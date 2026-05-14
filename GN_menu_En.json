@@ -1,0 +1,100 @@
+{
+    "Molecular Structure": [
+        "CH_Add Attributes",
+        "CH_Ball and Stick",
+        "CH_Add Material",
+        "CH_Set Atoms",
+        "CH_Set Bonds",
+        "CH_Custom Atom Color",
+        "CH_Custom Atom Material",
+        "CH_Scale Atoms",
+        "CH_Scale Bonds",
+        "CH_Filter Element",
+        "CH_Supercell",
+        "CH_Cell Expand"
+    ],
+    "Point Distribution": [
+        "CH_Simple Cubic",
+        "CH_FCC",
+        "CH_BCC",
+        "CH_All-Centered Cubic",
+        "CH_HCP",
+        "CH_Honeycomb",
+        "CH_Uniform Points on Faces",
+        "CH_Radial Lattice",
+        "CH_Golden Lattice"
+    ],
+    "Generate Mode":[
+        "CH_Sphere Instances",
+        "CH_Edge Sweep",
+        "CH_Atom Array",
+        "CH_Cross Section",
+        "CH_Coord Polyhedra",
+        "CH_Delaunay Triangulation",
+        "CH_Unit Polymerization",
+        "CH_Pipeline",
+        "CH_Grid Weaving",
+        "CH_Instance on Edges"
+    ],
+    "Set Selection":[
+        "CH_Index Selection",
+        "CH_Coordinates Selection",
+        "CH_Polar Coordinates Selection",
+        "CH_Select by Distance"
+    ],
+    "Custom Mesh": [
+        "CH_Platonic Solids",
+        "CH_Archimedean Solids",
+        "CH_Graphene",
+        "CH_MoS2",
+        "CH_Porous Generator",
+        "CH_Foam Skeleton",
+        "CH_Atomic Orbital"
+    ],
+    "Custom Curve":[
+        "CH_Parameter Spiral",
+        "CH_Conic Section",
+        "CH_Superellipse",
+        "CH_Heart Curve",
+        "CH_Lissajous Curve",
+        "CH_EM Wave"
+    ],
+    "Edit Mesh":[
+        "CH_Triangular Subdivide",
+        "CH_Quad Subdivide",
+        "CH_Simple Bevel",
+        "CH_Separate Polygons",
+        "CH_Connect by Distance",
+        "CH_Collapse Edge",
+        "CH_Uniform Extrude",
+        "CH_Inset Faces",
+        "CH_Remove Coplanar Edges",
+        "CH_Mesh Triangulation",
+        "CH_Maze Generator",
+        "CH_Celtic Links"
+    ],
+    "Edit Curve":[
+        "CH_Loft",
+        "CH_Lathe",
+        "CH_Sweep",
+        "CH_Arrow",
+        "CH_Fill Curve",
+        "CH_Extrude Curve",
+        "CH_Simple DNA",
+        "CH_Vessel and Cell"
+    ],
+    "Geometry Transform":[
+        "CH_Bend",
+        "CH_Twist",
+        "CH_Spherify",
+        "CH_Mirror",
+        "CH_Deform Along Curve",
+        "CH_Noise Deformation",
+        "CH_Position Transform",
+        "CH_Mesh Smooth",
+        "CH_Position Sort"
+    ],
+    "Utilities":[
+        "CH_Sampel UV Mesh"
+    ]
+}
