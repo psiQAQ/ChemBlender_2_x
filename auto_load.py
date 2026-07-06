@@ -4,11 +4,15 @@ import pkgutil
 import importlib
 from pathlib import Path
 
-def init():
+
+def init(package_name=None):
     global modules
     global classes
 
-    modules = get_all_submodules(Path(__file__).parent)
+    if package_name is None:
+        package_name = Path(__file__).parent.name
+
+    modules = get_all_submodules(Path(__file__).parent, package_name)
     classes = get_register(modules)
     return classes
 
@@ -16,8 +20,8 @@ def init():
 # Import modules
 #################################################
 
-def get_all_submodules(directory):
-    return list(iter_submodules(directory, directory.name))
+def get_all_submodules(directory, package_name):
+    return list(iter_submodules(directory, package_name))
 
 def iter_submodules(path, package_name):
     for name in sorted(iter_submodule_names(path)):

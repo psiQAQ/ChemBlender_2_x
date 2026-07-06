@@ -29,6 +29,12 @@ class ExtensionPackagingTests(unittest.TestCase):
             self.assertTrue(wheel.startswith("./wheels/"))
             self.assertTrue((REPO_ROOT / wheel[2:]).exists(), f"wheel 不存在: {wheel}")
 
+    def test_auto_load_does_not_assume_directory_name_as_package(self):
+        auto_load_text = (REPO_ROOT / "auto_load.py").read_text(encoding="utf-8")
+        init_text = (REPO_ROOT / "__init__.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("directory.name", auto_load_text)
+        self.assertIn("auto_load.init(__package__)", init_text)
     def test_runtime_install_ui_is_removed(self):
         panel_text = (REPO_ROOT / "panel.py").read_text(encoding="utf-8")
         ex_package_text = (REPO_ROOT / "ex_package.py").read_text(encoding="utf-8")

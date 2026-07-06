@@ -129,7 +129,7 @@ classes = (
     NODE_OT_group_add,
     # NODE_MT_chem_GN_menu,
 )
-auto_cls = auto_load.init()
+auto_cls = auto_load.init(__package__)
 panel_cls = [CHEM_PT_Build,
              CHEM_PT_TOOLS,
              CRYSTAL_PT_TOOLS,
