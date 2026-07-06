@@ -9,9 +9,15 @@
         "CH_Custom Atom Material",
         "CH_Scale Atoms",
         "CH_Scale Bonds",
-        "CH_Filter Element",
+        "CH_Filter Element"
+    ],
+    "Crystal Structure": [
         "CH_Supercell",
-        "CH_Cell Expand"
+        "CH_Cell Expand",
+        "CH_Axes Arrows",
+        "CH_Cross Section",
+        "CH_Coord Polyhedra",
+        "CH_Thermal Ellipsoid"
     ],
     "Point Distribution": [
         "CH_Simple Cubic",
@@ -28,8 +34,6 @@
         "CH_Sphere Instances",
         "CH_Edge Sweep",
         "CH_Atom Array",
-        "CH_Cross Section",
-        "CH_Coord Polyhedra",
         "CH_Delaunay Triangulation",
         "CH_Unit Polymerization",
         "CH_Pipeline",
@@ -40,7 +44,8 @@
         "CH_Index Selection",
         "CH_Coordinates Selection",
         "CH_Polar Coordinates Selection",
-        "CH_Select by Distance"
+        "CH_Select by Distance",
+        "CH_AtomicNum Selection"
     ],
     "Custom Mesh": [
         "CH_Platonic Solids",
@@ -77,7 +82,7 @@
         "CH_Loft",
         "CH_Lathe",
         "CH_Sweep",
-        "CH_Arrow",
+        "CH_Curve Arrow",
         "CH_Fill Curve",
         "CH_Extrude Curve",
         "CH_Simple DNA",

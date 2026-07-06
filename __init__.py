@@ -1,7 +1,7 @@
 bl_info = {
     "name" : "ChemBlender",
     "author" : "LiHaodong",
-    "version" : (2, 0, 0),
+    "version" : (2, 1, 0),
     "blender" : (5, 1, 0),
     "location" : "Geometry Nodes Editor > Add > Chem",
     "description" : "Professional Modeling and Visualization of Molecular and Crystal Structures for Scientists and Artiests.",
@@ -14,6 +14,8 @@ import bpy
 import os, re, json
 from . import auto_load
 from .panel import CHEM_texts, CHEM_PT_Build, CHEM_PT_TOOLS, CRYSTAL_PT_TOOLS
+from .read import CIF_Atom, CIF_Structure
+from .ex_package import PYPI_MIRROR
 from bpy.types import (
     Operator,
     Menu,
@@ -132,10 +134,13 @@ auto_cls = auto_load.init()
 panel_cls = [CHEM_PT_Build,
              CHEM_PT_TOOLS,
              CRYSTAL_PT_TOOLS,
+             CIF_Atom,
+             CIF_Structure
              ]
 for cls in panel_cls:
     auto_cls.remove(cls)
 auto_cls.append(NODE_OT_group_add)
+
 
 def register():
     global geo_node_group
@@ -153,18 +158,43 @@ def register():
         bpy.utils.register_class(cls)
     for cls in auto_cls:
         bpy.utils.register_class(cls)
+    bpy.types.Object.cif_original = bpy.props.PointerProperty(type=CIF_Structure)
+    bpy.types.Object.cif_current = bpy.props.PointerProperty(type=CIF_Structure)
     bpy.types.Scene.my_tool = bpy.props.PointerProperty(type=CHEM_texts)
+    bpy.types.Scene.pypi_mirror = bpy.props.EnumProperty(
+        name="PyPI Mirror",
+        items=[(k, k, "") for k in PYPI_MIRROR.keys()],
+        default="Default"
+    )
     cat_generator()
 
 
 def unregister():
-    if hasattr(bpy.types, "NODE_MT_chem_GN_menu"):
+    try:
         bpy.types.NODE_MT_add.remove(add_chem_button)
-    for cls in panel_cls:
-        bpy.utils.unregister_class(cls)
-    for cls in auto_cls:
-        bpy.utils.unregister_class(cls)
-    del bpy.types.Scene.my_tool
+    except:
+        pass
+
+    for cls in reversed(panel_cls):
+        try:
+            bpy.utils.unregister_class(cls)
+        except:
+            pass
+
+    for cls in reversed(auto_cls):
+        try:
+            bpy.utils.unregister_class(cls)
+        except:
+            pass
+
+    try:
+        del bpy.types.Object.cif_original
+        del bpy.types.Object.cif_current
+        del bpy.types.Scene.my_tool
+        del bpy.types.Scene.pypi_mirror
+    except:
+        pass
+    
     
 #if __name__ == "__main__":
 #    register()

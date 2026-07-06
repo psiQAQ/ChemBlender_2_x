@@ -2,8 +2,11 @@ import bpy
 import bmesh
 import numpy as np
 import re
+from math import dist
 from . import _math
 from .Chem_data import ELEMENTS_DEFAULT, BONDS_DEFAULT, FUNCTIONAL_GROUPS, IONIC_RADII, SYMOP_OPERATIONS
+
+language = 1 if 'zh_HAN' in bpy.context.preferences.view.language else 0
 
 def create_object(coll, name, verts, edges, faces):
     mesh = bpy.data.meshes.new(name)
@@ -43,6 +46,32 @@ def remove_doubles(object):
     bpy.ops.mesh.remove_doubles(threshold=0.001)
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.object.mode_set(mode='OBJECT')
+
+def connect_by_distance(obj, min_dist, max_dist):
+    if obj.mode != 'EDIT':
+        bpy.ops.object.mode_set(mode='EDIT')
+    bm = bmesh.from_edit_mesh(obj.data)
+    sel_verts = [v for v in bm.verts if v.select]
+    
+    if len(sel_verts) < 2:
+        return False, "至少选中2个点" if language else "At least select 2 vertices"
+    
+    create_edges = 0
+
+    for i in range(len(sel_verts)):
+        v1 = sel_verts[i]
+        for j in range(i+1, len(sel_verts)):
+            v2 = sel_verts[j]
+            dist_ij = dist(v1.co, v2.co)
+            if  dist_ij >= min_dist and dist_ij<= max_dist:
+                try:
+                    bm.edges.new([v1,v2])
+                    create_edges += 1
+                except:
+                    continue
+    bmesh.update_edit_mesh(obj.data)
+    
+    return True, f"已生成 {create_edges} 条边" if language else f"{create_edges} edges have been generated"
 
 # 属性设置
 ############################################################################################
@@ -124,28 +153,26 @@ def add_attr(mesh_obj, attr_name, datatype, domain, attr_values):
     attr.data.foreach_set(attr_types[datatype], attr_values)
     return attr
 
-def add_scaffold_attr(scaffold, ATOMS, AtomicNum, BOND_ORDERS, VDW_R, Radii, RingNum):
-    #STICK_R = np.full(len(AtomicNum), 0.18) # [0.18 for i in AtomicNum]
-    #WIRE_R = np.full(len(AtomicNum), 0.03)
+def add_scaffold_attr(scaffold, ATOMS, AtomicNum, BOND_ORDERS, VDW_R, Radii, RingNum, SiteID, COLORS, Atom_Scale_f, Bond_Scale_f, U_Scale, U_v1, U_v2, U_v3):
     Aromatic = np.full(len(BOND_ORDERS), False)
-    Atom_Scale_f = np.full(len(ATOMS), 1)
-    Bond_Scale_f = np.full(len(BOND_ORDERS), 1)
-    atom_colors = []
-    for element in ATOMS:
-        for value in ELEMENTS_DEFAULT[element.capitalize()][3]:
-            atom_colors.append(value)
     attributes = (
         {'name': 'atomic_num',       'type':'INT',      'domain':'POINT',  'values':AtomicNum},
         {'name': 'vdw_radius',       'type':'FLOAT',    'domain':'POINT',  'values':VDW_R},
         {'name': 'radius',           'type':'FLOAT',    'domain':'POINT',  'values':Radii},
         {'name': 'atom_scale_f',     'type':'FLOAT',    'domain':'POINT',  'values':Atom_Scale_f},
+        {'name': 'u_scale',          'type':'FLOAT_VECTOR',   'domain':'POINT',  'values':U_Scale},
+        {'name': 'u_v1',             'type':'FLOAT_VECTOR',   'domain':'POINT',  'values':U_v1},
+        {'name': 'u_v2',             'type':'FLOAT_VECTOR',   'domain':'POINT',  'values':U_v2},
+        {'name': 'u_v3',             'type':'FLOAT_VECTOR',   'domain':'POINT',  'values':U_v3},
+        #{'name': 'u_rot',            'type':'FLOAT_VECTOR',   'domain':'POINT',  'values':U_Rot},
         #{'name': 'stick_radius',     'type':'FLOAT',    'domain':'POINT',  'values':STICK_R},
         #{'name': 'wire_radius',      'type':'FLOAT',    'domain':'POINT',  'values':WIRE_R},
         {'name': 'bond_order',       'type':'INT',      'domain':'EDGE',   'values':BOND_ORDERS},
         {'name': 'bond_scale_f',     'type':'FLOAT',    'domain':'EDGE',  'values':Bond_Scale_f},
         {'name': 'ring_num',         'type':'INT',      'domain':'EDGE',   'values':RingNum},
         {'name': 'is_aromatic',      'type':'BOOLEAN',   'domain':'EDGE',  'values':Aromatic},
-        {'name': 'colour',     'type':'FLOAT_COLOR',    'domain':'POINT',  'values':atom_colors},
+        {'name': 'colour',           'type':'FLOAT_COLOR',    'domain':'POINT',  'values':COLORS},
+        {'name': 'siteid',           'type':'INT',         'domain':'POINT',  'values':SiteID},
     ) 
     for attr in attributes:
         add_attr(scaffold, attr['name'], attr['type'], attr['domain'], attr['values'])
@@ -162,11 +189,20 @@ def mesh_to_mol_scaffold(obj):
     AtomicNum = [6]*atoms_num
     VDW_R = [1.70]*atoms_num
     Radii = [0.76]*atoms_num
+    COLORS = [0.12,0.12,0.12,1.0]*atoms_num
+    SiteID = [0]*atoms_num
+    Atom_Scale_f = [1]*atoms_num
+    U_Scale = [1.0, 1.0, 1.0]*atoms_num
+    #U_Rot = [0.0, 0.0, 0.0]*atoms_num
+    U_v1 = [1.0, 0.0, 0.0]*atoms_num
+    U_v2 = [0.0, 1.0, 0.0]*atoms_num
+    U_v3 = [0.0, 0.0, 1.0]*atoms_num
     BOND_ORDERS = [1]*bonds_num
+    Bond_Scale_f = [1]*bonds_num
     RingNum = [0]*bonds_num
     obj['Type'] = 'scaffold'
     obj['Elements'] = list(set(ATOMS))
-    add_scaffold_attr(obj, ATOMS, AtomicNum, BOND_ORDERS, VDW_R, Radii, RingNum)
+    add_scaffold_attr(obj, ATOMS, AtomicNum, BOND_ORDERS, VDW_R, Radii, RingNum, SiteID, COLORS, Atom_Scale_f, Bond_Scale_f, U_Scale, U_v1, U_v2, U_v3)
 
 
 # 设置原子
@@ -193,7 +229,7 @@ def set_sel_center_ligand(obj, center, ligand):
     add_attr(obj, 'center', 'BOOLEAN', 'POINT', Centers)
     add_attr(obj, 'ligand', 'BOOLEAN', 'POINT', Ligands)
 
-def set_sel_atoms_attr(obj, atomic_num, scale_f, radius_type, charge, coord_num, center_set, center, ligand, use_custom_color, custom_color):
+def set_sel_atoms_attr(obj, atomic_num, scale_f, radius_type, charge, coord_num, center_set, center, ligand, use_custom_color, custom_color, siteid):
     sel_vert_idxs = get_sel_idxs(obj, 'VERT')
     if not sel_vert_idxs:
         return
@@ -203,6 +239,7 @@ def set_sel_atoms_attr(obj, atomic_num, scale_f, radius_type, charge, coord_num,
     Radii = get_attr(obj, 'radius', 'FLOAT', 'VERT')
     COLORS = get_attr(obj, 'colour', 'FLOAT_COLOR', 'VERT')
     Atom_scales = get_attr(obj, 'atom_scale_f', 'FLOAT', 'VERT')
+    SiteID = get_attr(obj, 'siteid', 'INT', 'VERT')
     
     if center_set: set_sel_center_ligand(obj, center, ligand)
 
@@ -211,17 +248,17 @@ def set_sel_atoms_attr(obj, atomic_num, scale_f, radius_type, charge, coord_num,
             Atomic_Nums[idx] = atomic_num
             radius, vdw_radius = get_atom_radius(atomic_num, radius_type, charge, coord_num)
             VDW_R[idx] = vdw_radius
-            Radii[idx] = radius
-            Atom_scales[idx] = scale_f
+            Radii[idx] = radius 
     else:
         for idx in sel_vert_idxs:
             atomic_num = Atomic_Nums[idx]
             radius, vdw_radius = get_atom_radius(atomic_num, radius_type, charge, coord_num)
             VDW_R[idx] = vdw_radius
             Radii[idx] = radius
-            Atom_scales[idx] = scale_f
-    
+
     for idx in sel_vert_idxs:
+        Atom_scales[idx] = scale_f
+        SiteID[idx] = siteid
         current_atomic_num = Atomic_Nums[idx]
         elem_symbol = next((k for k, v in ELEMENTS_DEFAULT.items() if v[0] == current_atomic_num), "Dummy")
         default_color = ELEMENTS_DEFAULT[elem_symbol][3]
@@ -234,6 +271,7 @@ def set_sel_atoms_attr(obj, atomic_num, scale_f, radius_type, charge, coord_num,
     add_attr(obj, 'vdw_radius', 'FLOAT', 'VERT', VDW_R)
     add_attr(obj, 'atom_scale_f', 'FLOAT', 'VERT', Atom_scales)
     add_attr(obj, 'colour', 'FLOAT_COLOR', 'VERT', COLORS)
+    add_attr(obj, 'siteid', 'INT', 'VERT', SiteID)
     
     # 根据新的原子调节键长
     if not obj.get('space group'):
@@ -279,37 +317,110 @@ def get_atom_radius(atomic_num, radius_type, charge, coord_num):
             return covalent_radius,vdw_radius
 
 # 设置键
-def set_sel_bonds_attr(obj, bond_order, scale_f, ring_num, dashed_line):
-    sel_edge_idxs = get_sel_idxs(obj, 'EDGE')
-    Bond_Orders = get_attr(obj, 'bond_order','INT','EDGE')
-    Bond_Scale_f = get_attr(obj, 'bond_scale_f','FLOAT','EDGE')
-    Ring_Nums = get_attr(obj, 'ring_num','INT','EDGE')
-    Aromatic = get_attr(obj, 'is_aromatic','BOOLEAN','EDGE')
+def set_sel_bonds_attr(obj, bond_order, scale_f, ring_num, dashed_line, toggle_aromatic):
+    from rdkit import Chem
 
-    
+    sel_edge_idxs = get_sel_idxs(obj, 'EDGE')
+    Bond_Orders  = get_attr(obj, 'bond_order',   'INT',     'EDGE')
+    Bond_Scale_f = get_attr(obj, 'bond_scale_f', 'FLOAT',   'EDGE')
+    Ring_Nums    = get_attr(obj, 'ring_num',      'INT',     'EDGE')
+    Aromatic     = get_attr(obj, 'is_aromatic',   'BOOLEAN', 'EDGE')
+
     try:
         Dashed_Lines = get_attr(obj, 'dashed', 'BOOLEAN', 'EDGE')
         if Dashed_Lines is None or len(Dashed_Lines) != len(Bond_Orders):
-            raise ValueError  # 强制触发后续初始化
+            raise ValueError
     except:
         Dashed_Lines = np.full(len(Bond_Orders), False, dtype=bool)
         add_attr(obj, 'dashed', 'BOOLEAN', 'EDGE', Dashed_Lines)
+
+    # ── Toggle aromatic ────────────────────────────────────────────────────────
+    if bond_order == 0 and toggle_aromatic and sel_edge_idxs:
+
+        has_arom_flag = any(
+            Bond_Orders[i] == 12 or Aromatic[i]
+            for i in sel_edge_idxs
+        )
+
+        if has_arom_flag:
+            # 芳香 → Kekulé：尝试用 RDKit 获取真实键级，失败则退回 1/2 交替
+            kekule_orders = _try_kekulize(obj, sel_edge_idxs, Bond_Orders)
+            for i in sel_edge_idxs:
+                Bond_Orders[i] = kekule_orders.get(i, 1)
+                Aromatic[i]    = False
+        else:
+            # Kekulé → 芳香：直接标记为 12
+            for i in sel_edge_idxs:
+                Bond_Orders[i] = 12
+                Aromatic[i]    = True
+
+    # ── 直接设置键级 ────────────────────────────────────────────────────────────
     if bond_order > 0:
         for idx in sel_edge_idxs:
             Bond_Orders[idx] = bond_order
-            if bond_order == 12:
-                Aromatic[idx] = True
+            Aromatic[idx]    = (bond_order == 12)
+
     if ring_num > 0:
-        for idx in sel_edge_idxs: Ring_Nums[idx] =ring_num
+        for idx in sel_edge_idxs:
+            Ring_Nums[idx] = ring_num
+
     for idx in sel_edge_idxs:
         Bond_Scale_f[idx] = scale_f
         Dashed_Lines[idx] = dashed_line
-    add_attr(obj, 'bond_order', 'INT', 'EDGE', Bond_Orders)
-    add_attr(obj, 'bond_scale_f', 'FLOAT', 'EDGE', Bond_Scale_f)
-    add_attr(obj, 'ring_num', 'INT', 'EDGE', Ring_Nums)
-    add_attr(obj, 'is_aromatic', 'BOOLEAN', 'EDGE', Aromatic)
-    add_attr(obj, 'dashed', 'BOOLEAN', 'EDGE', Dashed_Lines)
 
+    add_attr(obj, 'bond_order',   'INT',     'EDGE', Bond_Orders)
+    add_attr(obj, 'bond_scale_f', 'FLOAT',   'EDGE', Bond_Scale_f)
+    add_attr(obj, 'ring_num',     'INT',     'EDGE', Ring_Nums)
+    add_attr(obj, 'is_aromatic',  'BOOLEAN', 'EDGE', Aromatic)
+    add_attr(obj, 'dashed',       'BOOLEAN', 'EDGE', Dashed_Lines)
+
+
+def _try_kekulize(obj, sel_edge_idxs, Bond_Orders):
+    from rdkit import Chem
+
+    result = {}
+    try:
+        mol, atom_map = scaffold_to_mol(obj)
+        # 仅在分子较小或可 Kekulize 时继续
+        mol_copy = Chem.RWMol(Chem.Mol(mol))
+        Chem.Kekulize(mol_copy, clearAromaticFlags=False)
+
+        for i in sel_edge_idxs:
+            edge   = obj.data.edges[i]
+            v1, v2 = edge.vertices
+            bond   = mol_copy.GetBondBetweenAtoms(atom_map[v1], atom_map[v2])
+            if bond:
+                result[i] = int(bond.GetBondTypeAsDouble())
+
+    except Exception:
+        result = _greedy_kekulize_fallback(obj, sel_edge_idxs)
+
+    return result
+
+def _greedy_kekulize_fallback(obj, sel_edge_idxs):
+    sel_set = set(sel_edge_idxs)
+    
+    edges = {}
+    all_verts = set()
+    for i in sel_set:
+        v1, v2 = obj.data.edges[i].vertices
+        edges[i] = (v1, v2)
+        all_verts.add(v1)
+        all_verts.add(v2)
+    
+    matched_verts = set()
+    result = {}
+    
+    for i in sel_edge_idxs:  # 遍历顺序影响结果，但保证合法性
+        v1, v2 = edges[i]
+        if v1 not in matched_verts and v2 not in matched_verts:
+            result[i] = 2
+            matched_verts.add(v1)
+            matched_verts.add(v2)
+        else:
+            result[i] = 1
+    
+    return result
 
 # 选择
 ############################################################################################
@@ -352,14 +463,15 @@ def get_cell_parameters(obj):
     length_a, length_b, length_c = parse_str_array(obj['cell lengths'])
     angle_alpha, angle_beta, angle_gamma = parse_str_array(obj['cell angles'])
     space_group = obj['space group'].strip()
-    try:
-        space_group_num = SYMOP_OPERATIONS[space_group][0]
-    except KeyError:
-        space_group_num = 1
-    if obj['SG No.'] > space_group_num:
-        space_group_num = obj['SG No.']
-        space_group = list(SYMOP_OPERATIONS.keys())[space_group_num-1]
-    symop_operations = SYMOP_OPERATIONS[space_group][4]
+    space_group_num = obj['SG No.']
+    symop_operations = obj['symops']
+    if space_group_num is None:
+        try:
+            space_group_num = SYMOP_OPERATIONS[space_group][0]
+        except KeyError:
+            space_group_num = 1
+    if symop_operations is None:
+        symop_operations = SYMOP_OPERATIONS[space_group][4]
     return (length_a,length_b,length_c,angle_alpha,angle_beta,angle_gamma,space_group,space_group_num,symop_operations)
 
 def get_cell_vectors(obj):
@@ -373,8 +485,10 @@ def get_cell_vectors(obj):
 def select_verts(obj, elements):   # 'C', 'H'
     bpy.ops.object.mode_set(mode='EDIT')
     bm = bmesh.from_edit_mesh(obj.data)
+
     atom_num = get_layer(bm, 'INT', 'VERT', 'atomic_num')
     Elements = list(ELEMENTS_DEFAULT.keys())
+
     for vert in bm.verts:
         vert[atom_num] = 0 if vert[atom_num] == -1 else vert[atom_num]
         if Elements[vert[atom_num]] in elements:
@@ -468,60 +582,42 @@ def get_sel_xyz(obj):
 # 结构优化 
 ############################################################################################
 def scaffold_to_mol(scaffold):
-    """
-    从分子骨架对象获取RDKit可读的mol对象
-    """
     from rdkit import Chem
-    from rdkit.Chem import rdmolops
+    
+    BOND_TYPE_MAP = {
+        1: Chem.BondType.SINGLE,
+        2: Chem.BondType.DOUBLE,
+        3: Chem.BondType.TRIPLE,
+        12: Chem.BondType.AROMATIC
+    }
     atoms = []
     bonds = []
 
     # 读取原子和化学键属性
     Atomic_Nums = get_attr(scaffold, 'atomic_num', 'INT', 'VERT')
     Bond_Orders = get_attr(scaffold, 'bond_order', 'INT', 'EDGE')
-    Bond_Orders = [1 if x == 0 else x for x in Bond_Orders]
-    add_attr(scaffold, 'bond_order', 'INT', 'EDGE', Bond_Orders)
-    bond_type_map = {
-        1: Chem.BondType.SINGLE,
-        2: Chem.BondType.DOUBLE,
-        3: Chem.BondType.TRIPLE,
-        12: Chem.BondType.AROMATIC
-    }
+    Bond_Orders = [bo if bo != 0 else 1 for bo in Bond_Orders]
 
-    # 记录原子和化学键信息
-    for vert, atomic_num in zip(scaffold.data.vertices, Atomic_Nums):
-        atoms.append((vert.index, vert.co, atomic_num))
-    for edge, bond_order in zip(scaffold.data.edges, Bond_Orders):
-        bonds.append((edge.vertices[0], edge.vertices[1], bond_order))
+    unknown = set(Bond_Orders) - BOND_TYPE_MAP.keys()
+    if unknown:
+        raise ValueError(f"Unknown bond_order: {unknown}")
 
-    # 创建RDKit分子并添加原子和化学键
     rdmol = Chem.RWMol()
     atom_map = {}
-
-    for idx, pos, atomic_num in atoms:
-        atom = Chem.Atom(atomic_num)
-        atom_idx = rdmol.AddAtom(atom)
-        atom_map[idx] = atom_idx
     
+    for vert, atomic_num in zip(scaffold.data.vertices, Atomic_Nums):
+        atom_map[vert.index] = rdmol.AddAtom(Chem.Atom(atomic_num))
     conformer = Chem.Conformer(rdmol.GetNumAtoms())
-    for idx, pos, _ in atoms:
-        # 使用 rdkit.Geometry.Point3D 来设置坐标
-        conformer.SetAtomPosition(atom_map[idx], (pos[0], pos[1], pos[2]))
-    rdmol.AddConformer(conformer, assignId=True)
+    for vert in scaffold.data.vertices:
+        conformer.SetAtomPosition(atom_map[vert.index],tuple(vert.co))
+    rdmol.AddConformer(conformer, assignId = True)
 
-    for v1, v2, bond_order in bonds:
-        bond_type = bond_type_map.get(bond_order, None)
-        if bond_type is None:
-            raise ValueError(f"未知的 bond_order: {bond_order}")
-        rdmol.AddBond(atom_map[v1], atom_map[v2], bond_type)
+    for edge, bond_order in zip(scaffold.data.edges, Bond_Orders):
+        v1,v2 = edge.vertices
+        rdmol.AddBond(atom_map[v1], atom_map[v2], BOND_TYPE_MAP[bond_order])
+    rdmol.SetProp("_Name", scaffold.name)
     
-    # 设置分子名称为标题
-    molecule_name = scaffold.name if hasattr(scaffold, 'name') else "Unnamed"
-    rdmol.SetProp("_Name", molecule_name)
-    
-    # 生成最终的Mol对象
     mol = rdmol.GetMol()
-    #Chem.SanitizeMol(mol)
     Chem.SanitizeMol(mol,sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE)
     return mol, atom_map
 
@@ -628,21 +724,33 @@ def add_functional_groups(scaffold, coords, fg_name, n_carbon):
         ATOMS = ['C']*n_carbon
         BONDS = [(i,i+1) for i in range(n_carbon-1)]
         BOND_ORDERS = [1]*(n_carbon-1)
+        COLORS = [0.12,0.12,0.12,1.0]*n_carbon
     else:
         ATOMS = FUNCTIONAL_GROUPS[fg_name]['Atoms']
         BONDS = FUNCTIONAL_GROUPS[fg_name]['Bonds']
         BOND_ORDERS = FUNCTIONAL_GROUPS[fg_name]['Bond_Orders']
+        COLORS = FUNCTIONAL_GROUPS[fg_name]['COLORS']
     new_struct = create_object(coll, 'new_molecule', coords, BONDS, [])
     AtomicNum = [ELEMENTS_DEFAULT[atom][0] for atom in ATOMS]
+    Atom_Scale_f = [1]*len(ATOMS)
+    U_Scale = [1.0, 1.0, 1.0]*len(ATOMS)
+    #U_Rot = [0.0, 0.0, 0.0]*len(ATOMS)
+    U_v1 = [1.0, 0.0, 0.0]*len(ATOMS)
+    U_v2 = [0.0, 1.0, 0.0]*len(ATOMS)
+    U_v3 = [0.0, 0.0, 1.0]*len(ATOMS)
+    Bond_Scale_f = [1]*len(BONDS)
+    SiteID = [0]*len(ATOMS)
     VDW_R = [periodic_table.GetRvdw(atomic_num) for atomic_num in AtomicNum]
     Radii = [periodic_table.GetRcovalent(atomic_num) for atomic_num in AtomicNum]
     RingNum = [0]*len(BONDS)
-    add_scaffold_attr(new_struct, ATOMS, AtomicNum, BOND_ORDERS, VDW_R, Radii, RingNum)
+    add_scaffold_attr(new_struct, ATOMS, AtomicNum, BOND_ORDERS, VDW_R, Radii, RingNum, SiteID, COLORS, Atom_Scale_f, Bond_Scale_f, U_Scale, U_v1, U_v2, U_v3)
     new_scaffold = join_objects([scaffold, new_struct])
     remove_doubles(new_scaffold)
 
 def add_new_scaffold(scaffold, new_verts):
     bm = bmesh.from_edit_mesh(scaffold.data)
+    old_vert_count = len(bm.verts)
+    old_edge_count = len(bm.edges)
     sum = 0
     for new_vert in new_verts:
         index = new_vert[0]
@@ -653,23 +761,56 @@ def add_new_scaffold(scaffold, new_verts):
             bm.verts.ensure_lookup_table()
             new_edge = bm.edges.new([new_vert, bm.verts[index]])
     bmesh.update_edit_mesh(scaffold.data)
+    return old_vert_count, old_edge_count
 
 
-def set_new_scaffold_attr(scaffold, atomic_num, bond_order):
-    # 设置新的原子和键属性
+def set_new_scaffold_attr(scaffold, old_vert_count, old_edge_count, atomic_num, bond_order):
     from rdkit import Chem
     periodic_table = Chem.GetPeriodicTable()
+
     AtomicNum = get_attr(scaffold, 'atomic_num', 'INT', 'VERT')
     BOND_ORDERS = get_attr(scaffold, 'bond_order', 'INT', 'EDGE')
     RingNum = get_attr(scaffold, 'ring_num', 'INT', 'EDGE')
     VDW_R = get_attr(scaffold, 'vdw_radius', 'FLOAT', 'VERT')
     Radii = get_attr(scaffold, 'radius', 'FLOAT', 'VERT')
-    AtomicNum = [atomic_num if x == 0 else x for x in AtomicNum]
-    BOND_ORDERS = [bond_order if x == 0 else x for x in BOND_ORDERS]
-    VDW_R = [periodic_table.GetRvdw(atomic_num) if x == 0 else x for x in VDW_R]
-    Radii = [periodic_table.GetRcovalent(atomic_num) if x == 0 else x for x in Radii]
+    COLORS = get_attr(scaffold, 'colour', 'FLOAT_COLOR', 'VERT')
+    SiteID = get_attr(scaffold, 'siteid', 'INT', 'VERT')
+    Atom_Scale_f = get_attr(scaffold, 'atom_scale_f', 'FLOAT', 'VERT')
+    Bond_Scale_f = get_attr(scaffold, 'bond_scale_f','FLOAT','EDGE')
+    U_Scale = get_attr(scaffold, 'u_scale', 'FLOAT_VECTOR', 'VERT')
+    #U_Rot = get_attr(scaffold, 'u_rot', 'FLOAT_VECTOR', 'VERT')
+    U_v1 = get_attr(scaffold, 'u_v1', 'FLOAT_VECTOR', 'VERT')
+    U_v2 = get_attr(scaffold, 'u_v2', 'FLOAT_VECTOR', 'VERT')
+    U_v3 = get_attr(scaffold, 'u_v3', 'FLOAT_VECTOR', 'VERT')
+
+    num_new_verts = len(scaffold.data.vertices) - old_vert_count
+    num_new_edges = len(scaffold.data.edges) - old_edge_count
+
+    h_vdw = periodic_table.GetRvdw(atomic_num)
+    h_cov = periodic_table.GetRcovalent(atomic_num)
+    color = list(list(ELEMENTS_DEFAULT.items())[atomic_num][1][3])
+
+    AtomicNum = AtomicNum[:old_vert_count] + [atomic_num] * num_new_verts
+    VDW_R = VDW_R[:old_vert_count] + [h_vdw] * num_new_verts
+    Radii = Radii[:old_vert_count] + [h_cov] * num_new_verts
+    Atom_Scale_f  = Atom_Scale_f[:old_vert_count]  + [1.0] * num_new_verts
+    U_Scale = U_Scale[:old_vert_count*3] + [1.0, 1.0, 1.0] * num_new_verts
+    #U_Rot = U_Rot[:old_vert_count*3] + [0.0, 0.0, 0.0] * num_new_verts
+    U_v1 = U_v1[:old_vert_count*3] + [1.0, 0.0, 0.0] * num_new_verts
+    U_v2 = U_v2[:old_vert_count*3] + [0.0, 1.0, 0.0] * num_new_verts
+    U_v3 = U_v3[:old_vert_count*3] + [0.0, 0.0, 1.0] * num_new_verts
+    COLORS  = COLORS[:old_vert_count*4]  + color * num_new_verts
+    SiteID = SiteID[:old_vert_count] + [0] * num_new_verts
+    BOND_ORDERS = BOND_ORDERS[:old_edge_count] + [bond_order] * num_new_edges
+    RingNum = RingNum[:old_edge_count] + [0] * num_new_edges
+    Bond_Scale_f  = Bond_Scale_f[:old_edge_count]  + [1.0] * num_new_edges
+
+    #AtomicNum = [atomic_num if x == 0 else x for x in AtomicNum]
+    #BOND_ORDERS = [bond_order if x == 0 else x for x in BOND_ORDERS]
+    #VDW_R = [periodic_table.GetRvdw(atomic_num) if x == 0 else x for x in VDW_R]
+    #Radii = [periodic_table.GetRcovalent(atomic_num) if x == 0 else x for x in Radii]
     ATOMS = [list(ELEMENTS_DEFAULT.keys())[atomic_num] for atomic_num in AtomicNum]
-    add_scaffold_attr(scaffold, ATOMS, AtomicNum, BOND_ORDERS, VDW_R, Radii, RingNum)
+    add_scaffold_attr(scaffold, ATOMS, AtomicNum, BOND_ORDERS, VDW_R, Radii, RingNum, SiteID, COLORS, Atom_Scale_f, Bond_Scale_f, U_Scale, U_v1, U_v2, U_v3)
 
 def add_hydrogens(scaffold):
     """
@@ -720,10 +861,10 @@ def add_hydrogens(scaffold):
         new_verts.append((v.index, new_H_pos))
 
     # 添加氢原子顶点和化学键
-    add_new_scaffold(scaffold, new_verts)
+    old_vert_count, old_edge_count = add_new_scaffold(scaffold, new_verts)
     
     # 设置新的原子和键属性
-    set_new_scaffold_attr(scaffold, atomic_num=1, bond_order=1)
+    set_new_scaffold_attr(scaffold, old_vert_count, old_edge_count, atomic_num=1, bond_order=1)
     # bpy.ops.object.mode_set(mode='OBJECT')
 
 
@@ -794,7 +935,7 @@ def para_branches(scaffold, atomic_num, branches, calc_SA, default_angle, rotate
     bpy.ops.mesh.select_all(action='DESELECT')
     return new_verts
 
-def unit_cell_edges(obj_name, coll_mol, length_a, length_b, length_c, angle_alpha, angle_beta, angle_gamma, space_group):
+def unit_cell_edges(obj_name, coll_mol, length_a, length_b, length_c, angle_alpha, angle_beta, angle_gamma, space_group, space_group_num, symop_operations):
     fract_corners_xyz = [[0,0,0], [1,0,0], [1,1,0], [0,1,0], [0,0,1], [1,0,1], [1,1,1], [0,1,1]]
     cartn_corners = [_math.fract_to_cartn(corner, length_a, length_b, length_c, 
                                             angle_alpha, angle_beta, angle_gamma) for corner in fract_corners_xyz]
@@ -811,10 +952,8 @@ def unit_cell_edges(obj_name, coll_mol, length_a, length_b, length_c, angle_alph
     new_obj['cell lengths'] = f'{length_a},{length_b},{length_c}'
     new_obj['cell angles'] = f'{angle_alpha},{angle_beta},{angle_gamma}'
     new_obj['space group'] = space_group
-    try:
-        new_obj['SG No.'] = SYMOP_OPERATIONS[space_group][0]
-    except KeyError:
-        new_obj['SG No.'] = 1
+    new_obj['SG No.'] = space_group_num
+    new_obj['symops'] = symop_operations
     '''bpy.ops.object.convert(target='CURVE')
     bpy.context.object.data.bevel_depth = 0.01
     bpy.ops.object.select_all(action='DESELECT')'''

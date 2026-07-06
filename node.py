@@ -93,6 +93,8 @@ def Ball_Stick_nodetree(nodetree):
     nodes_link(nodetree, _ball_stick, 0, _add_material, 0)
     nodes_link(nodetree, _add_material, 0, _output, 0)
 
+
+
 def Supercell(scaffold, nodetree, full_cell_cutoff):
     cell_lengths = tuple(map(float,scaffold['cell lengths'].strip("").split(',')))
     cell_angles = tuple(map(float,scaffold['cell angles'].strip("").split(',')))
@@ -113,16 +115,49 @@ def Supercell(scaffold, nodetree, full_cell_cutoff):
     nodes_link(nodetree, _input, 2, _supercell, 4)
     nodes_link(nodetree, _supercell, 0, _output, 0)
 
-def CoordPolyhedra(nodetree, append_mode, RMin, RMax, atomic_num):
+
+def Cell_Edges(nodetree, cell_lengths, cell_angles):
+    a,b=(0,0)
+    _input, _output = set_io_nodes(nodetree, (a,b), (a+600,b))
+    group = nodetree.node_group
+    a, b, c = cell_lengths
+    alpha, beta, gamma = cell_angles
+
+    sweep_edge_name = "CH_边线扫描" if language else "CH_Edge Sweep"
+    axes_arrows_name = "CH_晶轴箭头" if language else "CH_Axes Arrows"
+    append(sweep_edge_name)
+    append(axes_arrows_name)
+
+    _joingeo = add_node(nodetree,'GeometryNodeJoinGeometry', (a+400,0), '')
+    _sweep_edge = add_node_group(nodetree, sweep_edge_name, (a+200,200))
+    _axes_arrows = add_node_group(nodetree, axes_arrows_name,(a+200,-50))
+    _sweep_edge.inputs[1].default_value = 0.01
+    _axes_arrows.inputs[3].default_value[0] = a
+    _axes_arrows.inputs[3].default_value[1] = b
+    _axes_arrows.inputs[3].default_value[2] = c
+    _axes_arrows.inputs[4].default_value[0] = alpha
+    _axes_arrows.inputs[4].default_value[1] = beta
+    _axes_arrows.inputs[4].default_value[2] = gamma
+
+    nodes_link(nodetree, _input, 0, _sweep_edge, 0)
+    nodes_link(nodetree, _axes_arrows, 0, _joingeo, 0)
+    nodes_link(nodetree, _sweep_edge, 0, _joingeo, 0)
+    nodes_link(nodetree, _joingeo, 0, _output, 0)
+
+
+
+def CoordPolyhedra(nodetree, set_mode, append_mode, RMin, RMax, center_nums, ligand_nums):
     a,b=(0,0)
     _input, _output = set_io_nodes(nodetree, (a,b), (a+1000,b))
     group = nodetree.node_group
 
     coordpoly_name = "CH_配位多面体" if language else "CH_Coord Polyhedra"
     remove_name = "CH_移除共面边" if language else "CH_Remove Coplanar Edges"
+    atomicnum_sel = "CH_原子序数选中项" if language else "CH_AtomicNum Selection"
     material_name = "CH_添加分子材质" if language else "CH_Add Material"
     append(coordpoly_name)
     append(remove_name)
+    append(atomicnum_sel)
 
     if not append_mode: # 逐个添加
         nodes_to_remove = []
@@ -152,11 +187,25 @@ def CoordPolyhedra(nodetree, append_mode, RMin, RMax, atomic_num):
 
     y_pos = b + 250 + (existing_poly*250)
     _coordpoly = add_node_group(nodetree, coordpoly_name, (250,y_pos))
-    if append_mode:
+    if set_mode == '1':
         _coordpoly.inputs[1].default_value = '自定义' if language else 'Customize'
-        _coordpoly.inputs[5].default_value = atomic_num
-    _coordpoly.inputs[2].default_value = RMin
-    _coordpoly.inputs[3].default_value = RMax
+    #if append_mode:
+        _center_sel = add_node_group(nodetree, atomicnum_sel, (-200,y_pos))
+        _ligand_sel = add_node_group(nodetree, atomicnum_sel, (0,y_pos))
+        for i,center_num in enumerate(center_nums):
+            try:
+                _center_sel.inputs[i].default_value = center_num
+            except Exception as e:
+                pass
+        for i,ligand_num in enumerate(ligand_nums):
+            try:
+                _ligand_sel.inputs[i].default_value = ligand_num
+            except Exception as e:
+                pass
+        nodes_link(nodetree, _center_sel, 0, _coordpoly, 2)
+        nodes_link(nodetree, _ligand_sel, 0, _coordpoly, 3)
+    _coordpoly.inputs[4].default_value = RMin
+    _coordpoly.inputs[5].default_value = RMax
     _remove = add_node_group(nodetree, remove_name, (450,y_pos))
 
     nodes_link(nodetree, _input, 0, _coordpoly, 0)

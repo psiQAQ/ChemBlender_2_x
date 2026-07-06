@@ -1,10 +1,8 @@
 import bpy
 import os, re
-from .read import check_type, read_MOL, read_Cryst, download_sdf_from_pubchem
-from .mesh import create_object, add_scaffold_attr, unit_cell_edges, remove_doubles
-from .Chem_data import preset_smiles
-from . import node
-from bpy.props import FloatProperty,StringProperty,IntProperty,EnumProperty,CollectionProperty
+from . import node, mesh, read
+from .Chem_data import preset_smiles,ELEMENTS_DEFAULT
+from bpy.props import FloatProperty, StringProperty, IntProperty
 language = 1 if 'zh_HAN' in bpy.context.preferences.view.language else 0
 
 selected_pubchem_cid = None
@@ -103,7 +101,7 @@ class MESH_OT_SCAFFOLD_BUILD(bpy.types.Operator):
         elif mytool.choose == "Polymer_Units":
             molname = preset_smiles[mytool.Polymer_Units][0]
         elif mytool.choose == "PubChem":
-            molname = download_sdf_from_pubchem(moltext)[1]
+            molname = read.download_sdf_from_pubchem(moltext)[1]
         else:
             molname = moltext
         return molname
@@ -126,7 +124,7 @@ class MESH_OT_SCAFFOLD_BUILD(bpy.types.Operator):
         mytool = context.scene.my_tool
         try:
             moltext = self.text_input(mytool)
-            text_type = check_type(moltext)
+            text_type = read.check_type(moltext)
             if text_type.lower() in ('cif','vasp','poscar'):
                 layout = self.layout
 
@@ -184,43 +182,58 @@ class MESH_OT_SCAFFOLD_BUILD(bpy.types.Operator):
 
                 moltext = cid
             molname = self.name_input(mytool, moltext)
-            text_type = check_type(moltext)
+            text_type = read.check_type(moltext)
             filter_text = self.filter
             for sep in ',;/| ': filter_text = filter_text.replace(sep, ' ')
             filters = filter_text.split()
             filters = [filter.capitalize() for filter in filters]
             
             if text_type.lower() in ('cif','vasp','poscar'):
-                data1, data2 = read_Cryst(moltext, text_type, self.length_factor, self.boundary)
-                ATOMS, AtomicNum, COORDS, BONDS, BOND_ORDERS, VDW_R, Radii, RingNum = data1
+                data1, data2, atom_list, extra_info = read.read_Cryst(moltext, text_type, self.length_factor, self.boundary)
+                ATOMS, AtomicNum, COORDS, BONDS, BOND_ORDERS, VDW_R, Radii, RingNum, U_Scale, U_v1, U_v2, U_v3 = data1
                 cell_lengths, cell_angles, space_group, space_group_num, symop_operations = data2
-                print(symop_operations)
             else:
-                data1 = read_MOL(moltext)[0][0]
-                print(data1)
+                data1 = read.read_MOL(moltext)[0][0]
                 ATOMS, AtomicNum, COORDS, BONDS, BOND_ORDERS, VDW_R, Radii, RingNum = data1
                 cell_lengths = cell_angles = None
-                
+                U_Scale = [1.0, 1.0, 1.0]*len(ATOMS)
+                U_v1 = [1.0, 0.0, 0.0]*len(ATOMS)
+                U_v2 = [0.0, 1.0, 0.0]*len(ATOMS)
+                U_v3 = [1.0, 0.0, 1.0]*len(ATOMS)
+            
+            COLORS = []
+            for element in ATOMS:
+                element = 'H' if element in ('D','T','d','t') else element.capitalize()
+                COLORS.extend(ELEMENTS_DEFAULT[element][3])
+            SiteID = [0]*len(ATOMS)
+            Atom_Scale_f = [1.0]*len(ATOMS)
+            Bond_Scale_f = [1.0]*len(BONDS)
+
             coll = bpy.data.collections.new('Scaffold_'+molname)
             bpy.context.scene.collection.children.link(coll)
-            mol_scaffold = create_object(coll, molname, COORDS, BONDS, [])
+            mol_scaffold = mesh.create_object(coll, molname, COORDS, BONDS, [])
             mol_scaffold['Type'] = 'scaffold'
             mol_scaffold['Elements'] = f'{list(set(ATOMS))}'
-            add_scaffold_attr(mol_scaffold, ATOMS, AtomicNum, BOND_ORDERS, VDW_R, Radii, RingNum)
+            mesh.add_scaffold_attr(mol_scaffold, ATOMS, AtomicNum, BOND_ORDERS, VDW_R, Radii, RingNum, SiteID, COLORS, Atom_Scale_f, Bond_Scale_f, U_Scale, U_v1, U_v2, U_v3)
             bpy.context.view_layer.objects.active = mol_scaffold
 
             if text_type.lower() in ('cif','vasp','poscar') and cell_lengths[0] is not None:
-                remove_doubles(mol_scaffold)
-                cell_edges = unit_cell_edges(molname, coll, cell_lengths[0], cell_lengths[1], cell_lengths[2],
-                                                cell_angles[0], cell_angles[1], cell_angles[2], space_group)
+                mesh.remove_doubles(mol_scaffold)
+                sg_info = (space_group, space_group_num, symop_operations)
+                read.init_cif_data(mol_scaffold, cell_lengths, cell_angles, sg_info, atom_list, extra_info)
+                read.init_cif_current(mol_scaffold)
+                cell_edges = mesh.unit_cell_edges(molname, coll, cell_lengths[0], cell_lengths[1], cell_lengths[2],
+                                                cell_angles[0], cell_angles[1], cell_angles[2], space_group, space_group_num, symop_operations)
                 mol_scaffold.name = 'unit_'+ molname
                 mol_scaffold['cell lengths'] = f'{cell_lengths[0]},{cell_lengths[1]},{cell_lengths[2]}'
                 mol_scaffold['cell angles'] = f'{cell_angles[0]},{cell_angles[1]},{cell_angles[2]}'
                 mol_scaffold['space group'] = space_group
                 mol_scaffold['SG No.'] = space_group_num
+                mol_scaffold['symops'] = symop_operations
                 node.crys_expand(mol_scaffold, cell_lengths, cell_angles, self.grow_iter)
+                GN_celledge = node.add_geometry_nodetree(cell_edges, "GN_"+molname, "NodeTree_"+molname)
+                node.Cell_Edges(GN_celledge, cell_lengths, cell_angles)
 
-            # mol_scaffold.select_set(True)
             node.crys_filter(mol_scaffold, molname, filters)
             GN_mol = node.add_geometry_nodetree(mol_scaffold, "GN_"+molname, "NodeTree_"+molname)
             node.Ball_Stick_nodetree(GN_mol)

@@ -1,14 +1,14 @@
 import bpy
 from bpy.props import StringProperty, EnumProperty, BoolProperty, FloatVectorProperty, IntVectorProperty
 language = 1 if 'zh_HAN' in bpy.context.preferences.view.language else 0
+from .Chem_data import preset_smiles
+from . import ex_package
 
 # ------------------------------------------------------------------------------------
 # This class lists properties shown in Panel but not in Operator.
 class CHEM_texts(bpy.types.PropertyGroup):
     def update_view_opposite(self, context):
         import mathutils
-
-        # 找到 3D 视图
         rv3d = None
         for area in context.window.screen.areas:
             if area.type == 'VIEW_3D':
@@ -21,13 +21,25 @@ class CHEM_texts(bpy.types.PropertyGroup):
         if not rv3d:
             return
 
-        # 获取当前视线方向（视图看向 -Z）
         view_dir = rv3d.view_rotation @ mathutils.Vector((0,0,-1))
-        # 直接反转为 -view_dir
         quat = (-view_dir).to_track_quat('-Z', 'Y')
-
         rv3d.view_rotation = quat
 
+    def update_smiles_from_preset(self, context):
+        if self.molecule_preset != 'NONE':
+            self.smilestext = ""
+
+    def update_smiles_value(self, context):
+        key = ""
+        if self.molecule_preset == 'Saccharides':
+            key = self.Saccharides
+        elif self.molecule_preset == 'Amino_Acids':
+            key = self.Amino_Acids
+        elif self.molecule_preset == 'Polymer_Units':
+            key = self.Polymer_Units
+        
+        if key in preset_smiles:
+            self.smilestext = preset_smiles[key][1]
 
     filetext: StringProperty(
         name = "Filepath",
@@ -59,18 +71,29 @@ class CHEM_texts(bpy.types.PropertyGroup):
         items = [("File","从文件创建",""),
                  ("PubChem","从PubChem创建",""),
                  ("SMILES","从SMILES创建",""),
-                 ("Saccharides","糖类",""),
-                 ("Amino_Acids","氨基酸",""),
-                 ("Polymer_Units", "聚合物单元",""),
         ] if language else [
             ("File","From Files",""),
             ("PubChem","From PubChem",""),
             ("SMILES","From SMILES",""),
-            ("Saccharides","Saccharides",""),
-            ("Amino_Acids","Amino Acids",""),
-            ("Polymer_Units", "Polymer Units",""),
         ]
-    ) # type: ignore
+    )
+
+    molecule_preset: EnumProperty(
+        name = '分子预设' if language else 'Presets',
+        default='NONE',
+        items =[
+            ('NONE',"自定义","Input SMILES manually"),
+            ('Saccharides',"糖类","Saccharides"),
+            ('Amino_Acids',"氨基酸","Amino Acids"),
+            ('Polymer_Units',"聚合物单元","Polymer Units"),
+        ] if language else [
+            ('NONE',"Customized","Input SMILES manually"),
+            ('Saccharides',"Saccharides","Saccharides"),
+            ('Amino_Acids',"Amino Acids","Amino Acids"),
+            ('Polymer_Units',"Polymer Units","Polymer Units"),
+        ],
+        update=update_smiles_from_preset
+    )
 
     Saccharides: EnumProperty(
         name = "糖类" if language else "Saccharides",
@@ -106,8 +129,9 @@ class CHEM_texts(bpy.types.PropertyGroup):
             ("Tre","Trehalose",""),
             ("Cel","Cellobiose",""),
             ("Raf","Raffinose",""),
-        ]
-    ) # type: ignore
+        ],
+        update=update_smiles_value
+    )
 
     Amino_Acids: EnumProperty(
         name = "氨基酸" if language else "Amino acids",
@@ -153,8 +177,9 @@ class CHEM_texts(bpy.types.PropertyGroup):
             ("W","Tryptophan","Trp"),
             ("Y","Tyrosine","Tyr"),
             ("V","Valine","Val"),
-        ]
-    ) # type: ignore
+        ],
+        update=update_smiles_value
+    )
 
     Polymer_Units: EnumProperty(
         name = "聚合物单元" if language else "Polymer Units",
@@ -208,8 +233,9 @@ class CHEM_texts(bpy.types.PropertyGroup):
             ("PAAm","uPAAm","Polyacrylamide"),
             ("PVP","uPVP","Polyvinylpyrrolidone"),
             ("PDMS","uPDMS","Polydimethylsiloxane"),
-        ]
-    ) # type: ignore
+        ],
+        update=update_smiles_value
+    )
 
     distance: StringProperty(
         name = '',
@@ -257,7 +283,6 @@ class CHEM_texts(bpy.types.PropertyGroup):
     ) # type: ignore
 
 
-
 class CHEM_PT_Build(bpy.types.Panel):
     bl_label = "分子骨架创建" if language else "Build Molecules"
     bl_idname = "CHEM_PT_BUILD"
@@ -269,25 +294,39 @@ class CHEM_PT_Build(bpy.types.Panel):
         mytool = context.scene.my_tool
         layout = self.layout
         layout.prop(mytool, "choose")
-        if mytool.choose == 'Saccharides':
-            layout.prop(mytool, "Saccharides")
-        elif mytool.choose == 'Amino_Acids':
-            layout.prop(mytool, "Amino_Acids")
-        elif mytool.choose == 'Polymer_Units':
-            layout.prop(mytool, "Polymer_Units")
-        elif mytool.choose == 'File':
+
+        if mytool.choose == 'File':
             layout.prop(mytool, "filetext")
         elif mytool.choose == 'PubChem':
             layout.prop(mytool, "pubchemtext")
-        else:
-            layout.prop(mytool, "smilestext")
+        elif mytool.choose == 'SMILES':
+            layout.prop(mytool, "molecule_preset")
 
-        layout.row()
+            if mytool.molecule_preset == 'Saccharides':
+                layout.prop(mytool, "Saccharides")
+            elif mytool.molecule_preset == 'Amino_Acids':
+                layout.prop(mytool, "Amino_Acids")
+            elif mytool.molecule_preset == 'Polymer_Units':
+                layout.prop(mytool, "Polymer_Units")
+            
+            layout.prop(mytool,"smilestext")
+
         text = "创建球棍模型" if language else "Ball and Stick"
         layout.operator("chem.scaffold_build", text=text, icon="GREASEPENCIL")
+        
+        installed = ex_package.safe_check_rdkit()
+        if installed:
+            layout.label(text="RDKit is already installed.", icon='CHECKMARK')
+        else:
+            layout.label(text="RDKit is required for ChemBlender", icon='INFO')
+            row = layout.row()
+            row.label(text="PyPI Mirror:")
+            row.prop(context.scene, "pypi_mirror", text="")
+            layout.operator("chem.install_rdkit", text="Install RDKit", icon='IMPORT')
+
 
 class CHEM_PT_TOOLS(bpy.types.Panel):
-    bl_label = "分子工具" if language else "ChemBlender Tools"
+    bl_label = "分子工具" if language else "Molecular Tools"
     bl_idname = "CHEM_PT_UTILITY"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -302,7 +341,14 @@ class CHEM_PT_TOOLS(bpy.types.Panel):
         row.prop(mytool, "select_text")
         row.scale_x = 0.75
         text = "选择" if language else "Select"
-        row.operator('mol3d.select', text = text)
+        row.operator('chem.select', text = text)
+
+        row = layout.row()
+        text = "增强选择" if language else "Enhanced Select"
+        row.operator("chem.enhance_select", text=text) 
+        text = "按距离连接点" if language else "Connect by Dist"
+        row.operator("chem.connect_by_dist", text=text)
+
         row = layout.row(align=True)
         text = "测量长度" if language else "Length Calc."
         row.operator("chem.button_distance", text=text)
@@ -332,9 +378,7 @@ class CHEM_PT_TOOLS(bpy.types.Panel):
         row.operator("chem.geometry_optimize", text=text)
         text = "构象更新" if language else "Update Geometry"
         row.operator("chem.geometry_update", text=text)
-        row = layout.row()
-        text = "选中对象导出为分子文件" if language else "Export Scaffold to Block File"
-        row.operator("chem.export_block", text=text)
+        
         row = layout.row()
         text = "选中网格转换为分子骨架" if language else "Convert Mesh to Mol Scaffold"
         row.operator("chem.mesh2scaffold", text=text)
@@ -351,33 +395,35 @@ class CRYSTAL_PT_TOOLS(bpy.types.Panel):
         layout = self.layout
         mytool = context.scene.my_tool
 
-        row = layout.row(align=True)
+        row = layout.row()
         text = "创建晶胞" if language else "Add New Cell"
         row.operator("chem.add_unit_cell", text=text)
         text = "添加骨架" if language else "Add New Crystal"
         row.operator("chem.add_crys_scaffold", text=text)
         
-        row = layout.row(align=True)
+        row = layout.row()
         text = "对称选择" if language else "Symmetry Select"
         row.operator("chem.sel_symmetry", text=text)
         text = "对称复制" if language else "Symmetry Duplicate"
         row.operator("chem.duplicate_symmetry", text=text)
 
-        row = layout.row(align=True)
-        text = "超胞生成" if language else "Generate Supercell"
+        row = layout.row()
+        text = "超胞生成" if language else "Supercell"
         row.operator("chem.supercell", text=text)
-        text = "添加配位多面体" if language else "Add Coordination Polyhedra"
+        text = "添加配位多面体" if language else "Coord. Polyhedra"
         row.operator("chem.add_coordpolyhedra", text=text)
 
-        row = layout.row(align=True)
+        row = layout.row()
         text = "AVG. Fracts"
         row.operator("chem.avgfract", text=text)
         row.scale_x = 1.5
         row.prop(mytool, "avgfract")
 
-        row = layout.row(align=True)
+        row = layout.row()
         text = "添加Dummy原子" if language else "Add Dummy"
         row.operator("chem.add_dummy", text=text)
+        text = "对称性更新" if language else "Update Symmetry"
+        row.operator("chem.update_cif_from_mesh", text=text)
 
         box = layout.box()
         box.label(text="Viewing Direction")
@@ -403,8 +449,8 @@ class CRYSTAL_PT_TOOLS(bpy.types.Panel):
 
 
 
-class CHEM_PT_RENDER(bpy.types.Panel):
-    bl_label = "渲染工具" if language else "Render Tools"
+class CHEM_PT_OUTPUT(bpy.types.Panel):
+    bl_label = "输出工具" if language else "Output Tools"
     bl_idname = "CHEM_PT_RENDER"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -413,11 +459,22 @@ class CHEM_PT_RENDER(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
+        
+        box = layout.box()
+        box.scale_y = 1.25
+        row = box.row(align=True)
+        text = "导出为分子文件" if language else "Export Molecular File"
+        row.operator("chem.molecule_output", text=text)
+        #row.separator()
+        
         mytool = context.scene.my_tool
         layout.prop(mytool, "env_texture")
-
-        row = layout.row(align=True)
+        row = layout.row()
         text = "添加视角摄像机" if language else "Add View Camera"
         row.operator("chem.add_camera", text=text)
+        text = "快捷渲染设置" if language else "Quick Render Setting"
+        row.operator("chem.quick_render_set", text=text)
+
+        row = layout.row()
         text = "快捷渲染" if language else "Quick Render"
         row.operator("chem.quick_render", text=text)

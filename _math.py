@@ -177,6 +177,7 @@ def convert_symop_xyz_to_vec(string):  # eg. string = "3/4-x"
     transl_comp = 0.0 if i == -1 else float(string[max(i-2,0):i])/float(string[i+1:i+2])
     return(rotate_comp, transl_comp)
 
+
 # get symmetry operation matrices (W, w) from strings. W is the rotation part, and w is the
 # translation part.
 def symop_xyz_to_matrix(strings):    # eg. strings = "-x+y, 1/2+y, -z-1/2"
@@ -187,6 +188,7 @@ def symop_xyz_to_matrix(strings):    # eg. strings = "-x+y, 1/2+y, -z-1/2"
 # from one fract_xyz to multi equiv fracts in one cell through symmetry operations.
 def fract_symop(fract_xyz, symop_operations):
     sym_fracts = []
+    sym_rotations = []
     for symop in symop_operations:
         sym_matrix = symop_xyz_to_matrix(symop)
         npS = np.array(sym_matrix[0])
@@ -195,37 +197,91 @@ def fract_symop(fract_xyz, symop_operations):
         npB = np.matmul(npS,npA) + npT    # Applying symmetry and translation.
         npB = npB % 1.0
         sym_fracts.append(npB)
-    return sym_fracts
+        sym_rotations.append(npS)
+    return sym_fracts, sym_rotations
+
+def transform_U_aniso(u_aniso_tuple, R):
+    if u_aniso_tuple is None:
+        return None
+    U11, U22, U33, U23, U13, U12 = u_aniso_tuple
+    U_mat = np.array([
+        [U11, U12, U13],
+        [U12, U22, U23],
+        [U13, U23, U33]
+    ])
+    R = np.array(R, dtype=float)
+    U_new = R @ U_mat @ R.T
+    return (U_new[0,0], U_new[1,1], U_new[2,2],
+            U_new[1,2], U_new[0,2], U_new[0,1])
 
 def fract_symop_expand(fract_xyz, symop_operations, boundary):
-    sym_fracts = fract_symop(fract_xyz, symop_operations)
-    sym_fracts = fracts_normalize(sym_fracts, boundary)
+    sym_fracts, _ = fract_symop(fract_xyz, symop_operations)
     sym_fracts = fracts_normalize(sym_fracts, boundary)
     return sym_fracts
 
+def make_cell_matrix(cell_lengths, cell_angles):
+    a, b, c = cell_lengths
+    alpha, beta, gamma = np.radians(cell_angles)
+    v = (cos(alpha)-cos(beta)*cos(gamma)) / sin(gamma)
+    M = np.array([
+        [a, b*cos(gamma), c*cos(beta)],
+        [0, b*sin(gamma), c*v],
+        [0, 0, c*sqrt(sin(beta)**2-v**2)]
+    ])
+    M_inv = np.linalg.inv(M)
+    return M, M_inv
+
+def get_cell_lengths_angles(cell_vecs):
+        a_vec, b_vec, c_vec = np.array(cell_vecs)
+        a = np.linalg.norm(a_vec)
+        b = np.linalg.norm(b_vec)
+        c = np.linalg.norm(c_vec)
+
+        def angle(u, v):
+            dot = np.clip(np.dot(u, v) / (np.linalg.norm(u)*np.linalg.norm(v)), -1, 1)
+            return np.degrees(np.arccos(dot))
+
+        alpha = angle(b_vec, c_vec)
+        beta  = angle(a_vec, c_vec)
+        gamma = angle(a_vec, b_vec)
+        return (float(a), float(b), float(c)), (float(alpha), float(beta), float(gamma))
+
+def get_crystal_system_from_params(cell_lengths, cell_angles):
+    a, b, c = cell_lengths
+    alpha, beta, gamma = cell_angles
+    eps = 0.5
+    if abs(a-b)<eps and abs(b-c)<eps and abs(alpha-90)<eps and abs(beta-90)<eps and abs(gamma-90)<eps:
+        return "cubic"
+    if abs(a-b)<eps and abs(gamma-120)<eps:
+        return "trigonal"
+    if abs(a-b)<eps and abs(alpha-90)<eps and abs(beta-90)<eps and abs(gamma-90)<eps:
+        return "tetragonal"
+    if abs(alpha-90)<eps and abs(beta-90)<eps and abs(gamma-90)<eps:
+        return "orthorhombic"
+    if abs(alpha-90)>eps or abs(beta-90)>eps or abs(gamma-90)>eps:
+        return "monoclinic"
+    return "triclinic"
+
+def calc_cell_volume(a, b, c, alpha, beta, gamma):
+    al = np.radians(alpha)
+    be = np.radians(beta)
+    ga = np.radians(gamma)
+    vol = a*b*c * np.sqrt(
+        1 - np.cos(al)**2 - np.cos(be)**2 - np.cos(ga)**2
+        + 2*np.cos(al)*np.cos(be)*np.cos(ga)
+    )
+    return round(vol, 4)
 
 def fract_to_cartn(fract_xyz,a,b,c,alpha,beta,gamma):
-    alpha = np.deg2rad(alpha)
-    beta = np.deg2rad(beta)
-    gamma = np.deg2rad(gamma)
-    v = (cos(alpha)-cos(beta)*cos(gamma))/sin(gamma)
-    M = np.array([[a, b*cos(gamma), c*cos(beta)],
-                [0, b*sin(gamma), c*v],
-                [0, 0, c*sqrt(pow(sin(beta),2)-v*v)]])
+    M, _ = make_cell_matrix((a,b,c),(alpha,beta,gamma))
     cartn_xyz = np.matmul(M, np.array(fract_xyz))
     return cartn_xyz
 
 def cartn_to_fract(cartn_xyz,a,b,c,alpha,beta,gamma):
-    alpha = np.deg2rad(alpha)
-    beta = np.deg2rad(beta)
-    gamma = np.deg2rad(gamma)
-    v = (cos(alpha)-cos(beta)*cos(gamma))/sin(gamma)
-    M = np.array([[a, b*cos(gamma), c*cos(beta)],
-                    [0, b*sin(gamma), c*v],
-                    [0, 0, c*sqrt(pow(sin(beta),2)-v*v)]])
-    inv_M = np.linalg.inv(M)
-    fract_xyz = np.matmul(inv_M, np.array(cartn_xyz))
+    _, M_inv = make_cell_matrix((a,b,c),(alpha,beta,gamma))
+    fract_xyz = np.matmul(M_inv, np.array(cartn_xyz))
     return fract_xyz
+
 
 def fracts_normalize(sym_fracts, boundary):
     # coordinates normalization (e.g. 1.15 becomes 0.15, -0.25 becomes 0.75, etc)
@@ -245,10 +301,10 @@ def fracts_normalize(sym_fracts, boundary):
         if fract[0] <= boundary and fract[0] >= -boundary:
             new_fract = (fract[0]+1, fract[1], fract[2])
             new_sym_fracts.append(new_fract)
-        if fract[1] <= boundary and fract[0] >= -boundary:
+        if fract[1] <= boundary and fract[1] >= -boundary:
             new_fract = (fract[0], fract[1]+1, fract[2])
             new_sym_fracts.append(new_fract)
-        if fract[2] <= boundary and fract[0] >= -boundary:
+        if fract[2] <= boundary and fract[2] >= -boundary:
             new_fract = (fract[0], fract[1], fract[2]+1)
             new_sym_fracts.append(new_fract)
     
@@ -256,23 +312,18 @@ def fracts_normalize(sym_fracts, boundary):
         if fract[0] >= 1-boundary and fract[0] <= 1+boundary:
             new_fract = (fract[0]-1, fract[1], fract[2])
             new_sym_fracts.append(new_fract)
-        if fract[1] >= 1-boundary and fract[0] <= 1+boundary:
+        if fract[1] >= 1-boundary and fract[1] <= 1+boundary:
             new_fract = (fract[0], fract[1]-1, fract[2])
             new_sym_fracts.append(new_fract)
-        if fract[2] >= 1-boundary and fract[0] <= 1+boundary:
+        if fract[2] >= 1-boundary and fract[2] <= 1+boundary:
             new_fract = (fract[0], fract[1], fract[2]-1)
             new_sym_fracts.append(new_fract)
 
     sym_fracts = list(set([tuple(fract) for fract in new_sym_fracts]))
-    # print(sym_fracts)
     return sym_fracts
 
 
 def deduplicate_fracts(fracts, digits):
-    """
-    按四舍五入 + 误差范围去重
-    相同位置的原子只保留一个
-    """
     seen = set()
     unique = []
     
@@ -285,3 +336,64 @@ def deduplicate_fracts(fracts, digits):
             unique.append((float(x), float(y), float(z)))
     
     return unique
+
+
+def compute_thermal_ellipsoid(U_Aniso, U_Iso, cell_lengths, cell_angles, prob_factor=1.54):
+    scales = []
+    vec1 = []   # 第一个特征向量（主轴1）
+    vec2 = []   # 第二个特征向量（主轴2）
+    vec3 = []   # 第三个特征向量（主轴3）
+
+    if cell_angles is not None:
+        a,b,c = cell_lengths
+        M, _ = make_cell_matrix(cell_lengths, cell_angles)
+        A = M @ np.diag([1.0/a, 1.0/b, 1.0/c])
+    else:
+        A = None
+
+    for i in range(len(U_Aniso)):
+        u_aniso = U_Aniso[i]
+        u_iso = U_Iso[i]
+
+        if u_aniso is not None and len(u_aniso) >= 6:
+            U11, U22, U33, U23, U13, U12 = u_aniso[:6]
+            det_sign = u_aniso[6] if len(u_aniso) > 6 else 1
+            U_mat = np.array([
+                [U11, U12, U13],
+                [U12, U22, U23],
+                [U13, U23, U33]
+            ])
+
+            if A is not None:
+                U_cart = A @ U_mat @ A.T
+            else:
+                U_cart = U_mat
+
+            eigvals, eigvecs = np.linalg.eigh(U_cart)
+            eigvals = np.clip(eigvals, 0.0, None)
+      
+            idx = np.argsort(eigvals)[::-1]  # 降序
+            eigvals = eigvals[idx]
+            eigvecs = eigvecs[:, idx]
+
+            if det_sign < 0:
+                eigvecs = -eigvecs
+
+            scale = prob_factor * np.sqrt(eigvals)
+            v1 = eigvecs[:, 0]
+            v2 = eigvecs[:, 1]
+            v3 = eigvecs[:, 2]
+
+        else:
+            u_iso = float(u_iso) if u_iso and u_iso > 0 else 0.001
+            scale = [prob_factor * np.sqrt(u_iso)] * 3
+            v1 = np.array([1, 0, 0])
+            v2 = np.array([0, 1, 0])
+            v3 = np.array([0, 0, 1])
+
+        scales.extend(scale)
+        vec1.extend(v1)
+        vec2.extend(v2)
+        vec3.extend(v3)
+
+    return scales, vec1, vec2, vec3
