@@ -316,13 +316,11 @@ class CHEM_PT_Build(bpy.types.Panel):
         
         installed = ex_package.safe_check_rdkit()
         if installed:
-            layout.label(text="RDKit is already installed.", icon='CHECKMARK')
+            layout.label(text="RDKit is available.", icon='CHECKMARK')
         else:
-            layout.label(text="RDKit is required for ChemBlender", icon='INFO')
-            row = layout.row()
-            row.label(text="PyPI Mirror:")
-            row.prop(context.scene, "pypi_mirror", text="")
-            layout.operator("chem.install_rdkit", text="Install RDKit", icon='IMPORT')
+            layout.label(text="RDKit is unavailable.", icon='ERROR')
+            layout.label(text="Reinstall the ChemBlender extension package.")
+            layout.label(text="Check the bundled Windows Blender 5.1 wheel.")
 
 
 class CHEM_PT_TOOLS(bpy.types.Panel):

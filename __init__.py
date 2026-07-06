@@ -15,7 +15,6 @@ import os, re, json
 from . import auto_load
 from .panel import CHEM_texts, CHEM_PT_Build, CHEM_PT_TOOLS, CRYSTAL_PT_TOOLS
 from .read import CIF_Atom, CIF_Structure
-from .ex_package import PYPI_MIRROR
 from bpy.types import (
     Operator,
     Menu,
@@ -161,11 +160,6 @@ def register():
     bpy.types.Object.cif_original = bpy.props.PointerProperty(type=CIF_Structure)
     bpy.types.Object.cif_current = bpy.props.PointerProperty(type=CIF_Structure)
     bpy.types.Scene.my_tool = bpy.props.PointerProperty(type=CHEM_texts)
-    bpy.types.Scene.pypi_mirror = bpy.props.EnumProperty(
-        name="PyPI Mirror",
-        items=[(k, k, "") for k in PYPI_MIRROR.keys()],
-        default="Default"
-    )
     cat_generator()
 
 
@@ -191,7 +185,6 @@ def unregister():
         del bpy.types.Object.cif_original
         del bpy.types.Object.cif_current
         del bpy.types.Scene.my_tool
-        del bpy.types.Scene.pypi_mirror
     except:
         pass
     

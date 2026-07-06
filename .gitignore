@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+*.zip
+.pytest_cache/
+Thumbs.db
+.agents/
+skills-lock.json
