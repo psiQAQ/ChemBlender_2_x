@@ -20,6 +20,9 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(manifest["platforms"], ["windows-x64"])
         self.assertEqual(manifest["wheels"], [f"./wheels/{WHEEL}"])
         self.assertLessEqual(len(manifest["permissions"]["files"]), 64)
+        self.assertIn("network", manifest["permissions"])
+        self.assertLessEqual(len(manifest["permissions"]["network"]), 64)
+        self.assertIn("scripts/", manifest["build"]["paths_exclude_pattern"])
         self.assertTrue((EXTENSION / "__init__.py").exists())
         self.assertTrue((EXTENSION / "scripts" / "build_extension.py").exists())
 

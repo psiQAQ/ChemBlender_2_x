@@ -76,7 +76,7 @@ Create `.agents/decisions/0002-release-testing-and-pillow-scope.md` with:
 
 The active document links this plan, states the approved remote sequence, lists the current phase as repository policy cleanup, and contains no claimed future result. `docs/development/testing-and-ci.md` explains the four test layers and exact local commands.
 
-- [ ] **Step 6: Verify routing and commit**
+- [x] **Step 6: Verify routing and commit**
 
 Run:
 
@@ -103,7 +103,7 @@ Expected: the stale search has no matches, current routing has matches, and the 
 - Consumes: source calls to `requests.get`, current build script location, and manifest parser.
 - Produces: declared network permission and a package that excludes development scripts.
 
-- [ ] **Step 1: Add failing manifest contract assertions**
+- [x] **Step 1: Add failing manifest contract assertions**
 
 In `test_extension_layout_and_manifest`, add:
 
@@ -113,7 +113,7 @@ self.assertLessEqual(len(manifest["permissions"]["network"]), 64)
 self.assertIn("scripts/", manifest["build"]["paths_exclude_pattern"])
 ```
 
-- [ ] **Step 2: Run RED test**
+- [x] **Step 2: Run RED test**
 
 Run:
 
@@ -123,7 +123,7 @@ Run:
 
 Expected: FAIL because `network` and `scripts/` are absent.
 
-- [ ] **Step 3: Apply the minimal manifest fix**
+- [x] **Step 3: Apply the minimal manifest fix**
 
 Set:
 
@@ -143,7 +143,7 @@ paths_exclude_pattern = [
 
 Document that network access supports explicit data-download features and is unrelated to dependency installation.
 
-- [ ] **Step 4: Run GREEN tests and native build**
+- [x] **Step 4: Run GREEN tests and native build**
 
 Run:
 

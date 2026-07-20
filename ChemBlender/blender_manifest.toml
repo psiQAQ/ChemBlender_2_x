@@ -13,10 +13,12 @@ wheels = ["./wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl"]
 
 [permissions]
 files = "Import molecular and crystal structure files selected by users"
+network = "Download molecular and scaffold data requested by users"
 
 [build]
 paths_exclude_pattern = [
   "__pycache__/",
   "*.zip",
+  "scripts/",
   "tests/",
 ]
