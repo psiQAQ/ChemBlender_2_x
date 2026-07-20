@@ -59,12 +59,22 @@ class RepositoryContractTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "extension-package.yml").read_text(
             encoding="utf-8"
         )
+        for action in (
+            "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+        ):
+            self.assertIn(action, workflow)
+        self.assertIn("permissions:", workflow)
+        self.assertIn("contents: read", workflow)
+        self.assertIn("timeout-minutes:", workflow)
+        self.assertIn("BLENDER_USER_RESOURCES", workflow)
+        self.assertIn("chemblender-2.2.0.sha256", workflow)
         self.assertIn("if: github.ref_type == 'tag'", workflow)
         self.assertIn("GITHUB_REF_NAME.TrimStart('v')", workflow)
         self.assertIn("Tag $tagVersion does not match manifest $manifestVersion", workflow)
         self.assertIn("blender-5.1.2.sha256", workflow)
         self.assertIn("f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48", workflow)
-        self.assertIn("actions/upload-artifact@v4", workflow)
 
     def test_blender_smoke_covers_release_artifact(self):
         smoke = (ROOT / "tests" / "blender_smoke.py").read_text(encoding="utf-8")

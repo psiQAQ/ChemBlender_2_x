@@ -266,7 +266,7 @@ Expected: package audit, RDKit operation, both blend libraries, lifecycle, and c
 - Consumes: explicit `git clean -ndX` evidence.
 - Produces: focused local workspace while retaining the verified ignored RDKit wheel.
 
-- [ ] **Step 1: Preview ignored targets**
+- [x] **Step 1: Preview ignored targets**
 
 Run:
 
@@ -276,7 +276,7 @@ git clean -ndX
 
 Expected targets include caches, `.blend-analysis/`, generated extension ZIP, and obsolete root `chemblender-2.1.0.zip`.
 
-- [ ] **Step 2: Resolve and remove only approved targets**
+- [x] **Step 2: Resolve and remove only approved targets**
 
 Verify every resolved path remains under `D:\workspace\ChemBlender_2_x`, then remove:
 
@@ -292,7 +292,7 @@ tests/__pycache__/
 
 Retain `ChemBlender/wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl` until all local install gates finish.
 
-- [ ] **Step 3: Verify tracked state is unchanged**
+- [x] **Step 3: Verify tracked state is unchanged**
 
 Run:
 
@@ -311,12 +311,13 @@ Expected: clean tracked state and no prohibited tracked artifact.
 - Modify: `.github/workflows/extension-package.yml`
 - Modify: `tests/test_repository_contract.py`
 - Modify: `docs/development/testing-and-ci.md`
+- Modify: `.gitignore`
 
 **Interfaces:**
 - Consumes: pinned official download URLs and the same local test/build/smoke commands.
 - Produces: a least-privilege Windows CI job and uploaded verified package/checksum.
 
-- [ ] **Step 1: Add failing workflow contract assertions**
+- [x] **Step 1: Add failing workflow contract assertions**
 
 Require these exact action pins:
 
@@ -328,7 +329,7 @@ actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
 
 Also require `permissions:`, `contents: read`, `timeout-minutes:`, `BLENDER_USER_RESOURCES`, and `chemblender-2.2.0.sha256`.
 
-- [ ] **Step 2: Run RED workflow contract**
+- [x] **Step 2: Run RED workflow contract**
 
 Run:
 
@@ -338,7 +339,7 @@ Run:
 
 Expected: FAIL because the workflow still uses mutable major tags and lacks the isolated profile/checksum record.
 
-- [ ] **Step 3: Apply minimal workflow hardening**
+- [x] **Step 3: Apply minimal workflow hardening**
 
 Update the workflow to:
 
@@ -348,15 +349,16 @@ Update the workflow to:
 - keep PR, `main`, and `v*` triggers;
 - create `$env:BLENDER_USER_RESOURCES` under `$env:RUNNER_TEMP` before smoke;
 - generate `ChemBlender/chemblender-2.2.0.sha256` with .NET UTF-8 without BOM;
+- ignore the generated checksum record locally;
 - upload the ZIP and checksum with `retention-days: 14`.
 
 Do not add cache, matrix, pytest, coverage, or automatic release publication.
 
-- [ ] **Step 4: Run GREEN contracts and local workflow equivalent**
+- [x] **Step 4: Run GREEN contracts and local workflow equivalent**
 
 Run all commands from Task 6 below once. Update `docs/development/testing-and-ci.md` with the exact CI/local equivalence and the fact that GitHub Actions is authoritative.
 
-- [ ] **Step 5: Commit workflow hardening**
+- [x] **Step 5: Commit workflow hardening**
 
 Run:
 
@@ -379,11 +381,11 @@ Expected: commit succeeds without generated artifacts.
 - Consumes: clean tracked tree, ignored RDKit wheel, Blender 5.1.2 executable and bundled Python.
 - Produces: local package SHA-256, isolated install evidence, and enabled real `user_default` installation.
 
-- [ ] **Step 1: Re-query Blender MCP runtime facts**
+- [x] **Step 1: Re-query Blender MCP runtime facts**
 
 Run `blender-mcp --help`, then query Blender version, executable, system, extension repositories, active file, and dirty state. Require Blender 5.1.2 on Windows and `user_default` enabled.
 
-- [ ] **Step 2: Restore and verify the pinned wheel if absent**
+- [x] **Step 2: Restore and verify the pinned wheel if absent**
 
 Download the exact URL in `.agents/reference/dependencies-and-release.md` only when the ignored wheel is absent. Require SHA-256:
 
@@ -391,7 +393,7 @@ Download the exact URL in `.agents/reference/dependencies-and-release.md` only w
 f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48
 ```
 
-- [ ] **Step 3: Run the full local equivalent pipeline**
+- [x] **Step 3: Run the full local equivalent pipeline**
 
 Run:
 
@@ -409,7 +411,7 @@ git diff --check
 
 Expected: every command exits zero. Existing regex escape warnings are recorded but do not hide a failed command.
 
-- [ ] **Step 4: Audit and hash the package**
+- [x] **Step 4: Audit and hash the package**
 
 Use stdlib `zipfile` to print sorted entries and verify the contract. Record package size and SHA-256 in `.agents/cache/release-evidence.json`, which remains ignored.
 

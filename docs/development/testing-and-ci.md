@@ -39,6 +39,6 @@ This proves that an existing user extension or shared `.local` directory did not
 
 Reinstall the same package into the real `user_default` repository from a fresh Blender process. Do not close an interactive Blender automatically; save work and close it before replacing loaded wheel DLLs.
 
-GitHub Actions repeats the local sequence on `windows-latest`, downloads Blender and RDKit from pinned sources, verifies their checksums, and uploads the tested package. The draft pull request run is authoritative; a local equivalent run alone is not CI proof.
+GitHub Actions repeats the local sequence on `windows-latest` with a temporary `BLENDER_USER_RESOURCES`, downloads Blender and RDKit from pinned sources, and verifies their checksums. It uploads the tested ZIP together with `chemblender-2.2.0.sha256`; action implementations are pinned to full commit SHAs and the job has read-only repository access. The draft pull request run is authoritative; a local equivalent run alone is not CI proof.
 
 Pillow is outside the 2.2.0 package while no extension code imports PIL or uses Pillow-dependent RDKit behavior. Any such feature must update the dependency decision, manifest, and CI together.

@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 *.zip
+ChemBlender/*.sha256
 .pytest_cache/
 .blend-analysis/
 Thumbs.db
