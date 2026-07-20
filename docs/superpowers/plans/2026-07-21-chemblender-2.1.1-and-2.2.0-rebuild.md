@@ -451,16 +451,6 @@ class RepositoryContractTests(unittest.TestCase):
         ).stdout.strip()
         self.assertEqual(tracked, "")
 
-    def test_runtime_source_has_no_package_install(self):
-        source = "\n".join(
-            path.read_text(encoding="utf-8")
-            for path in EXTENSION.rglob("*.py")
-            if "scripts" not in path.parts
-        ).lower()
-        self.assertNotIn("pip install", source)
-        self.assertNotIn('"-m", "pip"', source)
-
-
 if __name__ == "__main__":
     unittest.main()
 ```
@@ -581,6 +571,15 @@ Expected: all three tests pass; the actual Blender validator is intentionally de
 Extend `tests/test_repository_contract.py`:
 
 ```python
+    def test_runtime_source_has_no_package_install(self):
+        source = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in EXTENSION.rglob("*.py")
+            if "scripts" not in path.parts
+        ).lower()
+        self.assertNotIn("pip install", source)
+        self.assertNotIn('"-m", "pip"', source)
+
     def test_extension_uses_minimal_autoload_entrypoint(self):
         init_source = (EXTENSION / "__init__.py").read_text(encoding="utf-8")
         auto_load_source = (EXTENSION / "auto_load.py").read_text(encoding="utf-8")

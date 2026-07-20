@@ -1,0 +1,22 @@
+schema_version = "1.0.0"
+id = "chemblender"
+version = "2.2.0"
+name = "ChemBlender"
+tagline = "Molecular and crystal structure tools for Geometry Nodes"
+maintainer = "LiHaodong"
+type = "add-on"
+website = "https://www.chemblender.com"
+blender_version_min = "5.1.0"
+license = ["SPDX:GPL-3.0-or-later"]
+platforms = ["windows-x64"]
+wheels = ["./wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl"]
+
+[permissions]
+files = "Import molecular and crystal structure files selected by the user"
+
+[build]
+paths_exclude_pattern = [
+  "__pycache__/",
+  "*.zip",
+  "tests/",
+]
