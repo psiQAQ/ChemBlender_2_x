@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "blender-mcp-skills": {
+      "source": "psiQAQ/blender_mcp-setup-guide",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/blender-mcp-skills/SKILL.md",
+      "computedHash": "1543b78137f3cb9e4b004782e20407b8051f60c118503d11c3d6296aeca8d112"
+    }
+  }
+}
