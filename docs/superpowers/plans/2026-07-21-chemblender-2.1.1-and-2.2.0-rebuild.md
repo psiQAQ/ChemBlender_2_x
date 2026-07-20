@@ -84,7 +84,7 @@ git status --short --branch
 git ls-tree --name-only HEAD
 ```
 
-Expected: branch is `release/2.1.1`; no manifest, tests, wheels, `docs/`, or `.agents/` are tracked.
+Expected: branch is `release/2.1.1`; no manifest, tests, wheels, `docs/`, or `.agents/` are tracked. Local skills, wheel, build, or analysis files may remain untracked because the 2.1.0 baseline has no `.gitignore`; never stage them into 2.1.1.
 
 ---
 
@@ -124,7 +124,8 @@ $changedFiles = @(git diff --name-only)
 $expectedFiles = @('__init__.py', 'Chem_Nodes.blend', 'Chem_Nodes_En.blend')
 if (Compare-Object $expectedFiles $changedFiles) { throw 'Unexpected 2.1.1 files' }
 if (Test-Path -LiteralPath 'blender_manifest.toml') { throw '2.1.1 must remain a legacy add-on' }
-if (Test-Path -LiteralPath 'wheels') { throw '2.1.1 must not contain wheels' }
+$trackedReleaseFiles = @(git ls-files)
+if ($trackedReleaseFiles -match '^wheels/' -or $trackedReleaseFiles -match '^\.agents/' -or $trackedReleaseFiles -match '^docs/') { throw '2.1.1 contains development-only files' }
 ```
 
 Expected: no output and exit `0`.
