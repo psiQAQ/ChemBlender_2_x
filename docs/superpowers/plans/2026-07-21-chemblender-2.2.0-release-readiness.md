@@ -510,7 +510,7 @@ No correction was required: the first PR workflow run passed.
 
 Move the active summary to completed form with the PR URL, workflow run URL/ID, tested commit, package checksum, local and CI results, warnings, and remaining Windows-only limitation. Update the developer guide with any command correction discovered in CI.
 
-- [ ] **Step 2: Commit and push the evidence**
+- [x] **Step 2: Commit and push the evidence**
 
 Run:
 
@@ -523,7 +523,7 @@ git push origin feat/2.2.0-extension
 
 Wait for the new PR-head Actions run and require it to pass.
 
-- [ ] **Step 3: Verify replacement refs before local branch deletion**
+- [x] **Step 3: Verify replacement refs before local branch deletion**
 
 Require remote `archive/extension-spike-20260707`, `main`, and `v2.1.1` to match the intended commits. Then delete only duplicate local names:
 
@@ -534,13 +534,17 @@ git branch -d release/2.1.1
 
 Keep `archive/extension-spike-20260707`, `main`, and `feat/2.2.0-extension`.
 
-- [ ] **Step 4: Final audit**
+Execution correction: safe `-d` rejected the snapshot name because `24520d9` is not an ancestor of the feature branch. Before using `-D`, verification proved the local snapshot, local archive, and remote archive all pointed to `24520d9`, with `0/0` divergence and no unique commits. Only the redundant local name was removed; the remote snapshot remains.
+
+- [x] **Step 4: Final audit**
 
 Run repository contracts, native validate/build, isolated Blender smoke, Git ancestry/ref audit, PR checks, package artifact audit, `git diff --check`, and `git status --short --branch` one final time.
 
 Expected: all local and remote checks pass, current feature branch is clean, and no wheel/ZIP/cache is tracked.
 
-- [ ] **Step 5: Report excluded actions**
+PowerShell correction: `git merge-base --is-ancestor` reports success through `$LASTEXITCODE`, not stdout. The final audit checks the exit code explicitly and confirmed merge-base `2b72abf9e0e1f987014c8a95193bed06cc8dd988`.
+
+- [x] **Step 5: Report excluded actions**
 
 Report without performing:
 
