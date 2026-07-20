@@ -1,7 +1,7 @@
 bl_info = {
     "name" : "ChemBlender",
     "author" : "LiHaodong",
-    "version" : (2, 1, 0),
+    "version" : (2, 1, 1),
     "blender" : (5, 1, 0),
     "location" : "Geometry Nodes Editor > Add > Chem",
     "description" : "Professional Modeling and Visualization of Molecular and Crystal Structures for Scientists and Artiests.",
