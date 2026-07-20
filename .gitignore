@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 *.zip
 .pytest_cache/
+.blend-analysis/
 Thumbs.db
 .agents/
 skills-lock.json
