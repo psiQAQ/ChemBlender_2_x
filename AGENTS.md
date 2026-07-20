@@ -88,6 +88,14 @@ Do not infer current status from this file, completed work, archived evidence, o
 - A ZIP existing, a manifest parsing, or CI being green is not sufficient by itself; inspect package contents and runtime behavior.
 - Run `git diff --check` and confirm the final worktree before claiming completion.
 
+## Release Testing Policy
+
+- Keep release contracts on Python's standard library until pytest features are demonstrably needed.
+- A release gate includes repository contracts, native extension validate/build, ZIP-content audit, isolated Blender install, real `user_default` install, and an actual GitHub Actions run.
+- Use a temporary `BLENDER_USER_RESOURCES` directory for isolated runtime tests so an existing extension installation cannot satisfy missing dependencies.
+- Manifest permissions must describe actual runtime file and network behavior; network access is never used for package installation.
+- Pin GitHub-owned actions to reviewed full commit SHAs, not mutable version tags.
+
 ## Documentation and Agent Memory
 
 - Update docs only for features, architecture, installation, release flow, or explicit requests.
@@ -104,8 +112,9 @@ Do not infer current status from this file, completed work, archived evidence, o
 
 ## Knowledge Entrypoints
 
-- Current extension migration: `.agents/active/2.2.0-extension.md`
+- Current release readiness: `.agents/active/2.2.0-release-readiness.md`
 - Branch architecture: `.agents/reference/branch-architecture.md`
 - Dependency and release policy: `.agents/reference/dependencies-and-release.md`
 - Version roadmap decision: `.agents/decisions/0001-version-and-extension-roadmap.md`
+- Release testing decision: `.agents/decisions/0002-release-testing-and-pillow-scope.md`
 - Completed 2.1 history: `.agents/completed/2.1.0-import-and-2.1.1-slimming.md`

@@ -35,7 +35,7 @@
 - Consumes: approved release-readiness design and current completed migration record.
 - Produces: conspicuous stable rules plus a current task authority pointing to this plan.
 
-- [ ] **Step 1: Prove the current routing is stale**
+- [x] **Step 1: Prove the current routing is stale**
 
 Run:
 
@@ -46,7 +46,7 @@ Test-Path '.agents/active/2.2.0-extension.md'
 
 Expected: both indexes reference the path and `Test-Path` returns `False`.
 
-- [ ] **Step 2: Update the stable rules**
+- [x] **Step 2: Update the stable rules**
 
 Add a concise `Release Testing Policy` section to `AGENTS.md` requiring:
 
@@ -58,11 +58,11 @@ Add a concise `Release Testing Policy` section to `AGENTS.md` requiring:
 
 Replace the stale current-task entry with `.agents/active/2.2.0-release-readiness.md`.
 
-- [ ] **Step 3: Update Agent routing and stable dependency policy**
+- [x] **Step 3: Update Agent routing and stable dependency policy**
 
 Update `.agents/README.md` to index the new active task and completed migration. Update `.agents/reference/dependencies-and-release.md` with the same release gates, Pillow deferral boundary, isolated-profile rule, and real-CI requirement.
 
-- [ ] **Step 4: Record the dependency/testing decision**
+- [x] **Step 4: Record the dependency/testing decision**
 
 Create `.agents/decisions/0002-release-testing-and-pillow-scope.md` with:
 
@@ -72,7 +72,7 @@ Create `.agents/decisions/0002-release-testing-and-pillow-scope.md` with:
 - Blender's bundled NumPy and Requests are verified only from an isolated user resource root;
 - network permission describes molecular/scaffold downloads and never runtime package installation.
 
-- [ ] **Step 5: Create current task authority and developer guide**
+- [x] **Step 5: Create current task authority and developer guide**
 
 The active document links this plan, states the approved remote sequence, lists the current phase as repository policy cleanup, and contains no claimed future result. `docs/development/testing-and-ci.md` explains the four test layers and exact local commands.
 
