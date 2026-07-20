@@ -19,6 +19,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(manifest["blender_version_min"], "5.1.0")
         self.assertEqual(manifest["platforms"], ["windows-x64"])
         self.assertEqual(manifest["wheels"], [f"./wheels/{WHEEL}"])
+        self.assertLessEqual(len(manifest["permissions"]["files"]), 64)
         self.assertTrue((EXTENSION / "__init__.py").exists())
         self.assertTrue((EXTENSION / "scripts" / "build_extension.py").exists())
 
@@ -50,6 +51,17 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("auto_load.unregister()", init_source)
         self.assertIn('"wheels"', auto_load_source)
         self.assertIn("clear_submodule_cache", auto_load_source)
+
+    def test_package_workflow_pins_and_verifies_release_inputs(self):
+        workflow = (ROOT / ".github" / "workflows" / "extension-package.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("if: github.ref_type == 'tag'", workflow)
+        self.assertIn("GITHUB_REF_NAME.TrimStart('v')", workflow)
+        self.assertIn("Tag $tagVersion does not match manifest $manifestVersion", workflow)
+        self.assertIn("blender-5.1.2.sha256", workflow)
+        self.assertIn("f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48", workflow)
+        self.assertIn("actions/upload-artifact@v4", workflow)
 
 if __name__ == "__main__":
     unittest.main()

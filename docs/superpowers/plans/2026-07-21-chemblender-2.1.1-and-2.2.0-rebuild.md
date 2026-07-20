@@ -771,7 +771,7 @@ Query Blender MCP for version, executable, Python executable, runtime system, an
 if (-not $blenderBin) { throw 'Assign binary_path returned by Blender MCP to $blenderBin' }
 if (-not $pythonBin) { throw 'Assign binary_path_python returned by Blender MCP to $pythonBin' }
 & $pythonBin ChemBlender/scripts/validate_extension.py --source-path ChemBlender --blender $blenderBin
-& $pythonBin ChemBlender/scripts/build_extension.py --blender $blenderBin
+& $pythonBin ChemBlender/scripts/build_extension.py --python $pythonBin --blender $blenderBin
 ```
 
 Expected: local preflight, Blender extension validation, and build all pass; generated ZIP is outside Git tracking.
@@ -840,7 +840,7 @@ jobs:
         run: |
           $blender = (Get-ChildItem "blender" -Recurse -Filter "blender.exe" | Select-Object -First 1).FullName
           python -m unittest discover -s tests -p "test_*.py" -v
-          python ChemBlender/scripts/build_extension.py --blender $blender
+          python ChemBlender/scripts/build_extension.py --python python --blender $blender
           $package = (Get-ChildItem "ChemBlender" -Filter "chemblender-2.2.0.zip" | Select-Object -First 1).FullName
           & $blender --background --factory-startup --python tests/blender_smoke.py -- $package
       - uses: actions/upload-artifact@v4
@@ -896,7 +896,7 @@ if (-not $blenderBin) { throw 'Assign binary_path returned by Blender MCP to $bl
 if (-not $pythonBin) { throw 'Assign binary_path_python returned by Blender MCP to $pythonBin' }
 & $pythonBin -m unittest discover -s tests -p 'test_*.py' -v
 & $pythonBin ChemBlender/scripts/validate_extension.py --source-path ChemBlender --blender $blenderBin
-& $pythonBin ChemBlender/scripts/build_extension.py --blender $blenderBin
+& $pythonBin ChemBlender/scripts/build_extension.py --python $pythonBin --blender $blenderBin
 $package = Get-ChildItem -Path 'ChemBlender' -Filter 'chemblender-2.2.0.zip' -File | Select-Object -First 1
 & $blenderBin --background --factory-startup --python tests/blender_smoke.py -- $package.FullName
 git diff --check

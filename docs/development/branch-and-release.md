@@ -24,6 +24,8 @@ The maintained fork may diverge for extension packaging and CI. This does not pr
 4. Create the local annotated tag.
 5. Request explicit approval before pushing branches/tags or creating a GitHub release.
 
+For 2.2.0, `.github/workflows/extension-package.yml` downloads the pinned RDKit wheel and Blender 5.1.2, verifies both checksums, builds the extension, runs the Blender lifecycle smoke test, and uploads the ZIP. The wheel remains untracked.
+
 ## Current Version Boundary
 
 - 2.1.1: final legacy add-on; asset compression only.

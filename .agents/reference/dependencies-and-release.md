@@ -30,7 +30,7 @@ The wheel is downloaded to `ChemBlender/wheels/`, verified before build, declare
 2. Query Blender version, executable, Python, system, and extension repositories through MCP.
 3. Download and verify the RDKit wheel.
 4. Run `ChemBlender/scripts/validate_extension.py` with the MCP-discovered Blender executable.
-5. Run `ChemBlender/scripts/build_extension.py`.
+5. Run `ChemBlender/scripts/build_extension.py --python <Blender Python> --blender <Blender executable>`.
 6. Install the ZIP into `user_default` through `bpy.ops.extensions.package_install_files`.
 7. Verify module key, RDKit import, properties, `.blend` assets, and two disable/enable cycles.
 
@@ -41,3 +41,5 @@ The wheel is downloaded to `ChemBlender/wheels/`, verified before build, declare
 - Built ZIP contains the declared wheel; Git contains no `.whl`.
 - Unit, validate, build, install, register, unregister, and reload checks pass.
 - Publishing, pushing, PR creation, and release creation require explicit authorization.
+
+On Windows, overwriting an already loaded extension may warn that old wheel DLLs cannot be removed. Use a fresh Blender process for release validation; clean CI runners do not have the previous installation.
