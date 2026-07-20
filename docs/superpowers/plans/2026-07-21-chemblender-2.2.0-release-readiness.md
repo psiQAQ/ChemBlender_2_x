@@ -415,7 +415,7 @@ Expected: every command exits zero. Existing regex escape warnings are recorded 
 
 Use stdlib `zipfile` to print sorted entries and verify the contract. Record package size and SHA-256 in `.agents/cache/release-evidence.json`, which remains ignored.
 
-- [ ] **Step 5: Reinstall into the real user repository**
+- [x] **Step 5: Reinstall into the real user repository**
 
 If the connected Blender is dirty or has loaded ChemBlender/RDKit DLLs, ask the user to save and close Blender. Once no interactive Blender process is using the package, run a fresh default-profile background Blender process:
 
@@ -425,7 +425,7 @@ If the connected Blender is dirty or has loaded ChemBlender/RDKit DLLs, ask the 
 
 Then reconnect/query Blender and verify `bl_ext.user_default.chemblender`, three registered properties, installed path, RDKit operation, and both `.blend` files.
 
-- [ ] **Step 6: Confirm commit and artifact state**
+- [x] **Step 6: Confirm commit and artifact state**
 
 Run:
 
