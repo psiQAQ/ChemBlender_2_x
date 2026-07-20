@@ -66,5 +66,16 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48", workflow)
         self.assertIn("actions/upload-artifact@v4", workflow)
 
+    def test_blender_smoke_covers_release_artifact(self):
+        smoke = (ROOT / "tests" / "blender_smoke.py").read_text(encoding="utf-8")
+        for expected in (
+            "ZipFile",
+            "Chem_Nodes.blend",
+            "Chem_Nodes_En.blend",
+            "EmbedMolecule",
+            "--keep-enabled",
+        ):
+            self.assertIn(expected, smoke)
+
 if __name__ == "__main__":
     unittest.main()

@@ -155,7 +155,7 @@ Run:
 
 Expected: contracts, validate, and build pass.
 
-- [ ] **Step 5: Verify scripts are absent from the ZIP and commit**
+- [x] **Step 5: Verify scripts are absent from the ZIP and commit**
 
 Run:
 
@@ -180,7 +180,9 @@ Expected: ZIP assertion and commit pass.
 - Consumes: one built extension ZIP passed after `--` and optional `--keep-enabled`.
 - Produces: package audit, installed asset/RDKit verification, and either clean disable or a persistent verified installation.
 
-- [ ] **Step 1: Add a package-content assertion**
+**Execution correction:** Run Step 5 before Steps 1-4 to establish the required RED contract before changing the smoke implementation.
+
+- [x] **Step 1: Add a package-content assertion**
 
 Add a helper using `zipfile.ZipFile` that requires:
 
@@ -197,7 +199,7 @@ forbidden_prefixes = ("scripts/", "tests/", "__pycache__/")
 
 It also rejects nested `.zip` entries and requires exactly one `.whl`.
 
-- [ ] **Step 2: Verify representative RDKit compiled functionality**
+- [x] **Step 2: Verify representative RDKit compiled functionality**
 
 After installation, run:
 
@@ -209,7 +211,7 @@ mol = Chem.AddHs(Chem.MolFromSmiles("CCO"))
 assert AllChem.EmbedMolecule(mol, randomSeed=0xC0FFEE) == 0
 ```
 
-- [ ] **Step 3: Verify installed blend libraries**
+- [x] **Step 3: Verify installed blend libraries**
 
 Resolve the installed extension root with `importlib.util.find_spec(module_key)`. For each installed library, inspect `data_from.node_groups` through `bpy.data.libraries.load` without assigning any datablocks:
 
@@ -222,7 +224,7 @@ expected_node_groups = {
 
 Assert the installed files exist and counts match.
 
-- [ ] **Step 4: Add real-install mode**
+- [x] **Step 4: Add real-install mode**
 
 Accept either:
 
@@ -233,11 +235,11 @@ tests/blender_smoke.py -- package.zip --keep-enabled
 
 The default path retains two disable/enable cycles and a final disable. `--keep-enabled` performs the same assertions but leaves the verified extension enabled for the real user repository.
 
-- [ ] **Step 5: Strengthen the repository contract for the smoke script**
+- [x] **Step 5: Strengthen the repository contract for the smoke script**
 
 Assert the smoke source contains the two expected blend filenames, `EmbedMolecule`, package-content audit, and `--keep-enabled`.
 
-- [ ] **Step 6: Run isolated Blender smoke and commit**
+- [x] **Step 6: Run isolated Blender smoke and commit**
 
 Run:
 
