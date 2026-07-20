@@ -16,13 +16,13 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [2.2.0-release-readiness.md](active/2.2.0-release-readiness.md) | Current repository cleanup, install, and CI authority |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
 | decision | [0002-release-testing-and-pillow-scope.md](decisions/0002-release-testing-and-pillow-scope.md) | Release test runner, Pillow scope, and clean-profile rationale |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
+| completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Release package, real install, draft PR, and CI evidence |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.
 

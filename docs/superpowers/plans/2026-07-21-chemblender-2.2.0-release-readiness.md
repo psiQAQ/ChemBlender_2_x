@@ -446,7 +446,7 @@ Expected: clean tracked tree and only ignored local release artifacts.
 - Consumes: locally verified commits and user-approved remote strategy A.
 - Produces: durable 2.1.1 baseline/archive, feature branch, draft PR, and GitHub Actions run.
 
-- [ ] **Step 1: Verify exact push refs**
+- [x] **Step 1: Verify exact push refs**
 
 Require:
 
@@ -457,7 +457,7 @@ archive/extension-spike-20260707 -> 24520d991ba17c81db93afa888809c27574a3875
 feat/2.2.0-extension -> current verified HEAD
 ```
 
-- [ ] **Step 2: Push the maintained baseline and archive**
+- [x] **Step 2: Push the maintained baseline and archive**
 
 Run:
 
@@ -469,7 +469,7 @@ git push origin archive/extension-spike-20260707
 
 Do not push `release/2.1.1` or overwrite `snapshot/20260707-current-state`.
 
-- [ ] **Step 3: Push the feature branch**
+- [x] **Step 3: Push the feature branch**
 
 Run:
 
@@ -477,17 +477,19 @@ Run:
 git push -u origin feat/2.2.0-extension
 ```
 
-- [ ] **Step 4: Create a draft pull request**
+- [x] **Step 4: Create a draft pull request**
 
 Create a draft PR into `psiQAQ/ChemBlender_2_x:main` summarizing the 2.2.0 extension layout, offline RDKit wheel policy, release tests, Windows limitation, and local evidence. Do not include memory citations or claim CI is green before the run completes.
 
-- [ ] **Step 5: Wait for and inspect Actions**
+- [x] **Step 5: Wait for and inspect Actions**
 
 Use `gh pr checks --watch` or bounded `gh run watch`. Inspect failed logs rather than rerunning blindly. Download the successful artifact into ignored `.agents/cache/ci-artifact/` and audit the ZIP entries.
 
-- [ ] **Step 6: Correct reproduced CI failures**
+- [x] **Step 6: Correct reproduced CI failures**
 
 For each failure, update this plan with the observed cause, write the narrowest regression check, fix the root cause, rerun local gates, commit, push the feature branch, and wait for the replacement run. Stop only for unavailable GitHub permissions/service or another user-only blocker.
+
+No correction was required: the first PR workflow run passed.
 
 ---
 
@@ -504,7 +506,7 @@ For each failure, update this plan with the observed cause, write the narrowest 
 - Consumes: successful PR check URL, run ID, artifact name, package SHA-256, and verified remote refs.
 - Produces: durable completion evidence and a minimal local branch set.
 
-- [ ] **Step 1: Record authoritative CI evidence**
+- [x] **Step 1: Record authoritative CI evidence**
 
 Move the active summary to completed form with the PR URL, workflow run URL/ID, tested commit, package checksum, local and CI results, warnings, and remaining Windows-only limitation. Update the developer guide with any command correction discovered in CI.
 

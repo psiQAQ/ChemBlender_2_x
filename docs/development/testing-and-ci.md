@@ -41,4 +41,6 @@ Reinstall the same package into the real `user_default` repository from a fresh 
 
 GitHub Actions repeats the local sequence on `windows-latest` with a temporary `BLENDER_USER_RESOURCES`, downloads Blender and RDKit from pinned sources, and verifies their checksums. It uploads the tested ZIP together with `chemblender-2.2.0.sha256`; action implementations are pinned to full commit SHAs and the job has read-only repository access. The draft pull request run is authoritative; a local equivalent run alone is not CI proof.
 
+Audit the downloaded ZIP against its adjacent checksum record. Local and CI archive hashes may differ because ZIP metadata is regenerated; compare package contents and use the CI checksum as the authority for that workflow artifact.
+
 Pillow is outside the 2.2.0 package while no extension code imports PIL or uses Pillow-dependent RDKit behavior. Any such feature must update the dependency decision, manifest, and CI together.

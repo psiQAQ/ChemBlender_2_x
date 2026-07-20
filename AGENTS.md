@@ -112,7 +112,7 @@ Do not infer current status from this file, completed work, archived evidence, o
 
 ## Knowledge Entrypoints
 
-- Current release readiness: `.agents/active/2.2.0-release-readiness.md`
+- Latest release readiness evidence: `.agents/completed/2.2.0-release-readiness.md`
 - Branch architecture: `.agents/reference/branch-architecture.md`
 - Dependency and release policy: `.agents/reference/dependencies-and-release.md`
 - Version roadmap decision: `.agents/decisions/0001-version-and-extension-roadmap.md`
