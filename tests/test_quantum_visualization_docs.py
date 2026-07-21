@@ -20,7 +20,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for phase in range(5):
             self.assertIn(f"Phase {phase}", roadmap)
 
-    def test_foundation_plans_have_required_sections(self):
+    def test_topic_plans_have_required_sections(self):
         required = (
             "## 范围",
             "## 非目标",
@@ -33,6 +33,9 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for relative_path in (
             "docs/quantum-visualization/plans/semantic-core.md",
             "docs/quantum-visualization/plans/readers-and-formats.md",
+            "docs/quantum-visualization/plans/wavefunction-and-grids.md",
+            "docs/quantum-visualization/plans/blender-visualization.md",
+            "docs/quantum-visualization/plans/periodic-electronic-structure.md",
         ):
             text = self.read_doc(relative_path)
             for heading in required:
