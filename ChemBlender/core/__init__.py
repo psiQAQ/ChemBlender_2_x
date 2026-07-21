@@ -22,6 +22,7 @@ from .readers import (
     SniffMatch,
     SniffResult,
 )
+from .xyz import XYZ_READER, parse_xyz, sniff_xyz
 
 __all__ = [
     "AmbiguousReaderError",
@@ -44,4 +45,7 @@ __all__ = [
     "SniffMatch",
     "SniffResult",
     "Structure",
+    "XYZ_READER",
+    "parse_xyz",
+    "sniff_xyz",
 ]
