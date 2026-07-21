@@ -13,11 +13,19 @@ from .model import (
     QCProject,
     Structure,
 )
+from .readers import (
+    CapabilitySupport,
+    ReaderDescriptor,
+    ReaderRegistry,
+    SniffMatch,
+    SniffResult,
+)
 
 __all__ = [
     "ArrayData",
     "CalculationRecord",
     "CalculationStatus",
+    "CapabilitySupport",
     "DatasetStatus",
     "Grid3D",
     "ImportBatch",
@@ -27,5 +35,9 @@ __all__ = [
     "PropertyDataset",
     "ProvenanceRecord",
     "QCProject",
+    "ReaderDescriptor",
+    "ReaderRegistry",
+    "SniffMatch",
+    "SniffResult",
     "Structure",
 ]
