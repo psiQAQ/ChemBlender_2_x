@@ -43,4 +43,3 @@
 - Molden 轨道选择和适应性网格进入实现时审阅 Molecular Blender。
 - 体数据表面着色进入实现时审阅 Beautiful Atoms。
 - 后端基准启动时才固定 ORBKIT 或 GBasis/Grid commit；GPU 需求得到证据后再审阅 CuGBasis。
-

@@ -42,4 +42,3 @@
 - 轨迹、session、选择和整数标签编码进入实施时审阅 Molecular Nodes。
 - ASE/周期结构映射和 volume 着色进入实施时审阅 Beautiful Atoms。
 - Avogadro/CJSON 只在交换或 UI 工作流进入 P1 时审阅；不为界面灵感提前拉取仓库。
-

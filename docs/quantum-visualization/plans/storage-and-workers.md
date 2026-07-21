@@ -43,4 +43,3 @@
 - 轨迹边车、frame manager 和 session 恢复进入实现时审阅 Molecular Nodes。
 - 大型数组进入 benchmark 时审阅 Zarr/HDF5 官方实现和目标依赖树。
 - 只有 worker 协议落地后才调研 AiiDA、QCArchive、NOMAD 的缓存与不可变记录做法。
-
