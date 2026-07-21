@@ -23,12 +23,14 @@ class ReleaseArtifactTests(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def _write_artifact(self, *extra_entries: str) -> Path:
-        manifest_bytes = (EXTENSION / "blender_manifest.toml").read_bytes()
-        manifest = tomllib.loads(manifest_bytes.decode("utf-8"))
+    def _write_artifact(
+        self, *extra_entries: str, packaged_manifest: bytes | None = None
+    ) -> Path:
+        source_manifest = (EXTENSION / "blender_manifest.toml").read_bytes()
+        manifest = tomllib.loads(source_manifest.decode("utf-8"))
         package = self.artifact_dir / "chemblender-2.2.0.zip"
         entries = {
-            "blender_manifest.toml": manifest_bytes,
+            "blender_manifest.toml": packaged_manifest or source_manifest,
             "LICENSE": b"license",
             "Chem_Nodes.blend": b"blend",
             "Chem_Nodes_En.blend": b"blend",
@@ -63,6 +65,15 @@ class ReleaseArtifactTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "checksum mismatch"):
             verify_artifact(self.artifact_dir, EXTENSION, self.tag)
+
+    def test_manifest_line_endings_do_not_change_package_contract(self):
+        source_manifest = (EXTENSION / "blender_manifest.toml").read_bytes()
+        linux_manifest = source_manifest.replace(b"\r\n", b"\n")
+        self._write_artifact(packaged_manifest=linux_manifest)
+
+        result = verify_artifact(self.artifact_dir, EXTENSION, self.tag)
+
+        self.assertEqual(result["version"], "2.2.0")
 
     def test_extra_wheel_fails_package_contract(self):
         self._write_artifact("wheels/unexpected.whl")

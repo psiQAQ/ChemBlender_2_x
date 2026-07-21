@@ -106,7 +106,10 @@ def verify_artifact(
             raise ValueError(
                 f"wheel entries must be {sorted(declared_wheels)}, got {sorted(wheel_entries)}"
             )
-        if archive.read("blender_manifest.toml") != source_manifest:
+        packaged_manifest = tomllib.loads(
+            archive.read("blender_manifest.toml").decode("utf-8")
+        )
+        if packaged_manifest != manifest:
             raise ValueError("packaged manifest differs from checked-out tag")
 
     return {
