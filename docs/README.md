@@ -21,5 +21,6 @@
 - [Quantum visualization documentation implementation plan](superpowers/plans/2026-07-21-quantum-visualization-documentation-system.md)
 - [Quantum semantic core implementation plan](superpowers/plans/2026-07-21-quantum-semantic-core.md)
 - [Reader registry implementation plan](superpowers/plans/2026-07-21-reader-registry.md)
+- [XYZ reader implementation plan](superpowers/plans/2026-07-22-xyz-reader.md)
 
 Live Agent task status belongs in `.agents/active/`; these documents describe durable developer workflows and decisions.
