@@ -14,6 +14,7 @@ from .model import (
     QCProject,
     Structure,
 )
+from .mol_v2000 import MOL_V2000_READER, parse_mol_v2000, sniff_mol_v2000
 from .readers import (
     AmbiguousReaderError,
     CapabilitySupport,
@@ -36,6 +37,7 @@ __all__ = [
     "Grid3D",
     "ImportBatch",
     "IssueKind",
+    "MOL_V2000_READER",
     "ParserIssue",
     "ParserReport",
     "PropertyDataset",
@@ -49,5 +51,7 @@ __all__ = [
     "Structure",
     "XYZ_READER",
     "parse_xyz",
+    "parse_mol_v2000",
+    "sniff_mol_v2000",
     "sniff_xyz",
 ]
