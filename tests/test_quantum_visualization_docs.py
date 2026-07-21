@@ -56,6 +56,28 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         ):
             self.assertIn(decision, text)
 
+    def test_reference_catalog_and_empty_submodule_placeholder(self):
+        references = self.read_doc("docs/quantum-visualization/references.md")
+        placeholder = self.read_doc("submodules/README.md")
+        for project in (
+            "xyzrender",
+            "quantum-chem-skills",
+            "Molecular Blender",
+            "Beautiful Atoms",
+            "Molecular Nodes",
+            "cclib",
+            "IOData",
+            "Gemmi",
+            "spglib",
+            "pymatgen",
+            "phonopy",
+        ):
+            self.assertIn(project, references)
+        self.assertIn("git submodule add", placeholder)
+        self.assertFalse((ROOT / ".gitmodules").exists())
+        children = {path.name for path in (ROOT / "submodules").iterdir()}
+        self.assertEqual(children, {"README.md"})
+
 
 if __name__ == "__main__":
     unittest.main()
