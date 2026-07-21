@@ -21,6 +21,7 @@ Historical documents provide provenance, not current status.
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
 | decision | [0002-release-testing-and-pillow-scope.md](decisions/0002-release-testing-and-pillow-scope.md) | Release test runner, Pillow scope, and clean-profile rationale |
+| decision | [0003-quantum-chemistry-semantic-model.md](decisions/0003-quantum-chemistry-semantic-model.md) | Phase 0 project registry, semantic objects, arrays, states, and provenance boundary |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
