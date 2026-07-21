@@ -4,8 +4,10 @@ import unittest
 
 from ChemBlender.core import ImportBatch
 from ChemBlender.core.readers import (
+    AmbiguousReaderError,
     CapabilitySupport,
     ReaderDescriptor,
+    ReaderNotFoundError,
     ReaderRegistry,
     SniffMatch,
     SniffResult,
@@ -52,6 +54,83 @@ class ReaderRegistryTests(unittest.TestCase):
         registry.register(descriptor("same"))
         with self.assertRaises(ValueError):
             registry.register(descriptor("same"))
+
+    def test_selects_highest_match_then_priority(self):
+        registry = ReaderRegistry()
+        registry.register(
+            descriptor("probable", SniffMatch.PROBABLE, priority=100)
+        )
+        registry.register(descriptor("exact-low", SniffMatch.EXACT, priority=1))
+        registry.register(descriptor("exact-high", SniffMatch.EXACT, priority=2))
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "sample.out"
+            source.write_bytes(b"content")
+            self.assertEqual(registry.select(source).reader_id, "exact-high")
+
+    def test_equal_top_readers_are_ambiguous_independent_of_order(self):
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "sample.out"
+            source.write_bytes(b"content")
+            for order in (("alpha", "beta"), ("beta", "alpha")):
+                registry = ReaderRegistry()
+                for reader_id in order:
+                    registry.register(
+                        descriptor(reader_id, SniffMatch.EXACT, priority=1)
+                    )
+                with self.assertRaises(AmbiguousReaderError):
+                    registry.select(source)
+
+    def test_explicit_reader_bypasses_sniff_and_file_read(self):
+        registry = ReaderRegistry()
+        registry.register(descriptor("chosen"))
+        selected = registry.select(Path("missing.out"), reader_id="chosen")
+        self.assertEqual(selected.reader_id, "chosen")
+
+    def test_missing_explicit_reader_raises_not_found(self):
+        with self.assertRaises(ReaderNotFoundError):
+            ReaderRegistry().select(Path("missing.out"), reader_id="missing")
+
+    def test_sniff_prefix_is_bounded(self):
+        seen = []
+
+        def sniff(path, prefix):
+            seen.append(len(prefix))
+            return SniffResult(SniffMatch.EXACT, "bounded")
+
+        reader = descriptor("bounded")
+        reader = ReaderDescriptor(
+            reader.reader_id,
+            reader.reader_version,
+            reader.extensions,
+            reader.capabilities,
+            reader.priority,
+            sniff,
+            reader.parse,
+        )
+        registry = ReaderRegistry((reader,))
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "sample.out"
+            source.write_bytes(b"x" * 70000)
+            registry.select(source)
+        self.assertEqual(seen, [65536])
+
+    def test_parse_requires_import_batch(self):
+        reader = descriptor("bad")
+        bad = ReaderDescriptor(
+            reader.reader_id,
+            reader.reader_version,
+            reader.extensions,
+            reader.capabilities,
+            reader.priority,
+            reader.sniff,
+            lambda path: object(),
+        )
+        registry = ReaderRegistry((bad,))
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "sample.out"
+            source.write_bytes(b"content")
+            with self.assertRaises(TypeError):
+                registry.parse(source)
 
 
 if __name__ == "__main__":

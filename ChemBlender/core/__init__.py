@@ -14,14 +14,17 @@ from .model import (
     Structure,
 )
 from .readers import (
+    AmbiguousReaderError,
     CapabilitySupport,
     ReaderDescriptor,
+    ReaderNotFoundError,
     ReaderRegistry,
     SniffMatch,
     SniffResult,
 )
 
 __all__ = [
+    "AmbiguousReaderError",
     "ArrayData",
     "CalculationRecord",
     "CalculationStatus",
@@ -36,6 +39,7 @@ __all__ = [
     "ProvenanceRecord",
     "QCProject",
     "ReaderDescriptor",
+    "ReaderNotFoundError",
     "ReaderRegistry",
     "SniffMatch",
     "SniffResult",
