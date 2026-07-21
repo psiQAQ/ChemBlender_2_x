@@ -118,6 +118,9 @@ class RepositoryContractTests(unittest.TestCase):
         ):
             self.assertIn(expected, workflow)
         self.assertEqual(workflow.count("verify_release_artifact.py"), 2)
+        self.assertEqual(workflow.count("path: tag-source"), 2)
+        self.assertEqual(workflow.count("--extension-root tag-source/ChemBlender"), 2)
+        self.assertIn("git -C tag-source", workflow)
         self.assertEqual(workflow.count("contents: write"), 1)
         actions = re.findall(r"uses:\s+([^\s]+)", workflow)
         self.assertTrue(actions)

@@ -31,9 +31,11 @@ jobs:
       artifact_name: ${{ steps.release_info.outputs.artifact_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.tag }}
           fetch-depth: 0
+          path: tag-source
       - name: Resolve exact tag package run
         id: release_info
         shell: bash
@@ -47,20 +49,20 @@ jobs:
             echo "Invalid release tag: $RELEASE_TAG" >&2
             exit 1
           fi
-          if [[ "$(git cat-file -t "refs/tags/$RELEASE_TAG")" != "tag" ]]; then
+          if [[ "$(git -C tag-source cat-file -t "refs/tags/$RELEASE_TAG")" != "tag" ]]; then
             echo "Release ref must be an annotated tag: $RELEASE_TAG" >&2
             exit 1
           fi
 
-          git fetch origin main:refs/remotes/origin/main --no-tags
-          tag_commit="$(git rev-list -n 1 "$RELEASE_TAG")"
-          git merge-base --is-ancestor "$tag_commit" origin/main || {
+          git -C tag-source fetch origin main:refs/remotes/origin/main --no-tags
+          tag_commit="$(git -C tag-source rev-list -n 1 "$RELEASE_TAG")"
+          git -C tag-source merge-base --is-ancestor "$tag_commit" origin/main || {
             echo "Tag commit is not in origin/main: $tag_commit" >&2
             exit 1
           }
 
           version="${RELEASE_TAG#v}"
-          manifest_version="$(python3 -c "import tomllib; print(tomllib.load(open('ChemBlender/blender_manifest.toml','rb'))['version'])")"
+          manifest_version="$(python3 -c "import tomllib; print(tomllib.load(open('tag-source/ChemBlender/blender_manifest.toml','rb'))['version'])")"
           if [[ "$version" != "$manifest_version" ]]; then
             echo "Tag $version does not match manifest $manifest_version" >&2
             exit 1
@@ -105,7 +107,7 @@ jobs:
           set -euo pipefail
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
           python3 ChemBlender/scripts/verify_release_artifact.py \
-            --artifact-dir dist --extension-root ChemBlender --tag "$RELEASE_TAG"
+            --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG"
 
   publish:
     if: ${{ inputs.publish }}
@@ -118,8 +120,10 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.tag }}
+          path: tag-source
       - name: Download and reverify tag artifact
         shell: bash
         env:
@@ -132,7 +136,7 @@ jobs:
           set -euo pipefail
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
           python3 ChemBlender/scripts/verify_release_artifact.py \
-            --artifact-dir dist --extension-root ChemBlender --tag "$RELEASE_TAG"
+            --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG"
       - name: Create verified GitHub Release
         shell: bash
         env:
