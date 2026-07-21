@@ -186,6 +186,38 @@ class PropertyDataset:
 
 
 @dataclass(frozen=True, slots=True)
+class FrameSet(PropertyDataset):
+    structure_id: UUID
+    comments: tuple[str, ...]
+
+    def __post_init__(self):
+        super(FrameSet, self).__post_init__()
+        _require_uuid(self.structure_id, "structure_id")
+        if self.semantic_role != "coordinates" or self.domain != "frame":
+            raise ValueError("FrameSet must describe frame coordinates")
+        if self.data.dims != ("frame", "atom", "xyz") or any(
+            size <= 0 for size in self.data.shape
+        ):
+            raise ValueError(
+                "FrameSet data must have positive (frame, atom, xyz) dimensions"
+            )
+        if self.data.shape[2] != 3:
+            raise ValueError("FrameSet xyz dimension must have length 3")
+        if self.data.unit in {"dimensionless", "unknown"}:
+            raise ValueError(
+                "FrameSet coordinate unit must be known dimensional length"
+            )
+        comments = tuple(self.comments)
+        if len(comments) != self.data.shape[0] or any(
+            not isinstance(comment, str) for comment in comments
+        ):
+            raise ValueError(
+                "FrameSet comments must contain one string per frame"
+            )
+        object.__setattr__(self, "comments", comments)
+
+
+@dataclass(frozen=True, slots=True)
 class Grid3D(PropertyDataset):
     origin: tuple[float, float, float]
     step_vectors: tuple[
@@ -373,9 +405,11 @@ class QCProject:
         if existing_ids.intersection(incoming_ids):
             raise ValueError("batch UUID already exists in project")
 
-        structure_ids = set(self.structures).union(
-            structure.id for structure in batch.structures
+        structures = dict(self.structures)
+        structures.update(
+            (structure.id, structure) for structure in batch.structures
         )
+        structure_ids = set(structures)
         calculation_ids = set(self.calculations).union(
             calculation.id for calculation in batch.calculations
         )
@@ -411,6 +445,21 @@ class QCProject:
                 provenance_ids,
                 "dataset provenance",
             )
+            if isinstance(dataset, FrameSet):
+                try:
+                    reference = structures[dataset.structure_id]
+                except KeyError as error:
+                    raise ValueError(
+                        "FrameSet has a dangling structure reference"
+                    ) from error
+                if dataset.data.shape[1] != len(reference.atomic_numbers):
+                    raise ValueError(
+                        "FrameSet atom dimension must match its structure"
+                    )
+                if dataset.data.unit != reference.coordinates.unit:
+                    raise ValueError(
+                        "FrameSet and structure coordinate units must match"
+                    )
         all_ids = structure_ids | calculation_ids | dataset_ids | provenance_ids
         for record in batch.provenance:
             self._require_references(record.parent_ids, all_ids, "provenance parent")

@@ -9,6 +9,7 @@ from ChemBlender.core import (
     CalculationRecord,
     CalculationStatus,
     DatasetStatus,
+    FrameSet,
     Grid3D,
     ImportBatch,
     ParserReport,
@@ -155,6 +156,134 @@ class QuantumCoreTests(unittest.TestCase):
             PropertyDataset(status=DatasetStatus.COMPLETE, **common)
         dataset = PropertyDataset(status=DatasetStatus.AMBIGUOUS, **common)
         self.assertEqual(dataset.status, DatasetStatus.AMBIGUOUS)
+
+    def test_frame_set_commits_with_matching_reference_structure(self):
+        structure = Structure(
+            id=uuid4(),
+            revision="s1",
+            atomic_numbers=(1, 1),
+            coordinates=ArrayData(
+                array_view(range(6), (2, 3)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        )
+        frames = FrameSet(
+            id=uuid4(),
+            revision="f1",
+            semantic_role="coordinates",
+            domain="frame",
+            data=ArrayData(
+                array_view(range(12), (2, 2, 3)),
+                ("frame", "atom", "xyz"),
+                "angstrom",
+            ),
+            status=DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+            structure_id=structure.id,
+            comments=("first", "second"),
+        )
+        project = QCProject(id=uuid4(), schema_version="0.1")
+        project.commit(ImportBatch(structures=(structure,), datasets=(frames,)))
+        self.assertIs(project.datasets[frames.id], frames)
+
+    def test_frame_set_rejects_invalid_shape_and_comments(self):
+        common = {
+            "id": uuid4(),
+            "revision": "f1",
+            "semantic_role": "coordinates",
+            "domain": "frame",
+            "status": DatasetStatus.COMPLETE,
+            "source_calculation": None,
+            "provenance_ids": (),
+            "structure_id": uuid4(),
+        }
+        with self.assertRaises(ValueError):
+            FrameSet(
+                data=ArrayData(
+                    array_view(range(6), (2, 3)),
+                    ("atom", "xyz"),
+                    "angstrom",
+                ),
+                comments=("first",),
+                **common,
+            )
+        with self.assertRaises(ValueError):
+            FrameSet(
+                data=ArrayData(
+                    array_view(range(6), (2, 1, 3)),
+                    ("frame", "atom", "xyz"),
+                    "angstrom",
+                ),
+                comments=("only one",),
+                **common,
+            )
+
+    def test_project_rejects_invalid_frame_set_reference_atomically(self):
+        frames = FrameSet(
+            id=uuid4(),
+            revision="f1",
+            semantic_role="coordinates",
+            domain="frame",
+            data=ArrayData(
+                array_view(range(6), (2, 1, 3)),
+                ("frame", "atom", "xyz"),
+                "angstrom",
+            ),
+            status=DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+            structure_id=uuid4(),
+            comments=("first", "second"),
+        )
+        project = QCProject(id=uuid4(), schema_version="0.1")
+        with self.assertRaises(ValueError):
+            project.commit(ImportBatch(datasets=(frames,)))
+        self.assertEqual(project.datasets, {})
+
+    def test_project_rejects_frame_set_atom_and_unit_mismatch(self):
+        structure = Structure(
+            id=uuid4(),
+            revision="s1",
+            atomic_numbers=(1, 1),
+            coordinates=ArrayData(
+                array_view(range(6), (2, 3)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        )
+        for atom_count, unit in ((1, "angstrom"), (2, "bohr")):
+            with self.subTest(atom_count=atom_count, unit=unit):
+                frames = FrameSet(
+                    id=uuid4(),
+                    revision="f1",
+                    semantic_role="coordinates",
+                    domain="frame",
+                    data=ArrayData(
+                        array_view(
+                            range(2 * atom_count * 3),
+                            (2, atom_count, 3),
+                        ),
+                        ("frame", "atom", "xyz"),
+                        unit,
+                    ),
+                    status=DatasetStatus.COMPLETE,
+                    source_calculation=None,
+                    provenance_ids=(),
+                    structure_id=structure.id,
+                    comments=("first", "second"),
+                )
+                project = QCProject(id=uuid4(), schema_version="0.1")
+                with self.assertRaises(ValueError):
+                    project.commit(
+                        ImportBatch(
+                            structures=(structure,),
+                            datasets=(frames,),
+                        )
+                    )
+                self.assertEqual(project.structures, {})
+                self.assertEqual(project.datasets, {})
 
     def test_project_commits_valid_batch(self):
         structure_id, calculation_id, dataset_id, provenance_id = (
