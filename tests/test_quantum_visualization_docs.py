@@ -20,6 +20,37 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for phase in range(5):
             self.assertIn(f"Phase {phase}", roadmap)
 
+    def test_foundation_plans_have_required_sections(self):
+        required = (
+            "## 范围",
+            "## 非目标",
+            "## 优先级",
+            "## 依赖关系",
+            "## 交付物",
+            "## 验收标准",
+            "## 参考仓库触发条件",
+        )
+        for relative_path in (
+            "docs/quantum-visualization/plans/semantic-core.md",
+            "docs/quantum-visualization/plans/readers-and-formats.md",
+        ):
+            text = self.read_doc(relative_path)
+            for heading in required:
+                self.assertIn(heading, text, relative_path)
+
+    def test_data_boundary_lists_five_decisions(self):
+        text = self.read_doc(
+            "docs/quantum-visualization/architecture/data-boundary.md"
+        )
+        for decision in (
+            "量子化学语义模型",
+            "Grid3D 数据约定",
+            "单位约定",
+            "reader capability contract",
+            "Blender 与边车数据的职责边界",
+        ):
+            self.assertIn(decision, text)
+
 
 if __name__ == "__main__":
     unittest.main()
