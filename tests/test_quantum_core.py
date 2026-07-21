@@ -6,9 +6,15 @@ from uuid import uuid4
 
 from ChemBlender.core import (
     ArrayData,
+    CalculationRecord,
+    CalculationStatus,
     DatasetStatus,
     Grid3D,
+    ImportBatch,
+    ParserReport,
     PropertyDataset,
+    ProvenanceRecord,
+    QCProject,
     Structure,
 )
 
@@ -149,6 +155,130 @@ class QuantumCoreTests(unittest.TestCase):
             PropertyDataset(status=DatasetStatus.COMPLETE, **common)
         dataset = PropertyDataset(status=DatasetStatus.AMBIGUOUS, **common)
         self.assertEqual(dataset.status, DatasetStatus.AMBIGUOUS)
+
+    def test_project_commits_valid_batch(self):
+        structure_id, calculation_id, dataset_id, provenance_id = (
+            uuid4() for _ in range(4)
+        )
+        structure = Structure(
+            id=structure_id,
+            revision="s1",
+            atomic_numbers=(1,),
+            coordinates=ArrayData(
+                array_view(range(3), (1, 3)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        )
+        provenance = ProvenanceRecord(
+            id=provenance_id,
+            revision="p1",
+            producer="test",
+            producer_version="1",
+            source="fixture.xyz",
+            source_hash="a" * 64,
+            parent_ids=(),
+            operation="parse",
+            parameters=(),
+        )
+        dataset = PropertyDataset(
+            id=dataset_id,
+            revision="d1",
+            semantic_role="mulliken_charge",
+            domain="atom",
+            data=ArrayData(
+                array_view(range(1), (1,)),
+                ("atom",),
+                "elementary_charge",
+            ),
+            status=DatasetStatus.COMPLETE,
+            source_calculation=calculation_id,
+            provenance_ids=(provenance_id,),
+        )
+        calculation = CalculationRecord(
+            id=calculation_id,
+            revision="c1",
+            status=CalculationStatus.SUCCESS,
+            input_structure_ids=(structure_id,),
+            result_structure_ids=(structure_id,),
+            dataset_ids=(dataset_id,),
+            provenance_ids=(provenance_id,),
+        )
+        report = ParserReport(
+            reader_id="test",
+            reader_version="1",
+            created_entity_ids=(
+                structure_id,
+                calculation_id,
+                dataset_id,
+                provenance_id,
+            ),
+            parsed_capabilities=("structure", "atomic_property"),
+            issues=(),
+        )
+        project = QCProject(id=uuid4(), schema_version="0.1")
+        project.commit(
+            ImportBatch(
+                structures=(structure,),
+                calculations=(calculation,),
+                datasets=(dataset,),
+                provenance=(provenance,),
+                report=report,
+            )
+        )
+        self.assertIs(project.structures[structure_id], structure)
+        self.assertIs(project.calculations[calculation_id], calculation)
+        self.assertIs(project.datasets[dataset_id], dataset)
+        self.assertIs(project.provenance[provenance_id], provenance)
+
+    def test_project_rejects_dangling_reference_atomically(self):
+        project = QCProject(id=uuid4(), schema_version="0.1")
+        calculation = CalculationRecord(
+            id=uuid4(),
+            revision="c1",
+            status=CalculationStatus.SUCCESS,
+            input_structure_ids=(uuid4(),),
+            result_structure_ids=(),
+            dataset_ids=(),
+            provenance_ids=(),
+        )
+        with self.assertRaises(ValueError):
+            project.commit(ImportBatch(calculations=(calculation,)))
+        self.assertEqual(project.calculations, {})
+
+    def test_project_rejects_duplicate_uuid_atomically(self):
+        duplicate_id = uuid4()
+        structure = Structure(
+            id=duplicate_id,
+            revision="s1",
+            atomic_numbers=(1,),
+            coordinates=ArrayData(
+                array_view(range(3), (1, 3)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        )
+        dataset = PropertyDataset(
+            id=duplicate_id,
+            revision="d1",
+            semantic_role="charge",
+            domain="atom",
+            data=ArrayData(
+                array_view(range(1), (1,)),
+                ("atom",),
+                "elementary_charge",
+            ),
+            status=DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+        )
+        project = QCProject(id=uuid4(), schema_version="0.1")
+        with self.assertRaises(ValueError):
+            project.commit(
+                ImportBatch(structures=(structure,), datasets=(dataset,))
+            )
+        self.assertEqual(project.structures, {})
+        self.assertEqual(project.datasets, {})
 
 
 if __name__ == "__main__":

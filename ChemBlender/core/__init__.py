@@ -4,11 +4,13 @@ from .model import (
     CalculationStatus,
     DatasetStatus,
     Grid3D,
+    ImportBatch,
     IssueKind,
     ParserIssue,
     ParserReport,
     PropertyDataset,
     ProvenanceRecord,
+    QCProject,
     Structure,
 )
 
@@ -18,10 +20,12 @@ __all__ = [
     "CalculationStatus",
     "DatasetStatus",
     "Grid3D",
+    "ImportBatch",
     "IssueKind",
     "ParserIssue",
     "ParserReport",
     "PropertyDataset",
     "ProvenanceRecord",
+    "QCProject",
     "Structure",
 ]

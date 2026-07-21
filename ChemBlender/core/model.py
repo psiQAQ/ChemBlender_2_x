@@ -314,3 +314,141 @@ class ParserReport:
             raise TypeError("issues must contain ParserIssue values")
         object.__setattr__(self, "parsed_capabilities", capabilities)
         object.__setattr__(self, "issues", issues)
+
+
+@dataclass(frozen=True, slots=True)
+class ImportBatch:
+    structures: tuple[Structure, ...] = ()
+    calculations: tuple[CalculationRecord, ...] = ()
+    datasets: tuple[PropertyDataset | Grid3D, ...] = ()
+    provenance: tuple[ProvenanceRecord, ...] = ()
+    report: ParserReport | None = None
+
+    def __post_init__(self):
+        groups = (
+            ("structures", Structure),
+            ("calculations", CalculationRecord),
+            ("datasets", PropertyDataset),
+            ("provenance", ProvenanceRecord),
+        )
+        for name, entity_type in groups:
+            values = tuple(getattr(self, name))
+            if any(not isinstance(value, entity_type) for value in values):
+                raise TypeError(f"{name} contains an invalid entity type")
+            object.__setattr__(self, name, values)
+        if self.report is not None and not isinstance(self.report, ParserReport):
+            raise TypeError("report must be a ParserReport")
+
+
+@dataclass(slots=True)
+class QCProject:
+    id: UUID
+    schema_version: str
+    structures: dict[UUID, Structure] = field(default_factory=dict)
+    calculations: dict[UUID, CalculationRecord] = field(default_factory=dict)
+    datasets: dict[UUID, PropertyDataset | Grid3D] = field(default_factory=dict)
+    provenance: dict[UUID, ProvenanceRecord] = field(default_factory=dict)
+
+    def __post_init__(self):
+        _require_uuid(self.id, "id")
+        _require_text(self.schema_version, "schema_version")
+        self._validate_registries()
+
+    def commit(self, batch):
+        if not isinstance(batch, ImportBatch):
+            raise TypeError("batch must be an ImportBatch")
+
+        incoming_groups = (
+            batch.structures,
+            batch.calculations,
+            batch.datasets,
+            batch.provenance,
+        )
+        incoming = tuple(entity for group in incoming_groups for entity in group)
+        incoming_ids = tuple(entity.id for entity in incoming)
+        if len(set(incoming_ids)) != len(incoming_ids):
+            raise ValueError("batch contains duplicate entity UUIDs")
+
+        existing_ids = self._all_entity_ids()
+        if existing_ids.intersection(incoming_ids):
+            raise ValueError("batch UUID already exists in project")
+
+        structure_ids = set(self.structures).union(
+            structure.id for structure in batch.structures
+        )
+        calculation_ids = set(self.calculations).union(
+            calculation.id for calculation in batch.calculations
+        )
+        dataset_ids = set(self.datasets).union(dataset.id for dataset in batch.datasets)
+        provenance_ids = set(self.provenance).union(
+            record.id for record in batch.provenance
+        )
+
+        for calculation in batch.calculations:
+            self._require_references(
+                calculation.input_structure_ids + calculation.result_structure_ids,
+                structure_ids,
+                "calculation structure",
+            )
+            self._require_references(
+                calculation.dataset_ids,
+                dataset_ids,
+                "calculation dataset",
+            )
+            self._require_references(
+                calculation.provenance_ids,
+                provenance_ids,
+                "calculation provenance",
+            )
+        for dataset in batch.datasets:
+            if (
+                dataset.source_calculation is not None
+                and dataset.source_calculation not in calculation_ids
+            ):
+                raise ValueError("dataset has a dangling calculation reference")
+            self._require_references(
+                dataset.provenance_ids,
+                provenance_ids,
+                "dataset provenance",
+            )
+        all_ids = structure_ids | calculation_ids | dataset_ids | provenance_ids
+        for record in batch.provenance:
+            self._require_references(record.parent_ids, all_ids, "provenance parent")
+        if batch.report is not None and set(batch.report.created_entity_ids) != set(
+            incoming_ids
+        ):
+            raise ValueError("parser report created IDs must match the import batch")
+
+        self.structures.update((entity.id, entity) for entity in batch.structures)
+        self.calculations.update((entity.id, entity) for entity in batch.calculations)
+        self.datasets.update((entity.id, entity) for entity in batch.datasets)
+        self.provenance.update((entity.id, entity) for entity in batch.provenance)
+
+    def _all_entity_ids(self):
+        groups = (self.structures, self.calculations, self.datasets, self.provenance)
+        ids = [entity_id for group in groups for entity_id in group]
+        if len(set(ids)) != len(ids):
+            raise ValueError("project registries contain duplicate entity UUIDs")
+        return set(ids)
+
+    def _validate_registries(self):
+        groups = (
+            (self.structures, Structure, "structures"),
+            (self.calculations, CalculationRecord, "calculations"),
+            (self.datasets, PropertyDataset, "datasets"),
+            (self.provenance, ProvenanceRecord, "provenance"),
+        )
+        for registry, entity_type, name in groups:
+            if not isinstance(registry, dict):
+                raise TypeError(f"{name} must be a dict")
+            if any(
+                not isinstance(entity, entity_type) or entity_id != entity.id
+                for entity_id, entity in registry.items()
+            ):
+                raise ValueError(f"{name} keys and entity IDs must match")
+        self._all_entity_ids()
+
+    @staticmethod
+    def _require_references(references, valid_ids, name):
+        if any(reference not in valid_ids for reference in references):
+            raise ValueError(f"{name} reference is dangling")
