@@ -27,7 +27,7 @@
 
 ## Next Action
 
-四项 Phase 0 数据边界决策已经接受。下一步将它们转换为普通 CPython 可执行的最小语义核心实现计划，并在计划中确定最小文件位置、标准库数据结构和 contract tests；第三方依赖与边车后端不进入首个实现切片。
+执行[最小语义核心实现计划](../../docs/superpowers/plans/2026-07-21-quantum-semantic-core.md)：先建立普通 CPython 导入边界与 `ArrayData`，再实现 P0 实体、`Grid3D` 验证和 `QCProject` 原子提交。第三方依赖、reader registry 与边车后端不进入首个实现切片。
 
 ## Verification
 
@@ -41,6 +41,7 @@
 - [Grid3D 与单位约定 ADR](../decisions/0004-grid3d-and-units.md)
 - [Reader capability contract ADR](../decisions/0005-reader-capability-contract.md)
 - [Blender 与边车数据职责边界 ADR](../decisions/0006-blend-sidecar-boundary.md)
+- [最小语义核心实现计划](../../docs/superpowers/plans/2026-07-21-quantum-semantic-core.md)
 - [文档体系设计](../../docs/superpowers/specs/2026-07-21-quantum-visualization-development-system-design.md)
 - [持续开发路线图](../../docs/quantum-visualization/roadmap.md)
 - [Phase 0 数据边界议程](../../docs/quantum-visualization/architecture/data-boundary.md)
