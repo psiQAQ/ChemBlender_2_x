@@ -27,7 +27,7 @@
 
 ## Next Action
 
-审阅并执行[多帧 XYZ 与 FrameSet 设计](../../docs/superpowers/specs/2026-07-22-multiframe-xyz-design.md)：`FrameSet` 作为 `PropertyDataset` 存入 datasets registry，只解决共享原子身份、`(frame, atom, xyz)` 坐标和逐帧 comment。
+执行[多帧 XYZ 实现计划](../../docs/superpowers/plans/2026-07-22-multiframe-xyz.md)：`FrameSet` 作为 `PropertyDataset` 存入 datasets registry，只解决共享原子身份、`(frame, atom, xyz)` 坐标和逐帧 comment。
 
 ## Completed
 
@@ -54,6 +54,7 @@
 - [Reader registry 实现计划](../../docs/superpowers/plans/2026-07-21-reader-registry.md)
 - [XYZ reader 实现计划](../../docs/superpowers/plans/2026-07-22-xyz-reader.md)
 - [多帧 XYZ 与 FrameSet 设计](../../docs/superpowers/specs/2026-07-22-multiframe-xyz-design.md)
+- [多帧 XYZ 实现计划](../../docs/superpowers/plans/2026-07-22-multiframe-xyz.md)
 - [文档体系设计](../../docs/superpowers/specs/2026-07-21-quantum-visualization-development-system-design.md)
 - [持续开发路线图](../../docs/quantum-visualization/roadmap.md)
 - [Phase 0 数据边界议程](../../docs/quantum-visualization/architecture/data-boundary.md)
