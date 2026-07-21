@@ -27,7 +27,7 @@
 
 ## Next Action
 
-执行[多帧 XYZ 实现计划](../../docs/superpowers/plans/2026-07-22-multiframe-xyz.md)：`FrameSet` 作为 `PropertyDataset` 存入 datasets registry，只解决共享原子身份、`(frame, atom, xyz)` 坐标和逐帧 comment。
+选择并设计第二种无第三方依赖的结构 reader，用同一结构 fixture 验证跨格式 normalized representation 一致，从而完成 Phase 0 剩余的结构格式验收。extXYZ 与 Blender trajectory adapter 继续延期。
 
 ## Completed
 
@@ -37,6 +37,7 @@
 - 显式 reader registry 已实现 descriptor、capability、64 KiB bounded sniff、确定性选择和 `ImportBatch` 返回约束。
 - `.mol2` 已从旧 UI 文件白名单移除；在真实 reader 和 fixture 出现前不再宣称支持。
 - 单帧 XYZ reader 已实现内容探测、结构归一化、SHA-256 provenance 和 golden fixture；额外原子列、后续帧与 D/T 映射均通过 `ParserReport` 显式说明。
+- `FrameSet` 已作为 `PropertyDataset` specialization 进入 datasets registry；基础多帧 XYZ 可保留共享原子身份、`(frame, atom, xyz)` 坐标和逐帧 comment，并拒绝 frame 间原子变化或截断输入。
 
 ## Verification
 
