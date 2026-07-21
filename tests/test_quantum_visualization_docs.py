@@ -36,6 +36,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/quantum-visualization/plans/wavefunction-and-grids.md",
             "docs/quantum-visualization/plans/blender-visualization.md",
             "docs/quantum-visualization/plans/periodic-electronic-structure.md",
+            "docs/quantum-visualization/plans/storage-and-workers.md",
+            "docs/quantum-visualization/plans/workflows-and-connectors.md",
         ):
             text = self.read_doc(relative_path)
             for heading in required:
