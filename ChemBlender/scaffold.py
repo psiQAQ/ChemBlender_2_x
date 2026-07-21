@@ -13,7 +13,7 @@ def is_valid_cid(s: str) -> bool:
 def is_valid_filepath(s: str) -> bool:
     s = s.strip()
     ext = os.path.splitext(s)[1].lower()
-    valid_exts = {".cif", ".sdf", ".mol", ".mol2", ".xyz", ".pdb", ".json", ".poscar", ".vasp"}
+    valid_exts = {".cif", ".sdf", ".mol", ".xyz", ".pdb", ".json", ".poscar", ".vasp"}
     return ext in valid_exts
 
 def is_valid_smiles(s: str) -> bool:

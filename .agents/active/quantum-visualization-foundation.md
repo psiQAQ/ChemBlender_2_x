@@ -27,13 +27,15 @@
 
 ## Next Action
 
-执行 [reader registry 实现计划](../../docs/superpowers/plans/2026-07-21-reader-registry.md)：实现 descriptor、bounded sniff selection 和 `ImportBatch` 返回约束，并移除当前 `.mol2` 虚假支持声明。第三方 parser 依赖、动态插件发现和 Blender UI 继续延期。
+实现第一个无第三方依赖的 XYZ reader adapter 与 fixture：内容探测、单帧结构归一化、明确 capability/`ParserReport`，并通过 registry 返回 `ImportBatch`。多帧 trajectory、extXYZ 属性和 Blender UI 继续延期。
 
 ## Completed
 
 - ADR 0003–0006 已接受，分别确定语义模型、`Grid3D`/单位、reader capability 和 Blender/边车职责边界。
 - `ChemBlender/core/` 已实现不依赖 `bpy` 的 `ArrayData`、P0 实体、非正交 `Grid3D` 验证和 `QCProject` 原子提交。
 - 核心 contract tests 使用 Python 标准库运行，不要求 NumPy 或第三方 parser。
+- 显式 reader registry 已实现 descriptor、capability、64 KiB bounded sniff、确定性选择和 `ImportBatch` 返回约束。
+- `.mol2` 已从旧 UI 文件白名单移除；在真实 reader 和 fixture 出现前不再宣称支持。
 
 ## Verification
 

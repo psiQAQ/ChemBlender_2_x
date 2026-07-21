@@ -132,6 +132,13 @@ class ReaderRegistryTests(unittest.TestCase):
             with self.assertRaises(TypeError):
                 registry.parse(source)
 
+    def test_legacy_file_validation_does_not_claim_mol2(self):
+        source = (ROOT / "ChemBlender" / "scaffold.py").read_text(
+            encoding="utf-8"
+        )
+        valid_exts = source.split("valid_exts = {", 1)[1].split("}", 1)[0]
+        self.assertNotIn('".mol2"', valid_exts)
+
 
 if __name__ == "__main__":
     unittest.main()
