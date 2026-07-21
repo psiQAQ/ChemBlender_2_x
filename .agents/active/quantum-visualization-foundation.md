@@ -27,7 +27,7 @@
 
 ## Next Action
 
-基于已接受的语义模型与 `Grid3D`/单位约定，起草 reader capability contract ADR。只确定 reader 注册、内容探测、能力状态、输出事务和 `ParserReport`；插件发现与第三方依赖继续延期。
+基于已接受的语义模型、网格/单位和 reader contract，起草 Blender 与边车数据职责边界 ADR。只确定权威数据、`.blend` 引用、缓存身份和失效条件；具体边车后端与 worker 协议继续延期。
 
 ## Verification
 
@@ -39,6 +39,7 @@
 
 - [量子化学语义模型 ADR](../decisions/0003-quantum-chemistry-semantic-model.md)
 - [Grid3D 与单位约定 ADR](../decisions/0004-grid3d-and-units.md)
+- [Reader capability contract ADR](../decisions/0005-reader-capability-contract.md)
 - [文档体系设计](../../docs/superpowers/specs/2026-07-21-quantum-visualization-development-system-design.md)
 - [持续开发路线图](../../docs/quantum-visualization/roadmap.md)
 - [Phase 0 数据边界议程](../../docs/quantum-visualization/architecture/data-boundary.md)
