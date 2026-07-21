@@ -31,4 +31,5 @@ Dynamic branch tips must be checked live. This document records stable roles and
 - Annotated `v2.1.1` preserves the final legacy add-on at `2b72abf`.
 - `feat/2.2.0-extension` started from `main@v2.1.1` and remains available for review provenance.
 - PR #1 merged the verified extension history into maintained `main` as merge commit `8deeea1`.
+- Annotated `v2.2.0` preserves the first extension release at `cdc7236`; the matching GitHub Release publishes only the tested ZIP and checksum.
 - `archive/extension-spike-20260707` and the old remote snapshot remain separate retained evidence; neither is a release base.

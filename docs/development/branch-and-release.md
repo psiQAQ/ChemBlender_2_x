@@ -29,4 +29,4 @@ For 2.2.0, `.github/workflows/extension-package.yml` downloads the pinned RDKit 
 ## Current Version Boundary
 
 - 2.1.1: final legacy add-on; asset compression only.
-- 2.2.0: first extension; source under `ChemBlender/`, offline RDKit wheel, extension-native install, and package CI.
+- 2.2.0: first published extension; source under `ChemBlender/`, offline RDKit wheel, extension-native install, and package CI.
