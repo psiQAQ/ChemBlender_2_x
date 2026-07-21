@@ -84,4 +84,3 @@ FrameSet(PropertyDataset)
 - 新增 `frame_sets` registry：会扩大 `QCProject`、`ImportBatch`、引用校验和序列化边界，而现有 datasets registry 已能承载数组实体。
 - 允许 `Structure.coordinates` 同时接受二维与三维：会破坏现有 `(atom, xyz)` 契约和 Blender 消费方假设。
 - 每个 frame 创建独立 `Structure`：重复原子身份，不适合长轨迹，也不能直接表达一个连续 frame axis。
-
