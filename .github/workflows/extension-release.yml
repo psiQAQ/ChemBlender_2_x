@@ -1,0 +1,169 @@
+name: extension-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing annotated release tag (for example v2.3.0)
+        required: true
+        type: string
+      publish:
+        description: Publish after verification
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: extension-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      run_id: ${{ steps.release_info.outputs.run_id }}
+      version: ${{ steps.release_info.outputs.version }}
+      artifact_name: ${{ steps.release_info.outputs.artifact_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+      - name: Resolve exact tag package run
+        id: release_info
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid release tag: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          if [[ "$(git cat-file -t "refs/tags/$RELEASE_TAG")" != "tag" ]]; then
+            echo "Release ref must be an annotated tag: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          git fetch origin main:refs/remotes/origin/main --no-tags
+          tag_commit="$(git rev-list -n 1 "$RELEASE_TAG")"
+          git merge-base --is-ancestor "$tag_commit" origin/main || {
+            echo "Tag commit is not in origin/main: $tag_commit" >&2
+            exit 1
+          }
+
+          version="${RELEASE_TAG#v}"
+          manifest_version="$(python3 -c "import tomllib; print(tomllib.load(open('ChemBlender/blender_manifest.toml','rb'))['version'])")"
+          if [[ "$version" != "$manifest_version" ]]; then
+            echo "Tag $version does not match manifest $manifest_version" >&2
+            exit 1
+          fi
+
+          mapfile -t run_ids < <(
+            gh run list --repo "$GH_REPO" --workflow extension-package.yml \
+              --event push --branch "$RELEASE_TAG" --commit "$tag_commit" \
+              --status success --limit 10 \
+              --json databaseId,headSha,headBranch,event,conclusion \
+              --jq ".[] | select(.headSha == \"$tag_commit\" and .headBranch == \"$RELEASE_TAG\" and .event == \"push\" and .conclusion == \"success\") | .databaseId"
+          )
+          if [[ "${#run_ids[@]}" -ne 1 ]]; then
+            echo "Expected one successful exact-tag package run, found ${#run_ids[@]}" >&2
+            exit 1
+          fi
+          run_id="${run_ids[0]}"
+          artifact_name="chemblender-$version-windows-x64"
+          mapfile -t artifact_ids < <(
+            gh api "repos/$GH_REPO/actions/runs/$run_id/artifacts" \
+              --jq ".artifacts[] | select(.name == \"$artifact_name\" and .expired == false) | .id"
+          )
+          if [[ "${#artifact_ids[@]}" -ne 1 ]]; then
+            echo "Expected one unexpired artifact named $artifact_name, found ${#artifact_ids[@]}" >&2
+            exit 1
+          fi
+
+          {
+            echo "run_id=$run_id"
+            echo "version=$version"
+            echo "artifact_name=$artifact_name"
+          } >> "$GITHUB_OUTPUT"
+      - name: Download and verify tag artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RUN_ID: ${{ steps.release_info.outputs.run_id }}
+          ARTIFACT_NAME: ${{ steps.release_info.outputs.artifact_name }}
+        run: |
+          set -euo pipefail
+          gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
+          python3 ChemBlender/scripts/verify_release_artifact.py \
+            --artifact-dir dist --extension-root ChemBlender --tag "$RELEASE_TAG"
+
+  publish:
+    if: ${{ inputs.publish }}
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Download and reverify tag artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RUN_ID: ${{ needs.verify.outputs.run_id }}
+          ARTIFACT_NAME: ${{ needs.verify.outputs.artifact_name }}
+        run: |
+          set -euo pipefail
+          gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
+          python3 ChemBlender/scripts/verify_release_artifact.py \
+            --artifact-dir dist --extension-root ChemBlender --tag "$RELEASE_TAG"
+      - name: Create verified GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
+            echo "Release already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          package_name="chemblender-$VERSION.zip"
+          checksum_name="chemblender-$VERSION.sha256"
+          package="dist/$package_name"
+          checksum="dist/$checksum_name"
+          package_digest="sha256:$(sha256sum "$package" | cut -d ' ' -f 1)"
+          checksum_digest="sha256:$(sha256sum "$checksum" | cut -d ' ' -f 1)"
+
+          gh release create "$RELEASE_TAG" "$package" "$checksum" \
+            --repo "$GH_REPO" --verify-tag --draft --generate-notes \
+            --title "ChemBlender $VERSION"
+
+          release_json="$(gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json isDraft,assets)"
+          [[ "$(jq -r '.isDraft' <<< "$release_json")" == "true" ]]
+          [[ "$(jq '.assets | length' <<< "$release_json")" -eq 2 ]]
+          [[ "$(jq -r --arg name "$package_name" '.assets[] | select(.name == $name) | .digest' <<< "$release_json")" == "$package_digest" ]]
+          [[ "$(jq -r --arg name "$checksum_name" '.assets[] | select(.name == $name) | .digest' <<< "$release_json")" == "$checksum_digest" ]]
+
+          gh release edit "$RELEASE_TAG" --repo "$GH_REPO" \
+            --draft=false --latest --verify-tag
+          [[ "$(gh api "repos/$GH_REPO/releases/latest" --jq '.tag_name')" == "$RELEASE_TAG" ]]

@@ -44,8 +44,11 @@ Pillow is not bundled while ChemBlender does not import PIL or call Pillow-depen
 - Built ZIP contains the declared wheel; Git contains no `.whl`.
 - Built ZIP excludes development scripts, tests, caches, and nested ZIP files.
 - Unit, validate, build, isolated install, real install, register, unregister, reload, RDKit operation, and `.blend` checks pass.
-- A draft pull request produces a real green GitHub Actions run and an auditable package artifact.
+- Pull-request and maintained `main` runs are green; the exact annotated tag produces the authoritative package artifact for publication.
 - GitHub-owned actions use reviewed full commit SHA pins.
+- Run `extension-release` with `publish=false` before the separately authorized `publish=true` dispatch.
+- The Release workflow selects the successful exact-SHA tag run, re-verifies its ZIP and checksum, creates a draft, compares GitHub asset digests, and only then publishes; it never rebuilds the package.
+- Only the conditional publish job has `contents: write`; routine package CI and Release verification remain read-only.
 - Publishing, pushing, PR creation, and release creation require explicit authorization.
 
 On Windows, overwriting an already loaded extension may warn that old wheel DLLs cannot be removed. Use a fresh Blender process for release validation; clean CI runners do not have the previous installation.

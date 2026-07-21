@@ -1,3 +1,4 @@
+import re
 import subprocess
 import tomllib
 import unittest
@@ -86,6 +87,42 @@ class RepositoryContractTests(unittest.TestCase):
             "--keep-enabled",
         ):
             self.assertIn(expected, smoke)
+
+    def test_release_workflow_is_manual_and_deterministic(self):
+        workflow = (ROOT / ".github" / "workflows" / "extension-release.yml").read_text(
+            encoding="utf-8"
+        )
+        trigger = workflow.split("permissions:", 1)[0]
+        self.assertIn("workflow_dispatch:", trigger)
+        self.assertNotIn("pull_request:", trigger)
+        self.assertNotIn("workflow_run:", trigger)
+        self.assertNotRegex(trigger, r"(?m)^\s+push:")
+        for expected in (
+            "tag:",
+            "publish:",
+            "type: boolean",
+            "default: false",
+            "actions: read",
+            "contents: read",
+            "contents: write",
+            "environment: release",
+            "if: ${{ inputs.publish }}",
+            "gh run list",
+            "--workflow extension-package.yml",
+            "--commit \"$tag_commit\"",
+            "gh release create",
+            "--draft",
+            ".digest",
+            "gh release edit",
+            "--draft=false --latest",
+        ):
+            self.assertIn(expected, workflow)
+        self.assertEqual(workflow.count("verify_release_artifact.py"), 2)
+        self.assertEqual(workflow.count("contents: write"), 1)
+        actions = re.findall(r"uses:\s+([^\s]+)", workflow)
+        self.assertTrue(actions)
+        for action in actions:
+            self.assertRegex(action, r"@[0-9a-f]{40}$")
 
 if __name__ == "__main__":
     unittest.main()
