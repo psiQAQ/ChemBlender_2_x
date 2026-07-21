@@ -9,6 +9,8 @@
 
 ## Phase 0：数据边界
 
+状态：已完成（2026-07-22）。
+
 进入条件：2.2.0 Extension 发布边界稳定，现有解析、数据和 Blender 构建路径已经盘点。
 
 交付结果：完成量子化学语义模型、`Grid3D`、单位、reader capability contract、Blender/边车职责五项 ADR；定义最小纯 Python 契约；以 MOL2 声明不一致和跨格式结构归一化作为首批回归案例。
@@ -16,6 +18,8 @@
 退出条件：普通 CPython 可以运行 core tests；core 不 import `bpy`；未支持字段显式报告；数值有单位或标为 dimensionless。
 
 ## Phase 1：分子量子化学闭环
+
+状态：进行中；首个切片为无第三方依赖的 Cube reader。
 
 进入条件：Phase 0 的对象、单位、parser report 和缓存身份已经稳定。
 
@@ -49,8 +53,9 @@
 
 ## 当前顺序
 
-1. Phase 0：量子化学数据边界与契约。
-2. Phase 0：最小语义核心与 reader capability。
-3. Phase 1：Gaussian/ORCA、FCHK/Molden 与 Cube 的最小闭环。
+1. Phase 1：Cube 多 dataset 与非正交 `Grid3D`。
+2. Phase 1：Gaussian/ORCA 与 cclib adapter。
+3. Phase 1：FCHK/Molden 与 IOData adapter。
+4. Phase 1：normalized grid 到 Blender 可重建视图。
 
 后续顺序由已验收数据和真实使用需求决定，不在当前阶段预排实现日期。

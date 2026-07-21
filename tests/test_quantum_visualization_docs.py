@@ -82,7 +82,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            ["quantum-visualization-foundation.md"],
+            ["molecular-quantum-chemistry-closure.md"],
         )
 
     def test_local_markdown_links_resolve(self):
