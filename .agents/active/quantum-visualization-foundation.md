@@ -27,7 +27,7 @@
 
 ## Next Action
 
-审阅 MOL V2000 reader 设计规格；批准后编写实施计划，并用同一水分子 fixture 验证 XYZ 与 MOL V2000 的 normalized representation 一致。extXYZ、拓扑模型与 Blender trajectory adapter 继续延期。
+按已批准的实施计划，用同一水分子 fixture 验证 XYZ 与 MOL V2000 的 normalized representation 一致，并审计 Phase 0 退出条件。extXYZ、拓扑模型与 Blender trajectory adapter 继续延期。
 
 ## Completed
 
@@ -58,6 +58,7 @@
 - [多帧 XYZ 与 FrameSet 设计](../../docs/superpowers/specs/2026-07-22-multiframe-xyz-design.md)
 - [多帧 XYZ 实现计划](../../docs/superpowers/plans/2026-07-22-multiframe-xyz.md)
 - [MOL V2000 reader 设计](../../docs/superpowers/specs/2026-07-22-mol-v2000-reader-design.md)
+- [MOL V2000 reader 实现计划](../../docs/superpowers/plans/2026-07-22-mol-v2000-reader.md)
 - [文档体系设计](../../docs/superpowers/specs/2026-07-21-quantum-visualization-development-system-design.md)
 - [持续开发路线图](../../docs/quantum-visualization/roadmap.md)
 - [Phase 0 数据边界议程](../../docs/quantum-visualization/architecture/data-boundary.md)
