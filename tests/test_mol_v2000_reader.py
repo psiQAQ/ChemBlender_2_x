@@ -62,7 +62,7 @@ class MolV2000ReaderTests(unittest.TestCase):
             b"water\nChemBlender\n\n  1  0  0  0  0  0  0  0  0  0  0 V2000\n",
             MOL_FIXTURE.read_bytes().replace(b" O  ", b" Xx ", 1),
             MOL_FIXTURE.read_bytes().replace(b"    0.0000", b"       nan", 1),
-            MOL_FIXTURE.read_bytes().replace(b"M  END\n", b""),
+            MOL_FIXTURE.read_bytes().replace(b"M  END", b"", 1),
         )
         for content in cases:
             with self.subTest(content=content[:80]):
