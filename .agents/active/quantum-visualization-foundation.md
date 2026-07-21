@@ -27,7 +27,7 @@
 
 ## Next Action
 
-实现 reader registry 的最小切片：descriptor、bounded sniff selection、capability 声明和 `ImportBatch` adapter contract；同时移除或用真实 reader 覆盖当前 `.mol2` 虚假支持声明。第三方 parser 依赖、动态插件发现和 Blender UI 继续延期。
+执行 [reader registry 实现计划](../../docs/superpowers/plans/2026-07-21-reader-registry.md)：实现 descriptor、bounded sniff selection 和 `ImportBatch` 返回约束，并移除当前 `.mol2` 虚假支持声明。第三方 parser 依赖、动态插件发现和 Blender UI 继续延期。
 
 ## Completed
 
@@ -48,6 +48,7 @@
 - [Reader capability contract ADR](../decisions/0005-reader-capability-contract.md)
 - [Blender 与边车数据职责边界 ADR](../decisions/0006-blend-sidecar-boundary.md)
 - [最小语义核心实现计划](../../docs/superpowers/plans/2026-07-21-quantum-semantic-core.md)
+- [Reader registry 实现计划](../../docs/superpowers/plans/2026-07-21-reader-registry.md)
 - [文档体系设计](../../docs/superpowers/specs/2026-07-21-quantum-visualization-development-system-design.md)
 - [持续开发路线图](../../docs/quantum-visualization/roadmap.md)
 - [Phase 0 数据边界议程](../../docs/quantum-visualization/architecture/data-boundary.md)
