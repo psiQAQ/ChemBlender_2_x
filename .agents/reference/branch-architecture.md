@@ -25,10 +25,10 @@ Dynamic branch tips must be checked live. This document records stable roles and
 - Record branch creation, role changes, integration, archival, renaming, and deletion in the same development phase.
 - Do not delete local or remote branches without explicit authorization and a verified retained evidence path.
 
-## Initial Rebuild Record
+## Rebuild and Integration Record
 
 - `archive/extension-spike-20260707` preserves the mixed Blender extension experiment and planning records.
-- `release/2.1.1` starts at `78c2d8d` and adds one focused legacy release commit.
-- Local maintained `main` fast-forwards through the 2.1.0 import to `v2.1.1`.
-- `feat/2.2.0-extension` starts from maintained `main@v2.1.1`.
-- No rebuilt branch or tag has been pushed as part of this local execution.
+- Annotated `v2.1.1` preserves the final legacy add-on at `2b72abf`.
+- `feat/2.2.0-extension` started from `main@v2.1.1` and remains available for review provenance.
+- PR #1 merged the verified extension history into maintained `main` as merge commit `8deeea1`.
+- `archive/extension-spike-20260707` and the old remote snapshot remain separate retained evidence; neither is a release base.

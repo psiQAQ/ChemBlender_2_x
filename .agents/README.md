@@ -22,7 +22,7 @@ Historical documents provide provenance, not current status.
 | decision | [0002-release-testing-and-pillow-scope.md](decisions/0002-release-testing-and-pillow-scope.md) | Release test runner, Pillow scope, and clean-profile rationale |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
-| completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Release package, real install, draft PR, and CI evidence |
+| completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Release package, real install, merged PR, and CI evidence |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.
 
