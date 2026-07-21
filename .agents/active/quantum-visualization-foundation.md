@@ -27,7 +27,13 @@
 
 ## Next Action
 
-执行[最小语义核心实现计划](../../docs/superpowers/plans/2026-07-21-quantum-semantic-core.md)：先建立普通 CPython 导入边界与 `ArrayData`，再实现 P0 实体、`Grid3D` 验证和 `QCProject` 原子提交。第三方依赖、reader registry 与边车后端不进入首个实现切片。
+实现 reader registry 的最小切片：descriptor、bounded sniff selection、capability 声明和 `ImportBatch` adapter contract；同时移除或用真实 reader 覆盖当前 `.mol2` 虚假支持声明。第三方 parser 依赖、动态插件发现和 Blender UI 继续延期。
+
+## Completed
+
+- ADR 0003–0006 已接受，分别确定语义模型、`Grid3D`/单位、reader capability 和 Blender/边车职责边界。
+- `ChemBlender/core/` 已实现不依赖 `bpy` 的 `ArrayData`、P0 实体、非正交 `Grid3D` 验证和 `QCProject` 原子提交。
+- 核心 contract tests 使用 Python 标准库运行，不要求 NumPy 或第三方 parser。
 
 ## Verification
 
