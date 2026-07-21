@@ -18,6 +18,7 @@
 - [2.2.0 repository governance design](superpowers/specs/2026-07-20-chemblender-2.2.0-repository-governance-design.md)
 - [2.1.1 and 2.2.0 rebuild plan](superpowers/plans/2026-07-21-chemblender-2.1.1-and-2.2.0-rebuild.md)
 - [Quantum visualization development-system design](superpowers/specs/2026-07-21-quantum-visualization-development-system-design.md)
+- [Multi-frame XYZ and FrameSet design](superpowers/specs/2026-07-22-multiframe-xyz-design.md)
 - [Quantum visualization documentation implementation plan](superpowers/plans/2026-07-21-quantum-visualization-documentation-system.md)
 - [Quantum semantic core implementation plan](superpowers/plans/2026-07-21-quantum-semantic-core.md)
 - [Reader registry implementation plan](superpowers/plans/2026-07-21-reader-registry.md)
