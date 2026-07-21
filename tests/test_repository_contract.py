@@ -127,5 +127,23 @@ class RepositoryContractTests(unittest.TestCase):
         for action in actions:
             self.assertRegex(action, r"@[0-9a-f]{40}$")
 
+    def test_changelog_drives_release_notes(self):
+        changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        manifest = tomllib.loads(
+            (EXTENSION / "blender_manifest.toml").read_text(encoding="utf-8")
+        )
+        self.assertIn(f"## [{manifest['version']}] - ", changelog)
+
+        package_workflow = (
+            ROOT / ".github" / "workflows" / "extension-package.yml"
+        ).read_text(encoding="utf-8")
+        release_workflow = (
+            ROOT / ".github" / "workflows" / "extension-release.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("extract_release_notes.py", package_workflow)
+        self.assertGreaterEqual(release_workflow.count("extract_release_notes.py"), 2)
+        self.assertIn("--notes-file release-notes.md", release_workflow)
+        self.assertNotIn("--generate-notes", release_workflow)
+
 if __name__ == "__main__":
     unittest.main()

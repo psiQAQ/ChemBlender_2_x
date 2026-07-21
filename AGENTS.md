@@ -23,6 +23,7 @@ Do not infer current status from this file, completed work, archived evidence, o
 - 2.1.1 is the final legacy add-on release and changes only the version plus two compressed `.blend` files.
 - 2.2.0 is the first extension release and uses `ChemBlender/` as its extension root.
 - The repository root is the development workspace, not the packaged extension root.
+- `CHANGELOG.md` is the canonical Release-notes source. A version bump and its dated changelog entry belong in the same pre-tag commit; the Release workflow extracts that entry instead of generating or duplicating notes.
 
 ## Branch Roles
 

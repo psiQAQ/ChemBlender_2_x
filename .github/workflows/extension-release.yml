@@ -108,6 +108,14 @@ jobs:
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
           python3 ChemBlender/scripts/verify_release_artifact.py \
             --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG"
+          version="${RELEASE_TAG#v}"
+          python3 ChemBlender/scripts/extract_release_notes.py \
+            --changelog CHANGELOG.md --version "$version" --output release-notes.md
+          if [[ -f tag-source/CHANGELOG.md ]]; then
+            python3 ChemBlender/scripts/extract_release_notes.py \
+              --changelog tag-source/CHANGELOG.md --version "$version" --output tag-release-notes.md
+            cmp release-notes.md tag-release-notes.md
+          fi
 
   publish:
     if: ${{ inputs.publish }}
@@ -137,6 +145,14 @@ jobs:
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
           python3 ChemBlender/scripts/verify_release_artifact.py \
             --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG"
+          version="${RELEASE_TAG#v}"
+          python3 ChemBlender/scripts/extract_release_notes.py \
+            --changelog CHANGELOG.md --version "$version" --output release-notes.md
+          if [[ -f tag-source/CHANGELOG.md ]]; then
+            python3 ChemBlender/scripts/extract_release_notes.py \
+              --changelog tag-source/CHANGELOG.md --version "$version" --output tag-release-notes.md
+            cmp release-notes.md tag-release-notes.md
+          fi
       - name: Create verified GitHub Release
         shell: bash
         env:
@@ -159,7 +175,7 @@ jobs:
           checksum_digest="sha256:$(sha256sum "$checksum" | cut -d ' ' -f 1)"
 
           gh release create "$RELEASE_TAG" "$package" "$checksum" \
-            --repo "$GH_REPO" --verify-tag --draft --generate-notes \
+            --repo "$GH_REPO" --verify-tag --draft --notes-file release-notes.md \
             --title "ChemBlender $VERSION"
 
           release_json="$(gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json isDraft,assets)"

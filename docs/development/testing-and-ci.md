@@ -12,7 +12,7 @@ $pythonBin = 'C:\Program Files\Blender Foundation\Blender 5.1\5.1\python\bin\pyt
 & $pythonBin -m compileall -q ChemBlender tests
 ```
 
-Contracts cover manifest metadata and permissions, ignored dependencies, lifecycle wiring, package-install prohibition, package exclusions, and CI pins.
+Contracts cover manifest metadata and permissions, ignored dependencies, lifecycle wiring, package-install prohibition, package exclusions, changelog extraction, and CI pins.
 
 ## 2. Validate and Build
 
@@ -45,4 +45,4 @@ GitHub Actions repeats the local sequence on `windows-latest` with a temporary `
 
 Pillow is outside the 2.2.0 package while no extension code imports PIL or uses Pillow-dependent RDKit behavior. Any such feature must update the dependency decision, manifest, and CI together.
 
-The manually dispatched `extension-release` workflow performs a read-only validation run by default. With `publish=true`, its environment-gated job re-verifies the same artifact, creates a draft, compares Release asset digests, and publishes it. It does not rebuild or repeat Blender runtime testing. The complete procedure is maintained in [Branch and Release Workflow](branch-and-release.md).
+The manually dispatched `extension-release` workflow performs a read-only validation run by default. With `publish=true`, its environment-gated job re-verifies the same artifact, extracts the matching `CHANGELOG.md` entry, creates a draft with that body, compares Release asset digests, and publishes it. It does not rebuild or repeat Blender runtime testing. The complete procedure is maintained in [Branch and Release Workflow](branch-and-release.md).

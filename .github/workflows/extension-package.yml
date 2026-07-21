@@ -18,6 +18,12 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
+      - name: Verify changelog entry
+        shell: pwsh
+        run: |
+          $manifestVersion = python -c "import tomllib; print(tomllib.load(open('ChemBlender/blender_manifest.toml','rb'))['version'])"
+          python ChemBlender/scripts/extract_release_notes.py --changelog CHANGELOG.md --version $manifestVersion
+          if ($LASTEXITCODE -ne 0) { throw "CHANGELOG.md has no valid entry for $manifestVersion" }
       - name: Verify tag matches manifest
         if: github.ref_type == 'tag'
         shell: pwsh

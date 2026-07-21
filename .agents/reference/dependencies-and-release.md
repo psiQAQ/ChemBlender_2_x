@@ -40,6 +40,7 @@ Pillow is not bundled while ChemBlender does not import PIL or call Pillow-depen
 ## Release Gates
 
 - Tag version equals manifest version after stripping leading `v`.
+- `CHANGELOG.md` has exactly one non-empty dated entry for the manifest version; future tags contain that same entry.
 - CI downloads Blender and RDKit from pinned official locations and verifies checksums.
 - Built ZIP contains the declared wheel; Git contains no `.whl`.
 - Built ZIP excludes development scripts, tests, caches, and nested ZIP files.
@@ -47,7 +48,7 @@ Pillow is not bundled while ChemBlender does not import PIL or call Pillow-depen
 - Pull-request and maintained `main` runs are green; the exact annotated tag produces the authoritative package artifact for publication.
 - GitHub-owned actions use reviewed full commit SHA pins.
 - Run `extension-release` with `publish=false` before the separately authorized `publish=true` dispatch.
-- The Release workflow selects the successful exact-SHA tag run, re-verifies its ZIP and checksum, creates a draft, compares GitHub asset digests, and only then publishes; it never rebuilds the package.
+- The Release workflow selects the successful exact-SHA tag run, re-verifies its ZIP and checksum, extracts the matching changelog entry as the Release body, creates a draft, compares GitHub asset digests, and only then publishes; it never rebuilds the package.
 - Only the conditional publish job has `contents: write`; routine package CI and Release verification remain read-only.
 - Publishing, pushing, PR creation, and release creation require explicit authorization.
 

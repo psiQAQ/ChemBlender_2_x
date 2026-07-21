@@ -75,7 +75,7 @@ Expected: failure because `.github/workflows/extension-release.yml` does not exi
 
 - [x] **Step 3: Implement the minimum workflow**
 
-The `verify` job checks out the requested tag with full history, validates tag shape/type/main ancestry/manifest version, uses `gh run list` to select the one successful exact-SHA tag run, confirms one unexpired expected artifact, downloads it, and calls the validator. The conditional `publish` job repeats download and validation, refuses an existing Release, creates a generated-notes draft, compares both GitHub asset digests with local SHA-256 values, publishes latest, and confirms the latest API tag.
+The `verify` job checks out the workflow commit and requested tag separately, validates tag shape/type/main ancestry/manifest version, uses `gh run list` to select the one successful exact-SHA tag run, confirms one unexpired expected artifact, downloads it, and calls the validator. The conditional `publish` job repeats download and validation, extracts the matching `CHANGELOG.md` entry, refuses an existing Release, creates a draft with that body, compares both GitHub asset digests with local SHA-256 values, publishes latest, and confirms the latest API tag.
 
 - [x] **Step 4: Verify GREEN**
 

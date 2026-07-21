@@ -31,6 +31,7 @@ The workflow must fail before publication unless all conditions hold:
 - the expected Actions artifact exists exactly once and is not expired;
 - the artifact contains exactly the versioned extension ZIP and adjacent checksum record;
 - the checksum matches the ZIP;
+- `CHANGELOG.md` contains exactly one non-empty dated entry for the release version;
 - the ZIP contains the manifest, license, declared RDKit wheel, and two `.blend` libraries, while excluding development-only paths and extra wheels;
 - no GitHub Release already exists for the tag before publication;
 - GitHub reports the expected SHA-256 digest for each uploaded Release asset.
@@ -39,12 +40,12 @@ Use Python's standard library for manifest, checksum, and ZIP validation. Keep t
 
 ## Publication and Failure Behavior
 
-The publish job generates release notes with GitHub's native release-note generation and uploads only the verified ZIP and checksum. It creates a draft first. Digest failure leaves a private draft for inspection; only a digest-clean draft is changed to a public latest Release.
+The publish job extracts the release version from `CHANGELOG.md` and uses it as the complete GitHub Release body. If the tag contains a changelog, its extracted entry must match the dispatch commit. The job uploads only the verified ZIP and checksum and creates a draft first. Digest failure leaves a private draft for inspection; only a digest-clean draft is changed to a public latest Release.
 
 A verification-only run performs no external write. A failed publish run never deletes or replaces an existing Release automatically. Maintainers inspect and remove an invalid draft before retrying. Published tags and binaries are immutable by policy; corrections use a new patch version.
 
 ## Tests
 
-Extend the existing standard-library repository contracts before implementation. The tests require the trigger, inputs, job-level permissions, environment gate, exact-run selection, artifact re-verification, draft-first publication, digest check, and full action SHA pins. Add focused temporary-ZIP tests for the validator's success, checksum failure, and package-contract failure paths.
+Extend the existing standard-library repository contracts before implementation. The tests require the trigger, inputs, job-level permissions, environment gate, exact-run selection, changelog extraction, artifact re-verification, draft-first publication, digest check, and full action SHA pins. Add focused tests for version-entry extraction and temporary-ZIP validation failure paths.
 
 No new Python or GitHub Action dependency is introduced.

@@ -2,6 +2,7 @@
 
 ## Development
 
+- [Changelog](../CHANGELOG.md)
 - [Branch and release workflow](development/branch-and-release.md)
 - [2.2.0 extension migration](migration/2.2.0-extension.md)
 

@@ -31,6 +31,17 @@ This is the preferred balance for the current Windows-only release line. A tag p
 
 GitHub recommends full commit SHA pins for immutable action code and supports SHA-256 validation when workflow artifacts are uploaded and downloaded. See [Secure use reference](https://docs.github.com/en/actions/reference/security/secure-use) and [Store and share data with workflow artifacts](https://docs.github.com/en/actions/tutorials/store-and-share-data).
 
+## Changelog Policy
+
+`CHANGELOG.md` is the single source for GitHub Release notes.
+
+1. Record user-visible work under `## [Unreleased]` while developing.
+2. During release preparation, move the applicable entries to one dated heading in the exact form `## [X.Y.Z] - YYYY-MM-DD`.
+3. Update `blender_manifest.toml` to the same version in that pre-tag commit.
+4. Do not rewrite a published version entry except to correct a factual error; release behavior changes use a new version.
+
+`ChemBlender/scripts/extract_release_notes.py` requires exactly one non-empty dated entry. Package CI checks the manifest version entry, and the Release workflow extracts it into `release-notes.md`. When the tag contains `CHANGELOG.md`, the workflow also requires the tag and dispatch-commit entries to match. The historical v2.2.0 tag predates the changelog and is the only backfilled release.
+
 ## CI-to-Release Checks
 
 The Release workflow verifies all of these conditions before publication:
@@ -53,6 +64,11 @@ Merge the focused feature or release branch into maintained `main`. Confirm that
 ```powershell
 git switch main
 git pull --ff-only origin main
+$pythonBin = 'C:\Program Files\Blender Foundation\Blender 5.1\5.1\python\bin\python.exe'
+$version = '2.2.0'
+& $pythonBin ChemBlender/scripts/extract_release_notes.py `
+  --changelog CHANGELOG.md --version $version `
+  --output '.agents/cache/release-notes.md'
 git status --short --branch
 git diff --check
 ```
@@ -62,7 +78,6 @@ Do not release directly from `archive/*` or a downstream branch. Do not treat a 
 ### 2. Create and push one annotated tag
 
 ```powershell
-$version = '2.2.0'
 $tag = "v$version"
 
 git tag -a $tag -m "Release $tag"
@@ -91,13 +106,13 @@ gh workflow run extension-release.yml --repo $repo `
   -f tag=$tag -f publish=true
 ```
 
-This is the explicit publication authorization. The workflow repeats artifact verification inside its `release` environment, creates a draft with GitHub-generated notes, compares both GitHub asset digests, and publishes only after they match. It then confirms that the tag is the latest public Release.
+This is the explicit publication authorization. The workflow repeats artifact verification inside its `release` environment, extracts the matching `CHANGELOG.md` entry, creates a draft with that text, compares both GitHub asset digests, and publishes only after they match. It then confirms that the tag is the latest public Release.
 
 Repository administrators should configure required reviewers under **Settings → Environments → release** when a second approval is desired. Without that protection rule, the manual `publish=true` dispatch remains the sole human approval.
 
 ### 5. Record evidence
 
-Record the tag commit, package run URL, verification and publication run URLs, artifact name, package SHA-256, and Release URL in the release completion evidence.
+Record the tag commit, package run URL, verification and publication run URLs, changelog version, artifact name, package SHA-256, and Release URL in the release completion evidence. Confirm that the public Release body equals the extracted changelog entry.
 
 ## Failure Rules
 
