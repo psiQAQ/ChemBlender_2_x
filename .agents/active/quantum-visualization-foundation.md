@@ -27,7 +27,7 @@
 
 ## Next Action
 
-选择并设计第二种无第三方依赖的结构 reader，用同一结构 fixture 验证跨格式 normalized representation 一致，从而完成 Phase 0 剩余的结构格式验收。extXYZ 与 Blender trajectory adapter 继续延期。
+审阅 MOL V2000 reader 设计规格；批准后编写实施计划，并用同一水分子 fixture 验证 XYZ 与 MOL V2000 的 normalized representation 一致。extXYZ、拓扑模型与 Blender trajectory adapter 继续延期。
 
 ## Completed
 
@@ -38,6 +38,7 @@
 - `.mol2` 已从旧 UI 文件白名单移除；在真实 reader 和 fixture 出现前不再宣称支持。
 - 单帧 XYZ reader 已实现内容探测、结构归一化、SHA-256 provenance 和 golden fixture；额外原子列、后续帧与 D/T 映射均通过 `ParserReport` 显式说明。
 - `FrameSet` 已作为 `PropertyDataset` specialization 进入 datasets registry；基础多帧 XYZ 可保留共享原子身份、`(frame, atom, xyz)` 坐标和逐帧 comment，并拒绝 frame 间原子变化或截断输入。
+- 已选择 MOL V2000 作为第二种无第三方依赖的结构格式，并形成最小 reader 设计：只归一化结构，未映射键与属性必须显式报告。
 
 ## Verification
 
@@ -56,6 +57,7 @@
 - [XYZ reader 实现计划](../../docs/superpowers/plans/2026-07-22-xyz-reader.md)
 - [多帧 XYZ 与 FrameSet 设计](../../docs/superpowers/specs/2026-07-22-multiframe-xyz-design.md)
 - [多帧 XYZ 实现计划](../../docs/superpowers/plans/2026-07-22-multiframe-xyz.md)
+- [MOL V2000 reader 设计](../../docs/superpowers/specs/2026-07-22-mol-v2000-reader-design.md)
 - [文档体系设计](../../docs/superpowers/specs/2026-07-21-quantum-visualization-development-system-design.md)
 - [持续开发路线图](../../docs/quantum-visualization/roadmap.md)
 - [Phase 0 数据边界议程](../../docs/quantum-visualization/architecture/data-boundary.md)
