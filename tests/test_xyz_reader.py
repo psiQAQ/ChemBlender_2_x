@@ -4,6 +4,8 @@ import unittest
 from uuid import uuid4
 
 from ChemBlender.core import (
+    CapabilitySupport,
+    FrameSet,
     IssueKind,
     QCProject,
     ReaderRegistry,
@@ -15,6 +17,9 @@ from ChemBlender.core.xyz import sniff_xyz
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests" / "fixtures" / "xyz" / "water.xyz"
+TRAJECTORY_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "xyz" / "water-trajectory.xyz"
+)
 
 
 class XYZReaderTests(unittest.TestCase):
@@ -52,6 +57,25 @@ class XYZReaderTests(unittest.TestCase):
             {structure.id, batch.provenance[0].id},
         )
 
+    def test_parse_normalizes_multi_frame_xyz(self):
+        batch = XYZ_READER.parse(TRAJECTORY_FIXTURE)
+        self.assertEqual(len(batch.structures), 1)
+        self.assertEqual(len(batch.datasets), 1)
+        frames = batch.datasets[0]
+        self.assertIsInstance(frames, FrameSet)
+        self.assertEqual(frames.structure_id, batch.structures[0].id)
+        self.assertEqual(frames.data.shape, (2, 3, 3))
+        self.assertEqual(frames.comments, ("frame 0", "frame 1"))
+        self.assertAlmostEqual(frames.data.values[1, 0, 0], 0.1)
+        self.assertIn("trajectory", batch.report.parsed_capabilities)
+        project = QCProject(id=uuid4(), schema_version="0.1")
+        project.commit(batch)
+
+    def test_single_frame_does_not_create_frame_set(self):
+        batch = XYZ_READER.parse(FIXTURE)
+        self.assertEqual(batch.datasets, ())
+        self.assertEqual(batch.report.parsed_capabilities, ("structure",))
+
     def test_parsed_batch_commits_to_project(self):
         batch = ReaderRegistry((XYZ_READER,)).parse(FIXTURE)
         project = QCProject(id=uuid4(), schema_version="0.1")
@@ -72,7 +96,7 @@ class XYZReaderTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         XYZ_READER.parse(source)
 
-    def test_extra_columns_and_frames_are_reported(self):
+    def test_extra_columns_are_reported_for_multi_frame_xyz(self):
         content = b"1\nfirst\nH 0 0 0 charge=0\n1\nsecond\nH 1 0 0\n"
         with TemporaryDirectory() as directory:
             source = Path(directory) / "extra.xyz"
@@ -83,8 +107,26 @@ class XYZReaderTests(unittest.TestCase):
             issues,
             {
                 "atom_properties": IssueKind.UNSUPPORTED,
-                "trajectory": IssueKind.UNSUPPORTED,
             },
+        )
+
+    def test_multi_frame_rejects_changed_atoms_and_truncation(self):
+        cases = (
+            b"1\nfirst\nH 0 0 0\n1\nsecond\nO 1 0 0\n",
+            b"1\nfirst\nH 0 0 0\n2\nsecond\nH 1 0 0\n",
+        )
+        for content in cases:
+            with self.subTest(content=content):
+                with TemporaryDirectory() as directory:
+                    source = Path(directory) / "bad.xyz"
+                    source.write_bytes(content)
+                    with self.assertRaises(ValueError):
+                        XYZ_READER.parse(source)
+
+    def test_xyz_descriptor_supports_trajectory(self):
+        self.assertIs(
+            XYZ_READER.capabilities["trajectory"],
+            CapabilitySupport.SUPPORTED,
         )
 
     def test_isotope_symbols_map_to_hydrogen_with_warning(self):
