@@ -113,6 +113,8 @@ Do not infer current status from this file, completed work, archived evidence, o
 
 ## Knowledge Entrypoints
 
+- Quantum visualization roadmap: `docs/quantum-visualization/roadmap.md`
+- Quantum visualization data boundary: `docs/quantum-visualization/architecture/data-boundary.md`
 - Latest release readiness evidence: `.agents/completed/2.2.0-release-readiness.md`
 - Branch architecture: `.agents/reference/branch-architecture.md`
 - Dependency and release policy: `.agents/reference/dependencies-and-release.md`

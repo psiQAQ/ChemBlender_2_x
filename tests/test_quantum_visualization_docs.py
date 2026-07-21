@@ -78,6 +78,33 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         children = {path.name for path in (ROOT / "submodules").iterdir()}
         self.assertEqual(children, {"README.md"})
 
+    def test_single_active_task(self):
+        active = sorted((ROOT / ".agents" / "active").glob("*.md"))
+        self.assertEqual(
+            [path.name for path in active],
+            ["quantum-visualization-foundation.md"],
+        )
+
+    def test_local_markdown_links_resolve(self):
+        import re
+
+        paths = [
+            ROOT / "README.md",
+            ROOT / "AGENTS.md",
+            ROOT / ".agents" / "README.md",
+            *(ROOT / ".agents" / "active").glob("*.md"),
+            ROOT / "docs" / "README.md",
+            *DOCS.rglob("*.md"),
+        ]
+        for path in paths:
+            text = self.read_doc(str(path.relative_to(ROOT)))
+            for destination in re.findall(r"\[[^]]+\]\(([^)]+)\)", text):
+                destination = destination.strip("<>").split("#", 1)[0]
+                if not destination or destination.startswith(("http://", "https://")):
+                    continue
+                target = (path.parent / destination).resolve()
+                self.assertTrue(target.exists(), f"{path}: {destination}")
+
 
 if __name__ == "__main__":
     unittest.main()
