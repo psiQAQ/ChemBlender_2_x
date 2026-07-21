@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.zip
+ChemBlender/*.sha256
+.pytest_cache/
+.blend-analysis/
+Thumbs.db
+.agents/cache/
+.agents/archive/*
+!.agents/archive/README.md
+.worktrees/
+ChemBlender/wheels/*.whl

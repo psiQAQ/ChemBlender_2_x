@@ -1,21 +1,7 @@
-bl_info = {
-    "name" : "ChemBlender",
-    "author" : "LiHaodong",
-    "version" : (2, 1, 1),
-    "blender" : (5, 1, 0),
-    "location" : "Geometry Nodes Editor > Add > Chem",
-    "description" : "Professional Modeling and Visualization of Molecular and Crystal Structures for Scientists and Artiests.",
-    "warning" : "",
-    "doc_url": "www.chemblender.com",
-    "category": "Node",
-}
-
 import bpy
 import os, re, json
-from . import auto_load
-from .panel import CHEM_texts, CHEM_PT_Build, CHEM_PT_TOOLS, CRYSTAL_PT_TOOLS
+from .panel import CHEM_texts
 from .read import CIF_Atom, CIF_Structure
-from .ex_package import PYPI_MIRROR
 from bpy.types import (
     Operator,
     Menu,
@@ -32,8 +18,6 @@ cat_list = []
 
 # 生成分类菜单
 def cat_generator():
-    global cat_list
-    cat_list = []  # 每次调用时重置cat_list
     for item in geo_node_group.items():
         def my_list(self, context):
             layout = self.layout
@@ -50,14 +34,28 @@ def cat_generator():
             "bl_label": item[0],
             "draw": my_list,
         })
-        if menu_type not in cat_list:
-            def generate_menu_draw(name, label): # 强制唯一引用
-                def draw_menu(self, context):
-                    self.layout.menu(name, text=label)
-                return draw_menu
-            bpy.utils.register_class(menu_type)
-            bpy.types.NODE_MT_chem_GN_menu.append(generate_menu_draw(menu_type.bl_idname, menu_type.bl_label))
-            cat_list.append(menu_type)
+        def generate_menu_draw(name, label): # 强制唯一引用
+            def draw_menu(self, context):
+                self.layout.menu(name, text=label)
+            return draw_menu
+
+        draw_callback = generate_menu_draw(menu_type.bl_idname, menu_type.bl_label)
+        bpy.utils.register_class(menu_type)
+        bpy.types.NODE_MT_chem_GN_menu.append(draw_callback)
+        cat_list.append((menu_type, draw_callback))
+
+
+def clear_generated_menus():
+    for menu_type, draw_callback in reversed(cat_list):
+        try:
+            bpy.types.NODE_MT_chem_GN_menu.remove(draw_callback)
+        except (AttributeError, ValueError, RuntimeError):
+            pass
+        try:
+            bpy.utils.unregister_class(menu_type)
+        except (ValueError, RuntimeError):
+            pass
+    cat_list.clear()
 
 
 class NODE_MT_chem_GN_menu(Menu):
@@ -126,75 +124,44 @@ def add_chem_button(self, context):
     if context.area.ui_type == 'GeometryNodeTree':
         self.layout.menu('NODE_MT_chem_GN_menu', text="Chem Nodes", icon='FORWARD')
 
-classes = (
-    NODE_OT_group_add,
-    # NODE_MT_chem_GN_menu,
-)
-auto_cls = auto_load.init()
-panel_cls = [CHEM_PT_Build,
-             CHEM_PT_TOOLS,
-             CRYSTAL_PT_TOOLS,
-             CIF_Atom,
-             CIF_Structure
-             ]
-for cls in panel_cls:
-    auto_cls.remove(cls)
-auto_cls.append(NODE_OT_group_add)
-
-
 def register():
     global geo_node_group
-    
-    # Load GN_menu.json configuration file
-    json_file = "GN_menu.json" if language else "GN_menu_En.json"
-    with open(os.path.join(dir_path, json_file), 'r') as f:
-        geo_node_group = json.loads(f.read())
-    
-    if not hasattr(bpy.types, "NODE_MT_chem_GN_menu"):
-        bpy.utils.register_class(NODE_MT_chem_GN_menu)
-        bpy.types.NODE_MT_add.append(add_chem_button)
 
-    for cls in panel_cls:
-        bpy.utils.register_class(cls)
-    for cls in auto_cls:
-        bpy.utils.register_class(cls)
+    clear_generated_menus()
+    json_file = "GN_menu.json" if language else "GN_menu_En.json"
+    with open(os.path.join(dir_path, json_file), 'r', encoding='utf-8') as stream:
+        geo_node_group = json.load(stream)
+
+    try:
+        bpy.types.NODE_MT_add.remove(add_chem_button)
+    except (ValueError, RuntimeError):
+        pass
+    bpy.types.NODE_MT_add.append(add_chem_button)
+
+    for owner, name in (
+        (bpy.types.Object, "cif_original"),
+        (bpy.types.Object, "cif_current"),
+        (bpy.types.Scene, "my_tool"),
+    ):
+        if hasattr(owner, name):
+            delattr(owner, name)
     bpy.types.Object.cif_original = bpy.props.PointerProperty(type=CIF_Structure)
     bpy.types.Object.cif_current = bpy.props.PointerProperty(type=CIF_Structure)
     bpy.types.Scene.my_tool = bpy.props.PointerProperty(type=CHEM_texts)
-    bpy.types.Scene.pypi_mirror = bpy.props.EnumProperty(
-        name="PyPI Mirror",
-        items=[(k, k, "") for k in PYPI_MIRROR.keys()],
-        default="Default"
-    )
     cat_generator()
 
 
 def unregister():
+    clear_generated_menus()
     try:
         bpy.types.NODE_MT_add.remove(add_chem_button)
-    except:
+    except (ValueError, RuntimeError):
         pass
 
-    for cls in reversed(panel_cls):
-        try:
-            bpy.utils.unregister_class(cls)
-        except:
-            pass
-
-    for cls in reversed(auto_cls):
-        try:
-            bpy.utils.unregister_class(cls)
-        except:
-            pass
-
-    try:
-        del bpy.types.Object.cif_original
-        del bpy.types.Object.cif_current
-        del bpy.types.Scene.my_tool
-        del bpy.types.Scene.pypi_mirror
-    except:
-        pass
-    
-    
-#if __name__ == "__main__":
-#    register()
+    for owner, name in (
+        (bpy.types.Object, "cif_original"),
+        (bpy.types.Object, "cif_current"),
+        (bpy.types.Scene, "my_tool"),
+    ):
+        if hasattr(owner, name):
+            delattr(owner, name)
