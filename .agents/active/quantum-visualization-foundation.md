@@ -27,7 +27,7 @@
 
 ## Next Action
 
-执行 [XYZ reader 实现计划](../../docs/superpowers/plans/2026-07-22-xyz-reader.md)：实现内容探测、单帧结构归一化、明确 capability/`ParserReport`，并通过 registry 返回 `ImportBatch`。多帧 trajectory、extXYZ 属性和 Blender UI 继续延期。
+为多帧 XYZ 编写 `FrameSet` 最小建模与 reader 实现计划：只解决共享原子身份、`(frame, atom, xyz)` 坐标和逐帧 comment；extXYZ 属性 schema 与 Blender frame handler 继续延期。
 
 ## Completed
 
@@ -36,6 +36,7 @@
 - 核心 contract tests 使用 Python 标准库运行，不要求 NumPy 或第三方 parser。
 - 显式 reader registry 已实现 descriptor、capability、64 KiB bounded sniff、确定性选择和 `ImportBatch` 返回约束。
 - `.mol2` 已从旧 UI 文件白名单移除；在真实 reader 和 fixture 出现前不再宣称支持。
+- 单帧 XYZ reader 已实现内容探测、结构归一化、SHA-256 provenance 和 golden fixture；额外原子列、后续帧与 D/T 映射均通过 `ParserReport` 显式说明。
 
 ## Verification
 
