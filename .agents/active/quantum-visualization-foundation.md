@@ -27,7 +27,7 @@
 
 ## Next Action
 
-基于已接受的 [量子化学语义模型 ADR](../decisions/0003-quantum-chemistry-semantic-model.md)，起草下一项 `Grid3D` 与单位约定 ADR。只确定坐标、dataset axis、单位传递和错误状态；存储、压缩与显示样式继续延期。
+基于已接受的语义模型与 `Grid3D`/单位约定，起草 reader capability contract ADR。只确定 reader 注册、内容探测、能力状态、输出事务和 `ParserReport`；插件发现与第三方依赖继续延期。
 
 ## Verification
 
@@ -38,6 +38,7 @@
 ## References
 
 - [量子化学语义模型 ADR](../decisions/0003-quantum-chemistry-semantic-model.md)
+- [Grid3D 与单位约定 ADR](../decisions/0004-grid3d-and-units.md)
 - [文档体系设计](../../docs/superpowers/specs/2026-07-21-quantum-visualization-development-system-design.md)
 - [持续开发路线图](../../docs/quantum-visualization/roadmap.md)
 - [Phase 0 数据边界议程](../../docs/quantum-visualization/architecture/data-boundary.md)
