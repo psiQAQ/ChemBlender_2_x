@@ -24,6 +24,7 @@ Historical documents provide provenance, not current status.
 | decision | [0003-quantum-chemistry-semantic-model.md](decisions/0003-quantum-chemistry-semantic-model.md) | Phase 0 project registry, semantic objects, arrays, states, and provenance boundary |
 | decision | [0004-grid3d-and-units.md](decisions/0004-grid3d-and-units.md) | Phase 0 affine grid, dataset axes, unit tokens, and conversion provenance |
 | decision | [0005-reader-capability-contract.md](decisions/0005-reader-capability-contract.md) | Phase 0 reader registry, sniffing, capability, import batch, and parser report contract |
+| decision | [0006-blend-sidecar-boundary.md](decisions/0006-blend-sidecar-boundary.md) | Phase 0 authoritative sidecar, blend references, revisions, and cache invalidation boundary |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |

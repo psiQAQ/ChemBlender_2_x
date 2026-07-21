@@ -27,7 +27,7 @@
 
 ## Next Action
 
-基于已接受的语义模型、网格/单位和 reader contract，起草 Blender 与边车数据职责边界 ADR。只确定权威数据、`.blend` 引用、缓存身份和失效条件；具体边车后端与 worker 协议继续延期。
+四项 Phase 0 数据边界决策已经接受。下一步将它们转换为普通 CPython 可执行的最小语义核心实现计划，并在计划中确定最小文件位置、标准库数据结构和 contract tests；第三方依赖与边车后端不进入首个实现切片。
 
 ## Verification
 
@@ -40,6 +40,7 @@
 - [量子化学语义模型 ADR](../decisions/0003-quantum-chemistry-semantic-model.md)
 - [Grid3D 与单位约定 ADR](../decisions/0004-grid3d-and-units.md)
 - [Reader capability contract ADR](../decisions/0005-reader-capability-contract.md)
+- [Blender 与边车数据职责边界 ADR](../decisions/0006-blend-sidecar-boundary.md)
 - [文档体系设计](../../docs/superpowers/specs/2026-07-21-quantum-visualization-development-system-design.md)
 - [持续开发路线图](../../docs/quantum-visualization/roadmap.md)
 - [Phase 0 数据边界议程](../../docs/quantum-visualization/architecture/data-boundary.md)
