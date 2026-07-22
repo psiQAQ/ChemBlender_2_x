@@ -20,7 +20,7 @@ def assert_package_contents(package):
         "Chem_Nodes_En.blend",
         "wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl",
     }
-    forbidden_prefixes = ("scripts/", "tests/", "__pycache__/")
+    forbidden_prefixes = ("scripts/", "tests/", "worker/", "__pycache__/")
 
     with ZipFile(package) as archive:
         names = {entry.filename.replace("\\", "/") for entry in archive.infolist()}
@@ -46,6 +46,9 @@ def assert_enabled(module_key):
     assert f"{module_key}.grid_volume" in sys.modules
     assert f"{module_key}.dataset_view" in sys.modules
     assert f"{module_key}.trajectory_view" in sys.modules
+    assert f"{module_key}.worker_client" in sys.modules
+    assert f"{module_key}.core.worker_protocol" in sys.modules
+    assert "worker" not in sys.modules
     assert sum(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
         for handler in bpy.app.handlers.frame_change_post

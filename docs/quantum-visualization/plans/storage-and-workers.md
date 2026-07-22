@@ -42,8 +42,9 @@
 
 1. `.cbq` v0.1 manifest、content-addressed `.npy`、lazy open 与完整性校验。
 2. Blender scene 最小链接与 disconnected/stale 恢复状态。
-3. 使用 Phase 1/2 代表性数组完成存储 benchmark，再决定是否迁移到 Zarr 或 HDF5。
-4. 在稳定序列化协议上增加独立 worker，不让 Blender import 重型计算依赖。
+3. 已用 Phase 1/2 四类代表性数组完成 [Windows `.npy` benchmark](../benchmarks/2026-07-22-npy-sidecar-windows.md)；v1 保留 `.npy`。
+4. 本地 worker v1 使用严格 JSON、固定 operation registry、取消复查和原子结果发布；见 ADR 0016。
+5. 真实数组达到 512 MiB、压缩或 chunk-access 触发门槛时，再对 Zarr/HDF5 二选一。
 
 ## 参考仓库触发条件
 
