@@ -14,7 +14,7 @@
 
 | 优先级 | 内容 | 主要验证 |
 | --- | --- | --- |
-| P0 | 已完成 registry、sniffing、`ParserReport`、MOL2 回归、cclib schema 4（含 typed atom property、vibration/excited state）与 IOData；继续 Gemmi/spglib adapter 边界 | 真实 fixture 能区分 supported、partial、unsupported、ambiguous |
+| P0 | 已完成 registry、sniffing、`ParserReport`、MOL2 回归、cclib schema 4、IOData、Gemmi CIF envelope 与 spglib 标准化；继续 ASE/pymatgen 周期 adapters | 真实 fixture 能区分 supported、partial、unsupported、ambiguous |
 | P1 | ASE、QCSchema v1/v2、CJSON、Cube 与周期体数据 adapter | round-trip 或字段级对照不静默丢数据 |
 | P2 | phonopy、critic2、Multiwfn、MD trajectory 和数据库 connector | 对应 Phase 已批准，且外部输出有稳定 fixture |
 

@@ -78,17 +78,24 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("submodules/cclib", gitmodules)
         self.assertIn("submodules/iodata", gitmodules)
         self.assertIn("submodules/gbasis", gitmodules)
+        self.assertIn("submodules/gemmi", gitmodules)
+        self.assertIn("submodules/spglib", gitmodules)
         children = {path.name for path in (ROOT / "submodules").iterdir()}
-        self.assertEqual(children, {"README.md", "cclib", "gbasis", "iodata"})
+        self.assertEqual(
+            children,
+            {"README.md", "cclib", "gbasis", "gemmi", "iodata", "spglib"},
+        )
         self.assertIn("07260dd0394cb1a2381d4d897746d727a12ad6ce", placeholder)
         self.assertIn("adab5813713ba64641565eb2a8c11803a4e9bba6", placeholder)
         self.assertIn("6440c84f3fcf8d42cbd9b5de53ae8d70bed4cd4f", placeholder)
+        self.assertIn("5cc1c23c6007e0e6cbd69289c6f7c0bff50e943e", placeholder)
+        self.assertIn("12355c77fb7c505a55f52cae36341d73b781a065", placeholder)
 
     def test_single_active_task(self):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            ["crystal-foundation.md"],
+            ["phase2-periodic-structure-and-fields.md"],
         )
 
     def test_local_markdown_links_resolve(self):

@@ -14,8 +14,8 @@
 
 | 优先级 | 内容 | 验证重点 |
 | --- | --- | --- |
-| P0 | Gemmi CIF envelope、spglib 对称性/标准化、原始与标准晶胞关系、现有 CIF/POSCAR 回归 | setting、origin shift、occupancy、Uij 和未知 tag 不被误解或丢失 |
-| P1 | ASE/pymatgen adapter、CHGCAR/ELFCAR/LOCPOT、band/DOS、phonopy 复数 q-point 模态 | 晶格/单位/费米能一致；复数模态按相位公式动画 |
+| P0 | 已完成 Gemmi CIF envelope、spglib 对称性/标准化、原始/标准晶胞关系与现有 CIF/POSCAR golden baseline | setting、origin shift、occupancy、Uij 和未知 tag 不被误解或丢失 |
+| P1 | 当前实施 ASE/pymatgen structure 与 CHGCAR/ELFCAR/LOCPOT；随后 band/DOS、phonopy 复数 q-point 模态 | 晶格/单位/费米能一致；复数模态按相位公式动画 |
 | P2 | PyProcar 费米面、投影着色、自旋纹理、速度/有效质量和 sumo 风格联动 | 倒空间 mesh 与投影数据可追溯到来源计算 |
 
 ## 依赖关系

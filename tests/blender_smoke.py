@@ -453,6 +453,29 @@ def assert_dataset_and_trajectory_views(module_key):
             bpy.data.meshes.remove(mesh)
 
 
+def assert_legacy_crystal_reader_baseline(module_key, repository_root):
+    reader = importlib.import_module(f"{module_key}.read")
+    cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
+    poscar = repository_root / "tests" / "fixtures" / "poscar" / "cscl.vasp"
+    cif_result = reader.read_cif(cif)
+    assert cif_result[0] == [4.12, 4.12, 4.12]
+    assert cif_result[1] == [90.0, 90.0, 90.0]
+    assert cif_result[3] == 221
+    assert cif_result[4] == ["Cs", "Cl"]
+    assert cif_result[5] == ["Cs1", "Cl1"]
+    assert cif_result[6:9] == ([0.0, 0.5], [0.0, 0.5], [0.0, 0.5])
+    assert cif_result[9] == ["x,y,z"]
+
+    poscar_result = reader.read_poscar(poscar)
+    assert poscar_result[0] == (4.12, 4.12, 4.12), poscar_result
+    assert poscar_result[1] == (90.0, 90.0, 90.0)
+    assert poscar_result[3] == 221
+    assert poscar_result[4] == ["Cs", "Cl"]
+    assert poscar_result[5] == ["Cs1", "Cl1"]
+    assert poscar_result[6:9] == ([0.0, 0.5], [0.0, 0.5], [0.0, 0.5])
+    assert len(poscar_result[9]) == 48
+
+
 arguments = sys.argv[sys.argv.index("--") + 1 :]
 assert len(arguments) in (1, 2), "expected ZIP path and optional --keep-enabled"
 assert len(arguments) == 1 or arguments[1] == "--keep-enabled"
@@ -475,6 +498,7 @@ assert_installed_blend_libraries(module_key)
 assert_grid_volume_adapter(module_key)
 assert_vibration_view_adapter(module_key)
 assert_dataset_and_trajectory_views(module_key)
+assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 
 for _ in range(2):
     assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}

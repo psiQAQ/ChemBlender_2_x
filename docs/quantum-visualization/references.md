@@ -13,8 +13,8 @@
 | [IOData](https://github.com/theochem/iodata) | FCHK/Molden/WFN/WFX、basis、MO、RDM、Cube | reader；波函数 | P0 | 外部 core adapter；submodule 固定 v1.0.1 供审阅和测试 | GPL-3.0-or-later 已复核 | 已触发；`adab5813713ba64641565eb2a8c11803a4e9bba6` |
 | QCElemental/QCSchema | 单位、计算记录、provenance、交换 | 语义核心；reader | P0/P1 | schema adapter 与单位参考 | 集成前复核 | 单位/QCSchema ADR 需要代码对照 |
 | ASE | 结构、轨迹、周期 I/O 与 calculator 交换 | reader；周期 | P0/P1 | 结构交换 adapter 候选 | 集成前复核 | extXYZ/POSCAR/trajectory 进入实施 |
-| Gemmi | CIF/mmCIF 词法、语法与 raw envelope | reader；周期 | P0 | CIF adapter 候选 | 集成前复核 | CIF 替换回归 fixture 已准备 |
-| spglib | 空间群、Wyckoff、标准化与变换 | reader；周期 | P0 | 对称性 adapter 候选 | 集成前复核 | 空间群 ADR 与回归 fixture 已准备 |
+| [Gemmi](https://github.com/project-gemmi/gemmi) | CIF/mmCIF 词法、语法与 raw envelope | reader；周期 | P0 | 外部 core adapter；submodule 固定 v0.7.5 供审阅和测试 | MPL-2.0 已复核 | 已触发；`5cc1c23c6007e0e6cbd69289c6f7c0bff50e943e` |
+| [spglib](https://github.com/spglib/spglib) | 空间群、Wyckoff、标准化与变换 | reader；周期 | P0 | 外部 core adapter；submodule 固定 v2.7.0 供审阅和测试 | BSD-3-Clause 已复核 | 已触发；`12355c77fb7c505a55f52cae36341d73b781a065` |
 | ORBKIT | MO、密度、导数和网格求值 | 波函数/网格 | P1 | 仅保留未来对照候选；Python 3.13 实测因未声明 Cython 构建依赖失败 | LGPL-3.0-or-later 已复核 | 当前不触发；GBasis 已满足规则网格 MVP |
 | [GBasis](https://github.com/theochem/gbasis) | Gaussian basis、MO、密度、ESP、导数与积分 | 波函数/网格 | P1 | 外部 worker 主后端；submodule 固定 v0.1.0 供审阅和真实 FCHK 测试 | GPL-3.0-or-later 已复核 | 已触发；`6440c84f3fcf8d42cbd9b5de53ae8d70bed4cd4f` |
 | [Grid](https://github.com/theochem/grid) | 规则/原子中心/自适应网格、积分与 Cube | 波函数/网格 | P1 | 原子中心积分或自适应网格候选；当前 affine 点阵由 NumPy 生成 | GPL-3.0-or-later 已复核 | 当前不触发；规则网格不需要额外依赖 |

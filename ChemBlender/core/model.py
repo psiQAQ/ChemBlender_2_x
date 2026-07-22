@@ -136,12 +136,153 @@ class ArrayData:
 
 
 @dataclass(frozen=True, slots=True)
+class CIFEnvelope:
+    id: UUID
+    revision: str
+    block_name: str
+    source_bytes: bytes
+    tag_names: tuple[str, ...]
+    provenance_ids: tuple[UUID, ...]
+
+    def __post_init__(self):
+        _require_uuid(self.id, "id")
+        _require_text(self.revision, "revision")
+        _require_text(self.block_name, "block_name")
+        if not isinstance(self.source_bytes, bytes) or not self.source_bytes:
+            raise ValueError("source_bytes must be non-empty bytes")
+        tag_names = tuple(self.tag_names)
+        if any(
+            not isinstance(tag, str) or not tag.startswith("_")
+            for tag in tag_names
+        ):
+            raise ValueError("tag_names must contain CIF tags")
+        object.__setattr__(self, "tag_names", tag_names)
+        object.__setattr__(
+            self,
+            "provenance_ids",
+            _require_uuid_tuple(self.provenance_ids, "provenance_ids"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PeriodicSiteData:
+    fractional_coordinates: ArrayData
+    site_labels: tuple[str, ...]
+    occupancies: ArrayData
+    isotropic_displacements: ArrayData | None
+    anisotropic_displacements: ArrayData | None
+    adp_types: tuple[str, ...]
+    disorder_groups: tuple[int, ...]
+    declared_space_group_name: str | None
+    declared_space_group_number: int | None
+    symmetry_operations: tuple[str, ...]
+    cif_envelope_id: UUID | None
+
+    def __post_init__(self):
+        import numpy
+
+        fractional = numpy.asarray(self.fractional_coordinates.values)
+        if (
+            self.fractional_coordinates.dims != ("atom", "xyz")
+            or len(self.fractional_coordinates.shape) != 2
+            or self.fractional_coordinates.shape[1] != 3
+            or self.fractional_coordinates.unit != "dimensionless"
+            or numpy.iscomplexobj(fractional)
+            or not numpy.all(numpy.isfinite(fractional))
+        ):
+            raise ValueError(
+                "fractional_coordinates must contain finite (atom, xyz) values"
+            )
+        atom_count = self.fractional_coordinates.shape[0]
+        occupancies = numpy.asarray(self.occupancies.values)
+        if (
+            self.occupancies.dims != ("atom",)
+            or self.occupancies.shape != (atom_count,)
+            or self.occupancies.unit != "dimensionless"
+            or numpy.iscomplexobj(occupancies)
+            or not numpy.all(numpy.isfinite(occupancies))
+            or numpy.any(occupancies < 0.0)
+            or numpy.any(occupancies > 1.0)
+        ):
+            raise ValueError("occupancies must contain one value from 0 to 1 per atom")
+        labels = tuple(self.site_labels)
+        adp_types = tuple(self.adp_types)
+        disorder_groups = tuple(self.disorder_groups)
+        if len(labels) != atom_count or any(
+            not isinstance(value, str) or not value for value in labels
+        ):
+            raise ValueError("site_labels must contain one non-empty label per atom")
+        if len(adp_types) != atom_count or any(
+            not isinstance(value, str) or not value for value in adp_types
+        ):
+            raise ValueError("adp_types must contain one non-empty value per atom")
+        if len(disorder_groups) != atom_count or any(
+            isinstance(value, bool) or not isinstance(value, int) or value < 0
+            for value in disorder_groups
+        ):
+            raise ValueError("disorder_groups must contain non-negative integers")
+        if self.isotropic_displacements is not None:
+            values = numpy.asarray(self.isotropic_displacements.values)
+            if (
+                self.isotropic_displacements.dims != ("atom",)
+                or self.isotropic_displacements.shape != (atom_count,)
+                or self.isotropic_displacements.unit != "angstrom_squared"
+                or numpy.iscomplexobj(values)
+                or not numpy.all(numpy.isfinite(values) | numpy.isnan(values))
+            ):
+                raise ValueError(
+                    "isotropic displacements must be finite or missing per-atom values"
+                )
+        if self.anisotropic_displacements is not None:
+            values = numpy.asarray(self.anisotropic_displacements.values)
+            if (
+                self.anisotropic_displacements.dims
+                != ("atom", "tensor_component")
+                or self.anisotropic_displacements.shape != (atom_count, 6)
+                or self.anisotropic_displacements.unit != "angstrom_squared"
+                or numpy.iscomplexobj(values)
+            ):
+                raise ValueError(
+                    "anisotropic displacements must contain finite or missing Uij rows"
+                )
+            complete_rows = numpy.all(numpy.isfinite(values), axis=1)
+            missing_rows = numpy.all(numpy.isnan(values), axis=1)
+            if not numpy.all(complete_rows | missing_rows):
+                raise ValueError(
+                    "anisotropic displacements must contain finite or missing Uij rows"
+                )
+        if self.declared_space_group_name is not None:
+            _require_text(
+                self.declared_space_group_name, "declared_space_group_name"
+            )
+        if self.declared_space_group_number is not None and (
+            isinstance(self.declared_space_group_number, bool)
+            or not isinstance(self.declared_space_group_number, int)
+            or not 1 <= self.declared_space_group_number <= 230
+        ):
+            raise ValueError("declared_space_group_number must be from 1 to 230")
+        symmetry_operations = tuple(self.symmetry_operations)
+        if any(
+            not isinstance(value, str) or not value
+            for value in symmetry_operations
+        ):
+            raise ValueError("symmetry_operations must contain non-empty strings")
+        if self.cif_envelope_id is not None:
+            _require_uuid(self.cif_envelope_id, "cif_envelope_id")
+        object.__setattr__(self, "site_labels", labels)
+        object.__setattr__(self, "adp_types", adp_types)
+        object.__setattr__(self, "disorder_groups", disorder_groups)
+        object.__setattr__(self, "symmetry_operations", symmetry_operations)
+
+
+@dataclass(frozen=True, slots=True)
 class Structure:
     id: UUID
     revision: str
     atomic_numbers: tuple[int, ...]
     coordinates: ArrayData
     cell: ArrayData | None = None
+    periodic: PeriodicSiteData | None = None
 
     def __post_init__(self):
         _require_uuid(self.id, "id")
@@ -166,7 +307,153 @@ class Structure:
                 raise ValueError("cell must have dims (cell_vector, xyz) and shape (3, 3)")
             if self.cell.unit != self.coordinates.unit:
                 raise ValueError("cell and coordinates must use the same unit")
+        if self.periodic is not None:
+            if not isinstance(self.periodic, PeriodicSiteData):
+                raise TypeError("periodic must be PeriodicSiteData")
+            if self.cell is None:
+                raise ValueError("periodic structure requires a cell")
+            if self.periodic.fractional_coordinates.shape[0] != len(atomic_numbers):
+                raise ValueError("periodic atom dimension must match atomic numbers")
         object.__setattr__(self, "atomic_numbers", atomic_numbers)
+
+
+@dataclass(frozen=True, slots=True)
+class SymmetryResult:
+    id: UUID
+    revision: str
+    structure_id: UUID
+    standardized_structure_id: UUID
+    hall_number: int
+    international_number: int
+    international_symbol: str
+    hall_symbol: str
+    choice: str
+    pointgroup: str
+    rotations: ArrayData
+    translations: ArrayData
+    wyckoffs: tuple[str, ...]
+    site_symmetry_symbols: tuple[str, ...]
+    equivalent_atoms: ArrayData
+    crystallographic_orbits: ArrayData
+    transformation_matrix: ArrayData
+    origin_shift: ArrayData
+    mapping_to_primitive: ArrayData
+    std_mapping_to_primitive: ArrayData
+    std_rotation_matrix: ArrayData
+    symprec: float
+    angle_tolerance: float
+    provenance_ids: tuple[UUID, ...]
+
+    def __post_init__(self):
+        import numpy
+
+        _require_uuid(self.id, "id")
+        _require_uuid(self.structure_id, "structure_id")
+        _require_uuid(self.standardized_structure_id, "standardized_structure_id")
+        _require_text(self.revision, "revision")
+        if (
+            isinstance(self.hall_number, bool)
+            or not isinstance(self.hall_number, int)
+            or not 1 <= self.hall_number <= 530
+        ):
+            raise ValueError("hall_number must be from 1 to 530")
+        if (
+            isinstance(self.international_number, bool)
+            or not isinstance(self.international_number, int)
+            or not 1 <= self.international_number <= 230
+        ):
+            raise ValueError("international_number must be from 1 to 230")
+        for name in ("international_symbol", "hall_symbol", "pointgroup"):
+            _require_text(getattr(self, name), name)
+        if not isinstance(self.choice, str):
+            raise TypeError("choice must be a string")
+        arrays = (
+            self.rotations,
+            self.translations,
+            self.equivalent_atoms,
+            self.crystallographic_orbits,
+            self.transformation_matrix,
+            self.origin_shift,
+            self.mapping_to_primitive,
+            self.std_mapping_to_primitive,
+            self.std_rotation_matrix,
+        )
+        if any(not isinstance(value, ArrayData) for value in arrays):
+            raise TypeError("symmetry arrays must be ArrayData")
+        operation_count = self.rotations.shape[0]
+        if (
+            self.rotations.dims
+            != ("operation", "output_axis", "input_axis")
+            or self.rotations.shape[1:] != (3, 3)
+            or self.translations.dims != ("operation", "axis")
+            or self.translations.shape != (operation_count, 3)
+        ):
+            raise ValueError("rotations and translations must describe operations")
+        atom_count = self.equivalent_atoms.shape[0]
+        if (
+            self.equivalent_atoms.dims != ("atom",)
+            or self.crystallographic_orbits.dims != ("atom",)
+            or self.crystallographic_orbits.shape != (atom_count,)
+            or self.mapping_to_primitive.dims != ("atom",)
+            or self.mapping_to_primitive.shape != (atom_count,)
+        ):
+            raise ValueError("input-atom symmetry mappings must have matching shape")
+        if self.std_mapping_to_primitive.dims != ("standard_atom",):
+            raise ValueError("standard atom mapping must use standard_atom dimension")
+        matrix_shapes = (
+            (
+                self.transformation_matrix,
+                ("standard_axis", "input_axis"),
+            ),
+            (
+                self.std_rotation_matrix,
+                ("cartesian_output_axis", "cartesian_input_axis"),
+            ),
+        )
+        if any(
+            value.dims != dims or value.shape != (3, 3)
+            for value, dims in matrix_shapes
+        ):
+            raise ValueError("symmetry transformation matrices must be 3 by 3")
+        if self.origin_shift.dims != ("axis",) or self.origin_shift.shape != (3,):
+            raise ValueError("origin_shift must contain three values")
+        for value in arrays:
+            array = numpy.asarray(value.values)
+            if (
+                value.unit != "dimensionless"
+                or numpy.iscomplexobj(array)
+                or not numpy.all(numpy.isfinite(array))
+            ):
+                raise ValueError("symmetry arrays must be finite and dimensionless")
+        wyckoffs = tuple(self.wyckoffs)
+        site_symmetry_symbols = tuple(self.site_symmetry_symbols)
+        if len(wyckoffs) != atom_count or any(
+            not isinstance(value, str) or len(value) != 1 for value in wyckoffs
+        ):
+            raise ValueError("wyckoffs must contain one letter per input atom")
+        if len(site_symmetry_symbols) != atom_count or any(
+            not isinstance(value, str) or not value
+            for value in site_symmetry_symbols
+        ):
+            raise ValueError("site symmetry symbols must match input atoms")
+        for value, name, positive in (
+            (self.symprec, "symprec", True),
+            (self.angle_tolerance, "angle_tolerance", False),
+        ):
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not isfinite(value)
+                or (positive and value <= 0.0)
+            ):
+                raise ValueError(f"{name} must be finite")
+        object.__setattr__(self, "wyckoffs", wyckoffs)
+        object.__setattr__(self, "site_symmetry_symbols", site_symmetry_symbols)
+        object.__setattr__(
+            self,
+            "provenance_ids",
+            _require_uuid_tuple(self.provenance_ids, "provenance_ids"),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -958,6 +1245,8 @@ class ParserReport:
 @dataclass(frozen=True, slots=True)
 class ImportBatch:
     structures: tuple[Structure, ...] = ()
+    cif_envelopes: tuple[CIFEnvelope, ...] = ()
+    symmetry_results: tuple[SymmetryResult, ...] = ()
     calculations: tuple[CalculationRecord, ...] = ()
     datasets: tuple[PropertyDataset | Grid3D, ...] = ()
     basis_sets: tuple[BasisSet, ...] = ()
@@ -969,6 +1258,8 @@ class ImportBatch:
     def __post_init__(self):
         groups = (
             ("structures", Structure),
+            ("cif_envelopes", CIFEnvelope),
+            ("symmetry_results", SymmetryResult),
             ("calculations", CalculationRecord),
             ("datasets", PropertyDataset),
             ("basis_sets", BasisSet),
@@ -990,6 +1281,8 @@ class QCProject:
     id: UUID
     schema_version: str
     structures: dict[UUID, Structure] = field(default_factory=dict)
+    cif_envelopes: dict[UUID, CIFEnvelope] = field(default_factory=dict)
+    symmetry_results: dict[UUID, SymmetryResult] = field(default_factory=dict)
     calculations: dict[UUID, CalculationRecord] = field(default_factory=dict)
     datasets: dict[UUID, PropertyDataset | Grid3D] = field(default_factory=dict)
     basis_sets: dict[UUID, BasisSet] = field(default_factory=dict)
@@ -1008,6 +1301,8 @@ class QCProject:
 
         incoming_groups = (
             batch.structures,
+            batch.cif_envelopes,
+            batch.symmetry_results,
             batch.calculations,
             batch.datasets,
             batch.basis_sets,
@@ -1029,6 +1324,12 @@ class QCProject:
             (structure.id, structure) for structure in batch.structures
         )
         structure_ids = set(structures)
+        cif_envelope_ids = set(self.cif_envelopes).union(
+            envelope.id for envelope in batch.cif_envelopes
+        )
+        symmetry_result_ids = set(self.symmetry_results).union(
+            result.id for result in batch.symmetry_results
+        )
         calculation_ids = set(self.calculations).union(
             calculation.id for calculation in batch.calculations
         )
@@ -1047,6 +1348,50 @@ class QCProject:
         provenance_ids = set(self.provenance).union(
             record.id for record in batch.provenance
         )
+
+        for structure in batch.structures:
+            if (
+                structure.periodic is not None
+                and structure.periodic.cif_envelope_id is not None
+                and structure.periodic.cif_envelope_id not in cif_envelope_ids
+            ):
+                raise ValueError(
+                    "periodic structure has a dangling CIF envelope reference"
+                )
+        for envelope in batch.cif_envelopes:
+            self._require_references(
+                envelope.provenance_ids,
+                provenance_ids,
+                "CIF envelope provenance",
+            )
+        for result in batch.symmetry_results:
+            try:
+                input_structure = structures[result.structure_id]
+            except KeyError as error:
+                raise ValueError(
+                    "SymmetryResult has a dangling input structure reference"
+                ) from error
+            try:
+                standard_structure = structures[result.standardized_structure_id]
+            except KeyError as error:
+                raise ValueError(
+                    "SymmetryResult has a dangling standardized structure reference"
+                ) from error
+            if result.equivalent_atoms.shape[0] != len(input_structure.atomic_numbers):
+                raise ValueError(
+                    "SymmetryResult input atom mappings do not match structure"
+                )
+            if result.std_mapping_to_primitive.shape[0] != len(
+                standard_structure.atomic_numbers
+            ):
+                raise ValueError(
+                    "SymmetryResult standard atom mapping does not match structure"
+                )
+            self._require_references(
+                result.provenance_ids,
+                provenance_ids,
+                "symmetry provenance",
+            )
 
         for calculation in batch.calculations:
             self._require_references(
@@ -1201,6 +1546,8 @@ class QCProject:
             )
         all_ids = (
             structure_ids
+            | cif_envelope_ids
+            | symmetry_result_ids
             | calculation_ids
             | dataset_ids
             | basis_set_ids
@@ -1216,6 +1563,12 @@ class QCProject:
             raise ValueError("parser report created IDs must match the import batch")
 
         self.structures.update((entity.id, entity) for entity in batch.structures)
+        self.cif_envelopes.update(
+            (entity.id, entity) for entity in batch.cif_envelopes
+        )
+        self.symmetry_results.update(
+            (entity.id, entity) for entity in batch.symmetry_results
+        )
         self.calculations.update((entity.id, entity) for entity in batch.calculations)
         self.datasets.update((entity.id, entity) for entity in batch.datasets)
         self.basis_sets.update((entity.id, entity) for entity in batch.basis_sets)
@@ -1228,6 +1581,8 @@ class QCProject:
     def _all_entity_ids(self):
         groups = (
             self.structures,
+            self.cif_envelopes,
+            self.symmetry_results,
             self.calculations,
             self.datasets,
             self.basis_sets,
@@ -1243,6 +1598,8 @@ class QCProject:
     def _validate_registries(self):
         groups = (
             (self.structures, Structure, "structures"),
+            (self.cif_envelopes, CIFEnvelope, "cif_envelopes"),
+            (self.symmetry_results, SymmetryResult, "symmetry_results"),
             (self.calculations, CalculationRecord, "calculations"),
             (self.datasets, PropertyDataset, "datasets"),
             (self.basis_sets, BasisSet, "basis_sets"),

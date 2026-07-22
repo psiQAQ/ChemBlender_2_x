@@ -13,6 +13,12 @@ from .iodata_adapter import (
     parse_iodata_wavefunction,
     sniff_iodata_wavefunction,
 )
+from .gemmi_adapter import (
+    CIF_READER,
+    GemmiDependencyError,
+    parse_cif,
+    sniff_cif,
+)
 from .model import (
     ArrayData,
     AtomicProperty,
@@ -22,6 +28,7 @@ from .model import (
     BasisShell,
     CalculationRecord,
     CalculationStatus,
+    CIFEnvelope,
     DatasetStatus,
     DensityMatrix,
     DensityMatrixLevel,
@@ -38,6 +45,7 @@ from .model import (
     OrbitalSet,
     ParserIssue,
     ParserReport,
+    PeriodicSiteData,
     PropertyDataset,
     ProvenanceRecord,
     QCProject,
@@ -46,6 +54,7 @@ from .model import (
     SpectrumProfile,
     SpinChannel,
     Structure,
+    SymmetryResult,
     VibrationalModeSet,
 )
 from .mol_v2000 import MOL_V2000_READER, parse_mol_v2000, sniff_mol_v2000
@@ -57,6 +66,10 @@ from .readers import (
     ReaderRegistry,
     SniffMatch,
     SniffResult,
+)
+from .spglib_adapter import (
+    SpglibDependencyError,
+    derive_symmetry,
 )
 from .xyz import XYZ_READER, parse_xyz, sniff_xyz
 from .wavefunction_grid import (
@@ -83,9 +96,11 @@ __all__ = [
     "BasisShell",
     "CalculationRecord",
     "CalculationStatus",
+    "CIFEnvelope",
     "CapabilitySupport",
     "CCLIB_OUTPUT_READER",
     "CCLibDependencyError",
+    "CIF_READER",
     "CUBE_READER",
     "DatasetStatus",
     "DensityMatrix",
@@ -95,6 +110,7 @@ __all__ = [
     "ExcitedStateReferences",
     "ExcitedStateSet",
     "FrameSet",
+    "GemmiDependencyError",
     "Grid3D",
     "GBasisDependencyError",
     "ImportBatch",
@@ -107,6 +123,7 @@ __all__ = [
     "OrbitalSet",
     "ParserIssue",
     "ParserReport",
+    "PeriodicSiteData",
     "PropertyDataset",
     "ProvenanceRecord",
     "QCProject",
@@ -119,16 +136,20 @@ __all__ = [
     "SpectrumKind",
     "SpectrumProfile",
     "SpinChannel",
+    "SpglibDependencyError",
     "Structure",
+    "SymmetryResult",
     "VibrationalModeSet",
     "XYZ_READER",
     "parse_cube",
     "parse_cclib_output",
+    "parse_cif",
     "parse_xyz",
     "parse_mol_v2000",
     "sniff_mol_v2000",
     "sniff_cube",
     "sniff_cclib_output",
+    "sniff_cif",
     "sniff_xyz",
     "adapt_ccdata",
     "adapt_iodata",
@@ -139,5 +160,6 @@ __all__ = [
     "evaluate_electrostatic_potential_grid",
     "evaluate_molecular_orbital_grid",
     "derive_electronic_spectrum",
+    "derive_symmetry",
     "derive_vibrational_spectrum",
 ]

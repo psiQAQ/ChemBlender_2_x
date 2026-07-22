@@ -1,0 +1,38 @@
+data_cscl
+_audit_creation_method 'ChemBlender crystal fixture'
+_chemblender_unknown_tag 'preserve me'
+_cell_length_a 4.120(5)
+_cell_length_b 4.120(5)
+_cell_length_c 4.120(5)
+_cell_angle_alpha 90
+_cell_angle_beta 90
+_cell_angle_gamma 90
+_space_group_name_H-M_alt 'P m -3 m'
+_space_group_IT_number 221
+
+loop_
+_space_group_symop_id
+_space_group_symop_operation_xyz
+1 'x,y,z'
+
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+_atom_site_U_iso_or_equiv
+_atom_site_adp_type
+Cs1 Cs 0 0 0 1.0 0.010 Uani
+Cl1 Cl 0.5 0.5 0.5 1.0 0.012 Uiso
+
+loop_
+_atom_site_aniso_label
+_atom_site_aniso_U_11
+_atom_site_aniso_U_22
+_atom_site_aniso_U_33
+_atom_site_aniso_U_12
+_atom_site_aniso_U_13
+_atom_site_aniso_U_23
+Cs1 0.010 0.011 0.012 0.001 0.002 0.003

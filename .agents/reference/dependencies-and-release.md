@@ -59,6 +59,16 @@ IOData is the optional FCHK/Molden basis, orbital, AO-basis 1-RDM, and effective
 
 GBasis evaluates normalized Gaussian basis functions, molecular orbitals, total/spin density and electrostatic-potential grids. Install the modern distribution as `qc-gbasis`; do not install the withdrawn legacy `gbasis` distribution. Version 0.1.0 declares `numpy<2` on Windows, so its standard dependency set has no Python 3.13-compatible NumPy wheel. A Python 3.12/NumPy 1.26.4 worker is the supported local baseline. Python 3.13 with forced NumPy 2.5.1 produced matching probe results but is not a supported installation path. GBasis, IOData, SciPy and their submodules remain outside the Blender Extension ZIP.
 
+| Item | Value |
+| --- | --- |
+| Packages | `gemmi==0.7.5`, `spglib==2.7.0` |
+| Runtime boundary | independent CPython worker/core environment |
+| Reference sources | `submodules/gemmi` at `5cc1c23c6007e0e6cbd69289c6f7c0bff50e943e`; `submodules/spglib` at `12355c77fb7c505a55f52cae36341d73b781a065` |
+| Licenses | Gemmi MPL-2.0; spglib BSD-3-Clause |
+| Transitive requirements | spglib requires NumPy; Gemmi wheel has no required Python dependency |
+
+Gemmi owns CIF parsing and raw-envelope access; spglib owns symmetry search and standardization. Both adapters use late imports. They are tested in an ignored Python 3.13 environment and remain outside the Blender Extension ZIP. A future distributed worker must retain the applicable license files and notices.
+
 ## Local Extension Gates
 
 1. Run `blender-mcp --help`.
