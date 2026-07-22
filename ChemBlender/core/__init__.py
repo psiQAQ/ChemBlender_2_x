@@ -33,6 +33,11 @@ from .gemmi_adapter import (
     parse_cif,
     sniff_cif,
 )
+from .grid_lod import (
+    derive_grid_lod,
+    surface_render_cache_key,
+    volume_render_cache_key,
+)
 from .model import (
     ArrayData,
     AtomicProperty,
@@ -242,6 +247,7 @@ __all__ = [
     "evaluate_electrostatic_potential_grid",
     "evaluate_molecular_orbital_grid",
     "derive_electronic_spectrum",
+    "derive_grid_lod",
     "derive_phonon_frames",
     "derive_symmetry",
     "derive_vibrational_spectrum",
@@ -252,4 +258,6 @@ __all__ = [
     "render_cache_key",
     "save_project",
     "source_hash_bytes",
+    "surface_render_cache_key",
+    "volume_render_cache_key",
 ]

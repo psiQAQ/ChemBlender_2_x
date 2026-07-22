@@ -111,10 +111,11 @@ def assert_grid_volume_adapter(module_key):
         structure_id=structure_id,
     )
     with TemporaryDirectory() as directory:
-        cache = Path(directory) / "grid.vdb"
+        cache_root = Path(directory)
+        cache = adapter.volume_cache_path(cache_root, grid)
         obj = adapter.create_grid_volume(
             grid,
-            cache,
+            cache_root,
             collection=bpy.context.scene.collection,
         )
         volume = obj.data
@@ -130,11 +131,38 @@ def assert_grid_volume_adapter(module_key):
             assert obj["cb_value_unit"] == "inverse_bohr_to_three_halves"
             assert obj["cb_source_coordinate_unit"] == "bohr"
             assert obj["cb_display_coordinate_unit"] == "angstrom"
+            assert obj["cb_render_cache_key"] == cache.stem
             cached = openvdb.read(str(cache), "density")
             assert cached.getAccessor().getValue((1, 0, 1)) == 5.0
             expected = tuple(value * 0.529177210903 for value in (2.2, 3.3, 4.0))
             actual = tuple(cached.transform.indexToWorld((1, 1, 1)))
             assert all(abs(a - b) < 1e-12 for a, b in zip(actual, expected))
+
+            lod = core.derive_grid_lod(grid, strides=(2, 1, 1)).datasets[0]
+            lod_cache = adapter.volume_cache_path(cache_root, lod)
+            assert lod_cache != cache
+            lod_obj = adapter.create_grid_volume(
+                lod, cache_root, collection=bpy.context.scene.collection
+            )
+            lod_volume = lod_obj.data
+            try:
+                assert lod_cache.is_file()
+                assert lod_obj["cb_render_cache_key"] == lod_cache.stem
+                lod_cached = openvdb.read(str(lod_cache), "density")
+                assert lod_cached.getAccessor().getValue((0, 1, 1)) == 3.0
+                lod_world = tuple(
+                    lod_cached.transform.indexToWorld((1, 0, 0))
+                )
+                expected_lod = tuple(
+                    value * 0.529177210903 for value in (3.0, 2.0, 3.0)
+                )
+                assert all(
+                    abs(a - b) < 1e-12
+                    for a, b in zip(lod_world, expected_lod)
+                )
+            finally:
+                bpy.data.objects.remove(lod_obj, do_unlink=True)
+                bpy.data.volumes.remove(lod_volume)
         finally:
             bpy.data.objects.remove(obj, do_unlink=True)
             bpy.data.volumes.remove(volume)

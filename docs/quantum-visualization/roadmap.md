@@ -39,7 +39,7 @@
 
 ## Phase 3：大型数据与交互
 
-状态：进行中；`.cbq` v0.1、local worker v1 与 lazy trajectory manager 已完成，当前进入 Grid3D LOD 与 Volume cache identity。
+状态：已完成（2026-07-22）。`.cbq` v0.1、local worker v1、lazy trajectory manager、Grid3D LOD 与 Volume cache identity 均已验收。
 
 进入条件：Phase 1/2 已提供网格、轨迹和轨道数组的规模基准。
 
@@ -48,6 +48,8 @@
 退出条件：`.blend` 不保存权威大型数组；缓存能可靠失效；重开项目可恢复 dataset 引用；worker 失败不会损坏源数据。
 
 ## Phase 4：工作流与自动化
+
+状态：进行中；当前建立 versioned recipe schema、输入绑定与 validation contract。
 
 进入条件：语义输入、派生数据和 provenance 已足以描述可重复分析。
 
@@ -73,6 +75,7 @@
 14. 已完成：`.cbq` sidecar manifest、lazy array reference、Blender scene link 与分层 cache hash。
 15. 已完成：代表性数组存储 benchmark、worker request/result/error/cancel/version 协议。
 16. 已完成：lazy trajectory frame manager、有界 frame cache、插值与区间均值。
-17. 当前：Grid3D 多分辨率派生、lazy stride access 与 Blender Volume cache identity。
+17. 已完成：Grid3D 多分辨率派生、lazy stride access 与 Blender Volume cache identity。
+18. 当前：versioned recipe schema、语义输入绑定、validation 与 citation contract。
 
-Phase 3 已依据 benchmark 保留 `.npy` 并建立不阻塞 Blender 的本地 worker；下一步完成长轨迹和大型交互，recipe 在 Phase 4 收口。
+Phase 3 已依据 benchmark 保留 `.npy`，建立不阻塞 Blender 的本地 worker，并完成长轨迹与大型网格缓存闭环；Phase 4 从可验证 recipe contract 开始。

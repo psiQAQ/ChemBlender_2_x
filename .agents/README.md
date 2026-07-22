@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [phase3-grid-lod-cache.md](active/phase3-grid-lod-cache.md) | Reproducible Grid3D LOD and Blender Volume cache identity |
+| active | [phase4-recipe-contract.md](active/phase4-recipe-contract.md) | Versioned, validated quantum-analysis recipe contract |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -36,6 +36,7 @@ Historical documents provide provenance, not current status.
 | decision | [0015-cbq-npy-sidecar-and-cache-identity.md](decisions/0015-cbq-npy-sidecar-and-cache-identity.md) | `.cbq` v0.1 manifest, lazy arrays, atomic write and cache identity |
 | decision | [0016-local-worker-v1-and-npy-retention.md](decisions/0016-local-worker-v1-and-npy-retention.md) | Strict local worker protocol, atomic output and `.npy` benchmark decision |
 | decision | [0017-lazy-trajectory-frame-manager.md](decisions/0017-lazy-trajectory-frame-manager.md) | Per-frame lazy reads, bounded LRU and Blender trajectory lifecycle |
+| decision | [0018-grid-lod-and-render-cache-identity.md](decisions/0018-grid-lod-and-render-cache-identity.md) | Reproducible Grid3D LOD and Blender render cache identity |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
@@ -51,6 +52,7 @@ Historical documents provide provenance, not current status.
 | completed | [sidecar-and-cache-foundation.md](completed/sidecar-and-cache-foundation.md) | `.cbq` v0.1 sidecar, lazy arrays, cache keys and Blender scene link evidence |
 | completed | [sidecar-benchmark-and-local-worker.md](completed/sidecar-benchmark-and-local-worker.md) | Representative `.npy` benchmark and local worker v1 evidence |
 | completed | [lazy-trajectory-frame-manager.md](completed/lazy-trajectory-frame-manager.md) | Per-frame lazy trajectory access, LRU and Blender lifecycle evidence |
+| completed | [grid-lod-and-volume-cache.md](completed/grid-lod-and-volume-cache.md) | Lazy Grid3D LOD derivation and reproducible Volume cache evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.
