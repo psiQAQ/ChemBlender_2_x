@@ -42,6 +42,12 @@ def assert_enabled(module_key):
     assert f"{module_key}.core.wavefunction_observables" in sys.modules
     assert "gbasis" not in sys.modules
     assert f"{module_key}.grid_volume" in sys.modules
+    assert f"{module_key}.dataset_view" in sys.modules
+    assert f"{module_key}.trajectory_view" in sys.modules
+    assert sum(
+        getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
+        for handler in bpy.app.handlers.frame_change_post
+    ) == 1
     assert hasattr(bpy.types.Object, "cif_original")
     assert hasattr(bpy.types.Object, "cif_current")
     assert hasattr(bpy.types.Scene, "my_tool")
@@ -52,6 +58,10 @@ def assert_disabled(module_key):
     assert not hasattr(bpy.types.Object, "cif_original")
     assert not hasattr(bpy.types.Object, "cif_current")
     assert not hasattr(bpy.types.Scene, "my_tool")
+    assert not any(
+        getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
+        for handler in bpy.app.handlers.frame_change_post
+    )
 
 
 def assert_installed_blend_libraries(module_key):
@@ -164,13 +174,11 @@ def assert_vibration_view_adapter(module_key):
         assert obj["cb_vibration_mode_set_id"] == str(mode_set_id)
         assert obj["cb_vibration_mode_index"] == 0
         assert modifier.type == "NODES"
-        assert modifier.node_group["cbq_contract"] == "vibration_arrow_v1"
+        assert modifier.node_group["cbq_contract"] == "vector_arrow_v1"
         assert len(obj.modifiers) == 1
-        assert mesh.attributes["cbq_vibration_displacement"].domain == "POINT"
+        assert mesh.attributes["cbq_vector"].domain == "POINT"
         vectors = [0.0] * 6
-        mesh.attributes["cbq_vibration_displacement"].data.foreach_get(
-            "vector", vectors
-        )
+        mesh.attributes["cbq_vector"].data.foreach_get("vector", vectors)
         assert vectors == [2.0, 0.0, 0.0, 0.0, 1.0, 0.0]
         bpy.context.view_layer.update()
         depsgraph = bpy.context.evaluated_depsgraph_get()
@@ -189,6 +197,260 @@ def assert_vibration_view_adapter(module_key):
     finally:
         bpy.data.objects.remove(obj, do_unlink=True)
         bpy.data.meshes.remove(mesh)
+
+
+def assert_dataset_and_trajectory_views(module_key):
+    import numpy
+
+    core = importlib.import_module(f"{module_key}.core")
+    adapter = importlib.import_module(f"{module_key}.dataset_view")
+    trajectory = importlib.import_module(f"{module_key}.trajectory_view")
+    structure_id = uuid4()
+    structure = core.Structure(
+        id=structure_id,
+        revision="structure-revision",
+        atomic_numbers=(8, 1, 1),
+        coordinates=core.ArrayData(
+            numpy.asarray(
+                [[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [-2.0, 0.0, 0.0]]
+            ),
+            ("atom", "xyz"),
+            "bohr",
+        ),
+    )
+    obj = adapter.create_structure_view(
+        structure,
+        name="ChemBlender dataset smoke",
+        collection=bpy.context.scene.collection,
+    )
+    mesh = obj.data
+    try:
+        assert obj["cb_structure_id"] == str(structure_id)
+        atom_ids = [0] * 3
+        obj.data.attributes["cbq_atom_id"].data.foreach_get("value", atom_ids)
+        assert atom_ids == [0, 1, 2]
+        coordinates = [0.0] * 9
+        obj.data.vertices.foreach_get("co", coordinates)
+        assert numpy.allclose(
+            coordinates,
+            [
+                0.0,
+                0.0,
+                0.0,
+                1.058354421806,
+                0.0,
+                0.0,
+                -1.058354421806,
+                0.0,
+                0.0,
+            ],
+        )
+
+        scalar_id = uuid4()
+        scalar = core.AtomicProperty(
+            id=scalar_id,
+            revision="scalar-revision",
+            semantic_role="mulliken_charge",
+            domain="atom",
+            data=core.ArrayData(
+                numpy.asarray([-0.2, numpy.nan, 0.4]),
+                ("atom",),
+                "elementary_charge",
+            ),
+            status=core.DatasetStatus.PARTIAL,
+            source_calculation=None,
+            provenance_ids=(),
+            structure_id=structure_id,
+        )
+        adapter.apply_atomic_scalar(obj, scalar, symmetric=True)
+        scalar_values = [0.0] * 3
+        scalar_valid = [False] * 3
+        obj.data.attributes["cbq_atom_scalar"].data.foreach_get(
+            "value", scalar_values
+        )
+        obj.data.attributes["cbq_atom_scalar_valid"].data.foreach_get(
+            "value", scalar_valid
+        )
+        assert numpy.allclose(scalar_values, [-0.2, 0.0, 0.4])
+        assert scalar_valid == [True, False, True]
+        assert obj["cb_scalar_dataset_id"] == str(scalar_id)
+        assert obj["cb_scalar_unit"] == "elementary_charge"
+        assert obj["cb_scalar_display_min"] == -0.4
+        assert obj["cb_scalar_display_max"] == 0.4
+        assert obj.data.attributes["colour"].domain == "POINT"
+
+        vector_id = uuid4()
+        vector = core.AtomicProperty(
+            id=vector_id,
+            revision="vector-revision",
+            semantic_role="force",
+            domain="atom",
+            data=core.ArrayData(
+                numpy.asarray(
+                    [[1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 3.0]]
+                ),
+                ("atom", "xyz"),
+                "hartree_per_bohr",
+            ),
+            status=core.DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+            structure_id=structure_id,
+        )
+        modifier = adapter.apply_atomic_vector(obj, vector, display_scale=0.5)
+        assert modifier.node_group["cbq_contract"] == "vector_arrow_v1"
+        assert obj["cb_vector_dataset_id"] == str(vector_id)
+        assert obj["cb_vector_unit"] == "hartree_per_bohr"
+        vector_values = [0.0] * 9
+        obj.data.attributes["cbq_vector"].data.foreach_get(
+            "vector", vector_values
+        )
+        assert vector_values == [0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.5]
+        assert len(obj.modifiers) == 1
+        adapter.apply_atomic_vector(obj, vector, display_scale=1.0)
+        assert len(obj.modifiers) == 1
+        bpy.context.view_layer.update()
+        evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        evaluated_geometry = evaluated.evaluated_geometry()
+        assert len(evaluated_geometry.instance_references()) == 1
+        assert len(evaluated_geometry.instances_pointcloud().points) == 3
+
+        adapter.apply_atom_selection(obj, [0, 2], name="terminal_atoms")
+        selected = [False] * 3
+        obj.data.attributes["cbq_selected"].data.foreach_get("value", selected)
+        assert selected == [True, False, True]
+        assert obj["cb_selection_name"] == "terminal_atoms"
+
+        states = core.ExcitedStateSet(
+            id=uuid4(),
+            revision="states-revision",
+            semantic_role="excited_states",
+            domain="state",
+            data=core.ArrayData(
+                numpy.asarray([20000.0, 30000.0]),
+                ("state",),
+                "inverse_centimeter",
+            ),
+            status=core.DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+            structure_id=structure_id,
+            oscillator_strengths=core.ArrayData(
+                numpy.asarray([0.1, 0.2]), ("state",), "dimensionless"
+            ),
+            rotatory_strengths=None,
+            electric_transition_dipoles=None,
+            velocity_transition_dipoles=None,
+            magnetic_transition_dipoles=None,
+            symmetries=None,
+            multiplicities=(None, None),
+            configurations=None,
+            state_references=(
+                core.ExcitedStateReferences(),
+                core.ExcitedStateReferences(),
+            ),
+        )
+        spectrum = core.derive_electronic_spectrum(
+            states,
+            kind=core.SpectrumKind.UV_VIS,
+            profile=core.SpectrumProfile.STICK,
+        ).datasets[0]
+        adapter.link_stick_spectrum_selection(obj, spectrum, states, 1)
+        assert obj["cb_selection_spectrum_id"] == str(spectrum.id)
+        assert obj["cb_selection_dataset_id"] == str(states.id)
+        assert obj["cb_selection_domain"] == "state"
+        assert obj["cb_selection_index"] == 1
+        broadened = core.derive_electronic_spectrum(
+            states,
+            kind=core.SpectrumKind.UV_VIS,
+            profile=core.SpectrumProfile.GAUSSIAN,
+            axis=numpy.asarray([19000.0, 20000.0, 21000.0]),
+            fwhm=1000.0,
+        ).datasets[0]
+        try:
+            adapter.link_stick_spectrum_selection(obj, broadened, states, 0)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("broadened spectrum selection must be rejected")
+
+        frames = core.FrameSet(
+            id=uuid4(),
+            revision="trajectory-revision",
+            semantic_role="coordinates",
+            domain="frame",
+            data=core.ArrayData(
+                numpy.asarray(
+                    [
+                        [[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [-2.0, 0.0, 0.0]],
+                        [[0.0, 0.0, 1.0], [2.0, 0.0, 1.0], [-2.0, 0.0, 1.0]],
+                    ]
+                ),
+                ("frame", "atom", "xyz"),
+                "bohr",
+            ),
+            status=core.DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+            structure_id=structure_id,
+            comments=("first", "second"),
+        )
+        invalid_frames = core.FrameSet(
+            id=uuid4(),
+            revision="invalid-trajectory-revision",
+            semantic_role="coordinates",
+            domain="frame",
+            data=core.ArrayData(
+                numpy.asarray(
+                    [
+                        [[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [-2.0, 0.0, 0.0]],
+                        [[0.0, 0.0, float("nan")], [2.0, 0.0, 1.0], [-2.0, 0.0, 1.0]],
+                    ]
+                ),
+                ("frame", "atom", "xyz"),
+                "bohr",
+            ),
+            status=core.DatasetStatus.PARTIAL,
+            source_calculation=None,
+            provenance_ids=(),
+            structure_id=structure_id,
+            comments=("first", "invalid"),
+        )
+        try:
+            trajectory.configure_trajectory_view(obj, invalid_frames)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid trajectory frames must be rejected")
+        trajectory.configure_trajectory_view(
+            obj, frames, frame_start=10, frame_step=2
+        )
+        trajectory.configure_trajectory_view(
+            obj, frames, frame_start=10, frame_step=2
+        )
+        handlers = [
+            handler
+            for handler in bpy.app.handlers.frame_change_post
+            if handler.__module__ == trajectory.__name__
+        ]
+        assert len(handlers) == 1
+        bpy.context.scene.frame_set(12)
+        obj.data.vertices.foreach_get("co", coordinates)
+        assert numpy.allclose(
+            numpy.asarray(coordinates).reshape((3, 3))[:, 2],
+            [0.529177210903] * 3,
+        )
+        assert obj["cb_trajectory_frame_index"] == 1
+        bpy.context.scene.frame_set(100)
+        assert obj["cb_trajectory_frame_index"] == 1
+        assert len(bpy.data.objects) >= 1
+        trajectory.clear_trajectory_view(obj)
+    finally:
+        bpy.context.scene.frame_set(1)
+        if obj.name in bpy.data.objects:
+            bpy.data.objects.remove(obj, do_unlink=True)
+        if mesh.name in bpy.data.meshes:
+            bpy.data.meshes.remove(mesh)
 
 
 arguments = sys.argv[sys.argv.index("--") + 1 :]
@@ -212,6 +474,7 @@ assert_enabled(module_key)
 assert_installed_blend_libraries(module_key)
 assert_grid_volume_adapter(module_key)
 assert_vibration_view_adapter(module_key)
+assert_dataset_and_trajectory_views(module_key)
 
 for _ in range(2):
     assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}

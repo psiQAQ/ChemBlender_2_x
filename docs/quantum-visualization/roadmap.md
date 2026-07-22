@@ -19,7 +19,7 @@
 
 ## Phase 1：分子量子化学闭环
 
-状态：进行中；数据读取、波函数场、RDM/ESP、振动与激发态光谱闭环已完成，当前进行 Blender adapter 收口。
+状态：已完成（2026-07-22）。
 
 进入条件：Phase 0 的对象、单位、parser report 和缓存身份已经稳定。
 
@@ -60,6 +60,7 @@
 5. 已完成：DensityMatrix、RDM electron/spin density 与 ESP。
 6. 已完成：振动语义、IR/Raman 光谱和 Blender 模态动画。
 7. 已完成：激发态语义、UV-Vis/ECD 光谱与 transition/NTO 引用。
-8. 当前：Phase 1 原子标量/矢量、优化轨迹和 linked selection 的 Blender adapters 收口。
+8. 已完成：Phase 1 原子标量/矢量、优化轨迹和 linked selection 的 Blender adapters 收口。
+9. 当前：Gemmi CIF envelope 与 spglib 对称性/标准化基础设施。
 
-Phase 1 完成后按进入条件推进 Gemmi/spglib 与 Phase 2；大型缓存/worker 和 recipe 分别在 Phase 3/4 收口。
+Gemmi/spglib 验收后进入 Phase 2 周期结果 adapters；大型缓存/worker 和 recipe 分别在 Phase 3/4 收口。

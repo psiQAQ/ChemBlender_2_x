@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [phase1-blender-adapters.md](active/phase1-blender-adapters.md) | Phase 1 atom property, vector, trajectory and linked-selection Blender closure |
+| active | [crystal-foundation.md](active/crystal-foundation.md) | Gemmi CIF envelope and spglib symmetry/standardization foundation |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -27,6 +27,7 @@ Historical documents provide provenance, not current status.
 | decision | [0006-blend-sidecar-boundary.md](decisions/0006-blend-sidecar-boundary.md) | Phase 0 authoritative sidecar, blend references, revisions, and cache invalidation boundary |
 | decision | [0007-wavefunction-grid-backend.md](decisions/0007-wavefunction-grid-backend.md) | GBasis worker backend, uniform-grid scope, and Python compatibility boundary |
 | decision | [0008-excited-state-and-spectrum-contract.md](decisions/0008-excited-state-and-spectrum-contract.md) | Excited-state identity, configuration, references and electronic-spectrum contract |
+| decision | [0009-phase1-blender-dataset-contract.md](decisions/0009-phase1-blender-dataset-contract.md) | Structure, atom dataset, vector, trajectory and stick-selection Blender contract |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
@@ -36,6 +37,7 @@ Historical documents provide provenance, not current status.
 | completed | [wavefunction-observables.md](completed/wavefunction-observables.md) | One-RDM, electron/spin density and ESP derived-field evidence |
 | completed | [vibrations-and-spectra.md](completed/vibrations-and-spectra.md) | cclib vibrations, IR/Raman spectra and Blender mode-animation evidence |
 | completed | [excited-states-and-spectra.md](completed/excited-states-and-spectra.md) | cclib excited states, UV-Vis/ECD spectra and transition-reference evidence |
+| completed | [phase1-blender-adapters.md](completed/phase1-blender-adapters.md) | Phase 1 scalar/vector/trajectory/linked-selection Blender closure evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.

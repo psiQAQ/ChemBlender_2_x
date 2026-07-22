@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from .model import (
     ArrayData,
+    AtomicProperty,
     CalculationRecord,
     CalculationStatus,
     DatasetStatus,
@@ -31,7 +32,7 @@ from .readers import (
 )
 
 
-ADAPTER_VERSION = "3"
+ADAPTER_VERSION = "4"
 _MAPPED_ATTRIBUTES = {
     "atomcharges",
     "atomcoords",
@@ -608,7 +609,7 @@ def adapt_ccdata(data, source, *, cclib_version="unknown") -> ImportBatch:
                     f"cclib {attribute}[{name!r}] must have shape ({len(atomnos)},)"
                 )
             datasets.append(
-                PropertyDataset(
+                AtomicProperty(
                     id=uuid4(),
                     revision=revision,
                     semantic_role=f"{_semantic_name(name)}_{suffix}",
@@ -621,6 +622,7 @@ def adapt_ccdata(data, source, *, cclib_version="unknown") -> ImportBatch:
                     status=DatasetStatus.COMPLETE,
                     source_calculation=calculation_id,
                     provenance_ids=(provenance_id,),
+                    structure_id=structure_id,
                 )
             )
             property_count += 1

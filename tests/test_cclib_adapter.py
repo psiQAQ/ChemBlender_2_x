@@ -9,6 +9,7 @@ from uuid import uuid4
 import numpy
 
 from ChemBlender.core import (
+    AtomicProperty,
     CalculationStatus,
     CapabilitySupport,
     DatasetStatus,
@@ -190,6 +191,9 @@ class CCLibAdapterTests(unittest.TestCase):
         self.assertEqual(roles["scf_energy"].data.dims, ("step",))
         self.assertEqual(roles["mulliken_charge"].data.unit, "elementary_charge")
         self.assertEqual(roles["lowdin_spin_population"].data.unit, "dimensionless")
+        self.assertIsInstance(roles["mulliken_charge"], AtomicProperty)
+        self.assertIsInstance(roles["lowdin_spin_population"], AtomicProperty)
+        self.assertEqual(roles["mulliken_charge"].structure_id, structure.id)
         self.assertTrue(
             all(dataset.source_calculation == calculation.id for dataset in roles.values())
         )
@@ -422,7 +426,7 @@ class CCLibAdapterTests(unittest.TestCase):
 
     def test_reader_descriptor_declares_only_implemented_capabilities(self):
         self.assertEqual(CCLIB_OUTPUT_READER.reader_id, "cclib_output")
-        self.assertEqual(CCLIB_OUTPUT_READER.reader_version, "3")
+        self.assertEqual(CCLIB_OUTPUT_READER.reader_version, "4")
         self.assertEqual(CCLIB_OUTPUT_READER.extensions, (".log", ".out"))
         self.assertEqual(
             CCLIB_OUTPUT_READER.capabilities,
@@ -451,6 +455,13 @@ class CCLibAdapterTests(unittest.TestCase):
                 roles = {dataset.semantic_role for dataset in batch.datasets}
                 self.assertIn("scf_energy", roles)
                 self.assertTrue(expected_charge_roles.issubset(roles))
+                self.assertTrue(
+                    all(
+                        isinstance(dataset, AtomicProperty)
+                        for dataset in batch.datasets
+                        if dataset.semantic_role in expected_charge_roles
+                    )
+                )
                 self.assertEqual(dict(batch.provenance[0].parameters)["package"], package)
                 self.assertIs(batch.calculations[0].status, CalculationStatus.SUCCESS)
                 QCProject(id=uuid4(), schema_version="0.1").commit(batch)
