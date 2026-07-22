@@ -75,7 +75,7 @@ Gemmi owns CIF parsing and raw-envelope access; spglib owns symmetry search and 
 | Runtime boundary | independent CPython worker/core environment |
 | Reference sources | `submodules/ase` at `f27c0005ae6a67ea419f996e728668865bfc1f86`; `submodules/pymatgen-core` at `488ad74cc5ecaba5d24c1726e2762fb47f31f5ef` |
 | Licenses | ASE LGPL-2.1-or-later; pymatgen-core MIT |
-| Scope | POSCAR/CONTCAR/extXYZ and CHGCAR/PARCHG/ELFCAR/LOCPOT adapters |
+| Scope | POSCAR/CONTCAR/extXYZ, CHGCAR/PARCHG/ELFCAR/LOCPOT and vasprun.xml band/DOS adapters |
 
 The `pymatgen` 2026.5.4 distribution is a metapackage that resolves the actual
 implementation separately. ChemBlender pins `pymatgen-core` directly so reviewed

@@ -88,12 +88,11 @@ def _site_labels(symbols):
     return tuple(labels)
 
 
-def _structure(volume, revision):
+def adapt_pymatgen_structure(pmg_structure, revision):
     import numpy
 
-    pmg_structure = volume.structure
     if any(not site.is_ordered for site in pmg_structure):
-        raise ValueError("VASP volumetric structure must use ordered sites")
+        raise ValueError("pymatgen structure must use ordered sites")
     lattice = numpy.asarray(pmg_structure.lattice.matrix, dtype=float)
     fractional = numpy.asarray(pmg_structure.frac_coords, dtype=float)
     cartesian = numpy.asarray(pmg_structure.cart_coords, dtype=float)
@@ -103,7 +102,7 @@ def _structure(volume, revision):
         or not numpy.all(numpy.isfinite(cartesian))
         or abs(numpy.linalg.det(lattice)) < 1e-12
     ):
-        raise ValueError("VASP volumetric structure must be finite and non-singular")
+        raise ValueError("pymatgen structure must be finite and non-singular")
     symbols = tuple(site.specie.symbol for site in pmg_structure)
     structure_id = uuid4()
     return Structure(
@@ -203,7 +202,7 @@ def adapt_vasp_volumetric(
     source_hash = (
         hashlib.sha256(source_bytes).hexdigest() if source_bytes else _content_hash(volume)
     )
-    structure = _structure(volume, source_hash)
+    structure = adapt_pymatgen_structure(volume.structure, source_hash)
     lattice = numpy.asarray(structure.cell.values, dtype=float)
     cell_volume = abs(float(numpy.linalg.det(lattice)))
     components = _component_roles(source_kind, volume.data)

@@ -514,6 +514,71 @@ def assert_periodic_structure_view(module_key):
         bpy.data.meshes.remove(mesh)
 
 
+def assert_periodic_electronic_plots(module_key):
+    import numpy
+
+    core = importlib.import_module(f"{module_key}.core")
+    plots = importlib.import_module(f"{module_key}.electronic_plot")
+    structure_id = uuid4()
+    common = dict(
+        revision="electronic-revision",
+        status=core.DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(),
+        structure_id=structure_id,
+        spin_channels=("alpha", "beta"),
+        fermi_energy=5.0,
+        energy_reference=core.EnergyReference.ABSOLUTE,
+    )
+    band = core.BandStructure(
+        id=uuid4(),
+        semantic_role="band_structure",
+        domain="band",
+        data=core.ArrayData(
+            numpy.asarray([[[4.0, 6.0], [4.5, 6.5]], [[4.1, 6.1], [4.6, 6.6]]]),
+            ("spin", "kpoint", "band"),
+            "electron_volt",
+        ),
+        occupations=None,
+        kpoints=core.ArrayData(numpy.asarray([[0.0, 0.0, 0.0], [0.5, 0.0, 0.0]]), ("kpoint", "reciprocal_axis"), "dimensionless"),
+        reciprocal_lattice=core.ArrayData(numpy.eye(3), ("reciprocal_vector", "cartesian_axis"), "inverse_angstrom"),
+        distances=core.ArrayData(numpy.asarray([0.0, 1.0]), ("kpoint",), "inverse_angstrom"),
+        labels=("GAMMA", "X"),
+        branches=(core.BandPathBranch(0, 1, "GAMMA", "X"),),
+        projections=None,
+        orbital_labels=(),
+        **common,
+    )
+    dos = core.DensityOfStates(
+        id=uuid4(),
+        semantic_role="density_of_states",
+        domain="energy",
+        data=core.ArrayData(numpy.asarray([[1.0, 2.0, 3.0], [0.5, 1.0, 1.5]]), ("spin", "energy"), "states_per_electron_volt"),
+        energies=core.ArrayData(numpy.asarray([4.0, 5.0, 6.0]), ("energy",), "electron_volt"),
+        projections=None,
+        orbital_labels=(),
+        **common,
+    )
+    band_obj = plots.create_band_structure_plot(band, collection=bpy.context.scene.collection)
+    dos_obj = plots.create_dos_plot(dos, collection=bpy.context.scene.collection)
+    try:
+        assert len(band_obj.data.splines) == 4
+        assert band_obj["cb_energy_reference"] == "fermi_shifted"
+        assert band_obj.data.splines[0].points[0].co.y == -1.0
+        assert len(dos_obj.data.splines) == 2
+        assert dos_obj.data.splines[1].points[0].co.x == -0.5
+        plots.select_band_sample(band_obj, band, 1, 0, 1)
+        assert band_obj["cb_selected_spin"] == 1
+        assert band_obj["cb_selected_band"] == 1
+        plots.select_dos_sample(dos_obj, dos, 0, 2)
+        assert dos_obj["cb_selected_energy"] == 2
+    finally:
+        for obj in (band_obj, dos_obj):
+            curve = obj.data
+            bpy.data.objects.remove(obj, do_unlink=True)
+            bpy.data.curves.remove(curve)
+
+
 def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     reader = importlib.import_module(f"{module_key}.read")
     cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
@@ -560,6 +625,7 @@ assert_grid_volume_adapter(module_key)
 assert_vibration_view_adapter(module_key)
 assert_dataset_and_trajectory_views(module_key)
 assert_periodic_structure_view(module_key)
+assert_periodic_electronic_plots(module_key)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 
 for _ in range(2):

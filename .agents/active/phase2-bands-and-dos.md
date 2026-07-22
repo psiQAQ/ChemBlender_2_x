@@ -1,33 +1,27 @@
-# Phase 2 Band Structure and Density of States
+# Phase 2 Phonopy Complex Modes
 
 ## Goal
 
-建立 ChemBlender 自有 `BandStructure`、`DensityOfStates` 与 projection schema，
-用 pymatgen-core adapter 导入 VASP band/DOS 数据，并与 periodic structure 共享稳定 UUID。
+建立 phonopy q-point、frequency 与 complex eigenvector 语义，并按完整相位公式生成周期超胞位移动画。
 
 ## Success Criteria
 
-- band energies 保留 spin、kpoint、band、occupancy、Fermi level、reciprocal lattice、
-  labels 与 path branches。
-- total DOS/PDOS 保留 spin、energy、atom、orbital 维和明确的能量参考。
-- projections 不因缺字段而伪造；parser capability/issue 明确反映来源支持度。
-- 最小 2D plot/linked-selection adapter 可在 Blender 内选择 band/kpoint 或 DOS
-  component，并回写 dataset identity。
-- 普通 CPython、真实 pymatgen objects/fixtures、Blender lifecycle 与 ZIP audit 通过。
+- 复数 eigenvector 不丢弃虚部，q-point 使用 reciprocal fractional coordinates。
+- 动画实现 `Re[e_j(q) exp(i(q·R_j - ωt + φ))]`，支持用户相位与振幅。
+- primitive/supercell、atom mapping、frequency 与 group velocity 具有明确单位和 shape。
+- phonopy late import，不进入 Blender Extension。
 
 ## Constraints
 
-- 本阶段不实现 PyProcar Fermi surface 或 phonopy。
-- 不把 matplotlib/pymatgen-core 加入 Blender Extension；2D 输出先采用轻量自有数据/Curve contract。
-- 先稳定 schema 与能量零点，再讨论 sumo 风格和 publication presets。
+- 本阶段不实现 PyProcar Fermi surface。
+- 不把 phonopy/h5py 加入 Blender Extension。
+- 不将 complex mode 简化为仅使用 eigenvector 实部的静态箭头。
 
 ## Next Action
 
-核对 pymatgen-core 2026.7.16 的 `BandStructureSymmLine`、`CompleteDos`、VASP
-`Vasprun`/`BSVasprun` 字段约定；先写 spin/kpoint/band/projection 和 energy-reference
-模型测试，再实现 adapters。
+固定并拉取 phonopy 参考 submodule，核对 YAML/HDF5 schema 与 eigenvector normalization；先写 complex mode 相位和 supercell mapping tests，再实现 adapter。
 
 ## References
 
 - [周期电子结构计划](../../docs/quantum-visualization/plans/periodic-electronic-structure.md)
-- [周期结构与标量场决策](../decisions/0011-periodic-structure-and-vasp-grid-boundary.md)
+- [能带与 DOS 决策](../decisions/0012-periodic-band-dos-boundary.md)
