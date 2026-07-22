@@ -9,6 +9,9 @@ from .model import (
     CalculationRecord,
     CalculationStatus,
     DatasetStatus,
+    ExcitationContribution,
+    ExcitedStateReferences,
+    ExcitedStateSet,
     FrameSet,
     ImportBatch,
     IssueKind,
@@ -17,6 +20,7 @@ from .model import (
     PropertyDataset,
     ProvenanceRecord,
     Structure,
+    SpinChannel,
     VibrationalModeSet,
 )
 from .readers import (
@@ -27,7 +31,7 @@ from .readers import (
 )
 
 
-ADAPTER_VERSION = "2"
+ADAPTER_VERSION = "3"
 _MAPPED_ATTRIBUTES = {
     "atomcharges",
     "atomcoords",
@@ -37,6 +41,14 @@ _MAPPED_ATTRIBUTES = {
     "metadata",
     "mult",
     "scfenergies",
+    "etdips",
+    "etenergies",
+    "etmagdips",
+    "etoscs",
+    "etrotats",
+    "etsecs",
+    "etsyms",
+    "etveldips",
     "vibdisps",
     "vibfconsts",
     "vibfreqs",
@@ -168,21 +180,9 @@ def _adapt_vibrations(
         raise ValueError("cclib vibdisps must contain real Cartesian displacements")
 
     optional_specs = (
-        (
-            "vibrmasses",
-            "vibration.reduced_mass",
-            "dalton",
-        ),
-        (
-            "vibfconsts",
-            "vibration.force_constant",
-            "millidyne_per_angstrom",
-        ),
-        (
-            "vibirs",
-            "vibration.ir_intensity",
-            "kilometer_per_mole",
-        ),
+        ("vibrmasses", "vibration.reduced_mass", "dalton"),
+        ("vibfconsts", "vibration.force_constant", "millidyne_per_angstrom"),
+        ("vibirs", "vibration.ir_intensity", "kilometer_per_mole"),
         (
             "vibramans",
             "vibration.raman_activity",
@@ -251,6 +251,250 @@ def _adapt_vibrations(
         raman_activities=optional["vibramans"],
         symmetries=symmetries,
         displacement_convention="cclib_cartesian",
+    )
+
+
+def _multiplicity(label):
+    prefixes = {
+        "singlet": 1,
+        "doublet": 2,
+        "triplet": 3,
+        "quartet": 4,
+        "quintet": 5,
+    }
+    normalized = label.strip().lower()
+    return next(
+        (value for prefix, value in prefixes.items() if normalized.startswith(prefix)),
+        None,
+    )
+
+
+def _adapt_configurations(values, state_count):
+    from numbers import Integral
+
+    if len(values) != state_count:
+        raise ValueError("cclib etsecs must contain one configuration list per state")
+    states = []
+    for state in values:
+        contributions = []
+        for item in state:
+            if len(item) != 3 or len(item[0]) != 2 or len(item[1]) != 2:
+                raise ValueError("cclib etsecs entries must contain two orbitals and a coefficient")
+            occupied, virtual, coefficient = item
+            occupied_index, occupied_spin = occupied
+            virtual_index, virtual_spin = virtual
+            if (
+                isinstance(occupied_index, bool)
+                or not isinstance(occupied_index, Integral)
+                or occupied_index < 0
+                or isinstance(virtual_index, bool)
+                or not isinstance(virtual_index, Integral)
+                or virtual_index < 0
+                or occupied_spin not in (0, 1)
+                or virtual_spin not in (0, 1)
+            ):
+                raise ValueError("cclib etsecs contains an invalid orbital or spin index")
+            contributions.append(
+                ExcitationContribution(
+                    occupied_orbital=int(occupied_index),
+                    occupied_spin=(
+                        SpinChannel.ALPHA if occupied_spin == 0 else SpinChannel.BETA
+                    ),
+                    virtual_orbital=int(virtual_index),
+                    virtual_spin=(
+                        SpinChannel.ALPHA if virtual_spin == 0 else SpinChannel.BETA
+                    ),
+                    coefficient=float(coefficient),
+                )
+            )
+        states.append(tuple(contributions))
+    return tuple(states)
+
+
+def _adapt_excited_states(
+    data,
+    *,
+    structure_id,
+    calculation_id,
+    provenance_id,
+    revision,
+    issues,
+):
+    import numpy
+
+    attributes = (
+        "etenergies",
+        "etoscs",
+        "etrotats",
+        "etdips",
+        "etveldips",
+        "etmagdips",
+        "etsyms",
+        "etsecs",
+    )
+    if not any(hasattr(data, name) for name in attributes):
+        return None
+    if not hasattr(data, "etenergies"):
+        issues.append(
+            ParserIssue(
+                IssueKind.MISSING,
+                "excited_state.energies",
+                "cclib did not parse excited-state energies",
+            )
+        )
+        return None
+
+    energies = _array(data, "etenergies", 1)
+    if (
+        energies.size == 0
+        or numpy.iscomplexobj(energies)
+        or numpy.any(energies < 0.0)
+    ):
+        raise ValueError("cclib etenergies must contain real non-negative energies")
+    state_count = energies.shape[0]
+
+    optional = {}
+    for attribute, path, shape, dims, unit in (
+        (
+            "etoscs",
+            "excited_state.oscillator_strength",
+            (state_count,),
+            ("state",),
+            "dimensionless",
+        ),
+        (
+            "etrotats",
+            "excited_state.rotatory_strength",
+            (state_count,),
+            ("state",),
+            "unknown",
+        ),
+        (
+            "etdips",
+            "excited_state.electric_transition_dipole",
+            (state_count, 3),
+            ("state", "xyz"),
+            "elementary_charge_bohr",
+        ),
+        (
+            "etveldips",
+            "excited_state.velocity_transition_dipole",
+            (state_count, 3),
+            ("state", "xyz"),
+            "elementary_charge_bohr",
+        ),
+        (
+            "etmagdips",
+            "excited_state.magnetic_transition_dipole",
+            (state_count, 3),
+            ("state", "xyz"),
+            "elementary_charge_bohr",
+        ),
+    ):
+        if not hasattr(data, attribute):
+            issues.append(
+                ParserIssue(
+                    IssueKind.MISSING,
+                    path,
+                    f"cclib did not parse {attribute}",
+                )
+            )
+            optional[attribute] = None
+            continue
+        values = _array(data, attribute, len(shape), shape=shape)
+        if numpy.iscomplexobj(values):
+            raise ValueError(f"cclib {attribute} must contain real values")
+        if attribute == "etoscs" and numpy.any(values < 0.0):
+            raise ValueError("cclib etoscs must contain non-negative values")
+        optional[attribute] = ArrayData(
+            numpy.array(values, dtype=float, copy=True), dims, unit
+        )
+
+    status = DatasetStatus.COMPLETE
+    if optional["etrotats"] is not None:
+        status = DatasetStatus.AMBIGUOUS
+        issues.append(
+            ParserIssue(
+                IssueKind.AMBIGUOUS,
+                "excited_state.rotatory_strength.unit",
+                "cclib does not define one cross-parser rotatory-strength unit",
+            )
+        )
+
+    symmetries = None
+    multiplicities = (None,) * state_count
+    if hasattr(data, "etsyms"):
+        symmetries = tuple(getattr(data, "etsyms"))
+        if len(symmetries) != state_count or any(
+            not isinstance(value, str) or not value for value in symmetries
+        ):
+            raise ValueError("cclib etsyms must contain one label per state")
+        multiplicities = tuple(_multiplicity(label) for label in symmetries)
+        if any(value is None for value in multiplicities):
+            issues.append(
+                ParserIssue(
+                    IssueKind.AMBIGUOUS,
+                    "excited_state.multiplicity",
+                    "one or more cclib symmetry labels have unknown multiplicity",
+                )
+            )
+    else:
+        issues.append(
+            ParserIssue(
+                IssueKind.MISSING,
+                "excited_state.symmetry",
+                "cclib did not parse excited-state symmetry labels",
+            )
+        )
+
+    configurations = None
+    if hasattr(data, "etsecs"):
+        try:
+            configurations = _adapt_configurations(
+                getattr(data, "etsecs"), state_count
+            )
+        except (TypeError, ValueError, OverflowError) as error:
+            issues.append(
+                ParserIssue(
+                    IssueKind.INVALID,
+                    "excited_state.configurations",
+                    str(error),
+                )
+            )
+    else:
+        issues.append(
+            ParserIssue(
+                IssueKind.MISSING,
+                "excited_state.configurations",
+                "cclib did not parse excited-state configurations",
+            )
+        )
+
+    return ExcitedStateSet(
+        id=uuid4(),
+        revision=revision,
+        semantic_role="excited_states",
+        domain="state",
+        data=ArrayData(
+            numpy.array(energies, dtype=float, copy=True),
+            ("state",),
+            "inverse_centimeter",
+        ),
+        status=status,
+        source_calculation=calculation_id,
+        provenance_ids=(provenance_id,),
+        structure_id=structure_id,
+        oscillator_strengths=optional["etoscs"],
+        rotatory_strengths=optional["etrotats"],
+        electric_transition_dipoles=optional["etdips"],
+        velocity_transition_dipoles=optional["etveldips"],
+        magnetic_transition_dipoles=optional["etmagdips"],
+        symmetries=symmetries,
+        multiplicities=multiplicities,
+        configurations=configurations,
+        state_references=tuple(
+            ExcitedStateReferences() for _ in range(state_count)
+        ),
     )
 
 
@@ -404,6 +648,18 @@ def adapt_ccdata(data, source, *, cclib_version="unknown") -> ImportBatch:
         datasets.append(vibrations)
         parsed_capabilities.append("vibration")
 
+    excited_states = _adapt_excited_states(
+        data,
+        structure_id=structure_id,
+        calculation_id=calculation_id,
+        provenance_id=provenance_id,
+        revision=revision,
+        issues=issues,
+    )
+    if excited_states is not None:
+        datasets.append(excited_states)
+        parsed_capabilities.append("excited_state")
+
     attributes = _data_attributes(data)
     unmapped = tuple(sorted(set(attributes) - _MAPPED_ATTRIBUTES))
     if unmapped:
@@ -494,6 +750,7 @@ CCLIB_OUTPUT_READER = ReaderDescriptor(
         "energy": CapabilitySupport.SUPPORTED,
         "atomic_property": CapabilitySupport.SUPPORTED,
         "vibration": CapabilitySupport.SUPPORTED,
+        "excited_state": CapabilitySupport.SUPPORTED,
     },
     priority=80,
     sniff=sniff_cclib_output,

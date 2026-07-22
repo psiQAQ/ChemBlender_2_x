@@ -11,10 +11,13 @@ import numpy
 from ChemBlender.core import (
     CalculationStatus,
     CapabilitySupport,
+    DatasetStatus,
+    ExcitedStateSet,
     FrameSet,
     IssueKind,
     QCProject,
     SniffMatch,
+    SpinChannel,
     VibrationalModeSet,
 )
 from ChemBlender.core.cclib_adapter import (
@@ -67,11 +70,46 @@ VIBRATION_FIXTURES = (
         False,
     ),
 )
+EXCITED_STATE_FIXTURES = (
+    (
+        CCLIB_ROOT / "data" / "Gaussian" / "basicGaussian16" / "dvb_td.out",
+        "Gaussian",
+        5,
+        43030.485341579,
+        True,
+        0.0,
+    ),
+    (
+        CCLIB_ROOT / "data" / "Gaussian" / "basicGaussian09" / "dvb_td.out",
+        "Gaussian",
+        5,
+        45398.529145123,
+        True,
+        -0.478,
+    ),
+    (
+        CCLIB_ROOT / "data" / "ORCA" / "basicORCA5.0" / "dvb_td.out",
+        "ORCA",
+        10,
+        25241.0,
+        False,
+        0.0,
+    ),
+    (
+        CCLIB_ROOT / "data" / "ORCA" / "basicORCA5.0" / "dvb_adc2.log",
+        "ORCA",
+        2,
+        44797.1,
+        False,
+        0.0,
+    ),
+)
 HAS_CCLIB_INTEGRATION = (
     importlib.util.find_spec("cclib") is not None
     and GAUSSIAN_FIXTURE.is_file()
     and ORCA_FIXTURE.is_file()
     and all(case[0].is_file() for case in VIBRATION_FIXTURES)
+    and all(case[0].is_file() for case in EXCITED_STATE_FIXTURES)
 )
 
 
@@ -289,9 +327,102 @@ class CCLibAdapterTests(unittest.TestCase):
                         data, Path("invalid-vibration.log"), cclib_version="1.8.1"
                     )
 
+    def test_excited_states_map_signed_configurations_and_optional_fields(self):
+        data = fake_ccdata(
+            etenergies=numpy.asarray([25000.0, 30000.0]),
+            etoscs=numpy.asarray([0.1, 0.2]),
+            etrotats=numpy.asarray([-1.5, 2.0]),
+            etdips=numpy.asarray([[1.0, 0.0, 0.0], [0.0, 2.0, 0.0]]),
+            etveldips=numpy.zeros((2, 3)),
+            etmagdips=numpy.ones((2, 3)),
+            etsyms=["Singlet-A", "Triplet-B"],
+            etsecs=[
+                [((1, 0), (2, 0), -0.8)],
+                [((0, 1), (3, 1), 0.5)],
+            ],
+        )
+        batch = adapt_ccdata(data, Path("td.log"), cclib_version="1.8.1")
+        states = next(
+            item for item in batch.datasets if isinstance(item, ExcitedStateSet)
+        )
+
+        self.assertEqual(states.data.unit, "inverse_centimeter")
+        self.assertEqual(states.oscillator_strengths.unit, "dimensionless")
+        self.assertEqual(states.rotatory_strengths.unit, "unknown")
+        self.assertIs(states.status, DatasetStatus.AMBIGUOUS)
+        self.assertEqual(states.multiplicities, (1, 3))
+        transition = states.configurations[0][0]
+        self.assertEqual(transition.occupied_spin, SpinChannel.ALPHA)
+        self.assertEqual(transition.virtual_spin, SpinChannel.ALPHA)
+        self.assertEqual(transition.coefficient, -0.8)
+        self.assertIn("excited_state", batch.report.parsed_capabilities)
+        issues = {(issue.kind, issue.path) for issue in batch.report.issues}
+        self.assertIn(
+            (IssueKind.AMBIGUOUS, "excited_state.rotatory_strength.unit"), issues
+        )
+        QCProject(id=uuid4(), schema_version="0.1").commit(batch)
+
+    def test_partial_excited_states_report_missing_and_invalid_configurations(self):
+        missing_energy = fake_ccdata(etoscs=numpy.asarray([0.1]))
+        batch = adapt_ccdata(
+            missing_energy, Path("partial-td.log"), cclib_version="1.8.1"
+        )
+        self.assertFalse(
+            any(isinstance(item, ExcitedStateSet) for item in batch.datasets)
+        )
+        self.assertIn(
+            (IssueKind.MISSING, "excited_state.energies"),
+            {(issue.kind, issue.path) for issue in batch.report.issues},
+        )
+
+        for etsecs in (
+            [[((1, 9), (2, 0), 0.8)]],
+            [[((1, 0), (2, 0), float("nan"))]],
+        ):
+            with self.subTest(etsecs=etsecs):
+                malformed = fake_ccdata(
+                    etenergies=numpy.asarray([25000.0]), etsecs=etsecs
+                )
+                malformed_batch = adapt_ccdata(
+                    malformed, Path("malformed-td.log"), cclib_version="1.8.1"
+                )
+                states = next(
+                    item
+                    for item in malformed_batch.datasets
+                    if isinstance(item, ExcitedStateSet)
+                )
+                self.assertIsNone(states.configurations)
+                self.assertIn(
+                    (IssueKind.INVALID, "excited_state.configurations"),
+                    {
+                        (issue.kind, issue.path)
+                        for issue in malformed_batch.report.issues
+                    },
+                )
+
+    def test_invalid_excited_state_arrays_fail_explicitly(self):
+        invalid = (
+            fake_ccdata(etenergies=numpy.zeros((2, 1))),
+            fake_ccdata(etenergies=numpy.asarray([-1.0])),
+            fake_ccdata(
+                etenergies=numpy.asarray([1.0, 2.0]),
+                etoscs=numpy.asarray([0.1]),
+            ),
+            fake_ccdata(
+                etenergies=numpy.asarray([1.0]),
+                etdips=numpy.zeros((1, 2)),
+            ),
+        )
+        for data in invalid:
+            with self.subTest(data=data):
+                with self.assertRaises(ValueError):
+                    adapt_ccdata(
+                        data, Path("invalid-td.log"), cclib_version="1.8.1"
+                    )
+
     def test_reader_descriptor_declares_only_implemented_capabilities(self):
         self.assertEqual(CCLIB_OUTPUT_READER.reader_id, "cclib_output")
-        self.assertEqual(CCLIB_OUTPUT_READER.reader_version, "2")
+        self.assertEqual(CCLIB_OUTPUT_READER.reader_version, "3")
         self.assertEqual(CCLIB_OUTPUT_READER.extensions, (".log", ".out"))
         self.assertEqual(
             CCLIB_OUTPUT_READER.capabilities,
@@ -301,6 +432,7 @@ class CCLibAdapterTests(unittest.TestCase):
                 "energy": CapabilitySupport.SUPPORTED,
                 "atomic_property": CapabilitySupport.SUPPORTED,
                 "vibration": CapabilitySupport.SUPPORTED,
+                "excited_state": CapabilitySupport.SUPPORTED,
             },
         )
         manifest = (ROOT / "ChemBlender" / "blender_manifest.toml").read_text(
@@ -343,6 +475,32 @@ class CCLibAdapterTests(unittest.TestCase):
                 self.assertEqual(
                     dict(batch.provenance[0].parameters)["package"], package
                 )
+                QCProject(id=uuid4(), schema_version="0.1").commit(batch)
+
+    @unittest.skipUnless(
+        HAS_CCLIB_INTEGRATION, "cclib integration environment unavailable"
+    )
+    def test_real_gaussian_and_orca_excited_states(self):
+        for source, package, state_count, first_energy, has_dipoles, first_rotatory in (
+            EXCITED_STATE_FIXTURES
+        ):
+            with self.subTest(source=source):
+                batch = parse_cclib_output(source)
+                states = next(
+                    item
+                    for item in batch.datasets
+                    if isinstance(item, ExcitedStateSet)
+                )
+                self.assertEqual(states.data.shape, (state_count,))
+                self.assertAlmostEqual(states.data.values[0], first_energy, places=6)
+                self.assertEqual(states.electric_transition_dipoles is not None, has_dipoles)
+                self.assertAlmostEqual(
+                    states.rotatory_strengths.values[0], first_rotatory
+                )
+                self.assertEqual(
+                    dict(batch.provenance[0].parameters)["package"], package
+                )
+                self.assertIsNotNone(states.configurations)
                 QCProject(id=uuid4(), schema_version="0.1").commit(batch)
 
 

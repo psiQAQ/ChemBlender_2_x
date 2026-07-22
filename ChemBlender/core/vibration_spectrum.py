@@ -6,6 +6,7 @@ from uuid import uuid4
 from .model import (
     ArrayData,
     DatasetStatus,
+    ExcitedStateSet,
     ImportBatch,
     ProvenanceRecord,
     Spectrum,
@@ -15,13 +16,13 @@ from .model import (
 )
 
 
-DERIVATION_VERSION = "1"
+DERIVATION_VERSION = "2"
 
 
-def _identity(mode_set, parameters):
+def _identity(source_dataset, operation, parameters):
     payload = {
-        "parent": [str(mode_set.id), mode_set.revision],
-        "operation": "derive_vibrational_spectrum",
+        "parent": [str(source_dataset.id), source_dataset.revision],
+        "operation": operation,
         "operation_version": DERIVATION_VERSION,
         "parameters": parameters,
     }
@@ -31,56 +32,40 @@ def _identity(mode_set, parameters):
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _source_intensities(mode_set, kind):
-    if kind is SpectrumKind.IR:
-        return mode_set.ir_intensities, "kilometer_per_mole"
-    return mode_set.raman_activities, "angstrom_four_per_dalton"
-
-
-def derive_vibrational_spectrum(
-    mode_set,
+def _derive_spectrum(
+    source_dataset,
     *,
+    frequencies,
+    intensities,
+    intensity_unit,
     kind,
     profile,
-    axis=None,
-    fwhm=None,
-    include_imaginary=True,
+    axis,
+    fwhm,
+    selection_policy,
+    status,
+    operation,
 ):
     import numpy
 
-    if not isinstance(mode_set, VibrationalModeSet):
-        raise TypeError("mode_set must be a VibrationalModeSet")
-    if not isinstance(kind, SpectrumKind):
-        raise TypeError("kind must be a SpectrumKind")
-    if not isinstance(profile, SpectrumProfile):
-        raise TypeError("profile must be a SpectrumProfile")
-    if not isinstance(include_imaginary, bool):
-        raise TypeError("include_imaginary must be a bool")
-    source, intensity_unit = _source_intensities(mode_set, kind)
-    if source is None:
-        raise ValueError(f"mode_set does not contain {kind.value} intensities")
-    frequencies = numpy.asarray(mode_set.data.values)
-    intensities = numpy.asarray(source.values)
+    frequencies = numpy.asarray(frequencies)
+    intensities = numpy.asarray(intensities)
     if (
-        numpy.iscomplexobj(frequencies)
+        frequencies.ndim != 1
+        or intensities.shape != frequencies.shape
+        or frequencies.size == 0
+        or numpy.iscomplexobj(frequencies)
         or numpy.iscomplexobj(intensities)
         or not numpy.all(numpy.isfinite(frequencies))
         or not numpy.all(numpy.isfinite(intensities))
     ):
-        raise ValueError("mode frequencies and intensities must be finite and real")
-    mask = numpy.ones(frequencies.shape, dtype=bool)
-    if not include_imaginary:
-        mask = frequencies >= 0.0
-    frequencies = numpy.asarray(frequencies[mask], dtype=float)
-    intensities = numpy.asarray(intensities[mask], dtype=float)
-    if frequencies.size == 0:
-        raise ValueError("spectrum selection contains no modes")
+        raise ValueError("spectrum frequencies and intensities must be finite vectors")
 
     if profile is SpectrumProfile.STICK:
         if axis is not None or fwhm is not None:
             raise ValueError("stick spectrum does not accept axis or fwhm")
-        sample_axis = frequencies
-        values = intensities
+        sample_axis = numpy.asarray(frequencies, dtype=float)
+        values = numpy.asarray(intensities, dtype=float)
         normalized_fwhm = None
     else:
         if (
@@ -115,11 +100,11 @@ def derive_vibrational_spectrum(
         "kind": kind.value,
         "profile": profile.value,
         "fwhm": normalized_fwhm,
-        "include_imaginary": include_imaginary,
+        "selection_policy": selection_policy,
         "axis_hash": axis_hash,
         "sample_count": int(sample_axis.size),
     }
-    revision = _identity(mode_set, parameters)
+    revision = _identity(source_dataset, operation, parameters)
     provenance_id = uuid4()
     provenance = ProvenanceRecord(
         id=provenance_id,
@@ -128,8 +113,8 @@ def derive_vibrational_spectrum(
         producer_version=DERIVATION_VERSION,
         source="",
         source_hash=revision,
-        parent_ids=(mode_set.id,),
-        operation="derive_vibrational_spectrum",
+        parent_ids=(source_dataset.id,),
+        operation=operation,
         parameters=tuple(parameters.items()),
     )
     spectrum = Spectrum(
@@ -137,13 +122,9 @@ def derive_vibrational_spectrum(
         revision=revision,
         semantic_role=f"{kind.value}_spectrum",
         domain="frequency",
-        data=ArrayData(
-            numpy.asarray(values, dtype=float),
-            ("sample",),
-            intensity_unit,
-        ),
-        status=DatasetStatus.COMPLETE,
-        source_calculation=mode_set.source_calculation,
+        data=ArrayData(numpy.asarray(values, dtype=float), ("sample",), intensity_unit),
+        status=status,
+        source_calculation=source_dataset.source_calculation,
         provenance_ids=(provenance_id,),
         axis=ArrayData(
             numpy.asarray(sample_axis, dtype=float),
@@ -152,8 +133,100 @@ def derive_vibrational_spectrum(
         ),
         kind=kind,
         profile=profile,
-        source_dataset_id=mode_set.id,
+        source_dataset_id=source_dataset.id,
         fwhm=normalized_fwhm,
-        include_imaginary=include_imaginary,
+        selection_policy=selection_policy,
     )
     return ImportBatch(datasets=(spectrum,), provenance=(provenance,))
+
+
+def derive_vibrational_spectrum(
+    mode_set,
+    *,
+    kind,
+    profile,
+    axis=None,
+    fwhm=None,
+    include_imaginary=True,
+):
+    import numpy
+
+    if not isinstance(mode_set, VibrationalModeSet):
+        raise TypeError("mode_set must be a VibrationalModeSet")
+    if kind not in (SpectrumKind.IR, SpectrumKind.RAMAN):
+        raise ValueError("vibrational spectra support only IR and Raman kinds")
+    if not isinstance(profile, SpectrumProfile):
+        raise TypeError("profile must be a SpectrumProfile")
+    if not isinstance(include_imaginary, bool):
+        raise TypeError("include_imaginary must be a bool")
+    if kind is SpectrumKind.IR:
+        source = mode_set.ir_intensities
+        intensity_unit = "kilometer_per_mole"
+    else:
+        source = mode_set.raman_activities
+        intensity_unit = "angstrom_four_per_dalton"
+    if source is None:
+        raise ValueError(f"mode_set does not contain {kind.value} intensities")
+    frequencies = numpy.asarray(mode_set.data.values)
+    intensities = numpy.asarray(source.values)
+    mask = numpy.ones(frequencies.shape, dtype=bool)
+    if not include_imaginary:
+        mask = frequencies >= 0.0
+    frequencies = frequencies[mask]
+    intensities = intensities[mask]
+    if frequencies.size == 0:
+        raise ValueError("spectrum selection contains no modes")
+    return _derive_spectrum(
+        mode_set,
+        frequencies=frequencies,
+        intensities=intensities,
+        intensity_unit=intensity_unit,
+        kind=kind,
+        profile=profile,
+        axis=axis,
+        fwhm=fwhm,
+        selection_policy=(
+            "all_modes" if include_imaginary else "nonnegative_modes"
+        ),
+        status=DatasetStatus.COMPLETE,
+        operation="derive_vibrational_spectrum",
+    )
+
+
+def derive_electronic_spectrum(
+    state_set,
+    *,
+    kind,
+    profile,
+    axis=None,
+    fwhm=None,
+):
+    if not isinstance(state_set, ExcitedStateSet):
+        raise TypeError("state_set must be an ExcitedStateSet")
+    if kind not in (SpectrumKind.UV_VIS, SpectrumKind.ECD):
+        raise ValueError("electronic spectra support only UV-Vis and ECD kinds")
+    if not isinstance(profile, SpectrumProfile):
+        raise TypeError("profile must be a SpectrumProfile")
+    if kind is SpectrumKind.UV_VIS:
+        strengths = state_set.oscillator_strengths
+        intensity_unit = "dimensionless"
+        status = DatasetStatus.COMPLETE
+    else:
+        strengths = state_set.rotatory_strengths
+        intensity_unit = "unknown"
+        status = DatasetStatus.AMBIGUOUS
+    if strengths is None:
+        raise ValueError(f"state_set does not contain {kind.value} strengths")
+    return _derive_spectrum(
+        state_set,
+        frequencies=state_set.data.values,
+        intensities=strengths.values,
+        intensity_unit=intensity_unit,
+        kind=kind,
+        profile=profile,
+        axis=axis,
+        fwhm=fwhm,
+        selection_policy="all_states",
+        status=status,
+        operation="derive_electronic_spectrum",
+    )

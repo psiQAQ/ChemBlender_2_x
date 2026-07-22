@@ -26,6 +26,9 @@ from .model import (
     DensityMatrix,
     DensityMatrixLevel,
     DensityMatrixSpin,
+    ExcitationContribution,
+    ExcitedStateReferences,
+    ExcitedStateSet,
     FrameSet,
     Grid3D,
     ImportBatch,
@@ -41,6 +44,7 @@ from .model import (
     Spectrum,
     SpectrumKind,
     SpectrumProfile,
+    SpinChannel,
     Structure,
     VibrationalModeSet,
 )
@@ -64,7 +68,10 @@ from .wavefunction_observables import (
     evaluate_density_matrix_grid,
     evaluate_electrostatic_potential_grid,
 )
-from .vibration_spectrum import derive_vibrational_spectrum
+from .vibration_spectrum import (
+    derive_electronic_spectrum,
+    derive_vibrational_spectrum,
+)
 
 __all__ = [
     "AmbiguousReaderError",
@@ -84,6 +91,9 @@ __all__ = [
     "DensityMatrix",
     "DensityMatrixLevel",
     "DensityMatrixSpin",
+    "ExcitationContribution",
+    "ExcitedStateReferences",
+    "ExcitedStateSet",
     "FrameSet",
     "Grid3D",
     "GBasisDependencyError",
@@ -108,6 +118,7 @@ __all__ = [
     "Spectrum",
     "SpectrumKind",
     "SpectrumProfile",
+    "SpinChannel",
     "Structure",
     "VibrationalModeSet",
     "XYZ_READER",
@@ -127,5 +138,6 @@ __all__ = [
     "evaluate_density_matrix_grid",
     "evaluate_electrostatic_potential_grid",
     "evaluate_molecular_orbital_grid",
+    "derive_electronic_spectrum",
     "derive_vibrational_spectrum",
 ]

@@ -89,7 +89,7 @@ class VibrationalSpectrumTests(unittest.TestCase):
         self.assertEqual(spectrum.data.unit, "angstrom_four_per_dalton")
         numpy.testing.assert_allclose(spectrum.axis.values, [1600.0])
         numpy.testing.assert_allclose(spectrum.data.values, [30.0])
-        self.assertFalse(spectrum.include_imaginary)
+        self.assertEqual(spectrum.selection_policy, "nonnegative_modes")
 
         project = QCProject(id=uuid4(), schema_version="0.1")
         project.commit(ImportBatch(structures=(reference,), datasets=(modes,)))
