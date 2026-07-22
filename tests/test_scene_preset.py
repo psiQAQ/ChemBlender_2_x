@@ -19,6 +19,7 @@ from ChemBlender.core import (
     scene_preset_document,
     scene_preset_from_document,
     scene_preset_for_recipe_view,
+    validate_scene_plan,
 )
 from tests.test_periodic_electronic_model import (
     band_structure,
@@ -91,8 +92,11 @@ class ScenePresetTests(unittest.TestCase):
         self.assertEqual(scene_plan_document(first), scene_plan_document(second))
         self.assertEqual(len(first.render_identity), 64)
         self.assertEqual(dict(first.settings)["display_coordinate_unit"], "angstrom")
+        self.assertEqual(validate_scene_plan(first, project), first)
 
         project.structures[reference.id] = replace(reference, revision="changed")
+        with self.assertRaisesRegex(ScenePresetError, "stale"):
+            validate_scene_plan(first, project)
         changed = plan_scene_preset(
             preset, project, {"structure": reference.id}, {}
         )

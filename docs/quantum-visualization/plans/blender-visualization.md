@@ -39,9 +39,11 @@
 
 ## 当前进度
 
-基础 structure/dataset/vector/trajectory/vibration/electronic plot/topology/Fermi-surface adapters
-和 [scene preset v1](../specs/scene-preset-v1.md) 已完成。下一步仅对已有稳定 adapter 重放
-preset plan，并让尚无实现的 surface-property plan 明确失败。
+基础 structure/dataset/vector/trajectory/vibration/electronic plot/topology/Fermi-surface adapters、
+[scene preset v1](../specs/scene-preset-v1.md) 及其 Blender application 已完成。当前可原子地
+重放 structure、vibration/electronic spectrum 和 band/DOS plan；stale plan 与 adapter
+中途失败不会留下对象。下一步实现 signed isosurface，并为 property-on-surface 建立可验证的
+网格采样与材质属性契约。
 
 ## 参考仓库触发条件
 

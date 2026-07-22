@@ -83,7 +83,8 @@ Phase 0、Phase 1 分子闭环、Phase 2 周期量子化学与 Phase 3 大型数
 73. [Scene preset v1](specs/scene-preset-v1.md)
 74. [Scene preset 决策](../../.agents/decisions/0026-versioned-scene-presets.md)
 75. [已完成：scene preset contract](../../.agents/completed/scene-preset-contract.md)
-76. [当前任务：scene preset Blender application](../../.agents/active/phase4-scene-preset-application.md)
+76. [Scene preset Blender application 完成证据](../../.agents/completed/scene-preset-application.md)
+77. [当前任务：surface preset Blender application](../../.agents/active/phase4-surface-preset-application.md)
 
 路线图和主题计划保存稳定范围、依赖顺序与验收标准；`.agents/active/` 只记录正在执行的一个任务及其下一步。临时 commit、测试运行和本机状态不写入路线图。
 

@@ -211,7 +211,12 @@ def builtin_scene_presets():
                 ),
                 _spec("spectrum", "dataset", "Spectrum"),
             ),
-            ("structure_view_v1", "vibration_view_v1", "stick_spectrum_selection_v1"),
+            (
+                "structure_view_v1",
+                "vibration_view_v1",
+                "spectrum_curve_v1",
+                "stick_spectrum_selection_v1",
+            ),
             (("selection_index", 0), ("arrow_scale", 1.0), ("amplitude_scale", 1.0)),
         ),
         ScenePresetDefinition(
@@ -229,7 +234,7 @@ def builtin_scene_presets():
                 ),
                 _spec("spectrum", "dataset", "Spectrum"),
             ),
-            ("structure_view_v1", "stick_spectrum_selection_v1"),
+            ("structure_view_v1", "spectrum_curve_v1", "stick_spectrum_selection_v1"),
             (("selection_index", 0),),
         ),
         ScenePresetDefinition(
@@ -417,6 +422,23 @@ def plan_scene_preset(preset, project, bindings, settings):
         normalized_settings,
         render_identity,
     )
+
+
+def validate_scene_plan(plan, project):
+    """Rebuild a plan against current project revisions before side effects."""
+    if not isinstance(plan, ScenePresetPlan):
+        raise TypeError("plan must be a ScenePresetPlan")
+    try:
+        preset = builtin_scene_presets()[plan.preset_id]
+    except KeyError as error:
+        raise ScenePresetError("scene plan references an unknown preset") from error
+    if preset.version != plan.preset_version:
+        raise ScenePresetError("scene plan preset version is stale")
+    bindings = {value.name: value.entity_id for value in plan.bindings}
+    current = plan_scene_preset(preset, project, bindings, dict(plan.settings))
+    if current != plan:
+        raise ScenePresetError("scene plan is stale or has been modified")
+    return current
 
 
 def scene_preset_document(preset):

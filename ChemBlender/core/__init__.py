@@ -172,6 +172,7 @@ from .scene_preset import (
     scene_preset_document,
     scene_preset_from_document,
     scene_preset_for_recipe_view,
+    validate_scene_plan,
 )
 from .sidecar import (
     LazyNpyArray,
@@ -371,6 +372,7 @@ __all__ = [
     "scene_preset_document",
     "scene_preset_from_document",
     "scene_preset_for_recipe_view",
+    "validate_scene_plan",
     "source_hash_bytes",
     "surface_render_cache_key",
     "volume_render_cache_key",

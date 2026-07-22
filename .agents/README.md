@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [phase4-scene-preset-application.md](active/phase4-scene-preset-application.md) | Blender application and rollback for validated scene plans |
+| active | [phase4-surface-preset-application.md](active/phase4-surface-preset-application.md) | Signed and property-mapped surface application |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -69,6 +69,7 @@ Historical documents provide provenance, not current status.
 | completed | [qcengine-and-pyscf-execution.md](completed/qcengine-and-pyscf-execution.md) | QCEngine/PySCF worker execution, failure and cancellation evidence |
 | completed | [analysis-report-bundle.md](completed/analysis-report-bundle.md) | Deterministic JSON/Markdown report, citation and artifact evidence |
 | completed | [scene-preset-contract.md](completed/scene-preset-contract.md) | Versioned scene definitions, plans and linked dataset evidence |
+| completed | [scene-preset-application.md](completed/scene-preset-application.md) | Validated Blender scene application, spectrum curves and rollback evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.

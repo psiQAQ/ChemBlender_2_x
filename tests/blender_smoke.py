@@ -51,6 +51,8 @@ def assert_enabled(module_key):
     assert f"{module_key}.trajectory_view" in sys.modules
     assert f"{module_key}.worker_client" in sys.modules
     assert f"{module_key}.topology_view" in sys.modules
+    assert f"{module_key}.scene_preset_view" in sys.modules
+    assert f"{module_key}.spectrum_plot" in sys.modules
     assert f"{module_key}.core.worker_protocol" in sys.modules
     assert "worker" not in sys.modules
     core = importlib.import_module(f"{module_key}.core")
@@ -625,6 +627,143 @@ def assert_periodic_electronic_plots(module_key):
             bpy.data.curves.remove(curve)
 
 
+def assert_scene_preset_application(module_key):
+    import numpy
+
+    core = importlib.import_module(f"{module_key}.core")
+    view = importlib.import_module(f"{module_key}.scene_preset_view")
+    presets = core.builtin_scene_presets()
+    structure = core.Structure(
+        id=uuid4(), revision="scene-structure-r1", atomic_numbers=(8, 1),
+        coordinates=core.ArrayData(
+            numpy.asarray([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
+            ("atom", "xyz"), "angstrom",
+        ),
+    )
+    modes = core.VibrationalModeSet(
+        id=uuid4(), revision="scene-modes-r1", semantic_role="vibrational_modes",
+        domain="mode", data=core.ArrayData(numpy.asarray([1000.0]), ("mode",), "inverse_centimeter"),
+        status=core.DatasetStatus.COMPLETE, source_calculation=None, provenance_ids=(),
+        structure_id=structure.id,
+        displacements=core.ArrayData(numpy.asarray([[[0.1, 0.0, 0.0], [-0.1, 0.0, 0.0]]]), ("mode", "atom", "xyz"), "angstrom"),
+        reduced_masses=None, force_constants=None,
+        ir_intensities=core.ArrayData(numpy.asarray([10.0]), ("mode",), "kilometer_per_mole"),
+        raman_activities=None, symmetries=("A1",), displacement_convention="cclib_cartesian",
+    )
+    states = core.ExcitedStateSet(
+        id=uuid4(), revision="scene-states-r1", semantic_role="excited_states",
+        domain="state", data=core.ArrayData(numpy.asarray([20000.0]), ("state",), "inverse_centimeter"),
+        status=core.DatasetStatus.COMPLETE, source_calculation=None, provenance_ids=(),
+        structure_id=structure.id,
+        oscillator_strengths=core.ArrayData(numpy.asarray([0.2]), ("state",), "dimensionless"),
+        rotatory_strengths=None, electric_transition_dipoles=None,
+        velocity_transition_dipoles=None, magnetic_transition_dipoles=None,
+        symmetries=("A1",), multiplicities=(1,), configurations=((),),
+        state_references=(core.ExcitedStateReferences(),),
+    )
+    ir_batch = core.derive_vibrational_spectrum(
+        modes, kind=core.SpectrumKind.IR, profile=core.SpectrumProfile.STICK
+    )
+    ir = ir_batch.datasets[0]
+    uv_batch = core.derive_electronic_spectrum(
+        states, kind=core.SpectrumKind.UV_VIS, profile=core.SpectrumProfile.STICK
+    )
+    uv = uv_batch.datasets[0]
+    project = core.QCProject(uuid4(), "0.1")
+    project.commit(core.ImportBatch(structures=(structure,), datasets=(modes, states)))
+    project.commit(ir_batch)
+    project.commit(uv_batch)
+
+    created = []
+    try:
+        structure_plan = core.plan_scene_preset(
+            presets["structure_publication"], project, {"structure": structure.id}, {}
+        )
+        created.extend(view.apply_scene_preset(structure_plan, project, collection=bpy.context.scene.collection))
+        assert created[-1]["cb_scene_render_identity"] == structure_plan.render_identity
+
+        vibration_plan = core.plan_scene_preset(
+            presets["vibration_spectrum_linked"], project,
+            {"structure": structure.id, "modes": modes.id, "spectrum": ir.id},
+            {"arrow_scale": 2.0},
+        )
+        vibration_objects = view.apply_scene_preset(vibration_plan, project, collection=bpy.context.scene.collection)
+        created.extend(vibration_objects)
+        assert {obj.type for obj in vibration_objects} == {"MESH", "CURVE"}
+        assert vibration_objects[0]["cb_selection_domain"] == "mode"
+        assert vibration_objects[1]["cb_plot_contract"] == "spectrum_curve_v1"
+        assert len(vibration_objects[1].data.splines) == 1
+
+        electronic_plan = core.plan_scene_preset(
+            presets["electronic_spectrum_linked"], project,
+            {"structure": structure.id, "states": states.id, "spectrum": uv.id}, {},
+        )
+        electronic_objects = view.apply_scene_preset(electronic_plan, project, collection=bpy.context.scene.collection)
+        created.extend(electronic_objects)
+        assert electronic_objects[0]["cb_selection_domain"] == "state"
+
+        periodic_id = uuid4()
+        band = core.BandStructure(
+            id=uuid4(), revision="scene-band-r1", semantic_role="band_structure", domain="band",
+            data=core.ArrayData(numpy.asarray([[[4.0], [6.0]]]), ("spin", "kpoint", "band"), "electron_volt"),
+            status=core.DatasetStatus.COMPLETE, source_calculation=None, provenance_ids=(), structure_id=periodic_id,
+            occupations=None,
+            kpoints=core.ArrayData(numpy.asarray([[0.0, 0.0, 0.0], [0.5, 0.0, 0.0]]), ("kpoint", "reciprocal_axis"), "dimensionless"),
+            reciprocal_lattice=core.ArrayData(numpy.eye(3), ("reciprocal_vector", "cartesian_axis"), "inverse_angstrom"),
+            distances=core.ArrayData(numpy.asarray([0.0, 1.0]), ("kpoint",), "inverse_angstrom"),
+            spin_channels=("alpha",), labels=("GAMMA", "X"), branches=(core.BandPathBranch(0, 1, "GAMMA", "X"),),
+            projections=None, orbital_labels=(), fermi_energy=5.0, energy_reference=core.EnergyReference.ABSOLUTE,
+        )
+        dos = core.DensityOfStates(
+            id=uuid4(), revision="scene-dos-r1", semantic_role="density_of_states", domain="energy",
+            data=core.ArrayData(numpy.asarray([[1.0, 2.0]]), ("spin", "energy"), "states_per_electron_volt"),
+            status=core.DatasetStatus.COMPLETE, source_calculation=None, provenance_ids=(), structure_id=periodic_id,
+            energies=core.ArrayData(numpy.asarray([4.0, 6.0]), ("energy",), "electron_volt"),
+            spin_channels=("alpha",), projections=None, orbital_labels=(), fermi_energy=5.0,
+            energy_reference=core.EnergyReference.ABSOLUTE,
+        )
+        periodic = core.Structure(
+            id=periodic_id, revision="periodic-r1", atomic_numbers=(14,),
+            coordinates=core.ArrayData(numpy.zeros((1, 3)), ("atom", "xyz"), "angstrom"),
+        )
+        periodic_project = core.QCProject(uuid4(), "0.1")
+        periodic_project.commit(core.ImportBatch(structures=(periodic,), datasets=(band, dos)))
+        band_plan = core.plan_scene_preset(
+            presets["band_dos_linked"], periodic_project, {"band": band.id, "dos": dos.id}, {}
+        )
+        band_objects = view.apply_scene_preset(band_plan, periodic_project, collection=bpy.context.scene.collection)
+        created.extend(band_objects)
+        assert [obj["cb_plot_contract"] for obj in band_objects] == ["band_structure_curve_v1", "density_of_states_curve_v1"]
+
+        before = len(bpy.data.objects)
+        project.structures[structure.id] = replace(structure, revision="scene-structure-r2")
+        try:
+            view.apply_scene_preset(structure_plan, project)
+            raise AssertionError("stale plan must fail")
+        except core.ScenePresetError:
+            pass
+        assert len(bpy.data.objects) == before
+
+        original = view.create_spectrum_plot
+        view.create_spectrum_plot = lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("forced failure"))
+        project.structures[structure.id] = structure
+        before = len(bpy.data.objects)
+        try:
+            view.apply_scene_preset(vibration_plan, project)
+            raise AssertionError("adapter failure must fail")
+        except RuntimeError as error:
+            assert str(error) == "forced failure"
+        finally:
+            view.create_spectrum_plot = original
+        assert len(bpy.data.objects) == before
+    finally:
+        for obj in reversed(created):
+            data = obj.data
+            bpy.data.objects.remove(obj, do_unlink=True)
+            if data.users == 0:
+                bpy.data.batch_remove(ids=(data,))
+
+
 def assert_complex_phonon_trajectory(module_key):
     import numpy
 
@@ -852,6 +991,7 @@ assert_vibration_view_adapter(module_key)
 assert_dataset_and_trajectory_views(module_key)
 assert_periodic_structure_view(module_key)
 assert_periodic_electronic_plots(module_key)
+assert_scene_preset_application(module_key)
 assert_complex_phonon_trajectory(module_key)
 assert_fermi_surface_view(module_key)
 assert_project_sidecar_link(module_key)
