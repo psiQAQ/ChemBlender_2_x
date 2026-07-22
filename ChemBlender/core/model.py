@@ -204,6 +204,28 @@ class QCSchemaEnvelope:
 
 
 @dataclass(frozen=True, slots=True)
+class CJSONEnvelope:
+    id: UUID
+    revision: str
+    format_version: int
+    source_bytes: bytes
+    provenance_ids: tuple[UUID, ...]
+
+    def __post_init__(self):
+        _require_uuid(self.id, "id")
+        _require_text(self.revision, "revision")
+        if isinstance(self.format_version, bool) or self.format_version not in (0, 1):
+            raise ValueError("format_version must be CJSON version 0 or 1")
+        if not isinstance(self.source_bytes, bytes) or not self.source_bytes:
+            raise ValueError("source_bytes must be non-empty bytes")
+        object.__setattr__(
+            self,
+            "provenance_ids",
+            _require_uuid_tuple(self.provenance_ids, "provenance_ids"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class PeriodicSiteData:
     fractional_coordinates: ArrayData
     site_labels: tuple[str, ...]
@@ -320,6 +342,36 @@ class PeriodicSiteData:
 
 
 @dataclass(frozen=True, slots=True)
+class MolecularTopology:
+    bond_indices: ArrayData
+    bond_orders: ArrayData
+
+    def __post_init__(self):
+        import numpy
+
+        indices = numpy.asarray(self.bond_indices.values)
+        orders = numpy.asarray(self.bond_orders.values)
+        if (
+            self.bond_indices.dims != ("bond", "endpoint")
+            or len(self.bond_indices.shape) != 2
+            or self.bond_indices.shape[1] != 2
+            or self.bond_indices.unit != "dimensionless"
+            or indices.dtype.kind not in "iu"
+            or numpy.any(indices < 0)
+        ):
+            raise ValueError("bond_indices must contain non-negative integer pairs")
+        if (
+            self.bond_orders.dims != ("bond",)
+            or self.bond_orders.shape != (self.bond_indices.shape[0],)
+            or self.bond_orders.unit != "dimensionless"
+            or orders.dtype.kind not in "iuf"
+            or not numpy.all(numpy.isfinite(orders))
+            or numpy.any(orders <= 0.0)
+        ):
+            raise ValueError("bond_orders must contain one positive value per bond")
+
+
+@dataclass(frozen=True, slots=True)
 class Structure:
     id: UUID
     revision: str
@@ -329,8 +381,11 @@ class Structure:
     periodic: PeriodicSiteData | None = None
     molecular_charge: int | None = None
     molecular_multiplicity: int | None = None
+    topology: MolecularTopology | None = None
 
     def __post_init__(self):
+        import numpy
+
         _require_uuid(self.id, "id")
         _require_text(self.revision, "revision")
         atomic_numbers = tuple(self.atomic_numbers)
@@ -371,6 +426,12 @@ class Structure:
             or self.molecular_multiplicity <= 0
         ):
             raise ValueError("molecular_multiplicity must be positive or None")
+        if self.topology is not None:
+            if not isinstance(self.topology, MolecularTopology):
+                raise TypeError("topology must be MolecularTopology or None")
+            indices = numpy.asarray(self.topology.bond_indices.values)
+            if indices.size and int(indices.max()) >= len(atomic_numbers):
+                raise ValueError("topology bond index is outside the structure")
         object.__setattr__(self, "atomic_numbers", atomic_numbers)
 
 
@@ -1965,6 +2026,7 @@ class ImportBatch:
     structures: tuple[Structure, ...] = ()
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
     qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
+    cjson_envelopes: tuple[CJSONEnvelope, ...] = ()
     symmetry_results: tuple[SymmetryResult, ...] = ()
     calculations: tuple[CalculationRecord, ...] = ()
     datasets: tuple[PropertyDataset | Grid3D, ...] = ()
@@ -1979,6 +2041,7 @@ class ImportBatch:
             ("structures", Structure),
             ("cif_envelopes", CIFEnvelope),
             ("qcschema_envelopes", QCSchemaEnvelope),
+            ("cjson_envelopes", CJSONEnvelope),
             ("symmetry_results", SymmetryResult),
             ("calculations", CalculationRecord),
             ("datasets", PropertyDataset),
@@ -2003,6 +2066,7 @@ class QCProject:
     structures: dict[UUID, Structure] = field(default_factory=dict)
     cif_envelopes: dict[UUID, CIFEnvelope] = field(default_factory=dict)
     qcschema_envelopes: dict[UUID, QCSchemaEnvelope] = field(default_factory=dict)
+    cjson_envelopes: dict[UUID, CJSONEnvelope] = field(default_factory=dict)
     symmetry_results: dict[UUID, SymmetryResult] = field(default_factory=dict)
     calculations: dict[UUID, CalculationRecord] = field(default_factory=dict)
     datasets: dict[UUID, PropertyDataset | Grid3D] = field(default_factory=dict)
@@ -2024,6 +2088,7 @@ class QCProject:
             batch.structures,
             batch.cif_envelopes,
             batch.qcschema_envelopes,
+            batch.cjson_envelopes,
             batch.symmetry_results,
             batch.calculations,
             batch.datasets,
@@ -2051,6 +2116,9 @@ class QCProject:
         )
         qcschema_envelope_ids = set(self.qcschema_envelopes).union(
             envelope.id for envelope in batch.qcschema_envelopes
+        )
+        cjson_envelope_ids = set(self.cjson_envelopes).union(
+            envelope.id for envelope in batch.cjson_envelopes
         )
         symmetry_result_ids = set(self.symmetry_results).union(
             result.id for result in batch.symmetry_results
@@ -2094,6 +2162,12 @@ class QCProject:
                 envelope.provenance_ids,
                 provenance_ids,
                 "QCSchema envelope provenance",
+            )
+        for envelope in batch.cjson_envelopes:
+            self._require_references(
+                envelope.provenance_ids,
+                provenance_ids,
+                "CJSON envelope provenance",
             )
         for result in batch.symmetry_results:
             try:
@@ -2346,6 +2420,7 @@ class QCProject:
             structure_ids
             | cif_envelope_ids
             | qcschema_envelope_ids
+            | cjson_envelope_ids
             | symmetry_result_ids
             | calculation_ids
             | dataset_ids
@@ -2368,6 +2443,9 @@ class QCProject:
         self.qcschema_envelopes.update(
             (entity.id, entity) for entity in batch.qcschema_envelopes
         )
+        self.cjson_envelopes.update(
+            (entity.id, entity) for entity in batch.cjson_envelopes
+        )
         self.symmetry_results.update(
             (entity.id, entity) for entity in batch.symmetry_results
         )
@@ -2385,6 +2463,7 @@ class QCProject:
             self.structures,
             self.cif_envelopes,
             self.qcschema_envelopes,
+            self.cjson_envelopes,
             self.symmetry_results,
             self.calculations,
             self.datasets,
@@ -2403,6 +2482,7 @@ class QCProject:
             (self.structures, Structure, "structures"),
             (self.cif_envelopes, CIFEnvelope, "cif_envelopes"),
             (self.qcschema_envelopes, QCSchemaEnvelope, "qcschema_envelopes"),
+            (self.cjson_envelopes, CJSONEnvelope, "cjson_envelopes"),
             (self.symmetry_results, SymmetryResult, "symmetry_results"),
             (self.calculations, CalculationRecord, "calculations"),
             (self.datasets, PropertyDataset, "datasets"),

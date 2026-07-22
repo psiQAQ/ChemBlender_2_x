@@ -26,6 +26,7 @@ git add .gitmodules submodules/<name>
 | quantum-chem-skills | `https://github.com/silico-quantum/quantum-chem-skills.git` | recipe 分类、工作流输入输出与 citation 要求 | `fbfb3c23f94dff29f8db64a3b49c8dc6c840a154`；MIT；只用于审阅，不复制模板脚本 |
 | critic2 | `https://github.com/aoterodelaroza/critic2.git` | external adapter CLI、QTAIM/NCI 输入输出与 integration fixture | `4b5dec9131c3a035af1b421d68a227c47fd641db`；GPL-3.0；外部 worker 程序参考，不进入 Extension |
 | QCElemental | `https://github.com/MolSSI/QCElemental.git` | QCSchema v1/v2 model、字段迁移和 exchange fixture | `v0.50.4` / `46034a0587e2e74426cb1ae2d4d7f66ad5cf6090`；BSD-3-Clause；只用于 schema 审阅和测试，不进入 Extension |
+| avogadrolibs | `https://github.com/OpenChemistry/avogadrolibs.git` | CJSON 1 reader/writer、字段 convention 与 integration fixture | `1.103.0` / `5d5d11f4a9ca716f7fb9653eb92424f1714b68ac`；BSD-3-Clause；只用于交换格式审阅和测试，不进入 Extension |
 | xyzrender | `https://github.com/aligfellow/xyzrender` | reader/Cube | 未拉取 |
 | Molecular Blender | 添加前核实 | 波函数/适应性表面 | 未拉取 |
 | Beautiful Atoms | 添加前核实 | volume/周期渲染 | 未拉取 |

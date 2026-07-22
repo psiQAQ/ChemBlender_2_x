@@ -34,3 +34,6 @@
 [submodule "submodules/qcelemental"]
 	path = submodules/qcelemental
 	url = https://github.com/MolSSI/QCElemental.git
+[submodule "submodules/avogadrolibs"]
+	path = submodules/avogadrolibs
+	url = https://github.com/OpenChemistry/avogadrolibs.git
