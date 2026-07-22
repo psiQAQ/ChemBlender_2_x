@@ -106,6 +106,21 @@ PyProcar requires `numpy<2.0` plus PyVista/VTK, scikit-image, matplotlib and oth
 plotting dependencies. ChemBlender accepts its PyVista-compatible output through a
 neutral adapter; none of this stack enters the Blender Extension or base qc-core.
 
+## Optional Workflow and Exchange
+
+| Component | Pinned reference | Runtime boundary | Current scope |
+| --- | --- | --- | --- |
+| QCElemental | `v0.50.4` / `46034a0` | external core/worker | QCSchema v1/v2 fixtures and schema review; no runtime lock-in |
+| QCEngine | `v0.50.0` / `d1842c4` | external worker | optional `qcschema.compute@1`; delayed import |
+| Avogadro libs | `1.103.0` / `5d5d11f` | reference only | CJSON field/convention review |
+| critic2 | `4b5dec9` | external executable | descriptor, safe process boundary and JSON topology adapter |
+| Multiwfn | not pinned | external executable | descriptor only; no interactive menu automation |
+| QCArchive/AiiDA/NOMAD | SDK not pinned | optional external worker | versioned read-only connector request and offline replay only |
+
+These components, `worker/`, all submodules, fixtures and tests are excluded from the
+Extension ZIP. Enabling an online connector or executable requires a separate dependency,
+license, authentication and deployment decision; credential values never enter `.cbq`.
+
 ## Local Extension Gates
 
 1. Run `blender-mcp --help`.

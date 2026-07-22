@@ -14,9 +14,9 @@
 
 | 优先级 | 内容 | 验证重点 |
 | --- | --- | --- |
-| P0 | 已完成原子标量、单一 instanced-arrow contract、当前帧轨迹与 Volume/OpenVDB；继续 Phase 2 周期 structure/grid adapter | 属性 ID 稳定；箭头数量不增加 Object；缓存可重建 |
-| P1 | 已完成振动 phase adapter、IR/Raman、UV-Vis/ECD 与 stick state/mode selection；继续轨道 linked selection、表面顶点着色和 2D plot widget | 光谱选择与三维对象使用同一 dataset/state ID |
-| P2 | publication templates、linked brushing、比较视图和高级交互 | 有明确工作流和维护成本预算 |
+| P0 | 已完成原子标量、instanced-arrow、当前帧轨迹、周期 structure/grid 与 Volume/OpenVDB | 属性 ID 稳定；箭头数量不增加 Object；缓存可重建 |
+| P1 | 已完成振动、IR/Raman、UV-Vis/ECD、stick selection、Spectrum/band/DOS Curve 与 property-on-surface | 光谱选择与三维对象使用同一 dataset/state ID |
+| P2 | 已完成 versioned publication scene presets 与原子应用/回滚；linked brushing、比较视图按具体 UI 交互需求触发 | scene identity、binding 与 adapter metadata 可重放 |
 
 ## 依赖关系
 

@@ -15,8 +15,8 @@
 | 优先级 | 内容 | 进入下一优先级的条件 |
 | --- | --- | --- |
 | P0 | `Structure`、`CalculationRecord`、`PropertyDataset`、`Grid3D`、`ParserReport`、`Provenance`；统一 `dtype/shape/dims/unit/source` | 两种结构格式归一化一致；普通 CPython 测试通过；core 无 `bpy` |
-| P1 | 已完成 `OrbitalSet`、`DensityMatrix`、`VibrationalModeSet`、`ExcitedStateSet` 与振动/电子 `Spectrum`；继续周期数据专用容器 | Phase 1 有真实 fixture，通用 `PropertyDataset` 已不足以清晰表达 |
-| P2 | `TopologyGraph`、数据库记录、跨项目 provenance graph | critic2/数据库 connector 已进入获批任务 |
+| P1 | 已完成 `OrbitalSet`、`DensityMatrix`、`VibrationalModeSet`、`ExcitedStateSet`、`Spectrum`、band/DOS、phonon 与 Fermi-surface 容器 | Phase 1/2 fixtures 与 shape/unit contracts 通过 |
+| P2 | 已完成 `TopologyGraph` 与外部记录 connector envelope；跨项目 provenance federation 按真实多项目需求触发 | critic2 与离线数据库记录可进入 `QCProject` |
 
 ## 依赖关系
 

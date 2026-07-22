@@ -1,0 +1,17 @@
+{
+  "schema_name": "chemblender_reader_capability_matrix",
+  "schema_version": 1,
+  "readers": [
+    {"reader_id": "ase-structure", "reader_version": "1", "extensions": [".vasp", ".poscar", ".contcar", ".extxyz", ".xyz"], "capabilities": {"atomic_property": "partial", "crystal": "supported", "structure": "supported"}},
+    {"reader_id": "cclib_output", "reader_version": "4", "extensions": [".log", ".out"], "capabilities": {"atomic_property": "supported", "energy": "supported", "excited_state": "supported", "structure": "supported", "trajectory": "supported", "vibration": "supported"}},
+    {"reader_id": "cjson", "reader_version": "0.1.0", "extensions": [".cjson"], "capabilities": {"excited_state": "partial", "grid": "partial", "orbital": "partial", "spectrum": "partial", "structure": "supported", "topology": "supported", "trajectory": "partial", "vibration": "partial"}},
+    {"reader_id": "cube", "reader_version": "1", "extensions": [".cube", ".cub"], "capabilities": {"grid": "supported", "structure": "supported"}},
+    {"reader_id": "gemmi-cif", "reader_version": "1", "extensions": [".cif"], "capabilities": {"cif_envelope": "supported", "crystal": "supported", "structure": "supported"}},
+    {"reader_id": "iodata_wavefunction", "reader_version": "1", "extensions": [".fchk", ".fch", ".molden", ".input"], "capabilities": {"atomic_property": "supported", "basis_set": "supported", "density_matrix": "supported", "orbital": "supported", "structure": "supported"}},
+    {"reader_id": "mol-v2000", "reader_version": "1", "extensions": [".mol"], "capabilities": {"structure": "supported", "topology": "unsupported"}},
+    {"reader_id": "pymatgen-vasp-grid", "reader_version": "1", "extensions": [".chgcar", ".parchg", ".elfcar", ".locpot"], "capabilities": {"crystal": "supported", "grid": "supported", "structure": "supported"}},
+    {"reader_id": "pymatgen-vasprun-electronic", "reader_version": "1", "extensions": [".xml"], "capabilities": {"band_structure": "supported", "dos": "supported", "projection": "partial", "structure": "supported"}},
+    {"reader_id": "qcschema", "reader_version": "0.1.0", "extensions": [".json"], "capabilities": {"calculation_record": "partial", "energy": "partial", "gradient": "partial", "structure": "supported"}},
+    {"reader_id": "xyz", "reader_version": "1", "extensions": [".xyz"], "capabilities": {"structure": "supported", "trajectory": "supported"}}
+  ]
+}

@@ -155,6 +155,11 @@ from .readers import (
     SniffMatch,
     SniffResult,
 )
+from .reader_catalog import (
+    builtin_reader_descriptors,
+    builtin_reader_registry,
+    reader_capability_document,
+)
 from .recipe import (
     RecipeBinding,
     RecipeCitation,
@@ -373,7 +378,10 @@ __all__ = [
     "parser_cache_key",
     "render_cache_key",
     "render_analysis_report_markdown",
+    "reader_capability_document",
     "builtin_recipes",
+    "builtin_reader_descriptors",
+    "builtin_reader_registry",
     "builtin_external_connectors",
     "builtin_scene_presets",
     "plan_recipe",

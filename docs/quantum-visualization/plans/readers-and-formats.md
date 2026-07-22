@@ -14,9 +14,9 @@
 
 | 优先级 | 内容 | 主要验证 |
 | --- | --- | --- |
-| P0 | 已完成 registry、sniffing、`ParserReport`、MOL2 回归、cclib schema 4、IOData、Gemmi CIF envelope 与 spglib 标准化；继续 ASE/pymatgen 周期 adapters | 真实 fixture 能区分 supported、partial、unsupported、ambiguous |
+| P0 | 已完成 builtin registry、sniffing、`ParserReport`、MOL2 回归、cclib schema 4、IOData、Gemmi/spglib 与 ASE/pymatgen 周期 adapters | 真实 fixture 能区分 supported、partial、unsupported、ambiguous |
 | P1 | 已完成 ASE、QCSchema v1/v2、CJSON、Cube 与周期体数据 adapter | round-trip 或字段级对照不静默丢数据 |
-| P2 | phonopy、critic2、Multiwfn、MD trajectory 和数据库 connector | 对应 Phase 已批准，且外部输出有稳定 fixture |
+| P2 | 已完成 phonopy、critic2 与数据库 connector contract；Multiwfn 保持外部进程边界，MD trajectory 按真实 DCD/XTC/TRR 输入触发 | 已实现 adapter 有稳定 fixture；未触发格式不声明支持 |
 
 ## 依赖关系
 
@@ -37,6 +37,13 @@
 - capability matrix 由测试生成或校验，不由文档手工猜测。
 - parser 可在普通 CPython 中测试；Blender adapter 只消费 normalized model。
 - 非标准输入、失败计算和不完整文件有明确错误，不产生伪完整记录。
+
+## 当前能力矩阵
+
+[机器可读 reader capability matrix](../reader-capability-matrix.json) 由
+`reader_capability_document()` 的 contract test 逐字段校验。`builtin_reader_registry()`
+是所有 built-in `ReaderDescriptor` 的统一入口；phonopy、critic2、PyProcar 等需要附加上下文
+或外部执行的 adapter 不伪装为通用文件 reader。
 
 ## 参考仓库触发条件
 

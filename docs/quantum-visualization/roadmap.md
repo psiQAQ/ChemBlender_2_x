@@ -49,7 +49,7 @@
 
 ## Phase 4：工作流与自动化
 
-状态：进行中；recipe、external process、`TopologyGraph`、critic2 JSON、QCSchema/CJSON exchange、QCEngine/PySCF execution、analysis report、publication/surface application 与外部记录 connector contract 已完成，当前执行 Phase 0–4 completion audit。
+状态：已完成（2026-07-22）。recipe、external process、`TopologyGraph`、critic2 JSON、QCSchema/CJSON exchange、QCEngine/PySCF execution、analysis report、publication/surface application 与外部记录 connector contract 均已完成；条件触发项见完成度审计。
 
 进入条件：语义输入、派生数据和 provenance 已足以描述可重复分析。
 
@@ -87,6 +87,6 @@
 26. 已完成：validated scene plan 的 Blender application、Spectrum Curve、metadata 与 rollback。
 27. 已完成：signed isosurface 与 property-on-surface 的 Blender application。
 28. 已完成：QCArchive、AiiDA、NOMAD 的可选只读 connector contract。
-29. 当前：Phase 0–4 完成度、依赖、submodule 与验证证据审计。
+29. 已完成：Phase 0–4 完成度、依赖、submodule 与验证证据审计。
 
 Phase 3 已依据 benchmark 保留 `.npy`，建立不阻塞 Blender 的本地 worker，并完成长轨迹与大型网格缓存闭环；Phase 4 从可验证 recipe contract 开始。

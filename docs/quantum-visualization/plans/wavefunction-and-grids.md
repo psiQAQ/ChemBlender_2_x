@@ -15,7 +15,7 @@
 | 优先级 | 内容 | 验证重点 |
 | --- | --- | --- |
 | P0 | 多 dataset Cube、非正交 step vectors、`GridSemantic`、`SurfaceStyle`、正负相位、field-on-surface | 网格坐标、单位与 dataset 不丢失；ESP on density 与 ESP 等值面不混淆 |
-| P1 | 已完成 IOData basis/MO/1-RDM 与 GBasis MO/density/spin-density/ESP 规则网格；继续导数、field-on-surface、适应性 MO 网格和 mesh fallback | 解析 convention、开放壳层、电子数/轨道 norm、数值误差、峰值内存和时间 |
+| P1 | 已完成 IOData basis/MO/1-RDM、GBasis MO/density/spin-density/ESP、field-on-surface 与 OpenVDB surface；导数、自适应网格和 mesh fallback 仅在真实分析/平台需求触发 | 解析 convention、开放壳层、电子数/轨道 norm、数值误差、峰值内存和时间 |
 | P2 | CuGBasis、导数/Hessian 场、GPU 加速与高级拓扑量 | P1 后端已成为瓶颈且目标平台明确 |
 
 ## 依赖关系

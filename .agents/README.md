@@ -16,7 +16,6 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [phase4-completion-audit.md](active/phase4-completion-audit.md) | Phase 0-4 evidence and remaining-boundary audit |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -74,6 +73,7 @@ Historical documents provide provenance, not current status.
 | completed | [scene-preset-application.md](completed/scene-preset-application.md) | Validated Blender scene application, spectrum curves and rollback evidence |
 | completed | [surface-preset-application.md](completed/surface-preset-application.md) | Signed and property-mapped OpenVDB surface application evidence |
 | completed | [external-record-connectors.md](completed/external-record-connectors.md) | QCArchive, AiiDA and NOMAD connector contract evidence |
+| completed | [quantum-visualization-roadmap-audit.md](completed/quantum-visualization-roadmap-audit.md) | Phase 0-4 evidence, capability and conditional-boundary audit |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.

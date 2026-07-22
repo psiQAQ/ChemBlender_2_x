@@ -89,7 +89,7 @@ Phase 0、Phase 1 分子闭环、Phase 2 周期量子化学与 Phase 3 大型数
 79. [External record connector v1](specs/external-record-connector-v1.md)
 80. [ADR 0028：external record connector boundary](../../.agents/decisions/0028-external-record-connector-boundary.md)
 81. [External record connectors 完成证据](../../.agents/completed/external-record-connectors.md)
-82. [当前任务：Phase 4 completion audit](../../.agents/active/phase4-completion-audit.md)
+82. [Phase 0–4 completion audit](../../.agents/completed/quantum-visualization-roadmap-audit.md)
 
 路线图和主题计划保存稳定范围、依赖顺序与验收标准；`.agents/active/` 只记录正在执行的一个任务及其下一步。临时 commit、测试运行和本机状态不写入路线图。
 
@@ -97,6 +97,7 @@ Phase 0、Phase 1 分子闭环、Phase 2 周期量子化学与 Phase 3 大型数
 
 - [语义核心](plans/semantic-core.md)
 - [Reader 与格式能力](plans/readers-and-formats.md)
+- [机器可读 Reader capability matrix](reader-capability-matrix.json)
 - [波函数、网格与表面](plans/wavefunction-and-grids.md)
 - [Blender 可视化映射](plans/blender-visualization.md)
 - [周期电子结构](plans/periodic-electronic-structure.md)
