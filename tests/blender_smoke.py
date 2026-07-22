@@ -3,6 +3,7 @@ import importlib
 import importlib.util
 import math
 import sys
+from dataclasses import replace
 from importlib.metadata import version
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -41,6 +42,7 @@ def assert_enabled(module_key):
     assert f"{module_key}.core.wavefunction_grid" in sys.modules
     assert f"{module_key}.core.wavefunction_observables" in sys.modules
     assert f"{module_key}.core.recipe" in sys.modules
+    assert f"{module_key}.core.critic2_adapter" in sys.modules
     assert "gbasis" not in sys.modules
     assert "ase" not in sys.modules
     assert "pymatgen" not in sys.modules
@@ -48,6 +50,7 @@ def assert_enabled(module_key):
     assert f"{module_key}.dataset_view" in sys.modules
     assert f"{module_key}.trajectory_view" in sys.modules
     assert f"{module_key}.worker_client" in sys.modules
+    assert f"{module_key}.topology_view" in sys.modules
     assert f"{module_key}.core.worker_protocol" in sys.modules
     assert "worker" not in sys.modules
     core = importlib.import_module(f"{module_key}.core")
@@ -753,6 +756,55 @@ def assert_project_sidecar_link(module_key):
         bpy.data.meshes.remove(marker)
 
 
+def assert_topology_view(module_key, repository_root):
+    import numpy
+
+    core = importlib.import_module(f"{module_key}.core")
+    view = importlib.import_module(f"{module_key}.topology_view")
+    fixture = (
+        repository_root
+        / "tests"
+        / "fixtures"
+        / "critic2"
+        / "cpreport-minimal.json"
+    )
+    graph = core.parse_critic2_cpreport(
+        fixture, structure_id=uuid4()
+    ).datasets[0]
+    path = core.TopologyPath(
+        id=uuid4(),
+        start_id=graph.critical_point_ids[0],
+        end_id=graph.critical_point_ids[2],
+        samples=core.ArrayData(
+            numpy.asarray([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
+            ("sample", "xyz"),
+            "bohr",
+        ),
+    )
+    graph = replace(graph, paths=(path,))
+    points, paths = view.create_topology_view(graph)
+    mesh = points.data
+    curve = paths.data
+    try:
+        assert len(mesh.vertices) == 3
+        assert numpy.allclose(mesh.vertices[1].co, [1.058354421806, 0.0, 0.0])
+        kinds = [0, 0, 0]
+        mesh.attributes["cbq_critical_point_kind"].data.foreach_get("value", kinds)
+        assert kinds == [0, 0, 2]
+        fields = [0.0, 0.0, 0.0]
+        mesh.attributes["cbq_field_value"].data.foreach_get("value", fields)
+        assert numpy.allclose(fields, [10.0, 10.0, 0.25])
+        assert points["cb_topology_contract"] == "topology_graph_v1"
+        assert len(curve.splines) == 1
+        assert len(curve.splines[0].points) == 2
+        assert paths["cb_topology_contract"] == "topology_paths_v1"
+    finally:
+        bpy.data.objects.remove(paths, do_unlink=True)
+        bpy.data.curves.remove(curve)
+        bpy.data.objects.remove(points, do_unlink=True)
+        bpy.data.meshes.remove(mesh)
+
+
 def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     reader = importlib.import_module(f"{module_key}.read")
     cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
@@ -803,6 +855,7 @@ assert_periodic_electronic_plots(module_key)
 assert_complex_phonon_trajectory(module_key)
 assert_fermi_surface_view(module_key)
 assert_project_sidecar_link(module_key)
+assert_topology_view(module_key, package.parent.parent)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 
 for _ in range(2):

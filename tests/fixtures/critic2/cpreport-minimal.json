@@ -1,0 +1,16 @@
+{
+  "critical_points": {
+    "number_of_nonequivalent_cps": 3,
+    "nonequivalent_cps": [
+      {"id": 1, "name": "N1", "fractional_coordinates": [0.0, 0.0, 0.0], "cartesian_coordinates": [0.0, 0.0, 0.0], "multiplicity": 1, "point_group": "C1", "rank": 3, "signature": -3, "field": 10.0, "laplacian": -30.0, "hessian_eigenvalues": [-10.0, -10.0, -10.0], "is_nucleus": true},
+      {"id": 2, "name": "N2", "fractional_coordinates": [1.0, 0.0, 0.0], "cartesian_coordinates": [2.0, 0.0, 0.0], "multiplicity": 1, "point_group": "C1", "rank": 3, "signature": -3, "field": 10.0, "laplacian": -30.0, "hessian_eigenvalues": [-10.0, -10.0, -10.0], "is_nucleus": true},
+      {"id": 3, "name": "B1", "fractional_coordinates": [0.5, 0.0, 0.0], "cartesian_coordinates": [1.0, 0.0, 0.0], "multiplicity": 1, "point_group": "C1", "rank": 3, "signature": -1, "field": 0.25, "laplacian": -0.1, "hessian_eigenvalues": [-0.3, -0.2, 0.4], "is_nucleus": false}
+    ],
+    "number_of_cell_cps": 3,
+    "cell_cps": [
+      {"id": 1, "rank": 3, "signature": -3, "fractional_coordinates": [0.0, 0.0, 0.0], "cartesian_coordinates": [0.0, 0.0, 0.0], "nonequivalent_id": 1, "symop_to_nneq": 1, "centering_vector_to_nneq": [0, 0, 0], "lattice_vector_to_nneq": [0, 0, 0]},
+      {"id": 2, "rank": 3, "signature": -3, "fractional_coordinates": [1.0, 0.0, 0.0], "cartesian_coordinates": [2.0, 0.0, 0.0], "nonequivalent_id": 2, "symop_to_nneq": 1, "centering_vector_to_nneq": [0, 0, 0], "lattice_vector_to_nneq": [0, 0, 0]},
+      {"id": 3, "rank": 3, "signature": -1, "fractional_coordinates": [0.5, 0.0, 0.0], "cartesian_coordinates": [1.0, 0.0, 0.0], "nonequivalent_id": 3, "attractor_angle": 180.0, "attractor_eigenvec": [1.0, 0.0, 0.0], "attractors": [{"cell_id": 1, "lvec": [0, 0, 0], "distance": 1.0, "path_length": 1.05}, {"cell_id": 2, "lvec": [0, 0, 0], "distance": 1.0, "path_length": 1.05}], "symop_to_nneq": 1, "centering_vector_to_nneq": [0, 0, 0], "lattice_vector_to_nneq": [0, 0, 0]}
+    ]
+  }
+}

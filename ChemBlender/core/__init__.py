@@ -20,6 +20,7 @@ from .cclib_adapter import (
     parse_cclib_output,
     sniff_cclib_output,
 )
+from .critic2_adapter import parse_critic2_cpreport
 from .iodata_adapter import (
     IODATA_WAVEFUNCTION_READER,
     IODataDependencyError,
@@ -49,6 +50,7 @@ from .model import (
     BasisShell,
     CalculationRecord,
     CalculationStatus,
+    CriticalPointKind,
     CIFEnvelope,
     DatasetStatus,
     DensityMatrix,
@@ -80,6 +82,9 @@ from .model import (
     SpinChannel,
     Structure,
     SurfaceProperty,
+    TopologyConnection,
+    TopologyGraph,
+    TopologyPath,
     SymmetryResult,
     VibrationalModeSet,
 )
@@ -169,6 +174,7 @@ __all__ = [
     "BasisShell",
     "CalculationRecord",
     "CalculationStatus",
+    "CriticalPointKind",
     "CacheIdentityError",
     "CIFEnvelope",
     "CapabilitySupport",
@@ -237,6 +243,9 @@ __all__ = [
     "SpglibDependencyError",
     "Structure",
     "SurfaceProperty",
+    "TopologyConnection",
+    "TopologyGraph",
+    "TopologyPath",
     "SymmetryResult",
     "VibrationalModeSet",
     "TrajectoryFrameManager",
@@ -245,6 +254,7 @@ __all__ = [
     "parse_cube",
     "parse_ase_structure",
     "parse_cclib_output",
+    "parse_critic2_cpreport",
     "parse_cif",
     "parse_xyz",
     "parse_mol_v2000",
