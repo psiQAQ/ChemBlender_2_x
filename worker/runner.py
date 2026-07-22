@@ -265,6 +265,9 @@ def default_registry():
     from .qcengine_operation import register_qcschema_compute_operation
 
     register_qcschema_compute_operation(registry)
+    from .connector_operation import register_external_record_operation
+
+    register_external_record_operation(registry)
     return registry
 
 

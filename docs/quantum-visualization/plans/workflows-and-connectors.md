@@ -40,12 +40,13 @@
 
 ## 当前进度
 
-recipe、critic2/Multiwfn 进程边界、critic2 topology、QCSchema/CJSON exchange 和
-QCEngine/PySCF 可选执行和确定性本地分析报告均已完成。下一步将 recipe view 映射为
-versioned publication scene preset；数据库 connector 仍等待具体服务与鉴权需求。
+recipe、critic2/Multiwfn 进程边界、critic2 topology、QCSchema/CJSON exchange、
+QCEngine/PySCF 可选执行、确定性分析报告、publication scene preset 以及 QCArchive/AiiDA/NOMAD
+只读 connector contract 均已完成。数据库记录可离线重放；在线 provider SDK 仍等待具体服务与
+鉴权需求，不进入 Blender Extension。
 
 ## 参考仓库触发条件
 
 - 定义首批 recipe 时审阅 quantum-chem-skills 的功能分类和工作流，不直接复制占位脚本。
 - QTAIM/NCI adapter 实施时审阅 critic2；hole-electron、键级和表面分析实施时审阅 Multiwfn。
-- 只有用户确认数据库导入需求后才固定 QCArchive、AiiDA 或 NOMAD 参考版本。
+- 只有用户确认在线数据库与认证方式后才固定对应 SDK/参考版本；当前 neutral contract 不要求 submodule。

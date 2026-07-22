@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [phase4-record-connectors.md](active/phase4-record-connectors.md) | Optional read-only QCArchive, AiiDA and NOMAD connector contract |
+| active | [phase4-completion-audit.md](active/phase4-completion-audit.md) | Phase 0-4 evidence and remaining-boundary audit |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -46,6 +46,7 @@ Historical documents provide provenance, not current status.
 | decision | [0025-deterministic-analysis-report.md](decisions/0025-deterministic-analysis-report.md) | Deterministic report manifest, citation and artifact boundary |
 | decision | [0026-versioned-scene-presets.md](decisions/0026-versioned-scene-presets.md) | Pure-data publication preset, binding and render identity boundary |
 | decision | [0027-openvdb-surface-application.md](decisions/0027-openvdb-surface-application.md) | Signed phase and property-sampled OpenVDB surface boundary |
+| decision | [0028-external-record-connector-boundary.md](decisions/0028-external-record-connector-boundary.md) | Optional provider, credential and normalized-record boundary |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
@@ -72,6 +73,7 @@ Historical documents provide provenance, not current status.
 | completed | [scene-preset-contract.md](completed/scene-preset-contract.md) | Versioned scene definitions, plans and linked dataset evidence |
 | completed | [scene-preset-application.md](completed/scene-preset-application.md) | Validated Blender scene application, spectrum curves and rollback evidence |
 | completed | [surface-preset-application.md](completed/surface-preset-application.md) | Signed and property-mapped OpenVDB surface application evidence |
+| completed | [external-record-connectors.md](completed/external-record-connectors.md) | QCArchive, AiiDA and NOMAD connector contract evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.

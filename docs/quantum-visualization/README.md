@@ -86,7 +86,10 @@ Phase 0、Phase 1 分子闭环、Phase 2 周期量子化学与 Phase 3 大型数
 76. [Scene preset Blender application 完成证据](../../.agents/completed/scene-preset-application.md)
 77. [ADR 0027：OpenVDB surface application](../../.agents/decisions/0027-openvdb-surface-application.md)
 78. [Surface preset Blender application 完成证据](../../.agents/completed/surface-preset-application.md)
-79. [当前任务：external record connectors](../../.agents/active/phase4-record-connectors.md)
+79. [External record connector v1](specs/external-record-connector-v1.md)
+80. [ADR 0028：external record connector boundary](../../.agents/decisions/0028-external-record-connector-boundary.md)
+81. [External record connectors 完成证据](../../.agents/completed/external-record-connectors.md)
+82. [当前任务：Phase 4 completion audit](../../.agents/active/phase4-completion-audit.md)
 
 路线图和主题计划保存稳定范围、依赖顺序与验收标准；`.agents/active/` 只记录正在执行的一个任务及其下一步。临时 commit、测试运行和本机状态不写入路线图。
 

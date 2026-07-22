@@ -29,6 +29,15 @@ from .cache_identity import (
     render_cache_key,
     source_hash_bytes,
 )
+from .external_connector import (
+    ExternalConnectorDescriptor,
+    ExternalConnectorError,
+    ExternalRecordRequest,
+    builtin_external_connectors,
+    external_record_request_document,
+    external_record_request_from_document,
+    external_record_source_uri,
+)
 from .cclib_adapter import (
     CCLIB_OUTPUT_READER,
     CCLibDependencyError,
@@ -350,6 +359,9 @@ __all__ = [
     "evaluate_electrostatic_potential_grid",
     "evaluate_molecular_orbital_grid",
     "derive_electronic_spectrum",
+    "ExternalConnectorDescriptor",
+    "ExternalConnectorError",
+    "ExternalRecordRequest",
     "derive_grid_lod",
     "derive_phonon_frames",
     "derive_symmetry",
@@ -362,6 +374,7 @@ __all__ = [
     "render_cache_key",
     "render_analysis_report_markdown",
     "builtin_recipes",
+    "builtin_external_connectors",
     "builtin_scene_presets",
     "plan_recipe",
     "plan_scene_preset",
@@ -374,6 +387,9 @@ __all__ = [
     "scene_preset_for_recipe_view",
     "validate_scene_plan",
     "source_hash_bytes",
+    "external_record_request_document",
+    "external_record_request_from_document",
+    "external_record_source_uri",
     "surface_render_cache_key",
     "volume_render_cache_key",
     "validate_analysis_report",
