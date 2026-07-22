@@ -117,6 +117,7 @@ class ScenePresetTests(unittest.TestCase):
             {"isovalue": 0.05},
         )
         self.assertEqual(dict(signed.settings)["negative_isovalue"], -0.05)
+        self.assertEqual(validate_scene_plan(signed, project), signed)
         with self.assertRaises(ScenePresetError):
             plan_scene_preset(
                 presets["signed_isosurface"],
@@ -132,6 +133,13 @@ class ScenePresetTests(unittest.TestCase):
             {"surface_isovalue": 0.001, "color_min": -0.1, "color_max": 0.1},
         )
         self.assertEqual(mapped.view_kind, "property_on_surface")
+        with self.assertRaisesRegex(ScenePresetError, "colormap"):
+            plan_scene_preset(
+                presets["property_on_surface"],
+                project,
+                {"surface_grid": density.id, "property_grid": potential.id},
+                {"colormap": "unimplemented"},
+            )
         shifted = replace(potential, id=uuid4(), origin=(0.1, 0.0, 0.0))
         shifted_project = QCProject(uuid4(), "0.1")
         shifted_project.commit(

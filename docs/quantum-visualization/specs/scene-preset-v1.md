@@ -9,8 +9,8 @@ entity UUID/revision，并计算稳定 `render_identity`。
 | Preset | Binding | Adapter contract | 关键设置 |
 | --- | --- | --- | --- |
 | `structure_publication` | structure | `structure_view_v1` | display coordinate unit |
-| `signed_isosurface` | Grid3D | `openvdb_volume_v1`、`volume_to_mesh_v1` | 正 isovalue、派生负 isovalue、phase color、opacity |
-| `property_on_surface` | surface/property Grid3D | volume/mesh + `surface_property_plan_v1` | surface isovalue、color range、colormap |
+| `signed_isosurface` | Grid3D | `openvdb_volume_v1`、`volume_to_mesh_v1` | dataset index、正 isovalue、派生负 isovalue、phase color、opacity |
+| `property_on_surface` | surface/property Grid3D | volume/mesh + `surface_property_plan_v1` | 两个 dataset index、surface isovalue、color range、colormap |
 | `vibration_spectrum_linked` | structure、modes、stick spectrum | structure/vibration/spectrum-curve/stick-selection | mode index、arrow/amplitude scale |
 | `electronic_spectrum_linked` | structure、states、stick spectrum | structure/spectrum-curve/stick-selection | state index |
 | `band_dos_linked` | BandStructure、DensityOfStates | 两种 curve v1 | energy reference、beta mirror |
@@ -30,8 +30,16 @@ electronic spectrum 与 band/DOS；创建的每个对象保存 preset ID/version
 ID/revision、归一化 settings 和 `render_identity`。任一 adapter 失败时，本次新建的 Object
 及其无用户 datablock 全部回滚。
 
+## Surface application
+
+`signed_isosurface` 创建明确的 positive/negative 两个 OpenVDB Volume，并由独立
+`Volume to Mesh` Geometry Nodes modifier 生成表面。negative cache 保存取负后的 scalar
+field，因此两相位都使用正阈值，绝不根据 mesh normal 推断相位。
+
+`property_on_surface` 在一个 VDB 中保存 `density` 与 `property` grid。Geometry Nodes 在
+density isosurface 顶点采样 property grid，写入 `cbq_surface_property`，材质用 `coolwarm`
+及显式 color range 映射。v1 不接受其他 colormap 名称。
+
 ## 当前边界
 
-v1 不自动决定相机、灯光或物理阈值。`signed_isosurface` 与
-`surface_property_plan_v1` 尚待稳定 surface adapter；application 会在创建任何对象前返回
-明确 unsupported，不会降级为普通 Volume 或把未生成的表面声称为已完成 artifact。
+v1 不自动决定相机、灯光或物理阈值，不把生成的 Mesh 或 VDB 作为权威数值存储。

@@ -172,6 +172,7 @@ def builtin_scene_presets():
             (_spec("grid", "dataset", "Grid3D"),),
             ("openvdb_volume_v1", "volume_to_mesh_v1"),
             (
+                ("dataset_index", 0),
                 ("isovalue", 0.05),
                 ("opacity", 1.0),
                 ("positive_color", (0.15, 0.35, 0.95, 1.0)),
@@ -189,6 +190,8 @@ def builtin_scene_presets():
             ),
             ("openvdb_volume_v1", "volume_to_mesh_v1", "surface_property_plan_v1"),
             (
+                ("surface_dataset_index", 0),
+                ("property_dataset_index", 0),
                 ("surface_isovalue", 0.001),
                 ("color_min", -0.1),
                 ("color_max", 0.1),
@@ -310,12 +313,26 @@ def _settings(preset, supplied, entities):
         if result["display_coordinate_unit"] != "angstrom":
             raise ScenePresetError("structure display unit must be angstrom")
     elif kind == "signed_isosurface":
+        grid = entities["grid"]
+        dataset_count = grid.data.shape[0] if grid.data.dims[0] == "dataset" else 1
+        result["dataset_index"] = _index(
+            result["dataset_index"], dataset_count, "dataset_index"
+        )
         result["isovalue"] = _number(result["isovalue"], "isovalue", positive=True)
         result["negative_isovalue"] = -result["isovalue"]
         result["opacity"] = _number(result["opacity"], "opacity", minimum=0.0, maximum=1.0)
         result["positive_color"] = _color(result["positive_color"], "positive_color")
         result["negative_color"] = _color(result["negative_color"], "negative_color")
     elif kind == "property_on_surface":
+        surface, prop = entities["surface_grid"], entities["property_grid"]
+        surface_count = surface.data.shape[0] if surface.data.dims[0] == "dataset" else 1
+        property_count = prop.data.shape[0] if prop.data.dims[0] == "dataset" else 1
+        result["surface_dataset_index"] = _index(
+            result["surface_dataset_index"], surface_count, "surface_dataset_index"
+        )
+        result["property_dataset_index"] = _index(
+            result["property_dataset_index"], property_count, "property_dataset_index"
+        )
         result["surface_isovalue"] = _number(
             result["surface_isovalue"], "surface_isovalue", positive=True
         )
@@ -327,8 +344,8 @@ def _settings(preset, supplied, entities):
             raise ScenePresetError("symmetric must be a boolean")
         if result["symmetric"] and result["color_min"] != -result["color_max"]:
             raise ScenePresetError("symmetric color range must be centered on zero")
-        _token(result["colormap"], "colormap")
-        surface, prop = entities["surface_grid"], entities["property_grid"]
+        if result["colormap"] != "coolwarm":
+            raise ScenePresetError("unsupported property surface colormap")
         if (
             surface.grid_shape != prop.grid_shape
             or surface.origin != prop.origin
@@ -435,7 +452,9 @@ def validate_scene_plan(plan, project):
     if preset.version != plan.preset_version:
         raise ScenePresetError("scene plan preset version is stale")
     bindings = {value.name: value.entity_id for value in plan.bindings}
-    current = plan_scene_preset(preset, project, bindings, dict(plan.settings))
+    settings = dict(plan.settings)
+    supplied = {name: settings[name] for name, _ in preset.default_settings}
+    current = plan_scene_preset(preset, project, bindings, supplied)
     if current != plan:
         raise ScenePresetError("scene plan is stale or has been modified")
     return current

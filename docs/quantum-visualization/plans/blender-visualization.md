@@ -42,8 +42,9 @@
 基础 structure/dataset/vector/trajectory/vibration/electronic plot/topology/Fermi-surface adapters、
 [scene preset v1](../specs/scene-preset-v1.md) 及其 Blender application 已完成。当前可原子地
 重放 structure、vibration/electronic spectrum 和 band/DOS plan；stale plan 与 adapter
-中途失败不会留下对象。下一步实现 signed isosurface，并为 property-on-surface 建立可验证的
-网格采样与材质属性契约。
+中途失败不会留下对象。signed isosurface 现使用两个明确相位的 OpenVDB，
+property-on-surface 在同 affine grid 上采样 `cbq_surface_property` 并用 `coolwarm` 材质映射；
+三者均受 scene render identity 和原子回滚约束。
 
 ## 参考仓库触发条件
 

@@ -8,14 +8,16 @@ from .core import EnergyReference, validate_scene_plan
 from .dataset_view import create_structure_view, link_stick_spectrum_selection
 from .electronic_plot import create_band_structure_plot, create_dos_plot
 from .spectrum_plot import create_spectrum_plot
+from .surface_view import (
+    create_property_surface,
+    create_signed_isosurfaces,
+    remove_surface_object,
+)
 from .vibration_view import create_vibration_view
 
 
 class ScenePresetApplicationError(RuntimeError):
     pass
-
-
-_UNSUPPORTED = {"signed_isosurface", "property_on_surface"}
 
 
 def _entities(plan, project):
@@ -54,6 +56,12 @@ def _write_plan_metadata(obj, plan):
 def _remove_objects(objects):
     data_blocks = []
     for obj in reversed(objects):
+        if getattr(obj, "type", None) == "VOLUME" and any(
+            modifier.get("cbq_contract") in {"isosurface_v1", "property_surface_v1"}
+            for modifier in obj.modifiers
+        ):
+            remove_surface_object(obj)
+            continue
         data = getattr(obj, "data", None)
         bpy.data.objects.remove(obj, do_unlink=True)
         if data is not None:
@@ -63,13 +71,11 @@ def _remove_objects(objects):
             bpy.data.batch_remove(ids=(data,))
 
 
-def apply_scene_preset(plan, project, *, collection=None):
+def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
     """Apply a current plan, removing every created object if an adapter fails."""
     plan = validate_scene_plan(plan, project)
-    if plan.view_kind in _UNSUPPORTED:
-        raise ScenePresetApplicationError(
-            f"scene preset view is not implemented: {plan.view_kind}"
-        )
+    if plan.view_kind in {"signed_isosurface", "property_on_surface"} and cache_root is None:
+        raise ScenePresetApplicationError("surface scene preset requires cache_root")
     target = collection or bpy.context.collection
     if target is None:
         raise ScenePresetApplicationError("a Blender collection is required")
@@ -77,7 +83,32 @@ def apply_scene_preset(plan, project, *, collection=None):
     settings = dict(plan.settings)
     created = []
     try:
-        if plan.view_kind == "structure":
+        if plan.view_kind == "signed_isosurface":
+            created.extend(
+                create_signed_isosurfaces(
+                    entities["grid"], cache_root,
+                    isovalue=settings["isovalue"],
+                    positive_color=settings["positive_color"],
+                    negative_color=settings["negative_color"],
+                    opacity=settings["opacity"],
+                    dataset_index=settings["dataset_index"],
+                    render_identity=plan.render_identity,
+                    collection=target,
+                )
+            )
+        elif plan.view_kind == "property_on_surface":
+            created.append(
+                create_property_surface(
+                    entities["surface_grid"], entities["property_grid"], cache_root,
+                    isovalue=settings["surface_isovalue"],
+                    color_min=settings["color_min"], color_max=settings["color_max"],
+                    colormap=settings["colormap"], render_identity=plan.render_identity,
+                    surface_dataset_index=settings["surface_dataset_index"],
+                    property_dataset_index=settings["property_dataset_index"],
+                    collection=target,
+                )
+            )
+        elif plan.view_kind == "structure":
             created.append(create_structure_view(entities["structure"], collection=target))
         elif plan.view_kind == "vibration_spectrum_linked":
             structure = create_structure_view(entities["structure"], collection=target)

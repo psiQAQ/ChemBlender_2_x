@@ -129,7 +129,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            ["phase4-surface-preset-application.md"],
+            ["phase4-record-connectors.md"],
         )
 
     def test_local_markdown_links_resolve(self):

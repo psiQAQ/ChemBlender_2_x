@@ -53,6 +53,7 @@ def assert_enabled(module_key):
     assert f"{module_key}.topology_view" in sys.modules
     assert f"{module_key}.scene_preset_view" in sys.modules
     assert f"{module_key}.spectrum_plot" in sys.modules
+    assert f"{module_key}.surface_view" in sys.modules
     assert f"{module_key}.core.worker_protocol" in sys.modules
     assert "worker" not in sys.modules
     core = importlib.import_module(f"{module_key}.core")
@@ -632,6 +633,7 @@ def assert_scene_preset_application(module_key):
 
     core = importlib.import_module(f"{module_key}.core")
     view = importlib.import_module(f"{module_key}.scene_preset_view")
+    surface_view = importlib.import_module(f"{module_key}.surface_view")
     presets = core.builtin_scene_presets()
     structure = core.Structure(
         id=uuid4(), revision="scene-structure-r1", atomic_numbers=(8, 1),
@@ -702,6 +704,80 @@ def assert_scene_preset_application(module_key):
         created.extend(electronic_objects)
         assert electronic_objects[0]["cb_selection_domain"] == "state"
 
+        grid_coordinates = numpy.indices((5, 5, 5), dtype=float)
+        signed_values = grid_coordinates[0] - 2.0
+        radius = numpy.sqrt(sum((axis - 2.0) ** 2 for axis in grid_coordinates))
+        density_values = 1.5 - radius
+        property_values = sum(axis - 2.0 for axis in grid_coordinates)
+        grid_fields = dict(
+            domain="grid", status=core.DatasetStatus.COMPLETE,
+            source_calculation=None, provenance_ids=(), structure_id=None,
+            origin=(-2.0, -2.0, -2.0),
+            step_vectors=((1.0, 0.0, 0.0), (0.2, 1.0, 0.0), (0.0, 0.1, 1.0)),
+            coordinate_unit="angstrom",
+        )
+        signed_grid = core.Grid3D(
+            id=uuid4(), revision="signed-grid-r1", semantic_role="molecular_orbital",
+            data=core.ArrayData(signed_values, ("x", "y", "z"), "dimensionless"),
+            **grid_fields,
+        )
+        density_grid = core.Grid3D(
+            id=uuid4(), revision="density-grid-r1", semantic_role="electron_density",
+            data=core.ArrayData(density_values, ("x", "y", "z"), "dimensionless"),
+            **grid_fields,
+        )
+        property_grid = core.Grid3D(
+            id=uuid4(), revision="property-grid-r1", semantic_role="electrostatic_potential",
+            data=core.ArrayData(property_values, ("x", "y", "z"), "dimensionless"),
+            **grid_fields,
+        )
+        grid_project = core.QCProject(uuid4(), "0.1")
+        grid_project.commit(core.ImportBatch(datasets=(signed_grid, density_grid, property_grid)))
+        with TemporaryDirectory() as cache_root:
+            signed_plan = core.plan_scene_preset(
+                presets["signed_isosurface"], grid_project, {"grid": signed_grid.id},
+                {"isovalue": 0.5},
+            )
+            signed_objects = view.apply_scene_preset(
+                signed_plan, grid_project, cache_root=cache_root,
+                collection=bpy.context.scene.collection,
+            )
+            created.extend(signed_objects)
+            assert [obj["cb_surface_phase"] for obj in signed_objects] == ["positive", "negative"]
+            assert [obj["cb_surface_isovalue"] for obj in signed_objects] == [0.5, -0.5]
+            bpy.context.view_layer.update()
+            depsgraph = bpy.context.evaluated_depsgraph_get()
+            for obj in signed_objects:
+                evaluated = obj.evaluated_get(depsgraph)
+                geometry = evaluated.evaluated_geometry()
+                assert geometry.mesh is not None
+                assert len(geometry.mesh.vertices) > 0
+
+            property_plan = core.plan_scene_preset(
+                presets["property_on_surface"], grid_project,
+                {"surface_grid": density_grid.id, "property_grid": property_grid.id},
+                {"surface_isovalue": 0.2, "color_min": -3.0, "color_max": 3.0},
+            )
+            property_objects = view.apply_scene_preset(
+                property_plan, grid_project, cache_root=cache_root,
+                collection=bpy.context.scene.collection,
+            )
+            created.extend(property_objects)
+            property_obj = property_objects[0]
+            bpy.context.view_layer.update()
+            depsgraph = bpy.context.evaluated_depsgraph_get()
+            evaluated = property_obj.evaluated_get(depsgraph)
+            geometry = evaluated.evaluated_geometry()
+            assert geometry.mesh is not None
+            mesh = geometry.mesh
+            assert len(mesh.vertices) > 0
+            attribute = mesh.attributes["cbq_surface_property"]
+            sampled = [0.0] * len(mesh.vertices)
+            attribute.data.foreach_get("value", sampled)
+            assert min(sampled) < max(sampled)
+            assert property_obj["cb_property_colormap"] == "coolwarm"
+            assert len(list(Path(cache_root).glob("surface/*.vdb"))) == 3
+
         periodic_id = uuid4()
         band = core.BandStructure(
             id=uuid4(), revision="scene-band-r1", semantic_role="band_structure", domain="band",
@@ -758,10 +834,13 @@ def assert_scene_preset_application(module_key):
         assert len(bpy.data.objects) == before
     finally:
         for obj in reversed(created):
-            data = obj.data
-            bpy.data.objects.remove(obj, do_unlink=True)
-            if data.users == 0:
-                bpy.data.batch_remove(ids=(data,))
+            if obj.type == "VOLUME":
+                surface_view.remove_surface_object(obj)
+            else:
+                data = obj.data
+                bpy.data.objects.remove(obj, do_unlink=True)
+                if data.users == 0:
+                    bpy.data.batch_remove(ids=(data,))
 
 
 def assert_complex_phonon_trajectory(module_key):
