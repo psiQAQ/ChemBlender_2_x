@@ -17,6 +17,7 @@ from .model import (
     PropertyDataset,
     ProvenanceRecord,
     Structure,
+    VibrationalModeSet,
 )
 from .readers import (
     CapabilitySupport,
@@ -26,7 +27,7 @@ from .readers import (
 )
 
 
-ADAPTER_VERSION = "1"
+ADAPTER_VERSION = "2"
 _MAPPED_ATTRIBUTES = {
     "atomcharges",
     "atomcoords",
@@ -36,6 +37,13 @@ _MAPPED_ATTRIBUTES = {
     "metadata",
     "mult",
     "scfenergies",
+    "vibdisps",
+    "vibfconsts",
+    "vibfreqs",
+    "vibirs",
+    "vibramans",
+    "vibrmasses",
+    "vibsyms",
 }
 
 
@@ -102,6 +110,148 @@ def _status(metadata, issues):
         )
     )
     return CalculationStatus.INCOMPLETE
+
+
+def _adapt_vibrations(
+    data,
+    *,
+    atom_count,
+    structure_id,
+    calculation_id,
+    provenance_id,
+    revision,
+    issues,
+):
+    import numpy
+
+    attributes = (
+        "vibfreqs",
+        "vibdisps",
+        "vibrmasses",
+        "vibfconsts",
+        "vibirs",
+        "vibramans",
+        "vibsyms",
+    )
+    if not any(hasattr(data, name) for name in attributes):
+        return None
+    if not hasattr(data, "vibfreqs"):
+        issues.append(
+            ParserIssue(
+                IssueKind.MISSING,
+                "vibration.frequencies",
+                "cclib did not parse vibrational frequencies",
+            )
+        )
+        return None
+    if not hasattr(data, "vibdisps"):
+        issues.append(
+            ParserIssue(
+                IssueKind.MISSING,
+                "vibration.displacements",
+                "cclib did not parse vibrational displacements",
+            )
+        )
+        return None
+
+    frequencies = _array(data, "vibfreqs", 1)
+    if frequencies.size == 0 or numpy.iscomplexobj(frequencies):
+        raise ValueError("cclib vibfreqs must contain real mode frequencies")
+    mode_count = frequencies.shape[0]
+    displacements = _array(
+        data,
+        "vibdisps",
+        3,
+        shape=(mode_count, atom_count, 3),
+    )
+    if numpy.iscomplexobj(displacements):
+        raise ValueError("cclib vibdisps must contain real Cartesian displacements")
+
+    optional_specs = (
+        (
+            "vibrmasses",
+            "vibration.reduced_mass",
+            "dalton",
+        ),
+        (
+            "vibfconsts",
+            "vibration.force_constant",
+            "millidyne_per_angstrom",
+        ),
+        (
+            "vibirs",
+            "vibration.ir_intensity",
+            "kilometer_per_mole",
+        ),
+        (
+            "vibramans",
+            "vibration.raman_activity",
+            "angstrom_four_per_dalton",
+        ),
+    )
+    optional = {}
+    for attribute, path, unit in optional_specs:
+        if not hasattr(data, attribute):
+            issues.append(
+                ParserIssue(
+                    IssueKind.MISSING,
+                    path,
+                    f"cclib did not parse {attribute}",
+                )
+            )
+            optional[attribute] = None
+            continue
+        values = _array(data, attribute, 1, shape=(mode_count,))
+        if numpy.iscomplexobj(values):
+            raise ValueError(f"cclib {attribute} must contain real values")
+        optional[attribute] = ArrayData(
+            numpy.array(values, dtype=float, copy=True),
+            ("mode",),
+            unit,
+        )
+
+    symmetries = None
+    if hasattr(data, "vibsyms"):
+        symmetries = tuple(getattr(data, "vibsyms"))
+        if len(symmetries) != mode_count or any(
+            not isinstance(value, str) or not value for value in symmetries
+        ):
+            raise ValueError("cclib vibsyms must contain one label per mode")
+    else:
+        issues.append(
+            ParserIssue(
+                IssueKind.MISSING,
+                "vibration.symmetry",
+                "cclib did not parse vibration symmetry labels",
+            )
+        )
+
+    return VibrationalModeSet(
+        id=uuid4(),
+        revision=revision,
+        semantic_role="vibrational_modes",
+        domain="mode",
+        data=ArrayData(
+            numpy.array(frequencies, dtype=float, copy=True),
+            ("mode",),
+            "inverse_centimeter",
+        ),
+        status=DatasetStatus.COMPLETE,
+        source_calculation=calculation_id,
+        provenance_ids=(provenance_id,),
+        structure_id=structure_id,
+        displacements=ArrayData(
+            numpy.array(displacements, dtype=float, copy=True),
+            ("mode", "atom", "xyz"),
+            "angstrom",
+        ),
+        reduced_masses=optional["vibrmasses"],
+        force_constants=optional["vibfconsts"],
+        ir_intensities=optional["vibirs"],
+        raman_activities=optional["vibramans"],
+        symmetries=symmetries,
+        displacement_convention="cclib_cartesian",
+    )
 
 
 def adapt_ccdata(data, source, *, cclib_version="unknown") -> ImportBatch:
@@ -241,6 +391,19 @@ def adapt_ccdata(data, source, *, cclib_version="unknown") -> ImportBatch:
             )
         )
 
+    vibrations = _adapt_vibrations(
+        data,
+        atom_count=len(atomnos),
+        structure_id=structure_id,
+        calculation_id=calculation_id,
+        provenance_id=provenance_id,
+        revision=revision,
+        issues=issues,
+    )
+    if vibrations is not None:
+        datasets.append(vibrations)
+        parsed_capabilities.append("vibration")
+
     attributes = _data_attributes(data)
     unmapped = tuple(sorted(set(attributes) - _MAPPED_ATTRIBUTES))
     if unmapped:
@@ -330,6 +493,7 @@ CCLIB_OUTPUT_READER = ReaderDescriptor(
         "trajectory": CapabilitySupport.SUPPORTED,
         "energy": CapabilitySupport.SUPPORTED,
         "atomic_property": CapabilitySupport.SUPPORTED,
+        "vibration": CapabilitySupport.SUPPORTED,
     },
     priority=80,
     sniff=sniff_cclib_output,

@@ -101,3 +101,7 @@ P0 provenance 保存来源标识、来源 hash、parser 或程序及其版本、
 3. 开放壳层数组可用 `dims=("spin", "orbital", "basis_function")` 表达。
 4. shape/dims 不一致、重复 UUID 和 dangling reference 被拒绝。
 5. 缺失物理量只进入 `ParserReport`，不生成空数据集。
+
+## Phase 1 Amendment: Vibrations and Spectra
+
+真实 Gaussian/ORCA fixture 确认后，`VibrationalModeSet` 与 `Spectrum` 作为 `PropertyDataset` 专用子类进入同一 `datasets` registry，不增加平行 registry。前者用 signed `mode` frequency 作为主数据并携带 `(mode, atom, xyz)` displacement 与可选强度；后者保存独立 frequency axis、profile/FWHM 和通用 source dataset UUID，并按 spectrum kind 校验来源类型。这样 calculation ownership、provenance 和 linked selection 继续使用既有 dataset contract，同时避免把多数组振动语义拆成无关联的通用属性。

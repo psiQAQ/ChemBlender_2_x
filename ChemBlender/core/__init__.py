@@ -38,7 +38,11 @@ from .model import (
     PropertyDataset,
     ProvenanceRecord,
     QCProject,
+    Spectrum,
+    SpectrumKind,
+    SpectrumProfile,
     Structure,
+    VibrationalModeSet,
 )
 from .mol_v2000 import MOL_V2000_READER, parse_mol_v2000, sniff_mol_v2000
 from .readers import (
@@ -60,6 +64,7 @@ from .wavefunction_observables import (
     evaluate_density_matrix_grid,
     evaluate_electrostatic_potential_grid,
 )
+from .vibration_spectrum import derive_vibrational_spectrum
 
 __all__ = [
     "AmbiguousReaderError",
@@ -100,7 +105,11 @@ __all__ = [
     "ReaderRegistry",
     "SniffMatch",
     "SniffResult",
+    "Spectrum",
+    "SpectrumKind",
+    "SpectrumProfile",
     "Structure",
+    "VibrationalModeSet",
     "XYZ_READER",
     "parse_cube",
     "parse_cclib_output",
@@ -118,4 +127,5 @@ __all__ = [
     "evaluate_density_matrix_grid",
     "evaluate_electrostatic_potential_grid",
     "evaluate_molecular_orbital_grid",
+    "derive_vibrational_spectrum",
 ]

@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [vibrations-and-spectra.md](active/vibrations-and-spectra.md) | Vibrational semantics, IR/Raman spectra and Blender mode animation |
+| active | [excited-states-and-spectra.md](active/excited-states-and-spectra.md) | Excited-state semantics, UV-Vis/ECD spectra and transition references |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -33,6 +33,7 @@ Historical documents provide provenance, not current status.
 | completed | [molecular-quantum-chemistry-ingestion.md](completed/molecular-quantum-chemistry-ingestion.md) | Cube/OpenVDB, cclib, IOData, basis, and orbital ingestion evidence |
 | completed | [wavefunction-derived-fields.md](completed/wavefunction-derived-fields.md) | GBasis MO/density grids, numerical baselines, and Blender Volume evidence |
 | completed | [wavefunction-observables.md](completed/wavefunction-observables.md) | One-RDM, electron/spin density and ESP derived-field evidence |
+| completed | [vibrations-and-spectra.md](completed/vibrations-and-spectra.md) | cclib vibrations, IR/Raman spectra and Blender mode-animation evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.

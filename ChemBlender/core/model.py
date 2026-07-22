@@ -73,6 +73,17 @@ class DensityMatrixSpin(str, Enum):
     SPIN = "spin"
 
 
+class SpectrumKind(str, Enum):
+    IR = "ir"
+    RAMAN = "raman"
+
+
+class SpectrumProfile(str, Enum):
+    STICK = "stick"
+    GAUSSIAN = "gaussian"
+    LORENTZIAN = "lorentzian"
+
+
 @dataclass(frozen=True, slots=True)
 class ArrayData:
     values: object
@@ -249,6 +260,136 @@ class FrameSet(PropertyDataset):
                 "FrameSet comments must contain one string per frame"
             )
         object.__setattr__(self, "comments", comments)
+
+
+@dataclass(frozen=True, slots=True)
+class VibrationalModeSet(PropertyDataset):
+    structure_id: UUID
+    displacements: ArrayData
+    reduced_masses: ArrayData | None
+    force_constants: ArrayData | None
+    ir_intensities: ArrayData | None
+    raman_activities: ArrayData | None
+    symmetries: tuple[str, ...] | None
+    displacement_convention: str
+
+    def __post_init__(self):
+        super(VibrationalModeSet, self).__post_init__()
+        _require_uuid(self.structure_id, "structure_id")
+        if (
+            self.semantic_role != "vibrational_modes"
+            or self.domain != "mode"
+            or self.data.dims != ("mode",)
+            or self.data.shape[0] <= 0
+            or self.data.unit != "inverse_centimeter"
+            or "complex" in self.data.dtype.lower()
+        ):
+            raise ValueError(
+                "VibrationalModeSet data must contain real signed mode frequencies"
+            )
+        if (
+            not isinstance(self.displacements, ArrayData)
+            or self.displacements.dims != ("mode", "atom", "xyz")
+            or len(self.displacements.shape) != 3
+            or self.displacements.shape[0] != self.data.shape[0]
+            or self.displacements.shape[1] <= 0
+            or self.displacements.shape[2] != 3
+            or self.displacements.unit != "angstrom"
+            or "complex" in self.displacements.dtype.lower()
+        ):
+            raise ValueError(
+                "vibration displacements must have (mode, atom, xyz) in angstrom"
+            )
+        optional_arrays = (
+            (self.reduced_masses, "dalton", "reduced_masses"),
+            (
+                self.force_constants,
+                "millidyne_per_angstrom",
+                "force_constants",
+            ),
+            (
+                self.ir_intensities,
+                "kilometer_per_mole",
+                "ir_intensities",
+            ),
+            (
+                self.raman_activities,
+                "angstrom_four_per_dalton",
+                "raman_activities",
+            ),
+        )
+        for values, unit, name in optional_arrays:
+            if values is None:
+                continue
+            if (
+                not isinstance(values, ArrayData)
+                or values.dims != ("mode",)
+                or values.shape != self.data.shape
+                or values.unit != unit
+                or "complex" in values.dtype.lower()
+            ):
+                raise ValueError(f"{name} must contain one real value per mode")
+        if self.symmetries is not None:
+            symmetries = tuple(self.symmetries)
+            if len(symmetries) != self.data.shape[0] or any(
+                not isinstance(value, str) or not value for value in symmetries
+            ):
+                raise ValueError("symmetries must contain one non-empty label per mode")
+            object.__setattr__(self, "symmetries", symmetries)
+        _require_token(self.displacement_convention, "displacement_convention")
+
+
+@dataclass(frozen=True, slots=True)
+class Spectrum(PropertyDataset):
+    axis: ArrayData
+    kind: SpectrumKind
+    profile: SpectrumProfile
+    source_dataset_id: UUID
+    fwhm: float | None
+    include_imaginary: bool
+
+    def __post_init__(self):
+        super(Spectrum, self).__post_init__()
+        if not isinstance(self.kind, SpectrumKind):
+            raise TypeError("kind must be a SpectrumKind")
+        if not isinstance(self.profile, SpectrumProfile):
+            raise TypeError("profile must be a SpectrumProfile")
+        expected_role = f"{self.kind.value}_spectrum"
+        expected_unit = (
+            "kilometer_per_mole"
+            if self.kind is SpectrumKind.IR
+            else "angstrom_four_per_dalton"
+        )
+        if (
+            self.semantic_role != expected_role
+            or self.domain != "frequency"
+            or self.data.dims != ("sample",)
+            or self.data.shape[0] <= 0
+            or self.data.unit != expected_unit
+            or "complex" in self.data.dtype.lower()
+        ):
+            raise ValueError("Spectrum intensity axis does not match its kind")
+        if (
+            not isinstance(self.axis, ArrayData)
+            or self.axis.dims != ("sample",)
+            or self.axis.shape != self.data.shape
+            or self.axis.unit != "inverse_centimeter"
+            or "complex" in self.axis.dtype.lower()
+        ):
+            raise ValueError("Spectrum axis must contain one frequency per sample")
+        _require_uuid(self.source_dataset_id, "source_dataset_id")
+        if self.profile is SpectrumProfile.STICK:
+            if self.fwhm is not None:
+                raise ValueError("stick Spectrum must not define fwhm")
+        elif (
+            isinstance(self.fwhm, bool)
+            or not isinstance(self.fwhm, (int, float))
+            or not isfinite(self.fwhm)
+            or self.fwhm <= 0.0
+        ):
+            raise ValueError("broadened Spectrum requires positive finite fwhm")
+        if not isinstance(self.include_imaginary, bool):
+            raise TypeError("include_imaginary must be a bool")
 
 
 def _basis_function_count(angular_momentum, kind):
@@ -703,7 +844,9 @@ class QCProject:
         calculation_ids = set(self.calculations).union(
             calculation.id for calculation in batch.calculations
         )
-        dataset_ids = set(self.datasets).union(dataset.id for dataset in batch.datasets)
+        datasets = dict(self.datasets)
+        datasets.update((dataset.id, dataset) for dataset in batch.datasets)
+        dataset_ids = set(datasets)
         basis_sets = dict(self.basis_sets)
         basis_sets.update((basis.id, basis) for basis in batch.basis_sets)
         basis_set_ids = set(basis_sets)
@@ -769,6 +912,23 @@ class QCProject:
                 if dataset.data.unit != reference.coordinates.unit:
                     raise ValueError(
                         "FrameSet and structure coordinate units must match"
+                    )
+            if isinstance(dataset, VibrationalModeSet):
+                try:
+                    reference = structures[dataset.structure_id]
+                except KeyError as error:
+                    raise ValueError(
+                        "VibrationalModeSet has a dangling structure reference"
+                    ) from error
+                if dataset.displacements.shape[1] != len(reference.atomic_numbers):
+                    raise ValueError(
+                        "VibrationalModeSet atom dimension must match its structure"
+                    )
+            if isinstance(dataset, Spectrum):
+                source_modes = datasets.get(dataset.source_dataset_id)
+                if not isinstance(source_modes, VibrationalModeSet):
+                    raise ValueError(
+                        "Spectrum has a dangling VibrationalModeSet reference"
                     )
         for basis in batch.basis_sets:
             try:

@@ -41,7 +41,7 @@ reader descriptor：
 | 字段 | 值 |
 | --- | --- |
 | `reader_id` | `cclib_output` |
-| `reader_version` | adapter schema `1` |
+| `reader_version` | adapter schema `2`（schema 1 为 structure/energy/atomic property；schema 2 增加 vibration） |
 | extensions | `.log`, `.out` |
 | priority | `80`，低于明确格式 reader |
 | capabilities | structure、trajectory、energy、atomic_property |

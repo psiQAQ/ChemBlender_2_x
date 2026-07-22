@@ -15,6 +15,7 @@ from ChemBlender.core import (
     IssueKind,
     QCProject,
     SniffMatch,
+    VibrationalModeSet,
 )
 from ChemBlender.core.cclib_adapter import (
     CCLIB_OUTPUT_READER,
@@ -36,10 +37,41 @@ GAUSSIAN_FIXTURE = (
 ORCA_FIXTURE = (
     CCLIB_ROOT / "data" / "ORCA" / "basicORCA4.1" / "water_mp2.out"
 )
+VIBRATION_FIXTURES = (
+    (
+        CCLIB_ROOT / "data" / "Gaussian" / "basicGaussian16" / "dvb_ir.out",
+        "Gaussian",
+        53.1981,
+        False,
+        True,
+    ),
+    (
+        CCLIB_ROOT / "data" / "Gaussian" / "basicGaussian16" / "dvb_raman.out",
+        "Gaussian",
+        53.1117,
+        True,
+        True,
+    ),
+    (
+        CCLIB_ROOT / "data" / "ORCA" / "basicORCA5.0" / "dvb_ir.out",
+        "ORCA",
+        45.66,
+        False,
+        False,
+    ),
+    (
+        CCLIB_ROOT / "data" / "ORCA" / "basicORCA5.0" / "dvb_raman.out",
+        "ORCA",
+        77.7,
+        True,
+        False,
+    ),
+)
 HAS_CCLIB_INTEGRATION = (
     importlib.util.find_spec("cclib") is not None
     and GAUSSIAN_FIXTURE.is_file()
     and ORCA_FIXTURE.is_file()
+    and all(case[0].is_file() for case in VIBRATION_FIXTURES)
 )
 
 
@@ -170,8 +202,96 @@ class CCLibAdapterTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     adapt_ccdata(data, Path("invalid.log"), cclib_version="1.8.1")
 
+    def test_vibrations_map_signed_modes_and_all_available_quantities(self):
+        data = fake_ccdata(
+            vibfreqs=numpy.asarray([-120.0, 1600.0]),
+            vibdisps=numpy.zeros((2, 3, 3)),
+            vibrmasses=numpy.asarray([1.0, 2.0]),
+            vibfconsts=numpy.asarray([0.1, 1.2]),
+            vibirs=numpy.asarray([2.0, 20.0]),
+            vibramans=numpy.asarray([3.0, 30.0]),
+            vibsyms=["A1", "B2"],
+        )
+        batch = adapt_ccdata(data, Path("frequency.log"), cclib_version="1.8.1")
+        modes = next(
+            dataset
+            for dataset in batch.datasets
+            if isinstance(dataset, VibrationalModeSet)
+        )
+        self.assertEqual(modes.data.values[0], -120.0)
+        self.assertEqual(modes.displacements.shape, (2, 3, 3))
+        self.assertEqual(modes.reduced_masses.unit, "dalton")
+        self.assertEqual(modes.force_constants.unit, "millidyne_per_angstrom")
+        self.assertEqual(modes.ir_intensities.unit, "kilometer_per_mole")
+        self.assertEqual(modes.raman_activities.unit, "angstrom_four_per_dalton")
+        self.assertEqual(modes.symmetries, ("A1", "B2"))
+        self.assertIn("vibration", batch.report.parsed_capabilities)
+        self.assertIn(modes.id, batch.calculations[0].dataset_ids)
+        QCProject(id=uuid4(), schema_version="0.1").commit(batch)
+
+    def test_vibration_missing_and_partial_fields_are_reported(self):
+        complete_minimum = fake_ccdata(
+            vibfreqs=numpy.asarray([100.0]),
+            vibdisps=numpy.zeros((1, 3, 3)),
+        )
+        batch = adapt_ccdata(
+            complete_minimum, Path("minimal-frequency.out"), cclib_version="1.8.1"
+        )
+        self.assertTrue(
+            any(isinstance(item, VibrationalModeSet) for item in batch.datasets)
+        )
+        missing_paths = {
+            issue.path
+            for issue in batch.report.issues
+            if issue.kind is IssueKind.MISSING
+        }
+        self.assertTrue(
+            {"vibration.ir_intensity", "vibration.raman_activity"}.issubset(
+                missing_paths
+            )
+        )
+
+        partial = fake_ccdata(vibfreqs=numpy.asarray([100.0]))
+        partial_batch = adapt_ccdata(
+            partial, Path("partial-frequency.out"), cclib_version="1.8.1"
+        )
+        self.assertFalse(
+            any(isinstance(item, VibrationalModeSet) for item in partial_batch.datasets)
+        )
+        self.assertTrue(
+            any(
+                issue.kind is IssueKind.MISSING
+                and issue.path == "vibration.displacements"
+                for issue in partial_batch.report.issues
+            )
+        )
+
+    def test_invalid_vibration_shapes_fail_explicitly(self):
+        invalid = (
+            fake_ccdata(
+                vibfreqs=numpy.zeros((2, 1)),
+                vibdisps=numpy.zeros((2, 3, 3)),
+            ),
+            fake_ccdata(
+                vibfreqs=numpy.zeros(2),
+                vibdisps=numpy.zeros((1, 3, 3)),
+            ),
+            fake_ccdata(
+                vibfreqs=numpy.zeros(2),
+                vibdisps=numpy.zeros((2, 3, 3)),
+                vibirs=numpy.zeros(1),
+            ),
+        )
+        for data in invalid:
+            with self.subTest(data=data):
+                with self.assertRaises(ValueError):
+                    adapt_ccdata(
+                        data, Path("invalid-vibration.log"), cclib_version="1.8.1"
+                    )
+
     def test_reader_descriptor_declares_only_implemented_capabilities(self):
         self.assertEqual(CCLIB_OUTPUT_READER.reader_id, "cclib_output")
+        self.assertEqual(CCLIB_OUTPUT_READER.reader_version, "2")
         self.assertEqual(CCLIB_OUTPUT_READER.extensions, (".log", ".out"))
         self.assertEqual(
             CCLIB_OUTPUT_READER.capabilities,
@@ -180,6 +300,7 @@ class CCLibAdapterTests(unittest.TestCase):
                 "trajectory": CapabilitySupport.SUPPORTED,
                 "energy": CapabilitySupport.SUPPORTED,
                 "atomic_property": CapabilitySupport.SUPPORTED,
+                "vibration": CapabilitySupport.SUPPORTED,
             },
         )
         manifest = (ROOT / "ChemBlender" / "blender_manifest.toml").read_text(
@@ -200,6 +321,28 @@ class CCLibAdapterTests(unittest.TestCase):
                 self.assertTrue(expected_charge_roles.issubset(roles))
                 self.assertEqual(dict(batch.provenance[0].parameters)["package"], package)
                 self.assertIs(batch.calculations[0].status, CalculationStatus.SUCCESS)
+                QCProject(id=uuid4(), schema_version="0.1").commit(batch)
+
+    @unittest.skipUnless(
+        HAS_CCLIB_INTEGRATION, "cclib integration environment unavailable"
+    )
+    def test_real_gaussian_and_orca_vibrations(self):
+        for source, package, first_frequency, has_raman, has_mass in VIBRATION_FIXTURES:
+            with self.subTest(source=source):
+                batch = parse_cclib_output(source)
+                modes = next(
+                    dataset
+                    for dataset in batch.datasets
+                    if isinstance(dataset, VibrationalModeSet)
+                )
+                self.assertEqual(modes.data.shape, (54,))
+                self.assertEqual(modes.displacements.shape, (54, 20, 3))
+                self.assertAlmostEqual(modes.data.values[0], first_frequency, places=4)
+                self.assertEqual(modes.raman_activities is not None, has_raman)
+                self.assertEqual(modes.reduced_masses is not None, has_mass)
+                self.assertEqual(
+                    dict(batch.provenance[0].parameters)["package"], package
+                )
                 QCProject(id=uuid4(), schema_version="0.1").commit(batch)
 
 

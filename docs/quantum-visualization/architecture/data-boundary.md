@@ -8,7 +8,7 @@
 - 最小内容：对象身份、所有权、数组字段、缺失值、解析置信度和派生关系。
 - 已有约束：权威模型不使用 Blender `PropertyGroup`；大型数组不写入 Mesh attributes。
 - 验证证据：至少两种结构格式归一化一致；一个不完整输出能显式报告缺失字段。
-- 推迟选择：轨道、振动、激发态和拓扑图的全部专用字段；dataclass 与 Pydantic 的选择。
+- 已落地：dataclass core、`OrbitalSet`、`DensityMatrix`、`VibrationalModeSet` 与 IR/Raman `Spectrum`；继续推迟激发态、周期数据和拓扑图的完整专用字段。
 
 ## Grid3D 数据约定
 

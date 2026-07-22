@@ -1,6 +1,7 @@
 import array
 import importlib
 import importlib.util
+import math
 import sys
 from importlib.metadata import version
 from pathlib import Path
@@ -121,6 +122,75 @@ def assert_grid_volume_adapter(module_key):
             bpy.data.volumes.remove(volume)
 
 
+def assert_vibration_view_adapter(module_key):
+    import numpy
+
+    core = importlib.import_module(f"{module_key}.core")
+    adapter = importlib.import_module(f"{module_key}.vibration_view")
+    mesh = bpy.data.meshes.new("ChemBlender vibration smoke mesh")
+    mesh.from_pydata([(0.0, 0.0, 0.0), (1.0, 0.0, 0.0)], [], [])
+    obj = bpy.data.objects.new("ChemBlender vibration smoke", mesh)
+    bpy.context.scene.collection.objects.link(obj)
+    mode_set_id = uuid4()
+    modes = core.VibrationalModeSet(
+        id=mode_set_id,
+        revision="vibration-revision",
+        semantic_role="vibrational_modes",
+        domain="mode",
+        data=core.ArrayData(numpy.asarray([-100.0]), ("mode",), "inverse_centimeter"),
+        status=core.DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(),
+        structure_id=uuid4(),
+        displacements=core.ArrayData(
+            numpy.asarray([[[1.0, 0.0, 0.0], [0.0, 0.5, 0.0]]]),
+            ("mode", "atom", "xyz"),
+            "angstrom",
+        ),
+        reduced_masses=None,
+        force_constants=None,
+        ir_intensities=None,
+        raman_activities=None,
+        symmetries=None,
+        displacement_convention="cclib_cartesian",
+    )
+    try:
+        modifier = adapter.create_vibration_view(
+            obj,
+            modes,
+            mode_index=0,
+            arrow_scale=2.0,
+        )
+        assert obj["cb_vibration_mode_set_id"] == str(mode_set_id)
+        assert obj["cb_vibration_mode_index"] == 0
+        assert modifier.type == "NODES"
+        assert modifier.node_group["cbq_contract"] == "vibration_arrow_v1"
+        assert len(obj.modifiers) == 1
+        assert mesh.attributes["cbq_vibration_displacement"].domain == "POINT"
+        vectors = [0.0] * 6
+        mesh.attributes["cbq_vibration_displacement"].data.foreach_get(
+            "vector", vectors
+        )
+        assert vectors == [2.0, 0.0, 0.0, 0.0, 1.0, 0.0]
+        bpy.context.view_layer.update()
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        evaluated = obj.evaluated_get(depsgraph)
+        evaluated_geometry = evaluated.evaluated_geometry()
+        assert len(evaluated_geometry.instance_references()) == 1
+        assert len(evaluated_geometry.instances_pointcloud().points) == 2
+
+        adapter.apply_vibration_phase(obj, math.pi / 2.0, amplitude_scale=0.5)
+        coordinates = [0.0] * 6
+        mesh.vertices.foreach_get("co", coordinates)
+        assert numpy.allclose(coordinates, [0.5, 0.0, 0.0, 1.0, 0.25, 0.0])
+        adapter.apply_vibration_phase(obj, math.pi, amplitude_scale=0.5)
+        mesh.vertices.foreach_get("co", coordinates)
+        assert numpy.allclose(coordinates, [0.0, 0.0, 0.0, 1.0, 0.0, 0.0])
+    finally:
+        bpy.data.objects.remove(obj, do_unlink=True)
+        bpy.data.meshes.remove(mesh)
+
+
 arguments = sys.argv[sys.argv.index("--") + 1 :]
 assert len(arguments) in (1, 2), "expected ZIP path and optional --keep-enabled"
 assert len(arguments) == 1 or arguments[1] == "--keep-enabled"
@@ -141,6 +211,7 @@ module_key = "bl_ext.user_default.chemblender"
 assert_enabled(module_key)
 assert_installed_blend_libraries(module_key)
 assert_grid_volume_adapter(module_key)
+assert_vibration_view_adapter(module_key)
 
 for _ in range(2):
     assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}

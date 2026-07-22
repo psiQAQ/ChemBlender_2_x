@@ -15,7 +15,7 @@
 | 优先级 | 内容 | 进入下一优先级的条件 |
 | --- | --- | --- |
 | P0 | `Structure`、`CalculationRecord`、`PropertyDataset`、`Grid3D`、`ParserReport`、`Provenance`；统一 `dtype/shape/dims/unit/source` | 两种结构格式归一化一致；普通 CPython 测试通过；core 无 `bpy` |
-| P1 | 已完成 `OrbitalSet`、`DensityMatrix`；继续 `VibrationalModeSet`、`ExcitedStateSet`、`Spectrum` 与周期数据专用容器 | Phase 1 有真实 fixture，通用 `PropertyDataset` 已不足以清晰表达 |
+| P1 | 已完成 `OrbitalSet`、`DensityMatrix`、`VibrationalModeSet` 与 IR/Raman `Spectrum`；继续 `ExcitedStateSet`、电子光谱与周期数据专用容器 | Phase 1 有真实 fixture，通用 `PropertyDataset` 已不足以清晰表达 |
 | P2 | `TopologyGraph`、数据库记录、跨项目 provenance graph | critic2/数据库 connector 已进入获批任务 |
 
 ## 依赖关系
