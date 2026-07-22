@@ -10,6 +10,7 @@ The maintained 2.2.x line is a Blender Extension. Extension source and `blender_
 - Extension migration and local build: `docs/migration/2.2.0-extension.md`
 - Branch and release workflow: `docs/development/branch-and-release.md`
 - Quantum chemistry visualization roadmap: `docs/quantum-visualization/roadmap.md`
+- 中文代码架构导览：[`.agents/reference/code-architecture-guide.md`](.agents/reference/code-architecture-guide.md)
 
 RDKit is bundled into release packages by CI. Wheel files are downloaded locally when needed and are not tracked by Git.
 

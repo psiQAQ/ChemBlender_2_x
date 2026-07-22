@@ -132,6 +132,29 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             [],
         )
 
+    def test_code_architecture_guide_tracks_source_files(self):
+        import re
+
+        guide = self.read_doc(".agents/reference/code-architecture-guide.md")
+        expected = {
+            path.relative_to(ROOT).as_posix()
+            for root in (ROOT / "ChemBlender", ROOT / "worker")
+            for path in root.rglob("*.py")
+        }
+        documented = set(
+            re.findall(r"`((?:ChemBlender|worker)/[^`]+\.py)`", guide)
+        )
+        self.assertEqual(documented, expected)
+
+        readme = self.read_doc("README.md")
+        agents = self.read_doc("AGENTS.md")
+        index = self.read_doc(".agents/README.md")
+        reference = ".agents/reference/code-architecture-guide.md"
+        self.assertIn(reference, readme)
+        self.assertIn(reference, agents)
+        self.assertIn("code-architecture-guide.md", index)
+        self.assertIn("Every architecture change", agents)
+
     def test_local_markdown_links_resolve(self):
         import re
 

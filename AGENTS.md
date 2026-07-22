@@ -100,6 +100,7 @@ Do not infer current status from this file, completed work, archived evidence, o
 ## Documentation and Agent Memory
 
 - Update docs only for features, architecture, installation, release flow, or explicit requests.
+- Every architecture change that adds, removes, moves, or materially changes the responsibility or public entrypoint of a source module must update `.agents/reference/code-architecture-guide.md` in the same commit.
 - Root `AGENTS.md` contains stable rules and routing only, never live commit/run status or chat transcripts.
 - Update `.agents/active/` only after a material state change. Polling without change produces no edit.
 - Record branch-role, release-boundary, dependency-source, and packaging-policy changes in the same commit.
@@ -113,6 +114,7 @@ Do not infer current status from this file, completed work, archived evidence, o
 
 ## Knowledge Entrypoints
 
+- Code architecture and per-file responsibilities: `.agents/reference/code-architecture-guide.md`
 - Quantum visualization roadmap: `docs/quantum-visualization/roadmap.md`
 - Quantum visualization data boundary: `docs/quantum-visualization/architecture/data-boundary.md`
 - Latest release readiness evidence: `.agents/completed/2.2.0-release-readiness.md`
