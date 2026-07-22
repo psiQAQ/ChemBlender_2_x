@@ -57,6 +57,7 @@ from .model import (
     ParserIssue,
     ParserReport,
     PeriodicSiteData,
+    PhononModeSet,
     PropertyDataset,
     ProvenanceRecord,
     QCProject,
@@ -83,6 +84,8 @@ from .pymatgen_electronic import (
     parse_vasprun_electronic,
     sniff_vasprun,
 )
+from .phonon_frames import derive_phonon_frames
+from .phonopy_adapter import PhonopyDependencyError, adapt_phonopy_qpoints
 from .readers import (
     AmbiguousReaderError,
     CapabilitySupport,
@@ -155,6 +158,8 @@ __all__ = [
     "ParserIssue",
     "ParserReport",
     "PeriodicSiteData",
+    "PhononModeSet",
+    "PhonopyDependencyError",
     "PYMATGEN_VASP_GRID_READER",
     "PYMATGEN_VASP_ELECTRONIC_READER",
     "PymatgenDependencyError",
@@ -193,6 +198,7 @@ __all__ = [
     "adapt_iodata",
     "adapt_vasp_volumetric",
     "adapt_pymatgen_electronic",
+    "adapt_phonopy_qpoints",
     "parse_vasp_volumetric",
     "parse_vasprun_electronic",
     "sniff_vasp_volumetric",
@@ -204,6 +210,7 @@ __all__ = [
     "evaluate_electrostatic_potential_grid",
     "evaluate_molecular_orbital_grid",
     "derive_electronic_spectrum",
+    "derive_phonon_frames",
     "derive_symmetry",
     "derive_vibrational_spectrum",
 ]

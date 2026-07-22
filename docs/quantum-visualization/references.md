@@ -22,7 +22,7 @@
 | [pymatgen-core](https://github.com/materialsproject/pymatgen-core) | BandStructure、DOS、VASP 和材料数据 | 周期 | P1 | 外部 core adapter；submodule 固定 v2026.7.16，当前用于 VASP scalar grids | MIT 已复核 | 已触发；`488ad74cc5ecaba5d24c1726e2762fb47f31f5ef` |
 | PyProcar | 投影能带、费米面、自旋纹理 | 周期 | P2 | 算法和 reciprocal mesh 参考 | 集成前复核 | 费米面 P2 获批 |
 | sumo | 能带/DOS/光学 publication plot 规范 | 周期；Blender | P1/P2 | 绘图语义与默认值参考 | 集成前复核 | 2D plot 联动进入实现 |
-| phonopy | q-point、复数 eigenvector、声子数据 | 周期 | P1 | 正式 adapter 依赖候选 | 集成前复核 | 声子 schema 和 fixture 已准备 |
+| [phonopy](https://github.com/phonopy/phonopy) | q-point、复数 eigenvector、声子数据 | 周期 | P1 | 外部 core adapter；submodule 固定 v4.4.0，保留完整复数相位并派生 supercell frames | BSD-3-Clause 已复核 | 已触发；`2df40f4865d477f44d3b5d1ebcafc0b4af878e35` |
 | Avogadro/CJSON | 项目交换和 orbital/vibration/spectrum UI | reader；Blender | P1 | 交换 adapter 与工作流参考 | 集成前复核 | CJSON round-trip 进入实施 |
 | critic2 | QTAIM、临界点、basin、NCI、ELF | workflow | P2 | 外部进程 adapter | 集成前复核（调研记录为 GPLv3） | TopologyGraph 与许可边界已批准 |
 | Multiwfn | 电荷、键级、NCI、hole-electron、DOS、光谱 | workflow | P2 | 外部进程 adapter | 集成前复核 | 稳定非交互 recipe 和输出 fixture 已确认 |

@@ -82,6 +82,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("submodules/spglib", gitmodules)
         self.assertIn("submodules/ase", gitmodules)
         self.assertIn("submodules/pymatgen-core", gitmodules)
+        self.assertIn("submodules/phonopy", gitmodules)
         children = {path.name for path in (ROOT / "submodules").iterdir()}
         self.assertEqual(
             children,
@@ -93,6 +94,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 "gemmi",
                 "iodata",
                 "pymatgen-core",
+                "phonopy",
                 "spglib",
             },
         )
@@ -103,6 +105,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("12355c77fb7c505a55f52cae36341d73b781a065", placeholder)
         self.assertIn("f27c0005ae6a67ea419f996e728668865bfc1f86", placeholder)
         self.assertIn("488ad74cc5ecaba5d24c1726e2762fb47f31f5ef", placeholder)
+        self.assertIn("2df40f4865d477f44d3b5d1ebcafc0b4af878e35", placeholder)
 
     def test_single_active_task(self):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))

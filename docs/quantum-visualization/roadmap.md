@@ -29,7 +29,7 @@
 
 ## Phase 2：周期量子化学
 
-状态：进行中；Gemmi/spglib、ASE/pymatgen-core 周期结构、VASP scalar fields 与 band/DOS/projection 已完成，当前进入 phonopy complex-mode schema。
+状态：进行中；周期结构、VASP scalar fields、band/DOS/projection 与 phonopy complex modes 已完成，当前评估 Fermi-surface/PyProcar 边界。
 
 进入条件：Gemmi/spglib 已覆盖 CIF 语法、空间群与标准化边界，周期结构 ID 可以跨数据集复用。
 
@@ -66,6 +66,7 @@
 9. 已完成：Gemmi CIF envelope 与 spglib 对称性/标准化基础设施。
 10. 已完成：ASE/pymatgen-core 周期结构、CHGCAR/PARCHG/ELFCAR/LOCPOT 与 Blender volume identity。
 11. 已完成：band structure、DOS/PDOS、projection 与 Blender linked selection。
-12. 当前：phonopy q-point、复数 eigenvector 与周期超胞动画。
+12. 已完成：phonopy q-point、复数 eigenvector 与周期超胞动画。
+13. 当前：Fermi-surface 中立 mesh schema 与 PyProcar adapter 评估。
 
 周期 structure/grid 验收后继续 band/DOS 与 phonopy；大型缓存/worker 和 recipe 分别在 Phase 3/4 收口。

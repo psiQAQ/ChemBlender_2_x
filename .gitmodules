@@ -19,3 +19,6 @@
 [submodule "submodules/pymatgen-core"]
 	path = submodules/pymatgen-core
 	url = https://github.com/materialsproject/pymatgen-core.git
+[submodule "submodules/phonopy"]
+	path = submodules/phonopy
+	url = https://github.com/phonopy/phonopy.git

@@ -82,6 +82,18 @@ implementation separately. ChemBlender pins `pymatgen-core` directly so reviewed
 source and tested runtime match. ASE and pymatgen-core are late-imported and remain
 outside the Blender Extension ZIP.
 
+| Item | Value |
+| --- | --- |
+| Package | `phonopy==4.4.0` |
+| Runtime boundary | independent CPython worker/core environment |
+| Reference source | `submodules/phonopy` at `2df40f4865d477f44d3b5d1ebcafc0b4af878e35` |
+| License | BSD-3-Clause |
+| Scope | q-point frequencies, complex eigenvectors, group velocities and periodic mode frames |
+
+phonopy and its scientific stack are late-imported and remain outside the Blender
+Extension ZIP. The first adapter consumes an in-memory `Phonopy` object after
+`run_qpoints(..., with_eigenvectors=True)`; it does not bundle h5py or matplotlib.
+
 ## Local Extension Gates
 
 1. Run `blender-mcp --help`.

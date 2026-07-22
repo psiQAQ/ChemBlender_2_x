@@ -21,6 +21,7 @@ git add .gitmodules submodules/<name>
 | spglib | `https://github.com/spglib/spglib.git` | 空间群、Wyckoff、等价原子、标准化与变换 convention | `v2.7.0` / `12355c77fb7c505a55f52cae36341d73b781a065`；BSD-3-Clause；只用于审阅和测试 |
 | ASE | `https://gitlab.com/ase/ase.git` | POSCAR/CONTCAR、extXYZ、PBC 与 selective-dynamics adapter | `3.29.0` / `f27c0005ae6a67ea419f996e728668865bfc1f86`；LGPL-2.1-or-later；外部 core adapter、审阅和测试 |
 | pymatgen-core | `https://github.com/materialsproject/pymatgen-core.git` | CHGCAR/PARCHG、ELFCAR、LOCPOT 解析和周期 grid convention | `v2026.7.16` / `488ad74cc5ecaba5d24c1726e2762fb47f31f5ef`；MIT；外部 core adapter、审阅和测试 |
+| phonopy | `https://github.com/phonopy/phonopy.git` | q-point frequency、complex eigenvector、group velocity 与 supercell phase convention | `v4.4.0` / `2df40f4865d477f44d3b5d1ebcafc0b4af878e35`；BSD-3-Clause；外部 core adapter、审阅和测试 |
 | xyzrender | `https://github.com/aligfellow/xyzrender` | reader/Cube | 未拉取 |
 | quantum-chem-skills | `https://github.com/silico-quantum/quantum-chem-skills` | recipe/workflow | 未拉取 |
 | Molecular Blender | 添加前核实 | 波函数/适应性表面 | 未拉取 |

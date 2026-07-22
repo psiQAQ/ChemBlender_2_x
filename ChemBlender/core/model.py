@@ -1116,6 +1116,90 @@ class DensityOfStates(PropertyDataset):
         object.__setattr__(self, "orbital_labels", orbital_labels)
 
 
+@dataclass(frozen=True, slots=True)
+class PhononModeSet(PropertyDataset):
+    structure_id: UUID
+    qpoints: ArrayData
+    eigenvectors: ArrayData
+    masses: ArrayData
+    group_velocities: ArrayData | None
+    weights: ArrayData | None
+    eigenvector_convention: str
+
+    def __post_init__(self):
+        import numpy
+
+        super(PhononModeSet, self).__post_init__()
+        _require_uuid(self.structure_id, "structure_id")
+        frequencies = numpy.asarray(self.data.values)
+        if (
+            self.semantic_role != "phonon_modes"
+            or self.domain != "mode"
+            or self.data.dims != ("qpoint", "mode")
+            or any(size <= 0 for size in self.data.shape)
+            or self.data.unit != "terahertz"
+            or numpy.iscomplexobj(frequencies)
+            or not numpy.all(numpy.isfinite(frequencies))
+        ):
+            raise ValueError("PhononModeSet data must contain finite qpoint-mode frequencies")
+        qpoint_count, mode_count = self.data.shape
+        qpoints = numpy.asarray(self.qpoints.values)
+        if (
+            self.qpoints.dims != ("qpoint", "reciprocal_axis")
+            or self.qpoints.shape != (qpoint_count, 3)
+            or self.qpoints.unit != "dimensionless"
+            or numpy.iscomplexobj(qpoints)
+            or not numpy.all(numpy.isfinite(qpoints))
+        ):
+            raise ValueError("qpoints must contain finite reciprocal fractional coordinates")
+        eigenvectors = numpy.asarray(self.eigenvectors.values)
+        if (
+            self.eigenvectors.dims != ("qpoint", "mode", "atom", "xyz")
+            or self.eigenvectors.shape[:2] != (qpoint_count, mode_count)
+            or self.eigenvectors.shape[2] <= 0
+            or self.eigenvectors.shape[3] != 3
+            or mode_count != self.eigenvectors.shape[2] * 3
+            or self.eigenvectors.unit != "dimensionless"
+            or not numpy.iscomplexobj(eigenvectors)
+            or not numpy.all(numpy.isfinite(eigenvectors))
+        ):
+            raise ValueError("eigenvectors must contain three modes per atom as finite complex values")
+        atom_count = self.eigenvectors.shape[2]
+        masses = numpy.asarray(self.masses.values)
+        if (
+            self.masses.dims != ("atom",)
+            or self.masses.shape != (atom_count,)
+            or self.masses.unit != "atomic_mass_unit"
+            or numpy.iscomplexobj(masses)
+            or not numpy.all(numpy.isfinite(masses))
+            or numpy.any(masses <= 0.0)
+        ):
+            raise ValueError("masses must contain one positive atomic mass per atom")
+        if self.group_velocities is not None:
+            velocities = numpy.asarray(self.group_velocities.values)
+            if (
+                self.group_velocities.dims != ("qpoint", "mode", "xyz")
+                or self.group_velocities.shape != (qpoint_count, mode_count, 3)
+                or self.group_velocities.unit != "terahertz_angstrom"
+                or numpy.iscomplexobj(velocities)
+                or not numpy.all(numpy.isfinite(velocities))
+            ):
+                raise ValueError("group velocities must match qpoint-mode axes")
+        if self.weights is not None:
+            weights = numpy.asarray(self.weights.values)
+            if (
+                self.weights.dims != ("qpoint",)
+                or self.weights.shape != (qpoint_count,)
+                or self.weights.unit != "dimensionless"
+                or numpy.iscomplexobj(weights)
+                or not numpy.all(numpy.isfinite(weights))
+                or numpy.any(weights < 0.0)
+            ):
+                raise ValueError("weights must contain one non-negative value per qpoint")
+        if self.eigenvector_convention != "phonopy_mass_weighted_dynamical_matrix":
+            raise ValueError("unsupported eigenvector_convention")
+
+
 def _basis_function_count(angular_momentum, kind):
     if kind is BasisFunctionKind.CARTESIAN:
         return (angular_momentum + 1) * (angular_momentum + 2) // 2
@@ -1755,6 +1839,17 @@ class QCProject:
                         raise ValueError(
                             f"{type(dataset).__name__} projection atom dimension must match structure"
                         )
+            if isinstance(dataset, PhononModeSet):
+                try:
+                    reference = structures[dataset.structure_id]
+                except KeyError as error:
+                    raise ValueError(
+                        "PhononModeSet has a dangling structure reference"
+                    ) from error
+                if dataset.eigenvectors.shape[2] != len(reference.atomic_numbers):
+                    raise ValueError(
+                        "PhononModeSet atom dimension must match its structure"
+                    )
         for basis in batch.basis_sets:
             try:
                 reference = structures[basis.structure_id]

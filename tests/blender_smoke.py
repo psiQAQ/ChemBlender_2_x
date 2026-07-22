@@ -579,6 +579,62 @@ def assert_periodic_electronic_plots(module_key):
             bpy.data.curves.remove(curve)
 
 
+def assert_complex_phonon_trajectory(module_key):
+    import numpy
+
+    core = importlib.import_module(f"{module_key}.core")
+    views = importlib.import_module(f"{module_key}.dataset_view")
+    trajectory = importlib.import_module(f"{module_key}.trajectory_view")
+    primitive_id = uuid4()
+    eigenvectors = numpy.zeros((1, 3, 1, 3), dtype=complex)
+    eigenvectors[0, 0, 0, 0] = 1.0 + 2.0j
+    modes = core.PhononModeSet(
+        id=uuid4(), revision="phonon-smoke", semantic_role="phonon_modes", domain="mode",
+        data=core.ArrayData(numpy.asarray([[-1.0, 2.0, 3.0]]), ("qpoint", "mode"), "terahertz"),
+        status=core.DatasetStatus.COMPLETE, source_calculation=None, provenance_ids=(),
+        structure_id=primitive_id,
+        qpoints=core.ArrayData(numpy.asarray([[0.5, 0.0, 0.0]]), ("qpoint", "reciprocal_axis"), "dimensionless"),
+        eigenvectors=core.ArrayData(eigenvectors, ("qpoint", "mode", "atom", "xyz"), "dimensionless"),
+        masses=core.ArrayData(numpy.asarray([4.0]), ("atom",), "atomic_mass_unit"),
+        group_velocities=None, weights=None,
+        eigenvector_convention="phonopy_mass_weighted_dynamical_matrix",
+    )
+    supercell = core.Structure(
+        id=uuid4(), revision="phonon-supercell", atomic_numbers=(14, 14),
+        coordinates=core.ArrayData(numpy.asarray([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0]]), ("atom", "xyz"), "angstrom"),
+        cell=core.ArrayData(numpy.diag([6.0, 3.0, 3.0]), ("cell_vector", "xyz"), "angstrom"),
+        periodic=core.PeriodicSiteData(
+            fractional_coordinates=core.ArrayData(numpy.asarray([[0.0, 0.0, 0.0], [0.5, 0.0, 0.0]]), ("atom", "xyz"), "dimensionless"),
+            site_labels=("Si1", "Si2"), occupancies=core.ArrayData(numpy.ones(2), ("atom",), "dimensionless"),
+            isotropic_displacements=None, anisotropic_displacements=None,
+            adp_types=("none", "none"), disorder_groups=(0, 0),
+            declared_space_group_name=None, declared_space_group_number=None,
+            symmetry_operations=(), cif_envelope_id=None,
+        ),
+    )
+    frames = core.derive_phonon_frames(
+        modes, supercell,
+        primitive_atom_indices=[0, 0], translations=[[0, 0, 0], [1, 0, 0]],
+        qpoint_index=0, mode_index=0, phases=[0.0, math.pi / 2], amplitude=2.0,
+    ).datasets[0]
+    obj = views.create_structure_view(supercell, name="ChemBlender phonon smoke", collection=bpy.context.scene.collection)
+    mesh = obj.data
+    try:
+        bpy.context.scene.frame_set(1)
+        trajectory.configure_trajectory_view(obj, frames)
+        first = [0.0] * 6
+        mesh.vertices.foreach_get("co", first)
+        assert numpy.allclose(first, [1.0, 0.0, 0.0, 2.0, 0.0, 0.0])
+        bpy.context.scene.frame_set(2)
+        second = [0.0] * 6
+        mesh.vertices.foreach_get("co", second)
+        assert numpy.allclose(second, [2.0, 0.0, 0.0, 1.0, 0.0, 0.0])
+    finally:
+        trajectory.clear_trajectory_view(obj)
+        bpy.data.objects.remove(obj, do_unlink=True)
+        bpy.data.meshes.remove(mesh)
+
+
 def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     reader = importlib.import_module(f"{module_key}.read")
     cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
@@ -626,6 +682,7 @@ assert_vibration_view_adapter(module_key)
 assert_dataset_and_trajectory_views(module_key)
 assert_periodic_structure_view(module_key)
 assert_periodic_electronic_plots(module_key)
+assert_complex_phonon_trajectory(module_key)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 
 for _ in range(2):
