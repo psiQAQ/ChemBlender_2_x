@@ -37,6 +37,8 @@ def assert_enabled(module_key):
     assert f"{module_key}.core.cube" in sys.modules
     assert f"{module_key}.core.mol_v2000" in sys.modules
     assert f"{module_key}.core.xyz" in sys.modules
+    assert f"{module_key}.core.wavefunction_grid" in sys.modules
+    assert "gbasis" not in sys.modules
     assert f"{module_key}.grid_volume" in sys.modules
     assert hasattr(bpy.types.Object, "cif_original")
     assert hasattr(bpy.types.Object, "cif_current")
@@ -77,9 +79,11 @@ def assert_grid_volume_adapter(module_key):
     grid = core.Grid3D(
         id=dataset_id,
         revision="grid-revision",
-        semantic_role="scalar_field",
+        semantic_role="molecular_orbital",
         domain="grid",
-        data=core.ArrayData(values, ("x", "y", "z"), "dimensionless"),
+        data=core.ArrayData(
+            values, ("x", "y", "z"), "inverse_bohr_to_three_halves"
+        ),
         status=core.DatasetStatus.COMPLETE,
         source_calculation=None,
         provenance_ids=(),
@@ -102,6 +106,8 @@ def assert_grid_volume_adapter(module_key):
             assert obj["cb_dataset_id"] == str(dataset_id)
             assert obj["cb_dataset_revision"] == "grid-revision"
             assert obj["cb_dataset_index"] == 0
+            assert obj["cb_semantic_role"] == "molecular_orbital"
+            assert obj["cb_value_unit"] == "inverse_bohr_to_three_halves"
             assert obj["cb_source_coordinate_unit"] == "bohr"
             assert obj["cb_display_coordinate_unit"] == "angstrom"
             cached = openvdb.read(str(cache), "density")

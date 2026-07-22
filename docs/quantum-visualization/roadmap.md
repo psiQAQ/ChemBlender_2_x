@@ -19,7 +19,7 @@
 
 ## Phase 1：分子量子化学闭环
 
-状态：进行中；首个切片为无第三方依赖的 Cube reader。
+状态：进行中；Cube/OpenVDB、cclib、IOData 与 GBasis MO/density 规则网格闭环已完成，当前进入 RDM、spin density 与 ESP。
 
 进入条件：Phase 0 的对象、单位、parser report 和缓存身份已经稳定。
 
@@ -53,9 +53,13 @@
 
 ## 当前顺序
 
-1. Phase 1：Cube 多 dataset 与非正交 `Grid3D`。
-2. Phase 1：Gaussian/ORCA 与 cclib adapter。
-3. Phase 1：FCHK/Molden 与 IOData adapter。
-4. Phase 1：normalized grid 到 Blender 可重建视图。
+1. 已完成：Cube 多 dataset、非正交 `Grid3D` 与 OpenVDB 可重建视图。
+2. 已完成：Gaussian/ORCA cclib adapter。
+3. 已完成：FCHK/Molden IOData basis/orbital adapter。
+4. 已完成：GBasis MO/electron-density 规则网格与 Blender Volume。
+5. 当前：DensityMatrix、RDM electron/spin density 与 ESP。
+6. 下一步：振动语义、IR/Raman 光谱和 Blender 模态动画。
+7. 随后：激发态语义、UV-Vis/ECD 光谱与 transition/NTO 引用。
+8. Phase 1 收口：原子标量/矢量、优化轨迹和 linked selection 的 Blender adapters。
 
-后续顺序由已验收数据和真实使用需求决定，不在当前阶段预排实现日期。
+Phase 1 完成后按进入条件推进 Gemmi/spglib 与 Phase 2；大型缓存/worker 和 recipe 分别在 Phase 3/4 收口。

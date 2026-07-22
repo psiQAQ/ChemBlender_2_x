@@ -47,6 +47,11 @@ from .readers import (
     SniffResult,
 )
 from .xyz import XYZ_READER, parse_xyz, sniff_xyz
+from .wavefunction_grid import (
+    GBasisDependencyError,
+    evaluate_electron_density_grid,
+    evaluate_molecular_orbital_grid,
+)
 
 __all__ = [
     "AmbiguousReaderError",
@@ -64,6 +69,7 @@ __all__ = [
     "DatasetStatus",
     "FrameSet",
     "Grid3D",
+    "GBasisDependencyError",
     "ImportBatch",
     "IssueKind",
     "IODATA_WAVEFUNCTION_READER",
@@ -96,4 +102,6 @@ __all__ = [
     "adapt_iodata",
     "parse_iodata_wavefunction",
     "sniff_iodata_wavefunction",
+    "evaluate_electron_density_grid",
+    "evaluate_molecular_orbital_grid",
 ]

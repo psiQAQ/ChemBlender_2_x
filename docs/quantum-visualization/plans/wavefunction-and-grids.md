@@ -8,14 +8,14 @@
 
 - Cube 只是一种容器，不作为物理语义或 UI 功能名称。
 - 不用 face normal 推断轨道正负相位。
-- 没有数值和性能基准前不预选 ORBKIT、GBasis/Grid 或 GPU 后端。
+- 不把数值后端打入 Blender Extension；worker、缓存和 UI 必须保持解耦。
 
 ## 优先级
 
 | 优先级 | 内容 | 验证重点 |
 | --- | --- | --- |
 | P0 | 多 dataset Cube、非正交 step vectors、`GridSemantic`、`SurfaceStyle`、正负相位、field-on-surface | 网格坐标、单位与 dataset 不丢失；ESP on density 与 ESP 等值面不混淆 |
-| P1 | IOData basis/MO adapter；比较 IOData+GBasis/Grid 与 ORBKIT；适应性 MO 网格和 mesh fallback | 解析 convention、开放壳层、数值误差、峰值内存和时间 |
+| P1 | IOData basis/MO adapter；GBasis 规则网格 MO/density；1-RDM、spin density、ESP、导数；适应性 MO 网格和 mesh fallback | 解析 convention、开放壳层、电子数/轨道 norm、数值误差、峰值内存和时间 |
 | P2 | CuGBasis、导数/Hessian 场、GPU 加速与高级拓扑量 | P1 后端已成为瓶颈且目标平台明确 |
 
 ## 依赖关系
@@ -42,4 +42,6 @@
 
 - Molden 轨道选择和适应性网格进入实现时审阅 Molecular Blender。
 - 体数据表面着色进入实现时审阅 Beautiful Atoms。
-- 后端基准启动时才固定 ORBKIT 或 GBasis/Grid commit；GPU 需求得到证据后再审阅 CuGBasis。
+- GBasis 规则网格后端已固定 v0.1.0；原子中心积分或自适应采样出现明确验收需求时再固定 Grid。
+- ORBKIT 当前不拉取；只有 GBasis 缺失的独有能力和可维护构建链同时得到证据时才重新比较。
+- GPU 需求得到性能瓶颈证据后再审阅 CuGBasis。

@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [wavefunction-derived-fields.md](active/wavefunction-derived-fields.md) | MO/density numerical grids and Blender derived-field closure |
+| active | [wavefunction-observables.md](active/wavefunction-observables.md) | RDM, electron/spin density and ESP derived-field closure |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -25,11 +25,13 @@ Historical documents provide provenance, not current status.
 | decision | [0004-grid3d-and-units.md](decisions/0004-grid3d-and-units.md) | Phase 0 affine grid, dataset axes, unit tokens, and conversion provenance |
 | decision | [0005-reader-capability-contract.md](decisions/0005-reader-capability-contract.md) | Phase 0 reader registry, sniffing, capability, import batch, and parser report contract |
 | decision | [0006-blend-sidecar-boundary.md](decisions/0006-blend-sidecar-boundary.md) | Phase 0 authoritative sidecar, blend references, revisions, and cache invalidation boundary |
+| decision | [0007-wavefunction-grid-backend.md](decisions/0007-wavefunction-grid-backend.md) | GBasis worker backend, uniform-grid scope, and Python compatibility boundary |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
 | completed | [quantum-visualization-foundation.md](completed/quantum-visualization-foundation.md) | Phase 0 semantic model, reader contract, and cross-format normalization evidence |
 | completed | [molecular-quantum-chemistry-ingestion.md](completed/molecular-quantum-chemistry-ingestion.md) | Cube/OpenVDB, cclib, IOData, basis, and orbital ingestion evidence |
+| completed | [wavefunction-derived-fields.md](completed/wavefunction-derived-fields.md) | GBasis MO/density grids, numerical baselines, and Blender Volume evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.

@@ -4,3 +4,6 @@
 [submodule "submodules/iodata"]
 	path = submodules/iodata
 	url = https://github.com/theochem/iodata.git
+[submodule "submodules/gbasis"]
+	path = submodules/gbasis
+	url = https://github.com/theochem/gbasis.git

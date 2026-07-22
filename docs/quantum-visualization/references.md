@@ -15,8 +15,9 @@
 | ASE | 结构、轨迹、周期 I/O 与 calculator 交换 | reader；周期 | P0/P1 | 结构交换 adapter 候选 | 集成前复核 | extXYZ/POSCAR/trajectory 进入实施 |
 | Gemmi | CIF/mmCIF 词法、语法与 raw envelope | reader；周期 | P0 | CIF adapter 候选 | 集成前复核 | CIF 替换回归 fixture 已准备 |
 | spglib | 空间群、Wyckoff、标准化与变换 | reader；周期 | P0 | 对称性 adapter 候选 | 集成前复核 | 空间群 ADR 与回归 fixture 已准备 |
-| ORBKIT | MO、密度、导数和网格求值 | 波函数/网格 | P1 | 主后端候选和数值基准 | 集成前复核 | 与 IOData+GBasis/Grid 进行实测比较 |
-| GBasis/Grid | Gaussian basis 求值与现代网格组件 | 波函数/网格 | P1 | 主后端候选和数值基准 | 集成前复核 | 与 ORBKIT 进行实测比较 |
+| ORBKIT | MO、密度、导数和网格求值 | 波函数/网格 | P1 | 仅保留未来对照候选；Python 3.13 实测因未声明 Cython 构建依赖失败 | LGPL-3.0-or-later 已复核 | 当前不触发；GBasis 已满足规则网格 MVP |
+| [GBasis](https://github.com/theochem/gbasis) | Gaussian basis、MO、密度、ESP、导数与积分 | 波函数/网格 | P1 | 外部 worker 主后端；submodule 固定 v0.1.0 供审阅和真实 FCHK 测试 | GPL-3.0-or-later 已复核 | 已触发；`6440c84f3fcf8d42cbd9b5de53ae8d70bed4cd4f` |
+| [Grid](https://github.com/theochem/grid) | 规则/原子中心/自适应网格、积分与 Cube | 波函数/网格 | P1 | 原子中心积分或自适应网格候选；当前 affine 点阵由 NumPy 生成 | GPL-3.0-or-later 已复核 | 当前不触发；规则网格不需要额外依赖 |
 | CuGBasis | GPU 上的 MO、密度、ESP、RDG | 波函数/网格 | P2 | 可选 NVIDIA 加速 | 集成前复核 | P1 后端已形成可测性能瓶颈 |
 | pymatgen | BandStructure、DOS、VASP 和材料数据 | 周期 | P1 | 周期电子结构 adapter 候选 | 集成前复核 | Phase 2 数据 schema 稳定 |
 | PyProcar | 投影能带、费米面、自旋纹理 | 周期 | P2 | 算法和 reciprocal mesh 参考 | 集成前复核 | 费米面 P2 获批 |

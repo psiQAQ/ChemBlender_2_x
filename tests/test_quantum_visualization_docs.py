@@ -77,16 +77,18 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         gitmodules = self.read_doc(".gitmodules")
         self.assertIn("submodules/cclib", gitmodules)
         self.assertIn("submodules/iodata", gitmodules)
+        self.assertIn("submodules/gbasis", gitmodules)
         children = {path.name for path in (ROOT / "submodules").iterdir()}
-        self.assertEqual(children, {"README.md", "cclib", "iodata"})
+        self.assertEqual(children, {"README.md", "cclib", "gbasis", "iodata"})
         self.assertIn("07260dd0394cb1a2381d4d897746d727a12ad6ce", placeholder)
         self.assertIn("adab5813713ba64641565eb2a8c11803a4e9bba6", placeholder)
+        self.assertIn("6440c84f3fcf8d42cbd9b5de53ae8d70bed4cd4f", placeholder)
 
     def test_single_active_task(self):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            ["wavefunction-derived-fields.md"],
+            ["wavefunction-observables.md"],
         )
 
     def test_local_markdown_links_resolve(self):

@@ -16,6 +16,7 @@ git add .gitmodules submodules/<name>
 | --- | --- | --- | --- |
 | cclib | `https://github.com/cclib/cclib.git` | Gaussian/ORCA output adapter、parser capability、integration fixture | `v1.8.1` / `07260dd0394cb1a2381d4d897746d727a12ad6ce`；BSD-3-Clause；只用于审阅和测试 |
 | IOData | `https://github.com/theochem/iodata.git` | FCHK/Molden basis、orbital convention、integration fixture | `v1.0.1` / `adab5813713ba64641565eb2a8c11803a4e9bba6`；GPL-3.0-or-later；只用于审阅和测试 |
+| GBasis | `https://github.com/theochem/gbasis.git` | normalized Gaussian basis 的 MO/density 求值与 integration fixture | `v0.1.0` / `6440c84f3fcf8d42cbd9b5de53ae8d70bed4cd4f`；GPL-3.0-or-later；外部 worker 后端、审阅和测试 |
 | xyzrender | `https://github.com/aligfellow/xyzrender` | reader/Cube | 未拉取 |
 | quantum-chem-skills | `https://github.com/silico-quantum/quantum-chem-skills` | recipe/workflow | 未拉取 |
 | Molecular Blender | 添加前核实 | 波函数/适应性表面 | 未拉取 |
