@@ -25,3 +25,6 @@
 [submodule "submodules/pyprocar"]
 	path = submodules/pyprocar
 	url = https://github.com/romerogroup/pyprocar.git
+[submodule "submodules/quantum-chem-skills"]
+	path = submodules/quantum-chem-skills
+	url = https://github.com/silico-quantum/quantum-chem-skills.git

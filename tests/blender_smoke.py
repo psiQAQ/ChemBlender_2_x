@@ -40,6 +40,7 @@ def assert_enabled(module_key):
     assert f"{module_key}.core.xyz" in sys.modules
     assert f"{module_key}.core.wavefunction_grid" in sys.modules
     assert f"{module_key}.core.wavefunction_observables" in sys.modules
+    assert f"{module_key}.core.recipe" in sys.modules
     assert "gbasis" not in sys.modules
     assert "ase" not in sys.modules
     assert "pymatgen" not in sys.modules
@@ -49,6 +50,12 @@ def assert_enabled(module_key):
     assert f"{module_key}.worker_client" in sys.modules
     assert f"{module_key}.core.worker_protocol" in sys.modules
     assert "worker" not in sys.modules
+    core = importlib.import_module(f"{module_key}.core")
+    assert set(core.builtin_recipes()) == {
+        "tddft_uvvis",
+        "vibrational_ir_spectrum",
+        "wavefunction_molecular_orbital_grid",
+    }
     assert sum(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
         for handler in bpy.app.handlers.frame_change_post

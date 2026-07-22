@@ -5,7 +5,7 @@
 | 项目 | 参考用途 | 对应主题 | 计划优先级 | 复用方式 | 许可证状态 | 添加 submodule 的触发条件 |
 | --- | --- | --- | --- | --- | --- | --- |
 | [xyzrender](https://github.com/aligfellow/xyzrender) | reader 分派、轻量中间模型、Cube/显示配置、测试 | reader；波函数/网格 | P0 | 架构与测试对照，必要时移植小段实现 | 集成前复核 | 开始 registry/Cube 实现且需要固定代码证据 |
-| [quantum-chem-skills](https://github.com/silico-quantum/quantum-chem-skills) | 分析功能分类与 workflow recipe | workflow | P1 | 转写 schema，不复制占位脚本 | 集成前复核 | recipe 设计需要逐文件核对模板和引用 |
+| [quantum-chem-skills](https://github.com/silico-quantum/quantum-chem-skills) | 分析功能分类与 workflow recipe | workflow | P1 | 已固定 `fbfb3c2`，转写 schema，不复制模板脚本 | MIT | 更新 recipe 分类或引用要求时审阅新 commit |
 | Molecular Blender | Molden、轨道求值、适应性等值面 | 波函数/网格 | P0/P1 | 算法和 convention 对照 | 集成前复核 | Molden/MO 求值 benchmark 启动 |
 | Beautiful Atoms | ASE/Blender 桥接、周期体系、体数据表面着色 | Blender；周期 | P0/P1 | adapter 与渲染模式对照 | 集成前复核 | volume 或 ASE adapter 进入实现 |
 | Molecular Nodes | 长轨迹、session、选择、属性编码 | Blender；存储 | P0/P1 | session/manager/Geometry Nodes 契约参考 | 集成前复核 | 轨迹或 sidecar 恢复进入实现 |

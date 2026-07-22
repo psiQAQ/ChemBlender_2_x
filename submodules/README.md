@@ -23,8 +23,8 @@ git add .gitmodules submodules/<name>
 | pymatgen-core | `https://github.com/materialsproject/pymatgen-core.git` | CHGCAR/PARCHG、ELFCAR、LOCPOT 解析和周期 grid convention | `v2026.7.16` / `488ad74cc5ecaba5d24c1726e2762fb47f31f5ef`；MIT；外部 core adapter、审阅和测试 |
 | phonopy | `https://github.com/phonopy/phonopy.git` | q-point frequency、complex eigenvector、group velocity 与 supercell phase convention | `v4.4.0` / `2df40f4865d477f44d3b5d1ebcafc0b4af878e35`；BSD-3-Clause；外部 core adapter、审阅和测试 |
 | PyProcar | `https://github.com/romerogroup/pyprocar.git` | FermiSurface3D mesh、band identity、projection、spin texture 与 velocity contract | `v6.5.0` / `4a2ec9049af78fdd35b6214eef68fe40e5f356ed`；GPL-3.0；可选 worker adapter、审阅和测试 |
+| quantum-chem-skills | `https://github.com/silico-quantum/quantum-chem-skills.git` | recipe 分类、工作流输入输出与 citation 要求 | `fbfb3c23f94dff29f8db64a3b49c8dc6c840a154`；MIT；只用于审阅，不复制模板脚本 |
 | xyzrender | `https://github.com/aligfellow/xyzrender` | reader/Cube | 未拉取 |
-| quantum-chem-skills | `https://github.com/silico-quantum/quantum-chem-skills` | recipe/workflow | 未拉取 |
 | Molecular Blender | 添加前核实 | 波函数/适应性表面 | 未拉取 |
 | Beautiful Atoms | 添加前核实 | volume/周期渲染 | 未拉取 |
 | Molecular Nodes | 添加前核实 | 轨迹/session/选择 | 未拉取 |
