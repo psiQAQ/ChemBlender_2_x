@@ -10,7 +10,7 @@
 | Beautiful Atoms | ASE/Blender 桥接、周期体系、体数据表面着色 | Blender；周期 | P0/P1 | adapter 与渲染模式对照 | 集成前复核 | volume 或 ASE adapter 进入实现 |
 | Molecular Nodes | 长轨迹、session、选择、属性编码 | Blender；存储 | P0/P1 | session/manager/Geometry Nodes 契约参考 | 集成前复核 | 轨迹或 sidecar 恢复进入实现 |
 | [cclib](https://github.com/cclib/cclib) | 通用量化输出与 parser capability | reader | P0 | 外部 core adapter；submodule 固定 v1.8.1 供审阅和测试 | BSD-3-Clause 已复核 | 已触发；`07260dd0394cb1a2381d4d897746d727a12ad6ce` |
-| IOData | FCHK/Molden/WFN/WFX、basis、MO、RDM、Cube | reader；波函数 | P0 | 正式 adapter 依赖候选 | 集成前复核 | 波函数格式闭环实施；依赖另行批准 |
+| [IOData](https://github.com/theochem/iodata) | FCHK/Molden/WFN/WFX、basis、MO、RDM、Cube | reader；波函数 | P0 | 外部 core adapter；submodule 固定 v1.0.1 供审阅和测试 | GPL-3.0-or-later 已复核 | 已触发；`adab5813713ba64641565eb2a8c11803a4e9bba6` |
 | QCElemental/QCSchema | 单位、计算记录、provenance、交换 | 语义核心；reader | P0/P1 | schema adapter 与单位参考 | 集成前复核 | 单位/QCSchema ADR 需要代码对照 |
 | ASE | 结构、轨迹、周期 I/O 与 calculator 交换 | reader；周期 | P0/P1 | 结构交换 adapter 候选 | 集成前复核 | extXYZ/POSCAR/trajectory 进入实施 |
 | Gemmi | CIF/mmCIF 词法、语法与 raw envelope | reader；周期 | P0 | CIF adapter 候选 | 集成前复核 | CIF 替换回归 fixture 已准备 |

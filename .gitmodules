@@ -1,3 +1,6 @@
 [submodule "submodules/cclib"]
 	path = submodules/cclib
 	url = https://github.com/cclib/cclib.git
+[submodule "submodules/iodata"]
+	path = submodules/iodata
+	url = https://github.com/theochem/iodata.git

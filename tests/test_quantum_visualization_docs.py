@@ -76,9 +76,11 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("git submodule add", placeholder)
         gitmodules = self.read_doc(".gitmodules")
         self.assertIn("submodules/cclib", gitmodules)
+        self.assertIn("submodules/iodata", gitmodules)
         children = {path.name for path in (ROOT / "submodules").iterdir()}
-        self.assertEqual(children, {"README.md", "cclib"})
+        self.assertEqual(children, {"README.md", "cclib", "iodata"})
         self.assertIn("07260dd0394cb1a2381d4d897746d727a12ad6ce", placeholder)
+        self.assertIn("adab5813713ba64641565eb2a8c11803a4e9bba6", placeholder)
 
     def test_single_active_task(self):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))

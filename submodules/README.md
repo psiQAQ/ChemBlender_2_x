@@ -15,10 +15,11 @@ git add .gitmodules submodules/<name>
 | 项目 | 已知上游 | 触发主题 | 固定版本 / 状态 |
 | --- | --- | --- | --- |
 | cclib | `https://github.com/cclib/cclib.git` | Gaussian/ORCA output adapter、parser capability、integration fixture | `v1.8.1` / `07260dd0394cb1a2381d4d897746d727a12ad6ce`；BSD-3-Clause；只用于审阅和测试 |
+| IOData | `https://github.com/theochem/iodata.git` | FCHK/Molden basis、orbital convention、integration fixture | `v1.0.1` / `adab5813713ba64641565eb2a8c11803a4e9bba6`；GPL-3.0-or-later；只用于审阅和测试 |
 | xyzrender | `https://github.com/aligfellow/xyzrender` | reader/Cube | 未拉取 |
 | quantum-chem-skills | `https://github.com/silico-quantum/quantum-chem-skills` | recipe/workflow | 未拉取 |
 | Molecular Blender | 添加前核实 | 波函数/适应性表面 | 未拉取 |
 | Beautiful Atoms | 添加前核实 | volume/周期渲染 | 未拉取 |
 | Molecular Nodes | 添加前核实 | 轨迹/session/选择 | 未拉取 |
 
-更新 cclib 时先审阅新 release、许可证、字段变化和两份 integration fixture，再执行 `git -C submodules/cclib checkout <reviewed-commit>`。如移除，使用 `git submodule deinit` 和 `git rm submodules/cclib`，并同步删除 `.git/modules/submodules/cclib` 的本地缓存。不要为保持目录结构创建空仓库目录，也不要在未固定 reviewed commit 时提交 `.gitmodules`。
+更新已固定仓库时先审阅新 release、许可证、字段变化和 integration fixture，再执行 `git -C submodules/<name> checkout <reviewed-commit>`。如移除，使用 `git submodule deinit` 和 `git rm submodules/<name>`，并同步删除 `.git/modules/submodules/<name>` 的本地缓存。不要为保持目录结构创建空仓库目录，也不要在未固定 reviewed commit 时提交 `.gitmodules`。
