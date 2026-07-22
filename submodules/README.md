@@ -24,6 +24,7 @@ git add .gitmodules submodules/<name>
 | phonopy | `https://github.com/phonopy/phonopy.git` | q-point frequency、complex eigenvector、group velocity 与 supercell phase convention | `v4.4.0` / `2df40f4865d477f44d3b5d1ebcafc0b4af878e35`；BSD-3-Clause；外部 core adapter、审阅和测试 |
 | PyProcar | `https://github.com/romerogroup/pyprocar.git` | FermiSurface3D mesh、band identity、projection、spin texture 与 velocity contract | `v6.5.0` / `4a2ec9049af78fdd35b6214eef68fe40e5f356ed`；GPL-3.0；可选 worker adapter、审阅和测试 |
 | quantum-chem-skills | `https://github.com/silico-quantum/quantum-chem-skills.git` | recipe 分类、工作流输入输出与 citation 要求 | `fbfb3c23f94dff29f8db64a3b49c8dc6c840a154`；MIT；只用于审阅，不复制模板脚本 |
+| critic2 | `https://github.com/aoterodelaroza/critic2.git` | external adapter CLI、QTAIM/NCI 输入输出与 integration fixture | `4b5dec9131c3a035af1b421d68a227c47fd641db`；GPL-3.0；外部 worker 程序参考，不进入 Extension |
 | xyzrender | `https://github.com/aligfellow/xyzrender` | reader/Cube | 未拉取 |
 | Molecular Blender | 添加前核实 | 波函数/适应性表面 | 未拉取 |
 | Beautiful Atoms | 添加前核实 | volume/周期渲染 | 未拉取 |

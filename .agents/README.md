@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [phase4-external-analysis-adapters.md](active/phase4-external-analysis-adapters.md) | Safe external analysis adapter and failure-isolation contract |
+| active | [phase4-topology-graph-critic2.md](active/phase4-topology-graph-critic2.md) | Neutral TopologyGraph and critic2 text parser |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -38,6 +38,7 @@ Historical documents provide provenance, not current status.
 | decision | [0017-lazy-trajectory-frame-manager.md](decisions/0017-lazy-trajectory-frame-manager.md) | Per-frame lazy reads, bounded LRU and Blender trajectory lifecycle |
 | decision | [0018-grid-lod-and-render-cache-identity.md](decisions/0018-grid-lod-and-render-cache-identity.md) | Reproducible Grid3D LOD and Blender render cache identity |
 | decision | [0019-versioned-recipe-contract.md](decisions/0019-versioned-recipe-contract.md) | Versioned recipe definition, binding and validation contract |
+| decision | [0020-external-analysis-process-boundary.md](decisions/0020-external-analysis-process-boundary.md) | Safe subprocess, artifact and failure-isolation boundary |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
@@ -55,6 +56,7 @@ Historical documents provide provenance, not current status.
 | completed | [lazy-trajectory-frame-manager.md](completed/lazy-trajectory-frame-manager.md) | Per-frame lazy trajectory access, LRU and Blender lifecycle evidence |
 | completed | [grid-lod-and-volume-cache.md](completed/grid-lod-and-volume-cache.md) | Lazy Grid3D LOD derivation and reproducible Volume cache evidence |
 | completed | [recipe-contract.md](completed/recipe-contract.md) | Strict recipe schema, binding and derivation identity evidence |
+| completed | [external-analysis-adapters.md](completed/external-analysis-adapters.md) | critic2/Multiwfn descriptors and safe process runner evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.

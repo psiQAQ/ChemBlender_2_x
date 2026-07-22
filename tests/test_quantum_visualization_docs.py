@@ -85,6 +85,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("submodules/phonopy", gitmodules)
         self.assertIn("submodules/pyprocar", gitmodules)
         self.assertIn("submodules/quantum-chem-skills", gitmodules)
+        self.assertIn("submodules/critic2", gitmodules)
         children = {path.name for path in (ROOT / "submodules").iterdir()}
         self.assertEqual(
             children,
@@ -92,6 +93,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 "README.md",
                 "ase",
                 "cclib",
+                "critic2",
                 "gbasis",
                 "gemmi",
                 "iodata",
@@ -112,12 +114,13 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("2df40f4865d477f44d3b5d1ebcafc0b4af878e35", placeholder)
         self.assertIn("4a2ec9049af78fdd35b6214eef68fe40e5f356ed", placeholder)
         self.assertIn("fbfb3c23f94dff29f8db64a3b49c8dc6c840a154", placeholder)
+        self.assertIn("4b5dec9131c3a035af1b421d68a227c47fd641db", placeholder)
 
     def test_single_active_task(self):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            ["phase4-external-analysis-adapters.md"],
+            ["phase4-topology-graph-critic2.md"],
         )
 
     def test_local_markdown_links_resolve(self):

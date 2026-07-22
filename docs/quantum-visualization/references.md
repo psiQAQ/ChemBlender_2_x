@@ -24,7 +24,7 @@
 | sumo | 能带/DOS/光学 publication plot 规范 | 周期；Blender | P1/P2 | 绘图语义与默认值参考 | 集成前复核 | 2D plot 联动进入实现 |
 | [phonopy](https://github.com/phonopy/phonopy) | q-point、复数 eigenvector、声子数据 | 周期 | P1 | 外部 core adapter；submodule 固定 v4.4.0，保留完整复数相位并派生 supercell frames | BSD-3-Clause 已复核 | 已触发；`2df40f4865d477f44d3b5d1ebcafc0b4af878e35` |
 | Avogadro/CJSON | 项目交换和 orbital/vibration/spectrum UI | reader；Blender | P1 | 交换 adapter 与工作流参考 | 集成前复核 | CJSON round-trip 进入实施 |
-| critic2 | QTAIM、临界点、basin、NCI、ELF | workflow | P2 | 外部进程 adapter | 集成前复核（调研记录为 GPLv3） | TopologyGraph 与许可边界已批准 |
+| [critic2](https://github.com/aoterodelaroza/critic2) | QTAIM、临界点、basin、NCI、ELF | workflow | P2 | 已固定 `4b5dec9`；外部进程 adapter，后续解析为 `TopologyGraph` | GPL-3.0 | 更新 CLI/output parser 时审阅新 commit 与 fixture |
 | Multiwfn | 电荷、键级、NCI、hole-electron、DOS、光谱 | workflow | P2 | 外部进程 adapter | 集成前复核 | 稳定非交互 recipe 和输出 fixture 已确认 |
 | MDAnalysis/MDTraj | DCD/XTC/TRR 等长轨迹 | Blender；存储 | P2 | 可选 trajectory adapter | 集成前复核 | ASE/基础 trajectory 不能满足真实输入 |
 | QCArchive | 计算记录数据库 | workflow | P2 | connector | 集成前复核 | 用户确认数据库导入与鉴权需求 |

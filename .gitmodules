@@ -28,3 +28,6 @@
 [submodule "submodules/quantum-chem-skills"]
 	path = submodules/quantum-chem-skills
 	url = https://github.com/silico-quantum/quantum-chem-skills.git
+[submodule "submodules/critic2"]
+	path = submodules/critic2
+	url = https://github.com/aoterodelaroza/critic2.git
