@@ -20,7 +20,9 @@ Phase 0 已完成，当前进入 Phase 1 分子量子化学闭环。先实现无
 10. [MOL V2000 reader 实现计划](../superpowers/plans/2026-07-22-mol-v2000-reader.md)
 11. [Cube reader 设计](../superpowers/specs/2026-07-22-cube-reader-design.md)
 12. [Cube reader 实现计划](../superpowers/plans/2026-07-22-cube-reader.md)
-13. [当前任务](../../.agents/active/molecular-quantum-chemistry-closure.md)
+13. [OpenVDB Volume adapter 设计](../superpowers/specs/2026-07-22-grid-volume-adapter-design.md)
+14. [OpenVDB Volume adapter 实现计划](../superpowers/plans/2026-07-22-grid-volume-adapter.md)
+15. [当前任务](../../.agents/active/molecular-quantum-chemistry-closure.md)
 
 路线图和主题计划保存稳定范围、依赖顺序与验收标准；`.agents/active/` 只记录正在执行的一个任务及其下一步。临时 commit、测试运行和本机状态不写入路线图。
 

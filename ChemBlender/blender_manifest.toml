@@ -12,7 +12,7 @@ platforms = ["windows-x64"]
 wheels = ["./wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl"]
 
 [permissions]
-files = "Import molecular and crystal structure files selected by users"
+files = "Read selected files and write requested visualization caches"
 network = "Download molecular and scaffold data requested by users"
 
 [build]

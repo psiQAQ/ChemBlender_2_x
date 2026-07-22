@@ -60,7 +60,7 @@ jobs:
           python -m unittest discover -s tests -p "test_*.py" -v
           python ChemBlender/scripts/build_extension.py --python python --blender $blender
           $package = (Get-ChildItem "ChemBlender" -Filter "chemblender-2.2.0.zip" | Select-Object -First 1).FullName
-          & $blender --background --factory-startup --python tests/blender_smoke.py -- $package
+          & $blender --background --factory-startup --python-exit-code 1 --python tests/blender_smoke.py -- $package
           $hash = (Get-FileHash -Algorithm SHA256 $package).Hash.ToLowerInvariant()
           $checksum = Join-Path (Split-Path $package) "chemblender-2.2.0.sha256"
           [IO.File]::WriteAllText(

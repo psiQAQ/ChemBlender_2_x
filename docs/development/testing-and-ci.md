@@ -29,7 +29,7 @@ The built ZIP must contain the manifest, license, RDKit wheel, and two `.blend` 
 ```powershell
 $package = (Get-Item 'ChemBlender\chemblender-2.2.0.zip').FullName
 $env:BLENDER_USER_RESOURCES = (New-Item -ItemType Directory -Path '.agents\cache\blender-release-clean' -Force).FullName
-& $blenderBin --background --factory-startup --python tests/blender_smoke.py -- $package
+& $blenderBin --background --factory-startup --python-exit-code 1 --python tests/blender_smoke.py -- $package
 Remove-Item Env:BLENDER_USER_RESOURCES
 ```
 

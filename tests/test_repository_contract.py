@@ -21,6 +21,10 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(manifest["platforms"], ["windows-x64"])
         self.assertEqual(manifest["wheels"], [f"./wheels/{WHEEL}"])
         self.assertLessEqual(len(manifest["permissions"]["files"]), 64)
+        self.assertEqual(
+            manifest["permissions"]["files"],
+            "Read selected files and write requested visualization caches",
+        )
         self.assertIn("network", manifest["permissions"])
         self.assertLessEqual(len(manifest["permissions"]["network"]), 64)
         self.assertIn("scripts/", manifest["build"]["paths_exclude_pattern"])
@@ -70,6 +74,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("contents: read", workflow)
         self.assertIn("timeout-minutes:", workflow)
         self.assertIn("BLENDER_USER_RESOURCES", workflow)
+        self.assertIn("--python-exit-code 1", workflow)
         self.assertIn("chemblender-2.2.0.sha256", workflow)
         self.assertIn("if: github.ref_type == 'tag'", workflow)
         self.assertIn("GITHUB_REF_NAME.TrimStart('v')", workflow)

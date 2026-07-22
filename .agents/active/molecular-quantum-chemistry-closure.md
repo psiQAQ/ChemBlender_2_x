@@ -20,13 +20,15 @@
 
 ## Next Action
 
-按推荐方案实现 normalized `Grid3D` 到 Blender OpenVDB Volume 的最小 adapter：显式 cache path、斜网格 affine transform、bohr 到 angstrom 显示换算，以及 dataset UUID/revision/index 恢复属性。
+设计 cclib adapter 的最小结构/能量闭环，确定依赖版本、外部 core 环境边界、Gaussian/ORCA fixture 和 capability/`ParserReport` 映射；不把 cclib 打入当前 Windows Extension wheel 集合。
 
 ## Completed
 
 - 已选择标准库原生 Cube parser，不提前引入 IOData 或扩展 `Grid3D` 轴标签模型。
 - Cube reader 已实现斜网格、bohr 坐标、`NVAL`/`DSET_IDS` 多 dataset 去交错、dataset ID provenance，以及显式 semantic/value-unit ambiguity。
 - Blender 5.1.2 bundled `openvdb` 已通过斜 transform、写入和 Volume 重新加载探针；首版不实现无证据需要的第二套 mesh backend。
+- OpenVDB adapter 已实现显式 cache path、float32 派生 cache、斜 affine transform、bohr 到 angstrom 换算、Volume 创建和 dataset 身份恢复属性。
+- Blender lifecycle smoke 现在使用 `--python-exit-code 1`，Python traceback 不再被 exit code 0 静默放过。
 
 ## References
 

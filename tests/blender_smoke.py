@@ -1,7 +1,11 @@
+import array
+import importlib
 import importlib.util
 import sys
 from importlib.metadata import version
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from uuid import uuid4
 from zipfile import ZipFile
 
 import bpy
@@ -33,6 +37,7 @@ def assert_enabled(module_key):
     assert f"{module_key}.core.cube" in sys.modules
     assert f"{module_key}.core.mol_v2000" in sys.modules
     assert f"{module_key}.core.xyz" in sys.modules
+    assert f"{module_key}.grid_volume" in sys.modules
     assert hasattr(bpy.types.Object, "cif_original")
     assert hasattr(bpy.types.Object, "cif_current")
     assert hasattr(bpy.types.Scene, "my_tool")
@@ -61,6 +66,54 @@ def assert_installed_blend_libraries(module_key):
             assert len(data_from.node_groups) == expected_count, filename
 
 
+def assert_grid_volume_adapter(module_key):
+    import openvdb
+
+    core = importlib.import_module(f"{module_key}.core")
+    adapter = importlib.import_module(f"{module_key}.grid_volume")
+    values = memoryview(array.array("d", range(8)))
+    values = values.cast("B").cast("d", shape=(2, 2, 2))
+    dataset_id = uuid4()
+    grid = core.Grid3D(
+        id=dataset_id,
+        revision="grid-revision",
+        semantic_role="scalar_field",
+        domain="grid",
+        data=core.ArrayData(values, ("x", "y", "z"), "dimensionless"),
+        status=core.DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(),
+        origin=(1.0, 2.0, 3.0),
+        step_vectors=((1.0, 0.0, 0.0), (0.2, 1.0, 0.0), (0.0, 0.3, 1.0)),
+        coordinate_unit="bohr",
+    )
+    with TemporaryDirectory() as directory:
+        cache = Path(directory) / "grid.vdb"
+        obj = adapter.create_grid_volume(
+            grid,
+            cache,
+            collection=bpy.context.scene.collection,
+        )
+        volume = obj.data
+        try:
+            assert cache.is_file()
+            assert obj.type == "VOLUME" and obj.matrix_world.is_identity
+            assert len(volume.grids) == 1 and volume.grids["density"] is not None
+            assert obj["cb_dataset_id"] == str(dataset_id)
+            assert obj["cb_dataset_revision"] == "grid-revision"
+            assert obj["cb_dataset_index"] == 0
+            assert obj["cb_source_coordinate_unit"] == "bohr"
+            assert obj["cb_display_coordinate_unit"] == "angstrom"
+            cached = openvdb.read(str(cache), "density")
+            assert cached.getAccessor().getValue((1, 0, 1)) == 5.0
+            expected = tuple(value * 0.529177210903 for value in (2.2, 3.3, 4.0))
+            actual = tuple(cached.transform.indexToWorld((1, 1, 1)))
+            assert all(abs(a - b) < 1e-12 for a, b in zip(actual, expected))
+        finally:
+            bpy.data.objects.remove(obj, do_unlink=True)
+            bpy.data.volumes.remove(volume)
+
+
 arguments = sys.argv[sys.argv.index("--") + 1 :]
 assert len(arguments) in (1, 2), "expected ZIP path and optional --keep-enabled"
 assert len(arguments) == 1 or arguments[1] == "--keep-enabled"
@@ -80,6 +133,7 @@ assert result == {"FINISHED"}, result
 module_key = "bl_ext.user_default.chemblender"
 assert_enabled(module_key)
 assert_installed_blend_libraries(module_key)
+assert_grid_volume_adapter(module_key)
 
 for _ in range(2):
     assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}
