@@ -22,3 +22,6 @@
 [submodule "submodules/phonopy"]
 	path = submodules/phonopy
 	url = https://github.com/phonopy/phonopy.git
+[submodule "submodules/pyprocar"]
+	path = submodules/pyprocar
+	url = https://github.com/romerogroup/pyprocar.git

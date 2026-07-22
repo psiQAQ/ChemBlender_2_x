@@ -20,7 +20,7 @@
 | [Grid](https://github.com/theochem/grid) | 规则/原子中心/自适应网格、积分与 Cube | 波函数/网格 | P1 | 原子中心积分或自适应网格候选；当前 affine 点阵由 NumPy 生成 | GPL-3.0-or-later 已复核 | 当前不触发；规则网格不需要额外依赖 |
 | CuGBasis | GPU 上的 MO、密度、ESP、RDG | 波函数/网格 | P2 | 可选 NVIDIA 加速 | 集成前复核 | P1 后端已形成可测性能瓶颈 |
 | [pymatgen-core](https://github.com/materialsproject/pymatgen-core) | BandStructure、DOS、VASP 和材料数据 | 周期 | P1 | 外部 core adapter；submodule 固定 v2026.7.16，当前用于 VASP scalar grids | MIT 已复核 | 已触发；`488ad74cc5ecaba5d24c1726e2762fb47f31f5ef` |
-| PyProcar | 投影能带、费米面、自旋纹理 | 周期 | P2 | 算法和 reciprocal mesh 参考 | 集成前复核 | 费米面 P2 获批 |
+| [PyProcar](https://github.com/romerogroup/pyprocar) | 投影能带、费米面、自旋纹理 | 周期 | P2 | 可选 worker adapter；submodule 固定 v6.5.0，输出转为中立 mesh，不把 PyVista/VTK 带入 Blender | GPL-3.0 已复核 | 已触发；`4a2ec9049af78fdd35b6214eef68fe40e5f356ed` |
 | sumo | 能带/DOS/光学 publication plot 规范 | 周期；Blender | P1/P2 | 绘图语义与默认值参考 | 集成前复核 | 2D plot 联动进入实现 |
 | [phonopy](https://github.com/phonopy/phonopy) | q-point、复数 eigenvector、声子数据 | 周期 | P1 | 外部 core adapter；submodule 固定 v4.4.0，保留完整复数相位并派生 supercell frames | BSD-3-Clause 已复核 | 已触发；`2df40f4865d477f44d3b5d1ebcafc0b4af878e35` |
 | Avogadro/CJSON | 项目交换和 orbital/vibration/spectrum UI | reader；Blender | P1 | 交换 adapter 与工作流参考 | 集成前复核 | CJSON round-trip 进入实施 |

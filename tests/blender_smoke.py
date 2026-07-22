@@ -635,6 +635,43 @@ def assert_complex_phonon_trajectory(module_key):
         bpy.data.meshes.remove(mesh)
 
 
+def assert_fermi_surface_view(module_key):
+    import numpy
+
+    core = importlib.import_module(f"{module_key}.core")
+    view = importlib.import_module(f"{module_key}.fermi_surface_view")
+    surface = core.FermiSurfaceMesh(
+        id=uuid4(), revision="fermi-smoke", semantic_role="fermi_surface", domain="surface_vertex",
+        data=core.ArrayData(numpy.asarray([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]), ("vertex", "xyz"), "inverse_angstrom"),
+        status=core.DatasetStatus.COMPLETE, source_calculation=None, provenance_ids=(),
+        structure_id=uuid4(), band_structure_id=uuid4(),
+        faces=core.ArrayData(numpy.asarray([[0, 1, 2], [0, 2, 3]]), ("face", "corner"), "dimensionless"),
+        band_indices=core.ArrayData(numpy.asarray([1, 3]), ("face",), "dimensionless"),
+        spin_index=1, fermi_energy=5.25, coordinate_convention="cartesian_reciprocal_2pi",
+        properties=(
+            core.SurfaceProperty("orbital_contribution", "vertex", core.ArrayData(numpy.asarray([0.1, 0.2, 0.3, 0.4]), ("vertex",), "dimensionless")),
+            core.SurfaceProperty("spin_texture", "vertex", core.ArrayData(numpy.ones((4, 3)), ("vertex", "xyz"), "dimensionless")),
+        ),
+    )
+    obj = view.create_fermi_surface_view(surface, collection=bpy.context.scene.collection)
+    mesh = obj.data
+    try:
+        assert len(mesh.vertices) == 4 and len(mesh.polygons) == 2
+        bands = [0, 0]
+        mesh.attributes["cbq_band_index"].data.foreach_get("value", bands)
+        assert bands == [1, 3]
+        scalars = [0.0] * 4
+        mesh.attributes["cbq_orbital_contribution"].data.foreach_get("value", scalars)
+        assert numpy.allclose(scalars, [0.1, 0.2, 0.3, 0.4])
+        view.select_fermi_face(obj, surface, 1)
+        assert obj["cb_selected_face"] == 1
+        assert obj["cb_selected_band"] == 3
+        assert obj["cb_spin_index"] == 1
+    finally:
+        bpy.data.objects.remove(obj, do_unlink=True)
+        bpy.data.meshes.remove(mesh)
+
+
 def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     reader = importlib.import_module(f"{module_key}.read")
     cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
@@ -683,6 +720,7 @@ assert_dataset_and_trajectory_views(module_key)
 assert_periodic_structure_view(module_key)
 assert_periodic_electronic_plots(module_key)
 assert_complex_phonon_trajectory(module_key)
+assert_fermi_surface_view(module_key)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 
 for _ in range(2):

@@ -29,7 +29,7 @@
 
 ## Phase 2：周期量子化学
 
-状态：进行中；周期结构、VASP scalar fields、band/DOS/projection 与 phonopy complex modes 已完成，当前评估 Fermi-surface/PyProcar 边界。
+状态：已完成（2026-07-22）。周期结构、VASP scalar fields、band/DOS/projection、phonopy complex modes 与 Fermi-surface/PyProcar 中立边界均已交付。
 
 进入条件：Gemmi/spglib 已覆盖 CIF 语法、空间群与标准化边界，周期结构 ID 可以跨数据集复用。
 
@@ -38,6 +38,8 @@
 退出条件：复数 q-point 模态按相位公式生成动画；周期体数据保留完整晶格和网格轴；投影数据共享稳定 atom/orbital/dataset ID。
 
 ## Phase 3：大型数据与交互
+
+状态：进行中；当前进入 `.cbq` sidecar manifest 与 cache identity 基础。
 
 进入条件：Phase 1/2 已提供网格、轨迹和轨道数组的规模基准。
 
@@ -67,6 +69,7 @@
 10. 已完成：ASE/pymatgen-core 周期结构、CHGCAR/PARCHG/ELFCAR/LOCPOT 与 Blender volume identity。
 11. 已完成：band structure、DOS/PDOS、projection 与 Blender linked selection。
 12. 已完成：phonopy q-point、复数 eigenvector 与周期超胞动画。
-13. 当前：Fermi-surface 中立 mesh schema 与 PyProcar adapter 评估。
+13. 已完成：Fermi-surface 中立 mesh schema 与 PyProcar worker adapter。
+14. 当前：`.cbq` sidecar manifest、lazy array reference 与分层 cache hash。
 
 周期 structure/grid 验收后继续 band/DOS 与 phonopy；大型缓存/worker 和 recipe 分别在 Phase 3/4 收口。

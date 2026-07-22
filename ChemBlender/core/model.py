@@ -1200,6 +1200,98 @@ class PhononModeSet(PropertyDataset):
             raise ValueError("unsupported eigenvector_convention")
 
 
+@dataclass(frozen=True, slots=True)
+class SurfaceProperty:
+    semantic_role: str
+    domain: str
+    data: ArrayData
+
+    def __post_init__(self):
+        _require_token(self.semantic_role, "semantic_role")
+        if self.domain not in {"vertex", "face"}:
+            raise ValueError("surface property domain must be vertex or face")
+        if not isinstance(self.data, ArrayData):
+            raise TypeError("surface property data must be ArrayData")
+        if not self.data.dims or self.data.dims[0] != self.domain:
+            raise ValueError("surface property leading dimension must match its domain")
+
+
+@dataclass(frozen=True, slots=True)
+class FermiSurfaceMesh(PropertyDataset):
+    structure_id: UUID
+    band_structure_id: UUID
+    faces: ArrayData
+    band_indices: ArrayData
+    spin_index: int
+    fermi_energy: float
+    coordinate_convention: str
+    properties: tuple[SurfaceProperty, ...]
+
+    def __post_init__(self):
+        import numpy
+
+        super(FermiSurfaceMesh, self).__post_init__()
+        _require_uuid(self.structure_id, "structure_id")
+        _require_uuid(self.band_structure_id, "band_structure_id")
+        vertices = numpy.asarray(self.data.values)
+        if (
+            self.semantic_role != "fermi_surface"
+            or self.domain != "surface_vertex"
+            or self.data.dims != ("vertex", "xyz")
+            or self.data.shape[0] < 3
+            or self.data.shape[1] != 3
+            or self.data.unit != "inverse_angstrom"
+            or numpy.iscomplexobj(vertices)
+            or not numpy.all(numpy.isfinite(vertices))
+        ):
+            raise ValueError("FermiSurfaceMesh vertices must be finite reciprocal coordinates")
+        faces = numpy.asarray(self.faces.values)
+        if (
+            self.faces.dims != ("face", "corner")
+            or self.faces.shape[0] <= 0
+            or self.faces.shape[1] != 3
+            or self.faces.unit != "dimensionless"
+            or not numpy.issubdtype(faces.dtype, numpy.integer)
+            or numpy.any(faces < 0)
+            or numpy.any(faces >= self.data.shape[0])
+            or any(len(set(int(value) for value in face)) != 3 for face in faces)
+        ):
+            raise ValueError("face indices must contain valid non-degenerate triangles")
+        band_indices = numpy.asarray(self.band_indices.values)
+        if (
+            self.band_indices.dims != ("face",)
+            or self.band_indices.shape != (self.faces.shape[0],)
+            or self.band_indices.unit != "dimensionless"
+            or not numpy.issubdtype(band_indices.dtype, numpy.integer)
+            or numpy.any(band_indices < 0)
+        ):
+            raise ValueError("band_indices must contain one non-negative index per face")
+        if (
+            isinstance(self.spin_index, bool)
+            or not isinstance(self.spin_index, int)
+            or self.spin_index < 0
+        ):
+            raise ValueError("spin_index must be a non-negative integer")
+        if (
+            isinstance(self.fermi_energy, bool)
+            or not isinstance(self.fermi_energy, (int, float))
+            or not isfinite(self.fermi_energy)
+        ):
+            raise ValueError("fermi_energy must be finite")
+        if self.coordinate_convention != "cartesian_reciprocal_2pi":
+            raise ValueError("unsupported coordinate_convention")
+        properties = tuple(self.properties)
+        if any(not isinstance(prop, SurfaceProperty) for prop in properties):
+            raise TypeError("properties must contain SurfaceProperty values")
+        if len({prop.semantic_role for prop in properties}) != len(properties):
+            raise ValueError("surface property semantic roles must be unique")
+        for prop in properties:
+            expected = self.data.shape[0] if prop.domain == "vertex" else self.faces.shape[0]
+            if prop.data.shape[0] != expected:
+                raise ValueError("surface property domain shape does not match mesh")
+        object.__setattr__(self, "properties", properties)
+
+
 def _basis_function_count(angular_momentum, kind):
     if kind is BasisFunctionKind.CARTESIAN:
         return (angular_momentum + 1) * (angular_momentum + 2) // 2
@@ -1850,6 +1942,24 @@ class QCProject:
                     raise ValueError(
                         "PhononModeSet atom dimension must match its structure"
                     )
+            if isinstance(dataset, FermiSurfaceMesh):
+                if dataset.structure_id not in structure_ids:
+                    raise ValueError(
+                        "FermiSurfaceMesh has a dangling structure reference"
+                    )
+                source = datasets.get(dataset.band_structure_id)
+                if not isinstance(source, BandStructure):
+                    raise ValueError(
+                        "FermiSurfaceMesh has a dangling band structure reference"
+                    )
+                if source.structure_id != dataset.structure_id:
+                    raise ValueError(
+                        "FermiSurfaceMesh and BandStructure must use the same structure"
+                    )
+                if dataset.spin_index >= source.data.shape[0]:
+                    raise ValueError("FermiSurfaceMesh spin index is outside BandStructure")
+                if max(dataset.band_indices.values) >= source.data.shape[2]:
+                    raise ValueError("FermiSurfaceMesh band index is outside BandStructure")
         for basis in batch.basis_sets:
             try:
                 reference = structures[basis.structure_id]

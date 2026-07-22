@@ -94,6 +94,18 @@ phonopy and its scientific stack are late-imported and remain outside the Blende
 Extension ZIP. The first adapter consumes an in-memory `Phonopy` object after
 `run_qpoints(..., with_eigenvectors=True)`; it does not bundle h5py or matplotlib.
 
+| Item | Value |
+| --- | --- |
+| Package | optional `PyProcar==6.5.0` worker extra |
+| Runtime boundary | isolated worker environment; separate from NumPy 2.x qc-core |
+| Reference source | `submodules/pyprocar` at `4a2ec9049af78fdd35b6214eef68fe40e5f356ed` |
+| License | GPL-3.0 |
+| Scope | Fermi-surface mesh, band identity, projection, spin texture and velocity |
+
+PyProcar requires `numpy<2.0` plus PyVista/VTK, scikit-image, matplotlib and other
+plotting dependencies. ChemBlender accepts its PyVista-compatible output through a
+neutral adapter; none of this stack enters the Blender Extension or base qc-core.
+
 ## Local Extension Gates
 
 1. Run `blender-mcp --help`.

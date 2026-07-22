@@ -83,6 +83,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("submodules/ase", gitmodules)
         self.assertIn("submodules/pymatgen-core", gitmodules)
         self.assertIn("submodules/phonopy", gitmodules)
+        self.assertIn("submodules/pyprocar", gitmodules)
         children = {path.name for path in (ROOT / "submodules").iterdir()}
         self.assertEqual(
             children,
@@ -95,6 +96,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 "iodata",
                 "pymatgen-core",
                 "phonopy",
+                "pyprocar",
                 "spglib",
             },
         )
@@ -106,12 +108,13 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("f27c0005ae6a67ea419f996e728668865bfc1f86", placeholder)
         self.assertIn("488ad74cc5ecaba5d24c1726e2762fb47f31f5ef", placeholder)
         self.assertIn("2df40f4865d477f44d3b5d1ebcafc0b4af878e35", placeholder)
+        self.assertIn("4a2ec9049af78fdd35b6214eef68fe40e5f356ed", placeholder)
 
     def test_single_active_task(self):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            ["phase2-bands-and-dos.md"],
+            ["phase3-sidecar-cache.md"],
         )
 
     def test_local_markdown_links_resolve(self):

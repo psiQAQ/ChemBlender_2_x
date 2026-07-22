@@ -48,6 +48,7 @@ from .model import (
     ExcitedStateReferences,
     ExcitedStateSet,
     FrameSet,
+    FermiSurfaceMesh,
     Grid3D,
     ImportBatch,
     IssueKind,
@@ -66,6 +67,7 @@ from .model import (
     SpectrumProfile,
     SpinChannel,
     Structure,
+    SurfaceProperty,
     SymmetryResult,
     VibrationalModeSet,
 )
@@ -77,6 +79,7 @@ from .pymatgen_adapter import (
     parse_vasp_volumetric,
     sniff_vasp_volumetric,
 )
+from .pyprocar_adapter import adapt_pyprocar_fermi_surface
 from .pymatgen_electronic import (
     PYMATGEN_VASP_ELECTRONIC_READER,
     PymatgenElectronicDependencyError,
@@ -144,6 +147,7 @@ __all__ = [
     "ExcitedStateReferences",
     "ExcitedStateSet",
     "FrameSet",
+    "FermiSurfaceMesh",
     "GemmiDependencyError",
     "Grid3D",
     "GBasisDependencyError",
@@ -178,6 +182,7 @@ __all__ = [
     "SpinChannel",
     "SpglibDependencyError",
     "Structure",
+    "SurfaceProperty",
     "SymmetryResult",
     "VibrationalModeSet",
     "XYZ_READER",
@@ -199,6 +204,7 @@ __all__ = [
     "adapt_vasp_volumetric",
     "adapt_pymatgen_electronic",
     "adapt_phonopy_qpoints",
+    "adapt_pyprocar_fermi_surface",
     "parse_vasp_volumetric",
     "parse_vasprun_electronic",
     "sniff_vasp_volumetric",

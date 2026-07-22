@@ -50,7 +50,7 @@ Phase 0 与 Phase 1 分子量子化学闭环已完成；Gemmi/spglib、ASE/pymat
 40. [已完成：Gemmi/spglib 晶体基础设施](../../.agents/completed/crystal-foundation.md)
 41. [Gemmi/spglib 晶体边界决策](../../.agents/decisions/0010-crystal-parsing-and-symmetry-boundary.md)
 42. [已完成：Phase 2 周期结构与标量场](../../.agents/completed/periodic-structure-and-fields.md)
-43. [当前任务：Phase 2 band 与 DOS](../../.agents/active/phase2-bands-and-dos.md)
+43. [当前任务：Phase 3 sidecar 与 cache](../../.agents/active/phase3-sidecar-cache.md)
 
 路线图和主题计划保存稳定范围、依赖顺序与验收标准；`.agents/active/` 只记录正在执行的一个任务及其下一步。临时 commit、测试运行和本机状态不写入路线图。
 

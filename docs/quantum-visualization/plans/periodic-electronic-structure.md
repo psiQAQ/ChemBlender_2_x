@@ -16,7 +16,7 @@
 | --- | --- | --- |
 | P0 | 已完成 Gemmi CIF envelope、spglib 对称性/标准化、原始/标准晶胞关系与现有 CIF/POSCAR golden baseline | setting、origin shift、occupancy、Uij 和未知 tag 不被误解或丢失 |
 | P1 | 已完成 ASE/pymatgen-core structure、VASP scalar fields、band/DOS/projection 与 phonopy 复数 q-point 模态 | 晶格/单位/费米能一致；复数模态按相位公式动画 |
-| P2 | 当前评估 PyProcar 费米面、投影着色、自旋纹理、速度/有效质量；sumo 风格联动后置 | 倒空间 mesh 与投影数据可追溯到来源计算 |
+| P2 | 已完成 PyProcar 中立费米面、投影、spin texture 与 velocity 属性边界；sumo publication styling 后置 | 倒空间 mesh 与投影数据可追溯到来源计算 |
 
 ## 依赖关系
 
