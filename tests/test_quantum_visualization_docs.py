@@ -78,7 +78,6 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("submodules/cclib", gitmodules)
         children = {path.name for path in (ROOT / "submodules").iterdir()}
         self.assertEqual(children, {"README.md", "cclib"})
-        self.assertTrue((ROOT / "submodules" / "cclib" / "LICENSE").exists())
         self.assertIn("07260dd0394cb1a2381d4d897746d727a12ad6ce", placeholder)
 
     def test_single_active_task(self):

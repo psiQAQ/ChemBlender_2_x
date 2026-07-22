@@ -20,7 +20,7 @@
 
 ## Next Action
 
-设计 cclib adapter 的最小结构/能量闭环，确定依赖版本、外部 core 环境边界、Gaussian/ORCA fixture 和 capability/`ParserReport` 映射；不把 cclib 打入当前 Windows Extension wheel 集合。
+设计 IOData adapter 与 basis/orbital 最小语义对象，核对 FCHK/Molden convention、开放壳层维度和外部 core 依赖边界。
 
 ## Completed
 
@@ -29,6 +29,8 @@
 - Blender 5.1.2 bundled `openvdb` 已通过斜 transform、写入和 Volume 重新加载探针；首版不实现无证据需要的第二套 mesh backend。
 - OpenVDB adapter 已实现显式 cache path、float32 派生 cache、斜 affine transform、bohr 到 angstrom 换算、Volume 创建和 dataset 身份恢复属性。
 - Blender lifecycle smoke 现在使用 `--python-exit-code 1`，Python traceback 不再被 exit code 0 静默放过。
+- cclib 1.8.1 已作为外部 core adapter 接入；Gaussian 16 与 ORCA 4.1 fixture 可归一化为结构、SCF 能量、原子布居、计算状态和 provenance。
+- `submodules/cclib` 已固定官方 v1.8.1 commit，仅用于源码审阅与 integration fixture，不进入 Blender Extension。
 
 ## References
 
@@ -41,3 +43,5 @@
 - [Cube reader 实现计划](../../docs/superpowers/plans/2026-07-22-cube-reader.md)
 - [Grid3D 到 OpenVDB Volume adapter 设计](../../docs/superpowers/specs/2026-07-22-grid-volume-adapter-design.md)
 - [Grid3D OpenVDB Volume adapter 实现计划](../../docs/superpowers/plans/2026-07-22-grid-volume-adapter.md)
+- [cclib adapter 设计](../../docs/superpowers/specs/2026-07-22-cclib-adapter-design.md)
+- [cclib adapter 实现计划](../../docs/superpowers/plans/2026-07-22-cclib-adapter.md)

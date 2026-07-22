@@ -26,6 +26,18 @@ The wheel is downloaded to `ChemBlender/wheels/`, verified before build, declare
 
 Pillow is not bundled while ChemBlender does not import PIL or call Pillow-dependent RDKit APIs. Adding such behavior requires a new dependency decision, pinned wheel metadata, and a clean CI install check.
 
+## Optional Quantum Core
+
+| Item | Value |
+| --- | --- |
+| Package | `cclib==1.8.1` |
+| Runtime boundary | independent CPython core environment |
+| Reference source | `submodules/cclib` at `07260dd0394cb1a2381d4d897746d727a12ad6ce` (`v1.8.1`) |
+| License | BSD-3-Clause |
+| Transitive requirements | NumPy, SciPy, periodictable, packaging |
+
+cclib is an optional parser backend, not a Blender Extension wheel. `ChemBlender.core` and `ChemBlender.core.cclib_adapter` import without loading cclib or its numerical stack; only `parse_cclib_output()` loads the dependency. Developers may install the pinned submodule into an ignored isolated environment for integration tests. Never install it during Blender import, registration, enable, or file parsing fallback.
+
 ## Local Extension Gates
 
 1. Run `blender-mcp --help`.

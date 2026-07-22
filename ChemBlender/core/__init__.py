@@ -1,4 +1,11 @@
 from .cube import CUBE_READER, parse_cube, sniff_cube
+from .cclib_adapter import (
+    CCLIB_OUTPUT_READER,
+    CCLibDependencyError,
+    adapt_ccdata,
+    parse_cclib_output,
+    sniff_cclib_output,
+)
 from .model import (
     ArrayData,
     CalculationRecord,
@@ -33,6 +40,8 @@ __all__ = [
     "CalculationRecord",
     "CalculationStatus",
     "CapabilitySupport",
+    "CCLIB_OUTPUT_READER",
+    "CCLibDependencyError",
     "CUBE_READER",
     "DatasetStatus",
     "FrameSet",
@@ -53,9 +62,12 @@ __all__ = [
     "Structure",
     "XYZ_READER",
     "parse_cube",
+    "parse_cclib_output",
     "parse_xyz",
     "parse_mol_v2000",
     "sniff_mol_v2000",
     "sniff_cube",
+    "sniff_cclib_output",
     "sniff_xyz",
+    "adapt_ccdata",
 ]
