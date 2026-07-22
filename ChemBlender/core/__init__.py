@@ -1,3 +1,4 @@
+from .cube import CUBE_READER, parse_cube, sniff_cube
 from .model import (
     ArrayData,
     CalculationRecord,
@@ -32,6 +33,7 @@ __all__ = [
     "CalculationRecord",
     "CalculationStatus",
     "CapabilitySupport",
+    "CUBE_READER",
     "DatasetStatus",
     "FrameSet",
     "Grid3D",
@@ -50,8 +52,10 @@ __all__ = [
     "SniffResult",
     "Structure",
     "XYZ_READER",
+    "parse_cube",
     "parse_xyz",
     "parse_mol_v2000",
     "sniff_mol_v2000",
+    "sniff_cube",
     "sniff_xyz",
 ]
