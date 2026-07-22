@@ -177,6 +177,7 @@ class PeriodicSiteData:
     declared_space_group_number: int | None
     symmetry_operations: tuple[str, ...]
     cif_envelope_id: UUID | None
+    pbc: tuple[bool, bool, bool] = (True, True, True)
 
     def __post_init__(self):
         import numpy
@@ -269,10 +270,14 @@ class PeriodicSiteData:
             raise ValueError("symmetry_operations must contain non-empty strings")
         if self.cif_envelope_id is not None:
             _require_uuid(self.cif_envelope_id, "cif_envelope_id")
+        pbc = tuple(self.pbc)
+        if len(pbc) != 3 or any(not isinstance(value, bool) for value in pbc):
+            raise ValueError("pbc must contain three bool values")
         object.__setattr__(self, "site_labels", labels)
         object.__setattr__(self, "adp_types", adp_types)
         object.__setattr__(self, "disorder_groups", disorder_groups)
         object.__setattr__(self, "symmetry_operations", symmetry_operations)
+        object.__setattr__(self, "pbc", pbc)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1120,6 +1125,7 @@ class Grid3D(PropertyDataset):
         tuple[float, float, float],
     ]
     coordinate_unit: str
+    structure_id: UUID | None = None
 
     def __post_init__(self):
         super(Grid3D, self).__post_init__()
@@ -1146,6 +1152,8 @@ class Grid3D(PropertyDataset):
             and self.status is not DatasetStatus.AMBIGUOUS
         ):
             raise ValueError("unknown coordinate unit requires ambiguous dataset status")
+        if self.structure_id is not None:
+            _require_uuid(self.structure_id, "structure_id")
         object.__setattr__(self, "origin", origin)
         object.__setattr__(self, "step_vectors", steps)
 
@@ -1483,6 +1491,12 @@ class QCProject:
                     raise ValueError(
                         f"Spectrum has a dangling {expected_type.__name__} reference"
                     )
+            if (
+                isinstance(dataset, Grid3D)
+                and dataset.structure_id is not None
+                and dataset.structure_id not in structure_ids
+            ):
+                raise ValueError("Grid3D has a dangling structure reference")
         for basis in batch.basis_sets:
             try:
                 reference = structures[basis.structure_id]

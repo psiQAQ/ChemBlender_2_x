@@ -19,6 +19,8 @@ git add .gitmodules submodules/<name>
 | GBasis | `https://github.com/theochem/gbasis.git` | normalized Gaussian basis 的 MO/density 求值与 integration fixture | `v0.1.0` / `6440c84f3fcf8d42cbd9b5de53ae8d70bed4cd4f`；GPL-3.0-or-later；外部 worker 后端、审阅和测试 |
 | Gemmi | `https://github.com/project-gemmi/gemmi.git` | CIF DOM、small-structure convention、raw envelope 与 integration fixture | `v0.7.5` / `5cc1c23c6007e0e6cbd69289c6f7c0bff50e943e`；MPL-2.0；只用于审阅和测试 |
 | spglib | `https://github.com/spglib/spglib.git` | 空间群、Wyckoff、等价原子、标准化与变换 convention | `v2.7.0` / `12355c77fb7c505a55f52cae36341d73b781a065`；BSD-3-Clause；只用于审阅和测试 |
+| ASE | `https://gitlab.com/ase/ase.git` | POSCAR/CONTCAR、extXYZ、PBC 与 selective-dynamics adapter | `3.29.0` / `f27c0005ae6a67ea419f996e728668865bfc1f86`；LGPL-2.1-or-later；外部 core adapter、审阅和测试 |
+| pymatgen-core | `https://github.com/materialsproject/pymatgen-core.git` | CHGCAR/PARCHG、ELFCAR、LOCPOT 解析和周期 grid convention | `v2026.7.16` / `488ad74cc5ecaba5d24c1726e2762fb47f31f5ef`；MIT；外部 core adapter、审阅和测试 |
 | xyzrender | `https://github.com/aligfellow/xyzrender` | reader/Cube | 未拉取 |
 | quantum-chem-skills | `https://github.com/silico-quantum/quantum-chem-skills` | recipe/workflow | 未拉取 |
 | Molecular Blender | 添加前核实 | 波函数/适应性表面 | 未拉取 |

@@ -1,3 +1,10 @@
+from .ase_adapter import (
+    ASE_STRUCTURE_READER,
+    ASEDependencyError,
+    adapt_ase_atoms,
+    parse_ase_structure,
+    sniff_ase_structure,
+)
 from .cube import CUBE_READER, parse_cube, sniff_cube
 from .cclib_adapter import (
     CCLIB_OUTPUT_READER,
@@ -58,6 +65,13 @@ from .model import (
     VibrationalModeSet,
 )
 from .mol_v2000 import MOL_V2000_READER, parse_mol_v2000, sniff_mol_v2000
+from .pymatgen_adapter import (
+    PYMATGEN_VASP_GRID_READER,
+    PymatgenDependencyError,
+    adapt_vasp_volumetric,
+    parse_vasp_volumetric,
+    sniff_vasp_volumetric,
+)
 from .readers import (
     AmbiguousReaderError,
     CapabilitySupport,
@@ -88,6 +102,8 @@ from .vibration_spectrum import (
 
 __all__ = [
     "AmbiguousReaderError",
+    "ASE_STRUCTURE_READER",
+    "ASEDependencyError",
     "ArrayData",
     "AtomicProperty",
     "BasisConvention",
@@ -124,6 +140,8 @@ __all__ = [
     "ParserIssue",
     "ParserReport",
     "PeriodicSiteData",
+    "PYMATGEN_VASP_GRID_READER",
+    "PymatgenDependencyError",
     "PropertyDataset",
     "ProvenanceRecord",
     "QCProject",
@@ -141,18 +159,24 @@ __all__ = [
     "SymmetryResult",
     "VibrationalModeSet",
     "XYZ_READER",
+    "adapt_ase_atoms",
     "parse_cube",
+    "parse_ase_structure",
     "parse_cclib_output",
     "parse_cif",
     "parse_xyz",
     "parse_mol_v2000",
     "sniff_mol_v2000",
     "sniff_cube",
+    "sniff_ase_structure",
     "sniff_cclib_output",
     "sniff_cif",
     "sniff_xyz",
     "adapt_ccdata",
     "adapt_iodata",
+    "adapt_vasp_volumetric",
+    "parse_vasp_volumetric",
+    "sniff_vasp_volumetric",
     "parse_iodata_wavefunction",
     "sniff_iodata_wavefunction",
     "evaluate_electron_density_grid",

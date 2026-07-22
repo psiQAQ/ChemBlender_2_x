@@ -29,7 +29,7 @@
 
 ## Phase 2：周期量子化学
 
-状态：进行中；Gemmi CIF envelope 与 spglib 对称性/标准化基础已完成，当前进入 ASE/pymatgen 周期结构与 VASP scalar-field adapters。
+状态：进行中；Gemmi/spglib 基础与 ASE/pymatgen-core 周期结构、VASP scalar-field adapters 已完成，当前进入 band/DOS/projection schema。
 
 进入条件：Gemmi/spglib 已覆盖 CIF 语法、空间群与标准化边界，周期结构 ID 可以跨数据集复用。
 
@@ -64,6 +64,7 @@
 7. 已完成：激发态语义、UV-Vis/ECD 光谱与 transition/NTO 引用。
 8. 已完成：Phase 1 原子标量/矢量、优化轨迹和 linked selection 的 Blender adapters 收口。
 9. 已完成：Gemmi CIF envelope 与 spglib 对称性/标准化基础设施。
-10. 当前：ASE/pymatgen 周期结构、CHGCAR/ELFCAR/LOCPOT 与 Blender volume adapter。
+10. 已完成：ASE/pymatgen-core 周期结构、CHGCAR/PARCHG/ELFCAR/LOCPOT 与 Blender volume identity。
+11. 当前：band structure、DOS/PDOS、projection 与 Blender linked selection。
 
 周期 structure/grid 验收后继续 band/DOS 与 phonopy；大型缓存/worker 和 recipe 分别在 Phase 3/4 收口。

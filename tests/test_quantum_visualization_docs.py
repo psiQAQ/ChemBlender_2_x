@@ -80,22 +80,35 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("submodules/gbasis", gitmodules)
         self.assertIn("submodules/gemmi", gitmodules)
         self.assertIn("submodules/spglib", gitmodules)
+        self.assertIn("submodules/ase", gitmodules)
+        self.assertIn("submodules/pymatgen-core", gitmodules)
         children = {path.name for path in (ROOT / "submodules").iterdir()}
         self.assertEqual(
             children,
-            {"README.md", "cclib", "gbasis", "gemmi", "iodata", "spglib"},
+            {
+                "README.md",
+                "ase",
+                "cclib",
+                "gbasis",
+                "gemmi",
+                "iodata",
+                "pymatgen-core",
+                "spglib",
+            },
         )
         self.assertIn("07260dd0394cb1a2381d4d897746d727a12ad6ce", placeholder)
         self.assertIn("adab5813713ba64641565eb2a8c11803a4e9bba6", placeholder)
         self.assertIn("6440c84f3fcf8d42cbd9b5de53ae8d70bed4cd4f", placeholder)
         self.assertIn("5cc1c23c6007e0e6cbd69289c6f7c0bff50e943e", placeholder)
         self.assertIn("12355c77fb7c505a55f52cae36341d73b781a065", placeholder)
+        self.assertIn("f27c0005ae6a67ea419f996e728668865bfc1f86", placeholder)
+        self.assertIn("488ad74cc5ecaba5d24c1726e2762fb47f31f5ef", placeholder)
 
     def test_single_active_task(self):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            ["phase2-periodic-structure-and-fields.md"],
+            ["phase2-bands-and-dos.md"],
         )
 
     def test_local_markdown_links_resolve(self):

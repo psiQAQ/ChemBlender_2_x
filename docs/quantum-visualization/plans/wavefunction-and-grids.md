@@ -22,6 +22,20 @@
 
 依赖 `Grid3D`、单位、轨道数据和 provenance 契约。Blender Volume、Mesh 和 Material 只消费派生结果，不能反向定义网格存储。
 
+### GBasis 0.1.0 的边界
+
+PyPI 安装名固定为 `qc-gbasis==0.1.0`，Python import 名仍为 `gbasis`；撤回的旧 `gbasis` distribution 不得安装。GBasis 不是 SCF/DFT solver、完整文件 parser 或 Blender renderer，而是把 normalized Gaussian basis、MO coefficients 和 one-RDM 求值到任意空间点的外部 worker 数值内核。
+
+| 输入 | GBasis 输出 | ChemBlender 消费方式 |
+| --- | --- | --- |
+| `BasisSet + OrbitalSet + points` | AO/MO values | `Grid3D`、正负相位等值面、按需 HOMO/LUMO/SOMO |
+| `BasisSet + DensityMatrix + points` | electron/spin density | density volume、surface 与切片 |
+| density matrix、核坐标/电荷、points | ESP | density surface 顶点着色，或独立 grid 分析 |
+| density derivatives | gradient、Hessian、Laplacian、kinetic-energy density | 后续 RDG、拓扑与局部分析 |
+| Gaussian integrals | overlap、kinetic、nuclear attraction、ERI 等 | P2 轨道匹配/跟踪，不进入当前可视化 MVP |
+
+当前规则 affine grid 已直接用 NumPy 生成采样点，因而不为已有能力增加 `qc-grid`。局部包围盒、分辨率 presets、chunking、缓存和自适应采样属于 worker/storage 后续任务；只有真实性能基准证明需要时才扩展。
+
 ## 交付物
 
 - Cube 与波函数字段映射。

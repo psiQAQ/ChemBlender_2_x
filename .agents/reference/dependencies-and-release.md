@@ -69,6 +69,19 @@ GBasis evaluates normalized Gaussian basis functions, molecular orbitals, total/
 
 Gemmi owns CIF parsing and raw-envelope access; spglib owns symmetry search and standardization. Both adapters use late imports. They are tested in an ignored Python 3.13 environment and remain outside the Blender Extension ZIP. A future distributed worker must retain the applicable license files and notices.
 
+| Item | Value |
+| --- | --- |
+| Packages | `ase==3.29.0`, `pymatgen-core==2026.7.16` |
+| Runtime boundary | independent CPython worker/core environment |
+| Reference sources | `submodules/ase` at `f27c0005ae6a67ea419f996e728668865bfc1f86`; `submodules/pymatgen-core` at `488ad74cc5ecaba5d24c1726e2762fb47f31f5ef` |
+| Licenses | ASE LGPL-2.1-or-later; pymatgen-core MIT |
+| Scope | POSCAR/CONTCAR/extXYZ and CHGCAR/PARCHG/ELFCAR/LOCPOT adapters |
+
+The `pymatgen` 2026.5.4 distribution is a metapackage that resolves the actual
+implementation separately. ChemBlender pins `pymatgen-core` directly so reviewed
+source and tested runtime match. ASE and pymatgen-core are late-imported and remain
+outside the Blender Extension ZIP.
+
 ## Local Extension Gates
 
 1. Run `blender-mcp --help`.
@@ -96,3 +109,9 @@ Gemmi owns CIF parsing and raw-envelope access; spglib owns symmetry search and 
 - Publishing, pushing, PR creation, and release creation require explicit authorization.
 
 On Windows, overwriting an already loaded extension may warn that old wheel DLLs cannot be removed. Use a fresh Blender process for release validation; clean CI runners do not have the previous installation.
+
+For a persistent `user_default` reinstall, a fresh process is insufficient when the old
+extension is auto-enabled at startup. Disable it and save preferences, exit Blender, install
+from a second cold process, then launch a third process to verify the enabled key and real
+RDKit import. A same-process smoke result does not prove the shared wheel remains complete
+after exit.

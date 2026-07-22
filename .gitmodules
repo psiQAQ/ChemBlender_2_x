@@ -13,3 +13,9 @@
 [submodule "submodules/spglib"]
 	path = submodules/spglib
 	url = https://github.com/spglib/spglib.git
+[submodule "submodules/ase"]
+	path = submodules/ase
+	url = https://gitlab.com/ase/ase.git
+[submodule "submodules/pymatgen-core"]
+	path = submodules/pymatgen-core
+	url = https://github.com/materialsproject/pymatgen-core.git

@@ -41,6 +41,8 @@ def assert_enabled(module_key):
     assert f"{module_key}.core.wavefunction_grid" in sys.modules
     assert f"{module_key}.core.wavefunction_observables" in sys.modules
     assert "gbasis" not in sys.modules
+    assert "ase" not in sys.modules
+    assert "pymatgen" not in sys.modules
     assert f"{module_key}.grid_volume" in sys.modules
     assert f"{module_key}.dataset_view" in sys.modules
     assert f"{module_key}.trajectory_view" in sys.modules
@@ -88,6 +90,7 @@ def assert_grid_volume_adapter(module_key):
     values = memoryview(array.array("d", range(8)))
     values = values.cast("B").cast("d", shape=(2, 2, 2))
     dataset_id = uuid4()
+    structure_id = uuid4()
     grid = core.Grid3D(
         id=dataset_id,
         revision="grid-revision",
@@ -102,6 +105,7 @@ def assert_grid_volume_adapter(module_key):
         origin=(1.0, 2.0, 3.0),
         step_vectors=((1.0, 0.0, 0.0), (0.2, 1.0, 0.0), (0.0, 0.3, 1.0)),
         coordinate_unit="bohr",
+        structure_id=structure_id,
     )
     with TemporaryDirectory() as directory:
         cache = Path(directory) / "grid.vdb"
@@ -117,6 +121,7 @@ def assert_grid_volume_adapter(module_key):
             assert len(volume.grids) == 1 and volume.grids["density"] is not None
             assert obj["cb_dataset_id"] == str(dataset_id)
             assert obj["cb_dataset_revision"] == "grid-revision"
+            assert obj["cb_structure_id"] == str(structure_id)
             assert obj["cb_dataset_index"] == 0
             assert obj["cb_semantic_role"] == "molecular_orbital"
             assert obj["cb_value_unit"] == "inverse_bohr_to_three_halves"
@@ -453,6 +458,62 @@ def assert_dataset_and_trajectory_views(module_key):
             bpy.data.meshes.remove(mesh)
 
 
+def assert_periodic_structure_view(module_key):
+    import numpy
+
+    core = importlib.import_module(f"{module_key}.core")
+    adapter = importlib.import_module(f"{module_key}.dataset_view")
+    structure = core.Structure(
+        id=uuid4(),
+        revision="periodic-structure-revision",
+        atomic_numbers=(14,),
+        coordinates=core.ArrayData(
+            numpy.asarray([[0.0, 0.0, 0.0]]), ("atom", "xyz"), "angstrom"
+        ),
+        cell=core.ArrayData(
+            numpy.asarray([[4.0, 0.0, 0.0], [1.0, 3.0, 0.0], [0.0, 0.5, 5.0]]),
+            ("cell_vector", "xyz"),
+            "angstrom",
+        ),
+        periodic=core.PeriodicSiteData(
+            fractional_coordinates=core.ArrayData(
+                numpy.asarray([[0.0, 0.0, 0.0]]),
+                ("atom", "xyz"),
+                "dimensionless",
+            ),
+            site_labels=("Si1",),
+            occupancies=core.ArrayData(
+                numpy.ones(1), ("atom",), "dimensionless"
+            ),
+            isotropic_displacements=None,
+            anisotropic_displacements=None,
+            adp_types=("none",),
+            disorder_groups=(0,),
+            declared_space_group_name=None,
+            declared_space_group_number=None,
+            symmetry_operations=(),
+            cif_envelope_id=None,
+            pbc=(True, False, True),
+        ),
+    )
+    obj = adapter.create_structure_view(
+        structure,
+        name="ChemBlender periodic structure smoke",
+        collection=bpy.context.scene.collection,
+    )
+    mesh = obj.data
+    try:
+        assert obj["cb_periodic"] is True
+        assert list(obj["cb_pbc"]) == [True, False, True]
+        assert numpy.allclose(
+            list(obj["cb_periodic_cell"]),
+            [4.0, 0.0, 0.0, 1.0, 3.0, 0.0, 0.0, 0.5, 5.0],
+        )
+    finally:
+        bpy.data.objects.remove(obj, do_unlink=True)
+        bpy.data.meshes.remove(mesh)
+
+
 def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     reader = importlib.import_module(f"{module_key}.read")
     cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
@@ -498,6 +559,7 @@ assert_installed_blend_libraries(module_key)
 assert_grid_volume_adapter(module_key)
 assert_vibration_view_adapter(module_key)
 assert_dataset_and_trajectory_views(module_key)
+assert_periodic_structure_view(module_key)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 
 for _ in range(2):

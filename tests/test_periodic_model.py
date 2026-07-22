@@ -6,6 +6,8 @@ import numpy
 from ChemBlender.core import (
     ArrayData,
     CIFEnvelope,
+    DatasetStatus,
+    Grid3D,
     ImportBatch,
     PeriodicSiteData,
     ProvenanceRecord,
@@ -108,6 +110,50 @@ def symmetry_result(input_id, standard_id, provenance_id):
 
 
 class PeriodicModelTests(unittest.TestCase):
+    def test_periodic_grid_requires_a_project_structure(self):
+        structure_id = uuid4()
+        grid = Grid3D(
+            id=uuid4(),
+            revision="grid-revision",
+            semantic_role="electron_density",
+            domain="grid",
+            data=ArrayData(
+                numpy.ones((2, 2, 2)),
+                ("x", "y", "z"),
+                "inverse_cubic_angstrom",
+            ),
+            status=DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+            origin=(0.0, 0.0, 0.0),
+            step_vectors=tuple(tuple(row) for row in numpy.eye(3)),
+            coordinate_unit="angstrom",
+            structure_id=structure_id,
+        )
+        project = QCProject(id=uuid4(), schema_version="0.1")
+        with self.assertRaisesRegex(ValueError, "Grid3D.*structure"):
+            project.commit(ImportBatch(datasets=(grid,)))
+
+        periodic_structure = structure(None)
+        linked_grid = Grid3D(
+            id=grid.id,
+            revision=grid.revision,
+            semantic_role=grid.semantic_role,
+            domain=grid.domain,
+            data=grid.data,
+            status=grid.status,
+            source_calculation=None,
+            provenance_ids=(),
+            origin=grid.origin,
+            step_vectors=grid.step_vectors,
+            coordinate_unit=grid.coordinate_unit,
+            structure_id=periodic_structure.id,
+        )
+        project.commit(
+            ImportBatch(structures=(periodic_structure,), datasets=(linked_grid,))
+        )
+        self.assertIs(project.datasets[linked_grid.id], linked_grid)
+
     def test_project_commits_periodic_entities_atomically(self):
         provenance_id = uuid4()
         envelope = CIFEnvelope(

@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [phase2-periodic-structure-and-fields.md](active/phase2-periodic-structure-and-fields.md) | ASE/pymatgen periodic structure and VASP scalar-field adapters |
+| active | [phase2-bands-and-dos.md](active/phase2-bands-and-dos.md) | pymatgen-core band structure, DOS, projections and Blender linked-selection |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -29,6 +29,7 @@ Historical documents provide provenance, not current status.
 | decision | [0008-excited-state-and-spectrum-contract.md](decisions/0008-excited-state-and-spectrum-contract.md) | Excited-state identity, configuration, references and electronic-spectrum contract |
 | decision | [0009-phase1-blender-dataset-contract.md](decisions/0009-phase1-blender-dataset-contract.md) | Structure, atom dataset, vector, trajectory and stick-selection Blender contract |
 | decision | [0010-crystal-parsing-and-symmetry-boundary.md](decisions/0010-crystal-parsing-and-symmetry-boundary.md) | Gemmi CIF envelope, periodic sites and spglib standardization boundary |
+| decision | [0011-periodic-structure-and-vasp-grid-boundary.md](decisions/0011-periodic-structure-and-vasp-grid-boundary.md) | ASE/pymatgen-core periodic structure, VASP scalar-field semantics and linked identity |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
@@ -40,6 +41,7 @@ Historical documents provide provenance, not current status.
 | completed | [excited-states-and-spectra.md](completed/excited-states-and-spectra.md) | cclib excited states, UV-Vis/ECD spectra and transition-reference evidence |
 | completed | [phase1-blender-adapters.md](completed/phase1-blender-adapters.md) | Phase 1 scalar/vector/trajectory/linked-selection Blender closure evidence |
 | completed | [crystal-foundation.md](completed/crystal-foundation.md) | Gemmi/spglib periodic semantics, parsing and standardization evidence |
+| completed | [periodic-structure-and-fields.md](completed/periodic-structure-and-fields.md) | ASE structures, VASP scalar fields, periodic Grid3D identity and Blender evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.

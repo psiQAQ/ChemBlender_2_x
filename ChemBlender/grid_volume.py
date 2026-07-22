@@ -93,6 +93,8 @@ def create_grid_volume(
         "chemblender_coordinate_scale": scale,
         "chemblender_cache_format_version": 1,
     }
+    if grid.structure_id is not None:
+        metadata["chemblender_structure_id"] = str(grid.structure_id)
     temporary = cache_path.with_name(
         f".{cache_path.name}.{uuid4().hex}.tmp"
     )
@@ -122,6 +124,8 @@ def create_grid_volume(
         obj["cb_coordinate_scale"] = scale
         obj["cb_cache_path"] = str(cache_path)
         obj["cb_cache_format_version"] = 1
+        if grid.structure_id is not None:
+            obj["cb_structure_id"] = str(grid.structure_id)
         return obj
     except Exception:
         if obj is not None:

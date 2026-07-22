@@ -168,6 +168,14 @@ def create_structure_view(structure, *, name="ChemBlender Structure", collection
         obj["cb_source_coordinate_unit"] = structure.coordinates.unit
         obj["cb_display_coordinate_unit"] = "angstrom"
         obj["cb_coordinate_scale"] = scale
+        if structure.periodic is not None:
+            obj["cb_periodic"] = True
+            obj["cb_periodic_cell"] = tuple(
+                float(value)
+                for row in structure.cell.values
+                for value in row
+            )
+            obj["cb_pbc"] = structure.periodic.pbc
         mesh.update()
         return obj
     except Exception:
