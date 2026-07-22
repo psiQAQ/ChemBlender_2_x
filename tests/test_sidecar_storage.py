@@ -16,6 +16,7 @@ from ChemBlender.core import (
     ProvenanceRecord,
     QCProject,
     Structure,
+    TrajectoryFrameManager,
 )
 from ChemBlender.core.sidecar import (
     LazyNpyArray,
@@ -102,6 +103,21 @@ class SidecarStorageTests(unittest.TestCase):
             self.assertEqual(loaded.datasets[DATASET_ID].provenance_ids, (PROVENANCE_ID,))
             values = loaded.datasets[FRAMES_ID].data.values
             self.assertIsInstance(values, LazyNpyArray)
+            self.assertFalse(values.loaded)
+
+    def test_trajectory_manager_releases_lazy_sidecar_memory_map(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory) / "h2.cbq"
+            save_project(root, sample_project())
+            loaded = open_project(root)
+            values = loaded.datasets[FRAMES_ID].data.values
+            manager = TrajectoryFrameManager(loaded.datasets[FRAMES_ID])
+            self.assertFalse(values.loaded)
+            self.assertTrue(
+                numpy.allclose(manager.frame(1)[1], [1.0, 1.0, 1.74])
+            )
+            self.assertTrue(values.loaded)
+            manager.close()
             self.assertFalse(values.loaded)
             self.assertTrue(numpy.allclose(numpy.asarray(values)[1, 1], [1.0, 1.0, 1.74]))
             self.assertTrue(values.loaded)

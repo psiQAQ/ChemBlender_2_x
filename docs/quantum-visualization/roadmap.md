@@ -39,7 +39,7 @@
 
 ## Phase 3：大型数据与交互
 
-状态：进行中；`.cbq` v0.1、cache identity、存储 benchmark 与本地 worker v1 已完成，当前进入 lazy trajectory frame manager。
+状态：进行中；`.cbq` v0.1、local worker v1 与 lazy trajectory manager 已完成，当前进入 Grid3D LOD 与 Volume cache identity。
 
 进入条件：Phase 1/2 已提供网格、轨迹和轨道数组的规模基准。
 
@@ -72,6 +72,7 @@
 13. 已完成：Fermi-surface 中立 mesh schema 与 PyProcar worker adapter。
 14. 已完成：`.cbq` sidecar manifest、lazy array reference、Blender scene link 与分层 cache hash。
 15. 已完成：代表性数组存储 benchmark、worker request/result/error/cancel/version 协议。
-16. 当前：lazy trajectory frame manager、有界 frame cache、插值与区间均值。
+16. 已完成：lazy trajectory frame manager、有界 frame cache、插值与区间均值。
+17. 当前：Grid3D 多分辨率派生、lazy stride access 与 Blender Volume cache identity。
 
 Phase 3 已依据 benchmark 保留 `.npy` 并建立不阻塞 Blender 的本地 worker；下一步完成长轨迹和大型交互，recipe 在 Phase 4 收口。

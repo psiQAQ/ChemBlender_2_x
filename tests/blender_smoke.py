@@ -424,17 +424,20 @@ def assert_dataset_and_trajectory_views(module_key):
             structure_id=structure_id,
             comments=("first", "invalid"),
         )
+        invalid_manager = core.TrajectoryFrameManager(invalid_frames)
         try:
-            trajectory.configure_trajectory_view(obj, invalid_frames)
+            invalid_manager.frame(1)
         except ValueError:
             pass
         else:
             raise AssertionError("invalid trajectory frames must be rejected")
+        finally:
+            invalid_manager.close()
         trajectory.configure_trajectory_view(
-            obj, frames, frame_start=10, frame_step=2
+            obj, frames, frame_start=10, frame_step=2, cache_size=2
         )
         trajectory.configure_trajectory_view(
-            obj, frames, frame_start=10, frame_step=2
+            obj, frames, frame_start=10, frame_step=2, cache_size=2
         )
         handlers = [
             handler
@@ -449,6 +452,8 @@ def assert_dataset_and_trajectory_views(module_key):
             [0.529177210903] * 3,
         )
         assert obj["cb_trajectory_frame_index"] == 1
+        assert obj["cb_trajectory_cache_size"] == 2
+        assert obj["cb_trajectory_prefetch_ahead"] == 0
         bpy.context.scene.frame_set(100)
         assert obj["cb_trajectory_frame_index"] == 1
         assert len(bpy.data.objects) >= 1

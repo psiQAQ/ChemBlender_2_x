@@ -109,6 +109,7 @@ from .spglib_adapter import (
     SpglibDependencyError,
     derive_symmetry,
 )
+from .trajectory_frames import FrameCacheInfo, TrajectoryFrameManager
 from .sidecar import (
     LazyNpyArray,
     SidecarCompatibilityError,
@@ -165,6 +166,7 @@ __all__ = [
     "ExcitedStateReferences",
     "ExcitedStateSet",
     "FrameSet",
+    "FrameCacheInfo",
     "FermiSurfaceMesh",
     "GemmiDependencyError",
     "Grid3D",
@@ -208,6 +210,7 @@ __all__ = [
     "SurfaceProperty",
     "SymmetryResult",
     "VibrationalModeSet",
+    "TrajectoryFrameManager",
     "XYZ_READER",
     "adapt_ase_atoms",
     "parse_cube",
