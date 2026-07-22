@@ -11,7 +11,7 @@
 | Molecular Nodes | 长轨迹、session、选择、属性编码 | Blender；存储 | P0/P1 | session/manager/Geometry Nodes 契约参考 | 集成前复核 | 轨迹或 sidecar 恢复进入实现 |
 | [cclib](https://github.com/cclib/cclib) | 通用量化输出与 parser capability | reader | P0 | 外部 core adapter；submodule 固定 v1.8.1 供审阅和测试 | BSD-3-Clause 已复核 | 已触发；`07260dd0394cb1a2381d4d897746d727a12ad6ce` |
 | [IOData](https://github.com/theochem/iodata) | FCHK/Molden/WFN/WFX、basis、MO、RDM、Cube | reader；波函数 | P0 | 外部 core adapter；submodule 固定 v1.0.1 供审阅和测试 | GPL-3.0-or-later 已复核 | 已触发；`adab5813713ba64641565eb2a8c11803a4e9bba6` |
-| QCElemental/QCSchema | 单位、计算记录、provenance、交换 | 语义核心；reader | P0/P1 | schema adapter 与单位参考 | 集成前复核 | 单位/QCSchema ADR 需要代码对照 |
+| [QCElemental/QCSchema](https://github.com/MolSSI/QCElemental) | 单位、计算记录、provenance、交换 | 语义核心；reader | P0/P1 | 已固定 `v0.50.4` / `46034a0`；v1/v2 分离 adapter 与 raw envelope，不作为内部模型 | BSD-3-Clause 已复核 | 已触发；升级时复核 schema name/version、conversion loss 与 fixtures |
 | [ASE](https://gitlab.com/ase/ase) | 结构、轨迹、周期 I/O 与 calculator 交换 | reader；周期 | P0/P1 | 外部 core adapter；submodule 固定 3.29.0，当前用于 POSCAR/CONTCAR、extXYZ、PBC 与约束映射 | LGPL-2.1-or-later 已复核 | 已触发；`f27c0005ae6a67ea419f996e728668865bfc1f86` |
 | [Gemmi](https://github.com/project-gemmi/gemmi) | CIF/mmCIF 词法、语法与 raw envelope | reader；周期 | P0 | 外部 core adapter；submodule 固定 v0.7.5 供审阅和测试 | MPL-2.0 已复核 | 已触发；`5cc1c23c6007e0e6cbd69289c6f7c0bff50e943e` |
 | [spglib](https://github.com/spglib/spglib) | 空间群、Wyckoff、标准化与变换 | reader；周期 | P0 | 外部 core adapter；submodule 固定 v2.7.0 供审阅和测试 | BSD-3-Clause 已复核 | 已触发；`12355c77fb7c505a55f52cae36341d73b781a065` |

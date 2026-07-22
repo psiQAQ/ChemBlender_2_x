@@ -49,7 +49,7 @@
 
 ## Phase 4：工作流与自动化
 
-状态：进行中；recipe、external process、`TopologyGraph` 与 critic2 JSON adapter 已完成，当前进入 QCSchema exchange。
+状态：进行中；recipe、external process、`TopologyGraph`、critic2 JSON 与 QCSchema exchange 已完成，当前进入 CJSON exchange。
 
 进入条件：语义输入、派生数据和 provenance 已足以描述可重复分析。
 
@@ -79,6 +79,7 @@
 18. 已完成：versioned recipe schema、语义输入绑定、validation 与 citation contract。
 19. 已完成：critic2/Multiwfn external adapter、非交互执行与失败产物隔离。
 20. 已完成：中立 `TopologyGraph`、critic2 critical points/connectivity parser 与 Blender point/sampled-curve 映射。
-21. 当前：QCSchema versioned adapter、AtomicResult/Molecule 与 provenance/error exchange。
+21. 已完成：QCSchema versioned adapter、AtomicResult/Molecule 与 provenance/error exchange。
+22. 当前：Avogadro CJSON 结构、项目属性与轻量结果交换。
 
 Phase 3 已依据 benchmark 保留 `.npy`，建立不阻塞 Blender 的本地 worker，并完成长轨迹与大型网格缓存闭环；Phase 4 从可验证 recipe contract 开始。

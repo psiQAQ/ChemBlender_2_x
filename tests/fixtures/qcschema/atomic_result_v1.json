@@ -1,0 +1,27 @@
+{
+  "schema_name": "qcschema_output",
+  "schema_version": 1,
+  "molecule": {
+    "schema_name": "qcschema_molecule",
+    "schema_version": 2,
+    "symbols": ["O", "H", "H"],
+    "geometry": [0.0, 0.0, 0.0, 0.0, 0.0, 1.8, 0.0, 1.7, -0.6],
+    "molecular_charge": 0.0,
+    "molecular_multiplicity": 1
+  },
+  "driver": "energy",
+  "model": {"method": "HF", "basis": "sto-3g"},
+  "keywords": {"scf_type": "pk"},
+  "properties": {
+    "return_energy": -74.965002,
+    "nuclear_repulsion_energy": 9.157175,
+    "calcinfo_nalpha": 5,
+    "calcinfo_nbeta": 5
+  },
+  "return_result": -74.965002,
+  "success": true,
+  "provenance": {"creator": "fixture-engine", "version": "1.2.3", "routine": "energy"},
+  "stdout": "calculation complete",
+  "native_files": {"input.dat": "molecule {...}"},
+  "extras": {"fixture_marker": "preserve-me"}
+}

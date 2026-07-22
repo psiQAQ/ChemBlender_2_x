@@ -178,6 +178,32 @@ class CIFEnvelope:
 
 
 @dataclass(frozen=True, slots=True)
+class QCSchemaEnvelope:
+    id: UUID
+    revision: str
+    schema_name: str
+    schema_version: int
+    source_bytes: bytes
+    provenance_ids: tuple[UUID, ...]
+
+    def __post_init__(self):
+        _require_uuid(self.id, "id")
+        _require_text(self.revision, "revision")
+        _require_token(self.schema_name, "schema_name", _ID_PATTERN)
+        if isinstance(self.schema_version, bool) or not isinstance(
+            self.schema_version, int
+        ) or self.schema_version <= 0:
+            raise ValueError("schema_version must be a positive integer")
+        if not isinstance(self.source_bytes, bytes) or not self.source_bytes:
+            raise ValueError("source_bytes must be non-empty bytes")
+        object.__setattr__(
+            self,
+            "provenance_ids",
+            _require_uuid_tuple(self.provenance_ids, "provenance_ids"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class PeriodicSiteData:
     fractional_coordinates: ArrayData
     site_labels: tuple[str, ...]
@@ -301,6 +327,8 @@ class Structure:
     coordinates: ArrayData
     cell: ArrayData | None = None
     periodic: PeriodicSiteData | None = None
+    molecular_charge: int | None = None
+    molecular_multiplicity: int | None = None
 
     def __post_init__(self):
         _require_uuid(self.id, "id")
@@ -332,6 +360,17 @@ class Structure:
                 raise ValueError("periodic structure requires a cell")
             if self.periodic.fractional_coordinates.shape[0] != len(atomic_numbers):
                 raise ValueError("periodic atom dimension must match atomic numbers")
+        if self.molecular_charge is not None and (
+            isinstance(self.molecular_charge, bool)
+            or not isinstance(self.molecular_charge, int)
+        ):
+            raise TypeError("molecular_charge must be an integer or None")
+        if self.molecular_multiplicity is not None and (
+            isinstance(self.molecular_multiplicity, bool)
+            or not isinstance(self.molecular_multiplicity, int)
+            or self.molecular_multiplicity <= 0
+        ):
+            raise ValueError("molecular_multiplicity must be positive or None")
         object.__setattr__(self, "atomic_numbers", atomic_numbers)
 
 
@@ -475,6 +514,47 @@ class SymmetryResult:
 
 
 @dataclass(frozen=True, slots=True)
+class CalculationMetadata:
+    driver: str
+    method: str
+    basis: str | None
+    molecular_charge: int
+    molecular_multiplicity: int
+    program: str
+    program_version: str
+    error_type: str | None = None
+    error_message: str | None = None
+    qcschema_envelope_id: UUID | None = None
+
+    def __post_init__(self):
+        for value, name in (
+            (self.driver, "driver"),
+            (self.method, "method"),
+            (self.program, "program"),
+            (self.program_version, "program_version"),
+        ):
+            _require_text(value, name)
+        if self.basis is not None and not isinstance(self.basis, str):
+            raise TypeError("basis must be a string or None")
+        for value, name in (
+            (self.molecular_charge, "molecular_charge"),
+            (self.molecular_multiplicity, "molecular_multiplicity"),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be an integer")
+        if self.molecular_multiplicity <= 0:
+            raise ValueError("molecular_multiplicity must be positive")
+        for value, name in (
+            (self.error_type, "error_type"),
+            (self.error_message, "error_message"),
+        ):
+            if value is not None and not isinstance(value, str):
+                raise TypeError(f"{name} must be a string or None")
+        if self.qcschema_envelope_id is not None:
+            _require_uuid(self.qcschema_envelope_id, "qcschema_envelope_id")
+
+
+@dataclass(frozen=True, slots=True)
 class CalculationRecord:
     id: UUID
     revision: str
@@ -483,6 +563,7 @@ class CalculationRecord:
     result_structure_ids: tuple[UUID, ...]
     dataset_ids: tuple[UUID, ...]
     provenance_ids: tuple[UUID, ...]
+    metadata: CalculationMetadata | None = None
 
     def __post_init__(self):
         _require_uuid(self.id, "id")
@@ -496,6 +577,10 @@ class CalculationRecord:
             "provenance_ids",
         ):
             object.__setattr__(self, name, _require_uuid_tuple(getattr(self, name), name))
+        if self.metadata is not None and not isinstance(
+            self.metadata, CalculationMetadata
+        ):
+            raise TypeError("metadata must be CalculationMetadata or None")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1879,6 +1964,7 @@ class ParserReport:
 class ImportBatch:
     structures: tuple[Structure, ...] = ()
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
+    qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
     symmetry_results: tuple[SymmetryResult, ...] = ()
     calculations: tuple[CalculationRecord, ...] = ()
     datasets: tuple[PropertyDataset | Grid3D, ...] = ()
@@ -1892,6 +1978,7 @@ class ImportBatch:
         groups = (
             ("structures", Structure),
             ("cif_envelopes", CIFEnvelope),
+            ("qcschema_envelopes", QCSchemaEnvelope),
             ("symmetry_results", SymmetryResult),
             ("calculations", CalculationRecord),
             ("datasets", PropertyDataset),
@@ -1915,6 +2002,7 @@ class QCProject:
     schema_version: str
     structures: dict[UUID, Structure] = field(default_factory=dict)
     cif_envelopes: dict[UUID, CIFEnvelope] = field(default_factory=dict)
+    qcschema_envelopes: dict[UUID, QCSchemaEnvelope] = field(default_factory=dict)
     symmetry_results: dict[UUID, SymmetryResult] = field(default_factory=dict)
     calculations: dict[UUID, CalculationRecord] = field(default_factory=dict)
     datasets: dict[UUID, PropertyDataset | Grid3D] = field(default_factory=dict)
@@ -1935,6 +2023,7 @@ class QCProject:
         incoming_groups = (
             batch.structures,
             batch.cif_envelopes,
+            batch.qcschema_envelopes,
             batch.symmetry_results,
             batch.calculations,
             batch.datasets,
@@ -1959,6 +2048,9 @@ class QCProject:
         structure_ids = set(structures)
         cif_envelope_ids = set(self.cif_envelopes).union(
             envelope.id for envelope in batch.cif_envelopes
+        )
+        qcschema_envelope_ids = set(self.qcschema_envelopes).union(
+            envelope.id for envelope in batch.qcschema_envelopes
         )
         symmetry_result_ids = set(self.symmetry_results).union(
             result.id for result in batch.symmetry_results
@@ -1996,6 +2088,12 @@ class QCProject:
                 envelope.provenance_ids,
                 provenance_ids,
                 "CIF envelope provenance",
+            )
+        for envelope in batch.qcschema_envelopes:
+            self._require_references(
+                envelope.provenance_ids,
+                provenance_ids,
+                "QCSchema envelope provenance",
             )
         for result in batch.symmetry_results:
             try:
@@ -2042,6 +2140,15 @@ class QCProject:
                 provenance_ids,
                 "calculation provenance",
             )
+            if (
+                calculation.metadata is not None
+                and calculation.metadata.qcschema_envelope_id is not None
+                and calculation.metadata.qcschema_envelope_id
+                not in qcschema_envelope_ids
+            ):
+                raise ValueError(
+                    "calculation has a dangling QCSchema envelope reference"
+                )
         for dataset in batch.datasets:
             if (
                 dataset.source_calculation is not None
@@ -2238,6 +2345,7 @@ class QCProject:
         all_ids = (
             structure_ids
             | cif_envelope_ids
+            | qcschema_envelope_ids
             | symmetry_result_ids
             | calculation_ids
             | dataset_ids
@@ -2257,6 +2365,9 @@ class QCProject:
         self.cif_envelopes.update(
             (entity.id, entity) for entity in batch.cif_envelopes
         )
+        self.qcschema_envelopes.update(
+            (entity.id, entity) for entity in batch.qcschema_envelopes
+        )
         self.symmetry_results.update(
             (entity.id, entity) for entity in batch.symmetry_results
         )
@@ -2273,6 +2384,7 @@ class QCProject:
         groups = (
             self.structures,
             self.cif_envelopes,
+            self.qcschema_envelopes,
             self.symmetry_results,
             self.calculations,
             self.datasets,
@@ -2290,6 +2402,7 @@ class QCProject:
         groups = (
             (self.structures, Structure, "structures"),
             (self.cif_envelopes, CIFEnvelope, "cif_envelopes"),
+            (self.qcschema_envelopes, QCSchemaEnvelope, "qcschema_envelopes"),
             (self.symmetry_results, SymmetryResult, "symmetry_results"),
             (self.calculations, CalculationRecord, "calculations"),
             (self.datasets, PropertyDataset, "datasets"),

@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [phase4-qcschema-exchange.md](active/phase4-qcschema-exchange.md) | Version-decoupled QCSchema exchange adapter |
+| active | [phase4-cjson-exchange.md](active/phase4-cjson-exchange.md) | Avogadro CJSON lightweight project exchange adapter |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -40,6 +40,7 @@ Historical documents provide provenance, not current status.
 | decision | [0019-versioned-recipe-contract.md](decisions/0019-versioned-recipe-contract.md) | Versioned recipe definition, binding and validation contract |
 | decision | [0020-external-analysis-process-boundary.md](decisions/0020-external-analysis-process-boundary.md) | Safe subprocess, artifact and failure-isolation boundary |
 | decision | [0021-topology-graph-and-critic2-json.md](decisions/0021-topology-graph-and-critic2-json.md) | Neutral topology semantics and critic2 JSON boundary |
+| decision | [0022-versioned-qcschema-exchange.md](decisions/0022-versioned-qcschema-exchange.md) | QCSchema v1/v2 adapter, raw envelope and internal metadata boundary |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
@@ -59,6 +60,7 @@ Historical documents provide provenance, not current status.
 | completed | [recipe-contract.md](completed/recipe-contract.md) | Strict recipe schema, binding and derivation identity evidence |
 | completed | [external-analysis-adapters.md](completed/external-analysis-adapters.md) | critic2/Multiwfn descriptors and safe process runner evidence |
 | completed | [topology-graph-and-critic2.md](completed/topology-graph-and-critic2.md) | TopologyGraph, critic2 JSON and Blender point/path evidence |
+| completed | [qcschema-exchange.md](completed/qcschema-exchange.md) | QCSchema AtomicResult/Molecule v1/v2 exchange and raw-envelope evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.

@@ -31,3 +31,6 @@
 [submodule "submodules/critic2"]
 	path = submodules/critic2
 	url = https://github.com/aoterodelaroza/critic2.git
+[submodule "submodules/qcelemental"]
+	path = submodules/qcelemental
+	url = https://github.com/MolSSI/QCElemental.git

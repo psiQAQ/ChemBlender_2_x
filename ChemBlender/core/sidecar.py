@@ -126,7 +126,7 @@ def _file_hash(path):
 
 
 def _array_content_hash(array):
-    contiguous = _numpy().ascontiguousarray(array)
+    contiguous = _numpy().array(array, copy=True, order="C", subok=False)
     header = json.dumps(
         {"dtype": contiguous.dtype.str, "shape": contiguous.shape},
         sort_keys=True,

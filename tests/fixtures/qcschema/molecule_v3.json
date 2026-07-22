@@ -1,0 +1,10 @@
+{
+  "schema_name": "qcschema_molecule",
+  "schema_version": 3,
+  "symbols": ["N", "H", "H", "H"],
+  "geometry": [0.0, 0.0, 0.1, 1.7, 0.0, -0.4, -0.85, 1.472, -0.4, -0.85, -1.472, -0.4],
+  "molecular_charge": 1.0,
+  "molecular_multiplicity": 1,
+  "identifiers": {"molecular_formula": "H3N+"},
+  "extras": {"selection": [0, 1]}
+}

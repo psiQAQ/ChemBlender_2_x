@@ -92,6 +92,30 @@ def sample_project():
 
 
 class SidecarStorageTests(unittest.TestCase):
+    def test_scalar_array_round_trip_preserves_zero_rank(self):
+        dataset = PropertyDataset(
+            id=UUID("60000000-0000-0000-0000-000000000006"),
+            revision="scalar-v1",
+            semantic_role="return_energy",
+            domain="global",
+            data=ArrayData(numpy.asarray(-1.25), (), "hartree"),
+            status=DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+        )
+        project = QCProject(
+            id=UUID("70000000-0000-0000-0000-000000000007"),
+            schema_version="0.1",
+        )
+        project.commit(ImportBatch(datasets=(dataset,)))
+        with TemporaryDirectory() as directory:
+            root = save_project(Path(directory) / "scalar.cbq", project)
+            restored = open_project(root)
+            scalar = restored.datasets[dataset.id].data
+            self.assertEqual(scalar.shape, ())
+            self.assertEqual(float(numpy.asarray(scalar.values)), -1.25)
+            close_project(restored)
+
     def test_round_trip_restores_identity_and_lazy_arrays(self):
         with TemporaryDirectory() as directory:
             root = Path(directory) / "h2.cbq"
