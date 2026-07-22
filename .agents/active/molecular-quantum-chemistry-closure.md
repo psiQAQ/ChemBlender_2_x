@@ -38,3 +38,4 @@
 - [Cube reader 设计](../../docs/superpowers/specs/2026-07-22-cube-reader-design.md)
 - [Cube reader 实现计划](../../docs/superpowers/plans/2026-07-22-cube-reader.md)
 - [Grid3D 到 OpenVDB Volume adapter 设计](../../docs/superpowers/specs/2026-07-22-grid-volume-adapter-design.md)
+- [Grid3D OpenVDB Volume adapter 实现计划](../../docs/superpowers/plans/2026-07-22-grid-volume-adapter.md)
