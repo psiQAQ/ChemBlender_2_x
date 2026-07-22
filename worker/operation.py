@@ -1,9 +1,21 @@
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from ChemBlender.core import ImportBatch
 
 from .protocol import EntityReference
+
+
+_ERROR_CODE = re.compile(r"[a-z][a-z0-9_.-]*")
+
+
+class OperationError(RuntimeError):
+    def __init__(self, code, message):
+        if not isinstance(code, str) or not _ERROR_CODE.fullmatch(code):
+            raise ValueError("operation error code must be a lower token")
+        super().__init__(message)
+        self.code = code
 
 
 @dataclass(frozen=True, slots=True)

@@ -37,3 +37,6 @@
 [submodule "submodules/avogadrolibs"]
 	path = submodules/avogadrolibs
 	url = https://github.com/OpenChemistry/avogadrolibs.git
+[submodule "submodules/qcengine"]
+	path = submodules/qcengine
+	url = https://github.com/MolSSI/QCEngine.git

@@ -30,6 +30,8 @@ def _output(batch):
     groups = (
         batch.structures,
         batch.cif_envelopes,
+        batch.qcschema_envelopes,
+        batch.cjson_envelopes,
         batch.symmetry_results,
         batch.calculations,
         batch.datasets,

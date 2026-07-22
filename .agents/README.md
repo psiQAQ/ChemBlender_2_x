@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [phase4-qcengine-execution.md](active/phase4-qcengine-execution.md) | Optional QCEngine/PySCF local worker execution boundary |
+| active | [phase4-analysis-report.md](active/phase4-analysis-report.md) | Deterministic local analysis report and citation bundle |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -42,6 +42,7 @@ Historical documents provide provenance, not current status.
 | decision | [0021-topology-graph-and-critic2-json.md](decisions/0021-topology-graph-and-critic2-json.md) | Neutral topology semantics and critic2 JSON boundary |
 | decision | [0022-versioned-qcschema-exchange.md](decisions/0022-versioned-qcschema-exchange.md) | QCSchema v1/v2 adapter, raw envelope and internal metadata boundary |
 | decision | [0023-cjson-lightweight-exchange.md](decisions/0023-cjson-lightweight-exchange.md) | CJSON stable-field normalization and raw-envelope boundary |
+| decision | [0024-qcschema-compute-worker-boundary.md](decisions/0024-qcschema-compute-worker-boundary.md) | QCEngine/PySCF optional execution and AtomicResult recovery boundary |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
@@ -63,6 +64,7 @@ Historical documents provide provenance, not current status.
 | completed | [topology-graph-and-critic2.md](completed/topology-graph-and-critic2.md) | TopologyGraph, critic2 JSON and Blender point/path evidence |
 | completed | [qcschema-exchange.md](completed/qcschema-exchange.md) | QCSchema AtomicResult/Molecule v1/v2 exchange and raw-envelope evidence |
 | completed | [cjson-exchange.md](completed/cjson-exchange.md) | Avogadro CJSON structure, topology, trajectory and light-result exchange evidence |
+| completed | [qcengine-and-pyscf-execution.md](completed/qcengine-and-pyscf-execution.md) | QCEngine/PySCF worker execution, failure and cancellation evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.

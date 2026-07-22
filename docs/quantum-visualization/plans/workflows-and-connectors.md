@@ -38,6 +38,12 @@
 - 相同输入、参数和程序版本产生相同 derivation identity。
 - connector 断网或凭据缺失不影响本地项目打开与浏览。
 
+## 当前进度
+
+recipe、critic2/Multiwfn 进程边界、critic2 topology、QCSchema/CJSON exchange 和
+QCEngine/PySCF 可选执行均已完成。下一步生成可复现的本地分析报告与引用清单；数据库
+connector 仍等待具体服务与鉴权需求。
+
 ## 参考仓库触发条件
 
 - 定义首批 recipe 时审阅 quantum-chem-skills 的功能分类和工作流，不直接复制占位脚本。

@@ -15,7 +15,7 @@ from .protocol import (
     read_request,
     write_result,
 )
-from .operation import OperationContext, OperationOutput
+from .operation import OperationContext, OperationError, OperationOutput
 
 
 _TOKEN = re.compile(r"[a-z][a-z0-9_.-]*")
@@ -50,6 +50,8 @@ def _entities(project):
     registries = (
         project.structures,
         project.cif_envelopes,
+        project.qcschema_envelopes,
+        project.cjson_envelopes,
         project.symmetry_results,
         project.calculations,
         project.datasets,
@@ -75,6 +77,8 @@ def _batch_references(batch):
     groups = (
         batch.structures,
         batch.cif_envelopes,
+        batch.qcschema_envelopes,
+        batch.cjson_envelopes,
         batch.symmetry_results,
         batch.calculations,
         batch.datasets,
@@ -153,6 +157,13 @@ def run_request(request_path, result_path, registry, *, cancel_path=None):
                         output = operation(context, request)
                         if not isinstance(output, OperationOutput):
                             raise TypeError("operation must return OperationOutput")
+                    except OperationError as error:
+                        result = _error(
+                            request.request_id,
+                            WorkerStatus.ERROR,
+                            error.code,
+                            str(error) or error.code,
+                        )
                     except Exception as error:
                         result = _error(
                             request.request_id,
@@ -251,6 +262,9 @@ def default_registry():
     from .wavefunction_operations import register_wavefunction_operations
 
     register_wavefunction_operations(registry)
+    from .qcengine_operation import register_qcschema_compute_operation
+
+    register_qcschema_compute_operation(registry)
     return registry
 
 

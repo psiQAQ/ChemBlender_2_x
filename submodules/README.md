@@ -27,6 +27,7 @@ git add .gitmodules submodules/<name>
 | critic2 | `https://github.com/aoterodelaroza/critic2.git` | external adapter CLI、QTAIM/NCI 输入输出与 integration fixture | `4b5dec9131c3a035af1b421d68a227c47fd641db`；GPL-3.0；外部 worker 程序参考，不进入 Extension |
 | QCElemental | `https://github.com/MolSSI/QCElemental.git` | QCSchema v1/v2 model、字段迁移和 exchange fixture | `v0.50.4` / `46034a0587e2e74426cb1ae2d4d7f66ad5cf6090`；BSD-3-Clause；只用于 schema 审阅和测试，不进入 Extension |
 | avogadrolibs | `https://github.com/OpenChemistry/avogadrolibs.git` | CJSON 1 reader/writer、字段 convention 与 integration fixture | `1.103.0` / `5d5d11f4a9ca716f7fb9653eb92424f1714b68ac`；BSD-3-Clause；只用于交换格式审阅和测试，不进入 Extension |
+| QCEngine | `https://github.com/MolSSI/QCEngine.git` | QCSchema compute、program harness discovery、FailedOperation 与 provenance | `v0.50.0` / `d1842c4dd2c1e61eb9075a0d32ffefc7c4d5b318`；BSD-3-Clause；可选 worker 参考，不进入 Extension |
 | xyzrender | `https://github.com/aligfellow/xyzrender` | reader/Cube | 未拉取 |
 | Molecular Blender | 添加前核实 | 波函数/适应性表面 | 未拉取 |
 | Beautiful Atoms | 添加前核实 | volume/周期渲染 | 未拉取 |

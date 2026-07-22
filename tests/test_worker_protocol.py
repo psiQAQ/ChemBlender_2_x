@@ -302,7 +302,9 @@ class WorkerProtocolTests(unittest.TestCase):
             "import sys; from worker.runner import default_registry; "
             "registry = default_registry(); "
             "registry.get('wavefunction.mo_grid', '1'); "
-            "assert 'gbasis' not in sys.modules; assert 'pymatgen' not in sys.modules"
+            "registry.get('qcschema.compute', '1'); "
+            "assert 'gbasis' not in sys.modules; assert 'pymatgen' not in sys.modules; "
+            "assert 'qcengine' not in sys.modules; assert 'pyscf' not in sys.modules"
         )
         subprocess.run(
             [sys.executable, "-c", code],
