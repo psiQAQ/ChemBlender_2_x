@@ -20,7 +20,7 @@
 
 ## Next Action
 
-审阅最小 Cube reader 设计；批准后编写实施计划。设计支持完整三个 step vectors、`NVAL`/`DSET_IDS` 多 dataset、bohr 坐标和显式 grid semantic/value-unit ambiguity，只复用现有 `Grid3D` 与 reader contract。
+按已批准的实施计划实现最小 Cube reader：完整三个 step vectors、`NVAL`/`DSET_IDS` 多 dataset、bohr 坐标和显式 grid semantic/value-unit ambiguity。
 
 ## Completed
 
@@ -34,3 +34,4 @@
 - [Grid3D 与单位约定 ADR](../decisions/0004-grid3d-and-units.md)
 - [Reader capability contract ADR](../decisions/0005-reader-capability-contract.md)
 - [Cube reader 设计](../../docs/superpowers/specs/2026-07-22-cube-reader-design.md)
+- [Cube reader 实现计划](../../docs/superpowers/plans/2026-07-22-cube-reader.md)
