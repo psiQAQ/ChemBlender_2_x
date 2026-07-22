@@ -52,6 +52,17 @@ class IssueKind(str, Enum):
     WARNING = "warning"
 
 
+class BasisFunctionKind(str, Enum):
+    CARTESIAN = "cartesian"
+    PURE = "pure"
+
+
+class OrbitalKind(str, Enum):
+    RESTRICTED = "restricted"
+    UNRESTRICTED = "unrestricted"
+    GENERALIZED = "generalized"
+
+
 @dataclass(frozen=True, slots=True)
 class ArrayData:
     values: object
@@ -217,6 +228,210 @@ class FrameSet(PropertyDataset):
         object.__setattr__(self, "comments", comments)
 
 
+def _basis_function_count(angular_momentum, kind):
+    if kind is BasisFunctionKind.CARTESIAN:
+        return (angular_momentum + 1) * (angular_momentum + 2) // 2
+    if kind is BasisFunctionKind.PURE and angular_momentum >= 2:
+        return 2 * angular_momentum + 1
+    raise ValueError("pure basis functions require angular momentum >= 2")
+
+
+@dataclass(frozen=True, slots=True)
+class BasisShell:
+    center_atom: int
+    angular_momenta: tuple[int, ...]
+    kinds: tuple[BasisFunctionKind, ...]
+    exponents: ArrayData
+    coefficients: ArrayData
+
+    def __post_init__(self):
+        if (
+            isinstance(self.center_atom, bool)
+            or not isinstance(self.center_atom, int)
+            or self.center_atom < 0
+        ):
+            raise ValueError("center_atom must be a non-negative integer")
+        angular_momenta = tuple(self.angular_momenta)
+        kinds = tuple(self.kinds)
+        if not angular_momenta or len(angular_momenta) != len(kinds):
+            raise ValueError("basis shell contractions must have angular momenta and kinds")
+        if any(
+            isinstance(value, bool) or not isinstance(value, int) or value < 0
+            for value in angular_momenta
+        ):
+            raise ValueError("basis angular momenta must be non-negative integers")
+        if any(not isinstance(kind, BasisFunctionKind) for kind in kinds):
+            raise TypeError("basis kinds must be BasisFunctionKind values")
+        for angular_momentum, kind in zip(angular_momenta, kinds):
+            _basis_function_count(angular_momentum, kind)
+        if self.exponents.dims != ("primitive",) or self.exponents.unit != "inverse_square_bohr":
+            raise ValueError("basis exponents must use (primitive,) and inverse_square_bohr")
+        if (
+            self.coefficients.dims != ("primitive", "contraction")
+            or self.coefficients.unit != "dimensionless"
+            or self.coefficients.shape
+            != (self.exponents.shape[0], len(angular_momenta))
+        ):
+            raise ValueError("basis coefficients must match primitive and contraction counts")
+        object.__setattr__(self, "angular_momenta", angular_momenta)
+        object.__setattr__(self, "kinds", kinds)
+
+    @property
+    def basis_function_count(self):
+        return sum(
+            _basis_function_count(angular_momentum, kind)
+            for angular_momentum, kind in zip(self.angular_momenta, self.kinds)
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class BasisConvention:
+    angular_momentum: int
+    kind: BasisFunctionKind
+    functions: tuple[str, ...]
+
+    def __post_init__(self):
+        if (
+            isinstance(self.angular_momentum, bool)
+            or not isinstance(self.angular_momentum, int)
+            or self.angular_momentum < 0
+        ):
+            raise ValueError("convention angular momentum must be non-negative")
+        if not isinstance(self.kind, BasisFunctionKind):
+            raise TypeError("convention kind must be a BasisFunctionKind")
+        functions = tuple(self.functions)
+        expected = _basis_function_count(self.angular_momentum, self.kind)
+        if len(functions) != expected or any(
+            not isinstance(function, str) or not function for function in functions
+        ):
+            raise ValueError("basis convention functions must match the function count")
+        object.__setattr__(self, "functions", functions)
+
+    @property
+    def function_count(self):
+        return len(self.functions)
+
+
+@dataclass(frozen=True, slots=True)
+class BasisSet:
+    id: UUID
+    revision: str
+    structure_id: UUID
+    name: str
+    shells: tuple[BasisShell, ...]
+    conventions: tuple[BasisConvention, ...]
+    primitive_normalization: str
+    provenance_ids: tuple[UUID, ...]
+
+    def __post_init__(self):
+        _require_uuid(self.id, "id")
+        _require_text(self.revision, "revision")
+        _require_uuid(self.structure_id, "structure_id")
+        _require_text(self.name, "name")
+        shells = tuple(self.shells)
+        conventions = tuple(self.conventions)
+        if not shells or any(not isinstance(shell, BasisShell) for shell in shells):
+            raise ValueError("BasisSet requires BasisShell values")
+        if not conventions or any(
+            not isinstance(convention, BasisConvention) for convention in conventions
+        ):
+            raise ValueError("BasisSet requires BasisConvention values")
+        if len({(item.angular_momentum, item.kind) for item in conventions}) != len(
+            conventions
+        ):
+            raise ValueError("BasisSet conventions must have unique angular momentum and kind")
+        if self.primitive_normalization not in {"l1", "l2"}:
+            raise ValueError("primitive_normalization must be l1 or l2")
+        object.__setattr__(self, "shells", shells)
+        object.__setattr__(self, "conventions", conventions)
+        object.__setattr__(
+            self,
+            "provenance_ids",
+            _require_uuid_tuple(self.provenance_ids, "provenance_ids"),
+        )
+
+    @property
+    def basis_function_count(self):
+        return sum(shell.basis_function_count for shell in self.shells)
+
+
+@dataclass(frozen=True, slots=True)
+class OrbitalChannel:
+    label: str
+    coefficients: ArrayData
+    energies: ArrayData | None
+    occupations: ArrayData | None
+    irreps: tuple[str, ...]
+
+    def __post_init__(self):
+        if self.label not in {"restricted", "alpha", "beta", "generalized"}:
+            raise ValueError("invalid orbital channel label")
+        expected_dims = (
+            ("orbital", "spin_basis_function")
+            if self.label == "generalized"
+            else ("orbital", "basis_function")
+        )
+        if (
+            self.coefficients.dims != expected_dims
+            or self.coefficients.unit != "dimensionless"
+            or any(size <= 0 for size in self.coefficients.shape)
+        ):
+            raise ValueError("orbital coefficients have invalid dimensions or unit")
+        orbital_count = self.coefficients.shape[0]
+        for name in ("energies", "occupations"):
+            values = getattr(self, name)
+            if values is not None and (
+                values.dims != ("orbital",) or values.shape != (orbital_count,)
+            ):
+                raise ValueError(f"orbital {name} must match the orbital count")
+        if self.energies is not None and self.energies.unit != "hartree":
+            raise ValueError("orbital energies must use hartree")
+        if self.occupations is not None and self.occupations.unit != "dimensionless":
+            raise ValueError("orbital occupations must be dimensionless")
+        irreps = tuple(self.irreps)
+        if irreps and (
+            len(irreps) != orbital_count
+            or any(not isinstance(irrep, str) or not irrep for irrep in irreps)
+        ):
+            raise ValueError("orbital irreps must be empty or match the orbital count")
+        object.__setattr__(self, "irreps", irreps)
+
+
+@dataclass(frozen=True, slots=True)
+class OrbitalSet:
+    id: UUID
+    revision: str
+    structure_id: UUID
+    basis_set_id: UUID
+    kind: OrbitalKind
+    channels: tuple[OrbitalChannel, ...]
+    provenance_ids: tuple[UUID, ...]
+
+    def __post_init__(self):
+        _require_uuid(self.id, "id")
+        _require_text(self.revision, "revision")
+        _require_uuid(self.structure_id, "structure_id")
+        _require_uuid(self.basis_set_id, "basis_set_id")
+        if not isinstance(self.kind, OrbitalKind):
+            raise TypeError("kind must be an OrbitalKind")
+        channels = tuple(self.channels)
+        if any(not isinstance(channel, OrbitalChannel) for channel in channels):
+            raise TypeError("channels must contain OrbitalChannel values")
+        expected = {
+            OrbitalKind.RESTRICTED: ("restricted",),
+            OrbitalKind.UNRESTRICTED: ("alpha", "beta"),
+            OrbitalKind.GENERALIZED: ("generalized",),
+        }[self.kind]
+        if tuple(channel.label for channel in channels) != expected:
+            raise ValueError("orbital channels do not match orbital kind")
+        object.__setattr__(self, "channels", channels)
+        object.__setattr__(
+            self,
+            "provenance_ids",
+            _require_uuid_tuple(self.provenance_ids, "provenance_ids"),
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class Grid3D(PropertyDataset):
     origin: tuple[float, float, float]
@@ -353,6 +568,8 @@ class ImportBatch:
     structures: tuple[Structure, ...] = ()
     calculations: tuple[CalculationRecord, ...] = ()
     datasets: tuple[PropertyDataset | Grid3D, ...] = ()
+    basis_sets: tuple[BasisSet, ...] = ()
+    orbital_sets: tuple[OrbitalSet, ...] = ()
     provenance: tuple[ProvenanceRecord, ...] = ()
     report: ParserReport | None = None
 
@@ -361,6 +578,8 @@ class ImportBatch:
             ("structures", Structure),
             ("calculations", CalculationRecord),
             ("datasets", PropertyDataset),
+            ("basis_sets", BasisSet),
+            ("orbital_sets", OrbitalSet),
             ("provenance", ProvenanceRecord),
         )
         for name, entity_type in groups:
@@ -379,6 +598,8 @@ class QCProject:
     structures: dict[UUID, Structure] = field(default_factory=dict)
     calculations: dict[UUID, CalculationRecord] = field(default_factory=dict)
     datasets: dict[UUID, PropertyDataset | Grid3D] = field(default_factory=dict)
+    basis_sets: dict[UUID, BasisSet] = field(default_factory=dict)
+    orbital_sets: dict[UUID, OrbitalSet] = field(default_factory=dict)
     provenance: dict[UUID, ProvenanceRecord] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -394,6 +615,8 @@ class QCProject:
             batch.structures,
             batch.calculations,
             batch.datasets,
+            batch.basis_sets,
+            batch.orbital_sets,
             batch.provenance,
         )
         incoming = tuple(entity for group in incoming_groups for entity in group)
@@ -414,6 +637,12 @@ class QCProject:
             calculation.id for calculation in batch.calculations
         )
         dataset_ids = set(self.datasets).union(dataset.id for dataset in batch.datasets)
+        basis_sets = dict(self.basis_sets)
+        basis_sets.update((basis.id, basis) for basis in batch.basis_sets)
+        basis_set_ids = set(basis_sets)
+        orbital_set_ids = set(self.orbital_sets).union(
+            orbital_set.id for orbital_set in batch.orbital_sets
+        )
         provenance_ids = set(self.provenance).union(
             record.id for record in batch.provenance
         )
@@ -460,7 +689,51 @@ class QCProject:
                     raise ValueError(
                         "FrameSet and structure coordinate units must match"
                     )
-        all_ids = structure_ids | calculation_ids | dataset_ids | provenance_ids
+        for basis in batch.basis_sets:
+            try:
+                reference = structures[basis.structure_id]
+            except KeyError as error:
+                raise ValueError("BasisSet has a dangling structure reference") from error
+            if any(
+                shell.center_atom >= len(reference.atomic_numbers)
+                for shell in basis.shells
+            ):
+                raise ValueError("BasisSet shell center is outside its structure")
+            self._require_references(
+                basis.provenance_ids,
+                provenance_ids,
+                "basis provenance",
+            )
+        for orbital_set in batch.orbital_sets:
+            if orbital_set.structure_id not in structure_ids:
+                raise ValueError("OrbitalSet has a dangling structure reference")
+            try:
+                basis = basis_sets[orbital_set.basis_set_id]
+            except KeyError as error:
+                raise ValueError("OrbitalSet has a dangling basis reference") from error
+            if basis.structure_id != orbital_set.structure_id:
+                raise ValueError("OrbitalSet structure must match its BasisSet")
+            expected_width = basis.basis_function_count * (
+                2 if orbital_set.kind is OrbitalKind.GENERALIZED else 1
+            )
+            if any(
+                channel.coefficients.shape[1] != expected_width
+                for channel in orbital_set.channels
+            ):
+                raise ValueError("OrbitalSet coefficient width must match its BasisSet")
+            self._require_references(
+                orbital_set.provenance_ids,
+                provenance_ids,
+                "orbital provenance",
+            )
+        all_ids = (
+            structure_ids
+            | calculation_ids
+            | dataset_ids
+            | basis_set_ids
+            | orbital_set_ids
+            | provenance_ids
+        )
         for record in batch.provenance:
             self._require_references(record.parent_ids, all_ids, "provenance parent")
         if batch.report is not None and set(batch.report.created_entity_ids) != set(
@@ -471,10 +744,19 @@ class QCProject:
         self.structures.update((entity.id, entity) for entity in batch.structures)
         self.calculations.update((entity.id, entity) for entity in batch.calculations)
         self.datasets.update((entity.id, entity) for entity in batch.datasets)
+        self.basis_sets.update((entity.id, entity) for entity in batch.basis_sets)
+        self.orbital_sets.update((entity.id, entity) for entity in batch.orbital_sets)
         self.provenance.update((entity.id, entity) for entity in batch.provenance)
 
     def _all_entity_ids(self):
-        groups = (self.structures, self.calculations, self.datasets, self.provenance)
+        groups = (
+            self.structures,
+            self.calculations,
+            self.datasets,
+            self.basis_sets,
+            self.orbital_sets,
+            self.provenance,
+        )
         ids = [entity_id for group in groups for entity_id in group]
         if len(set(ids)) != len(ids):
             raise ValueError("project registries contain duplicate entity UUIDs")
@@ -485,6 +767,8 @@ class QCProject:
             (self.structures, Structure, "structures"),
             (self.calculations, CalculationRecord, "calculations"),
             (self.datasets, PropertyDataset, "datasets"),
+            (self.basis_sets, BasisSet, "basis_sets"),
+            (self.orbital_sets, OrbitalSet, "orbital_sets"),
             (self.provenance, ProvenanceRecord, "provenance"),
         )
         for registry, entity_type, name in groups:

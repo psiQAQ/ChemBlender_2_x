@@ -38,6 +38,16 @@ Pillow is not bundled while ChemBlender does not import PIL or call Pillow-depen
 
 cclib is an optional parser backend, not a Blender Extension wheel. `ChemBlender.core` and `ChemBlender.core.cclib_adapter` import without loading cclib or its numerical stack; only `parse_cclib_output()` loads the dependency. Developers may install the pinned submodule into an ignored isolated environment for integration tests. Never install it during Blender import, registration, enable, or file parsing fallback.
 
+| Item | Value |
+| --- | --- |
+| Package | `qc-iodata==1.0.1` |
+| Runtime boundary | independent CPython core environment |
+| Reference source | `submodules/iodata` at `adab5813713ba64641565eb2a8c11803a4e9bba6` (`v1.0.1`) |
+| License | GPL-3.0-or-later |
+| Transitive requirements | NumPy, SciPy, attrs |
+
+IOData is the optional FCHK/Molden basis and orbital parser. Its adapter preserves atomic units and basis conventions in ChemBlender-owned entities. Neither IOData nor its submodule is packaged in the Blender Extension; only `parse_iodata_wavefunction()` loads it in an external core environment.
+
 ## Local Extension Gates
 
 1. Run `blender-mcp --help`.
