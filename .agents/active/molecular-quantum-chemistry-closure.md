@@ -20,12 +20,13 @@
 
 ## Next Action
 
-设计 normalized `Grid3D` 到 Blender 可重建视图的最小 adapter，比较 Blender Volume/OpenVDB 与 mesh fallback 的实际运行边界；不在没有基准时实现两套后端。
+按推荐方案实现 normalized `Grid3D` 到 Blender OpenVDB Volume 的最小 adapter：显式 cache path、斜网格 affine transform、bohr 到 angstrom 显示换算，以及 dataset UUID/revision/index 恢复属性。
 
 ## Completed
 
 - 已选择标准库原生 Cube parser，不提前引入 IOData 或扩展 `Grid3D` 轴标签模型。
 - Cube reader 已实现斜网格、bohr 坐标、`NVAL`/`DSET_IDS` 多 dataset 去交错、dataset ID provenance，以及显式 semantic/value-unit ambiguity。
+- Blender 5.1.2 bundled `openvdb` 已通过斜 transform、写入和 Volume 重新加载探针；首版不实现无证据需要的第二套 mesh backend。
 
 ## References
 
@@ -36,3 +37,4 @@
 - [Reader capability contract ADR](../decisions/0005-reader-capability-contract.md)
 - [Cube reader 设计](../../docs/superpowers/specs/2026-07-22-cube-reader-design.md)
 - [Cube reader 实现计划](../../docs/superpowers/plans/2026-07-22-cube-reader.md)
+- [Grid3D 到 OpenVDB Volume adapter 设计](../../docs/superpowers/specs/2026-07-22-grid-volume-adapter-design.md)
