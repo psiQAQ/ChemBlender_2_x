@@ -1,3 +1,11 @@
+from .analysis_report import (
+    AnalysisReportError,
+    build_analysis_report,
+    describe_report_artifact,
+    render_analysis_report_markdown,
+    validate_analysis_report,
+    write_analysis_report_bundle,
+)
 from .ase_adapter import (
     ASE_STRUCTURE_READER,
     ASEDependencyError,
@@ -184,6 +192,7 @@ from .vibration_spectrum import (
 )
 
 __all__ = [
+    "AnalysisReportError",
     "AmbiguousReaderError",
     "ASE_STRUCTURE_READER",
     "ASEDependencyError",
@@ -284,6 +293,7 @@ __all__ = [
     "TrajectoryFrameManager",
     "XYZ_READER",
     "adapt_ase_atoms",
+    "build_analysis_report",
     "export_qcschema",
     "export_cjson",
     "export_qcschema_atomic_result",
@@ -327,11 +337,13 @@ __all__ = [
     "derive_phonon_frames",
     "derive_symmetry",
     "derive_vibrational_spectrum",
+    "describe_report_artifact",
     "close_project",
     "derivation_cache_key",
     "open_project",
     "parser_cache_key",
     "render_cache_key",
+    "render_analysis_report_markdown",
     "builtin_recipes",
     "plan_recipe",
     "recipe_document",
@@ -340,4 +352,6 @@ __all__ = [
     "source_hash_bytes",
     "surface_render_cache_key",
     "volume_render_cache_key",
+    "validate_analysis_report",
+    "write_analysis_report_bundle",
 ]

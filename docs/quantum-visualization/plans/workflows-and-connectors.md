@@ -41,8 +41,8 @@
 ## 当前进度
 
 recipe、critic2/Multiwfn 进程边界、critic2 topology、QCSchema/CJSON exchange 和
-QCEngine/PySCF 可选执行均已完成。下一步生成可复现的本地分析报告与引用清单；数据库
-connector 仍等待具体服务与鉴权需求。
+QCEngine/PySCF 可选执行和确定性本地分析报告均已完成。下一步将 recipe view 映射为
+versioned publication scene preset；数据库 connector 仍等待具体服务与鉴权需求。
 
 ## 参考仓库触发条件
 
