@@ -9,8 +9,11 @@ from uuid import uuid4
 import numpy
 
 from ChemBlender.core import (
+    AtomicProperty,
     BasisFunctionKind,
     CapabilitySupport,
+    DensityMatrixLevel,
+    DensityMatrixSpin,
     IssueKind,
     OrbitalKind,
     QCProject,
@@ -90,12 +93,14 @@ def fake_mo(kind="restricted"):
 def fake_iodata(kind="restricted", **overrides):
     values = {
         "atnums": numpy.asarray([1]),
+        "atcorenums": numpy.asarray([0.8]),
         "atcoords": numpy.asarray([[0.0, 0.0, 0.0]]),
         "obasis": fake_basis(),
         "obasis_name": "sto-3g",
         "mo": fake_mo(kind),
         "title": "synthetic wavefunction",
         "energy": -0.5,
+        "one_rdms": {"scf": numpy.asarray([[1.0, 0.1], [0.1, 0.5]])},
     }
     values.update(overrides)
     return SimpleNamespace(**values)
@@ -138,6 +143,8 @@ class IODataAdapterTests(unittest.TestCase):
         self.assertEqual(len(batch.structures), 1)
         self.assertEqual(len(batch.basis_sets), 1)
         self.assertEqual(len(batch.orbital_sets), 1)
+        self.assertEqual(len(batch.density_matrices), 1)
+        self.assertEqual(len(batch.datasets), 1)
         structure = batch.structures[0]
         basis = batch.basis_sets[0]
         orbitals = batch.orbital_sets[0]
@@ -153,8 +160,20 @@ class IODataAdapterTests(unittest.TestCase):
         self.assertEqual(restricted.energies.unit, "hartree")
         self.assertEqual(restricted.occupations.unit, "dimensionless")
         self.assertEqual(restricted.irreps, ("a1", "b1"))
+        matrix = batch.density_matrices[0]
+        self.assertIs(matrix.level, DensityMatrixLevel.SCF)
+        self.assertIs(matrix.spin_role, DensityMatrixSpin.TOTAL)
+        self.assertEqual(matrix.data.shape, (2, 2))
+        nuclear_charge = batch.datasets[0]
+        self.assertIsInstance(nuclear_charge, AtomicProperty)
+        self.assertEqual(nuclear_charge.structure_id, structure.id)
+        self.assertEqual(nuclear_charge.semantic_role, "nuclear_charge")
+        self.assertEqual(nuclear_charge.domain, "atom")
+        self.assertEqual(nuclear_charge.data.unit, "elementary_charge")
+        self.assertAlmostEqual(nuclear_charge.data.values[0], 0.8)
         self.assertEqual(
-            batch.report.parsed_capabilities, ("structure", "basis_set", "orbital")
+            batch.report.parsed_capabilities,
+            ("structure", "basis_set", "orbital", "atomic_property", "density_matrix"),
         )
         params = dict(batch.provenance[0].parameters)
         self.assertEqual(params["iodata_version"], "1.0.1")
@@ -210,6 +229,44 @@ class IODataAdapterTests(unittest.TestCase):
         self.assertIn((IssueKind.MISSING, "orbital.occupations"), issues)
         self.assertIn((IssueKind.MISSING, "orbital.irreps"), issues)
 
+    def test_rdm_roles_unknown_keys_and_missing_rdms_are_explicit(self):
+        matrices = {
+            "scf": numpy.eye(2),
+            "scf_spin": numpy.eye(2) * 0.2,
+            "post_scf_ao": numpy.eye(2) * 0.9,
+            "post_scf_spin_ao": numpy.eye(2) * 0.1,
+            "custom": numpy.eye(2),
+        }
+        batch = adapt_iodata(
+            fake_iodata(one_rdms=matrices),
+            Path("matrices.fchk"),
+            iodata_version="1.0.1",
+        )
+        self.assertEqual(
+            tuple((item.level, item.spin_role) for item in batch.density_matrices),
+            (
+                (DensityMatrixLevel.POST_SCF, DensityMatrixSpin.TOTAL),
+                (DensityMatrixLevel.POST_SCF, DensityMatrixSpin.SPIN),
+                (DensityMatrixLevel.SCF, DensityMatrixSpin.TOTAL),
+                (DensityMatrixLevel.SCF, DensityMatrixSpin.SPIN),
+            ),
+        )
+        self.assertTrue(
+            any(
+                issue.kind is IssueKind.UNSUPPORTED
+                and issue.path == "one_rdms.custom"
+                for issue in batch.report.issues
+            )
+        )
+
+        without = adapt_iodata(
+            fake_iodata(one_rdms={}),
+            Path("without-rdm.molden"),
+            iodata_version="1.0.1",
+        )
+        self.assertEqual(without.density_matrices, ())
+        self.assertNotIn("density_matrix", without.report.parsed_capabilities)
+
     def test_invalid_required_shapes_and_basis_kinds_fail(self):
         invalid_basis = fake_basis()
         invalid_basis.shells[0].kinds = numpy.asarray(["invalid"])
@@ -218,6 +275,8 @@ class IODataAdapterTests(unittest.TestCase):
             fake_iodata(atnums=numpy.asarray([1, 1])),
             fake_iodata(obasis=invalid_basis),
             fake_iodata(mo=SimpleNamespace(**{**vars(fake_mo()), "coeffs": numpy.zeros((3, 2))})),
+            fake_iodata(one_rdms={"scf": numpy.eye(2, dtype=complex) * (1 + 1j)}),
+            fake_iodata(atcorenums=numpy.asarray([0.8 + 0.1j])),
         )
         for data in cases:
             with self.subTest(data=data):
@@ -232,6 +291,8 @@ class IODataAdapterTests(unittest.TestCase):
                 "structure": CapabilitySupport.SUPPORTED,
                 "basis_set": CapabilitySupport.SUPPORTED,
                 "orbital": CapabilitySupport.SUPPORTED,
+                "atomic_property": CapabilitySupport.SUPPORTED,
+                "density_matrix": CapabilitySupport.SUPPORTED,
             },
         )
         manifest = (ROOT / "ChemBlender" / "blender_manifest.toml").read_text(
@@ -242,11 +303,11 @@ class IODataAdapterTests(unittest.TestCase):
     @unittest.skipUnless(HAS_IODATA_INTEGRATION, "IOData integration environment unavailable")
     def test_real_fchk_and_molden_wavefunctions(self):
         cases = (
-            (RESTRICTED_FCHK, OrbitalKind.RESTRICTED, 7, 7),
-            (UNRESTRICTED_FCHK, OrbitalKind.UNRESTRICTED, 8, 8),
-            (MOLDEN_FIXTURE, OrbitalKind.RESTRICTED, 19, 19),
+            (RESTRICTED_FCHK, OrbitalKind.RESTRICTED, 7, 7, 1),
+            (UNRESTRICTED_FCHK, OrbitalKind.UNRESTRICTED, 8, 8, 2),
+            (MOLDEN_FIXTURE, OrbitalKind.RESTRICTED, 19, 19, 0),
         )
-        for source, kind, basis_count, alpha_count in cases:
+        for source, kind, basis_count, alpha_count, matrix_count in cases:
             with self.subTest(source=source):
                 batch = parse_iodata_wavefunction(source)
                 basis = batch.basis_sets[0]
@@ -257,6 +318,8 @@ class IODataAdapterTests(unittest.TestCase):
                 self.assertEqual(
                     orbitals.channels[0].coefficients.shape[1], basis_count
                 )
+                self.assertEqual(len(batch.density_matrices), matrix_count)
+                self.assertEqual(batch.datasets[0].semantic_role, "nuclear_charge")
                 if source == MOLDEN_FIXTURE:
                     self.assertTrue(
                         any(

@@ -27,6 +27,22 @@ class GBasisDependencyError(RuntimeError):
     pass
 
 
+def _require_gbasis_version():
+    try:
+        from importlib.metadata import PackageNotFoundError, version
+
+        actual_version = version(BACKEND_NAME)
+    except PackageNotFoundError as error:
+        raise GBasisDependencyError(
+            f"cannot determine installed {BACKEND_NAME} version"
+        ) from error
+    if actual_version != BACKEND_VERSION:
+        raise GBasisDependencyError(
+            f"wavefunction evaluation requires {BACKEND_NAME}=={BACKEND_VERSION}; "
+            f"found {actual_version}"
+        )
+
+
 def _validate_entities(structure, basis_set, orbital_set):
     if not isinstance(structure, Structure):
         raise TypeError("structure must be a Structure")
@@ -177,8 +193,6 @@ def _basis_function_signs(basis_set):
 
 def _evaluate_channel(structure, basis_set, coefficients, points):
     try:
-        from importlib.metadata import PackageNotFoundError, version
-
         import numpy
         from gbasis.contractions import GeneralizedContractionShell
         from gbasis.evals.eval import evaluate_basis
@@ -186,17 +200,7 @@ def _evaluate_channel(structure, basis_set, coefficients, points):
         raise GBasisDependencyError(
             "wavefunction evaluation requires the optional qc-gbasis==0.1.0 dependency"
         ) from error
-    try:
-        actual_version = version(BACKEND_NAME)
-    except PackageNotFoundError as error:
-        raise GBasisDependencyError(
-            f"cannot determine installed {BACKEND_NAME} version"
-        ) from error
-    if actual_version != BACKEND_VERSION:
-        raise GBasisDependencyError(
-            f"wavefunction evaluation requires {BACKEND_NAME}=={BACKEND_VERSION}; "
-            f"found {actual_version}"
-        )
+    _require_gbasis_version()
     shells = _gbasis_shells(structure, basis_set, GeneralizedContractionShell)
     signs = numpy.asarray(_basis_function_signs(basis_set), dtype=float)
     transform = numpy.asarray(coefficients, dtype=float) * signs[numpy.newaxis, :]

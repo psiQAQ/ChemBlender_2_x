@@ -67,6 +67,7 @@ generalized contraction 不拆成多份重复 shell。`BasisShell.basis_function
 | IOData 字段 | ChemBlender | 处理规则 |
 | --- | --- | --- |
 | `atnums`, `atcoords` | `Structure` | `(atom, xyz)`, bohr |
+| `atcorenums` | `AtomicProperty(nuclear_charge)` | `(atom,)`, elementary charge；保留 ECP effective charge |
 | `obasis.shells` | `BasisShell` | 数组复制并验证 |
 | `obasis.conventions` | `BasisConvention` | key 排序，函数顺序原样保留 |
 | `obasis.primitive_normalization` | `BasisSet` | `L2`/`L1` 规范化为小写 token |
@@ -76,6 +77,7 @@ generalized contraction 不拆成多份重复 shell。`BasisShell.basis_function
 | `mo.energies` | channel energies | hartree |
 | `mo.occs` | channel occupations | restricted 保留 spin-summed occupation |
 | `mo.irreps` | channel irreps | 字符串化，不编码进数值数组 |
+| `one_rdms` recognized keys | `DensityMatrix` | AO-basis total/spin 与 SCF/post-SCF 角色显式映射 |
 
 adapter 不通过 IOData 的 `coeffsa`/`coeffsb` 属性处理 generalized，因为上游明确对 generalized 抛出 `NotImplementedError`。
 
@@ -86,7 +88,7 @@ adapt_iodata(data, source, *, iodata_version="unknown") -> ImportBatch
 parse_iodata_wavefunction(source) -> ImportBatch
 ```
 
-`parse_iodata_wavefunction` 延迟 import `iodata.load_one`。reader ID 为 `iodata_wavefunction`，首版扩展名为 `.fchk`、`.fch`、`.molden`、`.input`，capability 为 structure、basis_set、orbital。sniff 只接受 FCHK 的 typed record 标记或 `[Molden Format]`。
+`parse_iodata_wavefunction` 延迟 import `iodata.load_one`。reader ID 为 `iodata_wavefunction`，扩展名为 `.fchk`、`.fch`、`.molden`、`.input`，capability 为 structure、basis_set、orbital、atomic_property 与 density_matrix。sniff 只接受 FCHK 的 typed record 标记或 `[Molden Format]`。
 
 缺少结构、basis、MO 或 coefficient 时解析失败。可选 energies、occupations、irreps 缺失时创建部分 `OrbitalSet` 并产生 `missing` issue，不制造零数组。未映射 IOData 属性名写入 provenance 和一个 `unsupported` issue。
 
@@ -98,11 +100,11 @@ parse_iodata_wavefunction(source) -> ImportBatch
 - unrestricted FCHK：`ch3_hf_sto3g.fchk`；
 - Molden：`h2o.molden.input`。
 
-标准测试使用 synthetic IOData-like objects 验证模型和转换；可选 integration 环境安装 submodule 后真实解析三份 fixture。generalized 由 synthetic model/adapter test 覆盖，因为 FCHK/Molden 通常不携带 generalized spinor。
+标准测试使用 synthetic IOData-like objects 验证模型和转换；可选 integration 环境安装 submodule 后真实解析三份 fixture。water FCHK 含 total SCF RDM，CH3 FCHK 含 total/spin SCF RDM，Molden fixture 不含 RDM。generalized 由 synthetic model/adapter test 覆盖，因为 FCHK/Molden 通常不携带 generalized spinor。
 
 ## Non-goals
 
-- 本阶段不映射 RDM、gradient、Hessian、优化轨迹、WFX/WFN/MWFN。
+- 本阶段不映射 gradient、Hessian、优化轨迹、WFX/WFN/MWFN 或 2-RDM。
 - 不实现 AO/MO 数值求值、密度网格、ESP 或等值面。
 - 不建立 lazy array store；当前小型 fixture 数组复制到 normalized entity。
 - 不将 basis shell 展开为逐 basis-function 大表。

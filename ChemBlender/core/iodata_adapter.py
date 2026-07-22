@@ -8,10 +8,15 @@ from uuid import uuid4
 
 from .model import (
     ArrayData,
+    AtomicProperty,
     BasisConvention,
     BasisFunctionKind,
     BasisSet,
     BasisShell,
+    DatasetStatus,
+    DensityMatrix,
+    DensityMatrixLevel,
+    DensityMatrixSpin,
     ImportBatch,
     IssueKind,
     OrbitalChannel,
@@ -31,7 +36,16 @@ from .readers import (
 
 
 ADAPTER_VERSION = "1"
-_MAPPED_ATTRIBUTES = {"atcoords", "atnums", "mo", "obasis", "obasis_name", "title"}
+_MAPPED_ATTRIBUTES = {
+    "atcoords",
+    "atcorenums",
+    "atnums",
+    "mo",
+    "obasis",
+    "obasis_name",
+    "one_rdms",
+    "title",
+}
 _KNOWN_IODATA_ATTRIBUTES = (
     "atcharges",
     "atcoords",
@@ -226,7 +240,6 @@ def _optional_orbital_array(mo, name, count, issues):
 def _channel(label, coefficients, energies, occupations, irreps):
     import numpy
 
-    orbital_count = coefficients.shape[1]
     dims = (
         ("orbital", "spin_basis_function")
         if label == "generalized"
@@ -339,6 +352,65 @@ def _adapt_orbitals(mo, basis, structure_id, provenance_id, revision, issues):
     )
 
 
+_DENSITY_MATRIX_ROLES = {
+    "scf": (DensityMatrixLevel.SCF, DensityMatrixSpin.TOTAL),
+    "scf_spin": (DensityMatrixLevel.SCF, DensityMatrixSpin.SPIN),
+    "post_scf": (DensityMatrixLevel.POST_SCF, DensityMatrixSpin.TOTAL),
+    "post_scf_ao": (DensityMatrixLevel.POST_SCF, DensityMatrixSpin.TOTAL),
+    "post_scf_spin": (DensityMatrixLevel.POST_SCF, DensityMatrixSpin.SPIN),
+    "post_scf_spin_ao": (DensityMatrixLevel.POST_SCF, DensityMatrixSpin.SPIN),
+}
+
+
+def _adapt_density_matrices(
+    one_rdms, basis, structure_id, provenance_id, revision, issues
+):
+    import numpy
+
+    matrices = []
+    for key in sorted(one_rdms or {}):
+        try:
+            level, spin_role = _DENSITY_MATRIX_ROLES[key]
+        except KeyError:
+            issues.append(
+                ParserIssue(
+                    IssueKind.UNSUPPORTED,
+                    f"one_rdms.{key}",
+                    "IOData density-matrix role is not mapped",
+                )
+            )
+            continue
+        values = _array(
+            one_rdms[key],
+            f"one_rdms.{key}",
+            2,
+            shape=(basis.basis_function_count, basis.basis_function_count),
+        )
+        if numpy.iscomplexobj(values):
+            raise ValueError(f"IOData one_rdms.{key} must be real")
+        values = numpy.asarray(values, dtype=float)
+        if not numpy.allclose(values, values.T):
+            raise ValueError(f"IOData one_rdms.{key} must be symmetric")
+        matrices.append(
+            DensityMatrix(
+                id=uuid4(),
+                revision=revision,
+                structure_id=structure_id,
+                basis_set_id=basis.id,
+                level=level,
+                spin_role=spin_role,
+                data=ArrayData(
+                    numpy.array(values, dtype=float, copy=True),
+                    ("basis_function_row", "basis_function_column"),
+                    "dimensionless",
+                ),
+                source_calculation=None,
+                provenance_ids=(provenance_id,),
+            )
+        )
+    return tuple(matrices)
+
+
 def adapt_iodata(data, source, *, iodata_version="unknown") -> ImportBatch:
     import numpy
 
@@ -375,6 +447,39 @@ def adapt_iodata(data, source, *, iodata_version="unknown") -> ImportBatch:
     orbitals = _adapt_orbitals(
         data.mo, basis, structure_id, provenance_id, revision, issues
     )
+    atcorenums = getattr(data, "atcorenums", None)
+    if atcorenums is None:
+        atcorenums = atnums
+    atcorenums = _array(
+        atcorenums, "atcorenums", 1, shape=(len(atnums),)
+    )
+    if numpy.iscomplexobj(atcorenums):
+        raise ValueError("IOData atcorenums must be real")
+    if (atcorenums < 0).any():
+        raise ValueError("IOData atcorenums must be non-negative")
+    nuclear_charges = AtomicProperty(
+        id=uuid4(),
+        revision=revision,
+        semantic_role="nuclear_charge",
+        domain="atom",
+        data=ArrayData(
+            numpy.array(atcorenums, dtype=float, copy=True),
+            ("atom",),
+            "elementary_charge",
+        ),
+        status=DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(provenance_id,),
+        structure_id=structure_id,
+    )
+    density_matrices = _adapt_density_matrices(
+        getattr(data, "one_rdms", {}),
+        basis,
+        structure_id,
+        provenance_id,
+        revision,
+        issues,
+    )
 
     unmapped = _unmapped_attributes(data)
     if unmapped:
@@ -405,17 +510,30 @@ def adapt_iodata(data, source, *, iodata_version="unknown") -> ImportBatch:
             ("unmapped_attributes", unmapped),
         ),
     )
+    created = (
+        structure.id,
+        nuclear_charges.id,
+        basis.id,
+        orbitals.id,
+        *(matrix.id for matrix in density_matrices),
+        provenance.id,
+    )
+    parsed_capabilities = ["structure", "basis_set", "orbital", "atomic_property"]
+    if density_matrices:
+        parsed_capabilities.append("density_matrix")
     report = ParserReport(
         reader_id="iodata_wavefunction",
         reader_version=ADAPTER_VERSION,
-        created_entity_ids=(structure.id, basis.id, orbitals.id, provenance.id),
-        parsed_capabilities=("structure", "basis_set", "orbital"),
+        created_entity_ids=created,
+        parsed_capabilities=tuple(parsed_capabilities),
         issues=tuple(issues),
     )
     return ImportBatch(
         structures=(structure,),
+        datasets=(nuclear_charges,),
         basis_sets=(basis,),
         orbital_sets=(orbitals,),
+        density_matrices=density_matrices,
         provenance=(provenance,),
         report=report,
     )
@@ -457,6 +575,8 @@ IODATA_WAVEFUNCTION_READER = ReaderDescriptor(
         "structure": CapabilitySupport.SUPPORTED,
         "basis_set": CapabilitySupport.SUPPORTED,
         "orbital": CapabilitySupport.SUPPORTED,
+        "atomic_property": CapabilitySupport.SUPPORTED,
+        "density_matrix": CapabilitySupport.SUPPORTED,
     },
     priority=90,
     sniff=sniff_iodata_wavefunction,

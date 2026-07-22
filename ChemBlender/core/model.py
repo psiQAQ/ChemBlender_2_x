@@ -63,6 +63,16 @@ class OrbitalKind(str, Enum):
     GENERALIZED = "generalized"
 
 
+class DensityMatrixLevel(str, Enum):
+    SCF = "scf"
+    POST_SCF = "post_scf"
+
+
+class DensityMatrixSpin(str, Enum):
+    TOTAL = "total"
+    SPIN = "spin"
+
+
 @dataclass(frozen=True, slots=True)
 class ArrayData:
     values: object
@@ -194,6 +204,19 @@ class PropertyDataset:
             "provenance_ids",
             _require_uuid_tuple(self.provenance_ids, "provenance_ids"),
         )
+
+
+@dataclass(frozen=True, slots=True)
+class AtomicProperty(PropertyDataset):
+    structure_id: UUID
+
+    def __post_init__(self):
+        super(AtomicProperty, self).__post_init__()
+        _require_uuid(self.structure_id, "structure_id")
+        if self.domain != "atom" or not self.data.dims or self.data.dims[0] != "atom":
+            raise ValueError(
+                "AtomicProperty must use atom domain and leading atom dimension"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -433,6 +456,46 @@ class OrbitalSet:
 
 
 @dataclass(frozen=True, slots=True)
+class DensityMatrix:
+    id: UUID
+    revision: str
+    structure_id: UUID
+    basis_set_id: UUID
+    level: DensityMatrixLevel
+    spin_role: DensityMatrixSpin
+    data: ArrayData
+    source_calculation: UUID | None
+    provenance_ids: tuple[UUID, ...]
+
+    def __post_init__(self):
+        _require_uuid(self.id, "id")
+        _require_text(self.revision, "revision")
+        _require_uuid(self.structure_id, "structure_id")
+        _require_uuid(self.basis_set_id, "basis_set_id")
+        if not isinstance(self.level, DensityMatrixLevel):
+            raise TypeError("level must be a DensityMatrixLevel")
+        if not isinstance(self.spin_role, DensityMatrixSpin):
+            raise TypeError("spin_role must be a DensityMatrixSpin")
+        if (
+            self.data.dims
+            != ("basis_function_row", "basis_function_column")
+            or len(self.data.shape) != 2
+            or self.data.shape[0] <= 0
+            or self.data.shape[0] != self.data.shape[1]
+            or self.data.unit != "dimensionless"
+            or "complex" in self.data.dtype.lower()
+        ):
+            raise ValueError("density matrix must be a real dimensionless square AO matrix")
+        if self.source_calculation is not None:
+            _require_uuid(self.source_calculation, "source_calculation")
+        object.__setattr__(
+            self,
+            "provenance_ids",
+            _require_uuid_tuple(self.provenance_ids, "provenance_ids"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class Grid3D(PropertyDataset):
     origin: tuple[float, float, float]
     step_vectors: tuple[
@@ -570,6 +633,7 @@ class ImportBatch:
     datasets: tuple[PropertyDataset | Grid3D, ...] = ()
     basis_sets: tuple[BasisSet, ...] = ()
     orbital_sets: tuple[OrbitalSet, ...] = ()
+    density_matrices: tuple[DensityMatrix, ...] = ()
     provenance: tuple[ProvenanceRecord, ...] = ()
     report: ParserReport | None = None
 
@@ -580,6 +644,7 @@ class ImportBatch:
             ("datasets", PropertyDataset),
             ("basis_sets", BasisSet),
             ("orbital_sets", OrbitalSet),
+            ("density_matrices", DensityMatrix),
             ("provenance", ProvenanceRecord),
         )
         for name, entity_type in groups:
@@ -600,6 +665,7 @@ class QCProject:
     datasets: dict[UUID, PropertyDataset | Grid3D] = field(default_factory=dict)
     basis_sets: dict[UUID, BasisSet] = field(default_factory=dict)
     orbital_sets: dict[UUID, OrbitalSet] = field(default_factory=dict)
+    density_matrices: dict[UUID, DensityMatrix] = field(default_factory=dict)
     provenance: dict[UUID, ProvenanceRecord] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -617,6 +683,7 @@ class QCProject:
             batch.datasets,
             batch.basis_sets,
             batch.orbital_sets,
+            batch.density_matrices,
             batch.provenance,
         )
         incoming = tuple(entity for group in incoming_groups for entity in group)
@@ -642,6 +709,9 @@ class QCProject:
         basis_set_ids = set(basis_sets)
         orbital_set_ids = set(self.orbital_sets).union(
             orbital_set.id for orbital_set in batch.orbital_sets
+        )
+        density_matrix_ids = set(self.density_matrices).union(
+            matrix.id for matrix in batch.density_matrices
         )
         provenance_ids = set(self.provenance).union(
             record.id for record in batch.provenance
@@ -674,6 +744,17 @@ class QCProject:
                 provenance_ids,
                 "dataset provenance",
             )
+            if isinstance(dataset, AtomicProperty):
+                try:
+                    reference = structures[dataset.structure_id]
+                except KeyError as error:
+                    raise ValueError(
+                        "AtomicProperty has a dangling structure reference"
+                    ) from error
+                if dataset.data.shape[0] != len(reference.atomic_numbers):
+                    raise ValueError(
+                        "AtomicProperty atom dimension must match its structure"
+                    )
             if isinstance(dataset, FrameSet):
                 try:
                     reference = structures[dataset.structure_id]
@@ -726,12 +807,37 @@ class QCProject:
                 provenance_ids,
                 "orbital provenance",
             )
+        for matrix in batch.density_matrices:
+            if matrix.structure_id not in structure_ids:
+                raise ValueError("DensityMatrix has a dangling structure reference")
+            try:
+                basis = basis_sets[matrix.basis_set_id]
+            except KeyError as error:
+                raise ValueError("DensityMatrix has a dangling basis reference") from error
+            if basis.structure_id != matrix.structure_id:
+                raise ValueError("DensityMatrix structure must match its BasisSet")
+            if matrix.data.shape != (
+                basis.basis_function_count,
+                basis.basis_function_count,
+            ):
+                raise ValueError("DensityMatrix width must match its BasisSet")
+            if (
+                matrix.source_calculation is not None
+                and matrix.source_calculation not in calculation_ids
+            ):
+                raise ValueError("DensityMatrix has a dangling calculation reference")
+            self._require_references(
+                matrix.provenance_ids,
+                provenance_ids,
+                "density matrix provenance",
+            )
         all_ids = (
             structure_ids
             | calculation_ids
             | dataset_ids
             | basis_set_ids
             | orbital_set_ids
+            | density_matrix_ids
             | provenance_ids
         )
         for record in batch.provenance:
@@ -746,6 +852,9 @@ class QCProject:
         self.datasets.update((entity.id, entity) for entity in batch.datasets)
         self.basis_sets.update((entity.id, entity) for entity in batch.basis_sets)
         self.orbital_sets.update((entity.id, entity) for entity in batch.orbital_sets)
+        self.density_matrices.update(
+            (entity.id, entity) for entity in batch.density_matrices
+        )
         self.provenance.update((entity.id, entity) for entity in batch.provenance)
 
     def _all_entity_ids(self):
@@ -755,6 +864,7 @@ class QCProject:
             self.datasets,
             self.basis_sets,
             self.orbital_sets,
+            self.density_matrices,
             self.provenance,
         )
         ids = [entity_id for group in groups for entity_id in group]
@@ -769,6 +879,7 @@ class QCProject:
             (self.datasets, PropertyDataset, "datasets"),
             (self.basis_sets, BasisSet, "basis_sets"),
             (self.orbital_sets, OrbitalSet, "orbital_sets"),
+            (self.density_matrices, DensityMatrix, "density_matrices"),
             (self.provenance, ProvenanceRecord, "provenance"),
         )
         for registry, entity_type, name in groups:

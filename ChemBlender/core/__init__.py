@@ -15,6 +15,7 @@ from .iodata_adapter import (
 )
 from .model import (
     ArrayData,
+    AtomicProperty,
     BasisConvention,
     BasisFunctionKind,
     BasisSet,
@@ -22,6 +23,9 @@ from .model import (
     CalculationRecord,
     CalculationStatus,
     DatasetStatus,
+    DensityMatrix,
+    DensityMatrixLevel,
+    DensityMatrixSpin,
     FrameSet,
     Grid3D,
     ImportBatch,
@@ -52,10 +56,15 @@ from .wavefunction_grid import (
     evaluate_electron_density_grid,
     evaluate_molecular_orbital_grid,
 )
+from .wavefunction_observables import (
+    evaluate_density_matrix_grid,
+    evaluate_electrostatic_potential_grid,
+)
 
 __all__ = [
     "AmbiguousReaderError",
     "ArrayData",
+    "AtomicProperty",
     "BasisConvention",
     "BasisFunctionKind",
     "BasisSet",
@@ -67,6 +76,9 @@ __all__ = [
     "CCLibDependencyError",
     "CUBE_READER",
     "DatasetStatus",
+    "DensityMatrix",
+    "DensityMatrixLevel",
+    "DensityMatrixSpin",
     "FrameSet",
     "Grid3D",
     "GBasisDependencyError",
@@ -103,5 +115,7 @@ __all__ = [
     "parse_iodata_wavefunction",
     "sniff_iodata_wavefunction",
     "evaluate_electron_density_grid",
+    "evaluate_density_matrix_grid",
+    "evaluate_electrostatic_potential_grid",
     "evaluate_molecular_orbital_grid",
 ]

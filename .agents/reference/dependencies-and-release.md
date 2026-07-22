@@ -46,7 +46,7 @@ cclib is an optional parser backend, not a Blender Extension wheel. `ChemBlender
 | License | GPL-3.0-or-later |
 | Transitive requirements | NumPy, SciPy, attrs |
 
-IOData is the optional FCHK/Molden basis and orbital parser. Its adapter preserves atomic units and basis conventions in ChemBlender-owned entities. Neither IOData nor its submodule is packaged in the Blender Extension; only `parse_iodata_wavefunction()` loads it in an external core environment.
+IOData is the optional FCHK/Molden basis, orbital, AO-basis 1-RDM, and effective nuclear-charge parser. Its adapter preserves atomic units, basis conventions, total/spin matrix roles, and ECP-aware `atcorenums` in ChemBlender-owned entities. Neither IOData nor its submodule is packaged in the Blender Extension; only `parse_iodata_wavefunction()` loads it in an external core environment.
 
 | Item | Value |
 | --- | --- |
@@ -57,7 +57,7 @@ IOData is the optional FCHK/Molden basis and orbital parser. Its adapter preserv
 | Transitive requirements | NumPy, SciPy, SymPy, importlib-resources |
 | Recommended worker Python | 3.12 on Windows |
 
-GBasis evaluates normalized Gaussian basis functions, molecular orbitals and density grids. Install the modern distribution as `qc-gbasis`; do not install the withdrawn legacy `gbasis` distribution. Version 0.1.0 declares `numpy<2` on Windows, so its standard dependency set has no Python 3.13-compatible NumPy wheel. A Python 3.12/NumPy 1.26.4 worker is the supported local baseline. Python 3.13 with forced NumPy 2.5.1 produced matching probe results but is not a supported installation path. GBasis, IOData, SciPy and their submodules remain outside the Blender Extension ZIP.
+GBasis evaluates normalized Gaussian basis functions, molecular orbitals, total/spin density and electrostatic-potential grids. Install the modern distribution as `qc-gbasis`; do not install the withdrawn legacy `gbasis` distribution. Version 0.1.0 declares `numpy<2` on Windows, so its standard dependency set has no Python 3.13-compatible NumPy wheel. A Python 3.12/NumPy 1.26.4 worker is the supported local baseline. Python 3.13 with forced NumPy 2.5.1 produced matching probe results but is not a supported installation path. GBasis, IOData, SciPy and their submodules remain outside the Blender Extension ZIP.
 
 ## Local Extension Gates
 

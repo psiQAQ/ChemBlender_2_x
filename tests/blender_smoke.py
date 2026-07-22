@@ -38,6 +38,7 @@ def assert_enabled(module_key):
     assert f"{module_key}.core.mol_v2000" in sys.modules
     assert f"{module_key}.core.xyz" in sys.modules
     assert f"{module_key}.core.wavefunction_grid" in sys.modules
+    assert f"{module_key}.core.wavefunction_observables" in sys.modules
     assert "gbasis" not in sys.modules
     assert f"{module_key}.grid_volume" in sys.modules
     assert hasattr(bpy.types.Object, "cif_original")
