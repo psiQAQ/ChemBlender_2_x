@@ -14,7 +14,7 @@
 
 | 优先级 | 内容 | 选择门 |
 | --- | --- | --- |
-| P0 | `.cbq` manifest、source/parser/derivation/render hash、dataset UUID、原子写入和故障恢复 | Phase 0 对象身份与 provenance ADR 通过 |
+| P0 | `.cbq` manifest、source/parser/derivation/render hash、dataset UUID、原子写入和故障恢复 | 采用 [`.cbq` v0.1](../specs/cbq-sidecar-v0.1.md) 与 ADR 0015 |
 | P1 | 根据 benchmark 选择 Zarr 或 HDF5；加入 lazy loading、OpenVDB、独立 worker、长轨迹缓存 | Phase 1/2 有代表性数组规模和跨平台测试 |
 | P2 | 远程 worker、多计算 ensemble、搜索与项目级 provenance graph | 本地 worker 已稳定且出现真实远程需求 |
 
@@ -37,6 +37,13 @@
 - `.blend` 重开后通过 project/dataset UUID 恢复引用。
 - worker 崩溃不带崩 Blender，也不把部分结果标为成功。
 - 选定存储在 Windows、Linux、macOS 的维护成本有证据；未选方案不保留并行实现。
+
+## 当前实施顺序
+
+1. `.cbq` v0.1 manifest、content-addressed `.npy`、lazy open 与完整性校验。
+2. Blender scene 最小链接与 disconnected/stale 恢复状态。
+3. 使用 Phase 1/2 代表性数组完成存储 benchmark，再决定是否迁移到 Zarr 或 HDF5。
+4. 在稳定序列化协议上增加独立 worker，不让 Blender import 重型计算依赖。
 
 ## 参考仓库触发条件
 

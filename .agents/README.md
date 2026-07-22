@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [phase3-sidecar-cache.md](active/phase3-sidecar-cache.md) | `.cbq` sidecar manifest, lazy arrays and cache identity |
+| active | [phase3-worker-protocol.md](active/phase3-worker-protocol.md) | Representative array benchmark and local worker protocol |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -33,6 +33,7 @@ Historical documents provide provenance, not current status.
 | decision | [0012-periodic-band-dos-boundary.md](decisions/0012-periodic-band-dos-boundary.md) | Band/DOS/projection axes, energy reference and Blender curve contract |
 | decision | [0013-phonopy-complex-mode-boundary.md](decisions/0013-phonopy-complex-mode-boundary.md) | Phonopy complex q-point modes and periodic phase animation |
 | decision | [0014-fermi-surface-worker-boundary.md](decisions/0014-fermi-surface-worker-boundary.md) | Neutral Fermi-surface mesh and optional PyProcar worker boundary |
+| decision | [0015-cbq-npy-sidecar-and-cache-identity.md](decisions/0015-cbq-npy-sidecar-and-cache-identity.md) | `.cbq` v0.1 manifest, lazy arrays, atomic write and cache identity |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
@@ -45,6 +46,7 @@ Historical documents provide provenance, not current status.
 | completed | [phase1-blender-adapters.md](completed/phase1-blender-adapters.md) | Phase 1 scalar/vector/trajectory/linked-selection Blender closure evidence |
 | completed | [crystal-foundation.md](completed/crystal-foundation.md) | Gemmi/spglib periodic semantics, parsing and standardization evidence |
 | completed | [periodic-structure-and-fields.md](completed/periodic-structure-and-fields.md) | ASE structures, VASP scalar fields, periodic Grid3D identity and Blender evidence |
+| completed | [sidecar-and-cache-foundation.md](completed/sidecar-and-cache-foundation.md) | `.cbq` v0.1 sidecar, lazy arrays, cache keys and Blender scene link evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.

@@ -39,7 +39,7 @@
 
 ## Phase 3：大型数据与交互
 
-状态：进行中；当前进入 `.cbq` sidecar manifest 与 cache identity 基础。
+状态：进行中；`.cbq` v0.1 sidecar、lazy `.npy` 和 cache identity 已完成，当前进入存储 benchmark 与本地 worker 协议。
 
 进入条件：Phase 1/2 已提供网格、轨迹和轨道数组的规模基准。
 
@@ -70,6 +70,7 @@
 11. 已完成：band structure、DOS/PDOS、projection 与 Blender linked selection。
 12. 已完成：phonopy q-point、复数 eigenvector 与周期超胞动画。
 13. 已完成：Fermi-surface 中立 mesh schema 与 PyProcar worker adapter。
-14. 当前：`.cbq` sidecar manifest、lazy array reference 与分层 cache hash。
+14. 已完成：`.cbq` sidecar manifest、lazy array reference、Blender scene link 与分层 cache hash。
+15. 当前：代表性数组存储 benchmark、worker request/result/error/cancel/version 协议。
 
-周期 structure/grid 验收后继续 band/DOS 与 phonopy；大型缓存/worker 和 recipe 分别在 Phase 3/4 收口。
+Phase 3 先用 benchmark 决定 `.npy` 是否需要迁移到单一 chunked backend，再建立不阻塞 Blender 的本地 worker；recipe 在 Phase 4 收口。

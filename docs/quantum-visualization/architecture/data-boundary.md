@@ -40,7 +40,8 @@
 - 最小内容：project/dataset UUID、显示设置、缓存引用、派生对象身份、source hash 和失效规则。
 - 已有约束：`.blend` 保存视图状态与可重建缓存；边车保存权威数组、来源和 provenance。
 - 验证证据：重开 `.blend` 后可恢复 dataset 引用；源文件变化后旧表面不会继续标为有效。
-- 推迟选择：`.cbq` 目录布局、Zarr/HDF5、OpenVDB 和本地 IPC。
+- 已落地：`.cbq` v0.1 使用 JSON manifest、content-addressed `.npy`、原子发布、lazy open 与 Blender scene 最小链接；见 ADR 0015。
+- 推迟选择：基于 benchmark 的 Zarr/HDF5 单一后端迁移和本地 IPC。
 
 ## ADR 顺序
 

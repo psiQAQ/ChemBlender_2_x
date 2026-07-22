@@ -672,6 +672,44 @@ def assert_fermi_surface_view(module_key):
         bpy.data.meshes.remove(mesh)
 
 
+def assert_project_sidecar_link(module_key):
+    core = importlib.import_module(f"{module_key}.core")
+    links = importlib.import_module(f"{module_key}.project_link")
+    scene = bpy.context.scene
+    marker = bpy.data.meshes.new("ChemBlender sidecar marker mesh")
+    marker_object = bpy.data.objects.new("ChemBlender sidecar marker", marker)
+    scene.collection.objects.link(marker_object)
+    try:
+        with TemporaryDirectory() as directory:
+            directory = Path(directory)
+            blend_path = directory / "scene" / "view.blend"
+            sidecar = directory / "data" / "smoke.cbq"
+            project = core.QCProject(id=uuid4(), schema_version="0.1")
+            core.save_project(sidecar, project)
+            locator = links.write_project_link(
+                scene, project, sidecar, blend_path=blend_path
+            )
+            assert not Path(locator).is_absolute()
+            result = links.resolve_project_link(scene, blend_path=blend_path)
+            assert result.status is links.ProjectLinkStatus.CONNECTED
+            assert result.project.id == project.id
+
+            scene[links.SIDECAR_LOCATOR_KEY] = "missing.cbq"
+            result = links.resolve_project_link(scene, blend_path=blend_path)
+            assert result.status is links.ProjectLinkStatus.MISSING
+            assert marker_object.name in bpy.data.objects
+    finally:
+        for key in (
+            links.PROJECT_ID_KEY,
+            links.PROJECT_SCHEMA_KEY,
+            links.SIDECAR_LOCATOR_KEY,
+        ):
+            if key in scene:
+                del scene[key]
+        bpy.data.objects.remove(marker_object, do_unlink=True)
+        bpy.data.meshes.remove(marker)
+
+
 def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     reader = importlib.import_module(f"{module_key}.read")
     cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
@@ -721,6 +759,7 @@ assert_periodic_structure_view(module_key)
 assert_periodic_electronic_plots(module_key)
 assert_complex_phonon_trajectory(module_key)
 assert_fermi_surface_view(module_key)
+assert_project_sidecar_link(module_key)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 
 for _ in range(2):

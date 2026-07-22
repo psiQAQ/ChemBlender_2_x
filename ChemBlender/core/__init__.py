@@ -6,6 +6,13 @@ from .ase_adapter import (
     sniff_ase_structure,
 )
 from .cube import CUBE_READER, parse_cube, sniff_cube
+from .cache_identity import (
+    CacheIdentityError,
+    derivation_cache_key,
+    parser_cache_key,
+    render_cache_key,
+    source_hash_bytes,
+)
 from .cclib_adapter import (
     CCLIB_OUTPUT_READER,
     CCLibDependencyError,
@@ -102,6 +109,16 @@ from .spglib_adapter import (
     SpglibDependencyError,
     derive_symmetry,
 )
+from .sidecar import (
+    LazyNpyArray,
+    SidecarCompatibilityError,
+    SidecarError,
+    SidecarIntegrityError,
+    SidecarNotFoundError,
+    close_project,
+    open_project,
+    save_project,
+)
 from .xyz import XYZ_READER, parse_xyz, sniff_xyz
 from .wavefunction_grid import (
     GBasisDependencyError,
@@ -131,6 +148,7 @@ __all__ = [
     "BasisShell",
     "CalculationRecord",
     "CalculationStatus",
+    "CacheIdentityError",
     "CIFEnvelope",
     "CapabilitySupport",
     "CCLIB_OUTPUT_READER",
@@ -153,6 +171,7 @@ __all__ = [
     "GBasisDependencyError",
     "ImportBatch",
     "IssueKind",
+    "LazyNpyArray",
     "IODATA_WAVEFUNCTION_READER",
     "IODataDependencyError",
     "MOL_V2000_READER",
@@ -180,6 +199,10 @@ __all__ = [
     "SpectrumKind",
     "SpectrumProfile",
     "SpinChannel",
+    "SidecarCompatibilityError",
+    "SidecarError",
+    "SidecarIntegrityError",
+    "SidecarNotFoundError",
     "SpglibDependencyError",
     "Structure",
     "SurfaceProperty",
@@ -219,4 +242,11 @@ __all__ = [
     "derive_phonon_frames",
     "derive_symmetry",
     "derive_vibrational_spectrum",
+    "close_project",
+    "derivation_cache_key",
+    "open_project",
+    "parser_cache_key",
+    "render_cache_key",
+    "save_project",
+    "source_hash_bytes",
 ]
