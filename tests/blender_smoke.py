@@ -30,6 +30,7 @@ def assert_package_contents(package):
 
 def assert_enabled(module_key):
     assert module_key in bpy.context.preferences.addons
+    assert f"{module_key}.core.cube" in sys.modules
     assert f"{module_key}.core.mol_v2000" in sys.modules
     assert f"{module_key}.core.xyz" in sys.modules
     assert hasattr(bpy.types.Object, "cif_original")

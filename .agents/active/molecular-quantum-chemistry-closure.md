@@ -20,11 +20,12 @@
 
 ## Next Action
 
-按已批准的实施计划实现最小 Cube reader：完整三个 step vectors、`NVAL`/`DSET_IDS` 多 dataset、bohr 坐标和显式 grid semantic/value-unit ambiguity。
+设计 normalized `Grid3D` 到 Blender 可重建视图的最小 adapter，比较 Blender Volume/OpenVDB 与 mesh fallback 的实际运行边界；不在没有基准时实现两套后端。
 
 ## Completed
 
 - 已选择标准库原生 Cube parser，不提前引入 IOData 或扩展 `Grid3D` 轴标签模型。
+- Cube reader 已实现斜网格、bohr 坐标、`NVAL`/`DSET_IDS` 多 dataset 去交错、dataset ID provenance，以及显式 semantic/value-unit ambiguity。
 
 ## References
 
