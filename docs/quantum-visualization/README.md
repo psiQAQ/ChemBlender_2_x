@@ -26,7 +26,8 @@ Phase 0 已完成，当前进入 Phase 1 分子量子化学闭环。Cube/OpenVDB
 16. [cclib adapter 实现计划](../superpowers/plans/2026-07-22-cclib-adapter.md)
 17. [IOData 波函数语义设计](../superpowers/specs/2026-07-22-iodata-wavefunction-design.md)
 18. [IOData 波函数实现计划](../superpowers/plans/2026-07-22-iodata-wavefunction.md)
-19. [当前任务](../../.agents/active/molecular-quantum-chemistry-closure.md)
+19. [已完成的分子量化读取闭环](../../.agents/completed/molecular-quantum-chemistry-ingestion.md)
+20. [当前任务](../../.agents/active/wavefunction-derived-fields.md)
 
 路线图和主题计划保存稳定范围、依赖顺序与验收标准；`.agents/active/` 只记录正在执行的一个任务及其下一步。临时 commit、测试运行和本机状态不写入路线图。
 

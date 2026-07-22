@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [molecular-quantum-chemistry-closure.md](active/molecular-quantum-chemistry-closure.md) | Phase 1 molecular output, wavefunction, grid, and Blender closure |
+| active | [wavefunction-derived-fields.md](active/wavefunction-derived-fields.md) | MO/density numerical grids and Blender derived-field closure |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -29,6 +29,7 @@ Historical documents provide provenance, not current status.
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
 | completed | [quantum-visualization-foundation.md](completed/quantum-visualization-foundation.md) | Phase 0 semantic model, reader contract, and cross-format normalization evidence |
+| completed | [molecular-quantum-chemistry-ingestion.md](completed/molecular-quantum-chemistry-ingestion.md) | Cube/OpenVDB, cclib, IOData, basis, and orbital ingestion evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.
