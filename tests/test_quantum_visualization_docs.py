@@ -56,7 +56,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         ):
             self.assertIn(decision, text)
 
-    def test_reference_catalog_and_empty_submodule_placeholder(self):
+    def test_reference_catalog_and_pinned_submodule(self):
         references = self.read_doc("docs/quantum-visualization/references.md")
         placeholder = self.read_doc("submodules/README.md")
         for project in (
@@ -74,9 +74,12 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         ):
             self.assertIn(project, references)
         self.assertIn("git submodule add", placeholder)
-        self.assertFalse((ROOT / ".gitmodules").exists())
+        gitmodules = self.read_doc(".gitmodules")
+        self.assertIn("submodules/cclib", gitmodules)
         children = {path.name for path in (ROOT / "submodules").iterdir()}
-        self.assertEqual(children, {"README.md"})
+        self.assertEqual(children, {"README.md", "cclib"})
+        self.assertTrue((ROOT / "submodules" / "cclib" / "LICENSE").exists())
+        self.assertIn("07260dd0394cb1a2381d4d897746d727a12ad6ce", placeholder)
 
     def test_single_active_task(self):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))

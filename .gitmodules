@@ -1,0 +1,3 @@
+[submodule "submodules/cclib"]
+	path = submodules/cclib
+	url = https://github.com/cclib/cclib.git
