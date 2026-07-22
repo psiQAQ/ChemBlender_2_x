@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [phase4-scene-templates.md](active/phase4-scene-templates.md) | Versioned publication scene presets and render identity |
+| active | [phase4-scene-preset-application.md](active/phase4-scene-preset-application.md) | Blender application and rollback for validated scene plans |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | decision | [0001-version-and-extension-roadmap.md](decisions/0001-version-and-extension-roadmap.md) | 2.1.1 and 2.2.0 boundary rationale |
@@ -44,6 +44,7 @@ Historical documents provide provenance, not current status.
 | decision | [0023-cjson-lightweight-exchange.md](decisions/0023-cjson-lightweight-exchange.md) | CJSON stable-field normalization and raw-envelope boundary |
 | decision | [0024-qcschema-compute-worker-boundary.md](decisions/0024-qcschema-compute-worker-boundary.md) | QCEngine/PySCF optional execution and AtomicResult recovery boundary |
 | decision | [0025-deterministic-analysis-report.md](decisions/0025-deterministic-analysis-report.md) | Deterministic report manifest, citation and artifact boundary |
+| decision | [0026-versioned-scene-presets.md](decisions/0026-versioned-scene-presets.md) | Pure-data publication preset, binding and render identity boundary |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
@@ -67,6 +68,7 @@ Historical documents provide provenance, not current status.
 | completed | [cjson-exchange.md](completed/cjson-exchange.md) | Avogadro CJSON structure, topology, trajectory and light-result exchange evidence |
 | completed | [qcengine-and-pyscf-execution.md](completed/qcengine-and-pyscf-execution.md) | QCEngine/PySCF worker execution, failure and cancellation evidence |
 | completed | [analysis-report-bundle.md](completed/analysis-report-bundle.md) | Deterministic JSON/Markdown report, citation and artifact evidence |
+| completed | [scene-preset-contract.md](completed/scene-preset-contract.md) | Versioned scene definitions, plans and linked dataset evidence |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.

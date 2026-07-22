@@ -37,6 +37,12 @@
 - 轨道正负相位使用两个明确 dataset 或 surface，不依赖法向猜测。
 - register/unregister/reload 和重开文件后 dataset 引用仍可恢复。
 
+## 当前进度
+
+基础 structure/dataset/vector/trajectory/vibration/electronic plot/topology/Fermi-surface adapters
+和 [scene preset v1](../specs/scene-preset-v1.md) 已完成。下一步仅对已有稳定 adapter 重放
+preset plan，并让尚无实现的 surface-property plan 明确失败。
+
 ## 参考仓库触发条件
 
 - 轨迹、session、选择和整数标签编码进入实施时审阅 Molecular Nodes。

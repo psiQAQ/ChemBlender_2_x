@@ -161,11 +161,18 @@ from .recipe import (
     recipe_document,
     recipe_from_document,
 )
-from .spglib_adapter import (
-    SpglibDependencyError,
-    derive_symmetry,
+from .scene_preset import (
+    SceneBindingSpec,
+    ScenePresetDefinition,
+    ScenePresetError,
+    ScenePresetPlan,
+    builtin_scene_presets,
+    plan_scene_preset,
+    scene_plan_document,
+    scene_preset_document,
+    scene_preset_from_document,
+    scene_preset_for_recipe_view,
 )
-from .trajectory_frames import FrameCacheInfo, TrajectoryFrameManager
 from .sidecar import (
     LazyNpyArray,
     SidecarCompatibilityError,
@@ -176,6 +183,11 @@ from .sidecar import (
     open_project,
     save_project,
 )
+from .spglib_adapter import (
+    SpglibDependencyError,
+    derive_symmetry,
+)
+from .trajectory_frames import FrameCacheInfo, TrajectoryFrameManager
 from .xyz import XYZ_READER, parse_xyz, sniff_xyz
 from .wavefunction_grid import (
     GBasisDependencyError,
@@ -278,6 +290,10 @@ __all__ = [
     "SpectrumKind",
     "SpectrumProfile",
     "SpinChannel",
+    "SceneBindingSpec",
+    "ScenePresetDefinition",
+    "ScenePresetError",
+    "ScenePresetPlan",
     "SidecarCompatibilityError",
     "SidecarError",
     "SidecarIntegrityError",
@@ -345,10 +361,16 @@ __all__ = [
     "render_cache_key",
     "render_analysis_report_markdown",
     "builtin_recipes",
+    "builtin_scene_presets",
     "plan_recipe",
+    "plan_scene_preset",
     "recipe_document",
     "recipe_from_document",
     "save_project",
+    "scene_plan_document",
+    "scene_preset_document",
+    "scene_preset_from_document",
+    "scene_preset_for_recipe_view",
     "source_hash_bytes",
     "surface_render_cache_key",
     "volume_render_cache_key",
