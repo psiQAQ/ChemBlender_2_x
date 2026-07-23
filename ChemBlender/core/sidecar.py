@@ -9,6 +9,7 @@ from pathlib import Path, PurePosixPath
 from uuid import UUID, uuid4
 
 from . import model
+from .model_registry import MODEL_ENUMS, model_type_from_tag, model_type_tag
 
 
 FORMAT_ID = "chemblender.cbq"
@@ -102,21 +103,6 @@ class LazyNpyArray:
             self._array = None
 
 
-def _model_registry():
-    classes = {}
-    enums = {}
-    for name, value in vars(model).items():
-        if isinstance(value, type) and value.__module__ == model.__name__:
-            if is_dataclass(value):
-                classes[name] = value
-            if issubclass(value, Enum):
-                enums[name] = value
-    return classes, enums
-
-
-_MODEL_CLASSES, _MODEL_ENUMS = _model_registry()
-
-
 def _file_hash(path):
     digest = hashlib.sha256()
     with Path(path).open("rb") as stream:
@@ -158,7 +144,12 @@ class _Encoder:
 
     def encode(self, value):
         if isinstance(value, Enum):
-            return {"$enum": type(value).__name__, "value": self.encode(value.value)}
+            for tag, enum_type in MODEL_ENUMS.items():
+                if enum_type is type(value):
+                    return {"$enum": tag, "value": self.encode(value.value)}
+            raise SidecarIntegrityError(
+                f"unsupported manifest value: {type(value).__name__}"
+            )
         if value is None or isinstance(value, (str, bool, int, float)):
             return value
         if isinstance(value, UUID):
@@ -176,14 +167,20 @@ class _Encoder:
                     for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
                 ]
             }
-        if isinstance(value, model.ArrayData):
+        if type(value) is model.ArrayData:
             encoded = {"$type": "ArrayData"}
             encoded["values"] = self._array(value.values)
             encoded["dims"] = self.encode(value.dims)
             encoded["unit"] = value.unit
             return encoded
-        if is_dataclass(value) and type(value).__name__ in _MODEL_CLASSES:
-            encoded = {"$type": type(value).__name__}
+        if is_dataclass(value):
+            try:
+                type_name = model_type_tag(value)
+            except TypeError as error:
+                raise SidecarIntegrityError(
+                    f"unsupported manifest value: {type(value).__name__}"
+                ) from error
+            encoded = {"$type": type_name}
             for item in fields(value):
                 if item.init:
                     encoded[item.name] = self.encode(getattr(value, item.name))
@@ -250,7 +247,7 @@ class _Decoder:
                 raise SidecarIntegrityError("invalid UUID in manifest") from error
         if "$enum" in value:
             try:
-                enum_type = _MODEL_ENUMS[value["$enum"]]
+                enum_type = MODEL_ENUMS[value["$enum"]]
                 return enum_type(self.decode(value["value"]))
             except (KeyError, TypeError, ValueError) as error:
                 raise SidecarIntegrityError("invalid enum in manifest") from error
@@ -278,7 +275,7 @@ class _Decoder:
                 value.get("unit"),
             )
         try:
-            class_type = _MODEL_CLASSES[type_name]
+            class_type = model_type_from_tag(type_name)
         except (KeyError, TypeError) as error:
             raise SidecarIntegrityError(f"unknown model type: {type_name!r}") from error
         expected = {item.name for item in fields(class_type) if item.init}
