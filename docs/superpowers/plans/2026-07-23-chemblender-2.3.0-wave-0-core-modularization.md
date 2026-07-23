@@ -26,7 +26,7 @@
 - Create: `tests/fixtures/sidecar/model-v01/README.md`
 - Create: `tests/fixtures/sidecar/model-v01/manifest.json`
 - Create: content-addressed NPY fixture under `tests/fixtures/sidecar/model-v01/arrays/` using the generator-produced SHA-256 filename
-- Modify: `tests/test_sidecar.py`
+- Modify: `tests/test_sidecar_storage.py`
 
 **Interfaces:**
 - Consumes: current `ChemBlender.core` and sidecar implementation.
@@ -60,7 +60,7 @@ class ModelPublicSurfaceTests(unittest.TestCase):
 
 - [ ] **Step 2: Generate and commit a deterministic v0.1 sidecar fixture**
 
-Use an existing test helper to create a project containing Structure, MolecularTopology, AtomicProperty, FrameSet, Grid3D and ProvenanceRecord. Save it with the current code before refactoring. Record the generating commit and SHA-256 in `README.md`.
+Use the production sidecar serializer from baseline commit `03d65f78afc27cd7f8d6fe33b4517dac8a61b7bd`. Expand the fixture builder as part of Task 1 so it creates Structure, MolecularTopology, AtomicProperty, FrameSet, Grid3D and ProvenanceRecord; that expanded helper is represented by Task 1 commit `6db0d970df595c8a845fd331e97bccd27b0d2586`. Record both provenance boundaries and the generated SHA-256 values in `README.md`.
 
 - [ ] **Step 3: Add a fixture reopen test**
 
@@ -76,7 +76,7 @@ def test_committed_v01_fixture_opens(self):
 - [ ] **Step 4: Run and commit**
 
 ```powershell
-& $pythonBin -m unittest tests.test_model_public_surface tests.test_sidecar -v
+& $pythonBin -m unittest tests.test_model_public_surface tests.test_sidecar_storage -v
 ```
 
 Expected: PASS on the pre-refactor code.
@@ -91,7 +91,9 @@ git commit -m "test: lock quantum model and sidecar surface"
 **Files:**
 - Create: `ChemBlender/core/model_registry.py`
 - Modify: `ChemBlender/core/sidecar.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
 - Create: `tests/test_model_registry.py`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Consumes: existing model classes and enums.
@@ -172,13 +174,13 @@ Remove `_model_registry()` and `_MODEL_CLASSES/_MODEL_ENUMS` scanning. Import th
 - [ ] **Step 5: Run tests and commit**
 
 ```powershell
-& $pythonBin -m unittest tests.test_model_registry tests.test_sidecar tests.test_model_public_surface -v
+& $pythonBin -m unittest tests.test_model_registry tests.test_sidecar_storage tests.test_model_public_surface tests.test_quantum_visualization_docs -v
 ```
 
 Expected: all PASS, including the committed v0.1 fixture.
 
 ```bash
-git add ChemBlender/core/model_registry.py ChemBlender/core/sidecar.py tests
+git add ChemBlender/core/model_registry.py ChemBlender/core/sidecar.py tests .agents/reference/code-architecture-guide.md
 git commit -m "refactor: register sidecar model types explicitly"
 ```
 
@@ -210,7 +212,7 @@ Replace the documented `ChemBlender/core/model.py` responsibility with `ChemBlen
 - [ ] **Step 3: Run full relevant tests**
 
 ```powershell
-& $pythonBin -m unittest tests.test_quantum_core tests.test_model_public_surface tests.test_model_registry tests.test_sidecar tests.test_quantum_visualization_docs -v
+& $pythonBin -m unittest tests.test_quantum_core tests.test_model_public_surface tests.test_model_registry tests.test_sidecar_storage tests.test_quantum_visualization_docs -v
 & $pythonBin -m compileall -q ChemBlender tests
 ```
 
@@ -348,7 +350,7 @@ Keep backward compatibility. Add comments and the API document that classify mod
 - [ ] **Step 3: Verify and commit**
 
 ```powershell
-& $pythonBin -m unittest tests.test_core_public_api tests.test_model_public_surface tests.test_sidecar -v
+& $pythonBin -m unittest tests.test_core_public_api tests.test_model_public_surface tests.test_sidecar_storage -v
 git diff --check
 ```
 

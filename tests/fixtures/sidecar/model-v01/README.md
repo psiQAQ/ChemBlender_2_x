@@ -1,8 +1,12 @@
 # `model-v01` sidecar fixture
 
-Generated with `ChemBlender.core.sidecar.save_project()` from the existing
-`tests.test_sidecar_storage.sample_project()` helper at baseline commit
+Generated with `ChemBlender.core.sidecar.save_project()` using the production
+sidecar implementation at baseline commit
 `03d65f78afc27cd7f8d6fe33b4517dac8a61b7bd`.
+
+The fixture builder was expanded during Task 1 and is represented by the
+committed `tests.test_sidecar_storage.sample_project()` helper at
+`6db0d970df595c8a845fd331e97bccd27b0d2586`.
 
 It contains one `Structure` with `MolecularTopology`, plus `AtomicProperty`,
 `FrameSet`, `Grid3D`, and `ProvenanceRecord` entities. Array filenames are

@@ -128,10 +128,42 @@ def sample_project():
 class SidecarStorageTests(unittest.TestCase):
     def test_committed_v01_fixture_opens(self):
         project = open_project(FIXTURES / "sidecar" / "model-v01")
-        self.assertEqual(project.schema_version, "0.1")
-        self.assertEqual(len(project.structures), 1)
-        self.assertGreaterEqual(len(project.datasets), 3)
-        close_project(project)
+        try:
+            self.assertEqual(project.id, PROJECT_ID)
+            self.assertEqual(project.schema_version, "0.1")
+            self.assertEqual(set(project.structures), {STRUCTURE_ID})
+            self.assertEqual(
+                set(project.datasets),
+                {DATASET_ID, FRAMES_ID, GRID_ID},
+            )
+            self.assertEqual(set(project.provenance), {PROVENANCE_ID})
+
+            structure = project.structures[STRUCTURE_ID]
+            self.assertIs(type(structure), Structure)
+            self.assertIs(type(structure.topology), MolecularTopology)
+            self.assertEqual(structure.revision, "structure-r1")
+            self.assertEqual(structure.topology.bond_indices.shape, (1, 2))
+            self.assertEqual(structure.topology.bond_orders.shape, (1,))
+
+            charges = project.datasets[DATASET_ID]
+            frames = project.datasets[FRAMES_ID]
+            grid = project.datasets[GRID_ID]
+            self.assertIs(type(charges), AtomicProperty)
+            self.assertIs(type(frames), FrameSet)
+            self.assertIs(type(grid), Grid3D)
+            self.assertEqual(charges.revision, "charges-r1")
+            self.assertEqual(frames.revision, "frames-r1")
+            self.assertEqual(grid.revision, "grid-r1")
+            self.assertEqual(charges.structure_id, STRUCTURE_ID)
+            self.assertEqual(frames.structure_id, STRUCTURE_ID)
+            self.assertEqual(grid.structure_id, STRUCTURE_ID)
+            self.assertIsInstance(charges.data.values, LazyNpyArray)
+
+            provenance = project.provenance[PROVENANCE_ID]
+            self.assertIs(type(provenance), ProvenanceRecord)
+            self.assertEqual(provenance.revision, "provenance-r1")
+        finally:
+            close_project(project)
 
     def test_scalar_array_round_trip_preserves_zero_rank(self):
         dataset = PropertyDataset(
