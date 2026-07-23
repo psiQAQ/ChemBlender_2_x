@@ -33,6 +33,7 @@ from .project import (
     QCProject,
     QCSchemaEnvelope,
 )
+from .sources import SourceRecord, SourceRevision, source_parse_identity
 from .properties import AtomicProperty, FrameSet, PropertyDataset
 from .spectroscopy import (
     ExcitationContribution,

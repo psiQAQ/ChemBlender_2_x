@@ -30,7 +30,7 @@ PUBLIC_CORE_NAMES = (
     "ReaderNotFoundError", "ReaderRegistry", "RecipeBinding", "RecipeCitation",
     "RecipeDefinition", "RecipeInputSpec", "RecipeOutputSpec", "RecipeParameterSpec",
     "RecipePlan", "RecipeValidationSpec", "RecipeViewSpec", "SniffMatch", "SniffResult",
-    "Spectrum", "SpectrumKind", "SpectrumProfile", "SpinChannel", "SceneBindingSpec",
+    "SourceRecord", "SourceRevision", "Spectrum", "SpectrumKind", "SpectrumProfile", "SpinChannel", "SceneBindingSpec",
     "ScenePresetDefinition", "ScenePresetError", "ScenePresetPlan",
     "SidecarCompatibilityError", "SidecarError", "SidecarIntegrityError", "SidecarNotFoundError",
     "SpglibDependencyError", "Structure", "SurfaceProperty", "TopologyConnection",
@@ -56,7 +56,7 @@ PUBLIC_CORE_NAMES = (
     "builtin_scene_presets", "plan_recipe", "plan_scene_preset", "recipe_document",
     "recipe_from_document", "save_project", "scene_plan_document", "scene_preset_document",
     "scene_preset_from_document", "scene_preset_for_recipe_view", "validate_scene_plan",
-    "source_hash_bytes", "external_record_request_document",
+    "source_hash_bytes", "source_parse_identity", "external_record_request_document",
     "external_record_request_from_document", "external_record_source_uri",
     "surface_render_cache_key", "volume_render_cache_key", "validate_analysis_report",
     "write_analysis_report_bundle",
@@ -67,7 +67,7 @@ class CorePublicApiTests(unittest.TestCase):
     def test_public_names_are_frozen(self):
         self.assertEqual(tuple(core.__all__), PUBLIC_CORE_NAMES)
         self.assertEqual(len(core.__all__), len(set(core.__all__)))
-        self.assertEqual(len(core.__all__), 183)
+        self.assertEqual(len(core.__all__), 186)
 
     def test_public_names_resolve_to_attributes(self):
         missing = [name for name in core.__all__ if not hasattr(core, name)]

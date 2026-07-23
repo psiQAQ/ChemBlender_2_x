@@ -36,7 +36,7 @@ EXPECTED_MODEL_TYPES = {
     "TopologyConnection", "TopologyPath", "TopologyGraph", "BasisShell",
     "BasisConvention", "BasisSet", "OrbitalChannel", "OrbitalSet",
     "DensityMatrix", "Grid3D", "ProvenanceRecord", "ParserIssue",
-    "ParserReport", "ImportBatch", "QCProject",
+    "ParserReport", "ImportBatch", "QCProject", "SourceRecord", "SourceRevision",
 }
 
 EXPECTED_MODEL_ENUMS = {

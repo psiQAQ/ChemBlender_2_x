@@ -47,6 +47,8 @@ PUBLIC_MODEL_NAMES = {
     "Spectrum",
     "SpectrumKind",
     "SpectrumProfile",
+    "SourceRecord",
+    "SourceRevision",
     "SpinChannel",
     "Structure",
     "SurfaceProperty",

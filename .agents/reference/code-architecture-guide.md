@@ -93,8 +93,9 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
 | `ChemBlender/core/__init__.py` | 模块级 re-export | `core` 的普通 CPython、无 `bpy` 公共门面：稳定导出模型及其构造器/sidecar tag，并提供存储 API；Reader 与 Recipe 为 alpha 0.x 契约，具体 reader/adapter、派生、scene/reporting 与 connector 仅保持内部兼容导入，不是冻结插件 API。 |
-| `ChemBlender/core/model/__init__.py` | 模块级显式 re-export | 模型 package 的兼容门面；从基础模块和八个领域模块显式重导出既有公共名称，不保留领域模型定义。 |
+| `ChemBlender/core/model/__init__.py` | 模块级显式 re-export | 模型 package 的兼容门面；从基础模块和九个领域模块显式重导出既有公共名称，不保留领域模型定义。 |
 | `ChemBlender/core/model/common.py` | `_require_uuid()`、`_require_token()`、`CalculationStatus`、`DatasetStatus`、`IssueKind` 等 12 个 enum | 提供模型共享的 token/UUID/text 校验器、正则模式和稳定枚举定义，不依赖 Blender 或可选科学栈。 |
+| `ChemBlender/core/model/sources.py` | `SourceRecord`、`SourceRevision`、`source_parse_identity()` | 定义用户逻辑来源及其不可变内容/解析 revision；以内容 hash、reader plugin/id/version 和规范参数对计算与 locator 无关的解析身份。 |
 | `ChemBlender/core/model/arrays.py` | `ArrayData` | 定义带命名维度、单位、shape 和 dtype 校验的中立数组包装，并由模型 package 原样 re-export。 |
 | `ChemBlender/core/model/diagnostics.py` | `ParserIssue`、`ParserReport` | 定义 reader 诊断项与解析报告，复用共享校验器并保持既有构造器、枚举和能力 token 契约。 |
 | `ChemBlender/core/model/structure.py` | `PeriodicSiteData`、`MolecularTopology`、`Structure`、`SymmetryResult` | 定义分子/周期结构、拓扑关联和对称性结果；只依赖数组与共享校验基础层。 |
@@ -139,7 +140,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/core/phonon_frames.py` | `derive_phonon_frames()` | 根据复数 q-point eigenvector 和 `Re[e exp(i(q·R-ωt+φ))]` 生成周期超胞声子动画帧。 |
 | `ChemBlender/core/trajectory_frames.py` | `TrajectoryFrameManager.frame()`、`prefetch_around()`、`interpolate()`、`mean()` | 对 sidecar 轨迹执行逐帧 lazy 读取、有界 LRU 缓存、预取、插值和区间平均。 |
 | `ChemBlender/core/grid_lod.py` | `derive_grid_lod()`、`volume_render_cache_key()`、`surface_render_cache_key()` | 通过确定性 stride 生成 `Grid3D` LOD，并计算 Volume/Surface 渲染缓存身份。 |
-| `ChemBlender/core/model_registry.py` | `MODEL_TYPES`、`MODEL_ENUMS`、`model_type_tag()`、`model_type_from_tag()` | 明确登记 sidecar 可序列化的 dataclass 和 enum；以不可变映射固定 v0.1 type tag 与具体模型类的对应关系。 |
+| `ChemBlender/core/model_registry.py` | `MODEL_TYPES`、`MODEL_ENUMS`、`model_type_tag()`、`model_type_from_tag()` | 明确登记 sidecar 可序列化的 dataclass 和 enum；以不可变映射固定 type tag 与具体模型类的对应关系。 |
 | `ChemBlender/core/sidecar.py` | `LazyNpyArray`、`save_project()`、`open_project()`、`close_project()` | `.cbq` v0.1 存储实现：原子写 manifest/数组、内容 hash、lazy mmap、兼容性与完整性校验。 |
 | `ChemBlender/core/recipe.py` | `RecipeDefinition`、`plan_recipe()`、`recipe_document()`、`recipe_from_document()`、`builtin_recipes()` | 定义版本化分析 recipe 的输入语义、参数、输出、view、验证和引用；plan 阶段只绑定实体，不执行计算。 |
 | `ChemBlender/core/scene_preset.py` | `builtin_scene_presets()`、`plan_scene_preset()`、`validate_scene_plan()`、`scene_preset_for_recipe_view()` | 定义 publication scene preset，验证数据绑定和设置，并生成可重放的 render identity。 |

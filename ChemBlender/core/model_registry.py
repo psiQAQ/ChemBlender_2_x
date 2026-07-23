@@ -13,7 +13,7 @@ _MODEL_TYPE_NAMES = (
     "FermiSurfaceMesh", "TopologyConnection", "TopologyPath", "TopologyGraph",
     "BasisShell", "BasisConvention", "BasisSet", "OrbitalChannel", "OrbitalSet",
     "DensityMatrix", "Grid3D", "ProvenanceRecord", "ParserIssue", "ParserReport",
-    "ImportBatch", "QCProject",
+    "ImportBatch", "QCProject", "SourceRecord", "SourceRevision",
 )
 
 MODEL_TYPES = MappingProxyType({name: getattr(model, name) for name in _MODEL_TYPE_NAMES})
