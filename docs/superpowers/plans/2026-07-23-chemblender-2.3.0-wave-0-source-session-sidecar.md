@@ -210,6 +210,9 @@ architecture documentation.
 - Modify: `ChemBlender/project_link.py`
 - Modify: `tests/blender_smoke.py`
 - Create: `tests/test_project_link_pure.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_project_link.py`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `MANIFEST_HASH_KEY`, extended `write_project_link()` and hash-aware `resolve_project_link()`.
@@ -232,7 +235,12 @@ Assert the key exists, resolves after save, and tampering returns INVALID/MISMAT
 
 - [ ] **Step 4: Verify and commit**
 
-Run pure link, sidecar and Blender smoke before commit.
+Run `tests.test_project_link_pure`, `tests.test_project_link`,
+`tests.test_sidecar_storage`, `tests.test_quantum_visualization_docs` and the
+Blender smoke before commit. Include
+`.agents/reference/code-architecture-guide.md` in the implementation commit so
+the documented public entrypoints remain synchronized with
+`ChemBlender/project_link.py`.
 
 ### Task 6: Add session save/relink/verify service operations
 
