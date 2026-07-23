@@ -117,9 +117,9 @@ def test_unknown_manifest_version_is_rejected(self):
 
 - [ ] **Step 2: Implement a document migration before decode**
 
-Add `sources` and `source_revisions` dicts to `QCProject` and source groups to `ImportBatch`. `QCProject.commit()` verifies revision source IDs, created entities and diagnostic IDs in the final combined ID set.
+Add `sources` and `source_revisions` dicts to `QCProject` and source groups to `ImportBatch`. `QCProject.commit()` verifies revision source IDs and created entities in the final combined ID set. Until the later diagnostics plan adds an ID-bearing diagnostic registry, non-empty `SourceRevision.diagnostic_ids` are rejected as dangling references rather than accepted without validation.
 
-`migrate_manifest(document)` accepts only known versions. For v0.1, add empty source/diagnostic/view registries to the encoded QCProject field set before strict dataclass decoding and change the manifest version. Preserve project UUID and arrays.
+`migrate_manifest(document)` accepts only known versions. For v0.1, add empty source registries to the encoded QCProject field set before strict dataclass decoding and change the manifest version. Do not invent diagnostic or view fields that are not present in the current `QCProject` model. Preserve project UUID and arrays.
 
 - [ ] **Step 3: Add generation fields**
 
