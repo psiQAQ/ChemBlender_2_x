@@ -5,7 +5,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = (
-    "2.3.0-wave-0-platform-foundation.md",
     "2.3.0-wave-1-native-molecular-and-grid.md",
     "2.3.0-wave-2-native-crystal.md",
     "2.3.0-wave-3-exchange-mol2-pdb-pqr.md",
@@ -53,7 +52,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for name in WAVE_230_QUEUE_FILES:
             self.assertIn(name, agent_index)
 
-    def test_230_wave_queue_contains_exactly_five_files(self):
+    def test_230_wave_0_is_active_and_later_waves_remain_queued(self):
         queued = sorted(
             path.name
             for path in (ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md")
@@ -63,6 +62,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
     def test_230_markdown_is_utf8_without_bom(self):
         paths = [
             *(ROOT / ".agents" / "decisions").glob("00[234][0-9]-*.md"),
+            *(ROOT / ".agents" / "active").glob("2.3.0-wave-*.md"),
             *(ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md"),
             *(ROOT / "docs" / "quantum-visualization" / "2.3.0").rglob("*.md"),
             *(ROOT / "docs" / "superpowers" / "plans").glob(
@@ -191,7 +191,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            [],
+            ["2.3.0-wave-0-platform-foundation.md"],
         )
 
     def test_code_architecture_guide_tracks_source_files(self):
