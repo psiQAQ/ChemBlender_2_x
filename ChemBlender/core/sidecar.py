@@ -360,13 +360,18 @@ class _Decoder:
 
 
 def save_project(root, project):
+    root = Path(root)
+    if root.suffix.lower() != ".cbq":
+        raise ValueError("sidecar directory must use the .cbq suffix")
+    return _write_project_tree(root, project)
+
+
+def _write_project_tree(root, project):
     if not isinstance(project, model.QCProject):
         raise TypeError("project must be a QCProject")
     if project.schema_version not in ("0.1", CURRENT_PROJECT_SCHEMA_VERSION):
         raise SidecarCompatibilityError("unsupported project schema")
     root = Path(root)
-    if root.suffix.lower() != ".cbq":
-        raise ValueError("sidecar directory must use the .cbq suffix")
     root.mkdir(parents=True, exist_ok=True)
     (root / "arrays").mkdir(exist_ok=True)
     encoded = _Encoder(root).encode(project)
@@ -392,6 +397,22 @@ def save_project(root, project):
 
 
 def open_project(
+    root,
+    *,
+    expected_project_id=None,
+    expected_schema_version=None,
+    verify_arrays=True,
+):
+    project, _manifest = _open_project_with_manifest(
+        root,
+        expected_project_id=expected_project_id,
+        expected_schema_version=expected_schema_version,
+        verify_arrays=verify_arrays,
+    )
+    return project
+
+
+def _open_project_with_manifest(
     root,
     *,
     expected_project_id=None,
@@ -440,7 +461,7 @@ def open_project(
         raise SidecarIntegrityError("manifest project is not a QCProject")
     if project.id != project_id or project.schema_version != schema_version:
         raise SidecarIntegrityError("manifest header and project payload disagree")
-    return project
+    return project, manifest
 
 
 def _strict_uuid(value, name):
