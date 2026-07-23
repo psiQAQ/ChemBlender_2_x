@@ -4,17 +4,26 @@ import json
 import os
 import re
 from dataclasses import fields, is_dataclass
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path, PurePosixPath
 from uuid import UUID, uuid4
 
 from . import model
 from .model_registry import MODEL_ENUMS, model_type_from_tag, model_type_tag
+from .sidecar_migrations import (
+    CURRENT_MANIFEST_VERSION,
+    CURRENT_PROJECT_SCHEMA_VERSION,
+    migrate_manifest,
+)
 
 
 FORMAT_ID = "chemblender.cbq"
-MANIFEST_VERSION = "0.1"
+MANIFEST_VERSION = CURRENT_MANIFEST_VERSION
 _SHA256 = re.compile(r"[0-9a-f]{64}")
+_UTC_TIMESTAMP = re.compile(
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z"
+)
 
 
 def _numpy():
@@ -25,6 +34,25 @@ def _numpy():
 
 def _reject_json_constant(value):
     raise ValueError(f"non-finite JSON value: {value}")
+
+
+def _canonical_json(document):
+    return json.dumps(
+        document,
+        ensure_ascii=False,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
+def _manifest_hash(manifest):
+    payload = {
+        key: value
+        for key, value in manifest.items()
+        if key != "manifest_sha256"
+    }
+    return hashlib.sha256(_canonical_json(payload)).hexdigest()
 
 
 class SidecarError(RuntimeError):
@@ -334,27 +362,29 @@ class _Decoder:
 def save_project(root, project):
     if not isinstance(project, model.QCProject):
         raise TypeError("project must be a QCProject")
+    if project.schema_version not in ("0.1", CURRENT_PROJECT_SCHEMA_VERSION):
+        raise SidecarCompatibilityError("unsupported project schema")
     root = Path(root)
     if root.suffix.lower() != ".cbq":
         raise ValueError("sidecar directory must use the .cbq suffix")
     root.mkdir(parents=True, exist_ok=True)
     (root / "arrays").mkdir(exist_ok=True)
     encoded = _Encoder(root).encode(project)
+    encoded["schema_version"] = CURRENT_PROJECT_SCHEMA_VERSION
     manifest = {
         "format": FORMAT_ID,
         "manifest_version": MANIFEST_VERSION,
+        "generation_id": str(uuid4()),
+        "created_at_utc": datetime.now(timezone.utc)
+        .isoformat(timespec="microseconds")
+        .replace("+00:00", "Z"),
         "project_id": str(project.id),
-        "project_schema_version": project.schema_version,
+        "project_schema_version": CURRENT_PROJECT_SCHEMA_VERSION,
         "project": encoded,
     }
     try:
-        document = json.dumps(
-            manifest,
-            ensure_ascii=False,
-            allow_nan=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        ).encode("utf-8") + b"\n"
+        manifest["manifest_sha256"] = _manifest_hash(manifest)
+        document = _canonical_json(manifest) + b"\n"
     except (TypeError, ValueError) as error:
         raise SidecarIntegrityError("manifest is not canonical JSON") from error
     _atomic_bytes(root / "manifest.json", document)
@@ -379,25 +409,31 @@ def open_project(
         )
     except (OSError, UnicodeError, ValueError) as error:
         raise SidecarIntegrityError("cannot read sidecar manifest") from error
-    if manifest.get("format") != FORMAT_ID or manifest.get("manifest_version") != MANIFEST_VERSION:
-        raise SidecarCompatibilityError("unsupported sidecar manifest version")
-    expected_fields = {
-        "format",
-        "manifest_version",
-        "project_id",
-        "project_schema_version",
-        "project",
-    }
-    if set(manifest) != expected_fields:
-        raise SidecarIntegrityError("sidecar manifest has invalid top-level fields")
-    try:
-        project_id = UUID(manifest["project_id"])
-    except (KeyError, TypeError, ValueError) as error:
-        raise SidecarIntegrityError("invalid project_id in manifest") from error
-    schema_version = manifest.get("project_schema_version")
+    source_version = (
+        manifest.get("manifest_version")
+        if isinstance(manifest, dict)
+        else None
+    )
+    manifest = migrate_manifest(manifest)
+    if source_version == MANIFEST_VERSION:
+        project_id, schema_version = _validate_current_manifest(manifest)
+        if manifest["format"] != FORMAT_ID:
+            raise SidecarCompatibilityError("unsupported sidecar format")
+    else:
+        if manifest.get("format") != FORMAT_ID:
+            raise SidecarCompatibilityError("unsupported sidecar format")
+        project_id = _strict_uuid(manifest.get("project_id"), "project_id")
+        schema_version = manifest.get("project_schema_version")
     if expected_project_id is not None and project_id != expected_project_id:
         raise SidecarCompatibilityError("sidecar project UUID does not match")
-    if expected_schema_version is not None and schema_version != expected_schema_version:
+    if (
+        expected_schema_version is not None
+        and expected_schema_version != schema_version
+        and not (
+            expected_schema_version == "0.1"
+            and schema_version == CURRENT_PROJECT_SCHEMA_VERSION
+        )
+    ):
         raise SidecarCompatibilityError("sidecar project schema is incompatible")
     project = _Decoder(root, verify_arrays).decode(manifest.get("project"))
     if not isinstance(project, model.QCProject):
@@ -405,6 +441,96 @@ def open_project(
     if project.id != project_id or project.schema_version != schema_version:
         raise SidecarIntegrityError("manifest header and project payload disagree")
     return project
+
+
+def _strict_uuid(value, name):
+    try:
+        parsed = UUID(value)
+    except (AttributeError, TypeError, ValueError) as error:
+        raise SidecarIntegrityError(f"invalid {name} in manifest") from error
+    if str(parsed) != value:
+        raise SidecarIntegrityError(f"invalid {name} in manifest")
+    return parsed
+
+
+def _validate_current_manifest(manifest):
+    expected_fields = {
+        "format",
+        "manifest_version",
+        "generation_id",
+        "created_at_utc",
+        "manifest_sha256",
+        "project_id",
+        "project_schema_version",
+        "project",
+    }
+    if set(manifest) != expected_fields:
+        raise SidecarIntegrityError(
+            "sidecar manifest has invalid top-level fields"
+        )
+    stored_hash = manifest.get("manifest_sha256")
+    if (
+        not isinstance(stored_hash, str)
+        or not _SHA256.fullmatch(stored_hash)
+        or stored_hash != _manifest_hash(manifest)
+    ):
+        raise SidecarIntegrityError("sidecar manifest hash mismatch")
+    _strict_uuid(manifest.get("generation_id"), "generation_id")
+    project_id = _strict_uuid(manifest.get("project_id"), "project_id")
+    created_at = manifest.get("created_at_utc")
+    if (
+        not isinstance(created_at, str)
+        or not _UTC_TIMESTAMP.fullmatch(created_at)
+    ):
+        raise SidecarIntegrityError("invalid created_at_utc in manifest")
+    try:
+        timestamp = datetime.fromisoformat(
+            created_at.removesuffix("Z") + "+00:00"
+        )
+    except ValueError as error:
+        raise SidecarIntegrityError(
+            "invalid created_at_utc in manifest"
+        ) from error
+    if timestamp.utcoffset() != timezone.utc.utcoffset(timestamp):
+        raise SidecarIntegrityError("invalid created_at_utc in manifest")
+    return _validate_current_project_header(manifest, project_id)
+
+
+def _validate_current_project_header(manifest, project_id):
+    schema_version = manifest.get("project_schema_version")
+    project = manifest.get("project")
+    encoded_id = project.get("id") if isinstance(project, dict) else None
+    if (
+        not isinstance(project, dict)
+        or project.get("$type") != "QCProject"
+        or not isinstance(encoded_id, dict)
+        or set(encoded_id) != {"$uuid"}
+        or not isinstance(schema_version, str)
+        or not schema_version
+        or not isinstance(project.get("schema_version"), str)
+    ):
+        raise SidecarIntegrityError(
+            "manifest header and project payload disagree"
+        )
+    try:
+        payload_id = _strict_uuid(
+            encoded_id["$uuid"],
+            "project payload id",
+        )
+    except SidecarIntegrityError as error:
+        raise SidecarIntegrityError(
+            "manifest header and project payload disagree"
+        ) from error
+    if (
+        payload_id != project_id
+        or project["schema_version"] != schema_version
+    ):
+        raise SidecarIntegrityError(
+            "manifest header and project payload disagree"
+        )
+    if schema_version != CURRENT_PROJECT_SCHEMA_VERSION:
+        raise SidecarCompatibilityError("unsupported sidecar manifest version")
+    return project_id, schema_version
 
 
 def close_project(project):

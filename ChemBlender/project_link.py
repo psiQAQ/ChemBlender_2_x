@@ -67,7 +67,11 @@ def resolve_project_link(scene, *, blend_path=None, verify_arrays=True):
         path = base / path
     path = path.resolve()
     try:
-        project = open_project(path, verify_arrays=verify_arrays)
+        project = open_project(
+            path,
+            expected_schema_version=expected_schema,
+            verify_arrays=verify_arrays,
+        )
     except SidecarNotFoundError as error:
         return ProjectLinkResult(ProjectLinkStatus.MISSING, path, message=str(error))
     except SidecarCompatibilityError as error:
@@ -81,12 +85,5 @@ def resolve_project_link(scene, *, blend_path=None, verify_arrays=True):
             path,
             project=project,
             message="sidecar project UUID does not match scene link",
-        )
-    if project.schema_version != expected_schema:
-        return ProjectLinkResult(
-            ProjectLinkStatus.INCOMPATIBLE,
-            path,
-            project=project,
-            message="sidecar project schema does not match scene link",
         )
     return ProjectLinkResult(ProjectLinkStatus.CONNECTED, path, project=project)

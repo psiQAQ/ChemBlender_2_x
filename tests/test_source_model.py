@@ -3,7 +3,14 @@ import json
 import unittest
 from uuid import uuid4
 
-from ChemBlender.core import SourceRecord, SourceRevision, source_parse_identity
+from ChemBlender.core import (
+    ImportBatch,
+    ProvenanceRecord,
+    QCProject,
+    SourceRecord,
+    SourceRevision,
+    source_parse_identity,
+)
 
 
 class SourceModelTests(unittest.TestCase):
@@ -76,6 +83,148 @@ class SourceModelTests(unittest.TestCase):
             SourceRevision(**(values | {"locator_kind": "Local File"}))
         with self.assertRaises(TypeError):
             SourceRevision(**(values | {"created_entity_ids": ("not-a-uuid",)}))
+
+    def test_project_commits_source_revision_with_created_entities_atomically(self):
+        source = self._source()
+        entity = self._provenance()
+        revision = SourceRevision(
+            **(
+                self._revision_values()
+                | {
+                    "source_id": source.id,
+                    "created_entity_ids": (entity.id,),
+                }
+            )
+        )
+        project = QCProject(uuid4(), "0.2")
+
+        project.commit(
+            ImportBatch(
+                sources=[source],
+                source_revisions=[revision],
+                provenance=(entity,),
+            )
+        )
+
+        self.assertEqual(project.sources, {source.id: source})
+        self.assertEqual(project.source_revisions, {revision.id: revision})
+        self.assertEqual(project.provenance, {entity.id: entity})
+
+    def test_project_rejects_dangling_source_entity_and_diagnostic_without_mutation(self):
+        source = self._source()
+        invalid_revisions = {
+            "source": SourceRevision(**self._revision_values()),
+            "entity": SourceRevision(
+                **(
+                    self._revision_values()
+                    | {
+                        "source_id": source.id,
+                        "created_entity_ids": (uuid4(),),
+                    }
+                )
+            ),
+            "diagnostic": SourceRevision(
+                **(
+                    self._revision_values()
+                    | {
+                        "source_id": source.id,
+                        "diagnostic_ids": (uuid4(),),
+                    }
+                )
+            ),
+        }
+
+        for name, revision in invalid_revisions.items():
+            with self.subTest(name=name):
+                project = QCProject(uuid4(), "0.2")
+                with self.assertRaises(ValueError):
+                    project.commit(
+                        ImportBatch(
+                            sources=(source,),
+                            source_revisions=(revision,),
+                        )
+                    )
+                self.assertEqual(project.sources, {})
+                self.assertEqual(project.source_revisions, {})
+
+    def test_existing_source_registries_enforce_the_same_relationships(self):
+        source = self._source()
+        entity = self._provenance()
+        valid = SourceRevision(
+            **(
+                self._revision_values()
+                | {
+                    "source_id": source.id,
+                    "created_entity_ids": (entity.id,),
+                }
+            )
+        )
+        project = QCProject(
+            uuid4(),
+            "0.2",
+            sources={source.id: source},
+            source_revisions={valid.id: valid},
+            provenance={entity.id: entity},
+        )
+        self.assertEqual(project.source_revisions[valid.id], valid)
+
+        invalid_values = (
+            {"source_id": uuid4()},
+            {"source_id": source.id, "created_entity_ids": (uuid4(),)},
+            {"source_id": source.id, "diagnostic_ids": (uuid4(),)},
+        )
+        for values in invalid_values:
+            with self.subTest(values=values):
+                invalid = SourceRevision(**(self._revision_values() | values))
+                with self.assertRaises(ValueError):
+                    QCProject(
+                        uuid4(),
+                        "0.2",
+                        sources={source.id: source},
+                        source_revisions={invalid.id: invalid},
+                        provenance={entity.id: entity},
+                    )
+
+    def test_source_ids_share_the_project_wide_uuid_namespace(self):
+        shared_id = uuid4()
+        source = self._source(id=shared_id)
+        entity = self._provenance(id=shared_id)
+        with self.assertRaises(ValueError):
+            QCProject(
+                uuid4(),
+                "0.2",
+                sources={shared_id: source},
+                provenance={shared_id: entity},
+            )
+        with self.assertRaises(ValueError):
+            QCProject(uuid4(), "0.2").commit(
+                ImportBatch(sources=(source,), provenance=(entity,))
+            )
+
+    @staticmethod
+    def _source(**changes):
+        values = {
+            "id": uuid4(),
+            "display_name": "file.xyz",
+            "source_kind": "local_file",
+            "created_at_utc": "2026-07-24T00:00:00Z",
+        }
+        return SourceRecord(**(values | changes))
+
+    @staticmethod
+    def _provenance(**changes):
+        values = {
+            "id": uuid4(),
+            "revision": "r1",
+            "producer": "test",
+            "producer_version": "1",
+            "source": "file.xyz",
+            "source_hash": "a" * 64,
+            "parent_ids": (),
+            "operation": "parse",
+            "parameters": (),
+        }
+        return ProvenanceRecord(**(values | changes))
 
     @staticmethod
     def _revision_values():

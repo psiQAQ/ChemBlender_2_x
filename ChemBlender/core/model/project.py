@@ -21,6 +21,7 @@ from .periodic import (
     PhononModeSet,
 )
 from .properties import AtomicProperty, FrameSet, PropertyDataset
+from .sources import SourceRecord, SourceRevision
 from .spectroscopy import (
     ExcitedStateSet,
     Spectrum,
@@ -217,6 +218,8 @@ class ProvenanceRecord:
 
 @dataclass(frozen=True, slots=True)
 class ImportBatch:
+    sources: tuple[SourceRecord, ...] = ()
+    source_revisions: tuple[SourceRevision, ...] = ()
     structures: tuple[Structure, ...] = ()
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
     qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
@@ -232,6 +235,8 @@ class ImportBatch:
 
     def __post_init__(self):
         groups = (
+            ("sources", SourceRecord),
+            ("source_revisions", SourceRevision),
             ("structures", Structure),
             ("cif_envelopes", CIFEnvelope),
             ("qcschema_envelopes", QCSchemaEnvelope),
@@ -257,6 +262,8 @@ class ImportBatch:
 class QCProject:
     id: UUID
     schema_version: str
+    sources: dict[UUID, SourceRecord] = field(default_factory=dict)
+    source_revisions: dict[UUID, SourceRevision] = field(default_factory=dict)
     structures: dict[UUID, Structure] = field(default_factory=dict)
     cif_envelopes: dict[UUID, CIFEnvelope] = field(default_factory=dict)
     qcschema_envelopes: dict[UUID, QCSchemaEnvelope] = field(default_factory=dict)
@@ -278,7 +285,7 @@ class QCProject:
         if not isinstance(batch, ImportBatch):
             raise TypeError("batch must be an ImportBatch")
 
-        incoming_groups = (
+        incoming_entity_groups = (
             batch.structures,
             batch.cif_envelopes,
             batch.qcschema_envelopes,
@@ -291,6 +298,11 @@ class QCProject:
             batch.density_matrices,
             batch.provenance,
         )
+        incoming_groups = (
+            batch.sources,
+            batch.source_revisions,
+            *incoming_entity_groups,
+        )
         incoming = tuple(entity for group in incoming_groups for entity in group)
         incoming_ids = tuple(entity.id for entity in incoming)
         if len(set(incoming_ids)) != len(incoming_ids):
@@ -300,6 +312,14 @@ class QCProject:
         if existing_ids.intersection(incoming_ids):
             raise ValueError("batch UUID already exists in project")
 
+        sources = dict(self.sources)
+        sources.update((source.id, source) for source in batch.sources)
+        source_revisions = dict(self.source_revisions)
+        source_revisions.update(
+            (revision.id, revision) for revision in batch.source_revisions
+        )
+        source_ids = set(sources)
+        source_revision_ids = set(source_revisions)
         structures = dict(self.structures)
         structures.update(
             (structure.id, structure) for structure in batch.structures
@@ -611,7 +631,9 @@ class QCProject:
                 "density matrix provenance",
             )
         all_ids = (
-            structure_ids
+            source_ids
+            | source_revision_ids
+            | structure_ids
             | cif_envelope_ids
             | qcschema_envelope_ids
             | cjson_envelope_ids
@@ -623,13 +645,24 @@ class QCProject:
             | density_matrix_ids
             | provenance_ids
         )
+        self._validate_source_revision_references(
+            source_revisions.values(),
+            source_ids,
+            all_ids,
+        )
         for record in batch.provenance:
             self._require_references(record.parent_ids, all_ids, "provenance parent")
         if batch.report is not None and set(batch.report.created_entity_ids) != set(
-            incoming_ids
+            entity.id
+            for group in incoming_entity_groups
+            for entity in group
         ):
             raise ValueError("parser report created IDs must match the import batch")
 
+        self.sources.update((entity.id, entity) for entity in batch.sources)
+        self.source_revisions.update(
+            (entity.id, entity) for entity in batch.source_revisions
+        )
         self.structures.update((entity.id, entity) for entity in batch.structures)
         self.cif_envelopes.update(
             (entity.id, entity) for entity in batch.cif_envelopes
@@ -654,6 +687,8 @@ class QCProject:
 
     def _all_entity_ids(self):
         groups = (
+            self.sources,
+            self.source_revisions,
             self.structures,
             self.cif_envelopes,
             self.qcschema_envelopes,
@@ -673,6 +708,8 @@ class QCProject:
 
     def _validate_registries(self):
         groups = (
+            (self.sources, SourceRecord, "sources"),
+            (self.source_revisions, SourceRevision, "source_revisions"),
             (self.structures, Structure, "structures"),
             (self.cif_envelopes, CIFEnvelope, "cif_envelopes"),
             (self.qcschema_envelopes, QCSchemaEnvelope, "qcschema_envelopes"),
@@ -693,9 +730,33 @@ class QCProject:
                 for entity_id, entity in registry.items()
             ):
                 raise ValueError(f"{name} keys and entity IDs must match")
-        self._all_entity_ids()
+        all_ids = self._all_entity_ids()
+        self._validate_source_revision_references(
+            self.source_revisions.values(),
+            set(self.sources),
+            all_ids,
+        )
 
     @staticmethod
     def _require_references(references, valid_ids, name):
         if any(reference not in valid_ids for reference in references):
             raise ValueError(f"{name} reference is dangling")
+
+    @staticmethod
+    def _validate_source_revision_references(revisions, source_ids, all_ids):
+        for revision in revisions:
+            if revision.source_id not in source_ids:
+                raise ValueError(
+                    "source revision has a dangling source reference"
+                )
+            if any(
+                entity_id not in all_ids
+                for entity_id in revision.created_entity_ids
+            ):
+                raise ValueError(
+                    "source revision has a dangling created entity reference"
+                )
+            if revision.diagnostic_ids:
+                raise ValueError(
+                    "source revision has dangling diagnostic references"
+                )
