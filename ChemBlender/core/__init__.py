@@ -214,6 +214,8 @@ from .scene_preset import (
     scene_preset_for_recipe_view,
     validate_scene_plan,
 )
+# Session service exports.
+from .session import ProjectSession, close_session, create_session
 # Storage API exports.
 from .sidecar import (
     LazyNpyArray,
@@ -315,6 +317,7 @@ __all__ = [
     "PymatgenDependencyError",
     "PymatgenElectronicDependencyError",
     "PropertyDataset",
+    "ProjectSession",
     "ProvenanceRecord",
     "QCProject",
     "QCSchemaEnvelope",
@@ -409,6 +412,8 @@ __all__ = [
     "derive_vibrational_spectrum",
     "describe_report_artifact",
     "close_project",
+    "close_session",
+    "create_session",
     "derivation_cache_key",
     "open_project",
     "parser_cache_key",

@@ -10,6 +10,10 @@
 
 `open_project`、`save_project`、`close_project`、`LazyNpyArray` 及 `Sidecar*Error` 构成 sidecar 存储 API，用于 `.cbq` 项目和数组引用的读取、写入与错误处理。
 
+## Session API
+
+`ProjectSession` 在冻结的科学模型之外保存会话 UUID、临时根目录、dirty reasons、活动选择和 sidecar 链接状态。`create_session()` 创建带 UUID ownership marker 的临时根，`close_session()` 先关闭项目的 lazy resources，且只删除 marker 与会话 UUID 精确匹配的受控目录。
+
 ## Reader 契约
 
 `ReaderDescriptor`、`ReaderRegistry`、`SniffMatch`、`SniffResult` 和 catalog API 是 alpha 0.x Reader 契约，尚非 v1。
