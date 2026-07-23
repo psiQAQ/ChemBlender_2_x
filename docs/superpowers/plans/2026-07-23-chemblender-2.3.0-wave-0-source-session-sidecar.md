@@ -23,13 +23,18 @@
 
 **Files:**
 - Create: `ChemBlender/core/model/sources.py`
-- Modify: `ChemBlender/core/model/project.py`
 - Modify: `ChemBlender/core/model/__init__.py`
 - Modify: `ChemBlender/core/model_registry.py`
+- Modify: `ChemBlender/core/__init__.py`
 - Create: `tests/test_source_model.py`
+- Modify: `tests/test_model_registry.py`
+- Modify: `tests/test_model_public_surface.py`
+- Modify: `tests/test_core_public_api.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
-- Produces: `SourceRecord`, `SourceRevision`, `source_parse_identity()` and QCProject source registries.
+- Produces: `SourceRecord`, `SourceRevision` and `source_parse_identity()`.
 
 - [ ] **Step 1: Write failing source identity tests**
 
@@ -65,32 +70,36 @@ Run `tests.test_source_model`; expect missing imports.
 
 Build a dict with content hash, plugin ID, reader ID/version and canonical parameter pairs, serialize it with `json.dumps(document, sort_keys=True, separators=(",", ":"), allow_nan=False)`, then hash the UTF-8 bytes with SHA-256. Validate all hash fields and locator kind tokens.
 
-- [ ] **Step 4: Add QCProject registries and reference validation**
+- [ ] **Step 4: Register and export the source types**
 
-Add `sources` and `source_revisions` dicts. `QCProject.commit()` accepts source groups in ImportBatch and verifies revision source IDs, created entities and diagnostic IDs in the final combined ID set.
+Add the source types to the explicit sidecar registry and stable `ChemBlender.core` façade. Update the exact registry, public-surface and architecture documentation contracts. Do not add source fields to `QCProject` until Task 2 can migrate v0.1 documents before strict field decoding.
 
 - [ ] **Step 5: Run and commit**
 
 ```powershell
-& $pythonBin -m unittest tests.test_source_model tests.test_quantum_core tests.test_sidecar -v
+& $pythonBin -m unittest tests.test_source_model tests.test_model_registry tests.test_model_public_surface tests.test_core_public_api tests.test_sidecar_storage tests.test_quantum_visualization_docs -v
 ```
 
 ```bash
-git add ChemBlender/core/model ChemBlender/core/model_registry.py tests
+git add ChemBlender/core/model/sources.py ChemBlender/core/model/__init__.py ChemBlender/core/model_registry.py ChemBlender/core/__init__.py tests/test_source_model.py tests/test_model_registry.py tests/test_model_public_surface.py tests/test_core_public_api.py .agents/reference/code-architecture-guide.md
 git commit -m "feat: add source revision identity"
 ```
 
 ### Task 2: Migrate sidecar schema while preserving v0.1 reads
 
 **Files:**
+- Modify: `ChemBlender/core/model/project.py`
 - Modify: `ChemBlender/core/sidecar.py`
 - Create: `ChemBlender/core/sidecar_migrations.py`
 - Modify: `docs/quantum-visualization/specs/cbq-sidecar-v0.1.md`
 - Create: `docs/quantum-visualization/2.3.0/architecture/cbq-sidecar-v0.2.md`
-- Modify: `tests/test_sidecar.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Modify: `tests/test_source_model.py`
+- Modify: `tests/test_sidecar_storage.py`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
-- Produces: manifest version `0.2`, v0.1→v0.2 in-memory migration and explicit generation metadata.
+- Produces: QCProject source registries, manifest version `0.2`, v0.1→v0.2 in-memory migration and explicit generation metadata.
 
 - [ ] **Step 1: Write migration tests**
 
@@ -108,7 +117,9 @@ def test_unknown_manifest_version_is_rejected(self):
 
 - [ ] **Step 2: Implement a document migration before decode**
 
-`migrate_manifest(document)` accepts only known versions. For v0.1, add empty source/diagnostic/view registries to the encoded QCProject field set and change the manifest version. Preserve project UUID and arrays.
+Add `sources` and `source_revisions` dicts to `QCProject` and source groups to `ImportBatch`. `QCProject.commit()` verifies revision source IDs, created entities and diagnostic IDs in the final combined ID set.
+
+`migrate_manifest(document)` accepts only known versions. For v0.1, add empty source/diagnostic/view registries to the encoded QCProject field set before strict dataclass decoding and change the manifest version. Preserve project UUID and arrays.
 
 - [ ] **Step 3: Add generation fields**
 
