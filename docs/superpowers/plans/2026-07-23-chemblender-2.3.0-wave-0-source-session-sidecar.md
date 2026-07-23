@@ -248,13 +248,23 @@ the documented public entrypoints remain synchronized with
 - Create: `ChemBlender/core/project_service.py`
 - Create: `tests/test_project_service.py`
 - Modify: `ChemBlender/core/__init__.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Modify: `docs/quantum-visualization/2.3.0/architecture/cbq-sidecar-v0.2.md`
+- Test: `tests/test_project_session.py`
+- Test: `tests/test_sidecar_publication.py`
+- Test: `tests/test_sidecar_storage.py`
+- Test: `tests/test_project_link_pure.py`
+- Test: `tests/test_cache_identity.py`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `save_project_session()`, `relink_project_session()`, `verify_project_session()`, `clear_derived_cache()`.
 
 - [ ] **Step 1: Write operation tests**
 
-Cover unsaved, connected, missing, mismatch, incompatible and invalid states. `clear_derived_cache` may remove only render/derivation caches, never source arrays or manifest.
+Cover unsaved, connected, missing, mismatch, incompatible and invalid states.
+`clear_derived_cache` may remove only the documented render/derivation cache
+directories, never source arrays, manifest or any unrecognized sibling.
 
 - [ ] **Step 2: Implement operations using existing storage primitives**
 
@@ -262,4 +272,7 @@ Return typed result objects with status/message/path/hash; do not raise for expe
 
 - [ ] **Step 3: Verify and commit**
 
-Run project service, sidecar, project link and cache tests. Update architecture guide and commit.
+Run project service, session, publication, sidecar, project link, cache and
+documentation tests. Confirm importing `ChemBlender.core` still does not load
+`bpy` or optional scientific stacks. Update the architecture guide and
+`.cbq` v0.2 cache-layout documentation in the implementation commit.
