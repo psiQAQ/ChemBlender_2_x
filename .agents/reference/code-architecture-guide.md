@@ -92,7 +92,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
-| `ChemBlender/core/__init__.py` | 模块级 re-export | `core` 的稳定导入门面，集中导出模型、reader、adapter、派生、存储、recipe、scene preset 和 worker protocol API。 |
+| `ChemBlender/core/__init__.py` | 模块级 re-export | `core` 的普通 CPython、无 `bpy` 公共门面：稳定导出模型及其构造器/sidecar tag，并提供存储 API；Reader 与 Recipe 为 alpha 0.x 契约，具体 reader/adapter、派生、scene/reporting 与 connector 仅保持内部兼容导入，不是冻结插件 API。 |
 | `ChemBlender/core/model/__init__.py` | 模块级显式 re-export | 模型 package 的兼容门面；从基础模块和八个领域模块显式重导出既有公共名称，不保留领域模型定义。 |
 | `ChemBlender/core/model/common.py` | `_require_uuid()`、`_require_token()`、`CalculationStatus`、`DatasetStatus`、`IssueKind` 等 12 个 enum | 提供模型共享的 token/UUID/text 校验器、正则模式和稳定枚举定义，不依赖 Blender 或可选科学栈。 |
 | `ChemBlender/core/model/arrays.py` | `ArrayData` | 定义带命名维度、单位、shape 和 dtype 校验的中立数组包装，并由模型 package 原样 re-export。 |
