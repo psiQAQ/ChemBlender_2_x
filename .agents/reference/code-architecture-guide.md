@@ -83,7 +83,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/fermi_surface_view.py` | `create_fermi_surface_view()`、`select_fermi_face()` | 将中立 `FermiSurfaceMesh` 转为三角 Mesh，把 band、投影、速度或自旋写入顶点/面属性并支持面到 band 的选择。 |
 | `ChemBlender/topology_view.py` | `create_topology_view()` | 将 `TopologyGraph` 临界点映射为点 Mesh，将有采样坐标的路径映射为 Curve。 |
 | `ChemBlender/scene_preset_view.py` | `apply_scene_preset()` | 复验 `ScenePresetPlan` 后分派结构、振动、光谱、band/DOS 和表面 adapter；任一 adapter 失败时删除本次创建的全部对象。 |
-| `ChemBlender/project_link.py` | `write_project_link()`、`resolve_project_link()` | 在 Scene 中保存 project UUID、sidecar 相对路径和 manifest hash；打开 `.blend` 时解析、校验并恢复 `.cbq` 项目。 |
+| `ChemBlender/project_link.py` | `MANIFEST_HASH_KEY`、`write_project_link()`、`resolve_project_link()` | 以不依赖 `bpy` 的内部 helper 计算 Scene locator；只从同一次 sidecar 验证取得 manifest hash，并以 UUID、schema 与 hash 解析、校验和恢复 `.cbq` 项目。 |
 | `ChemBlender/worker_client.py` | `start_worker()`、`WorkerHandle.poll()`、`wait()`、`request_cancel()`、`terminate()` | 使用显式外部 Python 启动一次一任务的隐藏 worker 进程，管理 request/result/cancel 文件和 stdout/stderr 日志。 |
 
 ## 纯 Python 语义核心

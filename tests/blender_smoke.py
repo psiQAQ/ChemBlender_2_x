@@ -1,6 +1,7 @@
 import array
 import importlib
 import importlib.util
+import json
 import math
 import sys
 from dataclasses import replace
@@ -954,9 +955,30 @@ def assert_project_sidecar_link(module_key):
                 scene, project, sidecar, blend_path=blend_path
             )
             assert not Path(locator).is_absolute()
+            assert links.MANIFEST_HASH_KEY in scene
             result = links.resolve_project_link(scene, blend_path=blend_path)
             assert result.status is links.ProjectLinkStatus.CONNECTED
             assert result.project.id == project.id
+            core.close_project(result.project)
+
+            core.save_project(sidecar, project)
+            result = links.resolve_project_link(scene, blend_path=blend_path)
+            assert result.status is links.ProjectLinkStatus.MISMATCH
+            assert marker_object.name in bpy.data.objects
+
+            links.write_project_link(
+                scene, project, sidecar, blend_path=blend_path
+            )
+            manifest_path = sidecar / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["manifest_sha256"] = "0" * 64
+            manifest_path.write_text(
+                json.dumps(manifest, sort_keys=True),
+                encoding="utf-8",
+            )
+            result = links.resolve_project_link(scene, blend_path=blend_path)
+            assert result.status is links.ProjectLinkStatus.INVALID
+            assert marker_object.name in bpy.data.objects
 
             scene[links.SIDECAR_LOCATOR_KEY] = "missing.cbq"
             result = links.resolve_project_link(scene, blend_path=blend_path)
@@ -967,6 +989,7 @@ def assert_project_sidecar_link(module_key):
             links.PROJECT_ID_KEY,
             links.PROJECT_SCHEMA_KEY,
             links.SIDECAR_LOCATOR_KEY,
+            links.MANIFEST_HASH_KEY,
         ):
             if key in scene:
                 del scene[key]
