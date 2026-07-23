@@ -178,7 +178,10 @@ commit the new module together with its architecture and façade contracts.
 **Files:**
 - Create: `ChemBlender/core/storage/publication.py`
 - Modify: `ChemBlender/core/sidecar.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Modify: `docs/quantum-visualization/2.3.0/architecture/cbq-sidecar-v0.2.md`
 - Create: `tests/test_sidecar_publication.py`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `solidify_session(session, destination) -> PublishedProject`.
@@ -197,7 +200,9 @@ A helper detects `.tmp` and `.backup` siblings and returns an explicit recovery 
 
 - [ ] **Step 4: Run and commit**
 
-Run publication tests repeatedly to catch file-handle issues. Commit separately.
+Run publication tests repeatedly to catch file-handle issues, then run sidecar
+and documentation contracts. Commit the publication module together with its
+architecture documentation.
 
 ### Task 5: Store and verify manifest hash in Scene links
 
