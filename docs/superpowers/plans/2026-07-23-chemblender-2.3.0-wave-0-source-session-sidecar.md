@@ -134,7 +134,11 @@ Run all sidecar, project link, cache and worker tests. Commit migration docs wit
 **Files:**
 - Create: `ChemBlender/core/session.py`
 - Modify: `ChemBlender/core/__init__.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Modify: `docs/quantum-visualization/2.3.0/public-core-api.md`
 - Create: `tests/test_project_session.py`
+- Modify: `tests/test_core_public_api.py`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `ProjectSession`, `create_session()`, `close_session()` and dirty-state operations.
@@ -166,7 +170,8 @@ Use a mutable dataclass with project, temporary root, persistent sidecar path, d
 
 - [ ] **Step 4: Run and commit**
 
-Run session, sidecar and path traversal tests, then commit.
+Run session, sidecar, public API, documentation and path traversal tests, then
+commit the new module together with its architecture and façade contracts.
 
 ### Task 4: Implement atomic session solidification
 
