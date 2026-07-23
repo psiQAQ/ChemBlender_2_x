@@ -9,9 +9,12 @@ import numpy
 
 from ChemBlender.core import (
     ArrayData,
+    AtomicProperty,
     DatasetStatus,
     FrameSet,
+    Grid3D,
     ImportBatch,
+    MolecularTopology,
     PropertyDataset,
     ProvenanceRecord,
     QCProject,
@@ -28,11 +31,13 @@ from ChemBlender.core.sidecar import (
 )
 
 
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
 PROJECT_ID = UUID("10000000-0000-0000-0000-000000000001")
 STRUCTURE_ID = UUID("20000000-0000-0000-0000-000000000002")
 DATASET_ID = UUID("30000000-0000-0000-0000-000000000003")
 FRAMES_ID = UUID("40000000-0000-0000-0000-000000000004")
 PROVENANCE_ID = UUID("50000000-0000-0000-0000-000000000005")
+GRID_ID = UUID("60000000-0000-0000-0000-000000000006")
 
 
 def sample_project():
@@ -42,6 +47,16 @@ def sample_project():
         revision="structure-r1",
         atomic_numbers=(1, 1),
         coordinates=ArrayData(coordinates, ("atom", "xyz"), "angstrom"),
+        topology=MolecularTopology(
+            bond_indices=ArrayData(
+                numpy.asarray([[0, 1]], dtype=numpy.int64),
+                ("bond", "endpoint"),
+                "dimensionless",
+            ),
+            bond_orders=ArrayData(
+                numpy.asarray([1.0]), ("bond",), "dimensionless"
+            ),
+        ),
     )
     provenance = ProvenanceRecord(
         id=PROVENANCE_ID,
@@ -54,7 +69,7 @@ def sample_project():
         operation="parse",
         parameters=(("charge", 0),),
     )
-    charges = PropertyDataset(
+    charges = AtomicProperty(
         id=DATASET_ID,
         revision="charges-r1",
         semantic_role="mulliken_charge",
@@ -63,6 +78,7 @@ def sample_project():
         status=DatasetStatus.COMPLETE,
         source_calculation=None,
         provenance_ids=(PROVENANCE_ID,),
+        structure_id=STRUCTURE_ID,
     )
     frames = FrameSet(
         id=FRAMES_ID,
@@ -80,11 +96,29 @@ def sample_project():
         structure_id=STRUCTURE_ID,
         comments=("first", "second"),
     )
+    grid = Grid3D(
+        id=GRID_ID,
+        revision="grid-r1",
+        semantic_role="electron_density",
+        domain="grid",
+        data=ArrayData(
+            numpy.arange(8, dtype=numpy.float64).reshape((2, 2, 2)),
+            ("x", "y", "z"),
+            "electron_per_cubic_angstrom",
+        ),
+        status=DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(PROVENANCE_ID,),
+        origin=(0.0, 0.0, 0.0),
+        step_vectors=((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+        coordinate_unit="angstrom",
+        structure_id=STRUCTURE_ID,
+    )
     project = QCProject(id=PROJECT_ID, schema_version="0.1")
     project.commit(
         ImportBatch(
             structures=(structure,),
-            datasets=(charges, frames),
+            datasets=(charges, frames, grid),
             provenance=(provenance,),
         )
     )
@@ -92,6 +126,13 @@ def sample_project():
 
 
 class SidecarStorageTests(unittest.TestCase):
+    def test_committed_v01_fixture_opens(self):
+        project = open_project(FIXTURES / "sidecar" / "model-v01")
+        self.assertEqual(project.schema_version, "0.1")
+        self.assertEqual(len(project.structures), 1)
+        self.assertGreaterEqual(len(project.datasets), 3)
+        close_project(project)
+
     def test_scalar_array_round_trip_preserves_zero_rank(self):
         dataset = PropertyDataset(
             id=UUID("60000000-0000-0000-0000-000000000006"),
@@ -128,6 +169,7 @@ class SidecarStorageTests(unittest.TestCase):
             values = loaded.datasets[FRAMES_ID].data.values
             self.assertIsInstance(values, LazyNpyArray)
             self.assertFalse(values.loaded)
+            close_project(loaded)
 
     def test_trajectory_manager_releases_lazy_sidecar_memory_map(self):
         with TemporaryDirectory() as directory:
