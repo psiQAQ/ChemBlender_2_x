@@ -63,6 +63,7 @@ Do not infer current status from this file, completed work, archived evidence, o
 ## Blender Extension Workflow
 
 - Before Blender operations, run `blender-mcp --help` and query Blender version, executable, bundled Python, runtime system, and extension repositories together.
+- If Blender MCP cannot connect, check Blender processes by exact executable path. When Blender 5.1 is installed but no matching process is running, start Blender 5.1 directly, wait for the MCP listener, and retry the live query; do not substitute stale paths or versions.
 - Require Blender 5.1.0 or newer for the supported release.
 - Build and install through Blender Extensions; never copy 2.2.0 source into a legacy add-on directory.
 - Verify the enabled key `bl_ext.user_default.chemblender`.
