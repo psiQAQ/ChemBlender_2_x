@@ -93,7 +93,10 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
 | `ChemBlender/core/__init__.py` | 模块级 re-export | `core` 的稳定导入门面，集中导出模型、reader、adapter、派生、存储、recipe、scene preset 和 worker protocol API。 |
-| `ChemBlender/core/model/__init__.py` | `ArrayData`、`Structure`、`CalculationRecord`、`PropertyDataset`、`Grid3D`、`BasisSet`、`OrbitalSet`、`DensityMatrix`、`QCProject`、`ImportBatch` | 权威语义模型与引用校验中心；作为 Task 4 提取前的临时单体 package entry。各 dataclass 校验单位、shape、UUID/revision 和跨实体关系；`QCProject.commit()` 原子接纳一个 `ImportBatch`。 |
+| `ChemBlender/core/model/__init__.py` | `Structure`、`CalculationRecord`、`PropertyDataset`、`Grid3D`、`BasisSet`、`OrbitalSet`、`DensityMatrix`、`QCProject`、`ImportBatch`；foundational type re-export | 保留尚未拆分的领域模型、实体引用校验和稳定公共导出；只从基础模块导入剩余定义所需的私有校验器，`QCProject.commit()` 原子接纳一个 `ImportBatch`。 |
+| `ChemBlender/core/model/common.py` | `_require_uuid()`、`_require_token()`、`CalculationStatus`、`DatasetStatus`、`IssueKind` 等 12 个 enum | 提供模型共享的 token/UUID/text 校验器、正则模式和稳定枚举定义，不依赖 Blender 或可选科学栈。 |
+| `ChemBlender/core/model/arrays.py` | `ArrayData` | 定义带命名维度、单位、shape 和 dtype 校验的中立数组包装，并由模型 package 原样 re-export。 |
+| `ChemBlender/core/model/diagnostics.py` | `ParserIssue`、`ParserReport` | 定义 reader 诊断项与解析报告，复用共享校验器并保持既有构造器、枚举和能力 token 契约。 |
 | `ChemBlender/core/readers.py` | `ReaderDescriptor`、`ReaderRegistry.register()`、`select()`、`parse()` | 定义 reader capability、扩展名、bounded sniffing 和确定性分派；拒绝未知或歧义 reader。 |
 | `ChemBlender/core/reader_catalog.py` | `builtin_reader_descriptors()`、`builtin_reader_registry()`、`reader_capability_document()` | 汇总内置 reader，并生成机器可读的格式能力矩阵。 |
 | `ChemBlender/core/cache_identity.py` | `source_hash_bytes()`、`parser_cache_key()`、`derivation_cache_key()`、`render_cache_key()` | 用规范 JSON 和 SHA-256 分别标识源文件、解析、派生和渲染缓存。 |

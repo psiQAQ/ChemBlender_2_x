@@ -1,151 +1,29 @@
-import operator
 import re
 from math import isfinite
 from dataclasses import dataclass, field
-from enum import Enum
 from uuid import UUID
 
-
-_UNIT_PATTERN = re.compile(r"[a-z][a-z0-9_]*")
-_ID_PATTERN = re.compile(r"[a-z][a-z0-9_.-]*")
-
-
-def _require_uuid(value, name):
-    if not isinstance(value, UUID):
-        raise TypeError(f"{name} must be a UUID")
-
-
-def _require_uuid_tuple(values, name):
-    values = tuple(values)
-    for value in values:
-        _require_uuid(value, name)
-    return values
-
-
-def _require_token(value, name, pattern=_UNIT_PATTERN):
-    if not isinstance(value, str) or not pattern.fullmatch(value):
-        raise ValueError(f"{name} must be a lower_snake_case token")
-
-
-def _require_text(value, name):
-    if not isinstance(value, str) or not value:
-        raise ValueError(f"{name} must be a non-empty string")
-
-
-class CalculationStatus(str, Enum):
-    SUCCESS = "success"
-    FAILED = "failed"
-    INCOMPLETE = "incomplete"
-
-
-class DatasetStatus(str, Enum):
-    COMPLETE = "complete"
-    PARTIAL = "partial"
-    AMBIGUOUS = "ambiguous"
-
-
-class IssueKind(str, Enum):
-    MISSING = "missing"
-    UNSUPPORTED = "unsupported"
-    AMBIGUOUS = "ambiguous"
-    INVALID = "invalid"
-    WARNING = "warning"
-
-
-class BasisFunctionKind(str, Enum):
-    CARTESIAN = "cartesian"
-    PURE = "pure"
-
-
-class OrbitalKind(str, Enum):
-    RESTRICTED = "restricted"
-    UNRESTRICTED = "unrestricted"
-    GENERALIZED = "generalized"
-
-
-class DensityMatrixLevel(str, Enum):
-    SCF = "scf"
-    POST_SCF = "post_scf"
-
-
-class DensityMatrixSpin(str, Enum):
-    TOTAL = "total"
-    SPIN = "spin"
-
-
-class SpectrumKind(str, Enum):
-    IR = "ir"
-    RAMAN = "raman"
-    UV_VIS = "uv_vis"
-    ECD = "ecd"
-
-
-class SpectrumProfile(str, Enum):
-    STICK = "stick"
-    GAUSSIAN = "gaussian"
-    LORENTZIAN = "lorentzian"
-
-
-class SpinChannel(str, Enum):
-    ALPHA = "alpha"
-    BETA = "beta"
-
-
-class EnergyReference(str, Enum):
-    ABSOLUTE = "absolute"
-    FERMI_SHIFTED = "fermi_shifted"
-
-
-class CriticalPointKind(str, Enum):
-    NUCLEAR = "nuclear"
-    ATTRACTOR = "attractor"
-    BOND = "bond"
-    RING = "ring"
-    CAGE = "cage"
-
-
-@dataclass(frozen=True, slots=True)
-class ArrayData:
-    values: object
-    dims: tuple[str, ...]
-    unit: str
-    shape: tuple[int, ...] = field(init=False)
-    dtype: str = field(init=False)
-
-    def __post_init__(self):
-        try:
-            raw_shape = self.values.shape
-        except AttributeError as error:
-            raise TypeError("values must expose a shape") from error
-
-        shape = []
-        for dimension in raw_shape:
-            if isinstance(dimension, bool):
-                raise ValueError("array dimensions must be non-negative integers")
-            try:
-                size = operator.index(dimension)
-            except TypeError as error:
-                raise ValueError(
-                    "array dimensions must be non-negative integers"
-                ) from error
-            if size < 0:
-                raise ValueError("array dimensions must be non-negative integers")
-            shape.append(size)
-
-        dims = tuple(self.dims)
-        if len(shape) != len(dims):
-            raise ValueError("dims must match array rank")
-        if len(set(dims)) != len(dims) or any(
-            not isinstance(dim, str) or not dim for dim in dims
-        ):
-            raise ValueError("dims must be unique non-empty names")
-        if not isinstance(self.unit, str) or not _UNIT_PATTERN.fullmatch(self.unit):
-            raise ValueError("unit must be a lower_snake_case token")
-
-        dtype = getattr(self.values, "dtype", getattr(self.values, "format", "unknown"))
-        object.__setattr__(self, "dims", dims)
-        object.__setattr__(self, "shape", tuple(shape))
-        object.__setattr__(self, "dtype", str(dtype))
+from .arrays import ArrayData
+from .common import (
+    _ID_PATTERN,
+    BasisFunctionKind,
+    CalculationStatus,
+    CriticalPointKind,
+    DatasetStatus,
+    DensityMatrixLevel,
+    DensityMatrixSpin,
+    EnergyReference,
+    IssueKind,
+    OrbitalKind,
+    SpectrumKind,
+    SpectrumProfile,
+    SpinChannel,
+    _require_text,
+    _require_token,
+    _require_uuid,
+    _require_uuid_tuple,
+)
+from .diagnostics import ParserIssue, ParserReport
 
 
 @dataclass(frozen=True, slots=True)
@@ -1980,45 +1858,6 @@ class ProvenanceRecord:
         ):
             raise ValueError("parameters must contain non-empty string keys")
         object.__setattr__(self, "parameters", parameters)
-
-
-@dataclass(frozen=True, slots=True)
-class ParserIssue:
-    kind: IssueKind
-    path: str
-    message: str
-
-    def __post_init__(self):
-        if not isinstance(self.kind, IssueKind):
-            raise TypeError("kind must be an IssueKind")
-        _require_text(self.path, "path")
-        _require_text(self.message, "message")
-
-
-@dataclass(frozen=True, slots=True)
-class ParserReport:
-    reader_id: str
-    reader_version: str
-    created_entity_ids: tuple[UUID, ...]
-    parsed_capabilities: tuple[str, ...]
-    issues: tuple[ParserIssue, ...]
-
-    def __post_init__(self):
-        _require_token(self.reader_id, "reader_id", _ID_PATTERN)
-        _require_text(self.reader_version, "reader_version")
-        object.__setattr__(
-            self,
-            "created_entity_ids",
-            _require_uuid_tuple(self.created_entity_ids, "created_entity_ids"),
-        )
-        capabilities = tuple(self.parsed_capabilities)
-        for capability in capabilities:
-            _require_token(capability, "parsed_capability")
-        issues = tuple(self.issues)
-        if any(not isinstance(issue, ParserIssue) for issue in issues):
-            raise TypeError("issues must contain ParserIssue values")
-        object.__setattr__(self, "parsed_capabilities", capabilities)
-        object.__setattr__(self, "issues", issues)
 
 
 @dataclass(frozen=True, slots=True)

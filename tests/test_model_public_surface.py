@@ -59,6 +59,22 @@ PUBLIC_MODEL_NAMES = {
 
 
 class ModelPublicSurfaceTests(unittest.TestCase):
+    def test_foundational_types_are_split_but_publicly_reexported(self):
+        expected_origins = {
+            "ArrayData": "ChemBlender.core.model.arrays",
+            "CalculationStatus": "ChemBlender.core.model.common",
+            "IssueKind": "ChemBlender.core.model.common",
+            "ParserIssue": "ChemBlender.core.model.diagnostics",
+            "ParserReport": "ChemBlender.core.model.diagnostics",
+        }
+        self.assertEqual(
+            {
+                name: getattr(core, name).__module__
+                for name in expected_origins
+            },
+            expected_origins,
+        )
+
     def test_public_model_names_remain_importable(self):
         missing = sorted(name for name in PUBLIC_MODEL_NAMES if not hasattr(core, name))
         self.assertEqual(missing, [])
