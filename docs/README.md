@@ -9,12 +9,16 @@
 ## Quantum Visualization Development
 
 - [Development entrypoint](quantum-visualization/README.md)
+- [ChemBlender 2.3.0 development entrypoint](quantum-visualization/2.3.0/README.md)
+- [ChemBlender 2.3.0 main audit](quantum-visualization/2.3.0/audits/2026-07-23-main-deep-audit.md)
 - [Phase 0–4 roadmap](quantum-visualization/roadmap.md)
 - [Data-boundary decision agenda](quantum-visualization/architecture/data-boundary.md)
 - [Reference project catalog](quantum-visualization/references.md)
 
 ## Approved Design and Plan
 
+- [ChemBlender 2.3.0 native platform design](superpowers/specs/2026-07-23-chemblender-2.3.0-native-platform-design.md)
+- [ChemBlender 2.3.0 master sequencing plan](superpowers/plans/2026-07-23-chemblender-2.3.0-master-sequencing.md)
 - [2.2.0 repository governance design](superpowers/specs/2026-07-20-chemblender-2.2.0-repository-governance-design.md)
 - [2.1.1 and 2.2.0 rebuild plan](superpowers/plans/2026-07-21-chemblender-2.1.1-and-2.2.0-rebuild.md)
 - [Quantum visualization development-system design](superpowers/specs/2026-07-21-quantum-visualization-development-system-design.md)

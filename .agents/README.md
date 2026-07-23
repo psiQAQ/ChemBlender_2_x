@@ -47,6 +47,23 @@ Historical documents provide provenance, not current status.
 | decision | [0026-versioned-scene-presets.md](decisions/0026-versioned-scene-presets.md) | Pure-data publication preset, binding and render identity boundary |
 | decision | [0027-openvdb-surface-application.md](decisions/0027-openvdb-surface-application.md) | Signed phase and property-sampled OpenVDB surface boundary |
 | decision | [0028-external-record-connector-boundary.md](decisions/0028-external-record-connector-boundary.md) | Optional provider, credential and normalized-record boundary |
+| decision | [0029-2.3.0-product-and-priority-boundary.md](decisions/0029-2.3.0-product-and-priority-boundary.md) | 2.3.0 product scope and 70/30 priority boundary |
+| decision | [0030-native-dependency-and-gemmi-boundary.md](decisions/0030-native-dependency-and-gemmi-boundary.md) | Base and optional dependency tiers |
+| decision | [0031-source-session-import-transaction-boundary.md](decisions/0031-source-session-import-transaction-boundary.md) | Source revisions, session projects, and atomic imports |
+| decision | [0032-reader-plugin-api-and-canonical-document.md](decisions/0032-reader-plugin-api-and-canonical-document.md) | Reader API and canonical document boundary |
+| decision | [0033-quality-recovery-and-diagnostics-boundary.md](decisions/0033-quality-recovery-and-diagnostics-boundary.md) | Recovery policy, quality states, and diagnostics |
+| decision | [0034-immutable-edit-and-topology-provenance.md](decisions/0034-immutable-edit-and-topology-provenance.md) | Immutable entities, derived edits, and topology provenance |
+| decision | [0035-quick-import-project-browser-workspace.md](decisions/0035-quick-import-project-browser-workspace.md) | Quick Import, Project Browser, and workspace UX |
+| decision | [0036-native-format-scope-and-roundtrip.md](decisions/0036-native-format-scope-and-roundtrip.md) | Native format scope and round-trip policy |
+| decision | [0037-performance-and-scale-budget.md](decisions/0037-performance-and-scale-budget.md) | Performance budgets and non-blocking work |
+| decision | [0038-prerelease-schema-freeze-and-release-train.md](decisions/0038-prerelease-schema-freeze-and-release-train.md) | Prerelease train and schema/API freeze |
+| decision | [0039-legacy-scene-explicit-migration.md](decisions/0039-legacy-scene-explicit-migration.md) | Explicit legacy-scene migration |
+| decision | [0040-explicit-registration-and-module-boundary.md](decisions/0040-explicit-registration-and-module-boundary.md) | Explicit registration and module boundaries |
+| queued | [2.3.0-wave-0-platform-foundation.md](queued/2.3.0-wave-0-platform-foundation.md) | Wave 0 platform foundation |
+| queued | [2.3.0-wave-1-native-molecular-and-grid.md](queued/2.3.0-wave-1-native-molecular-and-grid.md) | Wave 1 native molecular and grid formats |
+| queued | [2.3.0-wave-2-native-crystal.md](queued/2.3.0-wave-2-native-crystal.md) | Wave 2 native crystal formats |
+| queued | [2.3.0-wave-3-exchange-mol2-pdb-pqr.md](queued/2.3.0-wave-3-exchange-mol2-pdb-pqr.md) | Wave 3 exchange and bio formats |
+| queued | [2.3.0-wave-4-migration-release.md](queued/2.3.0-wave-4-migration-release.md) | Wave 4 migration and release |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
@@ -75,6 +92,7 @@ Historical documents provide provenance, not current status.
 | completed | [surface-preset-application.md](completed/surface-preset-application.md) | Signed and property-mapped OpenVDB surface application evidence |
 | completed | [external-record-connectors.md](completed/external-record-connectors.md) | QCArchive, AiiDA and NOMAD connector contract evidence |
 | completed | [quantum-visualization-roadmap-audit.md](completed/quantum-visualization-roadmap-audit.md) | Phase 0-4 evidence, capability and conditional-boundary audit |
+| documentation | [ChemBlender 2.3.0 development entrypoint](../docs/quantum-visualization/2.3.0/README.md) | Native compatibility and platform-foundation execution roadmap |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.
