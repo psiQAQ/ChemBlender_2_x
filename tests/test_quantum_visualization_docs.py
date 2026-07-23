@@ -217,6 +217,14 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("code-architecture-guide.md", index)
         self.assertIn("Every architecture change", agents)
 
+    def test_quantum_model_is_a_package(self):
+        import importlib
+
+        self.assertFalse((ROOT / "ChemBlender" / "core" / "model.py").exists())
+        self.assertTrue((ROOT / "ChemBlender" / "core" / "model" / "__init__.py").exists())
+        model = importlib.import_module("ChemBlender.core.model")
+        self.assertIsNotNone(model.__spec__.submodule_search_locations)
+
     def test_local_markdown_links_resolve(self):
         import re
 
