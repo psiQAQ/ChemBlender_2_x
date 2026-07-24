@@ -6,9 +6,11 @@ from ChemBlender.core import ImportBatch
 from ChemBlender.core.readers import (
     AmbiguousReaderError,
     CapabilitySupport,
+    ReaderAvailability,
     ReaderDescriptor,
     ReaderNotFoundError,
     ReaderRegistry,
+    ReaderRuntimeDescriptor,
     SniffMatch,
     SniffResult,
 )
@@ -41,6 +43,54 @@ def descriptor(
 
 
 class ReaderRegistryTests(unittest.TestCase):
+    def test_legacy_descriptor_gets_available_builtin_runtime_metadata(self):
+        reader = descriptor("legacy")
+        registry = ReaderRegistry((reader,))
+
+        runtime = registry.runtime("legacy")
+
+        self.assertIs(runtime.descriptor, reader)
+        self.assertEqual(runtime.plugin_id, "chemblender.builtin")
+        self.assertEqual(runtime.api_version, "0.1")
+        self.assertEqual(runtime.execution_mode, "built_in")
+        self.assertEqual(
+            runtime.current_availability(),
+            ReaderAvailability(True, "built_in", "available", ""),
+        )
+        self.assertIs(registry.select("unused", reader_id="legacy"), reader)
+
+    def test_runtime_descriptor_keeps_selection_separate_from_availability(self):
+        reader = descriptor("optional")
+        runtime = ReaderRuntimeDescriptor(
+            descriptor=reader,
+            plugin_id="example.optional",
+            api_version="0.1",
+            execution_mode="worker",
+            availability=lambda: ReaderAvailability(
+                False,
+                "worker",
+                "dependency_unavailable",
+                "worker dependency missing",
+            ),
+        )
+        registry = ReaderRegistry((runtime,))
+
+        self.assertIs(registry.select("unused", reader_id="optional"), reader)
+        self.assertFalse(registry.runtime("optional").current_availability().available)
+
+    def test_runtime_contract_rejects_invalid_modes_and_probe_results(self):
+        with self.assertRaises(ValueError):
+            ReaderAvailability(True, "thread", "available", "")
+        with self.assertRaises(ValueError):
+            ReaderAvailability(True, "built_in", "Invalid Code", "")
+
+        runtime = ReaderRuntimeDescriptor(
+            descriptor=descriptor("bad-probe"),
+            availability=lambda: object(),
+        )
+        with self.assertRaises(TypeError):
+            runtime.current_availability()
+
     def test_descriptor_normalizes_extensions_and_capabilities(self):
         reader = descriptor("test-reader", extensions=("OUT", ".LOG"))
         self.assertEqual(reader.extensions, (".out", ".log"))

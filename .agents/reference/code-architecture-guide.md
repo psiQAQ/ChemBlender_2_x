@@ -109,11 +109,13 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/core/model/project.py` | `CalculationRecord`、`ProvenanceRecord`、`ImportBatch`、`QCProject` | 定义交换 envelope、计算/溯源记录和项目聚合根；原子提交 source/revision、diagnostic 与科学实体，并校验全局 registry UUID 和双向 revision-diagnostic 关系。 |
 | `ChemBlender/core/session.py` | `ProjectSession`、`create_session()`、`close_session()` | 在冻结科学模型之外管理可变会话状态；创建带 UUID ownership marker 的临时根，并在关闭 lazy resources 后仅删除标记匹配的受控目录。 |
 | `ChemBlender/core/project_service.py` | `save_project_session()`、`relink_project_session()`、`verify_project_session()`、`clear_derived_cache()` | 编排原子 sidecar publication 与经 hash 验证的 Scene link；以显式状态恢复 session，并仅清理 `.cbq/cache/derivation/` 与 `.cbq/cache/render/` 非权威缓存。 |
-| `ChemBlender/core/import_pipeline/__init__.py` | 模块级显式 re-export | 导入流水线的纯 Python package 门面；只公开 request、preview 与 staging 契约，不加载 Blender 或可选科学栈。 |
+| `ChemBlender/core/import_pipeline/__init__.py` | 模块级显式 re-export | 导入流水线的纯 Python package 门面；公开 request、preview、staging 与 reader preflight 契约，不加载 Blender 或可选科学栈。 |
+| `ChemBlender/core/import_pipeline/parse.py` | `staged_reader_batch()` | 将现有 reader 的 `ImportBatch` 适配为带 `SourceRecord`、`SourceRevision` 和双向诊断引用的暂存结果；规范参数绑定 reader execution mode，但不提交项目。 |
+| `ChemBlender/core/import_pipeline/preflight.py` | `preflight_import()`、`ImportCancelled` | 对显式文件执行 bounded hash、reader 选择与 availability 检查、可取消解析和稳定失败诊断；只登记到 owned staging session，不写 `QCProject`。 |
 | `ChemBlender/core/import_pipeline/request.py` | `ValidationMode`、`ImportSource`、`ReaderOverride`、`ImportRequest` | 定义不可变导入意图；规范化并去重显式文件路径，拒绝目录扫描，并将 reader override 限定到请求内来源。 |
 | `ChemBlender/core/import_pipeline/preview.py` | `SourcePreview`、`ImportPreview` | 以不可变路径、标量和 UUID 引用描述 source row、暂存 batch、冲突、归组建议、诊断及默认 view plan，不持有项目或 Blender 对象。 |
 | `ChemBlender/core/import_pipeline/staging.py` | `StagedImportSession.create()`、`register_result()`、`discard()` | 创建带 UUID ownership marker 的独占暂存根、artifact 目录和受控 `ImportBatch` registry；仅在路径、文件身份及 marker 均匹配时删除。 |
-| `ChemBlender/core/readers.py` | `ReaderDescriptor`、`ReaderRegistry.register()`、`select()`、`parse()` | 定义 reader capability、扩展名、bounded sniffing 和确定性分派；拒绝未知或歧义 reader。 |
+| `ChemBlender/core/readers.py` | `ReaderDescriptor`、`ReaderRuntimeDescriptor`、`ReaderAvailability`、`ReaderRegistry.register()`、`select()`、`parse()` | 定义 reader capability、扩展名、bounded sniffing 和确定性分派；以兼容 wrapper 分离 reader 选择与运行时 availability，拒绝未知或歧义 reader。 |
 | `ChemBlender/core/reader_catalog.py` | `builtin_reader_descriptors()`、`builtin_reader_registry()`、`reader_capability_document()` | 汇总内置 reader，并生成机器可读的格式能力矩阵。 |
 | `ChemBlender/core/cache_identity.py` | `source_hash_bytes()`、`parser_cache_key()`、`derivation_cache_key()`、`render_cache_key()` | 用规范 JSON 和 SHA-256 分别标识源文件、解析、派生和渲染缓存。 |
 

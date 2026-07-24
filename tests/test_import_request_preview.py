@@ -417,19 +417,21 @@ class StagedImportSessionTests(unittest.TestCase):
 
 
 class ImportPipelineBoundaryTests(unittest.TestCase):
-    def test_package_exports_only_task_two_contracts(self):
+    def test_package_exports_current_preflight_contracts(self):
         from ChemBlender.core import import_pipeline
 
         self.assertEqual(
             set(import_pipeline.__all__),
             {
                 "ImportPreview",
+                "ImportCancelled",
                 "ImportRequest",
                 "ImportSource",
                 "ReaderOverride",
                 "SourcePreview",
                 "StagedImportSession",
                 "ValidationMode",
+                "preflight_import",
             },
         )
 
