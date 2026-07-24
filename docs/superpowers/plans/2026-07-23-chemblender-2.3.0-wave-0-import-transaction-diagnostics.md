@@ -111,8 +111,15 @@ source module in the same implementation commit.
 **Files:**
 - Create: `ChemBlender/core/import_pipeline/preflight.py`
 - Create: `ChemBlender/core/import_pipeline/parse.py`
+- Modify: `ChemBlender/core/import_pipeline/__init__.py`
 - Modify: `ChemBlender/core/readers.py`
 - Create: `tests/test_import_preflight.py`
+- Modify: `tests/test_import_request_preview.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_quantum_readers.py`
+- Test: `tests/test_xyz_reader.py`
+- Test: `tests/test_cube_reader.py`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `preflight_import(request, registry, session) -> ImportPreview`.
@@ -135,7 +142,11 @@ The pure function accepts `progress(stage, completed, total)` and `is_cancelled(
 
 - [ ] **Step 5: Run and commit**
 
-Run existing reader selection tests plus new preflight tests.
+Run existing reader selection, XYZ/Cube, request/preview, preflight and
+documentation-contract tests. Confirm the expanded import-pipeline package
+still imports without `bpy` or optional scientific stacks. Update the
+architecture guide for the two new modules and the changed `readers.py`
+responsibility in the same implementation commit.
 
 ### Task 4: Implement duplicate and revision conflict analysis
 
