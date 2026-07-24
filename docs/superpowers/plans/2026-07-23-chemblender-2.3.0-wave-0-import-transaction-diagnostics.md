@@ -232,32 +232,83 @@ implementation commit.
 ### Task 6: Implement ProjectTransaction
 
 **Files:**
+- Create: `ChemBlender/core/model/grouping.py`
+- Modify: `ChemBlender/core/model/__init__.py`
+- Modify: `ChemBlender/core/model/project.py`
+- Modify: `ChemBlender/core/model_registry.py`
+- Modify: `ChemBlender/core/sidecar_migrations.py`
+- Modify: `ChemBlender/core/__init__.py`
 - Create: `ChemBlender/core/import_pipeline/transaction.py`
+- Modify: `ChemBlender/core/import_pipeline/grouping.py`
+- Modify: `ChemBlender/core/import_pipeline/__init__.py`
 - Modify: `ChemBlender/core/session.py`
 - Create: `tests/test_project_transaction.py`
+- Modify: `tests/test_source_grouping.py`
+- Modify: `tests/test_import_request_preview.py`
+- Modify: `tests/test_model_public_surface.py`
+- Modify: `tests/test_model_registry.py`
+- Modify: `tests/test_quantum_core.py`
+- Modify: `tests/test_sidecar_storage.py`
+- Test: `tests/test_import_conflicts.py`
+- Test: `tests/test_sidecar_publication.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
-- Produces: `commit_import_preview(session, preview, decisions) -> ImportCommitResult`.
+- Produces: `GroupingDecision`, `ImportCommitDecisions`, `ImportCommitResult` and
+  `commit_import_preview(project_session, staged_session, preview, decisions)
+  -> ImportCommitResult`.
+- `GroupingDecision` carries the complete immutable `SourceGroupSuggestion`
+  snapshot plus selected evidence IDs. The transaction recomputes suggestions
+  from the live staging session and requires complete object equality before
+  confirmation; UUID equality alone is insufficient.
+- `CalculationGroup` is a model entity stored in
+  `QCProject.calculation_groups` and serialized in `.cbq`. The import-pipeline
+  façade continues to re-export it for compatibility.
+- Adding the empty `calculation_groups` registry does not change the current
+  `0.2` manifest or project schema version. Migration must add the missing
+  registry when opening existing `0.2` documents and the committed `0.1`
+  fixture.
 
 - [ ] **Step 1: Write atomic failure tests**
 
-Create two staged batches, make the second contain a dangling reference, and assert no source/entity/diagnostic from either is committed and session dirty state is unchanged.
+Create two staged batches, make the second contain a dangling reference, and
+assert no source/entity/diagnostic/group from either is committed, the live
+project object and session dirty state are unchanged, and no temporary sidecar
+is published.
 
 - [ ] **Step 2: Write success tests**
 
-Assert source records, revisions, diagnostics, entities and confirmed groups are committed, session is dirty, and the temporary sidecar can reopen.
+Assert source records, revisions, diagnostics, entities and confirmed groups
+are committed, session is dirty, and the temporary sidecar can reopen with the
+same concrete entities and confirmed groups. Existing `0.2` sidecars and the
+committed `0.1` fixture must reopen with an empty `calculation_groups`
+registry.
 
 - [ ] **Step 3: Implement transaction assembly**
 
-Resolve conflicts, allocate new IDs where required, merge batches, create source/revision entities, validate through a copy of QCProject, publish the session sidecar, reopen and only then replace the live session project.
+Resolve conflicts against the live `QCProject` and staging session, allocate
+new IDs where required, merge batches, recompute and validate complete grouping
+suggestions, and validate through a copy of `QCProject`. Publish that candidate
+to the current session sidecar, or to a controlled temporary `.cbq` beneath the
+session root when the session has not yet been solidified. Reopen the published
+sidecar and only then replace the live session project and mark it dirty.
+Neither validation nor a failed publication may mutate the live project,
+session dirty state, or sidecar locator.
 
 - [ ] **Step 4: Add view failure status contract**
 
-The pure transaction does not create views. It returns default view plans and a committed project state. Blender caller handles view application and reports data committed/view failed separately.
+The pure transaction does not create views. It returns the immutable default
+view plan IDs and a committed project state. Blender caller handles view
+application and reports data committed/view failed separately.
 
 - [ ] **Step 5: Run and commit**
 
-Run transaction, project, sidecar, conflict and grouping tests.
+Run transaction, project, sidecar storage/publication, conflict, grouping,
+public façade, registry and documentation-contract tests. Confirm
+`ChemBlender.core.import_pipeline` remains importable without `bpy` or optional
+scientific stacks. Update the architecture guide in the same implementation
+commit for the new model and transaction modules.
 
 ### Task 7: Add deterministic diagnostic summaries and exports
 
