@@ -124,6 +124,17 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/core/reader_catalog.py` | `builtin_reader_descriptors()`、`builtin_reader_registry()`、`reader_capability_document()` | 汇总内置 reader，并生成机器可读的格式能力矩阵。 |
 | `ChemBlender/core/cache_identity.py` | `source_hash_bytes()`、`parser_cache_key()`、`derivation_cache_key()`、`render_cache_key()` | 用规范 JSON 和 SHA-256 分别标识源文件、解析、派生和渲染缓存。 |
 
+### Reader API alpha 门面
+
+`reader_api` 是面向实验性 0.x reader plugin 的公共、纯 Python（`bpy`-free）门面。manifest 是可安装插件的静态声明，runtime descriptor 是已解析 reader 的只读元数据；两者都不持有 parse callable，插件也不能取得或修改 `QCProject`。可选依赖 availability 探测只使用 `find_spec()`，不导入该依赖。
+
+| 文件 | 主要入口 | 职责 |
+| --- | --- | --- |
+| `ChemBlender/reader_api/__init__.py` | 模块级 re-export | Reader API 0.x 的严格公共门面；只导出版本、执行模式、现有 `ReaderAvailability`、manifest 类型和只读 runtime descriptor。 |
+| `ChemBlender/reader_api/version.py` | `READER_API_VERSION` | 声明当前实验性 Reader API 版本 `0.1`，供 manifest 兼容范围校验。 |
+| `ChemBlender/reader_api/manifest.py` | `ExecutionMode`、`ReaderManifestEntry`、`ReaderPluginManifest.from_toml()` | 用标准库 `tomllib` 读取受控 UTF-8 TOML，拒绝未知字段和不兼容 API 范围，并确定性规范化静态 reader 声明。 |
+| `ChemBlender/reader_api/descriptors.py` | `PublicReaderDescriptor`、`_probe_availability()` | 定义不含 callable、模块路径或项目上下文的不可变 runtime 元数据；以不导入可选依赖的 probe 返回现有 `ReaderAvailability`。 |
+
 ### 文件 reader 与第三方 adapter
 
 | 文件 | 主要入口 | 职责 |
