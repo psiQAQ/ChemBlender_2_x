@@ -136,6 +136,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/reader_api/descriptors.py` | `PublicReaderDescriptor`、`_probe_availability()` | 定义不含 callable、模块路径或项目上下文的不可变 runtime 元数据；以相对导入取得现有 `CapabilitySupport`/`ReaderAvailability`，并保留 `SUPPORTED`、`PARTIAL`、`UNSUPPORTED` 三态 capability。 |
 | `ChemBlender/reader_api/public_model.py` | `PublicImportBatch` | 以精确受信科学实体类型构成不可变、无复制的导入批次；拒绝子类和未批准数据集，插件不能经此获得项目。 |
 | `ChemBlender/reader_api/builtin_bridge.py` | `public_batch_from_internal()`、`internal_batch_from_public()` | 内置 `ImportBatch` 与公开批次间的薄、无复制转换边界；后者复用临时 `QCProject.commit()` 图校验，并转换为公开验证错误。 |
+| `ChemBlender/reader_api/canonical_document.py` | `public_batch_document()`、`public_batch_from_document()`、`write_public_batch_bundle()`、`read_public_batch_bundle()` | 将严格 `PublicImportBatch` 确定性编码为 Reader Import Document v0.1；以 content-addressed、禁 pickle 的 NPY artifacts 承载数组，并在读取边界复验 exact schema/type、相对路径、shape、dtype 与双 hash；只构造公开 batch，项目图校验留给 built-in bridge。 |
 
 ### 文件 reader 与第三方 adapter
 

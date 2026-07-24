@@ -5,6 +5,15 @@ from .builtin_bridge import (
     internal_batch_from_public,
     public_batch_from_internal,
 )
+from .canonical_document import (
+    CanonicalDocumentCompatibilityError,
+    CanonicalDocumentError,
+    CanonicalDocumentIntegrityError,
+    public_batch_document,
+    public_batch_from_document,
+    read_public_batch_bundle,
+    write_public_batch_bundle,
+)
 from .manifest import ExecutionMode, ReaderManifestEntry, ReaderPluginManifest
 from .public_model import (
     ArrayData,
@@ -134,4 +143,11 @@ __all__ = (
     "PublicBatchValidationError",
     "public_batch_from_internal",
     "internal_batch_from_public",
+    "CanonicalDocumentError",
+    "CanonicalDocumentCompatibilityError",
+    "CanonicalDocumentIntegrityError",
+    "public_batch_document",
+    "public_batch_from_document",
+    "write_public_batch_bundle",
+    "read_public_batch_bundle",
 )

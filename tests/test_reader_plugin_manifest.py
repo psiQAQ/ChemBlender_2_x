@@ -650,6 +650,13 @@ assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', '
                 "PublicBatchValidationError",
                 "public_batch_from_internal",
                 "internal_batch_from_public",
+                "CanonicalDocumentError",
+                "CanonicalDocumentCompatibilityError",
+                "CanonicalDocumentIntegrityError",
+                "public_batch_document",
+                "public_batch_from_document",
+                "write_public_batch_bundle",
+                "read_public_batch_bundle",
             ),
         )
 
