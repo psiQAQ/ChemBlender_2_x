@@ -17,6 +17,12 @@ from .canonical_document import (
 from .manifest import ExecutionMode, ReaderManifestEntry, ReaderPluginManifest
 from .protocol import ParseRequest, ProgressEvent, ReaderPlugin, SniffRequest
 from .registry import ReaderPluginRegistry, builtin_reader_plugin_registry
+from .worker_bridge import (
+    WorkerReaderError,
+    WorkerReaderExecutionError,
+    WorkerReaderIntegrityError,
+    parse_with_worker,
+)
 from .public_model import (
     ArrayData,
     AtomicProperty,
@@ -158,4 +164,8 @@ __all__ = (
     "ReaderPlugin",
     "ReaderPluginRegistry",
     "builtin_reader_plugin_registry",
+    "WorkerReaderError",
+    "WorkerReaderExecutionError",
+    "WorkerReaderIntegrityError",
+    "parse_with_worker",
 )

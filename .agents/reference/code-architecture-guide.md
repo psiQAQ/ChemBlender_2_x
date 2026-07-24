@@ -139,6 +139,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/reader_api/canonical_document.py` | `public_batch_document()`、`public_batch_from_document()`、`write_public_batch_bundle()`、`read_public_batch_bundle()` | 将严格 `PublicImportBatch` 确定性编码为 Reader Import Document v0.1；以 content-addressed、禁 pickle 的 NPY artifacts 承载数组，并在读取边界复验 exact schema/type、相对路径、shape、dtype 与双 hash；只构造公开 batch，项目图校验留给 built-in bridge。 |
 | `ChemBlender/reader_api/protocol.py` | `SniffRequest`、`ParseRequest`、`ProgressEvent`、`ReaderPlugin` | 定义无项目、无 Blender 上下文的 Reader 插件请求与进度协议；每个插件必须持有与 runtime descriptor 一致的 exact manifest，解析请求只携带已验证来源、规范参数、安全 staging root 及进度/取消回调。 |
 | `ChemBlender/reader_api/registry.py` | `ReaderPluginRegistry`、`builtin_reader_plugin_registry()` | 确定性选择公开 Reader 插件，在注册时交叉验证 manifest/runtime metadata，并要求同一 `plugin_id` 使用一份完整 manifest；在解析前后分块复验来源 hash，并隔离 sniff/parse 异常；现有 11 个 descriptor 薄包装为共享受控 manifest 的 `chemblender.builtin` 插件，可选依赖只做 presence probe。 |
+| `ChemBlender/reader_api/worker_bridge.py` | `parse_with_worker()`、`WorkerReaderError` | 主进程对固定 `reader.parse@0.1` 的已完成 `WorkerResult` 做 request ID、状态、exact metadata、NTFS-safe 相对路径、无 link/junction 的 exact bundle inventory、来源与全部输出 hash 复验；重开 canonical bundle 并经 `internal_batch_from_public()` 图校验后才返回内部 `ImportBatch`。 |
 
 ### 文件 reader 与第三方 adapter
 
@@ -200,8 +201,9 @@ worker 使用调用者明确提供的 Python 环境。默认 registry 只接受�
 | --- | --- | --- |
 | `worker/__init__.py` | 包标记 | 声明独立 worker package；没有运行逻辑。 |
 | `worker/protocol.py` | re-export | 从 `ChemBlender.core.worker_protocol` 重导出协议，使 runner 与 Blender client 使用同一数据契约。 |
-| `worker/operation.py` | `OperationContext`、`OperationOutput`、`OperationError` | 定义 operation 接收的项目上下文、待提交 batch/artifact/metadata，以及稳定错误码。 |
-| `worker/runner.py` | `OperationRegistry`、`run_request()`、`default_registry()`、`main()` | 打开 sidecar、校验输入 revision、检查取消、执行固定 operation、原子提交并重开复验输出，最后写 result。 |
+| `worker/operation.py` | `OperationContext`、`OperationOutput`、`OperationError` | 定义 operation 的项目/任务目录上下文、待提交 batch/artifact/metadata，以及稳定错误码；无项目的 reader operation 只使用任务目录。 |
+| `worker/reader_operation.py` | `register_reader_operation()` | 注册固定 `reader.parse@0.1`：只接受 exact 参数白名单和任务目录内来源 artifact，从内置 Reader registry 解析，写入并重开自有 `reader-bundle` canonical document，再经内部 batch 图校验后发布 hashes；取消或失败时安全清理本次新建 bundle，不写权威项目 sidecar。 |
+| `worker/runner.py` | `OperationRegistry`、`run_request()`、`default_registry()`、`main()` | 默认 operation 打开 sidecar、校验输入 revision、原子提交并重开复验；固定 `reader.parse@0.1` 改走不打开 sidecar 的任务目录 artifact 分支；两者均检查取消并在输出验证后写 result。 |
 | `worker/wavefunction_operations.py` | `register_wavefunction_operations()` | 注册 `wavefunction.mo_grid@1` 与 `wavefunction.electron_density_grid@1`，把 structure/basis/orbital 引用交给 GBasis 派生函数。 |
 | `worker/qcengine_operation.py` | `execute_qcschema()`、`qcschema_compute_operation()`、`register_qcschema_compute_operation()` | 注册 `qcschema.compute@1`；受控调用 QCEngine 或最小 PySCF HF/RHF/UHF adapter，将成功结果统一转回 AtomicResult。 |
 | `worker/connector_operation.py` | `external_record_operation()`、`register_external_record_operation()` | 注册 `external_record.fetch@1`；当前完成离线 QCSchema/CJSON replay、凭据检查、内容寻址 artifact 和脱敏 provenance。 |

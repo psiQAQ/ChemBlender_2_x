@@ -663,6 +663,10 @@ assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', '
                 "ReaderPlugin",
                 "ReaderPluginRegistry",
                 "builtin_reader_plugin_registry",
+                "WorkerReaderError",
+                "WorkerReaderExecutionError",
+                "WorkerReaderIntegrityError",
+                "parse_with_worker",
             ),
         )
 
