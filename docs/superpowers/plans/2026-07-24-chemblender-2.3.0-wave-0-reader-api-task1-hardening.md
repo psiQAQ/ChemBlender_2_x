@@ -33,13 +33,13 @@
 - Consumes: the installed package's `..core.readers` module.
 - Produces: a `reader_api` package that works as both `ChemBlender.reader_api` and `<repository>.chemblender.reader_api`.
 
-- [ ] **Step 1: Add the failing absolute-import AST contract**
+- [x] **Step 1: Add the failing absolute-import AST contract**
 
 Add a test that parses every `ChemBlender/reader_api/*.py` with `ast.parse()`.
 Reject `ast.Import` names and level-zero `ast.ImportFrom` modules whose first
 component is `ChemBlender` or `bl_ext`.
 
-- [ ] **Step 2: Add the failing installed-namespace subprocess test**
+- [x] **Step 2: Add the failing installed-namespace subprocess test**
 
 In a fresh subprocess:
 
@@ -51,7 +51,7 @@ In a fresh subprocess:
 5. Assert top-level `ChemBlender` and `bpy`, `cclib`, `iodata`, `gbasis`,
    `ase`, and `pymatgen` are absent from `sys.modules`.
 
-- [ ] **Step 3: Verify RED**
+- [x] **Step 3: Verify RED**
 
 Run:
 
@@ -62,7 +62,7 @@ Run:
 Expected: the AST test reports the two current absolute imports and the
 synthetic namespace import fails because top-level `ChemBlender` is absent.
 
-- [ ] **Step 4: Replace the absolute imports**
+- [x] **Step 4: Replace the absolute imports**
 
 Use one relative core import in `descriptors.py`:
 
@@ -87,7 +87,7 @@ Do not add aliases, dynamic imports, or repository-name configuration.
 - Consumes: exact `CapabilitySupport` values from `..core.readers`.
 - Produces: `PublicReaderDescriptor.capabilities: Mapping[str, CapabilitySupport]`.
 
-- [ ] **Step 1: Add failing exact-identity and tri-state tests**
+- [x] **Step 1: Add failing exact-identity and tri-state tests**
 
 Assert:
 
@@ -103,14 +103,14 @@ descriptor.capabilities == {
 Also assert bool, string, a different enum with matching serialized values,
 and a duck-typed object are rejected rather than coerced.
 
-- [ ] **Step 2: Add a current capability-matrix regression**
+- [x] **Step 2: Add a current capability-matrix regression**
 
 Read `docs/quantum-visualization/reader-capability-matrix.json`, select current
 entries containing `partial` and `unsupported`, convert the values through
 the exact public enum, and prove `PublicReaderDescriptor` preserves every
 entry without dropping or promoting it.
 
-- [ ] **Step 3: Implement the minimal type correction**
+- [x] **Step 3: Implement the minimal type correction**
 
 Change only the annotation and exact value check:
 
@@ -124,7 +124,7 @@ if type(support) is not CapabilitySupport:
 Keep the sorted `MappingProxyType` output. Do not implement the Task 4
 built-in registry bridge.
 
-- [ ] **Step 4: Update the parent plan contract**
+- [x] **Step 4: Update the parent plan contract**
 
 Add `CapabilitySupport` to Task 1's produced public API and state:
 
@@ -150,7 +150,7 @@ the three states.
 - Consumes: manifest/direct-constructor extension and license sequences.
 - Produces: deterministic immutable extension and license tuples.
 
-- [ ] **Step 1: Add failing extension-boundary tests**
+- [x] **Step 1: Add failing extension-boundary tests**
 
 Accept and normalize:
 
@@ -170,14 +170,14 @@ The canonical token must fully match:
 \.[a-z0-9][a-z0-9._+-]*
 ```
 
-- [ ] **Step 2: Add failing license-boundary tests**
+- [x] **Step 2: Add failing license-boundary tests**
 
 Reject non-strings, empty strings, pure whitespace, and leading/trailing
 whitespace. Accept internal spaces such as `MIT OR Apache-2.0`. Assert
 duplicates are removed, output is ordinally sorted, and later mutation of the
 input list cannot affect the frozen manifest.
 
-- [ ] **Step 3: Implement the shared normalization boundaries**
+- [x] **Step 3: Implement the shared normalization boundaries**
 
 Compile one `_EXTENSION_PATTERN` and call `fullmatch()` after lowercasing and
 adding one leading dot. Normalize licenses once in a small helper that exact-
@@ -199,7 +199,7 @@ Do not require an `SPDX:` prefix.
 - Produces: exact deterministic `reader_api.__all__` including
   `CapabilitySupport`, with existing Task 1 names unchanged.
 
-- [ ] **Step 1: Update the exact public-surface test**
+- [x] **Step 1: Update the exact public-surface test**
 
 Expected public names:
 
@@ -215,14 +215,14 @@ Expected public names:
 )
 ```
 
-- [ ] **Step 2: Update the architecture guide**
+- [x] **Step 2: Update the architecture guide**
 
 Document that `reader_api` uses namespace-relative imports, re-exports the
 exact installed core enum/availability types, and preserves
 `SUPPORTED`/`PARTIAL`/`UNSUPPORTED`. Keep the existing no-callable,
 no-`QCProject`, and no-optional-import boundaries.
 
-- [ ] **Step 3: Verify focused GREEN and commit**
+- [x] **Step 3: Verify focused GREEN and commit**
 
 Run:
 
@@ -249,7 +249,7 @@ git commit -m "fix: harden reader API metadata contract"
 **Interfaces:**
 - Produces: a completed hardening cursor with exact commits and fresh evidence.
 
-- [ ] **Step 1: Run the full verification**
+- [x] **Step 1: Run the full verification**
 
 ```powershell
 & $pythonBin -m unittest discover -s tests -p "test_*.py" -v
@@ -259,19 +259,19 @@ git diff --check
 git status --short
 ```
 
-- [ ] **Step 2: Complete independent reviews**
+- [x] **Step 2: Complete independent reviews**
 
 Run one specification-compliance review and one independent code-quality
 review. Fix every Critical/Important finding and every Minor finding directly
 related to this hardening scope, then rerun the covering and full verification.
 
-- [ ] **Step 3: Record the completed cursor**
+- [x] **Step 3: Record the completed cursor**
 
 Record planning and implementation full SHAs, RED/GREEN evidence, namespace
 alias and tri-state results, `Not Run: pure-Python Reader API metadata task`,
 the Task 2 stop boundary, and the no-push policy.
 
-- [ ] **Step 4: Commit the completion checkpoint**
+- [x] **Step 4: Commit the completion checkpoint**
 
 ```powershell
 git add `
