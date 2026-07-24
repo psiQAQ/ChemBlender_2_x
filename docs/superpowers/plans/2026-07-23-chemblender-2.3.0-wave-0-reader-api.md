@@ -250,19 +250,19 @@ point and must not create that later module early.
 - Publication rollback unregisters the extension if an incompatible existing
   handle prevents ownership.
 
-- [ ] **Step 1: Write bridge contract tests**
+- [x] **Step 1: Write bridge contract tests**
 
 Assert the handle key is versioned, the module name is derived from the live package root, and owner-token mismatch prevents removal. Static tests reject hardcoded `bl_ext.user_default.chemblender` in public plugin code.
 
-- [ ] **Step 2: Implement the pure handle type and Blender bridge**
+- [x] **Step 2: Implement the pure handle type and Blender bridge**
 
 The handle contains API version, actual module name, opaque owner token and registration callbacks. `register_reader_api_handle(package_root)` writes to `bpy.app.driver_namespace`; an existing incompatible owner produces a controlled registration error rather than silent overwrite.
 
-- [ ] **Step 3: Integrate explicit lifecycle**
+- [x] **Step 3: Integrate explicit lifecycle**
 
 Publish after the core Reader registry is ready and remove before module cleanup. Two disable/enable cycles produce exactly one current handle.
 
-- [ ] **Step 4: Blender smoke and commit**
+- [x] **Step 4: Blender smoke and commit**
 
 Assert the installed module name begins with the actual extension key, importing `handle.module_name` returns the public API module, and unregister removes only the owned handle. Commit.
 
