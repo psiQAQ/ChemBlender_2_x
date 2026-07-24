@@ -326,20 +326,59 @@ commit for the new model and transaction modules.
 
 **Files:**
 - Create: `ChemBlender/core/import_pipeline/report.py`
+- Modify: `ChemBlender/core/import_pipeline/__init__.py`
 - Create: `tests/test_import_report.py`
+- Modify: `tests/test_import_request_preview.py`
+- Test: `tests/test_import_diagnostics.py`
+- Test: `tests/test_import_preflight.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
 - Create: `docs/quantum-visualization/2.3.0/specs/import-report-v1.md`
+- Modify: `docs/quantum-visualization/2.3.0/README.md`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
-- Produces: `import_summary()`, `diagnostics_document()` and `render_diagnostics_markdown()`.
+- Produces: `import_summary(preview, staged_session)`,
+  `diagnostics_document(preview, staged_session)` and
+  `render_diagnostics_markdown(document)`.
+- `import_summary()` and `diagnostics_document()` read only the batches named by
+  an immutable `ImportPreview` from its matching live `StagedImportSession`.
+  They fail closed when the preview/session identity, source-to-batch
+  association or diagnostic references disagree. They do not read or mutate a
+  `QCProject`.
+- `diagnostics_document()` returns a JSON-compatible `dict` using schema name
+  `chemblender_import_report` and integer schema version `1`.
+- Canonical JSON uses UTF-8, `ensure_ascii=False`, `allow_nan=False`,
+  `sort_keys=True` and compact separators. The Markdown renderer consumes the
+  same document and does not inspect staging state.
+- The three functions are re-exported only by
+  `ChemBlender.core.import_pipeline`; they are not added to the stable
+  `ChemBlender.core` root façade.
 
 - [ ] **Step 1: Write stable-order tests**
 
-Input diagnostics in reversed orders and assert identical canonical JSON and Markdown sorted by severity, source, record, field and code.
+Input diagnostics in reversed orders and assert identical canonical JSON and
+Markdown sorted by explicit severity order (`error`, `warning`, `info`), source
+record UUID, record key, field path and code, with diagnostic UUID as the final
+deterministic tie-breaker. Assert the exact import-pipeline package export set
+and that a fresh import loads neither `bpy` nor optional scientific stacks.
 
 - [ ] **Step 2: Implement summary counts**
 
-Return counts for Complete, Partial, Ambiguous, Incomplete and Invalid by source and entity. Invalid staged entities not committed still appear in import report.
+Return diagnostic counts for Complete, Partial, Ambiguous, Incomplete and
+Invalid overall, by source record UUID and by non-null entity UUID. Diagnostics
+without an entity contribute to the overall and source counts but not the
+by-entity rows. An entity UUID referenced by an Invalid staged diagnostic is
+reported even when that entity cannot be committed. Source/entity rows and
+quality keys use deterministic UUID and `QualityStatus.summary_order` ordering.
+The report does not claim that diagnostic counts are an aggregate scientific
+quality verdict.
 
 - [ ] **Step 3: Verify and commit**
 
-Run report and canonical JSON tests, update architecture guide and commit.
+Run report, diagnostics, preflight, exact façade and documentation-contract
+tests. Confirm canonical JSON and Markdown are byte-identical for reordered
+input, the package imports without Blender or optional scientific stacks, and
+the report leaves the preview, staging session and staged batches unchanged.
+Document schema v1, canonical encoding, grouping semantics, invalid staged
+entity behavior and escaping rules; link the spec from the 2.3.0 entrypoint.
+Update the architecture guide in the same implementation commit and commit.
