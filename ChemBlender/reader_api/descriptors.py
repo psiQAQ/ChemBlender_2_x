@@ -14,6 +14,7 @@ _MODULE_ROOT_PATTERN = re.compile(r"[a-z_][a-z0-9_]*", re.ASCII)
 
 def _probe_availability(module_name, execution_mode):
     mode = ExecutionMode(execution_mode)
+    mode_value = mode.value
     if type(module_name) is not str or not _MODULE_ROOT_PATTERN.fullmatch(module_name):
         raise ValueError("module_name must be a lowercase top-level module identifier")
     try:
@@ -23,13 +24,13 @@ def _probe_availability(module_name, execution_mode):
     except Exception:
         return ReaderAvailability(
             False,
-            mode,
+            mode_value,
             "dependency_probe_failed",
             "find_spec raised an exception",
         )
     if not present:
-        return ReaderAvailability(False, mode, "dependency_missing", module_name)
-    return ReaderAvailability(True, mode, "available", "")
+        return ReaderAvailability(False, mode_value, "dependency_missing", module_name)
+    return ReaderAvailability(True, mode_value, "available", "")
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,7 +60,9 @@ class PublicReaderDescriptor:
                 raise TypeError("capability values must be CapabilitySupport")
         if type(self.availability) is not ReaderAvailability:
             raise TypeError("availability must be ReaderAvailability")
-        if self.availability.execution_mode != mode:
+        if type(self.availability.execution_mode) is not str:
+            raise TypeError("availability execution_mode must be a string")
+        if self.availability.execution_mode != mode.value:
             raise ValueError("availability execution_mode must match descriptor")
         object.__setattr__(self, "execution_mode", mode)
         object.__setattr__(self, "extensions", extensions)

@@ -249,6 +249,16 @@ class ReaderPluginManifestTests(unittest.TestCase):
                 ReaderAvailability(True, "extension", "available", ""),
             )
 
+    def test_descriptor_rejects_execution_mode_enum_in_availability(self):
+        from ChemBlender.reader_api import ExecutionMode, PublicReaderDescriptor, ReaderAvailability
+
+        with self.assertRaises(TypeError):
+            PublicReaderDescriptor(
+                "org.example.reader", "1.0.0", "example-format", "1", ExecutionMode.EXTENSION,
+                (".example",), {},
+                ReaderAvailability(True, ExecutionMode.EXTENSION, "available", ""),
+            )
+
     def test_descriptor_rejects_non_sequence_extensions(self):
         from ChemBlender.reader_api import (
             CapabilitySupport,
@@ -344,16 +354,23 @@ class ReaderPluginManifestTests(unittest.TestCase):
         entry = ReaderManifestEntry(
             "example-format",
             "1",
-            ["CUBE", ".tar.gz", ".molden.input", "cube", "..TAR.GZ"],
+            ["XYZ", ".xyz", "TAR.GZ", ".tar.gz", ".molden.input"],
             ["structure"],
         )
 
-        self.assertEqual(entry.extensions, (".cube", ".molden.input", ".tar.gz"))
+        self.assertEqual(entry.extensions, (".molden.input", ".tar.gz", ".xyz"))
+        self.assertEqual(
+            ReaderManifestEntry("example-format", "1", ["tar.gz", ".TAR.GZ"], ["structure"]).extensions,
+            (".tar.gz",),
+        )
 
     def test_extensions_reject_unsafe_or_ambiguous_values(self):
         from ChemBlender.reader_api import ReaderManifestEntry
 
-        for extension in ("/", "\\", "*", "?", ";", " ", "x yz", ".", "..", "../xyz", "folder/xyz"):
+        for extension in (
+            ".", "..", "..xyz", "...xyz", "..TAR.GZ", "../xyz",
+            "folder/xyz", "x yz", "/", "\\", "*", "?", ";",
+        ):
             with self.subTest(extension=extension), self.assertRaises(ValueError):
                 ReaderManifestEntry("example-format", "1", [extension], ["structure"])
 
@@ -376,6 +393,14 @@ class ReaderPluginManifestTests(unittest.TestCase):
                 ReaderPluginManifest(
                     "1", "org.example.reader", "1.0.0", ">=0.1,<1.0", "extension", [license_value], [entry]
                 )
+
+    def test_licenses_normalize_direct_helper_contract(self):
+        from ChemBlender.reader_api.manifest import _licenses
+
+        self.assertEqual(
+            _licenses(["MIT OR Apache-2.0", "Apache-2.0", "Apache-2.0"]),
+            ("Apache-2.0", "MIT OR Apache-2.0"),
+        )
 
     def test_reader_api_modules_have_no_absolute_installed_namespace_imports(self):
         package_root = Path(__file__).resolve().parents[1] / "ChemBlender" / "reader_api"
@@ -454,6 +479,8 @@ assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', '
 
         self.assertTrue(result.available)
         self.assertNotIn(module_name, sys.modules)
+        self.assertIs(type(result.execution_mode), str)
+        self.assertEqual(result.execution_mode, "extension")
 
     def test_availability_probe_returns_unavailable_for_missing_top_level_package(self):
         from ChemBlender.reader_api.descriptors import _probe_availability
@@ -462,6 +489,8 @@ assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', '
 
         self.assertFalse(result.available)
         self.assertEqual(result.reason_code, "dependency_missing")
+        self.assertIs(type(result.execution_mode), str)
+        self.assertEqual(result.execution_mode, "extension")
 
     def test_availability_probe_reports_unexpected_probe_failure(self):
         from ChemBlender.reader_api.descriptors import _probe_availability
@@ -471,6 +500,8 @@ assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', '
 
         self.assertFalse(result.available)
         self.assertEqual(result.reason_code, "dependency_probe_failed")
+        self.assertIs(type(result.execution_mode), str)
+        self.assertEqual(result.execution_mode, "extension")
 
     def test_availability_probe_does_not_format_probe_exception(self):
         from ChemBlender.reader_api.descriptors import _probe_availability

@@ -55,17 +55,19 @@ def _sequence(values, field):
 
 def _extensions(values):
     values = _sequence(values, "extensions")
-    normalized = []
+    extensions = []
     for value in values:
         if type(value) is not str or not value:
             raise ValueError("extensions must contain non-empty strings")
-        value = ("." + value.lstrip(".")).lower()
-        if not _EXTENSION_PATTERN.fullmatch(value):
+        normalized = value.lower()
+        if not normalized.startswith("."):
+            normalized = "." + normalized
+        if not _EXTENSION_PATTERN.fullmatch(normalized):
             raise ValueError("extension must be a normalized suffix")
-        if value in normalized:
+        if normalized in extensions:
             continue
-        normalized.append(value)
-    return tuple(sorted(normalized))
+        extensions.append(normalized)
+    return tuple(sorted(extensions))
 
 
 def _capabilities(values):
@@ -73,6 +75,13 @@ def _capabilities(values):
     for value in values:
         if type(value) is not str or not _CAPABILITY_PATTERN.fullmatch(value):
             raise ValueError("capabilities must contain lower_snake_case tokens")
+    return tuple(sorted(set(values)))
+
+
+def _licenses(values):
+    values = _sequence(values, "license")
+    if any(type(item) is not str or not item or item != item.strip() for item in values):
+        raise ValueError("license must contain non-empty strings")
     return tuple(sorted(set(values)))
 
 
@@ -103,9 +112,6 @@ class ReaderPluginManifest:
     def __post_init__(self):
         if type(self.schema_version) is not str or self.schema_version != "1":
             raise ValueError("schema_version must be '1'")
-        licenses = _sequence(self.license, "license")
-        if any(type(item) is not str or not item or item != item.strip() for item in licenses):
-            raise ValueError("license must contain non-empty strings")
         readers = _sequence(self.readers, "readers")
         if any(type(reader) is not ReaderManifestEntry for reader in readers):
             raise TypeError("readers must contain ReaderManifestEntry values")
@@ -119,7 +125,7 @@ class ReaderPluginManifest:
         object.__setattr__(self, "plugin_version", _version(self.plugin_version, "plugin_version"))
         object.__setattr__(self, "chemblender_api", _api_range(self.chemblender_api))
         object.__setattr__(self, "execution_mode", execution_mode)
-        object.__setattr__(self, "license", tuple(sorted(set(licenses))))
+        object.__setattr__(self, "license", _licenses(self.license))
         object.__setattr__(self, "readers", tuple(sorted(readers, key=lambda reader: reader.reader_id)))
 
     @classmethod
