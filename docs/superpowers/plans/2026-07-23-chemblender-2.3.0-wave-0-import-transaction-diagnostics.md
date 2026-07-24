@@ -81,6 +81,8 @@ same implementation commit, then commit.
 - Create: `ChemBlender/core/import_pipeline/staging.py`
 - Create: `ChemBlender/core/import_pipeline/__init__.py`
 - Create: `tests/test_import_request_preview.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `ValidationMode`, `ImportSource`, `ReaderOverride`, `ImportRequest`, `SourcePreview`, `ImportPreview`, `StagedImportSession`.
@@ -99,7 +101,10 @@ A Preview contains source rows, staged batch IDs, conflict IDs, grouping suggest
 
 - [ ] **Step 4: Run and commit**
 
-Run import request/preview and path safety tests.
+Run import request/preview, path safety and documentation-contract tests.
+Confirm a fresh `ChemBlender.core.import_pipeline` import loads neither `bpy`
+nor optional scientific stacks. Update the architecture guide for every new
+source module in the same implementation commit.
 
 ### Task 3: Implement reader preflight and staged parse for existing readers
 
