@@ -14,6 +14,12 @@ from .canonical_document import (
     read_public_batch_bundle,
     write_public_batch_bundle,
 )
+from .conformance import (
+    ReaderConformanceCase,
+    ReaderConformanceCheck,
+    ReaderConformanceResult,
+    run_reader_conformance,
+)
 from .manifest import ExecutionMode, ReaderManifestEntry, ReaderPluginManifest
 from .protocol import ParseRequest, ProgressEvent, ReaderPlugin, SniffRequest
 from .registry import ReaderPluginRegistry, builtin_reader_plugin_registry
@@ -158,6 +164,10 @@ __all__ = (
     "public_batch_from_document",
     "write_public_batch_bundle",
     "read_public_batch_bundle",
+    "ReaderConformanceCase",
+    "ReaderConformanceCheck",
+    "ReaderConformanceResult",
+    "run_reader_conformance",
     "SniffRequest",
     "ParseRequest",
     "ProgressEvent",

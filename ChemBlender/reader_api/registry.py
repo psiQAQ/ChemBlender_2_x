@@ -226,6 +226,7 @@ class ReaderPluginRegistry:
         self._plugins = {}
         self._plugin_manifests = {}
         self._last_sniff_diagnostics = ()
+        self._last_parse_exception_type = None
         for plugin in plugins:
             self.register(plugin)
 
@@ -331,6 +332,7 @@ class ReaderPluginRegistry:
         return winners[0].descriptor
 
     def parse(self, reader_id, request):
+        self._last_parse_exception_type = None
         if type(request) is not ParseRequest:
             raise TypeError("request must be a ParseRequest")
         plugin = self._plugin(reader_id)
@@ -368,6 +370,7 @@ class ReaderPluginRegistry:
             if type(result) is not PublicImportBatch:
                 raise TypeError("parse must return PublicImportBatch")
         except Exception as error:
+            self._last_parse_exception_type = type(error).__name__
             request.progress(ProgressEvent("parse", 1, 1))
             return _failure_batch(
                 descriptor,

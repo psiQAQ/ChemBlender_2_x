@@ -15,6 +15,7 @@
 9. `roadmap.md`
 10. `docs/superpowers/specs/` 中的 2.3.0 总设计和 Wave 设计
 11. `docs/superpowers/plans/` 中的总排序计划和各实施计划
+12. [Reader API 0.x alpha conformance](reader-api-0.x.md)
 
 ## 核心原则
 

@@ -15,7 +15,10 @@ from ChemBlender.core import (
 )
 from ChemBlender.reader_api import (
     ExecutionMode,
+    IssueKind,
     ParseRequest,
+    ParserIssue,
+    ParserReport,
     ProgressEvent,
     PublicImportBatch,
     PublicReaderDescriptor,
@@ -544,6 +547,35 @@ class ReaderAPIRegistryTests(unittest.TestCase):
         self.assertEqual(result.report.created_entity_ids, ())
         self.assertEqual(result.report.issues[0].path, "reader.parse")
         self.assertIn("RuntimeError", result.report.issues[0].message)
+
+    def test_private_parse_exception_evidence_is_exact_and_resets(self):
+        plugin = FixedPlugin(
+            public_descriptor("broken"), parse_error=RuntimeError("failed")
+        )
+        registry = ReaderPluginRegistry((plugin,))
+
+        registry.parse("broken", self.parse_request())
+        self.assertEqual(registry._last_parse_exception_type, "RuntimeError")
+
+        fabricated = PublicImportBatch(
+            report=ParserReport(
+                "broken",
+                "1",
+                (),
+                (),
+                (
+                    ParserIssue(
+                        IssueKind.INVALID,
+                        "reader.parse",
+                        "reader parse failed: Fabricated",
+                    ),
+                ),
+            )
+        )
+        plugin._parse_error = None
+        plugin._result = fabricated
+        self.assertIs(registry.parse("broken", self.parse_request()), fabricated)
+        self.assertIsNone(registry._last_parse_exception_type)
 
     def test_successful_parse_returns_exact_public_batch_and_reports_progress(self):
         events = []
