@@ -61,10 +61,25 @@ and `tests.test_quantum_visualization_docs` tests, then commit.
 **Files:**
 - Create: `ChemBlender/reader_api/public_model.py`
 - Create: `ChemBlender/reader_api/builtin_bridge.py`
+- Modify: `ChemBlender/reader_api/__init__.py`
 - Create: `tests/test_public_import_batch.py`
+- Modify: `tests/test_reader_plugin_manifest.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `PublicImportBatch`, `public_batch_from_internal()`, `internal_batch_from_public()`.
+- `PublicImportBatch` is a public, frozen, project-free batch container. It
+  mirrors internal `ImportBatch` groups but is not its subclass.
+- Reader API exposes trusted scientific model types as exact aliases, never
+  copies or subclasses them.
+- Plugins construct `PublicImportBatch`; they never receive or mutate
+  `QCProject`.
+- Internal/public conversion preserves large-array identity and validates the
+  public-to-internal result with `QCProject.commit()` before returning.
+- `PublicImportBatch` must not contain a `QCProject`, Blender context or
+  datablock, parse/sniff callable, pickle payload, or class identity derived
+  from `__module__`.
 
 - [ ] **Step 1: Write round-trip tests using XYZ and Cube**
 
