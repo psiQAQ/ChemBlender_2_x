@@ -8,7 +8,10 @@ from .version import READER_API_VERSION
 
 _ID_PATTERN = re.compile(r"[a-z][a-z0-9_.-]*", re.ASCII)
 _CAPABILITY_PATTERN = re.compile(r"[a-z][a-z0-9_]*", re.ASCII)
-_EXTENSION_PATTERN = re.compile(r"\.[a-z0-9][a-z0-9._+-]*", re.ASCII)
+_EXTENSION_PATTERN = re.compile(
+    r"\.[a-z0-9][a-z0-9_+-]*(?:\.[a-z0-9][a-z0-9_+-]*)*",
+    re.ASCII,
+)
 _VERSION_PATTERN = re.compile(r"[0-9]+(?:\.[0-9]+)*", re.ASCII)
 _API_RANGE_PATTERN = re.compile(r">=([0-9]+)\.([0-9]+),<([0-9]+)\.([0-9]+)", re.ASCII)
 _TOP_LEVEL_KEYS = frozenset(

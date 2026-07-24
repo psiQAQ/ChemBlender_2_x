@@ -354,25 +354,34 @@ class ReaderPluginManifestTests(unittest.TestCase):
         entry = ReaderManifestEntry(
             "example-format",
             "1",
-            ["XYZ", ".xyz", "TAR.GZ", ".tar.gz", ".molden.input"],
+            ["xyz", ".xyz", "tar.gz", ".TAR.GZ", "molden.input", ".c++", "x-y+z"],
             ["structure"],
         )
 
-        self.assertEqual(entry.extensions, (".molden.input", ".tar.gz", ".xyz"))
-        self.assertEqual(
-            ReaderManifestEntry("example-format", "1", ["tar.gz", ".TAR.GZ"], ["structure"]).extensions,
-            (".tar.gz",),
+        self.assertEqual(entry.extensions, (".c++", ".molden.input", ".tar.gz", ".x-y+z", ".xyz"))
+
+    def test_toml_extensions_accept_compound_suffixes(self):
+        manifest = self.manifest(
+            VALID_MANIFEST.replace('[".example"]', '["tar.gz", ".MOLDEN.INPUT"]')
         )
+
+        self.assertEqual(manifest.readers[0].extensions, (".molden.input", ".tar.gz"))
 
     def test_extensions_reject_unsafe_or_ambiguous_values(self):
         from ChemBlender.reader_api import ReaderManifestEntry
 
         for extension in (
-            ".", "..", "..xyz", "...xyz", "..TAR.GZ", "../xyz",
+            ".xyz.", ".tar..gz", ".molden..input", ".x...", ".x..y", ".x.",
+            "..xyz", "...xyz", "..", ".", "..TAR.GZ", "../xyz",
             "folder/xyz", "x yz", "/", "\\", "*", "?", ";",
         ):
             with self.subTest(extension=extension), self.assertRaises(ValueError):
                 ReaderManifestEntry("example-format", "1", [extension], ["structure"])
+
+    def test_toml_extensions_reject_trailing_dot_and_empty_segments(self):
+        for extension in (".xyz.", ".tar..gz"):
+            with self.subTest(extension=extension), self.assertRaises(ValueError):
+                self.manifest(VALID_MANIFEST.replace('[".example"]', f'["{extension}"]'))
 
     def test_licenses_require_exact_trimmed_strings_and_normalize(self):
         from ChemBlender.reader_api import ReaderManifestEntry, ReaderPluginManifest
