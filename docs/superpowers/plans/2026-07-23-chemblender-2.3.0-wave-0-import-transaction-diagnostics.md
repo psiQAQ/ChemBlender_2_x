@@ -25,8 +25,16 @@
 - Create: `ChemBlender/core/model/quality.py`
 - Modify: `ChemBlender/core/model/diagnostics.py`
 - Modify: `ChemBlender/core/model/project.py`
+- Modify: `ChemBlender/core/model/__init__.py`
 - Modify: `ChemBlender/core/model_registry.py`
+- Modify: `ChemBlender/core/__init__.py`
 - Create: `tests/test_import_diagnostics.py`
+- Modify: `tests/test_model_registry.py`
+- Modify: `tests/test_model_public_surface.py`
+- Modify: `tests/test_core_public_api.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_sidecar_storage.py`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `QualityStatus`, `DiagnosticSeverity`, `DiagnosticValue`, `ImportDiagnostic` and project diagnostic registry.
@@ -58,7 +66,10 @@ Diagnostic code uses `[a-z][a-z0-9_.-]*`. `DiagnosticValue` allows None, bool, i
 
 - [ ] **Step 4: Run and commit**
 
-Run diagnostics, sidecar and existing reader tests, then commit.
+Run diagnostics, model registry/public façade, sidecar, documentation and
+existing reader tests. Confirm a fresh `ChemBlender.core` import loads neither
+`bpy` nor optional scientific stacks. Update the architecture guide in the
+same implementation commit, then commit.
 
 ### Task 2: Add import request, source preview and staged session types
 
