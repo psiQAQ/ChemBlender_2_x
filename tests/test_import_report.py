@@ -1,3 +1,4 @@
+import copy
 import json
 import tempfile
 import unittest
@@ -6,12 +7,17 @@ from uuid import UUID, uuid4
 
 from ChemBlender.core.import_pipeline import (
     ImportPreview,
+    ImportRequest,
+    ImportSource,
+    ReaderOverride,
     SourcePreview,
     StagedImportSession,
     diagnostics_document,
     import_summary,
+    preflight_import,
     render_diagnostics_markdown,
 )
+from ChemBlender.core.cube import CUBE_READER
 from ChemBlender.core.model import (
     DiagnosticSeverity,
     DiagnosticValue,
@@ -21,6 +27,8 @@ from ChemBlender.core.model import (
     SourceRecord,
     SourceRevision,
 )
+from ChemBlender.core.readers import ReaderRegistry
+from ChemBlender.core.xyz import XYZ_READER
 
 
 SOURCE_ID = UUID("20000000-0000-0000-0000-000000000001")
@@ -308,6 +316,39 @@ class ImportReportTests(unittest.TestCase):
         self.assertNotIn("line\nvalue", markdown)
         self.assertTrue(markdown.endswith("\n"))
 
+    def test_markdown_treats_diagnostic_content_as_plain_text(self):
+        document = diagnostics_document(self.preview(), self.session)
+        item = document["diagnostics"][-1]
+        item["message"] = (
+            r"<script>alert(1)</script> [link](https://example.test) "
+            r"![image](x) `code` *bold* _italic_ ~strike~ before \| "
+            r"slashes\\ | after"
+        )
+        item["original_value"] = {
+            "nested": [r"\|", "<b>html</b>", "[label](target)"]
+        }
+
+        markdown = render_diagnostics_markdown(document)
+        diagnostic_row = next(
+            line
+            for line in markdown.splitlines()
+            if "alert" in line
+        )
+
+        self.assertIn(
+            r"&lt;script&gt;alert\(1\)&lt;/script&gt;",
+            diagnostic_row,
+        )
+        self.assertNotIn("<script>", diagnostic_row)
+        self.assertIn(r"\[link\]\(https://example.test\)", diagnostic_row)
+        self.assertIn(r"\!\[image\]\(x\)", diagnostic_row)
+        self.assertIn(r"\`code\`", diagnostic_row)
+        self.assertIn(r"\*bold\*", diagnostic_row)
+        self.assertIn(r"\_italic\_", diagnostic_row)
+        self.assertIn(r"\~strike\~", diagnostic_row)
+        self.assertIn(r"before \\\| slashes\\\\ \| after", diagnostic_row)
+        self.assertEqual(self.unescaped_pipes(diagnostic_row), 14)
+
     def test_report_fails_closed_on_identity_and_association_mismatch(self):
         preview = self.preview()
         other = StagedImportSession.create(temp_parent=self.root)
@@ -359,13 +400,176 @@ class ImportReportTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "revision diagnostic"):
             import_summary(self.preview((item.id,)), self.session)
 
-    def test_report_keeps_diagnostics_when_reader_selection_failed(self):
-        document = diagnostics_document(
-            self.preview(selected_reader_id=None),
-            self.session,
-        )
+    def test_missing_reader_selection_rejects_a_builtin_batch(self):
+        with self.assertRaisesRegex(ValueError, "preflight"):
+            diagnostics_document(
+                self.preview(selected_reader_id=None),
+                self.session,
+            )
 
-        self.assertEqual(len(document["diagnostics"]), len(self.diagnostics))
+    def test_real_preflight_reader_failure_remains_reportable(self):
+        for override_reader_id in (None, "missing"):
+            with self.subTest(override_reader_id=override_reader_id):
+                imported = ImportSource(self.source_path)
+                request = ImportRequest(
+                    sources=(imported,),
+                    reader_overrides=()
+                    if override_reader_id is None
+                    else (
+                        ReaderOverride(
+                            source_id=imported.id,
+                            reader_id=override_reader_id,
+                        ),
+                    ),
+                )
+                session = StagedImportSession.create(temp_parent=self.root)
+                try:
+                    preview = preflight_import(
+                        request,
+                        ReaderRegistry(),
+                        session,
+                    )
+                    batch = session.result(preview.staged_batch_ids[0])
+
+                    document = diagnostics_document(preview, session)
+
+                    self.assertIsNone(
+                        preview.source_previews[0].selected_reader_id
+                    )
+                    self.assertEqual(
+                        (
+                            batch.source_revisions[0].reader_plugin_id,
+                            batch.source_revisions[0].reader_version,
+                            batch.source_revisions[0].reader_api_version,
+                        ),
+                        ("chemblender.preflight", "0", "0.1"),
+                    )
+                    self.assertEqual(
+                        batch.source_revisions[0].reader_id,
+                        override_reader_id or "unresolved",
+                    )
+                    self.assertEqual(
+                        document["summary"]["overall"]["invalid"],
+                        1,
+                    )
+                finally:
+                    session.discard()
+
+    def test_renderer_rejects_malformed_documents_with_value_error(self):
+        valid = diagnostics_document(self.preview(), self.session)
+        mutations = {
+            "boolean schema version": lambda value: value.update(
+                schema_version=True
+            ),
+            "invalid session UUID": lambda value: value.update(
+                session_id="not-a-uuid"
+            ),
+            "invalid batch UUID": lambda value: value[
+                "staged_batch_ids"
+            ].__setitem__(0, "not-a-uuid"),
+            "duplicate batch UUID": lambda value: value[
+                "staged_batch_ids"
+            ].append(value["staged_batch_ids"][0]),
+            "missing status key": lambda value: value["summary"][
+                "overall"
+            ].pop("complete"),
+            "boolean count": lambda value: value["summary"]["overall"].update(
+                complete=True
+            ),
+            "negative count": lambda value: value["summary"]["overall"].update(
+                complete=-1
+            ),
+            "extra source row field": lambda value: value["summary"][
+                "by_source"
+            ][0].update(extra=0),
+            "duplicate source row": lambda value: value["summary"][
+                "by_source"
+            ].append(copy.deepcopy(value["summary"]["by_source"][0])),
+            "invalid diagnostic UUID": lambda value: value["diagnostics"][
+                0
+            ].update(id="bad"),
+            "invalid severity": lambda value: value["diagnostics"][0].update(
+                severity="fatal"
+            ),
+            "invalid quality": lambda value: value["diagnostics"][0].update(
+                quality_status="unknown"
+            ),
+            "invalid nullable field": lambda value: value["diagnostics"][
+                0
+            ].update(record_key=7),
+            "unknown source association": lambda value: value[
+                "diagnostics"
+            ][0].update(source_id=str(uuid4())),
+            "unknown entity association": lambda value: value[
+                "diagnostics"
+            ][0].update(entity_id=str(uuid4())),
+            "mismatched summary count": lambda value: value["summary"][
+                "overall"
+            ].update(invalid=99),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(label=label):
+                document = copy.deepcopy(valid)
+                mutate(document)
+                with self.assertRaises(ValueError):
+                    render_diagnostics_markdown(document)
+
+    def test_real_xyz_cube_preflight_report_is_stable_and_read_only(self):
+        fixtures = Path(__file__).parent / "fixtures"
+        xyz = self.root / "water.xyz"
+        cube = self.root / "sheared.cube"
+        xyz.write_bytes((fixtures / "xyz" / "water.xyz").read_bytes())
+        cube.write_bytes((fixtures / "cube" / "sheared.cube").read_bytes())
+        session = StagedImportSession.create(temp_parent=self.root)
+        try:
+            preview = preflight_import(
+                ImportRequest(
+                    sources=(ImportSource(xyz), ImportSource(cube)),
+                ),
+                ReaderRegistry((XYZ_READER, CUBE_READER)),
+                session,
+            )
+            result_ids = session.result_ids
+            batches = tuple(session.result(identifier) for identifier in result_ids)
+
+            first = diagnostics_document(preview, session)
+            second = diagnostics_document(preview, session)
+
+            encode = lambda value: json.dumps(
+                value,
+                ensure_ascii=False,
+                allow_nan=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            self.assertEqual(len(first["staged_batch_ids"]), 2)
+            self.assertEqual(encode(first), encode(second))
+            self.assertEqual(
+                render_diagnostics_markdown(first),
+                render_diagnostics_markdown(second),
+            )
+            self.assertEqual(session.result_ids, result_ids)
+            self.assertEqual(
+                tuple(session.result(identifier) for identifier in result_ids),
+                batches,
+            )
+        finally:
+            session.discard()
+
+    @staticmethod
+    def unescaped_pipes(value):
+        count = 0
+        for index, character in enumerate(value):
+            if character != "|":
+                continue
+            backslashes = 0
+            cursor = index - 1
+            while cursor >= 0 and value[cursor] == "\\":
+                backslashes += 1
+                cursor -= 1
+            if backslashes % 2 == 0:
+                count += 1
+        return count
 
 
 if __name__ == "__main__":

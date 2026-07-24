@@ -14,8 +14,10 @@ markdown = render_diagnostics_markdown(document)
 ```
 
 `import_summary()` 和 `diagnostics_document()` 接受不可变 `ImportPreview` 及其
-匹配的 `StagedImportSession`。`render_diagnostics_markdown()` 只接受 document，
-不访问 staging state。
+匹配的 `StagedImportSession`。缺少 selected reader 的 row 只接受
+`chemblender.preflight` 生成的 v0/Reader API 0.1 failure provenance，不把
+`selected_reader_id=None` 当作任意 reader 的通配符。
+`render_diagnostics_markdown()` 只接受 document，不访问 staging state。
 
 ## Document
 
@@ -71,5 +73,14 @@ json.dumps(
 )
 ```
 
-Markdown 从同一 document 渲染。表格单元中的 `|` 转义为 `\|`，CR/LF 替换为
-空格，因此重排原始 diagnostic 输入不会改变 canonical JSON 或 Markdown bytes。
+Renderer 在输出前深层验证 schema。`schema_version` 必须是 exact integer；
+全部 ID 必须是 canonical UUID text；severity、quality status、summary row 字段和
+五个非负 integer count 键必须精确；row/diagnostic ID 必须唯一，summary 必须与
+diagnostics 的 source/entity 关联和计数一致。所有畸形 document 统一抛出
+`ValueError`。
+
+Markdown 从同一 document 渲染，并把全部 diagnostic 内容视为纯文本。先用
+stdlib HTML escaping 处理 raw HTML，再转义原有 backslash 和
+backtick、emphasis、link/image、tilde、pipe 等 Markdown 语法字符；CR/LF
+替换为空格。此顺序使已有 `\|`、连续 backslash 和嵌套 JSON 都不会改变表格列，
+且重排原始 diagnostic 输入不会改变 canonical JSON 或 Markdown bytes。
