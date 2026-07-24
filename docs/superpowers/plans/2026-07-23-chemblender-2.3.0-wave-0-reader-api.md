@@ -141,11 +141,21 @@ Commit code, spec and tests together.
 **Files:**
 - Create: `ChemBlender/reader_api/protocol.py`
 - Create: `ChemBlender/reader_api/registry.py`
+- Modify: `ChemBlender/reader_api/__init__.py`
 - Modify: `ChemBlender/core/reader_catalog.py`
 - Create: `tests/test_reader_api_registry.py`
+- Modify: `tests/test_reader_catalog.py`
+- Modify: `tests/test_reader_plugin_manifest.py`
+- Modify: `docs/quantum-visualization/reader-capability-matrix.json`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `SniffRequest`, `ParseRequest`, `ProgressEvent`, `ReaderPlugin` Protocol, `ReaderPluginRegistry` and built-in registration.
+- The public facade explicitly exports the protocol and registry contract;
+  its exact `__all__` and installed-namespace import contract remain tested.
+- New source modules are recorded in the architecture guide in the same
+  implementation commit.
 - Manifest capability lists imply SUPPORTED.
 - Runtime PublicReaderDescriptor uses CapabilitySupport and can preserve
   SUPPORTED/PARTIAL/UNSUPPORTED for built-in and derived descriptors.
