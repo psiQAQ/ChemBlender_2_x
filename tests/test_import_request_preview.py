@@ -424,7 +424,9 @@ class ImportPipelineBoundaryTests(unittest.TestCase):
             set(import_pipeline.__all__),
             {
                 "ConflictDecision",
+                "CalculationGroup",
                 "DuplicateAction",
+                "GroupingEvidence",
                 "ImportConflict",
                 "ImportConflictCandidate",
                 "ImportConflictCategory",
@@ -433,12 +435,14 @@ class ImportPipelineBoundaryTests(unittest.TestCase):
                 "ImportRequest",
                 "ImportSource",
                 "ReaderOverride",
+                "SourceGroupSuggestion",
                 "SourcePreview",
                 "StagedImportSession",
                 "ValidationMode",
                 "apply_conflict_decisions",
                 "detect_import_conflicts",
                 "preflight_import",
+                "suggest_source_groups",
             },
         )
 
