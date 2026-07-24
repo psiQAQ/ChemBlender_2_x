@@ -75,10 +75,10 @@ protocol, `unittest`.
 
 ## Task 4: Review, verify, checkpoint, and push
 
-- [ ] Update the exact public `__all__` contract, architecture guide, and
+- [x] Update the exact public `__all__` contract, architecture guide, and
   execution cursor where responsibilities or public entry points changed.
-- [ ] Run focused tests, full discovery, compileall, optional-import isolation,
+- [x] Run focused tests, full discovery, compileall, optional-import isolation,
   `git diff --check`, and final worktree inspection.
-- [ ] Obtain independent specification and code-quality approval.
-- [ ] Commit implementation and checkpoint separately.
+- [x] Obtain independent specification and code-quality approval.
+- [x] Commit implementation and checkpoint separately.
 - [ ] Push the feature branch once and verify the remote SHA equals local HEAD.
