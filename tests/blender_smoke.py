@@ -14,6 +14,9 @@ from zipfile import ZipFile
 import bpy
 
 
+READER_API_HANDLE_KEY = "chemblender.reader_api.v0"
+
+
 def assert_package_contents(package):
     required = {
         "blender_manifest.toml",
@@ -70,6 +73,7 @@ def assert_enabled(module_key):
     assert hasattr(bpy.types.Object, "cif_original")
     assert hasattr(bpy.types.Object, "cif_current")
     assert hasattr(bpy.types.Scene, "my_tool")
+    assert_reader_api_handle(module_key)
 
 
 def assert_disabled(module_key):
@@ -77,9 +81,26 @@ def assert_disabled(module_key):
     assert not hasattr(bpy.types.Object, "cif_original")
     assert not hasattr(bpy.types.Object, "cif_current")
     assert not hasattr(bpy.types.Scene, "my_tool")
+    assert READER_API_HANDLE_KEY not in bpy.app.driver_namespace
     assert not any(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
         for handler in bpy.app.handlers.frame_change_post
+    )
+
+
+def assert_reader_api_handle(module_key):
+    handle = bpy.app.driver_namespace[READER_API_HANDLE_KEY]
+    assert handle.api_version == "0.1"
+    assert handle.module_name == f"{module_key}.reader_api"
+    assert importlib.import_module(handle.module_name).__name__ == handle.module_name
+    assert callable(handle.register_callback)
+    assert callable(handle.unregister_callback)
+    assert (
+        sum(
+            key == READER_API_HANDLE_KEY
+            for key in bpy.app.driver_namespace
+        )
+        == 1
     )
 
 

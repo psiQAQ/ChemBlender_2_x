@@ -255,6 +255,23 @@ class ReaderPluginRegistry:
         self._plugins[reader_id] = plugin
         self._plugin_manifests[plugin_id] = plugin.manifest
 
+    def unregister(self, manifest):
+        if type(manifest) is not ReaderPluginManifest:
+            raise TypeError("manifest must be a ReaderPluginManifest")
+        existing = self._plugin_manifests.get(manifest.plugin_id)
+        if existing is None:
+            raise KeyError(manifest.plugin_id)
+        if existing != manifest:
+            raise ValueError("manifest does not match registered plugin")
+        reader_ids = tuple(
+            reader_id
+            for reader_id, plugin in self._plugins.items()
+            if plugin.descriptor.plugin_id == manifest.plugin_id
+        )
+        for reader_id in reader_ids:
+            del self._plugins[reader_id]
+        del self._plugin_manifests[manifest.plugin_id]
+
     def select(self, request, reader_id=None):
         if type(request) is not SniffRequest:
             raise TypeError("request must be a SniffRequest")

@@ -44,8 +44,10 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
-| `ChemBlender/__init__.py` | `register()`、`unregister()` | Extension 最小入口；延迟导入 `auto_load`，启动或卸载全部 Blender 注册项。 |
+| `ChemBlender/__init__.py` | `register()`、`unregister()` | Extension 最小入口；延迟导入 `auto_load`，注册成功后发布 Reader API handle；发布失败时回滚，卸载时先安全移除自有 handle。 |
 | `ChemBlender/auto_load.py` | `init()`、`register()`、`unregister()`、`toposort()` | 扫描扩展子模块，分析 Blender class 依赖并按拓扑顺序注册；卸载时反向清理类、模块副作用和 import cache。 |
+| `ChemBlender/runtime/__init__.py` | package marker | 隔离依赖 Blender host 状态的 runtime bridge；导入该 package 本身没有注册副作用。 |
+| `ChemBlender/runtime/reader_api_bridge.py` | `ReaderAPIHandle`、`register_reader_api_handle()`、`remove_reader_api_handle()` | 以实际安装 package root 构造 Reader API 模块名，在 `bpy.app.driver_namespace` 发布由模块私有 identity 和不透明 token 共同约束的版本化 handle；稳定 wrapper callback 保护内置 reader，只允许外部插件精确注册/注销自身 manifest；模块导入保持 `bpy`-free，仅调用 bridge 时访问 Blender。 |
 | `ChemBlender/Chem_data.py` | `ELEMENTS_DEFAULT` | 保存元素序数、名称、颜色及共价/原子/范德华/离子半径等静态数据。该文件没有行为函数。 |
 | `ChemBlender/_math.py` | `rotate_vec()`、`symop_xyz_to_matrix()`、`fract_symop_expand()`、`make_cell_matrix()`、`fract_to_cartn()`、`compute_thermal_ellipsoid()` | 旧结构建模层共享的向量、晶胞、分数坐标、对称操作和热振动椭球数学函数。 |
 | `ChemBlender/ex_package.py` | `safe_check_rdkit()` | 检查 RDKit 是否存在并满足最低版本；不负责在线安装。 |
@@ -138,7 +140,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/reader_api/builtin_bridge.py` | `public_batch_from_internal()`、`internal_batch_from_public()` | 内置 `ImportBatch` 与公开批次间的薄、无复制转换边界；后者复用临时 `QCProject.commit()` 图校验，并转换为公开验证错误。 |
 | `ChemBlender/reader_api/canonical_document.py` | `public_batch_document()`、`public_batch_from_document()`、`write_public_batch_bundle()`、`read_public_batch_bundle()` | 将严格 `PublicImportBatch` 确定性编码为 Reader Import Document v0.1；以 content-addressed、禁 pickle 的 NPY artifacts 承载数组，并在读取边界复验 exact schema/type、相对路径、shape、dtype 与双 hash；只构造公开 batch，项目图校验留给 built-in bridge。 |
 | `ChemBlender/reader_api/protocol.py` | `SniffRequest`、`ParseRequest`、`ProgressEvent`、`ReaderPlugin` | 定义无项目、无 Blender 上下文的 Reader 插件请求与进度协议；每个插件必须持有与 runtime descriptor 一致的 exact manifest，解析请求只携带已验证来源、规范参数、安全 staging root 及进度/取消回调。 |
-| `ChemBlender/reader_api/registry.py` | `ReaderPluginRegistry`、`builtin_reader_plugin_registry()` | 确定性选择公开 Reader 插件，在注册时交叉验证 manifest/runtime metadata，并要求同一 `plugin_id` 使用一份完整 manifest；在解析前后分块复验来源 hash，并隔离 sniff/parse 异常；现有 11 个 descriptor 薄包装为共享受控 manifest 的 `chemblender.builtin` 插件，可选依赖只做 presence probe。 |
+| `ChemBlender/reader_api/registry.py` | `ReaderPluginRegistry`、`builtin_reader_plugin_registry()` | 确定性选择公开 Reader 插件，在注册时交叉验证 manifest/runtime metadata，并要求同一 `plugin_id` 使用一份完整 manifest；仅以 exact complete manifest 原子注销同一插件全部 reader；在解析前后分块复验来源 hash，并隔离 sniff/parse 异常；现有 11 个 descriptor 薄包装为共享受控 manifest 的 `chemblender.builtin` 插件，可选依赖只做 presence probe。 |
 | `ChemBlender/reader_api/worker_bridge.py` | `parse_with_worker()`、`WorkerReaderError` | 主进程对固定 `reader.parse@0.1` 的已完成 `WorkerResult` 做 request ID、状态、exact metadata、NTFS-safe 相对路径、无 link/junction 的 exact bundle inventory、来源与全部输出 hash 复验；重开 canonical bundle 并经 `internal_batch_from_public()` 图校验后才返回内部 `ImportBatch`。 |
 
 ### 文件 reader 与第三方 adapter

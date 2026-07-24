@@ -363,6 +363,64 @@ class ReaderAPIRegistryTests(unittest.TestCase):
         )
         self.assertEqual(len(registry.descriptors), 2)
 
+    def test_unregister_requires_exact_complete_manifest_and_is_atomic(self):
+        first = public_descriptor("first", extensions=(".first",))
+        second = public_descriptor("second", extensions=(".second",))
+        entries = (
+            ReaderManifestEntry("first", "1", (".first",), ("structure",)),
+            ReaderManifestEntry("second", "1", (".second",), ("structure",)),
+        )
+        manifest = manifest_for(first, readers=entries)
+        registry = ReaderPluginRegistry(
+            (
+                FixedPlugin(first, manifest=manifest),
+                FixedPlugin(second, manifest=manifest),
+            )
+        )
+        wrong = manifest_for(
+            first,
+            readers=entries,
+            license=("SPDX:Apache-2.0",),
+        )
+
+        with self.assertRaises(ValueError):
+            registry.unregister(wrong)
+        self.assertEqual(
+            tuple(item.reader_id for item in registry.descriptors),
+            ("first", "second"),
+        )
+
+        registry.unregister(manifest)
+        self.assertEqual(registry.descriptors, ())
+        with self.assertRaises(KeyError):
+            registry.unregister(manifest)
+
+    def test_runtime_handle_callbacks_protect_builtin_plugin_identity(self):
+        from ChemBlender.reader_api.registry import builtin_reader_plugins
+        from ChemBlender.runtime.reader_api_bridge import (
+            register_reader_api_handle,
+            remove_reader_api_handle,
+        )
+
+        namespace = {}
+        handle = register_reader_api_handle(
+            "synthetic_repository.chemblender",
+            namespace=namespace,
+        )
+        external = FixedPlugin(public_descriptor("external"))
+        builtin = builtin_reader_plugins()[0]
+        try:
+            self.assertIs(type(handle.register_callback), type(lambda: None))
+            self.assertIs(type(handle.unregister_callback), type(lambda: None))
+            handle.register_callback(external)
+            handle.unregister_callback(external.manifest)
+            with self.assertRaises(ValueError):
+                handle.register_callback(builtin)
+            with self.assertRaises(ValueError):
+                handle.unregister_callback(builtin.manifest)
+        finally:
+            remove_reader_api_handle(handle, namespace=namespace)
+
     def test_selection_matches_existing_xyz_and_cube_registry(self):
         registry = builtin_reader_plugin_registry()
         old = builtin_reader_registry()
