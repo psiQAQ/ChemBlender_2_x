@@ -45,7 +45,7 @@ service modules.
 - Preserves: `save_project()`, `open_project()`, `SidecarIntegrityError`
 - Strengthens: private canonical tagged-object and array descriptor decoding
 
-- [ ] **Step 1: Write strict decoder tests**
+- [x] **Step 1: Write strict decoder tests**
 
 Create a valid v0.2 sidecar, mutate `manifest.json`, and recompute its valid
 `manifest_sha256`. Cover:
@@ -62,7 +62,7 @@ Create a valid v0.2 sidecar, mutate `manifest.json`, and recompute its valid
 All cases must raise `SidecarIntegrityError`, demonstrating decoder rejection
 rather than a manifest-hash failure.
 
-- [ ] **Step 2: Run the RED test**
+- [x] **Step 2: Run the RED test**
 
 Run:
 
@@ -72,7 +72,7 @@ Run:
 
 Record the non-zero exit code and representative accepted-invalid cases.
 
-- [ ] **Step 3: Implement the minimum strict decoder**
+- [x] **Step 3: Implement the minimum strict decoder**
 
 Require these exact field sets:
 
@@ -91,7 +91,7 @@ Require list payloads, reject duplicate decoded keys, and accept only
 non-negative values whose exact type is `int` for array shape entries. Convert
 all malformed canonical representations to `SidecarIntegrityError`.
 
-- [ ] **Step 4: Run GREEN and regression tests**
+- [x] **Step 4: Run GREEN and regression tests**
 
 Run:
 
@@ -118,7 +118,7 @@ covered.
   `ChemBlender.core.model.project.validate_project_graph(project) -> None`
 - Preserves public `ChemBlender.core` façade
 
-- [ ] **Step 1: Write graph-integrity tests**
+- [x] **Step 1: Write graph-integrity tests**
 
 Tamper valid v0.2 sidecars, recompute a valid manifest hash, and verify
 `open_project()` rejects:
@@ -132,7 +132,7 @@ Tamper valid v0.2 sidecars, recompute a valid manifest hash, and verify
 Also construct an invalid in-memory `QCProject` registry directly and verify
 `save_project()` fails before a valid sidecar tree is published.
 
-- [ ] **Step 2: Run the RED tests**
+- [x] **Step 2: Run the RED tests**
 
 Run:
 
@@ -144,7 +144,7 @@ Run:
 
 Record the non-zero exit code and the invalid graphs that were accepted.
 
-- [ ] **Step 3: Implement one reusable graph validator**
+- [x] **Step 3: Implement one reusable graph validator**
 
 In `model/project.py`, validate an exact `QCProject` by:
 
@@ -161,7 +161,7 @@ Call the helper before sidecar encoding and after sidecar decoding. At the
 sidecar boundary convert validation `TypeError`/`ValueError` to
 `SidecarIntegrityError`; close a decoded project if validation fails.
 
-- [ ] **Step 4: Run GREEN and regression tests**
+- [x] **Step 4: Run GREEN and regression tests**
 
 Run:
 
@@ -190,7 +190,7 @@ Update the architecture guide for the strengthened `project.py` and
   and `reader_api_version`
 - Corrects: `SourceRevision.parse_identity` and `import_parameters_hash`
 
-- [ ] **Step 1: Write semantic identity tests**
+- [x] **Step 1: Write semantic identity tests**
 
 For the same source bytes, plugin, reader, version, validation mode and source
 content state, verify automatic selection and an explicit override selecting
@@ -199,7 +199,7 @@ Verify `detect_import_conflicts()` returns `SAME_PARSE_IDENTITY`.
 
 Also verify selecting a genuinely different reader ID changes parse identity.
 
-- [ ] **Step 2: Run the RED tests**
+- [x] **Step 2: Run the RED tests**
 
 Run:
 
@@ -211,7 +211,7 @@ Run:
 
 Record the non-zero exit code and identity mismatch.
 
-- [ ] **Step 3: Remove selection/deployment metadata from identity**
+- [x] **Step 3: Remove selection/deployment metadata from identity**
 
 Keep only parameters that affect scientific parsing:
 
@@ -225,7 +225,7 @@ Remove `reader_override` and `execution_mode`. Plugin ID, reader ID and reader
 version remain independent inputs to `source_parse_identity()` and must not be
 duplicated in parameter pairs.
 
-- [ ] **Step 4: Run GREEN and regression tests**
+- [x] **Step 4: Run GREEN and regression tests**
 
 Run the two focused modules again and confirm different readers remain
 distinct.
@@ -246,7 +246,7 @@ distinct.
 - Adds: `ProjectSession.mark_clean() -> None`
 - Preserves: `ProjectSession.mark_dirty()` and `clear_dirty()`
 
-- [ ] **Step 1: Write persistence-state tests**
+- [x] **Step 1: Write persistence-state tests**
 
 Cover:
 
@@ -260,7 +260,7 @@ Cover:
   reasons;
 - clearing derived cache does not affect dirty state.
 
-- [ ] **Step 2: Run the RED tests**
+- [x] **Step 2: Run the RED tests**
 
 Run:
 
@@ -274,13 +274,13 @@ Run:
 
 Record the non-zero exit code and stale dirty state.
 
-- [ ] **Step 3: Implement explicit clean transitions**
+- [x] **Step 3: Implement explicit clean transitions**
 
 `mark_clean()` clears every dirty reason. Call it after the complete successful
 `save_project_session()` transition and after successful disk-project adoption
 used by verify/relink. Do not call it from `solidify_session()`.
 
-- [ ] **Step 4: Run GREEN and regression tests**
+- [x] **Step 4: Run GREEN and regression tests**
 
 Run the four focused modules again and verify all failure paths preserve the
 prior project and dirty reasons.
@@ -293,7 +293,7 @@ prior project and dirty reasons.
 - Modify: `.agents/active/2.3.0-wave-0-platform-foundation.md`
 - Verify: `tests/fixtures/sidecar/model-v01/README.md`
 
-- [ ] **Step 1: Run the focused suite**
+- [x] **Step 1: Run the focused suite**
 
 ```powershell
 & $pythonBin -m unittest `
@@ -305,7 +305,7 @@ prior project and dirty reasons.
   tests.test_project_service -v
 ```
 
-- [ ] **Step 2: Run the complete regression**
+- [x] **Step 2: Run the complete regression**
 
 ```powershell
 & $pythonBin -m unittest discover -s tests -p "test_*.py" -v
@@ -323,12 +323,12 @@ git status --short
 Recompute all seven SHA-256 values listed in
 `tests/fixtures/sidecar/model-v01/README.md`.
 
-- [ ] **Step 3: Review**
+- [x] **Step 3: Review**
 
 Perform specification-compliance and code-quality reviews. Fix every Critical
 or Important finding and rerun the complete verification.
 
-- [ ] **Step 4: Commit the implementation**
+- [x] **Step 4: Commit the implementation**
 
 Stage only files changed by Tasks 1–4 and the architecture guide:
 
@@ -338,7 +338,7 @@ git commit -m "fix: harden project import integrity"
 
 Do not include the active checkpoint in this implementation commit.
 
-- [ ] **Step 5: Record and commit the checkpoint**
+- [x] **Step 5: Record and commit the checkpoint**
 
 Update the active Execution Cursor with the implementation commit, actual RED
 and GREEN evidence, fixture verification and:
