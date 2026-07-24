@@ -311,7 +311,13 @@ class _Decoder:
         if actual != expected:
             raise SidecarIntegrityError(f"invalid fields for model type {type_name}")
         try:
-            return class_type(**{name: self.decode(value[name]) for name in expected})
+            decoded = {
+                name: self.decode(value[name])
+                for name in expected
+            }
+            if class_type is model.DiagnosticValue:
+                return class_type._from_canonical(decoded["value"])
+            return class_type(**decoded)
         except SidecarError:
             raise
         except Exception as error:
@@ -435,9 +441,12 @@ def _open_project_with_manifest(
         if isinstance(manifest, dict)
         else None
     )
-    manifest = migrate_manifest(manifest)
+    metadata_manifest = None
     if source_version == MANIFEST_VERSION:
         project_id, schema_version = _validate_current_manifest(manifest)
+        metadata_manifest = manifest
+    manifest = migrate_manifest(manifest)
+    if source_version == MANIFEST_VERSION:
         if manifest["format"] != FORMAT_ID:
             raise SidecarCompatibilityError("unsupported sidecar format")
     else:
@@ -461,7 +470,7 @@ def _open_project_with_manifest(
         raise SidecarIntegrityError("manifest project is not a QCProject")
     if project.id != project_id or project.schema_version != schema_version:
         raise SidecarIntegrityError("manifest header and project payload disagree")
-    return project, manifest
+    return project, metadata_manifest if metadata_manifest is not None else manifest
 
 
 def _strict_uuid(value, name):

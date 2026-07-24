@@ -12,7 +12,7 @@ from .common import (
     _require_uuid,
     _require_uuid_tuple,
 )
-from .diagnostics import ParserReport
+from .diagnostics import ImportDiagnostic, ParserReport
 from .grids import Grid3D
 from .periodic import (
     BandStructure,
@@ -232,6 +232,7 @@ class ImportBatch:
     density_matrices: tuple[DensityMatrix, ...] = ()
     provenance: tuple[ProvenanceRecord, ...] = ()
     report: ParserReport | None = None
+    diagnostics: tuple[ImportDiagnostic, ...] = ()
 
     def __post_init__(self):
         groups = (
@@ -248,6 +249,7 @@ class ImportBatch:
             ("orbital_sets", OrbitalSet),
             ("density_matrices", DensityMatrix),
             ("provenance", ProvenanceRecord),
+            ("diagnostics", ImportDiagnostic),
         )
         for name, entity_type in groups:
             values = tuple(getattr(self, name))
@@ -275,6 +277,7 @@ class QCProject:
     orbital_sets: dict[UUID, OrbitalSet] = field(default_factory=dict)
     density_matrices: dict[UUID, DensityMatrix] = field(default_factory=dict)
     provenance: dict[UUID, ProvenanceRecord] = field(default_factory=dict)
+    diagnostics: dict[UUID, ImportDiagnostic] = field(default_factory=dict)
 
     def __post_init__(self):
         _require_uuid(self.id, "id")
@@ -301,6 +304,7 @@ class QCProject:
         incoming_groups = (
             batch.sources,
             batch.source_revisions,
+            batch.diagnostics,
             *incoming_entity_groups,
         )
         incoming = tuple(entity for group in incoming_groups for entity in group)
@@ -355,6 +359,11 @@ class QCProject:
         provenance_ids = set(self.provenance).union(
             record.id for record in batch.provenance
         )
+        diagnostics = dict(self.diagnostics)
+        diagnostics.update(
+            (diagnostic.id, diagnostic) for diagnostic in batch.diagnostics
+        )
+        diagnostic_ids = set(diagnostics)
 
         for structure in batch.structures:
             if (
@@ -644,14 +653,25 @@ class QCProject:
             | orbital_set_ids
             | density_matrix_ids
             | provenance_ids
+            | diagnostic_ids
         )
         self._validate_source_revision_references(
             source_revisions.values(),
             source_ids,
-            all_ids,
+            all_ids - diagnostic_ids,
+            diagnostics,
+        )
+        self._validate_diagnostic_references(
+            diagnostics.values(),
+            source_revisions,
+            all_ids - source_ids - source_revision_ids - diagnostic_ids,
         )
         for record in batch.provenance:
-            self._require_references(record.parent_ids, all_ids, "provenance parent")
+            self._require_references(
+                record.parent_ids,
+                all_ids - diagnostic_ids,
+                "provenance parent",
+            )
         if batch.report is not None and set(batch.report.created_entity_ids) != set(
             entity.id
             for group in incoming_entity_groups
@@ -684,6 +704,9 @@ class QCProject:
             (entity.id, entity) for entity in batch.density_matrices
         )
         self.provenance.update((entity.id, entity) for entity in batch.provenance)
+        self.diagnostics.update(
+            (entity.id, entity) for entity in batch.diagnostics
+        )
 
     def _all_entity_ids(self):
         groups = (
@@ -700,6 +723,7 @@ class QCProject:
             self.orbital_sets,
             self.density_matrices,
             self.provenance,
+            self.diagnostics,
         )
         ids = [entity_id for group in groups for entity_id in group]
         if len(set(ids)) != len(ids):
@@ -721,6 +745,7 @@ class QCProject:
             (self.orbital_sets, OrbitalSet, "orbital_sets"),
             (self.density_matrices, DensityMatrix, "density_matrices"),
             (self.provenance, ProvenanceRecord, "provenance"),
+            (self.diagnostics, ImportDiagnostic, "diagnostics"),
         )
         for registry, entity_type, name in groups:
             if not isinstance(registry, dict):
@@ -734,7 +759,16 @@ class QCProject:
         self._validate_source_revision_references(
             self.source_revisions.values(),
             set(self.sources),
-            all_ids,
+            all_ids - set(self.diagnostics),
+            self.diagnostics,
+        )
+        self._validate_diagnostic_references(
+            self.diagnostics.values(),
+            self.source_revisions,
+            all_ids
+            - set(self.sources)
+            - set(self.source_revisions)
+            - set(self.diagnostics),
         )
 
     @staticmethod
@@ -743,7 +777,12 @@ class QCProject:
             raise ValueError(f"{name} reference is dangling")
 
     @staticmethod
-    def _validate_source_revision_references(revisions, source_ids, all_ids):
+    def _validate_source_revision_references(
+        revisions,
+        source_ids,
+        all_ids,
+        diagnostics,
+    ):
         for revision in revisions:
             if revision.source_id not in source_ids:
                 raise ValueError(
@@ -756,7 +795,28 @@ class QCProject:
                 raise ValueError(
                     "source revision has a dangling created entity reference"
                 )
-            if revision.diagnostic_ids:
+            if any(
+                diagnostic_id not in diagnostics
+                or diagnostics[diagnostic_id].source_revision_id != revision.id
+                for diagnostic_id in revision.diagnostic_ids
+            ):
                 raise ValueError(
                     "source revision has dangling diagnostic references"
                 )
+
+    @staticmethod
+    def _validate_diagnostic_references(diagnostics, revisions, entity_ids):
+        for diagnostic in diagnostics:
+            revision = revisions.get(diagnostic.source_revision_id)
+            if (
+                revision is None
+                or diagnostic.id not in revision.diagnostic_ids
+            ):
+                raise ValueError(
+                    "diagnostic has a dangling source revision reference"
+                )
+            if (
+                diagnostic.entity_id is not None
+                and diagnostic.entity_id not in entity_ids
+            ):
+                raise ValueError("diagnostic has a dangling entity reference")

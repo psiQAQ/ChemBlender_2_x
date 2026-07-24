@@ -13,6 +13,15 @@ def migrate_manifest(document):
         raise SidecarIntegrityError("sidecar manifest must be an object")
     version = document.get("manifest_version")
     if version == CURRENT_MANIFEST_VERSION:
+        project = document.get("project")
+        if (
+            isinstance(project, dict)
+            and project.get("$type") == "QCProject"
+            and "diagnostics" not in project
+        ):
+            migrated = deepcopy(document)
+            migrated["project"]["diagnostics"] = {"$dict": []}
+            return migrated
         return document
     if version != LEGACY_MANIFEST_VERSION:
         raise SidecarCompatibilityError("unsupported sidecar manifest version")
@@ -46,4 +55,5 @@ def migrate_manifest(document):
     migrated["project"]["schema_version"] = CURRENT_PROJECT_SCHEMA_VERSION
     migrated["project"]["sources"] = {"$dict": []}
     migrated["project"]["source_revisions"] = {"$dict": []}
+    migrated["project"]["diagnostics"] = {"$dict": []}
     return migrated

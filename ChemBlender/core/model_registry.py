@@ -14,6 +14,7 @@ _MODEL_TYPE_NAMES = (
     "BasisShell", "BasisConvention", "BasisSet", "OrbitalChannel", "OrbitalSet",
     "DensityMatrix", "Grid3D", "ProvenanceRecord", "ParserIssue", "ParserReport",
     "ImportBatch", "QCProject", "SourceRecord", "SourceRevision",
+    "DiagnosticValue", "ImportDiagnostic",
 )
 
 MODEL_TYPES = MappingProxyType({name: getattr(model, name) for name in _MODEL_TYPE_NAMES})
@@ -23,6 +24,7 @@ MODEL_ENUMS = MappingProxyType({
         "CalculationStatus", "DatasetStatus", "IssueKind", "BasisFunctionKind",
         "OrbitalKind", "DensityMatrixLevel", "DensityMatrixSpin", "SpectrumKind",
         "SpectrumProfile", "SpinChannel", "EnergyReference", "CriticalPointKind",
+        "QualityStatus", "DiagnosticSeverity",
     )
 })
 

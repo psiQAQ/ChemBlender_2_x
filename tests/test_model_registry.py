@@ -37,6 +37,7 @@ EXPECTED_MODEL_TYPES = {
     "BasisConvention", "BasisSet", "OrbitalChannel", "OrbitalSet",
     "DensityMatrix", "Grid3D", "ProvenanceRecord", "ParserIssue",
     "ParserReport", "ImportBatch", "QCProject", "SourceRecord", "SourceRevision",
+    "DiagnosticValue", "ImportDiagnostic",
 }
 
 EXPECTED_MODEL_ENUMS = {
@@ -44,6 +45,7 @@ EXPECTED_MODEL_ENUMS = {
     "OrbitalKind", "DensityMatrixLevel", "DensityMatrixSpin", "SpectrumKind",
     "SpectrumProfile", "SpinChannel", "EnergyReference",
     "CriticalPointKind",
+    "QualityStatus", "DiagnosticSeverity",
 }
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "sidecar" / "model-v01"

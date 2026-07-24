@@ -15,17 +15,18 @@ PUBLIC_CORE_NAMES = (
     "CalculationStatus", "CriticalPointKind", "CJSONEnvelope", "CJSON_READER",
     "CJSONCompatibilityError", "CJSONError", "CacheIdentityError", "CacheClearResult", "CIFEnvelope",
     "CapabilitySupport", "CCLIB_OUTPUT_READER", "CCLibDependencyError", "CIF_READER",
-    "CUBE_READER", "DatasetStatus", "DensityMatrix", "DensityMatrixLevel",
+    "CUBE_READER", "DatasetStatus", "DiagnosticSeverity", "DiagnosticValue",
+    "DensityMatrix", "DensityMatrixLevel",
     "DensityMatrixSpin", "DensityOfStates", "EnergyReference",
     "ExcitationContribution", "ExcitedStateReferences", "ExcitedStateSet", "FrameSet",
     "FrameCacheInfo", "FermiSurfaceMesh", "GemmiDependencyError", "Grid3D",
-    "GBasisDependencyError", "ImportBatch", "IssueKind", "LazyNpyArray",
+    "GBasisDependencyError", "ImportBatch", "ImportDiagnostic", "IssueKind", "LazyNpyArray",
     "IODATA_WAVEFUNCTION_READER", "IODataDependencyError", "MOL_V2000_READER",
     "MolecularTopology", "OrbitalChannel", "OrbitalKind", "OrbitalSet", "ParserIssue",
     "ParserReport", "PeriodicSiteData", "PhononModeSet", "PhonopyDependencyError",
     "PYMATGEN_VASP_GRID_READER", "PYMATGEN_VASP_ELECTRONIC_READER",
     "PymatgenDependencyError", "PymatgenElectronicDependencyError", "PropertyDataset",
-    "ProjectSession", "ProjectServiceResult", "ProjectServiceStatus", "ProvenanceRecord", "QCProject", "QCSchemaEnvelope", "QCSCHEMA_READER",
+    "ProjectSession", "ProjectServiceResult", "ProjectServiceStatus", "ProvenanceRecord", "QCProject", "QualityStatus", "QCSchemaEnvelope", "QCSCHEMA_READER",
     "QCSchemaCompatibilityError", "QCSchemaError", "ReaderDescriptor",
     "ReaderNotFoundError", "ReaderRegistry", "RecipeBinding", "RecipeCitation",
     "RecipeDefinition", "RecipeInputSpec", "RecipeOutputSpec", "RecipeParameterSpec",
@@ -57,7 +58,7 @@ PUBLIC_CORE_NAMES = (
     "builtin_scene_presets", "plan_recipe", "plan_scene_preset", "recipe_document",
     "recipe_from_document", "relink_project_session", "save_project", "save_project_session", "scene_plan_document", "scene_preset_document",
     "scene_preset_from_document", "scene_preset_for_recipe_view", "validate_scene_plan",
-    "source_hash_bytes", "source_parse_identity", "external_record_request_document",
+    "source_hash_bytes", "source_parse_identity", "diagnostic_from_parser_issue", "external_record_request_document",
     "external_record_request_from_document", "external_record_source_uri",
     "surface_render_cache_key", "volume_render_cache_key", "validate_analysis_report", "verify_project_session",
     "write_analysis_report_bundle",
@@ -68,7 +69,7 @@ class CorePublicApiTests(unittest.TestCase):
     def test_public_names_are_frozen(self):
         self.assertEqual(tuple(core.__all__), PUBLIC_CORE_NAMES)
         self.assertEqual(len(core.__all__), len(set(core.__all__)))
-        self.assertEqual(len(core.__all__), 196)
+        self.assertEqual(len(core.__all__), 201)
 
     def test_public_names_resolve_to_attributes(self):
         missing = [name for name in core.__all__ if not hasattr(core, name)]
