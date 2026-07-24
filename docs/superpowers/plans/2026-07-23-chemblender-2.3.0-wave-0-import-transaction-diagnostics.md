@@ -238,6 +238,7 @@ implementation commit.
 - Modify: `ChemBlender/core/model_registry.py`
 - Modify: `ChemBlender/core/sidecar_migrations.py`
 - Modify: `ChemBlender/core/__init__.py`
+- Modify: `ChemBlender/core/storage/publication.py`
 - Create: `ChemBlender/core/import_pipeline/transaction.py`
 - Modify: `ChemBlender/core/import_pipeline/grouping.py`
 - Modify: `ChemBlender/core/import_pipeline/__init__.py`
@@ -269,6 +270,10 @@ implementation commit.
   `0.2` manifest or project schema version. Migration must add the missing
   registry when opening existing `0.2` documents and the committed `0.1`
   fixture.
+- The publication layer provides an explicit opt-in path that transfers
+  ownership of the already verified, reopened project to the transaction.
+  Existing callers retain metadata-only behavior and do not acquire a resource
+  that they must close.
 
 - [ ] **Step 1: Write atomic failure tests**
 
@@ -294,7 +299,9 @@ to the current session sidecar, or to a controlled temporary `.cbq` beneath the
 session root when the session has not yet been solidified. Reopen the published
 sidecar and only then replace the live session project and mark it dirty.
 Neither validation nor a failed publication may mutate the live project,
-session dirty state, or sidecar locator.
+session dirty state, or sidecar locator. The transaction adopts the exact
+project instance verified from the final published generation; it must not
+perform a second reopen after publication and create an unrollbackable gap.
 
 - [ ] **Step 4: Add view failure status contract**
 
