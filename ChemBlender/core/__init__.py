@@ -227,6 +227,16 @@ from .sidecar import (
     open_project,
     save_project,
 )
+# Project session service exports.
+from .project_service import (
+    CacheClearResult,
+    ProjectServiceResult,
+    ProjectServiceStatus,
+    clear_derived_cache,
+    relink_project_session,
+    save_project_session,
+    verify_project_session,
+)
 # Adapter compatibility exports.
 from .spglib_adapter import (
     SpglibDependencyError,
@@ -276,6 +286,7 @@ __all__ = [
     "CJSONCompatibilityError",
     "CJSONError",
     "CacheIdentityError",
+    "CacheClearResult",
     "CIFEnvelope",
     "CapabilitySupport",
     "CCLIB_OUTPUT_READER",
@@ -318,6 +329,8 @@ __all__ = [
     "PymatgenElectronicDependencyError",
     "PropertyDataset",
     "ProjectSession",
+    "ProjectServiceResult",
+    "ProjectServiceStatus",
     "ProvenanceRecord",
     "QCProject",
     "QCSchemaEnvelope",
@@ -413,6 +426,7 @@ __all__ = [
     "describe_report_artifact",
     "close_project",
     "close_session",
+    "clear_derived_cache",
     "create_session",
     "derivation_cache_key",
     "open_project",
@@ -429,7 +443,9 @@ __all__ = [
     "plan_scene_preset",
     "recipe_document",
     "recipe_from_document",
+    "relink_project_session",
     "save_project",
+    "save_project_session",
     "scene_plan_document",
     "scene_preset_document",
     "scene_preset_from_document",
@@ -443,5 +459,6 @@ __all__ = [
     "surface_render_cache_key",
     "volume_render_cache_key",
     "validate_analysis_report",
+    "verify_project_session",
     "write_analysis_report_bundle",
 ]
