@@ -27,6 +27,7 @@
 - Modify: `ChemBlender/core/model/project.py`
 - Modify: `ChemBlender/core/model/__init__.py`
 - Modify: `ChemBlender/core/model_registry.py`
+- Modify: `ChemBlender/core/sidecar_migrations.py`
 - Modify: `ChemBlender/core/__init__.py`
 - Create: `tests/test_import_diagnostics.py`
 - Modify: `tests/test_model_registry.py`
