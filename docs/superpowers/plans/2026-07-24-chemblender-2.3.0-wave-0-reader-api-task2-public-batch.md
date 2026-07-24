@@ -55,7 +55,7 @@
   `SpectrumProfile`, `SpinChannel`, `EnergyReference`, `CriticalPointKind`,
   `QualityStatus`, and `DiagnosticSeverity`.
 
-- [ ] **Step 1: Write failing public-surface tests**
+- [x] **Step 1: Write failing public-surface tests**
 
 Assert representative identities:
 
@@ -68,7 +68,7 @@ reader_api.ParserReport is ChemBlender.core.ParserReport
 Assert `QCProject` and `ImportBatch` are absent, and update the exact
 `reader_api.__all__` contract.
 
-- [ ] **Step 2: Implement exact relative aliases**
+- [x] **Step 2: Implement exact relative aliases**
 
 Expose the approved scientific types and enums from `..core`. Keep any
 exact-type collections private and immutable.
@@ -103,7 +103,7 @@ class PublicImportBatch:
     diagnostics: tuple[ImportDiagnostic, ...] = ()
 ```
 
-- [ ] **Step 1: Write failing container tests**
+- [x] **Step 1: Write failing container tests**
 
 Cover frozen/slots behavior, mutable sequence isolation, exact trusted types,
 the exact approved dataset types (`PropertyDataset`, `AtomicProperty`,
@@ -112,7 +112,7 @@ the exact approved dataset types (`PropertyDataset`, `AtomicProperty`,
 `TopologyGraph`), exact `ParserReport`, unknown subclass rejection, no
 automatic NumPy equality, and absence of project mutation methods.
 
-- [ ] **Step 2: Implement the minimum strict container**
+- [x] **Step 2: Implement the minimum strict container**
 
 Normalize each collection to a tuple, validate exact types against private
 allowlists, and retain entity/array identity. Do not deep-copy.
@@ -136,13 +136,13 @@ def public_batch_from_internal(batch) -> PublicImportBatch: ...
 def internal_batch_from_public(batch) -> ImportBatch: ...
 ```
 
-- [ ] **Step 1: Write failing conversion-boundary tests**
+- [x] **Step 1: Write failing conversion-boundary tests**
 
 Require exact input container types, reject untrusted entity subclasses, keep
 inputs unchanged, preserve entity and array identity, and convert internal
 validation errors into `PublicBatchValidationError`.
 
-- [ ] **Step 2: Implement thin conversion**
+- [x] **Step 2: Implement thin conversion**
 
 `public_batch_from_internal()` creates a new public wrapper from the existing
 tuples. `internal_batch_from_public()` creates a new internal `ImportBatch`,
@@ -164,13 +164,13 @@ boundary. Never return the temporary project or close shared lazy arrays.
 - Fixture: `tests/fixtures/xyz/water.xyz`
 - Fixture: `tests/fixtures/cube/sheared.cube`
 
-- [ ] **Step 1: Add real-reader round trips**
+- [x] **Step 1: Add real-reader round trips**
 
 For XYZ, preserve IDs, revisions, dims, units, values, provenance and report
 issues through internal → public → internal. For Cube, preserve the structure,
 all `Grid3D` datasets, origin, step vectors, coordinate unit and values.
 
-- [ ] **Step 2: Add graph-integrity failures**
+- [x] **Step 2: Add graph-integrity failures**
 
 Prove dangling structure references and mismatched
 `ParserReport.created_entity_ids` fail as `PublicBatchValidationError`.
@@ -186,19 +186,19 @@ Prove dangling structure references and mismatched
 - Test: `tests/test_quantum_visualization_docs.py`
 - Test: `tests/test_public_import_batch.py`
 
-- [ ] **Step 1: Update architecture responsibilities**
+- [x] **Step 1: Update architecture responsibilities**
 
 Document `public_model.py` as the controlled scientific façade and
 `builtin_bridge.py` as the validating, no-copy conversion boundary. State
 that plugins cannot obtain `QCProject`.
 
-- [ ] **Step 2: Verify namespace safety**
+- [x] **Step 2: Verify namespace safety**
 
 Assert the two new modules contain no absolute `ChemBlender`/`bl_ext` imports,
 work under a synthetic installed package namespace, and do not load `bpy`,
 `cclib`, `iodata`, `gbasis`, `ase`, or `pymatgen`.
 
-- [ ] **Step 3: Run RED before production edits**
+- [x] **Step 3: Run RED before production edits**
 
 ```powershell
 & $pythonBin -m unittest tests.test_public_import_batch -v
@@ -215,7 +215,7 @@ does not exist.
 - Modify: `.agents/active/2.3.0-wave-0-platform-foundation.md`
 - Modify: `docs/superpowers/plans/2026-07-24-chemblender-2.3.0-wave-0-reader-api-task2-public-batch.md`
 
-- [ ] **Step 1: Run focused GREEN**
+- [x] **Step 1: Run focused GREEN**
 
 ```powershell
 & $pythonBin -m unittest `
@@ -227,7 +227,7 @@ does not exist.
   tests.test_quantum_visualization_docs -v
 ```
 
-- [ ] **Step 2: Commit implementation**
+- [x] **Step 2: Commit implementation**
 
 ```powershell
 git add `
@@ -240,13 +240,13 @@ git add `
 git commit -m "feat: add reader API public import batches"
 ```
 
-- [ ] **Step 3: Complete independent reviews**
+- [x] **Step 3: Complete independent reviews**
 
 Run one task-scoped specification/code-quality review and one independent
 broad review. Fix all Critical/Important and directly related Minor findings,
 then rerun affected review and verification.
 
-- [ ] **Step 4: Run fresh full verification**
+- [x] **Step 4: Run fresh full verification**
 
 ```powershell
 & $pythonBin -m unittest discover -s tests -p "test_*.py" -v
@@ -259,14 +259,16 @@ git status --short
 Blender validate/build/smoke is:
 `Not Run: no registration or Blender runtime code changed`.
 
-- [ ] **Step 5: Commit completed checkpoint**
+- [x] **Step 5: Commit completed checkpoint**
 
 Record planning and implementation SHAs, RED/GREEN evidence, full test counts,
 XYZ/Cube round trips, array no-copy, synthetic namespace, review results,
 Blender `Not Run`, the Task 3 stop boundary, and no-push policy. Then commit:
 
 ```powershell
-git add .agents/active/2.3.0-wave-0-platform-foundation.md
+git add `
+  .agents/active/2.3.0-wave-0-platform-foundation.md `
+  docs/superpowers/plans/2026-07-24-chemblender-2.3.0-wave-0-reader-api-task2-public-batch.md
 git commit -m "chore: checkpoint wave 0 reader API task 2"
 ```
 
