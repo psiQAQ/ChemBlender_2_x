@@ -248,6 +248,7 @@ the documented public entrypoints remain synchronized with
 - Create: `ChemBlender/core/project_service.py`
 - Create: `tests/test_project_service.py`
 - Modify: `ChemBlender/core/__init__.py`
+- Modify: `tests/test_core_public_api.py`
 - Modify: `.agents/reference/code-architecture-guide.md`
 - Modify: `docs/quantum-visualization/2.3.0/architecture/cbq-sidecar-v0.2.md`
 - Test: `tests/test_project_session.py`
