@@ -24,8 +24,10 @@
 **Files:**
 - Create: `ChemBlender/reader_api/conformance.py`
 - Modify: `ChemBlender/reader_api/__init__.py`
+- Modify: `ChemBlender/reader_api/registry.py`
 - Create: `tests/test_reader_conformance.py`
 - Modify: `tests/test_reader_plugin_manifest.py`
+- Modify: `tests/test_reader_api_registry.py`
 - Create: `docs/quantum-visualization/2.3.0/reader-api-0.x.md`
 - Modify: `docs/quantum-visualization/2.3.0/README.md`
 - Modify: `.agents/reference/code-architecture-guide.md`
@@ -39,7 +41,7 @@
 - `ReaderConformanceResult` is `@dataclass(frozen=True, slots=True)` with exact fields `schema_version`, `case_name`, `reader_id`, and `checks`; its `passed` property is true only when every check passed, and `as_dict()` returns only JSON-safe primitives with deterministic check order.
 - `run_reader_conformance(case)` accepts only an exact `ReaderConformanceCase`, never raises a reader/plugin exception, and returns an exact `ReaderConformanceResult`.
 
-- [ ] **Step 1: Write the failing public contract tests**
+- [x] **Step 1: Write the failing public contract tests**
 
 Create `tests/test_reader_conformance.py` before `conformance.py`. Assert the new imports fail because the module does not exist, then specify frozen/slots case and result types, exact field normalization, deterministic `as_dict()`, and exact public `__all__` additions.
 
@@ -51,7 +53,7 @@ Run:
 
 Expected: non-zero exit with `ModuleNotFoundError` or `ImportError` for `ChemBlender.reader_api.conformance`.
 
-- [ ] **Step 2: Specify conformance behavior with failing tests**
+- [x] **Step 2: Specify conformance behavior with failing tests**
 
 Add tests that require the following ordered checks:
 
@@ -75,26 +77,31 @@ Add tests that require the following ordered checks:
 The tests must prove:
 
 - registration validates the plugin manifest/descriptor boundary;
-- sniff receives no more than 65,536 bytes and two calls select the same reader;
+- sniff receives no more than 65,536 bytes, two calls produce the same exact
+  `SniffResult`, and two full registry selections choose the same reader;
 - availability is explicit and available;
 - parse returns exact `PublicImportBatch`;
-- provenance or explicit `SourceRevision` binds the parsed entities to the source SHA-256 and reader metadata;
+- provenance or every explicit `SourceRevision` binds the parsed entities to
+  the source SHA-256, reader metadata, validation mode, canonical parameters,
+  `import_parameters_hash`, and parse identity;
 - `internal_batch_from_public()` accepts the graph and exact report-created entity IDs;
 - every reachable `ArrayData.unit` and coordinate-unit field is a non-empty canonical token;
 - the report reader/version/capabilities and diagnostic references are complete;
 - canonical write/read/write preserves canonical document bytes and artifact hashes;
 - a pre-cancelled request does not call the reader and yields the stable cancellation report;
-- a sniffing or parsing exception becomes a failed machine-readable check and does not escape.
+- a sniffing or parsing exception becomes a failed machine-readable check and
+  does not escape; parse exception type evidence comes only from the registry
+  catch boundary and never from a plugin-controlled report message.
 
 Use `tests/fixtures/xyz/water.xyz` and `tests/fixtures/cube/sheared.cube`. Expected capabilities are `("structure",)` for XYZ and `("grid", "structure")` for Cube.
 
-- [ ] **Step 3: Implement the minimum conformance runner**
+- [x] **Step 3: Implement the minimum conformance runner**
 
-Create `ChemBlender/reader_api/conformance.py` with relative imports only. Use one small private helper per shared check, `hashlib.sha256()` for source identity, `TemporaryDirectory()` for canonical round-trip, and the existing public bridge for graph validation. Catch `Exception` only at individual check boundaries so the result records `type(error).__name__` without exposing tracebacks or aborting later checks.
+Create `ChemBlender/reader_api/conformance.py` with relative imports only. Use one small private helper per shared check, `hashlib.sha256()` for source identity, `TemporaryDirectory()` for canonical round-trip, and the existing public bridge for graph validation. Catch `Exception` only at individual check boundaries so the result records `type(error).__name__` without exposing tracebacks or aborting later checks. Add only a private, reset-per-parse exception-type field to `ReaderPluginRegistry`; do not expose a new public registry API.
 
 Do not add wall-clock timeout threads or processes. “Bounded sniff” means the request prefix is capped at the existing 65,536-byte protocol limit; long-running work remains governed by the existing progress/cancellation protocol.
 
-- [ ] **Step 4: Make XYZ and Cube GREEN**
+- [x] **Step 4: Make XYZ and Cube GREEN**
 
 Run:
 
@@ -106,7 +113,7 @@ Run:
 
 Expected: all tests pass; both built-in conformance results have `passed is True`.
 
-- [ ] **Step 5: Publish the alpha imports and documentation**
+- [x] **Step 5: Publish the alpha imports and documentation**
 
 Re-export only:
 
@@ -119,7 +126,7 @@ run_reader_conformance
 
 Update the exact `reader_api.__all__` test. Document that API `0.x` is experimental through alpha, the conformance result schema is `0.1`, the exact supported import path is resolved from the Blender Reader API handle, and third-party experiments may use only the documented public imports. State that conformance success is not permission to mutate `QCProject`, use `bpy`, import optional dependencies during discovery, or bypass main-process validation.
 
-- [ ] **Step 6: Update architecture coverage and run regression**
+- [x] **Step 6: Update architecture coverage and run regression**
 
 Add the exact responsibility of `ChemBlender/reader_api/conformance.py` to `.agents/reference/code-architecture-guide.md`, link the alpha document from the 2.3.0 README, then run:
 
@@ -138,12 +145,11 @@ git diff --check
 
 Expected: zero failures. Blender validate/build/smoke are not rerun for this pure-Python Task 7; Task 6 supplies the fresh Blender handle lifecycle evidence for the complete Reader API plan.
 
-- [ ] **Step 7: Review and commit**
+- [x] **Step 7: Review and commit**
 
 Perform independent specification-compliance and code-quality reviews. Fix all Critical/Important findings and in-scope Minor findings, rerun the covering tests, then commit the implementation:
 
 ```powershell
-git add ChemBlender/reader_api/conformance.py ChemBlender/reader_api/__init__.py tests/test_reader_conformance.py tests/test_reader_plugin_manifest.py docs/quantum-visualization/2.3.0/reader-api-0.x.md docs/quantum-visualization/2.3.0/README.md .agents/reference/code-architecture-guide.md
+git add ChemBlender/reader_api/conformance.py ChemBlender/reader_api/__init__.py ChemBlender/reader_api/registry.py tests/test_reader_conformance.py tests/test_reader_plugin_manifest.py tests/test_reader_api_registry.py docs/quantum-visualization/2.3.0/reader-api-0.x.md docs/quantum-visualization/2.3.0/README.md .agents/reference/code-architecture-guide.md
 git commit -m "feat: add reader API alpha conformance"
 ```
-

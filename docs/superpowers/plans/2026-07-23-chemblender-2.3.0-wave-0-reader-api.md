@@ -271,8 +271,10 @@ Assert the installed module name begins with the actual extension key, importing
 **Files:**
 - Create: `ChemBlender/reader_api/conformance.py`
 - Modify: `ChemBlender/reader_api/__init__.py`
+- Modify: `ChemBlender/reader_api/registry.py`
 - Create: `tests/test_reader_conformance.py`
 - Modify: `tests/test_reader_plugin_manifest.py`
+- Modify: `tests/test_reader_api_registry.py`
 - Create: `docs/quantum-visualization/2.3.0/reader-api-0.x.md`
 - Modify: `docs/quantum-visualization/2.3.0/README.md`
 - Modify: `.agents/reference/code-architecture-guide.md`
@@ -281,18 +283,18 @@ Assert the installed module name begins with the actual extension key, importing
 **Interfaces:**
 - Produces: `ReaderConformanceCase`, `run_reader_conformance()` and machine-readable result.
 
-- [ ] **Step 1: Define conformance checks**
+- [x] **Step 1: Define conformance checks**
 
 Checks include manifest, bounded sniff, deterministic sniff, availability, parse output type, source identity, entity references, units, diagnostics, canonical round-trip, cancellation and exception isolation.
 
-- [ ] **Step 2: Run conformance on built-in XYZ and Cube**
+- [x] **Step 2: Run conformance on built-in XYZ and Cube**
 
 Write test cases with fixed fixtures and expected capabilities. Both must pass.
 
-- [ ] **Step 3: Document alpha instability**
+- [x] **Step 3: Document alpha instability**
 
 The doc states 0.x can change through alpha and identifies exact imports third-party experiments may use.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run conformance, reader catalog, worker protocol and full pure suite.
