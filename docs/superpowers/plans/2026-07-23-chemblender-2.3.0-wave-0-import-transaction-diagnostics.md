@@ -192,10 +192,18 @@ exports and architecture guide in the same implementation commit.
 
 **Files:**
 - Create: `ChemBlender/core/import_pipeline/grouping.py`
+- Modify: `ChemBlender/core/import_pipeline/__init__.py`
 - Create: `tests/test_source_grouping.py`
+- Modify: `tests/test_import_request_preview.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_import_preflight.py`
+- Test: `tests/test_import_conflicts.py`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `GroupingEvidence`, `SourceGroupSuggestion`, `CalculationGroup`, `suggest_source_groups()`.
+- `suggest_source_groups(preview, session)` reads immutable source rows and their staged `ImportBatch` values and returns immutable suggestions without mutating the preview, staging session or a project.
+- Confirming a `SourceGroupSuggestion` produces a new `CalculationGroup` with the selected evidence IDs and `confirmed_by="user"`; a suggestion is never promoted to scientific fact implicitly.
 
 - [ ] **Step 1: Write evidence score tests**
 
@@ -215,7 +223,11 @@ Suggestions are not stored as CalculationGroup until confirmed. The confirmed gr
 
 - [ ] **Step 5: Run and commit**
 
-Run grouping tests with exact, near, conflict and filename-only cases.
+Run grouping tests with exact, near, periodic-conflict and filename-only cases,
+plus request/preview, preflight, conflict and documentation-contract tests.
+Confirm the expanded package imports without `bpy` or optional scientific
+stacks. Update package exports and the architecture guide in the same
+implementation commit.
 
 ### Task 6: Implement ProjectTransaction
 
