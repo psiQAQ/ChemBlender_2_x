@@ -249,10 +249,12 @@ implementation commit.
 - Modify: `tests/test_model_public_surface.py`
 - Modify: `tests/test_model_registry.py`
 - Modify: `tests/test_quantum_core.py`
+- Modify: `tests/test_core_public_api.py`
 - Modify: `tests/test_sidecar_storage.py`
 - Test: `tests/test_import_conflicts.py`
 - Test: `tests/test_sidecar_publication.py`
 - Modify: `.agents/reference/code-architecture-guide.md`
+- Modify: `docs/quantum-visualization/2.3.0/public-core-api.md`
 - Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
@@ -265,7 +267,10 @@ implementation commit.
   confirmation; UUID equality alone is insufficient.
 - `CalculationGroup` is a model entity stored in
   `QCProject.calculation_groups` and serialized in `.cbq`. The import-pipeline
-  façade continues to re-export it for compatibility.
+  façade continues to re-export it for compatibility, and the stable
+  `ChemBlender.core` model façade exports it alongside the other registered
+  model types. Update the frozen public API test and document in the same
+  implementation commit.
 - Adding the empty `calculation_groups` registry does not change the current
   `0.2` manifest or project schema version. Migration must add the missing
   registry when opening existing `0.2` documents and the committed `0.1`
