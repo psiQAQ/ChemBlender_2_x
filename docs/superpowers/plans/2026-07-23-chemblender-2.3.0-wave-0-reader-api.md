@@ -35,19 +35,19 @@
   `ReaderAvailability` class. It must either re-export the current runtime
   type or define and test an explicit conversion boundary.
 
-- [ ] **Step 1: Write manifest validation tests**
+- [x] **Step 1: Write manifest validation tests**
 
 Test valid TOML, invalid plugin ID, incompatible API range, duplicate reader IDs, unknown execution mode, empty license and non-dot extension normalization.
 
-- [ ] **Step 2: Implement manifest parsing**
+- [x] **Step 2: Implement manifest parsing**
 
 Use `tomllib.loads`. API range supports the explicit forms used by ChemBlender, parsed into min/max tuples; do not introduce packaging dependency. Reject unrecognized keys in 0.x to surface mistakes.
 
-- [ ] **Step 3: Implement availability**
+- [x] **Step 3: Implement availability**
 
 Availability includes available bool, reason code and detail. It is evaluated without importing the optional dependency where possible using `importlib.util.find_spec` or worker environment probes.
 
-- [ ] **Step 4: Update architecture documentation, run and commit**
+- [x] **Step 4: Update architecture documentation, run and commit**
 
 Document all four new `ChemBlender/reader_api/` source files in
 `.agents/reference/code-architecture-guide.md`. Run manifest, existing reader
