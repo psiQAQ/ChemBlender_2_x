@@ -116,23 +116,23 @@ Run public batch, source, core and sidecar tests.
   yields a strict `PublicImportBatch`; later main-process conversion performs
   project-graph validation.
 
-- [ ] **Step 1: Write scalar and array round-trip tests**
+- [x] **Step 1: Write scalar and array round-trip tests**
 
 Use structure, topology, categorical property, frame property and grid arrays. Assert document bytes are identical regardless of dict insertion order.
 
-- [ ] **Step 2: Implement tagged canonical values**
+- [x] **Step 2: Implement tagged canonical values**
 
 Use stable type tags, UUID strings, enums, tuples and array descriptors. JSON uses UTF-8, sorted keys, compact separators and `allow_nan=False`.
 
-- [ ] **Step 3: Implement safe NPY artifacts**
+- [x] **Step 3: Implement safe NPY artifacts**
 
 Artifacts live under `artifacts/{content_sha256}.npy`; descriptor includes shape, dtype, content hash and file hash. Reject object dtype, absolute path, `..`, symlink escape and hash mismatch.
 
-- [ ] **Step 4: Run security tests**
+- [x] **Step 4: Run security tests**
 
 Add malformed documents for unknown type, extra/missing fields, path traversal, non-finite value and pickle-like payload. Expected: typed compatibility/integrity errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit code, spec and tests together.
 
