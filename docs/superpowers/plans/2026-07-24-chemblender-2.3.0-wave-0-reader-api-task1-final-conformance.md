@@ -32,7 +32,7 @@
 - Consumes: `ExecutionMode` or its accepted string value.
 - Produces: `ReaderAvailability.execution_mode` as exact `str` for every `_probe_availability()` outcome.
 
-- [ ] **Step 1: Write failing probe tests**
+- [x] **Step 1: Write failing probe tests**
 
 Cover available, dependency-missing, and dependency-probe-failed outcomes:
 
@@ -44,7 +44,7 @@ self.assertEqual(result.execution_mode, "extension")
 Add a descriptor boundary test proving that a `ReaderAvailability` whose
 `execution_mode` is an `ExecutionMode` instance is rejected with `TypeError`.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```powershell
 & $pythonBin -m unittest tests.test_reader_plugin_manifest -v
@@ -53,7 +53,7 @@ Add a descriptor boundary test proving that a `ReaderAvailability` whose
 Expected: failures show `_probe_availability()` returns `ExecutionMode`, and
 `PublicReaderDescriptor` accepts that non-canonical concrete type.
 
-- [ ] **Step 3: Implement the minimum correction**
+- [x] **Step 3: Implement the minimum correction**
 
 In `_probe_availability()` derive:
 
@@ -74,7 +74,7 @@ if self.availability.execution_mode != mode.value:
 
 Do not change the core `ReaderAvailability` type.
 
-- [ ] **Step 4: Run focused GREEN**
+- [x] **Step 4: Run focused GREEN**
 
 ```powershell
 & $pythonBin -m unittest tests.test_reader_plugin_manifest -v
@@ -94,7 +94,7 @@ Expected: all Reader API manifest tests pass.
 - Consumes: a non-empty list/tuple of extension strings.
 - Produces: sorted, deduplicated lowercase suffixes with exactly one optional added leading dot.
 
-- [ ] **Step 1: Write failing extension tests**
+- [x] **Step 1: Write failing extension tests**
 
 Accept:
 
@@ -111,7 +111,7 @@ Reject:
 
 Assert `["tar.gz", ".TAR.GZ"]` becomes `(".tar.gz",)`.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```powershell
 & $pythonBin -m unittest tests.test_reader_plugin_manifest -v
@@ -119,7 +119,7 @@ Assert `["tar.gz", ".TAR.GZ"]` becomes `(".tar.gz",)`.
 
 Expected: the multiple-leading-dot cases are incorrectly accepted.
 
-- [ ] **Step 3: Replace dot stripping**
+- [x] **Step 3: Replace dot stripping**
 
 Use:
 
@@ -132,7 +132,7 @@ if not normalized.startswith("."):
 Then apply the existing `_EXTENSION_PATTERN.fullmatch(normalized)` and
 deterministic deduplication. Do not broaden the regex.
 
-- [ ] **Step 4: Run focused GREEN**
+- [x] **Step 4: Run focused GREEN**
 
 ```powershell
 & $pythonBin -m unittest tests.test_reader_plugin_manifest -v
@@ -152,7 +152,7 @@ Expected: valid compound suffixes normalize and every multiple-dot case fails.
 - Consumes: a non-empty list/tuple of license strings.
 - Produces: `tuple(sorted(set(values)))` after exact-string and whitespace validation.
 
-- [ ] **Step 1: Add a helper contract test**
+- [x] **Step 1: Add a helper contract test**
 
 Import the private helper inside the test and assert:
 
@@ -167,7 +167,7 @@ Reuse the existing invalid and mutable-input manifest tests to cover exact
 strings, empty/whitespace values, leading/trailing whitespace, internal
 spaces, deduplication, sorting, and input isolation.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```powershell
 & $pythonBin -m unittest tests.test_reader_plugin_manifest -v
@@ -175,7 +175,7 @@ spaces, deduplication, sorting, and input isolation.
 
 Expected: importing `_licenses` fails because the helper does not exist.
 
-- [ ] **Step 3: Extract the existing rule once**
+- [x] **Step 3: Extract the existing rule once**
 
 Add:
 
@@ -190,7 +190,7 @@ def _licenses(values):
 Make `ReaderPluginManifest.__post_init__()` call `_licenses(self.license)`;
 remove its duplicate inline validation and normalization.
 
-- [ ] **Step 4: Run related GREEN**
+- [x] **Step 4: Run related GREEN**
 
 ```powershell
 & $pythonBin -m unittest `
@@ -211,7 +211,7 @@ Expected: all focused and documentation-contract tests pass.
 **Interfaces:**
 - Produces: one reviewed implementation commit and one completed execution cursor.
 
-- [ ] **Step 1: Commit the implementation**
+- [x] **Step 1: Commit the implementation**
 
 ```powershell
 git add `
@@ -221,13 +221,13 @@ git add `
 git commit -m "fix: canonicalize reader API metadata values"
 ```
 
-- [ ] **Step 2: Complete task and broad reviews**
+- [x] **Step 2: Complete task and broad reviews**
 
 Run one task-scoped specification/code-quality review and one independent
 broad review. Fix every Critical/Important finding and every directly related
 Minor finding, then repeat the affected review.
 
-- [ ] **Step 3: Run fresh full verification**
+- [x] **Step 3: Run fresh full verification**
 
 ```powershell
 & $pythonBin -m unittest `
@@ -240,7 +240,7 @@ git diff --check
 git status --short
 ```
 
-- [ ] **Step 4: Record and commit the completion checkpoint**
+- [x] **Step 4: Record and commit the completion checkpoint**
 
 Record planning and implementation full SHAs, RED/GREEN evidence, the three
 contract results, `Not Run: pure-Python Reader API contract cleanup`, the
