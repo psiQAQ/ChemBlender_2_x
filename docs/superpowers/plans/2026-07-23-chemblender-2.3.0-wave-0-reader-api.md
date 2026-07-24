@@ -227,13 +227,28 @@ Commit worker and bridge with protocol docs.
 ### Task 6: Publish a versioned Blender Reader API handle
 
 **Files:**
+- Create: `ChemBlender/runtime/__init__.py`
 - Create: `ChemBlender/runtime/reader_api_bridge.py`
-- Modify: `ChemBlender/runtime/registration.py`
+- Modify: `ChemBlender/__init__.py`
+- Modify: `ChemBlender/reader_api/registry.py`
 - Create: `tests/test_reader_api_bridge_contract.py`
+- Modify: `tests/test_reader_api_registry.py`
 - Modify: `tests/blender_smoke.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_quantum_visualization_docs.py`
+
+Live-state correction: `ChemBlender/runtime/registration.py` does not yet
+exist and belongs to the later Registration/UI plan. Task 6 integrates the
+handle lifecycle through the current root `register()` / `unregister()` entry
+point and must not create that later module early.
 
 **Interfaces:**
 - Produces: versioned `ReaderAPIHandle` publication and safe removal.
+- The bridge owns one initialized registry and exposes registration and safe
+  unregistration callbacks through the opaque handle; callback targets do not
+  appear in the pure Reader API facade.
+- Publication rollback unregisters the extension if an incompatible existing
+  handle prevents ownership.
 
 - [ ] **Step 1: Write bridge contract tests**
 
