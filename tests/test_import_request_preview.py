@@ -423,6 +423,11 @@ class ImportPipelineBoundaryTests(unittest.TestCase):
         self.assertEqual(
             set(import_pipeline.__all__),
             {
+                "ConflictDecision",
+                "DuplicateAction",
+                "ImportConflict",
+                "ImportConflictCandidate",
+                "ImportConflictCategory",
                 "ImportPreview",
                 "ImportCancelled",
                 "ImportRequest",
@@ -431,6 +436,8 @@ class ImportPipelineBoundaryTests(unittest.TestCase):
                 "SourcePreview",
                 "StagedImportSession",
                 "ValidationMode",
+                "apply_conflict_decisions",
+                "detect_import_conflicts",
                 "preflight_import",
             },
         )
