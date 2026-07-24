@@ -137,6 +137,8 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/reader_api/public_model.py` | `PublicImportBatch` | 以精确受信科学实体类型构成不可变、无复制的导入批次；拒绝子类和未批准数据集，插件不能经此获得项目。 |
 | `ChemBlender/reader_api/builtin_bridge.py` | `public_batch_from_internal()`、`internal_batch_from_public()` | 内置 `ImportBatch` 与公开批次间的薄、无复制转换边界；后者复用临时 `QCProject.commit()` 图校验，并转换为公开验证错误。 |
 | `ChemBlender/reader_api/canonical_document.py` | `public_batch_document()`、`public_batch_from_document()`、`write_public_batch_bundle()`、`read_public_batch_bundle()` | 将严格 `PublicImportBatch` 确定性编码为 Reader Import Document v0.1；以 content-addressed、禁 pickle 的 NPY artifacts 承载数组，并在读取边界复验 exact schema/type、相对路径、shape、dtype 与双 hash；只构造公开 batch，项目图校验留给 built-in bridge。 |
+| `ChemBlender/reader_api/protocol.py` | `SniffRequest`、`ParseRequest`、`ProgressEvent`、`ReaderPlugin` | 定义无项目、无 Blender 上下文的 Reader 插件请求与进度协议；每个插件必须持有与 runtime descriptor 一致的 exact manifest，解析请求只携带已验证来源、规范参数、安全 staging root 及进度/取消回调。 |
+| `ChemBlender/reader_api/registry.py` | `ReaderPluginRegistry`、`builtin_reader_plugin_registry()` | 确定性选择公开 Reader 插件，在注册时交叉验证 manifest/runtime metadata，并要求同一 `plugin_id` 使用一份完整 manifest；在解析前后分块复验来源 hash，并隔离 sniff/parse 异常；现有 11 个 descriptor 薄包装为共享受控 manifest 的 `chemblender.builtin` 插件，可选依赖只做 presence probe。 |
 
 ### 文件 reader 与第三方 adapter
 

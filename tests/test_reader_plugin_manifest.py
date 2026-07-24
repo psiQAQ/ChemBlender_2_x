@@ -657,6 +657,12 @@ assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', '
                 "public_batch_from_document",
                 "write_public_batch_bundle",
                 "read_public_batch_bundle",
+                "SniffRequest",
+                "ParseRequest",
+                "ProgressEvent",
+                "ReaderPlugin",
+                "ReaderPluginRegistry",
+                "builtin_reader_plugin_registry",
             ),
         )
 

@@ -15,6 +15,8 @@ from .canonical_document import (
     write_public_batch_bundle,
 )
 from .manifest import ExecutionMode, ReaderManifestEntry, ReaderPluginManifest
+from .protocol import ParseRequest, ProgressEvent, ReaderPlugin, SniffRequest
+from .registry import ReaderPluginRegistry, builtin_reader_plugin_registry
 from .public_model import (
     ArrayData,
     AtomicProperty,
@@ -150,4 +152,10 @@ __all__ = (
     "public_batch_from_document",
     "write_public_batch_bundle",
     "read_public_batch_bundle",
+    "SniffRequest",
+    "ParseRequest",
+    "ProgressEvent",
+    "ReaderPlugin",
+    "ReaderPluginRegistry",
+    "builtin_reader_plugin_registry",
 )
