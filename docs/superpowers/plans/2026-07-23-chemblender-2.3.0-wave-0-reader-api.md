@@ -81,19 +81,19 @@ and `tests.test_quantum_visualization_docs` tests, then commit.
   datablock, parse/sniff callable, pickle payload, or class identity derived
   from `__module__`.
 
-- [ ] **Step 1: Write round-trip tests using XYZ and Cube**
+- [x] **Step 1: Write round-trip tests using XYZ and Cube**
 
 Parse existing fixtures with internal readers, convert to public and back, and compare entity IDs, revisions, dims, units, values and report issues.
 
-- [ ] **Step 2: Implement public types**
+- [x] **Step 2: Implement public types**
 
 For source-tree tests, public types are imported through `ChemBlender.reader_api`. Installed third-party extensions resolve the actual module through the versioned Blender API handle described in Task 6; they do not hardcode the source-tree name or a `bl_ext` repository namespace. PublicImportBatch includes sources, entities, diagnostics and parser report.
 
-- [ ] **Step 3: Validate before conversion**
+- [x] **Step 3: Validate before conversion**
 
 `internal_batch_from_public` constructs an isolated QCProject and commits the batch to prove references before returning.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run public batch, source, core and sidecar tests.
 
@@ -101,11 +101,20 @@ Run public batch, source, core and sidecar tests.
 
 **Files:**
 - Create: `ChemBlender/reader_api/canonical_document.py`
+- Modify: `ChemBlender/reader_api/__init__.py`
 - Create: `tests/test_reader_canonical_document.py`
 - Create: `docs/quantum-visualization/2.3.0/specs/reader-import-document-v0.1.md`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `public_batch_document()`, `public_batch_from_document()`, `write_public_batch_bundle()`, `read_public_batch_bundle()`.
+- Produces stable `CanonicalDocumentError`,
+  `CanonicalDocumentCompatibilityError` and
+  `CanonicalDocumentIntegrityError` boundaries.
+- Document schema version is `"0.1"` with exact top-level fields. Decoding
+  yields a strict `PublicImportBatch`; later main-process conversion performs
+  project-graph validation.
 
 - [ ] **Step 1: Write scalar and array round-trip tests**
 
