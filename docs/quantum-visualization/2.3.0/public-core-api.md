@@ -6,6 +6,8 @@
 
 模型类和枚举是稳定门面；其构造器与 `.cbq` sidecar 类型标签保持兼容。请从 [ChemBlender.core](../../../ChemBlender/core/__init__.py) 导入这些语义模型。
 
+`CalculationGroup` 是用户确认的跨来源计算关系；它属于权威项目模型，保存在 `QCProject.calculation_groups` 并随 `.cbq` 往返。
+
 ## 存储 API
 
 `open_project`、`save_project`、`close_project`、`LazyNpyArray` 及 `Sidecar*Error` 构成 sidecar 存储 API，用于 `.cbq` 项目和数组引用的读取、写入与错误处理。

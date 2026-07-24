@@ -14,6 +14,7 @@ from .common import (
 )
 from .diagnostics import ImportDiagnostic, ParserReport
 from .grids import Grid3D
+from .grouping import CalculationGroup
 from .periodic import (
     BandStructure,
     DensityOfStates,
@@ -278,6 +279,9 @@ class QCProject:
     density_matrices: dict[UUID, DensityMatrix] = field(default_factory=dict)
     provenance: dict[UUID, ProvenanceRecord] = field(default_factory=dict)
     diagnostics: dict[UUID, ImportDiagnostic] = field(default_factory=dict)
+    calculation_groups: dict[UUID, CalculationGroup] = field(
+        default_factory=dict
+    )
 
     def __post_init__(self):
         _require_uuid(self.id, "id")
@@ -708,6 +712,26 @@ class QCProject:
             (entity.id, entity) for entity in batch.diagnostics
         )
 
+    def commit_calculation_groups(self, groups):
+        groups = tuple(groups)
+        if any(type(group) is not CalculationGroup for group in groups):
+            raise TypeError(
+                "calculation groups must contain CalculationGroup values"
+            )
+        group_ids = tuple(group.id for group in groups)
+        if len(group_ids) != len(set(group_ids)):
+            raise ValueError("calculation groups contain duplicate UUIDs")
+        if self._all_entity_ids().intersection(group_ids):
+            raise ValueError("calculation group UUID already exists in project")
+        if any(
+            not set(group.source_revision_ids).issubset(self.source_revisions)
+            for group in groups
+        ):
+            raise ValueError(
+                "calculation group has a dangling source revision reference"
+            )
+        self.calculation_groups.update((group.id, group) for group in groups)
+
     def _all_entity_ids(self):
         groups = (
             self.sources,
@@ -724,6 +748,7 @@ class QCProject:
             self.density_matrices,
             self.provenance,
             self.diagnostics,
+            self.calculation_groups,
         )
         ids = [entity_id for group in groups for entity_id in group]
         if len(set(ids)) != len(ids):
@@ -746,6 +771,11 @@ class QCProject:
             (self.density_matrices, DensityMatrix, "density_matrices"),
             (self.provenance, ProvenanceRecord, "provenance"),
             (self.diagnostics, ImportDiagnostic, "diagnostics"),
+            (
+                self.calculation_groups,
+                CalculationGroup,
+                "calculation_groups",
+            ),
         )
         for registry, entity_type, name in groups:
             if not isinstance(registry, dict):
@@ -770,6 +800,15 @@ class QCProject:
             - set(self.source_revisions)
             - set(self.diagnostics),
         )
+        if any(
+            not set(group.source_revision_ids).issubset(
+                self.source_revisions
+            )
+            for group in self.calculation_groups.values()
+        ):
+            raise ValueError(
+                "calculation group has a dangling source revision reference"
+            )
 
     @staticmethod
     def _require_references(references, valid_ids, name):

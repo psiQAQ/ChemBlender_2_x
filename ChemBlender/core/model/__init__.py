@@ -22,6 +22,7 @@ from .diagnostics import (
 )
 from .quality import DiagnosticSeverity, QualityStatus
 from .grids import Grid3D
+from .grouping import CalculationGroup
 from .periodic import (
     BandPathBranch,
     BandStructure,

@@ -164,6 +164,7 @@ class SidecarStorageTests(unittest.TestCase):
         try:
             self.assertEqual(project.id, PROJECT_ID)
             self.assertEqual(project.schema_version, "0.2")
+            self.assertEqual(project.calculation_groups, {})
             self.assertEqual(project.sources, {})
             self.assertEqual(project.source_revisions, {})
             self.assertEqual(set(project.structures), {STRUCTURE_ID})
@@ -199,6 +200,22 @@ class SidecarStorageTests(unittest.TestCase):
             self.assertEqual(provenance.revision, "provenance-r1")
         finally:
             close_project(project)
+
+    def test_existing_v02_without_calculation_groups_migrates_empty_registry(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary) / "legacy-v02.cbq"
+            save_project(root, sample_project())
+            manifest_path = root / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            del manifest["project"]["calculation_groups"]
+            write_manifest(manifest_path, manifest)
+
+            project = open_project(root)
+            try:
+                self.assertEqual(project.schema_version, "0.2")
+                self.assertEqual(project.calculation_groups, {})
+            finally:
+                close_project(project)
 
     def test_unknown_manifest_version_is_rejected(self):
         with TemporaryDirectory() as directory:

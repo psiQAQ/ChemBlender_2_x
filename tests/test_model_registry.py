@@ -37,7 +37,7 @@ EXPECTED_MODEL_TYPES = {
     "BasisConvention", "BasisSet", "OrbitalChannel", "OrbitalSet",
     "DensityMatrix", "Grid3D", "ProvenanceRecord", "ParserIssue",
     "ParserReport", "ImportBatch", "QCProject", "SourceRecord", "SourceRevision",
-    "DiagnosticValue", "ImportDiagnostic",
+    "DiagnosticValue", "ImportDiagnostic", "CalculationGroup",
 }
 
 EXPECTED_MODEL_ENUMS = {

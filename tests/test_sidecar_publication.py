@@ -85,6 +85,34 @@ class SidecarPublicationTests(unittest.TestCase):
         with self.assertRaises(FrozenInstanceError):
             published.schema_version = "changed"
 
+    def test_opt_in_transfers_exact_verified_project_ownership(self):
+        session = self.create_session(sample_project())
+        destination = self.root / "project.cbq"
+
+        published = solidify_session(
+            session,
+            destination,
+            transfer_verified_project=True,
+        )
+
+        try:
+            self.assertIsInstance(published.project, QCProject)
+            self.assertIsNot(published.project, session.project)
+            self.assertEqual(published.project.id, published.project_id)
+            self.assertEqual(
+                published.project.schema_version,
+                published.schema_version,
+            )
+        finally:
+            close_project(published.project)
+
+    def test_default_publication_does_not_transfer_open_project(self):
+        session = self.create_session(sample_project())
+
+        published = solidify_session(session, self.root / "project.cbq")
+
+        self.assertIsNone(published.project)
+
     def test_new_destination_final_verify_failure_leaves_only_stage_orphan(self):
         session = self.create_session(sample_project())
         destination = self.root / "project.cbq"

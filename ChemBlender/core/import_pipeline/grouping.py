@@ -8,7 +8,7 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 
 import numpy
 
-from ..model import ImportBatch, QCProject
+from ..model import CalculationGroup, ImportBatch, QCProject
 from .conflicts import _staged_revisions
 from .preview import ImportPreview
 from .staging import StagedImportSession
@@ -171,50 +171,6 @@ class GroupingEvidence:
     @property
     def requires_review(self):
         return self.is_conflict
-
-
-@dataclass(frozen=True, slots=True)
-class CalculationGroup:
-    suggestion_id: UUID
-    source_revision_ids: tuple[UUID, ...]
-    evidence_ids: tuple[UUID, ...]
-    confirmed_by: str = "user"
-    id: UUID = field(init=False)
-
-    def __post_init__(self):
-        if type(self.suggestion_id) is not UUID:
-            raise TypeError("suggestion_id must be a UUID")
-        object.__setattr__(
-            self,
-            "source_revision_ids",
-            _uuid_tuple(
-                self.source_revision_ids,
-                "source_revision_ids",
-                minimum=2,
-            ),
-        )
-        object.__setattr__(
-            self,
-            "evidence_ids",
-            _uuid_tuple(self.evidence_ids, "evidence_ids", minimum=1),
-        )
-        if self.confirmed_by != "user":
-            raise ValueError("confirmed_by must be 'user'")
-        object.__setattr__(
-            self,
-            "id",
-            _stable_id(
-                "calculation-group",
-                {
-                    "confirmed_by": self.confirmed_by,
-                    "evidence_ids": tuple(map(str, self.evidence_ids)),
-                    "source_revision_ids": tuple(
-                        map(str, self.source_revision_ids)
-                    ),
-                    "suggestion_id": str(self.suggestion_id),
-                },
-            ),
-        )
 
 
 @dataclass(frozen=True, slots=True)

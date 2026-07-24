@@ -14,13 +14,18 @@ def migrate_manifest(document):
     version = document.get("manifest_version")
     if version == CURRENT_MANIFEST_VERSION:
         project = document.get("project")
-        if (
-            isinstance(project, dict)
-            and project.get("$type") == "QCProject"
-            and "diagnostics" not in project
-        ):
+        if isinstance(project, dict) and project.get("$type") == "QCProject":
+            missing = tuple(
+                name
+                for name in ("diagnostics", "calculation_groups")
+                if name not in project
+            )
+        else:
+            missing = ()
+        if missing:
             migrated = deepcopy(document)
-            migrated["project"]["diagnostics"] = {"$dict": []}
+            for name in missing:
+                migrated["project"][name] = {"$dict": []}
             return migrated
         return document
     if version != LEGACY_MANIFEST_VERSION:
@@ -56,4 +61,5 @@ def migrate_manifest(document):
     migrated["project"]["sources"] = {"$dict": []}
     migrated["project"]["source_revisions"] = {"$dict": []}
     migrated["project"]["diagnostics"] = {"$dict": []}
+    migrated["project"]["calculation_groups"] = {"$dict": []}
     return migrated

@@ -14,7 +14,7 @@ _MODEL_TYPE_NAMES = (
     "BasisShell", "BasisConvention", "BasisSet", "OrbitalChannel", "OrbitalSet",
     "DensityMatrix", "Grid3D", "ProvenanceRecord", "ParserIssue", "ParserReport",
     "ImportBatch", "QCProject", "SourceRecord", "SourceRevision",
-    "DiagnosticValue", "ImportDiagnostic",
+    "DiagnosticValue", "ImportDiagnostic", "CalculationGroup",
 )
 
 MODEL_TYPES = MappingProxyType({name: getattr(model, name) for name in _MODEL_TYPE_NAMES})

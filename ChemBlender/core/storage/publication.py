@@ -1,7 +1,7 @@
 import os
 import re
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -28,6 +28,11 @@ class PublishedProject:
     schema_version: str
     manifest_sha256: str
     generation_id: UUID
+    project: QCProject | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,7 +111,7 @@ def _new_backup(destination):
             return path
 
 
-def _verified_project(path, project_id):
+def _verified_project(path, project_id, *, transfer_project=False):
     project, manifest = _open_project_with_manifest(
         path,
         expected_project_id=project_id,
@@ -114,23 +119,37 @@ def _verified_project(path, project_id):
         verify_arrays=True,
     )
     try:
-        return PublishedProject(
+        published = PublishedProject(
             path=path,
             project_id=project_id,
             schema_version=manifest["project_schema_version"],
             manifest_sha256=manifest["manifest_sha256"],
             generation_id=UUID(manifest["generation_id"]),
+            project=project if transfer_project else None,
         )
-    finally:
+    except Exception:
         close_project(project)
+        raise
+    if not transfer_project:
+        close_project(project)
+    return published
 
 
 def _verify_staged_project(path, project_id):
     return _verified_project(path, project_id)
 
 
-def _verify_published_project(path, project_id):
-    return _verified_project(path, project_id)
+def _verify_published_project(
+    path,
+    project_id,
+    *,
+    transfer_verified_project=False,
+):
+    return _verified_project(
+        path,
+        project_id,
+        transfer_project=transfer_verified_project,
+    )
 
 
 def _same_generation(left, right):
@@ -216,7 +235,12 @@ def _restore_final_failure(destination, stage, backup, staged, publication_error
             ) from publication_error
 
 
-def solidify_session(session, destination):
+def solidify_session(
+    session,
+    destination,
+    *,
+    transfer_verified_project=False,
+):
     if not isinstance(session, ProjectSession):
         raise TypeError("session must be a ProjectSession")
     if not isinstance(session.project, QCProject):
@@ -247,12 +271,24 @@ def solidify_session(session, destination):
         raise
 
     try:
-        published = _verify_published_project(destination, session.project.id)
+        if transfer_verified_project:
+            published = _verify_published_project(
+                destination,
+                session.project.id,
+                transfer_verified_project=True,
+            )
+        else:
+            published = _verify_published_project(
+                destination,
+                session.project.id,
+            )
         if not _same_generation(staged, published):
             raise RuntimeError(
                 "published generation does not match verified stage"
             )
     except Exception as publication_error:
+        if "published" in locals() and published.project is not None:
+            close_project(published.project)
         _restore_final_failure(
             destination,
             stage,

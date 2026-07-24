@@ -14,6 +14,7 @@ PUBLIC_MODEL_NAMES = {
     "BasisShell",
     "CalculationMetadata",
     "CalculationRecord",
+    "CalculationGroup",
     "CalculationStatus",
     "CriticalPointKind",
     "CJSONEnvelope",

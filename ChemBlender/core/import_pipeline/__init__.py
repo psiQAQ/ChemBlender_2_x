@@ -17,6 +17,12 @@ from .preflight import ImportCancelled, preflight_import
 from .preview import ImportPreview, SourcePreview
 from .request import ImportRequest, ImportSource, ReaderOverride, ValidationMode
 from .staging import StagedImportSession
+from .transaction import (
+    GroupingDecision,
+    ImportCommitDecisions,
+    ImportCommitResult,
+    commit_import_preview,
+)
 
 
 __all__ = [
@@ -24,6 +30,9 @@ __all__ = [
     "CalculationGroup",
     "DuplicateAction",
     "GroupingEvidence",
+    "GroupingDecision",
+    "ImportCommitDecisions",
+    "ImportCommitResult",
     "ImportConflict",
     "ImportConflictCandidate",
     "ImportConflictCategory",
@@ -37,6 +46,7 @@ __all__ = [
     "StagedImportSession",
     "ValidationMode",
     "apply_conflict_decisions",
+    "commit_import_preview",
     "detect_import_conflicts",
     "preflight_import",
     "suggest_source_groups",
