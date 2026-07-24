@@ -204,23 +204,23 @@ Run old and new catalog tests and update capability document generation to inclu
 - The public facade, exact `__all__`, protocol documentation and architecture
   inventory are updated in the implementation commit.
 
-- [ ] **Step 1: Write operation whitelist tests**
+- [x] **Step 1: Write operation whitelist tests**
 
 Assert request cannot specify module, callable, shell or argv. It can specify registered worker reader ID, source artifact and canonical parameters.
 
-- [ ] **Step 2: Implement worker operation**
+- [x] **Step 2: Implement worker operation**
 
 Worker reads request, resolves a reader from its fixed registry, parses into its task directory, writes canonical bundle and result hashes, then reopens the bundle before success.
 
-- [ ] **Step 3: Implement main-process revalidation**
+- [x] **Step 3: Implement main-process revalidation**
 
 Main process verifies WorkerResult, artifact paths and hashes, reads public batch document and validates through internal QCProject before staging.
 
-- [ ] **Step 4: Run cancellation/failure tests**
+- [x] **Step 4: Run cancellation/failure tests**
 
 Cover missing reader, dependency unavailable, cancel, malformed output, stale artifact and success.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit worker and bridge with protocol docs.
 
