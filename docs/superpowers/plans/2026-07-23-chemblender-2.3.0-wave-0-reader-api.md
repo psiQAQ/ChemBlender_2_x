@@ -160,23 +160,23 @@ Commit code, spec and tests together.
 - Runtime PublicReaderDescriptor uses CapabilitySupport and can preserve
   SUPPORTED/PARTIAL/UNSUPPORTED for built-in and derived descriptors.
 
-- [ ] **Step 1: Write deterministic selection tests**
+- [x] **Step 1: Write deterministic selection tests**
 
 Register built-in XYZ/Cube through the new registry. Assert identical selection to existing registry and dependency-unavailable readers remain selectable for Preview but cannot parse.
 
-- [ ] **Step 2: Implement protocol request objects**
+- [x] **Step 2: Implement protocol request objects**
 
 ParseRequest contains source path, source hash, validation mode, canonical parameters, staging root, progress callback and cancellation callback. It exposes no QCProject or Blender context.
 
-- [ ] **Step 3: Implement exception isolation**
+- [x] **Step 3: Implement exception isolation**
 
 Registry catches plugin sniff exceptions, records plugin diagnostic and continues other readers. If a selected plugin parse raises, it returns a failed staged result rather than disabling the extension.
 
-- [ ] **Step 4: Bridge existing descriptors**
+- [x] **Step 4: Bridge existing descriptors**
 
 Wrap the 11 existing descriptors with `plugin_id="chemblender.builtin"` and appropriate execution/availability metadata. Do not change their parse code yet.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 Run old and new catalog tests and update capability document generation to include execution mode and availability contract fields.
 
