@@ -270,8 +270,13 @@ Assert the installed module name begins with the actual extension key, importing
 
 **Files:**
 - Create: `ChemBlender/reader_api/conformance.py`
+- Modify: `ChemBlender/reader_api/__init__.py`
 - Create: `tests/test_reader_conformance.py`
+- Modify: `tests/test_reader_plugin_manifest.py`
 - Create: `docs/quantum-visualization/2.3.0/reader-api-0.x.md`
+- Modify: `docs/quantum-visualization/2.3.0/README.md`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `ReaderConformanceCase`, `run_reader_conformance()` and machine-readable result.
