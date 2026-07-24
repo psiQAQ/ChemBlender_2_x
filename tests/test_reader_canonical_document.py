@@ -305,6 +305,84 @@ class ReaderCanonicalDocumentTests(unittest.TestCase):
             restored = reader_api.read_public_batch_bundle(root)
             self.assertIs(type(restored), reader_api.PublicImportBatch)
 
+    def test_post_write_hash_and_cleanup_errors_are_stable(self):
+        with TemporaryDirectory() as temporary:
+            missing = Path(temporary) / "missing.npy"
+            with self.assertRaises(
+                reader_api.CanonicalDocumentIntegrityError
+            ):
+                canonical_document._file_hash(missing)
+
+            root = Path(temporary) / "result"
+            with patch.object(
+                canonical_document.os,
+                "replace",
+                side_effect=OSError("replace failed"),
+            ), patch.object(
+                canonical_document.Path,
+                "unlink",
+                side_effect=OSError("cleanup failed"),
+            ):
+                with self.assertRaisesRegex(
+                    reader_api.CanonicalDocumentIntegrityError,
+                    "cannot write canonical document",
+                ) as caught:
+                    reader_api.write_public_batch_bundle(
+                        root, reader_api.PublicImportBatch()
+                    )
+            self.assertEqual(str(caught.exception.__cause__), "replace failed")
+
+            cleanup_root = Path(temporary) / "cleanup-result"
+            with patch.object(
+                canonical_document.Path,
+                "unlink",
+                side_effect=OSError("cleanup failed"),
+            ):
+                with self.assertRaisesRegex(
+                    reader_api.CanonicalDocumentIntegrityError,
+                    "cannot clean canonical temporary file",
+                ) as caught:
+                    reader_api.write_public_batch_bundle(
+                        cleanup_root, reader_api.PublicImportBatch()
+                    )
+            self.assertEqual(str(caught.exception.__cause__), "cleanup failed")
+
+    def test_array_write_error_is_not_masked_by_cleanup_error(self):
+        with TemporaryDirectory() as temporary, patch.object(
+            canonical_document._numpy(),
+            "save",
+            side_effect=OSError("array write failed"),
+        ), patch.object(
+            canonical_document.Path,
+            "unlink",
+            side_effect=OSError("cleanup failed"),
+        ):
+            with self.assertRaisesRegex(
+                reader_api.CanonicalDocumentIntegrityError,
+                "cannot write array artifact",
+            ) as caught:
+                reader_api.public_batch_document(
+                    property_batch(numpy.asarray([1.0, 2.0])),
+                    temporary,
+                )
+        self.assertEqual(str(caught.exception.__cause__), "array write failed")
+
+    def test_array_cleanup_error_is_stable_without_a_write_error(self):
+        with TemporaryDirectory() as temporary, patch.object(
+            canonical_document.Path,
+            "unlink",
+            side_effect=OSError("array cleanup failed"),
+        ):
+            with self.assertRaisesRegex(
+                reader_api.CanonicalDocumentIntegrityError,
+                "cannot clean canonical temporary file",
+            ) as caught:
+                reader_api.public_batch_document(
+                    property_batch(numpy.asarray([1.0, 2.0])),
+                    temporary,
+                )
+        self.assertEqual(str(caught.exception.__cause__), "array cleanup failed")
+
     def test_registered_model_and_enum_tags_are_exact(self):
         self.assertEqual(tuple(canonical_document._MODEL_TYPES), MODEL_TAGS)
         self.assertEqual(tuple(canonical_document._MODEL_ENUMS), ENUM_TAGS)

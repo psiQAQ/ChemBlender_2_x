@@ -301,6 +301,16 @@ class ReaderPluginManifestTests(unittest.TestCase):
 
         self.assertIs(ReaderAvailability, ExistingReaderAvailability)
 
+    def test_sniff_results_are_exact_existing_classes(self):
+        from ChemBlender.core.readers import (
+            SniffMatch as ExistingSniffMatch,
+            SniffResult as ExistingSniffResult,
+        )
+        from ChemBlender.reader_api import SniffMatch, SniffResult
+
+        self.assertIs(SniffMatch, ExistingSniffMatch)
+        self.assertIs(SniffResult, ExistingSniffResult)
+
     def test_capability_support_is_exact_existing_class(self):
         from ChemBlender.core.readers import CapabilitySupport as ExistingCapabilitySupport
         from ChemBlender.reader_api import CapabilitySupport
@@ -470,6 +480,15 @@ import synthetic_repository.chemblender.reader_api as reader_api
 assert reader_api.CapabilitySupport.__name__ == 'CapabilitySupport'
 assert reader_api.PublicImportBatch.__name__ == 'PublicImportBatch'
 assert reader_api.Structure.__name__ == 'Structure'
+class Plugin:
+    def sniff(self, request):
+        return reader_api.SniffResult(
+            reader_api.SniffMatch.EXACT,
+            'synthetic',
+        )
+result = Plugin().sniff(reader_api.SniffRequest(package_root / '__init__.py', b''))
+assert type(result) is reader_api.SniffResult
+assert result.match is reader_api.SniffMatch.EXACT
 assert not hasattr(reader_api, 'QCProject')
 assert not hasattr(reader_api, 'ImportBatch')
 assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', 'iodata', 'gbasis', 'ase', 'pymatgen'))
@@ -661,6 +680,8 @@ assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', '
                 "ReaderConformanceCheck",
                 "ReaderConformanceResult",
                 "run_reader_conformance",
+                "SniffMatch",
+                "SniffResult",
                 "SniffRequest",
                 "ParseRequest",
                 "ProgressEvent",

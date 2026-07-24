@@ -13,9 +13,9 @@ case = reader_api.ReaderConformanceCase(...)
 result = reader_api.run_reader_conformance(case)
 ```
 
-可导入的 conformance 公共成员仅为 `ReaderConformanceCase`、`ReaderConformanceCheck`、`ReaderConformanceResult` 与 `run_reader_conformance`。结果的机器可读 schema 版本是 `0.1`；`ReaderConformanceResult.as_dict()` 只返回确定性的 JSON 安全值。
+插件可直接从动态解析的公共模块取得 exact `SniffMatch` 与 `SniffResult`，无需也不得导入源码树 `ChemBlender.core`。可导入的 conformance 公共成员为 `ReaderConformanceCase`、`ReaderConformanceCheck`、`ReaderConformanceResult` 与 `run_reader_conformance`。结果的机器可读 schema 版本是 `0.1`；`ReaderConformanceResult.as_dict()` 只返回确定性的 JSON 安全值。
 
-Runner 依次核验 manifest、bounded/deterministic sniff、availability、parse 输出、来源身份、图引用、单位、diagnostics、canonical bundle round-trip、预取消与异常隔离。它是验证工具，不创建或修改项目。
+Runner 依次核验 manifest、bounded/deterministic sniff、availability、parse 输出、来源身份、图引用、单位、diagnostics、canonical bundle round-trip、预取消与异常隔离。一般插件必须返回完整 `SourceRevision` 以绑定 plugin/reader/version、内容 hash、validation mode 与 canonical parameters。当前内建 XYZ/Cube 可使用严格受限 fallback：仅 `chemblender.builtin`、`balanced`、空 canonical parameters，且 report 与 provenance 必须同时匹配 reader/version、绝对来源路径、来源 hash/revision、`parse` operation、producer 及 `format`。它是验证工具，不创建或修改项目。
 
 通过 conformance 不授权插件修改 `QCProject`、使用 `bpy`、在 discovery 时导入 optional dependencies，或绕过主进程的来源、canonical bundle 与图验证。alpha 外部插件仍必须只经 handle 的 register/unregister callback 与文档化 Reader API 协作。
 

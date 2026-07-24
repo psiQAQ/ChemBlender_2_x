@@ -263,6 +263,16 @@ class WorkerReaderOperationTests(unittest.TestCase):
         self.assertEqual(result.error.code, "reader_output_invalid")
         self.assertFalse((self.root / "reader-bundle").exists())
 
+    def test_result_publication_failure_removes_bundle_and_allows_retry(self):
+        with patch(
+            "worker.runner.write_result",
+            side_effect=OSError("disk full"),
+        ):
+            with self.assertRaisesRegex(OSError, "disk full"):
+                self.run_reader()
+        self.assertFalse((self.root / "reader-bundle").exists())
+        self.assertIs(self.run_reader().status, WorkerStatus.SUCCESS)
+
     def test_failed_public_batch_is_not_published_as_success(self):
         self.source.write_bytes(b"not an XYZ document\n")
         result = self.run_reader(reader_request(sha256(self.source)))

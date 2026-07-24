@@ -137,11 +137,25 @@ def _canonical_json(value):
 
 
 def _file_hash(path):
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+    try:
+        digest = hashlib.sha256()
+        with Path(path).open("rb") as stream:
+            for block in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(block)
+        return digest.hexdigest()
+    except OSError as error:
+        raise CanonicalDocumentIntegrityError(
+            "cannot hash canonical artifact"
+        ) from error
+
+
+def _remove_temporary(path):
+    try:
+        path.unlink(missing_ok=True)
+    except OSError as error:
+        raise CanonicalDocumentIntegrityError(
+            "cannot clean canonical temporary file"
+        ) from error
 
 
 def _array_content_hash(value):
@@ -248,6 +262,7 @@ class _Encoder:
         temporary = destination.with_name(
             f".{destination.name}.{uuid4().hex}.tmp"
         )
+        write_error = None
         try:
             with temporary.open("xb") as stream:
                 _numpy().save(stream, array, allow_pickle=False)
@@ -255,12 +270,17 @@ class _Encoder:
                 os.fsync(stream.fileno())
             os.replace(temporary, destination)
         except OSError as error:
+            write_error = error
+        finally:
+            try:
+                _remove_temporary(temporary)
+            except CanonicalDocumentIntegrityError:
+                if write_error is None:
+                    raise
+        if write_error is not None:
             raise CanonicalDocumentIntegrityError(
                 "cannot write array artifact"
-            ) from error
-        finally:
-            if temporary.exists():
-                temporary.unlink()
+            ) from write_error
         return {
             "$array": "npy",
             "path": f"artifacts/{destination.name}",
@@ -590,6 +610,7 @@ def write_public_batch_bundle(root, batch):
     document = public_batch_document(batch, root)
     destination = root / _DOCUMENT_NAME
     temporary = destination.with_name(f".{destination.name}.{uuid4().hex}.tmp")
+    write_error = None
     try:
         with temporary.open("xb") as stream:
             stream.write(document)
@@ -597,12 +618,17 @@ def write_public_batch_bundle(root, batch):
             os.fsync(stream.fileno())
         os.replace(temporary, destination)
     except OSError as error:
+        write_error = error
+    finally:
+        try:
+            _remove_temporary(temporary)
+        except CanonicalDocumentIntegrityError:
+            if write_error is None:
+                raise
+    if write_error is not None:
         raise CanonicalDocumentIntegrityError(
             "cannot write canonical document"
-        ) from error
-    finally:
-        if temporary.exists():
-            temporary.unlink()
+        ) from write_error
     return destination
 
 

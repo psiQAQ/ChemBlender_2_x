@@ -34,11 +34,11 @@ protocol, `unittest`.
 - Modify: `tests/test_reader_plugin_manifest.py`
 - Modify: `tests/test_public_import_batch.py`
 
-- [ ] Re-export the exact core `SniffMatch` and `SniffResult` classes from the
+- [x] Re-export the exact core `SniffMatch` and `SniffResult` classes from the
   dynamically resolved Reader API facade.
-- [ ] Prove a synthetic installed-namespace plugin can implement `sniff()`
+- [x] Prove a synthetic installed-namespace plugin can implement `sniff()`
   using only the resolved public module.
-- [ ] Recursively reject callable, mutable, or unregistered nested values at
+- [x] Recursively reject callable, mutable, or unregistered nested values at
   the public-to-internal batch boundary while preserving approved immutable
   scientific values and no-copy array behavior.
 
@@ -49,12 +49,12 @@ protocol, `unittest`.
 - Modify: `tests/test_reader_conformance.py`
 - Modify: `docs/quantum-visualization/2.3.0/reader-api-0.x.md`
 
-- [ ] Reject incomplete or contradictory provenance when a reader returns no
+- [x] Reject incomplete or contradictory provenance when a reader returns no
   `SourceRevision`.
-- [ ] Preserve built-in XYZ/Cube conformance only for identity evidence that
+- [x] Preserve built-in XYZ/Cube conformance only for identity evidence that
   actually binds the selected reader, version, source hash, validation mode,
   and canonical parameters.
-- [ ] Document the exact source-identity evidence required by alpha
+- [x] Document the exact source-identity evidence required by alpha
   conformance.
 
 ## Task 3: Make artifact publication failures atomic and stable
@@ -63,15 +63,15 @@ protocol, `unittest`.
 - Modify: `ChemBlender/reader_api/canonical_document.py`
 - Modify: `worker/reader_operation.py`
 - Modify: `worker/runner.py`
-- Modify: `tests/test_canonical_document.py`
+- Modify: `tests/test_reader_canonical_document.py`
 - Modify: `tests/test_worker_reader_operation.py`
-- Modify: `tests/test_worker_runner.py`
+- Modify: `tests/test_worker_protocol.py`
 
-- [ ] Convert post-write hashing and cleanup filesystem errors to stable
+- [x] Convert post-write hashing and cleanup filesystem errors to stable
   canonical-document errors.
-- [ ] If worker result publication fails after creating the operation bundle,
+- [x] If worker result publication fails after creating the operation bundle,
   remove only that operation-created bundle and preserve the original failure.
-- [ ] Prove a retry is not blocked by a stale bundle.
+- [x] Prove a retry is not blocked by a stale bundle.
 
 ## Task 4: Review, verify, checkpoint, and push
 
@@ -82,4 +82,3 @@ protocol, `unittest`.
 - [ ] Obtain independent specification and code-quality approval.
 - [ ] Commit implementation and checkpoint separately.
 - [ ] Push the feature branch once and verify the remote SHA equals local HEAD.
-

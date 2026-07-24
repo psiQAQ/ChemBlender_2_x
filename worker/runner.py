@@ -237,6 +237,9 @@ def run_request(request_path, result_path, registry, *, cancel_path=None):
                     request.operation_id == "reader.parse"
                     and request.operation_version == "0.1"
                 ):
+                    task_directory = Path(request_path).resolve().parent
+                    bundle = task_directory / "reader-bundle"
+                    bundle_preexisting = bundle.exists() or bundle.is_symlink()
                     result = _run_task_directory_operation(
                         operation,
                         request,
@@ -244,7 +247,17 @@ def run_request(request_path, result_path, registry, *, cancel_path=None):
                         project_path,
                         cancel_path,
                     )
-                    write_result(result_path, result)
+                    try:
+                        write_result(result_path, result)
+                    except Exception:
+                        if not bundle_preexisting:
+                            try:
+                                from .reader_operation import _remove_owned_bundle
+
+                                _remove_owned_bundle(task_directory, bundle)
+                            except Exception:
+                                pass
+                        raise
                     return result
                 try:
                     project = open_project(

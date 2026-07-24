@@ -53,6 +53,10 @@ _ENTITY_GROUPS = (
     "density_matrices",
     "provenance",
 )
+_BUILTIN_PROVENANCE_PRODUCERS = {
+    "cube": "ChemBlender Cube reader",
+    "xyz": "ChemBlender XYZ reader",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -370,18 +374,40 @@ def run_reader_conformance(case):
             )
             return valid, "all SourceRevisions bind this case completely"
         entity_ids = _entity_ids(batch)
-        provenance = [
-            value for value in batch.provenance
-            if value.source_hash == state["source_hash"]
-        ]
+        provenance = tuple(batch.provenance)
+        report = batch.report
+        expected_producer = _BUILTIN_PROVENANCE_PRODUCERS.get(
+            descriptor.reader_id
+        )
         revisions_match = all(
             getattr(value, "revision", state["source_hash"]) == state["source_hash"]
             for name in _ENTITY_GROUPS
             for value in getattr(batch, name)
         )
+        provenance_matches = len(provenance) == 1 and all(
+            value.revision == state["source_hash"]
+            and value.producer == expected_producer
+            and value.producer_version == descriptor.reader_version
+            and value.source == str(case.source_path)
+            and value.source_hash == state["source_hash"]
+            and value.operation == "parse"
+            and tuple(
+                item for item in value.parameters if item[0] == "format"
+            ) == (("format", descriptor.reader_id),)
+            for value in provenance
+        )
         return (
-            bool(provenance) and bool(entity_ids) and revisions_match,
-            "provenance and entity revisions bind source identity",
+            descriptor.plugin_id == "chemblender.builtin"
+            and expected_producer is not None
+            and case.validation_mode == "balanced"
+            and not case.canonical_parameters
+            and report is not None
+            and report.reader_id == descriptor.reader_id
+            and report.reader_version == descriptor.reader_version
+            and bool(entity_ids)
+            and revisions_match
+            and provenance_matches,
+            "strict built-in provenance fallback binds source identity",
         )
 
     def entity_references():

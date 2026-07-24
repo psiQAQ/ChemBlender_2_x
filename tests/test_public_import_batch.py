@@ -3,6 +3,8 @@ from pathlib import Path
 import unittest
 from uuid import uuid4
 
+import numpy
+
 import ChemBlender.core as core
 import ChemBlender.reader_api as reader_api
 import ChemBlender.reader_api.builtin_bridge as builtin_bridge
@@ -181,6 +183,68 @@ class PublicImportBatchTests(unittest.TestCase):
                     report=replace(internal.report, created_entity_ids=()),
                 )
             )
+
+    def test_public_to_internal_rejects_unsafe_nested_values(self):
+        for value in (lambda: None, [], {}, frozenset(("unsafe",)), object()):
+            with self.subTest(value_type=type(value).__name__):
+                provenance = core.ProvenanceRecord(
+                    uuid4(),
+                    "revision",
+                    "test",
+                    "1",
+                    "source",
+                    "",
+                    (),
+                    "parse",
+                    (("unsafe", value),),
+                )
+                with self.assertRaises(reader_api.PublicBatchValidationError):
+                    reader_api.internal_batch_from_public(
+                        reader_api.PublicImportBatch(provenance=(provenance,))
+                    )
+
+    def test_public_to_internal_accepts_approved_immutable_nested_values(self):
+        array = core.ArrayData(
+            numpy.asarray([1.0]),
+            ("value",),
+            "dimensionless",
+        )
+        values = (
+            None,
+            "text",
+            b"bytes",
+            True,
+            1,
+            1.5,
+            uuid4(),
+            core.IssueKind.WARNING,
+            ("nested", 2),
+            array,
+        )
+        provenance = core.ProvenanceRecord(
+            uuid4(),
+            "revision",
+            "test",
+            "1",
+            "source",
+            "",
+            (),
+            "parse",
+            tuple((f"value_{index}", value) for index, value in enumerate(values)),
+        )
+        restored = reader_api.internal_batch_from_public(
+            reader_api.PublicImportBatch(provenance=(provenance,))
+        )
+
+        self.assertIs(restored.provenance[0], provenance)
+        self.assertIs(
+            restored.provenance[0].parameters[-1][1],
+            array,
+        )
+        self.assertIs(
+            restored.provenance[0].parameters[-1][1].values,
+            array.values,
+        )
 
 
 if __name__ == "__main__":

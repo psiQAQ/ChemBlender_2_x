@@ -22,6 +22,7 @@ from .conformance import (
 )
 from .manifest import ExecutionMode, ReaderManifestEntry, ReaderPluginManifest
 from .protocol import ParseRequest, ProgressEvent, ReaderPlugin, SniffRequest
+from ..core.readers import SniffMatch, SniffResult
 from .registry import ReaderPluginRegistry, builtin_reader_plugin_registry
 from .worker_bridge import (
     WorkerReaderError,
@@ -168,6 +169,8 @@ __all__ = (
     "ReaderConformanceCheck",
     "ReaderConformanceResult",
     "run_reader_conformance",
+    "SniffMatch",
+    "SniffResult",
     "SniffRequest",
     "ParseRequest",
     "ProgressEvent",

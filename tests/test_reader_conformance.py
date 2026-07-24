@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 from types import MappingProxyType
 from uuid import uuid4
 
-from ChemBlender.core import CapabilitySupport, ImportBatch, SniffMatch, SniffResult
+from ChemBlender.core import CapabilitySupport, ImportBatch
 from ChemBlender.core.import_pipeline import ImportSource, ValidationMode
 from ChemBlender.core.import_pipeline.parse import staged_reader_batch
 from ChemBlender.core.model.sources import source_parse_identity
@@ -23,6 +23,8 @@ from ChemBlender.reader_api import (
     ReaderManifestEntry,
     ReaderPluginManifest,
     ReaderPluginRegistry,
+    SniffMatch,
+    SniffResult,
     SniffRequest,
     SourceRecord,
     SourceRevision,
@@ -570,6 +572,75 @@ class ReaderConformanceContractTests(unittest.TestCase):
             )
 
         self.assertTrue(check(result, "source_identity").passed, result.as_dict())
+
+    def test_source_identity_rejects_weak_or_tampered_provenance_fallback(self):
+        source = FIXTURES / "xyz" / "water.xyz"
+        builtin = builtin_reader_plugin_registry()._plugin("xyz")
+
+        class Proxy:
+            descriptor = builtin.descriptor
+            manifest = builtin.manifest
+            priority = builtin.priority
+
+            def __init__(self, change):
+                self.change = change
+
+            def sniff(self, request):
+                return builtin.sniff(request)
+
+            def parse(self, request):
+                batch = builtin.parse(request)
+                provenance = replace(batch.provenance[0], **self.change)
+                return replace(batch, provenance=(provenance,))
+
+        cases = (
+            ({"producer": "forged"}, "balanced", {}),
+            ({"producer_version": "9"}, "balanced", {}),
+            ({"source": str(source.parent.resolve())}, "balanced", {}),
+            ({"source_hash": "0" * 64}, "balanced", {}),
+            ({"revision": "0" * 64}, "balanced", {}),
+            ({"operation": "convert"}, "balanced", {}),
+            ({"parameters": (("format", "other"),)}, "balanced", {}),
+            ({}, "strict", {}),
+            ({}, "balanced", {"charge": "2"}),
+        )
+        for changes, validation_mode, parameters in cases:
+            with self.subTest(
+                changes=changes,
+                validation_mode=validation_mode,
+                parameters=parameters,
+            ):
+                result = run_reader_conformance(
+                    ReaderConformanceCase(
+                        "tampered",
+                        ReaderPluginRegistry((Proxy(changes),)),
+                        "xyz",
+                        source,
+                        ("structure",),
+                        validation_mode=validation_mode,
+                        canonical_parameters=parameters,
+                    )
+                )
+                self.assertFalse(check(result, "source_identity").passed)
+
+    def test_third_party_reader_requires_source_revision_identity(self):
+        source = FIXTURES / "xyz" / "water.xyz"
+        from ChemBlender.core.xyz import XYZ_READER
+
+        plugin = FactoryPlugin(
+            lambda request: public_batch_from_internal(XYZ_READER.parse(source))
+        )
+        result = run_reader_conformance(
+            ReaderConformanceCase(
+                "third-party",
+                ReaderPluginRegistry((plugin,)),
+                "broken",
+                source,
+                ("structure",),
+            )
+        )
+
+        self.assertFalse(check(result, "source_identity").passed)
 
     def test_source_identity_matches_staged_reader_batch_parameters_hash(self):
         with TemporaryDirectory() as temporary:
