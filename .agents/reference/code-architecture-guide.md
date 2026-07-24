@@ -130,10 +130,12 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
-| `ChemBlender/reader_api/__init__.py` | 模块级 re-export | Reader API 0.x 的严格公共门面；以现有精确类身份导出版本、执行模式、`CapabilitySupport`、`ReaderAvailability`、manifest 类型和只读 runtime descriptor。 |
+| `ChemBlender/reader_api/__init__.py` | 模块级 re-export | Reader API 0.x 的严格公共门面；导出版本、manifest/runtime descriptor、受控科学实体和 `PublicImportBatch`，不导出 `QCProject` 或内部 `ImportBatch`。 |
 | `ChemBlender/reader_api/version.py` | `READER_API_VERSION` | 声明当前实验性 Reader API 版本 `0.1`，供 manifest 兼容范围校验。 |
 | `ChemBlender/reader_api/manifest.py` | `ExecutionMode`、`ReaderManifestEntry`、`ReaderPluginManifest.from_toml()` | 用标准库 `tomllib` 读取受控 UTF-8 TOML，拒绝未知字段和不兼容 API 范围，并确定性规范化静态 reader 声明；manifest capability list 恒表示 `SUPPORTED`。 |
 | `ChemBlender/reader_api/descriptors.py` | `PublicReaderDescriptor`、`_probe_availability()` | 定义不含 callable、模块路径或项目上下文的不可变 runtime 元数据；以相对导入取得现有 `CapabilitySupport`/`ReaderAvailability`，并保留 `SUPPORTED`、`PARTIAL`、`UNSUPPORTED` 三态 capability。 |
+| `ChemBlender/reader_api/public_model.py` | `PublicImportBatch` | 以精确受信科学实体类型构成不可变、无复制的导入批次；拒绝子类和未批准数据集，插件不能经此获得项目。 |
+| `ChemBlender/reader_api/builtin_bridge.py` | `public_batch_from_internal()`、`internal_batch_from_public()` | 内置 `ImportBatch` 与公开批次间的薄、无复制转换边界；后者复用临时 `QCProject.commit()` 图校验，并转换为公开验证错误。 |
 
 ### 文件 reader 与第三方 adapter
 
