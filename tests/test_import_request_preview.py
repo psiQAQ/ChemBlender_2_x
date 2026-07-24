@@ -445,10 +445,18 @@ class ImportPipelineBoundaryTests(unittest.TestCase):
                 "apply_conflict_decisions",
                 "commit_import_preview",
                 "detect_import_conflicts",
+                "diagnostics_document",
+                "import_summary",
                 "preflight_import",
+                "render_diagnostics_markdown",
                 "suggest_source_groups",
             },
         )
+        from ChemBlender import core
+
+        self.assertFalse(hasattr(core, "diagnostics_document"))
+        self.assertFalse(hasattr(core, "import_summary"))
+        self.assertFalse(hasattr(core, "render_diagnostics_markdown"))
 
     def test_fresh_import_does_not_load_blender_or_optional_stacks(self):
         code = """

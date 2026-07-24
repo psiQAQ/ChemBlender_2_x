@@ -15,6 +15,11 @@ from .grouping import (
 )
 from .preflight import ImportCancelled, preflight_import
 from .preview import ImportPreview, SourcePreview
+from .report import (
+    diagnostics_document,
+    import_summary,
+    render_diagnostics_markdown,
+)
 from .request import ImportRequest, ImportSource, ReaderOverride, ValidationMode
 from .staging import StagedImportSession
 from .transaction import (
@@ -48,6 +53,9 @@ __all__ = [
     "apply_conflict_decisions",
     "commit_import_preview",
     "detect_import_conflicts",
+    "diagnostics_document",
+    "import_summary",
     "preflight_import",
+    "render_diagnostics_markdown",
     "suggest_source_groups",
 ]

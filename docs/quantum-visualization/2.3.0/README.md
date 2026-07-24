@@ -8,12 +8,13 @@
 2. `product-definition.md`
 3. `architecture/import-project-reader-api-boundary.md`
 4. `architecture/quality-topology-edit-boundary.md`
-5. `format-maturity-matrix.md`
-6. `dependency-tier-matrix.md`
-7. `performance-budget.md`
-8. `roadmap.md`
-9. `docs/superpowers/specs/` 中的 2.3.0 总设计和 Wave 设计
-10. `docs/superpowers/plans/` 中的总排序计划和各实施计划
+5. [Import diagnostics report v1](specs/import-report-v1.md)
+6. `format-maturity-matrix.md`
+7. `dependency-tier-matrix.md`
+8. `performance-budget.md`
+9. `roadmap.md`
+10. `docs/superpowers/specs/` 中的 2.3.0 总设计和 Wave 设计
+11. `docs/superpowers/plans/` 中的总排序计划和各实施计划
 
 ## 核心原则
 

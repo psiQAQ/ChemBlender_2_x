@@ -118,6 +118,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/core/import_pipeline/preflight.py` | `preflight_import()`、`ImportCancelled` | 对显式文件执行 bounded hash、reader 选择与 availability 检查、可取消解析和稳定失败诊断；只登记到 owned staging session，不写 `QCProject`。 |
 | `ChemBlender/core/import_pipeline/request.py` | `ValidationMode`、`ImportSource`、`ReaderOverride`、`ImportRequest` | 定义不可变导入意图；规范化并去重显式文件路径，拒绝目录扫描，并将 reader override 限定到请求内来源。 |
 | `ChemBlender/core/import_pipeline/preview.py` | `SourcePreview`、`ImportPreview` | 以不可变路径、标量和 UUID 引用描述 source row、暂存 batch、冲突、归组建议、诊断及默认 view plan，不持有项目或 Blender 对象。 |
+| `ChemBlender/core/import_pipeline/report.py` | `import_summary()`、`diagnostics_document()`、`render_diagnostics_markdown()` | 只读验证 preview 与 live staging batch 的身份及关联，按稳定键生成 schema v1 JSON-compatible diagnostic document、质量状态计数和 Markdown；不读取项目、不加载 Blender 或可选科学栈。 |
 | `ChemBlender/core/import_pipeline/staging.py` | `StagedImportSession.create()`、`register_result()`、`discard()` | 创建带 UUID ownership marker 的独占暂存根、artifact 目录和受控 `ImportBatch` registry；仅在路径、文件身份及 marker 均匹配时删除。 |
 | `ChemBlender/core/readers.py` | `ReaderDescriptor`、`ReaderRuntimeDescriptor`、`ReaderAvailability`、`ReaderRegistry.register()`、`select()`、`parse()` | 定义 reader capability、扩展名、bounded sniffing 和确定性分派；以兼容 wrapper 分离 reader 选择与运行时 availability，拒绝未知或歧义 reader。 |
 | `ChemBlender/core/reader_catalog.py` | `builtin_reader_descriptors()`、`builtin_reader_registry()`、`reader_capability_document()` | 汇总内置 reader，并生成机器可读的格式能力矩阵。 |
