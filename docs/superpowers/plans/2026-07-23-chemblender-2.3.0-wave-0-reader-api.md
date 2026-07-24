@@ -185,11 +185,24 @@ Run old and new catalog tests and update capability document generation to inclu
 **Files:**
 - Create: `worker/reader_operation.py`
 - Modify: `worker/runner.py`
+- Modify: `worker/operation.py`
 - Create: `ChemBlender/reader_api/worker_bridge.py`
+- Modify: `ChemBlender/reader_api/__init__.py`
 - Create: `tests/test_worker_reader_operation.py`
+- Modify: `tests/test_worker_protocol.py`
+- Modify: `tests/test_reader_plugin_manifest.py`
+- Create: `docs/quantum-visualization/2.3.0/specs/worker-reader-operation-v0.1.md`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: fixed operation `reader.parse@0.1` and main-process `parse_with_worker()`.
+- Reader-operation request parameters use an exact whitelist and task-directory
+  relative artifact paths; they never carry module, callable, shell or argv.
+- Worker artifacts are published under the request task directory without
+  changing the authoritative project sidecar.
+- The public facade, exact `__all__`, protocol documentation and architecture
+  inventory are updated in the implementation commit.
 
 - [ ] **Step 1: Write operation whitelist tests**
 
