@@ -26,9 +26,14 @@
 - Create: `ChemBlender/reader_api/manifest.py`
 - Create: `ChemBlender/reader_api/descriptors.py`
 - Create: `tests/test_reader_plugin_manifest.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `READER_API_VERSION="0.1"`, `ReaderPluginManifest`, `ReaderManifestEntry`, `ExecutionMode`, `ReaderAvailability`, `PublicReaderDescriptor`.
+- Reader API 0.x must not introduce a second implicitly incompatible
+  `ReaderAvailability` class. It must either re-export the current runtime
+  type or define and test an explicit conversion boundary.
 
 - [ ] **Step 1: Write manifest validation tests**
 
@@ -42,9 +47,11 @@ Use `tomllib.loads`. API range supports the explicit forms used by ChemBlender, 
 
 Availability includes available bool, reason code and detail. It is evaluated without importing the optional dependency where possible using `importlib.util.find_spec` or worker environment probes.
 
-- [ ] **Step 4: Run and commit**
+- [ ] **Step 4: Update architecture documentation, run and commit**
 
-Run manifest and existing reader tests, then commit.
+Document all four new `ChemBlender/reader_api/` source files in
+`.agents/reference/code-architecture-guide.md`. Run manifest, existing reader
+and `tests.test_quantum_visualization_docs` tests, then commit.
 
 ### Task 2: Define public import model and built-in conversion
 
