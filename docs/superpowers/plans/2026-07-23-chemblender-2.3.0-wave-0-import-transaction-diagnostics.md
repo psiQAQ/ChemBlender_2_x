@@ -152,7 +152,13 @@ responsibility in the same implementation commit.
 
 **Files:**
 - Create: `ChemBlender/core/import_pipeline/conflicts.py`
+- Modify: `ChemBlender/core/import_pipeline/__init__.py`
 - Create: `tests/test_import_conflicts.py`
+- Modify: `tests/test_import_request_preview.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Test: `tests/test_import_preflight.py`
+- Test: `tests/test_source_model.py`
+- Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: `ImportConflict`, `DuplicateAction`, `detect_import_conflicts()` and `apply_conflict_decisions()`.
@@ -177,7 +183,10 @@ Each decision produces a new immutable preview. Reuse references existing entiti
 
 - [ ] **Step 4: Run and commit**
 
-Run conflict, source model and transaction precursor tests.
+Run conflict, source model, preflight/request and transaction-precursor tests,
+plus the documentation contract. Confirm the expanded import-pipeline package
+still imports without `bpy` or optional scientific stacks. Update the package
+exports and architecture guide in the same implementation commit.
 
 ### Task 5: Implement evidence-driven grouping suggestions
 
