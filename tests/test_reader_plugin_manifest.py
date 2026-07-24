@@ -1,8 +1,11 @@
+import ast
+import json
 import sys
 import subprocess
 import tempfile
 import unittest
 from dataclasses import fields
+from enum import Enum
 from pathlib import Path
 from types import ModuleType
 from unittest.mock import patch
@@ -154,7 +157,12 @@ class ReaderPluginManifestTests(unittest.TestCase):
             ReaderPluginManifest(EqualToOne(), "org.example.reader", "1.0.0", ">=0.1,<1.0", "extension", ["SPDX:MIT"], [entry])
 
     def test_descriptor_capabilities_are_immutable_and_ordered(self):
-        from ChemBlender.reader_api import ExecutionMode, PublicReaderDescriptor, ReaderAvailability
+        from ChemBlender.reader_api import (
+            CapabilitySupport,
+            ExecutionMode,
+            PublicReaderDescriptor,
+            ReaderAvailability,
+        )
 
         descriptor = PublicReaderDescriptor(
             plugin_id="org.example.reader",
@@ -163,12 +171,73 @@ class ReaderPluginManifestTests(unittest.TestCase):
             reader_version="1",
             execution_mode=ExecutionMode.EXTENSION,
             extensions=("EXAMPLE", ".other", ".EXAMPLE"),
-            capabilities={"structure": True, "atomic_property": True},
+            capabilities={
+                "structure": CapabilitySupport.SUPPORTED,
+                "atomic_property": CapabilitySupport.SUPPORTED,
+            },
             availability=ReaderAvailability(True, "extension", "available", ""),
         )
         self.assertEqual(tuple(descriptor.capabilities), ("atomic_property", "structure"))
         with self.assertRaises(TypeError):
-            descriptor.capabilities["grid"] = True
+            descriptor.capabilities["grid"] = CapabilitySupport.SUPPORTED
+
+    def test_descriptor_preserves_tri_state_capabilities(self):
+        from ChemBlender.reader_api import (
+            CapabilitySupport,
+            ExecutionMode,
+            PublicReaderDescriptor,
+            ReaderAvailability,
+        )
+
+        descriptor = PublicReaderDescriptor(
+            "org.example.reader",
+            "1.0.0",
+            "example-format",
+            "1",
+            ExecutionMode.EXTENSION,
+            ("example",),
+            {
+                "unsupported": CapabilitySupport.UNSUPPORTED,
+                "supported": CapabilitySupport.SUPPORTED,
+                "partial": CapabilitySupport.PARTIAL,
+            },
+            ReaderAvailability(True, "extension", "available", ""),
+        )
+
+        self.assertEqual(
+            tuple(descriptor.capabilities.items()),
+            (
+                ("partial", CapabilitySupport.PARTIAL),
+                ("supported", CapabilitySupport.SUPPORTED),
+                ("unsupported", CapabilitySupport.UNSUPPORTED),
+            ),
+        )
+
+    def test_descriptor_rejects_non_exact_capability_support(self):
+        from ChemBlender.reader_api import (
+            ExecutionMode,
+            PublicReaderDescriptor,
+            ReaderAvailability,
+        )
+
+        class ForeignCapabilitySupport(str, Enum):
+            SUPPORTED = "supported"
+
+        class DuckCapabilitySupport:
+            value = "supported"
+
+        for value in (True, "supported", ForeignCapabilitySupport.SUPPORTED, DuckCapabilitySupport()):
+            with self.subTest(value=value), self.assertRaises(TypeError):
+                PublicReaderDescriptor(
+                    "org.example.reader",
+                    "1.0.0",
+                    "example-format",
+                    "1",
+                    ExecutionMode.EXTENSION,
+                    ("example",),
+                    {"structure": value},
+                    ReaderAvailability(True, "extension", "available", ""),
+                )
 
     def test_descriptor_rejects_iterable_of_capability_pairs(self):
         from ChemBlender.reader_api import ExecutionMode, PublicReaderDescriptor, ReaderAvailability
@@ -176,16 +245,42 @@ class ReaderPluginManifestTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             PublicReaderDescriptor(
                 "org.example.reader", "1.0.0", "example-format", "1", ExecutionMode.EXTENSION,
-                (".example",), [("structure", True)],
+                (".example",), [("structure", "supported")],
                 ReaderAvailability(True, "extension", "available", ""),
             )
 
+    def test_descriptor_rejects_non_sequence_extensions(self):
+        from ChemBlender.reader_api import (
+            CapabilitySupport,
+            ExecutionMode,
+            PublicReaderDescriptor,
+            ReaderAvailability,
+        )
+
+        for extensions in ("xyz", b".example", {".example"}):
+            with self.subTest(extensions=extensions), self.assertRaises(ValueError):
+                PublicReaderDescriptor(
+                    "org.example.reader",
+                    "1.0.0",
+                    "example-format",
+                    "1",
+                    ExecutionMode.EXTENSION,
+                    extensions,
+                    {"structure": CapabilitySupport.SUPPORTED},
+                    ReaderAvailability(True, "extension", "available", ""),
+                )
+
     def test_public_descriptor_contains_no_callable(self):
-        from ChemBlender.reader_api import ExecutionMode, PublicReaderDescriptor, ReaderAvailability
+        from ChemBlender.reader_api import (
+            CapabilitySupport,
+            ExecutionMode,
+            PublicReaderDescriptor,
+            ReaderAvailability,
+        )
 
         descriptor = PublicReaderDescriptor(
             "org.example.reader", "1.0.0", "example-format", "1", ExecutionMode.EXTENSION,
-            (".example",), {"structure": True},
+            (".example",), {"structure": CapabilitySupport.SUPPORTED},
             ReaderAvailability(True, "extension", "available", ""),
         )
         self.assertFalse(any(callable(getattr(descriptor, field.name)) for field in fields(descriptor)))
@@ -195,6 +290,154 @@ class ReaderPluginManifestTests(unittest.TestCase):
         from ChemBlender.reader_api import ReaderAvailability
 
         self.assertIs(ReaderAvailability, ExistingReaderAvailability)
+
+    def test_capability_support_is_exact_existing_class(self):
+        from ChemBlender.core.readers import CapabilitySupport as ExistingCapabilitySupport
+        from ChemBlender.reader_api import CapabilitySupport
+
+        self.assertIs(CapabilitySupport, ExistingCapabilitySupport)
+
+    def test_capability_matrix_snapshot_preserves_all_tri_state_values(self):
+        from ChemBlender.reader_api import (
+            CapabilitySupport,
+            ExecutionMode,
+            PublicReaderDescriptor,
+            ReaderAvailability,
+        )
+
+        snapshot_path = Path(__file__).resolve().parents[1] / "docs" / "quantum-visualization" / "reader-capability-matrix.json"
+        snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        support_by_status = {
+            "supported": CapabilitySupport.SUPPORTED,
+            "partial": CapabilitySupport.PARTIAL,
+            "unsupported": CapabilitySupport.UNSUPPORTED,
+        }
+        descriptors = [
+            PublicReaderDescriptor(
+                "chemblender.builtin",
+                "0.1",
+                reader["reader_id"],
+                reader["reader_version"],
+                ExecutionMode.BUILT_IN,
+                reader["extensions"],
+                {name: support_by_status[status] for name, status in reader["capabilities"].items()},
+                ReaderAvailability(True, "built_in", "available", ""),
+            )
+            for reader in snapshot["readers"]
+        ]
+
+        self.assertEqual(
+            {support for descriptor in descriptors for support in descriptor.capabilities.values()},
+            set(CapabilitySupport),
+        )
+        self.assertEqual(
+            {
+                descriptor.reader_id: {name: support.value for name, support in descriptor.capabilities.items()}
+                for descriptor in descriptors
+            },
+            {reader["reader_id"]: reader["capabilities"] for reader in snapshot["readers"]},
+        )
+
+    def test_extensions_accept_compound_suffixes_and_normalize_deterministically(self):
+        from ChemBlender.reader_api import ReaderManifestEntry
+
+        entry = ReaderManifestEntry(
+            "example-format",
+            "1",
+            ["CUBE", ".tar.gz", ".molden.input", "cube", "..TAR.GZ"],
+            ["structure"],
+        )
+
+        self.assertEqual(entry.extensions, (".cube", ".molden.input", ".tar.gz"))
+
+    def test_extensions_reject_unsafe_or_ambiguous_values(self):
+        from ChemBlender.reader_api import ReaderManifestEntry
+
+        for extension in ("/", "\\", "*", "?", ";", " ", "x yz", ".", "..", "../xyz", "folder/xyz"):
+            with self.subTest(extension=extension), self.assertRaises(ValueError):
+                ReaderManifestEntry("example-format", "1", [extension], ["structure"])
+
+    def test_licenses_require_exact_trimmed_strings_and_normalize(self):
+        from ChemBlender.reader_api import ReaderManifestEntry, ReaderPluginManifest
+
+        entry = ReaderManifestEntry("example-format", "1", ["example"], ["structure"])
+        licenses = ["MIT License", "Apache-2.0", "MIT License"]
+        manifest = ReaderPluginManifest(
+            "1", "org.example.reader", "1.0.0", ">=0.1,<1.0", "extension", licenses, [entry]
+        )
+        licenses.append("GPL-3.0-only")
+        self.assertEqual(manifest.license, ("Apache-2.0", "MIT License"))
+
+        class StringSubclass(str):
+            pass
+
+        for license_value in ("", "   ", " MIT", "MIT ", StringSubclass("MIT"), 1):
+            with self.subTest(license_value=license_value), self.assertRaises(ValueError):
+                ReaderPluginManifest(
+                    "1", "org.example.reader", "1.0.0", ">=0.1,<1.0", "extension", [license_value], [entry]
+                )
+
+    def test_reader_api_modules_have_no_absolute_installed_namespace_imports(self):
+        package_root = Path(__file__).resolve().parents[1] / "ChemBlender" / "reader_api"
+        forbidden = ("ChemBlender", "bl_ext")
+
+        for source_path in package_root.glob("*.py"):
+            tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+            imported = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    imported.extend(alias.name for alias in node.names)
+                elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                    imported.extend([node.module or "", *(alias.name for alias in node.names)])
+            with self.subTest(source_path=source_path):
+                self.assertFalse(
+                    any(name == prefix or name.startswith(prefix + ".") for name in imported for prefix in forbidden),
+                    imported,
+                )
+
+    def test_reader_api_reexports_descriptor_classes_from_descriptors_module(self):
+        init_path = Path(__file__).resolve().parents[1] / "ChemBlender" / "reader_api" / "__init__.py"
+        tree = ast.parse(init_path.read_text(encoding="utf-8"), filename=str(init_path))
+        exports = {
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module == "descriptors"
+            for alias in node.names
+        }
+
+        self.assertTrue({"CapabilitySupport", "ReaderAvailability", "PublicReaderDescriptor"} <= exports)
+
+    def test_reader_api_imports_from_a_synthetic_installed_namespace(self):
+        repository_root = Path(__file__).resolve().parents[1]
+        package_root = repository_root / "ChemBlender"
+        script = f"""
+import importlib.machinery
+import importlib.util
+import sys
+import types
+from pathlib import Path
+
+repository_root = Path({str(repository_root)!r})
+package_root = Path({str(package_root)!r})
+sys.path[:] = [item for item in sys.path if item not in ('', str(repository_root))]
+parent = types.ModuleType('synthetic_repository')
+parent.__path__ = []
+parent.__spec__ = importlib.machinery.ModuleSpec('synthetic_repository', loader=None, is_package=True)
+sys.modules['synthetic_repository'] = parent
+spec = importlib.util.spec_from_file_location(
+    'synthetic_repository.chemblender',
+    package_root / '__init__.py',
+    submodule_search_locations=[str(package_root)],
+)
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+import synthetic_repository.chemblender.reader_api as reader_api
+assert reader_api.CapabilitySupport.__name__ == 'CapabilitySupport'
+assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', 'iodata', 'gbasis', 'ase', 'pymatgen'))
+"""
+
+        subprocess.run([sys.executable, "-c", script], check=True, cwd=repository_root)
 
     def test_availability_probe_does_not_import_present_optional_package(self):
         from ChemBlender.reader_api.descriptors import _probe_availability
@@ -298,6 +541,7 @@ class ReaderPluginManifestTests(unittest.TestCase):
             (
                 "READER_API_VERSION",
                 "ExecutionMode",
+                "CapabilitySupport",
                 "ReaderAvailability",
                 "ReaderManifestEntry",
                 "ReaderPluginManifest",

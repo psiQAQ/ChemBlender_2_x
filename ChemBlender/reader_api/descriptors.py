@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from ChemBlender.core.readers import ReaderAvailability
+from ..core.readers import CapabilitySupport, ReaderAvailability
 
 from .manifest import ExecutionMode, _capabilities, _extensions, _token, _version
 
@@ -40,7 +40,7 @@ class PublicReaderDescriptor:
     reader_version: str
     execution_mode: ExecutionMode
     extensions: tuple[str, ...]
-    capabilities: Mapping[str, bool]
+    capabilities: Mapping[str, CapabilitySupport]
     availability: ReaderAvailability
 
     def __post_init__(self):
@@ -49,14 +49,14 @@ class PublicReaderDescriptor:
         _token(self.reader_id, "reader_id")
         _version(self.reader_version, "reader_version")
         mode = ExecutionMode(self.execution_mode)
-        extensions = _extensions(list(self.extensions))
+        extensions = _extensions(self.extensions)
         if not isinstance(self.capabilities, Mapping):
             raise TypeError("capabilities must be a mapping")
         capabilities = dict(self.capabilities)
-        for capability, available in capabilities.items():
+        for capability, support in capabilities.items():
             _capabilities([capability])
-            if type(available) is not bool:
-                raise TypeError("capability values must be bool")
+            if type(support) is not CapabilitySupport:
+                raise TypeError("capability values must be CapabilitySupport")
         if type(self.availability) is not ReaderAvailability:
             raise TypeError("availability must be ReaderAvailability")
         if self.availability.execution_mode != mode:

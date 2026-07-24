@@ -30,10 +30,13 @@
 - Test: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
-- Produces: `READER_API_VERSION="0.1"`, `ReaderPluginManifest`, `ReaderManifestEntry`, `ExecutionMode`, `ReaderAvailability`, `PublicReaderDescriptor`.
+- Produces: `READER_API_VERSION="0.1"`, `ReaderPluginManifest`, `ReaderManifestEntry`, `ExecutionMode`, `CapabilitySupport`, `ReaderAvailability`, `PublicReaderDescriptor`.
 - Reader API 0.x must not introduce a second implicitly incompatible
   `ReaderAvailability` class. It must either re-export the current runtime
   type or define and test an explicit conversion boundary.
+- Manifest capability lists imply SUPPORTED.
+- Runtime PublicReaderDescriptor uses CapabilitySupport and can preserve
+  SUPPORTED/PARTIAL/UNSUPPORTED for built-in and derived descriptors.
 
 - [x] **Step 1: Write manifest validation tests**
 
@@ -119,6 +122,9 @@ Commit code, spec and tests together.
 
 **Interfaces:**
 - Produces: `SniffRequest`, `ParseRequest`, `ProgressEvent`, `ReaderPlugin` Protocol, `ReaderPluginRegistry` and built-in registration.
+- Manifest capability lists imply SUPPORTED.
+- Runtime PublicReaderDescriptor uses CapabilitySupport and can preserve
+  SUPPORTED/PARTIAL/UNSUPPORTED for built-in and derived descriptors.
 
 - [ ] **Step 1: Write deterministic selection tests**
 

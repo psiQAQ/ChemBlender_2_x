@@ -8,6 +8,7 @@ from .version import READER_API_VERSION
 
 _ID_PATTERN = re.compile(r"[a-z][a-z0-9_.-]*", re.ASCII)
 _CAPABILITY_PATTERN = re.compile(r"[a-z][a-z0-9_]*", re.ASCII)
+_EXTENSION_PATTERN = re.compile(r"\.[a-z0-9][a-z0-9._+-]*", re.ASCII)
 _VERSION_PATTERN = re.compile(r"[0-9]+(?:\.[0-9]+)*", re.ASCII)
 _API_RANGE_PATTERN = re.compile(r">=([0-9]+)\.([0-9]+),<([0-9]+)\.([0-9]+)", re.ASCII)
 _TOP_LEVEL_KEYS = frozenset(
@@ -58,10 +59,9 @@ def _extensions(values):
     for value in values:
         if type(value) is not str or not value:
             raise ValueError("extensions must contain non-empty strings")
-        value = "." + value.lstrip(".")
-        value = value.lower()
-        if value == ".":
-            raise ValueError("extension must contain a suffix")
+        value = ("." + value.lstrip(".")).lower()
+        if not _EXTENSION_PATTERN.fullmatch(value):
+            raise ValueError("extension must be a normalized suffix")
         if value in normalized:
             continue
         normalized.append(value)
@@ -104,7 +104,7 @@ class ReaderPluginManifest:
         if type(self.schema_version) is not str or self.schema_version != "1":
             raise ValueError("schema_version must be '1'")
         licenses = _sequence(self.license, "license")
-        if any(type(item) is not str or not item for item in licenses):
+        if any(type(item) is not str or not item or item != item.strip() for item in licenses):
             raise ValueError("license must contain non-empty strings")
         readers = _sequence(self.readers, "readers")
         if any(type(reader) is not ReaderManifestEntry for reader in readers):
@@ -119,7 +119,7 @@ class ReaderPluginManifest:
         object.__setattr__(self, "plugin_version", _version(self.plugin_version, "plugin_version"))
         object.__setattr__(self, "chemblender_api", _api_range(self.chemblender_api))
         object.__setattr__(self, "execution_mode", execution_mode)
-        object.__setattr__(self, "license", tuple(sorted(licenses)))
+        object.__setattr__(self, "license", tuple(sorted(set(licenses))))
         object.__setattr__(self, "readers", tuple(sorted(readers, key=lambda reader: reader.reader_id)))
 
     @classmethod
