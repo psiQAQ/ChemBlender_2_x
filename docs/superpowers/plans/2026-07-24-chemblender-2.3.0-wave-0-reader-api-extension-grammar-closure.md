@@ -32,12 +32,12 @@
 - Consumes: simple or compound extension suffix strings with at most one optional leading dot.
 - Produces: sorted, deduplicated lowercase suffixes whose dot-delimited segments are non-empty and start with an ASCII letter or digit.
 
-- [ ] **Step 1: Confirm the shared boundary**
+- [x] **Step 1: Confirm the shared boundary**
 
 Verify both `ReaderManifestEntry(...)` and `ReaderPluginManifest.from_toml(...)`
 route extension values through `_extensions()`. Do not add a second validator.
 
-- [ ] **Step 2: Implement the minimum grammar correction**
+- [x] **Step 2: Implement the minimum grammar correction**
 
 Replace `_EXTENSION_PATTERN` with:
 
@@ -69,14 +69,14 @@ Do not use `lstrip(".")`.
 - Valid: `xyz`, `.xyz`, `tar.gz`, `.TAR.GZ`, `molden.input`, `.c++`, and `x-y+z`.
 - Invalid: `.xyz.`, `.tar..gz`, `.molden..input`, `.x...`, `.x..y`, `.x.`, `..xyz`, `...xyz`, `..`, and `.`.
 
-- [ ] **Step 1: Write failing tests before runtime changes**
+- [x] **Step 1: Write failing tests before runtime changes**
 
 Cover the exact valid and invalid tables through direct
 `ReaderManifestEntry` construction. Add TOML parsing cases that prove the
 same shared rule accepts compound suffixes and rejects trailing-dot and
 empty-segment suffixes.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```powershell
 & $pythonBin -m unittest tests.test_reader_plugin_manifest -v
@@ -85,7 +85,7 @@ empty-segment suffixes.
 Expected: the new invalid cases are accepted by the current regex, so the
 test command exits nonzero for the intended assertions.
 
-- [ ] **Step 3: Apply Task 1's minimal regex change and run GREEN**
+- [x] **Step 3: Apply Task 1's minimal regex change and run GREEN**
 
 ```powershell
 & $pythonBin -m unittest tests.test_reader_plugin_manifest -v
@@ -102,7 +102,7 @@ and deduplication unchanged.
 - Verify: `ChemBlender/reader_api/manifest.py`
 - Verify: `tests/test_reader_plugin_manifest.py`
 
-- [ ] **Step 1: Run related contracts**
+- [x] **Step 1: Run related contracts**
 
 ```powershell
 & $pythonBin -m unittest `
@@ -110,7 +110,7 @@ and deduplication unchanged.
   tests.test_quantum_visualization_docs -v
 ```
 
-- [ ] **Step 2: Run full repository verification**
+- [x] **Step 2: Run full repository verification**
 
 ```powershell
 & $pythonBin -m unittest discover -s tests -p "test_*.py" -v
@@ -120,7 +120,7 @@ git diff --check
 git status --short
 ```
 
-- [ ] **Step 3: Complete two independent reviews**
+- [x] **Step 3: Complete two independent reviews**
 
 Run one task-scoped specification/code-quality review and one independent
 broad review. Fix all findings related to this task and rerun affected
@@ -137,7 +137,7 @@ Blender validate/build/smoke is:
 - Modify: `.agents/active/2.3.0-wave-0-platform-foundation.md`
 - Modify: `docs/superpowers/plans/2026-07-24-chemblender-2.3.0-wave-0-reader-api-extension-grammar-closure.md`
 
-- [ ] **Step 1: Commit implementation**
+- [x] **Step 1: Commit implementation**
 
 ```powershell
 git add `
@@ -146,14 +146,14 @@ git add `
 git commit -m "fix: reject ambiguous reader extension suffixes"
 ```
 
-- [ ] **Step 2: Record completion evidence**
+- [x] **Step 2: Record completion evidence**
 
 Record planning and implementation full SHAs, RED/GREEN evidence, full test
 counts, compound-extension acceptance, trailing-dot rejection, empty-segment
 rejection, review results, the Blender `Not Run` reason, the Task 2 stop
 boundary, and the no-push policy.
 
-- [ ] **Step 3: Commit checkpoint**
+- [x] **Step 3: Commit checkpoint**
 
 ```powershell
 git add `
