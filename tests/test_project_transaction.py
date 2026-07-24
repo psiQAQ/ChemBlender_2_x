@@ -251,6 +251,7 @@ class ProjectTransactionTests(unittest.TestCase):
 
         self.assertIn(structure.id, result.project.structures)
         self.assertIn(calculation.id, result.project.calculations)
+        self.assertEqual(project_session.dirty_reasons, frozenset({"import"}))
 
     def test_merged_batch_still_validates_each_parser_report_contract(self):
         project_session = self.project_session()

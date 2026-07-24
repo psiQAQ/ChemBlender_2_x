@@ -208,6 +208,11 @@ class ProjectSessionTests(unittest.TestCase):
         session.clear_dirty("view")
         self.assertFalse(session.dirty)
 
+        session.mark_dirty("import")
+        session.mark_dirty("view")
+        session.mark_clean()
+        self.assertEqual(session.dirty_reasons, frozenset())
+
         for invalid in ("", " ", " import", 1, None):
             with self.subTest(invalid=invalid):
                 with self.assertRaises((TypeError, ValueError)):

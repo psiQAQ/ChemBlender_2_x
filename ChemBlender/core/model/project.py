@@ -859,3 +859,29 @@ class QCProject:
                 and diagnostic.entity_id not in entity_ids
             ):
                 raise ValueError("diagnostic has a dangling entity reference")
+
+
+def validate_project_graph(project):
+    if type(project) is not QCProject:
+        raise TypeError("project must be a QCProject")
+    project._validate_registries()
+    validated = QCProject(id=project.id, schema_version=project.schema_version)
+    validated.commit(
+        ImportBatch(
+            sources=tuple(project.sources.values()),
+            source_revisions=tuple(project.source_revisions.values()),
+            structures=tuple(project.structures.values()),
+            cif_envelopes=tuple(project.cif_envelopes.values()),
+            qcschema_envelopes=tuple(project.qcschema_envelopes.values()),
+            cjson_envelopes=tuple(project.cjson_envelopes.values()),
+            symmetry_results=tuple(project.symmetry_results.values()),
+            calculations=tuple(project.calculations.values()),
+            datasets=tuple(project.datasets.values()),
+            basis_sets=tuple(project.basis_sets.values()),
+            orbital_sets=tuple(project.orbital_sets.values()),
+            density_matrices=tuple(project.density_matrices.values()),
+            provenance=tuple(project.provenance.values()),
+            diagnostics=tuple(project.diagnostics.values()),
+        )
+    )
+    validated.commit_calculation_groups(tuple(project.calculation_groups.values()))

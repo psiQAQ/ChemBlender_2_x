@@ -213,6 +213,24 @@ class ImportConflictTests(unittest.TestCase):
                 ("LINK_EXISTING", "link_existing"),
             ),
         )
+
+    def test_same_parse_identity_category_is_selected_before_locator_matches(self):
+        session, preview, _row, staged = self.staged(
+            locator="C:/incoming/same.xyz",
+            parse="a",
+        )
+        existing = self.revision(
+            uuid4(),
+            locator="C:/existing/same.xyz",
+            parse="a",
+        )
+
+        conflicts = detect_import_conflicts(self.project(existing), preview, session)
+
+        self.assertEqual(
+            tuple(item.category for item in conflicts),
+            (ImportConflictCategory.SAME_PARSE_IDENTITY,),
+        )
         self.assertEqual(
             tuple(
                 (member.name, member.value)

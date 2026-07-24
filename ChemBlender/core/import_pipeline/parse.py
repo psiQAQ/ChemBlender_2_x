@@ -50,18 +50,14 @@ def staged_reader_batch(
         reader_id = reader_override or "unresolved"
         reader_version = "0"
         api_version = "0.1"
-        execution_mode = "built_in"
     else:
         descriptor = runtime.descriptor
         plugin_id = runtime.plugin_id
         reader_id = descriptor.reader_id
         reader_version = descriptor.reader_version
         api_version = runtime.api_version
-        execution_mode = runtime.execution_mode
 
     parameters = (
-        ("execution_mode", execution_mode),
-        ("reader_override", reader_override),
         (
             "source_content_state",
             "verified" if content_verified else "unavailable",

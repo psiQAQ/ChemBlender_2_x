@@ -21,6 +21,7 @@ from ChemBlender.core.import_pipeline import (
     ImportSource,
     ReaderOverride,
     StagedImportSession,
+    detect_import_conflicts,
     preflight_import,
 )
 from ChemBlender.core.readers import (
@@ -133,8 +134,6 @@ class ImportPreflightTests(unittest.TestCase):
                     row.selected_reader_id,
                     revision.reader_version,
                     (
-                        ("execution_mode", "built_in"),
-                        ("reader_override", None),
                         ("source_content_state", "verified"),
                         ("validation_mode", "balanced"),
                     ),
@@ -209,6 +208,61 @@ class ImportPreflightTests(unittest.TestCase):
         batch = self.sessions[-1].result(row.staged_batch_ids[0])
         self.assertEqual(row.selected_reader_id, "second")
         self.assertEqual(batch.source_revisions[0].reader_id, "second")
+
+    def test_equivalent_explicit_reader_selection_preserves_parse_identity(self):
+        source = self.root / "identity.dat"
+        source.write_bytes(b"same bytes")
+        imported = ImportSource(source)
+        first = fake_descriptor("first", lambda path: ImportBatch(), priority=1)
+        second = fake_descriptor("second", lambda path: ImportBatch())
+        registry = ReaderRegistry((first, second))
+        automatic_session = self.session()
+        explicit_session = self.session()
+
+        automatic = preflight_import(
+            ImportRequest(sources=(imported,)), registry, automatic_session
+        )
+        explicit = preflight_import(
+            ImportRequest(
+                sources=(imported,),
+                reader_overrides=(
+                    ReaderOverride(source_id=imported.id, reader_id="first"),
+                ),
+            ),
+            registry,
+            explicit_session,
+        )
+        automatic_revision = automatic_session.result(
+            automatic.staged_batch_ids[0]
+        ).source_revisions[0]
+        explicit_revision = explicit_session.result(
+            explicit.staged_batch_ids[0]
+        ).source_revisions[0]
+
+        self.assertEqual(
+            automatic_revision.import_parameters_hash,
+            explicit_revision.import_parameters_hash,
+        )
+        self.assertEqual(automatic_revision.parse_identity, explicit_revision.parse_identity)
+        project = QCProject(id=uuid4(), schema_version="0.2")
+        project.commit(automatic_session.result(automatic.staged_batch_ids[0]))
+        conflicts = detect_import_conflicts(project, explicit, explicit_session)
+        self.assertEqual(tuple(item.category.value for item in conflicts), ("same_parse_identity",))
+
+        different = preflight_import(
+            ImportRequest(
+                sources=(imported,),
+                reader_overrides=(
+                    ReaderOverride(source_id=imported.id, reader_id="second"),
+                ),
+            ),
+            registry,
+            self.session(),
+        )
+        different_revision = self.sessions[-1].result(
+            different.staged_batch_ids[0]
+        ).source_revisions[0]
+        self.assertNotEqual(automatic_revision.parse_identity, different_revision.parse_identity)
 
     def test_wrong_extension_uses_content_selection(self):
         source = self.copy_fixture(Path("xyz") / "water.xyz", "water.cube")

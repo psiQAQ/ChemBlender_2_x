@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 from uuid import UUID, uuid4
 
 from . import model
+from .model.project import validate_project_graph
 from .model_registry import MODEL_ENUMS, model_type_from_tag, model_type_tag
 from .sidecar_migrations import (
     CURRENT_MANIFEST_VERSION,
@@ -268,40 +269,70 @@ class _Decoder:
             return value
         if not isinstance(value, dict):
             raise SidecarIntegrityError("manifest values must use tagged objects")
-        if "$uuid" in value:
+        tags = set(value).intersection(
+            {"$uuid", "$enum", "$bytes", "$tuple", "$list", "$dict"}
+        )
+        if len(tags) > 1:
+            raise SidecarIntegrityError("manifest object has multiple tags")
+        if "$uuid" in tags:
+            if set(value) != {"$uuid"}:
+                raise SidecarIntegrityError("invalid UUID tag fields")
             try:
                 return UUID(value["$uuid"])
             except (TypeError, ValueError) as error:
                 raise SidecarIntegrityError("invalid UUID in manifest") from error
-        if "$enum" in value:
+        if "$enum" in tags:
+            if set(value) != {"$enum", "value"}:
+                raise SidecarIntegrityError("invalid enum tag fields")
             try:
                 enum_type = MODEL_ENUMS[value["$enum"]]
                 return enum_type(self.decode(value["value"]))
             except (KeyError, TypeError, ValueError) as error:
                 raise SidecarIntegrityError("invalid enum in manifest") from error
-        if "$bytes" in value:
+        if "$bytes" in tags:
+            if set(value) != {"$bytes"}:
+                raise SidecarIntegrityError("invalid bytes tag fields")
             try:
                 return base64.b64decode(value["$bytes"], validate=True)
             except (TypeError, ValueError) as error:
                 raise SidecarIntegrityError("invalid bytes in manifest") from error
-        if "$tuple" in value:
+        if "$tuple" in tags:
+            if set(value) != {"$tuple"} or type(value["$tuple"]) is not list:
+                raise SidecarIntegrityError("invalid tuple in manifest")
             return tuple(self.decode(item) for item in value["$tuple"])
-        if "$list" in value:
+        if "$list" in tags:
+            if set(value) != {"$list"} or type(value["$list"]) is not list:
+                raise SidecarIntegrityError("invalid list in manifest")
             return [self.decode(item) for item in value["$list"]]
-        if "$dict" in value:
+        if "$dict" in tags:
+            if set(value) != {"$dict"} or type(value["$dict"]) is not list:
+                raise SidecarIntegrityError("invalid mapping in manifest")
             try:
-                return {
-                    self.decode(key): self.decode(item) for key, item in value["$dict"]
-                }
+                decoded = {}
+                for pair in value["$dict"]:
+                    if type(pair) is not list or len(pair) != 2:
+                        raise SidecarIntegrityError("invalid mapping in manifest")
+                    key = self.decode(pair[0])
+                    if key in decoded:
+                        raise SidecarIntegrityError("duplicate mapping key in manifest")
+                    decoded[key] = self.decode(pair[1])
+                return decoded
             except (TypeError, ValueError) as error:
                 raise SidecarIntegrityError("invalid mapping in manifest") from error
         type_name = value.get("$type")
         if type_name == "ArrayData":
-            return model.ArrayData(
-                self._array(value.get("values")),
-                self.decode(value.get("dims")),
-                value.get("unit"),
-            )
+            if set(value) != {"$type", "values", "dims", "unit"}:
+                raise SidecarIntegrityError("invalid ArrayData fields")
+            try:
+                return model.ArrayData(
+                    self._array(value["values"]),
+                    self.decode(value["dims"]),
+                    value["unit"],
+                )
+            except SidecarError:
+                raise
+            except Exception as error:
+                raise SidecarIntegrityError("invalid ArrayData in manifest") from error
         try:
             class_type = model_type_from_tag(type_name)
         except (KeyError, TypeError) as error:
@@ -324,9 +355,21 @@ class _Decoder:
             raise SidecarIntegrityError(f"invalid {type_name} in manifest") from error
 
     def _array(self, descriptor):
-        if not isinstance(descriptor, dict) or descriptor.get("$array") != "npy":
+        expected = {
+            "$array",
+            "path",
+            "content_sha256",
+            "file_sha256",
+            "shape",
+            "dtype",
+        }
+        if (
+            not isinstance(descriptor, dict)
+            or set(descriptor) != expected
+            or descriptor["$array"] != "npy"
+        ):
             raise SidecarIntegrityError("invalid array descriptor")
-        relative = descriptor.get("path")
+        relative = descriptor["path"]
         pure = PurePosixPath(relative) if isinstance(relative, str) else None
         if (
             pure is None
@@ -345,8 +388,8 @@ class _Decoder:
             ) from error
         if not path.is_file():
             raise SidecarIntegrityError(f"missing sidecar array: {relative}")
-        file_hash = descriptor.get("file_sha256")
-        content_hash = descriptor.get("content_sha256")
+        file_hash = descriptor["file_sha256"]
+        content_hash = descriptor["content_sha256"]
         if not isinstance(file_hash, str) or not _SHA256.fullmatch(file_hash):
             raise SidecarIntegrityError("invalid array file hash")
         if not isinstance(content_hash, str) or not _SHA256.fullmatch(content_hash):
@@ -356,11 +399,16 @@ class _Decoder:
         if self.verify_arrays and _file_hash(path) != file_hash:
             raise SidecarIntegrityError(f"sidecar array checksum mismatch: {relative}")
         try:
-            shape = tuple(int(size) for size in descriptor["shape"])
+            encoded_shape = descriptor["shape"]
+            if type(encoded_shape) is not list or any(
+                type(size) is not int or size < 0 for size in encoded_shape
+            ):
+                raise ValueError("invalid array shape")
+            shape = tuple(encoded_shape)
             dtype = _numpy().dtype(descriptor["dtype"])
         except (KeyError, TypeError, ValueError) as error:
             raise SidecarIntegrityError("invalid array metadata") from error
-        if any(size < 0 for size in shape) or dtype.hasobject:
+        if dtype.hasobject:
             raise SidecarIntegrityError("unsafe array metadata")
         return LazyNpyArray(path, shape, dtype, content_hash)
 
@@ -377,6 +425,10 @@ def _write_project_tree(root, project):
         raise TypeError("project must be a QCProject")
     if project.schema_version not in ("0.1", CURRENT_PROJECT_SCHEMA_VERSION):
         raise SidecarCompatibilityError("unsupported project schema")
+    try:
+        validate_project_graph(project)
+    except (TypeError, ValueError) as error:
+        raise SidecarIntegrityError("invalid project graph") from error
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
     (root / "arrays").mkdir(exist_ok=True)
@@ -470,6 +522,11 @@ def _open_project_with_manifest(
         raise SidecarIntegrityError("manifest project is not a QCProject")
     if project.id != project_id or project.schema_version != schema_version:
         raise SidecarIntegrityError("manifest header and project payload disagree")
+    try:
+        validate_project_graph(project)
+    except (TypeError, ValueError) as error:
+        close_project(project)
+        raise SidecarIntegrityError("invalid project graph in manifest") from error
     return project, metadata_manifest if metadata_manifest is not None else manifest
 
 
@@ -499,10 +556,14 @@ def _validate_current_manifest(manifest):
             "sidecar manifest has invalid top-level fields"
         )
     stored_hash = manifest.get("manifest_sha256")
+    try:
+        actual_hash = _manifest_hash(manifest)
+    except (TypeError, ValueError) as error:
+        raise SidecarIntegrityError("sidecar manifest is not canonical JSON") from error
     if (
         not isinstance(stored_hash, str)
         or not _SHA256.fullmatch(stored_hash)
-        or stored_hash != _manifest_hash(manifest)
+        or stored_hash != actual_hash
     ):
         raise SidecarIntegrityError("sidecar manifest hash mismatch")
     _strict_uuid(manifest.get("generation_id"), "generation_id")

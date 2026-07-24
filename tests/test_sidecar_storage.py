@@ -13,6 +13,7 @@ import numpy
 from ChemBlender.core import (
     ArrayData,
     AtomicProperty,
+    CIFEnvelope,
     DatasetStatus,
     FrameSet,
     Grid3D,
@@ -159,6 +160,123 @@ def sample_project():
 
 
 class SidecarStorageTests(unittest.TestCase):
+    def test_v02_tagged_objects_and_array_descriptors_require_exact_schemas(self):
+        project = sample_project()
+        project.provenance[PROVENANCE_ID] = ProvenanceRecord(
+            id=PROVENANCE_ID,
+            revision="provenance-r1",
+            producer="test",
+            producer_version="1",
+            source="h2.xyz",
+            source_hash="a" * 64,
+            parent_ids=(),
+            operation="parse",
+            parameters=(("values", [1]),),
+        )
+        project.commit(
+            ImportBatch(
+                cif_envelopes=(
+                    CIFEnvelope(
+                        id=UUID("70000000-0000-0000-0000-000000000007"),
+                        revision="cif-r1",
+                        block_name="data_test",
+                        source_bytes=b"data_test",
+                        tag_names=("_cell_length_a",),
+                        provenance_ids=(PROVENANCE_ID,),
+                    ),
+                )
+            )
+        )
+
+        def tagged(value, tag):
+            found = []
+            if isinstance(value, dict):
+                if tag in value:
+                    found.append(value)
+                for item in value.values():
+                    found.extend(tagged(item, tag))
+            elif isinstance(value, list):
+                for item in value:
+                    found.extend(tagged(item, tag))
+            return found
+
+        with TemporaryDirectory() as directory:
+            root = save_project(Path(directory) / "strict.cbq", project)
+            manifest_path = root / "manifest.json"
+            original = json.loads(manifest_path.read_text(encoding="utf-8"))
+            invalid_documents = {}
+            for tag in ("$uuid", "$enum", "$bytes", "$tuple", "$list", "$dict"):
+                document = copy.deepcopy(original)
+                targets = tagged(document["project"], tag)
+                target = targets[1] if tag == "$uuid" else targets[0]
+                target["unexpected"] = True
+                invalid_documents[f"extra_{tag}"] = document
+
+            document = copy.deepcopy(original)
+            uuid_tag = tagged(document["project"], "$uuid")[1]
+            uuid_tag["$enum"] = "DatasetStatus"
+            invalid_documents["multiple_tags"] = document
+
+            document = copy.deepcopy(original)
+            tagged(document["project"], "$enum")[0].pop("value")
+            invalid_documents["missing_enum_value"] = document
+
+            document = copy.deepcopy(original)
+            array_data = next(
+                item
+                for item in tagged(document["project"], "$type")
+                if item["$type"] == "ArrayData"
+            )
+            array_data["unexpected"] = True
+            invalid_documents["extra_array_data_field"] = document
+
+            for tag in ("$tuple", "$list", "$dict"):
+                document = copy.deepcopy(original)
+                target = tagged(document["project"], tag)[0]
+                target[tag] = "not-a-list"
+                invalid_documents[f"payload_{tag}"] = document
+
+            document = copy.deepcopy(original)
+            mapping = next(
+                item
+                for item in tagged(document["project"], "$dict")
+                if item["$dict"]
+            )
+            mapping["$dict"].append(copy.deepcopy(mapping["$dict"][0]))
+            invalid_documents["duplicate_decoded_dict_key"] = document
+
+            for mutation in (
+                lambda array: array.__setitem__("unexpected", True),
+                lambda array: array.pop("dtype"),
+                lambda array: array.__setitem__("shape", [True]),
+                lambda array: array.__setitem__("shape", ["1"]),
+                lambda array: array.__setitem__("shape", [1.0]),
+                lambda array: array.__setitem__("shape", [-1]),
+                lambda array: array.__setitem__("dtype", "object"),
+            ):
+                document = copy.deepcopy(original)
+                array = tagged(document["project"], "$array")[0]
+                mutation(array)
+                invalid_documents[f"array_{len(invalid_documents)}"] = document
+
+            for name, manifest in invalid_documents.items():
+                with self.subTest(name=name):
+                    write_manifest(manifest_path, manifest)
+                    with self.assertRaises(SidecarIntegrityError):
+                        open_project(root)
+
+    def test_raw_overflow_number_is_an_integrity_error(self):
+        with TemporaryDirectory() as directory:
+            root = save_project(Path(directory) / "overflow.cbq", sample_project())
+            manifest_path = root / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            payload = {key: value for key, value in manifest.items() if key != "project"}
+            raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            manifest_path.write_text(raw[:-1] + ",\"project\":1e400}\n", encoding="utf-8")
+
+            with self.assertRaises(SidecarIntegrityError):
+                open_project(root)
+
     def test_committed_v01_fixture_migrates_to_current_in_memory(self):
         project = open_project(FIXTURES / "sidecar" / "model-v01")
         try:

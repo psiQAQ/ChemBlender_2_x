@@ -76,6 +76,7 @@ class ProjectServiceTests(unittest.TestCase):
 
     def test_save_publishes_same_name_sidecar_and_connected_scene_hash(self):
         session = self.create_session()
+        session.mark_dirty("import")
         blend = self.root / "sample.blend"
         scene = {}
 
@@ -97,6 +98,7 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(scene[MANIFEST_HASH_KEY], result.manifest_sha256)
         self.assertEqual(session.sidecar_path, destination.resolve())
         self.assertEqual(session.link_status, "connected")
+        self.assertFalse(session.dirty)
 
     def test_save_scene_write_failure_is_unexpected_and_marks_session_invalid(self):
         class FailingScene(dict):
@@ -109,6 +111,7 @@ class ProjectServiceTests(unittest.TestCase):
                 super().__setitem__(key, value)
 
         session = self.create_session()
+        session.mark_dirty("import")
         scene = FailingScene({"view-marker": "preserve"})
 
         with self.assertRaisesRegex(RuntimeError, "scene write failed"):
@@ -120,6 +123,7 @@ class ProjectServiceTests(unittest.TestCase):
 
         self.assertEqual(session.sidecar_path, (self.root / "sample.cbq").resolve())
         self.assertEqual(session.link_status, "invalid")
+        self.assertEqual(session.dirty_reasons, frozenset({"import"}))
         self.assertEqual(scene, {"view-marker": "preserve"})
         self.assertTrue((self.root / "sample.cbq" / "manifest.json").is_file())
 
@@ -128,6 +132,7 @@ class ProjectServiceTests(unittest.TestCase):
         blend = self.root / "existing.blend"
         scene = {}
         save_project_session(session=session, scene=scene, blend_path=blend)
+        session.mark_dirty("edit")
         old_scene = dict(scene)
 
         class FailingScene(dict):
@@ -159,6 +164,7 @@ class ProjectServiceTests(unittest.TestCase):
         )
         self.assertEqual(session.sidecar_path, (self.root / "existing.cbq").resolve())
         self.assertEqual(session.link_status, "invalid")
+        self.assertEqual(session.dirty_reasons, frozenset({"edit"}))
 
     def test_verify_connected_replaces_session_project_and_transfers_ownership(self):
         sidecar = self.root / "stored.cbq"
@@ -166,6 +172,7 @@ class ProjectServiceTests(unittest.TestCase):
         save_project(sidecar, stored)
         scene = self.linked_scene(sidecar, stored)
         session = self.create_session()
+        session.mark_dirty("import")
         previous = session.project
 
         with patch.object(
@@ -180,6 +187,7 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertIsNot(session.project, previous)
         self.assertEqual(session.sidecar_path, sidecar.resolve())
         self.assertEqual(session.link_status, "connected")
+        self.assertFalse(session.dirty)
         close.assert_called_once_with(previous)
 
     def test_verify_connected_closes_replaced_lazy_array_resources(self):
@@ -209,6 +217,7 @@ class ProjectServiceTests(unittest.TestCase):
             path.unlink() if path.is_file() else path.rmdir()
         sidecar.rmdir()
         session = self.create_session()
+        session.mark_dirty("import")
         before = (session.project, session.sidecar_path, session.link_status, dict(scene))
 
         result = verify_project_session(session=session, scene=scene)
@@ -218,6 +227,7 @@ class ProjectServiceTests(unittest.TestCase):
             (session.project, session.sidecar_path, session.link_status, scene),
             before,
         )
+        self.assertEqual(session.dirty_reasons, frozenset({"import"}))
 
     def test_verify_mismatch_does_not_mutate_scene_or_session(self):
         sidecar = self.root / "changed.cbq"
@@ -226,6 +236,7 @@ class ProjectServiceTests(unittest.TestCase):
         scene = self.linked_scene(sidecar, stored)
         save_project(sidecar, stored)
         session = self.create_session()
+        session.mark_dirty("import")
         before = (session.project, session.sidecar_path, session.link_status, dict(scene))
 
         result = verify_project_session(session=session, scene=scene)
@@ -235,6 +246,7 @@ class ProjectServiceTests(unittest.TestCase):
             (session.project, session.sidecar_path, session.link_status, scene),
             before,
         )
+        self.assertEqual(session.dirty_reasons, frozenset({"import"}))
 
     def test_verify_invalid_does_not_mutate_scene_or_session(self):
         sidecar = self.root / "invalid.cbq"
@@ -243,6 +255,7 @@ class ProjectServiceTests(unittest.TestCase):
         scene = self.linked_scene(sidecar, stored)
         (sidecar / "manifest.json").write_text("{", encoding="utf-8")
         session = self.create_session()
+        session.mark_dirty("import")
         before = (session.project, session.sidecar_path, session.link_status, dict(scene))
 
         result = verify_project_session(session=session, scene=scene)
@@ -252,6 +265,7 @@ class ProjectServiceTests(unittest.TestCase):
             (session.project, session.sidecar_path, session.link_status, scene),
             before,
         )
+        self.assertEqual(session.dirty_reasons, frozenset({"import"}))
 
     def test_verify_incompatible_does_not_mutate_scene_or_session(self):
         sidecar = self.root / "incompatible.cbq"
@@ -260,6 +274,7 @@ class ProjectServiceTests(unittest.TestCase):
         scene = self.linked_scene(sidecar, stored)
         scene[PROJECT_SCHEMA_KEY] = "9.9"
         session = self.create_session()
+        session.mark_dirty("import")
         before = (session.project, session.sidecar_path, session.link_status, dict(scene))
 
         result = verify_project_session(session=session, scene=scene)
@@ -269,11 +284,13 @@ class ProjectServiceTests(unittest.TestCase):
             (session.project, session.sidecar_path, session.link_status, scene),
             before,
         )
+        self.assertEqual(session.dirty_reasons, frozenset({"import"}))
 
     def test_relink_uuid_mismatch_has_zero_mutation(self):
         sidecar = self.root / "other.cbq"
         save_project(sidecar, QCProject(id=UUID(int=2), schema_version="0.2"))
         session = self.create_session()
+        session.mark_dirty("import")
         scene = {"view-marker": "preserve"}
         before = (session.project, session.sidecar_path, session.link_status, dict(scene))
 
@@ -288,6 +305,7 @@ class ProjectServiceTests(unittest.TestCase):
             (session.project, session.sidecar_path, session.link_status, scene),
             before,
         )
+        self.assertEqual(session.dirty_reasons, frozenset({"import"}))
 
     def test_relink_uuid_mismatch_does_not_depend_on_exception_wording(self):
         sidecar = self.root / "other-wording.cbq"
@@ -314,6 +332,7 @@ class ProjectServiceTests(unittest.TestCase):
                     sidecar.mkdir()
                     (sidecar / "manifest.json").write_text("{", encoding="utf-8")
                 session = self.create_session()
+                session.mark_dirty("import")
                 scene = {"view-marker": "preserve"}
                 before = (
                     session.project,
@@ -340,6 +359,7 @@ class ProjectServiceTests(unittest.TestCase):
                     (session.project, session.sidecar_path, session.link_status, scene),
                     before,
                 )
+                self.assertEqual(session.dirty_reasons, frozenset({"import"}))
 
     def test_relink_incompatible_has_zero_mutation(self):
         sidecar = self.root / "future.cbq"
@@ -349,6 +369,7 @@ class ProjectServiceTests(unittest.TestCase):
         manifest["manifest_version"] = "9.9"
         manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
         session = self.create_session()
+        session.mark_dirty("import")
         scene = {"view-marker": "preserve"}
         before = (session.project, session.sidecar_path, session.link_status, dict(scene))
 
@@ -363,12 +384,14 @@ class ProjectServiceTests(unittest.TestCase):
             (session.project, session.sidecar_path, session.link_status, scene),
             before,
         )
+        self.assertEqual(session.dirty_reasons, frozenset({"import"}))
 
     def test_relink_verified_sidecar_updates_scene_and_session_consistently(self):
         sidecar = self.root / "candidate.cbq"
         stored = QCProject(id=PROJECT_ID, schema_version="0.2")
         save_project(sidecar, stored)
         session = self.create_session()
+        session.mark_dirty("import")
         scene = {"view-marker": "preserve"}
 
         result = relink_project_session(
@@ -381,6 +404,7 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertIs(result.project, session.project)
         self.assertEqual(session.sidecar_path, sidecar.resolve())
         self.assertEqual(session.link_status, "connected")
+        self.assertFalse(session.dirty)
         self.assertEqual(scene[MANIFEST_HASH_KEY], result.manifest_sha256)
         self.assertEqual(scene[SIDECAR_LOCATOR_KEY], str(sidecar.resolve()))
         self.assertEqual(scene["view-marker"], "preserve")
@@ -399,6 +423,7 @@ class ProjectServiceTests(unittest.TestCase):
         stored = QCProject(id=PROJECT_ID, schema_version="0.2")
         save_project(sidecar, stored)
         session = self.create_session()
+        session.mark_dirty("import")
         scene = FailingScene({"view-marker": "preserve"})
         before = (session.project, session.sidecar_path, session.link_status, dict(scene))
 
@@ -413,9 +438,12 @@ class ProjectServiceTests(unittest.TestCase):
             (session.project, session.sidecar_path, session.link_status, scene),
             before,
         )
+        self.assertEqual(session.dirty_reasons, frozenset({"import"}))
 
     def test_clear_cache_removes_only_derivation_and_render_namespaces(self):
         sidecar = self.root / "cache.cbq"
+        session = self.create_session()
+        session.mark_dirty("import")
         save_project(sidecar, QCProject(id=PROJECT_ID, schema_version="0.2"))
         (sidecar / "arrays" / "authoritative.npy").write_bytes(b"array-bytes")
         manifest_before = (sidecar / "manifest.json").read_bytes()
@@ -446,6 +474,7 @@ class ProjectServiceTests(unittest.TestCase):
             ),
             arrays_before,
         )
+        self.assertEqual(session.dirty_reasons, frozenset({"import"}))
 
     def test_clear_cache_without_cache_is_idempotent(self):
         sidecar = self.root / "empty.cbq"

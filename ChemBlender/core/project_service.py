@@ -101,6 +101,7 @@ def _adopt_project(session, project, path):
     session.project = project
     session.sidecar_path = path
     session.link_status = ProjectServiceStatus.CONNECTED.value
+    session.mark_clean()
 
 
 def save_project_session(*, session, scene, blend_path):
@@ -137,6 +138,7 @@ def save_project_session(*, session, scene, blend_path):
         session.link_status = ProjectServiceStatus.INVALID.value
         raise
     session.link_status = ProjectServiceStatus.CONNECTED.value
+    session.mark_clean()
     return ProjectServiceResult(
         ProjectServiceStatus.CONNECTED,
         path=published.path,

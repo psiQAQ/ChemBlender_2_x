@@ -59,6 +59,9 @@ class ProjectSession:
     def clear_dirty(self, reason):
         self._dirty_reasons.remove(_dirty_reason(reason))
 
+    def mark_clean(self):
+        self._dirty_reasons.clear()
+
 
 def create_session(*, temp_parent, project=None):
     if project is None:
