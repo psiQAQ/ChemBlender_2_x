@@ -43,8 +43,6 @@ def staged_reader_batch(
     parsed_batch=None,
     failure=None,
 ):
-    parsed_batch = ImportBatch() if parsed_batch is None else parsed_batch
-    revision_id = uuid4()
     if runtime is None:
         plugin_id = "chemblender.preflight"
         reader_id = reader_override or "unresolved"
@@ -57,13 +55,47 @@ def staged_reader_batch(
         reader_version = descriptor.reader_version
         api_version = runtime.api_version
 
+    return stage_import_batch(
+        source=source,
+        validation_mode=validation_mode,
+        content_hash=content_hash,
+        byte_size=byte_size,
+        plugin_id=plugin_id,
+        reader_id=reader_id,
+        reader_version=reader_version,
+        api_version=api_version,
+        content_verified=content_verified,
+        parsed_batch=parsed_batch,
+        failure=failure,
+    )
+
+
+def stage_import_batch(
+    *,
+    source,
+    validation_mode,
+    content_hash,
+    byte_size,
+    plugin_id,
+    reader_id,
+    reader_version,
+    api_version,
+    canonical_parameters=(),
+    content_verified=True,
+    parsed_batch=None,
+    failure=None,
+    preserve_source_identity=False,
+):
+    parsed_batch = ImportBatch() if parsed_batch is None else parsed_batch
     parameters = (
         (
             "source_content_state",
             "verified" if content_verified else "unavailable",
         ),
         ("validation_mode", validation_mode.value),
+        *tuple(canonical_parameters),
     )
+    parameters = tuple(sorted(parameters))
     parameters_hash = hashlib.sha256(
         json.dumps(
             parameters,
@@ -80,6 +112,22 @@ def staged_reader_batch(
         parameters,
     )
 
+    if preserve_source_identity:
+        _validate_supplied_identity(
+            parsed_batch,
+            source=source,
+            content_hash=content_hash,
+            byte_size=byte_size,
+            plugin_id=plugin_id,
+            reader_id=reader_id,
+            reader_version=reader_version,
+            api_version=api_version,
+            parameters_hash=parameters_hash,
+            parse_identity=parse_identity,
+        )
+        return parsed_batch
+
+    revision_id = uuid4()
     diagnostics = [
         replace(item, source_revision_id=revision_id)
         for item in parsed_batch.diagnostics
@@ -150,3 +198,63 @@ def staged_reader_batch(
         source_revisions=(revision,),
         diagnostics=tuple(diagnostics),
     )
+
+
+def _validate_supplied_identity(
+    batch,
+    *,
+    source,
+    content_hash,
+    byte_size,
+    plugin_id,
+    reader_id,
+    reader_version,
+    api_version,
+    parameters_hash,
+    parse_identity,
+):
+    if len(batch.sources) != 1 or len(batch.source_revisions) != 1:
+        raise ValueError(
+            "reader result must contain exactly one source and source revision"
+        )
+    source_record = batch.sources[0]
+    revision = batch.source_revisions[0]
+    created_entity_ids = tuple(
+        entity.id
+        for name in _ENTITY_GROUPS
+        for entity in getattr(batch, name)
+    )
+    expected = {
+        "source id": (source_record.id, source.id),
+        "source display name": (
+            source_record.display_name,
+            source.path.name,
+        ),
+        "source kind": (source_record.source_kind, "local_file"),
+        "revision source id": (revision.source_id, source.id),
+        "content hash": (revision.content_hash, content_hash),
+        "byte size": (revision.byte_size, byte_size),
+        "locator": (revision.locator, str(source.path)),
+        "locator kind": (revision.locator_kind, "absolute_path"),
+        "original filename": (revision.original_filename, source.path.name),
+        "reader plugin id": (revision.reader_plugin_id, plugin_id),
+        "reader id": (revision.reader_id, reader_id),
+        "reader version": (revision.reader_version, reader_version),
+        "reader API version": (revision.reader_api_version, api_version),
+        "import parameters hash": (
+            revision.import_parameters_hash,
+            parameters_hash,
+        ),
+        "parse identity": (revision.parse_identity, parse_identity),
+        "created entity IDs": (
+            revision.created_entity_ids,
+            created_entity_ids,
+        ),
+        "diagnostic IDs": (
+            revision.diagnostic_ids,
+            tuple(item.id for item in batch.diagnostics),
+        ),
+    }
+    for name, (actual, wanted) in expected.items():
+        if actual != wanted:
+            raise ValueError(f"reader result {name} does not match import source")

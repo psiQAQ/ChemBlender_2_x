@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 
-from ..reader_api.registry import builtin_reader_plugin_registry
+from ..reader_api.registry import (
+    ReaderPluginRegistry,
+    builtin_reader_plugin_registry,
+)
 from ..reader_api.version import READER_API_VERSION
 
 
@@ -23,6 +26,10 @@ class ReaderAPIHandle:
 _OWNER_TOKEN = object()
 _REGISTRY = builtin_reader_plugin_registry()
 _published_handle = None
+
+
+def get_reader_plugin_registry() -> ReaderPluginRegistry:
+    return _REGISTRY
 
 
 def _register_plugin(plugin):

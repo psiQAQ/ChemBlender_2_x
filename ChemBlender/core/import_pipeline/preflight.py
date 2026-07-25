@@ -30,7 +30,10 @@ def _not_cancelled():
 
 
 def _check_cancelled(is_cancelled):
-    if is_cancelled():
+    cancelled = is_cancelled()
+    if type(cancelled) is not bool:
+        raise TypeError("is_cancelled must return bool")
+    if cancelled:
         raise ImportCancelled("import preflight was cancelled")
 
 
@@ -48,6 +51,14 @@ def _hash_file(path, is_cancelled):
             byte_size += len(chunk)
     _check_cancelled(is_cancelled)
     return digest.hexdigest(), byte_size
+
+
+def _read_prefix(path, is_cancelled):
+    _check_cancelled(is_cancelled)
+    with path.open("rb") as stream:
+        prefix = stream.read(HASH_CHUNK_BYTES)
+    _check_cancelled(is_cancelled)
+    return prefix
 
 
 def _unavailable_content_hash(source_id):
