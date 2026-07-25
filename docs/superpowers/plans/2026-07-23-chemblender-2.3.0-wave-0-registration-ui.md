@@ -110,11 +110,11 @@ architecture guide and tests together.
 **Interfaces:**
 - Produces: `get_scene_session(scene)`, `new_scene_session(scene)`, `close_scene_session(scene)`, load/save handlers.
 
-- [ ] **Step 1: Write pure registry tests**
+- [x] **Step 1: Write pure registry tests**
 
 Test a weak-key/session mapping helper outside Blender where possible. It must not serialize ProjectSession into Scene.
 
-- [ ] **Step 2: Implement handlers**
+- [x] **Step 2: Implement handlers**
 
 Create the UI package root and add its session module to explicit registration
 in this commit. On first use, create a session. On `load_post`, resolve a
@@ -125,11 +125,11 @@ cancel the `.blend` save. On sidecar failure, preserve dirty state and the last
 verified Scene link, and expose a visible error/recovery state without claiming
 that the `.blend` save was cancelled.
 
-- [ ] **Step 3: Add exit cleanup**
+- [x] **Step 3: Add exit cleanup**
 
 Unregister removes handlers, closes lazy arrays and owned temporary roots according to dirty/recovery policy. Unsaved dirty sessions leave a recovery marker rather than being destroyed without notice.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Blender smoke creates, saves, reloads and unregisters a session, and asserts
 exactly one session load handler. Update registration, the architecture guide
