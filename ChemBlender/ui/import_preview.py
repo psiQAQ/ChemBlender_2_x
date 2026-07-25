@@ -34,6 +34,7 @@ from ..core.import_pipeline.transaction import (
 )
 from ..scene_preset_view import apply_scene_preset
 from ..runtime.reader_api_bridge import get_reader_plugin_registry
+from .default_views import describe_default_view, plan_default_view
 from .properties import (
     discard_quick_import_preview,
     finish_quick_import_job,
@@ -135,6 +136,7 @@ class CHEMBLENDER_PG_import_preview_row(bpy.types.PropertyGroup):
     )
     allowed_actions: StringProperty()
     default_view: BoolProperty(default=True)
+    default_view_label: StringProperty()
     blocking: BoolProperty(default=False)
     blocking_reason: StringProperty()
 
@@ -161,6 +163,7 @@ class PreviewProjection:
     conflict_action: str = DuplicateAction.INDEPENDENT_COPY.value
     conflict_candidates: tuple[ConflictCandidateProjection, ...] = ()
     default_view: bool = True
+    default_view_label: str = ""
     blocking: bool = False
     blocking_reason: str = ""
 
@@ -394,6 +397,23 @@ def project_import_preview(project_session, state, registry):
         )
         quality, blocking_reason = _quality_and_blocking(staging, source)
         conflict = conflicts_by_source.get(source.source_id)
+        default_view_plan = None
+        if len(source.staged_batch_ids) == 1:
+            batch = staging.result(source.staged_batch_ids[0])
+            revision = next(
+                (
+                    value
+                    for value in batch.source_revisions
+                    if value.source_id == source.source_id
+                ),
+                None,
+            )
+            if revision is not None:
+                default_view_plan = plan_default_view(
+                    revision,
+                    {value.id: value for value in batch.structures},
+                    {value.id: value for value in batch.datasets},
+                )
         rows.append(
             PreviewProjection(
                 source_id=str(source.source_id),
@@ -429,6 +449,9 @@ def project_import_preview(project_session, state, registry):
                     else ""
                 ),
                 default_view=True,
+                default_view_label=describe_default_view(
+                    default_view_plan
+                ),
                 blocking=bool(blocking_reason),
                 blocking_reason=blocking_reason,
             )
@@ -616,7 +639,7 @@ def import_commit_decisions(
     )
 
 
-def _committed_structure_ids(commit_result, rows):
+def _committed_default_view_plans(commit_result, rows):
     committing_rows = tuple(
         row
         for row in rows
@@ -637,11 +660,13 @@ def _committed_structure_ids(commit_result, rows):
         if not row.default_view:
             continue
         revision = project.source_revisions[revision_id]
-        selected.extend(
-            entity_id
-            for entity_id in revision.created_entity_ids
-            if entity_id in project.structures
+        plan = plan_default_view(
+            revision,
+            project.structures,
+            project.datasets,
         )
+        if plan is not None:
+            selected.append(plan)
     return tuple(selected)
 
 
@@ -672,19 +697,30 @@ def _finish_committed_import(
     cleanup_pending = bool(commit_result.cleanup_warnings)
     view_failed = False
     try:
-        preset = builtin_scene_presets()["structure_publication"]
-        for structure_id in _committed_structure_ids(commit_result, rows):
+        presets = builtin_scene_presets()
+        for default_view in _committed_default_view_plans(
+            commit_result,
+            rows,
+        ):
+            preset = presets[default_view.preset_id]
             plan = plan_scene_preset(
                 preset,
                 commit_result.project,
-                {"structure": structure_id},
-                {},
+                dict(default_view.bindings),
+                dict(default_view.settings),
             )
+            apply_keywords = {"collection": collection}
+            if default_view.preset_id != "structure_publication":
+                cache_root = (
+                    Path(project_session.temporary_root) / "view-cache"
+                )
+                cache_root.mkdir(exist_ok=True)
+                apply_keywords["cache_root"] = cache_root
             created.extend(
                 apply_view(
                     plan,
                     commit_result.project,
-                    collection=collection,
+                    **apply_keywords,
                 )
             )
     except Exception:
@@ -1010,6 +1046,7 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                             )
                         )
             box.prop(row, "default_view")
+            box.label(text=row.default_view_label)
         for suggestion in self.grouping_suggestions:
             box = layout.box()
             box.label(

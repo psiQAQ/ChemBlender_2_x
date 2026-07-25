@@ -7,6 +7,7 @@ import bpy
 from .core import EnergyReference, validate_scene_plan
 from .dataset_view import create_structure_view, link_stick_spectrum_selection
 from .electronic_plot import create_band_structure_plot, create_dos_plot
+from .grid_volume import create_grid_volume
 from .spectrum_plot import create_spectrum_plot
 from .surface_view import (
     create_property_surface,
@@ -74,8 +75,12 @@ def _remove_objects(objects):
 def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
     """Apply a current plan, removing every created object if an adapter fails."""
     plan = validate_scene_plan(plan, project)
-    if plan.view_kind in {"signed_isosurface", "property_on_surface"} and cache_root is None:
-        raise ScenePresetApplicationError("surface scene preset requires cache_root")
+    if plan.view_kind in {
+        "grid_volume",
+        "signed_isosurface",
+        "property_on_surface",
+    } and cache_root is None:
+        raise ScenePresetApplicationError("grid scene preset requires cache_root")
     target = collection or bpy.context.collection
     if target is None:
         raise ScenePresetApplicationError("a Blender collection is required")
@@ -83,7 +88,17 @@ def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
     settings = dict(plan.settings)
     created = []
     try:
-        if plan.view_kind == "signed_isosurface":
+        if plan.view_kind == "grid_volume":
+            created.append(
+                create_grid_volume(
+                    entities["grid"],
+                    cache_root,
+                    dataset_index=settings["dataset_index"],
+                    name="Grid Volume",
+                    collection=target,
+                )
+            )
+        elif plan.view_kind == "signed_isosurface":
             created.extend(
                 create_signed_isosurfaces(
                     entities["grid"], cache_root,

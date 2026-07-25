@@ -36,14 +36,20 @@ from ChemBlender.core import (
 )
 
 
-def grid(structure_id, role="electron_density", *, origin=(0.0, 0.0, 0.0)):
+def grid(
+    structure_id,
+    role="electron_density",
+    *,
+    origin=(0.0, 0.0, 0.0),
+    status=DatasetStatus.COMPLETE,
+):
     return Grid3D(
         id=uuid4(),
         revision=f"{role}-r1",
         semantic_role=role,
         domain="grid",
         data=ArrayData(numpy.zeros((3, 3, 3)), ("x", "y", "z"), "electron_per_cubic_bohr"),
-        status=DatasetStatus.COMPLETE,
+        status=status,
         source_calculation=None,
         provenance_ids=(),
         origin=origin,
@@ -61,6 +67,7 @@ class ScenePresetTests(unittest.TestCase):
             {
                 "band_dos_linked",
                 "electronic_spectrum_linked",
+                "grid_volume",
                 "property_on_surface",
                 "signed_isosurface",
                 "structure_publication",
@@ -76,6 +83,37 @@ class ScenePresetTests(unittest.TestCase):
             document["unexpected"] = True
             with self.assertRaises(ScenePresetError):
                 scene_preset_from_document(document)
+
+    def test_grid_volume_accepts_ambiguous_grid_without_weakening_signed_surface(self):
+        reference = structure()
+        ambiguous = grid(
+            reference.id,
+            "scalar_field",
+            status=DatasetStatus.AMBIGUOUS,
+        )
+        project = QCProject(uuid4(), "0.1")
+        project.commit(
+            ImportBatch(structures=(reference,), datasets=(ambiguous,))
+        )
+        presets = builtin_scene_presets()
+
+        plan = plan_scene_preset(
+            presets["grid_volume"],
+            project,
+            {"grid": ambiguous.id},
+            {},
+        )
+
+        self.assertEqual(plan.view_kind, "grid_volume")
+        self.assertEqual(dict(plan.settings)["dataset_index"], 0)
+        self.assertEqual(validate_scene_plan(plan, project), plan)
+        with self.assertRaisesRegex(ScenePresetError, "complete"):
+            plan_scene_preset(
+                presets["signed_isosurface"],
+                project,
+                {"grid": ambiguous.id},
+                {},
+            )
 
     def test_structure_plan_is_deterministic_and_revision_bound(self):
         reference = structure()

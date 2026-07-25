@@ -3,7 +3,7 @@ import sys
 import threading
 import time
 import unittest
-from dataclasses import replace
+from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
@@ -11,6 +11,7 @@ from unittest.mock import patch
 from uuid import UUID, uuid4
 
 from ChemBlender.core import (
+    DatasetStatus,
     close_project,
     close_session,
     create_session,
@@ -279,6 +280,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
                 "conflict_candidates",
                 "allowed_actions",
                 "default_view",
+                "default_view_label",
                 "blocking",
                 "blocking_reason",
             },
@@ -350,6 +352,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertIn("structure", row.capability_summary)
         self.assertFalse(row.blocking)
         self.assertEqual(state.preview.conflict_ids, ())
+        self.assertEqual(row.default_view_label, "Default view: Structure")
 
         self.module.commit_project_import(
             self.session,
@@ -373,6 +376,218 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             state.preview.conflict_ids,
             (state.conflicts[0].id,),
         )
+
+    def test_default_view_planner_prioritizes_real_grid_and_signed_roles(self):
+        default_views = importlib.import_module(
+            "ChemBlender.ui.default_views"
+        )
+        _registry, cube_state = self.stage(
+            "tests/fixtures/cube/sheared.cube"
+        )
+        cube_batch = cube_state.staging_session.result(
+            cube_state.preview.source_previews[0].staged_batch_ids[0]
+        )
+        cube_revision = cube_batch.source_revisions[0]
+        cube_grid = cube_batch.datasets[0]
+        cube_plan = default_views.plan_default_view(
+            cube_revision,
+            {value.id: value for value in cube_batch.structures},
+            {value.id: value for value in cube_batch.datasets},
+        )
+
+        self.assertEqual(cube_grid.status, DatasetStatus.AMBIGUOUS)
+        self.assertEqual(
+            cube_plan.source_revision_id,
+            cube_revision.id,
+        )
+        self.assertEqual(cube_plan.preset_id, "grid_volume")
+        self.assertEqual(cube_plan.bindings, (("grid", cube_grid.id),))
+        self.assertEqual(cube_plan.settings, (("dataset_index", 0),))
+        self.assertEqual(cube_plan.display_label, "Grid Volume")
+        self.assertFalse(hasattr(cube_plan, "__dict__"))
+        with self.assertRaises(FrozenInstanceError):
+            cube_plan.preset_id = "changed"
+        self.assertEqual(
+            default_views.describe_default_view(cube_plan),
+            "Default view: Grid Volume",
+        )
+
+        signed_grid = replace(
+            cube_grid,
+            semantic_role="molecular_orbital",
+            data=replace(cube_grid.data, unit="dimensionless"),
+            status=DatasetStatus.COMPLETE,
+        )
+        signed_plan = default_views.plan_default_view(
+            cube_revision,
+            {value.id: value for value in cube_batch.structures},
+            {signed_grid.id: signed_grid},
+        )
+        self.assertEqual(signed_plan.preset_id, "signed_isosurface")
+        self.assertEqual(signed_plan.display_label, "Signed Isosurface")
+        spin_plan = default_views.plan_default_view(
+            cube_revision,
+            {value.id: value for value in cube_batch.structures},
+            {
+                signed_grid.id: replace(
+                    signed_grid,
+                    semantic_role="spin_density",
+                )
+            },
+        )
+        self.assertEqual(spin_plan.preset_id, "signed_isosurface")
+        density_plan = default_views.plan_default_view(
+            cube_revision,
+            {value.id: value for value in cube_batch.structures},
+            {
+                signed_grid.id: replace(
+                    signed_grid,
+                    semantic_role="electron_density",
+                )
+            },
+        )
+        self.assertEqual(density_plan.preset_id, "grid_volume")
+
+        self.module.cancel_project_import(self.session)
+        _registry, xyz_state = self.stage(
+            "tests/fixtures/xyz/water.xyz"
+        )
+        xyz_batch = xyz_state.staging_session.result(
+            xyz_state.preview.source_previews[0].staged_batch_ids[0]
+        )
+        xyz_plan = default_views.plan_default_view(
+            xyz_batch.source_revisions[0],
+            {value.id: value for value in xyz_batch.structures},
+            {value.id: value for value in xyz_batch.datasets},
+        )
+        self.assertEqual(xyz_plan.preset_id, "structure_publication")
+        self.assertEqual(xyz_plan.display_label, "Structure")
+        self.assertIsNone(
+            default_views.plan_default_view(
+                replace(
+                    xyz_batch.source_revisions[0],
+                    created_entity_ids=(),
+                ),
+                {},
+                {},
+            )
+        )
+        self.assertEqual(
+            default_views.describe_default_view(None),
+            "Default view: No supported visual data",
+        )
+
+    def test_cube_projection_shows_grid_volume_default(self):
+        registry, state = self.stage(
+            "tests/fixtures/cube/sheared.cube"
+        )
+
+        row = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )[0]
+
+        self.assertEqual(
+            row.default_view_label,
+            "Default view: Grid Volume",
+        )
+
+    def test_default_view_planner_skips_grid_units_unsupported_by_adapters(self):
+        default_views = importlib.import_module(
+            "ChemBlender.ui.default_views"
+        )
+        _registry, state = self.stage(
+            "tests/fixtures/cube/sheared.cube"
+        )
+        batch = state.staging_session.result(
+            state.preview.source_previews[0].staged_batch_ids[0]
+        )
+        revision = batch.source_revisions[0]
+        grid = batch.datasets[0]
+        structures = {value.id: value for value in batch.structures}
+        structure_ids = tuple(structures)
+
+        for unit in ("unknown", "nanometer"):
+            with self.subTest(unit=unit):
+                unsupported = replace(
+                    grid,
+                    id=uuid4(),
+                    coordinate_unit=unit,
+                )
+                unsupported_revision = replace(
+                    revision,
+                    created_entity_ids=(
+                        unsupported.id,
+                        *structure_ids,
+                    ),
+                )
+                fallback = default_views.plan_default_view(
+                    unsupported_revision,
+                    structures,
+                    {unsupported.id: unsupported},
+                )
+                self.assertEqual(
+                    fallback.preset_id,
+                    "structure_publication",
+                )
+                self.assertIsNone(
+                    default_views.plan_default_view(
+                        replace(
+                            unsupported_revision,
+                            created_entity_ids=(unsupported.id,),
+                        ),
+                        {},
+                        {unsupported.id: unsupported},
+                    )
+                )
+
+        unsupported = replace(
+            grid,
+            id=uuid4(),
+            coordinate_unit="nanometer",
+        )
+        next_grid = default_views.plan_default_view(
+            replace(
+                revision,
+                created_entity_ids=(
+                    unsupported.id,
+                    grid.id,
+                    *structure_ids,
+                ),
+            ),
+            structures,
+            {
+                unsupported.id: unsupported,
+                grid.id: grid,
+            },
+        )
+        self.assertEqual(next_grid.preset_id, "grid_volume")
+        self.assertEqual(next_grid.bindings, (("grid", grid.id),))
+
+        unsupported_signed = replace(
+            unsupported,
+            semantic_role="molecular_orbital",
+            data=replace(unsupported.data, unit="dimensionless"),
+            status=DatasetStatus.COMPLETE,
+        )
+        signed_fallback = default_views.plan_default_view(
+            replace(
+                revision,
+                created_entity_ids=(
+                    unsupported_signed.id,
+                    grid.id,
+                    *structure_ids,
+                ),
+            ),
+            structures,
+            {
+                unsupported_signed.id: unsupported_signed,
+                grid.id: grid,
+            },
+        )
+        self.assertEqual(signed_fallback.preset_id, "grid_volume")
+        self.assertEqual(signed_fallback.bindings, (("grid", grid.id),))
 
     def test_projection_refreshes_grouping_snapshot_without_confirming_it(self):
         registry, state = self.stage(
@@ -742,7 +957,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertIsNone(state.preview)
         self.assertIsNone(state.staging_session)
 
-    def test_confirm_calls_transaction_once_creates_real_structure_plans(self):
+    def test_confirm_calls_transaction_once_creates_format_aware_plans(self):
         registry, state = self.stage(
             "tests/fixtures/xyz/water.xyz",
             "tests/fixtures/cube/sheared.cube",
@@ -753,16 +968,23 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             registry,
         )
         calls = []
+        view_calls = []
         original = self.module.commit_import_preview
 
         def commit_once(*args):
             calls.append(args)
             return original(*args)
 
-        def apply(plan, project, *, collection):
-            self.assertEqual(plan.preset_id, "structure_publication")
-            self.assertIn(plan.bindings[0].entity_id, project.structures)
+        def apply(plan, project, *, collection, cache_root=None):
+            binding = plan.bindings[0]
+            registry = (
+                project.structures
+                if binding.entity_kind == "structure"
+                else project.datasets
+            )
+            self.assertIn(binding.entity_id, registry)
             self.assertIsNotNone(collection)
+            view_calls.append((plan.preset_id, cache_root))
             return ()
 
         with patch.object(
@@ -779,12 +1001,48 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             )
 
         self.assertEqual(len(calls), 1)
+        self.assertEqual(
+            tuple(value[0] for value in view_calls),
+            ("structure_publication", "grid_volume"),
+        )
+        self.assertIsNone(view_calls[0][1])
+        self.assertEqual(
+            view_calls[1][1],
+            self.session.temporary_root / "view-cache",
+        )
+        self.assertTrue(view_calls[1][1].is_dir())
         self.assertGreaterEqual(len(self.session.project.structures), 2)
         self.assertEqual(self.session.dirty_reasons, frozenset({"import"}))
         self.assertEqual(state.browser_revision, 1)
         self.assertIsNone(state.preview)
         self.assertEqual(result.status, "committed")
         self.assertGreaterEqual(result.created_view_count, 0)
+
+    def test_disabled_default_view_creates_nothing_and_advances_browser_once(self):
+        registry, state = self.stage(
+            "tests/fixtures/cube/sheared.cube"
+        )
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+        rows[0].default_view = False
+        view_calls = []
+
+        result = self.module.commit_project_import(
+            self.session,
+            state,
+            rows,
+            collection=object(),
+            apply_view=lambda *_args, **_kwargs: view_calls.append(
+                (_args, _kwargs)
+            ),
+        )
+
+        self.assertEqual(view_calls, [])
+        self.assertEqual(result.created_view_count, 0)
+        self.assertEqual(state.browser_revision, 1)
 
     def test_sequential_xyz_cube_commits_rotate_owned_sidecar_generation(self):
         registry, state = self.stage("tests/fixtures/xyz/water.xyz")
@@ -984,20 +1242,22 @@ class ImportPreviewUIContractTests(unittest.TestCase):
 
     def test_view_failure_removes_prior_objects_but_keeps_committed_data(self):
         registry, state = self.stage(
-            "tests/fixtures/xyz/water.xyz",
             "tests/fixtures/cube/sheared.cube",
+            "tests/fixtures/xyz/water.xyz",
         )
         rows = self.module.project_import_preview(
             self.session,
             state,
             registry,
         )
-        created = SimpleNamespace(type="MESH", data=None)
+        created = SimpleNamespace(type="VOLUME", data=None)
         calls = 0
+        presets = []
 
-        def fail_second(*_args, **_kwargs):
+        def fail_second(plan, *_args, **_kwargs):
             nonlocal calls
             calls += 1
+            presets.append(plan.preset_id)
             if calls == 1:
                 return (created,)
             raise RuntimeError("simulated view failure")
@@ -1011,6 +1271,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         )
 
         self.assertEqual(result.status, "data committed; view failed")
+        self.assertEqual(presets, ["grid_volume", "structure_publication"])
         self.assertGreaterEqual(len(self.session.project.structures), 2)
         self.assertEqual(
             self.fake_bpy.data.objects.removed,

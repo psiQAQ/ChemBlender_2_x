@@ -527,8 +527,15 @@ def assert_quick_import(module_key, repository_root):
         assert state.preview is None
 
     state = stage(repository_root / "tests/fixtures/xyz/water.xyz")
+    xyz_rows = preview_ui.project_import_preview(
+        session,
+        state,
+        registry,
+    )
+    assert xyz_rows[0].default_view_label == "Default view: Structure"
     revision = state.browser_revision
     structure_count = len(session.project.structures)
+    source_revisions = set(session.project.source_revisions)
     assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
     assert len(session.project.structures) == structure_count + 1
     assert state.browser_revision == revision + 1
@@ -540,6 +547,25 @@ def assert_quick_import(module_key, repository_root):
         if obj.get("cb_scene_preset_id") == "structure_publication"
     ]
     assert structure_views
+    xyz_revision_id, = set(session.project.source_revisions) - source_revisions
+    xyz_revision = session.project.source_revisions[xyz_revision_id]
+    xyz_structure = next(
+        session.project.structures[entity_id]
+        for entity_id in xyz_revision.created_entity_ids
+        if entity_id in session.project.structures
+    )
+    xyz_view = next(
+        obj
+        for obj in structure_views
+        if obj.get("cb_structure_id") == str(xyz_structure.id)
+    )
+    assert xyz_view.type == "MESH"
+    assert xyz_view["cb_structure_revision"] == xyz_structure.revision
+    xyz_bindings = json.loads(xyz_view["cb_scene_bindings_json"])
+    assert xyz_bindings["structure"] == {
+        "entity_id": str(xyz_structure.id),
+        "revision": xyz_structure.revision,
+    }
     browser = importlib.import_module(
         f"{module_key}.ui.project_browser.panel"
     )
@@ -638,16 +664,55 @@ def assert_quick_import(module_key, repository_root):
     preview_ui.cancel_project_import(session)
 
     state = stage(repository_root / "tests/fixtures/cube/sheared.cube")
+    cube_rows = preview_ui.project_import_preview(
+        session,
+        state,
+        registry,
+    )
+    assert cube_rows[0].default_view_label == "Default view: Grid Volume"
     structure_count = len(session.project.structures)
+    source_revisions = set(session.project.source_revisions)
+    objects_before_cube = set(bpy.data.objects)
     assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
     assert len(session.project.structures) == structure_count + 1
     assert state.preview is None
+    cube_revision_id, = set(session.project.source_revisions) - source_revisions
+    cube_revision = session.project.source_revisions[cube_revision_id]
+    cube_grid = next(
+        session.project.datasets[entity_id]
+        for entity_id in cube_revision.created_entity_ids
+        if entity_id in session.project.datasets
+    )
+    assert cube_grid.status is core.DatasetStatus.AMBIGUOUS
+    cube_objects = set(bpy.data.objects) - objects_before_cube
+    cube_view, = cube_objects
+    assert cube_view.type == "VOLUME"
+    assert cube_view["cb_scene_preset_id"] == "grid_volume"
+    assert cube_view["cb_dataset_id"] == str(cube_grid.id)
+    assert cube_view["cb_dataset_revision"] == cube_grid.revision
+    assert cube_view["cb_scene_render_identity"]
+    cube_bindings = json.loads(cube_view["cb_scene_bindings_json"])
+    assert cube_bindings["grid"] == {
+        "entity_id": str(cube_grid.id),
+        "revision": cube_grid.revision,
+    }
+    cube_cache = Path(cube_view["cb_cache_path"]).resolve()
+    session_root = Path(session.temporary_root).resolve()
+    assert cube_cache.is_relative_to(session_root)
+    assert cube_cache.parent == session_root / "view-cache" / "volume"
+    assert cube_cache.is_file()
     browser_settings.mode = "by_data"
     rows_after_cube = browser.refresh_project_browser(bpy.context.scene)
     assert browser_settings.quality_filter == "all"
     assert rows_after_cube is not rows_before_cube
     assert any(row.kind == "structure" for row in rows_after_cube)
     assert any(row.kind == "grid3d" for row in rows_after_cube)
+    grid_row = next(
+        row
+        for row in rows_after_cube
+        if row.entity_id == cube_grid.id
+    )
+    assert grid_row.view_count == 1
     grid_label = next(
         row.label for row in rows_after_cube if row.kind == "grid3d"
     )

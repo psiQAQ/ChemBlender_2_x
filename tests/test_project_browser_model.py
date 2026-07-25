@@ -946,7 +946,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             name = "Density object"
 
         obj = ViewObject(
-            cb_scene_view_kind="volume",
+            cb_scene_view_kind="grid_volume",
             cb_scene_bindings_json=json.dumps(
                 {
                     "grid": {
@@ -965,7 +965,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
                     object_name="Density object",
                     entity_id=GRID_ID,
                     revision="grid-r1",
-                    view_kind="volume",
+                    view_kind="grid_volume",
                     label="Density object",
                 ),
             ),
