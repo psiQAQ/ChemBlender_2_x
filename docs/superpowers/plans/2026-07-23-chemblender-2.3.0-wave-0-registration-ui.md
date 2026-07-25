@@ -150,11 +150,11 @@ and documentation contract in the same commit.
 **Interfaces:**
 - Produces: `CHEMBLENDER_OT_quick_import`, validation mode property and N-panel section.
 
-- [ ] **Step 1: Add operator contract tests**
+- [x] **Step 1: Add operator contract tests**
 
 Inspect Blender class definitions and assert operator ID, multi-file collection property, FILE_PATH directory and accepted validation modes.
 
-- [ ] **Step 2: Implement invoke/execute**
+- [x] **Step 2: Implement invoke/execute**
 
 Add the new UI modules to explicit registration in this commit. Use Blender
 file selector with
@@ -166,15 +166,15 @@ session UI state. Quick Import must never access the private `_REGISTRY`, the
 old core reader registry, or a `QCProject` private registry. Do not commit
 during file chooser completion.
 
-- [ ] **Step 3: Add N-panel**
+- [x] **Step 3: Add N-panel**
 
 Show project state, dirty badge, Select Files, validation mode, recent summary, Save Project and Open Workspace. Existing Build Molecules panel remains.
 
-- [ ] **Step 4: Verify with XYZ and Cube**
+- [x] **Step 4: Verify with XYZ and Cube**
 
 Blender smoke invokes the operator execute path with fixture paths, confirms preview exists and project is unchanged.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit UI, explicit registration, architecture guide and tests together.
 
