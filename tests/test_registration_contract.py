@@ -19,6 +19,7 @@ EXPECTED_ROOTS = (
     ".read",
     ".scaffold",
     ".trajectory_view",
+    ".ui.session",
 )
 
 
@@ -190,11 +191,15 @@ class RegistrationContractTests(unittest.TestCase):
             self.assertTrue(name.startswith("."))
             self.assertFalse(
                 name.startswith(
-                    (".core", ".reader_api", ".runtime", ".legacy", ".ui")
+                    (".core", ".reader_api", ".runtime", ".legacy")
                 )
             )
             self.assertTrue(
-                (ROOT / "ChemBlender" / f"{name[1:]}.py").is_file()
+                (
+                    ROOT
+                    / "ChemBlender"
+                    / f"{name[1:].replace('.', '/')}.py"
+                ).is_file()
             )
 
     def test_import_is_bpy_free_and_runtime_package_has_no_side_effects(self):
@@ -280,6 +285,28 @@ class RegistrationContractTests(unittest.TestCase):
             harness.events.count(("remove_handle", harness.handle)),
             2,
         )
+
+    def test_load_post_republishes_the_owned_reader_handle(self):
+        registration = fresh_registration()
+        harness = RegistrationHarness(registration)
+        handlers = SimpleNamespace(
+            load_post=[],
+            persistent=lambda callback: callback,
+        )
+        fake_bpy = ModuleType("bpy")
+        fake_bpy.app = SimpleNamespace(handlers=handlers)
+
+        with patch.dict(sys.modules, {"bpy": fake_bpy}), harness.patch_imports():
+            registration.register_extension(harness.package_root)
+            self.assertEqual(len(handlers.load_post), 1)
+            handlers.load_post[0](None)
+            registration.unregister_extension()
+
+        self.assertEqual(
+            harness.events.count(("publish_handle", harness.package_root)),
+            2,
+        )
+        self.assertEqual(handlers.load_post, [])
 
     def test_class_failure_rolls_back_only_registered_classes(self):
         registration = fresh_registration()
@@ -522,7 +549,7 @@ class RegistrationContractTests(unittest.TestCase):
             1,
         )
 
-    def test_optional_stacks_and_future_ui_are_not_registration_roots(self):
+    def test_optional_stacks_are_not_registration_roots(self):
         registration = fresh_registration()
         forbidden = (
             "ase",
@@ -540,7 +567,7 @@ class RegistrationContractTests(unittest.TestCase):
 
         self.assertFalse(
             any(
-                name.startswith((".core", ".reader_api", ".ui"))
+                name.startswith((".core", ".reader_api"))
                 or any(stack in name for stack in forbidden)
                 for name in registration.REGISTER_MODULE_NAMES
             )

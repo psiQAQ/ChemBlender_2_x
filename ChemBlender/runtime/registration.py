@@ -11,12 +11,52 @@ REGISTER_MODULE_NAMES: tuple[str, ...] = (
     ".read",
     ".scaffold",
     ".trajectory_view",
+    ".ui.session",
 )
 
 _package_root = None
 _registered_classes = ()
 _registered_callback_modules = ()
 _reader_api_handle = None
+
+
+def _reader_api_load_post_handler(_dummy):
+    global _reader_api_handle
+
+    if _package_root is None:
+        return
+    bridge = importlib.import_module(
+        ".runtime.reader_api_bridge",
+        _package_root,
+    )
+    _reader_api_handle = bridge.register_reader_api_handle(_package_root)
+
+
+def _reader_api_load_handler_list():
+    try:
+        import bpy
+    except ModuleNotFoundError:
+        return None
+    return bpy.app.handlers.load_post
+
+
+def _register_reader_api_load_handler():
+    handlers = _reader_api_load_handler_list()
+    if handlers is None:
+        return
+    import bpy
+
+    bpy.app.handlers.persistent(_reader_api_load_post_handler)
+    while _reader_api_load_post_handler in handlers:
+        handlers.remove(_reader_api_load_post_handler)
+    handlers.append(_reader_api_load_post_handler)
+
+
+def _remove_reader_api_load_handler():
+    handlers = _reader_api_load_handler_list()
+    if handlers is not None:
+        while _reader_api_load_post_handler in handlers:
+            handlers.remove(_reader_api_load_post_handler)
 
 
 def _note_cleanup_failure(error, action, cleanup_error):
@@ -112,7 +152,9 @@ def register_extension(package_root: str) -> None:
                 callback_modules.append(module)
                 callback()
         handle = bridge.register_reader_api_handle(package_root)
+        _register_reader_api_load_handler()
     except BaseException as error:
+        _remove_reader_api_load_handler()
         (
             _registered_classes,
             _registered_callback_modules,
@@ -144,6 +186,8 @@ def unregister_extension() -> None:
 
     if _package_root is None:
         return
+
+    _remove_reader_api_load_handler()
 
     package_root = _package_root
     auto_load = importlib.import_module(".auto_load", package_root)

@@ -170,10 +170,7 @@ def assert_registration_isolation(module_key, before_install_modules):
         for name in registration.REGISTER_MODULE_NAMES
         if f"{module_key}{name}" in sys.modules
     ) == registration.REGISTER_MODULE_NAMES
-    assert not any(
-        name == f"{module_key}.ui" or name.startswith(f"{module_key}.ui.")
-        for name in sys.modules
-    )
+    assert f"{module_key}.ui.session" in sys.modules
     newly_loaded = set(sys.modules) - before_install_modules
     assert not any(
         name == prefix or name.startswith(prefix + ".")
@@ -197,6 +194,17 @@ def assert_enabled(module_key, before_install_modules):
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
         for handler in bpy.app.handlers.frame_change_post
     ) == 1
+    for callbacks, name in (
+        (bpy.app.handlers.load_post, "_load_post_handler"),
+        (bpy.app.handlers.save_pre, "_save_pre_handler"),
+    ):
+        matching = [
+            handler
+            for handler in callbacks
+            if getattr(handler, "__module__", None) == f"{module_key}.ui.session"
+            and handler.__name__ == name
+        ]
+        assert len(matching) == 1
     assert hasattr(bpy.types.Object, "cif_original")
     assert hasattr(bpy.types.Object, "cif_current")
     assert hasattr(bpy.types.Scene, "my_tool")
@@ -212,6 +220,11 @@ def assert_disabled(module_key, owned_classes):
     assert not any(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
         for handler in bpy.app.handlers.frame_change_post
+    )
+    assert not any(
+        getattr(handler, "__module__", None) == f"{module_key}.ui.session"
+        for callbacks in (bpy.app.handlers.load_post, bpy.app.handlers.save_pre)
+        for handler in callbacks
     )
     assert not owned_menu_callbacks(module_key)
     assert all(
@@ -234,6 +247,81 @@ def assert_reader_api_handle(module_key):
         )
         == 1
     )
+
+
+def assert_project_session_manager(module_key):
+    ui = importlib.import_module(f"{module_key}.ui.session")
+    scene = bpy.context.scene
+    session = ui.new_scene_session(scene)
+    session.mark_dirty("import")
+    with TemporaryDirectory() as directory:
+        blend = Path(directory) / "session-manager.blend"
+        result = bpy.ops.wm.save_as_mainfile(
+            filepath=str(blend),
+            check_existing=False,
+        )
+        assert result == {"FINISHED"}, result
+        assert session.dirty
+        result = bpy.ops.wm.save_mainfile()
+        assert result == {"FINISHED"}, result
+        assert not session.dirty
+        assert (blend.with_suffix(".cbq")).is_dir()
+
+        reader_handle = bpy.app.driver_namespace[READER_API_HANDLE_KEY]
+        reader_api = importlib.import_module(f"{module_key}.reader_api")
+        model_identities = (
+            reader_api.PublicImportBatch,
+            reader_api.PublicReaderDescriptor,
+            reader_api.ReaderPluginManifest,
+        )
+        registry = importlib.import_module(
+            f"{module_key}.runtime.reader_api_bridge"
+        ).get_reader_plugin_registry()
+        result = bpy.ops.wm.open_mainfile(filepath=str(blend))
+        assert result == {"FINISHED"}, result
+        assert bpy.app.driver_namespace[READER_API_HANDLE_KEY] is reader_handle
+        bridge = importlib.import_module(
+            f"{module_key}.runtime.reader_api_bridge"
+        )
+        assert bridge.get_reader_plugin_registry() is registry
+        current_reader_api = importlib.import_module(f"{module_key}.reader_api")
+        assert (
+            current_reader_api.PublicImportBatch,
+            current_reader_api.PublicReaderDescriptor,
+            current_reader_api.ReaderPluginManifest,
+        ) == model_identities
+        ui = importlib.import_module(f"{module_key}.ui.session")
+        restored = ui.get_scene_session(bpy.context.scene)
+        assert ui.get_scene_session_status(bpy.context.scene)[0] == "connected"
+        assert restored.sidecar_path == blend.with_suffix(".cbq")
+
+        restored.mark_dirty("edit")
+        verified_sidecar = restored.sidecar_path
+        original_save = ui.save_project_session
+        try:
+            def fail_save(**_kwargs):
+                raise RuntimeError("simulated sidecar failure")
+
+            ui.save_project_session = fail_save
+            ui._save_pre_handler(None)
+        finally:
+            ui.save_project_session = original_save
+        assert restored.dirty
+        assert restored.sidecar_path == verified_sidecar
+        assert ui.get_scene_session_status(bpy.context.scene) == (
+            "error",
+            "simulated sidecar failure",
+        )
+
+        temporary_root = restored.temporary_root
+        restored.mark_clean()
+        ui.unregister()
+        assert not temporary_root.exists()
+        assert not any(
+            getattr(handler, "__module__", None) == ui.__name__
+            for callbacks in (bpy.app.handlers.load_post, bpy.app.handlers.save_pre)
+            for handler in callbacks
+        )
 
 
 def assert_installed_blend_libraries(module_key):
@@ -1255,7 +1343,7 @@ legacy_inventory = json.loads(
 )
 assert legacy_inventory["installed_package_name"] == module_key
 stable_inventory = registration_inventory(module_key)
-assert stable_inventory == {
+expected_inventory = {
     name: legacy_inventory[name]
     for name in (
         "registered_classes",
@@ -1264,6 +1352,16 @@ assert stable_inventory == {
         "menu_callbacks",
     )
 }
+expected_inventory["module_callbacks"] += [
+    {"module": ".ui.session", "register": True, "unregister": True},
+]
+expected_inventory["handlers"] += [
+    {"owner": "load_post", "module": ".runtime.registration", "name": "_reader_api_load_post_handler"},
+    {"owner": "load_post", "module": ".ui.session", "name": "_load_post_handler"},
+    {"owner": "save_pre", "module": ".ui.session", "name": "_save_pre_handler"},
+]
+expected_inventory["handlers"].sort(key=lambda item: tuple(item.values()))
+assert stable_inventory == expected_inventory
 
 bridge = importlib.import_module(f"{module_key}.runtime.reader_api_bridge")
 reader_api = importlib.import_module(f"{module_key}.reader_api")
@@ -1360,6 +1458,7 @@ assert_scene_preset_application(module_key)
 assert_complex_phonon_trajectory(module_key)
 assert_fermi_surface_view(module_key)
 assert_project_sidecar_link(module_key)
+assert_project_session_manager(module_key)
 assert_topology_view(module_key, package.parent.parent)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 
