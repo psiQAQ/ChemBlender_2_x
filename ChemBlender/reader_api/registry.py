@@ -10,7 +10,10 @@ from ..core.readers import (
     SniffMatch,
     SniffResult,
 )
-from .builtin_bridge import public_batch_from_internal
+from .builtin_bridge import (
+    internal_batch_from_public,
+    public_batch_from_internal,
+)
 from .descriptors import (
     PublicReaderDescriptor,
     ReaderAvailability,
@@ -297,6 +300,8 @@ class ReaderPluginRegistry:
                 result = plugin.sniff(request)
                 if type(result) is not SniffResult:
                     raise TypeError("sniff must return SniffResult")
+            except MemoryError:
+                raise
             except Exception as error:
                 diagnostics.append(
                     ParserIssue(
@@ -369,6 +374,9 @@ class ReaderPluginRegistry:
             result = plugin.parse(request)
             if type(result) is not PublicImportBatch:
                 raise TypeError("parse must return PublicImportBatch")
+            internal_batch_from_public(result)
+        except MemoryError:
+            raise
         except Exception as error:
             self._last_parse_exception_type = type(error).__name__
             request.progress(ProgressEvent("parse", 1, 1))

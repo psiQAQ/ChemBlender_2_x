@@ -6,6 +6,9 @@ from dataclasses import FrozenInstanceError, fields
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import MappingProxyType
+from uuid import uuid4
+
+import numpy
 
 from ChemBlender.core import (
     CapabilitySupport,
@@ -15,11 +18,16 @@ from ChemBlender.core import (
 )
 from ChemBlender.reader_api import (
     ExecutionMode,
+    ArrayData,
+    DatasetStatus,
+    Grid3D,
     IssueKind,
     ParseRequest,
     ParserIssue,
     ParserReport,
     ProgressEvent,
+    PropertyDataset,
+    ProvenanceRecord,
     PublicImportBatch,
     PublicReaderDescriptor,
     ReaderAvailability,
@@ -532,6 +540,22 @@ class ReaderAPIRegistryTests(unittest.TestCase):
         registry.select(self.sniff_request(), "winner")
         self.assertEqual(registry.last_sniff_diagnostics, ())
 
+    def test_sniff_memory_error_propagates_unchanged(self):
+        error = MemoryError("fatal")
+        registry = ReaderPluginRegistry(
+            (
+                FixedPlugin(
+                    public_descriptor("fatal"),
+                    sniff_error=error,
+                ),
+            )
+        )
+
+        with self.assertRaises(MemoryError) as caught:
+            registry.select(self.sniff_request())
+
+        self.assertIs(caught.exception, error)
+
     def test_parse_exception_returns_inspectable_failed_batch(self):
         plugin = FixedPlugin(
             public_descriptor("broken"),
@@ -547,6 +571,102 @@ class ReaderAPIRegistryTests(unittest.TestCase):
         self.assertEqual(result.report.created_entity_ids, ())
         self.assertEqual(result.report.issues[0].path, "reader.parse")
         self.assertIn("RuntimeError", result.report.issues[0].message)
+
+    def test_parse_memory_error_propagates_unchanged(self):
+        error = MemoryError("fatal")
+        registry = ReaderPluginRegistry(
+            (
+                FixedPlugin(
+                    public_descriptor("fatal"),
+                    parse_error=error,
+                ),
+            )
+        )
+
+        with self.assertRaises(MemoryError) as caught:
+            registry.parse("fatal", self.parse_request())
+
+        self.assertIs(caught.exception, error)
+
+    def test_invalid_exact_public_batches_become_stable_parse_failures(self):
+        incomplete_grid = object.__new__(Grid3D)
+        dangling_grid = Grid3D(
+            id=uuid4(),
+            revision="grid-r1",
+            semantic_role="electron_density",
+            domain="grid",
+            data=ArrayData(
+                numpy.zeros((1, 1, 1)),
+                ("x", "y", "z"),
+                "electron_per_cubic_angstrom",
+            ),
+            status=DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+            origin=(0.0, 0.0, 0.0),
+            step_vectors=(
+                (1.0, 0.0, 0.0),
+                (0.0, 1.0, 0.0),
+                (0.0, 0.0, 1.0),
+            ),
+            coordinate_unit="angstrom",
+            structure_id=uuid4(),
+        )
+        report_mismatch = ParserReport(
+            "invalid",
+            "1",
+            (uuid4(),),
+            (),
+            (),
+        )
+        provenance_values = (
+            [],
+            lambda: None,
+        )
+        batches = [
+            PublicImportBatch(datasets=(incomplete_grid,)),
+            PublicImportBatch(datasets=(dangling_grid,)),
+            PublicImportBatch(report=report_mismatch),
+        ]
+        for value in provenance_values:
+            batches.append(
+                PublicImportBatch(
+                    provenance=(
+                        ProvenanceRecord(
+                            id=uuid4(),
+                            revision="provenance-r1",
+                            producer="test",
+                            producer_version="1",
+                            source="source.dat",
+                            source_hash="",
+                            parent_ids=(),
+                            operation="parse",
+                            parameters=(("unsafe", value),),
+                        ),
+                    )
+                )
+            )
+
+        for batch in batches:
+            with self.subTest(batch=batch):
+                plugin = FixedPlugin(
+                    public_descriptor("invalid"),
+                    result=batch,
+                )
+                registry = ReaderPluginRegistry((plugin,))
+
+                result = registry.parse("invalid", self.parse_request())
+
+                self.assertIsNot(result, batch)
+                self.assertEqual(result.report.issues[0].path, "reader.parse")
+                self.assertEqual(
+                    result.report.issues[0].message,
+                    "reader parse failed: PublicBatchValidationError",
+                )
+                self.assertEqual(
+                    registry._last_parse_exception_type,
+                    "PublicBatchValidationError",
+                )
 
     def test_private_parse_exception_evidence_is_exact_and_resets(self):
         plugin = FixedPlugin(
@@ -604,6 +724,48 @@ class ReaderAPIRegistryTests(unittest.TestCase):
                 ("parse", 1, 1),
             ],
         )
+
+    def test_success_validation_preserves_public_batch_and_array_identity(self):
+        values = numpy.asarray([1.0, 2.0, 3.0])
+        expected = PublicImportBatch(
+            datasets=(
+                PropertyDataset(
+                    id=uuid4(),
+                    revision="property-r1",
+                    semantic_role="test_values",
+                    domain="test",
+                    data=ArrayData(values, ("entry",), "dimensionless"),
+                    status=DatasetStatus.COMPLETE,
+                    source_calculation=None,
+                    provenance_ids=(),
+                ),
+            )
+        )
+        registry = ReaderPluginRegistry(
+            (FixedPlugin(public_descriptor("example"), result=expected),)
+        )
+
+        result = registry.parse("example", self.parse_request())
+
+        self.assertIs(result, expected)
+        self.assertIs(result.datasets[0].data.values, values)
+
+    def test_builtin_xyz_and_cube_parse_return_exact_public_batches(self):
+        registry = builtin_reader_plugin_registry()
+        for relative in ("xyz/water.xyz", "cube/sheared.cube"):
+            source = FIXTURES / relative
+            selected = registry.select(
+                SniffRequest(source, source.read_bytes()[:65536])
+            )
+
+            result = registry.parse(
+                selected.reader_id,
+                self.parse_request(source),
+            )
+
+            with self.subTest(relative=relative):
+                self.assertIs(type(result), PublicImportBatch)
+                self.assertTrue(result.structures)
 
     def test_registry_rejects_nonpublic_parse_result(self):
         plugin = FixedPlugin(public_descriptor("invalid"))

@@ -287,6 +287,17 @@ class ReaderCanonicalDocumentTests(unittest.TestCase):
             (("mapping", {"a": 1, "b": 2}),),
         )
 
+    def test_incomplete_exact_model_is_a_stable_integrity_error(self):
+        incomplete_grid = object.__new__(reader_api.Grid3D)
+        batch = reader_api.PublicImportBatch(datasets=(incomplete_grid,))
+
+        with TemporaryDirectory() as temporary:
+            with self.assertRaisesRegex(
+                reader_api.CanonicalDocumentIntegrityError,
+                "^incomplete public model value$",
+            ):
+                reader_api.public_batch_document(batch, temporary)
+
     def test_bundle_uses_content_addressed_safe_artifacts(self):
         with TemporaryDirectory() as temporary:
             root = Path(temporary) / "result"

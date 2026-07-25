@@ -247,7 +247,13 @@ class _Encoder:
         encoded = {"$type": tag}
         for item in fields(value):
             if item.init:
-                encoded[item.name] = self.encode(getattr(value, item.name))
+                try:
+                    field_value = getattr(value, item.name)
+                except AttributeError as error:
+                    raise CanonicalDocumentIntegrityError(
+                        "incomplete public model value"
+                    ) from error
+                encoded[item.name] = self.encode(field_value)
         return encoded
 
     def array(self, value):
