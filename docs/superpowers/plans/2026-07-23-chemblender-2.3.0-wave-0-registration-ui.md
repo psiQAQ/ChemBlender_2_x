@@ -268,19 +268,19 @@ architecture guide and tests together.
 **Interfaces:**
 - Produces: FileHandlers for 3D View and Project Browser that invoke Quick Import.
 
-- [ ] **Step 1: Add Blender-version guarded contract tests**
+- [x] **Step 1: Add Blender-version guarded contract tests**
 
 Assert each handler has `bl_import_operator="chemblender.quick_import"`, a deterministic extension list derived from available built-in descriptors and a `poll_drop` restricted to supported area types.
 
-- [ ] **Step 2: Implement handlers**
+- [x] **Step 2: Implement handlers**
 
 Do not parse in `poll_drop`. Unsupported or ambiguous extension can still reach content sniff through the import operator when Blender supplies a path; do not claim directories.
 
-- [ ] **Step 3: Verify registration lifecycle**
+- [x] **Step 3: Verify registration lifecycle**
 
 Build/install and assert handlers register once and unregister cleanly.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit handlers, explicit registration, architecture guide and tests together.
 
