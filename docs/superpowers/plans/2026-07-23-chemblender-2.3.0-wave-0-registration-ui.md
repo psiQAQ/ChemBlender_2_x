@@ -191,26 +191,26 @@ Commit UI, explicit registration, architecture guide and tests together.
 **Interfaces:**
 - Produces: `CHEMBLENDER_OT_confirm_import`, `CHEMBLENDER_OT_cancel_import` and preview row PropertyGroups.
 
-- [ ] **Step 1: Implement projection from pure preview**
+- [x] **Step 1: Implement projection from pure preview**
 
 Rows copy only display strings, IDs, status enums and selected actions into Blender properties. Large arrays and batches remain in session staging.
 
-- [ ] **Step 2: Implement draw**
+- [x] **Step 2: Implement draw**
 
 Show source, reader, availability, capability summary, quality badge, conflict action and default view checkbox. Blocking diagnostics disable Confirm.
 
-- [ ] **Step 3: Implement confirm**
+- [x] **Step 3: Implement confirm**
 
 Add the preview module to explicit registration in this commit. Call
 `commit_import_preview`, then apply default view plans. Track created objects;
 if view application fails, remove them and report data committed/view failed.
 Increment the UI/session browser revision after a successful import commit.
 
-- [ ] **Step 4: Implement cancel**
+- [x] **Step 4: Implement cancel**
 
 Discard staged session and clear UI state; assert project and scene objects unchanged.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Blender smoke tests confirm/cancel and commits XYZ/Cube. Commit UI, explicit
 registration, architecture guide and tests together.
