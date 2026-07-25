@@ -31,6 +31,9 @@ publishes the Reader API handle only after Blender registration succeeds.
   built-in reader objects, and Reader API model class identities.
 - Preserve the original registration failure; append cleanup failures through
   `BaseException.add_note()`.
+- Preserve `ChemBlender/auto_load.py` CRLF bytes and keep the standard
+  commit-range `git diff --check` reproducible through a narrowly scoped
+  `.gitattributes` rule.
 - Keep the known 276-character Windows extraction-path failure as a known
   limit; a short-path pass does not resolve it.
 - Update the architecture guide in the implementation commit.
@@ -46,6 +49,7 @@ publishes the Reader API handle only after Blender registration succeeds.
 - Modify: `ChemBlender/runtime/reader_api_bridge.py`
 - Modify: `ChemBlender/__init__.py`
 - Modify: `ChemBlender/auto_load.py`
+- Modify: `.gitattributes`
 - Create: `tests/test_registration_contract.py`
 - Create: `tests/fixtures/registration/legacy-registration-inventory.json`
 - Modify: `tests/test_reader_api_bridge_contract.py`
@@ -64,7 +68,7 @@ publishes the Reader API handle only after Blender registration succeeds.
   `register_extension(package_root: str) -> None`, and
   `unregister_extension() -> None`.
 
-- [ ] **Step 1: Freeze the unmodified legacy Blender inventory**
+- [x] **Step 1: Freeze the unmodified legacy Blender inventory**
 
 Build the reviewed baseline with Blender 5.1.2, install it into an isolated
 repository, collect stable JSON for discovered modules, ordered Blender
@@ -73,7 +77,7 @@ Save the result as
 `tests/fixtures/registration/legacy-registration-inventory.json` with full
 baseline SHA and no temporary absolute paths or object addresses.
 
-- [ ] **Step 2: Write the failing registration contract**
+- [x] **Step 2: Write the failing registration contract**
 
 Create `tests/test_registration_contract.py`. Assert the new module is
 initially absent, the explicit roots exist and exclude pure core/Reader API,
@@ -94,7 +98,7 @@ Run:
 Expected: `FAIL` with `ModuleNotFoundError` for
 `ChemBlender.runtime.registration`.
 
-- [ ] **Step 3: Implement atomic explicit registration**
+- [x] **Step 3: Implement atomic explicit registration**
 
 Create `runtime.registration` with the inventory-proven
 `REGISTER_MODULE_NAMES`. Import each root using
@@ -104,7 +108,7 @@ module callbacks, publish the Reader API handle last, and store only owned
 state. On any failure, reverse only completed steps and append cleanup error
 types as exception notes.
 
-- [ ] **Step 4: Replace the ordinary recursive entry path**
+- [x] **Step 4: Replace the ordinary recursive entry path**
 
 Make root `register()` and `unregister()` lazy delegates to
 `runtime.registration`. Remove the recursive discovery/cache-clearing
@@ -112,7 +116,7 @@ production entry from `auto_load`; retain only the class dependency/toposort
 and safe register/unregister helpers used by the explicit root. Do not retain
 a second production registration path for old tests.
 
-- [ ] **Step 5: Preserve Reader API lifecycle and extend runtime smoke**
+- [x] **Step 5: Preserve Reader API lifecycle and extend runtime smoke**
 
 Verify ordinary disable/enable preserves the private registry, built-in
 descriptor and public model class identities; an external reader follows the
@@ -121,7 +125,7 @@ documented handle lifecycle; only the owned handle is removed. Extend
 assert one trajectory handler/handle, no duplicate class warning, no residue,
 and no optional stack or future UI imports.
 
-- [ ] **Step 6: Update architecture and run GREEN verification**
+- [x] **Step 6: Update architecture and run GREEN verification**
 
 Document the new registration owner, minimal root delegation, narrowed
 `auto_load`, persistent registry identity, and incremental future UI roots.
@@ -145,7 +149,7 @@ cycles, legacy/new inventory comparison, Reader API handle/registry checks,
 RDKit import, and optional-stack audit. Record the artificial long-path result
 as a known limit.
 
-- [ ] **Step 7: Review and commit**
+- [x] **Step 7: Review and commit**
 
 Obtain independent specification-compliance and code-quality reviews. Fix all
 Critical, Important, and task-related Minor findings; rerun full verification.
