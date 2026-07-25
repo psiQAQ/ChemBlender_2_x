@@ -298,19 +298,19 @@ Commit handlers, explicit registration, architecture guide and tests together.
 **Interfaces:**
 - Produces: `CHEMBLENDER_OT_open_workspace` and bundled WorkSpace datablock named `ChemBlender`.
 
-- [ ] **Step 1: Create the workspace asset in Blender 5.1.2**
+- [x] **Step 1: Create the workspace asset in Blender 5.1.2**
 
 The asset contains only the `ChemBlender` WorkSpace and required screens. Configure a central 3D View, a left browser-capable 3D View sidebar, right properties area and bottom text/graph area. Remove unrelated scenes/objects before saving.
 
-- [ ] **Step 2: Implement safe append**
+- [x] **Step 2: Implement safe append**
 
 Load the WorkSpace by exact name using `bpy.data.libraries.load(link=False)`. Reuse an existing compatible workspace. On failure, return CANCELLED with a diagnostic and leave the current workspace unchanged.
 
-- [ ] **Step 3: Test package and fallback**
+- [x] **Step 3: Test package and fallback**
 
 Smoke asserts the asset is in ZIP, opening switches workspace, repeated open does not duplicate, and a simulated missing asset does not break N-panel Quick Import.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Add the workspace module to explicit registration in this commit. Commit the
 binary asset, operator, registration change, package test and architecture
