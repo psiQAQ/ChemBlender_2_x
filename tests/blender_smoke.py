@@ -441,7 +441,13 @@ def assert_project_session_manager(module_key):
             conflicting_sidecar,
             blend_path=blend,
         )
-        assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        save_pre_handlers = bpy.app.handlers.save_pre
+        save_pre_index = save_pre_handlers.index(ui._save_pre_handler)
+        save_pre_handlers.pop(save_pre_index)
+        try:
+            assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        finally:
+            save_pre_handlers.insert(save_pre_index, ui._save_pre_handler)
         assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
         ui = importlib.import_module(f"{module_key}.ui.session")
         conflicted_scenes = tuple(bpy.data.scenes)
