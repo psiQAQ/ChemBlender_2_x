@@ -5,6 +5,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 from uuid import uuid4
+from unittest.mock import patch
 
 import numpy
 
@@ -37,6 +38,7 @@ from ChemBlender.reader_api import (
     ReaderManifestEntry,
     ReaderPluginManifest,
     ReaderPluginRegistry,
+    ProgressEvent,
     SniffMatch,
     SniffRequest,
     SniffResult,
@@ -177,7 +179,9 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
         source_path = self.root / "source.ext"
         source_path.write_bytes(b"external")
         request = self.request(source_path, override="external-reader")
-        source_id = request.sources[0].id
+        request_source_id = request.sources[0].id
+        source_id = uuid4()
+        self.assertNotEqual(source_id, request_source_id)
         content_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
         structure = Structure(
             id=uuid4(),
@@ -241,7 +245,7 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                 registry,
                 session,
                 canonical_parameters_by_source={
-                    source_id: {"encoding": "utf-8"}
+                    request_source_id: {"encoding": "utf-8"}
                 },
             )
             staged = session.result(preview.staged_batch_ids[0])
@@ -250,6 +254,23 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
             self.assertIs(staged.source_revisions[0], revision)
             self.assertEqual(preview.source_previews[0].source_id, source_id)
             self.assertEqual(staged.structures, (structure,))
+            project_session = create_session(temp_parent=self.root)
+            try:
+                committed = commit_import_preview(
+                    project_session,
+                    session,
+                    preview,
+                    ImportCommitDecisions(),
+                )
+                self.assertIn(source_id, committed.project.sources)
+                self.assertNotIn(
+                    request_source_id,
+                    committed.project.sources,
+                )
+            finally:
+                from ChemBlender.core import close_session
+
+                close_session(project_session)
 
             for invalid in (
                 replace(public, source_revisions=()),
@@ -267,7 +288,7 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                     registry,
                     invalid_session,
                     canonical_parameters_by_source={
-                        source_id: {"encoding": "utf-8"}
+                        request_source_id: {"encoding": "utf-8"}
                     },
                 )
                 invalid_batch = invalid_session.result(
@@ -342,6 +363,12 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                     ("preflight", 0, 3),
                     ("hash", 1, 3),
                     ("reader", 2, 3),
+                    ("reader.source_hash", 0, 1),
+                    ("reader.source_hash", 1, 1),
+                    ("reader.parse", 0, 1),
+                    ("reader.source_recheck", 0, 1),
+                    ("reader.source_recheck", 1, 1),
+                    ("reader.parse", 1, 1),
                     ("parse", 3, 3),
                 ]
             ),
@@ -362,6 +389,47 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                 self.session(),
                 is_cancelled=lambda: 1,
             )
+
+    def test_snapshot_cancellation_callback_preserves_host_boundaries(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        cases = (
+            (
+                OSError("snapshot cancellation failed"),
+                OSError,
+                "snapshot cancellation failed",
+            ),
+            (
+                RuntimeError("snapshot callback failed"),
+                RuntimeError,
+                "snapshot callback failed",
+            ),
+            (MemoryError("fatal snapshot failure"), MemoryError, "fatal"),
+            (1, TypeError, "is_cancelled must return bool"),
+            (True, ImportCancelled, "import preflight was cancelled"),
+        )
+        for callback_result, error_type, message in cases:
+            with self.subTest(error_type=error_type):
+                calls = 0
+                session = self.session()
+
+                def stateful_cancel():
+                    nonlocal calls
+                    calls += 1
+                    if calls == 1:
+                        return False
+                    if isinstance(callback_result, Exception):
+                        raise callback_result
+                    return callback_result
+
+                with self.assertRaisesRegex(error_type, message):
+                    preflight_reader_plugins(
+                        self.request(source),
+                        ReaderPluginRegistry(),
+                        session,
+                        is_cancelled=stateful_cancel,
+                    )
+                self.assertEqual(session.result_ids, ())
 
     def test_selection_unavailability_and_parse_failures_are_staged(self):
         source = self.root / "source.ext"
@@ -439,6 +507,36 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
         self.assertEqual(batch.structures, ())
         self.assertEqual(batch.diagnostics[0].field_path, "reader.source")
         self.assertIn("changed", batch.diagnostics[0].message)
+
+    def test_hash_and_sniff_prefix_share_one_source_open(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        source = source.resolve()
+        source_opens = 0
+        opens_at_sniff = []
+        original_open = Path.open
+
+        class ObservingPlugin(_Plugin):
+            def sniff(self, request):
+                opens_at_sniff.append(source_opens)
+                return super().sniff(request)
+
+        def tracking_open(path, *args, **kwargs):
+            nonlocal source_opens
+            if path == source and args and args[0] == "rb":
+                source_opens += 1
+            return original_open(path, *args, **kwargs)
+
+        with patch.object(Path, "open", tracking_open):
+            preflight_reader_plugins(
+                self.request(source),
+                ReaderPluginRegistry((
+                    ObservingPlugin(_descriptor(), PublicImportBatch()),
+                )),
+                self.session(),
+            )
+
+        self.assertEqual(opens_at_sniff, [1])
 
     def test_source_deleted_after_sniff_is_staged_as_changed(self):
         source = self.root / "source.ext"
@@ -522,6 +620,75 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                 is_cancelled=one_shot_cancel,
             )
         self.assertEqual(session.result_ids, ())
+
+    def test_host_callback_failures_escape_plugin_failure_staging(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+
+        class ProgressPlugin(_Plugin):
+            def parse(self, request):
+                request.progress(ProgressEvent("decode", 1, 2))
+                return PublicImportBatch()
+
+        progress_registry = ReaderPluginRegistry((
+            ProgressPlugin(_descriptor(), PublicImportBatch()),
+        ))
+        progress_session = self.session()
+
+        def failing_progress(stage, completed, total):
+            if stage == "reader.decode":
+                raise OSError("host progress failed")
+
+        with self.assertRaisesRegex(OSError, "host progress failed"):
+            preflight_reader_plugins(
+                self.request(source),
+                progress_registry,
+                progress_session,
+                progress=failing_progress,
+            )
+        self.assertIsNone(progress_registry._last_parse_exception_type)
+        self.assertEqual(progress_session.result_ids, ())
+
+        class CancellationPlugin(_Plugin):
+            parsing = False
+
+            def parse(self, request):
+                self.parsing = True
+                request.is_cancelled()
+                return PublicImportBatch()
+
+        callback_cases = (
+            (
+                RuntimeError("host cancellation failed"),
+                RuntimeError,
+                "host cancellation failed",
+            ),
+            (1, TypeError, "is_cancelled must return bool"),
+        )
+        for callback_result, error_type, message in callback_cases:
+            with self.subTest(error_type=error_type):
+                plugin = CancellationPlugin(
+                    _descriptor(), PublicImportBatch()
+                )
+                registry = ReaderPluginRegistry((plugin,))
+                session = self.session()
+
+                def stateful_cancel():
+                    if not plugin.parsing:
+                        return False
+                    if isinstance(callback_result, Exception):
+                        raise callback_result
+                    return callback_result
+
+                with self.assertRaisesRegex(error_type, message):
+                    preflight_reader_plugins(
+                        self.request(source),
+                        registry,
+                        session,
+                        is_cancelled=stateful_cancel,
+                    )
+                self.assertIsNone(registry._last_parse_exception_type)
+                self.assertEqual(session.result_ids, ())
 
     def test_forged_builtin_metadata_cannot_bypass_external_identity(self):
         source = self.root / "source.ext"

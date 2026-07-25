@@ -7,8 +7,7 @@ from ..core.import_pipeline.preflight import (
     ImportCancelled,
     _check_cancelled,
     _failure_message,
-    _hash_file,
-    _read_prefix,
+    _hash_and_prefix_file,
     _register_preview,
     _unavailable_content_hash,
 )
@@ -21,7 +20,7 @@ from ..core.readers import (
     ReaderNotFoundError,
 )
 from .builtin_bridge import internal_batch_from_public
-from .protocol import ParseRequest, SniffRequest
+from .protocol import ParseRequest, ProgressEvent, SniffRequest
 from .public_model import PublicImportBatch
 from .registry import ReaderPluginRegistry, _BuiltinReaderPlugin
 from .version import READER_API_VERSION
@@ -58,6 +57,11 @@ class _BridgeCancelled(BaseException):
     pass
 
 
+class _BridgeHostCallbackError(BaseException):
+    def __init__(self, error):
+        self.error = error
+
+
 def _parameters(request, values):
     if values is None:
         return {}
@@ -88,14 +92,44 @@ def _parameters(request, values):
 
 def _cancel_callback(is_cancelled):
     def check():
-        cancelled = is_cancelled()
-        if type(cancelled) is not bool:
-            raise TypeError("is_cancelled must return bool")
-        if cancelled:
-            raise _BridgeCancelled
+        _check_bridge_cancelled(is_cancelled)
         return False
 
     return check
+
+
+def _check_bridge_cancelled(is_cancelled):
+    try:
+        cancelled = is_cancelled()
+    except (KeyboardInterrupt, SystemExit, MemoryError):
+        raise
+    except Exception as error:
+        raise _BridgeHostCallbackError(error) from error
+    if type(cancelled) is not bool:
+        raise _BridgeHostCallbackError(
+            TypeError("is_cancelled must return bool")
+        )
+    if cancelled:
+        raise _BridgeCancelled
+
+
+def _plugin_progress(progress, is_cancelled):
+    def report(event):
+        if type(event) is not ProgressEvent:
+            raise TypeError("reader progress must be a ProgressEvent")
+        try:
+            progress(
+                f"reader.{event.stage}",
+                event.completed,
+                event.total,
+            )
+        except (KeyboardInterrupt, SystemExit, MemoryError):
+            raise
+        except Exception as error:
+            raise _BridgeHostCallbackError(error) from error
+        _check_bridge_cancelled(is_cancelled)
+
+    return report
 
 
 def _has_scientific_entities(batch):
@@ -148,8 +182,15 @@ def preflight_reader_plugins(
         override = overrides.get(source.id)
         parameters = parameters_by_source.get(source.id, ())
         try:
-            content_hash, byte_size = _hash_file(source.path, is_cancelled)
-            prefix = _read_prefix(source.path, is_cancelled)
+            content_hash, byte_size, prefix = _hash_and_prefix_file(
+                source.path, _cancel_callback(is_cancelled)
+            )
+        except _BridgeCancelled:
+            raise ImportCancelled(
+                "import preflight was cancelled"
+            ) from None
+        except _BridgeHostCallbackError as error:
+            raise error.error from None
         except (KeyboardInterrupt, SystemExit, MemoryError, ImportCancelled):
             raise
         except OSError as error:
@@ -257,7 +298,7 @@ def preflight_reader_plugins(
                         request.validation_mode.value,
                         dict(parameters),
                         session.artifact_root,
-                        lambda event: None,
+                        _plugin_progress(progress, is_cancelled),
                         _cancel_callback(is_cancelled),
                     ),
                 )
@@ -265,6 +306,8 @@ def preflight_reader_plugins(
                 raise ImportCancelled(
                     "import preflight was cancelled"
                 ) from None
+            except _BridgeHostCallbackError as error:
+                raise error.error from None
             except ValueError as error:
                 if (
                     str(error) != "source_path must be a file"
@@ -339,6 +382,7 @@ def preflight_reader_plugins(
             session,
             batch_ids,
             diagnostic_ids,
+            source_id=internal.sources[0].id,
         ))
         progress("parse", completed + 3, total)
         _check_cancelled(is_cancelled)

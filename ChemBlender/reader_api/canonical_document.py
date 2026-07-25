@@ -233,11 +233,19 @@ class _Encoder:
             pairs.sort(key=lambda pair: _canonical_json(pair[0]))
             return {"$dict": pairs}
         if value_type is _model.ArrayData:
+            try:
+                values = value.values
+                dims = value.dims
+                unit = value.unit
+            except AttributeError as error:
+                raise CanonicalDocumentIntegrityError(
+                    "incomplete public model value"
+                ) from error
             return {
                 "$type": "ArrayData",
-                "values": self.array(value.values),
-                "dims": self.encode(value.dims),
-                "unit": value.unit,
+                "values": self.array(values),
+                "dims": self.encode(dims),
+                "unit": unit,
             }
         tag = _TYPE_TAGS.get(value_type)
         if tag is None:

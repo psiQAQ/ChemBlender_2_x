@@ -298,6 +298,21 @@ class ReaderCanonicalDocumentTests(unittest.TestCase):
             ):
                 reader_api.public_batch_document(batch, temporary)
 
+    def test_incomplete_nested_array_is_a_stable_integrity_error(self):
+        batch = sample_batch()
+        object.__setattr__(
+            batch.datasets[2],
+            "data",
+            object.__new__(reader_api.ArrayData),
+        )
+
+        with TemporaryDirectory() as temporary:
+            with self.assertRaisesRegex(
+                reader_api.CanonicalDocumentIntegrityError,
+                "^incomplete public model value$",
+            ):
+                reader_api.public_batch_document(batch, temporary)
+
     def test_bundle_uses_content_addressed_safe_artifacts(self):
         with TemporaryDirectory() as temporary:
             root = Path(temporary) / "result"

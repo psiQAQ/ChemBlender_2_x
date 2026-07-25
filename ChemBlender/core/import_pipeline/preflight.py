@@ -37,9 +37,10 @@ def _check_cancelled(is_cancelled):
         raise ImportCancelled("import preflight was cancelled")
 
 
-def _hash_file(path, is_cancelled):
+def _source_snapshot(path, is_cancelled):
     digest = hashlib.sha256()
     byte_size = 0
+    prefix = bytearray()
     _check_cancelled(is_cancelled)
     with path.open("rb") as stream:
         while True:
@@ -49,16 +50,19 @@ def _hash_file(path, is_cancelled):
                 break
             digest.update(chunk)
             byte_size += len(chunk)
+            if len(prefix) < HASH_CHUNK_BYTES:
+                prefix.extend(chunk[: HASH_CHUNK_BYTES - len(prefix)])
     _check_cancelled(is_cancelled)
-    return digest.hexdigest(), byte_size
+    return digest.hexdigest(), byte_size, bytes(prefix)
 
 
-def _read_prefix(path, is_cancelled):
-    _check_cancelled(is_cancelled)
-    with path.open("rb") as stream:
-        prefix = stream.read(HASH_CHUNK_BYTES)
-    _check_cancelled(is_cancelled)
-    return prefix
+def _hash_file(path, is_cancelled):
+    content_hash, byte_size, _ = _source_snapshot(path, is_cancelled)
+    return content_hash, byte_size
+
+
+def _hash_and_prefix_file(path, is_cancelled):
+    return _source_snapshot(path, is_cancelled)
 
 
 def _unavailable_content_hash(source_id):
@@ -338,6 +342,8 @@ def _register_preview(
     session,
     batch_ids,
     diagnostic_ids,
+    *,
+    source_id=None,
 ):
     batch_id = uuid4()
     session.register_result(batch_id, batch)
@@ -345,7 +351,7 @@ def _register_preview(
     source_diagnostic_ids = tuple(item.id for item in batch.diagnostics)
     diagnostic_ids.extend(source_diagnostic_ids)
     return SourcePreview(
-        source_id=source.id,
+        source_id=source.id if source_id is None else source_id,
         source_path=source.path,
         selected_reader_id=reader_id,
         content_hash=content_hash,

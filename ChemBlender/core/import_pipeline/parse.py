@@ -225,13 +225,12 @@ def _validate_supplied_identity(
         for entity in getattr(batch, name)
     )
     expected = {
-        "source id": (source_record.id, source.id),
         "source display name": (
             source_record.display_name,
             source.path.name,
         ),
         "source kind": (source_record.source_kind, "local_file"),
-        "revision source id": (revision.source_id, source.id),
+        "revision source id": (revision.source_id, source_record.id),
         "content hash": (revision.content_hash, content_hash),
         "byte size": (revision.byte_size, byte_size),
         "locator": (revision.locator, str(source.path)),
