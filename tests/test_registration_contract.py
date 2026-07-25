@@ -23,6 +23,7 @@ EXPECTED_ROOTS = (
     ".ui.properties",
     ".ui.quick_import",
     ".ui.import_preview",
+    ".ui.project_browser.panel",
 )
 
 

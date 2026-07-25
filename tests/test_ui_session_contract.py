@@ -105,6 +105,67 @@ class UiSessionContractTests(unittest.TestCase):
         self.assertEqual(self.scene._properties, {})
         self.assertTrue(session.temporary_root.is_dir())
 
+    def test_new_and_replacement_sessions_notify_browser_once(self):
+        notifications = []
+        self.ui.register_session_mutation(
+            lambda session: notifications.append(session.id)
+        )
+
+        first = self.ui.get_scene_session(self.scene)
+        replacement = self.ui.new_scene_session(self.scene)
+
+        self.assertEqual(notifications, [first.id, replacement.id])
+
+    def test_load_notifies_browser_only_after_successful_project_adoption(self):
+        notifications = []
+        self.ui.register_session_mutation(
+            lambda session: notifications.append(session.id)
+        )
+        self.ui.get_scene_session(self.scene)
+        notifications.clear()
+        connected = SimpleNamespace(
+            status=ProjectServiceStatus.CONNECTED,
+            message="",
+        )
+
+        with patch.object(
+            self.ui,
+            "verify_project_session",
+            return_value=connected,
+        ):
+            self.ui._load_post_handler(None)
+
+        restored = self.ui.get_scene_session(self.scene)
+        self.assertEqual(notifications, [restored.id])
+
+    def test_failed_or_invalid_load_does_not_advance_browser_revision(self):
+        notifications = []
+        self.ui.register_session_mutation(
+            lambda session: notifications.append(session.id)
+        )
+        self.ui.get_scene_session(self.scene)
+        notifications.clear()
+
+        with patch.object(
+            self.ui,
+            "verify_project_session",
+            side_effect=RuntimeError("verification failed"),
+        ):
+            self.ui._load_post_handler(None)
+        self.assertEqual(notifications, [])
+
+        invalid = SimpleNamespace(
+            status=ProjectServiceStatus.INVALID,
+            message="invalid",
+        )
+        with patch.object(
+            self.ui,
+            "verify_project_session",
+            return_value=invalid,
+        ):
+            self.ui._load_post_handler(None)
+        self.assertEqual(notifications, [])
+
     def test_registry_does_not_retain_discarded_scene(self):
         transient = Scene()
         session = self.ui.get_scene_session(transient)

@@ -9,7 +9,12 @@ from ..core.import_pipeline.preview import ImportPreview
 from ..core.import_pipeline.request import ValidationMode
 from ..core.import_pipeline.staging import StagedImportSession
 from ..core.session import ProjectSession
-from .session import register_session_cleanup, unregister_session_cleanup
+from .session import (
+    register_session_cleanup,
+    register_session_mutation,
+    unregister_session_cleanup,
+    unregister_session_mutation,
+)
 
 
 VALIDATION_MODE_ITEMS = tuple(
@@ -47,6 +52,13 @@ def _require_session(session):
 def get_quick_import_state(session):
     _require_session(session)
     return _QUICK_IMPORT_STATES.setdefault(session.id, QuickImportUIState())
+
+
+def advance_browser_revision(session):
+    """Invalidate presentation projections after a successful UI mutation."""
+    state = get_quick_import_state(session)
+    state.browser_revision += 1
+    return state.browser_revision
 
 
 def create_quick_import_staging(session):
@@ -182,17 +194,17 @@ def _remove_handler(callbacks, handler):
         callbacks.remove(handler)
 
 
-def _scene_property_identity():
+def _scene_property_identity(name=_SCENE_PROPERTY_NAME):
     scene_type = bpy.types.Scene
     rna = getattr(scene_type, "bl_rna", None)
     properties = getattr(rna, "properties", None)
     rna_property = None
     if properties is not None:
         try:
-            rna_property = properties.get(_SCENE_PROPERTY_NAME)
+            rna_property = properties.get(name)
         except (AttributeError, KeyError, TypeError):
             try:
-                rna_property = properties[_SCENE_PROPERTY_NAME]
+                rna_property = properties[name]
             except (KeyError, TypeError):
                 pass
     if rna_property is not None:
@@ -201,10 +213,10 @@ def _scene_property_identity():
             pointer = as_pointer()
             if type(pointer) is int and pointer:
                 return ("rna", pointer)
-    if hasattr(scene_type, _SCENE_PROPERTY_NAME):
+    if hasattr(scene_type, name):
         return (
             "python",
-            getattr(scene_type, _SCENE_PROPERTY_NAME),
+            getattr(scene_type, name),
         )
     return None
 
@@ -263,10 +275,12 @@ def register():
     bpy.app.handlers.persistent(_load_pre_handler)
     _register_handler(bpy.app.handlers.load_pre, _load_pre_handler)
     register_session_cleanup(clear_quick_import_state)
+    register_session_mutation(advance_browser_revision)
 
 
 def unregister():
     _remove_handler(bpy.app.handlers.load_pre, _load_pre_handler)
     _clear_all_states()
     unregister_session_cleanup(clear_quick_import_state)
+    unregister_session_mutation(advance_browser_revision)
     _unregister_scene_property()

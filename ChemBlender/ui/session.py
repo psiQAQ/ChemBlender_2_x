@@ -11,6 +11,7 @@ RECOVERY_MARKER = ".chemblender-session-recovery"
 _SCENE_SESSIONS = {}
 _RECOVERY_SESSIONS = {}
 _SESSION_CLEANUP_CALLBACKS = []
+_SESSION_MUTATION_CALLBACKS = []
 
 
 @dataclass(slots=True)
@@ -65,6 +66,24 @@ def unregister_session_cleanup(callback):
     """Remove a previously registered UI cleanup callback."""
     while callback in _SESSION_CLEANUP_CALLBACKS:
         _SESSION_CLEANUP_CALLBACKS.remove(callback)
+
+
+def register_session_mutation(callback):
+    """Register a small UI projection invalidator."""
+    if not callable(callback):
+        raise TypeError("callback must be callable")
+    if callback not in _SESSION_MUTATION_CALLBACKS:
+        _SESSION_MUTATION_CALLBACKS.append(callback)
+
+
+def unregister_session_mutation(callback):
+    while callback in _SESSION_MUTATION_CALLBACKS:
+        _SESSION_MUTATION_CALLBACKS.remove(callback)
+
+
+def _notify_session_mutation(session):
+    for callback in tuple(_SESSION_MUTATION_CALLBACKS):
+        callback(session)
 
 
 def _run_session_cleanups(session):
@@ -136,7 +155,7 @@ def _release_weak_scene(key, scene_ref):
         _remember_recovery(entry, error)
 
 
-def _new_entry(scene):
+def _new_entry(scene, *, notify=True):
     key = _scene_key(scene)
     session = create_session(temp_parent=Path(_bpy().app.tempdir))
     if key[0] == "weak":
@@ -148,6 +167,8 @@ def _new_entry(scene):
     else:
         entry = _SessionEntry(session, scene=scene)
     _SCENE_SESSIONS[key] = entry
+    if notify:
+        _notify_session_mutation(session)
     return entry
 
 
@@ -229,7 +250,7 @@ def _load_post_handler(_dummy):
     bpy = _bpy()
     cleanup_failure = _drain_scene_sessions()
     for scene in tuple(bpy.data.scenes):
-        session = _new_entry(scene).session
+        session = _new_entry(scene, notify=False).session
         verification_failure = None
         try:
             result = verify_project_session(
@@ -241,6 +262,11 @@ def _load_post_handler(_dummy):
             verification_failure = error
         else:
             _record_result(scene, result)
+            if result.status.value == "connected":
+                try:
+                    _notify_session_mutation(session)
+                except BaseException as error:
+                    verification_failure = error
         _key, entry = _entry_for(scene)
         if verification_failure is not None:
             if cleanup_failure is not None:

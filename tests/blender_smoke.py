@@ -8,7 +8,7 @@ from dataclasses import replace
 from importlib.metadata import version
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from uuid import uuid4
+from uuid import UUID, uuid4
 from zipfile import ZipFile
 
 import bpy
@@ -174,6 +174,7 @@ def assert_registration_isolation(module_key, before_install_modules):
     assert f"{module_key}.ui.properties" in sys.modules
     assert f"{module_key}.ui.quick_import" in sys.modules
     assert f"{module_key}.ui.import_preview" in sys.modules
+    assert f"{module_key}.ui.project_browser.panel" in sys.modules
     newly_loaded = set(sys.modules) - before_install_modules
     assert not any(
         name == prefix or name.startswith(prefix + ".")
@@ -319,6 +320,8 @@ def assert_project_session_manager(module_key):
         restored = ui.get_scene_session(bpy.context.scene)
         assert ui.get_scene_session_status(bpy.context.scene)[0] == "connected"
         assert restored.sidecar_path == blend.with_suffix(".cbq")
+        properties = importlib.import_module(f"{module_key}.ui.properties")
+        assert properties.get_quick_import_state(restored).browser_revision == 1
 
         restored.mark_dirty("edit")
         verified_sidecar = restored.sidecar_path
@@ -415,12 +418,67 @@ def assert_quick_import(module_key, repository_root):
         if obj.get("cb_scene_preset_id") == "structure_publication"
     ]
     assert structure_views
+    browser = importlib.import_module(
+        f"{module_key}.ui.project_browser.panel"
+    )
+    browser_settings = bpy.context.scene.chemblender_project_browser
+    browser_settings.mode = "by_source"
+    rows_before_cube = browser.refresh_project_browser(bpy.context.scene)
+    assert any(row.kind == "structure" for row in rows_before_cube)
 
     state = stage(repository_root / "tests/fixtures/cube/sheared.cube")
     structure_count = len(session.project.structures)
     assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
     assert len(session.project.structures) == structure_count + 1
     assert state.preview is None
+    browser_settings.mode = "by_data"
+    rows_after_cube = browser.refresh_project_browser(bpy.context.scene)
+    assert browser_settings.quality_filter == "all"
+    assert rows_after_cube is not rows_before_cube
+    assert any(row.kind == "structure" for row in rows_after_cube)
+    assert any(row.kind == "grid3d" for row in rows_after_cube)
+    grid_label = next(
+        row.label for row in rows_after_cube if row.kind == "grid3d"
+    )
+    browser_settings.search = grid_label.swapcase()
+    searched = browser.refresh_project_browser(bpy.context.scene)
+    assert any(row.kind == "grid3d" for row in searched)
+    browser_settings.search = ""
+    browser.refresh_project_browser(bpy.context.scene)
+    selected_index = next(
+        index
+        for index, row in enumerate(browser_settings.rows)
+        if row.entity_id
+    )
+    browser_settings.selected_index = selected_index
+    assert session.active_entity_id == UUID(
+        browser_settings.rows[selected_index].entity_id
+    )
+    selected_entity_id = session.active_entity_id
+    grid = next(
+        dataset
+        for dataset in session.project.datasets.values()
+        if type(dataset).__name__ == "Grid3D"
+    )
+    original_values = grid.data.values
+
+    class ArraySentinel:
+        def __array__(self, *_args, **_kwargs):
+            raise AssertionError("Project Browser materialized Grid3D")
+
+        def __iter__(self):
+            raise AssertionError("Project Browser traversed Grid3D")
+
+    object.__setattr__(grid.data, "values", ArraySentinel())
+    try:
+        for mode in ("by_source", "by_data"):
+            browser_settings.mode = mode
+            browser_settings.search = "density"
+            assert browser.refresh_project_browser(bpy.context.scene)
+            assert session.active_entity_id == selected_entity_id
+    finally:
+        object.__setattr__(grid.data, "values", original_values)
+        browser_settings.search = ""
 
     with TemporaryDirectory() as directory:
         directory = Path(directory)
@@ -1492,6 +1550,7 @@ expected_inventory = {
 expected_inventory["module_callbacks"] += [
     {"module": ".ui.session", "register": True, "unregister": True},
     {"module": ".ui.properties", "register": True, "unregister": True},
+    {"module": ".ui.project_browser.panel", "register": True, "unregister": True},
 ]
 expected_inventory["registered_classes"] += [
     {
@@ -1529,6 +1588,30 @@ expected_inventory["registered_classes"] += [
         "name": "CHEMBLENDER_OT_quick_import",
         "id": "chemblender.quick_import",
         "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_PG_project_browser",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_PG_project_browser_row",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_PT_project_browser",
+        "id": "CHEMBLENDER_PT_PROJECT_BROWSER",
+        "base": "Panel",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_UL_project_rows",
+        "id": None,
+        "base": "UIList",
     },
 ]
 expected_inventory["registered_classes"].sort(
