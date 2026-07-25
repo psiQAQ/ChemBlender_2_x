@@ -8,6 +8,7 @@ from dataclasses import replace
 from importlib.metadata import version
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 from zipfile import ZipFile
 
@@ -102,11 +103,13 @@ def owned_registration_classes(module_key):
         f"{module_key}.runtime.registration"
     )
     extension = importlib.import_module(f"{module_key}.extension")
+    file_handlers = importlib.import_module(f"{module_key}.ui.file_handlers")
     return tuple(
         dict.fromkeys(
             (
                 *registration._registered_classes,
                 *(menu_type for menu_type, _ in extension.cat_list),
+                *file_handlers._REGISTERED_CLASSES,
             )
         )
     )
@@ -118,7 +121,10 @@ def registration_inventory(module_key):
     )
     auto_load = importlib.import_module(f"{module_key}.auto_load")
     classes = owned_registration_classes(module_key)
-    base_types = auto_load.get_register_base_types()
+    base_types = {
+        *auto_load.get_register_base_types(),
+        bpy.types.FileHandler,
+    }
     registered_classes = []
     for cls in classes:
         bases = sorted(
@@ -175,6 +181,7 @@ def assert_registration_isolation(module_key, before_install_modules):
     assert f"{module_key}.ui.quick_import" in sys.modules
     assert f"{module_key}.ui.import_preview" in sys.modules
     assert f"{module_key}.ui.project_browser.panel" in sys.modules
+    assert f"{module_key}.ui.file_handlers" in sys.modules
     newly_loaded = set(sys.modules) - before_install_modules
     assert not any(
         name == prefix or name.startswith(prefix + ".")
@@ -216,6 +223,7 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_quick_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_confirm_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_cancel_import")
+    assert_file_handlers(module_key)
     properties = importlib.import_module(f"{module_key}.ui.properties")
     property_identity = properties._scene_property_identity()
     assert property_identity is not None
@@ -273,6 +281,58 @@ def assert_reader_api_handle(module_key):
         )
         == 1
     )
+
+
+def assert_file_handlers(module_key):
+    file_handlers = importlib.import_module(
+        f"{module_key}.ui.file_handlers"
+    )
+    bridge = importlib.import_module(
+        f"{module_key}.runtime.reader_api_bridge"
+    )
+    expected_extensions = ";".join(
+        sorted(
+            {
+                extension.lower()
+                for descriptor in bridge.get_reader_plugin_registry().descriptors
+                if descriptor.plugin_id == "chemblender.builtin"
+                and descriptor.availability.available
+                for extension in descriptor.extensions
+            }
+        )
+    )
+    window, sidebar = file_handlers.FILE_HANDLER_CLASSES
+    assert len(file_handlers.FILE_HANDLER_CLASSES) == 2
+    for cls in file_handlers.FILE_HANDLER_CLASSES:
+        assert cls.is_registered
+        assert getattr(bpy.types, cls.__name__) is cls
+        assert cls.bl_import_operator == "chemblender.quick_import"
+        assert cls.bl_file_extensions == expected_extensions
+    assert window.poll_drop(
+        SimpleNamespace(
+            area=SimpleNamespace(type="VIEW_3D"),
+            region=SimpleNamespace(type="WINDOW"),
+        )
+    ) is True
+    assert sidebar.poll_drop(
+        SimpleNamespace(
+            area=SimpleNamespace(type="VIEW_3D"),
+            region=SimpleNamespace(type="UI"),
+        )
+    ) is True
+    for cls in file_handlers.FILE_HANDLER_CLASSES:
+        assert cls.poll_drop(
+            SimpleNamespace(
+                area=SimpleNamespace(type="FILE_BROWSER"),
+                region=SimpleNamespace(type="WINDOW"),
+            )
+        ) is False
+        assert cls.poll_drop(
+            SimpleNamespace(
+                area=SimpleNamespace(type="OUTLINER"),
+                region=SimpleNamespace(type="WINDOW"),
+            )
+        ) is False
 
 
 def assert_project_session_manager(module_key):
@@ -1551,8 +1611,21 @@ expected_inventory["module_callbacks"] += [
     {"module": ".ui.session", "register": True, "unregister": True},
     {"module": ".ui.properties", "register": True, "unregister": True},
     {"module": ".ui.project_browser.panel", "register": True, "unregister": True},
+    {"module": ".ui.file_handlers", "register": True, "unregister": True},
 ]
 expected_inventory["registered_classes"] += [
+    {
+        "module": ".ui.file_handlers",
+        "name": "CHEMBLENDER_FH_project_browser",
+        "id": "CHEMBLENDER_FH_project_browser",
+        "base": "FileHandler",
+    },
+    {
+        "module": ".ui.file_handlers",
+        "name": "CHEMBLENDER_FH_view_3d_window",
+        "id": "CHEMBLENDER_FH_view_3d_window",
+        "base": "FileHandler",
+    },
     {
         "module": ".ui.import_preview",
         "name": "CHEMBLENDER_OT_cancel_import",
