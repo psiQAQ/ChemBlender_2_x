@@ -230,7 +230,7 @@ registration, architecture guide and tests together.
 **Interfaces:**
 - Produces: `BrowserMode`, `BrowserRow`, `build_browser_rows()`, `CHEMBLENDER_UL_project_rows`, Project Browser panel.
 
-- [ ] **Step 1: Write pure row projection tests**
+- [x] **Step 1: Write pure row projection tests**
 
 Build a project with source, structure, grid and diagnostic, plus a UI/session
 `ViewRecord`. `ViewRecord` is presentation state only: it is never a
@@ -238,18 +238,18 @@ Build a project with source, structure, grid and diagnostic, plus a UI/session
 order, depth, parent IDs, quality and search filtering. Assert no array values
 are accessed by using a sentinel lazy array that raises on `__array__`.
 
-- [ ] **Step 2: Implement cached rows**
+- [x] **Step 2: Implement cached rows**
 
 Cache key includes a monotonic UI/session browser revision, mode, search and
 filters. Increment and invalidate the revision on project replacement, import
 commit, view creation/deletion, relink and reopen. Row display never traverses
 large arrays.
 
-- [ ] **Step 3: Implement UIList**
+- [x] **Step 3: Implement UIList**
 
 Rows show indentation, icon, quality marker, name and view count. Selection writes active entity ID to session state and updates the properties panel.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Add the Project Browser registration root in this commit. Pure model tests and
 Blender row selection smoke pass. Commit UI, explicit registration,
