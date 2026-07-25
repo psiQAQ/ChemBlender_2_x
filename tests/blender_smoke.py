@@ -15,6 +15,19 @@ import bpy
 
 
 READER_API_HANDLE_KEY = "chemblender.reader_api.v0"
+OPTIONAL_STACK_PREFIXES = (
+    "ase",
+    "cclib",
+    "gbasis",
+    "gemmi",
+    "iodata",
+    "phonopy",
+    "pymatgen",
+    "pyprocar",
+    "qcengine",
+    "pyscf",
+    "scipy",
+)
 
 
 def assert_package_contents(package):
@@ -38,34 +51,148 @@ def assert_package_contents(package):
     ]
 
 
-def assert_enabled(module_key):
-    assert module_key in bpy.context.preferences.addons
-    assert f"{module_key}.core.cube" in sys.modules
-    assert f"{module_key}.core.mol_v2000" in sys.modules
-    assert f"{module_key}.core.xyz" in sys.modules
-    assert f"{module_key}.core.wavefunction_grid" in sys.modules
-    assert f"{module_key}.core.wavefunction_observables" in sys.modules
-    assert f"{module_key}.core.recipe" in sys.modules
-    assert f"{module_key}.core.critic2_adapter" in sys.modules
-    assert "gbasis" not in sys.modules
-    assert "ase" not in sys.modules
-    assert "pymatgen" not in sys.modules
-    assert f"{module_key}.grid_volume" in sys.modules
-    assert f"{module_key}.dataset_view" in sys.modules
-    assert f"{module_key}.trajectory_view" in sys.modules
-    assert f"{module_key}.worker_client" in sys.modules
-    assert f"{module_key}.topology_view" in sys.modules
-    assert f"{module_key}.scene_preset_view" in sys.modules
-    assert f"{module_key}.spectrum_plot" in sys.modules
-    assert f"{module_key}.surface_view" in sys.modules
-    assert f"{module_key}.core.worker_protocol" in sys.modules
-    assert "worker" not in sys.modules
-    core = importlib.import_module(f"{module_key}.core")
-    assert set(core.builtin_recipes()) == {
-        "tddft_uvvis",
-        "vibrational_ir_spectrum",
-        "wavefunction_molecular_orbital_grid",
+def relative_name(name, package_root):
+    if name == package_root:
+        return "."
+    prefix = package_root + "."
+    return "." + name[len(prefix) :] if name.startswith(prefix) else name
+
+
+def owned_handlers(package_root):
+    entries = []
+    for owner_name in dir(bpy.app.handlers):
+        callbacks = getattr(bpy.app.handlers, owner_name)
+        if not isinstance(callbacks, list):
+            continue
+        for callback in callbacks:
+            module_name = getattr(callback, "__module__", "")
+            if module_name.startswith(package_root + "."):
+                entries.append(
+                    {
+                        "owner": owner_name,
+                        "module": relative_name(module_name, package_root),
+                        "name": callback.__name__,
+                    }
+                )
+    return sorted(entries, key=lambda item: tuple(item.values()))
+
+
+def owned_menu_callbacks(package_root):
+    entries = []
+    for owner_name in dir(bpy.types):
+        owner = getattr(bpy.types, owner_name)
+        if not isinstance(owner, type) or not issubclass(owner, bpy.types.Menu):
+            continue
+        draw = getattr(owner, "draw", None)
+        for callback in getattr(draw, "_draw_funcs", ()):
+            module_name = getattr(callback, "__module__", "")
+            if module_name.startswith(package_root + "."):
+                entries.append(
+                    {
+                        "owner": owner_name,
+                        "module": relative_name(module_name, package_root),
+                        "name": callback.__name__,
+                    }
+                )
+    return sorted(entries, key=lambda item: tuple(item.values()))
+
+
+def owned_registration_classes(module_key):
+    registration = importlib.import_module(
+        f"{module_key}.runtime.registration"
+    )
+    extension = importlib.import_module(f"{module_key}.extension")
+    return tuple(
+        dict.fromkeys(
+            (
+                *registration._registered_classes,
+                *(menu_type for menu_type, _ in extension.cat_list),
+            )
+        )
+    )
+
+
+def registration_inventory(module_key):
+    registration = importlib.import_module(
+        f"{module_key}.runtime.registration"
+    )
+    auto_load = importlib.import_module(f"{module_key}.auto_load")
+    classes = owned_registration_classes(module_key)
+    base_types = auto_load.get_register_base_types()
+    registered_classes = []
+    for cls in classes:
+        bases = sorted(
+            base.__name__ for base in base_types if issubclass(cls, base)
+        )
+        registered_classes.append(
+            {
+                "module": relative_name(cls.__module__, module_key),
+                "name": cls.__name__,
+                "id": getattr(cls, "bl_idname", None) or None,
+                "base": bases[0],
+            }
+        )
+    module_callbacks = []
+    for name in registration.REGISTER_MODULE_NAMES:
+        module = importlib.import_module(name, module_key)
+        has_register = callable(getattr(module, "register", None))
+        has_unregister = callable(getattr(module, "unregister", None))
+        if has_register or has_unregister:
+            module_callbacks.append(
+                {
+                    "module": name,
+                    "register": has_register,
+                    "unregister": has_unregister,
+                }
+            )
+    return {
+        "registered_classes": sorted(
+            registered_classes,
+            key=lambda item: (
+                item["module"],
+                item["name"],
+                item["id"] or "",
+                item["base"],
+            ),
+        ),
+        "module_callbacks": module_callbacks,
+        "handlers": owned_handlers(module_key),
+        "menu_callbacks": owned_menu_callbacks(module_key),
     }
+
+
+def assert_registration_isolation(module_key, before_install_modules):
+    registration = importlib.import_module(
+        f"{module_key}.runtime.registration"
+    )
+    assert tuple(
+        name
+        for name in registration.REGISTER_MODULE_NAMES
+        if f"{module_key}{name}" in sys.modules
+    ) == registration.REGISTER_MODULE_NAMES
+    assert not any(
+        name == f"{module_key}.ui" or name.startswith(f"{module_key}.ui.")
+        for name in sys.modules
+    )
+    newly_loaded = set(sys.modules) - before_install_modules
+    assert not any(
+        name == prefix or name.startswith(prefix + ".")
+        for name in newly_loaded
+        for prefix in OPTIONAL_STACK_PREFIXES
+    ), sorted(
+        name
+        for name in newly_loaded
+        if any(
+            name == prefix or name.startswith(prefix + ".")
+            for prefix in OPTIONAL_STACK_PREFIXES
+        )
+    )
+
+
+def assert_enabled(module_key, before_install_modules):
+    assert module_key in bpy.context.preferences.addons
+    assert f"{module_key}.trajectory_view" in sys.modules
+    assert_registration_isolation(module_key, before_install_modules)
     assert sum(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
         for handler in bpy.app.handlers.frame_change_post
@@ -76,7 +203,7 @@ def assert_enabled(module_key):
     assert_reader_api_handle(module_key)
 
 
-def assert_disabled(module_key):
+def assert_disabled(module_key, owned_classes):
     assert module_key not in bpy.context.preferences.addons
     assert not hasattr(bpy.types.Object, "cif_original")
     assert not hasattr(bpy.types.Object, "cif_current")
@@ -85,6 +212,11 @@ def assert_disabled(module_key):
     assert not any(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
         for handler in bpy.app.handlers.frame_change_post
+    )
+    assert not owned_menu_callbacks(module_key)
+    assert all(
+        not getattr(cls, "is_registered", False)
+        for cls in owned_classes
     )
 
 
@@ -1097,6 +1229,7 @@ keep_enabled = arguments[1:] == ["--keep-enabled"]
 package = Path(arguments[0]).resolve()
 assert package.is_file(), package
 assert_package_contents(package)
+before_install_modules = set(sys.modules)
 
 result = bpy.ops.extensions.package_install_files(
     filepath=str(package),
@@ -1106,8 +1239,117 @@ result = bpy.ops.extensions.package_install_files(
 )
 assert result == {"FINISHED"}, result
 
-module_key = "bl_ext.user_default.chemblender"
-assert_enabled(module_key)
+module_keys = sorted(
+    addon.module
+    for addon in bpy.context.preferences.addons
+    if addon.module.rsplit(".", 1)[-1] == "chemblender"
+)
+assert len(module_keys) == 1, module_keys
+module_key = module_keys[0]
+assert_enabled(module_key, before_install_modules)
+legacy_inventory = json.loads(
+    (
+        package.parent.parent
+        / "tests/fixtures/registration/legacy-registration-inventory.json"
+    ).read_text(encoding="utf-8")
+)
+assert legacy_inventory["installed_package_name"] == module_key
+stable_inventory = registration_inventory(module_key)
+assert stable_inventory == {
+    name: legacy_inventory[name]
+    for name in (
+        "registered_classes",
+        "module_callbacks",
+        "handlers",
+        "menu_callbacks",
+    )
+}
+
+bridge = importlib.import_module(f"{module_key}.runtime.reader_api_bridge")
+reader_api = importlib.import_module(f"{module_key}.reader_api")
+registry_module = importlib.import_module(f"{module_key}.reader_api.registry")
+registry = bridge.get_reader_plugin_registry()
+builtin_identities = tuple(
+    id(item) for item in registry.descriptors
+)
+model_identities = (
+    reader_api.PublicImportBatch,
+    reader_api.PublicReaderDescriptor,
+    reader_api.ReaderPluginManifest,
+)
+builtin = registry_module.builtin_reader_plugins()[0]
+descriptor = replace(
+    builtin.descriptor,
+    plugin_id="org.example.blender_lifecycle",
+    reader_id="external.blender_lifecycle",
+)
+entry = replace(
+    builtin.manifest.readers[0],
+    reader_id=descriptor.reader_id,
+    reader_version=descriptor.reader_version,
+    extensions=descriptor.extensions,
+    capabilities=tuple(
+        sorted(
+            name
+            for name, support in descriptor.capabilities.items()
+            if support is reader_api.CapabilitySupport.SUPPORTED
+        )
+    ),
+)
+external = replace(
+    builtin,
+    descriptor=descriptor,
+    manifest=replace(
+        builtin.manifest,
+        plugin_id=descriptor.plugin_id,
+        readers=(entry,),
+    ),
+)
+bpy.app.driver_namespace[READER_API_HANDLE_KEY].register_callback(external)
+
+for _ in range(2):
+    owned_classes = owned_registration_classes(module_key)
+    old_handle = bpy.app.driver_namespace[READER_API_HANDLE_KEY]
+    assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}
+    assert_disabled(module_key, owned_classes)
+    assert bridge.get_reader_plugin_registry() is registry
+    assert next(
+        item
+        for item in registry.descriptors
+        if item.reader_id == descriptor.reader_id
+    ) is descriptor
+    assert bpy.ops.preferences.addon_enable(module=module_key) == {"FINISHED"}
+    assert_enabled(module_key, before_install_modules)
+    assert registration_inventory(module_key) == stable_inventory
+    assert bpy.app.driver_namespace[READER_API_HANDLE_KEY] is not old_handle
+    assert bridge.get_reader_plugin_registry() is registry
+    assert tuple(
+        id(item)
+        for item in registry.descriptors
+        if item.plugin_id == "chemblender.builtin"
+    ) == builtin_identities
+    current_reader_api = importlib.import_module(f"{module_key}.reader_api")
+    assert (
+        current_reader_api.PublicImportBatch,
+        current_reader_api.PublicReaderDescriptor,
+        current_reader_api.ReaderPluginManifest,
+    ) == model_identities
+    assert next(
+        item
+        for item in registry.descriptors
+        if item.reader_id == descriptor.reader_id
+    ) is descriptor
+
+bpy.app.driver_namespace[READER_API_HANDLE_KEY].unregister_callback(
+    external.manifest
+)
+
+core = importlib.import_module(f"{module_key}.core")
+assert set(core.builtin_recipes()) == {
+    "tddft_uvvis",
+    "vibrational_ir_spectrum",
+    "wavefunction_molecular_orbital_grid",
+}
 assert_installed_blend_libraries(module_key)
 assert_grid_volume_adapter(module_key)
 assert_vibration_view_adapter(module_key)
@@ -1120,12 +1362,6 @@ assert_fermi_surface_view(module_key)
 assert_project_sidecar_link(module_key)
 assert_topology_view(module_key, package.parent.parent)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
-
-for _ in range(2):
-    assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}
-    assert_disabled(module_key)
-    assert bpy.ops.preferences.addon_enable(module=module_key) == {"FINISHED"}
-    assert_enabled(module_key)
 
 import rdkit
 from rdkit import Chem
@@ -1140,6 +1376,7 @@ assert AllChem.EmbedMolecule(molecule, randomSeed=0xC0FFEE) == 0
 if keep_enabled:
     print("PASS: ChemBlender extension installed and enabled")
 else:
+    owned_classes = owned_registration_classes(module_key)
     assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}
-    assert_disabled(module_key)
+    assert_disabled(module_key, owned_classes)
     print("PASS: ChemBlender extension lifecycle")

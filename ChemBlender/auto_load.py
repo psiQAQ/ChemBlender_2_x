@@ -1,106 +1,22 @@
 import bpy
 import typing
 import inspect
-import pkgutil
-import importlib
-import sys
-from pathlib import Path
 
 blender_version = bpy.app.version
-modules = []
-ordered_classes = []
-EXCLUDED_SUBMODULE_DIRS = {"deps", "wheels", "scripts", ".venv", "venv", "__pycache__"}
-
-
-def clear_submodule_cache(package_name):
-    if not package_name:
-        return
-
-    prefix = package_name + "."
-    for name in list(sys.modules):
-        if name == __name__:
-            continue
-        if name.startswith(prefix):
-            del sys.modules[name]
-
-
-def init():
-    global modules
-    global ordered_classes
-
-    clear_submodule_cache(__package__)
-    modules = get_all_submodules(Path(__file__).parent)
-    ordered_classes = get_ordered_classes_to_register(modules)
-
-
-def register():
-    for cls in ordered_classes:
-        _safe_register_class(cls)
-
-    for module in modules:
-        if module.__name__ == __name__:
-            continue
-        if hasattr(module, "register"):
-            module.register()
-
-
-def unregister():
-    global modules
-    global ordered_classes
-
-    if modules is None:
-        modules = []
-    if ordered_classes is None:
-        ordered_classes = []
-
-    for module in reversed(modules):
-        if module.__name__ == __name__:
-            continue
-        if hasattr(module, "unregister"):
-            module.unregister()
-
-    for cls in reversed(ordered_classes):
-        _safe_unregister_class(cls)
-
-    modules = []
-    ordered_classes = []
 
 
 def _safe_register_class(cls):
-    try:
-        bpy.utils.register_class(cls)
-        return True
-    except ValueError:
+    if cls.is_registered:
         return False
+    bpy.utils.register_class(cls)
+    return True
 
 
 def _safe_unregister_class(cls):
-    try:
-        bpy.utils.unregister_class(cls)
-        return True
-    except (ValueError, RuntimeError):
+    if not cls.is_registered:
         return False
-
-
-def get_all_submodules(directory):
-    return list(iter_submodules(directory, __package__))
-
-
-def iter_submodules(path, package_name):
-    for name in sorted(iter_submodule_names(path)):
-        yield importlib.import_module("." + name, package_name)
-
-
-def iter_submodule_names(path, root=""):
-    for _, module_name, is_package in pkgutil.iter_modules([str(path)]):
-        if module_name in EXCLUDED_SUBMODULE_DIRS:
-            continue
-        if is_package:
-            sub_path = path / module_name
-            sub_root = root + module_name + "."
-            yield from iter_submodule_names(sub_path, sub_root)
-        else:
-            yield root + module_name
+    bpy.utils.unregister_class(cls)
+    return True
 
 
 def get_ordered_classes_to_register(modules):
@@ -211,7 +127,13 @@ def toposort(deps_dict):
             raise RuntimeError("Cyclic or unresolved registration dependencies detected")
 
         deps_dict = {value: deps_dict[value] - sorted_values for value in unsorted}
-        sorted_chunk.sort(key=lambda cls: getattr(cls, "bl_order", 0))
+        sorted_chunk.sort(
+            key=lambda cls: (
+                getattr(cls, "bl_order", 0),
+                cls.__module__,
+                cls.__qualname__,
+            )
+        )
         sorted_list.extend(sorted_chunk)
 
     return sorted_list

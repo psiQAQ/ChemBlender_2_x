@@ -1,3 +1,4 @@
+import ast
 import re
 import subprocess
 import tomllib
@@ -50,15 +51,45 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotIn("pip install", source)
         self.assertNotIn('"-m", "pip"', source)
 
-    def test_extension_uses_minimal_autoload_entrypoint(self):
+    def test_extension_uses_one_explicit_registration_entrypoint(self):
         init_source = (EXTENSION / "__init__.py").read_text(encoding="utf-8")
-        auto_load_source = (EXTENSION / "auto_load.py").read_text(encoding="utf-8")
+        auto_load_source = (
+            EXTENSION / "auto_load.py"
+        ).read_text(encoding="utf-8")
+        registration_source = (
+            EXTENSION / "runtime" / "registration.py"
+        ).read_text(encoding="utf-8")
+        auto_load_functions = {
+            node.name
+            for node in ast.parse(auto_load_source).body
+            if isinstance(node, ast.FunctionDef)
+        }
         self.assertNotIn("bl_info", init_source)
-        self.assertIn("auto_load.init()", init_source)
-        self.assertIn("auto_load.register()", init_source)
-        self.assertIn("auto_load.unregister()", init_source)
-        self.assertIn('"wheels"', auto_load_source)
-        self.assertIn("clear_submodule_cache", auto_load_source)
+        self.assertIn("register_extension(__package__)", init_source)
+        self.assertIn("unregister_extension()", init_source)
+        self.assertIn("REGISTER_MODULE_NAMES", registration_source)
+        self.assertNotIn("ChemBlender", registration_source)
+        self.assertNotIn("bl_ext.user_default", registration_source)
+        self.assertNotIn("pkgutil", auto_load_source)
+        self.assertFalse(
+            {
+                "init",
+                "register",
+                "unregister",
+                "clear_submodule_cache",
+                "get_all_submodules",
+                "iter_submodules",
+                "iter_submodule_names",
+            }
+            & auto_load_functions
+        )
+        self.assertTrue(
+            {
+                "get_ordered_classes_to_register",
+                "_safe_register_class",
+                "_safe_unregister_class",
+            }.issubset(auto_load_functions)
+        )
 
     def test_package_workflow_pins_and_verifies_release_inputs(self):
         workflow = (ROOT / ".github" / "workflows" / "extension-package.yml").read_text(

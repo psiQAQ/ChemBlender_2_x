@@ -2,10 +2,10 @@ import ast
 import importlib
 import sys
 import unittest
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 from types import ModuleType
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -142,114 +142,128 @@ class ReaderAPIBridgeContractTests(unittest.TestCase):
             )
         )
 
-    def test_root_lifecycle_publishes_after_registration_and_removes_first(self):
+    def test_root_lifecycle_lazy_delegates_to_registration_owner(self):
         package = importlib.import_module("ChemBlender")
         events = []
-        handle = object()
-        auto_load = ModuleType("ChemBlender.auto_load")
-        auto_load.init = lambda: events.append("init")
-        auto_load.register = lambda: events.append("auto_register")
-        auto_load.unregister = lambda: events.append("auto_unregister")
-        bridge = ModuleType("ChemBlender.runtime.reader_api_bridge")
-        bridge.register_reader_api_handle = (
-            lambda package_root: events.append(("publish", package_root))
-            or handle
+        registration = ModuleType("ChemBlender.runtime.registration")
+        registration.register_extension = (
+            lambda package_root: events.append(("register", package_root))
         )
-        bridge.remove_reader_api_handle = (
-            lambda value: events.append(("remove", value)) or True
+        registration.unregister_extension = (
+            lambda: events.append(("unregister",))
         )
 
         with patch.dict(
             sys.modules,
             {
-                "ChemBlender.auto_load": auto_load,
-                "ChemBlender.runtime.reader_api_bridge": bridge,
+                "ChemBlender.runtime.registration": registration,
             },
         ):
-            with patch.object(package, "auto_load", auto_load, create=True):
-                for _ in range(2):
-                    package.register()
-                    package.unregister()
+            for _ in range(2):
+                package.register()
+                package.unregister()
 
         self.assertEqual(
             events,
             [
-                "init",
-                "auto_register",
-                ("publish", "ChemBlender"),
-                ("remove", handle),
-                "auto_unregister",
-                "init",
-                "auto_register",
-                ("publish", "ChemBlender"),
-                ("remove", handle),
-                "auto_unregister",
+                ("register", "ChemBlender"),
+                ("unregister",),
+                ("register", "ChemBlender"),
+                ("unregister",),
             ],
         )
 
-    def test_root_registration_rolls_back_when_publication_fails(self):
-        package = importlib.import_module("ChemBlender")
-        events = []
-        auto_load = ModuleType("ChemBlender.auto_load")
-        auto_load.init = lambda: events.append("init")
-        auto_load.register = lambda: events.append("auto_register")
-        auto_load.unregister = lambda: events.append("rollback")
-        bridge = ModuleType("ChemBlender.runtime.reader_api_bridge")
-
-        def fail(package_root):
-            events.append(("publish", package_root))
-            raise RuntimeError("occupied")
-
-        bridge.register_reader_api_handle = fail
-        bridge.remove_reader_api_handle = Mock()
-
-        with patch.dict(
-            sys.modules,
-            {
-                "ChemBlender.auto_load": auto_load,
-                "ChemBlender.runtime.reader_api_bridge": bridge,
-            },
-        ):
-            with patch.object(package, "auto_load", auto_load, create=True):
-                with self.assertRaises(RuntimeError):
-                    package.register()
-
-        self.assertEqual(
-            events,
-            ["init", "auto_register", ("publish", "ChemBlender"), "rollback"],
+    def test_registry_builtins_models_and_external_reader_survive_handle_cycle(self):
+        bridge = self.bridge()
+        registry = bridge.get_reader_plugin_registry()
+        from ChemBlender.reader_api import (
+            CapabilitySupport,
+            PublicImportBatch,
+            ReaderPluginManifest,
         )
-        bridge.remove_reader_api_handle.assert_not_called()
+        from ChemBlender.reader_api.registry import builtin_reader_plugins
 
-    def test_root_rollback_preserves_publication_error_when_cleanup_fails(self):
-        package = importlib.import_module("ChemBlender")
-        publication_error = RuntimeError("occupied")
-        auto_load = ModuleType("ChemBlender.auto_load")
-        auto_load.init = Mock()
-        auto_load.register = Mock()
-        auto_load.unregister = Mock(side_effect=ValueError("cleanup failed"))
-        bridge = ModuleType("ChemBlender.runtime.reader_api_bridge")
-        bridge.register_reader_api_handle = Mock(
-            side_effect=publication_error
+        builtin = builtin_reader_plugins()[0]
+        descriptor = replace(
+            builtin.descriptor,
+            plugin_id="org.example.lifecycle",
+            reader_id="external.lifecycle",
         )
-        bridge.remove_reader_api_handle = Mock()
-
-        with patch.dict(
-            sys.modules,
-            {
-                "ChemBlender.auto_load": auto_load,
-                "ChemBlender.runtime.reader_api_bridge": bridge,
-            },
-        ):
-            with patch.object(package, "auto_load", auto_load, create=True):
-                with self.assertRaises(RuntimeError) as raised:
-                    package.register()
-
-        self.assertIs(raised.exception, publication_error)
-        self.assertTrue(
-            any("ValueError" in note for note in publication_error.__notes__)
+        entry = replace(
+            builtin.manifest.readers[0],
+            reader_id=descriptor.reader_id,
+            reader_version=descriptor.reader_version,
+            extensions=descriptor.extensions,
+            capabilities=tuple(
+                sorted(
+                    name
+                    for name, support in descriptor.capabilities.items()
+                    if support is CapabilitySupport.SUPPORTED
+                )
+            ),
         )
-        self.assertIsNone(package._reader_api_handle)
-        auto_load.unregister.assert_called_once_with()
+        external = replace(
+            builtin,
+            descriptor=descriptor,
+            manifest=replace(
+                builtin.manifest,
+                plugin_id=descriptor.plugin_id,
+                readers=(entry,),
+            ),
+        )
+        builtin_identities = tuple(
+            id(item) for item in registry.descriptors
+        )
+        namespace = {}
+        first = bridge.register_reader_api_handle(
+            "synthetic_repository.chemblender",
+            namespace=namespace,
+        )
+        try:
+            first.register_callback(external)
+            self.assertTrue(
+                bridge.remove_reader_api_handle(first, namespace=namespace)
+            )
+            second = bridge.register_reader_api_handle(
+                "synthetic_repository.chemblender",
+                namespace=namespace,
+            )
+            self.assertIsNot(second, first)
+            self.assertIs(bridge.get_reader_plugin_registry(), registry)
+            self.assertEqual(
+                tuple(
+                    id(item)
+                    for item in registry.descriptors
+                    if item.plugin_id == "chemblender.builtin"
+                ),
+                builtin_identities,
+            )
+            external_descriptor = next(
+                item
+                for item in registry.descriptors
+                if item.reader_id == "external.lifecycle"
+            )
+            self.assertIs(external_descriptor, descriptor)
+            self.assertIs(
+                importlib.import_module(
+                    "ChemBlender.reader_api"
+                ).PublicImportBatch,
+                PublicImportBatch,
+            )
+            self.assertIs(
+                importlib.import_module(
+                    "ChemBlender.reader_api"
+                ).ReaderPluginManifest,
+                ReaderPluginManifest,
+            )
+            second.unregister_callback(external.manifest)
+        finally:
+            current = namespace.get(bridge.READER_API_HANDLE_KEY)
+            if current is not None:
+                bridge.remove_reader_api_handle(
+                    current,
+                    namespace=namespace,
+                )
 
 
 if __name__ == "__main__":
