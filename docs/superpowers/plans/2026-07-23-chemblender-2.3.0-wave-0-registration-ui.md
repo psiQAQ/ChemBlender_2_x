@@ -39,14 +39,14 @@
 **Interfaces:**
 - Produces: `REGISTER_MODULE_NAMES`, `register_extension()` and `unregister_extension()`.
 
-- [ ] **Step 1: Record the live Blender registration inventory**
+- [x] **Step 1: Record the live Blender registration inventory**
 
 In Blender 5.1.2, record the currently registered modules, classes, handlers and
 menus before changing registration. This live inventory is the baseline for
 detecting omissions and duplicates; do not infer it from recursive source
 discovery alone.
 
-- [ ] **Step 2: Write static registration and handle-lifecycle tests**
+- [x] **Step 2: Write static registration and handle-lifecycle tests**
 
 Parse `registration.py` and assert the explicit module tuple contains only
 registration roots that exist in Task 1 and excludes prefixes
@@ -55,7 +55,7 @@ the Reader API handle is published only after all explicit modules register,
 removed before reverse-order module unregistration, and rolled back without
 masking the original registration exception.
 
-- [ ] **Step 3: Implement explicit module imports**
+- [x] **Step 3: Implement explicit module imports**
 
 ```python
 REGISTER_MODULE_NAMES = (
@@ -72,7 +72,7 @@ REGISTER_MODULE_NAMES = (
 
 Import each name with `importlib.import_module(relative_name, package_root)` so installed keys such as `bl_ext.user_default.chemblender` work without hardcoding the repository namespace. Continue using class dependency topological sort on only these modules.
 
-- [ ] **Step 4: Change extension entrypoint and preserve registry ownership**
+- [x] **Step 4: Change extension entrypoint and preserve registry ownership**
 
 `ChemBlender.__init__.register()` calls `register_extension()`, which registers
 the explicit modules before publishing the Reader API handle. Unregister removes
@@ -84,12 +84,12 @@ registry, its built-ins or registered model classes. Preserve import-cache
 cleanup only where a full extension update/reload requires it; external readers
 then re-register through the newly published handle.
 
-- [ ] **Step 5: Expand Blender smoke**
+- [x] **Step 5: Expand Blender smoke**
 
 Assert optional stacks absent and a representative pure module not needed by
 registration remains unloaded until used. Assert one trajectory handler.
 
-- [ ] **Step 6: Verify and commit**
+- [x] **Step 6: Verify and commit**
 
 Run static and documentation-contract tests, validate/build and two lifecycle
 cycles. Compare the final Blender inventory with the Step 1 baseline, allowing
