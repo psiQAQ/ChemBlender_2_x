@@ -203,6 +203,37 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(session.dirty_reasons, frozenset({"import"}))
         self.assertEqual(session.link_status, ProjectServiceStatus.INVALID.value)
 
+    def test_clean_session_link_failure_marks_project_link_for_retry(self):
+        class FailingScene(dict):
+            failed = False
+
+            def __setitem__(self, key, value):
+                if key == MANIFEST_HASH_KEY and not self.failed:
+                    self.failed = True
+                    raise RuntimeError("new scene link write failed")
+                super().__setitem__(key, value)
+
+        session = self.create_session()
+        session.mark_dirty("import")
+        blend = self.root / "retry.blend"
+        linked = {}
+        self.save_for_scenes(
+            session=session,
+            scenes=(linked,),
+            blend_path=blend,
+        )
+        self.assertFalse(session.dirty)
+
+        with self.assertRaisesRegex(RuntimeError, "new scene link write failed"):
+            self.save_for_scenes(
+                session=session,
+                scenes=(linked, FailingScene()),
+                blend_path=blend,
+            )
+
+        self.assertEqual(session.dirty_reasons, frozenset({"project_link"}))
+        self.assertEqual(session.link_status, ProjectServiceStatus.INVALID.value)
+
     def test_verify_identical_scene_links_adopts_project_once(self):
         sidecar = self.root / "identical.cbq"
         stored = QCProject(id=PROJECT_ID, schema_version="0.2")

@@ -523,6 +523,40 @@ class UiSessionContractTests(unittest.TestCase):
         self.assertEqual(status, "error")
         self.assertEqual(message, "scene link write failed")
 
+    def test_clean_session_retries_failed_new_scene_link_on_next_save(self):
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "retry-scene.blend"
+        )
+        session = self.ui.get_scene_session(self.scene)
+        session.mark_dirty("import")
+        self.ui._save_pre_handler(None)
+        self.assertFalse(session.dirty)
+
+        second_scene = FailingScene()
+        second_scene.fail_next_link_write = True
+        self.fake_bpy.data.scenes.append(second_scene)
+        self.ui._save_pre_handler(None)
+
+        self.assertEqual(session.dirty_reasons, frozenset({"project_link"}))
+        self.assertEqual(session.link_status, "invalid")
+        self.assertEqual(
+            self.ui.get_scene_session_status(second_scene),
+            ("error", "scene link write failed"),
+        )
+
+        self.ui._save_pre_handler(None)
+
+        self.assertFalse(session.dirty)
+        self.assertEqual(session.link_status, "connected")
+        self.assertEqual(
+            {key: second_scene[key] for key in LINK_KEYS},
+            {key: self.scene[key] for key in LINK_KEYS},
+        )
+        self.assertEqual(
+            self.ui.get_scene_session_status(second_scene),
+            ("connected", ""),
+        )
+
     def test_close_dirty_session_writes_recovery_marker_and_retains_root(self):
         session = self.ui.get_scene_session(self.scene)
         session.mark_dirty("import")

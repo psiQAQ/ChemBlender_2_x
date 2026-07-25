@@ -32,7 +32,10 @@ from ..core.import_pipeline.transaction import (
     ImportCommitDecisions,
     commit_import_preview,
 )
-from ..scene_preset_view import apply_scene_preset
+from ..scene_preset_view import (
+    _remove_objects as _remove_scene_preset_objects,
+    apply_scene_preset,
+)
 from ..runtime.reader_api_bridge import get_reader_plugin_registry
 from .default_views import describe_default_view, plan_default_view
 from .properties import (
@@ -670,18 +673,6 @@ def _committed_default_view_plans(commit_result, rows):
     return tuple(selected)
 
 
-def _remove_objects(objects):
-    data_blocks = []
-    for obj in reversed(objects):
-        data = getattr(obj, "data", None)
-        bpy.data.objects.remove(obj, do_unlink=True)
-        if data is not None:
-            data_blocks.append(data)
-    for data in data_blocks:
-        if data.users == 0:
-            bpy.data.batch_remove(ids=(data,))
-
-
 def _finish_committed_import(
     project_session,
     state,
@@ -724,7 +715,7 @@ def _finish_committed_import(
                 )
             )
     except Exception:
-        _remove_objects(created)
+        _remove_scene_preset_objects(created)
         created.clear()
         view_failed = True
     if discard_staging:

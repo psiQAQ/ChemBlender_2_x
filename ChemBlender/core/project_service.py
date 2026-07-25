@@ -209,7 +209,14 @@ def save_project_session_for_scenes(*, session, scenes, blend_path):
             blend,
         )
     destination = blend.resolve().with_suffix(".cbq")
-    published = solidify_session(session, destination)
+    was_clean = not session.dirty
+    try:
+        published = solidify_session(session, destination)
+    except Exception:
+        if was_clean:
+            session.mark_dirty("project_link")
+        session.link_status = ProjectServiceStatus.INVALID.value
+        raise
     try:
         links, values = _verified_link_values(session, destination, blend)
         _write_scene_links(scenes, values, links)
@@ -217,10 +224,14 @@ def save_project_session_for_scenes(*, session, scenes, blend_path):
         result = _error_result(error, destination, session.project)
         session.sidecar_path = published.path
         session.link_status = result.status.value
+        if was_clean:
+            session.mark_dirty("project_link")
         return result
     except Exception:
         session.sidecar_path = published.path
         session.link_status = ProjectServiceStatus.INVALID.value
+        if was_clean:
+            session.mark_dirty("project_link")
         raise
     session.link_status = ProjectServiceStatus.CONNECTED.value
     session.mark_clean()

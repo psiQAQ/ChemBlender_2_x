@@ -1250,7 +1250,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             state,
             registry,
         )
-        created = SimpleNamespace(type="VOLUME", data=None)
+        created = SimpleNamespace(type="VOLUME", data=None, modifiers=())
         calls = 0
         presets = []
 
@@ -1277,6 +1277,63 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             self.fake_bpy.data.objects.removed,
             [(created, True)],
         )
+        self.assertEqual(state.browser_revision, 1)
+        self.assertIsNone(state.preview)
+
+    def test_view_failure_uses_surface_cleanup_for_prior_surface_objects(self):
+        registry, state = self.stage(
+            "tests/fixtures/cube/sheared.cube",
+            "tests/fixtures/xyz/water.xyz",
+        )
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+        surface = SimpleNamespace(
+            type="VOLUME",
+            data=SimpleNamespace(users=0),
+            modifiers=({"cbq_contract": "isosurface_v1"},),
+        )
+        property_surface = SimpleNamespace(
+            type="VOLUME",
+            data=SimpleNamespace(users=0),
+            modifiers=({"cbq_contract": "property_surface_v1"},),
+        )
+        ordinary = SimpleNamespace(type="MESH", data=None, modifiers=())
+        calls = 0
+
+        def fail_second(_plan, *_args, **_kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return (surface, property_surface, ordinary)
+            raise RuntimeError("simulated later view failure")
+
+        scene_preset_view = importlib.import_module(
+            "ChemBlender.scene_preset_view"
+        )
+        cleaned_surfaces = []
+        with patch.object(
+            scene_preset_view,
+            "remove_surface_object",
+            side_effect=cleaned_surfaces.append,
+        ):
+            result = self.module.commit_project_import(
+                self.session,
+                state,
+                rows,
+                collection=object(),
+                apply_view=fail_second,
+            )
+
+        self.assertEqual(result.status, "data committed; view failed")
+        self.assertEqual(cleaned_surfaces, [property_surface, surface])
+        self.assertEqual(
+            self.fake_bpy.data.objects.removed,
+            [(ordinary, True)],
+        )
+        self.assertGreaterEqual(len(self.session.project.structures), 2)
         self.assertEqual(state.browser_revision, 1)
         self.assertIsNone(state.preview)
 
