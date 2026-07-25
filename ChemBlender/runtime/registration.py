@@ -17,6 +17,7 @@ REGISTER_MODULE_NAMES: tuple[str, ...] = (
     ".ui.import_preview",
     ".ui.project_browser.panel",
     ".ui.file_handlers",
+    ".ui.workspace",
 )
 
 _package_root = None

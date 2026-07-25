@@ -37,6 +37,7 @@ def assert_package_contents(package):
         "LICENSE",
         "Chem_Nodes.blend",
         "Chem_Nodes_En.blend",
+        "assets/Chem_Workspace.blend",
         "wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl",
     }
     forbidden_prefixes = ("scripts/", "tests/", "worker/", "__pycache__/")
@@ -182,6 +183,7 @@ def assert_registration_isolation(module_key, before_install_modules):
     assert f"{module_key}.ui.import_preview" in sys.modules
     assert f"{module_key}.ui.project_browser.panel" in sys.modules
     assert f"{module_key}.ui.file_handlers" in sys.modules
+    assert f"{module_key}.ui.workspace" in sys.modules
     newly_loaded = set(sys.modules) - before_install_modules
     assert not any(
         name == prefix or name.startswith(prefix + ".")
@@ -221,6 +223,7 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types.Scene, "my_tool")
     assert hasattr(bpy.types.Scene, "chemblender_quick_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_quick_import")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_open_workspace")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_confirm_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_cancel_import")
     assert_file_handlers(module_key)
@@ -577,6 +580,86 @@ def assert_quick_import(module_key, repository_root):
             == "data committed; view failed"
         )
         assert state.preview is None
+
+
+def assert_optional_workspace(module_key):
+    workspace_module = importlib.import_module(
+        f"{module_key}.ui.workspace"
+    )
+    asset = workspace_module.workspace_asset_path()
+    assert asset == (
+        Path(workspace_module.__file__).resolve().parents[1]
+        / "assets"
+        / "Chem_Workspace.blend"
+    )
+    assert asset.is_file()
+    with bpy.data.libraries.load(str(asset), link=False) as (
+        data_from,
+        _data_to,
+    ):
+        assert list(data_from.workspaces) == ["ChemBlender"]
+        for field in (
+            "scenes",
+            "objects",
+            "collections",
+            "meshes",
+            "materials",
+            "images",
+            "texts",
+            "node_groups",
+        ):
+            assert list(getattr(data_from, field)) == [], field
+
+    window = bpy.context.window
+    if window is None or bpy.app.background:
+        before_workspaces = tuple(bpy.data.workspaces)
+        before_screens = tuple(bpy.data.screens)
+        with bpy.data.libraries.load(str(asset), link=False) as (
+            _data_from,
+            data_to,
+        ):
+            data_to.workspaces = ["ChemBlender"]
+        appended = data_to.workspaces[0]
+        assert workspace_module.workspace_is_compatible(appended)
+        workspace_module._remove_new_data(
+            before_workspaces,
+            before_screens,
+        )
+        return
+
+    original = window.workspace
+    before_count = len(bpy.data.workspaces)
+    assert bpy.ops.chemblender.open_workspace() == {"FINISHED"}
+    assert window.workspace.name == "ChemBlender"
+    assert workspace_module.workspace_is_compatible(window.workspace)
+    appended_count = len(bpy.data.workspaces)
+    assert appended_count == before_count + 1
+    assert bpy.ops.chemblender.open_workspace() == {"FINISHED"}
+    assert len(bpy.data.workspaces) == appended_count
+
+    window.workspace = original
+    appended = bpy.data.workspaces.get("ChemBlender")
+    bpy.data.batch_remove(ids=(appended, *tuple(appended.screens)))
+    real_path = workspace_module.workspace_asset_path
+    try:
+        workspace_module.workspace_asset_path = lambda: asset.with_name(
+            "missing-workspace.blend"
+        )
+        assert bpy.ops.chemblender.open_workspace() == {"CANCELLED"}
+    finally:
+        workspace_module.workspace_asset_path = real_path
+    assert window.workspace is original
+    assert bpy.data.workspaces.get("ChemBlender") is None
+    registration = importlib.import_module(
+        f"{module_key}.runtime.registration"
+    )
+    registered_names = {
+        cls.__name__
+        for cls in registration._registered_classes
+        if getattr(cls, "is_registered", False)
+    }
+    assert "CHEMBLENDER_PT_quick_import" in registered_names
+    assert "CHEMBLENDER_PT_project_browser" in registered_names
 
 
 def assert_installed_blend_libraries(module_key):
@@ -1612,6 +1695,7 @@ expected_inventory["module_callbacks"] += [
     {"module": ".ui.properties", "register": True, "unregister": True},
     {"module": ".ui.project_browser.panel", "register": True, "unregister": True},
     {"module": ".ui.file_handlers", "register": True, "unregister": True},
+    {"module": ".ui.workspace", "register": True, "unregister": True},
 ]
 expected_inventory["registered_classes"] += [
     {
@@ -1660,6 +1744,12 @@ expected_inventory["registered_classes"] += [
         "module": ".ui.quick_import",
         "name": "CHEMBLENDER_OT_quick_import",
         "id": "chemblender.quick_import",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.workspace",
+        "name": "CHEMBLENDER_OT_open_workspace",
+        "id": "chemblender.open_workspace",
         "base": "Operator",
     },
     {
@@ -1800,6 +1890,7 @@ assert_complex_phonon_trajectory(module_key)
 assert_fermi_surface_view(module_key)
 assert_project_sidecar_link(module_key)
 assert_quick_import(module_key, package.parent.parent)
+assert_optional_workspace(module_key)
 assert_project_session_manager(module_key)
 assert_topology_view(module_key, package.parent.parent)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)

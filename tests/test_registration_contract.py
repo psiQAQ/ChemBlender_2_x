@@ -25,6 +25,7 @@ EXPECTED_ROOTS = (
     ".ui.import_preview",
     ".ui.project_browser.panel",
     ".ui.file_handlers",
+    ".ui.workspace",
 )
 
 
