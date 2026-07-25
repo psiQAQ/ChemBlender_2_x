@@ -104,10 +104,18 @@ class QuickImportContractTests(unittest.TestCase):
             cls.__annotations__["files"].keywords["type"],
             _OperatorFileListElement,
         )
+        self.assertEqual(
+            cls.__annotations__["files"].keywords["options"],
+            {"SKIP_SAVE", "HIDDEN"},
+        )
         self.assertEqual(cls.__annotations__["directory"].kind, "string")
         self.assertEqual(
             cls.__annotations__["directory"].keywords["subtype"],
             "DIR_PATH",
+        )
+        self.assertEqual(
+            cls.__annotations__["directory"].keywords["options"],
+            {"SKIP_SAVE", "HIDDEN"},
         )
         validation = cls.__annotations__["validation_mode"]
         self.assertEqual(validation.kind, "enum")
@@ -144,7 +152,7 @@ class QuickImportContractTests(unittest.TestCase):
             ValidationMode.STRICT.value,
         )
 
-    def test_execute_stages_deterministic_preview_without_project_mutation(self):
+    def test_invoke_with_multiple_files_stages_without_file_selector(self):
         module = importlib.import_module(QUICK_IMPORT_MODULE)
         source_a = Path(self.temporary.name) / "a.xyz"
         source_b = Path(self.temporary.name) / "b.cube"
@@ -160,8 +168,12 @@ class QuickImportContractTests(unittest.TestCase):
         context = SimpleNamespace(
             scene=SimpleNamespace(
                 chemblender_quick_import=scene_settings,
-            )
+            ),
+            window_manager=SimpleNamespace(
+                fileselect_add=lambda value: selected.append(value)
+            ),
         )
+        selected = []
         operator = module.CHEMBLENDER_OT_quick_import()
         operator.directory = self.temporary.name
         operator.files = [
@@ -201,9 +213,10 @@ class QuickImportContractTests(unittest.TestCase):
             "preflight_reader_plugins",
             side_effect=preflight,
         ):
-            result = operator.execute(context)
+            result = operator.invoke(context, None)
 
         self.assertEqual(result, {"FINISHED"})
+        self.assertEqual(selected, [])
         self.assertEqual(
             tuple(source.path.name for source in captured["request"].sources),
             ("a.xyz", "b.cube"),
@@ -219,6 +232,82 @@ class QuickImportContractTests(unittest.TestCase):
         self.assertEqual(self.project_snapshot(project_session), before)
         self.assertIn("2", scene_settings.recent_summary)
         module.clear_quick_import_state(project_session)
+
+    def test_invoke_with_unknown_suffix_reaches_content_sniff(self):
+        source = Path(self.temporary.name) / "water.dropped"
+        source.write_text("1\nwater\nH 0 0 0\n", encoding="utf-8")
+        module, operator = self.operator_for(source)
+        project_session = create_session(temp_parent=Path(self.temporary.name))
+        selected = []
+        context = self.operator_context()
+        context.window_manager.fileselect_add = (
+            lambda value: selected.append(value)
+        )
+
+        with patch.object(
+            module,
+            "get_scene_session",
+            return_value=project_session,
+        ):
+            result = operator.invoke(context, None)
+
+        self.assertEqual(result, {"FINISHED"})
+        self.assertEqual(selected, [])
+        state = module.get_quick_import_state(project_session)
+        self.assertEqual(
+            state.preview.source_previews[0].selected_reader_id,
+            "xyz",
+        )
+        module.clear_quick_import_state(project_session)
+
+    def test_invoke_does_not_reuse_paths_from_a_prior_drop(self):
+        source = Path(self.temporary.name) / "water.xyz"
+        source.write_text("1\nwater\nH 0 0 0\n", encoding="utf-8")
+        module, operator = self.operator_for(source)
+        selected = []
+        context = self.operator_context()
+        context.window_manager.fileselect_add = (
+            lambda value: selected.append(value)
+        )
+
+        with patch.object(
+            operator,
+            "execute",
+            return_value={"FINISHED"},
+        ) as execute:
+            self.assertEqual(operator.invoke(context, None), {"FINISHED"})
+            self.assertEqual(operator.directory, "")
+            self.assertEqual(operator.files, [])
+            self.assertEqual(
+                operator.invoke(context, None),
+                {"RUNNING_MODAL"},
+            )
+
+        execute.assert_called_once_with(context)
+        self.assertEqual(selected, [operator])
+
+    def test_selected_paths_reject_unsafe_names_and_non_files(self):
+        module = importlib.import_module(QUICK_IMPORT_MODULE)
+        root = Path(self.temporary.name)
+        source = root / "water.xyz"
+        source.write_text("1\nwater\nH 0 0 0\n", encoding="utf-8")
+        (root / "folder").mkdir()
+
+        for name in ("../water.xyz", str(source), "folder"):
+            with self.subTest(name=name):
+                with self.assertRaises(ValueError):
+                    module._selected_paths(
+                        root,
+                        [SimpleNamespace(name=name)],
+                    )
+        with self.assertRaisesRegex(
+            ValueError,
+            "directory must be a directory",
+        ):
+            module._selected_paths(
+                source,
+                [SimpleNamespace(name=source.name)],
+            )
 
     @staticmethod
     def project_snapshot(session):

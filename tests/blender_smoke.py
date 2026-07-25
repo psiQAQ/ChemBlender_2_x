@@ -495,6 +495,7 @@ def assert_quick_import(module_key, repository_root):
         directory = sources[0].parent
         assert all(source.parent == directory for source in sources)
         result = bpy.ops.chemblender.quick_import(
+            "INVOKE_DEFAULT",
             directory=str(directory),
             files=[{"name": source.name} for source in sources],
             validation_mode="balanced",

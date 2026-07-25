@@ -155,8 +155,14 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
     bl_label = "Select Files"
     bl_description = "Stage scientific files for import preview"
 
-    files: CollectionProperty(type=bpy.types.OperatorFileListElement)
-    directory: StringProperty(subtype="DIR_PATH")
+    files: CollectionProperty(
+        type=bpy.types.OperatorFileListElement,
+        options={"SKIP_SAVE", "HIDDEN"},
+    )
+    directory: StringProperty(
+        subtype="DIR_PATH",
+        options={"SKIP_SAVE", "HIDDEN"},
+    )
     validation_mode: EnumProperty(
         name="Validation",
         items=VALIDATION_MODE_ITEMS,
@@ -167,6 +173,12 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
         self.validation_mode = (
             context.scene.chemblender_quick_import.validation_mode
         )
+        if getattr(self, "files", ()):
+            try:
+                return self.execute(context)
+            finally:
+                self.files.clear()
+                self.directory = ""
         context.window_manager.fileselect_add(self)
         return {"RUNNING_MODAL"}
 

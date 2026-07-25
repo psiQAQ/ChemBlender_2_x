@@ -94,6 +94,13 @@ class FileHandlerContractTests(unittest.TestCase):
 
         self.assertTrue(expected)
         self.assertNotIn("*", expected)
+        self.assertEqual(
+            tuple(cls.__name__ for cls in module.FILE_HANDLER_CLASSES),
+            (
+                "CHEMBLENDER_FH_view_3d_window",
+                "CHEMBLENDER_FH_project_browser",
+            ),
+        )
         for cls in module.FILE_HANDLER_CLASSES:
             self.assertEqual(
                 cls.bl_import_operator,
