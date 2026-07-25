@@ -3,12 +3,23 @@ import sys
 import threading
 import time
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
+from uuid import UUID, uuid4
 
-from ChemBlender.core import close_session, create_session
+from ChemBlender.core import (
+    close_project,
+    close_session,
+    create_session,
+    open_project,
+)
+from ChemBlender.core.import_pipeline.grouping import (
+    GroupingEvidence,
+    SourceGroupSuggestion,
+)
 from ChemBlender.core.sidecar import save_project
 from ChemBlender.core.import_pipeline.request import (
     ImportRequest,
@@ -68,6 +79,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             ("BoolProperty", "bool"),
             ("CollectionProperty", "collection"),
             ("EnumProperty", "enum"),
+            ("IntProperty", "int"),
             ("PointerProperty", "pointer"),
             ("StringProperty", "string"),
         ):
@@ -230,6 +242,25 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             session.dirty_reasons,
         )
 
+    def stage_two_candidate_conflict(self):
+        for action in (None, "independent_copy"):
+            registry, state = self.stage("tests/fixtures/xyz/water.xyz")
+            rows = self.module.project_import_preview(
+                self.session,
+                state,
+                registry,
+            )
+            if action is not None:
+                rows[0].conflict_action = action
+            self.module.commit_project_import(
+                self.session,
+                state,
+                rows,
+                collection=object(),
+                apply_view=lambda *_args, **_kwargs: (),
+            )
+        return self.stage("tests/fixtures/xyz/water.xyz")
+
     def test_rna_rows_contain_only_small_projection_properties(self):
         row = self.module.CHEMBLENDER_PG_import_preview_row
         annotations = row.__annotations__
@@ -245,7 +276,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
                 "quality",
                 "conflict_id",
                 "conflict_action",
-                "conflict_target_revision_id",
+                "conflict_candidates",
                 "allowed_actions",
                 "default_view",
                 "blocking",
@@ -254,9 +285,54 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         )
         self.assertTrue(
             all(
-                value.kind in {"bool", "enum", "string"}
+                value.kind in {"bool", "collection", "enum", "string"}
                 for value in annotations.values()
             )
+        )
+        candidate = (
+            self.module.CHEMBLENDER_PG_import_conflict_candidate
+        )
+        self.assertEqual(
+            set(candidate.__annotations__),
+            {
+                "revision_id",
+                "source_id",
+                "display_label",
+                "created_entity_count",
+                "selected",
+            },
+        )
+        self.assertTrue(
+            all(
+                value.kind in {"bool", "int", "string"}
+                for value in candidate.__annotations__.values()
+            )
+        )
+        evidence = self.module.CHEMBLENDER_PG_import_grouping_evidence
+        self.assertEqual(
+            set(evidence.__annotations__),
+            {
+                "evidence_id",
+                "source_revision_ids",
+                "kind",
+                "summary",
+                "metric",
+                "metric_unit",
+                "selected",
+            },
+        )
+        suggestion = self.module.CHEMBLENDER_PG_import_grouping_suggestion
+        self.assertEqual(
+            set(suggestion.__annotations__),
+            {
+                "suggestion_id",
+                "source_count",
+                "confidence",
+                "requires_review",
+                "grouping_action",
+                "review_confirmed",
+                "evidence",
+            },
         )
 
     def test_projection_uses_live_reader_and_conflict_metadata(self):
@@ -320,6 +396,266 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         )
         self.assertEqual(result.status, "committed")
         self.assertEqual(result.commit_result.calculation_group_ids, ())
+
+    def test_two_candidate_target_projection_starts_unselected(self):
+        registry, state = self.stage_two_candidate_conflict()
+
+        row = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )[0]
+
+        self.assertEqual(len(row.conflict_candidates), 2)
+        self.assertEqual(
+            tuple(
+                candidate.revision_id
+                for candidate in row.conflict_candidates
+            ),
+            tuple(
+                str(candidate.revision_id)
+                for candidate in state.conflicts[0].candidates
+            ),
+        )
+        self.assertEqual(
+            tuple(
+                (
+                    candidate.source_id,
+                    candidate.created_entity_count,
+                    candidate.selected,
+                )
+                for candidate in row.conflict_candidates
+            ),
+            tuple(
+                (
+                    str(candidate.source_id),
+                    len(candidate.created_entity_ids),
+                    False,
+                )
+                for candidate in state.conflicts[0].candidates
+            ),
+        )
+        self.assertTrue(
+            all(
+                candidate.display_label
+                for candidate in row.conflict_candidates
+            )
+        )
+        self.assertEqual(
+            tuple(
+                item[0]
+                for item in self.module._conflict_action_items(row, None)
+            ),
+            tuple(row.allowed_actions.split(",")),
+        )
+
+    def test_target_decision_requires_one_live_candidate_and_binds_either(self):
+        registry, state = self.stage_two_candidate_conflict()
+        row = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )[0]
+        row.conflict_action = "reuse_existing"
+
+        with self.assertRaisesRegex(ValueError, "select.*target"):
+            self.module.import_commit_decisions(
+                state,
+                (row,),
+                project_session=self.session,
+            )
+
+        conflict = state.conflicts[0]
+        for selected_index, expected in enumerate(conflict.candidates):
+            for index, candidate in enumerate(row.conflict_candidates):
+                candidate.selected = index == selected_index
+            decisions = self.module.import_commit_decisions(
+                state,
+                (row,),
+                project_session=self.session,
+            )
+            self.assertEqual(
+                decisions.conflict_decisions[
+                    conflict.id
+                ].existing_revision_id,
+                expected.revision_id,
+            )
+
+        forged = replace(
+            row,
+            conflict_candidates=(
+                replace(
+                    row.conflict_candidates[0],
+                    revision_id=str(uuid4()),
+                    selected=True,
+                ),
+                replace(row.conflict_candidates[1], selected=False),
+            ),
+        )
+        with self.assertRaisesRegex(ValueError, "target.*allowed"):
+            self.module.import_commit_decisions(
+                state,
+                (forged,),
+                project_session=self.session,
+            )
+
+    def test_grouping_projection_defaults_to_keep_independent(self):
+        registry, state = self.stage(
+            "tests/fixtures/xyz/water.xyz",
+            "tests/fixtures/xyz/water-trajectory.xyz",
+        )
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+
+        suggestions = self.module.project_grouping_suggestions(state)
+
+        self.assertEqual(len(suggestions), 1)
+        suggestion = suggestions[0]
+        self.assertEqual(suggestion.source_count, 2)
+        self.assertIn(suggestion.confidence, {"high", "medium", "low"})
+        self.assertFalse(suggestion.requires_review)
+        self.assertEqual(suggestion.grouping_action, "keep_independent")
+        self.assertTrue(suggestion.evidence)
+        self.assertTrue(
+            all(
+                UUID(item.evidence_id)
+                and item.source_revision_ids
+                and item.kind
+                and item.summary
+                and isinstance(item.metric, str)
+                and isinstance(item.metric_unit, str)
+                for item in suggestion.evidence
+            )
+        )
+        decisions = self.module.import_commit_decisions(
+            state,
+            rows,
+            grouping_rows=suggestions,
+            project_session=self.session,
+        )
+        self.assertEqual(decisions.grouping_decisions, ())
+
+    def test_accept_group_uses_selected_evidence_and_round_trips(self):
+        registry, state = self.stage(
+            "tests/fixtures/xyz/water.xyz",
+            "tests/fixtures/xyz/water-trajectory.xyz",
+        )
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+        suggestions = self.module.project_grouping_suggestions(state)
+        suggestions[0].grouping_action = "accept_group"
+        suggestions[0].evidence[-1].selected = False
+        selected_ids = tuple(
+            UUID(item.evidence_id)
+            for item in suggestions[0].evidence
+            if item.selected
+        )
+
+        result = self.module.commit_project_import(
+            self.session,
+            state,
+            rows,
+            grouping_rows=suggestions,
+            collection=object(),
+            apply_view=lambda *_args, **_kwargs: (),
+        )
+
+        self.assertEqual(len(result.commit_result.calculation_group_ids), 1)
+        group = next(iter(self.session.project.calculation_groups.values()))
+        self.assertEqual(group.evidence_ids, tuple(sorted(selected_ids, key=str)))
+        reopened = open_project(result.commit_result.sidecar_path)
+        try:
+            self.assertEqual(
+                reopened.calculation_groups,
+                self.session.project.calculation_groups,
+            )
+        finally:
+            close_project(reopened)
+
+    def test_review_group_requires_separate_confirmation(self):
+        registry, state = self.stage(
+            "tests/fixtures/xyz/water.xyz",
+            "tests/fixtures/xyz/water-trajectory.xyz",
+        )
+        revisions = tuple(
+            state.staging_session.result(
+                row.staged_batch_ids[0]
+            ).source_revisions[0].id
+            for row in state.preview.source_previews
+        )
+        evidence = GroupingEvidence(
+            kind="periodic_equivalence_conflict",
+            source_revision_ids=revisions,
+            summary="primitive/conventional review",
+            metric=2.0,
+            metric_unit="cell_volume_ratio",
+        )
+        live = SourceGroupSuggestion(
+            source_revision_ids=revisions,
+            evidence=(evidence,),
+        )
+        with patch.object(
+            self.module,
+            "suggest_source_groups",
+            return_value=(live,),
+        ):
+            rows = self.module.project_import_preview(
+                self.session,
+                state,
+                registry,
+            )
+            suggestions = self.module.project_grouping_suggestions(state)
+            suggestions[0].grouping_action = "accept_group"
+            with self.assertRaisesRegex(ValueError, "review.*confirm"):
+                self.module.import_commit_decisions(
+                    state,
+                    rows,
+                    grouping_rows=suggestions,
+                    project_session=self.session,
+                )
+            suggestions[0].review_confirmed = True
+            decisions = self.module.import_commit_decisions(
+                state,
+                rows,
+                grouping_rows=suggestions,
+                project_session=self.session,
+            )
+
+        self.assertEqual(
+            decisions.grouping_decisions[0].evidence_ids,
+            (evidence.id,),
+        )
+
+    def test_changed_grouping_suggestion_fails_closed(self):
+        registry, state = self.stage(
+            "tests/fixtures/xyz/water.xyz",
+            "tests/fixtures/xyz/water-trajectory.xyz",
+        )
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+        suggestions = self.module.project_grouping_suggestions(state)
+
+        with patch.object(
+            self.module,
+            "suggest_source_groups",
+            return_value=(),
+        ):
+            with self.assertRaisesRegex(ValueError, "grouping.*changed"):
+                self.module.import_commit_decisions(
+                    state,
+                    rows,
+                    grouping_rows=suggestions,
+                    project_session=self.session,
+                )
 
     def test_missing_batch_blocks_confirm_with_visible_reason(self):
         registry, state = self.stage("tests/fixtures/xyz/water.xyz")

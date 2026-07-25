@@ -41,6 +41,7 @@ class QuickImportUIState:
     preview: ImportPreview | None = None
     active_job: object | None = None
     conflicts: tuple = ()
+    grouping_suggestions: tuple = ()
     browser_revision: int = 0
 
 
@@ -85,6 +86,7 @@ def store_quick_import_preview(session, staging_session, preview):
         raise ValueError("staging_session is not owned by session")
     state.preview = preview
     state.conflicts = ()
+    state.grouping_suggestions = ()
 
 
 def store_quick_import_job(session, staging_session, job):
@@ -166,6 +168,7 @@ def discard_quick_import_preview(session):
     state.staging_session = None
     state.preview = None
     state.conflicts = ()
+    state.grouping_suggestions = ()
 
 
 def _clear_all_states():

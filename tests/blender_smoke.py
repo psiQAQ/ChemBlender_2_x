@@ -470,11 +470,15 @@ def assert_project_session_manager(module_key):
 
 
 def assert_quick_import(module_key, repository_root):
+    core = importlib.import_module(f"{module_key}.core")
     ui = importlib.import_module(f"{module_key}.ui.session")
     properties = importlib.import_module(f"{module_key}.ui.properties")
     preview_ui = importlib.import_module(
         f"{module_key}.ui.import_preview"
     )
+    registry = importlib.import_module(
+        f"{module_key}.runtime.reader_api_bridge"
+    ).get_reader_plugin_registry()
     session = ui.new_scene_session(bpy.context.scene)
 
     def project_snapshot():
@@ -552,6 +556,87 @@ def assert_quick_import(module_key, repository_root):
     rows_before_cube = browser.refresh_project_browser(bpy.context.scene)
     assert any(row.kind == "structure" for row in rows_before_cube)
 
+    duplicate_source = repository_root / "tests/fixtures/xyz/water.xyz"
+    state = stage(duplicate_source)
+    duplicate_rows = preview_ui.project_import_preview(
+        session,
+        state,
+        registry,
+    )
+    assert len(duplicate_rows[0].conflict_candidates) == 1
+    assert duplicate_rows[0].conflict_candidates[0].selected
+    duplicate_rows[0].conflict_action = "independent_copy"
+    preview_ui.commit_project_import(
+        session,
+        state,
+        duplicate_rows,
+        collection=bpy.context.scene.collection,
+        apply_view=lambda *_args, **_kwargs: (),
+    )
+
+    state = stage(duplicate_source)
+    target_rows = preview_ui.project_import_preview(
+        session,
+        state,
+        registry,
+    )
+    target_row = target_rows[0]
+    conflict = state.conflicts[0]
+    assert len(target_row.conflict_candidates) == 2
+    assert not any(
+        candidate.selected
+        for candidate in target_row.conflict_candidates
+    )
+    try:
+        preview_ui.import_commit_decisions(
+            state,
+            target_rows,
+            project_session=session,
+        )
+    except ValueError as error:
+        assert "select exactly one conflict target" in str(error)
+    else:
+        raise AssertionError("ambiguous conflict target must fail")
+    for selected_index, expected in enumerate(conflict.candidates):
+        for index, candidate in enumerate(target_row.conflict_candidates):
+            candidate.selected = index == selected_index
+        decisions = preview_ui.import_commit_decisions(
+            state,
+            target_rows,
+            project_session=session,
+        )
+        assert (
+            decisions.conflict_decisions[
+                conflict.id
+            ].existing_revision_id
+            == expected.revision_id
+        )
+    forged = replace(
+        target_row,
+        conflict_candidates=(
+            replace(
+                target_row.conflict_candidates[0],
+                revision_id=str(uuid4()),
+                selected=True,
+            ),
+            replace(
+                target_row.conflict_candidates[1],
+                selected=False,
+            ),
+        ),
+    )
+    try:
+        preview_ui.import_commit_decisions(
+            state,
+            (forged,),
+            project_session=session,
+        )
+    except ValueError as error:
+        assert "conflict target is not allowed" in str(error)
+    else:
+        raise AssertionError("unknown conflict target must fail")
+    preview_ui.cancel_project_import(session)
+
     state = stage(repository_root / "tests/fixtures/cube/sheared.cube")
     structure_count = len(session.project.structures)
     assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
@@ -619,6 +704,24 @@ def assert_quick_import(module_key, repository_root):
             encoding="utf-8",
         )
         state = stage(first, second)
+        projected_rows = preview_ui.project_import_preview(
+            session,
+            state,
+            registry,
+        )
+        grouping_rows = preview_ui.project_grouping_suggestions(state)
+        assert len(grouping_rows) == 1
+        assert grouping_rows[0].grouping_action == "keep_independent"
+        assert (
+            preview_ui.import_commit_decisions(
+                state,
+                projected_rows,
+                grouping_rows=grouping_rows,
+                project_session=session,
+            ).grouping_decisions
+            == ()
+        )
+        group_count = len(session.project.calculation_groups)
         before_failure_objects = tuple(bpy.data.objects)
         before_failure_structures = len(session.project.structures)
         original_apply = preview_ui.apply_scene_preset
@@ -643,6 +746,56 @@ def assert_quick_import(module_key, repository_root):
             == "data committed; view failed"
         )
         assert state.preview is None
+        assert len(session.project.calculation_groups) == group_count
+
+        third = directory / "third.xyz"
+        fourth = directory / "fourth.xyz"
+        third.write_text(
+            "1\nthird\nH 0.3 0 0\n",
+            encoding="utf-8",
+        )
+        fourth.write_text(
+            "1\nfourth\nH 0.4 0 0\n",
+            encoding="utf-8",
+        )
+        state = stage(third, fourth)
+        projected_rows = preview_ui.project_import_preview(
+            session,
+            state,
+            registry,
+        )
+        grouping_rows = preview_ui.project_grouping_suggestions(state)
+        assert len(grouping_rows) == 1
+        grouping_rows[0].grouping_action = "accept_group"
+        selected_evidence_ids = tuple(
+            UUID(item.evidence_id)
+            for item in grouping_rows[0].evidence
+            if item.selected
+        )
+        accepted = preview_ui.commit_project_import(
+            session,
+            state,
+            projected_rows,
+            grouping_rows=grouping_rows,
+            collection=bpy.context.scene.collection,
+            apply_view=lambda *_args, **_kwargs: (),
+        )
+        assert len(accepted.commit_result.calculation_group_ids) == 1
+        assert len(session.project.calculation_groups) == group_count + 1
+        accepted_group = session.project.calculation_groups[
+            accepted.commit_result.calculation_group_ids[0]
+        ]
+        assert accepted_group.evidence_ids == tuple(
+            sorted(selected_evidence_ids, key=str)
+        )
+        reopened = core.open_project(accepted.commit_result.sidecar_path)
+        try:
+            assert (
+                reopened.calculation_groups
+                == session.project.calculation_groups
+            )
+        finally:
+            core.close_project(reopened)
     bpy.data.scenes.remove(switched_scene)
 
 
@@ -1785,6 +1938,24 @@ expected_inventory["registered_classes"] += [
         "name": "CHEMBLENDER_OT_confirm_import",
         "id": "chemblender.confirm_import",
         "base": "Operator",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_PG_import_conflict_candidate",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_PG_import_grouping_evidence",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_PG_import_grouping_suggestion",
+        "id": None,
+        "base": "PropertyGroup",
     },
     {
         "module": ".ui.import_preview",

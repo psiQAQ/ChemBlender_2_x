@@ -1,13 +1,19 @@
 """Blender Import Preview projection and transaction confirmation."""
 
 import shutil
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, is_dataclass, replace
 from pathlib import Path
 from threading import Event, Thread
 from uuid import UUID, uuid4
 
 import bpy
-from bpy.props import BoolProperty, CollectionProperty, EnumProperty, StringProperty
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    EnumProperty,
+    IntProperty,
+    StringProperty,
+)
 
 from ..core import (
     DiagnosticSeverity,
@@ -22,6 +28,7 @@ from ..core.import_pipeline.conflicts import (
 )
 from ..core.import_pipeline.grouping import suggest_source_groups
 from ..core.import_pipeline.transaction import (
+    GroupingDecision,
     ImportCommitDecisions,
     commit_import_preview,
 )
@@ -40,6 +47,22 @@ _ACTION_ITEMS = tuple(
     (action.value, action.value.replace("_", " ").title(), "")
     for action in DuplicateAction
 )
+_ACTION_ITEMS_BY_VALUE = {
+    identifier: (identifier, label, description)
+    for identifier, label, description in _ACTION_ITEMS
+}
+_GROUPING_ACTION_ITEMS = (
+    (
+        "keep_independent",
+        "Keep Independent",
+        "Do not create a Calculation Group",
+    ),
+    (
+        "accept_group",
+        "Accept Group",
+        "Create the suggested Calculation Group",
+    ),
+)
 _TARGET_ACTIONS = frozenset(
     {
         DuplicateAction.REUSE_EXISTING,
@@ -57,6 +80,47 @@ _SKIP_ACTIONS = frozenset(
 )
 
 
+def _conflict_action_items(row, _context):
+    values = tuple(
+        value
+        for value in getattr(row, "allowed_actions", "").split(",")
+        if value in _ACTION_ITEMS_BY_VALUE
+    )
+    if not values:
+        values = (DuplicateAction.INDEPENDENT_COPY.value,)
+    return tuple(_ACTION_ITEMS_BY_VALUE[value] for value in values)
+
+
+class CHEMBLENDER_PG_import_conflict_candidate(bpy.types.PropertyGroup):
+    revision_id: StringProperty()
+    source_id: StringProperty()
+    display_label: StringProperty()
+    created_entity_count: IntProperty()
+    selected: BoolProperty(default=False)
+
+
+class CHEMBLENDER_PG_import_grouping_evidence(bpy.types.PropertyGroup):
+    evidence_id: StringProperty()
+    source_revision_ids: StringProperty()
+    kind: StringProperty()
+    summary: StringProperty()
+    metric: StringProperty()
+    metric_unit: StringProperty()
+    selected: BoolProperty(default=True)
+
+
+class CHEMBLENDER_PG_import_grouping_suggestion(bpy.types.PropertyGroup):
+    suggestion_id: StringProperty()
+    source_count: IntProperty()
+    confidence: StringProperty()
+    requires_review: BoolProperty()
+    grouping_action: EnumProperty(items=_GROUPING_ACTION_ITEMS)
+    review_confirmed: BoolProperty(default=False)
+    evidence: CollectionProperty(
+        type=CHEMBLENDER_PG_import_grouping_evidence
+    )
+
+
 class CHEMBLENDER_PG_import_preview_row(bpy.types.PropertyGroup):
     source_id: StringProperty()
     source_name: StringProperty()
@@ -65,12 +129,23 @@ class CHEMBLENDER_PG_import_preview_row(bpy.types.PropertyGroup):
     capability_summary: StringProperty()
     quality: StringProperty()
     conflict_id: StringProperty()
-    conflict_action: EnumProperty(items=_ACTION_ITEMS)
-    conflict_target_revision_id: StringProperty()
+    conflict_action: EnumProperty(items=_conflict_action_items)
+    conflict_candidates: CollectionProperty(
+        type=CHEMBLENDER_PG_import_conflict_candidate
+    )
     allowed_actions: StringProperty()
     default_view: BoolProperty(default=True)
     blocking: BoolProperty(default=False)
     blocking_reason: StringProperty()
+
+
+@dataclass(slots=True)
+class ConflictCandidateProjection:
+    revision_id: str
+    source_id: str
+    display_label: str
+    created_entity_count: int
+    selected: bool = False
 
 
 @dataclass(slots=True)
@@ -82,12 +157,34 @@ class PreviewProjection:
     capability_summary: str
     quality: str
     conflict_id: str = ""
-    conflict_action: str = DuplicateAction.INDEPENDENT_COPY.value
-    conflict_target_revision_id: str = ""
     allowed_actions: str = ""
+    conflict_action: str = DuplicateAction.INDEPENDENT_COPY.value
+    conflict_candidates: tuple[ConflictCandidateProjection, ...] = ()
     default_view: bool = True
     blocking: bool = False
     blocking_reason: str = ""
+
+
+@dataclass(slots=True)
+class GroupingEvidenceProjection:
+    evidence_id: str
+    source_revision_ids: str
+    kind: str
+    summary: str
+    metric: str
+    metric_unit: str
+    selected: bool = True
+
+
+@dataclass(slots=True)
+class GroupingSuggestionProjection:
+    suggestion_id: str
+    source_count: int
+    confidence: str
+    requires_review: bool
+    grouping_action: str = "keep_independent"
+    review_confirmed: bool = False
+    evidence: tuple[GroupingEvidenceProjection, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -237,6 +334,21 @@ def _quality_and_blocking(staging, source_preview):
     )
 
 
+def _candidate_projection(project, candidate, *, selected):
+    source = project.sources[candidate.source_id]
+    revision = project.source_revisions[candidate.revision_id]
+    return ConflictCandidateProjection(
+        revision_id=str(candidate.revision_id),
+        source_id=str(candidate.source_id),
+        display_label=(
+            f"{source.display_name} · {revision.original_filename} · "
+            f"{str(candidate.revision_id)[:8]}"
+        ),
+        created_entity_count=len(candidate.created_entity_ids),
+        selected=selected,
+    )
+
+
 def project_import_preview(project_session, state, registry):
     """Refresh live conflicts and return a small RNA-safe row projection."""
     preview = state.preview
@@ -264,6 +376,7 @@ def project_import_preview(project_session, state, registry):
     )
     state.preview = preview
     state.conflicts = conflicts
+    state.grouping_suggestions = grouping_suggestions
     conflicts_by_source = {
         conflict.staged_source_id: conflict for conflict in conflicts
     }
@@ -295,11 +408,20 @@ def project_import_preview(project_session, state, registry):
                     if conflict
                     else DuplicateAction.INDEPENDENT_COPY.value
                 ),
-                conflict_target_revision_id=(
-                    str(conflict.candidates[0].revision_id)
+                conflict_candidates=(
+                    tuple(
+                        _candidate_projection(
+                            project_session.project,
+                            candidate,
+                            selected=(
+                                len(conflict.candidates) == 1
+                                and conflict.default_action in _TARGET_ACTIONS
+                            ),
+                        )
+                        for candidate in conflict.candidates
+                    )
                     if conflict
-                    and conflict.default_action in _TARGET_ACTIONS
-                    else ""
+                    else ()
                 ),
                 allowed_actions=(
                     ",".join(action.value for action in conflict.allowed_actions)
@@ -312,6 +434,35 @@ def project_import_preview(project_session, state, registry):
             )
         )
     return tuple(rows)
+
+
+def project_grouping_suggestions(state):
+    return tuple(
+        GroupingSuggestionProjection(
+            suggestion_id=str(suggestion.id),
+            source_count=len(suggestion.source_revision_ids),
+            confidence=suggestion.confidence,
+            requires_review=suggestion.requires_review,
+            evidence=tuple(
+                GroupingEvidenceProjection(
+                    evidence_id=str(item.id),
+                    source_revision_ids=",".join(
+                        map(str, item.source_revision_ids)
+                    ),
+                    kind=item.kind,
+                    summary=item.summary,
+                    metric=(
+                        ""
+                        if item.metric is None
+                        else format(item.metric, ".12g")
+                    ),
+                    metric_unit=item.metric_unit or "",
+                )
+                for item in suggestion.evidence
+            ),
+        )
+        for suggestion in state.grouping_suggestions
+    )
 
 
 def _source_rows(preview, rows):
@@ -328,7 +479,80 @@ def _source_rows(preview, rows):
     return by_source
 
 
-def import_commit_decisions(state, rows, *, project_session=None):
+def _grouping_decisions(
+    state,
+    grouping_rows,
+    *,
+    project_session,
+):
+    preview = state.preview
+    staging = state.staging_session
+    suggestions = state.grouping_suggestions
+    if preview.grouping_suggestion_ids != tuple(
+        suggestion.id for suggestion in suggestions
+    ):
+        raise ValueError("grouping suggestions do not match Import Preview")
+    if project_session is not None:
+        live = suggest_source_groups(preview, staging)
+        if live != suggestions:
+            raise ValueError(
+                "grouping suggestions changed; refresh Import Preview"
+            )
+    if grouping_rows is None:
+        grouping_rows = project_grouping_suggestions(state)
+    grouping_rows = tuple(grouping_rows)
+    by_id = {}
+    for row in grouping_rows:
+        suggestion_id = UUID(row.suggestion_id)
+        if suggestion_id in by_id:
+            raise ValueError("grouping suggestion rows must be unique")
+        by_id[suggestion_id] = row
+    live_by_id = {
+        suggestion.id: suggestion for suggestion in suggestions
+    }
+    if set(by_id) != set(live_by_id):
+        raise ValueError(
+            "grouping suggestion rows do not match Import Preview"
+        )
+    decisions = []
+    for suggestion_id, row in by_id.items():
+        suggestion = live_by_id[suggestion_id]
+        if row.grouping_action == "keep_independent":
+            continue
+        if row.grouping_action != "accept_group":
+            raise ValueError("Split/Edit grouping is unavailable in alpha.1")
+        if suggestion.requires_review and not row.review_confirmed:
+            raise ValueError("grouping review requires explicit confirmation")
+        evidence_rows = tuple(row.evidence)
+        evidence_ids = tuple(UUID(item.evidence_id) for item in evidence_rows)
+        if len(evidence_ids) != len(set(evidence_ids)) or set(
+            evidence_ids
+        ) != set(suggestion.evidence_ids):
+            raise ValueError(
+                "grouping evidence does not match Import Preview"
+            )
+        selected_ids = tuple(
+            UUID(item.evidence_id)
+            for item in evidence_rows
+            if item.selected
+        )
+        suggestion.confirm(selected_ids)
+        decisions.append(
+            GroupingDecision(
+                suggestion=suggestion,
+                evidence_ids=selected_ids,
+            )
+        )
+    return tuple(decisions)
+
+
+def import_commit_decisions(
+    state,
+    rows,
+    *,
+    grouping_rows=None,
+    project_session=None,
+):
     preview = state.preview
     staging = state.staging_session
     if preview is None or staging is None:
@@ -363,7 +587,19 @@ def import_commit_decisions(state, rows, *, project_session=None):
         if action not in conflict.allowed_actions:
             raise ValueError("conflict action is not allowed")
         if action in _TARGET_ACTIONS:
-            target_id = UUID(row.conflict_target_revision_id)
+            selected = tuple(
+                candidate
+                for candidate in row.conflict_candidates
+                if candidate.selected
+            )
+            if len(selected) != 1:
+                raise ValueError("select exactly one conflict target")
+            try:
+                target_id = UUID(selected[0].revision_id)
+            except (AttributeError, TypeError, ValueError) as error:
+                raise ValueError(
+                    "conflict target is not allowed"
+                ) from error
             if target_id not in conflict.existing_revision_ids:
                 raise ValueError("conflict target is not allowed")
             decisions[conflict.id] = ConflictDecision(action, target_id)
@@ -372,6 +608,11 @@ def import_commit_decisions(state, rows, *, project_session=None):
     return ImportCommitDecisions(
         conflicts=conflicts,
         conflict_decisions=decisions,
+        grouping_decisions=_grouping_decisions(
+            state,
+            grouping_rows,
+            project_session=project_session,
+        ),
     )
 
 
@@ -458,6 +699,7 @@ def _finish_committed_import(
     else:
         state.preview = None
         state.conflicts = ()
+        state.grouping_suggestions = ()
     status_parts = []
     if view_failed:
         status_parts.append("view failed")
@@ -476,6 +718,7 @@ def commit_project_import(
     state,
     rows,
     *,
+    grouping_rows=None,
     collection,
     apply_view=None,
 ):
@@ -486,6 +729,7 @@ def commit_project_import(
     decisions = import_commit_decisions(
         state,
         rows,
+        grouping_rows=grouping_rows,
         project_session=project_session,
     )
     result = _commit_to_fresh_generation(
@@ -637,21 +881,60 @@ class _CommitJob:
         self._window_manager = None
 
 
-def _copy_rows(collection, projected):
+def _copy_projections(collection, projected):
+    if collection is None:
+        return projected
     collection.clear()
     for projection in projected:
-        row = collection.add()
-        for name in projection.__dataclass_fields__:
-            setattr(row, name, getattr(projection, name))
+        item = collection.add()
+        for field in fields(projection):
+            value = getattr(projection, field.name)
+            if type(value) is tuple and (
+                not value or all(is_dataclass(member) for member in value)
+            ):
+                nested = getattr(item, field.name, None)
+                copied = _copy_projections(nested, value)
+                if nested is None:
+                    setattr(item, field.name, copied)
+            else:
+                setattr(item, field.name, value)
+    return collection
+
+
+def _projection_value(cls, value, nested=()):
+    nested = dict(nested)
+    return cls(
+        **{
+            field.name: (
+                tuple(
+                    _projection_value(nested[field.name], member)
+                    for member in getattr(value, field.name)
+                )
+                if field.name in nested
+                else getattr(value, field.name)
+            )
+            for field in fields(cls)
+        }
+    )
 
 
 def _row_values(rows):
     return tuple(
-        PreviewProjection(
-            **{
-                name: getattr(row, name)
-                for name in PreviewProjection.__dataclass_fields__
-            }
+        _projection_value(
+            PreviewProjection,
+            row,
+            (("conflict_candidates", ConflictCandidateProjection),),
+        )
+        for row in rows
+    )
+
+
+def _grouping_values(rows):
+    return tuple(
+        _projection_value(
+            GroupingSuggestionProjection,
+            row,
+            (("evidence", GroupingEvidenceProjection),),
         )
         for row in rows
     )
@@ -663,6 +946,9 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
     bl_description = "Review and commit staged scientific files"
 
     rows: CollectionProperty(type=CHEMBLENDER_PG_import_preview_row)
+    grouping_suggestions: CollectionProperty(
+        type=CHEMBLENDER_PG_import_grouping_suggestion
+    )
     blocking_reason: StringProperty()
 
     def _project(self, context):
@@ -673,7 +959,12 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             state,
             get_reader_plugin_registry(),
         )
-        _copy_rows(self.rows, projected)
+        _copy_projections(self.rows, projected)
+        grouping_suggestions = project_grouping_suggestions(state)
+        collection = getattr(self, "grouping_suggestions", None)
+        copied = _copy_projections(collection, grouping_suggestions)
+        if collection is None:
+            self.grouping_suggestions = copied
         self.blocking_reason = next(
             (row.blocking_reason for row in projected if row.blocking),
             "",
@@ -703,7 +994,54 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             box.label(text=f"Quality: {row.quality}")
             if row.conflict_id:
                 box.prop(row, "conflict_action")
+                if DuplicateAction(row.conflict_action) in _TARGET_ACTIONS:
+                    box.label(text="Select exactly one target:")
+                    for candidate in row.conflict_candidates:
+                        candidate_row = box.row(align=True)
+                        candidate_row.prop(
+                            candidate,
+                            "selected",
+                            text=candidate.display_label,
+                        )
+                        candidate_row.label(
+                            text=(
+                                f"{candidate.created_entity_count} "
+                                "created entities"
+                            )
+                        )
             box.prop(row, "default_view")
+        for suggestion in self.grouping_suggestions:
+            box = layout.box()
+            box.label(
+                text=(
+                    f"Suggested source group: {suggestion.source_count} "
+                    f"sources · {suggestion.confidence} confidence"
+                )
+            )
+            box.prop(suggestion, "grouping_action", expand=True)
+            if suggestion.grouping_action == "accept_group":
+                for evidence in suggestion.evidence:
+                    evidence_row = box.row(align=True)
+                    evidence_row.prop(
+                        evidence,
+                        "selected",
+                        text=evidence.summary,
+                    )
+                    detail = evidence.kind
+                    if evidence.metric:
+                        detail += (
+                            f": {evidence.metric} {evidence.metric_unit}"
+                        )
+                    evidence_row.label(text=detail)
+                if suggestion.requires_review:
+                    box.prop(
+                        suggestion,
+                        "review_confirmed",
+                        text="I reviewed this grouping conflict",
+                    )
+            unavailable = box.row()
+            unavailable.enabled = False
+            unavailable.label(text="Split / Edit unavailable in alpha.1")
 
     def _abort_setup(self, session, job, error):
         for label, cleanup in (
@@ -789,9 +1127,13 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             else:
                 state = get_quick_import_state(session)
             rows = _row_values(self.rows)
+            grouping_rows = _grouping_values(
+                self.grouping_suggestions
+            )
             decisions = import_commit_decisions(
                 state,
                 rows,
+                grouping_rows=grouping_rows,
                 project_session=session,
             )
         except BaseException as error:
@@ -803,6 +1145,7 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                     session,
                     state,
                     rows,
+                    grouping_rows=grouping_rows,
                     collection=context.scene.collection,
                 )
             except BaseException as error:
@@ -932,5 +1275,8 @@ class CHEMBLENDER_OT_cancel_import(bpy.types.Operator):
 __all__ = (
     "CHEMBLENDER_OT_cancel_import",
     "CHEMBLENDER_OT_confirm_import",
+    "CHEMBLENDER_PG_import_conflict_candidate",
+    "CHEMBLENDER_PG_import_grouping_evidence",
+    "CHEMBLENDER_PG_import_grouping_suggestion",
     "CHEMBLENDER_PG_import_preview_row",
 )
