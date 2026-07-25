@@ -33,6 +33,12 @@ from tests.test_sidecar_storage import FRAMES_ID, sample_project
 
 
 PROJECT_ID = UUID("10000000-0000-0000-0000-000000000001")
+LINK_KEYS = (
+    PROJECT_ID_KEY,
+    PROJECT_SCHEMA_KEY,
+    SIDECAR_LOCATOR_KEY,
+    MANIFEST_HASH_KEY,
+)
 
 
 class ProjectServiceTests(unittest.TestCase):
@@ -59,6 +65,32 @@ class ProjectServiceTests(unittest.TestCase):
         scene = {"view-marker": "preserve"}
         write_project_link(scene, project, sidecar)
         return scene
+
+    def save_for_scenes(self, *, session, scenes, blend_path):
+        operation = getattr(
+            project_service,
+            "save_project_session_for_scenes",
+            None,
+        )
+        self.assertIsNotNone(operation)
+        return operation(
+            session=session,
+            scenes=scenes,
+            blend_path=blend_path,
+        )
+
+    def verify_for_scenes(self, *, session, scenes, blend_path=None):
+        operation = getattr(
+            project_service,
+            "verify_project_session_for_scenes",
+            None,
+        )
+        self.assertIsNotNone(operation)
+        return operation(
+            session=session,
+            scenes=scenes,
+            blend_path=blend_path,
+        )
 
     def test_unsaved_blend_returns_unsaved_without_mutation(self):
         session = self.create_session()
@@ -99,6 +131,148 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(session.sidecar_path, destination.resolve())
         self.assertEqual(session.link_status, "connected")
         self.assertFalse(session.dirty)
+
+    def test_save_projects_one_verified_link_to_every_scene(self):
+        session = self.create_session()
+        session.mark_dirty("import")
+        blend = self.root / "shared.blend"
+        scenes = (
+            {"scene-marker": "first"},
+            {"scene-marker": "second"},
+        )
+
+        result = self.save_for_scenes(
+            session=session,
+            scenes=scenes,
+            blend_path=blend,
+        )
+
+        expected = {
+            key: scenes[0][key]
+            for key in LINK_KEYS
+        }
+        self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
+        self.assertEqual(
+            tuple({key: scene[key] for key in LINK_KEYS} for scene in scenes),
+            (expected, expected),
+        )
+        self.assertEqual(
+            (scenes[0]["scene-marker"], scenes[1]["scene-marker"]),
+            ("first", "second"),
+        )
+        self.assertFalse(session.dirty)
+
+    def test_later_scene_write_failure_restores_every_link_and_keeps_dirty(self):
+        class FailingScene(dict):
+            failed = False
+
+            def __setitem__(self, key, value):
+                if key == MANIFEST_HASH_KEY and not self.failed:
+                    self.failed = True
+                    raise RuntimeError("later scene write failed")
+                super().__setitem__(key, value)
+
+        session = self.create_session()
+        session.mark_dirty("import")
+        first = {
+            "scene-marker": "first",
+            PROJECT_ID_KEY: "old-first",
+            PROJECT_SCHEMA_KEY: "old-schema-first",
+            SIDECAR_LOCATOR_KEY: "old-first.cbq",
+            MANIFEST_HASH_KEY: "1" * 64,
+        }
+        second = FailingScene(
+            {
+                "scene-marker": "second",
+                PROJECT_ID_KEY: "old-second",
+                PROJECT_SCHEMA_KEY: "old-schema-second",
+                SIDECAR_LOCATOR_KEY: "old-second.cbq",
+                MANIFEST_HASH_KEY: "2" * 64,
+            }
+        )
+        originals = (dict(first), dict(second))
+
+        with self.assertRaisesRegex(RuntimeError, "later scene write failed"):
+            self.save_for_scenes(
+                session=session,
+                scenes=(first, second),
+                blend_path=self.root / "rollback.blend",
+            )
+
+        self.assertEqual((first, second), originals)
+        self.assertEqual(session.dirty_reasons, frozenset({"import"}))
+        self.assertEqual(session.link_status, ProjectServiceStatus.INVALID.value)
+
+    def test_verify_identical_scene_links_adopts_project_once(self):
+        sidecar = self.root / "identical.cbq"
+        stored = QCProject(id=PROJECT_ID, schema_version="0.2")
+        save_project(sidecar, stored)
+        first = self.linked_scene(sidecar, stored)
+        second = dict(first)
+        session = self.create_session()
+
+        with patch.object(
+            project_service,
+            "_adopt_project",
+            wraps=project_service._adopt_project,
+        ) as adopt:
+            result = self.verify_for_scenes(
+                session=session,
+                scenes=(first, second),
+            )
+
+        self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
+        self.assertEqual(session.project.id, PROJECT_ID)
+        adopt.assert_called_once()
+
+    def test_verify_valid_and_empty_scene_projects_link_then_adopts_once(self):
+        sidecar = self.root / "partial.cbq"
+        stored = QCProject(id=PROJECT_ID, schema_version="0.2")
+        save_project(sidecar, stored)
+        linked = self.linked_scene(sidecar, stored)
+        empty = {"scene-marker": "empty"}
+        session = self.create_session()
+
+        with patch.object(
+            project_service,
+            "_adopt_project",
+            wraps=project_service._adopt_project,
+        ) as adopt:
+            result = self.verify_for_scenes(
+                session=session,
+                scenes=(linked, empty),
+            )
+
+        self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
+        self.assertEqual(
+            {key: empty[key] for key in LINK_KEYS},
+            {key: linked[key] for key in LINK_KEYS},
+        )
+        self.assertEqual(empty["scene-marker"], "empty")
+        adopt.assert_called_once()
+
+    def test_verify_conflicting_valid_scene_links_fails_closed(self):
+        first_project = QCProject(id=PROJECT_ID, schema_version="0.2")
+        second_project = QCProject(id=UUID(int=2), schema_version="0.2")
+        first_sidecar = self.root / "first.cbq"
+        second_sidecar = self.root / "second.cbq"
+        save_project(first_sidecar, first_project)
+        save_project(second_sidecar, second_project)
+        scenes = (
+            self.linked_scene(first_sidecar, first_project),
+            self.linked_scene(second_sidecar, second_project),
+        )
+        originals = tuple(dict(scene) for scene in scenes)
+        session = self.create_session()
+        original_project = session.project
+
+        result = self.verify_for_scenes(session=session, scenes=scenes)
+
+        self.assertEqual(result.status, ProjectServiceStatus.INVALID)
+        self.assertEqual(result.message, "conflicting scene project links")
+        self.assertIs(session.project, original_project)
+        self.assertEqual(tuple(dict(scene) for scene in scenes), originals)
+        self.assertNotEqual(session.link_status, "connected")
 
     def test_save_scene_write_failure_is_unexpected_and_marks_session_invalid(self):
         class FailingScene(dict):

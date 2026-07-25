@@ -104,8 +104,98 @@ def _adopt_project(session, project, path):
     session.mark_clean()
 
 
-def save_project_session(*, session, scene, blend_path):
+_MISSING_LINK_VALUE = object()
+
+
+def _link_keys(links):
+    return (
+        links.PROJECT_ID_KEY,
+        links.PROJECT_SCHEMA_KEY,
+        links.SIDECAR_LOCATOR_KEY,
+        links.MANIFEST_HASH_KEY,
+    )
+
+
+def _scene_link_snapshot(scene, keys):
+    return {
+        key: scene[key] if key in scene else _MISSING_LINK_VALUE
+        for key in keys
+    }
+
+
+def _restore_scene_link(scene, snapshot):
+    failures = []
+    for key, value in snapshot.items():
+        try:
+            if value is _MISSING_LINK_VALUE:
+                if key in scene:
+                    del scene[key]
+            else:
+                scene[key] = value
+        except Exception as error:
+            failures.append((key, error))
+    return failures
+
+
+def _snapshot_matches(scene, snapshot):
+    try:
+        return all(
+            key not in scene
+            if value is _MISSING_LINK_VALUE
+            else key in scene and scene[key] == value
+            for key, value in snapshot.items()
+        )
+    except Exception:
+        return False
+
+
+def _write_scene_links(scenes, values, links):
+    snapshots = tuple(
+        (scene, _scene_link_snapshot(scene, values))
+        for scene in scenes
+    )
+    attempted = 0
+    try:
+        for scene, _snapshot in snapshots:
+            attempted += 1
+            links._write_scene_values(scene, values)
+    except Exception as write_error:
+        rollback_failures = []
+        for scene, snapshot in reversed(snapshots[:attempted]):
+            rollback_failures.extend(_restore_scene_link(scene, snapshot))
+        for key, error in rollback_failures:
+            write_error.add_note(f"scene link rollback failed for {key}: {error}")
+        residual_count = sum(
+            not _snapshot_matches(scene, snapshot)
+            for scene, snapshot in snapshots
+        )
+        if residual_count:
+            write_error.add_note(
+                f"scene link rollback left {residual_count} changed scene(s)"
+            )
+        raise
+
+
+def _verified_link_values(session, destination, blend):
+    links = _project_links()
+    candidate = {}
+    links.write_project_link(
+        candidate,
+        session.project,
+        destination,
+        blend_path=blend,
+    )
+    return links, {
+        key: candidate[key]
+        for key in _link_keys(links)
+    }
+
+
+def save_project_session_for_scenes(*, session, scenes, blend_path):
     _require_session(session)
+    scenes = tuple(scenes)
+    if not scenes:
+        raise ValueError("scenes must contain at least one scene")
     if not blend_path:
         return ProjectServiceResult(
             ProjectServiceStatus.UNSAVED,
@@ -120,14 +210,9 @@ def save_project_session(*, session, scene, blend_path):
         )
     destination = blend.resolve().with_suffix(".cbq")
     published = solidify_session(session, destination)
-    links = _project_links()
     try:
-        links.write_project_link(
-            scene,
-            session.project,
-            destination,
-            blend_path=blend,
-        )
+        links, values = _verified_link_values(session, destination, blend)
+        _write_scene_links(scenes, values, links)
     except (SidecarNotFoundError, SidecarCompatibilityError, SidecarIntegrityError) as error:
         result = _error_result(error, destination, session.project)
         session.sidecar_path = published.path
@@ -142,8 +227,82 @@ def save_project_session(*, session, scene, blend_path):
     return ProjectServiceResult(
         ProjectServiceStatus.CONNECTED,
         path=published.path,
-        manifest_sha256=scene[links.MANIFEST_HASH_KEY],
+        manifest_sha256=values[links.MANIFEST_HASH_KEY],
         project=session.project,
+    )
+
+
+def save_project_session(*, session, scene, blend_path):
+    return save_project_session_for_scenes(
+        session=session,
+        scenes=(scene,),
+        blend_path=blend_path,
+    )
+
+
+def verify_project_session_for_scenes(
+    *,
+    session,
+    scenes,
+    blend_path=None,
+    verify_arrays=True,
+):
+    _require_session(session)
+    scenes = tuple(scenes)
+    if not scenes:
+        raise ValueError("scenes must contain at least one scene")
+    links = _project_links()
+    keys = _link_keys(links)
+    linked_scene = None
+    linked_values = None
+    for scene in scenes:
+        present = tuple(key in scene for key in keys)
+        if not any(present):
+            continue
+        if not all(present):
+            session.link_status = ProjectServiceStatus.INVALID.value
+            return ProjectServiceResult(
+                ProjectServiceStatus.INVALID,
+                "invalid scene project link",
+            )
+        values = {key: scene[key] for key in keys}
+        if linked_values is not None and values != linked_values:
+            session.link_status = ProjectServiceStatus.INVALID.value
+            return ProjectServiceResult(
+                ProjectServiceStatus.INVALID,
+                "conflicting scene project links",
+            )
+        linked_scene = scene
+        linked_values = values
+
+    if linked_scene is None:
+        return ProjectServiceResult(
+            ProjectServiceStatus.UNSAVED,
+            "no scene project link",
+        )
+
+    resolved = links.resolve_project_link(
+        linked_scene,
+        blend_path=blend_path,
+        verify_arrays=verify_arrays,
+    )
+    status = _service_status(resolved.status)
+    if status is not ProjectServiceStatus.CONNECTED:
+        session.link_status = status.value
+        return ProjectServiceResult(status, resolved.message, resolved.path)
+    try:
+        _write_scene_links(scenes, linked_values, links)
+    except Exception:
+        close_project(resolved.project)
+        session.link_status = ProjectServiceStatus.INVALID.value
+        raise
+    _adopt_project(session, resolved.project, resolved.path)
+    return ProjectServiceResult(
+        status,
+        resolved.message,
+        resolved.path,
+        linked_values[links.MANIFEST_HASH_KEY],
+        session.project,
     )
 
 

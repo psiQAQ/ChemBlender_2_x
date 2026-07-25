@@ -1,3 +1,4 @@
+import array
 import gc
 import importlib
 import sys
@@ -7,12 +8,34 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
+from uuid import UUID
 
-from ChemBlender.core import ProjectServiceStatus, ProjectSession
-from ChemBlender.project_link import MANIFEST_HASH_KEY
+import ChemBlender.core.project_service as project_service
+from ChemBlender.core import (
+    ArrayData,
+    ImportBatch,
+    ProjectServiceStatus,
+    ProjectSession,
+    QCProject,
+    Structure,
+    save_project,
+)
+from ChemBlender.project_link import (
+    MANIFEST_HASH_KEY,
+    PROJECT_ID_KEY,
+    PROJECT_SCHEMA_KEY,
+    SIDECAR_LOCATOR_KEY,
+    write_project_link,
+)
 
 
 SESSION_MODULE = "ChemBlender.ui.session"
+LINK_KEYS = (
+    PROJECT_ID_KEY,
+    PROJECT_SCHEMA_KEY,
+    SIDECAR_LOCATOR_KEY,
+    MANIFEST_HASH_KEY,
+)
 
 
 class Scene:
@@ -89,6 +112,18 @@ class UiSessionContractTests(unittest.TestCase):
         sys.modules.pop("ChemBlender.ui", None)
         self.ui = importlib.import_module(SESSION_MODULE)
 
+    def link_project(self, scene, name, project_id=UUID(int=1)):
+        project = QCProject(id=project_id, schema_version="0.2")
+        sidecar = Path(self.temporary.name) / f"{name}.cbq"
+        save_project(sidecar, project)
+        write_project_link(
+            scene,
+            project,
+            sidecar,
+            blend_path=self.fake_bpy.data.filepath,
+        )
+        return project, sidecar
+
     def tearDown(self):
         if hasattr(self, "ui"):
             self.ui.unregister()
@@ -104,6 +139,33 @@ class UiSessionContractTests(unittest.TestCase):
         self.assertEqual(session.link_status, "unlinked")
         self.assertEqual(self.scene._properties, {})
         self.assertTrue(session.temporary_root.is_dir())
+
+    def test_all_scenes_share_one_session_project_and_temporary_root(self):
+        second_scene = Scene()
+        self.fake_bpy.data.scenes = [self.scene, second_scene]
+
+        first = self.ui.get_scene_session(self.scene)
+        second = self.ui.get_scene_session(second_scene)
+        coordinates = memoryview(array.array("d", (0.0, 0.0, 0.0)))
+        coordinates = coordinates.cast("B").cast("d", shape=(1, 3))
+        structure = Structure(
+            id=UUID(int=3),
+            revision="imported-through-first-scene",
+            atomic_numbers=(1,),
+            coordinates=ArrayData(
+                coordinates,
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        )
+        first.project.commit(ImportBatch(structures=(structure,)))
+        first.mark_dirty("import")
+
+        self.assertIs(second, first)
+        self.assertIs(second.project, first.project)
+        self.assertIs(second.project.structures[structure.id], structure)
+        self.assertEqual(second.temporary_root, first.temporary_root)
+        self.assertEqual(second.dirty_reasons, frozenset({"import"}))
 
     def test_new_and_replacement_sessions_notify_browser_once(self):
         notifications = []
@@ -121,21 +183,25 @@ class UiSessionContractTests(unittest.TestCase):
         self.ui.register_session_mutation(
             lambda session: notifications.append(session.id)
         )
+        second_scene = Scene()
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "shared.blend"
+        )
+        project, sidecar = self.link_project(self.scene, "shared")
+        write_project_link(
+            second_scene,
+            project,
+            sidecar,
+            blend_path=self.fake_bpy.data.filepath,
+        )
+        self.fake_bpy.data.scenes = [self.scene, second_scene]
         self.ui.get_scene_session(self.scene)
         notifications.clear()
-        connected = SimpleNamespace(
-            status=ProjectServiceStatus.CONNECTED,
-            message="",
-        )
 
-        with patch.object(
-            self.ui,
-            "verify_project_session",
-            return_value=connected,
-        ):
-            self.ui._load_post_handler(None)
+        self.ui._load_post_handler(None)
 
         restored = self.ui.get_scene_session(self.scene)
+        self.assertIs(self.ui.get_scene_session(second_scene), restored)
         self.assertEqual(notifications, [restored.id])
 
     def test_failed_or_invalid_load_does_not_advance_browser_revision(self):
@@ -146,27 +212,11 @@ class UiSessionContractTests(unittest.TestCase):
         self.ui.get_scene_session(self.scene)
         notifications.clear()
 
-        with patch.object(
-            self.ui,
-            "verify_project_session",
-            side_effect=RuntimeError("verification failed"),
-        ):
-            self.ui._load_post_handler(None)
+        self.scene[PROJECT_ID_KEY] = "partial-link"
+        self.ui._load_post_handler(None)
         self.assertEqual(notifications, [])
 
-        invalid = SimpleNamespace(
-            status=ProjectServiceStatus.INVALID,
-            message="invalid",
-        )
-        with patch.object(
-            self.ui,
-            "verify_project_session",
-            return_value=invalid,
-        ):
-            self.ui._load_post_handler(None)
-        self.assertEqual(notifications, [])
-
-    def test_registry_does_not_retain_discarded_scene(self):
+    def test_discarded_scene_does_not_close_file_session(self):
         transient = Scene()
         session = self.ui.get_scene_session(transient)
         reference = weakref.ref(transient)
@@ -175,8 +225,8 @@ class UiSessionContractTests(unittest.TestCase):
         gc.collect()
 
         self.assertIsNone(reference())
-        self.assertEqual(len(self.ui._SCENE_SESSIONS), 0)
-        self.assertFalse(session.temporary_root.exists())
+        self.assertIs(self.ui.get_scene_session(self.scene), session)
+        self.assertTrue(session.temporary_root.exists())
 
     def test_registry_supports_blender_style_non_weakrefable_scene(self):
         scene = PointerScene(1234)
@@ -187,15 +237,15 @@ class UiSessionContractTests(unittest.TestCase):
         self.ui.close_scene_session(scene)
         self.assertFalse(session.temporary_root.exists())
 
-    def test_pointer_reuse_replaces_and_closes_stale_session(self):
+    def test_pointer_reuse_still_returns_file_session(self):
         stale_scene = PointerScene(1234)
         stale = self.ui.get_scene_session(stale_scene)
         replacement_scene = PointerScene(1234)
 
         replacement = self.ui.get_scene_session(replacement_scene)
 
-        self.assertIsNot(replacement, stale)
-        self.assertFalse(stale.temporary_root.exists())
+        self.assertIs(replacement, stale)
+        self.assertTrue(stale.temporary_root.exists())
 
     def test_load_handler_closes_sessions_for_scenes_absent_from_loaded_file(self):
         stale_scene = Scene()
@@ -242,8 +292,9 @@ class UiSessionContractTests(unittest.TestCase):
             side_effect=OSError("close failed"),
         ), patch.object(
             self.ui,
-            "verify_project_session",
+            "verify_project_session_for_scenes",
             side_effect=RuntimeError("verification failed"),
+            create=True,
         ):
             self.ui._load_post_handler(None)
 
@@ -255,7 +306,7 @@ class UiSessionContractTests(unittest.TestCase):
         self.assertIn("marker failed", message)
         self.assertIn("close failed", message)
 
-    def test_load_handler_replaces_stale_session_and_exposes_service_result(self):
+    def test_load_handler_replaces_stale_session_with_empty_file_session(self):
         stale = self.ui.get_scene_session(self.scene)
 
         self.ui._load_post_handler(None)
@@ -264,8 +315,78 @@ class UiSessionContractTests(unittest.TestCase):
         status, message = self.ui.get_scene_session_status(self.scene)
         self.assertIsNot(current, stale)
         self.assertFalse(stale.temporary_root.exists())
-        self.assertEqual(status, ProjectServiceStatus.INVALID.value)
-        self.assertEqual(message, "invalid scene project link")
+        self.assertEqual(status, "unlinked")
+        self.assertEqual(message, "")
+
+    def test_load_without_links_creates_one_empty_shared_session(self):
+        second_scene = Scene()
+        self.fake_bpy.data.scenes = [self.scene, second_scene]
+
+        self.ui._load_post_handler(None)
+
+        session = self.ui.get_scene_session(self.scene)
+        self.assertIs(self.ui.get_scene_session(second_scene), session)
+        self.assertEqual(session.project.structures, {})
+        self.assertEqual(
+            self.ui.get_scene_session_status(second_scene),
+            ("unlinked", ""),
+        )
+
+    def test_load_valid_and_empty_links_adopts_and_projects_one_project(self):
+        second_scene = Scene()
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "partial.blend"
+        )
+        project, _sidecar = self.link_project(self.scene, "partial")
+        self.fake_bpy.data.scenes = [self.scene, second_scene]
+
+        self.ui._load_post_handler(None)
+
+        session = self.ui.get_scene_session(self.scene)
+        self.assertIs(self.ui.get_scene_session(second_scene), session)
+        self.assertEqual(session.project.id, project.id)
+        self.assertEqual(
+            {key: second_scene[key] for key in LINK_KEYS},
+            {key: self.scene[key] for key in LINK_KEYS},
+        )
+        self.assertEqual(
+            self.ui.get_scene_session_status(second_scene),
+            ("connected", ""),
+        )
+
+    def test_load_conflicting_valid_links_fails_closed(self):
+        second_scene = Scene()
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "conflict.blend"
+        )
+        first_project, _first_sidecar = self.link_project(
+            self.scene,
+            "first",
+            UUID(int=1),
+        )
+        second_project, _second_sidecar = self.link_project(
+            second_scene,
+            "second",
+            UUID(int=2),
+        )
+        self.fake_bpy.data.scenes = [self.scene, second_scene]
+
+        self.ui._load_post_handler(None)
+
+        session = self.ui.get_scene_session(self.scene)
+        self.assertIs(self.ui.get_scene_session(second_scene), session)
+        self.assertNotIn(
+            session.project.id,
+            {first_project.id, second_project.id},
+        )
+        self.assertEqual(
+            self.ui.get_scene_session_status(self.scene),
+            ("invalid", "conflicting scene project links"),
+        )
+        self.assertEqual(
+            self.ui.get_scene_session_status(second_scene),
+            ("invalid", "conflicting scene project links"),
+        )
 
     def test_save_handler_publishes_dirty_saved_session_and_marks_it_clean(self):
         session = self.ui.get_scene_session(self.scene)
@@ -279,6 +400,96 @@ class UiSessionContractTests(unittest.TestCase):
         self.assertEqual(status, ProjectServiceStatus.CONNECTED.value)
         self.assertEqual(message, "")
         self.assertTrue((Path(self.temporary.name) / "scene.cbq").is_dir())
+
+    def test_save_handler_publishes_once_after_scene_switch_and_links_all_scenes(self):
+        second_scene = Scene()
+        self.fake_bpy.data.scenes = [self.scene, second_scene]
+        session = self.ui.get_scene_session(self.scene)
+        session.mark_dirty("import")
+        self.fake_bpy.context.scene = second_scene
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "switched.blend"
+        )
+
+        with patch.object(
+            project_service,
+            "solidify_session",
+            wraps=project_service.solidify_session,
+        ) as publish:
+            self.ui._save_pre_handler(None)
+
+        publish.assert_called_once()
+        self.assertFalse(session.dirty)
+        self.assertEqual(
+            {key: second_scene[key] for key in LINK_KEYS},
+            {key: self.scene[key] for key in LINK_KEYS},
+        )
+        self.assertEqual(
+            self.ui.get_scene_session_status(self.scene),
+            ("connected", ""),
+        )
+
+    def test_save_handler_projects_clean_connected_session_to_new_scene(self):
+        session = self.ui.get_scene_session(self.scene)
+        session.mark_dirty("import")
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "expanded.blend"
+        )
+        self.ui._save_pre_handler(None)
+        self.assertFalse(session.dirty)
+
+        second_scene = Scene()
+        self.fake_bpy.data.scenes.append(second_scene)
+
+        with patch.object(
+            project_service,
+            "solidify_session",
+            wraps=project_service.solidify_session,
+        ) as publish:
+            self.ui._save_pre_handler(None)
+
+        publish.assert_called_once()
+        self.assertEqual(
+            {key: second_scene[key] for key in LINK_KEYS},
+            {key: self.scene[key] for key in LINK_KEYS},
+        )
+        self.assertEqual(
+            self.ui.get_scene_session_status(second_scene),
+            ("connected", ""),
+        )
+
+    def test_save_handler_does_not_publish_clean_missing_load(self):
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "missing-state.blend"
+        )
+        self.link_project(self.scene, "source")
+        self.scene[SIDECAR_LOCATOR_KEY] = "absent.cbq"
+        original_link = dict(self.scene._properties)
+        sibling = Path(self.temporary.name) / "missing-state.cbq"
+
+        self.ui._load_post_handler(None)
+        session = self.ui.get_scene_session(self.scene)
+        self.assertFalse(session.dirty)
+        self.assertIsNone(session.sidecar_path)
+        self.assertEqual(
+            self.ui.get_scene_session_status(self.scene)[0],
+            "missing",
+        )
+
+        with patch.object(
+            project_service,
+            "solidify_session",
+            wraps=project_service.solidify_session,
+        ) as publish:
+            self.ui._save_pre_handler(None)
+
+        publish.assert_not_called()
+        self.assertFalse(sibling.exists())
+        self.assertEqual(self.scene._properties, original_link)
+        self.assertEqual(
+            self.ui.get_scene_session_status(self.scene)[0],
+            "missing",
+        )
 
     def test_save_handler_ignores_non_blend_path(self):
         session = self.ui.get_scene_session(self.scene)
@@ -322,6 +533,26 @@ class UiSessionContractTests(unittest.TestCase):
         self.assertTrue(session.temporary_root.is_dir())
         self.assertEqual(marker.read_text(encoding="utf-8"), "import\n")
 
+    def test_shared_session_closes_once_and_writes_one_recovery_marker(self):
+        second_scene = Scene()
+        session = self.ui.get_scene_session(self.scene)
+        self.assertIs(self.ui.get_scene_session(second_scene), session)
+        session.mark_dirty("import")
+
+        with patch.object(
+            self.ui,
+            "close_session",
+            wraps=self.ui.close_session,
+        ) as close:
+            self.ui.close_scene_session(self.scene)
+            self.ui.close_scene_session(second_scene)
+
+        close.assert_called_once_with(session, remove_temporary=False)
+        markers = tuple(
+            session.temporary_root.glob(self.ui.RECOVERY_MARKER)
+        )
+        self.assertEqual(len(markers), 1)
+
     def test_close_session_runs_registered_ui_cleanup_before_removal(self):
         session = self.ui.get_scene_session(self.scene)
         events = []
@@ -334,7 +565,10 @@ class UiSessionContractTests(unittest.TestCase):
 
         self.assertEqual(events, [("ui", session.id, True)])
         self.assertFalse(session.temporary_root.exists())
-        self.assertFalse(self.ui._SCENE_SESSIONS)
+        self.assertEqual(
+            self.ui.get_scene_session_status(self.scene),
+            ("unlinked", ""),
+        )
 
     def test_new_session_clears_old_ui_state_before_replacement(self):
         old = self.ui.get_scene_session(self.scene)
@@ -410,7 +644,6 @@ class UiSessionContractTests(unittest.TestCase):
 
         self.ui.close_scene_session(self.scene)
 
-        self.assertFalse(self.ui._SCENE_SESSIONS)
         self.assertFalse(self.ui._RECOVERY_SESSIONS)
         self.assertTrue(session.temporary_root.is_dir())
 
@@ -433,7 +666,6 @@ class UiSessionContractTests(unittest.TestCase):
 
         self.ui.unregister()
 
-        self.assertFalse(self.ui._SCENE_SESSIONS)
         self.assertFalse(self.ui._RECOVERY_SESSIONS)
         self.assertTrue(stale.temporary_root.is_dir())
 

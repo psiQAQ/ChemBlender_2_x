@@ -340,8 +340,14 @@ def assert_file_handlers(module_key):
 
 def assert_project_session_manager(module_key):
     ui = importlib.import_module(f"{module_key}.ui.session")
+    core = importlib.import_module(f"{module_key}.core")
+    links = importlib.import_module(f"{module_key}.project_link")
     scene = bpy.context.scene
+    second_scene = bpy.data.scenes.new("ChemBlender shared session smoke")
     session = ui.new_scene_session(scene)
+    assert ui.get_scene_session(second_scene) is session
+    assert ui.get_scene_session(second_scene).project is session.project
+    assert ui.get_scene_session(second_scene).temporary_root == session.temporary_root
     session.mark_dirty("import")
     with TemporaryDirectory() as directory:
         blend = Path(directory) / "session-manager.blend"
@@ -355,6 +361,15 @@ def assert_project_session_manager(module_key):
         assert result == {"FINISHED"}, result
         assert not session.dirty
         assert (blend.with_suffix(".cbq")).is_dir()
+        link_keys = (
+            links.PROJECT_ID_KEY,
+            links.PROJECT_SCHEMA_KEY,
+            links.SIDECAR_LOCATOR_KEY,
+            links.MANIFEST_HASH_KEY,
+        )
+        assert tuple(scene[key] for key in link_keys) == tuple(
+            second_scene[key] for key in link_keys
+        )
 
         reader_handle = bpy.app.driver_namespace[READER_API_HANDLE_KEY]
         reader_api = importlib.import_module(f"{module_key}.reader_api")
@@ -381,6 +396,18 @@ def assert_project_session_manager(module_key):
         ) == model_identities
         ui = importlib.import_module(f"{module_key}.ui.session")
         restored = ui.get_scene_session(bpy.context.scene)
+        restored_scenes = tuple(bpy.data.scenes)
+        assert len(restored_scenes) >= 2
+        assert all(
+            ui.get_scene_session(value) is restored
+            for value in restored_scenes
+        )
+        assert len(
+            {
+                tuple(value[key] for key in link_keys)
+                for value in restored_scenes
+            }
+        ) == 1
         assert ui.get_scene_session_status(bpy.context.scene)[0] == "connected"
         assert restored.sidecar_path == blend.with_suffix(".cbq")
         properties = importlib.import_module(f"{module_key}.ui.properties")
@@ -388,15 +415,15 @@ def assert_project_session_manager(module_key):
 
         restored.mark_dirty("edit")
         verified_sidecar = restored.sidecar_path
-        original_save = ui.save_project_session
+        original_save = ui.save_project_session_for_scenes
         try:
             def fail_save(**_kwargs):
                 raise RuntimeError("simulated sidecar failure")
 
-            ui.save_project_session = fail_save
+            ui.save_project_session_for_scenes = fail_save
             ui._save_pre_handler(None)
         finally:
-            ui.save_project_session = original_save
+            ui.save_project_session_for_scenes = original_save
         assert restored.dirty
         assert restored.sidecar_path == verified_sidecar
         assert ui.get_scene_session_status(bpy.context.scene) == (
@@ -404,8 +431,35 @@ def assert_project_session_manager(module_key):
             "simulated sidecar failure",
         )
 
-        temporary_root = restored.temporary_root
         restored.mark_clean()
+        conflicting = core.QCProject(id=uuid4(), schema_version="0.2")
+        conflicting_sidecar = Path(directory) / "conflicting.cbq"
+        core.save_project(conflicting_sidecar, conflicting)
+        links.write_project_link(
+            restored_scenes[1],
+            conflicting,
+            conflicting_sidecar,
+            blend_path=blend,
+        )
+        assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
+        ui = importlib.import_module(f"{module_key}.ui.session")
+        conflicted_scenes = tuple(bpy.data.scenes)
+        conflicted = ui.get_scene_session(conflicted_scenes[0])
+        assert all(
+            ui.get_scene_session(value) is conflicted
+            for value in conflicted_scenes
+        )
+        assert ui.get_scene_session_status(conflicted_scenes[0]) == (
+            "invalid",
+            "conflicting scene project links",
+        )
+        assert conflicted.project.id not in {
+            restored.project.id,
+            conflicting.id,
+        }
+
+        temporary_root = conflicted.temporary_root
         ui.unregister()
         assert not temporary_root.exists()
         assert not any(
@@ -484,6 +538,14 @@ def assert_quick_import(module_key, repository_root):
     browser = importlib.import_module(
         f"{module_key}.ui.project_browser.panel"
     )
+    switched_scene = bpy.data.scenes.new(
+        "ChemBlender Quick Import shared session smoke"
+    )
+    switched_session = ui.get_scene_session(switched_scene)
+    assert switched_session is session
+    assert len(switched_session.project.structures) == structure_count + 1
+    switched_rows = browser.refresh_project_browser(switched_scene)
+    assert any(row.kind == "structure" for row in switched_rows)
     browser_settings = bpy.context.scene.chemblender_project_browser
     browser_settings.mode = "by_source"
     rows_before_cube = browser.refresh_project_browser(bpy.context.scene)
@@ -580,6 +642,7 @@ def assert_quick_import(module_key, repository_root):
             == "data committed; view failed"
         )
         assert state.preview is None
+    bpy.data.scenes.remove(switched_scene)
 
 
 def assert_optional_workspace(module_key):
