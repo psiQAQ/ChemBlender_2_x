@@ -173,6 +173,7 @@ def assert_registration_isolation(module_key, before_install_modules):
     assert f"{module_key}.ui.session" in sys.modules
     assert f"{module_key}.ui.properties" in sys.modules
     assert f"{module_key}.ui.quick_import" in sys.modules
+    assert f"{module_key}.ui.import_preview" in sys.modules
     newly_loaded = set(sys.modules) - before_install_modules
     assert not any(
         name == prefix or name.startswith(prefix + ".")
@@ -212,6 +213,8 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types.Scene, "my_tool")
     assert hasattr(bpy.types.Scene, "chemblender_quick_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_quick_import")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_confirm_import")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_cancel_import")
     properties = importlib.import_module(f"{module_key}.ui.properties")
     property_identity = properties._scene_property_identity()
     assert property_identity is not None
@@ -349,6 +352,9 @@ def assert_project_session_manager(module_key):
 def assert_quick_import(module_key, repository_root):
     ui = importlib.import_module(f"{module_key}.ui.session")
     properties = importlib.import_module(f"{module_key}.ui.properties")
+    preview_ui = importlib.import_module(
+        f"{module_key}.ui.import_preview"
+    )
     session = ui.new_scene_session(bpy.context.scene)
 
     def project_snapshot():
@@ -365,26 +371,94 @@ def assert_quick_import(module_key, repository_root):
             session.dirty_reasons,
         )
 
+    def stage(*sources):
+        directory = sources[0].parent
+        assert all(source.parent == directory for source in sources)
+        result = bpy.ops.chemblender.quick_import(
+            directory=str(directory),
+            files=[{"name": source.name} for source in sources],
+            validation_mode="balanced",
+        )
+        assert result == {"FINISHED"}, (sources, result)
+        state = properties.get_quick_import_state(session)
+        assert state.preview is not None
+        assert state.active_job is None
+        return state
+
     before = project_snapshot()
+    before_objects = tuple(bpy.data.objects)
     for relative in (
         "tests/fixtures/xyz/water.xyz",
         "tests/fixtures/cube/sheared.cube",
     ):
         source = repository_root / relative
-        result = bpy.ops.chemblender.quick_import(
-            directory=str(source.parent),
-            files=[{"name": source.name}],
-            validation_mode="balanced",
-        )
-        assert result == {"FINISHED"}, (relative, result)
-        state = properties.get_quick_import_state(session)
-        assert state.preview is not None
-        assert state.active_job is None
+        state = stage(source)
         assert len(state.preview.source_previews) == 1
         assert state.preview.source_previews[0].source_path == source.resolve()
         assert project_snapshot() == before
-    properties.clear_quick_import_state(session)
-    assert session.id not in properties._QUICK_IMPORT_STATES
+        assert bpy.ops.chemblender.cancel_import() == {"FINISHED"}
+        assert project_snapshot() == before
+        assert tuple(bpy.data.objects) == before_objects
+        assert state.preview is None
+
+    state = stage(repository_root / "tests/fixtures/xyz/water.xyz")
+    revision = state.browser_revision
+    structure_count = len(session.project.structures)
+    assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+    assert len(session.project.structures) == structure_count + 1
+    assert state.browser_revision == revision + 1
+    assert state.preview is None
+    assert session.dirty_reasons == frozenset({"import"})
+    structure_views = [
+        obj
+        for obj in bpy.data.objects
+        if obj.get("cb_scene_preset_id") == "structure_publication"
+    ]
+    assert structure_views
+
+    state = stage(repository_root / "tests/fixtures/cube/sheared.cube")
+    structure_count = len(session.project.structures)
+    assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+    assert len(session.project.structures) == structure_count + 1
+    assert state.preview is None
+
+    with TemporaryDirectory() as directory:
+        directory = Path(directory)
+        first = directory / "first.xyz"
+        second = directory / "second.xyz"
+        first.write_text(
+            "1\nfirst\nH 0.1 0 0\n",
+            encoding="utf-8",
+        )
+        second.write_text(
+            "1\nsecond\nH 0.2 0 0\n",
+            encoding="utf-8",
+        )
+        state = stage(first, second)
+        before_failure_objects = tuple(bpy.data.objects)
+        before_failure_structures = len(session.project.structures)
+        original_apply = preview_ui.apply_scene_preset
+        calls = 0
+
+        def fail_second(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise RuntimeError("simulated view failure")
+            return original_apply(*args, **kwargs)
+
+        try:
+            preview_ui.apply_scene_preset = fail_second
+            assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+        finally:
+            preview_ui.apply_scene_preset = original_apply
+        assert len(session.project.structures) == before_failure_structures + 2
+        assert tuple(bpy.data.objects) == before_failure_objects
+        assert (
+            bpy.context.scene.chemblender_quick_import.recent_summary
+            == "data committed; view failed"
+        )
+        assert state.preview is None
 
 
 def assert_installed_blend_libraries(module_key):
@@ -1420,6 +1494,24 @@ expected_inventory["module_callbacks"] += [
     {"module": ".ui.properties", "register": True, "unregister": True},
 ]
 expected_inventory["registered_classes"] += [
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_OT_cancel_import",
+        "id": "chemblender.cancel_import",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_OT_confirm_import",
+        "id": "chemblender.confirm_import",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_PG_import_preview_row",
+        "id": None,
+        "base": "PropertyGroup",
+    },
     {
         "module": ".ui.quick_import",
         "name": "CHEMBLENDER_PT_quick_import",

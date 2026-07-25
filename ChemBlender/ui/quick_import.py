@@ -283,6 +283,8 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
         settings = context.scene.chemblender_quick_import
         settings.validation_mode = self.validation_mode
         settings.recent_summary = _preview_summary(preview)
+        if not getattr(bpy.app, "background", False):
+            bpy.ops.chemblender.confirm_import("INVOKE_DEFAULT")
         return {"FINISHED"}
 
 
@@ -317,6 +319,18 @@ class CHEMBLENDER_PT_quick_import(bpy.types.Panel):
         operator.validation_mode = settings.validation_mode
         if settings.recent_summary:
             layout.label(text=settings.recent_summary)
+        if get_quick_import_state(session).preview is not None:
+            row = layout.row(align=True)
+            row.operator(
+                "chemblender.confirm_import",
+                text="Review",
+                icon="PRESET",
+            )
+            row.operator(
+                "chemblender.cancel_import",
+                text="Cancel",
+                icon="X",
+            )
 
         save_operator = (
             "wm.save_mainfile"

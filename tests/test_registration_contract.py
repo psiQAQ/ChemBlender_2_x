@@ -22,6 +22,7 @@ EXPECTED_ROOTS = (
     ".ui.session",
     ".ui.properties",
     ".ui.quick_import",
+    ".ui.import_preview",
 )
 
 

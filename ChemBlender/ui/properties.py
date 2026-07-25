@@ -35,6 +35,8 @@ class QuickImportUIState:
     staging_session: StagedImportSession | None = None
     preview: ImportPreview | None = None
     active_job: object | None = None
+    conflicts: tuple = ()
+    browser_revision: int = 0
 
 
 def _require_session(session):
@@ -49,8 +51,8 @@ def get_quick_import_state(session):
 
 def create_quick_import_staging(session):
     _require_session(session)
-    clear_quick_import_state(session)
     state = get_quick_import_state(session)
+    discard_quick_import_preview(session)
     staging = StagedImportSession.create(
         temp_parent=session.temporary_root.parent.parent
     )
@@ -70,6 +72,7 @@ def store_quick_import_preview(session, staging_session, preview):
     if state.staging_session is not staging_session:
         raise ValueError("staging_session is not owned by session")
     state.preview = preview
+    state.conflicts = ()
 
 
 def store_quick_import_job(session, staging_session, job):
@@ -136,6 +139,21 @@ def clear_quick_import_state(session):
     state = _QUICK_IMPORT_STATES.get(session.id)
     if state is not None:
         _clear_owned_state(session.id, state)
+
+
+def discard_quick_import_preview(session):
+    """Discard only staged import data while preserving UI revision state."""
+    _require_session(session)
+    state = _QUICK_IMPORT_STATES.get(session.id)
+    if state is None:
+        return
+    if state.active_job is not None:
+        raise RuntimeError("cannot discard while an import job is active")
+    if state.staging_session is not None:
+        state.staging_session.discard()
+    state.staging_session = None
+    state.preview = None
+    state.conflicts = ()
 
 
 def _clear_all_states():

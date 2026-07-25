@@ -7,6 +7,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
+from uuid import uuid4
 
 from ChemBlender.core import ProjectSession, create_session
 from ChemBlender.core.import_pipeline.preview import ImportPreview, SourcePreview
@@ -416,6 +417,29 @@ class QuickImportContractTests(unittest.TestCase):
         self.assertIn(("timer_remove", timer), calls)
         self.assertIn(("progress_end",), calls)
         self.assertNotIn(project_session.id, properties._QUICK_IMPORT_STATES)
+
+    def test_interactive_preflight_completion_opens_preview_dialog(self):
+        module = importlib.import_module(QUICK_IMPORT_MODULE)
+        operator = module.CHEMBLENDER_OT_quick_import()
+        operator.validation_mode = ValidationMode.BALANCED.value
+        preview = ImportPreview(
+            session_id=uuid4(),
+            source_previews=(),
+        )
+        calls = []
+        self.fake_bpy.app.background = False
+        self.fake_bpy.ops = SimpleNamespace(
+            chemblender=SimpleNamespace(
+                confirm_import=lambda mode: calls.append(mode)
+                or {"RUNNING_MODAL"}
+            )
+        )
+        context = self.operator_context()
+
+        result = operator._finish_preview(context, preview)
+
+        self.assertEqual(result, {"FINISHED"})
+        self.assertEqual(calls, ["INVOKE_DEFAULT"])
 
     def test_modal_thread_start_failure_releases_owned_staging(self):
         source = Path(self.temporary.name) / "start-failure.xyz"
