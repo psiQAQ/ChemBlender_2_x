@@ -10,6 +10,7 @@ from ..core import close_session, create_session, save_project_session, verify_p
 RECOVERY_MARKER = ".chemblender-session-recovery"
 _SCENE_SESSIONS = {}
 _RECOVERY_SESSIONS = {}
+_SESSION_CLEANUP_CALLBACKS = []
 
 
 @dataclass(slots=True)
@@ -52,7 +53,34 @@ def _set_error(entry, error):
     entry.message = _failure_message(error)
 
 
-def _close_session(session):
+def register_session_cleanup(callback):
+    """Register an idempotent UI cleanup callback for session teardown."""
+    if not callable(callback):
+        raise TypeError("callback must be callable")
+    if callback not in _SESSION_CLEANUP_CALLBACKS:
+        _SESSION_CLEANUP_CALLBACKS.append(callback)
+
+
+def unregister_session_cleanup(callback):
+    """Remove a previously registered UI cleanup callback."""
+    while callback in _SESSION_CLEANUP_CALLBACKS:
+        _SESSION_CLEANUP_CALLBACKS.remove(callback)
+
+
+def _run_session_cleanups(session):
+    failure = None
+    for callback in tuple(_SESSION_CLEANUP_CALLBACKS):
+        try:
+            callback(session)
+        except BaseException as error:
+            if failure is None:
+                failure = error
+            else:
+                failure.add_note(f"UI cleanup failed: {_failure_message(error)}")
+    return failure
+
+
+def _close_session(session, *, preserve_temporary=False):
     failure = None
     if session.dirty:
         try:
@@ -67,9 +95,29 @@ def _close_session(session):
             else:
                 failure.add_note(f"session close failed: {error}")
     else:
-        close_session(session)
+        close_session(session, remove_temporary=not preserve_temporary)
     if failure is not None:
         raise failure
+
+
+def _close_owned_session(session):
+    cleanup_failure = _run_session_cleanups(session)
+    close_failure = None
+    try:
+        _close_session(
+            session,
+            preserve_temporary=cleanup_failure is not None,
+        )
+    except BaseException as error:
+        close_failure = error
+    if cleanup_failure is not None:
+        if close_failure is not None:
+            cleanup_failure.add_note(
+                f"session close failed: {_failure_message(close_failure)}"
+            )
+        raise cleanup_failure
+    if close_failure is not None:
+        raise close_failure
 
 
 def _remember_recovery(entry, error):
@@ -83,7 +131,7 @@ def _release_weak_scene(key, scene_ref):
         return
     _SCENE_SESSIONS.pop(key, None)
     try:
-        _close_session(entry.session)
+        _close_owned_session(entry.session)
     except BaseException as error:
         _remember_recovery(entry, error)
 
@@ -109,7 +157,7 @@ def _entry_for(scene):
     if entry is not None and not _entry_matches(entry, scene):
         _SCENE_SESSIONS.pop(key, None)
         try:
-            _close_session(entry.session)
+            _close_owned_session(entry.session)
         except BaseException as error:
             _remember_recovery(entry, error)
         entry = None
@@ -141,7 +189,7 @@ def close_scene_session(scene):
     if entry is None:
         return
     try:
-        _close_session(entry.session)
+        _close_owned_session(entry.session)
     except BaseException as error:
         _set_error(entry, error)
         raise
@@ -159,7 +207,7 @@ def _drain_scene_sessions():
     for key, entry in tuple(_SCENE_SESSIONS.items()):
         _SCENE_SESSIONS.pop(key, None)
         try:
-            _close_session(entry.session)
+            _close_owned_session(entry.session)
         except BaseException as error:
             _remember_recovery(entry, error)
             failures.append(error)
@@ -254,7 +302,7 @@ def unregister():
     failure = _drain_scene_sessions()
     for session_id, entry in tuple(_RECOVERY_SESSIONS.items()):
         try:
-            _close_session(entry.session)
+            _close_owned_session(entry.session)
         except BaseException as error:
             _set_error(entry, error)
             if failure is None:

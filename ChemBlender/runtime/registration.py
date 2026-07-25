@@ -12,6 +12,8 @@ REGISTER_MODULE_NAMES: tuple[str, ...] = (
     ".scaffold",
     ".trajectory_view",
     ".ui.session",
+    ".ui.properties",
+    ".ui.quick_import",
 )
 
 _package_root = None

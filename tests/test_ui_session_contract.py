@@ -261,6 +261,78 @@ class UiSessionContractTests(unittest.TestCase):
         self.assertTrue(session.temporary_root.is_dir())
         self.assertEqual(marker.read_text(encoding="utf-8"), "import\n")
 
+    def test_close_session_runs_registered_ui_cleanup_before_removal(self):
+        session = self.ui.get_scene_session(self.scene)
+        events = []
+
+        def cleanup(value):
+            events.append(("ui", value.id, value.temporary_root.exists()))
+
+        self.ui.register_session_cleanup(cleanup)
+        self.ui.close_scene_session(self.scene)
+
+        self.assertEqual(events, [("ui", session.id, True)])
+        self.assertFalse(session.temporary_root.exists())
+        self.assertFalse(self.ui._SCENE_SESSIONS)
+
+    def test_new_session_clears_old_ui_state_before_replacement(self):
+        old = self.ui.get_scene_session(self.scene)
+        events = []
+        self.ui.register_session_cleanup(
+            lambda session: events.append(session.id)
+        )
+
+        new = self.ui.new_scene_session(self.scene)
+
+        self.assertEqual(events, [old.id])
+        self.assertIsNot(new, old)
+        self.assertFalse(old.temporary_root.exists())
+
+    def test_ui_cleanup_failure_preserves_retryable_session_ownership(self):
+        session = self.ui.get_scene_session(self.scene)
+        attempts = 0
+
+        def cleanup(_session):
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise RuntimeError("staging still running")
+
+        self.ui.register_session_cleanup(cleanup)
+
+        with self.assertRaisesRegex(RuntimeError, "staging still running"):
+            self.ui.close_scene_session(self.scene)
+
+        self.assertIs(self.ui.get_scene_session(self.scene), session)
+        self.assertTrue(session.temporary_root.exists())
+        self.ui.close_scene_session(self.scene)
+        self.assertEqual(attempts, 2)
+        self.assertFalse(session.temporary_root.exists())
+
+    def test_session_close_attempts_all_ui_cleanup_callbacks(self):
+        session = self.ui.get_scene_session(self.scene)
+        events = []
+        attempts = 0
+
+        def fail(_session):
+            nonlocal attempts
+            attempts += 1
+            events.append("failed")
+            if attempts == 1:
+                raise RuntimeError("first cleanup failed")
+
+        self.ui.register_session_cleanup(fail)
+        self.ui.register_session_cleanup(
+            lambda _session: events.append("completed")
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "first cleanup failed"):
+            self.ui.close_scene_session(self.scene)
+
+        self.assertEqual(events, ["failed", "completed"])
+        self.assertIs(self.ui.get_scene_session(self.scene), session)
+        self.assertTrue(session.temporary_root.exists())
+
     def test_close_retries_after_marker_failure_when_resource_close_succeeds(self):
         session = self.ui.get_scene_session(self.scene)
         session.mark_dirty("import")

@@ -171,6 +171,8 @@ def assert_registration_isolation(module_key, before_install_modules):
         if f"{module_key}{name}" in sys.modules
     ) == registration.REGISTER_MODULE_NAMES
     assert f"{module_key}.ui.session" in sys.modules
+    assert f"{module_key}.ui.properties" in sys.modules
+    assert f"{module_key}.ui.quick_import" in sys.modules
     newly_loaded = set(sys.modules) - before_install_modules
     assert not any(
         name == prefix or name.startswith(prefix + ".")
@@ -208,6 +210,21 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types.Object, "cif_original")
     assert hasattr(bpy.types.Object, "cif_current")
     assert hasattr(bpy.types.Scene, "my_tool")
+    assert hasattr(bpy.types.Scene, "chemblender_quick_import")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_quick_import")
+    properties = importlib.import_module(f"{module_key}.ui.properties")
+    property_identity = properties._scene_property_identity()
+    assert property_identity is not None
+    assert property_identity[0] == "rna"
+    properties.register()
+    assert properties._same_scene_property(
+        properties._scene_property_identity(),
+        property_identity,
+    )
+    assert sum(
+        getattr(handler, "__module__", None) == f"{module_key}.ui.properties"
+        for handler in bpy.app.handlers.load_pre
+    ) == 1
     assert_reader_api_handle(module_key)
 
 
@@ -216,6 +233,7 @@ def assert_disabled(module_key, owned_classes):
     assert not hasattr(bpy.types.Object, "cif_original")
     assert not hasattr(bpy.types.Object, "cif_current")
     assert not hasattr(bpy.types.Scene, "my_tool")
+    assert not hasattr(bpy.types.Scene, "chemblender_quick_import")
     assert READER_API_HANDLE_KEY not in bpy.app.driver_namespace
     assert not any(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
@@ -225,6 +243,10 @@ def assert_disabled(module_key, owned_classes):
         getattr(handler, "__module__", None) == f"{module_key}.ui.session"
         for callbacks in (bpy.app.handlers.load_post, bpy.app.handlers.save_pre)
         for handler in callbacks
+    )
+    assert not any(
+        getattr(handler, "__module__", None) == f"{module_key}.ui.properties"
+        for handler in bpy.app.handlers.load_pre
     )
     assert not owned_menu_callbacks(module_key)
     assert all(
@@ -322,6 +344,47 @@ def assert_project_session_manager(module_key):
             for callbacks in (bpy.app.handlers.load_post, bpy.app.handlers.save_pre)
             for handler in callbacks
         )
+
+
+def assert_quick_import(module_key, repository_root):
+    ui = importlib.import_module(f"{module_key}.ui.session")
+    properties = importlib.import_module(f"{module_key}.ui.properties")
+    session = ui.new_scene_session(bpy.context.scene)
+
+    def project_snapshot():
+        project = session.project
+        return (
+            id(project),
+            project.id,
+            project.schema_version,
+            tuple(
+                (name, tuple(getattr(project, name).items()))
+                for name in project.__dataclass_fields__
+                if isinstance(getattr(project, name), dict)
+            ),
+            session.dirty_reasons,
+        )
+
+    before = project_snapshot()
+    for relative in (
+        "tests/fixtures/xyz/water.xyz",
+        "tests/fixtures/cube/sheared.cube",
+    ):
+        source = repository_root / relative
+        result = bpy.ops.chemblender.quick_import(
+            directory=str(source.parent),
+            files=[{"name": source.name}],
+            validation_mode="balanced",
+        )
+        assert result == {"FINISHED"}, (relative, result)
+        state = properties.get_quick_import_state(session)
+        assert state.preview is not None
+        assert state.active_job is None
+        assert len(state.preview.source_previews) == 1
+        assert state.preview.source_previews[0].source_path == source.resolve()
+        assert project_snapshot() == before
+    properties.clear_quick_import_state(session)
+    assert session.id not in properties._QUICK_IMPORT_STATES
 
 
 def assert_installed_blend_libraries(module_key):
@@ -1354,10 +1417,40 @@ expected_inventory = {
 }
 expected_inventory["module_callbacks"] += [
     {"module": ".ui.session", "register": True, "unregister": True},
+    {"module": ".ui.properties", "register": True, "unregister": True},
 ]
+expected_inventory["registered_classes"] += [
+    {
+        "module": ".ui.quick_import",
+        "name": "CHEMBLENDER_PT_quick_import",
+        "id": "CHEMBLENDER_PT_QUICK_IMPORT",
+        "base": "Panel",
+    },
+    {
+        "module": ".ui.properties",
+        "name": "CHEMBLENDER_PG_quick_import",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.quick_import",
+        "name": "CHEMBLENDER_OT_quick_import",
+        "id": "chemblender.quick_import",
+        "base": "Operator",
+    },
+]
+expected_inventory["registered_classes"].sort(
+    key=lambda item: (
+        item["module"],
+        item["name"],
+        item["id"] or "",
+        item["base"],
+    )
+)
 expected_inventory["handlers"] += [
     {"owner": "load_post", "module": ".runtime.registration", "name": "_reader_api_load_post_handler"},
     {"owner": "load_post", "module": ".ui.session", "name": "_load_post_handler"},
+    {"owner": "load_pre", "module": ".ui.properties", "name": "_load_pre_handler"},
     {"owner": "save_pre", "module": ".ui.session", "name": "_save_pre_handler"},
 ]
 expected_inventory["handlers"].sort(key=lambda item: tuple(item.values()))
@@ -1458,6 +1551,7 @@ assert_scene_preset_application(module_key)
 assert_complex_phonon_trajectory(module_key)
 assert_fermi_surface_view(module_key)
 assert_project_sidecar_link(module_key)
+assert_quick_import(module_key, package.parent.parent)
 assert_project_session_manager(module_key)
 assert_topology_view(module_key, package.parent.parent)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)

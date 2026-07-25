@@ -20,6 +20,8 @@ EXPECTED_ROOTS = (
     ".scaffold",
     ".trajectory_view",
     ".ui.session",
+    ".ui.properties",
+    ".ui.quick_import",
 )
 
 
