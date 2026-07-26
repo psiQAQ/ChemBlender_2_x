@@ -20,7 +20,9 @@ sys.path.insert(0, str(SCRIPTS))
 import build_extension
 import release_metadata
 from release_metadata import (
+    ParsedReleaseVersion,
     ReleaseMetadata,
+    parse_release_version,
     read_release_metadata,
     release_metadata_document,
 )
@@ -80,6 +82,91 @@ class ReleaseMetadataTests(unittest.TestCase):
                 artifact_name="chemblender-2.2.0-windows-x64",
             ),
         )
+
+    def test_parses_supported_stable_and_prerelease_versions(self):
+        cases = (
+            (
+                "2.3.0",
+                ParsedReleaseVersion(
+                    value="2.3.0",
+                    major=2,
+                    minor=3,
+                    patch=0,
+                    channel=None,
+                    channel_number=None,
+                    is_prerelease=False,
+                ),
+            ),
+            (
+                "2.3.0-alpha.1",
+                ParsedReleaseVersion(
+                    value="2.3.0-alpha.1",
+                    major=2,
+                    minor=3,
+                    patch=0,
+                    channel="alpha",
+                    channel_number=1,
+                    is_prerelease=True,
+                ),
+            ),
+            (
+                "2.3.0-beta.2",
+                ParsedReleaseVersion(
+                    value="2.3.0-beta.2",
+                    major=2,
+                    minor=3,
+                    patch=0,
+                    channel="beta",
+                    channel_number=2,
+                    is_prerelease=True,
+                ),
+            ),
+            (
+                "2.3.0-rc.1",
+                ParsedReleaseVersion(
+                    value="2.3.0-rc.1",
+                    major=2,
+                    minor=3,
+                    patch=0,
+                    channel="rc",
+                    channel_number=1,
+                    is_prerelease=True,
+                ),
+            ),
+        )
+        for value, expected in cases:
+            with self.subTest(value=value):
+                self.assertEqual(parse_release_version(value), expected)
+
+    def test_parsed_release_version_is_frozen_and_slotted(self):
+        parsed = parse_release_version("2.3.0-alpha.1")
+
+        with self.assertRaises(FrozenInstanceError):
+            parsed.channel = "beta"
+        self.assertFalse(hasattr(parsed, "__dict__"))
+
+    def test_rejects_versions_outside_proven_grammar(self):
+        invalid = (
+            "2.3.0-alpha",
+            "2.3.0-alpha.",
+            "2.3.0-alpha.0",
+            "2.3.0-alpha.01",
+            "2.3.0-preview.1",
+            "v2.3.0",
+            "02.3.0",
+            "2.03.0",
+            "2.3.00",
+            " 2.3.0",
+            "2.3.0 ",
+            "2.3.0\n",
+            "2.3/0",
+            "2.3\\0",
+            "",
+        )
+        for value in invalid:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "release version"):
+                    parse_release_version(value)
 
     def test_release_metadata_is_frozen_and_slotted(self):
         metadata = read_release_metadata(EXTENSION)
@@ -155,7 +242,7 @@ class ReleaseMetadataTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "windows-x64"):
                     read_release_metadata(root)
 
-    def test_unsafe_versions_fail(self):
+    def test_invalid_manifest_versions_fail(self):
         unsafe_versions = (
             "",
             " 2.2.0",
@@ -171,6 +258,9 @@ class ReleaseMetadataTests(unittest.TestCase):
             "2.2|0",
             "2.2?0",
             "2.2*0",
+            "02.2.0",
+            "2.2.0-alpha.0",
+            "2.2.0-preview.1",
         )
         for version in unsafe_versions:
             with (
@@ -252,11 +342,19 @@ class ReleaseMetadataTests(unittest.TestCase):
         packaged_verifier = importlib.import_module(
             "ChemBlender.scripts.verify_release_artifact"
         )
+        packaged_notes = importlib.import_module(
+            "ChemBlender.scripts.extract_release_notes"
+        )
+        packaged_validator = importlib.import_module(
+            "ChemBlender.scripts.validate_extension"
+        )
 
         self.assertIsNotNone(direct.ReleaseMetadata)
         self.assertIsNotNone(packaged.ReleaseMetadata)
         self.assertIsNotNone(packaged_build.main)
         self.assertIsNotNone(packaged_verifier.verify_artifact)
+        self.assertIsNotNone(packaged_notes.extract_release_notes)
+        self.assertIsNotNone(packaged_validator.main)
         self.assertIs(sys.modules.get("bpy"), bpy_before)
 
     def test_build_and_verifier_do_not_reassemble_release_names(self):

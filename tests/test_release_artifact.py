@@ -29,10 +29,24 @@ class ReleaseArtifactTests(unittest.TestCase):
     def _write_artifact(
         self, *extra_entries: str, packaged_manifest: bytes | None = None
     ) -> Path:
-        source_manifest = (EXTENSION / "blender_manifest.toml").read_bytes()
+        return self._write_artifact_for_extension(
+            self.artifact_dir,
+            EXTENSION,
+            *extra_entries,
+            packaged_manifest=packaged_manifest,
+        )
+
+    def _write_artifact_for_extension(
+        self,
+        artifact_dir: Path,
+        extension: Path,
+        *extra_entries: str,
+        packaged_manifest: bytes | None = None,
+    ) -> Path:
+        source_manifest = (extension / "blender_manifest.toml").read_bytes()
         manifest = tomllib.loads(source_manifest.decode("utf-8"))
-        metadata = read_release_metadata(EXTENSION)
-        package = self.artifact_dir / metadata.package_name
+        metadata = read_release_metadata(extension)
+        package = artifact_dir / metadata.package_name
         entries = {
             "blender_manifest.toml": packaged_manifest or source_manifest,
             "LICENSE": b"license",
@@ -46,7 +60,7 @@ class ReleaseArtifactTests(unittest.TestCase):
                 archive.writestr(name, data)
 
         digest = hashlib.sha256(package.read_bytes()).hexdigest()
-        (self.artifact_dir / metadata.checksum_name).write_text(
+        (artifact_dir / metadata.checksum_name).write_text(
             f"{digest}  {package.name}\n",
             encoding="utf-8",
             newline="\n",
@@ -100,6 +114,44 @@ class ReleaseArtifactTests(unittest.TestCase):
             ValueError, "tag version 2.2.1 does not match manifest 2.2.0"
         ):
             verify_artifact(self.artifact_dir, EXTENSION, "v2.2.1")
+
+    def test_prerelease_tag_matches_prerelease_metadata(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            extension = root / "extension"
+            artifact = root / "artifact"
+            extension.mkdir()
+            artifact.mkdir()
+            manifest = (EXTENSION / "blender_manifest.toml").read_bytes().replace(
+                b'version = "2.2.0"',
+                b'version = "2.3.0-alpha.1"',
+            )
+            (extension / "blender_manifest.toml").write_bytes(manifest)
+            self._write_artifact_for_extension(artifact, extension)
+
+            result = verify_artifact(
+                artifact,
+                extension,
+                "v2.3.0-alpha.1",
+            )
+
+        self.assertEqual(result["version"], "2.3.0-alpha.1")
+        self.assertEqual(result["package"], "chemblender-2.3.0-alpha.1.zip")
+
+    def test_tag_requires_v_and_shared_release_version_grammar(self):
+        self._write_artifact()
+
+        for tag in (
+            "2.2.0",
+            "vv2.2.0",
+            "v2.2.0-alpha",
+            "v2.2.0-alpha.0",
+            "v2.2.0-preview.1",
+            "v02.2.0",
+        ):
+            with self.subTest(tag=tag):
+                with self.assertRaisesRegex(ValueError, "invalid release tag"):
+                    verify_artifact(self.artifact_dir, EXTENSION, tag)
 
     def test_extra_wheel_fails_package_contract(self):
         self._write_artifact("wheels/unexpected.whl")

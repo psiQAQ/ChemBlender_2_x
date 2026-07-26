@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -12,6 +13,23 @@ from pathlib import Path
 EXPECTED_EXTENSION_ID = "chemblender"
 EXPECTED_PLATFORM = "windows-x64"
 UNSAFE_VERSION_CHARACTERS = frozenset('<>:"/\\|?*')
+_RELEASE_VERSION_PATTERN = re.compile(
+    r"(?P<major>0|[1-9]\d*)"
+    r"\.(?P<minor>0|[1-9]\d*)"
+    r"\.(?P<patch>0|[1-9]\d*)"
+    r"(?:-(?P<channel>alpha|beta|rc)\.(?P<channel_number>[1-9]\d*))?"
+)
+
+
+@dataclass(frozen=True, slots=True)
+class ParsedReleaseVersion:
+    value: str
+    major: int
+    minor: int
+    patch: int
+    channel: str | None
+    channel_number: int | None
+    is_prerelease: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +40,25 @@ class ReleaseMetadata:
     package_name: str
     checksum_name: str
     artifact_name: str
+
+
+def parse_release_version(value: str) -> ParsedReleaseVersion:
+    if type(value) is not str:
+        raise ValueError("release version must be a string")
+    match = _RELEASE_VERSION_PATTERN.fullmatch(value)
+    if match is None:
+        raise ValueError(f"invalid release version: {value!r}")
+    channel = match.group("channel")
+    channel_number = match.group("channel_number")
+    return ParsedReleaseVersion(
+        value=value,
+        major=int(match.group("major")),
+        minor=int(match.group("minor")),
+        patch=int(match.group("patch")),
+        channel=channel,
+        channel_number=int(channel_number) if channel_number is not None else None,
+        is_prerelease=channel is not None,
+    )
 
 
 def _required_exact_string(document: dict[str, object], key: str) -> str:
@@ -67,6 +104,7 @@ def read_release_metadata(extension_root: Path | str) -> ReleaseMetadata:
             f"manifest platforms must be [{EXPECTED_PLATFORM!r}], got {platforms!r}"
         )
     _validate_version(version)
+    parse_release_version(version)
 
     return ReleaseMetadata(
         extension_id=extension_id,

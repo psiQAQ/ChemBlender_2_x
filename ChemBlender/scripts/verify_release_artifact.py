@@ -11,12 +11,11 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 if __package__:
-    from .release_metadata import read_release_metadata
+    from .release_metadata import parse_release_version, read_release_metadata
 else:
-    from release_metadata import read_release_metadata
+    from release_metadata import parse_release_version, read_release_metadata
 
 
-TAG_PATTERN = re.compile(r"v(\d+)\.(\d+)\.(\d+)")
 CHECKSUM_PATTERN = re.compile(r"([0-9a-fA-F]{64})\s+\*?(.+)")
 REQUIRED_FILES = {
     "blender_manifest.toml",
@@ -35,10 +34,12 @@ def _sha256(path: Path) -> str:
 
 
 def _version_from_tag(tag: str) -> str:
-    match = TAG_PATTERN.fullmatch(tag)
-    if not match:
+    if type(tag) is not str or not tag.startswith("v"):
         raise ValueError(f"invalid release tag: {tag}")
-    return ".".join(match.groups())
+    try:
+        return parse_release_version(tag[1:]).value
+    except ValueError as exc:
+        raise ValueError(f"invalid release tag: {tag}") from exc
 
 
 def _validate_archive_path(name: str) -> None:
