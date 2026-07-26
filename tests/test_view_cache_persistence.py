@@ -24,12 +24,15 @@ from ChemBlender.core import (
 
 
 class FakeGrids:
-    def __init__(self):
+    def __init__(self, volume):
+        self.volume = volume
         self.loads = 0
+        self.loaded_filepaths = []
         self.fail_once = False
 
     def load(self):
         self.loads += 1
+        self.loaded_filepaths.append(self.volume.filepath)
         if self.fail_once:
             self.fail_once = False
             raise RuntimeError("Blender grid reload failed")
@@ -38,7 +41,7 @@ class FakeGrids:
 class FakeVolume:
     def __init__(self, filepath):
         self.filepath = filepath
-        self.grids = FakeGrids()
+        self.grids = FakeGrids(self)
 
 
 class FakeObject(dict):
@@ -184,6 +187,7 @@ class ViewCachePersistenceTests(unittest.TestCase):
             f"//example.cbq/cache/render/volume/{expected.name}",
         )
         self.assertEqual(obj.data.grids.loads, 1)
+        self.assertEqual(obj.data.grids.loaded_filepaths, [str(expected)])
 
     def test_signed_surface_uses_stable_render_identity_key(self):
         from ChemBlender.ui import view_cache
@@ -541,6 +545,7 @@ class ViewCachePersistenceTests(unittest.TestCase):
         )
         self.assertNotEqual(obj.data.filepath, old_relative)
         self.assertEqual(obj.data.grids.loads, 1)
+        self.assertEqual(obj.data.grids.loaded_filepaths, [str(old_cache)])
         self.assertEqual(obj["cb_cache_path"], str(old_cache))
         self.assertEqual(self.session.dirty_reasons, frozenset({"view_cache"}))
 

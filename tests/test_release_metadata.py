@@ -472,9 +472,8 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertIn("chemblender-2.2.0.zip", error.getvalue())
 
     def test_production_manifest_bytes_are_unchanged(self):
-        digest = hashlib.sha256(
-            (EXTENSION / "blender_manifest.toml").read_bytes()
-        ).hexdigest()
+        manifest = (EXTENSION / "blender_manifest.toml").read_bytes()
+        digest = hashlib.sha256(manifest.replace(b"\r\n", b"\n")).hexdigest()
 
         self.assertEqual(digest, PRODUCTION_MANIFEST_SHA256)
 

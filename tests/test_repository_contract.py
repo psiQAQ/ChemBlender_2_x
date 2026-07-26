@@ -156,6 +156,33 @@ class RepositoryContractTests(unittest.TestCase):
         )
         self.assertIn('"$hash  $packageName`n"', workflow)
 
+    def test_package_workflow_runs_tests_with_blender_bundled_python(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "extension-package.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "$blenderPython = Join-Path (Split-Path $blender) "
+            '"5.1/python/bin/python.exe"',
+            workflow,
+        )
+        self.assertIn(
+            '& $blenderPython -m unittest discover -s tests -p "test_*.py" -v',
+            workflow,
+        )
+        self.assertIn(
+            "build_extension.py --python $blenderPython --blender $blender",
+            workflow,
+        )
+        self.assertIn(
+            'if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }',
+            workflow,
+        )
+        self.assertIn(
+            'if ($LASTEXITCODE -ne 0) { throw "Extension build failed" }',
+            workflow,
+        )
+
     def test_package_workflow_retains_tag_artifacts_for_review(self):
         workflow = (
             ROOT / ".github" / "workflows" / "extension-package.yml"

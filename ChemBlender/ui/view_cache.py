@@ -413,8 +413,9 @@ def repair_project_view_caches(
                 )
                 if not target.is_file():
                     raise ViewCacheError("render cache writer did not create a file")
-                obj.data.filepath = _blender_path(target, blend_path)
+                obj.data.filepath = str(target)
                 obj.data.grids.load()
+                obj.data.filepath = _blender_path(target, blend_path)
                 obj["cb_cache_path"] = str(target)
             except BaseException as error:
                 if isinstance(error, _FATAL_EXCEPTIONS):
@@ -444,10 +445,11 @@ def repair_project_view_caches(
                                 raise ViewCacheError(
                                     "previous render cache is invalid"
                                 )
+                            obj.data.filepath = str(fallback_target)
+                            obj.data.grids.load()
                             obj.data.filepath = _blender_path(
                                 fallback_target, blend_path
                             )
-                            obj.data.grids.load()
                     except BaseException as fallback_error:
                         if isinstance(fallback_error, _FATAL_EXCEPTIONS):
                             raise
