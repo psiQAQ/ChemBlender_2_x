@@ -33,17 +33,17 @@
 - Parsed fields: exact `value`, `major`, `minor`, `patch`, `channel`,
   `channel_number`, `is_prerelease`.
 
-- [ ] **Step 1: Add parser RED cases**
+- [x] **Step 1: Add parser RED cases**
 
 Test the four valid examples and invalid grammar including `2.3.0-alpha`,
 `2.3.0-alpha.`, `2.3.0-alpha.0`, `2.3.0-preview.1`, `v2.3.0`,
 `02.3.0`, whitespace, control and separators.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run release metadata tests; expect import/attribute failures for the absent parser.
 
-- [ ] **Step 3: Implement one anchored parser**
+- [x] **Step 3: Implement one anchored parser**
 
 Use one compiled regex and return the parsed immutable value. Make
 `read_release_metadata()` call it after filename-safety validation.
@@ -56,12 +56,12 @@ Use one compiled regex and return the parsed immutable value. Make
 - Modify: `ChemBlender/scripts/extract_release_notes.py`
 - Modify: `tests/test_release_notes.py`
 
-- [ ] **Step 1: Add prerelease heading RED tests**
+- [x] **Step 1: Add prerelease heading RED tests**
 
 Accept exactly one dated `## [2.3.0-alpha.1] - YYYY-MM-DD` entry and reject
 invalid/duplicate/missing/empty entries.
 
-- [ ] **Step 2: Replace local version regex**
+- [x] **Step 2: Replace local version regex**
 
 Use direct/module dual-mode import of `parse_release_version`; retain exact
 escaped heading matching and UTF-8/LF output.
@@ -74,12 +74,12 @@ escaped heading matching and UTF-8/LF output.
 - Modify: `ChemBlender/scripts/validate_extension.py`
 - Create or modify: `tests/test_validate_extension.py`
 
-- [ ] **Step 1: Add valid/invalid manifest RED tests**
+- [x] **Step 1: Add valid/invalid manifest RED tests**
 
 Call the local validator boundary with stable and three prerelease examples;
 invalid grammar must be a validation error, not only a warning.
 
-- [ ] **Step 2: Remove `SEMVER_PATTERN`**
+- [x] **Step 2: Remove `SEMVER_PATTERN`**
 
 Import the shared parser in direct/module modes. Convert parser failure into
 one precise manifest-version validation error while preserving all unrelated
@@ -93,12 +93,12 @@ preflight/native validation behavior.
 - Modify: `ChemBlender/scripts/verify_release_artifact.py`
 - Modify: `tests/test_release_artifact.py`
 
-- [ ] **Step 1: Add prerelease tag RED cases**
+- [x] **Step 1: Add prerelease tag RED cases**
 
 Accept `v2.3.0-alpha.1` when metadata matches and reject leading/missing `v`,
 unsupported/malformed prerelease tags and tag/manifest mismatch.
 
-- [ ] **Step 2: Remove duplicate tag regex**
+- [x] **Step 2: Remove duplicate tag regex**
 
 Require a leading `v`, parse the remainder with `parse_release_version`, and
 compare its exact value with metadata. Keep checksum/ZIP contracts unchanged.
@@ -111,17 +111,17 @@ compare its exact value with metadata. Keep checksum/ZIP contracts unchanged.
 - Modify: `.agents/active/2.3.0-wave-0-platform-foundation.md`
 - Modify: this plan
 
-- [ ] **Step 1: Run focused/full verification**
+- [x] **Step 1: Run focused/full verification**
 
 Run metadata, notes, local validator and artifact tests, full `unittest`,
 `compileall` and `git diff --check`.
 
-- [ ] **Step 2: Stable and disposable prerelease verification**
+- [x] **Step 2: Stable and disposable prerelease verification**
 
 Re-run stable metadata/artifact fixtures and the disposable Blender prerelease
 probe. Production manifest must remain unchanged.
 
-- [ ] **Step 3: Independent review and commit**
+- [x] **Step 3: Independent review and commit**
 
 Review grammar consistency, duplicate parser removal, direct-script imports and
 error classification. Implementation commit:
@@ -140,14 +140,27 @@ Task 5 — Add prerelease-aware release workflow behavior
 
 ## Completion checkpoint
 
-- State: `in_progress`
+- State: `completed`
 - Baseline: `584486c5397b06e086da41515462b293697b242f`
-- Planning commit: pending
-- Implementation commit: pending
-- Shared parser source: pending
-- RED evidence: `Not Run`
-- GREEN evidence: `Not Run`
-- Stable regression: `Not Run`
-- Prerelease probe regression: `Not Run`
+- Planning commit: `e06293e040716c03cf6115a8017a680e51085309`
+- Implementation commit: `4b2d26509b09c1f233dc64e8727b3de2c48fa8c4`
+- Review-fix commit: `c16680af5fea9705d6b93ab42c710d31a7ce0ad1`
+- Shared parser source: `ChemBlender/scripts/release_metadata.py`
+- RED evidence:
+  focused 20 tests produced 9 failures and 3 errors for missing shared APIs and
+  legacy consumer behavior; review regression then produced 6 Unicode-digit
+  subtest failures.
+- GREEN evidence:
+  focused 62 Passed and 1 Skipped; full 985 Passed, 28 Skipped and 0 Failed;
+  review-fix targeted 3/3 and consumer 39/39 Passed; compileall/diff-check
+  Passed.
+- Stable regression: `Passed`
+- Prerelease probe regression: `Passed`; Blender 5.1.2 exit 0.
+- Duplicate parser audit:
+  one shared anchored ASCII regex; legacy metadata/notes/validator/tag regexes
+  removed.
+- Independent review:
+  Unicode-digit Important fixed and scoped re-review `ADDRESSED`; no remaining
+  findings.
 - Remote CI: `Not Run`
 - Next task: `Task 5 — Add prerelease-aware release workflow behavior`
