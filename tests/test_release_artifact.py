@@ -148,6 +148,8 @@ class ReleaseArtifactTests(unittest.TestCase):
             "v2.2.0-alpha.0",
             "v2.2.0-preview.1",
             "v02.2.0",
+            "v2\u0663.3.0",
+            "v2.3.0-alpha.1\u0661",
         ):
             with self.subTest(tag=tag):
                 with self.assertRaisesRegex(ValueError, "invalid release tag"):

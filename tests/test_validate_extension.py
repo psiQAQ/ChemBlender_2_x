@@ -70,6 +70,8 @@ class ValidateExtensionVersionTests(unittest.TestCase):
             "2.3.0-alpha.0",
             "2.3.0-preview.1",
             "02.3.0",
+            "2\u0663.3.0",
+            "2.3.0-alpha.1\u0661",
         ):
             with self.subTest(version=version):
                 result, output = self._run_preflight(version)

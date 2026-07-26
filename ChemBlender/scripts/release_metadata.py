@@ -14,10 +14,10 @@ EXPECTED_EXTENSION_ID = "chemblender"
 EXPECTED_PLATFORM = "windows-x64"
 UNSAFE_VERSION_CHARACTERS = frozenset('<>:"/\\|?*')
 _RELEASE_VERSION_PATTERN = re.compile(
-    r"(?P<major>0|[1-9]\d*)"
-    r"\.(?P<minor>0|[1-9]\d*)"
-    r"\.(?P<patch>0|[1-9]\d*)"
-    r"(?:-(?P<channel>alpha|beta|rc)\.(?P<channel_number>[1-9]\d*))?"
+    r"(?P<major>0|[1-9][0-9]*)"
+    r"\.(?P<minor>0|[1-9][0-9]*)"
+    r"\.(?P<patch>0|[1-9][0-9]*)"
+    r"(?:-(?P<channel>alpha|beta|rc)\.(?P<channel_number>[1-9][0-9]*))?"
 )
 
 

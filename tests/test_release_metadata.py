@@ -161,6 +161,8 @@ class ReleaseMetadataTests(unittest.TestCase):
             "2.3.0\n",
             "2.3/0",
             "2.3\\0",
+            "2\u0663.3.0",
+            "2.3.0-alpha.1\u0661",
             "",
         )
         for value in invalid:
