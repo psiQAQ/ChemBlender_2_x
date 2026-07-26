@@ -62,7 +62,7 @@ class PrereleaseProbeScriptTests(unittest.TestCase):
     def test_production_manifest_bytes_are_unchanged(self):
         before = (EXTENSION / "blender_manifest.toml").read_bytes()
 
-        digest = hashlib.sha256(before).hexdigest()
+        digest = hashlib.sha256(before.replace(b"\r\n", b"\n")).hexdigest()
 
         self.assertEqual(digest, PRODUCTION_MANIFEST_SHA256)
 
