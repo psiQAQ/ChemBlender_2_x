@@ -3,6 +3,7 @@ import importlib
 import importlib.util
 import json
 import math
+import shutil
 import sys
 from dataclasses import replace
 from importlib.metadata import version
@@ -899,6 +900,10 @@ def assert_quick_import(module_key, repository_root):
             )
         finally:
             core.close_project(reopened)
+    cube_volume = cube_view.data
+    bpy.data.objects.remove(cube_view, do_unlink=True)
+    if cube_volume.users == 0:
+        bpy.data.volumes.remove(cube_volume)
     bpy.data.scenes.remove(switched_scene)
 
 
@@ -1050,6 +1055,14 @@ def assert_grid_volume_adapter(module_key):
             expected = tuple(value * 0.529177210903 for value in (2.2, 3.3, 4.0))
             actual = tuple(cached.transform.indexToWorld((1, 1, 1)))
             assert all(abs(a - b) < 1e-12 for a, b in zip(actual, expected))
+            stable_mtime = cache.stat().st_mtime_ns
+            assert adapter.ensure_grid_volume_cache(grid, cache) == cache
+            assert cache.stat().st_mtime_ns == stable_mtime
+            cache.unlink()
+            assert adapter.ensure_grid_volume_cache(grid, cache) == cache
+            assert openvdb.read(str(cache), "density").getAccessor().getValue(
+                (1, 0, 1)
+            ) == 5.0
 
             lod = core.derive_grid_lod(grid, strides=(2, 1, 1)).datasets[0]
             lod_cache = adapter.volume_cache_path(cache_root, lod)
@@ -1676,7 +1689,60 @@ def assert_scene_preset_application(module_key):
             attribute.data.foreach_get("value", sampled)
             assert min(sampled) < max(sampled)
             assert property_obj["cb_property_colormap"] == "coolwarm"
+            assert all(
+                obj["cb_cache_format_version"] == 1
+                for obj in (*signed_objects, property_obj)
+            )
             assert len(list(Path(cache_root).glob("surface/*.vdb"))) == 3
+
+            view_cache = importlib.import_module(f"{module_key}.ui.view_cache")
+            sidecar = Path(cache_root) / "durable.cbq"
+            sidecar.mkdir()
+            session_root = Path(cache_root) / "session"
+            session_root.mkdir()
+            session = core.ProjectSession(
+                uuid4(),
+                grid_project,
+                session_root,
+                sidecar_path=sidecar,
+                link_status="connected",
+            )
+            object_count = len(bpy.data.objects)
+            assert view_cache.repair_project_view_caches(
+                session=session,
+                objects=(*signed_objects, property_obj),
+                blend_path=Path(cache_root) / "durable.blend",
+            ) == 3
+            assert len(bpy.data.objects) == object_count
+            assert all(
+                obj.data.filepath.startswith("//durable.cbq/cache/render/surface/")
+                for obj in (*signed_objects, property_obj)
+            )
+            durable_files = sorted(
+                (sidecar / "cache" / "render" / "surface").glob("*.vdb")
+            )
+            assert len(durable_files) == 3
+            shutil.rmtree(sidecar / "cache" / "render")
+            assert view_cache.repair_project_view_caches(
+                session=session,
+                objects=(*signed_objects, property_obj),
+                blend_path=Path(cache_root) / "durable.blend",
+            ) == 3
+            assert len(
+                list((sidecar / "cache" / "render" / "surface").glob("*.vdb"))
+            ) == 3
+            save_as_sidecar = Path(cache_root) / "save-as.cbq"
+            save_as_sidecar.mkdir()
+            session.sidecar_path = save_as_sidecar
+            assert view_cache.repair_project_view_caches(
+                session=session,
+                objects=(*signed_objects, property_obj),
+                blend_path=Path(cache_root) / "save-as.blend",
+            ) == 3
+            assert all(
+                obj.data.filepath.startswith("//save-as.cbq/cache/render/surface/")
+                for obj in (*signed_objects, property_obj)
+            )
 
         periodic_id = uuid4()
         band = core.BandStructure(

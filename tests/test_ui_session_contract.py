@@ -555,11 +555,24 @@ class UiSessionContractTests(unittest.TestCase):
             project_service,
             "solidify_session",
             wraps=project_service.solidify_session,
-        ) as publish:
+        ) as publish, patch.object(
+            self.ui,
+            "repair_project_view_caches",
+            side_effect=lambda **values: (
+                values["session"].clear_dirty("view_cache"),
+                0,
+            )[1],
+            create=True,
+        ) as repair:
             self.ui._save_pre_handler(None)
 
         publish.assert_not_called()
-        self.assertEqual(session.dirty_reasons, frozenset({"view_cache"}))
+        repair.assert_called_once_with(
+            session=session,
+            objects=(),
+            blend_path=self.fake_bpy.data.filepath,
+        )
+        self.assertFalse(session.dirty)
 
     def test_save_handler_does_not_publish_clean_missing_load(self):
         self.fake_bpy.data.filepath = str(

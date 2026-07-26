@@ -65,6 +65,7 @@ def _fake_blender_modules(write_vdb):
         volumes=types.SimpleNamespace(new=stop_after_replace)
     )
     fake_openvdb = types.ModuleType("openvdb")
+    written = {}
 
     class FloatGrid:
         def __init__(self):
@@ -74,9 +75,18 @@ def _fake_blender_modules(write_vdb):
         def copyFromArray(self, _values):
             pass
 
+    def write(path, grids, metadata=None):
+        write_vdb(path, grids, metadata=metadata)
+        values = [grids] if isinstance(grids, FloatGrid) else list(grids)
+        written[str(path)] = (
+            [types.SimpleNamespace(name=value.name) for value in values],
+            dict(metadata or {}),
+        )
+
     fake_openvdb.FloatGrid = FloatGrid
     fake_openvdb.createLinearTransform = lambda matrix: matrix
-    fake_openvdb.write = write_vdb
+    fake_openvdb.write = write
+    fake_openvdb.readAll = lambda path: written[str(path)]
     return fake_bpy, fake_openvdb
 
 

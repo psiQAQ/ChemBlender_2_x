@@ -9,6 +9,7 @@ from ..core.project_service import (
     sync_project_session_links_for_scenes,
     verify_project_session_for_scenes,
 )
+from .view_cache import repair_project_view_caches
 
 
 RECOVERY_MARKER = ".chemblender-session-recovery"
@@ -217,6 +218,11 @@ def _load_post_handler(_dummy):
             _record_result(result)
         if result.status.value == "connected":
             try:
+                repair_project_view_caches(
+                    session=session,
+                    objects=tuple(getattr(bpy.data, "objects", ())),
+                    blend_path=bpy.data.filepath,
+                )
                 _notify_session_mutation(session)
             except BaseException as error:
                 verification_failure = error
@@ -254,8 +260,7 @@ def _save_pre_handler(_dummy):
         session.sidecar_path is not None
         and Path(session.sidecar_path).resolve() == desired_sidecar
     )
-    if reasons == frozenset({"view_cache"}) and same_sidecar:
-        return
+    view_cache_only = reasons == frozenset({"view_cache"}) and same_sidecar
     link_only = (
         same_sidecar
         and (
@@ -267,7 +272,9 @@ def _save_pre_handler(_dummy):
         )
     )
     try:
-        if link_only:
+        if view_cache_only:
+            result = None
+        elif link_only:
             result = sync_project_session_links_for_scenes(
                 session=session,
                 scenes=tuple(bpy.data.scenes),
@@ -279,10 +286,16 @@ def _save_pre_handler(_dummy):
                 scenes=tuple(bpy.data.scenes),
                 blend_path=blend_path,
             )
+        if result is not None:
+            _record_result(result)
+        if session.link_status == "connected":
+            repair_project_view_caches(
+                session=session,
+                objects=tuple(getattr(bpy.data, "objects", ())),
+                blend_path=blend_path,
+            )
     except BaseException as error:
         _set_error(entry, error)
-    else:
-        _record_result(result)
 
 
 def _register_handler(callbacks, handler):

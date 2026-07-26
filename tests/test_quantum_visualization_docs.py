@@ -210,6 +210,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "ChemBlender/core/storage/atomic_paths.py",
             documented,
         )
+        self.assertIn("ChemBlender/ui/view_cache.py", documented)
         self.assertEqual(documented, expected)
 
         readme = self.read_doc("README.md")
