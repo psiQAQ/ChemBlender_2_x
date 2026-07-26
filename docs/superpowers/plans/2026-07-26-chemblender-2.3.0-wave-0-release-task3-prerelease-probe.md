@@ -30,7 +30,7 @@
 - Produce: `probe_prerelease_version(extension_root, blender, version) -> dict[str, object]`.
 - Produce CLI accepting `--extension-root`, `--blender`, and optional `--version`.
 
-- [ ] **Step 1: Write copy-safety RED tests**
+- [x] **Step 1: Write copy-safety RED tests**
 
 Assert the script is missing, then cover:
 
@@ -40,7 +40,7 @@ Assert the script is missing, then cover:
 - malformed/multiple/missing version assignments fail before subprocess;
 - temporary root is removed on success and failure.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```powershell
 & $pythonBin -m unittest tests.test_prerelease_probe_script -v
@@ -48,7 +48,7 @@ Assert the script is missing, then cover:
 
 Expected: `ModuleNotFoundError`.
 
-- [ ] **Step 3: Implement the minimal safe probe**
+- [x] **Step 3: Implement the minimal safe probe**
 
 Use `TemporaryDirectory`, `shutil.copytree`, an anchored text replacement and
 `subprocess.run(..., capture_output=True, text=True, check=False)`. Invoke:
@@ -69,11 +69,11 @@ and returns Blender's nonzero status as failure.
 - Modify: `.agents/reference/code-architecture-guide.md`
 - Modify: `tests/test_quantum_visualization_docs.py`
 
-- [ ] **Step 1: Run Blender preflight**
+- [x] **Step 1: Run Blender preflight**
 
 Confirm Blender `5.1.2`, Windows executable and native CLI availability.
 
-- [ ] **Step 2: Run the real probe**
+- [x] **Step 2: Run the real probe**
 
 Use the MCP-confirmed executable:
 
@@ -84,7 +84,7 @@ C:\Program Files\Blender Foundation\Blender 5.1\blender.exe
 Record exact command, exit code, stdout/stderr, source manifest SHA-256 before
 and after, and whether the temporary directory was cleaned.
 
-- [ ] **Step 3: Commit observed evidence**
+- [x] **Step 3: Commit observed evidence**
 
 The document must say `Passed` only if native exit code is 0. It must clearly
 separate local evidence from Remote CI (`Not Run`).
@@ -97,18 +97,18 @@ separate local evidence from Remote CI (`Not Run`).
 - Modify: `.agents/active/2.3.0-wave-0-platform-foundation.md`
 - Modify: this plan
 
-- [ ] **Step 1: Run focused/full verification**
+- [x] **Step 1: Run focused/full verification**
 
 Run probe/release metadata/documentation tests, full `unittest`, `compileall`
 and `git diff --check`.
 
-- [ ] **Step 2: Independent review**
+- [x] **Step 2: Independent review**
 
 Review source immutability, copy exclusions, command construction, temp cleanup,
 exit propagation and evidence accuracy. Fix all Critical, Important and
 task-related Minor findings.
 
-- [ ] **Step 3: Commit and checkpoint**
+- [x] **Step 3: Commit and checkpoint**
 
 Implementation commit:
 
@@ -126,12 +126,27 @@ Task 4 — Extend changelog and release validators for the proven scheme
 
 ## Completion checkpoint
 
-- State: `in_progress`
+- State: `completed`
 - Baseline: `75e2fa01e4a50b33fabdaec37a4202d2da24c12f`
-- Planning commit: pending
-- Implementation commit: pending
+- Planning commit: `7fbcefee1596a1a1829ff86471b73959944cd30e`
+- Implementation commit: `615a815bf134a20b78222d500989702226ffd93b`
+- Review-fix commit: `654de70d695a587e3cc20e6d259d2ec52e6f3ee3`
 - Probe version: `2.3.0-alpha.1`
-- Native Blender result: `Not Run`
-- Production manifest unchanged: `Not Run`
+- RED evidence:
+  missing probe module; review regression then proved default `copytree`
+  entered a real Windows junction and did not reject mocked symlink metadata.
+- GREEN evidence:
+  probe 10 Passed and 1 Skipped; focused 39 Passed and 1 Skipped; full before
+  review fix 972 Passed, 27 Skipped and 0 Failed; compileall/diff-check Passed.
+- Native Blender result:
+  `Passed`; Blender 5.1.2 returned exit 0 and `Success parsing TOML`.
+- Production manifest unchanged:
+  `Passed`; SHA-256 before/after
+  `ed8ae130d6946725e9f2ed1bb141e2486c6d5cf80a589209480181ad7ea66f4e`.
+- Temporary root cleanup: `Passed`.
+- Independent review:
+  1 Important linked-source finding fixed and scoped re-review `ADDRESSED`;
+  no remaining findings.
 - Remote CI: `Not Run`
-- Next task: conditional on native probe
+- Next task:
+  `Task 4 — Extend changelog and release validators for the proven scheme`
