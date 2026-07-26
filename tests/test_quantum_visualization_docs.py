@@ -206,6 +206,10 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         documented = set(
             re.findall(r"`((?:ChemBlender|worker)/[^`]+\.py)`", guide)
         )
+        self.assertIn(
+            "ChemBlender/core/storage/atomic_paths.py",
+            documented,
+        )
         self.assertEqual(documented, expected)
 
         readme = self.read_doc("README.md")

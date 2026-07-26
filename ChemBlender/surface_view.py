@@ -2,12 +2,13 @@
 
 import hashlib
 import os
+import sys
 from pathlib import Path
-from uuid import uuid4
 
 import bpy
 
 from .core import Grid3D
+from .core.storage.atomic_paths import short_sibling_temporary_path
 from .grid_volume import _ANGSTROM_SCALE, _selected_values, _transform_matrix
 
 
@@ -34,12 +35,17 @@ def _vdb_grid(name, values, grid, scale):
 def _write_vdb(path, grids, metadata):
     import openvdb
 
-    temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+    temporary = short_sibling_temporary_path(path)
     try:
         openvdb.write(str(temporary), list(grids), metadata=metadata)
         os.replace(temporary, path)
     finally:
-        temporary.unlink(missing_ok=True)
+        active_error = sys.exception()
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            if active_error is None:
+                raise
 
 
 def _material(name, color, opacity):

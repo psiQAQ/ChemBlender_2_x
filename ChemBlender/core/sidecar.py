@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 from dataclasses import fields, is_dataclass
 from datetime import datetime, timezone
 from enum import Enum
@@ -17,6 +18,7 @@ from .sidecar_migrations import (
     CURRENT_PROJECT_SCHEMA_VERSION,
     migrate_manifest,
 )
+from .storage.atomic_paths import short_sibling_temporary_path
 
 
 FORMAT_ID = "chemblender.cbq"
@@ -154,7 +156,7 @@ def _array_content_hash(array):
 
 def _atomic_bytes(path, data):
     path = Path(path)
-    temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+    temporary = short_sibling_temporary_path(path)
     try:
         with temporary.open("xb") as stream:
             stream.write(data)
@@ -162,8 +164,12 @@ def _atomic_bytes(path, data):
             os.fsync(stream.fileno())
         os.replace(temporary, path)
     finally:
-        if temporary.exists():
-            temporary.unlink()
+        active_error = sys.exception()
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            if active_error is None:
+                raise
 
 
 class _Encoder:
@@ -239,7 +245,7 @@ class _Encoder:
                 if memory_map is not None:
                     memory_map.close()
         if not reusable:
-            temporary = destination.with_name(f".{destination.name}.{uuid4().hex}.tmp")
+            temporary = short_sibling_temporary_path(destination)
             try:
                 with temporary.open("xb") as stream:
                     _numpy().save(stream, contiguous, allow_pickle=False)
@@ -247,8 +253,12 @@ class _Encoder:
                     os.fsync(stream.fileno())
                 os.replace(temporary, destination)
             finally:
-                if temporary.exists():
-                    temporary.unlink()
+                active_error = sys.exception()
+                try:
+                    temporary.unlink(missing_ok=True)
+                except OSError:
+                    if active_error is None:
+                        raise
         return {
             "$array": "npy",
             "path": f"arrays/{destination.name}",

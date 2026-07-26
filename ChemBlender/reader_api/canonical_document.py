@@ -7,8 +7,9 @@ import re
 from dataclasses import fields
 from enum import Enum
 from pathlib import Path, PurePosixPath
-from uuid import UUID, uuid4
+from uuid import UUID
 
+from ..core.storage.atomic_paths import short_sibling_temporary_path
 from . import public_model as _model
 
 
@@ -273,9 +274,7 @@ class _Encoder:
             raise CanonicalDocumentIntegrityError(
                 "artifact path must stay inside the bundle"
             ) from error
-        temporary = destination.with_name(
-            f".{destination.name}.{uuid4().hex}.tmp"
-        )
+        temporary = short_sibling_temporary_path(destination)
         write_error = None
         try:
             with temporary.open("xb") as stream:
@@ -623,7 +622,7 @@ def write_public_batch_bundle(root, batch):
     root = Path(root)
     document = public_batch_document(batch, root)
     destination = root / _DOCUMENT_NAME
-    temporary = destination.with_name(f".{destination.name}.{uuid4().hex}.tmp")
+    temporary = short_sibling_temporary_path(destination)
     write_error = None
     try:
         with temporary.open("xb") as stream:

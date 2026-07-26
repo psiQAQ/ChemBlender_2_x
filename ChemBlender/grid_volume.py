@@ -1,11 +1,12 @@
 import operator
 import os
+import sys
 from pathlib import Path
-from uuid import uuid4
 
 import bpy
 
 from .core import Grid3D, volume_render_cache_key
+from .core.storage.atomic_paths import short_sibling_temporary_path
 
 
 _ANGSTROM_SCALE = {
@@ -126,14 +127,17 @@ def create_grid_volume(
     }
     if grid.structure_id is not None:
         metadata["chemblender_structure_id"] = str(grid.structure_id)
-    temporary = cache_path.with_name(
-        f".{cache_path.name}.{uuid4().hex}.tmp"
-    )
+    temporary = short_sibling_temporary_path(cache_path)
     try:
         openvdb.write(str(temporary), vdb_grid, metadata=metadata)
         os.replace(temporary, cache_path)
     finally:
-        temporary.unlink(missing_ok=True)
+        active_error = sys.exception()
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            if active_error is None:
+                raise
 
     volume = bpy.data.volumes.new(name)
     obj = None
