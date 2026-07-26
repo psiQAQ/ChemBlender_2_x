@@ -200,7 +200,7 @@ and the user-authorized branch push follow as a separate gate.
 - Planning commit: `3e4892d8a628d0e983c08c03fbbf593d0ac97641`
 - Implementation commit: `65c59eee2259b08397a4077d2e84c7d6e0d0ac73`
 - Review-fix commit: `240a7ca763a8a25d3c2d1e3b154e1585c72c11f4`
-- Checkpoint commit: pending
+- Checkpoint commit: `0bc7e829fb6e02f78e8a522a8ee6ec63187db3b3`
 - RED evidence: manifest-only bump ran 45 tests with 11 failures and 3 errors
   from intentional live-production `2.2.0` expectations and missing alpha notes.
 - GREEN evidence: focused 66 Passed and 1 Skipped; full 992 Passed,
@@ -210,8 +210,8 @@ and the user-authorized branch push follow as a separate gate.
   `adcb065d80b1efc28fcdcc3470c45d17bf8824437bebb5332677d89258e465b8`
 - Blender validate/build: `Passed` with Blender `5.1.2`
 - Candidate ZIP:
-  `chemblender-2.3.0-alpha.1.zip`, `27436445` bytes,
-  SHA-256 `c2deda79612b6acec9a7e594e131f0702c40bf45aa93f82ba17f986ad3cfeba9`
+  final reviewed `chemblender-2.3.0-alpha.1.zip`, `27436521` bytes,
+  SHA-256 `a7672249e42611fa86112cbe300a6d4392b2468ade40ec46e5129582fdc26fe2`
 - ZIP audit: `Passed`; 124 unique safe entries, CRC clean, exact pinned wheel
   and packaged manifest byte equality.
 - Isolated lifecycle: `Passed`; short isolated user resources with default
@@ -220,6 +220,13 @@ and the user-authorized branch push follow as a separate gate.
 - Independent reviews:
   specification `PASS`; one code-quality Minor fixed and scoped re-review
   `ADDRESSED`.
+- Post-checkpoint whole-branch fixes:
+  exact package tag `310881a63707cb5eb7c61f3281239f839f2584b1`;
+  legacy-tag helper compatibility `dc741a8cb95319c54bb3a889486776eda08c0627`;
+  fatal Scene-link rollback `9fe500ec6f89402b8bfab10c67b20952821d0411`.
+- Final whole-branch review:
+  specification and code quality `APPROVED`; all findings addressed.
+- Final full suite: 998 Passed, 28 Skipped and 0 Failed.
 - Tag/Release/workflow dispatch: `Not Run`
 - Remote CI: `Not Run`
 - Next gate: final whole-branch review, verification and authorized push
