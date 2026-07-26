@@ -1,0 +1,527 @@
+{
+  "schema_version": 1,
+  "baseline_commit": "7078356c85bd02fcb0db23b01490f87f16abfb94",
+  "blender_version": "5.1.2",
+  "installed_package_name": "bl_ext.user_default.chemblender",
+  "discovered_module_names": [
+    ".Chem_data",
+    "._math",
+    ".auto_load",
+    ".chem_utils",
+    ".core.analysis_report",
+    ".core.ase_adapter",
+    ".core.cache_identity",
+    ".core.cclib_adapter",
+    ".core.cjson_adapter",
+    ".core.critic2_adapter",
+    ".core.cube",
+    ".core.external_connector",
+    ".core.gemmi_adapter",
+    ".core.grid_lod",
+    ".core.import_pipeline.conflicts",
+    ".core.import_pipeline.grouping",
+    ".core.import_pipeline.parse",
+    ".core.import_pipeline.preflight",
+    ".core.import_pipeline.preview",
+    ".core.import_pipeline.report",
+    ".core.import_pipeline.request",
+    ".core.import_pipeline.staging",
+    ".core.import_pipeline.transaction",
+    ".core.iodata_adapter",
+    ".core.model.arrays",
+    ".core.model.common",
+    ".core.model.diagnostics",
+    ".core.model.grids",
+    ".core.model.grouping",
+    ".core.model.periodic",
+    ".core.model.project",
+    ".core.model.properties",
+    ".core.model.quality",
+    ".core.model.sources",
+    ".core.model.spectroscopy",
+    ".core.model.structure",
+    ".core.model.topology",
+    ".core.model.wavefunction",
+    ".core.model_registry",
+    ".core.mol_v2000",
+    ".core.phonon_frames",
+    ".core.phonopy_adapter",
+    ".core.project_service",
+    ".core.pymatgen_adapter",
+    ".core.pymatgen_electronic",
+    ".core.pyprocar_adapter",
+    ".core.qcschema_adapter",
+    ".core.reader_catalog",
+    ".core.readers",
+    ".core.recipe",
+    ".core.scene_preset",
+    ".core.session",
+    ".core.sidecar",
+    ".core.sidecar_migrations",
+    ".core.spglib_adapter",
+    ".core.trajectory_frames",
+    ".core.vibration_spectrum",
+    ".core.wavefunction_grid",
+    ".core.wavefunction_observables",
+    ".core.worker_protocol",
+    ".core.xyz",
+    ".crys_utils",
+    ".dataset_view",
+    ".electronic_plot",
+    ".ex_package",
+    ".extension",
+    ".fermi_surface_view",
+    ".grid_volume",
+    ".mesh",
+    ".node",
+    ".output",
+    ".panel",
+    ".periodictable",
+    ".project_link",
+    ".read",
+    ".reader_api.builtin_bridge",
+    ".reader_api.canonical_document",
+    ".reader_api.conformance",
+    ".reader_api.descriptors",
+    ".reader_api.import_pipeline_bridge",
+    ".reader_api.manifest",
+    ".reader_api.protocol",
+    ".reader_api.public_model",
+    ".reader_api.registry",
+    ".reader_api.version",
+    ".reader_api.worker_bridge",
+    ".runtime.reader_api_bridge",
+    ".scaffold",
+    ".scene_preset_view",
+    ".spectrum_plot",
+    ".surface_view",
+    ".topology_view",
+    ".trajectory_view",
+    ".vibration_view",
+    ".worker_client"
+  ],
+  "registered_classes": [
+    {
+      "module": ".chem_utils",
+      "name": "AddBranches",
+      "id": "chem.add_branches",
+      "base": "Operator"
+    },
+    {
+      "module": ".chem_utils",
+      "name": "AddHydrogens",
+      "id": "chem.add_hydrogens",
+      "base": "Operator"
+    },
+    {
+      "module": ".chem_utils",
+      "name": "AngleButton",
+      "id": "chem.button_angle",
+      "base": "Operator"
+    },
+    {
+      "module": ".chem_utils",
+      "name": "ConnectByDistance",
+      "id": "chem.connect_by_dist",
+      "base": "Operator"
+    },
+    {
+      "module": ".chem_utils",
+      "name": "DistanceButton",
+      "id": "chem.button_distance",
+      "base": "Operator"
+    },
+    {
+      "module": ".chem_utils",
+      "name": "EnergyButton",
+      "id": "chem.button_energy",
+      "base": "Operator"
+    },
+    {
+      "module": ".chem_utils",
+      "name": "EnhancedSelectButton",
+      "id": "chem.enhance_select",
+      "base": "Operator"
+    },
+    {
+      "module": ".chem_utils",
+      "name": "GeometryOptimizeButton",
+      "id": "chem.geometry_optimize",
+      "base": "Operator"
+    },
+    {
+      "module": ".chem_utils",
+      "name": "GeometryUpdateButton",
+      "id": "chem.geometry_update",
+      "base": "Operator"
+    },
+    {
+      "module": ".chem_utils",
+      "name": "ScaffoldConvertButton",
+      "id": "chem.mesh2scaffold",
+      "base": "Operator"
+    },
+    {
+      "module": ".chem_utils",
+      "name": "SelectButton",
+      "id": "chem.select",
+      "base": "Operator"
+    },
+    {
+      "module": ".chem_utils",
+      "name": "SetAtomsButton",
+      "id": "chem.set_atoms",
+      "base": "Operator"
+    },
+    {
+      "module": ".chem_utils",
+      "name": "SetBondsButton",
+      "id": "chem.set_bonds",
+      "base": "Operator"
+    },
+    {
+      "module": ".crys_utils",
+      "name": "AddCellButton",
+      "id": "chem.add_unit_cell",
+      "base": "Operator"
+    },
+    {
+      "module": ".crys_utils",
+      "name": "AddCoordPolyhedraButton",
+      "id": "chem.add_coordpolyhedra",
+      "base": "Operator"
+    },
+    {
+      "module": ".crys_utils",
+      "name": "AddCrysScaffoldButton",
+      "id": "chem.add_crys_scaffold",
+      "base": "Operator"
+    },
+    {
+      "module": ".crys_utils",
+      "name": "AddDummyButton",
+      "id": "chem.add_dummy",
+      "base": "Operator"
+    },
+    {
+      "module": ".crys_utils",
+      "name": "AvgFractButton",
+      "id": "chem.avgfract",
+      "base": "Operator"
+    },
+    {
+      "module": ".crys_utils",
+      "name": "CHEM_OT_AddAtom",
+      "id": "chem.add_atom",
+      "base": "Operator"
+    },
+    {
+      "module": ".crys_utils",
+      "name": "CHEM_OT_RemoveAtom",
+      "id": "chem.remove_atom",
+      "base": "Operator"
+    },
+    {
+      "module": ".crys_utils",
+      "name": "Chem_OT_ViewSet",
+      "id": "chem.view_set",
+      "base": "Operator"
+    },
+    {
+      "module": ".crys_utils",
+      "name": "SupercellButton",
+      "id": "chem.supercell",
+      "base": "Operator"
+    },
+    {
+      "module": ".crys_utils",
+      "name": "SymmetryDuplicate",
+      "id": "chem.duplicate_symmetry",
+      "base": "Operator"
+    },
+    {
+      "module": ".crys_utils",
+      "name": "SymmetrySelect",
+      "id": "chem.sel_symmetry",
+      "base": "Operator"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_MT_chem_GN_menu",
+      "id": "NODE_MT_chem_GN_menu",
+      "base": "Menu"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_MT_group_Crystal Structure",
+      "id": "NODE_MT_group_Crystal_Structure",
+      "base": "Menu"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_MT_group_Custom Curve",
+      "id": "NODE_MT_group_Custom_Curve",
+      "base": "Menu"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_MT_group_Custom Mesh",
+      "id": "NODE_MT_group_Custom_Mesh",
+      "base": "Menu"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_MT_group_Edit Curve",
+      "id": "NODE_MT_group_Edit_Curve",
+      "base": "Menu"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_MT_group_Edit Mesh",
+      "id": "NODE_MT_group_Edit_Mesh",
+      "base": "Menu"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_MT_group_Generate Mode",
+      "id": "NODE_MT_group_Generate_Mode",
+      "base": "Menu"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_MT_group_Geometry Transform",
+      "id": "NODE_MT_group_Geometry_Transform",
+      "base": "Menu"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_MT_group_Molecular Structure",
+      "id": "NODE_MT_group_Molecular_Structure",
+      "base": "Menu"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_MT_group_Point Distribution",
+      "id": "NODE_MT_group_Point_Distribution",
+      "base": "Menu"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_MT_group_Set Selection",
+      "id": "NODE_MT_group_Set_Selection",
+      "base": "Menu"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_MT_group_Utilities",
+      "id": "NODE_MT_group_Utilities",
+      "base": "Menu"
+    },
+    {
+      "module": ".extension",
+      "name": "NODE_OT_group_add",
+      "id": "chem.add_node_group",
+      "base": "Operator"
+    },
+    {
+      "module": ".output",
+      "name": "AddCameraButton",
+      "id": "chem.add_camera",
+      "base": "Operator"
+    },
+    {
+      "module": ".output",
+      "name": "QuickRenderButton",
+      "id": "chem.quick_render",
+      "base": "Operator"
+    },
+    {
+      "module": ".output",
+      "name": "QuickRenderSetting",
+      "id": "chem.quick_render_set",
+      "base": "Operator"
+    },
+    {
+      "module": ".output",
+      "name": "SaveMolButton",
+      "id": "chem.molecule_output",
+      "base": "Operator"
+    },
+    {
+      "module": ".output",
+      "name": "UpdateCIFFromMesh",
+      "id": "chem.update_cif_from_mesh",
+      "base": "Operator"
+    },
+    {
+      "module": ".panel",
+      "name": "CHEM_PT_Build",
+      "id": "CHEM_PT_BUILD",
+      "base": "Panel"
+    },
+    {
+      "module": ".panel",
+      "name": "CHEM_PT_OUTPUT",
+      "id": "CHEM_PT_RENDER",
+      "base": "Panel"
+    },
+    {
+      "module": ".panel",
+      "name": "CHEM_PT_TOOLS",
+      "id": "CHEM_PT_UTILITY",
+      "base": "Panel"
+    },
+    {
+      "module": ".panel",
+      "name": "CHEM_texts",
+      "id": null,
+      "base": "PropertyGroup"
+    },
+    {
+      "module": ".panel",
+      "name": "CRYSTAL_PT_TOOLS",
+      "id": "CRYSTAL_PT_UTILITY",
+      "base": "Panel"
+    },
+    {
+      "module": ".periodictable",
+      "name": "CHEMBLENDER_OT_CopyText",
+      "id": "chem.copy_text",
+      "base": "Operator"
+    },
+    {
+      "module": ".periodictable",
+      "name": "CHEMBLENDER_OT_OpenPeriodicTable",
+      "id": "chem.open_periodic_table",
+      "base": "Operator"
+    },
+    {
+      "module": ".periodictable",
+      "name": "CHEMBLENDER_OT_SelectElement",
+      "id": "chem.select_element",
+      "base": "Operator"
+    },
+    {
+      "module": ".periodictable",
+      "name": "CHEMBLENDER_PT_PeriodicPanel",
+      "id": "CHEMBLENDER_PT_periodic",
+      "base": "Panel"
+    },
+    {
+      "module": ".read",
+      "name": "CIF_Atom",
+      "id": null,
+      "base": "PropertyGroup"
+    },
+    {
+      "module": ".read",
+      "name": "CIF_Structure",
+      "id": null,
+      "base": "PropertyGroup"
+    },
+    {
+      "module": ".scaffold",
+      "name": "ERROR_OT_CustomDialog",
+      "id": "error.custom_dialog",
+      "base": "Operator"
+    },
+    {
+      "module": ".scaffold",
+      "name": "ErrorDialogOperator",
+      "id": "wm.error_dialog",
+      "base": "Operator"
+    },
+    {
+      "module": ".scaffold",
+      "name": "MESH_OT_SCAFFOLD_BUILD",
+      "id": "chem.scaffold_build",
+      "base": "Operator"
+    }
+  ],
+  "module_callbacks": [
+    {
+      "module": ".extension",
+      "register": true,
+      "unregister": true
+    },
+    {
+      "module": ".trajectory_view",
+      "register": true,
+      "unregister": true
+    }
+  ],
+  "handlers": [
+    {
+      "owner": "frame_change_post",
+      "module": ".trajectory_view",
+      "name": "_frame_change_handler"
+    }
+  ],
+  "menu_callbacks": [
+    {
+      "owner": "NODE_MT_add",
+      "module": ".extension",
+      "name": "add_chem_button"
+    },
+    {
+      "owner": "NODE_MT_chem_GN_menu",
+      "module": ".extension",
+      "name": "draw"
+    },
+    {
+      "owner": "NODE_MT_chem_GN_menu",
+      "module": ".extension",
+      "name": "draw_menu"
+    },
+    {
+      "owner": "NODE_MT_chem_GN_menu",
+      "module": ".extension",
+      "name": "draw_menu"
+    },
+    {
+      "owner": "NODE_MT_chem_GN_menu",
+      "module": ".extension",
+      "name": "draw_menu"
+    },
+    {
+      "owner": "NODE_MT_chem_GN_menu",
+      "module": ".extension",
+      "name": "draw_menu"
+    },
+    {
+      "owner": "NODE_MT_chem_GN_menu",
+      "module": ".extension",
+      "name": "draw_menu"
+    },
+    {
+      "owner": "NODE_MT_chem_GN_menu",
+      "module": ".extension",
+      "name": "draw_menu"
+    },
+    {
+      "owner": "NODE_MT_chem_GN_menu",
+      "module": ".extension",
+      "name": "draw_menu"
+    },
+    {
+      "owner": "NODE_MT_chem_GN_menu",
+      "module": ".extension",
+      "name": "draw_menu"
+    },
+    {
+      "owner": "NODE_MT_chem_GN_menu",
+      "module": ".extension",
+      "name": "draw_menu"
+    },
+    {
+      "owner": "NODE_MT_chem_GN_menu",
+      "module": ".extension",
+      "name": "draw_menu"
+    },
+    {
+      "owner": "NODE_MT_chem_GN_menu",
+      "module": ".extension",
+      "name": "draw_menu"
+    }
+  ]
+}

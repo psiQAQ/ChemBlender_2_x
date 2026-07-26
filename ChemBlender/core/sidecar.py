@@ -3,17 +3,30 @@ import hashlib
 import json
 import os
 import re
+import sys
 from dataclasses import fields, is_dataclass
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path, PurePosixPath
 from uuid import UUID, uuid4
 
 from . import model
+from .model.project import validate_project_graph
+from .model_registry import MODEL_ENUMS, model_type_from_tag, model_type_tag
+from .sidecar_migrations import (
+    CURRENT_MANIFEST_VERSION,
+    CURRENT_PROJECT_SCHEMA_VERSION,
+    migrate_manifest,
+)
+from .storage.atomic_paths import short_sibling_temporary_path
 
 
 FORMAT_ID = "chemblender.cbq"
-MANIFEST_VERSION = "0.1"
+MANIFEST_VERSION = CURRENT_MANIFEST_VERSION
 _SHA256 = re.compile(r"[0-9a-f]{64}")
+_UTC_TIMESTAMP = re.compile(
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z"
+)
 
 
 def _numpy():
@@ -24,6 +37,25 @@ def _numpy():
 
 def _reject_json_constant(value):
     raise ValueError(f"non-finite JSON value: {value}")
+
+
+def _canonical_json(document):
+    return json.dumps(
+        document,
+        ensure_ascii=False,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
+def _manifest_hash(manifest):
+    payload = {
+        key: value
+        for key, value in manifest.items()
+        if key != "manifest_sha256"
+    }
+    return hashlib.sha256(_canonical_json(payload)).hexdigest()
 
 
 class SidecarError(RuntimeError):
@@ -102,21 +134,6 @@ class LazyNpyArray:
             self._array = None
 
 
-def _model_registry():
-    classes = {}
-    enums = {}
-    for name, value in vars(model).items():
-        if isinstance(value, type) and value.__module__ == model.__name__:
-            if is_dataclass(value):
-                classes[name] = value
-            if issubclass(value, Enum):
-                enums[name] = value
-    return classes, enums
-
-
-_MODEL_CLASSES, _MODEL_ENUMS = _model_registry()
-
-
 def _file_hash(path):
     digest = hashlib.sha256()
     with Path(path).open("rb") as stream:
@@ -139,7 +156,7 @@ def _array_content_hash(array):
 
 def _atomic_bytes(path, data):
     path = Path(path)
-    temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+    temporary = short_sibling_temporary_path(path)
     try:
         with temporary.open("xb") as stream:
             stream.write(data)
@@ -147,8 +164,12 @@ def _atomic_bytes(path, data):
             os.fsync(stream.fileno())
         os.replace(temporary, path)
     finally:
-        if temporary.exists():
-            temporary.unlink()
+        active_error = sys.exception()
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            if active_error is None:
+                raise
 
 
 class _Encoder:
@@ -158,7 +179,12 @@ class _Encoder:
 
     def encode(self, value):
         if isinstance(value, Enum):
-            return {"$enum": type(value).__name__, "value": self.encode(value.value)}
+            for tag, enum_type in MODEL_ENUMS.items():
+                if enum_type is type(value):
+                    return {"$enum": tag, "value": self.encode(value.value)}
+            raise SidecarIntegrityError(
+                f"unsupported manifest value: {type(value).__name__}"
+            )
         if value is None or isinstance(value, (str, bool, int, float)):
             return value
         if isinstance(value, UUID):
@@ -176,14 +202,20 @@ class _Encoder:
                     for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
                 ]
             }
-        if isinstance(value, model.ArrayData):
+        if type(value) is model.ArrayData:
             encoded = {"$type": "ArrayData"}
             encoded["values"] = self._array(value.values)
             encoded["dims"] = self.encode(value.dims)
             encoded["unit"] = value.unit
             return encoded
-        if is_dataclass(value) and type(value).__name__ in _MODEL_CLASSES:
-            encoded = {"$type": type(value).__name__}
+        if is_dataclass(value):
+            try:
+                type_name = model_type_tag(value)
+            except TypeError as error:
+                raise SidecarIntegrityError(
+                    f"unsupported manifest value: {type(value).__name__}"
+                ) from error
+            encoded = {"$type": type_name}
             for item in fields(value):
                 if item.init:
                     encoded[item.name] = self.encode(getattr(value, item.name))
@@ -213,7 +245,7 @@ class _Encoder:
                 if memory_map is not None:
                     memory_map.close()
         if not reusable:
-            temporary = destination.with_name(f".{destination.name}.{uuid4().hex}.tmp")
+            temporary = short_sibling_temporary_path(destination)
             try:
                 with temporary.open("xb") as stream:
                     _numpy().save(stream, contiguous, allow_pickle=False)
@@ -221,8 +253,12 @@ class _Encoder:
                     os.fsync(stream.fileno())
                 os.replace(temporary, destination)
             finally:
-                if temporary.exists():
-                    temporary.unlink()
+                active_error = sys.exception()
+                try:
+                    temporary.unlink(missing_ok=True)
+                except OSError:
+                    if active_error is None:
+                        raise
         return {
             "$array": "npy",
             "path": f"arrays/{destination.name}",
@@ -243,42 +279,72 @@ class _Decoder:
             return value
         if not isinstance(value, dict):
             raise SidecarIntegrityError("manifest values must use tagged objects")
-        if "$uuid" in value:
+        tags = set(value).intersection(
+            {"$uuid", "$enum", "$bytes", "$tuple", "$list", "$dict"}
+        )
+        if len(tags) > 1:
+            raise SidecarIntegrityError("manifest object has multiple tags")
+        if "$uuid" in tags:
+            if set(value) != {"$uuid"}:
+                raise SidecarIntegrityError("invalid UUID tag fields")
             try:
                 return UUID(value["$uuid"])
             except (TypeError, ValueError) as error:
                 raise SidecarIntegrityError("invalid UUID in manifest") from error
-        if "$enum" in value:
+        if "$enum" in tags:
+            if set(value) != {"$enum", "value"}:
+                raise SidecarIntegrityError("invalid enum tag fields")
             try:
-                enum_type = _MODEL_ENUMS[value["$enum"]]
+                enum_type = MODEL_ENUMS[value["$enum"]]
                 return enum_type(self.decode(value["value"]))
             except (KeyError, TypeError, ValueError) as error:
                 raise SidecarIntegrityError("invalid enum in manifest") from error
-        if "$bytes" in value:
+        if "$bytes" in tags:
+            if set(value) != {"$bytes"}:
+                raise SidecarIntegrityError("invalid bytes tag fields")
             try:
                 return base64.b64decode(value["$bytes"], validate=True)
             except (TypeError, ValueError) as error:
                 raise SidecarIntegrityError("invalid bytes in manifest") from error
-        if "$tuple" in value:
+        if "$tuple" in tags:
+            if set(value) != {"$tuple"} or type(value["$tuple"]) is not list:
+                raise SidecarIntegrityError("invalid tuple in manifest")
             return tuple(self.decode(item) for item in value["$tuple"])
-        if "$list" in value:
+        if "$list" in tags:
+            if set(value) != {"$list"} or type(value["$list"]) is not list:
+                raise SidecarIntegrityError("invalid list in manifest")
             return [self.decode(item) for item in value["$list"]]
-        if "$dict" in value:
+        if "$dict" in tags:
+            if set(value) != {"$dict"} or type(value["$dict"]) is not list:
+                raise SidecarIntegrityError("invalid mapping in manifest")
             try:
-                return {
-                    self.decode(key): self.decode(item) for key, item in value["$dict"]
-                }
+                decoded = {}
+                for pair in value["$dict"]:
+                    if type(pair) is not list or len(pair) != 2:
+                        raise SidecarIntegrityError("invalid mapping in manifest")
+                    key = self.decode(pair[0])
+                    if key in decoded:
+                        raise SidecarIntegrityError("duplicate mapping key in manifest")
+                    decoded[key] = self.decode(pair[1])
+                return decoded
             except (TypeError, ValueError) as error:
                 raise SidecarIntegrityError("invalid mapping in manifest") from error
         type_name = value.get("$type")
         if type_name == "ArrayData":
-            return model.ArrayData(
-                self._array(value.get("values")),
-                self.decode(value.get("dims")),
-                value.get("unit"),
-            )
+            if set(value) != {"$type", "values", "dims", "unit"}:
+                raise SidecarIntegrityError("invalid ArrayData fields")
+            try:
+                return model.ArrayData(
+                    self._array(value["values"]),
+                    self.decode(value["dims"]),
+                    value["unit"],
+                )
+            except SidecarError:
+                raise
+            except Exception as error:
+                raise SidecarIntegrityError("invalid ArrayData in manifest") from error
         try:
-            class_type = _MODEL_CLASSES[type_name]
+            class_type = model_type_from_tag(type_name)
         except (KeyError, TypeError) as error:
             raise SidecarIntegrityError(f"unknown model type: {type_name!r}") from error
         expected = {item.name for item in fields(class_type) if item.init}
@@ -286,16 +352,34 @@ class _Decoder:
         if actual != expected:
             raise SidecarIntegrityError(f"invalid fields for model type {type_name}")
         try:
-            return class_type(**{name: self.decode(value[name]) for name in expected})
+            decoded = {
+                name: self.decode(value[name])
+                for name in expected
+            }
+            if class_type is model.DiagnosticValue:
+                return class_type._from_canonical(decoded["value"])
+            return class_type(**decoded)
         except SidecarError:
             raise
         except Exception as error:
             raise SidecarIntegrityError(f"invalid {type_name} in manifest") from error
 
     def _array(self, descriptor):
-        if not isinstance(descriptor, dict) or descriptor.get("$array") != "npy":
+        expected = {
+            "$array",
+            "path",
+            "content_sha256",
+            "file_sha256",
+            "shape",
+            "dtype",
+        }
+        if (
+            not isinstance(descriptor, dict)
+            or set(descriptor) != expected
+            or descriptor["$array"] != "npy"
+        ):
             raise SidecarIntegrityError("invalid array descriptor")
-        relative = descriptor.get("path")
+        relative = descriptor["path"]
         pure = PurePosixPath(relative) if isinstance(relative, str) else None
         if (
             pure is None
@@ -314,8 +398,8 @@ class _Decoder:
             ) from error
         if not path.is_file():
             raise SidecarIntegrityError(f"missing sidecar array: {relative}")
-        file_hash = descriptor.get("file_sha256")
-        content_hash = descriptor.get("content_sha256")
+        file_hash = descriptor["file_sha256"]
+        content_hash = descriptor["content_sha256"]
         if not isinstance(file_hash, str) or not _SHA256.fullmatch(file_hash):
             raise SidecarIntegrityError("invalid array file hash")
         if not isinstance(content_hash, str) or not _SHA256.fullmatch(content_hash):
@@ -325,39 +409,55 @@ class _Decoder:
         if self.verify_arrays and _file_hash(path) != file_hash:
             raise SidecarIntegrityError(f"sidecar array checksum mismatch: {relative}")
         try:
-            shape = tuple(int(size) for size in descriptor["shape"])
+            encoded_shape = descriptor["shape"]
+            if type(encoded_shape) is not list or any(
+                type(size) is not int or size < 0 for size in encoded_shape
+            ):
+                raise ValueError("invalid array shape")
+            shape = tuple(encoded_shape)
             dtype = _numpy().dtype(descriptor["dtype"])
         except (KeyError, TypeError, ValueError) as error:
             raise SidecarIntegrityError("invalid array metadata") from error
-        if any(size < 0 for size in shape) or dtype.hasobject:
+        if dtype.hasobject:
             raise SidecarIntegrityError("unsafe array metadata")
         return LazyNpyArray(path, shape, dtype, content_hash)
 
 
 def save_project(root, project):
-    if not isinstance(project, model.QCProject):
-        raise TypeError("project must be a QCProject")
     root = Path(root)
     if root.suffix.lower() != ".cbq":
         raise ValueError("sidecar directory must use the .cbq suffix")
+    return _write_project_tree(root, project)
+
+
+def _write_project_tree(root, project):
+    if not isinstance(project, model.QCProject):
+        raise TypeError("project must be a QCProject")
+    if project.schema_version not in ("0.1", CURRENT_PROJECT_SCHEMA_VERSION):
+        raise SidecarCompatibilityError("unsupported project schema")
+    try:
+        validate_project_graph(project)
+    except (TypeError, ValueError) as error:
+        raise SidecarIntegrityError("invalid project graph") from error
+    root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
     (root / "arrays").mkdir(exist_ok=True)
     encoded = _Encoder(root).encode(project)
+    encoded["schema_version"] = CURRENT_PROJECT_SCHEMA_VERSION
     manifest = {
         "format": FORMAT_ID,
         "manifest_version": MANIFEST_VERSION,
+        "generation_id": str(uuid4()),
+        "created_at_utc": datetime.now(timezone.utc)
+        .isoformat(timespec="microseconds")
+        .replace("+00:00", "Z"),
         "project_id": str(project.id),
-        "project_schema_version": project.schema_version,
+        "project_schema_version": CURRENT_PROJECT_SCHEMA_VERSION,
         "project": encoded,
     }
     try:
-        document = json.dumps(
-            manifest,
-            ensure_ascii=False,
-            allow_nan=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        ).encode("utf-8") + b"\n"
+        manifest["manifest_sha256"] = _manifest_hash(manifest)
+        document = _canonical_json(manifest) + b"\n"
     except (TypeError, ValueError) as error:
         raise SidecarIntegrityError("manifest is not canonical JSON") from error
     _atomic_bytes(root / "manifest.json", document)
@@ -365,6 +465,22 @@ def save_project(root, project):
 
 
 def open_project(
+    root,
+    *,
+    expected_project_id=None,
+    expected_schema_version=None,
+    verify_arrays=True,
+):
+    project, _manifest = _open_project_with_manifest(
+        root,
+        expected_project_id=expected_project_id,
+        expected_schema_version=expected_schema_version,
+        verify_arrays=verify_arrays,
+    )
+    return project
+
+
+def _open_project_with_manifest(
     root,
     *,
     expected_project_id=None,
@@ -382,32 +498,140 @@ def open_project(
         )
     except (OSError, UnicodeError, ValueError) as error:
         raise SidecarIntegrityError("cannot read sidecar manifest") from error
-    if manifest.get("format") != FORMAT_ID or manifest.get("manifest_version") != MANIFEST_VERSION:
-        raise SidecarCompatibilityError("unsupported sidecar manifest version")
-    expected_fields = {
-        "format",
-        "manifest_version",
-        "project_id",
-        "project_schema_version",
-        "project",
-    }
-    if set(manifest) != expected_fields:
-        raise SidecarIntegrityError("sidecar manifest has invalid top-level fields")
-    try:
-        project_id = UUID(manifest["project_id"])
-    except (KeyError, TypeError, ValueError) as error:
-        raise SidecarIntegrityError("invalid project_id in manifest") from error
-    schema_version = manifest.get("project_schema_version")
+    source_version = (
+        manifest.get("manifest_version")
+        if isinstance(manifest, dict)
+        else None
+    )
+    metadata_manifest = None
+    if source_version == MANIFEST_VERSION:
+        project_id, schema_version = _validate_current_manifest(manifest)
+        metadata_manifest = manifest
+    manifest = migrate_manifest(manifest)
+    if source_version == MANIFEST_VERSION:
+        if manifest["format"] != FORMAT_ID:
+            raise SidecarCompatibilityError("unsupported sidecar format")
+    else:
+        if manifest.get("format") != FORMAT_ID:
+            raise SidecarCompatibilityError("unsupported sidecar format")
+        project_id = _strict_uuid(manifest.get("project_id"), "project_id")
+        schema_version = manifest.get("project_schema_version")
     if expected_project_id is not None and project_id != expected_project_id:
         raise SidecarCompatibilityError("sidecar project UUID does not match")
-    if expected_schema_version is not None and schema_version != expected_schema_version:
+    if (
+        expected_schema_version is not None
+        and expected_schema_version != schema_version
+        and not (
+            expected_schema_version == "0.1"
+            and schema_version == CURRENT_PROJECT_SCHEMA_VERSION
+        )
+    ):
         raise SidecarCompatibilityError("sidecar project schema is incompatible")
     project = _Decoder(root, verify_arrays).decode(manifest.get("project"))
     if not isinstance(project, model.QCProject):
         raise SidecarIntegrityError("manifest project is not a QCProject")
     if project.id != project_id or project.schema_version != schema_version:
         raise SidecarIntegrityError("manifest header and project payload disagree")
-    return project
+    try:
+        validate_project_graph(project)
+    except (TypeError, ValueError) as error:
+        close_project(project)
+        raise SidecarIntegrityError("invalid project graph in manifest") from error
+    return project, metadata_manifest if metadata_manifest is not None else manifest
+
+
+def _strict_uuid(value, name):
+    try:
+        parsed = UUID(value)
+    except (AttributeError, TypeError, ValueError) as error:
+        raise SidecarIntegrityError(f"invalid {name} in manifest") from error
+    if str(parsed) != value:
+        raise SidecarIntegrityError(f"invalid {name} in manifest")
+    return parsed
+
+
+def _validate_current_manifest(manifest):
+    expected_fields = {
+        "format",
+        "manifest_version",
+        "generation_id",
+        "created_at_utc",
+        "manifest_sha256",
+        "project_id",
+        "project_schema_version",
+        "project",
+    }
+    if set(manifest) != expected_fields:
+        raise SidecarIntegrityError(
+            "sidecar manifest has invalid top-level fields"
+        )
+    stored_hash = manifest.get("manifest_sha256")
+    try:
+        actual_hash = _manifest_hash(manifest)
+    except (TypeError, ValueError) as error:
+        raise SidecarIntegrityError("sidecar manifest is not canonical JSON") from error
+    if (
+        not isinstance(stored_hash, str)
+        or not _SHA256.fullmatch(stored_hash)
+        or stored_hash != actual_hash
+    ):
+        raise SidecarIntegrityError("sidecar manifest hash mismatch")
+    _strict_uuid(manifest.get("generation_id"), "generation_id")
+    project_id = _strict_uuid(manifest.get("project_id"), "project_id")
+    created_at = manifest.get("created_at_utc")
+    if (
+        not isinstance(created_at, str)
+        or not _UTC_TIMESTAMP.fullmatch(created_at)
+    ):
+        raise SidecarIntegrityError("invalid created_at_utc in manifest")
+    try:
+        timestamp = datetime.fromisoformat(
+            created_at.removesuffix("Z") + "+00:00"
+        )
+    except ValueError as error:
+        raise SidecarIntegrityError(
+            "invalid created_at_utc in manifest"
+        ) from error
+    if timestamp.utcoffset() != timezone.utc.utcoffset(timestamp):
+        raise SidecarIntegrityError("invalid created_at_utc in manifest")
+    return _validate_current_project_header(manifest, project_id)
+
+
+def _validate_current_project_header(manifest, project_id):
+    schema_version = manifest.get("project_schema_version")
+    project = manifest.get("project")
+    encoded_id = project.get("id") if isinstance(project, dict) else None
+    if (
+        not isinstance(project, dict)
+        or project.get("$type") != "QCProject"
+        or not isinstance(encoded_id, dict)
+        or set(encoded_id) != {"$uuid"}
+        or not isinstance(schema_version, str)
+        or not schema_version
+        or not isinstance(project.get("schema_version"), str)
+    ):
+        raise SidecarIntegrityError(
+            "manifest header and project payload disagree"
+        )
+    try:
+        payload_id = _strict_uuid(
+            encoded_id["$uuid"],
+            "project payload id",
+        )
+    except SidecarIntegrityError as error:
+        raise SidecarIntegrityError(
+            "manifest header and project payload disagree"
+        ) from error
+    if (
+        payload_id != project_id
+        or project["schema_version"] != schema_version
+    ):
+        raise SidecarIntegrityError(
+            "manifest header and project payload disagree"
+        )
+    if schema_version != CURRENT_PROJECT_SCHEMA_VERSION:
+        raise SidecarCompatibilityError("unsupported sidecar manifest version")
+    return project_id, schema_version
 
 
 def close_project(project):

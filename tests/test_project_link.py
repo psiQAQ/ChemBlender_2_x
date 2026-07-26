@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import UUID
 
-from ChemBlender.core import QCProject, save_project
+from ChemBlender.core import QCProject, close_project, save_project
 from ChemBlender.project_link import (
     ProjectLinkStatus,
     resolve_project_link,
@@ -29,6 +29,7 @@ class ProjectLinkTests(unittest.TestCase):
             result = resolve_project_link(scene, blend_path=blend)
             self.assertEqual(result.status, ProjectLinkStatus.CONNECTED)
             self.assertEqual(result.project.id, project.id)
+            close_project(result.project)
 
             scene["cbq_project_id"] = str(UUID(int=2))
             result = resolve_project_link(scene, blend_path=blend)
@@ -41,7 +42,7 @@ class ProjectLinkTests(unittest.TestCase):
             self.assertEqual(result.status, ProjectLinkStatus.INCOMPATIBLE)
             self.assertEqual(scene["unrelated"], "preserve")
 
-            scene["cbq_project_schema_version"] = "0.1"
+            scene["cbq_project_schema_version"] = "0.2"
             scene["cbq_sidecar_locator"] = "missing.cbq"
             result = resolve_project_link(scene, blend_path=blend)
             self.assertEqual(result.status, ProjectLinkStatus.MISSING)

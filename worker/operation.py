@@ -32,6 +32,7 @@ class OperationContext:
     project_path: Path
     project: object
     cancel_path: Path | None
+    task_directory: Path | None = None
 
     def is_cancelled(self):
         return self.cancel_path is not None and self.cancel_path.exists()

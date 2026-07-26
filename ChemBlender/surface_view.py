@@ -2,20 +2,32 @@
 
 import hashlib
 import os
+import sys
 from pathlib import Path
-from uuid import uuid4
 
 import bpy
 
 from .core import Grid3D
+from .core.storage.atomic_paths import short_sibling_temporary_path
 from .grid_volume import _ANGSTROM_SCALE, _selected_values, _transform_matrix
 
 
 _PROPERTY_ATTRIBUTE = "cbq_surface_property"
 
 
-def _cache_path(cache_root, render_identity, variant):
-    root = Path(cache_root).resolve() / "surface"
+def _is_link_like(path):
+    return path.is_symlink() or path.is_junction()
+
+
+def _safe_vdb_path(path):
+    path = Path(os.path.abspath(path))
+    if _is_link_like(path):
+        raise OSError("cache_path must not be a filesystem link")
+    return path
+
+
+def surface_cache_path(cache_root, render_identity, variant):
+    root = _safe_vdb_path(cache_root) / "surface"
     root.mkdir(parents=True, exist_ok=True)
     key = hashlib.sha256(f"{render_identity}:{variant}".encode("utf-8")).hexdigest()
     return root / f"{key}.vdb", key
@@ -31,15 +43,139 @@ def _vdb_grid(name, values, grid, scale):
     return result
 
 
-def _write_vdb(path, grids, metadata):
+def _validate_vdb(path, grid_names, render_key):
     import openvdb
 
-    temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+    grids, metadata = openvdb.readAll(str(path))
+    if {grid.name for grid in grids} != set(grid_names):
+        raise RuntimeError("VDB grid inventory does not match the surface contract")
+    if metadata.get("chemblender_render_cache_key") != render_key:
+        raise RuntimeError("VDB render cache identity does not match")
+
+
+def _write_vdb(path, grids, metadata, grid_names=None, render_key=None):
+    import openvdb
+
+    grids = tuple(grids)
+    if grid_names is None:
+        grid_names = tuple(grid.name for grid in grids)
+    if render_key is None:
+        render_key = metadata.get("chemblender_render_cache_key")
+    path = _safe_vdb_path(path)
+    temporary = short_sibling_temporary_path(path)
     try:
         openvdb.write(str(temporary), list(grids), metadata=metadata)
+        _validate_vdb(temporary, grid_names, render_key)
         os.replace(temporary, path)
     finally:
-        temporary.unlink(missing_ok=True)
+        active_error = sys.exception()
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            if active_error is None:
+                raise
+
+
+def ensure_signed_surface_cache(
+    grid,
+    cache_path,
+    *,
+    dataset_index,
+    render_identity,
+    phase,
+):
+    """Return one validated signed-surface VDB, rebuilding it when needed."""
+    import numpy
+
+    if not isinstance(grid, Grid3D):
+        raise TypeError("grid must be a Grid3D")
+    if phase not in {"positive", "negative"}:
+        raise ValueError("phase must be positive or negative")
+    scale = _ANGSTROM_SCALE[grid.coordinate_unit]
+    path = _safe_vdb_path(cache_path)
+    if path.suffix.lower() != ".vdb":
+        raise ValueError("cache_path must use the .vdb suffix")
+    path.parent.mkdir(exist_ok=True)
+    key = hashlib.sha256(
+        f"{render_identity}:{phase}".encode("utf-8")
+    ).hexdigest()
+    if path.is_file():
+        try:
+            _validate_vdb(path, ("density",), key)
+        except Exception:
+            pass
+        else:
+            return path
+    values = _selected_values(grid, dataset_index)
+    if not numpy.all(numpy.isfinite(values)):
+        raise ValueError("surface grid values must be finite")
+    factor = 1.0 if phase == "positive" else -1.0
+    density = _vdb_grid(
+        "density", numpy.asarray(values * factor), grid, scale
+    )
+    _write_vdb(
+        path,
+        (density,),
+        {"chemblender_render_cache_key": key},
+        ("density",),
+        key,
+    )
+    return path
+
+
+def ensure_property_surface_cache(
+    surface_grid,
+    property_grid,
+    cache_path,
+    *,
+    surface_dataset_index,
+    property_dataset_index,
+    render_identity,
+):
+    """Return one validated property-surface VDB, rebuilding it when needed."""
+    import numpy
+
+    if not isinstance(surface_grid, Grid3D) or not isinstance(property_grid, Grid3D):
+        raise TypeError("surface_grid and property_grid must be Grid3D")
+    if (
+        surface_grid.grid_shape != property_grid.grid_shape
+        or surface_grid.origin != property_grid.origin
+        or surface_grid.step_vectors != property_grid.step_vectors
+        or surface_grid.coordinate_unit != property_grid.coordinate_unit
+        or surface_grid.structure_id != property_grid.structure_id
+    ):
+        raise ValueError("surface and property grids must share one affine grid")
+    scale = _ANGSTROM_SCALE[surface_grid.coordinate_unit]
+    path = _safe_vdb_path(cache_path)
+    if path.suffix.lower() != ".vdb":
+        raise ValueError("cache_path must use the .vdb suffix")
+    path.parent.mkdir(exist_ok=True)
+    key = hashlib.sha256(
+        f"{render_identity}:property".encode("utf-8")
+    ).hexdigest()
+    if path.is_file():
+        try:
+            _validate_vdb(path, ("density", "property"), key)
+        except Exception:
+            pass
+        else:
+            return path
+    density_values = _selected_values(surface_grid, surface_dataset_index)
+    property_values = _selected_values(property_grid, property_dataset_index)
+    if not numpy.all(numpy.isfinite(density_values)) or not numpy.all(
+        numpy.isfinite(property_values)
+    ):
+        raise ValueError("surface and property grid values must be finite")
+    density = _vdb_grid("density", density_values, surface_grid, scale)
+    prop = _vdb_grid("property", property_values, property_grid, scale)
+    _write_vdb(
+        path,
+        (density, prop),
+        {"chemblender_render_cache_key": key},
+        ("density", "property"),
+        key,
+    )
+    return path
 
 
 def _material(name, color, opacity):
@@ -196,6 +332,7 @@ def _metadata(obj, grid, dataset_index, path, cache_key, render_identity):
     obj["cb_source_coordinate_unit"] = grid.coordinate_unit
     obj["cb_display_coordinate_unit"] = "angstrom"
     obj["cb_cache_path"] = str(path)
+    obj["cb_cache_format_version"] = 1
     obj["cb_render_cache_key"] = cache_key
     obj["cb_scene_render_identity"] = render_identity
 
@@ -212,26 +349,25 @@ def create_signed_isosurfaces(
     render_identity,
     collection=None,
 ):
-    import numpy
-
     if not isinstance(grid, Grid3D):
         raise TypeError("grid must be a Grid3D")
     target = collection or bpy.context.collection
     if target is None:
         raise ValueError("a Blender collection is required")
-    scale = _ANGSTROM_SCALE[grid.coordinate_unit]
-    values = _selected_values(grid, dataset_index)
-    if not numpy.all(numpy.isfinite(values)):
-        raise ValueError("surface grid values must be finite")
     created = []
     try:
-        for phase, factor, color in (
-            ("positive", 1.0, positive_color),
-            ("negative", -1.0, negative_color),
+        for phase, color in (
+            ("positive", positive_color),
+            ("negative", negative_color),
         ):
-            path, key = _cache_path(cache_root, render_identity, phase)
-            density = _vdb_grid("density", numpy.asarray(values * factor), grid, scale)
-            _write_vdb(path, (density,), {"chemblender_render_cache_key": key})
+            path, key = surface_cache_path(cache_root, render_identity, phase)
+            path = ensure_signed_surface_cache(
+                grid,
+                path,
+                dataset_index=dataset_index,
+                render_identity=render_identity,
+                phase=phase,
+            )
             obj = _volume_surface(
                 path,
                 f"ChemBlender {phase.title()} Surface",
@@ -244,7 +380,9 @@ def create_signed_isosurfaces(
             created.append(obj)
             _metadata(obj, grid, dataset_index, path, key, render_identity)
             obj["cb_surface_phase"] = phase
-            obj["cb_surface_isovalue"] = float(isovalue if factor > 0 else -isovalue)
+            obj["cb_surface_isovalue"] = float(
+                isovalue if phase == "positive" else -isovalue
+            )
             obj["cb_surface_color"] = tuple(color)
             obj["cb_surface_opacity"] = float(opacity)
         return tuple(created)
@@ -281,19 +419,15 @@ def create_property_surface(
     target = collection or bpy.context.collection
     if target is None:
         raise ValueError("a Blender collection is required")
-    scale = _ANGSTROM_SCALE[surface_grid.coordinate_unit]
-    path, key = _cache_path(cache_root, render_identity, "property")
-    import numpy
-
-    density_values = _selected_values(surface_grid, surface_dataset_index)
-    property_values = _selected_values(property_grid, property_dataset_index)
-    if not numpy.all(numpy.isfinite(density_values)) or not numpy.all(
-        numpy.isfinite(property_values)
-    ):
-        raise ValueError("surface and property grid values must be finite")
-    density = _vdb_grid("density", density_values, surface_grid, scale)
-    prop = _vdb_grid("property", property_values, property_grid, scale)
-    _write_vdb(path, (density, prop), {"chemblender_render_cache_key": key})
+    path, key = surface_cache_path(cache_root, render_identity, "property")
+    path = ensure_property_surface_cache(
+        surface_grid,
+        property_grid,
+        path,
+        surface_dataset_index=surface_dataset_index,
+        property_dataset_index=property_dataset_index,
+        render_identity=render_identity,
+    )
     obj = _volume_surface(
         path,
         "ChemBlender Property Surface",

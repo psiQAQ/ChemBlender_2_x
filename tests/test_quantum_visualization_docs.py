@@ -4,6 +4,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
+WAVE_230_QUEUE_FILES = (
+    "2.3.0-wave-1-native-molecular-and-grid.md",
+    "2.3.0-wave-2-native-crystal.md",
+    "2.3.0-wave-3-exchange-mol2-pdb-pqr.md",
+    "2.3.0-wave-4-migration-release.md",
+)
 
 
 class QuantumVisualizationDocsTests(unittest.TestCase):
@@ -19,6 +25,62 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("roadmap.md", index)
         for phase in range(5):
             self.assertIn(f"Phase {phase}", roadmap)
+
+    def test_230_planning_entrypoints_exist_and_are_discoverable(self):
+        entrypoints = (
+            "docs/quantum-visualization/2.3.0/README.md",
+            "docs/quantum-visualization/2.3.0/audits/2026-07-23-main-deep-audit.md",
+            "docs/superpowers/specs/2026-07-23-chemblender-2.3.0-native-platform-design.md",
+            "docs/superpowers/plans/2026-07-23-chemblender-2.3.0-master-sequencing.md",
+        )
+        for relative_path in entrypoints:
+            self.read_doc(relative_path)
+
+        docs_index = self.read_doc("docs/README.md")
+        quantum_index = self.read_doc("docs/quantum-visualization/README.md")
+        agent_index = self.read_doc(".agents/README.md")
+        for name in (
+            "2.3.0/README.md",
+            "2026-07-23-main-deep-audit.md",
+            "2026-07-23-chemblender-2.3.0-native-platform-design.md",
+            "2026-07-23-chemblender-2.3.0-master-sequencing.md",
+        ):
+            self.assertTrue(
+                any(name in index for index in (docs_index, quantum_index)),
+                name,
+            )
+        for name in WAVE_230_QUEUE_FILES:
+            self.assertIn(name, agent_index)
+
+    def test_230_wave_0_is_active_and_later_waves_remain_queued(self):
+        queued = sorted(
+            path.name
+            for path in (ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md")
+        )
+        self.assertEqual(queued, sorted(WAVE_230_QUEUE_FILES))
+
+    def test_230_markdown_is_utf8_without_bom(self):
+        paths = [
+            *(ROOT / ".agents" / "decisions").glob("00[234][0-9]-*.md"),
+            *(ROOT / ".agents" / "active").glob("2.3.0-wave-*.md"),
+            *(ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md"),
+            *(ROOT / "docs" / "quantum-visualization" / "2.3.0").rglob("*.md"),
+            *(ROOT / "docs" / "superpowers" / "plans").glob(
+                "2026-07-23-chemblender-2.3.0-*.md"
+            ),
+            *(ROOT / "docs" / "superpowers" / "specs").glob(
+                "2026-07-23-chemblender-2.3.0-*.md"
+            ),
+        ]
+        for path in paths:
+            self.read_doc(str(path.relative_to(ROOT)))
+
+    def test_adr_numbers_are_unique(self):
+        numbers = [
+            path.name.split("-", 1)[0]
+            for path in (ROOT / ".agents" / "decisions").glob("[0-9][0-9][0-9][0-9]-*.md")
+        ]
+        self.assertEqual(len(numbers), len(set(numbers)))
 
     def test_topic_plans_have_required_sections(self):
         required = (
@@ -129,7 +191,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            [],
+            ["2.3.0-wave-0-platform-foundation.md"],
         )
 
     def test_code_architecture_guide_tracks_source_files(self):
@@ -144,6 +206,16 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         documented = set(
             re.findall(r"`((?:ChemBlender|worker)/[^`]+\.py)`", guide)
         )
+        self.assertIn(
+            "ChemBlender/core/storage/atomic_paths.py",
+            documented,
+        )
+        self.assertIn("ChemBlender/ui/view_cache.py", documented)
+        self.assertIn("ChemBlender/scripts/release_metadata.py", documented)
+        self.assertIn(
+            "ChemBlender/scripts/probe_prerelease_version.py",
+            documented,
+        )
         self.assertEqual(documented, expected)
 
         readme = self.read_doc("README.md")
@@ -155,6 +227,14 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("code-architecture-guide.md", index)
         self.assertIn("Every architecture change", agents)
 
+    def test_quantum_model_is_a_package(self):
+        import importlib
+
+        self.assertFalse((ROOT / "ChemBlender" / "core" / "model.py").exists())
+        self.assertTrue((ROOT / "ChemBlender" / "core" / "model" / "__init__.py").exists())
+        model = importlib.import_module("ChemBlender.core.model")
+        self.assertIsNotNone(model.__spec__.submodule_search_locations)
+
     def test_local_markdown_links_resolve(self):
         import re
 
@@ -163,8 +243,16 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             ROOT / "AGENTS.md",
             ROOT / ".agents" / "README.md",
             *(ROOT / ".agents" / "active").glob("*.md"),
+            *(ROOT / ".agents" / "decisions").glob("00[234][0-9]-*.md"),
+            *(ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md"),
             ROOT / "docs" / "README.md",
             *DOCS.rglob("*.md"),
+            *(ROOT / "docs" / "superpowers" / "plans").glob(
+                "2026-07-23-chemblender-2.3.0-*.md"
+            ),
+            *(ROOT / "docs" / "superpowers" / "specs").glob(
+                "2026-07-23-chemblender-2.3.0-*.md"
+            ),
         ]
         for path in paths:
             text = self.read_doc(str(path.relative_to(ROOT)))

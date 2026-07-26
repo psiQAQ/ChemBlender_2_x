@@ -18,6 +18,11 @@ except ModuleNotFoundError:  # pragma: no cover
     print("ERROR: Python 3.11+ is required (tomllib unavailable).")
     sys.exit(2)
 
+if __package__:
+    from .release_metadata import parse_release_version
+else:
+    from release_metadata import parse_release_version
+
 
 REQUIRED_MANIFEST_KEYS = (
     "id",
@@ -31,7 +36,6 @@ REQUIRED_MANIFEST_KEYS = (
 )
 
 EXTENSION_ID_PATTERN = re.compile(r"^[a-z0-9_]+$")
-SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 EXCLUDED_SCAN_DIRS = {"deps", "wheels", "scripts", ".venv", "venv", "__pycache__"}
 COMMON_TOP_LEVEL_THIRD_PARTY_IMPORTS = {"requests", "yaml", "numpy", "cv2", "PIL", "scipy", "torch", "open3d"}
 
@@ -294,8 +298,10 @@ def main() -> int:
 
         version = manifest.get("version")
         if isinstance(version, str):
-            if not SEMVER_PATTERN.fullmatch(version):
-                warns.append("manifest version should look like semantic version, for example 1.0.0.")
+            try:
+                parse_release_version(version)
+            except ValueError as exc:
+                errors.append(f"manifest version is invalid: {exc}")
         else:
             errors.append("manifest version must be a string.")
 

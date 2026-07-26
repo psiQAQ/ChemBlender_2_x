@@ -1,4 +1,5 @@
 import array
+import dataclasses
 import subprocess
 import sys
 import unittest
@@ -6,6 +7,7 @@ from uuid import uuid4
 
 from ChemBlender.core import (
     ArrayData,
+    CalculationGroup,
     CalculationRecord,
     CalculationStatus,
     DatasetStatus,
@@ -16,6 +18,8 @@ from ChemBlender.core import (
     PropertyDataset,
     ProvenanceRecord,
     QCProject,
+    SourceRecord,
+    SourceRevision,
     Structure,
 )
 
@@ -26,6 +30,94 @@ def array_view(values, shape):
 
 
 class QuantumCoreTests(unittest.TestCase):
+    @staticmethod
+    def source_pair():
+        sources = tuple(
+            SourceRecord(
+                id=uuid4(),
+                display_name=f"source-{index}.xyz",
+                source_kind="local_file",
+                created_at_utc="2026-07-24T00:00:00Z",
+            )
+            for index in range(2)
+        )
+        revisions = tuple(
+            SourceRevision(
+                id=uuid4(),
+                source_id=source.id,
+                content_hash=f"{index + 1:064x}",
+                byte_size=index + 1,
+                locator=f"C:/source-{index}.xyz",
+                locator_kind="absolute_path",
+                original_filename=f"source-{index}.xyz",
+                reader_plugin_id="chemblender.builtin",
+                reader_id="fixture",
+                reader_version="1",
+                reader_api_version="0.1",
+                import_parameters_hash="a" * 64,
+                parse_identity=f"{index + 10:064x}",
+                created_entity_ids=(),
+                diagnostic_ids=(),
+            )
+            for index, source in enumerate(sources)
+        )
+        return sources, revisions
+
+    def test_project_commits_calculation_group_atomically(self):
+        sources, revisions = self.source_pair()
+        project = QCProject(id=uuid4(), schema_version="0.2")
+        project.commit(
+            ImportBatch(sources=sources, source_revisions=revisions)
+        )
+        group = CalculationGroup(
+            suggestion_id=uuid4(),
+            source_revision_ids=tuple(item.id for item in revisions),
+            evidence_ids=(uuid4(),),
+        )
+
+        project.commit_calculation_groups((group,))
+
+        self.assertEqual(project.calculation_groups, {group.id: group})
+
+    def test_project_rejects_invalid_calculation_groups_without_mutation(self):
+        sources, revisions = self.source_pair()
+        group = CalculationGroup(
+            suggestion_id=uuid4(),
+            source_revision_ids=tuple(item.id for item in revisions),
+            evidence_ids=(uuid4(),),
+        )
+        cases = (
+            (ImportBatch(), (group,)),
+            (
+                ImportBatch(sources=sources, source_revisions=revisions),
+                (group, group),
+            ),
+            (
+                ImportBatch(
+                    sources=(
+                        dataclasses.replace(sources[0], id=group.id),
+                        sources[1],
+                    ),
+                    source_revisions=(
+                        dataclasses.replace(
+                            revisions[0],
+                            source_id=group.id,
+                        ),
+                        revisions[1],
+                    ),
+                ),
+                (group,),
+            ),
+        )
+        for batch, groups in cases:
+            with self.subTest(groups=len(groups), sources=len(batch.sources)):
+                project = QCProject(id=uuid4(), schema_version="0.2")
+                project.commit(batch)
+                before = dict(project.calculation_groups)
+                with self.assertRaises(ValueError):
+                    project.commit_calculation_groups(groups)
+                self.assertEqual(project.calculation_groups, before)
+
     def test_core_import_does_not_load_bpy(self):
         code = "import sys; import ChemBlender.core; assert 'bpy' not in sys.modules"
         subprocess.run([sys.executable, "-c", code], check=True)

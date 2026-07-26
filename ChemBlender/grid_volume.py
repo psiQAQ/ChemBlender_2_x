@@ -1,17 +1,33 @@
 import operator
 import os
+import sys
 from pathlib import Path
-from uuid import uuid4
 
 import bpy
 
 from .core import Grid3D, volume_render_cache_key
+from .core.storage.atomic_paths import short_sibling_temporary_path
 
 
 _ANGSTROM_SCALE = {
     "angstrom": 1.0,
     "bohr": 0.529177210903,
 }
+
+
+def _is_link_like(path):
+    return path.is_symlink() or path.is_junction()
+
+
+def _absolute_path(path):
+    return Path(os.path.abspath(path))
+
+
+def _safe_vdb_path(path):
+    path = _absolute_path(path)
+    if _is_link_like(path):
+        raise OSError("cache_path must not be a filesystem link")
+    return path
 
 
 def _selected_values(grid, dataset_index):
@@ -62,25 +78,27 @@ def volume_cache_path(cache_root, grid, *, dataset_index=None):
     if not isinstance(grid, Grid3D):
         raise TypeError("grid must be a Grid3D")
     dataset_index = _dataset_index(grid, dataset_index)
-    cache_root = Path(cache_root).resolve()
+    cache_root = _safe_vdb_path(cache_root)
     key = volume_render_cache_key(grid, dataset_index=dataset_index)
     return cache_root / "volume" / f"{key}.vdb"
 
 
-def create_grid_volume(
-    grid,
-    cache_path,
-    *,
-    dataset_index=None,
-    name="ChemBlender Grid",
-    collection=None,
-):
+def _validate_vdb(path, grid_names, render_key):
+    import openvdb
+
+    grids, metadata = openvdb.readAll(str(path))
+    if {grid.name for grid in grids} != set(grid_names):
+        raise RuntimeError("VDB grid inventory does not match the cache contract")
+    if metadata.get("chemblender_render_cache_key") != render_key:
+        raise RuntimeError("VDB render cache identity does not match")
+
+
+def ensure_grid_volume_cache(grid, cache_path, *, dataset_index=None):
+    """Return a validated cache, rebuilding a missing or invalid VDB in place."""
     import openvdb
 
     if not isinstance(grid, Grid3D):
         raise TypeError("grid must be a Grid3D")
-    if not isinstance(name, str) or not name:
-        raise ValueError("name must be a non-empty string")
     dataset_index = _dataset_index(grid, dataset_index)
     try:
         scale = _ANGSTROM_SCALE[grid.coordinate_unit]
@@ -88,22 +106,23 @@ def create_grid_volume(
         raise ValueError(
             f"unsupported Grid3D coordinate unit: {grid.coordinate_unit}"
         ) from error
-
-    cache_path = Path(cache_path).resolve()
-    render_key = volume_render_cache_key(grid, dataset_index=dataset_index)
+    cache_path = _safe_vdb_path(cache_path)
     if cache_path.is_dir():
         cache_path = volume_cache_path(
             cache_path, grid, dataset_index=dataset_index
         )
-        cache_path.parent.mkdir(exist_ok=True)
+        cache_path = _safe_vdb_path(cache_path)
     elif cache_path.suffix.lower() != ".vdb":
         raise ValueError("cache_path must use the .vdb suffix")
-    if not cache_path.parent.is_dir():
-        raise ValueError("cache_path parent directory must exist")
-    if collection is None:
-        collection = bpy.context.collection
-    if collection is None:
-        raise ValueError("a Blender collection is required")
+    cache_path.parent.mkdir(exist_ok=True)
+    render_key = volume_render_cache_key(grid, dataset_index=dataset_index)
+    if cache_path.is_file():
+        try:
+            _validate_vdb(cache_path, ("density",), render_key)
+        except Exception:
+            pass
+        else:
+            return cache_path
 
     values = _selected_values(grid, dataset_index)
     vdb_grid = openvdb.FloatGrid()
@@ -126,14 +145,49 @@ def create_grid_volume(
     }
     if grid.structure_id is not None:
         metadata["chemblender_structure_id"] = str(grid.structure_id)
-    temporary = cache_path.with_name(
-        f".{cache_path.name}.{uuid4().hex}.tmp"
-    )
+    temporary = short_sibling_temporary_path(cache_path)
     try:
         openvdb.write(str(temporary), vdb_grid, metadata=metadata)
+        _validate_vdb(temporary, ("density",), render_key)
         os.replace(temporary, cache_path)
     finally:
-        temporary.unlink(missing_ok=True)
+        active_error = sys.exception()
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            if active_error is None:
+                raise
+    return cache_path
+
+
+def create_grid_volume(
+    grid,
+    cache_path,
+    *,
+    dataset_index=None,
+    name="ChemBlender Grid",
+    collection=None,
+):
+    if not isinstance(grid, Grid3D):
+        raise TypeError("grid must be a Grid3D")
+    if not isinstance(name, str) or not name:
+        raise ValueError("name must be a non-empty string")
+    dataset_index = _dataset_index(grid, dataset_index)
+    try:
+        scale = _ANGSTROM_SCALE[grid.coordinate_unit]
+    except KeyError as error:
+        raise ValueError(
+            f"unsupported Grid3D coordinate unit: {grid.coordinate_unit}"
+        ) from error
+
+    render_key = volume_render_cache_key(grid, dataset_index=dataset_index)
+    cache_path = ensure_grid_volume_cache(
+        grid, cache_path, dataset_index=dataset_index
+    )
+    if collection is None:
+        collection = bpy.context.collection
+    if collection is None:
+        raise ValueError("a Blender collection is required")
 
     volume = bpy.data.volumes.new(name)
     obj = None

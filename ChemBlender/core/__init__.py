@@ -1,3 +1,4 @@
+# Derived/reporting compatibility exports.
 from .analysis_report import (
     AnalysisReportError,
     build_analysis_report,
@@ -6,6 +7,7 @@ from .analysis_report import (
     validate_analysis_report,
     write_analysis_report_bundle,
 )
+# Adapter compatibility exports.
 from .ase_adapter import (
     ASE_STRUCTURE_READER,
     ASEDependencyError,
@@ -13,7 +15,9 @@ from .ase_adapter import (
     parse_ase_structure,
     sniff_ase_structure,
 )
+# Reader compatibility exports.
 from .cube import CUBE_READER, parse_cube, sniff_cube
+# Adapter compatibility exports.
 from .cjson_adapter import (
     CJSON_READER,
     CJSONCompatibilityError,
@@ -22,6 +26,7 @@ from .cjson_adapter import (
     parse_cjson,
     sniff_cjson,
 )
+# Derived/reporting compatibility exports.
 from .cache_identity import (
     CacheIdentityError,
     derivation_cache_key,
@@ -29,6 +34,7 @@ from .cache_identity import (
     render_cache_key,
     source_hash_bytes,
 )
+# Adapter compatibility exports.
 from .external_connector import (
     ExternalConnectorDescriptor,
     ExternalConnectorError,
@@ -38,6 +44,7 @@ from .external_connector import (
     external_record_request_from_document,
     external_record_source_uri,
 )
+# Adapter compatibility exports.
 from .cclib_adapter import (
     CCLIB_OUTPUT_READER,
     CCLibDependencyError,
@@ -45,7 +52,9 @@ from .cclib_adapter import (
     parse_cclib_output,
     sniff_cclib_output,
 )
+# Adapter compatibility exports.
 from .critic2_adapter import parse_critic2_cpreport
+# Adapter compatibility exports.
 from .iodata_adapter import (
     IODATA_WAVEFUNCTION_READER,
     IODataDependencyError,
@@ -53,17 +62,20 @@ from .iodata_adapter import (
     parse_iodata_wavefunction,
     sniff_iodata_wavefunction,
 )
+# Adapter compatibility exports.
 from .gemmi_adapter import (
     CIF_READER,
     GemmiDependencyError,
     parse_cif,
     sniff_cif,
 )
+# Derived/reporting compatibility exports.
 from .grid_lod import (
     derive_grid_lod,
     surface_render_cache_key,
     volume_render_cache_key,
 )
+# Stable model façade exports.
 from .model import (
     ArrayData,
     AtomicProperty,
@@ -75,11 +87,14 @@ from .model import (
     BasisShell,
     CalculationRecord,
     CalculationMetadata,
+    CalculationGroup,
     CalculationStatus,
     CriticalPointKind,
     CJSONEnvelope,
     CIFEnvelope,
     DatasetStatus,
+    DiagnosticSeverity,
+    DiagnosticValue,
     DensityMatrix,
     DensityMatrixLevel,
     DensityMatrixSpin,
@@ -92,6 +107,7 @@ from .model import (
     FermiSurfaceMesh,
     Grid3D,
     ImportBatch,
+    ImportDiagnostic,
     IssueKind,
     OrbitalChannel,
     OrbitalKind,
@@ -104,7 +120,12 @@ from .model import (
     PropertyDataset,
     ProvenanceRecord,
     QCProject,
+    QualityStatus,
     QCSchemaEnvelope,
+    SourceRecord,
+    SourceRevision,
+    source_parse_identity,
+    diagnostic_from_parser_issue,
     Spectrum,
     SpectrumKind,
     SpectrumProfile,
@@ -117,6 +138,7 @@ from .model import (
     SymmetryResult,
     VibrationalModeSet,
 )
+# Adapter compatibility exports.
 from .qcschema_adapter import (
     QCSCHEMA_READER,
     QCSchemaCompatibilityError,
@@ -128,7 +150,9 @@ from .qcschema_adapter import (
     parse_qcschema_molecule,
     sniff_qcschema,
 )
+# Reader compatibility exports.
 from .mol_v2000 import MOL_V2000_READER, parse_mol_v2000, sniff_mol_v2000
+# Adapter compatibility exports.
 from .pymatgen_adapter import (
     PYMATGEN_VASP_GRID_READER,
     PymatgenDependencyError,
@@ -136,7 +160,9 @@ from .pymatgen_adapter import (
     parse_vasp_volumetric,
     sniff_vasp_volumetric,
 )
+# Adapter compatibility exports.
 from .pyprocar_adapter import adapt_pyprocar_fermi_surface
+# Adapter compatibility exports.
 from .pymatgen_electronic import (
     PYMATGEN_VASP_ELECTRONIC_READER,
     PymatgenElectronicDependencyError,
@@ -144,8 +170,11 @@ from .pymatgen_electronic import (
     parse_vasprun_electronic,
     sniff_vasprun,
 )
+# Derived/reporting compatibility exports.
 from .phonon_frames import derive_phonon_frames
+# Adapter compatibility exports.
 from .phonopy_adapter import PhonopyDependencyError, adapt_phonopy_qpoints
+# Reader contract exports.
 from .readers import (
     AmbiguousReaderError,
     CapabilitySupport,
@@ -155,11 +184,13 @@ from .readers import (
     SniffMatch,
     SniffResult,
 )
+# Reader contract exports.
 from .reader_catalog import (
     builtin_reader_descriptors,
     builtin_reader_registry,
     reader_capability_document,
 )
+# Recipe contract exports.
 from .recipe import (
     RecipeBinding,
     RecipeCitation,
@@ -175,6 +206,7 @@ from .recipe import (
     recipe_document,
     recipe_from_document,
 )
+# Scene compatibility exports.
 from .scene_preset import (
     SceneBindingSpec,
     ScenePresetDefinition,
@@ -188,6 +220,9 @@ from .scene_preset import (
     scene_preset_for_recipe_view,
     validate_scene_plan,
 )
+# Session service exports.
+from .session import ProjectSession, close_session, create_session
+# Storage API exports.
 from .sidecar import (
     LazyNpyArray,
     SidecarCompatibilityError,
@@ -198,26 +233,45 @@ from .sidecar import (
     open_project,
     save_project,
 )
+# Project session service exports.
+from .project_service import (
+    CacheClearResult,
+    ProjectServiceResult,
+    ProjectServiceStatus,
+    clear_derived_cache,
+    relink_project_session,
+    relink_project_session_for_scenes,
+    save_project_session,
+    sync_project_session_links_for_scenes,
+    verify_project_session,
+)
+# Adapter compatibility exports.
 from .spglib_adapter import (
     SpglibDependencyError,
     derive_symmetry,
 )
+# Derived/reporting compatibility exports.
 from .trajectory_frames import FrameCacheInfo, TrajectoryFrameManager
+# Reader compatibility exports.
 from .xyz import XYZ_READER, parse_xyz, sniff_xyz
+# Derived/reporting compatibility exports.
 from .wavefunction_grid import (
     GBasisDependencyError,
     evaluate_electron_density_grid,
     evaluate_molecular_orbital_grid,
 )
+# Derived/reporting compatibility exports.
 from .wavefunction_observables import (
     evaluate_density_matrix_grid,
     evaluate_electrostatic_potential_grid,
 )
+# Derived/reporting compatibility exports.
 from .vibration_spectrum import (
     derive_electronic_spectrum,
     derive_vibrational_spectrum,
 )
 
+# Exact public names are documented in docs/quantum-visualization/2.3.0/public-core-api.md.
 __all__ = [
     "AnalysisReportError",
     "AmbiguousReaderError",
@@ -233,6 +287,7 @@ __all__ = [
     "BasisShell",
     "CalculationRecord",
     "CalculationMetadata",
+    "CalculationGroup",
     "CalculationStatus",
     "CriticalPointKind",
     "CJSONEnvelope",
@@ -240,6 +295,7 @@ __all__ = [
     "CJSONCompatibilityError",
     "CJSONError",
     "CacheIdentityError",
+    "CacheClearResult",
     "CIFEnvelope",
     "CapabilitySupport",
     "CCLIB_OUTPUT_READER",
@@ -247,6 +303,8 @@ __all__ = [
     "CIF_READER",
     "CUBE_READER",
     "DatasetStatus",
+    "DiagnosticSeverity",
+    "DiagnosticValue",
     "DensityMatrix",
     "DensityMatrixLevel",
     "DensityMatrixSpin",
@@ -262,6 +320,7 @@ __all__ = [
     "Grid3D",
     "GBasisDependencyError",
     "ImportBatch",
+    "ImportDiagnostic",
     "IssueKind",
     "LazyNpyArray",
     "IODATA_WAVEFUNCTION_READER",
@@ -281,8 +340,12 @@ __all__ = [
     "PymatgenDependencyError",
     "PymatgenElectronicDependencyError",
     "PropertyDataset",
+    "ProjectSession",
+    "ProjectServiceResult",
+    "ProjectServiceStatus",
     "ProvenanceRecord",
     "QCProject",
+    "QualityStatus",
     "QCSchemaEnvelope",
     "QCSCHEMA_READER",
     "QCSchemaCompatibilityError",
@@ -301,6 +364,8 @@ __all__ = [
     "RecipeViewSpec",
     "SniffMatch",
     "SniffResult",
+    "SourceRecord",
+    "SourceRevision",
     "Spectrum",
     "SpectrumKind",
     "SpectrumProfile",
@@ -373,6 +438,9 @@ __all__ = [
     "derive_vibrational_spectrum",
     "describe_report_artifact",
     "close_project",
+    "close_session",
+    "clear_derived_cache",
+    "create_session",
     "derivation_cache_key",
     "open_project",
     "parser_cache_key",
@@ -388,18 +456,25 @@ __all__ = [
     "plan_scene_preset",
     "recipe_document",
     "recipe_from_document",
+    "relink_project_session",
+    "relink_project_session_for_scenes",
     "save_project",
+    "save_project_session",
     "scene_plan_document",
     "scene_preset_document",
     "scene_preset_from_document",
     "scene_preset_for_recipe_view",
     "validate_scene_plan",
     "source_hash_bytes",
+    "source_parse_identity",
+    "diagnostic_from_parser_issue",
     "external_record_request_document",
     "external_record_request_from_document",
     "external_record_source_uri",
     "surface_render_cache_key",
+    "sync_project_session_links_for_scenes",
     "volume_render_cache_key",
     "validate_analysis_report",
+    "verify_project_session",
     "write_analysis_report_bundle",
 ]

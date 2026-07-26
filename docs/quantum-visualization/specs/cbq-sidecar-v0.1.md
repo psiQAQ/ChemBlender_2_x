@@ -1,4 +1,15 @@
-# `.cbq` 边车格式 v0.1
+# `.cbq` 边车格式 v0.1（legacy，只读）
+
+## 状态
+
+v0.1 已冻结为 legacy 读取格式。当前 `save_project()` 只写 v0.2；现有 v0.1
+manifest 在严格 dataclass decode 前仅于内存中迁移为 `QCProject` schema `0.2`，
+补入空 `sources` 与 `source_revisions` registry。迁移不改写原目录，不生成虚假的
+`generation_id`、`created_at_utc` 或 `manifest_sha256`。
+
+提交的 `tests/fixtures/sidecar/model-v01` fixture 保持逐字节不变。未知 manifest
+版本直接返回兼容性错误，不按 v0.1 猜测解析。下文记录历史写入契约，仅用于维护
+legacy reader，不再定义新写入行为。
 
 ## 目标
 

@@ -115,7 +115,7 @@ WSL development + Windows Blender example:
 
 ```bash
 python templates/extension_addon/scripts/sync_and_reload.py \
-  --source /home/ustcw/project-folder/blender_mcp/my_addon \
+  --source /home/<username>/project-folder/blender_mcp/my_addon \
   --target "/mnt/c/Users/<user>/AppData/Roaming/Blender Foundation/Blender/4.5/extensions/user_default/my_extension" \
   --module my_addon \
   --delete-stale \

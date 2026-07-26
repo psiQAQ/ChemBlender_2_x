@@ -1,0 +1,345 @@
+"""Blender Project Browser UIList and small RNA projection."""
+
+import json
+from uuid import UUID
+
+import bpy
+from bpy.props import (
+    CollectionProperty,
+    EnumProperty,
+    IntProperty,
+    PointerProperty,
+    StringProperty,
+)
+
+from ..properties import (
+    _same_scene_property,
+    _scene_property_identity,
+    get_quick_import_state,
+)
+from ..session import get_scene_session
+from .model import (
+    BrowserMode,
+    ViewRecord,
+    _browser_entity_ids,
+    build_browser_rows,
+)
+
+
+_MODE_ITEMS = tuple(
+    (mode.value, mode.value.replace("_", " ").title(), "") for mode in BrowserMode
+)
+_QUALITY_ITEMS = (
+    ("all", "All Quality", ""),
+    ("complete", "Complete", ""),
+    ("partial", "Partial", ""),
+    ("ambiguous", "Ambiguous", ""),
+    ("incomplete", "Incomplete", ""),
+    ("invalid", "Invalid", ""),
+)
+_ROW_ICONS = {
+    "diagnostic": "ERROR",
+    "empty": "INFO",
+    "grid3d": "VOLUME_DATA",
+    "group": "OUTLINER_COLLECTION",
+    "source": "FILE",
+    "source_revision": "FILE",
+    "structure": "MESH_DATA",
+    "view": "HIDE_OFF",
+}
+_SCENE_PROPERTY_NAME = "chemblender_project_browser"
+_OWNED_SCENE_PROPERTY = None
+
+
+def _selection_changed(state, context):
+    synchronize_browser_selection(get_scene_session(context.scene), state)
+
+
+def _projection_changed(_state, context):
+    refresh_project_browser(context.scene)
+
+
+class CHEMBLENDER_PG_project_browser_row(bpy.types.PropertyGroup):
+    row_id: StringProperty()
+    parent_id: StringProperty()
+    entity_id: StringProperty()
+    kind: StringProperty()
+    label: StringProperty()
+    quality: StringProperty()
+    depth: IntProperty()
+    view_count: IntProperty()
+
+
+class CHEMBLENDER_PG_project_browser(bpy.types.PropertyGroup):
+    mode: EnumProperty(items=_MODE_ITEMS, default=BrowserMode.BY_SOURCE.value, update=_projection_changed)
+    search: StringProperty(name="Search", update=_projection_changed)
+    quality_filter: EnumProperty(
+        items=_QUALITY_ITEMS,
+        default="all",
+        update=_projection_changed,
+    )
+    selected_index: IntProperty(default=0, update=_selection_changed)
+    active_entity_id: StringProperty()
+    rows: CollectionProperty(type=CHEMBLENDER_PG_project_browser_row)
+
+
+def _project_entity_id(project, value):
+    if type(value) is not str or not value:
+        return None
+    try:
+        entity_id = UUID(value)
+    except ValueError:
+        return None
+    return (
+        entity_id
+        if entity_id in _browser_entity_ids(project)
+        else None
+    )
+
+
+def synchronize_browser_selection(session, state):
+    index = state.selected_index
+    entity_id = ""
+    if type(index) is int and 0 <= index < len(state.rows):
+        entity_id = state.rows[index].entity_id
+    selected = _project_entity_id(session.project, entity_id)
+    session.active_entity_id = selected
+    state.active_entity_id = str(selected) if selected is not None else ""
+
+
+def presentation_view_records(scene):
+    records = []
+    seen = set()
+    for obj in sorted(scene.objects, key=lambda value: value.name):
+        view_kind = obj.get("cb_scene_view_kind")
+        encoded = obj.get("cb_scene_bindings_json")
+        if (
+            type(view_kind) is not str
+            or not view_kind.strip()
+            or type(encoded) is not str
+            or not encoded.strip()
+        ):
+            continue
+        try:
+            bindings = json.loads(encoded)
+        except (TypeError, ValueError):
+            continue
+        if type(bindings) is not dict:
+            continue
+        for binding_name in sorted(bindings):
+            binding = bindings[binding_name]
+            if (
+                type(binding) is not dict
+                or set(binding) != {"entity_id", "revision"}
+            ):
+                continue
+            entity_text = binding["entity_id"]
+            revision = binding["revision"]
+            if (
+                type(entity_text) is not str
+                or not entity_text.strip()
+                or type(revision) is not str
+                or not revision.strip()
+            ):
+                continue
+            try:
+                entity_id = UUID(entity_text)
+            except ValueError:
+                continue
+            identity = (obj.name, entity_id, revision)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            records.append(
+                ViewRecord(
+                    object_name=obj.name,
+                    entity_id=entity_id,
+                    revision=revision,
+                    view_kind=view_kind,
+                    label=obj.name,
+                )
+            )
+    return tuple(records)
+
+
+def _copy_rows(collection, rows):
+    collection.clear()
+    for row in rows:
+        projected = collection.add()
+        projected.row_id = row.id
+        projected.parent_id = row.parent_id or ""
+        projected.entity_id = str(row.entity_id) if row.entity_id is not None else ""
+        projected.kind = row.kind
+        projected.label = row.label
+        projected.quality = row.quality
+        projected.depth = row.depth
+        projected.view_count = row.view_count
+
+
+def refresh_project_browser(scene):
+    session = get_scene_session(scene)
+    state = get_quick_import_state(session)
+    settings = getattr(scene, _SCENE_PROPERTY_NAME)
+    filters = (
+        ()
+        if settings.quality_filter == "all"
+        else (settings.quality_filter,)
+    )
+    rows = build_browser_rows(
+        session.project,
+        mode=settings.mode,
+        session_id=session.id,
+        browser_revision=state.browser_revision,
+        search=settings.search,
+        filters=filters,
+        views=presentation_view_records(scene),
+    )
+    selected = _project_entity_id(
+        session.project,
+        settings.active_entity_id,
+    )
+    selected_id = str(selected) if selected is not None else ""
+    _copy_rows(settings.rows, rows)
+    selected_index = next(
+        (
+            index
+            for index, row in enumerate(settings.rows)
+            if row.entity_id == selected_id
+        ),
+        None,
+    )
+    settings.selected_index = selected_index if selected_index is not None else 0
+    if selected_index is not None:
+        synchronize_browser_selection(session, settings)
+    elif selected is not None:
+        session.active_entity_id = selected
+        settings.active_entity_id = selected_id
+    else:
+        session.active_entity_id = None
+        settings.active_entity_id = ""
+    return rows
+
+
+class CHEMBLENDER_UL_project_rows(bpy.types.UIList):
+    def draw_item(
+        self,
+        _context,
+        layout,
+        _data,
+        item,
+        _icon,
+        _active_data,
+        _active_property,
+        _index=0,
+    ):
+        text = f"{'  ' * item.depth}{item.label}"
+        if item.view_count:
+            text = f"{text} ({item.view_count})"
+        row = layout.row(align=True)
+        row.label(text=text, icon=_ROW_ICONS.get(item.kind, "DOT"))
+        if item.quality:
+            row.label(text=item.quality.title())
+
+
+class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
+    bl_label = "Project Browser"
+    bl_idname = "CHEMBLENDER_PT_PROJECT_BROWSER"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "ChemBlender"
+
+    def draw(self, context):
+        settings = getattr(context.scene, _SCENE_PROPERTY_NAME)
+        refresh_project_browser(context.scene)
+        layout = self.layout
+        layout.prop(settings, "mode", expand=True)
+        layout.prop(settings, "search", icon="VIEWZOOM")
+        layout.prop(settings, "quality_filter")
+        layout.template_list(
+            "CHEMBLENDER_UL_project_rows",
+            "",
+            settings,
+            "rows",
+            settings,
+            "selected_index",
+        )
+        if settings.active_entity_id:
+            layout.label(text=f"Selected: {settings.active_entity_id}")
+
+
+def register():
+    global _OWNED_SCENE_PROPERTY
+    current = _scene_property_identity(_SCENE_PROPERTY_NAME)
+    if _OWNED_SCENE_PROPERTY is not None:
+        if _same_scene_property(current, _OWNED_SCENE_PROPERTY):
+            return
+        raise RuntimeError(
+            f"Scene.{_SCENE_PROPERTY_NAME} is no longer owned by ChemBlender"
+        )
+    if current is not None:
+        raise RuntimeError(f"Scene.{_SCENE_PROPERTY_NAME} is already owned")
+    created_property = PointerProperty(
+        type=CHEMBLENDER_PG_project_browser
+    )
+    setattr(
+        bpy.types.Scene,
+        _SCENE_PROPERTY_NAME,
+        created_property,
+    )
+    identity = _scene_property_identity(_SCENE_PROPERTY_NAME)
+    if identity is None:
+        failure = RuntimeError(
+            "Project Browser Scene property registration failed"
+        )
+        current_property = getattr(
+            bpy.types.Scene,
+            _SCENE_PROPERTY_NAME,
+            None,
+        )
+        if current_property is not created_property:
+            failure.add_note(
+                "property replaced before rollback; foreign property preserved"
+            )
+            raise failure
+        try:
+            delattr(bpy.types.Scene, _SCENE_PROPERTY_NAME)
+        except BaseException as error:
+            if (
+                getattr(
+                    bpy.types.Scene,
+                    _SCENE_PROPERTY_NAME,
+                    None,
+                )
+                is created_property
+            ):
+                _OWNED_SCENE_PROPERTY = (
+                    "python",
+                    created_property,
+                )
+            failure.add_note(f"property rollback failed: {error}")
+        raise failure
+    _OWNED_SCENE_PROPERTY = identity
+
+
+def unregister():
+    global _OWNED_SCENE_PROPERTY
+    owned = _OWNED_SCENE_PROPERTY
+    if owned is None:
+        return
+    if _same_scene_property(
+        _scene_property_identity(_SCENE_PROPERTY_NAME),
+        owned,
+    ):
+        delattr(bpy.types.Scene, _SCENE_PROPERTY_NAME)
+    _OWNED_SCENE_PROPERTY = None
+
+
+__all__ = (
+    "CHEMBLENDER_PG_project_browser",
+    "CHEMBLENDER_PG_project_browser_row",
+    "CHEMBLENDER_PT_project_browser",
+    "CHEMBLENDER_UL_project_rows",
+    "presentation_view_records",
+    "refresh_project_browser",
+    "synchronize_browser_selection",
+)

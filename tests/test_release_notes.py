@@ -50,6 +50,47 @@ class ReleaseNotesTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "exactly one dated entry"):
             extract_release_notes(changelog, "2.2.0")
 
+    def test_extracts_exact_prerelease_heading(self):
+        changelog = """## [2.3.0-alpha.1] - 2026-07-26
+
+- Alpha release.
+
+## [2.3.0] - 2026-07-27
+
+- Stable release.
+"""
+
+        notes = extract_release_notes(changelog, "2.3.0-alpha.1")
+
+        self.assertEqual(notes, "- Alpha release.\n")
+
+    def test_prerelease_entry_must_be_unique_present_and_nonempty(self):
+        duplicate = """## [2.3.0-alpha.1] - 2026-07-26
+
+- First.
+
+## [2.3.0-alpha.1] - 2026-07-27
+
+- Second.
+"""
+        empty = """## [2.3.0-alpha.1] - 2026-07-26
+
+## [2.3.0] - 2026-07-27
+
+- Stable.
+"""
+
+        with self.assertRaisesRegex(ValueError, "exactly one dated entry"):
+            extract_release_notes("# Changelog\n", "2.3.0-alpha.1")
+        with self.assertRaisesRegex(ValueError, "exactly one dated entry"):
+            extract_release_notes(duplicate, "2.3.0-alpha.1")
+        with self.assertRaisesRegex(ValueError, "empty"):
+            extract_release_notes(empty, "2.3.0-alpha.1")
+
+    def test_invalid_prerelease_version_fails_before_heading_lookup(self):
+        with self.assertRaisesRegex(ValueError, "release version"):
+            extract_release_notes("# Changelog\n", "2.3.0-preview.1")
+
     def test_reference_links_are_not_release_notes(self):
         changelog = """## [2.1.0] - 2026-07-07
 

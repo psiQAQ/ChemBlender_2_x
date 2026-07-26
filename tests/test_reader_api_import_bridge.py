@@ -1,0 +1,818 @@
+import hashlib
+import json
+import tempfile
+import unittest
+from dataclasses import replace
+from pathlib import Path
+from uuid import uuid4
+from unittest.mock import patch
+
+import numpy
+
+from ChemBlender.core import (
+    ArrayData,
+    CapabilitySupport,
+    ImportBatch,
+    QCProject,
+    SourceRecord,
+    SourceRevision,
+    Structure,
+    create_session,
+    source_parse_identity,
+)
+from ChemBlender.core.import_pipeline import (
+    ImportCancelled,
+    ImportCommitDecisions,
+    ImportRequest,
+    ImportSource,
+    ReaderOverride,
+    StagedImportSession,
+    ValidationMode,
+    commit_import_preview,
+)
+from ChemBlender.reader_api import (
+    ExecutionMode,
+    PublicImportBatch,
+    PublicReaderDescriptor,
+    ReaderAvailability,
+    ReaderManifestEntry,
+    ReaderPluginManifest,
+    ReaderPluginRegistry,
+    ProgressEvent,
+    SniffMatch,
+    SniffRequest,
+    SniffResult,
+    builtin_reader_plugin_registry,
+)
+from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from ChemBlender.runtime.reader_api_bridge import (
+    get_reader_plugin_registry,
+    register_reader_api_handle,
+    remove_reader_api_handle,
+)
+
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _identity_parameters(mode, extra=()):
+    return tuple(sorted(
+        (("source_content_state", "verified"), ("validation_mode", mode), *extra)
+    ))
+
+
+def _parameter_hash(parameters):
+    return hashlib.sha256(
+        json.dumps(
+            parameters,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+class _Plugin:
+    def __init__(self, descriptor, result):
+        self.descriptor = descriptor
+        self.priority = 100
+        self._result = result
+        entry = ReaderManifestEntry(
+            descriptor.reader_id,
+            descriptor.reader_version,
+            descriptor.extensions,
+            ("structure",),
+        )
+        self.manifest = ReaderPluginManifest(
+            "1",
+            descriptor.plugin_id,
+            descriptor.plugin_version,
+            ">=0.1,<1.0",
+            descriptor.execution_mode,
+            ("SPDX:MIT",),
+            (entry,),
+        )
+
+    def sniff(self, request):
+        self.sniff_prefix_size = len(request.prefix)
+        return SniffResult(SniffMatch.EXACT, "fixture")
+
+    def parse(self, request):
+        return self._result
+
+
+def _descriptor(reader_id="external-reader", *, availability=None):
+    return PublicReaderDescriptor(
+        plugin_id="org.example.reader",
+        plugin_version="1.0",
+        reader_id=reader_id,
+        reader_version="1",
+        execution_mode=ExecutionMode.EXTENSION,
+        extensions=(".ext",),
+        capabilities={"structure": CapabilitySupport.SUPPORTED},
+        availability=availability
+        or ReaderAvailability(True, "extension", "available", ""),
+    )
+
+
+class ReaderAPIImportBridgeTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary.name)
+        self.staged = []
+
+    def tearDown(self):
+        for session in self.staged:
+            if session.root.exists():
+                session.discard()
+        self.temporary.cleanup()
+
+    def session(self):
+        session = StagedImportSession.create(temp_parent=self.root)
+        self.staged.append(session)
+        return session
+
+    def request(self, path, *, override=None):
+        source = ImportSource(path)
+        overrides = (
+            ()
+            if override is None
+            else (ReaderOverride(source.id, override),)
+        )
+        return ImportRequest(
+            (source,),
+            ValidationMode.BALANCED,
+            overrides,
+        )
+
+    def test_requires_exact_contracts_and_safe_canonical_parameters(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        request = self.request(source)
+        registry = ReaderPluginRegistry()
+        session = self.session()
+
+        for arguments in (
+            (object(), registry, session),
+            (request, object(), session),
+            (request, registry, object()),
+        ):
+            with self.subTest(arguments=arguments):
+                with self.assertRaises(TypeError):
+                    preflight_reader_plugins(*arguments)
+        for parameters in (
+            {request.sources[0].id: {"validation_mode": "strict"}},
+            {request.sources[0].id: {"source_content_state": "changed"}},
+            {request.sources[0].id: {"bad key": "value"}},
+            {uuid4(): {"encoding": "utf-8"}},
+        ):
+            with self.subTest(parameters=parameters):
+                with self.assertRaises((TypeError, ValueError)):
+                    preflight_reader_plugins(
+                        request,
+                        registry,
+                        session,
+                        canonical_parameters_by_source=parameters,
+                    )
+
+    def test_external_identity_is_preserved_through_runtime_registration(self):
+        source_path = self.root / "source.ext"
+        source_path.write_bytes(b"external")
+        request = self.request(source_path, override="external-reader")
+        request_source_id = request.sources[0].id
+        source_id = uuid4()
+        self.assertNotEqual(source_id, request_source_id)
+        content_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
+        structure = Structure(
+            id=uuid4(),
+            revision="structure-r1",
+            atomic_numbers=(1,),
+            coordinates=ArrayData(
+                numpy.asarray(((0.0, 0.0, 0.0),)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        )
+        parameters = _identity_parameters(
+            "balanced", (("encoding", "utf-8"),)
+        )
+        descriptor = _descriptor()
+        source = SourceRecord(
+            source_id,
+            source_path.name,
+            "local_file",
+            "2026-07-25T00:00:00Z",
+        )
+        revision = SourceRevision(
+            uuid4(),
+            source_id,
+            content_hash,
+            len(source_path.read_bytes()),
+            str(source_path.resolve()),
+            "absolute_path",
+            source_path.name,
+            descriptor.plugin_id,
+            descriptor.reader_id,
+            descriptor.reader_version,
+            "0.1",
+            _parameter_hash(parameters),
+            source_parse_identity(
+                content_hash,
+                descriptor.plugin_id,
+                descriptor.reader_id,
+                descriptor.reader_version,
+                parameters,
+            ),
+            (structure.id,),
+            (),
+        )
+        public = PublicImportBatch(
+            sources=(source,),
+            source_revisions=(revision,),
+            structures=(structure,),
+        )
+        plugin = _Plugin(descriptor, public)
+        namespace = {}
+        handle = register_reader_api_handle(
+            "synthetic.chemblender", namespace=namespace
+        )
+        handle.register_callback(plugin)
+        try:
+            registry = get_reader_plugin_registry()
+            session = self.session()
+            preview = preflight_reader_plugins(
+                request,
+                registry,
+                session,
+                canonical_parameters_by_source={
+                    request_source_id: {"encoding": "utf-8"}
+                },
+            )
+            staged = session.result(preview.staged_batch_ids[0])
+
+            self.assertIs(staged.sources[0], source)
+            self.assertIs(staged.source_revisions[0], revision)
+            self.assertEqual(preview.source_previews[0].source_id, source_id)
+            self.assertEqual(staged.structures, (structure,))
+            project_session = create_session(temp_parent=self.root)
+            try:
+                committed = commit_import_preview(
+                    project_session,
+                    session,
+                    preview,
+                    ImportCommitDecisions(),
+                )
+                self.assertIn(source_id, committed.project.sources)
+                self.assertNotIn(
+                    request_source_id,
+                    committed.project.sources,
+                )
+            finally:
+                from ChemBlender.core import close_session
+
+                close_session(project_session)
+
+            for invalid in (
+                replace(public, source_revisions=()),
+                replace(
+                    public,
+                    source_revisions=(
+                        replace(revision, original_filename="wrong.ext"),
+                    ),
+                ),
+            ):
+                plugin._result = invalid
+                invalid_session = self.session()
+                invalid_preview = preflight_reader_plugins(
+                    request,
+                    registry,
+                    invalid_session,
+                    canonical_parameters_by_source={
+                        request_source_id: {"encoding": "utf-8"}
+                    },
+                )
+                invalid_batch = invalid_session.result(
+                    invalid_preview.staged_batch_ids[0]
+                )
+                self.assertEqual(invalid_batch.structures, ())
+                self.assertEqual(
+                    invalid_batch.diagnostics[0].code,
+                    "preflight.invalid_reader_result",
+                )
+        finally:
+            handle.unregister_callback(plugin.manifest)
+            remove_reader_api_handle(handle, namespace=namespace)
+        self.assertNotIn(
+            descriptor.reader_id,
+            tuple(item.reader_id for item in get_reader_plugin_registry().descriptors),
+        )
+
+    def test_external_scientific_result_without_identity_is_invalid(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        structure = Structure(
+            id=uuid4(),
+            revision="structure-r1",
+            atomic_numbers=(1,),
+            coordinates=ArrayData(
+                numpy.asarray(((0.0, 0.0, 0.0),)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        )
+        registry = ReaderPluginRegistry(
+            (_Plugin(_descriptor(), PublicImportBatch(structures=(structure,))),)
+        )
+        session = self.session()
+
+        preview = preflight_reader_plugins(
+            self.request(source),
+            registry,
+            session,
+        )
+        staged = session.result(preview.staged_batch_ids[0])
+
+        self.assertEqual(staged.structures, ())
+        self.assertEqual(
+            tuple(item.code for item in staged.diagnostics),
+            ("preflight.invalid_reader_result",),
+        )
+
+    def test_sniff_prefix_is_bounded_and_cancellation_is_typed(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"x" * 70000)
+        plugin = _Plugin(_descriptor(), PublicImportBatch())
+        registry = ReaderPluginRegistry((plugin,))
+        session = self.session()
+        progress = []
+
+        preflight_reader_plugins(
+            self.request(source),
+            registry,
+            session,
+            progress=lambda stage, completed, total: progress.append(
+                (stage, completed, total)
+            ),
+        )
+
+        self.assertEqual(plugin.sniff_prefix_size, 65536)
+        self.assertEqual(
+            progress,
+            (
+                [
+                    ("preflight", 0, 3),
+                    ("hash", 1, 3),
+                    ("reader", 2, 3),
+                    ("reader.source_hash", 0, 1),
+                    ("reader.source_hash", 1, 1),
+                    ("reader.parse", 0, 1),
+                    ("reader.source_recheck", 0, 1),
+                    ("reader.source_recheck", 1, 1),
+                    ("reader.parse", 1, 1),
+                    ("parse", 3, 3),
+                ]
+            ),
+        )
+        cancelled_session = self.session()
+        with self.assertRaises(ImportCancelled):
+            preflight_reader_plugins(
+                self.request(source),
+                registry,
+                cancelled_session,
+                is_cancelled=lambda: True,
+            )
+        self.assertEqual(cancelled_session.result_ids, ())
+        with self.assertRaises(TypeError):
+            preflight_reader_plugins(
+                self.request(source),
+                registry,
+                self.session(),
+                is_cancelled=lambda: 1,
+            )
+
+    def test_snapshot_cancellation_callback_preserves_host_boundaries(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        cases = (
+            (
+                OSError("snapshot cancellation failed"),
+                OSError,
+                "snapshot cancellation failed",
+            ),
+            (
+                RuntimeError("snapshot callback failed"),
+                RuntimeError,
+                "snapshot callback failed",
+            ),
+            (MemoryError("fatal snapshot failure"), MemoryError, "fatal"),
+            (1, TypeError, "is_cancelled must return bool"),
+            (True, ImportCancelled, "import preflight was cancelled"),
+        )
+        for callback_result, error_type, message in cases:
+            with self.subTest(error_type=error_type):
+                calls = 0
+                session = self.session()
+
+                def stateful_cancel():
+                    nonlocal calls
+                    calls += 1
+                    if calls == 1:
+                        return False
+                    if isinstance(callback_result, Exception):
+                        raise callback_result
+                    return callback_result
+
+                with self.assertRaisesRegex(error_type, message):
+                    preflight_reader_plugins(
+                        self.request(source),
+                        ReaderPluginRegistry(),
+                        session,
+                        is_cancelled=stateful_cancel,
+                    )
+                self.assertEqual(session.result_ids, ())
+
+    def test_selection_unavailability_and_parse_failures_are_staged(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        cases = (
+            (
+                ReaderPluginRegistry(),
+                "preflight.reader_not_found",
+            ),
+            (
+                ReaderPluginRegistry((
+                    _Plugin(
+                        _descriptor(
+                            availability=ReaderAvailability(
+                                False,
+                                "extension",
+                                "dependency_missing",
+                                "optional package is missing",
+                            )
+                        ),
+                        PublicImportBatch(),
+                    ),
+                )),
+                "preflight.reader_unavailable",
+            ),
+        )
+        for registry, code in cases:
+            with self.subTest(code=code):
+                session = self.session()
+                preview = preflight_reader_plugins(
+                    self.request(source), registry, session
+                )
+                batch = session.result(preview.staged_batch_ids[0])
+                self.assertEqual(
+                    tuple(item.code for item in batch.diagnostics),
+                    (code,),
+                )
+
+        class BrokenPlugin(_Plugin):
+            def parse(self, request):
+                raise RuntimeError("broken")
+
+        session = self.session()
+        preview = preflight_reader_plugins(
+            self.request(source),
+            ReaderPluginRegistry((
+                BrokenPlugin(_descriptor(), PublicImportBatch()),
+            )),
+            session,
+        )
+        batch = session.result(preview.staged_batch_ids[0])
+        self.assertEqual(batch.diagnostics[0].field_path, "reader.parse")
+        self.assertIn("RuntimeError", batch.diagnostics[0].message)
+
+    def test_source_recheck_failure_discards_plugin_success(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+
+        class MutatingPlugin(_Plugin):
+            def parse(self, request):
+                request.source_path.write_bytes(b"changed")
+                return PublicImportBatch()
+
+        session = self.session()
+        preview = preflight_reader_plugins(
+            self.request(source),
+            ReaderPluginRegistry((
+                MutatingPlugin(_descriptor(), PublicImportBatch()),
+            )),
+            session,
+        )
+        batch = session.result(preview.staged_batch_ids[0])
+
+        self.assertEqual(len(preview.staged_batch_ids), 1)
+        self.assertEqual(batch.structures, ())
+        self.assertEqual(batch.diagnostics[0].field_path, "reader.source")
+        self.assertIn("changed", batch.diagnostics[0].message)
+
+    def test_hash_and_sniff_prefix_share_one_source_open(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        source = source.resolve()
+        source_opens = 0
+        opens_at_sniff = []
+        original_open = Path.open
+
+        class ObservingPlugin(_Plugin):
+            def sniff(self, request):
+                opens_at_sniff.append(source_opens)
+                return super().sniff(request)
+
+        def tracking_open(path, *args, **kwargs):
+            nonlocal source_opens
+            if path == source and args and args[0] == "rb":
+                source_opens += 1
+            return original_open(path, *args, **kwargs)
+
+        with patch.object(Path, "open", tracking_open):
+            preflight_reader_plugins(
+                self.request(source),
+                ReaderPluginRegistry((
+                    ObservingPlugin(_descriptor(), PublicImportBatch()),
+                )),
+                self.session(),
+            )
+
+        self.assertEqual(opens_at_sniff, [1])
+
+    def test_source_deleted_after_sniff_is_staged_as_changed(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+
+        class DeletingPlugin(_Plugin):
+            def sniff(self, request):
+                result = super().sniff(request)
+                request.source_path.unlink()
+                return result
+
+        session = self.session()
+        preview = preflight_reader_plugins(
+            self.request(source),
+            ReaderPluginRegistry((
+                DeletingPlugin(_descriptor(), PublicImportBatch()),
+            )),
+            session,
+        )
+        batch = session.result(preview.staged_batch_ids[0])
+
+        self.assertEqual(
+            tuple(item.code for item in batch.diagnostics),
+            ("preflight.source_changed",),
+        )
+
+    def test_source_replaced_by_directory_after_sniff_is_staged_as_changed(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+
+        class ReplacingPlugin(_Plugin):
+            def sniff(self, request):
+                result = super().sniff(request)
+                request.source_path.unlink()
+                request.source_path.mkdir()
+                return result
+
+        session = self.session()
+        preview = preflight_reader_plugins(
+            self.request(source),
+            ReaderPluginRegistry((
+                ReplacingPlugin(_descriptor(), PublicImportBatch()),
+            )),
+            session,
+        )
+        batch = session.result(preview.staged_batch_ids[0])
+
+        self.assertEqual(
+            tuple(item.code for item in batch.diagnostics),
+            ("preflight.source_changed",),
+        )
+
+    def test_one_shot_cancellation_inside_plugin_parse_is_typed(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+
+        class CancellingPlugin(_Plugin):
+            parsing = False
+
+            def parse(self, request):
+                self.parsing = True
+                request.is_cancelled()
+                return PublicImportBatch()
+
+        plugin = CancellingPlugin(_descriptor(), PublicImportBatch())
+        session = self.session()
+        cancelled = False
+
+        def one_shot_cancel():
+            nonlocal cancelled
+            if plugin.parsing and not cancelled:
+                cancelled = True
+                return True
+            return False
+
+        with self.assertRaises(ImportCancelled):
+            preflight_reader_plugins(
+                self.request(source),
+                ReaderPluginRegistry((plugin,)),
+                session,
+                is_cancelled=one_shot_cancel,
+            )
+        self.assertEqual(session.result_ids, ())
+
+    def test_host_callback_failures_escape_plugin_failure_staging(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+
+        class ProgressPlugin(_Plugin):
+            def parse(self, request):
+                request.progress(ProgressEvent("decode", 1, 2))
+                return PublicImportBatch()
+
+        progress_registry = ReaderPluginRegistry((
+            ProgressPlugin(_descriptor(), PublicImportBatch()),
+        ))
+        progress_session = self.session()
+
+        def failing_progress(stage, completed, total):
+            if stage == "reader.decode":
+                raise OSError("host progress failed")
+
+        with self.assertRaisesRegex(OSError, "host progress failed"):
+            preflight_reader_plugins(
+                self.request(source),
+                progress_registry,
+                progress_session,
+                progress=failing_progress,
+            )
+        self.assertIsNone(progress_registry._last_parse_exception_type)
+        self.assertEqual(progress_session.result_ids, ())
+
+        class CancellationPlugin(_Plugin):
+            parsing = False
+
+            def parse(self, request):
+                self.parsing = True
+                request.is_cancelled()
+                return PublicImportBatch()
+
+        callback_cases = (
+            (
+                RuntimeError("host cancellation failed"),
+                RuntimeError,
+                "host cancellation failed",
+            ),
+            (1, TypeError, "is_cancelled must return bool"),
+        )
+        for callback_result, error_type, message in callback_cases:
+            with self.subTest(error_type=error_type):
+                plugin = CancellationPlugin(
+                    _descriptor(), PublicImportBatch()
+                )
+                registry = ReaderPluginRegistry((plugin,))
+                session = self.session()
+
+                def stateful_cancel():
+                    if not plugin.parsing:
+                        return False
+                    if isinstance(callback_result, Exception):
+                        raise callback_result
+                    return callback_result
+
+                with self.assertRaisesRegex(error_type, message):
+                    preflight_reader_plugins(
+                        self.request(source),
+                        registry,
+                        session,
+                        is_cancelled=stateful_cancel,
+                    )
+                self.assertIsNone(registry._last_parse_exception_type)
+                self.assertEqual(session.result_ids, ())
+
+    def test_forged_builtin_metadata_cannot_bypass_external_identity(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        structure = Structure(
+            id=uuid4(),
+            revision="structure-r1",
+            atomic_numbers=(1,),
+            coordinates=ArrayData(
+                numpy.asarray(((0.0, 0.0, 0.0),)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        )
+        descriptor = PublicReaderDescriptor(
+            plugin_id="chemblender.builtin",
+            plugin_version="2.3.0",
+            reader_id="forged",
+            reader_version="1",
+            execution_mode=ExecutionMode.BUILT_IN,
+            extensions=(".ext",),
+            capabilities={"structure": CapabilitySupport.SUPPORTED},
+            availability=ReaderAvailability(
+                True, "built_in", "available", ""
+            ),
+        )
+        session = self.session()
+
+        preview = preflight_reader_plugins(
+            self.request(source),
+            ReaderPluginRegistry((
+                _Plugin(
+                    descriptor,
+                    PublicImportBatch(structures=(structure,)),
+                ),
+            )),
+            session,
+        )
+        batch = session.result(preview.staged_batch_ids[0])
+
+        self.assertEqual(batch.structures, ())
+        self.assertEqual(
+            batch.diagnostics[0].code,
+            "preflight.invalid_reader_result",
+        )
+
+    def test_builtin_xyz_and_cube_stage_without_project_mutation(self):
+        project = QCProject(uuid4(), "0.2")
+        registry = builtin_reader_plugin_registry()
+        for relative in ("xyz/water.xyz", "cube/sheared.cube"):
+            with self.subTest(relative=relative):
+                session = self.session()
+                preview = preflight_reader_plugins(
+                    self.request(FIXTURES / relative),
+                    registry,
+                    session,
+                )
+                batch = session.result(preview.staged_batch_ids[0])
+                self.assertTrue(batch.structures)
+                self.assertEqual(project.structures, {})
+                self.assertEqual(len(batch.sources), 1)
+                self.assertEqual(len(batch.source_revisions), 1)
+                if relative.endswith(".cube"):
+                    self.assertTrue(batch.datasets)
+                    grid = batch.datasets[0]
+                    self.assertEqual(grid.data.values.shape, (2, 2, 2))
+
+    def test_builtin_cube_bridge_preserves_grid_and_array_identity(self):
+        source = FIXTURES / "cube/sheared.cube"
+        registry = builtin_reader_plugin_registry()
+        selected = registry.select(
+            SniffRequest(source, source.read_bytes()[:65536])
+        )
+        plugin = registry._plugin(selected.reader_id)
+        internal = plugin.core_descriptor.parse(source)
+        fixed_plugin = replace(
+            plugin,
+            core_descriptor=replace(
+                plugin.core_descriptor,
+                parse=lambda path: internal,
+            ),
+        )
+        session = self.session()
+
+        preview = preflight_reader_plugins(
+            self.request(source),
+            ReaderPluginRegistry((fixed_plugin,)),
+            session,
+        )
+        staged = session.result(preview.staged_batch_ids[0])
+
+        self.assertIs(staged.structures[0], internal.structures[0])
+        self.assertIs(staged.datasets[0], internal.datasets[0])
+        self.assertIs(
+            staged.datasets[0].data.values,
+            internal.datasets[0].data.values,
+        )
+
+    def test_builtin_preview_commits_only_after_confirmation(self):
+        for relative in ("xyz/water.xyz", "cube/sheared.cube"):
+            source = FIXTURES / relative
+            session = self.session()
+            preview = preflight_reader_plugins(
+                self.request(source),
+                builtin_reader_plugin_registry(),
+                session,
+            )
+            project_session = create_session(temp_parent=self.root)
+            try:
+                self.assertEqual(project_session.project.structures, {})
+                result = commit_import_preview(
+                    project_session,
+                    session,
+                    preview,
+                    ImportCommitDecisions(),
+                )
+                self.assertTrue(result.project.structures)
+                if relative.endswith(".cube"):
+                    self.assertTrue(result.project.datasets)
+            finally:
+                from ChemBlender.core import close_session
+
+                close_session(project_session)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -10,8 +10,12 @@ import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath
 
+if __package__:
+    from .release_metadata import parse_release_version, read_release_metadata
+else:
+    from release_metadata import parse_release_version, read_release_metadata
 
-TAG_PATTERN = re.compile(r"v(\d+)\.(\d+)\.(\d+)")
+
 CHECKSUM_PATTERN = re.compile(r"([0-9a-fA-F]{64})\s+\*?(.+)")
 REQUIRED_FILES = {
     "blender_manifest.toml",
@@ -30,10 +34,12 @@ def _sha256(path: Path) -> str:
 
 
 def _version_from_tag(tag: str) -> str:
-    match = TAG_PATTERN.fullmatch(tag)
-    if not match:
+    if type(tag) is not str or not tag.startswith("v"):
         raise ValueError(f"invalid release tag: {tag}")
-    return ".".join(match.groups())
+    try:
+        return parse_release_version(tag[1:]).value
+    except ValueError as exc:
+        raise ValueError(f"invalid release tag: {tag}") from exc
 
 
 def _validate_archive_path(name: str) -> None:
@@ -51,9 +57,15 @@ def verify_artifact(
 ) -> dict[str, str]:
     artifact_dir = artifact_dir.resolve()
     extension_root = extension_root.resolve()
-    version = _version_from_tag(tag)
-    package_name = f"chemblender-{version}.zip"
-    checksum_name = f"chemblender-{version}.sha256"
+    metadata = read_release_metadata(extension_root)
+    tag_version = _version_from_tag(tag)
+    if tag_version != metadata.version:
+        raise ValueError(
+            f"tag version {tag_version} does not match manifest {metadata.version}"
+        )
+    version = metadata.version
+    package_name = metadata.package_name
+    checksum_name = metadata.checksum_name
     expected_files = {package_name, checksum_name}
     actual_files = {
         path.relative_to(artifact_dir).as_posix()
@@ -79,10 +91,6 @@ def verify_artifact(
 
     source_manifest = (extension_root / "blender_manifest.toml").read_bytes()
     manifest = tomllib.loads(source_manifest.decode("utf-8"))
-    if manifest.get("version") != version:
-        raise ValueError(
-            f"tag version {version} does not match manifest {manifest.get('version')}"
-        )
     declared_wheels = {
         str(PurePosixPath(wheel.removeprefix("./")))
         for wheel in manifest.get("wheels", [])

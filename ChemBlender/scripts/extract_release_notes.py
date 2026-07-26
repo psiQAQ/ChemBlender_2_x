@@ -7,15 +7,17 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
+if __package__:
+    from .release_metadata import parse_release_version
+else:
+    from release_metadata import parse_release_version
 
-VERSION_PATTERN = re.compile(r"\d+\.\d+\.\d+")
 SECTION_PATTERN = re.compile(r"^## \[[^\]]+\](?: - \d{4}-\d{2}-\d{2})?\s*$", re.MULTILINE)
 REFERENCE_PATTERN = re.compile(r"^\[[^\]]+\]:\s+\S+.*$", re.MULTILINE)
 
 
 def extract_release_notes(changelog: str, version: str) -> str:
-    if not VERSION_PATTERN.fullmatch(version):
-        raise ValueError(f"invalid release version: {version}")
+    parse_release_version(version)
 
     entry_pattern = re.compile(
         rf"^## \[{re.escape(version)}\] - \d{{4}}-\d{{2}}-\d{{2}}\s*$",

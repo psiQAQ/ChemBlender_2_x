@@ -11,6 +11,17 @@ import sys
 from pathlib import Path
 from typing import Any
 
+if __package__:
+    from .release_metadata import (
+        read_release_metadata,
+        release_metadata_document,
+    )
+else:
+    from release_metadata import (
+        read_release_metadata,
+        release_metadata_document,
+    )
+
 
 def _script_dir() -> Path:
     return Path(__file__).resolve().parent
@@ -251,6 +262,12 @@ def main() -> int:
         print(f"ERROR: blender_manifest.toml not found: {manifest_path}", file=sys.stderr)
         return 1
 
+    try:
+        metadata = read_release_metadata(extension_root)
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+
     mcp_info = _load_mcp_info(args.mcp_info_json)
 
     mcp_extension_root = mcp_info.get("extension_root")
@@ -306,6 +323,14 @@ def main() -> int:
         print(f"INFO: blender_system={_normalize_os_name(blender_system)}")
     print(f"INFO: python_runner={python_runner}")
     print(f"INFO: blender_binary={blender_bin}")
+    print(
+        "INFO: release_metadata="
+        + json.dumps(
+            release_metadata_document(metadata),
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    )
 
     if args.check_only:
         print("OK: compatibility and path checks passed (check-only mode)")
@@ -325,6 +350,9 @@ def main() -> int:
     try:
         _run(validate_cmd, cwd=extension_root)
         _run([blender_bin, "--command", "extension", "build"], cwd=extension_root)
+        package = extension_root / metadata.package_name
+        if not package.is_file():
+            raise RuntimeError(f"Expected extension package was not built: {package}")
     except RuntimeError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         print(
@@ -334,7 +362,7 @@ def main() -> int:
         )
         return 1
 
-    print("OK: extension build completed")
+    print(f"OK: extension build completed: {package}")
     return 0
 
 

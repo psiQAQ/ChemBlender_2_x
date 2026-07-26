@@ -27,9 +27,26 @@ jobs:
     timeout-minutes: 10
     outputs:
       run_id: ${{ steps.release_info.outputs.run_id }}
+      tag_commit: ${{ steps.release_info.outputs.tag_commit }}
       version: ${{ steps.release_info.outputs.version }}
       artifact_name: ${{ steps.release_info.outputs.artifact_name }}
+      package_name: ${{ steps.release_info.outputs.package_name }}
+      checksum_name: ${{ steps.release_info.outputs.checksum_name }}
+      channel: ${{ steps.release_info.outputs.channel }}
+      is_prerelease: ${{ steps.release_info.outputs.is_prerelease }}
     steps:
+      - name: Require default-branch workflow ref
+        shell: bash
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          expected="refs/heads/$DEFAULT_BRANCH"
+          if [[ "$WORKFLOW_REF" != "$expected" ]]; then
+            echo "Release workflow must be dispatched from $expected, got $WORKFLOW_REF" >&2
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -45,10 +62,6 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid release tag: $RELEASE_TAG" >&2
-            exit 1
-          fi
           if [[ "$(git -C tag-source cat-file -t "refs/tags/$RELEASE_TAG")" != "tag" ]]; then
             echo "Release ref must be an annotated tag: $RELEASE_TAG" >&2
             exit 1
@@ -61,10 +74,19 @@ jobs:
             exit 1
           }
 
-          version="${RELEASE_TAG#v}"
-          manifest_version="$(python3 -c "import tomllib; print(tomllib.load(open('tag-source/ChemBlender/blender_manifest.toml','rb'))['version'])")"
-          if [[ "$version" != "$manifest_version" ]]; then
-            echo "Tag $version does not match manifest $manifest_version" >&2
+          metadata_json="$(
+            python3 ChemBlender/scripts/release_metadata.py \
+              --extension-root tag-source/ChemBlender --format json --include-channel
+          )"
+          version="$(jq -r '.version' <<< "$metadata_json")"
+          artifact_name="$(jq -r '.artifact_name' <<< "$metadata_json")"
+          package_name="$(jq -r '.package_name' <<< "$metadata_json")"
+          checksum_name="$(jq -r '.checksum_name' <<< "$metadata_json")"
+          channel="$(jq -r '.channel' <<< "$metadata_json")"
+          is_prerelease="$(jq -r '.is_prerelease' <<< "$metadata_json")"
+          expected_tag="v$version"
+          if [[ "$RELEASE_TAG" != "$expected_tag" ]]; then
+            echo "Tag $RELEASE_TAG does not match metadata $expected_tag" >&2
             exit 1
           fi
 
@@ -80,10 +102,10 @@ jobs:
             exit 1
           fi
           run_id="${run_ids[0]}"
-          artifact_name="chemblender-$version-windows-x64"
           mapfile -t artifact_ids < <(
-            gh api "repos/$GH_REPO/actions/runs/$run_id/artifacts" \
-              --jq ".artifacts[] | select(.name == \"$artifact_name\" and .expired == false) | .id"
+            gh api "repos/$GH_REPO/actions/runs/$run_id/artifacts" |
+              jq -r --arg name "$artifact_name" \
+                '.artifacts[] | select(.name == $name and .expired == false) | .id'
           )
           if [[ "${#artifact_ids[@]}" -ne 1 ]]; then
             echo "Expected one unexpired artifact named $artifact_name, found ${#artifact_ids[@]}" >&2
@@ -92,8 +114,13 @@ jobs:
 
           {
             echo "run_id=$run_id"
+            echo "tag_commit=$tag_commit"
             echo "version=$version"
             echo "artifact_name=$artifact_name"
+            echo "package_name=$package_name"
+            echo "checksum_name=$checksum_name"
+            echo "channel=$channel"
+            echo "is_prerelease=$is_prerelease"
           } >> "$GITHUB_OUTPUT"
       - name: Download and verify tag artifact
         shell: bash
@@ -103,17 +130,17 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
           RUN_ID: ${{ steps.release_info.outputs.run_id }}
           ARTIFACT_NAME: ${{ steps.release_info.outputs.artifact_name }}
+          VERSION: ${{ steps.release_info.outputs.version }}
         run: |
           set -euo pipefail
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
           python3 ChemBlender/scripts/verify_release_artifact.py \
             --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG"
-          version="${RELEASE_TAG#v}"
           python3 ChemBlender/scripts/extract_release_notes.py \
-            --changelog CHANGELOG.md --version "$version" --output release-notes.md
+            --changelog CHANGELOG.md --version "$VERSION" --output release-notes.md
           if [[ -f tag-source/CHANGELOG.md ]]; then
             python3 ChemBlender/scripts/extract_release_notes.py \
-              --changelog tag-source/CHANGELOG.md --version "$version" --output tag-release-notes.md
+              --changelog tag-source/CHANGELOG.md --version "$VERSION" --output tag-release-notes.md
             cmp release-notes.md tag-release-notes.md
           fi
 
@@ -130,7 +157,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ needs.verify.outputs.tag_commit }}
           path: tag-source
       - name: Download and reverify tag artifact
         shell: bash
@@ -140,17 +167,17 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
           RUN_ID: ${{ needs.verify.outputs.run_id }}
           ARTIFACT_NAME: ${{ needs.verify.outputs.artifact_name }}
+          VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
           python3 ChemBlender/scripts/verify_release_artifact.py \
             --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG"
-          version="${RELEASE_TAG#v}"
           python3 ChemBlender/scripts/extract_release_notes.py \
-            --changelog CHANGELOG.md --version "$version" --output release-notes.md
+            --changelog CHANGELOG.md --version "$VERSION" --output release-notes.md
           if [[ -f tag-source/CHANGELOG.md ]]; then
             python3 ChemBlender/scripts/extract_release_notes.py \
-              --changelog tag-source/CHANGELOG.md --version "$version" --output tag-release-notes.md
+              --changelog tag-source/CHANGELOG.md --version "$VERSION" --output tag-release-notes.md
             cmp release-notes.md tag-release-notes.md
           fi
       - name: Create verified GitHub Release
@@ -160,6 +187,11 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ inputs.tag }}
           VERSION: ${{ needs.verify.outputs.version }}
+          PACKAGE_NAME: ${{ needs.verify.outputs.package_name }}
+          CHECKSUM_NAME: ${{ needs.verify.outputs.checksum_name }}
+          CHANNEL: ${{ needs.verify.outputs.channel }}
+          IS_PRERELEASE: ${{ needs.verify.outputs.is_prerelease }}
+          VERIFIED_TAG_COMMIT: ${{ needs.verify.outputs.tag_commit }}
         run: |
           set -euo pipefail
           if gh release view "$RELEASE_TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
@@ -167,23 +199,57 @@ jobs:
             exit 1
           fi
 
-          package_name="chemblender-$VERSION.zip"
-          checksum_name="chemblender-$VERSION.sha256"
-          package="dist/$package_name"
-          checksum="dist/$checksum_name"
+          package="dist/$PACKAGE_NAME"
+          checksum="dist/$CHECKSUM_NAME"
           package_digest="sha256:$(sha256sum "$package" | cut -d ' ' -f 1)"
           checksum_digest="sha256:$(sha256sum "$checksum" | cut -d ' ' -f 1)"
 
+          release_flags=(--draft)
+          case "$IS_PRERELEASE" in
+            true) release_flags+=(--prerelease) ;;
+            false) ;;
+            *)
+              echo "Invalid prerelease metadata: $IS_PRERELEASE" >&2
+              exit 1
+              ;;
+          esac
+
+          git -C tag-source fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          if [[ "$(git -C tag-source cat-file -t "refs/tags/$RELEASE_TAG")" != "tag" ]]; then
+            echo "Remote release ref must remain an annotated tag: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          current_tag_commit="$(git -C tag-source rev-list -n 1 "refs/tags/$RELEASE_TAG")"
+          if [[ "$current_tag_commit" != "$VERIFIED_TAG_COMMIT" ]]; then
+            echo "Release tag moved after verification: $current_tag_commit != $VERIFIED_TAG_COMMIT" >&2
+            exit 1
+          fi
+
+          echo "Creating $CHANNEL channel release for $VERSION"
           gh release create "$RELEASE_TAG" "$package" "$checksum" \
-            --repo "$GH_REPO" --verify-tag --draft --notes-file release-notes.md \
+            --repo "$GH_REPO" --verify-tag "${release_flags[@]}" \
+            --notes-file release-notes.md \
             --title "ChemBlender $VERSION"
 
-          release_json="$(gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json isDraft,assets)"
+          release_json="$(gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json isDraft,isPrerelease,assets)"
           [[ "$(jq -r '.isDraft' <<< "$release_json")" == "true" ]]
+          [[ "$(jq -r '.isPrerelease' <<< "$release_json")" == "$IS_PRERELEASE" ]]
           [[ "$(jq '.assets | length' <<< "$release_json")" -eq 2 ]]
-          [[ "$(jq -r --arg name "$package_name" '.assets[] | select(.name == $name) | .digest' <<< "$release_json")" == "$package_digest" ]]
-          [[ "$(jq -r --arg name "$checksum_name" '.assets[] | select(.name == $name) | .digest' <<< "$release_json")" == "$checksum_digest" ]]
+          [[ "$(jq -r --arg name "$PACKAGE_NAME" '.assets[] | select(.name == $name) | .digest' <<< "$release_json")" == "$package_digest" ]]
+          [[ "$(jq -r --arg name "$CHECKSUM_NAME" '.assets[] | select(.name == $name) | .digest' <<< "$release_json")" == "$checksum_digest" ]]
 
-          gh release edit "$RELEASE_TAG" --repo "$GH_REPO" \
-            --draft=false --latest --verify-tag
-          [[ "$(gh api "repos/$GH_REPO/releases/latest" --jq '.tag_name')" == "$RELEASE_TAG" ]]
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            gh release edit "$RELEASE_TAG" --repo "$GH_REPO" \
+              --draft=false --prerelease --verify-tag
+            published_json="$(gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json isDraft,isPrerelease)"
+            [[ "$(jq -r '.isDraft' <<< "$published_json")" == "false" ]]
+            [[ "$(jq -r '.isPrerelease' <<< "$published_json")" == "true" ]]
+            [[ "$(gh api "repos/$GH_REPO/releases/latest" --jq '.tag_name')" != "$RELEASE_TAG" ]]
+          else
+            gh release edit "$RELEASE_TAG" --repo "$GH_REPO" \
+              --draft=false --latest --verify-tag
+            published_json="$(gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json isDraft,isPrerelease)"
+            [[ "$(jq -r '.isDraft' <<< "$published_json")" == "false" ]]
+            [[ "$(jq -r '.isPrerelease' <<< "$published_json")" == "false" ]]
+            [[ "$(gh api "repos/$GH_REPO/releases/latest" --jq '.tag_name')" == "$RELEASE_TAG" ]]
+          fi

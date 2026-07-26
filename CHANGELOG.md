@@ -4,8 +4,15 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ## [Unreleased]
 
+## [2.3.0-alpha.1] - 2026-07-26
+
 ### Added
 
+- Added one authoritative project session per `.blend`, with atomic multi-Scene `.cbq` links and durable save/reopen persistence.
+- Added transactional import and relink recovery that restores all affected Scene links after a failed commit.
+- Added explicit extension registration, drag-and-drop and Quick Import flows, a Project Browser, and import conflict/grouping decisions.
+- Added format-aware default Structure, Grid3D volume, and signed-isosurface views for XYZ and Cube data.
+- Added durable derived Volume and Surface caches under the project sidecar, including missing-cache reconstruction.
 - Added a manually dispatched Release workflow that publishes only the exact successful tag CI artifact.
 - Added deterministic ZIP, checksum, manifest, wheel, and Release asset digest verification.
 - Added versioned changelog extraction so GitHub Release notes come from this file.
@@ -14,6 +21,7 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 - Release verification can inspect artifacts from tags created before the Release workflow existed.
 - Manifest comparison now ignores platform line-ending differences while preserving TOML field validation.
+- Shortened same-directory atomic temporary paths so complete product flows work with default Windows temporary and user paths.
 
 ## [2.2.0] - 2026-07-21
 
@@ -68,7 +76,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 - Imported the latest ChemBlender 2.1.0 source as commit `78c2d8d8d6361302bf8f19a568c3d7cfccde4c19`, based on upstream commit `9077096b776cd18ca85adb4b50253a0d3c18fd76`.
 
-[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/v2.3.0-alpha.1...HEAD
+[2.3.0-alpha.1]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0-alpha.1
 [2.2.0]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.2.0
 [2.1.1]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.1.1
 [2.1.0]: https://github.com/psiQAQ/ChemBlender_2_x/commit/78c2d8d8d6361302bf8f19a568c3d7cfccde4c19

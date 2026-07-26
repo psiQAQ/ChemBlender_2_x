@@ -18,19 +18,41 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - name: Verify changelog entry
+      - name: Read release metadata
+        id: release_metadata
         shell: pwsh
         run: |
-          $manifestVersion = python -c "import tomllib; print(tomllib.load(open('ChemBlender/blender_manifest.toml','rb'))['version'])"
+          $metadataJson = python ChemBlender/scripts/release_metadata.py --extension-root ChemBlender --format json
+          if ($LASTEXITCODE -ne 0) { throw "Release metadata validation failed" }
+          $metadata = $metadataJson | ConvertFrom-Json
+          $output = @(
+            "version=$($metadata.version)"
+            "package_name=$($metadata.package_name)"
+            "checksum_name=$($metadata.checksum_name)"
+            "artifact_name=$($metadata.artifact_name)"
+          ) -join "`n"
+          [IO.File]::AppendAllText(
+            $env:GITHUB_OUTPUT,
+            "$output`n",
+            [Text.UTF8Encoding]::new($false)
+          )
+      - name: Verify changelog entry
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.release_metadata.outputs.version }}
+        run: |
+          $manifestVersion = $env:RELEASE_VERSION
           python ChemBlender/scripts/extract_release_notes.py --changelog CHANGELOG.md --version $manifestVersion
           if ($LASTEXITCODE -ne 0) { throw "CHANGELOG.md has no valid entry for $manifestVersion" }
       - name: Verify tag matches manifest
         if: github.ref_type == 'tag'
         shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.release_metadata.outputs.version }}
         run: |
-          $manifestVersion = python -c "import tomllib; print(tomllib.load(open('ChemBlender/blender_manifest.toml','rb'))['version'])"
-          $tagVersion = $env:GITHUB_REF_NAME.TrimStart('v')
-          if ($manifestVersion -ne $tagVersion) { throw "Tag $tagVersion does not match manifest $manifestVersion" }
+          $manifestVersion = $env:RELEASE_VERSION
+          $expectedTag = "v$manifestVersion"
+          if ($env:GITHUB_REF_NAME -ne $expectedTag) { throw "Tag $env:GITHUB_REF_NAME does not match expected $expectedTag" }
       - name: Download pinned RDKit wheel
         shell: pwsh
         run: |
@@ -53,26 +75,39 @@ jobs:
           Expand-Archive -LiteralPath "blender.zip" -DestinationPath "blender"
       - name: Test, validate, build, and install
         shell: pwsh
+        env:
+          PACKAGE_NAME: ${{ steps.release_metadata.outputs.package_name }}
+          CHECKSUM_NAME: ${{ steps.release_metadata.outputs.checksum_name }}
         run: |
           $blender = (Get-ChildItem "blender" -Recurse -Filter "blender.exe" | Select-Object -First 1).FullName
+          $blenderPython = Join-Path (Split-Path $blender) "5.1/python/bin/python.exe"
+          if (-not (Test-Path -LiteralPath $blenderPython -PathType Leaf)) { throw "Blender bundled Python missing" }
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
           $env:BLENDER_USER_RESOURCES = Join-Path $env:RUNNER_TEMP "blender-user"
           New-Item -ItemType Directory -Path $env:BLENDER_USER_RESOURCES -Force | Out-Null
-          python -m unittest discover -s tests -p "test_*.py" -v
-          python ChemBlender/scripts/build_extension.py --python python --blender $blender
-          $package = (Get-ChildItem "ChemBlender" -Filter "chemblender-2.2.0.zip" | Select-Object -First 1).FullName
+          & $blenderPython -m unittest discover -s tests -p "test_*.py" -v
+          if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
+          & $blenderPython ChemBlender/scripts/build_extension.py --python $blenderPython --blender $blender
+          if ($LASTEXITCODE -ne 0) { throw "Extension build failed" }
+          $packageName = $env:PACKAGE_NAME
+          $checksumName = $env:CHECKSUM_NAME
+          $package = Join-Path "ChemBlender" $packageName
+          if (-not (Test-Path -LiteralPath $package -PathType Leaf)) { throw "Expected package missing: $packageName" }
+          $package = (Resolve-Path -LiteralPath $package).Path
           & $blender --background --factory-startup --python-exit-code 1 --python tests/blender_smoke.py -- $package
           $hash = (Get-FileHash -Algorithm SHA256 $package).Hash.ToLowerInvariant()
-          $checksum = Join-Path (Split-Path $package) "chemblender-2.2.0.sha256"
+          $checksum = Join-Path (Split-Path $package) $checksumName
           [IO.File]::WriteAllText(
             $checksum,
-            "$hash  chemblender-2.2.0.zip`n",
+            "$hash  $packageName`n",
             [Text.UTF8Encoding]::new($false)
           )
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: chemblender-2.2.0-windows-x64
+          name: ${{ steps.release_metadata.outputs.artifact_name }}
           path: |
-            ChemBlender/chemblender-2.2.0.zip
-            ChemBlender/chemblender-2.2.0.sha256
+            ChemBlender/${{ steps.release_metadata.outputs.package_name }}
+            ChemBlender/${{ steps.release_metadata.outputs.checksum_name }}
           if-no-files-found: error
-          retention-days: 14
+          retention-days: ${{ github.ref_type == 'tag' && 30 || 14 }}

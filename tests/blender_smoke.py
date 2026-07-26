@@ -1,16 +1,34 @@
 import array
 import importlib
 import importlib.util
+import json
 import math
 import sys
 from dataclasses import replace
 from importlib.metadata import version
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from uuid import uuid4
+from types import SimpleNamespace
+from uuid import UUID, uuid4
 from zipfile import ZipFile
 
 import bpy
+
+
+READER_API_HANDLE_KEY = "chemblender.reader_api.v0"
+OPTIONAL_STACK_PREFIXES = (
+    "ase",
+    "cclib",
+    "gbasis",
+    "gemmi",
+    "iodata",
+    "phonopy",
+    "pymatgen",
+    "pyprocar",
+    "qcengine",
+    "pyscf",
+    "scipy",
+)
 
 
 def assert_package_contents(package):
@@ -19,6 +37,7 @@ def assert_package_contents(package):
         "LICENSE",
         "Chem_Nodes.blend",
         "Chem_Nodes_En.blend",
+        "assets/Chem_Workspace.blend",
         "wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl",
     }
     forbidden_prefixes = ("scripts/", "tests/", "worker/", "__pycache__/")
@@ -34,52 +53,937 @@ def assert_package_contents(package):
     ]
 
 
-def assert_enabled(module_key):
-    assert module_key in bpy.context.preferences.addons
-    assert f"{module_key}.core.cube" in sys.modules
-    assert f"{module_key}.core.mol_v2000" in sys.modules
-    assert f"{module_key}.core.xyz" in sys.modules
-    assert f"{module_key}.core.wavefunction_grid" in sys.modules
-    assert f"{module_key}.core.wavefunction_observables" in sys.modules
-    assert f"{module_key}.core.recipe" in sys.modules
-    assert f"{module_key}.core.critic2_adapter" in sys.modules
-    assert "gbasis" not in sys.modules
-    assert "ase" not in sys.modules
-    assert "pymatgen" not in sys.modules
-    assert f"{module_key}.grid_volume" in sys.modules
-    assert f"{module_key}.dataset_view" in sys.modules
-    assert f"{module_key}.trajectory_view" in sys.modules
-    assert f"{module_key}.worker_client" in sys.modules
-    assert f"{module_key}.topology_view" in sys.modules
-    assert f"{module_key}.scene_preset_view" in sys.modules
-    assert f"{module_key}.spectrum_plot" in sys.modules
-    assert f"{module_key}.surface_view" in sys.modules
-    assert f"{module_key}.core.worker_protocol" in sys.modules
-    assert "worker" not in sys.modules
-    core = importlib.import_module(f"{module_key}.core")
-    assert set(core.builtin_recipes()) == {
-        "tddft_uvvis",
-        "vibrational_ir_spectrum",
-        "wavefunction_molecular_orbital_grid",
+def relative_name(name, package_root):
+    if name == package_root:
+        return "."
+    prefix = package_root + "."
+    return "." + name[len(prefix) :] if name.startswith(prefix) else name
+
+
+def owned_handlers(package_root):
+    entries = []
+    for owner_name in dir(bpy.app.handlers):
+        callbacks = getattr(bpy.app.handlers, owner_name)
+        if not isinstance(callbacks, list):
+            continue
+        for callback in callbacks:
+            module_name = getattr(callback, "__module__", "")
+            if module_name.startswith(package_root + "."):
+                entries.append(
+                    {
+                        "owner": owner_name,
+                        "module": relative_name(module_name, package_root),
+                        "name": callback.__name__,
+                    }
+                )
+    return sorted(entries, key=lambda item: tuple(item.values()))
+
+
+def owned_menu_callbacks(package_root):
+    entries = []
+    for owner_name in dir(bpy.types):
+        owner = getattr(bpy.types, owner_name)
+        if not isinstance(owner, type) or not issubclass(owner, bpy.types.Menu):
+            continue
+        draw = getattr(owner, "draw", None)
+        for callback in getattr(draw, "_draw_funcs", ()):
+            module_name = getattr(callback, "__module__", "")
+            if module_name.startswith(package_root + "."):
+                entries.append(
+                    {
+                        "owner": owner_name,
+                        "module": relative_name(module_name, package_root),
+                        "name": callback.__name__,
+                    }
+                )
+    return sorted(entries, key=lambda item: tuple(item.values()))
+
+
+def owned_registration_classes(module_key):
+    registration = importlib.import_module(
+        f"{module_key}.runtime.registration"
+    )
+    extension = importlib.import_module(f"{module_key}.extension")
+    file_handlers = importlib.import_module(f"{module_key}.ui.file_handlers")
+    return tuple(
+        dict.fromkeys(
+            (
+                *registration._registered_classes,
+                *(menu_type for menu_type, _ in extension.cat_list),
+                *file_handlers._REGISTERED_CLASSES,
+            )
+        )
+    )
+
+
+def registration_inventory(module_key):
+    registration = importlib.import_module(
+        f"{module_key}.runtime.registration"
+    )
+    auto_load = importlib.import_module(f"{module_key}.auto_load")
+    classes = owned_registration_classes(module_key)
+    base_types = {
+        *auto_load.get_register_base_types(),
+        bpy.types.FileHandler,
     }
+    registered_classes = []
+    for cls in classes:
+        bases = sorted(
+            base.__name__ for base in base_types if issubclass(cls, base)
+        )
+        registered_classes.append(
+            {
+                "module": relative_name(cls.__module__, module_key),
+                "name": cls.__name__,
+                "id": getattr(cls, "bl_idname", None) or None,
+                "base": bases[0],
+            }
+        )
+    module_callbacks = []
+    for name in registration.REGISTER_MODULE_NAMES:
+        module = importlib.import_module(name, module_key)
+        has_register = callable(getattr(module, "register", None))
+        has_unregister = callable(getattr(module, "unregister", None))
+        if has_register or has_unregister:
+            module_callbacks.append(
+                {
+                    "module": name,
+                    "register": has_register,
+                    "unregister": has_unregister,
+                }
+            )
+    return {
+        "registered_classes": sorted(
+            registered_classes,
+            key=lambda item: (
+                item["module"],
+                item["name"],
+                item["id"] or "",
+                item["base"],
+            ),
+        ),
+        "module_callbacks": module_callbacks,
+        "handlers": owned_handlers(module_key),
+        "menu_callbacks": owned_menu_callbacks(module_key),
+    }
+
+
+def assert_registration_isolation(module_key, before_install_modules):
+    registration = importlib.import_module(
+        f"{module_key}.runtime.registration"
+    )
+    assert tuple(
+        name
+        for name in registration.REGISTER_MODULE_NAMES
+        if f"{module_key}{name}" in sys.modules
+    ) == registration.REGISTER_MODULE_NAMES
+    assert f"{module_key}.ui.session" in sys.modules
+    assert f"{module_key}.ui.properties" in sys.modules
+    assert f"{module_key}.ui.quick_import" in sys.modules
+    assert f"{module_key}.ui.import_preview" in sys.modules
+    assert f"{module_key}.ui.project_browser.panel" in sys.modules
+    assert f"{module_key}.ui.file_handlers" in sys.modules
+    assert f"{module_key}.ui.workspace" in sys.modules
+    newly_loaded = set(sys.modules) - before_install_modules
+    assert not any(
+        name == prefix or name.startswith(prefix + ".")
+        for name in newly_loaded
+        for prefix in OPTIONAL_STACK_PREFIXES
+    ), sorted(
+        name
+        for name in newly_loaded
+        if any(
+            name == prefix or name.startswith(prefix + ".")
+            for prefix in OPTIONAL_STACK_PREFIXES
+        )
+    )
+
+
+def assert_enabled(module_key, before_install_modules):
+    assert module_key in bpy.context.preferences.addons
+    assert f"{module_key}.trajectory_view" in sys.modules
+    assert_registration_isolation(module_key, before_install_modules)
     assert sum(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
         for handler in bpy.app.handlers.frame_change_post
     ) == 1
+    for callbacks, name in (
+        (bpy.app.handlers.load_post, "_load_post_handler"),
+        (bpy.app.handlers.save_pre, "_save_pre_handler"),
+    ):
+        matching = [
+            handler
+            for handler in callbacks
+            if getattr(handler, "__module__", None) == f"{module_key}.ui.session"
+            and handler.__name__ == name
+        ]
+        assert len(matching) == 1
     assert hasattr(bpy.types.Object, "cif_original")
     assert hasattr(bpy.types.Object, "cif_current")
     assert hasattr(bpy.types.Scene, "my_tool")
+    assert hasattr(bpy.types.Scene, "chemblender_quick_import")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_quick_import")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_open_workspace")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_confirm_import")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_cancel_import")
+    assert_file_handlers(module_key)
+    properties = importlib.import_module(f"{module_key}.ui.properties")
+    property_identity = properties._scene_property_identity()
+    assert property_identity is not None
+    assert property_identity[0] == "rna"
+    properties.register()
+    assert properties._same_scene_property(
+        properties._scene_property_identity(),
+        property_identity,
+    )
+    assert sum(
+        getattr(handler, "__module__", None) == f"{module_key}.ui.properties"
+        for handler in bpy.app.handlers.load_pre
+    ) == 1
+    assert_reader_api_handle(module_key)
 
 
-def assert_disabled(module_key):
+def assert_disabled(module_key, owned_classes):
     assert module_key not in bpy.context.preferences.addons
     assert not hasattr(bpy.types.Object, "cif_original")
     assert not hasattr(bpy.types.Object, "cif_current")
     assert not hasattr(bpy.types.Scene, "my_tool")
+    assert not hasattr(bpy.types.Scene, "chemblender_quick_import")
+    assert READER_API_HANDLE_KEY not in bpy.app.driver_namespace
     assert not any(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
         for handler in bpy.app.handlers.frame_change_post
     )
+    assert not any(
+        getattr(handler, "__module__", None) == f"{module_key}.ui.session"
+        for callbacks in (bpy.app.handlers.load_post, bpy.app.handlers.save_pre)
+        for handler in callbacks
+    )
+    assert not any(
+        getattr(handler, "__module__", None) == f"{module_key}.ui.properties"
+        for handler in bpy.app.handlers.load_pre
+    )
+    assert not owned_menu_callbacks(module_key)
+    assert all(
+        not getattr(cls, "is_registered", False)
+        for cls in owned_classes
+    )
+
+
+def assert_reader_api_handle(module_key):
+    handle = bpy.app.driver_namespace[READER_API_HANDLE_KEY]
+    assert handle.api_version == "0.1"
+    assert handle.module_name == f"{module_key}.reader_api"
+    assert importlib.import_module(handle.module_name).__name__ == handle.module_name
+    assert callable(handle.register_callback)
+    assert callable(handle.unregister_callback)
+    assert (
+        sum(
+            key == READER_API_HANDLE_KEY
+            for key in bpy.app.driver_namespace
+        )
+        == 1
+    )
+
+
+def assert_file_handlers(module_key):
+    file_handlers = importlib.import_module(
+        f"{module_key}.ui.file_handlers"
+    )
+    bridge = importlib.import_module(
+        f"{module_key}.runtime.reader_api_bridge"
+    )
+    expected_extensions = ";".join(
+        sorted(
+            {
+                extension.lower()
+                for descriptor in bridge.get_reader_plugin_registry().descriptors
+                if descriptor.plugin_id == "chemblender.builtin"
+                and descriptor.availability.available
+                for extension in descriptor.extensions
+            }
+        )
+    )
+    window, sidebar = file_handlers.FILE_HANDLER_CLASSES
+    assert len(file_handlers.FILE_HANDLER_CLASSES) == 2
+    for cls in file_handlers.FILE_HANDLER_CLASSES:
+        assert cls.is_registered
+        assert getattr(bpy.types, cls.__name__) is cls
+        assert cls.bl_import_operator == "chemblender.quick_import"
+        assert cls.bl_file_extensions == expected_extensions
+    assert window.poll_drop(
+        SimpleNamespace(
+            area=SimpleNamespace(type="VIEW_3D"),
+            region=SimpleNamespace(type="WINDOW"),
+        )
+    ) is True
+    assert sidebar.poll_drop(
+        SimpleNamespace(
+            area=SimpleNamespace(type="VIEW_3D"),
+            region=SimpleNamespace(type="UI"),
+        )
+    ) is True
+    for cls in file_handlers.FILE_HANDLER_CLASSES:
+        assert cls.poll_drop(
+            SimpleNamespace(
+                area=SimpleNamespace(type="FILE_BROWSER"),
+                region=SimpleNamespace(type="WINDOW"),
+            )
+        ) is False
+        assert cls.poll_drop(
+            SimpleNamespace(
+                area=SimpleNamespace(type="OUTLINER"),
+                region=SimpleNamespace(type="WINDOW"),
+            )
+        ) is False
+
+
+def assert_project_session_manager(module_key):
+    ui = importlib.import_module(f"{module_key}.ui.session")
+    core = importlib.import_module(f"{module_key}.core")
+    links = importlib.import_module(f"{module_key}.project_link")
+    scene = bpy.context.scene
+    second_scene = bpy.data.scenes.new("ChemBlender shared session smoke")
+    session = ui.new_scene_session(scene)
+    assert ui.get_scene_session(second_scene) is session
+    assert ui.get_scene_session(second_scene).project is session.project
+    assert ui.get_scene_session(second_scene).temporary_root == session.temporary_root
+    session.mark_dirty("import")
+    with TemporaryDirectory() as directory:
+        blend = Path(directory) / "session-manager.blend"
+        result = bpy.ops.wm.save_as_mainfile(
+            filepath=str(blend),
+            check_existing=False,
+        )
+        assert result == {"FINISHED"}, result
+        assert session.dirty
+        result = bpy.ops.wm.save_mainfile()
+        assert result == {"FINISHED"}, result
+        assert not session.dirty
+        sidecar = blend.with_suffix(".cbq")
+        assert sidecar.is_dir()
+        manifest_before = (sidecar / "manifest.json").read_bytes()
+        assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        assert (sidecar / "manifest.json").read_bytes() == manifest_before
+        third_scene = bpy.data.scenes.new(
+            "ChemBlender link-only Scene smoke"
+        )
+        assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        assert (sidecar / "manifest.json").read_bytes() == manifest_before
+        link_keys = (
+            links.PROJECT_ID_KEY,
+            links.PROJECT_SCHEMA_KEY,
+            links.SIDECAR_LOCATOR_KEY,
+            links.MANIFEST_HASH_KEY,
+        )
+        assert tuple(scene[key] for key in link_keys) == tuple(
+            second_scene[key] for key in link_keys
+        )
+        assert tuple(scene[key] for key in link_keys) == tuple(
+            third_scene[key] for key in link_keys
+        )
+
+        reader_handle = bpy.app.driver_namespace[READER_API_HANDLE_KEY]
+        reader_api = importlib.import_module(f"{module_key}.reader_api")
+        model_identities = (
+            reader_api.PublicImportBatch,
+            reader_api.PublicReaderDescriptor,
+            reader_api.ReaderPluginManifest,
+        )
+        registry = importlib.import_module(
+            f"{module_key}.runtime.reader_api_bridge"
+        ).get_reader_plugin_registry()
+        result = bpy.ops.wm.open_mainfile(filepath=str(blend))
+        assert result == {"FINISHED"}, result
+        assert bpy.app.driver_namespace[READER_API_HANDLE_KEY] is reader_handle
+        bridge = importlib.import_module(
+            f"{module_key}.runtime.reader_api_bridge"
+        )
+        assert bridge.get_reader_plugin_registry() is registry
+        current_reader_api = importlib.import_module(f"{module_key}.reader_api")
+        assert (
+            current_reader_api.PublicImportBatch,
+            current_reader_api.PublicReaderDescriptor,
+            current_reader_api.ReaderPluginManifest,
+        ) == model_identities
+        ui = importlib.import_module(f"{module_key}.ui.session")
+        restored = ui.get_scene_session(bpy.context.scene)
+        restored_scenes = tuple(bpy.data.scenes)
+        assert len(restored_scenes) >= 2
+        assert all(
+            ui.get_scene_session(value) is restored
+            for value in restored_scenes
+        )
+        assert len(
+            {
+                tuple(value[key] for key in link_keys)
+                for value in restored_scenes
+            }
+        ) == 1
+        assert ui.get_scene_session_status(bpy.context.scene)[0] == "connected"
+        assert restored.sidecar_path == blend.with_suffix(".cbq")
+        relinked_sidecar = Path(directory) / "relinked.cbq"
+        core.save_project(relinked_sidecar, restored.project)
+        relinked = core.relink_project_session_for_scenes(
+            session=restored,
+            scenes=restored_scenes,
+            sidecar_path=relinked_sidecar,
+            blend_path=blend,
+        )
+        assert relinked.status is core.ProjectServiceStatus.CONNECTED
+        assert restored.sidecar_path == relinked_sidecar
+        assert len(
+            {
+                tuple(value[key] for key in link_keys)
+                for value in restored_scenes
+            }
+        ) == 1
+        assert all(
+            value[links.SIDECAR_LOCATOR_KEY] == "relinked.cbq"
+            for value in restored_scenes
+        )
+        properties = importlib.import_module(f"{module_key}.ui.properties")
+        assert properties.get_quick_import_state(restored).browser_revision == 1
+
+        restored.mark_dirty("edit")
+        verified_sidecar = restored.sidecar_path
+        original_save = ui.save_project_session_for_scenes
+        try:
+            def fail_save(**_kwargs):
+                raise RuntimeError("simulated sidecar failure")
+
+            ui.save_project_session_for_scenes = fail_save
+            ui._save_pre_handler(None)
+        finally:
+            ui.save_project_session_for_scenes = original_save
+        assert restored.dirty
+        assert restored.sidecar_path == verified_sidecar
+        assert ui.get_scene_session_status(bpy.context.scene) == (
+            "error",
+            "simulated sidecar failure",
+        )
+
+        restored.mark_clean()
+        conflicting = core.QCProject(id=uuid4(), schema_version="0.2")
+        conflicting_sidecar = Path(directory) / "conflicting.cbq"
+        core.save_project(conflicting_sidecar, conflicting)
+        links.write_project_link(
+            restored_scenes[1],
+            conflicting,
+            conflicting_sidecar,
+            blend_path=blend,
+        )
+        save_pre_handlers = bpy.app.handlers.save_pre
+        save_pre_index = save_pre_handlers.index(ui._save_pre_handler)
+        save_pre_handlers.pop(save_pre_index)
+        try:
+            assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        finally:
+            save_pre_handlers.insert(save_pre_index, ui._save_pre_handler)
+        assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
+        ui = importlib.import_module(f"{module_key}.ui.session")
+        conflicted_scenes = tuple(bpy.data.scenes)
+        conflicted = ui.get_scene_session(conflicted_scenes[0])
+        assert all(
+            ui.get_scene_session(value) is conflicted
+            for value in conflicted_scenes
+        )
+        assert ui.get_scene_session_status(conflicted_scenes[0]) == (
+            "invalid",
+            "conflicting scene project links",
+        )
+        assert conflicted.project.id not in {
+            restored.project.id,
+            conflicting.id,
+        }
+
+        temporary_root = conflicted.temporary_root
+        ui.unregister()
+        assert not temporary_root.exists()
+        assert not any(
+            getattr(handler, "__module__", None) == ui.__name__
+            for callbacks in (bpy.app.handlers.load_post, bpy.app.handlers.save_pre)
+            for handler in callbacks
+        )
+
+
+def assert_quick_import(module_key, repository_root):
+    core = importlib.import_module(f"{module_key}.core")
+    ui = importlib.import_module(f"{module_key}.ui.session")
+    properties = importlib.import_module(f"{module_key}.ui.properties")
+    preview_ui = importlib.import_module(
+        f"{module_key}.ui.import_preview"
+    )
+    registry = importlib.import_module(
+        f"{module_key}.runtime.reader_api_bridge"
+    ).get_reader_plugin_registry()
+    session = ui.new_scene_session(bpy.context.scene)
+
+    def project_snapshot():
+        project = session.project
+        return (
+            id(project),
+            project.id,
+            project.schema_version,
+            tuple(
+                (name, tuple(getattr(project, name).items()))
+                for name in project.__dataclass_fields__
+                if isinstance(getattr(project, name), dict)
+            ),
+            session.dirty_reasons,
+        )
+
+    def stage(*sources):
+        directory = sources[0].parent
+        assert all(source.parent == directory for source in sources)
+        result = bpy.ops.chemblender.quick_import(
+            "INVOKE_DEFAULT",
+            directory=str(directory),
+            files=[{"name": source.name} for source in sources],
+            validation_mode="balanced",
+        )
+        assert result == {"FINISHED"}, (sources, result)
+        state = properties.get_quick_import_state(session)
+        assert state.preview is not None
+        assert state.active_job is None
+        return state
+
+    before = project_snapshot()
+    before_objects = tuple(bpy.data.objects)
+    for relative in (
+        "tests/fixtures/xyz/water.xyz",
+        "tests/fixtures/cube/sheared.cube",
+    ):
+        source = repository_root / relative
+        state = stage(source)
+        assert len(state.preview.source_previews) == 1
+        assert state.preview.source_previews[0].source_path == source.resolve()
+        assert project_snapshot() == before
+        assert bpy.ops.chemblender.cancel_import() == {"FINISHED"}
+        assert project_snapshot() == before
+        assert tuple(bpy.data.objects) == before_objects
+        assert state.preview is None
+
+    state = stage(repository_root / "tests/fixtures/xyz/water.xyz")
+    xyz_rows = preview_ui.project_import_preview(
+        session,
+        state,
+        registry,
+    )
+    assert xyz_rows[0].default_view_label == "Default view: Structure"
+    revision = state.browser_revision
+    structure_count = len(session.project.structures)
+    source_revisions = set(session.project.source_revisions)
+    assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+    assert len(session.project.structures) == structure_count + 1
+    assert state.browser_revision == revision + 1
+    assert state.preview is None
+    assert session.dirty_reasons == frozenset({"import"})
+    structure_views = [
+        obj
+        for obj in bpy.data.objects
+        if obj.get("cb_scene_preset_id") == "structure_publication"
+    ]
+    assert structure_views
+    xyz_revision_id, = set(session.project.source_revisions) - source_revisions
+    xyz_revision = session.project.source_revisions[xyz_revision_id]
+    xyz_structure = next(
+        session.project.structures[entity_id]
+        for entity_id in xyz_revision.created_entity_ids
+        if entity_id in session.project.structures
+    )
+    xyz_view = next(
+        obj
+        for obj in structure_views
+        if obj.get("cb_structure_id") == str(xyz_structure.id)
+    )
+    assert xyz_view.type == "MESH"
+    assert xyz_view["cb_structure_revision"] == xyz_structure.revision
+    xyz_bindings = json.loads(xyz_view["cb_scene_bindings_json"])
+    assert xyz_bindings["structure"] == {
+        "entity_id": str(xyz_structure.id),
+        "revision": xyz_structure.revision,
+    }
+    browser = importlib.import_module(
+        f"{module_key}.ui.project_browser.panel"
+    )
+    switched_scene = bpy.data.scenes.new(
+        "ChemBlender Quick Import shared session smoke"
+    )
+    switched_session = ui.get_scene_session(switched_scene)
+    assert switched_session is session
+    assert len(switched_session.project.structures) == structure_count + 1
+    switched_rows = browser.refresh_project_browser(switched_scene)
+    assert any(row.kind == "structure" for row in switched_rows)
+    browser_settings = bpy.context.scene.chemblender_project_browser
+    browser_settings.mode = "by_source"
+    rows_before_cube = browser.refresh_project_browser(bpy.context.scene)
+    assert any(row.kind == "structure" for row in rows_before_cube)
+
+    duplicate_source = repository_root / "tests/fixtures/xyz/water.xyz"
+    state = stage(duplicate_source)
+    duplicate_rows = preview_ui.project_import_preview(
+        session,
+        state,
+        registry,
+    )
+    assert len(duplicate_rows[0].conflict_candidates) == 1
+    assert duplicate_rows[0].conflict_candidates[0].selected
+    duplicate_rows[0].conflict_action = "independent_copy"
+    preview_ui.commit_project_import(
+        session,
+        state,
+        duplicate_rows,
+        collection=bpy.context.scene.collection,
+        apply_view=lambda *_args, **_kwargs: (),
+    )
+
+    state = stage(duplicate_source)
+    target_rows = preview_ui.project_import_preview(
+        session,
+        state,
+        registry,
+    )
+    target_row = target_rows[0]
+    conflict = state.conflicts[0]
+    assert len(target_row.conflict_candidates) == 2
+    assert not any(
+        candidate.selected
+        for candidate in target_row.conflict_candidates
+    )
+    try:
+        preview_ui.import_commit_decisions(
+            state,
+            target_rows,
+            project_session=session,
+        )
+    except ValueError as error:
+        assert "select exactly one conflict target" in str(error)
+    else:
+        raise AssertionError("ambiguous conflict target must fail")
+    for selected_index, expected in enumerate(conflict.candidates):
+        for index, candidate in enumerate(target_row.conflict_candidates):
+            candidate.selected = index == selected_index
+        decisions = preview_ui.import_commit_decisions(
+            state,
+            target_rows,
+            project_session=session,
+        )
+        assert (
+            decisions.conflict_decisions[
+                conflict.id
+            ].existing_revision_id
+            == expected.revision_id
+        )
+    forged = replace(
+        target_row,
+        conflict_candidates=(
+            replace(
+                target_row.conflict_candidates[0],
+                revision_id=str(uuid4()),
+                selected=True,
+            ),
+            replace(
+                target_row.conflict_candidates[1],
+                selected=False,
+            ),
+        ),
+    )
+    try:
+        preview_ui.import_commit_decisions(
+            state,
+            (forged,),
+            project_session=session,
+        )
+    except ValueError as error:
+        assert "conflict target is not allowed" in str(error)
+    else:
+        raise AssertionError("unknown conflict target must fail")
+    preview_ui.cancel_project_import(session)
+
+    state = stage(repository_root / "tests/fixtures/cube/sheared.cube")
+    cube_rows = preview_ui.project_import_preview(
+        session,
+        state,
+        registry,
+    )
+    assert cube_rows[0].default_view_label == "Default view: Grid Volume"
+    structure_count = len(session.project.structures)
+    source_revisions = set(session.project.source_revisions)
+    objects_before_cube = set(bpy.data.objects)
+    assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+    assert len(session.project.structures) == structure_count + 1
+    assert state.preview is None
+    cube_revision_id, = set(session.project.source_revisions) - source_revisions
+    cube_revision = session.project.source_revisions[cube_revision_id]
+    cube_grid = next(
+        session.project.datasets[entity_id]
+        for entity_id in cube_revision.created_entity_ids
+        if entity_id in session.project.datasets
+    )
+    assert cube_grid.status is core.DatasetStatus.AMBIGUOUS
+    cube_objects = set(bpy.data.objects) - objects_before_cube
+    cube_view, = cube_objects
+    assert cube_view.type == "VOLUME"
+    assert cube_view["cb_scene_preset_id"] == "grid_volume"
+    assert cube_view["cb_dataset_id"] == str(cube_grid.id)
+    assert cube_view["cb_dataset_revision"] == cube_grid.revision
+    assert cube_view["cb_scene_render_identity"]
+    cube_bindings = json.loads(cube_view["cb_scene_bindings_json"])
+    assert cube_bindings["grid"] == {
+        "entity_id": str(cube_grid.id),
+        "revision": cube_grid.revision,
+    }
+    cube_cache = Path(cube_view["cb_cache_path"]).resolve()
+    session_root = Path(session.temporary_root).resolve()
+    assert cube_cache.is_relative_to(session_root)
+    assert cube_cache.parent == session_root / "view-cache" / "volume"
+    assert cube_cache.is_file()
+    browser_settings.mode = "by_data"
+    rows_after_cube = browser.refresh_project_browser(bpy.context.scene)
+    assert browser_settings.quality_filter == "all"
+    assert rows_after_cube is not rows_before_cube
+    assert any(row.kind == "structure" for row in rows_after_cube)
+    assert any(row.kind == "grid3d" for row in rows_after_cube)
+    grid_row = next(
+        row
+        for row in rows_after_cube
+        if row.entity_id == cube_grid.id
+    )
+    assert grid_row.view_count == 1
+    grid_label = next(
+        row.label for row in rows_after_cube if row.kind == "grid3d"
+    )
+    browser_settings.search = grid_label.swapcase()
+    searched = browser.refresh_project_browser(bpy.context.scene)
+    assert any(row.kind == "grid3d" for row in searched)
+    browser_settings.search = ""
+    browser.refresh_project_browser(bpy.context.scene)
+    selected_index = next(
+        index
+        for index, row in enumerate(browser_settings.rows)
+        if row.entity_id
+    )
+    browser_settings.selected_index = selected_index
+    assert session.active_entity_id == UUID(
+        browser_settings.rows[selected_index].entity_id
+    )
+    selected_entity_id = session.active_entity_id
+    grid = next(
+        dataset
+        for dataset in session.project.datasets.values()
+        if type(dataset).__name__ == "Grid3D"
+    )
+    original_values = grid.data.values
+
+    class ArraySentinel:
+        def __array__(self, *_args, **_kwargs):
+            raise AssertionError("Project Browser materialized Grid3D")
+
+        def __iter__(self):
+            raise AssertionError("Project Browser traversed Grid3D")
+
+    object.__setattr__(grid.data, "values", ArraySentinel())
+    try:
+        for mode in ("by_source", "by_data"):
+            browser_settings.mode = mode
+            browser_settings.search = "density"
+            assert browser.refresh_project_browser(bpy.context.scene)
+            assert session.active_entity_id == selected_entity_id
+    finally:
+        object.__setattr__(grid.data, "values", original_values)
+        browser_settings.search = ""
+
+    with TemporaryDirectory() as directory:
+        directory = Path(directory)
+        first = directory / "first.xyz"
+        second = directory / "second.xyz"
+        first.write_text(
+            "1\nfirst\nH 0.1 0 0\n",
+            encoding="utf-8",
+        )
+        second.write_text(
+            "1\nsecond\nH 0.2 0 0\n",
+            encoding="utf-8",
+        )
+        state = stage(first, second)
+        projected_rows = preview_ui.project_import_preview(
+            session,
+            state,
+            registry,
+        )
+        grouping_rows = preview_ui.project_grouping_suggestions(state)
+        assert len(grouping_rows) == 1
+        assert grouping_rows[0].grouping_action == "keep_independent"
+        assert (
+            preview_ui.import_commit_decisions(
+                state,
+                projected_rows,
+                grouping_rows=grouping_rows,
+                project_session=session,
+            ).grouping_decisions
+            == ()
+        )
+        group_count = len(session.project.calculation_groups)
+        before_failure_objects = tuple(bpy.data.objects)
+        before_failure_structures = len(session.project.structures)
+        original_apply = preview_ui.apply_scene_preset
+        calls = 0
+
+        def fail_second(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise RuntimeError("simulated view failure")
+            return original_apply(*args, **kwargs)
+
+        try:
+            preview_ui.apply_scene_preset = fail_second
+            assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+        finally:
+            preview_ui.apply_scene_preset = original_apply
+        assert len(session.project.structures) == before_failure_structures + 2
+        assert tuple(bpy.data.objects) == before_failure_objects
+        assert (
+            bpy.context.scene.chemblender_quick_import.recent_summary
+            == "data committed; view failed"
+        )
+        assert state.preview is None
+        assert len(session.project.calculation_groups) == group_count
+
+        third = directory / "third.xyz"
+        fourth = directory / "fourth.xyz"
+        third.write_text(
+            "1\nthird\nH 0.3 0 0\n",
+            encoding="utf-8",
+        )
+        fourth.write_text(
+            "1\nfourth\nH 0.4 0 0\n",
+            encoding="utf-8",
+        )
+        state = stage(third, fourth)
+        projected_rows = preview_ui.project_import_preview(
+            session,
+            state,
+            registry,
+        )
+        grouping_rows = preview_ui.project_grouping_suggestions(state)
+        assert len(grouping_rows) == 1
+        grouping_rows[0].grouping_action = "accept_group"
+        selected_evidence_ids = tuple(
+            UUID(item.evidence_id)
+            for item in grouping_rows[0].evidence
+            if item.selected
+        )
+        accepted = preview_ui.commit_project_import(
+            session,
+            state,
+            projected_rows,
+            grouping_rows=grouping_rows,
+            collection=bpy.context.scene.collection,
+            apply_view=lambda *_args, **_kwargs: (),
+        )
+        assert len(accepted.commit_result.calculation_group_ids) == 1
+        assert len(session.project.calculation_groups) == group_count + 1
+        accepted_group = session.project.calculation_groups[
+            accepted.commit_result.calculation_group_ids[0]
+        ]
+        assert accepted_group.evidence_ids == tuple(
+            sorted(selected_evidence_ids, key=str)
+        )
+        reopened = core.open_project(accepted.commit_result.sidecar_path)
+        try:
+            assert (
+                reopened.calculation_groups
+                == session.project.calculation_groups
+            )
+        finally:
+            core.close_project(reopened)
+    cube_volume = cube_view.data
+    bpy.data.objects.remove(cube_view, do_unlink=True)
+    if cube_volume.users == 0:
+        bpy.data.volumes.remove(cube_volume)
+    bpy.data.scenes.remove(switched_scene)
+
+
+def assert_optional_workspace(module_key):
+    workspace_module = importlib.import_module(
+        f"{module_key}.ui.workspace"
+    )
+    asset = workspace_module.workspace_asset_path()
+    assert asset == (
+        Path(workspace_module.__file__).resolve().parents[1]
+        / "assets"
+        / "Chem_Workspace.blend"
+    )
+    assert asset.is_file()
+    with bpy.data.libraries.load(str(asset), link=False) as (
+        data_from,
+        _data_to,
+    ):
+        assert list(data_from.workspaces) == ["ChemBlender"]
+        for field in (
+            "scenes",
+            "objects",
+            "collections",
+            "meshes",
+            "materials",
+            "images",
+            "texts",
+            "node_groups",
+        ):
+            assert list(getattr(data_from, field)) == [], field
+
+    window = bpy.context.window
+    if window is None or bpy.app.background:
+        before_workspaces = tuple(bpy.data.workspaces)
+        before_screens = tuple(bpy.data.screens)
+        with bpy.data.libraries.load(str(asset), link=False) as (
+            _data_from,
+            data_to,
+        ):
+            data_to.workspaces = ["ChemBlender"]
+        appended = data_to.workspaces[0]
+        assert workspace_module.workspace_is_compatible(appended)
+        workspace_module._remove_new_data(
+            before_workspaces,
+            before_screens,
+        )
+        return
+
+    original = window.workspace
+    before_count = len(bpy.data.workspaces)
+    assert bpy.ops.chemblender.open_workspace() == {"FINISHED"}
+    assert window.workspace.name == "ChemBlender"
+    assert workspace_module.workspace_is_compatible(window.workspace)
+    appended_count = len(bpy.data.workspaces)
+    assert appended_count == before_count + 1
+    assert bpy.ops.chemblender.open_workspace() == {"FINISHED"}
+    assert len(bpy.data.workspaces) == appended_count
+
+    window.workspace = original
+    appended = bpy.data.workspaces.get("ChemBlender")
+    bpy.data.batch_remove(ids=(appended, *tuple(appended.screens)))
+    real_path = workspace_module.workspace_asset_path
+    try:
+        workspace_module.workspace_asset_path = lambda: asset.with_name(
+            "missing-workspace.blend"
+        )
+        assert bpy.ops.chemblender.open_workspace() == {"CANCELLED"}
+    finally:
+        workspace_module.workspace_asset_path = real_path
+    assert window.workspace is original
+    assert bpy.data.workspaces.get("ChemBlender") is None
+    registration = importlib.import_module(
+        f"{module_key}.runtime.registration"
+    )
+    registered_names = {
+        cls.__name__
+        for cls in registration._registered_classes
+        if getattr(cls, "is_registered", False)
+    }
+    assert "CHEMBLENDER_PT_quick_import" in registered_names
+    assert "CHEMBLENDER_PT_project_browser" in registered_names
 
 
 def assert_installed_blend_libraries(module_key):
@@ -150,6 +1054,19 @@ def assert_grid_volume_adapter(module_key):
             expected = tuple(value * 0.529177210903 for value in (2.2, 3.3, 4.0))
             actual = tuple(cached.transform.indexToWorld((1, 1, 1)))
             assert all(abs(a - b) < 1e-12 for a, b in zip(actual, expected))
+            stable_mtime = cache.stat().st_mtime_ns
+            assert adapter.ensure_grid_volume_cache(grid, cache) == cache
+            assert cache.stat().st_mtime_ns == stable_mtime
+            cache.write_bytes(b"corrupt VDB")
+            assert adapter.ensure_grid_volume_cache(grid, cache) == cache
+            assert openvdb.read(str(cache), "density").getAccessor().getValue(
+                (1, 0, 1)
+            ) == 5.0
+            cache.unlink()
+            assert adapter.ensure_grid_volume_cache(grid, cache) == cache
+            assert openvdb.read(str(cache), "density").getAccessor().getValue(
+                (1, 0, 1)
+            ) == 5.0
 
             lod = core.derive_grid_lod(grid, strides=(2, 1, 1)).datasets[0]
             lod_cache = adapter.volume_cache_path(cache_root, lod)
@@ -630,6 +1547,7 @@ def assert_periodic_electronic_plots(module_key):
 
 def assert_scene_preset_application(module_key):
     import numpy
+    import openvdb
 
     core = importlib.import_module(f"{module_key}.core")
     view = importlib.import_module(f"{module_key}.scene_preset_view")
@@ -776,7 +1694,70 @@ def assert_scene_preset_application(module_key):
             attribute.data.foreach_get("value", sampled)
             assert min(sampled) < max(sampled)
             assert property_obj["cb_property_colormap"] == "coolwarm"
+            assert all(
+                obj["cb_cache_format_version"] == 1
+                for obj in (*signed_objects, property_obj)
+            )
             assert len(list(Path(cache_root).glob("surface/*.vdb"))) == 3
+
+            view_cache = importlib.import_module(f"{module_key}.ui.view_cache")
+            sidecar = Path(cache_root) / "durable.cbq"
+            sidecar.mkdir()
+            session_root = Path(cache_root) / "session"
+            session_root.mkdir()
+            session = core.ProjectSession(
+                uuid4(),
+                grid_project,
+                session_root,
+                sidecar_path=sidecar,
+                link_status="connected",
+            )
+            object_count = len(bpy.data.objects)
+            assert view_cache.repair_project_view_caches(
+                session=session,
+                objects=(*signed_objects, property_obj),
+                blend_path=Path(cache_root) / "durable.blend",
+            ) == 3
+            assert len(bpy.data.objects) == object_count
+            assert all(
+                obj.data.filepath.startswith("//durable.cbq/cache/render/surface/")
+                for obj in (*signed_objects, property_obj)
+            )
+            durable_files = sorted(
+                (sidecar / "cache" / "render" / "surface").glob("*.vdb")
+            )
+            assert len(durable_files) == 3
+            durable_files[0].write_bytes(b"corrupt VDB")
+            assert view_cache.repair_project_view_caches(
+                session=session,
+                objects=(*signed_objects, property_obj),
+                blend_path=Path(cache_root) / "durable.blend",
+            ) == 3
+            assert len(openvdb.readAll(str(durable_files[0]))[0]) in {1, 2}
+            cleared = core.clear_derived_cache(sidecar_path=sidecar)
+            assert cleared.complete
+            assert sidecar / "cache" / "render" in cleared.removed_paths
+            session.mark_dirty("view_cache")
+            assert view_cache.repair_project_view_caches(
+                session=session,
+                objects=(*signed_objects, property_obj),
+                blend_path=Path(cache_root) / "durable.blend",
+            ) == 3
+            assert len(
+                list((sidecar / "cache" / "render" / "surface").glob("*.vdb"))
+            ) == 3
+            save_as_sidecar = Path(cache_root) / "save-as.cbq"
+            save_as_sidecar.mkdir()
+            session.sidecar_path = save_as_sidecar
+            assert view_cache.repair_project_view_caches(
+                session=session,
+                objects=(*signed_objects, property_obj),
+                blend_path=Path(cache_root) / "save-as.blend",
+            ) == 3
+            assert all(
+                obj.data.filepath.startswith("//save-as.cbq/cache/render/surface/")
+                for obj in (*signed_objects, property_obj)
+            )
 
         periodic_id = uuid4()
         band = core.BandStructure(
@@ -954,9 +1935,30 @@ def assert_project_sidecar_link(module_key):
                 scene, project, sidecar, blend_path=blend_path
             )
             assert not Path(locator).is_absolute()
+            assert links.MANIFEST_HASH_KEY in scene
             result = links.resolve_project_link(scene, blend_path=blend_path)
             assert result.status is links.ProjectLinkStatus.CONNECTED
             assert result.project.id == project.id
+            core.close_project(result.project)
+
+            core.save_project(sidecar, project)
+            result = links.resolve_project_link(scene, blend_path=blend_path)
+            assert result.status is links.ProjectLinkStatus.MISMATCH
+            assert marker_object.name in bpy.data.objects
+
+            links.write_project_link(
+                scene, project, sidecar, blend_path=blend_path
+            )
+            manifest_path = sidecar / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["manifest_sha256"] = "0" * 64
+            manifest_path.write_text(
+                json.dumps(manifest, sort_keys=True),
+                encoding="utf-8",
+            )
+            result = links.resolve_project_link(scene, blend_path=blend_path)
+            assert result.status is links.ProjectLinkStatus.INVALID
+            assert marker_object.name in bpy.data.objects
 
             scene[links.SIDECAR_LOCATOR_KEY] = "missing.cbq"
             result = links.resolve_project_link(scene, blend_path=blend_path)
@@ -967,6 +1969,7 @@ def assert_project_sidecar_link(module_key):
             links.PROJECT_ID_KEY,
             links.PROJECT_SCHEMA_KEY,
             links.SIDECAR_LOCATOR_KEY,
+            links.MANIFEST_HASH_KEY,
         ):
             if key in scene:
                 del scene[key]
@@ -1053,6 +2056,7 @@ keep_enabled = arguments[1:] == ["--keep-enabled"]
 package = Path(arguments[0]).resolve()
 assert package.is_file(), package
 assert_package_contents(package)
+before_install_modules = set(sys.modules)
 
 result = bpy.ops.extensions.package_install_files(
     filepath=str(package),
@@ -1062,8 +2066,238 @@ result = bpy.ops.extensions.package_install_files(
 )
 assert result == {"FINISHED"}, result
 
-module_key = "bl_ext.user_default.chemblender"
-assert_enabled(module_key)
+module_keys = sorted(
+    addon.module
+    for addon in bpy.context.preferences.addons
+    if addon.module.rsplit(".", 1)[-1] == "chemblender"
+)
+assert len(module_keys) == 1, module_keys
+module_key = module_keys[0]
+assert_enabled(module_key, before_install_modules)
+legacy_inventory = json.loads(
+    (
+        package.parent.parent
+        / "tests/fixtures/registration/legacy-registration-inventory.json"
+    ).read_text(encoding="utf-8")
+)
+assert legacy_inventory["installed_package_name"] == module_key
+stable_inventory = registration_inventory(module_key)
+expected_inventory = {
+    name: legacy_inventory[name]
+    for name in (
+        "registered_classes",
+        "module_callbacks",
+        "handlers",
+        "menu_callbacks",
+    )
+}
+expected_inventory["module_callbacks"] += [
+    {"module": ".ui.session", "register": True, "unregister": True},
+    {"module": ".ui.properties", "register": True, "unregister": True},
+    {"module": ".ui.project_browser.panel", "register": True, "unregister": True},
+    {"module": ".ui.file_handlers", "register": True, "unregister": True},
+    {"module": ".ui.workspace", "register": True, "unregister": True},
+]
+expected_inventory["registered_classes"] += [
+    {
+        "module": ".ui.file_handlers",
+        "name": "CHEMBLENDER_FH_project_browser",
+        "id": "CHEMBLENDER_FH_project_browser",
+        "base": "FileHandler",
+    },
+    {
+        "module": ".ui.file_handlers",
+        "name": "CHEMBLENDER_FH_view_3d_window",
+        "id": "CHEMBLENDER_FH_view_3d_window",
+        "base": "FileHandler",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_OT_cancel_import",
+        "id": "chemblender.cancel_import",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_OT_confirm_import",
+        "id": "chemblender.confirm_import",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_PG_import_conflict_candidate",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_PG_import_grouping_evidence",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_PG_import_grouping_suggestion",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_PG_import_preview_row",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.quick_import",
+        "name": "CHEMBLENDER_PT_quick_import",
+        "id": "CHEMBLENDER_PT_QUICK_IMPORT",
+        "base": "Panel",
+    },
+    {
+        "module": ".ui.properties",
+        "name": "CHEMBLENDER_PG_quick_import",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.quick_import",
+        "name": "CHEMBLENDER_OT_quick_import",
+        "id": "chemblender.quick_import",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.workspace",
+        "name": "CHEMBLENDER_OT_open_workspace",
+        "id": "chemblender.open_workspace",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_PG_project_browser",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_PG_project_browser_row",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_PT_project_browser",
+        "id": "CHEMBLENDER_PT_PROJECT_BROWSER",
+        "base": "Panel",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_UL_project_rows",
+        "id": None,
+        "base": "UIList",
+    },
+]
+expected_inventory["registered_classes"].sort(
+    key=lambda item: (
+        item["module"],
+        item["name"],
+        item["id"] or "",
+        item["base"],
+    )
+)
+expected_inventory["handlers"] += [
+    {"owner": "load_post", "module": ".runtime.registration", "name": "_reader_api_load_post_handler"},
+    {"owner": "load_post", "module": ".ui.session", "name": "_load_post_handler"},
+    {"owner": "load_pre", "module": ".ui.properties", "name": "_load_pre_handler"},
+    {"owner": "save_pre", "module": ".ui.session", "name": "_save_pre_handler"},
+]
+expected_inventory["handlers"].sort(key=lambda item: tuple(item.values()))
+assert stable_inventory == expected_inventory
+
+bridge = importlib.import_module(f"{module_key}.runtime.reader_api_bridge")
+reader_api = importlib.import_module(f"{module_key}.reader_api")
+registry_module = importlib.import_module(f"{module_key}.reader_api.registry")
+registry = bridge.get_reader_plugin_registry()
+builtin_identities = tuple(
+    id(item) for item in registry.descriptors
+)
+model_identities = (
+    reader_api.PublicImportBatch,
+    reader_api.PublicReaderDescriptor,
+    reader_api.ReaderPluginManifest,
+)
+builtin = registry_module.builtin_reader_plugins()[0]
+descriptor = replace(
+    builtin.descriptor,
+    plugin_id="org.example.blender_lifecycle",
+    reader_id="external.blender_lifecycle",
+)
+entry = replace(
+    builtin.manifest.readers[0],
+    reader_id=descriptor.reader_id,
+    reader_version=descriptor.reader_version,
+    extensions=descriptor.extensions,
+    capabilities=tuple(
+        sorted(
+            name
+            for name, support in descriptor.capabilities.items()
+            if support is reader_api.CapabilitySupport.SUPPORTED
+        )
+    ),
+)
+external = replace(
+    builtin,
+    descriptor=descriptor,
+    manifest=replace(
+        builtin.manifest,
+        plugin_id=descriptor.plugin_id,
+        readers=(entry,),
+    ),
+)
+bpy.app.driver_namespace[READER_API_HANDLE_KEY].register_callback(external)
+
+for _ in range(2):
+    owned_classes = owned_registration_classes(module_key)
+    old_handle = bpy.app.driver_namespace[READER_API_HANDLE_KEY]
+    assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}
+    assert_disabled(module_key, owned_classes)
+    assert bridge.get_reader_plugin_registry() is registry
+    assert next(
+        item
+        for item in registry.descriptors
+        if item.reader_id == descriptor.reader_id
+    ) is descriptor
+    assert bpy.ops.preferences.addon_enable(module=module_key) == {"FINISHED"}
+    assert_enabled(module_key, before_install_modules)
+    assert registration_inventory(module_key) == stable_inventory
+    assert bpy.app.driver_namespace[READER_API_HANDLE_KEY] is not old_handle
+    assert bridge.get_reader_plugin_registry() is registry
+    assert tuple(
+        id(item)
+        for item in registry.descriptors
+        if item.plugin_id == "chemblender.builtin"
+    ) == builtin_identities
+    current_reader_api = importlib.import_module(f"{module_key}.reader_api")
+    assert (
+        current_reader_api.PublicImportBatch,
+        current_reader_api.PublicReaderDescriptor,
+        current_reader_api.ReaderPluginManifest,
+    ) == model_identities
+    assert next(
+        item
+        for item in registry.descriptors
+        if item.reader_id == descriptor.reader_id
+    ) is descriptor
+
+bpy.app.driver_namespace[READER_API_HANDLE_KEY].unregister_callback(
+    external.manifest
+)
+
+core = importlib.import_module(f"{module_key}.core")
+assert set(core.builtin_recipes()) == {
+    "tddft_uvvis",
+    "vibrational_ir_spectrum",
+    "wavefunction_molecular_orbital_grid",
+}
 assert_installed_blend_libraries(module_key)
 assert_grid_volume_adapter(module_key)
 assert_vibration_view_adapter(module_key)
@@ -1074,14 +2308,11 @@ assert_scene_preset_application(module_key)
 assert_complex_phonon_trajectory(module_key)
 assert_fermi_surface_view(module_key)
 assert_project_sidecar_link(module_key)
+assert_quick_import(module_key, package.parent.parent)
+assert_optional_workspace(module_key)
+assert_project_session_manager(module_key)
 assert_topology_view(module_key, package.parent.parent)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
-
-for _ in range(2):
-    assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}
-    assert_disabled(module_key)
-    assert bpy.ops.preferences.addon_enable(module=module_key) == {"FINISHED"}
-    assert_enabled(module_key)
 
 import rdkit
 from rdkit import Chem
@@ -1096,6 +2327,7 @@ assert AllChem.EmbedMolecule(molecule, randomSeed=0xC0FFEE) == 0
 if keep_enabled:
     print("PASS: ChemBlender extension installed and enabled")
 else:
+    owned_classes = owned_registration_classes(module_key)
     assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}
-    assert_disabled(module_key)
+    assert_disabled(module_key, owned_classes)
     print("PASS: ChemBlender extension lifecycle")

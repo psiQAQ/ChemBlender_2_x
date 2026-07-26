@@ -109,6 +109,102 @@ def _error(request_id, status, code, message):
     )
 
 
+def _run_task_directory_operation(
+    operation,
+    request,
+    request_path,
+    project_path,
+    cancel_path,
+):
+    task_directory = Path(request_path).resolve().parent
+    bundle = task_directory / "reader-bundle"
+    bundle_preexisting = bundle.exists() or bundle.is_symlink()
+
+    def failed(result):
+        if bundle_preexisting:
+            return result
+        try:
+            from .reader_operation import _remove_owned_bundle
+
+            _remove_owned_bundle(task_directory, bundle)
+        except OperationError as error:
+            return _error(
+                request.request_id,
+                WorkerStatus.ERROR,
+                error.code,
+                str(error) or error.code,
+            )
+        return result
+
+    context = OperationContext(
+        project_path,
+        None,
+        cancel_path,
+        task_directory,
+    )
+    try:
+        output = operation(context, request)
+        if not isinstance(output, OperationOutput):
+            raise TypeError("operation must return OperationOutput")
+    except OperationError as error:
+        return failed(
+            _error(
+                request.request_id,
+                WorkerStatus.ERROR,
+                error.code,
+                str(error) or error.code,
+            )
+        )
+    except Exception as error:
+        return failed(
+            _error(
+                request.request_id,
+                WorkerStatus.ERROR,
+                "operation_failed",
+                str(error) or type(error).__name__,
+            )
+        )
+    if context.is_cancelled():
+        return failed(
+            _error(
+                request.request_id,
+                WorkerStatus.CANCELLED,
+                "cancelled",
+                "request was cancelled before result publication",
+            )
+        )
+    if output.batch is not None or output.outputs:
+        return failed(
+            _error(
+                request.request_id,
+                WorkerStatus.ERROR,
+                "output_validation_failed",
+                "task-directory operation must not modify the project",
+            )
+        )
+    try:
+        from ChemBlender.reader_api.worker_bridge import _task_file
+
+        for artifact in output.artifacts:
+            _task_file(task_directory, artifact)
+    except Exception as error:
+        return failed(
+            _error(
+                request.request_id,
+                WorkerStatus.ERROR,
+                "output_validation_failed",
+                str(error) or type(error).__name__,
+            )
+        )
+    return WorkerResult(
+        request_id=request.request_id,
+        status=WorkerStatus.SUCCESS,
+        artifacts=output.artifacts,
+        cache_key=output.cache_key,
+        metadata=output.metadata,
+    )
+
+
 def run_request(request_path, result_path, registry, *, cancel_path=None):
     if not isinstance(registry, OperationRegistry):
         raise TypeError("registry must be an OperationRegistry")
@@ -137,6 +233,32 @@ def run_request(request_path, result_path, registry, *, cancel_path=None):
                     str(error),
                 )
             else:
+                if (
+                    request.operation_id == "reader.parse"
+                    and request.operation_version == "0.1"
+                ):
+                    task_directory = Path(request_path).resolve().parent
+                    bundle = task_directory / "reader-bundle"
+                    bundle_preexisting = bundle.exists() or bundle.is_symlink()
+                    result = _run_task_directory_operation(
+                        operation,
+                        request,
+                        request_path,
+                        project_path,
+                        cancel_path,
+                    )
+                    try:
+                        write_result(result_path, result)
+                    except Exception:
+                        if not bundle_preexisting:
+                            try:
+                                from .reader_operation import _remove_owned_bundle
+
+                                _remove_owned_bundle(task_directory, bundle)
+                            except Exception:
+                                pass
+                        raise
+                    return result
                 try:
                     project = open_project(
                         project_path,
@@ -152,7 +274,12 @@ def run_request(request_path, result_path, registry, *, cancel_path=None):
                         str(error),
                     )
                 else:
-                    context = OperationContext(project_path, project, cancel_path)
+                    context = OperationContext(
+                        project_path,
+                        project,
+                        cancel_path,
+                        Path(request_path).resolve().parent,
+                    )
                     try:
                         output = operation(context, request)
                         if not isinstance(output, OperationOutput):
@@ -268,6 +395,9 @@ def default_registry():
     from .connector_operation import register_external_record_operation
 
     register_external_record_operation(registry)
+    from .reader_operation import register_reader_operation
+
+    register_reader_operation(registry)
     return registry
 
 

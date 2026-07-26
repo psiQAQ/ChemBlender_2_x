@@ -14,6 +14,16 @@ from .readers import ReaderDescriptor, ReaderRegistry
 from .xyz import XYZ_READER
 
 
+_OPTIONAL_READER_DEPENDENCIES = {
+    "ase-structure": "ase",
+    "cclib_output": "cclib",
+    "gemmi-cif": "gemmi",
+    "iodata_wavefunction": "iodata",
+    "pymatgen-vasp-grid": "pymatgen",
+    "pymatgen-vasprun-electronic": "pymatgen",
+}
+
+
 def builtin_reader_descriptors():
     return tuple(
         sorted(
@@ -51,8 +61,18 @@ def reader_capability_document(readers=None):
         "schema_version": 1,
         "readers": [
             {
+                "plugin_id": "chemblender.builtin",
                 "reader_id": reader.reader_id,
                 "reader_version": reader.reader_version,
+                "execution_mode": "built_in",
+                "availability_contract": (
+                    {
+                        "kind": "python_module",
+                        "module": _OPTIONAL_READER_DEPENDENCIES[reader.reader_id],
+                    }
+                    if reader.reader_id in _OPTIONAL_READER_DEPENDENCIES
+                    else {"kind": "always"}
+                ),
                 "extensions": list(reader.extensions),
                 "capabilities": {
                     name: reader.capabilities[name].value

@@ -180,6 +180,15 @@ def builtin_scene_presets():
             ),
         ),
         ScenePresetDefinition(
+            "grid_volume",
+            "1",
+            "Grid volume",
+            "grid_volume",
+            (_spec("grid", "dataset", "Grid3D"),),
+            ("openvdb_volume_v1",),
+            (("dataset_index", 0),),
+        ),
+        ScenePresetDefinition(
             "property_on_surface",
             "1",
             "Property mapped on surface",
@@ -261,7 +270,7 @@ def builtin_scene_presets():
     return {value.preset_id: value for value in presets}
 
 
-def _entity(project, spec, identity):
+def _entity(project, spec, identity, *, require_complete=True):
     registry = project.structures if spec.entity_kind == "structure" else project.datasets
     entity = registry.get(identity)
     if entity is None:
@@ -270,7 +279,11 @@ def _entity(project, spec, identity):
         raise ScenePresetError(f"scene binding has wrong type: {spec.name}")
     if spec.semantic_roles and entity.semantic_role not in spec.semantic_roles:
         raise ScenePresetError(f"scene binding has wrong semantic role: {spec.name}")
-    if spec.entity_kind == "dataset" and entity.status is not DatasetStatus.COMPLETE:
+    if (
+        require_complete
+        and spec.entity_kind == "dataset"
+        and entity.status is not DatasetStatus.COMPLETE
+    ):
         raise ScenePresetError(f"publication scene requires complete dataset: {spec.name}")
     return entity
 
@@ -312,12 +325,17 @@ def _settings(preset, supplied, entities):
     if kind == "structure":
         if result["display_coordinate_unit"] != "angstrom":
             raise ScenePresetError("structure display unit must be angstrom")
-    elif kind == "signed_isosurface":
+    elif kind in {"grid_volume", "signed_isosurface"}:
         grid = entities["grid"]
         dataset_count = grid.data.shape[0] if grid.data.dims[0] == "dataset" else 1
         result["dataset_index"] = _index(
             result["dataset_index"], dataset_count, "dataset_index"
         )
+        if kind == "grid_volume":
+            return tuple(
+                (name, _json_value(result[name], name))
+                for name in sorted(result)
+            )
         result["isovalue"] = _number(result["isovalue"], "isovalue", positive=True)
         result["negative_isovalue"] = -result["isovalue"]
         result["opacity"] = _number(result["opacity"], "opacity", minimum=0.0, maximum=1.0)
@@ -408,7 +426,12 @@ def plan_scene_preset(preset, project, bindings, settings):
     identities = []
     for spec in preset.bindings:
         identity = bindings[spec.name]
-        entity = _entity(project, spec, identity)
+        entity = _entity(
+            project,
+            spec,
+            identity,
+            require_complete=preset.view_kind != "grid_volume",
+        )
         entities[spec.name] = entity
         normalized_bindings.append(
             RecipeBinding(spec.name, spec.entity_kind, entity.id, entity.revision)

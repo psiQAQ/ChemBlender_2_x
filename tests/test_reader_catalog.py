@@ -26,6 +26,13 @@ class ReaderCatalogTests(unittest.TestCase):
             )
         expected = reader_capability_document(readers)
         self.assertEqual(json.loads(MATRIX.read_text(encoding="utf-8")), expected)
+        for row in expected["readers"]:
+            self.assertEqual(row["plugin_id"], "chemblender.builtin")
+            self.assertEqual(row["execution_mode"], "built_in")
+            self.assertIn(
+                row["availability_contract"]["kind"],
+                {"always", "python_module"},
+            )
 
     def test_matrix_is_deterministic_and_json_serializable(self):
         first = reader_capability_document()

@@ -22,9 +22,10 @@ ChemBlender uses **read-only package CI plus a manually dispatched, deterministi
 
 - `.github/workflows/extension-package.yml` runs for pull requests, pushes to `main`, and `v*` tags.
 - The workflow downloads pinned Blender and RDKit inputs, verifies their checksums, runs repository contracts, builds the extension, exercises it in an isolated Blender profile, and uploads the tested ZIP plus its SHA-256 record.
+- Tagged package artifacts are retained for 30 days to allow prerelease review; pull-request and branch artifacts retain the existing 14 days.
 - `.github/workflows/extension-package.yml` has `contents: read`; it never creates a GitHub Release.
 - `.github/workflows/extension-release.yml` locates the successful exact-tag run, downloads and audits its artifact, and performs no write when `publish=false`.
-- With `publish=true`, only the `publish` job receives `contents: write`. It creates a draft, verifies the uploaded asset digests, and then publishes the Release.
+- With `publish=true`, only the `publish` job receives `contents: write`. It creates a draft, verifies the uploaded asset digests, and then publishes the Release. Alpha, beta, and release-candidate tags remain prereleases and are never marked latest; final releases are marked latest.
 - Never rebuild between the successful tag run and publication. The GitHub Release assets must be byte-for-byte identical to the files downloaded from that run.
 
 This is the preferred balance for the current Windows-only release line. A tag push alone cannot publish, routine CI remains least-privileged, and deterministic checks replace manual artifact transfer. Release timing is still a human decision; package selection and digest verification are not. No large language model is used.
@@ -48,24 +49,36 @@ The Release workflow verifies all of these conditions before publication:
 
 | Check | Evidence |
 | --- | --- | --- |
-| Release identity | Input is an annotated `vMAJOR.MINOR.PATCH` tag in `origin/main`; tag version equals the manifest |
+| Release identity | Input is an annotated `vMAJOR.MINOR.PATCH`, `vMAJOR.MINOR.PATCH-alpha.N`, `vMAJOR.MINOR.PATCH-beta.N`, or `vMAJOR.MINOR.PATCH-rc.N` tag in `origin/main`; tag version and channel equal tagged-source metadata |
 | Package provenance | Successful `extension-package` push run has the same tag name and exact commit SHA |
-| Artifact availability | Exactly one expected, unexpired Actions artifact exists |
+| Artifact availability | Exactly one metadata-named, unexpired Actions artifact exists; tagged artifacts have a 30-day review window |
 | Package integrity | Artifact has only the versioned ZIP and checksum; SHA-256 matches |
 | Package contract | Manifest, license, declared wheel, and both `.blend` libraries exist; development paths and extra wheels do not |
-| Publication safety | No Release already exists; draft asset digests equal the downloaded files before publication |
+| Publication safety | No Release already exists; draft asset digests equal the downloaded files; prereleases remain non-latest and final releases become latest |
 
 ## Release Procedure
 
 ### 1. Prepare and verify `main`
 
-Merge the focused feature or release branch into maintained `main`. Confirm that the worktree is clean, the manifest version is final, and the pull-request and `main` workflow runs are green. Run all local gates in [Testing and CI](testing-and-ci.md), including the isolated and real Blender installations.
+Merge the focused feature or release branch into maintained `main`. Confirm that the worktree is clean, the manifest and changelog use the intended final or prerelease version, and the pull-request and `main` workflow runs are green. Run all local gates in [Testing and CI](testing-and-ci.md), including the isolated and real Blender installations.
 
 ```powershell
 git switch main
 git pull --ff-only origin main
 $pythonBin = 'C:\Program Files\Blender Foundation\Blender 5.1\5.1\python\bin\python.exe'
-$version = '2.2.0'
+$metadataJson = & $pythonBin `
+  ChemBlender/scripts/release_metadata.py `
+  --extension-root ChemBlender `
+  --format json
+if ($LASTEXITCODE -ne 0) {
+    throw "Release metadata validation failed"
+}
+$metadata = $metadataJson | ConvertFrom-Json
+$version = $metadata.version
+$packageName = $metadata.package_name
+$checksumName = $metadata.checksum_name
+$artifactName = $metadata.artifact_name
+$tag = "v$version"
 & $pythonBin ChemBlender/scripts/extract_release_notes.py `
   --changelog CHANGELOG.md --version $version `
   --output '.agents/cache/release-notes.md'
@@ -78,20 +91,18 @@ Do not release directly from `archive/*` or a downstream branch. Do not treat a 
 ### 2. Create and push one annotated tag
 
 ```powershell
-$tag = "v$version"
-
 git tag -a $tag -m "Release $tag"
 git show --no-patch --decorate $tag
 git push origin $tag
 ```
 
-Push only the intended tag; do not use `git push --follow-tags`. The tag workflow rejects a tag whose version does not equal `blender_manifest.toml`.
+Push only the intended tag; do not use `git push --follow-tags`. Supported tags are final `vMAJOR.MINOR.PATCH` tags and numbered `alpha`, `beta`, or `rc` prerelease tags shown in the CI-to-Release table. The tag workflow rejects a tag whose exact version does not equal tagged-source metadata.
 
 ### 3. Run verification only
 
 ```powershell
 $repo = 'psiQAQ/ChemBlender_2_x'
-gh workflow run extension-release.yml --repo $repo `
+gh workflow run extension-release.yml --repo $repo --ref main `
   -f tag=$tag -f publish=false
 gh run list --repo $repo --workflow extension-release.yml `
   --event workflow_dispatch --limit 5
@@ -102,11 +113,11 @@ This run is read-only. It selects the successful package run by exact tag commit
 ### 4. Dispatch publication
 
 ```powershell
-gh workflow run extension-release.yml --repo $repo `
+gh workflow run extension-release.yml --repo $repo --ref main `
   -f tag=$tag -f publish=true
 ```
 
-This is the explicit publication authorization. The workflow repeats artifact verification inside its `release` environment, extracts the matching `CHANGELOG.md` entry, creates a draft with that text, compares both GitHub asset digests, and publishes only after they match. It then confirms that the tag is the latest public Release.
+This is the explicit publication authorization. The workflow repeats artifact verification inside its `release` environment, extracts the matching `CHANGELOG.md` entry, creates a draft with that text, compares both GitHub asset digests, and publishes only after they match. For `alpha`, `beta`, and `rc` channels it creates and publishes a GitHub prerelease without changing the latest Release. For the final channel it publishes with `--latest` and confirms the tag is the latest public Release. Publication remains manual for every channel.
 
 Repository administrators should configure required reviewers under **Settings → Environments → release** when a second approval is desired. Without that protection rule, the manual `publish=true` dispatch remains the sole human approval.
 
@@ -126,3 +137,4 @@ Record the tag commit, package run URL, verification and publication run URLs, c
 
 - 2.1.1: final legacy add-on; asset compression only.
 - 2.2.0: first published extension; source under `ChemBlender/`, offline RDKit wheel, extension-native install, and package CI.
+- 2.3.0-alpha.1: Wave 0 platform-foundation prerelease candidate; publication pending PR, `main`, and exact-tag remote gates.

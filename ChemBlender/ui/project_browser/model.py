@@ -1,0 +1,432 @@
+"""Pure Project Browser flat-tree projection."""
+
+from collections import OrderedDict
+from dataclasses import dataclass
+from enum import Enum
+import re
+from uuid import UUID
+
+
+class BrowserMode(str, Enum):
+    BY_SOURCE = "by_source"
+    BY_DATA = "by_data"
+
+
+@dataclass(frozen=True, slots=True)
+class BrowserRow:
+    id: str
+    parent_id: str | None
+    depth: int
+    kind: str
+    label: str
+    quality: str
+    view_count: int
+    entity_id: UUID | None
+
+
+@dataclass(frozen=True, slots=True)
+class ViewRecord:
+    object_name: str
+    entity_id: UUID
+    revision: str
+    view_kind: str
+    label: str
+
+    def __post_init__(self):
+        if type(self.entity_id) is not UUID:
+            raise TypeError("entity_id must be UUID")
+        for name in ("object_name", "revision", "view_kind", "label"):
+            value = getattr(self, name)
+            if type(value) is not str:
+                raise TypeError(f"{name} must be str")
+            if not value.strip():
+                raise ValueError(f"{name} must not be empty")
+
+
+_REGISTRY_GROUPS = (
+    ("datasets", "Datasets"),
+    ("structures", "Structures"),
+    ("calculations", "Calculations"),
+    ("symmetry_results", "Symmetry"),
+    ("basis_sets", "Basis Sets"),
+    ("orbital_sets", "Orbital Sets"),
+    ("density_matrices", "Density Matrices"),
+    ("cif_envelopes", "CIF Envelopes"),
+    ("qcschema_envelopes", "QCSchema Envelopes"),
+    ("cjson_envelopes", "CJSON Envelopes"),
+    ("provenance", "Provenance"),
+)
+_CACHE = OrderedDict()
+_CACHE_LIMIT = 32
+
+
+def _token(value):
+    name = type(value).__name__.replace("3D", "3d")
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+
+
+def _quality(value):
+    status = getattr(value, "status", None)
+    return getattr(status, "value", "") if status is not None else ""
+
+
+def _label(value):
+    for name in ("display_name", "semantic_role", "original_filename"):
+        text = getattr(value, name, None)
+        if type(text) is str and text:
+            return text.replace("_", " ").title()
+    return type(value).__name__.replace("_", " ")
+
+
+def _view_row(view, parent_id, depth):
+    return BrowserRow(
+        id=(
+            f"{parent_id}/view:{view.object_name}:"
+            f"{view.entity_id}:{view.revision}"
+        ),
+        parent_id=parent_id,
+        depth=depth,
+        kind="view",
+        label=view.label,
+        quality="",
+        view_count=0,
+        entity_id=None,
+    )
+
+
+def _entity_views(entity, views):
+    candidates = sorted(
+        (
+            view
+            for view in views
+            if (
+                view.entity_id == entity.id
+                and view.revision == entity.revision
+            )
+        ),
+        key=lambda view: (
+            view.object_name,
+            str(view.entity_id),
+            view.revision,
+            view.view_kind,
+            view.label,
+        ),
+    )
+    unique = {}
+    for view in candidates:
+        unique.setdefault(
+            (view.object_name, view.entity_id, view.revision),
+            view,
+        )
+    return tuple(
+        sorted(
+            unique.values(),
+            key=lambda view: (
+                view.label.casefold(),
+                view.object_name,
+                view.view_kind,
+            ),
+        )
+    )
+
+
+def _entity_row(entity, parent_id, depth, views):
+    entity_views = _entity_views(entity, views)
+    row_id = f"{parent_id}/entity:{entity.id}"
+    return (
+        BrowserRow(
+            id=row_id,
+            parent_id=parent_id,
+            depth=depth,
+            kind=_token(entity),
+            label=_label(entity),
+            quality=_quality(entity),
+            view_count=len(entity_views),
+            entity_id=entity.id,
+        ),
+        *(_view_row(view, row_id, depth + 1) for view in entity_views),
+    )
+
+
+def _entity_lookup(project):
+    lookup = {}
+    for name, _label_text in _REGISTRY_GROUPS:
+        lookup.update(getattr(project, name))
+    return lookup
+
+
+def _browser_entity_ids(project):
+    return frozenset(_entity_lookup(project))
+
+
+def _unique_ids(values):
+    seen = set()
+    for value in values:
+        if value not in seen:
+            seen.add(value)
+            yield value
+
+
+def _by_source(project, views):
+    rows = []
+    entities = _entity_lookup(project)
+    sources = sorted(
+        project.sources.values(),
+        key=lambda value: (value.display_name.casefold(), str(value.id)),
+    )
+    for source in sources:
+        source_id = f"source:{source.id}"
+        rows.append(
+            BrowserRow(
+                source_id,
+                None,
+                0,
+                "source",
+                source.display_name,
+                "",
+                0,
+                None,
+            )
+        )
+        revisions = sorted(
+            (
+                revision
+                for revision in project.source_revisions.values()
+                if revision.source_id == source.id
+            ),
+            key=lambda value: (value.original_filename.casefold(), str(value.id)),
+        )
+        for revision in revisions:
+            revision_id = f"{source_id}/revision:{revision.id}"
+            rows.append(
+                BrowserRow(
+                    revision_id,
+                    source_id,
+                    1,
+                    "source_revision",
+                    revision.original_filename,
+                    "",
+                    0,
+                    None,
+                )
+            )
+            created = tuple(
+                entities[entity_id]
+                for entity_id in _unique_ids(revision.created_entity_ids)
+                if entity_id in entities
+            )
+            for entity in created:
+                rows.extend(_entity_row(entity, revision_id, 2, views))
+            diagnostics = sorted(
+                (
+                    project.diagnostics[diagnostic_id]
+                    for diagnostic_id in _unique_ids(
+                        revision.diagnostic_ids
+                    )
+                ),
+                key=lambda value: (
+                    value.severity.summary_order,
+                    value.message.casefold(),
+                    str(value.id),
+                ),
+            )
+            for diagnostic in diagnostics:
+                rows.append(
+                    BrowserRow(
+                        f"{revision_id}/diagnostic:{diagnostic.id}",
+                        revision_id,
+                        2,
+                        "diagnostic",
+                        diagnostic.message,
+                        diagnostic.quality_status.value,
+                        0,
+                        diagnostic.entity_id,
+                    )
+                )
+    return tuple(rows)
+
+
+def _by_data(project, views):
+    rows = []
+    for name, label in _REGISTRY_GROUPS:
+        entities = tuple(
+            sorted(
+                getattr(project, name).values(),
+                key=lambda value: (_label(value).casefold(), str(value.id)),
+            )
+        )
+        if not entities:
+            continue
+        group_id = f"group:{name}"
+        rows.append(BrowserRow(group_id, None, 0, "group", label, "", 0, None))
+        for entity in entities:
+            rows.extend(_entity_row(entity, group_id, 1, views))
+    diagnostics = tuple(
+        sorted(
+            project.diagnostics.values(),
+            key=lambda value: (
+                value.severity.summary_order,
+                value.message.casefold(),
+                str(value.id),
+            ),
+        )
+    )
+    if diagnostics:
+        group_id = "group:diagnostics"
+        rows.append(
+            BrowserRow(group_id, None, 0, "group", "Diagnostics", "", 0, None)
+        )
+        rows.extend(
+            BrowserRow(
+                f"{group_id}/diagnostic:{value.id}",
+                group_id,
+                1,
+                "diagnostic",
+                value.message,
+                value.quality_status.value,
+                0,
+                value.entity_id,
+            )
+            for value in diagnostics
+        )
+    return tuple(rows)
+
+
+def _filtered(rows, search, filters, mode):
+    if not search and not filters:
+        return rows
+    matching = {
+        row.id
+        for row in rows
+        if (
+            not search
+            or search
+            in " ".join((row.label, row.kind, row.quality)).casefold()
+        )
+        and (
+            not filters
+            or row.kind in filters
+            or row.quality in filters
+        )
+    }
+    parents = {row.id: row.parent_id for row in rows}
+    matching.update(
+        row.id
+        for row in rows
+        if row.kind == "view" and row.parent_id in matching
+    )
+    for row_id in tuple(matching):
+        parent_id = parents[row_id]
+        while parent_id is not None:
+            matching.add(parent_id)
+            parent_id = parents[parent_id]
+    filtered = tuple(row for row in rows if row.id in matching)
+    if filtered:
+        return filtered
+    return (
+        BrowserRow(
+            f"empty:{mode.value}",
+            None,
+            0,
+            "empty",
+            "No matching project data",
+            "",
+            0,
+            None,
+        ),
+    )
+
+
+def _empty_rows(mode):
+    return (
+        BrowserRow(
+            f"empty:{mode.value}",
+            None,
+            0,
+            "empty",
+            "No project data",
+            "",
+            0,
+            None,
+        ),
+    )
+
+
+def build_browser_rows(
+    project,
+    *,
+    mode=BrowserMode.BY_SOURCE,
+    session_id=None,
+    browser_revision=0,
+    search="",
+    filters=(),
+    views=(),
+):
+    mode = BrowserMode(mode)
+    search = str(search).strip().casefold()
+    filters = tuple(
+        sorted(
+            {
+                str(value).strip().casefold()
+                for value in filters
+                if str(value).strip()
+            }
+        )
+    )
+    views = tuple(views)
+    if any(type(view) is not ViewRecord for view in views):
+        raise TypeError("views must contain ViewRecord values")
+    views = tuple(
+        sorted(
+            views,
+            key=lambda view: (
+                str(view.entity_id),
+                view.revision,
+                view.label.casefold(),
+                view.object_name,
+                view.view_kind,
+            ),
+        )
+    )
+    view_fingerprint = tuple(
+        (
+            view.object_name,
+            str(view.entity_id),
+            view.revision,
+            view.view_kind,
+            view.label,
+        )
+        for view in views
+    )
+    key = (
+        id(project),
+        getattr(project, "id", None),
+        session_id,
+        browser_revision,
+        mode,
+        search,
+        filters,
+        view_fingerprint,
+    )
+    cached = _CACHE.get(key)
+    if cached is not None:
+        _CACHE.move_to_end(key)
+        return cached
+    rows = (
+        _by_source(project, views)
+        if mode is BrowserMode.BY_SOURCE
+        else _by_data(project, views)
+    )
+    result = (
+        _filtered(rows, search, filters, mode)
+        if rows
+        else _empty_rows(mode)
+    )
+    _CACHE[key] = result
+    _CACHE.move_to_end(key)
+    while len(_CACHE) > _CACHE_LIMIT:
+        _CACHE.popitem(last=False)
+    return result
+
+
+__all__ = ("BrowserMode", "BrowserRow", "ViewRecord", "build_browser_rows")

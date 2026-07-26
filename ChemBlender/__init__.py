@@ -1,11 +1,10 @@
 def register():
-    from . import auto_load
+    from .runtime.registration import register_extension
 
-    auto_load.init()
-    auto_load.register()
+    register_extension(__package__)
 
 
 def unregister():
-    from . import auto_load
+    from .runtime.registration import unregister_extension
 
-    auto_load.unregister()
+    unregister_extension()
