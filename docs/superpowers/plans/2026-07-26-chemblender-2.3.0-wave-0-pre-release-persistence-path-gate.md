@@ -286,3 +286,41 @@
 
 **Stop boundary:**
 - Stop with Release Groundwork Task 1 unstarted and no push.
+
+---
+
+## Completion checkpoint
+
+- State: `completed`
+- Planning commit:
+  `d971a385c006d23fa4733811427e6a7987429f8c`
+- Atomic-path implementation:
+  `013efd4f06d0c1971758940b7ebf4082a599a8c4`
+- Atomic-path review fix:
+  `3d4530b46d192dc5a6e042b2be0013a7b92e1b7f`
+- Link synchronization and relink:
+  `05351b54f8821fd48eedf3cdffb1512256c40b6d`
+- Link-locator review fix:
+  `0e0913f85e8064d5c3322fa7ce252a38844576a9`
+- Durable View cache:
+  `11eb3f8a4985946ee9a81d1a23f0c79a616114a2`
+- View-cache security/recovery review fix:
+  `3a7c47981bdb590b9a46b860c6c40ec606b8963b`
+- Save As fallback review fix:
+  `e310365fbc5228dd248c5cd6346363e61f71cafd`
+- Required focused modules: `206 Passed, 0 Failed`.
+- Full unittest discovery: `935 Passed, 27 Skipped, 0 Failed`.
+- Default Windows TEMP product smoke: `Passed`.
+- Short-path isolated product smoke: `Passed`.
+- Blender 5.1.2 validate/build/ZIP/default install/lifecycle: `Passed`.
+- Cross-process Grid/Surface reopen and cache reconstruction: `Passed`.
+- Clean link-only save, new Scene synchronization and multi-Scene relink:
+  `Passed`.
+- Fixture and canonical hashes: `Unchanged`.
+- Independent specification and code-quality reviews: `Passed`.
+- Remote CI: `Not Run`.
+- Next plan:
+  `docs/superpowers/plans/2026-07-23-chemblender-2.3.0-wave-0-release-groundwork.md`
+- Next task: `Task 1 — Add a single release metadata helper`.
+- Stop boundary: Release Groundwork Task 1 remains unstarted.
+- Remote policy: no push without a new explicit user authorization.
