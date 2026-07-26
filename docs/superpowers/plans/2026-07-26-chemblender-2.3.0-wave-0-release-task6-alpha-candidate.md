@@ -44,13 +44,13 @@ extension CLI and background runtime, `unittest`.
   `chemblender-2.3.0-alpha.1.sha256`,
   `chemblender-2.3.0-alpha.1-windows-x64`.
 
-- [ ] **Step 1: Record RED from exact production contracts**
+- [x] **Step 1: Record RED from exact production contracts**
 
 Run the production manifest, metadata CLI and artifact tests immediately after
 the manifest bump. Expected RED: assertions still require stable `2.2.0`
 metadata/tag/name bytes.
 
-- [ ] **Step 2: Add the complete dated alpha entry**
+- [x] **Step 2: Add the complete dated alpha entry**
 
 Move the release-workflow bullets currently under `Unreleased` into the alpha
 entry and describe only verified Wave 0 platform-foundation behavior:
@@ -58,7 +58,7 @@ authoritative project/session persistence, transactional import/link recovery,
 explicit registration/import UI, format-aware default views and durable derived
 view caches. Keep `Unreleased` present and empty.
 
-- [ ] **Step 3: Update exact production-state tests**
+- [x] **Step 3: Update exact production-state tests**
 
 Change only tests whose fixture is the live production manifest. Preserve
 stable-version unit fixtures that intentionally exercise `2.2.0`.
@@ -92,13 +92,13 @@ manifest before the candidate metadata commit.
 - `build_extension.py` produces the exact metadata-derived ZIP.
 - `verify_release_artifact.py` verifies tag `v2.3.0-alpha.1`.
 
-- [ ] **Step 1: Run native validate and build**
+- [x] **Step 1: Run native validate and build**
 
 Use Blender 5.1.2 and its bundled Python. Confirm exact output name and audit
 ZIP paths, CRC, required assets, the single pinned RDKit wheel and packaged
 manifest equality.
 
-- [ ] **Step 2: Verify checksum fixture**
+- [x] **Step 2: Verify checksum fixture**
 
 Create the checksum only in a temporary artifact directory, run the production
 artifact verifier, and record ZIP SHA-256 and byte size.
@@ -125,13 +125,13 @@ artifact document and ZIP inventory.
 - Installs the exact alpha ZIP into an isolated `user_default` repository.
 - Exercises the existing `tests/blender_smoke.py` product/lifecycle contract.
 
-- [ ] **Step 1: Isolated install and lifecycle**
+- [x] **Step 1: Isolated install and lifecycle**
 
 Run background Blender with a temporary short `BLENDER_USER_RESOURCES`,
 default Windows TEMP/TMP where applicable, `--factory-startup`,
 `--python-exit-code 1`, and the exact alpha ZIP.
 
-- [ ] **Step 2: Runtime and package audit**
+- [x] **Step 2: Runtime and package audit**
 
 Require register/unregister/reload, RDKit import, packaged `.blend` assets and
 the product/session smoke sentinels already implemented by the repository.
@@ -154,19 +154,19 @@ the product/session smoke sentinels already implemented by the repository.
 - Modify: `.agents/active/2.3.0-wave-0-platform-foundation.md`
 - Modify: this plan
 
-- [ ] **Step 1: Run the full local gate**
+- [x] **Step 1: Run the full local gate**
 
 Run all `unittest` tests, `compileall`, `git diff --check`, manifest/changelog
 hash capture, release-notes extraction, validate/build, ZIP audit, artifact
 verification and isolated Blender smoke.
 
-- [ ] **Step 2: Independent specification and code-quality review**
+- [x] **Step 2: Independent specification and code-quality review**
 
 Review the exact version, complete alpha notes, unchanged tagline, dynamic
 names, packaged manifest, prerelease channel, artifact provenance and explicit
 non-publication boundary. Fix all in-scope findings and rerun affected gates.
 
-- [ ] **Step 3: Commit candidate metadata and checkpoint**
+- [x] **Step 3: Commit candidate metadata and checkpoint**
 
 Implementation commit:
 
@@ -195,16 +195,31 @@ and the user-authorized branch push follow as a separate gate.
 
 ## Completion checkpoint
 
-- State: `in_progress`
+- State: `completed`
 - Baseline: `49443a18232db1e80a717691b37f7f7f3ed870f2`
-- Planning commit: pending
-- Implementation commit: pending
+- Planning commit: `3e4892d8a628d0e983c08c03fbbf593d0ac97641`
+- Implementation commit: `65c59eee2259b08397a4077d2e84c7d6e0d0ac73`
+- Review-fix commit: `240a7ca763a8a25d3c2d1e3b154e1585c72c11f4`
 - Checkpoint commit: pending
-- Exact alpha version: `Not Run`
-- Full tests: `Not Run`
-- Blender validate/build: `Not Run`
-- Isolated lifecycle: `Not Run`
-- Artifact verification: `Not Run`
+- RED evidence: manifest-only bump ran 45 tests with 11 failures and 3 errors
+  from intentional live-production `2.2.0` expectations and missing alpha notes.
+- GREEN evidence: focused 66 Passed and 1 Skipped; full 992 Passed,
+  28 Skipped and 0 Failed; compileall and diff-check Passed.
+- Exact alpha version: `Passed`
+- Manifest SHA-256:
+  `adcb065d80b1efc28fcdcc3470c45d17bf8824437bebb5332677d89258e465b8`
+- Blender validate/build: `Passed` with Blender `5.1.2`
+- Candidate ZIP:
+  `chemblender-2.3.0-alpha.1.zip`, `27436445` bytes,
+  SHA-256 `c2deda79612b6acec9a7e594e131f0702c40bf45aa93f82ba17f986ad3cfeba9`
+- ZIP audit: `Passed`; 124 unique safe entries, CRC clean, exact pinned wheel
+  and packaged manifest byte equality.
+- Isolated lifecycle: `Passed`; short isolated user resources with default
+  TEMP/TMP, cleanup Passed.
+- Artifact verification: `Passed` for tag `v2.3.0-alpha.1`
+- Independent reviews:
+  specification `PASS`; one code-quality Minor fixed and scoped re-review
+  `ADDRESSED`.
 - Tag/Release/workflow dispatch: `Not Run`
 - Remote CI: `Not Run`
 - Next gate: final whole-branch review, verification and authorized push
