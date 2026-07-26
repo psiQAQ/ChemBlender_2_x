@@ -155,6 +155,17 @@ class RepositoryContractTests(unittest.TestCase):
         )
         self.assertIn('"$hash  $packageName`n"', workflow)
 
+    def test_package_workflow_retains_tag_artifacts_for_review(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "extension-package.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "retention-days: ${{ github.ref_type == 'tag' && 30 || 14 }}",
+            workflow,
+        )
+        self.assertEqual(workflow.count("retention-days:"), 1)
+
     def test_blender_smoke_covers_release_artifact(self):
         smoke = (ROOT / "tests" / "blender_smoke.py").read_text(encoding="utf-8")
         for expected in (
@@ -197,13 +208,108 @@ class RepositoryContractTests(unittest.TestCase):
             self.assertIn(expected, workflow)
         self.assertEqual(workflow.count("verify_release_artifact.py"), 2)
         self.assertEqual(workflow.count("path: tag-source"), 2)
-        self.assertEqual(workflow.count("--extension-root tag-source/ChemBlender"), 2)
+        self.assertEqual(workflow.count("--extension-root tag-source/ChemBlender"), 3)
         self.assertIn("git -C tag-source", workflow)
         self.assertEqual(workflow.count("contents: write"), 1)
         actions = re.findall(r"uses:\s+([^\s]+)", workflow)
         self.assertTrue(actions)
         for action in actions:
             self.assertRegex(action, r"@[0-9a-f]{40}$")
+
+    def test_release_workflow_derives_identity_from_tagged_metadata(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "extension-release.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertEqual(workflow.count("release_metadata.py"), 1)
+        self.assertIn(
+            "python3 tag-source/ChemBlender/scripts/release_metadata.py",
+            workflow,
+        )
+        self.assertIn(
+            "--extension-root tag-source/ChemBlender --format json --include-channel",
+            workflow,
+        )
+        self.assertNotIn("import tomllib", workflow)
+        self.assertNotRegex(workflow, r"=~ \^v\\?\[0-9")
+        self.assertNotIn('artifact_name="chemblender-', workflow)
+        self.assertNotIn('package_name="chemblender-', workflow)
+        self.assertNotIn('checksum_name="chemblender-', workflow)
+        self.assertNotIn("build_extension.py", workflow)
+        for name in (
+            "version",
+            "artifact_name",
+            "package_name",
+            "checksum_name",
+            "channel",
+            "is_prerelease",
+        ):
+            self.assertIn(
+                f"""{name}="$(jq -r '.{name}' <<< "$metadata_json")\"""",
+                workflow,
+            )
+            self.assertIn(f'echo "{name}=${name}"', workflow)
+            self.assertIn(
+                f"{name}: ${{{{ steps.release_info.outputs.{name} }}}}",
+                workflow,
+            )
+        self.assertIn('expected_tag="v$version"', workflow)
+        self.assertIn('if [[ "$RELEASE_TAG" != "$expected_tag" ]]', workflow)
+        self.assertIn(
+            "--commit \"$tag_commit\"",
+            workflow,
+        )
+        self.assertIn('--arg name "$artifact_name"', workflow)
+        self.assertIn(
+            "select(.name == $name and .expired == false)",
+            workflow,
+        )
+
+    def test_release_workflow_keeps_prereleases_out_of_latest(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "extension-release.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "IS_PRERELEASE: ${{ needs.verify.outputs.is_prerelease }}",
+            workflow,
+        )
+        self.assertIn("release_flags+=(--prerelease)", workflow)
+        self.assertIn('"${release_flags[@]}"', workflow)
+        publish_branch = re.search(
+            r'if \[\[ "\$IS_PRERELEASE" == "true" \]\]; then'
+            r"(?P<prerelease>.*?gh release edit.*?)"
+            r"else(?P<final>.*?gh release edit.*?)"
+            r"\n\s*fi",
+            workflow,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(publish_branch)
+        prerelease = publish_branch.group("prerelease")
+        final = publish_branch.group("final")
+        self.assertIn("--draft=false --prerelease --verify-tag", prerelease)
+        self.assertNotIn("--latest", prerelease)
+        self.assertIn("--draft=false --latest --verify-tag", final)
+        self.assertNotIn("--prerelease", final)
+        self.assertGreaterEqual(workflow.count("isPrerelease"), 3)
+        self.assertIn('!= "$RELEASE_TAG"', prerelease)
+        self.assertIn('== "$RELEASE_TAG"', final)
+
+    def test_release_documentation_covers_prerelease_review_window(self):
+        documentation = (
+            ROOT / "docs" / "development" / "branch-and-release.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "vMAJOR.MINOR.PATCH-alpha.N",
+            documentation,
+        )
+        self.assertIn("vMAJOR.MINOR.PATCH-beta.N", documentation)
+        self.assertIn("vMAJOR.MINOR.PATCH-rc.N", documentation)
+        self.assertIn("30 days", documentation)
+        self.assertIn("14 days", documentation)
+        self.assertIn("never marked latest", documentation)
+        self.assertIn("manual", documentation.lower())
 
     def test_changelog_drives_release_notes(self):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")

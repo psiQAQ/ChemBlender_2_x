@@ -104,4 +104,4 @@ jobs:
             ChemBlender/${{ steps.release_metadata.outputs.package_name }}
             ChemBlender/${{ steps.release_metadata.outputs.checksum_name }}
           if-no-files-found: error
-          retention-days: 14
+          retention-days: ${{ github.ref_type == 'tag' && 30 || 14 }}

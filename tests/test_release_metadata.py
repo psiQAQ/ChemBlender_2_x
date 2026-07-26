@@ -145,6 +145,35 @@ class ReleaseMetadataTests(unittest.TestCase):
             parsed.channel = "beta"
         self.assertFalse(hasattr(parsed, "__dict__"))
 
+    def test_release_channel_document_uses_shared_version_parser(self):
+        cases = (
+            (
+                "2.3.0",
+                {"channel": "final", "is_prerelease": False},
+            ),
+            (
+                "2.3.0-alpha.1",
+                {"channel": "alpha", "is_prerelease": True},
+            ),
+            (
+                "2.3.0-beta.2",
+                {"channel": "beta", "is_prerelease": True},
+            ),
+            (
+                "2.3.0-rc.1",
+                {"channel": "rc", "is_prerelease": True},
+            ),
+        )
+        for version, expected in cases:
+            with self.subTest(version=version):
+                self.assertEqual(
+                    release_metadata.release_channel_document(version),
+                    expected,
+                )
+
+        with self.assertRaisesRegex(ValueError, "release version"):
+            release_metadata.release_channel_document("2.3.0-preview.1")
+
     def test_rejects_versions_outside_proven_grammar(self):
         invalid = (
             "2.3.0-alpha",
@@ -314,6 +343,33 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertEqual(first.stdout, expected)
         self.assertEqual(second.stdout, expected)
         self.assertEqual(first.stderr, b"")
+
+    def test_cli_channel_fields_are_explicitly_opt_in(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "release_metadata.py"),
+                "--extension-root",
+                str(EXTENSION),
+                "--format",
+                "json",
+                "--include-channel",
+            ],
+            capture_output=True,
+            check=False,
+        )
+
+        expected = (
+            b'{"artifact_name":"chemblender-2.2.0-windows-x64",'
+            b'"channel":"final",'
+            b'"checksum_name":"chemblender-2.2.0.sha256",'
+            b'"extension_id":"chemblender","is_prerelease":false,'
+            b'"package_name":"chemblender-2.2.0.zip",'
+            b'"platform":"windows-x64","version":"2.2.0"}\n'
+        )
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        self.assertEqual(result.stdout, expected)
+        self.assertEqual(result.stderr, b"")
 
     def test_cli_failure_uses_stderr_and_exit_one(self):
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -127,12 +127,21 @@ def release_metadata_document(metadata: ReleaseMetadata) -> dict[str, str]:
     }
 
 
+def release_channel_document(version: str) -> dict[str, str | bool]:
+    parsed = parse_release_version(version)
+    return {
+        "channel": parsed.channel or "final",
+        "is_prerelease": parsed.is_prerelease,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Read deterministic ChemBlender release metadata."
     )
     parser.add_argument("--extension-root", required=True, type=Path)
     parser.add_argument("--format", choices=("json",), required=True)
+    parser.add_argument("--include-channel", action="store_true")
     args = parser.parse_args(argv)
 
     try:
@@ -141,9 +150,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
+    document: dict[str, str | bool] = release_metadata_document(metadata)
+    if args.include_channel:
+        document.update(release_channel_document(metadata.version))
     payload = (
         json.dumps(
-            release_metadata_document(metadata),
+            document,
             ensure_ascii=False,
             separators=(",", ":"),
             sort_keys=True,
