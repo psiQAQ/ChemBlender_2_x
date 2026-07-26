@@ -1,9 +1,11 @@
 import hashlib
 import json
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
+from types import ModuleType
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import numpy
@@ -301,6 +303,134 @@ class ViewCachePersistenceTests(unittest.TestCase):
         self.assertEqual(obj.data.grids.loads, 0)
         self.assertEqual(self.session.dirty_reasons, frozenset({"view_cache"}))
 
+    def test_fatal_writer_errors_bypass_fallback_and_keep_original_identity(self):
+        from ChemBlender.ui import view_cache
+
+        previous_sidecar = self.root / "previous.cbq"
+        for name in ("volume", "surface"):
+            (previous_sidecar / "cache" / "render" / name).mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+        for error in (
+            KeyboardInterrupt(),
+            SystemExit(),
+            GeneratorExit(),
+            MemoryError("allocation failed"),
+        ):
+            with self.subTest(error=type(error).__name__):
+                obj = self.grid_object()
+                old_filepath = obj.data.filepath
+                if "view_cache" in self.session.dirty_reasons:
+                    self.session.clear_dirty("view_cache")
+                with patch.object(
+                    view_cache,
+                    "_ensure_grid_volume_cache",
+                    side_effect=error,
+                ), patch.object(
+                    view_cache,
+                    "_validate_fallback_cache",
+                ) as fallback:
+                    with self.assertRaises(type(error)) as raised:
+                        view_cache.repair_project_view_caches(
+                            session=self.session,
+                            objects=(obj,),
+                            blend_path=self.blend_path,
+                            previous_sidecar_path=previous_sidecar,
+                        )
+
+                self.assertIs(raised.exception, error)
+                fallback.assert_not_called()
+                self.assertEqual(obj.data.filepath, old_filepath)
+                self.assertEqual(obj.data.grids.loads, 0)
+                self.assertEqual(
+                    self.session.dirty_reasons,
+                    frozenset({"view_cache"}),
+                )
+
+    def test_previous_fallback_validation_preserves_fatal_identity(self):
+        from ChemBlender.ui import view_cache
+
+        previous_sidecar = self.root / "previous.cbq"
+        key = volume_render_cache_key(self.grid, dataset_index=0)
+        previous_cache = (
+            previous_sidecar
+            / "cache"
+            / "render"
+            / "volume"
+            / f"{key}.vdb"
+        )
+        previous_cache.parent.mkdir(parents=True)
+        (previous_sidecar / "cache" / "render" / "surface").mkdir()
+        previous_cache.touch()
+        obj = self.grid_object()
+        fatal = MemoryError("fallback validation exhausted memory")
+        validator_module = ModuleType("ChemBlender.grid_volume")
+        validate = Mock(side_effect=fatal)
+        validator_module._validate_vdb = validate
+
+        with patch.object(
+            view_cache,
+            "_ensure_grid_volume_cache",
+            side_effect=OSError("new cache write failed"),
+        ), patch.dict(
+            sys.modules,
+            {"ChemBlender.grid_volume": validator_module},
+        ):
+            with self.assertRaises(MemoryError) as raised:
+                view_cache.repair_project_view_caches(
+                    session=self.session,
+                    objects=(obj,),
+                    blend_path=self.blend_path,
+                    previous_sidecar_path=previous_sidecar,
+                )
+
+        self.assertIs(raised.exception, fatal)
+        validate.assert_called_once()
+        self.assertEqual(obj.data.grids.loads, 0)
+        self.assertEqual(
+            self.session.dirty_reasons,
+            frozenset({"view_cache"}),
+        )
+
+    def test_current_fallback_reload_preserves_fatal_identity(self):
+        from ChemBlender.ui import view_cache
+
+        old_path = self.session.temporary_root / "view-cache" / "old.vdb"
+        old_path.parent.mkdir()
+        old_path.touch()
+        obj = self.grid_object(old_path=old_path)
+        fatal = KeyboardInterrupt()
+
+        with patch.object(
+            view_cache,
+            "_ensure_grid_volume_cache",
+            side_effect=OSError("new cache write failed"),
+        ), patch.object(
+            view_cache,
+            "_validate_fallback_cache",
+            return_value=True,
+        ) as validate, patch.object(
+            obj.data.grids,
+            "load",
+            side_effect=fatal,
+        ):
+            with self.assertRaises(KeyboardInterrupt) as raised:
+                view_cache.repair_project_view_caches(
+                    session=self.session,
+                    objects=(obj,),
+                    blend_path=self.blend_path,
+                )
+
+        self.assertIs(raised.exception, fatal)
+        validate.assert_called_once()
+        self.assertEqual(obj.data.filepath, str(old_path))
+        self.assertEqual(
+            self.session.dirty_reasons,
+            frozenset({"view_cache"}),
+        )
+
     def test_stale_metadata_fails_closed_without_using_cache_property(self):
         from ChemBlender.ui import view_cache
 
@@ -481,48 +611,80 @@ class ViewCachePersistenceTests(unittest.TestCase):
         from ChemBlender.ui import view_cache
 
         obj = FakeObject("Foreign", "foreign.vdb", {"cb_cache_path": "foreign.vdb"})
+        before = dict(obj)
 
-        repaired = view_cache.repair_project_view_caches(
-            session=self.session,
-            objects=(obj,),
-            blend_path=self.blend_path,
-        )
+        with patch.object(view_cache, "_durable_cache_root") as durable:
+            repaired = view_cache.repair_project_view_caches(
+                session=self.session,
+                objects=(obj,),
+                blend_path=self.blend_path,
+            )
 
         self.assertEqual(repaired, 0)
+        durable.assert_not_called()
+        self.assertFalse((self.sidecar / "cache").exists())
         self.assertEqual(obj.data.filepath, "foreign.vdb")
-        self.assertEqual(obj["cb_cache_path"], "foreign.vdb")
+        self.assertEqual(dict(obj), before)
+
+    def test_non_volume_is_untouched_without_inspecting_sidecar(self):
+        from ChemBlender.ui import view_cache
+
+        obj = self.grid_object()
+        obj.type = "MESH"
+        before = dict(obj)
+        old_filepath = obj.data.filepath
+
+        with patch.object(view_cache, "_durable_cache_root") as durable:
+            repaired = view_cache.repair_project_view_caches(
+                session=self.session,
+                objects=(obj,),
+                blend_path=self.blend_path,
+            )
+
+        self.assertEqual(repaired, 0)
+        durable.assert_not_called()
+        self.assertFalse((self.sidecar / "cache").exists())
+        self.assertEqual(obj.data.filepath, old_filepath)
+        self.assertEqual(dict(obj), before)
 
     def test_success_clears_only_view_cache_retry_reason(self):
         from ChemBlender.ui import view_cache
 
+        self.session.sidecar_path = None
+        self.session.link_status = "unlinked"
         self.session.mark_dirty("view_cache")
         self.session.mark_dirty("project_link")
 
-        repaired = view_cache.repair_project_view_caches(
-            session=self.session,
-            objects=(),
-            blend_path=self.blend_path,
-        )
+        with patch.object(view_cache, "_durable_cache_root") as durable:
+            repaired = view_cache.repair_project_view_caches(
+                session=self.session,
+                objects=(),
+                blend_path=self.blend_path,
+            )
 
         self.assertEqual(repaired, 0)
+        durable.assert_not_called()
+        self.assertFalse((self.sidecar / "cache").exists())
         self.assertEqual(self.session.dirty_reasons, frozenset({"project_link"}))
 
     def test_linked_render_cache_directory_is_rejected(self):
         from ChemBlender.ui import view_cache
 
         (self.sidecar / "cache" / "render").mkdir(parents=True)
+        obj = self.grid_object()
 
         with patch.object(
             view_cache,
             "_is_link_like",
             side_effect=lambda path: path.name == "render",
-        ):
+        ), patch.object(view_cache, "_ensure_grid_volume_cache") as ensure:
             with self.assertRaisesRegex(view_cache.ViewCacheError, "unsafe"):
                 view_cache.repair_project_view_caches(
                     session=self.session,
-                    objects=(),
+                    objects=(obj,),
                     blend_path=self.blend_path,
                 )
+        ensure.assert_not_called()
         self.assertEqual(self.session.dirty_reasons, frozenset({"view_cache"}))
 
     def test_final_vdb_link_is_rejected_before_writer_and_preserves_target(self):

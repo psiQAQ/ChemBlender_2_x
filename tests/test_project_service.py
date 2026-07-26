@@ -491,6 +491,151 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(empty["scene-marker"], "empty")
         adopt.assert_called_once()
 
+    def test_multi_scene_verify_adoption_failure_restores_links_and_candidate(self):
+        sidecar = self.root / "verify-adoption-failure.cbq"
+        stored = sample_project()
+        save_project(sidecar, stored)
+        linked = self.linked_scene(sidecar, stored)
+        empty = {"scene-marker": "empty"}
+        scenes = (linked, empty)
+        originals = tuple(dict(scene) for scene in scenes)
+        session = self.create_session()
+        session.mark_dirty("import")
+        previous = session.project
+        before = (
+            session.project,
+            session.sidecar_path,
+            session.link_status,
+            session.dirty_reasons,
+        )
+        opened_projects = []
+        lazy_values = []
+        closed = []
+        links = project_service._project_links()
+        real_open = links._open_project_with_manifest
+        real_close = project_service.close_project
+
+        def record_open(*args, **kwargs):
+            project, manifest = real_open(*args, **kwargs)
+            values = project.datasets[FRAMES_ID].data.values
+            values[0]
+            opened_projects.append(project)
+            lazy_values.append(values)
+            return project, manifest
+
+        def fail_previous(project):
+            if project is previous:
+                raise OSError("old project close failed")
+            closed.append(project)
+            return real_close(project)
+
+        try:
+            with patch.object(
+                links,
+                "_open_project_with_manifest",
+                side_effect=record_open,
+            ), patch.object(
+                project_service,
+                "close_project",
+                side_effect=fail_previous,
+            ):
+                with self.assertRaisesRegex(OSError, "^old project close failed$"):
+                    self.verify_for_scenes(session=session, scenes=scenes)
+            actual_scenes = tuple(dict(scene) for scene in scenes)
+            candidate_loaded = lazy_values[0].loaded
+        finally:
+            for project in opened_projects:
+                real_close(project)
+
+        self.assertEqual(actual_scenes, originals)
+        self.assertEqual(
+            (
+                session.project,
+                session.sidecar_path,
+                session.link_status,
+                session.dirty_reasons,
+            ),
+            before,
+        )
+        self.assertEqual(closed, opened_projects)
+        self.assertFalse(candidate_loaded)
+
+    def test_multi_scene_verify_incomplete_adoption_rollback_is_structured(self):
+        class RollbackFailingScene(dict):
+            fail_restore = False
+
+            def __delitem__(self, key):
+                if key == MANIFEST_HASH_KEY and self.fail_restore:
+                    raise RuntimeError("Scene rollback failed")
+                super().__delitem__(key)
+
+        sidecar = self.root / "verify-structured.cbq"
+        stored = QCProject(id=PROJECT_ID, schema_version="0.2")
+        save_project(sidecar, stored)
+        linked = self.linked_scene(sidecar, stored)
+        failing = RollbackFailingScene({"scene-marker": "preserve"})
+        scenes = (linked, failing)
+        session = self.create_session()
+        session.mark_dirty("import")
+        previous = session.project
+        before = (
+            session.project,
+            session.sidecar_path,
+            session.link_status,
+            session.dirty_reasons,
+        )
+        closed = []
+
+        def fail_cleanup(project):
+            if project is previous:
+                failing.fail_restore = True
+                raise OSError("old project close failed")
+            closed.append(project)
+            raise OSError("candidate cleanup failed")
+
+        with patch.object(
+            project_service,
+            "close_project",
+            side_effect=fail_cleanup,
+        ):
+            with self.assertRaises(
+                project_service.SceneLinkWriteRecoveryError
+            ) as caught:
+                self.verify_for_scenes(session=session, scenes=scenes)
+
+        error = caught.exception
+        self.assertEqual(str(error.write_error), "old project close failed")
+        self.assertEqual(
+            tuple(
+                (failure.scene_index, failure.key, str(failure.error))
+                for failure in error.rollback_failures
+            ),
+            ((1, MANIFEST_HASH_KEY, "Scene rollback failed"),),
+        )
+        self.assertEqual(error.residual_keys, ((1, MANIFEST_HASH_KEY),))
+        self.assertEqual(
+            error.__notes__,
+            ["candidate project cleanup failed: candidate cleanup failed"],
+        )
+        self.assertEqual(len(closed), 1)
+        self.assertEqual(dict(linked), self.linked_scene(sidecar, stored))
+        self.assertEqual(
+            failing,
+            {
+                "scene-marker": "preserve",
+                MANIFEST_HASH_KEY: linked[MANIFEST_HASH_KEY],
+            },
+        )
+        self.assertEqual(
+            (
+                session.project,
+                session.sidecar_path,
+                session.link_status,
+                session.dirty_reasons,
+            ),
+            before,
+        )
+
     def test_verify_conflicting_valid_scene_links_fails_closed(self):
         first_project = QCProject(id=PROJECT_ID, schema_version="0.2")
         second_project = QCProject(id=UUID(int=2), schema_version="0.2")
@@ -621,6 +766,72 @@ class ProjectServiceTests(unittest.TestCase):
 
         self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
         self.assertFalse(lazy_values.loaded)
+
+    def test_single_scene_verify_adoption_failure_closes_candidate(self):
+        sidecar = self.root / "single-verify-adoption-failure.cbq"
+        stored = sample_project()
+        save_project(sidecar, stored)
+        scene = self.linked_scene(sidecar, stored)
+        original_scene = dict(scene)
+        session = self.create_session()
+        session.mark_dirty("import")
+        previous = session.project
+        before = (
+            session.project,
+            session.sidecar_path,
+            session.link_status,
+            session.dirty_reasons,
+        )
+        opened_projects = []
+        lazy_values = []
+        closed = []
+        links = project_service._project_links()
+        real_open = links._open_project_with_manifest
+        real_close = project_service.close_project
+
+        def record_open(*args, **kwargs):
+            project, manifest = real_open(*args, **kwargs)
+            values = project.datasets[FRAMES_ID].data.values
+            values[0]
+            opened_projects.append(project)
+            lazy_values.append(values)
+            return project, manifest
+
+        def fail_previous(project):
+            if project is previous:
+                raise OSError("old project close failed")
+            closed.append(project)
+            return real_close(project)
+
+        try:
+            with patch.object(
+                links,
+                "_open_project_with_manifest",
+                side_effect=record_open,
+            ), patch.object(
+                project_service,
+                "close_project",
+                side_effect=fail_previous,
+            ):
+                with self.assertRaisesRegex(OSError, "^old project close failed$"):
+                    verify_project_session(session=session, scene=scene)
+            candidate_loaded = lazy_values[0].loaded
+        finally:
+            for project in opened_projects:
+                real_close(project)
+
+        self.assertEqual(scene, original_scene)
+        self.assertEqual(
+            (
+                session.project,
+                session.sidecar_path,
+                session.link_status,
+                session.dirty_reasons,
+            ),
+            before,
+        )
+        self.assertEqual(closed, opened_projects)
+        self.assertFalse(candidate_loaded)
 
     def test_verify_missing_does_not_mutate_scene_or_session(self):
         sidecar = self.root / "missing.cbq"

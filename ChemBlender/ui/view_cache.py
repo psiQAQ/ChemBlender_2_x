@@ -15,6 +15,12 @@ from ..core import (
 
 _CACHE_FORMAT_VERSION = 1
 _VOLUME_PRESETS = {"grid_volume", "signed_isosurface", "property_on_surface"}
+_FATAL_EXCEPTIONS = (
+    KeyboardInterrupt,
+    SystemExit,
+    GeneratorExit,
+    MemoryError,
+)
 
 
 class ViewCacheError(RuntimeError):
@@ -363,7 +369,9 @@ def _validate_fallback_cache(
 
             key = _surface_key(plan.render_identity, "property")
             _validate_vdb(path, ("density", "property"), key)
-    except BaseException:
+    except BaseException as error:
+        if isinstance(error, _FATAL_EXCEPTIONS):
+            raise
         return False
     return True
 
@@ -378,15 +386,22 @@ def repair_project_view_caches(
     """Repair owned Volume caches without changing scientific project state."""
     repaired = 0
     try:
-        if session.sidecar_path is None or session.link_status != "connected":
-            raise ViewCacheError("view cache repair requires a connected session")
-        cache_root = _durable_cache_root(session.sidecar_path)
+        planned = []
         for obj in tuple(objects):
             if getattr(obj, "type", None) != "VOLUME":
                 continue
             plan = _current_plan(obj, session.project)
             if plan is None:
                 continue
+            planned.append((obj, plan))
+        planned = tuple(planned)
+        if planned:
+            if session.sidecar_path is None or session.link_status != "connected":
+                raise ViewCacheError(
+                    "view cache repair requires a connected session"
+                )
+            cache_root = _durable_cache_root(session.sidecar_path)
+        for obj, plan in planned:
             old_filepath = obj.data.filepath
             old_cache_path = obj.get("cb_cache_path")
             try:
@@ -402,6 +417,8 @@ def repair_project_view_caches(
                 obj.data.grids.load()
                 obj["cb_cache_path"] = str(target)
             except BaseException as error:
+                if isinstance(error, _FATAL_EXCEPTIONS):
+                    raise
                 fallback_target = None
                 if previous_sidecar_path is not None:
                     try:
@@ -431,7 +448,9 @@ def repair_project_view_caches(
                                 fallback_target, blend_path
                             )
                             obj.data.grids.load()
-                    except BaseException:
+                    except BaseException as fallback_error:
+                        if isinstance(fallback_error, _FATAL_EXCEPTIONS):
+                            raise
                         fallback_target = None
                 if fallback_target is None:
                     obj.data.filepath = old_filepath
@@ -445,7 +464,9 @@ def repair_project_view_caches(
                     ):
                         try:
                             obj.data.grids.load()
-                        except BaseException:
+                        except BaseException as fallback_error:
+                            if isinstance(fallback_error, _FATAL_EXCEPTIONS):
+                                raise
                             pass
                     if old_cache_path is None:
                         try:

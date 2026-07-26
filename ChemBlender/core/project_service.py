@@ -492,12 +492,17 @@ def verify_project_session_for_scenes(
         session.link_status = status.value
         return ProjectServiceResult(status, resolved.message, resolved.path)
     try:
-        _write_scene_links(scenes, linked_values, links)
+        snapshots = _write_scene_links(scenes, linked_values, links)
     except Exception:
         close_project(resolved.project)
         session.link_status = ProjectServiceStatus.INVALID.value
         raise
-    _adopt_project(session, resolved.project, resolved.path)
+    _adopt_verified_project(
+        session,
+        resolved.project,
+        resolved.path,
+        scene_snapshots=snapshots,
+    )
     return ProjectServiceResult(
         status,
         resolved.message,
@@ -524,7 +529,7 @@ def verify_project_session(
     status = _service_status(resolved.status)
     if status is not ProjectServiceStatus.CONNECTED:
         return ProjectServiceResult(status, resolved.message, resolved.path)
-    _adopt_project(session, resolved.project, resolved.path)
+    _adopt_verified_project(session, resolved.project, resolved.path)
     return ProjectServiceResult(
         status,
         resolved.message,
@@ -539,6 +544,26 @@ def _close_candidate_after_failure(candidate, error):
         close_project(candidate)
     except Exception as close_error:
         error.add_note(f"candidate project cleanup failed: {close_error}")
+
+
+def _adopt_verified_project(
+    session,
+    candidate,
+    path,
+    *,
+    scene_snapshots=(),
+):
+    try:
+        _adopt_project(session, candidate, path)
+    except Exception as error:
+        if scene_snapshots:
+            try:
+                _rollback_scene_links(scene_snapshots, error)
+            except Exception as recovery_error:
+                _close_candidate_after_failure(candidate, recovery_error)
+                raise
+        _close_candidate_after_failure(candidate, error)
+        raise
 
 
 def relink_project_session_for_scenes(
@@ -570,16 +595,12 @@ def relink_project_session_for_scenes(
     except Exception as error:
         _close_candidate_after_failure(candidate, error)
         raise
-    try:
-        _adopt_project(session, candidate, path)
-    except Exception as error:
-        try:
-            _rollback_scene_links(snapshots, error)
-        except Exception as recovery_error:
-            _close_candidate_after_failure(candidate, recovery_error)
-            raise
-        _close_candidate_after_failure(candidate, error)
-        raise
+    _adopt_verified_project(
+        session,
+        candidate,
+        path,
+        scene_snapshots=snapshots,
+    )
     return ProjectServiceResult(
         ProjectServiceStatus.CONNECTED,
         path=path,
