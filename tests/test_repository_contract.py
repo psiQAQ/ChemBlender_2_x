@@ -265,6 +265,38 @@ class RepositoryContractTests(unittest.TestCase):
             workflow,
         )
 
+    def test_release_workflow_binds_publish_to_verified_tag_commit(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "extension-release.yml"
+        ).read_text(encoding="utf-8")
+        publish = workflow.split("\n  publish:", 1)[1]
+
+        self.assertIn(
+            "tag_commit: ${{ steps.release_info.outputs.tag_commit }}",
+            workflow,
+        )
+        self.assertIn('echo "tag_commit=$tag_commit"', workflow)
+        self.assertIn(
+            "ref: ${{ needs.verify.outputs.tag_commit }}",
+            publish,
+        )
+        self.assertNotIn("ref: ${{ inputs.tag }}", publish)
+        self.assertIn(
+            "VERIFIED_TAG_COMMIT: ${{ needs.verify.outputs.tag_commit }}",
+            publish,
+        )
+
+        create_step = publish.split("- name: Create verified GitHub Release", 1)[1]
+        required_in_order = (
+            'git -C tag-source fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"',
+            'git -C tag-source cat-file -t "refs/tags/$RELEASE_TAG"',
+            'current_tag_commit="$(git -C tag-source rev-list -n 1 "refs/tags/$RELEASE_TAG")"',
+            'if [[ "$current_tag_commit" != "$VERIFIED_TAG_COMMIT" ]]',
+            'gh release create "$RELEASE_TAG"',
+        )
+        positions = [create_step.index(text) for text in required_in_order]
+        self.assertEqual(positions, sorted(positions))
+
     def test_release_workflow_keeps_prereleases_out_of_latest(self):
         workflow = (
             ROOT / ".github" / "workflows" / "extension-release.yml"

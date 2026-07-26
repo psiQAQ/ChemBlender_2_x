@@ -27,6 +27,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       run_id: ${{ steps.release_info.outputs.run_id }}
+      tag_commit: ${{ steps.release_info.outputs.tag_commit }}
       version: ${{ steps.release_info.outputs.version }}
       artifact_name: ${{ steps.release_info.outputs.artifact_name }}
       package_name: ${{ steps.release_info.outputs.package_name }}
@@ -101,6 +102,7 @@ jobs:
 
           {
             echo "run_id=$run_id"
+            echo "tag_commit=$tag_commit"
             echo "version=$version"
             echo "artifact_name=$artifact_name"
             echo "package_name=$package_name"
@@ -143,7 +145,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ needs.verify.outputs.tag_commit }}
           path: tag-source
       - name: Download and reverify tag artifact
         shell: bash
@@ -177,6 +179,7 @@ jobs:
           CHECKSUM_NAME: ${{ needs.verify.outputs.checksum_name }}
           CHANNEL: ${{ needs.verify.outputs.channel }}
           IS_PRERELEASE: ${{ needs.verify.outputs.is_prerelease }}
+          VERIFIED_TAG_COMMIT: ${{ needs.verify.outputs.tag_commit }}
         run: |
           set -euo pipefail
           if gh release view "$RELEASE_TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
@@ -198,6 +201,18 @@ jobs:
               exit 1
               ;;
           esac
+
+          git -C tag-source fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          if [[ "$(git -C tag-source cat-file -t "refs/tags/$RELEASE_TAG")" != "tag" ]]; then
+            echo "Remote release ref must remain an annotated tag: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          current_tag_commit="$(git -C tag-source rev-list -n 1 "refs/tags/$RELEASE_TAG")"
+          if [[ "$current_tag_commit" != "$VERIFIED_TAG_COMMIT" ]]; then
+            echo "Release tag moved after verification: $current_tag_commit != $VERIFIED_TAG_COMMIT" >&2
+            exit 1
+          fi
+
           echo "Creating $CHANNEL channel release for $VERSION"
           gh release create "$RELEASE_TAG" "$package" "$checksum" \
             --repo "$GH_REPO" --verify-tag "${release_flags[@]}" \
