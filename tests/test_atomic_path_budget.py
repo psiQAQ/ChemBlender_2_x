@@ -142,6 +142,13 @@ class AtomicPathBudgetTests(unittest.TestCase):
             self.assertTrue(array_replacements)
             for source, destination in array_replacements:
                 self.assert_short_replace_source(source, destination)
+            manifest_replacements = [
+                pair
+                for pair in replacements
+                if pair[1].name == "manifest.json"
+            ]
+            self.assertEqual(len(manifest_replacements), 1)
+            self.assert_short_replace_source(*manifest_replacements[0])
 
     def test_canonical_array_writer_uses_short_replace_source(self):
         with TemporaryDirectory() as temporary:
@@ -167,6 +174,13 @@ class AtomicPathBudgetTests(unittest.TestCase):
             self.assertTrue(array_replacements)
             for source, destination in array_replacements:
                 self.assert_short_replace_source(source, destination)
+            document_replacements = [
+                pair
+                for pair in replacements
+                if pair[1].name == "import-batch.json"
+            ]
+            self.assertEqual(len(document_replacements), 1)
+            self.assert_short_replace_source(*document_replacements[0])
 
     def test_grid_volume_writer_uses_short_replace_source(self):
         with TemporaryDirectory() as temporary:
@@ -297,6 +311,90 @@ class AtomicPathBudgetTests(unittest.TestCase):
                         module._write_vdb(destination, (), {})
             sys.modules.pop("ChemBlender.surface_view", None)
             sys.modules.pop("ChemBlender.grid_volume", None)
+
+    def test_grid_vdb_failures_remove_temporary_file(self):
+        for failure in ("write", "replace"):
+            with self.subTest(failure=failure), TemporaryDirectory() as temporary:
+                temporary_paths = []
+
+                def write_vdb(path, _grid, metadata=None):
+                    temporary_path = Path(path)
+                    temporary_paths.append(temporary_path)
+                    temporary_path.write_bytes(b"partial")
+                    if failure == "write":
+                        raise OSError("grid write failed")
+
+                fake_bpy, fake_openvdb = _fake_blender_modules(write_vdb)
+                with patch.dict(
+                    sys.modules,
+                    {"bpy": fake_bpy, "openvdb": fake_openvdb},
+                ):
+                    sys.modules.pop("ChemBlender.grid_volume", None)
+                    module = importlib.import_module("ChemBlender.grid_volume")
+                    destination = Path(temporary) / f"{'1' * 64}.vdb"
+                    replace = (
+                        patch.object(
+                            module.os,
+                            "replace",
+                            side_effect=OSError("grid replace failed"),
+                        )
+                        if failure == "replace"
+                        else patch.object(module.os, "replace", wraps=os.replace)
+                    )
+                    with replace, self.assertRaisesRegex(
+                        OSError,
+                        f"^grid {failure} failed$",
+                    ):
+                        module.create_grid_volume(
+                            sample_project().datasets[GRID_ID],
+                            destination,
+                            collection=object(),
+                        )
+                sys.modules.pop("ChemBlender.grid_volume", None)
+                self.assertEqual(len(temporary_paths), 1)
+                self.assertFalse(temporary_paths[0].exists())
+                self.assertFalse(destination.exists())
+
+    def test_surface_vdb_failures_remove_temporary_file(self):
+        for failure in ("write", "replace"):
+            with self.subTest(failure=failure), TemporaryDirectory() as temporary:
+                temporary_paths = []
+
+                def write_vdb(path, _grids, metadata=None):
+                    temporary_path = Path(path)
+                    temporary_paths.append(temporary_path)
+                    temporary_path.write_bytes(b"partial")
+                    if failure == "write":
+                        raise OSError("surface write failed")
+
+                fake_bpy, fake_openvdb = _fake_blender_modules(write_vdb)
+                with patch.dict(
+                    sys.modules,
+                    {"bpy": fake_bpy, "openvdb": fake_openvdb},
+                ):
+                    sys.modules.pop("ChemBlender.grid_volume", None)
+                    sys.modules.pop("ChemBlender.surface_view", None)
+                    module = importlib.import_module("ChemBlender.surface_view")
+                    destination = Path(temporary) / f"{'2' * 64}.vdb"
+                    replace = (
+                        patch.object(
+                            module.os,
+                            "replace",
+                            side_effect=OSError("surface replace failed"),
+                        )
+                        if failure == "replace"
+                        else patch.object(module.os, "replace", wraps=os.replace)
+                    )
+                    with replace, self.assertRaisesRegex(
+                        OSError,
+                        f"^surface {failure} failed$",
+                    ):
+                        module._write_vdb(destination, (), {})
+                sys.modules.pop("ChemBlender.surface_view", None)
+                sys.modules.pop("ChemBlender.grid_volume", None)
+                self.assertEqual(len(temporary_paths), 1)
+                self.assertFalse(temporary_paths[0].exists())
+                self.assertFalse(destination.exists())
 
     def test_sidecar_primary_error_wins_when_cleanup_also_fails(self):
         with TemporaryDirectory() as temporary:
