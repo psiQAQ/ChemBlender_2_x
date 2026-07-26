@@ -192,6 +192,27 @@ def _rollback_scene_links(snapshots, write_error, *, attempted=None):
         ) from write_error
 
 
+def _add_scene_link_recovery_note(error, recovery_error):
+    if isinstance(recovery_error, SceneLinkWriteRecoveryError):
+        failures = tuple(
+            (
+                failure.scene_index,
+                failure.key,
+                str(failure.error),
+            )
+            for failure in recovery_error.rollback_failures
+        )
+        error.add_note(
+            f"{recovery_error}; "
+            f"rollback_failures={failures!r}; "
+            f"residual_keys={recovery_error.residual_keys!r}"
+        )
+    else:
+        error.add_note(
+            f"Scene project link rollback failed: {recovery_error}"
+        )
+
+
 def _write_scene_links(scenes, values, links):
     snapshots = tuple(
         (scene, _scene_link_snapshot(scene, values))
@@ -202,12 +223,21 @@ def _write_scene_links(scenes, values, links):
         for scene, _snapshot in snapshots:
             attempted += 1
             links._write_scene_values(scene, values)
-    except Exception as write_error:
-        _rollback_scene_links(
-            snapshots,
-            write_error,
-            attempted=attempted,
-        )
+    except BaseException as write_error:
+        try:
+            _rollback_scene_links(
+                snapshots,
+                write_error,
+                attempted=attempted,
+            )
+        except BaseException as recovery_error:
+            if isinstance(write_error, _FATAL_EXCEPTIONS):
+                _add_scene_link_recovery_note(
+                    write_error,
+                    recovery_error,
+                )
+                raise write_error from recovery_error
+            raise
         raise
     return snapshots
 
@@ -376,7 +406,7 @@ def sync_project_session_links_for_scenes(*, session, scenes, blend_path):
     try:
         if targets:
             _write_scene_links(targets, values, links)
-    except Exception:
+    except BaseException:
         session.link_status = ProjectServiceStatus.INVALID.value
         session.mark_dirty("project_link")
         raise
@@ -425,7 +455,7 @@ def save_project_session_for_scenes(*, session, scenes, blend_path):
         if was_clean:
             session.mark_dirty("project_link")
         return result
-    except Exception:
+    except BaseException:
         session.sidecar_path = published.path
         session.link_status = ProjectServiceStatus.INVALID.value
         if was_clean:
@@ -499,8 +529,12 @@ def verify_project_session_for_scenes(
         return ProjectServiceResult(status, resolved.message, resolved.path)
     try:
         snapshots = _write_scene_links(scenes, linked_values, links)
-    except Exception:
-        close_project(resolved.project)
+    except BaseException as error:
+        _close_candidate_after_failure(
+            resolved.project,
+            error,
+            preserve_error=isinstance(error, _FATAL_EXCEPTIONS),
+        )
         session.link_status = ProjectServiceStatus.INVALID.value
         raise
     _adopt_verified_project(
@@ -575,28 +609,7 @@ def _adopt_verified_project(
                 _rollback_scene_links(scene_snapshots, error)
             except BaseException as recovery_error:
                 if fatal:
-                    if isinstance(
-                        recovery_error,
-                        SceneLinkWriteRecoveryError,
-                    ):
-                        failures = tuple(
-                            (
-                                failure.scene_index,
-                                failure.key,
-                                str(failure.error),
-                            )
-                            for failure in recovery_error.rollback_failures
-                        )
-                        error.add_note(
-                            f"{recovery_error}; "
-                            f"rollback_failures={failures!r}; "
-                            f"residual_keys={recovery_error.residual_keys!r}"
-                        )
-                    else:
-                        error.add_note(
-                            f"Scene project link rollback failed: "
-                            f"{recovery_error}"
-                        )
+                    _add_scene_link_recovery_note(error, recovery_error)
                 else:
                     _close_candidate_after_failure(candidate, recovery_error)
                     raise
@@ -634,8 +647,12 @@ def relink_project_session_for_scenes(
     )
     try:
         snapshots = _write_scene_links(scenes, values, links)
-    except Exception as error:
-        _close_candidate_after_failure(candidate, error)
+    except BaseException as error:
+        _close_candidate_after_failure(
+            candidate,
+            error,
+            preserve_error=isinstance(error, _FATAL_EXCEPTIONS),
+        )
         raise
     _adopt_verified_project(
         session,

@@ -41,6 +41,25 @@ LINK_KEYS = (
 )
 
 
+class FatalLinkWriteScene(dict):
+    def __init__(self, *args, error, rollback_failure_key=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.error = error
+        self.rollback_failure_key = rollback_failure_key
+        self.write_failed = False
+
+    def __setitem__(self, key, value):
+        if key == PROJECT_SCHEMA_KEY and not self.write_failed:
+            self.write_failed = True
+            raise self.error
+        super().__setitem__(key, value)
+
+    def __delitem__(self, key):
+        if self.write_failed and key == self.rollback_failure_key:
+            raise RuntimeError("Scene rollback failed")
+        super().__delitem__(key)
+
+
 class ProjectServiceTests(unittest.TestCase):
     def setUp(self):
         self.temporary = TemporaryDirectory()
@@ -268,6 +287,75 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(session.dirty_reasons, frozenset({"project_link"}))
         self.assertEqual(session.link_status, ProjectServiceStatus.INVALID.value)
 
+    def test_fatal_partial_scene_link_writes_restore_snapshot_and_identity(self):
+        links = project_service._project_links()
+        values = {
+            PROJECT_ID_KEY: str(PROJECT_ID),
+            PROJECT_SCHEMA_KEY: "0.2",
+            SIDECAR_LOCATOR_KEY: "candidate.cbq",
+            MANIFEST_HASH_KEY: "a" * 64,
+        }
+
+        for fatal in (
+            KeyboardInterrupt("link write interrupted"),
+            MemoryError("link write exhausted memory"),
+        ):
+            with self.subTest(error=type(fatal).__name__):
+                scene = FatalLinkWriteScene(
+                    {"scene-marker": "preserve"},
+                    error=fatal,
+                )
+
+                with self.assertRaises(type(fatal)) as raised:
+                    project_service._write_scene_links(
+                        (scene,),
+                        values,
+                        links,
+                    )
+
+                self.assertIs(raised.exception, fatal)
+                self.assertEqual(scene, {"scene-marker": "preserve"})
+
+    def test_fatal_incomplete_link_rollback_preserves_identity_and_structure(self):
+        links = project_service._project_links()
+        fatal = KeyboardInterrupt("link write interrupted")
+        scene = FatalLinkWriteScene(
+            {"scene-marker": "preserve"},
+            error=fatal,
+            rollback_failure_key=PROJECT_ID_KEY,
+        )
+        values = {
+            PROJECT_ID_KEY: str(PROJECT_ID),
+            PROJECT_SCHEMA_KEY: "0.2",
+            SIDECAR_LOCATOR_KEY: "candidate.cbq",
+            MANIFEST_HASH_KEY: "b" * 64,
+        }
+
+        with self.assertRaises(KeyboardInterrupt) as raised:
+            project_service._write_scene_links((scene,), values, links)
+
+        self.assertIs(raised.exception, fatal)
+        recovery = fatal.__cause__
+        self.assertIsInstance(
+            recovery,
+            project_service.SceneLinkWriteRecoveryError,
+        )
+        self.assertIs(recovery.write_error, fatal)
+        self.assertEqual(
+            tuple(
+                (failure.scene_index, failure.key, str(failure.error))
+                for failure in recovery.rollback_failures
+            ),
+            ((0, PROJECT_ID_KEY, "Scene rollback failed"),),
+        )
+        self.assertEqual(recovery.residual_keys, ((0, PROJECT_ID_KEY),))
+        self.assertIn(
+            "Scene project link write failed and rollback was incomplete",
+            fatal.__notes__[0],
+        )
+        self.assertIn("rollback_failures=", fatal.__notes__[0])
+        self.assertIn("residual_keys=", fatal.__notes__[0])
+
     def test_link_sync_identical_scene_is_noop_and_preserves_storage(self):
         class NoWriteScene(dict):
             def __setitem__(self, key, value):
@@ -458,6 +546,49 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(session.dirty_reasons, frozenset({"view_cache"}))
         self.assertEqual(self.storage_snapshot(session.sidecar_path), before)
 
+    def test_fatal_link_sync_restores_all_scenes_and_marks_retry(self):
+        session = self.create_session(project=sample_project())
+        old_blend = self.root / "fatal-sync-old" / "project.blend"
+        old_blend.parent.mkdir()
+        linked = {}
+        session.mark_dirty("import")
+        self.save_for_scenes(
+            session=session,
+            scenes=(linked,),
+            blend_path=old_blend,
+        )
+        new_blend = self.root / "fatal-sync-new" / "project.blend"
+        new_blend.parent.mkdir()
+        fatal = KeyboardInterrupt("link sync interrupted")
+        failing = FatalLinkWriteScene(
+            {"scene-marker": "preserve"},
+            error=fatal,
+        )
+        scenes = (linked, failing)
+        originals = tuple(dict(scene) for scene in scenes)
+        project = session.project
+        sidecar = session.sidecar_path
+        storage = self.storage_snapshot(sidecar)
+        session.mark_dirty("view_cache")
+
+        with self.assertRaises(KeyboardInterrupt) as raised:
+            project_service.sync_project_session_links_for_scenes(
+                session=session,
+                scenes=scenes,
+                blend_path=new_blend,
+            )
+
+        self.assertIs(raised.exception, fatal)
+        self.assertEqual(tuple(dict(scene) for scene in scenes), originals)
+        self.assertIs(session.project, project)
+        self.assertEqual(session.sidecar_path, sidecar)
+        self.assertEqual(session.link_status, ProjectServiceStatus.INVALID.value)
+        self.assertEqual(
+            session.dirty_reasons,
+            frozenset({"project_link", "view_cache"}),
+        )
+        self.assertEqual(self.storage_snapshot(sidecar), storage)
+
     def test_verify_identical_scene_links_adopts_project_once(self):
         sidecar = self.root / "identical.cbq"
         stored = sample_project()
@@ -520,6 +651,56 @@ class ProjectServiceTests(unittest.TestCase):
         )
         self.assertEqual(empty["scene-marker"], "empty")
         adopt.assert_called_once()
+
+    def test_fatal_multi_scene_verify_rolls_back_and_closes_candidate(self):
+        sidecar = self.root / "fatal-verify.cbq"
+        stored = sample_project()
+        save_project(sidecar, stored)
+        linked = self.linked_scene(sidecar, stored)
+        fatal = KeyboardInterrupt("verify link write interrupted")
+        failing = FatalLinkWriteScene(
+            {"scene-marker": "preserve"},
+            error=fatal,
+        )
+        scenes = (linked, failing)
+        originals = tuple(dict(scene) for scene in scenes)
+        session = self.create_session()
+        session.mark_dirty("import")
+        before = (
+            session.project,
+            session.sidecar_path,
+            session.dirty_reasons,
+        )
+        links = project_service._project_links()
+        record_open, opened_projects, lazy_values = (
+            self.loaded_candidate_recorder(links._open_project_with_manifest)
+        )
+
+        with patch.object(
+            links,
+            "_open_project_with_manifest",
+            side_effect=record_open,
+        ), patch.object(
+            project_service,
+            "close_project",
+            wraps=project_service.close_project,
+        ) as close:
+            with self.assertRaises(KeyboardInterrupt) as raised:
+                self.verify_for_scenes(session=session, scenes=scenes)
+
+        self.assertIs(raised.exception, fatal)
+        self.assertEqual(tuple(dict(scene) for scene in scenes), originals)
+        self.assertEqual(
+            (
+                session.project,
+                session.sidecar_path,
+                session.dirty_reasons,
+            ),
+            before,
+        )
+        self.assertEqual(session.link_status, ProjectServiceStatus.INVALID.value)
+        close.assert_called_once_with(opened_projects[0])
+        self.assertFalse(lazy_values[0].loaded)
 
     def test_multi_scene_verify_adoption_failure_restores_links_and_candidate(self):
         sidecar = self.root / "verify-adoption-failure.cbq"
@@ -898,6 +1079,34 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(scene, {"view-marker": "preserve"})
         self.assertTrue((self.root / "sample.cbq" / "manifest.json").is_file())
 
+    def test_fatal_save_link_write_rolls_back_and_marks_session_invalid(self):
+        session = self.create_session()
+        session.mark_dirty("import")
+        fatal = KeyboardInterrupt("save link write interrupted")
+        first = {"scene-marker": "first"}
+        failing = FatalLinkWriteScene(
+            {"scene-marker": "second"},
+            error=fatal,
+        )
+        scenes = (first, failing)
+        originals = tuple(dict(scene) for scene in scenes)
+        project = session.project
+        blend = self.root / "fatal-save.blend"
+
+        with self.assertRaises(KeyboardInterrupt) as raised:
+            self.save_for_scenes(
+                session=session,
+                scenes=scenes,
+                blend_path=blend,
+            )
+
+        self.assertIs(raised.exception, fatal)
+        self.assertEqual(tuple(dict(scene) for scene in scenes), originals)
+        self.assertIs(session.project, project)
+        self.assertEqual(session.sidecar_path, blend.with_suffix(".cbq").resolve())
+        self.assertEqual(session.link_status, ProjectServiceStatus.INVALID.value)
+        self.assertEqual(session.dirty_reasons, frozenset({"import"}))
+
     def test_save_new_generation_scene_failure_never_leaves_connected_status(self):
         session = self.create_session()
         blend = self.root / "existing.blend"
@@ -1259,6 +1468,61 @@ class ProjectServiceTests(unittest.TestCase):
             before,
         )
         self.assertEqual(session.dirty_reasons, frozenset({"import"}))
+
+    def test_fatal_multi_scene_relink_rolls_back_and_closes_candidate(self):
+        session = self.create_session()
+        session.mark_dirty("import")
+        candidate = self.root / "fatal-relink.cbq"
+        save_project(candidate, sample_project())
+        fatal = KeyboardInterrupt("relink write interrupted")
+        first = {"scene-marker": "first"}
+        failing = FatalLinkWriteScene(
+            {"scene-marker": "second"},
+            error=fatal,
+        )
+        scenes = (first, failing)
+        originals = tuple(dict(scene) for scene in scenes)
+        before = (
+            session.project,
+            session.sidecar_path,
+            session.link_status,
+            session.dirty_reasons,
+        )
+        record_open, opened_projects, lazy_values = (
+            self.loaded_candidate_recorder(
+                project_service._open_project_with_manifest
+            )
+        )
+
+        with patch.object(
+            project_service,
+            "_open_project_with_manifest",
+            side_effect=record_open,
+        ), patch.object(
+            project_service,
+            "close_project",
+            wraps=project_service.close_project,
+        ) as close:
+            with self.assertRaises(KeyboardInterrupt) as raised:
+                project_service.relink_project_session_for_scenes(
+                    session=session,
+                    scenes=scenes,
+                    sidecar_path=candidate,
+                )
+
+        self.assertIs(raised.exception, fatal)
+        self.assertEqual(tuple(dict(scene) for scene in scenes), originals)
+        self.assertEqual(
+            (
+                session.project,
+                session.sidecar_path,
+                session.link_status,
+                session.dirty_reasons,
+            ),
+            before,
+        )
+        close.assert_called_once_with(opened_projects[0])
+        self.assertFalse(lazy_values[0].loaded)
 
     def test_multi_scene_relink_opens_once_and_closes_old_project_once(self):
         session = self.create_session()
