@@ -34,12 +34,12 @@
 - Produce a CLI opt-in that adds these two fields while the existing CLI
   command remains byte-identical.
 
-- [ ] **Step 1: Add classification RED tests**
+- [x] **Step 1: Add classification RED tests**
 
 Cover stable/alpha/beta/rc and invalid versions. Assert the default canonical
 CLI bytes from Task 1 do not change.
 
-- [ ] **Step 2: Implement via shared parser**
+- [x] **Step 2: Implement via shared parser**
 
 Do not add a second regex or version split. The new CLI option only merges the
 channel document when explicitly requested.
@@ -52,13 +52,13 @@ channel document when explicitly requested.
 - Modify: `.github/workflows/extension-release.yml`
 - Modify: `tests/test_repository_contract.py`
 
-- [ ] **Step 1: Add release workflow RED assertions**
+- [x] **Step 1: Add release workflow RED assertions**
 
 Require tagged-source metadata helper invocation, exact tag `v<metadata.version>`,
 metadata-derived artifact/package/checksum names and channel outputs. Remove
 hardcoded release-name construction and the stable-only Bash tag regex.
 
-- [ ] **Step 2: Route verify/publish jobs**
+- [x] **Step 2: Route verify/publish jobs**
 
 Expose verify job outputs for version, artifact/package/checksum names, channel
 and `is_prerelease`. Download and verify the exact existing artifact; never
@@ -72,13 +72,13 @@ rebuild.
 - Modify: `.github/workflows/extension-release.yml`
 - Modify: `tests/test_repository_contract.py`
 
-- [ ] **Step 1: Add flag-branch RED assertions**
+- [x] **Step 1: Add flag-branch RED assertions**
 
 Prerelease branch must create/edit with `--prerelease`, publish the draft
 without `--latest`, assert `isPrerelease`, and assert the tag is not the latest
 release. Final branch must retain `--latest` and latest-tag verification.
 
-- [ ] **Step 2: Implement one final/prerelease branch**
+- [x] **Step 2: Implement one final/prerelease branch**
 
 Keep common draft creation, asset digest verification and notes handling. Only
 publication flags and post-publication assertions branch.
@@ -92,12 +92,12 @@ publication flags and post-publication assertions branch.
 - Modify: `docs/development/branch-and-release.md`
 - Modify: `tests/test_repository_contract.py`
 
-- [ ] **Step 1: Extend retention**
+- [x] **Step 1: Extend retention**
 
 Use 30 days for tag artifacts and retain 14 days for non-tag builds through one
 GitHub expression. Document the review window.
 
-- [ ] **Step 2: Document prerelease procedure**
+- [x] **Step 2: Document prerelease procedure**
 
 Update tag grammar, CI-to-release table and publication behavior. Explicitly
 state prereleases are never latest and publication remains manual.
@@ -110,17 +110,17 @@ state prereleases are never latest and publication remains manual.
 - Modify: `.agents/active/2.3.0-wave-0-platform-foundation.md`
 - Modify: this plan
 
-- [ ] **Step 1: Run focused/full tests**
+- [x] **Step 1: Run focused/full tests**
 
 Run release metadata/repository contract/docs tests, full `unittest`,
 `compileall`, workflow hardcode/action-pin audits and `git diff --check`.
 
-- [ ] **Step 2: Independent review**
+- [x] **Step 2: Independent review**
 
 Review tagged-source trust, exact-run selection, shell quoting, output routing,
 permissions, prerelease/latest flags, digest verification and documentation.
 
-- [ ] **Step 3: Commit and checkpoint**
+- [x] **Step 3: Commit and checkpoint**
 
 Implementation commit:
 
@@ -138,12 +138,20 @@ Task 6 — Build the Wave 0 alpha candidate without publishing
 
 ## Completion checkpoint
 
-- State: `in_progress`
+- State: `completed`
 - Baseline: `0efa828d6c7e8114d3d66c5e0bb926a7c1b7ce15`
-- Planning commit: pending
-- Implementation commit: pending
-- Prerelease publication static contract: `Not Run`
-- Final publication regression: `Not Run`
+- Planning commit: `f40238651aa82b7ae2f714c8f2442580ec8e6fb2`
+- Implementation commit: `b036127d364ade20d44faf5f9268d62e334cade2`
+- Review-fix commit: `327e4f45364661640950e8382d094d35662e168d`
+- RED evidence: channel helper/CLI produced 5 errors and 1 failure; workflow,
+  retention, prerelease/latest and documentation contracts produced 4 failures;
+  immutable tag-commit contract produced 1 failure.
+- GREEN evidence: focused 36/36 Passed; full 991 Passed, 28 Skipped and
+  0 Failed; compileall, four Bash syntax checks and diff-check Passed.
+- Prerelease publication static contract: `Passed`
+- Final publication regression: `Passed`
+- Immutable tag provenance: `Passed`
+- Independent review: one Important fixed; scoped re-review `ADDRESSED`.
 - Workflow dispatch/publication: `Not Run`
 - Remote CI: `Not Run`
 - Next task: `Task 6 — Build the Wave 0 alpha candidate without publishing`
