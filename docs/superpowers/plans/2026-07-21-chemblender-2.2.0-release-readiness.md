@@ -278,7 +278,7 @@ Expected targets include caches, `.blend-analysis/`, generated extension ZIP, an
 
 - [x] **Step 2: Resolve and remove only approved targets**
 
-Verify every resolved path remains under `D:\workspace\ChemBlender_2_x`, then remove:
+Verify every resolved path remains under `<repository-worktree>`, then remove:
 
 ```text
 .blend-analysis/

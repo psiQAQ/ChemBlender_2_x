@@ -66,7 +66,19 @@ Merge the focused feature or release branch into maintained `main`. Confirm that
 git switch main
 git pull --ff-only origin main
 $pythonBin = 'C:\Program Files\Blender Foundation\Blender 5.1\5.1\python\bin\python.exe'
-$version = '2.2.0'
+$metadataJson = & $pythonBin `
+  ChemBlender/scripts/release_metadata.py `
+  --extension-root ChemBlender `
+  --format json
+if ($LASTEXITCODE -ne 0) {
+    throw "Release metadata validation failed"
+}
+$metadata = $metadataJson | ConvertFrom-Json
+$version = $metadata.version
+$packageName = $metadata.package_name
+$checksumName = $metadata.checksum_name
+$artifactName = $metadata.artifact_name
+$tag = "v$version"
 & $pythonBin ChemBlender/scripts/extract_release_notes.py `
   --changelog CHANGELOG.md --version $version `
   --output '.agents/cache/release-notes.md'
@@ -79,8 +91,6 @@ Do not release directly from `archive/*` or a downstream branch. Do not treat a 
 ### 2. Create and push one annotated tag
 
 ```powershell
-$tag = "v$version"
-
 git tag -a $tag -m "Release $tag"
 git show --no-patch --decorate $tag
 git push origin $tag
@@ -92,7 +102,7 @@ Push only the intended tag; do not use `git push --follow-tags`. Supported tags 
 
 ```powershell
 $repo = 'psiQAQ/ChemBlender_2_x'
-gh workflow run extension-release.yml --repo $repo `
+gh workflow run extension-release.yml --repo $repo --ref main `
   -f tag=$tag -f publish=false
 gh run list --repo $repo --workflow extension-release.yml `
   --event workflow_dispatch --limit 5
@@ -103,7 +113,7 @@ This run is read-only. It selects the successful package run by exact tag commit
 ### 4. Dispatch publication
 
 ```powershell
-gh workflow run extension-release.yml --repo $repo `
+gh workflow run extension-release.yml --repo $repo --ref main `
   -f tag=$tag -f publish=true
 ```
 
@@ -127,3 +137,4 @@ Record the tag commit, package run URL, verification and publication run URLs, c
 
 - 2.1.1: final legacy add-on; asset compression only.
 - 2.2.0: first published extension; source under `ChemBlender/`, offline RDKit wheel, extension-native install, and package CI.
+- 2.3.0-alpha.1: Wave 0 platform-foundation prerelease candidate; publication pending PR, `main`, and exact-tag remote gates.

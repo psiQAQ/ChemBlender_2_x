@@ -31,7 +31,7 @@
 
 **RED or audit evidence:**
 - `docs/development/branch-and-release.md` contains `$version = '2.2.0'`.
-- Tracked agent/probe Markdown contains `C:\Users\ustcw` and exact random temporary paths.
+- Tracked agent/probe Markdown contains `C:\Users\<username>` and exact random temporary paths.
 - The active cursor records externally reviewed HEAD `97bb15f9...`.
 
 **Implementation:**
@@ -42,7 +42,7 @@
 - Set the reviewed baseline to `8f8234fc1617c8bb9f07608d9b3a6195bd46dc5b`.
 
 **Verification:**
-- Run an ordinal tracked-text scan for `C:\Users\ustcw`.
+- Run an ordinal tracked-text scan for `C:\Users\`.
 - Run `python -m unittest tests.test_repository_contract tests.test_quantum_visualization_docs -v`.
 - Confirm the manifest and changelog version bytes are unchanged.
 
@@ -205,20 +205,29 @@
 - The checkpoint push changes the PR HEAD, so all earlier green checks become evidence for the previous head only.
 
 **Implementation:**
-- Record planning/hygiene/CI-fix commits, PR URL, exact remote run/artifact evidence, local suite counts, and explicit Not Run/Not Created states.
+- Record planning/hygiene/CI-fix commits, PR URL, the pre-checkpoint remote
+  run/artifact evidence, local suite counts, and explicit Not Run/Not Created
+  states. Mark the checkpoint-head CI and artifact as pending because they
+  cannot exist before the commit that triggers them.
 - Mark all plan tasks complete and the cursor `completed`.
 - Commit `chore: checkpoint alpha PR remote CI gate` and push only the feature branch.
-- Wait for checks on the checkpoint commit and independently verify the checkpoint-head artifact again if the workflow produces a new artifact.
+- Wait for checks on the checkpoint commit and independently verify the
+  checkpoint-head artifact. Record those exact final values in a PR comment
+  and the final report without creating another source commit.
 
 **Verification:**
 - Local/remote feature refs equal the checkpoint SHA.
 - Final checkpoint HEAD PR checks are all green.
-- Final checkpoint-head artifact verifier exits 0 and its evidence replaces prior-head evidence.
+- Final checkpoint-head artifact verifier exits 0 and the PR comment/report
+  clearly supersede the pre-checkpoint cursor evidence.
 - Worktree is clean.
 - `main` is unchanged; no tag, workflow dispatch, or GitHub Release exists.
 
 **Commit boundary:** `chore: checkpoint alpha PR remote CI gate`.
 
-**Remote evidence:** Final PR HEAD, final package run ID/URL, artifact ID/name, hashes, verifier result, and PR comment.
+**Remote evidence:** The committed cursor contains pre-checkpoint evidence and
+an explicit pending marker. The PR comment and final report contain the final
+PR HEAD, final package run ID/URL, artifact ID/name, hashes, and verifier
+result.
 
 **Stop boundary:** Stop with the draft PR unmerged. The next action requires explicit authorization to merge the reviewed PR.

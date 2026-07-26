@@ -217,6 +217,50 @@ class RepositoryContractTests(unittest.TestCase):
         for action in actions:
             self.assertRegex(action, r"@[0-9a-f]{40}$")
 
+    def test_release_workflow_requires_default_branch_dispatch_ref(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "extension-release.yml"
+        ).read_text(encoding="utf-8")
+
+        verify_job = workflow.split("\n  verify:", 1)[1].split("\n  publish:", 1)[0]
+        steps = verify_job.split("\n    steps:\n", 1)[1]
+        first_step = re.search(r"(?m)^      - (.+)$", steps)
+        self.assertIsNotNone(first_step)
+        self.assertEqual(
+            first_step.group(1),
+            "name: Require default-branch workflow ref",
+        )
+        self.assertIn("- name: Require default-branch workflow ref", workflow)
+        self.assertIn("WORKFLOW_REF: ${{ github.ref }}", workflow)
+        self.assertIn(
+            "DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}",
+            workflow,
+        )
+        self.assertIn('expected="refs/heads/$DEFAULT_BRANCH"', workflow)
+        self.assertIn('if [[ "$WORKFLOW_REF" != "$expected" ]]', workflow)
+
+    def test_release_documentation_dispatches_release_workflow_from_main(self):
+        documentation = (
+            ROOT / "docs" / "development" / "branch-and-release.md"
+        ).read_text(encoding="utf-8")
+        lines = documentation.splitlines()
+        dispatches = []
+        for index, line in enumerate(lines):
+            if not line.startswith("gh workflow run extension-release.yml"):
+                continue
+            command = line
+            while command.rstrip().endswith("`"):
+                index += 1
+                command = f"{command} {lines[index].strip()}"
+            dispatches.append(command)
+
+        self.assertEqual(len(dispatches), 2)
+        for command in dispatches:
+            self.assertEqual(
+                re.findall(r"(?:^|\s)--ref\s+(\S+)", command),
+                ["main"],
+            )
+
     def test_release_workflow_derives_identity_from_tagged_metadata(self):
         workflow = (
             ROOT / ".github" / "workflows" / "extension-release.yml"
