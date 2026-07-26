@@ -106,12 +106,54 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("timeout-minutes:", workflow)
         self.assertIn("BLENDER_USER_RESOURCES", workflow)
         self.assertIn("--python-exit-code 1", workflow)
-        self.assertIn("chemblender-2.2.0.sha256", workflow)
         self.assertIn("if: github.ref_type == 'tag'", workflow)
         self.assertIn("GITHUB_REF_NAME.TrimStart('v')", workflow)
         self.assertIn("Tag $tagVersion does not match manifest $manifestVersion", workflow)
         self.assertIn("blender-5.1.2.sha256", workflow)
         self.assertIn("f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48", workflow)
+
+    def test_package_workflow_derives_names_from_release_metadata(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "extension-package.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn("chemblender-2.2.0", workflow)
+        self.assertNotIn("blender_manifest.toml", workflow)
+        self.assertEqual(workflow.count("release_metadata.py"), 1)
+        self.assertIn("id: release_metadata", workflow)
+        self.assertIn(
+            "release_metadata.py --extension-root ChemBlender --format json",
+            workflow,
+        )
+        self.assertIn("ConvertFrom-Json", workflow)
+        self.assertIn("[IO.File]::AppendAllText(", workflow)
+        self.assertIn("$env:GITHUB_OUTPUT", workflow)
+        self.assertIn("[Text.UTF8Encoding]::new($false)", workflow)
+        for name in (
+            "version",
+            "package_name",
+            "checksum_name",
+            "artifact_name",
+        ):
+            self.assertIn(f'"{name}=$($metadata.{name})"', workflow)
+
+        self.assertEqual(
+            workflow.count("steps.release_metadata.outputs.version"),
+            2,
+        )
+        self.assertEqual(
+            workflow.count("steps.release_metadata.outputs.package_name"),
+            2,
+        )
+        self.assertEqual(
+            workflow.count("steps.release_metadata.outputs.checksum_name"),
+            2,
+        )
+        self.assertEqual(
+            workflow.count("steps.release_metadata.outputs.artifact_name"),
+            1,
+        )
+        self.assertIn('"$hash  $packageName`n"', workflow)
 
     def test_blender_smoke_covers_release_artifact(self):
         smoke = (ROOT / "tests" / "blender_smoke.py").read_text(encoding="utf-8")
