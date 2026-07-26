@@ -260,21 +260,15 @@ def _save_pre_handler(_dummy):
         session.sidecar_path is not None
         and Path(session.sidecar_path).resolve() == desired_sidecar
     )
-    view_cache_only = reasons == frozenset({"view_cache"}) and same_sidecar
     link_only = (
         same_sidecar
         and (
             not reasons
-            or (
-                reasons <= link_retry_reasons
-                and "project_link" in reasons
-            )
+            or reasons <= link_retry_reasons
         )
     )
     try:
-        if view_cache_only:
-            result = None
-        elif link_only:
+        if link_only:
             result = sync_project_session_links_for_scenes(
                 session=session,
                 scenes=tuple(bpy.data.scenes),
@@ -286,8 +280,7 @@ def _save_pre_handler(_dummy):
                 scenes=tuple(bpy.data.scenes),
                 blend_path=blend_path,
             )
-        if result is not None:
-            _record_result(result)
+        _record_result(result)
         if session.link_status == "connected":
             repair_project_view_caches(
                 session=session,

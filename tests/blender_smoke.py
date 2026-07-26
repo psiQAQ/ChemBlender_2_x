@@ -3,7 +3,6 @@ import importlib
 import importlib.util
 import json
 import math
-import shutil
 import sys
 from dataclasses import replace
 from importlib.metadata import version
@@ -1058,6 +1057,11 @@ def assert_grid_volume_adapter(module_key):
             stable_mtime = cache.stat().st_mtime_ns
             assert adapter.ensure_grid_volume_cache(grid, cache) == cache
             assert cache.stat().st_mtime_ns == stable_mtime
+            cache.write_bytes(b"corrupt VDB")
+            assert adapter.ensure_grid_volume_cache(grid, cache) == cache
+            assert openvdb.read(str(cache), "density").getAccessor().getValue(
+                (1, 0, 1)
+            ) == 5.0
             cache.unlink()
             assert adapter.ensure_grid_volume_cache(grid, cache) == cache
             assert openvdb.read(str(cache), "density").getAccessor().getValue(
@@ -1543,6 +1547,7 @@ def assert_periodic_electronic_plots(module_key):
 
 def assert_scene_preset_application(module_key):
     import numpy
+    import openvdb
 
     core = importlib.import_module(f"{module_key}.core")
     view = importlib.import_module(f"{module_key}.scene_preset_view")
@@ -1722,7 +1727,17 @@ def assert_scene_preset_application(module_key):
                 (sidecar / "cache" / "render" / "surface").glob("*.vdb")
             )
             assert len(durable_files) == 3
-            shutil.rmtree(sidecar / "cache" / "render")
+            durable_files[0].write_bytes(b"corrupt VDB")
+            assert view_cache.repair_project_view_caches(
+                session=session,
+                objects=(*signed_objects, property_obj),
+                blend_path=Path(cache_root) / "durable.blend",
+            ) == 3
+            assert len(openvdb.readAll(str(durable_files[0]))[0]) in {1, 2}
+            cleared = core.clear_derived_cache(sidecar_path=sidecar)
+            assert cleared.complete
+            assert sidecar / "cache" / "render" in cleared.removed_paths
+            session.mark_dirty("view_cache")
             assert view_cache.repair_project_view_caches(
                 session=session,
                 objects=(*signed_objects, property_obj),

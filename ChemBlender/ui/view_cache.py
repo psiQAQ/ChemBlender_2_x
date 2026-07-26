@@ -25,6 +25,22 @@ def _is_link_like(path):
     return path.is_symlink() or path.is_junction()
 
 
+def _absolute_path(path):
+    return Path(os.path.abspath(path))
+
+
+def _safe_cache_target(target, cache_root):
+    target = _absolute_path(target)
+    cache_root = _absolute_path(cache_root)
+    if cache_root not in target.parents:
+        raise ViewCacheError("derived cache escaped the verified sidecar")
+    if _is_link_like(target):
+        raise ViewCacheError("final render cache path is unsafe")
+    if target.exists() and not target.is_file():
+        raise ViewCacheError("final render cache path is unsafe")
+    return target
+
+
 def _durable_cache_root(sidecar_path):
     sidecar = Path(sidecar_path)
     if sidecar.suffix.lower() != ".cbq" or not sidecar.is_dir():
@@ -155,13 +171,15 @@ def _target_and_ensure(obj, plan, project, cache_root):
         _require(obj.get("cb_dataset_index"), index, "dataset index")
         _require(obj.get("cb_cache_format_version"), _CACHE_FORMAT_VERSION, "cache format")
         _require(obj.get("cb_render_cache_key"), key, "render cache key")
-        target = cache_root / "volume" / f"{key}.vdb"
+        target = _safe_cache_target(
+            cache_root / "volume" / f"{key}.vdb", cache_root
+        )
         actual = _ensure_grid_volume_cache(
             grid, target, dataset_index=index
         )
-        if Path(actual).resolve() != target.resolve():
+        if _absolute_path(actual) != target:
             raise ViewCacheError("cache writer returned an unexpected path")
-        return target
+        return _safe_cache_target(target, cache_root)
     if plan.view_kind == "signed_isosurface":
         grid = _entity(plan, project, "grid")
         index = settings["dataset_index"]
@@ -174,7 +192,9 @@ def _target_and_ensure(obj, plan, project, cache_root):
         _require(obj.get("cb_dataset_index"), index, "dataset index")
         _require(obj.get("cb_cache_format_version"), _CACHE_FORMAT_VERSION, "cache format")
         _require(obj.get("cb_render_cache_key"), key, "render cache key")
-        target = cache_root / "surface" / f"{key}.vdb"
+        target = _safe_cache_target(
+            cache_root / "surface" / f"{key}.vdb", cache_root
+        )
         actual = _ensure_signed_surface_cache(
             grid,
             target,
@@ -182,9 +202,9 @@ def _target_and_ensure(obj, plan, project, cache_root):
             render_identity=plan.render_identity,
             phase=phase,
         )
-        if Path(actual).resolve() != target.resolve():
+        if _absolute_path(actual) != target:
             raise ViewCacheError("cache writer returned an unexpected path")
-        return target
+        return _safe_cache_target(target, cache_root)
     surface = _entity(plan, project, "surface_grid")
     prop = _entity(plan, project, "property_grid")
     surface_index = settings["surface_dataset_index"]
@@ -206,7 +226,9 @@ def _target_and_ensure(obj, plan, project, cache_root):
     )
     _require(obj.get("cb_cache_format_version"), _CACHE_FORMAT_VERSION, "cache format")
     _require(obj.get("cb_render_cache_key"), key, "render cache key")
-    target = cache_root / "surface" / f"{key}.vdb"
+    target = _safe_cache_target(
+        cache_root / "surface" / f"{key}.vdb", cache_root
+    )
     actual = _ensure_property_surface_cache(
         surface,
         prop,
@@ -215,9 +237,9 @@ def _target_and_ensure(obj, plan, project, cache_root):
         property_dataset_index=property_index,
         render_identity=plan.render_identity,
     )
-    if Path(actual).resolve() != target.resolve():
+    if _absolute_path(actual) != target:
         raise ViewCacheError("cache writer returned an unexpected path")
-    return target
+    return _safe_cache_target(target, cache_root)
 
 
 def _ensure_grid_volume_cache(grid, path, **kwargs):
@@ -239,23 +261,100 @@ def _ensure_property_surface_cache(surface_grid, property_grid, path, **kwargs):
 
 
 def _blender_path(path, blend_path):
-    absolute = str(Path(path).resolve())
+    absolute = str(_absolute_path(path))
     if absolute.startswith("\\\\?\\"):
         raise ViewCacheError("extended path prefixes must not enter Blender RNA")
     try:
-        relative = os.path.relpath(absolute, Path(blend_path).resolve().parent)
+        relative = os.path.relpath(absolute, _absolute_path(blend_path).parent)
     except ValueError:
         return absolute
     return "//" + Path(relative).as_posix()
 
 
+def _blender_absolute_path(value, blend_path):
+    if not isinstance(value, str) or not value:
+        return None
+    if value.startswith("\\\\") or value.startswith("\\\\?\\"):
+        return None
+    if value.startswith("//"):
+        relative = value[2:].replace("/", os.sep)
+        return _absolute_path(_absolute_path(blend_path).parent / relative)
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        return None
+    return _absolute_path(candidate)
+
+
+def _is_owned_cache_file(path, root):
+    root = _absolute_path(root)
+    path = _absolute_path(path)
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        return False
+    if not relative.parts:
+        return False
+    current = root
+    for part in relative.parts:
+        if _is_link_like(current):
+            return False
+        current = current / part
+    if _is_link_like(path) or not path.is_file():
+        return False
+    return True
+
+
+def _validate_fallback_cache(
+    *,
+    session,
+    obj,
+    plan,
+    old_filepath,
+    blend_path,
+    cache_root,
+):
+    path = _blender_absolute_path(old_filepath, blend_path)
+    if path is None:
+        return False
+    roots = (
+        session.temporary_root / "view-cache",
+        cache_root,
+    )
+    if not any(_is_owned_cache_file(path, root) for root in roots):
+        return False
+    try:
+        if plan.view_kind == "grid_volume":
+            from ..grid_volume import _validate_vdb
+
+            grid = _entity(plan, session.project, "grid")
+            index = dict(plan.settings)["dataset_index"]
+            key = volume_render_cache_key(grid, dataset_index=index)
+            _validate_vdb(path, ("density",), key)
+        elif plan.view_kind == "signed_isosurface":
+            from ..surface_view import _validate_vdb
+
+            phase = obj.get("cb_surface_phase")
+            if phase not in {"positive", "negative"}:
+                return False
+            key = _surface_key(plan.render_identity, phase)
+            _validate_vdb(path, ("density",), key)
+        else:
+            from ..surface_view import _validate_vdb
+
+            key = _surface_key(plan.render_identity, "property")
+            _validate_vdb(path, ("density", "property"), key)
+    except BaseException:
+        return False
+    return True
+
+
 def repair_project_view_caches(*, session, objects, blend_path):
     """Repair owned Volume caches without changing scientific project state."""
-    if session.sidecar_path is None or session.link_status != "connected":
-        raise ViewCacheError("view cache repair requires a connected session")
-    cache_root = _durable_cache_root(session.sidecar_path)
     repaired = 0
     try:
+        if session.sidecar_path is None or session.link_status != "connected":
+            raise ViewCacheError("view cache repair requires a connected session")
+        cache_root = _durable_cache_root(session.sidecar_path)
         for obj in tuple(objects):
             if getattr(obj, "type", None) != "VOLUME":
                 continue
@@ -265,22 +364,31 @@ def repair_project_view_caches(*, session, objects, blend_path):
             old_filepath = obj.data.filepath
             old_cache_path = obj.get("cb_cache_path")
             try:
-                target = Path(
+                target = _safe_cache_target(
                     _target_and_ensure(
                         obj, plan, session.project, cache_root
-                    )
-                ).resolve(strict=True)
-                if cache_root.resolve(strict=True) not in target.parents:
-                    raise ViewCacheError("derived cache escaped the verified sidecar")
+                    ),
+                    cache_root,
+                )
+                if not target.is_file():
+                    raise ViewCacheError("render cache writer did not create a file")
                 obj.data.filepath = _blender_path(target, blend_path)
                 obj.data.grids.load()
                 obj["cb_cache_path"] = str(target)
             except BaseException as error:
                 obj.data.filepath = old_filepath
-                try:
-                    obj.data.grids.load()
-                except BaseException:
-                    pass
+                if _validate_fallback_cache(
+                    session=session,
+                    obj=obj,
+                    plan=plan,
+                    old_filepath=old_filepath,
+                    blend_path=blend_path,
+                    cache_root=cache_root,
+                ):
+                    try:
+                        obj.data.grids.load()
+                    except BaseException:
+                        pass
                 if old_cache_path is None:
                     try:
                         del obj["cb_cache_path"]

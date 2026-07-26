@@ -264,6 +264,90 @@ class AtomicPathBudgetTests(unittest.TestCase):
             self.assertEqual(len(replacements), 1)
             self.assert_short_replace_source(*replacements[0])
 
+    def test_vdb_adapters_reject_final_file_links_without_external_access(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            outside = root / "outside.vdb"
+            original = b"external cache must remain unchanged"
+            outside.write_bytes(original)
+            reads = []
+            writes = []
+
+            def write_vdb(path, _grids, metadata=None):
+                writes.append(Path(path))
+                Path(path).write_bytes(b"mutated")
+
+            fake_bpy, fake_openvdb = _fake_blender_modules(write_vdb)
+            real_read_all = fake_openvdb.readAll
+
+            def read_all(path):
+                reads.append(Path(path))
+                return real_read_all(path)
+
+            fake_openvdb.readAll = read_all
+            with patch.dict(
+                sys.modules,
+                {"bpy": fake_bpy, "openvdb": fake_openvdb},
+            ):
+                sys.modules.pop("ChemBlender.grid_volume", None)
+                sys.modules.pop("ChemBlender.surface_view", None)
+                grid_module = importlib.import_module("ChemBlender.grid_volume")
+                surface_module = importlib.import_module("ChemBlender.surface_view")
+                dataset = sample_project().datasets[GRID_ID]
+
+                for name, ensure in (
+                    (
+                        "grid",
+                        lambda path: grid_module.ensure_grid_volume_cache(
+                            dataset, path
+                        ),
+                    ),
+                    (
+                        "surface",
+                        lambda path: surface_module.ensure_signed_surface_cache(
+                            dataset,
+                            path,
+                            dataset_index=0,
+                            render_identity="render",
+                            phase="positive",
+                        ),
+                    ),
+                    (
+                        "property",
+                        lambda path: surface_module.ensure_property_surface_cache(
+                            dataset,
+                            dataset,
+                            path,
+                            surface_dataset_index=0,
+                            property_dataset_index=0,
+                            render_identity="render",
+                        ),
+                    ),
+                ):
+                    with self.subTest(adapter=name):
+                        destination = root / f"{name}.vdb"
+                        module = (
+                            grid_module if name == "grid" else surface_module
+                        )
+                        with patch.object(
+                            module,
+                            "_is_link_like",
+                            side_effect=lambda path, expected=destination: (
+                                path == expected
+                            ),
+                        ):
+                            with self.assertRaisesRegex(
+                                OSError, "filesystem link"
+                            ):
+                                ensure(destination)
+                        self.assertEqual(reads, [])
+                        self.assertEqual(writes, [])
+                        self.assertFalse(destination.exists())
+                        self.assertEqual(outside.read_bytes(), original)
+
+            sys.modules.pop("ChemBlender.surface_view", None)
+            sys.modules.pop("ChemBlender.grid_volume", None)
+
     def test_grid_primary_error_wins_when_cleanup_also_fails(self):
         with TemporaryDirectory() as temporary:
             def write_vdb(path, _grid, metadata=None):

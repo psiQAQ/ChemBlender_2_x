@@ -15,6 +15,21 @@ _ANGSTROM_SCALE = {
 }
 
 
+def _is_link_like(path):
+    return path.is_symlink() or path.is_junction()
+
+
+def _absolute_path(path):
+    return Path(os.path.abspath(path))
+
+
+def _safe_vdb_path(path):
+    path = _absolute_path(path)
+    if _is_link_like(path):
+        raise OSError("cache_path must not be a filesystem link")
+    return path
+
+
 def _selected_values(grid, dataset_index):
     import numpy as np
 
@@ -63,7 +78,7 @@ def volume_cache_path(cache_root, grid, *, dataset_index=None):
     if not isinstance(grid, Grid3D):
         raise TypeError("grid must be a Grid3D")
     dataset_index = _dataset_index(grid, dataset_index)
-    cache_root = Path(cache_root).resolve()
+    cache_root = _safe_vdb_path(cache_root)
     key = volume_render_cache_key(grid, dataset_index=dataset_index)
     return cache_root / "volume" / f"{key}.vdb"
 
@@ -91,11 +106,12 @@ def ensure_grid_volume_cache(grid, cache_path, *, dataset_index=None):
         raise ValueError(
             f"unsupported Grid3D coordinate unit: {grid.coordinate_unit}"
         ) from error
-    cache_path = Path(cache_path).resolve()
+    cache_path = _safe_vdb_path(cache_path)
     if cache_path.is_dir():
         cache_path = volume_cache_path(
             cache_path, grid, dataset_index=dataset_index
         )
+        cache_path = _safe_vdb_path(cache_path)
     elif cache_path.suffix.lower() != ".vdb":
         raise ValueError("cache_path must use the .vdb suffix")
     cache_path.parent.mkdir(exist_ok=True)

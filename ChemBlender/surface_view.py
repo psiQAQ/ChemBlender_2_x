@@ -15,8 +15,19 @@ from .grid_volume import _ANGSTROM_SCALE, _selected_values, _transform_matrix
 _PROPERTY_ATTRIBUTE = "cbq_surface_property"
 
 
+def _is_link_like(path):
+    return path.is_symlink() or path.is_junction()
+
+
+def _safe_vdb_path(path):
+    path = Path(os.path.abspath(path))
+    if _is_link_like(path):
+        raise OSError("cache_path must not be a filesystem link")
+    return path
+
+
 def surface_cache_path(cache_root, render_identity, variant):
-    root = Path(cache_root).resolve() / "surface"
+    root = _safe_vdb_path(cache_root) / "surface"
     root.mkdir(parents=True, exist_ok=True)
     key = hashlib.sha256(f"{render_identity}:{variant}".encode("utf-8")).hexdigest()
     return root / f"{key}.vdb", key
@@ -50,6 +61,7 @@ def _write_vdb(path, grids, metadata, grid_names=None, render_key=None):
         grid_names = tuple(grid.name for grid in grids)
     if render_key is None:
         render_key = metadata.get("chemblender_render_cache_key")
+    path = _safe_vdb_path(path)
     temporary = short_sibling_temporary_path(path)
     try:
         openvdb.write(str(temporary), list(grids), metadata=metadata)
@@ -80,7 +92,7 @@ def ensure_signed_surface_cache(
     if phase not in {"positive", "negative"}:
         raise ValueError("phase must be positive or negative")
     scale = _ANGSTROM_SCALE[grid.coordinate_unit]
-    path = Path(cache_path).resolve()
+    path = _safe_vdb_path(cache_path)
     if path.suffix.lower() != ".vdb":
         raise ValueError("cache_path must use the .vdb suffix")
     path.parent.mkdir(exist_ok=True)
@@ -134,7 +146,7 @@ def ensure_property_surface_cache(
     ):
         raise ValueError("surface and property grids must share one affine grid")
     scale = _ANGSTROM_SCALE[surface_grid.coordinate_unit]
-    path = Path(cache_path).resolve()
+    path = _safe_vdb_path(cache_path)
     if path.suffix.lower() != ".vdb":
         raise ValueError("cache_path must use the .vdb suffix")
     path.parent.mkdir(exist_ok=True)

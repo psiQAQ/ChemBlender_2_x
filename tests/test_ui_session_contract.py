@@ -557,6 +557,10 @@ class UiSessionContractTests(unittest.TestCase):
             wraps=project_service.solidify_session,
         ) as publish, patch.object(
             self.ui,
+            "sync_project_session_links_for_scenes",
+            wraps=self.ui.sync_project_session_links_for_scenes,
+        ) as verify, patch.object(
+            self.ui,
             "repair_project_view_caches",
             side_effect=lambda **values: (
                 values["session"].clear_dirty("view_cache"),
@@ -567,12 +571,49 @@ class UiSessionContractTests(unittest.TestCase):
             self.ui._save_pre_handler(None)
 
         publish.assert_not_called()
+        verify.assert_called_once_with(
+            session=session,
+            scenes=(self.scene,),
+            blend_path=self.fake_bpy.data.filepath,
+        )
         repair.assert_called_once_with(
             session=session,
             objects=(),
             blend_path=self.fake_bpy.data.filepath,
         )
         self.assertFalse(session.dirty)
+
+    def test_view_cache_retry_reverifies_sidecar_before_cache_mutation(self):
+        session = self.ui.get_scene_session(self.scene)
+        session.mark_dirty("import")
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "replaced-view-cache.blend"
+        )
+        self.ui._save_pre_handler(None)
+        sidecar = Path(self.temporary.name) / "replaced-view-cache.cbq"
+        sidecar.rename(Path(self.temporary.name) / "verified-away.cbq")
+        sidecar.mkdir()
+        session.mark_dirty("view_cache")
+
+        with patch.object(
+            project_service,
+            "solidify_session",
+            wraps=project_service.solidify_session,
+        ) as publish, patch.object(
+            self.ui,
+            "repair_project_view_caches",
+            create=True,
+        ) as repair:
+            self.ui._save_pre_handler(None)
+
+        publish.assert_not_called()
+        repair.assert_not_called()
+        self.assertFalse((sidecar / "cache").exists())
+        self.assertEqual(session.link_status, "missing")
+        self.assertEqual(
+            session.dirty_reasons,
+            frozenset({"project_link", "view_cache"}),
+        )
 
     def test_save_handler_does_not_publish_clean_missing_load(self):
         self.fake_bpy.data.filepath = str(

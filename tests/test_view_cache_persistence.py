@@ -298,6 +298,7 @@ class ViewCachePersistenceTests(unittest.TestCase):
 
         self.assertEqual(obj.data.filepath, str(old_path))
         self.assertEqual(obj["cb_cache_path"], old_property)
+        self.assertEqual(obj.data.grids.loads, 0)
         self.assertEqual(self.session.dirty_reasons, frozenset({"view_cache"}))
 
     def test_stale_metadata_fails_closed_without_using_cache_property(self):
@@ -322,7 +323,9 @@ class ViewCachePersistenceTests(unittest.TestCase):
     def test_blender_reload_failure_restores_and_reloads_old_cache(self):
         from ChemBlender.ui import view_cache
 
-        old_path = self.root / "old.vdb"
+        old_path = self.session.temporary_root / "view-cache" / "old.vdb"
+        old_path.parent.mkdir()
+        old_path.touch()
         obj = self.grid_object(old_path=old_path)
         obj.data.grids.fail_once = True
 
@@ -330,6 +333,10 @@ class ViewCachePersistenceTests(unittest.TestCase):
             view_cache,
             "_ensure_grid_volume_cache",
             side_effect=self.ensured_path,
+        ), patch.object(
+            view_cache,
+            "_validate_fallback_cache",
+            return_value=True,
         ):
             with self.assertRaisesRegex(
                 view_cache.ViewCacheError, "Blender grid reload failed"
@@ -342,6 +349,35 @@ class ViewCachePersistenceTests(unittest.TestCase):
 
         self.assertEqual(obj.data.filepath, str(old_path))
         self.assertEqual(obj.data.grids.loads, 2)
+
+    def test_untrusted_old_filepath_is_not_loaded_during_failure_recovery(self):
+        from ChemBlender.ui import view_cache
+
+        old_path = r"\\attacker.invalid\share\payload.vdb"
+        obj = self.grid_object(old_path=old_path)
+
+        with patch.object(
+            view_cache,
+            "_ensure_grid_volume_cache",
+            side_effect=OSError("cache promotion failed"),
+        ), patch.object(
+            view_cache,
+            "_validate_fallback_cache",
+            wraps=view_cache._validate_fallback_cache,
+        ) as validate:
+            with self.assertRaisesRegex(
+                view_cache.ViewCacheError, "cache promotion failed"
+            ):
+                view_cache.repair_project_view_caches(
+                    session=self.session,
+                    objects=(obj,),
+                    blend_path=self.blend_path,
+                )
+
+        validate.assert_called_once()
+        self.assertEqual(obj.data.filepath, old_path)
+        self.assertEqual(obj.data.grids.loads, 0)
+        self.assertEqual(self.session.dirty_reasons, frozenset({"view_cache"}))
 
     def test_foreign_volume_is_untouched(self):
         from ChemBlender.ui import view_cache
@@ -389,6 +425,37 @@ class ViewCachePersistenceTests(unittest.TestCase):
                     objects=(),
                     blend_path=self.blend_path,
                 )
+        self.assertEqual(self.session.dirty_reasons, frozenset({"view_cache"}))
+
+    def test_final_vdb_link_is_rejected_before_writer_and_preserves_target(self):
+        from ChemBlender.ui import view_cache
+
+        obj = self.grid_object()
+        key = volume_render_cache_key(self.grid, dataset_index=0)
+        expected = (
+            self.sidecar / "cache" / "render" / "volume" / f"{key}.vdb"
+        )
+        expected.parent.mkdir(parents=True)
+        outside = self.root / "outside.vdb"
+        original = b"external cache must remain unchanged"
+        outside.write_bytes(original)
+
+        with patch.object(
+            view_cache,
+            "_is_link_like",
+            side_effect=lambda path: path == expected,
+        ), patch.object(view_cache, "_ensure_grid_volume_cache") as ensure:
+            with self.assertRaisesRegex(view_cache.ViewCacheError, "unsafe"):
+                view_cache.repair_project_view_caches(
+                    session=self.session,
+                    objects=(obj,),
+                    blend_path=self.blend_path,
+                )
+
+        ensure.assert_not_called()
+        self.assertFalse(expected.exists())
+        self.assertEqual(outside.read_bytes(), original)
+        self.assertEqual(self.session.dirty_reasons, frozenset({"view_cache"}))
 
 
 if __name__ == "__main__":
