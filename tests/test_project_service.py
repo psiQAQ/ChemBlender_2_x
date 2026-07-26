@@ -92,6 +92,21 @@ class ProjectServiceTests(unittest.TestCase):
             blend_path=blend_path,
         )
 
+    @staticmethod
+    def loaded_candidate_recorder(open_candidate):
+        opened_projects = []
+        lazy_values = []
+
+        def record(*args, **kwargs):
+            project, manifest = open_candidate(*args, **kwargs)
+            values = project.datasets[FRAMES_ID].data.values
+            values[0]
+            opened_projects.append(project)
+            lazy_values.append(values)
+            return project, manifest
+
+        return record, opened_projects, lazy_values
+
     def storage_snapshot(self, sidecar):
         manifest_path = sidecar / "manifest.json"
         manifest_bytes = manifest_path.read_bytes()
@@ -445,25 +460,40 @@ class ProjectServiceTests(unittest.TestCase):
 
     def test_verify_identical_scene_links_adopts_project_once(self):
         sidecar = self.root / "identical.cbq"
-        stored = QCProject(id=PROJECT_ID, schema_version="0.2")
+        stored = sample_project()
         save_project(sidecar, stored)
         first = self.linked_scene(sidecar, stored)
         second = dict(first)
         session = self.create_session()
+        previous = session.project
+        links = project_service._project_links()
+        record_open, opened_projects, lazy_values = (
+            self.loaded_candidate_recorder(links._open_project_with_manifest)
+        )
 
         with patch.object(
+            links,
+            "_open_project_with_manifest",
+            side_effect=record_open,
+        ), patch.object(
             project_service,
-            "_adopt_project",
-            wraps=project_service._adopt_project,
-        ) as adopt:
+            "close_project",
+            wraps=project_service.close_project,
+        ) as close:
             result = self.verify_for_scenes(
                 session=session,
                 scenes=(first, second),
             )
 
         self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
-        self.assertEqual(session.project.id, PROJECT_ID)
-        adopt.assert_called_once()
+        self.assertIs(session.project, opened_projects[0])
+        self.assertIs(result.project, session.project)
+        self.assertTrue(lazy_values[0].loaded)
+        self.assertEqual(
+            lazy_values[0][0][1].tolist(),
+            [0.0, 0.0, 0.74],
+        )
+        close.assert_called_once_with(previous)
 
     def test_verify_valid_and_empty_scene_projects_link_then_adopts_once(self):
         sidecar = self.root / "partial.cbq"
@@ -560,6 +590,172 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(closed, opened_projects)
         self.assertFalse(candidate_loaded)
 
+    def test_adoption_fatal_baseexceptions_restore_links_and_close_candidate(self):
+        sidecar = self.root / "fatal-adoption.cbq"
+        save_project(sidecar, sample_project())
+        real_close = project_service.close_project
+
+        for fatal in (KeyboardInterrupt(), SystemExit(), GeneratorExit()):
+            with self.subTest(error=type(fatal).__name__):
+                session = self.create_session()
+                previous = session.project
+                before = (
+                    session.project,
+                    session.sidecar_path,
+                    session.link_status,
+                    session.dirty_reasons,
+                )
+                candidate = open_project(sidecar)
+                lazy_values = candidate.datasets[FRAMES_ID].data.values
+                lazy_values[0]
+                scenes = (
+                    {"scene-marker": "linked"},
+                    {"scene-marker": "empty"},
+                )
+                originals = tuple(dict(scene) for scene in scenes)
+                snapshots = tuple(
+                    (
+                        scene,
+                        {
+                            key: project_service._MISSING_LINK_VALUE
+                            for key in LINK_KEYS
+                        },
+                    )
+                    for scene in scenes
+                )
+                for scene in scenes:
+                    scene.update({key: "candidate" for key in LINK_KEYS})
+                closed = []
+
+                def fail_previous(project):
+                    if project is previous:
+                        raise fatal
+                    closed.append(project)
+                    real_close(project)
+
+                try:
+                    with patch.object(
+                        project_service,
+                        "close_project",
+                        side_effect=fail_previous,
+                    ):
+                        with self.assertRaises(type(fatal)) as raised:
+                            project_service._adopt_verified_project(
+                                session,
+                                candidate,
+                                sidecar,
+                                scene_snapshots=snapshots,
+                            )
+                    actual_scenes = tuple(dict(scene) for scene in scenes)
+                    candidate_loaded = lazy_values.loaded
+                finally:
+                    real_close(candidate)
+
+                self.assertIs(raised.exception, fatal)
+                self.assertEqual(actual_scenes, originals)
+                self.assertEqual(closed, [candidate])
+                self.assertFalse(candidate_loaded)
+                self.assertEqual(
+                    (
+                        session.project,
+                        session.sidecar_path,
+                        session.link_status,
+                        session.dirty_reasons,
+                    ),
+                    before,
+                )
+
+    def test_memory_error_survives_incomplete_rollback_and_cleanup_failure(self):
+        class RollbackFailingScene(dict):
+            fail_restore = False
+
+            def __delitem__(self, key):
+                if key == MANIFEST_HASH_KEY and self.fail_restore:
+                    raise RuntimeError("Scene rollback failed")
+                super().__delitem__(key)
+
+        sidecar = self.root / "fatal-structured.cbq"
+        save_project(sidecar, sample_project())
+        session = self.create_session()
+        previous = session.project
+        before = (
+            session.project,
+            session.sidecar_path,
+            session.link_status,
+            session.dirty_reasons,
+        )
+        candidate = open_project(sidecar)
+        lazy_values = candidate.datasets[FRAMES_ID].data.values
+        lazy_values[0]
+        scene = RollbackFailingScene({"scene-marker": "preserve"})
+        original = dict(scene)
+        snapshot = {
+            key: project_service._MISSING_LINK_VALUE
+            for key in LINK_KEYS
+        }
+        scene.update({key: "candidate" for key in LINK_KEYS})
+        scene.fail_restore = True
+        fatal = MemoryError("adoption exhausted memory")
+        real_close = project_service.close_project
+        closed = []
+
+        def fail_cleanup(project):
+            if project is previous:
+                raise fatal
+            closed.append(project)
+            real_close(project)
+            raise OSError("candidate cleanup failed")
+
+        try:
+            with patch.object(
+                project_service,
+                "close_project",
+                side_effect=fail_cleanup,
+            ):
+                with self.assertRaises(MemoryError) as raised:
+                    project_service._adopt_verified_project(
+                        session,
+                        candidate,
+                        sidecar,
+                        scene_snapshots=((scene, snapshot),),
+                    )
+            candidate_loaded = lazy_values.loaded
+        finally:
+            real_close(candidate)
+
+        self.assertIs(raised.exception, fatal)
+        self.assertEqual(closed, [candidate])
+        self.assertFalse(candidate_loaded)
+        self.assertEqual(
+            (
+                session.project,
+                session.sidecar_path,
+                session.link_status,
+                session.dirty_reasons,
+            ),
+            before,
+        )
+        self.assertEqual(
+            scene,
+            {
+                **original,
+                MANIFEST_HASH_KEY: "candidate",
+            },
+        )
+        notes = fatal.__notes__
+        self.assertEqual(len(notes), 2)
+        self.assertIn(
+            "Scene project link write failed and rollback was incomplete",
+            notes[0],
+        )
+        self.assertIn("rollback_failures=", notes[0])
+        self.assertIn(MANIFEST_HASH_KEY, notes[0])
+        self.assertIn("residual_keys=", notes[0])
+        self.assertEqual(
+            notes[1],
+            "candidate project cleanup failed: candidate cleanup failed",
+        )
+
     def test_multi_scene_verify_incomplete_adoption_rollback_is_structured(self):
         class RollbackFailingScene(dict):
             fail_restore = False
@@ -570,7 +766,7 @@ class ProjectServiceTests(unittest.TestCase):
                 super().__delitem__(key)
 
         sidecar = self.root / "verify-structured.cbq"
-        stored = QCProject(id=PROJECT_ID, schema_version="0.2")
+        stored = sample_project()
         save_project(sidecar, stored)
         linked = self.linked_scene(sidecar, stored)
         failing = RollbackFailingScene({"scene-marker": "preserve"})
@@ -585,23 +781,38 @@ class ProjectServiceTests(unittest.TestCase):
             session.dirty_reasons,
         )
         closed = []
+        links = project_service._project_links()
+        record_open, opened_projects, lazy_values = (
+            self.loaded_candidate_recorder(links._open_project_with_manifest)
+        )
+        real_close = project_service.close_project
 
         def fail_cleanup(project):
             if project is previous:
                 failing.fail_restore = True
                 raise OSError("old project close failed")
             closed.append(project)
+            real_close(project)
             raise OSError("candidate cleanup failed")
 
-        with patch.object(
-            project_service,
-            "close_project",
-            side_effect=fail_cleanup,
-        ):
-            with self.assertRaises(
-                project_service.SceneLinkWriteRecoveryError
-            ) as caught:
-                self.verify_for_scenes(session=session, scenes=scenes)
+        try:
+            with patch.object(
+                links,
+                "_open_project_with_manifest",
+                side_effect=record_open,
+            ), patch.object(
+                project_service,
+                "close_project",
+                side_effect=fail_cleanup,
+            ):
+                with self.assertRaises(
+                    project_service.SceneLinkWriteRecoveryError
+                ) as caught:
+                    self.verify_for_scenes(session=session, scenes=scenes)
+            candidate_loaded = lazy_values[0].loaded
+        finally:
+            for project in opened_projects:
+                real_close(project)
 
         error = caught.exception
         self.assertEqual(str(error.write_error), "old project close failed")
@@ -617,7 +828,8 @@ class ProjectServiceTests(unittest.TestCase):
             error.__notes__,
             ["candidate project cleanup failed: candidate cleanup failed"],
         )
-        self.assertEqual(len(closed), 1)
+        self.assertEqual(closed, opened_projects)
+        self.assertFalse(candidate_loaded)
         self.assertEqual(dict(linked), self.linked_scene(sidecar, stored))
         self.assertEqual(
             failing,
@@ -1062,16 +1274,18 @@ class ProjectServiceTests(unittest.TestCase):
             blend_path=blend,
         )
         candidate = self.root / "data" / "candidate.cbq"
-        save_project(
-            candidate,
-            QCProject(id=session.project.id, schema_version="0.2"),
-        )
+        save_project(candidate, sample_project())
         previous = session.project
+        record_open, opened_projects, lazy_values = (
+            self.loaded_candidate_recorder(
+                project_service._open_project_with_manifest
+            )
+        )
 
         with patch.object(
             project_service,
             "_open_project_with_manifest",
-            wraps=project_service._open_project_with_manifest,
+            side_effect=record_open,
         ) as opened, patch.object(
             project_service,
             "close_project",
@@ -1087,6 +1301,13 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
         opened.assert_called_once()
         close.assert_called_once_with(previous)
+        self.assertIs(session.project, opened_projects[0])
+        self.assertIs(result.project, session.project)
+        self.assertTrue(lazy_values[0].loaded)
+        self.assertEqual(
+            lazy_values[0][0][1].tolist(),
+            [0.0, 0.0, 0.74],
+        )
         expected = {key: first[key] for key in LINK_KEYS}
         self.assertEqual({key: second[key] for key in LINK_KEYS}, expected)
         self.assertEqual(

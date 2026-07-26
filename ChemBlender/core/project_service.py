@@ -122,6 +122,12 @@ def _adopt_project(session, project, path):
 
 
 _MISSING_LINK_VALUE = object()
+_FATAL_EXCEPTIONS = (
+    KeyboardInterrupt,
+    SystemExit,
+    GeneratorExit,
+    MemoryError,
+)
 
 
 def _link_keys(links):
@@ -539,10 +545,17 @@ def verify_project_session(
     )
 
 
-def _close_candidate_after_failure(candidate, error):
+def _close_candidate_after_failure(
+    candidate,
+    error,
+    *,
+    preserve_error=False,
+):
     try:
         close_project(candidate)
-    except Exception as close_error:
+    except BaseException as close_error:
+        if not preserve_error and not isinstance(close_error, Exception):
+            raise
         error.add_note(f"candidate project cleanup failed: {close_error}")
 
 
@@ -555,14 +568,43 @@ def _adopt_verified_project(
 ):
     try:
         _adopt_project(session, candidate, path)
-    except Exception as error:
+    except BaseException as error:
+        fatal = isinstance(error, _FATAL_EXCEPTIONS)
         if scene_snapshots:
             try:
                 _rollback_scene_links(scene_snapshots, error)
-            except Exception as recovery_error:
-                _close_candidate_after_failure(candidate, recovery_error)
-                raise
-        _close_candidate_after_failure(candidate, error)
+            except BaseException as recovery_error:
+                if fatal:
+                    if isinstance(
+                        recovery_error,
+                        SceneLinkWriteRecoveryError,
+                    ):
+                        failures = tuple(
+                            (
+                                failure.scene_index,
+                                failure.key,
+                                str(failure.error),
+                            )
+                            for failure in recovery_error.rollback_failures
+                        )
+                        error.add_note(
+                            f"{recovery_error}; "
+                            f"rollback_failures={failures!r}; "
+                            f"residual_keys={recovery_error.residual_keys!r}"
+                        )
+                    else:
+                        error.add_note(
+                            f"Scene project link rollback failed: "
+                            f"{recovery_error}"
+                        )
+                else:
+                    _close_candidate_after_failure(candidate, recovery_error)
+                    raise
+        _close_candidate_after_failure(
+            candidate,
+            error,
+            preserve_error=fatal,
+        )
         raise
 
 
