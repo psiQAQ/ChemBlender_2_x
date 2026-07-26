@@ -331,6 +331,7 @@ def sync_project_session_links_for_scenes(*, session, scenes, blend_path):
         key for key in keys if key != links.SIDECAR_LOCATOR_KEY
     )
     targets = []
+    old_locator = _MISSING_LINK_VALUE
     for scene in scenes:
         present = tuple(key in scene for key in keys)
         if not any(present):
@@ -350,6 +351,17 @@ def sync_project_session_links_for_scenes(*, session, scenes, blend_path):
             return ProjectServiceResult(
                 ProjectServiceStatus.INVALID,
                 "conflicting scene project links require explicit relink",
+                path,
+            )
+        scene_locator = scene[links.SIDECAR_LOCATOR_KEY]
+        if old_locator is _MISSING_LINK_VALUE:
+            old_locator = scene_locator
+        elif scene_locator != old_locator:
+            session.link_status = ProjectServiceStatus.INVALID.value
+            session.mark_dirty("project_link")
+            return ProjectServiceResult(
+                ProjectServiceStatus.INVALID,
+                "conflicting scene sidecar locators require explicit relink",
                 path,
             )
         if any(scene[key] != values[key] for key in keys):

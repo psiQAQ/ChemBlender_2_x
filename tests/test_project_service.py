@@ -369,6 +369,80 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(linked[SIDECAR_LOCATOR_KEY], expected_locator)
         self.assertEqual(session.dirty_reasons, frozenset({"view_cache"}))
 
+    def test_link_sync_rejects_divergent_complete_locators_without_mutation(self):
+        session = self.create_session()
+        blend = self.root / "locator-conflict.blend"
+        first = {}
+        second = {}
+        session.mark_dirty("import")
+        self.save_for_scenes(
+            session=session,
+            scenes=(first, second),
+            blend_path=blend,
+        )
+        second[SIDECAR_LOCATOR_KEY] = "unrelated-location.cbq"
+        session.mark_dirty("project_link")
+        session.mark_dirty("view_cache")
+        original_project = session.project
+        original_sidecar = session.sidecar_path
+        original_scenes = (dict(first), dict(second))
+        before = self.storage_snapshot(original_sidecar)
+
+        result = project_service.sync_project_session_links_for_scenes(
+            session=session,
+            scenes=(first, second),
+            blend_path=blend,
+        )
+
+        self.assertEqual(result.status, ProjectServiceStatus.INVALID)
+        self.assertEqual((dict(first), dict(second)), original_scenes)
+        self.assertIs(session.project, original_project)
+        self.assertEqual(session.sidecar_path, original_sidecar)
+        self.assertEqual(session.link_status, ProjectServiceStatus.INVALID.value)
+        self.assertEqual(
+            session.dirty_reasons,
+            frozenset({"project_link", "view_cache"}),
+        )
+        self.assertEqual(self.storage_snapshot(original_sidecar), before)
+
+    def test_link_sync_updates_coherent_moved_locators_and_empty_scene(self):
+        session = self.create_session()
+        old_blend = self.root / "old-multi" / "project.blend"
+        old_blend.parent.mkdir()
+        first = {}
+        second = {}
+        session.mark_dirty("import")
+        self.save_for_scenes(
+            session=session,
+            scenes=(first, second),
+            blend_path=old_blend,
+        )
+        empty = {"scene-marker": "preserve"}
+        new_blend = self.root / "moved-multi" / "project.blend"
+        new_blend.parent.mkdir()
+        expected_locator = os.path.relpath(
+            session.sidecar_path,
+            new_blend.parent,
+        )
+        session.mark_dirty("project_link")
+        session.mark_dirty("view_cache")
+        before = self.storage_snapshot(session.sidecar_path)
+
+        result = project_service.sync_project_session_links_for_scenes(
+            session=session,
+            scenes=(first, empty, second),
+            blend_path=new_blend,
+        )
+
+        self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
+        self.assertEqual(
+            {scene[SIDECAR_LOCATOR_KEY] for scene in (first, empty, second)},
+            {expected_locator},
+        )
+        self.assertEqual(empty["scene-marker"], "preserve")
+        self.assertEqual(session.dirty_reasons, frozenset({"view_cache"}))
+        self.assertEqual(self.storage_snapshot(session.sidecar_path), before)
+
     def test_verify_identical_scene_links_adopts_project_once(self):
         sidecar = self.root / "identical.cbq"
         stored = QCProject(id=PROJECT_ID, schema_version="0.2")
