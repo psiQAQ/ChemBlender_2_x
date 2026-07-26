@@ -41,7 +41,7 @@ def _safe_cache_target(target, cache_root):
     return target
 
 
-def _durable_cache_root(sidecar_path):
+def _durable_cache_root(sidecar_path, *, create=True):
     sidecar = Path(sidecar_path)
     if sidecar.suffix.lower() != ".cbq" or not sidecar.is_dir():
         raise ViewCacheError("verified sidecar must be an existing .cbq directory")
@@ -55,6 +55,8 @@ def _durable_cache_root(sidecar_path):
             if _is_link_like(current) or not current.is_dir():
                 raise ViewCacheError("render cache path is unsafe")
         else:
+            if not create:
+                raise ViewCacheError("render cache path is missing")
             current.mkdir()
         if current.resolve(strict=True).parent != sidecar and name == "cache":
             raise ViewCacheError("render cache escaped the verified sidecar")
@@ -66,6 +68,8 @@ def _durable_cache_root(sidecar_path):
             if _is_link_like(child) or not child.is_dir():
                 raise ViewCacheError("render cache path is unsafe")
         else:
+            if not create:
+                raise ViewCacheError("render cache path is missing")
             child.mkdir()
         if child.resolve(strict=True).parent != current:
             raise ViewCacheError("render cache escaped the verified sidecar")
@@ -160,6 +164,28 @@ def _surface_key(render_identity, variant):
     ).hexdigest()
 
 
+def _expected_cache_target(obj, plan, project, cache_root):
+    settings = dict(plan.settings)
+    if plan.view_kind == "grid_volume":
+        grid = _entity(plan, project, "grid")
+        key = volume_render_cache_key(
+            grid, dataset_index=settings["dataset_index"]
+        )
+        return _safe_cache_target(
+            cache_root / "volume" / f"{key}.vdb", cache_root
+        )
+    if plan.view_kind == "signed_isosurface":
+        phase = obj.get("cb_surface_phase")
+        if phase not in {"positive", "negative"}:
+            raise ViewCacheError("surface phase is stale")
+        key = _surface_key(plan.render_identity, phase)
+    else:
+        key = _surface_key(plan.render_identity, "property")
+    return _safe_cache_target(
+        cache_root / "surface" / f"{key}.vdb", cache_root
+    )
+
+
 def _target_and_ensure(obj, plan, project, cache_root):
     settings = dict(plan.settings)
     if plan.view_kind == "grid_volume":
@@ -171,9 +197,7 @@ def _target_and_ensure(obj, plan, project, cache_root):
         _require(obj.get("cb_dataset_index"), index, "dataset index")
         _require(obj.get("cb_cache_format_version"), _CACHE_FORMAT_VERSION, "cache format")
         _require(obj.get("cb_render_cache_key"), key, "render cache key")
-        target = _safe_cache_target(
-            cache_root / "volume" / f"{key}.vdb", cache_root
-        )
+        target = _expected_cache_target(obj, plan, project, cache_root)
         actual = _ensure_grid_volume_cache(
             grid, target, dataset_index=index
         )
@@ -192,9 +216,7 @@ def _target_and_ensure(obj, plan, project, cache_root):
         _require(obj.get("cb_dataset_index"), index, "dataset index")
         _require(obj.get("cb_cache_format_version"), _CACHE_FORMAT_VERSION, "cache format")
         _require(obj.get("cb_render_cache_key"), key, "render cache key")
-        target = _safe_cache_target(
-            cache_root / "surface" / f"{key}.vdb", cache_root
-        )
+        target = _expected_cache_target(obj, plan, project, cache_root)
         actual = _ensure_signed_surface_cache(
             grid,
             target,
@@ -226,9 +248,7 @@ def _target_and_ensure(obj, plan, project, cache_root):
     )
     _require(obj.get("cb_cache_format_version"), _CACHE_FORMAT_VERSION, "cache format")
     _require(obj.get("cb_render_cache_key"), key, "render cache key")
-    target = _safe_cache_target(
-        cache_root / "surface" / f"{key}.vdb", cache_root
-    )
+    target = _expected_cache_target(obj, plan, project, cache_root)
     actual = _ensure_property_surface_cache(
         surface,
         prop,
@@ -348,7 +368,13 @@ def _validate_fallback_cache(
     return True
 
 
-def repair_project_view_caches(*, session, objects, blend_path):
+def repair_project_view_caches(
+    *,
+    session,
+    objects,
+    blend_path,
+    previous_sidecar_path=None,
+):
     """Repair owned Volume caches without changing scientific project state."""
     repaired = 0
     try:
@@ -376,26 +402,60 @@ def repair_project_view_caches(*, session, objects, blend_path):
                 obj.data.grids.load()
                 obj["cb_cache_path"] = str(target)
             except BaseException as error:
-                obj.data.filepath = old_filepath
-                if _validate_fallback_cache(
-                    session=session,
-                    obj=obj,
-                    plan=plan,
-                    old_filepath=old_filepath,
-                    blend_path=blend_path,
-                    cache_root=cache_root,
-                ):
+                fallback_target = None
+                if previous_sidecar_path is not None:
                     try:
-                        obj.data.grids.load()
+                        previous_cache_root = _durable_cache_root(
+                            previous_sidecar_path,
+                            create=False,
+                        )
+                        if previous_cache_root != cache_root:
+                            fallback_target = _expected_cache_target(
+                                obj,
+                                plan,
+                                session.project,
+                                previous_cache_root,
+                            )
+                            if not _validate_fallback_cache(
+                                session=session,
+                                obj=obj,
+                                plan=plan,
+                                old_filepath=str(fallback_target),
+                                blend_path=blend_path,
+                                cache_root=previous_cache_root,
+                            ):
+                                raise ViewCacheError(
+                                    "previous render cache is invalid"
+                                )
+                            obj.data.filepath = _blender_path(
+                                fallback_target, blend_path
+                            )
+                            obj.data.grids.load()
                     except BaseException:
-                        pass
-                if old_cache_path is None:
-                    try:
-                        del obj["cb_cache_path"]
-                    except KeyError:
-                        pass
+                        fallback_target = None
+                if fallback_target is None:
+                    obj.data.filepath = old_filepath
+                    if _validate_fallback_cache(
+                        session=session,
+                        obj=obj,
+                        plan=plan,
+                        old_filepath=old_filepath,
+                        blend_path=blend_path,
+                        cache_root=cache_root,
+                    ):
+                        try:
+                            obj.data.grids.load()
+                        except BaseException:
+                            pass
+                    if old_cache_path is None:
+                        try:
+                            del obj["cb_cache_path"]
+                        except KeyError:
+                            pass
+                    else:
+                        obj["cb_cache_path"] = old_cache_path
                 else:
-                    obj["cb_cache_path"] = old_cache_path
+                    obj["cb_cache_path"] = str(fallback_target)
                 raise ViewCacheError(f"{obj.name}: {error}") from error
             repaired += 1
     except BaseException:

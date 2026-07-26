@@ -542,6 +542,38 @@ class UiSessionContractTests(unittest.TestCase):
             (Path(self.temporary.name) / "copy.cbq").resolve(),
         )
 
+    def test_save_as_passes_previous_verified_sidecar_to_cache_repair(self):
+        old_root = Path(self.temporary.name) / "old"
+        new_root = Path(self.temporary.name) / "new"
+        old_root.mkdir()
+        new_root.mkdir()
+        old_blend = old_root / "original.blend"
+        new_blend = new_root / "renamed.blend"
+        session = self.ui.get_scene_session(self.scene)
+        session.mark_dirty("import")
+        self.fake_bpy.data.filepath = str(old_blend)
+        self.ui._save_pre_handler(None)
+        old_sidecar = old_blend.with_suffix(".cbq").resolve()
+        self.fake_bpy.data.filepath = str(new_blend)
+
+        with patch.object(
+            self.ui,
+            "repair_project_view_caches",
+            side_effect=OSError("new cache promotion failed"),
+        ) as repair:
+            self.ui._save_pre_handler(None)
+
+        repair.assert_called_once_with(
+            session=session,
+            objects=(),
+            blend_path=str(new_blend),
+            previous_sidecar_path=old_sidecar,
+        )
+        self.assertEqual(
+            session.sidecar_path,
+            new_blend.with_suffix(".cbq").resolve(),
+        )
+
     def test_save_handler_view_cache_only_does_not_republish(self):
         session = self.ui.get_scene_session(self.scene)
         session.mark_dirty("import")

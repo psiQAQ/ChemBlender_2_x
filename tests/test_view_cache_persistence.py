@@ -350,6 +350,104 @@ class ViewCachePersistenceTests(unittest.TestCase):
         self.assertEqual(obj.data.filepath, str(old_path))
         self.assertEqual(obj.data.grids.loads, 2)
 
+    def test_save_as_failure_reprojects_verified_previous_sidecar_cache(self):
+        from ChemBlender.ui import view_cache
+
+        old_blend = self.root / "old" / "original.blend"
+        old_sidecar = old_blend.with_suffix(".cbq")
+        new_blend = self.root / "new" / "renamed.blend"
+        new_sidecar = new_blend.with_suffix(".cbq")
+        old_sidecar.mkdir(parents=True)
+        new_sidecar.mkdir(parents=True)
+        key = volume_render_cache_key(self.grid, dataset_index=0)
+        old_cache = (
+            old_sidecar / "cache" / "render" / "volume" / f"{key}.vdb"
+        )
+        old_cache.parent.mkdir(parents=True)
+        (old_sidecar / "cache" / "render" / "surface").mkdir(parents=True)
+        old_cache.touch()
+        old_relative = (
+            f"//{old_sidecar.name}/cache/render/volume/{old_cache.name}"
+        )
+        obj = self.grid_object(old_path=old_relative)
+        obj["cb_cache_path"] = r"\\attacker.invalid\share\payload.vdb"
+        self.session.sidecar_path = new_sidecar
+
+        def fail_new_promotion(_grid, path, **_kwargs):
+            path = Path(path)
+            self.assertIn(new_sidecar, path.parents)
+            raise OSError("new sidecar cache promotion failed")
+
+        def validate_previous(**values):
+            self.assertEqual(values["old_filepath"], str(old_cache))
+            self.assertEqual(values["cache_root"], old_sidecar / "cache" / "render")
+            return True
+
+        with patch.object(
+            view_cache,
+            "_ensure_grid_volume_cache",
+            side_effect=fail_new_promotion,
+        ) as ensure, patch.object(
+            view_cache,
+            "_validate_fallback_cache",
+            side_effect=validate_previous,
+        ) as validate:
+            with self.assertRaisesRegex(
+                view_cache.ViewCacheError,
+                "new sidecar cache promotion failed",
+            ):
+                view_cache.repair_project_view_caches(
+                    session=self.session,
+                    objects=(obj,),
+                    blend_path=new_blend,
+                    previous_sidecar_path=old_sidecar,
+                )
+
+        ensure.assert_called_once()
+        validate.assert_called_once()
+        self.assertEqual(
+            view_cache._blender_absolute_path(obj.data.filepath, new_blend),
+            old_cache,
+        )
+        self.assertNotEqual(obj.data.filepath, old_relative)
+        self.assertEqual(obj.data.grids.loads, 1)
+        self.assertEqual(obj["cb_cache_path"], str(old_cache))
+        self.assertEqual(self.session.dirty_reasons, frozenset({"view_cache"}))
+
+    def test_save_as_fallback_does_not_create_previous_cache_directories(self):
+        from ChemBlender.ui import view_cache
+
+        old_sidecar = self.root / "old" / "original.cbq"
+        new_sidecar = self.root / "new" / "renamed.cbq"
+        old_sidecar.mkdir(parents=True)
+        new_sidecar.mkdir(parents=True)
+        self.session.sidecar_path = new_sidecar
+        obj = self.grid_object()
+
+        with patch.object(
+            view_cache,
+            "_ensure_grid_volume_cache",
+            side_effect=OSError("new sidecar cache promotion failed"),
+        ), patch.object(
+            view_cache,
+            "_validate_fallback_cache",
+            return_value=False,
+        ):
+            with self.assertRaisesRegex(
+                view_cache.ViewCacheError,
+                "new sidecar cache promotion failed",
+            ):
+                view_cache.repair_project_view_caches(
+                    session=self.session,
+                    objects=(obj,),
+                    blend_path=self.root / "new" / "renamed.blend",
+                    previous_sidecar_path=old_sidecar,
+                )
+
+        self.assertFalse((old_sidecar / "cache").exists())
+        self.assertEqual(obj.data.grids.loads, 0)
+        self.assertEqual(self.session.dirty_reasons, frozenset({"view_cache"}))
+
     def test_untrusted_old_filepath_is_not_loaded_during_failure_recovery(self):
         from ChemBlender.ui import view_cache
 

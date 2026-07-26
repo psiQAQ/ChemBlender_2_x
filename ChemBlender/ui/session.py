@@ -267,6 +267,15 @@ def _save_pre_handler(_dummy):
             or reasons <= link_retry_reasons
         )
     )
+    previous_sidecar_path = (
+        Path(session.sidecar_path).resolve()
+        if (
+            not same_sidecar
+            and session.sidecar_path is not None
+            and session.link_status == "connected"
+        )
+        else None
+    )
     try:
         if link_only:
             result = sync_project_session_links_for_scenes(
@@ -282,11 +291,14 @@ def _save_pre_handler(_dummy):
             )
         _record_result(result)
         if session.link_status == "connected":
-            repair_project_view_caches(
+            repair_values = dict(
                 session=session,
                 objects=tuple(getattr(bpy.data, "objects", ())),
                 blend_path=blend_path,
             )
+            if previous_sidecar_path is not None:
+                repair_values["previous_sidecar_path"] = previous_sidecar_path
+            repair_project_view_caches(**repair_values)
     except BaseException as error:
         _set_error(entry, error)
 
