@@ -5,12 +5,15 @@ import tomllib
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
 EXTENSION = ROOT / "ChemBlender"
 sys.path.insert(0, str(EXTENSION / "scripts"))
 
+import verify_release_artifact
+from release_metadata import read_release_metadata
 from verify_release_artifact import verify_artifact
 
 
@@ -28,7 +31,8 @@ class ReleaseArtifactTests(unittest.TestCase):
     ) -> Path:
         source_manifest = (EXTENSION / "blender_manifest.toml").read_bytes()
         manifest = tomllib.loads(source_manifest.decode("utf-8"))
-        package = self.artifact_dir / "chemblender-2.2.0.zip"
+        metadata = read_release_metadata(EXTENSION)
+        package = self.artifact_dir / metadata.package_name
         entries = {
             "blender_manifest.toml": packaged_manifest or source_manifest,
             "LICENSE": b"license",
@@ -42,7 +46,7 @@ class ReleaseArtifactTests(unittest.TestCase):
                 archive.writestr(name, data)
 
         digest = hashlib.sha256(package.read_bytes()).hexdigest()
-        (self.artifact_dir / "chemblender-2.2.0.sha256").write_text(
+        (self.artifact_dir / metadata.checksum_name).write_text(
             f"{digest}  {package.name}\n",
             encoding="utf-8",
             newline="\n",
@@ -59,6 +63,20 @@ class ReleaseArtifactTests(unittest.TestCase):
             result["package_sha256"], hashlib.sha256(package.read_bytes()).hexdigest()
         )
 
+    def test_verifier_reads_release_metadata_once(self):
+        self._write_artifact()
+
+        with mock.patch.object(
+            verify_release_artifact,
+            "read_release_metadata",
+            wraps=read_release_metadata,
+        ) as read_metadata:
+            verify_release_artifact.verify_artifact(
+                self.artifact_dir, EXTENSION, self.tag
+            )
+
+        read_metadata.assert_called_once_with(EXTENSION.resolve())
+
     def test_checksum_mismatch_fails(self):
         package = self._write_artifact()
         package.write_bytes(package.read_bytes() + b"changed")
@@ -74,6 +92,14 @@ class ReleaseArtifactTests(unittest.TestCase):
         result = verify_artifact(self.artifact_dir, EXTENSION, self.tag)
 
         self.assertEqual(result["version"], "2.2.0")
+
+    def test_tag_version_must_match_release_metadata(self):
+        self._write_artifact()
+
+        with self.assertRaisesRegex(
+            ValueError, "tag version 2.2.1 does not match manifest 2.2.0"
+        ):
+            verify_artifact(self.artifact_dir, EXTENSION, "v2.2.1")
 
     def test_extra_wheel_fails_package_contract(self):
         self._write_artifact("wheels/unexpected.whl")

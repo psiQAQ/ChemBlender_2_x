@@ -206,8 +206,9 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
 | `ChemBlender/scripts/validate_extension.py` | `main()` | 检查 manifest、wheel 路径、依赖策略、绝对 import 和源码布局，再调用 Blender 原生 Extension validate。 |
-| `ChemBlender/scripts/build_extension.py` | `main()` | 解析 Blender/Python/MCP 路径与系统兼容性，先验证再调用 Blender 原生 Extension build。 |
-| `ChemBlender/scripts/verify_release_artifact.py` | `verify_artifact()`、`main()` | 校验 Release ZIP 的 SHA-256、版本、路径安全、必需/禁止内容和 manifest contract。 |
+| `ChemBlender/scripts/release_metadata.py` | `ReleaseMetadata`、`read_release_metadata()`、`release_metadata_document()`、`main()` | 从 production manifest 严格读取 extension id、version 和单一 Windows platform，并确定性派生 package、checksum 与 artifact 名称；CLI 只输出稳定 UTF-8 JSON，不导入 Blender 或执行构建。 |
+| `ChemBlender/scripts/build_extension.py` | `main()` | 解析 Blender/Python/MCP 路径与系统兼容性，读取一次 `ReleaseMetadata`，先验证再调用 Blender 原生 Extension build，并要求 metadata 指定的 exact package 文件存在。 |
+| `ChemBlender/scripts/verify_release_artifact.py` | `verify_artifact()`、`main()` | 使用同一 `ReleaseMetadata` 校验 Release ZIP/checksum 名称、SHA-256、tag 版本、路径安全、必需/禁止内容和 manifest contract。 |
 | `ChemBlender/scripts/extract_release_notes.py` | `extract_release_notes()`、`main()` | 从 `CHANGELOG.md` 精确提取一个版本的非空 Release body。 |
 | `ChemBlender/scripts/benchmark_sidecar.py` | `run_benchmark()`、`main()` | 对代表性结构、轨迹、轨道和网格 `.npy` 写入/打开/切片性能进行基准测量。 |
 
