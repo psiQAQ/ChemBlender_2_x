@@ -51,8 +51,8 @@ jobs:
           RELEASE_VERSION: ${{ steps.release_metadata.outputs.version }}
         run: |
           $manifestVersion = $env:RELEASE_VERSION
-          $tagVersion = $env:GITHUB_REF_NAME.TrimStart('v')
-          if ($manifestVersion -ne $tagVersion) { throw "Tag $tagVersion does not match manifest $manifestVersion" }
+          $expectedTag = "v$manifestVersion"
+          if ($env:GITHUB_REF_NAME -ne $expectedTag) { throw "Tag $env:GITHUB_REF_NAME does not match expected $expectedTag" }
       - name: Download pinned RDKit wheel
         shell: pwsh
         run: |

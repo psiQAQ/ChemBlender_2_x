@@ -107,8 +107,9 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn("BLENDER_USER_RESOURCES", workflow)
         self.assertIn("--python-exit-code 1", workflow)
         self.assertIn("if: github.ref_type == 'tag'", workflow)
-        self.assertIn("GITHUB_REF_NAME.TrimStart('v')", workflow)
-        self.assertIn("Tag $tagVersion does not match manifest $manifestVersion", workflow)
+        self.assertIn('$expectedTag = "v$manifestVersion"', workflow)
+        self.assertIn("if ($env:GITHUB_REF_NAME -ne $expectedTag)", workflow)
+        self.assertNotIn("TrimStart", workflow)
         self.assertIn("blender-5.1.2.sha256", workflow)
         self.assertIn("f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48", workflow)
 
