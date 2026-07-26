@@ -4,7 +4,7 @@
 
 **Goal:** Publish a draft Wave 0 PR, obtain green `extension-package` PR CI, and independently verify the exact final-HEAD artifact without merging, tagging, dispatching the Release workflow, or creating a Release.
 
-**Architecture:** Keep release identity derived from `release_metadata.py`, add one fail-closed default-branch guard at the start of the Release workflow, and preserve the package workflow unchanged. Treat the PR run and its downloaded artifact as remote evidence tied to one exact PR HEAD, then persist that evidence before a final checkpoint push and CI rerun.
+**Architecture:** Keep release identity derived from `release_metadata.py` and add one fail-closed default-branch guard at the start of the Release workflow. Preserve package-workflow behavior unless an exact PR failure proves a portability defect; any repair must keep the full test/build/install gate. Treat the PR run and its downloaded artifact as remote evidence tied to one exact PR HEAD, then persist that evidence before a final checkpoint push and CI rerun.
 
 **Tech Stack:** Python 3.13 `unittest`, PowerShell, Bash, GitHub Actions, GitHub CLI, Blender 5.1.2.
 
@@ -15,7 +15,9 @@
 - Do not merge the PR, create a tag, dispatch `extension-release.yml`, create a GitHub Release, or enter Wave 1–4.
 - Do not modify `ChemBlender/blender_manifest.toml` or the version content in `CHANGELOG.md`.
 - Preserve the reviewed 179-commit history; do not reset, rebase, force-push, or alter remotes.
-- Keep `.github/workflows/extension-package.yml` byte-identical.
+- Keep `.github/workflows/extension-package.yml` byte-identical during the
+  planned handoff change. A later exact PR failure may authorize the smallest
+  reviewed portability fix that preserves every gate.
 - Remote evidence is valid only when the run `event`, `headSha`, workflow, and conclusion match the final PR HEAD.
 
 ---
@@ -231,3 +233,41 @@ PR HEAD, final package run ID/URL, artifact ID/name, hashes, and verifier
 result.
 
 **Stop boundary:** Stop with the draft PR unmerged. The next action requires explicit authorization to merge the reviewed PR.
+
+## Checkpoint Evidence
+
+- State: `completed`; checkpoint-head remote verification remains pending until
+  this evidence commit is pushed.
+- Planning commit:
+  `d842a94aa87ac7debe2efa8400289a14a9a57ed7`.
+- Release-handoff commit:
+  `0913a6616133f05b53aa17b4059d6ef1fdf30049`.
+- CI-fix commits:
+  `e59a33bde6c700cfdff169a002cfd70560a8822f`,
+  `ec2190588f43b6ce4184583d9d307d6893df324b`, and
+  `6883141cad7235059dfad57c395e0091967a1c26`.
+- Draft PR:
+  `#2`, `https://github.com/psiQAQ/ChemBlender_2_x/pull/2`.
+- Local final verification:
+  1001 Passed, 28 Skipped, 0 Failed; compileall and diff-check Passed;
+  Blender 5.1.2 validate/build and isolated lifecycle Passed.
+- Remote diagnosis:
+  runs `30205957805`, `30206395882`, and `30206577401` failed
+  deterministically before the reviewed fixes for Blender bundled-Python
+  ownership, canonical runner TEMP/TMP, cache load ordering, and CRLF-neutral
+  manifest hashes.
+- Pre-checkpoint GREEN:
+  exact head `6883141cad7235059dfad57c395e0091967a1c26`; run
+  `30206705245`; artifact ID `8633278750`;
+  package SHA-256
+  `db3ec617e62cb61865bf5e7039eea953e9b7f1fac026699cb1e14504b73e4182`;
+  checksum SHA-256
+  `4cd790c6ea9830ac8ce6d634b598c2e1244518d3cca3293be4c0b566ffc3e686`;
+  124 ZIP entries; CRC and independent verifier Passed.
+- Checkpoint-head CI/artifact:
+  `Pending`; final exact-head evidence must be added to PR #2 and the final
+  report without creating another source commit.
+- Main package CI, tag package CI, Release verification and publication:
+  `Not Run`.
+- Merge, tag and GitHub Release:
+  `Not Created`.
