@@ -240,7 +240,9 @@ from .project_service import (
     ProjectServiceStatus,
     clear_derived_cache,
     relink_project_session,
+    relink_project_session_for_scenes,
     save_project_session,
+    sync_project_session_links_for_scenes,
     verify_project_session,
 )
 # Adapter compatibility exports.
@@ -455,6 +457,7 @@ __all__ = [
     "recipe_document",
     "recipe_from_document",
     "relink_project_session",
+    "relink_project_session_for_scenes",
     "save_project",
     "save_project_session",
     "scene_plan_document",
@@ -469,6 +472,7 @@ __all__ = [
     "external_record_request_from_document",
     "external_record_source_uri",
     "surface_render_cache_key",
+    "sync_project_session_links_for_scenes",
     "volume_render_cache_key",
     "validate_analysis_report",
     "verify_project_session",

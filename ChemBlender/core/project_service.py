@@ -35,6 +35,23 @@ class ProjectServiceResult:
 
 
 @dataclass(frozen=True, slots=True)
+class SceneLinkRollbackFailure:
+    scene_index: int
+    key: str
+    error: Exception
+
+
+class SceneLinkWriteRecoveryError(RuntimeError):
+    def __init__(self, write_error, rollback_failures, residual_keys):
+        super().__init__(
+            "Scene project link write failed and rollback was incomplete"
+        )
+        self.write_error = write_error
+        self.rollback_failures = tuple(rollback_failures)
+        self.residual_keys = tuple(residual_keys)
+
+
+@dataclass(frozen=True, slots=True)
 class CacheClearResult:
     sidecar_path: Path
     removed_paths: tuple[Path, ...]
@@ -137,16 +154,36 @@ def _restore_scene_link(scene, snapshot):
     return failures
 
 
-def _snapshot_matches(scene, snapshot):
-    try:
-        return all(
-            key not in scene
-            if value is _MISSING_LINK_VALUE
-            else key in scene and scene[key] == value
-            for key, value in snapshot.items()
+def _rollback_scene_links(snapshots, write_error, *, attempted=None):
+    if attempted is None:
+        attempted = len(snapshots)
+    rollback_failures = []
+    for scene_index in reversed(range(attempted)):
+        scene, snapshot = snapshots[scene_index]
+        rollback_failures.extend(
+            SceneLinkRollbackFailure(scene_index, key, error)
+            for key, error in _restore_scene_link(scene, snapshot)
         )
-    except Exception:
-        return False
+    residual_keys = []
+    for scene_index, (scene, snapshot) in enumerate(snapshots):
+        for key, value in snapshot.items():
+            try:
+                matches = (
+                    key not in scene
+                    if value is _MISSING_LINK_VALUE
+                    else key in scene and scene[key] == value
+                )
+                matches = bool(matches)
+            except Exception:
+                matches = False
+            if not matches:
+                residual_keys.append((scene_index, key))
+    if rollback_failures or residual_keys:
+        raise SceneLinkWriteRecoveryError(
+            write_error,
+            rollback_failures,
+            residual_keys,
+        ) from write_error
 
 
 def _write_scene_links(scenes, values, links):
@@ -160,20 +197,13 @@ def _write_scene_links(scenes, values, links):
             attempted += 1
             links._write_scene_values(scene, values)
     except Exception as write_error:
-        rollback_failures = []
-        for scene, snapshot in reversed(snapshots[:attempted]):
-            rollback_failures.extend(_restore_scene_link(scene, snapshot))
-        for key, error in rollback_failures:
-            write_error.add_note(f"scene link rollback failed for {key}: {error}")
-        residual_count = sum(
-            not _snapshot_matches(scene, snapshot)
-            for scene, snapshot in snapshots
+        _rollback_scene_links(
+            snapshots,
+            write_error,
+            attempted=attempted,
         )
-        if residual_count:
-            write_error.add_note(
-                f"scene link rollback left {residual_count} changed scene(s)"
-            )
         raise
+    return snapshots
 
 
 def _verified_link_values(session, destination, blend):
@@ -191,11 +221,161 @@ def _verified_link_values(session, destination, blend):
     }
 
 
-def save_project_session_for_scenes(*, session, scenes, blend_path):
-    _require_session(session)
+def _opened_matching_project(session, path):
+    try:
+        candidate, manifest = _open_project_with_manifest(
+            path,
+            expected_schema_version=session.project.schema_version,
+            verify_arrays=True,
+        )
+    except SidecarNotFoundError as error:
+        return None, None, ProjectServiceResult(
+            ProjectServiceStatus.MISSING,
+            str(error),
+            path,
+        )
+    except SidecarIntegrityError as error:
+        return None, None, ProjectServiceResult(
+            ProjectServiceStatus.INVALID,
+            str(error),
+            path,
+        )
+    except SidecarCompatibilityError as error:
+        return None, None, ProjectServiceResult(
+            ProjectServiceStatus.INCOMPATIBLE,
+            str(error),
+            path,
+        )
+    if candidate.id != session.project.id:
+        close_project(candidate)
+        return None, None, ProjectServiceResult(
+            ProjectServiceStatus.MISMATCH,
+            "sidecar project UUID does not match",
+            path,
+        )
+    links = _project_links()
+    manifest_hash = manifest.get("manifest_sha256")
+    if not links._valid_manifest_hash(manifest_hash):
+        close_project(candidate)
+        return None, None, ProjectServiceResult(
+            ProjectServiceStatus.INCOMPATIBLE,
+            "sidecar manifest does not provide a verified hash",
+            path,
+        )
+    return candidate, manifest_hash, None
+
+
+def _link_values(project, path, manifest_hash, blend, links):
+    return {
+        links.PROJECT_ID_KEY: str(project.id),
+        links.PROJECT_SCHEMA_KEY: project.schema_version,
+        links.SIDECAR_LOCATOR_KEY: links._sidecar_locator(
+            path,
+            blend_path=blend,
+        ),
+        links.MANIFEST_HASH_KEY: manifest_hash,
+    }
+
+
+def _validated_scenes(scenes):
     scenes = tuple(scenes)
     if not scenes:
         raise ValueError("scenes must contain at least one scene")
+    return scenes
+
+
+def sync_project_session_links_for_scenes(*, session, scenes, blend_path):
+    _require_session(session)
+    scenes = _validated_scenes(scenes)
+    if not blend_path:
+        return ProjectServiceResult(
+            ProjectServiceStatus.UNSAVED,
+            "save the Blender file before synchronizing its project link",
+        )
+    blend = Path(blend_path)
+    if blend.suffix.lower() != ".blend":
+        return ProjectServiceResult(
+            ProjectServiceStatus.INVALID,
+            "saved Blender path must use the .blend suffix",
+            blend,
+        )
+    if session.sidecar_path is None:
+        return ProjectServiceResult(
+            ProjectServiceStatus.UNSAVED,
+            "no published project sidecar",
+        )
+
+    path = Path(session.sidecar_path).resolve()
+    candidate, manifest_hash, failure = _opened_matching_project(
+        session,
+        path,
+    )
+    if failure is not None:
+        session.link_status = failure.status.value
+        session.mark_dirty("project_link")
+        return failure
+    links = _project_links()
+    try:
+        values = _link_values(
+            candidate,
+            path,
+            manifest_hash,
+            blend,
+            links,
+        )
+    finally:
+        close_project(candidate)
+
+    keys = _link_keys(links)
+    identity_keys = tuple(
+        key for key in keys if key != links.SIDECAR_LOCATOR_KEY
+    )
+    targets = []
+    for scene in scenes:
+        present = tuple(key in scene for key in keys)
+        if not any(present):
+            targets.append(scene)
+            continue
+        if not all(present):
+            session.link_status = ProjectServiceStatus.INVALID.value
+            session.mark_dirty("project_link")
+            return ProjectServiceResult(
+                ProjectServiceStatus.INVALID,
+                "invalid scene project link",
+                path,
+            )
+        if any(scene[key] != values[key] for key in identity_keys):
+            session.link_status = ProjectServiceStatus.INVALID.value
+            session.mark_dirty("project_link")
+            return ProjectServiceResult(
+                ProjectServiceStatus.INVALID,
+                "conflicting scene project links require explicit relink",
+                path,
+            )
+        if any(scene[key] != values[key] for key in keys):
+            targets.append(scene)
+
+    try:
+        if targets:
+            _write_scene_links(targets, values, links)
+    except Exception:
+        session.link_status = ProjectServiceStatus.INVALID.value
+        session.mark_dirty("project_link")
+        raise
+    session.link_status = ProjectServiceStatus.CONNECTED.value
+    if "project_link" in session.dirty_reasons:
+        session.clear_dirty("project_link")
+    return ProjectServiceResult(
+        ProjectServiceStatus.CONNECTED,
+        path=path,
+        manifest_sha256=manifest_hash,
+        project=session.project,
+    )
+
+
+def save_project_session_for_scenes(*, session, scenes, blend_path):
+    _require_session(session)
+    scenes = _validated_scenes(scenes)
     if not blend_path:
         return ProjectServiceResult(
             ProjectServiceStatus.UNSAVED,
@@ -259,9 +439,7 @@ def verify_project_session_for_scenes(
     verify_arrays=True,
 ):
     _require_session(session)
-    scenes = tuple(scenes)
-    if not scenes:
-        raise ValueError("scenes must contain at least one scene")
+    scenes = _validated_scenes(scenes)
     links = _project_links()
     keys = _link_keys(links)
     linked_scene = None
@@ -344,6 +522,60 @@ def verify_project_session(
     )
 
 
+def _close_candidate_after_failure(candidate, error):
+    try:
+        close_project(candidate)
+    except Exception as close_error:
+        error.add_note(f"candidate project cleanup failed: {close_error}")
+
+
+def relink_project_session_for_scenes(
+    *,
+    session,
+    scenes,
+    sidecar_path,
+    blend_path=None,
+):
+    _require_session(session)
+    scenes = _validated_scenes(scenes)
+    links = _project_links()
+    path = Path(sidecar_path).resolve()
+    candidate, manifest_hash, failure = _opened_matching_project(
+        session,
+        path,
+    )
+    if failure is not None:
+        return failure
+    values = _link_values(
+        candidate,
+        path,
+        manifest_hash,
+        blend_path,
+        links,
+    )
+    try:
+        snapshots = _write_scene_links(scenes, values, links)
+    except Exception as error:
+        _close_candidate_after_failure(candidate, error)
+        raise
+    try:
+        _adopt_project(session, candidate, path)
+    except Exception as error:
+        try:
+            _rollback_scene_links(snapshots, error)
+        except Exception as recovery_error:
+            _close_candidate_after_failure(candidate, recovery_error)
+            raise
+        _close_candidate_after_failure(candidate, error)
+        raise
+    return ProjectServiceResult(
+        ProjectServiceStatus.CONNECTED,
+        path=path,
+        manifest_sha256=manifest_hash,
+        project=session.project,
+    )
+
+
 def relink_project_session(
     *,
     session,
@@ -351,47 +583,11 @@ def relink_project_session(
     sidecar_path,
     blend_path=None,
 ):
-    _require_session(session)
-    links = _project_links()
-    path = Path(sidecar_path).resolve()
-    candidate_scene = {}
-    try:
-        links.write_project_link(
-            candidate_scene,
-            session.project,
-            path,
-            blend_path=blend_path,
-        )
-    except (SidecarNotFoundError, SidecarCompatibilityError, SidecarIntegrityError) as error:
-        return _error_result(error, path, session.project)
-
-    resolved = links.resolve_project_link(candidate_scene, blend_path=blend_path)
-    status = _service_status(resolved.status)
-    if status is not ProjectServiceStatus.CONNECTED:
-        return ProjectServiceResult(status, resolved.message, resolved.path)
-    try:
-        links._write_scene_values(
-            scene,
-            {
-                key: candidate_scene[key]
-                for key in (
-                    links.PROJECT_ID_KEY,
-                    links.PROJECT_SCHEMA_KEY,
-                    links.SIDECAR_LOCATOR_KEY,
-                    links.MANIFEST_HASH_KEY,
-                )
-            },
-        )
-    except Exception:
-        close_project(resolved.project)
-        raise
-    _adopt_project(session, resolved.project, resolved.path)
-    return ProjectServiceResult(
-        status,
-        resolved.message,
-        resolved.path,
-        candidate_scene[links.MANIFEST_HASH_KEY],
-        session.project,
+    return relink_project_session_for_scenes(
+        session=session,
+        scenes=(scene,),
+        sidecar_path=sidecar_path,
+        blend_path=blend_path,
     )
 
 

@@ -6,6 +6,7 @@ from pathlib import Path
 from ..core import close_session, create_session
 from ..core.project_service import (
     save_project_session_for_scenes,
+    sync_project_session_links_for_scenes,
     verify_project_session_for_scenes,
 )
 
@@ -236,23 +237,48 @@ def _save_pre_handler(_dummy):
     entry = _FILE_SESSION
     if (
         entry is None
-        or (
-            not entry.session.dirty
-            and (
-                entry.session.sidecar_path is None
-                or entry.session.link_status != "connected"
-            )
-        )
         or not blend_path
         or Path(blend_path).suffix.lower() != ".blend"
     ):
         return
-    try:
-        result = save_project_session_for_scenes(
-            session=entry.session,
-            scenes=tuple(bpy.data.scenes),
-            blend_path=blend_path,
+    session = entry.session
+    reasons = session.dirty_reasons
+    if not reasons and (
+        session.sidecar_path is None
+        or session.link_status != "connected"
+    ):
+        return
+    link_retry_reasons = {"project_link", "view_cache"}
+    desired_sidecar = Path(blend_path).resolve().with_suffix(".cbq")
+    same_sidecar = (
+        session.sidecar_path is not None
+        and Path(session.sidecar_path).resolve() == desired_sidecar
+    )
+    if reasons == frozenset({"view_cache"}) and same_sidecar:
+        return
+    link_only = (
+        same_sidecar
+        and (
+            not reasons
+            or (
+                reasons <= link_retry_reasons
+                and "project_link" in reasons
+            )
         )
+    )
+    try:
+        if link_only:
+            result = sync_project_session_links_for_scenes(
+                session=session,
+                scenes=tuple(bpy.data.scenes),
+                blend_path=blend_path,
+            )
+        else:
+            result = save_project_session_for_scenes(
+                session=session,
+                scenes=tuple(bpy.data.scenes),
+                blend_path=blend_path,
+            )
     except BaseException as error:
         _set_error(entry, error)
     else:

@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -12,7 +13,6 @@ import ChemBlender.core.project_service as project_service
 from ChemBlender.core import (
     ProjectServiceStatus,
     QCProject,
-    SidecarCompatibilityError,
     clear_derived_cache,
     close_session,
     create_session,
@@ -90,6 +90,25 @@ class ProjectServiceTests(unittest.TestCase):
             session=session,
             scenes=scenes,
             blend_path=blend_path,
+        )
+
+    def storage_snapshot(self, sidecar):
+        manifest_path = sidecar / "manifest.json"
+        manifest_bytes = manifest_path.read_bytes()
+        manifest = json.loads(manifest_bytes)
+        arrays = tuple(
+            (
+                path.relative_to(sidecar).as_posix(),
+                path.read_bytes(),
+                path.stat().st_mtime_ns,
+            )
+            for path in sorted((sidecar / "arrays").glob("*.npy"))
+        )
+        return (
+            manifest_bytes,
+            manifest["generation_id"],
+            manifest["manifest_sha256"],
+            arrays,
         )
 
     def test_unsaved_blend_returns_unsaved_without_mutation(self):
@@ -233,6 +252,122 @@ class ProjectServiceTests(unittest.TestCase):
 
         self.assertEqual(session.dirty_reasons, frozenset({"project_link"}))
         self.assertEqual(session.link_status, ProjectServiceStatus.INVALID.value)
+
+    def test_link_sync_identical_scene_is_noop_and_preserves_storage(self):
+        class NoWriteScene(dict):
+            def __setitem__(self, key, value):
+                raise AssertionError(f"unexpected Scene write: {key}")
+
+        session = self.create_session(project=sample_project())
+        blend = self.root / "noop.blend"
+        scene = {}
+        session.mark_dirty("import")
+        self.save_for_scenes(
+            session=session,
+            scenes=(scene,),
+            blend_path=blend,
+        )
+        sidecar = blend.with_suffix(".cbq")
+        before = self.storage_snapshot(sidecar)
+        scene = NoWriteScene(scene)
+
+        result = project_service.sync_project_session_links_for_scenes(
+            session=session,
+            scenes=(scene,),
+            blend_path=blend,
+        )
+
+        self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
+        self.assertEqual(self.storage_snapshot(sidecar), before)
+        self.assertFalse(session.dirty)
+
+    def test_link_sync_adds_empty_scene_without_republishing(self):
+        session = self.create_session(project=sample_project())
+        blend = self.root / "expanded.blend"
+        linked = {}
+        session.mark_dirty("import")
+        self.save_for_scenes(
+            session=session,
+            scenes=(linked,),
+            blend_path=blend,
+        )
+        sidecar = blend.with_suffix(".cbq")
+        before = self.storage_snapshot(sidecar)
+        empty = {"scene-marker": "preserve"}
+
+        result = project_service.sync_project_session_links_for_scenes(
+            session=session,
+            scenes=(linked, empty),
+            blend_path=blend,
+        )
+
+        self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
+        self.assertEqual(
+            {key: empty[key] for key in LINK_KEYS},
+            {key: linked[key] for key in LINK_KEYS},
+        )
+        self.assertEqual(empty["scene-marker"], "preserve")
+        self.assertEqual(self.storage_snapshot(sidecar), before)
+
+    def test_link_sync_rejects_partial_and_conflicting_links(self):
+        session = self.create_session()
+        blend = self.root / "conflicting.blend"
+        linked = {}
+        session.mark_dirty("import")
+        self.save_for_scenes(
+            session=session,
+            scenes=(linked,),
+            blend_path=blend,
+        )
+        cases = (
+            {PROJECT_ID_KEY: linked[PROJECT_ID_KEY]},
+            {
+                **linked,
+                MANIFEST_HASH_KEY: "f" * 64,
+            },
+        )
+
+        for invalid in cases:
+            with self.subTest(invalid=invalid):
+                before = dict(invalid)
+                result = project_service.sync_project_session_links_for_scenes(
+                    session=session,
+                    scenes=(linked, invalid),
+                    blend_path=blend,
+                )
+                self.assertEqual(result.status, ProjectServiceStatus.INVALID)
+                self.assertEqual(invalid, before)
+                self.assertIn("project_link", session.dirty_reasons)
+
+    def test_link_sync_updates_only_locator_and_clears_only_project_link(self):
+        session = self.create_session()
+        old_blend = self.root / "old" / "project.blend"
+        old_blend.parent.mkdir()
+        linked = {}
+        session.mark_dirty("import")
+        self.save_for_scenes(
+            session=session,
+            scenes=(linked,),
+            blend_path=old_blend,
+        )
+        new_blend = self.root / "moved" / "project.blend"
+        new_blend.parent.mkdir()
+        expected_locator = os.path.relpath(
+            session.sidecar_path,
+            new_blend.parent,
+        )
+        session.mark_dirty("project_link")
+        session.mark_dirty("view_cache")
+
+        result = project_service.sync_project_session_links_for_scenes(
+            session=session,
+            scenes=(linked,),
+            blend_path=new_blend,
+        )
+
+        self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
+        self.assertEqual(linked[SIDECAR_LOCATOR_KEY], expected_locator)
+        self.assertEqual(session.dirty_reasons, frozenset({"view_cache"}))
 
     def test_verify_identical_scene_links_adopts_project_once(self):
         sidecar = self.root / "identical.cbq"
@@ -512,23 +647,6 @@ class ProjectServiceTests(unittest.TestCase):
         )
         self.assertEqual(session.dirty_reasons, frozenset({"import"}))
 
-    def test_relink_uuid_mismatch_does_not_depend_on_exception_wording(self):
-        sidecar = self.root / "other-wording.cbq"
-        save_project(sidecar, QCProject(id=UUID(int=2), schema_version="0.2"))
-        session = self.create_session()
-
-        with patch(
-            "ChemBlender.project_link.write_project_link",
-            side_effect=SidecarCompatibilityError("wording changed"),
-        ):
-            result = relink_project_session(
-                session=session,
-                scene={},
-                sidecar_path=sidecar,
-            )
-
-        self.assertEqual(result.status, ProjectServiceStatus.MISMATCH)
-
     def test_relink_missing_and_invalid_have_zero_mutation(self):
         for case in ("missing", "invalid"):
             with self.subTest(case=case):
@@ -644,6 +762,228 @@ class ProjectServiceTests(unittest.TestCase):
             before,
         )
         self.assertEqual(session.dirty_reasons, frozenset({"import"}))
+
+    def test_multi_scene_relink_opens_once_and_closes_old_project_once(self):
+        session = self.create_session()
+        blend = self.root / "scene" / "view.blend"
+        blend.parent.mkdir()
+        old_sidecar = blend.with_suffix(".cbq")
+        first = {}
+        second = {}
+        session.mark_dirty("import")
+        self.save_for_scenes(
+            session=session,
+            scenes=(first, second),
+            blend_path=blend,
+        )
+        candidate = self.root / "data" / "candidate.cbq"
+        save_project(
+            candidate,
+            QCProject(id=session.project.id, schema_version="0.2"),
+        )
+        previous = session.project
+
+        with patch.object(
+            project_service,
+            "_open_project_with_manifest",
+            wraps=project_service._open_project_with_manifest,
+        ) as opened, patch.object(
+            project_service,
+            "close_project",
+            wraps=project_service.close_project,
+        ) as close:
+            result = project_service.relink_project_session_for_scenes(
+                session=session,
+                scenes=(first, second),
+                sidecar_path=candidate,
+                blend_path=blend,
+            )
+
+        self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
+        opened.assert_called_once()
+        close.assert_called_once_with(previous)
+        expected = {key: first[key] for key in LINK_KEYS}
+        self.assertEqual({key: second[key] for key in LINK_KEYS}, expected)
+        self.assertEqual(
+            first[SIDECAR_LOCATOR_KEY],
+            os.path.relpath(candidate, blend.parent),
+        )
+        self.assertNotEqual(session.sidecar_path, old_sidecar.resolve())
+
+    def test_multi_scene_relink_failure_restores_all_and_closes_candidate(self):
+        class FailingScene(dict):
+            fail_next = False
+
+            def __setitem__(self, key, value):
+                if key == MANIFEST_HASH_KEY and self.fail_next:
+                    self.fail_next = False
+                    raise RuntimeError("second Scene write failed")
+                super().__setitem__(key, value)
+
+        session = self.create_session(project=sample_project())
+        blend = self.root / "rollback.blend"
+        first = {}
+        second = FailingScene()
+        session.mark_dirty("import")
+        self.save_for_scenes(
+            session=session,
+            scenes=(first, second),
+            blend_path=blend,
+        )
+        candidate = self.root / "candidate-lazy.cbq"
+        save_project(candidate, sample_project())
+        originals = (dict(first), dict(second))
+        previous = session.project
+        opened_projects = []
+        lazy_values = []
+        real_open = project_service._open_project_with_manifest
+
+        def record_open(*args, **kwargs):
+            project, manifest = real_open(*args, **kwargs)
+            values = project.datasets[FRAMES_ID].data.values
+            values[0]
+            opened_projects.append(project)
+            lazy_values.append(values)
+            return project, manifest
+
+        second.fail_next = True
+        with patch.object(
+            project_service,
+            "_open_project_with_manifest",
+            side_effect=record_open,
+        ) as opened, patch.object(
+            project_service,
+            "close_project",
+            wraps=project_service.close_project,
+        ) as close:
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "second Scene write failed",
+            ):
+                project_service.relink_project_session_for_scenes(
+                    session=session,
+                    scenes=(first, second),
+                    sidecar_path=candidate,
+                    blend_path=blend,
+                )
+
+        opened.assert_called_once()
+        close.assert_called_once_with(opened_projects[0])
+        self.assertFalse(lazy_values[0].loaded)
+        self.assertIs(session.project, previous)
+        self.assertEqual((first, second), originals)
+
+    def test_multi_scene_relink_incomplete_rollback_is_structured(self):
+        class RollbackFailingScene(dict):
+            fail_restore = False
+
+            def __setitem__(self, key, value):
+                if (
+                    key == MANIFEST_HASH_KEY
+                    and self.fail_restore
+                    and value == "1" * 64
+                ):
+                    raise RuntimeError("first Scene rollback failed")
+                super().__setitem__(key, value)
+
+        class WriteFailingScene(dict):
+            def __setitem__(self, key, value):
+                if key == MANIFEST_HASH_KEY:
+                    raise RuntimeError("second Scene write failed")
+                super().__setitem__(key, value)
+
+        session = self.create_session()
+        candidate = self.root / "structured.cbq"
+        save_project(candidate, session.project)
+        first = RollbackFailingScene(
+            {
+                PROJECT_ID_KEY: "old",
+                PROJECT_SCHEMA_KEY: "0.2",
+                SIDECAR_LOCATOR_KEY: "old.cbq",
+                MANIFEST_HASH_KEY: "1" * 64,
+            }
+        )
+        second = WriteFailingScene()
+        first.fail_restore = True
+        with self.assertRaises(
+            project_service.SceneLinkWriteRecoveryError
+        ) as caught:
+            project_service.relink_project_session_for_scenes(
+                session=session,
+                scenes=(first, second),
+                sidecar_path=candidate,
+            )
+
+        error = caught.exception
+        self.assertEqual(str(error.write_error), "second Scene write failed")
+        self.assertEqual(
+            tuple((failure.scene_index, failure.key) for failure in error.rollback_failures),
+            ((0, MANIFEST_HASH_KEY),),
+        )
+        self.assertEqual(
+            error.residual_keys,
+            ((0, MANIFEST_HASH_KEY),),
+        )
+
+    def test_multi_scene_relink_adoption_failure_restores_links_and_candidate(self):
+        session = self.create_session()
+        candidate = self.root / "adoption-failure.cbq"
+        save_project(candidate, session.project)
+        scenes = ({}, {})
+        originals = tuple(dict(scene) for scene in scenes)
+        previous = session.project
+        real_close = project_service.close_project
+        closed = []
+
+        def fail_previous(project):
+            if project is previous:
+                raise OSError("old project close failed")
+            closed.append(project)
+            return real_close(project)
+
+        with patch.object(
+            project_service,
+            "close_project",
+            side_effect=fail_previous,
+        ):
+            with self.assertRaisesRegex(OSError, "old project close failed"):
+                project_service.relink_project_session_for_scenes(
+                    session=session,
+                    scenes=scenes,
+                    sidecar_path=candidate,
+                )
+
+        self.assertIs(session.project, previous)
+        self.assertEqual(tuple(dict(scene) for scene in scenes), originals)
+        self.assertEqual(len(closed), 1)
+
+    def test_single_scene_relink_delegates_to_multi_scene_service(self):
+        session = self.create_session()
+        scene = {}
+        expected = project_service.ProjectServiceResult(
+            ProjectServiceStatus.MISSING,
+        )
+
+        with patch.object(
+            project_service,
+            "relink_project_session_for_scenes",
+            return_value=expected,
+            create=True,
+        ) as relink_many:
+            result = relink_project_session(
+                session=session,
+                scene=scene,
+                sidecar_path=self.root / "missing.cbq",
+                blend_path=self.root / "view.blend",
+            )
+
+        self.assertIs(result, expected)
+        relink_many.assert_called_once_with(
+            session=session,
+            scenes=(scene,),
+            sidecar_path=self.root / "missing.cbq",
+            blend_path=self.root / "view.blend",
+        )
 
     def test_clear_cache_removes_only_derivation_and_render_namespaces(self):
         sidecar = self.root / "cache.cbq"

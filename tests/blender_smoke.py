@@ -360,7 +360,16 @@ def assert_project_session_manager(module_key):
         result = bpy.ops.wm.save_mainfile()
         assert result == {"FINISHED"}, result
         assert not session.dirty
-        assert (blend.with_suffix(".cbq")).is_dir()
+        sidecar = blend.with_suffix(".cbq")
+        assert sidecar.is_dir()
+        manifest_before = (sidecar / "manifest.json").read_bytes()
+        assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        assert (sidecar / "manifest.json").read_bytes() == manifest_before
+        third_scene = bpy.data.scenes.new(
+            "ChemBlender link-only Scene smoke"
+        )
+        assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        assert (sidecar / "manifest.json").read_bytes() == manifest_before
         link_keys = (
             links.PROJECT_ID_KEY,
             links.PROJECT_SCHEMA_KEY,
@@ -369,6 +378,9 @@ def assert_project_session_manager(module_key):
         )
         assert tuple(scene[key] for key in link_keys) == tuple(
             second_scene[key] for key in link_keys
+        )
+        assert tuple(scene[key] for key in link_keys) == tuple(
+            third_scene[key] for key in link_keys
         )
 
         reader_handle = bpy.app.driver_namespace[READER_API_HANDLE_KEY]
@@ -410,6 +422,26 @@ def assert_project_session_manager(module_key):
         ) == 1
         assert ui.get_scene_session_status(bpy.context.scene)[0] == "connected"
         assert restored.sidecar_path == blend.with_suffix(".cbq")
+        relinked_sidecar = Path(directory) / "relinked.cbq"
+        core.save_project(relinked_sidecar, restored.project)
+        relinked = core.relink_project_session_for_scenes(
+            session=restored,
+            scenes=restored_scenes,
+            sidecar_path=relinked_sidecar,
+            blend_path=blend,
+        )
+        assert relinked.status is core.ProjectServiceStatus.CONNECTED
+        assert restored.sidecar_path == relinked_sidecar
+        assert len(
+            {
+                tuple(value[key] for key in link_keys)
+                for value in restored_scenes
+            }
+        ) == 1
+        assert all(
+            value[links.SIDECAR_LOCATOR_KEY] == "relinked.cbq"
+            for value in restored_scenes
+        )
         properties = importlib.import_module(f"{module_key}.ui.properties")
         assert properties.get_quick_import_state(restored).browser_revision == 1
 

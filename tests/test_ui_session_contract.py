@@ -1,6 +1,7 @@
 import array
 import gc
 import importlib
+import json
 import sys
 import unittest
 import weakref
@@ -123,6 +124,24 @@ class UiSessionContractTests(unittest.TestCase):
             blend_path=self.fake_bpy.data.filepath,
         )
         return project, sidecar
+
+    def storage_snapshot(self, sidecar):
+        manifest_path = sidecar / "manifest.json"
+        manifest_bytes = manifest_path.read_bytes()
+        manifest = json.loads(manifest_bytes)
+        return (
+            manifest_bytes,
+            manifest["generation_id"],
+            manifest["manifest_sha256"],
+            tuple(
+                (
+                    path.relative_to(sidecar).as_posix(),
+                    path.read_bytes(),
+                    path.stat().st_mtime_ns,
+                )
+                for path in sorted((sidecar / "arrays").glob("*.npy"))
+            ),
+        )
 
     def tearDown(self):
         if hasattr(self, "ui"):
@@ -437,6 +456,8 @@ class UiSessionContractTests(unittest.TestCase):
         )
         self.ui._save_pre_handler(None)
         self.assertFalse(session.dirty)
+        sidecar = Path(self.temporary.name) / "expanded.cbq"
+        before = self.storage_snapshot(sidecar)
 
         second_scene = Scene()
         self.fake_bpy.data.scenes.append(second_scene)
@@ -448,7 +469,7 @@ class UiSessionContractTests(unittest.TestCase):
         ) as publish:
             self.ui._save_pre_handler(None)
 
-        publish.assert_called_once()
+        publish.assert_not_called()
         self.assertEqual(
             {key: second_scene[key] for key in LINK_KEYS},
             {key: self.scene[key] for key in LINK_KEYS},
@@ -457,6 +478,88 @@ class UiSessionContractTests(unittest.TestCase):
             self.ui.get_scene_session_status(second_scene),
             ("connected", ""),
         )
+        self.assertEqual(self.storage_snapshot(sidecar), before)
+
+    def test_save_handler_clean_connected_identical_links_is_noop(self):
+        session = self.ui.get_scene_session(self.scene)
+        session.mark_dirty("import")
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "noop.blend"
+        )
+        self.ui._save_pre_handler(None)
+        sidecar = Path(self.temporary.name) / "noop.cbq"
+        before = self.storage_snapshot(sidecar)
+
+        with patch.object(
+            project_service,
+            "solidify_session",
+            wraps=project_service.solidify_session,
+        ) as publish:
+            self.ui._save_pre_handler(None)
+
+        publish.assert_not_called()
+        self.assertEqual(self.storage_snapshot(sidecar), before)
+
+    def test_save_handler_unknown_dirty_reason_still_republishes(self):
+        session = self.ui.get_scene_session(self.scene)
+        session.mark_dirty("import")
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "scientific.blend"
+        )
+        self.ui._save_pre_handler(None)
+        session.mark_dirty("future_scientific_reason")
+
+        with patch.object(
+            project_service,
+            "solidify_session",
+            wraps=project_service.solidify_session,
+        ) as publish:
+            self.ui._save_pre_handler(None)
+
+        publish.assert_called_once()
+
+    def test_save_handler_save_as_republishes_to_new_sibling(self):
+        session = self.ui.get_scene_session(self.scene)
+        session.mark_dirty("import")
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "original.blend"
+        )
+        self.ui._save_pre_handler(None)
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "copy.blend"
+        )
+
+        with patch.object(
+            project_service,
+            "solidify_session",
+            wraps=project_service.solidify_session,
+        ) as publish:
+            self.ui._save_pre_handler(None)
+
+        publish.assert_called_once()
+        self.assertEqual(
+            session.sidecar_path,
+            (Path(self.temporary.name) / "copy.cbq").resolve(),
+        )
+
+    def test_save_handler_view_cache_only_does_not_republish(self):
+        session = self.ui.get_scene_session(self.scene)
+        session.mark_dirty("import")
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "view-cache.blend"
+        )
+        self.ui._save_pre_handler(None)
+        session.mark_dirty("view_cache")
+
+        with patch.object(
+            project_service,
+            "solidify_session",
+            wraps=project_service.solidify_session,
+        ) as publish:
+            self.ui._save_pre_handler(None)
+
+        publish.assert_not_called()
+        self.assertEqual(session.dirty_reasons, frozenset({"view_cache"}))
 
     def test_save_handler_does_not_publish_clean_missing_load(self):
         self.fake_bpy.data.filepath = str(
@@ -490,6 +593,29 @@ class UiSessionContractTests(unittest.TestCase):
             self.ui.get_scene_session_status(self.scene)[0],
             "missing",
         )
+
+    def test_save_handler_connected_sidecar_becoming_missing_stays_link_only(self):
+        session = self.ui.get_scene_session(self.scene)
+        session.mark_dirty("import")
+        self.fake_bpy.data.filepath = str(
+            Path(self.temporary.name) / "removed.blend"
+        )
+        self.ui._save_pre_handler(None)
+        sidecar = Path(self.temporary.name) / "removed.cbq"
+        sidecar.rename(Path(self.temporary.name) / "removed-away.cbq")
+
+        with patch.object(
+            project_service,
+            "solidify_session",
+            wraps=project_service.solidify_session,
+        ) as publish:
+            self.ui._save_pre_handler(None)
+            self.ui._save_pre_handler(None)
+
+        publish.assert_not_called()
+        self.assertFalse(sidecar.exists())
+        self.assertEqual(session.link_status, "missing")
+        self.assertEqual(session.dirty_reasons, frozenset({"project_link"}))
 
     def test_save_handler_ignores_non_blend_path(self):
         session = self.ui.get_scene_session(self.scene)
@@ -544,8 +670,17 @@ class UiSessionContractTests(unittest.TestCase):
             ("error", "scene link write failed"),
         )
 
-        self.ui._save_pre_handler(None)
+        sidecar = Path(self.temporary.name) / "retry-scene.cbq"
+        before = self.storage_snapshot(sidecar)
+        with patch.object(
+            project_service,
+            "solidify_session",
+            wraps=project_service.solidify_session,
+        ) as publish:
+            self.ui._save_pre_handler(None)
 
+        publish.assert_not_called()
+        self.assertEqual(self.storage_snapshot(sidecar), before)
         self.assertFalse(session.dirty)
         self.assertEqual(session.link_status, "connected")
         self.assertEqual(

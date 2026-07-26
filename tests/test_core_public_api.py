@@ -56,11 +56,13 @@ PUBLIC_CORE_NAMES = (
     "render_analysis_report_markdown", "reader_capability_document", "builtin_recipes",
     "builtin_reader_descriptors", "builtin_reader_registry", "builtin_external_connectors",
     "builtin_scene_presets", "plan_recipe", "plan_scene_preset", "recipe_document",
-    "recipe_from_document", "relink_project_session", "save_project", "save_project_session", "scene_plan_document", "scene_preset_document",
+    "recipe_from_document", "relink_project_session", "relink_project_session_for_scenes",
+    "save_project", "save_project_session", "scene_plan_document", "scene_preset_document",
     "scene_preset_from_document", "scene_preset_for_recipe_view", "validate_scene_plan",
     "source_hash_bytes", "source_parse_identity", "diagnostic_from_parser_issue", "external_record_request_document",
     "external_record_request_from_document", "external_record_source_uri",
-    "surface_render_cache_key", "volume_render_cache_key", "validate_analysis_report", "verify_project_session",
+    "surface_render_cache_key", "sync_project_session_links_for_scenes",
+    "volume_render_cache_key", "validate_analysis_report", "verify_project_session",
     "write_analysis_report_bundle",
 )
 
@@ -69,7 +71,7 @@ class CorePublicApiTests(unittest.TestCase):
     def test_public_names_are_frozen(self):
         self.assertEqual(tuple(core.__all__), PUBLIC_CORE_NAMES)
         self.assertEqual(len(core.__all__), len(set(core.__all__)))
-        self.assertEqual(len(core.__all__), 202)
+        self.assertEqual(len(core.__all__), 204)
 
     def test_public_names_resolve_to_attributes(self):
         missing = [name for name in core.__all__ if not hasattr(core, name)]
