@@ -17,7 +17,7 @@ class RepositoryContractTests(unittest.TestCase):
             (EXTENSION / "blender_manifest.toml").read_text(encoding="utf-8")
         )
         self.assertEqual(manifest["id"], "chemblender")
-        self.assertEqual(manifest["version"], "2.2.0")
+        self.assertEqual(manifest["version"], "2.3.0-alpha.1")
         self.assertEqual(manifest["blender_version_min"], "5.1.0")
         self.assertEqual(manifest["platforms"], ["windows-x64"])
         self.assertEqual(manifest["wheels"], [f"./wheels/{WHEEL}"])
