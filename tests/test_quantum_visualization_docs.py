@@ -5,11 +5,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = (
-    "2.3.0-wave-1-native-molecular-and-grid.md",
     "2.3.0-wave-2-native-crystal.md",
     "2.3.0-wave-3-exchange-mol2-pdb-pqr.md",
     "2.3.0-wave-4-migration-release.md",
 )
+WAVE_230_ACTIVE_FILE = "2.3.0-wave-1-native-molecular-and-grid.md"
 
 
 class QuantumVisualizationDocsTests(unittest.TestCase):
@@ -49,10 +49,10 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 any(name in index for index in (docs_index, quantum_index)),
                 name,
             )
-        for name in WAVE_230_QUEUE_FILES:
+        for name in (WAVE_230_ACTIVE_FILE, *WAVE_230_QUEUE_FILES):
             self.assertIn(name, agent_index)
 
-    def test_230_wave_0_is_active_and_later_waves_remain_queued(self):
+    def test_230_wave_1_is_active_and_later_waves_remain_queued(self):
         queued = sorted(
             path.name
             for path in (ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md")
@@ -191,7 +191,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            ["2.3.0-wave-0-platform-foundation.md"],
+            [WAVE_230_ACTIVE_FILE],
         )
 
     def test_code_architecture_guide_tracks_source_files(self):

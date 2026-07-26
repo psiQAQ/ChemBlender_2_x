@@ -59,14 +59,14 @@ Historical documents provide provenance, not current status.
 | decision | [0038-prerelease-schema-freeze-and-release-train.md](decisions/0038-prerelease-schema-freeze-and-release-train.md) | Prerelease train and schema/API freeze |
 | decision | [0039-legacy-scene-explicit-migration.md](decisions/0039-legacy-scene-explicit-migration.md) | Explicit legacy-scene migration |
 | decision | [0040-explicit-registration-and-module-boundary.md](decisions/0040-explicit-registration-and-module-boundary.md) | Explicit registration and module boundaries |
-| active | [2.3.0-wave-0-platform-foundation.md](active/2.3.0-wave-0-platform-foundation.md) | Wave 0 platform foundation |
-| queued | [2.3.0-wave-1-native-molecular-and-grid.md](queued/2.3.0-wave-1-native-molecular-and-grid.md) | Wave 1 native molecular and grid formats |
+| active | [2.3.0-wave-1-native-molecular-and-grid.md](active/2.3.0-wave-1-native-molecular-and-grid.md) | Wave 1 native molecular and grid formats |
 | queued | [2.3.0-wave-2-native-crystal.md](queued/2.3.0-wave-2-native-crystal.md) | Wave 2 native crystal formats |
 | queued | [2.3.0-wave-3-exchange-mol2-pdb-pqr.md](queued/2.3.0-wave-3-exchange-mol2-pdb-pqr.md) | Wave 3 exchange and bio formats |
 | queued | [2.3.0-wave-4-migration-release.md](queued/2.3.0-wave-4-migration-release.md) | Wave 4 migration and release |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |
 | completed | [2.2.0-extension-migration.md](completed/2.2.0-extension-migration.md) | Initial extension migration and local validation evidence |
 | completed | [2.2.0-release-readiness.md](completed/2.2.0-release-readiness.md) | Published 2.2.0 package, install, merge, and CI evidence |
+| completed | [2.3.0-wave-0-platform-foundation.md](completed/2.3.0-wave-0-platform-foundation.md) | Published Wave 0 platform foundation and alpha.1 evidence |
 | completed | [quantum-visualization-foundation.md](completed/quantum-visualization-foundation.md) | Phase 0 semantic model, reader contract, and cross-format normalization evidence |
 | completed | [molecular-quantum-chemistry-ingestion.md](completed/molecular-quantum-chemistry-ingestion.md) | Cube/OpenVDB, cclib, IOData, basis, and orbital ingestion evidence |
 | completed | [wavefunction-derived-fields.md](completed/wavefunction-derived-fields.md) | GBasis MO/density grids, numerical baselines, and Blender Volume evidence |
