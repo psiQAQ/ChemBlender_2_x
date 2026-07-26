@@ -63,7 +63,7 @@ jobs:
           }
 
           metadata_json="$(
-            python3 tag-source/ChemBlender/scripts/release_metadata.py \
+            python3 ChemBlender/scripts/release_metadata.py \
               --extension-root tag-source/ChemBlender --format json --include-channel
           )"
           version="$(jq -r '.version' <<< "$metadata_json")"

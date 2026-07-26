@@ -224,6 +224,10 @@ class RepositoryContractTests(unittest.TestCase):
 
         self.assertEqual(workflow.count("release_metadata.py"), 1)
         self.assertIn(
+            "python3 ChemBlender/scripts/release_metadata.py",
+            workflow,
+        )
+        self.assertNotIn(
             "python3 tag-source/ChemBlender/scripts/release_metadata.py",
             workflow,
         )
