@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -140,6 +141,143 @@ class PrereleaseProbeScriptTests(unittest.TestCase):
                 "blender",
                 PROBE_VERSION,
             )
+
+    def test_probe_rejects_directory_symlink_without_entering_target(self):
+        outside = Path(self.temporary.name) / "outside-symlink-target"
+        outside.mkdir()
+        (outside / "must-not-copy.txt").write_text(
+            "outside",
+            encoding="utf-8",
+        )
+        linked = self.extension_root / "linked"
+        try:
+            os.symlink(outside, linked, target_is_directory=True)
+        except OSError as error:
+            self.skipTest(f"directory symlink unavailable: {error}")
+
+        real_scandir = os.scandir
+        linked_name = os.path.normcase(os.path.abspath(linked))
+
+        def refuse_target_entry(path):
+            candidate = os.path.normcase(os.path.abspath(os.fspath(path)))
+            if candidate == linked_name:
+                self.fail("probe entered the directory symlink")
+            return real_scandir(path)
+
+        try:
+            with (
+                mock.patch("os.scandir", side_effect=refuse_target_entry),
+                mock.patch.object(probe_module.subprocess, "run") as run,
+            ):
+                with self.assertRaisesRegex(ValueError, "link|reparse"):
+                    probe_prerelease_version(
+                        self.extension_root,
+                        "blender",
+                        PROBE_VERSION,
+                    )
+            run.assert_not_called()
+        finally:
+            linked.unlink()
+
+        self.assertEqual(
+            (outside / "must-not-copy.txt").read_text(encoding="utf-8"),
+            "outside",
+        )
+
+    def test_probe_fails_closed_when_path_metadata_reports_symlink(self):
+        linked = self.extension_root / "mocked-linked-directory"
+        linked.mkdir()
+        (linked / "must-not-read.txt").write_text(
+            "outside",
+            encoding="utf-8",
+        )
+        original_is_symlink = Path.is_symlink
+        original_iterdir = Path.iterdir
+
+        def report_symlink(path):
+            return path == linked or original_is_symlink(path)
+
+        def refuse_target_entry(path):
+            if path == linked:
+                self.fail("probe entered the mocked directory symlink")
+            return original_iterdir(path)
+
+        with (
+            mock.patch.object(Path, "is_symlink", report_symlink),
+            mock.patch.object(Path, "iterdir", refuse_target_entry),
+            mock.patch.object(probe_module.subprocess, "run") as run,
+        ):
+            with self.assertRaisesRegex(ValueError, "link|reparse"):
+                probe_prerelease_version(
+                    self.extension_root,
+                    "blender",
+                    PROBE_VERSION,
+                )
+
+        run.assert_not_called()
+
+    @unittest.skipUnless(
+        os.name == "nt" and hasattr(Path, "is_junction"),
+        "Windows junction support is required",
+    )
+    def test_probe_rejects_windows_junction_without_entering_target(self):
+        outside = Path(self.temporary.name) / "outside-junction-target"
+        outside.mkdir()
+        (outside / "must-not-copy.txt").write_text(
+            "outside",
+            encoding="utf-8",
+        )
+        linked = self.extension_root / "linked"
+        created = subprocess.run(
+            [
+                "cmd.exe",
+                "/d",
+                "/c",
+                "mklink",
+                "/J",
+                str(linked),
+                str(outside),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if created.returncode:
+            self.skipTest(
+                "directory junction unavailable: "
+                + created.stdout
+                + created.stderr
+            )
+        self.assertTrue(linked.is_junction())
+
+        real_scandir = os.scandir
+        linked_name = os.path.normcase(os.path.abspath(linked))
+
+        def refuse_target_entry(path):
+            candidate = os.path.normcase(os.path.abspath(os.fspath(path)))
+            if candidate == linked_name:
+                self.fail("probe entered the directory junction")
+            return real_scandir(path)
+
+        try:
+            with (
+                mock.patch("os.scandir", side_effect=refuse_target_entry),
+                mock.patch.object(probe_module.subprocess, "run") as run,
+            ):
+                with self.assertRaisesRegex(ValueError, "link|reparse"):
+                    probe_prerelease_version(
+                        self.extension_root,
+                        "blender",
+                        PROBE_VERSION,
+                    )
+            run.assert_not_called()
+        finally:
+            linked.rmdir()
+
+        self.assertEqual(
+            (outside / "must-not-copy.txt").read_text(encoding="utf-8"),
+            "outside",
+        )
 
     def test_probe_constructs_exact_native_validate_command(self):
         with mock.patch.object(
