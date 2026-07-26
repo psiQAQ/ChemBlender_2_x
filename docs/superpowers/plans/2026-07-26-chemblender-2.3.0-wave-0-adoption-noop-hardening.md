@@ -35,7 +35,7 @@
 - Reuse: `_close_candidate_after_failure(candidate, error)`.
 - Produce: one private adoption transaction, named `_adopt_verified_project(...)` or an equivalent local name, shared by multi-Scene verify, single-Scene verify and multi-Scene relink.
 
-- [ ] **Step 1: Add failing multi-Scene adoption tests**
+- [x] **Step 1: Add failing multi-Scene adoption tests**
 
 Add tests that open a candidate containing a loaded `LazyNpyArray`, patch `close_project(previous)` to raise `OSError("old project close failed")`, and assert:
 
@@ -60,14 +60,14 @@ Also make Scene rollback fail and assert `SceneLinkWriteRecoveryError.write_erro
 - Candidate `LazyNpyArray.loaded` remains true because the candidate is not closed.
 - Incomplete rollback cannot be reported because verify never attempts rollback.
 
-- [ ] **Step 2: Add failing single-Scene ownership test**
+- [x] **Step 2: Add failing single-Scene ownership test**
 
 Open and load a candidate array, fail `close_project(previous)`, then assert the original exception is re-raised, the session tuple `(project, sidecar_path, link_status, dirty_reasons)` is unchanged, and the candidate array is unloaded.
 
 **Expected RED:**
 - `verify_project_session()` leaks the candidate array after `_adopt_project()` raises.
 
-- [ ] **Step 3: Implement the shared transaction**
+- [x] **Step 3: Implement the shared transaction**
 
 Move only the existing relink adoption failure sequence into one helper:
 
@@ -119,7 +119,7 @@ Call it from `verify_project_session_for_scenes()`, `verify_project_session()` a
 - Preserves `close_project(previous)` exactly once on success.
 - Guarantees `close_project(candidate)` on every adoption failure before ownership transfer.
 
-- [ ] **Step 1: Complete ownership matrix tests**
+- [x] **Step 1: Complete ownership matrix tests**
 
 Cover:
 
@@ -167,7 +167,7 @@ The tests must observe real `LazyNpyArray.loaded` state, not only mock call coun
 - Consumes Scene snapshots returned by `_write_scene_links()`.
 - Preserves `SceneLinkWriteRecoveryError(write_error, rollback_failures, residual_keys)`.
 
-- [ ] **Step 1: Verify complete and incomplete adoption rollback**
+- [x] **Step 1: Verify complete and incomplete adoption rollback**
 
 For a linked Scene plus an empty Scene, capture every link key before verify. On adoption failure, assert both snapshots are restored. For a rollback write failure, assert:
 
@@ -215,7 +215,7 @@ self.assertEqual(error.residual_keys, ((expected_scene_index, MANIFEST_HASH_KEY)
 - Preserve: `repair_project_view_caches(*, session, objects, blend_path, previous_sidecar_path=None) -> int`.
 - Produce internally: a tuple of `(obj, plan)` for current ChemBlender-owned Volume/Surface views before any durable cache path is inspected or created.
 
-- [ ] **Step 1: Add failing zero-object and foreign-object tests**
+- [x] **Step 1: Add failing zero-object and foreign-object tests**
 
 For `objects=()`, a foreign Volume and a non-Volume ChemBlender object, patch `_durable_cache_root` and assert it is never called. Assert no `cache/`, `render/`, `volume/` or `surface/` path is created, no object metadata changes, result is `0`, and only `view_cache` is cleared from dirty reasons.
 
@@ -225,14 +225,14 @@ For `objects=()`, a foreign Volume and a non-Volume ChemBlender object, patch `_
 **Expected RED:**
 - `_durable_cache_root()` is called and creates all four namespaces before object inspection.
 
-- [ ] **Step 2: Preserve owned and stale behavior**
+- [x] **Step 2: Preserve owned and stale behavior**
 
 Move the linked-render-root rejection test to use a valid owned Grid Volume. Keep the existing valid Grid/Surface repairs. Assert stale owned metadata still raises `ViewCacheError`, marks `view_cache` dirty and does not call a writer.
 
 **Expected RED:**
 - The zero-object no-op tests fail before this change; owned/stale tests characterize behavior that must remain.
 
-- [ ] **Step 3: Add fatal exception passthrough test**
+- [x] **Step 3: Add fatal exception passthrough test**
 
 Raise `MemoryError("cache exhausted")` from the owned cache writer and assert:
 
@@ -248,7 +248,7 @@ Cover the same fatal classifier for `KeyboardInterrupt`, `SystemExit` and `Gener
 **Expected RED:**
 - Current `except BaseException` enters fallback and raises `ViewCacheError` instead of the fatal exception.
 
-- [ ] **Step 4: Implement scan-before-create and fatal passthrough**
+- [x] **Step 4: Implement scan-before-create and fatal passthrough**
 
 Inside the existing outer dirty-state guard:
 
@@ -297,7 +297,7 @@ Then validate connected session, create `_durable_cache_root()`, and repair `pla
 - Consumes the verified implementation commit.
 - Produces a completed `W0-PRE-RELEASE-ADOPTION-NOOP-HARDENING` cursor whose next task is Release Groundwork Task 1 without starting it.
 
-- [ ] **Step 1: Run focused and full Python verification**
+- [x] **Step 1: Run focused and full Python verification**
 
 ```powershell
 & $pythonBin -m unittest `
@@ -322,14 +322,14 @@ git status --short
 **Focused verification:**
 - Re-run the focused modules after every review fix, then the full suite once.
 
-- [ ] **Step 2: Run Blender 5.1.2 regression**
+- [x] **Step 2: Run Blender 5.1.2 regression**
 
 Run native preflight, extension validate/build, ZIP audit, `user_default` install, short-path isolated lifecycle, normal multi-Scene reopen, Structure-only save/reopen without render cache, Cube Volume save/reopen and signed Surface save/reopen. Use pure Python for injected adoption failure if Blender cannot safely patch the old-project close.
 
 **Blender verification:**
 - Record command, exit code and PASS sentinel for each executed gate.
 
-- [ ] **Step 3: Run two independent reviews**
+- [x] **Step 3: Run two independent reviews**
 
 Dispatch one specification-compliance review and one code-quality review. Fix all Critical, Important and gate-related Minor findings with TDD, then perform scoped re-review.
 
@@ -345,14 +345,26 @@ Dispatch one specification-compliance review and one code-quality review. Fix al
 
 ## Completion checkpoint
 
-- State: `in_progress`
+- State: `completed`
 - Reviewed baseline: `97bb15f9d1965c8b98a669fa41c7b44235539168`
-- Planning commit: pending
-- Implementation commit: pending
-- RED evidence: `Not Run — gate in progress`
-- GREEN evidence: `Not Run — gate in progress`
-- Blender verification: `Not Run — gate in progress`
-- Independent reviews: `Not Run — gate in progress`
+- Planning commit: `bd0e94a21be9e7069d3181628a788eec19a4201d`
+- Implementation commit: `4dabc04b8cb5e7ed3c9356662f4ae21cf889e10b`
+- Review-fix commit: `41ce00bc47b469b0042d3fb30aa75a950e92dacd`
+- RED evidence:
+  adoption 42 tests with 2 failures and 1 error; View-cache 15 tests with
+  2 failures and 5 errors; fallback review 17 tests with 2 errors; fatal
+  adoption review 2 tests with 3 subtest failures and 1 error.
+- GREEN evidence:
+  focused 99/99 Passed; full 944 Passed, 27 Skipped and 0 Failed; compileall
+  and diff-check Passed.
+- Blender verification:
+  Blender 5.1.2 native preflight, validate, build, ZIP audit, default
+  `user_default` install/lifecycle and short-path isolated lifecycle Passed;
+  Structure-only no-cache and Grid Volume/signed Surface cross-process reopen
+  Passed; missing VDB reconstruction Passed without duplicate objects.
+- Independent reviews:
+  specification compliance and code-quality reviews Passed after their
+  findings were fixed and scoped re-reviewed.
 - Remote CI: `Not Run`
 - Next plan: `docs/superpowers/plans/2026-07-23-chemblender-2.3.0-wave-0-release-groundwork.md`
 - Next task: `Task 1 — Add a single release metadata helper`
