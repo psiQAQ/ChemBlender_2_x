@@ -160,28 +160,36 @@ class RepositoryContractTests(unittest.TestCase):
         workflow = (
             ROOT / ".github" / "workflows" / "extension-package.yml"
         ).read_text(encoding="utf-8")
+        step = workflow.split(
+            "\n      - name: Test, validate, build, and install\n", 1
+        )[1].split("\n      - uses:", 1)[0]
 
         self.assertIn(
             "$blenderPython = Join-Path (Split-Path $blender) "
             '"5.1/python/bin/python.exe"',
-            workflow,
+            step,
         )
         self.assertIn(
             '& $blenderPython -m unittest discover -s tests -p "test_*.py" -v',
-            workflow,
+            step,
         )
         self.assertIn(
             "build_extension.py --python $blenderPython --blender $blender",
-            workflow,
+            step,
         )
         self.assertIn(
             'if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }',
-            workflow,
+            step,
         )
         self.assertIn(
             'if ($LASTEXITCODE -ne 0) { throw "Extension build failed" }',
-            workflow,
+            step,
         )
+        self.assertIn("$env:TEMP = $env:RUNNER_TEMP", step)
+        self.assertIn("$env:TMP = $env:RUNNER_TEMP", step)
+        test_command = step.index("& $blenderPython -m unittest discover")
+        self.assertLess(step.index("$env:TEMP = $env:RUNNER_TEMP"), test_command)
+        self.assertLess(step.index("$env:TMP = $env:RUNNER_TEMP"), test_command)
 
     def test_package_workflow_retains_tag_artifacts_for_review(self):
         workflow = (

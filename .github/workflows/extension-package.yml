@@ -82,6 +82,8 @@ jobs:
           $blender = (Get-ChildItem "blender" -Recurse -Filter "blender.exe" | Select-Object -First 1).FullName
           $blenderPython = Join-Path (Split-Path $blender) "5.1/python/bin/python.exe"
           if (-not (Test-Path -LiteralPath $blenderPython -PathType Leaf)) { throw "Blender bundled Python missing" }
+          $env:TEMP = $env:RUNNER_TEMP
+          $env:TMP = $env:RUNNER_TEMP
           $env:BLENDER_USER_RESOURCES = Join-Path $env:RUNNER_TEMP "blender-user"
           New-Item -ItemType Directory -Path $env:BLENDER_USER_RESOURCES -Force | Out-Null
           & $blenderPython -m unittest discover -s tests -p "test_*.py" -v
