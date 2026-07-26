@@ -123,10 +123,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             artifact = root / "artifact"
             extension.mkdir()
             artifact.mkdir()
-            manifest = (EXTENSION / "blender_manifest.toml").read_bytes().replace(
-                b'version = "2.2.0"',
-                b'version = "2.3.0-alpha.1"',
-            )
+            manifest = (EXTENSION / "blender_manifest.toml").read_bytes()
             (extension / "blender_manifest.toml").write_bytes(manifest)
             self._write_artifact_for_extension(artifact, extension)
 
