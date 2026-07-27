@@ -57,8 +57,15 @@ class RDKitMoleculeContext:
             raise TypeError("writer_name must be a string or None")
         if self.writer_version is not None and not isinstance(self.writer_version, str):
             raise TypeError("writer_version must be a string or None")
-        if self.validation_mode not in {"strict", "balanced", "maximum"}:
+        validation_mode = self.validation_mode
+        if type(validation_mode) is not str:
+            validation_mode = getattr(validation_mode, "value", None)
+        if (
+            type(validation_mode) is not str
+            or validation_mode not in {"strict", "balanced", "maximum"}
+        ):
             raise ValueError("validation_mode must be strict, balanced or maximum")
+        object.__setattr__(self, "validation_mode", validation_mode)
 
 
 @dataclass(frozen=True, slots=True)

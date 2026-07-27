@@ -29,6 +29,10 @@ if RDKIT_SITE.is_dir():
 from rdkit import Chem
 from rdkit.Chem import rdDepictor
 
+from ChemBlender.core import ImportBatch
+from ChemBlender.core.import_pipeline import ValidationMode
+from ChemBlender.reader_api.builtin_bridge import public_batch_from_internal
+
 
 def _context(module, *, record_key="record-0000"):
     return module.RDKitMoleculeContext(
@@ -277,6 +281,39 @@ class RDKitCommonAdapterTests(unittest.TestCase):
                     _context(adapter, record_key=str(stereo)),
                 )
                 self.assertEqual(adapted.topologies[0].stereo_labels, (expected,))
+
+    def test_validation_mode_enum_is_canonicalized_for_the_public_bridge(self):
+        adapter = self.adapter()
+        context = adapter.RDKitMoleculeContext(
+            UUID("11111111-1111-1111-1111-111111111111"),
+            "a" * 64,
+            "mode",
+            0,
+            "mode fixture",
+            "V2000",
+            validation_mode=ValidationMode.MAXIMUM,
+        )
+        adapted = adapter.adapt_rdkit_molecule(
+            _add_conformer(Chem.MolFromSmiles("CO")), b"mode\n", context
+        )
+
+        self.assertEqual(context.validation_mode, "maximum")
+        try:
+            public = public_batch_from_internal(
+                ImportBatch(
+                    structures=(adapted.structure,),
+                    topologies=adapted.topologies,
+                    molecular_records=(adapted.molecular_record,),
+                    provenance=(adapted.provenance,),
+                    diagnostics=adapted.diagnostics,
+                )
+            )
+        except TypeError as error:
+            self.fail(f"ValidationMode leaked through public bridge: {error}")
+        self.assertEqual(
+            public.provenance[0].parameters,
+            (("record_key", "mode"), ("rdkit_sanitized", True), ("validation_mode", "maximum")),
+        )
 
 
 if __name__ == "__main__":
