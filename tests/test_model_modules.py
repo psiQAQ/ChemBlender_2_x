@@ -5,6 +5,7 @@ from ChemBlender.core import model
 
 
 EXPECTED_MODULES = {
+    "AtomicIdentityData": "ChemBlender.core.model.chemical_identity",
     "PeriodicSiteData": "ChemBlender.core.model.structure",
     "MolecularTopology": "ChemBlender.core.model.structure",
     "TopologyRecord": "ChemBlender.core.model.molecular_topology",
@@ -18,6 +19,10 @@ EXPECTED_MODULES = {
     "FrameProperty": "ChemBlender.core.model.properties",
     "FrameSet": "ChemBlender.core.model.properties",
     "CategoricalData": "ChemBlender.core.model.categorical",
+    "RawRecordProperty": "ChemBlender.core.model.records",
+    "MolecularRecord": "ChemBlender.core.model.records",
+    "RecordPropertyColumn": "ChemBlender.core.model.records",
+    "ConformerSet": "ChemBlender.core.model.records",
     "Grid3D": "ChemBlender.core.model.grids",
     "VibrationalModeSet": "ChemBlender.core.model.spectroscopy",
     "ExcitationContribution": "ChemBlender.core.model.spectroscopy",

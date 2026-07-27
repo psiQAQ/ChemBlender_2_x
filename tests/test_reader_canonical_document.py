@@ -24,6 +24,8 @@ GRID_ID = UUID("60000000-0000-0000-0000-000000000006")
 MODEL_TAGS = (
     "PublicImportBatch",
     "ArrayData",
+    "AtomicIdentityData",
+    "CategoricalData",
     "SourceRecord",
     "SourceRevision",
     "CIFEnvelope",
@@ -31,12 +33,16 @@ MODEL_TAGS = (
     "CJSONEnvelope",
     "PeriodicSiteData",
     "MolecularTopology",
+    "RawRecordProperty",
+    "MolecularRecord",
     "TopologyRecord",
     "Structure",
     "SymmetryResult",
     "CalculationMetadata",
     "CalculationRecord",
     "PropertyDataset",
+    "RecordPropertyColumn",
+    "ConformerSet",
     "AtomicProperty",
     "FrameSet",
     "Grid3D",
@@ -414,7 +420,7 @@ class ReaderCanonicalDocumentTests(unittest.TestCase):
     def test_registered_model_and_enum_tags_are_exact(self):
         self.assertEqual(tuple(canonical_document._MODEL_TYPES), MODEL_TAGS)
         self.assertEqual(tuple(canonical_document._MODEL_ENUMS), ENUM_TAGS)
-        self.assertEqual(len(MODEL_TAGS), 43)
+        self.assertEqual(len(MODEL_TAGS), 49)
         self.assertEqual(len(ENUM_TAGS), 15)
         for name in MODEL_TAGS + ENUM_TAGS:
             with self.subTest(name=name):

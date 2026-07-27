@@ -31,6 +31,8 @@ _SHA256 = re.compile(r"[0-9a-f]{64}")
 _TYPE_NAMES = (
     "PublicImportBatch",
     "ArrayData",
+    "AtomicIdentityData",
+    "CategoricalData",
     "SourceRecord",
     "SourceRevision",
     "CIFEnvelope",
@@ -38,12 +40,16 @@ _TYPE_NAMES = (
     "CJSONEnvelope",
     "PeriodicSiteData",
     "MolecularTopology",
+    "RawRecordProperty",
+    "MolecularRecord",
     "TopologyRecord",
     "Structure",
     "SymmetryResult",
     "CalculationMetadata",
     "CalculationRecord",
     "PropertyDataset",
+    "RecordPropertyColumn",
+    "ConformerSet",
     "AtomicProperty",
     "FrameSet",
     "Grid3D",
@@ -264,6 +270,11 @@ class _Encoder:
                     raise CanonicalDocumentIntegrityError(
                         "incomplete public model value"
                     ) from error
+                if (
+                    (tag == "PublicImportBatch" and item.name == "molecular_records" and field_value == ())
+                    or (tag == "Structure" and item.name == "atomic_identity" and field_value is None)
+                ):
+                    continue
                 encoded[item.name] = self.encode(field_value)
         return encoded
 
@@ -442,6 +453,10 @@ class _Decoder:
             raise CanonicalDocumentCompatibilityError(
                 f"unknown public model type: {type_name!r}"
             )
+        if type_name == "PublicImportBatch" and "molecular_records" not in value:
+            value = dict(value, molecular_records={"$tuple": []})
+        elif type_name == "Structure" and "atomic_identity" not in value:
+            value = dict(value, atomic_identity=None)
         expected = {"$type"} | {
             item.name for item in fields(class_type) if item.init
         }

@@ -3,6 +3,7 @@ from math import isfinite
 from uuid import UUID
 
 from .arrays import ArrayData
+from .chemical_identity import AtomicIdentityData
 from .common import _require_text, _require_uuid, _require_uuid_tuple
 
 
@@ -164,6 +165,7 @@ class Structure:
     molecular_multiplicity: int | None = None
     topology: MolecularTopology | None = None
     topology_ids: tuple[UUID, ...] = ()
+    atomic_identity: AtomicIdentityData | None = None
 
     def __post_init__(self):
         import numpy
@@ -221,6 +223,11 @@ class Structure:
             indices = numpy.asarray(self.topology.bond_indices.values)
             if indices.size and int(indices.max()) >= len(atomic_numbers):
                 raise ValueError("topology bond index is outside the structure")
+        if self.atomic_identity is not None:
+            if not isinstance(self.atomic_identity, AtomicIdentityData):
+                raise TypeError("atomic_identity must be AtomicIdentityData or None")
+            if self.atomic_identity.atom_count != len(atomic_numbers):
+                raise ValueError("atomic identity atom dimension must match atomic numbers")
         object.__setattr__(self, "atomic_numbers", atomic_numbers)
         object.__setattr__(
             self,

@@ -5,6 +5,7 @@ import ChemBlender.core as core
 
 PUBLIC_MODEL_NAMES = {
     "ArrayData",
+    "AtomicIdentityData",
     "AtomicProperty",
     "AtomFrameProperty",
     "BandPathBranch",
@@ -18,6 +19,7 @@ PUBLIC_MODEL_NAMES = {
     "CalculationGroup",
     "CalculationStatus",
     "CategoricalData",
+    "ConformerSet",
     "CellFrameProperty",
     "CriticalPointKind",
     "CJSONEnvelope",
@@ -41,6 +43,9 @@ PUBLIC_MODEL_NAMES = {
     "ImportDiagnostic",
     "IssueKind",
     "MolecularTopology",
+    "MolecularRecord",
+    "RawRecordProperty",
+    "RecordPropertyColumn",
     "TopologyRecord",
     "TopologySource",
     "OrbitalChannel",

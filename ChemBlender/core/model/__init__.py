@@ -1,5 +1,6 @@
 from .arrays import ArrayData
 from .categorical import CategoricalData
+from .chemical_identity import AtomicIdentityData
 from .common import (
     BasisFunctionKind,
     CalculationStatus,
@@ -52,6 +53,7 @@ from .properties import (
     FrameSet,
     PropertyDataset,
 )
+from .records import ConformerSet, MolecularRecord, RawRecordProperty, RecordPropertyColumn
 from .spectroscopy import (
     ExcitationContribution,
     ExcitedStateReferences,

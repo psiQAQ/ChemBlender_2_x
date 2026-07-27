@@ -121,9 +121,11 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/core/model/sources.py` | `SourceRecord`、`SourceRevision`、`source_parse_identity()` | 定义用户逻辑来源及其不可变内容/解析 revision；以内容 hash、reader plugin/id/version 和规范参数对计算与 locator 无关的解析身份。 |
 | `ChemBlender/core/model/arrays.py` | `ArrayData` | 定义带命名维度、单位、shape 和 dtype 校验的中立数组包装，并由模型 package 原样 re-export。 |
 | `ChemBlender/core/model/categorical.py` | `CategoricalData` | 以整数 code、唯一字符串 category 和显式 missing code 保存分类属性，避免 object dtype 进入 sidecar。 |
+| `ChemBlender/core/model/chemical_identity.py` | `AtomicIdentityData` | 定义可选逐 atom identity 值对象；以 dimensionless integer isotope/formal-charge/atom-map 和 `CategoricalData` 名称/stereo 标签保持同一 atom 轴，不保存 RDKit 对象。 |
 | `ChemBlender/core/model/diagnostics.py` | `DiagnosticValue`、`ImportDiagnostic`、`diagnostic_from_parser_issue()`、`ParserIssue`、`ParserReport` | 以逐节点 type tag 定义不可变、JSON-safe 且可区分 sequence/mapping 的详细导入诊断，并提供 legacy reader issue 转换，同时保持既有 parser issue/report 契约。 |
 | `ChemBlender/core/model/structure.py` | `PeriodicSiteData`、`MolecularTopology`、`Structure`、`SymmetryResult` | 定义分子/周期结构和对称性结果；保留 `MolecularTopology` 读取兼容，让 Structure 记录零或多个独立 topology UUID，并拒绝非有限或奇异 cell。 |
 | `ChemBlender/core/model/molecular_topology.py` | `TopologySource`、`TopologyRecord` | 定义按来源和质量版本化的分子连接实体，校验 bond arrays、可选 integer lattice shifts、芳香/立体标签、规范推断参数及 provenance；文件显式、RDKit 解释、距离推断和用户编辑互不覆盖。 |
+| `ChemBlender/core/model/records.py` | `RawRecordProperty`、`MolecularRecord`、`RecordPropertyColumn`、`ConformerSet` | 定义原始分子 record 的精确 bytes/有序属性、可选 typed record-column 与已归一化 conformer 坐标；由 project graph 校验 source revision、Structure/Topology、record UUID、atom 数和单位，不解析 RDKit 或实现 grouping。 |
 | `ChemBlender/core/model/properties.py` | `PropertyDataset`、`AtomicProperty`、`FrameSet`、`FrameProperty`、`AtomFrameProperty`、`CellFrameProperty` | 定义通用属性数据集、原子/坐标帧特化，以及绑定 FrameSet 并带严格 validity mask 的帧属性。 |
 | `ChemBlender/core/model/grids.py` | `Grid3D` | 定义仿射三维网格、坐标单位、步进向量和可选结构引用校验。 |
 | `ChemBlender/core/model/spectroscopy.py` | `VibrationalModeSet`、`ExcitedStateSet`、`Spectrum` | 定义振动模式、激发态贡献/引用和振动/电子光谱数据集。 |

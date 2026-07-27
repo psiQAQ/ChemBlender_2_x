@@ -14,6 +14,11 @@
 `Structure.topology_ids` 只保存关联 UUID，活动 topology 属于 View 状态。
 旧 sidecar 中内嵌的 `MolecularTopology` 仅作为读取兼容输入。
 
+`AtomicIdentityData` 是可选逐 atom isotope、formal charge、atom-map、名称和
+stereo 值对象。`MolecularRecord` 保留单一精确 raw block 与有序（允许重复）原始
+属性。`RecordPropertyColumn` 与 `ConformerSet` 是可选 dataset 投影；它们不保存
+RDKit 对象，也不实现 reader、grouping、export 或 UI 行为。
+
 ## 存储 API
 
 `open_project`、`save_project`、`close_project`、`LazyNpyArray` 及 `Sidecar*Error` 构成 sidecar 存储 API，用于 `.cbq` 项目和数组引用的读取、写入与错误处理。

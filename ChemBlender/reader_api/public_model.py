@@ -4,6 +4,7 @@ from uuid import UUID
 
 from ..core import (
     ArrayData,
+    AtomicIdentityData,
     AtomFrameProperty,
     AtomicProperty,
     BandPathBranch,
@@ -15,6 +16,8 @@ from ..core import (
     CalculationMetadata,
     CalculationRecord,
     CalculationStatus,
+    CategoricalData,
+    ConformerSet,
     CJSONEnvelope,
     CIFEnvelope,
     CriticalPointKind,
@@ -37,6 +40,9 @@ from ..core import (
     ImportDiagnostic,
     IssueKind,
     MolecularTopology,
+    MolecularRecord,
+    RawRecordProperty,
+    RecordPropertyColumn,
     TopologyRecord,
     TopologySource,
     OrbitalChannel,
@@ -73,6 +79,7 @@ _GROUP_TYPES = (
     ("source_revisions", frozenset((SourceRevision,))),
     ("structures", frozenset((Structure,))),
     ("topologies", frozenset((TopologyRecord,))),
+    ("molecular_records", frozenset((MolecularRecord,))),
     ("cif_envelopes", frozenset((CIFEnvelope,))),
     ("qcschema_envelopes", frozenset((QCSchemaEnvelope,))),
     ("cjson_envelopes", frozenset((CJSONEnvelope,))),
@@ -82,7 +89,8 @@ _GROUP_TYPES = (
         PropertyDataset, AtomicProperty, FrameSet, FrameProperty,
         AtomFrameProperty, CellFrameProperty, Grid3D, VibrationalModeSet,
         ExcitedStateSet, Spectrum, BandStructure, DensityOfStates,
-        PhononModeSet, FermiSurfaceMesh, TopologyGraph,
+        PhononModeSet, FermiSurfaceMesh, TopologyGraph, RecordPropertyColumn,
+        ConformerSet,
     ))),
     ("basis_sets", frozenset((BasisSet,))),
     ("orbital_sets", frozenset((OrbitalSet,))),
@@ -162,6 +170,7 @@ class PublicImportBatch:
     source_revisions: tuple[SourceRevision, ...] = ()
     structures: tuple[Structure, ...] = ()
     topologies: tuple[TopologyRecord, ...] = ()
+    molecular_records: tuple[MolecularRecord, ...] = ()
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
     qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
     cjson_envelopes: tuple[CJSONEnvelope, ...] = ()

@@ -9,10 +9,10 @@ from ChemBlender.core.model_registry import MODEL_ENUMS, MODEL_TYPES
 
 PUBLIC_CORE_NAMES = (
     "AnalysisReportError", "AmbiguousReaderError", "ASE_STRUCTURE_READER",
-    "ASEDependencyError", "ArrayData", "AtomicProperty", "AtomFrameProperty", "BandPathBranch",
+    "ASEDependencyError", "ArrayData", "AtomicIdentityData", "AtomicProperty", "AtomFrameProperty", "BandPathBranch",
     "BandStructure", "BasisConvention", "BasisFunctionKind", "BasisSet",
     "BasisShell", "CalculationRecord", "CalculationMetadata", "CalculationGroup",
-    "CalculationStatus", "CategoricalData", "CriticalPointKind", "CJSONEnvelope", "CJSON_READER",
+    "CalculationStatus", "CategoricalData", "ConformerSet", "CriticalPointKind", "CJSONEnvelope", "CJSON_READER",
     "CJSONCompatibilityError", "CJSONError", "CacheIdentityError", "CacheClearResult", "CIFEnvelope",
     "CapabilitySupport", "CCLIB_OUTPUT_READER", "CCLibDependencyError", "CIF_READER",
     "CUBE_READER", "DatasetStatus", "DiagnosticSeverity", "DiagnosticValue",
@@ -22,7 +22,7 @@ PUBLIC_CORE_NAMES = (
     "FrameCacheInfo", "FermiSurfaceMesh", "GemmiDependencyError", "Grid3D",
     "GBasisDependencyError", "ImportBatch", "ImportDiagnostic", "IssueKind", "LazyNpyArray",
     "IODATA_WAVEFUNCTION_READER", "IODataDependencyError", "MOL_V2000_READER",
-    "MolecularTopology", "TopologyRecord", "TopologySource", "OrbitalChannel", "OrbitalKind", "OrbitalSet", "ParserIssue",
+    "MolecularTopology", "MolecularRecord", "RawRecordProperty", "RecordPropertyColumn", "TopologyRecord", "TopologySource", "OrbitalChannel", "OrbitalKind", "OrbitalSet", "ParserIssue",
     "ParserReport", "PeriodicSiteData", "PhononModeSet", "PhonopyDependencyError",
     "PYMATGEN_VASP_GRID_READER", "PYMATGEN_VASP_ELECTRONIC_READER",
     "PymatgenDependencyError", "PymatgenElectronicDependencyError", "PropertyDataset",
@@ -71,7 +71,7 @@ class CorePublicApiTests(unittest.TestCase):
     def test_public_names_are_frozen(self):
         self.assertEqual(tuple(core.__all__), PUBLIC_CORE_NAMES)
         self.assertEqual(len(core.__all__), len(set(core.__all__)))
-        self.assertEqual(len(core.__all__), 210)
+        self.assertEqual(len(core.__all__), 215)
 
     def test_public_names_resolve_to_attributes(self):
         missing = [name for name in core.__all__ if not hasattr(core, name)]

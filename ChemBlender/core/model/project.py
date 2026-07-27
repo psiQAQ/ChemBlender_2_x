@@ -30,6 +30,7 @@ from .properties import (
     FrameSet,
     PropertyDataset,
 )
+from .records import ConformerSet, MolecularRecord, RecordPropertyColumn
 from .sources import SourceRecord, SourceRevision
 from .spectroscopy import (
     ExcitedStateSet,
@@ -231,6 +232,7 @@ class ImportBatch:
     source_revisions: tuple[SourceRevision, ...] = ()
     structures: tuple[Structure, ...] = ()
     topologies: tuple[TopologyRecord, ...] = ()
+    molecular_records: tuple[MolecularRecord, ...] = ()
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
     qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
     cjson_envelopes: tuple[CJSONEnvelope, ...] = ()
@@ -250,6 +252,7 @@ class ImportBatch:
             ("source_revisions", SourceRevision),
             ("structures", Structure),
             ("topologies", TopologyRecord),
+            ("molecular_records", MolecularRecord),
             ("cif_envelopes", CIFEnvelope),
             ("qcschema_envelopes", QCSchemaEnvelope),
             ("cjson_envelopes", CJSONEnvelope),
@@ -279,6 +282,7 @@ class QCProject:
     source_revisions: dict[UUID, SourceRevision] = field(default_factory=dict)
     structures: dict[UUID, Structure] = field(default_factory=dict)
     topologies: dict[UUID, TopologyRecord] = field(default_factory=dict)
+    molecular_records: dict[UUID, MolecularRecord] = field(default_factory=dict)
     cif_envelopes: dict[UUID, CIFEnvelope] = field(default_factory=dict)
     qcschema_envelopes: dict[UUID, QCSchemaEnvelope] = field(default_factory=dict)
     cjson_envelopes: dict[UUID, CJSONEnvelope] = field(default_factory=dict)
@@ -306,6 +310,7 @@ class QCProject:
         incoming_entity_groups = (
             batch.structures,
             batch.topologies,
+            batch.molecular_records,
             batch.cif_envelopes,
             batch.qcschema_envelopes,
             batch.cjson_envelopes,
@@ -350,6 +355,11 @@ class QCProject:
             (topology.id, topology) for topology in batch.topologies
         )
         topology_ids = set(topologies)
+        molecular_records = dict(self.molecular_records)
+        molecular_records.update(
+            (record.id, record) for record in batch.molecular_records
+        )
+        molecular_record_ids = set(molecular_records)
         cif_envelope_ids = set(self.cif_envelopes).union(
             envelope.id for envelope in batch.cif_envelopes
         )
@@ -425,6 +435,23 @@ class QCProject:
                 topology.provenance_ids,
                 provenance_ids,
                 "topology provenance",
+            )
+        for record in batch.molecular_records:
+            if record.source_revision_id not in source_revision_ids:
+                raise ValueError("molecular record has a dangling source revision reference")
+            try:
+                reference = structures[record.structure_id]
+            except KeyError as error:
+                raise ValueError("molecular record has a dangling structure reference") from error
+            if record.topology_id is not None:
+                try:
+                    topology = topologies[record.topology_id]
+                except KeyError as error:
+                    raise ValueError("molecular record has a dangling topology reference") from error
+                if topology.structure_id != reference.id:
+                    raise ValueError("molecular record topology belongs to another structure")
+            self._require_references(
+                record.provenance_ids, provenance_ids, "molecular record provenance"
             )
         for envelope in batch.cif_envelopes:
             self._require_references(
@@ -509,6 +536,34 @@ class QCProject:
                 provenance_ids,
                 "dataset provenance",
             )
+            if isinstance(dataset, RecordPropertyColumn):
+                self._require_references(
+                    dataset.record_ids, molecular_record_ids, "record property column record"
+                )
+            if isinstance(dataset, ConformerSet):
+                try:
+                    reference = structures[dataset.reference_structure_id]
+                except KeyError as error:
+                    raise ValueError("ConformerSet has a dangling structure reference") from error
+                if dataset.data.shape[1] != len(reference.atomic_numbers):
+                    raise ValueError("ConformerSet atom dimension must match its structure")
+                if dataset.data.unit != reference.coordinates.unit:
+                    raise ValueError("ConformerSet and structure coordinate units must match")
+                if dataset.reference_topology_id is not None:
+                    try:
+                        topology = topologies[dataset.reference_topology_id]
+                    except KeyError as error:
+                        raise ValueError("ConformerSet has a dangling topology reference") from error
+                    if topology.structure_id != reference.id:
+                        raise ValueError("ConformerSet topology belongs to another structure")
+                self._require_references(
+                    dataset.record_ids, molecular_record_ids, "ConformerSet record"
+                )
+                if any(
+                    molecular_records[record_id].structure_id != reference.id
+                    for record_id in dataset.record_ids
+                ):
+                    raise ValueError("ConformerSet records must use its reference structure")
             if isinstance(dataset, AtomicProperty):
                 try:
                     reference = structures[dataset.structure_id]
@@ -716,6 +771,7 @@ class QCProject:
             | source_revision_ids
             | structure_ids
             | topology_ids
+            | molecular_record_ids
             | cif_envelope_ids
             | qcschema_envelope_ids
             | cjson_envelope_ids
@@ -758,6 +814,9 @@ class QCProject:
         )
         self.structures.update((entity.id, entity) for entity in batch.structures)
         self.topologies.update((entity.id, entity) for entity in batch.topologies)
+        self.molecular_records.update(
+            (entity.id, entity) for entity in batch.molecular_records
+        )
         self.cif_envelopes.update(
             (entity.id, entity) for entity in batch.cif_envelopes
         )
@@ -808,6 +867,7 @@ class QCProject:
             self.source_revisions,
             self.structures,
             self.topologies,
+            self.molecular_records,
             self.cif_envelopes,
             self.qcschema_envelopes,
             self.cjson_envelopes,
@@ -832,6 +892,7 @@ class QCProject:
             (self.source_revisions, SourceRevision, "source_revisions"),
             (self.structures, Structure, "structures"),
             (self.topologies, TopologyRecord, "topologies"),
+            (self.molecular_records, MolecularRecord, "molecular_records"),
             (self.cif_envelopes, CIFEnvelope, "cif_envelopes"),
             (self.qcschema_envelopes, QCSchemaEnvelope, "qcschema_envelopes"),
             (self.cjson_envelopes, CJSONEnvelope, "cjson_envelopes"),
@@ -944,6 +1005,7 @@ def validate_project_graph(project):
             source_revisions=tuple(project.source_revisions.values()),
             structures=tuple(project.structures.values()),
             topologies=tuple(project.topologies.values()),
+            molecular_records=tuple(project.molecular_records.values()),
             cif_envelopes=tuple(project.cif_envelopes.values()),
             qcschema_envelopes=tuple(project.qcschema_envelopes.values()),
             cjson_envelopes=tuple(project.cjson_envelopes.values()),

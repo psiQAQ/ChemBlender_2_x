@@ -171,7 +171,12 @@ def migrate_manifest(document, *, migrated_topology_ids=None):
         if isinstance(project, dict) and project.get("$type") == "QCProject":
             missing = tuple(
                 name
-                for name in ("diagnostics", "calculation_groups", "topologies")
+                for name in (
+                    "diagnostics",
+                    "calculation_groups",
+                    "topologies",
+                    "molecular_records",
+                )
                 if name not in project
             )
         else:
@@ -190,10 +195,23 @@ def migrate_manifest(document, *, migrated_topology_ids=None):
             and "bond_lattice_shifts" not in topology
             for _key, topology in _registry_entries(project or {}, "topologies")
         )
-        if missing or has_legacy_structure or has_legacy_topology:
+        has_pre_task1_structure = any(
+            isinstance(structure, dict)
+            and structure.get("$type") == "Structure"
+            and "atomic_identity" not in structure
+            for _key, structure in _registry_entries(project or {}, "structures")
+        )
+        if missing or has_legacy_structure or has_legacy_topology or has_pre_task1_structure:
             migrated = deepcopy(document)
             for name in missing:
                 migrated["project"][name] = {"$dict": []}
+            for _key, structure in _registry_entries(migrated["project"], "structures"):
+                if (
+                    isinstance(structure, dict)
+                    and structure.get("$type") == "Structure"
+                    and "atomic_identity" not in structure
+                ):
+                    structure["atomic_identity"] = None
             migrate_topologies(migrated["project"])
             return migrated
         return document
@@ -232,5 +250,13 @@ def migrate_manifest(document, *, migrated_topology_ids=None):
     migrated["project"]["diagnostics"] = {"$dict": []}
     migrated["project"]["calculation_groups"] = {"$dict": []}
     migrated["project"]["topologies"] = {"$dict": []}
+    migrated["project"]["molecular_records"] = {"$dict": []}
+    for _key, structure in _registry_entries(migrated["project"], "structures"):
+        if (
+            isinstance(structure, dict)
+            and structure.get("$type") == "Structure"
+            and "atomic_identity" not in structure
+        ):
+            structure["atomic_identity"] = None
     migrate_topologies(migrated["project"])
     return migrated
