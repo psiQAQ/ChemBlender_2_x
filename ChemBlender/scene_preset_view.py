@@ -5,7 +5,7 @@ import json
 import bpy
 
 from .core import EnergyReference, validate_scene_plan
-from .dataset_view import create_structure_view, link_stick_spectrum_selection
+from .dataset_view import link_stick_spectrum_selection
 from .electronic_plot import create_band_structure_plot, create_dos_plot
 from .grid_volume import create_grid_volume
 from .spectrum_plot import create_spectrum_plot
@@ -15,6 +15,7 @@ from .surface_view import (
     remove_surface_object,
 )
 from .vibration_view import create_vibration_view
+from .views.structure import create_structure_view, remove_structure_view
 
 
 class ScenePresetApplicationError(RuntimeError):
@@ -57,6 +58,13 @@ def _write_plan_metadata(obj, plan):
 def _remove_objects(objects):
     data_blocks = []
     for obj in reversed(objects):
+        getter = getattr(obj, "get", None)
+        if (
+            getter is not None
+            and getter("cb_structure_contract") == "structure_view_v1"
+        ):
+            remove_structure_view(obj)
+            continue
         if getattr(obj, "type", None) == "VOLUME" and any(
             modifier.get("cbq_contract") in {"isosurface_v1", "property_surface_v1"}
             for modifier in obj.modifiers

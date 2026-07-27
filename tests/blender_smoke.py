@@ -1167,10 +1167,12 @@ def assert_vibration_view_adapter(module_key):
 
 def assert_dataset_and_trajectory_views(module_key):
     import numpy
+    import warnings
 
     core = importlib.import_module(f"{module_key}.core")
     adapter = importlib.import_module(f"{module_key}.dataset_view")
     trajectory = importlib.import_module(f"{module_key}.trajectory_view")
+    views = importlib.import_module(f"{module_key}.views")
     structure_id = uuid4()
     structure = core.Structure(
         id=structure_id,
@@ -1184,17 +1186,60 @@ def assert_dataset_and_trajectory_views(module_key):
             "bohr",
         ),
     )
-    obj = adapter.create_structure_view(
-        structure,
-        name="ChemBlender dataset smoke",
-        collection=bpy.context.scene.collection,
+    topology = core.TopologyRecord(
+        id=uuid4(),
+        revision="topology-revision",
+        structure_id=structure_id,
+        bond_indices=core.ArrayData(
+            numpy.asarray([[0, 1], [0, 2]]),
+            ("bond", "endpoint"),
+            "dimensionless",
+        ),
+        bond_orders=core.ArrayData(
+            numpy.asarray([1.0, 1.0]), ("bond",), "dimensionless"
+        ),
+        aromatic_flags=core.ArrayData(
+            numpy.asarray([False, False]), ("bond",), "dimensionless"
+        ),
+        stereo_labels=("", ""),
+        source_kind=core.TopologySource.EXPLICIT_FILE,
+        quality_status=core.QualityStatus.COMPLETE,
+        inference_parameters=(),
+        provenance_ids=(),
     )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", DeprecationWarning)
+        obj = adapter.create_structure_view(
+            structure,
+            topology,
+            name="ChemBlender dataset smoke",
+            collection=bpy.context.scene.collection,
+        )
+    assert len(caught) == 1
+    assert issubclass(caught[0].category, DeprecationWarning)
     mesh = obj.data
     try:
         assert obj["cb_structure_id"] == str(structure_id)
+        assert obj["cb_topology_id"] == str(topology.id)
+        assert obj["cbq_topology_source"] == "explicit_file"
+        assert len(mesh.edges) == 2
         atom_ids = [0] * 3
         obj.data.attributes["cbq_atom_id"].data.foreach_get("value", atom_ids)
         assert atom_ids == [0, 1, 2]
+        bond_ids = [0] * 2
+        obj.data.attributes["cbq_bond_id"].data.foreach_get("value", bond_ids)
+        assert bond_ids == [0, 1]
+        exact_orders = [0.0] * 2
+        obj.data.attributes["cbq_bond_order"].data.foreach_get(
+            "value", exact_orders
+        )
+        assert exact_orders == [1.0, 1.0]
+        ball_stick = [
+            item
+            for item in obj.modifiers
+            if item.get("cbq_contract") == "structure_ball_stick_v1"
+        ]
+        assert len(ball_stick) == 1
         coordinates = [0.0] * 9
         obj.data.vertices.foreach_get("co", coordinates)
         assert numpy.allclose(
@@ -1272,14 +1317,15 @@ def assert_dataset_and_trajectory_views(module_key):
             "vector", vector_values
         )
         assert vector_values == [0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.5]
-        assert len(obj.modifiers) == 1
+        assert len(obj.modifiers) == 2
+        assert tuple(obj.modifiers)[0] == modifier
         adapter.apply_atomic_vector(obj, vector, display_scale=1.0)
-        assert len(obj.modifiers) == 1
+        assert len(obj.modifiers) == 2
         bpy.context.view_layer.update()
         evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
         evaluated_geometry = evaluated.evaluated_geometry()
-        assert len(evaluated_geometry.instance_references()) == 1
-        assert len(evaluated_geometry.instances_pointcloud().points) == 3
+        assert len(evaluated_geometry.instance_references()) >= 1
+        assert len(evaluated_geometry.instances_pointcloud().points) >= 3
 
         adapter.apply_atom_selection(obj, [0, 2], name="terminal_atoms")
         selected = [False] * 3
@@ -1419,22 +1465,23 @@ def assert_dataset_and_trajectory_views(module_key):
     finally:
         bpy.context.scene.frame_set(1)
         if obj.name in bpy.data.objects:
-            bpy.data.objects.remove(obj, do_unlink=True)
-        if mesh.name in bpy.data.meshes:
-            bpy.data.meshes.remove(mesh)
+            views.remove_structure_view(obj)
 
 
 def assert_periodic_structure_view(module_key):
     import numpy
 
     core = importlib.import_module(f"{module_key}.core")
-    adapter = importlib.import_module(f"{module_key}.dataset_view")
+    views = importlib.import_module(f"{module_key}.views")
+    structure_id = uuid4()
     structure = core.Structure(
-        id=uuid4(),
+        id=structure_id,
         revision="periodic-structure-revision",
-        atomic_numbers=(14,),
+        atomic_numbers=(14, 14),
         coordinates=core.ArrayData(
-            numpy.asarray([[0.0, 0.0, 0.0]]), ("atom", "xyz"), "angstrom"
+            numpy.asarray([[0.1, 0.0, 0.0], [3.9, 0.0, 0.0]]),
+            ("atom", "xyz"),
+            "angstrom",
         ),
         cell=core.ArrayData(
             numpy.asarray([[4.0, 0.0, 0.0], [1.0, 3.0, 0.0], [0.0, 0.5, 5.0]]),
@@ -1443,18 +1490,18 @@ def assert_periodic_structure_view(module_key):
         ),
         periodic=core.PeriodicSiteData(
             fractional_coordinates=core.ArrayData(
-                numpy.asarray([[0.0, 0.0, 0.0]]),
+                numpy.asarray([[0.025, 0.0, 0.0], [0.975, 0.0, 0.0]]),
                 ("atom", "xyz"),
                 "dimensionless",
             ),
-            site_labels=("Si1",),
+            site_labels=("Si1", "Si2"),
             occupancies=core.ArrayData(
-                numpy.ones(1), ("atom",), "dimensionless"
+                numpy.ones(2), ("atom",), "dimensionless"
             ),
             isotropic_displacements=None,
             anisotropic_displacements=None,
-            adp_types=("none",),
-            disorder_groups=(0,),
+            adp_types=("none", "none"),
+            disorder_groups=(0, 0),
             declared_space_group_name=None,
             declared_space_group_number=None,
             symmetry_operations=(),
@@ -1462,22 +1509,57 @@ def assert_periodic_structure_view(module_key):
             pbc=(True, False, True),
         ),
     )
-    obj = adapter.create_structure_view(
+    topology = core.TopologyRecord(
+        id=uuid4(),
+        revision="periodic-topology-revision",
+        structure_id=structure_id,
+        bond_indices=core.ArrayData(
+            numpy.asarray([[0, 1]]), ("bond", "endpoint"), "dimensionless"
+        ),
+        bond_orders=core.ArrayData(
+            numpy.asarray([1.0]), ("bond",), "dimensionless"
+        ),
+        aromatic_flags=core.ArrayData(
+            numpy.asarray([False]), ("bond",), "dimensionless"
+        ),
+        stereo_labels=("",),
+        source_kind=core.TopologySource.EXPLICIT_FILE,
+        quality_status=core.QualityStatus.COMPLETE,
+        inference_parameters=(),
+        provenance_ids=(),
+        bond_lattice_shifts=core.ArrayData(
+            numpy.asarray([[-1, 0, 0]]), ("bond", "xyz"), "dimensionless"
+        ),
+    )
+    obj = views.create_structure_view(
         structure,
+        topology,
         name="ChemBlender periodic structure smoke",
         collection=bpy.context.scene.collection,
     )
-    mesh = obj.data
     try:
+        assert len(obj.data.vertices) == 2
+        assert len(obj.data.edges) == 0
         assert obj["cb_periodic"] is True
         assert list(obj["cb_pbc"]) == [True, False, True]
         assert numpy.allclose(
             list(obj["cb_periodic_cell"]),
             [4.0, 0.0, 0.0, 1.0, 3.0, 0.0, 0.0, 0.5, 5.0],
         )
+        display = bpy.data.objects[obj["cb_periodic_display_object"]]
+        assert display["cb_structure_contract"] == "structure_periodic_display_v1"
+        assert len(display.data.vertices) == 2
+        assert len(display.data.edges) == 1
+        assert obj["cb_periodic_display_bond_count"] == 1
+        assert any(
+            item.get("cbq_contract") == "structure_periodic_display_v1"
+            for item in obj.modifiers
+        )
+        bpy.context.view_layer.update()
+        evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        assert evaluated.evaluated_geometry() is not None
     finally:
-        bpy.data.objects.remove(obj, do_unlink=True)
-        bpy.data.meshes.remove(mesh)
+        views.remove_structure_view(obj)
 
 
 def assert_periodic_electronic_plots(module_key):
@@ -1828,7 +1910,7 @@ def assert_complex_phonon_trajectory(module_key):
     import numpy
 
     core = importlib.import_module(f"{module_key}.core")
-    views = importlib.import_module(f"{module_key}.dataset_view")
+    views = importlib.import_module(f"{module_key}.views")
     trajectory = importlib.import_module(f"{module_key}.trajectory_view")
     primitive_id = uuid4()
     eigenvectors = numpy.zeros((1, 3, 1, 3), dtype=complex)
@@ -1876,8 +1958,7 @@ def assert_complex_phonon_trajectory(module_key):
         assert numpy.allclose(second, [2.0, 0.0, 0.0, 1.0, 0.0, 0.0])
     finally:
         trajectory.clear_trajectory_view(obj)
-        bpy.data.objects.remove(obj, do_unlink=True)
-        bpy.data.meshes.remove(mesh)
+        views.remove_structure_view(obj)
 
 
 def assert_fermi_surface_view(module_key):

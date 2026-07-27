@@ -75,7 +75,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/read.py` | `read_MOL()`、`read_Cryst()`、`read_cif()`、`read_poscar()`、`init_cif_data()`、`update_cif_from_mesh()` | 兼容既有 UI 的分子/晶体读取路径；识别 SMILES、XYZ、MOL/SDF、PDB、JSON、CIF、POSCAR，建立键和 CIF PropertyGroup。新量子 reader 应进入 `core/`，不继续扩大此分支。 |
 | `ChemBlender/scaffold.py` | `MESH_OT_SCAFFOLD_BUILD.execute()`、`show_error_dialog()` | 验证用户输入，调用读取函数，创建分子或晶体 scaffold，并统一显示输入错误。 |
 | `ChemBlender/mesh.py` | `create_object()`、`add_scaffold_attr()`、`scaffold_to_mol()`、`set_sel_atoms_attr()`、`set_sel_bonds_attr()`、`mol_optimize()`、`unit_cell_edges()` | Mesh/BMesh 主工具箱：创建和合并对象、写原子/键属性、选择和编辑结构、RDKit 转换与优化、生成晶胞边。 |
-| `ChemBlender/node.py` | `add_geometry_nodetree()`、`append()`、`Ball_Stick_nodetree()`、`Supercell()`、`CoordPolyhedra()`、`crys_filter()` | 创建或加载 Geometry Node Group，连接球棍、超胞、晶胞边、配位多面体和晶体过滤节点。 |
+| `ChemBlender/node.py` | `add_geometry_nodetree()`、`append()`、`Ball_Stick_nodetree()`、`ensure_structure_ball_stick_modifier()`、`Supercell()`、`CoordPolyhedra()`、`crys_filter()` | 创建或加载 Geometry Node Group，连接球棍、超胞、晶胞边、配位多面体和晶体过滤节点；统一 Structure view 通过 data API 建立带 contract 的球棍 modifier，避免依赖活动对象 operator context。 |
 | `ChemBlender/chem_utils.py` | `SelectButton`、`EnhancedSelectButton`、`SetAtomsButton`、`SetBondsButton`、`ConnectByDistance`、`AddHydrogens`、`AddBranches`、`GeometryOptimizeButton` | 分子编辑 operators：选择、测距/测角、设置原子和键属性、补键/氢/支链、几何更新与优化、scaffold 转换。 |
 | `ChemBlender/crys_utils.py` | `SupercellButton`、`AddCellButton`、`AddCrysScaffoldButton`、`AddCoordPolyhedraButton`、`SymmetrySelect`、`SymmetryDuplicate` | 晶体 operators：生成超胞和晶胞、添加/删除位点、配位多面体、等价位置选择及对称复制。 |
 | `ChemBlender/output.py` | `xyz_block()`、`mol_block_v2000()`、`mol_block_v3000()`、`cif_block()`、`vasp_block()`、`SaveMolButton` | 从当前 Blender scaffold 生成 XYZ、MOL/SDF、CIF、POSCAR 文本并保存；还包含相机与快速渲染 operators。 |
@@ -88,7 +88,9 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
-| `ChemBlender/dataset_view.py` | `create_structure_view()`、`apply_atomic_scalar()`、`apply_atomic_vector()`、`apply_atom_selection()`、`link_stick_spectrum_selection()` | 建立标准结构 Mesh；把原子标量、矢量和选择写成 named attributes；记录光谱样点到源数据集的联动身份。 |
+| `ChemBlender/dataset_view.py` | `create_structure_view()` compatibility wrapper、`apply_atomic_scalar()`、`apply_atomic_vector()`、`apply_atom_selection()`、`link_stick_spectrum_selection()` | 保留旧结构入口的开发期 DeprecationWarning；把原子标量、矢量和选择写成 named attributes，确保 vector modifier 位于默认球棍 modifier 前，并记录光谱样点到源数据集的联动身份。 |
+| `ChemBlender/views/__init__.py` | `StructureViewSettings`、`create_structure_view()`、`remove_structure_view()` | 作为统一 Blender view package 门面，当前只公开 Structure view 构建与成组清理。 |
+| `ChemBlender/views/structure.py` | `StructureViewSettings`、`create_structure_view()`、`remove_structure_view()` | 从 Structure 与显式 selected TopologyRecord 建立单一 canonical-atom Mesh，写入新旧 atom/bond attributes、科学 identity 和默认球棍节点；非零 lattice-shift bonds 使用隐藏 derived display Mesh 加 Geometry Nodes 合并，不写回科学实体。 |
 | `ChemBlender/grid_volume.py` | `volume_cache_path()`、`ensure_grid_volume_cache()`、`create_grid_volume()` | 将单个 `Grid3D` dataset 写成确定性 OpenVDB cache；cache-only helper 在 Blender datablock 变更前拒绝最终文件 link/junction、验证 grid inventory/render identity，并为创建与 reopen repair 共用；创建函数再生成带 UUID/revision/affine/render identity metadata 的 Blender Volume。 |
 | `ChemBlender/surface_view.py` | `surface_cache_path()`、`ensure_signed_surface_cache()`、`ensure_property_surface_cache()`、`create_signed_isosurfaces()`、`create_property_surface()`、`remove_surface_object()` | 共用 cache-only helper 在任何 VDB read/write 前拒绝最终文件 link/junction，写入并验证 signed/property VDB，再用 Volume→Mesh Geometry Nodes 创建独立正/负相位面，或在密度面采样另一标量场并写入 `cbq_surface_property`。 |
 | `ChemBlender/vibration_view.py` | `create_vibration_view()`、`apply_vibration_phase()` | 将一个振动模态写入位移属性和实例化箭头节点，并按相位更新原子位置。 |
@@ -97,7 +99,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/electronic_plot.py` | `create_band_structure_plot()`、`create_dos_plot()`、`select_band_sample()`、`select_dos_sample()` | 创建 band/DOS Curve，处理费米能参考和 β-spin 镜像，并记录被选 k-point/band/energy 样点。 |
 | `ChemBlender/fermi_surface_view.py` | `create_fermi_surface_view()`、`select_fermi_face()` | 将中立 `FermiSurfaceMesh` 转为三角 Mesh，把 band、投影、速度或自旋写入顶点/面属性并支持面到 band 的选择。 |
 | `ChemBlender/topology_view.py` | `create_topology_view()` | 将 `TopologyGraph` 临界点映射为点 Mesh，将有采样坐标的路径映射为 Curve。 |
-| `ChemBlender/scene_preset_view.py` | `apply_scene_preset()` | 复验 `ScenePresetPlan` 后分派结构、Grid3D Volume、振动、光谱、band/DOS 和表面 adapter；任一 adapter 失败时删除本次创建的全部对象。 |
+| `ChemBlender/scene_preset_view.py` | `apply_scene_preset()` | 复验 `ScenePresetPlan` 后分派统一结构、Grid3D Volume、振动、光谱、band/DOS 和表面 adapter；任一 adapter 失败时连同 Structure view 的 derived display object/node group 删除本次创建的全部对象。 |
 | `ChemBlender/project_link.py` | `MANIFEST_HASH_KEY`、`write_project_link()`、`resolve_project_link()` | 以不依赖 `bpy` 的内部 helper 计算 Scene locator；只从同一次 sidecar 验证取得 manifest hash，并以 UUID、schema 与 hash 解析、校验和恢复 `.cbq` 项目。 |
 | `ChemBlender/worker_client.py` | `start_worker()`、`WorkerHandle.poll()`、`wait()`、`request_cancel()`、`terminate()` | 使用显式外部 Python 启动一次一任务的隐藏 worker 进程，管理 request/result/cancel 文件和 stdout/stderr 日志。 |
 

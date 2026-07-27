@@ -125,7 +125,7 @@ Run periodic and nonperiodic inference tests; commit.
 **Interfaces:**
 - Produces: `create_structure_view(structure, topology=None, settings=None)` under the new views package and a legacy re-export.
 
-- [ ] **Step 1: Define the view contract**
+- [x] **Step 1: Define the view contract**
 
 Mesh contains vertices and topology edges. Named attributes:
 
@@ -139,23 +139,23 @@ cbq_topology_source    object metadata
 
 Object stores structure/topology IDs/revisions, quality and display coordinate unit.
 
-- [ ] **Step 2: Write Blender smoke for explicit topology**
+- [x] **Step 2: Write Blender smoke for explicit topology**
 
 Create water with two edges. Assert mesh edges, attributes and existing ball-and-stick node modifier render atoms/bonds.
 
-- [ ] **Step 3: Handle no topology**
+- [x] **Step 3: Handle no topology**
 
 Atoms-only view remains valid. UI can request inference. Do not silently infer inside the builder.
 
-- [ ] **Step 4: Integrate periodic image bonds**
+- [x] **Step 4: Integrate periodic image bonds**
 
 The primary mesh keeps canonical cell atoms. Periodic image/edge display uses Geometry Nodes or derived display geometry based on lattice shifts, not duplicated scientific atoms.
 
-- [ ] **Step 5: Preserve existing dataset adapters**
+- [x] **Step 5: Preserve existing dataset adapters**
 
 Atomic scalar/vector/selection functions continue to work with the new view. `dataset_view.create_structure_view` re-exports and emits a deprecation warning only in developer logs, not user popups.
 
-- [ ] **Step 6: Run and commit**
+- [x] **Step 6: Run and commit**
 
 Run Blender smoke, view contract and all dataset adapter tests; commit.
 
