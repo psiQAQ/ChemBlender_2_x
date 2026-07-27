@@ -320,6 +320,18 @@ def _diagnostics(staging, source_preview):
     )
 
 
+def _is_isolated_sdf_record_failure(diagnostic, valid_record_keys):
+    return (
+        diagnostic.code == "sdf.record_parse_failed"
+        and diagnostic.field_path.startswith("record.")
+        and diagnostic.recovery_action == "other SDF records were retained"
+        and diagnostic.entity_id is None
+        and valid_record_keys
+        and diagnostic.record_key
+        and diagnostic.record_key not in valid_record_keys
+    )
+
+
 def _quality_and_blocking(staging, source_preview):
     if len(source_preview.staged_batch_ids) != 1:
         return (
@@ -344,11 +356,8 @@ def _quality_and_blocking(staging, source_preview):
                 item.severity is DiagnosticSeverity.ERROR
                 or item.quality_status is QualityStatus.INVALID
             )
-            and not (
-                item.entity_id is None
-                and valid_record_keys
-                and item.record_key
-                and item.record_key not in valid_record_keys
+            and not _is_isolated_sdf_record_failure(
+                item, valid_record_keys
             )
         ),
         None,

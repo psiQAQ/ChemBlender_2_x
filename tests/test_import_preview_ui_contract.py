@@ -470,6 +470,23 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         )
         self.assertIn("sdf.record_parse_failed", blocking_reason)
 
+        plugin_batch = replace(
+            batch,
+            diagnostics=(
+                replace(
+                    batch.diagnostics[0],
+                    code="plugin.integrity_failure",
+                    field_path="source.integrity",
+                    recovery_action="plugin data must be repaired",
+                ),
+            ),
+        )
+        plugin_staging = SimpleNamespace(result=lambda _batch_id: plugin_batch)
+        _quality, plugin_reason = self.module._quality_and_blocking(
+            plugin_staging, source
+        )
+        self.assertIn("plugin.integrity_failure", plugin_reason)
+
         failed = Path(self.temporary.name) / "all-failed.sdf"
         failed.write_bytes(
             (ROOT / "tests/fixtures/mol/water-v2000.mol")
