@@ -15,15 +15,17 @@ from .model import (
     FrameSet,
     ImportBatch,
     IssueKind,
-    MolecularTopology,
     ParserIssue,
     ParserReport,
     PropertyDataset,
     ProvenanceRecord,
+    QualityStatus,
     Spectrum,
     SpectrumKind,
     SpectrumProfile,
     Structure,
+    TopologyRecord,
+    TopologySource,
 )
 from .readers import CapabilitySupport, ReaderDescriptor, SniffMatch, SniffResult
 
@@ -89,7 +91,7 @@ def _integer(value, path, *, positive=False):
     return integer
 
 
-def _topology(document, atom_count):
+def _topology_arrays(document, atom_count):
     import numpy
 
     bonds = document.get("bonds")
@@ -118,9 +120,49 @@ def _topology(document, atom_count):
         or numpy.any(orders > 6.0)
     ):
         raise CJSONError("bonds.order must contain one integer from 1 to 6 per bond")
-    return MolecularTopology(
-        bond_indices=ArrayData(indices, ("bond", "endpoint"), "dimensionless"),
-        bond_orders=ArrayData(orders, ("bond",), "dimensionless"),
+    canonical = sorted(
+        (min(int(left), int(right)), max(int(left), int(right)), float(order))
+        for (left, right), order in zip(indices, orders)
+    )
+    return (
+        ArrayData(
+            numpy.asarray(
+                [(left, right) for left, right, _order in canonical], dtype=int
+            ).reshape((-1, 2)),
+            ("bond", "endpoint"),
+            "dimensionless",
+        ),
+        ArrayData(
+            numpy.asarray([order for _left, _right, order in canonical]),
+            ("bond",),
+            "dimensionless",
+        ),
+    )
+
+
+def _topology_record(source_hash, structure_id, bond_indices, bond_orders, provenance_id):
+    identity = _canonical(
+        {
+            "adapter_version": ADAPTER_VERSION,
+            "source_hash": source_hash,
+            "bond_indices": bond_indices.values.tolist(),
+            "bond_orders": bond_orders.values.tolist(),
+        }
+    )
+    revision = hashlib.sha256(identity).hexdigest()
+    return TopologyRecord(
+        id=uuid5(_IDENTITY_NAMESPACE, f"topology:{revision}"),
+        revision=revision,
+        structure_id=structure_id,
+        bond_indices=bond_indices,
+        bond_orders=bond_orders,
+        aromatic_flags=None,
+        stereo_labels=("",) * bond_indices.shape[0],
+        source_kind=TopologySource.EXPLICIT_FILE,
+        quality_status=QualityStatus.COMPLETE,
+        inference_parameters=(),
+        provenance_ids=(provenance_id,),
+        bond_lattice_shifts=None,
     )
 
 
@@ -337,11 +379,21 @@ def parse_cjson(source):
     properties = _mapping(properties, "properties")
     charge = _integer(properties.get("totalCharge", 0), "properties.totalCharge")
     multiplicity = _integer(properties.get("totalSpinMultiplicity", 1), "properties.totalSpinMultiplicity", positive=True)
-    topology = _topology(document, atom_count)
+    topology_arrays = _topology_arrays(document, atom_count)
 
     source_hash = hashlib.sha256(source_bytes).hexdigest()
     provenance_id = _identity(source_hash, "provenance")
     structure_id = _identity(source_hash, "structure")
+    topology = (
+        None
+        if topology_arrays is None
+        else _topology_record(
+            source_hash,
+            structure_id,
+            *topology_arrays,
+            provenance_id,
+        )
+    )
     structure_revision = hashlib.sha256(
         atomic_numbers.tobytes() + coordinates.tobytes() + (b"" if topology is None else topology.bond_indices.values.tobytes())
     ).hexdigest()
@@ -353,7 +405,8 @@ def parse_cjson(source):
         cell=cell,
         molecular_charge=charge,
         molecular_multiplicity=multiplicity,
-        topology=topology,
+        topology=None,
+        topology_ids=() if topology is None else (topology.id,),
     )
     atom_fields = dict(atoms)
     if "partialCharges" not in atom_fields and "partialCharges" in document:
@@ -406,7 +459,13 @@ def parse_cjson(source):
         source_bytes=_canonical(document),
         provenance_ids=(provenance_id,),
     )
-    created_ids = (structure.id, envelope.id, *(dataset.id for dataset in datasets), provenance.id)
+    created_ids = (
+        structure.id,
+        *((topology.id,) if topology is not None else ()),
+        envelope.id,
+        *(dataset.id for dataset in datasets),
+        provenance.id,
+    )
     capabilities = ["structure"]
     if topology is not None:
         capabilities.append("topology")
@@ -423,6 +482,7 @@ def parse_cjson(source):
     )
     return ImportBatch(
         structures=(structure,),
+        topologies=() if topology is None else (topology,),
         cjson_envelopes=(envelope,),
         datasets=tuple(datasets),
         provenance=(provenance,),

@@ -22,6 +22,8 @@ from ChemBlender.core.model import (
 )
 from ChemBlender.core.readers import ReaderRegistry
 from ChemBlender.core.sidecar import close_project, open_project, save_project
+from ChemBlender.ui.topology import topology_choices
+from ChemBlender.views.structure import _structure_view_data
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "cjson" / "water-results.cjson"
@@ -31,13 +33,45 @@ class CJSONAdapterTests(unittest.TestCase):
     def test_structure_topology_charge_selection_and_trajectory_are_normalized(self):
         batch = parse_cjson(FIXTURE)
         structure = batch.structures[0]
+        topology = batch.topologies[0]
         self.assertEqual(structure.atomic_numbers, (8, 1, 1))
         self.assertEqual(structure.coordinates.unit, "angstrom")
         self.assertEqual(structure.molecular_charge, 0)
         self.assertEqual(structure.molecular_multiplicity, 1)
-        self.assertEqual(structure.topology.bond_indices.dims, ("bond", "endpoint"))
-        numpy.testing.assert_array_equal(structure.topology.bond_indices.values, [[0, 1], [0, 2]])
-        numpy.testing.assert_array_equal(structure.topology.bond_orders.values, [1, 1])
+        self.assertIsNone(structure.topology)
+        self.assertEqual(structure.topology_ids, (topology.id,))
+        self.assertEqual(topology.bond_indices.dims, ("bond", "endpoint"))
+        numpy.testing.assert_array_equal(topology.bond_indices.values, [[0, 1], [0, 2]])
+        numpy.testing.assert_array_equal(topology.bond_orders.values, [1, 1])
+        self.assertEqual(topology.source_kind, TopologySource.EXPLICIT_FILE)
+        self.assertEqual(topology.quality_status, QualityStatus.COMPLETE)
+        self.assertIsNone(topology.bond_lattice_shifts)
+        self.assertIsNone(topology.aromatic_flags)
+        self.assertEqual(topology.stereo_labels, ("", ""))
+        self.assertEqual(topology.provenance_ids, (batch.provenance[0].id,))
+
+        project = QCProject(id=structure.id, schema_version="0.2")
+        project.commit(batch)
+        self.assertEqual(
+            tuple(choice.topology_id for choice in topology_choices(project, structure.id)),
+            (topology.id,),
+        )
+        self.assertEqual(
+            _structure_view_data(structure, topology)["primary_edges"],
+            ((0, 1), (0, 2)),
+        )
+        self.assertEqual(
+            batch.report.created_entity_ids,
+            (
+                structure.id,
+                topology.id,
+                batch.cjson_envelopes[0].id,
+                *(dataset.id for dataset in batch.datasets),
+                batch.provenance[0].id,
+            ),
+        )
+        duplicate = parse_cjson(FIXTURE).topologies[0]
+        self.assertEqual((topology.id, topology.revision), (duplicate.id, duplicate.revision))
 
         atom_data = {
             item.semantic_role: item
@@ -49,6 +83,20 @@ class CJSONAdapterTests(unittest.TestCase):
         self.assertEqual(atom_data["selected"].data.values.tolist(), [True, False, True])
         frames = next(item for item in batch.datasets if isinstance(item, FrameSet))
         self.assertEqual(frames.data.shape, (2, 3, 3))
+
+    def test_explicit_bonds_are_canonicalized_before_topology_identity(self):
+        source = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        source["bonds"] = {
+            "connections": {"index": [2, 0, 1, 0]},
+            "order": [2, 1],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "canonical.cjson"
+            path.write_text(json.dumps(source), encoding="utf-8")
+            topology = parse_cjson(path).topologies[0]
+
+        numpy.testing.assert_array_equal(topology.bond_indices.values, [[0, 1], [0, 2]])
+        numpy.testing.assert_array_equal(topology.bond_orders.values, [1, 2])
 
     def test_electronic_spectrum_maps_to_excited_states_with_explicit_conversion(self):
         batch = parse_cjson(FIXTURE)

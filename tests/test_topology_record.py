@@ -335,49 +335,57 @@ class TopologyRecordTests(unittest.TestCase):
                 self.assertEqual(project.structures, {})
                 self.assertEqual(project.topologies, {})
 
-    def test_legacy_embedded_topology_migrates_without_mutating_manifest(self):
+    def test_v01_and_v02_embedded_topology_migrate_without_mutating_manifest(self):
         source = json.loads(
             (LEGACY_SIDECAR / "manifest.json").read_text(encoding="utf-8")
         )
-        original = deepcopy(source)
+        v02 = deepcopy(source)
+        v02["manifest_version"] = "0.2"
+        v02["project_schema_version"] = "0.2"
+        v02["project"]["schema_version"] = "0.2"
+        for name in ("sources", "source_revisions", "diagnostics", "calculation_groups", "topologies"):
+            v02["project"][name] = {"$dict": []}
 
-        migrated = migrate_manifest(source)
+        for document in (source, v02):
+            with self.subTest(manifest_version=document["manifest_version"]):
+                original = deepcopy(document)
+                migrated = migrate_manifest(document)
 
-        self.assertEqual(source, original)
-        project = migrated["project"]
-        structure_value = project["structures"]["$dict"][0][1]
-        topology_entries = project["topologies"]["$dict"]
-        self.assertIsNone(structure_value["topology"])
-        self.assertEqual(len(structure_value["topology_ids"]["$tuple"]), 1)
-        self.assertEqual(len(topology_entries), 1)
-        topology_id, topology_value = topology_entries[0]
-        self.assertEqual(
-            structure_value["topology_ids"]["$tuple"][0],
-            topology_id,
-        )
-        self.assertEqual(topology_value["$type"], "TopologyRecord")
-        self.assertEqual(
-            topology_value["source_kind"],
-            {"$enum": "TopologySource", "value": "distance_inferred"},
-        )
-        self.assertEqual(
-            topology_value["quality_status"],
-            {"$enum": "QualityStatus", "value": "ambiguous"},
-        )
-        self.assertEqual(
-            topology_value["inference_parameters"],
-            {
-                "$tuple": [
+                self.assertEqual(document, original)
+                project = migrated["project"]
+                structure_value = project["structures"]["$dict"][0][1]
+                topology_entries = project["topologies"]["$dict"]
+                self.assertIsNone(structure_value["topology"])
+                self.assertEqual(len(structure_value["topology_ids"]["$tuple"]), 1)
+                self.assertEqual(len(topology_entries), 1)
+                topology_id, topology_value = topology_entries[0]
+                self.assertEqual(
+                    structure_value["topology_ids"]["$tuple"][0],
+                    topology_id,
+                )
+                self.assertEqual(topology_value["$type"], "TopologyRecord")
+                self.assertEqual(
+                    topology_value["source_kind"],
+                    {"$enum": "TopologySource", "value": "distance_inferred"},
+                )
+                self.assertEqual(
+                    topology_value["quality_status"],
+                    {"$enum": "QualityStatus", "value": "ambiguous"},
+                )
+                self.assertEqual(
+                    topology_value["inference_parameters"],
                     {
                         "$tuple": [
-                            "legacy_origin",
-                            "unverified",
+                            {
+                                "$tuple": [
+                                    "legacy_origin",
+                                    "unverified",
+                                ]
+                            }
                         ]
-                    }
-                ]
-            },
-        )
-        self.assertIsNone(topology_value["bond_lattice_shifts"])
+                    },
+                )
+                self.assertIsNone(topology_value["bond_lattice_shifts"])
 
     def test_batch_bridges_merges_and_worker_references_preserve_topologies(self):
         structure_id = uuid4()
