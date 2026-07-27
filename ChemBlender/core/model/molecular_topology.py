@@ -15,6 +15,22 @@ class TopologySource(str, Enum):
     USER_EDITED = "user_edited"
 
 
+def canonical_topology_edge(left, right, lattice_shift=(0, 0, 0)):
+    shift = tuple(int(value) for value in lattice_shift)
+    if left > right:
+        return right, left, tuple(-value for value in shift)
+    if left < right:
+        return left, right, shift
+    if not any(shift):
+        raise ValueError("zero-shift self edge is invalid")
+    first_nonzero = next(value for value in shift if value)
+    return (
+        (left, right, tuple(-value for value in shift))
+        if first_nonzero < 0
+        else (left, right, shift)
+    )
+
+
 def _canonical_parameter_value(value):
     if value is None or type(value) in (str, bool, int):
         return value
@@ -101,6 +117,23 @@ class TopologyRecord:
                 raise ValueError(
                     "bond_lattice_shifts must contain one integer xyz shift per bond"
                 )
+        else:
+            shifts = numpy.zeros((bond_count, 3), dtype=numpy.int64)
+        edge_keys = []
+        for endpoints, shift in zip(indices.tolist(), shifts.tolist()):
+            left, right = map(int, endpoints)
+            key = (left, right, tuple(map(int, shift)))
+            try:
+                canonical = canonical_topology_edge(*key)
+            except ValueError as error:
+                raise ValueError(f"bond_indices: {error}") from error
+            if key != canonical:
+                raise ValueError("bond edges must use canonical endpoint and shift order")
+            edge_keys.append(key)
+        if len(set(edge_keys)) != len(edge_keys):
+            raise ValueError("bond edges must not repeat")
+        if edge_keys != sorted(edge_keys):
+            raise ValueError("bond edges must use canonical key order")
         labels = tuple(self.stereo_labels)
         if len(labels) != bond_count or any(
             not isinstance(label, str) for label in labels

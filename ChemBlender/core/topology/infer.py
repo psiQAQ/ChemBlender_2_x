@@ -17,6 +17,7 @@ from ..model import (
     TopologyRecord,
     TopologySource,
 )
+from ..model.molecular_topology import canonical_topology_edge
 from .radii import covalent_radius_angstrom, is_metal
 
 
@@ -106,6 +107,29 @@ def _inference_batch(
 ):
     import numpy
 
+    edges = tuple(edges)
+    orders = tuple(orders)
+    shifts = (
+        ((0, 0, 0),) * len(edges)
+        if bond_lattice_shifts is None
+        else tuple(bond_lattice_shifts)
+    )
+    if len(orders) != len(edges) or len(shifts) != len(edges):
+        raise ValueError("inferred topology bond arrays must have matching lengths")
+    canonical = sorted(
+        (
+            canonical_topology_edge(left, right, shift),
+            float(order),
+        )
+        for (left, right), shift, order in zip(edges, shifts, orders)
+    )
+    keys = tuple(key for key, _order in canonical)
+    if len(set(keys)) != len(keys):
+        raise ValueError("inferred topology edges must not repeat")
+    edges = tuple(key[:2] for key in keys)
+    orders = tuple(order for _key, order in canonical)
+    if bond_lattice_shifts is not None:
+        bond_lattice_shifts = tuple(key[2] for key in keys)
     identity = json.dumps(
         {
             "bond_lattice_shifts": bond_lattice_shifts,

@@ -27,6 +27,7 @@ from .model import (
     TopologyRecord,
     TopologySource,
 )
+from .model.molecular_topology import canonical_topology_edge
 from .readers import CapabilitySupport, ReaderDescriptor, SniffMatch, SniffResult
 
 
@@ -121,9 +122,11 @@ def _topology_arrays(document, atom_count):
     ):
         raise CJSONError("bonds.order must contain one integer from 1 to 6 per bond")
     canonical = sorted(
-        (min(int(left), int(right)), max(int(left), int(right)), float(order))
+        (*canonical_topology_edge(int(left), int(right))[:2], float(order))
         for (left, right), order in zip(indices, orders)
     )
+    if len({item[:2] for item in canonical}) != len(canonical):
+        raise CJSONError("bonds.connections must not repeat")
     return (
         ArrayData(
             numpy.asarray(

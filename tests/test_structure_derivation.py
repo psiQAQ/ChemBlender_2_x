@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 from uuid import uuid4
 
 import numpy
@@ -265,6 +266,56 @@ class StructureDerivationTests(unittest.TestCase):
         self.assertIs(self.project.datasets[self.dataset.id], self.dataset)
         self.assertIn(derived.id, self.project.structures)
         self.assertIn(derived_topology.id, self.project.topologies)
+
+    def test_edited_bonds_canonicalize_and_sort_parallel_arrays(self):
+        source_topology = replace(
+            self.topology,
+            aromatic_flags=array(
+                (True,),
+                ("bond",),
+                "dimensionless",
+                bool,
+            ),
+            stereo_labels=("E",),
+        )
+        project = replace(
+            self.project,
+            topologies={source_topology.id: source_topology},
+        )
+        batch = commit_structure_edits(
+            project,
+            self.structure,
+            source_topology,
+            **self.edited(
+                bond_indices=array(
+                    ((1, 0), (0, 0)),
+                    ("bond", "endpoint"),
+                    "dimensionless",
+                    int,
+                ),
+                bond_orders=array(
+                    (2.0, 0.0),
+                    ("bond",),
+                    "dimensionless",
+                ),
+                bond_lattice_shifts=array(
+                    ((0, 0, 0), (-1, 0, 0)),
+                    ("bond", "xyz"),
+                    "dimensionless",
+                    int,
+                ),
+            ),
+        )
+
+        topology = batch.topologies[0]
+        self.assertEqual(topology.bond_indices.values.tolist(), [[0, 0], [0, 1]])
+        self.assertEqual(
+            topology.bond_lattice_shifts.values.tolist(),
+            [[1, 0, 0], [0, 0, 0]],
+        )
+        self.assertEqual(topology.bond_orders.values.tolist(), [0.0, 2.0])
+        self.assertEqual(topology.aromatic_flags.values.tolist(), [False, True])
+        self.assertEqual(topology.stereo_labels, ("", "E"))
 
     def test_identical_edits_have_deterministic_identity(self):
         edited = self.edited(

@@ -221,6 +221,68 @@ class TopologyRecordTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "bond_lattice_shifts"):
                     topology_record(bond_lattice_shifts=shifts)
 
+    def test_topology_edges_must_be_unique_and_canonical(self):
+        invalid = (
+            (
+                ((1, 0),),
+                ((0, 0, 0),),
+                "canonical",
+            ),
+            (
+                ((0, 1), (0, 1)),
+                ((0, 0, 0), (0, 0, 0)),
+                "repeat",
+            ),
+            (
+                ((0, 1), (1, 0)),
+                ((1, 0, 0), (-1, 0, 0)),
+                "canonical",
+            ),
+            (
+                ((0, 0),),
+                ((0, 0, 0),),
+                "self",
+            ),
+            (
+                ((2, 1),),
+                ((1, 0, 0),),
+                "canonical",
+            ),
+            (
+                ((0, 0),),
+                ((-1, 0, 0),),
+                "canonical",
+            ),
+            (
+                ((1, 2), (0, 1)),
+                ((0, 0, 0), (0, 0, 0)),
+                "canonical",
+            ),
+        )
+        for endpoints, shifts, message in invalid:
+            with self.subTest(endpoints=endpoints, shifts=shifts):
+                count = len(endpoints)
+                with self.assertRaisesRegex(ValueError, message):
+                    topology_record(
+                        bond_indices=array(endpoints, ("bond", "endpoint")),
+                        bond_orders=array((1.0,) * count, ("bond",)),
+                        aromatic_flags=array((False,) * count, ("bond",)),
+                        stereo_labels=("",) * count,
+                        bond_lattice_shifts=array(shifts, ("bond", "xyz")),
+                    )
+
+        valid = topology_record(
+            bond_indices=array(((0, 0), (0, 1)), ("bond", "endpoint")),
+            bond_orders=array((0.0, 1.0), ("bond",)),
+            aromatic_flags=array((False, False), ("bond",)),
+            stereo_labels=("", ""),
+            bond_lattice_shifts=array(
+                ((1, 0, 0), (0, 0, 0)),
+                ("bond", "xyz"),
+            ),
+        )
+        self.assertEqual(valid.bond_orders.values.tolist(), [0.0, 1.0])
+
     def test_structure_has_zero_or_more_topology_references(self):
         reference = structure()
         self.assertIn("topology_ids", tuple(field.name for field in fields(reference)))

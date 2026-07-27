@@ -8,6 +8,7 @@ import numpy
 from ChemBlender.core.cjson_adapter import (
     CJSON_READER,
     CJSONCompatibilityError,
+    CJSONError,
     export_cjson,
     parse_cjson,
 )
@@ -99,6 +100,18 @@ class CJSONAdapterTests(unittest.TestCase):
 
         numpy.testing.assert_array_equal(topology.bond_indices.values, [[0, 1], [0, 2]])
         numpy.testing.assert_array_equal(topology.bond_orders.values, [1, 2])
+
+    def test_duplicate_explicit_bonds_are_rejected_after_canonicalization(self):
+        source = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        source["bonds"] = {
+            "connections": {"index": [0, 1, 1, 0]},
+            "order": [1, 1],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "duplicate.cjson"
+            path.write_text(json.dumps(source), encoding="utf-8")
+            with self.assertRaisesRegex(CJSONError, "repeat"):
+                parse_cjson(path)
 
     def test_staging_keeps_explicit_topology_in_source_revision(self):
         batch = parse_cjson(FIXTURE)

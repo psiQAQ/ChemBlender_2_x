@@ -18,6 +18,7 @@ from ..model import (
     TopologyRecord,
     TopologySource,
 )
+from ..model.molecular_topology import canonical_topology_edge
 
 
 EDIT_VERSION = "1"
@@ -173,12 +174,10 @@ def _bond_map(indices, orders, shifts, atom_count, name):
     ):
         left, right = map(int, endpoints)
         shift = tuple(map(int, shift))
-        if left > right:
-            left, right = right, left
-            shift = tuple(-value for value in shift)
-        if left == right and shift == (0, 0, 0):
-            raise ValueError(f"{name} zero-shift self bond is invalid")
-        key = (left, right, shift)
+        try:
+            key = canonical_topology_edge(left, right, shift)
+        except ValueError as error:
+            raise ValueError(f"{name} {error}") from error
         if key in result:
             raise ValueError(f"{name} bonds must not repeat")
         result[key] = float(order)
@@ -506,10 +505,7 @@ def _derived_topology(
         if left is None or right is None:
             return None
         shift = key[2]
-        if left > right:
-            left, right = right, left
-            shift = tuple(-value for value in shift)
-        return left, right, shift
+        return canonical_topology_edge(left, right, shift)
 
     return TopologyRecord(
         id=topology_id,

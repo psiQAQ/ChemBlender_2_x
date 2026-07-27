@@ -2,6 +2,7 @@ from itertools import product
 from math import ceil
 
 from ..model import QualityStatus, Structure
+from ..model.molecular_topology import canonical_topology_edge
 from .infer import (
     _ANGSTROM_SCALE,
     _NEIGHBOR_OFFSETS,
@@ -11,22 +12,6 @@ from .infer import (
     TopologyInferenceSettings,
 )
 from .radii import covalent_radius_angstrom
-
-
-def _canonical_edge(left, right, shift):
-    if left < right:
-        return left, right, tuple(shift)
-    if left > right:
-        return right, left, tuple(-value for value in shift)
-    shift = tuple(shift)
-    for value in shift:
-        if value < 0:
-            shift = tuple(-item for item in shift)
-            break
-        if value > 0:
-            break
-    return left, right, shift
-
 
 def infer_periodic_topology(structure, settings=None):
     import numpy
@@ -119,9 +104,7 @@ def infer_periodic_topology(structure, settings=None):
                     + settings.tolerance_angstrom
                 )
                 if distance <= cutoff:
-                    edge = _canonical_edge(left, right, shift)
-                    if edge[0] == edge[1] and edge[2] == (0, 0, 0):
-                        continue
+                    edge = canonical_topology_edge(left, right, shift)
                     candidates[edge] = min(distance, candidates.get(edge, distance))
 
     coordination = [0] * len(structure.atomic_numbers)
