@@ -230,6 +230,7 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_accept_topology")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_reject_topology")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_switch_topology")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_scientific_edits")
     assert hasattr(bpy.types.Scene, "chemblender_topology")
     assert_file_handlers(module_key)
     properties = importlib.import_module(f"{module_key}.ui.properties")
@@ -415,8 +416,81 @@ def assert_project_session_manager(module_key):
     )
     assert atom_ids == [0, 1, 2]
     topology_decisions = topology_settings.decisions_json
+    grid = core.Grid3D(
+        id=uuid4(),
+        revision="topology-ui-grid-r1",
+        semantic_role="electron_density",
+        domain="grid",
+        data=core.ArrayData(
+            numpy.ones((1, 1, 1)),
+            ("x", "y", "z"),
+            "dimensionless",
+        ),
+        status=core.DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(),
+        origin=(0.0, 0.0, 0.0),
+        step_vectors=(
+            (1.0, 0.0, 0.0),
+            (0.0, 1.0, 0.0),
+            (0.0, 0.0, 1.0),
+        ),
+        coordinate_unit="angstrom",
+        structure_id=structure.id,
+    )
+    session.project.commit(core.ImportBatch(datasets=(grid,)))
     session.mark_dirty("import")
     with TemporaryDirectory() as directory:
+        scientific_edit = importlib.import_module(
+            f"{module_key}.ui.scientific_edit"
+        )
+        structure_obj.location = (4.0, 5.0, 6.0)
+        assert not scientific_edit.preview_structure_object_edits(
+            session.project,
+            structure_obj,
+        ).has_changes
+        structure_obj.data.vertices[1].co.x += 0.125
+        structure_obj.data.update()
+        edit_preview = scientific_edit.preview_structure_object_edits(
+            session.project,
+            structure_obj,
+        )
+        assert edit_preview.coordinate_change_count == 1
+        assert edit_preview.affected_result_ids == (grid.id,)
+        xyz_export = Path(directory) / "derived.xyz"
+        assert bpy.ops.chemblender.apply_scientific_edits(
+            export_xyz=True,
+            export_path=str(xyz_export),
+        ) == {"FINISHED"}
+        derived_id = session.active_entity_id
+        derived = session.project.structures[derived_id]
+        derived_obj_name = session.active_view_object_name
+        derived_obj = bpy.data.objects[derived_obj_name]
+        derived_topology_id = UUID(derived_obj["cb_topology_id"])
+        derived_topology = session.project.topologies[
+            derived_topology_id
+        ]
+        assert derived_topology.source_kind is core.TopologySource.USER_EDITED
+        assert derived_topology.structure_id == derived.id
+        assert derived.topology_ids == (derived_topology.id,)
+        assert numpy.allclose(
+            structure.coordinates.values,
+            ((0.0, 0.0, 0.0), (0.96, 0.0, 0.0), (-0.24, 0.93, 0.0)),
+        )
+        assert grid.structure_id == structure.id
+        assert grid.id in session.project.datasets
+        assert not any(
+            getattr(dataset, "structure_id", None) == derived.id
+            for dataset in session.project.datasets.values()
+        )
+        assert xyz_export.is_file()
+        exported = core.parse_xyz(xyz_export).structures[0]
+        assert exported.atomic_numbers == derived.atomic_numbers
+        assert numpy.allclose(
+            exported.coordinates.values,
+            derived.coordinates.values,
+            atol=1.0e-6,
+        )
         blend = Path(directory) / "session-manager.blend"
         result = bpy.ops.wm.save_as_mainfile(
             filepath=str(blend),
@@ -480,6 +554,15 @@ def assert_project_session_manager(module_key):
         assert restored_obj["cb_topology_id"] == str(topology_id)
         assert restored_obj["cb_topology_revision"] == topology.revision
         assert topology_id in restored.project.topologies
+        restored_derived = restored.project.structures[derived_id]
+        assert restored_derived.revision == derived.revision
+        restored_derived_obj = bpy.data.objects[derived_obj_name]
+        assert restored_derived_obj["cb_structure_id"] == str(derived_id)
+        assert (
+            restored_derived_obj["cb_topology_id"]
+            == str(derived_topology_id)
+        )
+        assert restored.project.datasets[grid.id].structure_id == structure.id
         assert (
             bpy.context.scene.chemblender_topology.decisions_json
             == topology_decisions
@@ -2303,6 +2386,12 @@ expected_inventory["registered_classes"] += [
         "name": "CHEMBLENDER_PG_import_preview_row",
         "id": None,
         "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.scientific_edit",
+        "name": "CHEMBLENDER_OT_apply_scientific_edits",
+        "id": "chemblender.apply_scientific_edits",
+        "base": "Operator",
     },
     {
         "module": ".ui.topology",

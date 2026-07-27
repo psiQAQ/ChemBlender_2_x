@@ -692,6 +692,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         for name in (
             "ChemBlender.ui.project_browser.panel",
             "ChemBlender.ui.properties",
+            "ChemBlender.ui.scientific_edit",
             "ChemBlender.ui.topology",
         ):
             sys.modules.pop(name, None)
@@ -704,6 +705,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         for name in (
             "ChemBlender.ui.project_browser.panel",
             "ChemBlender.ui.properties",
+            "ChemBlender.ui.scientific_edit",
             "ChemBlender.ui.topology",
         ):
             sys.modules.pop(name, None)

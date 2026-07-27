@@ -17,6 +17,10 @@ from ..properties import (
     _scene_property_identity,
     get_quick_import_state,
 )
+from ..scientific_edit import (
+    CHEMBLENDER_OT_apply_scientific_edits,
+    draw_scientific_edit_controls,
+)
 from ..session import get_scene_session
 from ..topology import (
     CHEMBLENDER_OT_accept_topology,
@@ -300,6 +304,11 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
         )
         if settings.active_entity_id:
             layout.label(text=f"Selected: {settings.active_entity_id}")
+        draw_scientific_edit_controls(
+            layout,
+            context,
+            get_scene_session(context.scene),
+        )
         draw_topology_controls(
             layout,
             context,
