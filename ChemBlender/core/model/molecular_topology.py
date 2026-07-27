@@ -40,6 +40,7 @@ class TopologyRecord:
     quality_status: QualityStatus
     inference_parameters: tuple[tuple[str, object], ...]
     provenance_ids: tuple[UUID, ...]
+    bond_lattice_shifts: ArrayData | None = None
 
     def __post_init__(self):
         import numpy
@@ -86,6 +87,19 @@ class TopologyRecord:
             ):
                 raise ValueError(
                     "aromatic_flags must contain one bool value per bond"
+                )
+        if self.bond_lattice_shifts is not None:
+            if not isinstance(self.bond_lattice_shifts, ArrayData):
+                raise TypeError("bond_lattice_shifts must be ArrayData or None")
+            shifts = numpy.asarray(self.bond_lattice_shifts.values)
+            if (
+                self.bond_lattice_shifts.dims != ("bond", "xyz")
+                or self.bond_lattice_shifts.shape != (bond_count, 3)
+                or self.bond_lattice_shifts.unit != "dimensionless"
+                or shifts.dtype.kind not in "iu"
+            ):
+                raise ValueError(
+                    "bond_lattice_shifts must contain one integer xyz shift per bond"
                 )
         labels = tuple(self.stereo_labels)
         if len(labels) != bond_count or any(

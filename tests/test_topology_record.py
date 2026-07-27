@@ -91,6 +91,7 @@ class TopologyRecordTests(unittest.TestCase):
                 "quality_status",
                 "inference_parameters",
                 "provenance_ids",
+                "bond_lattice_shifts",
             ),
         )
 
@@ -199,6 +200,26 @@ class TopologyRecordTests(unittest.TestCase):
         record = topology_record()
         self.assertEqual(record.source_kind, core.TopologySource.EXPLICIT_FILE)
         self.assertEqual(record.inference_parameters, ())
+        self.assertIsNone(record.bond_lattice_shifts)
+
+    def test_optional_bond_lattice_shifts_are_integer_bond_xyz_values(self):
+        valid = topology_record(
+            bond_lattice_shifts=array(
+                ((0, 0, 0), (1, -1, 0)),
+                ("bond", "xyz"),
+            )
+        )
+        self.assertEqual(valid.bond_lattice_shifts.shape, (2, 3))
+        invalid = (
+            array(((0, 0), (1, 0)), ("bond", "xyz")),
+            array(((0.0, 0.0, 0.0), (1.0, 0.0, 0.0)), ("bond", "xyz")),
+            array(((0, 0, 0),), ("bond", "xyz")),
+            array(((0, 0, 0), (1, 0, 0)), ("bond", "axis")),
+        )
+        for shifts in invalid:
+            with self.subTest(shifts=shifts):
+                with self.assertRaisesRegex(ValueError, "bond_lattice_shifts"):
+                    topology_record(bond_lattice_shifts=shifts)
 
     def test_structure_has_zero_or_more_topology_references(self):
         reference = structure()
@@ -356,6 +377,7 @@ class TopologyRecordTests(unittest.TestCase):
                 ]
             },
         )
+        self.assertIsNone(topology_value["bond_lattice_shifts"])
 
     def test_batch_bridges_merges_and_worker_references_preserve_topologies(self):
         structure_id = uuid4()

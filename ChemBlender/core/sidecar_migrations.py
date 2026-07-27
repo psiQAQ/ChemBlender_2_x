@@ -71,6 +71,14 @@ def _encoded_tuple(values):
 def _migrate_topology_records(project):
     topology_entries = list(_registry_entries(project, "topologies"))
     changed = "topologies" not in project
+    for _key, topology in topology_entries:
+        if (
+            isinstance(topology, dict)
+            and topology.get("$type") == "TopologyRecord"
+            and "bond_lattice_shifts" not in topology
+        ):
+            topology["bond_lattice_shifts"] = None
+            changed = True
     structures = _registry_entries(project, "structures")
     for _key, structure in structures:
         if not isinstance(structure, dict) or structure.get("$type") != "Structure":
@@ -130,6 +138,7 @@ def _migrate_topology_records(project):
                     },
                     "inference_parameters": _encoded_tuple(parameters),
                     "provenance_ids": {"$tuple": []},
+                    "bond_lattice_shifts": None,
                 },
             ]
         )
@@ -173,7 +182,13 @@ def migrate_manifest(document):
             )
             for _key, structure in _registry_entries(project or {}, "structures")
         )
-        if missing or has_legacy_structure:
+        has_legacy_topology = any(
+            isinstance(topology, dict)
+            and topology.get("$type") == "TopologyRecord"
+            and "bond_lattice_shifts" not in topology
+            for _key, topology in _registry_entries(project or {}, "topologies")
+        )
+        if missing or has_legacy_structure or has_legacy_topology:
             migrated = deepcopy(document)
             for name in missing:
                 migrated["project"][name] = {"$dict": []}

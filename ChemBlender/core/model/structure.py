@@ -186,10 +186,17 @@ class Structure:
         if self.coordinates.unit in {"dimensionless", "unknown"}:
             raise ValueError("coordinate unit must be known dimensional length")
         if self.cell is not None:
+            cell = numpy.asarray(self.cell.values)
             if self.cell.dims != ("cell_vector", "xyz") or self.cell.shape != (3, 3):
                 raise ValueError("cell must have dims (cell_vector, xyz) and shape (3, 3)")
             if self.cell.unit != self.coordinates.unit:
                 raise ValueError("cell and coordinates must use the same unit")
+            if (
+                numpy.iscomplexobj(cell)
+                or not numpy.all(numpy.isfinite(cell))
+                or abs(float(numpy.linalg.det(cell))) < 1.0e-12
+            ):
+                raise ValueError("cell must contain finite non-singular vectors")
         if self.periodic is not None:
             if not isinstance(self.periodic, PeriodicSiteData):
                 raise TypeError("periodic must be PeriodicSiteData")

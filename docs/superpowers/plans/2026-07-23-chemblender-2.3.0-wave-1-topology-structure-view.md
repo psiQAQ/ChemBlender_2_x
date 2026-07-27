@@ -97,19 +97,19 @@ Commit inference and benchmark.
 **Interfaces:**
 - Produces: `infer_periodic_topology()` with lattice shifts per connection.
 
-- [ ] **Step 1: Extend topology data for image shifts**
+- [x] **Step 1: Extend topology data for image shifts**
 
 Add optional `bond_lattice_shifts` with dims `(bond,xyz)` integer dimensionless. Nonperiodic records use zeros or None by contract.
 
-- [ ] **Step 2: Write boundary tests**
+- [x] **Step 2: Write boundary tests**
 
 Atoms near opposite cell faces connect with a nonzero lattice shift. Nonorthogonal cells use fractional minimum images. Partial PBC honors axis flags.
 
-- [ ] **Step 3: Implement fractional neighbor logic**
+- [x] **Step 3: Implement fractional neighbor logic**
 
 Use inverse cell to map displacement, wrap only PBC axes and recover Cartesian distance. Store the chosen integer shift. Detect singular cell through existing Structure validation.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run periodic and nonperiodic inference tests; commit.
 

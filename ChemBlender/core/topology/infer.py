@@ -94,6 +94,96 @@ def _invalid_duplicate_batch(structure, settings, left, right, distance):
     )
 
 
+def _inference_batch(
+    structure,
+    *,
+    parameters,
+    edges,
+    orders,
+    quality_status,
+    operation,
+    bond_lattice_shifts=None,
+):
+    import numpy
+
+    identity = json.dumps(
+        {
+            "bond_lattice_shifts": bond_lattice_shifts,
+            "edges": edges,
+            "operation": operation,
+            "orders": orders,
+            "parameters": parameters,
+            "structure_id": str(structure.id),
+        },
+        allow_nan=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    revision = hashlib.sha256(identity).hexdigest()
+    topology_id = uuid5(
+        NAMESPACE_URL,
+        f"chemblender:topology-distance:{INFERENCE_VERSION}:{revision}:topology",
+    )
+    provenance_id = uuid5(
+        NAMESPACE_URL,
+        f"chemblender:topology-distance:{INFERENCE_VERSION}:{revision}:provenance",
+    )
+    topology = TopologyRecord(
+        id=topology_id,
+        revision=revision,
+        structure_id=structure.id,
+        bond_indices=ArrayData(
+            numpy.asarray(edges, dtype=numpy.int64).reshape((-1, 2)),
+            ("bond", "endpoint"),
+            "dimensionless",
+        ),
+        bond_orders=ArrayData(
+            numpy.asarray(orders, dtype=float),
+            ("bond",),
+            "dimensionless",
+        ),
+        aromatic_flags=None,
+        stereo_labels=("",) * len(edges),
+        source_kind=TopologySource.DISTANCE_INFERRED,
+        quality_status=quality_status,
+        inference_parameters=parameters,
+        provenance_ids=(provenance_id,),
+        bond_lattice_shifts=(
+            None
+            if bond_lattice_shifts is None
+            else ArrayData(
+                numpy.asarray(bond_lattice_shifts, dtype=numpy.int64).reshape(
+                    (-1, 3)
+                ),
+                ("bond", "xyz"),
+                "dimensionless",
+            )
+        ),
+    )
+    provenance = ProvenanceRecord(
+        id=provenance_id,
+        revision=revision,
+        producer="ChemBlender topology inference",
+        producer_version=INFERENCE_VERSION,
+        source="",
+        source_hash=revision,
+        parent_ids=(structure.id,),
+        operation=operation,
+        parameters=parameters,
+    )
+    return ImportBatch(
+        topologies=(topology,),
+        provenance=(provenance,),
+        report=ParserReport(
+            reader_id="topology-distance",
+            reader_version=INFERENCE_VERSION,
+            created_entity_ids=(topology.id, provenance.id),
+            parsed_capabilities=("topology",),
+            issues=(),
+        ),
+    )
+
+
 def infer_distance_topology(structure, settings=None):
     import numpy
 
@@ -184,70 +274,15 @@ def infer_distance_topology(structure, settings=None):
         for metal in metal_connections
     )
     parameters = _settings_parameters(settings, structure)
-    identity = json.dumps(
-        {
-            "edges": edges,
-            "orders": orders,
-            "parameters": parameters,
-            "structure_id": str(structure.id),
-        },
-        allow_nan=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
-    revision = hashlib.sha256(identity).hexdigest()
-    topology_id = uuid5(
-        NAMESPACE_URL,
-        f"chemblender:topology-distance:{INFERENCE_VERSION}:{revision}:topology",
-    )
-    provenance_id = uuid5(
-        NAMESPACE_URL,
-        f"chemblender:topology-distance:{INFERENCE_VERSION}:{revision}:provenance",
-    )
-    topology = TopologyRecord(
-        id=topology_id,
-        revision=revision,
-        structure_id=structure.id,
-        bond_indices=ArrayData(
-            numpy.asarray(edges, dtype=numpy.int64).reshape((-1, 2)),
-            ("bond", "endpoint"),
-            "dimensionless",
-        ),
-        bond_orders=ArrayData(
-            numpy.asarray(orders, dtype=float),
-            ("bond",),
-            "dimensionless",
-        ),
-        aromatic_flags=None,
-        stereo_labels=("",) * len(edges),
-        source_kind=TopologySource.DISTANCE_INFERRED,
+    return _inference_batch(
+        structure,
+        parameters=parameters,
+        edges=edges,
+        orders=orders,
         quality_status=(
             QualityStatus.AMBIGUOUS
             if coordination_mode and any(metal_connections)
             else QualityStatus.COMPLETE
         ),
-        inference_parameters=parameters,
-        provenance_ids=(provenance_id,),
-    )
-    provenance = ProvenanceRecord(
-        id=provenance_id,
-        revision=revision,
-        producer="ChemBlender topology inference",
-        producer_version=INFERENCE_VERSION,
-        source="",
-        source_hash=revision,
-        parent_ids=(structure.id,),
         operation="infer_distance_topology",
-        parameters=parameters,
-    )
-    return ImportBatch(
-        topologies=(topology,),
-        provenance=(provenance,),
-        report=ParserReport(
-            reader_id="topology-distance",
-            reader_version=INFERENCE_VERSION,
-            created_entity_ids=(topology.id, provenance.id),
-            parsed_capabilities=("topology",),
-            issues=(),
-        ),
     )
