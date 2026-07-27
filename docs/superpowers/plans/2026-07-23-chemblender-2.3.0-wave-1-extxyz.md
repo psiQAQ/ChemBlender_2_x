@@ -41,7 +41,7 @@
   Numeric and logical Partial properties use that boolean mask.
 - `CategoricalData` stores integer codes, unique categories and an explicit missing code; it never stores an object-dtype array and does not add a redundant validity mask.
 
-- [ ] **Step 1: Write model validation tests**
+- [x] **Step 1: Write model validation tests**
 
 ```python
 def test_categorical_data_round_trips_codes_and_categories(self):
@@ -62,7 +62,7 @@ def test_atom_frame_property_requires_frame_atom_prefix(self):
         )
 ```
 
-- [ ] **Step 2: Implement models and project validation**
+- [x] **Step 2: Implement models and project validation**
 
 `FrameProperty` requires leading `frame`; `AtomFrameProperty` requires
 `("frame","atom")`; `CellFrameProperty` requires
@@ -71,11 +71,11 @@ counts at project commit. Numeric and bool Partial datasets require their
 matching validity mask; Complete datasets must not use a mask. Categorical
 missing values use only `CategoricalData.missing_code`.
 
-- [ ] **Step 3: Add sidecar round-trip tests**
+- [x] **Step 3: Add sidecar round-trip tests**
 
 Include categorical string values and all three frame property types. Assert no object array is written.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run model, project and sidecar tests; commit.
 
