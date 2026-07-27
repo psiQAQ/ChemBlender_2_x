@@ -191,12 +191,62 @@ class SDFConformerGroupingTests(unittest.TestCase):
         columns = {column.semantic_role: column for column in accepted.property_columns}
         self.assertEqual(columns["sdf_energy"].record_ids, suggestion.record_ids)
         self.assertEqual(columns["sdf_energy"].data.values.tolist(), [-1.0, -2.0])
-        self.assertEqual(columns["sdf_energy"].validity_mask.values.tolist(), [True, True])
+        self.assertIsNone(columns["sdf_energy"].validity_mask)
         self.assertEqual(columns["sdf_flag"].data.values.tolist(), [True, False])
-        self.assertEqual(columns["sdf_flag"].validity_mask.values.tolist(), [True, True])
+        self.assertIsNone(columns["sdf_flag"].validity_mask)
         self.assertEqual(columns["sdf_state"].data.codes.values.tolist(), [0, 1])
         self.assertEqual(accepted.provenance.operation, "group_conformers")
         self.assertIn(("evidence", "complete_atom_maps"), accepted.provenance.parameters)
+        provenance = dict(accepted.provenance.parameters)
+        self.assertEqual(provenance["confirmed_by"], "user")
+        self.assertEqual(provenance["mapping_direction"], "reference_atom_to_source_atom")
+        self.assertEqual(provenance["property_column_lineage"][0][1], grouped_batch.datasets[0].revision)
+        self.assertEqual(provenance["topology_lineage"][0][1], batch.topologies[0].revision)
+
+    def test_categorical_snapshot_change_fails_closed(self):
+        from ChemBlender.core import ArrayData, CategoricalData
+        from ChemBlender.core.import_pipeline.conformer_grouping import (
+            accept_conformer_group,
+            suggest_conformer_groups,
+        )
+
+        first = _molecule("FC(Cl)(Br)I", atom_maps=True)
+        second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
+        batch = _batch((first, (("State", "solid"),)), (second, (("State", "liquid"),)))
+        suggestion = suggest_conformer_groups(batch)[0]
+        column = batch.datasets[0]
+        changed = replace(
+            column,
+            data=CategoricalData(
+                ArrayData(column.data.codes.values.copy(), ("record",), "dimensionless"),
+                tuple(reversed(column.data.categories)),
+                column.data.missing_code,
+            ),
+        )
+
+        with self.assertRaisesRegex(ValueError, "stale"):
+            accept_conformer_group(suggestion, replace(batch, datasets=(changed,)))
+
+    def test_cancellation_is_checked_between_rdkit_records(self):
+        from ChemBlender.core.import_pipeline.conformer_grouping import (
+            ConformerGroupingCancelled,
+            suggest_conformer_groups,
+        )
+
+        batch = _batch(
+            (_molecule("FC(Cl)(Br)I", atom_maps=True), ()),
+            (_molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0)), ()),
+        )
+        calls = 0
+
+        def cancelled():
+            nonlocal calls
+            calls += 1
+            return calls >= 4
+
+        with self.assertRaises(ConformerGroupingCancelled):
+            suggest_conformer_groups(batch, is_cancelled=cancelled)
+        self.assertEqual(calls, 4)
 
     def test_stale_suggestion_and_cancellation_fail_closed(self):
         from ChemBlender.core.import_pipeline.conformer_grouping import (
@@ -221,6 +271,52 @@ class SDFConformerGroupingTests(unittest.TestCase):
                 batch,
                 is_cancelled=lambda: True,
             )
+
+    def test_acceptance_converts_bohr_coordinates_to_reference_unit_and_snapshot_tracks_units(self):
+        from ChemBlender.core import ArrayData
+        from ChemBlender.core.import_pipeline.conformer_grouping import (
+            accept_conformer_group,
+            suggest_conformer_groups,
+        )
+
+        first = _molecule("FC(Cl)(Br)I", atom_maps=True)
+        second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
+        batch = _batch((first, ()), (second, ()))
+        source = batch.structures[1]
+        bohr_structure = replace(
+            source,
+            coordinates=ArrayData(source.coordinates.values / 0.529177210903, ("atom", "xyz"), "bohr"),
+        )
+        bohr_batch = replace(batch, structures=(batch.structures[0], bohr_structure))
+        suggestion = suggest_conformer_groups(bohr_batch)[0]
+
+        accepted = accept_conformer_group(suggestion, bohr_batch)
+
+        self.assertEqual(accepted.conformer_set.data.unit, "angstrom")
+        numpy.testing.assert_allclose(
+            accepted.conformer_set.data.values[1],
+            source.coordinates.values[[4, 3, 2, 1, 0]],
+        )
+        self.assertNotEqual(suggestion, suggest_conformer_groups(batch)[0])
+
+    def test_invalid_or_non_explicit_topology_is_not_suggested(self):
+        from ChemBlender.core import TopologySource
+        from ChemBlender.core.model import QualityStatus
+        from ChemBlender.core.import_pipeline.conformer_grouping import suggest_conformer_groups
+
+        first = _molecule("FC(Cl)(Br)I", atom_maps=True)
+        second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
+        batch = _batch((first, ()), (second, ()))
+        for fields in (
+            {"source_kind": TopologySource.RDKIT_SANITIZED},
+            {"quality_status": QualityStatus.INVALID},
+        ):
+            with self.subTest(fields=fields):
+                changed = replace(batch.topologies[1], **fields)
+                self.assertEqual(
+                    suggest_conformer_groups(replace(batch, topologies=(batch.topologies[0], changed))),
+                    (),
+                )
 
     def test_acceptance_is_atomic_when_property_conversion_fails(self):
         from ChemBlender.core.import_pipeline import conformer_grouping
@@ -319,6 +415,17 @@ class SDFConformerGroupingTests(unittest.TestCase):
                     len([item for item in result.project.datasets.values() if item.domain == "conformer"]),
                     1,
                 )
+                coordinates = next(iter(result.project.structures.values())).coordinates.values
+                self.assertFalse(coordinates.loaded)
+                lazy_batch = ImportBatch(
+                    structures=tuple(result.project.structures.values()),
+                    topologies=tuple(result.project.topologies.values()),
+                    molecular_records=tuple(result.project.molecular_records.values()),
+                    datasets=tuple(result.project.datasets.values()),
+                    provenance=tuple(result.project.provenance.values()),
+                )
+                suggest_conformer_groups(lazy_batch)
+                self.assertFalse(coordinates.loaded)
             finally:
                 close_session(session)
                 staging.discard()

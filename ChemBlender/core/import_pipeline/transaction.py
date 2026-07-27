@@ -23,7 +23,7 @@ from .conflicts import (
 )
 from .conformer_grouping import (
     ConformerGroupSuggestion,
-    accept_conformer_group,
+    _accept_conformer_group,
     suggest_conformer_groups,
 )
 from .grouping import (
@@ -461,7 +461,7 @@ def _validated_conformer_grouping_decisions(preview, staged_session, decisions):
             raise ValueError("ambiguous conformer grouping requires explicit review confirmation")
         seen.add(suggestion.id)
         validated.append((suggestion, decision.review_confirmed))
-    return tuple(validated)
+    return tuple(sorted(validated, key=lambda item: str(item[0].id)))
 
 
 def _with_conformer_fragment(batch, acceptance):
@@ -518,10 +518,11 @@ def _accepted_conformer_batches(validated, replacements, batches):
             )
             if live is None:
                 continue
-            acceptance = accept_conformer_group(
+            acceptance = _accept_conformer_group(
                 live,
                 batch,
                 review_confirmed=review_confirmed,
+                validated=True,
             )
             enriched[index] = _with_conformer_fragment(batch, acceptance)
             break

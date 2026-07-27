@@ -15,11 +15,14 @@ from ..model import (
     MolecularRecord,
     ProvenanceRecord,
     RecordPropertyColumn,
+    TopologySource,
+    QualityStatus,
 )
 
 
 _VERSION = "1"
 _MAX_SYMMETRY_MATCHES = 4096
+_BOHR_TO_ANGSTROM = 0.529177210903
 
 
 class ConformerGroupingCancelled(Exception):
@@ -228,13 +231,18 @@ def _ordered_records(batch):
             topology = topologies[record.topology_id]
         except KeyError as error:
             raise ValueError("conformer grouping requires record structure and topology") from error
-        if structure.atomic_identity is None:
-            raise ValueError("conformer grouping requires atomic identity")
+        if (
+            structure.atomic_identity is None
+            or topology.source_kind is not TopologySource.EXPLICIT_FILE
+            or topology.quality_status is QualityStatus.INVALID
+        ):
+            continue
         entries.append((record, structure, topology))
     return tuple(entries)
 
 
-def _rdkit_molecule(record):
+def _rdkit_molecule(record, *, is_cancelled=None):
+    _check_cancel(is_cancelled)
     from rdkit import Chem
 
     molecule = Chem.MolFromMolBlock(
@@ -245,8 +253,10 @@ def _rdkit_molecule(record):
     )
     if molecule is None:
         raise ValueError("record raw block no longer parses as an SDF molecule")
+    _check_cancel(is_cancelled)
     molecule.UpdatePropertyCache(strict=False)
     Chem.AssignStereochemistry(molecule, cleanIt=False, force=True)
+    _check_cancel(is_cancelled)
     return molecule
 
 
@@ -254,13 +264,28 @@ def _identity_values(identity, name):
     import numpy
 
     value = getattr(identity, name)
-    if hasattr(value, "codes"):
-        codes = numpy.asarray(value.codes.values)
-        return tuple(
-            None if code == value.missing_code else value.categories[int(code)]
-            for code in codes
-        )
-    return tuple(numpy.asarray(value.values).tolist())
+    values = value.codes.values if hasattr(value, "codes") else value.values
+    was_unloaded = getattr(values, "loaded", None) is False
+    try:
+        array = numpy.asarray(values)
+        if hasattr(value, "codes"):
+            return tuple(None if code == value.missing_code else value.categories[int(code)] for code in array)
+        return tuple(array.tolist())
+    finally:
+        if was_unloaded:
+            values.close()
+
+
+def _array_copy(value):
+    import numpy
+
+    values = value.values
+    was_unloaded = getattr(values, "loaded", None) is False
+    try:
+        return numpy.asarray(values).copy()
+    finally:
+        if was_unloaded:
+            values.close()
 
 
 def _complete_unique_atom_maps(structure):
@@ -289,20 +314,20 @@ def _exact_model_mapping(reference, candidate, mapping):
             return False
     reference_edges = {
         (int(left), int(right)): index
-        for index, (left, right) in enumerate(numpy.asarray(reference_topology.bond_indices.values))
+        for index, (left, right) in enumerate(_array_copy(reference_topology.bond_indices))
     }
     candidate_edges = {
         (int(left), int(right)): index
-        for index, (left, right) in enumerate(numpy.asarray(candidate_topology.bond_indices.values))
+        for index, (left, right) in enumerate(_array_copy(candidate_topology.bond_indices))
     }
     if len(reference_edges) != len(candidate_edges):
         return False
-    reference_orders = numpy.asarray(reference_topology.bond_orders.values)
-    candidate_orders = numpy.asarray(candidate_topology.bond_orders.values)
+    reference_orders = _array_copy(reference_topology.bond_orders)
+    candidate_orders = _array_copy(candidate_topology.bond_orders)
     if reference_topology.aromatic_flags is None or candidate_topology.aromatic_flags is None:
         return False
-    reference_aromatic = numpy.asarray(reference_topology.aromatic_flags.values)
-    candidate_aromatic = numpy.asarray(candidate_topology.aromatic_flags.values)
+    reference_aromatic = _array_copy(reference_topology.aromatic_flags)
+    candidate_aromatic = _array_copy(candidate_topology.aromatic_flags)
     for (left, right), first_index in reference_edges.items():
         edge = tuple(sorted((mapping[left], mapping[right])))
         second_index = candidate_edges.get(edge)
@@ -315,7 +340,8 @@ def _exact_model_mapping(reference, candidate, mapping):
     return True
 
 
-def _pair_mapping(reference, candidate):
+def _pair_mapping(reference, candidate, *, is_cancelled=None):
+    _check_cancel(is_cancelled)
     reference_molecule, _reference_record, reference_structure, _reference_topology = reference
     candidate_molecule, _candidate_record, candidate_structure, _candidate_topology = candidate
     if reference_molecule.GetNumAtoms() != candidate_molecule.GetNumAtoms():
@@ -344,6 +370,7 @@ def _pair_mapping(reference, candidate):
             includeAtomMaps=False,
         )
     )
+    _check_cancel(is_cancelled)
     candidate_ranks = tuple(
         Chem.CanonicalRankAtoms(
             candidate_molecule,
@@ -363,6 +390,7 @@ def _pair_mapping(reference, candidate):
         useChirality=True,
         maxMatches=_MAX_SYMMETRY_MATCHES + 1,
     )
+    _check_cancel(is_cancelled)
     if len(raw_matches) > _MAX_SYMMETRY_MATCHES:
         return None
     matches = tuple(
@@ -388,7 +416,13 @@ def _pair_mapping(reference, candidate):
 def _array_snapshot(value):
     import numpy
 
-    return numpy.asarray(value.values).tolist()
+    values = value.values
+    was_unloaded = getattr(values, "loaded", None) is False
+    try:
+        return numpy.asarray(values).tolist()
+    finally:
+        if was_unloaded:
+            values.close()
 
 
 def _snapshot(batch, members):
@@ -401,7 +435,7 @@ def _snapshot(batch, members):
                 "record": (str(record.id), record.revision, record.record_key),
                 "structure": (
                     str(structure.id), structure.revision, structure.atomic_numbers,
-                    _array_snapshot(structure.coordinates),
+                    structure.coordinates.unit, _array_snapshot(structure.coordinates),
                     _identity_values(identity, "formal_charges"),
                     _identity_values(identity, "isotopes"),
                     _identity_values(identity, "atom_map_numbers"),
@@ -409,9 +443,11 @@ def _snapshot(batch, members):
                 ),
                 "topology": (
                     str(topology.id), topology.revision,
+                    topology.source_kind.value, topology.quality_status.value,
                     _array_snapshot(topology.bond_indices),
                     _array_snapshot(topology.bond_orders),
                     None if topology.aromatic_flags is None else _array_snapshot(topology.aromatic_flags),
+                    None if topology.bond_lattice_shifts is None else _array_snapshot(topology.bond_lattice_shifts),
                     topology.stereo_labels,
                 ),
             }
@@ -422,11 +458,19 @@ def _snapshot(batch, members):
             continue
         data = column.data.codes if isinstance(column.data, CategoricalData) else column.data
         columns.append(
-            (
-                str(column.id), column.revision, tuple(map(str, column.record_ids)),
-                _array_snapshot(data),
-                None if column.validity_mask is None else _array_snapshot(column.validity_mask),
-            )
+            {
+                "id": str(column.id), "revision": column.revision,
+                "record_ids": tuple(map(str, column.record_ids)),
+                "semantic_role": column.semantic_role, "status": column.status.value,
+                "domain": column.domain, "unit": data.unit, "dims": data.dims,
+                "provenance_ids": tuple(map(str, column.provenance_ids)),
+                "source_calculation": None if column.source_calculation is None else str(column.source_calculation),
+                "values": _array_snapshot(data),
+                "validity_mask": None if column.validity_mask is None else _array_snapshot(column.validity_mask),
+                "validity_mask_metadata": None if column.validity_mask is None else (column.validity_mask.dims, column.validity_mask.unit),
+                "categories": None if not isinstance(column.data, CategoricalData) else column.data.categories,
+                "missing_code": None if not isinstance(column.data, CategoricalData) else column.data.missing_code,
+            }
         )
     return _digest({"columns": tuple(columns), "members": tuple(rows)})
 
@@ -435,7 +479,7 @@ def suggest_conformer_groups(batch, *, is_cancelled=None):
     """Return immutable candidates; this function never creates project data."""
     entries = _ordered_records(batch)
     _check_cancel(is_cancelled)
-    molecules = tuple((_rdkit_molecule(record), record, structure, topology) for record, structure, topology in entries)
+    molecules = tuple((_rdkit_molecule(record, is_cancelled=is_cancelled), record, structure, topology) for record, structure, topology in entries)
     suggestions = []
     unmatched = list(molecules)
     while unmatched:
@@ -458,6 +502,7 @@ def suggest_conformer_groups(batch, *, is_cancelled=None):
             result = _pair_mapping(
                 (reference, reference_record, reference_structure, reference_topology),
                 (candidate, candidate_record, candidate_structure, candidate_topology),
+                is_cancelled=is_cancelled,
             )
             if result is None:
                 remaining.append((candidate, candidate_record, candidate_structure, candidate_topology))
@@ -492,13 +537,26 @@ def suggest_conformer_groups(batch, *, is_cancelled=None):
     return tuple(sorted(suggestions, key=lambda suggestion: str(suggestion.id)))
 
 
-def _coordinates(structure, mapping):
+def _coordinates(structure, mapping, reference_unit):
     import numpy
 
-    coordinates = numpy.asarray(structure.coordinates.values, dtype=numpy.float64)
-    if not numpy.all(numpy.isfinite(coordinates)):
-        raise ValueError("structure has non-finite coordinates")
-    return coordinates[list(mapping)]
+    values = structure.coordinates.values
+    was_unloaded = getattr(values, "loaded", None) is False
+    try:
+        coordinates = numpy.asarray(values, dtype=numpy.float64)
+        if not numpy.all(numpy.isfinite(coordinates)):
+            raise ValueError("structure has non-finite coordinates")
+        units = (structure.coordinates.unit, reference_unit)
+        if units == ("bohr", "angstrom"):
+            coordinates = coordinates * _BOHR_TO_ANGSTROM
+        elif units == ("angstrom", "bohr"):
+            coordinates = coordinates / _BOHR_TO_ANGSTROM
+        elif units[0] != units[1]:
+            raise ValueError("conformer coordinate units must be angstrom or bohr")
+        return coordinates[list(mapping)]
+    finally:
+        if was_unloaded:
+            values.close()
 
 
 def _reordered_column(column, row_indices, record_ids, provenance_id, suggestion_id):
@@ -508,7 +566,7 @@ def _reordered_column(column, row_indices, record_ids, provenance_id, suggestion
     if isinstance(data, CategoricalData):
         reordered_data = CategoricalData(
             ArrayData(
-                numpy.asarray(data.codes.values)[list(row_indices)].copy(),
+                _array_copy(data.codes)[list(row_indices)],
                 data.codes.dims,
                 data.codes.unit,
             ),
@@ -517,7 +575,7 @@ def _reordered_column(column, row_indices, record_ids, provenance_id, suggestion
         )
     else:
         reordered_data = ArrayData(
-            numpy.asarray(data.values)[list(row_indices)].copy(),
+            _array_copy(data)[list(row_indices)],
             data.dims,
             data.unit,
         )
@@ -525,11 +583,18 @@ def _reordered_column(column, row_indices, record_ids, provenance_id, suggestion
         None
         if column.validity_mask is None
         else ArrayData(
-            numpy.asarray(column.validity_mask.values)[list(row_indices)].copy(),
+            _array_copy(column.validity_mask)[list(row_indices)],
             column.validity_mask.dims,
             column.validity_mask.unit,
         )
     )
+    status = column.status
+    if isinstance(reordered_data, CategoricalData):
+        if not numpy.any(numpy.asarray(reordered_data.codes.values) == reordered_data.missing_code):
+            status = DatasetStatus.COMPLETE
+    elif mask is not None and bool(numpy.all(numpy.asarray(mask.values))):
+        status = DatasetStatus.COMPLETE
+        mask = None
     revision = _digest(
         {
             "column_id": str(column.id),
@@ -544,7 +609,7 @@ def _reordered_column(column, row_indices, record_ids, provenance_id, suggestion
         semantic_role=column.semantic_role,
         domain="record",
         data=reordered_data,
-        status=column.status,
+        status=status,
         source_calculation=column.source_calculation,
         provenance_ids=tuple(dict.fromkeys((*column.provenance_ids, provenance_id))),
         record_ids=record_ids,
@@ -552,12 +617,19 @@ def _reordered_column(column, row_indices, record_ids, provenance_id, suggestion
     )
 
 
-def accept_conformer_group(
+def _rdkit_version():
+    import rdkit
+
+    return rdkit.__version__
+
+
+def _accept_conformer_group(
     suggestion,
     batch,
     *,
     review_confirmed=False,
     is_cancelled=None,
+    validated=False,
 ):
     """Convert one current suggestion after explicit user confirmation."""
     if type(suggestion) is not ConformerGroupSuggestion:
@@ -568,24 +640,38 @@ def accept_conformer_group(
         raise ValueError("ambiguous conformer grouping requires explicit review confirmation")
     entries = _ordered_records(batch)
     _check_cancel(is_cancelled)
-    live = {item.id: item for item in suggest_conformer_groups(batch, is_cancelled=is_cancelled)}
-    if live.get(suggestion.id) != suggestion:
-        raise ValueError("conformer grouping suggestion is stale; refresh before accepting")
+    if not validated:
+        live = {item.id: item for item in suggest_conformer_groups(batch, is_cancelled=is_cancelled)}
+        if live.get(suggestion.id) != suggestion:
+            raise ValueError("conformer grouping suggestion is stale; refresh before accepting")
     by_id = {record.id: (record, structure, topology) for record, structure, topology in entries}
     selected = tuple(by_id[record_id] for record_id in suggestion.record_ids)
+    selected_ids = set(suggestion.record_ids)
+    columns = tuple(column for column in batch.datasets if type(column) is RecordPropertyColumn)
     parent_ids = tuple(
         dict.fromkeys(
-            parent_id for record, _structure, _topology in selected for parent_id in record.provenance_ids
+            parent_id
+            for record, _structure, topology in selected
+            for parent_id in record.provenance_ids + topology.provenance_ids
+        )
+        | dict.fromkeys(
+            parent_id
+            for column in columns
+            if selected_ids.intersection(column.record_ids)
+            for parent_id in column.provenance_ids
         )
     )
     evidence_kinds = tuple(
         sorted({item.kind for item in suggestion.evidence if item.kind != "reference"})
     )
+    reference_unit = selected[0][1].coordinates.unit
     payload = {
         "atom_mappings": suggestion.atom_mappings,
         "evidence": evidence_kinds,
         "record_ids": tuple(map(str, suggestion.record_ids)),
-        "suggestion_id": str(suggestion.id),
+        "suggestion_id": str(suggestion.id), "reference_record_id": str(suggestion.reference_record_id),
+        "record_keys": suggestion.record_keys, "mapping_direction": "reference_atom_to_source_atom",
+        "reference_unit": reference_unit,
     }
     revision = _digest(payload)
     provenance = ProvenanceRecord(
@@ -598,9 +684,21 @@ def accept_conformer_group(
         parent_ids=parent_ids,
         operation="group_conformers",
         parameters=(
-            ("suggestion_id", str(suggestion.id)),
+            ("algorithm", "rdkit_atom_maps_canonical_ranks_isomorphism"),
+            ("confirmed_by", "user"),
             ("evidence", ",".join(evidence_kinds)),
+            ("matching_evidence", tuple((str(item.record_id), item.kind, item.atom_mapping, item.requires_review) for item in suggestion.evidence)),
+            ("mapping_direction", "reference_atom_to_source_atom"),
+            ("mappings", suggestion.atom_mappings),
+            ("ordered_record_ids", tuple(map(str, suggestion.record_ids))),
+            ("ordered_record_keys", suggestion.record_keys),
+            ("property_column_lineage", tuple((str(column.id), column.revision) for column in columns if selected_ids.intersection(column.record_ids))),
+            ("reference_record_id", str(suggestion.reference_record_id)),
             ("review_confirmed", review_confirmed),
+            ("rdkit_version", _rdkit_version()),
+            ("suggestion_id", str(suggestion.id)),
+            ("structure_lineage", tuple((str(structure.id), structure.revision) for _record, structure, _topology in selected)),
+            ("topology_lineage", tuple((str(topology.id), topology.revision, topology.source_kind.value, topology.quality_status.value) for _record, _structure, topology in selected)),
         ),
     )
     _check_cancel(is_cancelled)
@@ -608,16 +706,14 @@ def accept_conformer_group(
 
     coordinates = numpy.asarray(
         [
-            _coordinates(structure, mapping)
+            _coordinates(structure, mapping, reference_unit)
             for (_record, structure, _topology), mapping in zip(selected, suggestion.atom_mappings, strict=True)
         ],
         dtype=numpy.float64,
     )
     if not all(isfinite(float(value)) for value in coordinates.flat):
         raise ValueError("conformer coordinates must be finite")
-    columns = tuple(column for column in batch.datasets if type(column) is RecordPropertyColumn)
     reordered_columns = []
-    selected_ids = set(suggestion.record_ids)
     for column in columns:
         _check_cancel(is_cancelled)
         overlap = selected_ids.intersection(column.record_ids)
@@ -641,7 +737,7 @@ def accept_conformer_group(
         revision=revision,
         semantic_role="coordinates",
         domain="conformer",
-        data=ArrayData(coordinates, ("conformer", "atom", "xyz"), "angstrom"),
+        data=ArrayData(coordinates, ("conformer", "atom", "xyz"), reference_unit),
         status=(DatasetStatus.AMBIGUOUS if suggestion.requires_review else DatasetStatus.COMPLETE),
         source_calculation=None,
         provenance_ids=(provenance.id,),
@@ -660,6 +756,15 @@ def accept_conformer_group(
         conformer_set,
         tuple(reordered_columns),
         provenance,
+    )
+
+
+def accept_conformer_group(suggestion, batch, *, review_confirmed=False, is_cancelled=None):
+    return _accept_conformer_group(
+        suggestion,
+        batch,
+        review_confirmed=review_confirmed,
+        is_cancelled=is_cancelled,
     )
 
 
