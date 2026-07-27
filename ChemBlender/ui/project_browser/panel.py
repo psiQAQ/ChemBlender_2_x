@@ -1,5 +1,6 @@
 """Blender Project Browser UIList and small RNA projection."""
 
+import importlib
 import json
 from uuid import UUID
 
@@ -17,8 +18,6 @@ from ..properties import (
     _scene_property_identity,
     get_quick_import_state,
 )
-from .. import scientific_edit as _scientific_edit
-from .. import topology as _topology
 from ..session import get_scene_session
 from .model import (
     BrowserMode,
@@ -26,6 +25,9 @@ from .model import (
     _browser_entity_ids,
     build_browser_rows,
 )
+
+_scientific_edit = importlib.import_module("..scientific_edit", __package__)
+_topology = importlib.import_module("..topology", __package__)
 
 
 _MODE_ITEMS = tuple(

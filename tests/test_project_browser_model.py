@@ -772,6 +772,45 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
                 any(value in classes for value in vars(panel).values())
             )
 
+    def test_panel_ignores_stale_ui_module_aliases(self):
+        ui_package = importlib.import_module("ChemBlender.ui")
+        stale_topology = ModuleType("ChemBlender.ui.topology")
+        stale_scientific_edit = ModuleType(
+            "ChemBlender.ui.scientific_edit"
+        )
+        with (
+            patch.object(
+                ui_package,
+                "topology",
+                stale_topology,
+                create=True,
+            ),
+            patch.object(
+                ui_package,
+                "scientific_edit",
+                stale_scientific_edit,
+                create=True,
+            ),
+        ):
+            panel = importlib.import_module(
+                "ChemBlender.ui.project_browser.panel"
+            )
+
+        self.assertIsNot(panel._topology, stale_topology)
+        self.assertIsNot(panel._scientific_edit, stale_scientific_edit)
+        self.assertTrue(
+            hasattr(
+                panel._topology,
+                "CHEMBLENDER_PG_topology_settings",
+            )
+        )
+        self.assertTrue(
+            hasattr(
+                panel._scientific_edit,
+                "CHEMBLENDER_OT_apply_scientific_edits",
+            )
+        )
+
     def test_ui_list_draws_indentation_icon_quality_and_view_count(self):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"
