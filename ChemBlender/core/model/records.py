@@ -13,6 +13,17 @@ from .common import (
 from .properties import PropertyDataset
 
 
+def _array_dtype(values):
+    import numpy
+
+    try:
+        if isinstance(values, memoryview):
+            return numpy.asarray(values).dtype
+        return numpy.dtype(values.dtype)
+    except (AttributeError, BufferError, TypeError, ValueError) as error:
+        raise TypeError("array values must expose a readable dtype") from error
+
+
 @dataclass(frozen=True, slots=True)
 class RawRecordProperty:
     name: str
@@ -109,7 +120,7 @@ class RecordPropertyColumn(PropertyDataset):
             ):
                 raise ValueError("Complete categorical property must not contain missing codes")
         else:
-            dtype = numpy.dtype(self.data.values.dtype)
+            dtype = _array_dtype(self.data.values)
             numeric_or_logical = (
                 dtype.kind in "biufc"
                 and not dtype.hasobject
@@ -146,7 +157,7 @@ class ConformerSet(PropertyDataset):
             _require_uuid(self.reference_topology_id, "reference_topology_id")
         if not isinstance(self.data, ArrayData):
             raise TypeError("ConformerSet data must be ArrayData")
-        dtype = numpy.dtype(self.data.values.dtype)
+        dtype = _array_dtype(self.data.values)
         if (
             self.domain != "conformer"
             or self.data.dims != ("conformer", "atom", "xyz")

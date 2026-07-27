@@ -277,6 +277,8 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
             ("data", array([[[0.0, 0.0, 0.0]]], ("conformer", "atom", "axis"), "angstrom")),
             ("data", array(numpy.empty((1, 0, 3)), ("conformer", "atom", "xyz"), "angstrom")),
             ("atom_mappings", array([[True, False], [False, True]], ("conformer", "atom"))),
+            ("atom_mappings", array([[0, 2], [1, 0]], ("conformer", "atom"))),
+            ("atom_mappings", array([[0, 3], [1, 0]], ("conformer", "atom"))),
             ("record_ids", (record_ids[0], record_ids[0])),
             ("record_keys", ("one", "one")),
             ("record_keys", ("one",)),
@@ -334,6 +336,44 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
         ))
         self.assertIs(project.datasets[conformers.id], conformers)
 
+    def test_numeric_memoryview_models_and_reader_bridge(self):
+        molecule = structure()
+        value = record(molecule.id)
+        column = RecordPropertyColumn(
+            id=uuid4(), revision="memoryview-column-r1", semantic_role="energy",
+            domain="record", data=ArrayData(
+                memoryview(numpy.asarray([-1.0])), ("record",), "hartree"
+            ), status=DatasetStatus.COMPLETE, source_calculation=None,
+            provenance_ids=(), record_ids=(value.id,),
+        )
+        conformers = ConformerSet(
+            id=uuid4(), revision="memoryview-conformer-r1", semantic_role="coordinates",
+            domain="conformer", data=ArrayData(
+                memoryview(numpy.asarray([[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]])),
+                ("conformer", "atom", "xyz"), "angstrom",
+            ), status=DatasetStatus.COMPLETE, source_calculation=None, provenance_ids=(),
+            reference_structure_id=molecule.id, reference_topology_id=None,
+            record_ids=(value.id,), record_keys=(value.record_key,),
+            atom_mappings=array([[0, 1]], ("conformer", "atom")),
+        )
+        source, revision = source_revision(
+            (molecule.id, value.id, column.id, conformers.id)
+        )
+        value = MolecularRecord(
+            **{
+                name: (revision.id if name == "source_revision_id" else getattr(value, name))
+                for name in value.__dataclass_fields__
+            }
+        )
+        batch = ImportBatch(
+            sources=(source,), source_revisions=(revision,), structures=(molecule,),
+            molecular_records=(value,), datasets=(column, conformers),
+        )
+        public = reader_api.public_batch_from_internal(batch)
+        restored = reader_api.internal_batch_from_public(public)
+        self.assertIsInstance(restored.datasets[0], RecordPropertyColumn)
+        self.assertIsInstance(restored.datasets[1], ConformerSet)
+
     def test_project_rejects_dangling_conformer_records_without_mutation(self):
         molecule = structure()
         dataset = ConformerSet(
@@ -353,12 +393,20 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
         self.assertEqual(project.datasets, {})
 
     def test_project_rejects_cross_registry_and_molecular_dangling_references(self):
+        def assert_rejected(batch, message):
+            project = QCProject(uuid4(), "0.2")
+            with self.assertRaisesRegex(ValueError, message):
+                project.commit(batch)
+            for registry in (
+                project.sources, project.source_revisions, project.structures,
+                project.topologies, project.molecular_records, project.datasets,
+                project.provenance,
+            ):
+                self.assertEqual(registry, {})
+
         molecule = structure()
         source = SourceRecord(molecule.id, "records.sdf", "file", "2026-07-27T00:00:00Z")
-        with self.assertRaisesRegex(ValueError, "duplicate"):
-            QCProject(uuid4(), "0.2").commit(
-                ImportBatch(sources=(source,), structures=(molecule,))
-            )
+        assert_rejected(ImportBatch(sources=(source,), structures=(molecule,)), "duplicate")
 
         source, revision = source_revision((molecule.id,))
         topology_id = uuid4()
@@ -403,8 +451,8 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
             ),
         )
         for name, batch, message in cases:
-            with self.subTest(name=name), self.assertRaisesRegex(ValueError, message):
-                QCProject(uuid4(), "0.2").commit(batch)
+            with self.subTest(name=name):
+                assert_rejected(batch, message)
 
         provenance_missing = MolecularRecord(
             **{
@@ -416,11 +464,58 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                 for name in record_value.__dataclass_fields__
             }
         )
-        with self.assertRaisesRegex(ValueError, "provenance"):
-            QCProject(uuid4(), "0.2").commit(ImportBatch(
-                sources=(source,), source_revisions=(revision,), structures=(molecule,),
-                molecular_records=(provenance_missing,),
-            ))
+        assert_rejected(ImportBatch(
+            sources=(source,), source_revisions=(revision,), structures=(molecule,),
+            molecular_records=(provenance_missing,),
+        ), "provenance")
+
+        source_only, revision_only = source_revision(())
+        dangling_structure = record(uuid4())
+        dangling_structure = MolecularRecord(
+            **{
+                name: (revision_only.id if name == "source_revision_id" else getattr(dangling_structure, name))
+                for name in dangling_structure.__dataclass_fields__
+            }
+        )
+        assert_rejected(ImportBatch(
+            sources=(source_only,), source_revisions=(revision_only,),
+            molecular_records=(dangling_structure,),
+        ), "structure")
+
+        other = structure()
+        topology = TopologyRecord(
+            id=uuid4(), revision="other-topology-r1", structure_id=other.id,
+            bond_indices=array([[0, 1]], ("bond", "endpoint")),
+            bond_orders=array([1.0], ("bond",)), aromatic_flags=None,
+            stereo_labels=("",), source_kind=TopologySource.EXPLICIT_FILE,
+            quality_status=QualityStatus.COMPLETE, inference_parameters=(),
+            provenance_ids=(),
+        )
+        reference_record = record(molecule.id)
+        mismatched = ConformerSet(
+            id=uuid4(), revision="mismatched-topology-r1", semantic_role="coordinates",
+            domain="conformer", data=array(
+                [[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]],
+                ("conformer", "atom", "xyz"), "angstrom",
+            ), status=DatasetStatus.COMPLETE, source_calculation=None, provenance_ids=(),
+            reference_structure_id=molecule.id, reference_topology_id=topology.id,
+            record_ids=(reference_record.id,), record_keys=(reference_record.record_key,),
+            atom_mappings=array([[0, 1]], ("conformer", "atom")),
+        )
+        mismatch_source, mismatch_revision = source_revision(
+            (molecule.id, other.id, topology.id, reference_record.id, mismatched.id)
+        )
+        reference_record = MolecularRecord(
+            **{
+                name: (mismatch_revision.id if name == "source_revision_id" else getattr(reference_record, name))
+                for name in reference_record.__dataclass_fields__
+            }
+        )
+        assert_rejected(ImportBatch(
+            sources=(mismatch_source,), source_revisions=(mismatch_revision,),
+            structures=(molecule, other), topologies=(topology,),
+            molecular_records=(reference_record,), datasets=(mismatched,),
+        ), "belongs to another")
 
     def test_project_sidecar_and_reader_api_round_trip(self):
         molecule = structure(identity())
@@ -445,6 +540,7 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
         )
         project.commit(batch)
         self.assertEqual(project.molecular_records[value.id], value)
+        self.assertIn(value.id, revision.created_entity_ids)
         public = reader_api.public_batch_from_internal(
             batch
         )
