@@ -250,6 +250,48 @@ class ExtXYZFrameIteratorTests(unittest.TestCase):
                         )
                     )
 
+    def test_free_text_before_reserved_marker_fails_closed(self):
+        comments = (
+            "trailing prose "
+            "Properties=species:S:1:pos:R:3:force:R:3",
+            'trailing prose Lattice="1 0 0 0 1 0 0 0 1"',
+            'trailing prose pbc="T T T"',
+            "don't hide Properties=species:S:1:pos:R:3:force:R:3",
+        )
+        for comment in comments:
+            with self.subTest(comment=comment):
+                with self.assertRaisesRegex(
+                    ExtXYZSyntaxError,
+                    "reserved extXYZ marker",
+                ):
+                    tuple(
+                        iter_extxyz_frames(
+                            StringIO(
+                                "1\n"
+                                f"{comment}\n"
+                                "H 0 0 0 1 2 3\n"
+                            )
+                        )
+                    )
+
+    def test_reserved_marker_text_inside_quoted_title_remains_plain(self):
+        comment = (
+            'plain title "Properties=species:S:1:pos:R:3:force:R:3" '
+            "remains prose"
+        )
+        frame, = tuple(
+            iter_extxyz_frames(
+                StringIO(
+                    "1\n"
+                    f"{comment}\n"
+                    "H 0 0 0\n"
+                )
+            )
+        )
+
+        self.assertEqual(frame.comment.raw, comment)
+        self.assertEqual(frame.comment.entries, ())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -32,6 +32,10 @@ class ExtXYZSyntaxError(ValueError):
 class _PlainComment(ExtXYZSyntaxError):
     """Signal that a comment mixes free text instead of only key/value pairs."""
 
+    def __init__(self, message, offset):
+        super().__init__(message)
+        self.offset = offset
+
 
 @dataclass(frozen=True, slots=True)
 class ExtXYZPropertyField:
@@ -306,6 +310,37 @@ def _value_lexeme(text, index):
     return end, text[index:end]
 
 
+def _has_unquoted_reserved_assignment(text, start):
+    index = start
+    while index < len(text):
+        character = text[index]
+        previous_is_word = index > start and (
+            text[index - 1].isalnum() or text[index - 1] == "_"
+        )
+        if character == '"' or (character == "'" and not previous_is_word):
+            try:
+                index, _value = _quoted(text, index, character)
+            except ExtXYZSyntaxError:
+                return False
+            continue
+        if character == "\\":
+            index += 2
+            continue
+        for key in _RESERVED_COMMENT_KEYS:
+            end = index + len(key)
+            if (
+                text.startswith(key, index)
+                and not previous_is_word
+                and (end == len(text) or not (text[end].isalnum() or text[end] == "_"))
+            ):
+                while end < len(text) and text[end].isspace():
+                    end += 1
+                if end < len(text) and text[end] == "=":
+                    return True
+        index += 1
+    return False
+
+
 def parse_extxyz_comment(text):
     if not isinstance(text, str):
         raise TypeError("extXYZ comment must be a string")
@@ -317,6 +352,7 @@ def parse_extxyz_comment(text):
             index += 1
         if index == len(text):
             break
+        token_start = index
         index, key, requires_quoting = _comment_token(text, index)
         while index < len(text) and text[index].isspace():
             index += 1
@@ -325,7 +361,10 @@ def parse_extxyz_comment(text):
                 raise ExtXYZSyntaxError(
                     "free text is not allowed after a reserved extXYZ marker"
                 )
-            raise _PlainComment(f"extXYZ comment key {key!r} is missing '='")
+            raise _PlainComment(
+                f"extXYZ comment key {key!r} is missing '='",
+                token_start,
+            )
         if requires_quoting:
             raise ExtXYZSyntaxError(
                 "bare extXYZ comment keys containing special characters "
@@ -432,7 +471,11 @@ def _iter_stream(stream):
         else:
             try:
                 comment = parse_extxyz_comment(raw_comment)
-            except _PlainComment:
+            except _PlainComment as error:
+                if _has_unquoted_reserved_assignment(raw_comment, error.offset):
+                    raise ExtXYZSyntaxError(
+                        "free text before a reserved extXYZ marker is not allowed"
+                    ) from error
                 comment = default_comment
         fields = comment.properties
         explicit_properties = any(
