@@ -34,6 +34,7 @@ def _pbc_primary_coordinates(coordinates, cell, pbc):
         numpy.abs(fractional) @ numpy.abs(cell)
     )
     roundoff += coordinate_roundoff @ numpy.abs(inverse_cell)
+    winding = numpy.zeros_like(fractional)
     for axis, periodic in enumerate(pbc):
         if periodic:
             column = fractional[:, axis]
@@ -43,8 +44,9 @@ def _pbc_primary_coordinates(coordinates, cell, pbc):
                 nearest,
                 column,
             )
-            column -= numpy.floor(column)
-    return fractional @ cell, inverse_cell
+            winding[:, axis] = numpy.floor(column)
+            column -= winding[:, axis]
+    return fractional @ cell, inverse_cell, winding
 
 
 def infer_periodic_topology(structure, settings=None):
@@ -64,7 +66,7 @@ def infer_periodic_topology(structure, settings=None):
     cell = numpy.asarray(structure.cell.values, dtype=float) * scale
     if not numpy.all(numpy.isfinite(coordinates)):
         raise ValueError("structure coordinates must be finite")
-    coordinates, inverse_cell = _pbc_primary_coordinates(
+    coordinates, inverse_cell, _winding = _pbc_primary_coordinates(
         coordinates,
         cell,
         structure.periodic.pbc,

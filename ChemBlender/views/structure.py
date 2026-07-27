@@ -131,8 +131,9 @@ def _structure_view_data(structure, topology=None, settings=None):
         else numpy.asarray(structure.cell.values, dtype=float) * scale
     )
     periodic_coordinates = coordinates
-    if structure.periodic is not None and numpy.any(shifts):
-        periodic_coordinates, _inverse_cell = _pbc_primary_coordinates(
+    winding = numpy.zeros_like(coordinates)
+    if structure.periodic is not None and len(indices):
+        periodic_coordinates, _inverse_cell, winding = _pbc_primary_coordinates(
             coordinates,
             cell,
             structure.periodic.pbc,
@@ -142,7 +143,10 @@ def _structure_view_data(structure, topology=None, settings=None):
     ):
         shift_tuple = tuple(map(int, shift))
         legacy_order = _legacy_bond_order(float(order), bool(is_aromatic))
-        if shift_tuple == (0, 0, 0):
+        if shift_tuple == (0, 0, 0) and numpy.array_equal(
+            winding[left],
+            winding[right],
+        ):
             if left == right:
                 raise ValueError("zero-shift topology edge cannot connect an atom to itself")
             primary.append(

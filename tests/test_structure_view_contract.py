@@ -12,6 +12,7 @@ from ChemBlender.core import (
     TopologyRecord,
     TopologySource,
 )
+from ChemBlender.core.topology.periodic import infer_periodic_topology
 from ChemBlender.views.structure import (
     StructureViewSettings,
     _structure_view_data,
@@ -80,15 +81,17 @@ def topology(reference, *, shifts=None):
 def periodic_structure(
     coordinates,
     *,
+    atomic_numbers=(8, 1, 1),
     pbc=(True, False, False),
     structure_id=None,
 ):
     coordinates = numpy.asarray(coordinates, dtype=float)
+    atom_count = len(coordinates)
     cell = numpy.diag((4.0, 5.0, 6.0))
     return Structure(
         id=uuid4() if structure_id is None else structure_id,
         revision="periodic-r1",
-        atomic_numbers=(8, 1, 1),
+        atomic_numbers=atomic_numbers,
         coordinates=ArrayData(coordinates, ("atom", "xyz"), "angstrom"),
         cell=ArrayData(cell, ("cell_vector", "xyz"), "angstrom"),
         periodic=PeriodicSiteData(
@@ -97,14 +100,14 @@ def periodic_structure(
                 ("atom", "xyz"),
                 "dimensionless",
             ),
-            site_labels=("O", "H1", "H2"),
+            site_labels=tuple(f"site-{index}" for index in range(atom_count)),
             occupancies=ArrayData(
-                numpy.ones(3), ("atom",), "dimensionless"
+                numpy.ones(atom_count), ("atom",), "dimensionless"
             ),
             isotropic_displacements=None,
             anisotropic_displacements=None,
-            adp_types=("none",) * 3,
-            disorder_groups=(0,) * 3,
+            adp_types=("none",) * atom_count,
+            disorder_groups=(0,) * atom_count,
             declared_space_group_name=None,
             declared_space_group_number=None,
             symmetry_operations=(),
@@ -202,6 +205,36 @@ class StructureViewContractTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             unwrapped_data["periodic_segments"][0]["coordinates"],
             wrapped_data["periodic_segments"][0]["coordinates"],
+        )
+
+    def test_inferred_zero_shift_uses_winding_to_choose_display_geometry(self):
+        wrapped = periodic_structure(
+            ((0.1, 0.0, 0.0), (0.8, 0.0, 0.0)),
+            atomic_numbers=(6, 6),
+        )
+        unwrapped = periodic_structure(
+            ((0.1, 0.0, 0.0), (4.8, 0.0, 0.0)),
+            atomic_numbers=(6, 6),
+            structure_id=wrapped.id,
+        )
+        wrapped_topology, = infer_periodic_topology(wrapped).topologies
+        unwrapped_topology, = infer_periodic_topology(unwrapped).topologies
+
+        self.assertEqual(unwrapped_topology.id, wrapped_topology.id)
+        self.assertEqual(
+            unwrapped_topology.bond_lattice_shifts.values.tolist(),
+            [[0, 0, 0]],
+        )
+        wrapped_data = _structure_view_data(wrapped, wrapped_topology)
+        unwrapped_data = _structure_view_data(unwrapped, unwrapped_topology)
+
+        self.assertEqual(wrapped_data["primary_edges"], ((0, 1),))
+        self.assertEqual(wrapped_data["periodic_segments"], ())
+        self.assertEqual(unwrapped_data["coordinates"][1], (4.8, 0.0, 0.0))
+        self.assertEqual(unwrapped_data["primary_edges"], ())
+        numpy.testing.assert_allclose(
+            unwrapped_data["periodic_segments"][0]["coordinates"],
+            ((0.1, 0.0, 0.0), (0.8, 0.0, 0.0)),
         )
 
     def test_periodic_segment_does_not_wrap_disabled_axis(self):
