@@ -8,6 +8,8 @@
 
 **Tech Stack:** Python 3.13 standard library, Blender-bundled NumPy 2.3.4, dataclasses, existing `.cbq` v0.2 and Reader API canonical v0.1, `unittest`.
 
+**Status:** Completed on 2026-07-27. RDKit parent-plan Task 2 remains unstarted.
+
 ## Global Constraints
 
 - Do not import or call RDKit and do not create MOL/SDF/SMILES readers, exporters, grouping, UI or Cube runtime.
@@ -35,13 +37,13 @@
 - `AtomicIdentityData(isotopes, formal_charges, atom_map_numbers, atom_names, stereo_labels)`.
 - `Structure.atomic_identity: AtomicIdentityData | None = None`.
 
-- [ ] **Step 1: Write the RED tests**
+- [x] **Step 1: Write the RED tests**
 
 Cover a complete identity; wrong dims; inconsistent atom axes; float isotope; bool formal charge; negative isotope/map; categorical shape mismatch; object dtype rejection; `Structure` atom-count mismatch; and an unchanged `Structure` without identity.
 
 **Expected RED:** `ImportError` for `AtomicIdentityData` and missing `Structure.atomic_identity`.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run:
 
@@ -51,11 +53,11 @@ Run:
 
 Expected: non-zero exit caused only by the missing Task 1 model.
 
-- [ ] **Step 3: Implement minimally**
+- [x] **Step 3: Implement minimally**
 
 Use one frozen, slotted dataclass. Require all five values to be `ArrayData`/`CategoricalData`, exact `("atom",)` dims, one shared positive-or-zero atom axis, `"dimensionless"` units, integer non-bool isotope/charge/map arrays, non-negative isotope/map values and no object dtype. Append the optional field to `Structure` and compare its atom count with `atomic_numbers`.
 
-- [ ] **Step 4: Verify focused behavior**
+- [x] **Step 4: Verify focused behavior**
 
 Run the Task 1 tests and existing structure/model tests.
 
@@ -81,21 +83,21 @@ Run the Task 1 tests and existing structure/model tests.
 - `RawRecordProperty(name: str, value: str)`.
 - `MolecularRecord(id, revision, source_revision_id, record_key, structure_id, topology_id, raw_block, title, source_record_index, block_version, writer_name, writer_version, ordered_raw_properties, provenance_ids)`.
 
-- [ ] **Step 1: Write the RED tests**
+- [x] **Step 1: Write the RED tests**
 
 Cover exact CRLF/LF bytes, empty title/value, duplicate ordered property names, tuple normalization, invalid record index including bool, empty record key, optional topology, writer metadata types and immutable order.
 
 **Expected RED:** imports fail because `RawRecordProperty` and `MolecularRecord` do not exist.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run the single new test module and retain the expected failure summary.
 
-- [ ] **Step 3: Implement minimally**
+- [x] **Step 3: Implement minimally**
 
 Keep `raw_block` as one exact `bytes` field. Normalize only sequence containers to tuples; never decode, normalize or deduplicate properties. Accept `block_version` as `str | None`, with current producers expected to use `V2000` or `V3000`; this Task does not infer it.
 
-- [ ] **Step 4: Verify focused behavior**
+- [x] **Step 4: Verify focused behavior**
 
 Run raw-evidence and immutability tests.
 
@@ -120,21 +122,21 @@ Run raw-evidence and immutability tests.
 **New interfaces:**
 - `RecordPropertyColumn(PropertyDataset)` with `record_ids: tuple[UUID, ...]` and `validity_mask: ArrayData | None = None`.
 
-- [ ] **Step 1: Write the RED tests**
+- [x] **Step 1: Write the RED tests**
 
 Cover complete numeric; partial numeric with/without mask; complete numeric with mask; categorical missing codes; categorical redundant mask; complete categorical missing code; duplicate/non-UUID record IDs; data length mismatch and wrong domain/dims.
 
 **Expected RED:** missing `RecordPropertyColumn`.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run the new test module and confirm contract failures are model failures, not fixture errors.
 
-- [ ] **Step 3: Implement minimally**
+- [x] **Step 3: Implement minimally**
 
 Call `PropertyDataset.__post_init__()`, require `domain == "record"`, leading `("record",)`, unique UUID tuple matching the first data axis. Complete numeric/logical forbids a mask; partial numeric/logical requires an exact dimensionless bool `("record",)` mask; categorical uses only `missing_code`, forbids a mask and forbids missing codes when Complete.
 
-- [ ] **Step 4: Verify focused behavior**
+- [x] **Step 4: Verify focused behavior**
 
 Run record-column and existing frame-property tests.
 
@@ -159,21 +161,21 @@ Run record-column and existing frame-property tests.
 **New interfaces:**
 - `ConformerSet(PropertyDataset)` with `reference_structure_id`, optional `reference_topology_id`, ordered unique `record_ids`/`record_keys` and `atom_mappings`.
 
-- [ ] **Step 1: Write the RED tests**
+- [x] **Step 1: Write the RED tests**
 
 Cover valid coordinates and mappings; wrong dims/unit; zero axes; bool mappings; duplicate/missing/out-of-range mapping entries; duplicate record ID/key and length mismatches.
 
 **Expected RED:** missing `ConformerSet`.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run the new test module and retain the expected missing-model failure.
 
-- [ ] **Step 3: Implement minimally**
+- [x] **Step 3: Implement minimally**
 
 Require coordinates `("conformer","atom","xyz")`, positive axes, xyz length 3 and a known dimensional length unit. Require integer non-bool mappings with exact `("conformer","atom")` shape and each row equal to a permutation of `range(atom_count)`. Normalize record IDs/keys to tuples and require unique values matching conformer count.
 
-- [ ] **Step 4: Verify focused behavior**
+- [x] **Step 4: Verify focused behavior**
 
 Run permutation, identity and dataset base-contract tests.
 
@@ -202,21 +204,21 @@ Run permutation, identity and dataset base-contract tests.
 - `ImportBatch.molecular_records: tuple[MolecularRecord, ...] = ()`.
 - `QCProject.molecular_records: dict[UUID, MolecularRecord]`.
 
-- [ ] **Step 1: Write the RED tests**
+- [x] **Step 1: Write the RED tests**
 
 Cover empty registry, successful record commit, cross-registry duplicate UUID, dangling source revision/structure/topology/provenance, topology owned by another structure, dangling record-column/conformer record IDs, conformer structure/topology/atom/unit mismatch, `SourceRevision.created_entity_ids`, and zero mutation after each failure.
 
 **Expected RED:** constructor/commit reject unknown new fields or omit required graph checks.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run `tests.test_chemical_identity_records` and `tests.test_project_graph_integrity`.
 
-- [ ] **Step 3: Implement minimally**
+- [x] **Step 3: Implement minimally**
 
 Add exactly one registry. Include it in incoming entity groups, final IDs, mutation, `_all_entity_ids`, registry validation and graph reconstruction. Validate each record against the final source/structure/topology/provenance graph before any mutation. Validate record datasets against final records; validate conformer references, atom count and coordinate unit against their reference structure/topology.
 
-- [ ] **Step 4: Verify focused behavior**
+- [x] **Step 4: Verify focused behavior**
 
 Run project transaction, graph integrity and source model tests.
 
@@ -245,21 +247,21 @@ Run project transaction, graph integrity and source model tests.
 - Model tags for `AtomicIdentityData`, `RawRecordProperty`, `MolecularRecord`, `RecordPropertyColumn`, `ConformerSet`.
 - Current-v0.2 additive defaults only for missing `QCProject.molecular_records` and `Structure.atomic_identity`.
 
-- [ ] **Step 1: Write the RED tests**
+- [x] **Step 1: Write the RED tests**
 
 Cover save/open of every new model; exact raw bytes and duplicate properties; lazy conformer arrays; synthetic pre-Task1 current-v0.2 missing both fields; malformed existing fields; unknown future field/type; unchanged alpha.1 fixture/hash.
 
 **Expected RED:** strict decoder reports invalid fields/model tags and old v0.2 documents fail due to the new exact dataclass field set.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run new tests plus sidecar storage and model registry.
 
-- [ ] **Step 3: Implement minimally**
+- [x] **Step 3: Implement minimally**
 
 Register the five exact types. In `migrate_manifest()`, only when the source is a valid current-v0.2 `QCProject`, deep-copy and inject encoded empty `molecular_records` and `atomic_identity=None` where absent. Never overwrite a present field, never delete unknown fields, and leave original document/hash bytes untouched.
 
-- [ ] **Step 4: Verify focused behavior**
+- [x] **Step 4: Verify focused behavior**
 
 Run sidecar/model registry tests and explicitly close reopened lazy arrays.
 
@@ -290,21 +292,21 @@ Run sidecar/model registry tests and explicitly close reopened lazy arrays.
 - Public exports for all five new model types.
 - `PublicImportBatch.molecular_records: tuple[MolecularRecord, ...] = ()`.
 
-- [ ] **Step 1: Write the RED tests**
+- [x] **Step 1: Write the RED tests**
 
 Cover exact public names, molecular-record group acceptance, internal/public/internal round-trip, dataset subclasses, mutable/RDKit-like object rejection, new canonical round-trip, and old canonical v0.1 documents missing only the two approved additive fields.
 
 **Expected RED:** missing public types/group/bridge field/type tags and strict decoder field mismatches.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run public batch and canonical tests.
 
-- [ ] **Step 3: Implement minimally**
+- [x] **Step 3: Implement minimally**
 
 Extend explicit imports, `_GROUP_TYPES`, `_PUBLIC_MODEL_TYPES`, `_BATCH_FIELDS` and canonical `_TYPE_NAMES`. Before canonical model decode, apply a narrow in-memory compatibility projection only to `PublicImportBatch.molecular_records` and nested `Structure.atomic_identity`; keep every other exact-field check unchanged.
 
-- [ ] **Step 4: Verify focused behavior**
+- [x] **Step 4: Verify focused behavior**
 
 Run public batch, bridge, canonical bundle and worker-reader bundle tests.
 
@@ -334,21 +336,21 @@ Run public batch, bridge, canonical bundle and worker-reader bundle tests.
 **New interfaces:**
 - `AtomicIdentityData`, `RawRecordProperty`, `MolecularRecord`, `RecordPropertyColumn`, `ConformerSet` from `ChemBlender.core` and `ChemBlender.reader_api`.
 
-- [ ] **Step 1: Write the RED tests**
+- [x] **Step 1: Write the RED tests**
 
 Add the five names to exact public/model/module-origin expectations and optional-stack import isolation.
 
 **Expected RED:** exact public surfaces and architecture inventory differ.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run model/public/document contract tests.
 
-- [ ] **Step 3: Implement minimally**
+- [x] **Step 3: Implement minimally**
 
 Re-export the exact types without importing RDKit. Document only implemented model/storage/Reader API responsibilities and explicitly state that RDKit is not a project model and readers/grouping/export/UI are not yet implemented.
 
-- [ ] **Step 4: Verify focused behavior**
+- [x] **Step 4: Verify focused behavior**
 
 Run all public-surface and documentation tests.
 
@@ -371,25 +373,25 @@ Run all public-surface and documentation tests.
 
 **New interfaces:** None.
 
-- [ ] **Step 1: Run focused verification**
+- [x] **Step 1: Run focused verification**
 
 Run the exact focused modules named in the goal, adjusted only for files that truly exist.
 
 **Expected RED:** Not applicable; implementation must already be green.
 
-- [ ] **Step 2: Run compatibility verification**
+- [x] **Step 2: Run compatibility verification**
 
 Run alpha.1 sidecar, canonical 0.1, optional-stack isolation and Blender bundled-Python model/sidecar/Reader API tests.
 
-- [ ] **Step 3: Run full verification**
+- [x] **Step 3: Run full verification**
 
 Run full `unittest`, `compileall`, `git diff --check` and inspect `git status --short`. Run extension validate/build/ZIP/lifecycle only if package contract is affected.
 
-- [ ] **Step 4: Independent review**
+- [x] **Step 4: Independent review**
 
 Run separate specification-compliance and code-quality reviews over `e00ee4039dea6b7497c80a98611e32446300e592..HEAD`; fix every Critical, Important and Task-related Minor finding and repeat verification.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit implementation as `feat: add molecular identity and record models`, then update cursor evidence and commit `chore: checkpoint RDKit molecular models`.
 
@@ -400,3 +402,37 @@ Commit implementation as `feat: add molecular identity and record models`, then 
 **Commit boundary:** Final checkpoint commit only contains cursor/plan evidence.
 
 **Stop boundary:** Stop with RDKit Task 2 unchecked and do not push.
+
+## Completion Evidence
+
+- Planning commit:
+  `e632a51c1fb04bb001b083b5b4a2554b3fd30163`.
+- Implementation commit:
+  `72922592a94ffc68fa98f7f8d6a59ab8754e5f99`.
+- Review-fix commits:
+  `cfe54f9533a7627052c8c8858f9474f88c2dacc5`,
+  `05ad69c6e0c914f2dbd92bcf3ccc1c185288858b`,
+  `43299cb1b291fdfa98bc6bc5ad25d7063430bc15`.
+- RED:
+  initial missing-model `ImportError`; review rounds reproduced unsafe object
+  arrays, invalid conformer graph/unit acceptance, lazy-array eager loading and
+  valid numeric `memoryview` rejection.
+- GREEN:
+  final focused `106/106`; full `1173 Passed / 28 Skipped / 0 Failed`;
+  `compileall` and `git diff --check` Passed.
+- Compatibility:
+  alpha.1 sidecar v0.2 and canonical v0.1 additive reads, exact raw bytes,
+  ordered duplicate properties, lazy-array close, strict unknown fields/types,
+  and optional-stack non-import Passed.
+- Blender:
+  5.1.2 native validate/build, 142-entry ZIP audit and short-path isolated
+  install/lifecycle Passed.
+- Independent reviews:
+  final specification compliance `PASS`; final code quality `PASS`.
+- Remote CI:
+  `Not Run`.
+- Deferred performance gate:
+  extXYZ real `preview_ready <= 0.5 s` remains assigned to
+  `W1-PRE-ALPHA2-PERFORMANCE-GATE`.
+- Stop boundary:
+  RDKit Task 2 has not started; no push was performed.
