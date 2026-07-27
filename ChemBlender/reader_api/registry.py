@@ -53,8 +53,13 @@ class _BuiltinReaderPlugin:
         return self.core_descriptor.sniff(request.source_path, request.prefix)
 
     def parse(self, request):
+        parser = self.core_descriptor.parse_request
         return public_batch_from_internal(
-            self.core_descriptor.parse(request.source_path)
+            (
+                self.core_descriptor.parse(request.source_path)
+                if parser is None
+                else parser(request)
+            )
         )
 
 

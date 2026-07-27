@@ -144,7 +144,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/core/import_pipeline/request.py` | `ValidationMode`、`ImportSource`、`ReaderOverride`、`ImportRequest` | 定义不可变导入意图；规范化并去重显式文件路径，拒绝目录扫描，并将 reader override 限定到请求内来源。 |
 | `ChemBlender/core/import_pipeline/preview.py` | `SourcePreview`、`ImportPreview` | 以不可变路径、标量和 UUID 引用描述 source row、暂存 batch、冲突、归组建议、诊断及默认 view plan，不持有项目或 Blender 对象。 |
 | `ChemBlender/core/import_pipeline/report.py` | `import_summary()`、`diagnostics_document()`、`render_diagnostics_markdown()` | 只读验证 preview 与 live staging batch 的身份及关联，按稳定键生成 schema v1 JSON-compatible diagnostic document、质量状态计数和 Markdown；不读取项目、不加载 Blender 或可选科学栈。 |
-| `ChemBlender/core/import_pipeline/staging.py` | `StagedImportSession.create()`、`register_result()`、`discard()` | 创建带 UUID ownership marker 的独占暂存根、artifact 目录和受控 `ImportBatch` registry；仅在路径、文件身份及 marker 均匹配时删除。 |
+| `ChemBlender/core/import_pipeline/staging.py` | `StagedImportSession.create()`、`register_result()`、`discard()` | 创建带 UUID ownership marker 的独占暂存根、artifact 目录和受控 `ImportBatch` registry；discard 会先关闭已注册 batch 的 staged memmap，再仅在路径、文件身份及 marker 均匹配时删除。 |
 | `ChemBlender/core/readers.py` | `ReaderDescriptor`、`ReaderRuntimeDescriptor`、`ReaderAvailability`、`ReaderRegistry.register()`、`select()`、`parse()` | 定义 reader capability、扩展名、bounded sniffing 和确定性分派；以兼容 wrapper 分离 reader 选择与运行时 availability，拒绝未知或歧义 reader。 |
 | `ChemBlender/core/reader_catalog.py` | `builtin_reader_descriptors()`、`builtin_reader_registry()`、`reader_capability_document()` | 汇总内置 reader，并生成机器可读的格式能力矩阵。 |
 | `ChemBlender/core/cache_identity.py` | `source_hash_bytes()`、`parser_cache_key()`、`derivation_cache_key()`、`render_cache_key()` | 用规范 JSON 和 SHA-256 分别标识源文件、解析、派生和渲染缓存。 |
@@ -165,7 +165,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/reader_api/import_pipeline_bridge.py` | `preflight_reader_plugins()` | 把主进程持有的 `ReaderPluginRegistry` 接入既有 `ImportRequest`、`StagedImportSession` 与 `ImportPreview`：复用 bounded hash、sniff prefix、取消和暂存 helper，复验外部 reader 的完整来源身份；确认前不修改 `QCProject`、Scene 或 Blender datablock。 |
 | `ChemBlender/reader_api/conformance.py` | `ReaderConformanceCase`、`ReaderConformanceCheck`、`ReaderConformanceResult`、`run_reader_conformance()` | Reader API 0.x alpha 的纯 Python conformance runner；复用 registry、公开 batch graph bridge 与 canonical bundle，对 manifest、双重 sniff/registry 选择、完整 `SourceRevision` 或严格受限内建 provenance identity、单位、diagnostics、round-trip、取消和 reader 异常输出确定性机器可读证据，不创建 registry、项目或 Blender 状态。 |
 | `ChemBlender/reader_api/protocol.py` | `SniffRequest`、`ParseRequest`、`ProgressEvent`、`ReaderPlugin` | 定义无项目、无 Blender 上下文的 Reader 插件请求与进度协议；每个插件必须持有与 runtime descriptor 一致的 exact manifest，解析请求只携带已验证来源、规范参数、安全 staging root 及进度/取消回调。 |
-| `ChemBlender/reader_api/registry.py` | `ReaderPluginRegistry`、`builtin_reader_plugin_registry()` | 确定性选择公开 Reader 插件，在注册时交叉验证 manifest/runtime metadata，并要求同一 `plugin_id` 使用一份完整 manifest；仅以 exact complete manifest 原子注销同一插件全部 reader；在解析前后分块复验来源 hash，隔离 sniff/parse 异常并保留最近一次 parse 的私有异常类型证据；现有 11 个 descriptor 薄包装为共享受控 manifest 的 `chemblender.builtin` 插件，可选依赖只做 presence probe。 |
+| `ChemBlender/reader_api/registry.py` | `ReaderPluginRegistry`、`builtin_reader_plugin_registry()` | 确定性选择公开 Reader 插件，在注册时交叉验证 manifest/runtime metadata，并要求同一 `plugin_id` 使用一份完整 manifest；仅以 exact complete manifest 原子注销同一插件全部 reader；在解析前后分块复验来源 hash，隔离 sniff/parse 异常并保留最近一次 parse 的私有异常类型证据；现有 12 个 descriptor 薄包装为共享受控 manifest 的 `chemblender.builtin` 插件，支持 built-in reader 在 `ParseRequest.staging_root` 中持有大型数组，可选依赖只做 presence probe。 |
 | `ChemBlender/reader_api/worker_bridge.py` | `parse_with_worker()`、`WorkerReaderError` | 主进程对固定 `reader.parse@0.1` 的已完成 `WorkerResult` 做 request ID、状态、exact metadata、NTFS-safe 相对路径、无 link/junction 的 exact bundle inventory、来源与全部输出 hash 复验；重开 canonical bundle 并经 `internal_batch_from_public()` 图校验后才返回内部 `ImportBatch`。 |
 
 ### 文件 reader 与第三方 adapter
@@ -173,7 +173,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
 | `ChemBlender/core/formats/__init__.py` | 模块级 re-export | 暴露低层、纯 Python 的原生文本格式语法入口，不注册 reader 或接触项目状态。 |
-| `ChemBlender/core/formats/extxyz.py` | `parse_extxyz_comment()`、`parse_properties_descriptor()`、`iter_extxyz_frames()` | 逐帧解析 extXYZ comment、typed metadata、`Properties` 与严格 `S/I/R/L` 原子列；每次只持有一个 frame，不依赖 ASE。 |
+| `ChemBlender/core/formats/extxyz.py` | `parse_extxyz()`、`sniff_extxyz()`、`iter_extxyz_frames()` | 原生选择并逐帧解析 extXYZ，将兼容帧映射为确定性 `Structure`、`FrameSet` 与 typed frame/atom/cell property；大型数组由 staging NPY memmap 持有，取消时清理，不依赖 ASE。 |
 | `ChemBlender/core/xyz.py` | `sniff_xyz()`、`parse_xyz()` | 读取单帧/多帧 XYZ 和受支持的 extXYZ lattice/PBC/property 子集，输出 `Structure`、`FrameSet` 和报告。 |
 | `ChemBlender/core/mol_v2000.py` | `sniff_mol_v2000()`、`parse_mol_v2000()` | 使用标准库解析 MOL V2000 原子和结构；未建模的拓扑信息通过 `ParserReport` 明示。 |
 | `ChemBlender/core/cube.py` | `sniff_cube()`、`parse_cube()` | 读取 Cube 原点、完整非正交 step vectors、多 dataset/MO index 和 voxel 数据，输出 `Grid3D`。 |

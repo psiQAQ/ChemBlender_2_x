@@ -1,9 +1,36 @@
 """Bounded, dependency-free extXYZ syntax parsing."""
 
 from dataclasses import dataclass
+import hashlib
+import json
 import math
 from pathlib import Path
 import re
+from uuid import NAMESPACE_URL, uuid5
+
+from ...Chem_data import ELEMENTS_DEFAULT
+from ..model import (
+    ArrayData,
+    AtomFrameProperty,
+    CategoricalData,
+    CellFrameProperty,
+    DatasetStatus,
+    FrameProperty,
+    FrameSet,
+    ImportBatch,
+    IssueKind,
+    ParserIssue,
+    ParserReport,
+    PeriodicSiteData,
+    ProvenanceRecord,
+    Structure,
+)
+from ..readers import (
+    CapabilitySupport,
+    ReaderDescriptor,
+    SniffMatch,
+    SniffResult,
+)
 
 
 _INTEGER = re.compile(r"[+-]?[0-9]+\Z")
@@ -23,10 +50,84 @@ _LOGICAL = {
 }
 _DEFAULT_PROPERTIES = "species:S:1:pos:R:3"
 _RESERVED_COMMENT_KEYS = frozenset({"Lattice", "Properties", "pbc"})
+_ATOMIC_NUMBERS = {
+    symbol: data[0] for symbol, data in ELEMENTS_DEFAULT.items() if data[0] > 0
+}
+_ATOM_PROPERTIES = {
+    "charge": ("atomic_charge", "elementary_charge"),
+    "force": ("atomic_force", "electron_volt_per_angstrom"),
+    "forces": ("atomic_force", "electron_volt_per_angstrom"),
+    "mass": ("atomic_mass", "atomic_mass_unit"),
+    "vel": ("atomic_velocity", "angstrom_per_femtosecond"),
+    "velocity": ("atomic_velocity", "angstrom_per_femtosecond"),
+}
+_FRAME_PROPERTIES = {
+    "energy": ("energy", "electron_volt"),
+    "free_energy": ("free_energy", "electron_volt"),
+    "step": ("step", "dimensionless"),
+    "temperature": ("temperature", "kelvin"),
+    "time": ("time", "femtosecond"),
+}
+
+
+class _LazyNumpy:
+    def __getattr__(self, name):
+        import numpy as module
+
+        return getattr(module, name)
+
+
+numpy = _LazyNumpy()
+
+
+class _ArrayOwner:
+    def __init__(self, root):
+        self.root = None if root is None else Path(root)
+        self.arrays = []
+        if self.root is not None:
+            self.root.mkdir(parents=True, exist_ok=True)
+
+    def empty(self, shape, dtype):
+        if self.root is None:
+            return numpy.empty(shape, dtype=dtype)
+        path = self.root / f"extxyz-{len(self.arrays):04d}.npy"
+        value = numpy.lib.format.open_memmap(
+            path,
+            mode="w+",
+            dtype=dtype,
+            shape=shape,
+        )
+        self.arrays.append((value, path))
+        return value
+
+    def zeros(self, shape, dtype):
+        value = self.empty(shape, dtype)
+        value[...] = 0
+        return value
+
+    def full(self, shape, fill_value, dtype):
+        value = self.empty(shape, dtype)
+        value[...] = fill_value
+        return value
+
+    def cleanup(self):
+        for value, path in reversed(self.arrays):
+            mmap = getattr(value, "_mmap", None)
+            if mmap is not None:
+                mmap.close()
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+        self.arrays.clear()
 
 
 class ExtXYZSyntaxError(ValueError):
     """Stable syntax failure for an extXYZ record."""
+
+
+class ExtXYZCancelled(Exception):
+    """Signal cooperative cancellation of a staged extXYZ parse."""
 
 
 class _PlainComment(ExtXYZSyntaxError):
@@ -534,13 +635,780 @@ def iter_extxyz_frames(source):
     yield from _iter_stream(source)
 
 
+def _token(value):
+    value = re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
+    return value or "property"
+
+
+def _entry_map(frame):
+    return {entry.key: entry for entry in frame.comment.entries}
+
+
+def _field_map(frame):
+    return {field.name: field for field in frame.properties}
+
+
+def _value_map(frame):
+    return dict(frame.values)
+
+
+def _symbol_number(symbol):
+    symbol = str(symbol).strip()
+    normalized = symbol[:1].upper() + symbol[1:].lower()
+    if normalized in {"D", "T"}:
+        normalized = "H"
+    try:
+        return _ATOMIC_NUMBERS[normalized]
+    except KeyError as error:
+        raise ExtXYZSyntaxError(
+            f"unknown extXYZ element symbol: {symbol}"
+        ) from error
+
+
+def _identity(frame):
+    fields = _field_map(frame)
+    values = _value_map(frame)
+    species = fields.get("species")
+    if species is None or species.kind != "S" or species.columns != 1:
+        raise ExtXYZSyntaxError(
+            "extXYZ Properties must contain species:S:1"
+        )
+    position = fields.get("pos")
+    if position is None or position.kind != "R" or position.columns != 3:
+        raise ExtXYZSyntaxError("extXYZ Properties must contain pos:R:3")
+    return tuple(_symbol_number(value) for value in values["species"])
+
+
+def _cell_and_pbc(frame):
+    entries = _entry_map(frame)
+    lattice = entries.get("Lattice")
+    pbc_entry = entries.get("pbc")
+    if lattice is None:
+        if pbc_entry is not None and any(_pbc_tuple(pbc_entry.value)):
+            raise ExtXYZSyntaxError("periodic pbc requires Lattice")
+        return None, (False, False, False)
+    if lattice.diagnostic is not None:
+        raise ExtXYZSyntaxError(f"invalid Lattice: {lattice.diagnostic}")
+    try:
+        values = numpy.asarray(lattice.value, dtype=numpy.float64).reshape(-1)
+    except (TypeError, ValueError) as error:
+        raise ExtXYZSyntaxError("Lattice must contain nine real values") from error
+    if values.shape != (9,) or not numpy.all(numpy.isfinite(values)):
+        raise ExtXYZSyntaxError("Lattice must contain nine finite real values")
+    cell = values.reshape((3, 3))
+    if abs(float(numpy.linalg.det(cell))) < 1.0e-12:
+        raise ExtXYZSyntaxError("Lattice must be non-singular")
+    return (
+        cell,
+        (True, True, True)
+        if pbc_entry is None
+        else _pbc_tuple(pbc_entry.value),
+    )
+
+
+def _pbc_tuple(value):
+    if isinstance(value, str):
+        values = tuple(value.split())
+    elif isinstance(value, tuple):
+        values = value
+    else:
+        values = (value,)
+    normalized = []
+    for item in values:
+        if type(item) is bool:
+            normalized.append(item)
+        elif str(item) in _LOGICAL:
+            normalized.append(_LOGICAL[str(item)])
+        else:
+            raise ExtXYZSyntaxError("pbc must contain three logical values")
+    if len(normalized) != 3:
+        raise ExtXYZSyntaxError("pbc must contain three logical values")
+    return tuple(normalized)
+
+
+def _stable_uuid(source_hash, role):
+    return uuid5(
+        NAMESPACE_URL,
+        f"chemblender:extxyz:1:{source_hash}:{role}",
+    )
+
+
+def _source_hash(source, is_cancelled):
+    digest = hashlib.sha256()
+    with source.open("rb") as stream:
+        while chunk := stream.read(65536):
+            if is_cancelled():
+                raise ExtXYZCancelled("extXYZ parse was cancelled")
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _revision(source_hash, role, payload):
+    document = json.dumps(
+        payload,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(
+        f"{source_hash}:{role}:{document}".encode("utf-8")
+    ).hexdigest()
+
+
+def _dims(field, *, prefix):
+    if field.columns == 1:
+        return prefix
+    if field.columns == 3:
+        return prefix + ("xyz",)
+    return prefix + ("component",)
+
+
+def _shape(frame_count, atom_count, field):
+    base = (frame_count, atom_count)
+    return base if field.columns == 1 else base + (field.columns,)
+
+
+def _numeric_dtype(kind):
+    return {
+        "I": numpy.int64,
+        "R": numpy.float64,
+        "L": numpy.bool_,
+    }[kind]
+
+
+def _categorical(values, present, dims, owner):
+    categories = []
+    first = next(iter(values.values()))
+    suffix = () if not first or isinstance(first[0], str) else (len(first[0]),)
+    codes = owner.full(present.shape + suffix, -1, numpy.int64)
+    for frame_index, frame_values in values.items():
+        for atom_index, value in enumerate(frame_values):
+            items = (value,) if isinstance(value, str) else value
+            for component, item in enumerate(items):
+                if item not in categories:
+                    categories.append(item)
+                index = (frame_index, atom_index) + (
+                    () if suffix == () else (component,)
+                )
+                codes[index] = categories.index(item)
+    return CategoricalData(
+        ArrayData(codes, dims, "dimensionless"),
+        tuple(categories),
+        -1,
+    )
+
+
+def _atom_property(
+    *,
+    source_hash,
+    group_index,
+    frame_set_id,
+    provenance_id,
+    field,
+    values,
+    frame_count,
+    atom_count,
+    issues,
+    owner,
+    declared_unit,
+):
+    role, unit = _ATOM_PROPERTIES.get(
+        field.name,
+        (_token(field.name), "unknown"),
+    )
+    present = numpy.zeros((frame_count, atom_count), dtype=numpy.bool_)
+    for frame_index, frame_values in values.items():
+        present[frame_index] = True
+    if field.kind == "S":
+        data = _categorical(
+            values,
+            present,
+            _dims(field, prefix=("frame", "atom")),
+            owner,
+        )
+        mask = None
+    else:
+        array = owner.zeros(
+            _shape(frame_count, atom_count, field),
+            _numeric_dtype(field.kind),
+        )
+        for frame_index, frame_values in values.items():
+            array[frame_index] = frame_values
+        data = ArrayData(
+            array,
+            _dims(field, prefix=("frame", "atom")),
+            unit,
+        )
+        mask = (
+            None
+            if numpy.all(present)
+            else ArrayData(
+                present,
+                ("frame", "atom"),
+                "dimensionless",
+            )
+        )
+    if field.name in _ATOM_PROPERTIES:
+        if not declared_unit:
+            issues.append(
+                ParserIssue(
+                    IssueKind.AMBIGUOUS,
+                    f"atom_properties.{field.name}",
+                    f"{unit} was assumed because extXYZ declared no unit",
+                )
+            )
+        status = (
+            DatasetStatus.PARTIAL
+            if mask is not None
+            else DatasetStatus.COMPLETE
+        )
+    else:
+        status = DatasetStatus.AMBIGUOUS
+        issues.append(
+            ParserIssue(
+                IssueKind.AMBIGUOUS,
+                f"atom_properties.{field.name}",
+                "extXYZ property has no declared ChemBlender semantic unit",
+            )
+        )
+    identity = f"group:{group_index}:atom_property:{field.name}"
+    return AtomFrameProperty(
+        id=_stable_uuid(source_hash, identity),
+        revision=_revision(
+            source_hash,
+            identity,
+            {
+                "kind": field.kind,
+                "columns": field.columns,
+                "present": present.tolist(),
+            },
+        ),
+        semantic_role=role,
+        domain="atom_frame",
+        data=data,
+        status=status,
+        source_calculation=None,
+        provenance_ids=(provenance_id,),
+        frame_set_id=frame_set_id,
+        validity_mask=mask,
+    )
+
+
+def _metadata_property(
+    *,
+    source_hash,
+    group_index,
+    frame_set_id,
+    provenance_id,
+    name,
+    values,
+    frame_count,
+    issues,
+    owner,
+):
+    role, unit = _FRAME_PROPERTIES.get(name, (_token(name), "unknown"))
+    present = numpy.asarray(
+        [index in values for index in range(frame_count)],
+        dtype=numpy.bool_,
+    )
+    samples = tuple(values.values())
+    if not samples:
+        return None
+    sample = samples[0]
+    sample_array = numpy.asarray(sample)
+    if isinstance(sample, str) or sample_array.dtype.kind in "SU":
+        categories = []
+        suffix = (
+            ()
+            if sample_array.ndim == 0
+            else (
+                ("component",)
+                if sample_array.ndim == 1
+                else ("row", "column")
+            )
+        )
+        codes = owner.full(
+            (frame_count,) + sample_array.shape,
+            -1,
+            numpy.int64,
+        )
+        for index, value in values.items():
+            value_array = numpy.asarray(value)
+            if value_array.shape != sample_array.shape:
+                raise ExtXYZSyntaxError(
+                    f"metadata {name} changes shape between frames"
+                )
+            for offset in numpy.ndindex(value_array.shape or (1,)):
+                text = str(value_array.item() if not value_array.shape else value_array[offset])
+                if text not in categories:
+                    categories.append(text)
+                target = (index,) if not value_array.shape else (index,) + offset
+                codes[target] = categories.index(text)
+        data = CategoricalData(
+            ArrayData(codes, ("frame",) + suffix, "dimensionless"),
+            tuple(categories),
+            -1,
+        )
+        mask = None
+    else:
+        if sample_array.ndim > 2 or sample_array.dtype.kind not in "biuf":
+            return None
+        suffix = (
+            ()
+            if sample_array.ndim == 0
+            else (
+                ("tensor_component",)
+                if sample_array.ndim == 1
+                else ("tensor_row", "tensor_column")
+            )
+        )
+        if name in {"stress", "virial"}:
+            size = int(sample_array.size)
+            if size not in {6, 9}:
+                raise ExtXYZSyntaxError(
+                    f"{name} must contain six Voigt or nine matrix values"
+                )
+            role = f"{name}_{'voigt' if size == 6 else 'matrix'}"
+            unit = "unknown"
+        array = owner.zeros(
+            (frame_count,) + sample_array.shape,
+            sample_array.dtype,
+        )
+        for index, value in values.items():
+            value_array = numpy.asarray(value)
+            if value_array.shape != sample_array.shape:
+                raise ExtXYZSyntaxError(
+                    f"metadata {name} changes shape between frames"
+                )
+            array[index] = value_array
+        data = ArrayData(array, ("frame",) + suffix, unit)
+        mask = (
+            None
+            if numpy.all(present)
+            else ArrayData(present, ("frame",), "dimensionless")
+        )
+    if name in _FRAME_PROPERTIES:
+        issues.append(
+            ParserIssue(
+                IssueKind.AMBIGUOUS,
+                f"frame_properties.{name}",
+                f"{unit} was assumed because extXYZ declared no unit",
+            )
+        )
+        status = (
+            DatasetStatus.PARTIAL
+            if mask is not None
+            else DatasetStatus.COMPLETE
+        )
+    else:
+        status = DatasetStatus.AMBIGUOUS
+    identity = f"group:{group_index}:frame_property:{name}"
+    return FrameProperty(
+        id=_stable_uuid(source_hash, identity),
+        revision=_revision(
+            source_hash,
+            identity,
+            {"present": present.tolist(), "shape": data.shape},
+        ),
+        semantic_role=role,
+        domain="frame",
+        data=data,
+        status=status,
+        source_calculation=None,
+        provenance_ids=(provenance_id,),
+        frame_set_id=frame_set_id,
+        validity_mask=mask,
+    )
+
+
+def _periodic_data(cell, pbc, coordinates, labels):
+    fractional = numpy.asarray(coordinates) @ numpy.linalg.inv(cell)
+    atom_count = len(labels)
+    return PeriodicSiteData(
+        fractional_coordinates=ArrayData(
+            fractional,
+            ("atom", "xyz"),
+            "dimensionless",
+        ),
+        site_labels=tuple(f"{label}{index + 1}" for index, label in enumerate(labels)),
+        occupancies=ArrayData(
+            numpy.ones(atom_count, dtype=numpy.float64),
+            ("atom",),
+            "dimensionless",
+        ),
+        isotropic_displacements=None,
+        anisotropic_displacements=None,
+        adp_types=("none",) * atom_count,
+        disorder_groups=(0,) * atom_count,
+        declared_space_group_name=None,
+        declared_space_group_number=None,
+        symmetry_operations=(),
+        cif_envelope_id=None,
+        pbc=pbc,
+    )
+
+
+def _build_group(
+    source,
+    source_hash,
+    group_index,
+    start,
+    end,
+    identity,
+    issues,
+    owner,
+    is_cancelled,
+):
+    frame_count = end - start
+    atom_count = len(identity)
+    provenance_id = _stable_uuid(source_hash, "provenance")
+    structure_id = _stable_uuid(source_hash, f"group:{group_index}:structure")
+    frame_set_id = _stable_uuid(source_hash, f"group:{group_index}:frames")
+    coordinates = owner.empty(
+        (frame_count, atom_count, 3),
+        numpy.float64,
+    )
+    comments = []
+    cells = [None] * frame_count
+    pbcs = [None] * frame_count
+    symbols = None
+    atom_specs = {}
+    atom_values = {}
+    metadata_values = {}
+    for source_index, frame in enumerate(iter_extxyz_frames(source)):
+        is_cancelled()
+        if source_index < start:
+            continue
+        if source_index >= end:
+            break
+        frame_index = source_index - start
+        fields = _field_map(frame)
+        values = _value_map(frame)
+        coordinates[frame_index] = values["pos"]
+        comments.append(frame.comment.raw)
+        cells[frame_index], pbcs[frame_index] = _cell_and_pbc(frame)
+        if symbols is None:
+            symbols = tuple(str(value) for value in values["species"])
+        for field in frame.properties:
+            if field.name in {"species", "pos"}:
+                continue
+            previous = atom_specs.setdefault(field.name, field)
+            if previous != field:
+                raise ExtXYZSyntaxError(
+                    f"Properties field {field.name} changes type or width"
+                )
+            atom_values.setdefault(field.name, {})[frame_index] = values[field.name]
+        for entry in frame.comment.entries:
+            if entry.key in _RESERVED_COMMENT_KEYS:
+                continue
+            if entry.diagnostic is not None:
+                issues.append(
+                    ParserIssue(
+                        IssueKind.AMBIGUOUS,
+                        f"metadata.{entry.key}",
+                        f"{entry.diagnostic}; raw value retained in comment",
+                    )
+                )
+                continue
+            metadata_values.setdefault(entry.key, {})[frame_index] = entry.value
+
+    first_cell = cells[0]
+    first_pbc = pbcs[0]
+    periodic = (
+        None
+        if first_cell is None
+        else _periodic_data(first_cell, first_pbc, coordinates[0], symbols)
+    )
+    structure = Structure(
+        id=structure_id,
+        revision=_revision(
+            source_hash,
+            f"group:{group_index}:structure",
+            {"identity": identity, "first_frame": coordinates[0].tolist()},
+        ),
+        atomic_numbers=identity,
+        coordinates=ArrayData(
+            coordinates[0],
+            ("atom", "xyz"),
+            "angstrom",
+        ),
+        cell=(
+            None
+            if first_cell is None
+            else ArrayData(first_cell, ("cell_vector", "xyz"), "angstrom")
+        ),
+        periodic=periodic,
+    )
+    frame_set = FrameSet(
+        id=frame_set_id,
+        revision=_revision(
+            source_hash,
+            f"group:{group_index}:frames",
+            {"start": start, "end": end},
+        ),
+        semantic_role="coordinates",
+        domain="frame",
+        data=ArrayData(
+            coordinates,
+            ("frame", "atom", "xyz"),
+            "angstrom",
+        ),
+        status=DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(provenance_id,),
+        structure_id=structure_id,
+        comments=tuple(comments),
+    )
+    datasets = [frame_set]
+    datasets.extend(
+        _atom_property(
+            source_hash=source_hash,
+            group_index=group_index,
+            frame_set_id=frame_set_id,
+            provenance_id=provenance_id,
+            field=atom_specs[name],
+            values=atom_values[name],
+            frame_count=frame_count,
+            atom_count=atom_count,
+            issues=issues,
+            owner=owner,
+            declared_unit=(
+                bool(metadata_values.get(f"{name}_unit"))
+                and all(
+                    value == _ATOM_PROPERTIES[name][1]
+                    for value in metadata_values[f"{name}_unit"].values()
+                )
+                if name in _ATOM_PROPERTIES
+                else False
+            ),
+        )
+        for name in atom_specs
+    )
+    for name, values in metadata_values.items():
+        if name.endswith("_unit") and name[:-5] in _ATOM_PROPERTIES:
+            continue
+        dataset = _metadata_property(
+            source_hash=source_hash,
+            group_index=group_index,
+            frame_set_id=frame_set_id,
+            provenance_id=provenance_id,
+            name=name,
+            values=values,
+            frame_count=frame_count,
+            issues=issues,
+            owner=owner,
+        )
+        if dataset is not None:
+            datasets.append(dataset)
+    if any(cell is not None for cell in cells) and (
+        any(cell is None for cell in cells)
+        or any(
+            not numpy.array_equal(cell, first_cell)
+            for cell in cells
+            if cell is not None
+        )
+    ):
+        present = numpy.asarray(
+            [cell is not None for cell in cells],
+            dtype=numpy.bool_,
+        )
+        values = owner.zeros((frame_count, 3, 3), numpy.float64)
+        for index, cell in enumerate(cells):
+            if cell is not None:
+                values[index] = cell
+        mask = (
+            None
+            if numpy.all(present)
+            else ArrayData(present, ("frame",), "dimensionless")
+        )
+        datasets.append(
+            CellFrameProperty(
+                id=_stable_uuid(source_hash, f"group:{group_index}:cells"),
+                revision=_revision(
+                    source_hash,
+                    f"group:{group_index}:cells",
+                    {"present": present.tolist()},
+                ),
+                semantic_role="cell",
+                domain="cell_frame",
+                data=ArrayData(
+                    values,
+                    ("frame", "cell_vector", "xyz"),
+                    "angstrom",
+                ),
+                status=(
+                    DatasetStatus.COMPLETE
+                    if mask is None
+                    else DatasetStatus.PARTIAL
+                ),
+                source_calculation=None,
+                provenance_ids=(provenance_id,),
+                frame_set_id=frame_set_id,
+                validity_mask=mask,
+            )
+        )
+    if any(pbc != first_pbc for pbc in pbcs[1:]):
+        pbc_values = numpy.asarray(pbcs, dtype=numpy.bool_)
+        datasets.append(
+            FrameProperty(
+                id=_stable_uuid(source_hash, f"group:{group_index}:pbc"),
+                revision=_revision(
+                    source_hash,
+                    f"group:{group_index}:pbc",
+                    pbc_values.tolist(),
+                ),
+                semantic_role="pbc",
+                domain="frame",
+                data=ArrayData(
+                    pbc_values,
+                    ("frame", "xyz"),
+                    "dimensionless",
+                ),
+                status=DatasetStatus.COMPLETE,
+                source_calculation=None,
+                provenance_ids=(provenance_id,),
+                frame_set_id=frame_set_id,
+            )
+        )
+    return structure, tuple(datasets)
+
+
+def parse_extxyz(source, *, staging_root=None, is_cancelled=None):
+    source = Path(source)
+    is_cancelled = (lambda: False) if is_cancelled is None else is_cancelled
+    if not callable(is_cancelled):
+        raise TypeError("is_cancelled must be callable")
+    owner = _ArrayOwner(staging_root)
+    try:
+        source_hash = _source_hash(source, is_cancelled)
+        identities = []
+        for frame in iter_extxyz_frames(source):
+            if is_cancelled():
+                raise ExtXYZCancelled("extXYZ parse was cancelled")
+            identities.append(_identity(frame))
+            _cell_and_pbc(frame)
+        if not identities:
+            raise ExtXYZSyntaxError("extXYZ source is missing an atom frame")
+        ranges = []
+        start = 0
+        for index in range(1, len(identities)):
+            if identities[index] != identities[start]:
+                ranges.append((start, index, identities[start]))
+                start = index
+        ranges.append((start, len(identities), identities[start]))
+
+        issues = []
+        if len(ranges) > 1:
+            issues.append(
+                ParserIssue(
+                    IssueKind.AMBIGUOUS,
+                    "frames.atomic_identity",
+                    "atom identity changed between frames; trajectory was split",
+                )
+            )
+        structures = []
+        datasets = []
+        for group_index, (start, end, identity) in enumerate(ranges):
+            structure, group_datasets = _build_group(
+                source,
+                source_hash,
+                group_index,
+                start,
+                end,
+                identity,
+                issues,
+                owner,
+                is_cancelled,
+            )
+            structures.append(structure)
+            datasets.extend(group_datasets)
+        provenance_id = _stable_uuid(source_hash, "provenance")
+        provenance = ProvenanceRecord(
+            id=provenance_id,
+            revision=_revision(source_hash, "provenance", {"format": "extxyz"}),
+            producer="ChemBlender extXYZ reader",
+            producer_version="1",
+            source=str(source.resolve()),
+            source_hash=source_hash,
+            parent_ids=(),
+            operation="parse",
+            parameters=(
+                ("format", "extxyz"),
+                ("lattice_order", "ax ay az bx by bz cx cy cz"),
+            ),
+        )
+        created = tuple(
+            [item.id for item in structures]
+            + [item.id for item in datasets]
+            + [provenance.id]
+        )
+        return ImportBatch(
+            structures=tuple(structures),
+            datasets=tuple(datasets),
+            provenance=(provenance,),
+            report=ParserReport(
+                reader_id="extxyz",
+                reader_version="1",
+                created_entity_ids=created,
+                parsed_capabilities=("structure", "trajectory", "properties"),
+                issues=tuple(issues),
+            ),
+        )
+    except BaseException:
+        owner.cleanup()
+        raise
+
+
+def sniff_extxyz(source, prefix):
+    try:
+        lines = prefix.decode("utf-8-sig").splitlines()
+    except UnicodeDecodeError:
+        return SniffResult(SniffMatch.NONE, "content is not UTF-8 extXYZ text")
+    if len(lines) < 2 or "Properties" not in lines[1]:
+        return SniffResult(SniffMatch.NONE, "no extXYZ Properties marker")
+    try:
+        int(lines[0].strip())
+        parse_extxyz_comment(lines[1])
+    except (ValueError, ExtXYZSyntaxError):
+        return SniffResult(SniffMatch.NONE, "invalid extXYZ Properties marker")
+    return SniffResult(SniffMatch.EXACT, "valid extXYZ Properties marker")
+
+
+def _parse_request(request):
+    return parse_extxyz(
+        request.source_path,
+        staging_root=request.staging_root,
+        is_cancelled=request.is_cancelled,
+    )
+
+
+EXTXYZ_READER = ReaderDescriptor(
+    reader_id="extxyz",
+    reader_version="1",
+    extensions=(".xyz", ".extxyz"),
+    capabilities={
+        "structure": CapabilitySupport.SUPPORTED,
+        "trajectory": CapabilitySupport.SUPPORTED,
+        "properties": CapabilitySupport.SUPPORTED,
+    },
+    priority=130,
+    sniff=sniff_extxyz,
+    parse=parse_extxyz,
+    parse_request=_parse_request,
+)
+
+
 __all__ = (
+    "EXTXYZ_READER",
+    "ExtXYZCancelled",
     "ExtXYZComment",
     "ExtXYZFrame",
     "ExtXYZMetadataEntry",
     "ExtXYZPropertyField",
     "ExtXYZSyntaxError",
     "iter_extxyz_frames",
+    "parse_extxyz",
     "parse_extxyz_comment",
     "parse_properties_descriptor",
+    "sniff_extxyz",
 )

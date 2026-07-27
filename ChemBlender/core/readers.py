@@ -79,6 +79,7 @@ class ReaderDescriptor:
     priority: int
     sniff: Callable[[Path, bytes], SniffResult]
     parse: Callable[[Path], ImportBatch]
+    parse_request: Callable[[object], ImportBatch] | None = None
 
     def __post_init__(self):
         if (
@@ -118,6 +119,8 @@ class ReaderDescriptor:
             raise TypeError("priority must be an integer")
         if not callable(self.sniff) or not callable(self.parse):
             raise TypeError("sniff and parse must be callable")
+        if self.parse_request is not None and not callable(self.parse_request):
+            raise TypeError("parse_request must be callable or None")
 
         object.__setattr__(self, "extensions", tuple(extensions))
         object.__setattr__(self, "capabilities", MappingProxyType(capabilities))

@@ -4,6 +4,7 @@ from .ase_adapter import ASE_STRUCTURE_READER
 from .cclib_adapter import CCLIB_OUTPUT_READER
 from .cjson_adapter import CJSON_READER
 from .cube import CUBE_READER
+from .formats.extxyz import EXTXYZ_READER
 from .gemmi_adapter import CIF_READER
 from .iodata_adapter import IODATA_WAVEFUNCTION_READER
 from .mol_v2000 import MOL_V2000_READER
@@ -33,6 +34,7 @@ def builtin_reader_descriptors():
                 CIF_READER,
                 CJSON_READER,
                 CUBE_READER,
+                EXTXYZ_READER,
                 IODATA_WAVEFUNCTION_READER,
                 MOL_V2000_READER,
                 PYMATGEN_VASP_ELECTRONIC_READER,

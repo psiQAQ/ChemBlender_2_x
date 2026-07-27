@@ -1,4 +1,5 @@
 import shutil
+from dataclasses import fields, is_dataclass
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -6,6 +7,26 @@ from ..model import ImportBatch
 
 
 _OWNER_MARKER = ".chemblender-import-owner"
+
+
+def _close_memmaps(value, seen):
+    import numpy
+
+    identity = id(value)
+    if identity in seen:
+        return
+    seen.add(identity)
+    if isinstance(value, numpy.memmap):
+        mmap = getattr(value, "_mmap", None)
+        if mmap is not None:
+            mmap.close()
+        return
+    if isinstance(value, tuple):
+        for item in value:
+            _close_memmaps(item, seen)
+    elif is_dataclass(value):
+        for field in fields(value):
+            _close_memmaps(getattr(value, field.name), seen)
 
 
 def _is_link_like(path):
@@ -147,6 +168,8 @@ class StagedImportSession:
         ):
             raise RuntimeError("refusing to remove an unsafe artifact root")
 
+        for batch in self._results.values():
+            _close_memmaps(batch, set())
         shutil.rmtree(resolved)
         self._results.clear()
         self._discarded = True

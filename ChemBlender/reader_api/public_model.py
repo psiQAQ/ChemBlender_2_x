@@ -4,6 +4,7 @@ from uuid import UUID
 
 from ..core import (
     ArrayData,
+    AtomFrameProperty,
     AtomicProperty,
     BandPathBranch,
     BandStructure,
@@ -30,6 +31,8 @@ from ..core import (
     ExcitedStateSet,
     FermiSurfaceMesh,
     FrameSet,
+    FrameProperty,
+    CellFrameProperty,
     Grid3D,
     ImportDiagnostic,
     IssueKind,
@@ -76,7 +79,8 @@ _GROUP_TYPES = (
     ("symmetry_results", frozenset((SymmetryResult,))),
     ("calculations", frozenset((CalculationRecord,))),
     ("datasets", frozenset((
-        PropertyDataset, AtomicProperty, FrameSet, Grid3D, VibrationalModeSet,
+        PropertyDataset, AtomicProperty, FrameSet, FrameProperty,
+        AtomFrameProperty, CellFrameProperty, Grid3D, VibrationalModeSet,
         ExcitedStateSet, Spectrum, BandStructure, DensityOfStates,
         PhononModeSet, FermiSurfaceMesh, TopologyGraph,
     ))),
