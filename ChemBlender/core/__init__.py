@@ -162,6 +162,7 @@ from .qcschema_adapter import (
     sniff_qcschema,
 )
 # Reader compatibility exports.
+from .formats.mol import MOL_READER, parse_mol, sniff_mol
 from .mol_v2000 import MOL_V2000_READER, parse_mol_v2000, sniff_mol_v2000
 # Adapter compatibility exports.
 from .pymatgen_adapter import (
@@ -342,6 +343,7 @@ __all__ = [
     "IODATA_WAVEFUNCTION_READER",
     "IODataDependencyError",
     "MOL_V2000_READER",
+    "MOL_READER",
     "MolecularTopology",
     "MolecularRecord",
     "RawRecordProperty",
@@ -425,9 +427,11 @@ __all__ = [
     "parse_qcschema_molecule",
     "parse_cif",
     "parse_xyz",
+    "parse_mol",
     "parse_mol_v2000",
     "sniff_qcschema",
     "sniff_cjson",
+    "sniff_mol",
     "sniff_mol_v2000",
     "sniff_cube",
     "sniff_ase_structure",

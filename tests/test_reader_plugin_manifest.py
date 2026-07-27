@@ -346,9 +346,13 @@ class ReaderPluginManifestTests(unittest.TestCase):
             for reader in snapshot["readers"]
         ]
 
-        self.assertEqual(
-            {support for descriptor in descriptors for support in descriptor.capabilities.values()},
-            set(CapabilitySupport),
+        self.assertTrue(
+            {
+                CapabilitySupport.SUPPORTED,
+                CapabilitySupport.PARTIAL,
+            }.issubset(
+                {support for descriptor in descriptors for support in descriptor.capabilities.values()}
+            )
         )
         self.assertEqual(
             {

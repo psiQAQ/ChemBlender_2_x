@@ -33,6 +33,8 @@ RDKit 对象，也不实现 reader、grouping、export 或 UI 行为。RDKit is 
 
 `ReaderDescriptor`、`ReaderRegistry`、`SniffMatch`、`SniffResult` 和 catalog API 是 alpha 0.x Reader 契约，尚非 v1。
 
+内置 `mol` v2 reader 通过 RDKit 提供单记录 MOL V2000/V3000 的结构、原子身份、拓扑和 `MolecularRecord`；`mol-v2000` 仅保留为 V2000 的显式兼容 alias，并在报告中提示改用 `mol`。
+
 ## Recipe 契约
 
 `RecipeDefinition`、绑定、参数、计划、校验与文档函数构成 Recipe 契约；其版本化数据定义是该契约的边界。

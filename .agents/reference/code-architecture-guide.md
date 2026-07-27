@@ -178,11 +178,12 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | --- | --- | --- |
 | `ChemBlender/core/exporters/__init__.py` | 模块级 re-export | 暴露原生文本格式的纯 Python 导出入口、无写入 loss preview、取消异常和语义比较器，不加载 Blender 或可选科学栈。 |
 | `ChemBlender/core/exporters/xyz.py` | `export_xyz()`、`export_extxyz()`、`preview_extxyz_export()`、`semantic_extxyz_differences()` | 确定性、同目录短临时文件原子写入 XYZ/extXYZ；每个 chunk 前响应取消并清理 temp，保留 typed frame/atom/cell property、integral-valued real metadata 与 validity，显式报告 partial/ambiguous loss，并按科学数据而非 UUID/空白比较 round-trip。 |
-| `ChemBlender/core/formats/__init__.py` | 模块级 re-export | 暴露低层、纯 Python 的原生文本格式语法入口，不注册 reader 或接触项目状态。 |
+| `ChemBlender/core/formats/__init__.py` | 模块级 re-export | 暴露原生文本格式 reader 的低层入口，不注册 reader 或接触项目状态。 |
 | `ChemBlender/core/formats/extxyz.py` | `parse_extxyz()`、`sniff_extxyz()`、`iter_extxyz_frames()` | 原生选择并逐帧解析 extXYZ，将兼容帧映射为确定性 `Structure`、`FrameSet` 与 typed frame/atom/cell property；大型数组由 staging NPY memmap 持有，取消时清理，不依赖 ASE。 |
+| `ChemBlender/core/formats/mol.py` | `MOL_READER`、`sniff_mol()`、`parse_mol()`、`parse_mol_request()` | 对单记录 MOL V2000/V3000 做完整 CTAB/atom/bond 结构 sniff，并仅在调用时加载 RDKit；保留原始 bytes，借助共享 adapter 输出结构、原子身份、显式拓扑、MolecularRecord、provenance 与诊断；产品请求直接沿用 host 的 source revision、hash、validation 和 cancellation。 |
 | `ChemBlender/core/formats/rdkit_common.py` | `adapt_rdkit_molecule()` | 在函数内加载 RDKit，将临时分子映射为现有的不可变结构、原子身份、显式/必要时 sanitized 拓扑、原始 record、provenance 与诊断；不保存 RDKit Mol，缺失 conformer 不虚构坐标。 |
 | `ChemBlender/core/xyz.py` | `sniff_xyz()`、`parse_xyz()` | 读取单帧/多帧 XYZ 和受支持的 extXYZ lattice/PBC/property 子集，输出 `Structure`、`FrameSet` 和报告。 |
-| `ChemBlender/core/mol_v2000.py` | `sniff_mol_v2000()`、`parse_mol_v2000()` | 使用标准库解析 MOL V2000 原子和结构；未建模的拓扑信息通过 `ParserReport` 明示。 |
+| `ChemBlender/core/mol_v2000.py` | `MOL_V2000_READER`、`parse_mol_v2000()` | 已弃用的 V2000-only 显式兼容 alias；委托 `formats.mol` 的同一实现，自动选择始终由 replacement `mol` 处理并在 alias report 中说明迁移目标。 |
 | `ChemBlender/core/cube.py` | `sniff_cube()`、`parse_cube()` | 读取 Cube 原点、完整非正交 step vectors、多 dataset/MO index 和 voxel 数据，输出 `Grid3D`。 |
 | `ChemBlender/core/cclib_adapter.py` | `sniff_cclib_output()`、`adapt_ccdata()`、`parse_cclib_output()` | 延迟加载 cclib，将 Gaussian/ORCA 等输出归一化为结构轨迹、能量、原子属性、振动、激发态及 parser issues。 |
 | `ChemBlender/core/iodata_adapter.py` | `sniff_iodata_wavefunction()`、`adapt_iodata()`、`parse_iodata_wavefunction()` | 延迟加载 IOData，将 FCHK/Molden 的结构、basis、restricted/unrestricted/generalized MO 和 RDM 转为内部模型。 |
