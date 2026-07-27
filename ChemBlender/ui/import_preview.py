@@ -326,7 +326,11 @@ def _quality_and_blocking(staging, source_preview):
             QualityStatus.INCOMPLETE.value,
             "source has no single staged batch",
         )
+    batch = staging.result(source_preview.staged_batch_ids[0])
     diagnostics = _diagnostics(staging, source_preview)
+    valid_record_keys = frozenset(
+        record.record_key for record in batch.molecular_records
+    )
     quality = max(
         (item.quality_status for item in diagnostics),
         key=lambda item: item.summary_order,
@@ -336,8 +340,16 @@ def _quality_and_blocking(staging, source_preview):
         (
             item
             for item in diagnostics
-            if item.severity is DiagnosticSeverity.ERROR
-            or item.quality_status is QualityStatus.INVALID
+            if (
+                item.severity is DiagnosticSeverity.ERROR
+                or item.quality_status is QualityStatus.INVALID
+            )
+            and not (
+                item.entity_id is None
+                and valid_record_keys
+                and item.record_key
+                and item.record_key not in valid_record_keys
+            )
         ),
         None,
     )

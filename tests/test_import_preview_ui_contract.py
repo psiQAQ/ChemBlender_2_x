@@ -425,6 +425,65 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             (state.conflicts[0].id,),
         )
 
+    def test_recovered_sdf_record_failure_is_visible_but_does_not_block_commit(self):
+        registry, state = self.stage("tests/fixtures/sdf/malformed-middle.sdf")
+        source = state.preview.source_previews[0]
+        batch = state.staging_session.result(source.staged_batch_ids[0])
+        rows = self.module.project_import_preview(self.session, state, registry)
+
+        self.assertEqual(rows[0].quality, "invalid")
+        self.assertFalse(rows[0].blocking)
+        result = self.module.commit_project_import(
+            self.session,
+            state,
+            rows,
+            collection=object(),
+            apply_view=lambda *_args, **_kwargs: (),
+        )
+        self.assertEqual(result.status, "committed")
+        records = tuple(
+            sorted(
+                self.session.project.molecular_records.values(),
+                key=lambda item: item.source_record_index,
+            )
+        )
+        self.assertEqual(tuple(item.source_record_index for item in records), (0, 2))
+        self.assertEqual(
+            tuple(item.code for item in self.session.project.diagnostics.values()),
+            ("sdf.record_parse_failed",),
+        )
+
+        blocking_batch = replace(
+            batch,
+            diagnostics=(
+                replace(
+                    batch.diagnostics[0],
+                    record_key=batch.molecular_records[0].record_key,
+                ),
+            ),
+        )
+        blocking_staging = SimpleNamespace(
+            result=lambda _batch_id: blocking_batch,
+        )
+        _quality, blocking_reason = self.module._quality_and_blocking(
+            blocking_staging, source
+        )
+        self.assertIn("sdf.record_parse_failed", blocking_reason)
+
+        failed = Path(self.temporary.name) / "all-failed.sdf"
+        failed.write_bytes(
+            (ROOT / "tests/fixtures/mol/water-v2000.mol")
+            .read_bytes()
+            .replace(b" O   ", b" Xx  ", 1)
+            + b"$$$$\n"
+        )
+        _failed_registry, failed_state = self.stage(failed)
+        _quality, failed_reason = self.module._quality_and_blocking(
+            failed_state.staging_session,
+            failed_state.preview.source_previews[0],
+        )
+        self.assertIn("sdf.record_parse_failed", failed_reason)
+
     def test_default_view_planner_prioritizes_real_grid_and_signed_roles(self):
         default_views = importlib.import_module(
             "ChemBlender.ui.default_views"
