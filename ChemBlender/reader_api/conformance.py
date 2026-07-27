@@ -8,16 +8,22 @@ from tempfile import TemporaryDirectory
 from types import MappingProxyType
 from uuid import uuid4
 
+from ..core.import_pipeline import ImportSource, ValidationMode
+from ..core.import_pipeline.parse import stage_import_batch
 from ..core.model.sources import source_parse_identity
 from ..core.readers import SniffResult
-from .builtin_bridge import internal_batch_from_public
+from .builtin_bridge import (
+    _internal_batch_from_public_unchecked,
+    _validate_internal_batch_graph,
+    internal_batch_from_public,
+)
 from .canonical_document import (
     read_public_batch_bundle,
     write_public_batch_bundle,
 )
 from .protocol import ParseRequest, SniffRequest
 from .public_model import ArrayData, PublicImportBatch
-from .registry import ReaderPluginRegistry
+from .registry import ReaderPluginRegistry, _BuiltinReaderPlugin
 from .version import READER_API_VERSION
 
 
@@ -426,8 +432,30 @@ def run_reader_conformance(case):
         batch = state["batch"]
         if type(batch) is not PublicImportBatch:
             return False, "parse output unavailable"
-        internal_batch_from_public(batch)
-        report = batch.report
+        plugin = case.registry._plugin(case.reader_id)
+        if type(plugin) is _BuiltinReaderPlugin:
+            request = state["parse_request"]
+            descriptor = plugin.descriptor
+            internal = _internal_batch_from_public_unchecked(batch)
+            internal = stage_import_batch(
+                source=ImportSource(case.source_path),
+                validation_mode=ValidationMode(request.validation_mode),
+                content_hash=request.source_content_hash,
+                byte_size=case.source_path.stat().st_size,
+                plugin_id=descriptor.plugin_id,
+                reader_id=descriptor.reader_id,
+                reader_version=descriptor.reader_version,
+                api_version=READER_API_VERSION,
+                canonical_parameters=tuple(
+                    sorted(request.canonical_parameters.items())
+                ),
+                parsed_batch=internal,
+                revision_id=request.source_revision_id,
+            )
+            _validate_internal_batch_graph(internal)
+        else:
+            internal = internal_batch_from_public(batch)
+        report = internal.report
         expected = _entity_ids(batch)
         actual = () if report is None else report.created_entity_ids
         return (

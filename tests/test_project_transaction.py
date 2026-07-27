@@ -315,6 +315,27 @@ class ProjectTransactionTests(unittest.TestCase):
         self.assertIsNone(project_session.sidecar_path)
         self.assertFalse(project_session.dirty)
 
+    def test_merge_requires_exact_parser_report_order_without_duplicates(self):
+        first = self.structure()
+        second = self.structure()
+        for created_ids in (
+            (second.id, first.id),
+            (first.id, first.id),
+        ):
+            with self.subTest(created_ids=created_ids):
+                batch = ImportBatch(
+                    structures=(first, second),
+                    report=ParserReport(
+                        "fixture",
+                        "1",
+                        created_ids,
+                        ("structure",),
+                        (),
+                    ),
+                )
+                with self.assertRaisesRegex(ValueError, "parser report"):
+                    transaction_module._merge_batches((batch,))
+
     def test_commits_reopens_diagnostics_groups_and_view_plan_ids(self):
         project_session = self.project_session()
         staged_session = self.staged_session()

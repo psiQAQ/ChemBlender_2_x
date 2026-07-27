@@ -14,6 +14,7 @@ from ChemBlender.core import (
     ArrayData,
     DatasetStatus,
     ImportBatch,
+    MolecularRecord,
     PropertyDataset,
     QCProject,
     Structure,
@@ -32,7 +33,13 @@ from ChemBlender.core.worker_protocol import (
     write_request,
     write_result,
 )
-from worker.runner import OperationOutput, OperationRegistry, run_request
+from worker.runner import (
+    OperationOutput,
+    OperationRegistry,
+    _batch_references,
+    _validate_references,
+    run_request,
+)
 
 
 PROJECT_ID = UUID("10000000-0000-0000-0000-000000000001")
@@ -68,6 +75,35 @@ def request(project_locator="project.cbq", *, inputs=()):
 
 
 class WorkerProtocolTests(unittest.TestCase):
+    def test_generic_worker_inventories_include_molecular_records(self):
+        record = MolecularRecord(
+            id=UUID("50000000-0000-0000-0000-000000000005"),
+            revision="record-r1",
+            source_revision_id=UUID(
+                "60000000-0000-0000-0000-000000000006"
+            ),
+            record_key="record-0001",
+            structure_id=STRUCTURE_ID,
+            topology_id=None,
+            raw_block=b"record",
+            title="record",
+            source_record_index=0,
+            block_version="V2000",
+            writer_name=None,
+            writer_version=None,
+            ordered_raw_properties=(),
+            provenance_ids=(),
+        )
+        project = QCProject(id=PROJECT_ID, schema_version="0.1")
+        project.molecular_records[record.id] = record
+        reference = EntityReference(record.id, record.revision)
+
+        _validate_references(project, (reference,), "input")
+        self.assertEqual(
+            _batch_references(ImportBatch(molecular_records=(record,))),
+            (reference,),
+        )
+
     def test_request_round_trip_is_strict_and_canonical(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "request.json"

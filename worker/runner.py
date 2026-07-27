@@ -50,6 +50,7 @@ def _entities(project):
     registries = (
         project.structures,
         project.topologies,
+        project.molecular_records,
         project.cif_envelopes,
         project.qcschema_envelopes,
         project.cjson_envelopes,
@@ -78,6 +79,7 @@ def _batch_references(batch):
     groups = (
         batch.structures,
         batch.topologies,
+        batch.molecular_records,
         batch.cif_envelopes,
         batch.qcschema_envelopes,
         batch.cjson_envelopes,

@@ -215,12 +215,12 @@ def _remap(value, replacements):
 def _validate_batch_report(batch):
     if batch.report is None:
         return
-    created_ids = {
+    created_ids = tuple(
         entity.id
         for name in _BATCH_ENTITY_FIELDS
         for entity in getattr(batch, name)
-    }
-    if set(batch.report.created_entity_ids) != created_ids:
+    )
+    if batch.report.created_entity_ids != created_ids:
         raise ValueError("parser report created IDs must match the import batch")
 
 

@@ -1,5 +1,6 @@
 from collections.abc import Mapping
 import re
+import shutil
 from uuid import UUID, uuid4
 
 from ..core.import_pipeline.parse import stage_import_batch
@@ -58,6 +59,14 @@ def _noop_progress(stage, completed, total):
 
 def _not_cancelled():
     return False
+
+
+def _remove_reader_staging_root(root):
+    if not root.exists():
+        return
+    if root.is_symlink() or root.is_junction() or not root.is_dir():
+        raise RuntimeError("refusing to remove an unsafe reader staging root")
+    shutil.rmtree(root)
 
 
 class _BridgeCancelled(BaseException):
@@ -298,86 +307,97 @@ def preflight_reader_plugins(
         else:
             progress("reader", completed + 2, total)
             revision_id = uuid4()
+            reader_staging_root = session.artifact_root / str(revision_id)
+            reader_staging_root.mkdir()
+            keep_reader_artifacts = False
             try:
-                public = registry.parse(
-                    descriptor.reader_id,
-                    ParseRequest(
-                        source.path,
-                        content_hash,
-                        request.validation_mode.value,
-                        dict(parameters),
-                        session.artifact_root,
-                        _plugin_progress(progress, is_cancelled),
-                        _cancel_callback(is_cancelled),
-                        revision_id,
-                    ),
-                )
-            except _BridgeCancelled:
-                raise ImportCancelled(
-                    "import preflight was cancelled"
-                ) from None
-            except _BridgeHostCallbackError as error:
-                raise error.error from None
-            except ValueError as error:
-                if (
-                    str(error) != "source_path must be a file"
-                    or source.path.is_file()
-                ):
-                    raise
-                internal = None
-                failure = _source_changed_failure(error)
-            except OSError as error:
-                internal = None
-                failure = _source_changed_failure(error)
-            else:
-                _check_cancelled(is_cancelled)
                 try:
-                    plugin = registry._plugin(descriptor.reader_id)
-                    trusted_builtin = type(plugin) is _BuiltinReaderPlugin
-                    internal = (
-                        _internal_batch_from_public_unchecked(public)
-                        if trusted_builtin
-                        else internal_batch_from_public(public)
+                    public = registry.parse(
+                        descriptor.reader_id,
+                        ParseRequest(
+                            source.path,
+                            content_hash,
+                            request.validation_mode.value,
+                            dict(parameters),
+                            reader_staging_root,
+                            _plugin_progress(progress, is_cancelled),
+                            _cancel_callback(is_cancelled),
+                            revision_id,
+                        ),
                     )
-                    supplied_identity = bool(
-                        internal.sources or internal.source_revisions
-                    )
+                except _BridgeCancelled:
+                    raise ImportCancelled(
+                        "import preflight was cancelled"
+                    ) from None
+                except _BridgeHostCallbackError as error:
+                    raise error.error from None
+                except ValueError as error:
                     if (
-                        not trusted_builtin
-                        and _has_scientific_entities(internal)
-                        and not supplied_identity
+                        str(error) != "source_path must be a file"
+                        or source.path.is_file()
                     ):
-                        raise ValueError(
-                            "external scientific result omitted source identity"
-                        )
-                    internal = stage_import_batch(
-                        source=source,
-                        validation_mode=request.validation_mode,
-                        content_hash=content_hash,
-                        byte_size=byte_size,
-                        plugin_id=descriptor.plugin_id,
-                        reader_id=descriptor.reader_id,
-                        reader_version=descriptor.reader_version,
-                        api_version=READER_API_VERSION,
-                        canonical_parameters=parameters,
-                        parsed_batch=internal,
-                        preserve_source_identity=supplied_identity,
-                        revision_id=revision_id,
-                    )
-                    _validate_internal_batch_graph(internal)
-                    failure = None
-                except (
-                    PublicBatchError,
-                    TypeError,
-                    ValueError,
-                    KeyError,
-                ) as error:
+                        raise
                     internal = None
-                    failure = (
-                        "preflight.invalid_reader_result",
-                        _failure_message(error),
-                        "the reader result did not satisfy the import identity contract",
-                    )
+                    failure = _source_changed_failure(error)
+                except OSError as error:
+                    internal = None
+                    failure = _source_changed_failure(error)
+                else:
+                    _check_cancelled(is_cancelled)
+                    try:
+                        plugin = registry._plugin(descriptor.reader_id)
+                        trusted_builtin = type(plugin) is _BuiltinReaderPlugin
+                        internal = (
+                            _internal_batch_from_public_unchecked(public)
+                            if trusted_builtin
+                            else internal_batch_from_public(public)
+                        )
+                        supplied_identity = bool(
+                            internal.sources or internal.source_revisions
+                        )
+                        if (
+                            not trusted_builtin
+                            and _has_scientific_entities(internal)
+                            and not supplied_identity
+                        ):
+                            raise ValueError(
+                                "external scientific result omitted source identity"
+                            )
+                        internal = stage_import_batch(
+                            source=source,
+                            validation_mode=request.validation_mode,
+                            content_hash=content_hash,
+                            byte_size=byte_size,
+                            plugin_id=descriptor.plugin_id,
+                            reader_id=descriptor.reader_id,
+                            reader_version=descriptor.reader_version,
+                            api_version=READER_API_VERSION,
+                            canonical_parameters=parameters,
+                            parsed_batch=internal,
+                            preserve_source_identity=supplied_identity,
+                            revision_id=revision_id,
+                        )
+                        _validate_internal_batch_graph(internal)
+                        failure = None
+                        keep_reader_artifacts = (
+                            _has_scientific_entities(internal)
+                            and any(reader_staging_root.iterdir())
+                        )
+                    except (
+                        PublicBatchError,
+                        TypeError,
+                        ValueError,
+                        KeyError,
+                    ) as error:
+                        internal = None
+                        failure = (
+                            "preflight.invalid_reader_result",
+                            _failure_message(error),
+                            "the reader result did not satisfy the import identity contract",
+                        )
+            finally:
+                if not keep_reader_artifacts:
+                    _remove_reader_staging_root(reader_staging_root)
 
         if internal is None:
             internal = stage_import_batch(

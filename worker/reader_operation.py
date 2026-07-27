@@ -1,9 +1,14 @@
 import shutil
 from pathlib import Path
 
+from ChemBlender.core.import_pipeline import ImportSource, ValidationMode
+from ChemBlender.core.import_pipeline.parse import stage_import_batch
 from ChemBlender.reader_api.builtin_bridge import (
     PublicBatchError,
+    _internal_batch_from_public_unchecked,
+    _validate_internal_batch_graph,
     internal_batch_from_public,
+    public_batch_from_internal,
 )
 from ChemBlender.reader_api.canonical_document import (
     CanonicalDocumentError,
@@ -11,7 +16,11 @@ from ChemBlender.reader_api.canonical_document import (
     write_public_batch_bundle,
 )
 from ChemBlender.reader_api.protocol import ParseRequest
-from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+from ChemBlender.reader_api.registry import (
+    _BuiltinReaderPlugin,
+    builtin_reader_plugin_registry,
+)
+from ChemBlender.reader_api.version import READER_API_VERSION
 from ChemBlender.reader_api.worker_bridge import (
     WorkerReaderIntegrityError,
     _DOCUMENT_PATH,
@@ -139,6 +148,36 @@ def _reader_parse(context, request):
             "reader_parse_failed",
             "reader returned a failed public batch",
         )
+
+    try:
+        plugin = registry._plugin(descriptor.reader_id)
+        internal = (
+            _internal_batch_from_public_unchecked(batch)
+            if type(plugin) is _BuiltinReaderPlugin
+            else internal_batch_from_public(batch)
+        )
+        internal = stage_import_batch(
+            source=ImportSource(source),
+            validation_mode=ValidationMode(parameters["validation_mode"]),
+            content_hash=parameters["source_sha256"],
+            byte_size=source.stat().st_size,
+            plugin_id=descriptor.plugin_id,
+            reader_id=descriptor.reader_id,
+            reader_version=descriptor.reader_version,
+            api_version=READER_API_VERSION,
+            canonical_parameters=tuple(
+                sorted(parameters["canonical_parameters"].items())
+            ),
+            parsed_batch=internal,
+            revision_id=request.request_id,
+        )
+        _validate_internal_batch_graph(internal)
+        batch = public_batch_from_internal(internal)
+    except (PublicBatchError, TypeError, ValueError, KeyError, OSError) as error:
+        raise OperationError(
+            "reader_output_invalid",
+            "reader result did not satisfy the import identity contract",
+        ) from error
 
     task_directory = Path(context.task_directory).resolve(strict=True)
     bundle = task_directory / "reader-bundle"

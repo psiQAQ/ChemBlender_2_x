@@ -384,6 +384,41 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
             ("preflight.invalid_reader_result",),
         )
 
+    def test_invalid_reader_result_removes_its_staging_artifacts(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        structure = Structure(
+            id=uuid4(),
+            revision="structure-r1",
+            atomic_numbers=(1,),
+            coordinates=ArrayData(
+                numpy.asarray(((0.0, 0.0, 0.0),)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        )
+
+        def invalid_result(request):
+            (request.staging_root / "orphan.bin").write_bytes(b"orphan")
+            return PublicImportBatch(structures=(structure,))
+
+        session = self.session()
+        preview = preflight_reader_plugins(
+            self.request(source),
+            ReaderPluginRegistry((
+                _Plugin(_descriptor(), invalid_result),
+            )),
+            session,
+        )
+        staged = session.result(preview.staged_batch_ids[0])
+
+        self.assertEqual(staged.structures, ())
+        self.assertEqual(
+            tuple(item.code for item in staged.diagnostics),
+            ("preflight.invalid_reader_result",),
+        )
+        self.assertEqual(tuple(session.artifact_root.iterdir()), ())
+
     def test_sniff_prefix_is_bounded_and_cancellation_is_typed(self):
         source = self.root / "source.ext"
         source.write_bytes(b"x" * 70000)
@@ -644,6 +679,7 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
 
             def parse(self, request):
                 self.parsing = True
+                (request.staging_root / "orphan.bin").write_bytes(b"orphan")
                 request.is_cancelled()
                 return PublicImportBatch()
 
@@ -666,6 +702,7 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                 is_cancelled=one_shot_cancel,
             )
         self.assertEqual(session.result_ids, ())
+        self.assertEqual(tuple(session.artifact_root.iterdir()), ())
 
     def test_host_callback_failures_escape_plugin_failure_staging(self):
         source = self.root / "source.ext"

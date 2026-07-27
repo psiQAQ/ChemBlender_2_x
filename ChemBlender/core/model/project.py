@@ -821,7 +821,7 @@ class QCProject:
                 all_ids - diagnostic_ids,
                 "provenance parent",
             )
-        if batch.report is not None and set(batch.report.created_entity_ids) != set(
+        if batch.report is not None and batch.report.created_entity_ids != tuple(
             entity.id
             for group in incoming_entity_groups
             for entity in group
