@@ -124,6 +124,8 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/core/model/periodic.py` | `BandStructure`、`DensityOfStates`、`PhononModeSet`、`FermiSurfaceMesh` | 定义能带、DOS、声子模式和费米面网格等周期体系数据集。 |
 | `ChemBlender/core/model/topology.py` | `TopologyGraph`、`TopologyConnection`、`TopologyPath` | 定义临界点、连接和路径组成的中立拓扑图，并校验结构/网格引用所需的局部语义。 |
 | `ChemBlender/core/model/project.py` | `CalculationRecord`、`ProvenanceRecord`、`ImportBatch`、`QCProject`、`validate_project_graph()` | 定义交换 envelope、计算/溯源记录和项目聚合根；原子提交 source/revision、topology、diagnostic 与科学实体，并校验 topology→Structure、Structure→topology、provenance、数组边界、全局 registry UUID 和双向 revision-diagnostic 关系；`validate_project_graph()` 以一次临时 `QCProject.commit()` 和 calculation-group 提交复验完整已存在图。 |
+| `ChemBlender/core/topology/radii.py` | `covalent_radius_angstrom()`、`is_metal()` | 把既有 `Chem_data.ELEMENTS_DEFAULT` 和 metals 表投影为纯 Python 拓扑推断查询，不导入 RDKit 或 Blender。 |
+| `ChemBlender/core/topology/infer.py` | `TopologyInferenceSettings`、`infer_distance_topology()` | 对 angstrom/bohr 非周期 Structure 使用 27 邻格空间 cell list 生成确定性距离拓扑；记录全部设置、源 Structure revision 和 provenance，重复近点以 INVALID parser issue 阻断，金属配位保持 ambiguous/零键级。 |
 | `ChemBlender/core/session.py` | `ProjectSession`、`create_session()`、`close_session()` | 在冻结科学模型之外管理可变会话状态；`mark_clean()` 仅显式清空已记录 dirty reasons；创建带 UUID ownership marker 的临时根，并在关闭 lazy resources 后仅删除标记匹配的受控目录。 |
 | `ChemBlender/core/project_service.py` | `save_project_session()`、`save_project_session_for_scenes()`、`sync_project_session_links_for_scenes()`、`verify_project_session()`、`verify_project_session_for_scenes()`、`relink_project_session()`、`relink_project_session_for_scenes()`、`clear_derived_cache()` | 编排原子 sidecar publication 与经 hash 验证的 Scene link；link-only 同步只打开验证现有 sidecar 一次，精确 no-op 或只补空 Scene/移动后的 locator，不改 manifest、generation 或 authoritative arrays，partial/conflicting link 必须显式 relink。多 Scene relink 只打开候选一次，先快照全部四字段再写同一 UUID、schema、locator 与 manifest hash，任一写入或采用失败时恢复全部 Scene；rollback 不完整时保留原错误、逐 Scene/key failure 和 residual keys，全部写成功后才采用候选并关闭旧 project。单 Scene relink 保持兼容 wrapper。恢复时忽略空 Scene、只采纳一次相同有效 link，并对冲突有效 link fail-closed；另以显式状态恢复 session，并仅清理 `.cbq/cache/derivation/` 与 `.cbq/cache/render/` 非权威缓存。 |
 | `ChemBlender/core/import_pipeline/__init__.py` | 模块级显式 re-export | 导入流水线的纯 Python package 门面；公开 request、preview、staging、preflight、conflict 与 grouping 契约，不加载 Blender 或可选科学栈。 |
@@ -213,6 +215,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/scripts/verify_release_artifact.py` | `verify_artifact()`、`main()` | 使用同一 `ReleaseMetadata` 和 shared release version parser 校验 stable/prerelease tag、Release ZIP/checksum 名称、SHA-256、路径安全、必需/禁止内容和 manifest contract。 |
 | `ChemBlender/scripts/extract_release_notes.py` | `extract_release_notes()`、`main()` | 先经 shared release version parser 校验 stable/prerelease version，再从 `CHANGELOG.md` 精确提取一个 dated、非空 Release body。 |
 | `ChemBlender/scripts/benchmark_sidecar.py` | `run_benchmark()`、`main()` | 对代表性结构、轨迹、轨道和网格 `.npy` 写入/打开/切片性能进行基准测量。 |
+| `ChemBlender/scripts/benchmark_topology.py` | `run_benchmark()`、`main()` | 以 25k/50k 稀疏原子生成器记录非周期空间 cell-list 推断的 median、p95 和倍增比例，并执行 50k/3s 与低于三倍的倍增门。 |
 
 ## 外部 worker
 

@@ -57,7 +57,7 @@ Run model, migration, existing readers and sidecar tests; commit.
 **Interfaces:**
 - Produces: `infer_distance_topology(structure, settings) -> ImportBatch`.
 
-- [ ] **Step 1: Define settings**
+- [x] **Step 1: Define settings**
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -72,19 +72,19 @@ class TopologyInferenceSettings:
 
 Validate finite positive values and supported mode.
 
-- [ ] **Step 2: Write chemistry and edge-case tests**
+- [x] **Step 2: Write chemistry and edge-case tests**
 
 Water, benzene, disconnected fragments, close duplicate atoms, metal complex and 50k generated grid. Assert duplicates yield Invalid diagnostic, metal bonds are coordination/ambiguous and no duplicate edges.
 
-- [ ] **Step 3: Implement spatial cell list**
+- [x] **Step 3: Implement spatial cell list**
 
 Convert coordinates to angstrom. Bin by the maximum possible cutoff. Inspect 27 neighboring bins. Apply pair cutoff and coordination constraints deterministically. Sort edges lexicographically.
 
-- [ ] **Step 4: Add provenance and benchmark**
+- [x] **Step 4: Add provenance and benchmark**
 
 Return a derived TopologyRecord with all settings and source structure revision. Benchmark confirms subquadratic behavior and records median/p95.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 Commit inference and benchmark.
 
