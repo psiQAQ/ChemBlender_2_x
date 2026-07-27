@@ -6,8 +6,10 @@ from . import model
 _MODEL_TYPE_NAMES = (
     "ArrayData", "CIFEnvelope", "QCSchemaEnvelope", "CJSONEnvelope",
     "PeriodicSiteData", "MolecularTopology", "TopologyRecord", "Structure", "SymmetryResult",
-    "CalculationMetadata", "CalculationRecord", "PropertyDataset",
-    "AtomicProperty", "FrameSet", "VibrationalModeSet", "ExcitationContribution",
+    "CalculationMetadata", "CalculationRecord", "CategoricalData",
+    "PropertyDataset", "AtomicProperty", "FrameSet", "FrameProperty",
+    "AtomFrameProperty", "CellFrameProperty", "VibrationalModeSet",
+    "ExcitationContribution",
     "ExcitedStateReferences", "ExcitedStateSet", "Spectrum", "BandPathBranch",
     "BandStructure", "DensityOfStates", "PhononModeSet", "SurfaceProperty",
     "FermiSurfaceMesh", "TopologyConnection", "TopologyPath", "TopologyGraph",

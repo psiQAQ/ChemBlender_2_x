@@ -9,16 +9,16 @@ from ChemBlender.core.model_registry import MODEL_ENUMS, MODEL_TYPES
 
 PUBLIC_CORE_NAMES = (
     "AnalysisReportError", "AmbiguousReaderError", "ASE_STRUCTURE_READER",
-    "ASEDependencyError", "ArrayData", "AtomicProperty", "BandPathBranch",
+    "ASEDependencyError", "ArrayData", "AtomicProperty", "AtomFrameProperty", "BandPathBranch",
     "BandStructure", "BasisConvention", "BasisFunctionKind", "BasisSet",
     "BasisShell", "CalculationRecord", "CalculationMetadata", "CalculationGroup",
-    "CalculationStatus", "CriticalPointKind", "CJSONEnvelope", "CJSON_READER",
+    "CalculationStatus", "CategoricalData", "CriticalPointKind", "CJSONEnvelope", "CJSON_READER",
     "CJSONCompatibilityError", "CJSONError", "CacheIdentityError", "CacheClearResult", "CIFEnvelope",
     "CapabilitySupport", "CCLIB_OUTPUT_READER", "CCLibDependencyError", "CIF_READER",
     "CUBE_READER", "DatasetStatus", "DiagnosticSeverity", "DiagnosticValue",
     "DensityMatrix", "DensityMatrixLevel",
     "DensityMatrixSpin", "DensityOfStates", "EnergyReference",
-    "ExcitationContribution", "ExcitedStateReferences", "ExcitedStateSet", "FrameSet",
+    "ExcitationContribution", "ExcitedStateReferences", "ExcitedStateSet", "FrameSet", "FrameProperty",
     "FrameCacheInfo", "FermiSurfaceMesh", "GemmiDependencyError", "Grid3D",
     "GBasisDependencyError", "ImportBatch", "ImportDiagnostic", "IssueKind", "LazyNpyArray",
     "IODATA_WAVEFUNCTION_READER", "IODataDependencyError", "MOL_V2000_READER",
@@ -34,7 +34,7 @@ PUBLIC_CORE_NAMES = (
     "SourceRecord", "SourceRevision", "Spectrum", "SpectrumKind", "SpectrumProfile", "SpinChannel", "SceneBindingSpec",
     "ScenePresetDefinition", "ScenePresetError", "ScenePresetPlan",
     "SidecarCompatibilityError", "SidecarError", "SidecarIntegrityError", "SidecarNotFoundError",
-    "SpglibDependencyError", "Structure", "SurfaceProperty", "TopologyConnection",
+    "SpglibDependencyError", "Structure", "SurfaceProperty", "CellFrameProperty", "TopologyConnection",
     "TopologyGraph", "TopologyPath", "SymmetryResult", "VibrationalModeSet",
     "TrajectoryFrameManager", "XYZ_READER", "adapt_ase_atoms", "build_analysis_report",
     "export_qcschema", "export_cjson", "export_qcschema_atomic_result", "parse_cube",
@@ -71,7 +71,7 @@ class CorePublicApiTests(unittest.TestCase):
     def test_public_names_are_frozen(self):
         self.assertEqual(tuple(core.__all__), PUBLIC_CORE_NAMES)
         self.assertEqual(len(core.__all__), len(set(core.__all__)))
-        self.assertEqual(len(core.__all__), 206)
+        self.assertEqual(len(core.__all__), 210)
 
     def test_public_names_resolve_to_attributes(self):
         missing = [name for name in core.__all__ if not hasattr(core, name)]

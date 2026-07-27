@@ -1,4 +1,5 @@
 from .arrays import ArrayData
+from .categorical import CategoricalData
 from .common import (
     BasisFunctionKind,
     CalculationStatus,
@@ -43,7 +44,14 @@ from .project import (
     QCSchemaEnvelope,
 )
 from .sources import SourceRecord, SourceRevision, source_parse_identity
-from .properties import AtomicProperty, FrameSet, PropertyDataset
+from .properties import (
+    AtomicProperty,
+    AtomFrameProperty,
+    CellFrameProperty,
+    FrameProperty,
+    FrameSet,
+    PropertyDataset,
+)
 from .spectroscopy import (
     ExcitationContribution,
     ExcitedStateReferences,

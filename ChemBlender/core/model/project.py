@@ -22,7 +22,14 @@ from .periodic import (
     FermiSurfaceMesh,
     PhononModeSet,
 )
-from .properties import AtomicProperty, FrameSet, PropertyDataset
+from .properties import (
+    AtomicProperty,
+    AtomFrameProperty,
+    CellFrameProperty,
+    FrameProperty,
+    FrameSet,
+    PropertyDataset,
+)
 from .sources import SourceRecord, SourceRevision
 from .spectroscopy import (
     ExcitedStateSet,
@@ -527,6 +534,26 @@ class QCProject:
                 if dataset.data.unit != reference.coordinates.unit:
                     raise ValueError(
                         "FrameSet and structure coordinate units must match"
+                    )
+            if isinstance(
+                dataset,
+                (FrameProperty, AtomFrameProperty, CellFrameProperty),
+            ):
+                frames = datasets.get(dataset.frame_set_id)
+                if not isinstance(frames, FrameSet):
+                    raise ValueError(
+                        f"{type(dataset).__name__} has a dangling FrameSet reference"
+                    )
+                if dataset.data.shape[0] != frames.data.shape[0]:
+                    raise ValueError(
+                        f"{type(dataset).__name__} frame dimension must match its FrameSet"
+                    )
+                if (
+                    isinstance(dataset, AtomFrameProperty)
+                    and dataset.data.shape[1] != frames.data.shape[1]
+                ):
+                    raise ValueError(
+                        "AtomFrameProperty atom dimension must match its FrameSet"
                     )
             if isinstance(dataset, VibrationalModeSet):
                 try:

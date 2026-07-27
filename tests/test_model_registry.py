@@ -28,8 +28,9 @@ from tests.test_sidecar_storage import PROJECT_ID, sample_project
 EXPECTED_MODEL_TYPES = {
     "ArrayData", "CIFEnvelope", "QCSchemaEnvelope", "CJSONEnvelope",
     "PeriodicSiteData", "MolecularTopology", "TopologyRecord", "Structure", "SymmetryResult",
-    "CalculationMetadata", "CalculationRecord", "PropertyDataset",
-    "AtomicProperty", "FrameSet", "VibrationalModeSet",
+    "CalculationMetadata", "CalculationRecord", "CategoricalData",
+    "PropertyDataset", "AtomicProperty", "FrameSet", "FrameProperty",
+    "AtomFrameProperty", "CellFrameProperty", "VibrationalModeSet",
     "ExcitationContribution", "ExcitedStateReferences", "ExcitedStateSet",
     "Spectrum", "BandPathBranch", "BandStructure", "DensityOfStates",
     "PhononModeSet", "SurfaceProperty", "FermiSurfaceMesh",
