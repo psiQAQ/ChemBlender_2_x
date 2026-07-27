@@ -421,12 +421,15 @@ def preflight_reader_plugins(
             progress("parse", completed + 3, total)
             _check_cancelled(is_cancelled)
         except BaseException:
-            if (
-                reader_staging_root is not None
-                and reader_staging_root.exists()
-            ):
-                _close_memmaps(internal, set())
-                _remove_reader_staging_root(reader_staging_root)
+            try:
+                if (
+                    reader_staging_root is not None
+                    and reader_staging_root.exists()
+                ):
+                    _close_memmaps(internal, set())
+                    _remove_reader_staging_root(reader_staging_root)
+            except BaseException:
+                pass
             raise
         source_previews.append(_register_preview(
             source,

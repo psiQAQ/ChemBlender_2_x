@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from dataclasses import replace
@@ -14,6 +15,7 @@ from ChemBlender.core import (
     CapabilitySupport,
     ImportBatch,
     QCProject,
+    ReaderDescriptor,
     SourceRecord,
     SourceRevision,
     Structure,
@@ -45,6 +47,7 @@ from ChemBlender.reader_api import (
     builtin_reader_plugin_registry,
 )
 from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from ChemBlender.reader_api.registry import _builtin_manifest, _builtin_plugin
 from ChemBlender.runtime.reader_api_bridge import (
     get_reader_plugin_registry,
     register_reader_api_handle,
@@ -727,6 +730,80 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
             preflight_reader_plugins(
                 self.request(source),
                 builtin_reader_plugin_registry(),
+                session,
+                progress=progress,
+                is_cancelled=cancel_at_terminal_check,
+            )
+
+        self.assertEqual(session.result_ids, ())
+        self.assertEqual(tuple(session.artifact_root.iterdir()), ())
+
+    @unittest.skipUnless(os.name == "nt", "Windows file ownership regression")
+    def test_terminal_cancellation_releases_memmap_backed_memoryview(self):
+        source = self.root / "memoryview.synthetic"
+        source.write_bytes(b"memoryview")
+        session = self.session()
+        checks_before_terminal = None
+
+        def parse(request):
+            array_path = request.staging_root / "coordinates.npy"
+            numpy.save(array_path, numpy.zeros((1, 3)))
+            mapped = numpy.load(array_path, mmap_mode="r")
+            structures = tuple(
+                Structure(
+                    id=uuid4(),
+                    revision=f"structure-{index}-r1",
+                    atomic_numbers=(1,),
+                    coordinates=ArrayData(
+                        values,
+                        ("atom", "xyz"),
+                        "angstrom",
+                    ),
+                )
+                for index, values in enumerate((
+                    memoryview(mapped),
+                    memoryview(mapped.view(numpy.ndarray)),
+                ))
+            )
+            return ImportBatch(structures=structures)
+
+        descriptor = ReaderDescriptor(
+            reader_id="memoryview",
+            reader_version="1",
+            extensions=(".synthetic",),
+            capabilities={"structure": CapabilitySupport.SUPPORTED},
+            priority=100,
+            sniff=lambda path, prefix: SniffResult(
+                SniffMatch.EXACT, "fixture"
+            ),
+            parse=lambda path: ImportBatch(),
+            parse_request=parse,
+        )
+        registry = ReaderPluginRegistry((
+            _builtin_plugin(
+                descriptor,
+                _builtin_manifest((descriptor,)),
+            ),
+        ))
+
+        def progress(stage, completed, total):
+            nonlocal checks_before_terminal
+            if stage == "reader.parse" and completed == total == 1:
+                checks_before_terminal = 2
+
+        def cancel_at_terminal_check():
+            nonlocal checks_before_terminal
+            if checks_before_terminal is None:
+                return False
+            if checks_before_terminal:
+                checks_before_terminal -= 1
+                return False
+            return True
+
+        with self.assertRaises(ImportCancelled):
+            preflight_reader_plugins(
+                self.request(source),
+                registry,
                 session,
                 progress=progress,
                 is_cancelled=cancel_at_terminal_check,

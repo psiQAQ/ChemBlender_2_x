@@ -9,24 +9,55 @@ from ..model import ImportBatch
 _OWNER_MARKER = ".chemblender-import-owner"
 
 
-def _close_memmaps(value, seen):
-    import numpy
-
+def _collect_mapped_buffers(value, seen, views, memmaps, numpy):
     identity = id(value)
     if identity in seen:
         return
     seen.add(identity)
+    if isinstance(value, memoryview):
+        try:
+            owner = value.obj
+        except ValueError:
+            return
+        views.append(value)
+        _collect_mapped_buffers(owner, seen, views, memmaps, numpy)
+        return
     if isinstance(value, numpy.memmap):
-        mmap = getattr(value, "_mmap", None)
-        if mmap is not None:
-            mmap.close()
+        memmaps.append(value)
+        return
+    if isinstance(value, numpy.ndarray):
+        base = getattr(value, "base", None)
+        if base is not None:
+            _collect_mapped_buffers(base, seen, views, memmaps, numpy)
         return
     if isinstance(value, tuple):
         for item in value:
-            _close_memmaps(item, seen)
+            _collect_mapped_buffers(item, seen, views, memmaps, numpy)
     elif is_dataclass(value):
         for field in fields(value):
-            _close_memmaps(getattr(value, field.name), seen)
+            _collect_mapped_buffers(
+                getattr(value, field.name),
+                seen,
+                views,
+                memmaps,
+                numpy,
+            )
+
+
+def _close_memmaps(value, seen):
+    import numpy
+
+    views = []
+    memmaps = []
+    _collect_mapped_buffers(value, seen, views, memmaps, numpy)
+    for view in reversed(views):
+        view.release()
+    closed = set()
+    for value in memmaps:
+        mmap = getattr(value, "_mmap", None)
+        if mmap is not None and id(mmap) not in closed:
+            mmap.close()
+            closed.add(id(mmap))
 
 
 def _is_link_like(path):
@@ -168,8 +199,7 @@ class StagedImportSession:
         ):
             raise RuntimeError("refusing to remove an unsafe artifact root")
 
-        for batch in self._results.values():
-            _close_memmaps(batch, set())
+        _close_memmaps(tuple(self._results.values()), set())
         shutil.rmtree(resolved)
         self._results.clear()
         self._discarded = True
