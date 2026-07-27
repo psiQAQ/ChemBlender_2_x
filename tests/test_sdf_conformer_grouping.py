@@ -227,6 +227,58 @@ class SDFConformerGroupingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "stale"):
             accept_conformer_group(suggestion, replace(batch, datasets=(changed,)))
 
+    def test_source_and_provenance_snapshot_changes_fail_closed(self):
+        from ChemBlender.core.import_pipeline.conformer_grouping import (
+            accept_conformer_group,
+            suggest_conformer_groups,
+        )
+
+        first = _molecule("FC(Cl)(Br)I", atom_maps=True)
+        second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
+        batch = _batch((first, ()), (second, ()))
+        suggestion = suggest_conformer_groups(batch)[0]
+        mutations = (
+            (
+                "record source revision",
+                replace(
+                    batch,
+                    molecular_records=(
+                        replace(batch.molecular_records[0], source_revision_id=uuid4()),
+                        batch.molecular_records[1],
+                    ),
+                ),
+            ),
+            (
+                "record provenance",
+                replace(
+                    batch,
+                    molecular_records=(
+                        replace(batch.molecular_records[0], provenance_ids=(uuid4(),)),
+                        batch.molecular_records[1],
+                    ),
+                ),
+            ),
+            (
+                "topology provenance",
+                replace(
+                    batch,
+                    topologies=(
+                        replace(batch.topologies[0], provenance_ids=(uuid4(),)),
+                        batch.topologies[1],
+                    ),
+                ),
+            ),
+        )
+
+        for changed_name, changed_batch in mutations:
+            with self.subTest(changed=changed_name):
+                self.assertEqual(
+                    changed_batch.molecular_records[0].revision,
+                    batch.molecular_records[0].revision,
+                )
+                with self.assertRaisesRegex(ValueError, "stale"):
+                    accept_conformer_group(suggestion, changed_batch)
+
     def test_cancellation_is_checked_between_rdkit_records(self):
         from ChemBlender.core.import_pipeline.conformer_grouping import (
             ConformerGroupingCancelled,
@@ -309,7 +361,12 @@ class SDFConformerGroupingTests(unittest.TestCase):
         batch = _batch((first, ()), (second, ()))
         for fields in (
             {"source_kind": TopologySource.RDKIT_SANITIZED},
-            {"quality_status": QualityStatus.INVALID},
+            *({"quality_status": status} for status in (
+                QualityStatus.PARTIAL,
+                QualityStatus.AMBIGUOUS,
+                QualityStatus.INCOMPLETE,
+                QualityStatus.INVALID,
+            )),
         ):
             with self.subTest(fields=fields):
                 changed = replace(batch.topologies[1], **fields)

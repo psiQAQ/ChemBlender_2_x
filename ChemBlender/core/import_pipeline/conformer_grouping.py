@@ -234,7 +234,7 @@ def _ordered_records(batch):
         if (
             structure.atomic_identity is None
             or topology.source_kind is not TopologySource.EXPLICIT_FILE
-            or topology.quality_status is QualityStatus.INVALID
+            or topology.quality_status is not QualityStatus.COMPLETE
         ):
             continue
         entries.append((record, structure, topology))
@@ -432,7 +432,10 @@ def _snapshot(batch, members):
         identity = structure.atomic_identity
         rows.append(
             {
-                "record": (str(record.id), record.revision, record.record_key),
+                "record": (
+                    str(record.id), record.revision, record.record_key,
+                    str(record.source_revision_id), tuple(map(str, record.provenance_ids)),
+                ),
                 "structure": (
                     str(structure.id), structure.revision, structure.atomic_numbers,
                     structure.coordinates.unit, _array_snapshot(structure.coordinates),
@@ -449,6 +452,7 @@ def _snapshot(batch, members):
                     None if topology.aromatic_flags is None else _array_snapshot(topology.aromatic_flags),
                     None if topology.bond_lattice_shifts is None else _array_snapshot(topology.bond_lattice_shifts),
                     topology.stereo_labels,
+                    tuple(map(str, topology.provenance_ids)),
                 ),
             }
         )
