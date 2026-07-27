@@ -37,7 +37,7 @@ _INTEGER = re.compile(r"[+-]?\d+\Z", re.ASCII)
 _V2000_COUNTS = re.compile(br"\s*\d+\s+\d+.*V2000\Z")
 _V2000_ATOM = re.compile(br"\s*[+-]?(?:\d+\.\d*|\.\d+)\s+")
 _V3000_COUNTS = re.compile(
-    br"M[ \t]+V30[ \t]+COUNTS[ \t]+\d+[ \t]+\d+[ \t]+\d+[ \t]+\d+[ \t]+\d+\Z"
+    br"M +V30 +COUNTS +\d+ +\d+ +\d+ +\d+ +\d+\Z"
 )
 _V3000_ATOM = re.compile(br"M  V30 \d+ [A-Z][a-z]?(?:\s|\Z)")
 

@@ -426,7 +426,7 @@ class SDFReaderTests(unittest.TestCase):
         content = (
             b"large V3000\nChemBlender\n\n"
             b"  0  0  0     0  0            999 V3000\n"
-            b"M  V30 BEGIN CTAB\nM  V30 COUNTS\t  1200\t0  0\t0 0\nM  V30 BEGIN ATOM\n"
+            b"M  V30 BEGIN CTAB\nM  V30 COUNTS   1200  0   0 0  0\nM  V30 BEGIN ATOM\n"
             + atoms
             + b"M  V30 END ATOM\nM  V30 END CTAB\nM  END\n$$$$\n"
         )
@@ -437,6 +437,39 @@ class SDFReaderTests(unittest.TestCase):
             result = SDF_READER.sniff(source, content[:64 * 1024])
 
         self.assertIs(result.match, SniffMatch.PROBABLE)
+
+    def test_v3000_counts_extra_spaces_parse_with_rdkit(self) -> None:
+        from ChemBlender.core.formats.sdf import parse_sdf
+
+        mol = (Path(__file__).with_name("fixtures") / "mol" / "water-v3000.mol").read_bytes()
+        content = mol.replace(
+            b"M  V30 COUNTS 3 2 0 0 0",
+            b"M  V30 COUNTS   3  2   0 0  0",
+        ) + b"$$$$\n"
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "spaces-v3000.sdf"
+            source.write_bytes(content)
+            batch = parse_sdf(source)
+
+        self.assertEqual(len(batch.molecular_records), 1)
+
+    def test_tabbed_v3000_counts_prefix_is_not_probable(self) -> None:
+        from ChemBlender.core.formats.sdf import SDF_READER
+        from ChemBlender.core.readers import SniffMatch
+
+        content = (
+            b"tabbed V3000\nChemBlender\n\n"
+            b"  0  0  0     0  0            999 V3000\n"
+            b"M  V30 BEGIN CTAB\nM  V30 COUNTS\t3 2 0 0 0\n"
+            b"M  V30 BEGIN ATOM\nM  V30 1 C 0.0 0.0 0.0 0\n"
+            + b"x" * (64 * 1024)
+        )
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "tabbed-v3000.sdf"
+            source.write_bytes(content)
+            result = SDF_READER.sniff(source, content[:64 * 1024])
+
+        self.assertIs(result.match, SniffMatch.NONE)
 
     def test_record_keys_depend_on_source_identity_and_full_record_hash(self) -> None:
         from ChemBlender.core.formats.sdf import parse_sdf
