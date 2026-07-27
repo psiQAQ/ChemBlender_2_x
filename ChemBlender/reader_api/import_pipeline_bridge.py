@@ -14,7 +14,10 @@ from ..core.import_pipeline.preflight import (
 )
 from ..core.import_pipeline.preview import ImportPreview
 from ..core.import_pipeline.request import ImportRequest
-from ..core.import_pipeline.staging import StagedImportSession
+from ..core.import_pipeline.staging import (
+    StagedImportSession,
+    _close_memmaps,
+)
 from ..core.readers import (
     AmbiguousReaderError,
     CapabilitySupport,
@@ -293,6 +296,7 @@ def preflight_reader_plugins(
             for name, support in descriptor.capabilities.items()
             if support is not CapabilitySupport.UNSUPPORTED
         ))
+        reader_staging_root = None
         if not descriptor.availability.available:
             failure = (
                 "preflight.reader_unavailable",
@@ -413,6 +417,17 @@ def preflight_reader_plugins(
                 failure=failure,
                 revision_id=revision_id,
             )
+        try:
+            progress("parse", completed + 3, total)
+            _check_cancelled(is_cancelled)
+        except BaseException:
+            if (
+                reader_staging_root is not None
+                and reader_staging_root.exists()
+            ):
+                _close_memmaps(internal, set())
+                _remove_reader_staging_root(reader_staging_root)
+            raise
         source_previews.append(_register_preview(
             source,
             descriptor.reader_id,
@@ -425,8 +440,6 @@ def preflight_reader_plugins(
             diagnostic_ids,
             source_id=internal.sources[0].id,
         ))
-        progress("parse", completed + 3, total)
-        _check_cancelled(is_cancelled)
 
     return ImportPreview(
         session.id,

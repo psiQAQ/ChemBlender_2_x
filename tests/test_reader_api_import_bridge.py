@@ -704,6 +704,37 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
         self.assertEqual(session.result_ids, ())
         self.assertEqual(tuple(session.artifact_root.iterdir()), ())
 
+    def test_terminal_cancellation_rolls_back_successful_reader_artifacts(self):
+        source = FIXTURES / "extxyz" / "multiframe-cell.extxyz"
+        session = self.session()
+        checks_before_terminal = None
+
+        def progress(stage, completed, total):
+            nonlocal checks_before_terminal
+            if stage == "reader.parse" and completed == total == 1:
+                checks_before_terminal = 2
+
+        def cancel_at_terminal_check():
+            nonlocal checks_before_terminal
+            if checks_before_terminal is None:
+                return False
+            if checks_before_terminal:
+                checks_before_terminal -= 1
+                return False
+            return True
+
+        with self.assertRaises(ImportCancelled):
+            preflight_reader_plugins(
+                self.request(source),
+                builtin_reader_plugin_registry(),
+                session,
+                progress=progress,
+                is_cancelled=cancel_at_terminal_check,
+            )
+
+        self.assertEqual(session.result_ids, ())
+        self.assertEqual(tuple(session.artifact_root.iterdir()), ())
+
     def test_host_callback_failures_escape_plugin_failure_staging(self):
         source = self.root / "source.ext"
         source.write_bytes(b"fixture")

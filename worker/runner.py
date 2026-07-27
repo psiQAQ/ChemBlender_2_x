@@ -253,13 +253,13 @@ def run_request(request_path, result_path, registry, *, cancel_path=None):
                     )
                     try:
                         write_result(result_path, result)
-                    except Exception:
+                    except BaseException:
                         if not bundle_preexisting:
                             try:
                                 from .reader_operation import _remove_owned_bundle
 
                                 _remove_owned_bundle(task_directory, bundle)
-                            except Exception:
+                            except BaseException:
                                 pass
                         raise
                     return result

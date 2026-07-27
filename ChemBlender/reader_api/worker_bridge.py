@@ -1,6 +1,7 @@
 import hashlib
 import os
 import re
+import shutil
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from ..core.worker_protocol import (
@@ -171,6 +172,23 @@ def _bundle_inventory(root, artifact_paths):
         raise WorkerReaderIntegrityError("worker bundle inventory mismatch")
 
 
+def _remove_verified_bundle(root):
+    try:
+        root = Path(root).resolve(strict=True)
+        bundle = root / _BUNDLE_PATH
+        if _link_like(bundle) or not bundle.is_dir():
+            raise WorkerReaderIntegrityError(
+                "invalid worker reader bundle is unsafe"
+            )
+        shutil.rmtree(bundle)
+    except WorkerReaderIntegrityError:
+        raise
+    except OSError as error:
+        raise WorkerReaderIntegrityError(
+            "cannot remove invalid worker reader bundle"
+        ) from error
+
+
 def _file_sha256(path, is_cancelled=None):
     digest = hashlib.sha256()
     try:
@@ -269,8 +287,17 @@ def parse_with_worker(request, result, task_directory):
             raise WorkerReaderIntegrityError("worker artifact hash mismatch")
     try:
         public = read_public_batch_bundle(Path(task_directory) / _BUNDLE_PATH)
-        return internal_batch_from_public(public)
+        batch = internal_batch_from_public(public)
     except (CanonicalDocumentError, PublicBatchError) as error:
         raise WorkerReaderIntegrityError(
             "invalid worker reader canonical bundle"
         ) from error
+    if (
+        len(batch.source_revisions) != 1
+        or batch.source_revisions[0].id != request.request_id
+    ):
+        _remove_verified_bundle(task_directory)
+        raise WorkerReaderIntegrityError(
+            "worker source revision identity does not match request"
+        )
+    return batch

@@ -8,7 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy
 
@@ -39,6 +39,10 @@ from ChemBlender.reader_api.worker_bridge import (
     _WorkerReaderCancelled,
     _file_sha256,
     _task_file,
+)
+from ChemBlender.reader_api.canonical_document import (
+    read_public_batch_bundle,
+    write_public_batch_bundle,
 )
 from ChemBlender.reader_api.registry import (
     ReaderPluginRegistry,
@@ -379,6 +383,17 @@ class WorkerReaderOperationTests(unittest.TestCase):
         self.assertFalse((self.root / "reader-bundle").exists())
         self.assertIs(self.run_reader().status, WorkerStatus.SUCCESS)
 
+    def test_fatal_result_publication_failure_preserves_error_and_cleans_bundle(self):
+        with patch(
+            "worker.runner.write_result",
+            side_effect=SystemExit(9),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                self.run_reader()
+
+        self.assertEqual(raised.exception.code, 9)
+        self.assertFalse((self.root / "reader-bundle").exists())
+
     def test_failed_public_batch_is_not_published_as_success(self):
         self.source.write_bytes(b"not an XYZ document\n")
         result = self.run_reader(reader_request(sha256(self.source)))
@@ -437,6 +452,32 @@ class WorkerReaderOperationTests(unittest.TestCase):
                 replace(result, metadata=bad_metadata),
                 self.root,
             )
+
+    def test_main_process_rejects_and_cleans_self_consistent_wrong_revision_id(self):
+        result = self.run_reader()
+        bundle = self.root / "reader-bundle"
+        public = read_public_batch_bundle(bundle)
+        tampered = replace(
+            public,
+            source_revisions=(
+                replace(public.source_revisions[0], id=uuid4()),
+            ),
+        )
+        document = write_public_batch_bundle(bundle, tampered)
+        metadata = dict(result.metadata)
+        metadata["document_sha256"] = sha256(document)
+
+        with self.assertRaisesRegex(
+            WorkerReaderIntegrityError,
+            "revision identity",
+        ):
+            parse_with_worker(
+                self.request,
+                replace(result, metadata=metadata),
+                self.root,
+            )
+
+        self.assertFalse(bundle.exists())
 
     def test_main_process_rejects_tampered_array_artifact(self):
         result = self.run_reader()
