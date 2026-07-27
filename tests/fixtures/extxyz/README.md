@@ -4,6 +4,7 @@
 - `multiframe-cell.extxyz`: changing per-frame Lattice metadata.
 - `invalid-property.extxyz`: invalid zero-column `Properties` descriptor.
 - `libatoms-typed.extxyz`: libAtoms-style typed scalar/vector/matrix comment values.
+- `libatoms-legacy-array.extxyz`: backward-compatible whitespace-separated `{}` array.
 - `ase-lattice.extxyz`: ASE-style quoted Lattice and pbc values.
 - `ovito-properties.extxyz`: OVITO-compatible named particle columns.
 

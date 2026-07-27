@@ -22,6 +22,7 @@ _LOGICAL = {
     "false": False,
 }
 _DEFAULT_PROPERTIES = "species:S:1:pos:R:3"
+_RESERVED_COMMENT_KEYS = frozenset({"Lattice", "Properties", "pbc"})
 
 
 class ExtXYZSyntaxError(ValueError):
@@ -217,7 +218,9 @@ def _array_value(raw):
         return _promote(values)
     if raw.startswith("{"):
         content = raw[1:-1].strip()
-        items = _split_items(content)
+        if not content:
+            raise ValueError("array must contain at least one item")
+        items = _split_items(content) if "," in content else content.split()
         return _promote(tuple(_typed_value(item) for item in items))
     raise ValueError("unsupported array")
 
@@ -318,6 +321,10 @@ def parse_extxyz_comment(text):
         while index < len(text) and text[index].isspace():
             index += 1
         if index == len(text) or text[index] != "=":
+            if seen.intersection(_RESERVED_COMMENT_KEYS):
+                raise ExtXYZSyntaxError(
+                    "free text is not allowed after a reserved extXYZ marker"
+                )
             raise _PlainComment(f"extXYZ comment key {key!r} is missing '='")
         if requires_quoting:
             raise ExtXYZSyntaxError(

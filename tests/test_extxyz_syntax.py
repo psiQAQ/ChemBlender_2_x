@@ -95,14 +95,16 @@ class ExtXYZCommentTests(unittest.TestCase):
     def test_arrays_require_nonempty_comma_separated_items(self):
         parsed = parse_extxyz_comment(
             "empty=[] whitespace=[1 2] missing=[1,,2] "
-            "brace={1 2} unclosed=[1,2"
+            "empty_brace={} legacy={1 2} modern=[1,2] unclosed=[1,2"
         )
         values = {entry.key: entry for entry in parsed.entries}
 
-        for key in ("empty", "whitespace", "missing", "brace", "unclosed"):
+        for key in ("empty", "whitespace", "missing", "empty_brace", "unclosed"):
             with self.subTest(key=key):
                 self.assertIsNone(values[key].value)
                 self.assertIsNotNone(values[key].diagnostic)
+        self.assertEqual(values["legacy"].value, (1, 2))
+        self.assertEqual(values["modern"].value, (1, 2))
         self.assertEqual(values["unclosed"].raw_lexeme, "[1,2")
 
     def test_bare_special_characters_require_quoting_or_escaping(self):
@@ -180,6 +182,7 @@ class ExtXYZFrameIteratorTests(unittest.TestCase):
     def test_common_compatibility_fixtures_parse_without_runtime_dependencies(self):
         for name in (
             "libatoms-typed.extxyz",
+            "libatoms-legacy-array.extxyz",
             "ase-lattice.extxyz",
             "ovito-properties.extxyz",
             "multiframe-cell.extxyz",
@@ -224,6 +227,28 @@ class ExtXYZFrameIteratorTests(unittest.TestCase):
 
         self.assertEqual(values["energy"], -1)
         self.assertEqual(values["Lattice"], (1, 0, 0, 0, 1, 0, 0, 0, 1))
+
+    def test_reserved_marker_followed_by_free_text_never_drops_schema(self):
+        comments = (
+            "Properties=species:S:1:pos:R:3:force:R:3 trailing prose",
+            'Lattice="1 0 0 0 1 0 0 0 1" trailing prose',
+            'pbc="T T T" trailing prose',
+        )
+        for comment in comments:
+            with self.subTest(comment=comment):
+                with self.assertRaisesRegex(
+                    ExtXYZSyntaxError,
+                    "free text.*extXYZ marker",
+                ):
+                    tuple(
+                        iter_extxyz_frames(
+                            StringIO(
+                                "1\n"
+                                f"{comment}\n"
+                                "H 0 0 0 1 2 3\n"
+                            )
+                        )
+                    )
 
 
 if __name__ == "__main__":
