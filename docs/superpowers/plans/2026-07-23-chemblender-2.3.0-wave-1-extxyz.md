@@ -285,3 +285,17 @@ rollback for the staged memmap/NPY path.
 - [x] **Step 5: Verify and commit**
 
 Run Blender smoke with multi-frame extXYZ, save/reopen and force-vector view; run benchmark and document baseline.
+
+### Completion evidence
+
+- Final focused tests: `217/217 Passed`.
+- Final full tests: `1158 Passed / 28 Skipped / 0 Failed`.
+- Blender 5.1.2 validate, build, ZIP audit, isolated install, product smoke,
+  save/reopen, and reload x2: `Passed`.
+- Independent specification and code-quality reviews: `Clean`.
+- Medium real `preview_ready` median/p95:
+  `1.369213/1.374558 s`; the `0.5 s` budget is `Failed`.
+- Corrected reference-scale product Preview metric:
+  `Not Run / Not Claimed`.
+- Remote CI: `Not Run`.
+- Stop boundary: RDKit and Cube runtime implementation remain unstarted.
