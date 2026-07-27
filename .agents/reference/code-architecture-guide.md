@@ -172,6 +172,8 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
+| `ChemBlender/core/exporters/__init__.py` | 模块级 re-export | 暴露原生文本格式的纯 Python 导出入口、loss report 和语义比较器，不加载 Blender 或可选科学栈。 |
+| `ChemBlender/core/exporters/xyz.py` | `export_xyz()`、`export_extxyz()`、`semantic_extxyz_differences()` | 确定性、原子写入 XYZ/extXYZ；保留 typed frame/atom/cell property 与 validity，显式报告 partial/ambiguous loss，并按科学数据而非 UUID/空白比较 round-trip。 |
 | `ChemBlender/core/formats/__init__.py` | 模块级 re-export | 暴露低层、纯 Python 的原生文本格式语法入口，不注册 reader 或接触项目状态。 |
 | `ChemBlender/core/formats/extxyz.py` | `parse_extxyz()`、`sniff_extxyz()`、`iter_extxyz_frames()` | 原生选择并逐帧解析 extXYZ，将兼容帧映射为确定性 `Structure`、`FrameSet` 与 typed frame/atom/cell property；大型数组由 staging NPY memmap 持有，取消时清理，不依赖 ASE。 |
 | `ChemBlender/core/xyz.py` | `sniff_xyz()`、`parse_xyz()` | 读取单帧/多帧 XYZ 和受支持的 extXYZ lattice/PBC/property 子集，输出 `Structure`、`FrameSet` 和报告。 |

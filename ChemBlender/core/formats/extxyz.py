@@ -6,6 +6,7 @@ import json
 import math
 from pathlib import Path
 import re
+import shlex
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from ...Chem_data import ELEMENTS_DEFAULT
@@ -368,8 +369,8 @@ def _typed_value(raw):
             raise ValueError("quoted value has trailing characters")
         parts = decoded.split()
         values = tuple(_scalar(part) for part in parts)
-        if parts and all(type(value) is not str for value in values):
-            return _promote(values)[0] if len(values) == 1 else _promote(values)
+        if len(parts) > 1 and all(type(value) is not str for value in values):
+            return _promote(values)
         return decoded
     decoded = _decode_bare_value(raw)
     return _scalar(decoded)
@@ -600,7 +601,13 @@ def _iter_stream(stream):
                     f"extXYZ frame {frame_index} does not contain all "
                     "declared atom rows"
                 ) from error
-            columns = row.split()
+            try:
+                columns = shlex.split(row, comments=False, posix=True)
+            except ValueError as error:
+                raise ExtXYZSyntaxError(
+                    f"extXYZ frame {frame_index} atom {atom_index} "
+                    "has invalid quoted columns"
+                ) from error
             if len(columns) < width or (
                 explicit_properties and len(columns) != width
             ):
