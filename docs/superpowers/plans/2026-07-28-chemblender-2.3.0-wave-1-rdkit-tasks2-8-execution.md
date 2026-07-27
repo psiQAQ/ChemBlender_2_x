@@ -21,8 +21,8 @@ export reconstructs a temporary RDKit Mol from immutable project entities.
 | Task | State | Implementation commit | Review status |
 |---|---|---|---|
 | 2 Shared adapter | completed | `4ae1e027`, `a9e12c01`, `d74f10ff`, `b0537e5b` | SPEC PASS; QUALITY PASS |
-| 3 MOL reader | in_progress | — | — |
-| 4 SDF reader/recovery | pending | — | — |
+| 3 MOL reader | completed | `ef57adc2`, `5acfdf46` | SPEC PASS; QUALITY PASS |
+| 4 SDF reader/recovery | in_progress | — | — |
 | 5 Conformer grouping | pending | — | — |
 | 6 SMILES/3D | pending | — | — |
 | 7 Exporters | pending | — | — |

@@ -86,19 +86,19 @@ Run with the pinned RDKit in Blender Python and commit.
 **Interfaces:**
 - Produces: reader ID `mol`, version `2`, capabilities structure/topology/atomic_identity.
 
-- [ ] **Step 1: Write sniff tests**
+- [x] **Step 1: Write sniff tests**
 
 V2000 and V3000 content both match exact; `.mol` ordinary text does not. SDF with `$$$$` is routed to SDF reader, not MOL.
 
-- [ ] **Step 2: Implement block-version detection and adapter call**
+- [x] **Step 2: Implement block-version detection and adapter call**
 
 Read bytes, decode with replacement diagnostic if needed, reject multiple SDF records in MOL reader, and call RDKit common adapter.
 
-- [ ] **Step 3: Preserve old reader ID compatibility**
+- [x] **Step 3: Preserve old reader ID compatibility**
 
 Explicit `reader_id="mol-v2000"` may resolve to a deprecated alias that calls the new reader for V2000 only and reports the replacement. Built-in catalog advertises `mol` as primary.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run old/new tests and update capability matrix.
 
