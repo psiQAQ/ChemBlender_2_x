@@ -142,19 +142,19 @@ Run reader, preview, sidecar and record tests.
 **Interfaces:**
 - Produces: `suggest_conformer_groups(records) -> tuple[ConformerGroupSuggestion, ...]` and confirmation conversion to ConformerSet.
 
-- [ ] **Step 1: Write acceptance tests**
+- [x] **Step 1: Write acceptance tests**
 
 Records with same chemistry but reordered atoms group after deterministic atom mapping. Different bond order, formal charge or stereo do not group. Same atom count alone never groups.
 
-- [ ] **Step 2: Implement matching precedence**
+- [x] **Step 2: Implement matching precedence**
 
 Use atom-map numbers if complete and unique. Otherwise use RDKit canonical ranks and substructure isomorphism, then verify exact topology, formal charges, isotopes and stereochemistry. Record the mapping and evidence.
 
-- [ ] **Step 3: Build ConformerSet only on user acceptance**
+- [x] **Step 3: Build ConformerSet only on user acceptance**
 
 Reorder coordinates into reference atom order, preserve record keys and property columns, and create provenance describing grouping evidence.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run grouping and project validation tests.
 
