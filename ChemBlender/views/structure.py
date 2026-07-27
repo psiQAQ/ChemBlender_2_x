@@ -3,6 +3,7 @@ from math import isfinite
 
 from ..Chem_data import ELEMENTS_DEFAULT
 from ..core import Structure, TopologyRecord
+from ..core.topology.periodic import _pbc_primary_coordinates
 
 
 _ANGSTROM_SCALE = {"angstrom": 1.0, "bohr": 0.529177210903}
@@ -129,6 +130,13 @@ def _structure_view_data(structure, topology=None, settings=None):
         if structure.cell is None
         else numpy.asarray(structure.cell.values, dtype=float) * scale
     )
+    periodic_coordinates = coordinates
+    if structure.periodic is not None and numpy.any(shifts):
+        periodic_coordinates, _inverse_cell = _pbc_primary_coordinates(
+            coordinates,
+            cell,
+            structure.periodic.pbc,
+        )
     for bond_id, ((left, right), order, is_aromatic, shift) in enumerate(
         zip(indices, orders, aromatic, shifts)
     ):
@@ -156,11 +164,11 @@ def _structure_view_data(structure, topology=None, settings=None):
                 "atom_ids": (int(left), int(right)),
                 "lattice_shift": shift_tuple,
                 "coordinates": (
-                    tuple(map(float, coordinates[left])),
+                    tuple(map(float, periodic_coordinates[left])),
                     tuple(
                         map(
                             float,
-                            coordinates[right]
+                            periodic_coordinates[right]
                             + numpy.asarray(shift_tuple, dtype=float) @ cell,
                         )
                     ),

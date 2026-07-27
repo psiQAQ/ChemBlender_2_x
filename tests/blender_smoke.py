@@ -1746,7 +1746,7 @@ def assert_unwrapped_periodic_inference_view(module_key):
         "cartesian_pbc_modulo_one",
     ) in topology.inference_parameters
     obj = views.create_structure_view(
-        structure,
+        unwrapped,
         topology,
         name="ChemBlender periodic structure smoke",
         collection=bpy.context.scene.collection,
@@ -1754,6 +1754,7 @@ def assert_unwrapped_periodic_inference_view(module_key):
     try:
         assert len(obj.data.vertices) == 2
         assert len(obj.data.edges) == 0
+        assert numpy.allclose(obj.data.vertices[1].co, (11.8, 0.0, 0.0))
         assert obj["cb_periodic"] is True
         assert list(obj["cb_pbc"]) == [True, False, True]
         assert numpy.allclose(
@@ -1764,6 +1765,11 @@ def assert_unwrapped_periodic_inference_view(module_key):
         assert display["cb_structure_contract"] == "structure_periodic_display_v1"
         assert len(display.data.vertices) == 2
         assert len(display.data.edges) == 1
+        segment = numpy.asarray(
+            [tuple(vertex.co) for vertex in display.data.vertices]
+        )
+        assert numpy.allclose(segment, ((0.1, 0.0, 0.0), (-0.2, 0.0, 0.0)))
+        assert numpy.isclose(numpy.linalg.norm(segment[1] - segment[0]), 0.3)
         assert obj["cb_periodic_display_bond_count"] == 1
         assert any(
             item.get("cbq_contract") == "structure_periodic_display_v1"

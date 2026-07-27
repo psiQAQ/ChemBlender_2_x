@@ -13,23 +13,10 @@ from .infer import (
 )
 from .radii import covalent_radius_angstrom
 
-def infer_periodic_topology(structure, settings=None):
+
+def _pbc_primary_coordinates(coordinates, cell, pbc):
     import numpy
 
-    if not isinstance(structure, Structure) or structure.periodic is None:
-        raise TypeError("structure must be a periodic Structure")
-    if settings is None:
-        settings = TopologyInferenceSettings(periodic=True)
-    if not isinstance(settings, TopologyInferenceSettings):
-        raise TypeError("settings must be TopologyInferenceSettings")
-    if not settings.periodic:
-        raise ValueError("periodic topology inference requires periodic=True")
-
-    scale = _ANGSTROM_SCALE[structure.coordinates.unit]
-    coordinates = numpy.asarray(structure.coordinates.values, dtype=float) * scale
-    cell = numpy.asarray(structure.cell.values, dtype=float) * scale
-    if not numpy.all(numpy.isfinite(coordinates)):
-        raise ValueError("structure coordinates must be finite")
     inverse_cell = numpy.linalg.inv(cell)
     fractional = coordinates @ inverse_cell
     epsilon = numpy.finfo(fractional.dtype).eps
@@ -47,7 +34,7 @@ def infer_periodic_topology(structure, settings=None):
         numpy.abs(fractional) @ numpy.abs(cell)
     )
     roundoff += coordinate_roundoff @ numpy.abs(inverse_cell)
-    for axis, periodic in enumerate(structure.periodic.pbc):
+    for axis, periodic in enumerate(pbc):
         if periodic:
             column = fractional[:, axis]
             nearest = numpy.rint(column)
@@ -57,7 +44,31 @@ def infer_periodic_topology(structure, settings=None):
                 column,
             )
             column -= numpy.floor(column)
-    coordinates = fractional @ cell
+    return fractional @ cell, inverse_cell
+
+
+def infer_periodic_topology(structure, settings=None):
+    import numpy
+
+    if not isinstance(structure, Structure) or structure.periodic is None:
+        raise TypeError("structure must be a periodic Structure")
+    if settings is None:
+        settings = TopologyInferenceSettings(periodic=True)
+    if not isinstance(settings, TopologyInferenceSettings):
+        raise TypeError("settings must be TopologyInferenceSettings")
+    if not settings.periodic:
+        raise ValueError("periodic topology inference requires periodic=True")
+
+    scale = _ANGSTROM_SCALE[structure.coordinates.unit]
+    coordinates = numpy.asarray(structure.coordinates.values, dtype=float) * scale
+    cell = numpy.asarray(structure.cell.values, dtype=float) * scale
+    if not numpy.all(numpy.isfinite(coordinates)):
+        raise ValueError("structure coordinates must be finite")
+    coordinates, inverse_cell = _pbc_primary_coordinates(
+        coordinates,
+        cell,
+        structure.periodic.pbc,
+    )
     radii = numpy.fromiter(
         (covalent_radius_angstrom(number) for number in structure.atomic_numbers),
         dtype=float,
