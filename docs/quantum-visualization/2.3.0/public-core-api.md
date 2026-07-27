@@ -35,6 +35,8 @@ RDKit 对象，也不实现 reader、grouping、export 或 UI 行为。RDKit is 
 
 内置 `mol` v2 reader 通过 RDKit 提供单记录 MOL V2000/V3000 的结构、原子身份、拓扑和 `MolecularRecord`；`mol-v2000` 仅保留为 V2000 的显式兼容 alias，并在报告中提示改用 `mol`。
 
+内置 `sdf` reader 以原始字节逐条恢复多记录 SDF：每条 MOL block 和重复/空 SD 字段均保持独立 record 身份，Balanced 模式不会因单条坏记录而丢弃相邻有效记录；只为无歧义数值或布尔 SD 字段生成 typed record columns。
+
 ## Recipe 契约
 
 `RecipeDefinition`、绑定、参数、计划、校验与文档函数构成 Recipe 契约；其版本化数据定义是该契约的边界。

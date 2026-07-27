@@ -21,7 +21,7 @@ PUBLIC_CORE_NAMES = (
     "ExcitationContribution", "ExcitedStateReferences", "ExcitedStateSet", "FrameSet", "FrameProperty",
     "FrameCacheInfo", "FermiSurfaceMesh", "GemmiDependencyError", "Grid3D",
     "GBasisDependencyError", "ImportBatch", "ImportDiagnostic", "IssueKind", "LazyNpyArray",
-    "IODATA_WAVEFUNCTION_READER", "IODataDependencyError", "MOL_V2000_READER", "MOL_READER",
+    "IODATA_WAVEFUNCTION_READER", "IODataDependencyError", "MOL_V2000_READER", "MOL_READER", "SDF_READER",
     "MolecularTopology", "MolecularRecord", "RawRecordProperty", "RecordPropertyColumn", "TopologyRecord", "TopologySource", "OrbitalChannel", "OrbitalKind", "OrbitalSet", "ParserIssue",
     "ParserReport", "PeriodicSiteData", "PhononModeSet", "PhonopyDependencyError",
     "PYMATGEN_VASP_GRID_READER", "PYMATGEN_VASP_ELECTRONIC_READER",
@@ -40,7 +40,7 @@ PUBLIC_CORE_NAMES = (
     "export_qcschema", "export_cjson", "export_qcschema_atomic_result", "parse_cube",
     "parse_cjson", "parse_ase_structure", "parse_cclib_output", "parse_critic2_cpreport",
     "parse_qcschema", "parse_qcschema_atomic_result", "parse_qcschema_molecule", "parse_cif",
-    "parse_xyz", "parse_mol", "parse_mol_v2000", "sniff_qcschema", "sniff_cjson", "sniff_mol", "sniff_mol_v2000",
+    "parse_xyz", "parse_mol", "parse_sdf", "parse_mol_v2000", "sniff_qcschema", "sniff_cjson", "sniff_mol", "sniff_sdf", "sniff_mol_v2000",
     "sniff_cube", "sniff_ase_structure", "sniff_cclib_output", "sniff_cif", "sniff_xyz",
     "adapt_ccdata", "adapt_iodata", "adapt_vasp_volumetric", "adapt_pymatgen_electronic",
     "adapt_phonopy_qpoints", "adapt_pyprocar_fermi_surface", "parse_vasp_volumetric",
@@ -71,7 +71,7 @@ class CorePublicApiTests(unittest.TestCase):
     def test_public_names_are_frozen(self):
         self.assertEqual(tuple(core.__all__), PUBLIC_CORE_NAMES)
         self.assertEqual(len(core.__all__), len(set(core.__all__)))
-        self.assertEqual(len(core.__all__), 218)
+        self.assertEqual(len(core.__all__), 221)
 
     def test_public_names_resolve_to_attributes(self):
         missing = [name for name in core.__all__ if not hasattr(core, name)]
