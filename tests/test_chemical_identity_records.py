@@ -152,6 +152,7 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
             )
         for name, replacement in (
             ("source_record_index", -1),
+            ("block_version", "V4000"),
             ("writer_name", 1),
             ("writer_version", object()),
         ):
@@ -162,6 +163,11 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
 
     def test_record_property_column_masks_and_categorical_rules(self):
         record_ids = (uuid4(), uuid4())
+
+        class SubarrayValues:
+            shape = (2,)
+            dtype = numpy.dtype((numpy.float64, (2,)))
+
         complete = RecordPropertyColumn(
             id=uuid4(), revision="column-r1", semantic_role="energy", domain="record",
             data=array([1.0, 2.0], ("record",), "hartree"),
@@ -213,8 +219,10 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
             )
         for values in (
             numpy.asarray(["text", "value"]),
+            numpy.asarray([1.0 + 2.0j, 3.0 + 4.0j]),
             numpy.asarray([object(), object()], dtype=object),
             numpy.zeros(2, dtype=[("value", numpy.float64)]),
+            SubarrayValues(),
         ):
             with self.subTest(dtype=values.dtype), self.assertRaisesRegex(
                 TypeError, "numeric, logical or categorical"
@@ -236,6 +244,40 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                     status=DatasetStatus.COMPLETE, source_calculation=None,
                     provenance_ids=(), record_ids=record_ids_value,
                 )
+
+    def test_record_property_column_requires_finite_real_valid_values(self):
+        record_ids = (uuid4(), uuid4())
+
+        def column(values, status=DatasetStatus.COMPLETE, mask=None):
+            return RecordPropertyColumn(
+                id=uuid4(),
+                revision="finite-r1",
+                semantic_role="energy",
+                domain="record",
+                data=array(values, ("record",), "hartree"),
+                status=status,
+                source_calculation=None,
+                provenance_ids=(),
+                record_ids=record_ids,
+                validity_mask=mask,
+            )
+
+        with self.assertRaisesRegex(ValueError, "finite"):
+            column([1.0, numpy.inf])
+        with self.assertRaisesRegex(ValueError, "finite"):
+            column(
+                [numpy.nan, 7.0],
+                DatasetStatus.PARTIAL,
+                array([True, False], ("record",)),
+            )
+        self.assertIsInstance(
+            column(
+                [1.0, numpy.nan],
+                DatasetStatus.PARTIAL,
+                array([True, False], ("record",)),
+            ),
+            RecordPropertyColumn,
+        )
 
     def test_conformer_set_requires_permutation_mapping(self):
         molecule = structure()
@@ -274,6 +316,19 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                     }
                 )
         for name, replacement in (
+            ("semantic_role", "energy"),
+            ("domain", "record"),
+            (
+                "data",
+                array(
+                    [
+                        [[numpy.nan, 0.0, 0.0], [0.0, 0.0, 1.0]],
+                        [[0.0, 0.0, 0.1], [0.0, 0.0, 1.1]],
+                    ],
+                    ("conformer", "atom", "xyz"),
+                    "angstrom",
+                ),
+            ),
             ("data", array([[[0.0, 0.0, 0.0]]], ("conformer", "atom", "axis"), "angstrom")),
             ("data", array(numpy.empty((1, 0, 3)), ("conformer", "atom", "xyz"), "angstrom")),
             ("atom_mappings", array([[True, False], [False, True]], ("conformer", "atom"))),
@@ -287,6 +342,237 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
             fields[name] = replacement
             with self.subTest(name=name), self.assertRaises(ValueError):
                 ConformerSet(**fields)
+
+    def test_project_enforces_source_local_record_key_and_index_uniqueness(self):
+        molecule = structure()
+        source, revision = source_revision((molecule.id,))
+        first = record(molecule.id)
+        first = MolecularRecord(
+            **{
+                name: (
+                    revision.id
+                    if name == "source_revision_id"
+                    else getattr(first, name)
+                )
+                for name in first.__dataclass_fields__
+            }
+        )
+        for field, replacement in (
+            ("record_key", first.record_key),
+            ("source_record_index", first.source_record_index),
+        ):
+            second = record(molecule.id)
+            second_fields = {
+                name: (
+                    revision.id
+                    if name == "source_revision_id"
+                    else getattr(second, name)
+                )
+                for name in second.__dataclass_fields__
+            }
+            second_fields[field] = replacement
+            if field == "record_key":
+                second_fields["source_record_index"] = first.source_record_index + 1
+            else:
+                second_fields["record_key"] = "record-0002"
+            second = MolecularRecord(**second_fields)
+            batch_revision = SourceRevision(
+                **{
+                    name: (
+                        (molecule.id, first.id, second.id)
+                        if name == "created_entity_ids"
+                        else getattr(revision, name)
+                    )
+                    for name in revision.__dataclass_fields__
+                }
+            )
+            project = QCProject(uuid4(), "0.2")
+            with self.subTest(field=field), self.assertRaisesRegex(
+                ValueError, "source revision"
+            ):
+                project.commit(
+                    ImportBatch(
+                        sources=(source,),
+                        source_revisions=(batch_revision,),
+                        structures=(molecule,),
+                        molecular_records=(first, second),
+                    )
+                )
+            self.assertEqual(project.sources, {})
+            self.assertEqual(project.molecular_records, {})
+
+    def test_project_allows_the_same_record_key_and_index_in_other_revisions(self):
+        first_structure = structure()
+        second_structure = structure()
+        first_source, first_revision = source_revision((first_structure.id,))
+        second_source, second_revision = source_revision((second_structure.id,))
+        first = record(first_structure.id)
+        second = record(second_structure.id)
+        first = MolecularRecord(
+            **{
+                name: (
+                    first_revision.id
+                    if name == "source_revision_id"
+                    else getattr(first, name)
+                )
+                for name in first.__dataclass_fields__
+            }
+        )
+        second = MolecularRecord(
+            **{
+                name: (
+                    second_revision.id
+                    if name == "source_revision_id"
+                    else first.record_key
+                    if name == "record_key"
+                    else first.source_record_index
+                    if name == "source_record_index"
+                    else getattr(second, name)
+                )
+                for name in second.__dataclass_fields__
+            }
+        )
+        first_revision = SourceRevision(
+            **{
+                name: (
+                    (first_structure.id, first.id)
+                    if name == "created_entity_ids"
+                    else getattr(first_revision, name)
+                )
+                for name in first_revision.__dataclass_fields__
+            }
+        )
+        second_revision = SourceRevision(
+            **{
+                name: (
+                    (second_structure.id, second.id)
+                    if name == "created_entity_ids"
+                    else getattr(second_revision, name)
+                )
+                for name in second_revision.__dataclass_fields__
+            }
+        )
+        project = QCProject(uuid4(), "0.2")
+        project.commit(
+            ImportBatch(
+                sources=(first_source, second_source),
+                source_revisions=(first_revision, second_revision),
+                structures=(first_structure, second_structure),
+                molecular_records=(first, second),
+            )
+        )
+        self.assertEqual(set(project.molecular_records), {first.id, second.id})
+
+    def test_project_checks_record_uniqueness_against_existing_records(self):
+        molecule = structure()
+        source, revision = source_revision((molecule.id,))
+        first = record(molecule.id)
+        first = MolecularRecord(
+            **{
+                name: (
+                    revision.id
+                    if name == "source_revision_id"
+                    else getattr(first, name)
+                )
+                for name in first.__dataclass_fields__
+            }
+        )
+        revision = SourceRevision(
+            **{
+                name: (
+                    (molecule.id, first.id)
+                    if name == "created_entity_ids"
+                    else getattr(revision, name)
+                )
+                for name in revision.__dataclass_fields__
+            }
+        )
+        project = QCProject(uuid4(), "0.2")
+        project.commit(
+            ImportBatch(
+                sources=(source,),
+                source_revisions=(revision,),
+                structures=(molecule,),
+                molecular_records=(first,),
+            )
+        )
+        before = dict(project.molecular_records)
+        second = record(molecule.id)
+        second = MolecularRecord(
+            **{
+                name: (
+                    revision.id
+                    if name == "source_revision_id"
+                    else first.record_key
+                    if name == "record_key"
+                    else first.source_record_index + 1
+                    if name == "source_record_index"
+                    else getattr(second, name)
+                )
+                for name in second.__dataclass_fields__
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "source revision"):
+            project.commit(ImportBatch(molecular_records=(second,)))
+        self.assertEqual(project.molecular_records, before)
+
+    def test_project_rejects_conformer_record_key_mismatch_without_mutation(self):
+        molecule = structure()
+        value = record(molecule.id)
+        source, revision = source_revision((molecule.id, value.id))
+        value = MolecularRecord(
+            **{
+                name: (
+                    revision.id
+                    if name == "source_revision_id"
+                    else getattr(value, name)
+                )
+                for name in value.__dataclass_fields__
+            }
+        )
+        conformers = ConformerSet(
+            id=uuid4(),
+            revision="conformer-r1",
+            semantic_role="coordinates",
+            domain="conformer",
+            data=array(
+                [[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]],
+                ("conformer", "atom", "xyz"),
+                "angstrom",
+            ),
+            status=DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+            reference_structure_id=molecule.id,
+            reference_topology_id=None,
+            record_ids=(value.id,),
+            record_keys=("wrong-key",),
+            atom_mappings=array([[0, 1]], ("conformer", "atom")),
+        )
+        revision = SourceRevision(
+            **{
+                name: (
+                    (molecule.id, value.id, conformers.id)
+                    if name == "created_entity_ids"
+                    else getattr(revision, name)
+                )
+                for name in revision.__dataclass_fields__
+            }
+        )
+        project = QCProject(uuid4(), "0.2")
+        with self.assertRaisesRegex(ValueError, "record keys"):
+            project.commit(
+                ImportBatch(
+                    sources=(source,),
+                    source_revisions=(revision,),
+                    structures=(molecule,),
+                    molecular_records=(value,),
+                    datasets=(conformers,),
+                )
+            )
+        self.assertEqual(project.sources, {})
+        self.assertEqual(project.datasets, {})
 
     def test_atomic_identity_rejects_wrong_dims_categories_and_object_values(self):
         value = identity()
@@ -616,8 +902,9 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
         )
         column = RecordPropertyColumn(
             id=uuid4(), revision="energy-r1", semantic_role="energy", domain="record",
-            data=array([-1.0], ("record",), "hartree"), status=DatasetStatus.COMPLETE,
+            data=array([numpy.nan], ("record",), "hartree"), status=DatasetStatus.PARTIAL,
             source_calculation=None, provenance_ids=(), record_ids=(value.id,),
+            validity_mask=array([False], ("record",)),
         )
         conformers = ConformerSet(
             id=uuid4(), revision="conformers-r1", semantic_role="coordinates",
@@ -649,15 +936,23 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                 self.assertIsInstance(reopened.datasets[conformers.id], ConformerSet)
                 self.assertEqual(reopened.datasets[conformers.id].atom_mappings.shape, (1, 2))
                 column_values = reopened.datasets[column.id].data.values
+                mask_values = reopened.datasets[column.id].validity_mask.values
                 values = reopened.datasets[conformers.id].data.values
+                mapping_values = reopened.datasets[
+                    conformers.id
+                ].atom_mappings.values
                 self.assertFalse(column_values.loaded)
+                self.assertFalse(mask_values.loaded)
                 self.assertFalse(values.loaded)
+                self.assertFalse(mapping_values.loaded)
                 self.assertEqual(values[0, 0, 0], 0.0)
                 self.assertTrue(values.loaded)
             finally:
                 close_project(reopened)
             self.assertFalse(column_values.loaded)
+            self.assertFalse(mask_values.loaded)
             self.assertFalse(values.loaded)
+            self.assertFalse(mapping_values.loaded)
 
     def test_public_batch_rejects_unsafe_ndarray_dtypes(self):
         for values in (

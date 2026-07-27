@@ -98,7 +98,7 @@ class _Plugin:
         return SniffResult(SniffMatch.EXACT, "fixture")
 
     def parse(self, request):
-        return self._result
+        return self._result(request) if callable(self._result) else self._result
 
 
 def _descriptor(reader_id="external-reader", *, availability=None):
@@ -203,7 +203,7 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
             "local_file",
             "2026-07-25T00:00:00Z",
         )
-        revision = SourceRevision(
+        revision_template = SourceRevision(
             uuid4(),
             source_id,
             content_hash,
@@ -226,12 +226,22 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
             (structure.id,),
             (),
         )
-        public = PublicImportBatch(
-            sources=(source,),
-            source_revisions=(revision,),
-            structures=(structure,),
-        )
-        plugin = _Plugin(descriptor, public)
+        captured = {}
+
+        def matching_result(parse_request):
+            revision = replace(
+                revision_template,
+                id=parse_request.source_revision_id,
+            )
+            public = PublicImportBatch(
+                sources=(source,),
+                source_revisions=(revision,),
+                structures=(structure,),
+            )
+            captured.update(revision=revision, public=public)
+            return public
+
+        plugin = _Plugin(descriptor, matching_result)
         namespace = {}
         handle = register_reader_api_handle(
             "synthetic.chemblender", namespace=namespace
@@ -249,6 +259,8 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                 },
             )
             staged = session.result(preview.staged_batch_ids[0])
+            revision = captured["revision"]
+            public = captured["public"]
 
             self.assertIs(staged.sources[0], source)
             self.assertIs(staged.source_revisions[0], revision)
@@ -272,16 +284,23 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
 
                 close_session(project_session)
 
-            for invalid in (
-                replace(public, source_revisions=()),
-                replace(
+            for invalid_result in (
+                lambda parse_request: replace(
+                    public,
+                    source_revisions=(),
+                ),
+                lambda parse_request: replace(
                     public,
                     source_revisions=(
-                        replace(revision, original_filename="wrong.ext"),
+                        replace(
+                            revision,
+                            id=parse_request.source_revision_id,
+                            original_filename="wrong.ext",
+                        ),
                     ),
                 ),
             ):
-                plugin._result = invalid
+                plugin._result = invalid_result
                 invalid_session = self.session()
                 invalid_preview = preflight_reader_plugins(
                     request,
@@ -299,6 +318,33 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                     invalid_batch.diagnostics[0].code,
                     "preflight.invalid_reader_result",
                 )
+
+            plugin._result = lambda parse_request: replace(
+                captured["public"],
+                source_revisions=(
+                    replace(
+                        captured["revision"],
+                        id=uuid4(),
+                    ),
+                ),
+            )
+            mismatched_session = self.session()
+            mismatched_preview = preflight_reader_plugins(
+                request,
+                registry,
+                mismatched_session,
+                canonical_parameters_by_source={
+                    request_source_id: {"encoding": "utf-8"}
+                },
+            )
+            mismatched = mismatched_session.result(
+                mismatched_preview.staged_batch_ids[0]
+            )
+            self.assertEqual(mismatched.structures, ())
+            self.assertEqual(
+                mismatched.diagnostics[0].code,
+                "external-reader.invalid",
+            )
         finally:
             handle.unregister_callback(plugin.manifest)
             remove_reader_api_handle(handle, namespace=namespace)

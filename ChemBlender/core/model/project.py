@@ -360,6 +360,24 @@ class QCProject:
             (record.id, record) for record in batch.molecular_records
         )
         molecular_record_ids = set(molecular_records)
+        record_keys = set()
+        record_indices = set()
+        for record in molecular_records.values():
+            source_key = (record.source_revision_id, record.record_key)
+            source_index = (
+                record.source_revision_id,
+                record.source_record_index,
+            )
+            if source_key in record_keys:
+                raise ValueError(
+                    "molecular record key must be unique within its source revision"
+                )
+            if source_index in record_indices:
+                raise ValueError(
+                    "molecular record index must be unique within its source revision"
+                )
+            record_keys.add(source_key)
+            record_indices.add(source_index)
         cif_envelope_ids = set(self.cif_envelopes).union(
             envelope.id for envelope in batch.cif_envelopes
         )
@@ -559,6 +577,13 @@ class QCProject:
                 self._require_references(
                     dataset.record_ids, molecular_record_ids, "ConformerSet record"
                 )
+                if tuple(
+                    molecular_records[record_id].record_key
+                    for record_id in dataset.record_ids
+                ) != dataset.record_keys:
+                    raise ValueError(
+                        "ConformerSet record keys must match its records"
+                    )
             if isinstance(dataset, AtomicProperty):
                 try:
                     reference = structures[dataset.structure_id]

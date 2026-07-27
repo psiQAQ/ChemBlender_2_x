@@ -107,6 +107,7 @@ def _reader_parse(context, request):
             staging_root=context.task_directory,
             progress=lambda event: None,
             is_cancelled=context.is_cancelled,
+            source_revision_id=request.request_id,
         ),
     )
     if context.is_cancelled():
@@ -115,6 +116,8 @@ def _reader_parse(context, request):
         "sources",
         "source_revisions",
         "structures",
+        "topologies",
+        "molecular_records",
         "cif_envelopes",
         "qcschema_envelopes",
         "cjson_envelopes",

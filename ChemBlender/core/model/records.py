@@ -76,6 +76,8 @@ class MolecularRecord:
         ):
             if value is not None and not isinstance(value, str):
                 raise TypeError(f"{name} must be a string or None")
+        if self.block_version not in (None, "V2000", "V3000"):
+            raise ValueError("block_version must be V2000, V3000 or None")
         properties = tuple(self.ordered_raw_properties)
         if any(type(item) is not RawRecordProperty for item in properties):
             raise TypeError("ordered_raw_properties must contain RawRecordProperty values")
@@ -122,7 +124,7 @@ class RecordPropertyColumn(PropertyDataset):
         else:
             dtype = _array_dtype(self.data.values)
             numeric_or_logical = (
-                dtype.kind in "biufc"
+                dtype.kind in "biuf"
                 and not dtype.hasobject
                 and dtype.fields is None
                 and dtype.subdtype is None
@@ -137,6 +139,43 @@ class RecordPropertyColumn(PropertyDataset):
                 raise ValueError("Partial numeric or logical property requires a validity mask")
             if self.validity_mask is not None:
                 _record_mask(self.data, self.validity_mask)
+            values = self.data.values
+            mask_values = (
+                None
+                if self.validity_mask is None
+                else self.validity_mask.values
+            )
+            values_were_unloaded = getattr(values, "loaded", None) is False
+            mask_was_unloaded = (
+                mask_values is not None
+                and getattr(mask_values, "loaded", None) is False
+            )
+            try:
+                finite = numpy.isfinite(numpy.asarray(values))
+                if mask_values is None:
+                    valid_are_finite = bool(numpy.all(finite))
+                else:
+                    mask = numpy.asarray(mask_values).reshape(
+                        (self.data.shape[0],)
+                        + (1,) * (len(self.data.shape) - 1)
+                    )
+                    valid_are_finite = bool(
+                        numpy.logical_and.reduce(
+                            finite,
+                            axis=None,
+                            where=mask,
+                            initial=True,
+                        )
+                    )
+                if not valid_are_finite:
+                    raise ValueError(
+                        "RecordPropertyColumn valid values must be finite"
+                    )
+            finally:
+                if values_were_unloaded:
+                    values.close()
+                if mask_was_unloaded:
+                    mask_values.close()
         object.__setattr__(self, "record_ids", record_ids)
 
 
@@ -159,7 +198,8 @@ class ConformerSet(PropertyDataset):
             raise TypeError("ConformerSet data must be ArrayData")
         dtype = _array_dtype(self.data.values)
         if (
-            self.domain != "conformer"
+            self.semantic_role != "coordinates"
+            or self.domain != "conformer"
             or self.data.dims != ("conformer", "atom", "xyz")
             or any(size <= 0 for size in self.data.shape)
             or self.data.shape[2] != 3
@@ -170,20 +210,39 @@ class ConformerSet(PropertyDataset):
         ):
             raise ValueError("ConformerSet must use real positive conformer, atom and xyz coordinates")
         _require_known_length_unit(self.data.unit, "ConformerSet coordinate unit")
+        values = self.data.values
+        values_were_unloaded = getattr(values, "loaded", None) is False
+        try:
+            if not bool(numpy.all(numpy.isfinite(numpy.asarray(values)))):
+                raise ValueError("ConformerSet coordinates must be finite")
+        finally:
+            if values_were_unloaded:
+                values.close()
         if not isinstance(self.atom_mappings, ArrayData):
             raise TypeError("atom_mappings must be ArrayData")
-        mappings = numpy.asarray(self.atom_mappings.values)
-        if (
-            self.atom_mappings.dims != ("conformer", "atom")
-            or self.atom_mappings.shape != self.data.shape[:2]
-            or self.atom_mappings.unit != "dimensionless"
-            or mappings.dtype.kind not in "iu"
-            or mappings.dtype.kind == "b"
-        ):
-            raise ValueError("atom_mappings must be integer conformer atom mappings")
-        atom_count = self.data.shape[1]
-        if any(sorted(row.tolist()) != list(range(atom_count)) for row in mappings):
-            raise ValueError("each atom mapping must be a permutation")
+        mapping_values = self.atom_mappings.values
+        mappings_were_unloaded = (
+            getattr(mapping_values, "loaded", None) is False
+        )
+        try:
+            mappings = numpy.asarray(mapping_values)
+            if (
+                self.atom_mappings.dims != ("conformer", "atom")
+                or self.atom_mappings.shape != self.data.shape[:2]
+                or self.atom_mappings.unit != "dimensionless"
+                or mappings.dtype.kind not in "iu"
+                or mappings.dtype.kind == "b"
+            ):
+                raise ValueError("atom_mappings must be integer conformer atom mappings")
+            atom_count = self.data.shape[1]
+            if any(
+                sorted(row.tolist()) != list(range(atom_count))
+                for row in mappings
+            ):
+                raise ValueError("each atom mapping must be a permutation")
+        finally:
+            if mappings_were_unloaded:
+                mapping_values.close()
         record_ids = _require_uuid_tuple(self.record_ids, "record_ids")
         record_keys = tuple(self.record_keys)
         if (

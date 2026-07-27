@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 import re
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from ..core.import_pipeline.parse import stage_import_batch
 from ..core.import_pipeline.preflight import (
@@ -19,7 +19,12 @@ from ..core.readers import (
     CapabilitySupport,
     ReaderNotFoundError,
 )
-from .builtin_bridge import internal_batch_from_public
+from .builtin_bridge import (
+    PublicBatchError,
+    _internal_batch_from_public_unchecked,
+    _validate_internal_batch_graph,
+    internal_batch_from_public,
+)
 from .protocol import ParseRequest, ProgressEvent, SniffRequest
 from .public_model import PublicImportBatch
 from .registry import ReaderPluginRegistry, _BuiltinReaderPlugin
@@ -32,6 +37,8 @@ _RESERVED_PARAMETERS = frozenset(
 _PARAMETER = re.compile(r"[a-z][a-z0-9_.-]*", re.ASCII)
 _SCIENTIFIC_GROUPS = (
     "structures",
+    "topologies",
+    "molecular_records",
     "cif_envelopes",
     "qcschema_envelopes",
     "cjson_envelopes",
@@ -287,8 +294,10 @@ def preflight_reader_plugins(
                 "the selected reader cannot run in the current environment",
             )
             internal = None
+            revision_id = None
         else:
             progress("reader", completed + 2, total)
+            revision_id = uuid4()
             try:
                 public = registry.parse(
                     descriptor.reader_id,
@@ -300,6 +309,7 @@ def preflight_reader_plugins(
                         session.artifact_root,
                         _plugin_progress(progress, is_cancelled),
                         _cancel_callback(is_cancelled),
+                        revision_id,
                     ),
                 )
             except _BridgeCancelled:
@@ -322,13 +332,16 @@ def preflight_reader_plugins(
             else:
                 _check_cancelled(is_cancelled)
                 try:
-                    internal = internal_batch_from_public(public)
+                    plugin = registry._plugin(descriptor.reader_id)
+                    trusted_builtin = type(plugin) is _BuiltinReaderPlugin
+                    internal = (
+                        _internal_batch_from_public_unchecked(public)
+                        if trusted_builtin
+                        else internal_batch_from_public(public)
+                    )
                     supplied_identity = bool(
                         internal.sources or internal.source_revisions
                     )
-                    trusted_builtin = type(
-                        registry._plugin(descriptor.reader_id)
-                    ) is _BuiltinReaderPlugin
                     if (
                         not trusted_builtin
                         and _has_scientific_entities(internal)
@@ -349,9 +362,16 @@ def preflight_reader_plugins(
                         canonical_parameters=parameters,
                         parsed_batch=internal,
                         preserve_source_identity=supplied_identity,
+                        revision_id=revision_id,
                     )
+                    _validate_internal_batch_graph(internal)
                     failure = None
-                except (TypeError, ValueError, KeyError) as error:
+                except (
+                    PublicBatchError,
+                    TypeError,
+                    ValueError,
+                    KeyError,
+                ) as error:
                     internal = None
                     failure = (
                         "preflight.invalid_reader_result",
@@ -371,6 +391,7 @@ def preflight_reader_plugins(
                 api_version=READER_API_VERSION,
                 canonical_parameters=parameters,
                 failure=failure,
+                revision_id=revision_id,
             )
         source_previews.append(_register_preview(
             source,

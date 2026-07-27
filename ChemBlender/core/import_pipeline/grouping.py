@@ -25,6 +25,7 @@ _KIND_CONTRACT = {
 _ENTITY_GROUPS = (
     "structures",
     "topologies",
+    "molecular_records",
     "cif_envelopes",
     "qcschema_envelopes",
     "cjson_envelopes",

@@ -11,6 +11,7 @@ from ..core.readers import (
     SniffResult,
 )
 from .builtin_bridge import (
+    _internal_batch_from_public_unchecked,
     internal_batch_from_public,
     public_batch_from_internal,
 )
@@ -379,7 +380,18 @@ class ReaderPluginRegistry:
             result = plugin.parse(request)
             if type(result) is not PublicImportBatch:
                 raise TypeError("parse must return PublicImportBatch")
-            internal_batch_from_public(result)
+            if type(plugin) is _BuiltinReaderPlugin:
+                _internal_batch_from_public_unchecked(result)
+            else:
+                internal = internal_batch_from_public(result)
+                if internal.source_revisions and (
+                    len(internal.source_revisions) != 1
+                    or internal.source_revisions[0].id
+                    != request.source_revision_id
+                ):
+                    raise ValueError(
+                        "reader source revision identity does not match request"
+                    )
         except MemoryError:
             raise
         except Exception as error:

@@ -2,7 +2,7 @@ import hashlib
 import json
 from dataclasses import replace
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from ..model import (
     DiagnosticSeverity,
@@ -19,6 +19,7 @@ from ..model import (
 _ENTITY_GROUPS = (
     "structures",
     "topologies",
+    "molecular_records",
     "cif_envelopes",
     "qcschema_envelopes",
     "cjson_envelopes",
@@ -86,7 +87,10 @@ def stage_import_batch(
     parsed_batch=None,
     failure=None,
     preserve_source_identity=False,
+    revision_id=None,
 ):
+    if revision_id is not None and type(revision_id) is not UUID:
+        raise TypeError("revision_id must be a UUID or None")
     parsed_batch = ImportBatch() if parsed_batch is None else parsed_batch
     parameters = (
         (
@@ -125,10 +129,11 @@ def stage_import_batch(
             api_version=api_version,
             parameters_hash=parameters_hash,
             parse_identity=parse_identity,
+            revision_id=revision_id,
         )
         return parsed_batch
 
-    revision_id = uuid4()
+    revision_id = uuid4() if revision_id is None else revision_id
     diagnostics = [
         replace(item, source_revision_id=revision_id)
         for item in parsed_batch.diagnostics
@@ -213,6 +218,7 @@ def _validate_supplied_identity(
     api_version,
     parameters_hash,
     parse_identity,
+    revision_id,
 ):
     if len(batch.sources) != 1 or len(batch.source_revisions) != 1:
         raise ValueError(
@@ -255,6 +261,8 @@ def _validate_supplied_identity(
             tuple(item.id for item in batch.diagnostics),
         ),
     }
+    if revision_id is not None:
+        expected["revision id"] = (revision.id, revision_id)
     for name, (actual, wanted) in expected.items():
         if actual != wanted:
             raise ValueError(f"reader result {name} does not match import source")

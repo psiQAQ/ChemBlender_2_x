@@ -202,6 +202,7 @@ def envelope_batch(
     validation_mode="balanced",
     canonical_parameters=(),
     revisions=(),
+    revision_id=None,
 ):
     content_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
     source = SourceRecord(uuid4(), source_path.name, "file", "2026-07-25")
@@ -215,7 +216,7 @@ def envelope_batch(
         parameters = identity_parameters(validation_mode, canonical_parameters)
         revisions = (
             SourceRevision(
-                uuid4(),
+                uuid4() if revision_id is None else revision_id,
                 source.id,
                 content_hash,
                 source_path.stat().st_size,
@@ -559,6 +560,7 @@ class ReaderConformanceContractTests(unittest.TestCase):
                                     source,
                                     validation_mode="strict",
                                     canonical_parameters=parameters,
+                                    revision_id=request.source_revision_id,
                                 )
                             ),
                         )
@@ -659,7 +661,17 @@ class ReaderConformanceContractTests(unittest.TestCase):
                 ),
             )
             plugin = FactoryPlugin(
-                lambda request: public_batch_from_internal(internal)
+                lambda request: public_batch_from_internal(
+                    replace(
+                        internal,
+                        source_revisions=(
+                            replace(
+                                internal.source_revisions[0],
+                                id=request.source_revision_id,
+                            ),
+                        ),
+                    )
+                )
             )
             plugin.descriptor = descriptor(
                 plugin_id="chemblender.preflight", reader_version="0"
@@ -746,7 +758,12 @@ class ReaderConformanceContractTests(unittest.TestCase):
         with TemporaryDirectory() as temporary:
             source = Path(temporary) / "envelope.dat"
             source.write_bytes(b"fixture")
-            plugin = FactoryPlugin(lambda request: envelope_batch(source))
+            plugin = FactoryPlugin(
+                lambda request: envelope_batch(
+                    source,
+                    revision_id=request.source_revision_id,
+                )
+            )
             result = run_reader_conformance(
                 ReaderConformanceCase(
                     "envelope",

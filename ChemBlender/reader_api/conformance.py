@@ -6,6 +6,7 @@ from dataclasses import dataclass, fields, is_dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import MappingProxyType
+from uuid import uuid4
 
 from ..core.model.sources import source_parse_identity
 from ..core.readers import SniffResult
@@ -42,6 +43,8 @@ _CHECK_NAMES = (
 )
 _ENTITY_GROUPS = (
     "structures",
+    "topologies",
+    "molecular_records",
     "cif_envelopes",
     "qcschema_envelopes",
     "cjson_envelopes",
@@ -197,6 +200,7 @@ def _parse_request(case, source_hash, staging_root, is_cancelled=lambda: False):
         staging_root=staging_root,
         progress=lambda event: None,
         is_cancelled=is_cancelled,
+        source_revision_id=uuid4(),
     )
 
 
@@ -264,6 +268,7 @@ def run_reader_conformance(case):
     state = {
         "descriptor": None,
         "batch": None,
+        "parse_request": None,
         "source_hash": _source_hash(case.source_path),
         "isolated_exception_types": [],
     }
@@ -317,9 +322,15 @@ def run_reader_conformance(case):
 
     def parse_output():
         with TemporaryDirectory() as temporary:
+            request = _parse_request(
+                case,
+                state["source_hash"],
+                Path(temporary),
+            )
+            state["parse_request"] = request
             batch = case.registry.parse(
                 case.reader_id,
-                _parse_request(case, state["source_hash"], Path(temporary)),
+                request,
             )
         exception_type = case.registry._last_parse_exception_type
         if exception_type is not None:
@@ -355,7 +366,8 @@ def run_reader_conformance(case):
             )
             expected_parameters_hash = _identity_parameters_hash(parameters)
             valid = all(
-                value.content_hash == state["source_hash"]
+                value.id == state["parse_request"].source_revision_id
+                and value.content_hash == state["source_hash"]
                 and value.source_id in source_ids
                 and value.byte_size == case.source_path.stat().st_size
                 and value.original_filename == case.source_path.name

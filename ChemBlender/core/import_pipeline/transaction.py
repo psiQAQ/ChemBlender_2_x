@@ -33,6 +33,7 @@ from .staging import StagedImportSession
 _BATCH_ENTITY_FIELDS = (
     "structures",
     "topologies",
+    "molecular_records",
     "cif_envelopes",
     "qcschema_envelopes",
     "cjson_envelopes",
