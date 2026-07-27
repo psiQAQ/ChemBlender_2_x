@@ -95,7 +95,7 @@ Run model, project and sidecar tests; commit.
 **Interfaces:**
 - Produces: `parse_extxyz_comment()`, `parse_properties_descriptor()`, `iter_extxyz_frames()`.
 
-- [ ] **Step 1: Write descriptor tests**
+- [x] **Step 1: Write descriptor tests**
 
 ```python
 def test_properties_descriptor_parses_mixed_types(self):
@@ -111,7 +111,7 @@ def test_properties_descriptor_parses_mixed_types(self):
 
 Test duplicate names, invalid types, zero columns and truncated atom rows.
 
-- [ ] **Step 2: Implement a quoted key/value tokenizer**
+- [x] **Step 2: Implement a quoted key/value tokenizer**
 
 Support `key=value`, quoted values containing spaces and escaped quote handling
 defined by the extXYZ reference fixtures. Preserve typed per-config metadata as
@@ -119,14 +119,14 @@ string, integer, real, logical, 1-D array and 2-D array values. When a value
 cannot be safely typed, retain its raw lexeme and diagnostic instead of silently
 coercing it to a string. Reject unclosed quotes with a record diagnostic.
 
-- [ ] **Step 3: Implement streaming frames**
+- [x] **Step 3: Implement streaming frames**
 
 Read frame count, raw comment and exactly N atom lines. Parse columns according
 to Properties. If Properties is absent, use ordinary
 `species:S:1:pos:R:3`. Use a bounded one-frame iterator; do not load all frames
 in this low-level iterator.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run syntax and ordinary XYZ regression tests; commit parser primitives.
 
