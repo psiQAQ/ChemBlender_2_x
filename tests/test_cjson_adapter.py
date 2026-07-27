@@ -22,6 +22,8 @@ from ChemBlender.core.model import (
 )
 from ChemBlender.core.readers import ReaderRegistry
 from ChemBlender.core.sidecar import close_project, open_project, save_project
+from ChemBlender.core.import_pipeline.parse import stage_import_batch
+from ChemBlender.core.import_pipeline.request import ImportSource, ValidationMode
 from ChemBlender.ui.topology import topology_choices
 from ChemBlender.views.structure import _structure_view_data
 
@@ -97,6 +99,31 @@ class CJSONAdapterTests(unittest.TestCase):
 
         numpy.testing.assert_array_equal(topology.bond_indices.values, [[0, 1], [0, 2]])
         numpy.testing.assert_array_equal(topology.bond_orders.values, [1, 2])
+
+    def test_staging_keeps_explicit_topology_in_source_revision(self):
+        batch = parse_cjson(FIXTURE)
+        staged = stage_import_batch(
+            source=ImportSource(FIXTURE),
+            validation_mode=ValidationMode.BALANCED,
+            content_hash="a" * 64,
+            byte_size=FIXTURE.stat().st_size,
+            plugin_id="chemblender.builtin",
+            reader_id="cjson",
+            reader_version="0.1.0",
+            api_version="0.1",
+            parsed_batch=batch,
+        )
+
+        self.assertEqual(
+            staged.source_revisions[0].created_entity_ids,
+            (
+                batch.structures[0].id,
+                batch.topologies[0].id,
+                batch.cjson_envelopes[0].id,
+                *(dataset.id for dataset in batch.datasets),
+                batch.provenance[0].id,
+            ),
+        )
 
     def test_electronic_spectrum_maps_to_excited_states_with_explicit_conversion(self):
         batch = parse_cjson(FIXTURE)

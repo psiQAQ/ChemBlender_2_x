@@ -18,6 +18,7 @@ from ..model import (
 
 _ENTITY_GROUPS = (
     "structures",
+    "topologies",
     "cif_envelopes",
     "qcschema_envelopes",
     "cjson_envelopes",

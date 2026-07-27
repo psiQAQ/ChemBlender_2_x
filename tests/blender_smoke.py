@@ -723,6 +723,48 @@ def assert_quick_import(module_key, repository_root):
         assert tuple(bpy.data.objects) == before_objects
         assert state.preview is None
 
+    cjson_source = repository_root / "tests/fixtures/cjson/water-results.cjson"
+    state = stage(cjson_source)
+    cjson_rows = preview_ui.project_import_preview(session, state, registry)
+    assert cjson_rows[0].default_view_label == "Default view: Structure"
+    cjson_batch = state.staging_session.result(
+        state.preview.source_previews[0].staged_batch_ids[0]
+    )
+    cjson_structure, = cjson_batch.structures
+    cjson_topology, = cjson_batch.topologies
+    assert cjson_structure.topology is None
+    assert cjson_structure.topology_ids == (cjson_topology.id,)
+    source_revisions = set(session.project.source_revisions)
+    assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+    cjson_revision_id, = set(session.project.source_revisions) - source_revisions
+    cjson_revision = session.project.source_revisions[cjson_revision_id]
+    cjson_structure = next(
+        session.project.structures[entity_id]
+        for entity_id in cjson_revision.created_entity_ids
+        if entity_id in session.project.structures
+    )
+    assert cjson_structure.topology is None
+    topology_id, = cjson_structure.topology_ids
+    assert topology_id == cjson_topology.id
+    topology = session.project.topologies[topology_id]
+    topology_ui = importlib.import_module(f"{module_key}.ui.topology")
+    choices = topology_ui.topology_choices(session.project, cjson_structure.id)
+    assert tuple(choice.topology_id for choice in choices) == (topology_id,)
+    assert topology.source_kind is core.TopologySource.EXPLICIT_FILE
+    assert topology.quality_status is core.QualityStatus.COMPLETE
+    views = importlib.import_module(f"{module_key}.views")
+    cjson_view = views.create_structure_view(
+        cjson_structure,
+        topology,
+        name="ChemBlender immediate CJSON topology smoke",
+        collection=bpy.context.scene.collection,
+    )
+    try:
+        assert cjson_view["cb_topology_id"] == str(topology_id)
+        assert len(cjson_view.data.edges) == topology.bond_indices.shape[0]
+    finally:
+        views.remove_structure_view(cjson_view)
+
     state = stage(repository_root / "tests/fixtures/xyz/water.xyz")
     xyz_rows = preview_ui.project_import_preview(
         session,
