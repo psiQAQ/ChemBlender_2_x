@@ -7,6 +7,8 @@ from ChemBlender.core import model
 EXPECTED_MODULES = {
     "PeriodicSiteData": "ChemBlender.core.model.structure",
     "MolecularTopology": "ChemBlender.core.model.structure",
+    "TopologyRecord": "ChemBlender.core.model.molecular_topology",
+    "TopologySource": "ChemBlender.core.model.molecular_topology",
     "Structure": "ChemBlender.core.model.structure",
     "SymmetryResult": "ChemBlender.core.model.structure",
     "PropertyDataset": "ChemBlender.core.model.properties",

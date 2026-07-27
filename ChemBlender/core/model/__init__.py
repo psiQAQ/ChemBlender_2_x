@@ -21,6 +21,7 @@ from .diagnostics import (
     diagnostic_from_parser_issue,
 )
 from .quality import DiagnosticSeverity, QualityStatus
+from .molecular_topology import TopologyRecord, TopologySource
 from .grids import Grid3D
 from .grouping import CalculationGroup
 from .periodic import (

@@ -8,6 +8,12 @@
 
 `CalculationGroup` 是用户确认的跨来源计算关系；它属于权威项目模型，保存在 `QCProject.calculation_groups` 并随 `.cbq` 往返。
 
+`TopologyRecord` 是独立的结构连接实体，使用 `TopologySource` 和
+`QualityStatus` 区分文件显式连接、RDKit 解释、距离推断和用户编辑。
+`ImportBatch.topologies` 与 `QCProject.topologies` 保存这些实体；
+`Structure.topology_ids` 只保存关联 UUID，活动 topology 属于 View 状态。
+旧 sidecar 中内嵌的 `MolecularTopology` 仅作为读取兼容输入。
+
 ## 存储 API
 
 `open_project`、`save_project`、`close_project`、`LazyNpyArray` 及 `Sidecar*Error` 构成 sidecar 存储 API，用于 `.cbq` 项目和数组引用的读取、写入与错误处理。

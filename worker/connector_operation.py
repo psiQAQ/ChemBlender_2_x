@@ -38,7 +38,7 @@ def _fixture_path(root, locator):
 
 def _batch_references(batch):
     groups = (
-        batch.structures, batch.cif_envelopes, batch.qcschema_envelopes,
+        batch.structures, batch.topologies, batch.cif_envelopes, batch.qcschema_envelopes,
         batch.cjson_envelopes, batch.symmetry_results, batch.calculations,
         batch.datasets, batch.basis_sets, batch.orbital_sets,
         batch.density_matrices, batch.provenance,

@@ -17,6 +17,8 @@ from ChemBlender.core.model import (
     ExcitedStateSet,
     FrameSet,
     QCProject,
+    QualityStatus,
+    TopologySource,
 )
 from ChemBlender.core.readers import ReaderRegistry
 from ChemBlender.core.sidecar import close_project, open_project, save_project
@@ -73,10 +75,16 @@ class CJSONAdapterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = save_project(Path(directory) / "cjson.cbq", project)
             restored = open_project(root)
-            document = export_cjson(next(iter(restored.cjson_envelopes.values())))
-            self.assertTrue(document["customProjectField"]["preserve"])
-            self.assertEqual(next(iter(restored.structures.values())).topology.bond_orders.shape, (2,))
-            close_project(restored)
+            try:
+                document = export_cjson(next(iter(restored.cjson_envelopes.values())))
+                self.assertTrue(document["customProjectField"]["preserve"])
+                structure = next(iter(restored.structures.values()))
+                topology = restored.topologies[structure.topology_ids[0]]
+                self.assertEqual(topology.bond_orders.shape, (2,))
+                self.assertEqual(topology.source_kind, TopologySource.EXPLICIT_FILE)
+                self.assertEqual(topology.quality_status, QualityStatus.COMPLETE)
+            finally:
+                close_project(restored)
 
     def test_reader_registry_detects_cjson(self):
         self.assertIs(ReaderRegistry((CJSON_READER,)).select(FIXTURE), CJSON_READER)

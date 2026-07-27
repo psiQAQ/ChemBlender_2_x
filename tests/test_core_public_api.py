@@ -22,7 +22,7 @@ PUBLIC_CORE_NAMES = (
     "FrameCacheInfo", "FermiSurfaceMesh", "GemmiDependencyError", "Grid3D",
     "GBasisDependencyError", "ImportBatch", "ImportDiagnostic", "IssueKind", "LazyNpyArray",
     "IODATA_WAVEFUNCTION_READER", "IODataDependencyError", "MOL_V2000_READER",
-    "MolecularTopology", "OrbitalChannel", "OrbitalKind", "OrbitalSet", "ParserIssue",
+    "MolecularTopology", "TopologyRecord", "TopologySource", "OrbitalChannel", "OrbitalKind", "OrbitalSet", "ParserIssue",
     "ParserReport", "PeriodicSiteData", "PhononModeSet", "PhonopyDependencyError",
     "PYMATGEN_VASP_GRID_READER", "PYMATGEN_VASP_ELECTRONIC_READER",
     "PymatgenDependencyError", "PymatgenElectronicDependencyError", "PropertyDataset",
@@ -71,7 +71,7 @@ class CorePublicApiTests(unittest.TestCase):
     def test_public_names_are_frozen(self):
         self.assertEqual(tuple(core.__all__), PUBLIC_CORE_NAMES)
         self.assertEqual(len(core.__all__), len(set(core.__all__)))
-        self.assertEqual(len(core.__all__), 204)
+        self.assertEqual(len(core.__all__), 206)
 
     def test_public_names_resolve_to_attributes(self):
         missing = [name for name in core.__all__ if not hasattr(core, name)]

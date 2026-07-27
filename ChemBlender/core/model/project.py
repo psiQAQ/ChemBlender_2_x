@@ -15,6 +15,7 @@ from .common import (
 from .diagnostics import ImportDiagnostic, ParserReport
 from .grids import Grid3D
 from .grouping import CalculationGroup
+from .molecular_topology import TopologyRecord
 from .periodic import (
     BandStructure,
     DensityOfStates,
@@ -222,6 +223,7 @@ class ImportBatch:
     sources: tuple[SourceRecord, ...] = ()
     source_revisions: tuple[SourceRevision, ...] = ()
     structures: tuple[Structure, ...] = ()
+    topologies: tuple[TopologyRecord, ...] = ()
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
     qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
     cjson_envelopes: tuple[CJSONEnvelope, ...] = ()
@@ -240,6 +242,7 @@ class ImportBatch:
             ("sources", SourceRecord),
             ("source_revisions", SourceRevision),
             ("structures", Structure),
+            ("topologies", TopologyRecord),
             ("cif_envelopes", CIFEnvelope),
             ("qcschema_envelopes", QCSchemaEnvelope),
             ("cjson_envelopes", CJSONEnvelope),
@@ -268,6 +271,7 @@ class QCProject:
     sources: dict[UUID, SourceRecord] = field(default_factory=dict)
     source_revisions: dict[UUID, SourceRevision] = field(default_factory=dict)
     structures: dict[UUID, Structure] = field(default_factory=dict)
+    topologies: dict[UUID, TopologyRecord] = field(default_factory=dict)
     cif_envelopes: dict[UUID, CIFEnvelope] = field(default_factory=dict)
     qcschema_envelopes: dict[UUID, QCSchemaEnvelope] = field(default_factory=dict)
     cjson_envelopes: dict[UUID, CJSONEnvelope] = field(default_factory=dict)
@@ -294,6 +298,7 @@ class QCProject:
 
         incoming_entity_groups = (
             batch.structures,
+            batch.topologies,
             batch.cif_envelopes,
             batch.qcschema_envelopes,
             batch.cjson_envelopes,
@@ -333,6 +338,11 @@ class QCProject:
             (structure.id, structure) for structure in batch.structures
         )
         structure_ids = set(structures)
+        topologies = dict(self.topologies)
+        topologies.update(
+            (topology.id, topology) for topology in batch.topologies
+        )
+        topology_ids = set(topologies)
         cif_envelope_ids = set(self.cif_envelopes).union(
             envelope.id for envelope in batch.cif_envelopes
         )
@@ -378,6 +388,37 @@ class QCProject:
                 raise ValueError(
                     "periodic structure has a dangling CIF envelope reference"
                 )
+            for topology_id in structure.topology_ids:
+                try:
+                    topology = topologies[topology_id]
+                except KeyError as error:
+                    raise ValueError(
+                        "structure has a dangling topology reference"
+                    ) from error
+                if topology.structure_id != structure.id:
+                    raise ValueError(
+                        "structure topology reference belongs to another structure"
+                    )
+        for topology in batch.topologies:
+            import numpy
+
+            try:
+                reference = structures[topology.structure_id]
+            except KeyError as error:
+                raise ValueError(
+                    "topology has a dangling structure reference"
+                ) from error
+            indices = numpy.asarray(topology.bond_indices.values)
+            if (
+                topology.bond_indices.shape[0]
+                and int(indices.max()) >= len(reference.atomic_numbers)
+            ):
+                raise ValueError("topology bond index is outside its structure")
+            self._require_references(
+                topology.provenance_ids,
+                provenance_ids,
+                "topology provenance",
+            )
         for envelope in batch.cif_envelopes:
             self._require_references(
                 envelope.provenance_ids,
@@ -647,6 +688,7 @@ class QCProject:
             source_ids
             | source_revision_ids
             | structure_ids
+            | topology_ids
             | cif_envelope_ids
             | qcschema_envelope_ids
             | cjson_envelope_ids
@@ -688,6 +730,7 @@ class QCProject:
             (entity.id, entity) for entity in batch.source_revisions
         )
         self.structures.update((entity.id, entity) for entity in batch.structures)
+        self.topologies.update((entity.id, entity) for entity in batch.topologies)
         self.cif_envelopes.update(
             (entity.id, entity) for entity in batch.cif_envelopes
         )
@@ -737,6 +780,7 @@ class QCProject:
             self.sources,
             self.source_revisions,
             self.structures,
+            self.topologies,
             self.cif_envelopes,
             self.qcschema_envelopes,
             self.cjson_envelopes,
@@ -760,6 +804,7 @@ class QCProject:
             (self.sources, SourceRecord, "sources"),
             (self.source_revisions, SourceRevision, "source_revisions"),
             (self.structures, Structure, "structures"),
+            (self.topologies, TopologyRecord, "topologies"),
             (self.cif_envelopes, CIFEnvelope, "cif_envelopes"),
             (self.qcschema_envelopes, QCSchemaEnvelope, "qcschema_envelopes"),
             (self.cjson_envelopes, CJSONEnvelope, "cjson_envelopes"),
@@ -871,6 +916,7 @@ def validate_project_graph(project):
             sources=tuple(project.sources.values()),
             source_revisions=tuple(project.source_revisions.values()),
             structures=tuple(project.structures.values()),
+            topologies=tuple(project.topologies.values()),
             cif_envelopes=tuple(project.cif_envelopes.values()),
             qcschema_envelopes=tuple(project.qcschema_envelopes.values()),
             cjson_envelopes=tuple(project.cjson_envelopes.values()),

@@ -38,6 +38,7 @@ _TYPE_NAMES = (
     "CJSONEnvelope",
     "PeriodicSiteData",
     "MolecularTopology",
+    "TopologyRecord",
     "Structure",
     "SymmetryResult",
     "CalculationMetadata",
@@ -87,6 +88,7 @@ _ENUM_NAMES = (
     "CriticalPointKind",
     "QualityStatus",
     "DiagnosticSeverity",
+    "TopologySource",
 )
 _MODEL_TYPES = {name: getattr(_model, name) for name in _TYPE_NAMES}
 _MODEL_ENUMS = {name: getattr(_model, name) for name in _ENUM_NAMES}

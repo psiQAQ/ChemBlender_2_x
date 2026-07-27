@@ -163,6 +163,7 @@ class Structure:
     molecular_charge: int | None = None
     molecular_multiplicity: int | None = None
     topology: MolecularTopology | None = None
+    topology_ids: tuple[UUID, ...] = ()
 
     def __post_init__(self):
         import numpy
@@ -214,6 +215,11 @@ class Structure:
             if indices.size and int(indices.max()) >= len(atomic_numbers):
                 raise ValueError("topology bond index is outside the structure")
         object.__setattr__(self, "atomic_numbers", atomic_numbers)
+        object.__setattr__(
+            self,
+            "topology_ids",
+            _require_uuid_tuple(self.topology_ids, "topology_ids"),
+        )
 
 
 @dataclass(frozen=True, slots=True)

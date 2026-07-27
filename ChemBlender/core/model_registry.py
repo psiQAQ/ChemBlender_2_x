@@ -5,7 +5,7 @@ from . import model
 
 _MODEL_TYPE_NAMES = (
     "ArrayData", "CIFEnvelope", "QCSchemaEnvelope", "CJSONEnvelope",
-    "PeriodicSiteData", "MolecularTopology", "Structure", "SymmetryResult",
+    "PeriodicSiteData", "MolecularTopology", "TopologyRecord", "Structure", "SymmetryResult",
     "CalculationMetadata", "CalculationRecord", "PropertyDataset",
     "AtomicProperty", "FrameSet", "VibrationalModeSet", "ExcitationContribution",
     "ExcitedStateReferences", "ExcitedStateSet", "Spectrum", "BandPathBranch",
@@ -25,6 +25,7 @@ MODEL_ENUMS = MappingProxyType({
         "OrbitalKind", "DensityMatrixLevel", "DensityMatrixSpin", "SpectrumKind",
         "SpectrumProfile", "SpinChannel", "EnergyReference", "CriticalPointKind",
         "QualityStatus", "DiagnosticSeverity",
+        "TopologySource",
     )
 })
 

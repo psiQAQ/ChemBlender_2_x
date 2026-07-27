@@ -34,6 +34,8 @@ from ..core import (
     ImportDiagnostic,
     IssueKind,
     MolecularTopology,
+    TopologyRecord,
+    TopologySource,
     OrbitalChannel,
     OrbitalKind,
     OrbitalSet,
@@ -67,6 +69,7 @@ _GROUP_TYPES = (
     ("sources", frozenset((SourceRecord,))),
     ("source_revisions", frozenset((SourceRevision,))),
     ("structures", frozenset((Structure,))),
+    ("topologies", frozenset((TopologyRecord,))),
     ("cif_envelopes", frozenset((CIFEnvelope,))),
     ("qcschema_envelopes", frozenset((QCSchemaEnvelope,))),
     ("cjson_envelopes", frozenset((CJSONEnvelope,))),
@@ -154,6 +157,7 @@ class PublicImportBatch:
     sources: tuple[SourceRecord, ...] = ()
     source_revisions: tuple[SourceRevision, ...] = ()
     structures: tuple[Structure, ...] = ()
+    topologies: tuple[TopologyRecord, ...] = ()
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
     qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
     cjson_envelopes: tuple[CJSONEnvelope, ...] = ()

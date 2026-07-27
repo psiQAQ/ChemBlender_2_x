@@ -33,7 +33,7 @@ _FIXTURE_HASHES = {
         "f190a1e96267d0fb052410267622ccc11ffc9bfbf670df9bb59f20b50182ef6b",
 }
 _CANONICAL_DOCUMENT_SHA256 = (
-    "cde1a31f0402c76e9d8cf40f634d9722bb7f4df4bc179a1bef0b6835b3fcd270"
+    "67822646b1de633c278eab19b99f9b245f86153c25dd87a1a85e16e1ea10a042"
 )
 _CANONICAL_ARTIFACT_HASHES = {
     "32797cc6cc28d503b4b14f327da8f10aaea77c2f2375fdc32b7765fa653c66ed.npy":
@@ -547,7 +547,7 @@ class AtomicPathBudgetTests(unittest.TestCase):
         }
         self.assertEqual(actual, _FIXTURE_HASHES)
 
-    def test_canonical_document_and_artifact_hashes_are_unchanged(self):
+    def test_canonical_document_and_artifact_hashes_match_current_contract(self):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
             document = reader_api.public_batch_document(

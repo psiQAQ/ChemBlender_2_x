@@ -30,19 +30,19 @@
 **Interfaces:**
 - Produces: `TopologySource`, `TopologyRecord`, project `topologies` registry and Structure topology references.
 
-- [ ] **Step 1: Write validation tests**
+- [x] **Step 1: Write validation tests**
 
 Test bond index/order shapes, aromatic flags, stereo labels, source enum, quality, canonical inference parameters and structure reference. `distance_inferred` requires non-empty inference parameters; `explicit_file` permits none.
 
-- [ ] **Step 2: Preserve MolecularTopology compatibility**
+- [x] **Step 2: Preserve MolecularTopology compatibility**
 
 Keep the old type readable for v0.1 sidecars. Migration converts embedded Structure topology into a TopologyRecord with `explicit_file` when source came from an explicit format, otherwise `distance_inferred` plus legacy parameters if known. Ambiguous origin becomes `legacy_unverified` quality.
 
-- [ ] **Step 3: Update project validation and sidecar migration**
+- [x] **Step 3: Update project validation and sidecar migration**
 
 A Structure can reference zero or more topology IDs; selected topology is view state, not structure state.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run model, migration, existing readers and sidecar tests; commit.
 

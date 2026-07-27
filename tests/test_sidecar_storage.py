@@ -22,9 +22,12 @@ from ChemBlender.core import (
     PropertyDataset,
     ProvenanceRecord,
     QCProject,
+    QualityStatus,
     SourceRecord,
     SourceRevision,
     Structure,
+    TopologyRecord,
+    TopologySource,
     TrajectoryFrameManager,
 )
 from ChemBlender.core.sidecar import (
@@ -294,10 +297,14 @@ class SidecarStorageTests(unittest.TestCase):
 
             structure = project.structures[STRUCTURE_ID]
             self.assertIs(type(structure), Structure)
-            self.assertIs(type(structure.topology), MolecularTopology)
+            self.assertIsNone(structure.topology)
             self.assertEqual(structure.revision, "structure-r1")
-            self.assertEqual(structure.topology.bond_indices.shape, (1, 2))
-            self.assertEqual(structure.topology.bond_orders.shape, (1,))
+            topology = project.topologies[structure.topology_ids[0]]
+            self.assertIs(type(topology), TopologyRecord)
+            self.assertEqual(topology.source_kind, TopologySource.DISTANCE_INFERRED)
+            self.assertEqual(topology.quality_status, QualityStatus.AMBIGUOUS)
+            self.assertEqual(topology.bond_indices.shape, (1, 2))
+            self.assertEqual(topology.bond_orders.shape, (1,))
 
             charges = project.datasets[DATASET_ID]
             frames = project.datasets[FRAMES_ID]

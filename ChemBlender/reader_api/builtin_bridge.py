@@ -25,7 +25,7 @@ class PublicBatchValidationError(PublicBatchError):
 
 
 _BATCH_FIELDS = (
-    "sources", "source_revisions", "structures", "cif_envelopes",
+    "sources", "source_revisions", "structures", "topologies", "cif_envelopes",
     "qcschema_envelopes", "cjson_envelopes", "symmetry_results",
     "calculations", "datasets", "basis_sets", "orbital_sets",
     "density_matrices", "provenance", "report", "diagnostics",

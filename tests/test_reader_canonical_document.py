@@ -31,6 +31,7 @@ MODEL_TAGS = (
     "CJSONEnvelope",
     "PeriodicSiteData",
     "MolecularTopology",
+    "TopologyRecord",
     "Structure",
     "SymmetryResult",
     "CalculationMetadata",
@@ -80,6 +81,7 @@ ENUM_TAGS = (
     "CriticalPointKind",
     "QualityStatus",
     "DiagnosticSeverity",
+    "TopologySource",
 )
 
 
@@ -412,8 +414,8 @@ class ReaderCanonicalDocumentTests(unittest.TestCase):
     def test_registered_model_and_enum_tags_are_exact(self):
         self.assertEqual(tuple(canonical_document._MODEL_TYPES), MODEL_TAGS)
         self.assertEqual(tuple(canonical_document._MODEL_ENUMS), ENUM_TAGS)
-        self.assertEqual(len(MODEL_TAGS), 42)
-        self.assertEqual(len(ENUM_TAGS), 14)
+        self.assertEqual(len(MODEL_TAGS), 43)
+        self.assertEqual(len(ENUM_TAGS), 15)
         for name in MODEL_TAGS + ENUM_TAGS:
             with self.subTest(name=name):
                 self.assertIs(

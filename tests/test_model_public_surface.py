@@ -37,6 +37,8 @@ PUBLIC_MODEL_NAMES = {
     "ImportDiagnostic",
     "IssueKind",
     "MolecularTopology",
+    "TopologyRecord",
+    "TopologySource",
     "OrbitalChannel",
     "OrbitalKind",
     "OrbitalSet",

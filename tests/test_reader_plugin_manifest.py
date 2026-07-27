@@ -617,6 +617,8 @@ assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', '
                 "CJSONEnvelope",
                 "PeriodicSiteData",
                 "MolecularTopology",
+                "TopologyRecord",
+                "TopologySource",
                 "Structure",
                 "SymmetryResult",
                 "CalculationMetadata",
