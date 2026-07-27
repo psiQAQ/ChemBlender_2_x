@@ -33,16 +33,20 @@ def infer_periodic_topology(structure, settings=None):
     inverse_cell = numpy.linalg.inv(cell)
     fractional = coordinates @ inverse_cell
     epsilon = numpy.finfo(fractional.dtype).eps
+    gamma_three = 3.0 * epsilon / (1.0 - 3.0 * epsilon)
     # gamma_3 bounds each three-term dot; the inverse residual adds its
     # per-axis backward error without coupling unrelated cell directions.
     dot_roundoff = (
-        (3.0 * epsilon / (1.0 - 3.0 * epsilon))
-        * (numpy.abs(coordinates) @ numpy.abs(inverse_cell))
+        gamma_three * (numpy.abs(coordinates) @ numpy.abs(inverse_cell))
     )
     inverse_residual = numpy.abs(
         cell @ inverse_cell - numpy.eye(3, dtype=fractional.dtype)
     )
     roundoff = dot_roundoff + numpy.abs(fractional) @ inverse_residual
+    coordinate_roundoff = gamma_three * (
+        numpy.abs(fractional) @ numpy.abs(cell)
+    )
+    roundoff += coordinate_roundoff @ numpy.abs(inverse_cell)
     for axis, periodic in enumerate(structure.periodic.pbc):
         if periodic:
             column = fractional[:, axis]

@@ -227,6 +227,33 @@ class PeriodicTopologyInferenceTests(unittest.TestCase):
             [[0, 0, 0]],
         )
 
+    def test_cartesian_forward_roundoff_preserves_integer_translation(self):
+        structure_id = uuid4()
+        cell = (
+            (7.208641513774426, 4.470500043909762, 0.13013066386478833),
+            (3.0015220310821977, 5.655936610779453, 4.415126123856346),
+            (2.3502499302073065, -0.9593169529948238, 4.011231361584645),
+        )
+        reference = periodic_structure(
+            ((0.0, 0.0, 0.0), (0.1, 0.0, 0.0)),
+            cell=cell,
+            structure_id=structure_id,
+        )
+        unwrapped = periodic_structure(
+            ((1.0, -9.0, 9.0), (0.1, 0.0, 0.0)),
+            cell=cell,
+            structure_id=structure_id,
+        )
+
+        original = topology(reference)
+        shifted = topology(unwrapped)
+
+        self.assertEqual(shifted.id, original.id)
+        self.assertEqual(
+            shifted.bond_lattice_shifts.values.tolist(),
+            [[0, 0, 0]],
+        )
+
     def test_near_boundary_noninteger_coordinate_is_not_snapped(self):
         cell = (
             (6.076548178105441, 0.1535747351592509, -0.9982093402937147),
