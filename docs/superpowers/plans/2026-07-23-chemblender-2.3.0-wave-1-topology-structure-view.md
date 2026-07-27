@@ -197,18 +197,18 @@ Blender smoke imports XYZ, infers topology, accepts it, switches to atoms-only a
 **Interfaces:**
 - Produces: `preview_structure_edits()`, `commit_structure_edits()` and `CHEMBLENDER_OT_apply_scientific_edits`.
 
-- [ ] **Step 1: Write diff tests**
+- [x] **Step 1: Write diff tests**
 
 Compare a View Mesh to source Structure/Topology and report coordinate, element, atom count, bond and cell changes. Object matrix transforms are inverted and ignored as scientific edits.
 
-- [ ] **Step 2: Implement derived batch**
+- [x] **Step 2: Implement derived batch**
 
 Create new Structure and optional TopologyRecord, provenance parent IDs and a diagnostic that source-linked results were not inherited. No source entity mutation.
 
-- [ ] **Step 3: Implement preview UI**
+- [x] **Step 3: Implement preview UI**
 
 Show counts and maximum displacement, affected result datasets and export choice. Cancel changes nothing.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Blender smoke moves an atom, creates derived structure, confirms source coordinates and grid bindings unchanged, then exports derived XYZ.
