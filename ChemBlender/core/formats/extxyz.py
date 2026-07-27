@@ -4,9 +4,11 @@ from dataclasses import dataclass, field
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 import shlex
+import tempfile
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from ...Chem_data import ELEMENTS_DEFAULT
@@ -32,6 +34,7 @@ from ..readers import (
     SniffMatch,
     SniffResult,
 )
+from ..storage.atomic_paths import short_sibling_temporary_path
 
 
 _INTEGER = re.compile(r"[+-]?[0-9]+\Z")
@@ -81,15 +84,31 @@ class _LazyNumpy:
 numpy = _LazyNumpy()
 
 
+def _raise_cleanup_failures(failures):
+    if not failures:
+        return
+    first, *remaining = failures
+    for error in remaining:
+        first.add_note(
+            "additional extXYZ staging cleanup failure: "
+            f"{type(error).__name__}: {error}"
+        )
+    raise first
+
+
 class _ArrayOwner:
     def __init__(self, root):
         self.root = None
         self.arrays = []
+        self._snapshot_path = None
+        self._snapshot_root = None
+        self._snapshot_root_owned = False
         if root is not None:
             parent = Path(root)
             parent.mkdir(parents=True, exist_ok=True)
             self.root = parent / f"extxyz-{uuid4().hex}"
             self.root.mkdir()
+            self._snapshot_root = self.root
 
     def empty(self, shape, dtype):
         if self.root is None:
@@ -114,21 +133,102 @@ class _ArrayOwner:
         value[...] = fill_value
         return value
 
+    def snapshot(self, source, is_cancelled):
+        if self._snapshot_root is None:
+            self._snapshot_root = Path(
+                tempfile.mkdtemp(prefix="chemblender-extxyz-")
+            )
+            self._snapshot_root_owned = True
+        destination = self._snapshot_root / "source.extxyz"
+        temporary = short_sibling_temporary_path(destination)
+        try:
+            with source.open("rb") as input_stream, temporary.open("xb") as output:
+                while chunk := input_stream.read(65536):
+                    _check_cancelled(is_cancelled)
+                    output.write(chunk)
+                output.flush()
+                os.fsync(output.fileno())
+                _check_cancelled(is_cancelled)
+            os.replace(temporary, destination)
+        except BaseException as error:
+            try:
+                temporary.unlink(missing_ok=True)
+            except BaseException as cleanup_error:
+                error.add_note(
+                    "extXYZ snapshot temporary cleanup failed: "
+                    f"{type(cleanup_error).__name__}: {cleanup_error}"
+                )
+            raise
+        self._snapshot_path = destination
+        return destination
+
+    def release_snapshot(self):
+        failures = []
+        if self._snapshot_path is not None:
+            try:
+                self._snapshot_path.unlink()
+            except FileNotFoundError:
+                pass
+            except BaseException as error:
+                failures.append(error)
+            else:
+                self._snapshot_path = None
+        if self._snapshot_root_owned and self._snapshot_root is not None:
+            try:
+                self._snapshot_root.rmdir()
+            except FileNotFoundError:
+                pass
+            except BaseException as error:
+                failures.append(error)
+            else:
+                self._snapshot_root = None
+                self._snapshot_root_owned = False
+        _raise_cleanup_failures(failures)
+
     def cleanup(self):
+        failures = []
         for value, path in reversed(self.arrays):
             mmap = getattr(value, "_mmap", None)
             if mmap is not None:
-                mmap.close()
+                try:
+                    mmap.close()
+                except BaseException as error:
+                    failures.append(error)
             try:
                 path.unlink()
             except FileNotFoundError:
                 pass
+            except BaseException as error:
+                failures.append(error)
         self.arrays.clear()
+        if self._snapshot_path is not None:
+            try:
+                self._snapshot_path.unlink()
+            except FileNotFoundError:
+                pass
+            except BaseException as error:
+                failures.append(error)
+            else:
+                self._snapshot_path = None
         if self.root is not None:
             try:
                 self.root.rmdir()
             except FileNotFoundError:
                 pass
+            except BaseException as error:
+                failures.append(error)
+        if (
+            self._snapshot_root_owned
+            and self._snapshot_root is not None
+            and self._snapshot_root != self.root
+        ):
+            try:
+                self._snapshot_root.rmdir()
+            except FileNotFoundError:
+                pass
+            except BaseException as error:
+                failures.append(error)
+        _raise_cleanup_failures(failures)
 
 
 class ExtXYZSyntaxError(ValueError):
@@ -924,6 +1024,14 @@ def _plan_source(source, is_cancelled, issues):
                 continue
             signature = _metadata_signature(entry.value)
             if signature is None:
+                issues.append(
+                    ParserIssue(
+                        IssueKind.AMBIGUOUS,
+                        f"metadata.{entry.key}",
+                        "metadata value cannot be represented as a typed "
+                        "property; raw value retained in comment",
+                    )
+                )
                 continue
             plan = current.metadata.get(entry.key)
             if plan is None:
@@ -1453,9 +1561,10 @@ def parse_extxyz(source, *, staging_root=None, is_cancelled=None):
         raise TypeError("is_cancelled must be callable")
     owner = _ArrayOwner(staging_root)
     try:
-        source_hash = _source_hash(source, is_cancelled)
+        snapshot = owner.snapshot(source, is_cancelled)
+        source_hash = _source_hash(snapshot, is_cancelled)
         issues = []
-        groups = _plan_source(source, is_cancelled, issues)
+        groups = _plan_source(snapshot, is_cancelled, issues)
         if len(groups) > 1:
             issues.append(
                 ParserIssue(
@@ -1468,7 +1577,8 @@ def parse_extxyz(source, *, staging_root=None, is_cancelled=None):
             _prepare_group_state(group, owner, issues)
             for group in groups
         ]
-        _fill_states(source, states, is_cancelled)
+        _fill_states(snapshot, states, is_cancelled)
+        owner.release_snapshot()
         finalized = [
             _finalize_group(state, source_hash)
             for state in states
@@ -1511,8 +1621,16 @@ def parse_extxyz(source, *, staging_root=None, is_cancelled=None):
                 issues=tuple(issues),
             ),
         )
-    except BaseException:
-        owner.cleanup()
+    except BaseException as error:
+        try:
+            owner.cleanup()
+        except BaseException as cleanup_error:
+            error.add_note(
+                "extXYZ staging cleanup failed: "
+                f"{type(cleanup_error).__name__}: {cleanup_error}"
+            )
+            for note in getattr(cleanup_error, "__notes__", ()):
+                error.add_note(note)
         raise
 
 

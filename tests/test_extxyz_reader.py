@@ -310,6 +310,37 @@ class ExtXYZProjectMappingTests(unittest.TestCase):
             DatasetStatus.AMBIGUOUS,
         )
 
+    def test_out_of_range_integer_metadata_is_reported_and_retained_raw(self):
+        huge = 2**64
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "huge.extxyz"
+            source.write_text(
+                "1\nProperties=species:S:1:pos:R:3 "
+                f"huge_scalar={huge} "
+                f"huge_vector=[{huge},{huge + 1}]\n"
+                "H 0 0 0\n",
+                encoding="utf-8",
+            )
+            batch = parse_extxyz(source)
+
+        roles = {
+            item.semantic_role
+            for item in batch.datasets
+            if isinstance(item, FrameProperty)
+        }
+        self.assertNotIn("huge_scalar", roles)
+        self.assertNotIn("huge_vector", roles)
+        issues = {
+            issue.path: issue.message
+            for issue in batch.report.issues
+        }
+        for name in ("huge_scalar", "huge_vector"):
+            self.assertIn(f"metadata.{name}", issues)
+            self.assertIn(
+                "cannot be represented",
+                issues[f"metadata.{name}"],
+            )
+
 
 class ExtXYZStagingTests(unittest.TestCase):
     def test_split_source_uses_exactly_one_plan_and_one_fill_scan(self):
@@ -336,6 +367,149 @@ class ExtXYZStagingTests(unittest.TestCase):
                 parse_extxyz(source)
 
         self.assertEqual(scans, 2)
+
+    def test_plan_and_fill_use_one_immutable_source_snapshot(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            session = StagedImportSession.create(temp_parent=root)
+            source = root / "replace.extxyz"
+            original = (
+                "1\nProperties=species:S:1:pos:R:3\nH 1 0 0\n"
+            )
+            source.write_text(original, encoding="utf-8")
+            original_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+            original_plan = extxyz_module._plan_source
+
+            def plan_then_replace(snapshot, is_cancelled, issues):
+                plan = original_plan(snapshot, is_cancelled, issues)
+                source.write_text(
+                    "1\nProperties=species:S:1:pos:R:3\nHe 9 0 0\n",
+                    encoding="utf-8",
+                )
+                return plan
+
+            with patch.object(
+                extxyz_module,
+                "_plan_source",
+                side_effect=plan_then_replace,
+            ):
+                batch = parse_extxyz(
+                    source,
+                    staging_root=session.artifact_root,
+                )
+
+            try:
+                structure, = batch.structures
+                self.assertEqual(structure.atomic_numbers, (1,))
+                numpy.testing.assert_array_equal(
+                    structure.coordinates.values,
+                    [[1.0, 0.0, 0.0]],
+                )
+                provenance, = batch.provenance
+                self.assertEqual(provenance.source, str(source.resolve()))
+                self.assertEqual(provenance.source_hash, original_hash)
+                self.assertFalse(
+                    any(
+                        path.suffix in {".extxyz", ".tmp"}
+                        for path in session.artifact_root.rglob("*")
+                    )
+                )
+            finally:
+                session.register_result(uuid4(), batch)
+                session.discard()
+
+    def test_array_owner_cleanup_is_best_effort_and_aggregates_failures(self):
+        calls = []
+
+        class Mapping:
+            def __init__(self, label, failure=None):
+                self.label = label
+                self.failure = failure
+
+            def close(self):
+                calls.append(f"close:{self.label}")
+                if self.failure is not None:
+                    raise self.failure
+
+        class Value:
+            def __init__(self, mapping):
+                self._mmap = mapping
+
+        class File:
+            def __init__(self, label, failure=None):
+                self.label = label
+                self.failure = failure
+
+            def unlink(self):
+                calls.append(f"unlink:{self.label}")
+                if self.failure is not None:
+                    raise self.failure
+
+        class Root:
+            def rmdir(self):
+                calls.append("rmdir")
+                raise OSError("root failed")
+
+        owner = object.__new__(extxyz_module._ArrayOwner)
+        owner.root = Root()
+        owner.arrays = [
+            (Value(Mapping("first")), File("first", OSError("unlink failed"))),
+            (Value(Mapping("second", OSError("close failed"))), File("second")),
+        ]
+        owner._snapshot_path = None
+        owner._snapshot_root = None
+        owner._snapshot_root_owned = False
+
+        with self.assertRaisesRegex(OSError, "close failed") as caught:
+            owner.cleanup()
+
+        self.assertEqual(
+            tuple(calls),
+            (
+                "close:second",
+                "unlink:second",
+                "close:first",
+                "unlink:first",
+                "rmdir",
+            ),
+        )
+        self.assertEqual(owner.arrays, [])
+        notes = tuple(getattr(caught.exception, "__notes__", ()))
+        self.assertTrue(any("unlink failed" in note for note in notes))
+        self.assertTrue(any("root failed" in note for note in notes))
+
+    def test_parse_primary_error_survives_owner_cleanup_failure(self):
+        primary = KeyboardInterrupt("cancel parse")
+
+        def cancel():
+            raise primary
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "cancel.extxyz"
+            source.write_text(
+                "1\nProperties=species:S:1:pos:R:3\nH 0 0 0\n",
+                encoding="utf-8",
+            )
+            with patch.object(
+                extxyz_module._ArrayOwner,
+                "cleanup",
+                side_effect=OSError("cleanup failed"),
+            ):
+                with self.assertRaises(KeyboardInterrupt) as caught:
+                    parse_extxyz(
+                        source,
+                        staging_root=root,
+                        is_cancelled=cancel,
+                    )
+
+        self.assertIs(caught.exception, primary)
+        self.assertTrue(
+            any(
+                "cleanup failed" in note
+                for note in getattr(primary, "__notes__", ())
+            )
+        )
 
     def test_multiple_sources_get_distinct_staged_backing_files(self):
         with TemporaryDirectory() as directory:

@@ -296,6 +296,55 @@ class ExtXYZExporterTests(unittest.TestCase):
             self.assertTrue(report.written)
             self.assertNotIn("ragged", destination.read_text(encoding="utf-8"))
 
+    def test_unmodeled_large_integer_metadata_requires_loss_confirmation(self):
+        huge = 2**64
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "huge.extxyz"
+            source.write_text(
+                "1\nProperties=species:S:1:pos:R:3 "
+                f"huge_scalar={huge} "
+                f"huge_vector=[{huge},{huge + 1}]\n"
+                "H 0 0 0\n",
+                encoding="utf-8",
+            )
+            batch = parse_extxyz(source)
+            structure, = batch.structures
+            frame_set = next(
+                item
+                for item in batch.datasets
+                if item.semantic_role == "coordinates"
+            )
+            destination = root / "export.extxyz"
+
+            preview = export_extxyz(
+                destination,
+                structure,
+                frame_set=frame_set,
+            )
+
+            self.assertFalse(preview.written)
+            self.assertTrue(preview.requires_confirmation)
+            omitted = {
+                entry.message
+                for entry in preview.entries
+                if entry.code == "unsafe_metadata_omitted"
+            }
+            self.assertTrue(any("huge_scalar" in item for item in omitted))
+            self.assertTrue(any("huge_vector" in item for item in omitted))
+            self.assertFalse(destination.exists())
+
+            report = export_extxyz(
+                destination,
+                structure,
+                frame_set=frame_set,
+                confirm_loss=True,
+            )
+            self.assertTrue(report.written)
+            output = destination.read_text(encoding="utf-8")
+            self.assertNotIn("huge_scalar", output)
+            self.assertNotIn("huge_vector", output)
+
     def test_nonfinite_partial_export_requires_explicit_missing_token(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -606,6 +655,121 @@ class ExtXYZExporterTests(unittest.TestCase):
 
             temporary.assert_not_called()
             self.assertFalse(destination.exists())
+
+    def test_duplicate_frame_roles_fail_before_temporary_file_is_opened(self):
+        batch = parse_extxyz(FIXTURES / "properties-mixed.extxyz")
+        structure, = batch.structures
+        frame_set = next(
+            item for item in batch.datasets if item.semantic_role == "coordinates"
+        )
+        energy = next(
+            item
+            for item in batch.datasets
+            if isinstance(item, FrameProperty)
+            and item.semantic_role == "energy"
+        )
+        duplicate = replace(energy, id=uuid4())
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "duplicate.extxyz"
+            with patch(
+                "ChemBlender.core.exporters.xyz.short_sibling_temporary_path"
+            ) as temporary:
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "duplicate extXYZ comment key.*energy",
+                ):
+                    export_extxyz(
+                        destination,
+                        structure,
+                        frame_set=frame_set,
+                        properties=(energy, duplicate),
+                        confirm_loss=True,
+                    )
+
+            temporary.assert_not_called()
+
+    def test_normalized_metadata_collision_fails_before_temporary_file(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "normalized.extxyz"
+            source.write_text(
+                "1\nProperties=species:S:1:pos:R:3 "
+                "foo-bar=1 foo_bar=2\n"
+                "H 0 0 0\n",
+                encoding="utf-8",
+            )
+            batch = parse_extxyz(source)
+            structure, = batch.structures
+            frame_set = next(
+                item
+                for item in batch.datasets
+                if item.semantic_role == "coordinates"
+            )
+            properties = tuple(
+                item
+                for item in batch.datasets
+                if isinstance(item, FrameProperty)
+            )
+            self.assertEqual(
+                tuple(item.semantic_role for item in properties),
+                ("foo_bar", "foo_bar"),
+            )
+            destination = root / "normalized-export.extxyz"
+
+            with patch(
+                "ChemBlender.core.exporters.xyz.short_sibling_temporary_path"
+            ) as temporary:
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "duplicate extXYZ comment key.*foo_bar",
+                ):
+                    export_extxyz(
+                        destination,
+                        structure,
+                        frame_set=frame_set,
+                        properties=properties,
+                        confirm_loss=True,
+                    )
+
+            temporary.assert_not_called()
+
+    def test_automatic_unit_key_collision_fails_before_temporary_file(self):
+        batch = parse_extxyz(FIXTURES / "properties-mixed.extxyz")
+        structure, = batch.structures
+        frame_set = next(
+            item for item in batch.datasets if item.semantic_role == "coordinates"
+        )
+        energy = next(
+            item
+            for item in batch.datasets
+            if isinstance(item, FrameProperty)
+            and item.semantic_role == "energy"
+        )
+        explicit_unit = replace(
+            energy,
+            id=uuid4(),
+            semantic_role="energy_unit",
+        )
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "unit-collision.extxyz"
+            with patch(
+                "ChemBlender.core.exporters.xyz.short_sibling_temporary_path"
+            ) as temporary:
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "duplicate extXYZ comment key.*energy_unit",
+                ):
+                    export_extxyz(
+                        destination,
+                        structure,
+                        frame_set=frame_set,
+                        properties=(energy, explicit_unit),
+                        confirm_loss=True,
+                    )
+
+            temporary.assert_not_called()
 
 
 class ExtXYZSemanticComparatorTests(unittest.TestCase):

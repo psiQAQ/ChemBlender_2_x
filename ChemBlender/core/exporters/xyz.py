@@ -7,7 +7,11 @@ import os
 from pathlib import Path
 
 from ...Chem_data import ELEMENTS_DEFAULT
-from ..formats.extxyz import parse_extxyz_comment
+from ..formats.extxyz import (
+    _RESERVED_COMMENT_KEYS,
+    _token,
+    parse_extxyz_comment,
+)
 from ..model import (
     AtomFrameProperty,
     CategoricalData,
@@ -357,6 +361,23 @@ def _ordered_frame_properties(properties):
     )
 
 
+def _emitted_unit_keys(properties):
+    keys = set()
+    for item in properties:
+        if isinstance(item, AtomFrameProperty):
+            field_name, _rank, expected = _ATOM_ROLE_NAMES.get(
+                item.semantic_role,
+                (item.semantic_role, 1000, None),
+            )
+            if expected is not None and item.data.unit == expected:
+                keys.add(f"{field_name}_unit")
+        elif isinstance(item, FrameProperty):
+            expected = _FRAME_ROLE_UNITS.get(item.semantic_role)
+            if expected is not None and item.data.unit == expected:
+                keys.add(f"{item.semantic_role}_unit")
+    return keys
+
+
 def _loss_entries(frame_set, properties):
     entries = []
     for item in properties:
@@ -368,6 +389,7 @@ def _loss_entries(frame_set, properties):
                 )
             )
     modeled = {item.semantic_role for item in properties}
+    emitted_units = _emitted_unit_keys(properties)
     raw_keys = set()
     if frame_set is not None:
         for comment_text in frame_set.comments:
@@ -377,8 +399,9 @@ def _loss_entries(frame_set, properties):
                 continue
             for entry in comment.entries:
                 if (
-                    entry.diagnostic is not None
-                    and entry.key not in modeled
+                    entry.key not in _RESERVED_COMMENT_KEYS
+                    and _token(entry.key) not in modeled
+                    and entry.key not in emitted_units
                     and entry.key not in raw_keys
                 ):
                     raw_keys.add(entry.key)
@@ -468,6 +491,17 @@ def _check_export_inputs(structure, frame_set, properties):
                     f"duplicate extXYZ atom property name: {field_name}"
                 )
             atom_field_names.add(field_name)
+    comment_keys = set()
+    unit_keys = _emitted_unit_keys(properties)
+    for item in _ordered_frame_properties(properties):
+        key = item.semantic_role
+        if key in comment_keys:
+            raise ValueError(f"duplicate extXYZ comment key: {key}")
+        comment_keys.add(key)
+    for key in unit_keys:
+        if key in comment_keys:
+            raise ValueError(f"duplicate extXYZ comment key: {key}")
+        comment_keys.add(key)
     return frame_count
 
 
