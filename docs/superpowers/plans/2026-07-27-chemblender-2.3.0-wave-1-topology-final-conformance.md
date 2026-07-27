@@ -48,7 +48,7 @@ The three commits outside the six product Tasks are the Wave 1 activation, plan/
 - Consumes: CJSON `bonds.connections.index`, `bonds.order`, parser source SHA-256 and parser provenance.
 - Produces: `Structure(topology=None, topology_ids=(topology.id,))`, `ImportBatch.topologies=(topology,)`, complete `ParserReport.created_entity_ids`.
 
-- [ ] **Step 1: Write and run RED tests**
+- [x] **Step 1: Write and run RED tests**
 
 Add tests proving `parse_cjson()` immediately returns one deterministic `TopologyRecord`, `QCProject.commit()` exposes it to `topology_choices()`, `_structure_view_data()` accepts it, and report IDs exactly match all entities. Run:
 
@@ -58,11 +58,11 @@ Add tests proving `parse_cjson()` immediately returns one deterministic `Topolog
 
 **Expected RED:** the batch has no topology record, the Structure still embeds `MolecularTopology`, and report IDs omit topology identity.
 
-- [ ] **Step 2: Implement the minimal reader normalization**
+- [x] **Step 2: Implement the minimal reader normalization**
 
 Canonicalize CJSON endpoints/orders before construction; derive revision and UUID from adapter version, source hash and canonical arrays; create `TopologyRecord` with `EXPLICIT_FILE`, `COMPLETE`, empty stereo labels and parser provenance. Keep the raw envelope unchanged.
 
-- [ ] **Step 3: Verify compatibility**
+- [x] **Step 3: Verify compatibility**
 
 Run CJSON, topology, project, sidecar migration and Structure View tests. Confirm legacy v0.1/v0.2 embedded topology still migrates and CJSON envelope bytes export unchanged.
 
@@ -85,7 +85,7 @@ Run CJSON, topology, project, sidecar migration and Structure View tests. Confir
 - Consumes: `REGISTER_MODULE_NAMES`, `auto_load.get_ordered_classes_to_register()`.
 - Produces: `.ui.topology` and `.ui.scientific_edit` as exact registration roots without class re-export through the Project Browser module.
 
-- [ ] **Step 1: Write and run RED tests**
+- [x] **Step 1: Write and run RED tests**
 
 Assert both roots are present, every discovered Blender class belongs to its declared root, panel exposes no imported topology/scientific-edit classes, and the existing atomic callback rollback harness still succeeds.
 
@@ -95,11 +95,11 @@ Assert both roots are present, every discovered Blender class belongs to its dec
 
 **Expected RED:** the two roots are absent and panel re-exports their Blender classes.
 
-- [ ] **Step 2: Implement root ownership**
+- [x] **Step 2: Implement root ownership**
 
 Add the two root names and import their modules in panel via private module aliases. Keep `Scene.chemblender_topology` property ownership in panel and reference its type through the alias.
 
-- [ ] **Step 3: Verify lifecycle**
+- [x] **Step 3: Verify lifecycle**
 
 Run registration, Project Browser and Blender lifecycle tests, including partial registration failure and register/unregister/reload twice. Verify optional scientific stacks are not imported.
 
@@ -127,7 +127,7 @@ Run registration, Project Browser and Blender lifecycle tests, including partial
 - Producer rule: reverse `left > right` and negate shift; self-image first nonzero shift is positive; sort all parallel bond fields by the same key.
 - Model rule: reject reversed/non-canonical edges, zero-shift self edges and exact/reversed duplicates; continue accepting `bond_order=0.0`.
 
-- [ ] **Step 1: Write and run RED tests**
+- [x] **Step 1: Write and run RED tests**
 
 Add literal cases for reversed zero-shift edge, exact/reversed duplicate, zero-shift self edge, reversed periodic edge and reversed self-image. Include accepted canonical periodic/self-image and zero bond order.
 
@@ -137,11 +137,11 @@ Add literal cases for reversed zero-shift edge, exact/reversed duplicate, zero-s
 
 **Expected RED:** current `TopologyRecord` accepts malformed graph payloads.
 
-- [ ] **Step 2: Implement one shared canonicalizer and strict model validation**
+- [x] **Step 2: Implement one shared canonicalizer and strict model validation**
 
 Reuse one pure helper from the model boundary in CJSON, periodic inference, scientific-edit producer and legacy migration as required. The frozen model validates only; it never silently reorders its arrays.
 
-- [ ] **Step 3: Verify graph compatibility**
+- [x] **Step 3: Verify graph compatibility**
 
 Run model, reader, migration, sidecar, inference and Structure View tests. Confirm all parallel arrays keep the same sorted permutation.
 
@@ -162,7 +162,7 @@ Run model, reader, migration, sidecar, inference and Structure View tests. Confi
 - Consumes: Cartesian coordinates, cell and `PeriodicSiteData.pbc`.
 - Produces: fractional search coordinates normalized with `fractional[:, axis] -= floor(fractional[:, axis])` only where `pbc[axis]` is true, plus an explicit inference parameter naming the normalization strategy.
 
-- [ ] **Step 1: Write and run RED tests**
+- [x] **Step 1: Write and run RED tests**
 
 Cover whole-structure integer translation, one atom moved by more than one cell, skew cell, partial PBC, self-image and canonical shifts. Assert exact topology identity for physically equivalent PBC representations.
 
@@ -172,11 +172,11 @@ Cover whole-structure integer translation, one atom moved by more than one cell,
 
 **Expected RED:** a single atom unwrapped by multiple cells loses its edge or changes identity.
 
-- [ ] **Step 2: Implement Cartesian-authoritative PBC wrapping**
+- [x] **Step 2: Implement Cartesian-authoritative PBC wrapping**
 
 Compute fractional values only from Cartesian coordinates and cell; wrap enabled axes, preserve non-periodic axes, then rebuild Cartesian search coordinates. Record `fractional_normalization=cartesian_pbc_modulo_one`.
 
-- [ ] **Step 3: Verify performance**
+- [x] **Step 3: Verify performance**
 
 Run periodic/nonperiodic focused tests and topology benchmark. Compare median/p95 and scaling with the recorded Wave 1 budget.
 
@@ -195,19 +195,19 @@ Run periodic/nonperiodic focused tests and topology benchmark. Compare median/p9
 **Interfaces:**
 - Produces: complete contracts for frame validity masks, typed metadata/raw lexemes, exact lattice vector order and PBC defaults, package creation, explicit export UI registration, bounded staging/cancellation and compatibility fixtures.
 
-- [ ] **Step 1: Amend Task 1 model contract**
+- [x] **Step 1: Amend Task 1 model contract**
 
 Define boolean dimensionless validity masks with exact prefixes: `FrameProperty ("frame",)`, `AtomFrameProperty ("frame","atom")`, `CellFrameProperty ("frame",)`. Define categorical integer codes, unique categories and explicit missing code.
 
-- [ ] **Step 2: Amend parser/mapping contracts**
+- [x] **Step 2: Amend parser/mapping contracts**
 
 Add `ChemBlender/core/formats/__init__.py`; preserve string/integer/real/logical/1-D/2-D per-config values plus raw lexeme/diagnostic when safe typing fails; require exact lattice sequence `ax ay az bx by bz cx cy cz`; set PBC defaults to false without Lattice and true with Lattice unless explicitly overridden.
 
-- [ ] **Step 3: Amend UI and scale contracts**
+- [x] **Step 3: Amend UI and scale contracts**
 
 Make `ui.export` an explicit registration root and list registration/document tests. Require bounded frame iterator, staged memmap/NPY owner, cancellation cleanup, publication rollback and no all-frame nested tuple. Add libAtoms/ASE/OVITO-compatible fixtures without an ASE runtime dependency.
 
-- [ ] **Step 4: Verify the plan**
+- [x] **Step 4: Verify the plan**
 
 Run documentation contracts and self-review for missing placeholders, type/name consistency and all eight requested corrections.
 
@@ -226,7 +226,7 @@ Run documentation contracts and self-review for missing placeholders, type/name 
 **Interfaces:**
 - Produces: completed conformance cursor with planning/implementation/review/checkpoint SHAs and exact local evidence.
 
-- [ ] **Step 1: Run focused and full verification**
+- [x] **Step 1: Run focused and full verification**
 
 ```powershell
 & $pythonBin -m unittest `
@@ -243,15 +243,15 @@ Run documentation contracts and self-review for missing placeholders, type/name 
 git diff --check
 ```
 
-- [ ] **Step 2: Run Blender 5.1.2 product regression**
+- [x] **Step 2: Run Blender 5.1.2 product regression**
 
 Run native validate/build, ZIP audit, isolated install, two lifecycle loops, immediate CJSON topology/UI/Structure View, unwrapped periodic topology and scientific-edit regression.
 
-- [ ] **Step 3: Perform two independent reviews**
+- [x] **Step 3: Perform two independent reviews**
 
 Run specification-compliance and code-quality reviews. Fix all Critical, Important and gate-related Minor findings, then re-run covering and full verification.
 
-- [ ] **Step 4: Commit and checkpoint**
+- [x] **Step 4: Commit and checkpoint**
 
 Commit runtime/test/plan changes as `fix: close topology and extXYZ preflight contracts`; update cursor with exact evidence and commit `chore: checkpoint topology final conformance`.
 
