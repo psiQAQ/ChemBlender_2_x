@@ -39,24 +39,49 @@ class RDKitMoleculeContext:
     def __post_init__(self):
         if type(self.source_revision_id) is not UUID:
             raise TypeError("source_revision_id must be a UUID")
+        if not isinstance(self.source_hash, str):
+            raise ValueError("source_hash must be SHA-256 hex")
+        source_hash = str.__str__(self.source_hash)
         if (
-            not isinstance(self.source_hash, str)
-            or len(self.source_hash) != 64
-            or any(character not in "0123456789abcdef" for character in self.source_hash)
+            len(source_hash) != 64
+            or any(character not in "0123456789abcdef" for character in source_hash)
         ):
             raise ValueError("source_hash must be SHA-256 hex")
-        if not isinstance(self.record_key, str) or not self.record_key:
+        if not isinstance(self.record_key, str):
+            raise ValueError("record_key must be non-empty")
+        record_key = str.__str__(self.record_key)
+        if not record_key:
             raise ValueError("record_key must be non-empty")
         if type(self.source_record_index) is not int or self.source_record_index < 0:
             raise ValueError("source_record_index must be non-negative")
         if not isinstance(self.title, str):
             raise TypeError("title must be a string")
-        if self.block_version not in (None, "V2000", "V3000"):
+        title = str.__str__(self.title)
+        if self.block_version is not None and not isinstance(
+            self.block_version, str
+        ):
+            raise ValueError("block_version must be V2000, V3000 or None")
+        block_version = (
+            None
+            if self.block_version is None
+            else str.__str__(self.block_version)
+        )
+        if block_version not in (None, "V2000", "V3000"):
             raise ValueError("block_version must be V2000, V3000 or None")
         if self.writer_name is not None and not isinstance(self.writer_name, str):
             raise TypeError("writer_name must be a string or None")
         if self.writer_version is not None and not isinstance(self.writer_version, str):
             raise TypeError("writer_version must be a string or None")
+        writer_name = (
+            None
+            if self.writer_name is None
+            else str.__str__(self.writer_name)
+        )
+        writer_version = (
+            None
+            if self.writer_version is None
+            else str.__str__(self.writer_version)
+        )
         validation_mode = self.validation_mode
         if type(validation_mode) is not str:
             validation_mode = getattr(validation_mode, "value", None)
@@ -65,6 +90,13 @@ class RDKitMoleculeContext:
             or validation_mode not in {"strict", "balanced", "maximum"}
         ):
             raise ValueError("validation_mode must be strict, balanced or maximum")
+        validation_mode = str.__str__(validation_mode)
+        object.__setattr__(self, "source_hash", source_hash)
+        object.__setattr__(self, "record_key", record_key)
+        object.__setattr__(self, "title", title)
+        object.__setattr__(self, "block_version", block_version)
+        object.__setattr__(self, "writer_name", writer_name)
+        object.__setattr__(self, "writer_version", writer_version)
         object.__setattr__(self, "validation_mode", validation_mode)
 
 

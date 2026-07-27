@@ -1,5 +1,6 @@
 import importlib
 from dataclasses import fields
+from enum import Enum, StrEnum
 import inspect
 import os
 from pathlib import Path
@@ -314,6 +315,85 @@ class RDKitCommonAdapterTests(unittest.TestCase):
             public.provenance[0].parameters,
             (("record_key", "mode"), ("rdkit_sanitized", True), ("validation_mode", "maximum")),
         )
+
+    def test_context_text_str_enums_are_canonicalized_for_the_public_bridge(self):
+        class ContextText(str, Enum):
+            SOURCE_HASH = "a" * 64
+            RECORD_KEY = "enum-record"
+            TITLE = "enum title"
+            BLOCK_VERSION = "V2000"
+            WRITER_NAME = "RDKit"
+            WRITER_VERSION = "2026.03.3"
+
+        class ContextStrEnum(StrEnum):
+            SOURCE_HASH = "a" * 64
+            RECORD_KEY = "enum-record"
+            TITLE = "enum title"
+            BLOCK_VERSION = "V2000"
+            WRITER_NAME = "RDKit"
+            WRITER_VERSION = "2026.03.3"
+
+        adapter = self.adapter()
+        values = {
+            "source_revision_id": UUID("11111111-1111-1111-1111-111111111111"),
+            "source_hash": "a" * 64,
+            "record_key": "plain-record",
+            "source_record_index": 0,
+            "title": "plain title",
+            "block_version": "V2000",
+            "writer_name": "plain writer",
+            "writer_version": "1",
+            "validation_mode": "maximum",
+        }
+        for enum_type in (ContextText, ContextStrEnum):
+            enum_fields = {
+                "source_hash": enum_type.SOURCE_HASH,
+                "record_key": enum_type.RECORD_KEY,
+                "title": enum_type.TITLE,
+                "block_version": enum_type.BLOCK_VERSION,
+                "writer_name": enum_type.WRITER_NAME,
+                "writer_version": enum_type.WRITER_VERSION,
+            }
+            for name, value in enum_fields.items():
+                with self.subTest(enum_type=enum_type.__name__, name=name):
+                    candidate = dict(values)
+                    candidate[name] = value
+                    context = adapter.RDKitMoleculeContext(**candidate)
+                    self.assertIs(type(getattr(context, name)), str)
+                    self.assertEqual(getattr(context, name), value.value)
+
+        context = adapter.RDKitMoleculeContext(
+            **{
+                **values,
+                "source_hash": ContextText.SOURCE_HASH,
+                "record_key": ContextText.RECORD_KEY,
+                "title": ContextText.TITLE,
+                "block_version": ContextText.BLOCK_VERSION,
+                "writer_name": ContextText.WRITER_NAME,
+                "writer_version": ContextText.WRITER_VERSION,
+            }
+        )
+        adapted = adapter.adapt_rdkit_molecule(
+            _add_conformer(Chem.MolFromSmiles("CO")), b"context\n", context
+        )
+        try:
+            public = public_batch_from_internal(
+                ImportBatch(
+                    structures=(adapted.structure,),
+                    topologies=adapted.topologies,
+                    molecular_records=(adapted.molecular_record,),
+                    provenance=(adapted.provenance,),
+                    diagnostics=adapted.diagnostics,
+                )
+            )
+        except TypeError as error:
+            self.fail(f"context text subtype leaked through public bridge: {error}")
+        self.assertIs(type(public.molecular_records[0].record_key), str)
+        self.assertIs(type(public.molecular_records[0].title), str)
+        self.assertIs(type(public.molecular_records[0].block_version), str)
+        self.assertIs(type(public.molecular_records[0].writer_name), str)
+        self.assertIs(type(public.molecular_records[0].writer_version), str)
+        self.assertIs(type(public.provenance[0].source_hash), str)
 
 
 if __name__ == "__main__":
