@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 
 from . import model
 from .model.project import validate_project_graph
+from .model.molecular_topology import canonical_topology_edge
 from .model_registry import MODEL_ENUMS, model_type_from_tag, model_type_tag
 from .sidecar_migrations import (
     CURRENT_MANIFEST_VERSION,
@@ -270,9 +271,10 @@ class _Encoder:
 
 
 class _Decoder:
-    def __init__(self, root, verify_arrays):
+    def __init__(self, root, verify_arrays, legacy_topology_ids=()):
         self.root = Path(root).resolve()
         self.verify_arrays = verify_arrays
+        self.legacy_topology_ids = frozenset(legacy_topology_ids)
 
     def decode(self, value):
         if value is None or isinstance(value, (str, bool, int, float)):
@@ -358,11 +360,61 @@ class _Decoder:
             }
             if class_type is model.DiagnosticValue:
                 return class_type._from_canonical(decoded["value"])
+            if (
+                class_type is model.TopologyRecord
+                and decoded["id"] in self.legacy_topology_ids
+            ):
+                decoded = self._canonical_legacy_topology(decoded)
             return class_type(**decoded)
         except SidecarError:
             raise
         except Exception as error:
             raise SidecarIntegrityError(f"invalid {type_name} in manifest") from error
+
+    def _canonical_legacy_topology(self, decoded):
+        arrays = (decoded["bond_indices"], decoded["bond_orders"])
+        try:
+            model.MolecularTopology(*arrays)
+            indices = _numpy().array(decoded["bond_indices"].values, copy=True)
+            orders = _numpy().array(decoded["bond_orders"].values, copy=True)
+            keys = tuple(
+                canonical_topology_edge(int(left), int(right))
+                for left, right in indices
+            )
+            if len(set(keys)) != len(keys):
+                raise ValueError("legacy topology edges must not repeat")
+            permutation = sorted(range(len(keys)), key=keys.__getitem__)
+            result = dict(decoded)
+            result["bond_indices"] = model.ArrayData(
+                _numpy().asarray(
+                    [keys[index][:2] for index in permutation],
+                    dtype=indices.dtype,
+                ).reshape((-1, 2)),
+                decoded["bond_indices"].dims,
+                decoded["bond_indices"].unit,
+            )
+            result["bond_orders"] = model.ArrayData(
+                orders[permutation],
+                decoded["bond_orders"].dims,
+                decoded["bond_orders"].unit,
+            )
+            result["stereo_labels"] = tuple(
+                decoded["stereo_labels"][index] for index in permutation
+            )
+            return result
+        finally:
+            active_error = sys.exception()
+            cleanup_error = None
+            for array in arrays:
+                values = array.values
+                if isinstance(values, LazyNpyArray):
+                    try:
+                        values.close()
+                    except Exception as error:
+                        if cleanup_error is None:
+                            cleanup_error = error
+            if active_error is None and cleanup_error is not None:
+                raise cleanup_error
 
     def _array(self, descriptor):
         expected = {
@@ -507,7 +559,11 @@ def _open_project_with_manifest(
     if source_version == MANIFEST_VERSION:
         project_id, schema_version = _validate_current_manifest(manifest)
         metadata_manifest = manifest
-    manifest = migrate_manifest(manifest)
+    legacy_topology_ids = set()
+    manifest = migrate_manifest(
+        manifest,
+        migrated_topology_ids=legacy_topology_ids,
+    )
     if source_version == MANIFEST_VERSION:
         if manifest["format"] != FORMAT_ID:
             raise SidecarCompatibilityError("unsupported sidecar format")
@@ -527,7 +583,11 @@ def _open_project_with_manifest(
         )
     ):
         raise SidecarCompatibilityError("sidecar project schema is incompatible")
-    project = _Decoder(root, verify_arrays).decode(manifest.get("project"))
+    project = _Decoder(
+        root,
+        verify_arrays,
+        legacy_topology_ids,
+    ).decode(manifest.get("project"))
     if not isinstance(project, model.QCProject):
         raise SidecarIntegrityError("manifest project is not a QCProject")
     if project.id != project_id or project.schema_version != schema_version:

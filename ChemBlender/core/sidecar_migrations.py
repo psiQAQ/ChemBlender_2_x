@@ -68,7 +68,7 @@ def _encoded_tuple(values):
     return {"$tuple": [{"$tuple": list(item)} for item in values]}
 
 
-def _migrate_topology_records(project):
+def _migrate_topology_records(project, migrated_topology_ids=None):
     topology_entries = list(_registry_entries(project, "topologies"))
     changed = "topologies" not in project
     for _key, topology in topology_entries:
@@ -144,18 +144,20 @@ def _migrate_topology_records(project):
         )
         structure["topology"] = None
         structure["topology_ids"] = {"$tuple": [topology_id]}
+        if migrated_topology_ids is not None:
+            migrated_topology_ids.add(topology_uuid)
         changed = True
     if changed:
         project["topologies"] = {"$dict": topology_entries}
     return changed
 
 
-def migrate_manifest(document):
+def migrate_manifest(document, *, migrated_topology_ids=None):
     from .sidecar import SidecarCompatibilityError, SidecarIntegrityError
 
     def migrate_topologies(project):
         try:
-            _migrate_topology_records(project)
+            _migrate_topology_records(project, migrated_topology_ids)
         except (KeyError, TypeError, ValueError) as error:
             raise SidecarIntegrityError(
                 "invalid legacy topology payload"

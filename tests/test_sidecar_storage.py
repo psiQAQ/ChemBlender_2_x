@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy
 
@@ -163,6 +163,56 @@ def sample_project():
 
 
 class SidecarStorageTests(unittest.TestCase):
+    def test_legacy_embedded_topology_is_canonicalized_on_open(self):
+        structure = Structure(
+            id=uuid4(),
+            revision="legacy-structure",
+            atomic_numbers=(6, 6, 6),
+            coordinates=ArrayData(
+                numpy.zeros((3, 3)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+            topology=MolecularTopology(
+                bond_indices=ArrayData(
+                    numpy.asarray(((2, 1), (1, 0)), dtype=numpy.int64),
+                    ("bond", "endpoint"),
+                    "dimensionless",
+                ),
+                bond_orders=ArrayData(
+                    numpy.asarray((2.0, 1.0)),
+                    ("bond",),
+                    "dimensionless",
+                ),
+            ),
+        )
+        project = QCProject(id=uuid4(), schema_version="0.1")
+        project.commit(ImportBatch(structures=(structure,)))
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "legacy.cbq"
+            save_project(path, project)
+            before = {
+                item.relative_to(path): item.read_bytes()
+                for item in path.rglob("*")
+                if item.is_file()
+            }
+            restored = open_project(path)
+
+            topology = next(iter(restored.topologies.values()))
+            self.assertEqual(topology.bond_indices.values.tolist(), [[0, 1], [1, 2]])
+            self.assertEqual(topology.bond_orders.values.tolist(), [1.0, 2.0])
+            self.assertIsNone(restored.structures[structure.id].topology)
+            close_project(restored)
+            self.assertEqual(
+                before,
+                {
+                    item.relative_to(path): item.read_bytes()
+                    for item in path.rglob("*")
+                    if item.is_file()
+                },
+            )
+
     def test_v02_tagged_objects_and_array_descriptors_require_exact_schemas(self):
         project = sample_project()
         project.provenance[PROVENANCE_ID] = ProvenanceRecord(
