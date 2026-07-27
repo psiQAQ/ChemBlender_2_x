@@ -205,11 +205,11 @@ Run reader, catalog, capability document, sidecar and import preview tests. Comm
 **Interfaces:**
 - Produces: `export_xyz()`, `export_extxyz()` and `ExportReport` entries.
 
-- [ ] **Step 1: Write ordinary XYZ export test**
+- [x] **Step 1: Write ordinary XYZ export test**
 
 Export a Structure and assert count, title, symbols, fixed finite coordinates and newline. Reject unsupported coordinate units rather than silently writing.
 
-- [ ] **Step 2: Write extXYZ schema test**
+- [x] **Step 2: Write extXYZ schema test**
 
 Create a structure/frame set with numeric, bool and categorical properties.
 Assert deterministic `Properties` ordering: identity/position first, then
@@ -217,7 +217,7 @@ standardized roles, then unknown properties by original order key. Cover
 deterministic typed metadata serialization for scalar, 1-D and 2-D typed metadata,
 preserving string/integer/real/logical type and array shape.
 
-- [ ] **Step 3: Implement quoting and categorical export**
+- [x] **Step 3: Implement quoting and categorical export**
 
 Write categories as original strings. Metadata values requiring spaces are
 quoted. An unsafe raw lexeme and diagnostic may be emitted unchanged only when
@@ -226,14 +226,14 @@ export report presents a loss preview and requires confirmation before omission
 or string fallback. Non-finite values require Partial export confirmation and an
 explicit missing-value token policy in ExportReport.
 
-- [ ] **Step 4: Implement semantic round-trip comparator**
+- [x] **Step 4: Implement semantic round-trip comparator**
 
 Parse exported file and compare atomic numbers, coordinates, cell, PBC, dims,
 categories, valid masks and metadata type, shape and value with tolerances.
 Include scalar, 1-D and 2-D metadata plus the unsafe-lexeme loss path. Do not
 compare UUIDs or provenance IDs.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 Run round-trip tests including multi-frame cell and unknown properties; commit.
 
