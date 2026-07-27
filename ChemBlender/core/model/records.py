@@ -109,7 +109,7 @@ class RecordPropertyColumn(PropertyDataset):
             ):
                 raise ValueError("Complete categorical property must not contain missing codes")
         else:
-            dtype = numpy.asarray(self.data.values).dtype
+            dtype = numpy.dtype(self.data.values.dtype)
             numeric_or_logical = (
                 dtype.kind in "biufc"
                 and not dtype.hasobject
@@ -146,8 +146,7 @@ class ConformerSet(PropertyDataset):
             _require_uuid(self.reference_topology_id, "reference_topology_id")
         if not isinstance(self.data, ArrayData):
             raise TypeError("ConformerSet data must be ArrayData")
-        values = numpy.asarray(self.data.values)
-        dtype = values.dtype
+        dtype = numpy.dtype(self.data.values.dtype)
         if (
             self.domain != "conformer"
             or self.data.dims != ("conformer", "atom", "xyz")

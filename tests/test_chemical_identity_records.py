@@ -150,6 +150,15 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                 **{name: (True if name == "source_record_index" else getattr(value, name))
                    for name in value.__dataclass_fields__}
             )
+        for name, replacement in (
+            ("source_record_index", -1),
+            ("writer_name", 1),
+            ("writer_version", object()),
+        ):
+            fields = {field: getattr(value, field) for field in value.__dataclass_fields__}
+            fields[name] = replacement
+            with self.subTest(name=name), self.assertRaises((TypeError, ValueError)):
+                MolecularRecord(**fields)
 
     def test_record_property_column_masks_and_categorical_rules(self):
         record_ids = (uuid4(), uuid4())
@@ -183,6 +192,8 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
         self.assertIsInstance(RecordPropertyColumn(**partial_fields), RecordPropertyColumn)
         with self.assertRaisesRegex(ValueError, "requires a validity mask"):
             RecordPropertyColumn(**{**partial_fields, "validity_mask": None})
+        with self.assertRaisesRegex(ValueError, "Complete"):
+            RecordPropertyColumn(**{**partial_fields, "status": DatasetStatus.COMPLETE})
         categories = CategoricalData(
             ArrayData(numpy.asarray([0, -1], dtype=numpy.int64), ("record",), "dimensionless"),
             ("ok",), -1,
@@ -192,6 +203,13 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                 id=uuid4(), revision="cat-r1", semantic_role="label", domain="record",
                 data=categories, status=DatasetStatus.COMPLETE,
                 source_calculation=None, provenance_ids=(), record_ids=record_ids,
+            )
+        with self.assertRaisesRegex(ValueError, "missing_code"):
+            RecordPropertyColumn(
+                id=uuid4(), revision="cat-mask-r1", semantic_role="label", domain="record",
+                data=categories, status=DatasetStatus.PARTIAL,
+                source_calculation=None, provenance_ids=(), record_ids=record_ids,
+                validity_mask=array([True, False], ("record",)),
             )
         for values in (
             numpy.asarray(["text", "value"]),
@@ -206,6 +224,17 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                     domain="record", data=ArrayData(values, ("record",), "dimensionless"),
                     status=DatasetStatus.COMPLETE, source_calculation=None,
                     provenance_ids=(), record_ids=record_ids,
+                )
+        for record_ids_value, values in (
+            (("not-a-uuid",), numpy.asarray([1.0])),
+            ((uuid4(),), numpy.asarray([1.0, 2.0])),
+        ):
+            with self.subTest(record_ids=record_ids_value), self.assertRaises((TypeError, ValueError)):
+                RecordPropertyColumn(
+                    id=uuid4(), revision="invalid-ids-r1", semantic_role="energy",
+                    domain="record", data=ArrayData(values, ("record",), "hartree"),
+                    status=DatasetStatus.COMPLETE, source_calculation=None,
+                    provenance_ids=(), record_ids=record_ids_value,
                 )
 
     def test_conformer_set_requires_permutation_mapping(self):
@@ -244,6 +273,35 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                         for name in conformers.__dataclass_fields__
                     }
                 )
+        for name, replacement in (
+            ("data", array([[[0.0, 0.0, 0.0]]], ("conformer", "atom", "axis"), "angstrom")),
+            ("data", array(numpy.empty((1, 0, 3)), ("conformer", "atom", "xyz"), "angstrom")),
+            ("atom_mappings", array([[True, False], [False, True]], ("conformer", "atom"))),
+            ("record_ids", (record_ids[0], record_ids[0])),
+            ("record_keys", ("one", "one")),
+            ("record_keys", ("one",)),
+        ):
+            fields = {field: getattr(conformers, field) for field in conformers.__dataclass_fields__}
+            fields[name] = replacement
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                ConformerSet(**fields)
+
+    def test_atomic_identity_rejects_wrong_dims_categories_and_object_values(self):
+        value = identity()
+        with self.assertRaisesRegex(ValueError, "represent"):
+            CategoricalData(
+                ArrayData(numpy.asarray([0, 1], dtype=numpy.int8), ("atom",), "dimensionless"),
+                tuple(str(index) for index in range(129)), -1,
+            )
+        replacements = (
+            ("isotopes", ArrayData(numpy.asarray([0, 1]), ("site",), "dimensionless")),
+            ("formal_charges", ArrayData(numpy.asarray([object(), object()]), ("atom",), "dimensionless")),
+        )
+        for name, replacement in replacements:
+            fields = {field: getattr(value, field) for field in value.__dataclass_fields__}
+            fields[name] = replacement
+            with self.subTest(name=name), self.assertRaises((TypeError, ValueError)):
+                AtomicIdentityData(**fields)
 
     def test_conformer_set_can_group_records_from_independent_structures(self):
         reference = structure()
@@ -293,6 +351,76 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
             project.commit(ImportBatch(structures=(molecule,), datasets=(dataset,)))
         self.assertEqual(project.structures, {})
         self.assertEqual(project.datasets, {})
+
+    def test_project_rejects_cross_registry_and_molecular_dangling_references(self):
+        molecule = structure()
+        source = SourceRecord(molecule.id, "records.sdf", "file", "2026-07-27T00:00:00Z")
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            QCProject(uuid4(), "0.2").commit(
+                ImportBatch(sources=(source,), structures=(molecule,))
+            )
+
+        source, revision = source_revision((molecule.id,))
+        topology_id = uuid4()
+        record_value = record(molecule.id, topology_id)
+        record_value = MolecularRecord(
+            **{
+                name: (revision.id if name == "source_revision_id" else getattr(record_value, name))
+                for name in record_value.__dataclass_fields__
+            }
+        )
+        column = RecordPropertyColumn(
+            id=uuid4(), revision="column-r1", semantic_role="energy", domain="record",
+            data=array([1.0], ("record",), "hartree"), status=DatasetStatus.COMPLETE,
+            source_calculation=None, provenance_ids=(), record_ids=(uuid4(),),
+        )
+        cases = (
+            (
+                "topology",
+                ImportBatch(
+                    sources=(source,), source_revisions=(revision,), structures=(molecule,),
+                    molecular_records=(record_value,),
+                ),
+                "topology",
+            ),
+            (
+                "record_property",
+                ImportBatch(structures=(molecule,), datasets=(column,)),
+                "record property",
+            ),
+            (
+                "revision_created_entity",
+                ImportBatch(
+                    sources=(source,),
+                    source_revisions=(SourceRevision(
+                        **{
+                            name: ((uuid4(),) if name == "created_entity_ids" else getattr(revision, name))
+                            for name in revision.__dataclass_fields__
+                        }
+                    ),),
+                ),
+                "created entity",
+            ),
+        )
+        for name, batch, message in cases:
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, message):
+                QCProject(uuid4(), "0.2").commit(batch)
+
+        provenance_missing = MolecularRecord(
+            **{
+                name: (
+                    (uuid4(),) if name == "provenance_ids"
+                    else None if name == "topology_id"
+                    else getattr(record_value, name)
+                )
+                for name in record_value.__dataclass_fields__
+            }
+        )
+        with self.assertRaisesRegex(ValueError, "provenance"):
+            QCProject(uuid4(), "0.2").commit(ImportBatch(
+                sources=(source,), source_revisions=(revision,), structures=(molecule,),
+                molecular_records=(provenance_missing,),
+            ))
 
     def test_project_sidecar_and_reader_api_round_trip(self):
         molecule = structure(identity())
@@ -424,11 +552,15 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                 self.assertIsInstance(reopened.datasets[column.id], RecordPropertyColumn)
                 self.assertIsInstance(reopened.datasets[conformers.id], ConformerSet)
                 self.assertEqual(reopened.datasets[conformers.id].atom_mappings.shape, (1, 2))
+                column_values = reopened.datasets[column.id].data.values
                 values = reopened.datasets[conformers.id].data.values
+                self.assertFalse(column_values.loaded)
+                self.assertFalse(values.loaded)
                 self.assertEqual(values[0, 0, 0], 0.0)
                 self.assertTrue(values.loaded)
             finally:
                 close_project(reopened)
+            self.assertFalse(column_values.loaded)
             self.assertFalse(values.loaded)
 
     def test_public_batch_rejects_unsafe_ndarray_dtypes(self):
@@ -458,6 +590,26 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                     ),
                 )))
             values._mmap.close()
+
+    def test_public_batch_rejects_unsafe_memoryview_dtypes(self):
+        for values in (
+            memoryview(numpy.empty((1, 3), dtype=object)),
+            memoryview(numpy.zeros((1, 3), dtype=[("value", numpy.float64)])),
+        ):
+            structure_value = Structure(
+                id=uuid4(), revision="unsafe-memoryview-r1", atomic_numbers=(1,),
+                coordinates=ArrayData(values, ("atom", "xyz"), "angstrom"),
+            )
+            with self.subTest(format=values.format), self.assertRaisesRegex(
+                TypeError, "object, structured or subarray"
+            ):
+                reader_api.public_batch_from_internal(ImportBatch(structures=(structure_value,)))
+            with self.subTest(format=values.format), self.assertRaises(
+                reader_api.PublicBatchValidationError
+            ):
+                reader_api.internal_batch_from_public(
+                    reader_api.PublicImportBatch(structures=(structure_value,))
+                )
 
     def test_task1_additive_fields_reject_malformed_and_unknown_values(self):
         molecule = structure(identity())
