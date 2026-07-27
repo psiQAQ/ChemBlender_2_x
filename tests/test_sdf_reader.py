@@ -426,7 +426,7 @@ class SDFReaderTests(unittest.TestCase):
         content = (
             b"large V3000\nChemBlender\n\n"
             b"  0  0  0     0  0            999 V3000\n"
-            b"M  V30 BEGIN CTAB\nM  V30 COUNTS 1200 0 0 0 0\nM  V30 BEGIN ATOM\n"
+            b"M  V30 BEGIN CTAB\nM  V30 COUNTS\t  1200\t0  0\t0 0\nM  V30 BEGIN ATOM\n"
             + atoms
             + b"M  V30 END ATOM\nM  V30 END CTAB\nM  END\n$$$$\n"
         )
