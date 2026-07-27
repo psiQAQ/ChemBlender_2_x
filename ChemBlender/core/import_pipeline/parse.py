@@ -44,6 +44,7 @@ def staged_reader_batch(
     content_verified=True,
     parsed_batch=None,
     failure=None,
+    revision_id=None,
 ):
     if runtime is None:
         plugin_id = "chemblender.preflight"
@@ -69,6 +70,7 @@ def staged_reader_batch(
         content_verified=content_verified,
         parsed_batch=parsed_batch,
         failure=failure,
+        revision_id=revision_id,
     )
 
 
@@ -134,6 +136,11 @@ def stage_import_batch(
         return parsed_batch
 
     revision_id = uuid4() if revision_id is None else revision_id
+    if reader_id == "smiles" and any(
+        record.source_revision_id != revision_id
+        for record in parsed_batch.molecular_records
+    ):
+        raise ValueError("SMILES entities must use the authoritative source revision")
     diagnostics = [
         replace(item, source_revision_id=revision_id)
         for item in parsed_batch.diagnostics
@@ -175,8 +182,8 @@ def stage_import_batch(
     )
     source_record = SourceRecord(
         id=source.id,
-        display_name=source.path.name,
-        source_kind="local_file",
+        display_name=source.display_name,
+        source_kind=source.source_kind,
         created_at_utc=datetime.now(timezone.utc)
         .isoformat(timespec="seconds")
         .replace("+00:00", "Z"),
@@ -186,9 +193,9 @@ def stage_import_batch(
         source_id=source.id,
         content_hash=content_hash,
         byte_size=byte_size,
-        locator=str(source.path),
-        locator_kind="absolute_path",
-        original_filename=source.path.name,
+        locator=("inline:smiles" if source.text is not None else str(source.path)),
+        locator_kind=("inline_text" if source.text is not None else "absolute_path"),
+        original_filename=("inline.smi" if source.text is not None else source.path.name),
         reader_plugin_id=plugin_id,
         reader_id=reader_id,
         reader_version=reader_version,
@@ -234,15 +241,15 @@ def _validate_supplied_identity(
     expected = {
         "source display name": (
             source_record.display_name,
-            source.path.name,
+            source.display_name,
         ),
-        "source kind": (source_record.source_kind, "local_file"),
+        "source kind": (source_record.source_kind, source.source_kind),
         "revision source id": (revision.source_id, source_record.id),
         "content hash": (revision.content_hash, content_hash),
         "byte size": (revision.byte_size, byte_size),
-        "locator": (revision.locator, str(source.path)),
-        "locator kind": (revision.locator_kind, "absolute_path"),
-        "original filename": (revision.original_filename, source.path.name),
+        "locator": (revision.locator, "inline:smiles" if source.text is not None else str(source.path)),
+        "locator kind": (revision.locator_kind, "inline_text" if source.text is not None else "absolute_path"),
+        "original filename": (revision.original_filename, "inline.smi" if source.text is not None else source.path.name),
         "reader plugin id": (revision.reader_plugin_id, plugin_id),
         "reader id": (revision.reader_id, reader_id),
         "reader version": (revision.reader_version, reader_version),

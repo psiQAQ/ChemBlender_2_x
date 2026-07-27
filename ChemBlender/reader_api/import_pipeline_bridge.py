@@ -9,6 +9,7 @@ from ..core.import_pipeline.preflight import (
     _check_cancelled,
     _failure_message,
     _hash_and_prefix_file,
+    _materialize_text_source,
     _register_preview,
     _unavailable_content_hash,
 )
@@ -198,11 +199,12 @@ def preflight_reader_plugins(
     for index, source in enumerate(request.sources):
         completed = index * 3
         _check_cancelled(is_cancelled)
+        source_path = _materialize_text_source(source, session)
         override = overrides.get(source.id)
         parameters = parameters_by_source.get(source.id, ())
         try:
             content_hash, byte_size, prefix = _hash_and_prefix_file(
-                source.path, _cancel_callback(is_cancelled)
+                source_path, _cancel_callback(is_cancelled)
             )
         except _BridgeCancelled:
             raise ImportCancelled(
@@ -242,7 +244,7 @@ def preflight_reader_plugins(
 
         try:
             descriptor = registry.select(
-                SniffRequest(source.path, prefix), override
+                SniffRequest(source_path, prefix), override
             )
         except (KeyboardInterrupt, SystemExit, MemoryError, ImportCancelled):
             raise
@@ -319,7 +321,7 @@ def preflight_reader_plugins(
                     public = registry.parse(
                         descriptor.reader_id,
                         ParseRequest(
-                            source.path,
+                            source_path,
                             content_hash,
                             request.validation_mode.value,
                             dict(parameters),
@@ -338,7 +340,7 @@ def preflight_reader_plugins(
                 except ValueError as error:
                     if (
                         str(error) != "source_path must be a file"
-                        or source.path.is_file()
+                        or source_path.is_file()
                     ):
                         raise
                     internal = None

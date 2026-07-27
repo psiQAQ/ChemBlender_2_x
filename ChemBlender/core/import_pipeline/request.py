@@ -21,18 +21,47 @@ class ValidationMode(str, Enum):
 
 @dataclass(frozen=True, slots=True)
 class ImportSource:
-    path: Path
+    path: Path | None = None
     id: UUID = field(default_factory=uuid4)
+    text: str | None = None
+    source_kind: str = "local_file"
+    display_name: str | None = None
 
     def __post_init__(self):
-        if not isinstance(self.path, Path):
-            raise TypeError("path must be a Path")
         if type(self.id) is not UUID:
             raise TypeError("id must be a UUID")
-        canonical = self.path.resolve(strict=True)
-        if not canonical.is_file():
-            raise ValueError("source path must be a file")
-        object.__setattr__(self, "path", canonical)
+        _require_token(self.source_kind, "source_kind")
+        if self.text is None:
+            if not isinstance(self.path, Path):
+                raise TypeError("path must be a Path")
+            if self.source_kind != "local_file":
+                raise ValueError("file sources must use local_file")
+            canonical = self.path.resolve(strict=True)
+            if not canonical.is_file():
+                raise ValueError("source path must be a file")
+            object.__setattr__(self, "path", canonical)
+            if self.display_name is None:
+                object.__setattr__(self, "display_name", canonical.name)
+        else:
+            if self.path is not None or type(self.text) is not str:
+                raise ValueError("text sources require text and no path")
+            if self.source_kind != "text":
+                raise ValueError("text sources must use text")
+            if not self.text:
+                raise ValueError("text source must be non-empty")
+            if self.display_name is None:
+                object.__setattr__(self, "display_name", "SMILES text")
+        if type(self.display_name) is not str or not self.display_name:
+            raise ValueError("display_name must be non-empty")
+
+    @classmethod
+    def smiles_text(cls, text, *, id=None, display_name="SMILES text"):
+        return cls(
+            id=uuid4() if id is None else id,
+            text=text,
+            source_kind="text",
+            display_name=display_name,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,7 +91,7 @@ class ImportRequest:
             raise ValueError("sources must not be empty")
         if any(type(source) is not ImportSource for source in self.sources):
             raise TypeError("sources must contain ImportSource values")
-        paths = tuple(source.path for source in self.sources)
+        paths = tuple(source.path for source in self.sources if source.path is not None)
         if len(paths) != len(set(paths)):
             raise ValueError("source paths must be canonical and unique")
         source_ids = tuple(source.id for source in self.sources)

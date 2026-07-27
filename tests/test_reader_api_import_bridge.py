@@ -130,6 +130,43 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                 session.discard()
         self.temporary.cleanup()
 
+    def test_product_bridge_stages_inline_smiles_with_semantic_locator(self):
+        session = StagedImportSession.create(temp_parent=self.root)
+        self.staged.append(session)
+        request = ImportRequest((ImportSource.smiles_text("CCO ethanol\n"),))
+
+        preview = preflight_reader_plugins(
+            request, builtin_reader_plugin_registry(), session
+        )
+
+        batch = session.result(preview.staged_batch_ids[0])
+        revision, = batch.source_revisions
+        self.assertEqual(revision.reader_id, "smiles")
+        self.assertEqual(revision.locator, "inline:smiles")
+        self.assertEqual(revision.locator_kind, "inline_text")
+        self.assertNotIn(str(session.artifact_root), revision.locator)
+
+    def test_product_bridge_repeated_inline_smiles_commits_distinct_entities(self):
+        session = StagedImportSession.create(temp_parent=self.root)
+        self.staged.append(session)
+        first_preview = preflight_reader_plugins(
+            ImportRequest((ImportSource.smiles_text("CCO ethanol\n"),)),
+            builtin_reader_plugin_registry(), session,
+        )
+        second_preview = preflight_reader_plugins(
+            ImportRequest((ImportSource.smiles_text("CCO ethanol\n"),)),
+            builtin_reader_plugin_registry(), session,
+        )
+        first = session.result(first_preview.staged_batch_ids[0])
+        second = session.result(second_preview.staged_batch_ids[0])
+        self.assertNotEqual(first.structures[0].id, second.structures[0].id)
+        self.assertNotEqual(first.molecular_records[0].id, second.molecular_records[0].id)
+        self.assertEqual(first.provenance[0].source_hash, first.source_revisions[0].content_hash)
+        self.assertEqual(second.provenance[0].source_hash, second.source_revisions[0].content_hash)
+        project = QCProject(id=uuid4(), schema_version="1.0")
+        project.commit(first)
+        project.commit(second)
+
     def session(self):
         session = StagedImportSession.create(temp_parent=self.root)
         self.staged.append(session)

@@ -1,4 +1,5 @@
 import hashlib
+from types import SimpleNamespace
 from uuid import uuid4
 
 from ..model import ImportBatch
@@ -76,6 +77,14 @@ def _failure_message(error):
     return message or type(error).__name__
 
 
+def _materialize_text_source(source, session):
+    if source.text is None:
+        return source.path
+    path = session.artifact_root / f"{source.id}.smi"
+    path.write_bytes(source.text.encode("utf-8"))
+    return path
+
+
 def preflight_import(
     request,
     registry,
@@ -108,10 +117,11 @@ def preflight_import(
     for index, source in enumerate(request.sources):
         completed = index * 3
         _check_cancelled(is_cancelled)
+        path = _materialize_text_source(source, session)
         reader_override = overrides.get(source.id)
         runtime = None
         try:
-            content_hash, byte_size = _hash_file(source.path, is_cancelled)
+            content_hash, byte_size = _hash_file(path, is_cancelled)
         except (KeyboardInterrupt, SystemExit, MemoryError):
             raise
         except OSError as error:
@@ -150,7 +160,7 @@ def preflight_import(
 
         _check_cancelled(is_cancelled)
         try:
-            descriptor = registry.select(source.path, reader_override)
+            descriptor = registry.select(path, reader_override)
             runtime = registry.runtime(descriptor.reader_id)
         except (KeyboardInterrupt, SystemExit, MemoryError):
             raise
@@ -258,8 +268,23 @@ def preflight_import(
         progress("reader", completed + 2, total)
 
         _check_cancelled(is_cancelled)
+        revision_id = uuid4()
+        reader_staging_root = session.artifact_root / str(revision_id)
+        reader_staging_root.mkdir()
         try:
-            parsed_batch = descriptor.parse(source.path)
+            if descriptor.parse_request is None:
+                parsed_batch = descriptor.parse(path)
+            else:
+                parsed_batch = descriptor.parse_request(
+                    SimpleNamespace(
+                        source_path=path,
+                        source_content_hash=content_hash,
+                        validation_mode=request.validation_mode.value,
+                        canonical_parameters={}, staging_root=reader_staging_root,
+                        progress=lambda _event: None, is_cancelled=is_cancelled,
+                        source_revision_id=revision_id,
+                    )
+                )
             if type(parsed_batch) is not ImportBatch:
                 raise TypeError("reader parse must return ImportBatch")
         except (KeyboardInterrupt, SystemExit, MemoryError):
@@ -277,7 +302,7 @@ def preflight_import(
         if parsed_batch is not None:
             try:
                 current_hash, current_size = _hash_file(
-                    source.path,
+                    path,
                     is_cancelled,
                 )
             except (KeyboardInterrupt, SystemExit, MemoryError):
@@ -307,6 +332,7 @@ def preflight_import(
             reader_override=reader_override,
             parsed_batch=parsed_batch,
             failure=failure,
+            revision_id=revision_id,
         )
         source_previews.append(
             _register_preview(
@@ -352,7 +378,11 @@ def _register_preview(
     diagnostic_ids.extend(source_diagnostic_ids)
     return SourcePreview(
         source_id=source.id if source_id is None else source_id,
-        source_path=source.path,
+        source_path=(
+            source.path
+            if source.path is not None
+            else session.artifact_root / f"{source.id}.smi"
+        ),
         selected_reader_id=reader_id,
         content_hash=content_hash,
         byte_size=byte_size,

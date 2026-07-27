@@ -164,6 +164,7 @@ from .qcschema_adapter import (
 # Reader compatibility exports.
 from .formats.mol import MOL_READER, parse_mol, sniff_mol
 from .formats.sdf import SDF_READER, parse_sdf, sniff_sdf
+from .formats.smiles import SMILES_READER, parse_smiles, parse_smiles_text, sniff_smiles
 from .mol_v2000 import MOL_V2000_READER, parse_mol_v2000, sniff_mol_v2000
 # Adapter compatibility exports.
 from .pymatgen_adapter import (
@@ -346,6 +347,7 @@ __all__ = [
     "MOL_V2000_READER",
     "MOL_READER",
     "SDF_READER",
+    "SMILES_READER",
     "MolecularTopology",
     "MolecularRecord",
     "RawRecordProperty",
@@ -431,11 +433,14 @@ __all__ = [
     "parse_xyz",
     "parse_mol",
     "parse_sdf",
+    "parse_smiles",
+    "parse_smiles_text",
     "parse_mol_v2000",
     "sniff_qcschema",
     "sniff_cjson",
     "sniff_mol",
     "sniff_sdf",
+    "sniff_smiles",
     "sniff_mol_v2000",
     "sniff_cube",
     "sniff_ase_structure",

@@ -213,6 +213,7 @@ def _ordered_records(batch):
         raise ValueError("records must have unique IDs")
     structures = {structure.id: structure for structure in batch.structures}
     topologies = {topology.id: topology for topology in batch.topologies}
+    source_revisions = {revision.id: revision for revision in batch.source_revisions}
     ordered = tuple(
         sorted(
             records,
@@ -233,6 +234,10 @@ def _ordered_records(batch):
             raise ValueError("conformer grouping requires record structure and topology") from error
         if (
             structure.atomic_identity is None
+            or (
+                record.source_revision_id in source_revisions
+                and source_revisions[record.source_revision_id].reader_id != "sdf"
+            )
             or topology.source_kind is not TopologySource.EXPLICIT_FILE
             or topology.quality_status is not QualityStatus.COMPLETE
         ):
