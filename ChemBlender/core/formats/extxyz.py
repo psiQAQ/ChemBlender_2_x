@@ -1,12 +1,12 @@
 """Bounded, dependency-free extXYZ syntax parsing."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import hashlib
 import json
 import math
 from pathlib import Path
 import re
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from ...Chem_data import ELEMENTS_DEFAULT
 from ..model import (
@@ -82,10 +82,13 @@ numpy = _LazyNumpy()
 
 class _ArrayOwner:
     def __init__(self, root):
-        self.root = None if root is None else Path(root)
+        self.root = None
         self.arrays = []
-        if self.root is not None:
-            self.root.mkdir(parents=True, exist_ok=True)
+        if root is not None:
+            parent = Path(root)
+            parent.mkdir(parents=True, exist_ok=True)
+            self.root = parent / f"extxyz-{uuid4().hex}"
+            self.root.mkdir()
 
     def empty(self, shape, dtype):
         if self.root is None:
@@ -120,6 +123,11 @@ class _ArrayOwner:
             except FileNotFoundError:
                 pass
         self.arrays.clear()
+        if self.root is not None:
+            try:
+                self.root.rmdir()
+            except FileNotFoundError:
+                pass
 
 
 class ExtXYZSyntaxError(ValueError):
@@ -737,10 +745,17 @@ def _source_hash(source, is_cancelled):
     digest = hashlib.sha256()
     with source.open("rb") as stream:
         while chunk := stream.read(65536):
-            if is_cancelled():
-                raise ExtXYZCancelled("extXYZ parse was cancelled")
+            _check_cancelled(is_cancelled)
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _check_cancelled(is_cancelled):
+    result = is_cancelled()
+    if type(result) is not bool:
+        raise TypeError("is_cancelled must return bool")
+    if result:
+        raise ExtXYZCancelled("extXYZ parse was cancelled")
 
 
 def _revision(source_hash, role, payload):
@@ -776,218 +791,266 @@ def _numeric_dtype(kind):
     }[kind]
 
 
-def _categorical(values, present, dims, owner):
-    categories = []
-    first = next(iter(values.values()))
-    suffix = () if not first or isinstance(first[0], str) else (len(first[0]),)
-    codes = owner.full(present.shape + suffix, -1, numpy.int64)
-    for frame_index, frame_values in values.items():
-        for atom_index, value in enumerate(frame_values):
-            items = (value,) if isinstance(value, str) else value
-            for component, item in enumerate(items):
-                if item not in categories:
-                    categories.append(item)
-                index = (frame_index, atom_index) + (
-                    () if suffix == () else (component,)
-                )
-                codes[index] = categories.index(item)
-    return CategoricalData(
-        ArrayData(codes, dims, "dimensionless"),
-        tuple(categories),
-        -1,
-    )
+@dataclass(slots=True)
+class _ValuePlan:
+    sample: object
+    present: int = 0
+    unit_missing: int = 0
+    unit_values: set = field(default_factory=set)
+    schema: ExtXYZPropertyField | None = None
 
 
-def _atom_property(
-    *,
-    source_hash,
-    group_index,
-    frame_set_id,
-    provenance_id,
-    field,
-    values,
-    frame_count,
-    atom_count,
-    issues,
-    owner,
-    declared_unit,
-):
-    role, unit = _ATOM_PROPERTIES.get(
-        field.name,
-        (_token(field.name), "unknown"),
-    )
-    present = numpy.zeros((frame_count, atom_count), dtype=numpy.bool_)
-    for frame_index, frame_values in values.items():
-        present[frame_index] = True
-    if field.kind == "S":
-        data = _categorical(
-            values,
-            present,
-            _dims(field, prefix=("frame", "atom")),
-            owner,
-        )
-        mask = None
+@dataclass(slots=True)
+class _GroupPlan:
+    index: int
+    start: int
+    end: int
+    identity: tuple[int, ...]
+    first_cell: object
+    first_pbc: tuple[bool, bool, bool]
+    atom: dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
+    cell_changed: bool = False
+    cell_missing: bool = False
+    pbc_changed: bool = False
+
+    @property
+    def frame_count(self):
+        return self.end - self.start
+
+
+def _metadata_signature(value):
+    array = numpy.asarray(value)
+    if array.ndim > 2:
+        return None
+    if array.dtype.kind in "SU":
+        kind = "categorical"
+    elif array.dtype.kind in "biuf":
+        kind = array.dtype.str
     else:
-        array = owner.zeros(
-            _shape(frame_count, atom_count, field),
-            _numeric_dtype(field.kind),
+        return None
+    return kind, array.shape
+
+
+def _record_unit(plan, expected, entry):
+    if entry is None:
+        plan.unit_missing += 1
+    else:
+        value = None if entry.diagnostic is not None else str(entry.value)
+        plan.unit_values.add(expected if value == expected else "<invalid>")
+
+
+def _unit_mode(plan, expected):
+    if expected is None:
+        return "unknown", "unknown"
+    if plan.unit_missing == plan.present and not plan.unit_values:
+        return expected, "assumed"
+    if plan.unit_missing == 0 and plan.unit_values == {expected}:
+        return expected, "declared"
+    return "unknown", "invalid"
+
+
+def _plan_source(source, is_cancelled, issues):
+    groups = []
+    current = None
+    for frame_index, frame in enumerate(iter_extxyz_frames(source)):
+        _check_cancelled(is_cancelled)
+        identity = _identity(frame)
+        cell, pbc = _cell_and_pbc(frame)
+        if current is None or identity != current.identity:
+            current = _GroupPlan(
+                len(groups),
+                frame_index,
+                frame_index,
+                identity,
+                None if cell is None else cell.copy(),
+                pbc,
+                cell_missing=cell is None,
+            )
+            groups.append(current)
+        current.end = frame_index + 1
+        current.cell_missing |= cell is None
+        current.cell_changed |= (
+            (cell is None) != (current.first_cell is None)
+            or (
+                cell is not None
+                and current.first_cell is not None
+                and not numpy.array_equal(cell, current.first_cell)
+            )
         )
-        for frame_index, frame_values in values.items():
-            array[frame_index] = frame_values
-        data = ArrayData(
-            array,
-            _dims(field, prefix=("frame", "atom")),
-            unit,
-        )
-        mask = (
+        current.pbc_changed |= pbc != current.first_pbc
+        entries = _entry_map(frame)
+        values = _value_map(frame)
+        for property_field in frame.properties:
+            if property_field.name in {"species", "pos"}:
+                continue
+            plan = current.atom.get(property_field.name)
+            if plan is None:
+                plan = _ValuePlan(
+                    values[property_field.name][0],
+                    schema=property_field,
+                )
+                current.atom[property_field.name] = plan
+            elif plan.schema != property_field:
+                raise ExtXYZSyntaxError(
+                    f"Properties field {property_field.name} "
+                    "changes type or width"
+                )
+            plan.present += 1
+            if property_field.name in _ATOM_PROPERTIES:
+                _record_unit(
+                    plan,
+                    _ATOM_PROPERTIES[property_field.name][1],
+                    entries.get(f"{property_field.name}_unit"),
+                )
+        for entry in frame.comment.entries:
+            if entry.key in _RESERVED_COMMENT_KEYS:
+                continue
+            if entry.diagnostic is not None:
+                issues.append(
+                    ParserIssue(
+                        IssueKind.AMBIGUOUS,
+                        f"metadata.{entry.key}",
+                        f"{entry.diagnostic}; raw value retained in comment",
+                    )
+                )
+                continue
+            signature = _metadata_signature(entry.value)
+            if signature is None:
+                continue
+            plan = current.metadata.get(entry.key)
+            if plan is None:
+                plan = _ValuePlan(entry.value)
+                current.metadata[entry.key] = plan
+            elif _metadata_signature(plan.sample) != signature:
+                raise ExtXYZSyntaxError(
+                    f"metadata {entry.key} changes shape or type between frames"
+                )
+            plan.present += 1
+        for name, (_role, expected) in _FRAME_PROPERTIES.items():
+            plan = current.metadata.get(name)
+            if plan is not None and name in entries:
+                _record_unit(
+                    plan,
+                    expected,
+                    entries.get(f"{name}_unit"),
+                )
+    if not groups:
+        raise ExtXYZSyntaxError("extXYZ source is missing an atom frame")
+    return groups
+
+
+def _categorical_state(owner, shape, dims, present_shape):
+    return {
+        "values": owner.full(shape, -1, numpy.int64),
+        "dims": dims,
+        "categories": [],
+        "category_index": {},
+        "present": (
             None
-            if numpy.all(present)
-            else ArrayData(
-                present,
-                ("frame", "atom"),
-                "dimensionless",
-            )
-        )
-    if field.name in _ATOM_PROPERTIES:
-        if not declared_unit:
-            issues.append(
-                ParserIssue(
-                    IssueKind.AMBIGUOUS,
-                    f"atom_properties.{field.name}",
-                    f"{unit} was assumed because extXYZ declared no unit",
-                )
-            )
-        status = (
-            DatasetStatus.PARTIAL
-            if mask is not None
-            else DatasetStatus.COMPLETE
-        )
-    else:
-        status = DatasetStatus.AMBIGUOUS
+            if present_shape is None
+            else owner.zeros(present_shape, numpy.bool_)
+        ),
+        "categorical": True,
+    }
+
+
+def _numeric_state(owner, shape, dims, dtype, unit, present_shape):
+    return {
+        "values": owner.zeros(shape, dtype),
+        "dims": dims,
+        "unit": unit,
+        "present": (
+            None
+            if present_shape is None
+            else owner.zeros(present_shape, numpy.bool_)
+        ),
+        "categorical": False,
+    }
+
+
+def _prepare_atom_state(plan, group, owner, issues):
+    schema = plan.schema
+    role, expected = _ATOM_PROPERTIES.get(
+        schema.name,
+        (_token(schema.name), None),
+    )
+    unit, mode = _unit_mode(plan, expected)
+    if mode == "assumed":
         issues.append(
             ParserIssue(
                 IssueKind.AMBIGUOUS,
-                f"atom_properties.{field.name}",
+                f"atom_properties.{schema.name}",
+                f"{unit} was assumed because extXYZ declared no unit",
+            )
+        )
+    elif mode == "invalid":
+        issues.append(
+            ParserIssue(
+                IssueKind.AMBIGUOUS,
+                f"atom_properties.{schema.name}",
+                "explicit extXYZ unit is unknown or inconsistent",
+            )
+        )
+    elif mode == "unknown":
+        issues.append(
+            ParserIssue(
+                IssueKind.AMBIGUOUS,
+                f"atom_properties.{schema.name}",
                 "extXYZ property has no declared ChemBlender semantic unit",
             )
         )
-    identity = f"group:{group_index}:atom_property:{field.name}"
-    return AtomFrameProperty(
-        id=_stable_uuid(source_hash, identity),
-        revision=_revision(
-            source_hash,
-            identity,
-            {
-                "kind": field.kind,
-                "columns": field.columns,
-                "present": present.tolist(),
-            },
-        ),
-        semantic_role=role,
-        domain="atom_frame",
-        data=data,
-        status=status,
-        source_calculation=None,
-        provenance_ids=(provenance_id,),
-        frame_set_id=frame_set_id,
-        validity_mask=mask,
+    shape = _shape(group.frame_count, len(group.identity), schema)
+    dims = _dims(schema, prefix=("frame", "atom"))
+    present_shape = (
+        None
+        if plan.present == group.frame_count
+        else (group.frame_count, len(group.identity))
     )
+    state = (
+        _categorical_state(owner, shape, dims, present_shape)
+        if schema.kind == "S"
+        else _numeric_state(
+            owner,
+            shape,
+            dims,
+            _numeric_dtype(schema.kind),
+            unit,
+            present_shape,
+        )
+    )
+    state.update(
+        {
+            "name": schema.name,
+            "role": role,
+            "mode": mode,
+            "plan": plan,
+        }
+    )
+    return state
 
 
-def _metadata_property(
-    *,
-    source_hash,
-    group_index,
-    frame_set_id,
-    provenance_id,
-    name,
-    values,
-    frame_count,
-    issues,
-    owner,
-):
-    role, unit = _FRAME_PROPERTIES.get(name, (_token(name), "unknown"))
-    present = numpy.asarray(
-        [index in values for index in range(frame_count)],
-        dtype=numpy.bool_,
-    )
-    samples = tuple(values.values())
-    if not samples:
-        return None
-    sample = samples[0]
-    sample_array = numpy.asarray(sample)
-    if isinstance(sample, str) or sample_array.dtype.kind in "SU":
-        categories = []
-        suffix = (
-            ()
-            if sample_array.ndim == 0
-            else (
-                ("component",)
-                if sample_array.ndim == 1
-                else ("row", "column")
+def _metadata_dims(sample):
+    array = numpy.asarray(sample)
+    if array.ndim == 0:
+        return ()
+    if array.ndim == 1:
+        return ("tensor_component",)
+    return ("tensor_row", "tensor_column")
+
+
+def _prepare_metadata_state(name, plan, group, owner, issues):
+    role, expected = _FRAME_PROPERTIES.get(name, (_token(name), None))
+    unit, mode = _unit_mode(plan, expected)
+    sample = numpy.asarray(plan.sample)
+    if name in {"stress", "virial"}:
+        if sample.ndim != 1 or sample.size not in {6, 9}:
+            raise ExtXYZSyntaxError(
+                f"{name} must contain six Voigt or nine matrix values"
             )
-        )
-        codes = owner.full(
-            (frame_count,) + sample_array.shape,
-            -1,
-            numpy.int64,
-        )
-        for index, value in values.items():
-            value_array = numpy.asarray(value)
-            if value_array.shape != sample_array.shape:
-                raise ExtXYZSyntaxError(
-                    f"metadata {name} changes shape between frames"
-                )
-            for offset in numpy.ndindex(value_array.shape or (1,)):
-                text = str(value_array.item() if not value_array.shape else value_array[offset])
-                if text not in categories:
-                    categories.append(text)
-                target = (index,) if not value_array.shape else (index,) + offset
-                codes[target] = categories.index(text)
-        data = CategoricalData(
-            ArrayData(codes, ("frame",) + suffix, "dimensionless"),
-            tuple(categories),
-            -1,
-        )
-        mask = None
-    else:
-        if sample_array.ndim > 2 or sample_array.dtype.kind not in "biuf":
-            return None
-        suffix = (
-            ()
-            if sample_array.ndim == 0
-            else (
-                ("tensor_component",)
-                if sample_array.ndim == 1
-                else ("tensor_row", "tensor_column")
-            )
-        )
-        if name in {"stress", "virial"}:
-            size = int(sample_array.size)
-            if size not in {6, 9}:
-                raise ExtXYZSyntaxError(
-                    f"{name} must contain six Voigt or nine matrix values"
-                )
-            role = f"{name}_{'voigt' if size == 6 else 'matrix'}"
-            unit = "unknown"
-        array = owner.zeros(
-            (frame_count,) + sample_array.shape,
-            sample_array.dtype,
-        )
-        for index, value in values.items():
-            value_array = numpy.asarray(value)
-            if value_array.shape != sample_array.shape:
-                raise ExtXYZSyntaxError(
-                    f"metadata {name} changes shape between frames"
-                )
-            array[index] = value_array
-        data = ArrayData(array, ("frame",) + suffix, unit)
-        mask = (
-            None
-            if numpy.all(present)
-            else ArrayData(present, ("frame",), "dimensionless")
-        )
-    if name in _FRAME_PROPERTIES:
+        role = f"{name}_{'voigt' if sample.size == 6 else 'matrix'}"
+        unit, mode = "unknown", "unknown"
+    if mode == "assumed":
         issues.append(
             ParserIssue(
                 IssueKind.AMBIGUOUS,
@@ -995,30 +1058,176 @@ def _metadata_property(
                 f"{unit} was assumed because extXYZ declared no unit",
             )
         )
-        status = (
-            DatasetStatus.PARTIAL
-            if mask is not None
-            else DatasetStatus.COMPLETE
+    elif mode == "invalid":
+        issues.append(
+            ParserIssue(
+                IssueKind.AMBIGUOUS,
+                f"frame_properties.{name}",
+                "explicit extXYZ unit is unknown or inconsistent",
+            )
         )
-    else:
-        status = DatasetStatus.AMBIGUOUS
-    identity = f"group:{group_index}:frame_property:{name}"
-    return FrameProperty(
-        id=_stable_uuid(source_hash, identity),
-        revision=_revision(
-            source_hash,
-            identity,
-            {"present": present.tolist(), "shape": data.shape},
-        ),
-        semantic_role=role,
-        domain="frame",
-        data=data,
-        status=status,
-        source_calculation=None,
-        provenance_ids=(provenance_id,),
-        frame_set_id=frame_set_id,
-        validity_mask=mask,
+    present_shape = (
+        None if plan.present == group.frame_count else (group.frame_count,)
     )
+    dims = ("frame",) + _metadata_dims(plan.sample)
+    shape = (group.frame_count,) + sample.shape
+    state = (
+        _categorical_state(owner, shape, dims, present_shape)
+        if sample.dtype.kind in "SU"
+        else _numeric_state(
+            owner,
+            shape,
+            dims,
+            sample.dtype,
+            unit,
+            present_shape,
+        )
+    )
+    state.update(
+        {
+            "name": name,
+            "role": role,
+            "mode": mode,
+            "plan": plan,
+        }
+    )
+    return state
+
+
+def _consumed_unit_names(group):
+    names = set()
+    for name, plan in group.atom.items():
+        expected = _ATOM_PROPERTIES.get(name, (None, None))[1]
+        if _unit_mode(plan, expected)[1] == "declared":
+            names.add(f"{name}_unit")
+    for name, plan in group.metadata.items():
+        expected = _FRAME_PROPERTIES.get(name, (None, None))[1]
+        if expected is not None and _unit_mode(plan, expected)[1] == "declared":
+            names.add(f"{name}_unit")
+    return names
+
+
+def _prepare_group_state(group, owner, issues):
+    cell_values = cell_present = pbc_values = None
+    if group.cell_changed or (group.first_cell is not None and group.cell_missing):
+        cell_values = owner.zeros(
+            (group.frame_count, 3, 3),
+            numpy.float64,
+        )
+        if group.cell_missing:
+            cell_present = owner.zeros((group.frame_count,), numpy.bool_)
+    if group.pbc_changed:
+        pbc_values = owner.empty((group.frame_count, 3), numpy.bool_)
+    consumed = _consumed_unit_names(group)
+    return {
+        "plan": group,
+        "coordinates": owner.empty(
+            (group.frame_count, len(group.identity), 3),
+            numpy.float64,
+        ),
+        "comments": [None] * group.frame_count,
+        "symbols": None,
+        "cells": cell_values,
+        "cell_present": cell_present,
+        "pbcs": pbc_values,
+        "atom": {
+            name: _prepare_atom_state(plan, group, owner, issues)
+            for name, plan in group.atom.items()
+        },
+        "metadata": {
+            name: _prepare_metadata_state(name, plan, group, owner, issues)
+            for name, plan in group.metadata.items()
+            if name not in consumed
+        },
+    }
+
+
+def _write_categorical(state, target, value):
+    value = numpy.asarray(value)
+    for offset in numpy.ndindex(value.shape or (1,)):
+        text = str(value.item() if not value.shape else value[offset])
+        if text not in state["category_index"]:
+            state["category_index"][text] = len(state["categories"])
+            state["categories"].append(text)
+        destination = target if not value.shape else target + offset
+        state["values"][destination] = state["category_index"][text]
+
+
+def _fill_states(source, states, is_cancelled):
+    group_index = 0
+    for frame_index, frame in enumerate(iter_extxyz_frames(source)):
+        _check_cancelled(is_cancelled)
+        while frame_index >= states[group_index]["plan"].end:
+            group_index += 1
+        state = states[group_index]
+        group = state["plan"]
+        local = frame_index - group.start
+        values = _value_map(frame)
+        if _identity(frame) != group.identity:
+            raise ExtXYZSyntaxError("atom identity changed during extXYZ fill")
+        state["coordinates"][local] = values["pos"]
+        state["comments"][local] = frame.comment.raw
+        if state["symbols"] is None:
+            state["symbols"] = tuple(str(value) for value in values["species"])
+        cell, pbc = _cell_and_pbc(frame)
+        if state["cells"] is not None and cell is not None:
+            state["cells"][local] = cell
+            if state["cell_present"] is not None:
+                state["cell_present"][local] = True
+        if state["pbcs"] is not None:
+            state["pbcs"][local] = pbc
+        fields = _field_map(frame)
+        for name, property_state in state["atom"].items():
+            if name not in fields:
+                continue
+            if property_state["categorical"]:
+                for atom_index, value in enumerate(values[name]):
+                    _write_categorical(
+                        property_state,
+                        (local, atom_index),
+                        value,
+                    )
+            else:
+                property_state["values"][local] = values[name]
+            if property_state["present"] is not None:
+                property_state["present"][local] = True
+        entries = _entry_map(frame)
+        for name, property_state in state["metadata"].items():
+            entry = entries.get(name)
+            if entry is None or entry.diagnostic is not None:
+                continue
+            if property_state["categorical"]:
+                _write_categorical(property_state, (local,), entry.value)
+            else:
+                property_state["values"][local] = entry.value
+            if property_state["present"] is not None:
+                property_state["present"][local] = True
+
+
+def _state_data(state):
+    if state["categorical"]:
+        return CategoricalData(
+            ArrayData(state["values"], state["dims"], "dimensionless"),
+            tuple(state["categories"]),
+            -1,
+        )
+    return ArrayData(state["values"], state["dims"], state["unit"])
+
+
+def _state_status(state):
+    if state["mode"] in {"invalid", "unknown"}:
+        return DatasetStatus.AMBIGUOUS
+    return (
+        DatasetStatus.PARTIAL
+        if state["present"] is not None
+        else DatasetStatus.COMPLETE
+    )
+
+
+def _state_mask(state, dims):
+    if state["categorical"] or state["present"] is None:
+        return None
+    return ArrayData(state["present"], dims, "dimensionless")
 
 
 def _periodic_data(cell, pbc, coordinates, labels):
@@ -1048,94 +1257,47 @@ def _periodic_data(cell, pbc, coordinates, labels):
     )
 
 
-def _build_group(
-    source,
-    source_hash,
-    group_index,
-    start,
-    end,
-    identity,
-    issues,
-    owner,
-    is_cancelled,
-):
-    frame_count = end - start
-    atom_count = len(identity)
+def _finalize_group(state, source_hash):
+    group = state["plan"]
+    group_index = group.index
     provenance_id = _stable_uuid(source_hash, "provenance")
     structure_id = _stable_uuid(source_hash, f"group:{group_index}:structure")
     frame_set_id = _stable_uuid(source_hash, f"group:{group_index}:frames")
-    coordinates = owner.empty(
-        (frame_count, atom_count, 3),
-        numpy.float64,
-    )
-    comments = []
-    cells = [None] * frame_count
-    pbcs = [None] * frame_count
-    symbols = None
-    atom_specs = {}
-    atom_values = {}
-    metadata_values = {}
-    for source_index, frame in enumerate(iter_extxyz_frames(source)):
-        is_cancelled()
-        if source_index < start:
-            continue
-        if source_index >= end:
-            break
-        frame_index = source_index - start
-        fields = _field_map(frame)
-        values = _value_map(frame)
-        coordinates[frame_index] = values["pos"]
-        comments.append(frame.comment.raw)
-        cells[frame_index], pbcs[frame_index] = _cell_and_pbc(frame)
-        if symbols is None:
-            symbols = tuple(str(value) for value in values["species"])
-        for field in frame.properties:
-            if field.name in {"species", "pos"}:
-                continue
-            previous = atom_specs.setdefault(field.name, field)
-            if previous != field:
-                raise ExtXYZSyntaxError(
-                    f"Properties field {field.name} changes type or width"
-                )
-            atom_values.setdefault(field.name, {})[frame_index] = values[field.name]
-        for entry in frame.comment.entries:
-            if entry.key in _RESERVED_COMMENT_KEYS:
-                continue
-            if entry.diagnostic is not None:
-                issues.append(
-                    ParserIssue(
-                        IssueKind.AMBIGUOUS,
-                        f"metadata.{entry.key}",
-                        f"{entry.diagnostic}; raw value retained in comment",
-                    )
-                )
-                continue
-            metadata_values.setdefault(entry.key, {})[frame_index] = entry.value
-
-    first_cell = cells[0]
-    first_pbc = pbcs[0]
     periodic = (
         None
-        if first_cell is None
-        else _periodic_data(first_cell, first_pbc, coordinates[0], symbols)
+        if group.first_cell is None
+        else _periodic_data(
+            group.first_cell,
+            group.first_pbc,
+            state["coordinates"][0],
+            state["symbols"],
+        )
     )
     structure = Structure(
         id=structure_id,
         revision=_revision(
             source_hash,
             f"group:{group_index}:structure",
-            {"identity": identity, "first_frame": coordinates[0].tolist()},
+            {
+                "identity": group.identity,
+                "start": group.start,
+                "end": group.end,
+            },
         ),
-        atomic_numbers=identity,
+        atomic_numbers=group.identity,
         coordinates=ArrayData(
-            coordinates[0],
+            state["coordinates"][0],
             ("atom", "xyz"),
             "angstrom",
         ),
         cell=(
             None
-            if first_cell is None
-            else ArrayData(first_cell, ("cell_vector", "xyz"), "angstrom")
+            if group.first_cell is None
+            else ArrayData(
+                group.first_cell,
+                ("cell_vector", "xyz"),
+                "angstrom",
+            )
         ),
         periodic=periodic,
     )
@@ -1144,12 +1306,12 @@ def _build_group(
         revision=_revision(
             source_hash,
             f"group:{group_index}:frames",
-            {"start": start, "end": end},
+            {"start": group.start, "end": group.end},
         ),
         semantic_role="coordinates",
         domain="frame",
         data=ArrayData(
-            coordinates,
+            state["coordinates"],
             ("frame", "atom", "xyz"),
             "angstrom",
         ),
@@ -1157,69 +1319,68 @@ def _build_group(
         source_calculation=None,
         provenance_ids=(provenance_id,),
         structure_id=structure_id,
-        comments=tuple(comments),
+        comments=tuple(state["comments"]),
     )
     datasets = [frame_set]
-    datasets.extend(
-        _atom_property(
-            source_hash=source_hash,
-            group_index=group_index,
-            frame_set_id=frame_set_id,
-            provenance_id=provenance_id,
-            field=atom_specs[name],
-            values=atom_values[name],
-            frame_count=frame_count,
-            atom_count=atom_count,
-            issues=issues,
-            owner=owner,
-            declared_unit=(
-                bool(metadata_values.get(f"{name}_unit"))
-                and all(
-                    value == _ATOM_PROPERTIES[name][1]
-                    for value in metadata_values[f"{name}_unit"].values()
-                )
-                if name in _ATOM_PROPERTIES
-                else False
-            ),
+    for name, property_state in state["atom"].items():
+        identity = f"group:{group_index}:atom_property:{name}"
+        datasets.append(
+            AtomFrameProperty(
+                id=_stable_uuid(source_hash, identity),
+                revision=_revision(
+                    source_hash,
+                    identity,
+                    {
+                        "kind": property_state["plan"].schema.kind,
+                        "columns": property_state["plan"].schema.columns,
+                        "present": property_state["plan"].present,
+                    },
+                ),
+                semantic_role=property_state["role"],
+                domain="atom_frame",
+                data=_state_data(property_state),
+                status=_state_status(property_state),
+                source_calculation=None,
+                provenance_ids=(provenance_id,),
+                frame_set_id=frame_set_id,
+                validity_mask=_state_mask(
+                    property_state,
+                    ("frame", "atom"),
+                ),
+            )
         )
-        for name in atom_specs
-    )
-    for name, values in metadata_values.items():
-        if name.endswith("_unit") and name[:-5] in _ATOM_PROPERTIES:
-            continue
-        dataset = _metadata_property(
-            source_hash=source_hash,
-            group_index=group_index,
-            frame_set_id=frame_set_id,
-            provenance_id=provenance_id,
-            name=name,
-            values=values,
-            frame_count=frame_count,
-            issues=issues,
-            owner=owner,
+    for name, property_state in state["metadata"].items():
+        identity = f"group:{group_index}:frame_property:{name}"
+        datasets.append(
+            FrameProperty(
+                id=_stable_uuid(source_hash, identity),
+                revision=_revision(
+                    source_hash,
+                    identity,
+                    {
+                        "present": property_state["plan"].present,
+                        "shape": property_state["values"].shape,
+                    },
+                ),
+                semantic_role=property_state["role"],
+                domain="frame",
+                data=_state_data(property_state),
+                status=_state_status(property_state),
+                source_calculation=None,
+                provenance_ids=(provenance_id,),
+                frame_set_id=frame_set_id,
+                validity_mask=_state_mask(property_state, ("frame",)),
+            )
         )
-        if dataset is not None:
-            datasets.append(dataset)
-    if any(cell is not None for cell in cells) and (
-        any(cell is None for cell in cells)
-        or any(
-            not numpy.array_equal(cell, first_cell)
-            for cell in cells
-            if cell is not None
-        )
-    ):
-        present = numpy.asarray(
-            [cell is not None for cell in cells],
-            dtype=numpy.bool_,
-        )
-        values = owner.zeros((frame_count, 3, 3), numpy.float64)
-        for index, cell in enumerate(cells):
-            if cell is not None:
-                values[index] = cell
+    if state["cells"] is not None:
         mask = (
             None
-            if numpy.all(present)
-            else ArrayData(present, ("frame",), "dimensionless")
+            if state["cell_present"] is None
+            else ArrayData(
+                state["cell_present"],
+                ("frame",),
+                "dimensionless",
+            )
         )
         datasets.append(
             CellFrameProperty(
@@ -1227,12 +1388,18 @@ def _build_group(
                 revision=_revision(
                     source_hash,
                     f"group:{group_index}:cells",
-                    {"present": present.tolist()},
+                    {
+                        "present": (
+                            group.frame_count
+                            if state["cell_present"] is None
+                            else int(numpy.count_nonzero(state["cell_present"]))
+                        )
+                    },
                 ),
                 semantic_role="cell",
                 domain="cell_frame",
                 data=ArrayData(
-                    values,
+                    state["cells"],
                     ("frame", "cell_vector", "xyz"),
                     "angstrom",
                 ),
@@ -1247,20 +1414,19 @@ def _build_group(
                 validity_mask=mask,
             )
         )
-    if any(pbc != first_pbc for pbc in pbcs[1:]):
-        pbc_values = numpy.asarray(pbcs, dtype=numpy.bool_)
+    if state["pbcs"] is not None:
         datasets.append(
             FrameProperty(
                 id=_stable_uuid(source_hash, f"group:{group_index}:pbc"),
                 revision=_revision(
                     source_hash,
                     f"group:{group_index}:pbc",
-                    pbc_values.tolist(),
+                    {"frames": group.frame_count},
                 ),
                 semantic_role="pbc",
                 domain="frame",
                 data=ArrayData(
-                    pbc_values,
+                    state["pbcs"],
                     ("frame", "xyz"),
                     "dimensionless",
                 ),
@@ -1281,24 +1447,9 @@ def parse_extxyz(source, *, staging_root=None, is_cancelled=None):
     owner = _ArrayOwner(staging_root)
     try:
         source_hash = _source_hash(source, is_cancelled)
-        identities = []
-        for frame in iter_extxyz_frames(source):
-            if is_cancelled():
-                raise ExtXYZCancelled("extXYZ parse was cancelled")
-            identities.append(_identity(frame))
-            _cell_and_pbc(frame)
-        if not identities:
-            raise ExtXYZSyntaxError("extXYZ source is missing an atom frame")
-        ranges = []
-        start = 0
-        for index in range(1, len(identities)):
-            if identities[index] != identities[start]:
-                ranges.append((start, index, identities[start]))
-                start = index
-        ranges.append((start, len(identities), identities[start]))
-
         issues = []
-        if len(ranges) > 1:
+        groups = _plan_source(source, is_cancelled, issues)
+        if len(groups) > 1:
             issues.append(
                 ParserIssue(
                     IssueKind.AMBIGUOUS,
@@ -1306,22 +1457,21 @@ def parse_extxyz(source, *, staging_root=None, is_cancelled=None):
                     "atom identity changed between frames; trajectory was split",
                 )
             )
-        structures = []
-        datasets = []
-        for group_index, (start, end, identity) in enumerate(ranges):
-            structure, group_datasets = _build_group(
-                source,
-                source_hash,
-                group_index,
-                start,
-                end,
-                identity,
-                issues,
-                owner,
-                is_cancelled,
-            )
-            structures.append(structure)
-            datasets.extend(group_datasets)
+        states = [
+            _prepare_group_state(group, owner, issues)
+            for group in groups
+        ]
+        _fill_states(source, states, is_cancelled)
+        finalized = [
+            _finalize_group(state, source_hash)
+            for state in states
+        ]
+        structures = [item[0] for item in finalized]
+        datasets = [
+            dataset
+            for _structure, group_datasets in finalized
+            for dataset in group_datasets
+        ]
         provenance_id = _stable_uuid(source_hash, "provenance")
         provenance = ProvenanceRecord(
             id=provenance_id,
@@ -1359,17 +1509,39 @@ def parse_extxyz(source, *, staging_root=None, is_cancelled=None):
         raise
 
 
+def _properties_schema_state(text):
+    assignment = _has_unquoted_reserved_assignment(text, 0)
+    try:
+        comment = parse_extxyz_comment(text)
+    except ExtXYZSyntaxError:
+        return assignment, False
+    if not any(entry.key == "Properties" for entry in comment.entries):
+        return False, False
+    fields = {field.name: field for field in comment.properties}
+    valid = (
+        fields.get("species") == ExtXYZPropertyField("species", "S", 1)
+        and fields.get("pos") == ExtXYZPropertyField("pos", "R", 3)
+    )
+    return True, valid
+
+
+def has_extxyz_properties_assignment(text):
+    return _properties_schema_state(text)[0]
+
+
 def sniff_extxyz(source, prefix):
     try:
         lines = prefix.decode("utf-8-sig").splitlines()
     except UnicodeDecodeError:
         return SniffResult(SniffMatch.NONE, "content is not UTF-8 extXYZ text")
-    if len(lines) < 2 or "Properties" not in lines[1]:
+    if len(lines) < 2:
         return SniffResult(SniffMatch.NONE, "no extXYZ Properties marker")
     try:
-        int(lines[0].strip())
-        parse_extxyz_comment(lines[1])
-    except (ValueError, ExtXYZSyntaxError):
+        atom_count = int(lines[0].strip())
+    except ValueError:
+        return SniffResult(SniffMatch.NONE, "invalid extXYZ atom count")
+    _assignment, valid = _properties_schema_state(lines[1])
+    if atom_count <= 0 or not valid:
         return SniffResult(SniffMatch.NONE, "invalid extXYZ Properties marker")
     return SniffResult(SniffMatch.EXACT, "valid extXYZ Properties marker")
 
@@ -1406,6 +1578,7 @@ __all__ = (
     "ExtXYZMetadataEntry",
     "ExtXYZPropertyField",
     "ExtXYZSyntaxError",
+    "has_extxyz_properties_assignment",
     "iter_extxyz_frames",
     "parse_extxyz",
     "parse_extxyz_comment",

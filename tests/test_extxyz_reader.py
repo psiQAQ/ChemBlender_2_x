@@ -20,6 +20,7 @@ from ChemBlender.core import (
     create_session,
 )
 from ChemBlender.core.formats.extxyz import EXTXYZ_READER, parse_extxyz
+from ChemBlender.core.formats import extxyz as extxyz_module
 from ChemBlender.core.import_pipeline import (
     ImportCommitDecisions,
     ImportRequest,
@@ -62,6 +63,30 @@ class ExtXYZReaderSelectionTests(unittest.TestCase):
             registry.select(malformed)
         with self.assertRaisesRegex(ValueError, "positive"):
             registry.parse(malformed, reader_id="extxyz")
+
+    def test_sniff_requires_a_structured_complete_properties_schema(self):
+        registry = builtin_reader_registry()
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            prose = root / "prose.xyz"
+            prose.write_text(
+                "1\nProperties are useful prose\nH 0 0 0\n",
+                encoding="utf-8",
+            )
+            incomplete = root / "incomplete.xyz"
+            incomplete.write_text(
+                "1\nProperties=foo:R:1\n1\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(registry.select(prose).reader_id, "xyz")
+            with self.assertRaises(LookupError):
+                registry.select(incomplete)
+            with self.assertRaisesRegex(
+                ValueError,
+                "species:S:1",
+            ):
+                registry.parse(incomplete, reader_id="extxyz")
 
 
 class ExtXYZProjectMappingTests(unittest.TestCase):
@@ -207,8 +232,192 @@ class ExtXYZProjectMappingTests(unittest.TestCase):
             },
         )
 
+    def test_explicit_units_are_validated_and_unknown_lexemes_are_preserved(self):
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "units.extxyz"
+            source.write_text(
+                "1\nProperties=species:S:1:pos:R:3:charge:R:1 "
+                "charge_unit=not_a_unit energy=-1 energy_unit=hartree\n"
+                "C 0 0 0 -0.2\n",
+                encoding="utf-8",
+            )
+            batch = parse_extxyz(source)
+
+        properties = {
+            item.semantic_role: item
+            for item in batch.datasets
+            if item.semantic_role != "coordinates"
+        }
+        self.assertEqual(properties["atomic_charge"].data.unit, "unknown")
+        self.assertEqual(
+            properties["atomic_charge"].status,
+            DatasetStatus.AMBIGUOUS,
+        )
+        self.assertEqual(properties["energy"].data.unit, "unknown")
+        self.assertEqual(properties["energy"].status, DatasetStatus.AMBIGUOUS)
+        self.assertIn("charge_unit", properties)
+        self.assertIn("energy_unit", properties)
+        self.assertFalse(
+            any(
+                "declared no unit" in issue.message
+                for issue in batch.report.issues
+            )
+        )
+
+    def test_recognized_units_suppress_assumption_diagnostics(self):
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "units.extxyz"
+            source.write_text(
+                "1\nProperties=species:S:1:pos:R:3:charge:R:1 "
+                "charge_unit=elementary_charge energy=-1 "
+                "energy_unit=electron_volt\n"
+                "C 0 0 0 -0.2\n",
+                encoding="utf-8",
+            )
+            batch = parse_extxyz(source)
+
+        self.assertFalse(
+            any(
+                issue.path in {
+                    "atom_properties.charge",
+                    "frame_properties.energy",
+                }
+                for issue in batch.report.issues
+            )
+        )
+
+    def test_stress_and_virial_record_six_and_nine_component_conventions(self):
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "tensor.extxyz"
+            source.write_text(
+                '1\nProperties=species:S:1:pos:R:3 '
+                'stress="1 2 3 4 5 6" '
+                'virial="1 0 0 0 1 0 0 0 1"\n'
+                "C 0 0 0\n",
+                encoding="utf-8",
+            )
+            batch = parse_extxyz(source)
+
+        properties = {
+            item.semantic_role: item
+            for item in batch.datasets
+            if isinstance(item, FrameProperty)
+        }
+        self.assertEqual(properties["stress_voigt"].data.shape, (1, 6))
+        self.assertEqual(properties["virial_matrix"].data.shape, (1, 9))
+        self.assertEqual(
+            properties["stress_voigt"].status,
+            DatasetStatus.AMBIGUOUS,
+        )
+
 
 class ExtXYZStagingTests(unittest.TestCase):
+    def test_split_source_uses_exactly_one_plan_and_one_fill_scan(self):
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "split.extxyz"
+            source.write_text(
+                "1\nProperties=species:S:1:pos:R:3\nH 0 0 0\n"
+                "1\nProperties=species:S:1:pos:R:3\nHe 0 0 0\n",
+                encoding="utf-8",
+            )
+            original = extxyz_module.iter_extxyz_frames
+            scans = 0
+
+            def counted(path):
+                nonlocal scans
+                scans += 1
+                return original(path)
+
+            with patch.object(
+                extxyz_module,
+                "iter_extxyz_frames",
+                side_effect=counted,
+            ):
+                parse_extxyz(source)
+
+        self.assertEqual(scans, 2)
+
+    def test_multiple_sources_get_distinct_staged_backing_files(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            session = StagedImportSession.create(temp_parent=root)
+            first = parse_extxyz(
+                FIXTURES / "extxyz" / "multiframe-cell.extxyz",
+                staging_root=session.artifact_root,
+            )
+            first_frames = next(
+                item for item in first.datasets if isinstance(item, FrameSet)
+            )
+            before = numpy.asarray(first_frames.data.values).copy()
+            second_source = root / "second.extxyz"
+            second_source.write_text(
+                "1\nProperties=species:S:1:pos:R:3\nH 9 0 0\n",
+                encoding="utf-8",
+            )
+            second = parse_extxyz(
+                second_source,
+                staging_root=session.artifact_root,
+            )
+            second_frames = next(
+                item for item in second.datasets if isinstance(item, FrameSet)
+            )
+
+            self.assertNotEqual(
+                Path(first_frames.data.values.filename).parent,
+                Path(second_frames.data.values.filename).parent,
+            )
+            numpy.testing.assert_array_equal(first_frames.data.values, before)
+            session.register_result(uuid4(), first)
+            session.register_result(uuid4(), second)
+            session.discard()
+
+    def test_staged_values_and_validity_masks_share_the_owner(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            session = StagedImportSession.create(temp_parent=root)
+            source = root / "partial.extxyz"
+            source.write_text(
+                "1\nProperties=species:S:1:pos:R:3:q:R:1\n"
+                "C 0 0 0 1\n"
+                "1\nProperties=species:S:1:pos:R:3\nC 0 0 0\n",
+                encoding="utf-8",
+            )
+            batch = parse_extxyz(
+                source,
+                staging_root=session.artifact_root,
+            )
+            prop = next(
+                item
+                for item in batch.datasets
+                if isinstance(item, AtomFrameProperty)
+            )
+
+            self.assertIsInstance(prop.data.values, numpy.memmap)
+            self.assertIsInstance(
+                prop.validity_mask.values,
+                numpy.memmap,
+            )
+            session.register_result(uuid4(), batch)
+            session.discard()
+
+    def test_fill_pass_requires_exact_cancellation_bool(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            calls = 0
+
+            def check():
+                nonlocal calls
+                calls += 1
+                return 1 if calls == 4 else False
+
+            with self.assertRaisesRegex(TypeError, "bool"):
+                parse_extxyz(
+                    FIXTURES / "extxyz" / "multiframe-cell.extxyz",
+                    staging_root=root,
+                    is_cancelled=check,
+                )
+            self.assertEqual(tuple(root.iterdir()), ())
+
     def test_publication_failure_keeps_live_project_and_staged_owner(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -284,11 +493,15 @@ class ExtXYZStagingTests(unittest.TestCase):
                 item for item in batch.datasets if isinstance(item, FrameSet)
             )
 
-            self.assertIsInstance(frames.data.values, numpy.memmap)
-            self.assertTrue(tuple(session.artifact_root.glob("*.npy")))
             root = session.root
             session.register_result(uuid4(), batch)
-            session.discard()
+            try:
+                self.assertIsInstance(frames.data.values, numpy.memmap)
+                files = tuple(session.artifact_root.rglob("*.npy"))
+                self.assertTrue(files)
+                self.assertEqual(len({path.parent for path in files}), 1)
+            finally:
+                session.discard()
             self.assertFalse(root.exists())
 
     def test_cancellation_removes_incomplete_staged_arrays(self):
