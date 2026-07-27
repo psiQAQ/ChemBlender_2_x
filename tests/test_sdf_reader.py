@@ -92,6 +92,22 @@ class SDFReaderTests(unittest.TestCase):
         self.assertEqual(flag.data.values.tolist(), [True, False, False])
         self.assertEqual(flag.validity_mask.values.tolist(), [True, True, False])
 
+    def test_normal_int64_property_remains_a_numeric_column(self) -> None:
+        import numpy
+
+        from ChemBlender.core.formats.sdf import parse_sdf
+
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "integer.sdf"
+            source.write_bytes(_sdf(_record(("Identifier", b"9223372036854775807"))))
+            batch = parse_sdf(source)
+
+        identifier = next(
+            item for item in batch.datasets if item.semantic_role == "sdf_identifier"
+        )
+        self.assertEqual(identifier.data.dtype, numpy.dtype(numpy.int64))
+        self.assertEqual(identifier.data.values.tolist(), [9223372036854775807])
+
     def test_sdwriter_headers_and_non_numeric_properties_build_categorical_columns(self) -> None:
         from ChemBlender.core import CategoricalData, DatasetStatus
         from ChemBlender.core.formats.sdf import parse_sdf
@@ -235,6 +251,24 @@ class SDFReaderTests(unittest.TestCase):
             (source_revision_id, source_revision_id),
         )
         self.assertEqual(len(set(record.record_key for record in batch.molecular_records)), 2)
+
+    def test_final_delimiter_without_newline_has_matching_bytes_and_file_boundaries(self) -> None:
+        from ChemBlender.core.formats.sdf import iter_sdf_file_records, iter_sdf_records
+
+        record = _record()
+        content = record + b"$$$$"
+        expected_hash = hashlib.sha256(record).hexdigest()
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "final-delimiter.sdf"
+            source.write_bytes(content)
+            file_boundaries = tuple(iter_sdf_file_records(source, chunk_bytes=7))
+        bytes_boundaries = tuple(iter_sdf_records(content))
+
+        self.assertEqual(bytes_boundaries, file_boundaries)
+        self.assertEqual(
+            tuple((item.index, item.start, item.end, item.raw_hash) for item in bytes_boundaries),
+            ((0, 0, len(record), expected_hash),),
+        )
 
     def test_file_cancellation_and_10k_indexing_are_bounded(self) -> None:
         from ChemBlender.core.formats.sdf import (
@@ -380,6 +414,47 @@ class SDFReaderTests(unittest.TestCase):
             result = SDF_READER.sniff(source, source.read_bytes()[:64 * 1024])
 
         self.assertIs(result.match, SniffMatch.NONE)
+
+    def test_large_incomplete_v3000_mol_prefix_is_probable_sdf(self) -> None:
+        from ChemBlender.core.formats.sdf import SDF_READER
+        from ChemBlender.core.readers import SniffMatch
+
+        atoms = b"".join(
+            f"M  V30 {index} C 1234567890.1234567890 0.0000000000 0.0000000000 0\n".encode("ascii")
+            for index in range(1, 1201)
+        )
+        content = (
+            b"large V3000\nChemBlender\n\n"
+            b"  0  0  0     0  0            999 V3000\n"
+            b"M  V30 BEGIN CTAB\nM  V30 COUNTS 1200 0 0 0 0\nM  V30 BEGIN ATOM\n"
+            + atoms
+            + b"M  V30 END ATOM\nM  V30 END CTAB\nM  END\n$$$$\n"
+        )
+        self.assertGreater(len(content), 64 * 1024)
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "large-v3000.sdf"
+            source.write_bytes(content)
+            result = SDF_READER.sniff(source, content[:64 * 1024])
+
+        self.assertIs(result.match, SniffMatch.PROBABLE)
+
+    def test_record_keys_depend_on_source_identity_and_full_record_hash(self) -> None:
+        from ChemBlender.core.formats.sdf import parse_sdf
+
+        first = _record(("Label", b"same"))
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source_one = root / "one.sdf"
+            source_two = root / "two.sdf"
+            source_one.write_bytes(_sdf(first, _record(("Tail", b"one"))))
+            source_two.write_bytes(_sdf(first, _record(("Tail", b"two"))))
+            first_batch = parse_sdf(source_one)
+            second_batch = parse_sdf(source_two)
+
+        self.assertNotEqual(
+            first_batch.molecular_records[0].record_key,
+            second_batch.molecular_records[0].record_key,
+        )
 
     def test_direct_parse_uses_a_single_atomic_snapshot_when_source_is_replaced(self) -> None:
         from ChemBlender.core.formats import sdf

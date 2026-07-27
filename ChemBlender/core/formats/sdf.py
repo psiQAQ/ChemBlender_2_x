@@ -34,6 +34,10 @@ _CAPABILITIES = {
 }
 _PROPERTY_HEADER = re.compile(br">\s*<([^>]*)>.*")
 _INTEGER = re.compile(r"[+-]?\d+\Z", re.ASCII)
+_V2000_COUNTS = re.compile(br"\s*\d+\s+\d+.*V2000\Z")
+_V2000_ATOM = re.compile(br"\s*[+-]?(?:\d+\.\d*|\.\d+)\s+")
+_V3000_COUNTS = re.compile(br"M  V30 COUNTS \d+ \d+ \d+ \d+ \d+\Z")
+_V3000_ATOM = re.compile(br"M  V30 \d+ [A-Z][a-z]?(?:\s|\Z)")
 
 
 class SDFReaderCancelled(Exception):
@@ -49,6 +53,7 @@ class SDFRecordBoundary:
     index: int
     start: int
     end: int
+    raw_hash: str = ""
 
 
 def _check_cancel(is_cancelled):
@@ -78,13 +83,19 @@ def iter_sdf_records(raw_source, *, is_cancelled=None):
         else:
             next_line = line_end + 1
         if raw_source[line_start:line_end].rstrip(b"\r") == b"$$$$":
-            yield SDFRecordBoundary(index, start, line_start)
+            raw_record = raw_source[start:line_start]
+            yield SDFRecordBoundary(
+                index, start, line_start, hashlib.sha256(raw_record).hexdigest()
+            )
             index += 1
             start = next_line
         line_start = next_line
     _check_cancel(is_cancelled)
     if raw_source[start:].strip(b" \t\r\n"):
-        yield SDFRecordBoundary(index, start, size)
+        raw_record = raw_source[start:size]
+        yield SDFRecordBoundary(
+            index, start, size, hashlib.sha256(raw_record).hexdigest()
+        )
 
 
 def _scan_sdf_stream(stream, *, is_cancelled, chunk_bytes, snapshot=None, digest=None):
@@ -148,12 +159,10 @@ def _scan_sdf_stream(stream, *, is_cancelled, chunk_bytes, snapshot=None, digest
             offset += newline - segment_start + 1
             finish_line(offset)
             segment_start = newline + 1
+    if line_start < offset:
+        finish_line(offset)
     if tail_has_content:
         boundaries.append(SDFRecordBoundary(index, record_start, offset))
-    elif line_start < offset:
-        finish_line(offset)
-        if tail_has_content:
-            boundaries.append(SDFRecordBoundary(index, record_start, offset))
     _check_cancel(is_cancelled)
     return tuple(boundaries)
 
@@ -162,9 +171,28 @@ def iter_sdf_file_records(source, *, is_cancelled=None, chunk_bytes=64 * 1024):
     """Yield SDF byte ranges from fixed-size binary reads."""
     _check_cancel(is_cancelled)
     with Path(source).open("rb") as stream:
-        yield from _scan_sdf_stream(
+        boundaries = _scan_sdf_stream(
             stream, is_cancelled=is_cancelled, chunk_bytes=chunk_bytes
         )
+        yield from _hash_stream_boundaries(stream, boundaries, is_cancelled=is_cancelled)
+
+
+def _hash_stream_boundaries(stream, boundaries, *, is_cancelled):
+    hashed = []
+    for boundary in boundaries:
+        digest = hashlib.sha256()
+        remaining = boundary.end - boundary.start
+        stream.seek(boundary.start)
+        while remaining:
+            _check_cancel(is_cancelled)
+            chunk = stream.read(min(64 * 1024, remaining))
+            if not chunk:
+                raise OSError("SDF source changed while hashing a record")
+            digest.update(chunk)
+            remaining -= len(chunk)
+        hashed.append(replace(boundary, raw_hash=digest.hexdigest()))
+    _check_cancel(is_cancelled)
+    return tuple(hashed)
 
 
 def _read_snapshot_record(snapshot, boundary, *, is_cancelled):
@@ -197,7 +225,9 @@ def _snapshot_source(source, *, is_cancelled, temp_dir=None, chunk_bytes=64 * 10
                 digest=digest,
             )
         snapshot.seek(0)
-        return snapshot, digest.hexdigest(), boundaries
+        return snapshot, digest.hexdigest(), _hash_stream_boundaries(
+            snapshot, boundaries, is_cancelled=is_cancelled
+        )
     except BaseException:
         snapshot.close()
         raise
@@ -239,8 +269,12 @@ def _properties(raw_properties):
     return tuple(result)
 
 
-def _record_key(index, raw_record):
-    return f"record-{index:06d}-{hashlib.sha256(raw_record).hexdigest()[:16]}"
+def _record_key(source_revision_id, source_hash, boundary):
+    identity = uuid5(
+        source_revision_id,
+        f"sdf:record:{source_hash}:{boundary.index}:{boundary.raw_hash}",
+    )
+    return f"record-{boundary.index:06d}-{identity}"
 
 
 def _parse_record(raw_record, boundary, *, source_revision_id, source_hash, validation_mode, is_cancelled):
@@ -253,7 +287,7 @@ def _parse_record(raw_record, boundary, *, source_revision_id, source_hash, vali
     from .rdkit_common import RDKitMoleculeContext, adapt_rdkit_molecule
     from rdkit import Chem
 
-    key = _record_key(boundary.index, raw_record)
+    key = _record_key(source_revision_id, source_hash, boundary)
     context = RDKitMoleculeContext(
         source_revision_id=source_revision_id,
         source_hash=source_hash,
@@ -287,11 +321,13 @@ def _parse_record(raw_record, boundary, *, source_revision_id, source_hash, vali
     return adaptation, record, diagnostics
 
 
-def _failure_diagnostic(source_revision_id, boundary, raw_record, message):
-    key = _record_key(boundary.index, raw_record)
-    raw_hash = hashlib.sha256(raw_record).hexdigest()
+def _failure_diagnostic(source_revision_id, source_hash, boundary, message):
+    key = _record_key(source_revision_id, source_hash, boundary)
     return ImportDiagnostic(
-        id=uuid5(source_revision_id, f"sdf:record-parse-failed:{boundary.index}:{raw_hash}"),
+        id=uuid5(
+            source_revision_id,
+            f"sdf:record-parse-failed:{boundary.index}:{boundary.raw_hash}",
+        ),
         severity=DiagnosticSeverity.ERROR,
         quality_status=QualityStatus.INVALID,
         source_revision_id=source_revision_id,
@@ -466,6 +502,8 @@ def _parse_records(boundaries, read_record, *, source_revision_id, source_hash, 
     for boundary in boundaries:
         _check_cancel(is_cancelled)
         raw_record = read_record(boundary)
+        if hashlib.sha256(raw_record).hexdigest() != boundary.raw_hash:
+            raise OSError("SDF record hash mismatch")
         try:
             adaptation, record, record_diagnostics = _parse_record(
                 raw_record,
@@ -482,7 +520,7 @@ def _parse_records(boundaries, read_record, *, source_revision_id, source_hash, 
                 raise ValueError(f"SDF record {boundary.index} failed") from error
             diagnostics.append(
                 _failure_diagnostic(
-                    source_revision_id, boundary, raw_record, type(error).__name__
+                    source_revision_id, source_hash, boundary, type(error).__name__
                 )
             )
             continue
@@ -530,6 +568,26 @@ def _parse_snapshot(snapshot, boundaries, *, source_revision_id, source_hash, va
     )
 
 
+def _is_incomplete_mol_prefix(prefix):
+    lines = tuple(line.rstrip(b"\r") for line in prefix.splitlines())
+    if len(lines) < 5:
+        return False
+    counts = lines[3]
+    if counts.endswith(b"V2000"):
+        return bool(
+            _V2000_COUNTS.fullmatch(counts)
+            and _V2000_ATOM.match(lines[4])
+        )
+    if not counts.endswith(b"V3000") or len(lines) < 8:
+        return False
+    return bool(
+        lines[4] == b"M  V30 BEGIN CTAB"
+        and _V3000_COUNTS.fullmatch(lines[5])
+        and lines[6] == b"M  V30 BEGIN ATOM"
+        and _V3000_ATOM.match(lines[7])
+    )
+
+
 def sniff_sdf(source, prefix):
     source = Path(source)
     boundaries = tuple(iter_sdf_records(prefix))
@@ -548,6 +606,11 @@ def sniff_sdf(source, prefix):
             mol_block, _properties_bytes = _split_mol_block(prefix)
             _mol_version(_decode_mol(mol_block)[0])
         except ValueError as error:
+            if not complete and _is_incomplete_mol_prefix(prefix):
+                return SniffResult(
+                    SniffMatch.PROBABLE,
+                    "incomplete but structurally valid SDF MOL prefix",
+                )
             return SniffResult(
                 SniffMatch.NONE,
                 str(error),
