@@ -92,6 +92,41 @@ class ExtXYZCommentTests(unittest.TestCase):
         with self.assertRaisesRegex(ExtXYZSyntaxError, "unclosed quoted"):
             parse_extxyz_comment('title="unfinished')
 
+    def test_arrays_require_nonempty_comma_separated_items(self):
+        parsed = parse_extxyz_comment(
+            "empty=[] whitespace=[1 2] missing=[1,,2] "
+            "brace={1 2} unclosed=[1,2"
+        )
+        values = {entry.key: entry for entry in parsed.entries}
+
+        for key in ("empty", "whitespace", "missing", "brace", "unclosed"):
+            with self.subTest(key=key):
+                self.assertIsNone(values[key].value)
+                self.assertIsNotNone(values[key].diagnostic)
+        self.assertEqual(values["unclosed"].raw_lexeme, "[1,2")
+
+    def test_bare_special_characters_require_quoting_or_escaping(self):
+        parsed = parse_extxyz_comment(
+            r"comma=a,b bracket=a[b] brace=a{b} equals=a=b "
+            r'trailing=[1]x escaped=a\,b escaped\,key=1 quoted="a,b"'
+        )
+        values = {entry.key: entry for entry in parsed.entries}
+
+        for key in ("comma", "bracket", "brace", "equals"):
+            with self.subTest(key=key):
+                self.assertIsNone(values[key].value)
+                self.assertIn("quoted", values[key].diagnostic)
+        self.assertIsNone(values["trailing"].value)
+        self.assertIn("trailing", values["trailing"].diagnostic)
+        self.assertEqual(values["escaped"].value, "a,b")
+        self.assertIsNone(values["escaped"].diagnostic)
+        self.assertEqual(values["escaped,key"].value, 1)
+        self.assertEqual(values["quoted"].value, "a,b")
+        self.assertIsNone(values["quoted"].diagnostic)
+
+        with self.assertRaisesRegex(ExtXYZSyntaxError, "quoted"):
+            parse_extxyz_comment("bad,key=1")
+
 
 class ExtXYZFrameIteratorTests(unittest.TestCase):
     def test_default_properties_support_plain_xyz_and_stream_one_frame_at_a_time(self):
@@ -155,6 +190,40 @@ class ExtXYZFrameIteratorTests(unittest.TestCase):
                         sum(1 for _frame in iter_extxyz_frames(stream)),
                         1,
                     )
+
+    def test_plain_comment_with_equals_suffix_falls_back_as_a_whole(self):
+        for comment in (
+            "plain comment with x=y suffix",
+            "energy=-1 trailing,text",
+        ):
+            with self.subTest(comment=comment):
+                frame, = tuple(
+                    iter_extxyz_frames(
+                        StringIO(
+                            "1\n"
+                            f"{comment}\n"
+                            "H 0 0 0\n"
+                        )
+                    )
+                )
+
+                self.assertEqual(frame.comment.raw, comment)
+                self.assertEqual(frame.comment.entries, ())
+
+    def test_all_key_value_comment_without_properties_remains_typed(self):
+        frame, = tuple(
+            iter_extxyz_frames(
+                StringIO(
+                    "1\n"
+                    'energy=-1 Lattice="1 0 0 0 1 0 0 0 1"\n'
+                    "H 0 0 0\n"
+                )
+            )
+        )
+        values = {entry.key: entry.value for entry in frame.comment.entries}
+
+        self.assertEqual(values["energy"], -1)
+        self.assertEqual(values["Lattice"], (1, 0, 0, 0, 1, 0, 0, 0, 1))
 
 
 if __name__ == "__main__":

@@ -28,6 +28,10 @@ class ExtXYZSyntaxError(ValueError):
     """Stable syntax failure for an extXYZ record."""
 
 
+class _PlainComment(ExtXYZSyntaxError):
+    """Signal that a comment mixes free text instead of only key/value pairs."""
+
+
 @dataclass(frozen=True, slots=True)
 class ExtXYZPropertyField:
     name: str
@@ -180,6 +184,12 @@ def _promote(values):
 
 
 def _array_value(raw):
+    try:
+        end = _container_end(raw, 0)
+    except ExtXYZSyntaxError as error:
+        raise ValueError(str(error)) from error
+    if end != len(raw):
+        raise ValueError("array value has trailing characters")
     if raw.startswith("["):
         items = _split_items(raw[1:-1])
         values = tuple(_typed_value(item) for item in items)
@@ -207,9 +217,30 @@ def _array_value(raw):
         return _promote(values)
     if raw.startswith("{"):
         content = raw[1:-1].strip()
-        items = _split_items(content) if "," in content else content.split()
+        items = _split_items(content)
         return _promote(tuple(_typed_value(item) for item in items))
     raise ValueError("unsupported array")
+
+
+def _decode_bare_value(raw):
+    decoded = []
+    index = 0
+    while index < len(raw):
+        character = raw[index]
+        if character == "\\":
+            index += 1
+            if index == len(raw):
+                raise ValueError("bare value has a trailing escape")
+            decoded.append(raw[index])
+        elif character.isspace() or character in ",[]{}=":
+            raise ValueError(
+                "bare value containing whitespace or special characters "
+                "must be quoted or escaped"
+            )
+        else:
+            decoded.append(character)
+        index += 1
+    return "".join(decoded)
 
 
 def _typed_value(raw):
@@ -224,36 +255,29 @@ def _typed_value(raw):
         if parts and all(type(value) is not str for value in values):
             return _promote(values)[0] if len(values) == 1 else _promote(values)
         return decoded
-    if "\\" in raw:
-        decoded = []
-        index = 0
-        while index < len(raw):
-            if raw[index] == "\\":
-                index += 1
-                if index == len(raw):
-                    raise ValueError("bare value has a trailing escape")
-            decoded.append(raw[index])
-            index += 1
-        return "".join(decoded)
-    return _scalar(raw)
+    decoded = _decode_bare_value(raw)
+    return _scalar(decoded)
 
 
 def _comment_token(text, index):
     if text[index] == '"':
         end, value = _quoted(text, index)
-        return end, value
+        return end, value, False
     start = index
     escaped = []
+    requires_quoting = False
     while index < len(text) and not text[index].isspace() and text[index] != "=":
         if text[index] == "\\":
             index += 1
             if index >= len(text):
                 raise ExtXYZSyntaxError("trailing escape in extXYZ comment")
+        elif text[index] in ",[]{}":
+            requires_quoting = True
         escaped.append(text[index])
         index += 1
     if index == start:
         raise ExtXYZSyntaxError("empty key in extXYZ comment")
-    return index, "".join(escaped)
+    return index, "".join(escaped), requires_quoting
 
 
 def _value_lexeme(text, index):
@@ -262,6 +286,9 @@ def _value_lexeme(text, index):
         return end, text[index:end]
     if text[index] in "[{":
         end = _container_end(text, index)
+        if end < len(text) and not text[end].isspace():
+            while end < len(text) and not text[end].isspace():
+                end += 1
         return end, text[index:end]
     end = index
     while end < len(text):
@@ -287,20 +314,32 @@ def parse_extxyz_comment(text):
             index += 1
         if index == len(text):
             break
-        index, key = _comment_token(text, index)
+        index, key, requires_quoting = _comment_token(text, index)
         while index < len(text) and text[index].isspace():
             index += 1
         if index == len(text) or text[index] != "=":
-            raise ExtXYZSyntaxError(f"extXYZ comment key {key!r} is missing '='")
+            raise _PlainComment(f"extXYZ comment key {key!r} is missing '='")
+        if requires_quoting:
+            raise ExtXYZSyntaxError(
+                "bare extXYZ comment keys containing special characters "
+                "must be quoted or escaped"
+            )
         index += 1
         while index < len(text) and text[index].isspace():
             index += 1
         if index == len(text):
             raise ExtXYZSyntaxError(f"extXYZ comment key {key!r} has no value")
-        end, raw = _value_lexeme(text, index)
         if key in seen:
             raise ExtXYZSyntaxError(f"duplicate extXYZ comment key: {key}")
         seen.add(key)
+        try:
+            end, raw = _value_lexeme(text, index)
+        except ExtXYZSyntaxError as error:
+            if text[index] not in "[{":
+                raise
+            raw = text[index:].rstrip()
+            entries.append(ExtXYZMetadataEntry(key, None, raw, str(error)))
+            break
         try:
             value = _typed_value(raw)
             diagnostic = None
@@ -376,15 +415,18 @@ def _iter_stream(stream):
             raise ExtXYZSyntaxError(
                 f"extXYZ frame {frame_index} is missing its comment"
             ) from error
-        comment = (
-            ExtXYZComment(
-                raw_comment,
-                (),
-                parse_properties_descriptor(_DEFAULT_PROPERTIES),
-            )
-            if "=" not in raw_comment
-            else parse_extxyz_comment(raw_comment)
+        default_comment = ExtXYZComment(
+            raw_comment,
+            (),
+            parse_properties_descriptor(_DEFAULT_PROPERTIES),
         )
+        if "=" not in raw_comment:
+            comment = default_comment
+        else:
+            try:
+                comment = parse_extxyz_comment(raw_comment)
+            except _PlainComment:
+                comment = default_comment
         fields = comment.properties
         explicit_properties = any(
             entry.key == "Properties" for entry in comment.entries
