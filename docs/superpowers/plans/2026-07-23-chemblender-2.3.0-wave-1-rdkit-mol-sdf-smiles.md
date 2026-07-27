@@ -57,19 +57,19 @@ Run model/sidecar/project tests and commit.
 **Interfaces:**
 - Produces: `adapt_rdkit_molecule(mol, raw_block, context) -> PublicImportBatchFragment`.
 
-- [ ] **Step 1: Write a molecule fixture matrix**
+- [x] **Step 1: Write a molecule fixture matrix**
 
 Use embedded blocks for charged, isotopic, aromatic, chiral, unsanitized and no-conformer molecules. Assert atoms, coordinates, explicit bonds, bond orders, aromatic flags, formal charges, isotopes and stereo.
 
-- [ ] **Step 2: Implement safe parsing modes**
+- [x] **Step 2: Implement safe parsing modes**
 
 Parse raw records with sanitization disabled first. Attempt sanitization on a copy. Store explicit-file topology regardless. If sanitization succeeds, store `rdkit_sanitized` topology only when it materially adds/changes interpretation. If it fails, create `mol.sanitize_failed` diagnostic.
 
-- [ ] **Step 3: Handle coordinates**
+- [x] **Step 3: Handle coordinates**
 
 A 3D conformer creates Structure coordinates. A 2D conformer is valid but marked as planar source; no automatic 3D optimization for MOL/SDF import. Missing conformer rejects Structure only when coordinates cannot be recovered.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run with the pinned RDKit in Blender Python and commit.
 
