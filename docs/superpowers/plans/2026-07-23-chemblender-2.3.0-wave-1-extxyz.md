@@ -256,19 +256,19 @@ Run round-trip tests including multi-frame cell and unknown properties; commit.
 - `ChemBlender/ui/export.py` is an explicit registration root; it must not rely
   on another UI module re-exporting its Blender classes.
 
-- [ ] **Step 1: Show extXYZ capabilities in Preview**
+- [x] **Step 1: Show extXYZ capabilities in Preview**
 
 Display frame count, atom properties, frame properties, lattice/PBC and any assumed-unit diagnostics.
 
-- [ ] **Step 2: Add data browser groups**
+- [x] **Step 2: Add data browser groups**
 
 FrameSet and its related properties appear together. Selecting atomic force can apply vector arrows to the active structure view.
 
-- [ ] **Step 3: Add exporter action**
+- [x] **Step 3: Add exporter action**
 
 Export selected Structure or FrameSet with a loss preview. Partial/Ambiguous requires confirmation.
 
-- [ ] **Step 4: Benchmark**
+- [x] **Step 4: Benchmark**
 
 Generate deterministic 1k-frame/1k-atom and larger metadata-only cases. Measure
 first-frame decode separately from product preview readiness. Product
@@ -282,6 +282,6 @@ record the gate as unmet rather than substituting first-frame decode.
 The benchmark and Blender smoke also cover cancellation cleanup and publication
 rollback for the staged memmap/NPY path.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run Blender smoke with multi-frame extXYZ, save/reopen and force-vector view; run benchmark and document baseline.
