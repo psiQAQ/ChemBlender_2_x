@@ -113,23 +113,23 @@ Run old/new tests and update capability matrix.
 **Interfaces:**
 - Produces: reader ID `sdf`, record identities, raw/typed properties and staged grouping candidates.
 
-- [ ] **Step 1: Write record recovery tests**
+- [x] **Step 1: Write record recovery tests**
 
 A three-record file with a malformed second record under Balanced Recovery yields two MolecularRecords, one Invalid record diagnostic, original indices 0 and 2, and an import summary showing one failed record.
 
-- [ ] **Step 2: Use an RDKit supplier without silent skipping**
+- [x] **Step 2: Use an RDKit supplier without silent skipping**
 
 Retain record boundaries and raw blocks before RDKit parsing so a `None` supplier result can be tied to source record index and raw bytes/hash.
 
-- [ ] **Step 3: Preserve SD properties**
+- [x] **Step 3: Preserve SD properties**
 
 Record property order is read from raw record. Store raw strings. Build typed bool/int/float columns only when parsing is unambiguous; mixed values remain categorical/string with diagnostics only when a requested numeric semantic cannot be established.
 
-- [ ] **Step 4: Stage every record independently**
+- [x] **Step 4: Stage every record independently**
 
 Each valid record receives a stable source-local key derived from source revision, record index and raw record hash. Do not merge in the reader.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 Run reader, preview, sidecar and record tests.
 
