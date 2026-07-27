@@ -196,6 +196,55 @@ class PeriodicTopologyInferenceTests(unittest.TestCase):
 
         self.assertEqual(topology(unwrapped).id, topology(reference).id)
 
+    def test_skew_cell_integer_boundary_roundoff_preserves_identity(self):
+        structure_id = uuid4()
+        cell = (
+            (6.076548178105441, 0.1535747351592509, -0.9982093402937147),
+            (-0.02790012271465714, 5.7605579427458675, 0.6779164425174695),
+            (-0.34250410044247936, -0.5787801207625116, 4.2062839602396105),
+        )
+        reference = periodic_structure(
+            ((0.0, 0.37, 0.61), (0.1, 0.37, 0.61)),
+            cell=cell,
+            structure_id=structure_id,
+        )
+        unwrapped = periodic_structure(
+            ((-14.0, 1.37, 3.61), (0.1, 0.37, 0.61)),
+            cell=cell,
+            structure_id=structure_id,
+        )
+
+        original = topology(reference)
+        shifted = topology(unwrapped)
+
+        self.assertEqual(
+            original.bond_lattice_shifts.values.tolist(),
+            [[0, 0, 0]],
+        )
+        self.assertEqual(shifted.id, original.id)
+        self.assertEqual(
+            shifted.bond_lattice_shifts.values.tolist(),
+            [[0, 0, 0]],
+        )
+
+    def test_near_boundary_noninteger_coordinate_is_not_snapped(self):
+        cell = (
+            (6.076548178105441, 0.1535747351592509, -0.9982093402937147),
+            (-0.02790012271465714, 5.7605579427458675, 0.6779164425174695),
+            (-0.34250410044247936, -0.5787801207625116, 4.2062839602396105),
+        )
+        reference = periodic_structure(
+            ((-1.0e-10, 0.37, 0.61), (0.1, 0.37, 0.61)),
+            cell=cell,
+        )
+
+        result = topology(reference)
+
+        self.assertEqual(
+            result.bond_lattice_shifts.values.tolist(),
+            [[1, 0, 0]],
+        )
+
     def test_partial_pbc_does_not_wrap_disabled_axis(self):
         structure_id = uuid4()
         reference = periodic_structure(
