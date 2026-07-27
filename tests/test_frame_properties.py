@@ -126,6 +126,41 @@ class CategoricalDataTests(unittest.TestCase):
                 with self.assertRaises((TypeError, ValueError)):
                     CategoricalData(**fields)
 
+    def test_code_dtype_must_represent_missing_code_and_every_category_index(self):
+        cases = (
+            {
+                "codes": ArrayData(
+                    numpy.asarray([0], dtype=numpy.uint8),
+                    ("atom",),
+                    "dimensionless",
+                ),
+                "categories": ("carbon",),
+                "missing_code": -1,
+            },
+            {
+                "codes": ArrayData(
+                    numpy.asarray([0], dtype=numpy.uint8),
+                    ("atom",),
+                    "dimensionless",
+                ),
+                "categories": ("carbon",),
+                "missing_code": 256,
+            },
+            {
+                "codes": ArrayData(
+                    numpy.asarray([0], dtype=numpy.int8),
+                    ("atom",),
+                    "dimensionless",
+                ),
+                "categories": tuple(f"category-{index}" for index in range(129)),
+                "missing_code": -1,
+            },
+        )
+        for fields in cases:
+            with self.subTest(dtype=fields["codes"].dtype):
+                with self.assertRaisesRegex(ValueError, "dtype"):
+                    CategoricalData(**fields)
+
 
 class FramePropertyValidationTests(unittest.TestCase):
     def test_frame_property_requires_leading_frame_dimension(self):
@@ -287,6 +322,39 @@ class FramePropertyValidationTests(unittest.TestCase):
             )
         )
         self.assertIsNone(categorical.validity_mask)
+
+    def test_complete_categorical_property_rejects_actual_missing_codes(self):
+        _, frames = structure_and_frames()
+        data = CategoricalData(
+            codes=ArrayData(
+                numpy.asarray([[0, -1], [1, 0]], dtype=numpy.int8),
+                ("frame", "atom"),
+                "dimensionless",
+            ),
+            categories=("donor", "acceptor"),
+            missing_code=-1,
+        )
+
+        with self.assertRaisesRegex(ValueError, "Complete.*missing"):
+            AtomFrameProperty(
+                **property_fields(
+                    domain="atom_frame",
+                    data=data,
+                    frame_set_id=frames.id,
+                )
+            )
+
+        for status in (DatasetStatus.PARTIAL, DatasetStatus.AMBIGUOUS):
+            with self.subTest(status=status):
+                value = AtomFrameProperty(
+                    **property_fields(
+                        domain="atom_frame",
+                        data=data,
+                        frame_set_id=frames.id,
+                        status=status,
+                    )
+                )
+                self.assertIsNone(value.validity_mask)
 
     def test_frame_and_cell_partial_masks_use_their_declared_prefixes(self):
         _, frames = structure_and_frames()

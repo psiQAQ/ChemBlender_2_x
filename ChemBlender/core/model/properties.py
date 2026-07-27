@@ -114,6 +114,12 @@ def _validate_frame_property(
     if isinstance(value.data, CategoricalData):
         if mask is not None:
             raise ValueError("CategoricalData uses missing_code, not a validity mask")
+        if value.status is DatasetStatus.COMPLETE and numpy.any(
+            numpy.asarray(value.data.codes.values) == value.data.missing_code
+        ):
+            raise ValueError(
+                "Complete categorical property must not contain missing codes"
+            )
         return
     if value.status is DatasetStatus.COMPLETE and mask is not None:
         raise ValueError("Complete frame property must not use a validity mask")
