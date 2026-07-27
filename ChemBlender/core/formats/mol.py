@@ -79,7 +79,11 @@ def _v3000_blocks(lines, end):
     except (StopIteration, ValueError) as error:
         raise ValueError("MOL V3000 counts line is invalid") from error
     atoms = section("ATOM")
-    bonds = section("BOND")
+    has_bond_section = any(
+        line.strip() in {"M  V30 BEGIN BOND", "M  V30 END BOND"}
+        for line in lines
+    )
+    bonds = section("BOND") if bond_count or has_bond_section else ()
     if atom_count <= 0 or bond_count < 0 or len(atoms) != atom_count or len(bonds) != bond_count:
         raise ValueError("MOL V3000 declared atom or bond block is incomplete")
     for line in atoms:
@@ -129,8 +133,6 @@ def _mol_version(text):
 
 def sniff_mol(source, prefix):
     source = Path(source)
-    if source.suffix.lower() != ".mol":
-        return SniffResult(SniffMatch.NONE, "MOL reader only considers .mol files")
     text, _ = _decode_mol(prefix)
     try:
         version, _ = _mol_version(text)
@@ -188,9 +190,17 @@ def _report(reader_id, reader_version, adaptation):
     )
 
 
-def _parse(source, *, source_revision_id, source_hash, validation_mode, is_cancelled, reader_id, reader_version, required_version=None):
-    source = Path(source)
-    raw_block = source.read_bytes()
+def _parse_bytes(
+    raw_block,
+    *,
+    source_revision_id,
+    source_hash,
+    validation_mode,
+    is_cancelled,
+    reader_id,
+    reader_version,
+    required_version=None,
+):
     text, replaced = _decode_mol(raw_block)
     block_version, lines = _mol_version(text)
     if required_version is not None and block_version != required_version:
@@ -236,11 +246,16 @@ def _parse(source, *, source_revision_id, source_hash, validation_mode, is_cance
     )
 
 
+def _parse_source(source, **kwargs):
+    source = Path(source)
+    return _parse_bytes(source.read_bytes(), **kwargs)
+
+
 def parse_mol(source):
     raw_block = Path(source).read_bytes()
     source_hash = hashlib.sha256(raw_block).hexdigest()
-    return _parse(
-        source,
+    return _parse_bytes(
+        raw_block,
         source_revision_id=uuid5(NAMESPACE_URL, f"chemblender:mol:{source_hash}"),
         source_hash=source_hash,
         validation_mode="balanced",
@@ -251,7 +266,7 @@ def parse_mol(source):
 
 
 def parse_mol_request(request):
-    return _parse(
+    return _parse_source(
         request.source_path,
         source_revision_id=request.source_revision_id,
         source_hash=request.source_content_hash,
@@ -265,8 +280,8 @@ def parse_mol_request(request):
 def parse_mol_v2000(source):
     raw_block = Path(source).read_bytes()
     source_hash = hashlib.sha256(raw_block).hexdigest()
-    return _deprecated_v2000_alias(_parse(
-        source,
+    return _deprecated_v2000_alias(_parse_bytes(
+        raw_block,
         source_revision_id=uuid5(NAMESPACE_URL, f"chemblender:mol-v2000:{source_hash}"),
         source_hash=source_hash,
         validation_mode="balanced",
@@ -278,7 +293,7 @@ def parse_mol_v2000(source):
 
 
 def parse_mol_v2000_request(request):
-    return _deprecated_v2000_alias(_parse(
+    return _deprecated_v2000_alias(_parse_source(
         request.source_path,
         source_revision_id=request.source_revision_id,
         source_hash=request.source_content_hash,

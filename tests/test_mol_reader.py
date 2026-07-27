@@ -4,6 +4,7 @@ import unittest
 from uuid import uuid4
 
 import hashlib
+from unittest.mock import patch
 
 from ChemBlender.core import (
     builtin_reader_registry,
@@ -105,6 +106,70 @@ class MOLReaderTests(unittest.TestCase):
         self.assertEqual(batch.molecular_records[0].raw_block, source.read_bytes())
         self.assertEqual(len(batch.topologies[0].bond_orders.values), 2)
 
+    def test_rdkit_v3000_single_atom_without_bond_section_is_exact(self) -> None:
+        from rdkit import Chem
+
+        from ChemBlender.core.formats.mol import parse_mol, sniff_mol
+        from ChemBlender.core.readers import SniffMatch
+
+        molecule = Chem.MolFromSmiles("[He]")
+        conformer = Chem.Conformer(1)
+        conformer.SetAtomPosition(0, (0.0, 0.0, 0.0))
+        molecule.AddConformer(conformer)
+        lines = Chem.MolToMolBlock(molecule, forceV3000=True).splitlines()
+        lines = [
+            line
+            for line in lines
+            if line not in {"M  V30 BEGIN BOND", "M  V30 END BOND"}
+        ]
+        raw_block = ("\n".join(lines) + "\n").encode("utf-8")
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "helium.mol"
+            source.write_bytes(raw_block)
+            batch = parse_mol(source)
+            sniff = sniff_mol(source, raw_block)
+
+        self.assertIs(sniff.match, SniffMatch.EXACT)
+        self.assertEqual(batch.molecular_records[0].raw_block, raw_block)
+        self.assertEqual(batch.topologies[0].bond_indices.shape, (0, 2))
+
+    def test_valid_mol_content_is_exact_under_an_unrelated_extension(self) -> None:
+        from ChemBlender.core.formats.mol import sniff_mol
+        from ChemBlender.core.readers import SniffMatch
+
+        content = (FIXTURE_ROOT / "water-v2000.mol").read_bytes()
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "water.dat"
+            source.write_bytes(content)
+            result = sniff_mol(source, content)
+            selected = builtin_reader_registry().select(source)
+
+        self.assertIs(result.match, SniffMatch.EXACT)
+        self.assertIs(selected, MOL_READER)
+
+    def test_direct_and_alias_parse_read_source_once_and_keep_the_same_bytes(self) -> None:
+        from ChemBlender.core.formats.mol import parse_mol
+        from ChemBlender.core.mol_v2000 import parse_mol_v2000
+
+        source = FIXTURE_ROOT / "water-v2000.mol"
+        raw_block = source.read_bytes()
+        changed_block = raw_block.replace(b"water V2000", b"other V2000")
+        source_hash = hashlib.sha256(raw_block).hexdigest()
+        for parser in (parse_mol, parse_mol_v2000):
+            with self.subTest(parser=parser.__name__):
+                calls = []
+
+                def read_once(path):
+                    calls.append(path)
+                    return raw_block if len(calls) == 1 else changed_block
+
+                with patch.object(Path, "read_bytes", read_once):
+                    batch = parser(source)
+
+                self.assertEqual(calls, [source])
+                self.assertEqual(batch.molecular_records[0].raw_block, raw_block)
+                self.assertEqual(batch.provenance[0].source_hash, source_hash)
+
     def test_sniff_and_parse_reject_prose_sdf_and_multiple_records(self) -> None:
         from ChemBlender.core.formats.mol import parse_mol, sniff_mol
         from ChemBlender.core.readers import SniffMatch
@@ -202,3 +267,5 @@ class MOLReaderTests(unittest.TestCase):
                     close_project(reopened)
             finally:
                 close_session(session)
+                staged.discard()
+                self.assertFalse(staged.root.exists())
