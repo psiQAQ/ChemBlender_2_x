@@ -450,6 +450,52 @@ class ExtXYZExporterTests(unittest.TestCase):
                 (("a", "b"), ("c", "0")),
             )
 
+    def test_all_missing_categorical_frame_is_omitted_without_a_token(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "categorical-frame.extxyz"
+            source.write_text(
+                "2\nProperties=species:S:1:pos:R:3:label:S:1\n"
+                "H 0 0 0 donor\n"
+                "H 1 0 0 acceptor\n"
+                "2\nProperties=species:S:1:pos:R:3\n"
+                "H 0 0 0\n"
+                "H 1 0 0\n",
+                encoding="utf-8",
+            )
+            batch = parse_extxyz(source)
+            structure, = batch.structures
+            frame_set = next(
+                item for item in batch.datasets if item.semantic_role == "coordinates"
+            )
+            label = next(
+                item
+                for item in batch.datasets
+                if isinstance(item, AtomFrameProperty)
+            )
+            destination = root / "export.extxyz"
+
+            report = export_extxyz(
+                destination,
+                structure,
+                frame_set=frame_set,
+                properties=(label,),
+                confirm_loss=True,
+            )
+
+            self.assertTrue(report.written)
+            self.assertFalse(
+                any(
+                    entry.code == "missing_value_token_required"
+                    for entry in report.entries
+                )
+            )
+            reparsed = parse_extxyz(destination)
+            self.assertEqual(
+                semantic_extxyz_differences(batch, reparsed),
+                (),
+            )
+
     def test_atom_alias_collision_fails_before_temporary_file_is_opened(self):
         batch = parse_extxyz(FIXTURES / "properties-mixed.extxyz")
         structure, = batch.structures
@@ -535,6 +581,58 @@ class ExtXYZSemanticComparatorTests(unittest.TestCase):
 
         self.assertTrue(
             any("atomic_charge multiplicity differs" in item for item in differences)
+        )
+
+    def test_duplicate_dataset_groups_match_independent_of_input_order(self):
+        batch = parse_extxyz(FIXTURES / "properties-mixed.extxyz")
+        charge = next(
+            item
+            for item in batch.datasets
+            if isinstance(item, AtomFrameProperty)
+            and item.semantic_role == "atomic_charge"
+        )
+        changed_values = numpy.asarray(charge.data.values).copy()
+        changed_values[0, 0] = -0.4
+        changed = replace(
+            charge,
+            id=uuid4(),
+            data=replace(charge.data, values=changed_values),
+        )
+        without_charge = tuple(
+            item for item in batch.datasets if item is not charge
+        )
+        left = replace(
+            batch,
+            datasets=(*without_charge, charge, changed),
+        )
+        right = replace(
+            batch,
+            datasets=(*without_charge, changed, charge),
+        )
+
+        self.assertEqual(semantic_extxyz_differences(left, right), ())
+
+    def test_dataset_status_is_part_of_semantic_comparison(self):
+        batch = parse_extxyz(FIXTURES / "properties-mixed.extxyz")
+        charge = next(
+            item
+            for item in batch.datasets
+            if isinstance(item, AtomFrameProperty)
+            and item.semantic_role == "atomic_charge"
+        )
+        changed = replace(
+            batch,
+            datasets=tuple(
+                replace(item, status=DatasetStatus.AMBIGUOUS)
+                if item is charge
+                else item
+                for item in batch.datasets
+            ),
+        )
+
+        self.assertIn(
+            "atomic_charge status differs",
+            semantic_extxyz_differences(batch, changed),
         )
 
 

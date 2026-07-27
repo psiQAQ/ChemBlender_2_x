@@ -361,11 +361,14 @@ def _has_missing_cells(structure, frame_set, properties):
         return True
     for item in properties:
         if isinstance(item.data, CategoricalData):
-            if isinstance(item, AtomFrameProperty) and numpy.any(
-                numpy.asarray(item.data.codes.values)
-                == item.data.missing_code
-            ):
-                return True
+            if isinstance(item, AtomFrameProperty):
+                codes = numpy.asarray(item.data.codes.values)
+                for frame_index in range(frame_set.data.shape[0]):
+                    present = (
+                        codes[frame_index] != item.data.missing_code
+                    )
+                    if numpy.any(present) and not numpy.all(present):
+                        return True
             continue
         values = numpy.asarray(item.data.values)
         if isinstance(item, AtomFrameProperty):
@@ -720,8 +723,11 @@ def _datasets_by_key(datasets):
 
 def _dataset_differences(left, right, *, name, rtol, atol):
     differences = []
+    if left.status is not right.status:
+        differences.append(f"{name} status differs")
     if left.data.dims != right.data.dims:
-        return [f"{name} dims differ"]
+        differences.append(f"{name} dims differ")
+        return differences
     if left.data.unit != right.data.unit:
         differences.append(f"{name} unit differs")
     if isinstance(left.data, CategoricalData) != isinstance(
@@ -763,6 +769,30 @@ def _dataset_differences(left, right, *, name, rtol, atol):
     ):
         differences.append(f"{name} validity mask differs")
     return differences
+
+
+def _dataset_groups_match(left_items, right_items, *, rtol, atol):
+    if not left_items:
+        return True
+    left = left_items[0]
+    for index, right in enumerate(right_items):
+        if _dataset_differences(
+            left,
+            right,
+            name=left.semantic_role,
+            rtol=rtol,
+            atol=atol,
+        ):
+            continue
+        remaining = right_items[:index] + right_items[index + 1 :]
+        if _dataset_groups_match(
+            left_items[1:],
+            remaining,
+            rtol=rtol,
+            atol=atol,
+        ):
+            return True
+    return False
 
 
 def semantic_extxyz_differences(left, right, *, rtol=1.0e-9, atol=1.0e-12):
@@ -821,20 +851,29 @@ def semantic_extxyz_differences(left, right, *, rtol=1.0e-9, atol=1.0e-12):
                 f"{len(left_items)} != {len(right_items)}"
             )
             continue
-        for index, (left_item, right_item) in enumerate(
-            zip(left_items, right_items, strict=True)
+        if sorted(item.status.value for item in left_items) != sorted(
+            item.status.value for item in right_items
         ):
-            item_name = (
-                name if len(left_items) == 1 else f"{name}[{index}]"
-            )
+            differences.append(f"{name} status differs")
+            continue
+        if len(left_items) == 1:
             differences.extend(
                 _dataset_differences(
-                    left_item,
-                    right_item,
-                    name=item_name,
+                    left_items[0],
+                    right_items[0],
+                    name=name,
                     rtol=rtol,
                     atol=atol,
                 )
+            )
+        elif not _dataset_groups_match(
+            tuple(left_items),
+            tuple(right_items),
+            rtol=rtol,
+            atol=atol,
+        ):
+            differences.append(
+                f"{name} dataset group semantics differ"
             )
     return tuple(differences)
 
