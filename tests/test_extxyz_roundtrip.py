@@ -3,6 +3,8 @@ from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
+from uuid import uuid4
 
 import numpy
 
@@ -20,6 +22,8 @@ from ChemBlender.core.model import (
     AtomFrameProperty,
     CategoricalData,
     CellFrameProperty,
+    DatasetStatus,
+    FrameProperty,
     ImportBatch,
 )
 
@@ -276,6 +280,207 @@ class ExtXYZExporterTests(unittest.TestCase):
                 )
             )
 
+    def test_missing_atom_category_requires_token_and_replace_is_atomic(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "categorical.extxyz"
+            source.write_text(
+                "2\nProperties=species:S:1:pos:R:3:label:S:1\n"
+                "H 0 0 0 donor\n"
+                "H 1 0 0 acceptor\n",
+                encoding="utf-8",
+            )
+            batch = parse_extxyz(source)
+            structure, = batch.structures
+            frame_set = next(
+                item for item in batch.datasets if item.semantic_role == "coordinates"
+            )
+            label = next(
+                item
+                for item in batch.datasets
+                if isinstance(item, AtomFrameProperty)
+            )
+            codes = numpy.asarray(label.data.codes.values).copy()
+            codes[0, 1] = label.data.missing_code
+            label = replace(
+                label,
+                data=CategoricalData(
+                    replace(label.data.codes, values=codes),
+                    label.data.categories,
+                    label.data.missing_code,
+                ),
+                status=DatasetStatus.AMBIGUOUS,
+            )
+            destination = root / "export.extxyz"
+            destination.write_bytes(b"existing\n")
+
+            preview = export_extxyz(
+                destination,
+                structure,
+                frame_set=frame_set,
+                properties=(label,),
+                confirm_loss=True,
+            )
+
+            self.assertFalse(preview.written)
+            self.assertTrue(
+                any(
+                    entry.code == "missing_value_token_required"
+                    for entry in preview.entries
+                )
+            )
+            self.assertEqual(destination.read_bytes(), b"existing\n")
+
+            with patch(
+                "ChemBlender.core.exporters.xyz.os.replace",
+                side_effect=OSError("replace failed"),
+            ):
+                with self.assertRaisesRegex(OSError, "replace failed"):
+                    export_extxyz(
+                        destination,
+                        structure,
+                        frame_set=frame_set,
+                        properties=(label,),
+                        confirm_loss=True,
+                        missing_value_token="0",
+                    )
+            self.assertEqual(destination.read_bytes(), b"existing\n")
+            self.assertEqual(
+                tuple(path.name for path in root.iterdir()),
+                ("categorical.extxyz", "export.extxyz"),
+            )
+
+            report = export_extxyz(
+                destination,
+                structure,
+                frame_set=frame_set,
+                properties=(label,),
+                confirm_loss=True,
+                missing_value_token="0",
+            )
+            self.assertTrue(report.written)
+            frame, = tuple(iter_extxyz_frames(destination))
+            self.assertEqual(dict(frame.values)["label"], ("donor", "0"))
+
+    def test_frame_missing_category_needs_no_cell_token_but_component_atom_does(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "categorical-components.extxyz"
+            source.write_text(
+                "2\nProperties=species:S:1:pos:R:3:tag:S:2 title=first\n"
+                "H 0 0 0 a b\n"
+                "H 1 0 0 c d\n"
+                "2\nProperties=species:S:1:pos:R:3:tag:S:2\n"
+                "H 0 0 0 a b\n"
+                "H 1 0 0 c d\n",
+                encoding="utf-8",
+            )
+            batch = parse_extxyz(source)
+            structure, = batch.structures
+            frame_set = next(
+                item for item in batch.datasets if item.semantic_role == "coordinates"
+            )
+            title = next(
+                item
+                for item in batch.datasets
+                if isinstance(item, FrameProperty)
+                and item.semantic_role == "title"
+            )
+            destination = root / "frame.extxyz"
+
+            frame_report = export_extxyz(
+                destination,
+                structure,
+                frame_set=frame_set,
+                properties=(title,),
+                confirm_loss=True,
+            )
+            self.assertTrue(frame_report.written)
+            self.assertFalse(
+                any(
+                    entry.code == "missing_value_token_required"
+                    for entry in frame_report.entries
+                )
+            )
+
+            tag = next(
+                item
+                for item in batch.datasets
+                if isinstance(item, AtomFrameProperty)
+            )
+            codes = numpy.asarray(tag.data.codes.values).copy()
+            codes[0, 1, 1] = tag.data.missing_code
+            tag = replace(
+                tag,
+                data=CategoricalData(
+                    replace(tag.data.codes, values=codes),
+                    tag.data.categories,
+                    tag.data.missing_code,
+                ),
+                status=DatasetStatus.AMBIGUOUS,
+            )
+            component_preview = export_extxyz(
+                root / "component.extxyz",
+                structure,
+                frame_set=frame_set,
+                properties=(tag,),
+                confirm_loss=True,
+            )
+            self.assertFalse(component_preview.written)
+            self.assertTrue(
+                any(
+                    entry.code == "missing_value_token_required"
+                    for entry in component_preview.entries
+                )
+            )
+            component_report = export_extxyz(
+                root / "component.extxyz",
+                structure,
+                frame_set=frame_set,
+                properties=(tag,),
+                confirm_loss=True,
+                missing_value_token="0",
+            )
+            self.assertTrue(component_report.written)
+            first, _second = tuple(
+                iter_extxyz_frames(root / "component.extxyz")
+            )
+            self.assertEqual(
+                dict(first.values)["tag"],
+                (("a", "b"), ("c", "0")),
+            )
+
+    def test_atom_alias_collision_fails_before_temporary_file_is_opened(self):
+        batch = parse_extxyz(FIXTURES / "properties-mixed.extxyz")
+        structure, = batch.structures
+        frame_set = next(
+            item for item in batch.datasets if item.semantic_role == "coordinates"
+        )
+        charge = next(
+            item
+            for item in batch.datasets
+            if isinstance(item, AtomFrameProperty)
+            and item.semantic_role == "atomic_charge"
+        )
+        alias = replace(charge, id=uuid4(), semantic_role="charge")
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "collision.extxyz"
+            with patch(
+                "ChemBlender.core.exporters.xyz.short_sibling_temporary_path"
+            ) as temporary:
+                with self.assertRaisesRegex(ValueError, "duplicate.*charge"):
+                    export_extxyz(
+                        destination,
+                        structure,
+                        frame_set=frame_set,
+                        properties=(charge, alias),
+                        confirm_loss=True,
+                    )
+
+            temporary.assert_not_called()
+            self.assertFalse(destination.exists())
+
 
 class ExtXYZSemanticComparatorTests(unittest.TestCase):
     def test_reports_semantic_changes_but_not_uuid_or_comment_whitespace(self):
@@ -311,6 +516,25 @@ class ExtXYZSemanticComparatorTests(unittest.TestCase):
         self.assertIn(
             "coordinates values differ",
             semantic_extxyz_differences(batch, changed),
+        )
+
+    def test_duplicate_dataset_keys_report_multiplicity_without_uuid_matching(self):
+        batch = parse_extxyz(FIXTURES / "properties-mixed.extxyz")
+        charge = next(
+            item
+            for item in batch.datasets
+            if isinstance(item, AtomFrameProperty)
+            and item.semantic_role == "atomic_charge"
+        )
+        duplicated = replace(
+            batch,
+            datasets=(*batch.datasets, replace(charge, id=uuid4())),
+        )
+
+        differences = semantic_extxyz_differences(duplicated, batch)
+
+        self.assertTrue(
+            any("atomic_charge multiplicity differs" in item for item in differences)
         )
 
 

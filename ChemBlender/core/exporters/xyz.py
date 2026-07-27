@@ -250,11 +250,14 @@ def _valid(dataset, frame_index, atom_index=None):
         )
         import numpy
 
+        present = (
+            numpy.asarray(dataset.data.codes.values[index])
+            != dataset.data.missing_code
+        )
         return bool(
-            numpy.all(
-                numpy.asarray(dataset.data.codes.values[index])
-                != dataset.data.missing_code
-            )
+            numpy.any(present)
+            if atom_index is not None
+            else numpy.all(present)
         )
     if dataset.validity_mask is None:
         return True
@@ -358,6 +361,11 @@ def _has_missing_cells(structure, frame_set, properties):
         return True
     for item in properties:
         if isinstance(item.data, CategoricalData):
+            if isinstance(item, AtomFrameProperty) and numpy.any(
+                numpy.asarray(item.data.codes.values)
+                == item.data.missing_code
+            ):
+                return True
             continue
         values = numpy.asarray(item.data.values)
         if isinstance(item, AtomFrameProperty):
@@ -397,6 +405,7 @@ def _check_export_inputs(structure, frame_set, properties):
         if frame_set.data.shape[1] != len(structure.atomic_numbers):
             raise ValueError("frame_set atom count does not match structure")
     frame_count = 1 if frame_set is None else frame_set.data.shape[0]
+    atom_field_names = {"species", "pos"}
     for item in properties:
         if not isinstance(
             item,
@@ -407,6 +416,13 @@ def _check_export_inputs(structure, frame_set, properties):
             raise ValueError("property does not belong to frame_set")
         if item.data.shape[0] != frame_count:
             raise ValueError("property frame count does not match frame_set")
+        if isinstance(item, AtomFrameProperty):
+            field_name = _atom_field_name(item)
+            if field_name in atom_field_names:
+                raise ValueError(
+                    f"duplicate extXYZ atom property name: {field_name}"
+                )
+            atom_field_names.add(field_name)
     return frame_count
 
 
@@ -456,10 +472,10 @@ def _metadata_item(dataset, frame_index):
 
 
 def _atom_item(dataset, frame_index, atom_index):
-    if not _valid(dataset, frame_index, atom_index):
-        return None
     if isinstance(dataset.data, CategoricalData):
         return _category_value(dataset.data, (frame_index, atom_index))
+    if not _valid(dataset, frame_index, atom_index):
+        return None
     return dataset.data.values[(frame_index, atom_index)]
 
 
@@ -695,6 +711,60 @@ def _dataset_key(dataset):
     return type(dataset).__name__, dataset.domain, dataset.semantic_role
 
 
+def _datasets_by_key(datasets):
+    grouped = {}
+    for dataset in datasets:
+        grouped.setdefault(_dataset_key(dataset), []).append(dataset)
+    return grouped
+
+
+def _dataset_differences(left, right, *, name, rtol, atol):
+    differences = []
+    if left.data.dims != right.data.dims:
+        return [f"{name} dims differ"]
+    if left.data.unit != right.data.unit:
+        differences.append(f"{name} unit differs")
+    if isinstance(left.data, CategoricalData) != isinstance(
+        right.data,
+        CategoricalData,
+    ):
+        differences.append(f"{name} type differs")
+        return differences
+    if isinstance(left.data, CategoricalData):
+        if (
+            left.data.categories != right.data.categories
+            or left.data.missing_code != right.data.missing_code
+            or not _arrays_equal(
+                left.data.codes.values,
+                right.data.codes.values,
+                rtol=rtol,
+                atol=atol,
+            )
+        ):
+            differences.append(f"{name} categorical data differs")
+    elif not _arrays_equal(
+        left.data.values,
+        right.data.values,
+        rtol=rtol,
+        atol=atol,
+    ):
+        label = "coordinates" if isinstance(left, FrameSet) else name
+        differences.append(f"{label} values differ")
+    left_mask = getattr(left, "validity_mask", None)
+    right_mask = getattr(right, "validity_mask", None)
+    if (left_mask is None) != (right_mask is None) or (
+        left_mask is not None
+        and not _arrays_equal(
+            left_mask.values,
+            right_mask.values,
+            rtol=rtol,
+            atol=atol,
+        )
+    ):
+        differences.append(f"{name} validity mask differs")
+    return differences
+
+
 def semantic_extxyz_differences(left, right, *, rtol=1.0e-9, atol=1.0e-12):
     if not isinstance(left, ImportBatch) or not isinstance(right, ImportBatch):
         raise TypeError("semantic comparator requires two ImportBatch values")
@@ -736,62 +806,36 @@ def semantic_extxyz_differences(left, right, *, rtol=1.0e-9, atol=1.0e-12):
         if left_pbc != right_pbc:
             differences.append(f"{prefix}PBC differs")
 
-    left_datasets = {_dataset_key(item): item for item in left.datasets}
-    right_datasets = {_dataset_key(item): item for item in right.datasets}
+    left_datasets = _datasets_by_key(left.datasets)
+    right_datasets = _datasets_by_key(right.datasets)
     if left_datasets.keys() != right_datasets.keys():
         differences.append("property inventory differs")
         return tuple(differences)
     for key in sorted(left_datasets):
-        left_item = left_datasets[key]
-        right_item = right_datasets[key]
-        name = left_item.semantic_role
-        if left_item.data.dims != right_item.data.dims:
-            differences.append(f"{name} dims differ")
+        left_items = left_datasets[key]
+        right_items = right_datasets[key]
+        name = key[2]
+        if len(left_items) != len(right_items):
+            differences.append(
+                f"{name} multiplicity differs: "
+                f"{len(left_items)} != {len(right_items)}"
+            )
             continue
-        if left_item.data.unit != right_item.data.unit:
-            differences.append(f"{name} unit differs")
-        if isinstance(left_item.data, CategoricalData) != isinstance(
-            right_item.data,
-            CategoricalData,
+        for index, (left_item, right_item) in enumerate(
+            zip(left_items, right_items, strict=True)
         ):
-            differences.append(f"{name} type differs")
-            continue
-        if isinstance(left_item.data, CategoricalData):
-            if (
-                left_item.data.categories != right_item.data.categories
-                or left_item.data.missing_code != right_item.data.missing_code
-                or not _arrays_equal(
-                    left_item.data.codes.values,
-                    right_item.data.codes.values,
+            item_name = (
+                name if len(left_items) == 1 else f"{name}[{index}]"
+            )
+            differences.extend(
+                _dataset_differences(
+                    left_item,
+                    right_item,
+                    name=item_name,
                     rtol=rtol,
                     atol=atol,
                 )
-            ):
-                differences.append(f"{name} categorical data differs")
-        elif not _arrays_equal(
-            left_item.data.values,
-            right_item.data.values,
-            rtol=rtol,
-            atol=atol,
-        ):
-            label = (
-                "coordinates"
-                if isinstance(left_item, FrameSet)
-                else name
             )
-            differences.append(f"{label} values differ")
-        left_mask = getattr(left_item, "validity_mask", None)
-        right_mask = getattr(right_item, "validity_mask", None)
-        if (left_mask is None) != (right_mask is None) or (
-            left_mask is not None
-            and not _arrays_equal(
-                left_mask.values,
-                right_mask.values,
-                rtol=rtol,
-                atol=atol,
-            )
-        ):
-            differences.append(f"{name} validity mask differs")
     return tuple(differences)
 
 
