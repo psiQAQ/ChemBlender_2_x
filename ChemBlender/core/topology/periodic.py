@@ -32,22 +32,23 @@ def infer_periodic_topology(structure, settings=None):
         raise ValueError("structure coordinates must be finite")
     inverse_cell = numpy.linalg.inv(cell)
     fractional = coordinates @ inverse_cell
-    condition = float(
-        numpy.linalg.norm(cell, ord=numpy.inf)
-        * numpy.linalg.norm(inverse_cell, ord=numpy.inf)
+    epsilon = numpy.finfo(fractional.dtype).eps
+    # gamma_3 bounds each three-term dot; the inverse residual adds its
+    # per-axis backward error without coupling unrelated cell directions.
+    dot_roundoff = (
+        (3.0 * epsilon / (1.0 - 3.0 * epsilon))
+        * (numpy.abs(coordinates) @ numpy.abs(inverse_cell))
     )
-    # Three-term dot products plus a 3x3 inverse stay within this
-    # condition-scaled floating-point uncertainty.
-    roundoff_factor = (
-        8.0 * numpy.finfo(fractional.dtype).eps * max(1.0, condition)
+    inverse_residual = numpy.abs(
+        cell @ inverse_cell - numpy.eye(3, dtype=fractional.dtype)
     )
+    roundoff = dot_roundoff + numpy.abs(fractional) @ inverse_residual
     for axis, periodic in enumerate(structure.periodic.pbc):
         if periodic:
             column = fractional[:, axis]
             nearest = numpy.rint(column)
-            roundoff = roundoff_factor * numpy.maximum(1.0, numpy.abs(column))
             column[:] = numpy.where(
-                numpy.abs(column - nearest) <= roundoff,
+                numpy.abs(column - nearest) <= roundoff[:, axis],
                 nearest,
                 column,
             )

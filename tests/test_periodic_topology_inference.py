@@ -245,6 +245,21 @@ class PeriodicTopologyInferenceTests(unittest.TestCase):
             [[1, 0, 0]],
         )
 
+    def test_nonperiodic_cell_ill_conditioning_does_not_snap_pbc_axis(self):
+        reference = periodic_structure(
+            ((0.0, 0.0, 1.0e-4), (0.0, 0.0, 0.19715)),
+            cell=((10.0, 0.0, 0.0), (10.0, 1.0e-10, 0.0), (0.0, 0.0, 10.0)),
+            pbc=(False, False, True),
+        )
+
+        result = topology(reference)
+
+        self.assertEqual(result.bond_indices.values.tolist(), [[0, 1]])
+        self.assertEqual(
+            result.bond_lattice_shifts.values.tolist(),
+            [[0, 0, 0]],
+        )
+
     def test_partial_pbc_does_not_wrap_disabled_axis(self):
         structure_id = uuid4()
         reference = periodic_structure(
