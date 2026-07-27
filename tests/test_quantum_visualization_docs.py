@@ -235,6 +235,42 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         model = importlib.import_module("ChemBlender.core.model")
         self.assertIsNotNone(model.__spec__.submodule_search_locations)
 
+    def test_extxyz_plan_records_preimplementation_contracts(self):
+        plan = self.read_doc(
+            "docs/superpowers/plans/"
+            "2026-07-23-chemblender-2.3.0-wave-1-extxyz.md"
+        )
+        required = (
+            '`FrameProperty` validity mask prefix `("frame",)`',
+            '`AtomFrameProperty` validity mask prefix `("frame", "atom")`',
+            '`CellFrameProperty` validity mask prefix `("frame",)`',
+            "boolean, dimensionless",
+            "integer codes",
+            "unique categories",
+            "explicit missing code",
+            "Create: `ChemBlender/core/formats/__init__.py`",
+            "string, integer, real, logical, 1-D array and 2-D array",
+            "raw lexeme and diagnostic",
+            "`ax ay az bx by bz cx cy cz`",
+            "no `Lattice` and no `pbc`: `(False, False, False)`",
+            "`Lattice` and no `pbc`: `(True, True, True)`",
+            "explicit `pbc` overrides",
+            "Modify: `ChemBlender/runtime/registration.py`",
+            "Modify: `tests/test_registration_contract.py`",
+            "Modify: `.agents/reference/code-architecture-guide.md`",
+            "Modify: `tests/test_quantum_visualization_docs.py`",
+            "`ChemBlender/ui/export.py` is an explicit registration root",
+            "bounded one-frame iterator",
+            "staged memmap/NPY owner",
+            "cancellation cleanup",
+            "must not construct a nested Python tuple containing all frames",
+            "sidecar publication failure rolls back",
+            "libAtoms, ASE and OVITO",
+            "ASE remains fixture provenance only, not a runtime dependency",
+        )
+        for contract in required:
+            self.assertIn(contract, plan)
+
     def test_local_markdown_links_resolve(self):
         import re
 

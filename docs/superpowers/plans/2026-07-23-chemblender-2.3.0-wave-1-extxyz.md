@@ -31,6 +31,13 @@
 
 **Interfaces:**
 - Produces: `CategoricalData`, `FrameProperty`, `AtomFrameProperty`, `CellFrameProperty`.
+- `FrameProperty` validity mask prefix `("frame",)`.
+- `AtomFrameProperty` validity mask prefix `("frame", "atom")`.
+- `CellFrameProperty` validity mask prefix `("frame",)`.
+- Each numeric or logical partial property has a boolean, dimensionless validity
+  mask whose shape and leading dimensions exactly match the corresponding data
+  prefix.
+- `CategoricalData` stores integer codes, unique categories and an explicit missing code; it never stores an object-dtype array.
 
 - [ ] **Step 1: Write model validation tests**
 
@@ -55,7 +62,11 @@ def test_atom_frame_property_requires_frame_atom_prefix(self):
 
 - [ ] **Step 2: Implement models and project validation**
 
-`FrameProperty` requires leading `frame`; `AtomFrameProperty` requires `("frame","atom")`; `CellFrameProperty` requires `("frame","cell_vector","xyz")`. All bind a FrameSet and validate frame/atom counts at project commit.
+`FrameProperty` requires leading `frame`; `AtomFrameProperty` requires
+`("frame","atom")`; `CellFrameProperty` requires
+`("frame","cell_vector","xyz")`. All bind a FrameSet and validate frame/atom
+counts at project commit. Numeric and bool Partial datasets require their
+matching validity mask; Complete datasets must not use a mask.
 
 - [ ] **Step 3: Add sidecar round-trip tests**
 
@@ -68,12 +79,15 @@ Run model, project and sidecar tests; commit.
 ### Task 2: Implement extXYZ comment and Properties parser
 
 **Files:**
+- Create: `ChemBlender/core/formats/__init__.py`
 - Create: `ChemBlender/core/formats/extxyz.py`
 - Create: `tests/test_extxyz_syntax.py`
 - Create: `tests/fixtures/extxyz/README.md`
 - Create: `tests/fixtures/extxyz/properties-mixed.extxyz`
 - Create: `tests/fixtures/extxyz/multiframe-cell.extxyz`
 - Create: `tests/fixtures/extxyz/invalid-property.extxyz`
+- Create: libAtoms, ASE and OVITO common compatibility fixtures under
+  `tests/fixtures/extxyz/`; ASE remains fixture provenance only, not a runtime dependency.
 
 **Interfaces:**
 - Produces: `parse_extxyz_comment()`, `parse_properties_descriptor()`, `iter_extxyz_frames()`.
@@ -96,11 +110,18 @@ Test duplicate names, invalid types, zero columns and truncated atom rows.
 
 - [ ] **Step 2: Implement a quoted key/value tokenizer**
 
-Support `key=value`, quoted values containing spaces and escaped quote handling defined by the extXYZ reference fixtures. Preserve unrecognized metadata as strings. Reject unclosed quotes with a record diagnostic.
+Support `key=value`, quoted values containing spaces and escaped quote handling
+defined by the extXYZ reference fixtures. Preserve typed per-config metadata as
+string, integer, real, logical, 1-D array and 2-D array values. When a value
+cannot be safely typed, retain its raw lexeme and diagnostic instead of silently
+coercing it to a string. Reject unclosed quotes with a record diagnostic.
 
 - [ ] **Step 3: Implement streaming frames**
 
-Read frame count, raw comment and exactly N atom lines. Parse columns according to Properties. If Properties is absent, use ordinary `species:S:1:pos:R:3`. Do not load all frames in this low-level iterator.
+Read frame count, raw comment and exactly N atom lines. Parse columns according
+to Properties. If Properties is absent, use ordinary
+`species:S:1:pos:R:3`. Use a bounded one-frame iterator; do not load all frames
+in this low-level iterator.
 
 - [ ] **Step 4: Run and commit**
 
@@ -141,11 +162,25 @@ Units not declared by extXYZ are source-convention assumptions and must produce 
 
 - [ ] **Step 3: Map frame metadata**
 
-`Lattice` is 9 floats row-major, `pbc` accepts T/F tokens, energy/free_energy/time/temperature/step become frame properties, stress/virial accept 9 or 6 components with recorded convention.
+`Lattice` is exactly nine floats in the lattice-vector sequence
+`ax ay az bx by bz cx cy cz`; do not describe the contract only as row-major or
+column-major. PBC defaults are exact:
+
+- no `Lattice` and no `pbc`: `(False, False, False)`;
+- `Lattice` and no `pbc`: `(True, True, True)`;
+- explicit `pbc` overrides either default and accepts T/F tokens.
+
+energy/free_energy/time/temperature/step become frame properties, while
+stress/virial accept 9 or 6 components with a recorded convention.
 
 - [ ] **Step 4: Handle changing cell and properties**
 
 Compatible frames form one FrameSet. Changing cell becomes CellFrameProperty. A property absent in some frames becomes Partial with a validity mask rather than zero-filled Complete data. Incompatible atom identity splits the source into separate structures and diagnostics.
+
+For large compatible trajectories, stage arrays through a staged memmap/NPY owner
+and append from the bounded frame iterator. The mapper must not construct a nested Python tuple containing all frames. Cancellation cleanup removes all owned staging
+files, and sidecar publication failure rolls back the staged project without
+leaking files or partially committing entities.
 
 - [ ] **Step 5: Run and commit**
 
@@ -188,11 +223,17 @@ Run round-trip tests including multi-frame cell and unknown properties; commit.
 - Modify: `ChemBlender/ui/import_preview.py`
 - Modify: `ChemBlender/ui/project_browser/panel.py`
 - Create: `ChemBlender/ui/export.py`
+- Modify: `ChemBlender/runtime/registration.py`
+- Modify: `tests/test_registration_contract.py`
 - Modify: `tests/blender_smoke.py`
 - Create: `ChemBlender/scripts/benchmark_extxyz.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Modify: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: property summary, frame controls and export operator.
+- `ChemBlender/ui/export.py` is an explicit registration root; it must not rely
+  on another UI module re-exporting its Blender classes.
 
 - [ ] **Step 1: Show extXYZ capabilities in Preview**
 
@@ -209,6 +250,9 @@ Export selected Structure or FrameSet with a loss preview. Partial/Ambiguous req
 - [ ] **Step 4: Benchmark**
 
 Generate deterministic 1k-frame/1k-atom and larger metadata-only cases. Measure first preview, parse, sidecar write, frame access and export. Ensure large paths do not construct nested Python tuples for all values.
+
+The benchmark and Blender smoke also cover cancellation cleanup and publication
+rollback for the staged memmap/NPY path.
 
 - [ ] **Step 5: Verify and commit**
 
