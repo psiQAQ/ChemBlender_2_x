@@ -17,19 +17,9 @@ from ..properties import (
     _scene_property_identity,
     get_quick_import_state,
 )
-from ..scientific_edit import (
-    CHEMBLENDER_OT_apply_scientific_edits,
-    draw_scientific_edit_controls,
-)
+from .. import scientific_edit as _scientific_edit
+from .. import topology as _topology
 from ..session import get_scene_session
-from ..topology import (
-    CHEMBLENDER_OT_accept_topology,
-    CHEMBLENDER_OT_compute_topology,
-    CHEMBLENDER_OT_reject_topology,
-    CHEMBLENDER_OT_switch_topology,
-    CHEMBLENDER_PG_topology_settings,
-    draw_topology_controls,
-)
 from .model import (
     BrowserMode,
     ViewRecord,
@@ -304,12 +294,12 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
         )
         if settings.active_entity_id:
             layout.label(text=f"Selected: {settings.active_entity_id}")
-        draw_scientific_edit_controls(
+        _scientific_edit.draw_scientific_edit_controls(
             layout,
             context,
             get_scene_session(context.scene),
         )
-        draw_topology_controls(
+        _topology.draw_topology_controls(
             layout,
             context,
             get_scene_session(context.scene),
@@ -398,7 +388,7 @@ def register():
             f"Scene.{_TOPOLOGY_SCENE_PROPERTY_NAME} is already owned"
         )
     created_topology_property = PointerProperty(
-        type=CHEMBLENDER_PG_topology_settings
+        type=_topology.CHEMBLENDER_PG_topology_settings
     )
     setattr(
         bpy.types.Scene,

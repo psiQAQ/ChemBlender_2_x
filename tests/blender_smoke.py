@@ -122,6 +122,10 @@ def registration_inventory(module_key):
     )
     auto_load = importlib.import_module(f"{module_key}.auto_load")
     classes = owned_registration_classes(module_key)
+    assert {
+        relative_name(cls.__module__, module_key)
+        for cls in classes
+    }.issubset(registration.REGISTER_MODULE_NAMES)
     base_types = {
         *auto_load.get_register_base_types(),
         bpy.types.FileHandler,
@@ -181,6 +185,8 @@ def assert_registration_isolation(module_key, before_install_modules):
     assert f"{module_key}.ui.properties" in sys.modules
     assert f"{module_key}.ui.quick_import" in sys.modules
     assert f"{module_key}.ui.import_preview" in sys.modules
+    assert f"{module_key}.ui.topology" in sys.modules
+    assert f"{module_key}.ui.scientific_edit" in sys.modules
     assert f"{module_key}.ui.project_browser.panel" in sys.modules
     assert f"{module_key}.ui.file_handlers" in sys.modules
     assert f"{module_key}.ui.workspace" in sys.modules

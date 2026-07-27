@@ -737,6 +737,41 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             all(identifier for identifier, _label, _description in quality.keywords["items"])
         )
 
+    def test_topology_and_scientific_edit_classes_have_explicit_roots(self):
+        registration = importlib.import_module(
+            "ChemBlender.runtime.registration"
+        )
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        modules = tuple(
+            importlib.import_module(name)
+            for name in (
+                "ChemBlender.ui.topology",
+                "ChemBlender.ui.scientific_edit",
+            )
+        )
+
+        self.assertTrue(
+            {
+                ".ui.topology",
+                ".ui.scientific_edit",
+            }.issubset(registration.REGISTER_MODULE_NAMES)
+        )
+        for module in modules:
+            classes = tuple(
+                value
+                for name, value in vars(module).items()
+                if name.startswith(("CHEMBLENDER_OT_", "CHEMBLENDER_PG_"))
+            )
+            self.assertTrue(classes)
+            self.assertTrue(
+                all(cls.__module__ == module.__name__ for cls in classes)
+            )
+            self.assertFalse(
+                any(value in classes for value in vars(panel).values())
+            )
+
     def test_ui_list_draws_indentation_icon_quality_and_view_count(self):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"

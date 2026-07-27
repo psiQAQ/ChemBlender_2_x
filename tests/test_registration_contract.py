@@ -23,6 +23,8 @@ EXPECTED_ROOTS = (
     ".ui.properties",
     ".ui.quick_import",
     ".ui.import_preview",
+    ".ui.topology",
+    ".ui.scientific_edit",
     ".ui.project_browser.panel",
     ".ui.file_handlers",
     ".ui.workspace",
