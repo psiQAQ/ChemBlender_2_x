@@ -32,6 +32,9 @@ def infer_periodic_topology(structure, settings=None):
         raise ValueError("structure coordinates must be finite")
     inverse_cell = numpy.linalg.inv(cell)
     fractional = coordinates @ inverse_cell
+    for axis, periodic in enumerate(structure.periodic.pbc):
+        if periodic:
+            fractional[:, axis] -= numpy.floor(fractional[:, axis])
     coordinates = fractional @ cell
     radii = numpy.fromiter(
         (covalent_radius_angstrom(number) for number in structure.atomic_numbers),
@@ -139,7 +142,13 @@ def infer_periodic_topology(structure, settings=None):
     parameters = tuple(
         sorted(
             _settings_parameters(settings, structure)
-            + (("pbc", structure.periodic.pbc),)
+            + (
+                (
+                    "fractional_normalization",
+                    "cartesian_pbc_modulo_one",
+                ),
+                ("pbc", structure.periodic.pbc),
+            )
         )
     )
     return _inference_batch(

@@ -24,6 +24,9 @@ def periodic_structure(
     atomic_numbers=None,
     cell=None,
     pbc=(True, True, True),
+    structure_id=None,
+    revision="periodic-r1",
+    stored_fractional=None,
 ):
     fractional = numpy.asarray(fractional, dtype=float)
     atom_count = len(fractional)
@@ -33,8 +36,8 @@ def periodic_structure(
         cell = numpy.diag((10.0, 10.0, 10.0))
     cell = numpy.asarray(cell, dtype=float)
     return Structure(
-        id=uuid4(),
-        revision="periodic-r1",
+        id=uuid4() if structure_id is None else structure_id,
+        revision=revision,
         atomic_numbers=tuple(atomic_numbers),
         coordinates=ArrayData(
             fractional @ cell,
@@ -44,7 +47,11 @@ def periodic_structure(
         cell=ArrayData(cell, ("cell_vector", "xyz"), "angstrom"),
         periodic=PeriodicSiteData(
             fractional_coordinates=ArrayData(
-                fractional,
+                (
+                    fractional
+                    if stored_fractional is None
+                    else numpy.asarray(stored_fractional, dtype=float)
+                ),
                 ("atom", "xyz"),
                 "dimensionless",
             ),
@@ -117,6 +124,117 @@ class PeriodicTopologyInferenceTests(unittest.TestCase):
         self.assertEqual(unwrapped.bond_indices.shape, (0, 2))
         self.assertEqual(unwrapped.bond_lattice_shifts.shape, (0, 3))
 
+    def test_integer_lattice_translation_preserves_topology_identity(self):
+        structure_id = uuid4()
+        reference = periodic_structure(
+            ((0.95, 0.95, 0.5), (0.05, 0.05, 0.5)),
+            structure_id=structure_id,
+        )
+        translated = periodic_structure(
+            ((3.95, -1.05, 2.5), (3.05, -1.95, 2.5)),
+            structure_id=structure_id,
+        )
+
+        original = topology(reference)
+        shifted = topology(translated)
+
+        self.assertEqual(shifted.id, original.id)
+        self.assertEqual(shifted.revision, original.revision)
+        self.assertEqual(
+            shifted.bond_indices.values.tolist(),
+            original.bond_indices.values.tolist(),
+        )
+        self.assertEqual(
+            shifted.bond_lattice_shifts.values.tolist(),
+            original.bond_lattice_shifts.values.tolist(),
+        )
+        self.assertIn(
+            (
+                "fractional_normalization",
+                "cartesian_pbc_modulo_one",
+            ),
+            shifted.inference_parameters,
+        )
+
+    def test_single_atom_unwrapped_by_multiple_cells_preserves_edges(self):
+        structure_id = uuid4()
+        reference = periodic_structure(
+            ((0.95, 0.5, 0.5), (0.05, 0.5, 0.5)),
+            structure_id=structure_id,
+        )
+        unwrapped = periodic_structure(
+            ((0.95, 0.5, 0.5), (3.05, 0.5, 0.5)),
+            structure_id=structure_id,
+        )
+
+        original = topology(reference)
+        shifted = topology(unwrapped)
+
+        self.assertEqual(shifted.id, original.id)
+        self.assertEqual(
+            shifted.bond_lattice_shifts.values.tolist(),
+            [[1, 0, 0]],
+        )
+
+    def test_skew_cell_unwrapped_coordinates_preserve_identity(self):
+        structure_id = uuid4()
+        cell = (
+            (3.0, 0.0, 0.0),
+            (1.5, 2.598076211, 0.0),
+            (0.0, 0.0, 10.0),
+        )
+        reference = periodic_structure(
+            ((0.95, 0.95, 0.5), (0.05, 0.05, 0.5)),
+            cell=cell,
+            structure_id=structure_id,
+        )
+        unwrapped = periodic_structure(
+            ((2.95, -1.05, 0.5), (0.05, 3.05, 0.5)),
+            cell=cell,
+            structure_id=structure_id,
+        )
+
+        self.assertEqual(topology(unwrapped).id, topology(reference).id)
+
+    def test_partial_pbc_does_not_wrap_disabled_axis(self):
+        structure_id = uuid4()
+        reference = periodic_structure(
+            ((0.95, 0.0, 0.5), (0.05, 0.0, 0.5)),
+            pbc=(True, False, False),
+            structure_id=structure_id,
+        )
+        pbc_unwrapped = periodic_structure(
+            ((2.95, 0.0, 0.5), (-1.95, 0.0, 0.5)),
+            pbc=(True, False, False),
+            structure_id=structure_id,
+        )
+        nonpbc_unwrapped = periodic_structure(
+            ((0.95, 2.0, 0.5), (0.05, 0.0, 0.5)),
+            pbc=(True, False, False),
+            structure_id=structure_id,
+        )
+
+        self.assertEqual(topology(pbc_unwrapped).id, topology(reference).id)
+        self.assertNotEqual(topology(nonpbc_unwrapped).id, topology(reference).id)
+        self.assertEqual(topology(nonpbc_unwrapped).bond_indices.shape, (0, 2))
+
+    def test_cartesian_coordinates_are_authoritative_for_wrapping(self):
+        structure_id = uuid4()
+        reference = periodic_structure(
+            ((0.95, 0.5, 0.5), (0.05, 0.5, 0.5)),
+            structure_id=structure_id,
+        )
+        inconsistent_stored_fractional = periodic_structure(
+            ((2.95, 0.5, 0.5), (-1.95, 0.5, 0.5)),
+            stored_fractional=((0.4, 0.4, 0.4), (0.8, 0.8, 0.8)),
+            structure_id=structure_id,
+        )
+
+        self.assertEqual(
+            topology(inconsistent_stored_fractional).id,
+            topology(reference).id,
+        )
+
     def test_single_atom_periodic_chain_keeps_one_canonical_self_image(self):
         reference = periodic_structure(
             ((0.0, 0.0, 0.0),),
@@ -129,6 +247,20 @@ class PeriodicTopologyInferenceTests(unittest.TestCase):
 
         self.assertEqual(result.bond_indices.values.tolist(), [[0, 0]])
         self.assertEqual(result.bond_lattice_shifts.values.tolist(), [[1, 0, 0]])
+
+        unwrapped = periodic_structure(
+            ((4.0, 0.0, 0.0),),
+            atomic_numbers=(1,),
+            cell=((0.7, 0.0, 0.0), (0.0, 5.0, 0.0), (0.0, 0.0, 5.0)),
+            pbc=(True, False, False),
+            structure_id=reference.id,
+        )
+        shifted = topology(unwrapped)
+        self.assertEqual(shifted.id, result.id)
+        self.assertEqual(
+            shifted.bond_lattice_shifts.values.tolist(),
+            [[1, 0, 0]],
+        )
 
     def test_periodic_result_commits_and_nonperiodic_result_has_no_shifts(self):
         reference = periodic_structure(((0.95, 0.5, 0.5), (0.05, 0.5, 0.5)))
