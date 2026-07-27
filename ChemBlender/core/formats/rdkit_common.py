@@ -32,6 +32,9 @@ class RDKitMoleculeContext:
     source_record_index: int
     title: str
     block_version: str | None
+    writer_name: str | None = None
+    writer_version: str | None = None
+    validation_mode: str = "balanced"
 
     def __post_init__(self):
         if type(self.source_revision_id) is not UUID:
@@ -50,6 +53,12 @@ class RDKitMoleculeContext:
             raise TypeError("title must be a string")
         if self.block_version not in (None, "V2000", "V3000"):
             raise ValueError("block_version must be V2000, V3000 or None")
+        if self.writer_name is not None and not isinstance(self.writer_name, str):
+            raise TypeError("writer_name must be a string or None")
+        if self.writer_version is not None and not isinstance(self.writer_version, str):
+            raise TypeError("writer_version must be a string or None")
+        if self.validation_mode not in {"strict", "balanced", "maximum"}:
+            raise ValueError("validation_mode must be strict, balanced or maximum")
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +69,10 @@ class RDKitMoleculeAdaptation:
     molecular_record: MolecularRecord | None
     provenance: ProvenanceRecord
     diagnostics: tuple[ImportDiagnostic, ...]
+
+
+class RDKitMoleculeCancelled(Exception):
+    """Signal cooperative cancellation of an RDKit molecule adaptation."""
 
 
 def _identity(context, raw_block, kind):
@@ -86,7 +99,7 @@ def _categorical(values):
 
 
 def _atom_name(atom):
-    for name in ("atomName", "_TriposAtomName"):
+    for name in ("molFileAlias", "atomName", "_TriposAtomName"):
         if atom.HasProp(name):
             return atom.GetProp(name)
     return None
@@ -94,7 +107,15 @@ def _atom_name(atom):
 
 def _bond_label(bond):
     label = str(bond.GetStereo())
-    return {"STEREOE": "E", "STEREOZ": "Z", "STEREOCIS": "cis", "STEREOTRANS": "trans"}.get(label, "")
+    if label != "STEREONONE":
+        return {
+            "STEREOE": "E",
+            "STEREOZ": "Z",
+            "STEREOCIS": "cis",
+            "STEREOTRANS": "trans",
+        }.get(label, f"stereo:{label.removeprefix('STEREO').lower()}")
+    direction = str(bond.GetBondDir())
+    return "" if direction == "NONE" else f"bond_dir:{direction.lower()}"
 
 
 def _topology(mol, structure_id, topology_id, source_kind, provenance_id):
@@ -163,25 +184,28 @@ def _diagnostic(context, raw_block, code, quality_status, message):
     )
 
 
-def adapt_rdkit_molecule(mol, raw_block, context):
+def _check_cancel(is_cancelled):
+    if is_cancelled is None:
+        return
+    cancelled = is_cancelled()
+    if type(cancelled) is not bool:
+        raise TypeError("is_cancelled must return a bool")
+    if cancelled:
+        raise RDKitMoleculeCancelled()
+
+
+def adapt_rdkit_molecule(mol, raw_block, context, *, is_cancelled=None):
     """Convert one temporary RDKit ``Mol`` without retaining it in the result."""
     if not isinstance(raw_block, bytes):
         raise TypeError("raw_block must be bytes")
     if not isinstance(context, RDKitMoleculeContext):
         raise TypeError("context must be RDKitMoleculeContext")
 
+    _check_cancel(is_cancelled)
     from rdkit import Chem
 
     provenance_id = _identity(context, raw_block, "provenance")
     structure_id = _identity(context, raw_block, "structure")
-    explicit = _topology(
-        mol,
-        structure_id,
-        _identity(context, raw_block, "topology:explicit"),
-        TopologySource.EXPLICIT_FILE,
-        provenance_id,
-    )
-    topologies = [explicit]
     diagnostics = []
     sanitized = Chem.Mol(mol)
     if int(Chem.SanitizeMol(sanitized, catchErrors=True)):
@@ -195,15 +219,8 @@ def adapt_rdkit_molecule(mol, raw_block, context):
             )
         )
     else:
-        interpreted = _topology(
-            sanitized,
-            structure_id,
-            _identity(context, raw_block, "topology:sanitized"),
-            TopologySource.RDKIT_SANITIZED,
-            provenance_id,
-        )
-        if _topology_signature(interpreted) != _topology_signature(explicit):
-            topologies.append(interpreted)
+        Chem.AssignStereochemistry(sanitized, cleanIt=True, force=True)
+    _check_cancel(is_cancelled)
 
     provenance = ProvenanceRecord(
         id=provenance_id,
@@ -214,7 +231,11 @@ def adapt_rdkit_molecule(mol, raw_block, context):
         source_hash=context.source_hash,
         parent_ids=(),
         operation="adapt",
-        parameters=(("record_key", context.record_key), ("rdkit_sanitized", not diagnostics)),
+        parameters=(
+            ("record_key", context.record_key),
+            ("rdkit_sanitized", not diagnostics),
+            ("validation_mode", context.validation_mode),
+        ),
     )
     if not mol.GetNumConformers():
         diagnostics.append(
@@ -227,7 +248,7 @@ def adapt_rdkit_molecule(mol, raw_block, context):
             )
         )
         return RDKitMoleculeAdaptation(
-            raw_block, None, tuple(topologies), None, provenance, tuple(diagnostics)
+            raw_block, None, (), None, provenance, tuple(diagnostics)
         )
 
     conformer = mol.GetConformer()
@@ -235,6 +256,40 @@ def adapt_rdkit_molecule(mol, raw_block, context):
         [tuple(conformer.GetAtomPosition(index)) for index in range(mol.GetNumAtoms())],
         dtype=numpy.float64,
     )
+    if not numpy.all(numpy.isfinite(coordinates)):
+        diagnostics.append(
+            _diagnostic(
+                context,
+                raw_block,
+                "mol.coordinates_invalid",
+                QualityStatus.INVALID,
+                "The source conformer has non-finite coordinates.",
+            )
+        )
+        return RDKitMoleculeAdaptation(
+            raw_block, None, (), None, provenance, tuple(diagnostics)
+        )
+    if not conformer.Is3D():
+        coordinates[:, 2] = 0.0
+    explicit = _topology(
+        mol,
+        structure_id,
+        _identity(context, raw_block, "topology:explicit"),
+        TopologySource.EXPLICIT_FILE,
+        provenance_id,
+    )
+    topologies = [explicit]
+    if not diagnostics:
+        interpreted = _topology(
+            sanitized,
+            structure_id,
+            _identity(context, raw_block, "topology:sanitized"),
+            TopologySource.RDKIT_SANITIZED,
+            provenance_id,
+        )
+        if _topology_signature(interpreted) != _topology_signature(explicit):
+            topologies.append(interpreted)
+    _check_cancel(is_cancelled)
     identity = AtomicIdentityData(
         isotopes=ArrayData(numpy.asarray([atom.GetIsotope() for atom in mol.GetAtoms()], dtype=numpy.int64), ("atom",), "dimensionless"),
         formal_charges=ArrayData(numpy.asarray([atom.GetFormalCharge() for atom in mol.GetAtoms()], dtype=numpy.int64), ("atom",), "dimensionless"),
@@ -271,8 +326,8 @@ def adapt_rdkit_molecule(mol, raw_block, context):
         title=context.title,
         source_record_index=context.source_record_index,
         block_version=context.block_version,
-        writer_name=None,
-        writer_version=None,
+        writer_name=context.writer_name,
+        writer_version=context.writer_version,
         ordered_raw_properties=(),
         provenance_ids=(provenance.id,),
     )

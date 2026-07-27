@@ -1,5 +1,6 @@
 import importlib
 from dataclasses import fields
+import inspect
 import os
 from pathlib import Path
 import subprocess
@@ -95,7 +96,6 @@ class RDKitCommonAdapterTests(unittest.TestCase):
         _add_conformer(molecule)
         molecule.GetAtomWithIdx(0).SetProp("atomName", "isotope-carbon")
         molecule.GetAtomWithIdx(1).SetProp("atomName", "stereo-carbon")
-        molecule.GetBondWithIdx(2).SetStereo(Chem.BondStereo.STEREOE)
         raw = b"adapter\r\nexact raw bytes\xff\n"
 
         first = adapter.adapt_rdkit_molecule(molecule, raw, _context(adapter))
@@ -109,7 +109,6 @@ class RDKitCommonAdapterTests(unittest.TestCase):
         self.assertEqual(first.topologies[0].source_kind.value, "explicit_file")
         self.assertEqual(first.topologies[0].bond_indices.values.tolist(), [[0, 1], [1, 2], [1, 3], [3, 4], [4, 5], [5, 6], [5, 7], [5, 8]])
         self.assertEqual(first.topologies[0].bond_orders.values.tolist(), [1.0, 1.0, 1.0, 2.0, 1.0, 1.0, 1.0, 1.0])
-        self.assertEqual(first.topologies[0].stereo_labels[3], "E")
         self.assertEqual(
             _identity_values(first.structure.atomic_identity),
             ([13, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1, 0, 0, 0], [7, 8, 0, 0, 0, 9, 0, 0, 0], ("isotope-carbon", "stereo-carbon", None, None, None, None, None, None, None), (None, "CHI_TETRAHEDRAL_CCW", None, None, None, None, None, None, None)),
@@ -123,7 +122,7 @@ class RDKitCommonAdapterTests(unittest.TestCase):
 
     def test_uses_a_second_sanitized_topology_only_when_sanitization_changes_interpretation(self):
         adapter = self.adapter()
-        molecule = Chem.MolFromSmiles("C1=CC=CC=C1", sanitize=False)
+        molecule = _add_conformer(Chem.MolFromSmiles("C1=CC=CC=C1", sanitize=False))
 
         adapted = adapter.adapt_rdkit_molecule(molecule, b"kekule\n", _context(adapter))
 
@@ -160,6 +159,8 @@ class RDKitCommonAdapterTests(unittest.TestCase):
         three_dimensional.AddConformer(conformer)
         planar = Chem.MolFromSmiles("C=C")
         rdDepictor.Compute2DCoords(planar)
+        planar.GetConformer().SetAtomPosition(0, (0.0, 0.0, 9.0))
+        planar.GetConformer().SetAtomPosition(1, (1.0, 0.0, -9.0))
 
         three_d = adapter.adapt_rdkit_molecule(three_dimensional, b"3d\n", _context(adapter, record_key="3d"))
         two_d = adapter.adapt_rdkit_molecule(planar, b"2d\n", _context(adapter, record_key="2d"))
@@ -175,9 +176,107 @@ class RDKitCommonAdapterTests(unittest.TestCase):
 
         self.assertIsNone(adapted.structure)
         self.assertIsNone(adapted.molecular_record)
-        self.assertEqual(len(adapted.topologies), 1)
-        self.assertEqual(adapted.topologies[0].source_kind.value, "explicit_file")
+        self.assertEqual(adapted.topologies, ())
         self.assertEqual(tuple(item.code for item in adapted.diagnostics), ("mol.coordinates_missing",))
+
+    def test_context_preserves_writer_metadata_and_validates_mode(self):
+        adapter = self.adapter()
+        names = {field.name for field in fields(adapter.RDKitMoleculeContext)}
+
+        self.assertTrue({"writer_name", "writer_version", "validation_mode"} <= names)
+        context = adapter.RDKitMoleculeContext(
+            source_revision_id=UUID("11111111-1111-1111-1111-111111111111"),
+            source_hash="a" * 64,
+            record_key="writer",
+            source_record_index=0,
+            title="writer fixture",
+            block_version="V2000",
+            writer_name="RDKit",
+            writer_version="2026.03.3",
+            validation_mode="maximum",
+        )
+        adapted = adapter.adapt_rdkit_molecule(
+            _add_conformer(Chem.MolFromSmiles("CO")), b"writer\n", context
+        )
+        self.assertEqual(adapted.molecular_record.writer_name, "RDKit")
+        self.assertEqual(adapted.molecular_record.writer_version, "2026.03.3")
+        with self.assertRaises(ValueError):
+            adapter.RDKitMoleculeContext(
+                UUID(int=1), "a" * 64, "invalid", 0, "", None,
+                "", None, "guess",
+            )
+
+    def test_cancellation_is_cooperative_and_fatal_callback_errors_propagate(self):
+        adapter = self.adapter()
+        parameters = inspect.signature(adapter.adapt_rdkit_molecule).parameters
+
+        self.assertIn("is_cancelled", parameters)
+        cancelled = getattr(adapter, "RDKitMoleculeCancelled", None)
+        self.assertIsNotNone(cancelled)
+        molecule = _add_conformer(Chem.MolFromSmiles("CO"))
+        with self.assertRaises(cancelled):
+            adapter.adapt_rdkit_molecule(
+                molecule, b"cancel\n", _context(adapter), is_cancelled=lambda: True
+            )
+        failure = RuntimeError("cancellation callback failed")
+        with self.assertRaises(RuntimeError) as raised:
+            adapter.adapt_rdkit_molecule(
+                molecule,
+                b"fatal\n",
+                _context(adapter),
+                is_cancelled=lambda: (_ for _ in ()).throw(failure),
+            )
+        self.assertIs(raised.exception, failure)
+
+    def test_alias_bond_direction_and_assigned_double_bond_stereo_are_preserved(self):
+        adapter = self.adapter()
+        mol_block = b"""\n     RDKit          2D\n\n  4  3  0  0  0  0  0  0  0  0999 V2000\n   -1.9796   -0.1365    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.5994    0.4508    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    0.5994   -0.4508    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.9796    0.1365    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0\n  2  3  2  0\n  3  4  1  0\nM  END\n"""
+        molecule = Chem.MolFromMolBlock(mol_block, sanitize=False, removeHs=False)
+        molecule.GetAtomWithIdx(0).SetProp("molFileAlias", "fluorine-alias")
+
+        adapted = adapter.adapt_rdkit_molecule(molecule, mol_block, _context(adapter))
+
+        self.assertEqual(_identity_values(adapted.structure.atomic_identity)[3][0], "fluorine-alias")
+        self.assertEqual(
+            adapted.topologies[0].stereo_labels,
+            ("bond_dir:endupright", "", "bond_dir:endupright"),
+        )
+        self.assertEqual(
+            adapted.topologies[1].stereo_labels,
+            ("bond_dir:endupright", "E", "bond_dir:endupright"),
+        )
+
+    def test_nonfinite_coordinates_and_zero_bond_molecules_keep_valid_fragments(self):
+        adapter = self.adapter()
+        invalid = _add_conformer(Chem.MolFromSmiles("CO"))
+        invalid.GetConformer().SetAtomPosition(0, (float("nan"), 0.0, 0.0))
+
+        adapted = adapter.adapt_rdkit_molecule(invalid, b"nan\n", _context(adapter))
+
+        self.assertIsNone(adapted.structure)
+        self.assertIsNone(adapted.molecular_record)
+        self.assertEqual(adapted.topologies, ())
+        self.assertEqual(tuple(item.code for item in adapted.diagnostics), ("mol.coordinates_invalid",))
+        helium = _add_conformer(Chem.MolFromSmiles("[He]"))
+        zero_bond = adapter.adapt_rdkit_molecule(helium, b"helium\n", _context(adapter, record_key="helium"))
+        self.assertEqual(zero_bond.topologies[0].bond_indices.shape, (0, 2))
+        self.assertEqual(zero_bond.topologies[0].bond_orders.shape, (0,))
+
+    def test_uncommon_bond_stereo_labels_are_not_discarded(self):
+        adapter = self.adapter()
+        for stereo, expected in (
+            (Chem.BondStereo.STEREOANY, "stereo:any"),
+            (Chem.BondStereo.STEREOATROPCCW, "stereo:atropccw"),
+        ):
+            with self.subTest(stereo=stereo):
+                molecule = _add_conformer(Chem.MolFromSmiles("CC"))
+                molecule.GetBondWithIdx(0).SetStereo(stereo)
+                adapted = adapter.adapt_rdkit_molecule(
+                    molecule,
+                    f"{stereo}\n".encode(),
+                    _context(adapter, record_key=str(stereo)),
+                )
+                self.assertEqual(adapted.topologies[0].stereo_labels, (expected,))
 
 
 if __name__ == "__main__":
