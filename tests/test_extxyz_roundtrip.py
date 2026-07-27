@@ -10,6 +10,7 @@ import numpy
 
 from ChemBlender.core.exporters.xyz import (
     export_extxyz,
+    preview_extxyz_export,
     semantic_extxyz_differences,
 )
 from ChemBlender.core.formats.extxyz import (
@@ -65,6 +66,85 @@ def _replace_label_categories(batch):
 
 
 class ExtXYZExporterTests(unittest.TestCase):
+    def test_float_metadata_keeps_real_type_when_one_frame_is_integral(self):
+        source_text = (
+            "1\nProperties=species:S:1:pos:R:3 energy=-1.0\nH 0 0 0\n"
+            "1\nProperties=species:S:1:pos:R:3 energy=-0.5\nH 0.1 0 0\n"
+        )
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "energy.extxyz"
+            destination = root / "export.extxyz"
+            source.write_text(source_text, encoding="utf-8")
+            batch = parse_extxyz(source)
+            structure, = batch.structures
+            frame_set = next(
+                item
+                for item in batch.datasets
+                if item.semantic_role == "coordinates"
+            )
+            properties = tuple(
+                item for item in batch.datasets if item is not frame_set
+            )
+
+            export_extxyz(
+                destination,
+                structure,
+                frame_set=frame_set,
+                properties=properties,
+                confirm_loss=True,
+            )
+            reparsed = parse_extxyz(destination)
+
+            self.assertEqual(
+                semantic_extxyz_differences(batch, reparsed),
+                (),
+            )
+
+    def test_preview_reports_loss_without_writing_or_requiring_destination(self):
+        complete = parse_extxyz(FIXTURES / "multiframe-cell.extxyz")
+        structure, = complete.structures
+        frame_set = next(
+            item
+            for item in complete.datasets
+            if item.semantic_role == "coordinates"
+        )
+        properties = tuple(
+            item for item in complete.datasets if item is not frame_set
+        )
+
+        report = preview_extxyz_export(
+            structure,
+            frame_set=frame_set,
+            properties=properties,
+        )
+
+        self.assertFalse(report.written)
+        self.assertFalse(report.requires_confirmation)
+        self.assertEqual(report.frame_count, 2)
+
+        lossy = parse_extxyz(FIXTURES / "properties-mixed.extxyz")
+        structure, = lossy.structures
+        frame_set = next(
+            item
+            for item in lossy.datasets
+            if item.semantic_role == "coordinates"
+        )
+        properties = tuple(
+            item for item in lossy.datasets if item is not frame_set
+        )
+        report = preview_extxyz_export(
+            structure,
+            frame_set=frame_set,
+            properties=properties,
+        )
+
+        self.assertFalse(report.written)
+        self.assertTrue(report.requires_confirmation)
+        self.assertTrue(
+            any(entry.code == "ambiguous_property" for entry in report.entries)
+        )
+
     def test_schema_metadata_and_categorical_values_are_deterministic(self):
         source_text = (
             "2\n"

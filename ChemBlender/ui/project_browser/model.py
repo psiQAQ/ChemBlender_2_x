@@ -277,6 +277,32 @@ def _by_data(project, views):
             continue
         group_id = f"group:{name}"
         rows.append(BrowserRow(group_id, None, 0, "group", label, "", 0, None))
+        if name == "datasets":
+            frame_sets = tuple(
+                entity for entity in entities if _token(entity) == "frame_set"
+            )
+            grouped_ids = {
+                entity.id
+                for entity in entities
+                if getattr(entity, "frame_set_id", None)
+                in {frame_set.id for frame_set in frame_sets}
+            }
+            for frame_set in frame_sets:
+                frame_rows = _entity_row(frame_set, group_id, 1, views)
+                rows.extend(frame_rows)
+                frame_row_id = frame_rows[0].id
+                for entity in entities:
+                    if getattr(entity, "frame_set_id", None) == frame_set.id:
+                        rows.extend(
+                            _entity_row(entity, frame_row_id, 2, views)
+                        )
+            for entity in entities:
+                if (
+                    entity.id not in grouped_ids
+                    and entity not in frame_sets
+                ):
+                    rows.extend(_entity_row(entity, group_id, 1, views))
+            continue
         for entity in entities:
             rows.extend(_entity_row(entity, group_id, 1, views))
     diagnostics = tuple(

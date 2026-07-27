@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core.exporters.xyz import export_xyz
+from ChemBlender.core.exporters.xyz import ExportCancelled, export_xyz
 from ChemBlender.core.model import ArrayData, Structure
 
 
@@ -62,6 +62,23 @@ class XYZExporterTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "angstrom"):
                 export_xyz(destination, _structure(unit="bohr"))
             self.assertEqual(destination.read_bytes(), b"existing\n")
+
+    def test_cancellation_preserves_destination_and_removes_temporary_file(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            destination = root / "structure.xyz"
+            destination.write_bytes(b"existing\n")
+            checks = iter((False, True))
+
+            with self.assertRaisesRegex(ExportCancelled, "cancelled"):
+                export_xyz(
+                    destination,
+                    _structure(),
+                    is_cancelled=lambda: next(checks),
+                )
+
+            self.assertEqual(destination.read_bytes(), b"existing\n")
+            self.assertEqual(tuple(root.iterdir()), (destination,))
 
             structure = _structure()
             structure.coordinates.values[0, 0] = numpy.nan

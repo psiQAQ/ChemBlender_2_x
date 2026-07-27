@@ -28,6 +28,7 @@ from ChemBlender.core.import_pipeline.request import (
     ValidationMode,
 )
 from ChemBlender.core.import_pipeline.staging import StagedImportSession
+from ChemBlender.core.formats.extxyz import parse_extxyz
 from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
 from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
 
@@ -243,6 +244,48 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             session.dirty_reasons,
         )
 
+    def test_extxyz_preview_summary_reports_frames_properties_cell_and_units(self):
+        source = Path(self.temporary.name) / "force.extxyz"
+        source.write_text(
+            "\n".join(
+                (
+                    "1",
+                    'Lattice="4 0 0 0 4 0 0 0 4" '
+                    "Properties=species:S:1:pos:R:3:force:R:3 "
+                    'pbc="T F T" energy=-1.25',
+                    "C 0 0 0 1 2 3",
+                    "1",
+                    'Lattice="5 0 0 0 5 0 0 0 5" '
+                    "Properties=species:S:1:pos:R:3:force:R:3 "
+                    'pbc="F F F" energy=-1.0',
+                    "C 0.1 0 0 2 3 4",
+                    "",
+                )
+            ),
+            encoding="utf-8",
+        )
+        batch = parse_extxyz(source)
+
+        summary = self.module.extxyz_preview_summary(batch)
+
+        self.assertEqual(summary.frame_count, 2)
+        self.assertEqual(summary.atom_properties, ("atomic_force",))
+        self.assertEqual(
+            summary.frame_properties,
+            ("cell", "energy", "pbc"),
+        )
+        self.assertTrue(summary.has_lattice)
+        self.assertEqual(summary.pbc, (True, False, True))
+        self.assertTrue(summary.pbc_changes)
+        self.assertEqual(
+            summary.assumed_units,
+            (
+                "electron_volt was assumed because extXYZ declared no unit",
+                "electron_volt_per_angstrom was assumed because extXYZ "
+                "declared no unit",
+            ),
+        )
+
     def stage_two_candidate_conflict(self):
         for action in (None, "independent_copy"):
             registry, state = self.stage("tests/fixtures/xyz/water.xyz")
@@ -274,6 +317,11 @@ class ImportPreviewUIContractTests(unittest.TestCase):
                 "reader_id",
                 "reader_availability",
                 "capability_summary",
+                "frame_count",
+                "atom_property_summary",
+                "frame_property_summary",
+                "lattice_pbc_summary",
+                "assumed_unit_summary",
                 "quality",
                 "conflict_id",
                 "conflict_action",
@@ -287,7 +335,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         )
         self.assertTrue(
             all(
-                value.kind in {"bool", "collection", "enum", "string"}
+                value.kind in {"bool", "collection", "enum", "int", "string"}
                 for value in annotations.values()
             )
         )

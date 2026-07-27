@@ -2,12 +2,14 @@
 
 import importlib
 import json
+import operator
 from uuid import UUID
 
 import bpy
 from bpy.props import (
     CollectionProperty,
     EnumProperty,
+    FloatProperty,
     IntProperty,
     PointerProperty,
     StringProperty,
@@ -19,6 +21,8 @@ from ..properties import (
     get_quick_import_state,
 )
 from ..session import get_scene_session
+from ...core import AtomFrameProperty, FrameSet
+from ...dataset_view import write_vector_view
 from .model import (
     BrowserMode,
     ViewRecord,
@@ -112,6 +116,81 @@ def synchronize_browser_selection(session, state):
     selected = _project_entity_id(session.project, entity_id)
     session.active_entity_id = selected
     state.active_entity_id = str(selected) if selected is not None else ""
+
+
+def atom_frame_vector(project, entity_id, frame_index):
+    if type(entity_id) is not UUID:
+        raise TypeError("entity_id must be UUID")
+    dataset = project.datasets.get(entity_id)
+    if (
+        not isinstance(dataset, AtomFrameProperty)
+        or dataset.semantic_role != "atomic_force"
+        or dataset.data.dims != ("frame", "atom", "xyz")
+    ):
+        raise ValueError("selected entity is not an atomic force trajectory")
+    frame_set = project.datasets.get(dataset.frame_set_id)
+    if not isinstance(frame_set, FrameSet):
+        raise ValueError("atomic force trajectory has no FrameSet")
+    if isinstance(frame_index, bool):
+        raise TypeError("frame_index must be an integer")
+    try:
+        frame_index = operator.index(frame_index)
+    except TypeError as error:
+        raise TypeError("frame_index must be an integer") from error
+    if not 0 <= frame_index < dataset.data.shape[0]:
+        raise IndexError("frame_index is outside the trajectory")
+    if dataset.validity_mask is not None:
+        import numpy
+
+        if not numpy.all(dataset.validity_mask.values[frame_index]):
+            raise ValueError("atomic force frame contains missing values")
+    return (
+        frame_set.structure_id,
+        dataset,
+        dataset.data.values[frame_index],
+    )
+
+
+class CHEMBLENDER_OT_apply_frame_force(bpy.types.Operator):
+    bl_idname = "chemblender.apply_frame_force"
+    bl_label = "Show Force Vectors"
+    bl_description = "Apply the selected trajectory force to the active Structure view"
+
+    display_scale: FloatProperty(name="Scale", default=1.0, min=1.0e-9)
+
+    def execute(self, context):
+        session = get_scene_session(context.scene)
+        obj = context.active_object
+        if obj is None and session.active_view_object_name:
+            obj = context.scene.objects.get(session.active_view_object_name)
+        try:
+            frame_index = int(obj.get("cb_trajectory_frame_index", 0))
+            structure_id, dataset, values = atom_frame_vector(
+                session.project,
+                session.active_entity_id,
+                frame_index,
+            )
+            if (
+                obj.get("cb_structure_contract") != "structure_view_v1"
+                or obj.get("cb_structure_id") != str(structure_id)
+            ):
+                raise ValueError(
+                    "active object is not the matching Structure view"
+                )
+            write_vector_view(
+                obj,
+                values,
+                dataset_id=dataset.id,
+                revision=dataset.revision,
+                semantic_role=dataset.semantic_role,
+                unit=dataset.data.unit,
+                display_scale=self.display_scale,
+            )
+        except (AttributeError, TypeError, ValueError, IndexError) as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        session.active_view_object_name = obj.name
+        return {"FINISHED"}
 
 
 def presentation_view_records(scene):
@@ -282,6 +361,7 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
     def draw(self, context):
         settings = getattr(context.scene, _SCENE_PROPERTY_NAME)
         refresh_project_browser(context.scene)
+        session = get_scene_session(context.scene)
         layout = self.layout
         layout.prop(settings, "mode", expand=True)
         layout.prop(settings, "search", icon="VIEWZOOM")
@@ -296,15 +376,32 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
         )
         if settings.active_entity_id:
             layout.label(text=f"Selected: {settings.active_entity_id}")
+            selected = session.project.datasets.get(session.active_entity_id)
+            if (
+                isinstance(selected, AtomFrameProperty)
+                and selected.semantic_role == "atomic_force"
+            ):
+                layout.operator(
+                    CHEMBLENDER_OT_apply_frame_force.bl_idname,
+                    icon="FORCE_FORCE",
+                )
+            if (
+                session.active_entity_id in session.project.structures
+                or isinstance(selected, FrameSet)
+            ):
+                layout.operator(
+                    "chemblender.export_project_entity",
+                    icon="EXPORT",
+                )
         _scientific_edit.draw_scientific_edit_controls(
             layout,
             context,
-            get_scene_session(context.scene),
+            session,
         )
         _topology.draw_topology_controls(
             layout,
             context,
-            get_scene_session(context.scene),
+            session,
         )
 
 
@@ -437,6 +534,7 @@ def unregister():
 
 
 __all__ = (
+    "CHEMBLENDER_OT_apply_frame_force",
     "CHEMBLENDER_PG_project_browser",
     "CHEMBLENDER_PG_project_browser_row",
     "CHEMBLENDER_PT_project_browser",

@@ -187,6 +187,7 @@ def assert_registration_isolation(module_key, before_install_modules):
     assert f"{module_key}.ui.import_preview" in sys.modules
     assert f"{module_key}.ui.topology" in sys.modules
     assert f"{module_key}.ui.scientific_edit" in sys.modules
+    assert f"{module_key}.ui.export" in sys.modules
     assert f"{module_key}.ui.project_browser.panel" in sys.modules
     assert f"{module_key}.ui.file_handlers" in sys.modules
     assert f"{module_key}.ui.workspace" in sys.modules
@@ -237,6 +238,8 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_reject_topology")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_switch_topology")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_scientific_edits")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_frame_force")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_export_project_entity")
     assert hasattr(bpy.types.Scene, "chemblender_topology")
     assert_file_handlers(module_key)
     properties = importlib.import_module(f"{module_key}.ui.properties")
@@ -1665,6 +1668,54 @@ def assert_dataset_and_trajectory_views(module_key):
         assert obj["cb_trajectory_frame_index"] == 1
         assert obj["cb_trajectory_cache_size"] == 2
         assert obj["cb_trajectory_prefetch_ahead"] == 0
+        frame_force = core.AtomFrameProperty(
+            id=uuid4(),
+            revision="trajectory-force-revision",
+            semantic_role="atomic_force",
+            domain="atom_frame",
+            data=core.ArrayData(
+                numpy.asarray(
+                    [
+                        [[1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 3.0]],
+                        [[4.0, 0.0, 0.0], [0.0, 5.0, 0.0], [0.0, 0.0, 6.0]],
+                    ]
+                ),
+                ("frame", "atom", "xyz"),
+                "electron_volt_per_angstrom",
+            ),
+            status=core.DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+            frame_set_id=frames.id,
+        )
+        project = core.QCProject(uuid4(), "0.2")
+        project.commit(
+            core.ImportBatch(
+                structures=(structure,),
+                datasets=(frames, frame_force),
+            )
+        )
+        browser = importlib.import_module(
+            f"{module_key}.ui.project_browser.panel"
+        )
+        force_structure_id, selected_force, values = (
+            browser.atom_frame_vector(project, frame_force.id, 1)
+        )
+        assert force_structure_id == structure.id
+        adapter.write_vector_view(
+            obj,
+            values,
+            dataset_id=selected_force.id,
+            revision=selected_force.revision,
+            semantic_role=selected_force.semantic_role,
+            unit=selected_force.data.unit,
+            display_scale=0.5,
+        )
+        vector_values = [0.0] * 9
+        obj.data.attributes["cbq_vector"].data.foreach_get(
+            "vector", vector_values
+        )
+        assert vector_values == [2.0, 0.0, 0.0, 0.0, 2.5, 0.0, 0.0, 0.0, 3.0]
         bpy.context.scene.frame_set(100)
         assert obj["cb_trajectory_frame_index"] == 1
         assert len(bpy.data.objects) >= 1
@@ -2327,6 +2378,146 @@ def assert_topology_view(module_key, repository_root):
         bpy.data.meshes.remove(mesh)
 
 
+def assert_extxyz_workflow(module_key, repository_root):
+    core = importlib.import_module(f"{module_key}.core")
+    formats = importlib.import_module(
+        f"{module_key}.core.formats.extxyz"
+    )
+    exporters = importlib.import_module(
+        f"{module_key}.core.exporters"
+    )
+    export_ui = importlib.import_module(f"{module_key}.ui.export")
+    preview_ui = importlib.import_module(
+        f"{module_key}.ui.import_preview"
+    )
+    browser_model = importlib.import_module(
+        f"{module_key}.ui.project_browser.model"
+    )
+    ordinary = core.parse_xyz(
+        repository_root / "tests" / "fixtures" / "xyz" / "water.xyz"
+    )
+    assert len(ordinary.structures) == 1
+
+    source_text = (
+        "2\n"
+        'Lattice="4 0 0 0 4 0 0 0 4" '
+        "Properties=species:S:1:pos:R:3:force:R:3:"
+        'custom:R:1:flag:L:1:label:S:1 pbc="T F T" energy=-1.0\n'
+        "C 0 0 0 1 0 0 2.5 T donor\n"
+        "H 1 0 0 0 1 0 3.5 F acceptor\n"
+        "2\n"
+        'Lattice="5 0 0 0 5 0 0 0 5" '
+        "Properties=species:S:1:pos:R:3:"
+        'custom:R:1:flag:L:1:label:S:1 pbc="F F F" energy=-0.5\n'
+        "C 0.1 0 0 4.5 F donor\n"
+        "H 1.1 0 0 5.5 T acceptor\n"
+    )
+    with TemporaryDirectory(prefix="chemblender-extxyz-smoke-") as directory:
+        root = Path(directory)
+        source = root / "trajectory.extxyz"
+        source.write_text(source_text, encoding="utf-8")
+        batch = formats.parse_extxyz(source)
+        structure, = batch.structures
+        frame_set = next(
+            item
+            for item in batch.datasets
+            if isinstance(item, core.FrameSet)
+        )
+        force = next(
+            item
+            for item in batch.datasets
+            if isinstance(item, core.AtomFrameProperty)
+            and item.semantic_role == "atomic_force"
+        )
+        assert frame_set.data.shape == (2, 2, 3)
+        assert force.status is core.DatasetStatus.PARTIAL
+        assert any(
+            isinstance(item, core.CellFrameProperty)
+            for item in batch.datasets
+        )
+        pbc = next(
+            item
+            for item in batch.datasets
+            if isinstance(item, core.FrameProperty)
+            and item.semantic_role == "pbc"
+        )
+        assert tuple(map(tuple, pbc.data.values)) == (
+            (True, False, True),
+            (False, False, False),
+        )
+        for role in ("custom", "flag", "label"):
+            item = next(
+                value
+                for value in batch.datasets
+                if value.semantic_role == role
+            )
+            assert item.status is core.DatasetStatus.AMBIGUOUS
+
+        summary = preview_ui.extxyz_preview_summary(batch)
+        assert summary.frame_count == 2
+        assert "atomic_force" in summary.atom_properties
+        assert summary.has_lattice
+        assert summary.assumed_units
+
+        project = core.QCProject(uuid4(), "0.2")
+        project.commit(batch)
+        rows = browser_model.build_browser_rows(
+            project,
+            mode=browser_model.BrowserMode.BY_DATA,
+            browser_revision=1,
+        )
+        frame_row = next(row for row in rows if row.entity_id == frame_set.id)
+        force_row = next(row for row in rows if row.entity_id == force.id)
+        assert force_row.parent_id == frame_row.id
+
+        selection = export_ui.resolve_export_selection(
+            project,
+            frame_set.id,
+        )
+        preview = export_ui.preview_export_selection(
+            selection,
+            "extxyz",
+        )
+        assert preview.requires_confirmation
+        destination = root / "trajectory-export.extxyz"
+        job = export_ui.ExportJob(
+            destination,
+            selection,
+            format_name="extxyz",
+            confirm_loss=True,
+            missing_value_token=None,
+        )
+        job.start()
+        assert job.join(30)
+        assert job.error is None
+        assert job.result.written
+        reparsed = formats.parse_extxyz(destination)
+        assert exporters.semantic_extxyz_differences(batch, reparsed) == ()
+
+        xyz_destination = root / "structure.xyz"
+        xyz_job = export_ui.ExportJob(
+            xyz_destination,
+            export_ui.resolve_export_selection(project, structure.id),
+            format_name="xyz",
+            confirm_loss=False,
+            missing_value_token=None,
+        )
+        xyz_job.start()
+        assert xyz_job.join(30)
+        assert xyz_job.error is None
+        assert xyz_job.result.written
+        assert len(core.parse_xyz(xyz_destination).structures) == 1
+
+        sidecar = root / "trajectory.cbq"
+        core.save_project(sidecar, project)
+        reopened = core.open_project(sidecar)
+        try:
+            assert frame_set.id in reopened.datasets
+            assert force.id in reopened.datasets
+        finally:
+            core.close_project(reopened)
+
+
 def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     reader = importlib.import_module(f"{module_key}.read")
     cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
@@ -2400,6 +2591,12 @@ expected_inventory["module_callbacks"] += [
     {"module": ".ui.workspace", "register": True, "unregister": True},
 ]
 expected_inventory["registered_classes"] += [
+    {
+        "module": ".ui.export",
+        "name": "CHEMBLENDER_OT_export_project_entity",
+        "id": "chemblender.export_project_entity",
+        "base": "Operator",
+    },
     {
         "module": ".ui.file_handlers",
         "name": "CHEMBLENDER_FH_project_browser",
@@ -2506,6 +2703,12 @@ expected_inventory["registered_classes"] += [
         "module": ".ui.workspace",
         "name": "CHEMBLENDER_OT_open_workspace",
         "id": "chemblender.open_workspace",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_apply_frame_force",
+        "id": "chemblender.apply_frame_force",
         "base": "Operator",
     },
     {
@@ -2649,6 +2852,7 @@ assert_quick_import(module_key, package.parent.parent)
 assert_optional_workspace(module_key)
 assert_project_session_manager(module_key)
 assert_topology_view(module_key, package.parent.parent)
+assert_extxyz_workflow(module_key, package.parent.parent)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 
 import rdkit

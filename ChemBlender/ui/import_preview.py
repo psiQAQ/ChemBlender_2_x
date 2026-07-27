@@ -16,7 +16,12 @@ from bpy.props import (
 )
 
 from ..core import (
+    AtomFrameProperty,
+    CellFrameProperty,
     DiagnosticSeverity,
+    FrameProperty,
+    FrameSet,
+    IssueKind,
     QualityStatus,
     builtin_scene_presets,
     plan_scene_preset,
@@ -131,6 +136,11 @@ class CHEMBLENDER_PG_import_preview_row(bpy.types.PropertyGroup):
     reader_id: StringProperty()
     reader_availability: StringProperty()
     capability_summary: StringProperty()
+    frame_count: IntProperty()
+    atom_property_summary: StringProperty()
+    frame_property_summary: StringProperty()
+    lattice_pbc_summary: StringProperty()
+    assumed_unit_summary: StringProperty()
     quality: StringProperty()
     conflict_id: StringProperty()
     conflict_action: EnumProperty(items=_conflict_action_items)
@@ -161,6 +171,11 @@ class PreviewProjection:
     reader_availability: str
     capability_summary: str
     quality: str
+    frame_count: int = 0
+    atom_property_summary: str = ""
+    frame_property_summary: str = ""
+    lattice_pbc_summary: str = ""
+    assumed_unit_summary: str = ""
     conflict_id: str = ""
     allowed_actions: str = ""
     conflict_action: str = DuplicateAction.INDEPENDENT_COPY.value
@@ -202,6 +217,78 @@ class ImportUICommitResult:
 
 class ImportCommitCancelled(RuntimeError):
     pass
+
+
+@dataclass(frozen=True, slots=True)
+class ExtXYZPreviewSummary:
+    frame_count: int
+    atom_properties: tuple[str, ...]
+    frame_properties: tuple[str, ...]
+    has_lattice: bool
+    pbc: tuple[bool, bool, bool] | None
+    pbc_changes: bool
+    assumed_units: tuple[str, ...]
+
+
+def extxyz_preview_summary(batch):
+    frames = tuple(
+        dataset for dataset in batch.datasets if isinstance(dataset, FrameSet)
+    )
+    atom_properties = tuple(
+        sorted(
+            {
+                dataset.semantic_role
+                for dataset in batch.datasets
+                if isinstance(dataset, AtomFrameProperty)
+            }
+        )
+    )
+    frame_properties = tuple(
+        sorted(
+            {
+                dataset.semantic_role
+                for dataset in batch.datasets
+                if isinstance(dataset, (FrameProperty, CellFrameProperty))
+            }
+        )
+    )
+    pbc = next(
+        (
+            structure.periodic.pbc
+            for structure in batch.structures
+            if structure.periodic is not None
+        ),
+        None,
+    )
+    issues = () if batch.report is None else batch.report.issues
+    return ExtXYZPreviewSummary(
+        frame_count=sum(dataset.data.shape[0] for dataset in frames),
+        atom_properties=atom_properties,
+        frame_properties=frame_properties,
+        has_lattice=any(
+            structure.cell is not None for structure in batch.structures
+        )
+        or any(
+            isinstance(dataset, CellFrameProperty)
+            for dataset in batch.datasets
+        ),
+        pbc=pbc,
+        pbc_changes=any(
+            isinstance(dataset, FrameProperty)
+            and dataset.semantic_role == "pbc"
+            for dataset in batch.datasets
+        ),
+        assumed_units=tuple(
+            sorted(
+                {
+                    issue.message
+                    for issue in issues
+                    if issue.kind is IssueKind.AMBIGUOUS
+                    and " was assumed " in issue.message
+                }
+            )
+        ),
+    )
 
 
 def _owned_temporary_generation(project_session, path):
@@ -401,8 +488,11 @@ def project_import_preview(project_session, state, registry):
         quality, blocking_reason = _quality_and_blocking(staging, source)
         conflict = conflicts_by_source.get(source.source_id)
         default_view_plan = None
+        extxyz_summary = None
         if len(source.staged_batch_ids) == 1:
             batch = staging.result(source.staged_batch_ids[0])
+            if source.selected_reader_id == "extxyz":
+                extxyz_summary = extxyz_preview_summary(batch)
             revision = next(
                 (
                     value
@@ -425,6 +515,45 @@ def project_import_preview(project_session, state, registry):
                 reader_availability=availability,
                 capability_summary=", ".join(source.capabilities) or "none",
                 quality=quality,
+                frame_count=(
+                    0 if extxyz_summary is None else extxyz_summary.frame_count
+                ),
+                atom_property_summary=(
+                    ""
+                    if extxyz_summary is None
+                    else ", ".join(extxyz_summary.atom_properties) or "none"
+                ),
+                frame_property_summary=(
+                    ""
+                    if extxyz_summary is None
+                    else ", ".join(extxyz_summary.frame_properties) or "none"
+                ),
+                lattice_pbc_summary=(
+                    ""
+                    if extxyz_summary is None
+                    else (
+                        f"Lattice: {'yes' if extxyz_summary.has_lattice else 'no'}"
+                        " · PBC: "
+                        + (
+                            "none"
+                            if extxyz_summary.pbc is None
+                            else " ".join(
+                                "T" if value else "F"
+                                for value in extxyz_summary.pbc
+                            )
+                            + (
+                                " (varies)"
+                                if extxyz_summary.pbc_changes
+                                else ""
+                            )
+                        )
+                    )
+                ),
+                assumed_unit_summary=(
+                    ""
+                    if extxyz_summary is None
+                    else "; ".join(extxyz_summary.assumed_units)
+                ),
                 conflict_id=str(conflict.id) if conflict else "",
                 conflict_action=(
                     conflict.default_action.value
@@ -1019,6 +1148,20 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             )
             box.label(text=f"Capabilities: {row.capability_summary}")
             box.label(text=f"Quality: {row.quality}")
+            if row.frame_count:
+                box.label(text=f"Frames: {row.frame_count}")
+                box.label(
+                    text=f"Atom properties: {row.atom_property_summary}"
+                )
+                box.label(
+                    text=f"Frame properties: {row.frame_property_summary}"
+                )
+                box.label(text=row.lattice_pbc_summary)
+                if row.assumed_unit_summary:
+                    box.label(
+                        text=f"Assumed units: {row.assumed_unit_summary}",
+                        icon="ERROR",
+                    )
             if row.conflict_id:
                 box.prop(row, "conflict_action")
                 if DuplicateAction(row.conflict_action) in _TARGET_ACTIONS:

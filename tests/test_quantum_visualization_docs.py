@@ -211,6 +211,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             documented,
         )
         self.assertIn("ChemBlender/ui/view_cache.py", documented)
+        self.assertIn("ChemBlender/ui/export.py", documented)
+        self.assertIn("ChemBlender/scripts/benchmark_extxyz.py", documented)
         self.assertIn("ChemBlender/scripts/release_metadata.py", documented)
         self.assertIn(
             "ChemBlender/scripts/probe_prerelease_version.py",

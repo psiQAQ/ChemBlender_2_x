@@ -64,6 +64,21 @@ class ExportReport:
     missing_value_token: str | None = None
 
 
+class ExportCancelled(RuntimeError):
+    pass
+
+
+def _cancelled(is_cancelled):
+    if is_cancelled is None:
+        return False
+    if not callable(is_cancelled):
+        raise TypeError("is_cancelled must be callable")
+    value = is_cancelled()
+    if type(value) is not bool:
+        raise TypeError("is_cancelled must return bool")
+    return value
+
+
 def _number(value):
     value = float(value)
     if not math.isfinite(value):
@@ -80,12 +95,16 @@ def _replacement_number(value, missing_value_token):
         return missing_value_token
 
 
-def _atomic_write_chunks(destination, chunks):
+def _atomic_write_chunks(destination, chunks, *, is_cancelled=None):
     destination = Path(destination)
+    if _cancelled(is_cancelled):
+        raise ExportCancelled("export cancelled")
     temporary = short_sibling_temporary_path(destination)
     try:
         with temporary.open("xb") as stream:
             for chunk in chunks:
+                if _cancelled(is_cancelled):
+                    raise ExportCancelled("export cancelled")
                 stream.write(chunk.encode("utf-8"))
             stream.flush()
             os.fsync(stream.fileno())
@@ -123,14 +142,18 @@ def _structure_rows(structure):
     return rows
 
 
-def export_xyz(destination, structure, *, title=""):
+def export_xyz(destination, structure, *, title="", is_cancelled=None):
     if not isinstance(title, str):
         raise TypeError("title must be a string")
     if "\n" in title or "\r" in title:
         raise ValueError("title must fit on one line")
     rows = _structure_rows(structure)
     content = "\n".join((str(len(rows)), title, *rows)) + "\n"
-    _atomic_write(destination, content)
+    _atomic_write_chunks(
+        destination,
+        (content,),
+        is_cancelled=is_cancelled,
+    )
     return ExportReport("xyz", True, 1, False)
 
 
@@ -211,23 +234,36 @@ def _metadata_text(value, missing_value_token):
     if value.ndim > 2:
         raise ValueError("extXYZ metadata arrays may have at most two dimensions")
     if value.ndim:
-        return _metadata_array(value.tolist(), missing_value_token)
+        return _metadata_array(
+            value.tolist(),
+            missing_value_token,
+            force_real=value.dtype.kind == "f",
+        )
     scalar = value.item()
     if isinstance(scalar, (bool, numpy.bool_)):
         return "T" if bool(scalar) else "F"
     if isinstance(scalar, (int, numpy.integer)) and not isinstance(scalar, bool):
         return str(int(scalar))
     if isinstance(scalar, (float, numpy.floating)):
-        return _replacement_number(scalar, missing_value_token)
+        return _real_text(scalar, missing_value_token)
     return _quote(scalar)
 
 
-def _metadata_array(value, missing_value_token):
+def _real_text(value, missing_value_token):
+    text = _replacement_number(value, missing_value_token)
+    return text if any(character in text for character in ".eE") else text + ".0"
+
+
+def _metadata_array(value, missing_value_token, *, force_real=False):
     if isinstance(value, list):
         return (
             "["
             + ",".join(
-                _metadata_array(item, missing_value_token)
+                _metadata_array(
+                    item,
+                    missing_value_token,
+                    force_real=force_real,
+                )
                 for item in value
             )
             + "]"
@@ -237,7 +273,11 @@ def _metadata_array(value, missing_value_token):
     if isinstance(value, int):
         return str(value)
     if isinstance(value, float):
-        return _replacement_number(value, missing_value_token)
+        return (
+            _real_text(value, missing_value_token)
+            if force_real
+            else _replacement_number(value, missing_value_token)
+        )
     return _quote(value)
 
 
@@ -601,19 +641,15 @@ def _frame_rows(
     return rows
 
 
-def export_extxyz(
-    destination,
+def preview_extxyz_export(
     structure,
     *,
     frame_set=None,
     properties=(),
-    confirm_loss=False,
     missing_value_token=None,
 ):
     properties = tuple(properties)
     frame_count = _check_export_inputs(structure, frame_set, properties)
-    if not isinstance(confirm_loss, bool):
-        raise TypeError("confirm_loss must be a bool")
     if missing_value_token is not None:
         if not isinstance(missing_value_token, str) or not missing_value_token:
             raise ValueError("missing_value_token must be a non-empty string")
@@ -637,23 +673,48 @@ def export_extxyz(
                 "an explicit finite replacement token",
             )
         )
-    requires_confirmation = bool(entries)
+    return ExportReport(
+        "extxyz",
+        False,
+        frame_count,
+        bool(entries),
+        tuple(entries),
+        missing_value_token,
+    )
+
+
+def export_extxyz(
+    destination,
+    structure,
+    *,
+    frame_set=None,
+    properties=(),
+    confirm_loss=False,
+    missing_value_token=None,
+    is_cancelled=None,
+):
+    properties = tuple(properties)
+    if not isinstance(confirm_loss, bool):
+        raise TypeError("confirm_loss must be a bool")
+    preview = preview_extxyz_export(
+        structure,
+        frame_set=frame_set,
+        properties=properties,
+        missing_value_token=missing_value_token,
+    )
+    missing_token_required = any(
+        entry.code == "missing_value_token_required"
+        for entry in preview.entries
+    )
     if (
-        (requires_confirmation and not confirm_loss)
-        or (needs_token and missing_value_token is None)
+        (preview.requires_confirmation and not confirm_loss)
+        or missing_token_required
     ):
-        return ExportReport(
-            "extxyz",
-            False,
-            frame_count,
-            True,
-            tuple(entries),
-            missing_value_token,
-        )
+        return preview
 
     atom_properties = _ordered_atom_properties(properties)
     def lines():
-        for frame_index in range(frame_count):
+        for frame_index in range(preview.frame_count):
             fields = _schema_for_frame(
                 atom_properties,
                 frame_index,
@@ -679,13 +740,17 @@ def export_extxyz(
             for row in rows:
                 yield f"{row}\n"
 
-    _atomic_write_chunks(destination, lines())
+    _atomic_write_chunks(
+        destination,
+        lines(),
+        is_cancelled=is_cancelled,
+    )
     return ExportReport(
         "extxyz",
         True,
-        frame_count,
-        requires_confirmation,
-        tuple(entries),
+        preview.frame_count,
+        preview.requires_confirmation,
+        preview.entries,
         missing_value_token,
     )
 
@@ -881,7 +946,9 @@ def semantic_extxyz_differences(left, right, *, rtol=1.0e-9, atol=1.0e-12):
 __all__ = (
     "ExportReport",
     "ExportReportEntry",
+    "ExportCancelled",
     "export_extxyz",
     "export_xyz",
+    "preview_extxyz_export",
     "semantic_extxyz_differences",
 )

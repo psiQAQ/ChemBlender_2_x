@@ -25,6 +25,7 @@ EXPECTED_ROOTS = (
     ".ui.import_preview",
     ".ui.topology",
     ".ui.scientific_edit",
+    ".ui.export",
     ".ui.project_browser.panel",
     ".ui.file_handlers",
     ".ui.workspace",

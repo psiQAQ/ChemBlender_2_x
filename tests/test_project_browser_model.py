@@ -10,12 +10,16 @@ from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 from uuid import UUID
 
+import numpy
+
 from ChemBlender.core import (
     ArrayData,
+    AtomFrameProperty,
     DatasetStatus,
     DiagnosticSeverity,
     DiagnosticValue,
     Grid3D,
+    FrameSet,
     ImportBatch,
     ImportDiagnostic,
     QCProject,
@@ -38,6 +42,8 @@ SOURCE_ID = UUID("20000000-0000-0000-0000-000000000001")
 REVISION_ID = UUID("20000000-0000-0000-0000-000000000002")
 STRUCTURE_ID = UUID("30000000-0000-0000-0000-000000000001")
 GRID_ID = UUID("30000000-0000-0000-0000-000000000002")
+FRAME_SET_ID = UUID("30000000-0000-0000-0000-000000000003")
+FORCE_ID = UUID("30000000-0000-0000-0000-000000000004")
 DIAGNOSTIC_ID = UUID("40000000-0000-0000-0000-000000000001")
 
 
@@ -145,6 +151,43 @@ def sample_project():
     return project
 
 
+def sample_trajectory_project():
+    project = sample_project()
+    frame_set = FrameSet(
+        id=FRAME_SET_ID,
+        revision="frames-r1",
+        semantic_role="coordinates",
+        domain="frame",
+        data=ArrayData(
+            numpy.zeros((2, 1, 3)),
+            ("frame", "atom", "xyz"),
+            "angstrom",
+        ),
+        status=DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(),
+        structure_id=STRUCTURE_ID,
+        comments=("", ""),
+    )
+    force = AtomFrameProperty(
+        id=FORCE_ID,
+        revision="force-r1",
+        semantic_role="atomic_force",
+        domain="atom_frame",
+        data=ArrayData(
+            numpy.asarray([[[1.0, 2.0, 3.0]], [[4.0, 5.0, 6.0]]]),
+            ("frame", "atom", "xyz"),
+            "electron_volt_per_angstrom",
+        ),
+        status=DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(),
+        frame_set_id=FRAME_SET_ID,
+    )
+    project.commit(ImportBatch(datasets=(force, frame_set)))
+    return project
+
+
 def sample_views():
     return (
         ViewRecord(
@@ -158,6 +201,20 @@ def sample_views():
 
 
 class ProjectBrowserModelTests(unittest.TestCase):
+    def test_frame_set_groups_its_related_properties_without_reading_values(self):
+        rows = build_browser_rows(
+            sample_trajectory_project(),
+            mode=BrowserMode.BY_DATA,
+            session_id=SESSION_ID,
+            browser_revision=2,
+        )
+        frame_row = next(row for row in rows if row.entity_id == FRAME_SET_ID)
+        force_row = next(row for row in rows if row.entity_id == FORCE_ID)
+
+        self.assertEqual(frame_row.parent_id, "group:datasets")
+        self.assertEqual(force_row.parent_id, frame_row.id)
+        self.assertEqual(force_row.depth, frame_row.depth + 1)
+
     def test_rows_and_view_records_are_immutable(self):
         row = BrowserRow(
             id="entity:test",
@@ -655,7 +712,8 @@ class _Panel:
 
 
 class _Operator:
-    pass
+    def report(self, levels, message):
+        self.last_report = (levels, message)
 
 
 class _Scene:
@@ -902,6 +960,67 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         panel.synchronize_browser_selection(session, state)
         self.assertIsNone(session.active_entity_id)
         self.assertEqual(state.active_entity_id, "")
+
+    def test_selected_force_projects_only_the_active_trajectory_frame(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        structure_id, dataset, values = panel.atom_frame_vector(
+            sample_trajectory_project(),
+            FORCE_ID,
+            1,
+        )
+
+        self.assertEqual(structure_id, STRUCTURE_ID)
+        self.assertEqual(dataset.id, FORCE_ID)
+        numpy.testing.assert_array_equal(values, [[4.0, 5.0, 6.0]])
+
+    def test_force_operator_applies_selected_frame_to_active_structure_view(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class ViewObject(dict):
+            name = "Water trajectory"
+
+        obj = ViewObject(
+            cb_structure_contract="structure_view_v1",
+            cb_structure_id=str(STRUCTURE_ID),
+            cb_structure_revision="structure-r1",
+            cb_trajectory_frame_index=1,
+        )
+        session = SimpleNamespace(
+            project=sample_trajectory_project(),
+            active_entity_id=FORCE_ID,
+            active_view_object_name=obj.name,
+        )
+        context = SimpleNamespace(
+            scene=SimpleNamespace(objects={obj.name: obj}),
+            active_object=obj,
+        )
+
+        def write_vector(view, values, **keywords):
+            view["displayed_vectors"] = (
+                numpy.asarray(values) * keywords["display_scale"]
+            )
+            view["vector_dataset_id"] = str(keywords["dataset_id"])
+            return object()
+
+        operation = panel.CHEMBLENDER_OT_apply_frame_force()
+        operation.display_scale = 0.5
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(panel, "write_vector_view", write_vector),
+        ):
+            result = operation.execute(context)
+
+        self.assertEqual(result, {"FINISHED"})
+        numpy.testing.assert_array_equal(
+            obj["displayed_vectors"],
+            [[2.0, 2.5, 3.0]],
+        )
+        self.assertEqual(obj["vector_dataset_id"], str(FORCE_ID))
 
     def test_refresh_preserves_selection_hidden_by_search(self):
         panel = importlib.import_module(
