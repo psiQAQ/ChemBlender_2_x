@@ -417,3 +417,28 @@ git commit -m "chore: checkpoint RDKit source-binding gate"
 **Commit boundary:** Final Gate checkpoint commit.
 
 **Stop boundary:** The Gate must be completed before the separate Tasks 2–8 master plan begins.
+
+## Completion Evidence
+
+- State: `completed`.
+- Planning commit:
+  `be9e35357c557032a1b79e6e7d17477ec4b23bc9`.
+- Implementation commit:
+  `97151d38b2308defab6738f5081f9e8c8160d5fd`.
+- Review-fix commits:
+  `38dbffe3a4b26f38fef8a50c5f5326ba9a9d2f8b`,
+  `3cc709ec5ef9463ddd8b9061b9d64799deead7ca`,
+  `155f36a953aacd81b9405427e7856e2c45d50c2f`.
+- RED: the initial 20-test molecular record/model run produced 8 failures and
+  1 error. Independent reviews added exact RED reproductions for worker source
+  identity, conformance staging, created-ID ordering, worker inventories,
+  publication/cancellation cleanup and memmap-backed `memoryview` release.
+- GREEN: final affected matrix 101/101 Passed; full discovery 1192 Passed,
+  28 Skipped, 0 Failed; `compileall` and `git diff --check` Passed.
+- Blender 5.1.2: native validate/build, 142-entry ZIP audit, isolated install,
+  register/unregister/reload and XYZ/extXYZ/Cube Quick Import smoke Passed.
+- Independent reviews: specification `PASS`; code quality `PASS`.
+- Compatibility: project/sidecar 0.2 and Reader API/canonical 0.1 unchanged;
+  no dependency, manifest, workflow, version or release changes.
+- Remote CI: `Not Run`.
+- Stop boundary: RDKit Task 2 remained unstarted at this Gate checkpoint.
