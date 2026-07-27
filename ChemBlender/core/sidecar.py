@@ -275,6 +275,39 @@ class _Decoder:
         self.root = Path(root).resolve()
         self.verify_arrays = verify_arrays
         self.legacy_topology_ids = frozenset(legacy_topology_ids)
+        self._owned_lazy_arrays = {}
+
+    def release_lazy_arrays(self):
+        self._owned_lazy_arrays.clear()
+
+    def close_lazy_arrays(self, values=None, primary_error=None):
+        if values is None:
+            values = tuple(self._owned_lazy_arrays.values())
+        cleanup_errors = []
+        for value in values:
+            if not isinstance(value, LazyNpyArray):
+                continue
+            owned = self._owned_lazy_arrays.pop(id(value), None)
+            if owned is None:
+                continue
+            try:
+                owned.close()
+            except Exception as error:
+                cleanup_errors.append(error)
+        if primary_error is not None:
+            for error in cleanup_errors:
+                primary_error.add_note(
+                    f"sidecar array cleanup failed: {type(error).__name__}: {error}"
+                )
+            return
+        if cleanup_errors:
+            first, *remaining = cleanup_errors
+            for error in remaining:
+                first.add_note(
+                    f"additional sidecar array cleanup failure: "
+                    f"{type(error).__name__}: {error}"
+                )
+            raise first
 
     def decode(self, value):
         if value is None or isinstance(value, (str, bool, int, float)):
@@ -369,7 +402,10 @@ class _Decoder:
         except SidecarError:
             raise
         except Exception as error:
-            raise SidecarIntegrityError(f"invalid {type_name} in manifest") from error
+            wrapped = SidecarIntegrityError(f"invalid {type_name} in manifest")
+            for note in getattr(error, "__notes__", ()):
+                wrapped.add_note(note)
+            raise wrapped from error
 
     def _canonical_legacy_topology(self, decoded):
         arrays = (decoded["bond_indices"], decoded["bond_orders"])
@@ -404,17 +440,10 @@ class _Decoder:
             return result
         finally:
             active_error = sys.exception()
-            cleanup_error = None
-            for array in arrays:
-                values = array.values
-                if isinstance(values, LazyNpyArray):
-                    try:
-                        values.close()
-                    except Exception as error:
-                        if cleanup_error is None:
-                            cleanup_error = error
-            if active_error is None and cleanup_error is not None:
-                raise cleanup_error
+            self.close_lazy_arrays(
+                (array.values for array in arrays),
+                active_error,
+            )
 
     def _array(self, descriptor):
         expected = {
@@ -472,7 +501,9 @@ class _Decoder:
             raise SidecarIntegrityError("invalid array metadata") from error
         if dtype.hasobject:
             raise SidecarIntegrityError("unsafe array metadata")
-        return LazyNpyArray(path, shape, dtype, content_hash)
+        result = LazyNpyArray(path, shape, dtype, content_hash)
+        self._owned_lazy_arrays[id(result)] = result
+        return result
 
 
 def save_project(root, project):
@@ -583,11 +614,17 @@ def _open_project_with_manifest(
         )
     ):
         raise SidecarCompatibilityError("sidecar project schema is incompatible")
-    project = _Decoder(
+    decoder = _Decoder(
         root,
         verify_arrays,
         legacy_topology_ids,
-    ).decode(manifest.get("project"))
+    )
+    try:
+        project = decoder.decode(manifest.get("project"))
+    except BaseException as error:
+        decoder.close_lazy_arrays(primary_error=error)
+        raise
+    decoder.release_lazy_arrays()
     if not isinstance(project, model.QCProject):
         raise SidecarIntegrityError("manifest project is not a QCProject")
     if project.id != project_id or project.schema_version != schema_version:
