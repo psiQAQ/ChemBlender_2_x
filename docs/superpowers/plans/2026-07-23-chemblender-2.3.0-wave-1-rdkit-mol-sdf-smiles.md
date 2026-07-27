@@ -169,19 +169,19 @@ Run grouping and project validation tests.
 **Interfaces:**
 - Produces: `parse_smiles_text()`, `derive_smiles_3d()` and provenance parameters.
 
-- [ ] **Step 1: Test source preservation**
+- [x] **Step 1: Test source preservation**
 
 Input isomeric SMILES produces a topology/identity entity, canonical SMILES and isomeric canonical SMILES. Invalid input returns blocking diagnostic without a Structure.
 
-- [ ] **Step 2: Implement deterministic embedding**
+- [x] **Step 2: Implement deterministic embedding**
 
 Use ETKDGv3, fixed default seed `0xC0FFEE`, one thread for reproducibility, optional AddHs and UFF/MMFF choice as canonical parameters. Return a derived Structure only on success.
 
-- [ ] **Step 3: Handle optimization failure**
+- [x] **Step 3: Handle optimization failure**
 
 Embedding success plus optimization failure retains coordinates with Partial derivation status and diagnostic. Embedding failure leaves the source/topology valid.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run with bundled RDKit and commit.
 

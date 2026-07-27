@@ -235,6 +235,12 @@ pinned RDKit.
 
 **Commit message:** `feat: add SMILES source and deterministic 3D derivation`
 
+**Completed:** `b26603966e01e6f9f86784df43139a566875f818`.
+
+**Verification:** bundled-Python focused 90/90; full 1292 Passed, 28 Skipped;
+Blender 5.1.2 inline SMILES → deterministic 3D smoke Passed; `SPEC PASS`;
+`QUALITY PASS`.
+
 **Next task:** Task 7 — molecular exporters.
 
 ## Task 7 — MOL/SDF/SMILES Exporters
