@@ -559,11 +559,6 @@ class QCProject:
                 self._require_references(
                     dataset.record_ids, molecular_record_ids, "ConformerSet record"
                 )
-                if any(
-                    molecular_records[record_id].structure_id != reference.id
-                    for record_id in dataset.record_ids
-                ):
-                    raise ValueError("ConformerSet records must use its reference structure")
             if isinstance(dataset, AtomicProperty):
                 try:
                     reference = structures[dataset.structure_id]

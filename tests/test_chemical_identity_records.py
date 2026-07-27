@@ -27,6 +27,7 @@ from ChemBlender.core import (
     save_project,
     open_project,
     close_project,
+    SidecarIntegrityError,
 )
 from tests.test_sidecar_storage import write_manifest
 
@@ -112,6 +113,18 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                 array([1.5, 0], ("atom",)), array([0, 0], ("atom",)),
                 array([0, 0], ("atom",)), categorical([0, 0]), categorical([0, 0]),
             )
+        for name, values in (
+            ("isotopes", array([-1, 0], ("atom",))),
+            ("atom_map_numbers", array([0, -1], ("atom",))),
+            ("formal_charges", array([True, False], ("atom",))),
+        ):
+            fields = {
+                field: getattr(value, field)
+                for field in value.__dataclass_fields__
+            }
+            fields[name] = values
+            with self.subTest(name=name), self.assertRaises(TypeError):
+                AtomicIdentityData(**fields)
         with self.assertRaisesRegex(ValueError, "match atomic numbers"):
             Structure(
                 id=uuid4(), revision="bad", atomic_numbers=(1,),
@@ -147,6 +160,21 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
             record_ids=record_ids,
         )
         self.assertEqual(complete.record_ids, record_ids)
+        with self.assertRaisesRegex(ValueError, "unique"):
+            RecordPropertyColumn(
+                id=uuid4(), revision="duplicate-r1", semantic_role="energy",
+                domain="record", data=array([1.0, 2.0], ("record",), "hartree"),
+                status=DatasetStatus.COMPLETE, source_calculation=None,
+                provenance_ids=(), record_ids=(record_ids[0], record_ids[0]),
+            )
+        for domain, dims in (("atom", ("record",)), ("record", ("value",))):
+            with self.subTest(domain=domain, dims=dims), self.assertRaises(ValueError):
+                RecordPropertyColumn(
+                    id=uuid4(), revision="invalid-r1", semantic_role="energy",
+                    domain=domain, data=array([1.0, 2.0], dims, "hartree"),
+                    status=DatasetStatus.COMPLETE, source_calculation=None,
+                    provenance_ids=(), record_ids=record_ids,
+                )
         partial_fields = {name: getattr(complete, name) for name in complete.__dataclass_fields__}
         partial_fields.update(
             status=DatasetStatus.PARTIAL,
@@ -165,6 +193,20 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                 data=categories, status=DatasetStatus.COMPLETE,
                 source_calculation=None, provenance_ids=(), record_ids=record_ids,
             )
+        for values in (
+            numpy.asarray(["text", "value"]),
+            numpy.asarray([object(), object()], dtype=object),
+            numpy.zeros(2, dtype=[("value", numpy.float64)]),
+        ):
+            with self.subTest(dtype=values.dtype), self.assertRaisesRegex(
+                TypeError, "numeric, logical or categorical"
+            ):
+                RecordPropertyColumn(
+                    id=uuid4(), revision="invalid-r1", semantic_role="invalid",
+                    domain="record", data=ArrayData(values, ("record",), "dimensionless"),
+                    status=DatasetStatus.COMPLETE, source_calculation=None,
+                    provenance_ids=(), record_ids=record_ids,
+                )
 
     def test_conformer_set_requires_permutation_mapping(self):
         molecule = structure()
@@ -185,6 +227,72 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                 **{name: (array([[0, 0], [1, 0]], ("conformer", "atom")) if name == "atom_mappings" else getattr(conformers, name))
                    for name in conformers.__dataclass_fields__}
             )
+        for values, unit in (
+            (numpy.ones((2, 2, 3), dtype=bool), "angstrom"),
+            (numpy.ones((2, 2, 3), dtype=complex), "angstrom"),
+            (numpy.asarray([[[object()] * 3] * 2] * 2, dtype=object), "angstrom"),
+            (numpy.zeros((2, 2, 3), dtype=[("value", numpy.float64)]), "angstrom"),
+            (numpy.ones((2, 2, 3), dtype=float), "electron_volt"),
+        ):
+            with self.subTest(dtype=values.dtype, unit=unit), self.assertRaises(ValueError):
+                ConformerSet(
+                    **{
+                        name: (
+                            ArrayData(values, ("conformer", "atom", "xyz"), unit)
+                            if name == "data" else getattr(conformers, name)
+                        )
+                        for name in conformers.__dataclass_fields__
+                    }
+                )
+
+    def test_conformer_set_can_group_records_from_independent_structures(self):
+        reference = structure()
+        independent = structure()
+        value = record(independent.id)
+        source, revision = source_revision(
+            (reference.id, independent.id, value.id)
+        )
+        value = MolecularRecord(
+            **{
+                name: (revision.id if name == "source_revision_id" else getattr(value, name))
+                for name in value.__dataclass_fields__
+            }
+        )
+        conformers = ConformerSet(
+            id=uuid4(), revision="conformer-r1", semantic_role="coordinates",
+            domain="conformer", data=array(
+                [[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]],
+                ("conformer", "atom", "xyz"), "angstrom",
+            ), status=DatasetStatus.COMPLETE, source_calculation=None, provenance_ids=(),
+            reference_structure_id=reference.id, reference_topology_id=None,
+            record_ids=(value.id,), record_keys=(value.record_key,),
+            atom_mappings=array([[0, 1]], ("conformer", "atom")),
+        )
+        project = QCProject(uuid4(), "0.2")
+        project.commit(ImportBatch(
+            sources=(source,), source_revisions=(revision,),
+            structures=(reference, independent), molecular_records=(value,),
+            datasets=(conformers,),
+        ))
+        self.assertIs(project.datasets[conformers.id], conformers)
+
+    def test_project_rejects_dangling_conformer_records_without_mutation(self):
+        molecule = structure()
+        dataset = ConformerSet(
+            id=uuid4(), revision="conformer-r1", semantic_role="coordinates",
+            domain="conformer", data=array(
+                [[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]],
+                ("conformer", "atom", "xyz"), "angstrom",
+            ), status=DatasetStatus.COMPLETE, source_calculation=None, provenance_ids=(),
+            reference_structure_id=molecule.id, reference_topology_id=None,
+            record_ids=(uuid4(),), record_keys=("missing",),
+            atom_mappings=array([[0, 1]], ("conformer", "atom")),
+        )
+        project = QCProject(uuid4(), "0.2")
+        with self.assertRaisesRegex(ValueError, "dangling"):
+            project.commit(ImportBatch(structures=(molecule,), datasets=(dataset,)))
+        self.assertEqual(project.structures, {})
+        self.assertEqual(project.datasets, {})
 
     def test_project_sidecar_and_reader_api_round_trip(self):
         molecule = structure(identity())
@@ -316,8 +424,71 @@ class ChemicalIdentityAndRecordsTests(unittest.TestCase):
                 self.assertIsInstance(reopened.datasets[column.id], RecordPropertyColumn)
                 self.assertIsInstance(reopened.datasets[conformers.id], ConformerSet)
                 self.assertEqual(reopened.datasets[conformers.id].atom_mappings.shape, (1, 2))
+                values = reopened.datasets[conformers.id].data.values
+                self.assertEqual(values[0, 0, 0], 0.0)
+                self.assertTrue(values.loaded)
             finally:
                 close_project(reopened)
+            self.assertFalse(values.loaded)
+
+    def test_public_batch_rejects_unsafe_ndarray_dtypes(self):
+        for values in (
+            numpy.asarray([[object(), object(), object()]], dtype=object),
+            numpy.zeros((1, 3), dtype=[("value", numpy.float64)]),
+        ):
+            with self.subTest(dtype=values.dtype), self.assertRaisesRegex(
+                TypeError, "object, structured or subarray"
+            ):
+                reader_api.public_batch_from_internal(ImportBatch(structures=(
+                    Structure(
+                        id=uuid4(), revision="unsafe-r1", atomic_numbers=(1,),
+                        coordinates=ArrayData(values, ("atom", "xyz"), "angstrom"),
+                    ),
+                )))
+        with TemporaryDirectory() as temporary:
+            values = numpy.memmap(
+                f"{temporary}/unsafe.npy", mode="w+", shape=(1, 3),
+                dtype=[("value", numpy.float64)],
+            )
+            with self.assertRaisesRegex(TypeError, "object, structured or subarray"):
+                reader_api.public_batch_from_internal(ImportBatch(structures=(
+                    Structure(
+                        id=uuid4(), revision="unsafe-memmap-r1", atomic_numbers=(1,),
+                        coordinates=ArrayData(values, ("atom", "xyz"), "angstrom"),
+                    ),
+                )))
+            values._mmap.close()
+
+    def test_task1_additive_fields_reject_malformed_and_unknown_values(self):
+        molecule = structure(identity())
+        value = record(molecule.id)
+        source, revision = source_revision((molecule.id, value.id))
+        value = MolecularRecord(
+            **{
+                name: (revision.id if name == "source_revision_id" else getattr(value, name))
+                for name in value.__dataclass_fields__
+            }
+        )
+        project = QCProject(uuid4(), "0.2")
+        project.commit(ImportBatch(
+            sources=(source,), source_revisions=(revision,), structures=(molecule,),
+            molecular_records=(value,),
+        ))
+        with TemporaryDirectory() as temporary:
+            root = f"{temporary}/malformed.cbq"
+            save_project(root, project)
+            manifest_path = Path(root) / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            for field, replacement in (
+                ("unknown_task1_field", True),
+                ("raw_block", {"$uuid": str(uuid4())}),
+            ):
+                with self.subTest(field=field):
+                    candidate = json.loads(json.dumps(manifest))
+                    candidate["project"]["molecular_records"]["$dict"][0][1][field] = replacement
+                    write_manifest(manifest_path, candidate)
+                    with self.assertRaises(SidecarIntegrityError):
+                        open_project(root)
 
 
 if __name__ == "__main__":

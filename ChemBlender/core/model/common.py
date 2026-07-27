@@ -5,6 +5,7 @@ from uuid import UUID
 
 _UNIT_PATTERN = re.compile(r"[a-z][a-z0-9_]*")
 _ID_PATTERN = re.compile(r"[a-z][a-z0-9_.-]*")
+_KNOWN_LENGTH_UNITS = frozenset(("angstrom", "bohr"))
 
 
 def _require_uuid(value, name):
@@ -27,6 +28,11 @@ def _require_token(value, name, pattern=_UNIT_PATTERN):
 def _require_text(value, name):
     if not isinstance(value, str) or not value:
         raise ValueError(f"{name} must be a non-empty string")
+
+
+def _require_known_length_unit(value, name):
+    if value not in _KNOWN_LENGTH_UNITS:
+        raise ValueError(f"{name} must be a known length unit")
 
 
 class CalculationStatus(str, Enum):

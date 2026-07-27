@@ -3,7 +3,13 @@ from uuid import UUID
 
 from .arrays import ArrayData
 from .categorical import CategoricalData
-from .common import DatasetStatus, _require_text, _require_uuid, _require_uuid_tuple
+from .common import (
+    DatasetStatus,
+    _require_known_length_unit,
+    _require_text,
+    _require_uuid,
+    _require_uuid_tuple,
+)
 from .properties import PropertyDataset
 
 
@@ -103,7 +109,17 @@ class RecordPropertyColumn(PropertyDataset):
             ):
                 raise ValueError("Complete categorical property must not contain missing codes")
         else:
-            numeric_or_logical = numpy.dtype(self.data.dtype).kind in "biufc"
+            dtype = numpy.asarray(self.data.values).dtype
+            numeric_or_logical = (
+                dtype.kind in "biufc"
+                and not dtype.hasobject
+                and dtype.fields is None
+                and dtype.subdtype is None
+            )
+            if not numeric_or_logical:
+                raise TypeError(
+                    "RecordPropertyColumn data must be numeric, logical or categorical"
+                )
             if self.status is DatasetStatus.COMPLETE and self.validity_mask is not None:
                 raise ValueError("Complete record property must not use a validity mask")
             if self.status is DatasetStatus.PARTIAL and numeric_or_logical and self.validity_mask is None:
@@ -130,14 +146,20 @@ class ConformerSet(PropertyDataset):
             _require_uuid(self.reference_topology_id, "reference_topology_id")
         if not isinstance(self.data, ArrayData):
             raise TypeError("ConformerSet data must be ArrayData")
+        values = numpy.asarray(self.data.values)
+        dtype = values.dtype
         if (
             self.domain != "conformer"
             or self.data.dims != ("conformer", "atom", "xyz")
             or any(size <= 0 for size in self.data.shape)
             or self.data.shape[2] != 3
-            or self.data.unit in {"dimensionless", "unknown"}
+            or dtype.kind not in "iuf"
+            or dtype.hasobject
+            or dtype.fields is not None
+            or dtype.subdtype is not None
         ):
-            raise ValueError("ConformerSet must use positive conformer, atom and xyz coordinates")
+            raise ValueError("ConformerSet must use real positive conformer, atom and xyz coordinates")
+        _require_known_length_unit(self.data.unit, "ConformerSet coordinate unit")
         if not isinstance(self.atom_mappings, ArrayData):
             raise TypeError("atom_mappings must be ArrayData")
         mappings = numpy.asarray(self.atom_mappings.values)

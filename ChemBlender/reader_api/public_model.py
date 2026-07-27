@@ -127,6 +127,16 @@ def _validate_public_batch_values(batch):
             import numpy
 
             if value_type in (memoryview, numpy.ndarray, numpy.memmap, LazyNpyArray):
+                if value_type is not memoryview:
+                    dtype = numpy.dtype(value.dtype)
+                    if (
+                        dtype.hasobject
+                        or dtype.fields is not None
+                        or dtype.subdtype is not None
+                    ):
+                        raise TypeError(
+                            "ArrayData values must not use object, structured or subarray dtype"
+                        )
                 return
             raise TypeError("ArrayData values use an unapproved array type")
         if value_type in (list, dict, set, bytearray):

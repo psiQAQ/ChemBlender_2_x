@@ -491,7 +491,7 @@ assert type(result) is reader_api.SniffResult
 assert result.match is reader_api.SniffMatch.EXACT
 assert not hasattr(reader_api, 'QCProject')
 assert not hasattr(reader_api, 'ImportBatch')
-assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', 'iodata', 'gbasis', 'ase', 'pymatgen'))
+assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', 'iodata', 'gbasis', 'ase', 'pymatgen', 'rdkit'))
 """
 
         subprocess.run([sys.executable, "-c", script], check=True, cwd=repository_root)
@@ -590,7 +590,7 @@ assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', '
                 "-c",
                 "import sys; import ChemBlender.reader_api; "
                 "assert all(name not in sys.modules for name in "
-                "('bpy', 'cclib', 'iodata', 'gbasis', 'ase', 'pymatgen'))",
+                "('bpy', 'cclib', 'iodata', 'gbasis', 'ase', 'pymatgen', 'rdkit'))",
             ],
             check=True,
             cwd=Path(__file__).resolve().parents[1],
