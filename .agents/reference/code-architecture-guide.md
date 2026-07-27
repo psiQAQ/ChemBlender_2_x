@@ -172,6 +172,8 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
+| `ChemBlender/core/formats/__init__.py` | 模块级 re-export | 暴露低层、纯 Python 的原生文本格式语法入口，不注册 reader 或接触项目状态。 |
+| `ChemBlender/core/formats/extxyz.py` | `parse_extxyz_comment()`、`parse_properties_descriptor()`、`iter_extxyz_frames()` | 逐帧解析 extXYZ comment、typed metadata、`Properties` 与严格 `S/I/R/L` 原子列；每次只持有一个 frame，不依赖 ASE。 |
 | `ChemBlender/core/xyz.py` | `sniff_xyz()`、`parse_xyz()` | 读取单帧/多帧 XYZ 和受支持的 extXYZ lattice/PBC/property 子集，输出 `Structure`、`FrameSet` 和报告。 |
 | `ChemBlender/core/mol_v2000.py` | `sniff_mol_v2000()`、`parse_mol_v2000()` | 使用标准库解析 MOL V2000 原子和结构；未建模的拓扑信息通过 `ParserReport` 明示。 |
 | `ChemBlender/core/cube.py` | `sniff_cube()`、`parse_cube()` | 读取 Cube 原点、完整非正交 step vectors、多 dataset/MO index 和 voxel 数据，输出 `Grid3D`。 |
