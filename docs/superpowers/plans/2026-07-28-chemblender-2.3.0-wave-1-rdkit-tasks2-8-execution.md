@@ -20,7 +20,7 @@ export reconstructs a temporary RDKit Mol from immutable project entities.
 
 | Task | State | Implementation commit | Review status |
 |---|---|---|---|
-| 2 Shared adapter | pending | — | — |
+| 2 Shared adapter | in_progress | — | — |
 | 3 MOL reader | pending | — | — |
 | 4 SDF reader/recovery | pending | — | — |
 | 5 Conformer grouping | pending | — | — |
