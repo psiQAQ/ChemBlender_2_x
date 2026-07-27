@@ -345,6 +345,126 @@ class ExtXYZExporterTests(unittest.TestCase):
             self.assertNotIn("huge_scalar", output)
             self.assertNotIn("huge_vector", output)
 
+    def test_cross_domain_names_do_not_hide_unsafe_frame_metadata(self):
+        cases = []
+        atom_batch = parse_extxyz(FIXTURES / "properties-mixed.extxyz")
+        atom_frames = next(
+            item
+            for item in atom_batch.datasets
+            if item.semantic_role == "coordinates"
+        )
+        atom_property = next(
+            item
+            for item in atom_batch.datasets
+            if isinstance(item, AtomFrameProperty)
+            and item.semantic_role == "atomic_charge"
+        )
+        cases.append(
+            (
+                "atomic_charge",
+                atom_batch.structures[0],
+                replace(
+                    atom_frames,
+                    comments=tuple(
+                        f"{comment} atomic_charge=7"
+                        for comment in atom_frames.comments
+                    ),
+                ),
+                atom_property,
+            )
+        )
+        cell_batch = parse_extxyz(FIXTURES / "multiframe-cell.extxyz")
+        cell_frames = next(
+            item
+            for item in cell_batch.datasets
+            if item.semantic_role == "coordinates"
+        )
+        cell_property = next(
+            item
+            for item in cell_batch.datasets
+            if isinstance(item, CellFrameProperty)
+        )
+        cases.append(
+            (
+                "cell",
+                cell_batch.structures[0],
+                replace(
+                    cell_frames,
+                    comments=tuple(
+                        f"{comment} cell=7"
+                        for comment in cell_frames.comments
+                    ),
+                ),
+                cell_property,
+            )
+        )
+
+        for name, structure, frame_set, property_dataset in cases:
+            with self.subTest(name=name):
+                preview = preview_extxyz_export(
+                    structure,
+                    frame_set=frame_set,
+                    properties=(property_dataset,),
+                )
+                self.assertTrue(
+                    any(
+                        entry.code == "unsafe_metadata_omitted"
+                        and name in entry.message
+                        for entry in preview.entries
+                    )
+                )
+
+    def test_stress_and_virial_source_keys_are_modeled_aliases(self):
+        cases = (
+            (
+                "stress=[1,2,3,4,5,6] "
+                "virial=[1,0,0,0,1,0,0,0,1]",
+                {"stress_voigt", "virial_matrix"},
+            ),
+            (
+                "stress=[1,0,0,0,1,0,0,0,1] "
+                "virial=[1,2,3,4,5,6]",
+                {"stress_matrix", "virial_voigt"},
+            ),
+        )
+        for metadata, expected_roles in cases:
+            with self.subTest(roles=expected_roles), TemporaryDirectory() as directory:
+                source = Path(directory) / "tensor.extxyz"
+                source.write_text(
+                    "1\nProperties=species:S:1:pos:R:3 "
+                    f"{metadata}\nH 0 0 0\n",
+                    encoding="utf-8",
+                )
+                batch = parse_extxyz(source)
+                structure, = batch.structures
+                frame_set = next(
+                    item
+                    for item in batch.datasets
+                    if item.semantic_role == "coordinates"
+                )
+                properties = tuple(
+                    item
+                    for item in batch.datasets
+                    if isinstance(item, FrameProperty)
+                )
+                self.assertEqual(
+                    {item.semantic_role for item in properties},
+                    expected_roles,
+                )
+
+                preview = preview_extxyz_export(
+                    structure,
+                    frame_set=frame_set,
+                    properties=properties,
+                )
+
+                self.assertFalse(
+                    any(
+                        entry.code == "unsafe_metadata_omitted"
+                        for entry in preview.entries
+                    )
+                )
+
     def test_nonfinite_partial_export_requires_explicit_missing_token(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -770,6 +890,82 @@ class ExtXYZExporterTests(unittest.TestCase):
                     )
 
             temporary.assert_not_called()
+
+    def test_duplicate_cell_and_pbc_inputs_fail_before_temporary_file(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "changing.extxyz"
+            source.write_text(
+                '1\nLattice="4 0 0 0 4 0 0 0 4" pbc="T T T" '
+                "Properties=species:S:1:pos:R:3\nH 0 0 0\n"
+                '1\nLattice="5 0 0 0 5 0 0 0 5" pbc="T F T" '
+                "Properties=species:S:1:pos:R:3\nH 0.1 0 0\n",
+                encoding="utf-8",
+            )
+            batch = parse_extxyz(source)
+            structure, = batch.structures
+            frame_set = next(
+                item
+                for item in batch.datasets
+                if item.semantic_role == "coordinates"
+            )
+            cell = next(
+                item
+                for item in batch.datasets
+                if isinstance(item, CellFrameProperty)
+            )
+            pbc = next(
+                item
+                for item in batch.datasets
+                if isinstance(item, FrameProperty)
+                and item.semantic_role == "pbc"
+            )
+            duplicates = (
+                (
+                    "Lattice",
+                    cell,
+                    replace(
+                        cell,
+                        id=uuid4(),
+                        data=replace(
+                            cell.data,
+                            values=numpy.asarray(cell.data.values) * 2,
+                        ),
+                    ),
+                ),
+                (
+                    "pbc",
+                    pbc,
+                    replace(
+                        pbc,
+                        id=uuid4(),
+                        data=replace(
+                            pbc.data,
+                            values=numpy.logical_not(pbc.data.values),
+                        ),
+                    ),
+                ),
+            )
+            for key, first, second in duplicates:
+                with self.subTest(key=key):
+                    destination = root / f"{key}-collision.extxyz"
+                    with patch(
+                        "ChemBlender.core.exporters.xyz."
+                        "short_sibling_temporary_path"
+                    ) as temporary:
+                        with self.assertRaisesRegex(
+                            ValueError,
+                            f"duplicate extXYZ comment key.*{key}",
+                        ):
+                            export_extxyz(
+                                destination,
+                                structure,
+                                frame_set=frame_set,
+                                properties=(first, second),
+                                confirm_loss=True,
+                            )
+
+                    temporary.assert_not_called()
 
 
 class ExtXYZSemanticComparatorTests(unittest.TestCase):

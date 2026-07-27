@@ -50,6 +50,12 @@ _FRAME_ROLE_UNITS = {
     "temperature": "kelvin",
     "time": "femtosecond",
 }
+_FRAME_SOURCE_KEYS = {
+    "stress_voigt": "stress",
+    "stress_matrix": "stress",
+    "virial_voigt": "virial",
+    "virial_matrix": "virial",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -388,7 +394,12 @@ def _loss_entries(frame_set, properties):
                     f"{item.semantic_role} is {item.status.value}",
                 )
             )
-    modeled = {item.semantic_role for item in properties}
+    modeled = set()
+    for item in _ordered_frame_properties(properties):
+        modeled.add(item.semantic_role)
+        source_key = _FRAME_SOURCE_KEYS.get(item.semantic_role)
+        if source_key is not None:
+            modeled.add(source_key)
     emitted_units = _emitted_unit_keys(properties)
     raw_keys = set()
     if frame_set is not None:
@@ -492,16 +503,22 @@ def _check_export_inputs(structure, frame_set, properties):
                 )
             atom_field_names.add(field_name)
     comment_keys = set()
+
+    def add_comment_key(key):
+        if key in comment_keys:
+            raise ValueError(f"duplicate extXYZ comment key: {key}")
+        comment_keys.add(key)
+
+    for item in properties:
+        if isinstance(item, CellFrameProperty):
+            add_comment_key("Lattice")
+        elif isinstance(item, FrameProperty) and item.semantic_role == "pbc":
+            add_comment_key("pbc")
     unit_keys = _emitted_unit_keys(properties)
     for item in _ordered_frame_properties(properties):
-        key = item.semantic_role
-        if key in comment_keys:
-            raise ValueError(f"duplicate extXYZ comment key: {key}")
-        comment_keys.add(key)
-    for key in unit_keys:
-        if key in comment_keys:
-            raise ValueError(f"duplicate extXYZ comment key: {key}")
-        comment_keys.add(key)
+        add_comment_key(item.semantic_role)
+    for key in sorted(unit_keys):
+        add_comment_key(key)
     return frame_count
 
 
