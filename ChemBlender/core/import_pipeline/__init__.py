@@ -7,6 +7,14 @@ from .conflicts import (
     apply_conflict_decisions,
     detect_import_conflicts,
 )
+from .conformer_grouping import (
+    ConformerGroupAcceptance,
+    ConformerGroupEvidence,
+    ConformerGroupSuggestion,
+    ConformerGroupingCancelled,
+    accept_conformer_group,
+    suggest_conformer_groups,
+)
 from .grouping import (
     CalculationGroup,
     GroupingEvidence,
@@ -24,6 +32,7 @@ from .request import ImportRequest, ImportSource, ReaderOverride, ValidationMode
 from .staging import StagedImportSession
 from .transaction import (
     GroupingDecision,
+    ConformerGroupingDecision,
     ImportCommitDecisions,
     ImportCommitResult,
     commit_import_preview,
@@ -32,6 +41,11 @@ from .transaction import (
 
 __all__ = [
     "ConflictDecision",
+    "ConformerGroupAcceptance",
+    "ConformerGroupEvidence",
+    "ConformerGroupSuggestion",
+    "ConformerGroupingCancelled",
+    "ConformerGroupingDecision",
     "CalculationGroup",
     "DuplicateAction",
     "GroupingEvidence",
@@ -51,6 +65,7 @@ __all__ = [
     "StagedImportSession",
     "ValidationMode",
     "apply_conflict_decisions",
+    "accept_conformer_group",
     "commit_import_preview",
     "detect_import_conflicts",
     "diagnostics_document",
@@ -58,4 +73,5 @@ __all__ = [
     "preflight_import",
     "render_diagnostics_markdown",
     "suggest_source_groups",
+    "suggest_conformer_groups",
 ]

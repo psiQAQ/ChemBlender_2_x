@@ -425,6 +425,11 @@ class ImportPipelineBoundaryTests(unittest.TestCase):
             {
                 "ConflictDecision",
                 "CalculationGroup",
+                "ConformerGroupAcceptance",
+                "ConformerGroupEvidence",
+                "ConformerGroupSuggestion",
+                "ConformerGroupingCancelled",
+                "ConformerGroupingDecision",
                 "DuplicateAction",
                 "GroupingEvidence",
                 "GroupingDecision",
@@ -443,6 +448,7 @@ class ImportPipelineBoundaryTests(unittest.TestCase):
                 "StagedImportSession",
                 "ValidationMode",
                 "apply_conflict_decisions",
+                "accept_conformer_group",
                 "commit_import_preview",
                 "detect_import_conflicts",
                 "diagnostics_document",
@@ -450,6 +456,7 @@ class ImportPipelineBoundaryTests(unittest.TestCase):
                 "preflight_import",
                 "render_diagnostics_markdown",
                 "suggest_source_groups",
+                "suggest_conformer_groups",
             },
         )
         from ChemBlender import core
@@ -462,7 +469,7 @@ class ImportPipelineBoundaryTests(unittest.TestCase):
         code = """
 import sys
 import ChemBlender.core.import_pipeline
-blocked = {'bpy', 'cclib', 'iodata', 'gbasis', 'ase', 'pymatgen'}
+blocked = {'bpy', 'cclib', 'iodata', 'gbasis', 'ase', 'pymatgen', 'rdkit'}
 loaded = sorted(blocked.intersection(sys.modules))
 assert loaded == [], loaded
 """
