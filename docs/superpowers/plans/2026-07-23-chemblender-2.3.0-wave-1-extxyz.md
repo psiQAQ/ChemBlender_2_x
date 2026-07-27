@@ -142,11 +142,11 @@ Run syntax and ordinary XYZ regression tests; commit parser primitives.
 **Interfaces:**
 - Produces: built-in reader ID `extxyz`, version `1`, and ordinary XYZ delegation that avoids ambiguity.
 
-- [ ] **Step 1: Write reader-selection tests**
+- [x] **Step 1: Write reader-selection tests**
 
 Ordinary `water.xyz` selects `xyz`; a `.xyz` file with valid `Properties=` selects `extxyz` with higher EXACT match; malformed text selects neither or produces a precise diagnostic only after an explicit override.
 
-- [ ] **Step 2: Map known properties**
+- [x] **Step 2: Map known properties**
 
 Mapping table:
 
@@ -163,7 +163,7 @@ KNOWN_ATOM_PROPERTIES = {
 
 Units not declared by extXYZ are source-convention assumptions and must produce diagnostics unless metadata supplies a recognized unit key. Unknown R/I/L properties remain typed with `unknown` semantic unit rules and appropriate quality status.
 
-- [ ] **Step 3: Map frame metadata**
+- [x] **Step 3: Map frame metadata**
 
 `Lattice` is exactly nine floats in the lattice-vector sequence
 `ax ay az bx by bz cx cy cz`; do not describe the contract only as row-major or
@@ -176,7 +176,7 @@ column-major. PBC defaults are exact:
 energy/free_energy/time/temperature/step become frame properties, while
 stress/virial accept 9 or 6 components with a recorded convention.
 
-- [ ] **Step 4: Handle changing cell and properties**
+- [x] **Step 4: Handle changing cell and properties**
 
 Compatible frames form one FrameSet. Changing cell becomes CellFrameProperty.
 A numeric or logical property absent in some frames becomes Partial with the
@@ -190,7 +190,7 @@ and append from the bounded frame iterator. The mapper must not construct a nest
 files, and sidecar publication failure rolls back the staged project without
 leaking files or partially committing entities.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 Run reader, catalog, capability document, sidecar and import preview tests. Commit.
 
