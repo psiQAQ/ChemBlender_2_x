@@ -18,6 +18,14 @@ from ..properties import (
     get_quick_import_state,
 )
 from ..session import get_scene_session
+from ..topology import (
+    CHEMBLENDER_OT_accept_topology,
+    CHEMBLENDER_OT_compute_topology,
+    CHEMBLENDER_OT_reject_topology,
+    CHEMBLENDER_OT_switch_topology,
+    CHEMBLENDER_PG_topology_settings,
+    draw_topology_controls,
+)
 from .model import (
     BrowserMode,
     ViewRecord,
@@ -45,10 +53,13 @@ _ROW_ICONS = {
     "source": "FILE",
     "source_revision": "FILE",
     "structure": "MESH_DATA",
+    "topology_record": "MOD_WIREFRAME",
     "view": "HIDE_OFF",
 }
 _SCENE_PROPERTY_NAME = "chemblender_project_browser"
+_TOPOLOGY_SCENE_PROPERTY_NAME = "chemblender_topology"
 _OWNED_SCENE_PROPERTY = None
+_OWNED_TOPOLOGY_SCENE_PROPERTY = None
 
 
 def _selection_changed(state, context):
@@ -111,6 +122,30 @@ def presentation_view_records(scene):
     records = []
     seen = set()
     for obj in sorted(scene.objects, key=lambda value: value.name):
+        topology_text = obj.get("cb_topology_id")
+        topology_revision = obj.get("cb_topology_revision")
+        if (
+            type(topology_text) is str
+            and topology_text.strip()
+            and type(topology_revision) is str
+            and topology_revision.strip()
+        ):
+            try:
+                topology_id = UUID(topology_text)
+            except ValueError:
+                pass
+            else:
+                identity = (obj.name, topology_id, topology_revision)
+                seen.add(identity)
+                records.append(
+                    ViewRecord(
+                        object_name=obj.name,
+                        entity_id=topology_id,
+                        revision=topology_revision,
+                        view_kind="structure_topology",
+                        label=obj.name,
+                    )
+                )
         view_kind = obj.get("cb_scene_view_kind")
         encoded = obj.get("cb_scene_bindings_json")
         if (
@@ -265,13 +300,30 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
         )
         if settings.active_entity_id:
             layout.label(text=f"Selected: {settings.active_entity_id}")
+        draw_topology_controls(
+            layout,
+            context,
+            get_scene_session(context.scene),
+        )
 
 
 def register():
     global _OWNED_SCENE_PROPERTY
+    global _OWNED_TOPOLOGY_SCENE_PROPERTY
     current = _scene_property_identity(_SCENE_PROPERTY_NAME)
     if _OWNED_SCENE_PROPERTY is not None:
         if _same_scene_property(current, _OWNED_SCENE_PROPERTY):
+            topology_current = _scene_property_identity(
+                _TOPOLOGY_SCENE_PROPERTY_NAME
+            )
+            if not _same_scene_property(
+                topology_current,
+                _OWNED_TOPOLOGY_SCENE_PROPERTY,
+            ):
+                raise RuntimeError(
+                    f"Scene.{_TOPOLOGY_SCENE_PROPERTY_NAME} is no longer "
+                    "owned by ChemBlender"
+                )
             return
         raise RuntimeError(
             f"Scene.{_SCENE_PROPERTY_NAME} is no longer owned by ChemBlender"
@@ -319,10 +371,59 @@ def register():
             failure.add_note(f"property rollback failed: {error}")
         raise failure
     _OWNED_SCENE_PROPERTY = identity
+    topology_current = _scene_property_identity(
+        _TOPOLOGY_SCENE_PROPERTY_NAME
+    )
+    if _OWNED_TOPOLOGY_SCENE_PROPERTY is not None:
+        if _same_scene_property(
+            topology_current,
+            _OWNED_TOPOLOGY_SCENE_PROPERTY,
+        ):
+            return
+        raise RuntimeError(
+            f"Scene.{_TOPOLOGY_SCENE_PROPERTY_NAME} is no longer owned "
+            "by ChemBlender"
+        )
+    if topology_current is not None:
+        raise RuntimeError(
+            f"Scene.{_TOPOLOGY_SCENE_PROPERTY_NAME} is already owned"
+        )
+    created_topology_property = PointerProperty(
+        type=CHEMBLENDER_PG_topology_settings
+    )
+    setattr(
+        bpy.types.Scene,
+        _TOPOLOGY_SCENE_PROPERTY_NAME,
+        created_topology_property,
+    )
+    topology_identity = _scene_property_identity(
+        _TOPOLOGY_SCENE_PROPERTY_NAME
+    )
+    if topology_identity is None:
+        failure = RuntimeError(
+            "Topology Scene property registration failed"
+        )
+        try:
+            delattr(bpy.types.Scene, _TOPOLOGY_SCENE_PROPERTY_NAME)
+        except BaseException as error:
+            failure.add_note(f"property rollback failed: {error}")
+        raise failure
+    _OWNED_TOPOLOGY_SCENE_PROPERTY = topology_identity
 
 
 def unregister():
     global _OWNED_SCENE_PROPERTY
+    global _OWNED_TOPOLOGY_SCENE_PROPERTY
+    topology_owned = _OWNED_TOPOLOGY_SCENE_PROPERTY
+    if (
+        topology_owned is not None
+        and _same_scene_property(
+            _scene_property_identity(_TOPOLOGY_SCENE_PROPERTY_NAME),
+            topology_owned,
+        )
+    ):
+        delattr(bpy.types.Scene, _TOPOLOGY_SCENE_PROPERTY_NAME)
+    _OWNED_TOPOLOGY_SCENE_PROPERTY = None
     owned = _OWNED_SCENE_PROPERTY
     if owned is None:
         return

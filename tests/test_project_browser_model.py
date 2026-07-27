@@ -654,6 +654,10 @@ class _Panel:
     pass
 
 
+class _Operator:
+    pass
+
+
 class _Scene:
     pass
 
@@ -666,6 +670,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             ("BoolProperty", "bool"),
             ("CollectionProperty", "collection"),
             ("EnumProperty", "enum"),
+            ("FloatProperty", "float"),
             ("IntProperty", "int"),
             ("PointerProperty", "pointer"),
             ("StringProperty", "string"),
@@ -674,6 +679,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.fake_bpy.props = self.fake_props
         self.fake_bpy.types = SimpleNamespace(
             Panel=_Panel,
+            Operator=_Operator,
             PropertyGroup=_PropertyGroup,
             Scene=_Scene,
             UIList=_UIList,
@@ -686,6 +692,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         for name in (
             "ChemBlender.ui.project_browser.panel",
             "ChemBlender.ui.properties",
+            "ChemBlender.ui.topology",
         ):
             sys.modules.pop(name, None)
 
@@ -697,10 +704,13 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         for name in (
             "ChemBlender.ui.project_browser.panel",
             "ChemBlender.ui.properties",
+            "ChemBlender.ui.topology",
         ):
             sys.modules.pop(name, None)
         if hasattr(_Scene, "chemblender_project_browser"):
             del _Scene.chemblender_project_browser
+        if hasattr(_Scene, "chemblender_topology"):
+            del _Scene.chemblender_topology
 
     def test_rna_projection_contains_only_small_values(self):
         panel = importlib.import_module(
@@ -1099,6 +1109,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.assertIs(_Scene.chemblender_project_browser, owned)
         panel.unregister()
         self.assertFalse(hasattr(_Scene, "chemblender_project_browser"))
+        self.assertFalse(hasattr(_Scene, "chemblender_topology"))
 
         foreign = _Property("foreign")
         _Scene.chemblender_project_browser = foreign
@@ -1219,6 +1230,23 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         panel.unregister()
 
         self.assertIs(_Scene.chemblender_project_browser, foreign)
+
+    def test_register_detects_later_foreign_topology_property(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        panel.register()
+        foreign = _Property("replacement")
+        _Scene.chemblender_topology = foreign
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "chemblender_topology.*no longer owned",
+        ):
+            panel.register()
+        panel.unregister()
+
+        self.assertIs(_Scene.chemblender_topology, foreign)
 
 
 if __name__ == "__main__":

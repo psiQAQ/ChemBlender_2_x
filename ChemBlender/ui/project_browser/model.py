@@ -46,6 +46,7 @@ class ViewRecord:
 _REGISTRY_GROUPS = (
     ("datasets", "Datasets"),
     ("structures", "Structures"),
+    ("topologies", "Topologies"),
     ("calculations", "Calculations"),
     ("symmetry_results", "Symmetry"),
     ("basis_sets", "Basis Sets"),
@@ -67,10 +68,27 @@ def _token(value):
 
 def _quality(value):
     status = getattr(value, "status", None)
+    if status is None:
+        status = getattr(value, "quality_status", None)
     return getattr(status, "value", "") if status is not None else ""
 
 
 def _label(value):
+    source = getattr(getattr(value, "source_kind", None), "value", None)
+    bonds = getattr(getattr(value, "bond_indices", None), "shape", ())
+    if type(source) is str and len(bonds) == 2:
+        parameters = getattr(value, "inference_parameters", ())
+        suffix = (
+            ""
+            if not parameters
+            else " (" + ", ".join(
+                f"{name}={setting}" for name, setting in parameters
+            ) + ")"
+        )
+        return (
+            f"{source.replace('_', ' ').title()}: {bonds[0]} bonds"
+            f"{suffix}"
+        )
     for name in ("display_name", "semantic_role", "original_filename"):
         text = getattr(value, name, None)
         if type(text) is str and text:
@@ -151,7 +169,7 @@ def _entity_row(entity, parent_id, depth, views):
 def _entity_lookup(project):
     lookup = {}
     for name, _label_text in _REGISTRY_GROUPS:
-        lookup.update(getattr(project, name))
+        lookup.update(getattr(project, name, {}))
     return lookup
 
 

@@ -226,6 +226,11 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_open_workspace")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_confirm_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_cancel_import")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_compute_topology")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_accept_topology")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_reject_topology")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_switch_topology")
+    assert hasattr(bpy.types.Scene, "chemblender_topology")
     assert_file_handlers(module_key)
     properties = importlib.import_module(f"{module_key}.ui.properties")
     property_identity = properties._scene_property_identity()
@@ -249,6 +254,7 @@ def assert_disabled(module_key, owned_classes):
     assert not hasattr(bpy.types.Object, "cif_current")
     assert not hasattr(bpy.types.Scene, "my_tool")
     assert not hasattr(bpy.types.Scene, "chemblender_quick_import")
+    assert not hasattr(bpy.types.Scene, "chemblender_topology")
     assert READER_API_HANDLE_KEY not in bpy.app.driver_namespace
     assert not any(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
@@ -339,15 +345,76 @@ def assert_file_handlers(module_key):
 
 
 def assert_project_session_manager(module_key):
+    import numpy
+
     ui = importlib.import_module(f"{module_key}.ui.session")
     core = importlib.import_module(f"{module_key}.core")
     links = importlib.import_module(f"{module_key}.project_link")
+    views = importlib.import_module(f"{module_key}.views")
     scene = bpy.context.scene
     second_scene = bpy.data.scenes.new("ChemBlender shared session smoke")
     session = ui.new_scene_session(scene)
     assert ui.get_scene_session(second_scene) is session
     assert ui.get_scene_session(second_scene).project is session.project
     assert ui.get_scene_session(second_scene).temporary_root == session.temporary_root
+    structure = core.Structure(
+        id=uuid4(),
+        revision="topology-ui-structure-r1",
+        atomic_numbers=(8, 1, 1),
+        coordinates=core.ArrayData(
+            numpy.asarray(
+                ((0.0, 0.0, 0.0), (0.96, 0.0, 0.0), (-0.24, 0.93, 0.0))
+            ),
+            ("atom", "xyz"),
+            "angstrom",
+        ),
+    )
+    session.project.commit(core.ImportBatch(structures=(structure,)))
+    structure_obj = views.create_structure_view(
+        structure,
+        name="ChemBlender topology UI smoke",
+        collection=scene.collection,
+    )
+    bpy.context.view_layer.objects.active = structure_obj
+    structure_obj.select_set(True)
+    session.active_entity_id = structure.id
+    session.active_view_object_name = structure_obj.name
+    assert bpy.ops.chemblender.compute_topology() == {"FINISHED"}
+    topology_settings = scene.chemblender_topology
+    topology_id = UUID(topology_settings.proposal_topology_id)
+    topology = session.project.topologies[topology_id]
+    assert topology.source_kind is core.TopologySource.DISTANCE_INFERRED
+    assert bpy.ops.chemblender.accept_topology(
+        topology_id=str(topology_id)
+    ) == {"FINISHED"}
+    assert len(structure_obj.data.edges) == 2
+    assert structure_obj["cb_topology_id"] == str(topology_id)
+    assert structure_obj["cb_topology_decision"] == "accepted"
+    structure_revision = structure.revision
+    assert bpy.ops.chemblender.switch_topology(
+        atoms_only=True
+    ) == {"FINISHED"}
+    assert len(structure_obj.data.edges) == 0
+    assert structure.revision == structure_revision
+    assert topology_id in session.project.topologies
+    assert bpy.ops.chemblender.switch_topology(
+        topology_id=str(topology_id)
+    ) == {"FINISHED"}
+    assert len(structure_obj.data.edges) == 2
+    assert bpy.ops.chemblender.reject_topology(
+        topology_id=str(topology_id)
+    ) == {"FINISHED"}
+    assert len(structure_obj.data.edges) == 0
+    assert topology_id in session.project.topologies
+    assert bpy.ops.chemblender.accept_topology(
+        topology_id=str(topology_id)
+    ) == {"FINISHED"}
+    atom_ids = [0] * 3
+    structure_obj.data.attributes["cbq_atom_id"].data.foreach_get(
+        "value", atom_ids
+    )
+    assert atom_ids == [0, 1, 2]
+    topology_decisions = topology_settings.decisions_json
     session.mark_dirty("import")
     with TemporaryDirectory() as directory:
         blend = Path(directory) / "session-manager.blend"
@@ -408,6 +475,15 @@ def assert_project_session_manager(module_key):
         ) == model_identities
         ui = importlib.import_module(f"{module_key}.ui.session")
         restored = ui.get_scene_session(bpy.context.scene)
+        restored_obj = bpy.data.objects["ChemBlender topology UI smoke"]
+        assert len(restored_obj.data.edges) == 2
+        assert restored_obj["cb_topology_id"] == str(topology_id)
+        assert restored_obj["cb_topology_revision"] == topology.revision
+        assert topology_id in restored.project.topologies
+        assert (
+            bpy.context.scene.chemblender_topology.decisions_json
+            == topology_decisions
+        )
         restored_scenes = tuple(bpy.data.scenes)
         assert len(restored_scenes) >= 2
         assert all(
@@ -2225,6 +2301,36 @@ expected_inventory["registered_classes"] += [
     {
         "module": ".ui.import_preview",
         "name": "CHEMBLENDER_PG_import_preview_row",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.topology",
+        "name": "CHEMBLENDER_OT_accept_topology",
+        "id": "chemblender.accept_topology",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.topology",
+        "name": "CHEMBLENDER_OT_compute_topology",
+        "id": "chemblender.compute_topology",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.topology",
+        "name": "CHEMBLENDER_OT_reject_topology",
+        "id": "chemblender.reject_topology",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.topology",
+        "name": "CHEMBLENDER_OT_switch_topology",
+        "id": "chemblender.switch_topology",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.topology",
+        "name": "CHEMBLENDER_PG_topology_settings",
         "id": None,
         "base": "PropertyGroup",
     },

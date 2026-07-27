@@ -170,19 +170,19 @@ Run Blender smoke, view contract and all dataset adapter tests; commit.
 **Interfaces:**
 - Produces: topology list, inference settings, Accept/Reject/Recompute and active-view topology switch.
 
-- [ ] **Step 1: Project Browser rows**
+- [x] **Step 1: Project Browser rows**
 
 Each topology displays source, quality, edge count, inference parameters and view usage.
 
-- [ ] **Step 2: Implement compute/accept/reject operators**
+- [x] **Step 2: Implement compute/accept/reject operators**
 
 Compute creates a derived proposal. Accept creates a user-confirmed revision or marks selection in ViewRecord; Reject keeps proposal history but removes it from default suggestions.
 
-- [ ] **Step 3: Update view without data mutation**
+- [x] **Step 3: Update view without data mutation**
 
 Switching topology rebuilds or updates mesh edges and render identity. Structure and old topology remain unchanged.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Blender smoke imports XYZ, infers topology, accepts it, switches to atoms-only and reopens project with identities preserved.
 

@@ -360,6 +360,20 @@ def _periodic_display_object(main, collection, data):
         group["cbq_contract"] = _PERIODIC_DISPLAY_CONTRACT
         modifier.node_group = group
         modifier["cbq_contract"] = _PERIODIC_DISPLAY_CONTRACT
+        ball_stick = next(
+            (
+                item
+                for item in main.modifiers
+                if item.node_group is not None
+                and item.node_group.get("cbq_contract") == _BALL_STICK_CONTRACT
+            ),
+            None,
+        )
+        if ball_stick is not None:
+            main.modifiers.move(
+                tuple(main.modifiers).index(modifier),
+                tuple(main.modifiers).index(ball_stick),
+            )
         main["cb_periodic_display_object"] = display.name
         main["cb_periodic_display_bond_count"] = len(segments)
         return display
@@ -373,6 +387,112 @@ def _periodic_display_object(main, collection, data):
         if mesh.users == 0:
             bpy.data.meshes.remove(mesh)
         raise
+
+
+def _set_topology_metadata(obj, topology):
+    names = (
+        "cb_topology_id",
+        "cb_topology_revision",
+        "cbq_topology_source",
+        "cb_topology_quality",
+    )
+    if topology is None:
+        for name in names:
+            if name in obj:
+                del obj[name]
+        obj["cb_topology_render_identity"] = "atoms-only"
+        return
+    obj["cb_topology_id"] = str(topology.id)
+    obj["cb_topology_revision"] = topology.revision
+    obj["cbq_topology_source"] = topology.source_kind.value
+    obj["cb_topology_quality"] = topology.quality_status.value
+    obj["cb_topology_render_identity"] = f"{topology.id}:{topology.revision}"
+
+
+def _remove_periodic_display(obj):
+    import bpy
+
+    groups = []
+    for modifier in tuple(obj.modifiers):
+        if (
+            modifier.node_group is not None
+            and modifier.node_group.get("cbq_contract")
+            == _PERIODIC_DISPLAY_CONTRACT
+        ):
+            groups.append(modifier.node_group)
+            obj.modifiers.remove(modifier)
+    display_name = obj.get("cb_periodic_display_object")
+    display = (
+        bpy.data.objects.get(display_name)
+        if isinstance(display_name, str)
+        else None
+    )
+    if display is not None:
+        mesh = display.data
+        bpy.data.objects.remove(display, do_unlink=True)
+        if mesh is not None and mesh.users == 0:
+            bpy.data.meshes.remove(mesh)
+    for group in groups:
+        if group.users == 0:
+            bpy.data.node_groups.remove(group)
+    for name in (
+        "cb_periodic_display_object",
+        "cb_periodic_display_bond_count",
+    ):
+        if name in obj:
+            del obj[name]
+
+
+def update_structure_view_topology(
+    obj,
+    structure,
+    topology=None,
+    settings=None,
+):
+    import bmesh
+    import bpy
+
+    if not isinstance(obj, bpy.types.Object) or obj.type != "MESH":
+        raise TypeError("obj must be a Blender Mesh object")
+    if obj.get("cb_structure_contract") != _STRUCTURE_CONTRACT:
+        raise ValueError("obj is not a ChemBlender Structure view")
+    if obj.get("cb_structure_id") != str(structure.id):
+        raise ValueError("Structure does not match the Blender object")
+    data = _structure_view_data(structure, topology, settings)
+    if len(obj.data.vertices) != len(data["coordinates"]):
+        raise ValueError("Structure atom count does not match the Blender object")
+
+    mesh = obj.data
+    bm = bmesh.new()
+    try:
+        bm.from_mesh(mesh)
+        for edge in tuple(bm.edges):
+            bm.edges.remove(edge)
+        bm.verts.ensure_lookup_table()
+        for left, right in data["primary_edges"]:
+            bm.edges.new((bm.verts[left], bm.verts[right]))
+        bm.to_mesh(mesh)
+    finally:
+        bm.free()
+    _write_edge_attributes(
+        mesh,
+        bond_ids=data["primary_bond_ids"],
+        bond_orders=data["bond_order"],
+        exact_orders=data["cbq_bond_order"],
+        aromatic=data["is_aromatic"],
+        bond_scale=data["bond_scale_f"],
+    )
+    _remove_periodic_display(obj)
+    if data["periodic_segments"] and data["settings"].display_periodic_images:
+        collection = (
+            obj.users_collection[0]
+            if obj.users_collection
+            else bpy.context.collection
+        )
+        _periodic_display_object(obj, collection, data)
+    _set_topology_metadata(obj, topology)
+    mesh.update()
+    return obj
 
 
 def create_structure_view(
@@ -418,11 +538,7 @@ def create_structure_view(
         obj["cb_coordinate_scale"] = _coordinate_scale(
             structure.coordinates.unit
         )
-        if topology is not None:
-            obj["cb_topology_id"] = str(topology.id)
-            obj["cb_topology_revision"] = topology.revision
-            obj["cbq_topology_source"] = topology.source_kind.value
-            obj["cb_topology_quality"] = topology.quality_status.value
+        _set_topology_metadata(obj, topology)
         if structure.periodic is not None:
             scale = _coordinate_scale(structure.coordinates.unit)
             obj["cb_periodic"] = True
