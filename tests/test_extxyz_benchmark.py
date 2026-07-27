@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 
 SCRIPT = (
@@ -21,7 +22,11 @@ class ExtXYZBenchmarkTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
-        with TemporaryDirectory() as directory:
+        with TemporaryDirectory() as directory, patch.object(
+            module,
+            "extxyz_preview_summary",
+            wraps=module.extxyz_preview_summary,
+        ) as preview_projection:
             report = module.run_benchmark(
                 frames=3,
                 atoms=2,
@@ -34,7 +39,8 @@ class ExtXYZBenchmarkTests(unittest.TestCase):
         self.assertEqual(
             set(report["measurements"]),
             {
-                "first_preview",
+                "first_frame_decode",
+                "preview_ready",
                 "parse",
                 "sidecar_write",
                 "single_frame_access",
@@ -58,6 +64,11 @@ class ExtXYZBenchmarkTests(unittest.TestCase):
         self.assertTrue(report["resilience"]["cancellation_cleanup"])
         self.assertTrue(report["resilience"]["publication_rollback"])
         self.assertTrue(report["streaming_arrays"])
+        self.assertEqual(preview_projection.call_count, 2)
+        self.assertEqual(
+            report["budget"]["preview_ready_lte_0_5_seconds"],
+            report["measurements"]["preview_ready"]["median_seconds"] <= 0.5,
+        )
         self.assertIn("peak_python_bytes", report)
         self.assertIn("environment", report)
         self.assertIn("budget", report)

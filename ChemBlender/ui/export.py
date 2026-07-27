@@ -96,6 +96,9 @@ class ExportJob:
         self._done = Event()
         self._started = False
         self._thread = Thread(target=self._run, daemon=True)
+        self._window_manager = None
+        self._timer = None
+        self._progress_started = False
 
     def _run(self):
         try:
@@ -121,8 +124,13 @@ class ExportJob:
             self._done.set()
 
     def start(self):
-        self._thread.start()
-        self._started = True
+        try:
+            self._thread.start()
+        except BaseException:
+            self._started = self._thread.is_alive()
+            raise
+        else:
+            self._started = True
 
     def cancel(self):
         self._cancelled.set()
@@ -136,6 +144,49 @@ class ExportJob:
     @property
     def done(self):
         return self._done.is_set()
+
+    @property
+    def timer_pending(self):
+        return self._timer is not None
+
+    def attach_ui(self, manager, timer):
+        self._window_manager = manager
+        self._timer = timer
+
+    def mark_progress_started(self):
+        self._progress_started = True
+
+    def release_ui(self):
+        manager = self._window_manager
+        if manager is None:
+            return
+        failure = None
+        if self._progress_started:
+            try:
+                manager.progress_end()
+            except BaseException as error:
+                failure = error
+            else:
+                self._progress_started = False
+        if self._timer is not None:
+            try:
+                manager.event_timer_remove(self._timer)
+            except BaseException as error:
+                if failure is None:
+                    failure = error
+                else:
+                    failure.add_note(f"timer cleanup failed: {error}")
+            else:
+                self._timer = None
+        if self._timer is None and not self._progress_started:
+            self._window_manager = None
+        if failure is not None:
+            raise failure
+
+    def abandon_ui(self):
+        self._window_manager = None
+        self._timer = None
+        self._progress_started = False
 
 
 def _report_text(report):
@@ -192,6 +243,31 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
         layout.prop(self, "confirm_loss")
         layout.prop(self, "missing_value_token")
 
+    def _clear_job_ownership(self, job):
+        if getattr(self, "_job", None) is job:
+            self._job = None
+            self._timer = None
+
+    def _cancel_and_release_job(self, job):
+        failure = None
+        job.cancel()
+        try:
+            if not job.join(None):
+                raise RuntimeError("export worker did not stop")
+        except BaseException as error:
+            failure = error
+        try:
+            job.release_ui()
+        except BaseException as error:
+            if failure is None:
+                failure = error
+            else:
+                failure.add_note(f"export UI cleanup failed: {error}")
+        self._clear_job_ownership(job)
+        if failure is not None:
+            job.abandon_ui()
+            raise failure
+
     def execute(self, context):
         try:
             selection, preview = self._selection_and_preview(context)
@@ -214,15 +290,30 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
                 job.join(None)
                 return self._finish_job(job)
             manager = context.window_manager
+            self._job = job
+            self._timer = None
             timer = manager.event_timer_add(0.1, window=context.window)
+            self._timer = timer
+            job.attach_ui(manager, timer)
             manager.progress_begin(0, 100)
+            job.mark_progress_started()
             manager.progress_update(10)
             manager.modal_handler_add(self)
-            self._job = job
-            self._timer = timer
             job.start()
             return {"RUNNING_MODAL"}
-        except (OSError, TypeError, ValueError) as error:
+        except BaseException as error:
+            if "job" in locals() and getattr(self, "_job", None) is job:
+                try:
+                    self._cancel_and_release_job(job)
+                except BaseException as cleanup_error:
+                    error.add_note(
+                        f"export setup cleanup failed: {cleanup_error}"
+                    )
+            if isinstance(
+                error,
+                (KeyboardInterrupt, SystemExit, GeneratorExit, MemoryError),
+            ):
+                raise
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
 
@@ -247,18 +338,30 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
         if event.type != "TIMER" or not job.done:
             return {"RUNNING_MODAL"}
         job.join(0)
-        manager = context.window_manager
-        manager.progress_update(100)
-        manager.progress_end()
-        manager.event_timer_remove(self._timer)
-        self._job = None
-        self._timer = None
+        context.window_manager.progress_update(100)
+        try:
+            job.release_ui()
+        except BaseException as error:
+            if job.timer_pending:
+                self.report(
+                    {"WARNING"},
+                    f"Export cleanup retry pending: {error}",
+                )
+                return {"RUNNING_MODAL"}
+            job.abandon_ui()
+            self._clear_job_ownership(job)
+            self.report({"ERROR"}, f"Export UI cleanup failed: {error}")
+            return {"CANCELLED"}
+        self._clear_job_ownership(job)
         return self._finish_job(job)
 
     def cancel(self, _context):
         job = getattr(self, "_job", None)
         if job is not None:
-            job.cancel()
+            try:
+                self._cancel_and_release_job(job)
+            except BaseException as error:
+                self.report({"ERROR"}, f"Export cleanup failed: {error}")
 
 
 __all__ = ("CHEMBLENDER_OT_export_project_entity",)

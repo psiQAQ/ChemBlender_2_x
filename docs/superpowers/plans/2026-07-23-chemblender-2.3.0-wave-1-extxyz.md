@@ -241,6 +241,7 @@ Run round-trip tests including multi-frame cell and unknown properties; commit.
 
 **Files:**
 - Modify: `ChemBlender/ui/import_preview.py`
+- Create: `ChemBlender/ui/extxyz_preview.py`
 - Modify: `ChemBlender/ui/project_browser/panel.py`
 - Create: `ChemBlender/ui/export.py`
 - Modify: `ChemBlender/runtime/registration.py`
@@ -269,7 +270,14 @@ Export selected Structure or FrameSet with a loss preview. Partial/Ambiguous req
 
 - [ ] **Step 4: Benchmark**
 
-Generate deterministic 1k-frame/1k-atom and larger metadata-only cases. Measure first preview, parse, sidecar write, frame access and export. Ensure large paths do not construct nested Python tuples for all values.
+Generate deterministic 1k-frame/1k-atom and larger metadata-only cases. Measure
+first-frame decode separately from product preview readiness. Product
+`preview_ready` must run the actual reader preflight, obtain the staged batch,
+and apply the same pure summary projection used by Import Preview; only this
+metric evaluates the Quick Import preview budget. Also measure parse, sidecar
+write, frame access and export. Ensure large paths do not construct nested
+Python tuples for all values. If full preview readiness misses the budget,
+record the gate as unmet rather than substituting first-frame decode.
 
 The benchmark and Blender smoke also cover cancellation cleanup and publication
 rollback for the staged memmap/NPY path.

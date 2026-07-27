@@ -1,6 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 from uuid import uuid4
 
 import numpy
@@ -85,6 +86,33 @@ class XYZExporterTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "finite"):
                 export_xyz(destination, structure)
             self.assertEqual(destination.read_bytes(), b"existing\n")
+
+    def test_cancellation_after_fsync_does_not_publish_temporary_file(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            destination = root / "structure.xyz"
+            destination.write_bytes(b"existing\n")
+            cancelled = False
+
+            def cancel_after_fsync(_file_descriptor):
+                nonlocal cancelled
+                cancelled = True
+
+            with (
+                patch(
+                    "ChemBlender.core.exporters.xyz.os.fsync",
+                    side_effect=cancel_after_fsync,
+                ),
+                self.assertRaisesRegex(ExportCancelled, "cancelled"),
+            ):
+                export_xyz(
+                    destination,
+                    _structure(),
+                    is_cancelled=lambda: cancelled,
+                )
+
+            self.assertEqual(destination.read_bytes(), b"existing\n")
+            self.assertEqual(tuple(root.iterdir()), (destination,))
 
 
 if __name__ == "__main__":

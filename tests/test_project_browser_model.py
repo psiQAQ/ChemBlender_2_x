@@ -966,15 +966,65 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             "ChemBlender.ui.project_browser.panel"
         )
 
-        structure_id, dataset, values = panel.atom_frame_vector(
+        structure, dataset, values = panel.atom_frame_vector(
             sample_trajectory_project(),
             FORCE_ID,
             1,
         )
 
-        self.assertEqual(structure_id, STRUCTURE_ID)
+        self.assertEqual(structure.id, STRUCTURE_ID)
+        self.assertEqual(structure.revision, "structure-r1")
         self.assertEqual(dataset.id, FORCE_ID)
         numpy.testing.assert_array_equal(values, [[4.0, 5.0, 6.0]])
+
+    def test_force_operator_rejects_missing_or_stale_structure_view(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class ViewObject(dict):
+            name = "Water trajectory"
+
+        for missing_structure, revision in (
+            (True, "structure-r1"),
+            (False, "stale-structure-r0"),
+        ):
+            with self.subTest(
+                missing_structure=missing_structure,
+                revision=revision,
+            ):
+                project = sample_trajectory_project()
+                if missing_structure:
+                    project.structures.pop(STRUCTURE_ID)
+                obj = ViewObject(
+                    cb_structure_contract="structure_view_v1",
+                    cb_structure_id=str(STRUCTURE_ID),
+                    cb_structure_revision=revision,
+                    cb_trajectory_frame_index=1,
+                )
+                session = SimpleNamespace(
+                    project=project,
+                    active_entity_id=FORCE_ID,
+                    active_view_object_name=obj.name,
+                )
+                context = SimpleNamespace(
+                    scene=SimpleNamespace(objects={obj.name: obj}),
+                    active_object=obj,
+                )
+                operation = panel.CHEMBLENDER_OT_apply_frame_force()
+                operation.display_scale = 1.0
+                with (
+                    patch.object(
+                        panel,
+                        "get_scene_session",
+                        return_value=session,
+                    ),
+                    patch.object(panel, "write_vector_view") as writer,
+                ):
+                    result = operation.execute(context)
+
+                self.assertEqual(result, {"CANCELLED"})
+                writer.assert_not_called()
 
     def test_force_operator_applies_selected_frame_to_active_structure_view(self):
         panel = importlib.import_module(

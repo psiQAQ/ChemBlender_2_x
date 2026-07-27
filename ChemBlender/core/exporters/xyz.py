@@ -108,6 +108,8 @@ def _atomic_write_chunks(destination, chunks, *, is_cancelled=None):
                 stream.write(chunk.encode("utf-8"))
             stream.flush()
             os.fsync(stream.fileno())
+            if _cancelled(is_cancelled):
+                raise ExportCancelled("export cancelled")
         os.replace(temporary, destination)
     except BaseException as error:
         try:

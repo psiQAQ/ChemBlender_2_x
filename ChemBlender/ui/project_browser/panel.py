@@ -21,7 +21,7 @@ from ..properties import (
     get_quick_import_state,
 )
 from ..session import get_scene_session
-from ...core import AtomFrameProperty, FrameSet
+from ...core import AtomFrameProperty, FrameSet, Structure
 from ...dataset_view import write_vector_view
 from .model import (
     BrowserMode,
@@ -131,6 +131,9 @@ def atom_frame_vector(project, entity_id, frame_index):
     frame_set = project.datasets.get(dataset.frame_set_id)
     if not isinstance(frame_set, FrameSet):
         raise ValueError("atomic force trajectory has no FrameSet")
+    structure = project.structures.get(frame_set.structure_id)
+    if not isinstance(structure, Structure):
+        raise ValueError("atomic force trajectory has no current Structure")
     if isinstance(frame_index, bool):
         raise TypeError("frame_index must be an integer")
     try:
@@ -145,7 +148,7 @@ def atom_frame_vector(project, entity_id, frame_index):
         if not numpy.all(dataset.validity_mask.values[frame_index]):
             raise ValueError("atomic force frame contains missing values")
     return (
-        frame_set.structure_id,
+        structure,
         dataset,
         dataset.data.values[frame_index],
     )
@@ -165,17 +168,18 @@ class CHEMBLENDER_OT_apply_frame_force(bpy.types.Operator):
             obj = context.scene.objects.get(session.active_view_object_name)
         try:
             frame_index = int(obj.get("cb_trajectory_frame_index", 0))
-            structure_id, dataset, values = atom_frame_vector(
+            structure, dataset, values = atom_frame_vector(
                 session.project,
                 session.active_entity_id,
                 frame_index,
             )
             if (
                 obj.get("cb_structure_contract") != "structure_view_v1"
-                or obj.get("cb_structure_id") != str(structure_id)
+                or obj.get("cb_structure_id") != str(structure.id)
+                or obj.get("cb_structure_revision") != structure.revision
             ):
                 raise ValueError(
-                    "active object is not the matching Structure view"
+                    "active object is not the current matching Structure view"
                 )
             write_vector_view(
                 obj,

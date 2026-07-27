@@ -1698,10 +1698,10 @@ def assert_dataset_and_trajectory_views(module_key):
         browser = importlib.import_module(
             f"{module_key}.ui.project_browser.panel"
         )
-        force_structure_id, selected_force, values = (
+        force_structure, selected_force, values = (
             browser.atom_frame_vector(project, frame_force.id, 1)
         )
-        assert force_structure_id == structure.id
+        assert force_structure is structure
         adapter.write_vector_view(
             obj,
             values,

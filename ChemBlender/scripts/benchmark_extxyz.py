@@ -47,6 +47,7 @@ from ChemBlender.reader_api.import_pipeline_bridge import (
     preflight_reader_plugins,
 )
 from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+from ChemBlender.ui.extxyz_preview import extxyz_preview_summary
 
 
 def generate_extxyz(path, *, frames, atoms, metadata_only=False):
@@ -207,12 +208,33 @@ def run_benchmark(
         metadata_only=True,
     )
 
-    def first_preview(_index):
+    def first_frame_decode(_index):
         iterator = iter_extxyz_frames(source)
         try:
             next(iterator)
         finally:
             iterator.close()
+
+    registry = builtin_reader_plugin_registry()
+
+    def preview_ready(_index):
+        staged = StagedImportSession.create(temp_parent=workspace)
+        try:
+            preview = preflight_reader_plugins(
+                ImportRequest(
+                    sources=(ImportSource(source),),
+                    validation_mode=ValidationMode.BALANCED,
+                ),
+                registry,
+                staged,
+            )
+            staged_source, = preview.source_previews
+            batch_id, = staged_source.staged_batch_ids
+            summary = extxyz_preview_summary(staged.result(batch_id))
+            if summary.frame_count != frames:
+                raise RuntimeError("preview frame count does not match workload")
+        finally:
+            staged.discard()
 
     parse_counter = 0
 
@@ -224,7 +246,8 @@ def run_benchmark(
         _cleanup_parse(batch, root)
 
     measurements = {
-        "first_preview": _measure(first_preview, repeats),
+        "first_frame_decode": _measure(first_frame_decode, repeats),
+        "preview_ready": _measure(preview_ready, repeats),
         "parse": _measure(parse_once, repeats),
     }
     metadata_parse = _measure(
@@ -292,8 +315,8 @@ def run_benchmark(
     budget = {
         "reference_scale_met": frames >= 1_000 and atoms >= 1_000,
         "metadata_scale_met": metadata_frames > frames,
-        "first_preview_lte_0_5_seconds": (
-            measurements["first_preview"]["median_seconds"] <= 0.5
+        "preview_ready_lte_0_5_seconds": (
+            measurements["preview_ready"]["median_seconds"] <= 0.5
         ),
         "frame_access_p95_lte_0_1_seconds": (
             measurements["single_frame_access"]["p95_seconds"] <= 0.1
