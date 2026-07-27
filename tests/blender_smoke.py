@@ -1675,7 +1675,7 @@ def assert_dataset_and_trajectory_views(module_key):
             views.remove_structure_view(obj)
 
 
-def assert_periodic_structure_view(module_key):
+def assert_unwrapped_periodic_inference_view(module_key):
     import numpy
 
     core = importlib.import_module(f"{module_key}.core")
@@ -1686,7 +1686,7 @@ def assert_periodic_structure_view(module_key):
         revision="periodic-structure-revision",
         atomic_numbers=(14, 14),
         coordinates=core.ArrayData(
-            numpy.asarray([[0.1, 0.0, 0.0], [3.9, 0.0, 0.0]]),
+            numpy.asarray([[0.1, 0.0, 0.0], [3.8, 0.0, 0.0]]),
             ("atom", "xyz"),
             "angstrom",
         ),
@@ -1697,7 +1697,7 @@ def assert_periodic_structure_view(module_key):
         ),
         periodic=core.PeriodicSiteData(
             fractional_coordinates=core.ArrayData(
-                numpy.asarray([[0.025, 0.0, 0.0], [0.975, 0.0, 0.0]]),
+                numpy.asarray([[0.025, 0.0, 0.0], [0.95, 0.0, 0.0]]),
                 ("atom", "xyz"),
                 "dimensionless",
             ),
@@ -1716,28 +1716,35 @@ def assert_periodic_structure_view(module_key):
             pbc=(True, False, True),
         ),
     )
-    topology = core.TopologyRecord(
-        id=uuid4(),
-        revision="periodic-topology-revision",
-        structure_id=structure_id,
-        bond_indices=core.ArrayData(
-            numpy.asarray([[0, 1]]), ("bond", "endpoint"), "dimensionless"
+    unwrapped = replace(
+        structure,
+        coordinates=core.ArrayData(
+            numpy.asarray([[0.1, 0.0, 0.0], [11.8, 0.0, 0.0]]),
+            ("atom", "xyz"),
+            "angstrom",
         ),
-        bond_orders=core.ArrayData(
-            numpy.asarray([1.0]), ("bond",), "dimensionless"
-        ),
-        aromatic_flags=core.ArrayData(
-            numpy.asarray([False]), ("bond",), "dimensionless"
-        ),
-        stereo_labels=("",),
-        source_kind=core.TopologySource.EXPLICIT_FILE,
-        quality_status=core.QualityStatus.COMPLETE,
-        inference_parameters=(),
-        provenance_ids=(),
-        bond_lattice_shifts=core.ArrayData(
-            numpy.asarray([[-1, 0, 0]]), ("bond", "xyz"), "dimensionless"
+        periodic=replace(
+            structure.periodic,
+            fractional_coordinates=core.ArrayData(
+                numpy.asarray([[0.025, 0.0, 0.0], [2.95, 0.0, 0.0]]),
+                ("atom", "xyz"),
+                "dimensionless",
+            ),
         ),
     )
+    infer_periodic_topology = importlib.import_module(
+        f"{module_key}.core.topology.periodic"
+    ).infer_periodic_topology
+    reference_topology, = infer_periodic_topology(structure).topologies
+    topology, = infer_periodic_topology(unwrapped).topologies
+    assert topology.id == reference_topology.id
+    assert topology.revision == reference_topology.revision
+    assert topology.bond_indices.values.tolist() == [[0, 1]]
+    assert topology.bond_lattice_shifts.values.tolist() == [[-1, 0, 0]]
+    assert (
+        "fractional_normalization",
+        "cartesian_pbc_modulo_one",
+    ) in topology.inference_parameters
     obj = views.create_structure_view(
         structure,
         topology,
@@ -2626,7 +2633,7 @@ assert_installed_blend_libraries(module_key)
 assert_grid_volume_adapter(module_key)
 assert_vibration_view_adapter(module_key)
 assert_dataset_and_trajectory_views(module_key)
-assert_periodic_structure_view(module_key)
+assert_unwrapped_periodic_inference_view(module_key)
 assert_periodic_electronic_plots(module_key)
 assert_scene_preset_application(module_key)
 assert_complex_phonon_trajectory(module_key)
