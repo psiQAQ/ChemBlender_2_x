@@ -1,1 +1,2 @@
 ChemBlender/auto_load.py whitespace=cr-at-eol
+tests/fixtures/sdf/crlf.sdf -text whitespace=cr-at-eol

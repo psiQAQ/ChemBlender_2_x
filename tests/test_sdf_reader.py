@@ -1,7 +1,10 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import hashlib
+import json
+import platform
 import statistics
+import sys
 import time
 import tracemalloc
 import unittest
@@ -116,15 +119,29 @@ class SDFReaderTests(unittest.TestCase):
         self.assertIsNone(state.validity_mask)
         self.assertIsInstance(columns["sdf_count"].data, CategoricalData)
 
+    def test_very_large_integer_property_becomes_categorical_without_int_conversion(self) -> None:
+        from ChemBlender.core import CategoricalData
+        from ChemBlender.core.formats.sdf import parse_sdf
+
+        value = b"9" * 5_000
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "large-integer.sdf"
+            source.write_bytes(_sdf(_record(("Identifier", value))))
+            batch = parse_sdf(source)
+
+        identifier = next(
+            item for item in batch.datasets if item.semantic_role == "sdf_identifier"
+        )
+        self.assertIsInstance(identifier.data, CategoricalData)
+        self.assertEqual(identifier.data.categories, (value.decode("ascii"),))
+
     def test_crlf_mol_slice_and_standalone_delimiter_are_exact(self) -> None:
         from ChemBlender.core.formats.sdf import parse_sdf
 
         source = FIXTURE_ROOT / "crlf.sdf"
-        content = source.read_bytes().replace(b"\n", b"\r\n")
-        with TemporaryDirectory() as directory:
-            crlf_source = Path(directory) / "crlf.sdf"
-            crlf_source.write_bytes(content)
-            batch = parse_sdf(crlf_source)
+        content = source.read_bytes()
+        self.assertIn(b"\r\n", content)
+        batch = parse_sdf(source)
 
         record = batch.molecular_records[0]
         self.assertEqual(record.raw_block, content.split(b">", 1)[0])
@@ -271,13 +288,46 @@ class SDFReaderTests(unittest.TestCase):
             finally:
                 tracemalloc.stop()
 
+        source_hash = hashlib.sha256(content).hexdigest()
         median = statistics.median(samples)
         p95 = statistics.quantiles(samples, n=100)[94]
-        print(f"SDF 10k file index: sha256={hashlib.sha256(content).hexdigest()} size={len(content)} median={median:.3f}s p95={p95:.3f}s peak={peak}")
+        from rdkit import rdBase
+
+        print(json.dumps({
+            "benchmark": "sdf_10k_file_index",
+            "cache_state": {"first_run": "cold_after_write", "later_runs": "warm_os_file_cache"},
+            "environment": {
+                "blender": Path(sys.executable).parents[2].name,
+                "blender_python": sys.executable,
+                "platform": platform.platform(),
+                "python": platform.python_version(),
+                "rdkit": rdBase.rdkitVersion,
+            },
+            "input": {"record_count": 10_000, "sha256": source_hash, "size_bytes": len(content)},
+            "memory": {"peak_bytes": peak},
+            "timing_seconds": {"cold": samples[0], "median": median, "p95": p95, "warm": samples[1:]},
+        }, sort_keys=True))
+        self.assertEqual(source_hash, "bec92cea8a452b1c2a0ad076b346de0f91a97ba94c7d1815b79c90fdd1b10279")
         self.assertEqual(len(boundaries), 10_000)
         self.assertLess(median, 2.0)
         self.assertLess(p95, 2.0)
         self.assertLess(peak, 128 * 1024 * 1024)
+
+    def test_file_scanner_does_not_buffer_an_unterminated_megabyte_line(self) -> None:
+        from ChemBlender.core.formats.sdf import iter_sdf_file_records
+
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "long-line.sdf"
+            source.write_bytes(b"x" * (1024 * 1024))
+            tracemalloc.start()
+            try:
+                boundaries = tuple(iter_sdf_file_records(source, chunk_bytes=4096))
+                _current, peak = tracemalloc.get_traced_memory()
+            finally:
+                tracemalloc.stop()
+
+        self.assertEqual(len(boundaries), 1)
+        self.assertLess(peak, 256 * 1024)
 
     def test_memory_error_and_host_failures_do_not_become_recovery_diagnostics(self) -> None:
         from ChemBlender.core.formats import sdf
@@ -320,6 +370,83 @@ class SDFReaderTests(unittest.TestCase):
                 SniffMatch.PROBABLE,
             )
 
+    def test_truncated_sdf_suffix_prose_without_a_complete_mol_block_is_not_selected(self) -> None:
+        from ChemBlender.core.formats.sdf import SDF_READER
+        from ChemBlender.core.readers import SniffMatch
+
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "prose.sdf"
+            source.write_bytes(b"ordinary prose\n" * 10_000)
+            result = SDF_READER.sniff(source, source.read_bytes()[:64 * 1024])
+
+        self.assertIs(result.match, SniffMatch.NONE)
+
+    def test_direct_parse_uses_a_single_atomic_snapshot_when_source_is_replaced(self) -> None:
+        from ChemBlender.core.formats import sdf
+
+        original = _sdf(
+            _record(("Source", b"original-one")),
+            _record(("Source", b"original-two")),
+        )
+        replacement = _sdf(_record(("Source", b"replacement")))
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "swap.sdf"
+            source.write_bytes(original)
+            create_snapshot = sdf._snapshot_source
+
+            def replace_after_snapshot(path, **kwargs):
+                snapshot = create_snapshot(path, **kwargs)
+                source.write_bytes(replacement)
+                return snapshot
+
+            with patch.object(sdf, "_snapshot_source", replace_after_snapshot):
+                batch = sdf.parse_sdf(source)
+
+        self.assertEqual(
+            tuple(item.ordered_raw_properties[0].value for item in batch.molecular_records),
+            ("original-one", "original-two"),
+        )
+        self.assertEqual(
+            batch.provenance[0].source_hash, hashlib.sha256(original).hexdigest()
+        )
+
+    def test_direct_parse_opens_the_product_source_once(self) -> None:
+        from ChemBlender.core.formats import sdf
+
+        content = _sdf(_record(), _record())
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "single-open.sdf"
+            source.write_bytes(content)
+            original_open = Path.open
+            source_opens = 0
+
+            def count_source_open(path, *args, **kwargs):
+                nonlocal source_opens
+                if path == source:
+                    source_opens += 1
+                return original_open(path, *args, **kwargs)
+
+            with patch.object(Path, "open", count_source_open):
+                batch = sdf.parse_sdf(source)
+
+        self.assertEqual(len(batch.molecular_records), 2)
+        self.assertEqual(source_opens, 1)
+
+    def test_host_request_rejects_a_snapshot_hash_mismatch(self) -> None:
+        from ChemBlender.core.formats.sdf import parse_sdf_request
+        from ChemBlender.reader_api.protocol import ParseRequest
+
+        content = _sdf(_record())
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "hash.sdf"
+            source.write_bytes(content)
+            request = ParseRequest(
+                source, "0" * 64, "balanced", {}, root, lambda _event: None, lambda: False
+            )
+            with self.assertRaisesRegex(ValueError, "source content hash mismatch"):
+                parse_sdf_request(request)
+
     def test_preflight_sidecar_round_trip_keeps_records_raw_properties_and_masks(self) -> None:
         import numpy
 
@@ -335,9 +462,14 @@ class SDFReaderTests(unittest.TestCase):
         from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
         from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
 
-        source = FIXTURE_ROOT / "records.sdf"
         with TemporaryDirectory() as directory:
             root = Path(directory)
+            source = root / "partial.sdf"
+            content = _sdf(
+                _record(("Energy", b"-1.25"), ("Flag", b"true")),
+                _record(("Flag", b"false")),
+            )
+            source.write_bytes(content)
             staged = StagedImportSession.create(temp_parent=root)
             session = create_session(temp_parent=root)
             try:
@@ -370,8 +502,15 @@ class SDFReaderTests(unittest.TestCase):
                         for item in reopened.datasets.values()
                         if item.semantic_role == "sdf_energy"
                     )
-                    self.assertEqual(numpy.asarray(energy.data.values).tolist(), [-1.25, -2.0])
-                    self.assertIsNone(energy.validity_mask)
+                    self.assertEqual(numpy.asarray(energy.data.values).tolist(), [-1.25, 0.0])
+                    self.assertEqual(
+                        numpy.asarray(energy.validity_mask.values).tolist(), [True, False]
+                    )
+                    self.assertEqual(energy.record_ids, tuple(item.id for item in records))
+                    self.assertEqual(
+                        reopened.provenance[records[0].provenance_ids[0]].source_hash,
+                        hashlib.sha256(content).hexdigest(),
+                    )
                 finally:
                     close_project(reopened)
             finally:

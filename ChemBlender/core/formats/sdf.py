@@ -4,6 +4,7 @@ import hashlib
 import json
 import math
 import re
+import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
@@ -86,63 +87,120 @@ def iter_sdf_records(raw_source, *, is_cancelled=None):
         yield SDFRecordBoundary(index, start, size)
 
 
-def iter_sdf_file_records(source, *, is_cancelled=None, chunk_bytes=64 * 1024):
-    """Yield SDF byte ranges from a binary file without retaining the source."""
+def _scan_sdf_stream(stream, *, is_cancelled, chunk_bytes, snapshot=None, digest=None):
+    """Scan binary chunks without retaining an unbounded physical line."""
     if isinstance(chunk_bytes, bool) or not isinstance(chunk_bytes, int) or chunk_bytes <= 0:
         raise ValueError("chunk_bytes must be a positive integer")
-    _check_cancel(is_cancelled)
-    source = Path(source)
     record_start = 0
     index = 0
     tail_has_content = False
-    with source.open("rb", buffering=max(8192, chunk_bytes)) as stream:
-        while True:
-            _check_cancel(is_cancelled)
-            line_start = stream.tell()
-            line = stream.readline()
-            if not line:
-                break
-            line_end = stream.tell()
-            if line.rstrip(b"\r\n") == b"$$$$":
-                yield SDFRecordBoundary(index, record_start, line_start)
-                index += 1
-                record_start = line_end
-                tail_has_content = False
-            elif line.strip(b" \t\r\n"):
-                tail_has_content = True
+    boundaries = []
+    line_start = 0
+    offset = 0
+    line_probe = bytearray()
+    line_too_long = False
+    line_has_content = False
+
+    def finish_line(next_start):
+        nonlocal index, line_start, record_start, tail_has_content
+        nonlocal line_probe, line_too_long, line_has_content
+        if not line_too_long and line_probe.rstrip(b"\r") == b"$$$$":
+            boundaries.append(SDFRecordBoundary(index, record_start, line_start))
+            index += 1
+            record_start = next_start
+            tail_has_content = False
+        elif line_has_content:
+            tail_has_content = True
+        line_start = next_start
+        line_probe = bytearray()
+        line_too_long = False
+        line_has_content = False
+
+    def add_line_segment(segment):
+        nonlocal line_too_long, line_has_content
+        if len(line_probe) < 5:
+            remaining = 5 - len(line_probe)
+            line_probe.extend(segment[:remaining])
+            if len(segment) > remaining:
+                line_too_long = True
+        elif segment:
+            line_too_long = True
+        if segment.strip(b" \t\r"):
+            line_has_content = True
+
+    while True:
         _check_cancel(is_cancelled)
-        end = stream.tell()
+        chunk = stream.read(chunk_bytes)
+        if not chunk:
+            break
+        if snapshot is not None:
+            snapshot.write(chunk)
+        if digest is not None:
+            digest.update(chunk)
+        segment_start = 0
+        while True:
+            newline = chunk.find(b"\n", segment_start)
+            if newline < 0:
+                add_line_segment(chunk[segment_start:])
+                offset += len(chunk) - segment_start
+                break
+            add_line_segment(chunk[segment_start:newline])
+            offset += newline - segment_start + 1
+            finish_line(offset)
+            segment_start = newline + 1
     if tail_has_content:
-        yield SDFRecordBoundary(index, record_start, end)
+        boundaries.append(SDFRecordBoundary(index, record_start, offset))
+    elif line_start < offset:
+        finish_line(offset)
+        if tail_has_content:
+            boundaries.append(SDFRecordBoundary(index, record_start, offset))
+    _check_cancel(is_cancelled)
+    return tuple(boundaries)
 
 
-def _read_record(source, boundary, *, is_cancelled):
+def iter_sdf_file_records(source, *, is_cancelled=None, chunk_bytes=64 * 1024):
+    """Yield SDF byte ranges from fixed-size binary reads."""
+    _check_cancel(is_cancelled)
+    with Path(source).open("rb") as stream:
+        yield from _scan_sdf_stream(
+            stream, is_cancelled=is_cancelled, chunk_bytes=chunk_bytes
+        )
+
+
+def _read_snapshot_record(snapshot, boundary, *, is_cancelled):
     remaining = boundary.end - boundary.start
     chunks = []
-    with Path(source).open("rb") as stream:
-        stream.seek(boundary.start)
-        while remaining:
-            _check_cancel(is_cancelled)
-            chunk = stream.read(min(64 * 1024, remaining))
-            if not chunk:
-                raise OSError("SDF source changed while reading a record")
-            chunks.append(chunk)
-            remaining -= len(chunk)
+    snapshot.seek(boundary.start)
+    while remaining:
+        _check_cancel(is_cancelled)
+        chunk = snapshot.read(min(64 * 1024, remaining))
+        if not chunk:
+            raise OSError("SDF snapshot changed while reading a record")
+        chunks.append(chunk)
+        remaining -= len(chunk)
     _check_cancel(is_cancelled)
     return b"".join(chunks)
 
 
-def _source_hash(source, *, is_cancelled):
+def _snapshot_source(source, *, is_cancelled, temp_dir=None, chunk_bytes=64 * 1024):
     digest = hashlib.sha256()
-    with Path(source).open("rb") as stream:
-        while True:
-            _check_cancel(is_cancelled)
-            chunk = stream.read(64 * 1024)
-            if not chunk:
-                break
-            digest.update(chunk)
-    _check_cancel(is_cancelled)
-    return digest.hexdigest()
+    snapshot = tempfile.SpooledTemporaryFile(
+        max_size=4 * chunk_bytes, mode="w+b", dir=temp_dir
+    )
+    try:
+        with Path(source).open("rb") as stream:
+            boundaries = _scan_sdf_stream(
+                stream,
+                is_cancelled=is_cancelled,
+                chunk_bytes=chunk_bytes,
+                snapshot=snapshot,
+                digest=digest,
+            )
+        snapshot.seek(0)
+        return snapshot, digest.hexdigest(), boundaries
+    except BaseException:
+        snapshot.close()
+        raise
 
 
 def _split_mol_block(raw_record):
@@ -263,7 +321,12 @@ def _column_value(values):
     if all(value in {"true", "false"} for value in lowered):
         return bool, [value == "true" for value in lowered]
     if all(_INTEGER.fullmatch(value) for value in present):
-        integers = [int(value) for value in present]
+        if any(len(value.lstrip("+-")) > 19 for value in present):
+            return str, present
+        try:
+            integers = [int(value) for value in present]
+        except ValueError:
+            return str, present
         limits = -(2**63), 2**63 - 1
         if all(limits[0] <= value <= limits[1] for value in integers):
             return int, integers
@@ -454,10 +517,12 @@ def _parse_bytes(raw_source, *, source_revision_id, source_hash, validation_mode
     )
 
 
-def _parse_source(source, *, source_revision_id, source_hash, validation_mode, is_cancelled):
+def _parse_snapshot(snapshot, boundaries, *, source_revision_id, source_hash, validation_mode, is_cancelled):
     return _parse_records(
-        iter_sdf_file_records(source, is_cancelled=is_cancelled),
-        lambda boundary: _read_record(source, boundary, is_cancelled=is_cancelled),
+        boundaries,
+        lambda boundary: _read_snapshot_record(
+            snapshot, boundary, is_cancelled=is_cancelled
+        ),
         source_revision_id=source_revision_id,
         source_hash=source_hash,
         validation_mode=validation_mode,
@@ -484,8 +549,8 @@ def sniff_sdf(source, prefix):
             _mol_version(_decode_mol(mol_block)[0])
         except ValueError as error:
             return SniffResult(
-                SniffMatch.PROBABLE if not complete else SniffMatch.NONE,
-                "SDF delimiter is beyond bounded prefix" if not complete else str(error),
+                SniffMatch.NONE,
+                str(error),
             )
         return SniffResult(
             SniffMatch.EXACT if complete else SniffMatch.PROBABLE,
@@ -509,24 +574,37 @@ def sniff_sdf(source, prefix):
 
 
 def parse_sdf(source):
-    source_hash = _source_hash(source, is_cancelled=None)
-    return _parse_source(
-        source,
-        source_revision_id=uuid5(NAMESPACE_URL, f"chemblender:sdf:{source_hash}"),
-        source_hash=source_hash,
-        validation_mode="balanced",
-        is_cancelled=None,
+    snapshot, source_hash, boundaries = _snapshot_source(
+        source, is_cancelled=None
     )
+    with snapshot:
+        return _parse_snapshot(
+            snapshot,
+            boundaries,
+            source_revision_id=uuid5(NAMESPACE_URL, f"chemblender:sdf:{source_hash}"),
+            source_hash=source_hash,
+            validation_mode="balanced",
+            is_cancelled=None,
+        )
 
 
 def parse_sdf_request(request):
-    return _parse_source(
+    snapshot, source_hash, boundaries = _snapshot_source(
         request.source_path,
-        source_revision_id=request.source_revision_id,
-        source_hash=request.source_content_hash,
-        validation_mode=request.validation_mode,
         is_cancelled=request.is_cancelled,
+        temp_dir=request.staging_root,
     )
+    with snapshot:
+        if source_hash != request.source_content_hash:
+            raise ValueError("source content hash mismatch")
+        return _parse_snapshot(
+            snapshot,
+            boundaries,
+            source_revision_id=request.source_revision_id,
+            source_hash=source_hash,
+            validation_mode=request.validation_mode,
+            is_cancelled=request.is_cancelled,
+        )
 
 
 SDF_READER = ReaderDescriptor(
