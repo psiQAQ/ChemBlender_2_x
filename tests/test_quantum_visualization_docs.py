@@ -240,36 +240,65 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-07-23-chemblender-2.3.0-wave-1-extxyz.md"
         )
-        required = (
-            '`FrameProperty` validity mask prefix `("frame",)`',
-            '`AtomFrameProperty` validity mask prefix `("frame", "atom")`',
-            '`CellFrameProperty` validity mask prefix `("frame",)`',
-            "boolean, dimensionless",
-            "integer codes",
-            "unique categories",
-            "explicit missing code",
-            "Create: `ChemBlender/core/formats/__init__.py`",
-            "string, integer, real, logical, 1-D array and 2-D array",
-            "raw lexeme and diagnostic",
-            "`ax ay az bx by bz cx cy cz`",
-            "no `Lattice` and no `pbc`: `(False, False, False)`",
-            "`Lattice` and no `pbc`: `(True, True, True)`",
-            "explicit `pbc` overrides",
-            "Modify: `ChemBlender/runtime/registration.py`",
-            "Modify: `tests/test_registration_contract.py`",
-            "Modify: `.agents/reference/code-architecture-guide.md`",
-            "Modify: `tests/test_quantum_visualization_docs.py`",
-            "`ChemBlender/ui/export.py` is an explicit registration root",
-            "bounded one-frame iterator",
-            "staged memmap/NPY owner",
-            "cancellation cleanup",
-            "must not construct a nested Python tuple containing all frames",
-            "sidecar publication failure rolls back",
-            "libAtoms, ASE and OVITO",
-            "ASE remains fixture provenance only, not a runtime dependency",
-        )
-        for contract in required:
-            self.assertIn(contract, plan)
+        sections = {}
+        for task_number in range(1, 6):
+            marker = f"### Task {task_number}:"
+            start = plan.index(marker)
+            next_marker = f"### Task {task_number + 1}:"
+            end = plan.find(next_marker, start)
+            sections[task_number] = plan[start : end if end != -1 else None]
+
+        required_by_task = {
+            1: (
+                '`FrameProperty` validity mask prefix `("frame",)`',
+                '`AtomFrameProperty` validity mask prefix `("frame", "atom")`',
+                '`CellFrameProperty` validity mask prefix `("frame",)`',
+                "`mask.dims == required_prefix`",
+                "`mask.values.shape == data.values.shape[:len(required_prefix)]`",
+                "`mask.values.dtype == numpy.bool_`",
+                '`mask.unit == "dimensionless"`',
+                "Numeric and logical Partial properties use that boolean mask.",
+                "integer codes",
+                "unique categories",
+                "explicit missing code",
+                "does not add a redundant validity mask",
+            ),
+            2: (
+                "Create: `ChemBlender/core/formats/__init__.py`",
+                "string, integer, real, logical, 1-D array and 2-D array",
+                "raw lexeme and diagnostic",
+                "bounded one-frame iterator",
+                "libAtoms, ASE and OVITO",
+                "ASE remains fixture provenance only, not a runtime dependency",
+            ),
+            3: (
+                "`ax ay az bx by bz cx cy cz`",
+                "no `Lattice` and no `pbc`: `(False, False, False)`",
+                "`Lattice` and no `pbc`: `(True, True, True)`",
+                "explicit `pbc` overrides",
+                "staged memmap/NPY owner",
+                "Cancellation cleanup",
+                "must not construct a nested Python tuple containing all frames",
+                "sidecar publication failure rolls back",
+            ),
+            4: (
+                "deterministic typed metadata serialization",
+                "scalar, 1-D and 2-D typed metadata",
+                "metadata type, shape and value",
+                "unsafe raw lexeme and diagnostic",
+                "loss preview",
+            ),
+            5: (
+                "Modify: `ChemBlender/runtime/registration.py`",
+                "Modify: `tests/test_registration_contract.py`",
+                "Modify: `.agents/reference/code-architecture-guide.md`",
+                "Modify: `tests/test_quantum_visualization_docs.py`",
+                "`ChemBlender/ui/export.py` is an explicit registration root",
+            ),
+        }
+        for task_number, contracts in required_by_task.items():
+            for contract in contracts:
+                self.assertIn(contract, sections[task_number], contract)
 
     def test_local_markdown_links_resolve(self):
         import re
