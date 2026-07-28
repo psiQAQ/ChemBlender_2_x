@@ -443,16 +443,67 @@ def _format_loss_entries(structure, topology, *, record=None, format_name):
     return tuple(entries)
 
 
+def preview_molecular_export(
+    structure,
+    topology,
+    *,
+    record=None,
+    format_name,
+    frame_count=1,
+    isomeric=True,
+    extra_loss_entries=(),
+):
+    """Validate molecular bindings and report loss without invoking RDKit writers."""
+    if format_name not in {"mol", "sdf", "smiles"}:
+        raise ValueError("format_name must be mol, sdf or smiles")
+    if type(frame_count) is not int or frame_count < 1:
+        raise ValueError("frame_count must be a positive int")
+    if type(isomeric) is not bool:
+        raise TypeError("isomeric must be bool")
+    extra_loss_entries = tuple(extra_loss_entries)
+    if any(
+        not isinstance(entry, ExportReportEntry)
+        for entry in extra_loss_entries
+    ):
+        raise TypeError("extra_loss_entries must contain ExportReportEntry values")
+    _validate_inputs(structure, topology)
+    if record is not None:
+        _validate_record(record, structure, topology)
+    entries = _format_loss_entries(
+        structure,
+        topology,
+        record=record,
+        format_name=format_name.upper(),
+    )
+    if format_name == "smiles":
+        entries += _loss_entries(
+            structure,
+            topology,
+            record=record,
+            isomeric=isomeric,
+        )
+    entries += extra_loss_entries
+    return ExportReport(
+        format_name,
+        False,
+        frame_count,
+        bool(entries),
+        entries,
+    )
+
+
 def export_mol(structure, topology, *, record=None, seed_record=None, version="auto", confirm_loss=False, destination=None, is_cancelled=None):
     if version not in {"auto", "V2000", "V3000"}:
         raise ValueError("version must be auto, V2000, or V3000")
     if type(confirm_loss) is not bool:
         raise TypeError("confirm_loss must be bool")
-    if record is not None:
-        _validate_record(record, structure, topology)
-    _validate_inputs(structure, topology)
-    entries = _format_loss_entries(structure, topology, record=record, format_name="MOL")
-    preview = ExportReport("mol", False, 1, bool(entries), entries)
+    preview = preview_molecular_export(
+        structure,
+        topology,
+        record=record,
+        format_name="mol",
+    )
+    entries = preview.entries
     if preview.requires_confirmation and not confirm_loss:
         return MolecularExport("", preview)
     _check_cancel(is_cancelled)
@@ -589,15 +640,14 @@ def export_sdf(structure=None, topology=None, *, record=None, records=None, entr
 def export_smiles(structure, topology, *, record=None, isomeric=True, confirm_loss=False, destination=None, is_cancelled=None):
     if type(isomeric) is not bool or type(confirm_loss) is not bool:
         raise TypeError("isomeric and confirm_loss must be bool")
-    if record is not None and not isinstance(record, MolecularRecord):
-        raise TypeError("record must be a MolecularRecord or None")
-    _validate_inputs(structure, topology)
-    if record is not None:
-        _validate_record(record, structure, topology)
-    entries = _format_loss_entries(structure, topology, record=record, format_name="SMILES") + _loss_entries(
-        structure, topology, record=record, isomeric=isomeric
+    preview = preview_molecular_export(
+        structure,
+        topology,
+        record=record,
+        format_name="smiles",
+        isomeric=isomeric,
     )
-    preview = ExportReport("smiles", False, 1, True, entries)
+    entries = preview.entries
     if not confirm_loss:
         return MolecularExport("", preview)
     _check_cancel(is_cancelled)
@@ -696,4 +746,4 @@ def semantic_molecular_differences(left, right, *, allow_smiles_loss=False, allo
     return tuple(differences)
 
 
-__all__ = ("MolecularExport", "SDFExportEntry", "export_mol", "export_sdf", "export_smiles", "sdf_entries_from_conformer_set", "semantic_molecular_differences")
+__all__ = ("MolecularExport", "SDFExportEntry", "export_mol", "export_sdf", "export_smiles", "preview_molecular_export", "sdf_entries_from_conformer_set", "semantic_molecular_differences")

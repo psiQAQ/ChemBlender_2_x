@@ -44,6 +44,7 @@ class ViewRecord:
 
 
 _REGISTRY_GROUPS = (
+    ("molecular_records", "Molecular Records"),
     ("datasets", "Datasets"),
     ("structures", "Structures"),
     ("topologies", "Topologies"),
@@ -74,6 +75,11 @@ def _quality(value):
 
 
 def _label(value):
+    record_key = getattr(value, "record_key", None)
+    title = getattr(value, "title", None)
+    if type(record_key) is str and type(title) is str:
+        version = getattr(value, "block_version", None) or "SMILES"
+        return f"{title or record_key} · {version}"
     source = getattr(getattr(value, "source_kind", None), "value", None)
     bonds = getattr(getattr(value, "bond_indices", None), "shape", ())
     if type(source) is str and len(bonds) == 2:
@@ -269,7 +275,7 @@ def _by_data(project, views):
     for name, label in _REGISTRY_GROUPS:
         entities = tuple(
             sorted(
-                getattr(project, name).values(),
+                getattr(project, name, {}).values(),
                 key=lambda value: (_label(value).casefold(), str(value.id)),
             )
         )
@@ -281,25 +287,51 @@ def _by_data(project, views):
             frame_sets = tuple(
                 entity for entity in entities if _token(entity) == "frame_set"
             )
+            conformer_sets = tuple(
+                entity
+                for entity in entities
+                if _token(entity) == "conformer_set"
+            )
+            parents = (*frame_sets, *conformer_sets)
+            frame_set_ids = {frame_set.id for frame_set in frame_sets}
+            conformer_record_ids = {
+                conformer_set.id: conformer_set.record_ids
+                for conformer_set in conformer_sets
+            }
+
+            def parent_for(entity, parent):
+                if _token(parent) == "frame_set":
+                    return getattr(entity, "frame_set_id", None) == parent.id
+                return (
+                    entity is not parent
+                    and getattr(entity, "record_ids", None)
+                    == conformer_record_ids[parent.id]
+                )
+
             grouped_ids = {
                 entity.id
                 for entity in entities
-                if getattr(entity, "frame_set_id", None)
-                in {frame_set.id for frame_set in frame_sets}
+                if (
+                    getattr(entity, "frame_set_id", None) in frame_set_ids
+                    or any(
+                        parent_for(entity, conformer_set)
+                        for conformer_set in conformer_sets
+                    )
+                )
             }
-            for frame_set in frame_sets:
-                frame_rows = _entity_row(frame_set, group_id, 1, views)
-                rows.extend(frame_rows)
-                frame_row_id = frame_rows[0].id
+            for parent in parents:
+                parent_rows = _entity_row(parent, group_id, 1, views)
+                rows.extend(parent_rows)
+                parent_row_id = parent_rows[0].id
                 for entity in entities:
-                    if getattr(entity, "frame_set_id", None) == frame_set.id:
+                    if parent_for(entity, parent):
                         rows.extend(
-                            _entity_row(entity, frame_row_id, 2, views)
+                            _entity_row(entity, parent_row_id, 2, views)
                         )
             for entity in entities:
                 if (
                     entity.id not in grouped_ids
-                    and entity not in frame_sets
+                    and entity not in parents
                 ):
                     rows.extend(_entity_row(entity, group_id, 1, views))
             continue
@@ -442,6 +474,19 @@ def build_browser_rows(
         )
         for view in views
     )
+    if search or filters:
+        rows = build_browser_rows(
+            project,
+            mode=mode,
+            session_id=session_id,
+            browser_revision=browser_revision,
+            views=views,
+        )
+        return (
+            rows
+            if len(rows) == 1 and rows[0].kind == "empty"
+            else _filtered(rows, search, filters, mode)
+        )
     key = (
         id(project),
         getattr(project, "id", None),
@@ -462,10 +507,18 @@ def build_browser_rows(
         else _by_data(project, views)
     )
     result = (
-        _filtered(rows, search, filters, mode)
-        if rows
-        else _empty_rows(mode)
+        rows
+        if len(rows) == 1 and rows[0].kind == "empty"
+        else (
+            _filtered(rows, "", (), mode)
+            if rows
+            else _empty_rows(mode)
+        )
     )
+    scope = (key[0], key[1], key[2], key[4])
+    for stale in tuple(_CACHE):
+        if (stale[0], stale[1], stale[2], stale[4]) == scope:
+            del _CACHE[stale]
     _CACHE[key] = result
     _CACHE.move_to_end(key)
     while len(_CACHE) > _CACHE_LIMIT:

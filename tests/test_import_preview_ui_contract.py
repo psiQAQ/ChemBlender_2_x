@@ -21,6 +21,9 @@ from ChemBlender.core.import_pipeline.grouping import (
     GroupingEvidence,
     SourceGroupSuggestion,
 )
+from ChemBlender.core.import_pipeline.conformer_grouping import (
+    suggest_staged_conformer_groups,
+)
 from ChemBlender.core.sidecar import save_project
 from ChemBlender.core.import_pipeline.request import (
     ImportRequest,
@@ -144,6 +147,10 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             self.session,
             staging,
             preview,
+            conformer_grouping_suggestions=suggest_staged_conformer_groups(
+                preview,
+                staging,
+            ),
         )
         return registry, self.properties.get_quick_import_state(self.session)
 
@@ -322,6 +329,12 @@ class ImportPreviewUIContractTests(unittest.TestCase):
                 "frame_property_summary",
                 "lattice_pbc_summary",
                 "assumed_unit_summary",
+                "molecular_record_count",
+                "molecular_version_summary",
+                "molecular_recovery_summary",
+                "molecular_topology_summary",
+                "molecular_property_summary",
+                "conformer_suggestion_count",
                 "quality",
                 "conflict_id",
                 "conflict_action",
@@ -384,6 +397,34 @@ class ImportPreviewUIContractTests(unittest.TestCase):
                 "evidence",
             },
         )
+        conformer_evidence = (
+            self.module.CHEMBLENDER_PG_import_conformer_evidence
+        )
+        self.assertEqual(
+            set(conformer_evidence.__annotations__),
+            {
+                "record_id",
+                "record_key",
+                "kind",
+                "atom_mapping",
+                "requires_review",
+            },
+        )
+        conformer_suggestion = (
+            self.module.CHEMBLENDER_PG_import_conformer_suggestion
+        )
+        self.assertEqual(
+            set(conformer_suggestion.__annotations__),
+            {
+                "suggestion_id",
+                "record_count",
+                "requires_review",
+                "hidden_review_count",
+                "grouping_action",
+                "review_confirmed",
+                "evidence",
+            },
+        )
 
     def test_projection_uses_live_reader_and_conflict_metadata(self):
         registry, state = self.stage("tests/fixtures/xyz/water.xyz")
@@ -423,6 +464,46 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertEqual(
             state.preview.conflict_ids,
             (state.conflicts[0].id,),
+        )
+
+    def test_inline_smiles_reaches_preview_without_filesystem_locator_forgery(self):
+        staging = self.properties.create_quick_import_staging(self.session)
+        request = ImportRequest(
+            sources=(ImportSource.smiles_text("CO"),),
+            validation_mode=ValidationMode.BALANCED,
+        )
+        registry = builtin_reader_plugin_registry()
+        preview = preflight_reader_plugins(
+            request,
+            registry,
+            staging,
+            progress=lambda *_args: None,
+            is_cancelled=lambda: False,
+        )
+        self.properties.store_quick_import_preview(
+            self.session,
+            staging,
+            preview,
+            conformer_grouping_suggestions=suggest_staged_conformer_groups(
+                preview,
+                staging,
+            ),
+        )
+        state = self.properties.get_quick_import_state(self.session)
+
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+
+        self.assertEqual(rows[0].reader_id, "smiles")
+        self.assertEqual(rows[0].molecular_record_count, 1)
+        batch = staging.result(preview.source_previews[0].staged_batch_ids[0])
+        self.assertEqual(batch.source_revisions[0].locator, "inline:smiles")
+        self.assertEqual(
+            batch.source_revisions[0].locator_kind,
+            "inline_text",
         )
 
     def test_recovered_sdf_record_failure_is_visible_but_does_not_block_commit(self):
@@ -500,6 +581,244 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             failed_state.preview.source_previews[0],
         )
         self.assertIn("sdf.record_parse_failed", failed_reason)
+
+    def test_molecular_preview_and_conformer_choice_are_small_and_explicit(self):
+        registry, state = self.stage("tests/fixtures/sdf/records.sdf")
+
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+        row = rows[0]
+        self.assertEqual(row.molecular_record_count, 2)
+        self.assertEqual(row.molecular_version_summary, "V2000: 2")
+        self.assertEqual(row.molecular_recovery_summary, "none")
+        self.assertIn("sanitized", row.molecular_topology_summary)
+        self.assertIn("raw fields", row.molecular_property_summary)
+        self.assertIn("typed columns", row.molecular_property_summary)
+        self.assertEqual(row.conformer_suggestion_count, 1)
+
+        suggestions = self.module.project_conformer_suggestions(state)
+        self.assertEqual(len(suggestions), 1)
+        suggestion = suggestions[0]
+        self.assertEqual(suggestion.record_count, 2)
+        self.assertEqual(suggestion.grouping_action, "keep_independent")
+        self.assertFalse(suggestion.review_confirmed)
+        self.assertEqual(len(suggestion.evidence), 2)
+        self.assertTrue(
+            all(
+                item.record_id
+                and item.record_key
+                and item.kind
+                and item.atom_mapping
+                for item in suggestion.evidence
+            )
+        )
+        decisions = self.module.import_commit_decisions(
+            state,
+            rows,
+            conformer_rows=suggestions,
+            project_session=self.session,
+        )
+        self.assertEqual(decisions.conformer_grouping_decisions, ())
+
+        suggestion.grouping_action = "accept_group"
+        suggestion.review_confirmed = suggestion.requires_review
+        decisions = self.module.import_commit_decisions(
+            state,
+            rows,
+            conformer_rows=suggestions,
+            project_session=self.session,
+        )
+        self.assertEqual(
+            decisions.conformer_grouping_decisions[0].suggestion.id,
+            UUID(suggestion.suggestion_id),
+        )
+        result = self.module.commit_project_import(
+            self.session,
+            state,
+            rows,
+            conformer_rows=suggestions,
+            collection=object(),
+            apply_view=lambda *_args, **_kwargs: (),
+        )
+        self.assertEqual(result.status, "committed")
+        self.assertEqual(
+            sum(
+                type(dataset).__name__ == "ConformerSet"
+                for dataset in self.session.project.datasets.values()
+            ),
+            1,
+        )
+        reopened = open_project(result.commit_result.sidecar_path)
+        try:
+            self.assertEqual(
+                sum(
+                    type(dataset).__name__ == "ConformerSet"
+                    for dataset in reopened.datasets.values()
+                ),
+                1,
+            )
+        finally:
+            close_project(reopened)
+
+    def test_cached_conformer_suggestions_avoid_main_thread_regrouping(self):
+        registry, state = self.stage("tests/fixtures/sdf/records.sdf")
+        cached = suggest_staged_conformer_groups(
+            state.preview,
+            state.staging_session,
+        )
+        state.conformer_grouping_suggestions = cached
+
+        with patch(
+            "ChemBlender.core.import_pipeline.conformer_grouping."
+            "suggest_staged_conformer_groups",
+            side_effect=AssertionError("must not regroup in UI projection"),
+        ):
+            rows = self.module.project_import_preview(
+                self.session,
+                state,
+                registry,
+            )
+
+        self.assertEqual(rows[0].conformer_suggestion_count, 1)
+        self.assertIs(state.conformer_grouping_suggestions, cached)
+
+    def test_missing_conformer_cache_does_not_regroup_on_ui_thread(self):
+        registry, state = self.stage("tests/fixtures/sdf/records.sdf")
+        state.conformer_grouping_suggestions = None
+
+        with patch(
+            "ChemBlender.core.import_pipeline.conformer_grouping."
+            "suggest_staged_conformer_groups",
+            side_effect=AssertionError("must not regroup in UI projection"),
+        ):
+            rows = self.module.project_import_preview(
+                self.session,
+                state,
+                registry,
+            )
+
+        self.assertEqual(rows[0].conformer_suggestion_count, 0)
+        self.assertEqual(state.conformer_grouping_suggestions, ())
+
+    def test_changed_conformer_suggestion_fails_closed_in_transaction(self):
+        registry, state = self.stage("tests/fixtures/sdf/records.sdf")
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+        suggestions = self.module.project_conformer_suggestions(state)
+        suggestions[0].grouping_action = "accept_group"
+        suggestions[0].review_confirmed = suggestions[0].requires_review
+        transaction = importlib.import_module(
+            "ChemBlender.core.import_pipeline.transaction"
+        )
+
+        with patch.object(
+            transaction,
+            "suggest_conformer_groups",
+            return_value=(),
+        ):
+            with self.assertRaisesRegex(
+                ValueError,
+                "conformer grouping decision does not match live staging",
+            ):
+                self.module.commit_project_import(
+                    self.session,
+                    state,
+                    rows,
+                    conformer_rows=suggestions,
+                    collection=object(),
+                    apply_view=lambda *_args, **_kwargs: (),
+                )
+
+    def test_conformer_evidence_projection_is_bounded_outside_rna(self):
+        evidence = tuple(
+            SimpleNamespace(
+                record_id=uuid4(),
+                kind="complete_atom_maps",
+                atom_mapping=(0,),
+                requires_review=index == 24,
+            )
+            for index in range(25)
+        )
+        suggestion = SimpleNamespace(
+            id=uuid4(),
+            record_ids=tuple(item.record_id for item in evidence),
+            record_keys=tuple(f"record-{index}" for index in range(25)),
+            requires_review=True,
+            evidence=evidence,
+        )
+
+        projected = self.module.project_conformer_suggestions(
+            SimpleNamespace(
+                conformer_grouping_suggestions=(suggestion,),
+            )
+        )[0]
+
+        self.assertEqual(projected.record_count, 25)
+        self.assertEqual(len(projected.evidence), 20)
+        review = tuple(item for item in projected.evidence if item.requires_review)
+        self.assertEqual(len(review), 1)
+        self.assertEqual(review[0].record_key, "record-24")
+
+    def test_hidden_conformer_review_evidence_is_fail_closed(self):
+        evidence = tuple(
+            SimpleNamespace(
+                record_id=uuid4(),
+                kind="ambiguous_atom_mapping",
+                atom_mapping=(0,),
+                requires_review=True,
+            )
+            for _ in range(25)
+        )
+        suggestion = SimpleNamespace(
+            id=uuid4(),
+            record_ids=tuple(item.record_id for item in evidence),
+            record_keys=tuple(f"record-{index}" for index in range(25)),
+            requires_review=True,
+            evidence=evidence,
+        )
+        state = SimpleNamespace(
+            conformer_grouping_suggestions=(suggestion,),
+        )
+        projected = self.module.project_conformer_suggestions(state)[0]
+
+        self.assertEqual(len(projected.evidence), 20)
+        self.assertTrue(all(item.requires_review for item in projected.evidence))
+        self.assertEqual(projected.hidden_review_count, 5)
+        projected.grouping_action = "accept_group"
+        projected.review_confirmed = True
+        with self.assertRaisesRegex(ValueError, "hidden review evidence"):
+            self.module._conformer_grouping_decisions(state, (projected,))
+
+    def test_conformer_atom_mapping_projection_is_bounded(self):
+        evidence = SimpleNamespace(
+            record_id=uuid4(),
+            kind="complete_atom_maps",
+            atom_mapping=tuple(range(1000)),
+            requires_review=False,
+        )
+        suggestion = SimpleNamespace(
+            id=uuid4(),
+            record_ids=(evidence.record_id,),
+            record_keys=("large-record",),
+            requires_review=False,
+            evidence=(evidence,),
+        )
+
+        mapping = self.module.project_conformer_suggestions(
+            SimpleNamespace(
+                conformer_grouping_suggestions=(suggestion,),
+            )
+        )[0].evidence[0].atom_mapping
+
+        self.assertLessEqual(len(mapping), 160)
+        self.assertIn("1000 atoms", mapping)
+        self.assertIn("sha256:", mapping)
 
     def test_default_view_planner_prioritizes_real_grid_and_signed_roles(self):
         default_views = importlib.import_module(
@@ -1404,6 +1723,95 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertEqual(state.browser_revision, 1)
         self.assertIsNone(state.preview)
 
+    def test_fatal_view_failure_removes_prior_objects_before_reraising(self):
+        registry, state = self.stage(
+            "tests/fixtures/cube/sheared.cube",
+            "tests/fixtures/xyz/water.xyz",
+        )
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+        created = SimpleNamespace(type="MESH", data=None, modifiers=())
+        calls = 0
+        fatal = GeneratorExit("view generation stopped")
+
+        def fail_second(_plan, *_args, **_kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return (created,)
+            raise fatal
+
+        with self.assertRaises(GeneratorExit) as raised:
+            self.module.commit_project_import(
+                self.session,
+                state,
+                rows,
+                collection=object(),
+                apply_view=fail_second,
+            )
+
+        self.assertIs(raised.exception, fatal)
+        self.assertEqual(
+            self.fake_bpy.data.objects.removed,
+            [(created, True)],
+        )
+
+    def test_scene_preset_rolls_back_partial_objects_before_fatal_reraises(self):
+        scene_preset_view = importlib.import_module(
+            "ChemBlender.scene_preset_view"
+        )
+        created = object()
+        fatal = GeneratorExit("linked view stopped")
+        plan = SimpleNamespace(
+            view_kind="electronic_spectrum_linked",
+            settings=(("selection_index", 0),),
+        )
+        removed = []
+
+        with (
+            patch.object(
+                scene_preset_view,
+                "validate_scene_plan",
+                return_value=plan,
+            ),
+            patch.object(
+                scene_preset_view,
+                "_entities",
+                return_value={
+                    "structure": object(),
+                    "spectrum": object(),
+                    "states": object(),
+                },
+            ),
+            patch.object(
+                scene_preset_view,
+                "create_structure_view",
+                return_value=created,
+            ),
+            patch.object(
+                scene_preset_view,
+                "link_stick_spectrum_selection",
+                side_effect=fatal,
+            ),
+            patch.object(
+                scene_preset_view,
+                "_remove_objects",
+                side_effect=lambda objects: removed.extend(objects),
+            ),
+        ):
+            with self.assertRaises(GeneratorExit) as raised:
+                scene_preset_view.apply_scene_preset(
+                    plan,
+                    object(),
+                    collection=object(),
+                )
+
+        self.assertIs(raised.exception, fatal)
+        self.assertEqual(removed, [created])
+
     def test_view_failure_uses_surface_cleanup_for_prior_surface_objects(self):
         registry, state = self.stage(
             "tests/fixtures/cube/sheared.cube",
@@ -1719,6 +2127,146 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             calls.index(("progress_end",)),
         )
 
+    def test_modal_fatal_worker_error_rethrows_after_cleanup(self):
+        timer = object()
+        manager = SimpleNamespace(
+            event_timer_add=lambda *_args, **_kwargs: timer,
+            event_timer_remove=lambda _value: None,
+            progress_begin=lambda *_args: None,
+            progress_update=lambda *_args: None,
+            progress_end=lambda: None,
+            modal_handler_add=lambda *_args: None,
+        )
+        registry, state, context, operator = self.interactive_fixture(
+            manager
+        )
+        staging_root = state.staging_session.root
+
+        with (
+            patch.object(
+                self.module,
+                "get_scene_session",
+                return_value=self.session,
+            ),
+            patch.object(
+                self.module,
+                "get_reader_plugin_registry",
+                return_value=registry,
+            ),
+            patch.object(
+                self.module,
+                "commit_import_preview",
+                side_effect=MemoryError("worker exhausted memory"),
+            ),
+        ):
+            self.assertEqual(operator.execute(context), {"RUNNING_MODAL"})
+            self.assertTrue(operator._job.join(2))
+            with self.assertRaisesRegex(MemoryError, "exhausted memory"):
+                operator.modal(context, SimpleNamespace(type="TIMER"))
+
+        self.assertIsNone(state.active_job)
+        self.assertIsNone(state.staging_session)
+        self.assertFalse(staging_root.exists())
+
+    def test_fatal_ownership_cleanup_is_not_hidden_by_prior_error(self):
+        operator = self.module.CHEMBLENDER_OT_confirm_import()
+        job = SimpleNamespace(project_session=self.session)
+        fatal = MemoryError("ownership cleanup exhausted memory")
+
+        with patch.object(
+            self.module,
+            "finish_quick_import_job",
+            side_effect=fatal,
+        ), patch.object(
+            self.module,
+            "discard_quick_import_preview",
+        ) as discard:
+            with self.assertRaises(MemoryError) as raised:
+                operator._finish_modal_ownership(
+                    job,
+                    None,
+                    OSError("UI cleanup failed"),
+                )
+
+        self.assertIs(raised.exception, fatal)
+        discard.assert_called_once_with(self.session)
+
+    def test_modal_finalization_fatal_releases_ui_and_ownership(self):
+        operator = self.module.CHEMBLENDER_OT_confirm_import()
+        released = []
+        job = SimpleNamespace(
+            project_session=self.session,
+            done=True,
+            error=None,
+            join=lambda _timeout: True,
+            release_ui=lambda: released.append(True),
+            timer_pending=False,
+            abandon_ui=lambda: None,
+        )
+        operator._job = job
+        state = self.properties.get_quick_import_state(self.session)
+        state.active_job = job
+        context = SimpleNamespace(window_manager=object())
+
+        with patch.object(
+            operator,
+            "_finalize_committed_job",
+            side_effect=MemoryError("finalization exhausted memory"),
+        ):
+            with self.assertRaises(MemoryError):
+                operator.modal(context, SimpleNamespace(type="TIMER"))
+
+        self.assertEqual(released, [True])
+        self.assertIsNone(state.active_job)
+
+    def test_modal_retries_timer_cleanup_before_reraising_finalization_fatal(self):
+        operator = self.module.CHEMBLENDER_OT_confirm_import()
+        releases = []
+        job = SimpleNamespace(
+            project_session=self.session,
+            done=True,
+            error=None,
+            join=lambda _timeout: True,
+            timer_pending=True,
+            abandon_ui=lambda: None,
+        )
+
+        def release():
+            releases.append(True)
+            if len(releases) == 1:
+                raise OSError("timer cleanup failed")
+            job.timer_pending = False
+
+        job.release_ui = release
+        operator._job = job
+        state = self.properties.get_quick_import_state(self.session)
+        state.active_job = job
+        context = SimpleNamespace(window_manager=object())
+        fatal = MemoryError("finalization exhausted memory")
+
+        with patch.object(
+            operator,
+            "_finalize_committed_job",
+            side_effect=fatal,
+        ):
+            self.assertEqual(
+                operator.modal(
+                    context,
+                    SimpleNamespace(type="TIMER"),
+                ),
+                {"RUNNING_MODAL"},
+            )
+            self.assertIs(state.active_job, job)
+            with self.assertRaises(MemoryError) as raised:
+                operator.modal(
+                    context,
+                    SimpleNamespace(type="TIMER"),
+                )
+
+        self.assertIs(raised.exception, fatal)
+        self.assertEqual(releases, [True, True])
+        self.assertIsNone(state.active_job)
+
     def test_modal_retries_timer_cleanup_without_repeating_commit_finalization(self):
         calls = []
         timer = object()
@@ -1963,6 +2511,24 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertEqual(result, {"RUNNING_MODAL"})
         self.assertEqual(calls, [(operator, 720)])
         self.assertEqual(len(operator.rows), 1)
+
+    def test_invoke_does_not_convert_fatal_errors_to_cancelled(self):
+        context = SimpleNamespace(scene=object())
+        for fatal_type in (
+            KeyboardInterrupt,
+            SystemExit,
+            GeneratorExit,
+            MemoryError,
+        ):
+            with self.subTest(fatal_type=fatal_type.__name__):
+                operator = self.module.CHEMBLENDER_OT_confirm_import()
+                with patch.object(
+                    operator,
+                    "_project",
+                    side_effect=fatal_type("fatal projection"),
+                ):
+                    with self.assertRaises(fatal_type):
+                        operator.invoke(context, None)
 
     def test_commit_job_ui_cleanup_is_independent_and_retryable(self):
         calls = []

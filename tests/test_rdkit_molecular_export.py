@@ -27,11 +27,34 @@ class RDKitMolecularExportTests(unittest.TestCase):
             export_mol,
             export_sdf,
             export_smiles,
+            preview_molecular_export,
         )
 
         self.assertTrue(callable(export_mol))
         self.assertTrue(callable(export_sdf))
         self.assertTrue(callable(export_smiles))
+        self.assertTrue(callable(preview_molecular_export))
+
+    def test_molecular_preview_reports_loss_without_constructing_rdkit_molecule(self):
+        from ChemBlender.core.exporters import preview_molecular_export
+
+        structure, topology = self.source()
+        with patch(
+            "ChemBlender.core.exporters.rdkit_molecular._molecule",
+            side_effect=AssertionError("preview constructed an RDKit molecule"),
+        ):
+            report = preview_molecular_export(
+                replace(structure, molecular_multiplicity=2),
+                topology,
+                format_name="sdf",
+            )
+
+        self.assertFalse(report.written)
+        self.assertTrue(report.requires_confirmation)
+        self.assertEqual(
+            tuple(entry.code for entry in report.entries),
+            ("multiplicity_omitted",),
+        )
 
     def test_aromatic_implicit_hydrogen_requires_and_verifies_bound_record_seed(self):
         from ChemBlender.core.exporters.rdkit_molecular import export_mol, export_smiles

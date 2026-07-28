@@ -42,6 +42,7 @@ class QuickImportUIState:
     active_job: object | None = None
     conflicts: tuple = ()
     grouping_suggestions: tuple = ()
+    conformer_grouping_suggestions: tuple | None = None
     browser_revision: int = 0
 
 
@@ -73,12 +74,23 @@ def create_quick_import_staging(session):
     return staging
 
 
-def store_quick_import_preview(session, staging_session, preview):
+def store_quick_import_preview(
+    session,
+    staging_session,
+    preview,
+    *,
+    conformer_grouping_suggestions=None,
+):
     _require_session(session)
     if type(staging_session) is not StagedImportSession:
         raise TypeError("staging_session must be a StagedImportSession")
     if type(preview) is not ImportPreview:
         raise TypeError("preview must be an ImportPreview")
+    if (
+        conformer_grouping_suggestions is not None
+        and type(conformer_grouping_suggestions) is not tuple
+    ):
+        raise TypeError("conformer_grouping_suggestions must be a tuple")
     if preview.session_id != staging_session.id:
         raise ValueError("preview must belong to staging_session")
     state = get_quick_import_state(session)
@@ -87,6 +99,7 @@ def store_quick_import_preview(session, staging_session, preview):
     state.preview = preview
     state.conflicts = ()
     state.grouping_suggestions = ()
+    state.conformer_grouping_suggestions = conformer_grouping_suggestions
 
 
 def store_quick_import_job(session, staging_session, job):
@@ -169,6 +182,7 @@ def discard_quick_import_preview(session):
     state.preview = None
     state.conflicts = ()
     state.grouping_suggestions = ()
+    state.conformer_grouping_suggestions = None
 
 
 def _clear_all_states():

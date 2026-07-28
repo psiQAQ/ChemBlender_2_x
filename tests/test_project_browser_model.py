@@ -28,6 +28,11 @@ from ChemBlender.core import (
     SourceRevision,
     Structure,
 )
+from ChemBlender.core.formats.sdf import parse_sdf
+from ChemBlender.core.import_pipeline.conformer_grouping import (
+    accept_conformer_group,
+    suggest_conformer_groups,
+)
 from ChemBlender.ui.project_browser.model import (
     BrowserMode,
     BrowserRow,
@@ -45,6 +50,7 @@ GRID_ID = UUID("30000000-0000-0000-0000-000000000002")
 FRAME_SET_ID = UUID("30000000-0000-0000-0000-000000000003")
 FORCE_ID = UUID("30000000-0000-0000-0000-000000000004")
 DIAGNOSTIC_ID = UUID("40000000-0000-0000-0000-000000000001")
+SDF_FIXTURE = Path(__file__).with_name("fixtures") / "sdf" / "records.sdf"
 
 
 class _ArraySentinel:
@@ -200,7 +206,84 @@ def sample_views():
     )
 
 
+def sample_molecular_project():
+    batch = parse_sdf(SDF_FIXTURE)
+    acceptance = accept_conformer_group(
+        suggest_conformer_groups(batch)[0],
+        batch,
+        review_confirmed=True,
+    )
+    project = SimpleNamespace(
+        id=PROJECT_ID,
+        molecular_records={
+            record.id: record for record in batch.molecular_records
+        },
+        datasets={
+            dataset.id: dataset
+            for dataset in (*batch.datasets, acceptance.conformer_set)
+        },
+        structures={value.id: value for value in batch.structures},
+        topologies={value.id: value for value in batch.topologies},
+        calculations={},
+        symmetry_results={},
+        basis_sets={},
+        orbital_sets={},
+        density_matrices={},
+        cif_envelopes={},
+        qcschema_envelopes={},
+        cjson_envelopes={},
+        provenance={},
+        diagnostics={},
+    )
+    return project, batch, acceptance
+
+
 class ProjectBrowserModelTests(unittest.TestCase):
+    def test_molecular_records_and_conformer_properties_are_grouped(self):
+        project, batch, acceptance = sample_molecular_project()
+
+        rows = build_browser_rows(
+            project,
+            mode=BrowserMode.BY_DATA,
+            session_id=SESSION_ID,
+            browser_revision=3,
+        )
+
+        record_rows = tuple(
+            row for row in rows if row.kind == "molecular_record"
+        )
+        self.assertEqual(
+            tuple(row.entity_id for row in record_rows),
+            tuple(record.id for record in batch.molecular_records),
+        )
+        self.assertTrue(
+            all(row.parent_id == "group:molecular_records" for row in record_rows)
+        )
+        conformer_row = next(
+            row
+            for row in rows
+            if row.entity_id == acceptance.conformer_set.id
+        )
+        property_rows = tuple(
+            row
+            for row in rows
+            if row.kind == "record_property_column"
+        )
+        self.assertTrue(property_rows)
+        self.assertTrue(
+            all(row.parent_id == conformer_row.id for row in property_rows)
+        )
+        self.assertTrue(
+            all(
+                record.title in next(
+                    row.label
+                    for row in record_rows
+                    if row.entity_id == record.id
+                )
+                for record in batch.molecular_records
+            )
+        )
+
     def test_frame_set_groups_its_related_properties_without_reading_values(self):
         rows = build_browser_rows(
             sample_trajectory_project(),
@@ -546,7 +629,62 @@ class ProjectBrowserModelTests(unittest.TestCase):
             views=sample_views(),
         )
 
-        self.assertIs(first, normalized)
+        self.assertEqual(first, normalized)
+
+    def test_cache_keeps_only_current_projection_for_a_browser_scope(self):
+        project = sample_project()
+        model = importlib.import_module(
+            "ChemBlender.ui.project_browser.model"
+        )
+        model._CACHE.clear()
+
+        for revision in range(40):
+            build_browser_rows(
+                project,
+                mode=BrowserMode.BY_DATA,
+                session_id=SESSION_ID,
+                browser_revision=revision,
+                views=sample_views(),
+            )
+
+        scoped = tuple(
+            key
+            for key in model._CACHE
+            if (
+                key[0] == id(project)
+                and key[2] == SESSION_ID
+                and key[4] is BrowserMode.BY_DATA
+            )
+        )
+        self.assertEqual(len(scoped), 1)
+        self.assertEqual(scoped[0][3], 39)
+
+    def test_filter_reuses_cached_unfiltered_projection(self):
+        project = sample_project()
+        model = importlib.import_module(
+            "ChemBlender.ui.project_browser.model"
+        )
+        keywords = {
+            "mode": BrowserMode.BY_DATA,
+            "session_id": SESSION_ID,
+            "browser_revision": 9876,
+            "views": sample_views(),
+        }
+
+        with patch.object(
+            model,
+            "_by_data",
+            wraps=model._by_data,
+        ) as project_rows:
+            build_browser_rows(project, **keywords)
+            filtered = build_browser_rows(
+                project,
+                search="density",
+                **keywords,
+            )
+
+        self.assertEqual(project_rows.call_count, 1)
+        self.assertTrue(any(row.label == "Electron Density" for row in filtered))
 
     def test_filter_keeps_only_matching_entities_views_and_ancestors(self):
         grid_path = f"group:datasets/entity:{GRID_ID}"
@@ -1126,6 +1264,65 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
 
         self.assertEqual(session.active_entity_id, GRID_ID)
         self.assertEqual(settings.active_entity_id, str(GRID_ID))
+
+    def test_refresh_bounds_rna_rows_and_records_total_count(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class Rows(list):
+            def add(self):
+                row = SimpleNamespace()
+                self.append(row)
+                return row
+
+        limit = 1000
+        rows = tuple(
+            BrowserRow(
+                id=f"row-{index}",
+                parent_id=None,
+                depth=0,
+                kind="molecular_record",
+                label=f"Record {index}",
+                quality="complete",
+                view_count=0,
+                entity_id=None,
+            )
+            for index in range(limit + 5)
+        )
+        session = SimpleNamespace(
+            id="session",
+            project=sample_project(),
+            active_entity_id=None,
+        )
+        settings = SimpleNamespace(
+            mode="by_data",
+            search="",
+            quality_filter="all",
+            selected_index=0,
+            active_entity_id="",
+            rows=Rows(),
+        )
+        scene = SimpleNamespace(
+            chemblender_project_browser=settings,
+            objects=(),
+        )
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=SimpleNamespace(browser_revision=1),
+            ),
+            patch.object(panel, "build_browser_rows", return_value=rows),
+        ):
+            projected = panel.refresh_project_browser(scene)
+
+        self.assertEqual(panel._BROWSER_RNA_ROW_LIMIT, limit)
+        self.assertEqual(len(projected), limit + 5)
+        self.assertEqual(len(settings.rows), limit)
+        self.assertEqual(settings.total_row_count, limit + 5)
 
     def test_refresh_clears_stale_and_malformed_hidden_selection(self):
         panel = importlib.import_module(

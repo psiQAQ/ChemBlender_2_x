@@ -732,6 +732,81 @@ def assert_quick_import(module_key, repository_root):
         assert tuple(bpy.data.objects) == before_objects
         assert state.preview is None
 
+    assert bpy.ops.chemblender.import_smiles_text(
+        "EXEC_DEFAULT",
+        smiles_text="C/C=C/C",
+        validation_mode="balanced",
+    ) == {"FINISHED"}
+    state = properties.get_quick_import_state(session)
+    smiles_rows = preview_ui.project_import_preview(session, state, registry)
+    assert smiles_rows[0].reader_id == "smiles"
+    assert smiles_rows[0].molecular_record_count == 1
+    assert smiles_rows[0].molecular_version_summary == "SMILES: 1"
+    assert bpy.ops.chemblender.cancel_import() == {"FINISHED"}
+
+    for relative, expected_records, expected_summary in (
+        ("tests/fixtures/mol/water-v3000.mol", 1, "V3000: 1"),
+        ("tests/fixtures/sdf/malformed-middle.sdf", 2, "V2000: 2"),
+        ("tests/fixtures/sdf/mixed-properties.sdf", 3, "V2000: 3"),
+    ):
+        state = stage(repository_root / relative)
+        molecular_rows = preview_ui.project_import_preview(
+            session,
+            state,
+            registry,
+        )
+        assert molecular_rows[0].molecular_record_count == expected_records
+        assert molecular_rows[0].molecular_version_summary == expected_summary
+        if "malformed-middle" in relative:
+            assert "1 recovered record" in (
+                molecular_rows[0].molecular_recovery_summary
+            )
+        if "mixed-properties" in relative:
+            assert "typed columns" in (
+                molecular_rows[0].molecular_property_summary
+            )
+        assert bpy.ops.chemblender.cancel_import() == {"FINISHED"}
+
+    state = stage(repository_root / "tests/fixtures/sdf/records.sdf")
+    molecular_rows = preview_ui.project_import_preview(
+        session,
+        state,
+        registry,
+    )
+    conformer_rows = preview_ui.project_conformer_suggestions(state)
+    assert len(conformer_rows) == 1
+    conformer_rows[0].grouping_action = "accept_group"
+    conformer_rows[0].review_confirmed = conformer_rows[0].requires_review
+    molecular_result = preview_ui.commit_project_import(
+        session,
+        state,
+        molecular_rows,
+        conformer_rows=conformer_rows,
+        collection=bpy.context.scene.collection,
+    )
+    conformer_set = next(
+        dataset
+        for dataset in session.project.datasets.values()
+        if type(dataset).__name__ == "ConformerSet"
+    )
+    browser = importlib.import_module(
+        f"{module_key}.ui.project_browser.panel"
+    )
+    browser_rows = browser.refresh_project_browser(bpy.context.scene)
+    assert sum(row.kind == "molecular_record" for row in browser_rows) >= 2
+    assert any(row.entity_id == conformer_set.id for row in browser_rows)
+    with TemporaryDirectory() as directory:
+        exported = Path(directory) / "conformers.sdf"
+        session.active_entity_id = conformer_set.id
+        assert bpy.ops.chemblender.export_project_entity(
+            filepath=str(exported),
+            format_name="sdf",
+            confirm_loss=True,
+        ) == {"FINISHED"}
+        reparsed = core.SDF_READER.parse(exported)
+        assert len(reparsed.molecular_records) == 2
+    assert molecular_result.status == "committed"
+
     cjson_source = repository_root / "tests/fixtures/cjson/water-results.cjson"
     state = stage(cjson_source)
     cjson_rows = preview_ui.project_import_preview(session, state, registry)
@@ -2541,6 +2616,305 @@ def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     assert len(poscar_result[9]) == 48
 
 
+def assert_sdf_10k_workflow_budget(module_key):
+    from statistics import median
+    from time import perf_counter
+    import tracemalloc
+
+    from rdkit import Chem, rdBase
+    from rdkit.Chem import rdDepictor
+
+    core = importlib.import_module(f"{module_key}.core")
+    conformer_grouping = importlib.import_module(
+        f"{module_key}.core.import_pipeline.conformer_grouping"
+    )
+    request_model = importlib.import_module(
+        f"{module_key}.core.import_pipeline.request"
+    )
+    reader_bridge = importlib.import_module(
+        f"{module_key}.reader_api.import_pipeline_bridge"
+    )
+    registry = importlib.import_module(
+        f"{module_key}.runtime.reader_api_bridge"
+    ).get_reader_plugin_registry()
+    properties = importlib.import_module(f"{module_key}.ui.properties")
+    preview_ui = importlib.import_module(
+        f"{module_key}.ui.import_preview"
+    )
+    browser_model = importlib.import_module(
+        f"{module_key}.ui.project_browser.model"
+    )
+    suffixes = (
+        "",
+        "O",
+        "N",
+        "F",
+        "Cl",
+        "Br",
+        "S",
+        "C#N",
+        "C=O",
+        "C(=O)O",
+    )
+    molecules = tuple(
+        Chem.MolFromSmiles("C" * length + suffix)
+        for length in range(1, 11)
+        for suffix in suffixes
+    )
+    canonical_identities = tuple(
+        Chem.MolToSmiles(
+            molecule,
+            canonical=True,
+            isomericSmiles=True,
+        )
+        for molecule in molecules
+    )
+    assert len(molecules) == len(set(canonical_identities)) == 100
+    before_objects = tuple(bpy.data.objects)
+    timings = {}
+
+    def measured(name, repeats, operation):
+        samples = []
+        result = None
+        for index in range(repeats):
+            started = perf_counter()
+            result = operation(index)
+            samples.append(perf_counter() - started)
+        timings[name] = samples
+        return result
+
+    with TemporaryDirectory(
+        prefix="chemblender-sdf-workflow-benchmark-"
+    ) as directory:
+        root = Path(directory)
+        source = root / "10k.sdf"
+        with source.open("wb") as stream:
+            for identity_index, molecule in enumerate(molecules):
+                molecule.SetProp("_Name", f"Identity {identity_index:03d}")
+                rdDepictor.Compute2DCoords(molecule)
+                record = Chem.MolToMolBlock(molecule).encode("utf-8")
+                for _ in range(100):
+                    stream.write(record)
+                    stream.write(b"$$$$\n")
+
+        source_model = request_model.ImportSource(source)
+        request = request_model.ImportRequest(
+            sources=(source_model,),
+            validation_mode=request_model.ValidationMode.BALANCED,
+        )
+        session = core.create_session(temp_parent=root)
+        staging = properties.create_quick_import_staging(session)
+        tracemalloc.start()
+        measured_sequence_started = perf_counter()
+        try:
+            preview = measured(
+                "reader_preflight",
+                1,
+                lambda _index: reader_bridge.preflight_reader_plugins(
+                    request,
+                    registry,
+                    staging,
+                    progress=lambda *_args: None,
+                    is_cancelled=lambda: False,
+                ),
+            )
+            suggestions = measured(
+                "conformer_suggestion",
+                3,
+                lambda _index: (
+                    conformer_grouping.suggest_staged_conformer_groups(
+                        preview,
+                        staging,
+                    )
+                ),
+            )
+            properties.store_quick_import_preview(
+                session,
+                staging,
+                preview,
+                conformer_grouping_suggestions=suggestions,
+            )
+            state = properties.get_quick_import_state(session)
+            preview_rows, conformer_rows = measured(
+                "preview_projection",
+                3,
+                lambda _index: (
+                    preview_ui.project_import_preview(
+                        session,
+                        state,
+                        registry,
+                    ),
+                    preview_ui.project_conformer_suggestions(state),
+                ),
+            )
+            source_preview, = preview.source_previews
+            staged_batch_id, = source_preview.staged_batch_ids
+            batch = staging.result(staged_batch_id)
+            source_revision_ids = {
+                record.source_revision_id
+                for record in batch.molecular_records
+            }
+            assert len(batch.molecular_records) == 10_000
+            assert source_revision_ids == {batch.source_revisions[0].id}
+            assert len(suggestions) == len(conformer_rows) == 100
+            assert preview_rows[0].molecular_record_count == 10_000
+            assert preview_rows[0].conformer_suggestion_count == 100
+            measured(
+                "project_commit",
+                1,
+                lambda _index: session.project.commit(batch),
+            )
+
+            browser_samples = []
+            filter_samples = []
+            for revision in range(1, 4):
+                started = perf_counter()
+                browser_rows = browser_model.build_browser_rows(
+                    session.project,
+                    session_id=session.id,
+                    browser_revision=revision,
+                )
+                browser_samples.append(perf_counter() - started)
+                started = perf_counter()
+                filtered_rows = browser_model.build_browser_rows(
+                    session.project,
+                    session_id=session.id,
+                    browser_revision=revision,
+                    search="Identity 042",
+                )
+                filter_samples.append(perf_counter() - started)
+            timings["browser_projection"] = browser_samples
+            timings["browser_filter"] = filter_samples
+            timings["measured_sequence_wall"] = [
+                perf_counter() - measured_sequence_started
+            ]
+            _current, peak = tracemalloc.get_traced_memory()
+
+            assert sum(
+                row.kind == "molecular_record"
+                for row in browser_rows
+            ) == 10_000
+            assert sum(
+                row.kind == "molecular_record"
+                for row in filtered_rows
+            ) == 100
+            assert tuple(bpy.data.objects) == before_objects
+        finally:
+            tracemalloc.stop()
+            try:
+                properties.clear_quick_import_state(session)
+            finally:
+                core.close_session(session)
+
+        def timing_summary(samples):
+            ordered = sorted(samples)
+            return {
+                "samples": len(samples),
+                "median": median(samples),
+                "p95": ordered[math.ceil(len(samples) * 0.95) - 1],
+            }
+
+        print(
+            "PERF: "
+            + json.dumps(
+                {
+                    "benchmark": "sdf_10k_workflow",
+                    "environment": {
+                        "blender": bpy.app.version_string,
+                        "python": sys.version.split()[0],
+                        "rdkit": rdBase.rdkitVersion,
+                    },
+                    "input": {
+                        "canonical_identity_count": 100,
+                        "record_count": 10_000,
+                        "records_per_identity": 100,
+                        "size_bytes": source.stat().st_size,
+                        "source_revision_count": len(
+                            source_revision_ids
+                        ),
+                    },
+                    "memory": {"peak_bytes": peak},
+                    "output": {
+                        "browser_row_count": len(browser_rows),
+                        "conformer_suggestion_count": len(suggestions),
+                        "filtered_record_count": sum(
+                            row.kind == "molecular_record"
+                            for row in filtered_rows
+                        ),
+                    },
+                    "timing_seconds": {
+                        name: timing_summary(samples)
+                        for name, samples in timings.items()
+                    },
+                },
+                sort_keys=True,
+            )
+        )
+
+
+def assert_project_browser_rna_budget(module_key):
+    from time import perf_counter
+    import tracemalloc
+    from unittest.mock import patch
+
+    panel = importlib.import_module(
+        f"{module_key}.ui.project_browser.panel"
+    )
+    model = importlib.import_module(
+        f"{module_key}.ui.project_browser.model"
+    )
+    scene = bpy.data.scenes.new("ChemBlender Browser RNA Budget")
+    rows = tuple(
+        model.BrowserRow(
+            id=f"record-{index}",
+            parent_id=None,
+            depth=1,
+            kind="molecular_record",
+            label=f"Record {index}",
+            quality="complete",
+            view_count=0,
+            entity_id=None,
+        )
+        for index in range(40007)
+    )
+    session = SimpleNamespace(
+        id=uuid4(),
+        project=object(),
+        active_entity_id=None,
+    )
+    try:
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=SimpleNamespace(browser_revision=1),
+            ),
+            patch.object(panel, "build_browser_rows", return_value=rows),
+        ):
+            tracemalloc.start()
+            samples = []
+            for _ in range(3):
+                started = perf_counter()
+                projected = panel.refresh_project_browser(scene)
+                samples.append((perf_counter() - started) * 1000.0)
+            _current, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+        settings = scene.chemblender_project_browser
+        assert projected is rows
+        assert settings.total_row_count == len(rows)
+        assert len(settings.rows) == panel._BROWSER_RNA_ROW_LIMIT
+        assert max(samples) < 200.0, samples
+        ordered = sorted(samples)
+        print(
+            "PERF: Project Browser 40,007-row RNA projection "
+            f"median={ordered[1]:.2f}ms p95={ordered[-1]:.2f}ms "
+            f"peak={peak}B visible={len(settings.rows)}"
+        )
+    finally:
+        bpy.data.scenes.remove(scene)
+
+
 arguments = sys.argv[sys.argv.index("--") + 1 :]
 assert len(arguments) in (1, 2), "expected ZIP path and optional --keep-enabled"
 assert len(arguments) == 1 or arguments[1] == "--keep-enabled"
@@ -2623,6 +2997,18 @@ expected_inventory["registered_classes"] += [
     },
     {
         "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_PG_import_conformer_evidence",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_PG_import_conformer_suggestion",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.import_preview",
         "name": "CHEMBLENDER_PG_import_conflict_candidate",
         "id": None,
         "base": "PropertyGroup",
@@ -2680,6 +3066,12 @@ expected_inventory["registered_classes"] += [
         "name": "CHEMBLENDER_PG_topology_settings",
         "id": None,
         "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.quick_import",
+        "name": "CHEMBLENDER_OT_import_smiles_text",
+        "id": "chemblender.import_smiles_text",
+        "base": "Operator",
     },
     {
         "module": ".ui.quick_import",
@@ -2854,6 +3246,8 @@ assert_project_session_manager(module_key)
 assert_topology_view(module_key, package.parent.parent)
 assert_extxyz_workflow(module_key, package.parent.parent)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
+assert_sdf_10k_workflow_budget(module_key)
+assert_project_browser_rna_budget(module_key)
 
 import rdkit
 from rdkit import Chem

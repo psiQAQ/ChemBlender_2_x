@@ -211,16 +211,27 @@ def _staged_revisions(preview, session):
             raise ValueError("staged reader does not match source preview")
         if source_preview.byte_size != revision.byte_size:
             raise ValueError("staged byte size does not match source preview")
-        if revision.locator_kind != "absolute_path":
+        if revision.locator_kind == "absolute_path":
+            if ntpath.normcase(
+                ntpath.normpath(str(source_preview.source_path))
+            ) != ntpath.normcase(
+                ntpath.normpath(revision.locator.replace("/", "\\"))
+            ):
+                raise ValueError("staged locator does not match source preview")
+        elif revision.locator_kind == "inline_text":
+            expected_path = session.artifact_root / f"{source.id}.smi"
+            if (
+                source.source_kind != "text"
+                or revision.locator != "inline:smiles"
+                or source_preview.source_path != expected_path
+            ):
+                raise ValueError(
+                    "staged inline text locator does not match source preview"
+                )
+        else:
             raise ValueError(
-                "staged revision locator_kind must be absolute_path"
+                "staged revision locator_kind must be absolute_path or inline_text"
             )
-        if ntpath.normcase(
-            ntpath.normpath(str(source_preview.source_path))
-        ) != ntpath.normcase(
-            ntpath.normpath(revision.locator.replace("/", "\\"))
-        ):
-            raise ValueError("staged locator does not match source preview")
         batch_diagnostic_ids = tuple(item.id for item in batch.diagnostics)
         if batch_diagnostic_ids != source_preview.diagnostic_ids:
             raise ValueError("staged diagnostics do not match source preview")

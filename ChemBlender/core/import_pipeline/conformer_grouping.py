@@ -418,6 +418,57 @@ def _pair_mapping(reference, candidate, *, is_cancelled=None):
     )
 
 
+def _grouping_bucket_key(entry):
+    molecule, record, structure, topology = entry
+    from rdkit import Chem
+
+    canonical = Chem.Mol(molecule)
+    for atom in canonical.GetAtoms():
+        atom.SetAtomMapNum(0)
+    smiles = Chem.MolToSmiles(
+        canonical,
+        canonical=True,
+        isomericSmiles=True,
+    )
+    identity = structure.atomic_identity
+    charges = _identity_values(identity, "formal_charges")
+    isotopes = _identity_values(identity, "isotopes")
+    atom_stereo = _identity_values(identity, "stereo_labels")
+    atom_signature = tuple(
+        sorted(
+            (
+                int(number),
+                int(charges[index]),
+                int(isotopes[index]),
+                "" if atom_stereo[index] is None else str(atom_stereo[index]),
+            )
+            for index, number in enumerate(structure.atomic_numbers)
+        )
+    )
+    orders = _array_copy(topology.bond_orders)
+    aromatic = (
+        None
+        if topology.aromatic_flags is None
+        else _array_copy(topology.aromatic_flags)
+    )
+    bond_signature = tuple(
+        sorted(
+            (
+                float(order),
+                None if aromatic is None else bool(aromatic[index]),
+                topology.stereo_labels[index],
+            )
+            for index, order in enumerate(orders)
+        )
+    )
+    return (
+        record.source_revision_id,
+        smiles,
+        atom_signature,
+        bond_signature,
+    )
+
+
 def _array_snapshot(value):
     import numpy
 
@@ -487,63 +538,127 @@ def _snapshot(batch, members):
 def suggest_conformer_groups(batch, *, is_cancelled=None):
     """Return immutable candidates; this function never creates project data."""
     entries = _ordered_records(batch)
+    entries_by_record_id = {entry[0].id: entry for entry in entries}
     _check_cancel(is_cancelled)
-    molecules = tuple((_rdkit_molecule(record, is_cancelled=is_cancelled), record, structure, topology) for record, structure, topology in entries)
-    suggestions = []
-    unmatched = list(molecules)
-    while unmatched:
-        _check_cancel(is_cancelled)
-        reference, reference_record, reference_structure, reference_topology = unmatched.pop(0)
-        members = [
-            (
-                reference_record,
-                tuple(range(len(reference_structure.atomic_numbers))),
-                "reference",
-                False,
-            )
-        ]
-        remaining = []
-        for candidate, candidate_record, candidate_structure, candidate_topology in unmatched:
+    buckets = {}
+    for record, structure, topology in entries:
+        molecule = _rdkit_molecule(record, is_cancelled=is_cancelled)
+        try:
             _check_cancel(is_cancelled)
-            if candidate_record.source_revision_id != reference_record.source_revision_id:
-                remaining.append((candidate, candidate_record, candidate_structure, candidate_topology))
-                continue
-            result = _pair_mapping(
-                (reference, reference_record, reference_structure, reference_topology),
-                (candidate, candidate_record, candidate_structure, candidate_topology),
+            key = _grouping_bucket_key(
+                (molecule, record, structure, topology)
+            )
+        finally:
+            del molecule
+        buckets.setdefault(key, []).append((record, structure, topology))
+    suggestions = []
+    for bucket in buckets.values():
+        unmatched = list(bucket)
+        while unmatched:
+            _check_cancel(is_cancelled)
+            reference_record, reference_structure, reference_topology = unmatched.pop(0)
+            members = [
+                (
+                    reference_record,
+                    tuple(range(len(reference_structure.atomic_numbers))),
+                    "reference",
+                    False,
+                )
+            ]
+            remaining = []
+            reference = _rdkit_molecule(
+                reference_record,
                 is_cancelled=is_cancelled,
             )
-            if result is None:
-                remaining.append((candidate, candidate_record, candidate_structure, candidate_topology))
+            try:
+                for candidate_record, candidate_structure, candidate_topology in unmatched:
+                    candidate = _rdkit_molecule(
+                        candidate_record,
+                        is_cancelled=is_cancelled,
+                    )
+                    try:
+                        _check_cancel(is_cancelled)
+                        result = _pair_mapping(
+                            (
+                                reference,
+                                reference_record,
+                                reference_structure,
+                                reference_topology,
+                            ),
+                            (
+                                candidate,
+                                candidate_record,
+                                candidate_structure,
+                                candidate_topology,
+                            ),
+                            is_cancelled=is_cancelled,
+                        )
+                    finally:
+                        del candidate
+                    if result is None:
+                        remaining.append(
+                            (
+                                candidate_record,
+                                candidate_structure,
+                                candidate_topology,
+                            )
+                        )
+                        continue
+                    mapping, kind, requires_review = result
+                    members.append(
+                        (
+                            candidate_record,
+                            mapping,
+                            kind,
+                            requires_review,
+                        )
+                    )
+            finally:
+                del reference
+            unmatched = remaining
+            if len(members) < 2:
                 continue
-            mapping, kind, requires_review = result
-            members.append((candidate_record, mapping, kind, requires_review))
-        unmatched = remaining
-        if len(members) < 2:
-            continue
-        suggestion_records = tuple(item[0] for item in members)
-        member_entries = tuple(
-            next(entry for entry in entries if entry[0].id == record.id)
-            for record in suggestion_records
-        )
-        mappings = tuple(item[1] for item in members)
-        evidence = tuple(
-            ConformerGroupEvidence(record.id, kind, mapping, requires_review)
-            for record, mapping, kind, requires_review in members
-        )
-        suggestions.append(
-            ConformerGroupSuggestion(
-                reference_record_id=reference_record.id,
-                record_ids=tuple(record.id for record in suggestion_records),
-                record_keys=tuple(record.record_key for record in suggestion_records),
-                record_revisions=tuple(record.revision for record in suggestion_records),
-                atom_mappings=mappings,
-                evidence=evidence,
-                snapshot=_snapshot(batch, member_entries),
+            suggestion_records = tuple(item[0] for item in members)
+            member_entries = tuple(
+                entries_by_record_id[record.id]
+                for record in suggestion_records
             )
-        )
+            mappings = tuple(item[1] for item in members)
+            evidence = tuple(
+                ConformerGroupEvidence(record.id, kind, mapping, requires_review)
+                for record, mapping, kind, requires_review in members
+            )
+            suggestions.append(
+                ConformerGroupSuggestion(
+                    reference_record_id=reference_record.id,
+                    record_ids=tuple(record.id for record in suggestion_records),
+                    record_keys=tuple(record.record_key for record in suggestion_records),
+                    record_revisions=tuple(record.revision for record in suggestion_records),
+                    atom_mappings=mappings,
+                    evidence=evidence,
+                    snapshot=_snapshot(batch, member_entries),
+                )
+            )
     _check_cancel(is_cancelled)
     return tuple(sorted(suggestions, key=lambda suggestion: str(suggestion.id)))
+
+
+def suggest_staged_conformer_groups(
+    preview,
+    staged_session,
+    *,
+    is_cancelled=None,
+):
+    suggestions = []
+    for source in preview.source_previews:
+        if len(source.staged_batch_ids) == 1:
+            suggestions.extend(
+                suggest_conformer_groups(
+                    staged_session.result(source.staged_batch_ids[0]),
+                    is_cancelled=is_cancelled,
+                )
+            )
+    return tuple(sorted(suggestions, key=lambda value: str(value.id)))
 
 
 def _coordinates(structure, mapping, reference_unit):
@@ -784,4 +899,5 @@ __all__ = [
     "ConformerGroupingCancelled",
     "accept_conformer_group",
     "suggest_conformer_groups",
+    "suggest_staged_conformer_groups",
 ]

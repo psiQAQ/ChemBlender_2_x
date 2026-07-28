@@ -22,6 +22,14 @@ class ScenePresetApplicationError(RuntimeError):
     pass
 
 
+_FATAL_EXCEPTIONS = (
+    KeyboardInterrupt,
+    SystemExit,
+    GeneratorExit,
+    MemoryError,
+)
+
+
 def _entities(plan, project):
     entities = {}
     for binding in plan.bindings:
@@ -182,6 +190,19 @@ def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
         for obj in created:
             _write_plan_metadata(obj, plan)
         return tuple(created)
-    except Exception:
-        _remove_objects(created)
+    except BaseException as error:
+        try:
+            _remove_objects(created)
+        except BaseException as cleanup_error:
+            if (
+                isinstance(cleanup_error, _FATAL_EXCEPTIONS)
+                and not isinstance(error, _FATAL_EXCEPTIONS)
+            ):
+                cleanup_error.add_note(
+                    f"scene preset application failed: {error}"
+                )
+                raise cleanup_error
+            error.add_note(
+                f"scene preset cleanup failed: {cleanup_error}"
+            )
         raise

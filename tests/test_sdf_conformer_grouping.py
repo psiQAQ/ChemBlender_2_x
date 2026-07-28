@@ -1,6 +1,7 @@
 from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from uuid import uuid4
@@ -81,6 +82,24 @@ class SDFConformerGroupingTests(unittest.TestCase):
         self.assertEqual(suggestion.atom_mappings[0], tuple(range(5)))
         self.assertEqual(suggestion.atom_mappings[1], (4, 3, 2, 1, 0))
 
+    def test_mapped_and_unmapped_reordered_records_share_a_bucket(self):
+        from ChemBlender.core.import_pipeline.conformer_grouping import (
+            suggest_conformer_groups,
+        )
+
+        batch = _batch(
+            (_molecule("FC(Cl)(Br)I", atom_maps=True), ()),
+            (_molecule("FC(Cl)(Br)I", order=(4, 3, 2, 1, 0)), ()),
+        )
+
+        suggestion = suggest_conformer_groups(batch)[0]
+
+        self.assertEqual(
+            suggestion.evidence[1].kind,
+            "canonical_ranks_isomorphism",
+        )
+        self.assertEqual(suggestion.atom_mappings[1], (4, 3, 2, 1, 0))
+
     def test_canonical_rank_isomorphism_mapping_is_deterministic(self):
         from ChemBlender.core.import_pipeline.conformer_grouping import (
             suggest_conformer_groups,
@@ -129,6 +148,83 @@ class SDFConformerGroupingTests(unittest.TestCase):
         batch = _batch((_molecule("CCO"), ()), (_molecule("CCN"), ()))
 
         self.assertEqual(suggest_conformer_groups(batch), ())
+
+    def test_distinct_molecular_identities_never_reach_pair_mapping(self):
+        from ChemBlender.core.import_pipeline import conformer_grouping
+
+        batch = _batch(
+            (_molecule("FC(Cl)(Br)I"), ()),
+            (_molecule("FC(Cl)(Br)I", order=(4, 3, 2, 1, 0)), ()),
+            (_molecule("CCO"), ()),
+            (_molecule("CCN"), ()),
+        )
+
+        with patch.object(
+            conformer_grouping,
+            "_pair_mapping",
+            wraps=conformer_grouping._pair_mapping,
+        ) as pair_mapping:
+            suggestions = conformer_grouping.suggest_conformer_groups(batch)
+
+        self.assertEqual(len(suggestions), 1)
+        self.assertEqual(pair_mapping.call_count, 1)
+
+    def test_ten_thousand_distinct_buckets_do_no_pairwise_work(self):
+        from ChemBlender.core.import_pipeline import conformer_grouping
+
+        source_revision_id = uuid4()
+
+        class TrackedMolecule:
+            live = 0
+            peak = 0
+
+            def __init__(self):
+                type(self).live += 1
+                type(self).peak = max(type(self).peak, type(self).live)
+
+            def __del__(self):
+                type(self).live -= 1
+
+        entries = tuple(
+            (
+                SimpleNamespace(
+                    id=uuid4(),
+                    record_key=f"record-{index}",
+                    source_revision_id=source_revision_id,
+                ),
+                SimpleNamespace(atomic_numbers=(6,)),
+                object(),
+            )
+            for index in range(10_000)
+        )
+
+        with (
+            patch.object(
+                conformer_grouping,
+                "_ordered_records",
+                return_value=entries,
+            ),
+            patch.object(
+                conformer_grouping,
+                "_rdkit_molecule",
+                side_effect=lambda *_args, **_kwargs: TrackedMolecule(),
+            ),
+            patch.object(
+                conformer_grouping,
+                "_grouping_bucket_key",
+                new=lambda entry: entry[1].record_key,
+            ),
+            patch.object(
+                conformer_grouping,
+                "_pair_mapping",
+                side_effect=AssertionError("cross-bucket pair comparison"),
+            ) as pair_mapping,
+        ):
+            suggestions = conformer_grouping.suggest_conformer_groups(object())
+
+        self.assertEqual(suggestions, ())
+        pair_mapping.assert_not_called()
+        self.assertLessEqual(TrackedMolecule.peak, 2)
 
     def test_ambiguous_symmetric_isomorphism_requires_review(self):
         from ChemBlender.core.import_pipeline.conformer_grouping import (

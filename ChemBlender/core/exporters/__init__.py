@@ -15,6 +15,7 @@ from .rdkit_molecular import (
     export_mol,
     export_sdf,
     export_smiles,
+    preview_molecular_export,
     sdf_entries_from_conformer_set,
     semantic_molecular_differences,
 )
@@ -29,6 +30,7 @@ __all__ = (
     "export_mol",
     "export_sdf",
     "export_smiles",
+    "preview_molecular_export",
     "sdf_entries_from_conformer_set",
     "export_xyz",
     "preview_extxyz_export",

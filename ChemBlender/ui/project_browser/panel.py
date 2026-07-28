@@ -21,7 +21,13 @@ from ..properties import (
     get_quick_import_state,
 )
 from ..session import get_scene_session
-from ...core import AtomFrameProperty, FrameSet, Structure
+from ...core import (
+    AtomFrameProperty,
+    ConformerSet,
+    FrameSet,
+    MolecularRecord,
+    Structure,
+)
 from ...dataset_view import write_vector_view
 from .model import (
     BrowserMode,
@@ -45,13 +51,17 @@ _QUALITY_ITEMS = (
     ("incomplete", "Incomplete", ""),
     ("invalid", "Invalid", ""),
 )
+_BROWSER_RNA_ROW_LIMIT = 1000
 _ROW_ICONS = {
     "diagnostic": "ERROR",
     "empty": "INFO",
     "grid3d": "VOLUME_DATA",
+    "conformer_set": "MOD_ARRAY",
     "group": "OUTLINER_COLLECTION",
     "source": "FILE",
     "source_revision": "FILE",
+    "molecular_record": "FILE_TEXT",
+    "record_property_column": "PROPERTIES",
     "structure": "MESH_DATA",
     "topology_record": "MOD_WIREFRAME",
     "view": "HIDE_OFF",
@@ -91,6 +101,7 @@ class CHEMBLENDER_PG_project_browser(bpy.types.PropertyGroup):
     )
     selected_index: IntProperty(default=0, update=_selection_changed)
     active_entity_id: StringProperty()
+    total_row_count: IntProperty(default=0)
     rows: CollectionProperty(type=CHEMBLENDER_PG_project_browser_row)
 
 
@@ -313,7 +324,8 @@ def refresh_project_browser(scene):
         settings.active_entity_id,
     )
     selected_id = str(selected) if selected is not None else ""
-    _copy_rows(settings.rows, rows)
+    settings.total_row_count = len(rows)
+    _copy_rows(settings.rows, rows[:_BROWSER_RNA_ROW_LIMIT])
     selected_index = next(
         (
             index
@@ -378,9 +390,20 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
             settings,
             "selected_index",
         )
+        if settings.total_row_count > len(settings.rows):
+            layout.label(
+                text=(
+                    f"Showing {len(settings.rows)} of "
+                    f"{settings.total_row_count} rows; refine Search or Filter"
+                ),
+                icon="INFO",
+            )
         if settings.active_entity_id:
             layout.label(text=f"Selected: {settings.active_entity_id}")
             selected = session.project.datasets.get(session.active_entity_id)
+            selected_record = session.project.molecular_records.get(
+                session.active_entity_id
+            )
             if (
                 isinstance(selected, AtomFrameProperty)
                 and selected.semantic_role == "atomic_force"
@@ -391,7 +414,8 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
                 )
             if (
                 session.active_entity_id in session.project.structures
-                or isinstance(selected, FrameSet)
+                or isinstance(selected, (FrameSet, ConformerSet))
+                or isinstance(selected_record, MolecularRecord)
             ):
                 layout.operator(
                     "chemblender.export_project_entity",

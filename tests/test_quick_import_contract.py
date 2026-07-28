@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 from ChemBlender.core import ProjectSession, create_session
@@ -127,6 +127,80 @@ class QuickImportContractTests(unittest.TestCase):
             validation.keywords["default"],
             ValidationMode.BALANCED.value,
         )
+
+    def test_smiles_operator_uses_text_import_source(self):
+        module = importlib.import_module(QUICK_IMPORT_MODULE)
+        cls = module.CHEMBLENDER_OT_import_smiles_text
+        self.assertEqual(cls.bl_idname, "chemblender.import_smiles_text")
+        self.assertEqual(cls.__annotations__["smiles_text"].kind, "string")
+        operator = cls()
+        operator.smiles_text = "CO"
+        operator.validation_mode = ValidationMode.STRICT.value
+        session = create_session(temp_parent=Path(self.temporary.name))
+        captured = []
+        context = SimpleNamespace(
+            scene=SimpleNamespace(
+                chemblender_quick_import=SimpleNamespace(
+                    validation_mode="balanced",
+                    recent_summary="",
+                )
+            ),
+        )
+
+        def preflight(request, *_args, **_kwargs):
+            captured.append(request)
+            return object()
+
+        with patch.object(
+            module,
+            "get_scene_session",
+            return_value=session,
+        ), patch.object(
+            module,
+            "create_quick_import_staging",
+            return_value=object(),
+        ), patch.object(
+            module,
+            "store_quick_import_preview",
+        ), patch.object(
+            module,
+            "get_reader_plugin_registry",
+            return_value=object(),
+        ), patch.object(
+            module,
+            "preflight_reader_plugins",
+            side_effect=preflight,
+        ), patch.object(
+            module,
+            "prepare_conformer_suggestions",
+            return_value=(),
+        ), patch.object(
+            cls,
+            "_finish_preview",
+            return_value={"FINISHED"},
+        ):
+            self.assertEqual(operator.execute(context), {"FINISHED"})
+        self.assertEqual(captured[0].sources[0].text, "CO")
+
+    def test_smiles_invoke_opens_text_and_validation_dialog(self):
+        module = importlib.import_module(QUICK_IMPORT_MODULE)
+        operator = module.CHEMBLENDER_OT_import_smiles_text()
+        dialogs = []
+        context = SimpleNamespace(
+            scene=SimpleNamespace(
+                chemblender_quick_import=SimpleNamespace(
+                    validation_mode=ValidationMode.STRICT.value,
+                )
+            ),
+            window_manager=SimpleNamespace(
+                invoke_props_dialog=lambda value: dialogs.append(value) or {"RUNNING_MODAL"},
+            ),
+        )
+        self.fake_bpy.app.background = False
+
+        self.assertEqual(operator.invoke(context, None), {"RUNNING_MODAL"})
+        self.assertEqual(dialogs, [operator])
+        self.assertEqual(operator.validation_mode, ValidationMode.STRICT.value)
 
     def test_invoke_opens_file_selector(self):
         module = importlib.import_module(QUICK_IMPORT_MODULE)
@@ -384,6 +458,29 @@ class QuickImportContractTests(unittest.TestCase):
             importlib.import_module(PROPERTIES_MODULE)._QUICK_IMPORT_STATES,
         )
 
+    def test_generator_exit_is_not_converted_to_cancelled(self):
+        source = Path(self.temporary.name) / "fatal.xyz"
+        source.write_text("1\nA\nH 0 0 0\n", encoding="utf-8")
+        _module, operator = self.operator_for(source)
+
+        with self.assertRaises(GeneratorExit):
+            operator._handle_error(None, GeneratorExit())
+
+    def test_fatal_cleanup_error_is_not_hidden_by_ordinary_error(self):
+        module = importlib.import_module(QUICK_IMPORT_MODULE)
+        operator = module.CHEMBLENDER_OT_quick_import()
+        fatal = MemoryError("cleanup exhausted memory")
+
+        with patch.object(
+            module,
+            "clear_quick_import_state",
+            side_effect=fatal,
+        ):
+            with self.assertRaises(MemoryError) as raised:
+                operator._handle_error(object(), ValueError("preflight failed"))
+
+        self.assertIs(raised.exception, fatal)
+
     def test_discard_failure_retains_owner_for_successful_retry(self):
         source = Path(self.temporary.name) / "failed.xyz"
         source.write_text("1\nA\nH 0 0 0\n", encoding="utf-8")
@@ -507,6 +604,112 @@ class QuickImportContractTests(unittest.TestCase):
         self.assertIn(("progress_end",), calls)
         self.assertNotIn(project_session.id, properties._QUICK_IMPORT_STATES)
 
+    def test_modal_retries_timer_cleanup_before_reraising_progress_fatal(self):
+        module = importlib.import_module(QUICK_IMPORT_MODULE)
+        operator = module.CHEMBLENDER_OT_quick_import()
+        session = object()
+        releases = []
+        progress_calls = []
+        job = SimpleNamespace(
+            done=True,
+            error=None,
+            drain_progress=lambda: ("hash", 1, 2),
+            cancel=Mock(),
+            join=Mock(return_value=True),
+            timer_pending=True,
+            abandon_ui=Mock(),
+        )
+
+        def release():
+            releases.append(True)
+            if len(releases) == 1:
+                raise OSError("timer cleanup failed")
+            job.timer_pending = False
+
+        job.release_ui = release
+        operator._job = job
+        operator._project_session = session
+        operator.report = lambda *_args: None
+        context = SimpleNamespace(
+            window_manager=SimpleNamespace(
+                progress_update=lambda _value: (
+                    progress_calls.append(True)
+                    or (_ for _ in ()).throw(
+                        MemoryError("progress exhausted memory")
+                    )
+                )
+            )
+        )
+
+        with (
+            patch.object(module, "finish_quick_import_job") as finish,
+            patch.object(module, "clear_quick_import_state") as clear,
+        ):
+            self.assertEqual(
+                operator.modal(
+                    context,
+                    SimpleNamespace(type="TIMER"),
+                ),
+                {"RUNNING_MODAL"},
+            )
+            self.assertIs(operator._job, job)
+            with self.assertRaisesRegex(MemoryError, "exhausted memory"):
+                operator.modal(
+                    context,
+                    SimpleNamespace(type="TIMER"),
+                )
+
+        self.assertEqual(progress_calls, [True])
+        self.assertEqual(releases, [True, True])
+        job.cancel.assert_called_once_with()
+        job.join.assert_called_once_with(None)
+        finish.assert_called_once_with(session, job)
+        clear.assert_called_once_with(session)
+        self.assertIsNone(operator._job)
+
+    def test_modal_join_fatal_releases_ui_and_staging_before_reraising(self):
+        module = importlib.import_module(QUICK_IMPORT_MODULE)
+        operator = module.CHEMBLENDER_OT_quick_import()
+        session = object()
+        fatal = GeneratorExit("join stopped")
+        releases = []
+
+        def join(timeout):
+            if timeout == 0:
+                raise fatal
+            return True
+
+        job = SimpleNamespace(
+            done=True,
+            error=None,
+            drain_progress=lambda: None,
+            cancel=Mock(),
+            join=join,
+            timer_pending=False,
+            release_ui=lambda: releases.append(True),
+            abandon_ui=Mock(),
+        )
+        operator._job = job
+        operator._project_session = session
+        context = SimpleNamespace(window_manager=SimpleNamespace())
+
+        with (
+            patch.object(module, "finish_quick_import_job") as finish,
+            patch.object(module, "clear_quick_import_state") as clear,
+        ):
+            with self.assertRaises(GeneratorExit) as raised:
+                operator.modal(
+                    context,
+                    SimpleNamespace(type="TIMER"),
+                )
+
+        self.assertIs(raised.exception, fatal)
+        self.assertEqual(releases, [True])
+        job.cancel.assert_called_once_with()
+        finish.assert_called_once_with(session, job)
+        clear.assert_called_once_with(session)
+        self.assertIsNone(operator._job)
+
     def test_interactive_preflight_completion_opens_preview_dialog(self):
         module = importlib.import_module(QUICK_IMPORT_MODULE)
         operator = module.CHEMBLENDER_OT_quick_import()
@@ -529,6 +732,69 @@ class QuickImportContractTests(unittest.TestCase):
 
         self.assertEqual(result, {"FINISHED"})
         self.assertEqual(calls, ["INVOKE_DEFAULT"])
+
+    def test_preflight_job_precomputes_conformer_suggestions_off_main_thread(self):
+        module = importlib.import_module(QUICK_IMPORT_MODULE)
+        preview = ImportPreview(session_id=uuid4(), source_previews=())
+        suggestions = (object(),)
+        request = object()
+        registry = object()
+        staging = object()
+
+        with patch.object(
+            module,
+            "preflight_reader_plugins",
+            return_value=preview,
+        ), patch.object(
+            module,
+            "prepare_conformer_suggestions",
+            return_value=suggestions,
+        ) as prepare:
+            job = module._PreflightJob(request, registry, staging)
+            job._run()
+
+        self.assertIs(job.preview, preview)
+        self.assertIs(job.conformer_suggestions, suggestions)
+        self.assertIsNone(job.error)
+        prepare.assert_called_once_with(
+            preview,
+            staging,
+            is_cancelled=job._cancelled.is_set,
+        )
+        self.assertEqual(
+            job.drain_progress(),
+            ("conformer_grouping", 1, 1),
+        )
+
+    def test_preflight_job_cancels_conformer_precompute(self):
+        module = importlib.import_module(QUICK_IMPORT_MODULE)
+        preview = ImportPreview(session_id=uuid4(), source_previews=())
+        entered = threading.Event()
+
+        def slow(_preview, _staging, *, is_cancelled):
+            entered.set()
+            while not is_cancelled():
+                time.sleep(0.001)
+            raise ImportCancelled("conformer grouping cancelled")
+
+        with patch.object(
+            module,
+            "preflight_reader_plugins",
+            return_value=preview,
+        ), patch.object(
+            module,
+            "prepare_conformer_suggestions",
+            side_effect=slow,
+        ):
+            job = module._PreflightJob(object(), object(), object())
+            job.start()
+            self.assertTrue(entered.wait(1))
+            job.cancel()
+            self.assertTrue(job.join(1))
+
+        self.assertTrue(job.done)
+        self.assertIsInstance(job.error, ImportCancelled)
+        self.assertEqual(str(job.error), "conformer grouping cancelled")
 
     def test_modal_thread_start_failure_releases_owned_staging(self):
         source = Path(self.temporary.name) / "start-failure.xyz"
