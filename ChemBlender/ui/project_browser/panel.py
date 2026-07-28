@@ -38,6 +38,7 @@ from .model import (
 
 _scientific_edit = importlib.import_module("..scientific_edit", __package__)
 _topology = importlib.import_module("..topology", __package__)
+_grid = importlib.import_module("..grid", __package__)
 
 
 _MODE_ITEMS = tuple(
@@ -427,6 +428,11 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
             session,
         )
         _topology.draw_topology_controls(
+            layout,
+            context,
+            session,
+        )
+        _grid.draw_grid_controls(
             layout,
             context,
             session,

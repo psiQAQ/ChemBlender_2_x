@@ -42,6 +42,7 @@ from ..scene_preset_view import (
 from ..runtime.reader_api_bridge import get_reader_plugin_registry
 from .default_views import describe_default_view, plan_default_view
 from .extxyz_preview import extxyz_preview_summary
+from .grid import grid_preview_summary
 from .properties import (
     discard_quick_import_preview,
     finish_quick_import_job,
@@ -197,6 +198,13 @@ class CHEMBLENDER_PG_import_preview_row(bpy.types.PropertyGroup):
     molecular_recovery_summary: StringProperty()
     molecular_topology_summary: StringProperty()
     molecular_property_summary: StringProperty()
+    grid_dataset_count: IntProperty()
+    grid_source_ids: StringProperty()
+    grid_sample_range: StringProperty()
+    grid_shape: StringProperty()
+    grid_coordinate_unit: StringProperty()
+    grid_value_unit: StringProperty()
+    grid_quality: StringProperty()
     conformer_suggestion_count: IntProperty()
     quality: StringProperty()
     conflict_id: StringProperty()
@@ -238,6 +246,13 @@ class PreviewProjection:
     molecular_recovery_summary: str = ""
     molecular_topology_summary: str = ""
     molecular_property_summary: str = ""
+    grid_dataset_count: int = 0
+    grid_source_ids: str = ""
+    grid_sample_range: str = ""
+    grid_shape: str = ""
+    grid_coordinate_unit: str = ""
+    grid_value_unit: str = ""
+    grid_quality: str = ""
     conformer_suggestion_count: int = 0
     conflict_id: str = ""
     allowed_actions: str = ""
@@ -561,9 +576,11 @@ def project_import_preview(project_session, state, registry):
         conflict = conflicts_by_source.get(source.source_id)
         default_view_plan = None
         extxyz_summary = None
+        grid_summary = None
         molecular_summary = (0, "", "", "", "", 0)
         if len(source.staged_batch_ids) == 1:
             batch = staging.result(source.staged_batch_ids[0])
+            grid_summary = grid_preview_summary(batch)
             if source.selected_reader_id == "extxyz":
                 extxyz_summary = extxyz_preview_summary(batch)
             batch_record_ids = {
@@ -645,6 +662,38 @@ def project_import_preview(project_session, state, registry):
                 molecular_recovery_summary=molecular_summary[2],
                 molecular_topology_summary=molecular_summary[3],
                 molecular_property_summary=molecular_summary[4],
+                grid_dataset_count=(
+                    0 if grid_summary is None else grid_summary.dataset_count
+                ),
+                grid_source_ids=(
+                    ""
+                    if grid_summary is None
+                    else ", ".join(grid_summary.source_dataset_ids)
+                ),
+                grid_sample_range=(
+                    ""
+                    if grid_summary is None
+                    else "; ".join(
+                        f"{low:g}..{high:g}"
+                        for low, high in grid_summary.sample_ranges
+                    )
+                ),
+                grid_shape=(
+                    ""
+                    if grid_summary is None
+                    else " × ".join(map(str, grid_summary.grid_shape))
+                ),
+                grid_coordinate_unit=(
+                    ""
+                    if grid_summary is None
+                    else grid_summary.coordinate_unit
+                ),
+                grid_value_unit=(
+                    "" if grid_summary is None else grid_summary.value_unit
+                ),
+                grid_quality=(
+                    "" if grid_summary is None else grid_summary.quality
+                ),
                 conformer_suggestion_count=molecular_summary[5],
                 conflict_id=str(conflict.id) if conflict else "",
                 conflict_action=(
@@ -1442,6 +1491,22 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                         f"Conformer suggestions: "
                         f"{row.conformer_suggestion_count}"
                     )
+                )
+            if row.grid_dataset_count:
+                box.label(
+                    text=(
+                        f"Grid: {row.grid_shape} {row.grid_coordinate_unit} · "
+                        f"{row.grid_dataset_count} dataset(s)"
+                    )
+                )
+                box.label(text=f"Dataset IDs: {row.grid_source_ids}")
+                box.label(text=f"Sample range: {row.grid_sample_range}")
+                box.label(
+                    text=(
+                        f"Value unit: {row.grid_value_unit} · "
+                        f"{row.grid_quality}"
+                    ),
+                    icon="ERROR" if row.grid_quality == "ambiguous" else "INFO",
                 )
             if row.conflict_id:
                 box.prop(row, "conflict_action")

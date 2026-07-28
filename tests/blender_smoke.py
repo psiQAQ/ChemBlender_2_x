@@ -188,6 +188,7 @@ def assert_registration_isolation(module_key, before_install_modules):
     assert f"{module_key}.ui.topology" in sys.modules
     assert f"{module_key}.ui.scientific_edit" in sys.modules
     assert f"{module_key}.ui.export" in sys.modules
+    assert f"{module_key}.ui.grid" in sys.modules
     assert f"{module_key}.ui.project_browser.panel" in sys.modules
     assert f"{module_key}.ui.file_handlers" in sys.modules
     assert f"{module_key}.ui.workspace" in sys.modules
@@ -240,7 +241,10 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_scientific_edits")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_frame_force")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_export_project_entity")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_resolve_grid_semantics")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_create_grid_view")
     assert hasattr(bpy.types.Scene, "chemblender_topology")
+    assert hasattr(bpy.types.Scene, "chemblender_grid")
     assert_file_handlers(module_key)
     properties = importlib.import_module(f"{module_key}.ui.properties")
     property_identity = properties._scene_property_identity()
@@ -265,6 +269,7 @@ def assert_disabled(module_key, owned_classes):
     assert not hasattr(bpy.types.Scene, "my_tool")
     assert not hasattr(bpy.types.Scene, "chemblender_quick_import")
     assert not hasattr(bpy.types.Scene, "chemblender_topology")
+    assert not hasattr(bpy.types.Scene, "chemblender_grid")
     assert READER_API_HANDLE_KEY not in bpy.app.driver_namespace
     assert not any(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
@@ -993,6 +998,10 @@ def assert_quick_import(module_key, repository_root):
         registry,
     )
     assert cube_rows[0].default_view_label == "Default view: Grid Volume"
+    assert cube_rows[0].grid_dataset_count == 1
+    assert cube_rows[0].grid_shape == "2 × 2 × 2"
+    assert cube_rows[0].grid_coordinate_unit == "bohr"
+    assert cube_rows[0].grid_quality == "ambiguous"
     structure_count = len(session.project.structures)
     source_revisions = set(session.project.source_revisions)
     objects_before_cube = set(bpy.data.objects)
@@ -1031,6 +1040,17 @@ def assert_quick_import(module_key, repository_root):
     assert cube_cache.is_relative_to(session_root)
     assert cube_cache.parent == session_root / "view-cache" / "volume"
     assert cube_cache.is_file()
+    session.active_entity_id = cube_grid.id
+    grid_settings = bpy.context.scene.chemblender_grid
+    grid_settings.dataset_index = 0
+    grid_settings.preset_id = "generic_scalar"
+    grid_settings.value_unit = "dimensionless"
+    assert bpy.ops.chemblender.resolve_grid_semantics() == {"FINISHED"}
+    resolved_grid = session.project.datasets[session.active_entity_id]
+    assert resolved_grid.id != cube_grid.id
+    assert resolved_grid.status is core.DatasetStatus.COMPLETE
+    assert resolved_grid.semantic_role == "scalar_field"
+    assert session.project.datasets[cube_grid.id] is cube_grid
     browser_settings.mode = "by_data"
     rows_after_cube = browser.refresh_project_browser(bpy.context.scene)
     assert browser_settings.quality_filter == "all"
@@ -2967,11 +2987,30 @@ expected_inventory = {
 expected_inventory["module_callbacks"] += [
     {"module": ".ui.session", "register": True, "unregister": True},
     {"module": ".ui.properties", "register": True, "unregister": True},
+    {"module": ".ui.grid", "register": True, "unregister": True},
     {"module": ".ui.project_browser.panel", "register": True, "unregister": True},
     {"module": ".ui.file_handlers", "register": True, "unregister": True},
     {"module": ".ui.workspace", "register": True, "unregister": True},
 ]
 expected_inventory["registered_classes"] += [
+    {
+        "module": ".ui.grid",
+        "name": "CHEMBLENDER_OT_create_grid_view",
+        "id": "chemblender.create_grid_view",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.grid",
+        "name": "CHEMBLENDER_OT_resolve_grid_semantics",
+        "id": "chemblender.resolve_grid_semantics",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.grid",
+        "name": "CHEMBLENDER_PG_grid_settings",
+        "id": None,
+        "base": "PropertyGroup",
+    },
     {
         "module": ".ui.export",
         "name": "CHEMBLENDER_OT_export_project_entity",

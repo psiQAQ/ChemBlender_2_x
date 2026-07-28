@@ -334,6 +334,13 @@ class ImportPreviewUIContractTests(unittest.TestCase):
                 "molecular_recovery_summary",
                 "molecular_topology_summary",
                 "molecular_property_summary",
+                "grid_dataset_count",
+                "grid_source_ids",
+                "grid_sample_range",
+                "grid_shape",
+                "grid_coordinate_unit",
+                "grid_value_unit",
+                "grid_quality",
                 "conformer_suggestion_count",
                 "quality",
                 "conflict_id",
@@ -935,6 +942,11 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             row.default_view_label,
             "Default view: Grid Volume",
         )
+        self.assertEqual(row.grid_dataset_count, 1)
+        self.assertEqual(row.grid_shape, "2 × 2 × 2")
+        self.assertEqual(row.grid_coordinate_unit, "bohr")
+        self.assertEqual(row.grid_value_unit, "unknown")
+        self.assertEqual(row.grid_quality, "ambiguous")
 
     def test_default_view_planner_skips_grid_units_unsupported_by_adapters(self):
         default_views = importlib.import_module(
