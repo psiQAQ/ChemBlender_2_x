@@ -63,6 +63,12 @@ jobs:
           Invoke-WebRequest -Uri "https://files.pythonhosted.org/packages/68/d0/5de3d0d7e66f0e7e7795ab94a53b826e257176c15c9ee79f15621ac040ed/rdkit-2026.3.3-cp313-cp313-win_amd64.whl" -OutFile $wheelPath
           $hash = (Get-FileHash -Algorithm SHA256 $wheelPath).Hash.ToLowerInvariant()
           if ($hash -ne "f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48") { throw "RDKit wheel hash mismatch" }
+          $wheelPath = (Resolve-Path -LiteralPath $wheelPath).Path
+          [IO.File]::AppendAllText(
+            $env:GITHUB_ENV,
+            "RDKIT_WHEEL=$wheelPath`n",
+            [Text.UTF8Encoding]::new($false)
+          )
 
           $wheelPath = "$wheelDir/gemmi-0.7.5-cp313-cp313-win_amd64.whl"
           Invoke-WebRequest -Uri "https://files.pythonhosted.org/packages/ee/ab/7d7463cda94f8b68b969ea97aaad679655a0e436efd6a643e528a8de114e/gemmi-0.7.5-cp313-cp313-win_amd64.whl" -OutFile $wheelPath
@@ -92,8 +98,21 @@ jobs:
           $env:TMP = $env:RUNNER_TEMP
           $env:BLENDER_USER_RESOURCES = Join-Path $env:RUNNER_TEMP "blender-user"
           New-Item -ItemType Directory -Path $env:BLENDER_USER_RESOURCES -Force | Out-Null
-          & $blenderPython -m unittest discover -s tests -p "test_*.py" -v
-          if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
+          $rdkitTestSite = Join-Path $env:RUNNER_TEMP "rdkit-test-site"
+          & $blenderPython -m pip install --disable-pip-version-check --no-index --no-deps --target $rdkitTestSite $env:RDKIT_WHEEL
+          if ($LASTEXITCODE -ne 0) { throw "RDKit test bootstrap failed" }
+          $previousPythonPath = $env:PYTHONPATH
+          try {
+            $env:PYTHONPATH = $rdkitTestSite
+            & $blenderPython -m unittest discover -s tests -p "test_*.py" -v
+            if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
+          } finally {
+            if ($null -eq $previousPythonPath) {
+              Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+            } else {
+              $env:PYTHONPATH = $previousPythonPath
+            }
+          }
           & $blenderPython ChemBlender/scripts/build_extension.py --python $blenderPython --blender $blender
           if ($LASTEXITCODE -ne 0) { throw "Extension build failed" }
           $packageName = $env:PACKAGE_NAME

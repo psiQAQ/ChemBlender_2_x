@@ -48,6 +48,36 @@ class RepositoryContractTests(unittest.TestCase):
         ).stdout.strip()
         self.assertEqual(tracked, "")
 
+    def test_molecular_fixture_line_endings_are_cross_platform_stable(self):
+        attributes = subprocess.run(
+            [
+                "git",
+                "check-attr",
+                "text",
+                "eol",
+                "--",
+                "tests/fixtures/mol/water-v2000.mol",
+                "tests/fixtures/sdf/records.sdf",
+                "tests/fixtures/sdf/crlf.sdf",
+            ],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.splitlines()
+
+        self.assertIn(
+            "tests/fixtures/mol/water-v2000.mol: text: set",
+            attributes,
+        )
+        self.assertIn(
+            "tests/fixtures/mol/water-v2000.mol: eol: lf",
+            attributes,
+        )
+        self.assertIn("tests/fixtures/sdf/records.sdf: text: set", attributes)
+        self.assertIn("tests/fixtures/sdf/records.sdf: eol: lf", attributes)
+        self.assertIn("tests/fixtures/sdf/crlf.sdf: text: unset", attributes)
+
     def test_runtime_source_has_no_package_install(self):
         source = "\n".join(
             path.read_text(encoding="utf-8")
@@ -170,15 +200,27 @@ class RepositoryContractTests(unittest.TestCase):
         workflow = (
             ROOT / ".github" / "workflows" / "extension-package.yml"
         ).read_text(encoding="utf-8")
+        download_step = workflow.split(
+            "\n      - name: Download pinned extension wheels\n", 1
+        )[1].split("\n      - name: Download Blender 5.1.2\n", 1)[0]
         step = workflow.split(
             "\n      - name: Test, validate, build, and install\n", 1
         )[1].split("\n      - uses:", 1)[0]
 
+        self.assertIn('"RDKIT_WHEEL=$wheelPath`n"', download_step)
+        self.assertIn("$env:GITHUB_ENV", download_step)
         self.assertIn(
             "$blenderPython = Join-Path (Split-Path $blender) "
             '"5.1/python/bin/python.exe"',
             step,
         )
+        self.assertIn(
+            "& $blenderPython -m pip install --disable-pip-version-check "
+            "--no-index --no-deps --target $rdkitTestSite $env:RDKIT_WHEEL",
+            step,
+        )
+        self.assertIn("$env:PYTHONPATH = $rdkitTestSite", step)
+        self.assertIn("Remove-Item Env:PYTHONPATH", step)
         self.assertIn(
             '& $blenderPython -m unittest discover -s tests -p "test_*.py" -v',
             step,
@@ -200,6 +242,12 @@ class RepositoryContractTests(unittest.TestCase):
         test_command = step.index("& $blenderPython -m unittest discover")
         self.assertLess(step.index("$env:TEMP = $env:RUNNER_TEMP"), test_command)
         self.assertLess(step.index("$env:TMP = $env:RUNNER_TEMP"), test_command)
+        self.assertLess(step.index("$env:PYTHONPATH = $rdkitTestSite"), test_command)
+        self.assertLess(test_command, step.index("Remove-Item Env:PYTHONPATH"))
+        self.assertLess(
+            step.index("Remove-Item Env:PYTHONPATH"),
+            step.index("& $blenderPython ChemBlender/scripts/build_extension.py"),
+        )
 
     def test_package_workflow_retains_tag_artifacts_for_review(self):
         workflow = (
