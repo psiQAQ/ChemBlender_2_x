@@ -73,3 +73,26 @@ change release metadata, push, tag or publish.
 
 **Commit boundary:** `chore: close Wave 1 performance gate`, followed by
 `chore: checkpoint Wave 1 native molecular and grid`.
+
+## Completion Evidence
+
+- Task 1: Passed. extXYZ 1,000 × 1,000 Preview median/p95
+  0.448/0.457 s; full materialization 99.702 s; topology 50k
+  1.519/1.525 s; Cube 128³ total 1.679902 s; isolated 10k SDF product wall
+  187.247 s; Project Browser RNA median/p95 5.56/5.66 ms.
+- Task 2: Passed. Quick Import preflight, import materialization, export,
+  Cube VDB and topology inference use visible modal/background ownership.
+  Cancellation is fail-closed and leaves no live-project mutation or owned
+  staged array/cache leak.
+- Task 3: Passed. Focused 278/278; final full 1411 Passed / 28 Skipped /
+  0 Failed; `compileall` and `git diff --check` Passed. Blender 5.1.2
+  validate/build, 154-entry ZIP audit, fresh isolated install, product smoke
+  and lifecycle ×2 Passed. Package SHA-256:
+  `e5a28384edd7fbe1afafc3fa09a1df2461daed5ed0ac8f67c39244b902a42eee`.
+- Task 4: Passed. Separate specification-compliance and code-quality reviews
+  found and fixed the topology main-thread stall, missing deferred snapshot
+  fail-open and cancellation/test-isolation regressions.
+- Implementation:
+  `fe338ac42f707b9b286be7d638c6915e6c366567`.
+- Remote CI: Not Run.
+- Stop boundary: Wave 2 remains queued and unstarted.
