@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from .model import (
     ArrayData,
+    AtomicProperty,
     DatasetStatus,
     Grid3D,
     ImportBatch,
@@ -21,6 +22,9 @@ from .readers import (
     SniffMatch,
     SniffResult,
 )
+
+
+READER_VERSION = "2"
 
 
 def _finite_floats(fields, label):
@@ -52,7 +56,7 @@ def _header_and_axes(lines):
 
     grid_shape = []
     step_vectors = []
-    has_negative_count = False
+    signed_voxel_counts = []
     for line in lines[3:6]:
         fields = line.split()
         if len(fields) != 4:
@@ -63,16 +67,16 @@ def _header_and_axes(lines):
             raise ValueError("Cube voxel count must be an integer") from error
         if signed_count == 0:
             raise ValueError("Cube voxel counts must be nonzero")
+        signed_voxel_counts.append(signed_count)
         grid_shape.append(abs(signed_count))
         step_vectors.append(_finite_floats(fields[1:4], "step vector"))
-        has_negative_count = has_negative_count or signed_count < 0
     return (
         signed_atom_count,
         nval,
         origin,
         tuple(grid_shape),
         tuple(step_vectors),
-        has_negative_count,
+        tuple(signed_voxel_counts),
     )
 
 
@@ -105,7 +109,7 @@ def parse_cube(source: Path) -> ImportBatch:
         origin,
         grid_shape,
         step_vectors,
-        has_negative_count,
+        signed_voxel_counts,
     ) = _header_and_axes(lines)
 
     atom_count = abs(signed_atom_count)
@@ -113,8 +117,8 @@ def parse_cube(source: Path) -> ImportBatch:
     if len(lines) < atom_end:
         raise ValueError("Cube source does not contain its declared atoms")
     atomic_numbers = []
+    nuclear_charge_values = []
     flat_coordinates = []
-    nondefault_nuclear_charge = False
     for index, line in enumerate(lines[6:atom_end], start=1):
         fields = line.split()
         if len(fields) != 5:
@@ -131,10 +135,8 @@ def parse_cube(source: Path) -> ImportBatch:
             fields[1:], f"atom line {index}"
         )
         atomic_numbers.append(atomic_number)
+        nuclear_charge_values.append(nuclear_charge)
         flat_coordinates.extend(coordinates)
-        nondefault_nuclear_charge = (
-            nondefault_nuclear_charge or nuclear_charge != atomic_number
-        )
 
     tokens = " ".join(lines[atom_end:]).split()
     dataset_ids = None
@@ -186,6 +188,7 @@ def parse_cube(source: Path) -> ImportBatch:
     grid_values = grid_values.cast("B").cast("d", shape=shape)
     structure_id = uuid4()
     grid_id = uuid4()
+    nuclear_charge_id = uuid4()
     provenance_id = uuid4()
     structure = Structure(
         id=structure_id,
@@ -207,6 +210,21 @@ def parse_cube(source: Path) -> ImportBatch:
         coordinate_unit="bohr",
         structure_id=structure_id,
     )
+    nuclear_charges = AtomicProperty(
+        id=nuclear_charge_id,
+        revision=source_hash,
+        semantic_role="nuclear_charge",
+        domain="atom",
+        data=ArrayData(
+            memoryview(array.array("d", nuclear_charge_values)),
+            ("atom",),
+            "elementary_charge",
+        ),
+        status=DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(provenance_id,),
+        structure_id=structure_id,
+    )
 
     issues = [
         ParserIssue(
@@ -220,7 +238,7 @@ def parse_cube(source: Path) -> ImportBatch:
             "Cube does not reliably identify the scalar-field value unit",
         ),
     ]
-    if has_negative_count:
+    if any(count < 0 for count in signed_voxel_counts):
         issues.append(
             ParserIssue(
                 IssueKind.WARNING,
@@ -228,19 +246,12 @@ def parse_cube(source: Path) -> ImportBatch:
                 "negative voxel counts were treated as bohr Cube dimensions",
             )
         )
-    if nondefault_nuclear_charge:
-        issues.append(
-            ParserIssue(
-                IssueKind.UNSUPPORTED,
-                "atom_nuclear_charge",
-                "Cube nuclear charges differing from atomic numbers were not imported",
-            )
-        )
-
     parameters = [
         ("format", "cube"),
         ("comment_1", lines[0]),
         ("comment_2", lines[1]),
+        ("signed_atom_count", signed_atom_count),
+        ("signed_voxel_counts", signed_voxel_counts),
         ("dataset_count", dataset_count),
     ]
     if dataset_ids is not None:
@@ -249,7 +260,7 @@ def parse_cube(source: Path) -> ImportBatch:
         id=provenance_id,
         revision=source_hash,
         producer="ChemBlender Cube reader",
-        producer_version="1",
+        producer_version=READER_VERSION,
         source=str(source.resolve()),
         source_hash=source_hash,
         parent_ids=(),
@@ -258,14 +269,19 @@ def parse_cube(source: Path) -> ImportBatch:
     )
     report = ParserReport(
         reader_id="cube",
-        reader_version="1",
-        created_entity_ids=(structure_id, grid_id, provenance_id),
-        parsed_capabilities=("structure", "grid"),
+        reader_version=READER_VERSION,
+        created_entity_ids=(
+            structure_id,
+            grid_id,
+            nuclear_charge_id,
+            provenance_id,
+        ),
+        parsed_capabilities=("structure", "grid", "atomic_property"),
         issues=tuple(issues),
     )
     return ImportBatch(
         structures=(structure,),
-        datasets=(grid,),
+        datasets=(grid, nuclear_charges),
         provenance=(provenance,),
         report=report,
     )
@@ -273,11 +289,12 @@ def parse_cube(source: Path) -> ImportBatch:
 
 CUBE_READER = ReaderDescriptor(
     reader_id="cube",
-    reader_version="1",
+    reader_version=READER_VERSION,
     extensions=(".cube", ".cub"),
     capabilities={
         "structure": CapabilitySupport.SUPPORTED,
         "grid": CapabilitySupport.SUPPORTED,
+        "atomic_property": CapabilitySupport.SUPPORTED,
     },
     priority=100,
     sniff=sniff_cube,

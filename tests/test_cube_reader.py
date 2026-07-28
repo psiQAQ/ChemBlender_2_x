@@ -4,6 +4,8 @@ import unittest
 from uuid import uuid4
 
 from ChemBlender.core import (
+    AtomicProperty,
+    CapabilitySupport,
     DatasetStatus,
     Grid3D,
     IssueKind,
@@ -12,6 +14,7 @@ from ChemBlender.core import (
     SniffMatch,
 )
 from ChemBlender.core.cube import CUBE_READER, sniff_cube
+from ChemBlender.core.sidecar import close_project, open_project, save_project
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -97,13 +100,57 @@ field
         self.assertEqual(grid.data.values[1, 0, 0, 1], 20.0)
         self.assertNotIn("dataset_ids", dict(batch.provenance[0].parameters))
 
-    def test_nondefault_nuclear_charge_is_reported(self):
+    def test_parse_preserves_nuclear_charges_and_source_conventions(self):
         content = SHEARED.read_bytes().replace(b"8.000000", b"6.000000", 1)
         batch = self.parse_bytes(content)
-        self.assertIn(
-            (IssueKind.UNSUPPORTED, "atom_nuclear_charge"),
-            {(issue.kind, issue.path) for issue in batch.report.issues},
+        structure = batch.structures[0]
+        charge = next(
+            item for item in batch.datasets if isinstance(item, AtomicProperty)
         )
+        self.assertEqual(charge.structure_id, structure.id)
+        self.assertEqual(charge.semantic_role, "nuclear_charge")
+        self.assertEqual(charge.data.dims, ("atom",))
+        self.assertEqual(charge.data.unit, "elementary_charge")
+        self.assertEqual(tuple(charge.data.values), (6.0,))
+        self.assertIn(charge.id, batch.report.created_entity_ids)
+        self.assertIn("atomic_property", batch.report.parsed_capabilities)
+        self.assertIs(
+            CUBE_READER.capabilities["atomic_property"],
+            CapabilitySupport.SUPPORTED,
+        )
+        parameters = dict(batch.provenance[0].parameters)
+        self.assertEqual(parameters["comment_1"], "sheared grid")
+        self.assertEqual(parameters["comment_2"], "unknown scalar field")
+        self.assertEqual(parameters["signed_atom_count"], 1)
+        self.assertEqual(parameters["signed_voxel_counts"], (2, 2, 2))
+        self.assertNotIn(
+            "atom_nuclear_charge",
+            {issue.path for issue in batch.report.issues},
+        )
+
+        project = QCProject(id=uuid4(), schema_version="0.2")
+        project.commit(batch)
+        with TemporaryDirectory() as directory:
+            sidecar = Path(directory) / "cube.cbq"
+            save_project(sidecar, project)
+            restored = open_project(sidecar)
+            try:
+                restored_charge = restored.datasets[charge.id]
+                self.assertIsInstance(restored_charge, AtomicProperty)
+                self.assertEqual(tuple(restored_charge.data.values), (6.0,))
+            finally:
+                close_project(restored)
+
+    def test_parse_preserves_default_nuclear_charge_and_dataset_ids(self):
+        batch = CUBE_READER.parse(TWO_DATASETS)
+        charge = next(
+            item for item in batch.datasets if isinstance(item, AtomicProperty)
+        )
+        self.assertEqual(tuple(charge.data.values), (1.0,))
+        parameters = dict(batch.provenance[0].parameters)
+        self.assertEqual(parameters["signed_atom_count"], -1)
+        self.assertEqual(parameters["signed_voxel_counts"], (-2, 2, 1))
+        self.assertEqual(parameters["dataset_ids"], (5, 7))
 
     def test_parse_rejects_invalid_cube_boundaries(self):
         base = SHEARED.read_bytes()

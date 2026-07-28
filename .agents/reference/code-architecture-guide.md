@@ -190,7 +190,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/core/derivations/smiles_3d.py` | `derive_smiles_3d()` | 从关联的 `Structure`、`TopologyRecord`、`MolecularRecord` 与真实 `SourceRevision` 重建临时 RDKit Mol，以固定 ETKDGv3 seed、单线程及显式 AddHs/UFF/MMFF 参数生成新 3D Structure/Topology；通过 `CalculationRecord` 表示 success、failed 或 incomplete，保留来源实体且不持久化 RDKit Mol。 |
 | `ChemBlender/core/xyz.py` | `sniff_xyz()`、`parse_xyz()` | 读取单帧/多帧 XYZ 和受支持的 extXYZ lattice/PBC/property 子集，输出 `Structure`、`FrameSet` 和报告。 |
 | `ChemBlender/core/mol_v2000.py` | `MOL_V2000_READER`、`parse_mol_v2000()` | 已弃用的 V2000-only 显式兼容 alias；委托 `formats.mol` 的同一实现，自动选择始终由 replacement `mol` 处理并在 alias report 中说明迁移目标。 |
-| `ChemBlender/core/cube.py` | `sniff_cube()`、`parse_cube()` | 读取 Cube 原点、完整非正交 step vectors、多 dataset/MO index 和 voxel 数据，输出 `Grid3D`。 |
+| `ChemBlender/core/cube.py` | `sniff_cube()`、`parse_cube()` | 读取 Cube 原点、完整非正交 step vectors、多 dataset/MO index、voxel 数据与逐原子 nuclear charge，输出共享 `Structure` 的 `Grid3D` 和 `AtomicProperty`，并在 provenance 保留 comments、dataset IDs 与有符号轴约定。 |
 | `ChemBlender/core/cclib_adapter.py` | `sniff_cclib_output()`、`adapt_ccdata()`、`parse_cclib_output()` | 延迟加载 cclib，将 Gaussian/ORCA 等输出归一化为结构轨迹、能量、原子属性、振动、激发态及 parser issues。 |
 | `ChemBlender/core/iodata_adapter.py` | `sniff_iodata_wavefunction()`、`adapt_iodata()`、`parse_iodata_wavefunction()` | 延迟加载 IOData，将 FCHK/Molden 的结构、basis、restricted/unrestricted/generalized MO 和 RDM 转为内部模型。 |
 | `ChemBlender/core/ase_adapter.py` | `sniff_ase_structure()`、`adapt_ase_atoms()`、`parse_ase_structure()` | 延迟加载 ASE，归一化分子/周期结构、约束、per-atom arrays 和轨迹。 |

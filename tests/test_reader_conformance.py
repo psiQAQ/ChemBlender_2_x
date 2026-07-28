@@ -421,7 +421,11 @@ class ReaderConformanceContractTests(unittest.TestCase):
         registry = builtin_reader_plugin_registry()
         cases = (
             ("water", "xyz/water.xyz", ("structure",)),
-            ("sheared", "cube/sheared.cube", ("grid", "structure")),
+            (
+                "sheared",
+                "cube/sheared.cube",
+                ("atomic_property", "grid", "structure"),
+            ),
         )
         for name, relative, capabilities in cases:
             with self.subTest(relative=relative):
