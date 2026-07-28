@@ -46,10 +46,38 @@ EXPECTED = {
             'object["space group"]',
             'object["SG No."]',
             'object["symops"]',
+            "object.cif_original.atom_count",
+            "object.cif_original.atoms[].label",
+            "object.cif_original.atoms[].element",
+            "object.cif_original.atoms[].x",
+            "object.cif_original.atoms[].y",
+            "object.cif_original.atoms[].z",
             "object.cif_original.atoms[].occupancy",
-            "object.cif_original.atoms[].u11..u23",
+            "object.cif_original.atoms[].u_iso_equiv",
+            "object.cif_original.atoms[].adp_type",
+            "object.cif_original.atoms[].u11",
+            "object.cif_original.atoms[].u22",
+            "object.cif_original.atoms[].u33",
+            "object.cif_original.atoms[].u12",
+            "object.cif_original.atoms[].u13",
+            "object.cif_original.atoms[].u23",
+            "object.cif_current.atom_count",
+            "object.cif_current.atoms[].label",
+            "object.cif_current.atoms[].element",
+            "object.cif_current.atoms[].x",
+            "object.cif_current.atoms[].y",
+            "object.cif_current.atoms[].z",
             "object.cif_current.atoms[].occupancy",
-            "object.cif_current.atoms[].u11..u23",
+            "object.cif_current.atoms[].u_iso_equiv",
+            "object.cif_current.atoms[].adp_type",
+            "object.cif_current.atoms[].u11",
+            "object.cif_current.atoms[].u22",
+            "object.cif_current.atoms[].u33",
+            "object.cif_current.atoms[].u12",
+            "object.cif_current.atoms[].u13",
+            "object.cif_current.atoms[].u23",
+            "mesh.vertices",
+            "mesh.vertices[].co",
             "mesh.attributes.atomic_num",
             "mesh.attributes.u_scale",
             "mesh.attributes.u_v1",
@@ -57,6 +85,93 @@ EXPECTED = {
             "mesh.attributes.u_v3",
             "cell_edges.custom_properties",
         ],
+        "expected_values": {
+            "cif_original": {
+                "atom_count": 2,
+                "atoms": [
+                    {
+                        "label": "Cu1",
+                        "element": "Cu",
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0,
+                        "occupancy": 0.75,
+                        "u_iso_equiv": 0.012000000104308128,
+                        "adp_type": "Uani",
+                        "u11": 0.010999999940395355,
+                        "u22": 0.013000000268220901,
+                        "u33": 0.017000000923871994,
+                        "u12": 0.003000000026077032,
+                        "u13": 0.0020000000949949026,
+                        "u23": 0.0010000000474974513,
+                    },
+                    {
+                        "label": "O1",
+                        "element": "O",
+                        "x": 0.5,
+                        "y": 0.5,
+                        "z": 0.5,
+                        "occupancy": 1.0,
+                        "u_iso_equiv": 0.019999999552965164,
+                        "adp_type": "Uiso",
+                        "u11": 0.0,
+                        "u22": 0.0,
+                        "u33": 0.0,
+                        "u12": 0.0,
+                        "u13": 0.0,
+                        "u23": 0.0,
+                    },
+                ],
+            },
+            "cif_current": {
+                "atom_count": 2,
+                "atoms": [
+                    {
+                        "label": "Cu1",
+                        "element": "Cu",
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0,
+                        "occupancy": 0.75,
+                        "u_iso_equiv": 0.012000000104308128,
+                        "adp_type": "Uani",
+                        "u11": 0.010999999940395355,
+                        "u22": 0.013000000268220901,
+                        "u33": 0.017000000923871994,
+                        "u12": 0.003000000026077032,
+                        "u13": 0.0020000000949949026,
+                        "u23": 0.0010000000474974513,
+                    },
+                    {
+                        "label": "O1",
+                        "element": "O",
+                        "x": 0.5,
+                        "y": 0.5,
+                        "z": 0.5,
+                        "occupancy": 1.0,
+                        "u_iso_equiv": 0.019999999552965164,
+                        "adp_type": "Uiso",
+                        "u11": 0.0,
+                        "u22": 0.0,
+                        "u33": 0.0,
+                        "u12": 0.0,
+                        "u13": 0.0,
+                        "u23": 0.0,
+                    },
+                ],
+            },
+            "mesh_vertices": [
+                [0.0, 0.0, 0.0],
+                [-1.215537190437317, -0.4424193799495697, 6.8794426918029785],
+                [-2.0521209239959717, 5.638155937194824, 0.0],
+                [-3.267657995223999, 5.195736408233643, 6.8794426918029785],
+                [5.0, 0.0, 0.0],
+                [3.7844626903533936, -0.4424193799495697, 6.8794426918029785],
+                [2.9478790760040283, 5.638155937194824, 0.0],
+                [1.7323418855667114, 5.195736408233643, 6.8794426918029785],
+                [0.8661709427833557, 2.5978682041168213, 3.4397213459014893],
+            ],
+        },
     },
     "chemblender-2.2-edited-scaffold.blend": {
         "sha256": "a6af8e232fe7b934bf850f8e6b24d396596b79cc1fd38e8ff6eb071c50bf8740",
@@ -91,7 +206,7 @@ def read_metadata():
 
 
 class LegacyFixtureInventoryTests(unittest.TestCase):
-    def test_expected_fixture_files_exist(self):
+    def test_expected_fixture_files_are_exact(self):
         missing = [
             path.name
             for path in [README, *(FIXTURE_ROOT / name for name in EXPECTED)]
@@ -99,6 +214,10 @@ class LegacyFixtureInventoryTests(unittest.TestCase):
         ]
 
         self.assertEqual(missing, [])
+        self.assertEqual(
+            {path.name for path in FIXTURE_ROOT.glob("*.blend")},
+            set(EXPECTED),
+        )
 
     def test_binary_hashes_match_reviewed_inventory(self):
         for name, expected in EXPECTED.items():
