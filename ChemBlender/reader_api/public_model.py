@@ -4,6 +4,8 @@ from uuid import UUID
 
 from ..core import (
     ArrayData,
+    AtomicIdentityData,
+    AtomFrameProperty,
     AtomicProperty,
     BandPathBranch,
     BandStructure,
@@ -14,6 +16,8 @@ from ..core import (
     CalculationMetadata,
     CalculationRecord,
     CalculationStatus,
+    CategoricalData,
+    ConformerSet,
     CJSONEnvelope,
     CIFEnvelope,
     CriticalPointKind,
@@ -30,10 +34,17 @@ from ..core import (
     ExcitedStateSet,
     FermiSurfaceMesh,
     FrameSet,
+    FrameProperty,
+    CellFrameProperty,
     Grid3D,
     ImportDiagnostic,
     IssueKind,
     MolecularTopology,
+    MolecularRecord,
+    RawRecordProperty,
+    RecordPropertyColumn,
+    TopologyRecord,
+    TopologySource,
     OrbitalChannel,
     OrbitalKind,
     OrbitalSet,
@@ -67,15 +78,19 @@ _GROUP_TYPES = (
     ("sources", frozenset((SourceRecord,))),
     ("source_revisions", frozenset((SourceRevision,))),
     ("structures", frozenset((Structure,))),
+    ("topologies", frozenset((TopologyRecord,))),
+    ("molecular_records", frozenset((MolecularRecord,))),
     ("cif_envelopes", frozenset((CIFEnvelope,))),
     ("qcschema_envelopes", frozenset((QCSchemaEnvelope,))),
     ("cjson_envelopes", frozenset((CJSONEnvelope,))),
     ("symmetry_results", frozenset((SymmetryResult,))),
     ("calculations", frozenset((CalculationRecord,))),
     ("datasets", frozenset((
-        PropertyDataset, AtomicProperty, FrameSet, Grid3D, VibrationalModeSet,
+        PropertyDataset, AtomicProperty, FrameSet, FrameProperty,
+        AtomFrameProperty, CellFrameProperty, Grid3D, VibrationalModeSet,
         ExcitedStateSet, Spectrum, BandStructure, DensityOfStates,
-        PhononModeSet, FermiSurfaceMesh, TopologyGraph,
+        PhononModeSet, FermiSurfaceMesh, TopologyGraph, RecordPropertyColumn,
+        ConformerSet,
     ))),
     ("basis_sets", frozenset((BasisSet,))),
     ("orbital_sets", frozenset((OrbitalSet,))),
@@ -112,6 +127,15 @@ def _validate_public_batch_values(batch):
             import numpy
 
             if value_type in (memoryview, numpy.ndarray, numpy.memmap, LazyNpyArray):
+                dtype = numpy.asarray(value).dtype if value_type is memoryview else numpy.dtype(value.dtype)
+                if (
+                    dtype.hasobject
+                    or dtype.fields is not None
+                    or dtype.subdtype is not None
+                ):
+                    raise TypeError(
+                        "ArrayData values must not use object, structured or subarray dtype"
+                    )
                 return
             raise TypeError("ArrayData values use an unapproved array type")
         if value_type in (list, dict, set, bytearray):
@@ -154,6 +178,8 @@ class PublicImportBatch:
     sources: tuple[SourceRecord, ...] = ()
     source_revisions: tuple[SourceRevision, ...] = ()
     structures: tuple[Structure, ...] = ()
+    topologies: tuple[TopologyRecord, ...] = ()
+    molecular_records: tuple[MolecularRecord, ...] = ()
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
     qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
     cjson_envelopes: tuple[CJSONEnvelope, ...] = ()

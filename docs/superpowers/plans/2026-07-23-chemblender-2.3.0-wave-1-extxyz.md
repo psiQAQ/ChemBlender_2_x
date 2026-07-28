@@ -31,8 +31,17 @@
 
 **Interfaces:**
 - Produces: `CategoricalData`, `FrameProperty`, `AtomFrameProperty`, `CellFrameProperty`.
+- `FrameProperty` validity mask prefix `("frame",)`.
+- `AtomFrameProperty` validity mask prefix `("frame", "atom")`.
+- `CellFrameProperty` validity mask prefix `("frame",)`.
+- For the required prefix above, every numeric or logical Partial property
+  satisfies `mask.dims == required_prefix`,
+  `mask.values.shape == data.values.shape[:len(required_prefix)]`,
+  `mask.values.dtype == numpy.bool_` and `mask.unit == "dimensionless"`.
+  Numeric and logical Partial properties use that boolean mask.
+- `CategoricalData` stores integer codes, unique categories and an explicit missing code; it never stores an object-dtype array and does not add a redundant validity mask.
 
-- [ ] **Step 1: Write model validation tests**
+- [x] **Step 1: Write model validation tests**
 
 ```python
 def test_categorical_data_round_trips_codes_and_categories(self):
@@ -53,32 +62,40 @@ def test_atom_frame_property_requires_frame_atom_prefix(self):
         )
 ```
 
-- [ ] **Step 2: Implement models and project validation**
+- [x] **Step 2: Implement models and project validation**
 
-`FrameProperty` requires leading `frame`; `AtomFrameProperty` requires `("frame","atom")`; `CellFrameProperty` requires `("frame","cell_vector","xyz")`. All bind a FrameSet and validate frame/atom counts at project commit.
+`FrameProperty` requires leading `frame`; `AtomFrameProperty` requires
+`("frame","atom")`; `CellFrameProperty` requires
+`("frame","cell_vector","xyz")`. All bind a FrameSet and validate frame/atom
+counts at project commit. Numeric and bool Partial datasets require their
+matching validity mask; Complete datasets must not use a mask. Categorical
+missing values use only `CategoricalData.missing_code`.
 
-- [ ] **Step 3: Add sidecar round-trip tests**
+- [x] **Step 3: Add sidecar round-trip tests**
 
 Include categorical string values and all three frame property types. Assert no object array is written.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run model, project and sidecar tests; commit.
 
 ### Task 2: Implement extXYZ comment and Properties parser
 
 **Files:**
+- Create: `ChemBlender/core/formats/__init__.py`
 - Create: `ChemBlender/core/formats/extxyz.py`
 - Create: `tests/test_extxyz_syntax.py`
 - Create: `tests/fixtures/extxyz/README.md`
 - Create: `tests/fixtures/extxyz/properties-mixed.extxyz`
 - Create: `tests/fixtures/extxyz/multiframe-cell.extxyz`
 - Create: `tests/fixtures/extxyz/invalid-property.extxyz`
+- Create: libAtoms, ASE and OVITO common compatibility fixtures under
+  `tests/fixtures/extxyz/`; ASE remains fixture provenance only, not a runtime dependency.
 
 **Interfaces:**
 - Produces: `parse_extxyz_comment()`, `parse_properties_descriptor()`, `iter_extxyz_frames()`.
 
-- [ ] **Step 1: Write descriptor tests**
+- [x] **Step 1: Write descriptor tests**
 
 ```python
 def test_properties_descriptor_parses_mixed_types(self):
@@ -94,15 +111,22 @@ def test_properties_descriptor_parses_mixed_types(self):
 
 Test duplicate names, invalid types, zero columns and truncated atom rows.
 
-- [ ] **Step 2: Implement a quoted key/value tokenizer**
+- [x] **Step 2: Implement a quoted key/value tokenizer**
 
-Support `key=value`, quoted values containing spaces and escaped quote handling defined by the extXYZ reference fixtures. Preserve unrecognized metadata as strings. Reject unclosed quotes with a record diagnostic.
+Support `key=value`, quoted values containing spaces and escaped quote handling
+defined by the extXYZ reference fixtures. Preserve typed per-config metadata as
+string, integer, real, logical, 1-D array and 2-D array values. When a value
+cannot be safely typed, retain its raw lexeme and diagnostic instead of silently
+coercing it to a string. Reject unclosed quotes with a record diagnostic.
 
-- [ ] **Step 3: Implement streaming frames**
+- [x] **Step 3: Implement streaming frames**
 
-Read frame count, raw comment and exactly N atom lines. Parse columns according to Properties. If Properties is absent, use ordinary `species:S:1:pos:R:3`. Do not load all frames in this low-level iterator.
+Read frame count, raw comment and exactly N atom lines. Parse columns according
+to Properties. If Properties is absent, use ordinary
+`species:S:1:pos:R:3`. Use a bounded one-frame iterator; do not load all frames
+in this low-level iterator.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run syntax and ordinary XYZ regression tests; commit parser primitives.
 
@@ -118,11 +142,11 @@ Run syntax and ordinary XYZ regression tests; commit parser primitives.
 **Interfaces:**
 - Produces: built-in reader ID `extxyz`, version `1`, and ordinary XYZ delegation that avoids ambiguity.
 
-- [ ] **Step 1: Write reader-selection tests**
+- [x] **Step 1: Write reader-selection tests**
 
 Ordinary `water.xyz` selects `xyz`; a `.xyz` file with valid `Properties=` selects `extxyz` with higher EXACT match; malformed text selects neither or produces a precise diagnostic only after an explicit override.
 
-- [ ] **Step 2: Map known properties**
+- [x] **Step 2: Map known properties**
 
 Mapping table:
 
@@ -139,15 +163,34 @@ KNOWN_ATOM_PROPERTIES = {
 
 Units not declared by extXYZ are source-convention assumptions and must produce diagnostics unless metadata supplies a recognized unit key. Unknown R/I/L properties remain typed with `unknown` semantic unit rules and appropriate quality status.
 
-- [ ] **Step 3: Map frame metadata**
+- [x] **Step 3: Map frame metadata**
 
-`Lattice` is 9 floats row-major, `pbc` accepts T/F tokens, energy/free_energy/time/temperature/step become frame properties, stress/virial accept 9 or 6 components with recorded convention.
+`Lattice` is exactly nine floats in the lattice-vector sequence
+`ax ay az bx by bz cx cy cz`; do not describe the contract only as row-major or
+column-major. PBC defaults are exact:
 
-- [ ] **Step 4: Handle changing cell and properties**
+- no `Lattice` and no `pbc`: `(False, False, False)`;
+- `Lattice` and no `pbc`: `(True, True, True)`;
+- explicit `pbc` overrides either default and accepts T/F tokens.
 
-Compatible frames form one FrameSet. Changing cell becomes CellFrameProperty. A property absent in some frames becomes Partial with a validity mask rather than zero-filled Complete data. Incompatible atom identity splits the source into separate structures and diagnostics.
+energy/free_energy/time/temperature/step become frame properties, while
+stress/virial accept 9 or 6 components with a recorded convention.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 4: Handle changing cell and properties**
+
+Compatible frames form one FrameSet. Changing cell becomes CellFrameProperty.
+A numeric or logical property absent in some frames becomes Partial with the
+Task 1 boolean validity mask rather than zero-filled Complete data. A categorical
+property uses its integer missing code and does not add a second validity mask.
+Incompatible atom identity splits the source into separate structures and
+diagnostics.
+
+For large compatible trajectories, stage arrays through a staged memmap/NPY owner
+and append from the bounded frame iterator. The mapper must not construct a nested Python tuple containing all frames. Cancellation cleanup removes all owned staging
+files, and sidecar publication failure rolls back the staged project without
+leaking files or partially committing entities.
+
+- [x] **Step 5: Run and commit**
 
 Run reader, catalog, capability document, sidecar and import preview tests. Commit.
 
@@ -162,23 +205,35 @@ Run reader, catalog, capability document, sidecar and import preview tests. Comm
 **Interfaces:**
 - Produces: `export_xyz()`, `export_extxyz()` and `ExportReport` entries.
 
-- [ ] **Step 1: Write ordinary XYZ export test**
+- [x] **Step 1: Write ordinary XYZ export test**
 
 Export a Structure and assert count, title, symbols, fixed finite coordinates and newline. Reject unsupported coordinate units rather than silently writing.
 
-- [ ] **Step 2: Write extXYZ schema test**
+- [x] **Step 2: Write extXYZ schema test**
 
-Create a structure/frame set with numeric, bool and categorical properties. Assert deterministic `Properties` ordering: identity/position first, then standardized roles, then unknown properties by original order key.
+Create a structure/frame set with numeric, bool and categorical properties.
+Assert deterministic `Properties` ordering: identity/position first, then
+standardized roles, then unknown properties by original order key. Cover
+deterministic typed metadata serialization for scalar, 1-D and 2-D typed metadata,
+preserving string/integer/real/logical type and array shape.
 
-- [ ] **Step 3: Implement quoting and categorical export**
+- [x] **Step 3: Implement quoting and categorical export**
 
-Write categories as original strings. Metadata values requiring spaces are quoted. Non-finite values require Partial export confirmation and an explicit missing-value token policy in ExportReport.
+Write categories as original strings. Metadata values requiring spaces are
+quoted. An unsafe raw lexeme and diagnostic may be emitted unchanged only when
+the lexeme remains grammar-safe and its metadata is unmodified; otherwise the
+export report presents a loss preview and requires confirmation before omission
+or string fallback. Non-finite values require Partial export confirmation and an
+explicit missing-value token policy in ExportReport.
 
-- [ ] **Step 4: Implement semantic round-trip comparator**
+- [x] **Step 4: Implement semantic round-trip comparator**
 
-Parse exported file and compare atomic numbers, coordinates, cell, PBC, dims, categories and valid masks with tolerances. Do not compare UUIDs or provenance IDs.
+Parse exported file and compare atomic numbers, coordinates, cell, PBC, dims,
+categories, valid masks and metadata type, shape and value with tolerances.
+Include scalar, 1-D and 2-D metadata plus the unsafe-lexeme loss path. Do not
+compare UUIDs or provenance IDs.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 Run round-trip tests including multi-frame cell and unknown properties; commit.
 
@@ -186,30 +241,61 @@ Run round-trip tests including multi-frame cell and unknown properties; commit.
 
 **Files:**
 - Modify: `ChemBlender/ui/import_preview.py`
+- Create: `ChemBlender/ui/extxyz_preview.py`
 - Modify: `ChemBlender/ui/project_browser/panel.py`
 - Create: `ChemBlender/ui/export.py`
+- Modify: `ChemBlender/runtime/registration.py`
+- Modify: `tests/test_registration_contract.py`
 - Modify: `tests/blender_smoke.py`
 - Create: `ChemBlender/scripts/benchmark_extxyz.py`
+- Modify: `.agents/reference/code-architecture-guide.md`
+- Modify: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Produces: property summary, frame controls and export operator.
+- `ChemBlender/ui/export.py` is an explicit registration root; it must not rely
+  on another UI module re-exporting its Blender classes.
 
-- [ ] **Step 1: Show extXYZ capabilities in Preview**
+- [x] **Step 1: Show extXYZ capabilities in Preview**
 
 Display frame count, atom properties, frame properties, lattice/PBC and any assumed-unit diagnostics.
 
-- [ ] **Step 2: Add data browser groups**
+- [x] **Step 2: Add data browser groups**
 
 FrameSet and its related properties appear together. Selecting atomic force can apply vector arrows to the active structure view.
 
-- [ ] **Step 3: Add exporter action**
+- [x] **Step 3: Add exporter action**
 
 Export selected Structure or FrameSet with a loss preview. Partial/Ambiguous requires confirmation.
 
-- [ ] **Step 4: Benchmark**
+- [x] **Step 4: Benchmark**
 
-Generate deterministic 1k-frame/1k-atom and larger metadata-only cases. Measure first preview, parse, sidecar write, frame access and export. Ensure large paths do not construct nested Python tuples for all values.
+Generate deterministic 1k-frame/1k-atom and larger metadata-only cases. Measure
+first-frame decode separately from product preview readiness. Product
+`preview_ready` must run the actual reader preflight, obtain the staged batch,
+and apply the same pure summary projection used by Import Preview; only this
+metric evaluates the Quick Import preview budget. Also measure parse, sidecar
+write, frame access and export. Ensure large paths do not construct nested
+Python tuples for all values. If full preview readiness misses the budget,
+record the gate as unmet rather than substituting first-frame decode.
 
-- [ ] **Step 5: Verify and commit**
+The benchmark and Blender smoke also cover cancellation cleanup and publication
+rollback for the staged memmap/NPY path.
+
+- [x] **Step 5: Verify and commit**
 
 Run Blender smoke with multi-frame extXYZ, save/reopen and force-vector view; run benchmark and document baseline.
+
+### Completion evidence
+
+- Final focused tests: `217/217 Passed`.
+- Final full tests: `1158 Passed / 28 Skipped / 0 Failed`.
+- Blender 5.1.2 validate, build, ZIP audit, isolated install, product smoke,
+  save/reopen, and reload x2: `Passed`.
+- Independent specification and code-quality reviews: `Clean`.
+- Medium real `preview_ready` median/p95:
+  `1.369213/1.374558 s`; the `0.5 s` budget is `Failed`.
+- Corrected reference-scale product Preview metric:
+  `Not Run / Not Claimed`.
+- Remote CI: `Not Run`.
+- Stop boundary: RDKit and Cube runtime implementation remain unstarted.

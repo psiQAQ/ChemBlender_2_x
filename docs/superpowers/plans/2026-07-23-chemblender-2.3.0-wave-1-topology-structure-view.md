@@ -30,19 +30,19 @@
 **Interfaces:**
 - Produces: `TopologySource`, `TopologyRecord`, project `topologies` registry and Structure topology references.
 
-- [ ] **Step 1: Write validation tests**
+- [x] **Step 1: Write validation tests**
 
 Test bond index/order shapes, aromatic flags, stereo labels, source enum, quality, canonical inference parameters and structure reference. `distance_inferred` requires non-empty inference parameters; `explicit_file` permits none.
 
-- [ ] **Step 2: Preserve MolecularTopology compatibility**
+- [x] **Step 2: Preserve MolecularTopology compatibility**
 
 Keep the old type readable for v0.1 sidecars. Migration converts embedded Structure topology into a TopologyRecord with `explicit_file` when source came from an explicit format, otherwise `distance_inferred` plus legacy parameters if known. Ambiguous origin becomes `legacy_unverified` quality.
 
-- [ ] **Step 3: Update project validation and sidecar migration**
+- [x] **Step 3: Update project validation and sidecar migration**
 
 A Structure can reference zero or more topology IDs; selected topology is view state, not structure state.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run model, migration, existing readers and sidecar tests; commit.
 
@@ -57,7 +57,7 @@ Run model, migration, existing readers and sidecar tests; commit.
 **Interfaces:**
 - Produces: `infer_distance_topology(structure, settings) -> ImportBatch`.
 
-- [ ] **Step 1: Define settings**
+- [x] **Step 1: Define settings**
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -72,19 +72,19 @@ class TopologyInferenceSettings:
 
 Validate finite positive values and supported mode.
 
-- [ ] **Step 2: Write chemistry and edge-case tests**
+- [x] **Step 2: Write chemistry and edge-case tests**
 
 Water, benzene, disconnected fragments, close duplicate atoms, metal complex and 50k generated grid. Assert duplicates yield Invalid diagnostic, metal bonds are coordination/ambiguous and no duplicate edges.
 
-- [ ] **Step 3: Implement spatial cell list**
+- [x] **Step 3: Implement spatial cell list**
 
 Convert coordinates to angstrom. Bin by the maximum possible cutoff. Inspect 27 neighboring bins. Apply pair cutoff and coordination constraints deterministically. Sort edges lexicographically.
 
-- [ ] **Step 4: Add provenance and benchmark**
+- [x] **Step 4: Add provenance and benchmark**
 
 Return a derived TopologyRecord with all settings and source structure revision. Benchmark confirms subquadratic behavior and records median/p95.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 Commit inference and benchmark.
 
@@ -97,19 +97,19 @@ Commit inference and benchmark.
 **Interfaces:**
 - Produces: `infer_periodic_topology()` with lattice shifts per connection.
 
-- [ ] **Step 1: Extend topology data for image shifts**
+- [x] **Step 1: Extend topology data for image shifts**
 
 Add optional `bond_lattice_shifts` with dims `(bond,xyz)` integer dimensionless. Nonperiodic records use zeros or None by contract.
 
-- [ ] **Step 2: Write boundary tests**
+- [x] **Step 2: Write boundary tests**
 
 Atoms near opposite cell faces connect with a nonzero lattice shift. Nonorthogonal cells use fractional minimum images. Partial PBC honors axis flags.
 
-- [ ] **Step 3: Implement fractional neighbor logic**
+- [x] **Step 3: Implement fractional neighbor logic**
 
 Use inverse cell to map displacement, wrap only PBC axes and recover Cartesian distance. Store the chosen integer shift. Detect singular cell through existing Structure validation.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run periodic and nonperiodic inference tests; commit.
 
@@ -125,7 +125,7 @@ Run periodic and nonperiodic inference tests; commit.
 **Interfaces:**
 - Produces: `create_structure_view(structure, topology=None, settings=None)` under the new views package and a legacy re-export.
 
-- [ ] **Step 1: Define the view contract**
+- [x] **Step 1: Define the view contract**
 
 Mesh contains vertices and topology edges. Named attributes:
 
@@ -139,23 +139,23 @@ cbq_topology_source    object metadata
 
 Object stores structure/topology IDs/revisions, quality and display coordinate unit.
 
-- [ ] **Step 2: Write Blender smoke for explicit topology**
+- [x] **Step 2: Write Blender smoke for explicit topology**
 
 Create water with two edges. Assert mesh edges, attributes and existing ball-and-stick node modifier render atoms/bonds.
 
-- [ ] **Step 3: Handle no topology**
+- [x] **Step 3: Handle no topology**
 
 Atoms-only view remains valid. UI can request inference. Do not silently infer inside the builder.
 
-- [ ] **Step 4: Integrate periodic image bonds**
+- [x] **Step 4: Integrate periodic image bonds**
 
 The primary mesh keeps canonical cell atoms. Periodic image/edge display uses Geometry Nodes or derived display geometry based on lattice shifts, not duplicated scientific atoms.
 
-- [ ] **Step 5: Preserve existing dataset adapters**
+- [x] **Step 5: Preserve existing dataset adapters**
 
 Atomic scalar/vector/selection functions continue to work with the new view. `dataset_view.create_structure_view` re-exports and emits a deprecation warning only in developer logs, not user popups.
 
-- [ ] **Step 6: Run and commit**
+- [x] **Step 6: Run and commit**
 
 Run Blender smoke, view contract and all dataset adapter tests; commit.
 
@@ -170,19 +170,19 @@ Run Blender smoke, view contract and all dataset adapter tests; commit.
 **Interfaces:**
 - Produces: topology list, inference settings, Accept/Reject/Recompute and active-view topology switch.
 
-- [ ] **Step 1: Project Browser rows**
+- [x] **Step 1: Project Browser rows**
 
 Each topology displays source, quality, edge count, inference parameters and view usage.
 
-- [ ] **Step 2: Implement compute/accept/reject operators**
+- [x] **Step 2: Implement compute/accept/reject operators**
 
 Compute creates a derived proposal. Accept creates a user-confirmed revision or marks selection in ViewRecord; Reject keeps proposal history but removes it from default suggestions.
 
-- [ ] **Step 3: Update view without data mutation**
+- [x] **Step 3: Update view without data mutation**
 
 Switching topology rebuilds or updates mesh edges and render identity. Structure and old topology remain unchanged.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Blender smoke imports XYZ, infers topology, accepts it, switches to atoms-only and reopens project with identities preserved.
 
@@ -197,18 +197,18 @@ Blender smoke imports XYZ, infers topology, accepts it, switches to atoms-only a
 **Interfaces:**
 - Produces: `preview_structure_edits()`, `commit_structure_edits()` and `CHEMBLENDER_OT_apply_scientific_edits`.
 
-- [ ] **Step 1: Write diff tests**
+- [x] **Step 1: Write diff tests**
 
 Compare a View Mesh to source Structure/Topology and report coordinate, element, atom count, bond and cell changes. Object matrix transforms are inverted and ignored as scientific edits.
 
-- [ ] **Step 2: Implement derived batch**
+- [x] **Step 2: Implement derived batch**
 
 Create new Structure and optional TopologyRecord, provenance parent IDs and a diagnostic that source-linked results were not inherited. No source entity mutation.
 
-- [ ] **Step 3: Implement preview UI**
+- [x] **Step 3: Implement preview UI**
 
 Show counts and maximum displacement, affected result datasets and export choice. Cancel changes nothing.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Blender smoke moves an atom, creates derived structure, confirms source coordinates and grid bindings unchanged, then exports derived XYZ.

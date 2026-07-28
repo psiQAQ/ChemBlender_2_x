@@ -146,6 +146,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
             "staging_root": self.root,
             "progress": lambda event: None,
             "is_cancelled": lambda: False,
+            "source_revision_id": uuid4(),
         }
         values.update(changes)
         return ParseRequest(**values)
@@ -157,6 +158,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
         self.assertEqual(request.source_path, self.source.resolve())
         self.assertEqual(request.staging_root, self.root.resolve())
         self.assertEqual(request.validation_mode, "balanced")
+        self.assertIs(type(request.source_revision_id), type(uuid4()))
         self.assertIs(type(request.canonical_parameters), MappingProxyType)
         self.assertEqual(dict(request.canonical_parameters), {"encoding": "utf-8"})
         self.assertEqual((event.stage, event.completed, event.total), ("parse", 1, 2))
@@ -177,6 +179,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
             {"progress": None},
             {"is_cancelled": None},
             {"staging_root": self.source},
+            {"source_revision_id": "not-a-uuid"},
         )
         for changes in cases:
             with self.subTest(changes=changes):
@@ -452,7 +455,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
         plugins = builtin_reader_plugins()
         registry = ReaderPluginRegistry(plugins)
 
-        self.assertEqual(len(registry.descriptors), 11)
+        self.assertEqual(len(registry.descriptors), 15)
         self.assertEqual({id(plugin.manifest) for plugin in plugins}, {id(plugins[0].manifest)})
         self.assertEqual(plugins[0].manifest.schema_version, "1")
         self.assertEqual(plugins[0].manifest.chemblender_api, ">=0.1,<1.0")
@@ -460,7 +463,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
             plugins[0].manifest.license,
             ("SPDX:GPL-3.0-or-later",),
         )
-        self.assertEqual(len(plugins[0].manifest.readers), 11)
+        self.assertEqual(len(plugins[0].manifest.readers), 15)
         self.assertEqual(
             {item.plugin_id for item in registry.descriptors},
             {"chemblender.builtin"},

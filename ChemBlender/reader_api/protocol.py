@@ -1,9 +1,10 @@
 import re
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
 from typing import Protocol, runtime_checkable
+from uuid import UUID, uuid4
 
 from ..core.readers import SniffResult
 from .descriptors import PublicReaderDescriptor
@@ -67,6 +68,7 @@ class ParseRequest:
     staging_root: Path
     progress: Callable[[ProgressEvent], None]
     is_cancelled: Callable[[], bool]
+    source_revision_id: UUID = field(default_factory=uuid4)
 
     def __post_init__(self):
         if not isinstance(self.source_path, Path):
@@ -103,6 +105,8 @@ class ParseRequest:
             raise ValueError("staging_root must be a directory")
         if not callable(self.progress) or not callable(self.is_cancelled):
             raise TypeError("progress and is_cancelled must be callable")
+        if type(self.source_revision_id) is not UUID:
+            raise TypeError("source_revision_id must be a UUID")
         object.__setattr__(self, "source_path", source_path)
         object.__setattr__(self, "staging_root", staging_root)
         object.__setattr__(

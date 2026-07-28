@@ -21,9 +21,12 @@ from ChemBlender.core import (
     OrbitalChannel,
     OrbitalKind,
     OrbitalSet,
+    ParserReport,
+    QCProject,
     Spectrum,
     SpectrumKind,
     SpectrumProfile,
+    Structure,
     VibrationalModeSet,
     open_project,
     save_project,
@@ -157,6 +160,41 @@ def typed_object(value, type_name):
 
 
 class ProjectGraphIntegrityTests(unittest.TestCase):
+    def test_commit_requires_exact_parser_report_entity_order_without_duplicates(self):
+        first = Structure(
+            id=uuid4(),
+            revision="first-r1",
+            atomic_numbers=(1,),
+            coordinates=ArrayData(
+                numpy.zeros((1, 3)), ("atom", "xyz"), "angstrom"
+            ),
+        )
+        second = dataclasses.replace(
+            first,
+            id=uuid4(),
+            revision="second-r1",
+        )
+        for created_ids in (
+            (second.id, first.id),
+            (first.id, first.id),
+        ):
+            with self.subTest(created_ids=created_ids):
+                project = QCProject(uuid4(), "0.2")
+                with self.assertRaisesRegex(ValueError, "parser report"):
+                    project.commit(
+                        ImportBatch(
+                            structures=(first, second),
+                            report=ParserReport(
+                                "fixture",
+                                "1",
+                                created_ids,
+                                ("structure",),
+                                (),
+                            ),
+                        )
+                    )
+                self.assertEqual(project.structures, {})
+
     def test_save_rejects_invalid_in_memory_graph_before_publication(self):
         project = graph_project()
         atomic = next(

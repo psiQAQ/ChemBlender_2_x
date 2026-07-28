@@ -6,9 +6,9 @@ from ChemBlender.core import (
     AtomicProperty,
     FrameSet,
     Grid3D,
-    MolecularTopology,
     ProvenanceRecord,
     Structure,
+    TopologyRecord,
 )
 from ChemBlender.core.model_registry import (
     MODEL_ENUMS,
@@ -26,10 +26,12 @@ from tests.test_sidecar_storage import PROJECT_ID, sample_project
 
 
 EXPECTED_MODEL_TYPES = {
-    "ArrayData", "CIFEnvelope", "QCSchemaEnvelope", "CJSONEnvelope",
-    "PeriodicSiteData", "MolecularTopology", "Structure", "SymmetryResult",
-    "CalculationMetadata", "CalculationRecord", "PropertyDataset",
-    "AtomicProperty", "FrameSet", "VibrationalModeSet",
+    "ArrayData", "AtomicIdentityData", "CIFEnvelope", "QCSchemaEnvelope", "CJSONEnvelope",
+    "PeriodicSiteData", "MolecularTopology", "TopologyRecord", "Structure", "SymmetryResult",
+    "CalculationMetadata", "CalculationRecord", "CategoricalData",
+    "PropertyDataset", "AtomicProperty", "FrameSet", "FrameProperty",
+    "AtomFrameProperty", "CellFrameProperty", "VibrationalModeSet",
+    "RawRecordProperty", "MolecularRecord", "RecordPropertyColumn", "ConformerSet",
     "ExcitationContribution", "ExcitedStateReferences", "ExcitedStateSet",
     "Spectrum", "BandPathBranch", "BandStructure", "DensityOfStates",
     "PhononModeSet", "SurfaceProperty", "FermiSurfaceMesh",
@@ -45,7 +47,7 @@ EXPECTED_MODEL_ENUMS = {
     "OrbitalKind", "DensityMatrixLevel", "DensityMatrixSpin", "SpectrumKind",
     "SpectrumProfile", "SpinChannel", "EnergyReference",
     "CriticalPointKind",
-    "QualityStatus", "DiagnosticSeverity",
+    "QualityStatus", "DiagnosticSeverity", "TopologySource",
 }
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "sidecar" / "model-v01"
@@ -92,7 +94,9 @@ class ModelRegistryTests(unittest.TestCase):
             self.assertEqual(project.id, PROJECT_ID)
             structure = next(iter(project.structures.values()))
             self.assertIs(type(structure), Structure)
-            self.assertIs(type(structure.topology), MolecularTopology)
+            self.assertIsNone(structure.topology)
+            topology = project.topologies[structure.topology_ids[0]]
+            self.assertIs(type(topology), TopologyRecord)
             self.assertIs(type(next(iter(project.datasets.values()))), AtomicProperty)
             self.assertEqual(
                 {type(value) for value in project.datasets.values()},

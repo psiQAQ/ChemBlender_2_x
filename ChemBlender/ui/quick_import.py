@@ -12,6 +12,9 @@ from ..core.import_pipeline.request import (
     ImportSource,
     ValidationMode,
 )
+from ..core.import_pipeline.conformer_grouping import (
+    suggest_staged_conformer_groups as prepare_conformer_suggestions,
+)
 from ..reader_api.import_pipeline_bridge import preflight_reader_plugins
 from ..runtime.reader_api_bridge import get_reader_plugin_registry
 from .properties import (
@@ -24,6 +27,25 @@ from .properties import (
     store_quick_import_preview,
 )
 from .session import get_scene_session
+
+
+_FATAL_EXCEPTIONS = (
+    KeyboardInterrupt,
+    SystemExit,
+    GeneratorExit,
+    MemoryError,
+)
+
+
+def _merge_cleanup_failure(failure, error, label):
+    if isinstance(error, _FATAL_EXCEPTIONS) and not isinstance(
+        failure,
+        _FATAL_EXCEPTIONS,
+    ):
+        error.add_note(f"earlier failure: {failure}")
+        return error
+    failure.add_note(f"{label}: {error}")
+    return failure
 
 
 def _selected_paths(directory, files):
@@ -63,6 +85,7 @@ class _PreflightJob:
         self.registry = registry
         self.staging = staging
         self.preview = None
+        self.conformer_suggestions = None
         self.error = None
         self.progress_events = SimpleQueue()
         self._cancelled = Event()
@@ -82,6 +105,13 @@ class _PreflightJob:
                 progress=self._progress,
                 is_cancelled=self._cancelled.is_set,
             )
+            self._progress("conformer_grouping", 0, 1)
+            self.conformer_suggestions = prepare_conformer_suggestions(
+                self.preview,
+                self.staging,
+                is_cancelled=self._cancelled.is_set,
+            )
+            self._progress("conformer_grouping", 1, 1)
         except BaseException as error:
             self.error = error
         finally:
@@ -114,6 +144,10 @@ class _PreflightJob:
     def done(self):
         return self._done.is_set()
 
+    @property
+    def timer_pending(self):
+        return self._timer is not None
+
     def drain_progress(self):
         latest = None
         while True:
@@ -138,16 +172,26 @@ class _PreflightJob:
             try:
                 manager.progress_end()
             except BaseException as error:
-                if failure is None:
-                    failure = error
-                else:
-                    failure.add_note(f"progress cleanup failed: {error}")
+                failure = (
+                    error
+                    if failure is None
+                    else _merge_cleanup_failure(
+                        failure,
+                        error,
+                        "progress cleanup failed",
+                    )
+                )
             else:
                 self._progress_started = False
         if self._timer is None and not self._progress_started:
             self._window_manager = None
         if failure is not None:
             raise failure
+
+    def abandon_ui(self):
+        self._window_manager = None
+        self._timer = None
+        self._progress_started = False
 
 
 class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
@@ -210,7 +254,17 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
                 progress=lambda _stage, _completed, _total: None,
                 is_cancelled=lambda: False,
             )
-            store_quick_import_preview(project_session, staging, preview)
+            conformer_suggestions = prepare_conformer_suggestions(
+                preview,
+                staging,
+                is_cancelled=lambda: False,
+            )
+            store_quick_import_preview(
+                project_session,
+                staging,
+                preview,
+                conformer_grouping_suggestions=conformer_suggestions,
+            )
         except BaseException as error:
             return self._handle_error(project_session, error)
         return self._finish_preview(context, preview)
@@ -247,29 +301,78 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
             job.cancel()
         if event.type != "TIMER":
             return {"RUNNING_MODAL"}
-        progress = job.drain_progress()
-        if progress is not None:
-            _stage, completed, total = progress
-            context.window_manager.progress_update(
-                100 * completed / total if total else 0
-            )
-        if not job.done:
-            return {"RUNNING_MODAL"}
-        job.join(0)
+        if not getattr(job, "_completion_checked", False):
+            completion_error = None
+            try:
+                progress = job.drain_progress()
+                if progress is not None:
+                    _stage, completed, total = progress
+                    context.window_manager.progress_update(
+                        100 * completed / total if total else 0
+                    )
+                if not job.done:
+                    return {"RUNNING_MODAL"}
+                job.join(0)
+            except BaseException as error:
+                completion_error = error
+                job.cancel()
+                try:
+                    job.join(None)
+                except BaseException as cleanup_error:
+                    completion_error = _merge_cleanup_failure(
+                        completion_error,
+                        cleanup_error,
+                        "Quick Import job cleanup failed",
+                    )
+            job._completion_error = completion_error
+            job._completion_checked = True
         project_session = self._project_session
+        failure = job._completion_error
+        if failure is None:
+            failure = job.error
         try:
             job.release_ui()
+        except BaseException as error:
+            if (
+                not isinstance(error, _FATAL_EXCEPTIONS)
+                and job.timer_pending
+            ):
+                self.report(
+                    {"WARNING"},
+                    f"Quick Import cleanup retry pending: {error}",
+                )
+                return {"RUNNING_MODAL"}
+            job.abandon_ui()
+            failure = (
+                error
+                if failure is None
+                else _merge_cleanup_failure(
+                    failure,
+                    error,
+                    "Quick Import UI cleanup failed",
+                )
+            )
+        try:
             finish_quick_import_job(project_session, job)
         except BaseException as error:
-            return self._handle_error(project_session, error)
+            failure = (
+                error
+                if failure is None
+                else _merge_cleanup_failure(
+                    failure,
+                    error,
+                    "Quick Import ownership cleanup failed",
+                )
+            )
         self._job = None
-        if job.error is not None:
-            return self._handle_error(project_session, job.error)
+        if failure is not None:
+            return self._handle_error(project_session, failure)
         try:
             store_quick_import_preview(
                 project_session,
                 job.staging,
                 job.preview,
+                conformer_grouping_suggestions=job.conformer_suggestions,
             )
         except BaseException as error:
             return self._handle_error(project_session, error)
@@ -285,8 +388,12 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
             try:
                 clear_quick_import_state(project_session)
             except BaseException as cleanup_error:
-                error.add_note(f"Quick Import cleanup failed: {cleanup_error}")
-        if isinstance(error, (KeyboardInterrupt, SystemExit, MemoryError)):
+                error = _merge_cleanup_failure(
+                    error,
+                    cleanup_error,
+                    "Quick Import cleanup failed",
+                )
+        if isinstance(error, _FATAL_EXCEPTIONS):
             raise error
         self.report({"ERROR"}, str(error))
         return {"CANCELLED"}
@@ -298,6 +405,58 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
         if not getattr(bpy.app, "background", False):
             bpy.ops.chemblender.confirm_import("INVOKE_DEFAULT")
         return {"FINISHED"}
+
+
+class CHEMBLENDER_OT_import_smiles_text(CHEMBLENDER_OT_quick_import):
+    bl_idname = "chemblender.import_smiles_text"
+    bl_label = "Import SMILES"
+    bl_description = "Stage SMILES text for import preview"
+
+    smiles_text: StringProperty(name="SMILES")
+
+    def invoke(self, context, _event):
+        self.validation_mode = context.scene.chemblender_quick_import.validation_mode
+        if not getattr(bpy.app, "background", False):
+            return context.window_manager.invoke_props_dialog(self)
+        return self.execute(context)
+
+    def draw(self, _context):
+        self.layout.prop(self, "smiles_text")
+        self.layout.prop(self, "validation_mode")
+
+    def execute(self, context):
+        try:
+            request = ImportRequest(
+                sources=(ImportSource.smiles_text(self.smiles_text),),
+                validation_mode=ValidationMode(self.validation_mode),
+            )
+            project_session = get_scene_session(context.scene)
+            staging = create_quick_import_staging(project_session)
+            registry = get_reader_plugin_registry()
+        except BaseException as error:
+            return self._handle_error(locals().get("project_session"), error)
+        if not getattr(bpy.app, "background", False):
+            return self._start_modal(context, project_session, staging, request, registry)
+        try:
+            preview = preflight_reader_plugins(
+                request, registry, staging,
+                progress=lambda _stage, _completed, _total: None,
+                is_cancelled=lambda: False,
+            )
+            conformer_suggestions = prepare_conformer_suggestions(
+                preview,
+                staging,
+                is_cancelled=lambda: False,
+            )
+            store_quick_import_preview(
+                project_session,
+                staging,
+                preview,
+                conformer_grouping_suggestions=conformer_suggestions,
+            )
+        except BaseException as error:
+            return self._handle_error(project_session, error)
+        return self._finish_preview(context, preview)
 
 
 class CHEMBLENDER_PT_quick_import(bpy.types.Panel):
@@ -329,6 +488,12 @@ class CHEMBLENDER_PT_quick_import(bpy.types.Panel):
             icon="FILE_FOLDER",
         )
         operator.validation_mode = settings.validation_mode
+        smiles = layout.operator(
+            "chemblender.import_smiles_text",
+            text="Import SMILES",
+            icon="TEXT",
+        )
+        smiles.validation_mode = settings.validation_mode
         if settings.recent_summary:
             layout.label(text=settings.recent_summary)
         if get_quick_import_state(session).preview is not None:
@@ -364,6 +529,7 @@ class CHEMBLENDER_PT_quick_import(bpy.types.Panel):
 
 __all__ = (
     "CHEMBLENDER_OT_quick_import",
+    "CHEMBLENDER_OT_import_smiles_text",
     "CHEMBLENDER_PT_quick_import",
     "clear_quick_import_state",
     "get_quick_import_state",

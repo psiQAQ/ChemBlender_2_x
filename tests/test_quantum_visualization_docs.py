@@ -5,11 +5,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = (
-    "2.3.0-wave-1-native-molecular-and-grid.md",
     "2.3.0-wave-2-native-crystal.md",
     "2.3.0-wave-3-exchange-mol2-pdb-pqr.md",
     "2.3.0-wave-4-migration-release.md",
 )
+WAVE_230_ACTIVE_FILE = "2.3.0-wave-1-native-molecular-and-grid.md"
 
 
 class QuantumVisualizationDocsTests(unittest.TestCase):
@@ -49,10 +49,10 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 any(name in index for index in (docs_index, quantum_index)),
                 name,
             )
-        for name in WAVE_230_QUEUE_FILES:
+        for name in (WAVE_230_ACTIVE_FILE, *WAVE_230_QUEUE_FILES):
             self.assertIn(name, agent_index)
 
-    def test_230_wave_0_is_active_and_later_waves_remain_queued(self):
+    def test_230_wave_1_is_active_and_later_waves_remain_queued(self):
         queued = sorted(
             path.name
             for path in (ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md")
@@ -191,7 +191,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            ["2.3.0-wave-0-platform-foundation.md"],
+            [WAVE_230_ACTIVE_FILE],
         )
 
     def test_code_architecture_guide_tracks_source_files(self):
@@ -211,6 +211,9 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             documented,
         )
         self.assertIn("ChemBlender/ui/view_cache.py", documented)
+        self.assertIn("ChemBlender/ui/export.py", documented)
+        self.assertIn("ChemBlender/scripts/benchmark_cube_flow.py", documented)
+        self.assertIn("ChemBlender/scripts/benchmark_extxyz.py", documented)
         self.assertIn("ChemBlender/scripts/release_metadata.py", documented)
         self.assertIn(
             "ChemBlender/scripts/probe_prerelease_version.py",
@@ -227,6 +230,34 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("code-architecture-guide.md", index)
         self.assertIn("Every architecture change", agents)
 
+    def test_cube_flow_baseline_records_real_budget_evidence(self):
+        baseline = self.read_doc(
+            "docs/quantum-visualization/2.3.0/benchmarks/"
+            "cube-flow-baseline.md"
+        )
+        for value in (
+            "128 × 128 × 128",
+            "1.679902 s",
+            "Blender 5.1.2",
+            "cold VDB cache",
+            "Remote CI: Not Run",
+        ):
+            self.assertIn(value, baseline)
+
+    def test_extxyz_flow_baseline_records_reference_budget_evidence(self):
+        baseline = self.read_doc(
+            "docs/quantum-visualization/2.3.0/benchmarks/"
+            "extxyz-flow-baseline.md"
+        )
+        for value in (
+            "1,000 frames × 1,000 atoms",
+            "0.448/0.457 s",
+            "99.702 s",
+            "bounded 64 KiB source-read",
+            "Remote CI: Not Run",
+        ):
+            self.assertIn(value, baseline)
+
     def test_quantum_model_is_a_package(self):
         import importlib
 
@@ -234,6 +265,71 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertTrue((ROOT / "ChemBlender" / "core" / "model" / "__init__.py").exists())
         model = importlib.import_module("ChemBlender.core.model")
         self.assertIsNotNone(model.__spec__.submodule_search_locations)
+
+    def test_extxyz_plan_records_preimplementation_contracts(self):
+        plan = self.read_doc(
+            "docs/superpowers/plans/"
+            "2026-07-23-chemblender-2.3.0-wave-1-extxyz.md"
+        )
+        sections = {}
+        for task_number in range(1, 6):
+            marker = f"### Task {task_number}:"
+            start = plan.index(marker)
+            next_marker = f"### Task {task_number + 1}:"
+            end = plan.find(next_marker, start)
+            sections[task_number] = plan[start : end if end != -1 else None]
+
+        required_by_task = {
+            1: (
+                '`FrameProperty` validity mask prefix `("frame",)`',
+                '`AtomFrameProperty` validity mask prefix `("frame", "atom")`',
+                '`CellFrameProperty` validity mask prefix `("frame",)`',
+                "`mask.dims == required_prefix`",
+                "`mask.values.shape == data.values.shape[:len(required_prefix)]`",
+                "`mask.values.dtype == numpy.bool_`",
+                '`mask.unit == "dimensionless"`',
+                "Numeric and logical Partial properties use that boolean mask.",
+                "integer codes",
+                "unique categories",
+                "explicit missing code",
+                "does not add a redundant validity mask",
+            ),
+            2: (
+                "Create: `ChemBlender/core/formats/__init__.py`",
+                "string, integer, real, logical, 1-D array and 2-D array",
+                "raw lexeme and diagnostic",
+                "bounded one-frame iterator",
+                "libAtoms, ASE and OVITO",
+                "ASE remains fixture provenance only, not a runtime dependency",
+            ),
+            3: (
+                "`ax ay az bx by bz cx cy cz`",
+                "no `Lattice` and no `pbc`: `(False, False, False)`",
+                "`Lattice` and no `pbc`: `(True, True, True)`",
+                "explicit `pbc` overrides",
+                "staged memmap/NPY owner",
+                "Cancellation cleanup",
+                "must not construct a nested Python tuple containing all frames",
+                "sidecar publication failure rolls back",
+            ),
+            4: (
+                "deterministic typed metadata serialization",
+                "scalar, 1-D and 2-D typed metadata",
+                "metadata type, shape and value",
+                "unsafe raw lexeme and diagnostic",
+                "loss preview",
+            ),
+            5: (
+                "Modify: `ChemBlender/runtime/registration.py`",
+                "Modify: `tests/test_registration_contract.py`",
+                "Modify: `.agents/reference/code-architecture-guide.md`",
+                "Modify: `tests/test_quantum_visualization_docs.py`",
+                "`ChemBlender/ui/export.py` is an explicit registration root",
+            ),
+        }
+        for task_number, contracts in required_by_task.items():
+            for contract in contracts:
+                self.assertIn(contract, sections[task_number], contract)
 
     def test_local_markdown_links_resolve(self):
         import re

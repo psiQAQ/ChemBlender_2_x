@@ -9,13 +9,15 @@
 3. `architecture/import-project-reader-api-boundary.md`
 4. `architecture/quality-topology-edit-boundary.md`
 5. [Import diagnostics report v1](specs/import-report-v1.md)
-6. `format-maturity-matrix.md`
-7. `dependency-tier-matrix.md`
-8. `performance-budget.md`
-9. `roadmap.md`
-10. `docs/superpowers/specs/` 中的 2.3.0 总设计和 Wave 设计
-11. `docs/superpowers/plans/` 中的总排序计划和各实施计划
-12. [Reader API 0.x alpha conformance](reader-api-0.x.md)
+6. [Grid semantic presets v1](specs/grid-semantic-presets-v1.md)
+7. `format-maturity-matrix.md`
+8. `dependency-tier-matrix.md`
+9. `performance-budget.md`
+10. [Wave 1 Cube 128³ 产品流性能基线](benchmarks/cube-flow-baseline.md)
+11. `roadmap.md`
+12. `docs/superpowers/specs/` 中的 2.3.0 总设计和 Wave 设计
+13. `docs/superpowers/plans/` 中的总排序计划和各实施计划
+14. [Reader API 0.x alpha conformance](reader-api-0.x.md)
 
 ## 核心原则
 

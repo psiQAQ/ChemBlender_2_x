@@ -1,12 +1,15 @@
 """Blender Project Browser UIList and small RNA projection."""
 
+import importlib
 import json
+import operator
 from uuid import UUID
 
 import bpy
 from bpy.props import (
     CollectionProperty,
     EnumProperty,
+    FloatProperty,
     IntProperty,
     PointerProperty,
     StringProperty,
@@ -18,12 +21,24 @@ from ..properties import (
     get_quick_import_state,
 )
 from ..session import get_scene_session
+from ...core import (
+    AtomFrameProperty,
+    ConformerSet,
+    FrameSet,
+    MolecularRecord,
+    Structure,
+)
+from ...dataset_view import write_vector_view
 from .model import (
     BrowserMode,
     ViewRecord,
     _browser_entity_ids,
     build_browser_rows,
 )
+
+_scientific_edit = importlib.import_module("..scientific_edit", __package__)
+_topology = importlib.import_module("..topology", __package__)
+_grid = importlib.import_module("..grid", __package__)
 
 
 _MODE_ITEMS = tuple(
@@ -37,18 +52,25 @@ _QUALITY_ITEMS = (
     ("incomplete", "Incomplete", ""),
     ("invalid", "Invalid", ""),
 )
+_BROWSER_RNA_ROW_LIMIT = 1000
 _ROW_ICONS = {
     "diagnostic": "ERROR",
     "empty": "INFO",
     "grid3d": "VOLUME_DATA",
+    "conformer_set": "MOD_ARRAY",
     "group": "OUTLINER_COLLECTION",
     "source": "FILE",
     "source_revision": "FILE",
+    "molecular_record": "FILE_TEXT",
+    "record_property_column": "PROPERTIES",
     "structure": "MESH_DATA",
+    "topology_record": "MOD_WIREFRAME",
     "view": "HIDE_OFF",
 }
 _SCENE_PROPERTY_NAME = "chemblender_project_browser"
+_TOPOLOGY_SCENE_PROPERTY_NAME = "chemblender_topology"
 _OWNED_SCENE_PROPERTY = None
+_OWNED_TOPOLOGY_SCENE_PROPERTY = None
 
 
 def _selection_changed(state, context):
@@ -80,6 +102,7 @@ class CHEMBLENDER_PG_project_browser(bpy.types.PropertyGroup):
     )
     selected_index: IntProperty(default=0, update=_selection_changed)
     active_entity_id: StringProperty()
+    total_row_count: IntProperty(default=0)
     rows: CollectionProperty(type=CHEMBLENDER_PG_project_browser_row)
 
 
@@ -107,10 +130,113 @@ def synchronize_browser_selection(session, state):
     state.active_entity_id = str(selected) if selected is not None else ""
 
 
+def atom_frame_vector(project, entity_id, frame_index):
+    if type(entity_id) is not UUID:
+        raise TypeError("entity_id must be UUID")
+    dataset = project.datasets.get(entity_id)
+    if (
+        not isinstance(dataset, AtomFrameProperty)
+        or dataset.semantic_role != "atomic_force"
+        or dataset.data.dims != ("frame", "atom", "xyz")
+    ):
+        raise ValueError("selected entity is not an atomic force trajectory")
+    frame_set = project.datasets.get(dataset.frame_set_id)
+    if not isinstance(frame_set, FrameSet):
+        raise ValueError("atomic force trajectory has no FrameSet")
+    structure = project.structures.get(frame_set.structure_id)
+    if not isinstance(structure, Structure):
+        raise ValueError("atomic force trajectory has no current Structure")
+    if isinstance(frame_index, bool):
+        raise TypeError("frame_index must be an integer")
+    try:
+        frame_index = operator.index(frame_index)
+    except TypeError as error:
+        raise TypeError("frame_index must be an integer") from error
+    if not 0 <= frame_index < dataset.data.shape[0]:
+        raise IndexError("frame_index is outside the trajectory")
+    if dataset.validity_mask is not None:
+        import numpy
+
+        if not numpy.all(dataset.validity_mask.values[frame_index]):
+            raise ValueError("atomic force frame contains missing values")
+    return (
+        structure,
+        dataset,
+        dataset.data.values[frame_index],
+    )
+
+
+class CHEMBLENDER_OT_apply_frame_force(bpy.types.Operator):
+    bl_idname = "chemblender.apply_frame_force"
+    bl_label = "Show Force Vectors"
+    bl_description = "Apply the selected trajectory force to the active Structure view"
+
+    display_scale: FloatProperty(name="Scale", default=1.0, min=1.0e-9)
+
+    def execute(self, context):
+        session = get_scene_session(context.scene)
+        obj = context.active_object
+        if obj is None and session.active_view_object_name:
+            obj = context.scene.objects.get(session.active_view_object_name)
+        try:
+            frame_index = int(obj.get("cb_trajectory_frame_index", 0))
+            structure, dataset, values = atom_frame_vector(
+                session.project,
+                session.active_entity_id,
+                frame_index,
+            )
+            if (
+                obj.get("cb_structure_contract") != "structure_view_v1"
+                or obj.get("cb_structure_id") != str(structure.id)
+                or obj.get("cb_structure_revision") != structure.revision
+            ):
+                raise ValueError(
+                    "active object is not the current matching Structure view"
+                )
+            write_vector_view(
+                obj,
+                values,
+                dataset_id=dataset.id,
+                revision=dataset.revision,
+                semantic_role=dataset.semantic_role,
+                unit=dataset.data.unit,
+                display_scale=self.display_scale,
+            )
+        except (AttributeError, TypeError, ValueError, IndexError) as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        session.active_view_object_name = obj.name
+        return {"FINISHED"}
+
+
 def presentation_view_records(scene):
     records = []
     seen = set()
     for obj in sorted(scene.objects, key=lambda value: value.name):
+        topology_text = obj.get("cb_topology_id")
+        topology_revision = obj.get("cb_topology_revision")
+        if (
+            type(topology_text) is str
+            and topology_text.strip()
+            and type(topology_revision) is str
+            and topology_revision.strip()
+        ):
+            try:
+                topology_id = UUID(topology_text)
+            except ValueError:
+                pass
+            else:
+                identity = (obj.name, topology_id, topology_revision)
+                seen.add(identity)
+                records.append(
+                    ViewRecord(
+                        object_name=obj.name,
+                        entity_id=topology_id,
+                        revision=topology_revision,
+                        view_kind="structure_topology",
+                        label=obj.name,
+                    )
+                )
         view_kind = obj.get("cb_scene_view_kind")
         encoded = obj.get("cb_scene_bindings_json")
         if (
@@ -126,6 +252,20 @@ def presentation_view_records(scene):
             continue
         if type(bindings) is not dict:
             continue
+        quality = obj.get("cb_view_quality", "")
+        if (
+            type(quality) is not str
+            or quality not in {"", "complete", "partial", "ambiguous"}
+        ):
+            quality = ""
+        report_eligible = obj.get(
+            "cb_report_eligible",
+            view_kind not in {"signed_isosurface", "property_on_surface"},
+        )
+        if type(report_eligible) is not bool:
+            report_eligible = False
+        if quality in {"partial", "ambiguous"}:
+            report_eligible = False
         for binding_name in sorted(bindings):
             binding = bindings[binding_name]
             if (
@@ -157,6 +297,8 @@ def presentation_view_records(scene):
                     revision=revision,
                     view_kind=view_kind,
                     label=obj.name,
+                    quality=quality,
+                    report_eligible=report_eligible,
                 )
             )
     return tuple(records)
@@ -199,7 +341,8 @@ def refresh_project_browser(scene):
         settings.active_entity_id,
     )
     selected_id = str(selected) if selected is not None else ""
-    _copy_rows(settings.rows, rows)
+    settings.total_row_count = len(rows)
+    _copy_rows(settings.rows, rows[:_BROWSER_RNA_ROW_LIMIT])
     selected_index = next(
         (
             index
@@ -251,6 +394,7 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
     def draw(self, context):
         settings = getattr(context.scene, _SCENE_PROPERTY_NAME)
         refresh_project_browser(context.scene)
+        session = get_scene_session(context.scene)
         layout = self.layout
         layout.prop(settings, "mode", expand=True)
         layout.prop(settings, "search", icon="VIEWZOOM")
@@ -263,15 +407,71 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
             settings,
             "selected_index",
         )
+        if settings.total_row_count > len(settings.rows):
+            layout.label(
+                text=(
+                    f"Showing {len(settings.rows)} of "
+                    f"{settings.total_row_count} rows; refine Search or Filter"
+                ),
+                icon="INFO",
+            )
         if settings.active_entity_id:
             layout.label(text=f"Selected: {settings.active_entity_id}")
+            selected = session.project.datasets.get(session.active_entity_id)
+            selected_record = session.project.molecular_records.get(
+                session.active_entity_id
+            )
+            if (
+                isinstance(selected, AtomFrameProperty)
+                and selected.semantic_role == "atomic_force"
+            ):
+                layout.operator(
+                    CHEMBLENDER_OT_apply_frame_force.bl_idname,
+                    icon="FORCE_FORCE",
+                )
+            if (
+                session.active_entity_id in session.project.structures
+                or isinstance(selected, (FrameSet, ConformerSet))
+                or isinstance(selected_record, MolecularRecord)
+            ):
+                layout.operator(
+                    "chemblender.export_project_entity",
+                    icon="EXPORT",
+                )
+        _scientific_edit.draw_scientific_edit_controls(
+            layout,
+            context,
+            session,
+        )
+        _topology.draw_topology_controls(
+            layout,
+            context,
+            session,
+        )
+        _grid.draw_grid_controls(
+            layout,
+            context,
+            session,
+        )
 
 
 def register():
     global _OWNED_SCENE_PROPERTY
+    global _OWNED_TOPOLOGY_SCENE_PROPERTY
     current = _scene_property_identity(_SCENE_PROPERTY_NAME)
     if _OWNED_SCENE_PROPERTY is not None:
         if _same_scene_property(current, _OWNED_SCENE_PROPERTY):
+            topology_current = _scene_property_identity(
+                _TOPOLOGY_SCENE_PROPERTY_NAME
+            )
+            if not _same_scene_property(
+                topology_current,
+                _OWNED_TOPOLOGY_SCENE_PROPERTY,
+            ):
+                raise RuntimeError(
+                    f"Scene.{_TOPOLOGY_SCENE_PROPERTY_NAME} is no longer "
+                    "owned by ChemBlender"
+                )
             return
         raise RuntimeError(
             f"Scene.{_SCENE_PROPERTY_NAME} is no longer owned by ChemBlender"
@@ -319,10 +519,59 @@ def register():
             failure.add_note(f"property rollback failed: {error}")
         raise failure
     _OWNED_SCENE_PROPERTY = identity
+    topology_current = _scene_property_identity(
+        _TOPOLOGY_SCENE_PROPERTY_NAME
+    )
+    if _OWNED_TOPOLOGY_SCENE_PROPERTY is not None:
+        if _same_scene_property(
+            topology_current,
+            _OWNED_TOPOLOGY_SCENE_PROPERTY,
+        ):
+            return
+        raise RuntimeError(
+            f"Scene.{_TOPOLOGY_SCENE_PROPERTY_NAME} is no longer owned "
+            "by ChemBlender"
+        )
+    if topology_current is not None:
+        raise RuntimeError(
+            f"Scene.{_TOPOLOGY_SCENE_PROPERTY_NAME} is already owned"
+        )
+    created_topology_property = PointerProperty(
+        type=_topology.CHEMBLENDER_PG_topology_settings
+    )
+    setattr(
+        bpy.types.Scene,
+        _TOPOLOGY_SCENE_PROPERTY_NAME,
+        created_topology_property,
+    )
+    topology_identity = _scene_property_identity(
+        _TOPOLOGY_SCENE_PROPERTY_NAME
+    )
+    if topology_identity is None:
+        failure = RuntimeError(
+            "Topology Scene property registration failed"
+        )
+        try:
+            delattr(bpy.types.Scene, _TOPOLOGY_SCENE_PROPERTY_NAME)
+        except BaseException as error:
+            failure.add_note(f"property rollback failed: {error}")
+        raise failure
+    _OWNED_TOPOLOGY_SCENE_PROPERTY = topology_identity
 
 
 def unregister():
     global _OWNED_SCENE_PROPERTY
+    global _OWNED_TOPOLOGY_SCENE_PROPERTY
+    topology_owned = _OWNED_TOPOLOGY_SCENE_PROPERTY
+    if (
+        topology_owned is not None
+        and _same_scene_property(
+            _scene_property_identity(_TOPOLOGY_SCENE_PROPERTY_NAME),
+            topology_owned,
+        )
+    ):
+        delattr(bpy.types.Scene, _TOPOLOGY_SCENE_PROPERTY_NAME)
+    _OWNED_TOPOLOGY_SCENE_PROPERTY = None
     owned = _OWNED_SCENE_PROPERTY
     if owned is None:
         return
@@ -335,6 +584,7 @@ def unregister():
 
 
 __all__ = (
+    "CHEMBLENDER_OT_apply_frame_force",
     "CHEMBLENDER_PG_project_browser",
     "CHEMBLENDER_PG_project_browser_row",
     "CHEMBLENDER_PT_project_browser",

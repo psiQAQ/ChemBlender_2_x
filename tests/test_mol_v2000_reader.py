@@ -2,7 +2,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from ChemBlender.core import IssueKind, ReaderRegistry, SniffMatch, XYZ_READER
+from ChemBlender.core import ReaderRegistry, SniffMatch, XYZ_READER
 from ChemBlender.core.mol_v2000 import (
     MOL_V2000_READER,
     sniff_mol_v2000,
@@ -17,11 +17,9 @@ XYZ_FIXTURE = ROOT / "tests" / "fixtures" / "xyz" / "water.xyz"
 class MolV2000ReaderTests(unittest.TestCase):
     def test_sniff_and_registry_recognize_v2000(self):
         result = sniff_mol_v2000(MOL_FIXTURE, MOL_FIXTURE.read_bytes())
-        self.assertEqual(result.match, SniffMatch.EXACT)
-        self.assertIs(
-            ReaderRegistry((MOL_V2000_READER,)).select(MOL_FIXTURE),
-            MOL_V2000_READER,
-        )
+        self.assertEqual(result.match, SniffMatch.NONE)
+        with self.assertRaises(LookupError):
+            ReaderRegistry((MOL_V2000_READER,)).select(MOL_FIXTURE)
 
     def test_parse_normalizes_structure_and_reports_topology(self):
         batch = MOL_V2000_READER.parse(MOL_FIXTURE)
@@ -29,14 +27,18 @@ class MolV2000ReaderTests(unittest.TestCase):
         self.assertEqual(structure.atomic_numbers, (8, 1, 1))
         self.assertEqual(structure.coordinates.shape, (3, 3))
         self.assertEqual(structure.coordinates.unit, "angstrom")
-        self.assertEqual(batch.report.parsed_capabilities, ("structure",))
         self.assertEqual(
-            {(issue.kind, issue.path) for issue in batch.report.issues},
-            {(IssueKind.UNSUPPORTED, "topology")},
+            batch.report.parsed_capabilities,
+            ("structure", "atomic_identity", "topology", "molecular_record"),
         )
         self.assertEqual(
             set(batch.report.created_entity_ids),
-            {structure.id, batch.provenance[0].id},
+            {
+                structure.id,
+                batch.topologies[0].id,
+                batch.molecular_records[0].id,
+                batch.provenance[0].id,
+            },
         )
         self.assertEqual(len(batch.provenance[0].source_hash), 64)
 
@@ -72,7 +74,7 @@ class MolV2000ReaderTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         MOL_V2000_READER.parse(source)
 
-    def test_unmapped_property_records_are_reported(self):
+    def test_alias_preserves_v2000_atomic_properties(self):
         content = MOL_FIXTURE.read_bytes().replace(
             b"M  END",
             b"M  CHG  1   1  -1\nM  END",
@@ -81,10 +83,7 @@ class MolV2000ReaderTests(unittest.TestCase):
             source = Path(directory) / "charged.mol"
             source.write_bytes(content)
             batch = MOL_V2000_READER.parse(source)
-        self.assertIn(
-            (IssueKind.UNSUPPORTED, "atom_properties"),
-            {(issue.kind, issue.path) for issue in batch.report.issues},
-        )
+        self.assertEqual(batch.structures[0].atomic_identity.formal_charges.values.tolist(), [-1, 0, 0])
 
 
 if __name__ == "__main__":

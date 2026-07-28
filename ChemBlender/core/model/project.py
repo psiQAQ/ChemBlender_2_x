@@ -15,13 +15,22 @@ from .common import (
 from .diagnostics import ImportDiagnostic, ParserReport
 from .grids import Grid3D
 from .grouping import CalculationGroup
+from .molecular_topology import TopologyRecord
 from .periodic import (
     BandStructure,
     DensityOfStates,
     FermiSurfaceMesh,
     PhononModeSet,
 )
-from .properties import AtomicProperty, FrameSet, PropertyDataset
+from .properties import (
+    AtomicProperty,
+    AtomFrameProperty,
+    CellFrameProperty,
+    FrameProperty,
+    FrameSet,
+    PropertyDataset,
+)
+from .records import ConformerSet, MolecularRecord, RecordPropertyColumn
 from .sources import SourceRecord, SourceRevision
 from .spectroscopy import (
     ExcitedStateSet,
@@ -222,6 +231,8 @@ class ImportBatch:
     sources: tuple[SourceRecord, ...] = ()
     source_revisions: tuple[SourceRevision, ...] = ()
     structures: tuple[Structure, ...] = ()
+    topologies: tuple[TopologyRecord, ...] = ()
+    molecular_records: tuple[MolecularRecord, ...] = ()
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
     qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
     cjson_envelopes: tuple[CJSONEnvelope, ...] = ()
@@ -240,6 +251,8 @@ class ImportBatch:
             ("sources", SourceRecord),
             ("source_revisions", SourceRevision),
             ("structures", Structure),
+            ("topologies", TopologyRecord),
+            ("molecular_records", MolecularRecord),
             ("cif_envelopes", CIFEnvelope),
             ("qcschema_envelopes", QCSchemaEnvelope),
             ("cjson_envelopes", CJSONEnvelope),
@@ -268,6 +281,8 @@ class QCProject:
     sources: dict[UUID, SourceRecord] = field(default_factory=dict)
     source_revisions: dict[UUID, SourceRevision] = field(default_factory=dict)
     structures: dict[UUID, Structure] = field(default_factory=dict)
+    topologies: dict[UUID, TopologyRecord] = field(default_factory=dict)
+    molecular_records: dict[UUID, MolecularRecord] = field(default_factory=dict)
     cif_envelopes: dict[UUID, CIFEnvelope] = field(default_factory=dict)
     qcschema_envelopes: dict[UUID, QCSchemaEnvelope] = field(default_factory=dict)
     cjson_envelopes: dict[UUID, CJSONEnvelope] = field(default_factory=dict)
@@ -294,6 +309,8 @@ class QCProject:
 
         incoming_entity_groups = (
             batch.structures,
+            batch.topologies,
+            batch.molecular_records,
             batch.cif_envelopes,
             batch.qcschema_envelopes,
             batch.cjson_envelopes,
@@ -333,6 +350,34 @@ class QCProject:
             (structure.id, structure) for structure in batch.structures
         )
         structure_ids = set(structures)
+        topologies = dict(self.topologies)
+        topologies.update(
+            (topology.id, topology) for topology in batch.topologies
+        )
+        topology_ids = set(topologies)
+        molecular_records = dict(self.molecular_records)
+        molecular_records.update(
+            (record.id, record) for record in batch.molecular_records
+        )
+        molecular_record_ids = set(molecular_records)
+        record_keys = set()
+        record_indices = set()
+        for record in molecular_records.values():
+            source_key = (record.source_revision_id, record.record_key)
+            source_index = (
+                record.source_revision_id,
+                record.source_record_index,
+            )
+            if source_key in record_keys:
+                raise ValueError(
+                    "molecular record key must be unique within its source revision"
+                )
+            if source_index in record_indices:
+                raise ValueError(
+                    "molecular record index must be unique within its source revision"
+                )
+            record_keys.add(source_key)
+            record_indices.add(source_index)
         cif_envelope_ids = set(self.cif_envelopes).union(
             envelope.id for envelope in batch.cif_envelopes
         )
@@ -378,6 +423,54 @@ class QCProject:
                 raise ValueError(
                     "periodic structure has a dangling CIF envelope reference"
                 )
+            for topology_id in structure.topology_ids:
+                try:
+                    topology = topologies[topology_id]
+                except KeyError as error:
+                    raise ValueError(
+                        "structure has a dangling topology reference"
+                    ) from error
+                if topology.structure_id != structure.id:
+                    raise ValueError(
+                        "structure topology reference belongs to another structure"
+                    )
+        for topology in batch.topologies:
+            import numpy
+
+            try:
+                reference = structures[topology.structure_id]
+            except KeyError as error:
+                raise ValueError(
+                    "topology has a dangling structure reference"
+                ) from error
+            indices = numpy.asarray(topology.bond_indices.values)
+            if (
+                topology.bond_indices.shape[0]
+                and int(indices.max()) >= len(reference.atomic_numbers)
+            ):
+                raise ValueError("topology bond index is outside its structure")
+            self._require_references(
+                topology.provenance_ids,
+                provenance_ids,
+                "topology provenance",
+            )
+        for record in batch.molecular_records:
+            if record.source_revision_id not in source_revision_ids:
+                raise ValueError("molecular record has a dangling source revision reference")
+            try:
+                reference = structures[record.structure_id]
+            except KeyError as error:
+                raise ValueError("molecular record has a dangling structure reference") from error
+            if record.topology_id is not None:
+                try:
+                    topology = topologies[record.topology_id]
+                except KeyError as error:
+                    raise ValueError("molecular record has a dangling topology reference") from error
+                if topology.structure_id != reference.id:
+                    raise ValueError("molecular record topology belongs to another structure")
+            self._require_references(
+                record.provenance_ids, provenance_ids, "molecular record provenance"
+            )
         for envelope in batch.cif_envelopes:
             self._require_references(
                 envelope.provenance_ids,
@@ -461,6 +554,36 @@ class QCProject:
                 provenance_ids,
                 "dataset provenance",
             )
+            if isinstance(dataset, RecordPropertyColumn):
+                self._require_references(
+                    dataset.record_ids, molecular_record_ids, "record property column record"
+                )
+            if isinstance(dataset, ConformerSet):
+                try:
+                    reference = structures[dataset.reference_structure_id]
+                except KeyError as error:
+                    raise ValueError("ConformerSet has a dangling structure reference") from error
+                if dataset.data.shape[1] != len(reference.atomic_numbers):
+                    raise ValueError("ConformerSet atom dimension must match its structure")
+                if dataset.data.unit != reference.coordinates.unit:
+                    raise ValueError("ConformerSet and structure coordinate units must match")
+                if dataset.reference_topology_id is not None:
+                    try:
+                        topology = topologies[dataset.reference_topology_id]
+                    except KeyError as error:
+                        raise ValueError("ConformerSet has a dangling topology reference") from error
+                    if topology.structure_id != reference.id:
+                        raise ValueError("ConformerSet topology belongs to another structure")
+                self._require_references(
+                    dataset.record_ids, molecular_record_ids, "ConformerSet record"
+                )
+                if tuple(
+                    molecular_records[record_id].record_key
+                    for record_id in dataset.record_ids
+                ) != dataset.record_keys:
+                    raise ValueError(
+                        "ConformerSet record keys must match its records"
+                    )
             if isinstance(dataset, AtomicProperty):
                 try:
                     reference = structures[dataset.structure_id]
@@ -486,6 +609,26 @@ class QCProject:
                 if dataset.data.unit != reference.coordinates.unit:
                     raise ValueError(
                         "FrameSet and structure coordinate units must match"
+                    )
+            if isinstance(
+                dataset,
+                (FrameProperty, AtomFrameProperty, CellFrameProperty),
+            ):
+                frames = datasets.get(dataset.frame_set_id)
+                if not isinstance(frames, FrameSet):
+                    raise ValueError(
+                        f"{type(dataset).__name__} has a dangling FrameSet reference"
+                    )
+                if dataset.data.shape[0] != frames.data.shape[0]:
+                    raise ValueError(
+                        f"{type(dataset).__name__} frame dimension must match its FrameSet"
+                    )
+                if (
+                    isinstance(dataset, AtomFrameProperty)
+                    and dataset.data.shape[1] != frames.data.shape[1]
+                ):
+                    raise ValueError(
+                        "AtomFrameProperty atom dimension must match its FrameSet"
                     )
             if isinstance(dataset, VibrationalModeSet):
                 try:
@@ -647,6 +790,8 @@ class QCProject:
             source_ids
             | source_revision_ids
             | structure_ids
+            | topology_ids
+            | molecular_record_ids
             | cif_envelope_ids
             | qcschema_envelope_ids
             | cjson_envelope_ids
@@ -676,7 +821,7 @@ class QCProject:
                 all_ids - diagnostic_ids,
                 "provenance parent",
             )
-        if batch.report is not None and set(batch.report.created_entity_ids) != set(
+        if batch.report is not None and batch.report.created_entity_ids != tuple(
             entity.id
             for group in incoming_entity_groups
             for entity in group
@@ -688,6 +833,10 @@ class QCProject:
             (entity.id, entity) for entity in batch.source_revisions
         )
         self.structures.update((entity.id, entity) for entity in batch.structures)
+        self.topologies.update((entity.id, entity) for entity in batch.topologies)
+        self.molecular_records.update(
+            (entity.id, entity) for entity in batch.molecular_records
+        )
         self.cif_envelopes.update(
             (entity.id, entity) for entity in batch.cif_envelopes
         )
@@ -737,6 +886,8 @@ class QCProject:
             self.sources,
             self.source_revisions,
             self.structures,
+            self.topologies,
+            self.molecular_records,
             self.cif_envelopes,
             self.qcschema_envelopes,
             self.cjson_envelopes,
@@ -760,6 +911,8 @@ class QCProject:
             (self.sources, SourceRecord, "sources"),
             (self.source_revisions, SourceRevision, "source_revisions"),
             (self.structures, Structure, "structures"),
+            (self.topologies, TopologyRecord, "topologies"),
+            (self.molecular_records, MolecularRecord, "molecular_records"),
             (self.cif_envelopes, CIFEnvelope, "cif_envelopes"),
             (self.qcschema_envelopes, QCSchemaEnvelope, "qcschema_envelopes"),
             (self.cjson_envelopes, CJSONEnvelope, "cjson_envelopes"),
@@ -871,6 +1024,8 @@ def validate_project_graph(project):
             sources=tuple(project.sources.values()),
             source_revisions=tuple(project.source_revisions.values()),
             structures=tuple(project.structures.values()),
+            topologies=tuple(project.topologies.values()),
+            molecular_records=tuple(project.molecular_records.values()),
             cif_envelopes=tuple(project.cif_envelopes.values()),
             qcschema_envelopes=tuple(project.qcschema_envelopes.values()),
             cjson_envelopes=tuple(project.cjson_envelopes.values()),

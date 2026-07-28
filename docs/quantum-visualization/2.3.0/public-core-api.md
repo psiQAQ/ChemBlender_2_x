@@ -8,6 +8,22 @@
 
 `CalculationGroup` 是用户确认的跨来源计算关系；它属于权威项目模型，保存在 `QCProject.calculation_groups` 并随 `.cbq` 往返。
 
+`TopologyRecord` 是独立的结构连接实体，使用 `TopologySource` 和
+`QualityStatus` 区分文件显式连接、RDKit 解释、距离推断和用户编辑。
+`ImportBatch.topologies` 与 `QCProject.topologies` 保存这些实体；
+`Structure.topology_ids` 只保存关联 UUID，活动 topology 属于 View 状态。
+旧 sidecar 中内嵌的 `MolecularTopology` 仅作为读取兼容输入。
+
+`AtomicIdentityData` 是可选逐 atom isotope、formal charge、atom-map、名称和
+stereo 值对象。`MolecularRecord` 保留单一精确 raw block 与有序（允许重复）原始
+属性。`RecordPropertyColumn` 与 `ConformerSet` 是可选 dataset 投影；它们不保存
+RDKit 对象，也不实现 reader、grouping、export 或 UI 行为。RDKit is not a project model.
+
+`GridSemanticPreset`、`builtin_grid_semantic_presets()`、
+`resolve_grid_semantics()` 与 `default_grid_isovalue()` 构成 Cube/Grid
+显式语义解析边界。解析保留 raw ambiguous grid；用户选择生成新的确定性
+`Grid3D` revision 和 provenance。
+
 ## 存储 API
 
 `open_project`、`save_project`、`close_project`、`LazyNpyArray` 及 `Sidecar*Error` 构成 sidecar 存储 API，用于 `.cbq` 项目和数组引用的读取、写入与错误处理。
@@ -21,6 +37,10 @@
 ## Reader 契约
 
 `ReaderDescriptor`、`ReaderRegistry`、`SniffMatch`、`SniffResult` 和 catalog API 是 alpha 0.x Reader 契约，尚非 v1。
+
+内置 `mol` v2 reader 通过 RDKit 提供单记录 MOL V2000/V3000 的结构、原子身份、拓扑和 `MolecularRecord`；`mol-v2000` 仅保留为 V2000 的显式兼容 alias，并在报告中提示改用 `mol`。
+
+内置 `sdf` reader 以原始字节逐条恢复多记录 SDF：每条 MOL block 和重复/空 SD 字段均保持独立 record 身份，Balanced 模式不会因单条坏记录而丢弃相邻有效记录；只为无歧义数值或布尔 SD 字段生成 typed record columns。
 
 ## Recipe 契约
 

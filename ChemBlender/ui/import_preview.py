@@ -2,7 +2,9 @@
 
 import shutil
 from dataclasses import dataclass, fields, is_dataclass, replace
+from hashlib import sha256
 from pathlib import Path
+from queue import Empty, SimpleQueue
 from threading import Event, Thread
 from uuid import UUID, uuid4
 
@@ -18,6 +20,7 @@ from bpy.props import (
 from ..core import (
     DiagnosticSeverity,
     QualityStatus,
+    RecordPropertyColumn,
     builtin_scene_presets,
     plan_scene_preset,
 )
@@ -27,7 +30,9 @@ from ..core.import_pipeline.conflicts import (
     detect_import_conflicts,
 )
 from ..core.import_pipeline.grouping import suggest_source_groups
+from ..core.import_pipeline.preflight import ImportCancelled
 from ..core.import_pipeline.transaction import (
+    ConformerGroupingDecision,
     GroupingDecision,
     ImportCommitDecisions,
     commit_import_preview,
@@ -38,6 +43,8 @@ from ..scene_preset_view import (
 )
 from ..runtime.reader_api_bridge import get_reader_plugin_registry
 from .default_views import describe_default_view, plan_default_view
+from .extxyz_preview import extxyz_preview_summary
+from .grid import grid_preview_summary
 from .properties import (
     discard_quick_import_preview,
     finish_quick_import_job,
@@ -67,6 +74,18 @@ _GROUPING_ACTION_ITEMS = (
         "Create the suggested Calculation Group",
     ),
 )
+_CONFORMER_GROUPING_ACTION_ITEMS = (
+    (
+        "keep_independent",
+        "Keep Independent",
+        "Keep each molecular record as an independent Structure",
+    ),
+    (
+        "accept_group",
+        "Accept Group",
+        "Create the suggested ConformerSet",
+    ),
+)
 _TARGET_ACTIONS = frozenset(
     {
         DuplicateAction.REUSE_EXISTING,
@@ -82,6 +101,26 @@ _SKIP_ACTIONS = frozenset(
         DuplicateAction.IGNORE,
     }
 )
+_CONFORMER_EVIDENCE_PREVIEW_LIMIT = 20
+_FATAL_EXCEPTIONS = (
+    KeyboardInterrupt,
+    SystemExit,
+    GeneratorExit,
+    MemoryError,
+)
+
+
+def _merge_cleanup_failure(failure, error, label):
+    if failure is None:
+        return error
+    if isinstance(error, _FATAL_EXCEPTIONS) and not isinstance(
+        failure,
+        _FATAL_EXCEPTIONS,
+    ):
+        error.add_note(f"earlier cleanup failed: {failure}")
+        return error
+    failure.add_note(f"{label}: {error}")
+    return failure
 
 
 def _conflict_action_items(row, _context):
@@ -125,12 +164,50 @@ class CHEMBLENDER_PG_import_grouping_suggestion(bpy.types.PropertyGroup):
     )
 
 
+class CHEMBLENDER_PG_import_conformer_evidence(bpy.types.PropertyGroup):
+    record_id: StringProperty()
+    record_key: StringProperty()
+    kind: StringProperty()
+    atom_mapping: StringProperty()
+    requires_review: BoolProperty()
+
+
+class CHEMBLENDER_PG_import_conformer_suggestion(bpy.types.PropertyGroup):
+    suggestion_id: StringProperty()
+    record_count: IntProperty()
+    requires_review: BoolProperty()
+    hidden_review_count: IntProperty(default=0)
+    grouping_action: EnumProperty(items=_CONFORMER_GROUPING_ACTION_ITEMS)
+    review_confirmed: BoolProperty(default=False)
+    evidence: CollectionProperty(
+        type=CHEMBLENDER_PG_import_conformer_evidence
+    )
+
+
 class CHEMBLENDER_PG_import_preview_row(bpy.types.PropertyGroup):
     source_id: StringProperty()
     source_name: StringProperty()
     reader_id: StringProperty()
     reader_availability: StringProperty()
     capability_summary: StringProperty()
+    frame_count: IntProperty()
+    atom_property_summary: StringProperty()
+    frame_property_summary: StringProperty()
+    lattice_pbc_summary: StringProperty()
+    assumed_unit_summary: StringProperty()
+    molecular_record_count: IntProperty()
+    molecular_version_summary: StringProperty()
+    molecular_recovery_summary: StringProperty()
+    molecular_topology_summary: StringProperty()
+    molecular_property_summary: StringProperty()
+    grid_dataset_count: IntProperty()
+    grid_source_ids: StringProperty()
+    grid_sample_range: StringProperty()
+    grid_shape: StringProperty()
+    grid_coordinate_unit: StringProperty()
+    grid_value_unit: StringProperty()
+    grid_quality: StringProperty()
+    conformer_suggestion_count: IntProperty()
     quality: StringProperty()
     conflict_id: StringProperty()
     conflict_action: EnumProperty(items=_conflict_action_items)
@@ -161,6 +238,24 @@ class PreviewProjection:
     reader_availability: str
     capability_summary: str
     quality: str
+    frame_count: int = 0
+    atom_property_summary: str = ""
+    frame_property_summary: str = ""
+    lattice_pbc_summary: str = ""
+    assumed_unit_summary: str = ""
+    molecular_record_count: int = 0
+    molecular_version_summary: str = ""
+    molecular_recovery_summary: str = ""
+    molecular_topology_summary: str = ""
+    molecular_property_summary: str = ""
+    grid_dataset_count: int = 0
+    grid_source_ids: str = ""
+    grid_sample_range: str = ""
+    grid_shape: str = ""
+    grid_coordinate_unit: str = ""
+    grid_value_unit: str = ""
+    grid_quality: str = ""
+    conformer_suggestion_count: int = 0
     conflict_id: str = ""
     allowed_actions: str = ""
     conflict_action: str = DuplicateAction.INDEPENDENT_COPY.value
@@ -191,6 +286,26 @@ class GroupingSuggestionProjection:
     grouping_action: str = "keep_independent"
     review_confirmed: bool = False
     evidence: tuple[GroupingEvidenceProjection, ...] = ()
+
+
+@dataclass(slots=True)
+class ConformerEvidenceProjection:
+    record_id: str
+    record_key: str
+    kind: str
+    atom_mapping: str
+    requires_review: bool
+
+
+@dataclass(slots=True)
+class ConformerSuggestionProjection:
+    suggestion_id: str
+    record_count: int
+    requires_review: bool
+    hidden_review_count: int = 0
+    grouping_action: str = "keep_independent"
+    review_confirmed: bool = False
+    evidence: tuple[ConformerEvidenceProjection, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -252,6 +367,9 @@ def _commit_to_fresh_generation(
     staged_session,
     preview,
     decisions,
+    *,
+    progress=lambda _stage, _completed, _total: None,
+    is_cancelled=lambda: False,
 ):
     previous_path = project_session.sidecar_path
     previous_project = project_session.project
@@ -264,6 +382,8 @@ def _commit_to_fresh_generation(
             staged_session,
             preview,
             decisions,
+            progress=progress,
+            is_cancelled=is_cancelled,
         )
     except BaseException as error:
         project_session.sidecar_path = previous_path
@@ -309,13 +429,29 @@ def _diagnostics(staging, source_preview):
     )
 
 
+def _is_isolated_sdf_record_failure(diagnostic, valid_record_keys):
+    return (
+        diagnostic.code == "sdf.record_parse_failed"
+        and diagnostic.field_path.startswith("record.")
+        and diagnostic.recovery_action == "other SDF records were retained"
+        and diagnostic.entity_id is None
+        and valid_record_keys
+        and diagnostic.record_key
+        and diagnostic.record_key not in valid_record_keys
+    )
+
+
 def _quality_and_blocking(staging, source_preview):
     if len(source_preview.staged_batch_ids) != 1:
         return (
             QualityStatus.INCOMPLETE.value,
             "source has no single staged batch",
         )
+    batch = staging.result(source_preview.staged_batch_ids[0])
     diagnostics = _diagnostics(staging, source_preview)
+    valid_record_keys = frozenset(
+        record.record_key for record in batch.molecular_records
+    )
     quality = max(
         (item.quality_status for item in diagnostics),
         key=lambda item: item.summary_order,
@@ -325,8 +461,13 @@ def _quality_and_blocking(staging, source_preview):
         (
             item
             for item in diagnostics
-            if item.severity is DiagnosticSeverity.ERROR
-            or item.quality_status is QualityStatus.INVALID
+            if (
+                item.severity is DiagnosticSeverity.ERROR
+                or item.quality_status is QualityStatus.INVALID
+            )
+            and not _is_isolated_sdf_record_failure(
+                item, valid_record_keys
+            )
         ),
         None,
     )
@@ -355,6 +496,42 @@ def _candidate_projection(project, candidate, *, selected):
     )
 
 
+def _molecular_summary(batch, conformer_count):
+    records = batch.molecular_records
+    if not records:
+        return (0, "", "", "", "", 0)
+    versions = {}
+    for record in records:
+        name = record.block_version or "SMILES"
+        versions[name] = versions.get(name, 0) + 1
+    version_summary = ", ".join(
+        f"{name}: {versions[name]}" for name in sorted(versions)
+    )
+    recoveries = sum(
+        diagnostic.code == "sdf.record_parse_failed"
+        for diagnostic in batch.diagnostics
+    )
+    sanitized = sum(
+        getattr(topology.source_kind, "value", "") == "rdkit_sanitized"
+        for topology in batch.topologies
+    )
+    raw_fields = sum(
+        len(record.ordered_raw_properties) for record in records
+    )
+    typed_columns = sum(
+        isinstance(dataset, RecordPropertyColumn)
+        for dataset in batch.datasets
+    )
+    return (
+        len(records),
+        version_summary,
+        "none" if not recoveries else f"{recoveries} recovered record(s)",
+        f"{sanitized} sanitized topology record(s)",
+        f"{raw_fields} raw fields · {typed_columns} typed columns",
+        conformer_count,
+    )
+
+
 def project_import_preview(project_session, state, registry):
     """Refresh live conflicts and return a small RNA-safe row projection."""
     preview = state.preview
@@ -373,6 +550,9 @@ def project_import_preview(project_session, state, registry):
     grouping_suggestions = (
         suggest_source_groups(preview, staging) if ready else ()
     )
+    conformer_suggestions = state.conformer_grouping_suggestions
+    if not ready or conformer_suggestions is None:
+        conformer_suggestions = ()
     preview = replace(
         preview,
         conflict_ids=tuple(conflict.id for conflict in conflicts),
@@ -383,6 +563,7 @@ def project_import_preview(project_session, state, registry):
     state.preview = preview
     state.conflicts = conflicts
     state.grouping_suggestions = grouping_suggestions
+    state.conformer_grouping_suggestions = conformer_suggestions
     conflicts_by_source = {
         conflict.staged_source_id: conflict for conflict in conflicts
     }
@@ -401,8 +582,27 @@ def project_import_preview(project_session, state, registry):
         quality, blocking_reason = _quality_and_blocking(staging, source)
         conflict = conflicts_by_source.get(source.source_id)
         default_view_plan = None
+        extxyz_summary = None
+        grid_summary = None
+        molecular_summary = (0, "", "", "", "", 0)
         if len(source.staged_batch_ids) == 1:
             batch = staging.result(source.staged_batch_ids[0])
+            grid_summary = grid_preview_summary(batch)
+            if source.selected_reader_id == "extxyz":
+                extxyz_summary = extxyz_preview_summary(batch)
+            batch_record_ids = {
+                record.id for record in batch.molecular_records
+            }
+            source_suggestion_count = sum(
+                set(suggestion.record_ids).issubset(
+                    batch_record_ids
+                )
+                for suggestion in conformer_suggestions
+            )
+            molecular_summary = _molecular_summary(
+                batch,
+                source_suggestion_count,
+            )
             revision = next(
                 (
                     value
@@ -425,6 +625,83 @@ def project_import_preview(project_session, state, registry):
                 reader_availability=availability,
                 capability_summary=", ".join(source.capabilities) or "none",
                 quality=quality,
+                frame_count=(
+                    0 if extxyz_summary is None else extxyz_summary.frame_count
+                ),
+                atom_property_summary=(
+                    ""
+                    if extxyz_summary is None
+                    else ", ".join(extxyz_summary.atom_properties) or "none"
+                ),
+                frame_property_summary=(
+                    ""
+                    if extxyz_summary is None
+                    else ", ".join(extxyz_summary.frame_properties) or "none"
+                ),
+                lattice_pbc_summary=(
+                    ""
+                    if extxyz_summary is None
+                    else (
+                        f"Lattice: {'yes' if extxyz_summary.has_lattice else 'no'}"
+                        " · PBC: "
+                        + (
+                            "none"
+                            if extxyz_summary.pbc is None
+                            else " ".join(
+                                "T" if value else "F"
+                                for value in extxyz_summary.pbc
+                            )
+                            + (
+                                " (varies)"
+                                if extxyz_summary.pbc_changes
+                                else ""
+                            )
+                        )
+                    )
+                ),
+                assumed_unit_summary=(
+                    ""
+                    if extxyz_summary is None
+                    else "; ".join(extxyz_summary.assumed_units)
+                ),
+                molecular_record_count=molecular_summary[0],
+                molecular_version_summary=molecular_summary[1],
+                molecular_recovery_summary=molecular_summary[2],
+                molecular_topology_summary=molecular_summary[3],
+                molecular_property_summary=molecular_summary[4],
+                grid_dataset_count=(
+                    0 if grid_summary is None else grid_summary.dataset_count
+                ),
+                grid_source_ids=(
+                    ""
+                    if grid_summary is None
+                    else ", ".join(grid_summary.source_dataset_ids)
+                ),
+                grid_sample_range=(
+                    ""
+                    if grid_summary is None
+                    else "; ".join(
+                        f"{low:g}..{high:g}"
+                        for low, high in grid_summary.sample_ranges
+                    )
+                ),
+                grid_shape=(
+                    ""
+                    if grid_summary is None
+                    else " × ".join(map(str, grid_summary.grid_shape))
+                ),
+                grid_coordinate_unit=(
+                    ""
+                    if grid_summary is None
+                    else grid_summary.coordinate_unit
+                ),
+                grid_value_unit=(
+                    "" if grid_summary is None else grid_summary.value_unit
+                ),
+                grid_quality=(
+                    "" if grid_summary is None else grid_summary.quality
+                ),
+                conformer_suggestion_count=molecular_summary[5],
                 conflict_id=str(conflict.id) if conflict else "",
                 conflict_action=(
                     conflict.default_action.value
@@ -488,6 +765,62 @@ def project_grouping_suggestions(state):
             ),
         )
         for suggestion in state.grouping_suggestions
+    )
+
+
+def _conformer_projection(suggestion):
+    if len(suggestion.evidence) != len(suggestion.record_keys):
+        raise ValueError("conformer evidence and record keys must align")
+    review_evidence = []
+    other_evidence = []
+    review_count = 0
+    for index, item in enumerate(suggestion.evidence):
+        pair = (item, suggestion.record_keys[index])
+        if item.requires_review:
+            review_count += 1
+            if len(review_evidence) < _CONFORMER_EVIDENCE_PREVIEW_LIMIT:
+                review_evidence.append(pair)
+        elif len(other_evidence) < _CONFORMER_EVIDENCE_PREVIEW_LIMIT:
+            other_evidence.append(pair)
+    visible_evidence = (
+        review_evidence + other_evidence
+    )[:_CONFORMER_EVIDENCE_PREVIEW_LIMIT]
+    return ConformerSuggestionProjection(
+        suggestion_id=str(suggestion.id),
+        record_count=len(suggestion.record_ids),
+        requires_review=suggestion.requires_review,
+        hidden_review_count=review_count - len(review_evidence),
+        evidence=tuple(
+            ConformerEvidenceProjection(
+                record_id=str(item.record_id),
+                record_key=record_key,
+                kind=item.kind,
+                atom_mapping=_atom_mapping_summary(item.atom_mapping),
+                requires_review=item.requires_review,
+            )
+            for item, record_key in visible_evidence
+        ),
+    )
+
+
+def _atom_mapping_summary(atom_mapping):
+    visible = ",".join(map(str, atom_mapping[:12]))
+    if len(atom_mapping) <= 12:
+        return visible
+    digest = sha256()
+    for value in atom_mapping:
+        digest.update(str(value).encode("ascii"))
+        digest.update(b",")
+    return (
+        f"{visible},... ({len(atom_mapping)} atoms; "
+        f"sha256:{digest.hexdigest()[:12]})"
+    )
+
+
+def project_conformer_suggestions(state):
+    return tuple(
+        _conformer_projection(suggestion)
+        for suggestion in (state.conformer_grouping_suggestions or ())
     )
 
 
@@ -572,11 +905,86 @@ def _grouping_decisions(
     return tuple(decisions)
 
 
+def _conformer_grouping_decisions(
+    state,
+    conformer_rows,
+):
+    suggestions = state.conformer_grouping_suggestions or ()
+    if conformer_rows is None:
+        conformer_rows = project_conformer_suggestions(state)
+    conformer_rows = tuple(conformer_rows)
+    by_id = {}
+    for row in conformer_rows:
+        suggestion_id = UUID(row.suggestion_id)
+        if suggestion_id in by_id:
+            raise ValueError("conformer grouping suggestion rows must be unique")
+        by_id[suggestion_id] = row
+    live_by_id = {
+        suggestion.id: suggestion for suggestion in suggestions
+    }
+    if set(by_id) != set(live_by_id):
+        raise ValueError(
+            "conformer grouping rows do not match Import Preview"
+        )
+    decisions = []
+    for suggestion_id, row in by_id.items():
+        suggestion = live_by_id[suggestion_id]
+        expected = _conformer_projection(suggestion)
+        evidence = tuple(row.evidence)
+        if tuple(
+            (
+                item.record_id,
+                item.record_key,
+                item.kind,
+                item.atom_mapping,
+                item.requires_review,
+            )
+            for item in evidence
+        ) != tuple(
+            (
+                item.record_id,
+                item.record_key,
+                item.kind,
+                item.atom_mapping,
+                item.requires_review,
+            )
+            for item in expected.evidence
+        ):
+            raise ValueError(
+                "conformer grouping evidence does not match Import Preview"
+            )
+        if row.hidden_review_count != expected.hidden_review_count:
+            raise ValueError(
+                "conformer grouping review count does not match Import Preview"
+            )
+        if row.grouping_action == "keep_independent":
+            continue
+        if row.grouping_action != "accept_group":
+            raise ValueError("unsupported conformer grouping action")
+        if expected.hidden_review_count:
+            raise ValueError(
+                "conformer grouping has hidden review evidence; "
+                "keep records independent"
+            )
+        if suggestion.requires_review and not row.review_confirmed:
+            raise ValueError(
+                "conformer grouping review requires explicit confirmation"
+            )
+        decisions.append(
+            ConformerGroupingDecision(
+                suggestion,
+                review_confirmed=row.review_confirmed,
+            )
+        )
+    return tuple(decisions)
+
+
 def import_commit_decisions(
     state,
     rows,
     *,
     grouping_rows=None,
+    conformer_rows=None,
     project_session=None,
 ):
     preview = state.preview
@@ -638,6 +1046,10 @@ def import_commit_decisions(
             state,
             grouping_rows,
             project_session=project_session,
+        ),
+        conformer_grouping_decisions=_conformer_grouping_decisions(
+            state,
+            conformer_rows,
         ),
     )
 
@@ -714,19 +1126,31 @@ def _finish_committed_import(
                     **apply_keywords,
                 )
             )
-    except Exception:
-        _remove_scene_preset_objects(created)
+    except BaseException as error:
+        try:
+            _remove_scene_preset_objects(created)
+        except BaseException as cleanup_error:
+            error = _merge_cleanup_failure(
+                error,
+                cleanup_error,
+                "default view cleanup failed",
+            )
         created.clear()
+        if isinstance(error, _FATAL_EXCEPTIONS):
+            raise error
         view_failed = True
     if discard_staging:
         try:
             discard_quick_import_preview(project_session)
-        except Exception:
+        except BaseException as error:
+            if isinstance(error, _FATAL_EXCEPTIONS):
+                raise error
             cleanup_pending = True
     else:
         state.preview = None
         state.conflicts = ()
         state.grouping_suggestions = ()
+        state.conformer_grouping_suggestions = ()
     status_parts = []
     if view_failed:
         status_parts.append("view failed")
@@ -746,6 +1170,7 @@ def commit_project_import(
     rows,
     *,
     grouping_rows=None,
+    conformer_rows=None,
     collection,
     apply_view=None,
 ):
@@ -757,6 +1182,7 @@ def commit_project_import(
         state,
         rows,
         grouping_rows=grouping_rows,
+        conformer_rows=conformer_rows,
         project_session=project_session,
     )
     result = _commit_to_fresh_generation(
@@ -814,6 +1240,7 @@ class _CommitJob:
         self.decisions = decisions
         self.result = None
         self.error = None
+        self.progress_events = SimpleQueue()
         self._cancelled = Event()
         self._commit_started = Event()
         self._done = Event()
@@ -847,6 +1274,8 @@ class _CommitJob:
                 self.staging,
                 self.preview,
                 self.decisions,
+                progress=self._progress,
+                is_cancelled=self._cancelled.is_set,
             )
         except BaseException as error:
             self.error = error
@@ -859,6 +1288,17 @@ class _CommitJob:
 
     def cancel(self):
         self._cancelled.set()
+
+    def _progress(self, stage, completed, total):
+        self.progress_events.put((stage, completed, total))
+
+    def drain_progress(self):
+        latest = None
+        while True:
+            try:
+                latest = self.progress_events.get_nowait()
+            except Empty:
+                return latest
 
     def join(self, timeout):
         if not self._started:
@@ -891,10 +1331,11 @@ class _CommitJob:
             try:
                 manager.event_timer_remove(self._timer)
             except BaseException as error:
-                if failure is None:
-                    failure = error
-                else:
-                    failure.add_note(f"timer cleanup failed: {error}")
+                failure = _merge_cleanup_failure(
+                    failure,
+                    error,
+                    "timer cleanup failed",
+                )
             else:
                 self._timer = None
         if self._timer is None and not self._progress_started:
@@ -967,6 +1408,17 @@ def _grouping_values(rows):
     )
 
 
+def _conformer_values(rows):
+    return tuple(
+        _projection_value(
+            ConformerSuggestionProjection,
+            row,
+            (("evidence", ConformerEvidenceProjection),),
+        )
+        for row in rows
+    )
+
+
 class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
     bl_idname = "chemblender.confirm_import"
     bl_label = "Import Preview"
@@ -975,6 +1427,9 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
     rows: CollectionProperty(type=CHEMBLENDER_PG_import_preview_row)
     grouping_suggestions: CollectionProperty(
         type=CHEMBLENDER_PG_import_grouping_suggestion
+    )
+    conformer_grouping_suggestions: CollectionProperty(
+        type=CHEMBLENDER_PG_import_conformer_suggestion
     )
     blocking_reason: StringProperty()
 
@@ -992,6 +1447,15 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
         copied = _copy_projections(collection, grouping_suggestions)
         if collection is None:
             self.grouping_suggestions = copied
+        conformer_suggestions = project_conformer_suggestions(state)
+        collection = getattr(
+            self,
+            "conformer_grouping_suggestions",
+            None,
+        )
+        copied = _copy_projections(collection, conformer_suggestions)
+        if collection is None:
+            self.conformer_grouping_suggestions = copied
         self.blocking_reason = next(
             (row.blocking_reason for row in projected if row.blocking),
             "",
@@ -1003,6 +1467,8 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
         try:
             self._project(context)
         except BaseException as error:
+            if isinstance(error, _FATAL_EXCEPTIONS):
+                raise
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
         return context.window_manager.invoke_props_dialog(self, width=720)
@@ -1019,6 +1485,50 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             )
             box.label(text=f"Capabilities: {row.capability_summary}")
             box.label(text=f"Quality: {row.quality}")
+            if row.frame_count:
+                box.label(text=f"Frames: {row.frame_count}")
+                box.label(
+                    text=f"Atom properties: {row.atom_property_summary}"
+                )
+                box.label(
+                    text=f"Frame properties: {row.frame_property_summary}"
+                )
+                box.label(text=row.lattice_pbc_summary)
+                if row.assumed_unit_summary:
+                    box.label(
+                        text=f"Assumed units: {row.assumed_unit_summary}",
+                        icon="ERROR",
+                    )
+            if row.molecular_record_count:
+                box.label(
+                    text=f"Records: {row.molecular_record_count} · "
+                    f"{row.molecular_version_summary}"
+                )
+                box.label(text=f"Recovery: {row.molecular_recovery_summary}")
+                box.label(text=row.molecular_topology_summary)
+                box.label(text=row.molecular_property_summary)
+                box.label(
+                    text=(
+                        f"Conformer suggestions: "
+                        f"{row.conformer_suggestion_count}"
+                    )
+                )
+            if row.grid_dataset_count:
+                box.label(
+                    text=(
+                        f"Grid: {row.grid_shape} {row.grid_coordinate_unit} · "
+                        f"{row.grid_dataset_count} dataset(s)"
+                    )
+                )
+                box.label(text=f"Dataset IDs: {row.grid_source_ids}")
+                box.label(text=f"Sample range: {row.grid_sample_range}")
+                box.label(
+                    text=(
+                        f"Value unit: {row.grid_value_unit} · "
+                        f"{row.grid_quality}"
+                    ),
+                    icon="ERROR" if row.grid_quality == "ambiguous" else "INFO",
+                )
             if row.conflict_id:
                 box.prop(row, "conflict_action")
                 if DuplicateAction(row.conflict_action) in _TARGET_ACTIONS:
@@ -1070,8 +1580,52 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             unavailable = box.row()
             unavailable.enabled = False
             unavailable.label(text="Split / Edit unavailable in alpha.1")
+        for suggestion in self.conformer_grouping_suggestions:
+            box = layout.box()
+            box.label(
+                text=(
+                    f"Suggested conformer group: "
+                    f"{suggestion.record_count} records"
+                )
+            )
+            action = box.row()
+            action.enabled = not suggestion.hidden_review_count
+            action.prop(suggestion, "grouping_action", expand=True)
+            for evidence in suggestion.evidence:
+                box.label(
+                    text=(
+                        f"{evidence.record_key}: {evidence.kind} · "
+                        f"map {evidence.atom_mapping}"
+                    ),
+                    icon="ERROR" if evidence.requires_review else "INFO",
+                )
+            if len(suggestion.evidence) < suggestion.record_count:
+                box.label(
+                    text=(
+                        f"Showing {len(suggestion.evidence)} "
+                        f"of {suggestion.record_count} records"
+                    )
+                )
+            if suggestion.hidden_review_count:
+                box.label(
+                    text=(
+                        f"{suggestion.hidden_review_count} review mappings "
+                        "are hidden; keep records independent"
+                    ),
+                    icon="ERROR",
+                )
+            if (
+                suggestion.grouping_action == "accept_group"
+                and suggestion.requires_review
+            ):
+                box.prop(
+                    suggestion,
+                    "review_confirmed",
+                    text="I reviewed this atom mapping",
+                )
 
     def _abort_setup(self, session, job, error):
+        fatal_cleanup = None
         for label, cleanup in (
             ("job cancellation failed", job.cancel),
             ("job join failed", lambda: job.join(0)),
@@ -1080,6 +1634,11 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                 cleanup()
             except BaseException as cleanup_error:
                 _add_cleanup_note(error, label, cleanup_error)
+                if (
+                    fatal_cleanup is None
+                    and isinstance(cleanup_error, _FATAL_EXCEPTIONS)
+                ):
+                    fatal_cleanup = cleanup_error
         try:
             job.release_ui()
         except BaseException as cleanup_error:
@@ -1088,6 +1647,11 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                 "job UI cleanup failed",
                 cleanup_error,
             )
+            if (
+                fatal_cleanup is None
+                and isinstance(cleanup_error, _FATAL_EXCEPTIONS)
+            ):
+                fatal_cleanup = cleanup_error
         else:
             for label, cleanup in (
                 (
@@ -1103,8 +1667,16 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                     cleanup()
                 except BaseException as cleanup_error:
                     _add_cleanup_note(error, label, cleanup_error)
+                    if (
+                        fatal_cleanup is None
+                        and isinstance(cleanup_error, _FATAL_EXCEPTIONS)
+                    ):
+                        fatal_cleanup = cleanup_error
         self._job = None
         self._rows = None
+        if fatal_cleanup is not None:
+            fatal_cleanup.add_note(f"setup failed: {error}")
+            raise fatal_cleanup
 
     def _finalize_committed_job(self, context, job, state):
         result = getattr(self, "_completion_result", None)
@@ -1113,7 +1685,9 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
         progress_failed = False
         try:
             context.window_manager.progress_update(80)
-        except BaseException:
+        except BaseException as error:
+            if isinstance(error, _FATAL_EXCEPTIONS):
+                raise
             progress_failed = True
         result = _finish_committed_import(
             job.project_session,
@@ -1126,7 +1700,9 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
         )
         try:
             context.window_manager.progress_update(100)
-        except BaseException:
+        except BaseException as error:
+            if isinstance(error, _FATAL_EXCEPTIONS):
+                raise
             progress_failed = True
         if progress_failed:
             result = _with_cleanup_pending(result)
@@ -1135,14 +1711,26 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
 
     def _finish_modal_ownership(self, job, result, cleanup_error=None):
         state = get_quick_import_state(job.project_session)
+        cleanup_errors = [] if cleanup_error is None else [cleanup_error]
         try:
             finish_quick_import_job(job.project_session, job)
         except BaseException as error:
-            cleanup_error = cleanup_error or error
+            cleanup_errors.append(error)
         try:
             discard_quick_import_preview(job.project_session)
         except BaseException as error:
-            cleanup_error = cleanup_error or error
+            cleanup_errors.append(error)
+        fatal_error = next(
+            (
+                error
+                for error in cleanup_errors
+                if isinstance(error, _FATAL_EXCEPTIONS)
+            ),
+            None,
+        )
+        if fatal_error is not None:
+            raise fatal_error
+        cleanup_error = cleanup_errors[0] if cleanup_errors else None
         if cleanup_error is not None and result is not None:
             result = _with_cleanup_pending(result)
         return state, result
@@ -1158,13 +1746,19 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             grouping_rows = _grouping_values(
                 self.grouping_suggestions
             )
+            conformer_rows = _conformer_values(
+                self.conformer_grouping_suggestions
+            )
             decisions = import_commit_decisions(
                 state,
                 rows,
                 grouping_rows=grouping_rows,
+                conformer_rows=conformer_rows,
                 project_session=session,
             )
         except BaseException as error:
+            if isinstance(error, _FATAL_EXCEPTIONS):
+                raise
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
         if getattr(bpy.app, "background", False):
@@ -1174,9 +1768,12 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                     state,
                     rows,
                     grouping_rows=grouping_rows,
+                    conformer_rows=conformer_rows,
                     collection=context.scene.collection,
                 )
             except BaseException as error:
+                if isinstance(error, _FATAL_EXCEPTIONS):
+                    raise
                 self.report({"ERROR"}, str(error))
                 return {"CANCELLED"}
             self.report(
@@ -1211,6 +1808,8 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             job.start()
         except BaseException as error:
             self._abort_setup(session, job, error)
+            if isinstance(error, _FATAL_EXCEPTIONS):
+                raise
             self.report({"ERROR"}, _error_report(error))
             return {"CANCELLED"}
         return {"RUNNING_MODAL"}
@@ -1224,34 +1823,77 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             if job.commit_started:
                 self.report(
                     {"WARNING"},
-                    "commit already started; cancellation cannot undo data",
+                    "cancellation requested; cannot undo published data",
                 )
-        if event.type != "TIMER" or not job.done:
+        if event.type != "TIMER":
             return {"RUNNING_MODAL"}
-        job.join(0)
-        state = get_quick_import_state(job.project_session)
-        result = (
-            self._finalize_committed_job(context, job, state)
-            if job.error is None
-            else None
-        )
+        progress = getattr(job, "drain_progress", lambda: None)()
+        if progress is not None:
+            _stage, completed, total = progress
+            context.window_manager.progress_update(
+                10 + 60 * completed / total if total else 10
+            )
+        if not job.done:
+            return {"RUNNING_MODAL"}
+        if not getattr(job, "_completion_checked", False):
+            completion_error = None
+            result = None
+            try:
+                job.join(0)
+                state = get_quick_import_state(job.project_session)
+                if job.error is None:
+                    result = self._finalize_committed_job(
+                        context,
+                        job,
+                        state,
+                    )
+            except BaseException as error:
+                completion_error = error
+            job._completion_error = completion_error
+            job._completion_result = result
+            job._completion_checked = True
+        completion_error = job._completion_error
+        result = job._completion_result
         release_error = None
         try:
             job.release_ui()
         except BaseException as error:
             release_error = error
-            if job.timer_pending:
+            if (
+                not isinstance(error, _FATAL_EXCEPTIONS)
+                and job.timer_pending
+            ):
                 self.report(
                     {"WARNING"},
                     f"Import Preview cleanup retry pending: {error}",
                 )
                 return {"RUNNING_MODAL"}
             job.abandon_ui()
-        state, result = self._finish_modal_ownership(
-            job,
-            result,
-            release_error,
-        )
+        try:
+            state, result = self._finish_modal_ownership(
+                job,
+                result,
+                release_error,
+            )
+        except BaseException as ownership_error:
+            if completion_error is not None:
+                raise _merge_cleanup_failure(
+                    completion_error,
+                    ownership_error,
+                    "import ownership cleanup failed",
+                )
+            raise
+        if completion_error is not None:
+            if release_error is not None:
+                completion_error = _merge_cleanup_failure(
+                    completion_error,
+                    release_error,
+                    "Import Preview UI cleanup failed",
+                )
+            if isinstance(completion_error, _FATAL_EXCEPTIONS):
+                raise completion_error
+            self.report({"ERROR"}, str(completion_error))
+            return {"CANCELLED"}
         if job.error is not None:
             if release_error is not None:
                 _add_cleanup_note(
@@ -1259,8 +1901,10 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                     "Import Preview UI cleanup failed",
                     release_error,
                 )
-            if isinstance(job.error, ImportCommitCancelled):
+            if isinstance(job.error, (ImportCommitCancelled, ImportCancelled)):
                 self.report({"INFO"}, str(job.error))
+            elif isinstance(job.error, _FATAL_EXCEPTIONS):
+                raise job.error
             else:
                 self.report({"ERROR"}, str(job.error))
             return {"CANCELLED"}
@@ -1303,6 +1947,8 @@ class CHEMBLENDER_OT_cancel_import(bpy.types.Operator):
 __all__ = (
     "CHEMBLENDER_OT_cancel_import",
     "CHEMBLENDER_OT_confirm_import",
+    "CHEMBLENDER_PG_import_conformer_evidence",
+    "CHEMBLENDER_PG_import_conformer_suggestion",
     "CHEMBLENDER_PG_import_conflict_candidate",
     "CHEMBLENDER_PG_import_grouping_evidence",
     "CHEMBLENDER_PG_import_grouping_suggestion",

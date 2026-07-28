@@ -1,6 +1,8 @@
 from collections.abc import Mapping
+from dataclasses import fields, replace
 import re
-from uuid import UUID
+import shutil
+from uuid import UUID, uuid4
 
 from ..core.import_pipeline.parse import stage_import_batch
 from ..core.import_pipeline.preflight import (
@@ -8,18 +10,29 @@ from ..core.import_pipeline.preflight import (
     _check_cancelled,
     _failure_message,
     _hash_and_prefix_file,
+    _hash_file,
+    _materialize_text_source,
     _register_preview,
     _unavailable_content_hash,
 )
 from ..core.import_pipeline.preview import ImportPreview
 from ..core.import_pipeline.request import ImportRequest
-from ..core.import_pipeline.staging import StagedImportSession
+from ..core.import_pipeline.staging import (
+    StagedImportSession,
+    _close_memmaps,
+)
 from ..core.readers import (
     AmbiguousReaderError,
     CapabilitySupport,
     ReaderNotFoundError,
 )
-from .builtin_bridge import internal_batch_from_public
+from .builtin_bridge import (
+    PublicBatchError,
+    _internal_batch_from_public_unchecked,
+    _validate_internal_batch_graph,
+    internal_batch_from_public,
+    public_batch_from_internal,
+)
 from .protocol import ParseRequest, ProgressEvent, SniffRequest
 from .public_model import PublicImportBatch
 from .registry import ReaderPluginRegistry, _BuiltinReaderPlugin
@@ -32,6 +45,8 @@ _RESERVED_PARAMETERS = frozenset(
 _PARAMETER = re.compile(r"[a-z][a-z0-9_.-]*", re.ASCII)
 _SCIENTIFIC_GROUPS = (
     "structures",
+    "topologies",
+    "molecular_records",
     "cif_envelopes",
     "qcschema_envelopes",
     "cjson_envelopes",
@@ -51,6 +66,14 @@ def _noop_progress(stage, completed, total):
 
 def _not_cancelled():
     return False
+
+
+def _remove_reader_staging_root(root):
+    if not root.exists():
+        return
+    if root.is_symlink() or root.is_junction() or not root.is_dir():
+        raise RuntimeError("refusing to remove an unsafe reader staging root")
+    shutil.rmtree(root)
 
 
 class _BridgeCancelled(BaseException):
@@ -136,6 +159,26 @@ def _has_scientific_entities(batch):
     return any(getattr(batch, name) for name in _SCIENTIFIC_GROUPS)
 
 
+def _staged_identity(batch):
+    return tuple(
+        (name, entity.id)
+        for name in (
+            "sources",
+            "source_revisions",
+            *_SCIENTIFIC_GROUPS,
+        )
+        for entity in getattr(batch, name)
+    )
+
+
+def _diagnostic_signature(diagnostic):
+    return tuple(
+        getattr(diagnostic, field.name)
+        for field in fields(diagnostic)
+        if field.name != "id"
+    )
+
+
 def _source_changed_failure(error):
     return (
         "preflight.source_changed",
@@ -179,11 +222,12 @@ def preflight_reader_plugins(
     for index, source in enumerate(request.sources):
         completed = index * 3
         _check_cancelled(is_cancelled)
+        source_path = _materialize_text_source(source, session)
         override = overrides.get(source.id)
         parameters = parameters_by_source.get(source.id, ())
         try:
             content_hash, byte_size, prefix = _hash_and_prefix_file(
-                source.path, _cancel_callback(is_cancelled)
+                source_path, _cancel_callback(is_cancelled)
             )
         except _BridgeCancelled:
             raise ImportCancelled(
@@ -223,7 +267,7 @@ def preflight_reader_plugins(
 
         try:
             descriptor = registry.select(
-                SniffRequest(source.path, prefix), override
+                SniffRequest(source_path, prefix), override
             )
         except (KeyboardInterrupt, SystemExit, MemoryError, ImportCancelled):
             raise
@@ -277,6 +321,8 @@ def preflight_reader_plugins(
             for name, support in descriptor.capabilities.items()
             if support is not CapabilitySupport.UNSUPPORTED
         ))
+        reader_staging_root = None
+        materializer = None
         if not descriptor.availability.available:
             failure = (
                 "preflight.reader_unavailable",
@@ -287,77 +333,278 @@ def preflight_reader_plugins(
                 "the selected reader cannot run in the current environment",
             )
             internal = None
+            revision_id = None
         else:
             progress("reader", completed + 2, total)
+            revision_id = uuid4()
+            reader_staging_root = session.artifact_root / str(revision_id)
+            reader_staging_root.mkdir()
+            keep_reader_artifacts = False
             try:
-                public = registry.parse(
-                    descriptor.reader_id,
-                    ParseRequest(
-                        source.path,
+                try:
+                    parse_request = ParseRequest(
+                        source_path,
                         content_hash,
                         request.validation_mode.value,
                         dict(parameters),
-                        session.artifact_root,
+                        reader_staging_root,
                         _plugin_progress(progress, is_cancelled),
                         _cancel_callback(is_cancelled),
-                    ),
-                )
-            except _BridgeCancelled:
-                raise ImportCancelled(
-                    "import preflight was cancelled"
-                ) from None
-            except _BridgeHostCallbackError as error:
-                raise error.error from None
-            except ValueError as error:
-                if (
-                    str(error) != "source_path must be a file"
-                    or source.path.is_file()
-                ):
-                    raise
-                internal = None
-                failure = _source_changed_failure(error)
-            except OSError as error:
-                internal = None
-                failure = _source_changed_failure(error)
-            else:
-                _check_cancelled(is_cancelled)
-                try:
-                    internal = internal_batch_from_public(public)
-                    supplied_identity = bool(
-                        internal.sources or internal.source_revisions
+                        revision_id,
                     )
-                    trusted_builtin = type(
-                        registry._plugin(descriptor.reader_id)
-                    ) is _BuiltinReaderPlugin
-                    if (
-                        not trusted_builtin
-                        and _has_scientific_entities(internal)
-                        and not supplied_identity
-                    ):
-                        raise ValueError(
-                            "external scientific result omitted source identity"
+                    plugin = registry._plugin(descriptor.reader_id)
+                    trusted_builtin = type(plugin) is _BuiltinReaderPlugin
+                    preview_parser = (
+                        plugin.core_descriptor.preview_request
+                        if trusted_builtin
+                        else None
+                    )
+                    if preview_parser is None:
+                        public = registry.parse(
+                            descriptor.reader_id,
+                            parse_request,
                         )
-                    internal = stage_import_batch(
-                        source=source,
-                        validation_mode=request.validation_mode,
-                        content_hash=content_hash,
-                        byte_size=byte_size,
-                        plugin_id=descriptor.plugin_id,
-                        reader_id=descriptor.reader_id,
-                        reader_version=descriptor.reader_version,
-                        api_version=READER_API_VERSION,
-                        canonical_parameters=parameters,
-                        parsed_batch=internal,
-                        preserve_source_identity=supplied_identity,
-                    )
-                    failure = None
-                except (TypeError, ValueError, KeyError) as error:
+                    else:
+                        parse_request.progress(
+                            ProgressEvent("parse", 0, 1)
+                        )
+                        public = public_batch_from_internal(
+                            preview_parser(parse_request)
+                        )
+                        current_hash, _current_size = _hash_file(
+                            source_path,
+                            parse_request.is_cancelled,
+                        )
+                        if current_hash != content_hash:
+                            raise ValueError(
+                                "source content changed during preview parse"
+                            )
+                        parse_request.progress(
+                            ProgressEvent("parse", 1, 1)
+                        )
+                except _BridgeCancelled:
+                    raise ImportCancelled(
+                        "import preflight was cancelled"
+                    ) from None
+                except _BridgeHostCallbackError as error:
+                    raise error.error from None
+                except ValueError as error:
+                    if (
+                        str(error) != "source_path must be a file"
+                        or source_path.is_file()
+                    ):
+                        raise
                     internal = None
-                    failure = (
-                        "preflight.invalid_reader_result",
-                        _failure_message(error),
-                        "the reader result did not satisfy the import identity contract",
-                    )
+                    failure = _source_changed_failure(error)
+                except OSError as error:
+                    internal = None
+                    failure = _source_changed_failure(error)
+                else:
+                    _check_cancelled(is_cancelled)
+                    try:
+                        internal = (
+                            _internal_batch_from_public_unchecked(public)
+                            if trusted_builtin
+                            else internal_batch_from_public(public)
+                        )
+                        supplied_identity = bool(
+                            internal.sources or internal.source_revisions
+                        )
+                        if (
+                            not trusted_builtin
+                            and _has_scientific_entities(internal)
+                            and not supplied_identity
+                        ):
+                            raise ValueError(
+                                "external scientific result omitted source identity"
+                            )
+                        internal = stage_import_batch(
+                            source=source,
+                            validation_mode=request.validation_mode,
+                            content_hash=content_hash,
+                            byte_size=byte_size,
+                            plugin_id=descriptor.plugin_id,
+                            reader_id=descriptor.reader_id,
+                            reader_version=descriptor.reader_version,
+                            api_version=READER_API_VERSION,
+                            canonical_parameters=parameters,
+                            parsed_batch=internal,
+                            preserve_source_identity=supplied_identity,
+                            revision_id=revision_id,
+                        )
+                        _validate_internal_batch_graph(internal)
+                        failure = None
+                        keep_reader_artifacts = (
+                            _has_scientific_entities(internal)
+                            and any(reader_staging_root.iterdir())
+                        )
+                        materialize_parser = (
+                            plugin.core_descriptor.materialize_request
+                            if trusted_builtin
+                            else None
+                        )
+                        if materialize_parser is not None:
+                            expected_identity = _staged_identity(internal)
+                            expected_diagnostics = internal.diagnostics
+
+                            def materialize(
+                                materialize_progress,
+                                materialize_cancelled,
+                                *,
+                                _parser=materialize_parser,
+                                _request=parse_request,
+                                _expected=expected_identity,
+                                _expected_diagnostics=expected_diagnostics,
+                                _source=source,
+                                _validation=request.validation_mode,
+                                _content_hash=content_hash,
+                                _byte_size=byte_size,
+                                _plugin_id=descriptor.plugin_id,
+                                _reader_id=descriptor.reader_id,
+                                _reader_version=descriptor.reader_version,
+                                _parameters=parameters,
+                                _revision_id=revision_id,
+                            ):
+                                before_artifacts = frozenset(
+                                    _request.staging_root.iterdir()
+                                )
+                                try:
+                                    parsed = _parser(
+                                        ParseRequest(
+                                            _request.source_path,
+                                            _request.source_content_hash,
+                                            _request.validation_mode,
+                                            dict(
+                                                _request.canonical_parameters
+                                            ),
+                                            _request.staging_root,
+                                            _plugin_progress(
+                                                materialize_progress,
+                                                materialize_cancelled,
+                                            ),
+                                            _cancel_callback(
+                                                materialize_cancelled
+                                            ),
+                                            _request.source_revision_id,
+                                        )
+                                    )
+                                except _BridgeCancelled:
+                                    raise ImportCancelled(
+                                        "import materialization was cancelled"
+                                    ) from None
+                                except _BridgeHostCallbackError as error:
+                                    raise error.error from None
+                                if parsed is None:
+                                    return None
+                                candidate = None
+                                try:
+                                    parsed = _internal_batch_from_public_unchecked(
+                                        public_batch_from_internal(parsed)
+                                    )
+                                    candidate = stage_import_batch(
+                                        source=_source,
+                                        validation_mode=_validation,
+                                        content_hash=_content_hash,
+                                        byte_size=_byte_size,
+                                        plugin_id=_plugin_id,
+                                        reader_id=_reader_id,
+                                        reader_version=_reader_version,
+                                        api_version=READER_API_VERSION,
+                                        canonical_parameters=_parameters,
+                                        parsed_batch=parsed,
+                                        revision_id=_revision_id,
+                                    )
+                                    _validate_internal_batch_graph(candidate)
+                                    if (
+                                        _staged_identity(candidate) != _expected
+                                        or tuple(
+                                            map(
+                                                _diagnostic_signature,
+                                                candidate.diagnostics,
+                                            )
+                                        )
+                                        != tuple(
+                                            map(
+                                                _diagnostic_signature,
+                                                _expected_diagnostics,
+                                            )
+                                        )
+                                    ):
+                                        raise ValueError(
+                                            "materialized reader result changed; "
+                                            "refresh Import Preview"
+                                        )
+                                    diagnostic_ids = tuple(
+                                        item.id for item in _expected_diagnostics
+                                    )
+                                    return replace(
+                                        candidate,
+                                        diagnostics=tuple(
+                                            replace(item, id=identifier)
+                                            for item, identifier in zip(
+                                                candidate.diagnostics,
+                                                diagnostic_ids,
+                                                strict=True,
+                                            )
+                                        ),
+                                        source_revisions=tuple(
+                                            replace(
+                                                revision,
+                                                diagnostic_ids=diagnostic_ids,
+                                            )
+                                            for revision in candidate.source_revisions
+                                        ),
+                                    )
+                                except BaseException as error:
+                                    try:
+                                        _close_memmaps(
+                                            candidate or parsed,
+                                            set(),
+                                        )
+                                    except BaseException as cleanup_error:
+                                        error.add_note(
+                                            "materialized array cleanup failed: "
+                                            f"{cleanup_error}"
+                                        )
+                                    for artifact in tuple(
+                                        _request.staging_root.iterdir()
+                                    ):
+                                        if artifact in before_artifacts:
+                                            continue
+                                        try:
+                                            if artifact.is_file():
+                                                artifact.unlink()
+                                            elif artifact.is_dir():
+                                                _remove_reader_staging_root(
+                                                    artifact
+                                                )
+                                            else:
+                                                raise RuntimeError(
+                                                    "unsafe materialized artifact"
+                                                )
+                                        except BaseException as cleanup_error:
+                                            error.add_note(
+                                                "materialized artifact cleanup "
+                                                f"failed: {cleanup_error}"
+                                            )
+                                    raise
+
+                            materializer = materialize
+                    except (
+                        PublicBatchError,
+                        TypeError,
+                        ValueError,
+                        KeyError,
+                    ) as error:
+                        internal = None
+                        failure = (
+                            "preflight.invalid_reader_result",
+                            _failure_message(error),
+                            "the reader result did not satisfy the import identity contract",
+                        )
+            finally:
+                if not keep_reader_artifacts:
+                    _remove_reader_staging_root(reader_staging_root)
 
         if internal is None:
             internal = stage_import_batch(
@@ -371,7 +618,22 @@ def preflight_reader_plugins(
                 api_version=READER_API_VERSION,
                 canonical_parameters=parameters,
                 failure=failure,
+                revision_id=revision_id,
             )
+        try:
+            progress("parse", completed + 3, total)
+            _check_cancelled(is_cancelled)
+        except BaseException:
+            try:
+                if (
+                    reader_staging_root is not None
+                    and reader_staging_root.exists()
+                ):
+                    _close_memmaps(internal, set())
+                    _remove_reader_staging_root(reader_staging_root)
+            except BaseException:
+                pass
+            raise
         source_previews.append(_register_preview(
             source,
             descriptor.reader_id,
@@ -383,9 +645,8 @@ def preflight_reader_plugins(
             batch_ids,
             diagnostic_ids,
             source_id=internal.sources[0].id,
+            materializer=materializer,
         ))
-        progress("parse", completed + 3, total)
-        _check_cancelled(is_cancelled)
 
     return ImportPreview(
         session.id,

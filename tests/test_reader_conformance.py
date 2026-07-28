@@ -7,7 +7,16 @@ from tempfile import TemporaryDirectory
 from types import MappingProxyType
 from uuid import uuid4
 
-from ChemBlender.core import CapabilitySupport, ImportBatch
+import numpy
+
+from ChemBlender.core import (
+    ArrayData,
+    CapabilitySupport,
+    ImportBatch,
+    MolecularRecord,
+    ReaderDescriptor,
+    Structure,
+)
 from ChemBlender.core.import_pipeline import ImportSource, ValidationMode
 from ChemBlender.core.import_pipeline.parse import staged_reader_batch
 from ChemBlender.core.model.sources import source_parse_identity
@@ -37,6 +46,7 @@ from ChemBlender.reader_api.conformance import (
     ReaderConformanceResult,
     run_reader_conformance,
 )
+from ChemBlender.reader_api.registry import _builtin_manifest, _builtin_plugin
 import ChemBlender.reader_api as reader_api
 
 
@@ -202,6 +212,7 @@ def envelope_batch(
     validation_mode="balanced",
     canonical_parameters=(),
     revisions=(),
+    revision_id=None,
 ):
     content_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
     source = SourceRecord(uuid4(), source_path.name, "file", "2026-07-25")
@@ -215,7 +226,7 @@ def envelope_batch(
         parameters = identity_parameters(validation_mode, canonical_parameters)
         revisions = (
             SourceRevision(
-                uuid4(),
+                uuid4() if revision_id is None else revision_id,
                 source.id,
                 content_hash,
                 source_path.stat().st_size,
@@ -247,6 +258,83 @@ def envelope_batch(
 
 
 class ReaderConformanceContractTests(unittest.TestCase):
+    def test_builtin_record_is_staged_before_entity_reference_validation(self):
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "record.dat"
+            source.write_bytes(b"record")
+
+            def parse(request):
+                structure = Structure(
+                    id=uuid4(),
+                    revision="structure-r1",
+                    atomic_numbers=(1,),
+                    coordinates=ArrayData(
+                        numpy.asarray(((0.0, 0.0, 0.0),)),
+                        ("atom", "xyz"),
+                        "angstrom",
+                    ),
+                )
+                record = MolecularRecord(
+                    id=uuid4(),
+                    revision="record-r1",
+                    source_revision_id=request.source_revision_id,
+                    record_key="record-0001",
+                    structure_id=structure.id,
+                    topology_id=None,
+                    raw_block=b"record",
+                    title="record",
+                    source_record_index=0,
+                    block_version="V2000",
+                    writer_name=None,
+                    writer_version=None,
+                    ordered_raw_properties=(),
+                    provenance_ids=(),
+                )
+                return ImportBatch(
+                    structures=(structure,),
+                    molecular_records=(record,),
+                    report=ParserReport(
+                        "synthetic-record",
+                        "1",
+                        (structure.id, record.id),
+                        ("structure",),
+                        (),
+                    ),
+                )
+
+            core_descriptor = ReaderDescriptor(
+                reader_id="synthetic-record",
+                reader_version="1",
+                extensions=(".dat",),
+                capabilities={"structure": CapabilitySupport.SUPPORTED},
+                priority=100,
+                sniff=lambda path, prefix: SniffResult(
+                    SniffMatch.EXACT, "fixture"
+                ),
+                parse=lambda path: ImportBatch(),
+                parse_request=parse,
+            )
+            registry = ReaderPluginRegistry((
+                _builtin_plugin(
+                    core_descriptor,
+                    _builtin_manifest((core_descriptor,)),
+                ),
+            ))
+            result = run_reader_conformance(
+                ReaderConformanceCase(
+                    "synthetic-record",
+                    registry,
+                    core_descriptor.reader_id,
+                    source,
+                    ("structure",),
+                )
+            )
+
+        self.assertTrue(
+            check(result, "entity_references").passed,
+            check(result, "entity_references").detail,
+        )
+
     def test_public_reader_api_exports_only_the_documented_conformance_names(self):
         expected = {
             "ReaderConformanceCase",
@@ -333,7 +421,11 @@ class ReaderConformanceContractTests(unittest.TestCase):
         registry = builtin_reader_plugin_registry()
         cases = (
             ("water", "xyz/water.xyz", ("structure",)),
-            ("sheared", "cube/sheared.cube", ("grid", "structure")),
+            (
+                "sheared",
+                "cube/sheared.cube",
+                ("atomic_property", "grid", "structure"),
+            ),
         )
         for name, relative, capabilities in cases:
             with self.subTest(relative=relative):
@@ -559,6 +651,7 @@ class ReaderConformanceContractTests(unittest.TestCase):
                                     source,
                                     validation_mode="strict",
                                     canonical_parameters=parameters,
+                                    revision_id=request.source_revision_id,
                                 )
                             ),
                         )
@@ -659,7 +752,17 @@ class ReaderConformanceContractTests(unittest.TestCase):
                 ),
             )
             plugin = FactoryPlugin(
-                lambda request: public_batch_from_internal(internal)
+                lambda request: public_batch_from_internal(
+                    replace(
+                        internal,
+                        source_revisions=(
+                            replace(
+                                internal.source_revisions[0],
+                                id=request.source_revision_id,
+                            ),
+                        ),
+                    )
+                )
             )
             plugin.descriptor = descriptor(
                 plugin_id="chemblender.preflight", reader_version="0"
@@ -746,7 +849,12 @@ class ReaderConformanceContractTests(unittest.TestCase):
         with TemporaryDirectory() as temporary:
             source = Path(temporary) / "envelope.dat"
             source.write_bytes(b"fixture")
-            plugin = FactoryPlugin(lambda request: envelope_batch(source))
+            plugin = FactoryPlugin(
+                lambda request: envelope_batch(
+                    source,
+                    revision_id=request.source_revision_id,
+                )
+            )
             result = run_reader_conformance(
                 ReaderConformanceCase(
                     "envelope",

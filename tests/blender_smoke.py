@@ -122,6 +122,10 @@ def registration_inventory(module_key):
     )
     auto_load = importlib.import_module(f"{module_key}.auto_load")
     classes = owned_registration_classes(module_key)
+    assert {
+        relative_name(cls.__module__, module_key)
+        for cls in classes
+    }.issubset(registration.REGISTER_MODULE_NAMES)
     base_types = {
         *auto_load.get_register_base_types(),
         bpy.types.FileHandler,
@@ -181,6 +185,10 @@ def assert_registration_isolation(module_key, before_install_modules):
     assert f"{module_key}.ui.properties" in sys.modules
     assert f"{module_key}.ui.quick_import" in sys.modules
     assert f"{module_key}.ui.import_preview" in sys.modules
+    assert f"{module_key}.ui.topology" in sys.modules
+    assert f"{module_key}.ui.scientific_edit" in sys.modules
+    assert f"{module_key}.ui.export" in sys.modules
+    assert f"{module_key}.ui.grid" in sys.modules
     assert f"{module_key}.ui.project_browser.panel" in sys.modules
     assert f"{module_key}.ui.file_handlers" in sys.modules
     assert f"{module_key}.ui.workspace" in sys.modules
@@ -226,6 +234,17 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_open_workspace")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_confirm_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_cancel_import")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_compute_topology")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_accept_topology")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_reject_topology")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_switch_topology")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_scientific_edits")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_frame_force")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_export_project_entity")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_resolve_grid_semantics")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_create_grid_view")
+    assert hasattr(bpy.types.Scene, "chemblender_topology")
+    assert hasattr(bpy.types.Scene, "chemblender_grid")
     assert_file_handlers(module_key)
     properties = importlib.import_module(f"{module_key}.ui.properties")
     property_identity = properties._scene_property_identity()
@@ -249,6 +268,8 @@ def assert_disabled(module_key, owned_classes):
     assert not hasattr(bpy.types.Object, "cif_current")
     assert not hasattr(bpy.types.Scene, "my_tool")
     assert not hasattr(bpy.types.Scene, "chemblender_quick_import")
+    assert not hasattr(bpy.types.Scene, "chemblender_topology")
+    assert not hasattr(bpy.types.Scene, "chemblender_grid")
     assert READER_API_HANDLE_KEY not in bpy.app.driver_namespace
     assert not any(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
@@ -339,17 +360,151 @@ def assert_file_handlers(module_key):
 
 
 def assert_project_session_manager(module_key):
+    import numpy
+
     ui = importlib.import_module(f"{module_key}.ui.session")
     core = importlib.import_module(f"{module_key}.core")
     links = importlib.import_module(f"{module_key}.project_link")
+    views = importlib.import_module(f"{module_key}.views")
     scene = bpy.context.scene
     second_scene = bpy.data.scenes.new("ChemBlender shared session smoke")
     session = ui.new_scene_session(scene)
     assert ui.get_scene_session(second_scene) is session
     assert ui.get_scene_session(second_scene).project is session.project
     assert ui.get_scene_session(second_scene).temporary_root == session.temporary_root
+    structure = core.Structure(
+        id=uuid4(),
+        revision="topology-ui-structure-r1",
+        atomic_numbers=(8, 1, 1),
+        coordinates=core.ArrayData(
+            numpy.asarray(
+                ((0.0, 0.0, 0.0), (0.96, 0.0, 0.0), (-0.24, 0.93, 0.0))
+            ),
+            ("atom", "xyz"),
+            "angstrom",
+        ),
+    )
+    session.project.commit(core.ImportBatch(structures=(structure,)))
+    structure_obj = views.create_structure_view(
+        structure,
+        name="ChemBlender topology UI smoke",
+        collection=scene.collection,
+    )
+    bpy.context.view_layer.objects.active = structure_obj
+    structure_obj.select_set(True)
+    session.active_entity_id = structure.id
+    session.active_view_object_name = structure_obj.name
+    assert bpy.ops.chemblender.compute_topology() == {"FINISHED"}
+    topology_settings = scene.chemblender_topology
+    topology_id = UUID(topology_settings.proposal_topology_id)
+    topology = session.project.topologies[topology_id]
+    assert topology.source_kind is core.TopologySource.DISTANCE_INFERRED
+    assert bpy.ops.chemblender.accept_topology(
+        topology_id=str(topology_id)
+    ) == {"FINISHED"}
+    assert len(structure_obj.data.edges) == 2
+    assert structure_obj["cb_topology_id"] == str(topology_id)
+    assert structure_obj["cb_topology_decision"] == "accepted"
+    structure_revision = structure.revision
+    assert bpy.ops.chemblender.switch_topology(
+        atoms_only=True
+    ) == {"FINISHED"}
+    assert len(structure_obj.data.edges) == 0
+    assert structure.revision == structure_revision
+    assert topology_id in session.project.topologies
+    assert bpy.ops.chemblender.switch_topology(
+        topology_id=str(topology_id)
+    ) == {"FINISHED"}
+    assert len(structure_obj.data.edges) == 2
+    assert bpy.ops.chemblender.reject_topology(
+        topology_id=str(topology_id)
+    ) == {"FINISHED"}
+    assert len(structure_obj.data.edges) == 0
+    assert topology_id in session.project.topologies
+    assert bpy.ops.chemblender.accept_topology(
+        topology_id=str(topology_id)
+    ) == {"FINISHED"}
+    atom_ids = [0] * 3
+    structure_obj.data.attributes["cbq_atom_id"].data.foreach_get(
+        "value", atom_ids
+    )
+    assert atom_ids == [0, 1, 2]
+    topology_decisions = topology_settings.decisions_json
+    grid = core.Grid3D(
+        id=uuid4(),
+        revision="topology-ui-grid-r1",
+        semantic_role="electron_density",
+        domain="grid",
+        data=core.ArrayData(
+            numpy.ones((1, 1, 1)),
+            ("x", "y", "z"),
+            "dimensionless",
+        ),
+        status=core.DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(),
+        origin=(0.0, 0.0, 0.0),
+        step_vectors=(
+            (1.0, 0.0, 0.0),
+            (0.0, 1.0, 0.0),
+            (0.0, 0.0, 1.0),
+        ),
+        coordinate_unit="angstrom",
+        structure_id=structure.id,
+    )
+    session.project.commit(core.ImportBatch(datasets=(grid,)))
     session.mark_dirty("import")
     with TemporaryDirectory() as directory:
+        scientific_edit = importlib.import_module(
+            f"{module_key}.ui.scientific_edit"
+        )
+        structure_obj.location = (4.0, 5.0, 6.0)
+        assert not scientific_edit.preview_structure_object_edits(
+            session.project,
+            structure_obj,
+        ).has_changes
+        structure_obj.data.vertices[1].co.x += 0.125
+        structure_obj.data.update()
+        edit_preview = scientific_edit.preview_structure_object_edits(
+            session.project,
+            structure_obj,
+        )
+        assert edit_preview.coordinate_change_count == 1
+        assert edit_preview.affected_result_ids == (grid.id,)
+        xyz_export = Path(directory) / "derived.xyz"
+        assert bpy.ops.chemblender.apply_scientific_edits(
+            export_xyz=True,
+            export_path=str(xyz_export),
+        ) == {"FINISHED"}
+        derived_id = session.active_entity_id
+        derived = session.project.structures[derived_id]
+        derived_obj_name = session.active_view_object_name
+        derived_obj = bpy.data.objects[derived_obj_name]
+        derived_topology_id = UUID(derived_obj["cb_topology_id"])
+        derived_topology = session.project.topologies[
+            derived_topology_id
+        ]
+        assert derived_topology.source_kind is core.TopologySource.USER_EDITED
+        assert derived_topology.structure_id == derived.id
+        assert derived.topology_ids == (derived_topology.id,)
+        assert numpy.allclose(
+            structure.coordinates.values,
+            ((0.0, 0.0, 0.0), (0.96, 0.0, 0.0), (-0.24, 0.93, 0.0)),
+        )
+        assert grid.structure_id == structure.id
+        assert grid.id in session.project.datasets
+        assert not any(
+            getattr(dataset, "structure_id", None) == derived.id
+            for dataset in session.project.datasets.values()
+        )
+        assert xyz_export.is_file()
+        exported = core.parse_xyz(xyz_export).structures[0]
+        assert exported.atomic_numbers == derived.atomic_numbers
+        assert numpy.allclose(
+            exported.coordinates.values,
+            derived.coordinates.values,
+            atol=1.0e-6,
+        )
         blend = Path(directory) / "session-manager.blend"
         result = bpy.ops.wm.save_as_mainfile(
             filepath=str(blend),
@@ -408,6 +563,24 @@ def assert_project_session_manager(module_key):
         ) == model_identities
         ui = importlib.import_module(f"{module_key}.ui.session")
         restored = ui.get_scene_session(bpy.context.scene)
+        restored_obj = bpy.data.objects["ChemBlender topology UI smoke"]
+        assert len(restored_obj.data.edges) == 2
+        assert restored_obj["cb_topology_id"] == str(topology_id)
+        assert restored_obj["cb_topology_revision"] == topology.revision
+        assert topology_id in restored.project.topologies
+        restored_derived = restored.project.structures[derived_id]
+        assert restored_derived.revision == derived.revision
+        restored_derived_obj = bpy.data.objects[derived_obj_name]
+        assert restored_derived_obj["cb_structure_id"] == str(derived_id)
+        assert (
+            restored_derived_obj["cb_topology_id"]
+            == str(derived_topology_id)
+        )
+        assert restored.project.datasets[grid.id].structure_id == structure.id
+        assert (
+            bpy.context.scene.chemblender_topology.decisions_json
+            == topology_decisions
+        )
         restored_scenes = tuple(bpy.data.scenes)
         assert len(restored_scenes) >= 2
         assert all(
@@ -564,6 +737,123 @@ def assert_quick_import(module_key, repository_root):
         assert tuple(bpy.data.objects) == before_objects
         assert state.preview is None
 
+    assert bpy.ops.chemblender.import_smiles_text(
+        "EXEC_DEFAULT",
+        smiles_text="C/C=C/C",
+        validation_mode="balanced",
+    ) == {"FINISHED"}
+    state = properties.get_quick_import_state(session)
+    smiles_rows = preview_ui.project_import_preview(session, state, registry)
+    assert smiles_rows[0].reader_id == "smiles"
+    assert smiles_rows[0].molecular_record_count == 1
+    assert smiles_rows[0].molecular_version_summary == "SMILES: 1"
+    assert bpy.ops.chemblender.cancel_import() == {"FINISHED"}
+
+    for relative, expected_records, expected_summary in (
+        ("tests/fixtures/mol/water-v3000.mol", 1, "V3000: 1"),
+        ("tests/fixtures/sdf/malformed-middle.sdf", 2, "V2000: 2"),
+        ("tests/fixtures/sdf/mixed-properties.sdf", 3, "V2000: 3"),
+    ):
+        state = stage(repository_root / relative)
+        molecular_rows = preview_ui.project_import_preview(
+            session,
+            state,
+            registry,
+        )
+        assert molecular_rows[0].molecular_record_count == expected_records
+        assert molecular_rows[0].molecular_version_summary == expected_summary
+        if "malformed-middle" in relative:
+            assert "1 recovered record" in (
+                molecular_rows[0].molecular_recovery_summary
+            )
+        if "mixed-properties" in relative:
+            assert "typed columns" in (
+                molecular_rows[0].molecular_property_summary
+            )
+        assert bpy.ops.chemblender.cancel_import() == {"FINISHED"}
+
+    state = stage(repository_root / "tests/fixtures/sdf/records.sdf")
+    molecular_rows = preview_ui.project_import_preview(
+        session,
+        state,
+        registry,
+    )
+    conformer_rows = preview_ui.project_conformer_suggestions(state)
+    assert len(conformer_rows) == 1
+    conformer_rows[0].grouping_action = "accept_group"
+    conformer_rows[0].review_confirmed = conformer_rows[0].requires_review
+    molecular_result = preview_ui.commit_project_import(
+        session,
+        state,
+        molecular_rows,
+        conformer_rows=conformer_rows,
+        collection=bpy.context.scene.collection,
+    )
+    conformer_set = next(
+        dataset
+        for dataset in session.project.datasets.values()
+        if type(dataset).__name__ == "ConformerSet"
+    )
+    browser = importlib.import_module(
+        f"{module_key}.ui.project_browser.panel"
+    )
+    browser_rows = browser.refresh_project_browser(bpy.context.scene)
+    assert sum(row.kind == "molecular_record" for row in browser_rows) >= 2
+    assert any(row.entity_id == conformer_set.id for row in browser_rows)
+    with TemporaryDirectory() as directory:
+        exported = Path(directory) / "conformers.sdf"
+        session.active_entity_id = conformer_set.id
+        assert bpy.ops.chemblender.export_project_entity(
+            filepath=str(exported),
+            format_name="sdf",
+            confirm_loss=True,
+        ) == {"FINISHED"}
+        reparsed = core.SDF_READER.parse(exported)
+        assert len(reparsed.molecular_records) == 2
+    assert molecular_result.status == "committed"
+
+    cjson_source = repository_root / "tests/fixtures/cjson/water-results.cjson"
+    state = stage(cjson_source)
+    cjson_rows = preview_ui.project_import_preview(session, state, registry)
+    assert cjson_rows[0].default_view_label == "Default view: Structure"
+    cjson_batch = state.staging_session.result(
+        state.preview.source_previews[0].staged_batch_ids[0]
+    )
+    cjson_structure, = cjson_batch.structures
+    cjson_topology, = cjson_batch.topologies
+    assert cjson_structure.topology is None
+    assert cjson_structure.topology_ids == (cjson_topology.id,)
+    source_revisions = set(session.project.source_revisions)
+    assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+    cjson_revision_id, = set(session.project.source_revisions) - source_revisions
+    cjson_revision = session.project.source_revisions[cjson_revision_id]
+    cjson_structure = next(
+        session.project.structures[entity_id]
+        for entity_id in cjson_revision.created_entity_ids
+        if entity_id in session.project.structures
+    )
+    assert cjson_structure.topology is None
+    topology_id, = cjson_structure.topology_ids
+    assert topology_id == cjson_topology.id
+    topology = session.project.topologies[topology_id]
+    topology_ui = importlib.import_module(f"{module_key}.ui.topology")
+    choices = topology_ui.topology_choices(session.project, cjson_structure.id)
+    assert tuple(choice.topology_id for choice in choices) == (topology_id,)
+    assert topology.source_kind is core.TopologySource.EXPLICIT_FILE
+    assert topology.quality_status is core.QualityStatus.COMPLETE
+    views = importlib.import_module(f"{module_key}.views")
+    cjson_view = views.create_structure_view(
+        cjson_structure,
+        topology,
+        name="ChemBlender immediate CJSON topology smoke",
+        collection=bpy.context.scene.collection,
+    )
+    try:
+        assert cjson_view["cb_topology_id"] == str(topology_id)
+        assert len(cjson_view.data.edges) == topology.bond_indices.shape[0]
+    finally:
+        views.remove_structure_view(cjson_view)
+
     state = stage(repository_root / "tests/fixtures/xyz/water.xyz")
     xyz_rows = preview_ui.project_import_preview(
         session,
@@ -708,6 +998,10 @@ def assert_quick_import(module_key, repository_root):
         registry,
     )
     assert cube_rows[0].default_view_label == "Default view: Grid Volume"
+    assert cube_rows[0].grid_dataset_count == 1
+    assert cube_rows[0].grid_shape == "2 × 2 × 2"
+    assert cube_rows[0].grid_coordinate_unit == "bohr"
+    assert cube_rows[0].grid_quality == "ambiguous"
     structure_count = len(session.project.structures)
     source_revisions = set(session.project.source_revisions)
     objects_before_cube = set(bpy.data.objects)
@@ -716,11 +1010,17 @@ def assert_quick_import(module_key, repository_root):
     assert state.preview is None
     cube_revision_id, = set(session.project.source_revisions) - source_revisions
     cube_revision = session.project.source_revisions[cube_revision_id]
+    cube_structure = next(
+        session.project.structures[entity_id]
+        for entity_id in cube_revision.created_entity_ids
+        if entity_id in session.project.structures
+    )
     cube_grid = next(
         session.project.datasets[entity_id]
         for entity_id in cube_revision.created_entity_ids
         if entity_id in session.project.datasets
     )
+    assert cube_grid.structure_id == cube_structure.id
     assert cube_grid.status is core.DatasetStatus.AMBIGUOUS
     cube_objects = set(bpy.data.objects) - objects_before_cube
     cube_view, = cube_objects
@@ -728,6 +1028,7 @@ def assert_quick_import(module_key, repository_root):
     assert cube_view["cb_scene_preset_id"] == "grid_volume"
     assert cube_view["cb_dataset_id"] == str(cube_grid.id)
     assert cube_view["cb_dataset_revision"] == cube_grid.revision
+    assert cube_view["cb_structure_id"] == str(cube_structure.id)
     assert cube_view["cb_scene_render_identity"]
     cube_bindings = json.loads(cube_view["cb_scene_bindings_json"])
     assert cube_bindings["grid"] == {
@@ -739,6 +1040,38 @@ def assert_quick_import(module_key, repository_root):
     assert cube_cache.is_relative_to(session_root)
     assert cube_cache.parent == session_root / "view-cache" / "volume"
     assert cube_cache.is_file()
+    session.active_entity_id = cube_grid.id
+    grid_settings = bpy.context.scene.chemblender_grid
+    grid_settings.dataset_index = 0
+    grid_settings.preset_id = "generic_scalar"
+    grid_settings.value_unit = "dimensionless"
+    assert bpy.ops.chemblender.resolve_grid_semantics() == {"FINISHED"}
+    resolved_grid = session.project.datasets[session.active_entity_id]
+    assert resolved_grid.id != cube_grid.id
+    assert resolved_grid.status is core.DatasetStatus.COMPLETE
+    assert resolved_grid.semantic_role == "scalar_field"
+    assert session.project.datasets[cube_grid.id] is cube_grid
+    objects_before_surface = set(bpy.data.objects)
+    assert bpy.ops.chemblender.create_grid_view(
+        mode="signed_surface"
+    ) == {"FINISHED"}
+    cube_surface_objects = tuple(
+        set(bpy.data.objects) - objects_before_surface
+    )
+    assert len(cube_surface_objects) == 2
+    assert {
+        obj["cb_surface_phase"] for obj in cube_surface_objects
+    } == {"positive", "negative"}
+    for obj in cube_surface_objects:
+        assert obj["cb_dataset_id"] == str(resolved_grid.id)
+        assert obj["cb_dataset_revision"] == resolved_grid.revision
+        assert obj["cb_dataset_index"] == 0
+        assert obj["cb_view_quality"] == "complete"
+        assert obj["cb_report_eligible"]
+        assert json.loads(obj["cb_scene_bindings_json"])["grid"] == {
+            "entity_id": str(resolved_grid.id),
+            "revision": resolved_grid.revision,
+        }
     browser_settings.mode = "by_data"
     rows_after_cube = browser.refresh_project_browser(bpy.context.scene)
     assert browser_settings.quality_filter == "all"
@@ -903,6 +1236,9 @@ def assert_quick_import(module_key, repository_root):
     bpy.data.objects.remove(cube_view, do_unlink=True)
     if cube_volume.users == 0:
         bpy.data.volumes.remove(cube_volume)
+    surface_view = importlib.import_module(f"{module_key}.surface_view")
+    for obj in cube_surface_objects:
+        surface_view.remove_surface_object(obj)
     bpy.data.scenes.remove(switched_scene)
 
 
@@ -1167,10 +1503,12 @@ def assert_vibration_view_adapter(module_key):
 
 def assert_dataset_and_trajectory_views(module_key):
     import numpy
+    import warnings
 
     core = importlib.import_module(f"{module_key}.core")
     adapter = importlib.import_module(f"{module_key}.dataset_view")
     trajectory = importlib.import_module(f"{module_key}.trajectory_view")
+    views = importlib.import_module(f"{module_key}.views")
     structure_id = uuid4()
     structure = core.Structure(
         id=structure_id,
@@ -1184,17 +1522,60 @@ def assert_dataset_and_trajectory_views(module_key):
             "bohr",
         ),
     )
-    obj = adapter.create_structure_view(
-        structure,
-        name="ChemBlender dataset smoke",
-        collection=bpy.context.scene.collection,
+    topology = core.TopologyRecord(
+        id=uuid4(),
+        revision="topology-revision",
+        structure_id=structure_id,
+        bond_indices=core.ArrayData(
+            numpy.asarray([[0, 1], [0, 2]]),
+            ("bond", "endpoint"),
+            "dimensionless",
+        ),
+        bond_orders=core.ArrayData(
+            numpy.asarray([1.0, 1.0]), ("bond",), "dimensionless"
+        ),
+        aromatic_flags=core.ArrayData(
+            numpy.asarray([False, False]), ("bond",), "dimensionless"
+        ),
+        stereo_labels=("", ""),
+        source_kind=core.TopologySource.EXPLICIT_FILE,
+        quality_status=core.QualityStatus.COMPLETE,
+        inference_parameters=(),
+        provenance_ids=(),
     )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", DeprecationWarning)
+        obj = adapter.create_structure_view(
+            structure,
+            topology,
+            name="ChemBlender dataset smoke",
+            collection=bpy.context.scene.collection,
+        )
+    assert len(caught) == 1
+    assert issubclass(caught[0].category, DeprecationWarning)
     mesh = obj.data
     try:
         assert obj["cb_structure_id"] == str(structure_id)
+        assert obj["cb_topology_id"] == str(topology.id)
+        assert obj["cbq_topology_source"] == "explicit_file"
+        assert len(mesh.edges) == 2
         atom_ids = [0] * 3
         obj.data.attributes["cbq_atom_id"].data.foreach_get("value", atom_ids)
         assert atom_ids == [0, 1, 2]
+        bond_ids = [0] * 2
+        obj.data.attributes["cbq_bond_id"].data.foreach_get("value", bond_ids)
+        assert bond_ids == [0, 1]
+        exact_orders = [0.0] * 2
+        obj.data.attributes["cbq_bond_order"].data.foreach_get(
+            "value", exact_orders
+        )
+        assert exact_orders == [1.0, 1.0]
+        ball_stick = [
+            item
+            for item in obj.modifiers
+            if item.get("cbq_contract") == "structure_ball_stick_v1"
+        ]
+        assert len(ball_stick) == 1
         coordinates = [0.0] * 9
         obj.data.vertices.foreach_get("co", coordinates)
         assert numpy.allclose(
@@ -1272,14 +1653,15 @@ def assert_dataset_and_trajectory_views(module_key):
             "vector", vector_values
         )
         assert vector_values == [0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.5]
-        assert len(obj.modifiers) == 1
+        assert len(obj.modifiers) == 2
+        assert tuple(obj.modifiers)[0] == modifier
         adapter.apply_atomic_vector(obj, vector, display_scale=1.0)
-        assert len(obj.modifiers) == 1
+        assert len(obj.modifiers) == 2
         bpy.context.view_layer.update()
         evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
         evaluated_geometry = evaluated.evaluated_geometry()
-        assert len(evaluated_geometry.instance_references()) == 1
-        assert len(evaluated_geometry.instances_pointcloud().points) == 3
+        assert len(evaluated_geometry.instance_references()) >= 1
+        assert len(evaluated_geometry.instances_pointcloud().points) >= 3
 
         adapter.apply_atom_selection(obj, [0, 2], name="terminal_atoms")
         selected = [False] * 3
@@ -1412,6 +1794,54 @@ def assert_dataset_and_trajectory_views(module_key):
         assert obj["cb_trajectory_frame_index"] == 1
         assert obj["cb_trajectory_cache_size"] == 2
         assert obj["cb_trajectory_prefetch_ahead"] == 0
+        frame_force = core.AtomFrameProperty(
+            id=uuid4(),
+            revision="trajectory-force-revision",
+            semantic_role="atomic_force",
+            domain="atom_frame",
+            data=core.ArrayData(
+                numpy.asarray(
+                    [
+                        [[1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 3.0]],
+                        [[4.0, 0.0, 0.0], [0.0, 5.0, 0.0], [0.0, 0.0, 6.0]],
+                    ]
+                ),
+                ("frame", "atom", "xyz"),
+                "electron_volt_per_angstrom",
+            ),
+            status=core.DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+            frame_set_id=frames.id,
+        )
+        project = core.QCProject(uuid4(), "0.2")
+        project.commit(
+            core.ImportBatch(
+                structures=(structure,),
+                datasets=(frames, frame_force),
+            )
+        )
+        browser = importlib.import_module(
+            f"{module_key}.ui.project_browser.panel"
+        )
+        force_structure, selected_force, values = (
+            browser.atom_frame_vector(project, frame_force.id, 1)
+        )
+        assert force_structure is structure
+        adapter.write_vector_view(
+            obj,
+            values,
+            dataset_id=selected_force.id,
+            revision=selected_force.revision,
+            semantic_role=selected_force.semantic_role,
+            unit=selected_force.data.unit,
+            display_scale=0.5,
+        )
+        vector_values = [0.0] * 9
+        obj.data.attributes["cbq_vector"].data.foreach_get(
+            "vector", vector_values
+        )
+        assert vector_values == [2.0, 0.0, 0.0, 0.0, 2.5, 0.0, 0.0, 0.0, 3.0]
         bpy.context.scene.frame_set(100)
         assert obj["cb_trajectory_frame_index"] == 1
         assert len(bpy.data.objects) >= 1
@@ -1419,22 +1849,23 @@ def assert_dataset_and_trajectory_views(module_key):
     finally:
         bpy.context.scene.frame_set(1)
         if obj.name in bpy.data.objects:
-            bpy.data.objects.remove(obj, do_unlink=True)
-        if mesh.name in bpy.data.meshes:
-            bpy.data.meshes.remove(mesh)
+            views.remove_structure_view(obj)
 
 
-def assert_periodic_structure_view(module_key):
+def assert_unwrapped_periodic_inference_view(module_key):
     import numpy
 
     core = importlib.import_module(f"{module_key}.core")
-    adapter = importlib.import_module(f"{module_key}.dataset_view")
+    views = importlib.import_module(f"{module_key}.views")
+    structure_id = uuid4()
     structure = core.Structure(
-        id=uuid4(),
+        id=structure_id,
         revision="periodic-structure-revision",
-        atomic_numbers=(14,),
+        atomic_numbers=(14, 14),
         coordinates=core.ArrayData(
-            numpy.asarray([[0.0, 0.0, 0.0]]), ("atom", "xyz"), "angstrom"
+            numpy.asarray([[0.1, 0.0, 0.0], [3.8, 0.0, 0.0]]),
+            ("atom", "xyz"),
+            "angstrom",
         ),
         cell=core.ArrayData(
             numpy.asarray([[4.0, 0.0, 0.0], [1.0, 3.0, 0.0], [0.0, 0.5, 5.0]]),
@@ -1443,18 +1874,18 @@ def assert_periodic_structure_view(module_key):
         ),
         periodic=core.PeriodicSiteData(
             fractional_coordinates=core.ArrayData(
-                numpy.asarray([[0.0, 0.0, 0.0]]),
+                numpy.asarray([[0.025, 0.0, 0.0], [0.95, 0.0, 0.0]]),
                 ("atom", "xyz"),
                 "dimensionless",
             ),
-            site_labels=("Si1",),
+            site_labels=("Si1", "Si2"),
             occupancies=core.ArrayData(
-                numpy.ones(1), ("atom",), "dimensionless"
+                numpy.ones(2), ("atom",), "dimensionless"
             ),
             isotropic_displacements=None,
             anisotropic_displacements=None,
-            adp_types=("none",),
-            disorder_groups=(0,),
+            adp_types=("none", "none"),
+            disorder_groups=(0, 0),
             declared_space_group_name=None,
             declared_space_group_number=None,
             symmetry_operations=(),
@@ -1462,22 +1893,70 @@ def assert_periodic_structure_view(module_key):
             pbc=(True, False, True),
         ),
     )
-    obj = adapter.create_structure_view(
+    unwrapped = replace(
         structure,
+        coordinates=core.ArrayData(
+            numpy.asarray([[0.1, 0.0, 0.0], [11.8, 0.0, 0.0]]),
+            ("atom", "xyz"),
+            "angstrom",
+        ),
+        periodic=replace(
+            structure.periodic,
+            fractional_coordinates=core.ArrayData(
+                numpy.asarray([[0.025, 0.0, 0.0], [2.95, 0.0, 0.0]]),
+                ("atom", "xyz"),
+                "dimensionless",
+            ),
+        ),
+    )
+    infer_periodic_topology = importlib.import_module(
+        f"{module_key}.core.topology.periodic"
+    ).infer_periodic_topology
+    reference_topology, = infer_periodic_topology(structure).topologies
+    topology, = infer_periodic_topology(unwrapped).topologies
+    assert topology.id == reference_topology.id
+    assert topology.revision == reference_topology.revision
+    assert topology.bond_indices.values.tolist() == [[0, 1]]
+    assert topology.bond_lattice_shifts.values.tolist() == [[-1, 0, 0]]
+    assert (
+        "fractional_normalization",
+        "cartesian_pbc_modulo_one",
+    ) in topology.inference_parameters
+    obj = views.create_structure_view(
+        unwrapped,
+        topology,
         name="ChemBlender periodic structure smoke",
         collection=bpy.context.scene.collection,
     )
-    mesh = obj.data
     try:
+        assert len(obj.data.vertices) == 2
+        assert len(obj.data.edges) == 0
+        assert numpy.allclose(obj.data.vertices[1].co, (11.8, 0.0, 0.0))
         assert obj["cb_periodic"] is True
         assert list(obj["cb_pbc"]) == [True, False, True]
         assert numpy.allclose(
             list(obj["cb_periodic_cell"]),
             [4.0, 0.0, 0.0, 1.0, 3.0, 0.0, 0.0, 0.5, 5.0],
         )
+        display = bpy.data.objects[obj["cb_periodic_display_object"]]
+        assert display["cb_structure_contract"] == "structure_periodic_display_v1"
+        assert len(display.data.vertices) == 2
+        assert len(display.data.edges) == 1
+        segment = numpy.asarray(
+            [tuple(vertex.co) for vertex in display.data.vertices]
+        )
+        assert numpy.allclose(segment, ((0.1, 0.0, 0.0), (-0.2, 0.0, 0.0)))
+        assert numpy.isclose(numpy.linalg.norm(segment[1] - segment[0]), 0.3)
+        assert obj["cb_periodic_display_bond_count"] == 1
+        assert any(
+            item.get("cbq_contract") == "structure_periodic_display_v1"
+            for item in obj.modifiers
+        )
+        bpy.context.view_layer.update()
+        evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        assert evaluated.evaluated_geometry() is not None
     finally:
-        bpy.data.objects.remove(obj, do_unlink=True)
-        bpy.data.meshes.remove(mesh)
+        views.remove_structure_view(obj)
 
 
 def assert_periodic_electronic_plots(module_key):
@@ -1663,6 +2142,8 @@ def assert_scene_preset_application(module_key):
             created.extend(signed_objects)
             assert [obj["cb_surface_phase"] for obj in signed_objects] == ["positive", "negative"]
             assert [obj["cb_surface_isovalue"] for obj in signed_objects] == [0.5, -0.5]
+            assert all(obj["cb_view_quality"] == "complete" for obj in signed_objects)
+            assert all(obj["cb_report_eligible"] for obj in signed_objects)
             bpy.context.view_layer.update()
             depsgraph = bpy.context.evaluated_depsgraph_get()
             for obj in signed_objects:
@@ -1694,11 +2175,72 @@ def assert_scene_preset_application(module_key):
             attribute.data.foreach_get("value", sampled)
             assert min(sampled) < max(sampled)
             assert property_obj["cb_property_colormap"] == "coolwarm"
+            assert property_obj["cb_view_quality"] == "complete"
+            assert property_obj["cb_report_eligible"]
+            assert property_obj["cb_surface_dataset_id"] == str(density_grid.id)
+            assert property_obj["cb_surface_dataset_revision"] == density_grid.revision
+            assert property_obj["cb_surface_dataset_index"] == 0
+            assert property_obj["cb_surface_semantic_role"] == density_grid.semantic_role
+            assert property_obj["cb_surface_unit"] == density_grid.data.unit
+            assert property_obj["cb_property_dataset_id"] == str(property_grid.id)
+            assert property_obj["cb_property_dataset_revision"] == property_grid.revision
+            assert property_obj["cb_property_dataset_index"] == 0
+            assert property_obj["cb_property_semantic_role"] == property_grid.semantic_role
+            assert property_obj["cb_property_unit"] == property_grid.data.unit
+            assert property_obj["cb_scene_render_identity"] == property_plan.render_identity
             assert all(
                 obj["cb_cache_format_version"] == 1
                 for obj in (*signed_objects, property_obj)
             )
             assert len(list(Path(cache_root).glob("surface/*.vdb"))) == 3
+
+            ambiguous_grid = replace(
+                signed_grid,
+                id=uuid4(),
+                revision="ambiguous-grid-r1",
+                semantic_role="scalar_field",
+                data=replace(signed_grid.data, unit="unknown"),
+                status=core.DatasetStatus.AMBIGUOUS,
+            )
+            grid_project.commit(core.ImportBatch(datasets=(ambiguous_grid,)))
+            ambiguous_plan = core.plan_scene_preset(
+                presets["signed_isosurface"],
+                grid_project,
+                {"grid": ambiguous_grid.id},
+                {"isovalue": 0.5},
+            )
+            ambiguous_objects = view.apply_scene_preset(
+                ambiguous_plan,
+                grid_project,
+                cache_root=Path(cache_root) / "preview",
+                collection=bpy.context.scene.collection,
+            )
+            try:
+                assert all(
+                    obj["cb_view_quality"] == "ambiguous"
+                    and not obj["cb_report_eligible"]
+                    for obj in ambiguous_objects
+                )
+                browser = importlib.import_module(
+                    f"{module_key}.ui.project_browser.panel"
+                )
+                records = tuple(
+                    record
+                    for record in browser.presentation_view_records(
+                        bpy.context.scene
+                    )
+                    if record.object_name
+                    in {obj.name for obj in ambiguous_objects}
+                )
+                assert records
+                assert all(
+                    record.quality == "ambiguous"
+                    and not record.report_eligible
+                    for record in records
+                )
+            finally:
+                for obj in ambiguous_objects:
+                    surface_view.remove_surface_object(obj)
 
             view_cache = importlib.import_module(f"{module_key}.ui.view_cache")
             sidecar = Path(cache_root) / "durable.cbq"
@@ -1828,7 +2370,7 @@ def assert_complex_phonon_trajectory(module_key):
     import numpy
 
     core = importlib.import_module(f"{module_key}.core")
-    views = importlib.import_module(f"{module_key}.dataset_view")
+    views = importlib.import_module(f"{module_key}.views")
     trajectory = importlib.import_module(f"{module_key}.trajectory_view")
     primitive_id = uuid4()
     eigenvectors = numpy.zeros((1, 3, 1, 3), dtype=complex)
@@ -1876,8 +2418,7 @@ def assert_complex_phonon_trajectory(module_key):
         assert numpy.allclose(second, [2.0, 0.0, 0.0, 1.0, 0.0, 0.0])
     finally:
         trajectory.clear_trajectory_view(obj)
-        bpy.data.objects.remove(obj, do_unlink=True)
-        bpy.data.meshes.remove(mesh)
+        views.remove_structure_view(obj)
 
 
 def assert_fermi_surface_view(module_key):
@@ -2026,6 +2567,146 @@ def assert_topology_view(module_key, repository_root):
         bpy.data.meshes.remove(mesh)
 
 
+def assert_extxyz_workflow(module_key, repository_root):
+    core = importlib.import_module(f"{module_key}.core")
+    formats = importlib.import_module(
+        f"{module_key}.core.formats.extxyz"
+    )
+    exporters = importlib.import_module(
+        f"{module_key}.core.exporters"
+    )
+    export_ui = importlib.import_module(f"{module_key}.ui.export")
+    preview_ui = importlib.import_module(
+        f"{module_key}.ui.import_preview"
+    )
+    browser_model = importlib.import_module(
+        f"{module_key}.ui.project_browser.model"
+    )
+    ordinary = core.parse_xyz(
+        repository_root / "tests" / "fixtures" / "xyz" / "water.xyz"
+    )
+    assert len(ordinary.structures) == 1
+
+    source_text = (
+        "2\n"
+        'Lattice="4 0 0 0 4 0 0 0 4" '
+        "Properties=species:S:1:pos:R:3:force:R:3:"
+        'custom:R:1:flag:L:1:label:S:1 pbc="T F T" energy=-1.0\n'
+        "C 0 0 0 1 0 0 2.5 T donor\n"
+        "H 1 0 0 0 1 0 3.5 F acceptor\n"
+        "2\n"
+        'Lattice="5 0 0 0 5 0 0 0 5" '
+        "Properties=species:S:1:pos:R:3:"
+        'custom:R:1:flag:L:1:label:S:1 pbc="F F F" energy=-0.5\n'
+        "C 0.1 0 0 4.5 F donor\n"
+        "H 1.1 0 0 5.5 T acceptor\n"
+    )
+    with TemporaryDirectory(prefix="chemblender-extxyz-smoke-") as directory:
+        root = Path(directory)
+        source = root / "trajectory.extxyz"
+        source.write_text(source_text, encoding="utf-8")
+        batch = formats.parse_extxyz(source)
+        structure, = batch.structures
+        frame_set = next(
+            item
+            for item in batch.datasets
+            if isinstance(item, core.FrameSet)
+        )
+        force = next(
+            item
+            for item in batch.datasets
+            if isinstance(item, core.AtomFrameProperty)
+            and item.semantic_role == "atomic_force"
+        )
+        assert frame_set.data.shape == (2, 2, 3)
+        assert force.status is core.DatasetStatus.PARTIAL
+        assert any(
+            isinstance(item, core.CellFrameProperty)
+            for item in batch.datasets
+        )
+        pbc = next(
+            item
+            for item in batch.datasets
+            if isinstance(item, core.FrameProperty)
+            and item.semantic_role == "pbc"
+        )
+        assert tuple(map(tuple, pbc.data.values)) == (
+            (True, False, True),
+            (False, False, False),
+        )
+        for role in ("custom", "flag", "label"):
+            item = next(
+                value
+                for value in batch.datasets
+                if value.semantic_role == role
+            )
+            assert item.status is core.DatasetStatus.AMBIGUOUS
+
+        summary = preview_ui.extxyz_preview_summary(batch)
+        assert summary.frame_count == 2
+        assert "atomic_force" in summary.atom_properties
+        assert summary.has_lattice
+        assert summary.assumed_units
+
+        project = core.QCProject(uuid4(), "0.2")
+        project.commit(batch)
+        rows = browser_model.build_browser_rows(
+            project,
+            mode=browser_model.BrowserMode.BY_DATA,
+            browser_revision=1,
+        )
+        frame_row = next(row for row in rows if row.entity_id == frame_set.id)
+        force_row = next(row for row in rows if row.entity_id == force.id)
+        assert force_row.parent_id == frame_row.id
+
+        selection = export_ui.resolve_export_selection(
+            project,
+            frame_set.id,
+        )
+        preview = export_ui.preview_export_selection(
+            selection,
+            "extxyz",
+        )
+        assert preview.requires_confirmation
+        destination = root / "trajectory-export.extxyz"
+        job = export_ui.ExportJob(
+            destination,
+            selection,
+            format_name="extxyz",
+            confirm_loss=True,
+            missing_value_token=None,
+        )
+        job.start()
+        assert job.join(30)
+        assert job.error is None
+        assert job.result.written
+        reparsed = formats.parse_extxyz(destination)
+        assert exporters.semantic_extxyz_differences(batch, reparsed) == ()
+
+        xyz_destination = root / "structure.xyz"
+        xyz_job = export_ui.ExportJob(
+            xyz_destination,
+            export_ui.resolve_export_selection(project, structure.id),
+            format_name="xyz",
+            confirm_loss=False,
+            missing_value_token=None,
+        )
+        xyz_job.start()
+        assert xyz_job.join(30)
+        assert xyz_job.error is None
+        assert xyz_job.result.written
+        assert len(core.parse_xyz(xyz_destination).structures) == 1
+
+        sidecar = root / "trajectory.cbq"
+        core.save_project(sidecar, project)
+        reopened = core.open_project(sidecar)
+        try:
+            assert frame_set.id in reopened.datasets
+            assert force.id in reopened.datasets
+        finally:
+            core.close_project(reopened)
+
+
 def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     reader = importlib.import_module(f"{module_key}.read")
     cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
@@ -2047,6 +2728,305 @@ def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     assert poscar_result[5] == ["Cs1", "Cl1"]
     assert poscar_result[6:9] == ([0.0, 0.5], [0.0, 0.5], [0.0, 0.5])
     assert len(poscar_result[9]) == 48
+
+
+def assert_sdf_10k_workflow_budget(module_key):
+    from statistics import median
+    from time import perf_counter
+    import tracemalloc
+
+    from rdkit import Chem, rdBase
+    from rdkit.Chem import rdDepictor
+
+    core = importlib.import_module(f"{module_key}.core")
+    conformer_grouping = importlib.import_module(
+        f"{module_key}.core.import_pipeline.conformer_grouping"
+    )
+    request_model = importlib.import_module(
+        f"{module_key}.core.import_pipeline.request"
+    )
+    reader_bridge = importlib.import_module(
+        f"{module_key}.reader_api.import_pipeline_bridge"
+    )
+    registry = importlib.import_module(
+        f"{module_key}.runtime.reader_api_bridge"
+    ).get_reader_plugin_registry()
+    properties = importlib.import_module(f"{module_key}.ui.properties")
+    preview_ui = importlib.import_module(
+        f"{module_key}.ui.import_preview"
+    )
+    browser_model = importlib.import_module(
+        f"{module_key}.ui.project_browser.model"
+    )
+    suffixes = (
+        "",
+        "O",
+        "N",
+        "F",
+        "Cl",
+        "Br",
+        "S",
+        "C#N",
+        "C=O",
+        "C(=O)O",
+    )
+    molecules = tuple(
+        Chem.MolFromSmiles("C" * length + suffix)
+        for length in range(1, 11)
+        for suffix in suffixes
+    )
+    canonical_identities = tuple(
+        Chem.MolToSmiles(
+            molecule,
+            canonical=True,
+            isomericSmiles=True,
+        )
+        for molecule in molecules
+    )
+    assert len(molecules) == len(set(canonical_identities)) == 100
+    before_objects = tuple(bpy.data.objects)
+    timings = {}
+
+    def measured(name, repeats, operation):
+        samples = []
+        result = None
+        for index in range(repeats):
+            started = perf_counter()
+            result = operation(index)
+            samples.append(perf_counter() - started)
+        timings[name] = samples
+        return result
+
+    with TemporaryDirectory(
+        prefix="chemblender-sdf-workflow-benchmark-"
+    ) as directory:
+        root = Path(directory)
+        source = root / "10k.sdf"
+        with source.open("wb") as stream:
+            for identity_index, molecule in enumerate(molecules):
+                molecule.SetProp("_Name", f"Identity {identity_index:03d}")
+                rdDepictor.Compute2DCoords(molecule)
+                record = Chem.MolToMolBlock(molecule).encode("utf-8")
+                for _ in range(100):
+                    stream.write(record)
+                    stream.write(b"$$$$\n")
+
+        source_model = request_model.ImportSource(source)
+        request = request_model.ImportRequest(
+            sources=(source_model,),
+            validation_mode=request_model.ValidationMode.BALANCED,
+        )
+        session = core.create_session(temp_parent=root)
+        staging = properties.create_quick_import_staging(session)
+        tracemalloc.start()
+        measured_sequence_started = perf_counter()
+        try:
+            preview = measured(
+                "reader_preflight",
+                1,
+                lambda _index: reader_bridge.preflight_reader_plugins(
+                    request,
+                    registry,
+                    staging,
+                    progress=lambda *_args: None,
+                    is_cancelled=lambda: False,
+                ),
+            )
+            suggestions = measured(
+                "conformer_suggestion",
+                3,
+                lambda _index: (
+                    conformer_grouping.suggest_staged_conformer_groups(
+                        preview,
+                        staging,
+                    )
+                ),
+            )
+            properties.store_quick_import_preview(
+                session,
+                staging,
+                preview,
+                conformer_grouping_suggestions=suggestions,
+            )
+            state = properties.get_quick_import_state(session)
+            preview_rows, conformer_rows = measured(
+                "preview_projection",
+                3,
+                lambda _index: (
+                    preview_ui.project_import_preview(
+                        session,
+                        state,
+                        registry,
+                    ),
+                    preview_ui.project_conformer_suggestions(state),
+                ),
+            )
+            source_preview, = preview.source_previews
+            staged_batch_id, = source_preview.staged_batch_ids
+            batch = staging.result(staged_batch_id)
+            source_revision_ids = {
+                record.source_revision_id
+                for record in batch.molecular_records
+            }
+            assert len(batch.molecular_records) == 10_000
+            assert source_revision_ids == {batch.source_revisions[0].id}
+            assert len(suggestions) == len(conformer_rows) == 100
+            assert preview_rows[0].molecular_record_count == 10_000
+            assert preview_rows[0].conformer_suggestion_count == 100
+            measured(
+                "project_commit",
+                1,
+                lambda _index: session.project.commit(batch),
+            )
+
+            browser_samples = []
+            filter_samples = []
+            for revision in range(1, 4):
+                started = perf_counter()
+                browser_rows = browser_model.build_browser_rows(
+                    session.project,
+                    session_id=session.id,
+                    browser_revision=revision,
+                )
+                browser_samples.append(perf_counter() - started)
+                started = perf_counter()
+                filtered_rows = browser_model.build_browser_rows(
+                    session.project,
+                    session_id=session.id,
+                    browser_revision=revision,
+                    search="Identity 042",
+                )
+                filter_samples.append(perf_counter() - started)
+            timings["browser_projection"] = browser_samples
+            timings["browser_filter"] = filter_samples
+            timings["measured_sequence_wall"] = [
+                perf_counter() - measured_sequence_started
+            ]
+            _current, peak = tracemalloc.get_traced_memory()
+
+            assert sum(
+                row.kind == "molecular_record"
+                for row in browser_rows
+            ) == 10_000
+            assert sum(
+                row.kind == "molecular_record"
+                for row in filtered_rows
+            ) == 100
+            assert tuple(bpy.data.objects) == before_objects
+        finally:
+            tracemalloc.stop()
+            try:
+                properties.clear_quick_import_state(session)
+            finally:
+                core.close_session(session)
+
+        def timing_summary(samples):
+            ordered = sorted(samples)
+            return {
+                "samples": len(samples),
+                "median": median(samples),
+                "p95": ordered[math.ceil(len(samples) * 0.95) - 1],
+            }
+
+        print(
+            "PERF: "
+            + json.dumps(
+                {
+                    "benchmark": "sdf_10k_workflow",
+                    "environment": {
+                        "blender": bpy.app.version_string,
+                        "python": sys.version.split()[0],
+                        "rdkit": rdBase.rdkitVersion,
+                    },
+                    "input": {
+                        "canonical_identity_count": 100,
+                        "record_count": 10_000,
+                        "records_per_identity": 100,
+                        "size_bytes": source.stat().st_size,
+                        "source_revision_count": len(
+                            source_revision_ids
+                        ),
+                    },
+                    "memory": {"peak_bytes": peak},
+                    "output": {
+                        "browser_row_count": len(browser_rows),
+                        "conformer_suggestion_count": len(suggestions),
+                        "filtered_record_count": sum(
+                            row.kind == "molecular_record"
+                            for row in filtered_rows
+                        ),
+                    },
+                    "timing_seconds": {
+                        name: timing_summary(samples)
+                        for name, samples in timings.items()
+                    },
+                },
+                sort_keys=True,
+            )
+        )
+
+
+def assert_project_browser_rna_budget(module_key):
+    from time import perf_counter
+    import tracemalloc
+    from unittest.mock import patch
+
+    panel = importlib.import_module(
+        f"{module_key}.ui.project_browser.panel"
+    )
+    model = importlib.import_module(
+        f"{module_key}.ui.project_browser.model"
+    )
+    scene = bpy.data.scenes.new("ChemBlender Browser RNA Budget")
+    rows = tuple(
+        model.BrowserRow(
+            id=f"record-{index}",
+            parent_id=None,
+            depth=1,
+            kind="molecular_record",
+            label=f"Record {index}",
+            quality="complete",
+            view_count=0,
+            entity_id=None,
+        )
+        for index in range(40007)
+    )
+    session = SimpleNamespace(
+        id=uuid4(),
+        project=object(),
+        active_entity_id=None,
+    )
+    try:
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=SimpleNamespace(browser_revision=1),
+            ),
+            patch.object(panel, "build_browser_rows", return_value=rows),
+        ):
+            tracemalloc.start()
+            samples = []
+            for _ in range(3):
+                started = perf_counter()
+                projected = panel.refresh_project_browser(scene)
+                samples.append((perf_counter() - started) * 1000.0)
+            _current, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+        settings = scene.chemblender_project_browser
+        assert projected is rows
+        assert settings.total_row_count == len(rows)
+        assert len(settings.rows) == panel._BROWSER_RNA_ROW_LIMIT
+        assert max(samples) < 200.0, samples
+        ordered = sorted(samples)
+        print(
+            "PERF: Project Browser 40,007-row RNA projection "
+            f"median={ordered[1]:.2f}ms p95={ordered[-1]:.2f}ms "
+            f"peak={peak}B visible={len(settings.rows)}"
+        )
+    finally:
+        bpy.data.scenes.remove(scene)
 
 
 arguments = sys.argv[sys.argv.index("--") + 1 :]
@@ -2094,11 +3074,36 @@ expected_inventory = {
 expected_inventory["module_callbacks"] += [
     {"module": ".ui.session", "register": True, "unregister": True},
     {"module": ".ui.properties", "register": True, "unregister": True},
+    {"module": ".ui.grid", "register": True, "unregister": True},
     {"module": ".ui.project_browser.panel", "register": True, "unregister": True},
     {"module": ".ui.file_handlers", "register": True, "unregister": True},
     {"module": ".ui.workspace", "register": True, "unregister": True},
 ]
 expected_inventory["registered_classes"] += [
+    {
+        "module": ".ui.grid",
+        "name": "CHEMBLENDER_OT_create_grid_view",
+        "id": "chemblender.create_grid_view",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.grid",
+        "name": "CHEMBLENDER_OT_resolve_grid_semantics",
+        "id": "chemblender.resolve_grid_semantics",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.grid",
+        "name": "CHEMBLENDER_PG_grid_settings",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.export",
+        "name": "CHEMBLENDER_OT_export_project_entity",
+        "id": "chemblender.export_project_entity",
+        "base": "Operator",
+    },
     {
         "module": ".ui.file_handlers",
         "name": "CHEMBLENDER_FH_project_browser",
@@ -2125,6 +3130,18 @@ expected_inventory["registered_classes"] += [
     },
     {
         "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_PG_import_conformer_evidence",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_PG_import_conformer_suggestion",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.import_preview",
         "name": "CHEMBLENDER_PG_import_conflict_candidate",
         "id": None,
         "base": "PropertyGroup",
@@ -2148,6 +3165,48 @@ expected_inventory["registered_classes"] += [
         "base": "PropertyGroup",
     },
     {
+        "module": ".ui.scientific_edit",
+        "name": "CHEMBLENDER_OT_apply_scientific_edits",
+        "id": "chemblender.apply_scientific_edits",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.topology",
+        "name": "CHEMBLENDER_OT_accept_topology",
+        "id": "chemblender.accept_topology",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.topology",
+        "name": "CHEMBLENDER_OT_compute_topology",
+        "id": "chemblender.compute_topology",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.topology",
+        "name": "CHEMBLENDER_OT_reject_topology",
+        "id": "chemblender.reject_topology",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.topology",
+        "name": "CHEMBLENDER_OT_switch_topology",
+        "id": "chemblender.switch_topology",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.topology",
+        "name": "CHEMBLENDER_PG_topology_settings",
+        "id": None,
+        "base": "PropertyGroup",
+    },
+    {
+        "module": ".ui.quick_import",
+        "name": "CHEMBLENDER_OT_import_smiles_text",
+        "id": "chemblender.import_smiles_text",
+        "base": "Operator",
+    },
+    {
         "module": ".ui.quick_import",
         "name": "CHEMBLENDER_PT_quick_import",
         "id": "CHEMBLENDER_PT_QUICK_IMPORT",
@@ -2169,6 +3228,12 @@ expected_inventory["registered_classes"] += [
         "module": ".ui.workspace",
         "name": "CHEMBLENDER_OT_open_workspace",
         "id": "chemblender.open_workspace",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_apply_frame_force",
+        "id": "chemblender.apply_frame_force",
         "base": "Operator",
     },
     {
@@ -2302,7 +3367,7 @@ assert_installed_blend_libraries(module_key)
 assert_grid_volume_adapter(module_key)
 assert_vibration_view_adapter(module_key)
 assert_dataset_and_trajectory_views(module_key)
-assert_periodic_structure_view(module_key)
+assert_unwrapped_periodic_inference_view(module_key)
 assert_periodic_electronic_plots(module_key)
 assert_scene_preset_application(module_key)
 assert_complex_phonon_trajectory(module_key)
@@ -2312,7 +3377,10 @@ assert_quick_import(module_key, package.parent.parent)
 assert_optional_workspace(module_key)
 assert_project_session_manager(module_key)
 assert_topology_view(module_key, package.parent.parent)
+assert_extxyz_workflow(module_key, package.parent.parent)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
+assert_sdf_10k_workflow_budget(module_key)
+assert_project_browser_rna_budget(module_key)
 
 import rdkit
 from rdkit import Chem

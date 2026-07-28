@@ -29,6 +29,7 @@ def _entities(context, request):
 def _output(batch):
     groups = (
         batch.structures,
+        batch.topologies,
         batch.cif_envelopes,
         batch.qcschema_envelopes,
         batch.cjson_envelopes,

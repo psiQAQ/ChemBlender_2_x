@@ -49,6 +49,8 @@ class OperationRegistry:
 def _entities(project):
     registries = (
         project.structures,
+        project.topologies,
+        project.molecular_records,
         project.cif_envelopes,
         project.qcschema_envelopes,
         project.cjson_envelopes,
@@ -76,6 +78,8 @@ def _validate_references(project, references, label):
 def _batch_references(batch):
     groups = (
         batch.structures,
+        batch.topologies,
+        batch.molecular_records,
         batch.cif_envelopes,
         batch.qcschema_envelopes,
         batch.cjson_envelopes,
@@ -249,13 +253,13 @@ def run_request(request_path, result_path, registry, *, cancel_path=None):
                     )
                     try:
                         write_result(result_path, result)
-                    except Exception:
+                    except BaseException:
                         if not bundle_preexisting:
                             try:
                                 from .reader_operation import _remove_owned_bundle
 
                                 _remove_owned_bundle(task_directory, bundle)
-                            except Exception:
+                            except BaseException:
                                 pass
                         raise
                     return result

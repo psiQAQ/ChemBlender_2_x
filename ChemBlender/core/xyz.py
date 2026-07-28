@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from ..Chem_data import ELEMENTS_DEFAULT
+from .formats.extxyz import has_extxyz_properties_assignment
 from .model import (
     ArrayData,
     DatasetStatus,
@@ -63,6 +64,11 @@ def sniff_xyz(source: Path, prefix: bytes) -> SniffResult:
         return SniffResult(SniffMatch.NONE, "atom count is not an integer")
     if atom_count <= 0 or len(lines) < 2:
         return SniffResult(SniffMatch.NONE, "invalid atom count or comment line")
+    if has_extxyz_properties_assignment(lines[1]):
+        return SniffResult(
+            SniffMatch.NONE,
+            "extXYZ Properties marker is not plain XYZ",
+        )
 
     atom_lines = lines[2 : 2 + atom_count]
     try:

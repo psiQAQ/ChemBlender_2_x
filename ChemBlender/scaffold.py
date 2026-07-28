@@ -115,6 +115,9 @@ class MESH_OT_SCAFFOLD_BUILD(bpy.types.Operator):
                 self.report({'ERROR'}, "Invalid SMILES")
                 return False
         if mode == 'File':
+            if os.path.splitext(moltext.strip())[1].lower() == ".mol2":
+                self.report({'ERROR'}, "MOL2 is not supported")
+                return False
             if not is_valid_filepath(moltext):
                 self.report({'ERROR'}, "Invalid structure file")
                 return False
@@ -163,6 +166,38 @@ class MESH_OT_SCAFFOLD_BUILD(bpy.types.Operator):
             
             if not self.mode_judge(mytool, moltext):
                 return {'CANCELLED'}
+            validation_mode = getattr(
+                getattr(
+                    context.scene,
+                    "chemblender_quick_import",
+                    None,
+                ),
+                "validation_mode",
+                "balanced",
+            )
+            if mytool.choose in {
+                "SMILES",
+                "Saccharides",
+                "Amino_Acids",
+                "Polymer_Units",
+            }:
+                return bpy.ops.chemblender.import_smiles_text(
+                    "EXEC_DEFAULT",
+                    smiles_text=moltext,
+                    validation_mode=validation_mode,
+                )
+            if (
+                mytool.choose == "File"
+                and os.path.splitext(moltext)[1].lower()
+                in {".mol", ".sdf", ".xyz", ".json"}
+            ):
+                source = os.path.abspath(bpy.path.abspath(moltext))
+                return bpy.ops.chemblender.quick_import(
+                    "EXEC_DEFAULT",
+                    directory=os.path.dirname(source),
+                    files=[{"name": os.path.basename(source)}],
+                    validation_mode=validation_mode,
+                )
             if mytool.choose == "PubChem":
                 from urllib.parse import quote
                 import requests

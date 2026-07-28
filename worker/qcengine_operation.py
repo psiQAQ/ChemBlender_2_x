@@ -288,6 +288,7 @@ def _write_json(path, document):
 def _batch_references(batch):
     groups = (
         batch.structures,
+        batch.topologies,
         batch.cif_envelopes,
         batch.qcschema_envelopes,
         batch.cjson_envelopes,

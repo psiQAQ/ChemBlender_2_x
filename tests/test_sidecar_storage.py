@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy
 
@@ -22,15 +22,19 @@ from ChemBlender.core import (
     PropertyDataset,
     ProvenanceRecord,
     QCProject,
+    QualityStatus,
     SourceRecord,
     SourceRevision,
     Structure,
+    TopologyRecord,
+    TopologySource,
     TrajectoryFrameManager,
 )
 from ChemBlender.core.sidecar import (
     LazyNpyArray,
     SidecarCompatibilityError,
     SidecarIntegrityError,
+    _array_content_hash,
     close_project,
     open_project,
     save_project,
@@ -159,7 +163,176 @@ def sample_project():
     return project
 
 
+def topology_project(indices, orders, *, native):
+    indices = numpy.asarray(indices, dtype=numpy.int64)
+    atom_count = int(indices.max(initial=0)) + 1
+    structure_id = uuid4()
+    bonds = MolecularTopology(
+        bond_indices=ArrayData(
+            indices,
+            ("bond", "endpoint"),
+            "dimensionless",
+        ),
+        bond_orders=ArrayData(
+            numpy.asarray(orders, dtype=float),
+            ("bond",),
+            "dimensionless",
+        ),
+    )
+    topology_id = uuid4()
+    structure = Structure(
+        id=structure_id,
+        revision="topology-structure",
+        atomic_numbers=(6,) * atom_count,
+        coordinates=ArrayData(
+            numpy.zeros((atom_count, 3)),
+            ("atom", "xyz"),
+            "angstrom",
+        ),
+        topology=None if native else bonds,
+        topology_ids=(topology_id,) if native else (),
+    )
+    project = QCProject(id=uuid4(), schema_version="0.2" if native else "0.1")
+    topologies = (
+        (
+            TopologyRecord(
+                id=topology_id,
+                revision="current-topology",
+                structure_id=structure_id,
+                bond_indices=bonds.bond_indices,
+                bond_orders=bonds.bond_orders,
+                aromatic_flags=None,
+                stereo_labels=("",) * len(indices),
+                source_kind=TopologySource.EXPLICIT_FILE,
+                quality_status=QualityStatus.COMPLETE,
+                inference_parameters=(),
+                provenance_ids=(),
+            ),
+        )
+        if native
+        else ()
+    )
+    project.commit(ImportBatch(structures=(structure,), topologies=topologies))
+    return project, structure
+
+
 class SidecarStorageTests(unittest.TestCase):
+    def test_current_noncanonical_topology_failure_closes_lazy_arrays(self):
+        project, _structure = topology_project(((0, 1),), (1.0,), native=True)
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "current.cbq"
+            save_project(path, project)
+            manifest_path = path / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            topology_value = manifest["project"]["topologies"]["$dict"][0][1]
+            descriptor = topology_value["bond_indices"]["values"]
+            content_hash, reversed_indices = _array_content_hash(
+                numpy.asarray(((1, 0),), dtype=numpy.int64)
+            )
+            array_path = path / "arrays" / f"{content_hash}.npy"
+            with array_path.open("wb") as stream:
+                numpy.save(stream, reversed_indices, allow_pickle=False)
+            descriptor.update(
+                {
+                    "path": f"arrays/{array_path.name}",
+                    "content_sha256": content_hash,
+                    "file_sha256": hashlib.sha256(array_path.read_bytes()).hexdigest(),
+                    "shape": list(reversed_indices.shape),
+                    "dtype": reversed_indices.dtype.str,
+                }
+            )
+            write_manifest(manifest_path, manifest)
+
+            closed = []
+            original_close = LazyNpyArray.close
+
+            def record_close(array):
+                closed.append(id(array))
+                original_close(array)
+
+            with (
+                patch.object(LazyNpyArray, "close", record_close),
+                self.assertRaisesRegex(
+                    SidecarIntegrityError,
+                    "invalid TopologyRecord",
+                ),
+            ):
+                open_project(path)
+            self.assertEqual(len(closed), len(set(closed)))
+            self.assertGreaterEqual(len(closed), 2)
+
+    def test_legacy_topology_cleanup_failure_is_noted_on_primary_error(self):
+        project, _structure = topology_project(
+            ((0, 1), (1, 0)),
+            (1.0, 1.0),
+            native=False,
+        )
+        original_close = LazyNpyArray.close
+
+        def close_then_fail(array):
+            original_close(array)
+            raise OSError("injected cleanup failure")
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "legacy-duplicate.cbq"
+            save_project(path, project)
+            with (
+                patch.object(LazyNpyArray, "close", close_then_fail),
+                self.assertRaisesRegex(
+                    SidecarIntegrityError,
+                    "invalid TopologyRecord",
+                ) as caught,
+            ):
+                open_project(path)
+
+        cause = caught.exception.__cause__
+        self.assertIsInstance(cause, ValueError)
+        self.assertIn("repeat", str(cause))
+        self.assertTrue(
+            any(
+                "injected cleanup failure" in note
+                for note in getattr(cause, "__notes__", ())
+            )
+        )
+        self.assertTrue(
+            any(
+                "injected cleanup failure" in note
+                for note in getattr(caught.exception, "__notes__", ())
+            )
+        )
+
+    def test_legacy_embedded_topology_is_canonicalized_on_open(self):
+        project, structure = topology_project(
+            ((2, 1), (1, 0)),
+            (2.0, 1.0),
+            native=False,
+        )
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "legacy.cbq"
+            save_project(path, project)
+            before = {
+                item.relative_to(path): item.read_bytes()
+                for item in path.rglob("*")
+                if item.is_file()
+            }
+            restored = open_project(path)
+
+            topology = next(iter(restored.topologies.values()))
+            self.assertEqual(topology.bond_indices.values.tolist(), [[0, 1], [1, 2]])
+            self.assertEqual(topology.bond_orders.values.tolist(), [1.0, 2.0])
+            self.assertIsNone(restored.structures[structure.id].topology)
+            close_project(restored)
+            self.assertEqual(
+                before,
+                {
+                    item.relative_to(path): item.read_bytes()
+                    for item in path.rglob("*")
+                    if item.is_file()
+                },
+            )
+
     def test_v02_tagged_objects_and_array_descriptors_require_exact_schemas(self):
         project = sample_project()
         project.provenance[PROVENANCE_ID] = ProvenanceRecord(
@@ -294,10 +467,14 @@ class SidecarStorageTests(unittest.TestCase):
 
             structure = project.structures[STRUCTURE_ID]
             self.assertIs(type(structure), Structure)
-            self.assertIs(type(structure.topology), MolecularTopology)
+            self.assertIsNone(structure.topology)
             self.assertEqual(structure.revision, "structure-r1")
-            self.assertEqual(structure.topology.bond_indices.shape, (1, 2))
-            self.assertEqual(structure.topology.bond_orders.shape, (1,))
+            topology = project.topologies[structure.topology_ids[0]]
+            self.assertIs(type(topology), TopologyRecord)
+            self.assertEqual(topology.source_kind, TopologySource.DISTANCE_INFERRED)
+            self.assertEqual(topology.quality_status, QualityStatus.AMBIGUOUS)
+            self.assertEqual(topology.bond_indices.shape, (1, 2))
+            self.assertEqual(topology.bond_orders.shape, (1,))
 
             charges = project.datasets[DATASET_ID]
             frames = project.datasets[FRAMES_ID]

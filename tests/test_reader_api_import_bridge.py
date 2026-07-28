@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import tempfile
 import unittest
 from dataclasses import replace
@@ -14,6 +15,7 @@ from ChemBlender.core import (
     CapabilitySupport,
     ImportBatch,
     QCProject,
+    ReaderDescriptor,
     SourceRecord,
     SourceRevision,
     Structure,
@@ -45,6 +47,7 @@ from ChemBlender.reader_api import (
     builtin_reader_plugin_registry,
 )
 from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from ChemBlender.reader_api.registry import _builtin_manifest, _builtin_plugin
 from ChemBlender.runtime.reader_api_bridge import (
     get_reader_plugin_registry,
     register_reader_api_handle,
@@ -98,7 +101,7 @@ class _Plugin:
         return SniffResult(SniffMatch.EXACT, "fixture")
 
     def parse(self, request):
-        return self._result
+        return self._result(request) if callable(self._result) else self._result
 
 
 def _descriptor(reader_id="external-reader", *, availability=None):
@@ -126,6 +129,43 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
             if session.root.exists():
                 session.discard()
         self.temporary.cleanup()
+
+    def test_product_bridge_stages_inline_smiles_with_semantic_locator(self):
+        session = StagedImportSession.create(temp_parent=self.root)
+        self.staged.append(session)
+        request = ImportRequest((ImportSource.smiles_text("CCO ethanol\n"),))
+
+        preview = preflight_reader_plugins(
+            request, builtin_reader_plugin_registry(), session
+        )
+
+        batch = session.result(preview.staged_batch_ids[0])
+        revision, = batch.source_revisions
+        self.assertEqual(revision.reader_id, "smiles")
+        self.assertEqual(revision.locator, "inline:smiles")
+        self.assertEqual(revision.locator_kind, "inline_text")
+        self.assertNotIn(str(session.artifact_root), revision.locator)
+
+    def test_product_bridge_repeated_inline_smiles_commits_distinct_entities(self):
+        session = StagedImportSession.create(temp_parent=self.root)
+        self.staged.append(session)
+        first_preview = preflight_reader_plugins(
+            ImportRequest((ImportSource.smiles_text("CCO ethanol\n"),)),
+            builtin_reader_plugin_registry(), session,
+        )
+        second_preview = preflight_reader_plugins(
+            ImportRequest((ImportSource.smiles_text("CCO ethanol\n"),)),
+            builtin_reader_plugin_registry(), session,
+        )
+        first = session.result(first_preview.staged_batch_ids[0])
+        second = session.result(second_preview.staged_batch_ids[0])
+        self.assertNotEqual(first.structures[0].id, second.structures[0].id)
+        self.assertNotEqual(first.molecular_records[0].id, second.molecular_records[0].id)
+        self.assertEqual(first.provenance[0].source_hash, first.source_revisions[0].content_hash)
+        self.assertEqual(second.provenance[0].source_hash, second.source_revisions[0].content_hash)
+        project = QCProject(id=uuid4(), schema_version="1.0")
+        project.commit(first)
+        project.commit(second)
 
     def session(self):
         session = StagedImportSession.create(temp_parent=self.root)
@@ -203,7 +243,7 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
             "local_file",
             "2026-07-25T00:00:00Z",
         )
-        revision = SourceRevision(
+        revision_template = SourceRevision(
             uuid4(),
             source_id,
             content_hash,
@@ -226,12 +266,22 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
             (structure.id,),
             (),
         )
-        public = PublicImportBatch(
-            sources=(source,),
-            source_revisions=(revision,),
-            structures=(structure,),
-        )
-        plugin = _Plugin(descriptor, public)
+        captured = {}
+
+        def matching_result(parse_request):
+            revision = replace(
+                revision_template,
+                id=parse_request.source_revision_id,
+            )
+            public = PublicImportBatch(
+                sources=(source,),
+                source_revisions=(revision,),
+                structures=(structure,),
+            )
+            captured.update(revision=revision, public=public)
+            return public
+
+        plugin = _Plugin(descriptor, matching_result)
         namespace = {}
         handle = register_reader_api_handle(
             "synthetic.chemblender", namespace=namespace
@@ -249,6 +299,8 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                 },
             )
             staged = session.result(preview.staged_batch_ids[0])
+            revision = captured["revision"]
+            public = captured["public"]
 
             self.assertIs(staged.sources[0], source)
             self.assertIs(staged.source_revisions[0], revision)
@@ -272,16 +324,23 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
 
                 close_session(project_session)
 
-            for invalid in (
-                replace(public, source_revisions=()),
-                replace(
+            for invalid_result in (
+                lambda parse_request: replace(
+                    public,
+                    source_revisions=(),
+                ),
+                lambda parse_request: replace(
                     public,
                     source_revisions=(
-                        replace(revision, original_filename="wrong.ext"),
+                        replace(
+                            revision,
+                            id=parse_request.source_revision_id,
+                            original_filename="wrong.ext",
+                        ),
                     ),
                 ),
             ):
-                plugin._result = invalid
+                plugin._result = invalid_result
                 invalid_session = self.session()
                 invalid_preview = preflight_reader_plugins(
                     request,
@@ -299,6 +358,33 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                     invalid_batch.diagnostics[0].code,
                     "preflight.invalid_reader_result",
                 )
+
+            plugin._result = lambda parse_request: replace(
+                captured["public"],
+                source_revisions=(
+                    replace(
+                        captured["revision"],
+                        id=uuid4(),
+                    ),
+                ),
+            )
+            mismatched_session = self.session()
+            mismatched_preview = preflight_reader_plugins(
+                request,
+                registry,
+                mismatched_session,
+                canonical_parameters_by_source={
+                    request_source_id: {"encoding": "utf-8"}
+                },
+            )
+            mismatched = mismatched_session.result(
+                mismatched_preview.staged_batch_ids[0]
+            )
+            self.assertEqual(mismatched.structures, ())
+            self.assertEqual(
+                mismatched.diagnostics[0].code,
+                "external-reader.invalid",
+            )
         finally:
             handle.unregister_callback(plugin.manifest)
             remove_reader_api_handle(handle, namespace=namespace)
@@ -337,6 +423,41 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
             tuple(item.code for item in staged.diagnostics),
             ("preflight.invalid_reader_result",),
         )
+
+    def test_invalid_reader_result_removes_its_staging_artifacts(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        structure = Structure(
+            id=uuid4(),
+            revision="structure-r1",
+            atomic_numbers=(1,),
+            coordinates=ArrayData(
+                numpy.asarray(((0.0, 0.0, 0.0),)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        )
+
+        def invalid_result(request):
+            (request.staging_root / "orphan.bin").write_bytes(b"orphan")
+            return PublicImportBatch(structures=(structure,))
+
+        session = self.session()
+        preview = preflight_reader_plugins(
+            self.request(source),
+            ReaderPluginRegistry((
+                _Plugin(_descriptor(), invalid_result),
+            )),
+            session,
+        )
+        staged = session.result(preview.staged_batch_ids[0])
+
+        self.assertEqual(staged.structures, ())
+        self.assertEqual(
+            tuple(item.code for item in staged.diagnostics),
+            ("preflight.invalid_reader_result",),
+        )
+        self.assertEqual(tuple(session.artifact_root.iterdir()), ())
 
     def test_sniff_prefix_is_bounded_and_cancellation_is_typed(self):
         source = self.root / "source.ext"
@@ -598,6 +719,7 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
 
             def parse(self, request):
                 self.parsing = True
+                (request.staging_root / "orphan.bin").write_bytes(b"orphan")
                 request.is_cancelled()
                 return PublicImportBatch()
 
@@ -620,6 +742,112 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                 is_cancelled=one_shot_cancel,
             )
         self.assertEqual(session.result_ids, ())
+        self.assertEqual(tuple(session.artifact_root.iterdir()), ())
+
+    def test_terminal_cancellation_rolls_back_successful_reader_artifacts(self):
+        source = FIXTURES / "extxyz" / "multiframe-cell.extxyz"
+        session = self.session()
+        checks_before_terminal = None
+
+        def progress(stage, completed, total):
+            nonlocal checks_before_terminal
+            if stage == "reader.parse" and completed == total == 1:
+                checks_before_terminal = 2
+
+        def cancel_at_terminal_check():
+            nonlocal checks_before_terminal
+            if checks_before_terminal is None:
+                return False
+            if checks_before_terminal:
+                checks_before_terminal -= 1
+                return False
+            return True
+
+        with self.assertRaises(ImportCancelled):
+            preflight_reader_plugins(
+                self.request(source),
+                builtin_reader_plugin_registry(),
+                session,
+                progress=progress,
+                is_cancelled=cancel_at_terminal_check,
+            )
+
+        self.assertEqual(session.result_ids, ())
+        self.assertEqual(tuple(session.artifact_root.iterdir()), ())
+
+    @unittest.skipUnless(os.name == "nt", "Windows file ownership regression")
+    def test_terminal_cancellation_releases_memmap_backed_memoryview(self):
+        source = self.root / "memoryview.synthetic"
+        source.write_bytes(b"memoryview")
+        session = self.session()
+        checks_before_terminal = None
+
+        def parse(request):
+            array_path = request.staging_root / "coordinates.npy"
+            numpy.save(array_path, numpy.zeros((1, 3)))
+            mapped = numpy.load(array_path, mmap_mode="r")
+            structures = tuple(
+                Structure(
+                    id=uuid4(),
+                    revision=f"structure-{index}-r1",
+                    atomic_numbers=(1,),
+                    coordinates=ArrayData(
+                        values,
+                        ("atom", "xyz"),
+                        "angstrom",
+                    ),
+                )
+                for index, values in enumerate((
+                    memoryview(mapped),
+                    memoryview(mapped.view(numpy.ndarray)),
+                ))
+            )
+            return ImportBatch(structures=structures)
+
+        descriptor = ReaderDescriptor(
+            reader_id="memoryview",
+            reader_version="1",
+            extensions=(".synthetic",),
+            capabilities={"structure": CapabilitySupport.SUPPORTED},
+            priority=100,
+            sniff=lambda path, prefix: SniffResult(
+                SniffMatch.EXACT, "fixture"
+            ),
+            parse=lambda path: ImportBatch(),
+            parse_request=parse,
+        )
+        registry = ReaderPluginRegistry((
+            _builtin_plugin(
+                descriptor,
+                _builtin_manifest((descriptor,)),
+            ),
+        ))
+
+        def progress(stage, completed, total):
+            nonlocal checks_before_terminal
+            if stage == "reader.parse" and completed == total == 1:
+                checks_before_terminal = 2
+
+        def cancel_at_terminal_check():
+            nonlocal checks_before_terminal
+            if checks_before_terminal is None:
+                return False
+            if checks_before_terminal:
+                checks_before_terminal -= 1
+                return False
+            return True
+
+        with self.assertRaises(ImportCancelled):
+            preflight_reader_plugins(
+                self.request(source),
+                registry,
+                session,
+                progress=progress,
+                is_cancelled=cancel_at_terminal_check,
+            )
+
+        self.assertEqual(session.result_ids, ())
+        self.assertEqual(tuple(session.artifact_root.iterdir()), ())
 
     def test_host_callback_failures_escape_plugin_failure_staging(self):
         source = self.root / "source.ext"

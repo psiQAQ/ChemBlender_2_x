@@ -25,7 +25,7 @@ class PublicBatchValidationError(PublicBatchError):
 
 
 _BATCH_FIELDS = (
-    "sources", "source_revisions", "structures", "cif_envelopes",
+    "sources", "source_revisions", "structures", "topologies", "molecular_records", "cif_envelopes",
     "qcschema_envelopes", "cjson_envelopes", "symmetry_results",
     "calculations", "datasets", "basis_sets", "orbital_sets",
     "density_matrices", "provenance", "report", "diagnostics",
@@ -43,12 +43,26 @@ def public_batch_from_internal(batch) -> _PublicImportBatch:
 
 
 def internal_batch_from_public(batch) -> _ImportBatch:
+    candidate = _internal_batch_from_public_unchecked(batch)
+    _validate_internal_batch_graph(candidate)
+    return candidate
+
+
+def _internal_batch_from_public_unchecked(batch) -> _ImportBatch:
     if type(batch) is not _PublicImportBatch:
         raise TypeError("batch must be a PublicImportBatch")
     try:
         _validate_public_batch_values(batch)
         candidate = _ImportBatch(**{name: getattr(batch, name) for name in _BATCH_FIELDS})
-        _QCProject(_uuid4(), _CURRENT_PROJECT_SCHEMA_VERSION).commit(candidate)
     except (TypeError, ValueError, KeyError) as error:
         raise PublicBatchValidationError(str(error)) from error
     return candidate
+
+
+def _validate_internal_batch_graph(batch) -> None:
+    if type(batch) is not _ImportBatch:
+        raise TypeError("batch must be an ImportBatch")
+    try:
+        _QCProject(_uuid4(), _CURRENT_PROJECT_SCHEMA_VERSION).commit(batch)
+    except (TypeError, ValueError, KeyError) as error:
+        raise PublicBatchValidationError(str(error)) from error

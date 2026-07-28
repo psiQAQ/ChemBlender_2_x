@@ -10,12 +10,16 @@ from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 from uuid import UUID
 
+import numpy
+
 from ChemBlender.core import (
     ArrayData,
+    AtomFrameProperty,
     DatasetStatus,
     DiagnosticSeverity,
     DiagnosticValue,
     Grid3D,
+    FrameSet,
     ImportBatch,
     ImportDiagnostic,
     QCProject,
@@ -23,6 +27,11 @@ from ChemBlender.core import (
     SourceRecord,
     SourceRevision,
     Structure,
+)
+from ChemBlender.core.formats.sdf import parse_sdf
+from ChemBlender.core.import_pipeline.conformer_grouping import (
+    accept_conformer_group,
+    suggest_conformer_groups,
 )
 from ChemBlender.ui.project_browser.model import (
     BrowserMode,
@@ -38,7 +47,10 @@ SOURCE_ID = UUID("20000000-0000-0000-0000-000000000001")
 REVISION_ID = UUID("20000000-0000-0000-0000-000000000002")
 STRUCTURE_ID = UUID("30000000-0000-0000-0000-000000000001")
 GRID_ID = UUID("30000000-0000-0000-0000-000000000002")
+FRAME_SET_ID = UUID("30000000-0000-0000-0000-000000000003")
+FORCE_ID = UUID("30000000-0000-0000-0000-000000000004")
 DIAGNOSTIC_ID = UUID("40000000-0000-0000-0000-000000000001")
+SDF_FIXTURE = Path(__file__).with_name("fixtures") / "sdf" / "records.sdf"
 
 
 class _ArraySentinel:
@@ -145,6 +157,43 @@ def sample_project():
     return project
 
 
+def sample_trajectory_project():
+    project = sample_project()
+    frame_set = FrameSet(
+        id=FRAME_SET_ID,
+        revision="frames-r1",
+        semantic_role="coordinates",
+        domain="frame",
+        data=ArrayData(
+            numpy.zeros((2, 1, 3)),
+            ("frame", "atom", "xyz"),
+            "angstrom",
+        ),
+        status=DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(),
+        structure_id=STRUCTURE_ID,
+        comments=("", ""),
+    )
+    force = AtomFrameProperty(
+        id=FORCE_ID,
+        revision="force-r1",
+        semantic_role="atomic_force",
+        domain="atom_frame",
+        data=ArrayData(
+            numpy.asarray([[[1.0, 2.0, 3.0]], [[4.0, 5.0, 6.0]]]),
+            ("frame", "atom", "xyz"),
+            "electron_volt_per_angstrom",
+        ),
+        status=DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(),
+        frame_set_id=FRAME_SET_ID,
+    )
+    project.commit(ImportBatch(datasets=(force, frame_set)))
+    return project
+
+
 def sample_views():
     return (
         ViewRecord(
@@ -157,7 +206,98 @@ def sample_views():
     )
 
 
+def sample_molecular_project():
+    batch = parse_sdf(SDF_FIXTURE)
+    acceptance = accept_conformer_group(
+        suggest_conformer_groups(batch)[0],
+        batch,
+        review_confirmed=True,
+    )
+    project = SimpleNamespace(
+        id=PROJECT_ID,
+        molecular_records={
+            record.id: record for record in batch.molecular_records
+        },
+        datasets={
+            dataset.id: dataset
+            for dataset in (*batch.datasets, acceptance.conformer_set)
+        },
+        structures={value.id: value for value in batch.structures},
+        topologies={value.id: value for value in batch.topologies},
+        calculations={},
+        symmetry_results={},
+        basis_sets={},
+        orbital_sets={},
+        density_matrices={},
+        cif_envelopes={},
+        qcschema_envelopes={},
+        cjson_envelopes={},
+        provenance={},
+        diagnostics={},
+    )
+    return project, batch, acceptance
+
+
 class ProjectBrowserModelTests(unittest.TestCase):
+    def test_molecular_records_and_conformer_properties_are_grouped(self):
+        project, batch, acceptance = sample_molecular_project()
+
+        rows = build_browser_rows(
+            project,
+            mode=BrowserMode.BY_DATA,
+            session_id=SESSION_ID,
+            browser_revision=3,
+        )
+
+        record_rows = tuple(
+            row for row in rows if row.kind == "molecular_record"
+        )
+        self.assertEqual(
+            tuple(row.entity_id for row in record_rows),
+            tuple(record.id for record in batch.molecular_records),
+        )
+        self.assertTrue(
+            all(row.parent_id == "group:molecular_records" for row in record_rows)
+        )
+        conformer_row = next(
+            row
+            for row in rows
+            if row.entity_id == acceptance.conformer_set.id
+        )
+        property_rows = tuple(
+            row
+            for row in rows
+            if row.kind == "record_property_column"
+        )
+        self.assertTrue(property_rows)
+        self.assertTrue(
+            all(row.parent_id == conformer_row.id for row in property_rows)
+        )
+        self.assertTrue(
+            all(
+                record.title in next(
+                    row.label
+                    for row in record_rows
+                    if row.entity_id == record.id
+                )
+                for record in batch.molecular_records
+            )
+        )
+
+    def test_frame_set_groups_its_related_properties_without_reading_values(self):
+        rows = build_browser_rows(
+            sample_trajectory_project(),
+            mode=BrowserMode.BY_DATA,
+            session_id=SESSION_ID,
+            browser_revision=2,
+        )
+        frame_row = next(row for row in rows if row.entity_id == FRAME_SET_ID)
+        force_row = next(row for row in rows if row.entity_id == FORCE_ID)
+
+        self.assertEqual(frame_row.parent_id, "group:datasets")
+        self.assertEqual(force_row.parent_id, frame_row.id)
+        self.assertEqual(force_row.depth, frame_row.depth + 1)
+
     def test_rows_and_view_records_are_immutable(self):
         row = BrowserRow(
             id="entity:test",
@@ -489,7 +629,62 @@ class ProjectBrowserModelTests(unittest.TestCase):
             views=sample_views(),
         )
 
-        self.assertIs(first, normalized)
+        self.assertEqual(first, normalized)
+
+    def test_cache_keeps_only_current_projection_for_a_browser_scope(self):
+        project = sample_project()
+        model = importlib.import_module(
+            "ChemBlender.ui.project_browser.model"
+        )
+        model._CACHE.clear()
+
+        for revision in range(40):
+            build_browser_rows(
+                project,
+                mode=BrowserMode.BY_DATA,
+                session_id=SESSION_ID,
+                browser_revision=revision,
+                views=sample_views(),
+            )
+
+        scoped = tuple(
+            key
+            for key in model._CACHE
+            if (
+                key[0] == id(project)
+                and key[2] == SESSION_ID
+                and key[4] is BrowserMode.BY_DATA
+            )
+        )
+        self.assertEqual(len(scoped), 1)
+        self.assertEqual(scoped[0][3], 39)
+
+    def test_filter_reuses_cached_unfiltered_projection(self):
+        project = sample_project()
+        model = importlib.import_module(
+            "ChemBlender.ui.project_browser.model"
+        )
+        keywords = {
+            "mode": BrowserMode.BY_DATA,
+            "session_id": SESSION_ID,
+            "browser_revision": 9876,
+            "views": sample_views(),
+        }
+
+        with patch.object(
+            model,
+            "_by_data",
+            wraps=model._by_data,
+        ) as project_rows:
+            build_browser_rows(project, **keywords)
+            filtered = build_browser_rows(
+                project,
+                search="density",
+                **keywords,
+            )
+
+        self.assertEqual(project_rows.call_count, 1)
+        self.assertTrue(any(row.label == "Electron Density" for row in filtered))
 
     def test_filter_keeps_only_matching_entities_views_and_ancestors(self):
         grid_path = f"group:datasets/entity:{GRID_ID}"
@@ -654,6 +849,11 @@ class _Panel:
     pass
 
 
+class _Operator:
+    def report(self, levels, message):
+        self.last_report = (levels, message)
+
+
 class _Scene:
     pass
 
@@ -666,6 +866,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             ("BoolProperty", "bool"),
             ("CollectionProperty", "collection"),
             ("EnumProperty", "enum"),
+            ("FloatProperty", "float"),
             ("IntProperty", "int"),
             ("PointerProperty", "pointer"),
             ("StringProperty", "string"),
@@ -674,6 +875,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.fake_bpy.props = self.fake_props
         self.fake_bpy.types = SimpleNamespace(
             Panel=_Panel,
+            Operator=_Operator,
             PropertyGroup=_PropertyGroup,
             Scene=_Scene,
             UIList=_UIList,
@@ -686,6 +888,8 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         for name in (
             "ChemBlender.ui.project_browser.panel",
             "ChemBlender.ui.properties",
+            "ChemBlender.ui.scientific_edit",
+            "ChemBlender.ui.topology",
         ):
             sys.modules.pop(name, None)
 
@@ -697,10 +901,14 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         for name in (
             "ChemBlender.ui.project_browser.panel",
             "ChemBlender.ui.properties",
+            "ChemBlender.ui.scientific_edit",
+            "ChemBlender.ui.topology",
         ):
             sys.modules.pop(name, None)
         if hasattr(_Scene, "chemblender_project_browser"):
             del _Scene.chemblender_project_browser
+        if hasattr(_Scene, "chemblender_topology"):
+            del _Scene.chemblender_topology
 
     def test_rna_projection_contains_only_small_values(self):
         panel = importlib.import_module(
@@ -723,6 +931,80 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.assertEqual(quality.keywords["default"], "all")
         self.assertTrue(
             all(identifier for identifier, _label, _description in quality.keywords["items"])
+        )
+
+    def test_topology_and_scientific_edit_classes_have_explicit_roots(self):
+        registration = importlib.import_module(
+            "ChemBlender.runtime.registration"
+        )
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        modules = tuple(
+            importlib.import_module(name)
+            for name in (
+                "ChemBlender.ui.topology",
+                "ChemBlender.ui.scientific_edit",
+            )
+        )
+
+        self.assertTrue(
+            {
+                ".ui.topology",
+                ".ui.scientific_edit",
+            }.issubset(registration.REGISTER_MODULE_NAMES)
+        )
+        for module in modules:
+            classes = tuple(
+                value
+                for name, value in vars(module).items()
+                if name.startswith(("CHEMBLENDER_OT_", "CHEMBLENDER_PG_"))
+            )
+            self.assertTrue(classes)
+            self.assertTrue(
+                all(cls.__module__ == module.__name__ for cls in classes)
+            )
+            self.assertFalse(
+                any(value in classes for value in vars(panel).values())
+            )
+
+    def test_panel_ignores_stale_ui_module_aliases(self):
+        ui_package = importlib.import_module("ChemBlender.ui")
+        stale_topology = ModuleType("ChemBlender.ui.topology")
+        stale_scientific_edit = ModuleType(
+            "ChemBlender.ui.scientific_edit"
+        )
+        with (
+            patch.object(
+                ui_package,
+                "topology",
+                stale_topology,
+                create=True,
+            ),
+            patch.object(
+                ui_package,
+                "scientific_edit",
+                stale_scientific_edit,
+                create=True,
+            ),
+        ):
+            panel = importlib.import_module(
+                "ChemBlender.ui.project_browser.panel"
+            )
+
+        self.assertIsNot(panel._topology, stale_topology)
+        self.assertIsNot(panel._scientific_edit, stale_scientific_edit)
+        self.assertTrue(
+            hasattr(
+                panel._topology,
+                "CHEMBLENDER_PG_topology_settings",
+            )
+        )
+        self.assertTrue(
+            hasattr(
+                panel._scientific_edit,
+                "CHEMBLENDER_OT_apply_scientific_edits",
+            )
         )
 
     def test_ui_list_draws_indentation_icon_quality_and_view_count(self):
@@ -817,6 +1099,117 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.assertIsNone(session.active_entity_id)
         self.assertEqual(state.active_entity_id, "")
 
+    def test_selected_force_projects_only_the_active_trajectory_frame(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        structure, dataset, values = panel.atom_frame_vector(
+            sample_trajectory_project(),
+            FORCE_ID,
+            1,
+        )
+
+        self.assertEqual(structure.id, STRUCTURE_ID)
+        self.assertEqual(structure.revision, "structure-r1")
+        self.assertEqual(dataset.id, FORCE_ID)
+        numpy.testing.assert_array_equal(values, [[4.0, 5.0, 6.0]])
+
+    def test_force_operator_rejects_missing_or_stale_structure_view(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class ViewObject(dict):
+            name = "Water trajectory"
+
+        for missing_structure, revision in (
+            (True, "structure-r1"),
+            (False, "stale-structure-r0"),
+        ):
+            with self.subTest(
+                missing_structure=missing_structure,
+                revision=revision,
+            ):
+                project = sample_trajectory_project()
+                if missing_structure:
+                    project.structures.pop(STRUCTURE_ID)
+                obj = ViewObject(
+                    cb_structure_contract="structure_view_v1",
+                    cb_structure_id=str(STRUCTURE_ID),
+                    cb_structure_revision=revision,
+                    cb_trajectory_frame_index=1,
+                )
+                session = SimpleNamespace(
+                    project=project,
+                    active_entity_id=FORCE_ID,
+                    active_view_object_name=obj.name,
+                )
+                context = SimpleNamespace(
+                    scene=SimpleNamespace(objects={obj.name: obj}),
+                    active_object=obj,
+                )
+                operation = panel.CHEMBLENDER_OT_apply_frame_force()
+                operation.display_scale = 1.0
+                with (
+                    patch.object(
+                        panel,
+                        "get_scene_session",
+                        return_value=session,
+                    ),
+                    patch.object(panel, "write_vector_view") as writer,
+                ):
+                    result = operation.execute(context)
+
+                self.assertEqual(result, {"CANCELLED"})
+                writer.assert_not_called()
+
+    def test_force_operator_applies_selected_frame_to_active_structure_view(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class ViewObject(dict):
+            name = "Water trajectory"
+
+        obj = ViewObject(
+            cb_structure_contract="structure_view_v1",
+            cb_structure_id=str(STRUCTURE_ID),
+            cb_structure_revision="structure-r1",
+            cb_trajectory_frame_index=1,
+        )
+        session = SimpleNamespace(
+            project=sample_trajectory_project(),
+            active_entity_id=FORCE_ID,
+            active_view_object_name=obj.name,
+        )
+        context = SimpleNamespace(
+            scene=SimpleNamespace(objects={obj.name: obj}),
+            active_object=obj,
+        )
+
+        def write_vector(view, values, **keywords):
+            view["displayed_vectors"] = (
+                numpy.asarray(values) * keywords["display_scale"]
+            )
+            view["vector_dataset_id"] = str(keywords["dataset_id"])
+            return object()
+
+        operation = panel.CHEMBLENDER_OT_apply_frame_force()
+        operation.display_scale = 0.5
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(panel, "write_vector_view", write_vector),
+        ):
+            result = operation.execute(context)
+
+        self.assertEqual(result, {"FINISHED"})
+        numpy.testing.assert_array_equal(
+            obj["displayed_vectors"],
+            [[2.0, 2.5, 3.0]],
+        )
+        self.assertEqual(obj["vector_dataset_id"], str(FORCE_ID))
+
     def test_refresh_preserves_selection_hidden_by_search(self):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"
@@ -871,6 +1264,65 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
 
         self.assertEqual(session.active_entity_id, GRID_ID)
         self.assertEqual(settings.active_entity_id, str(GRID_ID))
+
+    def test_refresh_bounds_rna_rows_and_records_total_count(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class Rows(list):
+            def add(self):
+                row = SimpleNamespace()
+                self.append(row)
+                return row
+
+        limit = 1000
+        rows = tuple(
+            BrowserRow(
+                id=f"row-{index}",
+                parent_id=None,
+                depth=0,
+                kind="molecular_record",
+                label=f"Record {index}",
+                quality="complete",
+                view_count=0,
+                entity_id=None,
+            )
+            for index in range(limit + 5)
+        )
+        session = SimpleNamespace(
+            id="session",
+            project=sample_project(),
+            active_entity_id=None,
+        )
+        settings = SimpleNamespace(
+            mode="by_data",
+            search="",
+            quality_filter="all",
+            selected_index=0,
+            active_entity_id="",
+            rows=Rows(),
+        )
+        scene = SimpleNamespace(
+            chemblender_project_browser=settings,
+            objects=(),
+        )
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=SimpleNamespace(browser_revision=1),
+            ),
+            patch.object(panel, "build_browser_rows", return_value=rows),
+        ):
+            projected = panel.refresh_project_browser(scene)
+
+        self.assertEqual(panel._BROWSER_RNA_ROW_LIMIT, limit)
+        self.assertEqual(len(projected), limit + 5)
+        self.assertEqual(len(settings.rows), limit)
+        self.assertEqual(settings.total_row_count, limit + 5)
 
     def test_refresh_clears_stale_and_malformed_hidden_selection(self):
         panel = importlib.import_module(
@@ -1099,6 +1551,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.assertIs(_Scene.chemblender_project_browser, owned)
         panel.unregister()
         self.assertFalse(hasattr(_Scene, "chemblender_project_browser"))
+        self.assertFalse(hasattr(_Scene, "chemblender_topology"))
 
         foreign = _Property("foreign")
         _Scene.chemblender_project_browser = foreign
@@ -1212,6 +1665,34 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"
         )
+
+    def test_surface_quality_and_report_eligibility_are_projected(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class ViewObject(dict):
+            name = "Raw Cube surface"
+
+        obj = ViewObject(
+            cb_scene_view_kind="signed_isosurface",
+            cb_scene_bindings_json=json.dumps(
+                {
+                    "grid": {
+                        "entity_id": str(GRID_ID),
+                        "revision": "grid-r1",
+                    }
+                }
+            ),
+            cb_view_quality="ambiguous",
+            cb_report_eligible=True,
+        )
+
+        record, = panel.presentation_view_records(
+            SimpleNamespace(objects=(obj,))
+        )
+        self.assertEqual(record.quality, "ambiguous")
+        self.assertFalse(record.report_eligible)
         panel.register()
         foreign = _Property("replacement")
         _Scene.chemblender_project_browser = foreign
@@ -1219,6 +1700,23 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         panel.unregister()
 
         self.assertIs(_Scene.chemblender_project_browser, foreign)
+
+    def test_register_detects_later_foreign_topology_property(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        panel.register()
+        foreign = _Property("replacement")
+        _Scene.chemblender_topology = foreign
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "chemblender_topology.*no longer owned",
+        ):
+            panel.register()
+        panel.unregister()
+
+        self.assertIs(_Scene.chemblender_topology, foreign)
 
 
 if __name__ == "__main__":

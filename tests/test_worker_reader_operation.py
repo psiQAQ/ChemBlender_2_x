@@ -8,9 +8,21 @@ from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from ChemBlender.core import ImportBatch
+import numpy
+
+from ChemBlender.core import (
+    ArrayData,
+    CapabilitySupport,
+    ImportBatch,
+    MolecularRecord,
+    ParserReport,
+    ReaderDescriptor,
+    SniffMatch,
+    SniffResult,
+    Structure,
+)
 from ChemBlender.core.worker_protocol import (
     WorkerError,
     WorkerRequest,
@@ -27,6 +39,15 @@ from ChemBlender.reader_api.worker_bridge import (
     _WorkerReaderCancelled,
     _file_sha256,
     _task_file,
+)
+from ChemBlender.reader_api.canonical_document import (
+    read_public_batch_bundle,
+    write_public_batch_bundle,
+)
+from ChemBlender.reader_api.registry import (
+    ReaderPluginRegistry,
+    _builtin_manifest,
+    _builtin_plugin,
 )
 from worker.runner import default_registry, run_request
 
@@ -109,6 +130,95 @@ class WorkerReaderOperationTests(unittest.TestCase):
         self.assertIs(type(batch), ImportBatch)
         self.assertEqual(len(batch.structures), 1)
         self.assertEqual(batch.report.reader_id, "xyz")
+
+    def test_builtin_molecular_record_is_bound_before_worker_validation(self):
+        structure_id = UUID("40000000-0000-0000-0000-000000000004")
+        record_id = UUID("50000000-0000-0000-0000-000000000005")
+
+        def parse(request):
+            structure = Structure(
+                id=structure_id,
+                revision="structure-r1",
+                atomic_numbers=(1,),
+                coordinates=ArrayData(
+                    numpy.asarray(((0.0, 0.0, 0.0),)),
+                    ("atom", "xyz"),
+                    "angstrom",
+                ),
+            )
+            record = MolecularRecord(
+                id=record_id,
+                revision="record-r1",
+                source_revision_id=request.source_revision_id,
+                record_key="record-0001",
+                structure_id=structure.id,
+                topology_id=None,
+                raw_block=b"record",
+                title="record",
+                source_record_index=0,
+                block_version="V2000",
+                writer_name=None,
+                writer_version=None,
+                ordered_raw_properties=(),
+                provenance_ids=(),
+            )
+            return ImportBatch(
+                structures=(structure,),
+                molecular_records=(record,),
+                report=ParserReport(
+                    "synthetic-record",
+                    "1",
+                    (structure.id, record.id),
+                    ("structure",),
+                    (),
+                ),
+            )
+
+        descriptor = ReaderDescriptor(
+            reader_id="synthetic-record",
+            reader_version="1",
+            extensions=(".xyz",),
+            capabilities={"structure": CapabilitySupport.SUPPORTED},
+            priority=100,
+            sniff=lambda path, prefix: SniffResult(
+                SniffMatch.EXACT, "fixture"
+            ),
+            parse=lambda path: ImportBatch(),
+            parse_request=parse,
+        )
+        registry = ReaderPluginRegistry(
+            (_builtin_plugin(descriptor, _builtin_manifest((descriptor,))),)
+        )
+
+        with patch(
+            "worker.reader_operation.builtin_reader_plugin_registry",
+            return_value=registry,
+        ):
+            result = self.run_reader(
+                reader_request(
+                    sha256(self.source),
+                    reader_id=descriptor.reader_id,
+                )
+            )
+
+        self.assertIs(result.status, WorkerStatus.SUCCESS)
+        batch = parse_with_worker(
+            reader_request(
+                sha256(self.source),
+                reader_id=descriptor.reader_id,
+            ),
+            result,
+            self.root,
+        )
+        self.assertEqual(batch.source_revisions[0].id, REQUEST_ID)
+        self.assertEqual(
+            batch.molecular_records[0].source_revision_id,
+            REQUEST_ID,
+        )
+        self.assertEqual(
+            batch.source_revisions[0].created_entity_ids,
+            (structure_id, record_id),
+        )
 
     def test_request_parameters_are_an_exact_whitelist(self):
         for field in ("module", "callable", "shell", "argv", "extra"):
@@ -273,6 +383,17 @@ class WorkerReaderOperationTests(unittest.TestCase):
         self.assertFalse((self.root / "reader-bundle").exists())
         self.assertIs(self.run_reader().status, WorkerStatus.SUCCESS)
 
+    def test_fatal_result_publication_failure_preserves_error_and_cleans_bundle(self):
+        with patch(
+            "worker.runner.write_result",
+            side_effect=SystemExit(9),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                self.run_reader()
+
+        self.assertEqual(raised.exception.code, 9)
+        self.assertFalse((self.root / "reader-bundle").exists())
+
     def test_failed_public_batch_is_not_published_as_success(self):
         self.source.write_bytes(b"not an XYZ document\n")
         result = self.run_reader(reader_request(sha256(self.source)))
@@ -331,6 +452,32 @@ class WorkerReaderOperationTests(unittest.TestCase):
                 replace(result, metadata=bad_metadata),
                 self.root,
             )
+
+    def test_main_process_rejects_and_cleans_self_consistent_wrong_revision_id(self):
+        result = self.run_reader()
+        bundle = self.root / "reader-bundle"
+        public = read_public_batch_bundle(bundle)
+        tampered = replace(
+            public,
+            source_revisions=(
+                replace(public.source_revisions[0], id=uuid4()),
+            ),
+        )
+        document = write_public_batch_bundle(bundle, tampered)
+        metadata = dict(result.metadata)
+        metadata["document_sha256"] = sha256(document)
+
+        with self.assertRaisesRegex(
+            WorkerReaderIntegrityError,
+            "revision identity",
+        ):
+            parse_with_worker(
+                self.request,
+                replace(result, metadata=metadata),
+                self.root,
+            )
+
+        self.assertFalse(bundle.exists())
 
     def test_main_process_rejects_tampered_array_artifact(self):
         result = self.run_reader()

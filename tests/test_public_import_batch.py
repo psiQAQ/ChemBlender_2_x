@@ -19,7 +19,7 @@ CUBE = ROOT / "tests" / "fixtures" / "cube" / "sheared.cube"
 SCIENTIFIC_TYPES = (
     "ArrayData", "SourceRecord", "SourceRevision", "CIFEnvelope",
     "QCSchemaEnvelope", "CJSONEnvelope", "PeriodicSiteData",
-    "MolecularTopology", "Structure", "SymmetryResult",
+    "MolecularTopology", "TopologyRecord", "Structure", "SymmetryResult",
     "CalculationMetadata", "CalculationRecord", "PropertyDataset",
     "AtomicProperty", "FrameSet", "Grid3D", "VibrationalModeSet",
     "ExcitedStateSet", "Spectrum", "BandStructure", "DensityOfStates",
@@ -34,7 +34,7 @@ ENUM_TYPES = (
     "CalculationStatus", "DatasetStatus", "IssueKind", "BasisFunctionKind",
     "OrbitalKind", "DensityMatrixLevel", "DensityMatrixSpin", "SpectrumKind",
     "SpectrumProfile", "SpinChannel", "EnergyReference", "CriticalPointKind",
-    "QualityStatus", "DiagnosticSeverity",
+    "QualityStatus", "DiagnosticSeverity", "TopologySource",
 )
 
 

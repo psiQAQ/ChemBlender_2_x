@@ -1,0 +1,4 @@
+2
+Properties=species:S:1:pos:R:3:charge:R:1:fixed:L:1:group:I:1 energy=-1.25
+C 0 0 0 -0.2 F 2
+H 1 0 0 0.2 T 3

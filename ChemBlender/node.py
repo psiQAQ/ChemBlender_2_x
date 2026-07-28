@@ -6,6 +6,8 @@ dir_path = os.path.dirname(__file__)
 language = 1 if 'zh_HAN' in bpy.context.preferences.view.language else 0
 file = "Chem_Nodes.blend" if language else "Chem_Nodes_En.blend"
 filepath = os.path.join(dir_path, file)
+_STRUCTURE_BALL_STICK_MODIFIER = "ChemBlender Ball and Stick"
+_STRUCTURE_BALL_STICK_CONTRACT = "structure_ball_stick_v1"
 
 def add_geometry_nodetree(obj, GN_modifier_name, nodetree_name):
     bpy.context.view_layer.objects.active = obj
@@ -92,6 +94,48 @@ def Ball_Stick_nodetree(nodetree):
     nodes_link(nodetree, _add_mol_attr, 0, _ball_stick, 0)
     nodes_link(nodetree, _ball_stick, 0, _add_material, 0)
     nodes_link(nodetree, _add_material, 0, _output, 0)
+
+
+def ensure_structure_ball_stick_modifier(obj):
+    if not isinstance(obj, bpy.types.Object) or obj.type != "MESH":
+        raise TypeError("obj must be a Blender Mesh object")
+    modifier = obj.modifiers.get(_STRUCTURE_BALL_STICK_MODIFIER)
+    if modifier is not None:
+        if (
+            modifier.type != "NODES"
+            or modifier.node_group is None
+            or modifier.node_group.get("cbq_contract")
+            != _STRUCTURE_BALL_STICK_CONTRACT
+        ):
+            raise RuntimeError(
+                f"incompatible modifier already uses {_STRUCTURE_BALL_STICK_MODIFIER}"
+            )
+        return modifier
+    modifier = obj.modifiers.new(_STRUCTURE_BALL_STICK_MODIFIER, "NODES")
+    group = bpy.data.node_groups.new(
+        f"{obj.name} Ball and Stick Nodes",
+        "GeometryNodeTree",
+    )
+    try:
+        group.is_modifier = True
+        group.interface.new_socket(
+            name="Geometry", in_out="INPUT", socket_type="NodeSocketGeometry"
+        )
+        group.interface.new_socket(
+            name="Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry"
+        )
+        group.nodes.new("NodeGroupInput")
+        group.nodes.new("NodeGroupOutput")
+        modifier.node_group = group
+        Ball_Stick_nodetree(modifier)
+        group["cbq_contract"] = _STRUCTURE_BALL_STICK_CONTRACT
+        modifier["cbq_contract"] = _STRUCTURE_BALL_STICK_CONTRACT
+        return modifier
+    except Exception:
+        obj.modifiers.remove(modifier)
+        if group.users == 0:
+            bpy.data.node_groups.remove(group)
+        raise
 
 
 

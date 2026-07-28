@@ -20,6 +20,10 @@
 | Project Browser 搜索/过滤 | ≤ 200 ms |
 | 预计超过 1 s 的操作 | 进度、取消、UI不长期阻塞 |
 
+`Quick Import 首次反馈` 的 benchmark 门以实际 reader preflight 已生成 staged
+`ImportBatch`、且 Import Preview 的纯摘要投影完成为止；只解码 extXYZ
+第一帧属于独立诊断指标，不能替代该产品门。
+
 ## 测量规则
 
 1. 同一硬件 baseline 和 Blender 版本记录冷启动与热缓存。

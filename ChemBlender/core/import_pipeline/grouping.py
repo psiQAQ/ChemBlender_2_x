@@ -24,6 +24,8 @@ _KIND_CONTRACT = {
 }
 _ENTITY_GROUPS = (
     "structures",
+    "topologies",
+    "molecular_records",
     "cif_envelopes",
     "qcschema_envelopes",
     "cjson_envelopes",
@@ -925,9 +927,9 @@ def suggest_source_groups(preview, session):
         raise TypeError("session must be a StagedImportSession")
 
     entries = _staged_entries(preview, session)
-    _validate_staged_entities(entries)
     if len(entries) < 2:
         return ()
+    _validate_staged_entities(entries)
     evidence_by_pair = _explicit_evidence(entries)
     for first_index, first_entry in enumerate(entries):
         for second_entry in entries[first_index + 1 :]:

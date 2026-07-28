@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 
 from . import model
 from .model.project import validate_project_graph
+from .model.molecular_topology import canonical_topology_edge
 from .model_registry import MODEL_ENUMS, model_type_from_tag, model_type_tag
 from .sidecar_migrations import (
     CURRENT_MANIFEST_VERSION,
@@ -270,9 +271,43 @@ class _Encoder:
 
 
 class _Decoder:
-    def __init__(self, root, verify_arrays):
+    def __init__(self, root, verify_arrays, legacy_topology_ids=()):
         self.root = Path(root).resolve()
         self.verify_arrays = verify_arrays
+        self.legacy_topology_ids = frozenset(legacy_topology_ids)
+        self._owned_lazy_arrays = {}
+
+    def release_lazy_arrays(self):
+        self._owned_lazy_arrays.clear()
+
+    def close_lazy_arrays(self, values=None, primary_error=None):
+        if values is None:
+            values = tuple(self._owned_lazy_arrays.values())
+        cleanup_errors = []
+        for value in values:
+            if not isinstance(value, LazyNpyArray):
+                continue
+            owned = self._owned_lazy_arrays.pop(id(value), None)
+            if owned is None:
+                continue
+            try:
+                owned.close()
+            except Exception as error:
+                cleanup_errors.append(error)
+        if primary_error is not None:
+            for error in cleanup_errors:
+                primary_error.add_note(
+                    f"sidecar array cleanup failed: {type(error).__name__}: {error}"
+                )
+            return
+        if cleanup_errors:
+            first, *remaining = cleanup_errors
+            for error in remaining:
+                first.add_note(
+                    f"additional sidecar array cleanup failure: "
+                    f"{type(error).__name__}: {error}"
+                )
+            raise first
 
     def decode(self, value):
         if value is None or isinstance(value, (str, bool, int, float)):
@@ -358,11 +393,57 @@ class _Decoder:
             }
             if class_type is model.DiagnosticValue:
                 return class_type._from_canonical(decoded["value"])
+            if (
+                class_type is model.TopologyRecord
+                and decoded["id"] in self.legacy_topology_ids
+            ):
+                decoded = self._canonical_legacy_topology(decoded)
             return class_type(**decoded)
         except SidecarError:
             raise
         except Exception as error:
-            raise SidecarIntegrityError(f"invalid {type_name} in manifest") from error
+            wrapped = SidecarIntegrityError(f"invalid {type_name} in manifest")
+            for note in getattr(error, "__notes__", ()):
+                wrapped.add_note(note)
+            raise wrapped from error
+
+    def _canonical_legacy_topology(self, decoded):
+        arrays = (decoded["bond_indices"], decoded["bond_orders"])
+        try:
+            model.MolecularTopology(*arrays)
+            indices = _numpy().array(decoded["bond_indices"].values, copy=True)
+            orders = _numpy().array(decoded["bond_orders"].values, copy=True)
+            keys = tuple(
+                canonical_topology_edge(int(left), int(right))
+                for left, right in indices
+            )
+            if len(set(keys)) != len(keys):
+                raise ValueError("legacy topology edges must not repeat")
+            permutation = sorted(range(len(keys)), key=keys.__getitem__)
+            result = dict(decoded)
+            result["bond_indices"] = model.ArrayData(
+                _numpy().asarray(
+                    [keys[index][:2] for index in permutation],
+                    dtype=indices.dtype,
+                ).reshape((-1, 2)),
+                decoded["bond_indices"].dims,
+                decoded["bond_indices"].unit,
+            )
+            result["bond_orders"] = model.ArrayData(
+                orders[permutation],
+                decoded["bond_orders"].dims,
+                decoded["bond_orders"].unit,
+            )
+            result["stereo_labels"] = tuple(
+                decoded["stereo_labels"][index] for index in permutation
+            )
+            return result
+        finally:
+            active_error = sys.exception()
+            self.close_lazy_arrays(
+                (array.values for array in arrays),
+                active_error,
+            )
 
     def _array(self, descriptor):
         expected = {
@@ -420,7 +501,9 @@ class _Decoder:
             raise SidecarIntegrityError("invalid array metadata") from error
         if dtype.hasobject:
             raise SidecarIntegrityError("unsafe array metadata")
-        return LazyNpyArray(path, shape, dtype, content_hash)
+        result = LazyNpyArray(path, shape, dtype, content_hash)
+        self._owned_lazy_arrays[id(result)] = result
+        return result
 
 
 def save_project(root, project):
@@ -507,7 +590,11 @@ def _open_project_with_manifest(
     if source_version == MANIFEST_VERSION:
         project_id, schema_version = _validate_current_manifest(manifest)
         metadata_manifest = manifest
-    manifest = migrate_manifest(manifest)
+    legacy_topology_ids = set()
+    manifest = migrate_manifest(
+        manifest,
+        migrated_topology_ids=legacy_topology_ids,
+    )
     if source_version == MANIFEST_VERSION:
         if manifest["format"] != FORMAT_ID:
             raise SidecarCompatibilityError("unsupported sidecar format")
@@ -527,7 +614,17 @@ def _open_project_with_manifest(
         )
     ):
         raise SidecarCompatibilityError("sidecar project schema is incompatible")
-    project = _Decoder(root, verify_arrays).decode(manifest.get("project"))
+    decoder = _Decoder(
+        root,
+        verify_arrays,
+        legacy_topology_ids,
+    )
+    try:
+        project = decoder.decode(manifest.get("project"))
+    except BaseException as error:
+        decoder.close_lazy_arrays(primary_error=error)
+        raise
+    decoder.release_lazy_arrays()
     if not isinstance(project, model.QCProject):
         raise SidecarIntegrityError("manifest project is not a QCProject")
     if project.id != project_id or project.schema_version != schema_version:

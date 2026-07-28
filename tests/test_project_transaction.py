@@ -16,6 +16,7 @@ from ChemBlender.core import (
     DiagnosticValue,
     ImportBatch,
     ImportDiagnostic,
+    MolecularRecord,
     ParserReport,
     ProjectSession,
     ProvenanceRecord,
@@ -253,6 +254,40 @@ class ProjectTransactionTests(unittest.TestCase):
         self.assertIn(calculation.id, result.project.calculations)
         self.assertEqual(project_session.dirty_reasons, frozenset({"import"}))
 
+    def test_merge_and_remap_keep_molecular_records(self):
+        structure = self.structure()
+        revision_id = uuid4()
+        record = MolecularRecord(
+            id=uuid4(),
+            revision="record-r1",
+            source_revision_id=revision_id,
+            record_key="record-0001",
+            structure_id=structure.id,
+            topology_id=None,
+            raw_block=b"record",
+            title="record",
+            source_record_index=0,
+            block_version="V2000",
+            writer_name=None,
+            writer_version=None,
+            ordered_raw_properties=(),
+            provenance_ids=(),
+        )
+        merged = transaction_module._merge_batches(
+            (
+                ImportBatch(structures=(structure,)),
+                ImportBatch(molecular_records=(record,)),
+            )
+        )
+        replacement_id = uuid4()
+        remapped = transaction_module._remap(
+            merged,
+            {record.id: replacement_id},
+        )
+
+        self.assertEqual(merged.molecular_records, (record,))
+        self.assertEqual(remapped.molecular_records[0].id, replacement_id)
+
     def test_merged_batch_still_validates_each_parser_report_contract(self):
         project_session = self.project_session()
         staged_session = self.staged_session()
@@ -279,6 +314,27 @@ class ProjectTransactionTests(unittest.TestCase):
 
         self.assertIsNone(project_session.sidecar_path)
         self.assertFalse(project_session.dirty)
+
+    def test_merge_requires_exact_parser_report_order_without_duplicates(self):
+        first = self.structure()
+        second = self.structure()
+        for created_ids in (
+            (second.id, first.id),
+            (first.id, first.id),
+        ):
+            with self.subTest(created_ids=created_ids):
+                batch = ImportBatch(
+                    structures=(first, second),
+                    report=ParserReport(
+                        "fixture",
+                        "1",
+                        created_ids,
+                        ("structure",),
+                        (),
+                    ),
+                )
+                with self.assertRaisesRegex(ValueError, "parser report"):
+                    transaction_module._merge_batches((batch,))
 
     def test_commits_reopens_diagnostics_groups_and_view_plan_ids(self):
         project_session = self.project_session()

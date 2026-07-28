@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from inspect import signature
 from pathlib import Path
+from unittest.mock import patch
 from uuid import uuid4
 
 import numpy
@@ -276,6 +277,18 @@ class SourceGroupingTests(unittest.TestCase):
             for evidence in suggestion.evidence
             if evidence.kind == kind
         )
+
+    def test_single_source_skips_cross_source_graph_validation(self):
+        session, preview, _, _ = self.staged_preview(
+            ({"filename": "single.xyz"},)
+        )
+
+        with patch.object(
+            grouping_module,
+            "_validate_staged_entities",
+            side_effect=AssertionError("cross-source validation is unnecessary"),
+        ):
+            self.assertEqual(suggest_source_groups(preview, session), ())
 
     def test_evidence_ranking_is_exact(self):
         revision_ids = (uuid4(), uuid4())

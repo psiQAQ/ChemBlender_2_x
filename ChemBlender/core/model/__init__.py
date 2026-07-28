@@ -1,4 +1,6 @@
 from .arrays import ArrayData
+from .categorical import CategoricalData
+from .chemical_identity import AtomicIdentityData
 from .common import (
     BasisFunctionKind,
     CalculationStatus,
@@ -21,6 +23,7 @@ from .diagnostics import (
     diagnostic_from_parser_issue,
 )
 from .quality import DiagnosticSeverity, QualityStatus
+from .molecular_topology import TopologyRecord, TopologySource
 from .grids import Grid3D
 from .grouping import CalculationGroup
 from .periodic import (
@@ -42,7 +45,15 @@ from .project import (
     QCSchemaEnvelope,
 )
 from .sources import SourceRecord, SourceRevision, source_parse_identity
-from .properties import AtomicProperty, FrameSet, PropertyDataset
+from .properties import (
+    AtomicProperty,
+    AtomFrameProperty,
+    CellFrameProperty,
+    FrameProperty,
+    FrameSet,
+    PropertyDataset,
+)
+from .records import ConformerSet, MolecularRecord, RawRecordProperty, RecordPropertyColumn
 from .spectroscopy import (
     ExcitationContribution,
     ExcitedStateReferences,

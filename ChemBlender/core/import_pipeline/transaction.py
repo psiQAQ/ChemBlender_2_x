@@ -21,17 +21,25 @@ from .conflicts import (
     apply_conflict_decisions,
     detect_import_conflicts,
 )
+from .conformer_grouping import (
+    ConformerGroupSuggestion,
+    _accept_conformer_group,
+    suggest_conformer_groups,
+)
 from .grouping import (
     GroupingEvidence,
     SourceGroupSuggestion,
     suggest_source_groups,
 )
 from .preview import ImportPreview
+from .preflight import ImportCancelled
 from .staging import StagedImportSession
 
 
 _BATCH_ENTITY_FIELDS = (
     "structures",
+    "topologies",
+    "molecular_records",
     "cif_envelopes",
     "qcschema_envelopes",
     "cjson_envelopes",
@@ -85,10 +93,23 @@ class GroupingDecision:
 
 
 @dataclass(frozen=True, slots=True)
+class ConformerGroupingDecision:
+    suggestion: ConformerGroupSuggestion
+    review_confirmed: bool = False
+
+    def __post_init__(self):
+        if type(self.suggestion) is not ConformerGroupSuggestion:
+            raise TypeError("suggestion must be a ConformerGroupSuggestion")
+        if type(self.review_confirmed) is not bool:
+            raise TypeError("review_confirmed must be a bool")
+
+
+@dataclass(frozen=True, slots=True)
 class ImportCommitDecisions:
     conflicts: tuple[ImportConflict, ...] = ()
     conflict_decisions: Mapping = field(default_factory=dict)
     grouping_decisions: tuple[GroupingDecision, ...] = ()
+    conformer_grouping_decisions: tuple[ConformerGroupingDecision, ...] = ()
 
     def __post_init__(self):
         if type(self.conflicts) is not tuple or any(
@@ -111,6 +132,13 @@ class ImportCommitDecisions:
         ):
             raise TypeError(
                 "grouping_decisions must contain GroupingDecision values"
+            )
+        if type(self.conformer_grouping_decisions) is not tuple or any(
+            type(decision) is not ConformerGroupingDecision
+            for decision in self.conformer_grouping_decisions
+        ):
+            raise TypeError(
+                "conformer_grouping_decisions must contain ConformerGroupingDecision values"
             )
         object.__setattr__(
             self,
@@ -213,12 +241,12 @@ def _remap(value, replacements):
 def _validate_batch_report(batch):
     if batch.report is None:
         return
-    created_ids = {
+    created_ids = tuple(
         entity.id
         for name in _BATCH_ENTITY_FIELDS
         for entity in getattr(batch, name)
-    }
-    if set(batch.report.created_entity_ids) != created_ids:
+    )
+    if batch.report.created_entity_ids != created_ids:
         raise ValueError("parser report created IDs must match the import batch")
 
 
@@ -412,6 +440,100 @@ def _validated_grouping_decisions(preview, staged_session, decisions):
     return tuple(validated)
 
 
+def _validated_conformer_grouping_decisions(preview, staged_session, decisions):
+    if not decisions.conformer_grouping_decisions:
+        return ()
+    live = []
+    for source_preview in preview.source_previews:
+        if len(source_preview.staged_batch_ids) != 1:
+            continue
+        batch = staged_session.result(source_preview.staged_batch_ids[0])
+        live.extend(suggest_conformer_groups(batch))
+    by_id = {suggestion.id: suggestion for suggestion in live}
+    validated = []
+    seen = set()
+    for decision in decisions.conformer_grouping_decisions:
+        suggestion = by_id.get(decision.suggestion.id)
+        if suggestion is None or suggestion != decision.suggestion:
+            raise ValueError("conformer grouping decision does not match live staging")
+        if suggestion.id in seen:
+            raise ValueError("conformer grouping suggestion was decided more than once")
+        if suggestion.requires_review and not decision.review_confirmed:
+            raise ValueError("ambiguous conformer grouping requires explicit review confirmation")
+        seen.add(suggestion.id)
+        validated.append((suggestion, decision.review_confirmed))
+    return tuple(sorted(validated, key=lambda item: str(item[0].id)))
+
+
+def _with_conformer_fragment(batch, acceptance):
+    record_source_revision_id = next(
+        record.source_revision_id
+        for record in batch.molecular_records
+        if record.id == acceptance.suggestion.record_ids[0]
+    )
+    created = (
+        acceptance.conformer_set.id,
+        *(column.id for column in acceptance.property_columns),
+        acceptance.provenance.id,
+    )
+    revisions = tuple(
+        replace(
+            revision,
+            created_entity_ids=revision.created_entity_ids + created,
+        )
+        if revision.id == record_source_revision_id
+        else revision
+        for revision in batch.source_revisions
+    )
+    enriched = replace(
+        batch,
+        source_revisions=revisions,
+        datasets=batch.datasets + acceptance.property_columns + (acceptance.conformer_set,),
+        provenance=batch.provenance + (acceptance.provenance,),
+    )
+    if enriched.report is None:
+        return enriched
+    created_ids = tuple(
+        entity.id
+        for name in _BATCH_ENTITY_FIELDS
+        for entity in getattr(enriched, name)
+    )
+    return replace(enriched, report=replace(enriched.report, created_entity_ids=created_ids))
+
+
+def _accepted_conformer_batches(validated, replacements, batches):
+    enriched = list(batches)
+    for suggestion, review_confirmed in validated:
+        expected_record_ids = tuple(
+            replacements.get(record_id, record_id)
+            for record_id in suggestion.record_ids
+        )
+        for index, batch in enumerate(enriched):
+            live = next(
+                (
+                    item
+                    for item in suggest_conformer_groups(batch)
+                    if item.record_ids == expected_record_ids
+                ),
+                None,
+            )
+            if live is None:
+                continue
+            acceptance = _accept_conformer_group(
+                live,
+                batch,
+                review_confirmed=review_confirmed,
+                validated=True,
+            )
+            enriched[index] = _with_conformer_fragment(batch, acceptance)
+            break
+        else:
+            raise ValueError(
+                "confirmed conformer grouping suggestion references unavailable records"
+            )
+    return tuple(enriched)
+
+
 def _remapped_grouping_suggestion(suggestion, replacements):
     evidence_pairs = tuple(
         (
@@ -488,6 +610,9 @@ def commit_import_preview(
     staged_session,
     preview,
     decisions,
+    *,
+    progress=lambda _stage, _completed, _total: None,
+    is_cancelled=lambda: False,
 ):
     if type(project_session) is not ProjectSession:
         raise TypeError("project_session must be a ProjectSession")
@@ -499,8 +624,30 @@ def commit_import_preview(
         raise TypeError("decisions must be ImportCommitDecisions")
     if preview.session_id != staged_session.id:
         raise ValueError("preview session does not match staged session")
+    if not callable(progress) or not callable(is_cancelled):
+        raise TypeError("progress and is_cancelled must be callable")
+
+    total = len(preview.staged_batch_ids)
+    for index, batch_id in enumerate(preview.staged_batch_ids):
+        cancelled = is_cancelled()
+        if type(cancelled) is not bool:
+            raise TypeError("is_cancelled must return bool")
+        if cancelled:
+            raise ImportCancelled("import materialization was cancelled")
+        progress("materialize", index, total)
+        staged_session.materialize_result(
+            batch_id,
+            progress=progress,
+            is_cancelled=is_cancelled,
+        )
+    progress("materialize", total, total)
 
     validated_grouping_decisions = _validated_grouping_decisions(
+        preview,
+        staged_session,
+        decisions,
+    )
+    validated_conformer_grouping_decisions = _validated_conformer_grouping_decisions(
         preview,
         staged_session,
         decisions,
@@ -515,6 +662,11 @@ def commit_import_preview(
         preview,
         staged_session,
         decisions,
+    )
+    batches = _accepted_conformer_batches(
+        validated_conformer_grouping_decisions,
+        replacements,
+        batches,
     )
     candidate = _copy_project(project_session.project)
     candidate.commit(_merge_batches(batches))

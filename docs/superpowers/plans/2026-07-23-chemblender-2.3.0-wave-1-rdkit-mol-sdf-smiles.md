@@ -57,19 +57,19 @@ Run model/sidecar/project tests and commit.
 **Interfaces:**
 - Produces: `adapt_rdkit_molecule(mol, raw_block, context) -> PublicImportBatchFragment`.
 
-- [ ] **Step 1: Write a molecule fixture matrix**
+- [x] **Step 1: Write a molecule fixture matrix**
 
 Use embedded blocks for charged, isotopic, aromatic, chiral, unsanitized and no-conformer molecules. Assert atoms, coordinates, explicit bonds, bond orders, aromatic flags, formal charges, isotopes and stereo.
 
-- [ ] **Step 2: Implement safe parsing modes**
+- [x] **Step 2: Implement safe parsing modes**
 
 Parse raw records with sanitization disabled first. Attempt sanitization on a copy. Store explicit-file topology regardless. If sanitization succeeds, store `rdkit_sanitized` topology only when it materially adds/changes interpretation. If it fails, create `mol.sanitize_failed` diagnostic.
 
-- [ ] **Step 3: Handle coordinates**
+- [x] **Step 3: Handle coordinates**
 
 A 3D conformer creates Structure coordinates. A 2D conformer is valid but marked as planar source; no automatic 3D optimization for MOL/SDF import. Missing conformer rejects Structure only when coordinates cannot be recovered.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run with the pinned RDKit in Blender Python and commit.
 
@@ -86,19 +86,19 @@ Run with the pinned RDKit in Blender Python and commit.
 **Interfaces:**
 - Produces: reader ID `mol`, version `2`, capabilities structure/topology/atomic_identity.
 
-- [ ] **Step 1: Write sniff tests**
+- [x] **Step 1: Write sniff tests**
 
 V2000 and V3000 content both match exact; `.mol` ordinary text does not. SDF with `$$$$` is routed to SDF reader, not MOL.
 
-- [ ] **Step 2: Implement block-version detection and adapter call**
+- [x] **Step 2: Implement block-version detection and adapter call**
 
 Read bytes, decode with replacement diagnostic if needed, reject multiple SDF records in MOL reader, and call RDKit common adapter.
 
-- [ ] **Step 3: Preserve old reader ID compatibility**
+- [x] **Step 3: Preserve old reader ID compatibility**
 
 Explicit `reader_id="mol-v2000"` may resolve to a deprecated alias that calls the new reader for V2000 only and reports the replacement. Built-in catalog advertises `mol` as primary.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run old/new tests and update capability matrix.
 
@@ -113,23 +113,23 @@ Run old/new tests and update capability matrix.
 **Interfaces:**
 - Produces: reader ID `sdf`, record identities, raw/typed properties and staged grouping candidates.
 
-- [ ] **Step 1: Write record recovery tests**
+- [x] **Step 1: Write record recovery tests**
 
 A three-record file with a malformed second record under Balanced Recovery yields two MolecularRecords, one Invalid record diagnostic, original indices 0 and 2, and an import summary showing one failed record.
 
-- [ ] **Step 2: Use an RDKit supplier without silent skipping**
+- [x] **Step 2: Use an RDKit supplier without silent skipping**
 
 Retain record boundaries and raw blocks before RDKit parsing so a `None` supplier result can be tied to source record index and raw bytes/hash.
 
-- [ ] **Step 3: Preserve SD properties**
+- [x] **Step 3: Preserve SD properties**
 
 Record property order is read from raw record. Store raw strings. Build typed bool/int/float columns only when parsing is unambiguous; mixed values remain categorical/string with diagnostics only when a requested numeric semantic cannot be established.
 
-- [ ] **Step 4: Stage every record independently**
+- [x] **Step 4: Stage every record independently**
 
 Each valid record receives a stable source-local key derived from source revision, record index and raw record hash. Do not merge in the reader.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 Run reader, preview, sidecar and record tests.
 
@@ -142,19 +142,19 @@ Run reader, preview, sidecar and record tests.
 **Interfaces:**
 - Produces: `suggest_conformer_groups(records) -> tuple[ConformerGroupSuggestion, ...]` and confirmation conversion to ConformerSet.
 
-- [ ] **Step 1: Write acceptance tests**
+- [x] **Step 1: Write acceptance tests**
 
 Records with same chemistry but reordered atoms group after deterministic atom mapping. Different bond order, formal charge or stereo do not group. Same atom count alone never groups.
 
-- [ ] **Step 2: Implement matching precedence**
+- [x] **Step 2: Implement matching precedence**
 
 Use atom-map numbers if complete and unique. Otherwise use RDKit canonical ranks and substructure isomorphism, then verify exact topology, formal charges, isotopes and stereochemistry. Record the mapping and evidence.
 
-- [ ] **Step 3: Build ConformerSet only on user acceptance**
+- [x] **Step 3: Build ConformerSet only on user acceptance**
 
 Reorder coordinates into reference atom order, preserve record keys and property columns, and create provenance describing grouping evidence.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run grouping and project validation tests.
 
@@ -169,19 +169,19 @@ Run grouping and project validation tests.
 **Interfaces:**
 - Produces: `parse_smiles_text()`, `derive_smiles_3d()` and provenance parameters.
 
-- [ ] **Step 1: Test source preservation**
+- [x] **Step 1: Test source preservation**
 
 Input isomeric SMILES produces a topology/identity entity, canonical SMILES and isomeric canonical SMILES. Invalid input returns blocking diagnostic without a Structure.
 
-- [ ] **Step 2: Implement deterministic embedding**
+- [x] **Step 2: Implement deterministic embedding**
 
 Use ETKDGv3, fixed default seed `0xC0FFEE`, one thread for reproducibility, optional AddHs and UFF/MMFF choice as canonical parameters. Return a derived Structure only on success.
 
-- [ ] **Step 3: Handle optimization failure**
+- [x] **Step 3: Handle optimization failure**
 
 Embedding success plus optimization failure retains coordinates with Partial derivation status and diagnostic. Embedding failure leaves the source/topology valid.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run with bundled RDKit and commit.
 
@@ -196,7 +196,7 @@ Run with bundled RDKit and commit.
 **Interfaces:**
 - Produces: `export_mol()`, `export_sdf()`, `export_smiles()`.
 
-- [ ] **Step 1: Add V3000 bond ID regression**
+- [x] **Step 1: Add V3000 bond ID regression**
 
 ```python
 def test_v3000_bond_ids_start_at_one(self):
@@ -205,21 +205,26 @@ def test_v3000_bond_ids_start_at_one(self):
     self.assertNotIn("M  V30 0 ", text)
 ```
 
-- [ ] **Step 2: Build RDKit molecule from project entities**
+- [x] **Step 2: Build RDKit molecule from project entities**
 
 Set atoms, isotopes, formal charges, maps, stereo and explicit bonds. Add conformer coordinates. Reject or diagnose topology concepts not representable by target format.
 
-- [ ] **Step 3: SDF export**
+- [x] **Step 3: SDF export**
 
 Write records in selected original order and SD properties in original order. Derived conformers get deterministic new titles/record IDs without pretending to be original records.
 
-- [ ] **Step 4: SMILES export**
+- [x] **Step 4: SMILES export**
 
 Allow canonical and isomeric modes and report loss of coordinates/properties.
 
-- [ ] **Step 5: Round-trip tests and commit**
+- [x] **Step 5: Round-trip tests and commit**
 
 Compare chemistry, coordinates within writer precision, charges, isotopes, stereo, record order and SD strings. Commit.
+
+**Completed:** `1229d78c0e2e86488c6e05e4b1456f537decf9a9`.
+
+**Verification:** focused 121/121; full 1319 Passed, 28 Skipped; real Blender
+5.1.2 export/re-import Passed; `SPEC PASS`; `QUALITY PASS`.
 
 ### Task 8: Add UI and remove silent legacy failure paths
 
@@ -233,22 +238,28 @@ Compare chemistry, coordinates within writer precision, charges, isotopes, stere
 **Interfaces:**
 - Produces: record browsing, conformer confirmation, SMILES input through unified pipeline and explicit legacy errors.
 
-- [ ] **Step 1: Add record/SD property browser rows**
+- [x] **Step 1: Add record/SD property browser rows**
 
 Show record count, failed records, group suggestions and property columns. Default view uses first valid record or accepted first conformer group.
 
-- [ ] **Step 2: Route legacy SMILES and File actions**
+- [x] **Step 2: Route legacy SMILES and File actions**
 
 Legacy UI constructs ImportRequest. Do not call old `read_MOL` for migrated types.
 
-- [ ] **Step 3: Make remaining unsupported legacy inputs explicit**
+- [x] **Step 3: Make remaining unsupported legacy inputs explicit**
 
 Until MOL2 Wave 3, old MOL2 input returns a controlled unsupported diagnostic rather than using an uninitialized `mol`. All RDKit parse `None` cases return user-visible errors.
 
-- [ ] **Step 4: Blender smoke and performance**
+- [x] **Step 4: Blender smoke and performance**
 
 Import V2000, V3000, multi-record SDF and SMILES; accept a conformer group; create/save/reopen views; export. Benchmark 10k-record indexing without creating 10k objects.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit UI/legacy bridge and tests.
+
+**Completed:** `e1bf9c8a56a299d0fac8d8238339cbf31f3b783f`.
+
+**Verification:** focused 361/361; full 1375 Ran, 1347 Passed, 28 Skipped,
+0 Failed; Blender 5.1.2 validate/build, ZIP audit, isolated product/lifecycle
+smoke and 10,000-record workflow Passed; `SPEC PASS`; `QUALITY PASS`.

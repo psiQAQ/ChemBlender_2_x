@@ -79,6 +79,9 @@ class ReaderDescriptor:
     priority: int
     sniff: Callable[[Path, bytes], SniffResult]
     parse: Callable[[Path], ImportBatch]
+    parse_request: Callable[[object], ImportBatch] | None = None
+    preview_request: Callable[[object], ImportBatch] | None = None
+    materialize_request: Callable[[object], ImportBatch | None] | None = None
 
     def __post_init__(self):
         if (
@@ -118,6 +121,18 @@ class ReaderDescriptor:
             raise TypeError("priority must be an integer")
         if not callable(self.sniff) or not callable(self.parse):
             raise TypeError("sniff and parse must be callable")
+        if self.parse_request is not None and not callable(self.parse_request):
+            raise TypeError("parse_request must be callable or None")
+        if self.preview_request is not None and not callable(self.preview_request):
+            raise TypeError("preview_request must be callable or None")
+        if self.materialize_request is not None and not callable(
+            self.materialize_request
+        ):
+            raise TypeError("materialize_request must be callable or None")
+        if (self.preview_request is None) != (self.materialize_request is None):
+            raise ValueError(
+                "preview_request and materialize_request must be configured together"
+            )
 
         object.__setattr__(self, "extensions", tuple(extensions))
         object.__setattr__(self, "capabilities", MappingProxyType(capabilities))

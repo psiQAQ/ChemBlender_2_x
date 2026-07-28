@@ -7,7 +7,7 @@ from pathlib import Path
 
 import bpy
 
-from .core import Grid3D
+from .core import Grid3D, grids_share_affine
 from .core.storage.atomic_paths import short_sibling_temporary_path
 from .grid_volume import _ANGSTROM_SCALE, _selected_values, _transform_matrix
 
@@ -137,13 +137,7 @@ def ensure_property_surface_cache(
 
     if not isinstance(surface_grid, Grid3D) or not isinstance(property_grid, Grid3D):
         raise TypeError("surface_grid and property_grid must be Grid3D")
-    if (
-        surface_grid.grid_shape != property_grid.grid_shape
-        or surface_grid.origin != property_grid.origin
-        or surface_grid.step_vectors != property_grid.step_vectors
-        or surface_grid.coordinate_unit != property_grid.coordinate_unit
-        or surface_grid.structure_id != property_grid.structure_id
-    ):
+    if not grids_share_affine(surface_grid, property_grid):
         raise ValueError("surface and property grids must share one affine grid")
     scale = _ANGSTROM_SCALE[surface_grid.coordinate_unit]
     path = _safe_vdb_path(cache_path)
@@ -408,13 +402,7 @@ def create_property_surface(
 ):
     if not isinstance(surface_grid, Grid3D) or not isinstance(property_grid, Grid3D):
         raise TypeError("surface_grid and property_grid must be Grid3D")
-    if (
-        surface_grid.grid_shape != property_grid.grid_shape
-        or surface_grid.origin != property_grid.origin
-        or surface_grid.step_vectors != property_grid.step_vectors
-        or surface_grid.coordinate_unit != property_grid.coordinate_unit
-        or surface_grid.structure_id != property_grid.structure_id
-    ):
+    if not grids_share_affine(surface_grid, property_grid):
         raise ValueError("surface and property grids must share one affine grid")
     target = collection or bpy.context.collection
     if target is None:
@@ -441,6 +429,11 @@ def create_property_surface(
     _metadata(
         obj, surface_grid, surface_dataset_index, path, key, render_identity
     )
+    obj["cb_surface_dataset_id"] = str(surface_grid.id)
+    obj["cb_surface_dataset_revision"] = surface_grid.revision
+    obj["cb_surface_dataset_index"] = int(surface_dataset_index)
+    obj["cb_surface_semantic_role"] = surface_grid.semantic_role
+    obj["cb_surface_unit"] = surface_grid.data.unit
     obj["cb_property_dataset_id"] = str(property_grid.id)
     obj["cb_property_dataset_revision"] = property_grid.revision
     obj["cb_property_dataset_index"] = int(property_dataset_index)

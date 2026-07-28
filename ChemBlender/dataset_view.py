@@ -1,5 +1,6 @@
 import operator
 from math import isfinite
+import warnings
 
 import bpy
 
@@ -10,30 +11,25 @@ from .core import (
     Spectrum,
     SpectrumKind,
     SpectrumProfile,
-    Structure,
     VibrationalModeSet,
+)
+from .views.structure import (
+    _coordinate_scale,
+    _write_attribute,
+    create_structure_view as _create_structure_view,
 )
 
 
-_ANGSTROM_SCALE = {"angstrom": 1.0, "bohr": 0.529177210903}
 _GROUP_NAME = "ChemBlender Vector Arrows"
 _MODIFIER_NAME = "ChemBlender Vector Arrows"
 _VECTOR_CONTRACT = "vector_arrow_v1"
 _VECTOR_ATTRIBUTE = "cbq_vector"
 _VECTOR_MAGNITUDE_ATTRIBUTE = "cbq_vector_magnitude"
-_STRUCTURE_CONTRACT = "structure_view_v1"
 
 
 def _require_mesh_object(obj):
     if not isinstance(obj, bpy.types.Object) or obj.type != "MESH":
         raise TypeError("obj must be a Blender Mesh object")
-
-
-def _coordinate_scale(unit):
-    try:
-        return _ANGSTROM_SCALE[unit]
-    except KeyError as error:
-        raise ValueError(f"unsupported coordinate unit: {unit}") from error
 
 
 def _require_structure_match(obj, structure_id, atom_count):
@@ -42,24 +38,6 @@ def _require_structure_match(obj, structure_id, atom_count):
         raise ValueError("dataset structure does not match the Blender object")
     if len(obj.data.vertices) != atom_count:
         raise ValueError("dataset atom count does not match the Blender mesh")
-
-
-def _attribute(mesh, name, data_type):
-    value = mesh.attributes.get(name)
-    if value is not None and (
-        value.data_type != data_type or value.domain != "POINT"
-    ):
-        mesh.attributes.remove(value)
-        value = None
-    if value is None:
-        value = mesh.attributes.new(name, data_type, "POINT")
-    return value
-
-
-def _write_attribute(mesh, name, data_type, field, values):
-    value = _attribute(mesh, name, data_type)
-    value.data.foreach_set(field, values)
-    return value
 
 
 def _ensure_vector_arrow_group():
@@ -126,63 +104,14 @@ def _ensure_vector_arrow_group():
         raise
 
 
-def create_structure_view(structure, *, name="ChemBlender Structure", collection=None):
-    import numpy
-
-    if not isinstance(structure, Structure):
-        raise TypeError("structure must be a Structure")
-    if not isinstance(name, str) or not name:
-        raise ValueError("name must be a non-empty string")
-    if collection is None:
-        collection = bpy.context.collection
-    if collection is None:
-        raise ValueError("a Blender collection is required")
-    scale = _coordinate_scale(structure.coordinates.unit)
-    coordinates = numpy.asarray(structure.coordinates.values, dtype=float)
-    if numpy.iscomplexobj(coordinates) or not numpy.all(numpy.isfinite(coordinates)):
-        raise ValueError("structure coordinates must be finite and real")
-
-    mesh = bpy.data.meshes.new(name)
-    obj = None
-    try:
-        mesh.from_pydata((coordinates * scale).tolist(), [], [])
-        obj = bpy.data.objects.new(name, mesh)
-        collection.objects.link(obj)
-        _write_attribute(
-            mesh,
-            "atomic_num",
-            "INT",
-            "value",
-            tuple(structure.atomic_numbers),
-        )
-        _write_attribute(
-            mesh,
-            "cbq_atom_id",
-            "INT",
-            "value",
-            tuple(range(len(structure.atomic_numbers))),
-        )
-        obj["cb_structure_id"] = str(structure.id)
-        obj["cb_structure_revision"] = structure.revision
-        obj["cb_structure_contract"] = _STRUCTURE_CONTRACT
-        obj["cb_source_coordinate_unit"] = structure.coordinates.unit
-        obj["cb_display_coordinate_unit"] = "angstrom"
-        obj["cb_coordinate_scale"] = scale
-        if structure.periodic is not None:
-            obj["cb_periodic"] = True
-            obj["cb_periodic_cell"] = tuple(
-                float(value)
-                for row in structure.cell.values
-                for value in row
-            )
-            obj["cb_pbc"] = structure.periodic.pbc
-        mesh.update()
-        return obj
-    except Exception:
-        if obj is not None:
-            bpy.data.objects.remove(obj, do_unlink=True)
-        bpy.data.meshes.remove(mesh)
-        raise
+def create_structure_view(*args, **kwargs):
+    warnings.warn(
+        "ChemBlender.dataset_view.create_structure_view is deprecated; "
+        "use ChemBlender.views.create_structure_view",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return _create_structure_view(*args, **kwargs)
 
 
 def _display_range(values, valid, display_min, display_max, symmetric):
@@ -343,6 +272,20 @@ def write_vector_view(
         raise RuntimeError(f"incompatible modifier already uses {_MODIFIER_NAME}")
     modifier.node_group = group
     modifier["cbq_contract"] = _VECTOR_CONTRACT
+    ball_stick = next(
+        (
+            item
+            for item in obj.modifiers
+            if item.node_group is not None
+            and item.node_group.get("cbq_contract") == "structure_ball_stick_v1"
+        ),
+        None,
+    )
+    if ball_stick is not None:
+        vector_index = tuple(obj.modifiers).index(modifier)
+        ball_stick_index = tuple(obj.modifiers).index(ball_stick)
+        if vector_index > ball_stick_index:
+            obj.modifiers.move(vector_index, ball_stick_index)
     obj["cb_vector_dataset_id"] = str(dataset_id)
     obj["cb_vector_dataset_revision"] = revision
     obj["cb_vector_semantic_role"] = semantic_role

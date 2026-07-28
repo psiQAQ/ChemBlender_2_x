@@ -139,9 +139,13 @@ class ImportConflictTests(unittest.TestCase):
         parse="b",
         with_diagnostic=False,
         session=None,
+        source_kind="local_file",
     ):
         session = session or self.session()
-        source = self.source()
+        source = dataclasses.replace(
+            self.source(),
+            source_kind=source_kind,
+        )
         revision = self.revision(
             source.id,
             content=content,
@@ -181,7 +185,9 @@ class ImportConflictTests(unittest.TestCase):
         source_preview = SourcePreview(
             source_id=source.id,
             source_path=(
-                Path(locator)
+                session.artifact_root / f"{source.id}.smi"
+                if source_kind == "text"
+                else Path(locator)
                 if Path(locator).is_absolute()
                 else self.root / f"{source.id}.xyz"
             ),
@@ -540,6 +546,18 @@ class ImportConflictTests(unittest.TestCase):
                     detect_import_conflicts(
                         self.project(), preview, session
                     )
+
+    def test_staged_inline_smiles_uses_semantic_locator_and_owned_artifact(self):
+        session, preview, _, _ = self.staged(
+            locator="inline:smiles",
+            locator_kind="inline_text",
+            source_kind="text",
+        )
+
+        self.assertEqual(
+            detect_import_conflicts(self.project(), preview, session),
+            (),
+        )
 
     def test_detection_never_requires_a_live_locator_or_uses_mtime(self):
         missing = self.root / "missing" / "source.xyz"

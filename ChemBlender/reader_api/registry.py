@@ -1,4 +1,3 @@
-import hashlib
 from dataclasses import dataclass
 
 from ..core.model import IssueKind, ParserIssue, ParserReport
@@ -10,7 +9,9 @@ from ..core.readers import (
     SniffMatch,
     SniffResult,
 )
+from ..core.storage.hashing import sha256_file
 from .builtin_bridge import (
+    _internal_batch_from_public_unchecked,
     internal_batch_from_public,
     public_batch_from_internal,
 )
@@ -30,9 +31,6 @@ from .public_model import PublicImportBatch
 
 _BUILTIN_PLUGIN_ID = "chemblender.builtin"
 _BUILTIN_PLUGIN_VERSION = "2.3.0"
-_HASH_CHUNK_BYTES = 65536
-
-
 def _builtin_availability(reader_id):
     from ..core.reader_catalog import _OPTIONAL_READER_DEPENDENCIES
 
@@ -53,8 +51,13 @@ class _BuiltinReaderPlugin:
         return self.core_descriptor.sniff(request.source_path, request.prefix)
 
     def parse(self, request):
+        parser = self.core_descriptor.parse_request
         return public_batch_from_internal(
-            self.core_descriptor.parse(request.source_path)
+            (
+                self.core_descriptor.parse(request.source_path)
+                if parser is None
+                else parser(request)
+            )
         )
 
 
@@ -147,31 +150,18 @@ class _SourceReadError(Exception):
 
 def _source_hash(request, stage):
     request.progress(ProgressEvent(stage, 0, 1))
-    if _cancelled(request):
-        raise _SourceCancelled
-    digest = hashlib.sha256()
+
+    def check():
+        if _cancelled(request):
+            raise _SourceCancelled
+        return False
+
     try:
-        stream = request.source_path.open("rb")
+        digest = sha256_file(request.source_path, check)
     except OSError as error:
         raise _SourceReadError(error) from error
-    try:
-        while True:
-            try:
-                chunk = stream.read(_HASH_CHUNK_BYTES)
-            except OSError as error:
-                raise _SourceReadError(error) from error
-            if not chunk:
-                break
-            digest.update(chunk)
-            if _cancelled(request):
-                raise _SourceCancelled
-    finally:
-        try:
-            stream.close()
-        except OSError as error:
-            raise _SourceReadError(error) from error
     request.progress(ProgressEvent(stage, 1, 1))
-    return digest.hexdigest()
+    return digest
 
 
 def _cancelled_batch(descriptor):
@@ -374,7 +364,18 @@ class ReaderPluginRegistry:
             result = plugin.parse(request)
             if type(result) is not PublicImportBatch:
                 raise TypeError("parse must return PublicImportBatch")
-            internal_batch_from_public(result)
+            if type(plugin) is _BuiltinReaderPlugin:
+                _internal_batch_from_public_unchecked(result)
+            else:
+                internal = internal_batch_from_public(result)
+                if internal.source_revisions and (
+                    len(internal.source_revisions) != 1
+                    or internal.source_revisions[0].id
+                    != request.source_revision_id
+                ):
+                    raise ValueError(
+                        "reader source revision identity does not match request"
+                    )
         except MemoryError:
             raise
         except Exception as error:

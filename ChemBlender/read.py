@@ -230,9 +230,18 @@ def read_MOL(moltext):
     from rdkit import Chem
     from rdkit.Chem import AllChem
     text_type = check_type(moltext)
+    if text_type is None:
+        raise ValueError("Unsupported molecular input")
+    text_type = text_type.lower()
+    if text_type == "mol2":
+        raise NotImplementedError("MOL2 is not supported")
+    if text_type not in {"smiles", "xyz", "mol", "sdf", "pdb", "cid", "json"}:
+        raise ValueError(f"Unsupported molecular input type: {text_type}")
     # get mol object from moltext
     if text_type == 'smiles':
         mol = Chem.MolFromSmiles(moltext)
+        if mol is None:
+            raise ValueError("Unable to parse smiles molecular input")
         mol = Chem.AddHs(mol)
         params = AllChem.ETKDGv3()
         if len(moltext)>50: params.useRandomCoords = True
@@ -246,17 +255,31 @@ def read_MOL(moltext):
         block = Chem.MolToMolBlock(mol)
     elif text_type == 'xyz':
         mol = Chem.MolFromXYZFile(moltext)
+        if mol is None:
+            raise ValueError("Unable to parse xyz molecular input")
     elif text_type == 'mol' or text_type == 'sdf':
         mol = Chem.MolFromMolFile(moltext, removeHs=False, sanitize=False)
+        if mol is None:
+            raise ValueError(f"Unable to parse {text_type} molecular input")
     elif text_type == 'pdb':
         mol = Chem.MolFromPDBFile(moltext)
+        if mol is None:
+            raise ValueError("Unable to parse pdb molecular input")
     elif text_type == 'cid':   # from PubChem
         block = download_sdf_from_pubchem(moltext)[0]
+        if block is None:
+            raise ValueError("Unable to parse cid molecular input")
         mol = Chem.MolFromMolBlock(block)
+        if mol is None:
+            raise ValueError("Unable to parse cid molecular input")
         mol = mol_2D_to_3D(mol)   # conformation optimization
     elif text_type == 'json':
         block = json_2_molblock(moltext)
+        if block is None:
+            raise ValueError("Unable to parse json molecular input")
         mol = Chem.MolFromMolBlock(block)
+        if mol is None:
+            raise ValueError("Unable to parse json molecular input")
     mol_list = [[attr_values_from_mol(mol)]]
     return mol_list
 
