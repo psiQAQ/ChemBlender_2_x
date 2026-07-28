@@ -178,7 +178,8 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
-| `ChemBlender/core/exporters/__init__.py` | 模块级 re-export | 暴露原生文本格式的纯 Python 导出入口、无写入 loss preview、取消异常和语义比较器，不加载 Blender 或 RDKit。 |
+| `ChemBlender/core/exporters/__init__.py` | 模块级 re-export | 暴露原生 XYZ/extXYZ、MOL/SDF/SMILES 与 controlled CIF 的纯 Python 导出入口、无写入 loss/patch preview、取消异常和语义比较器，不加载 Blender 或 RDKit。 |
+| `ChemBlender/core/exporters/cif.py` | `CIFExportPlan`、`plan_cif_export()`、`export_cif()` | 复用 Gemmi 只在 CIF 导出调用时读取 source envelope；Preserve mode 以稳定 block identity 只 patch cell、atom-site、occupancy、Uiso/Uij 与明确声明的 symmetry，并保留未知 block/tag/loop；Normalized mode 从无 envelope 的周期 Structure 写最小 CIF，不虚构 uncertainty、disorder 或 symmetry。两种模式共用短临时文件、fsync、原子替换与取消清理。 |
 | `ChemBlender/core/exporters/xyz.py` | `atomic_write_chunks()`、`export_xyz()`、`export_extxyz()`、`preview_extxyz_export()`、`semantic_extxyz_differences()` | 提供同目录短临时文件、fsync、replace、取消清理的共享 UTF-8 原子写入；其上确定性导出 XYZ/extXYZ，保留 typed frame/atom/cell property、integral-valued real metadata 与 validity，显式报告 partial/ambiguous loss，并按科学数据而非 UUID/空白比较 round-trip。 |
 | `ChemBlender/core/exporters/rdkit_molecular.py` | `SDFExportEntry`、`sdf_entries_from_conformer_set()`、`preview_molecular_export()`、`export_mol()`、`export_sdf()`、`export_smiles()`、`semantic_molecular_differences()` | 仅在写入时加载 RDKit，从 `Structure`、`AtomicIdentityData` 和选定 `TopologyRecord` 重建临时分子；纯 metadata preview 复用同一 loss contract 而不构造或序列化 RDKit Mol；严格审计 V2000 表示能力并自动选择 V3000，MOL/SDF 的 atom name 或 multiplicity loss 先要求确认，SDF 以 caller-selected `SDFExportEntry` 顺序保留 raw SD 属性的重复项；ConformerSet helper 按 reference atom order 生成派生记录而不二次应用 mapping；SMILES 在确认前只报告 loss，所有目标文件复用 shared atomic writer。 |
 | `ChemBlender/core/formats/__init__.py` | 模块级 re-export | 暴露原生文本格式 reader 的低层入口，不注册 reader 或接触项目状态。 |

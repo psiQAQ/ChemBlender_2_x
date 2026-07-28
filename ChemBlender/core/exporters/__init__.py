@@ -1,5 +1,6 @@
 """Deterministic native structure exporters."""
 
+from .cif import CIFExportField, CIFExportPlan, export_cif, plan_cif_export
 from .xyz import (
     ExportCancelled,
     ExportReport,
@@ -24,9 +25,12 @@ __all__ = (
     "ExportCancelled",
     "ExportReport",
     "ExportReportEntry",
+    "CIFExportField",
+    "CIFExportPlan",
     "MolecularExport",
     "SDFExportEntry",
     "export_extxyz",
+    "export_cif",
     "export_mol",
     "export_sdf",
     "export_smiles",
@@ -34,6 +38,7 @@ __all__ = (
     "sdf_entries_from_conformer_set",
     "export_xyz",
     "preview_extxyz_export",
+    "plan_cif_export",
     "semantic_extxyz_differences",
     "semantic_molecular_differences",
 )
