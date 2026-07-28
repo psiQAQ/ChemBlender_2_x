@@ -22,6 +22,7 @@ from ChemBlender.core import (
     FrameSet,
     ImportBatch,
     ImportDiagnostic,
+    PeriodicSiteData,
     QCProject,
     QualityStatus,
     SourceRecord,
@@ -932,6 +933,69 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.assertTrue(
             all(identifier for identifier, _label, _description in quality.keywords["items"])
         )
+
+    def test_crystal_symmetry_sections_survive_missing_spglib(self):
+        properties = importlib.import_module("ChemBlender.ui.properties")
+        structure = Structure(
+            id=STRUCTURE_ID,
+            revision="periodic-r1",
+            atomic_numbers=(14,),
+            coordinates=ArrayData(
+                numpy.zeros((1, 3)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+            cell=ArrayData(
+                numpy.eye(3),
+                ("cell_vector", "xyz"),
+                "angstrom",
+            ),
+            periodic=PeriodicSiteData(
+                fractional_coordinates=ArrayData(
+                    numpy.zeros((1, 3)),
+                    ("atom", "xyz"),
+                    "dimensionless",
+                ),
+                site_labels=("Si1",),
+                occupancies=ArrayData(
+                    numpy.ones(1),
+                    ("atom",),
+                    "dimensionless",
+                ),
+                isotropic_displacements=None,
+                anisotropic_displacements=None,
+                adp_types=("none",),
+                disorder_groups=(0,),
+                declared_space_group_name="P 1",
+                declared_space_group_number=1,
+                symmetry_operations=("x,y,z",),
+                cif_envelope_id=None,
+                declared_hall_symbol="P 1",
+            ),
+        )
+        with patch.object(
+            properties.importlib.util,
+            "find_spec",
+            return_value=None,
+        ):
+            sections = properties.crystal_symmetry_property_sections(
+                structure
+            )
+        self.assertEqual(
+            sections["declared"],
+            (
+                ("Name", "P 1"),
+                ("International number", "1"),
+                ("Hall symbol", "P 1"),
+                ("Operations", "1"),
+            ),
+        )
+        self.assertEqual(
+            sections["derived"][0],
+            ("International", "Not derived"),
+        )
+        self.assertFalse(sections["derive_available"])
+        self.assertIn("not installed", sections["dependency_reason"])
 
     def test_topology_and_scientific_edit_classes_have_explicit_roots(self):
         registration = importlib.import_module(

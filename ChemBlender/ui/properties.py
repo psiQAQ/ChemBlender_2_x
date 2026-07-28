@@ -1,15 +1,19 @@
 """Small Blender properties and in-memory state for Quick Import."""
 
 from dataclasses import dataclass
+import importlib.util
 
 import bpy
-from bpy.props import EnumProperty, PointerProperty, StringProperty
+from bpy.props import EnumProperty, FloatProperty, PointerProperty, StringProperty
 
+from ..core import Structure, SymmetryResult
 from ..core.import_pipeline.preview import ImportPreview
 from ..core.import_pipeline.request import ValidationMode
 from ..core.import_pipeline.staging import StagedImportSession
 from ..core.session import ProjectSession
+from ..core.spglib_adapter import SpglibDependencyError, derive_symmetry
 from .session import (
+    get_scene_session,
     register_session_cleanup,
     register_session_mutation,
     unregister_session_cleanup,
@@ -33,6 +37,125 @@ class CHEMBLENDER_PG_quick_import(bpy.types.PropertyGroup):
         default=ValidationMode.BALANCED.value,
     )
     recent_summary: StringProperty(name="Recent Preview", default="")
+
+
+def spglib_action_availability():
+    try:
+        available = importlib.util.find_spec("spglib") is not None
+    except (ImportError, AttributeError, ValueError) as error:
+        return False, f"spglib availability check failed: {error}"
+    return (
+        (True, "")
+        if available
+        else (False, "spglib is not installed in the core/worker environment")
+    )
+
+
+def crystal_symmetry_property_sections(structure, derived=None):
+    if not isinstance(structure, Structure) or structure.periodic is None:
+        raise TypeError("structure must be a periodic Structure")
+    if derived is not None and (
+        not isinstance(derived, SymmetryResult)
+        or derived.structure_id != structure.id
+    ):
+        raise ValueError("derived symmetry must belong to structure")
+    declared = structure.periodic.declared_symmetry
+    available, reason = spglib_action_availability()
+    return {
+        "declared": (
+            ("Name", declared.name or "Not declared"),
+            (
+                "International number",
+                (
+                    str(declared.international_number)
+                    if declared.international_number is not None
+                    else "Not declared"
+                ),
+            ),
+            ("Hall symbol", declared.hall_symbol or "Not declared"),
+            ("Operations", str(len(declared.operations))),
+        ),
+        "derived": (
+            (
+                "International",
+                (
+                    f"{derived.international_symbol} "
+                    f"(No. {derived.international_number})"
+                    if derived is not None
+                    else "Not derived"
+                ),
+            ),
+            (
+                "Hall symbol",
+                derived.hall_symbol if derived is not None else "Not derived",
+            ),
+        ),
+        "derive_available": available,
+        "dependency_reason": reason,
+    }
+
+
+class CHEMBLENDER_OT_derive_crystal_symmetry(bpy.types.Operator):
+    bl_idname = "chemblender.derive_crystal_symmetry"
+    bl_label = "Derive Symmetry"
+    bl_description = "Derive symmetry without changing the source Structure"
+
+    symprec: FloatProperty(name="Symprec", default=1.0e-5, min=1.0e-12)
+    angle_tolerance: FloatProperty(name="Angle Tolerance", default=-1.0, min=-1.0)
+
+    def execute(self, context):
+        session = get_scene_session(context.scene)
+        structure = session.project.structures.get(session.active_entity_id)
+        available, reason = spglib_action_availability()
+        if not available:
+            self.report({"ERROR"}, reason)
+            return {"CANCELLED"}
+        try:
+            if not isinstance(structure, Structure) or structure.periodic is None:
+                raise ValueError("select a periodic Structure")
+            existing = next(
+                (
+                    result
+                    for result in session.project.symmetry_results.values()
+                    if (
+                        result.structure_id == structure.id
+                        and result.symprec == self.symprec
+                        and result.angle_tolerance == self.angle_tolerance
+                    )
+                ),
+                None,
+            )
+            if existing is None:
+                session.project.commit(
+                    derive_symmetry(
+                        structure,
+                        symprec=self.symprec,
+                        angle_tolerance=self.angle_tolerance,
+                    )
+                )
+                session.mark_dirty("symmetry")
+        except (
+            SpglibDependencyError,
+            TypeError,
+            ValueError,
+        ) as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
+def draw_crystal_symmetry_properties(layout, structure, derived=None):
+    sections = crystal_symmetry_property_sections(structure, derived)
+    for title in ("declared", "derived"):
+        box = layout.box()
+        box.label(text=f"{title.title()} Symmetry")
+        for name, value in sections[title]:
+            box.label(text=f"{name}: {value}")
+    row = layout.row()
+    row.enabled = sections["derive_available"]
+    row.operator(CHEMBLENDER_OT_derive_crystal_symmetry.bl_idname)
+    if sections["dependency_reason"]:
+        layout.label(text=sections["dependency_reason"], icon="INFO")
 
 
 @dataclass(slots=True)

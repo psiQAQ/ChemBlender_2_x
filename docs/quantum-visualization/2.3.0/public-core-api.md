@@ -20,6 +20,10 @@
 `cartesian_to_fractional()` 和
 `validate_periodic_coordinate_consistency()` 是纯 Python/NumPy 模型边界；
 它们不引入第二套晶体实体，也不加载 Gemmi、spglib、ASE 或 pymatgen。
+`PeriodicSiteData.declared_symmetry` 以 `DeclaredSymmetry` 只读投影保留源文件
+声明的名称、IT number、Hall symbol 与 operations；spglib 结果独立保存为
+`SymmetryResult`。`compare_symmetry()` 返回 `SymmetryComparison`，不会在缺少
+显式 setting transformation 时声称两个 setting 等价。
 
 `AtomicIdentityData` 是可选逐 atom isotope、formal charge、atom-map、名称和
 stereo 值对象。`MolecularRecord` 保留单一精确 raw block 与有序（允许重复）原始

@@ -401,6 +401,84 @@ def _anisotropic_displacements(gemmi, block, labels):
     )
 
 
+def _first_text(gemmi, block, tags):
+    for tag in tags:
+        value = block.find_value(tag)
+        if value and value not in {".", "?"}:
+            return gemmi.cif.as_string(value)
+    return None
+
+
+def _declared_symmetry(gemmi, block):
+    name = _first_text(
+        gemmi,
+        block,
+        (
+            "_space_group_name_H-M_alt",
+            "_symmetry_space_group_name_H-M",
+        ),
+    )
+    hall_symbol = _first_text(
+        gemmi,
+        block,
+        (
+            "_space_group_name_Hall",
+            "_symmetry_space_group_name_Hall",
+        ),
+    )
+    number_text = _first_text(
+        gemmi,
+        block,
+        (
+            "_space_group_IT_number",
+            "_symmetry_Int_Tables_number",
+        ),
+    )
+    number = None
+    issues = []
+    if number_text is not None:
+        parsed = gemmi.cif.as_number(number_text)
+        if (
+            not parsed.is_integer()
+            or not 1 <= int(parsed) <= 230
+        ):
+            issues.append(
+                ParserIssue(
+                    IssueKind.INVALID,
+                    "structure.periodic.declared_space_group_number",
+                    "declared CIF international number is invalid",
+                )
+            )
+        else:
+            number = int(parsed)
+    operation_tags = (
+        "_space_group_symop_operation_xyz",
+        "_symmetry_equiv_pos_as_xyz",
+    )
+    operations = ()
+    for tag in operation_tags:
+        operations = _column_strings(gemmi, block, tag)
+        if operations:
+            operations = tuple(value.replace(" ", "") for value in operations)
+            break
+    for symbol in (name, hall_symbol):
+        if symbol is None or number is None:
+            continue
+        group = gemmi.find_spacegroup_by_name(symbol)
+        if group is not None and group.number != number:
+            issues.append(
+                ParserIssue(
+                    IssueKind.AMBIGUOUS,
+                    "structure.periodic.declared_symmetry",
+                    (
+                        f"declared CIF group {symbol!r} conflicts with "
+                        f"international number {number}"
+                    ),
+                )
+            )
+    return name, number, hall_symbol, operations, tuple(issues)
+
+
 def _parse_block(
     gemmi,
     block,
@@ -473,10 +551,15 @@ def _parse_block(
             f"{block_key}:structure"
         ),
     )
-    space_group_name = small.spacegroup_hm or None
-    space_group_number = small.spacegroup_number or None
-    symmetry_operations = tuple(
-        operation.replace(" ", "") for operation in small.symops
+    (
+        space_group_name,
+        space_group_number,
+        hall_symbol,
+        symmetry_operations,
+        declared_symmetry_issues,
+    ) = _declared_symmetry(
+        gemmi,
+        block,
     )
     periodic = PeriodicSiteData(
         fractional_coordinates=ArrayData(
@@ -496,6 +579,7 @@ def _parse_block(
         cif_block_key=block_key,
         cif_block_index=block_index,
         disorder_assemblies=disorder_assemblies,
+        declared_hall_symbol=hall_symbol,
     )
     structure = Structure(
         id=structure_id,
@@ -534,6 +618,7 @@ def _parse_block(
         + occupancy_issues
         + isotropic_issues
         + anisotropic_issues
+        + declared_symmetry_issues
     )
     if numpy.any(occupancies[numpy.isfinite(occupancies)] < 1.0):
         issues.append(

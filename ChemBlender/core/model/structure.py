@@ -13,6 +13,35 @@ from .common import (
 
 
 @dataclass(frozen=True, slots=True)
+class DeclaredSymmetry:
+    name: str | None
+    international_number: int | None
+    hall_symbol: str | None
+    operations: tuple[str, ...]
+
+    def __post_init__(self):
+        for value, name in (
+            (self.name, "name"),
+            (self.hall_symbol, "hall_symbol"),
+        ):
+            if value is not None:
+                _require_text(value, name)
+        if self.international_number is not None and (
+            isinstance(self.international_number, bool)
+            or not isinstance(self.international_number, int)
+            or not 1 <= self.international_number <= 230
+        ):
+            raise ValueError("international_number must be from 1 to 230")
+        operations = tuple(self.operations)
+        if any(
+            not isinstance(value, str) or not value
+            for value in operations
+        ):
+            raise ValueError("operations must contain non-empty strings")
+        object.__setattr__(self, "operations", operations)
+
+
+@dataclass(frozen=True, slots=True)
 class PeriodicSiteData:
     fractional_coordinates: ArrayData
     site_labels: tuple[str, ...]
@@ -30,6 +59,7 @@ class PeriodicSiteData:
     cif_block_key: str | None = None
     cif_block_index: int | None = None
     disorder_assemblies: tuple[str, ...] = ()
+    declared_hall_symbol: str | None = None
 
     def __post_init__(self):
         import numpy
@@ -116,6 +146,8 @@ class PeriodicSiteData:
             or not 1 <= self.declared_space_group_number <= 230
         ):
             raise ValueError("declared_space_group_number must be from 1 to 230")
+        if self.declared_hall_symbol is not None:
+            _require_text(self.declared_hall_symbol, "declared_hall_symbol")
         symmetry_operations = tuple(self.symmetry_operations)
         if any(
             not isinstance(value, str) or not value
@@ -163,6 +195,15 @@ class PeriodicSiteData:
         object.__setattr__(self, "symmetry_operations", symmetry_operations)
         object.__setattr__(self, "pbc", pbc)
         object.__setattr__(self, "disorder_assemblies", disorder_assemblies)
+
+    @property
+    def declared_symmetry(self):
+        return DeclaredSymmetry(
+            self.declared_space_group_name,
+            self.declared_space_group_number,
+            self.declared_hall_symbol,
+            self.symmetry_operations,
+        )
 
 
 def _cell_matrix(cell, *, load_lazy=True):

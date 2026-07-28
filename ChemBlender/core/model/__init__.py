@@ -63,6 +63,7 @@ from .spectroscopy import (
 )
 from .structure import (
     cartesian_to_fractional,
+    DeclaredSymmetry,
     fractional_to_cartesian,
     MolecularTopology,
     PeriodicSiteData,

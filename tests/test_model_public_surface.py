@@ -31,6 +31,7 @@ PUBLIC_MODEL_NAMES = {
     "DensityMatrixLevel",
     "DensityMatrixSpin",
     "DensityOfStates",
+    "DeclaredSymmetry",
     "EnergyReference",
     "ExcitationContribution",
     "ExcitedStateReferences",

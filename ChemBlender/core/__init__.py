@@ -148,6 +148,7 @@ from .model import (
     SpectrumProfile,
     SpinChannel,
     Structure,
+    DeclaredSymmetry,
     unit_cell_parameters,
     fractional_to_cartesian,
     cartesian_to_fractional,
@@ -277,6 +278,7 @@ from .spglib_adapter import (
     SpglibDependencyError,
     derive_symmetry,
 )
+from .symmetry_comparison import SymmetryComparison, compare_symmetry
 # Derived/reporting compatibility exports.
 from .trajectory_frames import FrameCacheInfo, TrajectoryFrameManager
 # Reader compatibility exports.
@@ -340,6 +342,7 @@ __all__ = [
     "DensityMatrixLevel",
     "DensityMatrixSpin",
     "DensityOfStates",
+    "DeclaredSymmetry",
     "EnergyReference",
     "ExcitationContribution",
     "ExcitedStateReferences",
@@ -431,6 +434,7 @@ __all__ = [
     "TopologyGraph",
     "TopologyPath",
     "SymmetryResult",
+    "SymmetryComparison",
     "VibrationalModeSet",
     "TrajectoryFrameManager",
     "XYZ_READER",
@@ -489,6 +493,7 @@ __all__ = [
     "default_grid_isovalue",
     "derive_phonon_frames",
     "derive_symmetry",
+    "compare_symmetry",
     "derive_vibrational_spectrum",
     "describe_report_artifact",
     "close_project",

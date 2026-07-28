@@ -132,10 +132,10 @@ def derive_symmetry(
         anisotropic_displacements=None,
         adp_types=("none",) * len(standard_numbers),
         disorder_groups=(0,) * len(standard_numbers),
-        declared_space_group_name=dataset.international,
-        declared_space_group_number=int(dataset.number),
+        declared_space_group_name=None,
+        declared_space_group_number=None,
         symmetry_operations=(),
-        cif_envelope_id=structure.periodic.cif_envelope_id,
+        cif_envelope_id=None,
     )
     standard_structure = Structure(
         id=standard_id,

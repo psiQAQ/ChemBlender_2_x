@@ -392,6 +392,7 @@ class _Decoder:
             value.setdefault("cif_block_key", None)
             value.setdefault("cif_block_index", None)
             value.setdefault("disorder_assemblies", {"$tuple": []})
+            value.setdefault("declared_hall_symbol", None)
         expected = {item.name for item in fields(class_type) if item.init}
         actual = set(value) - {"$type"}
         if actual != expected:

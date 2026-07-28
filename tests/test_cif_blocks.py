@@ -158,6 +158,7 @@ class CIFBlockTests(unittest.TestCase):
                         value.pop("cif_block_key")
                         value.pop("cif_block_index")
                         value.pop("disorder_assemblies")
+                        value.pop("declared_hall_symbol")
                     for item in value.values():
                         strip_added_fields(item)
                 elif isinstance(value, list):
@@ -177,6 +178,9 @@ class CIFBlockTests(unittest.TestCase):
             )
         self.assertEqual(restored.cif_envelopes[0].block_names, ("quoted",))
         self.assertIsNone(restored.structures[0].periodic.cif_block_key)
+        self.assertIsNone(
+            restored.structures[0].periodic.declared_hall_symbol
+        )
         self.assertEqual(
             restored.structures[0].periodic.disorder_assemblies,
             ("none", "none"),

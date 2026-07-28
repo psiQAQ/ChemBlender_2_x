@@ -4,10 +4,14 @@ from pathlib import Path
 import subprocess
 import sys
 import unittest
+from unittest.mock import patch
+from uuid import uuid4
 
 import numpy
 
+import ChemBlender.core as core
 from ChemBlender.core import ArrayData, QCProject, parse_cif
+from ChemBlender.core import PeriodicSiteData, Structure
 from ChemBlender.core.spglib_adapter import (
     SpglibDependencyError,
     derive_symmetry,
@@ -23,6 +27,110 @@ HAS_INTEGRATION = HAS_GEMMI and HAS_SPGLIB
 
 
 class SpglibAdapterTests(unittest.TestCase):
+    def test_derivation_keeps_source_declared_symmetry_unchanged(self):
+        source = Structure(
+            id=uuid4(),
+            revision="source-r1",
+            atomic_numbers=(14,),
+            coordinates=ArrayData(
+                numpy.zeros((1, 3)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+            cell=ArrayData(
+                numpy.eye(3) * 3.0,
+                ("cell_vector", "xyz"),
+                "angstrom",
+            ),
+            periodic=PeriodicSiteData(
+                fractional_coordinates=ArrayData(
+                    numpy.zeros((1, 3)),
+                    ("atom", "xyz"),
+                    "dimensionless",
+                ),
+                site_labels=("Si1",),
+                occupancies=ArrayData(
+                    numpy.ones(1),
+                    ("atom",),
+                    "dimensionless",
+                ),
+                isotropic_displacements=None,
+                anisotropic_displacements=None,
+                adp_types=("none",),
+                disorder_groups=(0,),
+                declared_space_group_name="P 1",
+                declared_space_group_number=1,
+                symmetry_operations=("x,y,z",),
+                cif_envelope_id=None,
+                declared_hall_symbol="P 1",
+            ),
+        )
+        dataset = type(
+            "Dataset",
+            (),
+            {
+                "std_lattice": numpy.eye(3) * 3.0,
+                "std_positions": numpy.zeros((1, 3)),
+                "std_types": numpy.asarray([14]),
+                "hall_number": 1,
+                "number": 1,
+                "international": "P1",
+                "hall": "P 1",
+                "choice": "",
+                "pointgroup": "1",
+                "rotations": numpy.asarray([numpy.eye(3, dtype=int)]),
+                "translations": numpy.zeros((1, 3)),
+                "wyckoffs": ("a",),
+                "site_symmetry_symbols": ("1",),
+                "equivalent_atoms": numpy.asarray([0]),
+                "crystallographic_orbits": numpy.asarray([0]),
+                "transformation_matrix": numpy.eye(3),
+                "origin_shift": numpy.zeros(3),
+                "mapping_to_primitive": numpy.asarray([0]),
+                "std_mapping_to_primitive": numpy.asarray([0]),
+                "std_rotation_matrix": numpy.eye(3),
+            },
+        )()
+        fake_spglib = type(
+            "FakeSpglib",
+            (),
+            {
+                "__version__": "test",
+                "get_symmetry_dataset": staticmethod(
+                    lambda *_args, **_kwargs: dataset
+                ),
+            },
+        )()
+
+        with patch(
+            "ChemBlender.core.spglib_adapter._spglib",
+            return_value=fake_spglib,
+        ):
+            derived = derive_symmetry(
+                source,
+                symprec=2.0e-5,
+                angle_tolerance=0.5,
+            )
+
+        self.assertEqual(
+            source.periodic.declared_symmetry,
+            core.DeclaredSymmetry("P 1", 1, "P 1", ("x,y,z",)),
+        )
+        standard = derived.structures[0]
+        self.assertEqual(
+            standard.periodic.declared_symmetry,
+            core.DeclaredSymmetry(None, None, None, ()),
+        )
+        result = derived.symmetry_results[0]
+        self.assertEqual((result.symprec, result.angle_tolerance), (2.0e-5, 0.5))
+        self.assertEqual(
+            derived.provenance[0].parameters[:2],
+            (
+                ("symprec_angstrom", 2.0e-5),
+                ("angle_tolerance_degree", 0.5),
+            ),
+        )
+
     def test_core_import_does_not_eagerly_load_spglib(self):
         code = (
             "import sys; import ChemBlender.core; "
@@ -73,9 +181,10 @@ class SpglibAdapterTests(unittest.TestCase):
                 @ standard.cell.values,
             )
         )
+        self.assertIsNone(standard.periodic.cif_envelope_id)
         self.assertEqual(
-            standard.periodic.cif_envelope_id,
-            original.periodic.cif_envelope_id,
+            standard.periodic.declared_symmetry,
+            core.DeclaredSymmetry(None, None, None, ()),
         )
         project.commit(derived)
         self.assertIs(project.symmetry_results[result.id], result)
