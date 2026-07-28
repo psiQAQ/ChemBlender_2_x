@@ -19,6 +19,11 @@ stereo 值对象。`MolecularRecord` 保留单一精确 raw block 与有序（�
 属性。`RecordPropertyColumn` 与 `ConformerSet` 是可选 dataset 投影；它们不保存
 RDKit 对象，也不实现 reader、grouping、export 或 UI 行为。RDKit is not a project model.
 
+`GridSemanticPreset`、`builtin_grid_semantic_presets()`、
+`resolve_grid_semantics()` 与 `default_grid_isovalue()` 构成 Cube/Grid
+显式语义解析边界。解析保留 raw ambiguous grid；用户选择生成新的确定性
+`Grid3D` revision 和 provenance。
+
 ## 存储 API
 
 `open_project`、`save_project`、`close_project`、`LazyNpyArray` 及 `Sidecar*Error` 构成 sidecar 存储 API，用于 `.cbq` 项目和数组引用的读取、写入与错误处理。

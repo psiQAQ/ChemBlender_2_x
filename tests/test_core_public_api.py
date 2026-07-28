@@ -19,7 +19,7 @@ PUBLIC_CORE_NAMES = (
     "DensityMatrix", "DensityMatrixLevel",
     "DensityMatrixSpin", "DensityOfStates", "EnergyReference",
     "ExcitationContribution", "ExcitedStateReferences", "ExcitedStateSet", "FrameSet", "FrameProperty",
-    "FrameCacheInfo", "FermiSurfaceMesh", "GemmiDependencyError", "Grid3D",
+    "FrameCacheInfo", "FermiSurfaceMesh", "GemmiDependencyError", "Grid3D", "GridSemanticPreset",
     "GBasisDependencyError", "ImportBatch", "ImportDiagnostic", "IssueKind", "LazyNpyArray",
     "IODATA_WAVEFUNCTION_READER", "IODataDependencyError", "MOL_V2000_READER", "MOL_READER", "SDF_READER", "SMILES_READER",
     "MolecularTopology", "MolecularRecord", "RawRecordProperty", "RecordPropertyColumn", "TopologyRecord", "TopologySource", "OrbitalChannel", "OrbitalKind", "OrbitalSet", "ParserIssue",
@@ -49,11 +49,11 @@ PUBLIC_CORE_NAMES = (
     "evaluate_density_matrix_grid", "evaluate_electrostatic_potential_grid",
     "evaluate_molecular_orbital_grid", "derive_electronic_spectrum",
     "ExternalConnectorDescriptor", "ExternalConnectorError", "ExternalRecordRequest",
-    "derive_grid_lod", "derive_phonon_frames", "derive_symmetry",
+    "derive_grid_lod", "default_grid_isovalue", "derive_phonon_frames", "derive_symmetry",
     "derive_vibrational_spectrum", "describe_report_artifact", "close_project",
     "close_session", "clear_derived_cache", "create_session", "derivation_cache_key", "open_project",
-    "parser_cache_key", "render_cache_key",
-    "render_analysis_report_markdown", "reader_capability_document", "builtin_recipes",
+    "parser_cache_key", "render_cache_key", "resolve_grid_semantics",
+    "render_analysis_report_markdown", "reader_capability_document", "builtin_recipes", "builtin_grid_semantic_presets",
     "builtin_reader_descriptors", "builtin_reader_registry", "builtin_external_connectors",
     "builtin_scene_presets", "plan_recipe", "plan_scene_preset", "recipe_document",
     "recipe_from_document", "relink_project_session", "relink_project_session_for_scenes",
@@ -71,7 +71,7 @@ class CorePublicApiTests(unittest.TestCase):
     def test_public_names_are_frozen(self):
         self.assertEqual(tuple(core.__all__), PUBLIC_CORE_NAMES)
         self.assertEqual(len(core.__all__), len(set(core.__all__)))
-        self.assertEqual(len(core.__all__), 225)
+        self.assertEqual(len(core.__all__), 229)
 
     def test_public_names_resolve_to_attributes(self):
         missing = [name for name in core.__all__ if not hasattr(core, name)]

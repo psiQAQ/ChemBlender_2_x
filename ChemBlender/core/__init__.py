@@ -75,6 +75,13 @@ from .grid_lod import (
     surface_render_cache_key,
     volume_render_cache_key,
 )
+# Grid semantic-resolution exports.
+from .grid_semantics import (
+    GridSemanticPreset,
+    builtin_grid_semantic_presets,
+    default_grid_isovalue,
+    resolve_grid_semantics,
+)
 # Stable model façade exports.
 from .model import (
     ArrayData,
@@ -337,6 +344,7 @@ __all__ = [
     "FermiSurfaceMesh",
     "GemmiDependencyError",
     "Grid3D",
+    "GridSemanticPreset",
     "GBasisDependencyError",
     "ImportBatch",
     "ImportDiagnostic",
@@ -468,6 +476,7 @@ __all__ = [
     "ExternalConnectorError",
     "ExternalRecordRequest",
     "derive_grid_lod",
+    "default_grid_isovalue",
     "derive_phonon_frames",
     "derive_symmetry",
     "derive_vibrational_spectrum",
@@ -480,9 +489,11 @@ __all__ = [
     "open_project",
     "parser_cache_key",
     "render_cache_key",
+    "resolve_grid_semantics",
     "render_analysis_report_markdown",
     "reader_capability_document",
     "builtin_recipes",
+    "builtin_grid_semantic_presets",
     "builtin_reader_descriptors",
     "builtin_reader_registry",
     "builtin_external_connectors",
