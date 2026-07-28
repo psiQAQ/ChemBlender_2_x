@@ -53,15 +53,21 @@ jobs:
           $manifestVersion = $env:RELEASE_VERSION
           $expectedTag = "v$manifestVersion"
           if ($env:GITHUB_REF_NAME -ne $expectedTag) { throw "Tag $env:GITHUB_REF_NAME does not match expected $expectedTag" }
-      - name: Download pinned RDKit wheel
+      - name: Download pinned extension wheels
         shell: pwsh
         run: |
           $wheelDir = "ChemBlender/wheels"
-          $wheelPath = "$wheelDir/rdkit-2026.3.3-cp313-cp313-win_amd64.whl"
           New-Item -ItemType Directory -Path $wheelDir -Force | Out-Null
+
+          $wheelPath = "$wheelDir/rdkit-2026.3.3-cp313-cp313-win_amd64.whl"
           Invoke-WebRequest -Uri "https://files.pythonhosted.org/packages/68/d0/5de3d0d7e66f0e7e7795ab94a53b826e257176c15c9ee79f15621ac040ed/rdkit-2026.3.3-cp313-cp313-win_amd64.whl" -OutFile $wheelPath
           $hash = (Get-FileHash -Algorithm SHA256 $wheelPath).Hash.ToLowerInvariant()
           if ($hash -ne "f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48") { throw "RDKit wheel hash mismatch" }
+
+          $wheelPath = "$wheelDir/gemmi-0.7.5-cp313-cp313-win_amd64.whl"
+          Invoke-WebRequest -Uri "https://files.pythonhosted.org/packages/ee/ab/7d7463cda94f8b68b969ea97aaad679655a0e436efd6a643e528a8de114e/gemmi-0.7.5-cp313-cp313-win_amd64.whl" -OutFile $wheelPath
+          $hash = (Get-FileHash -Algorithm SHA256 $wheelPath).Hash.ToLowerInvariant()
+          if ($hash -ne "ad1f72ffa24adbfaf259e11471f6f071a668667f6ca846051f3bfea024fd337d") { throw "Gemmi wheel hash mismatch" }
       - name: Download Blender 5.1.2
         shell: pwsh
         run: |

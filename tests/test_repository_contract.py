@@ -8,7 +8,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 EXTENSION = ROOT / "ChemBlender"
-WHEEL = "rdkit-2026.3.3-cp313-cp313-win_amd64.whl"
+WHEELS = (
+    "rdkit-2026.3.3-cp313-cp313-win_amd64.whl",
+    "gemmi-0.7.5-cp313-cp313-win_amd64.whl",
+)
 
 
 class RepositoryContractTests(unittest.TestCase):
@@ -20,7 +23,10 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(manifest["version"], "2.3.0-alpha.1")
         self.assertEqual(manifest["blender_version_min"], "5.1.0")
         self.assertEqual(manifest["platforms"], ["windows-x64"])
-        self.assertEqual(manifest["wheels"], [f"./wheels/{WHEEL}"])
+        self.assertEqual(
+            manifest["wheels"],
+            [f"./wheels/{wheel}" for wheel in WHEELS],
+        )
         self.assertLessEqual(len(manifest["permissions"]["files"]), 64)
         self.assertEqual(
             manifest["permissions"]["files"],
@@ -112,6 +118,10 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertNotIn("TrimStart", workflow)
         self.assertIn("blender-5.1.2.sha256", workflow)
         self.assertIn("f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48", workflow)
+        self.assertIn(
+            "ad1f72ffa24adbfaf259e11471f6f071a668667f6ca846051f3bfea024fd337d",
+            workflow,
+        )
 
     def test_package_workflow_derives_names_from_release_metadata(self):
         workflow = (

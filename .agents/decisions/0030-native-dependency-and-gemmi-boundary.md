@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed for 2.3.0; user direction approved.
+Accepted for 2.3.0.
 
 ## Context
 
@@ -13,6 +13,12 @@ RDKit已随2.2.0打包。CIF要成为安装即用能力，需要可靠 parser；
 RDKit继续作为第一优先级基础 wheel。Gemmi升级为2.3.0基础 wheel，负责 CIF语法、block/loop和raw envelope。spglib继续作为可选增强，派生空间群、标准化和Wyckoff结果，不覆盖文件声明。
 
 新增 wheel遵循单个压缩10 MB、解压30 MB、合计20 MB目标；Gemmi例外必须有独立大小、加载、许可证、SHA和Blender lifecycle证据。
+
+批准的 Gemmi artifact 为官方 PyPI
+`gemmi-0.7.5-cp313-cp313-win_amd64.whl`，SHA-256
+`ad1f72ffa24adbfaf259e11471f6f071a668667f6ca846051f3bfea024fd337d`。
+压缩大小为 2,270,352 bytes，解压大小为 5,345,458 bytes，低于预算；
+wheel 内含 `gemmi-0.7.5.dist-info/licenses/LICENSE.txt`（MPL-2.0）。
 
 ## Consequences
 
