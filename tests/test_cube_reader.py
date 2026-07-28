@@ -35,6 +35,7 @@ class CubeReaderTests(unittest.TestCase):
         structure = batch.structures[0]
         grid = batch.datasets[0]
         self.assertIsInstance(grid, Grid3D)
+        self.assertEqual(grid.structure_id, structure.id)
         self.assertEqual(structure.atomic_numbers, (8,))
         self.assertEqual(structure.coordinates.unit, "bohr")
         self.assertEqual(grid.origin, (0.0, 0.0, 0.0))

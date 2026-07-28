@@ -205,6 +205,7 @@ def parse_cube(source: Path) -> ImportBatch:
         origin=origin,
         step_vectors=step_vectors,
         coordinate_unit="bohr",
+        structure_id=structure_id,
     )
 
     issues = [
