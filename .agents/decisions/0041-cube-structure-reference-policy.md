@@ -80,4 +80,3 @@ Volume、Geometry Nodes 输出和等值面 Mesh 是可删除的派生视图：
 4. `bohr` 与 `angstrom` 不被静默混用；显示换算不改权威 Grid3D。
 5. 删除 ChemBlender-owned VDB 后可从 sidecar Grid3D 重建。
 6. `ChemBlender.core` 在普通 CPython 中导入时不加载 `bpy`。
-

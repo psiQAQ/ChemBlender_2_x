@@ -180,4 +180,3 @@ review and one separate code-quality review.
 
 **Stop boundary:** Cursor next task is Cube Task 1; do not start it and do not
 push.
-
