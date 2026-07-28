@@ -1051,6 +1051,27 @@ def assert_quick_import(module_key, repository_root):
     assert resolved_grid.status is core.DatasetStatus.COMPLETE
     assert resolved_grid.semantic_role == "scalar_field"
     assert session.project.datasets[cube_grid.id] is cube_grid
+    objects_before_surface = set(bpy.data.objects)
+    assert bpy.ops.chemblender.create_grid_view(
+        mode="signed_surface"
+    ) == {"FINISHED"}
+    cube_surface_objects = tuple(
+        set(bpy.data.objects) - objects_before_surface
+    )
+    assert len(cube_surface_objects) == 2
+    assert {
+        obj["cb_surface_phase"] for obj in cube_surface_objects
+    } == {"positive", "negative"}
+    for obj in cube_surface_objects:
+        assert obj["cb_dataset_id"] == str(resolved_grid.id)
+        assert obj["cb_dataset_revision"] == resolved_grid.revision
+        assert obj["cb_dataset_index"] == 0
+        assert obj["cb_view_quality"] == "complete"
+        assert obj["cb_report_eligible"]
+        assert json.loads(obj["cb_scene_bindings_json"])["grid"] == {
+            "entity_id": str(resolved_grid.id),
+            "revision": resolved_grid.revision,
+        }
     browser_settings.mode = "by_data"
     rows_after_cube = browser.refresh_project_browser(bpy.context.scene)
     assert browser_settings.quality_filter == "all"
@@ -1215,6 +1236,9 @@ def assert_quick_import(module_key, repository_root):
     bpy.data.objects.remove(cube_view, do_unlink=True)
     if cube_volume.users == 0:
         bpy.data.volumes.remove(cube_volume)
+    surface_view = importlib.import_module(f"{module_key}.surface_view")
+    for obj in cube_surface_objects:
+        surface_view.remove_surface_object(obj)
     bpy.data.scenes.remove(switched_scene)
 
 

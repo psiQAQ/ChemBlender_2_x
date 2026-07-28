@@ -212,6 +212,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         )
         self.assertIn("ChemBlender/ui/view_cache.py", documented)
         self.assertIn("ChemBlender/ui/export.py", documented)
+        self.assertIn("ChemBlender/scripts/benchmark_cube_flow.py", documented)
         self.assertIn("ChemBlender/scripts/benchmark_extxyz.py", documented)
         self.assertIn("ChemBlender/scripts/release_metadata.py", documented)
         self.assertIn(
@@ -228,6 +229,20 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn(reference, agents)
         self.assertIn("code-architecture-guide.md", index)
         self.assertIn("Every architecture change", agents)
+
+    def test_cube_flow_baseline_records_real_budget_evidence(self):
+        baseline = self.read_doc(
+            "docs/quantum-visualization/2.3.0/benchmarks/"
+            "cube-flow-baseline.md"
+        )
+        for value in (
+            "128 × 128 × 128",
+            "1.659286 s",
+            "Blender 5.1.2",
+            "cold VDB cache",
+            "Remote CI: Not Run",
+        ):
+            self.assertIn(value, baseline)
 
     def test_quantum_model_is_a_package(self):
         import importlib
