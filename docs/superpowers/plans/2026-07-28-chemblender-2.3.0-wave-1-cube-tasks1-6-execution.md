@@ -38,8 +38,8 @@ services.
 
 | Task | State | Implementation commit | Review |
 |---|---|---|---|
-| 1 Cube source metadata | in progress | — | pending |
-| 2 Grid semantics and presets | pending | — | pending |
+| 1 Cube source metadata | completed | `08e020ab736543ec495895f77baa886a0838ca34` | SPEC PASS; QUALITY PASS |
+| 2 Grid semantics and presets | in progress | — | pending |
 | 3 Cube dataset and semantic UI | pending | — | pending |
 | 4 Progress-aware cancellable VDB cache | pending | — | pending |
 | 5 Surface quality and bindings | pending | — | pending |
@@ -61,15 +61,21 @@ services.
 - Keeps Cube comments, ordered dataset IDs, dataset count and signed axis
   convention in the existing `ProvenanceRecord.parameters`.
 
-- [ ] Write tests proving non-default and default nuclear charges are retained,
+- [x] Write tests proving non-default and default nuclear charges are retained,
   report IDs include the property, and project/canonical/sidecar round-trips
   preserve it.
-- [ ] Run `tests.test_cube_reader` and record the missing-property RED.
-- [ ] Retain parsed charges, construct the existing `AtomicProperty`, include it
+- [x] Run `tests.test_cube_reader` and record the missing-property RED.
+- [x] Retain parsed charges, construct the existing `AtomicProperty`, include it
   beside the `Grid3D`, remove the obsolete unsupported diagnostic and update
   parsed capabilities.
-- [ ] Run Cube, project, canonical and sidecar focused tests.
-- [ ] Review and commit `feat: preserve Cube source metadata`.
+- [x] Run Cube, project, canonical and sidecar focused tests.
+- [x] Review and commit `feat: preserve Cube source metadata`.
+
+**Evidence:** Initial Cube run had two `StopIteration` errors because no
+`AtomicProperty` existed. Focused verification passed 99/99. The first full run
+exposed stale reader-matrix and conformance expectations; after synchronizing
+the version-2 atomic-property capability, full discovery passed 1376 tests with
+28 skips and 0 failures.
 
 ## Task 2 — Resolve grid semantics with deterministic presets
 
