@@ -62,10 +62,14 @@ from .spectroscopy import (
     VibrationalModeSet,
 )
 from .structure import (
+    cartesian_to_fractional,
+    fractional_to_cartesian,
     MolecularTopology,
     PeriodicSiteData,
     Structure,
     SymmetryResult,
+    unit_cell_parameters,
+    validate_periodic_coordinate_consistency,
 )
 from .topology import TopologyConnection, TopologyGraph, TopologyPath
 from .wavefunction import (

@@ -34,7 +34,10 @@ PUBLIC_CORE_NAMES = (
     "SourceRecord", "SourceRevision", "Spectrum", "SpectrumKind", "SpectrumProfile", "SpinChannel", "SceneBindingSpec",
     "ScenePresetDefinition", "ScenePresetError", "ScenePresetPlan",
     "SidecarCompatibilityError", "SidecarError", "SidecarIntegrityError", "SidecarNotFoundError",
-    "SpglibDependencyError", "Structure", "SurfaceProperty", "CellFrameProperty", "TopologyConnection",
+    "SpglibDependencyError", "Structure", "unit_cell_parameters",
+    "fractional_to_cartesian", "cartesian_to_fractional",
+    "validate_periodic_coordinate_consistency", "SurfaceProperty",
+    "CellFrameProperty", "TopologyConnection",
     "TopologyGraph", "TopologyPath", "SymmetryResult", "VibrationalModeSet",
     "TrajectoryFrameManager", "XYZ_READER", "adapt_ase_atoms", "build_analysis_report",
     "export_qcschema", "export_cjson", "export_qcschema_atomic_result", "parse_cube",
@@ -71,7 +74,7 @@ class CorePublicApiTests(unittest.TestCase):
     def test_public_names_are_frozen(self):
         self.assertEqual(tuple(core.__all__), PUBLIC_CORE_NAMES)
         self.assertEqual(len(core.__all__), len(set(core.__all__)))
-        self.assertEqual(len(core.__all__), 229)
+        self.assertEqual(len(core.__all__), 233)
 
     def test_public_names_resolve_to_attributes(self):
         missing = [name for name in core.__all__ if not hasattr(core, name)]
@@ -85,7 +88,8 @@ class CorePublicApiTests(unittest.TestCase):
     def test_import_does_not_load_blender_or_optional_stacks(self):
         code = (
             "import sys; import ChemBlender.core; "
-            "forbidden = {'bpy', 'cclib', 'iodata', 'gbasis', 'ase', 'pymatgen', 'rdkit'}; "
+            "forbidden = {'bpy', 'cclib', 'iodata', 'gbasis', 'ase', 'gemmi', "
+            "'pymatgen', 'rdkit', 'spglib'}; "
             "raise SystemExit(bool(forbidden & set(sys.modules)))"
         )
         result = subprocess.run(

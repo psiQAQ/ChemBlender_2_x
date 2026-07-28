@@ -14,6 +14,13 @@
 `Structure.topology_ids` 只保存关联 UUID，活动 topology 属于 View 状态。
 旧 sidecar 中内嵌的 `MolecularTopology` 仅作为读取兼容输入。
 
+周期晶体继续使用统一 `Structure`：`cell` 保存三个 row-vector 晶格向量，
+`PeriodicSiteData` 保存 fractional coordinates 与 PBC。
+`unit_cell_parameters()`、`fractional_to_cartesian()`、
+`cartesian_to_fractional()` 和
+`validate_periodic_coordinate_consistency()` 是纯 Python/NumPy 模型边界；
+它们不引入第二套晶体实体，也不加载 Gemmi、spglib、ASE 或 pymatgen。
+
 `AtomicIdentityData` 是可选逐 atom isotope、formal charge、atom-map、名称和
 stereo 值对象。`MolecularRecord` 保留单一精确 raw block 与有序（允许重复）原始
 属性。`RecordPropertyColumn` 与 `ConformerSet` 是可选 dataset 投影；它们不保存

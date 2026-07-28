@@ -13,7 +13,9 @@ from uuid import uuid4
 
 
 FIXTURE_ROOT = Path(__file__).with_name("fixtures") / "sdf"
-MOL_BLOCK = (Path(__file__).with_name("fixtures") / "mol" / "water-v2000.mol").read_bytes()
+MOL_BLOCK = (
+    Path(__file__).with_name("fixtures") / "mol" / "water-v2000.mol"
+).read_bytes().replace(b"\r\n", b"\n")
 
 
 def _record(*properties):

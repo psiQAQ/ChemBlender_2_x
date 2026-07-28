@@ -193,7 +193,10 @@ class MOLReaderTests(unittest.TestCase):
     def test_raw_bom_crlf_and_non_utf8_bytes_are_preserved_with_diagnostic(self) -> None:
         from ChemBlender.core.formats.mol import parse_mol
 
-        content = (FIXTURE_ROOT / "water-v2000.mol").read_bytes()
+        content = (FIXTURE_ROOT / "water-v2000.mol").read_bytes().replace(
+            b"\r\n",
+            b"\n",
+        )
         content = b"\xef\xbb\xbfwat\xffr\r\n" + content.split(b"\n", 1)[1].replace(b"\n", b"\r\n")
         with TemporaryDirectory() as directory:
             source = Path(directory) / "encoded.mol"

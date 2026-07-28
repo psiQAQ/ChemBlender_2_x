@@ -728,29 +728,16 @@ class ReaderCanonicalDocumentTests(unittest.TestCase):
 
     def test_pickle_backed_npy_and_object_arrays_are_rejected(self):
         with TemporaryDirectory() as temporary:
+            unsafe = sample_batch()
+            object.__setattr__(
+                unsafe.structures[0].coordinates,
+                "values",
+                numpy.asarray([[object(), object(), object()]], dtype=object),
+            )
             with self.assertRaises(
                 reader_api.CanonicalDocumentIntegrityError
             ):
-                reader_api.public_batch_document(
-                    reader_api.PublicImportBatch(
-                        structures=(
-                            reader_api.Structure(
-                                id=STRUCTURE_ID,
-                                revision="unsafe",
-                                atomic_numbers=(1,),
-                                coordinates=reader_api.ArrayData(
-                                    numpy.asarray(
-                                        [[object(), object(), object()]],
-                                        dtype=object,
-                                    ),
-                                    ("atom", "xyz"),
-                                    "angstrom",
-                                ),
-                            ),
-                        )
-                    ),
-                    temporary,
-                )
+                reader_api.public_batch_document(unsafe, temporary)
 
             raw = reader_api.public_batch_document(sample_batch(), temporary)
             valid = json.loads(raw)
