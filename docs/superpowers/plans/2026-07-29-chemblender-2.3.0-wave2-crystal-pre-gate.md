@@ -52,12 +52,12 @@ a second persisted authority.
 - Consumes: completed Wave 1 gate at `1bbab210...`.
 - Produces: one active Wave 2 cursor and one accepted model decision.
 
-- [ ] **Step 1: Update the active/queued documentation test**
+- [x] **Step 1: Update the active/queued documentation test**
 
 Set `WAVE_230_ACTIVE_FILE` to `2.3.0-wave-2-native-crystal.md` and keep only
 Wave 3 and Wave 4 in `WAVE_230_QUEUE_FILES`.
 
-- [ ] **Step 2: Run the documentation contract**
+- [x] **Step 2: Run the documentation contract**
 
 Run:
 
@@ -67,7 +67,7 @@ Run:
 
 Expected: all documentation tests pass with exactly one active Wave.
 
-- [ ] **Step 3: Commit activation and plan**
+- [x] **Step 3: Commit activation and plan**
 
 ```powershell
 git add .agents docs/superpowers tests/test_quantum_visualization_docs.py
@@ -100,13 +100,13 @@ git commit -m "docs: activate Wave 2 crystal pre-gate"
   `validate_periodic_coordinate_consistency(structure,
   absolute_tolerance=1e-9)`.
 
-- [ ] **Step 1: Write the failing cell/coordinate tests**
+- [x] **Step 1: Write the failing cell/coordinate tests**
 
 Cover known/unknown units, non-finite values, cell lengths/angles, skew-cell
 round trips, bohr retention, invalid shapes, mismatched units and explicit
 coordinate inconsistency.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run:
 
@@ -117,7 +117,7 @@ Run:
 Expected: import errors for the four missing public helpers and failures for
 currently accepted non-length/non-finite Structure coordinates.
 
-- [ ] **Step 3: Implement the minimum pure-core helpers**
+- [x] **Step 3: Implement the minimum pure-core helpers**
 
 Use row-vector algebra only:
 
@@ -129,7 +129,7 @@ fractional = cartesian @ numpy.linalg.inv(cell)
 Derive angles with clipped normalized dot products and `degrees(acos(...))`.
 Do not store derived parameters.
 
-- [ ] **Step 4: Run GREEN**
+- [x] **Step 4: Run GREEN**
 
 Run:
 
@@ -165,12 +165,12 @@ loadable until an adapter explicitly calls the consistency validator.
 - Produces: integer unimodular rotation validation and explicit conformance
   evidence for periodic edge/project rollback behavior.
 
-- [ ] **Step 1: Write failing symmetry tests**
+- [x] **Step 1: Write failing symmetry tests**
 
 Reject float rotations, singular/non-unimodular rotations, malformed
 translations and non-finite values; accept identity and inversion operations.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run:
 
@@ -181,12 +181,12 @@ Run:
 
 Expected: invalid float and non-unimodular rotations are currently accepted.
 
-- [ ] **Step 3: Add minimal `SymmetryResult` validation**
+- [x] **Step 3: Add minimal `SymmetryResult` validation**
 
 Require integer rotation dtype and determinant magnitude one for every
 operation. Retain the existing dimensionless/finiteness checks.
 
-- [ ] **Step 4: Verify topology and rollback**
+- [x] **Step 4: Verify topology and rollback**
 
 Run:
 
@@ -222,24 +222,24 @@ commit as Task 2.
 - Consumes: current `.cbq` v0.2 and canonical PublicImportBatch schemas.
 - Produces: compatibility evidence without a schema change.
 
-- [ ] **Step 1: Add persistence tests**
+- [x] **Step 1: Add persistence tests**
 
 Save/open a periodic project and canonicalize/decode its public batch. Assert
 structure UUID, lattice, fractional coordinates, PBC, topology shifts and
 lazy array integrity.
 
-- [ ] **Step 2: Add optional-import audit**
+- [x] **Step 2: Add optional-import audit**
 
 In a fresh process import `ChemBlender.core`; fail if `bpy`, `gemmi`,
 `spglib`, `ase` or `pymatgen` appears in `sys.modules`.
 
-- [ ] **Step 3: Stabilize Windows fixture bytes**
+- [x] **Step 3: Stabilize Windows fixture bytes**
 
 Normalize the shared in-memory MOL fixture to LF before constructing CRLF and
 10k synthetic test inputs. This removes checkout `core.autocrlf` from
 scientific hash expectations without altering production parsing.
 
-- [ ] **Step 4: Run focused persistence verification**
+- [x] **Step 4: Run focused persistence verification**
 
 ```powershell
 & $pythonBin -m unittest `
@@ -274,7 +274,7 @@ unchanged.
 - Consumes: final implementation commit.
 - Produces: completed gate evidence and next-task cursor.
 
-- [ ] **Step 1: Run repository verification**
+- [x] **Step 1: Run repository verification**
 
 ```powershell
 & $pythonBin -m unittest discover -s tests -p "test_*.py" -v
@@ -285,19 +285,19 @@ git diff --check
 
 Expected: zero failed/error tests and only accepted optional skips.
 
-- [ ] **Step 2: Run Blender package verification**
+- [x] **Step 2: Run Blender package verification**
 
 Run native extension validate/build and ZIP path/CRC/wheel audit with Blender
 5.1.2. No CIF/POSCAR/UI product smoke belongs to this gate.
 
-- [ ] **Step 3: Review the final diff twice**
+- [x] **Step 3: Review the final diff twice**
 
 First compare every requirement in ADR 0042 and this plan to tests and code.
 Then review the diff for public API drift, duplicated authorities, accidental
 optional imports and unrelated changes. Resolve every gate-related finding
 and rerun Steps 1–2.
 
-- [ ] **Step 4: Commit the completed cursor**
+- [x] **Step 4: Commit the completed cursor**
 
 ```powershell
 git add `
@@ -306,7 +306,7 @@ git add `
 git commit -m "chore: checkpoint crystal pre-gate"
 ```
 
-- [ ] **Step 5: Push the verified Wave 2 branch**
+- [x] **Step 5: Push the verified Wave 2 branch**
 
 Require clean worktree, fast-forward remote ancestry and a successful
 `git push --dry-run` before:
@@ -321,3 +321,31 @@ Verify `git ls-remote` matches local HEAD. Do not push tags or create a PR.
 
 **Stop boundary:** Stop after push. The next task is Wave 2 Task 1, beginning
 with Gemmi dependency approval; CIF/Gemmi/POSCAR/UI remain unstarted.
+
+## Completion Evidence
+
+- Planning commit:
+  `7314e03239e9f6c67fa6bc9ef54e3d13a054f82a`.
+- Implementation commit:
+  `f5ed327413bec04deb5f2cf92b43e45035ecf630`.
+- RED:
+  the initial 13-test crystal contract run reported six failures and six
+  errors for missing helpers and accepted invalid data; the fresh-checkout
+  baseline reported `1411 Ran / 28 Skipped / 1 Failed / 1 Error` from
+  checkout-dependent MOL fixture line endings.
+- GREEN:
+  focused `166/166 Passed`; full `1424 Passed / 28 Skipped / 0 Failed`;
+  compileall, docs `15/15`, optional-import audit and `git diff --check`
+  Passed.
+- Persistence:
+  `.cbq` and canonical Reader API round-trips, lazy coordinate/cell ownership,
+  project rollback, periodic topology shifts and legacy sidecars Passed.
+- Blender 5.1.2:
+  native preflight, extension validate/build and 154-entry ZIP
+  CRC/path/manifest/wheel audit Passed. Package SHA-256:
+  `63f4412d342ea8eef3eb36e94dd33699a9c1511987507c8df87e8ee22f5e937c`.
+- Reviews:
+  specification compliance and code-quality passes completed; lazy sidecar
+  ownership and unsafe dtype compatibility findings were fixed before final
+  verification.
+- Remote CI: `Not Run`.
