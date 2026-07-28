@@ -180,3 +180,24 @@ review and one separate code-quality review.
 
 **Stop boundary:** Cursor next task is Cube Task 1; do not start it and do not
 push.
+
+## Completion Evidence
+
+- State: `completed`.
+- Planning/ADR commit:
+  `9ccde2138d763a3948bdfde501e2a9e1817eed22`.
+- Implementation commit:
+  `dc2fa5dd4fb93fa1672b2a7f63d3f0597c81cd34`.
+- Blender contract commit:
+  `31a9a3c1a50ba3b322670bd22f27471c0ed7b747`.
+- Review-fix commit:
+  `a211c3746eba606ad9d0d7d86c8c8e68c9a85a1f`.
+- RED: Cube reader focused run had 1 failure because
+  `Grid3D.structure_id` was `None`.
+- GREEN: 109 focused tests passed; full suite 1347 Passed / 28 Skipped /
+  0 Failed.
+- Blender 5.1.2: validate/build, ZIP audit, isolated install, Cube binding,
+  VDB rebuild and lifecycle ×2 Passed.
+- Reviews: `SPEC PASS`; `QUALITY PASS`.
+- Remote CI: `Not Run`.
+- Stop: Cube Task 1 remains unstarted; no push was performed.
