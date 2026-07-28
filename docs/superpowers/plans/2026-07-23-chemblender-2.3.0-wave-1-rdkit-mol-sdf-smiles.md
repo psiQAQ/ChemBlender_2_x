@@ -238,22 +238,28 @@ Compare chemistry, coordinates within writer precision, charges, isotopes, stere
 **Interfaces:**
 - Produces: record browsing, conformer confirmation, SMILES input through unified pipeline and explicit legacy errors.
 
-- [ ] **Step 1: Add record/SD property browser rows**
+- [x] **Step 1: Add record/SD property browser rows**
 
 Show record count, failed records, group suggestions and property columns. Default view uses first valid record or accepted first conformer group.
 
-- [ ] **Step 2: Route legacy SMILES and File actions**
+- [x] **Step 2: Route legacy SMILES and File actions**
 
 Legacy UI constructs ImportRequest. Do not call old `read_MOL` for migrated types.
 
-- [ ] **Step 3: Make remaining unsupported legacy inputs explicit**
+- [x] **Step 3: Make remaining unsupported legacy inputs explicit**
 
 Until MOL2 Wave 3, old MOL2 input returns a controlled unsupported diagnostic rather than using an uninitialized `mol`. All RDKit parse `None` cases return user-visible errors.
 
-- [ ] **Step 4: Blender smoke and performance**
+- [x] **Step 4: Blender smoke and performance**
 
 Import V2000, V3000, multi-record SDF and SMILES; accept a conformer group; create/save/reopen views; export. Benchmark 10k-record indexing without creating 10k objects.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit UI/legacy bridge and tests.
+
+**Completed:** `e1bf9c8a56a299d0fac8d8238339cbf31f3b783f`.
+
+**Verification:** focused 361/361; full 1375 Ran, 1347 Passed, 28 Skipped,
+0 Failed; Blender 5.1.2 validate/build, ZIP audit, isolated product/lifecycle
+smoke and 10,000-record workflow Passed; `SPEC PASS`; `QUALITY PASS`.

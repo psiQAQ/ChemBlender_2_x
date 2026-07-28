@@ -24,9 +24,9 @@ export reconstructs a temporary RDKit Mol from immutable project entities.
 | 3 MOL reader | completed | `ef57adc2`, `5acfdf46` | SPEC PASS; QUALITY PASS |
 | 4 SDF reader/recovery | completed | `8f69e7bd`, `4df0b809`, `f926da2b`, `0e9f776`, `dffaa85`, `bc32578`, `4d45697`, `344fa2c` | SPEC PASS; QUALITY PASS |
 | 5 Conformer grouping | completed | `97fa019`, `f6ee00b`, `7fa2aa6` | SPEC PASS; QUALITY PASS |
-| 6 SMILES/3D | in_progress | — | — |
-| 7 Exporters | pending | — | — |
-| 8 UI/performance | pending | — | — |
+| 6 SMILES/3D | completed | `b266039` | SPEC PASS; QUALITY PASS |
+| 7 Exporters | completed | `1229d78` | SPEC PASS; QUALITY PASS |
+| 8 UI/performance | completed | `e1bf9c8` | SPEC PASS; QUALITY PASS |
 
 ## Global Constraints
 
@@ -328,6 +328,21 @@ reviews.
 
 **Commit message:** `feat: complete RDKit molecular import and export workflow`
 
+**Completed:** `e1bf9c8a56a299d0fac8d8238339cbf31f3b783f`.
+
+**Verification:** final focused 361/361; full 1375 Ran, 1347 Passed,
+28 Skipped, 0 Failed; `compileall` and `git diff --check` Passed. Blender
+5.1.2 native validate/build, 150-entry ZIP audit, isolated install, full
+product/lifecycle smoke and the real 10,000-record workflow Passed. Reviews:
+`SPEC PASS`; `QUALITY PASS`.
+
+**Performance:** 10,000 records / 6,404,000 bytes / 100 canonical identities;
+peak 111,738,965 bytes. Reader preflight 114.381 s; conformer suggestions
+median 13.139 s, p95 13.389 s; preview median 0.264 s, p95 0.276 s; commit
+44.685 s; browser median 2.006 s, p95 2.011 s; filter median 0.089 s,
+p95 0.119 s. The 40,007-row RNA projection retained 1,000 rows with median
+5.71 ms, p95 5.85 ms and 19,918-byte peak memory.
+
 **Next task:** Stop before Cube Task 1.
 
 ## Final Verification and Stop Boundary
@@ -340,4 +355,5 @@ reviews.
   Cube runtime was added, and `Remote CI: Not Run`.
 - Complete final independent spec/quality reviews.
 - Commit `chore: checkpoint RDKit molecular workflow`.
-- Stop with Cube Task 1 unstarted and do not push.
+- Completed locally through Task 8; Cube Task 1 remains unstarted,
+  `Remote CI: Not Run`, and no push was performed.
