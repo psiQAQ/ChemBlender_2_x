@@ -222,14 +222,23 @@ smoke passed. Implementation:
 - The benchmark CLI emits canonical JSON with hardware, dataset size, runs,
   median, p95, peak memory and per-stage results.
 
-- [ ] Write the product-flow and benchmark-contract tests and record RED.
-- [ ] Implement a generated 128³ input path without committing a large binary
+- [x] Write the product-flow and benchmark-contract tests and record RED.
+- [x] Implement a generated 128³ input path without committing a large binary
   fixture; benchmark parse, array staging, save, cold/hot cache and view stages
   separately.
-- [ ] Run focused flow tests and the real Blender benchmark.
-- [ ] Compare total 128³ time with the 10 s Wave budget; if it fails, profile
+- [x] Run focused flow tests and the real Blender benchmark.
+- [x] Compare total 128³ time with the 10 s Wave budget; if it fails, profile
   the blocking stage and keep the gate failed.
-- [ ] Review and commit `test: close Cube product and performance flow`.
+- [x] Review and commit `test: close Cube product and performance flow`.
+
+**Evidence:** RED ran two product-flow tests with one failure because the
+benchmark script did not exist. GREEN passed 38/38 focused tests and the full
+suite passed 1397 tests with 28 skips and 0 failures. Blender 5.1.2 native
+validate/build and isolated product/lifecycle smoke passed, including a
+resolved Cube signed-isosurface view. The real 128³ benchmark measured
+1.659286 s total median, 299,352,487 peak Python bytes and passed the 10 s
+budget. Specification and quality reviews passed. Implementation:
+`728f956b09882f58c26955df79c59e79aabf8dcb`.
 
 ## Pre-alpha.2 performance gate
 
