@@ -59,6 +59,7 @@ Historical documents provide provenance, not current status.
 | decision | [0038-prerelease-schema-freeze-and-release-train.md](decisions/0038-prerelease-schema-freeze-and-release-train.md) | Prerelease train and schema/API freeze |
 | decision | [0039-legacy-scene-explicit-migration.md](decisions/0039-legacy-scene-explicit-migration.md) | Explicit legacy-scene migration |
 | decision | [0040-explicit-registration-and-module-boundary.md](decisions/0040-explicit-registration-and-module-boundary.md) | Explicit registration and module boundaries |
+| decision | [0041-cube-structure-reference-policy.md](decisions/0041-cube-structure-reference-policy.md) | Cube structure references, units, and derived-view authority |
 | active | [2.3.0-wave-1-native-molecular-and-grid.md](active/2.3.0-wave-1-native-molecular-and-grid.md) | Wave 1 native molecular and grid formats |
 | queued | [2.3.0-wave-2-native-crystal.md](queued/2.3.0-wave-2-native-crystal.md) | Wave 2 native crystal formats |
 | queued | [2.3.0-wave-3-exchange-mol2-pdb-pqr.md](queued/2.3.0-wave-3-exchange-mol2-pdb-pqr.md) | Wave 3 exchange and bio formats |
