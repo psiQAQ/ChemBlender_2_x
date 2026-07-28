@@ -105,7 +105,8 @@ def _replacement_number(value, missing_value_token):
         return missing_value_token
 
 
-def _atomic_write_chunks(destination, chunks, *, is_cancelled=None):
+def atomic_write_chunks(destination, chunks, *, is_cancelled=None):
+    """Write UTF-8 chunks atomically with cooperative cancellation."""
     destination = Path(destination)
     if _cancelled(is_cancelled):
         raise ExportCancelled("export cancelled")
@@ -130,7 +131,11 @@ def _atomic_write_chunks(destination, chunks, *, is_cancelled=None):
 
 
 def _atomic_write(destination, content):
-    _atomic_write_chunks(destination, (content,))
+    atomic_write_chunks(destination, (content,))
+
+
+# Kept private as a compatibility alias for the existing exporter internals.
+_atomic_write_chunks = atomic_write_chunks
 
 
 def _structure_rows(structure):
@@ -1000,6 +1005,7 @@ __all__ = (
     "ExportReport",
     "ExportReportEntry",
     "ExportCancelled",
+    "atomic_write_chunks",
     "export_extxyz",
     "export_xyz",
     "preview_extxyz_export",

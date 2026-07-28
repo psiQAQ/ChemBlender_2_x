@@ -1,12 +1,16 @@
 import bpy
 import os
 import numpy as np
+import warnings
 from . import read, mesh, _math
 from .Chem_data import ELEMENTS_DEFAULT
 from bpy.types import Operator
 from bpy.props import IntProperty, FloatProperty, BoolProperty, StringProperty,EnumProperty, FloatVectorProperty
 language = 1 if 'zh_HAN' in bpy.context.preferences.view.language else 0
 warning_text = "请选择一个有效的分子骨架！" if language else "Please Select a Effective Mol Scaffold"
+
+def _legacy_mol_export_warning():
+    warnings.warn("legacy Blender-scaffold MOL/SDF helpers are deprecated; use core.exporters for new data-model exports", DeprecationWarning, stacklevel=2)
 
 def xyz_block(name, atoms):
     lines = []
@@ -17,6 +21,7 @@ def xyz_block(name, atoms):
     return lines
 
 def mol_block_v2000(name, atoms, bonds):
+    _legacy_mol_export_warning()
     lines = []
     lines.append(name)
     lines.append("  ChemBlender")
@@ -34,6 +39,7 @@ def mol_block_v2000(name, atoms, bonds):
     return lines
 
 def mol_block_v3000(name, atoms, bonds):
+    _legacy_mol_export_warning()
     lines = []
     # Header block
     lines.append(name)
@@ -49,7 +55,7 @@ def mol_block_v3000(name, atoms, bonds):
     lines.append("M  V30 END ATOM")
     # Bond block
     lines.append("M  V30 BEGIN BOND")
-    for bond_id, (v1, v2, bond_type) in enumerate(bonds):
+    for bond_id, (v1, v2, bond_type) in enumerate(bonds, start=1):
         lines.append(f"M  V30 {bond_id} {bond_type} {v1} {v2}")
     lines.append("M  V30 END BOND")
     lines.append("M  V30 END CTAB")
@@ -57,6 +63,7 @@ def mol_block_v3000(name, atoms, bonds):
     return lines
 
 def sdf_block(name, atoms, bonds):
+    _legacy_mol_export_warning()
     lines = mol_block_v2000(name, atoms, bonds)
     lines.append("$$$$")
     return lines

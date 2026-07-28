@@ -177,8 +177,9 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
-| `ChemBlender/core/exporters/__init__.py` | 模块级 re-export | 暴露原生文本格式的纯 Python 导出入口、无写入 loss preview、取消异常和语义比较器，不加载 Blender 或可选科学栈。 |
-| `ChemBlender/core/exporters/xyz.py` | `export_xyz()`、`export_extxyz()`、`preview_extxyz_export()`、`semantic_extxyz_differences()` | 确定性、同目录短临时文件原子写入 XYZ/extXYZ；每个 chunk 前响应取消并清理 temp，保留 typed frame/atom/cell property、integral-valued real metadata 与 validity，显式报告 partial/ambiguous loss，并按科学数据而非 UUID/空白比较 round-trip。 |
+| `ChemBlender/core/exporters/__init__.py` | 模块级 re-export | 暴露原生文本格式的纯 Python 导出入口、无写入 loss preview、取消异常和语义比较器，不加载 Blender 或 RDKit。 |
+| `ChemBlender/core/exporters/xyz.py` | `atomic_write_chunks()`、`export_xyz()`、`export_extxyz()`、`preview_extxyz_export()`、`semantic_extxyz_differences()` | 提供同目录短临时文件、fsync、replace、取消清理的共享 UTF-8 原子写入；其上确定性导出 XYZ/extXYZ，保留 typed frame/atom/cell property、integral-valued real metadata 与 validity，显式报告 partial/ambiguous loss，并按科学数据而非 UUID/空白比较 round-trip。 |
+| `ChemBlender/core/exporters/rdkit_molecular.py` | `SDFExportEntry`、`sdf_entries_from_conformer_set()`、`export_mol()`、`export_sdf()`、`export_smiles()`、`semantic_molecular_differences()` | 仅在调用时加载 RDKit，从 `Structure`、`AtomicIdentityData` 和选定 `TopologyRecord` 重建临时分子；严格审计 V2000 表示能力并自动选择 V3000，MOL/SDF 的 atom name 或 multiplicity loss 先要求确认，SDF 以 caller-selected `SDFExportEntry` 顺序保留 raw SD 属性的重复项；ConformerSet helper 按 reference atom order 生成派生记录而不二次应用 mapping；SMILES 在确认前只报告 loss，所有目标文件复用 shared atomic writer。 |
 | `ChemBlender/core/formats/__init__.py` | 模块级 re-export | 暴露原生文本格式 reader 的低层入口，不注册 reader 或接触项目状态。 |
 | `ChemBlender/core/formats/extxyz.py` | `parse_extxyz()`、`sniff_extxyz()`、`iter_extxyz_frames()` | 原生选择并逐帧解析 extXYZ，将兼容帧映射为确定性 `Structure`、`FrameSet` 与 typed frame/atom/cell property；大型数组由 staging NPY memmap 持有，取消时清理，不依赖 ASE。 |
 | `ChemBlender/core/formats/mol.py` | `MOL_READER`、`sniff_mol()`、`parse_mol()`、`parse_mol_request()` | 对单记录 MOL V2000/V3000 做完整 CTAB/atom/bond 结构 sniff，并仅在调用时加载 RDKit；保留原始 bytes，借助共享 adapter 输出结构、原子身份、显式拓扑、MolecularRecord、provenance 与诊断；产品请求直接沿用 host 的 source revision、hash、validation 和 cancellation。 |
