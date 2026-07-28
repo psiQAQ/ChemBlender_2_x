@@ -50,6 +50,8 @@ class CIFEnvelope:
     source_bytes: bytes
     tag_names: tuple[str, ...]
     provenance_ids: tuple[UUID, ...]
+    block_names: tuple[str, ...] = ()
+    block_keys: tuple[str, ...] = ()
 
     def __post_init__(self):
         _require_uuid(self.id, "id")
@@ -69,6 +71,21 @@ class CIFEnvelope:
             "provenance_ids",
             _require_uuid_tuple(self.provenance_ids, "provenance_ids"),
         )
+        block_names = tuple(self.block_names) or (self.block_name,)
+        block_keys = tuple(self.block_keys) or (self.block_name,)
+        if len(block_names) != len(block_keys) or any(
+            not isinstance(value, str) or not value
+            for value in block_names + block_keys
+        ):
+            raise ValueError(
+                "block_names and block_keys must contain matching non-empty strings"
+            )
+        if len(block_keys) != len(set(block_keys)):
+            raise ValueError("block_keys must be unique")
+        if self.block_name != block_names[0]:
+            raise ValueError("block_name must identify the first CIF block")
+        object.__setattr__(self, "block_names", block_names)
+        object.__setattr__(self, "block_keys", block_keys)
 
 
 @dataclass(frozen=True, slots=True)
@@ -378,9 +395,11 @@ class QCProject:
                 )
             record_keys.add(source_key)
             record_indices.add(source_index)
-        cif_envelope_ids = set(self.cif_envelopes).union(
-            envelope.id for envelope in batch.cif_envelopes
+        cif_envelopes = dict(self.cif_envelopes)
+        cif_envelopes.update(
+            (envelope.id, envelope) for envelope in batch.cif_envelopes
         )
+        cif_envelope_ids = set(cif_envelopes)
         qcschema_envelope_ids = set(self.qcschema_envelopes).union(
             envelope.id for envelope in batch.qcschema_envelopes
         )
@@ -423,6 +442,22 @@ class QCProject:
                 raise ValueError(
                     "periodic structure has a dangling CIF envelope reference"
                 )
+            if (
+                structure.periodic is not None
+                and structure.periodic.cif_block_index is not None
+            ):
+                envelope = cif_envelopes[structure.periodic.cif_envelope_id]
+                index = structure.periodic.cif_block_index
+                if (
+                    index >= len(envelope.block_keys)
+                    or envelope.block_keys[index]
+                    != structure.periodic.cif_block_key
+                    or envelope.block_names[index]
+                    != structure.periodic.cif_block_name
+                ):
+                    raise ValueError(
+                        "periodic structure has an invalid CIF block reference"
+                    )
             for topology_id in structure.topology_ids:
                 try:
                     topology = topologies[topology_id]

@@ -105,7 +105,11 @@ Run old Gemmi tests, reader conformance and catalog/capability tests; commit.
 
 - [ ] **Step 1: Write block-selection tests**
 
-A two-block file produces two SourcePreview records. Quick default selects the first block containing a valid atom-site loop; no valid block yields a blocking diagnostic but preserves source metadata.
+A two-block file produces one source preview containing two ordered block-local
+Structure records. Quick default ordering starts with the first block containing
+a valid atom-site loop; no valid block yields a blocking diagnostic but
+preserves source metadata. The source is not duplicated into synthetic
+SourceRecord values merely to represent its blocks.
 
 - [ ] **Step 2: Preserve raw document and block identity**
 

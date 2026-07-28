@@ -1,6 +1,6 @@
 import hashlib
 from pathlib import Path
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid5
 
 from ..model import (
     ArrayData,
@@ -101,20 +101,54 @@ def _lattice_and_cartesian(gemmi, small):
     return lattice, fractional, fractional @ lattice
 
 
-def parse_cif(source: Path) -> ImportBatch:
+def _read_document(gemmi, content):
+    try:
+        return gemmi.cif.read_string(content)
+    except RuntimeError as error:
+        if "duplicate block name" not in str(error).lower():
+            raise
+        document = gemmi.cif.read_string(content, check_level=0)
+        names = tuple(block.name for block in document)
+        if len(names) == len(set(names)):
+            raise
+        for block in document:
+            tags = tuple(tag.lower() for tag in _tag_names(block))
+            if len(tags) != len(set(tags)):
+                raise RuntimeError(
+                    f"duplicate CIF tag in block {block.name!r}"
+                ) from error
+        return document
+
+
+def _block_keys(block_names):
+    counts = {}
+    used = set()
+    keys = []
+    for name in block_names:
+        count = counts.get(name, 0) + 1
+        counts[name] = count
+        key = name if count == 1 else f"{name}#{count}"
+        while key in used:
+            count += 1
+            counts[name] = count
+            key = f"{name}#{count}"
+        used.add(key)
+        keys.append(key)
+    return tuple(keys)
+
+
+def _parse_block(
+    gemmi,
+    block,
+    *,
+    source_hash,
+    envelope_id,
+    block_name,
+    block_key,
+    block_index,
+):
     import numpy
 
-    gemmi = _gemmi()
-    source = Path(source)
-    content = source.read_bytes()
-    source_hash = hashlib.sha256(content).hexdigest()
-    try:
-        document = gemmi.cif.read_file(str(source))
-    except RuntimeError as error:
-        raise ValueError(f"Gemmi could not parse CIF: {error}") from error
-    if len(document) != 1:
-        raise ValueError("CIF reader requires exactly one data block")
-    block = document.sole_block()
     try:
         small = gemmi.make_small_structure_from_block(block)
     except RuntimeError as error:
@@ -189,9 +223,13 @@ def parse_cif(source: Path) -> ImportBatch:
     adp_map = _site_map(gemmi, block, "_atom_site_adp_type")
     adp_types = tuple(adp_map.get(label, "none") or "none" for label in labels)
     disorder_groups = tuple(max(0, int(site.disorder_group)) for site in small.sites)
-    envelope_id = uuid4()
-    provenance_id = uuid4()
-    structure_id = uuid4()
+    structure_id = uuid5(
+        NAMESPACE_URL,
+        (
+            f"chemblender:cif:{ADAPTER_VERSION}:{source_hash}:"
+            f"{block_key}:structure"
+        ),
+    )
     space_group_name = small.spacegroup_hm or None
     space_group_number = small.spacegroup_number or None
     symmetry_operations = tuple(
@@ -211,22 +249,17 @@ def parse_cif(source: Path) -> ImportBatch:
         declared_space_group_number=space_group_number,
         symmetry_operations=symmetry_operations,
         cif_envelope_id=envelope_id,
+        cif_block_name=block_name,
+        cif_block_key=block_key,
+        cif_block_index=block_index,
     )
     structure = Structure(
         id=structure_id,
-        revision=source_hash,
+        revision=f"{source_hash}:{block_key}",
         atomic_numbers=atomic_numbers,
         coordinates=ArrayData(cartesian, ("atom", "xyz"), "angstrom"),
         cell=ArrayData(lattice, ("cell_vector", "xyz"), "angstrom"),
         periodic=periodic,
-    )
-    envelope = CIFEnvelope(
-        id=envelope_id,
-        revision=source_hash,
-        block_name=block.name,
-        source_bytes=content,
-        tag_names=tags,
-        provenance_ids=(provenance_id,),
     )
     issues = []
     if numpy.any(occupancies < 1.0):
@@ -245,6 +278,88 @@ def parse_cif(source: Path) -> ImportBatch:
                 "disorder groups were preserved; symmetry derivation is disabled",
             )
         )
+    return structure, tuple(issues)
+
+
+def parse_cif(source: Path) -> ImportBatch:
+    gemmi = _gemmi()
+    source = Path(source)
+    content = source.read_bytes()
+    source_hash = hashlib.sha256(content).hexdigest()
+    try:
+        document = _read_document(gemmi, content)
+    except RuntimeError as error:
+        raise ValueError(f"Gemmi could not parse CIF: {error}") from error
+    if not document:
+        raise ValueError("CIF document does not contain a data block")
+
+    blocks = tuple(document)
+    block_names = tuple(block.name for block in blocks)
+    block_keys = _block_keys(block_names)
+    envelope_id = uuid5(
+        NAMESPACE_URL,
+        f"chemblender:cif:{ADAPTER_VERSION}:{source_hash}:envelope",
+    )
+    provenance_id = uuid5(envelope_id, "provenance")
+    tag_names = tuple(
+        dict.fromkeys(tag for block in blocks for tag in _tag_names(block))
+    )
+    envelope = CIFEnvelope(
+        id=envelope_id,
+        revision=source_hash,
+        block_name=block_names[0],
+        source_bytes=content,
+        tag_names=tag_names,
+        provenance_ids=(provenance_id,),
+        block_names=block_names,
+        block_keys=block_keys,
+    )
+    issues = [
+        ParserIssue(
+            IssueKind.AMBIGUOUS,
+            f"cif.blocks[{index}].name",
+            (
+                f"duplicate CIF block name {name!r} was assigned "
+                f"source-local key {block_keys[index]!r}"
+            ),
+        )
+        for index, name in enumerate(block_names)
+        if block_names[:index].count(name)
+    ]
+    structures = []
+    for index, (block, block_name, block_key) in enumerate(
+        zip(blocks, block_names, block_keys)
+    ):
+        try:
+            structure, block_issues = _parse_block(
+                gemmi,
+                block,
+                source_hash=source_hash,
+                envelope_id=envelope_id,
+                block_name=block_name,
+                block_key=block_key,
+                block_index=index,
+            )
+        except ValueError as error:
+            issues.append(
+                ParserIssue(
+                    IssueKind.WARNING,
+                    f"cif.blocks[{index}]",
+                    f"block {block_key!r} has no importable structure: {error}",
+                )
+            )
+            continue
+        structures.append(structure)
+        issues.extend(block_issues)
+    if not structures:
+        issues.append(
+            ParserIssue(
+                IssueKind.INVALID,
+                "cif.blocks",
+                "CIF document does not contain an importable atom-site block",
+            )
+        )
+
     provenance = ProvenanceRecord(
         id=provenance_id,
         revision=source_hash,
@@ -254,17 +369,20 @@ def parse_cif(source: Path) -> ImportBatch:
         source_hash=source_hash,
         parent_ids=(),
         operation="parse",
-        parameters=(("format", "cif"), ("block_name", block.name)),
+        parameters=(("format", "cif"), ("block_keys", block_keys)),
     )
     report = ParserReport(
         reader_id="cif",
         reader_version=ADAPTER_VERSION,
-        created_entity_ids=(structure_id, envelope_id, provenance_id),
+        created_entity_ids=tuple(
+            [structure.id for structure in structures]
+            + [envelope_id, provenance_id]
+        ),
         parsed_capabilities=("structure", "crystal", "cif_envelope"),
         issues=tuple(issues),
     )
     return ImportBatch(
-        structures=(structure,),
+        structures=tuple(structures),
         cif_envelopes=(envelope,),
         provenance=(provenance,),
         report=report,

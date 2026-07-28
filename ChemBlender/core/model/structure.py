@@ -26,6 +26,9 @@ class PeriodicSiteData:
     symmetry_operations: tuple[str, ...]
     cif_envelope_id: UUID | None
     pbc: tuple[bool, bool, bool] = (True, True, True)
+    cif_block_name: str | None = None
+    cif_block_key: str | None = None
+    cif_block_index: int | None = None
 
     def __post_init__(self):
         import numpy
@@ -118,6 +121,26 @@ class PeriodicSiteData:
             raise ValueError("symmetry_operations must contain non-empty strings")
         if self.cif_envelope_id is not None:
             _require_uuid(self.cif_envelope_id, "cif_envelope_id")
+        block_identity = (
+            self.cif_block_name,
+            self.cif_block_key,
+            self.cif_block_index,
+        )
+        if any(value is not None for value in block_identity):
+            if self.cif_envelope_id is None or any(
+                value is None for value in block_identity
+            ):
+                raise ValueError(
+                    "CIF block identity requires an envelope, name, key and index"
+                )
+            _require_text(self.cif_block_name, "cif_block_name")
+            _require_text(self.cif_block_key, "cif_block_key")
+            if (
+                isinstance(self.cif_block_index, bool)
+                or not isinstance(self.cif_block_index, int)
+                or self.cif_block_index < 0
+            ):
+                raise ValueError("cif_block_index must be a non-negative integer")
         pbc = tuple(self.pbc)
         if len(pbc) != 3 or any(not isinstance(value, bool) for value in pbc):
             raise ValueError("pbc must contain three bool values")

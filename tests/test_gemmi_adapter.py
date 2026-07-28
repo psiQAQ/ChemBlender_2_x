@@ -2,7 +2,6 @@ import importlib.util
 from pathlib import Path
 import subprocess
 import sys
-import tempfile
 import unittest
 
 import numpy
@@ -123,12 +122,11 @@ class GemmiAdapterTests(unittest.TestCase):
         self.assertIsNone(periodic.anisotropic_displacements)
 
     @unittest.skipUnless(HAS_GEMMI, "Gemmi integration dependency is unavailable")
-    def test_multiple_blocks_are_rejected(self):
-        with tempfile.TemporaryDirectory() as directory:
-            source = Path(directory) / "multiple.cif"
-            source.write_bytes(b"data_a\n_custom 1\ndata_b\n_custom 2\n")
-            with self.assertRaisesRegex(ValueError, "exactly one data block"):
-                parse_cif(source)
+    def test_multiple_blocks_are_preserved(self):
+        source = ROOT / "tests" / "fixtures" / "cif" / "multi-block.cif"
+        batch = parse_cif(source)
+        self.assertEqual(len(batch.structures), 2)
+        self.assertEqual(len(batch.cif_envelopes), 1)
 
 
 if __name__ == "__main__":

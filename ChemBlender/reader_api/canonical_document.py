@@ -457,6 +457,15 @@ class _Decoder:
             value = dict(value, molecular_records={"$tuple": []})
         elif type_name == "Structure" and "atomic_identity" not in value:
             value = dict(value, atomic_identity=None)
+        elif type_name == "CIFEnvelope":
+            value = dict(value)
+            value.setdefault("block_names", {"$tuple": []})
+            value.setdefault("block_keys", {"$tuple": []})
+        elif type_name == "PeriodicSiteData":
+            value = dict(value)
+            value.setdefault("cif_block_name", None)
+            value.setdefault("cif_block_key", None)
+            value.setdefault("cif_block_index", None)
         expected = {"$type"} | {
             item.name for item in fields(class_type) if item.init
         }

@@ -382,6 +382,15 @@ class _Decoder:
             class_type = model_type_from_tag(type_name)
         except (KeyError, TypeError) as error:
             raise SidecarIntegrityError(f"unknown model type: {type_name!r}") from error
+        if class_type is model.CIFEnvelope:
+            value = dict(value)
+            value.setdefault("block_names", {"$tuple": []})
+            value.setdefault("block_keys", {"$tuple": []})
+        elif class_type is model.PeriodicSiteData:
+            value = dict(value)
+            value.setdefault("cif_block_name", None)
+            value.setdefault("cif_block_key", None)
+            value.setdefault("cif_block_index", None)
         expected = {item.name for item in fields(class_type) if item.init}
         actual = set(value) - {"$type"}
         if actual != expected:
