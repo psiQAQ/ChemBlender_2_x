@@ -192,13 +192,20 @@ install/lifecycle passed. Implementation:
 - View/object metadata contains both source grid IDs/revisions, dataset indices,
   roles, units, isovalue, range/colormap and render-cache identity.
 
-- [ ] Test raw/resolved quality, exact/mismatched alignment, no silent
+- [x] Test raw/resolved quality, exact/mismatched alignment, no silent
   resampling and full binding persistence.
-- [ ] Run surface/scene tests and record the missing validation/binding RED.
-- [ ] Add one shared alignment guard and extend existing metadata dictionaries;
+- [x] Run surface/scene tests and record the missing validation/binding RED.
+- [x] Add one shared alignment guard and extend existing metadata dictionaries;
   do not add a scientific surface model.
-- [ ] Run surface, scene-preset, view-cache and Blender smoke tests.
-- [ ] Review and commit `feat: complete Cube surface quality bindings`.
+- [x] Run surface, scene-preset, view-cache and Blender smoke tests.
+- [x] Review and commit `feat: complete Cube surface quality bindings`.
+
+**Evidence:** Focused RED showed ambiguous signed surfaces were rejected, no
+shared affine guard existed and `ViewRecord` lacked quality fields. Focused
+verification passed 97/97; full discovery passed 1394 tests with 28 skips and
+0 failures. Blender 5.1.2 native validate/build and short isolated product
+smoke passed. Implementation:
+`3ffdeff817ea52a71472161d5f048bc3dd54e717`.
 
 ## Task 6 — Close the Cube product and 128³ performance path
 
