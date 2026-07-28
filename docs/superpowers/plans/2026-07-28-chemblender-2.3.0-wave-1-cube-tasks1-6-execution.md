@@ -162,13 +162,19 @@ validate/build and short-path isolated install/lifecycle passed.
   verification and atomic replacement; Blender datablocks remain main-thread
   work in `grid_volume.py`.
 
-- [ ] Test cache hit, four cancellation checkpoints, writer failure, publish
+- [x] Test cache hit, four cancellation checkpoints, writer failure, publish
   failure, staging cleanup and unchanged prior cache.
-- [ ] Run the new service tests and record the import RED.
-- [ ] Extract only identity/staging from the current writer and reuse
+- [x] Run the new service tests and record the import RED.
+- [x] Extract only identity/staging from the current writer and reuse
   `short_sibling_temporary_path()` plus existing cache metadata.
-- [ ] Run cache, atomic-path, view-cache and Blender volume smoke tests.
-- [ ] Review and commit `feat: add cancellable Cube cache preparation`.
+- [x] Run cache, atomic-path, view-cache and Blender volume smoke tests.
+- [x] Review and commit `feat: add cancellable Cube cache preparation`.
+
+**Evidence:** The initial focused test failed with `ModuleNotFoundError`.
+Focused verification passed 110/110; full discovery passed 1390 tests with 28
+skips and 0 failures. Blender 5.1.2 native validate/build and short isolated
+install/lifecycle passed. Implementation:
+`00d013e095e1f6def04f969515b13e9075c823df`.
 
 ## Task 5 — Enforce surface quality, alignment and complete bindings
 
