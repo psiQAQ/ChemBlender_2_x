@@ -252,6 +252,20 @@ def presentation_view_records(scene):
             continue
         if type(bindings) is not dict:
             continue
+        quality = obj.get("cb_view_quality", "")
+        if (
+            type(quality) is not str
+            or quality not in {"", "complete", "partial", "ambiguous"}
+        ):
+            quality = ""
+        report_eligible = obj.get(
+            "cb_report_eligible",
+            view_kind not in {"signed_isosurface", "property_on_surface"},
+        )
+        if type(report_eligible) is not bool:
+            report_eligible = False
+        if quality in {"partial", "ambiguous"}:
+            report_eligible = False
         for binding_name in sorted(bindings):
             binding = bindings[binding_name]
             if (
@@ -283,6 +297,8 @@ def presentation_view_records(scene):
                     revision=revision,
                     view_kind=view_kind,
                     label=obj.name,
+                    quality=quality,
+                    report_eligible=report_eligible,
                 )
             )
     return tuple(records)

@@ -1665,6 +1665,34 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"
         )
+
+    def test_surface_quality_and_report_eligibility_are_projected(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class ViewObject(dict):
+            name = "Raw Cube surface"
+
+        obj = ViewObject(
+            cb_scene_view_kind="signed_isosurface",
+            cb_scene_bindings_json=json.dumps(
+                {
+                    "grid": {
+                        "entity_id": str(GRID_ID),
+                        "revision": "grid-r1",
+                    }
+                }
+            ),
+            cb_view_quality="ambiguous",
+            cb_report_eligible=True,
+        )
+
+        record, = panel.presentation_view_records(
+            SimpleNamespace(objects=(obj,))
+        )
+        self.assertEqual(record.quality, "ambiguous")
+        self.assertFalse(record.report_eligible)
         panel.register()
         foreign = _Property("replacement")
         _Scene.chemblender_project_browser = foreign

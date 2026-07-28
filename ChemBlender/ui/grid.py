@@ -12,6 +12,7 @@ from ..core import (
     builtin_grid_semantic_presets,
     builtin_scene_presets,
     default_grid_isovalue,
+    grids_share_affine,
     plan_scene_preset,
     resolve_grid_semantics,
 )
@@ -107,19 +108,13 @@ def _grid(project, grid_id):
     return grid
 
 
-def _same_affine(left, right):
-    return (
-        left.grid_shape == right.grid_shape
-        and left.origin == right.origin
-        and left.step_vectors == right.step_vectors
-        and left.coordinate_unit == right.coordinate_unit
-        and left.structure_id == right.structure_id
-    )
-
-
 def grid_action_availability(project, grid_id):
     grid = _grid(project, grid_id)
     complete = grid.status is DatasetStatus.COMPLETE
+    surface_preview = grid.status in {
+        DatasetStatus.COMPLETE,
+        DatasetStatus.AMBIGUOUS,
+    }
     property_ids = (
         tuple(
             value.id
@@ -128,7 +123,7 @@ def grid_action_availability(project, grid_id):
                 isinstance(value, Grid3D)
                 and value.id != grid.id
                 and value.status is DatasetStatus.COMPLETE
-                and _same_affine(grid, value)
+                and grids_share_affine(grid, value)
             )
         )
         if complete
@@ -136,7 +131,7 @@ def grid_action_availability(project, grid_id):
     )
     return GridActionAvailability(
         volume=True,
-        signed_surface=complete,
+        signed_surface=surface_preview,
         property_grid_ids=tuple(sorted(property_ids, key=str)),
     )
 

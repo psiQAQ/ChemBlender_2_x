@@ -229,11 +229,13 @@ from .recipe import (
 )
 # Scene compatibility exports.
 from .scene_preset import (
+    GRID_AFFINE_ABS_TOLERANCE,
     SceneBindingSpec,
     ScenePresetDefinition,
     ScenePresetError,
     ScenePresetPlan,
     builtin_scene_presets,
+    grids_share_affine,
     plan_scene_preset,
     scene_plan_document,
     scene_preset_document,

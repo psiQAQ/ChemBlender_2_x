@@ -107,8 +107,17 @@ class GridUIContractTests(unittest.TestCase):
                 session.project.commit(batch)
                 raw_actions = grid_action_availability(session.project, raw.id)
                 self.assertTrue(raw_actions.volume)
-                self.assertFalse(raw_actions.signed_surface)
+                self.assertTrue(raw_actions.signed_surface)
                 self.assertEqual(raw_actions.property_grid_ids, ())
+                self.assertEqual(
+                    plan_grid_view(
+                        session.project,
+                        raw.id,
+                        mode="signed_surface",
+                        dataset_index=1,
+                    ).preset_id,
+                    "signed_isosurface",
+                )
                 self.assertEqual(
                     plan_grid_view(
                         session.project,

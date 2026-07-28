@@ -22,6 +22,7 @@ from .recipe import RecipeBinding, RecipeDefinition
 
 
 _TOKEN = re.compile(r"[a-z][a-z0-9_.-]*")
+GRID_AFFINE_ABS_TOLERANCE = 1.0e-9
 _ENTITY_TYPES = {
     "Structure": Structure,
     "Grid3D": Grid3D,
@@ -31,6 +32,31 @@ _ENTITY_TYPES = {
     "BandStructure": BandStructure,
     "DensityOfStates": DensityOfStates,
 }
+
+
+def grids_share_affine(left, right):
+    """Return whether two grids share one index-to-space mapping."""
+    if not isinstance(left, Grid3D) or not isinstance(right, Grid3D):
+        return False
+    if (
+        left.grid_shape != right.grid_shape
+        or left.coordinate_unit != right.coordinate_unit
+        or left.structure_id != right.structure_id
+    ):
+        return False
+    return all(
+        math.isclose(
+            left_value,
+            right_value,
+            rel_tol=0.0,
+            abs_tol=GRID_AFFINE_ABS_TOLERANCE,
+        )
+        for left_value, right_value in zip(
+            (*left.origin, *(value for row in left.step_vectors for value in row)),
+            (*right.origin, *(value for row in right.step_vectors for value in row)),
+            strict=True,
+        )
+    )
 
 
 class ScenePresetError(ValueError):
@@ -327,6 +353,14 @@ def _settings(preset, supplied, entities):
             raise ScenePresetError("structure display unit must be angstrom")
     elif kind in {"grid_volume", "signed_isosurface"}:
         grid = entities["grid"]
+        if (
+            kind == "signed_isosurface"
+            and grid.status
+            not in {DatasetStatus.COMPLETE, DatasetStatus.AMBIGUOUS}
+        ):
+            raise ScenePresetError(
+                "surface preview requires complete or ambiguous grid"
+            )
         dataset_count = grid.data.shape[0] if grid.data.dims[0] == "dataset" else 1
         result["dataset_index"] = _index(
             result["dataset_index"], dataset_count, "dataset_index"
@@ -364,13 +398,7 @@ def _settings(preset, supplied, entities):
             raise ScenePresetError("symmetric color range must be centered on zero")
         if result["colormap"] != "coolwarm":
             raise ScenePresetError("unsupported property surface colormap")
-        if (
-            surface.grid_shape != prop.grid_shape
-            or surface.origin != prop.origin
-            or surface.step_vectors != prop.step_vectors
-            or surface.coordinate_unit != prop.coordinate_unit
-            or surface.structure_id != prop.structure_id
-        ):
+        if not grids_share_affine(surface, prop):
             raise ScenePresetError("surface and property grids must share one affine grid")
     elif kind in {"vibration_spectrum_linked", "electronic_spectrum_linked"}:
         source_name = "modes" if kind.startswith("vibration") else "states"
@@ -430,7 +458,8 @@ def plan_scene_preset(preset, project, bindings, settings):
             project,
             spec,
             identity,
-            require_complete=preset.view_kind != "grid_volume",
+            require_complete=preset.view_kind
+            not in {"grid_volume", "signed_isosurface"},
         )
         entities[spec.name] = entity
         normalized_bindings.append(

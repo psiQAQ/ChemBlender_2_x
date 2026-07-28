@@ -31,6 +31,8 @@ class ViewRecord:
     revision: str
     view_kind: str
     label: str
+    quality: str = ""
+    report_eligible: bool = True
 
     def __post_init__(self):
         if type(self.entity_id) is not UUID:
@@ -41,6 +43,14 @@ class ViewRecord:
                 raise TypeError(f"{name} must be str")
             if not value.strip():
                 raise ValueError(f"{name} must not be empty")
+        if type(self.quality) is not str:
+            raise TypeError("quality must be str")
+        if self.quality not in {"", "complete", "partial", "ambiguous"}:
+            raise ValueError("quality is not supported")
+        if type(self.report_eligible) is not bool:
+            raise TypeError("report_eligible must be bool")
+        if self.quality in {"partial", "ambiguous"} and self.report_eligible:
+            raise ValueError("non-complete view must not be report eligible")
 
 
 _REGISTRY_GROUPS = (
@@ -112,7 +122,7 @@ def _view_row(view, parent_id, depth):
         depth=depth,
         kind="view",
         label=view.label,
-        quality="",
+        quality=view.quality,
         view_count=0,
         entity_id=None,
     )
@@ -471,6 +481,8 @@ def build_browser_rows(
             view.revision,
             view.view_kind,
             view.label,
+            view.quality,
+            view.report_eligible,
         )
         for view in views
     )

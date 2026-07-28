@@ -2118,6 +2118,8 @@ def assert_scene_preset_application(module_key):
             created.extend(signed_objects)
             assert [obj["cb_surface_phase"] for obj in signed_objects] == ["positive", "negative"]
             assert [obj["cb_surface_isovalue"] for obj in signed_objects] == [0.5, -0.5]
+            assert all(obj["cb_view_quality"] == "complete" for obj in signed_objects)
+            assert all(obj["cb_report_eligible"] for obj in signed_objects)
             bpy.context.view_layer.update()
             depsgraph = bpy.context.evaluated_depsgraph_get()
             for obj in signed_objects:
@@ -2149,11 +2151,72 @@ def assert_scene_preset_application(module_key):
             attribute.data.foreach_get("value", sampled)
             assert min(sampled) < max(sampled)
             assert property_obj["cb_property_colormap"] == "coolwarm"
+            assert property_obj["cb_view_quality"] == "complete"
+            assert property_obj["cb_report_eligible"]
+            assert property_obj["cb_surface_dataset_id"] == str(density_grid.id)
+            assert property_obj["cb_surface_dataset_revision"] == density_grid.revision
+            assert property_obj["cb_surface_dataset_index"] == 0
+            assert property_obj["cb_surface_semantic_role"] == density_grid.semantic_role
+            assert property_obj["cb_surface_unit"] == density_grid.data.unit
+            assert property_obj["cb_property_dataset_id"] == str(property_grid.id)
+            assert property_obj["cb_property_dataset_revision"] == property_grid.revision
+            assert property_obj["cb_property_dataset_index"] == 0
+            assert property_obj["cb_property_semantic_role"] == property_grid.semantic_role
+            assert property_obj["cb_property_unit"] == property_grid.data.unit
+            assert property_obj["cb_scene_render_identity"] == property_plan.render_identity
             assert all(
                 obj["cb_cache_format_version"] == 1
                 for obj in (*signed_objects, property_obj)
             )
             assert len(list(Path(cache_root).glob("surface/*.vdb"))) == 3
+
+            ambiguous_grid = replace(
+                signed_grid,
+                id=uuid4(),
+                revision="ambiguous-grid-r1",
+                semantic_role="scalar_field",
+                data=replace(signed_grid.data, unit="unknown"),
+                status=core.DatasetStatus.AMBIGUOUS,
+            )
+            grid_project.commit(core.ImportBatch(datasets=(ambiguous_grid,)))
+            ambiguous_plan = core.plan_scene_preset(
+                presets["signed_isosurface"],
+                grid_project,
+                {"grid": ambiguous_grid.id},
+                {"isovalue": 0.5},
+            )
+            ambiguous_objects = view.apply_scene_preset(
+                ambiguous_plan,
+                grid_project,
+                cache_root=Path(cache_root) / "preview",
+                collection=bpy.context.scene.collection,
+            )
+            try:
+                assert all(
+                    obj["cb_view_quality"] == "ambiguous"
+                    and not obj["cb_report_eligible"]
+                    for obj in ambiguous_objects
+                )
+                browser = importlib.import_module(
+                    f"{module_key}.ui.project_browser.panel"
+                )
+                records = tuple(
+                    record
+                    for record in browser.presentation_view_records(
+                        bpy.context.scene
+                    )
+                    if record.object_name
+                    in {obj.name for obj in ambiguous_objects}
+                )
+                assert records
+                assert all(
+                    record.quality == "ambiguous"
+                    and not record.report_eligible
+                    for record in records
+                )
+            finally:
+                for obj in ambiguous_objects:
+                    surface_view.remove_surface_object(obj)
 
             view_cache = importlib.import_module(f"{module_key}.ui.view_cache")
             sidecar = Path(cache_root) / "durable.cbq"

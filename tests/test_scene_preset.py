@@ -84,7 +84,7 @@ class ScenePresetTests(unittest.TestCase):
             with self.assertRaises(ScenePresetError):
                 scene_preset_from_document(document)
 
-    def test_grid_volume_accepts_ambiguous_grid_without_weakening_signed_surface(self):
+    def test_ambiguous_grid_supports_volume_and_report_ineligible_surface_preview(self):
         reference = structure()
         ambiguous = grid(
             reference.id,
@@ -107,13 +107,13 @@ class ScenePresetTests(unittest.TestCase):
         self.assertEqual(plan.view_kind, "grid_volume")
         self.assertEqual(dict(plan.settings)["dataset_index"], 0)
         self.assertEqual(validate_scene_plan(plan, project), plan)
-        with self.assertRaisesRegex(ScenePresetError, "complete"):
-            plan_scene_preset(
-                presets["signed_isosurface"],
-                project,
-                {"grid": ambiguous.id},
-                {},
-            )
+        surface = plan_scene_preset(
+            presets["signed_isosurface"],
+            project,
+            {"grid": ambiguous.id},
+            {},
+        )
+        self.assertEqual(surface.view_kind, "signed_isosurface")
 
     def test_structure_plan_is_deterministic_and_revision_bound(self):
         reference = structure()
