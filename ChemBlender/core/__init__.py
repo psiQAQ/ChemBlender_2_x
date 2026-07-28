@@ -62,8 +62,8 @@ from .iodata_adapter import (
     parse_iodata_wavefunction,
     sniff_iodata_wavefunction,
 )
-# Adapter compatibility exports.
-from .gemmi_adapter import (
+# Native CIF compatibility exports.
+from .formats.cif import (
     CIF_READER,
     GemmiDependencyError,
     parse_cif,

@@ -37,7 +37,7 @@ class GemmiAdapterTests(unittest.TestCase):
     def test_reader_descriptor_and_sniff(self):
         result = sniff_cif(CSCL, CSCL.read_bytes())
         self.assertIs(result.match, SniffMatch.EXACT)
-        self.assertEqual(CIF_READER.reader_id, "gemmi-cif")
+        self.assertEqual(CIF_READER.reader_id, "cif")
         self.assertEqual(CIF_READER.reader_version, "1")
         self.assertEqual(CIF_READER.extensions, (".cif",))
         self.assertEqual(

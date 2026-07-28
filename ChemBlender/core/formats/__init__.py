@@ -1,5 +1,6 @@
 """Low-level native text-format parsers."""
 
+from .cif import CIF_READER, GemmiDependencyError, parse_cif, sniff_cif
 from .extxyz import (
     ExtXYZComment,
     ExtXYZFrame,
@@ -20,17 +21,21 @@ __all__ = (
     "ExtXYZMetadataEntry",
     "ExtXYZPropertyField",
     "ExtXYZSyntaxError",
+    "CIF_READER",
+    "GemmiDependencyError",
     "MOL_READER",
     "SDF_READER",
     "SMILES_READER",
     "iter_extxyz_frames",
     "parse_mol",
+    "parse_cif",
     "parse_sdf",
     "parse_smiles",
     "parse_smiles_text",
     "parse_extxyz_comment",
     "parse_properties_descriptor",
     "sniff_mol",
+    "sniff_cif",
     "sniff_sdf",
     "sniff_smiles",
 )

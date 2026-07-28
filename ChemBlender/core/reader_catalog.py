@@ -4,8 +4,8 @@ from .ase_adapter import ASE_STRUCTURE_READER
 from .cclib_adapter import CCLIB_OUTPUT_READER
 from .cjson_adapter import CJSON_READER
 from .cube import CUBE_READER
+from .formats.cif import CIF_READER
 from .formats.extxyz import EXTXYZ_READER
-from .gemmi_adapter import CIF_READER
 from .iodata_adapter import IODATA_WAVEFUNCTION_READER
 from .formats.mol import MOL_READER
 from .formats.sdf import SDF_READER
@@ -21,7 +21,7 @@ from .xyz import XYZ_READER
 _OPTIONAL_READER_DEPENDENCIES = {
     "ase-structure": "ase",
     "cclib_output": "cclib",
-    "gemmi-cif": "gemmi",
+    "cif": "gemmi",
     "iodata_wavefunction": "iodata",
     "mol": "rdkit",
     "mol-v2000": "rdkit",
