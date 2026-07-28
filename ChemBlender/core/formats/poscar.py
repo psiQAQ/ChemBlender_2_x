@@ -95,9 +95,14 @@ def _parse_coordinates(lines, start, count, selective):
 def _parse_velocities(lines, start, count):
     if start >= len(lines):
         return None, None
-    marker = lines[start].lstrip()[:1].lower()
+    remaining = lines[start:]
+    if not any(line.strip() for line in remaining):
+        return None, None
+    marker = remaining[0].lstrip()[:1].lower()
     mode = "cartesian" if not marker or marker in {"c", "k"} else "direct"
-    rows = lines[start + 1 :]
+    rows = remaining[1:]
+    while rows and not rows[-1].strip():
+        rows.pop()
     if len(rows) != count:
         raise PoscarSyntaxError("POSCAR velocity block must contain one row per atom")
     return mode, tuple(

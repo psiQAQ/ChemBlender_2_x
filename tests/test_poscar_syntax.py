@@ -190,6 +190,70 @@ class PoscarSyntaxTests(unittest.TestCase):
                 b"0.4 0.5 0.6\n"
             )
 
+    def test_trailing_blank_lines_without_velocities_are_ignored(self):
+        from ChemBlender.core.formats.poscar import parse_poscar_document
+
+        document = parse_poscar_document(
+            b"no velocities\n"
+            b"1\n"
+            b"1 0 0\n"
+            b"0 1 0\n"
+            b"0 0 1\n"
+            b"H\n"
+            b"1\n"
+            b"Direct\n"
+            b"0 0 0\n"
+            b"\n\n"
+        )
+
+        self.assertIsNone(document.velocity_mode)
+        self.assertIsNone(document.velocities)
+
+    def test_trailing_blank_lines_after_complete_velocities_are_ignored(self):
+        from ChemBlender.core.formats.poscar import parse_poscar_document
+
+        document = parse_poscar_document(
+            b"velocity tail\n"
+            b"1\n"
+            b"1 0 0\n"
+            b"0 1 0\n"
+            b"0 0 1\n"
+            b"H\n"
+            b"1\n"
+            b"Direct\n"
+            b"0 0 0\n"
+            b"\n"
+            b"0.1 0.2 0.3\n"
+            b"\n\n"
+        )
+
+        self.assertEqual(document.velocity_mode, "cartesian")
+        self.assertEqual(document.velocities, ((0.1, 0.2, 0.3),))
+
+    def test_blank_line_inside_velocity_rows_is_rejected(self):
+        from ChemBlender.core.formats.poscar import (
+            PoscarSyntaxError,
+            parse_poscar_document,
+        )
+
+        with self.assertRaisesRegex(PoscarSyntaxError, "velocity"):
+            parse_poscar_document(
+                b"internal velocity blank\n"
+                b"1\n"
+                b"1 0 0\n"
+                b"0 1 0\n"
+                b"0 0 1\n"
+                b"H\n"
+                b"2\n"
+                b"Direct\n"
+                b"0 0 0\n"
+                b"0.5 0.5 0.5\n"
+                b"\n"
+                b"0.1 0.2 0.3\n"
+                b"\n"
+                b"0.4 0.5 0.6\n"
+            )
+
     def test_invalid_velocity_block_is_rejected(self):
         from ChemBlender.core.formats.poscar import PoscarSyntaxError, parse_poscar_document
 
