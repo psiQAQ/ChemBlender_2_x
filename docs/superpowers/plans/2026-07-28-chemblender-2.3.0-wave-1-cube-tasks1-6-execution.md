@@ -132,13 +132,19 @@ Focused verification passed 34/34; full discovery passed 1382 tests with
 - View actions pass dataset index, role, unit, mode and numeric isovalue to
   existing scene-preset planning.
 
-- [ ] Test two-dataset projection, first-dataset default without semantic
+- [x] Test two-dataset projection, first-dataset default without semantic
   resolution, invalid action disabling, immutable resolution and explicit
   registration root ownership.
-- [ ] Run UI and registration tests and record the missing module/operator RED.
-- [ ] Implement only bounded RNA state and delegation; keep arrays out of RNA.
-- [ ] Run UI, registration, preview/browser and Blender Cube smoke tests.
-- [ ] Review and commit `feat: add Cube semantic and view controls`.
+- [x] Run UI and registration tests and record the missing module/operator RED.
+- [x] Implement only bounded RNA state and delegation; keep arrays out of RNA.
+- [x] Run UI, registration, preview/browser and Blender Cube smoke tests.
+- [x] Review and commit `feat: add Cube semantic and view controls`.
+
+**Evidence:** The initial focused run failed with `ModuleNotFoundError` and an
+explicit-root mismatch. The first installed Blender run exposed and fixed the
+RNA callback/default contract. Focused verification passed 145/145; full
+discovery passed 1385 tests with 28 skips and 0 failures. Blender 5.1.2 native
+validate/build and short-path isolated install/lifecycle passed.
 
 ## Task 4 — Prepare OpenVDB cache with progress and cancellation
 
