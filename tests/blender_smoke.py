@@ -1001,11 +1001,17 @@ def assert_quick_import(module_key, repository_root):
     assert state.preview is None
     cube_revision_id, = set(session.project.source_revisions) - source_revisions
     cube_revision = session.project.source_revisions[cube_revision_id]
+    cube_structure = next(
+        session.project.structures[entity_id]
+        for entity_id in cube_revision.created_entity_ids
+        if entity_id in session.project.structures
+    )
     cube_grid = next(
         session.project.datasets[entity_id]
         for entity_id in cube_revision.created_entity_ids
         if entity_id in session.project.datasets
     )
+    assert cube_grid.structure_id == cube_structure.id
     assert cube_grid.status is core.DatasetStatus.AMBIGUOUS
     cube_objects = set(bpy.data.objects) - objects_before_cube
     cube_view, = cube_objects
@@ -1013,6 +1019,7 @@ def assert_quick_import(module_key, repository_root):
     assert cube_view["cb_scene_preset_id"] == "grid_volume"
     assert cube_view["cb_dataset_id"] == str(cube_grid.id)
     assert cube_view["cb_dataset_revision"] == cube_grid.revision
+    assert cube_view["cb_structure_id"] == str(cube_structure.id)
     assert cube_view["cb_scene_render_identity"]
     cube_bindings = json.loads(cube_view["cb_scene_bindings_json"])
     assert cube_bindings["grid"] == {
