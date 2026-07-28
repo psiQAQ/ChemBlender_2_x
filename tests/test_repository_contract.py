@@ -160,15 +160,27 @@ class RepositoryContractTests(unittest.TestCase):
         workflow = (
             ROOT / ".github" / "workflows" / "extension-package.yml"
         ).read_text(encoding="utf-8")
+        download_step = workflow.split(
+            "\n      - name: Download pinned RDKit wheel\n", 1
+        )[1].split("\n      - name: Download Blender 5.1.2\n", 1)[0]
         step = workflow.split(
             "\n      - name: Test, validate, build, and install\n", 1
         )[1].split("\n      - uses:", 1)[0]
 
+        self.assertIn('"RDKIT_WHEEL=$wheelPath`n"', download_step)
+        self.assertIn("$env:GITHUB_ENV", download_step)
         self.assertIn(
             "$blenderPython = Join-Path (Split-Path $blender) "
             '"5.1/python/bin/python.exe"',
             step,
         )
+        self.assertIn(
+            "& $blenderPython -m pip install --disable-pip-version-check "
+            "--no-index --no-deps --target $rdkitTestSite $env:RDKIT_WHEEL",
+            step,
+        )
+        self.assertIn("$env:PYTHONPATH = $rdkitTestSite", step)
+        self.assertIn("Remove-Item Env:PYTHONPATH", step)
         self.assertIn(
             '& $blenderPython -m unittest discover -s tests -p "test_*.py" -v',
             step,
@@ -190,6 +202,12 @@ class RepositoryContractTests(unittest.TestCase):
         test_command = step.index("& $blenderPython -m unittest discover")
         self.assertLess(step.index("$env:TEMP = $env:RUNNER_TEMP"), test_command)
         self.assertLess(step.index("$env:TMP = $env:RUNNER_TEMP"), test_command)
+        self.assertLess(step.index("$env:PYTHONPATH = $rdkitTestSite"), test_command)
+        self.assertLess(test_command, step.index("Remove-Item Env:PYTHONPATH"))
+        self.assertLess(
+            step.index("Remove-Item Env:PYTHONPATH"),
+            step.index("& $blenderPython ChemBlender/scripts/build_extension.py"),
+        )
 
     def test_package_workflow_retains_tag_artifacts_for_review(self):
         workflow = (
