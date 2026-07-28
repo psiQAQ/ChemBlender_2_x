@@ -20,7 +20,7 @@ from probe_prerelease_version import probe_prerelease_version
 
 
 PRODUCTION_MANIFEST_SHA256 = (
-    "adcb065d80b1efc28fcdcc3470c45d17bf8824437bebb5332677d89258e465b8"
+    "229d1da9c624e756f3e6114fd4ea3675075a23302dc0cba3273dde162f17d185"
 )
 PROBE_VERSION = "2.3.0-alpha.1"
 
