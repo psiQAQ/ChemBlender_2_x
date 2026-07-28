@@ -42,6 +42,36 @@ class RepositoryContractTests(unittest.TestCase):
         ).stdout.strip()
         self.assertEqual(tracked, "")
 
+    def test_molecular_fixture_line_endings_are_cross_platform_stable(self):
+        attributes = subprocess.run(
+            [
+                "git",
+                "check-attr",
+                "text",
+                "eol",
+                "--",
+                "tests/fixtures/mol/water-v2000.mol",
+                "tests/fixtures/sdf/records.sdf",
+                "tests/fixtures/sdf/crlf.sdf",
+            ],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.splitlines()
+
+        self.assertIn(
+            "tests/fixtures/mol/water-v2000.mol: text: set",
+            attributes,
+        )
+        self.assertIn(
+            "tests/fixtures/mol/water-v2000.mol: eol: lf",
+            attributes,
+        )
+        self.assertIn("tests/fixtures/sdf/records.sdf: text: set", attributes)
+        self.assertIn("tests/fixtures/sdf/records.sdf: eol: lf", attributes)
+        self.assertIn("tests/fixtures/sdf/crlf.sdf: text: unset", attributes)
+
     def test_runtime_source_has_no_package_install(self):
         source = "\n".join(
             path.read_text(encoding="utf-8")
