@@ -39,8 +39,8 @@ services.
 | Task | State | Implementation commit | Review |
 |---|---|---|---|
 | 1 Cube source metadata | completed | `08e020ab736543ec495895f77baa886a0838ca34` | SPEC PASS; QUALITY PASS |
-| 2 Grid semantics and presets | in progress | — | pending |
-| 3 Cube dataset and semantic UI | pending | — | pending |
+| 2 Grid semantics and presets | completed | `0a466d3de71da2fb0334771a6724744cfbff6607` | SPEC PASS; QUALITY PASS |
+| 3 Cube dataset and semantic UI | in progress | — | pending |
 | 4 Progress-aware cancellable VDB cache | pending | — | pending |
 | 5 Surface quality and bindings | pending | — | pending |
 | 6 Product flow and Cube benchmark | pending | — | pending |
@@ -91,19 +91,25 @@ the version-2 atomic-property capability, full discovery passed 1376 tests with
 **Interfaces:**
 - `GridSemanticPreset`
 - `GRID_SEMANTIC_PRESETS`
-- `resolve_grid_semantics(grid, *, dataset_index, preset_id, value_unit,
-  provenance_id) -> tuple[Grid3D, ProvenanceRecord]`
+- `resolve_grid_semantics(grid, *, dataset_index, preset_id, value_unit)
+  -> ImportBatch`
 - `default_grid_isovalue(grid, *, dataset_index, preset_id) -> float`
 
-- [ ] Test all seven preset IDs, allowed role/unit pairs, dataset bounds,
+- [x] Test all seven preset IDs, allowed role/unit pairs, dataset bounds,
   immutable source values, deterministic identity/revision/provenance and
   named default-isovalue policies.
-- [ ] Run the new module and record the import RED.
-- [ ] Implement the smallest pure core service using existing arrays and
+- [x] Run the new module and record the import RED.
+- [x] Implement the smallest pure core service using existing arrays and
   provenance; a multi-dataset selection becomes a single-grid dataset without
   modifying source values.
-- [ ] Run semantic, model, project and scene-preset tests.
-- [ ] Review and commit `feat: add Cube grid semantic presets`.
+- [x] Run semantic, model, project and scene-preset tests.
+- [x] Review and commit `feat: add Cube grid semantic presets`.
+
+**Evidence:** Initial focused run failed to import
+`ChemBlender.core.grid_semantics`. The completed service exposes seven frozen
+presets, deterministic resolution/provenance and named isovalue policies.
+Focused verification passed 34/34; full discovery passed 1382 tests with
+28 skips and 0 failures.
 
 ## Task 3 — Add bounded Cube dataset and semantic UI
 
