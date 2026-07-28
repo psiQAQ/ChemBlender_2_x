@@ -32,6 +32,29 @@ class PoscarSyntaxTests(unittest.TestCase):
 
         self.assertIs(result.match, SniffMatch.PROBABLE)
 
+    def test_sniff_accepts_valid_truncated_large_poscar_prefix(self):
+        from ChemBlender.core.formats.poscar import sniff_poscar
+        from ChemBlender.core.readers import SNIFF_PREFIX_BYTES
+
+        atom_count = 12000
+        content = (
+            "large\n"
+            "1\n"
+            "1 0 0\n"
+            "0 1 0\n"
+            "0 0 1\n"
+            "H\n"
+            f"{atom_count}\n"
+            "Direct\n"
+            + "0.125 0.25 0.5\n" * atom_count
+        ).encode()
+
+        self.assertGreater(len(content), SNIFF_PREFIX_BYTES)
+        self.assertIs(
+            sniff_poscar(Path("POSCAR"), content[:SNIFF_PREFIX_BYTES]).match,
+            SniffMatch.EXACT,
+        )
+
     def test_negative_scale_normalizes_lattice_and_cartesian_coordinates(self):
         from ChemBlender.core.formats.poscar import parse_poscar_document
 
@@ -113,6 +136,59 @@ class PoscarSyntaxTests(unittest.TestCase):
             document.velocities,
             ((0.1, 0.2, 0.3), (-0.4, 0.5, 0.6)),
         )
+        self.assertEqual(document.velocity_mode, "cartesian")
+
+    def test_explicit_velocity_mode_uses_vasp_first_character_rule(self):
+        from ChemBlender.core.formats.poscar import parse_poscar_document
+
+        cases = {
+            "Cartesian": "cartesian",
+            "k": "cartesian",
+            "Direct": "direct",
+            "velocity mode": "direct",
+        }
+        for marker, expected in cases.items():
+            with self.subTest(marker=marker):
+                document = parse_poscar_document(
+                    (
+                        "explicit velocity mode\n"
+                        "1\n"
+                        "1 0 0\n"
+                        "0 1 0\n"
+                        "0 0 1\n"
+                        "H\n"
+                        "1\n"
+                        "Direct\n"
+                        "0 0 0\n"
+                        f"{marker}\n"
+                        "0.1 0.2 0.3\n"
+                    ).encode()
+                )
+
+                self.assertEqual(document.velocity_mode, expected)
+                self.assertEqual(document.velocities, ((0.1, 0.2, 0.3),))
+
+    def test_velocity_triplets_without_mode_are_rejected(self):
+        from ChemBlender.core.formats.poscar import (
+            PoscarSyntaxError,
+            parse_poscar_document,
+        )
+
+        with self.assertRaisesRegex(PoscarSyntaxError, "velocity"):
+            parse_poscar_document(
+                b"missing velocity mode\n"
+                b"1\n"
+                b"1 0 0\n"
+                b"0 1 0\n"
+                b"0 0 1\n"
+                b"H\n"
+                b"2\n"
+                b"Direct\n"
+                b"0 0 0\n"
+                b"0.5 0.5 0.5\n"
+                b"0.1 0.2 0.3\n"
+                b"0.4 0.5 0.6\n"
+            )
 
     def test_invalid_velocity_block_is_rejected(self):
         from ChemBlender.core.formats.poscar import PoscarSyntaxError, parse_poscar_document

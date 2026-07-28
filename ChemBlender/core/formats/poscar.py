@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 
 from ..model import IssueKind, ParserIssue
-from ..readers import SniffMatch, SniffResult
+from ..readers import SNIFF_PREFIX_BYTES, SniffMatch, SniffResult
 
 
 _INTEGER = re.compile(r"[+-]?[0-9]+\Z")
@@ -28,6 +28,7 @@ class PoscarDocument:
     coordinate_mode: str
     coordinates: tuple[tuple[float, float, float], ...]
     selective_dynamics: tuple[tuple[bool, bool, bool], ...] | None
+    velocity_mode: str | None
     velocities: tuple[tuple[float, float, float], ...] | None
     diagnostics: tuple[ParserIssue, ...]
 
@@ -92,13 +93,15 @@ def _parse_coordinates(lines, start, count, selective):
 
 
 def _parse_velocities(lines, start, count):
-    remaining = tuple(line for line in lines[start:] if line.strip())
-    if not remaining:
-        return None
-    if len(remaining) != count:
+    if start >= len(lines):
+        return None, None
+    marker = lines[start].lstrip()[:1].lower()
+    mode = "cartesian" if not marker or marker in {"c", "k"} else "direct"
+    rows = lines[start + 1 :]
+    if len(rows) != count:
         raise PoscarSyntaxError("POSCAR velocity block must contain one row per atom")
-    return tuple(
-        _numbers(line, count=3, name="POSCAR velocity rows") for line in remaining
+    return mode, tuple(
+        _numbers(line, count=3, name="POSCAR velocity rows") for line in rows
     )
 
 
@@ -141,7 +144,7 @@ def parse_poscar_document(raw):
     coordinates, flags, index = _parse_coordinates(
         lines, index + 1, sum(counts), selective
     )
-    velocities = _parse_velocities(lines, index, sum(counts))
+    velocity_mode, velocities = _parse_velocities(lines, index, sum(counts))
 
     diagnostics = []
     determinant = _determinant(lattice)
@@ -176,15 +179,53 @@ def parse_poscar_document(raw):
         coordinate_mode=coordinate_mode,
         coordinates=coordinates,
         selective_dynamics=flags,
+        velocity_mode=velocity_mode,
         velocities=velocities,
         diagnostics=tuple(diagnostics),
     )
 
 
+def _sniff_truncated_prefix(prefix):
+    try:
+        lines = prefix.decode("utf-8-sig").splitlines()
+    except UnicodeDecodeError as error:
+        raise PoscarSyntaxError("POSCAR content must be UTF-8 text") from error
+    if prefix[-1:] not in {b"\n", b"\r"}:
+        lines = lines[:-1]
+    if len(lines) < 9:
+        raise PoscarSyntaxError("POSCAR prefix is missing header or coordinates")
+
+    _numbers(lines[1], count=1, name="POSCAR scale")
+    for line in lines[2:5]:
+        _numbers(line, count=3, name="POSCAR lattice vector")
+    labels = lines[5].split()
+    if not labels:
+        raise PoscarSyntaxError("POSCAR species or counts line is required")
+    if all(_INTEGER.fullmatch(label) for label in labels):
+        counts = _parse_counts(lines[5])
+        index = 6
+    else:
+        counts = _parse_counts(lines[6])
+        if len(labels) != len(counts):
+            raise PoscarSyntaxError("POSCAR species and counts must have equal lengths")
+        index = 7
+    selective = lines[index].lstrip()[:1].lower() == "s"
+    if selective:
+        index += 1
+    _mode(lines[index])
+    available = min(sum(counts), len(lines) - index - 1)
+    if available < 1:
+        raise PoscarSyntaxError("POSCAR prefix has no complete coordinate row")
+    _parse_coordinates(lines, index + 1, available, selective)
+
+
 def sniff_poscar(source, prefix):
     source = Path(source)
     try:
-        parse_poscar_document(prefix)
+        if len(prefix) < SNIFF_PREFIX_BYTES:
+            parse_poscar_document(prefix)
+        else:
+            _sniff_truncated_prefix(prefix)
     except (PoscarSyntaxError, TypeError):
         return SniffResult(SniffMatch.NONE, "missing POSCAR lattice, counts, or coordinates")
     if source.name.upper() in {"POSCAR", "CONTCAR"}:
