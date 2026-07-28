@@ -80,6 +80,30 @@ class GemmiDependencyContractTests(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn("duplicate wheel path", output)
 
+    def test_preflight_rejects_duplicate_manifest_wheel_alias(self):
+        extension_root = self._minimal_extension(
+            (
+                f"./wheels/{GEMMI_WHEEL}",
+                f"./wheels/../wheels/{GEMMI_WHEEL}",
+            )
+        )
+
+        result, output = self._run_preflight(extension_root)
+
+        self.assertEqual(result, 1)
+        self.assertIn("duplicate wheel path", output)
+
+    def test_preflight_rejects_missing_manifest_wheel(self):
+        extension_root = self._minimal_extension(
+            (f"./wheels/{GEMMI_WHEEL}",)
+        )
+        (extension_root / "wheels" / GEMMI_WHEEL).unlink()
+
+        result, output = self._run_preflight(extension_root)
+
+        self.assertEqual(result, 1)
+        self.assertIn("wheel path does not exist", output)
+
     def _minimal_extension(
         self,
         wheels: tuple[str, ...],

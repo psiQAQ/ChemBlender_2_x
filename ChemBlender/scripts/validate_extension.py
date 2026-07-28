@@ -10,7 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 try:
     import tomllib
@@ -325,18 +325,17 @@ def main() -> int:
                     if not isinstance(wheel, str):
                         errors.append(f"wheels[{idx}] must be a string path.")
                         continue
-                    normalized_wheel = str(
-                        PurePosixPath(wheel.removeprefix("./"))
-                    )
-                    if normalized_wheel in declared_wheels:
-                        errors.append(f"duplicate wheel path: {wheel}")
-                    declared_wheels.append(normalized_wheel)
                     wheel_path = (extension_root / wheel).resolve()
                     try:
-                        wheel_path.relative_to(extension_root)
+                        normalized_wheel = wheel_path.relative_to(
+                            extension_root
+                        ).as_posix()
                     except ValueError:
                         errors.append(f"wheel path must stay within extension root: {wheel}")
                         continue
+                    if normalized_wheel in declared_wheels:
+                        errors.append(f"duplicate wheel path: {wheel}")
+                    declared_wheels.append(normalized_wheel)
                     if not wheel_path.exists():
                         errors.append(f"wheel path does not exist: {wheel}")
                 present_wheels = {
