@@ -9,6 +9,7 @@ from ..readers import (
     ReaderNotFoundError,
     ReaderRegistry,
 )
+from ..storage.hashing import sha256_file_snapshot
 from .parse import staged_reader_batch
 from .preview import ImportPreview, SourcePreview
 from .request import ImportRequest
@@ -39,22 +40,15 @@ def _check_cancelled(is_cancelled):
 
 
 def _source_snapshot(path, is_cancelled):
-    digest = hashlib.sha256()
-    byte_size = 0
-    prefix = bytearray()
-    _check_cancelled(is_cancelled)
-    with path.open("rb") as stream:
-        while True:
-            _check_cancelled(is_cancelled)
-            chunk = stream.read(HASH_CHUNK_BYTES)
-            if not chunk:
-                break
-            digest.update(chunk)
-            byte_size += len(chunk)
-            if len(prefix) < HASH_CHUNK_BYTES:
-                prefix.extend(chunk[: HASH_CHUNK_BYTES - len(prefix)])
-    _check_cancelled(is_cancelled)
-    return digest.hexdigest(), byte_size, bytes(prefix)
+    def check():
+        _check_cancelled(is_cancelled)
+        return False
+
+    return sha256_file_snapshot(
+        path,
+        check,
+        prefix_bytes=HASH_CHUNK_BYTES,
+    )
 
 
 def _hash_file(path, is_cancelled):
@@ -370,9 +364,14 @@ def _register_preview(
     diagnostic_ids,
     *,
     source_id=None,
+    materializer=None,
 ):
     batch_id = uuid4()
-    session.register_result(batch_id, batch)
+    session.register_result(
+        batch_id,
+        batch,
+        materializer=materializer,
+    )
     batch_ids.append(batch_id)
     source_diagnostic_ids = tuple(item.id for item in batch.diagnostics)
     diagnostic_ids.extend(source_diagnostic_ids)

@@ -3,7 +3,7 @@
 ## 结论
 
 2026-07-28 在 Blender 5.1.2 的真实 OpenVDB/Volume 路径上，128³ Cube
-产品流的各阶段 median 总和为 **1.659 s**，通过 Wave 1 的 **10 s** 门限。
+产品流的各阶段 median 总和为 **1.680 s**，通过 Wave 1 的 **10 s** 门限。
 
 ## 环境与负载
 
@@ -18,7 +18,7 @@
 | 网格 | 128 × 128 × 128，2,097,152 voxels |
 | 生成的 Cube | 32,501,927 bytes |
 | 重复次数 | 3 |
-| peak Python allocation | 299,352,487 bytes |
+| peak Python allocation | 299,352,763 bytes |
 
 输入生成不计入产品流时间。Parse 在刚生成输入后的 warm OS file cache 上测量；
 cold VDB 每次先删除 derived cache；hot VDB 验证已有 cache；view stage 使用已有
@@ -28,15 +28,15 @@ VDB 并真实创建、删除 Blender Volume datablock。
 
 | Stage | Median (s) | P95 (s) |
 | --- | ---: | ---: |
-| parse | 1.220970 | 1.236715 |
-| stage NPY | 0.018436 | 0.060033 |
-| sidecar save | 0.352497 | 0.353038 |
-| cold VDB cache | 0.056388 | 0.082392 |
-| hot VDB cache | 0.010312 | 0.010856 |
-| hot Volume view | 0.010994 | 0.011697 |
+| parse | 1.243538 | 1.247895 |
+| stage NPY | 0.015240 | 0.021490 |
+| sidecar save | 0.348070 | 0.356801 |
+| cold VDB cache | 0.060937 | 0.078979 |
+| hot VDB cache | 0.011063 | 0.011445 |
+| hot Volume view | 0.012118 | 0.012994 |
 
 门限总和使用 `parse + stage NPY + sidecar save + cold VDB cache + hot Volume
-view`，结果为 **1.659286 s**。Hot VDB cache 作为独立诊断，不重复计入总和。
+view`，结果为 **1.679902 s**。Hot VDB cache 作为独立诊断，不重复计入总和。
 
 ## 复现
 

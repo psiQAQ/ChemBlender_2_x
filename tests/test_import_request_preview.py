@@ -244,6 +244,61 @@ class StagedImportSessionTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             session.register_result(uuid4(), object())
 
+    def test_result_materializer_replaces_atomically_and_runs_once(self):
+        session = self.create_session()
+        result_id = uuid4()
+        preview = ImportBatch()
+        materialized = ImportBatch(report=None)
+        calls = []
+
+        def materializer(progress, is_cancelled):
+            calls.append((progress, is_cancelled))
+            return materialized
+
+        session.register_result(
+            result_id,
+            preview,
+            materializer=materializer,
+        )
+
+        self.assertIs(session.result(result_id), preview)
+        self.assertTrue(session.has_pending_materializer(result_id))
+        self.assertIs(
+            session.materialize_result(
+                result_id,
+                progress=lambda *_args: None,
+                is_cancelled=lambda: False,
+            ),
+            materialized,
+        )
+        self.assertIs(session.result(result_id), materialized)
+        self.assertFalse(session.has_pending_materializer(result_id))
+        self.assertIs(
+            session.materialize_result(result_id),
+            materialized,
+        )
+        self.assertEqual(len(calls), 1)
+
+    def test_failed_result_materializer_preserves_preview_for_retry(self):
+        session = self.create_session()
+        result_id = uuid4()
+        preview = ImportBatch()
+
+        def materializer(_progress, _is_cancelled):
+            raise RuntimeError("materialization failed")
+
+        session.register_result(
+            result_id,
+            preview,
+            materializer=materializer,
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "materialization failed"):
+            session.materialize_result(result_id)
+
+        self.assertIs(session.result(result_id), preview)
+        self.assertTrue(session.has_pending_materializer(result_id))
+
     def test_discard_removes_only_owned_root_and_is_idempotent(self):
         session = self.create_session()
         root = session.root

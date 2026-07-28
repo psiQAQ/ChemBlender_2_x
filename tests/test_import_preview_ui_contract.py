@@ -1427,9 +1427,9 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         view_calls = []
         original = self.module.commit_import_preview
 
-        def commit_once(*args):
+        def commit_once(*args, **kwargs):
             calls.append(args)
-            return original(*args)
+            return original(*args, **kwargs)
 
         def apply(plan, project, *, collection, cache_root=None):
             binding = plan.bindings[0]
@@ -1569,7 +1569,11 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         )
         observed_paths = []
 
-        def fail_after_creating_generation(project_session, *_args):
+        def fail_after_creating_generation(
+            project_session,
+            *_args,
+            **_kwargs,
+        ):
             observed_paths.append(project_session.sidecar_path)
             project_session.sidecar_path.mkdir()
             (project_session.sidecar_path / "partial").write_bytes(b"partial")
@@ -2006,10 +2010,10 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         release = threading.Event()
         original = self.module.commit_import_preview
 
-        def delayed_commit(*args):
+        def delayed_commit(*args, **kwargs):
             entered.set()
             release.wait(2)
-            return original(*args)
+            return original(*args, **kwargs)
 
         job = self.module._CommitJob(
             self.session,
@@ -2040,7 +2044,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             cleanup.join(2)
 
         self.assertFalse(cleanup.is_alive())
-        self.assertIsNotNone(job.result)
+        self.assertIsInstance(job.error, self.module.ImportCancelled)
         self.assertNotIn(
             self.session.id,
             self.properties._QUICK_IMPORT_STATES,
@@ -2084,10 +2088,10 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         operator.blocking_reason = ""
         self.fake_bpy.app.background = False
 
-        def delayed(*args):
+        def delayed(*args, **kwargs):
             entered.set()
             release.wait(2)
-            return original(*args)
+            return original(*args, **kwargs)
 
         with patch.object(
             self.module,
@@ -2123,22 +2127,61 @@ class ImportPreviewUIContractTests(unittest.TestCase):
                     context,
                     SimpleNamespace(type="TIMER"),
                 )
-                if result == {"FINISHED"}:
+                if result != {"RUNNING_MODAL"}:
                     break
                 time.sleep(0.01)
 
-        self.assertEqual(result, {"FINISHED"})
-        self.assertGreaterEqual(len(self.session.project.structures), 1)
+        self.assertEqual(result, {"CANCELLED"})
+        self.assertEqual(len(self.session.project.structures), 0)
         self.assertIn(("timer_remove", timer), calls)
         self.assertIn(("progress_end",), calls)
-        self.assertTrue(
+        self.assertFalse(
             any(call[:2] == ("progress_update", 100) for call in calls),
             calls,
         )
-        self.assertLess(
-            calls.index(("progress_update", 100)),
-            calls.index(("progress_end",)),
+
+    def test_commit_job_forwards_materialization_progress_and_cancellation(self):
+        observed = {}
+        expected = object()
+
+        def commit(
+            project_session,
+            staging,
+            preview,
+            decisions,
+            *,
+            progress,
+            is_cancelled,
+        ):
+            observed["arguments"] = (
+                project_session,
+                staging,
+                preview,
+                decisions,
+            )
+            observed["is_cancelled"] = is_cancelled
+            progress("materialize", 1, 4)
+            return expected
+
+        job = self.module._CommitJob(
+            self.session,
+            object(),
+            object(),
+            object(),
         )
+        with patch.object(
+            self.module,
+            "_commit_to_fresh_generation",
+            side_effect=commit,
+        ):
+            job._run()
+
+        self.assertIs(job.result, expected)
+        self.assertIsNone(job.error)
+        self.assertEqual(job.drain_progress(), ("materialize", 1, 4))
+        self.assertFalse(observed["is_cancelled"]())
+        job.cancel()
+        self.assertTrue(observed["is_cancelled"]())
 
     def test_modal_fatal_worker_error_rethrows_after_cleanup(self):
         timer = object()

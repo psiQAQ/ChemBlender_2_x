@@ -4,6 +4,7 @@ import shutil
 from dataclasses import dataclass, fields, is_dataclass, replace
 from hashlib import sha256
 from pathlib import Path
+from queue import Empty, SimpleQueue
 from threading import Event, Thread
 from uuid import UUID, uuid4
 
@@ -29,6 +30,7 @@ from ..core.import_pipeline.conflicts import (
     detect_import_conflicts,
 )
 from ..core.import_pipeline.grouping import suggest_source_groups
+from ..core.import_pipeline.preflight import ImportCancelled
 from ..core.import_pipeline.transaction import (
     ConformerGroupingDecision,
     GroupingDecision,
@@ -365,6 +367,9 @@ def _commit_to_fresh_generation(
     staged_session,
     preview,
     decisions,
+    *,
+    progress=lambda _stage, _completed, _total: None,
+    is_cancelled=lambda: False,
 ):
     previous_path = project_session.sidecar_path
     previous_project = project_session.project
@@ -377,6 +382,8 @@ def _commit_to_fresh_generation(
             staged_session,
             preview,
             decisions,
+            progress=progress,
+            is_cancelled=is_cancelled,
         )
     except BaseException as error:
         project_session.sidecar_path = previous_path
@@ -1233,6 +1240,7 @@ class _CommitJob:
         self.decisions = decisions
         self.result = None
         self.error = None
+        self.progress_events = SimpleQueue()
         self._cancelled = Event()
         self._commit_started = Event()
         self._done = Event()
@@ -1266,6 +1274,8 @@ class _CommitJob:
                 self.staging,
                 self.preview,
                 self.decisions,
+                progress=self._progress,
+                is_cancelled=self._cancelled.is_set,
             )
         except BaseException as error:
             self.error = error
@@ -1278,6 +1288,17 @@ class _CommitJob:
 
     def cancel(self):
         self._cancelled.set()
+
+    def _progress(self, stage, completed, total):
+        self.progress_events.put((stage, completed, total))
+
+    def drain_progress(self):
+        latest = None
+        while True:
+            try:
+                latest = self.progress_events.get_nowait()
+            except Empty:
+                return latest
 
     def join(self, timeout):
         if not self._started:
@@ -1802,9 +1823,17 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             if job.commit_started:
                 self.report(
                     {"WARNING"},
-                    "commit already started; cancellation cannot undo data",
+                    "cancellation requested; cannot undo published data",
                 )
-        if event.type != "TIMER" or not job.done:
+        if event.type != "TIMER":
+            return {"RUNNING_MODAL"}
+        progress = getattr(job, "drain_progress", lambda: None)()
+        if progress is not None:
+            _stage, completed, total = progress
+            context.window_manager.progress_update(
+                10 + 60 * completed / total if total else 10
+            )
+        if not job.done:
             return {"RUNNING_MODAL"}
         if not getattr(job, "_completion_checked", False):
             completion_error = None
@@ -1872,7 +1901,7 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                     "Import Preview UI cleanup failed",
                     release_error,
                 )
-            if isinstance(job.error, ImportCommitCancelled):
+            if isinstance(job.error, (ImportCommitCancelled, ImportCancelled)):
                 self.report({"INFO"}, str(job.error))
             elif isinstance(job.error, _FATAL_EXCEPTIONS):
                 raise job.error

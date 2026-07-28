@@ -32,6 +32,7 @@ from .grouping import (
     suggest_source_groups,
 )
 from .preview import ImportPreview
+from .preflight import ImportCancelled
 from .staging import StagedImportSession
 
 
@@ -609,6 +610,9 @@ def commit_import_preview(
     staged_session,
     preview,
     decisions,
+    *,
+    progress=lambda _stage, _completed, _total: None,
+    is_cancelled=lambda: False,
 ):
     if type(project_session) is not ProjectSession:
         raise TypeError("project_session must be a ProjectSession")
@@ -620,6 +624,23 @@ def commit_import_preview(
         raise TypeError("decisions must be ImportCommitDecisions")
     if preview.session_id != staged_session.id:
         raise ValueError("preview session does not match staged session")
+    if not callable(progress) or not callable(is_cancelled):
+        raise TypeError("progress and is_cancelled must be callable")
+
+    total = len(preview.staged_batch_ids)
+    for index, batch_id in enumerate(preview.staged_batch_ids):
+        cancelled = is_cancelled()
+        if type(cancelled) is not bool:
+            raise TypeError("is_cancelled must return bool")
+        if cancelled:
+            raise ImportCancelled("import materialization was cancelled")
+        progress("materialize", index, total)
+        staged_session.materialize_result(
+            batch_id,
+            progress=progress,
+            is_cancelled=is_cancelled,
+        )
+    progress("materialize", total, total)
 
     validated_grouping_decisions = _validated_grouping_decisions(
         preview,

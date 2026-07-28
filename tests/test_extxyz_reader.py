@@ -23,6 +23,7 @@ from ChemBlender.core.formats.extxyz import EXTXYZ_READER, parse_extxyz
 from ChemBlender.core.formats import extxyz as extxyz_module
 from ChemBlender.core.import_pipeline import (
     ImportCommitDecisions,
+    ImportCancelled,
     ImportRequest,
     ImportSource,
     StagedImportSession,
@@ -54,6 +55,198 @@ class ExtXYZReaderSelectionTests(unittest.TestCase):
             "extxyz",
         )
         self.assertEqual(EXTXYZ_READER.reader_version, "1")
+
+    def test_large_preflight_defers_full_parse_until_materialization(self):
+        source = FIXTURES / "extxyz" / "multiframe-cell.extxyz"
+        with TemporaryDirectory() as directory, patch.object(
+            extxyz_module,
+            "_DEFERRED_PREVIEW_BYTES",
+            0,
+        ):
+            session = StagedImportSession.create(temp_parent=Path(directory))
+            try:
+                preview = preflight_reader_plugins(
+                    ImportRequest(
+                        (ImportSource(source),),
+                        ValidationMode.BALANCED,
+                    ),
+                    builtin_reader_plugin_registry(),
+                    session,
+                )
+                batch_id, = preview.staged_batch_ids
+                staged = session.result(batch_id)
+                frames = next(
+                    item
+                    for item in staged.datasets
+                    if isinstance(item, FrameSet)
+                )
+                self.assertEqual(frames.data.shape, (2, 1, 3))
+                self.assertTrue(session.has_pending_materializer(batch_id))
+
+                materialized = session.materialize_result(batch_id)
+                full_frames = next(
+                    item
+                    for item in materialized.datasets
+                    if isinstance(item, FrameSet)
+                )
+                self.assertIsInstance(full_frames.data.values, numpy.memmap)
+                self.assertTrue(
+                    numpy.array_equal(
+                        numpy.asarray(full_frames.data.values),
+                        numpy.asarray(parse_extxyz(source).datasets[0].data.values),
+                    )
+                )
+                self.assertFalse(session.has_pending_materializer(batch_id))
+            finally:
+                session.discard()
+
+    def test_deferred_commit_cancellation_keeps_preview_and_live_project(self):
+        source = FIXTURES / "extxyz" / "multiframe-cell.extxyz"
+        with TemporaryDirectory() as directory, patch.object(
+            extxyz_module,
+            "_DEFERRED_PREVIEW_BYTES",
+            0,
+        ):
+            root = Path(directory)
+            staged = StagedImportSession.create(temp_parent=root)
+            project_session = create_session(temp_parent=root)
+            try:
+                preview = preflight_reader_plugins(
+                    ImportRequest(
+                        (ImportSource(source),),
+                        ValidationMode.BALANCED,
+                    ),
+                    builtin_reader_plugin_registry(),
+                    staged,
+                )
+                batch_id, = preview.staged_batch_ids
+                previous = project_session.project
+
+                with self.assertRaises(ImportCancelled):
+                    commit_import_preview(
+                        project_session,
+                        staged,
+                        preview,
+                        ImportCommitDecisions(),
+                        is_cancelled=lambda: True,
+                    )
+
+                self.assertIs(project_session.project, previous)
+                self.assertTrue(staged.has_pending_materializer(batch_id))
+            finally:
+                staged.discard()
+                close_session(project_session)
+
+    def test_deferred_materialization_preserves_reviewed_diagnostic_ids(self):
+        source = FIXTURES / "extxyz" / "properties-mixed.extxyz"
+        with TemporaryDirectory() as directory, patch.object(
+            extxyz_module,
+            "_DEFERRED_PREVIEW_BYTES",
+            0,
+        ):
+            session = StagedImportSession.create(temp_parent=Path(directory))
+            try:
+                preview = preflight_reader_plugins(
+                    ImportRequest((ImportSource(source),)),
+                    builtin_reader_plugin_registry(),
+                    session,
+                )
+                batch_id, = preview.staged_batch_ids
+                reviewed_ids = session.result(
+                    batch_id
+                ).source_revisions[0].diagnostic_ids
+                self.assertTrue(reviewed_ids)
+
+                materialized = session.materialize_result(batch_id)
+
+                self.assertEqual(
+                    materialized.source_revisions[0].diagnostic_ids,
+                    reviewed_ids,
+                )
+                self.assertEqual(
+                    tuple(item.id for item in materialized.diagnostics),
+                    reviewed_ids,
+                )
+            finally:
+                session.discard()
+
+    def test_changed_materialized_inventory_keeps_retryable_preview_snapshot(self):
+        with TemporaryDirectory() as directory, patch.object(
+            extxyz_module,
+            "_DEFERRED_PREVIEW_BYTES",
+            0,
+        ):
+            root = Path(directory)
+            source = root / "identity-change.extxyz"
+            source.write_text(
+                "1\nProperties=species:S:1:pos:R:3\nC 0 0 0\n"
+                "1\nProperties=species:S:1:pos:R:3\nO 0 0 0\n",
+                encoding="utf-8",
+            )
+            session = StagedImportSession.create(temp_parent=root)
+            try:
+                preview = preflight_reader_plugins(
+                    ImportRequest((ImportSource(source),)),
+                    builtin_reader_plugin_registry(),
+                    session,
+                )
+                batch_id, = preview.staged_batch_ids
+
+                for _attempt in range(2):
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        "refresh Import Preview",
+                    ):
+                        session.materialize_result(batch_id)
+                    self.assertTrue(
+                        session.has_pending_materializer(batch_id)
+                    )
+                    self.assertEqual(
+                        len(
+                            tuple(
+                                session.artifact_root.rglob(
+                                    extxyz_module._PREVIEW_SNAPSHOT_NAME
+                                )
+                            )
+                        ),
+                        1,
+                    )
+                    self.assertEqual(
+                        tuple(session.artifact_root.rglob("*.npy")),
+                        (),
+                    )
+            finally:
+                session.discard()
+
+    def test_missing_deferred_snapshot_never_commits_preview_placeholders(self):
+        source = FIXTURES / "extxyz" / "multiframe-cell.extxyz"
+        with TemporaryDirectory() as directory, patch.object(
+            extxyz_module,
+            "_DEFERRED_PREVIEW_BYTES",
+            0,
+        ):
+            session = StagedImportSession.create(temp_parent=Path(directory))
+            try:
+                preview = preflight_reader_plugins(
+                    ImportRequest((ImportSource(source),)),
+                    builtin_reader_plugin_registry(),
+                    session,
+                )
+                batch_id, = preview.staged_batch_ids
+                snapshot, = session.artifact_root.rglob(
+                    extxyz_module._PREVIEW_SNAPSHOT_NAME
+                )
+                snapshot.unlink()
+
+                with self.assertRaisesRegex(
+                    extxyz_module.ExtXYZSyntaxError,
+                    "snapshot is missing",
+                ):
+                    session.materialize_result(batch_id)
+
+                self.assertTrue(session.has_pending_materializer(batch_id))
+            finally:
+                session.discard()
 
     def test_malformed_properties_requires_explicit_override_for_diagnostic(self):
         registry = builtin_reader_registry()

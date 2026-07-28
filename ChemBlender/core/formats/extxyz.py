@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 import hashlib
+import io
 import json
 import math
 import os
@@ -35,6 +36,7 @@ from ..readers import (
     SniffResult,
 )
 from ..storage.atomic_paths import short_sibling_temporary_path
+from ..storage.hashing import sha256_bytes, sha256_file
 
 
 _INTEGER = re.compile(r"[+-]?[0-9]+\Z")
@@ -72,6 +74,9 @@ _FRAME_PROPERTIES = {
     "temperature": ("temperature", "kelvin"),
     "time": ("time", "femtosecond"),
 }
+_DEFERRED_PREVIEW_BYTES = 256 * 1024
+_PREVIEW_SNAPSHOT_NAME = "extxyz-preview-source.extxyz"
+_MATERIALIZED_MARKER_NAME = ".extxyz-materialized"
 
 
 class _LazyNumpy:
@@ -229,6 +234,24 @@ class _ArrayOwner:
             except BaseException as error:
                 failures.append(error)
         _raise_cleanup_failures(failures)
+
+
+class _PreviewArrayOwner:
+    @staticmethod
+    def _constant(shape, value, dtype):
+        return numpy.broadcast_to(
+            numpy.asarray(value, dtype=dtype),
+            shape,
+        )
+
+    def empty(self, shape, dtype):
+        return self._constant(shape, 0, dtype)
+
+    def zeros(self, shape, dtype):
+        return self._constant(shape, 0, dtype)
+
+    def full(self, shape, fill_value, dtype):
+        return self._constant(shape, fill_value, dtype)
 
 
 class ExtXYZSyntaxError(ValueError):
@@ -957,6 +980,83 @@ def _unit_mode(plan, expected):
     return "unknown", "invalid"
 
 
+def _accumulate_frame_plan(current, frame_index, frame, cell, pbc, issues):
+    current.end = frame_index + 1
+    current.cell_missing |= cell is None
+    current.cell_changed |= (
+        (cell is None) != (current.first_cell is None)
+        or (
+            cell is not None
+            and current.first_cell is not None
+            and not numpy.array_equal(cell, current.first_cell)
+        )
+    )
+    current.pbc_changed |= pbc != current.first_pbc
+    entries = _entry_map(frame)
+    values = _value_map(frame)
+    for property_field in frame.properties:
+        if property_field.name in {"species", "pos"}:
+            continue
+        plan = current.atom.get(property_field.name)
+        if plan is None:
+            plan = _ValuePlan(
+                values[property_field.name][0],
+                schema=property_field,
+            )
+            current.atom[property_field.name] = plan
+        elif plan.schema != property_field:
+            raise ExtXYZSyntaxError(
+                f"Properties field {property_field.name} changes type or width"
+            )
+        plan.present += 1
+        if property_field.name in _ATOM_PROPERTIES:
+            _record_unit(
+                plan,
+                _ATOM_PROPERTIES[property_field.name][1],
+                entries.get(f"{property_field.name}_unit"),
+            )
+    for entry in frame.comment.entries:
+        if entry.key in _RESERVED_COMMENT_KEYS:
+            continue
+        if entry.diagnostic is not None:
+            issues.append(
+                ParserIssue(
+                    IssueKind.AMBIGUOUS,
+                    f"metadata.{entry.key}",
+                    f"{entry.diagnostic}; raw value retained in comment",
+                )
+            )
+            continue
+        signature = _metadata_signature(entry.value)
+        if signature is None:
+            issues.append(
+                ParserIssue(
+                    IssueKind.AMBIGUOUS,
+                    f"metadata.{entry.key}",
+                    "metadata value cannot be represented as a typed "
+                    "property; raw value retained in comment",
+                )
+            )
+            continue
+        plan = current.metadata.get(entry.key)
+        if plan is None:
+            plan = _ValuePlan(entry.value)
+            current.metadata[entry.key] = plan
+        elif _metadata_signature(plan.sample) != signature:
+            raise ExtXYZSyntaxError(
+                f"metadata {entry.key} changes shape or type between frames"
+            )
+        plan.present += 1
+    for name, (_role, expected) in _FRAME_PROPERTIES.items():
+        plan = current.metadata.get(name)
+        if plan is not None and name in entries:
+            _record_unit(
+                plan,
+                expected,
+                entries.get(f"{name}_unit"),
+            )
+
+
 def _plan_source(source, is_cancelled, issues):
     groups = []
     current = None
@@ -975,81 +1075,14 @@ def _plan_source(source, is_cancelled, issues):
                 cell_missing=cell is None,
             )
             groups.append(current)
-        current.end = frame_index + 1
-        current.cell_missing |= cell is None
-        current.cell_changed |= (
-            (cell is None) != (current.first_cell is None)
-            or (
-                cell is not None
-                and current.first_cell is not None
-                and not numpy.array_equal(cell, current.first_cell)
-            )
+        _accumulate_frame_plan(
+            current,
+            frame_index,
+            frame,
+            cell,
+            pbc,
+            issues,
         )
-        current.pbc_changed |= pbc != current.first_pbc
-        entries = _entry_map(frame)
-        values = _value_map(frame)
-        for property_field in frame.properties:
-            if property_field.name in {"species", "pos"}:
-                continue
-            plan = current.atom.get(property_field.name)
-            if plan is None:
-                plan = _ValuePlan(
-                    values[property_field.name][0],
-                    schema=property_field,
-                )
-                current.atom[property_field.name] = plan
-            elif plan.schema != property_field:
-                raise ExtXYZSyntaxError(
-                    f"Properties field {property_field.name} "
-                    "changes type or width"
-                )
-            plan.present += 1
-            if property_field.name in _ATOM_PROPERTIES:
-                _record_unit(
-                    plan,
-                    _ATOM_PROPERTIES[property_field.name][1],
-                    entries.get(f"{property_field.name}_unit"),
-                )
-        for entry in frame.comment.entries:
-            if entry.key in _RESERVED_COMMENT_KEYS:
-                continue
-            if entry.diagnostic is not None:
-                issues.append(
-                    ParserIssue(
-                        IssueKind.AMBIGUOUS,
-                        f"metadata.{entry.key}",
-                        f"{entry.diagnostic}; raw value retained in comment",
-                    )
-                )
-                continue
-            signature = _metadata_signature(entry.value)
-            if signature is None:
-                issues.append(
-                    ParserIssue(
-                        IssueKind.AMBIGUOUS,
-                        f"metadata.{entry.key}",
-                        "metadata value cannot be represented as a typed "
-                        "property; raw value retained in comment",
-                    )
-                )
-                continue
-            plan = current.metadata.get(entry.key)
-            if plan is None:
-                plan = _ValuePlan(entry.value)
-                current.metadata[entry.key] = plan
-            elif _metadata_signature(plan.sample) != signature:
-                raise ExtXYZSyntaxError(
-                    f"metadata {entry.key} changes shape or type between frames"
-                )
-            plan.present += 1
-        for name, (_role, expected) in _FRAME_PROPERTIES.items():
-            plan = current.metadata.get(name)
-            if plan is not None and name in entries:
-                _record_unit(
-                    plan,
-                    expected,
-                    entries.get(f"{name}_unit"),
-                )
     if not groups:
         raise ExtXYZSyntaxError("extXYZ source is missing an atom frame")
     return groups
@@ -1554,6 +1587,74 @@ def _finalize_group(state, source_hash):
     return structure, tuple(datasets)
 
 
+def _finalize_batch(states, source_hash, source, issues):
+    finalized = [_finalize_group(state, source_hash) for state in states]
+    structures = [item[0] for item in finalized]
+    datasets = [
+        dataset
+        for _structure, group_datasets in finalized
+        for dataset in group_datasets
+    ]
+    provenance_id = _stable_uuid(source_hash, "provenance")
+    provenance = ProvenanceRecord(
+        id=provenance_id,
+        revision=_revision(source_hash, "provenance", {"format": "extxyz"}),
+        producer="ChemBlender extXYZ reader",
+        producer_version="1",
+        source=str(Path(source).resolve()),
+        source_hash=source_hash,
+        parent_ids=(),
+        operation="parse",
+        parameters=(
+            ("format", "extxyz"),
+            ("lattice_order", "ax ay az bx by bz cx cy cz"),
+        ),
+    )
+    created = tuple(
+        [item.id for item in structures]
+        + [item.id for item in datasets]
+        + [provenance.id]
+    )
+    return ImportBatch(
+        structures=tuple(structures),
+        datasets=tuple(datasets),
+        provenance=(provenance,),
+        report=ParserReport(
+            reader_id="extxyz",
+            reader_version="1",
+            created_entity_ids=created,
+            parsed_capabilities=("structure", "trajectory", "properties"),
+            issues=tuple(issues),
+        ),
+    )
+
+
+def _parse_snapshot(
+    snapshot,
+    owner,
+    source_hash,
+    source,
+    is_cancelled,
+    *,
+    release_snapshot=False,
+):
+    issues = []
+    groups = _plan_source(snapshot, is_cancelled, issues)
+    if len(groups) > 1:
+        issues.append(
+            ParserIssue(
+                IssueKind.AMBIGUOUS,
+                "frames.atomic_identity",
+                "atom identity changed between frames; trajectory was split",
+            )
+        )
+    states = [_prepare_group_state(group, owner, issues) for group in groups]
+    _fill_states(snapshot, states, is_cancelled)
+    if release_snapshot:
+        owner.release_snapshot()
+    return _finalize_batch(states, source_hash, source, issues)
+
+
 def parse_extxyz(source, *, staging_root=None, is_cancelled=None):
     source = Path(source)
     is_cancelled = (lambda: False) if is_cancelled is None else is_cancelled
@@ -1562,64 +1663,13 @@ def parse_extxyz(source, *, staging_root=None, is_cancelled=None):
     owner = _ArrayOwner(staging_root)
     try:
         snapshot = owner.snapshot(source, is_cancelled)
-        source_hash = _source_hash(snapshot, is_cancelled)
-        issues = []
-        groups = _plan_source(snapshot, is_cancelled, issues)
-        if len(groups) > 1:
-            issues.append(
-                ParserIssue(
-                    IssueKind.AMBIGUOUS,
-                    "frames.atomic_identity",
-                    "atom identity changed between frames; trajectory was split",
-                )
-            )
-        states = [
-            _prepare_group_state(group, owner, issues)
-            for group in groups
-        ]
-        _fill_states(snapshot, states, is_cancelled)
-        owner.release_snapshot()
-        finalized = [
-            _finalize_group(state, source_hash)
-            for state in states
-        ]
-        structures = [item[0] for item in finalized]
-        datasets = [
-            dataset
-            for _structure, group_datasets in finalized
-            for dataset in group_datasets
-        ]
-        provenance_id = _stable_uuid(source_hash, "provenance")
-        provenance = ProvenanceRecord(
-            id=provenance_id,
-            revision=_revision(source_hash, "provenance", {"format": "extxyz"}),
-            producer="ChemBlender extXYZ reader",
-            producer_version="1",
-            source=str(source.resolve()),
-            source_hash=source_hash,
-            parent_ids=(),
-            operation="parse",
-            parameters=(
-                ("format", "extxyz"),
-                ("lattice_order", "ax ay az bx by bz cx cy cz"),
-            ),
-        )
-        created = tuple(
-            [item.id for item in structures]
-            + [item.id for item in datasets]
-            + [provenance.id]
-        )
-        return ImportBatch(
-            structures=tuple(structures),
-            datasets=tuple(datasets),
-            provenance=(provenance,),
-            report=ParserReport(
-                reader_id="extxyz",
-                reader_version="1",
-                created_entity_ids=created,
-                parsed_capabilities=("structure", "trajectory", "properties"),
-                issues=tuple(issues),
-            ),
+        return _parse_snapshot(
+            snapshot,
+            owner,
+            _source_hash(snapshot, is_cancelled),
+            source,
+            is_cancelled,
+            release_snapshot=True,
         )
     except BaseException as error:
         try:
@@ -1671,6 +1721,250 @@ def sniff_extxyz(source, prefix):
     return SniffResult(SniffMatch.EXACT, "valid extXYZ Properties marker")
 
 
+class _PreviewFallback(Exception):
+    pass
+
+
+def _preview_records(raw, is_cancelled):
+    records = []
+    position = 0
+    expected_count = None
+    expected_properties = None
+    first_frame_end = None
+    while position < len(raw):
+        _check_cancelled(is_cancelled)
+        if raw[position] in b"\r\n":
+            if raw[position:].strip():
+                raise _PreviewFallback
+            break
+        count_end = raw.find(b"\n", position)
+        if count_end < 0:
+            raise _PreviewFallback
+        count_raw = raw[position:count_end].rstrip(b"\r")
+        try:
+            count = int(count_raw.decode("utf-8-sig").strip())
+        except (UnicodeDecodeError, ValueError) as error:
+            raise _PreviewFallback from error
+        if count <= 0 or (
+            expected_count is not None and count != expected_count
+        ):
+            raise _PreviewFallback
+        expected_count = count
+        newline = b"\r\n" if raw[count_end - 1 : count_end] == b"\r" else b"\n"
+        comment_start = count_end + 1
+        comment_end = raw.find(b"\n", comment_start)
+        if comment_end < 0:
+            raise _PreviewFallback
+        try:
+            comment = parse_extxyz_comment(
+                raw[comment_start:comment_end].rstrip(b"\r").decode("utf-8")
+            )
+        except (UnicodeDecodeError, ExtXYZSyntaxError) as error:
+            raise _PreviewFallback from error
+        if expected_properties is None:
+            expected_properties = comment.properties
+        elif comment.properties != expected_properties:
+            raise _PreviewFallback
+        atom_start = comment_end + 1
+        marker = newline + str(count).encode("ascii") + newline
+        next_marker = raw.find(marker, atom_start)
+        if next_marker < 0:
+            next_position = len(raw)
+            row_region = raw[atom_start:].rstrip(b"\r\n")
+            row_lines = row_region.count(b"\n") + bool(row_region)
+        else:
+            next_position = next_marker + len(newline)
+            row_region = raw[atom_start:next_position]
+            row_lines = row_region.count(b"\n")
+        if row_lines != count:
+            raise _PreviewFallback
+        if first_frame_end is None:
+            first_frame_end = next_position
+        cell, pbc = _cell_and_pbc(
+            ExtXYZFrame(count, comment, comment.properties, ())
+        )
+        records.append((comment, cell, pbc))
+        position = next_position
+    if not records or first_frame_end is None:
+        raise _PreviewFallback
+    return expected_count, first_frame_end, tuple(records)
+
+
+def _preview_categories(values):
+    return list(dict.fromkeys(str(value) for value in numpy.asarray(values).flat))
+
+
+def _preview_batch(raw, source_hash, source, is_cancelled):
+    atom_count, first_frame_end, records = _preview_records(
+        raw,
+        is_cancelled,
+    )
+    try:
+        first = next(
+            iter_extxyz_frames(
+                io.StringIO(raw[:first_frame_end].decode("utf-8-sig"))
+            )
+        )
+    except (StopIteration, UnicodeDecodeError, ExtXYZSyntaxError) as error:
+        raise _PreviewFallback from error
+    if first.atom_count != atom_count:
+        raise _PreviewFallback
+
+    identity = _identity(first)
+    first_cell, first_pbc = records[0][1:]
+    group = _GroupPlan(
+        0,
+        0,
+        0,
+        identity,
+        None if first_cell is None else first_cell.copy(),
+        first_pbc,
+        cell_missing=first_cell is None,
+    )
+    issues = []
+    for frame_index, (comment, cell, pbc) in enumerate(records):
+        frame = ExtXYZFrame(
+            atom_count,
+            comment,
+            first.properties,
+            first.values,
+        )
+        _accumulate_frame_plan(
+            group,
+            frame_index,
+            frame,
+            cell,
+            pbc,
+            issues,
+        )
+
+    state = _prepare_group_state(group, _PreviewArrayOwner(), issues)
+    first_values = _value_map(first)
+    coordinates = numpy.asarray(first_values["pos"], dtype=numpy.float64)
+    state["coordinates"] = numpy.broadcast_to(
+        coordinates,
+        (group.frame_count, atom_count, 3),
+    )
+    state["comments"] = [record[0].raw for record in records]
+    state["symbols"] = tuple(str(value) for value in first_values["species"])
+    if state["cell_present"] is not None:
+        state["cell_present"] = numpy.asarray(
+            [cell is not None for _comment, cell, _pbc in records],
+            dtype=numpy.bool_,
+        )
+    if state["cells"] is not None and first_cell is not None:
+        state["cells"] = numpy.broadcast_to(
+            first_cell,
+            (group.frame_count, 3, 3),
+        )
+    if state["pbcs"] is not None:
+        state["pbcs"] = numpy.broadcast_to(
+            numpy.asarray(first_pbc, dtype=numpy.bool_),
+            (group.frame_count, 3),
+        )
+    for name, property_state in state["atom"].items():
+        if property_state["categorical"]:
+            categories = _preview_categories(first_values[name])
+            property_state["categories"] = categories
+            property_state["category_index"] = {
+                value: index for index, value in enumerate(categories)
+            }
+    for property_state in state["metadata"].values():
+        if property_state["categorical"]:
+            categories = _preview_categories(property_state["plan"].sample)
+            property_state["categories"] = categories
+            property_state["category_index"] = {
+                value: index for index, value in enumerate(categories)
+            }
+    return _finalize_batch((state,), source_hash, source, issues)
+
+
+def _preview_snapshot(request):
+    _check_cancelled(request.is_cancelled)
+    raw = request.source_path.read_bytes()
+    _check_cancelled(request.is_cancelled)
+    if sha256_bytes(raw) != request.source_content_hash:
+        raise ExtXYZSyntaxError("extXYZ source changed before preview snapshot")
+    destination = request.staging_root / _PREVIEW_SNAPSHOT_NAME
+    temporary = short_sibling_temporary_path(destination)
+    try:
+        with temporary.open("xb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        _check_cancelled(request.is_cancelled)
+        os.replace(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return raw, destination
+
+
+def _mark_materialized(request):
+    (request.staging_root / _MATERIALIZED_MARKER_NAME).write_text(
+        f"{request.source_content_hash}\n",
+        encoding="ascii",
+        newline="\n",
+    )
+
+
+def _preview_request(request):
+    if request.source_path.stat().st_size < _DEFERRED_PREVIEW_BYTES:
+        batch = _parse_request(request)
+        _mark_materialized(request)
+        return batch
+    raw, snapshot = _preview_snapshot(request)
+    try:
+        return _preview_batch(
+            raw,
+            request.source_content_hash,
+            request.source_path,
+            request.is_cancelled,
+        )
+    except _PreviewFallback:
+        snapshot.unlink(missing_ok=True)
+        batch = _parse_request(request)
+        _mark_materialized(request)
+        return batch
+    except BaseException:
+        snapshot.unlink(missing_ok=True)
+        raise
+
+
+def _materialize_request(request):
+    snapshot = request.staging_root / _PREVIEW_SNAPSHOT_NAME
+    if not snapshot.is_file():
+        marker = request.staging_root / _MATERIALIZED_MARKER_NAME
+        if (
+            marker.is_file()
+            and marker.read_text(encoding="ascii")
+            == f"{request.source_content_hash}\n"
+        ):
+            return None
+        raise ExtXYZSyntaxError("extXYZ preview snapshot is missing")
+    _check_cancelled(request.is_cancelled)
+    if sha256_file(snapshot, request.is_cancelled) != request.source_content_hash:
+        raise ExtXYZSyntaxError("extXYZ preview snapshot hash mismatch")
+    owner = _ArrayOwner(request.staging_root)
+    try:
+        batch = _parse_snapshot(
+            snapshot,
+            owner,
+            request.source_content_hash,
+            request.source_path,
+            request.is_cancelled,
+        )
+        return batch
+    except BaseException as error:
+        try:
+            owner.cleanup()
+        except BaseException as cleanup_error:
+            error.add_note(
+                "extXYZ materialization cleanup failed: "
+                f"{type(cleanup_error).__name__}: {cleanup_error}"
+            )
+        raise
+
+
 def _parse_request(request):
     return parse_extxyz(
         request.source_path,
@@ -1692,6 +1986,8 @@ EXTXYZ_READER = ReaderDescriptor(
     sniff=sniff_extxyz,
     parse=parse_extxyz,
     parse_request=_parse_request,
+    preview_request=_preview_request,
+    materialize_request=_materialize_request,
 )
 
 

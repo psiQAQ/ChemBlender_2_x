@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, replace
 import json
+from threading import Event, Thread
 from uuid import UUID
 
 from ..core import ProjectSession, QualityStatus, TopologySource
@@ -19,6 +20,7 @@ _SOURCE_ORDER = {
     TopologySource.DISTANCE_INFERRED.value: 3,
 }
 _SCENE_PROPERTY_NAME = "chemblender_topology"
+_FATAL_EXCEPTIONS = (KeyboardInterrupt, SystemExit, GeneratorExit, MemoryError)
 
 
 @dataclass(frozen=True, slots=True)
@@ -229,10 +231,8 @@ def record_topology_decision(
     return _encode_decisions(decisions)
 
 
-def compute_topology_proposal(session, structure_id, settings=None):
-    if not isinstance(session, ProjectSession):
-        raise TypeError("session must be a ProjectSession")
-    reference = _require_structure(session.project, structure_id)
+def prepare_topology_proposal(project, structure_id, settings=None):
+    reference = _require_structure(project, structure_id)
     if settings is None:
         settings = TopologyInferenceSettings()
     if not isinstance(settings, TopologyInferenceSettings):
@@ -248,6 +248,20 @@ def compute_topology_proposal(session, structure_id, settings=None):
         else infer_distance_topology(reference, settings)
     )
     proposal = batch.topologies[0]
+    existing = project.topologies.get(proposal.id)
+    if existing is not None:
+        if (
+            existing.revision != proposal.revision
+            or existing.structure_id != proposal.structure_id
+        ):
+            raise RuntimeError("deterministic topology identity collision")
+        return existing, None
+    return proposal, batch
+
+
+def apply_topology_proposal(session, proposal, batch):
+    if not isinstance(session, ProjectSession):
+        raise TypeError("session must be a ProjectSession")
     existing = session.project.topologies.get(proposal.id)
     if existing is not None:
         if (
@@ -256,9 +270,108 @@ def compute_topology_proposal(session, structure_id, settings=None):
         ):
             raise RuntimeError("deterministic topology identity collision")
         return existing, False
+    if batch is None or tuple(batch.topologies) != (proposal,):
+        raise ValueError("prepared topology batch does not match proposal")
     session.project.commit(batch)
     session.mark_dirty("topology")
     return proposal, True
+
+
+def compute_topology_proposal(session, structure_id, settings=None):
+    if not isinstance(session, ProjectSession):
+        raise TypeError("session must be a ProjectSession")
+    return apply_topology_proposal(
+        session,
+        *prepare_topology_proposal(session.project, structure_id, settings),
+    )
+
+
+class TopologyInferenceJob:
+    """Pure background inference; project mutation remains on the caller."""
+
+    def __init__(self, project, structure_id, settings):
+        self.project = project
+        self.structure_id = structure_id
+        self.settings = settings
+        self.result = None
+        self.error = None
+        self._cancelled = Event()
+        self._done = Event()
+        self._started = False
+        self._thread = Thread(target=self._run, daemon=True)
+        self._window_manager = None
+        self._timer = None
+        self._progress_started = False
+
+    def _run(self):
+        try:
+            if not self._cancelled.is_set():
+                result = prepare_topology_proposal(
+                    self.project,
+                    self.structure_id,
+                    self.settings,
+                )
+                if not self._cancelled.is_set():
+                    self.result = result
+        except BaseException as error:
+            self.error = error
+        finally:
+            self._done.set()
+
+    def start(self):
+        try:
+            self._thread.start()
+        except BaseException:
+            self._started = self._thread.is_alive()
+            raise
+        else:
+            self._started = True
+
+    def cancel(self):
+        self._cancelled.set()
+
+    def join(self, timeout):
+        if not self._started:
+            return True
+        self._thread.join(timeout)
+        return not self._thread.is_alive()
+
+    @property
+    def cancelled(self):
+        return self._cancelled.is_set()
+
+    @property
+    def done(self):
+        return self._done.is_set()
+
+    @property
+    def timer_pending(self):
+        return self._timer is not None
+
+    def attach_ui(self, window_manager, timer):
+        self._window_manager = window_manager
+        self._timer = timer
+
+    def mark_progress_started(self):
+        self._progress_started = True
+
+    def release_ui(self):
+        manager = self._window_manager
+        if manager is None:
+            return
+        if self._progress_started:
+            manager.progress_end()
+            self._progress_started = False
+        if self._timer is not None:
+            manager.event_timer_remove(self._timer)
+            self._timer = None
+        if self._timer is None and not self._progress_started:
+            self._window_manager = None
+
+    def abandon_ui(self):
+        self._window_manager = None
+        self._timer = None
+        self._progress_started = False
 
 
 try:
@@ -403,28 +516,140 @@ if bpy is not None:
         bl_label = "Compute Topology"
         bl_description = "Create a distance-inferred topology proposal"
 
+        def _finish(self, session, settings, prepared):
+            proposal, created = apply_topology_proposal(session, *prepared)
+            settings.proposal_topology_id = str(proposal.id)
+            if created:
+                from .properties import advance_browser_revision
+
+                advance_browser_revision(session)
+            self.report(
+                {"INFO"},
+                "Topology proposal created"
+                if created
+                else "Matching topology proposal already exists",
+            )
+            return {"FINISHED"}
+
+        def _release_job(self, job):
+            job.release_ui()
+            if getattr(self, "_job", None) is job:
+                self._job = None
+
         def execute(self, context):
             try:
                 session, reference, settings = _operator_context(context)
-                proposal, created = compute_topology_proposal(
-                    session,
+                inference_settings = _inference_settings(settings)
+                if getattr(bpy.app, "background", False):
+                    return self._finish(
+                        session,
+                        settings,
+                        prepare_topology_proposal(
+                            session.project,
+                            reference.id,
+                            inference_settings,
+                        ),
+                    )
+                job = TopologyInferenceJob(
+                    session.project,
                     reference.id,
-                    _inference_settings(settings),
+                    inference_settings,
                 )
-                settings.proposal_topology_id = str(proposal.id)
-                if created:
-                    from .properties import advance_browser_revision
-
-                    advance_browser_revision(session)
-                self.report(
-                    {"INFO"},
-                    "Topology proposal created"
-                    if created
-                    else "Matching topology proposal already exists",
-                )
-                return {"FINISHED"}
-            except Exception as error:
+                manager = context.window_manager
+                timer = manager.event_timer_add(0.1, window=context.window)
+                job.attach_ui(manager, timer)
+                manager.progress_begin(0, 100)
+                job.mark_progress_started()
+                manager.progress_update(10)
+                manager.modal_handler_add(self)
+                self._job = job
+                self._session = session
+                self._settings = settings
+                job.start()
+                return {"RUNNING_MODAL"}
+            except BaseException as error:
+                if "job" in locals():
+                    job.cancel()
+                    job.join(None)
+                    try:
+                        self._release_job(job)
+                    except BaseException as cleanup_error:
+                        error.add_note(
+                            f"topology job cleanup failed: {cleanup_error}"
+                        )
+                if isinstance(error, _FATAL_EXCEPTIONS):
+                    raise
                 return _report_failure(self, error)
+
+        def modal(self, context, event):
+            job = getattr(self, "_job", None)
+            if job is None:
+                return {"CANCELLED"}
+            if event.type == "ESC":
+                job.cancel()
+            if event.type != "TIMER" or not job.done:
+                return {"RUNNING_MODAL"}
+            if not hasattr(job, "_completion_failure"):
+                failure = None
+                try:
+                    job.join(0)
+                    context.window_manager.progress_update(100)
+                except BaseException as error:
+                    failure = error
+                job._completion_failure = failure
+            failure = job._completion_failure
+            try:
+                self._release_job(job)
+            except BaseException as error:
+                if (
+                    not isinstance(error, _FATAL_EXCEPTIONS)
+                    and job.timer_pending
+                ):
+                    self.report(
+                        {"WARNING"},
+                        f"Topology cleanup retry pending: {error}",
+                    )
+                    return {"RUNNING_MODAL"}
+                job.abandon_ui()
+                if failure is None:
+                    failure = error
+                else:
+                    error.add_note(f"topology completion failed: {failure}")
+                    failure = error
+            if failure is not None:
+                if isinstance(failure, _FATAL_EXCEPTIONS):
+                    raise failure
+                return _report_failure(self, failure)
+            if job.error is not None:
+                if isinstance(job.error, _FATAL_EXCEPTIONS):
+                    raise job.error
+                return _report_failure(self, job.error)
+            if job.cancelled:
+                self.report({"INFO"}, "Topology inference cancelled")
+                return {"CANCELLED"}
+            try:
+                return self._finish(
+                    self._session,
+                    self._settings,
+                    job.result,
+                )
+            except BaseException as error:
+                if isinstance(error, _FATAL_EXCEPTIONS):
+                    raise
+                return _report_failure(self, error)
+
+        def cancel(self, _context):
+            job = getattr(self, "_job", None)
+            if job is None:
+                return
+            job.cancel()
+            try:
+                job.join(None)
+                self._release_job(job)
+            except BaseException as error:
+                if isinstance(error, _FATAL_EXCEPTIONS):
+                    raise
+                self.report({"ERROR"}, f"Topology cleanup failed: {error}")
 
 
     class _TopologyOperator:
@@ -631,7 +856,10 @@ if bpy is not None:
 
 __all__ = (
     "TopologyChoice",
+    "TopologyInferenceJob",
+    "apply_topology_proposal",
     "compute_topology_proposal",
+    "prepare_topology_proposal",
     "record_topology_decision",
     "suggested_topology_id",
     "topology_choices",

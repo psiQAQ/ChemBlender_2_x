@@ -76,6 +76,7 @@ class StagedImportSession:
         "_discarded",
         "_id",
         "_marker_identity",
+        "_materializers",
         "_results",
         "_root",
         "_root_identity",
@@ -120,6 +121,7 @@ class StagedImportSession:
         instance._root_identity = _path_identity(instance._root)
         instance._artifact_identity = _path_identity(instance._artifact_root)
         instance._marker_identity = _path_identity(marker)
+        instance._materializers = {}
         instance._results = {}
         instance._discarded = False
         return instance
@@ -140,16 +142,20 @@ class StagedImportSession:
     def result_ids(self):
         return tuple(self._results)
 
-    def register_result(self, result_id, batch):
+    def register_result(self, result_id, batch, *, materializer=None):
         if self._discarded:
             raise RuntimeError("staged import session was discarded")
         if type(result_id) is not UUID:
             raise TypeError("result_id must be a UUID")
         if type(batch) is not ImportBatch:
             raise TypeError("batch must be an ImportBatch")
+        if materializer is not None and not callable(materializer):
+            raise TypeError("materializer must be callable or None")
         if result_id in self._results:
             raise ValueError("result id is already registered")
         self._results[result_id] = batch
+        if materializer is not None:
+            self._materializers[result_id] = materializer
 
     def result(self, result_id):
         if self._discarded:
@@ -157,6 +163,34 @@ class StagedImportSession:
         if type(result_id) is not UUID:
             raise TypeError("result_id must be a UUID")
         return self._results[result_id]
+
+    def has_pending_materializer(self, result_id):
+        self.result(result_id)
+        return result_id in self._materializers
+
+    def materialize_result(
+        self,
+        result_id,
+        *,
+        progress=lambda _stage, _completed, _total: None,
+        is_cancelled=lambda: False,
+    ):
+        current = self.result(result_id)
+        if not callable(progress) or not callable(is_cancelled):
+            raise TypeError("progress and is_cancelled must be callable")
+        materializer = self._materializers.get(result_id)
+        if materializer is None:
+            return current
+        replacement = materializer(progress, is_cancelled)
+        if replacement is None:
+            replacement = current
+        if type(replacement) is not ImportBatch:
+            raise TypeError("materializer must return ImportBatch or None")
+        self._results[result_id] = replacement
+        del self._materializers[result_id]
+        if replacement is not current:
+            _close_memmaps(current, set())
+        return replacement
 
     def discard(self):
         if self._discarded:
@@ -201,5 +235,6 @@ class StagedImportSession:
 
         _close_memmaps(tuple(self._results.values()), set())
         shutil.rmtree(resolved)
+        self._materializers.clear()
         self._results.clear()
         self._discarded = True

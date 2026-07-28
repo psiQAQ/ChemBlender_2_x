@@ -237,9 +237,23 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         )
         for value in (
             "128 × 128 × 128",
-            "1.659286 s",
+            "1.679902 s",
             "Blender 5.1.2",
             "cold VDB cache",
+            "Remote CI: Not Run",
+        ):
+            self.assertIn(value, baseline)
+
+    def test_extxyz_flow_baseline_records_reference_budget_evidence(self):
+        baseline = self.read_doc(
+            "docs/quantum-visualization/2.3.0/benchmarks/"
+            "extxyz-flow-baseline.md"
+        )
+        for value in (
+            "1,000 frames × 1,000 atoms",
+            "0.448/0.457 s",
+            "99.702 s",
+            "bounded 64 KiB source-read",
             "Remote CI: Not Run",
         ):
             self.assertIn(value, baseline)

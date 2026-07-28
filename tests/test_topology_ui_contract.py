@@ -1,7 +1,10 @@
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from threading import Event
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 from uuid import uuid4
 
 import numpy
@@ -19,7 +22,10 @@ from ChemBlender.core import (
 )
 from ChemBlender.core.topology.infer import TopologyInferenceSettings
 from ChemBlender.ui.topology import (
+    TopologyInferenceJob,
+    apply_topology_proposal,
     compute_topology_proposal,
+    prepare_topology_proposal,
     record_topology_decision,
     suggested_topology_id,
     topology_choices,
@@ -283,6 +289,105 @@ class TopologyUIContractTests(unittest.TestCase):
                 )
             finally:
                 close_session(session)
+
+    def test_inference_job_does_not_mutate_project_before_main_thread_apply(self):
+        reference = structure()
+        project = QCProject(uuid4(), "0.2")
+        project.commit(ImportBatch(structures=(reference,)))
+        with TemporaryDirectory() as directory:
+            session = create_session(
+                temp_parent=Path(directory),
+                project=project,
+            )
+            try:
+                job = TopologyInferenceJob(
+                    project,
+                    reference.id,
+                    TopologyInferenceSettings(),
+                )
+                job.start()
+                self.assertTrue(job.join(5.0))
+                self.assertIsNone(job.error)
+                self.assertFalse(job.cancelled)
+                self.assertEqual(project.topologies, {})
+                proposal, batch = job.result
+
+                applied, created = apply_topology_proposal(
+                    session,
+                    proposal,
+                    batch,
+                )
+
+                self.assertIs(applied, proposal)
+                self.assertTrue(created)
+                self.assertIs(project.topologies[proposal.id], proposal)
+                self.assertIn("topology", session.dirty_reasons)
+            finally:
+                close_session(session)
+
+    def test_cancelled_inference_job_discards_prepared_batch_without_mutation(self):
+        reference = structure()
+        project = QCProject(uuid4(), "0.2")
+        project.commit(ImportBatch(structures=(reference,)))
+        started = Event()
+        release = Event()
+        original = prepare_topology_proposal
+
+        def delayed(project_arg, structure_id, settings):
+            started.set()
+            release.wait(5.0)
+            return original(project_arg, structure_id, settings)
+
+        with patch.dict(
+            TopologyInferenceJob._run.__globals__,
+            {"prepare_topology_proposal": delayed},
+        ):
+            job = TopologyInferenceJob(
+                project,
+                reference.id,
+                TopologyInferenceSettings(),
+            )
+            job.start()
+            self.assertTrue(started.wait(5.0))
+            job.cancel()
+            release.set()
+            self.assertTrue(job.join(5.0))
+
+        self.assertTrue(job.cancelled)
+        self.assertIsNone(job.result)
+        self.assertIsNone(job.error)
+        self.assertEqual(project.topologies, {})
+
+    def test_inference_job_retries_ui_cleanup_without_losing_timer_ownership(self):
+        class Manager:
+            progress_attempts = 0
+            removed = []
+
+            def progress_end(self):
+                self.progress_attempts += 1
+                if self.progress_attempts == 1:
+                    raise OSError("progress busy")
+
+            def event_timer_remove(self, timer):
+                self.removed.append(timer)
+
+        job = TopologyInferenceJob(
+            QCProject(uuid4(), "0.2"),
+            uuid4(),
+            TopologyInferenceSettings(),
+        )
+        manager = Manager()
+        timer = SimpleNamespace()
+        job.attach_ui(manager, timer)
+        job.mark_progress_started()
+
+        with self.assertRaisesRegex(OSError, "progress busy"):
+            job.release_ui()
+        self.assertTrue(job.timer_pending)
+
+        job.release_ui()
+        self.assertFalse(job.timer_pending)
+        self.assertEqual(manager.removed, [timer])
 
 
 if __name__ == "__main__":
