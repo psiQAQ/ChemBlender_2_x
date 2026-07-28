@@ -18,6 +18,13 @@ class PoscarSyntaxError(ValueError):
 
 
 @dataclass(frozen=True, slots=True)
+class PoscarLatticeVelocityBlock:
+    initialization_state: float
+    velocities: tuple[tuple[float, float, float], ...]
+    lattice_vectors: tuple[tuple[float, float, float], ...]
+
+
+@dataclass(frozen=True, slots=True)
 class PoscarDocument:
     comment: str
     scale: float
@@ -28,6 +35,7 @@ class PoscarDocument:
     coordinate_mode: str
     coordinates: tuple[tuple[float, float, float], ...]
     selective_dynamics: tuple[tuple[bool, bool, bool], ...] | None
+    lattice_velocities: PoscarLatticeVelocityBlock | None
     velocity_mode: str | None
     velocities: tuple[tuple[float, float, float], ...] | None
     diagnostics: tuple[ParserIssue, ...]
@@ -110,6 +118,34 @@ def _parse_velocities(lines, start, count):
     )
 
 
+def _parse_lattice_velocities(lines, start):
+    if start >= len(lines) or lines[start].lstrip()[:1].lower() != "l":
+        return None, start
+    if len(lines) < start + 8:
+        raise PoscarSyntaxError("POSCAR lattice velocity block must contain 8 lines")
+    initialization_state, = _numbers(
+        lines[start + 1],
+        count=1,
+        name="POSCAR lattice velocity initialization state",
+    )
+    velocities = tuple(
+        _numbers(line, count=3, name="POSCAR lattice velocity rows")
+        for line in lines[start + 2 : start + 5]
+    )
+    lattice_vectors = tuple(
+        _numbers(line, count=3, name="POSCAR lattice velocity vectors")
+        for line in lines[start + 5 : start + 8]
+    )
+    return (
+        PoscarLatticeVelocityBlock(
+            initialization_state=initialization_state,
+            velocities=velocities,
+            lattice_vectors=lattice_vectors,
+        ),
+        start + 8,
+    )
+
+
 def parse_poscar_document(raw):
     if not isinstance(raw, bytes):
         raise TypeError("raw must be bytes")
@@ -149,6 +185,7 @@ def parse_poscar_document(raw):
     coordinates, flags, index = _parse_coordinates(
         lines, index + 1, sum(counts), selective
     )
+    lattice_velocities, index = _parse_lattice_velocities(lines, index)
     velocity_mode, velocities = _parse_velocities(lines, index, sum(counts))
 
     diagnostics = []
@@ -184,6 +221,7 @@ def parse_poscar_document(raw):
         coordinate_mode=coordinate_mode,
         coordinates=coordinates,
         selective_dynamics=flags,
+        lattice_velocities=lattice_velocities,
         velocity_mode=velocity_mode,
         velocities=velocities,
         diagnostics=tuple(diagnostics),
@@ -240,4 +278,10 @@ def sniff_poscar(source, prefix):
     return SniffResult(SniffMatch.NONE, "POSCAR filename or VASP suffix is required")
 
 
-__all__ = ("PoscarDocument", "PoscarSyntaxError", "parse_poscar_document", "sniff_poscar")
+__all__ = (
+    "PoscarDocument",
+    "PoscarLatticeVelocityBlock",
+    "PoscarSyntaxError",
+    "parse_poscar_document",
+    "sniff_poscar",
+)

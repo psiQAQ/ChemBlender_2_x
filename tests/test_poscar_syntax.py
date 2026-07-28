@@ -32,6 +32,16 @@ class PoscarSyntaxTests(unittest.TestCase):
 
         self.assertIs(result.match, SniffMatch.PROBABLE)
 
+    def test_bare_contcar_sniff_is_exact(self):
+        from ChemBlender.core.formats.poscar import sniff_poscar
+
+        source = FIXTURES / "velocities.CONTCAR"
+
+        self.assertIs(
+            sniff_poscar(Path("CONTCAR"), source.read_bytes()).match,
+            SniffMatch.EXACT,
+        )
+
     def test_sniff_accepts_valid_truncated_large_poscar_prefix(self):
         from ChemBlender.core.formats.poscar import sniff_poscar
         from ChemBlender.core.readers import SNIFF_PREFIX_BYTES
@@ -70,6 +80,27 @@ class PoscarSyntaxTests(unittest.TestCase):
         )
         self.assertEqual(document.coordinates, ((0.5, 1.0, 1.5),))
 
+    def test_positive_scale_normalizes_lattice_and_cartesian_coordinates(self):
+        from ChemBlender.core.formats.poscar import parse_poscar_document
+
+        document = parse_poscar_document(
+            b"positive scale\n"
+            b"2.5\n"
+            b"1 0 0\n"
+            b"0 1 0\n"
+            b"0 0 1\n"
+            b"H\n"
+            b"1\n"
+            b"Cartesian\n"
+            b"0.2 0.4 0.6\n"
+        )
+
+        self.assertEqual(
+            document.lattice,
+            ((2.5, 0.0, 0.0), (0.0, 2.5, 0.0), (0.0, 0.0, 2.5)),
+        )
+        self.assertEqual(document.coordinates, ((0.5, 1.0, 1.5),))
+
     def test_negative_scale_with_singular_lattice_returns_invalid_diagnostic(self):
         from ChemBlender.core.formats.poscar import parse_poscar_document
 
@@ -83,6 +114,26 @@ class PoscarSyntaxTests(unittest.TestCase):
             [("invalid", "lattice")],
         )
 
+    def test_zero_scale_returns_invalid_scale_diagnostic(self):
+        from ChemBlender.core.formats.poscar import parse_poscar_document
+
+        document = parse_poscar_document(
+            b"zero scale\n"
+            b"0\n"
+            b"1 0 0\n"
+            b"0 1 0\n"
+            b"0 0 1\n"
+            b"H\n"
+            b"1\n"
+            b"Direct\n"
+            b"0 0 0\n"
+        )
+
+        self.assertEqual(
+            [(issue.kind.value, issue.path) for issue in document.diagnostics],
+            [("invalid", "scale")],
+        )
+
     def test_vasp4_counts_preserve_missing_species_identities(self):
         from ChemBlender.core.formats.poscar import parse_poscar_document
 
@@ -93,6 +144,27 @@ class PoscarSyntaxTests(unittest.TestCase):
         self.assertIsNone(document.species)
         self.assertEqual(document.counts, (2, 1))
         self.assertEqual(document.coordinates, ((0.0, 0.0, 0.0), (0.5, 0.5, 0.5), (0.25, 0.25, 0.25)))
+
+    def test_vasp5_species_and_counts_preserve_source_order(self):
+        from ChemBlender.core.formats.poscar import parse_poscar_document
+
+        document = parse_poscar_document(
+            b"ordered species\n"
+            b"1\n"
+            b"1 0 0\n"
+            b"0 1 0\n"
+            b"0 0 1\n"
+            b"O Si H\n"
+            b"1 2 1\n"
+            b"Direct\n"
+            b"0 0 0\n"
+            b"0.25 0.25 0.25\n"
+            b"0.5 0.5 0.5\n"
+            b"0.75 0.75 0.75\n"
+        )
+
+        self.assertEqual(document.species, ("O", "Si", "H"))
+        self.assertEqual(document.counts, (1, 2, 1))
 
     def test_selective_dynamics_and_direct_mode_are_parsed(self):
         from ChemBlender.core.formats.poscar import parse_poscar_document
@@ -125,18 +197,103 @@ class PoscarSyntaxTests(unittest.TestCase):
                 b"bad flags\n1\n1 0 0\n0 1 0\n0 0 1\nH\n1\nSelective\nDirect\n0 0 0 T F X\n"
             )
 
-    def test_valid_velocity_block_is_preserved(self):
+    def test_valid_lattice_and_ion_velocity_blocks_are_preserved(self):
         from ChemBlender.core.formats.poscar import parse_poscar_document
 
         document = parse_poscar_document(
             (FIXTURES / "velocities.CONTCAR").read_bytes()
         )
 
+        self.assertEqual(document.lattice_velocities.initialization_state, 1.0)
+        self.assertEqual(
+            document.lattice_velocities.velocities,
+            (
+                (0.001, 0.0, 0.0),
+                (0.0, 0.002, 0.0),
+                (0.0, 0.0, 0.003),
+            ),
+        )
+        self.assertEqual(
+            document.lattice_velocities.lattice_vectors,
+            (
+                (3.0, 0.0, 0.0),
+                (0.0, 3.0, 0.0),
+                (0.0, 0.0, 3.0),
+            ),
+        )
         self.assertEqual(
             document.velocities,
             ((0.1, 0.2, 0.3), (-0.4, 0.5, 0.6)),
         )
         self.assertEqual(document.velocity_mode, "cartesian")
+
+    def test_invalid_or_incomplete_lattice_velocity_blocks_are_rejected(self):
+        from ChemBlender.core.formats.poscar import (
+            PoscarSyntaxError,
+            parse_poscar_document,
+        )
+
+        prefix = (
+            b"invalid lattice velocities\n"
+            b"1\n"
+            b"1 0 0\n"
+            b"0 1 0\n"
+            b"0 0 1\n"
+            b"H\n"
+            b"1\n"
+            b"Direct\n"
+            b"0 0 0\n"
+            b"Lattice velocities and vectors\n"
+        )
+        vector_rows = (
+            b"0.1 0 0\n"
+            b"0 0.2 0\n"
+            b"0 0 0.3\n"
+            b"1 0 0\n"
+            b"0 1 0\n"
+            b"0 0 1\n"
+        )
+        cases = {
+            "initialization state": prefix + b"1 2\n" + vector_rows,
+            "finite": (
+                prefix
+                + b"1\n"
+                + b"nan 0 0\n"
+                + b"0 0.2 0\n"
+                + b"0 0 0.3\n"
+                + b"1 0 0\n"
+                + b"0 1 0\n"
+                + b"0 0 1\n"
+            ),
+            "lattice velocity block": (
+                prefix
+                + b"1\n"
+                + b"0.1 0 0\n"
+                + b"0 0.2 0\n"
+                + b"0 0 0.3\n"
+                + b"1 0 0\n"
+                + b"0 1 0\n"
+            ),
+        }
+        for message, content in cases.items():
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(PoscarSyntaxError, message):
+                    parse_poscar_document(content)
+
+    def test_predictor_corrector_tail_is_not_silently_consumed(self):
+        from ChemBlender.core.formats.poscar import (
+            PoscarSyntaxError,
+            parse_poscar_document,
+        )
+
+        content = (FIXTURES / "velocities.CONTCAR").read_bytes()
+
+        with self.assertRaisesRegex(PoscarSyntaxError, "velocity"):
+            parse_poscar_document(
+                content
+                + b"\npredictor-corrector initialization\n"
+                + b"1\n"
+            )
 
     def test_explicit_velocity_mode_uses_vasp_first_character_rule(self):
         from ChemBlender.core.formats.poscar import parse_poscar_document
