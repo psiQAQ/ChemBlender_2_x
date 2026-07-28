@@ -196,7 +196,7 @@ Run with bundled RDKit and commit.
 **Interfaces:**
 - Produces: `export_mol()`, `export_sdf()`, `export_smiles()`.
 
-- [ ] **Step 1: Add V3000 bond ID regression**
+- [x] **Step 1: Add V3000 bond ID regression**
 
 ```python
 def test_v3000_bond_ids_start_at_one(self):
@@ -205,21 +205,26 @@ def test_v3000_bond_ids_start_at_one(self):
     self.assertNotIn("M  V30 0 ", text)
 ```
 
-- [ ] **Step 2: Build RDKit molecule from project entities**
+- [x] **Step 2: Build RDKit molecule from project entities**
 
 Set atoms, isotopes, formal charges, maps, stereo and explicit bonds. Add conformer coordinates. Reject or diagnose topology concepts not representable by target format.
 
-- [ ] **Step 3: SDF export**
+- [x] **Step 3: SDF export**
 
 Write records in selected original order and SD properties in original order. Derived conformers get deterministic new titles/record IDs without pretending to be original records.
 
-- [ ] **Step 4: SMILES export**
+- [x] **Step 4: SMILES export**
 
 Allow canonical and isomeric modes and report loss of coordinates/properties.
 
-- [ ] **Step 5: Round-trip tests and commit**
+- [x] **Step 5: Round-trip tests and commit**
 
 Compare chemistry, coordinates within writer precision, charges, isotopes, stereo, record order and SD strings. Commit.
+
+**Completed:** `1229d78c0e2e86488c6e05e4b1456f537decf9a9`.
+
+**Verification:** focused 121/121; full 1319 Passed, 28 Skipped; real Blender
+5.1.2 export/re-import Passed; `SPEC PASS`; `QUALITY PASS`.
 
 ### Task 8: Add UI and remove silent legacy failure paths
 

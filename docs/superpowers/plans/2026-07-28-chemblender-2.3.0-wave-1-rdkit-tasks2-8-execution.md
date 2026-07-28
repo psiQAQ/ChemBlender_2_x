@@ -279,6 +279,12 @@ atomic-path and legacy output regressions.
 
 **Commit message:** `feat: add RDKit molecular exporters`
 
+**Completed:** `1229d78c0e2e86488c6e05e4b1456f537decf9a9`.
+
+**Verification:** bundled-Python focused 121/121; full 1319 Passed,
+28 Skipped; Blender 5.1.2 MOL/SDF/SMILES and complex E/Z export/re-import
+Passed; `SPEC PASS`; `QUALITY PASS`.
+
 **Next task:** Task 8 — UI and performance closure.
 
 ## Task 8 — UI, Legacy and Performance Closure
