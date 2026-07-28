@@ -391,6 +391,7 @@ class _Decoder:
             value.setdefault("cif_block_name", None)
             value.setdefault("cif_block_key", None)
             value.setdefault("cif_block_index", None)
+            value.setdefault("disorder_assemblies", {"$tuple": []})
         expected = {item.name for item in fields(class_type) if item.init}
         actual = set(value) - {"$type"}
         if actual != expected:

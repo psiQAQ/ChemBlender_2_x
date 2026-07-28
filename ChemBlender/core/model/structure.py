@@ -29,6 +29,7 @@ class PeriodicSiteData:
     cif_block_name: str | None = None
     cif_block_key: str | None = None
     cif_block_index: int | None = None
+    disorder_assemblies: tuple[str, ...] = ()
 
     def __post_init__(self):
         import numpy
@@ -52,11 +53,13 @@ class PeriodicSiteData:
             or self.occupancies.shape != (atom_count,)
             or self.occupancies.unit != "dimensionless"
             or numpy.iscomplexobj(occupancies)
-            or not numpy.all(numpy.isfinite(occupancies))
-            or numpy.any(occupancies < 0.0)
-            or numpy.any(occupancies > 1.0)
+            or not numpy.all(numpy.isfinite(occupancies) | numpy.isnan(occupancies))
+            or numpy.any(occupancies[numpy.isfinite(occupancies)] < 0.0)
+            or numpy.any(occupancies[numpy.isfinite(occupancies)] > 1.0)
         ):
-            raise ValueError("occupancies must contain one value from 0 to 1 per atom")
+            raise ValueError(
+                "occupancies must contain one value from 0 to 1 or missing per atom"
+            )
         labels = tuple(self.site_labels)
         adp_types = tuple(self.adp_types)
         disorder_groups = tuple(self.disorder_groups)
@@ -144,11 +147,22 @@ class PeriodicSiteData:
         pbc = tuple(self.pbc)
         if len(pbc) != 3 or any(not isinstance(value, bool) for value in pbc):
             raise ValueError("pbc must contain three bool values")
+        disorder_assemblies = tuple(self.disorder_assemblies) or (
+            ("none",) * atom_count
+        )
+        if len(disorder_assemblies) != atom_count or any(
+            not isinstance(value, str) or not value
+            for value in disorder_assemblies
+        ):
+            raise ValueError(
+                "disorder_assemblies must contain one non-empty value per atom"
+            )
         object.__setattr__(self, "site_labels", labels)
         object.__setattr__(self, "adp_types", adp_types)
         object.__setattr__(self, "disorder_groups", disorder_groups)
         object.__setattr__(self, "symmetry_operations", symmetry_operations)
         object.__setattr__(self, "pbc", pbc)
+        object.__setattr__(self, "disorder_assemblies", disorder_assemblies)
 
 
 def _cell_matrix(cell, *, load_lazy=True):

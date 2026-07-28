@@ -1,0 +1,15 @@
+data_cartesian
+_cell_length_a 10
+_cell_length_b 10
+_cell_length_c 10
+_cell_angle_alpha 90
+_cell_angle_beta 90
+_cell_angle_gamma 90
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_Cartn_x
+_atom_site_Cartn_y
+_atom_site_Cartn_z
+C1 C 1.0 2.0 3.0
+O1 O 4.0 5.0 6.0
