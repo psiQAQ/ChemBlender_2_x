@@ -1,12 +1,17 @@
-import operator
 import os
-import sys
 from pathlib import Path
 
 import bpy
 
 from .core import Grid3D, volume_render_cache_key
-from .core.storage.atomic_paths import short_sibling_temporary_path
+from .core.grid_cache_service import (
+    VolumeCacheRequest,
+    _dataset_index as _cache_dataset_index,
+    _selected_values,
+    _transform_matrix,
+    prepare_volume_cache,
+    volume_cache_path as _volume_cache_path,
+)
 
 
 _ANGSTROM_SCALE = {
@@ -30,82 +35,56 @@ def _safe_vdb_path(path):
     return path
 
 
-def _selected_values(grid, dataset_index):
-    import numpy as np
-
-    if isinstance(dataset_index, bool):
-        raise TypeError("dataset_index must be an integer")
-    try:
-        dataset_index = operator.index(dataset_index)
-    except TypeError as error:
-        raise TypeError("dataset_index must be an integer") from error
-    if grid.data.dims == ("x", "y", "z"):
-        if dataset_index != 0:
-            raise IndexError("three-dimensional Grid3D only has dataset index 0")
-        return np.asarray(grid.data.values, dtype=np.float32, order="C")
-    if grid.data.dims == ("dataset", "x", "y", "z"):
-        if not 0 <= dataset_index < grid.data.shape[0]:
-            raise IndexError("dataset_index is outside the Grid3D dataset axis")
-        return np.asarray(
-            grid.data.values[dataset_index], dtype=np.float32, order="C"
-        )
-    raise ValueError("Volume adapter requires xyz or dataset-xyz Grid3D dimensions")
-
-
-def _dataset_index(grid, dataset_index):
-    if dataset_index is None:
-        if grid.data.dims == ("x", "y", "z"):
-            return 0
-        raise ValueError("multi-dataset Grid3D requires an explicit dataset_index")
-    if isinstance(dataset_index, bool):
-        raise TypeError("dataset_index must be an integer")
-    try:
-        return operator.index(dataset_index)
-    except TypeError as error:
-        raise TypeError("dataset_index must be an integer") from error
-
-
-def _transform_matrix(grid, scale):
-    steps = tuple(
-        tuple(component * scale for component in vector) + (0.0,)
-        for vector in grid.step_vectors
-    )
-    origin = tuple(component * scale for component in grid.origin) + (1.0,)
-    return (*steps, origin)
-
-
 def volume_cache_path(cache_root, grid, *, dataset_index=None):
     if not isinstance(grid, Grid3D):
         raise TypeError("grid must be a Grid3D")
-    dataset_index = _dataset_index(grid, dataset_index)
     cache_root = _safe_vdb_path(cache_root)
-    key = volume_render_cache_key(grid, dataset_index=dataset_index)
-    return cache_root / "volume" / f"{key}.vdb"
+    return _safe_vdb_path(
+        _volume_cache_path(
+            cache_root,
+            grid,
+            dataset_index=dataset_index,
+        )
+    )
 
 
-def _validate_vdb(path, grid_names, render_key):
-    import openvdb
+class _OpenVDBWriter:
+    @staticmethod
+    def populate(values, transform, _metadata):
+        import openvdb
 
-    grids, metadata = openvdb.readAll(str(path))
-    if {grid.name for grid in grids} != set(grid_names):
-        raise RuntimeError("VDB grid inventory does not match the cache contract")
-    if metadata.get("chemblender_render_cache_key") != render_key:
-        raise RuntimeError("VDB render cache identity does not match")
+        vdb_grid = openvdb.FloatGrid()
+        vdb_grid.name = "density"
+        vdb_grid.copyFromArray(values)
+        vdb_grid.transform = openvdb.createLinearTransform(transform)
+        return vdb_grid
+
+    @staticmethod
+    def write(path, payload, metadata):
+        import openvdb
+
+        openvdb.write(str(path), payload, metadata=metadata)
+
+    @staticmethod
+    def validate(path, grid_names, render_key):
+        import openvdb
+
+        grids, metadata = openvdb.readAll(str(path))
+        if {grid.name for grid in grids} != set(grid_names):
+            raise RuntimeError(
+                "VDB grid inventory does not match the cache contract"
+            )
+        if metadata.get("chemblender_render_cache_key") != render_key:
+            raise RuntimeError("VDB render cache identity does not match")
+
+
+_OPENVDB_WRITER = _OpenVDBWriter()
 
 
 def ensure_grid_volume_cache(grid, cache_path, *, dataset_index=None):
     """Return a validated cache, rebuilding a missing or invalid VDB in place."""
-    import openvdb
-
     if not isinstance(grid, Grid3D):
         raise TypeError("grid must be a Grid3D")
-    dataset_index = _dataset_index(grid, dataset_index)
-    try:
-        scale = _ANGSTROM_SCALE[grid.coordinate_unit]
-    except KeyError as error:
-        raise ValueError(
-            f"unsupported Grid3D coordinate unit: {grid.coordinate_unit}"
-        ) from error
     cache_path = _safe_vdb_path(cache_path)
     if cache_path.is_dir():
         cache_path = volume_cache_path(
@@ -114,50 +93,14 @@ def ensure_grid_volume_cache(grid, cache_path, *, dataset_index=None):
         cache_path = _safe_vdb_path(cache_path)
     elif cache_path.suffix.lower() != ".vdb":
         raise ValueError("cache_path must use the .vdb suffix")
-    cache_path.parent.mkdir(exist_ok=True)
-    render_key = volume_render_cache_key(grid, dataset_index=dataset_index)
-    if cache_path.is_file():
-        try:
-            _validate_vdb(cache_path, ("density",), render_key)
-        except Exception:
-            pass
-        else:
-            return cache_path
-
-    values = _selected_values(grid, dataset_index)
-    vdb_grid = openvdb.FloatGrid()
-    vdb_grid.name = "density"
-    vdb_grid.copyFromArray(values)
-    vdb_grid.transform = openvdb.createLinearTransform(
-        _transform_matrix(grid, scale)
+    result = prepare_volume_cache(
+        grid,
+        VolumeCacheRequest(cache_path, dataset_index=dataset_index),
+        writer=_OPENVDB_WRITER,
+        cancelled=lambda: False,
+        progress=lambda _stage, _fraction: None,
     )
-    metadata = {
-        "chemblender_dataset_id": str(grid.id),
-        "chemblender_dataset_revision": grid.revision,
-        "chemblender_dataset_index": int(dataset_index),
-        "chemblender_semantic_role": grid.semantic_role,
-        "chemblender_value_unit": grid.data.unit,
-        "chemblender_source_coordinate_unit": grid.coordinate_unit,
-        "chemblender_display_coordinate_unit": "angstrom",
-        "chemblender_coordinate_scale": scale,
-        "chemblender_cache_format_version": 1,
-        "chemblender_render_cache_key": render_key,
-    }
-    if grid.structure_id is not None:
-        metadata["chemblender_structure_id"] = str(grid.structure_id)
-    temporary = short_sibling_temporary_path(cache_path)
-    try:
-        openvdb.write(str(temporary), vdb_grid, metadata=metadata)
-        _validate_vdb(temporary, ("density",), render_key)
-        os.replace(temporary, cache_path)
-    finally:
-        active_error = sys.exception()
-        try:
-            temporary.unlink(missing_ok=True)
-        except OSError:
-            if active_error is None:
-                raise
-    return cache_path
+    return result.cache_path
 
 
 def create_grid_volume(
@@ -172,7 +115,7 @@ def create_grid_volume(
         raise TypeError("grid must be a Grid3D")
     if not isinstance(name, str) or not name:
         raise ValueError("name must be a non-empty string")
-    dataset_index = _dataset_index(grid, dataset_index)
+    dataset_index = _cache_dataset_index(grid, dataset_index)
     try:
         scale = _ANGSTROM_SCALE[grid.coordinate_unit]
     except KeyError as error:

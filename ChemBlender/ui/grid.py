@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Event, Thread
 from uuid import UUID
 
 from ..core import (
@@ -320,44 +321,61 @@ if bpy is not None:
         mode: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
         property_grid_id: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
 
+        @staticmethod
+        def _cache_root(session):
+            if session.sidecar_path is None:
+                root = Path(session.temporary_root) / "view-cache"
+                root.mkdir(exist_ok=True)
+                return root
+            from .view_cache import _durable_cache_root
+
+            return _durable_cache_root(session.sidecar_path)
+
+        def _values(self, context):
+            session, grid, settings = _operator_context(context)
+            property_grid_id = (
+                UUID(self.property_grid_id)
+                if self.property_grid_id
+                else None
+            )
+            plan = plan_grid_view(
+                session.project,
+                grid.id,
+                mode=self.mode,
+                dataset_index=(
+                    settings.dataset_index
+                    if grid.data.dims[0] == "dataset"
+                    else 0
+                ),
+                property_grid_id=property_grid_id,
+                isovalue=settings.isovalue,
+            )
+            return session, grid, plan, self._cache_root(session)
+
+        @staticmethod
+        def _apply(context, session, plan, cache_root):
+            from ..scene_preset_view import apply_scene_preset
+
+            created = apply_scene_preset(
+                plan,
+                session.project,
+                collection=context.collection,
+                cache_root=cache_root,
+            )
+            if created:
+                session.active_view_object_name = created[-1].name
+            session.mark_dirty("view_cache")
+            return created
+
         def execute(self, context):
             try:
-                session, grid, settings = _operator_context(context)
-                property_grid_id = (
-                    UUID(self.property_grid_id)
-                    if self.property_grid_id
-                    else None
-                )
-                plan = plan_grid_view(
-                    session.project,
-                    grid.id,
-                    mode=self.mode,
-                    dataset_index=(
-                        settings.dataset_index
-                        if grid.data.dims[0] == "dataset"
-                        else 0
-                    ),
-                    property_grid_id=property_grid_id,
-                    isovalue=settings.isovalue,
-                )
-                from ..scene_preset_view import apply_scene_preset
-
-                if session.sidecar_path is None:
-                    cache_root = Path(session.temporary_root) / "view-cache"
-                    cache_root.mkdir(exist_ok=True)
-                else:
-                    from .view_cache import _durable_cache_root
-
-                    cache_root = _durable_cache_root(session.sidecar_path)
-                created = apply_scene_preset(
+                session, _grid, plan, cache_root = self._values(context)
+                created = self._apply(
+                    context,
+                    session,
                     plan,
-                    session.project,
-                    collection=context.collection,
-                    cache_root=cache_root,
+                    cache_root,
                 )
-                if created:
-                    session.active_view_object_name = created[-1].name
-                session.mark_dirty("view_cache")
                 self.report({"INFO"}, f"Created {len(created)} Grid view object(s)")
                 return {"FINISHED"}
             except Exception as error:
@@ -365,6 +383,134 @@ if bpy is not None:
                     raise
                 self.report({"ERROR"}, str(error))
                 return {"CANCELLED"}
+
+        def invoke(self, context, _event):
+            if self.mode != "volume" or bpy.app.background:
+                return self.execute(context)
+            try:
+                session, grid, plan, cache_root = self._values(context)
+                dataset_index = dict(plan.settings)["dataset_index"]
+                from ..core.grid_cache_service import (
+                    VolumeCacheRequest,
+                    prepare_volume_cache,
+                )
+                from ..grid_volume import (
+                    _OPENVDB_WRITER,
+                    volume_cache_path,
+                )
+
+                request = VolumeCacheRequest(
+                    volume_cache_path(
+                        cache_root,
+                        grid,
+                        dataset_index=dataset_index,
+                    ),
+                    dataset_index,
+                )
+                self._cache_job = {
+                    "result": None,
+                    "error": None,
+                    "stage": "starting",
+                    "progress": 0.0,
+                }
+                self._cache_cancel = Event()
+                self._cache_values = (session, plan, cache_root)
+
+                def progress(stage, fraction):
+                    self._cache_job["stage"] = stage
+                    self._cache_job["progress"] = fraction
+
+                def run():
+                    try:
+                        self._cache_job["result"] = prepare_volume_cache(
+                            grid,
+                            request,
+                            writer=_OPENVDB_WRITER,
+                            cancelled=self._cache_cancel.is_set,
+                            progress=progress,
+                        )
+                    except BaseException as error:
+                        self._cache_job["error"] = error
+
+                self._cache_thread = Thread(
+                    target=run,
+                    name="ChemBlender volume cache",
+                    daemon=True,
+                )
+                manager = context.window_manager
+                self._cache_timer = None
+                progress_started = False
+                try:
+                    manager.progress_begin(0, 100)
+                    progress_started = True
+                    self._cache_timer = manager.event_timer_add(
+                        0.1,
+                        window=context.window,
+                    )
+                    manager.modal_handler_add(self)
+                    self._cache_thread.start()
+                except BaseException:
+                    self._cache_cancel.set()
+                    if self._cache_timer is not None:
+                        manager.event_timer_remove(self._cache_timer)
+                    if progress_started:
+                        manager.progress_end()
+                    raise
+                return {"RUNNING_MODAL"}
+            except Exception as error:
+                if isinstance(error, MemoryError):
+                    raise
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
+
+        def _finish_modal(self, context):
+            manager = context.window_manager
+            manager.event_timer_remove(self._cache_timer)
+            manager.progress_end()
+
+        def modal(self, context, event):
+            if event.type == "ESC":
+                self._cache_cancel.set()
+            if event.type != "TIMER":
+                return {"RUNNING_MODAL"}
+            manager = context.window_manager
+            manager.progress_update(
+                int(self._cache_job["progress"] * 100)
+            )
+            if self._cache_thread.is_alive():
+                return {"RUNNING_MODAL"}
+            self._finish_modal(context)
+            error = self._cache_job["error"]
+            if error is not None:
+                if isinstance(
+                    error,
+                    (KeyboardInterrupt, SystemExit, GeneratorExit, MemoryError),
+                ):
+                    raise error
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
+            result = self._cache_job["result"]
+            if result.status == "cancelled":
+                self.report({"INFO"}, "Grid cache creation cancelled")
+                return {"CANCELLED"}
+            try:
+                session, plan, cache_root = self._cache_values
+                created = self._apply(
+                    context,
+                    session,
+                    plan,
+                    cache_root,
+                )
+            except Exception as error:
+                if isinstance(error, MemoryError):
+                    raise
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
+            self.report(
+                {"INFO"},
+                f"Created {len(created)} Grid view object(s)",
+            )
+            return {"FINISHED"}
 
 
     def draw_grid_controls(layout, context, session):

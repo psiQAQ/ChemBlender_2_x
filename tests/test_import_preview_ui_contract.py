@@ -84,6 +84,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             ("BoolProperty", "bool"),
             ("CollectionProperty", "collection"),
             ("EnumProperty", "enum"),
+            ("FloatProperty", "float"),
             ("IntProperty", "int"),
             ("PointerProperty", "pointer"),
             ("StringProperty", "string"),
