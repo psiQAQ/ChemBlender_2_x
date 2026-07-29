@@ -37,7 +37,7 @@ ADR 0043 is authoritative. PDB/PQR must reuse `BiologicalHierarchy`,
   `FrameSet`.
 - Produces: executable mapping fixtures; no new core model.
 
-- [ ] **Step 1: Write shape and categorical tests**
+- [x] **Step 1: Write shape and categorical tests**
 
 `BiologicalAtomSiteData` stores serial, residue index, altloc and record kind;
 `BiologicalChain`/`BiologicalResidue` store chain, segment, residue number,
@@ -45,19 +45,24 @@ insertion code and residue name; `AtomicIdentityData` stores atom names.
 Occupancy/B-factor and PQR charge/radius remain atomic datasets. All atom
 dimensions match Structure.
 
-- [ ] **Step 2: Verify identity key**
+- [x] **Step 2: Verify identity key**
 
 A stable atom identity tuple uses record kind, chain, residue number, insertion code, residue name, atom name and altloc. Serial is retained but not the sole identity across models.
 
-- [ ] **Step 3: Verify project/sidecar validation**
+- [x] **Step 3: Verify project/sidecar validation**
 
 Each Structure has at most one BiologicalHierarchy. Compatible MODEL records
 use FrameSet; incompatible identity sets create independent structures.
 Run sidecar/canonical round-trip.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit model and tests.
+
+Completion evidence: `ac924e6`, `3eade23`; 22 focused tests passed,
+`compileall` and `git diff --check` passed, and fix round 1 closed the only
+Important review finding. The registered-reader capability matrix remains
+unchanged until PDB/PQR reader registration in Tasks 3 and 4.
 
 ### Task 2: Implement fixed-column PDB parser
 
