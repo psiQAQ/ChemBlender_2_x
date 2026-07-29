@@ -29,20 +29,20 @@
 - Consumes: merged Wave 2 evidence at `644b83edf6f63f352615240296b6a060866a98c6`.
 - Produces: one in-progress `W2-FINAL-QUALIFICATION-GATE` execution cursor.
 
-- [ ] **Step 1: Record the live baseline**
+- [x] **Step 1: Record the live baseline**
 
 Record the branch, worktree, merged main SHA, exact post-merge CI run
 `30438386040`, Blender 5.1.2 executable/Python/runtime and the 34-test
 focused baseline.
 
-- [ ] **Step 2: Record scope and stop boundary**
+- [x] **Step 2: Record scope and stop boundary**
 
 Set required subgoals to `schema-api-freeze-audit`,
 `optional-dependency-isolation`, `crystal-capability-matrix`,
 `fixed-crystal-roundtrip`, `wave2-performance-baseline` and
 `blender-product-qualification`. State that Wave 3 remains queued.
 
-- [ ] **Step 3: Verify documentation and commit**
+- [x] **Step 3: Verify documentation and commit**
 
 Run:
 
@@ -70,7 +70,7 @@ git commit -m "docs: start Wave 2 final qualification"
 - Consumes: `ChemBlender.core.__all__`, `ChemBlender.reader_api.__all__`, ADR 0042 and live built-in reader descriptors.
 - Produces: a checked-in crystal capability declaration and executable public/dependency audit.
 
-- [ ] **Step 1: Write the RED contract**
+- [x] **Step 1: Write the RED contract**
 
 Add tests that load the not-yet-created matrix and assert:
 
@@ -90,7 +90,7 @@ and export support with only `supported`, `partial` or `unsupported` values.
 The RED failure is `FileNotFoundError` for
 `crystal-capability-matrix-v1.json`.
 
-- [ ] **Step 2: Run and capture RED**
+- [x] **Step 2: Run and capture RED**
 
 Run:
 
@@ -101,7 +101,7 @@ Run:
 Expected: the matrix test fails because the file is absent; existing public
 surface and import-isolation assertions remain green.
 
-- [ ] **Step 3: Add the minimal matrix and lazy-import audit**
+- [x] **Step 3: Add the minimal matrix and lazy-import audit**
 
 Create one deterministic JSON object with schema name/version and exact CIF
 and POSCAR capability objects. In fresh subprocesses prove:
@@ -120,7 +120,7 @@ When Gemmi is available, invoke `parse_cif()` and assert Gemmi then loads
 while spglib remains absent. Public exported objects must not have
 `__module__` roots `gemmi` or `spglib`.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run:
 
@@ -149,7 +149,7 @@ git commit -m "test: freeze Wave 2 crystal boundaries"
 - Consumes: `parse_cif()`, `parse_poscar()`, `QCProject.commit()`, `save_project()`, `open_project()`, `export_cif()`, `export_poscar()` and `semantic_poscar_differences()`.
 - Produces: a fixed qualification inventory covering quartz, NaCl, disorder, multi-block CIF, Si, bcc Fe, Selective Dynamics and velocity POSCAR/CONTCAR.
 
-- [ ] **Step 1: Write fixture-inventory RED tests**
+- [x] **Step 1: Write fixture-inventory RED tests**
 
 Define literal fixture tables:
 
@@ -164,7 +164,7 @@ PBC for all cases; additionally compare declared symmetry, occupancy,
 disorder and ADP when present. POSCAR comparison must include matching
 Selective Dynamics and selected velocity datasets.
 
-- [ ] **Step 2: Run and capture RED**
+- [x] **Step 2: Run and capture RED**
 
 Run:
 
@@ -174,7 +174,7 @@ Run:
 
 Expected: missing quartz/NaCl/Si/Fe fixture failures.
 
-- [ ] **Step 3: Add the smallest valid fixtures**
+- [x] **Step 3: Add the smallest valid fixtures**
 
 Add UTF-8/LF deterministic scientific fixtures:
 
@@ -186,7 +186,7 @@ Add UTF-8/LF deterministic scientific fixtures:
 Reuse the existing disorder, multi-block, Selective Dynamics and velocity
 fixtures instead of duplicating them.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run:
 
@@ -214,7 +214,7 @@ git commit -m "test: qualify crystal scientific round trips"
 - Consumes: fixed fixtures, `parse_cif()`, `parse_poscar()`, periodic derived-site preparation and Blender periodic view creation.
 - Produces: deterministic benchmark JSON containing hardware/runtime, workload size, sample count, warmup, median, p95 and peak memory.
 
-- [ ] **Step 1: Write the benchmark contract RED**
+- [x] **Step 1: Write the benchmark contract RED**
 
 Import `ChemBlender.scripts.benchmark_crystal` and require:
 
@@ -234,7 +234,7 @@ The result must contain `environment` and metrics named
 metadata. With `include_blender_view=False`, the view metric is explicitly
 `Not Run`, never fabricated.
 
-- [ ] **Step 2: Run and capture RED**
+- [x] **Step 2: Run and capture RED**
 
 Run:
 
@@ -244,7 +244,7 @@ Run:
 
 Expected: import failure because `benchmark_crystal.py` is absent.
 
-- [ ] **Step 3: Implement the minimal benchmark**
+- [x] **Step 3: Implement the minimal benchmark**
 
 Use only `argparse`, `json`, `platform`, `statistics`, `time`,
 `tracemalloc`, `tempfile` and existing ChemBlender APIs. Generate bounded
@@ -252,7 +252,7 @@ synthetic CIF input without nested full-project duplication. Use a lazy
 Blender-only import for actual view creation and delete created objects after
 each sample. Output canonical UTF-8 JSON with sorted keys and one trailing LF.
 
-- [ ] **Step 4: Measure the release workloads**
+- [x] **Step 4: Measure the release workloads**
 
 Run at least five samples after one warmup for:
 
@@ -266,7 +266,7 @@ Record CPU, RAM, Windows version, Blender/Python/NumPy/Gemmi versions,
 sample count, median, p95, peak memory and comparison with
 `docs/quantum-visualization/2.3.0/performance-budget.md`.
 
-- [ ] **Step 5: Run GREEN and commit**
+- [x] **Step 5: Run GREEN and commit**
 
 Run:
 
@@ -293,7 +293,7 @@ git commit -m "perf: record Wave 2 crystal baseline"
 - Consumes: Tasks 1–4 commits.
 - Produces: completed gate evidence and a clean local branch stopped before Wave 3.
 
-- [ ] **Step 1: Run focused and full Python verification**
+- [x] **Step 1: Run focused and full Python verification**
 
 Run the qualification, CIF, POSCAR, symmetry, periodic view, Reader API,
 sidecar and documentation modules, then:
@@ -304,28 +304,28 @@ sidecar and documentation modules, then:
 git diff --check
 ```
 
-- [ ] **Step 2: Run Blender 5.1.2 qualification**
+- [x] **Step 2: Run Blender 5.1.2 qualification**
 
 Run native extension validate/build, exact ZIP safe-path/duplicate/CRC/wheel
 audit, isolated official-ZIP install, CIF/POSCAR save/reopen/export, crystal
 view creation and register/unregister/reload ×2. Confirm the built artifact
 contains exact pinned Gemmi/RDKit wheels and no spglib wheel.
 
-- [ ] **Step 3: Request two independent reviews**
+- [x] **Step 3: Request two independent reviews**
 
 Review 1 checks requirements/specification compliance. Review 2 checks code
 quality, fixture correctness, benchmark honesty and over-engineering. Fix all
 Critical/Important and gate-related Minor findings, then rerun affected and
 full verification.
 
-- [ ] **Step 4: Complete the cursor and plan**
+- [x] **Step 4: Complete the cursor and plan**
 
 Record all commit SHAs, RED/GREEN counts, fixture inventory, matrix status,
 actual performance metrics, package SHA/size, Blender evidence, post-merge
 CI provenance and `Remote CI: Not Run` for this local qualification branch.
 Set next task to `Wave 3 Exchange Pre-Gate` but keep Wave 3 queued.
 
-- [ ] **Step 5: Commit checkpoint and stop**
+- [x] **Step 5: Commit checkpoint and stop**
 
 ```powershell
 git add .agents/active/2.3.0-wave-2-native-crystal.md docs/superpowers/plans/2026-07-30-chemblender-2.3.0-wave2-final-qualification.md
