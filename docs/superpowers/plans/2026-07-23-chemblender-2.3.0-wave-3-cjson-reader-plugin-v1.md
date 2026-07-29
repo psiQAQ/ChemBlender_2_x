@@ -164,15 +164,15 @@ was unavailable. Scoped re-review passed with no open findings.
 **Interfaces:**
 - Produces: CLI and JSON result schema.
 
-- [ ] **Step 1: Define conformance result document**
+- [x] **Step 1: Define conformance result document**
 
 Fields: API version, plugin ID/version, reader ID/version, case IDs, pass/fail/skip, duration, fixture hashes, diagnostics and environment. Skips require an explicit optional-case reason; required cases cannot skip.
 
-- [ ] **Step 2: Extend checks**
+- [x] **Step 2: Extend checks**
 
 Validate deterministic sniff, prefix bound, source identity, quality/diagnostics, reference integrity, canonical round-trip, artifact security, progress monotonicity, cancellation, exception isolation and declared capabilities.
 
-- [ ] **Step 3: Add CLI**
+- [x] **Step 3: Add CLI**
 
 ```text
 python -m ChemBlender.reader_api.conformance_cli --plugin-path examples/reader-extension --fixtures examples/reader-extension/fixtures --output conformance-result.json
@@ -180,13 +180,20 @@ python -m ChemBlender.reader_api.conformance_cli --plugin-path examples/reader-e
 
 The CLI imports the plugin in a subprocess for isolation and returns nonzero if a required case fails.
 
-- [ ] **Step 4: Run built-in and example suites**
+- [x] **Step 4: Run built-in and example suites**
 
 All built-in Wave 1–3 readers and the example plugin produce passing results. Store summary in beta.2 evidence, not generated runtime artifacts in Git unless stable fixtures are intended.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit conformance implementation/docs/tests.
+
+Completion evidence: `d128b90`, `377f8b8`; RED was an import error for the
+missing v1 runner followed by three focused regressions for progress cleanup,
+stdout isolation and the complete built-in matrix. GREEN was 170/170 focused,
+12/12 required built-in readers and 1/1 example CLI cases. Pinned Gemmi/RDKit
+wheels were unpacked only into temporary test paths; no dependency was
+installed. Scoped re-review approved with no open findings.
 
 ### Task 5: Verify plugin discovery and failure isolation in Blender
 
