@@ -15,6 +15,7 @@ DOC_NAMES = (
     "python-api.md",
     "worker-api.md",
     "diagnostics.md",
+    "conformance.md",
     "compatibility.md",
 )
 

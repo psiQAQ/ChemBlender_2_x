@@ -10,6 +10,7 @@ Reader API 是 Reader Extension 与 ChemBlender 之间的纯 Python 数据边界
 - [Python API 与生命周期](python-api.md)
 - [Worker API](worker-api.md)
 - [诊断与故障隔离](diagnostics.md)
+- [Conformance kit](conformance.md)
 - [兼容与弃用策略](compatibility.md)
 
 ## Installed Extension bootstrap
