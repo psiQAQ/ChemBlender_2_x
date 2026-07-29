@@ -236,3 +236,19 @@ Completion evidence: `d57aac0`, `ec713f3`; 11 focused and 112 related tests
 passed, public imports, `compileall` and `git diff --check` passed. Fix round 1
 closed PQR cardinality/FrameSet and live hierarchy validation findings with no
 open issues.
+
+## Final whole-plan review
+
+- [x] Review the complete PDB/PQR diff against this plan.
+- [x] Fix all Critical, Important and plan-related Minor findings in one final
+  fix wave.
+- [x] Run a scoped independent re-review of that fix wave.
+
+Completion evidence: `e480154`; 247 impacted tests and 30
+structure/registration tests passed. Native extension validate/build and the
+Blender 5.1.2 lifecycle smoke passed. The final fix wave closed 5 Important
+and 2 Minor findings covering transactional residue-conflict recovery, PQR
+dialect provenance, live export-readiness validation, fail-closed biological
+projection and linear-time labels/browser mapping. Scoped re-review approved
+the result with no new findings. Deferred scope remains PDB/PQR writing,
+ribbon/cartoon, secondary structure and biological assembly.
