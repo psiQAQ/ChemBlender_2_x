@@ -138,21 +138,25 @@ Critical/Important review findings.
 **Interfaces:**
 - Produces: molecule/record/substructure browsing and styling.
 
-- [ ] **Step 1: Preview summary**
+- [x] **Step 1: Preview summary**
 
 Show molecule count, atom/bond counts, molecule/charge types, partial-charge availability and unsupported sections.
 
-- [ ] **Step 2: Browser and selection**
+- [x] **Step 2: Browser and selection**
 
 Expose atom type, substructure and charge datasets. Add substructure selection/coloring through categorical codes and existing selection attributes.
 
-- [ ] **Step 3: Legacy bridge**
+- [x] **Step 3: Legacy bridge**
 
 Route legacy `.mol2` file action to Quick Import. Remove the temporary unsupported diagnostic introduced in Wave 1.
 
-- [ ] **Step 4: Blender smoke and commit**
+- [x] **Step 4: Blender smoke and commit**
 
 Import aromatic/substructure fixture, create ball-and-stick view, color by substructure, save/reopen. Commit.
+
+Completion evidence: `40bdc39`, `f0ffe03`; 217 focused tests passed,
+native validate/build and Blender 5.1.2 isolated lifecycle smoke passed, and
+fix round 1 closed all Critical/Important review findings.
 
 ### Task 5: Establish MOL2 export P1 boundary
 
