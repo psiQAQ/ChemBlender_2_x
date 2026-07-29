@@ -29,6 +29,21 @@ def _annotations(batch):
     return {annotation.key: annotation.value for annotation in batch.annotations}
 
 
+def _bond_record(name, declared_bonds, bond_lines):
+    return (
+        b"@<TRIPOS>MOLECULE\n"
+        + name.encode("ascii")
+        + b"\n2 "
+        + str(declared_bonds).encode("ascii")
+        + b" 0 0 0\nSMALL\nNO_CHARGES\n"
+        b"@<TRIPOS>ATOM\n"
+        b"10 C1 0 0 0 C.3\n"
+        b"42 H1 1 0 0 H\n"
+        b"@<TRIPOS>BOND\n"
+        + bond_lines
+    )
+
+
 class Mol2MappingTests(unittest.TestCase):
     def test_reader_parse_entrypoint_exists(self):
         self.assertTrue(callable(getattr(mol2, "parse_mol2", None)))
@@ -189,6 +204,73 @@ class Mol2MappingTests(unittest.TestCase):
 
 
 class Mol2RecoveryTests(unittest.TestCase):
+    def _parse_between_valid_records(self, invalid_record):
+        from tempfile import TemporaryDirectory
+
+        valid = (FIXTURES / "small.mol2").read_bytes()
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "bond-recovery.mol2"
+            source.write_bytes(valid + invalid_record + valid)
+            try:
+                return mol2.parse_mol2(source)
+            except ValueError as error:
+                self.fail(
+                    f"Balanced MOL2 bond recovery raised {type(error).__name__}: "
+                    f"{error}"
+                )
+
+    def _assert_middle_topology_invalid(
+        self, batch, expected_path="topology.bonds"
+    ):
+        self.assertEqual(len(batch.structures), 3)
+        self.assertEqual(len(batch.molecular_records), 3)
+        self.assertEqual(len(batch.topologies), 2)
+        self.assertEqual(
+            tuple(record.source_record_index for record in batch.molecular_records),
+            (0, 1, 2),
+        )
+        self.assertIsNone(batch.molecular_records[1].topology_id)
+        invalid = [
+            diagnostic
+            for diagnostic in batch.diagnostics
+            if diagnostic.quality_status is QualityStatus.INVALID
+            and "record-000001" in diagnostic.record_key
+        ]
+        self.assertEqual(len(invalid), 1)
+        self.assertEqual(invalid[0].field_path, expected_path)
+
+    def test_duplicate_canonical_edge_keeps_atoms_and_neighbor_records(self):
+        batch = self._parse_between_valid_records(
+            _bond_record(
+                "duplicate edge",
+                2,
+                b"7 10 42 1\n8 42 10 1\n",
+            )
+        )
+
+        self._assert_middle_topology_invalid(batch)
+
+    def test_self_edge_keeps_atoms_and_neighbor_records(self):
+        batch = self._parse_between_valid_records(
+            _bond_record("self edge", 1, b"7 10 10 1\n")
+        )
+
+        self._assert_middle_topology_invalid(batch)
+
+    def test_malformed_bond_numeric_keeps_atoms_and_neighbor_records(self):
+        batch = self._parse_between_valid_records(
+            _bond_record("malformed numeric", 1, b"x 10 42 1\n")
+        )
+
+        self._assert_middle_topology_invalid(batch, "bond[0].syntax")
+
+    def test_bond_count_mismatch_keeps_atoms_and_neighbor_records(self):
+        batch = self._parse_between_valid_records(
+            _bond_record("count mismatch", 2, b"7 10 42 1\n")
+        )
+
+        self._assert_middle_topology_invalid(batch, "bond.count")
+
     def test_balanced_mode_keeps_records_around_a_malformed_record(self):
         first, second = (FIXTURES / "multi.mol2").read_bytes().split(
             b"@<TRIPOS>MOLECULE\nsecond",
@@ -368,7 +450,7 @@ class Mol2RegistrationTests(unittest.TestCase):
 
 
 class Mol2PersistenceTests(unittest.TestCase):
-    def test_preview_commit_and_sidecar_reopen_preserve_record_mapping(self):
+    def test_repeated_set_diagnostics_survive_preview_commit_and_sidecar_reopen(self):
         from tempfile import TemporaryDirectory
 
         from ChemBlender.core import (
@@ -392,11 +474,25 @@ class Mol2PersistenceTests(unittest.TestCase):
         )
         from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
 
-        raw = (FIXTURES / "small.mol2").read_bytes()
+        raw = (
+            (FIXTURES / "small.mol2").read_bytes()
+            + b"@<TRIPOS>SET\n"
+            b"2 SECOND_SET ATOMS STATIC\n"
+            b"1 42\n"
+        )
         with TemporaryDirectory() as directory:
             root = Path(directory)
             source_path = root / "small.mol2"
             source_path.write_bytes(raw)
+            first_ids = tuple(
+                diagnostic.id
+                for diagnostic in mol2.parse_mol2(source_path).diagnostics
+            )
+            second_ids = tuple(
+                diagnostic.id
+                for diagnostic in mol2.parse_mol2(source_path).diagnostics
+            )
+            self.assertEqual(first_ids, second_ids)
             source = ImportSource(source_path)
             request = ImportRequest(
                 (source,),
@@ -415,6 +511,11 @@ class Mol2PersistenceTests(unittest.TestCase):
                 self.assertEqual(len(preview.staged_batch_ids), 1)
                 staged = staged_session.result(preview.staged_batch_ids[0])
                 self.assertEqual(len(staged.molecular_records), 1)
+                self.assertEqual(len(staged.diagnostics), 2)
+                self.assertEqual(
+                    len({diagnostic.id for diagnostic in staged.diagnostics}),
+                    2,
+                )
                 self.assertEqual(
                     staged.molecular_records[0].source_revision_id,
                     staged.source_revisions[0].id,
@@ -427,12 +528,23 @@ class Mol2PersistenceTests(unittest.TestCase):
                     preview,
                     ImportCommitDecisions(),
                 )
+                self.assertEqual(len(result.project.diagnostics), 2)
                 sidecar = root / "mol2.cbq"
                 save_project(sidecar, result.project)
                 reopened = open_project(sidecar)
                 try:
                     record = next(iter(reopened.molecular_records.values()))
                     self.assertEqual(record.raw_block, raw)
+                    self.assertEqual(len(reopened.diagnostics), 2)
+                    self.assertEqual(
+                        len(
+                            {
+                                diagnostic.id
+                                for diagnostic in reopened.diagnostics.values()
+                            }
+                        ),
+                        2,
+                    )
                     self.assertEqual(
                         {value.semantic_role for value in reopened.datasets.values()},
                         {

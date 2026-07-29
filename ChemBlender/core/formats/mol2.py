@@ -380,14 +380,39 @@ def parse_mol2_record(record: Mol2SyntaxRecord) -> Mol2ParsedRecord:
         if bond_section is None
         else [line for line in _section_lines(bond_section) if line.strip()]
     )
-    bonds = tuple(
-        _parse_bond(line, index, atom_indices, issues)
-        for index, line in enumerate(bond_lines)
-    )
-    if len(bonds) != counts.bond_count:
-        raise ValueError("MOL2 BOND section does not match the declared count")
+    invalid_bond_data = False
+    bonds = []
+    for index, line in enumerate(bond_lines):
+        try:
+            bonds.append(_parse_bond(line, index, atom_indices, issues))
+        except ValueError as error:
+            invalid_bond_data = True
+            issues.append(
+                ParserIssue(
+                    IssueKind.INVALID,
+                    f"bond[{index}].syntax",
+                    str(error),
+                )
+            )
+    bonds = tuple(bonds)
+    if len(bond_lines) != counts.bond_count:
+        invalid_bond_data = True
+        issues.append(
+            ParserIssue(
+                IssueKind.INVALID,
+                "bond.count",
+                "MOL2 BOND section does not match the declared count",
+            )
+        )
     if len({bond.bond_id for bond in bonds}) != len(bonds):
-        raise ValueError("MOL2 bond IDs must be unique")
+        invalid_bond_data = True
+        issues.append(
+            ParserIssue(
+                IssueKind.INVALID,
+                "bond.ids",
+                "MOL2 bond IDs must be unique",
+            )
+        )
 
     substructure_section = _optional_section(record, "SUBSTRUCTURE")
     substructure_lines = (
@@ -442,7 +467,8 @@ def parse_mol2_record(record: Mol2SyntaxRecord) -> Mol2ParsedRecord:
         for section in unknown_sections
     )
     topology_valid = (
-        not any(bond.atom_indices is None or bond.unknown for bond in bonds)
+        not invalid_bond_data
+        and not any(bond.atom_indices is None or bond.unknown for bond in bonds)
         and all(value.root_atom_index is not None for value in substructures)
         and not dangling_substructures
     )
@@ -579,9 +605,11 @@ def _diagnostic(
     raw_block,
     record_key,
     issue,
+    occurrence,
     *,
     entity_id=None,
 ):
+    occurrence_suffix = "" if occurrence == 0 else f":{occurrence}"
     severity, quality_status, consequence = {
         IssueKind.MISSING: (
             DiagnosticSeverity.WARNING,
@@ -615,7 +643,7 @@ def _diagnostic(
             source_hash,
             record_index,
             raw_block,
-            f"diagnostic:{issue.kind.value}:{issue.path}",
+            f"diagnostic:{issue.kind.value}:{issue.path}{occurrence_suffix}",
         ),
         severity=severity,
         quality_status=quality_status,
@@ -672,6 +700,7 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
         parsed.raw_block,
     )
 
+    issues = list(parsed.issues)
     topology = None
     if parsed.topology_valid:
         bonds = sorted(
@@ -684,42 +713,49 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
             )
             for bond in parsed.bonds
         )
-        topology = TopologyRecord(
-            id=_identity(
-                source_revision_id,
-                source_hash,
-                record_index,
-                parsed.raw_block,
-                "topology",
-            ),
-            revision=source_hash,
-            structure_id=structure_id,
-            bond_indices=ArrayData(
-                numpy.asarray(
-                    tuple(item[:2] for item in bonds),
-                    dtype=numpy.int64,
-                ).reshape((-1, 2)),
-                ("bond", "endpoint"),
-                "dimensionless",
-            ),
-            bond_orders=_array(
-                tuple(item[2] for item in bonds),
-                ("bond",),
-                dtype="float64",
-            ),
-            aromatic_flags=_array(
-                tuple(item[3] for item in bonds),
-                ("bond",),
-                dtype="bool",
-            ),
-            stereo_labels=tuple(item[4] for item in bonds),
-            source_kind=TopologySource.EXPLICIT_FILE,
-            quality_status=QualityStatus.COMPLETE,
-            inference_parameters=(),
-            provenance_ids=(provenance_id,),
-        )
-
-    issues = list(parsed.issues)
+        try:
+            topology = TopologyRecord(
+                id=_identity(
+                    source_revision_id,
+                    source_hash,
+                    record_index,
+                    parsed.raw_block,
+                    "topology",
+                ),
+                revision=source_hash,
+                structure_id=structure_id,
+                bond_indices=ArrayData(
+                    numpy.asarray(
+                        tuple(item[:2] for item in bonds),
+                        dtype=numpy.int64,
+                    ).reshape((-1, 2)),
+                    ("bond", "endpoint"),
+                    "dimensionless",
+                ),
+                bond_orders=_array(
+                    tuple(item[2] for item in bonds),
+                    ("bond",),
+                    dtype="float64",
+                ),
+                aromatic_flags=_array(
+                    tuple(item[3] for item in bonds),
+                    ("bond",),
+                    dtype="bool",
+                ),
+                stereo_labels=tuple(item[4] for item in bonds),
+                source_kind=TopologySource.EXPLICIT_FILE,
+                quality_status=QualityStatus.COMPLETE,
+                inference_parameters=(),
+                provenance_ids=(provenance_id,),
+            )
+        except ValueError as error:
+            issues.append(
+                ParserIssue(
+                    IssueKind.INVALID,
+                    "topology.bonds",
+                    f"invalid MOL2 bond topology: {error}",
+                )
+            )
     missing_categories = tuple(
         index
         for index, atom in enumerate(parsed.atoms)
@@ -898,18 +934,25 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
         ordered_raw_properties=(),
         provenance_ids=(provenance_id,),
     )
-    diagnostics = tuple(
-        _diagnostic(
-            source_revision_id,
-            source_hash,
-            record_index,
-            parsed.raw_block,
-            record_key,
-            issue,
-            entity_id=structure.id,
+    occurrences = {}
+    diagnostics = []
+    for issue in issues:
+        key = (issue.kind, issue.path)
+        occurrence = occurrences.get(key, 0)
+        occurrences[key] = occurrence + 1
+        diagnostics.append(
+            _diagnostic(
+                source_revision_id,
+                source_hash,
+                record_index,
+                parsed.raw_block,
+                record_key,
+                issue,
+                occurrence,
+                entity_id=structure.id,
+            )
         )
-        for issue in issues
-    )
+    diagnostics = tuple(diagnostics)
     return (
         structure,
         topology,
