@@ -107,21 +107,25 @@ Critical/Important review findings.
 **Interfaces:**
 - Produces: reader ID `mol2`, Structure, TopologyRecord, AtomicProperties, categorical atom/substructure data and MolecularRecords.
 
-- [ ] **Step 1: Write mapping tests**
+- [x] **Step 1: Write mapping tests**
 
 Assert coordinates, elements, atom types, partial charges, topology source explicit_file, aromatic/amide flags, substructure IDs/names and envelope.
 
-- [ ] **Step 2: Implement partial recovery**
+- [x] **Step 2: Implement partial recovery**
 
 A malformed record does not invalidate other records under Balanced mode. A valid atom block with invalid bonds yields a Structure and Invalid topology diagnostic. Missing charge values produce Partial property, not zero Complete values.
 
-- [ ] **Step 3: Register and conform**
+- [x] **Step 3: Register and conform**
 
 Add execution mode built-in, capabilities structure/topology/atomic_property/substructure/multi_record. Run Reader API v1 conformance.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run reader, catalog, sidecar, preview and record tests; commit.
+
+Completion evidence: `e4acf7f`, `baa13bd`, `83e142a`; 132 focused tests
+passed, `compileall` and `git diff --check` passed, and fix round 2 closed all
+Critical/Important review findings.
 
 ### Task 4: Add MOL2 Project Browser and view behavior
 
