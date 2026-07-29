@@ -275,15 +275,33 @@ class LegacyMolecularImportTests(unittest.TestCase):
                 self.assertEqual(reports, [])
                 read_mol.assert_not_called()
 
-    def test_legacy_mol2_action_cancels_before_reader_api_delegation(self):
+    def test_legacy_mol2_action_routes_to_quick_import(self):
+        source = (
+            Path(__file__).with_name("fixtures")
+            / "mol2"
+            / "substructure.mol2"
+        ).resolve()
         operator, context, calls, reports = self.scaffold_fixture(
             "File",
-            filetext="molecule.mol2",
+            filetext=str(source),
         )
 
-        self.assertEqual(operator.execute(context), {"CANCELLED"})
-        self.assertEqual(calls, [])
-        self.assertEqual(reports, [({"ERROR"}, "MOL2 is not supported")])
+        self.assertEqual(operator.execute(context), {"FINISHED"})
+        self.assertEqual(
+            calls,
+            [
+                (
+                    "quick_import",
+                    ("EXEC_DEFAULT",),
+                    {
+                        "directory": str(source.parent),
+                        "files": [{"name": source.name}],
+                        "validation_mode": "strict",
+                    },
+                )
+            ],
+        )
+        self.assertEqual(reports, [])
 
 
 if __name__ == "__main__":

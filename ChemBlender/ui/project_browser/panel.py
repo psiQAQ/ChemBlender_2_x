@@ -3,6 +3,7 @@
 import importlib
 import json
 import operator
+from dataclasses import replace
 from uuid import UUID
 
 import bpy
@@ -24,13 +25,20 @@ from ..properties import (
 )
 from ..session import get_scene_session
 from ...core import (
+    ArrayData,
     AtomFrameProperty,
+    AtomicProperty,
+    CategoricalData,
     ConformerSet,
     FrameSet,
     MolecularRecord,
     Structure,
 )
-from ...dataset_view import write_vector_view
+from ...dataset_view import (
+    apply_atom_selection,
+    apply_atomic_scalar,
+    write_vector_view,
+)
 from .model import (
     BrowserMode,
     ViewRecord,
@@ -102,6 +110,11 @@ class CHEMBLENDER_PG_project_browser(bpy.types.PropertyGroup):
         default="all",
         update=_projection_changed,
     )
+    substructure_code: IntProperty(
+        name="Substructure Code",
+        default=0,
+        min=0,
+    )
     selected_index: IntProperty(default=0, update=_selection_changed)
     active_entity_id: StringProperty()
     total_row_count: IntProperty(default=0)
@@ -166,6 +179,104 @@ def atom_frame_vector(project, entity_id, frame_index):
         dataset,
         dataset.data.values[frame_index],
     )
+
+
+def substructure_category(project, entity_id, category_code):
+    if type(entity_id) is not UUID:
+        raise TypeError("entity_id must be UUID")
+    dataset = project.datasets.get(entity_id)
+    if (
+        not isinstance(dataset, AtomicProperty)
+        or dataset.semantic_role != "substructure_name"
+        or not isinstance(dataset.data, CategoricalData)
+        or dataset.data.dims != ("atom",)
+    ):
+        raise ValueError(
+            "selected entity is not a categorical substructure dataset"
+        )
+    structure = project.structures.get(dataset.structure_id)
+    if (
+        not isinstance(structure, Structure)
+        or len(structure.atomic_numbers) != dataset.data.shape[0]
+    ):
+        raise ValueError("substructure dataset has no matching Structure")
+    if isinstance(category_code, bool):
+        raise TypeError("category_code must be an integer")
+    try:
+        category_code = operator.index(category_code)
+    except TypeError as error:
+        raise TypeError("category_code must be an integer") from error
+    if not 0 <= category_code < len(dataset.data.categories):
+        raise IndexError("category_code is outside the substructure categories")
+    import numpy
+
+    indices = tuple(
+        int(index)
+        for index in numpy.flatnonzero(
+            numpy.asarray(dataset.data.codes.values) == category_code
+        )
+    )
+    return (
+        structure,
+        dataset,
+        dataset.data.categories[category_code],
+        indices,
+    )
+
+
+class CHEMBLENDER_OT_apply_substructure_category(bpy.types.Operator):
+    bl_idname = "chemblender.apply_substructure_category"
+    bl_label = "Color and Select Substructure"
+    bl_description = (
+        "Color MOL2 substructures and select atoms with the chosen category code"
+    )
+
+    category_code: IntProperty(name="Category Code", default=0, min=0)
+
+    def execute(self, context):
+        session = get_scene_session(context.scene)
+        obj = context.active_object
+        if obj is None and session.active_view_object_name:
+            obj = context.scene.objects.get(session.active_view_object_name)
+        try:
+            structure, dataset, label, indices = substructure_category(
+                session.project,
+                session.active_entity_id,
+                self.category_code,
+            )
+            if (
+                obj.get("cb_structure_contract") != "structure_view_v1"
+                or obj.get("cb_structure_id") != str(structure.id)
+                or obj.get("cb_structure_revision") != structure.revision
+            ):
+                raise ValueError(
+                    "active object is not the current matching Structure view"
+                )
+            import numpy
+
+            codes = numpy.asarray(dataset.data.codes.values, dtype=float)
+            codes[codes == dataset.data.missing_code] = numpy.nan
+            apply_atomic_scalar(
+                obj,
+                replace(
+                    dataset,
+                    data=ArrayData(codes, ("atom",), "dimensionless"),
+                ),
+            )
+            apply_atom_selection(
+                obj,
+                indices,
+                name=f"substructure:{label}",
+            )
+            obj["cb_categorical_dataset_id"] = str(dataset.id)
+            obj["cb_categorical_dataset_revision"] = dataset.revision
+            obj["cb_categorical_code"] = int(self.category_code)
+            obj["cb_categorical_label"] = label
+        except (AttributeError, TypeError, ValueError, IndexError) as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        session.active_view_object_name = obj.name
+        return {"FINISHED"}
 
 
 class CHEMBLENDER_OT_apply_frame_force(bpy.types.Operator):
@@ -304,6 +415,28 @@ def presentation_view_records(scene):
                 )
             )
     return tuple(records)
+
+
+def draw_substructure_controls(layout, dataset, settings):
+    if (
+        not isinstance(dataset, AtomicProperty)
+        or dataset.semantic_role != "substructure_name"
+        or not isinstance(dataset.data, CategoricalData)
+    ):
+        return
+    categories = dataset.data.categories
+    layout.label(text=f"Substructures: {len(categories)} categories")
+    layout.prop(settings, "substructure_code")
+    code = settings.substructure_code
+    if not 0 <= code < len(categories):
+        layout.label(text="Substructure code is outside the dataset", icon="ERROR")
+        return
+    layout.label(text=f"Code {code}: {categories[code]}")
+    action = layout.operator(
+        CHEMBLENDER_OT_apply_substructure_category.bl_idname,
+        icon="RESTRICT_SELECT_OFF",
+    )
+    action.category_code = code
 
 
 def _copy_rows(collection, rows):
@@ -460,6 +593,7 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
                     CHEMBLENDER_OT_apply_frame_force.bl_idname,
                     icon="FORCE_FORCE",
                 )
+            draw_substructure_controls(layout, selected, settings)
             if (
                 session.active_entity_id in session.project.structures
                 or isinstance(selected, (FrameSet, ConformerSet))
@@ -616,11 +750,14 @@ def unregister():
 
 __all__ = (
     "CHEMBLENDER_OT_apply_frame_force",
+    "CHEMBLENDER_OT_apply_substructure_category",
     "CHEMBLENDER_PG_project_browser",
     "CHEMBLENDER_PG_project_browser_row",
     "CHEMBLENDER_PT_project_browser",
     "CHEMBLENDER_UL_project_rows",
     "presentation_view_records",
     "refresh_project_browser",
+    "draw_substructure_controls",
+    "substructure_category",
     "synchronize_browser_selection",
 )

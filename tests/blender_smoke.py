@@ -242,6 +242,7 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_switch_topology")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_scientific_edits")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_frame_force")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_substructure_category")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_export_project_entity")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_resolve_grid_semantics")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_create_grid_view")
@@ -1242,6 +1243,170 @@ def assert_quick_import(module_key, repository_root):
     for obj in cube_surface_objects:
         surface_view.remove_surface_object(obj)
     bpy.data.scenes.remove(switched_scene)
+
+
+def assert_mol2_browser_view(module_key, repository_root):
+    ui = importlib.import_module(f"{module_key}.ui.session")
+    properties = importlib.import_module(f"{module_key}.ui.properties")
+    preview_ui = importlib.import_module(f"{module_key}.ui.import_preview")
+    browser = importlib.import_module(
+        f"{module_key}.ui.project_browser.panel"
+    )
+    session = ui.new_scene_session(bpy.context.scene)
+    fixture_dir = repository_root / "tests" / "fixtures" / "mol2"
+    sources = (
+        fixture_dir / "aromatic.mol2",
+        fixture_dir / "substructure.mol2",
+    )
+    assert bpy.ops.chemblender.quick_import(
+        "INVOKE_DEFAULT",
+        directory=str(fixture_dir),
+        files=[{"name": source.name} for source in sources],
+        validation_mode="balanced",
+    ) == {"FINISHED"}
+    state = properties.get_quick_import_state(session)
+    rows = preview_ui.project_import_preview(
+        session,
+        state,
+        importlib.import_module(
+            f"{module_key}.runtime.reader_api_bridge"
+        ).get_reader_plugin_registry(),
+    )
+    summaries = {row.source_name: row for row in rows}
+    assert summaries["aromatic.mol2"].mol2_atom_count == 6
+    assert summaries["aromatic.mol2"].mol2_bond_count == 6
+    assert summaries["aromatic.mol2"].mol2_partial_charge_summary == (
+        "unavailable"
+    )
+    assert summaries["substructure.mol2"].mol2_molecule_types == "BIOPOLYMER"
+    assert summaries["substructure.mol2"].mol2_charge_types == "GASTEIGER"
+    assert summaries["substructure.mol2"].mol2_partial_charge_summary == (
+        "available (complete)"
+    )
+    assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+
+    revisions = {
+        revision.original_filename: revision
+        for revision in session.project.source_revisions.values()
+        if revision.original_filename in {source.name for source in sources}
+    }
+    aromatic_revision = revisions["aromatic.mol2"]
+    substructure_revision = revisions["substructure.mol2"]
+
+    def revision_entity(revision, registry):
+        return next(
+            registry[entity_id]
+            for entity_id in revision.created_entity_ids
+            if entity_id in registry
+        )
+
+    aromatic_structure = revision_entity(
+        aromatic_revision,
+        session.project.structures,
+    )
+    aromatic_topology = revision_entity(
+        aromatic_revision,
+        session.project.topologies,
+    )
+    assert aromatic_topology.bond_indices.shape == (6, 2)
+    assert tuple(aromatic_topology.aromatic_flags.values) == (True,) * 6
+
+    substructure_structure = revision_entity(
+        substructure_revision,
+        session.project.structures,
+    )
+    substructure_dataset = next(
+        session.project.datasets[entity_id]
+        for entity_id in substructure_revision.created_entity_ids
+        if (
+            entity_id in session.project.datasets
+            and session.project.datasets[entity_id].semantic_role
+            == "substructure_name"
+        )
+    )
+    browser_settings = bpy.context.scene.chemblender_project_browser
+    browser_settings.mode = "by_data"
+    browser_rows = browser.refresh_project_browser(bpy.context.scene)
+    labels = {
+        row.label
+        for row in browser_rows
+        if row.entity_id in session.project.datasets
+    }
+    assert {
+        "Atom Type",
+        "Substructure Id",
+        "Substructure Name",
+        "Partial Charge",
+    }.issubset(labels)
+
+    aromatic_view = next(
+        obj
+        for obj in bpy.data.objects
+        if obj.get("cb_structure_id") == str(aromatic_structure.id)
+    )
+    substructure_view = next(
+        obj
+        for obj in bpy.data.objects
+        if obj.get("cb_structure_id") == str(substructure_structure.id)
+    )
+    for view in (aromatic_view, substructure_view):
+        assert any(
+            modifier.node_group is not None
+            and modifier.node_group.get("cbq_contract")
+            == "structure_ball_stick_v1"
+            for modifier in view.modifiers
+        )
+
+    bpy.ops.object.select_all(action="DESELECT")
+    substructure_view.select_set(True)
+    bpy.context.view_layer.objects.active = substructure_view
+    session.active_entity_id = substructure_dataset.id
+    session.active_view_object_name = substructure_view.name
+    assert bpy.ops.chemblender.apply_substructure_category(
+        category_code=1
+    ) == {"FINISHED"}
+    selected = [False] * 3
+    substructure_view.data.attributes["cbq_selected"].data.foreach_get(
+        "value",
+        selected,
+    )
+    colors = [0.0] * 12
+    substructure_view.data.attributes["colour"].data.foreach_get(
+        "color",
+        colors,
+    )
+    assert selected == [False, False, True]
+    assert colors[:4] == colors[4:8]
+    assert colors[:4] != colors[8:12]
+    assert substructure_view["cb_categorical_dataset_id"] == str(
+        substructure_dataset.id
+    )
+    assert substructure_view["cb_categorical_code"] == 1
+    assert substructure_view["cb_categorical_label"] == "RES_B"
+
+    substructure_view_name = substructure_view.name
+    with TemporaryDirectory() as directory:
+        blend = Path(directory) / "mol2-substructure-smoke.blend"
+        assert bpy.ops.wm.save_as_mainfile(
+            filepath=str(blend),
+            check_existing=False,
+        ) == {"FINISHED"}
+        assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
+        ui = importlib.import_module(f"{module_key}.ui.session")
+        reopened = ui.get_scene_session(bpy.context.scene)
+        assert substructure_dataset.id in reopened.project.datasets
+        reopened_view = bpy.data.objects[substructure_view_name]
+        assert reopened_view["cb_categorical_dataset_id"] == str(
+            substructure_dataset.id
+        )
+        assert reopened_view["cb_categorical_code"] == 1
+        reopened_selected = [False] * 3
+        reopened_view.data.attributes["cbq_selected"].data.foreach_get(
+            "value",
+            reopened_selected,
+        )
+        assert reopened_selected == [False, False, True]
+        ui.close_scene_session(bpy.context.scene)
 
 
 def assert_optional_workspace(module_key):
@@ -4065,6 +4230,12 @@ expected_inventory["registered_classes"] += [
     },
     {
         "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_apply_substructure_category",
+        "id": "chemblender.apply_substructure_category",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
         "name": "CHEMBLENDER_PG_project_browser",
         "id": None,
         "base": "PropertyGroup",
@@ -4213,6 +4384,7 @@ assert_extxyz_workflow(module_key, package.parent.parent)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 assert_sdf_10k_workflow_budget(module_key)
 assert_project_browser_rna_budget(module_key)
+assert_mol2_browser_view(module_key, package.parent.parent)
 
 import rdkit
 import gemmi

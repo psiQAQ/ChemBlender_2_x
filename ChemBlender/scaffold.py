@@ -17,6 +17,7 @@ def is_valid_filepath(s: str) -> bool:
         ".cif",
         ".sdf",
         ".mol",
+        ".mol2",
         ".xyz",
         ".pdb",
         ".json",
@@ -128,9 +129,6 @@ class MESH_OT_SCAFFOLD_BUILD(bpy.types.Operator):
                 self.report({'ERROR'}, "Invalid SMILES")
                 return False
         if mode == 'File':
-            if os.path.splitext(moltext.strip())[1].lower() == ".mol2":
-                self.report({'ERROR'}, "MOL2 is not supported")
-                return False
             if not is_valid_filepath(moltext):
                 self.report({'ERROR'}, "Invalid structure file")
                 return False
@@ -205,6 +203,7 @@ class MESH_OT_SCAFFOLD_BUILD(bpy.types.Operator):
                     os.path.splitext(moltext)[1].lower()
                     in {
                         ".mol",
+                        ".mol2",
                         ".sdf",
                         ".xyz",
                         ".json",

@@ -294,6 +294,23 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             ),
         )
 
+    def test_mol2_preview_reports_counts_types_charges_and_unsupported_sections(self):
+        registry, state = self.stage("tests/fixtures/mol2/small.mol2")
+
+        row = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )[0]
+
+        self.assertEqual(row.mol2_molecule_count, 1)
+        self.assertEqual(row.mol2_atom_count, 2)
+        self.assertEqual(row.mol2_bond_count, 1)
+        self.assertEqual(row.mol2_molecule_types, "SMALL")
+        self.assertEqual(row.mol2_charge_types, "USER_CHARGES")
+        self.assertEqual(row.mol2_partial_charge_summary, "available (complete)")
+        self.assertEqual(row.mol2_unsupported_sections, "SET")
+
     def stage_two_candidate_conflict(self):
         for action in (None, "independent_copy"):
             registry, state = self.stage("tests/fixtures/xyz/water.xyz")
@@ -335,6 +352,13 @@ class ImportPreviewUIContractTests(unittest.TestCase):
                 "molecular_recovery_summary",
                 "molecular_topology_summary",
                 "molecular_property_summary",
+                "mol2_molecule_count",
+                "mol2_atom_count",
+                "mol2_bond_count",
+                "mol2_molecule_types",
+                "mol2_charge_types",
+                "mol2_partial_charge_summary",
+                "mol2_unsupported_sections",
                 "grid_dataset_count",
                 "grid_source_ids",
                 "grid_sample_range",
