@@ -1040,15 +1040,18 @@ def _parse_bytes(
                 )
             )
             continue
-        mapped.append(
-            _map_record(
-                parsed,
-                index,
-                source_revision_id,
-                source_hash,
-                source,
-            )
+        mapped_record = _map_record(
+            parsed,
+            index,
+            source_revision_id,
+            source_hash,
+            source,
         )
+        if validation_mode == "strict" and any(
+            issue.kind is IssueKind.INVALID for issue in mapped_record[7]
+        ):
+            raise ValueError(f"MOL2 record {index} failed")
+        mapped.append(mapped_record)
     mapped = tuple(mapped)
     structures = tuple(item[0] for item in mapped)
     topologies = tuple(item[1] for item in mapped if item[1] is not None)

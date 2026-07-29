@@ -219,6 +219,29 @@ class Mol2RecoveryTests(unittest.TestCase):
                     f"{error}"
                 )
 
+    def _assert_strict_rejects(self, invalid_record):
+        from tempfile import TemporaryDirectory
+
+        from ChemBlender.reader_api import ParseRequest
+
+        valid = (FIXTURES / "small.mol2").read_bytes()
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "strict-bond-recovery.mol2"
+            raw = valid + invalid_record + valid
+            source.write_bytes(raw)
+            request = ParseRequest(
+                source,
+                hashlib.sha256(raw).hexdigest(),
+                "strict",
+                {},
+                root,
+                lambda _event: None,
+                lambda: False,
+            )
+            with self.assertRaisesRegex(ValueError, "MOL2 record 1 failed"):
+                mol2.parse_mol2_request(request)
+
     def _assert_middle_topology_invalid(
         self, batch, expected_path="topology.bonds"
     ):
@@ -270,6 +293,30 @@ class Mol2RecoveryTests(unittest.TestCase):
         )
 
         self._assert_middle_topology_invalid(batch, "bond.count")
+
+    def test_strict_rejects_duplicate_canonical_edge_record(self):
+        self._assert_strict_rejects(
+            _bond_record(
+                "duplicate edge",
+                2,
+                b"7 10 42 1\n8 42 10 1\n",
+            )
+        )
+
+    def test_strict_rejects_self_edge_record(self):
+        self._assert_strict_rejects(
+            _bond_record("self edge", 1, b"7 10 10 1\n")
+        )
+
+    def test_strict_rejects_malformed_bond_numeric_record(self):
+        self._assert_strict_rejects(
+            _bond_record("malformed numeric", 1, b"x 10 42 1\n")
+        )
+
+    def test_strict_rejects_bond_count_mismatch_record(self):
+        self._assert_strict_rejects(
+            _bond_record("count mismatch", 2, b"7 10 42 1\n")
+        )
 
     def test_balanced_mode_keeps_records_around_a_malformed_record(self):
         first, second = (FIXTURES / "multi.mol2").read_bytes().split(
