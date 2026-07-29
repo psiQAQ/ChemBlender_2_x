@@ -2776,6 +2776,152 @@ def assert_cif_workflow(module_key, repository_root):
         ui.close_scene_session(bpy.context.scene)
 
 
+def assert_poscar_workflow(module_key, repository_root):
+    import numpy
+
+    assert bpy.ops.wm.read_homefile(use_empty=True) == {"FINISHED"}
+    core = importlib.import_module(f"{module_key}.core")
+    export_ui = importlib.import_module(f"{module_key}.ui.export")
+    ui = importlib.import_module(f"{module_key}.ui.session")
+    views = importlib.import_module(f"{module_key}.views")
+    source = (
+        repository_root
+        / "tests"
+        / "fixtures"
+        / "poscar"
+        / "cscl-selective.vasp"
+    )
+    batch = core.parse_poscar(source)
+    structure, = batch.structures
+    selective = next(
+        value
+        for value in batch.datasets
+        if value.semantic_role == "selective_dynamics"
+    )
+    session = ui.new_scene_session(bpy.context.scene)
+    session.project.commit(batch)
+    session.mark_dirty("import")
+    view = views.create_structure_view(
+        structure,
+        selective_dynamics=selective,
+        name="ChemBlender POSCAR smoke",
+        collection=bpy.context.scene.collection,
+    )
+    marker = bpy.data.objects[view["cb_selective_marker_object"]]
+    assert view.data.attributes["cbq_selective_x"] is not None
+    assert view.data.attributes["cbq_selective_y"] is not None
+    assert view.data.attributes["cbq_selective_z"] is not None
+    assert marker["cbq_contract"] == "structure_selective_marker_v1"
+    assert view["cb_selective_constraint_count"] == 2
+    session.active_entity_id = structure.id
+    session.active_view_object_name = view.name
+    bpy.context.view_layer.objects.active = view
+    view.select_set(True)
+    assert bpy.ops.chemblender.toggle_selective_constraints() == {"FINISHED"}
+    assert marker.hide_get()
+    assert bpy.ops.chemblender.toggle_selective_constraints() == {"FINISHED"}
+    assert not marker.hide_get()
+
+    with TemporaryDirectory(prefix="chemblender-poscar-smoke-") as directory:
+        root = Path(directory)
+        blend = root / "selective.blend"
+        assert bpy.ops.wm.save_as_mainfile(
+            filepath=str(blend),
+            check_existing=False,
+        ) == {"FINISHED"}
+        assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        assert session.link_status == "connected", (
+            session.link_status,
+            ui.get_scene_session_status(bpy.context.scene),
+        )
+        assert structure.id in session.project.structures
+        assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
+        ui = importlib.import_module(f"{module_key}.ui.session")
+        restored = ui.get_scene_session(bpy.context.scene)
+        assert structure.id in restored.project.structures, (
+            tuple(restored.project.structures),
+            restored.link_status,
+            ui.get_scene_session_status(bpy.context.scene),
+        )
+        restored_view = bpy.data.objects["ChemBlender POSCAR smoke"]
+        restored_marker = bpy.data.objects[
+            restored_view["cb_selective_marker_object"]
+        ]
+        assert restored_marker["cb_structure_id"] == str(structure.id)
+        restored_selective = next(
+            value
+            for value in restored.project.datasets.values()
+            if (
+                value.semantic_role == "selective_dynamics"
+                and value.structure_id == structure.id
+            )
+        )
+        assert (
+            numpy.asarray(restored_selective.data.values).tolist()
+            == selective.data.values.tolist()
+        )
+
+        destination = root / "POSCAR"
+        selection = export_ui.resolve_export_selection(
+            restored.project,
+            structure.id,
+        )
+        job = export_ui.ExportJob(
+            destination,
+            selection,
+            format_name="poscar",
+            confirm_loss=False,
+            missing_value_token=None,
+        )
+        job.start()
+        assert job.join(30)
+        assert job.error is None
+        assert job.result.written
+        reparsed = core.parse_poscar(destination)
+        assert reparsed.structures[0].atomic_numbers == structure.atomic_numbers
+        reparsed_selective = next(
+            value
+            for value in reparsed.datasets
+            if value.semantic_role == "selective_dynamics"
+        )
+        assert (
+            reparsed_selective.data.values.tolist()
+            == selective.data.values.tolist()
+        )
+
+        velocity_batch = core.parse_poscar(
+            repository_root
+            / "tests"
+            / "fixtures"
+            / "poscar"
+            / "velocities.CONTCAR"
+        )
+        restored.project.commit(velocity_batch)
+        velocity_structure, = velocity_batch.structures
+        velocity_destination = root / "CONTCAR"
+        velocity_selection = export_ui.resolve_export_selection(
+            restored.project,
+            velocity_structure.id,
+        )
+        velocity_job = export_ui.ExportJob(
+            velocity_destination,
+            velocity_selection,
+            format_name="poscar",
+            confirm_loss=False,
+            missing_value_token=None,
+        )
+        velocity_job._run()
+        assert velocity_job.error is None
+        velocity_document = importlib.import_module(
+            f"{module_key}.core.formats.poscar"
+        ).parse_poscar_document(velocity_destination.read_bytes())
+        assert velocity_document.velocities is not None
+        assert velocity_document.lattice_velocities is not None
+
+        views.remove_structure_view(restored_view)
+        ui.close_scene_session(bpy.context.scene)
+
+
 def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     reader = importlib.import_module(f"{module_key}.read")
     cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
@@ -3187,6 +3333,12 @@ expected_inventory["registered_classes"] += [
     },
     {
         "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_OT_apply_poscar_species",
+        "id": "chemblender.apply_poscar_species",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.import_preview",
         "name": "CHEMBLENDER_OT_cancel_import",
         "id": "chemblender.cancel_import",
         "base": "Operator",
@@ -3285,6 +3437,12 @@ expected_inventory["registered_classes"] += [
         "module": ".ui.properties",
         "name": "CHEMBLENDER_OT_derive_crystal_symmetry",
         "id": "chemblender.derive_crystal_symmetry",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.properties",
+        "name": "CHEMBLENDER_OT_toggle_selective_constraints",
+        "id": "chemblender.toggle_selective_constraints",
         "base": "Operator",
     },
     {
@@ -3453,6 +3611,7 @@ assert_fermi_surface_view(module_key)
 assert_project_sidecar_link(module_key)
 assert_quick_import(module_key, package.parent.parent)
 assert_cif_workflow(module_key, package.parent.parent)
+assert_poscar_workflow(module_key, package.parent.parent)
 assert_optional_workspace(module_key)
 assert_project_session_manager(module_key)
 assert_topology_view(module_key, package.parent.parent)

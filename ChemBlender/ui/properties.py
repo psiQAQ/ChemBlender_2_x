@@ -6,7 +6,7 @@ import importlib.util
 import bpy
 from bpy.props import EnumProperty, FloatProperty, PointerProperty, StringProperty
 
-from ..core import Structure, SymmetryResult
+from ..core import AtomicProperty, Structure, SymmetryResult
 from ..core.import_pipeline.preview import ImportPreview
 from ..core.import_pipeline.request import ValidationMode
 from ..core.import_pipeline.staging import StagedImportSession
@@ -142,6 +142,77 @@ class CHEMBLENDER_OT_derive_crystal_symmetry(bpy.types.Operator):
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
         return {"FINISHED"}
+
+
+def _selective_dynamics(project, structure_id):
+    return next(
+        (
+            value
+            for value in project.datasets.values()
+            if (
+                isinstance(value, AtomicProperty)
+                and value.structure_id == structure_id
+                and value.semantic_role == "selective_dynamics"
+            )
+        ),
+        None,
+    )
+
+
+class CHEMBLENDER_OT_toggle_selective_constraints(bpy.types.Operator):
+    bl_idname = "chemblender.toggle_selective_constraints"
+    bl_label = "Toggle Selective Constraints"
+    bl_description = "Show or hide the active Structure constraint markers"
+
+    def execute(self, context):
+        session = get_scene_session(context.scene)
+        obj = context.active_object
+        if obj is None and session.active_view_object_name:
+            obj = context.scene.objects.get(session.active_view_object_name)
+        try:
+            structure = session.project.structures.get(
+                session.active_entity_id
+            )
+            if not isinstance(structure, Structure):
+                raise ValueError("select a Structure")
+            if _selective_dynamics(session.project, structure.id) is None:
+                raise ValueError("selected Structure has no Selective Dynamics")
+            if (
+                obj is None
+                or obj.get("cb_structure_id") != str(structure.id)
+            ):
+                raise ValueError("activate the matching Structure view")
+            marker_name = obj.get("cb_selective_marker_object")
+            marker = (
+                bpy.data.objects.get(marker_name)
+                if isinstance(marker_name, str)
+                else None
+            )
+            if marker is None:
+                raise ValueError("Structure view has no constraint marker")
+            visible = marker.hide_get()
+            marker.hide_set(not visible)
+            obj["cb_selective_constraints_visible"] = visible
+        except (AttributeError, TypeError, ValueError) as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        session.active_view_object_name = obj.name
+        return {"FINISHED"}
+
+
+def draw_selective_dynamics_properties(layout, project, structure):
+    dataset = _selective_dynamics(project, structure.id)
+    if dataset is None:
+        return
+    constrained = int((~dataset.data.values).any(axis=1).sum())
+    box = layout.box()
+    box.label(
+        text=f"Selective Dynamics: {constrained} constrained atom(s)"
+    )
+    box.operator(
+        CHEMBLENDER_OT_toggle_selective_constraints.bl_idname,
+        icon="HIDE_OFF",
+    )
 
 
 def draw_crystal_symmetry_properties(layout, structure, derived=None):

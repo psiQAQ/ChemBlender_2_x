@@ -19,6 +19,7 @@ from ..properties import (
     _same_scene_property,
     _scene_property_identity,
     draw_crystal_symmetry_properties,
+    draw_selective_dynamics_properties,
     get_quick_import_state,
 )
 from ..session import get_scene_session
@@ -441,6 +442,11 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
                     layout,
                     selected_structure,
                     derived,
+                )
+                draw_selective_dynamics_properties(
+                    layout,
+                    session.project,
+                    selected_structure,
                 )
             if (
                 isinstance(selected, AtomFrameProperty)

@@ -22,7 +22,7 @@ class PoscarSyntaxTests(unittest.TestCase):
             SniffMatch.NONE,
         )
 
-    def test_sniff_marks_valid_vasp_suffix_as_probable(self):
+    def test_sniff_marks_valid_vasp_suffix_as_exact_native_format(self):
         from ChemBlender.core.formats.poscar import sniff_poscar
 
         result = sniff_poscar(
@@ -30,7 +30,7 @@ class PoscarSyntaxTests(unittest.TestCase):
             (FIXTURES / "cscl.vasp").read_bytes(),
         )
 
-        self.assertIs(result.match, SniffMatch.PROBABLE)
+        self.assertIs(result.match, SniffMatch.EXACT)
 
     def test_bare_contcar_sniff_is_exact(self):
         from ChemBlender.core.formats.poscar import sniff_poscar

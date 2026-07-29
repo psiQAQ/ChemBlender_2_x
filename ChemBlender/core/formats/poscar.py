@@ -298,10 +298,14 @@ def sniff_poscar(source, prefix):
             _sniff_truncated_prefix(prefix)
     except (PoscarSyntaxError, TypeError):
         return SniffResult(SniffMatch.NONE, "missing POSCAR lattice, counts, or coordinates")
-    if source.name.upper() in {"POSCAR", "CONTCAR"}:
-        return SniffResult(SniffMatch.EXACT, "valid canonical POSCAR/CONTCAR content")
-    if source.suffix.lower() in _POSCAR_SUFFIXES:
-        return SniffResult(SniffMatch.PROBABLE, "valid POSCAR content with VASP suffix")
+    if (
+        source.name.upper() in {"POSCAR", "CONTCAR"}
+        or source.suffix.lower() in _POSCAR_SUFFIXES
+    ):
+        return SniffResult(
+            SniffMatch.EXACT,
+            "valid POSCAR/CONTCAR content and filename",
+        )
     return SniffResult(SniffMatch.NONE, "POSCAR filename or VASP suffix is required")
 
 

@@ -30,14 +30,25 @@ from ..core.import_pipeline.conflicts import (
     DuplicateAction,
     detect_import_conflicts,
 )
+from ..core.import_pipeline.conformer_grouping import (
+    suggest_staged_conformer_groups,
+)
 from ..core.import_pipeline.grouping import suggest_source_groups
 from ..core.import_pipeline.preflight import ImportCancelled
+from ..core.import_pipeline.preview import ImportPreview
+from ..core.import_pipeline.request import (
+    ImportRequest,
+    ImportSource,
+    ReaderOverride,
+    ValidationMode,
+)
 from ..core.import_pipeline.transaction import (
     ConformerGroupingDecision,
     GroupingDecision,
     ImportCommitDecisions,
     commit_import_preview,
 )
+from ..reader_api.import_pipeline_bridge import preflight_reader_plugins
 from ..scene_preset_view import (
     _remove_objects as _remove_scene_preset_objects,
     apply_scene_preset,
@@ -103,6 +114,7 @@ _SKIP_ACTIONS = frozenset(
     }
 )
 _CONFORMER_EVIDENCE_PREVIEW_LIMIT = 20
+_RNA_TEXT_PREVIEW_LIMIT = 256
 _FATAL_EXCEPTIONS = (
     KeyboardInterrupt,
     SystemExit,
@@ -122,6 +134,19 @@ def _merge_cleanup_failure(failure, error, label):
         return error
     failure.add_note(f"{label}: {error}")
     return failure
+
+
+def _rna_preview_text(value):
+    text = str(value)
+    if len(text) <= _RNA_TEXT_PREVIEW_LIMIT:
+        return text
+    return text[: _RNA_TEXT_PREVIEW_LIMIT - 1] + "…"
+
+
+def _new_preflight_job(*args, **kwargs):
+    from .quick_import import _PreflightJob
+
+    return _PreflightJob(*args, **kwargs)
 
 
 def _conflict_action_items(row, _context):
@@ -216,6 +241,15 @@ class CHEMBLENDER_PG_import_preview_row(bpy.types.PropertyGroup):
     cif_occupancy_adp_summary: StringProperty()
     cif_declared_symmetry_summary: StringProperty()
     cif_default_block_confirmed: BoolProperty(default=False)
+    poscar_comment: StringProperty()
+    poscar_scale_summary: StringProperty()
+    poscar_cell_summary: StringProperty()
+    poscar_species_summary: StringProperty()
+    poscar_coordinate_mode: StringProperty()
+    poscar_selective_summary: StringProperty()
+    poscar_velocity_summary: StringProperty()
+    poscar_species_assignment: StringProperty()
+    poscar_requires_species_assignment: BoolProperty(default=False)
     conformer_suggestion_count: IntProperty()
     quality: StringProperty()
     conflict_id: StringProperty()
@@ -272,6 +306,15 @@ class PreviewProjection:
     cif_occupancy_adp_summary: str = ""
     cif_declared_symmetry_summary: str = ""
     cif_default_block_confirmed: bool = False
+    poscar_comment: str = ""
+    poscar_scale_summary: str = ""
+    poscar_cell_summary: str = ""
+    poscar_species_summary: str = ""
+    poscar_coordinate_mode: str = ""
+    poscar_selective_summary: str = ""
+    poscar_velocity_summary: str = ""
+    poscar_species_assignment: str = ""
+    poscar_requires_species_assignment: bool = False
     conformer_suggestion_count: int = 0
     conflict_id: str = ""
     allowed_actions: str = ""
@@ -634,6 +677,208 @@ def _cif_summary(batch):
     }
 
 
+def _poscar_summary(batch):
+    import numpy
+
+    provenance = next(
+        (
+            value
+            for value in batch.provenance
+            if value.producer == "ChemBlender POSCAR adapter"
+        ),
+        None,
+    )
+    if provenance is None:
+        return None
+    parameters = dict(provenance.parameters)
+    species = (
+        parameters.get("species_order")
+        or parameters.get("species_assignment")
+    )
+    counts = parameters.get("counts") or ()
+    assignment = parameters.get("species_assignment")
+    structure = batch.structures[0] if len(batch.structures) == 1 else None
+    volume = (
+        None
+        if structure is None
+        else abs(float(numpy.linalg.det(structure.cell.values)))
+    )
+    velocities = []
+    if parameters.get("velocity_mode") is not None:
+        velocities.append("Ion velocities")
+    if parameters.get("lattice_velocity_initialization_state") is not None:
+        velocities.append("lattice velocities")
+    scale = parameters.get("scale")
+    scale_kind = (
+        "target volume"
+        if isinstance(scale, (int, float)) and scale < 0.0
+        else "factor"
+    )
+    return {
+        "comment": str(parameters.get("comment") or ""),
+        "scale_summary": (
+            ""
+            if not isinstance(scale, (int, float))
+            else f"{scale:g} ({scale_kind})"
+        ),
+        "cell_summary": (
+            "Unavailable until species assignment"
+            if volume is None
+            else f"{volume:g} angstrom^3"
+        ),
+        "species_summary": (
+            f"{' '.join(species) if species else 'Unassigned'}"
+            f" · {' '.join(map(str, counts))}"
+        ),
+        "group_count": len(counts),
+        "coordinate_mode": str(
+            parameters.get("coordinate_mode") or ""
+        ).title(),
+        "selective_summary": (
+            "Selective Dynamics"
+            if parameters.get("selective_dynamics")
+            else "No Selective Dynamics"
+        ),
+        "velocity_summary": (
+            " · ".join(velocities) if velocities else "No velocities"
+        ),
+        "species_assignment": (
+            "" if assignment is None else ",".join(assignment)
+        ),
+        "requires_species_assignment": (
+            parameters.get("species_order") is None and structure is None
+        ),
+    }
+
+
+def _prepare_poscar_species_restage(
+    state,
+    source_id,
+    species,
+    validation_mode,
+):
+    if type(source_id) is not UUID:
+        raise TypeError("source_id must be UUID")
+    if type(species) is not str:
+        raise TypeError("species must be comma-separated text")
+    if type(validation_mode) is not ValidationMode:
+        raise TypeError("validation_mode must be ValidationMode")
+    if state.active_job is not None:
+        raise RuntimeError("cannot restage while an import job is active")
+    preview = state.preview
+    old_staging = state.staging_session
+    if preview is None or old_staging is None:
+        raise RuntimeError("no staged Import Preview")
+    target = next(
+        (
+            value
+            for value in preview.source_previews
+            if value.source_id == source_id
+        ),
+        None,
+    )
+    if target is None or target.selected_reader_id != "poscar":
+        raise ValueError("source is not a staged POSCAR")
+    normalized = ",".join(
+        value.strip() for value in species.split(",") if value.strip()
+    )
+    if not normalized:
+        raise ValueError("enter ordered POSCAR species")
+    current_batch = old_staging.result(target.staged_batch_ids[0])
+    summary = _poscar_summary(current_batch)
+    if (
+        summary is None
+        or len(normalized.split(",")) != summary["group_count"]
+    ):
+        raise ValueError(
+            "species assignment must match the POSCAR count groups"
+        )
+
+    request = ImportRequest(
+        sources=(ImportSource(path=target.source_path, id=source_id),),
+        validation_mode=validation_mode,
+        reader_overrides=(ReaderOverride(source_id, "poscar"),),
+    )
+    return (
+        request,
+        {source_id: {"species": normalized}},
+    )
+
+
+def _apply_poscar_species_restage(state, source_id, target_result):
+    preview = state.preview
+    staging = state.staging_session
+    if preview is None or staging is None:
+        raise RuntimeError("no staged Import Preview")
+    target_preview, = target_result.source_previews
+    if target_preview.source_id != source_id:
+        raise ValueError("POSCAR restage returned the wrong source")
+    batch = staging.result(target_preview.staged_batch_ids[0])
+    if len(batch.structures) != 1:
+        message = next(
+            (
+                diagnostic.message
+                for diagnostic in batch.diagnostics
+                if diagnostic.source_revision_id
+                in {
+                    value.id for value in batch.source_revisions
+                }
+            ),
+            "POSCAR species assignment did not produce a Structure",
+        )
+        raise ValueError(message)
+    source_previews = tuple(
+        target_preview if value.source_id == source_id else value
+        for value in preview.source_previews
+    )
+    refreshed = ImportPreview(
+        session_id=staging.id,
+        source_previews=source_previews,
+        staged_batch_ids=tuple(
+            result_id
+            for value in source_previews
+            for result_id in value.staged_batch_ids
+        ),
+        diagnostic_ids=tuple(
+            diagnostic_id
+            for value in source_previews
+            for diagnostic_id in value.diagnostic_ids
+        ),
+    )
+    state.preview = refreshed
+    state.conflicts = ()
+    state.grouping_suggestions = ()
+    return refreshed
+
+
+def restage_poscar_species_assignment(
+    project_session,
+    state,
+    source_id,
+    species,
+    registry,
+    validation_mode,
+    *,
+    progress=None,
+    is_cancelled=None,
+):
+    request, canonical_parameters = _prepare_poscar_species_restage(
+        state,
+        source_id,
+        species,
+        validation_mode,
+    )
+    target_result = preflight_reader_plugins(
+        request,
+        registry,
+        state.staging_session,
+        canonical_parameters_by_source=canonical_parameters,
+        progress=progress,
+        is_cancelled=is_cancelled,
+    )
+    return _apply_poscar_species_restage(state, source_id, target_result)
+
+
 def project_import_preview(project_session, state, registry):
     """Refresh live conflicts and return a small RNA-safe row projection."""
     preview = state.preview
@@ -687,12 +932,23 @@ def project_import_preview(project_session, state, registry):
         extxyz_summary = None
         grid_summary = None
         cif_summary = None
+        poscar_summary = None
         molecular_summary = (0, "", "", "", "", 0)
         if len(source.staged_batch_ids) == 1:
             batch = staging.result(source.staged_batch_ids[0])
             grid_summary = grid_preview_summary(batch)
             if source.selected_reader_id == "cif":
                 cif_summary = _cif_summary(batch)
+            if source.selected_reader_id == "poscar":
+                poscar_summary = _poscar_summary(batch)
+                if (
+                    poscar_summary is not None
+                    and poscar_summary["requires_species_assignment"]
+                ):
+                    blocking_reason = (
+                        "VASP 4 count groups require an ordered species "
+                        "assignment"
+                    )
             if source.selected_reader_id == "extxyz":
                 extxyz_summary = extxyz_preview_summary(batch)
             batch_record_ids = {
@@ -832,6 +1088,53 @@ def project_import_preview(project_session, state, registry):
                     ""
                     if cif_summary is None
                     else cif_summary["declared_symmetry_summary"]
+                ),
+                poscar_comment=(
+                    ""
+                    if poscar_summary is None
+                    else _rna_preview_text(poscar_summary["comment"])
+                ),
+                poscar_scale_summary=(
+                    ""
+                    if poscar_summary is None
+                    else _rna_preview_text(poscar_summary["scale_summary"])
+                ),
+                poscar_cell_summary=(
+                    ""
+                    if poscar_summary is None
+                    else _rna_preview_text(poscar_summary["cell_summary"])
+                ),
+                poscar_species_summary=(
+                    ""
+                    if poscar_summary is None
+                    else _rna_preview_text(poscar_summary["species_summary"])
+                ),
+                poscar_coordinate_mode=(
+                    ""
+                    if poscar_summary is None
+                    else _rna_preview_text(poscar_summary["coordinate_mode"])
+                ),
+                poscar_selective_summary=(
+                    ""
+                    if poscar_summary is None
+                    else _rna_preview_text(poscar_summary["selective_summary"])
+                ),
+                poscar_velocity_summary=(
+                    ""
+                    if poscar_summary is None
+                    else _rna_preview_text(poscar_summary["velocity_summary"])
+                ),
+                poscar_species_assignment=(
+                    ""
+                    if poscar_summary is None
+                    else _rna_preview_text(
+                        poscar_summary["species_assignment"]
+                    )
+                ),
+                poscar_requires_species_assignment=(
+                    False
+                    if poscar_summary is None
+                    else poscar_summary["requires_species_assignment"]
                 ),
                 conformer_suggestion_count=molecular_summary[5],
                 conflict_id=str(conflict.id) if conflict else "",
@@ -1573,6 +1876,178 @@ def _conformer_values(rows):
     )
 
 
+class CHEMBLENDER_OT_apply_poscar_species(bpy.types.Operator):
+    bl_idname = "chemblender.apply_poscar_species"
+    bl_label = "Apply POSCAR Species"
+    bl_description = "Reparse a VASP 4 file with the ordered element assignment"
+
+    source_id: StringProperty(options={"HIDDEN"})
+    species: StringProperty(name="Species")
+
+    def execute(self, context):
+        job = None
+        try:
+            session = get_scene_session(context.scene)
+            state = get_quick_import_state(session)
+            source_id = UUID(self.source_id)
+            validation_mode = ValidationMode(
+                context.scene.chemblender_quick_import.validation_mode
+            )
+            registry = get_reader_plugin_registry()
+            if getattr(bpy.app, "background", False):
+                restage_poscar_species_assignment(
+                    session,
+                    state,
+                    source_id,
+                    self.species,
+                    registry,
+                    validation_mode,
+                )
+                self.report({"INFO"}, "POSCAR species applied; reopen Review")
+                return {"FINISHED"}
+            request, canonical_parameters = _prepare_poscar_species_restage(
+                state,
+                source_id,
+                self.species,
+                validation_mode,
+            )
+            job = _new_preflight_job(
+                request,
+                registry,
+                state.staging_session,
+                canonical_parameters_by_source=canonical_parameters,
+                prepare_conformers=False,
+            )
+            store_quick_import_job(session, state.staging_session, job)
+            manager = context.window_manager
+            timer = manager.event_timer_add(0.1, window=context.window)
+            job.attach_ui(manager, timer)
+            manager.progress_begin(0, 100)
+            job.mark_progress_started()
+            manager.modal_handler_add(self)
+            self._session = session
+            self._state = state
+            self._source_id = source_id
+            self._job = job
+            job.start()
+        except BaseException as error:
+            if job is not None:
+                try:
+                    job.release_ui()
+                except BaseException as cleanup_error:
+                    error = _merge_cleanup_failure(
+                        error,
+                        cleanup_error,
+                        "POSCAR restage UI cleanup failed",
+                    )
+                if state.active_job is job:
+                    try:
+                        finish_quick_import_job(session, job)
+                    except BaseException as cleanup_error:
+                        error = _merge_cleanup_failure(
+                            error,
+                            cleanup_error,
+                            "POSCAR restage ownership cleanup failed",
+                        )
+            return self._report_error(error)
+        return {"RUNNING_MODAL"}
+
+    def modal(self, context, event):
+        job = getattr(self, "_job", None)
+        if job is None:
+            return {"CANCELLED"}
+        if event.type == "ESC":
+            job.cancel()
+        if event.type != "TIMER":
+            return {"RUNNING_MODAL"}
+        if not getattr(job, "_completion_checked", False):
+            completion_error = None
+            try:
+                progress = job.drain_progress()
+                if progress is not None:
+                    _stage, completed, total = progress
+                    context.window_manager.progress_update(
+                        100 * completed / total if total else 0
+                    )
+                if not job.done:
+                    return {"RUNNING_MODAL"}
+                job.join(0)
+            except BaseException as error:
+                completion_error = error
+                job.cancel()
+                try:
+                    job.join(None)
+                except BaseException as cleanup_error:
+                    completion_error = _merge_cleanup_failure(
+                        completion_error,
+                        cleanup_error,
+                        "POSCAR restage job cleanup failed",
+                    )
+            job._completion_error = completion_error
+            job._completion_checked = True
+        failure = job._completion_error
+        if failure is None:
+            failure = job.error
+        try:
+            job.release_ui()
+        except BaseException as error:
+            if (
+                not isinstance(error, _FATAL_EXCEPTIONS)
+                and job.timer_pending
+            ):
+                self.report(
+                    {"WARNING"},
+                    f"POSCAR restage cleanup retry pending: {error}",
+                )
+                return {"RUNNING_MODAL"}
+            job.abandon_ui()
+            failure = (
+                error
+                if failure is None
+                else _merge_cleanup_failure(
+                    failure,
+                    error,
+                    "POSCAR restage UI cleanup failed",
+                )
+            )
+        try:
+            finish_quick_import_job(self._session, job)
+        except BaseException as error:
+            failure = (
+                error
+                if failure is None
+                else _merge_cleanup_failure(
+                    failure,
+                    error,
+                    "POSCAR restage ownership cleanup failed",
+                )
+            )
+        self._job = None
+        if failure is not None:
+            return self._report_error(failure)
+        try:
+            _apply_poscar_species_restage(
+                self._state,
+                self._source_id,
+                job.preview,
+            )
+        except BaseException as error:
+            return self._report_error(error)
+        self.report({"INFO"}, "POSCAR species applied; reopen Review")
+        return {"FINISHED"}
+
+    def cancel(self, _context):
+        job = getattr(self, "_job", None)
+        if job is not None:
+            job.cancel()
+
+    def _report_error(self, error):
+        if isinstance(error, _FATAL_EXCEPTIONS):
+            raise error
+        self.report({"ERROR"}, str(error))
+        return {"CANCELLED"}
+
+
 class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
     bl_idname = "chemblender.confirm_import"
     bl_label = "Import Preview"
@@ -1701,6 +2176,26 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                         "cif_default_block_confirmed",
                         text="Use the displayed default CIF block for the view",
                     )
+            if row.reader_id == "poscar":
+                box.label(text=f"Comment: {row.poscar_comment}")
+                box.label(text=f"Scale: {row.poscar_scale_summary}")
+                box.label(text=f"Cell: {row.poscar_cell_summary}")
+                box.label(text=f"Species: {row.poscar_species_summary}")
+                box.label(text=f"Coordinates: {row.poscar_coordinate_mode}")
+                box.label(text=row.poscar_selective_summary)
+                box.label(text=row.poscar_velocity_summary)
+                if row.poscar_requires_species_assignment:
+                    box.prop(
+                        row,
+                        "poscar_species_assignment",
+                        text="Ordered species",
+                    )
+                    apply_species = box.operator(
+                        CHEMBLENDER_OT_apply_poscar_species.bl_idname,
+                        text="Apply Species and Refresh",
+                    )
+                    apply_species.source_id = row.source_id
+                    apply_species.species = row.poscar_species_assignment
             if row.conflict_id:
                 box.prop(row, "conflict_action")
                 if DuplicateAction(row.conflict_action) in _TARGET_ACTIONS:
@@ -2117,6 +2612,7 @@ class CHEMBLENDER_OT_cancel_import(bpy.types.Operator):
 
 
 __all__ = (
+    "CHEMBLENDER_OT_apply_poscar_species",
     "CHEMBLENDER_OT_cancel_import",
     "CHEMBLENDER_OT_confirm_import",
     "CHEMBLENDER_PG_import_conformer_evidence",
@@ -2125,4 +2621,5 @@ __all__ = (
     "CHEMBLENDER_PG_import_grouping_evidence",
     "CHEMBLENDER_PG_import_grouping_suggestion",
     "CHEMBLENDER_PG_import_preview_row",
+    "restage_poscar_species_assignment",
 )

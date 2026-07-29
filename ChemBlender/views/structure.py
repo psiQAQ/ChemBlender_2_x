@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from math import isfinite
 
 from ..Chem_data import ELEMENTS_DEFAULT
-from ..core import Structure, TopologyRecord
+from ..core import AtomicProperty, Structure, TopologyRecord
 from ..core.topology.periodic import _pbc_primary_coordinates
 
 
@@ -16,6 +16,33 @@ _STRUCTURE_CONTRACT = "structure_view_v1"
 _BALL_STICK_CONTRACT = "structure_ball_stick_v1"
 _PERIODIC_DISPLAY_CONTRACT = "structure_periodic_display_v1"
 _PERIODIC_MODIFIER_NAME = "ChemBlender Periodic Images"
+_SELECTIVE_MARKER_CONTRACT = "structure_selective_marker_v1"
+_SELECTIVE_MARKER_GROUP = "ChemBlender Selective Constraints"
+_FATAL_EXCEPTIONS = (
+    KeyboardInterrupt,
+    SystemExit,
+    GeneratorExit,
+    MemoryError,
+)
+
+
+def _merge_cleanup_failure(failure, error, label):
+    if isinstance(error, _FATAL_EXCEPTIONS) and not isinstance(
+        failure,
+        _FATAL_EXCEPTIONS,
+    ):
+        error.add_note(f"earlier failure: {failure}")
+        return error
+    failure.add_note(f"{label}: {error}")
+    return failure
+
+
+def _run_cleanup(failure, label, callback):
+    try:
+        callback()
+    except BaseException as error:
+        return _merge_cleanup_failure(failure, error, label)
+    return failure
 
 
 def _coordinate_scale(unit):
@@ -55,7 +82,13 @@ def _legacy_bond_order(order, aromatic):
     return max(1, min(3, int(round(order))))
 
 
-def _structure_view_data(structure, topology=None, settings=None):
+def _structure_view_data(
+    structure,
+    topology=None,
+    settings=None,
+    *,
+    selective_dynamics=None,
+):
     import numpy
 
     if not isinstance(structure, Structure):
@@ -74,6 +107,22 @@ def _structure_view_data(structure, topology=None, settings=None):
         raise ValueError("structure coordinates must be finite and real")
 
     atom_count = len(structure.atomic_numbers)
+    selective = None
+    if selective_dynamics is not None:
+        if (
+            not isinstance(selective_dynamics, AtomicProperty)
+            or selective_dynamics.structure_id != structure.id
+            or selective_dynamics.semantic_role != "selective_dynamics"
+            or selective_dynamics.data.dims != ("atom", "xyz")
+            or selective_dynamics.data.shape != (atom_count, 3)
+        ):
+            raise ValueError(
+                "selective_dynamics must match the Structure atom axes"
+            )
+        selective = numpy.asarray(
+            selective_dynamics.data.values,
+            dtype=numpy.bool_,
+        )
     elements = tuple(
         _ELEMENT_BY_NUMBER.get(number, ("Dummy", ELEMENTS_DEFAULT["Dummy"]))
         for number in structure.atomic_numbers
@@ -95,6 +144,24 @@ def _structure_view_data(structure, topology=None, settings=None):
         "u_v2": (0.0, 1.0, 0.0) * atom_count,
         "u_v3": (0.0, 0.0, 1.0) * atom_count,
         "element_symbols": tuple(symbol for symbol, _data in elements),
+        "cbq_selective_x": (
+            () if selective is None else tuple(map(bool, selective[:, 0]))
+        ),
+        "cbq_selective_y": (
+            () if selective is None else tuple(map(bool, selective[:, 1]))
+        ),
+        "cbq_selective_z": (
+            () if selective is None else tuple(map(bool, selective[:, 2]))
+        ),
+        "selective_atom_ids": (
+            ()
+            if selective is None
+            else tuple(
+                index
+                for index, flags in enumerate(selective)
+                if not bool(numpy.all(flags))
+            )
+        ),
     }
     if topology is None:
         return {
@@ -251,6 +318,18 @@ def _write_point_attributes(mesh, data, *, atom_ids=None):
             "vector",
             vector * count,
         )
+    if data["cbq_selective_x"]:
+        for name in (
+            "cbq_selective_x",
+            "cbq_selective_y",
+            "cbq_selective_z",
+        ):
+            values = (
+                data[name]
+                if atom_ids == data["cbq_atom_id"]
+                else tuple(data[name][index] for index in atom_ids)
+            )
+            _write_attribute(mesh, name, "BOOLEAN", "value", values)
 
 
 def _write_edge_attributes(
@@ -401,6 +480,120 @@ def _periodic_display_object(main, collection, data):
         raise
 
 
+def _ensure_selective_marker_group():
+    import bpy
+
+    group = bpy.data.node_groups.get(_SELECTIVE_MARKER_GROUP)
+    if group is not None:
+        if (
+            group.bl_idname != "GeometryNodeTree"
+            or group.get("cbq_contract") != _SELECTIVE_MARKER_CONTRACT
+        ):
+            raise RuntimeError(
+                f"incompatible node group already uses {_SELECTIVE_MARKER_GROUP}"
+            )
+        return group
+    group = bpy.data.node_groups.new(
+        _SELECTIVE_MARKER_GROUP,
+        "GeometryNodeTree",
+    )
+    try:
+        group.is_modifier = True
+        group.interface.new_socket(
+            name="Geometry",
+            in_out="INPUT",
+            socket_type="NodeSocketGeometry",
+        )
+        group.interface.new_socket(
+            name="Geometry",
+            in_out="OUTPUT",
+            socket_type="NodeSocketGeometry",
+        )
+        group_input = group.nodes.new("NodeGroupInput")
+        group_output = group.nodes.new("NodeGroupOutput")
+        points = group.nodes.new("GeometryNodeMeshToPoints")
+        points.mode = "VERTICES"
+        points.inputs["Radius"].default_value = 0.14
+        sphere = group.nodes.new("GeometryNodeMeshIcoSphere")
+        sphere.inputs["Radius"].default_value = 0.14
+        sphere.inputs["Subdivisions"].default_value = 1
+        instance = group.nodes.new("GeometryNodeInstanceOnPoints")
+        group.links.new(group_input.outputs["Geometry"], points.inputs["Mesh"])
+        group.links.new(points.outputs["Points"], instance.inputs["Points"])
+        group.links.new(sphere.outputs["Mesh"], instance.inputs["Instance"])
+        group.links.new(
+            instance.outputs["Instances"],
+            group_output.inputs["Geometry"],
+        )
+        group["cbq_contract"] = _SELECTIVE_MARKER_CONTRACT
+        return group
+    except BaseException as error:
+        if group.users == 0:
+            error = _run_cleanup(
+                error,
+                "selective marker node-group cleanup failed",
+                lambda: bpy.data.node_groups.remove(group),
+            )
+        raise error
+
+
+def _selective_marker_object(main, collection, data):
+    import bpy
+
+    atom_ids = data["selective_atom_ids"]
+    if not atom_ids:
+        return None
+    mesh = bpy.data.meshes.new(f"{main.name} Selective Constraints")
+    marker = None
+    group = None
+    group_created = bpy.data.node_groups.get(_SELECTIVE_MARKER_GROUP) is None
+    try:
+        mesh.from_pydata(
+            tuple(data["coordinates"][index] for index in atom_ids),
+            (),
+            (),
+        )
+        marker = bpy.data.objects.new(mesh.name, mesh)
+        collection.objects.link(marker)
+        _write_point_attributes(mesh, data, atom_ids=atom_ids)
+        modifier = marker.modifiers.new(
+            _SELECTIVE_MARKER_GROUP,
+            "NODES",
+        )
+        group = _ensure_selective_marker_group()
+        modifier.node_group = group
+        marker.parent = main
+        marker.show_in_front = True
+        marker.hide_render = True
+        marker["cbq_contract"] = _SELECTIVE_MARKER_CONTRACT
+        marker["cb_structure_id"] = main["cb_structure_id"]
+        main["cb_selective_marker_object"] = marker.name
+        main["cb_selective_constraint_count"] = len(atom_ids)
+        main["cb_selective_constraints_visible"] = True
+        mesh.update()
+        return marker
+    except BaseException as error:
+        if marker is not None:
+            error = _run_cleanup(
+                error,
+                "selective marker object cleanup failed",
+                lambda: bpy.data.objects.remove(marker, do_unlink=True),
+            )
+        if mesh.users == 0:
+            error = _run_cleanup(
+                error,
+                "selective marker mesh cleanup failed",
+                lambda: bpy.data.meshes.remove(mesh),
+            )
+        if group_created and group is not None and group.users == 0:
+            error = _run_cleanup(
+                error,
+                "selective marker node-group cleanup failed",
+                lambda: bpy.data.node_groups.remove(group),
+            )
+        raise error
+
+
 def _set_topology_metadata(obj, topology):
     names = (
         "cb_topology_id",
@@ -512,6 +705,7 @@ def create_structure_view(
     topology=None,
     settings=None,
     *,
+    selective_dynamics=None,
     name="ChemBlender Structure",
     collection=None,
 ):
@@ -523,7 +717,12 @@ def create_structure_view(
         collection = bpy.context.collection
     if collection is None:
         raise ValueError("a Blender collection is required")
-    data = _structure_view_data(structure, topology, settings)
+    data = _structure_view_data(
+        structure,
+        topology,
+        settings,
+        selective_dynamics=selective_dynamics,
+    )
     settings = data["settings"]
     mesh = bpy.data.meshes.new(name)
     obj = None
@@ -562,18 +761,27 @@ def create_structure_view(
             obj["cb_pbc"] = structure.periodic.pbc
         if data["periodic_segments"] and settings.display_periodic_images:
             _periodic_display_object(obj, collection, data)
+        _selective_marker_object(obj, collection, data)
         if settings.attach_ball_and_stick:
             from .. import node
 
             node.ensure_structure_ball_stick_modifier(obj)
         mesh.update()
         return obj
-    except Exception:
+    except BaseException as error:
         if obj is not None and obj.name in bpy.data.objects:
-            remove_structure_view(obj)
+            error = _run_cleanup(
+                error,
+                "Structure view cleanup failed",
+                lambda: remove_structure_view(obj),
+            )
         elif mesh.users == 0:
-            bpy.data.meshes.remove(mesh)
-        raise
+            error = _run_cleanup(
+                error,
+                "Structure mesh cleanup failed",
+                lambda: bpy.data.meshes.remove(mesh),
+            )
+        raise error
 
 
 def remove_structure_view(obj):
@@ -587,6 +795,12 @@ def remove_structure_view(obj):
         if isinstance(display_name, str)
         else None
     )
+    marker_name = obj.get("cb_selective_marker_object")
+    marker = (
+        bpy.data.objects.get(marker_name)
+        if isinstance(marker_name, str)
+        else None
+    )
     groups = tuple(
         modifier.node_group
         for modifier in obj.modifiers
@@ -598,6 +812,16 @@ def remove_structure_view(obj):
     if display is not None:
         data_blocks.append(display.data)
         bpy.data.objects.remove(display, do_unlink=True)
+    if marker is not None:
+        data_blocks.append(marker.data)
+        groups += tuple(
+            modifier.node_group
+            for modifier in marker.modifiers
+            if modifier.node_group is not None
+            and modifier.node_group.get("cbq_contract")
+            == _SELECTIVE_MARKER_CONTRACT
+        )
+        bpy.data.objects.remove(marker, do_unlink=True)
     bpy.data.objects.remove(obj, do_unlink=True)
     for data in data_blocks:
         if data is not None and data.users == 0:
