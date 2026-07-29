@@ -183,25 +183,32 @@ element inference with no open findings.
 **Interfaces:**
 - Produces: hierarchy attributes, selection operators, altloc filter, model playback and size-aware default representation.
 
-- [ ] **Step 1: Write Blender attribute contract**
+- [x] **Step 1: Write Blender attribute contract**
 
 Point attributes contain chain/residue/altloc categorical codes, residue number, occupancy, B-factor, PQR charge/radius and record kind. Mapping metadata stores categories and hashes.
 
-- [ ] **Step 2: Add selection operators**
+- [x] **Step 2: Add selection operators**
 
 Select by chain, residue range/name, atom name, altloc and property threshold. Selections write existing boolean named attributes and do not change source data.
 
-- [ ] **Step 3: Model/frame playback**
+- [x] **Step 3: Model/frame playback**
 
 Compatible models use existing trajectory manager. Altloc filtering is applied consistently across frames or reports incompatibility.
 
-- [ ] **Step 4: Default view**
+- [x] **Step 4: Default view**
 
 Small files use ball-and-stick when explicit/inferred topology selected; large files default to atoms/points with an explanation. No ribbon option is exposed.
 
-- [ ] **Step 5: Blender smoke and commit**
+- [x] **Step 5: Blender smoke and commit**
 
 Import PDB altloc/multimodel and PQR charge/radius; select chain/residue, switch altloc, play frames, save/reopen. Commit.
+
+Completion evidence: `d58f90c`, `a8d2988`; 111 focused/documentation tests,
+native extension validate/build and the full Blender 5.1.2 lifecycle smoke
+passed. Fix round 1 closed all six Important findings for Quick Import,
+finite/unit-aware projection, live Mesh validation, atomic altloc updates,
+browser context and reopened MODEL playback. The remaining duplicate
+categorical decoder is a non-blocking final-qualification cleanup.
 
 ### Task 6: Define PDB/PQR export readiness P1
 
