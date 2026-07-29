@@ -1,18 +1,63 @@
 """Dependency-free Tripos MOL2 syntax parser."""
 
+import hashlib
+import json
 import math
 import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
+from uuid import NAMESPACE_URL, uuid5
 
 from ...Chem_data import ELEMENTS_DEFAULT
-from ..model import IssueKind, ParserIssue
-from ..readers import SniffMatch, SniffResult
+from ..model import (
+    ArrayData,
+    AtomicIdentityData,
+    AtomicProperty,
+    CategoricalData,
+    ChemicalAnnotation,
+    DatasetStatus,
+    DiagnosticSeverity,
+    ImportBatch,
+    ImportDiagnostic,
+    IssueKind,
+    MolecularRecord,
+    ParserIssue,
+    ParserReport,
+    ProvenanceRecord,
+    QualityStatus,
+    SourceRecord,
+    SourceRevision,
+    Structure,
+    TopologyRecord,
+    TopologySource,
+    source_parse_identity,
+)
+from ..readers import (
+    READER_API_VERSION,
+    CapabilitySupport,
+    ReaderDescriptor,
+    SniffMatch,
+    SniffResult,
+)
 
 
 _SECTION_HEADER = re.compile(r"@<TRIPOS>([A-Z0-9_]+)", re.ASCII | re.IGNORECASE)
 _ELEMENT_SYMBOLS = frozenset(
     symbol for symbol, data in ELEMENTS_DEFAULT.items() if data[0] > 0
+)
+_ELEMENT_NUMBERS = {
+    symbol: data[0] for symbol, data in ELEMENTS_DEFAULT.items() if data[0] > 0
+}
+_READER_ID = "mol2"
+_READER_VERSION = "1"
+_PLUGIN_ID = "chemblender.builtin"
+_PARSED_CAPABILITIES = (
+    "structure",
+    "topology",
+    "atomic_property",
+    "substructure",
+    "multi_record",
 )
 
 
@@ -460,3 +505,643 @@ def sniff_mol2(source: Path, prefix: bytes) -> SniffResult:
         SniffMatch.PROBABLE if truncated else SniffMatch.EXACT,
         "valid MOL2 prefix" if truncated else "complete MOL2 source",
     )
+
+
+def _identity(source_revision_id, source_hash, record_index, raw_block, role):
+    raw_hash = hashlib.sha256(raw_block).hexdigest()
+    return uuid5(
+        source_revision_id,
+        f"mol2:{source_hash}:{record_index}:{raw_hash}:{role}",
+    )
+
+
+def _record_key(source_revision_id, source_hash, record_index, raw_block):
+    return (
+        f"record-{record_index:06d}-"
+        f"{_identity(source_revision_id, source_hash, record_index, raw_block, 'key')}"
+    )
+
+
+def _array(values, dims, unit="dimensionless", *, dtype=None):
+    import numpy
+
+    return ArrayData(numpy.asarray(values, dtype=dtype), dims, unit)
+
+
+def _categorical(values):
+    categories = tuple(dict.fromkeys(value for value in values if value is not None))
+    indices = {value: index for index, value in enumerate(categories)}
+    return CategoricalData(
+        _array(
+            tuple(indices.get(value, -1) for value in values),
+            ("atom",),
+            dtype="int64",
+        ),
+        categories,
+        -1,
+    )
+
+
+def _property(
+    source_revision_id,
+    source_hash,
+    parsed,
+    record_index,
+    structure_id,
+    provenance_id,
+    semantic_role,
+    data,
+    status,
+):
+    return AtomicProperty(
+        id=_identity(
+            source_revision_id,
+            source_hash,
+            record_index,
+            parsed.raw_block,
+            f"property:{semantic_role}",
+        ),
+        revision=source_hash,
+        semantic_role=semantic_role,
+        domain="atom",
+        data=data,
+        status=status,
+        source_calculation=None,
+        provenance_ids=(provenance_id,),
+        structure_id=structure_id,
+    )
+
+
+def _diagnostic(
+    source_revision_id,
+    source_hash,
+    record_index,
+    raw_block,
+    record_key,
+    issue,
+    *,
+    entity_id=None,
+):
+    severity, quality_status, consequence = {
+        IssueKind.MISSING: (
+            DiagnosticSeverity.WARNING,
+            QualityStatus.INCOMPLETE,
+            "Required or optional MOL2 data is missing.",
+        ),
+        IssueKind.UNSUPPORTED: (
+            DiagnosticSeverity.WARNING,
+            QualityStatus.INCOMPLETE,
+            "The source field remains only in the raw MOL2 record.",
+        ),
+        IssueKind.AMBIGUOUS: (
+            DiagnosticSeverity.WARNING,
+            QualityStatus.AMBIGUOUS,
+            "The scientific meaning requires review.",
+        ),
+        IssueKind.INVALID: (
+            DiagnosticSeverity.ERROR,
+            QualityStatus.INVALID,
+            "The invalid source field was not mapped to a scientific entity.",
+        ),
+        IssueKind.WARNING: (
+            DiagnosticSeverity.WARNING,
+            QualityStatus.PARTIAL,
+            "The imported MOL2 record has a reader warning.",
+        ),
+    }[issue.kind]
+    return ImportDiagnostic(
+        id=_identity(
+            source_revision_id,
+            source_hash,
+            record_index,
+            raw_block,
+            f"diagnostic:{issue.kind.value}:{issue.path}",
+        ),
+        severity=severity,
+        quality_status=quality_status,
+        source_revision_id=source_revision_id,
+        record_key=record_key,
+        entity_id=entity_id,
+        field_path=issue.path,
+        code=f"mol2.{issue.kind.value}",
+        message=issue.message,
+        original_value=None,
+        normalized_value=None,
+        recovery_action=(
+            "the Structure was retained without an explicit topology"
+            if issue.kind is IssueKind.INVALID and issue.path.startswith("bond")
+            else None
+        ),
+        scientific_consequence=consequence,
+        suggested_action=None,
+    )
+
+
+def _map_record(parsed, record_index, source_revision_id, source_hash, source):
+    import numpy
+
+    provenance_id = _identity(
+        source_revision_id,
+        source_hash,
+        record_index,
+        parsed.raw_block,
+        "provenance",
+    )
+    structure_id = _identity(
+        source_revision_id,
+        source_hash,
+        record_index,
+        parsed.raw_block,
+        "structure",
+    )
+    provenance = ProvenanceRecord(
+        id=provenance_id,
+        revision=source_hash,
+        producer="ChemBlender MOL2 reader",
+        producer_version=_READER_VERSION,
+        source=str(source),
+        source_hash=source_hash,
+        parent_ids=(),
+        operation="parse",
+        parameters=(("format", "mol2"),),
+    )
+    record_key = _record_key(
+        source_revision_id,
+        source_hash,
+        record_index,
+        parsed.raw_block,
+    )
+
+    topology = None
+    if parsed.topology_valid:
+        bonds = sorted(
+            (
+                min(bond.atom_indices),
+                max(bond.atom_indices),
+                bond.order,
+                bond.aromatic,
+                "amide" if bond.amide else "",
+            )
+            for bond in parsed.bonds
+        )
+        topology = TopologyRecord(
+            id=_identity(
+                source_revision_id,
+                source_hash,
+                record_index,
+                parsed.raw_block,
+                "topology",
+            ),
+            revision=source_hash,
+            structure_id=structure_id,
+            bond_indices=ArrayData(
+                numpy.asarray(
+                    tuple(item[:2] for item in bonds),
+                    dtype=numpy.int64,
+                ).reshape((-1, 2)),
+                ("bond", "endpoint"),
+                "dimensionless",
+            ),
+            bond_orders=_array(
+                tuple(item[2] for item in bonds),
+                ("bond",),
+                dtype="float64",
+            ),
+            aromatic_flags=_array(
+                tuple(item[3] for item in bonds),
+                ("bond",),
+                dtype="bool",
+            ),
+            stereo_labels=tuple(item[4] for item in bonds),
+            source_kind=TopologySource.EXPLICIT_FILE,
+            quality_status=QualityStatus.COMPLETE,
+            inference_parameters=(),
+            provenance_ids=(provenance_id,),
+        )
+
+    issues = list(parsed.issues)
+    missing_categories = tuple(
+        index
+        for index, atom in enumerate(parsed.atoms)
+        if atom.name == "*" or atom.atom_type == "*"
+    )
+    issues.extend(
+        ParserIssue(
+            IssueKind.MISSING,
+            f"atom[{index}].name_and_type",
+            "MOL2 * recovery sentinel maps to categorical missing codes",
+        )
+        for index in missing_categories
+    )
+    atom_names = tuple(
+        None if atom.name == "*" else atom.name for atom in parsed.atoms
+    )
+    structure = Structure(
+        id=structure_id,
+        revision=source_hash,
+        atomic_numbers=tuple(
+            0 if atom.element is None else _ELEMENT_NUMBERS[atom.element]
+            for atom in parsed.atoms
+        ),
+        coordinates=_array(
+            tuple(atom.coordinates for atom in parsed.atoms),
+            ("atom", "xyz"),
+            "angstrom",
+            dtype="float64",
+        ),
+        topology_ids=(() if topology is None else (topology.id,)),
+        atomic_identity=AtomicIdentityData(
+            isotopes=_array((0,) * len(parsed.atoms), ("atom",), dtype="int64"),
+            formal_charges=_array(
+                (0,) * len(parsed.atoms), ("atom",), dtype="int64"
+            ),
+            atom_map_numbers=_array(
+                (0,) * len(parsed.atoms), ("atom",), dtype="int64"
+            ),
+            atom_names=_categorical(atom_names),
+            stereo_labels=_categorical((None,) * len(parsed.atoms)),
+        ),
+    )
+
+    datasets = [
+        _property(
+            source_revision_id,
+            source_hash,
+            parsed,
+            record_index,
+            structure.id,
+            provenance_id,
+            "atom_type",
+            _categorical(
+                tuple(
+                    None if atom.atom_type == "*" else atom.atom_type
+                    for atom in parsed.atoms
+                )
+            ),
+            (
+                DatasetStatus.PARTIAL
+                if missing_categories
+                else DatasetStatus.COMPLETE
+            ),
+        )
+    ]
+    substructure_ids = tuple(atom.substructure_id for atom in parsed.atoms)
+    if any(value is not None for value in substructure_ids):
+        datasets.append(
+            _property(
+                source_revision_id,
+                source_hash,
+                parsed,
+                record_index,
+                structure.id,
+                provenance_id,
+                "substructure_id",
+                _array(
+                    tuple(0 if value is None else value for value in substructure_ids),
+                    ("atom",),
+                    dtype="int64",
+                ),
+                (
+                    DatasetStatus.COMPLETE
+                    if all(value is not None for value in substructure_ids)
+                    else DatasetStatus.PARTIAL
+                ),
+            )
+        )
+    substructure_names = tuple(atom.substructure_name for atom in parsed.atoms)
+    if any(value is not None for value in substructure_names):
+        datasets.append(
+            _property(
+                source_revision_id,
+                source_hash,
+                parsed,
+                record_index,
+                structure.id,
+                provenance_id,
+                "substructure_name",
+                _categorical(substructure_names),
+                (
+                    DatasetStatus.COMPLETE
+                    if all(value is not None for value in substructure_names)
+                    else DatasetStatus.PARTIAL
+                ),
+            )
+        )
+    charges = tuple(atom.charge for atom in parsed.atoms)
+    if any(value is not None for value in charges):
+        datasets.append(
+            _property(
+                source_revision_id,
+                source_hash,
+                parsed,
+                record_index,
+                structure.id,
+                provenance_id,
+                "partial_charge",
+                _array(
+                    tuple(0.0 if value is None else value for value in charges),
+                    ("atom",),
+                    dtype="float64",
+                ),
+                (
+                    DatasetStatus.COMPLETE
+                    if all(value is not None for value in charges)
+                    else DatasetStatus.PARTIAL
+                ),
+            )
+        )
+
+    annotations = tuple(
+        ChemicalAnnotation(
+            id=_identity(
+                source_revision_id,
+                source_hash,
+                record_index,
+                parsed.raw_block,
+                f"annotation:{key}",
+            ),
+            revision=source_hash,
+            target_entity_id=structure.id,
+            namespace="tripos",
+            key=key,
+            value=value,
+            source="mol2",
+            confidence=None,
+            provenance_ids=(provenance_id,),
+        )
+        for key, value in (
+            ("molecule_type", parsed.molecule_type),
+            ("charge_type", parsed.charge_type),
+            ("status_bits", parsed.status_bits),
+        )
+        if value is not None
+    )
+    record = MolecularRecord(
+        id=_identity(
+            source_revision_id,
+            source_hash,
+            record_index,
+            parsed.raw_block,
+            "record",
+        ),
+        revision=source_hash,
+        source_revision_id=source_revision_id,
+        record_key=record_key,
+        structure_id=structure.id,
+        topology_id=None if topology is None else topology.id,
+        raw_block=parsed.raw_block,
+        title=parsed.name,
+        source_record_index=record_index,
+        block_version=None,
+        writer_name=None,
+        writer_version=None,
+        ordered_raw_properties=(),
+        provenance_ids=(provenance_id,),
+    )
+    diagnostics = tuple(
+        _diagnostic(
+            source_revision_id,
+            source_hash,
+            record_index,
+            parsed.raw_block,
+            record_key,
+            issue,
+            entity_id=structure.id,
+        )
+        for issue in issues
+    )
+    return (
+        structure,
+        topology,
+        record,
+        annotations,
+        tuple(datasets),
+        provenance,
+        diagnostics,
+        tuple(issues),
+    )
+
+
+def _record_failure_diagnostic(
+    source_revision_id,
+    source_hash,
+    record_index,
+    raw_block,
+    message,
+):
+    return ImportDiagnostic(
+        id=_identity(
+            source_revision_id,
+            source_hash,
+            record_index,
+            raw_block,
+            "diagnostic:record_parse_failed",
+        ),
+        severity=DiagnosticSeverity.ERROR,
+        quality_status=QualityStatus.INVALID,
+        source_revision_id=source_revision_id,
+        record_key=_record_key(
+            source_revision_id,
+            source_hash,
+            record_index,
+            raw_block,
+        ),
+        entity_id=None,
+        field_path=f"record.{record_index}",
+        code="mol2.record_parse_failed",
+        message=message,
+        original_value=None,
+        normalized_value=None,
+        recovery_action="other MOL2 records were retained",
+        scientific_consequence="This record has no imported molecular structure.",
+        suggested_action="Correct the malformed MOL2 record and import again.",
+    )
+
+
+def _parameters(validation_mode, canonical_parameters):
+    return tuple(
+        sorted(
+            (
+                ("source_content_state", "verified"),
+                ("validation_mode", validation_mode),
+                *canonical_parameters,
+            )
+        )
+    )
+
+
+def _parse_bytes(
+    raw_source,
+    source,
+    *,
+    source_revision_id,
+    source_hash,
+    validation_mode,
+    canonical_parameters=(),
+):
+    mapped = []
+    failure_diagnostics = []
+    for index, syntax in enumerate(iter_mol2_records(raw_source)):
+        try:
+            parsed = parse_mol2_record(syntax)
+        except ValueError as error:
+            if validation_mode == "strict":
+                raise ValueError(f"MOL2 record {index} failed") from error
+            failure_diagnostics.append(
+                _record_failure_diagnostic(
+                    source_revision_id,
+                    source_hash,
+                    index,
+                    syntax.raw_block,
+                    str(error),
+                )
+            )
+            continue
+        mapped.append(
+            _map_record(
+                parsed,
+                index,
+                source_revision_id,
+                source_hash,
+                source,
+            )
+        )
+    mapped = tuple(mapped)
+    structures = tuple(item[0] for item in mapped)
+    topologies = tuple(item[1] for item in mapped if item[1] is not None)
+    records = tuple(item[2] for item in mapped)
+    annotations = tuple(value for item in mapped for value in item[3])
+    datasets = tuple(value for item in mapped for value in item[4])
+    provenance = tuple(item[5] for item in mapped)
+    diagnostics = (
+        tuple(value for item in mapped for value in item[6])
+        + tuple(failure_diagnostics)
+    )
+    issues = tuple(issue for item in mapped for issue in item[7])
+    created_ids = tuple(
+        value.id
+        for group in (
+            structures,
+            topologies,
+            records,
+            annotations,
+            datasets,
+            provenance,
+        )
+        for value in group
+    )
+    report = ParserReport(
+        reader_id=_READER_ID,
+        reader_version=_READER_VERSION,
+        created_entity_ids=created_ids,
+        parsed_capabilities=_PARSED_CAPABILITIES,
+        issues=issues,
+    )
+    source_id = uuid5(source_revision_id, "mol2:source")
+    parameters = _parameters(validation_mode, canonical_parameters)
+    parameters_hash = hashlib.sha256(
+        json.dumps(
+            parameters,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+    source_record = SourceRecord(
+        id=source_id,
+        display_name=Path(source).name,
+        source_kind="local_file",
+        created_at_utc=datetime.now(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z"),
+    )
+    revision = SourceRevision(
+        id=source_revision_id,
+        source_id=source_id,
+        content_hash=source_hash,
+        byte_size=len(raw_source),
+        locator=str(Path(source).resolve()),
+        locator_kind="absolute_path",
+        original_filename=Path(source).name,
+        reader_plugin_id=_PLUGIN_ID,
+        reader_id=_READER_ID,
+        reader_version=_READER_VERSION,
+        reader_api_version=READER_API_VERSION,
+        import_parameters_hash=parameters_hash,
+        parse_identity=source_parse_identity(
+            source_hash,
+            _PLUGIN_ID,
+            _READER_ID,
+            _READER_VERSION,
+            parameters,
+        ),
+        created_entity_ids=created_ids,
+        diagnostic_ids=tuple(item.id for item in diagnostics),
+    )
+    return ImportBatch(
+        sources=(source_record,),
+        source_revisions=(revision,),
+        structures=structures,
+        topologies=topologies,
+        molecular_records=records,
+        annotations=annotations,
+        datasets=datasets,
+        provenance=provenance,
+        report=report,
+        diagnostics=diagnostics,
+    )
+
+
+def parse_mol2(source):
+    source = Path(source)
+    raw_source = source.read_bytes()
+    source_hash = hashlib.sha256(raw_source).hexdigest()
+    return _parse_bytes(
+        raw_source,
+        source,
+        source_revision_id=uuid5(
+            NAMESPACE_URL,
+            f"chemblender:mol2:{source_hash}",
+        ),
+        source_hash=source_hash,
+        validation_mode="balanced",
+    )
+
+
+def parse_mol2_request(request):
+    parameters = tuple(sorted(request.canonical_parameters.items()))
+    if parameters:
+        raise ValueError("unsupported MOL2 parse parameter")
+    cancelled = request.is_cancelled()
+    if type(cancelled) is not bool:
+        raise TypeError("is_cancelled must return bool")
+    if cancelled:
+        raise RuntimeError("MOL2 parse was cancelled")
+    source = Path(request.source_path)
+    raw_source = source.read_bytes()
+    source_hash = hashlib.sha256(raw_source).hexdigest()
+    if source_hash != request.source_content_hash:
+        raise ValueError("source content hash mismatch")
+    return _parse_bytes(
+        raw_source,
+        source,
+        source_revision_id=request.source_revision_id,
+        source_hash=source_hash,
+        validation_mode=request.validation_mode,
+        canonical_parameters=parameters,
+    )
+
+
+MOL2_READER = ReaderDescriptor(
+    reader_id=_READER_ID,
+    reader_version=_READER_VERSION,
+    extensions=(".mol2",),
+    capabilities={
+        capability: CapabilitySupport.SUPPORTED
+        for capability in _PARSED_CAPABILITIES
+    },
+    priority=120,
+    sniff=sniff_mol2,
+    parse=parse_mol2,
+    parse_request=parse_mol2_request,
+)
