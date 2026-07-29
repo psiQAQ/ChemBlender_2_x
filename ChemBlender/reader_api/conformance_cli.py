@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from contextlib import redirect_stdout
 from pathlib import Path
 
 from ..core.readers import CapabilitySupport
@@ -116,14 +117,15 @@ def _write_atomic(path, content):
 
 
 def _worker(plugin_path, fixtures):
-    cases = _cases(
-        _directory(plugin_path, "plugin path"),
-        _directory(fixtures, "fixtures"),
-    )
-    document = run_reader_conformance_v1(
-        cases,
-        process_isolation="subprocess",
-    )
+    with redirect_stdout(sys.stderr):
+        cases = _cases(
+            _directory(plugin_path, "plugin path"),
+            _directory(fixtures, "fixtures"),
+        )
+        document = run_reader_conformance_v1(
+            cases,
+            process_isolation="subprocess",
+        )
     sys.stdout.buffer.write(_json_bytes(document))
     return 0
 

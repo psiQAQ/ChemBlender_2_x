@@ -25,7 +25,7 @@ from .canonical_document import (
     read_public_batch_bundle,
     write_public_batch_bundle,
 )
-from .protocol import ParseRequest, SniffRequest
+from .protocol import ParseRequest, ProgressEvent, SniffRequest
 from .public_model import ArrayData, PublicImportBatch
 from .registry import ReaderPluginRegistry, _BuiltinReaderPlugin
 from .version import READER_API_VERSION
@@ -288,6 +288,7 @@ def run_reader_conformance(case):
     state = {
         "descriptor": None,
         "batch": None,
+        "identity_batch": None,
         "parse_temporary": None,
         "parse_request": None,
         "source_hash": _source_hash(case.source_path),
@@ -392,6 +393,7 @@ def run_reader_conformance(case):
                 parsed_batch=_internal_batch_from_public_unchecked(batch),
                 revision_id=request.source_revision_id,
             )
+        state["identity_batch"] = identity_batch
         revisions = tuple(identity_batch.source_revisions)
         if revisions:
             source_ids = {value.id for value in identity_batch.sources}
@@ -521,12 +523,15 @@ def run_reader_conformance(case):
         if type(batch) is not PublicImportBatch or batch.report is None:
             return False, "parser report unavailable"
         report = batch.report
-        diagnostic_ids = {value.id for value in batch.diagnostics}
-        source_revisions = {value.id: value for value in batch.source_revisions}
+        identity_batch = state["identity_batch"] or batch
+        diagnostic_ids = {value.id for value in identity_batch.diagnostics}
+        source_revisions = {
+            value.id: value for value in identity_batch.source_revisions
+        }
         references_complete = all(
             value.source_revision_id in source_revisions
             and value.id in source_revisions[value.source_revision_id].diagnostic_ids
-            for value in batch.diagnostics
+            for value in identity_batch.diagnostics
         )
         return (
             report.reader_id == descriptor.reader_id
@@ -613,6 +618,8 @@ def run_reader_conformance(case):
 def _progress_is_monotonic(events):
     previous = {}
     for event in events:
+        if type(event) is not ProgressEvent:
+            return False
         prior = previous.get(event.stage)
         if prior is not None and (
             event.total != prior.total or event.completed < prior.completed
@@ -640,6 +647,22 @@ def _artifact_inventory_is_safe(root):
 
 
 def _v1_checks(case, legacy):
+    staging = TemporaryDirectory()
+    state = {"batch": None}
+    try:
+        return _v1_checks_in_staging(
+            case,
+            legacy,
+            Path(staging.name),
+            state,
+        )
+    finally:
+        if type(state["batch"]) is PublicImportBatch:
+            _close_memmaps(state["batch"], set())
+        staging.cleanup()
+
+
+def _v1_checks_in_staging(case, legacy, staging_root, state):
     descriptor = case.registry.select(
         SniffRequest(case.source_path, b""),
         case.reader_id,
@@ -647,7 +670,6 @@ def _v1_checks(case, legacy):
     events = []
     batch = None
     parse_error = None
-    staging = TemporaryDirectory()
     try:
         batch = case.registry.parse(
             case.reader_id,
@@ -656,12 +678,13 @@ def _v1_checks(case, legacy):
                 source_content_hash=_source_hash(case.source_path),
                 validation_mode=case.validation_mode,
                 canonical_parameters=case.canonical_parameters,
-                staging_root=Path(staging.name),
+                staging_root=staging_root,
                 progress=events.append,
                 is_cancelled=lambda: False,
                 source_revision_id=uuid4(),
             ),
         )
+        state["batch"] = batch
     except Exception as error:
         parse_error = type(error).__name__
 
@@ -691,9 +714,6 @@ def _v1_checks(case, legacy):
                 artifact_ok = _artifact_inventory_is_safe(root)
         except Exception:
             artifact_ok = False
-        finally:
-            _close_memmaps(batch, set())
-    staging.cleanup()
 
     declared_ok = set(case.expected_capabilities) <= set(
         descriptor.capabilities
