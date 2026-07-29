@@ -1,18 +1,71 @@
-"""Dependency-free fixed-column PDB syntax parsing."""
+"""Dependency-free fixed-column PDB reader and syntax parsing."""
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from datetime import datetime, timezone
+import hashlib
+import json
 import math
 from pathlib import Path
 import re
+from uuid import NAMESPACE_URL, uuid5
 
 from ...Chem_data import ELEMENTS_DEFAULT
-from ..model import IssueKind, ParserIssue
-from ..readers import SniffMatch, SniffResult
+from ..model import (
+    ArrayData,
+    AtomicIdentityData,
+    AtomicProperty,
+    BiologicalAtomSiteData,
+    BiologicalChain,
+    BiologicalHierarchy,
+    BiologicalModel,
+    BiologicalResidue,
+    CategoricalData,
+    DatasetStatus,
+    DiagnosticSeverity,
+    FrameSet,
+    ImportBatch,
+    ImportDiagnostic,
+    IssueKind,
+    ParserIssue,
+    ParserReport,
+    PeriodicSiteData,
+    ProvenanceRecord,
+    QualityStatus,
+    SourceRecord,
+    SourceRevision,
+    Structure,
+    TopologyRecord,
+    TopologySource,
+    source_parse_identity,
+)
+from ..readers import (
+    READER_API_VERSION,
+    CapabilitySupport,
+    ReaderDescriptor,
+    SniffMatch,
+    SniffResult,
+)
 
 
 _ELEMENT_SYMBOLS = frozenset(
     symbol for symbol, data in ELEMENTS_DEFAULT.items() if data[0] > 0
+)
+_ELEMENT_NUMBERS = {
+    symbol: data[0] for symbol, data in ELEMENTS_DEFAULT.items() if data[0] > 0
+}
+_READER_ID = "pdb"
+_READER_VERSION = "1"
+_PLUGIN_ID = "chemblender.builtin"
+_PARSED_CAPABILITIES = (
+    "atomic_identity",
+    "atomic_property",
+    "crystal",
+    "hierarchy",
+    "multi_model",
+    "structure",
+    "topology",
+    "trajectory",
 )
 _SPACE_GROUP_PATTERN = re.compile(
     r"[PABCIFRH][ 0-9+\-/.ABCDMNabcdmn]*\Z",
@@ -758,7 +811,731 @@ def sniff_pdb(source: Path, prefix: bytes) -> SniffResult:
     return SniffResult(SniffMatch.EXACT, "complete fixed-column PDB content")
 
 
+def _array(values, dims, unit="dimensionless", *, dtype=None):
+    import numpy
+
+    return ArrayData(numpy.asarray(values, dtype=dtype), dims, unit)
+
+
+def _categorical(values):
+    categories = tuple(dict.fromkeys(value for value in values if value is not None))
+    indices = {value: index for index, value in enumerate(categories)}
+    return CategoricalData(
+        _array(
+            tuple(indices.get(value, -1) for value in values),
+            ("atom",),
+            dtype="int64",
+        ),
+        categories,
+        -1,
+    )
+
+
+def _atom_identity(atom):
+    return (
+        atom.record_kind,
+        atom.chain_id,
+        atom.residue_number,
+        atom.insertion_code,
+        atom.residue_name,
+        atom.atom_name,
+        atom.alternate_location,
+    )
+
+
+def _cell(cryst1):
+    import numpy
+
+    alpha, beta, gamma = map(
+        math.radians,
+        (cryst1.alpha, cryst1.beta, cryst1.gamma),
+    )
+    sin_gamma = math.sin(gamma)
+    c_x = cryst1.c * math.cos(beta)
+    c_y = cryst1.c * (
+        math.cos(alpha) - math.cos(beta) * math.cos(gamma)
+    ) / sin_gamma
+    c_z = math.sqrt(max(0.0, cryst1.c**2 - c_x**2 - c_y**2))
+    return _array(
+        numpy.asarray(
+            (
+                (cryst1.a, 0.0, 0.0),
+                (
+                    cryst1.b * math.cos(gamma),
+                    cryst1.b * sin_gamma,
+                    0.0,
+                ),
+                (c_x, c_y, c_z),
+            ),
+            dtype=numpy.float64,
+        ),
+        ("cell_vector", "xyz"),
+        "angstrom",
+    )
+
+
+def _periodic(atoms, coordinates, cell, cryst1):
+    import numpy
+
+    fractional = numpy.asarray(coordinates.values) @ numpy.linalg.inv(
+        numpy.asarray(cell.values)
+    )
+    return PeriodicSiteData(
+        fractional_coordinates=_array(
+            fractional,
+            ("atom", "xyz"),
+            dtype="float64",
+        ),
+        site_labels=tuple(
+            atom.atom_name or f"atom-{atom.serial}" for atom in atoms
+        ),
+        occupancies=_array(
+            tuple(
+                math.nan if atom.occupancy is None else atom.occupancy
+                for atom in atoms
+            ),
+            ("atom",),
+            dtype="float64",
+        ),
+        isotropic_displacements=None,
+        anisotropic_displacements=None,
+        adp_types=("none",) * len(atoms),
+        disorder_groups=(0,) * len(atoms),
+        declared_space_group_name=(
+            cryst1.declared_space_group
+            if _SPACE_GROUP_PATTERN.fullmatch(cryst1.declared_space_group)
+            else None
+        ),
+        declared_space_group_number=None,
+        symmetry_operations=(),
+        cif_envelope_id=None,
+    )
+
+
+def _topologies(
+    structure_id,
+    source_hash,
+    provenance_id,
+    group,
+    bonds_by_model,
+):
+    import numpy
+
+    reference = group[0]
+    reference_indices = {
+        _atom_identity(atom): index
+        for index, (_global_index, atom) in enumerate(reference["atoms"])
+    }
+    result = []
+    for model in group:
+        model_number = model["number"]
+        edges = {}
+        atoms_by_global = dict(model["atoms"])
+        for bond in bonds_by_model[model_number]:
+            if bond.atom_indices is None:
+                continue
+            try:
+                endpoints = tuple(
+                    reference_indices[_atom_identity(atoms_by_global[index])]
+                    for index in bond.atom_indices
+                )
+            except KeyError:
+                continue
+            edge = tuple(sorted(endpoints))
+            order = 0.0 if bond.order is None else float(bond.order)
+            previous = edges.get(edge)
+            edges[edge] = order if previous in (None, order) else 0.0
+        if not edges:
+            continue
+        ordered = tuple(sorted(edges.items()))
+        topology = TopologyRecord(
+            id=uuid5(structure_id, f"topology:model:{model_number}"),
+            revision=source_hash,
+            structure_id=structure_id,
+            bond_indices=ArrayData(
+                numpy.asarray(
+                    tuple(edge for edge, _order in ordered),
+                    dtype=numpy.int64,
+                ).reshape((-1, 2)),
+                ("bond", "endpoint"),
+                "dimensionless",
+            ),
+            bond_orders=_array(
+                tuple(order for _edge, order in ordered),
+                ("bond",),
+                dtype="float64",
+            ),
+            aromatic_flags=None,
+            stereo_labels=("",) * len(ordered),
+            source_kind=TopologySource.EXPLICIT_FILE,
+            quality_status=(
+                QualityStatus.AMBIGUOUS
+                if any(order == 0.0 for _edge, order in ordered)
+                else QualityStatus.COMPLETE
+            ),
+            inference_parameters=(("model_number", model_number),),
+            provenance_ids=(provenance_id,),
+        )
+        result.append(topology)
+    return tuple(result)
+
+
+def _hierarchy(
+    structure_id,
+    source_hash,
+    provenance_id,
+    model_number,
+    atoms,
+):
+    chain_indices = {}
+    chains = []
+    residue_indices = {}
+    residues = []
+    atom_residue_indices = []
+    for atom in atoms:
+        chain_key = (atom.chain_id, atom.segment_index)
+        chain_index = chain_indices.get(chain_key)
+        if chain_index is None:
+            chain_index = len(chains)
+            chain_indices[chain_key] = chain_index
+            chains.append(BiologicalChain(*chain_key))
+        residue_key = (
+            chain_index,
+            atom.residue_number,
+            atom.insertion_code,
+            atom.record_kind == "hetatm",
+        )
+        residue_index = residue_indices.get(residue_key)
+        if residue_index is None:
+            residue_index = len(residues)
+            residue_indices[residue_key] = residue_index
+            residues.append(
+                BiologicalResidue(
+                    chain_index,
+                    atom.residue_name,
+                    atom.residue_number,
+                    atom.insertion_code,
+                    atom.record_kind == "hetatm",
+                )
+            )
+        elif residues[residue_index].residue_name != atom.residue_name:
+            raise ValueError(
+                "PDB residue identity conflicts within one chain segment"
+            )
+        atom_residue_indices.append(residue_index)
+    return BiologicalHierarchy(
+        id=uuid5(structure_id, "hierarchy"),
+        revision=source_hash,
+        structure_id=structure_id,
+        model=BiologicalModel(model_number if model_number > 0 else None),
+        chains=tuple(chains),
+        residues=tuple(residues),
+        atom_sites=BiologicalAtomSiteData(
+            serial_numbers=_array(
+                tuple(atom.serial for atom in atoms),
+                ("atom",),
+                dtype="int64",
+            ),
+            residue_indices=_array(
+                atom_residue_indices,
+                ("atom",),
+                dtype="int64",
+            ),
+            alternate_locations=_categorical(
+                tuple(
+                    atom.alternate_location or None
+                    for atom in atoms
+                )
+            ),
+            record_kinds=_categorical(
+                tuple(atom.record_kind for atom in atoms)
+            ),
+        ),
+        provenance_ids=(provenance_id,),
+    )
+
+
+def _property(
+    structure_id,
+    source_hash,
+    provenance_id,
+    role,
+    unit,
+    values,
+):
+    complete = all(value is not None for value in values)
+    return AtomicProperty(
+        id=uuid5(structure_id, f"property:{role}"),
+        revision=source_hash,
+        semantic_role=role,
+        domain="atom",
+        data=_array(
+            tuple(math.nan if value is None else value for value in values),
+            ("atom",),
+            unit,
+            dtype="float64",
+        ),
+        status=DatasetStatus.COMPLETE if complete else DatasetStatus.PARTIAL,
+        source_calculation=None,
+        provenance_ids=(provenance_id,),
+        structure_id=structure_id,
+    )
+
+
+def _groups(atoms, issues):
+    models = {}
+    for global_index, atom in enumerate(atoms):
+        models.setdefault(atom.model_number, []).append((global_index, atom))
+    groups = []
+    compatible = {}
+    baseline_identities = None
+    for model_number, model_atoms in models.items():
+        if model_number <= 0:
+            issues.append(
+                ParserIssue(
+                    IssueKind.INVALID,
+                    f"model[{model_number}].number",
+                    "PDB MODEL number must be positive",
+                )
+            )
+        identities = tuple(_atom_identity(atom) for _index, atom in model_atoms)
+        duplicates = tuple(
+            identity
+            for identity, count in Counter(identities).items()
+            if count > 1
+        )
+        if duplicates:
+            issues.append(
+                ParserIssue(
+                    IssueKind.INVALID,
+                    f"model[{model_number}].identity",
+                    "duplicate seven-field atom identity prevents MODEL alignment",
+                )
+            )
+            key = ("duplicate", model_number)
+        else:
+            key = frozenset(identities)
+        identity_set = frozenset(identities)
+        if baseline_identities is None:
+            baseline_identities = identity_set
+        group_index = compatible.get(key)
+        if group_index is None:
+            if groups and not duplicates:
+                missing = tuple(sorted(baseline_identities - identity_set))
+                additional = tuple(sorted(identity_set - baseline_identities))
+                issues.append(
+                    ParserIssue(
+                        IssueKind.WARNING,
+                        f"model[{model_number}].identity",
+                        (
+                            "MODEL identity set differs from the reference "
+                            f"model: missing={missing!r}; "
+                            f"additional={additional!r}; created an "
+                            "independent Structure"
+                        ),
+                    )
+                )
+            group_index = len(groups)
+            compatible[key] = group_index
+            groups.append([])
+        groups[group_index].append(
+            {"number": model_number, "atoms": tuple(model_atoms)}
+        )
+    return tuple(tuple(group) for group in groups)
+
+
+def _diagnostics(source_revision_id, issues):
+    outcomes = {
+        IssueKind.MISSING: (
+            DiagnosticSeverity.WARNING,
+            QualityStatus.INCOMPLETE,
+            "source data is missing",
+        ),
+        IssueKind.UNSUPPORTED: (
+            DiagnosticSeverity.WARNING,
+            QualityStatus.INCOMPLETE,
+            "source data is preserved but not represented as a typed entity",
+        ),
+        IssueKind.AMBIGUOUS: (
+            DiagnosticSeverity.WARNING,
+            QualityStatus.AMBIGUOUS,
+            "scientific meaning requires review",
+        ),
+        IssueKind.INVALID: (
+            DiagnosticSeverity.ERROR,
+            QualityStatus.INVALID,
+            "invalid source data was not mapped as valid scientific data",
+        ),
+        IssueKind.WARNING: (
+            DiagnosticSeverity.WARNING,
+            QualityStatus.PARTIAL,
+            "the source was recovered with a reader warning",
+        ),
+    }
+    occurrences = Counter()
+    diagnostics = []
+    for issue in issues:
+        occurrence_key = (issue.kind.value, issue.path)
+        occurrence = occurrences[occurrence_key]
+        occurrences[occurrence_key] += 1
+        severity, quality, consequence = outcomes[issue.kind]
+        diagnostics.append(
+            ImportDiagnostic(
+                id=uuid5(
+                    source_revision_id,
+                    (
+                        f"diagnostic:{issue.kind.value}:{issue.path}:"
+                        f"{occurrence}"
+                    ),
+                ),
+                severity=severity,
+                quality_status=quality,
+                source_revision_id=source_revision_id,
+                record_key=None,
+                entity_id=None,
+                field_path=issue.path,
+                code=f"pdb.{issue.kind.value}",
+                message=issue.message,
+                original_value=None,
+                normalized_value=None,
+                recovery_action=(
+                    "retained valid PDB models as independent Structures"
+                    if issue.path.endswith(".identity")
+                    else None
+                ),
+                scientific_consequence=consequence,
+                suggested_action=None,
+            )
+        )
+    return tuple(diagnostics)
+
+
+def _parameters(validation_mode, canonical_parameters):
+    return tuple(
+        sorted(
+            (
+                ("source_content_state", "verified"),
+                ("validation_mode", validation_mode),
+                *canonical_parameters,
+            )
+        )
+    )
+
+
+def _parse_bytes(
+    raw_source,
+    source,
+    *,
+    source_revision_id,
+    source_hash,
+    validation_mode,
+    canonical_parameters=(),
+):
+    parsed = parse_pdb_records(raw_source, validation_mode=validation_mode)
+    if not parsed.atoms:
+        raise ValueError("PDB source contains no valid atoms")
+    issues = list(parsed.issues)
+    groups = _groups(parsed.atoms, issues)
+    if validation_mode == "strict" and any(
+        issue.kind is IssueKind.INVALID for issue in issues
+    ):
+        raise ValueError("PDB source contains invalid model mapping")
+
+    provenance_id = uuid5(source_revision_id, "pdb:provenance")
+    provenance_parameters = [("format", "pdb")]
+    if parsed.cryst1 is not None:
+        provenance_parameters.extend(
+            (
+                ("cryst1_source_record", parsed.cryst1.source_record),
+                ("cryst1_space_group_field", parsed.cryst1.space_group_field),
+                ("cryst1_z", parsed.cryst1.z_value),
+            )
+        )
+    provenance = ProvenanceRecord(
+        id=provenance_id,
+        revision=source_hash,
+        producer="ChemBlender PDB reader",
+        producer_version=_READER_VERSION,
+        source=str(source),
+        source_hash=source_hash,
+        parent_ids=(),
+        operation="parse",
+        parameters=tuple(provenance_parameters),
+    )
+
+    structures = []
+    topologies = []
+    hierarchies = []
+    datasets = []
+    bonds_by_model = defaultdict(list)
+    for bond in parsed.bonds:
+        bonds_by_model[bond.model_number].append(bond)
+    for group_index, group in enumerate(groups):
+        model_numbers = ",".join(str(model["number"]) for model in group)
+        structure_id = uuid5(
+            source_revision_id,
+            f"pdb:structure:{group_index}:models:{model_numbers}",
+        )
+        reference = group[0]
+        reference_atoms = tuple(atom for _index, atom in reference["atoms"])
+        group_topologies = _topologies(
+            structure_id,
+            source_hash,
+            provenance_id,
+            group,
+            bonds_by_model,
+        )
+        coordinates = _array(
+            tuple(atom.coordinates for atom in reference_atoms),
+            ("atom", "xyz"),
+            "angstrom",
+            dtype="float64",
+        )
+        cell = None if parsed.cryst1 is None else _cell(parsed.cryst1)
+        structure = Structure(
+            id=structure_id,
+            revision=source_hash,
+            atomic_numbers=tuple(
+                0 if atom.element is None else _ELEMENT_NUMBERS[atom.element]
+                for atom in reference_atoms
+            ),
+            coordinates=coordinates,
+            cell=cell,
+            periodic=(
+                None
+                if parsed.cryst1 is None
+                else _periodic(
+                    reference_atoms,
+                    coordinates,
+                    cell,
+                    parsed.cryst1,
+                )
+            ),
+            topology_ids=tuple(value.id for value in group_topologies),
+            atomic_identity=AtomicIdentityData(
+                isotopes=_array(
+                    (0,) * len(reference_atoms),
+                    ("atom",),
+                    dtype="int64",
+                ),
+                formal_charges=_array(
+                    tuple(atom.formal_charge or 0 for atom in reference_atoms),
+                    ("atom",),
+                    dtype="int64",
+                ),
+                atom_map_numbers=_array(
+                    (0,) * len(reference_atoms),
+                    ("atom",),
+                    dtype="int64",
+                ),
+                atom_names=_categorical(
+                    tuple(atom.atom_name or None for atom in reference_atoms)
+                ),
+                stereo_labels=_categorical((None,) * len(reference_atoms)),
+            ),
+        )
+        hierarchy = _hierarchy(
+            structure_id,
+            source_hash,
+            provenance_id,
+            reference["number"],
+            reference_atoms,
+        )
+        group_datasets = [
+            _property(
+                structure_id,
+                source_hash,
+                provenance_id,
+                "occupancy",
+                "dimensionless",
+                tuple(atom.occupancy for atom in reference_atoms),
+            ),
+            _property(
+                structure_id,
+                source_hash,
+                provenance_id,
+                "b_factor",
+                "angstrom_squared",
+                tuple(atom.b_factor for atom in reference_atoms),
+            ),
+        ]
+        if len(group) > 1:
+            reference_order = {
+                _atom_identity(atom): index
+                for index, atom in enumerate(reference_atoms)
+            }
+            frame_values = []
+            for model in group:
+                ordered = [None] * len(reference_atoms)
+                for _global_index, atom in model["atoms"]:
+                    ordered[reference_order[_atom_identity(atom)]] = atom.coordinates
+                frame_values.append(tuple(ordered))
+            group_datasets.append(
+                FrameSet(
+                    id=uuid5(structure_id, "frames"),
+                    revision=source_hash,
+                    semantic_role="coordinates",
+                    domain="frame",
+                    data=_array(
+                        frame_values,
+                        ("frame", "atom", "xyz"),
+                        "angstrom",
+                        dtype="float64",
+                    ),
+                    status=DatasetStatus.COMPLETE,
+                    source_calculation=None,
+                    provenance_ids=(provenance_id,),
+                    structure_id=structure_id,
+                    comments=tuple(
+                        f"MODEL {model['number']}" for model in group
+                    ),
+                )
+            )
+        structures.append(structure)
+        topologies.extend(group_topologies)
+        hierarchies.append(hierarchy)
+        datasets.extend(group_datasets)
+
+    structures = tuple(structures)
+    topologies = tuple(topologies)
+    hierarchies = tuple(hierarchies)
+    datasets = tuple(datasets)
+    diagnostics = _diagnostics(source_revision_id, tuple(issues))
+    created_ids = tuple(
+        value.id
+        for values in (
+            structures,
+            topologies,
+            hierarchies,
+            datasets,
+            (provenance,),
+        )
+        for value in values
+    )
+    report = ParserReport(
+        reader_id=_READER_ID,
+        reader_version=_READER_VERSION,
+        created_entity_ids=created_ids,
+        parsed_capabilities=_PARSED_CAPABILITIES,
+        issues=tuple(issues),
+    )
+    source_id = uuid5(source_revision_id, "pdb:source")
+    parameters = _parameters(validation_mode, canonical_parameters)
+    parameters_hash = hashlib.sha256(
+        json.dumps(
+            parameters,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+    source_record = SourceRecord(
+        id=source_id,
+        display_name=Path(source).name,
+        source_kind="local_file",
+        created_at_utc=datetime.now(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z"),
+    )
+    revision = SourceRevision(
+        id=source_revision_id,
+        source_id=source_id,
+        content_hash=source_hash,
+        byte_size=len(raw_source),
+        locator=str(Path(source).resolve()),
+        locator_kind="absolute_path",
+        original_filename=Path(source).name,
+        reader_plugin_id=_PLUGIN_ID,
+        reader_id=_READER_ID,
+        reader_version=_READER_VERSION,
+        reader_api_version=READER_API_VERSION,
+        import_parameters_hash=parameters_hash,
+        parse_identity=source_parse_identity(
+            source_hash,
+            _PLUGIN_ID,
+            _READER_ID,
+            _READER_VERSION,
+            parameters,
+        ),
+        created_entity_ids=created_ids,
+        diagnostic_ids=tuple(value.id for value in diagnostics),
+    )
+    return ImportBatch(
+        sources=(source_record,),
+        source_revisions=(revision,),
+        structures=structures,
+        topologies=topologies,
+        biological_hierarchies=hierarchies,
+        datasets=datasets,
+        provenance=(provenance,),
+        report=report,
+        diagnostics=diagnostics,
+    )
+
+
+def parse_pdb(source):
+    source = Path(source)
+    raw_source = source.read_bytes()
+    source_hash = hashlib.sha256(raw_source).hexdigest()
+    return _parse_bytes(
+        raw_source,
+        source,
+        source_revision_id=uuid5(
+            NAMESPACE_URL,
+            f"chemblender:pdb:{source_hash}",
+        ),
+        source_hash=source_hash,
+        validation_mode="balanced",
+    )
+
+
+def parse_pdb_request(request):
+    parameters = tuple(sorted(request.canonical_parameters.items()))
+    if parameters:
+        raise ValueError("unsupported PDB parse parameter")
+    cancelled = request.is_cancelled()
+    if type(cancelled) is not bool:
+        raise TypeError("is_cancelled must return bool")
+    if cancelled:
+        raise RuntimeError("PDB parse was cancelled")
+    source = Path(request.source_path)
+    raw_source = source.read_bytes()
+    source_hash = hashlib.sha256(raw_source).hexdigest()
+    if source_hash != request.source_content_hash:
+        raise ValueError("source content hash mismatch")
+    return _parse_bytes(
+        raw_source,
+        source,
+        source_revision_id=request.source_revision_id,
+        source_hash=source_hash,
+        validation_mode=request.validation_mode,
+        canonical_parameters=parameters,
+    )
+
+
+PDB_READER = ReaderDescriptor(
+    reader_id=_READER_ID,
+    reader_version=_READER_VERSION,
+    extensions=(".pdb",),
+    capabilities={
+        "atomic_identity": CapabilitySupport.SUPPORTED,
+        "atomic_property": CapabilitySupport.SUPPORTED,
+        "crystal": CapabilitySupport.PARTIAL,
+        "hierarchy": CapabilitySupport.SUPPORTED,
+        "multi_model": CapabilitySupport.SUPPORTED,
+        "structure": CapabilitySupport.SUPPORTED,
+        "topology": CapabilitySupport.PARTIAL,
+        "trajectory": CapabilitySupport.SUPPORTED,
+    },
+    priority=120,
+    sniff=sniff_pdb,
+    parse=parse_pdb,
+    parse_request=parse_pdb_request,
+)
+
+
 __all__ = (
+    "PDB_READER",
     "PDBAtomRecord",
     "PDBBond",
     "PDBConectRecord",
@@ -766,6 +1543,8 @@ __all__ = (
     "PDBRecordSet",
     "PDBSyntaxError",
     "PDBTerRecord",
+    "parse_pdb",
+    "parse_pdb_request",
     "parse_pdb_records",
     "sniff_pdb",
 )
