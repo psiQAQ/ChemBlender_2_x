@@ -182,3 +182,15 @@ Run readiness tests and commit the explicit P1 boundary.
 Completion evidence: `46bb656`, `c578915`; 32 MOL2/readiness and 21
 documentation/core-public tests passed, `compileall` and `git diff --check`
 passed, and fix round 1 closed all Critical/Important review findings.
+
+## Final whole-plan review
+
+- [x] Review the complete MOL2 implementation against this plan.
+- [x] Close all Critical/Important findings in one scoped fix wave.
+- [x] Re-review only the fix wave and record the remaining non-blocking items.
+
+Completion evidence: `4719f84`; 79 focused tests passed, native extension
+validate/build and Blender 5.1.2 isolated lifecycle passed. The scoped
+re-review reported 0 Critical, 0 Important and one non-blocking test-strength
+Minor. Fixture `set_count`, duplicate preview count and multi-record raw-hash
+test strengthening are deferred to the Wave 3 final qualification.
