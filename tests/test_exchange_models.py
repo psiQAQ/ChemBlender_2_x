@@ -89,6 +89,18 @@ class ChemicalAnnotationTests(unittest.TestCase):
         with self.assertRaises(FrozenInstanceError):
             annotation.value = "changed"
 
+    def test_wrong_field_types_raise_type_error(self):
+        for updates in (
+            {"revision": 1},
+            {"namespace": 1},
+            {"key": 1},
+            {"source": 1},
+            {"confidence": 1},
+        ):
+            with self.subTest(updates=updates):
+                with self.assertRaises(TypeError):
+                    ChemicalAnnotation(**self.fields(**updates))
+
 
 class ExternalReferenceTests(unittest.TestCase):
     def test_requires_stable_namespace_identifier_and_source(self):
@@ -121,6 +133,22 @@ class ExternalReferenceTests(unittest.TestCase):
             with self.subTest(field=field):
                 with self.assertRaises((TypeError, ValueError)):
                     ExternalReference(**fields)
+
+    def test_wrong_field_types_raise_type_error(self):
+        fields = {
+            "id": uuid4(),
+            "revision": "reference-r1",
+            "target_entity_id": uuid4(),
+            "namespace": "pdb",
+            "identifier": "1CRN",
+            "source": "pdb_header",
+            "provenance_ids": (),
+        }
+        for field in ("revision", "namespace", "identifier", "source"):
+            invalid = dict(fields, **{field: 1})
+            with self.subTest(field=field):
+                with self.assertRaises(TypeError):
+                    ExternalReference(**invalid)
 
 
 class BiologicalHierarchyTests(unittest.TestCase):
@@ -194,6 +222,25 @@ class BiologicalHierarchyTests(unittest.TestCase):
                 with self.assertRaises((TypeError, ValueError)):
                     BiologicalAtomSiteData(**fields)
 
+    def test_record_kind_is_required_for_every_atom_site(self):
+        valid = atom_sites()
+        missing_record_kind = CategoricalData(
+            codes=ArrayData(
+                numpy.asarray((-1, 0), dtype=numpy.int16),
+                ("atom",),
+                "dimensionless",
+            ),
+            categories=("atom",),
+            missing_code=-1,
+        )
+        with self.assertRaisesRegex(ValueError, "record kind"):
+            BiologicalAtomSiteData(
+                serial_numbers=valid.serial_numbers,
+                residue_indices=valid.residue_indices,
+                alternate_locations=valid.alternate_locations,
+                record_kinds=missing_record_kind,
+            )
+
     def test_rejects_invalid_indexes_and_duplicate_hierarchy_keys(self):
         with self.assertRaisesRegex(ValueError, "residue index"):
             self.hierarchy(atom_sites=atom_sites(residue_indices=(0, 1)))
@@ -214,6 +261,22 @@ class BiologicalHierarchyTests(unittest.TestCase):
             BiologicalModel(number=0)
         with self.assertRaises((TypeError, ValueError)):
             BiologicalChain(chain_id=1, segment_index=0)
+
+    def test_wrong_hierarchy_value_types_raise_type_error(self):
+        invalid_calls = (
+            lambda: BiologicalModel(number="1"),
+            lambda: BiologicalChain(chain_id=1, segment_index=0),
+            lambda: BiologicalChain(chain_id="A", segment_index="0"),
+            lambda: BiologicalResidue("0", "GLY", 1, "", False),
+            lambda: BiologicalResidue(0, 1, 1, "", False),
+            lambda: BiologicalResidue(0, "GLY", True, "", False),
+            lambda: BiologicalResidue(0, "GLY", 1, 0, False),
+            lambda: BiologicalResidue(0, "GLY", 1, "", 0),
+        )
+        for invalid_call in invalid_calls:
+            with self.subTest(invalid_call=invalid_call):
+                with self.assertRaises(TypeError):
+                    invalid_call()
 
 
 if __name__ == "__main__":

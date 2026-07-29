@@ -4,7 +4,20 @@ from uuid import UUID
 
 from .arrays import ArrayData
 from .categorical import CategoricalData
-from .common import _require_text, _require_token, _require_uuid, _require_uuid_tuple
+from .common import _require_token, _require_uuid, _require_uuid_tuple
+
+
+def _require_exchange_text(value, name):
+    if type(value) is not str:
+        raise TypeError(f"{name} must be a string")
+    if not value:
+        raise ValueError(f"{name} must be non-empty")
+
+
+def _require_exchange_token(value, name):
+    if type(value) is not str:
+        raise TypeError(f"{name} must be a string")
+    _require_token(value, name)
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,23 +34,22 @@ class ChemicalAnnotation:
 
     def __post_init__(self):
         _require_uuid(self.id, "id")
-        _require_text(self.revision, "revision")
+        _require_exchange_text(self.revision, "revision")
         _require_uuid(self.target_entity_id, "target_entity_id")
-        _require_token(self.namespace, "namespace")
-        _require_token(self.key, "key")
+        _require_exchange_token(self.namespace, "namespace")
+        _require_exchange_token(self.key, "key")
         if type(self.value) not in (str, int, float, bool):
             raise TypeError("value must be an immutable scalar")
         if isinstance(self.value, str) and not self.value:
             raise ValueError("string value must be non-empty")
         if isinstance(self.value, float) and not isfinite(self.value):
             raise ValueError("float value must be finite")
-        _require_text(self.source, "source")
-        if self.confidence is not None and (
-            type(self.confidence) is not float
-            or not isfinite(self.confidence)
-            or not 0.0 <= self.confidence <= 1.0
-        ):
-            raise ValueError("confidence must be a float from 0 to 1 or None")
+        _require_exchange_text(self.source, "source")
+        if self.confidence is not None:
+            if type(self.confidence) is not float:
+                raise TypeError("confidence must be a float or None")
+            if not isfinite(self.confidence) or not 0.0 <= self.confidence <= 1.0:
+                raise ValueError("confidence must be from 0 to 1")
         object.__setattr__(
             self,
             "provenance_ids",
@@ -57,11 +69,11 @@ class ExternalReference:
 
     def __post_init__(self):
         _require_uuid(self.id, "id")
-        _require_text(self.revision, "revision")
+        _require_exchange_text(self.revision, "revision")
         _require_uuid(self.target_entity_id, "target_entity_id")
-        _require_token(self.namespace, "namespace")
-        _require_text(self.identifier, "identifier")
-        _require_text(self.source, "source")
+        _require_exchange_token(self.namespace, "namespace")
+        _require_exchange_text(self.identifier, "identifier")
+        _require_exchange_text(self.source, "source")
         object.__setattr__(
             self,
             "provenance_ids",
@@ -74,12 +86,11 @@ class BiologicalModel:
     number: int | None
 
     def __post_init__(self):
-        if self.number is not None and (
-            isinstance(self.number, bool)
-            or not isinstance(self.number, int)
-            or self.number <= 0
-        ):
-            raise ValueError("model number must be a positive integer or None")
+        if self.number is not None:
+            if type(self.number) is not int:
+                raise TypeError("model number must be an integer or None")
+            if self.number <= 0:
+                raise ValueError("model number must be positive")
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,14 +99,12 @@ class BiologicalChain:
     segment_index: int
 
     def __post_init__(self):
-        if not isinstance(self.chain_id, str):
+        if type(self.chain_id) is not str:
             raise TypeError("chain_id must be a string")
-        if (
-            isinstance(self.segment_index, bool)
-            or not isinstance(self.segment_index, int)
-            or self.segment_index < 0
-        ):
-            raise ValueError("segment_index must be a non-negative integer")
+        if type(self.segment_index) is not int:
+            raise TypeError("segment_index must be an integer")
+        if self.segment_index < 0:
+            raise ValueError("segment_index must be non-negative")
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,20 +116,16 @@ class BiologicalResidue:
     hetero: bool
 
     def __post_init__(self):
-        if (
-            isinstance(self.chain_index, bool)
-            or not isinstance(self.chain_index, int)
-            or self.chain_index < 0
-        ):
-            raise ValueError("chain_index must be a non-negative integer")
-        _require_text(self.residue_name, "residue_name")
-        if isinstance(self.sequence_number, bool) or not isinstance(
-            self.sequence_number, int
-        ):
+        if type(self.chain_index) is not int:
+            raise TypeError("chain_index must be an integer")
+        if self.chain_index < 0:
+            raise ValueError("chain_index must be non-negative")
+        _require_exchange_text(self.residue_name, "residue_name")
+        if type(self.sequence_number) is not int:
             raise TypeError("sequence_number must be an integer")
-        if not isinstance(self.insertion_code, str):
+        if type(self.insertion_code) is not str:
             raise TypeError("insertion_code must be a string")
-        if not isinstance(self.hetero, bool):
+        if type(self.hetero) is not bool:
             raise TypeError("hetero must be a bool")
 
 
@@ -173,6 +178,9 @@ class BiologicalAtomSiteData:
             for value in self.record_kinds.categories
         ):
             raise ValueError("record kinds must be atom or hetatm")
+        record_kinds = numpy.asarray(self.record_kinds.codes.values)
+        if numpy.any(record_kinds == self.record_kinds.missing_code):
+            raise ValueError("record kind is required for every atom site")
 
     @property
     def atom_count(self):
@@ -194,7 +202,7 @@ class BiologicalHierarchy:
         import numpy
 
         _require_uuid(self.id, "id")
-        _require_text(self.revision, "revision")
+        _require_exchange_text(self.revision, "revision")
         _require_uuid(self.structure_id, "structure_id")
         if not isinstance(self.model, BiologicalModel):
             raise TypeError("model must be BiologicalModel")

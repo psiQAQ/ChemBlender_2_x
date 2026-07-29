@@ -1,5 +1,5 @@
 import math
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from uuid import UUID
 
 from ..core import (
@@ -190,9 +190,13 @@ class PublicImportBatch:
     structures: tuple[Structure, ...] = ()
     topologies: tuple[TopologyRecord, ...] = ()
     molecular_records: tuple[MolecularRecord, ...] = ()
-    biological_hierarchies: tuple[BiologicalHierarchy, ...] = ()
-    annotations: tuple[ChemicalAnnotation, ...] = ()
-    external_references: tuple[ExternalReference, ...] = ()
+    biological_hierarchies: tuple[BiologicalHierarchy, ...] = field(
+        default=(), kw_only=True
+    )
+    annotations: tuple[ChemicalAnnotation, ...] = field(default=(), kw_only=True)
+    external_references: tuple[ExternalReference, ...] = field(
+        default=(), kw_only=True
+    )
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
     qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
     cjson_envelopes: tuple[CJSONEnvelope, ...] = ()

@@ -1,9 +1,11 @@
 import unittest
 from dataclasses import replace
+from inspect import Parameter, signature
 from uuid import uuid4
 
 import numpy
 
+import ChemBlender.reader_api as reader_api
 from ChemBlender.core import (
     ArrayData,
     BiologicalAtomSiteData,
@@ -15,6 +17,7 @@ from ChemBlender.core import (
     ChemicalAnnotation,
     ExternalReference,
     ImportBatch,
+    ParserReport,
     ProvenanceRecord,
     QCProject,
     Structure,
@@ -111,6 +114,17 @@ def external_reference(target_id, **updates):
 
 
 class ExchangeProjectContractTests(unittest.TestCase):
+    def test_new_exchange_groups_are_keyword_only_compatible_additions(self):
+        for container in (ImportBatch, QCProject, reader_api.PublicImportBatch):
+            parameters = signature(container).parameters
+            with self.subTest(container=container.__name__):
+                for name in (
+                    "biological_hierarchies",
+                    "annotations",
+                    "external_references",
+                ):
+                    self.assertIs(parameters[name].kind, Parameter.KEYWORD_ONLY)
+
     def test_commits_all_exchange_groups_and_revalidates_the_graph(self):
         item = structure()
         bio = hierarchy(item.id)
@@ -124,6 +138,13 @@ class ExchangeProjectContractTests(unittest.TestCase):
                 biological_hierarchies=(bio,),
                 annotations=(note,),
                 external_references=(reference,),
+                report=ParserReport(
+                    "exchange-fixture",
+                    "1",
+                    (item.id, bio.id, note.id, reference.id),
+                    ("structure",),
+                    (),
+                ),
             )
         )
 

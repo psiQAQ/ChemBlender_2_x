@@ -251,9 +251,13 @@ class ImportBatch:
     structures: tuple[Structure, ...] = ()
     topologies: tuple[TopologyRecord, ...] = ()
     molecular_records: tuple[MolecularRecord, ...] = ()
-    biological_hierarchies: tuple[BiologicalHierarchy, ...] = ()
-    annotations: tuple[ChemicalAnnotation, ...] = ()
-    external_references: tuple[ExternalReference, ...] = ()
+    biological_hierarchies: tuple[BiologicalHierarchy, ...] = field(
+        default=(), kw_only=True
+    )
+    annotations: tuple[ChemicalAnnotation, ...] = field(default=(), kw_only=True)
+    external_references: tuple[ExternalReference, ...] = field(
+        default=(), kw_only=True
+    )
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
     qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
     cjson_envelopes: tuple[CJSONEnvelope, ...] = ()
@@ -308,11 +312,13 @@ class QCProject:
     topologies: dict[UUID, TopologyRecord] = field(default_factory=dict)
     molecular_records: dict[UUID, MolecularRecord] = field(default_factory=dict)
     biological_hierarchies: dict[UUID, BiologicalHierarchy] = field(
-        default_factory=dict
+        default_factory=dict, kw_only=True
     )
-    annotations: dict[UUID, ChemicalAnnotation] = field(default_factory=dict)
+    annotations: dict[UUID, ChemicalAnnotation] = field(
+        default_factory=dict, kw_only=True
+    )
     external_references: dict[UUID, ExternalReference] = field(
-        default_factory=dict
+        default_factory=dict, kw_only=True
     )
     cif_envelopes: dict[UUID, CIFEnvelope] = field(default_factory=dict)
     qcschema_envelopes: dict[UUID, QCSchemaEnvelope] = field(default_factory=dict)

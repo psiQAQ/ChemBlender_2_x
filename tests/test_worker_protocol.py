@@ -12,7 +12,10 @@ import numpy
 
 from ChemBlender.core import (
     ArrayData,
+    BiologicalHierarchy,
+    ChemicalAnnotation,
     DatasetStatus,
+    ExternalReference,
     ImportBatch,
     MolecularRecord,
     PropertyDataset,
@@ -102,6 +105,40 @@ class WorkerProtocolTests(unittest.TestCase):
         self.assertEqual(
             _batch_references(ImportBatch(molecular_records=(record,))),
             (reference,),
+        )
+
+    def test_generic_worker_inventories_include_exchange_entities(self):
+        entities = []
+        for index, entity_type in enumerate(
+            (BiologicalHierarchy, ChemicalAnnotation, ExternalReference), start=7
+        ):
+            entity = object.__new__(entity_type)
+            object.__setattr__(
+                entity,
+                "id",
+                UUID(f"{index}0000000-0000-0000-0000-00000000000{index}"),
+            )
+            object.__setattr__(entity, "revision", f"exchange-r{index}")
+            entities.append(entity)
+        hierarchy, annotation, external_reference = entities
+        project = QCProject(id=PROJECT_ID, schema_version="0.1")
+        project.biological_hierarchies[hierarchy.id] = hierarchy
+        project.annotations[annotation.id] = annotation
+        project.external_references[external_reference.id] = external_reference
+        references = tuple(
+            EntityReference(entity.id, entity.revision) for entity in entities
+        )
+
+        _validate_references(project, references, "input")
+        self.assertEqual(
+            _batch_references(
+                ImportBatch(
+                    biological_hierarchies=(hierarchy,),
+                    annotations=(annotation,),
+                    external_references=(external_reference,),
+                )
+            ),
+            references,
         )
 
     def test_request_round_trip_is_strict_and_canonical(self):
