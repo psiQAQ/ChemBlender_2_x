@@ -75,25 +75,31 @@ unchanged until PDB/PQR reader registration in Tasks 3 and 4.
 **Interfaces:**
 - Produces: `sniff_pdb()`, `parse_pdb_records()` and record dataclasses.
 
-- [ ] **Step 1: Write column tests**
+- [x] **Step 1: Write column tests**
 
 Test exact slices for serial, atom name, altloc, residue, chain, residue number, insertion, xyz, occupancy, B-factor, element and charge. Lines shorter than required generate record diagnostics.
 
-- [ ] **Step 2: Implement element resolution**
+- [x] **Step 2: Implement element resolution**
 
 Use element columns when valid. Otherwise infer from atom name using PDB conventions and chemical context, preserving inferred flag and diagnostic. Unknown remains invalid atom identity; do not default.
 
-- [ ] **Step 3: Parse MODEL/ENDMDL and TER**
+- [x] **Step 3: Parse MODEL/ENDMDL and TER**
 
 Maintain model number and segment index. ATOM/HETATM outside MODEL belong to model 1. Nested/mismatched model markers produce diagnostics and balanced recovery.
 
-- [ ] **Step 4: Parse CONECT and CRYST1**
+- [x] **Step 4: Parse CONECT and CRYST1**
 
 CONECT serial references map after atoms are known. Repeated entries can encode bond multiplicity only when unambiguous; otherwise store connectivity/unknown order. CRYST1 maps cell and declared space group/source metadata.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 Run syntax tests and commit parser primitives.
+
+Completion evidence: `22b566a`, `b848b0c`, `ed7b0e0`, `089f0c5`;
+22 focused and 89 related tests passed, `compileall` and `git diff --check`
+passed. Three review-fix rounds closed fixed-column element alignment,
+malformed TER recovery, model-scoped CONECT, CRYST1 validation and sniff
+confidence findings with no open Critical/Important issues.
 
 ### Task 3: Map PDB models, altlocs and topology into project entities
 
