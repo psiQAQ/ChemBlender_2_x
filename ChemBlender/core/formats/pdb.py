@@ -206,6 +206,8 @@ def _infer_element(atom_name_field, record_name, residue_name):
         and residue_name in _STANDARD_POLYMER_RESIDUES
     ):
         candidate = atom_name_field[0].upper()
+        if candidate not in "CHNOPS":
+            return None
     else:
         candidate = atom_name_field[0].upper() + atom_name_field[1].lower()
     return candidate if candidate in _ELEMENT_SYMBOLS else None
