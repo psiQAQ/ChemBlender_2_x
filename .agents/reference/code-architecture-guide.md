@@ -243,6 +243,15 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/core/external_connector.py` | `builtin_external_connectors()`、`ExternalRecordRequest`、`external_record_request_document()`、`external_record_source_uri()` | 定义 QCArchive/AiiDA/NOMAD 的 provider-neutral 请求、locator、凭据环境变量引用和脱敏 provenance URI。 |
 | `ChemBlender/core/worker_protocol.py` | `WorkerRequest`、`WorkerResult`、`write_request()`、`read_request()`、`write_result()`、`read_result()` | Blender 与外部 worker 共用的严格 JSON 协议；校验版本、operation、实体 revision、artifact 相对路径、错误和取消状态。 |
 
+## 独立 Reader Extension 示例
+
+`examples/reader-extension/` 是单独构建、安装和卸载的 Blender Extension
+源码，不进入 ChemBlender 基础 ZIP。`__init__.py` 只从
+`bpy.app.driver_namespace["chemblender.reader_api.v1"]` 解析宿主发布的 API
+module 并注册/注销插件；`reader.py` 只接收该公开 module，使用公开
+manifest、descriptor、request 和科学模型读取 `CBSIMPLE 1`，不导入 `bpy`
+或 `ChemBlender.core/ui/views`。
+
 ## Extension 维护脚本
 
 这些脚本随源码保存，但由开发者或 CI 调用，不在 Extension 运行时执行。
