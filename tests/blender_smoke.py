@@ -1578,6 +1578,8 @@ def assert_dataset_and_trajectory_views(module_key):
             if item.get("cbq_contract") == "structure_ball_stick_v1"
         ]
         assert len(ball_stick) == 1
+        assert ball_stick[0]["cbq_contract_version"] == 1
+        assert ball_stick[0].node_group["cbq_contract_version"] == 1
         coordinates = [0.0] * 9
         obj.data.vertices.foreach_get("co", coordinates)
         assert numpy.allclose(
@@ -2710,8 +2712,11 @@ def assert_extxyz_workflow(module_key, repository_root):
 
 
 def assert_cif_workflow(module_key, repository_root):
+    import numpy
+
     core = importlib.import_module(f"{module_key}.core")
     export_ui = importlib.import_module(f"{module_key}.ui.export")
+    node_module = importlib.import_module(f"{module_key}.node")
     ui = importlib.import_module(f"{module_key}.ui.session")
     views = importlib.import_module(f"{module_key}.views")
     assert "spglib" not in sys.modules
@@ -2742,9 +2747,58 @@ def assert_cif_workflow(module_key, repository_root):
     assert len(derived.data.vertices) == view["cbq_periodic_derived_site_count"]
     assert len(derived.data.vertices) > 0
     assert derived.data.attributes["cbq_display_only"] is not None
+    derived_ball_stick, = derived.modifiers
+    assert derived_ball_stick["cbq_contract_version"] == 1
+    assert derived_ball_stick.node_group["cbq_contract_version"] == 1
+    for name, contract in (
+        (
+            "CH_添加分子属性" if node_module.language
+            else "CH_Add Attributes",
+            "legacy_atom_attributes_asset_v1",
+        ),
+        (
+            "CH_分子球棍模型" if node_module.language
+            else "CH_Ball and Stick",
+            "legacy_ball_stick_asset_v1",
+        ),
+        (
+            "CH_添加分子材质" if node_module.language
+            else "CH_Add Material",
+            "legacy_molecule_material_asset_v1",
+        ),
+    ):
+        assert bpy.data.node_groups[name]["cbq_contract"] == contract
+        assert bpy.data.node_groups[name]["cbq_contract_version"] == 1
     occupancy = [0.0] * len(structure.atomic_numbers)
     view.data.attributes["cbq_occupancy"].data.foreach_get("value", occupancy)
     assert occupancy == [0.5]
+    cell_display = bpy.data.objects[view["cbq_periodic_cell_object"]]
+    adp_display = bpy.data.objects[view["cbq_periodic_adp_object"]]
+    occupancy_display = bpy.data.objects[
+        view["cbq_periodic_occupancy_object"]
+    ]
+    for display, contract in (
+        (cell_display, "periodic_cell_edges_v1"),
+        (adp_display, "periodic_thermal_ellipsoid_v1"),
+        (occupancy_display, "periodic_site_occupancy_v1"),
+    ):
+        modifier, = display.modifiers
+        assert modifier["cbq_contract"] == contract
+        assert modifier["cbq_contract_version"] == 1
+        assert modifier.node_group["cbq_contract"] == contract
+        assert modifier.node_group["cbq_contract_version"] == 1
+        evaluated = display.evaluated_get(
+            bpy.context.evaluated_depsgraph_get()
+        )
+        evaluated_mesh = evaluated.to_mesh()
+        try:
+            assert len(evaluated_mesh.vertices) > 0, (
+                display.name,
+                contract,
+                len(evaluated_mesh.vertices),
+            )
+        finally:
+            evaluated.to_mesh_clear()
     for attribute in (
         "siteid",
         "cbq_site_label",
@@ -2762,6 +2816,331 @@ def assert_cif_workflow(module_key, repository_root):
         assert view.data.attributes[attribute] is not None
     session.active_entity_id = structure.id
     session.active_view_object_name = view.name
+
+    mixed, = core.parse_cif(
+        repository_root / "tests" / "fixtures" / "cif" / "mixed-site-data.cif"
+    ).structures
+    oblique_cell = numpy.asarray(
+        ((2.0, 0.0, 0.0), (0.5, 3.0, 0.0), (0.2, 0.3, 4.0))
+    )
+    fractional = numpy.asarray(
+        mixed.periodic.fractional_coordinates.values,
+        dtype=float,
+    )
+    oblique = replace(
+        mixed,
+        revision=f"{mixed.revision}-oblique-smoke",
+        cell=core.ArrayData(
+            oblique_cell,
+            ("cell_vector", "xyz"),
+            "angstrom",
+        ),
+        coordinates=core.ArrayData(
+            fractional @ oblique_cell,
+            ("atom", "xyz"),
+            "angstrom",
+        ),
+    )
+    oblique_view = views.create_periodic_structure_view(
+        oblique,
+        settings=views.PeriodicViewSettings(
+            representation="supercell",
+            supercell=(2, 1, 1),
+            occupancy_mode="radius",
+            show_axes=True,
+        ),
+        name="ChemBlender oblique ADP smoke",
+        collection=bpy.context.scene.collection,
+    )
+    oblique_cell_display = bpy.data.objects[
+        oblique_view["cbq_periodic_cell_object"]
+    ]
+    numpy.testing.assert_allclose(
+        oblique_cell_display.data.vertices[7].co,
+        (4.7, 3.3, 4.0),
+    )
+    assert len(oblique_cell_display.data.vertices) == 14
+    assert len(oblique_cell_display.data.edges) == 15
+    oblique_adp = bpy.data.objects[oblique_view["cbq_periodic_adp_object"]]
+    occupancy_valid = [False] * 2
+    adp_valid = [False] * len(oblique_adp.data.vertices)
+    quality = [0] * len(oblique_adp.data.vertices)
+    oblique_view.data.attributes["cbq_occupancy_valid"].data.foreach_get(
+        "value",
+        occupancy_valid,
+    )
+    oblique_adp.data.attributes["cbq_adp_valid"].data.foreach_get(
+        "value",
+        adp_valid,
+    )
+    oblique_adp.data.attributes["cbq_quality_badge"].data.foreach_get(
+        "value",
+        quality,
+    )
+    assert occupancy_valid == [False, True]
+    assert adp_valid == [True, False, True, False]
+    assert quality == [1, 2, 1, 2]
+    evaluated_adp = oblique_adp.evaluated_get(
+        bpy.context.evaluated_depsgraph_get()
+    )
+    evaluated_adp_mesh = evaluated_adp.to_mesh()
+    try:
+        assert len(evaluated_adp_mesh.vertices) > len(oblique_adp.data.vertices)
+    finally:
+        evaluated_adp.to_mesh_clear()
+    views.remove_structure_view(oblique_view)
+
+    occupancy_geometry = {}
+    for mode in ("opacity", "pie", "split_site"):
+        mode_view = views.create_periodic_structure_view(
+            mixed,
+            settings=views.PeriodicViewSettings(
+                occupancy_mode=mode,
+                show_cell=False,
+                show_axes=mode == "opacity",
+            ),
+            name=f"ChemBlender {mode} occupancy smoke",
+            collection=bpy.context.scene.collection,
+        )
+        mode_display = bpy.data.objects[
+            mode_view["cbq_periodic_occupancy_object"]
+        ]
+        source_scale = [1.0] * len(mode_view.data.vertices)
+        mode_view.data.attributes["atom_scale_f"].data.foreach_get(
+            "value",
+            source_scale,
+        )
+        assert source_scale == [0.0] * len(source_scale)
+        evaluated = mode_display.evaluated_get(
+            bpy.context.evaluated_depsgraph_get()
+        )
+        evaluated_mesh = evaluated.to_mesh()
+        try:
+            occupancy_geometry[mode] = (
+                len(mode_display.data.vertices),
+                len(mode_display.data.polygons),
+                len(evaluated_mesh.vertices),
+            )
+            assert len(evaluated_mesh.vertices) > 0
+        finally:
+            evaluated.to_mesh_clear()
+        if mode == "pie":
+            assert len(mode_display.data.polygons) > 0
+            material = bpy.data.materials[
+                mode_view["cbq_periodic_occupancy_material"]
+            ]
+            try:
+                node_module.ensure_periodic_occupancy_modifier(
+                    mode_display,
+                    "opacity",
+                    material,
+                )
+            except RuntimeError as error:
+                assert "incompatible modifier" in str(error)
+            else:
+                raise AssertionError("occupancy node mode was silently reused")
+        if mode == "opacity":
+            axes = bpy.data.objects[
+                mode_view["cbq_periodic_cell_object"]
+            ]
+            assert len(axes.data.vertices) == 6
+            assert len(axes.data.edges) == 3
+        views.remove_structure_view(mode_view)
+    assert len(set(occupancy_geometry.values())) == 3
+
+    conflict_mesh = bpy.data.meshes.new("ChemBlender node conflict smoke")
+    conflict = bpy.data.objects.new(conflict_mesh.name, conflict_mesh)
+    bpy.context.scene.collection.objects.link(conflict)
+    modifier = conflict.modifiers.new(
+        "ChemBlender Periodic Cell",
+        "NODES",
+    )
+    foreign_group = bpy.data.node_groups.new(
+        "Foreign Periodic Cell",
+        "GeometryNodeTree",
+    )
+    foreign_group["cbq_contract"] = "periodic_cell_edges_v1"
+    modifier.node_group = foreign_group
+    try:
+        node_module.ensure_periodic_cell_modifier(conflict)
+    except RuntimeError as error:
+        assert "incompatible modifier" in str(error)
+    else:
+        raise AssertionError("incompatible periodic node contract was reused")
+    bpy.data.objects.remove(conflict, do_unlink=True)
+    bpy.data.meshes.remove(conflict_mesh)
+    bpy.data.node_groups.remove(foreign_group)
+
+    foreign_owner = views.create_periodic_structure_view(
+        mixed,
+        settings=views.PeriodicViewSettings(
+            occupancy_mode="radius",
+            show_cell=False,
+        ),
+        name="ChemBlender foreign ownership smoke",
+        collection=bpy.context.scene.collection,
+    )
+    foreign_mesh = bpy.data.meshes.new("Foreign cell v2")
+    foreign_child = bpy.data.objects.new(foreign_mesh.name, foreign_mesh)
+    bpy.context.scene.collection.objects.link(foreign_child)
+    foreign_child.parent = foreign_owner
+    foreign_child["cbq_contract"] = "periodic_cell_display_v1"
+    foreign_child["cbq_contract_version"] = 2
+    foreign_owner["cbq_periodic_cell_object"] = foreign_child.name
+    foreign_material = bpy.data.materials.new("Foreign occupancy material v2")
+    foreign_material["cbq_contract"] = "periodic_occupancy_material_v1"
+    foreign_material["cbq_contract_version"] = 2
+    foreign_owner["cbq_periodic_occupancy_material"] = foreign_material.name
+    views.remove_structure_view(foreign_owner)
+    assert foreign_child.name in bpy.data.objects
+    assert foreign_material.name in bpy.data.materials
+    bpy.data.objects.remove(foreign_child, do_unlink=True)
+    bpy.data.meshes.remove(foreign_mesh)
+    bpy.data.materials.remove(foreign_material)
+
+    supercell_name = (
+        "CH_超胞" if node_module.language else "CH_Supercell"
+    )
+    legacy_conflict = bpy.data.node_groups.new(
+        supercell_name,
+        "GeometryNodeTree",
+    )
+    source_collection = bpy.data.collections.new("Scaffold_smoke")
+    bpy.context.scene.collection.children.link(source_collection)
+    source_mesh = bpy.data.meshes.new("unit_smoke")
+    source = bpy.data.objects.new("unit_smoke", source_mesh)
+    source_collection.objects.link(source)
+    source["cell lengths"] = "1,1,1"
+    source["cell angles"] = "90,90,90"
+    bpy.context.view_layer.objects.active = source
+    source.select_set(True)
+    source.hide_set(False)
+    objects_before = set(bpy.data.objects.keys())
+    modifiers_before = tuple(source.modifiers)
+    groups_before = set(bpy.data.node_groups.keys())
+    try:
+        result = bpy.ops.chem.supercell()
+    except RuntimeError as error:
+        assert "incompatible node group" in str(error)
+    else:
+        assert result == {"CANCELLED"}
+    assert not source.hide_get()
+    assert set(bpy.data.objects.keys()) == objects_before
+    assert tuple(source.modifiers) == modifiers_before
+    assert set(bpy.data.node_groups.keys()) == groups_before
+    bpy.data.node_groups.remove(legacy_conflict)
+    assert bpy.ops.chem.supercell() == {"FINISHED"}
+    generated = bpy.data.objects["crystal_smoke"]
+    supercell_modifier = generated.modifiers["Supercell_smoke"]
+    assert supercell_modifier.get(
+        "cbq_contract"
+    ) == "legacy_supercell_wrapper_v1", (
+        tuple(supercell_modifier.items()),
+        tuple(supercell_modifier.node_group.items()),
+    )
+    assert supercell_modifier["cbq_contract_version"] == 1
+    assert supercell_modifier.node_group[
+        "cbq_contract"
+    ] == "legacy_supercell_wrapper_v1"
+    assert supercell_modifier.node_group["cbq_contract_version"] == 1
+    assert bpy.data.node_groups[supercell_name][
+        "cbq_contract"
+    ] == "legacy_supercell_asset_v1"
+    assert bpy.data.node_groups[supercell_name][
+        "cbq_contract_version"
+    ] == 1
+    generated_mesh = generated.data
+    bpy.data.objects.remove(generated, do_unlink=True)
+    bpy.data.meshes.remove(generated_mesh)
+    bpy.data.objects.remove(source, do_unlink=True)
+    bpy.data.meshes.remove(source_mesh)
+    bpy.data.collections.remove(source_collection)
+
+    cell_mesh = bpy.data.meshes.new("ChemBlender legacy cell smoke")
+    cell_obj = bpy.data.objects.new(cell_mesh.name, cell_mesh)
+    bpy.context.scene.collection.objects.link(cell_obj)
+    bpy.context.view_layer.objects.active = cell_obj
+    cell_obj.select_set(True)
+    cell_modifier = node_module.add_geometry_nodetree(
+        cell_obj,
+        "ChemBlender Legacy Cell",
+        "ChemBlender Legacy Cell Nodes",
+    )
+    node_module.Cell_Edges(
+        cell_modifier,
+        (1.0, 1.0, 1.0),
+        (90.0, 90.0, 90.0),
+    )
+    assert cell_modifier["cbq_contract"] == "legacy_cell_edges_wrapper_v1"
+    assert cell_modifier["cbq_contract_version"] == 1
+    assert cell_modifier.node_group[
+        "cbq_contract"
+    ] == "legacy_cell_edges_wrapper_v1"
+    for name, contract in (
+        (
+            "CH_边线扫描" if node_module.language else "CH_Edge Sweep",
+            "legacy_cell_edge_sweep_asset_v1",
+        ),
+        (
+            "CH_晶轴箭头" if node_module.language else "CH_Axes Arrows",
+            "legacy_cell_axes_asset_v1",
+        ),
+    ):
+        assert bpy.data.node_groups[name]["cbq_contract"] == contract
+        assert bpy.data.node_groups[name]["cbq_contract_version"] == 1
+    bpy.data.objects.remove(cell_obj, do_unlink=True)
+    bpy.data.meshes.remove(cell_mesh)
+
+    poly_mesh = bpy.data.meshes.new("ChemBlender polyhedra contract smoke")
+    poly_mesh.from_pydata(((0.0, 0.0, 0.0),), (), ())
+    poly_obj = bpy.data.objects.new(poly_mesh.name, poly_mesh)
+    bpy.context.scene.collection.objects.link(poly_obj)
+    bpy.context.view_layer.objects.active = poly_obj
+    poly_obj.select_set(True)
+    poly_modifier = node_module.add_geometry_nodetree(
+        poly_obj,
+        "ChemBlender Polyhedra",
+        "ChemBlender Polyhedra Nodes",
+    )
+    node_module.Ball_Stick_nodetree(poly_modifier)
+    node_module.CoordPolyhedra(
+        poly_modifier,
+        "1",
+        False,
+        0.0,
+        3.0,
+        (6,),
+        (8,),
+    )
+    assert poly_modifier.node_group[
+        "cbq_contract"
+    ] == "legacy_coord_polyhedra_wrapper_v1"
+    assert poly_modifier.node_group["cbq_contract_version"] == 1
+    assert poly_modifier[
+        "cbq_contract"
+    ] == "legacy_coord_polyhedra_wrapper_v1"
+    assert poly_modifier["cbq_contract_version"] == 1
+    for name, contract in (
+        (
+            "CH_配位多面体" if node_module.language
+            else "CH_Coord Polyhedra",
+            "legacy_coord_polyhedra_asset_v1",
+        ),
+        (
+            "CH_移除共面边" if node_module.language
+            else "CH_Remove Coplanar Edges",
+            "legacy_remove_coplanar_edges_v1",
+        ),
+        (
+            "CH_原子序数选中项" if node_module.language
+            else "CH_AtomicNum Selection",
+            "legacy_atomic_selection_v1",
+        ),
+    ):
+        assert bpy.data.node_groups[name]["cbq_contract"] == contract
+        assert bpy.data.node_groups[name]["cbq_contract_version"] == 1
+    bpy.data.objects.remove(poly_obj, do_unlink=True)
+    bpy.data.meshes.remove(poly_mesh)
 
     with TemporaryDirectory(prefix="chemblender-cif-smoke-") as directory:
         root = Path(directory)
@@ -2786,6 +3165,18 @@ def assert_cif_workflow(module_key, repository_root):
             restored_view["cbq_periodic_site_display_object"]
         ]
         assert restored_derived["cbq_contract"] == "structure_periodic_sites_v1"
+        restored_cell = bpy.data.objects[
+            restored_view["cbq_periodic_cell_object"]
+        ]
+        restored_adp = bpy.data.objects[
+            restored_view["cbq_periodic_adp_object"]
+        ]
+        assert restored_cell.modifiers[0].node_group[
+            "cbq_contract_version"
+        ] == 1
+        assert restored_adp.modifiers[0].node_group[
+            "cbq_contract_version"
+        ] == 1
 
         destination = root / "partial-disorder-export.cif"
         selection = export_ui.resolve_export_selection(

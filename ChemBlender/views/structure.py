@@ -19,12 +19,20 @@ _PERIODIC_SITE_DISPLAY_CONTRACT = "structure_periodic_sites_v1"
 _PERIODIC_MODIFIER_NAME = "ChemBlender Periodic Images"
 _SELECTIVE_MARKER_CONTRACT = "structure_selective_marker_v1"
 _SELECTIVE_MARKER_GROUP = "ChemBlender Selective Constraints"
+_VIEW_CONTRACT_VERSION = 1
 _FATAL_EXCEPTIONS = (
     KeyboardInterrupt,
     SystemExit,
     GeneratorExit,
     MemoryError,
 )
+
+
+def _is_view_contract(owner, contract):
+    return (
+        owner.get("cbq_contract") == contract
+        and owner.get("cbq_contract_version") == _VIEW_CONTRACT_VERSION
+    )
 
 
 def _merge_cleanup_failure(failure, error, label):
@@ -460,6 +468,8 @@ def _periodic_display_object(main, collection, data):
             bond_scale=(float(data["settings"].bond_scale),) * len(segments),
         )
         display["cb_structure_contract"] = _PERIODIC_DISPLAY_CONTRACT
+        display["cbq_contract"] = _PERIODIC_DISPLAY_CONTRACT
+        display["cbq_contract_version"] = _VIEW_CONTRACT_VERSION
         display["cb_structure_id"] = main["cb_structure_id"]
         display.hide_render = True
         display.hide_set(True)
@@ -488,14 +498,20 @@ def _periodic_display_object(main, collection, data):
         group.links.new(object_info.outputs["Geometry"], join.inputs["Geometry"])
         group.links.new(join.outputs["Geometry"], group_output.inputs["Geometry"])
         group["cbq_contract"] = _PERIODIC_DISPLAY_CONTRACT
+        group["cbq_contract_version"] = _VIEW_CONTRACT_VERSION
         modifier.node_group = group
         modifier["cbq_contract"] = _PERIODIC_DISPLAY_CONTRACT
+        modifier["cbq_contract_version"] = _VIEW_CONTRACT_VERSION
         ball_stick = next(
             (
                 item
                 for item in main.modifiers
                 if item.node_group is not None
-                and item.node_group.get("cbq_contract") == _BALL_STICK_CONTRACT
+                and _is_view_contract(
+                    item.node_group,
+                    _BALL_STICK_CONTRACT,
+                )
+                and _is_view_contract(item, _BALL_STICK_CONTRACT)
             ),
             None,
         )
@@ -507,16 +523,32 @@ def _periodic_display_object(main, collection, data):
         main["cb_periodic_display_object"] = display.name
         main["cb_periodic_display_bond_count"] = len(segments)
         return display
-    except Exception:
+    except BaseException as error:
         if modifier is not None:
-            main.modifiers.remove(modifier)
-        if group is not None and group.users == 0:
-            bpy.data.node_groups.remove(group)
+            error = _run_cleanup(
+                error,
+                "periodic display modifier cleanup failed",
+                lambda: main.modifiers.remove(modifier),
+            )
         if display is not None:
-            bpy.data.objects.remove(display, do_unlink=True)
+            error = _run_cleanup(
+                error,
+                "periodic display object cleanup failed",
+                lambda: bpy.data.objects.remove(display, do_unlink=True),
+            )
         if mesh.users == 0:
-            bpy.data.meshes.remove(mesh)
-        raise
+            error = _run_cleanup(
+                error,
+                "periodic display mesh cleanup failed",
+                lambda: bpy.data.meshes.remove(mesh),
+            )
+        if group is not None and group.users == 0:
+            error = _run_cleanup(
+                error,
+                "periodic display node-group cleanup failed",
+                lambda: bpy.data.node_groups.remove(group),
+            )
+        raise error
 
 
 def _ensure_selective_marker_group():
@@ -526,7 +558,7 @@ def _ensure_selective_marker_group():
     if group is not None:
         if (
             group.bl_idname != "GeometryNodeTree"
-            or group.get("cbq_contract") != _SELECTIVE_MARKER_CONTRACT
+            or not _is_view_contract(group, _SELECTIVE_MARKER_CONTRACT)
         ):
             raise RuntimeError(
                 f"incompatible node group already uses {_SELECTIVE_MARKER_GROUP}"
@@ -565,6 +597,7 @@ def _ensure_selective_marker_group():
             group_output.inputs["Geometry"],
         )
         group["cbq_contract"] = _SELECTIVE_MARKER_CONTRACT
+        group["cbq_contract_version"] = _VIEW_CONTRACT_VERSION
         return group
     except BaseException as error:
         if group.users == 0:
@@ -601,10 +634,13 @@ def _selective_marker_object(main, collection, data):
         )
         group = _ensure_selective_marker_group()
         modifier.node_group = group
+        modifier["cbq_contract"] = _SELECTIVE_MARKER_CONTRACT
+        modifier["cbq_contract_version"] = _VIEW_CONTRACT_VERSION
         marker.parent = main
         marker.show_in_front = True
         marker.hide_render = True
         marker["cbq_contract"] = _SELECTIVE_MARKER_CONTRACT
+        marker["cbq_contract_version"] = _VIEW_CONTRACT_VERSION
         marker["cb_structure_id"] = main["cb_structure_id"]
         main["cb_selective_marker_object"] = marker.name
         main["cb_selective_constraint_count"] = len(atom_ids)
@@ -660,8 +696,14 @@ def _remove_periodic_display(obj):
     for modifier in tuple(obj.modifiers):
         if (
             modifier.node_group is not None
-            and modifier.node_group.get("cbq_contract")
-            == _PERIODIC_DISPLAY_CONTRACT
+            and _is_view_contract(
+                modifier.node_group,
+                _PERIODIC_DISPLAY_CONTRACT,
+            )
+            and _is_view_contract(
+                modifier,
+                _PERIODIC_DISPLAY_CONTRACT,
+            )
         ):
             groups.append(modifier.node_group)
             obj.modifiers.remove(modifier)
@@ -671,6 +713,17 @@ def _remove_periodic_display(obj):
         if isinstance(display_name, str)
         else None
     )
+    if (
+        display is not None
+        and (
+            display.parent != obj
+            or not _is_view_contract(
+                display,
+                _PERIODIC_DISPLAY_CONTRACT,
+            )
+        )
+    ):
+        display = None
     if display is not None:
         mesh = display.data
         bpy.data.objects.remove(display, do_unlink=True)
@@ -840,30 +893,69 @@ def remove_structure_view(obj):
 
     if not isinstance(obj, bpy.types.Object):
         raise TypeError("obj must be a Blender Object")
-    display_name = obj.get("cb_periodic_display_object")
-    display = (
-        bpy.data.objects.get(display_name)
-        if isinstance(display_name, str)
+    def owned_child(property_name, contract):
+        name = obj.get(property_name)
+        child = (
+            bpy.data.objects.get(name) if isinstance(name, str) else None
+        )
+        return (
+            child
+            if child is not None
+            and getattr(child, "parent", None) == obj
+            and _is_view_contract(child, contract)
+            else None
+        )
+
+    display = owned_child(
+        "cb_periodic_display_object",
+        _PERIODIC_DISPLAY_CONTRACT,
+    )
+    marker = owned_child(
+        "cb_selective_marker_object",
+        _SELECTIVE_MARKER_CONTRACT,
+    )
+    site_display = owned_child(
+        "cbq_periodic_site_display_object",
+        _PERIODIC_SITE_DISPLAY_CONTRACT,
+    )
+    cell_display = owned_child(
+        "cbq_periodic_cell_object",
+        "periodic_cell_display_v1",
+    )
+    adp_display = owned_child(
+        "cbq_periodic_adp_object",
+        "periodic_adp_display_v1",
+    )
+    occupancy_display = owned_child(
+        "cbq_periodic_occupancy_object",
+        "periodic_occupancy_display_v1",
+    )
+    occupancy_material_name = obj.get("cbq_periodic_occupancy_material")
+    occupancy_material = (
+        bpy.data.materials.get(occupancy_material_name)
+        if isinstance(occupancy_material_name, str)
         else None
     )
-    marker_name = obj.get("cb_selective_marker_object")
-    marker = (
-        bpy.data.objects.get(marker_name)
-        if isinstance(marker_name, str)
-        else None
-    )
-    site_display_name = obj.get("cbq_periodic_site_display_object")
-    site_display = (
-        bpy.data.objects.get(site_display_name)
-        if isinstance(site_display_name, str)
-        else None
-    )
+    if (
+        occupancy_material is not None
+        and not _is_view_contract(
+            occupancy_material,
+            "periodic_occupancy_material_v1",
+        )
+    ):
+        occupancy_material = None
     groups = tuple(
         modifier.node_group
         for modifier in obj.modifiers
         if modifier.node_group is not None
-        and modifier.node_group.get("cbq_contract")
-        in {_BALL_STICK_CONTRACT, _PERIODIC_DISPLAY_CONTRACT}
+        and any(
+            _is_view_contract(modifier.node_group, contract)
+            and _is_view_contract(modifier, contract)
+            for contract in (
+                _BALL_STICK_CONTRACT,
+                _PERIODIC_DISPLAY_CONTRACT,
+            )
+        )
     )
     data_blocks = [obj.data]
     if display is not None:
@@ -875,8 +967,11 @@ def remove_structure_view(obj):
             modifier.node_group
             for modifier in marker.modifiers
             if modifier.node_group is not None
-            and modifier.node_group.get("cbq_contract")
-            == _SELECTIVE_MARKER_CONTRACT
+            and _is_view_contract(
+                modifier.node_group,
+                _SELECTIVE_MARKER_CONTRACT,
+            )
+            and _is_view_contract(modifier, _SELECTIVE_MARKER_CONTRACT)
         )
         bpy.data.objects.remove(marker, do_unlink=True)
     if site_display is not None:
@@ -885,10 +980,32 @@ def remove_structure_view(obj):
             modifier.node_group
             for modifier in site_display.modifiers
             if modifier.node_group is not None
-            and modifier.node_group.get("cbq_contract")
-            in {_BALL_STICK_CONTRACT, _PERIODIC_SITE_DISPLAY_CONTRACT}
+            and any(
+                _is_view_contract(modifier.node_group, contract)
+                and _is_view_contract(modifier, contract)
+                for contract in (
+                    _BALL_STICK_CONTRACT,
+                    _PERIODIC_SITE_DISPLAY_CONTRACT,
+                )
+            )
         )
         bpy.data.objects.remove(site_display, do_unlink=True)
+    for child, contract in (
+        (cell_display, "periodic_cell_edges_v1"),
+        (adp_display, "periodic_thermal_ellipsoid_v1"),
+        (occupancy_display, "periodic_site_occupancy_v1"),
+    ):
+        if child is None:
+            continue
+        data_blocks.append(child.data)
+        groups += tuple(
+            modifier.node_group
+            for modifier in child.modifiers
+            if modifier.node_group is not None
+            and _is_view_contract(modifier.node_group, contract)
+            and _is_view_contract(modifier, contract)
+        )
+        bpy.data.objects.remove(child, do_unlink=True)
     bpy.data.objects.remove(obj, do_unlink=True)
     for data in data_blocks:
         if data is not None and data.users == 0:
@@ -900,3 +1017,5 @@ def remove_structure_view(obj):
     for group in unique_groups:
         if group.users == 0:
             bpy.data.node_groups.remove(group)
+    if occupancy_material is not None and occupancy_material.users == 0:
+        bpy.data.materials.remove(occupancy_material)

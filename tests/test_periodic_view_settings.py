@@ -210,7 +210,16 @@ class PeriodicViewSettingsTests(unittest.TestCase):
         source = periodic_structure()
         selective = object()
         obj = Object()
+        derived_sites = {
+            "coordinates": (),
+            "source_atom_ids": (),
+            "rotations": (),
+        }
         with (
+            patch(
+                "ChemBlender.views.periodic._derived_periodic_sites",
+                return_value=derived_sites,
+            ) as derive,
             patch(
                 "ChemBlender.views.periodic.create_structure_view",
                 return_value=obj,
@@ -219,6 +228,15 @@ class PeriodicViewSettingsTests(unittest.TestCase):
             patch(
                 "ChemBlender.views.periodic._create_periodic_site_display"
             ) as display,
+            patch(
+                "ChemBlender.views.periodic._create_periodic_cell_display"
+            ),
+            patch(
+                "ChemBlender.views.periodic._create_occupancy_display"
+            ) as occupancy_display,
+            patch(
+                "ChemBlender.views.periodic._create_adp_display"
+            ) as adp_display,
         ):
             create_periodic_structure_view(
                 source,
@@ -231,6 +249,21 @@ class PeriodicViewSettingsTests(unittest.TestCase):
             selective,
         )
         self.assertIs(display.call_args.args[-1], selective)
+        derive.assert_called_once_with(source, PeriodicViewSettings(
+            show_constraints=False,
+        ))
+        self.assertIs(
+            display.call_args.kwargs["derived"],
+            derived_sites,
+        )
+        self.assertIs(
+            occupancy_display.call_args.kwargs["derived"],
+            derived_sites,
+        )
+        self.assertIs(
+            adp_display.call_args.kwargs["derived"],
+            derived_sites,
+        )
 
     def test_unwrapped_sites_use_canonical_main_without_display_duplicates(self):
         for fractional, main_x, derived_x in (
@@ -443,6 +476,7 @@ class PeriodicViewSettingsTests(unittest.TestCase):
             (SimpleNamespace(node_group=foreign_group),),
         )
         main = Object("Main", main_mesh)
+        derived.parent = main
         main["cbq_periodic_site_display_object"] = derived.name
 
         class Objects:
@@ -471,7 +505,43 @@ class PeriodicViewSettingsTests(unittest.TestCase):
             structure_view.remove_structure_view(main)
 
         self.assertEqual(removed_groups, [])
-        self.assertEqual(removed_meshes, [derived_mesh, main_mesh])
+        self.assertEqual(removed_meshes, [main_mesh])
+        self.assertEqual(derived_mesh.users, 1)
+
+    def test_occupancy_material_fatal_removes_unowned_material(self):
+        from ChemBlender.views import periodic as periodic_view
+
+        fatal = MemoryError("material nodes unavailable")
+        removed = []
+
+        class Material:
+            users = 0
+
+            @property
+            def use_nodes(self):
+                return False
+
+            @use_nodes.setter
+            def use_nodes(self, _value):
+                raise fatal
+
+        material = Material()
+        fake_bpy = SimpleNamespace(
+            data=SimpleNamespace(
+                materials=SimpleNamespace(
+                    new=lambda _name: material,
+                    remove=lambda value: removed.append(value),
+                )
+            )
+        )
+        with (
+            patch.dict(sys.modules, {"bpy": fake_bpy}),
+            self.assertRaises(MemoryError) as raised,
+        ):
+            periodic_view._occupancy_material("Occupancy")
+
+        self.assertIs(raised.exception, fatal)
+        self.assertEqual(removed, [material])
 
     def test_ball_stick_pre_attachment_fatal_removes_modifier_and_group(self):
         fatal = GeneratorExit("socket creation aborted")
