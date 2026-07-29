@@ -1,5 +1,6 @@
 import hashlib
 import json
+import subprocess
 from dataclasses import MISSING, fields, is_dataclass
 from enum import Enum
 from pathlib import Path
@@ -102,6 +103,19 @@ def _schema_document():
 
 
 class ReaderApiV1RcTests(unittest.TestCase):
+    def test_public_schema_fixture_disables_checkout_line_ending_conversion(
+        self,
+    ):
+        relative = FIXTURE.relative_to(REPOSITORY_ROOT).as_posix()
+        result = subprocess.run(
+            ["git", "check-attr", "text", "--", relative],
+            cwd=REPOSITORY_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.stdout.strip(), f"{relative}: text: unset")
+
     def test_version_and_builtin_manifest_use_v1_compatibility_family(self):
         self.assertEqual(reader_api.READER_API_VERSION, "1.0-rc1")
         self.assertEqual(reader_api.READER_API_VERSION, CORE_READER_API_VERSION)

@@ -208,6 +208,7 @@ class RepositoryContractTests(unittest.TestCase):
         )[1].split("\n      - uses:", 1)[0]
 
         self.assertIn('"RDKIT_WHEEL=$wheelPath`n"', download_step)
+        self.assertIn('"GEMMI_WHEEL=$wheelPath`n"', download_step)
         self.assertIn("$env:GITHUB_ENV", download_step)
         self.assertIn(
             "$blenderPython = Join-Path (Split-Path $blender) "
@@ -216,10 +217,11 @@ class RepositoryContractTests(unittest.TestCase):
         )
         self.assertIn(
             "& $blenderPython -m pip install --disable-pip-version-check "
-            "--no-index --no-deps --target $rdkitTestSite $env:RDKIT_WHEEL",
+            "--no-index --no-deps --target $testSite "
+            "$env:RDKIT_WHEEL $env:GEMMI_WHEEL",
             step,
         )
-        self.assertIn("$env:PYTHONPATH = $rdkitTestSite", step)
+        self.assertIn("$env:PYTHONPATH = $testSite", step)
         self.assertIn("Remove-Item Env:PYTHONPATH", step)
         self.assertIn(
             '& $blenderPython -m unittest discover -s tests -p "test_*.py" -v',
@@ -242,7 +244,7 @@ class RepositoryContractTests(unittest.TestCase):
         test_command = step.index("& $blenderPython -m unittest discover")
         self.assertLess(step.index("$env:TEMP = $env:RUNNER_TEMP"), test_command)
         self.assertLess(step.index("$env:TMP = $env:RUNNER_TEMP"), test_command)
-        self.assertLess(step.index("$env:PYTHONPATH = $rdkitTestSite"), test_command)
+        self.assertLess(step.index("$env:PYTHONPATH = $testSite"), test_command)
         self.assertLess(test_command, step.index("Remove-Item Env:PYTHONPATH"))
         self.assertLess(
             step.index("Remove-Item Env:PYTHONPATH"),

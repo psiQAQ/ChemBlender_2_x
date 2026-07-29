@@ -39,6 +39,11 @@ class GemmiDependencyContractTests(unittest.TestCase):
         self.assertIn(GEMMI_WHEEL, workflow)
         self.assertIn(GEMMI_URL, workflow)
         self.assertIn(GEMMI_SHA256, workflow)
+        self.assertIn('"GEMMI_WHEEL=$wheelPath`n"', workflow)
+        self.assertIn(
+            "$env:RDKIT_WHEEL $env:GEMMI_WHEEL",
+            workflow,
+        )
 
     def test_core_and_reader_api_import_without_loading_gemmi(self):
         code = (
