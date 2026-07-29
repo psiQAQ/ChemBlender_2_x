@@ -474,6 +474,8 @@ class TopologyRecordTests(unittest.TestCase):
             (LEGACY_SIDECAR / "manifest.json").read_text(encoding="utf-8")
         )
         source["manifest_version"] = "0.2"
+        source["project_schema_version"] = "0.2"
+        source["project"]["schema_version"] = "0.2"
         structure_value = source["project"]["structures"]["$dict"][0][1]
         structure_value["id"] = {"$uuid": "not-a-uuid"}
 

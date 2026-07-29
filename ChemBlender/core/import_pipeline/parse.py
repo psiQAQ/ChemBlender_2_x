@@ -14,6 +14,7 @@ from ..model import (
     diagnostic_from_parser_issue,
     source_parse_identity,
 )
+from ..readers import READER_API_VERSION
 
 
 _ENTITY_GROUPS = (
@@ -50,7 +51,7 @@ def staged_reader_batch(
         plugin_id = "chemblender.preflight"
         reader_id = reader_override or "unresolved"
         reader_version = "0"
-        api_version = "0.1"
+        api_version = READER_API_VERSION
     else:
         descriptor = runtime.descriptor
         plugin_id = runtime.plugin_id

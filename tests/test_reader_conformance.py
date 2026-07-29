@@ -92,7 +92,7 @@ def manifest(value):
         schema_version="1",
         plugin_id=value.plugin_id,
         plugin_version=value.plugin_version,
-        chemblender_api=">=0.1,<1.0",
+        chemblender_api=">=1.0,<2.0",
         execution_mode=value.execution_mode,
         license=("SPDX:MIT",),
         readers=(
@@ -236,7 +236,7 @@ def envelope_batch(
                 "org.example.reader",
                 "broken",
                 "1",
-                "0.1",
+                "1.0-rc1",
                 identity_parameters_hash(parameters),
                 source_parse_identity(
                     content_hash,

@@ -61,13 +61,30 @@ GBasis evaluates normalized Gaussian basis functions, molecular orbitals, total/
 
 | Item | Value |
 | --- | --- |
-| Packages | `gemmi==0.7.5`, `spglib==2.7.0` |
-| Runtime boundary | independent CPython worker/core environment |
-| Reference sources | `submodules/gemmi` at `5cc1c23c6007e0e6cbd69289c6f7c0bff50e943e`; `submodules/spglib` at `12355c77fb7c505a55f52cae36341d73b781a065` |
-| Licenses | Gemmi MPL-2.0; spglib BSD-3-Clause |
-| Transitive requirements | spglib requires NumPy; Gemmi wheel has no required Python dependency |
+| Package version | `gemmi==0.7.5` |
+| Filename | `gemmi-0.7.5-cp313-cp313-win_amd64.whl` |
+| Target | CPython 3.13, Windows x64 |
+| SHA-256 | `ad1f72ffa24adbfaf259e11471f6f071a668667f6ca846051f3bfea024fd337d` |
+| Source | `https://files.pythonhosted.org/packages/ee/ab/7d7463cda94f8b68b969ea97aaad679655a0e436efd6a643e528a8de114e/gemmi-0.7.5-cp313-cp313-win_amd64.whl` |
+| Compressed / unpacked | 2,270,352 / 5,345,458 bytes |
+| License | MPL-2.0; wheel path `gemmi-0.7.5.dist-info/licenses/LICENSE.txt` |
+| Transitive requirements | None |
 
-Gemmi owns CIF parsing and raw-envelope access; spglib owns symmetry search and standardization. Both adapters use late imports. They are tested in an ignored Python 3.13 environment and remain outside the Blender Extension ZIP. A future distributed worker must retain the applicable license files and notices.
+Gemmi is a bundled base wheel and owns CIF parsing and raw-envelope access.
+Its adapter uses a late import: extension enable, `ChemBlender.core` and
+`ChemBlender.reader_api` imports must not load Gemmi. Gemmi objects never enter
+the project, sidecar, canonical document or public Reader API.
+
+| Item | Value |
+| --- | --- |
+| Package | `spglib==2.7.0` |
+| Runtime boundary | independent CPython worker/core environment |
+| Reference source | `submodules/spglib` at `12355c77fb7c505a55f52cae36341d73b781a065` |
+| License | BSD-3-Clause |
+| Transitive requirements | NumPy |
+
+spglib owns optional symmetry search and standardization. It remains outside
+the Blender Extension ZIP and cannot be a CIF import requirement.
 
 | Item | Value |
 | --- | --- |
@@ -125,21 +142,21 @@ license, authentication and deployment decision; credential values never enter `
 
 1. Run `blender-mcp --help`.
 2. Query Blender version, executable, Python, system, and extension repositories through MCP.
-3. Download and verify the RDKit wheel.
+3. Download and verify the RDKit and Gemmi wheels.
 4. Run `ChemBlender/scripts/validate_extension.py` with the MCP-discovered Blender executable.
 5. Run `ChemBlender/scripts/build_extension.py --python <Blender Python> --blender <Blender executable>`.
 6. Install and test once with a temporary `BLENDER_USER_RESOURCES` root.
-7. Verify package contents, module key, representative RDKit operations, properties, installed `.blend` assets, and two disable/enable cycles.
+7. Verify package contents, module key, representative RDKit operations, Gemmi import/version, properties, installed `.blend` assets, and two disable/enable cycles.
 8. Reinstall the same ZIP into the real `user_default` repository from a fresh Blender process.
 
 ## Release Gates
 
 - Tag version equals manifest version after stripping leading `v`.
 - `CHANGELOG.md` has exactly one non-empty dated entry for the manifest version; future tags contain that same entry.
-- CI downloads Blender and RDKit from pinned official locations and verifies checksums.
-- Built ZIP contains the declared wheel; Git contains no `.whl`.
+- CI downloads Blender, RDKit and Gemmi from pinned official locations and verifies checksums.
+- Built ZIP contains exactly the declared wheels; Git contains no `.whl`.
 - Built ZIP excludes development scripts, tests, caches, and nested ZIP files.
-- Unit, validate, build, isolated install, real install, register, unregister, reload, RDKit operation, and `.blend` checks pass.
+- Unit, validate, build, isolated install, real install, register, unregister, reload, RDKit operation, Gemmi import/version, and `.blend` checks pass.
 - Pull-request and maintained `main` runs are green; the exact annotated tag produces the authoritative package artifact for publication.
 - GitHub-owned actions use reviewed full commit SHA pins.
 - Run `extension-release` with `publish=false` before the separately authorized `publish=true` dispatch.
@@ -152,5 +169,5 @@ On Windows, overwriting an already loaded extension may warn that old wheel DLLs
 For a persistent `user_default` reinstall, a fresh process is insufficient when the old
 extension is auto-enabled at startup. Disable it and save preferences, exit Blender, install
 from a second cold process, then launch a third process to verify the enabled key and real
-RDKit import. A same-process smoke result does not prove the shared wheel remains complete
+RDKit and Gemmi import. A same-process smoke result does not prove the shared wheels remain complete
 after exit.

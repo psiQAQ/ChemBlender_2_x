@@ -4,7 +4,41 @@ from uuid import UUID
 
 from .arrays import ArrayData
 from .chemical_identity import AtomicIdentityData
-from .common import _require_text, _require_uuid, _require_uuid_tuple
+from .common import (
+    _require_known_length_unit,
+    _require_text,
+    _require_uuid,
+    _require_uuid_tuple,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class DeclaredSymmetry:
+    name: str | None
+    international_number: int | None
+    hall_symbol: str | None
+    operations: tuple[str, ...]
+
+    def __post_init__(self):
+        for value, name in (
+            (self.name, "name"),
+            (self.hall_symbol, "hall_symbol"),
+        ):
+            if value is not None:
+                _require_text(value, name)
+        if self.international_number is not None and (
+            isinstance(self.international_number, bool)
+            or not isinstance(self.international_number, int)
+            or not 1 <= self.international_number <= 230
+        ):
+            raise ValueError("international_number must be from 1 to 230")
+        operations = tuple(self.operations)
+        if any(
+            not isinstance(value, str) or not value
+            for value in operations
+        ):
+            raise ValueError("operations must contain non-empty strings")
+        object.__setattr__(self, "operations", operations)
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,6 +55,11 @@ class PeriodicSiteData:
     symmetry_operations: tuple[str, ...]
     cif_envelope_id: UUID | None
     pbc: tuple[bool, bool, bool] = (True, True, True)
+    cif_block_name: str | None = None
+    cif_block_key: str | None = None
+    cif_block_index: int | None = None
+    disorder_assemblies: tuple[str, ...] = ()
+    declared_hall_symbol: str | None = None
 
     def __post_init__(self):
         import numpy
@@ -44,11 +83,13 @@ class PeriodicSiteData:
             or self.occupancies.shape != (atom_count,)
             or self.occupancies.unit != "dimensionless"
             or numpy.iscomplexobj(occupancies)
-            or not numpy.all(numpy.isfinite(occupancies))
-            or numpy.any(occupancies < 0.0)
-            or numpy.any(occupancies > 1.0)
+            or not numpy.all(numpy.isfinite(occupancies) | numpy.isnan(occupancies))
+            or numpy.any(occupancies[numpy.isfinite(occupancies)] < 0.0)
+            or numpy.any(occupancies[numpy.isfinite(occupancies)] > 1.0)
         ):
-            raise ValueError("occupancies must contain one value from 0 to 1 per atom")
+            raise ValueError(
+                "occupancies must contain one value from 0 to 1 or missing per atom"
+            )
         labels = tuple(self.site_labels)
         adp_types = tuple(self.adp_types)
         disorder_groups = tuple(self.disorder_groups)
@@ -105,6 +146,8 @@ class PeriodicSiteData:
             or not 1 <= self.declared_space_group_number <= 230
         ):
             raise ValueError("declared_space_group_number must be from 1 to 230")
+        if self.declared_hall_symbol is not None:
+            _require_text(self.declared_hall_symbol, "declared_hall_symbol")
         symmetry_operations = tuple(self.symmetry_operations)
         if any(
             not isinstance(value, str) or not value
@@ -113,14 +156,196 @@ class PeriodicSiteData:
             raise ValueError("symmetry_operations must contain non-empty strings")
         if self.cif_envelope_id is not None:
             _require_uuid(self.cif_envelope_id, "cif_envelope_id")
+        block_identity = (
+            self.cif_block_name,
+            self.cif_block_key,
+            self.cif_block_index,
+        )
+        if any(value is not None for value in block_identity):
+            if self.cif_envelope_id is None or any(
+                value is None for value in block_identity
+            ):
+                raise ValueError(
+                    "CIF block identity requires an envelope, name, key and index"
+                )
+            _require_text(self.cif_block_name, "cif_block_name")
+            _require_text(self.cif_block_key, "cif_block_key")
+            if (
+                isinstance(self.cif_block_index, bool)
+                or not isinstance(self.cif_block_index, int)
+                or self.cif_block_index < 0
+            ):
+                raise ValueError("cif_block_index must be a non-negative integer")
         pbc = tuple(self.pbc)
         if len(pbc) != 3 or any(not isinstance(value, bool) for value in pbc):
             raise ValueError("pbc must contain three bool values")
+        disorder_assemblies = tuple(self.disorder_assemblies) or (
+            ("none",) * atom_count
+        )
+        if len(disorder_assemblies) != atom_count or any(
+            not isinstance(value, str) or not value
+            for value in disorder_assemblies
+        ):
+            raise ValueError(
+                "disorder_assemblies must contain one non-empty value per atom"
+            )
         object.__setattr__(self, "site_labels", labels)
         object.__setattr__(self, "adp_types", adp_types)
         object.__setattr__(self, "disorder_groups", disorder_groups)
         object.__setattr__(self, "symmetry_operations", symmetry_operations)
         object.__setattr__(self, "pbc", pbc)
+        object.__setattr__(self, "disorder_assemblies", disorder_assemblies)
+
+    @property
+    def declared_symmetry(self):
+        return DeclaredSymmetry(
+            self.declared_space_group_name,
+            self.declared_space_group_number,
+            self.declared_hall_symbol,
+            self.symmetry_operations,
+        )
+
+
+def _cell_matrix(cell, *, load_lazy=True):
+    import numpy
+
+    if not isinstance(cell, ArrayData):
+        raise TypeError("cell must be ArrayData")
+    if cell.dims != ("cell_vector", "xyz") or cell.shape != (3, 3):
+        raise ValueError("cell must have dims (cell_vector, xyz) and shape (3, 3)")
+    _require_known_length_unit(cell.unit, "cell unit")
+    if not load_lazy and getattr(cell.values, "loaded", None) is False:
+        if numpy.dtype(cell.values.dtype).kind not in "iuf":
+            raise ValueError("cell must contain finite non-singular vectors")
+        return None
+    values = numpy.asarray(cell.values)
+    if (
+        values.dtype.kind not in "iuf"
+        or not numpy.all(numpy.isfinite(values))
+        or abs(float(numpy.linalg.det(values))) < 1.0e-12
+    ):
+        raise ValueError("cell must contain finite non-singular vectors")
+    return values
+
+
+def _cartesian_coordinates(coordinates, *, expected_unit=None, load_lazy=True):
+    import numpy
+
+    if not isinstance(coordinates, ArrayData):
+        raise TypeError("coordinates must be ArrayData")
+    if (
+        coordinates.dims != ("atom", "xyz")
+        or len(coordinates.shape) != 2
+        or coordinates.shape[1] != 3
+    ):
+        raise ValueError("coordinates must have dims (atom, xyz) and shape (n, 3)")
+    _require_known_length_unit(coordinates.unit, "coordinate unit")
+    if expected_unit is not None and coordinates.unit != expected_unit:
+        raise ValueError("coordinates and cell must use the same unit")
+    if not load_lazy and getattr(coordinates.values, "loaded", None) is False:
+        if numpy.dtype(coordinates.values.dtype).kind not in "iuf":
+            raise ValueError("coordinates must contain finite real values")
+        return None
+    values = numpy.asarray(coordinates.values)
+    if values.dtype.hasobject or values.dtype.fields is not None:
+        return values
+    if values.dtype.subdtype is not None:
+        return values
+    if values.dtype.kind not in "iuf" or not numpy.all(numpy.isfinite(values)):
+        raise ValueError("coordinates must contain finite real values")
+    return values
+
+
+def _fractional_coordinates(fractional_coordinates):
+    import numpy
+
+    if not isinstance(fractional_coordinates, ArrayData):
+        raise TypeError("fractional_coordinates must be ArrayData")
+    values = numpy.asarray(fractional_coordinates.values)
+    if (
+        fractional_coordinates.dims != ("atom", "xyz")
+        or len(fractional_coordinates.shape) != 2
+        or fractional_coordinates.shape[1] != 3
+        or fractional_coordinates.unit != "dimensionless"
+        or values.dtype.kind not in "iuf"
+        or not numpy.all(numpy.isfinite(values))
+    ):
+        raise ValueError(
+            "fractional_coordinates must contain finite dimensionless "
+            "(atom, xyz) values"
+        )
+    return values
+
+
+def unit_cell_parameters(cell):
+    """Return ``a, b, c, alpha, beta, gamma`` from lattice row vectors."""
+    import numpy
+
+    values = _cell_matrix(cell)
+    lengths = numpy.linalg.norm(values, axis=1)
+
+    def angle(left, right):
+        cosine = float(
+            numpy.dot(left, right)
+            / (numpy.linalg.norm(left) * numpy.linalg.norm(right))
+        )
+        return float(numpy.degrees(numpy.arccos(numpy.clip(cosine, -1.0, 1.0))))
+
+    a, b, c = (float(value) for value in lengths)
+    return a, b, c, angle(values[1], values[2]), angle(
+        values[0], values[2]
+    ), angle(values[0], values[1])
+
+
+def fractional_to_cartesian(fractional_coordinates, cell):
+    values = _fractional_coordinates(fractional_coordinates)
+    cell_values = _cell_matrix(cell)
+    return ArrayData(
+        values @ cell_values,
+        ("atom", "xyz"),
+        cell.unit,
+    )
+
+
+def cartesian_to_fractional(coordinates, cell):
+    import numpy
+
+    cell_values = _cell_matrix(cell)
+    values = _cartesian_coordinates(coordinates, expected_unit=cell.unit)
+    return ArrayData(
+        values @ numpy.linalg.inv(cell_values),
+        ("atom", "xyz"),
+        "dimensionless",
+    )
+
+
+def validate_periodic_coordinate_consistency(
+    structure,
+    *,
+    absolute_tolerance=1.0e-9,
+):
+    import numpy
+
+    if not isinstance(structure, Structure) or structure.periodic is None:
+        raise TypeError("structure must be a periodic Structure")
+    if (
+        isinstance(absolute_tolerance, bool)
+        or not isinstance(absolute_tolerance, (int, float))
+        or not isfinite(absolute_tolerance)
+        or absolute_tolerance < 0.0
+    ):
+        raise ValueError("absolute_tolerance must be finite and non-negative")
+    derived = fractional_to_cartesian(
+        structure.periodic.fractional_coordinates,
+        structure.cell,
+    )
+    if not numpy.allclose(
+        derived.values,
+        structure.coordinates.values,
+        rtol=0.0,
+        atol=float(absolute_tolerance),
+    ):
+        raise ValueError("fractional and Cartesian coordinates are inconsistent")
 
 
 @dataclass(frozen=True, slots=True)
@@ -180,25 +405,14 @@ class Structure:
             for number in atomic_numbers
         ):
             raise ValueError("atomic numbers must be integers from 0 to 118")
-        if self.coordinates.dims != ("atom", "xyz") or self.coordinates.shape != (
-            len(atomic_numbers),
-            3,
-        ):
-            raise ValueError("coordinates must have dims (atom, xyz) and shape (n, 3)")
-        if self.coordinates.unit in {"dimensionless", "unknown"}:
-            raise ValueError("coordinate unit must be known dimensional length")
+        _cartesian_coordinates(self.coordinates, load_lazy=False)
         if self.cell is not None:
-            cell = numpy.asarray(self.cell.values)
-            if self.cell.dims != ("cell_vector", "xyz") or self.cell.shape != (3, 3):
-                raise ValueError("cell must have dims (cell_vector, xyz) and shape (3, 3)")
+            _cell_matrix(self.cell, load_lazy=False)
+        if self.coordinates.shape != (len(atomic_numbers), 3):
+            raise ValueError("coordinates must have dims (atom, xyz) and shape (n, 3)")
+        if self.cell is not None:
             if self.cell.unit != self.coordinates.unit:
                 raise ValueError("cell and coordinates must use the same unit")
-            if (
-                numpy.iscomplexobj(cell)
-                or not numpy.all(numpy.isfinite(cell))
-                or abs(float(numpy.linalg.det(cell))) < 1.0e-12
-            ):
-                raise ValueError("cell must contain finite non-singular vectors")
         if self.periodic is not None:
             if not isinstance(self.periodic, PeriodicSiteData):
                 raise TypeError("periodic must be PeriodicSiteData")
@@ -308,6 +522,16 @@ class SymmetryResult:
             or self.translations.shape != (operation_count, 3)
         ):
             raise ValueError("rotations and translations must describe operations")
+        rotations = numpy.asarray(self.rotations.values)
+        if rotations.dtype.kind not in "iu":
+            raise ValueError("symmetry rotations must use an integer dtype")
+        if not numpy.allclose(
+            numpy.abs(numpy.linalg.det(rotations)),
+            1.0,
+            rtol=0.0,
+            atol=1.0e-12,
+        ):
+            raise ValueError("symmetry rotations must be unimodular")
         atom_count = self.equivalent_atoms.shape[0]
         if (
             self.equivalent_atoms.dims != ("atom",)

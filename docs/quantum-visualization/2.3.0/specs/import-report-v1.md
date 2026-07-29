@@ -15,7 +15,7 @@ markdown = render_diagnostics_markdown(document)
 
 `import_summary()` 和 `diagnostics_document()` 接受不可变 `ImportPreview` 及其
 匹配的 `StagedImportSession`。缺少 selected reader 的 row 只接受
-`chemblender.preflight` 生成的 v0/Reader API 0.1 failure provenance，不把
+`chemblender.preflight` 生成的 v0/Reader API 1.0-rc1 failure provenance，不把
 `selected_reader_id=None` 当作任意 reader 的通配符。
 `render_diagnostics_markdown()` 只接受 document，不访问 staging state。
 

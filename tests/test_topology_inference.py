@@ -180,13 +180,10 @@ class TopologyInferenceTests(unittest.TestCase):
         )
 
     def test_unsupported_units_and_periodic_requests_fail_closed(self):
-        unknown_unit = structure((1,), ((0.0, 0.0, 0.0),), unit="nanometer")
-        nonfinite = structure((1,), ((float("nan"), 0.0, 0.0),))
-
-        with self.assertRaisesRegex(ValueError, "angstrom or bohr"):
-            infer_distance_topology(unknown_unit)
         with self.assertRaisesRegex(ValueError, "finite"):
-            infer_distance_topology(nonfinite)
+            structure((1,), ((float("nan"), 0.0, 0.0),))
+        with self.assertRaisesRegex(ValueError, "known length unit"):
+            structure((1,), ((0.0, 0.0, 0.0),), unit="nanometer")
         with self.assertRaisesRegex(ValueError, "nonperiodic"):
             infer_distance_topology(
                 structure((1,), ((0.0, 0.0, 0.0),)),

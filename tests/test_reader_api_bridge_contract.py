@@ -31,9 +31,9 @@ class ReaderAPIBridgeContractTests(unittest.TestCase):
         self.assertNotIn("bpy", set(sys.modules) - before)
         self.assertEqual(
             bridge.READER_API_HANDLE_KEY,
-            "chemblender.reader_api.v0",
+            "chemblender.reader_api.v1",
         )
-        self.assertEqual(handle.api_version, "0.1")
+        self.assertEqual(handle.api_version, "1.0-rc1")
         self.assertEqual(
             handle.module_name,
             "synthetic_repository.chemblender.reader_api",

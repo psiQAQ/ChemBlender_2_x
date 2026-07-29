@@ -13,8 +13,21 @@ def is_valid_cid(s: str) -> bool:
 def is_valid_filepath(s: str) -> bool:
     s = s.strip()
     ext = os.path.splitext(s)[1].lower()
-    valid_exts = {".cif", ".sdf", ".mol", ".xyz", ".pdb", ".json", ".poscar", ".vasp"}
-    return ext in valid_exts
+    valid_exts = {
+        ".cif",
+        ".sdf",
+        ".mol",
+        ".xyz",
+        ".pdb",
+        ".json",
+        ".poscar",
+        ".contcar",
+        ".vasp",
+    }
+    return (
+        ext in valid_exts
+        or os.path.basename(s).lower() in {"poscar", "contcar"}
+    )
 
 def is_valid_smiles(s: str) -> bool:
     s = s.strip()
@@ -188,8 +201,20 @@ class MESH_OT_SCAFFOLD_BUILD(bpy.types.Operator):
                 )
             if (
                 mytool.choose == "File"
-                and os.path.splitext(moltext)[1].lower()
-                in {".mol", ".sdf", ".xyz", ".json"}
+                and (
+                    os.path.splitext(moltext)[1].lower()
+                    in {
+                        ".mol",
+                        ".sdf",
+                        ".xyz",
+                        ".json",
+                        ".vasp",
+                        ".poscar",
+                        ".contcar",
+                    }
+                    or (read.check_type(moltext) or "").lower()
+                    in {"vasp", "poscar", "contcar"}
+                )
             ):
                 source = os.path.abspath(bpy.path.abspath(moltext))
                 return bpy.ops.chemblender.quick_import(

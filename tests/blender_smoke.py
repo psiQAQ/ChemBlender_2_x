@@ -15,7 +15,7 @@ from zipfile import ZipFile
 import bpy
 
 
-READER_API_HANDLE_KEY = "chemblender.reader_api.v0"
+READER_API_HANDLE_KEY = "chemblender.reader_api.v1"
 OPTIONAL_STACK_PREFIXES = (
     "ase",
     "cclib",
@@ -39,6 +39,7 @@ def assert_package_contents(package):
         "Chem_Nodes_En.blend",
         "assets/Chem_Workspace.blend",
         "wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl",
+        "wheels/gemmi-0.7.5-cp313-cp313-win_amd64.whl",
     }
     forbidden_prefixes = ("scripts/", "tests/", "worker/", "__pycache__/")
 
@@ -48,8 +49,9 @@ def assert_package_contents(package):
     assert required <= names, required - names
     assert not any(name.startswith(forbidden_prefixes) for name in names)
     assert not any(name.endswith(".zip") for name in names)
-    assert [name for name in names if name.endswith(".whl")] == [
-        "wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl"
+    assert sorted(name for name in names if name.endswith(".whl")) == [
+        "wheels/gemmi-0.7.5-cp313-cp313-win_amd64.whl",
+        "wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl",
     ]
 
 
@@ -293,7 +295,7 @@ def assert_disabled(module_key, owned_classes):
 
 def assert_reader_api_handle(module_key):
     handle = bpy.app.driver_namespace[READER_API_HANDLE_KEY]
-    assert handle.api_version == "0.1"
+    assert handle.api_version == "1.0-rc1"
     assert handle.module_name == f"{module_key}.reader_api"
     assert importlib.import_module(handle.module_name).__name__ == handle.module_name
     assert callable(handle.register_callback)
@@ -1576,6 +1578,8 @@ def assert_dataset_and_trajectory_views(module_key):
             if item.get("cbq_contract") == "structure_ball_stick_v1"
         ]
         assert len(ball_stick) == 1
+        assert ball_stick[0]["cbq_contract_version"] == 1
+        assert ball_stick[0].node_group["cbq_contract_version"] == 1
         coordinates = [0.0] * 9
         obj.data.vertices.foreach_get("co", coordinates)
         assert numpy.allclose(
@@ -2707,6 +2711,805 @@ def assert_extxyz_workflow(module_key, repository_root):
             core.close_project(reopened)
 
 
+def assert_cif_workflow(module_key, repository_root):
+    import numpy
+
+    core = importlib.import_module(f"{module_key}.core")
+    export_ui = importlib.import_module(f"{module_key}.ui.export")
+    node_module = importlib.import_module(f"{module_key}.node")
+    ui = importlib.import_module(f"{module_key}.ui.session")
+    views = importlib.import_module(f"{module_key}.views")
+    assert "spglib" not in sys.modules
+
+    batch = core.parse_cif(
+        repository_root / "tests" / "fixtures" / "cif" / "partial-disorder.cif"
+    )
+    structure, = batch.structures
+    assert structure.periodic is not None
+    assert tuple(structure.periodic.occupancies.values) == (0.5,)
+    session = ui.new_scene_session(bpy.context.scene)
+    session.project.commit(batch)
+    session.mark_dirty("import")
+    view = views.create_periodic_structure_view(
+        structure,
+        settings=views.PeriodicViewSettings(
+            representation="supercell",
+            supercell=(2, 1, 1),
+        ),
+        name="ChemBlender CIF smoke",
+        collection=bpy.context.scene.collection,
+    )
+    assert len(view.data.vertices) == len(structure.atomic_numbers)
+    assert view["cbq_periodic_representation"] == "supercell"
+    assert tuple(view["cbq_periodic_supercell"]) == (2, 1, 1)
+    derived = bpy.data.objects[view["cbq_periodic_site_display_object"]]
+    assert derived["cbq_contract"] == "structure_periodic_sites_v1"
+    assert len(derived.data.vertices) == view["cbq_periodic_derived_site_count"]
+    assert len(derived.data.vertices) > 0
+    assert derived.data.attributes["cbq_display_only"] is not None
+    derived_ball_stick, = derived.modifiers
+    assert derived_ball_stick["cbq_contract_version"] == 1
+    assert derived_ball_stick.node_group["cbq_contract_version"] == 1
+    for name, contract in (
+        (
+            "CH_添加分子属性" if node_module.language
+            else "CH_Add Attributes",
+            "legacy_atom_attributes_asset_v1",
+        ),
+        (
+            "CH_分子球棍模型" if node_module.language
+            else "CH_Ball and Stick",
+            "legacy_ball_stick_asset_v1",
+        ),
+        (
+            "CH_添加分子材质" if node_module.language
+            else "CH_Add Material",
+            "legacy_molecule_material_asset_v1",
+        ),
+    ):
+        assert bpy.data.node_groups[name]["cbq_contract"] == contract
+        assert bpy.data.node_groups[name]["cbq_contract_version"] == 1
+    occupancy = [0.0] * len(structure.atomic_numbers)
+    view.data.attributes["cbq_occupancy"].data.foreach_get("value", occupancy)
+    assert occupancy == [0.5]
+    cell_display = bpy.data.objects[view["cbq_periodic_cell_object"]]
+    adp_display = bpy.data.objects[view["cbq_periodic_adp_object"]]
+    occupancy_display = bpy.data.objects[
+        view["cbq_periodic_occupancy_object"]
+    ]
+    for display, contract in (
+        (cell_display, "periodic_cell_edges_v1"),
+        (adp_display, "periodic_thermal_ellipsoid_v1"),
+        (occupancy_display, "periodic_site_occupancy_v1"),
+    ):
+        modifier, = display.modifiers
+        assert modifier["cbq_contract"] == contract
+        assert modifier["cbq_contract_version"] == 1
+        assert modifier.node_group["cbq_contract"] == contract
+        assert modifier.node_group["cbq_contract_version"] == 1
+        evaluated = display.evaluated_get(
+            bpy.context.evaluated_depsgraph_get()
+        )
+        evaluated_mesh = evaluated.to_mesh()
+        try:
+            assert len(evaluated_mesh.vertices) > 0, (
+                display.name,
+                contract,
+                len(evaluated_mesh.vertices),
+            )
+        finally:
+            evaluated.to_mesh_clear()
+    for attribute in (
+        "siteid",
+        "cbq_site_label",
+        "cbq_disorder_group",
+        "cbq_disorder_assembly",
+        "cbq_adp_type",
+        "cbq_u_iso",
+        "cbq_u11",
+        "cbq_u22",
+        "cbq_u33",
+        "cbq_u12",
+        "cbq_u13",
+        "cbq_u23",
+    ):
+        assert view.data.attributes[attribute] is not None
+    session.active_entity_id = structure.id
+    session.active_view_object_name = view.name
+
+    standard = replace(
+        structure,
+        id=uuid4(),
+        revision=f"{structure.revision}-standard-smoke",
+        topology_ids=(),
+    )
+    symmetry = object.__new__(core.SymmetryResult)
+    object.__setattr__(symmetry, "id", uuid4())
+    object.__setattr__(symmetry, "structure_id", structure.id)
+    object.__setattr__(symmetry, "standardized_structure_id", standard.id)
+    session.project.structures[standard.id] = standard
+    session.project.symmetry_results[symmetry.id] = symmetry
+    standard_view = None
+    try:
+        bpy.context.view_layer.objects.active = view
+        view.select_set(True)
+        assert bpy.ops.chemblender.view_standardized_structure(
+            symmetry_result_id=str(symmetry.id),
+        ) == {"FINISHED"}
+        standard_view = bpy.data.objects[session.active_view_object_name]
+        assert standard_view["cb_structure_id"] == str(standard.id)
+        assert standard_view["cb_structure_contract"] == "structure_view_v1"
+        assert standard_view["cbq_periodic_representation"] == "source_sites"
+        assert view.name in bpy.data.objects
+        with TemporaryDirectory(
+            prefix="chemblender-cif-normalized-smoke-"
+        ) as directory:
+            destination = Path(directory) / "standardized.cif"
+            selection = export_ui.resolve_export_selection(
+                session.project,
+                standard.id,
+            )
+            preview = export_ui.preview_export_selection(
+                selection,
+                "cif",
+                cif_mode="normalized",
+                destination=destination,
+            )
+            assert preview.requires_confirmation
+            assert any(
+                entry.code == "structure:derived"
+                for entry in preview.entries
+            )
+            job = export_ui.ExportJob(
+                destination,
+                selection,
+                format_name="cif",
+                confirm_loss=True,
+                missing_value_token=None,
+                cif_mode="normalized",
+            )
+            job._run()
+            assert job.error is None
+            normalized, = core.parse_cif(destination).structures
+            assert normalized.atomic_numbers == standard.atomic_numbers
+            assert numpy.allclose(
+                normalized.cell.values,
+                standard.cell.values,
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            assert numpy.allclose(
+                normalized.periodic.fractional_coordinates.values,
+                standard.periodic.fractional_coordinates.values,
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            assert numpy.allclose(
+                normalized.periodic.occupancies.values,
+                standard.periodic.occupancies.values,
+                rtol=0.0,
+                atol=1.0e-12,
+                equal_nan=True,
+            )
+            assert (
+                normalized.periodic.site_labels
+                == standard.periodic.site_labels
+            )
+            for name in (
+                "isotropic_displacements",
+                "anisotropic_displacements",
+            ):
+                expected = getattr(standard.periodic, name)
+                actual = getattr(normalized.periodic, name)
+                assert (actual is None) == (expected is None)
+                if expected is not None:
+                    assert numpy.allclose(
+                        actual.values,
+                        expected.values,
+                        rtol=0.0,
+                        atol=1.0e-12,
+                        equal_nan=True,
+                    )
+            assert (
+                normalized.periodic.declared_symmetry
+                == standard.periodic.declared_symmetry
+            )
+    finally:
+        if (
+            standard_view is not None
+            and standard_view.name in bpy.data.objects
+        ):
+            views.remove_structure_view(standard_view)
+        session.project.symmetry_results.pop(symmetry.id, None)
+        session.project.structures.pop(standard.id, None)
+        session.active_entity_id = structure.id
+        session.active_view_object_name = view.name
+
+    mixed, = core.parse_cif(
+        repository_root / "tests" / "fixtures" / "cif" / "mixed-site-data.cif"
+    ).structures
+    oblique_cell = numpy.asarray(
+        ((2.0, 0.0, 0.0), (0.5, 3.0, 0.0), (0.2, 0.3, 4.0))
+    )
+    fractional = numpy.asarray(
+        mixed.periodic.fractional_coordinates.values,
+        dtype=float,
+    )
+    oblique = replace(
+        mixed,
+        revision=f"{mixed.revision}-oblique-smoke",
+        cell=core.ArrayData(
+            oblique_cell,
+            ("cell_vector", "xyz"),
+            "angstrom",
+        ),
+        coordinates=core.ArrayData(
+            fractional @ oblique_cell,
+            ("atom", "xyz"),
+            "angstrom",
+        ),
+    )
+    oblique_view = views.create_periodic_structure_view(
+        oblique,
+        settings=views.PeriodicViewSettings(
+            representation="supercell",
+            supercell=(2, 1, 1),
+            occupancy_mode="radius",
+            show_axes=True,
+        ),
+        name="ChemBlender oblique ADP smoke",
+        collection=bpy.context.scene.collection,
+    )
+    oblique_cell_display = bpy.data.objects[
+        oblique_view["cbq_periodic_cell_object"]
+    ]
+    numpy.testing.assert_allclose(
+        oblique_cell_display.data.vertices[7].co,
+        (4.7, 3.3, 4.0),
+    )
+    assert len(oblique_cell_display.data.vertices) == 14
+    assert len(oblique_cell_display.data.edges) == 15
+    oblique_adp = bpy.data.objects[oblique_view["cbq_periodic_adp_object"]]
+    occupancy_valid = [False] * 2
+    adp_valid = [False] * len(oblique_adp.data.vertices)
+    quality = [0] * len(oblique_adp.data.vertices)
+    oblique_view.data.attributes["cbq_occupancy_valid"].data.foreach_get(
+        "value",
+        occupancy_valid,
+    )
+    oblique_adp.data.attributes["cbq_adp_valid"].data.foreach_get(
+        "value",
+        adp_valid,
+    )
+    oblique_adp.data.attributes["cbq_quality_badge"].data.foreach_get(
+        "value",
+        quality,
+    )
+    assert occupancy_valid == [False, True]
+    assert adp_valid == [True, False, True, False]
+    assert quality == [1, 2, 1, 2]
+    evaluated_adp = oblique_adp.evaluated_get(
+        bpy.context.evaluated_depsgraph_get()
+    )
+    evaluated_adp_mesh = evaluated_adp.to_mesh()
+    try:
+        assert len(evaluated_adp_mesh.vertices) > len(oblique_adp.data.vertices)
+    finally:
+        evaluated_adp.to_mesh_clear()
+    views.remove_structure_view(oblique_view)
+
+    occupancy_geometry = {}
+    for mode in ("opacity", "pie", "split_site"):
+        mode_view = views.create_periodic_structure_view(
+            mixed,
+            settings=views.PeriodicViewSettings(
+                occupancy_mode=mode,
+                show_cell=False,
+                show_axes=mode == "opacity",
+            ),
+            name=f"ChemBlender {mode} occupancy smoke",
+            collection=bpy.context.scene.collection,
+        )
+        mode_display = bpy.data.objects[
+            mode_view["cbq_periodic_occupancy_object"]
+        ]
+        source_scale = [1.0] * len(mode_view.data.vertices)
+        mode_view.data.attributes["atom_scale_f"].data.foreach_get(
+            "value",
+            source_scale,
+        )
+        assert source_scale == [0.0] * len(source_scale)
+        evaluated = mode_display.evaluated_get(
+            bpy.context.evaluated_depsgraph_get()
+        )
+        evaluated_mesh = evaluated.to_mesh()
+        try:
+            occupancy_geometry[mode] = (
+                len(mode_display.data.vertices),
+                len(mode_display.data.polygons),
+                len(evaluated_mesh.vertices),
+            )
+            assert len(evaluated_mesh.vertices) > 0
+        finally:
+            evaluated.to_mesh_clear()
+        if mode == "pie":
+            assert len(mode_display.data.polygons) > 0
+            material = bpy.data.materials[
+                mode_view["cbq_periodic_occupancy_material"]
+            ]
+            try:
+                node_module.ensure_periodic_occupancy_modifier(
+                    mode_display,
+                    "opacity",
+                    material,
+                )
+            except RuntimeError as error:
+                assert "incompatible modifier" in str(error)
+            else:
+                raise AssertionError("occupancy node mode was silently reused")
+        if mode == "opacity":
+            axes = bpy.data.objects[
+                mode_view["cbq_periodic_cell_object"]
+            ]
+            assert len(axes.data.vertices) == 6
+            assert len(axes.data.edges) == 3
+        views.remove_structure_view(mode_view)
+    assert len(set(occupancy_geometry.values())) == 3
+
+    conflict_mesh = bpy.data.meshes.new("ChemBlender node conflict smoke")
+    conflict = bpy.data.objects.new(conflict_mesh.name, conflict_mesh)
+    bpy.context.scene.collection.objects.link(conflict)
+    modifier = conflict.modifiers.new(
+        "ChemBlender Periodic Cell",
+        "NODES",
+    )
+    foreign_group = bpy.data.node_groups.new(
+        "Foreign Periodic Cell",
+        "GeometryNodeTree",
+    )
+    foreign_group["cbq_contract"] = "periodic_cell_edges_v1"
+    modifier.node_group = foreign_group
+    try:
+        node_module.ensure_periodic_cell_modifier(conflict)
+    except RuntimeError as error:
+        assert "incompatible modifier" in str(error)
+    else:
+        raise AssertionError("incompatible periodic node contract was reused")
+    bpy.data.objects.remove(conflict, do_unlink=True)
+    bpy.data.meshes.remove(conflict_mesh)
+    bpy.data.node_groups.remove(foreign_group)
+
+    foreign_owner = views.create_periodic_structure_view(
+        mixed,
+        settings=views.PeriodicViewSettings(
+            occupancy_mode="radius",
+            show_cell=False,
+        ),
+        name="ChemBlender foreign ownership smoke",
+        collection=bpy.context.scene.collection,
+    )
+    foreign_mesh = bpy.data.meshes.new("Foreign cell v2")
+    foreign_child = bpy.data.objects.new(foreign_mesh.name, foreign_mesh)
+    bpy.context.scene.collection.objects.link(foreign_child)
+    foreign_child.parent = foreign_owner
+    foreign_child["cbq_contract"] = "periodic_cell_display_v1"
+    foreign_child["cbq_contract_version"] = 2
+    foreign_owner["cbq_periodic_cell_object"] = foreign_child.name
+    foreign_material = bpy.data.materials.new("Foreign occupancy material v2")
+    foreign_material["cbq_contract"] = "periodic_occupancy_material_v1"
+    foreign_material["cbq_contract_version"] = 2
+    foreign_owner["cbq_periodic_occupancy_material"] = foreign_material.name
+    views.remove_structure_view(foreign_owner)
+    assert foreign_child.name in bpy.data.objects
+    assert foreign_material.name in bpy.data.materials
+    bpy.data.objects.remove(foreign_child, do_unlink=True)
+    bpy.data.meshes.remove(foreign_mesh)
+    bpy.data.materials.remove(foreign_material)
+
+    supercell_name = (
+        "CH_超胞" if node_module.language else "CH_Supercell"
+    )
+    legacy_conflict = bpy.data.node_groups.new(
+        supercell_name,
+        "GeometryNodeTree",
+    )
+    source_collection = bpy.data.collections.new("Scaffold_smoke")
+    bpy.context.scene.collection.children.link(source_collection)
+    source_mesh = bpy.data.meshes.new("unit_smoke")
+    source = bpy.data.objects.new("unit_smoke", source_mesh)
+    source_collection.objects.link(source)
+    source["cell lengths"] = "1,1,1"
+    source["cell angles"] = "90,90,90"
+    bpy.context.view_layer.objects.active = source
+    source.select_set(True)
+    source.hide_set(False)
+    objects_before = set(bpy.data.objects.keys())
+    modifiers_before = tuple(source.modifiers)
+    groups_before = set(bpy.data.node_groups.keys())
+    try:
+        result = bpy.ops.chem.supercell()
+    except RuntimeError as error:
+        assert "incompatible node group" in str(error)
+    else:
+        assert result == {"CANCELLED"}
+    assert not source.hide_get()
+    assert set(bpy.data.objects.keys()) == objects_before
+    assert tuple(source.modifiers) == modifiers_before
+    assert set(bpy.data.node_groups.keys()) == groups_before
+    bpy.data.node_groups.remove(legacy_conflict)
+    assert bpy.ops.chem.supercell() == {"FINISHED"}
+    generated = bpy.data.objects["crystal_smoke"]
+    supercell_modifier = generated.modifiers["Supercell_smoke"]
+    assert supercell_modifier.get(
+        "cbq_contract"
+    ) == "legacy_supercell_wrapper_v1", (
+        tuple(supercell_modifier.items()),
+        tuple(supercell_modifier.node_group.items()),
+    )
+    assert supercell_modifier["cbq_contract_version"] == 1
+    assert supercell_modifier.node_group[
+        "cbq_contract"
+    ] == "legacy_supercell_wrapper_v1"
+    assert supercell_modifier.node_group["cbq_contract_version"] == 1
+    assert bpy.data.node_groups[supercell_name][
+        "cbq_contract"
+    ] == "legacy_supercell_asset_v1"
+    assert bpy.data.node_groups[supercell_name][
+        "cbq_contract_version"
+    ] == 1
+    generated_mesh = generated.data
+    bpy.data.objects.remove(generated, do_unlink=True)
+    bpy.data.meshes.remove(generated_mesh)
+    bpy.data.objects.remove(source, do_unlink=True)
+    bpy.data.meshes.remove(source_mesh)
+    bpy.data.collections.remove(source_collection)
+
+    cell_mesh = bpy.data.meshes.new("ChemBlender legacy cell smoke")
+    cell_obj = bpy.data.objects.new(cell_mesh.name, cell_mesh)
+    bpy.context.scene.collection.objects.link(cell_obj)
+    bpy.context.view_layer.objects.active = cell_obj
+    cell_obj.select_set(True)
+    cell_modifier = node_module.add_geometry_nodetree(
+        cell_obj,
+        "ChemBlender Legacy Cell",
+        "ChemBlender Legacy Cell Nodes",
+    )
+    node_module.Cell_Edges(
+        cell_modifier,
+        (1.0, 1.0, 1.0),
+        (90.0, 90.0, 90.0),
+    )
+    assert cell_modifier["cbq_contract"] == "legacy_cell_edges_wrapper_v1"
+    assert cell_modifier["cbq_contract_version"] == 1
+    assert cell_modifier.node_group[
+        "cbq_contract"
+    ] == "legacy_cell_edges_wrapper_v1"
+    for name, contract in (
+        (
+            "CH_边线扫描" if node_module.language else "CH_Edge Sweep",
+            "legacy_cell_edge_sweep_asset_v1",
+        ),
+        (
+            "CH_晶轴箭头" if node_module.language else "CH_Axes Arrows",
+            "legacy_cell_axes_asset_v1",
+        ),
+    ):
+        assert bpy.data.node_groups[name]["cbq_contract"] == contract
+        assert bpy.data.node_groups[name]["cbq_contract_version"] == 1
+    bpy.data.objects.remove(cell_obj, do_unlink=True)
+    bpy.data.meshes.remove(cell_mesh)
+
+    poly_mesh = bpy.data.meshes.new("ChemBlender polyhedra contract smoke")
+    poly_mesh.from_pydata(((0.0, 0.0, 0.0),), (), ())
+    poly_obj = bpy.data.objects.new(poly_mesh.name, poly_mesh)
+    bpy.context.scene.collection.objects.link(poly_obj)
+    bpy.context.view_layer.objects.active = poly_obj
+    poly_obj.select_set(True)
+    poly_modifier = node_module.add_geometry_nodetree(
+        poly_obj,
+        "ChemBlender Polyhedra",
+        "ChemBlender Polyhedra Nodes",
+    )
+    node_module.Ball_Stick_nodetree(poly_modifier)
+    node_module.CoordPolyhedra(
+        poly_modifier,
+        "1",
+        False,
+        0.0,
+        3.0,
+        (6,),
+        (8,),
+    )
+    assert poly_modifier.node_group[
+        "cbq_contract"
+    ] == "legacy_coord_polyhedra_wrapper_v1"
+    assert poly_modifier.node_group["cbq_contract_version"] == 1
+    assert poly_modifier[
+        "cbq_contract"
+    ] == "legacy_coord_polyhedra_wrapper_v1"
+    assert poly_modifier["cbq_contract_version"] == 1
+    for name, contract in (
+        (
+            "CH_配位多面体" if node_module.language
+            else "CH_Coord Polyhedra",
+            "legacy_coord_polyhedra_asset_v1",
+        ),
+        (
+            "CH_移除共面边" if node_module.language
+            else "CH_Remove Coplanar Edges",
+            "legacy_remove_coplanar_edges_v1",
+        ),
+        (
+            "CH_原子序数选中项" if node_module.language
+            else "CH_AtomicNum Selection",
+            "legacy_atomic_selection_v1",
+        ),
+    ):
+        assert bpy.data.node_groups[name]["cbq_contract"] == contract
+        assert bpy.data.node_groups[name]["cbq_contract_version"] == 1
+    bpy.data.objects.remove(poly_obj, do_unlink=True)
+    bpy.data.meshes.remove(poly_mesh)
+
+    with TemporaryDirectory(prefix="chemblender-cif-smoke-") as directory:
+        root = Path(directory)
+        blend = root / "partial-disorder.blend"
+        assert bpy.ops.wm.save_as_mainfile(
+            filepath=str(blend),
+            check_existing=False,
+        ) == {"FINISHED"}
+        assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        assert blend.with_suffix(".cbq").is_dir()
+        assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
+
+        ui = importlib.import_module(f"{module_key}.ui.session")
+        restored = ui.get_scene_session(bpy.context.scene)
+        assert structure.id in restored.project.structures
+        restored_view = bpy.data.objects["ChemBlender CIF smoke"]
+        assert restored_view["cb_structure_id"] == str(structure.id)
+        assert restored_view["cb_periodic"] is True
+        assert len(restored_view.data.vertices) == len(structure.atomic_numbers)
+        assert restored_view["cbq_periodic_representation"] == "supercell"
+        restored_derived = bpy.data.objects[
+            restored_view["cbq_periodic_site_display_object"]
+        ]
+        assert restored_derived["cbq_contract"] == "structure_periodic_sites_v1"
+        restored_cell = bpy.data.objects[
+            restored_view["cbq_periodic_cell_object"]
+        ]
+        restored_adp = bpy.data.objects[
+            restored_view["cbq_periodic_adp_object"]
+        ]
+        assert restored_cell.modifiers[0].node_group[
+            "cbq_contract_version"
+        ] == 1
+        assert restored_adp.modifiers[0].node_group[
+            "cbq_contract_version"
+        ] == 1
+
+        destination = root / "partial-disorder-export.cif"
+        selection = export_ui.resolve_export_selection(
+            restored.project,
+            structure.id,
+        )
+        preview = export_ui.preview_export_selection(
+            selection,
+            "cif",
+            cif_mode="preserve",
+            destination=destination,
+        )
+        assert not preview.requires_confirmation
+        assert any(
+            entry.code == "target:cif_preserve"
+            for entry in preview.entries
+        )
+        job = export_ui.ExportJob(
+            destination,
+            selection,
+            format_name="cif",
+            confirm_loss=False,
+            missing_value_token=None,
+            cif_mode="preserve",
+        )
+        job.start()
+        assert job.join(30)
+        assert job.error is None
+        assert job.result.written
+        exported = core.parse_cif(destination)
+        preserved, = exported.structures
+        assert preserved.atomic_numbers == structure.atomic_numbers
+        assert numpy.allclose(
+            preserved.cell.values,
+            structure.cell.values,
+            rtol=0.0,
+            atol=1.0e-12,
+        )
+        assert numpy.allclose(
+            preserved.periodic.fractional_coordinates.values,
+            structure.periodic.fractional_coordinates.values,
+            rtol=0.0,
+            atol=1.0e-12,
+        )
+        assert tuple(preserved.periodic.occupancies.values) == (0.5,)
+        assert (
+            preserved.periodic.declared_symmetry
+            == structure.periodic.declared_symmetry
+        )
+        assert b"_chemblender_unknown_tag" in destination.read_bytes()
+        assert "spglib" not in sys.modules
+
+        views.remove_structure_view(restored_view)
+        ui.close_scene_session(bpy.context.scene)
+
+
+def assert_poscar_workflow(module_key, repository_root):
+    import numpy
+
+    assert bpy.ops.wm.read_homefile(use_empty=True) == {"FINISHED"}
+    core = importlib.import_module(f"{module_key}.core")
+    export_ui = importlib.import_module(f"{module_key}.ui.export")
+    ui = importlib.import_module(f"{module_key}.ui.session")
+    views = importlib.import_module(f"{module_key}.views")
+    source = (
+        repository_root
+        / "tests"
+        / "fixtures"
+        / "poscar"
+        / "cscl-selective.vasp"
+    )
+    batch = core.parse_poscar(source)
+    structure, = batch.structures
+    selective = next(
+        value
+        for value in batch.datasets
+        if value.semantic_role == "selective_dynamics"
+    )
+    session = ui.new_scene_session(bpy.context.scene)
+    session.project.commit(batch)
+    session.mark_dirty("import")
+    view = views.create_periodic_structure_view(
+        structure,
+        settings=views.PeriodicViewSettings(show_constraints=False),
+        selective_dynamics=selective,
+        name="ChemBlender POSCAR smoke",
+        collection=bpy.context.scene.collection,
+    )
+    marker = bpy.data.objects[view["cb_selective_marker_object"]]
+    assert view.data.attributes["cbq_selective_x"] is not None
+    assert view.data.attributes["cbq_selective_y"] is not None
+    assert view.data.attributes["cbq_selective_z"] is not None
+    assert marker["cbq_contract"] == "structure_selective_marker_v1"
+    assert view["cb_selective_constraint_count"] == 2
+    assert marker.hide_get()
+    session.active_entity_id = structure.id
+    session.active_view_object_name = view.name
+    bpy.context.view_layer.objects.active = view
+    view.select_set(True)
+    assert bpy.ops.chemblender.toggle_selective_constraints() == {"FINISHED"}
+    assert not marker.hide_get()
+    assert bpy.ops.chemblender.toggle_selective_constraints() == {"FINISHED"}
+    assert marker.hide_get()
+
+    with TemporaryDirectory(prefix="chemblender-poscar-smoke-") as directory:
+        root = Path(directory)
+        blend = root / "selective.blend"
+        assert bpy.ops.wm.save_as_mainfile(
+            filepath=str(blend),
+            check_existing=False,
+        ) == {"FINISHED"}
+        assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        assert session.link_status == "connected", (
+            session.link_status,
+            ui.get_scene_session_status(bpy.context.scene),
+        )
+        assert structure.id in session.project.structures
+        assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
+        ui = importlib.import_module(f"{module_key}.ui.session")
+        restored = ui.get_scene_session(bpy.context.scene)
+        assert structure.id in restored.project.structures, (
+            tuple(restored.project.structures),
+            restored.link_status,
+            ui.get_scene_session_status(bpy.context.scene),
+        )
+        restored_view = bpy.data.objects["ChemBlender POSCAR smoke"]
+        restored_marker = bpy.data.objects[
+            restored_view["cb_selective_marker_object"]
+        ]
+        assert restored_marker["cb_structure_id"] == str(structure.id)
+        restored_selective = next(
+            value
+            for value in restored.project.datasets.values()
+            if (
+                value.semantic_role == "selective_dynamics"
+                and value.structure_id == structure.id
+            )
+        )
+        assert (
+            numpy.asarray(restored_selective.data.values).tolist()
+            == selective.data.values.tolist()
+        )
+
+        destination = root / "POSCAR"
+        selection = export_ui.resolve_export_selection(
+            restored.project,
+            structure.id,
+        )
+        settings = export_ui.PoscarExportSettings(
+            comment="ChemBlender smoke",
+            coordinate_mode="cartesian",
+            scale_policy="unit",
+            include_selective_dynamics=True,
+        )
+        preview = export_ui.preview_export_selection(
+            selection,
+            "poscar",
+            poscar_settings=settings,
+            destination=destination,
+        )
+        assert not preview.requires_confirmation
+        assert any(
+            entry.code == "coordinates_cartesian"
+            for entry in preview.entries
+        )
+        job = export_ui.ExportJob(
+            destination,
+            selection,
+            format_name="poscar",
+            confirm_loss=False,
+            missing_value_token=None,
+            poscar_settings=settings,
+        )
+        job.start()
+        assert job.join(30)
+        assert job.error is None
+        assert job.result.written
+        reparsed = core.parse_poscar(destination)
+        exporters = importlib.import_module(
+            f"{module_key}.core.exporters"
+        )
+        assert exporters.semantic_poscar_differences(batch, reparsed) == ()
+        reparsed_selective = next(
+            value
+            for value in reparsed.datasets
+            if value.semantic_role == "selective_dynamics"
+        )
+        assert (
+            reparsed_selective.data.values.tolist()
+            == selective.data.values.tolist()
+        )
+
+        velocity_batch = core.parse_poscar(
+            repository_root
+            / "tests"
+            / "fixtures"
+            / "poscar"
+            / "velocities.CONTCAR"
+        )
+        restored.project.commit(velocity_batch)
+        velocity_structure, = velocity_batch.structures
+        velocity_destination = root / "CONTCAR"
+        velocity_selection = export_ui.resolve_export_selection(
+            restored.project,
+            velocity_structure.id,
+        )
+        velocity_job = export_ui.ExportJob(
+            velocity_destination,
+            velocity_selection,
+            format_name="poscar",
+            confirm_loss=True,
+            missing_value_token=None,
+        )
+        velocity_job._run()
+        assert velocity_job.error is None
+        velocity_document = importlib.import_module(
+            f"{module_key}.core.formats.poscar"
+        ).parse_poscar_document(velocity_destination.read_bytes())
+        assert velocity_document.velocities is not None
+        assert velocity_document.lattice_velocities is not None
+
+        views.remove_structure_view(restored_view)
+        ui.close_scene_session(bpy.context.scene)
+
+
 def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     reader = importlib.import_module(f"{module_key}.read")
     cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
@@ -3118,6 +3921,12 @@ expected_inventory["registered_classes"] += [
     },
     {
         "module": ".ui.import_preview",
+        "name": "CHEMBLENDER_OT_apply_poscar_species",
+        "id": "chemblender.apply_poscar_species",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.import_preview",
         "name": "CHEMBLENDER_OT_cancel_import",
         "id": "chemblender.cancel_import",
         "base": "Operator",
@@ -3214,6 +4023,24 @@ expected_inventory["registered_classes"] += [
     },
     {
         "module": ".ui.properties",
+        "name": "CHEMBLENDER_OT_derive_crystal_symmetry",
+        "id": "chemblender.derive_crystal_symmetry",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.properties",
+        "name": "CHEMBLENDER_OT_view_standardized_structure",
+        "id": "chemblender.view_standardized_structure",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.properties",
+        "name": "CHEMBLENDER_OT_toggle_selective_constraints",
+        "id": "chemblender.toggle_selective_constraints",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.properties",
         "name": "CHEMBLENDER_PG_quick_import",
         "id": None,
         "base": "PropertyGroup",
@@ -3276,7 +4103,10 @@ expected_inventory["handlers"] += [
     {"owner": "save_pre", "module": ".ui.session", "name": "_save_pre_handler"},
 ]
 expected_inventory["handlers"].sort(key=lambda item: tuple(item.values()))
-assert stable_inventory == expected_inventory
+assert stable_inventory == expected_inventory, (
+    stable_inventory,
+    expected_inventory,
+)
 
 bridge = importlib.import_module(f"{module_key}.runtime.reader_api_bridge")
 reader_api = importlib.import_module(f"{module_key}.reader_api")
@@ -3374,6 +4204,8 @@ assert_complex_phonon_trajectory(module_key)
 assert_fermi_surface_view(module_key)
 assert_project_sidecar_link(module_key)
 assert_quick_import(module_key, package.parent.parent)
+assert_cif_workflow(module_key, package.parent.parent)
+assert_poscar_workflow(module_key, package.parent.parent)
 assert_optional_workspace(module_key)
 assert_project_session_manager(module_key)
 assert_topology_view(module_key, package.parent.parent)
@@ -3383,11 +4215,14 @@ assert_sdf_10k_workflow_budget(module_key)
 assert_project_browser_rna_budget(module_key)
 
 import rdkit
+import gemmi
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
 assert rdkit.__version__
 assert version("rdkit") == "2026.3.3"
+assert gemmi.__version__ == "0.7.5"
+assert version("gemmi") == "0.7.5"
 molecule = Chem.AddHs(Chem.MolFromSmiles("CCO"))
 assert molecule is not None
 assert AllChem.EmbedMolecule(molecule, randomSeed=0xC0FFEE) == 0

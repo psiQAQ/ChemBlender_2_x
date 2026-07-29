@@ -1,15 +1,17 @@
 """Background XYZ/extXYZ export for the active Project Browser entity."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from threading import Event, Thread
 from uuid import UUID
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, StringProperty
+from bpy.props import BoolProperty, EnumProperty, FloatProperty, StringProperty
 
 from ..core import (
+    CIFEnvelope,
     ConformerSet,
+    DatasetStatus,
     FrameSet,
     MolecularRecord,
     Structure,
@@ -18,15 +20,20 @@ from ..core import (
 from ..core.exporters import (
     ExportReport,
     ExportReportEntry,
+    PoscarExportSettings,
     export_extxyz,
+    export_cif,
     export_xyz,
     export_mol,
+    export_poscar,
     export_sdf,
     export_smiles,
     preview_extxyz_export,
     preview_molecular_export,
+    plan_cif_export,
     sdf_entries_from_conformer_set,
 )
+from ..core.formats.poscar import PoscarLatticeVelocityBlock
 from .session import get_scene_session
 
 
@@ -36,7 +43,15 @@ _FORMAT_ITEMS = (
     ("mol", "MOL", "Export a molecular Structure"),
     ("sdf", "SDF", "Export molecular records or conformers"),
     ("smiles", "SMILES", "Export a molecular Structure"),
+    ("cif", "CIF", "Export a periodic Structure"),
+    ("poscar", "POSCAR/CONTCAR", "Export a periodic Structure for VASP"),
 )
+_CIF_ACTION_LABELS = {
+    "preserve": "Preserved",
+    "replace": "Changed",
+    "add": "Added",
+    "omit": "Omitted",
+}
 _FATAL_EXCEPTIONS = (
     KeyboardInterrupt,
     SystemExit,
@@ -67,6 +82,62 @@ class ExportSelection:
     record: MolecularRecord | None = None
     conformer_set: ConformerSet | None = None
     records_by_id: dict | None = None
+    cif_envelope: CIFEnvelope | None = None
+    provenance: tuple = ()
+    source_structure_id: UUID | None = None
+
+
+def _with_structure_origin(project, selection):
+    source_id = next(
+        (
+            result.structure_id
+            for result in getattr(project, "symmetry_results", {}).values()
+            if result.standardized_structure_id == selection.structure.id
+        ),
+        None,
+    )
+    return (
+        selection
+        if source_id is None
+        else replace(selection, source_structure_id=source_id)
+    )
+
+
+def _structure_context(project, structure):
+    created_ids = set()
+    for revision in getattr(project, "source_revisions", {}).values():
+        if structure.id in revision.created_entity_ids:
+            created_ids.update(revision.created_entity_ids)
+    direct = tuple(
+        value
+        for value in getattr(project, "datasets", {}).values()
+        if (
+            getattr(value, "structure_id", None) == structure.id
+            or value.id in created_ids
+        )
+    )
+    provenance_ids = created_ids.union(
+        provenance_id
+        for value in direct
+        for provenance_id in getattr(value, "provenance_ids", ())
+    )
+    direct_ids = {value.id for value in direct}
+    properties = tuple(
+        value
+        for value in getattr(project, "datasets", {}).values()
+        if (
+            value.id in direct_ids
+            or provenance_ids.intersection(
+                getattr(value, "provenance_ids", ())
+            )
+        )
+    )
+    provenance = tuple(
+        value
+        for value in getattr(project, "provenance", {}).values()
+        if value.id in provenance_ids
+    )
+    return properties, provenance
 
 
 def _molecular_selection(
@@ -123,9 +194,16 @@ def _molecular_selection(
         record = None
     elif record is not None and record.topology_id not in {None, topology.id}:
         record = None
+    properties, provenance = _structure_context(project, structure)
     return ExportSelection(
-        structure, None, (), topology, record, conformer_set,
+        structure, None, properties, topology, record, conformer_set,
         {item.id: item for item in project.molecular_records.values()},
+        getattr(project, "cif_envelopes", {}).get(
+            getattr(structure.periodic, "cif_envelope_id", None)
+            if structure.periodic is not None
+            else None
+        ),
+        provenance,
     )
 
 
@@ -134,42 +212,267 @@ def resolve_export_selection(project, entity_id):
         raise TypeError("select a Structure or FrameSet before exporting")
     structure = project.structures.get(entity_id)
     if structure is not None:
+        properties, provenance = _structure_context(project, structure)
         try:
-            return _molecular_selection(project, structure)
+            selection = _molecular_selection(project, structure)
         except ValueError:
-            return ExportSelection(structure, None, ())
+            envelope = getattr(project, "cif_envelopes", {}).get(
+                getattr(structure.periodic, "cif_envelope_id", None)
+                if structure.periodic is not None
+                else None
+            )
+            selection = ExportSelection(
+                structure,
+                None,
+                properties,
+                cif_envelope=envelope,
+                provenance=provenance,
+            )
+        return _with_structure_origin(project, selection)
     record = project.molecular_records.get(entity_id)
     if record is not None:
         structure = project.structures.get(record.structure_id)
         if structure is None:
             raise ValueError("selected MolecularRecord has no Structure")
-        return _molecular_selection(project, structure, record=record)
+        return _with_structure_origin(
+            project,
+            _molecular_selection(project, structure, record=record),
+        )
     frame_set = project.datasets.get(entity_id)
     if isinstance(frame_set, ConformerSet):
         structure = project.structures.get(frame_set.reference_structure_id)
         if structure is None:
             raise ValueError("selected ConformerSet has no Structure")
-        return _molecular_selection(project, structure, conformer_set=frame_set)
+        return _with_structure_origin(
+            project,
+            _molecular_selection(
+                project,
+                structure,
+                conformer_set=frame_set,
+            ),
+        )
     if not isinstance(frame_set, FrameSet):
         raise ValueError("selected entity is not an exportable Structure or FrameSet")
     structure = project.structures.get(frame_set.structure_id)
     if structure is None:
         raise ValueError("selected FrameSet has no Structure")
-    return ExportSelection(
-        structure,
-        frame_set,
-        tuple(
-            dataset
-            for dataset in project.datasets.values()
-            if getattr(dataset, "frame_set_id", None) == frame_set.id
+    return _with_structure_origin(
+        project,
+        ExportSelection(
+            structure,
+            frame_set,
+            tuple(
+                dataset
+                for dataset in project.datasets.values()
+                if getattr(dataset, "frame_set_id", None) == frame_set.id
+            ),
         ),
     )
+
+
+def _poscar_parts(selection, settings=None):
+    properties = {
+        value.semantic_role: value
+        for value in selection.properties
+        if hasattr(value, "semantic_role")
+    }
+    provenance = next(
+        (
+            value
+            for value in selection.provenance
+            if value.producer == "ChemBlender POSCAR adapter"
+        ),
+        None,
+    )
+    parameters = {} if provenance is None else dict(provenance.parameters)
+    scale = parameters.get("scale")
+    inferred_settings = PoscarExportSettings(
+        comment=str(parameters.get("comment") or "ChemBlender"),
+        coordinate_mode=str(
+            parameters.get("coordinate_mode") or "direct"
+        ),
+        scale_policy=(
+            "preserve_source"
+            if isinstance(scale, (int, float)) and not isinstance(scale, bool)
+            else "unit"
+        ),
+        source_scale=(
+            float(scale)
+            if isinstance(scale, (int, float)) and not isinstance(scale, bool)
+            else None
+        ),
+        velocity_mode=str(parameters.get("velocity_mode") or "cartesian"),
+    )
+    if settings is None:
+        settings = inferred_settings
+    elif not isinstance(settings, PoscarExportSettings):
+        raise TypeError("poscar_settings must be PoscarExportSettings or None")
+    lattice = None
+    lattice_property = properties.get("lattice_velocity")
+    lattice_vectors = parameters.get("lattice_velocity_vectors")
+    initialization = parameters.get(
+        "lattice_velocity_initialization_state"
+    )
+    if (
+        lattice_property is not None
+        and lattice_vectors is not None
+        and initialization is not None
+    ):
+        lattice = PoscarLatticeVelocityBlock(
+            float(initialization),
+            tuple(
+                tuple(map(float, row))
+                for row in lattice_property.data.values
+            ),
+            tuple(tuple(map(float, row)) for row in lattice_vectors),
+        )
+    return (
+        settings,
+        (
+            properties.get("selective_dynamics")
+            if settings.include_selective_dynamics
+            else None
+        ),
+        properties.get("atomic_velocity"),
+        lattice,
+    )
+
+
+def _poscar_preview(selection, settings=None):
+    import numpy
+
+    settings, selective, velocities, lattice = _poscar_parts(
+        selection,
+        settings,
+    )
+    periodic = selection.structure.periodic
+    if selection.frame_set is not None or periodic is None:
+        raise ValueError("POSCAR export requires one periodic Structure")
+    entries = [
+        ExportReportEntry(
+            f"scale_{settings.scale_policy}",
+            f"POSCAR scale policy: {settings.scale_policy}",
+        ),
+        ExportReportEntry(
+            f"coordinates_{settings.coordinate_mode}",
+            f"POSCAR coordinates: {settings.coordinate_mode}",
+        ),
+    ]
+    loss = []
+    occupancies = numpy.asarray(periodic.occupancies.values, dtype=float)
+    if not numpy.allclose(occupancies, 1.0, rtol=0.0, atol=1.0e-12):
+        loss.append(
+            ExportReportEntry(
+                "occupancy_omitted",
+                "POSCAR omits partial or missing occupancies",
+            )
+        )
+    if (
+        periodic.isotropic_displacements is not None
+        or periodic.anisotropic_displacements is not None
+    ):
+        loss.append(
+            ExportReportEntry(
+                "adp_omitted",
+                "POSCAR omits atomic displacement parameters",
+            )
+        )
+    if (
+        periodic.declared_symmetry.name is not None
+        or periodic.declared_symmetry.operations
+    ):
+        loss.append(
+            ExportReportEntry(
+                "symmetry_omitted",
+                "POSCAR omits declared symmetry metadata",
+            )
+        )
+    if selective is not None:
+        entries.append(
+            ExportReportEntry(
+                "selective_dynamics",
+                "Selective Dynamics will be exported",
+            )
+        )
+    elif settings.include_selective_dynamics is False and any(
+        getattr(value, "semantic_role", None) == "selective_dynamics"
+        for value in selection.properties
+    ):
+        loss.append(
+            ExportReportEntry(
+                "selective_dynamics_omitted",
+                "POSCAR Selective Dynamics flags will be omitted",
+            )
+        )
+    if velocities is not None or lattice is not None:
+        entries.append(
+            ExportReportEntry(
+                "velocities",
+                "Selected POSCAR velocity data will be exported",
+            )
+        )
+    return ExportReport(
+        "poscar",
+        False,
+        1,
+        bool(loss),
+        tuple((*loss, *entries)),
+    )
+
+
+def _crystal_plan_entries(selection, target, destination):
+    entries = [
+        ExportReportEntry(
+            f"target:{target}",
+            f"Target format: {target.replace('_', ' ')}",
+        ),
+        ExportReportEntry(
+            (
+                "structure:derived"
+                if selection.source_structure_id is not None
+                else "structure:source"
+            ),
+            (
+                f"Derived Structure {selection.structure.id} from "
+                f"{selection.source_structure_id}"
+                if selection.source_structure_id is not None
+                else f"Source Structure: {selection.structure.id}"
+            ),
+        ),
+    ]
+    if destination is not None:
+        entries.append(
+            ExportReportEntry(
+                "output_path",
+                f"Output path: {Path(destination)}",
+            )
+        )
+    quality = {
+        status
+        for value in selection.properties
+        if (
+            (status := getattr(value, "status", None))
+            in {DatasetStatus.PARTIAL, DatasetStatus.AMBIGUOUS}
+        )
+    }
+    entries.extend(
+        ExportReportEntry(
+            f"quality:{status.value}",
+            f"Related data quality: {status.value}",
+        )
+        for status in sorted(quality, key=lambda value: value.value)
+    )
+    return tuple(entries), bool(quality)
 
 
 def preview_export_selection(
     selection,
     format_name,
     missing_value_token=None,
+    *,
+    cif_mode=None,
+    poscar_settings=None,
+    destination=None,
 ):
     if type(selection) is not ExportSelection:
         raise TypeError("selection must be an ExportSelection")
@@ -177,6 +480,59 @@ def preview_export_selection(
         if selection.frame_set is not None:
             raise ValueError("FrameSet export requires extXYZ")
         return ExportReport("xyz", False, 1, False)
+    if format_name == "cif":
+        if selection.frame_set is not None or selection.structure.periodic is None:
+            raise ValueError("CIF export requires one periodic Structure")
+        mode = cif_mode or (
+            "preserve"
+            if selection.cif_envelope is not None
+            else "normalized"
+        )
+        plan = plan_cif_export(
+            selection.structure,
+            envelope=selection.cif_envelope,
+            mode=mode,
+        )
+        context_entries, quality_warning = _crystal_plan_entries(
+            selection,
+            f"cif_{mode}",
+            destination,
+        )
+        omitted_source_content = (
+            selection.cif_envelope is not None
+            and any(
+                field.name == "unknown_content" and field.action == "omit"
+                for field in plan.fields
+            )
+        )
+        return ExportReport(
+            "cif",
+            False,
+            1,
+            quality_warning or omitted_source_content,
+            context_entries
+            + tuple(
+                ExportReportEntry(
+                    f"{field.action}:{field.name}",
+                    f"{_CIF_ACTION_LABELS[field.action]}: {field.detail}",
+                )
+                for field in plan.fields
+            ),
+        )
+    if format_name == "poscar":
+        report = _poscar_preview(selection, poscar_settings)
+        context_entries, quality_warning = _crystal_plan_entries(
+            selection,
+            "poscar",
+            destination,
+        )
+        return replace(
+            report,
+            requires_confirmation=(
+                report.requires_confirmation or quality_warning
+            ),
+            entries=context_entries + report.entries,
+        )
     if format_name in {"mol", "sdf", "smiles"}:
         if selection.topology is None:
             raise ValueError("molecular export requires a complete topology")
@@ -217,7 +573,9 @@ def preview_export_selection(
             extra_loss_entries=extra_entries,
         )
     if format_name != "extxyz":
-        raise ValueError("format_name must be xyz, extxyz, mol, sdf or smiles")
+        raise ValueError(
+            "format_name must be xyz, extxyz, mol, sdf, smiles, cif or poscar"
+        )
     return preview_extxyz_export(
         selection.structure,
         frame_set=selection.frame_set,
@@ -235,12 +593,16 @@ class ExportJob:
         format_name,
         confirm_loss,
         missing_value_token,
+        cif_mode=None,
+        poscar_settings=None,
     ):
         self.destination = Path(destination)
         self.selection = selection
         self.format_name = format_name
         self.confirm_loss = confirm_loss
         self.missing_value_token = missing_value_token
+        self.cif_mode = cif_mode
+        self.poscar_settings = poscar_settings
         self.result = None
         self.error = None
         self._cancelled = Event()
@@ -253,6 +615,19 @@ class ExportJob:
 
     def _run(self):
         try:
+            if self.format_name in {"cif", "poscar"}:
+                preview = preview_export_selection(
+                    self.selection,
+                    self.format_name,
+                    cif_mode=self.cif_mode,
+                    poscar_settings=self.poscar_settings,
+                    destination=self.destination,
+                )
+                if preview.requires_confirmation and not self.confirm_loss:
+                    raise ValueError(
+                        "Loss/Partial/Ambiguous export requires explicit "
+                        "confirmation"
+                    )
             if self.format_name == "xyz":
                 self.result = export_xyz(
                     self.destination,
@@ -310,8 +685,43 @@ class ExportJob:
                     destination=self.destination,
                     is_cancelled=self._cancelled.is_set,
                 ).report
+            elif self.format_name == "cif":
+                mode = self.cif_mode or (
+                    "preserve"
+                    if self.selection.cif_envelope is not None
+                    else "normalized"
+                )
+                self.result = export_cif(
+                    self.destination,
+                    self.selection.structure,
+                    envelope=self.selection.cif_envelope,
+                    mode=mode,
+                    is_cancelled=self._cancelled.is_set,
+                )
+            elif self.format_name == "poscar":
+                (
+                    settings,
+                    selective,
+                    velocities,
+                    lattice,
+                ) = _poscar_parts(
+                    self.selection,
+                    self.poscar_settings,
+                )
+                self.result = export_poscar(
+                    self.destination,
+                    self.selection.structure,
+                    settings,
+                    selective_dynamics=selective,
+                    velocities=velocities,
+                    lattice_velocities=lattice,
+                    is_cancelled=self._cancelled.is_set,
+                )
             else:
-                raise ValueError("format_name must be xyz, extxyz, mol, sdf or smiles")
+                raise ValueError(
+                    "format_name must be xyz, extxyz, mol, sdf, smiles, cif "
+                    "or poscar"
+                )
         except BaseException as error:
             self.error = error
         finally:
@@ -396,6 +806,7 @@ def _export_preview_changed(self, context):
     try:
         preview(context)
     except (TypeError, ValueError) as error:
+        self._preview_report = None
         self.loss_preview = str(error)
 
 
@@ -404,9 +815,15 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
     bl_label = "Export Selected Data"
     bl_description = "Export the selected Structure or FrameSet"
 
-    filepath: StringProperty(subtype="FILE_PATH")
+    filepath: StringProperty(
+        subtype="FILE_PATH",
+        update=_export_preview_changed,
+    )
     filter_glob: StringProperty(
-        default="*.xyz;*.extxyz;*.mol;*.sdf;*.smi;*.smiles",
+        default=(
+            "*.xyz;*.extxyz;*.mol;*.sdf;*.smi;*.smiles;*.cif;"
+            "*.vasp;*.poscar;*.contcar"
+        ),
         options={"HIDDEN"},
     )
     format_name: EnumProperty(
@@ -414,8 +831,69 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
         default="extxyz",
         update=_export_preview_changed,
     )
+    cif_mode: EnumProperty(
+        name="CIF Mode",
+        items=(
+            ("preserve", "Preserve", "Patch the bound source CIF envelope"),
+            ("normalized", "Normalized", "Write a normalized CIF document"),
+        ),
+        default="normalized",
+        update=_export_preview_changed,
+    )
+    poscar_coordinate_mode: EnumProperty(
+        name="Coordinates",
+        items=(
+            ("direct", "Direct", "Write fractional coordinates"),
+            ("cartesian", "Cartesian", "Write Cartesian coordinates"),
+        ),
+        default="direct",
+        update=_export_preview_changed,
+    )
+    poscar_scale_policy: EnumProperty(
+        name="Scale",
+        items=(
+            ("unit", "Unit", "Write a unit POSCAR scale"),
+            (
+                "preserve_source",
+                "Preserve Source",
+                "Reuse the verified source POSCAR scale",
+            ),
+            (
+                "target_volume",
+                "Target Volume",
+                "Write the verified cell volume as a negative scale",
+            ),
+        ),
+        default="unit",
+        update=_export_preview_changed,
+    )
+    poscar_include_selective_dynamics: BoolProperty(
+        name="Selective Dynamics",
+        default=True,
+        update=_export_preview_changed,
+    )
+    poscar_comment: StringProperty(
+        name="Comment",
+        default="ChemBlender",
+        update=_export_preview_changed,
+    )
+    poscar_target_volume: FloatProperty(
+        name="Target Volume",
+        min=0.0,
+        precision=8,
+        update=_export_preview_changed,
+    )
+    poscar_velocity_mode: EnumProperty(
+        name="Velocity Coordinates",
+        items=(
+            ("cartesian", "Cartesian", "Write Cartesian ion velocities"),
+            ("direct", "Direct", "Write direct ion velocities"),
+        ),
+        default="cartesian",
+        update=_export_preview_changed,
+    )
     confirm_loss: BoolProperty(
-        name="Confirm Partial/Ambiguous Export",
+        name="Confirm Loss/Partial/Ambiguous Export",
         default=False,
     )
     missing_value_token: StringProperty(
@@ -423,6 +901,44 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
         update=_export_preview_changed,
     )
     loss_preview: StringProperty(name="Loss Preview")
+
+    def _poscar_settings(self, selection):
+        inferred, _selective, _velocities, _lattice = _poscar_parts(selection)
+        scale_policy = getattr(
+            self,
+            "poscar_scale_policy",
+            inferred.scale_policy,
+        )
+        target_volume = (
+            getattr(self, "poscar_target_volume", 0.0)
+            if scale_policy == "target_volume"
+            else None
+        )
+        return PoscarExportSettings(
+            comment=getattr(self, "poscar_comment", inferred.comment),
+            coordinate_mode=getattr(
+                self,
+                "poscar_coordinate_mode",
+                inferred.coordinate_mode,
+            ),
+            scale_policy=scale_policy,
+            source_scale=(
+                inferred.source_scale
+                if scale_policy == "preserve_source"
+                else None
+            ),
+            target_volume=target_volume,
+            include_selective_dynamics=getattr(
+                self,
+                "poscar_include_selective_dynamics",
+                inferred.include_selective_dynamics,
+            ),
+            velocity_mode=getattr(
+                self,
+                "poscar_velocity_mode",
+                inferred.velocity_mode,
+            ),
+        )
 
     def _selection_and_preview(self, context, *, default_format=False):
         session = get_scene_session(context.scene)
@@ -435,12 +951,56 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
                 self.format_name = "sdf"
             elif selection.frame_set is not None:
                 self.format_name = "extxyz"
+            elif selection.structure.periodic is not None:
+                self.format_name = (
+                    "poscar"
+                    if any(
+                        value.producer == "ChemBlender POSCAR adapter"
+                        for value in selection.provenance
+                    )
+                    else "cif"
+                )
+            if self.format_name == "cif":
+                self.cif_mode = (
+                    "preserve"
+                    if selection.cif_envelope is not None
+                    else "normalized"
+                )
+            elif self.format_name == "poscar":
+                settings, _selective, _velocities, _lattice = _poscar_parts(
+                    selection
+                )
+                self.poscar_coordinate_mode = settings.coordinate_mode
+                self.poscar_scale_policy = settings.scale_policy
+                self.poscar_comment = settings.comment
+                import numpy
+
+                self.poscar_target_volume = abs(
+                    float(numpy.linalg.det(selection.structure.cell.values))
+                )
+                self.poscar_include_selective_dynamics = (
+                    settings.include_selective_dynamics
+                )
+                self.poscar_velocity_mode = settings.velocity_mode
+        keywords = {}
+        if self.format_name == "cif":
+            keywords = {
+                "cif_mode": getattr(self, "cif_mode", "normalized"),
+                "destination": getattr(self, "filepath", None) or None,
+            }
+        elif self.format_name == "poscar":
+            keywords = {
+                "poscar_settings": self._poscar_settings(selection),
+                "destination": getattr(self, "filepath", None) or None,
+            }
         report = preview_export_selection(
             selection,
             self.format_name,
             self.missing_value_token,
+            **keywords,
         )
         self.loss_preview = _report_text(report)
+        self._preview_report = report
         return selection, report
 
     def invoke(self, context, _event):
@@ -455,9 +1015,25 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
     def draw(self, _context):
         layout = self.layout
         layout.prop(self, "format_name")
-        layout.label(text=self.loss_preview or "No data loss")
+        if self.format_name == "cif":
+            layout.prop(self, "cif_mode")
+        elif self.format_name == "poscar":
+            layout.prop(self, "poscar_comment")
+            layout.prop(self, "poscar_coordinate_mode")
+            layout.prop(self, "poscar_scale_policy")
+            if self.poscar_scale_policy == "target_volume":
+                layout.prop(self, "poscar_target_volume")
+            layout.prop(self, "poscar_include_selective_dynamics")
+            layout.prop(self, "poscar_velocity_mode")
+        report = getattr(self, "_preview_report", None)
+        if report is None:
+            layout.label(text=self.loss_preview or "No data loss")
+        else:
+            for entry in report.entries:
+                layout.label(text=entry.message)
         layout.prop(self, "confirm_loss")
-        layout.prop(self, "missing_value_token")
+        if self.format_name == "extxyz":
+            layout.prop(self, "missing_value_token")
 
     def _clear_job_ownership(self, job):
         if getattr(self, "_job", None) is job:
@@ -490,7 +1066,8 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
             selection, preview = self._selection_and_preview(context)
             if preview.requires_confirmation and not self.confirm_loss:
                 raise ValueError(
-                    "Partial/Ambiguous export requires explicit confirmation"
+                    "Loss/Partial/Ambiguous export requires explicit "
+                    "confirmation"
                 )
             destination = Path(self.filepath)
             if not destination.name:
@@ -501,6 +1078,16 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
                 format_name=self.format_name,
                 confirm_loss=self.confirm_loss,
                 missing_value_token=self.missing_value_token or None,
+                cif_mode=(
+                    getattr(self, "cif_mode", None)
+                    if self.format_name == "cif"
+                    else None
+                ),
+                poscar_settings=(
+                    self._poscar_settings(selection)
+                    if self.format_name == "poscar"
+                    else None
+                ),
             )
             if getattr(bpy.app, "background", False):
                 job.start()

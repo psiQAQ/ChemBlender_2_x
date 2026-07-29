@@ -55,10 +55,17 @@ class SupercellButton(Operator):
             self.report({'WARNING'}, "该功能需作用于单胞骨架！" if language else "This Function Must Act on Unit Cell Scaffold!")
             return {'CANCELLED'}
         
+        crystal_scaffold = None
+        copied_mesh = None
+        source_hidden = ao.hide_get()
+        active_before = context.view_layer.objects.active
+        groups_before = set(bpy.data.node_groups.keys())
         try:
+            node.preflight_legacy_supercell_contract()
             molname = ao.name.split('_',1)[-1]
             coll = bpy.data.collections['Scaffold_'+molname]
             crystal_scaffold = mesh.copy_mesh_object(coll, ao.data, 'crystal_'+molname)
+            copied_mesh = crystal_scaffold.data
             for key in ao.keys():
                 if not key.startswith("_") and key not in {'name','data','type'}:
                     crystal_scaffold[key]=ao[key]
@@ -66,6 +73,12 @@ class SupercellButton(Operator):
             ao.hide_set(True)
             GN_supercell = node.add_geometry_nodetree(crystal_scaffold, "Supercell_"+molname, "Supercell_"+molname)
             node.Supercell(crystal_scaffold, GN_supercell, self.full_cell_cutoff)
+            crystal_scaffold["cbq_legacy_supercell_contract"] = (
+                GN_supercell.node_group["cbq_contract"]
+            )
+            crystal_scaffold["cbq_legacy_supercell_contract_version"] = (
+                GN_supercell.node_group["cbq_contract_version"]
+            )
             crystal_scaffold.modifiers["Supercell_"+molname]["Socket_2"]=self.negative_boundaries
             crystal_scaffold.modifiers["Supercell_"+molname]["Socket_3"]=self.positive_boundaries
 
@@ -74,6 +87,19 @@ class SupercellButton(Operator):
             node.Ball_Stick_nodetree(GN_mol)
             return {'FINISHED'}
         except Exception as e:
+            ao.hide_set(source_hidden)
+            if crystal_scaffold is not None:
+                bpy.data.objects.remove(crystal_scaffold, do_unlink=True)
+            if copied_mesh is not None and copied_mesh.users == 0:
+                bpy.data.meshes.remove(copied_mesh)
+            for _pass in range(3):
+                for group in tuple(bpy.data.node_groups):
+                    if (
+                        group.name not in groups_before
+                        and group.users == 0
+                    ):
+                        bpy.data.node_groups.remove(group)
+            context.view_layer.objects.active = active_before
             self.report({'ERROR'}, f"发生错误: {str(e)}")
             return {'CANCELLED'}
 
@@ -499,6 +525,12 @@ class AddCoordPolyhedraButton(Operator):
 
             nodetree = ao.modifiers[-1]
             node.CoordPolyhedra(nodetree, self.set_mode, self.append_mode, self.RMin, self.RMax, center_nums, ligand_nums)
+            ao["cbq_legacy_polyhedra_contract"] = (
+                nodetree.node_group["cbq_contract"]
+            )
+            ao["cbq_legacy_polyhedra_contract_version"] = (
+                nodetree.node_group["cbq_contract_version"]
+            )
             self.report({'INFO'}, "配位多面体添加成功！" if language else "Coordination Polyhedra Added!")
             return {'FINISHED'}
         except Exception as e:

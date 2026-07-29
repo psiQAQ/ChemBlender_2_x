@@ -20,9 +20,13 @@
 
 ### Gemmi
 
-- 2.3.0 将 Gemmi 从可选 external core 升级为基础 wheel。
-- 采用独立 ADR；固定版本、官方 wheel URL、SHA-256、MPL-2.0 notices。
-- 必须实测压缩/解压体积和 Blender enable/import/lifecycle。
+- 2.3.0 使用官方
+  `gemmi-0.7.5-cp313-cp313-win_amd64.whl` 作为基础 wheel。
+- SHA-256：
+  `ad1f72ffa24adbfaf259e11471f6f071a668667f6ca846051f3bfea024fd337d`。
+- 实测压缩/解压体积为 2,270,352 / 5,345,458 bytes；wheel 内含
+  MPL-2.0 license 文件。
+- manifest、CI 下载和 package inventory 均使用同一 exact artifact。
 - CIF reader晚加载 Gemmi；非 CIF 功能不应因 Gemmi失败而不可用。
 
 ### spglib

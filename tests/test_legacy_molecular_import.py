@@ -1,5 +1,6 @@
 import importlib
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -200,6 +201,21 @@ class LegacyMolecularImportTests(unittest.TestCase):
                 )
             ],
         )
+        self.assertEqual(reports, [])
+
+    def test_legacy_canonical_contcar_routes_to_quick_import(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "CONTCAR"
+            source.touch()
+            operator, context, calls, reports = self.scaffold_fixture(
+                "File",
+                filetext=str(source),
+            )
+
+            self.assertEqual(operator.execute(context), {"FINISHED"})
+
+        self.assertEqual(calls[0][0], "quick_import")
+        self.assertEqual(calls[0][2]["files"], [{"name": "CONTCAR"}])
         self.assertEqual(reports, [])
 
     def test_legacy_smiles_action_delegates_exact_reader_api_payload(self):

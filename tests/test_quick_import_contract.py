@@ -59,6 +59,7 @@ class QuickImportContractTests(unittest.TestCase):
         self.fake_props = ModuleType("bpy.props")
         self.fake_props.CollectionProperty = _property("collection")
         self.fake_props.EnumProperty = _property("enum")
+        self.fake_props.FloatProperty = _property("float")
         self.fake_props.PointerProperty = _property("pointer")
         self.fake_props.StringProperty = _property("string")
         self.fake_bpy.props = self.fake_props
@@ -559,7 +560,16 @@ class QuickImportContractTests(unittest.TestCase):
         )
         self.fake_bpy.app.background = False
 
-        def slow(_request, _registry, _staging, *, progress, is_cancelled):
+        def slow(
+            _request,
+            _registry,
+            _staging,
+            *,
+            canonical_parameters_by_source=None,
+            progress,
+            is_cancelled,
+        ):
+            self.assertIsNone(canonical_parameters_by_source)
             progress("hash", 1, 3)
             started.set()
             while not is_cancelled():

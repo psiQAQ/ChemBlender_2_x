@@ -51,7 +51,7 @@ class ReaderRegistryTests(unittest.TestCase):
 
         self.assertIs(runtime.descriptor, reader)
         self.assertEqual(runtime.plugin_id, "chemblender.builtin")
-        self.assertEqual(runtime.api_version, "0.1")
+        self.assertEqual(runtime.api_version, "1.0-rc1")
         self.assertEqual(runtime.execution_mode, "built_in")
         self.assertEqual(
             runtime.current_availability(),

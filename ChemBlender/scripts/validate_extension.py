@@ -320,18 +320,33 @@ def main() -> int:
             if not isinstance(wheels, list):
                 errors.append("manifest key 'wheels' must be a list when present.")
             else:
+                declared_wheels: list[str] = []
                 for idx, wheel in enumerate(wheels):
                     if not isinstance(wheel, str):
                         errors.append(f"wheels[{idx}] must be a string path.")
                         continue
                     wheel_path = (extension_root / wheel).resolve()
                     try:
-                        wheel_path.relative_to(extension_root)
+                        normalized_wheel = wheel_path.relative_to(
+                            extension_root
+                        ).as_posix()
                     except ValueError:
                         errors.append(f"wheel path must stay within extension root: {wheel}")
                         continue
+                    if normalized_wheel in declared_wheels:
+                        errors.append(f"duplicate wheel path: {wheel}")
+                    declared_wheels.append(normalized_wheel)
                     if not wheel_path.exists():
                         errors.append(f"wheel path does not exist: {wheel}")
+                present_wheels = {
+                    path.relative_to(extension_root).as_posix()
+                    for path in extension_root.rglob("*.whl")
+                    if path.is_file()
+                }
+                for wheel in sorted(
+                    present_wheels - set(declared_wheels)
+                ):
+                    errors.append(f"undeclared wheel file: {wheel}")
 
     project_modules = _collect_project_modules(extension_root)
     warns.extend(_scan_absolute_import_warnings(extension_root, project_modules))

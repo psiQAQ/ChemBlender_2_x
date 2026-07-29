@@ -80,10 +80,20 @@ def _preview_summary(preview):
 
 
 class _PreflightJob:
-    def __init__(self, request, registry, staging):
+    def __init__(
+        self,
+        request,
+        registry,
+        staging,
+        *,
+        canonical_parameters_by_source=None,
+        prepare_conformers=True,
+    ):
         self.request = request
         self.registry = registry
         self.staging = staging
+        self.canonical_parameters_by_source = canonical_parameters_by_source
+        self.prepare_conformers = prepare_conformers
         self.preview = None
         self.conformer_suggestions = None
         self.error = None
@@ -102,16 +112,20 @@ class _PreflightJob:
                 self.request,
                 self.registry,
                 self.staging,
+                canonical_parameters_by_source=(
+                    self.canonical_parameters_by_source
+                ),
                 progress=self._progress,
                 is_cancelled=self._cancelled.is_set,
             )
-            self._progress("conformer_grouping", 0, 1)
-            self.conformer_suggestions = prepare_conformer_suggestions(
-                self.preview,
-                self.staging,
-                is_cancelled=self._cancelled.is_set,
-            )
-            self._progress("conformer_grouping", 1, 1)
+            if self.prepare_conformers:
+                self._progress("conformer_grouping", 0, 1)
+                self.conformer_suggestions = prepare_conformer_suggestions(
+                    self.preview,
+                    self.staging,
+                    is_cancelled=self._cancelled.is_set,
+                )
+                self._progress("conformer_grouping", 1, 1)
         except BaseException as error:
             self.error = error
         finally:

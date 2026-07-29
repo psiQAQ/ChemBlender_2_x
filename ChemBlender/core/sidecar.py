@@ -17,6 +17,8 @@ from .model_registry import MODEL_ENUMS, model_type_from_tag, model_type_tag
 from .sidecar_migrations import (
     CURRENT_MANIFEST_VERSION,
     CURRENT_PROJECT_SCHEMA_VERSION,
+    HASHED_LEGACY_MANIFEST_VERSION,
+    LEGACY_MANIFEST_VERSION,
     migrate_manifest,
 )
 from .storage.atomic_paths import short_sibling_temporary_path
@@ -382,6 +384,17 @@ class _Decoder:
             class_type = model_type_from_tag(type_name)
         except (KeyError, TypeError) as error:
             raise SidecarIntegrityError(f"unknown model type: {type_name!r}") from error
+        if class_type is model.CIFEnvelope:
+            value = dict(value)
+            value.setdefault("block_names", {"$tuple": []})
+            value.setdefault("block_keys", {"$tuple": []})
+        elif class_type is model.PeriodicSiteData:
+            value = dict(value)
+            value.setdefault("cif_block_name", None)
+            value.setdefault("cif_block_key", None)
+            value.setdefault("cif_block_index", None)
+            value.setdefault("disorder_assemblies", {"$tuple": []})
+            value.setdefault("declared_hall_symbol", None)
         expected = {item.name for item in fields(class_type) if item.init}
         actual = set(value) - {"$type"}
         if actual != expected:
@@ -516,7 +529,11 @@ def save_project(root, project):
 def _write_project_tree(root, project):
     if not isinstance(project, model.QCProject):
         raise TypeError("project must be a QCProject")
-    if project.schema_version not in ("0.1", CURRENT_PROJECT_SCHEMA_VERSION):
+    if project.schema_version not in (
+        LEGACY_MANIFEST_VERSION,
+        HASHED_LEGACY_MANIFEST_VERSION,
+        CURRENT_PROJECT_SCHEMA_VERSION,
+    ):
         raise SidecarCompatibilityError("unsupported project schema")
     try:
         validate_project_graph(project)
@@ -587,29 +604,36 @@ def _open_project_with_manifest(
         else None
     )
     metadata_manifest = None
-    if source_version == MANIFEST_VERSION:
-        project_id, schema_version = _validate_current_manifest(manifest)
+    if source_version in (
+        HASHED_LEGACY_MANIFEST_VERSION,
+        MANIFEST_VERSION,
+    ):
+        project_id, _source_schema_version = _validate_hashed_manifest(
+            manifest,
+            expected_schema_version=source_version,
+        )
         metadata_manifest = manifest
     legacy_topology_ids = set()
     manifest = migrate_manifest(
         manifest,
         migrated_topology_ids=legacy_topology_ids,
     )
-    if source_version == MANIFEST_VERSION:
-        if manifest["format"] != FORMAT_ID:
-            raise SidecarCompatibilityError("unsupported sidecar format")
-    else:
+    if source_version not in (
+        HASHED_LEGACY_MANIFEST_VERSION,
+        MANIFEST_VERSION,
+    ):
         if manifest.get("format") != FORMAT_ID:
             raise SidecarCompatibilityError("unsupported sidecar format")
         project_id = _strict_uuid(manifest.get("project_id"), "project_id")
-        schema_version = manifest.get("project_schema_version")
+    schema_version = manifest.get("project_schema_version")
     if expected_project_id is not None and project_id != expected_project_id:
         raise SidecarCompatibilityError("sidecar project UUID does not match")
     if (
         expected_schema_version is not None
         and expected_schema_version != schema_version
         and not (
-            expected_schema_version == "0.1"
+            expected_schema_version
+            in (LEGACY_MANIFEST_VERSION, HASHED_LEGACY_MANIFEST_VERSION)
             and schema_version == CURRENT_PROJECT_SCHEMA_VERSION
         )
     ):
@@ -647,7 +671,7 @@ def _strict_uuid(value, name):
     return parsed
 
 
-def _validate_current_manifest(manifest):
+def _validate_hashed_manifest(manifest, *, expected_schema_version):
     expected_fields = {
         "format",
         "manifest_version",
@@ -691,10 +715,23 @@ def _validate_current_manifest(manifest):
         ) from error
     if timestamp.utcoffset() != timezone.utc.utcoffset(timestamp):
         raise SidecarIntegrityError("invalid created_at_utc in manifest")
-    return _validate_current_project_header(manifest, project_id)
+    if manifest.get("format") != FORMAT_ID:
+        raise SidecarCompatibilityError("unsupported sidecar format")
+    if manifest.get("manifest_version") != expected_schema_version:
+        raise SidecarCompatibilityError("unsupported sidecar manifest version")
+    return _validate_project_header(
+        manifest,
+        project_id,
+        expected_schema_version=expected_schema_version,
+    )
 
 
-def _validate_current_project_header(manifest, project_id):
+def _validate_project_header(
+    manifest,
+    project_id,
+    *,
+    expected_schema_version,
+):
     schema_version = manifest.get("project_schema_version")
     project = manifest.get("project")
     encoded_id = project.get("id") if isinstance(project, dict) else None
@@ -726,7 +763,7 @@ def _validate_current_project_header(manifest, project_id):
         raise SidecarIntegrityError(
             "manifest header and project payload disagree"
         )
-    if schema_version != CURRENT_PROJECT_SCHEMA_VERSION:
+    if schema_version != expected_schema_version:
         raise SidecarCompatibilityError("unsupported sidecar manifest version")
     return project_id, schema_version
 

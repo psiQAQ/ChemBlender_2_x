@@ -1,1 +1,1 @@
-READER_API_VERSION = "0.1"
+from ..core.readers import READER_API_VERSION

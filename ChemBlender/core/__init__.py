@@ -62,13 +62,14 @@ from .iodata_adapter import (
     parse_iodata_wavefunction,
     sniff_iodata_wavefunction,
 )
-# Adapter compatibility exports.
-from .gemmi_adapter import (
+# Native CIF compatibility exports.
+from .formats.cif import (
     CIF_READER,
     GemmiDependencyError,
     parse_cif,
     sniff_cif,
 )
+from .formats.poscar import POSCAR_READER, parse_poscar, sniff_poscar
 # Derived/reporting compatibility exports.
 from .grid_lod import (
     derive_grid_lod,
@@ -148,6 +149,11 @@ from .model import (
     SpectrumProfile,
     SpinChannel,
     Structure,
+    DeclaredSymmetry,
+    unit_cell_parameters,
+    fractional_to_cartesian,
+    cartesian_to_fractional,
+    validate_periodic_coordinate_consistency,
     SurfaceProperty,
     CellFrameProperty,
     TopologyConnection,
@@ -273,6 +279,7 @@ from .spglib_adapter import (
     SpglibDependencyError,
     derive_symmetry,
 )
+from .symmetry_comparison import SymmetryComparison, compare_symmetry
 # Derived/reporting compatibility exports.
 from .trajectory_frames import FrameCacheInfo, TrajectoryFrameManager
 # Reader compatibility exports.
@@ -328,6 +335,7 @@ __all__ = [
     "CCLIB_OUTPUT_READER",
     "CCLibDependencyError",
     "CIF_READER",
+    "POSCAR_READER",
     "CUBE_READER",
     "DatasetStatus",
     "DiagnosticSeverity",
@@ -336,6 +344,7 @@ __all__ = [
     "DensityMatrixLevel",
     "DensityMatrixSpin",
     "DensityOfStates",
+    "DeclaredSymmetry",
     "EnergyReference",
     "ExcitationContribution",
     "ExcitedStateReferences",
@@ -417,12 +426,17 @@ __all__ = [
     "SidecarNotFoundError",
     "SpglibDependencyError",
     "Structure",
+    "unit_cell_parameters",
+    "fractional_to_cartesian",
+    "cartesian_to_fractional",
+    "validate_periodic_coordinate_consistency",
     "SurfaceProperty",
     "CellFrameProperty",
     "TopologyConnection",
     "TopologyGraph",
     "TopologyPath",
     "SymmetryResult",
+    "SymmetryComparison",
     "VibrationalModeSet",
     "TrajectoryFrameManager",
     "XYZ_READER",
@@ -440,6 +454,7 @@ __all__ = [
     "parse_qcschema_atomic_result",
     "parse_qcschema_molecule",
     "parse_cif",
+    "parse_poscar",
     "parse_xyz",
     "parse_mol",
     "parse_sdf",
@@ -456,6 +471,7 @@ __all__ = [
     "sniff_ase_structure",
     "sniff_cclib_output",
     "sniff_cif",
+    "sniff_poscar",
     "sniff_xyz",
     "adapt_ccdata",
     "adapt_iodata",
@@ -481,6 +497,7 @@ __all__ = [
     "default_grid_isovalue",
     "derive_phonon_frames",
     "derive_symmetry",
+    "compare_symmetry",
     "derive_vibrational_spectrum",
     "describe_report_artifact",
     "close_project",

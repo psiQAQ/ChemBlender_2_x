@@ -52,7 +52,10 @@ class ReleaseArtifactTests(unittest.TestCase):
             "LICENSE": b"license",
             "Chem_Nodes.blend": b"blend",
             "Chem_Nodes_En.blend": b"blend",
-            manifest["wheels"][0].removeprefix("./"): b"wheel",
+            **{
+                wheel.removeprefix("./"): b"wheel"
+                for wheel in manifest["wheels"]
+            },
         }
         entries.update({name: b"extra" for name in extra_entries})
         with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as archive:

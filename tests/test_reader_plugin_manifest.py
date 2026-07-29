@@ -15,7 +15,7 @@ VALID_MANIFEST = """
 schema_version = "1"
 plugin_id = "org.example.reader"
 plugin_version = "1.0.0"
-chemblender_api = ">=0.1,<1.0"
+chemblender_api = ">=1.0,<2.0"
 execution_mode = "extension"
 license = ["SPDX:MIT"]
 
@@ -33,10 +33,10 @@ class ReaderPluginManifestTests(unittest.TestCase):
 
         return ReaderPluginManifest.from_toml(text)
 
-    def test_reader_api_version_is_alpha_version(self):
+    def test_reader_api_version_is_v1_release_candidate(self):
         from ChemBlender.reader_api import READER_API_VERSION
 
-        self.assertEqual(READER_API_VERSION, "0.1")
+        self.assertEqual(READER_API_VERSION, "1.0-rc1")
 
     def test_parses_valid_manifest_from_text_and_bytes(self):
         manifest = self.manifest()
@@ -57,11 +57,11 @@ class ReaderPluginManifestTests(unittest.TestCase):
     def test_rejects_invalid_api_ranges(self):
         for api_range in ("*", "latest", "^0.1", "~=0.1", ">=0.1", "", ">=0.1,<0.1", ">=1.0,<0.1"):
             with self.subTest(api_range=api_range), self.assertRaises(ValueError):
-                self.manifest(VALID_MANIFEST.replace(">=0.1,<1.0", api_range))
+                self.manifest(VALID_MANIFEST.replace(">=1.0,<2.0", api_range))
 
     def test_rejects_incompatible_api_range(self):
         with self.assertRaises(ValueError):
-            self.manifest(VALID_MANIFEST.replace(">=0.1,<1.0", ">=0.2,<1.0"))
+            self.manifest(VALID_MANIFEST.replace(">=1.0,<2.0", ">=0.2,<1.0"))
 
     def test_rejects_duplicate_reader_id(self):
         with self.assertRaises(ValueError):
@@ -124,7 +124,7 @@ class ReaderPluginManifestTests(unittest.TestCase):
         licenses = ["SPDX:MIT"]
         readers = [entry]
         manifest = ReaderPluginManifest(
-            "1", "org.example.reader", "1.0.0", ">=0.1,<1.0", "extension", licenses, readers
+            "1", "org.example.reader", "1.0.0", ">=1.0,<2.0", "extension", licenses, readers
         )
         extensions.append(".mutated")
         capabilities.append("grid")
@@ -154,7 +154,7 @@ class ReaderPluginManifestTests(unittest.TestCase):
 
         entry = ReaderManifestEntry("example-format", "1", [".example"], ["structure"])
         with self.assertRaises(ValueError):
-            ReaderPluginManifest(EqualToOne(), "org.example.reader", "1.0.0", ">=0.1,<1.0", "extension", ["SPDX:MIT"], [entry])
+            ReaderPluginManifest(EqualToOne(), "org.example.reader", "1.0.0", ">=1.0,<2.0", "extension", ["SPDX:MIT"], [entry])
 
     def test_descriptor_capabilities_are_immutable_and_ordered(self):
         from ChemBlender.reader_api import (
@@ -403,7 +403,7 @@ class ReaderPluginManifestTests(unittest.TestCase):
         entry = ReaderManifestEntry("example-format", "1", ["example"], ["structure"])
         licenses = ["MIT License", "Apache-2.0", "MIT License"]
         manifest = ReaderPluginManifest(
-            "1", "org.example.reader", "1.0.0", ">=0.1,<1.0", "extension", licenses, [entry]
+            "1", "org.example.reader", "1.0.0", ">=1.0,<2.0", "extension", licenses, [entry]
         )
         licenses.append("GPL-3.0-only")
         self.assertEqual(manifest.license, ("Apache-2.0", "MIT License"))
@@ -414,7 +414,7 @@ class ReaderPluginManifestTests(unittest.TestCase):
         for license_value in ("", "   ", " MIT", "MIT ", StringSubclass("MIT"), 1):
             with self.subTest(license_value=license_value), self.assertRaises(ValueError):
                 ReaderPluginManifest(
-                    "1", "org.example.reader", "1.0.0", ">=0.1,<1.0", "extension", [license_value], [entry]
+                    "1", "org.example.reader", "1.0.0", ">=1.0,<2.0", "extension", [license_value], [entry]
                 )
 
     def test_licenses_normalize_direct_helper_contract(self):
@@ -636,6 +636,9 @@ assert not any(name in sys.modules for name in ('ChemBlender', 'bpy', 'cclib', '
                 "PropertyDataset",
                 "AtomicProperty",
                 "FrameSet",
+                "FrameProperty",
+                "AtomFrameProperty",
+                "CellFrameProperty",
                 "Grid3D",
                 "VibrationalModeSet",
                 "ExcitedStateSet",

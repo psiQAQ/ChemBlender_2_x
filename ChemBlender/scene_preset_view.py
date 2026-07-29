@@ -4,7 +4,12 @@ import json
 
 import bpy
 
-from .core import DatasetStatus, EnergyReference, validate_scene_plan
+from .core import (
+    AtomicProperty,
+    DatasetStatus,
+    EnergyReference,
+    validate_scene_plan,
+)
 from .dataset_view import link_stick_spectrum_selection
 from .electronic_plot import create_band_structure_plot, create_dos_plot
 from .grid_volume import create_grid_volume
@@ -147,7 +152,26 @@ def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
                 )
             )
         elif plan.view_kind == "structure":
-            created.append(create_structure_view(entities["structure"], collection=target))
+            structure = entities["structure"]
+            selective = next(
+                (
+                    value
+                    for value in project.datasets.values()
+                    if (
+                        isinstance(value, AtomicProperty)
+                        and value.structure_id == structure.id
+                        and value.semantic_role == "selective_dynamics"
+                    )
+                ),
+                None,
+            )
+            created.append(
+                create_structure_view(
+                    structure,
+                    selective_dynamics=selective,
+                    collection=target,
+                )
+            )
         elif plan.view_kind == "vibration_spectrum_linked":
             structure = create_structure_view(entities["structure"], collection=target)
             created.append(structure)

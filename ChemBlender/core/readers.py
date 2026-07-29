@@ -11,6 +11,7 @@ from .model import ImportBatch
 _READER_ID_PATTERN = re.compile(r"[a-z][a-z0-9_.-]*", re.ASCII)
 _CAPABILITY_PATTERN = re.compile(r"[a-z][a-z0-9_]*", re.ASCII)
 SNIFF_PREFIX_BYTES = 65536
+READER_API_VERSION = "1.0-rc1"
 _EXECUTION_MODES = frozenset({"built_in", "extension", "worker"})
 
 
@@ -146,7 +147,7 @@ def _builtin_availability():
 class ReaderRuntimeDescriptor:
     descriptor: ReaderDescriptor
     plugin_id: str = "chemblender.builtin"
-    api_version: str = "0.1"
+    api_version: str = READER_API_VERSION
     execution_mode: str = "built_in"
     availability: Callable[[], ReaderAvailability] = _builtin_availability
 

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from math import isfinite
 
 from ..Chem_data import ELEMENTS_DEFAULT
-from ..core import Structure, TopologyRecord
+from ..core import AtomicProperty, Structure, TopologyRecord
 from ..core.topology.periodic import _pbc_primary_coordinates
 
 
@@ -15,7 +15,43 @@ _ELEMENT_BY_NUMBER = {
 _STRUCTURE_CONTRACT = "structure_view_v1"
 _BALL_STICK_CONTRACT = "structure_ball_stick_v1"
 _PERIODIC_DISPLAY_CONTRACT = "structure_periodic_display_v1"
+_PERIODIC_SITE_DISPLAY_CONTRACT = "structure_periodic_sites_v1"
 _PERIODIC_MODIFIER_NAME = "ChemBlender Periodic Images"
+_SELECTIVE_MARKER_CONTRACT = "structure_selective_marker_v1"
+_SELECTIVE_MARKER_GROUP = "ChemBlender Selective Constraints"
+_VIEW_CONTRACT_VERSION = 1
+_FATAL_EXCEPTIONS = (
+    KeyboardInterrupt,
+    SystemExit,
+    GeneratorExit,
+    MemoryError,
+)
+
+
+def _is_view_contract(owner, contract):
+    return (
+        owner.get("cbq_contract") == contract
+        and owner.get("cbq_contract_version") == _VIEW_CONTRACT_VERSION
+    )
+
+
+def _merge_cleanup_failure(failure, error, label):
+    if isinstance(error, _FATAL_EXCEPTIONS) and not isinstance(
+        failure,
+        _FATAL_EXCEPTIONS,
+    ):
+        error.add_note(f"earlier failure: {failure}")
+        return error
+    failure.add_note(f"{label}: {error}")
+    return failure
+
+
+def _run_cleanup(failure, label, callback):
+    try:
+        callback()
+    except BaseException as error:
+        return _merge_cleanup_failure(failure, error, label)
+    return failure
 
 
 def _coordinate_scale(unit):
@@ -55,7 +91,14 @@ def _legacy_bond_order(order, aromatic):
     return max(1, min(3, int(round(order))))
 
 
-def _structure_view_data(structure, topology=None, settings=None):
+def _structure_view_data(
+    structure,
+    topology=None,
+    settings=None,
+    *,
+    selective_dynamics=None,
+    periodic_boundary_tolerance=None,
+):
     import numpy
 
     if not isinstance(structure, Structure):
@@ -72,8 +115,56 @@ def _structure_view_data(structure, topology=None, settings=None):
     coordinates = numpy.asarray(structure.coordinates.values, dtype=float) * scale
     if numpy.iscomplexobj(coordinates) or not numpy.all(numpy.isfinite(coordinates)):
         raise ValueError("structure coordinates must be finite and real")
+    if periodic_boundary_tolerance is not None:
+        if (
+            structure.periodic is None
+            or isinstance(periodic_boundary_tolerance, bool)
+            or not isinstance(periodic_boundary_tolerance, (int, float))
+            or not isfinite(periodic_boundary_tolerance)
+            or periodic_boundary_tolerance < 0.0
+        ):
+            raise ValueError(
+                "periodic_boundary_tolerance requires a periodic Structure "
+                "and a finite non-negative value"
+            )
+        fractional = numpy.asarray(
+            structure.periodic.fractional_coordinates.values,
+            dtype=float,
+        ).copy()
+        for axis, enabled in enumerate(structure.periodic.pbc):
+            if enabled:
+                fractional[:, axis] %= 1.0
+                values = fractional[:, axis]
+                values[
+                    (numpy.abs(values) <= periodic_boundary_tolerance)
+                    | (
+                        numpy.abs(values - 1.0)
+                        <= periodic_boundary_tolerance
+                    )
+                ] = 0.0
+        coordinates = (
+            fractional
+            @ numpy.asarray(structure.cell.values, dtype=float)
+            * scale
+        )
 
     atom_count = len(structure.atomic_numbers)
+    selective = None
+    if selective_dynamics is not None:
+        if (
+            not isinstance(selective_dynamics, AtomicProperty)
+            or selective_dynamics.structure_id != structure.id
+            or selective_dynamics.semantic_role != "selective_dynamics"
+            or selective_dynamics.data.dims != ("atom", "xyz")
+            or selective_dynamics.data.shape != (atom_count, 3)
+        ):
+            raise ValueError(
+                "selective_dynamics must match the Structure atom axes"
+            )
+        selective = numpy.asarray(
+            selective_dynamics.data.values,
+            dtype=numpy.bool_,
+        )
     elements = tuple(
         _ELEMENT_BY_NUMBER.get(number, ("Dummy", ELEMENTS_DEFAULT["Dummy"]))
         for number in structure.atomic_numbers
@@ -95,6 +186,24 @@ def _structure_view_data(structure, topology=None, settings=None):
         "u_v2": (0.0, 1.0, 0.0) * atom_count,
         "u_v3": (0.0, 0.0, 1.0) * atom_count,
         "element_symbols": tuple(symbol for symbol, _data in elements),
+        "cbq_selective_x": (
+            () if selective is None else tuple(map(bool, selective[:, 0]))
+        ),
+        "cbq_selective_y": (
+            () if selective is None else tuple(map(bool, selective[:, 1]))
+        ),
+        "cbq_selective_z": (
+            () if selective is None else tuple(map(bool, selective[:, 2]))
+        ),
+        "selective_atom_ids": (
+            ()
+            if selective is None
+            else tuple(
+                index
+                for index, flags in enumerate(selective)
+                if not bool(numpy.all(flags))
+            )
+        ),
     }
     if topology is None:
         return {
@@ -237,7 +346,12 @@ def _write_point_attributes(mesh, data, *, atom_ids=None):
         for component in range(4)
     )
     _write_attribute(mesh, "colour", "FLOAT_COLOR", "color", colors)
-    _write_attribute(mesh, "siteid", "INT", "value", (0,) * count)
+    site_ids = (
+        data["siteid"]
+        if atom_ids == data["cbq_atom_id"]
+        else tuple(data["siteid"][index] for index in atom_ids)
+    )
+    _write_attribute(mesh, "siteid", "INT", "value", site_ids)
     for name, vector in (
         ("u_scale", (1.0, 1.0, 1.0)),
         ("u_v1", (1.0, 0.0, 0.0)),
@@ -251,6 +365,18 @@ def _write_point_attributes(mesh, data, *, atom_ids=None):
             "vector",
             vector * count,
         )
+    if data["cbq_selective_x"]:
+        for name in (
+            "cbq_selective_x",
+            "cbq_selective_y",
+            "cbq_selective_z",
+        ):
+            values = (
+                data[name]
+                if atom_ids == data["cbq_atom_id"]
+                else tuple(data[name][index] for index in atom_ids)
+            )
+            _write_attribute(mesh, name, "BOOLEAN", "value", values)
 
 
 def _write_edge_attributes(
@@ -342,6 +468,8 @@ def _periodic_display_object(main, collection, data):
             bond_scale=(float(data["settings"].bond_scale),) * len(segments),
         )
         display["cb_structure_contract"] = _PERIODIC_DISPLAY_CONTRACT
+        display["cbq_contract"] = _PERIODIC_DISPLAY_CONTRACT
+        display["cbq_contract_version"] = _VIEW_CONTRACT_VERSION
         display["cb_structure_id"] = main["cb_structure_id"]
         display.hide_render = True
         display.hide_set(True)
@@ -370,14 +498,20 @@ def _periodic_display_object(main, collection, data):
         group.links.new(object_info.outputs["Geometry"], join.inputs["Geometry"])
         group.links.new(join.outputs["Geometry"], group_output.inputs["Geometry"])
         group["cbq_contract"] = _PERIODIC_DISPLAY_CONTRACT
+        group["cbq_contract_version"] = _VIEW_CONTRACT_VERSION
         modifier.node_group = group
         modifier["cbq_contract"] = _PERIODIC_DISPLAY_CONTRACT
+        modifier["cbq_contract_version"] = _VIEW_CONTRACT_VERSION
         ball_stick = next(
             (
                 item
                 for item in main.modifiers
                 if item.node_group is not None
-                and item.node_group.get("cbq_contract") == _BALL_STICK_CONTRACT
+                and _is_view_contract(
+                    item.node_group,
+                    _BALL_STICK_CONTRACT,
+                )
+                and _is_view_contract(item, _BALL_STICK_CONTRACT)
             ),
             None,
         )
@@ -389,16 +523,150 @@ def _periodic_display_object(main, collection, data):
         main["cb_periodic_display_object"] = display.name
         main["cb_periodic_display_bond_count"] = len(segments)
         return display
-    except Exception:
+    except BaseException as error:
         if modifier is not None:
-            main.modifiers.remove(modifier)
-        if group is not None and group.users == 0:
-            bpy.data.node_groups.remove(group)
+            error = _run_cleanup(
+                error,
+                "periodic display modifier cleanup failed",
+                lambda: main.modifiers.remove(modifier),
+            )
         if display is not None:
-            bpy.data.objects.remove(display, do_unlink=True)
+            error = _run_cleanup(
+                error,
+                "periodic display object cleanup failed",
+                lambda: bpy.data.objects.remove(display, do_unlink=True),
+            )
         if mesh.users == 0:
-            bpy.data.meshes.remove(mesh)
-        raise
+            error = _run_cleanup(
+                error,
+                "periodic display mesh cleanup failed",
+                lambda: bpy.data.meshes.remove(mesh),
+            )
+        if group is not None and group.users == 0:
+            error = _run_cleanup(
+                error,
+                "periodic display node-group cleanup failed",
+                lambda: bpy.data.node_groups.remove(group),
+            )
+        raise error
+
+
+def _ensure_selective_marker_group():
+    import bpy
+
+    group = bpy.data.node_groups.get(_SELECTIVE_MARKER_GROUP)
+    if group is not None:
+        if (
+            group.bl_idname != "GeometryNodeTree"
+            or not _is_view_contract(group, _SELECTIVE_MARKER_CONTRACT)
+        ):
+            raise RuntimeError(
+                f"incompatible node group already uses {_SELECTIVE_MARKER_GROUP}"
+            )
+        return group
+    group = bpy.data.node_groups.new(
+        _SELECTIVE_MARKER_GROUP,
+        "GeometryNodeTree",
+    )
+    try:
+        group.is_modifier = True
+        group.interface.new_socket(
+            name="Geometry",
+            in_out="INPUT",
+            socket_type="NodeSocketGeometry",
+        )
+        group.interface.new_socket(
+            name="Geometry",
+            in_out="OUTPUT",
+            socket_type="NodeSocketGeometry",
+        )
+        group_input = group.nodes.new("NodeGroupInput")
+        group_output = group.nodes.new("NodeGroupOutput")
+        points = group.nodes.new("GeometryNodeMeshToPoints")
+        points.mode = "VERTICES"
+        points.inputs["Radius"].default_value = 0.14
+        sphere = group.nodes.new("GeometryNodeMeshIcoSphere")
+        sphere.inputs["Radius"].default_value = 0.14
+        sphere.inputs["Subdivisions"].default_value = 1
+        instance = group.nodes.new("GeometryNodeInstanceOnPoints")
+        group.links.new(group_input.outputs["Geometry"], points.inputs["Mesh"])
+        group.links.new(points.outputs["Points"], instance.inputs["Points"])
+        group.links.new(sphere.outputs["Mesh"], instance.inputs["Instance"])
+        group.links.new(
+            instance.outputs["Instances"],
+            group_output.inputs["Geometry"],
+        )
+        group["cbq_contract"] = _SELECTIVE_MARKER_CONTRACT
+        group["cbq_contract_version"] = _VIEW_CONTRACT_VERSION
+        return group
+    except BaseException as error:
+        if group.users == 0:
+            error = _run_cleanup(
+                error,
+                "selective marker node-group cleanup failed",
+                lambda: bpy.data.node_groups.remove(group),
+            )
+        raise error
+
+
+def _selective_marker_object(main, collection, data):
+    import bpy
+
+    atom_ids = data["selective_atom_ids"]
+    if not atom_ids:
+        return None
+    mesh = bpy.data.meshes.new(f"{main.name} Selective Constraints")
+    marker = None
+    group = None
+    group_created = bpy.data.node_groups.get(_SELECTIVE_MARKER_GROUP) is None
+    try:
+        mesh.from_pydata(
+            tuple(data["coordinates"][index] for index in atom_ids),
+            (),
+            (),
+        )
+        marker = bpy.data.objects.new(mesh.name, mesh)
+        collection.objects.link(marker)
+        _write_point_attributes(mesh, data, atom_ids=atom_ids)
+        modifier = marker.modifiers.new(
+            _SELECTIVE_MARKER_GROUP,
+            "NODES",
+        )
+        group = _ensure_selective_marker_group()
+        modifier.node_group = group
+        modifier["cbq_contract"] = _SELECTIVE_MARKER_CONTRACT
+        modifier["cbq_contract_version"] = _VIEW_CONTRACT_VERSION
+        marker.parent = main
+        marker.show_in_front = True
+        marker.hide_render = True
+        marker["cbq_contract"] = _SELECTIVE_MARKER_CONTRACT
+        marker["cbq_contract_version"] = _VIEW_CONTRACT_VERSION
+        marker["cb_structure_id"] = main["cb_structure_id"]
+        main["cb_selective_marker_object"] = marker.name
+        main["cb_selective_constraint_count"] = len(atom_ids)
+        main["cb_selective_constraints_visible"] = True
+        mesh.update()
+        return marker
+    except BaseException as error:
+        if marker is not None:
+            error = _run_cleanup(
+                error,
+                "selective marker object cleanup failed",
+                lambda: bpy.data.objects.remove(marker, do_unlink=True),
+            )
+        if mesh.users == 0:
+            error = _run_cleanup(
+                error,
+                "selective marker mesh cleanup failed",
+                lambda: bpy.data.meshes.remove(mesh),
+            )
+        if group_created and group is not None and group.users == 0:
+            error = _run_cleanup(
+                error,
+                "selective marker node-group cleanup failed",
+                lambda: bpy.data.node_groups.remove(group),
+            )
+        raise error
 
 
 def _set_topology_metadata(obj, topology):
@@ -428,8 +696,14 @@ def _remove_periodic_display(obj):
     for modifier in tuple(obj.modifiers):
         if (
             modifier.node_group is not None
-            and modifier.node_group.get("cbq_contract")
-            == _PERIODIC_DISPLAY_CONTRACT
+            and _is_view_contract(
+                modifier.node_group,
+                _PERIODIC_DISPLAY_CONTRACT,
+            )
+            and _is_view_contract(
+                modifier,
+                _PERIODIC_DISPLAY_CONTRACT,
+            )
         ):
             groups.append(modifier.node_group)
             obj.modifiers.remove(modifier)
@@ -439,6 +713,17 @@ def _remove_periodic_display(obj):
         if isinstance(display_name, str)
         else None
     )
+    if (
+        display is not None
+        and (
+            display.parent != obj
+            or not _is_view_contract(
+                display,
+                _PERIODIC_DISPLAY_CONTRACT,
+            )
+        )
+    ):
+        display = None
     if display is not None:
         mesh = display.data
         bpy.data.objects.remove(display, do_unlink=True)
@@ -470,7 +755,17 @@ def update_structure_view_topology(
         raise ValueError("obj is not a ChemBlender Structure view")
     if obj.get("cb_structure_id") != str(structure.id):
         raise ValueError("Structure does not match the Blender object")
-    data = _structure_view_data(structure, topology, settings)
+    tolerance = (
+        obj.get("cbq_periodic_boundary_tolerance")
+        if obj.get("cbq_periodic_representation") != "source_sites"
+        else None
+    )
+    data = _structure_view_data(
+        structure,
+        topology,
+        settings,
+        periodic_boundary_tolerance=tolerance,
+    )
     if len(obj.data.vertices) != len(data["coordinates"]):
         raise ValueError("Structure atom count does not match the Blender object")
 
@@ -512,6 +807,8 @@ def create_structure_view(
     topology=None,
     settings=None,
     *,
+    selective_dynamics=None,
+    periodic_boundary_tolerance=None,
     name="ChemBlender Structure",
     collection=None,
 ):
@@ -523,7 +820,13 @@ def create_structure_view(
         collection = bpy.context.collection
     if collection is None:
         raise ValueError("a Blender collection is required")
-    data = _structure_view_data(structure, topology, settings)
+    data = _structure_view_data(
+        structure,
+        topology,
+        settings,
+        selective_dynamics=selective_dynamics,
+        periodic_boundary_tolerance=periodic_boundary_tolerance,
+    )
     settings = data["settings"]
     mesh = bpy.data.meshes.new(name)
     obj = None
@@ -562,18 +865,27 @@ def create_structure_view(
             obj["cb_pbc"] = structure.periodic.pbc
         if data["periodic_segments"] and settings.display_periodic_images:
             _periodic_display_object(obj, collection, data)
+        _selective_marker_object(obj, collection, data)
         if settings.attach_ball_and_stick:
             from .. import node
 
             node.ensure_structure_ball_stick_modifier(obj)
         mesh.update()
         return obj
-    except Exception:
+    except BaseException as error:
         if obj is not None and obj.name in bpy.data.objects:
-            remove_structure_view(obj)
+            error = _run_cleanup(
+                error,
+                "Structure view cleanup failed",
+                lambda: remove_structure_view(obj),
+            )
         elif mesh.users == 0:
-            bpy.data.meshes.remove(mesh)
-        raise
+            error = _run_cleanup(
+                error,
+                "Structure mesh cleanup failed",
+                lambda: bpy.data.meshes.remove(mesh),
+            )
+        raise error
 
 
 def remove_structure_view(obj):
@@ -581,27 +893,129 @@ def remove_structure_view(obj):
 
     if not isinstance(obj, bpy.types.Object):
         raise TypeError("obj must be a Blender Object")
-    display_name = obj.get("cb_periodic_display_object")
-    display = (
-        bpy.data.objects.get(display_name)
-        if isinstance(display_name, str)
+    def owned_child(property_name, contract):
+        name = obj.get(property_name)
+        child = (
+            bpy.data.objects.get(name) if isinstance(name, str) else None
+        )
+        return (
+            child
+            if child is not None
+            and getattr(child, "parent", None) == obj
+            and _is_view_contract(child, contract)
+            else None
+        )
+
+    display = owned_child(
+        "cb_periodic_display_object",
+        _PERIODIC_DISPLAY_CONTRACT,
+    )
+    marker = owned_child(
+        "cb_selective_marker_object",
+        _SELECTIVE_MARKER_CONTRACT,
+    )
+    site_display = owned_child(
+        "cbq_periodic_site_display_object",
+        _PERIODIC_SITE_DISPLAY_CONTRACT,
+    )
+    cell_display = owned_child(
+        "cbq_periodic_cell_object",
+        "periodic_cell_display_v1",
+    )
+    adp_display = owned_child(
+        "cbq_periodic_adp_object",
+        "periodic_adp_display_v1",
+    )
+    occupancy_display = owned_child(
+        "cbq_periodic_occupancy_object",
+        "periodic_occupancy_display_v1",
+    )
+    occupancy_material_name = obj.get("cbq_periodic_occupancy_material")
+    occupancy_material = (
+        bpy.data.materials.get(occupancy_material_name)
+        if isinstance(occupancy_material_name, str)
         else None
     )
+    if (
+        occupancy_material is not None
+        and not _is_view_contract(
+            occupancy_material,
+            "periodic_occupancy_material_v1",
+        )
+    ):
+        occupancy_material = None
     groups = tuple(
         modifier.node_group
         for modifier in obj.modifiers
         if modifier.node_group is not None
-        and modifier.node_group.get("cbq_contract")
-        in {_BALL_STICK_CONTRACT, _PERIODIC_DISPLAY_CONTRACT}
+        and any(
+            _is_view_contract(modifier.node_group, contract)
+            and _is_view_contract(modifier, contract)
+            for contract in (
+                _BALL_STICK_CONTRACT,
+                _PERIODIC_DISPLAY_CONTRACT,
+            )
+        )
     )
     data_blocks = [obj.data]
     if display is not None:
         data_blocks.append(display.data)
         bpy.data.objects.remove(display, do_unlink=True)
+    if marker is not None:
+        data_blocks.append(marker.data)
+        groups += tuple(
+            modifier.node_group
+            for modifier in marker.modifiers
+            if modifier.node_group is not None
+            and _is_view_contract(
+                modifier.node_group,
+                _SELECTIVE_MARKER_CONTRACT,
+            )
+            and _is_view_contract(modifier, _SELECTIVE_MARKER_CONTRACT)
+        )
+        bpy.data.objects.remove(marker, do_unlink=True)
+    if site_display is not None:
+        data_blocks.append(site_display.data)
+        groups += tuple(
+            modifier.node_group
+            for modifier in site_display.modifiers
+            if modifier.node_group is not None
+            and any(
+                _is_view_contract(modifier.node_group, contract)
+                and _is_view_contract(modifier, contract)
+                for contract in (
+                    _BALL_STICK_CONTRACT,
+                    _PERIODIC_SITE_DISPLAY_CONTRACT,
+                )
+            )
+        )
+        bpy.data.objects.remove(site_display, do_unlink=True)
+    for child, contract in (
+        (cell_display, "periodic_cell_edges_v1"),
+        (adp_display, "periodic_thermal_ellipsoid_v1"),
+        (occupancy_display, "periodic_site_occupancy_v1"),
+    ):
+        if child is None:
+            continue
+        data_blocks.append(child.data)
+        groups += tuple(
+            modifier.node_group
+            for modifier in child.modifiers
+            if modifier.node_group is not None
+            and _is_view_contract(modifier.node_group, contract)
+            and _is_view_contract(modifier, contract)
+        )
+        bpy.data.objects.remove(child, do_unlink=True)
     bpy.data.objects.remove(obj, do_unlink=True)
     for data in data_blocks:
         if data is not None and data.users == 0:
             bpy.data.meshes.remove(data)
+    unique_groups = []
     for group in groups:
+        if group not in unique_groups:
+            unique_groups.append(group)
+    for group in unique_groups:
         if group.users == 0:
             bpy.data.node_groups.remove(group)
+    if occupancy_material is not None and occupancy_material.users == 0:
+        bpy.data.materials.remove(occupancy_material)

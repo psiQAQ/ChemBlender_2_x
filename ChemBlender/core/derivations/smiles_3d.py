@@ -150,7 +150,7 @@ def _derived_source_revision(source, revision, created, diagnostics):
     encoded = json.dumps(parameters, separators=(",", ":")).encode("utf-8")
     return SourceRevision(id=_identity(revision, "source_revision"), source_id=source.source_id, content_hash=source.content_hash,
         byte_size=source.byte_size, locator=source.locator, locator_kind=source.locator_kind, original_filename=source.original_filename,
-        reader_plugin_id="chemblender.builtin", reader_id="smiles-3d", reader_version=_VERSION, reader_api_version="0.1",
+        reader_plugin_id="chemblender.builtin", reader_id="smiles-3d", reader_version=_VERSION, reader_api_version=source.reader_api_version,
         import_parameters_hash=hashlib.sha256(encoded).hexdigest(),
         parse_identity=source_parse_identity(source.content_hash, "chemblender.builtin", "smiles-3d", _VERSION, parameters),
         created_entity_ids=created, diagnostic_ids=tuple(item.id for item in diagnostics))

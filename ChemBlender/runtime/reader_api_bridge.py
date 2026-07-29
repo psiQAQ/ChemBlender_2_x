@@ -7,7 +7,7 @@ from ..reader_api.registry import (
 from ..reader_api.version import READER_API_VERSION
 
 
-READER_API_HANDLE_KEY = "chemblender.reader_api.v0"
+READER_API_HANDLE_KEY = "chemblender.reader_api.v1"
 
 
 class ReaderAPIRegistrationError(RuntimeError):

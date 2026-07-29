@@ -18,6 +18,8 @@ from bpy.props import (
 from ..properties import (
     _same_scene_property,
     _scene_property_identity,
+    draw_crystal_symmetry_properties,
+    draw_selective_dynamics_properties,
     get_quick_import_state,
 )
 from ..session import get_scene_session
@@ -421,6 +423,35 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
             selected_record = session.project.molecular_records.get(
                 session.active_entity_id
             )
+            selected_structure = session.project.structures.get(
+                session.active_entity_id
+            )
+            if (
+                isinstance(selected_structure, Structure)
+                and selected_structure.periodic is not None
+            ):
+                derived = next(
+                    (
+                        result
+                        for result in reversed(
+                            tuple(
+                                session.project.symmetry_results.values()
+                            )
+                        )
+                        if result.structure_id == selected_structure.id
+                    ),
+                    None,
+                )
+                draw_crystal_symmetry_properties(
+                    layout,
+                    selected_structure,
+                    derived,
+                )
+                draw_selective_dynamics_properties(
+                    layout,
+                    session.project,
+                    selected_structure,
+                )
             if (
                 isinstance(selected, AtomFrameProperty)
                 and selected.semantic_role == "atomic_force"
