@@ -220,14 +220,19 @@ categorical decoder is a non-blocking final-qualification cleanup.
 **Interfaces:**
 - Produces: readiness reports for future export.
 
-- [ ] **Step 1: Define required identity fields and representability**
+- [x] **Step 1: Define required identity fields and representability**
 
 PDB readiness requires atom names, residue identity, serial allocation and coordinates. PQR additionally requires finite charge/radius. Report line-width/field overflow risks.
 
-- [ ] **Step 2: Implement and test**
+- [x] **Step 2: Implement and test**
 
 Complete imported entities report Ready; generic molecules report MissingHierarchy; long identifiers report FieldOverflow.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 Commit readiness boundary without claiming exporter support.
+
+Completion evidence: `d57aac0`, `ec713f3`; 11 focused and 112 related tests
+passed, public imports, `compileall` and `git diff --check` passed. Fix round 1
+closed PQR cardinality/FrameSet and live hierarchy validation findings with no
+open issues.
