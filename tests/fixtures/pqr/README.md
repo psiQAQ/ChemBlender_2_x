@@ -3,5 +3,7 @@
 - `with-chain.pqr`: validated whitespace PQR records with chain IDs and an
   appended residue insertion code.
 - `no-chain.pqr`: validated whitespace PQR records without chain IDs.
+- `padded.pqr`: valid no-chain PQR whose whitespace also resembles fixed-column
+  PDB occupancy/B-factor placement.
 - `malformed.pqr`: one valid atom followed by invalid charge, shifted fields,
   unknown element identity and missing-radius records.

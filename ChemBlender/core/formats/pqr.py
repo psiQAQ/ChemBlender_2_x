@@ -37,8 +37,8 @@ from .pdb import (
     _array,
     _categorical,
     _hierarchy,
-    _infer_element,
     _property,
+    _STANDARD_POLYMER_RESIDUES,
     parse_pdb_records,
 )
 
@@ -54,6 +54,11 @@ _PARSED_CAPABILITIES = (
 )
 _RESIDUE_IDENTIFIER = re.compile(r"([+-]?\d+)([A-Za-z]?)\Z", re.ASCII)
 _MAX_LINE_BYTES = 4096
+_EXPLICIT_TWO_LETTER_ELEMENTS = {
+    "BR": "Br",
+    "CL": "Cl",
+    "FE": "Fe",
+}
 
 
 class PQRSyntaxError(ValueError):
@@ -137,10 +142,30 @@ def _residue_identifier(token):
     return int(match.group(1)), match.group(2)
 
 
-def _atom_name_field(atom_name):
-    if atom_name[0].isdigit() or len(atom_name) > 1:
-        return atom_name.ljust(4)
-    return f" {atom_name:<3}"
+def _infer_pqr_element(atom_name, record_name, residue_name):
+    token = atom_name.upper()
+    residue = residue_name.upper()
+    if len(token) > 1 and token[0].isdigit() and token[1] == "H":
+        return "H"
+    if record_name == "ATOM" and residue in _STANDARD_POLYMER_RESIDUES:
+        if residue == "SEC" and token.startswith("SE"):
+            return "Se"
+        if token[0] in "CHNOPS":
+            return token[0]
+    if len(token) == 1 and token in _ELEMENT_NUMBERS:
+        return token
+    if token in _EXPLICIT_TWO_LETTER_ELEMENTS:
+        return _EXPLICIT_TWO_LETTER_ELEMENTS[token]
+    candidate = token[0] + token[1:].lower()
+    if (
+        record_name == "HETATM"
+        and token == residue
+        and candidate in _ELEMENT_NUMBERS
+    ):
+        return candidate
+    if token[0] in "CHNOPS" and any(value.isdigit() for value in token[1:]):
+        return token[0]
+    return None
 
 
 def _parse_fields(fields, dialect, raw_line, record_index):
@@ -167,15 +192,18 @@ def _parse_fields(fields, dialect, raw_line, record_index):
     if radius <= 0:
         raise _FieldError("radius", "radius must be positive")
     record_name = fields[0]
-    element = _infer_element(
-        _atom_name_field(atom_name),
-        "ATOM  " if record_name == "ATOM" else "HETATM",
-        residue_name.upper(),
+    element = _infer_pqr_element(
+        atom_name,
+        record_name,
+        residue_name,
     )
     if element is None:
         raise _FieldError(
             "element",
-            "PQR atom name does not identify a recognized element",
+            (
+                f"PQR atom name {atom_name!r} does not unambiguously identify "
+                "an element from record/residue context"
+            ),
         )
     return PQRAtomRecord(
         raw_line=raw_line,
@@ -195,10 +223,6 @@ def _parse_fields(fields, dialect, raw_line, record_index):
     )
 
 
-def _looks_like_fixed_pdb(raw_line):
-    return bool(parse_pdb_records(raw_line).atoms)
-
-
 def parse_pqr_records(raw_source, *, validation_mode="balanced"):
     if not isinstance(raw_source, bytes):
         raise TypeError("raw_source must be bytes")
@@ -208,6 +232,7 @@ def parse_pqr_records(raw_source, *, validation_mode="balanced"):
 
     atoms = []
     issues = []
+    residue_names = {}
     for record_index, raw_line in enumerate(raw_source.splitlines(keepends=True)):
         line_bytes = raw_line.rstrip(b"\r\n")
         if len(line_bytes) > _MAX_LINE_BYTES:
@@ -235,16 +260,6 @@ def parse_pqr_records(raw_source, *, validation_mode="balanced"):
         fields = line.split()
         if not fields or fields[0] not in {"ATOM", "HETATM"}:
             continue
-        if _looks_like_fixed_pdb(raw_line):
-            issues.append(
-                _issue(
-                    IssueKind.INVALID,
-                    record_index,
-                    "dialect",
-                    "fixed-column PDB atom record is not whitespace PQR",
-                )
-            )
-            continue
 
         candidates = []
         for dialect, field_count in (("no_chain", 10), ("with_chain", 11)):
@@ -265,6 +280,28 @@ def parse_pqr_records(raw_source, *, validation_mode="balanced"):
                 )
         if len(candidates) == 1:
             atom = candidates[0]
+            residue_key = (
+                atom.chain_id,
+                atom.segment_index,
+                atom.residue_number,
+                atom.insertion_code,
+                atom.record_kind == "hetatm",
+            )
+            previous_name = residue_names.get(residue_key)
+            if previous_name is not None and previous_name != atom.residue_name:
+                issues.append(
+                    _issue(
+                        IssueKind.INVALID,
+                        record_index,
+                        "residue_name",
+                        (
+                            f"residue key was first labeled {previous_name!r} "
+                            f"and conflicts with {atom.residue_name!r}"
+                        ),
+                    )
+                )
+                continue
+            residue_names[residue_key] = atom.residue_name
             atoms.append(atom)
             issues.append(
                 _issue(
@@ -273,7 +310,7 @@ def parse_pqr_records(raw_source, *, validation_mode="balanced"):
                     "element",
                     (
                         f"inferred {atom.element} from PQR atom name "
-                        "using PDB naming rules"
+                        f"{atom.atom_name!r} and record/residue context"
                     ),
                 )
             )
@@ -313,6 +350,14 @@ def sniff_pqr(source: Path, prefix: bytes) -> SniffResult:
         return SniffResult(
             SniffMatch.NONE,
             "missing valid PQR atom with charge and radius",
+        )
+    if (
+        Path(source).suffix.lower() != ".pqr"
+        and parse_pdb_records(prefix).atoms
+    ):
+        return SniffResult(
+            SniffMatch.NONE,
+            "content also matches fixed-column PDB and source is not .pqr",
         )
     try:
         truncated = Path(source).stat().st_size > len(prefix)
