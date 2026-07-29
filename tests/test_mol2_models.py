@@ -39,7 +39,7 @@ def categorical(values, categories):
 
 
 def mol2_fixture():
-    atom_names = categorical((0, -1), ("C1",))
+    atom_names = categorical((0, 1), ("C1", "H1"))
     structure = Structure(
         id=uuid4(),
         revision="mol2-structure-r1",
@@ -71,8 +71,8 @@ def mol2_fixture():
         revision="mol2-atom-types-r1",
         semantic_role="atom_type",
         domain="atom",
-        data=categorical((0, -1), ("C.3",)),
-        status=DatasetStatus.PARTIAL,
+        data=categorical((0, 1), ("C.3", "H")),
+        status=DatasetStatus.COMPLETE,
         source_calculation=None,
         provenance_ids=(),
         structure_id=structure.id,
@@ -93,8 +93,8 @@ def mol2_fixture():
         revision="mol2-substructure-names-r1",
         semantic_role="substructure_name",
         domain="atom",
-        data=categorical((0, -1), ("METHANE",)),
-        status=DatasetStatus.PARTIAL,
+        data=categorical((0, 0), ("METHANE",)),
+        status=DatasetStatus.COMPLETE,
         source_calculation=None,
         provenance_ids=(),
         structure_id=structure.id,
@@ -134,6 +134,7 @@ def mol2_fixture():
         b"2 1 1 1 0\r\n"
         b"SMALL\r\n"
         b"USER_CHARGES\r\n"
+        b"INVALID_CHARGES\r\n"
         b"@<TRIPOS>ATOM\r\n"
         b"10 C1 0.0 0.0 0.0 C.3 101 METHANE -0.12\r\n"
         b"42 H1 1.0 0.0 0.0 H 101 METHANE 0.12\r\n"
@@ -251,19 +252,25 @@ class Mol2ModelMappingTests(unittest.TestCase):
             self.assertIsInstance(datasets_by_id[substructure_ids.id], AtomicProperty)
             self.assertEqual(
                 numpy.asarray(structure_value.atomic_identity.atom_names.codes.values).tolist(),
-                [0, -1],
+                [0, 1],
             )
-            self.assertEqual(structure_value.atomic_identity.atom_names.categories, ("C1",))
+            self.assertEqual(
+                structure_value.atomic_identity.atom_names.categories,
+                ("C1", "H1"),
+            )
             self.assertEqual(structure_value.atomic_identity.atom_names.missing_code, -1)
             self.assertEqual(
                 numpy.asarray(datasets_by_id[atom_types.id].data.codes.values).tolist(),
-                [0, -1],
+                [0, 1],
             )
-            self.assertEqual(datasets_by_id[atom_types.id].data.categories, ("C.3",))
+            self.assertEqual(
+                datasets_by_id[atom_types.id].data.categories,
+                ("C.3", "H"),
+            )
             self.assertEqual(datasets_by_id[atom_types.id].data.missing_code, -1)
             self.assertEqual(
                 numpy.asarray(datasets_by_id[substructure_names.id].data.codes.values).tolist(),
-                [0, -1],
+                [0, 0],
             )
             self.assertEqual(
                 datasets_by_id[substructure_names.id].data.categories,
@@ -290,6 +297,7 @@ class Mol2ModelMappingTests(unittest.TestCase):
                     b"2 1 1 1 0\r\n"
                     b"SMALL\r\n"
                     b"USER_CHARGES\r\n"
+                    b"INVALID_CHARGES\r\n"
                     b"@<TRIPOS>ATOM\r\n"
                     b"10 C1 0.0 0.0 0.0 C.3 101 METHANE -0.12\r\n"
                     b"42 H1 1.0 0.0 0.0 H 101 METHANE 0.12\r\n"
