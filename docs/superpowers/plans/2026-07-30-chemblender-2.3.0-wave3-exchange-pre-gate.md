@@ -114,9 +114,9 @@
 
 - [x] **RED:** add documentation contracts for the ADR, architecture inventory and downstream-plan references.
 - [x] Document the approved mappings without implementing format code.
-- [ ] Run focused tests, then the full suite, `compileall` and `git diff --check`.
-- [ ] Run Blender 5.1.2 native validate/build and ZIP safe-path/duplicate/CRC/wheel audit.
-- [ ] Perform separate specification-compliance and code-quality review passes; fix all in-scope findings and rerun affected verification.
-- [ ] Mark the gate completed, record exact RED/GREEN/Blender evidence and next task `Wave 3 Task 1 — MOL2 adapter`.
-- [ ] Commit documentation as `docs: freeze Wave 3 exchange mappings`, then commit the final cursor/plan as `chore: checkpoint exchange pre gate`.
-- [ ] Stop with a clean worktree; no reader implementation and no push.
+- [x] Run focused tests, then the full suite, `compileall` and `git diff --check`.
+- [x] Run Blender 5.1.2 native validate/build and ZIP safe-path/duplicate/CRC/wheel audit.
+- [x] Perform separate specification-compliance and code-quality review passes; fix all in-scope findings and rerun affected verification.
+- [x] Mark the gate completed, record exact RED/GREEN/Blender evidence and next task `Wave 3 Task 1 — MOL2 adapter`.
+- [x] Commit documentation as `docs: freeze Wave 3 exchange mappings`, then commit the final cursor/plan as `chore: checkpoint exchange pre gate`.
+- [x] Stop with a clean worktree; no reader implementation and no push.
