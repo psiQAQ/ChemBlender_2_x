@@ -65,6 +65,26 @@ def external_plugin(plugin_id, reader_id):
     )
 
 
+class _PoisonBoolean:
+    def __bool__(self):
+        raise OSError("poison bool")
+
+
+class _MalformedManifest:
+    plugin_id = "org.example.malformed_equality"
+    plugin_version = "1.0.0"
+    execution_mode = ExecutionMode.EXTENSION
+    readers = ()
+
+    def __init__(self, equality):
+        self._equality = equality
+
+    def __eq__(self, _other):
+        if isinstance(self._equality, BaseException):
+            raise self._equality
+        return self._equality
+
+
 class ReaderPluginDiscoveryTests(unittest.TestCase):
     def discovery(self):
         module = importlib.import_module("ChemBlender.reader_api.discovery")
@@ -373,6 +393,90 @@ class ReaderPluginDiscoveryTests(unittest.TestCase):
             registry.descriptors,
             discovery.refresh().descriptors,
         )
+
+    def test_malformed_equality_cannot_poison_unrelated_good_unregister(self):
+        for equality in (
+            OSError("poison equality"),
+            _PoisonBoolean(),
+        ):
+            with self.subTest(equality=type(equality).__name__):
+                discovery, registry = self.discovery()
+                malformed = SimpleNamespace(
+                    manifest=_MalformedManifest(equality),
+                    descriptor=None,
+                    priority=0,
+                )
+                failed = discovery.register(malformed)
+                good = external_plugin(
+                    "org.example.unrelated_good",
+                    "external.unrelated_good",
+                )
+                discovery.register(good)
+
+                self.assertTrue(discovery.unregister(good.manifest))
+
+                self.assertNotIn(
+                    good.descriptor.reader_id,
+                    {item.reader_id for item in registry.descriptors},
+                )
+                self.assertIn(failed, discovery.refresh().plugins)
+
+    def test_fatal_manifest_equality_preserves_state_and_propagates(self):
+        for fatal in (
+            MemoryError("out of memory"),
+            KeyboardInterrupt(),
+            SystemExit(),
+            GeneratorExit(),
+        ):
+            with self.subTest(error=type(fatal).__name__):
+                discovery, registry = self.discovery()
+                malformed = SimpleNamespace(
+                    manifest=_MalformedManifest(fatal),
+                    descriptor=None,
+                    priority=0,
+                )
+                discovery.register(malformed)
+                good = external_plugin(
+                    "org.example.equality_fatal_good",
+                    "external.equality_fatal_good",
+                )
+                discovery.register(good)
+                before = discovery.refresh()
+
+                with self.assertRaises(type(fatal)):
+                    discovery.unregister(good.manifest)
+
+                self.assertIs(discovery.refresh(), before)
+                self.assertIn(
+                    good.descriptor.reader_id,
+                    {item.reader_id for item in registry.descriptors},
+                )
+
+    def test_repeated_never_owned_unregister_stays_one_failure(self):
+        discovery, registry = self.discovery()
+        manifest = external_plugin(
+            "org.example.never_owned",
+            "external.never_owned",
+        ).manifest
+        before = registry.descriptors
+
+        first = discovery.unregister(manifest)
+        second = discovery.unregister(manifest)
+
+        for failed in (first, second):
+            self.assertFalse(failed.availability.available)
+            self.assertEqual(
+                failed.availability.reason_code,
+                "plugin_unregistration_failed",
+            )
+        self.assertEqual(registry.descriptors, before)
+        failures = tuple(
+            state
+            for state in discovery.refresh().plugins
+            if state.plugin_id == manifest.plugin_id
+            and not state.availability.available
+        )
+        self.assertEqual(failures, (second,))
 
     def test_unregister_failure_is_visible_and_retry_removes_registered_reader(self):
         discovery, registry = self.discovery()

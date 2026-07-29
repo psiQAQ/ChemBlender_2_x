@@ -105,7 +105,7 @@ def _same_manifest(left, right):
     if left is right:
         return True
     try:
-        return left == right
+        return (left == right) is True
     except MemoryError:
         raise
     except Exception:
@@ -201,10 +201,8 @@ class ReaderPluginDiscovery:
             ]
             self._invalidate()
             return True
-        if (
-            len(failed_registrations) != len(self._failed_registrations)
-            or len(unregistration_failures)
-            != len(self._unregistration_failures)
+        if len(failed_registrations) != len(
+            self._failed_registrations
         ):
             self._failed_registrations = failed_registrations
             self._unregistration_failures = unregistration_failures
