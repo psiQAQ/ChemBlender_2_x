@@ -167,14 +167,18 @@ fix round 1 closed all Critical/Important review findings.
 **Interfaces:**
 - Produces: a machine-readable readiness check, not an exporter requirement.
 
-- [ ] **Step 1: Define representability rules**
+- [x] **Step 1: Define representability rules**
 
 Document required atom names/types, charge type, substructure and bond type mappings for future export. Identify data that cannot be reconstructed from generic Structure/Topology alone.
 
-- [ ] **Step 2: Add readiness report**
+- [x] **Step 2: Add readiness report**
 
 `mol2_export_readiness(project_entities)` returns Complete/Partial/Unsupported with missing fields. UI may display this but does not promise export.
 
-- [ ] **Step 3: Test and commit**
+- [x] **Step 3: Test and commit**
 
 Run readiness tests and commit the explicit P1 boundary.
+
+Completion evidence: `46bb656`, `c578915`; 32 MOL2/readiness and 21
+documentation/core-public tests passed, `compileall` and `git diff --check`
+passed, and fix round 1 closed all Critical/Important review findings.
