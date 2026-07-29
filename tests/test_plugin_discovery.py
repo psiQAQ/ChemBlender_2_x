@@ -167,6 +167,108 @@ class ReaderPluginDiscoveryTests(unittest.TestCase):
             )
         )
 
+    def test_duplicate_enable_is_reconciled_by_one_unregister(self):
+        discovery, registry = self.discovery()
+        plugin = external_plugin(
+            "org.example.duplicate_enable",
+            "external.duplicate_enable",
+        )
+
+        self.assertTrue(discovery.register(plugin).availability.available)
+        failed = discovery.register(plugin)
+        self.assertFalse(failed.availability.available)
+
+        self.assertTrue(discovery.unregister(plugin.manifest))
+        self.assertNotIn(
+            plugin.descriptor.reader_id,
+            {item.reader_id for item in registry.descriptors},
+        )
+        self.assertNotIn(
+            plugin.descriptor.plugin_id,
+            {item.plugin_id for item in discovery.refresh().plugins},
+        )
+
+    def test_recreated_equal_manifest_reconciles_unregister_failure(self):
+        discovery, registry = self.discovery()
+        first = external_plugin(
+            "org.example.recreated",
+            "external.recreated",
+        )
+        recreated = external_plugin(
+            "org.example.recreated",
+            "external.recreated",
+        )
+        self.assertEqual(recreated.manifest, first.manifest)
+        self.assertIsNot(recreated.manifest, first.manifest)
+        discovery.register(first)
+
+        with patch.object(
+            registry,
+            "unregister",
+            side_effect=OSError("registry unavailable"),
+        ):
+            failed_unregister = discovery.unregister(first.manifest)
+        failed_register = discovery.register(recreated)
+        self.assertFalse(failed_unregister.availability.available)
+        self.assertFalse(failed_register.availability.available)
+
+        self.assertTrue(discovery.unregister(recreated.manifest))
+        self.assertNotIn(
+            recreated.descriptor.reader_id,
+            {item.reader_id for item in registry.descriptors},
+        )
+        self.assertNotIn(
+            recreated.descriptor.plugin_id,
+            {item.plugin_id for item in discovery.refresh().plugins},
+        )
+
+    def test_partial_multi_reader_registration_is_reconciled_once(self):
+        discovery, registry = self.discovery()
+        first = external_plugin(
+            "org.example.multi",
+            "external.multi.first",
+        )
+        second = external_plugin(
+            "org.example.multi",
+            "external.multi.second",
+        )
+        blocker = external_plugin(
+            "org.example.blocker",
+            second.descriptor.reader_id,
+        )
+        shared_manifest = replace(
+            first.manifest,
+            readers=(
+                first.manifest.readers[0],
+                second.manifest.readers[0],
+            ),
+        )
+        first = replace(first, manifest=shared_manifest)
+        second = replace(second, manifest=shared_manifest)
+        discovery.register(blocker)
+        self.assertTrue(discovery.register(first).availability.available)
+        failed = discovery.register(second)
+        self.assertFalse(failed.availability.available)
+
+        self.assertTrue(discovery.unregister(shared_manifest))
+        descriptors = registry.descriptors
+        self.assertNotIn(
+            first.descriptor.reader_id,
+            {item.reader_id for item in descriptors},
+        )
+        self.assertIs(
+            next(
+                item
+                for item in descriptors
+                if item.reader_id == blocker.descriptor.reader_id
+            ),
+            blocker.descriptor,
+        )
+        self.assertNotIn(
+            first.descriptor.plugin_id,
+            {item.plugin_id for item in discovery.refresh().plugins},
+        )
+
     def test_callback_failure_is_visible_without_hiding_good_reader(self):
         discovery, registry = self.discovery()
         good = external_plugin("org.example.good", "external.good")
@@ -308,6 +410,74 @@ class ReaderPluginDiscoveryTests(unittest.TestCase):
 
 
 class ReaderAPIDiscoveryBridgeTests(unittest.TestCase):
+    def test_reserved_builtin_id_is_isolated_and_cleaned_by_discovery(self):
+        bridge = importlib.import_module(
+            "ChemBlender.runtime.reader_api_bridge"
+        )
+        registry = bridge.get_reader_plugin_registry()
+        before = registry.descriptors
+        reserved = external_plugin(
+            "chemblender.builtin",
+            "external.reserved",
+        )
+        namespace = {}
+        handle = bridge.register_reader_api_handle(
+            "synthetic_repository.chemblender",
+            namespace=namespace,
+        )
+        registered_failure = False
+
+        try:
+            failed = handle.register_callback(reserved)
+            registered_failure = True
+            self.assertFalse(failed.availability.available)
+            self.assertEqual(
+                failed.availability.reason_code,
+                "plugin_registration_failed",
+            )
+            self.assertEqual(failed.availability.detail, "ValueError")
+            self.assertTrue(
+                all(
+                    actual is expected
+                    for actual, expected in zip(
+                        registry.descriptors,
+                        before,
+                        strict=True,
+                    )
+                )
+            )
+            self.assertIn(
+                failed,
+                bridge.refresh_reader_plugin_discovery().plugins,
+            )
+            self.assertTrue(
+                handle.unregister_callback(reserved.manifest)
+            )
+            registered_failure = False
+            self.assertTrue(
+                all(
+                    actual is expected
+                    for actual, expected in zip(
+                        registry.descriptors,
+                        before,
+                        strict=True,
+                    )
+                )
+            )
+            self.assertNotIn(
+                failed,
+                bridge.refresh_reader_plugin_discovery().plugins,
+            )
+        finally:
+            if registered_failure:
+                handle.unregister_callback(reserved.manifest)
+            current = namespace.get(bridge.READER_API_HANDLE_KEY)
+            if current is not None:
+                bridge.remove_reader_api_handle(
+                    current,
+                    namespace=namespace,
+                )
+
     def test_handle_callbacks_refresh_and_clean_explicit_plugin_state(self):
         bridge = importlib.import_module(
             "ChemBlender.runtime.reader_api_bridge"

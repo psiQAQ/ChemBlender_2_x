@@ -39,16 +39,10 @@ def refresh_reader_plugin_discovery():
 
 
 def _register_plugin(plugin):
-    if getattr(getattr(plugin, "descriptor", None), "plugin_id", None) == (
-        "chemblender.builtin"
-    ):
-        raise ValueError("built-in reader plugins cannot be replaced")
     return _DISCOVERY.register(plugin)
 
 
 def _unregister_plugin(manifest):
-    if getattr(manifest, "plugin_id", None) == "chemblender.builtin":
-        raise ValueError("built-in reader plugins cannot be removed")
     return _DISCOVERY.unregister(manifest)
 
 

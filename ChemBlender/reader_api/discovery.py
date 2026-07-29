@@ -101,6 +101,17 @@ def _failure_state(plugin, error, reason_code):
     )
 
 
+def _same_manifest(left, right):
+    if left is right:
+        return True
+    try:
+        return left == right
+    except MemoryError:
+        raise
+    except Exception:
+        return False
+
+
 class ReaderPluginDiscovery:
     def __init__(self, registry):
         if type(registry) is not ReaderPluginRegistry:
@@ -149,19 +160,21 @@ class ReaderPluginDiscovery:
         )
 
     def unregister(self, manifest):
-        failed_count = len(self._failed_registrations)
-        self._failed_registrations = [
+        failed_registrations = [
             failed
             for failed in self._failed_registrations
-            if failed.manifest is not manifest
+            if not _same_manifest(failed.manifest, manifest)
         ]
-        if len(self._failed_registrations) != failed_count:
-            self._invalidate()
-            return True
-        if any(
-            registered is manifest
+        unregistration_failures = [
+            failure
+            for failure in self._unregistration_failures
+            if not _same_manifest(failure.manifest, manifest)
+        ]
+        owns_registration = any(
+            _same_manifest(registered, manifest)
             for registered in self._registered_manifests
-        ):
+        )
+        if owns_registration:
             try:
                 self._registry.unregister(manifest)
             except MemoryError:
@@ -173,26 +186,28 @@ class ReaderPluginDiscovery:
                     error,
                     "plugin_unregistration_failed",
                 )
-                self._unregistration_failures = [
-                    failure
-                    for failure in self._unregistration_failures
-                    if failure.manifest is not manifest
-                ]
-                self._unregistration_failures.append(
+                self._failed_registrations = failed_registrations
+                self._unregistration_failures = unregistration_failures + [
                     _FailedRegistration(manifest, state)
-                )
+                ]
                 self._invalidate()
                 return state
-            self._unregistration_failures = [
-                failure
-                for failure in self._unregistration_failures
-                if failure.manifest is not manifest
-            ]
+            self._failed_registrations = failed_registrations
+            self._unregistration_failures = unregistration_failures
             self._registered_manifests = [
                 registered
                 for registered in self._registered_manifests
-                if registered is not manifest
+                if not _same_manifest(registered, manifest)
             ]
+            self._invalidate()
+            return True
+        if (
+            len(failed_registrations) != len(self._failed_registrations)
+            or len(unregistration_failures)
+            != len(self._unregistration_failures)
+        ):
+            self._failed_registrations = failed_registrations
+            self._unregistration_failures = unregistration_failures
             self._invalidate()
             return True
         state = _failure_state_from_values(
@@ -201,9 +216,9 @@ class ReaderPluginDiscovery:
             KeyError("plugin registration is not owned"),
             "plugin_unregistration_failed",
         )
-        self._unregistration_failures.append(
+        self._unregistration_failures = unregistration_failures + [
             _FailedRegistration(manifest, state)
-        )
+        ]
         self._invalidate()
         return state
 

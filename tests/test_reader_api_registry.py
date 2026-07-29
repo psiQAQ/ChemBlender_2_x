@@ -412,6 +412,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
     def test_runtime_handle_callbacks_protect_builtin_plugin_identity(self):
         from ChemBlender.reader_api.registry import builtin_reader_plugins
         from ChemBlender.runtime.reader_api_bridge import (
+            refresh_reader_plugin_discovery,
             register_reader_api_handle,
             remove_reader_api_handle,
         )
@@ -428,10 +429,22 @@ class ReaderAPIRegistryTests(unittest.TestCase):
             self.assertIs(type(handle.unregister_callback), type(lambda: None))
             handle.register_callback(external)
             handle.unregister_callback(external.manifest)
-            with self.assertRaises(ValueError):
-                handle.register_callback(builtin)
-            with self.assertRaises(ValueError):
-                handle.unregister_callback(builtin.manifest)
+            before = refresh_reader_plugin_discovery().descriptors
+            failed = handle.register_callback(builtin)
+            self.assertFalse(failed.availability.available)
+            self.assertEqual(
+                failed.availability.reason_code,
+                "plugin_registration_failed",
+            )
+            self.assertEqual(
+                refresh_reader_plugin_discovery().descriptors,
+                before,
+            )
+            self.assertTrue(handle.unregister_callback(builtin.manifest))
+            self.assertNotIn(
+                failed,
+                refresh_reader_plugin_discovery().plugins,
+            )
         finally:
             remove_reader_api_handle(handle, namespace=namespace)
 

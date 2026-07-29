@@ -4945,8 +4945,18 @@ assert next(
     for item in registry.descriptors
     if item.reader_id == descriptor.reader_id
 ) is descriptor
+duplicate_state = reader_handle.register_callback(external)
+assert not duplicate_state.availability.available
 bpy.app.driver_namespace[READER_API_HANDLE_KEY].unregister_callback(
     external.manifest
+)
+assert all(
+    item.reader_id != descriptor.reader_id
+    for item in registry.descriptors
+)
+assert all(
+    item.plugin_id != descriptor.plugin_id
+    for item in bridge.refresh_reader_plugin_discovery().plugins
 )
 
 core = importlib.import_module(f"{module_key}.core")
