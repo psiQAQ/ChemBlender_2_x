@@ -9,6 +9,7 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, StringProperty
 
 from ..core import (
+    CIFEnvelope,
     ConformerSet,
     FrameSet,
     MolecularRecord,
@@ -19,12 +20,14 @@ from ..core.exporters import (
     ExportReport,
     ExportReportEntry,
     export_extxyz,
+    export_cif,
     export_xyz,
     export_mol,
     export_sdf,
     export_smiles,
     preview_extxyz_export,
     preview_molecular_export,
+    plan_cif_export,
     sdf_entries_from_conformer_set,
 )
 from .session import get_scene_session
@@ -36,6 +39,7 @@ _FORMAT_ITEMS = (
     ("mol", "MOL", "Export a molecular Structure"),
     ("sdf", "SDF", "Export molecular records or conformers"),
     ("smiles", "SMILES", "Export a molecular Structure"),
+    ("cif", "CIF", "Export a periodic Structure"),
 )
 _FATAL_EXCEPTIONS = (
     KeyboardInterrupt,
@@ -67,6 +71,7 @@ class ExportSelection:
     record: MolecularRecord | None = None
     conformer_set: ConformerSet | None = None
     records_by_id: dict | None = None
+    cif_envelope: CIFEnvelope | None = None
 
 
 def _molecular_selection(
@@ -126,6 +131,11 @@ def _molecular_selection(
     return ExportSelection(
         structure, None, (), topology, record, conformer_set,
         {item.id: item for item in project.molecular_records.values()},
+        getattr(project, "cif_envelopes", {}).get(
+            getattr(structure.periodic, "cif_envelope_id", None)
+            if structure.periodic is not None
+            else None
+        ),
     )
 
 
@@ -137,7 +147,17 @@ def resolve_export_selection(project, entity_id):
         try:
             return _molecular_selection(project, structure)
         except ValueError:
-            return ExportSelection(structure, None, ())
+            envelope = getattr(project, "cif_envelopes", {}).get(
+                getattr(structure.periodic, "cif_envelope_id", None)
+                if structure.periodic is not None
+                else None
+            )
+            return ExportSelection(
+                structure,
+                None,
+                (),
+                cif_envelope=envelope,
+            )
     record = project.molecular_records.get(entity_id)
     if record is not None:
         structure = project.structures.get(record.structure_id)
@@ -177,6 +197,28 @@ def preview_export_selection(
         if selection.frame_set is not None:
             raise ValueError("FrameSet export requires extXYZ")
         return ExportReport("xyz", False, 1, False)
+    if format_name == "cif":
+        if selection.frame_set is not None or selection.structure.periodic is None:
+            raise ValueError("CIF export requires one periodic Structure")
+        mode = "preserve" if selection.cif_envelope is not None else "normalized"
+        plan = plan_cif_export(
+            selection.structure,
+            envelope=selection.cif_envelope,
+            mode=mode,
+        )
+        return ExportReport(
+            "cif",
+            False,
+            1,
+            False,
+            tuple(
+                ExportReportEntry(
+                    f"{field.action}:{field.name}",
+                    field.detail,
+                )
+                for field in plan.fields
+            ),
+        )
     if format_name in {"mol", "sdf", "smiles"}:
         if selection.topology is None:
             raise ValueError("molecular export requires a complete topology")
@@ -310,8 +352,22 @@ class ExportJob:
                     destination=self.destination,
                     is_cancelled=self._cancelled.is_set,
                 ).report
+            elif self.format_name == "cif":
+                self.result = export_cif(
+                    self.destination,
+                    self.selection.structure,
+                    envelope=self.selection.cif_envelope,
+                    mode=(
+                        "preserve"
+                        if self.selection.cif_envelope is not None
+                        else "normalized"
+                    ),
+                    is_cancelled=self._cancelled.is_set,
+                )
             else:
-                raise ValueError("format_name must be xyz, extxyz, mol, sdf or smiles")
+                raise ValueError(
+                    "format_name must be xyz, extxyz, mol, sdf, smiles or cif"
+                )
         except BaseException as error:
             self.error = error
         finally:
@@ -406,7 +462,7 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
 
     filepath: StringProperty(subtype="FILE_PATH")
     filter_glob: StringProperty(
-        default="*.xyz;*.extxyz;*.mol;*.sdf;*.smi;*.smiles",
+        default="*.xyz;*.extxyz;*.mol;*.sdf;*.smi;*.smiles;*.cif",
         options={"HIDDEN"},
     )
     format_name: EnumProperty(
@@ -435,6 +491,8 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
                 self.format_name = "sdf"
             elif selection.frame_set is not None:
                 self.format_name = "extxyz"
+            elif selection.structure.periodic is not None:
+                self.format_name = "cif"
         report = preview_export_selection(
             selection,
             self.format_name,

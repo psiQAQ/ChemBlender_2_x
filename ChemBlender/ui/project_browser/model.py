@@ -167,6 +167,7 @@ def _entity_views(entity, views):
 def _entity_row(entity, parent_id, depth, views):
     entity_views = _entity_views(entity, views)
     row_id = f"{parent_id}/entity:{entity.id}"
+    details = _periodic_detail_rows(entity, row_id, depth + 1)
     return (
         BrowserRow(
             id=row_id,
@@ -178,7 +179,48 @@ def _entity_row(entity, parent_id, depth, views):
             view_count=len(entity_views),
             entity_id=entity.id,
         ),
+        *details,
         *(_view_row(view, row_id, depth + 1) for view in entity_views),
+    )
+
+
+def _periodic_detail_rows(entity, parent_id, depth):
+    periodic = getattr(entity, "periodic", None)
+    if periodic is None:
+        return ()
+    atom_count = len(entity.atomic_numbers)
+    disorder_count = sum(
+        value != 0 for value in periodic.disorder_groups
+    )
+    return (
+        BrowserRow(
+            f"{parent_id}/crystal-sites",
+            parent_id,
+            depth,
+            "crystal_sites",
+            (
+                f"Sites: {atom_count} · Occupancy: per-site · "
+                f"Disorder: {disorder_count} grouped"
+            ),
+            "",
+            0,
+            None,
+        ),
+        BrowserRow(
+            f"{parent_id}/crystal-adp",
+            parent_id,
+            depth,
+            "crystal_adp",
+            (
+                "ADP: Uiso "
+                f"{'available' if periodic.isotropic_displacements is not None else 'missing'}"
+                " · Uij "
+                f"{'available' if periodic.anisotropic_displacements is not None else 'missing'}"
+            ),
+            "",
+            0,
+            None,
+        ),
     )
 
 

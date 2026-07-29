@@ -2709,6 +2709,73 @@ def assert_extxyz_workflow(module_key, repository_root):
             core.close_project(reopened)
 
 
+def assert_cif_workflow(module_key, repository_root):
+    core = importlib.import_module(f"{module_key}.core")
+    export_ui = importlib.import_module(f"{module_key}.ui.export")
+    ui = importlib.import_module(f"{module_key}.ui.session")
+    views = importlib.import_module(f"{module_key}.views")
+    assert "spglib" not in sys.modules
+
+    batch = core.parse_cif(
+        repository_root / "tests" / "fixtures" / "cif" / "partial-disorder.cif"
+    )
+    structure, = batch.structures
+    assert structure.periodic is not None
+    assert tuple(structure.periodic.occupancies.values) == (0.5,)
+    session = ui.new_scene_session(bpy.context.scene)
+    session.project.commit(batch)
+    session.mark_dirty("import")
+    view = views.create_structure_view(
+        structure,
+        name="ChemBlender CIF smoke",
+        collection=bpy.context.scene.collection,
+    )
+    session.active_entity_id = structure.id
+    session.active_view_object_name = view.name
+
+    with TemporaryDirectory(prefix="chemblender-cif-smoke-") as directory:
+        root = Path(directory)
+        blend = root / "partial-disorder.blend"
+        assert bpy.ops.wm.save_as_mainfile(
+            filepath=str(blend),
+            check_existing=False,
+        ) == {"FINISHED"}
+        assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        assert blend.with_suffix(".cbq").is_dir()
+        assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
+
+        ui = importlib.import_module(f"{module_key}.ui.session")
+        restored = ui.get_scene_session(bpy.context.scene)
+        assert structure.id in restored.project.structures
+        restored_view = bpy.data.objects["ChemBlender CIF smoke"]
+        assert restored_view["cb_structure_id"] == str(structure.id)
+        assert restored_view["cb_periodic"] is True
+
+        destination = root / "partial-disorder-export.cif"
+        selection = export_ui.resolve_export_selection(
+            restored.project,
+            structure.id,
+        )
+        job = export_ui.ExportJob(
+            destination,
+            selection,
+            format_name="cif",
+            confirm_loss=False,
+            missing_value_token=None,
+        )
+        job.start()
+        assert job.join(30)
+        assert job.error is None
+        assert job.result.written
+        exported = core.parse_cif(destination)
+        assert tuple(exported.structures[0].periodic.occupancies.values) == (0.5,)
+        assert b"_chemblender_unknown_tag" in destination.read_bytes()
+        assert "spglib" not in sys.modules
+
+        views.remove_structure_view(restored_view)
+        ui.close_scene_session(bpy.context.scene)
+
+
 def assert_legacy_crystal_reader_baseline(module_key, repository_root):
     reader = importlib.import_module(f"{module_key}.read")
     cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
@@ -3216,6 +3283,12 @@ expected_inventory["registered_classes"] += [
     },
     {
         "module": ".ui.properties",
+        "name": "CHEMBLENDER_OT_derive_crystal_symmetry",
+        "id": "chemblender.derive_crystal_symmetry",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.properties",
         "name": "CHEMBLENDER_PG_quick_import",
         "id": None,
         "base": "PropertyGroup",
@@ -3278,7 +3351,10 @@ expected_inventory["handlers"] += [
     {"owner": "save_pre", "module": ".ui.session", "name": "_save_pre_handler"},
 ]
 expected_inventory["handlers"].sort(key=lambda item: tuple(item.values()))
-assert stable_inventory == expected_inventory
+assert stable_inventory == expected_inventory, (
+    stable_inventory,
+    expected_inventory,
+)
 
 bridge = importlib.import_module(f"{module_key}.runtime.reader_api_bridge")
 reader_api = importlib.import_module(f"{module_key}.reader_api")
@@ -3376,6 +3452,7 @@ assert_complex_phonon_trajectory(module_key)
 assert_fermi_surface_view(module_key)
 assert_project_sidecar_link(module_key)
 assert_quick_import(module_key, package.parent.parent)
+assert_cif_workflow(module_key, package.parent.parent)
 assert_optional_workspace(module_key)
 assert_project_session_manager(module_key)
 assert_topology_view(module_key, package.parent.parent)

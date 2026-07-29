@@ -23,6 +23,7 @@ from ..core import (
     RecordPropertyColumn,
     builtin_scene_presets,
     plan_scene_preset,
+    unit_cell_parameters,
 )
 from ..core.import_pipeline.conflicts import (
     ConflictDecision,
@@ -207,6 +208,14 @@ class CHEMBLENDER_PG_import_preview_row(bpy.types.PropertyGroup):
     grid_coordinate_unit: StringProperty()
     grid_value_unit: StringProperty()
     grid_quality: StringProperty()
+    cif_block_count: IntProperty()
+    cif_valid_block_count: IntProperty()
+    cif_block_summary: StringProperty()
+    cif_site_summary: StringProperty()
+    cif_cell_summary: StringProperty()
+    cif_occupancy_adp_summary: StringProperty()
+    cif_declared_symmetry_summary: StringProperty()
+    cif_default_block_confirmed: BoolProperty(default=False)
     conformer_suggestion_count: IntProperty()
     quality: StringProperty()
     conflict_id: StringProperty()
@@ -255,6 +264,14 @@ class PreviewProjection:
     grid_coordinate_unit: str = ""
     grid_value_unit: str = ""
     grid_quality: str = ""
+    cif_block_count: int = 0
+    cif_valid_block_count: int = 0
+    cif_block_summary: str = ""
+    cif_site_summary: str = ""
+    cif_cell_summary: str = ""
+    cif_occupancy_adp_summary: str = ""
+    cif_declared_symmetry_summary: str = ""
+    cif_default_block_confirmed: bool = False
     conformer_suggestion_count: int = 0
     conflict_id: str = ""
     allowed_actions: str = ""
@@ -532,6 +549,91 @@ def _molecular_summary(batch, conformer_count):
     )
 
 
+def _cif_summary(batch):
+    if not batch.cif_envelopes:
+        return None
+    envelope = batch.cif_envelopes[0]
+    structures = tuple(
+        structure
+        for structure in batch.structures
+        if (
+            structure.periodic is not None
+            and structure.periodic.cif_envelope_id == envelope.id
+        )
+    )
+    sites = sum(len(structure.atomic_numbers) for structure in structures)
+    cells = []
+    declared = []
+    missing_occupancy = 0
+    partial_occupancy = 0
+    u_iso = 0
+    u_aniso = 0
+    disorder = 0
+    for structure in structures:
+        import numpy
+
+        periodic = structure.periodic
+        parameters = unit_cell_parameters(structure.cell)
+        cells.append(
+            f"{periodic.cif_block_key}: "
+            + " × ".join(format(value, ".6g") for value in parameters[:3])
+            + f" {structure.cell.unit}"
+        )
+        occupancies = numpy.asarray(periodic.occupancies.values)
+        missing_occupancy += int(numpy.count_nonzero(numpy.isnan(occupancies)))
+        partial_occupancy += int(
+            numpy.count_nonzero(
+                numpy.isfinite(occupancies) & (occupancies < 1.0)
+            )
+        )
+        u_iso += periodic.isotropic_displacements is not None
+        u_aniso += periodic.anisotropic_displacements is not None
+        disorder += sum(value != 0 for value in periodic.disorder_groups)
+        source_symmetry = periodic.declared_symmetry
+        if any(
+            (
+                source_symmetry.name,
+                source_symmetry.international_number,
+                source_symmetry.hall_symbol,
+                source_symmetry.operations,
+            )
+        ):
+            declared.append(
+                (
+                    f"{periodic.cif_block_key}: "
+                    f"{source_symmetry.name or 'unnamed'}"
+                    + (
+                        ""
+                        if source_symmetry.international_number is None
+                        else f" (No. {source_symmetry.international_number})"
+                    )
+                )
+            )
+    default_key = (
+        structures[0].periodic.cif_block_key if structures else "none"
+    )
+    return {
+        "block_count": len(envelope.block_names),
+        "valid_block_count": len(structures),
+        "block_summary": (
+            ", ".join(envelope.block_keys) + f" · default {default_key}"
+        ),
+        "site_summary": (
+            f"{sites} sites across {len(structures)} structure(s)"
+        ),
+        "cell_summary": "; ".join(cells),
+        "occupancy_adp_summary": (
+            f"Occupancy: {missing_occupancy} missing, "
+            f"{partial_occupancy} partial · "
+            f"ADP: Uiso {u_iso}, Uij {u_aniso} · "
+            f"Disorder: {disorder} site(s)"
+        ),
+        "declared_symmetry_summary": (
+            "; ".join(declared) if declared else "No declared symmetry"
+        ),
+    }
+
+
 def project_import_preview(project_session, state, registry):
     """Refresh live conflicts and return a small RNA-safe row projection."""
     preview = state.preview
@@ -584,10 +686,13 @@ def project_import_preview(project_session, state, registry):
         default_view_plan = None
         extxyz_summary = None
         grid_summary = None
+        cif_summary = None
         molecular_summary = (0, "", "", "", "", 0)
         if len(source.staged_batch_ids) == 1:
             batch = staging.result(source.staged_batch_ids[0])
             grid_summary = grid_preview_summary(batch)
+            if source.selected_reader_id == "cif":
+                cif_summary = _cif_summary(batch)
             if source.selected_reader_id == "extxyz":
                 extxyz_summary = extxyz_preview_summary(batch)
             batch_record_ids = {
@@ -700,6 +805,33 @@ def project_import_preview(project_session, state, registry):
                 ),
                 grid_quality=(
                     "" if grid_summary is None else grid_summary.quality
+                ),
+                cif_block_count=(
+                    0 if cif_summary is None else cif_summary["block_count"]
+                ),
+                cif_valid_block_count=(
+                    0
+                    if cif_summary is None
+                    else cif_summary["valid_block_count"]
+                ),
+                cif_block_summary=(
+                    "" if cif_summary is None else cif_summary["block_summary"]
+                ),
+                cif_site_summary=(
+                    "" if cif_summary is None else cif_summary["site_summary"]
+                ),
+                cif_cell_summary=(
+                    "" if cif_summary is None else cif_summary["cell_summary"]
+                ),
+                cif_occupancy_adp_summary=(
+                    ""
+                    if cif_summary is None
+                    else cif_summary["occupancy_adp_summary"]
+                ),
+                cif_declared_symmetry_summary=(
+                    ""
+                    if cif_summary is None
+                    else cif_summary["declared_symmetry_summary"]
                 ),
                 conformer_suggestion_count=molecular_summary[5],
                 conflict_id=str(conflict.id) if conflict else "",
@@ -996,6 +1128,28 @@ def import_commit_decisions(
         _quality, blocking_reason = _quality_and_blocking(staging, source)
         if blocking_reason:
             raise ValueError(blocking_reason)
+        if source.selected_reader_id == "cif":
+            batch = staging.result(source.staged_batch_ids[0])
+            summary = _cif_summary(batch)
+            row = by_source[source.source_id]
+            expected = (
+                summary["block_count"],
+                summary["valid_block_count"],
+            )
+            if (
+                row.cif_block_count,
+                row.cif_valid_block_count,
+            ) != expected:
+                raise ValueError(
+                    "CIF block summary changed; refresh Import Preview"
+                )
+            if (
+                summary["valid_block_count"] > 1
+                and not row.cif_default_block_confirmed
+            ):
+                raise ValueError(
+                    "CIF default block requires explicit confirmation"
+                )
     conflicts = state.conflicts
     if project_session is not None:
         live = detect_import_conflicts(
@@ -1529,6 +1683,24 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                     ),
                     icon="ERROR" if row.grid_quality == "ambiguous" else "INFO",
                 )
+            if row.cif_block_count:
+                box.label(
+                    text=(
+                        f"CIF blocks: {row.cif_block_count} · "
+                        f"importable: {row.cif_valid_block_count}"
+                    )
+                )
+                box.label(text=row.cif_block_summary)
+                box.label(text=row.cif_site_summary)
+                box.label(text=row.cif_cell_summary)
+                box.label(text=row.cif_occupancy_adp_summary)
+                box.label(text=row.cif_declared_symmetry_summary)
+                if row.cif_valid_block_count > 1:
+                    box.prop(
+                        row,
+                        "cif_default_block_confirmed",
+                        text="Use the displayed default CIF block for the view",
+                    )
             if row.conflict_id:
                 box.prop(row, "conflict_action")
                 if DuplicateAction(row.conflict_action) in _TARGET_ACTIONS:
