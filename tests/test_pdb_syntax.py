@@ -212,6 +212,13 @@ class PDBFixedColumnTests(unittest.TestCase):
             (b" C  ", b"ALA", b"ATOM  ", "C"),
             (b" CA ", b"ALA", b"ATOM  ", "C"),
             (b"CA  ", b"ALA", b"ATOM  ", "C"),
+            (b"CD  ", b"GLU", b"ATOM  ", "C"),
+            (b"CE  ", b"LYS", b"ATOM  ", "C"),
+            (b"ND  ", b"ASN", b"ATOM  ", "N"),
+            (b"NE  ", b"GLN", b"ATOM  ", "N"),
+            (b"SG  ", b"CYS", b"ATOM  ", "S"),
+            (b"OG  ", b"SER", b"ATOM  ", "O"),
+            (b"HG  ", b"CYS", b"ATOM  ", "H"),
             (b"CA  ", b"CA ", b"HETATM", "Ca"),
             (b"FE  ", b"HEM", b"HETATM", "Fe"),
             (b"1HG2", b"GLY", b"ATOM  ", "H"),
@@ -219,36 +226,35 @@ class PDBFixedColumnTests(unittest.TestCase):
             (b"  CA", b"ALA", b"ATOM  ", None),
             (b" QX ", b"UNK", b"ATOM  ", None),
         )
-        raw = b"\n".join(
-            atom_line(
-                index,
-                atom_name,
-                residue_name=residue,
+        for atom_name, residue, record_name, expected in cases:
+            with self.subTest(
+                atom_name=atom_name,
+                residue=residue,
                 record_name=record_name,
-            )
-            for index, (atom_name, residue, record_name, _expected) in enumerate(
-                cases,
-                1,
-            )
-        )
+            ):
+                parsed = parse_pdb_records(
+                    atom_line(
+                        1,
+                        atom_name,
+                        residue_name=residue,
+                        record_name=record_name,
+                    )
+                    + b"\n"
+                )
 
-        parsed = parse_pdb_records(raw + b"\n")
-
-        self.assertEqual(
-            tuple(atom.element for atom in parsed.atoms),
-            tuple(expected for *_source, expected in cases),
-        )
-        self.assertTrue(all(atom.element_inferred for atom in parsed.atoms[:-2]))
-        self.assertFalse(parsed.atoms[-2].element_inferred)
-        self.assertFalse(parsed.atoms[-1].element_inferred)
-        self.assertIn(
-            (IssueKind.INVALID, "record[7].element"),
-            tuple((issue.kind, issue.path) for issue in parsed.issues),
-        )
-        self.assertIn(
-            (IssueKind.INVALID, "record[8].element"),
-            tuple((issue.kind, issue.path) for issue in parsed.issues),
-        )
+                self.assertEqual(parsed.atoms[0].element, expected)
+                self.assertEqual(
+                    parsed.atoms[0].element_inferred,
+                    expected is not None,
+                )
+                if expected is None:
+                    self.assertIn(
+                        (IssueKind.INVALID, "record[0].element"),
+                        tuple(
+                            (issue.kind, issue.path)
+                            for issue in parsed.issues
+                        ),
+                    )
 
     def test_sniff_requires_fixed_column_coordinate_content(self):
         from ChemBlender.core.formats.pdb import sniff_pdb

@@ -197,16 +197,15 @@ def _infer_element(atom_name_field, record_name, residue_name):
         return None
     elif (
         record_name == "ATOM  "
-        and residue_name in _STANDARD_POLYMER_RESIDUES
-        and atom_name_field[:2].upper() == "CA"
-    ):
-        candidate = "C"
-    elif (
-        record_name == "ATOM  "
         and residue_name == "SEC"
         and atom_name_field[:2].upper() == "SE"
     ):
         candidate = "Se"
+    elif (
+        record_name == "ATOM  "
+        and residue_name in _STANDARD_POLYMER_RESIDUES
+    ):
+        candidate = atom_name_field[0].upper()
     else:
         candidate = atom_name_field[0].upper() + atom_name_field[1].lower()
     return candidate if candidate in _ELEMENT_SYMBOLS else None
