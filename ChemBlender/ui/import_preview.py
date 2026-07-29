@@ -53,7 +53,10 @@ from ..scene_preset_view import (
     _remove_objects as _remove_scene_preset_objects,
     apply_scene_preset,
 )
-from ..runtime.reader_api_bridge import get_reader_plugin_registry
+from ..runtime.reader_api_bridge import (
+    get_reader_plugin_registry,
+    refresh_reader_plugin_discovery,
+)
 from .default_views import describe_default_view, plan_default_view
 from .extxyz_preview import extxyz_preview_summary
 from .grid import grid_preview_summary
@@ -1289,6 +1292,23 @@ def project_import_preview(project_session, state, registry):
     return tuple(rows)
 
 
+def unavailable_reader_plugin_status(snapshot):
+    return tuple(
+        (
+            f"Reader plugin {plugin.plugin_id} "
+            f"({', '.join(plugin.reader_ids) or 'no readers'}) unavailable: "
+            f"{plugin.availability.reason_code}"
+            + (
+                f" ({plugin.availability.detail})"
+                if plugin.availability.detail
+                else ""
+            )
+        )
+        for plugin in snapshot.plugins
+        if not plugin.availability.available
+    )
+
+
 def project_grouping_suggestions(state):
     return tuple(
         GroupingSuggestionProjection(
@@ -2176,6 +2196,7 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
         type=CHEMBLENDER_PG_import_conformer_suggestion
     )
     blocking_reason: StringProperty()
+    reader_plugin_status: StringProperty()
 
     def _project(self, context):
         session = get_scene_session(context.scene)
@@ -2186,6 +2207,11 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             get_reader_plugin_registry(),
         )
         _copy_projections(self.rows, projected)
+        self.reader_plugin_status = "\n".join(
+            unavailable_reader_plugin_status(
+                refresh_reader_plugin_discovery()
+            )
+        )
         grouping_suggestions = project_grouping_suggestions(state)
         collection = getattr(self, "grouping_suggestions", None)
         copied = _copy_projections(collection, grouping_suggestions)
@@ -2221,6 +2247,8 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
         layout = self.layout
         if self.blocking_reason:
             layout.label(text=self.blocking_reason, icon="ERROR")
+        for status in self.reader_plugin_status.splitlines():
+            layout.label(text=status, icon="ERROR")
         for row in self.rows:
             box = layout.box()
             box.label(text=row.source_name)

@@ -253,6 +253,60 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             session.dirty_reasons,
         )
 
+    def test_import_preview_projects_and_draws_unavailable_reader_plugin(self):
+        registry, _state = self.stage("tests/fixtures/xyz/water.xyz")
+        unavailable = SimpleNamespace(
+            plugin_id="org.example.failed",
+            reader_ids=("failed-reader",),
+            availability=SimpleNamespace(
+                available=False,
+                reason_code="plugin_registration_failed",
+                detail="ValueError",
+            ),
+        )
+        snapshot = SimpleNamespace(plugins=(unavailable,))
+        operator = self.module.CHEMBLENDER_OT_confirm_import()
+        operator.rows = _RNACollection()
+        operator.grouping_suggestions = _RNACollection()
+        operator.conformer_grouping_suggestions = _RNACollection()
+        operator.blocking_reason = ""
+        operator.reader_plugin_status = ""
+        context = SimpleNamespace(scene=object())
+
+        with patch.object(
+            self.module,
+            "get_scene_session",
+            return_value=self.session,
+        ), patch.object(
+            self.module,
+            "get_reader_plugin_registry",
+            return_value=registry,
+        ), patch.object(
+            self.module,
+            "refresh_reader_plugin_discovery",
+            return_value=snapshot,
+        ):
+            operator._project(context)
+
+        expected = (
+            "Reader plugin org.example.failed (failed-reader) unavailable: "
+            "plugin_registration_failed (ValueError)"
+        )
+        self.assertEqual(operator.reader_plugin_status, expected)
+
+        labels = []
+        operator.layout = SimpleNamespace(
+            label=lambda **keywords: labels.append(keywords),
+        )
+        operator.rows = ()
+        operator.grouping_suggestions = ()
+        operator.conformer_grouping_suggestions = ()
+        operator.draw(None)
+        self.assertIn(
+            {"text": expected, "icon": "ERROR"},
+            labels,
+        )
+
     def test_extxyz_preview_summary_reports_frames_properties_cell_and_units(self):
         source = Path(self.temporary.name) / "force.extxyz"
         source.write_text(

@@ -83,6 +83,7 @@ class RegistrationHarness:
         )
         self.bridge.register_reader_api_handle = self._publish
         self.bridge.remove_reader_api_handle = self._remove
+        self.bridge.refresh_reader_plugin_discovery = self._refresh_readers
 
     def _module_register(self, name):
         def register():
@@ -129,6 +130,9 @@ class RegistrationHarness:
         if self.removal_failure is not None:
             raise self.removal_failure
         return True
+
+    def _refresh_readers(self):
+        self.events.append(("refresh_readers",))
 
     def import_module(self, name, package):
         self.imports.append((name, package))
@@ -316,6 +320,10 @@ class RegistrationContractTests(unittest.TestCase):
         self.assertEqual(
             harness.events.count(("publish_handle", harness.package_root)),
             2,
+        )
+        self.assertEqual(
+            harness.events.count(("refresh_readers",)),
+            1,
         )
         self.assertEqual(handlers.load_post, [])
 

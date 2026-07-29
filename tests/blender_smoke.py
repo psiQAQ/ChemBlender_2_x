@@ -4871,7 +4871,38 @@ external = replace(
         readers=(entry,),
     ),
 )
-bpy.app.driver_namespace[READER_API_HANDLE_KEY].register_callback(external)
+reader_handle = bpy.app.driver_namespace[READER_API_HANDLE_KEY]
+reader_handle.register_callback(external)
+failed_descriptor = replace(
+    descriptor,
+    plugin_id="org.example.blender_failure",
+)
+failed_external = replace(
+    external,
+    descriptor=failed_descriptor,
+    manifest=replace(
+        external.manifest,
+        plugin_id=failed_descriptor.plugin_id,
+    ),
+)
+failed_state = reader_handle.register_callback(failed_external)
+assert not failed_state.availability.available
+assert failed_state.availability.reason_code == "plugin_registration_failed"
+discovery_snapshot = bridge.refresh_reader_plugin_discovery()
+assert failed_state in discovery_snapshot.plugins
+assert next(
+    item
+    for item in registry.descriptors
+    if item.reader_id == descriptor.reader_id
+) is descriptor
+preview_module = importlib.import_module(f"{module_key}.ui.import_preview")
+assert preview_module.unavailable_reader_plugin_status(
+    discovery_snapshot
+) == (
+    "Reader plugin org.example.blender_failure "
+    "(external.blender_lifecycle) unavailable: "
+    "plugin_registration_failed (ValueError)",
+)
 
 for _ in range(2):
     owned_classes = owned_registration_classes(module_key)
@@ -4906,6 +4937,14 @@ for _ in range(2):
         if item.reader_id == descriptor.reader_id
     ) is descriptor
 
+bpy.app.driver_namespace[READER_API_HANDLE_KEY].unregister_callback(
+    failed_external.manifest
+)
+assert next(
+    item
+    for item in registry.descriptors
+    if item.reader_id == descriptor.reader_id
+) is descriptor
 bpy.app.driver_namespace[READER_API_HANDLE_KEY].unregister_callback(
     external.manifest
 )
