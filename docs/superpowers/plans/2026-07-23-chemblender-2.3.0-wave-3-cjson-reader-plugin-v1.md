@@ -117,7 +117,7 @@ plugin diagnostics remain explicitly owned by Tasks 3 and 5.
 **Interfaces:**
 - Produces: `org.chemblender.example.simplecoords` plugin reading `.cbsimple`.
 
-- [ ] **Step 1: Define the example format**
+- [x] **Step 1: Define the example format**
 
 ```text
 CBSIMPLE 1
@@ -130,21 +130,28 @@ H -0.7 0.0 0.5
 
 The reader returns one Structure and source diagnostic report.
 
-- [ ] **Step 2: Implement only public imports**
+- [x] **Step 2: Implement only public imports**
 
 Static tests walk AST and reject imports whose module starts with `ChemBlender.core`, `ChemBlender.ui` or `ChemBlender.views`. `reader.py` cannot import `bpy`; only `__init__.py`/bootstrap may import `bpy` and `importlib` to obtain `bpy.app.driver_namespace["chemblender.reader_api.v1"]`, import `handle.module_name`, and call the official registration callback.
 
-- [ ] **Step 3: Add manifest and fixture tests**
+- [x] **Step 3: Add manifest and fixture tests**
 
 Run API manifest validation, sniff, parse, canonical round-trip and cancellation tests.
 
-- [ ] **Step 4: Build/install in Blender**
+- [x] **Step 4: Build/install in Blender**
 
 Package the example separately, install after ChemBlender, import fixture, disable/uninstall plugin, reopen saved `.cbq` and confirm view/data remain accessible while reparse is unavailable.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Commit example and tests; base ChemBlender ZIP excludes examples.
+
+Completion evidence: `bee56b3`, `bdb0202`; RED was 5 tests with 1 failure
+and 4 errors. GREEN was 127/127 plus the example-local test. The separate
+example and base extensions validated, built and passed ZIP audit. An isolated
+Blender 5.1.2 profile installed both, imported CBSIMPLE, saved/reopened,
+uninstalled the example, and reopened the retained project/view while reparse
+was unavailable. Scoped re-review passed with no open findings.
 
 ### Task 4: Publish the Reader API v1 conformance kit
 
