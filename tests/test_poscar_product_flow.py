@@ -539,7 +539,7 @@ class PoscarProductFlowTests(unittest.TestCase):
             update=Mock(),
         )
 
-        class Modifier:
+        class Modifier(dict):
             node_group = None
 
         modifier = Modifier()

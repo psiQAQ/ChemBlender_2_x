@@ -2825,6 +2825,7 @@ def assert_cif_workflow(module_key, repository_root):
     )
     symmetry = object.__new__(core.SymmetryResult)
     object.__setattr__(symmetry, "id", uuid4())
+    object.__setattr__(symmetry, "structure_id", structure.id)
     object.__setattr__(symmetry, "standardized_structure_id", standard.id)
     session.project.structures[standard.id] = standard
     session.project.symmetry_results[symmetry.id] = symmetry
@@ -2840,6 +2841,79 @@ def assert_cif_workflow(module_key, repository_root):
         assert standard_view["cb_structure_contract"] == "structure_view_v1"
         assert standard_view["cbq_periodic_representation"] == "source_sites"
         assert view.name in bpy.data.objects
+        with TemporaryDirectory(
+            prefix="chemblender-cif-normalized-smoke-"
+        ) as directory:
+            destination = Path(directory) / "standardized.cif"
+            selection = export_ui.resolve_export_selection(
+                session.project,
+                standard.id,
+            )
+            preview = export_ui.preview_export_selection(
+                selection,
+                "cif",
+                cif_mode="normalized",
+                destination=destination,
+            )
+            assert preview.requires_confirmation
+            assert any(
+                entry.code == "structure:derived"
+                for entry in preview.entries
+            )
+            job = export_ui.ExportJob(
+                destination,
+                selection,
+                format_name="cif",
+                confirm_loss=True,
+                missing_value_token=None,
+                cif_mode="normalized",
+            )
+            job._run()
+            assert job.error is None
+            normalized, = core.parse_cif(destination).structures
+            assert normalized.atomic_numbers == standard.atomic_numbers
+            assert numpy.allclose(
+                normalized.cell.values,
+                standard.cell.values,
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            assert numpy.allclose(
+                normalized.periodic.fractional_coordinates.values,
+                standard.periodic.fractional_coordinates.values,
+                rtol=0.0,
+                atol=1.0e-12,
+            )
+            assert numpy.allclose(
+                normalized.periodic.occupancies.values,
+                standard.periodic.occupancies.values,
+                rtol=0.0,
+                atol=1.0e-12,
+                equal_nan=True,
+            )
+            assert (
+                normalized.periodic.site_labels
+                == standard.periodic.site_labels
+            )
+            for name in (
+                "isotropic_displacements",
+                "anisotropic_displacements",
+            ):
+                expected = getattr(standard.periodic, name)
+                actual = getattr(normalized.periodic, name)
+                assert (actual is None) == (expected is None)
+                if expected is not None:
+                    assert numpy.allclose(
+                        actual.values,
+                        expected.values,
+                        rtol=0.0,
+                        atol=1.0e-12,
+                        equal_nan=True,
+                    )
+            assert (
+                normalized.periodic.declared_symmetry
+                == standard.periodic.declared_symmetry
+            )
     finally:
         if (
             standard_view is not None
@@ -3217,19 +3291,49 @@ def assert_cif_workflow(module_key, repository_root):
             restored.project,
             structure.id,
         )
+        preview = export_ui.preview_export_selection(
+            selection,
+            "cif",
+            cif_mode="preserve",
+            destination=destination,
+        )
+        assert not preview.requires_confirmation
+        assert any(
+            entry.code == "target:cif_preserve"
+            for entry in preview.entries
+        )
         job = export_ui.ExportJob(
             destination,
             selection,
             format_name="cif",
             confirm_loss=False,
             missing_value_token=None,
+            cif_mode="preserve",
         )
         job.start()
         assert job.join(30)
         assert job.error is None
         assert job.result.written
         exported = core.parse_cif(destination)
-        assert tuple(exported.structures[0].periodic.occupancies.values) == (0.5,)
+        preserved, = exported.structures
+        assert preserved.atomic_numbers == structure.atomic_numbers
+        assert numpy.allclose(
+            preserved.cell.values,
+            structure.cell.values,
+            rtol=0.0,
+            atol=1.0e-12,
+        )
+        assert numpy.allclose(
+            preserved.periodic.fractional_coordinates.values,
+            structure.periodic.fractional_coordinates.values,
+            rtol=0.0,
+            atol=1.0e-12,
+        )
+        assert tuple(preserved.periodic.occupancies.values) == (0.5,)
+        assert (
+            preserved.periodic.declared_symmetry
+            == structure.periodic.declared_symmetry
+        )
         assert b"_chemblender_unknown_tag" in destination.read_bytes()
         assert "spglib" not in sys.modules
 
@@ -3329,19 +3433,40 @@ def assert_poscar_workflow(module_key, repository_root):
             restored.project,
             structure.id,
         )
+        settings = export_ui.PoscarExportSettings(
+            comment="ChemBlender smoke",
+            coordinate_mode="cartesian",
+            scale_policy="unit",
+            include_selective_dynamics=True,
+        )
+        preview = export_ui.preview_export_selection(
+            selection,
+            "poscar",
+            poscar_settings=settings,
+            destination=destination,
+        )
+        assert not preview.requires_confirmation
+        assert any(
+            entry.code == "coordinates_cartesian"
+            for entry in preview.entries
+        )
         job = export_ui.ExportJob(
             destination,
             selection,
             format_name="poscar",
             confirm_loss=False,
             missing_value_token=None,
+            poscar_settings=settings,
         )
         job.start()
         assert job.join(30)
         assert job.error is None
         assert job.result.written
         reparsed = core.parse_poscar(destination)
-        assert reparsed.structures[0].atomic_numbers == structure.atomic_numbers
+        exporters = importlib.import_module(
+            f"{module_key}.core.exporters"
+        )
+        assert exporters.semantic_poscar_differences(batch, reparsed) == ()
         reparsed_selective = next(
             value
             for value in reparsed.datasets
@@ -3370,7 +3495,7 @@ def assert_poscar_workflow(module_key, repository_root):
             velocity_destination,
             velocity_selection,
             format_name="poscar",
-            confirm_loss=False,
+            confirm_loss=True,
             missing_value_token=None,
         )
         velocity_job._run()
