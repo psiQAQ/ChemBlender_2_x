@@ -1,6 +1,11 @@
 """Deterministic native structure exporters."""
 
 from .cif import CIFExportField, CIFExportPlan, export_cif, plan_cif_export
+from .poscar import (
+    PoscarExportSettings,
+    export_poscar,
+    semantic_poscar_differences,
+)
 from .xyz import (
     ExportCancelled,
     ExportReport,
@@ -28,10 +33,12 @@ __all__ = (
     "CIFExportField",
     "CIFExportPlan",
     "MolecularExport",
+    "PoscarExportSettings",
     "SDFExportEntry",
     "export_extxyz",
     "export_cif",
     "export_mol",
+    "export_poscar",
     "export_sdf",
     "export_smiles",
     "preview_molecular_export",
@@ -41,4 +48,5 @@ __all__ = (
     "plan_cif_export",
     "semantic_extxyz_differences",
     "semantic_molecular_differences",
+    "semantic_poscar_differences",
 )
