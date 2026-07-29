@@ -217,7 +217,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/core/pyprocar_adapter.py` | `adapt_pyprocar_fermi_surface()` | 将已生成的 PyVista-compatible PyProcar surface 转为不依赖 PyVista 的顶点、三角面、band 和属性数组。 |
 | `ChemBlender/core/critic2_adapter.py` | `parse_critic2_cpreport()` | 解析 critic2 `cpreport` JSON 的临界点、cell copies、connectivity、属性和 provenance，输出 `TopologyGraph`。 |
 | `ChemBlender/core/qcschema_adapter.py` | `parse_qcschema_atomic_result()`、`parse_qcschema_molecule()`、`parse_qcschema()`、`export_qcschema()` | 兼容 QCSchema v1/v2 结果和 Molecule envelope，在内部模型与版本化交换文档之间转换。 |
-| `ChemBlender/core/cjson_adapter.py` | `parse_cjson()`、`export_cjson()`、`sniff_cjson()` | 导入/导出 Avogadro CJSON 的结构、拓扑、轨迹和轻量原子数据，并保留原始 envelope。 |
+| `ChemBlender/core/cjson_adapter.py` | `parse_cjson()`、`preview_cjson_export()`、`export_cjson()`、`sniff_cjson()` | 把 Avogadro CJSON whitelist 映射到统一结构、拓扑、categorical identity、annotation 和轻量数据；保留原始 envelope，并以 `ExportReport` 控制大型数组省略。 |
 
 ### 派生计算、工作流与存储
 
