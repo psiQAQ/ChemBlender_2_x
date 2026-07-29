@@ -101,6 +101,12 @@ def _action(left, right):
     return "preserve" if _same_array(left, right) else "replace"
 
 
+def _sequence_action(original, current, default):
+    if original == current:
+        return "preserve"
+    return "add" if all(value == default for value in original) else "replace"
+
+
 def _bound_source(structure, envelope):
     if not isinstance(structure, Structure) or structure.periodic is None:
         raise TypeError("structure must be a periodic Structure")
@@ -186,6 +192,29 @@ def _preserve_fields(structure, baseline):
             "anisotropic displacement values",
         ),
         CIFExportField(
+            "adp_type",
+            _sequence_action(original.adp_types, periodic.adp_types, "none"),
+            "atom-site displacement types",
+        ),
+        CIFExportField(
+            "disorder_group",
+            _sequence_action(
+                original.disorder_groups,
+                periodic.disorder_groups,
+                0,
+            ),
+            "atom-site disorder groups",
+        ),
+        CIFExportField(
+            "disorder_assembly",
+            _sequence_action(
+                original.disorder_assemblies,
+                periodic.disorder_assemblies,
+                "none",
+            ),
+            "atom-site disorder assemblies",
+        ),
+        CIFExportField(
             "declared_symmetry",
             "preserve" if declared_same else "replace",
             "source-declared symmetry fields",
@@ -217,6 +246,32 @@ def _normalized_fields(structure):
             "u_aniso",
             "add" if periodic.anisotropic_displacements is not None else "omit",
             "anisotropic displacement values",
+        ),
+        CIFExportField(
+            "adp_type",
+            (
+                "add"
+                if any(value != "none" for value in periodic.adp_types)
+                else "omit"
+            ),
+            "atom-site displacement types",
+        ),
+        CIFExportField(
+            "disorder_group",
+            "add" if any(periodic.disorder_groups) else "omit",
+            "atom-site disorder groups",
+        ),
+        CIFExportField(
+            "disorder_assembly",
+            (
+                "add"
+                if any(
+                    value != "none"
+                    for value in periodic.disorder_assemblies
+                )
+                else "omit"
+            ),
+            "atom-site disorder assemblies",
         ),
         CIFExportField(
             "declared_symmetry",
@@ -496,9 +551,23 @@ def _write_declared_symmetry(gemmi, block, structure):
             loop.add_row((gemmi.cif.quote(operation),))
 
 
-def _write_disorder(block, loop, structure):
+def _write_adp_types(gemmi, block, loop, structure, *, include_default=False):
+    values = structure.periodic.adp_types
+    if include_default or any(value != "none" for value in values):
+        _column(
+            block,
+            loop,
+            "_atom_site_adp_type",
+            tuple(
+                "." if value == "none" else gemmi.cif.quote(value)
+                for value in values
+            ),
+        )
+
+
+def _write_disorder_groups(block, loop, structure, *, include_default=False):
     periodic = structure.periodic
-    if any(periodic.disorder_groups):
+    if include_default or any(periodic.disorder_groups):
         _column(
             block,
             loop,
@@ -508,14 +577,25 @@ def _write_disorder(block, loop, structure):
                 for value in periodic.disorder_groups
             ),
         )
-    if any(value != "none" for value in periodic.disorder_assemblies):
+
+
+def _write_disorder_assemblies(
+    gemmi,
+    block,
+    loop,
+    structure,
+    *,
+    include_default=False,
+):
+    values = structure.periodic.disorder_assemblies
+    if include_default or any(value != "none" for value in values):
         _column(
             block,
             loop,
             "_atom_site_disorder_assembly",
             tuple(
-                value if value != "none" else "."
-                for value in periodic.disorder_assemblies
+                "." if value == "none" else gemmi.cif.quote(value)
+                for value in values
             ),
         )
 
@@ -533,6 +613,29 @@ def _patch_preserved(gemmi, block, structure, plan):
         _write_isotropic(block, loop, structure)
     if actions["u_aniso"] in {"add", "replace"}:
         _write_anisotropic(block, structure)
+    if actions["adp_type"] in {"add", "replace"}:
+        _write_adp_types(
+            gemmi,
+            block,
+            loop,
+            structure,
+            include_default=True,
+        )
+    if actions["disorder_group"] in {"add", "replace"}:
+        _write_disorder_groups(
+            block,
+            loop,
+            structure,
+            include_default=True,
+        )
+    if actions["disorder_assembly"] in {"add", "replace"}:
+        _write_disorder_assemblies(
+            gemmi,
+            block,
+            loop,
+            structure,
+            include_default=True,
+        )
     if actions["declared_symmetry"] == "replace":
         _write_declared_symmetry(gemmi, block, structure)
 
@@ -547,7 +650,9 @@ def _normalized_document(gemmi, structure, block_name):
         _write_isotropic(block, loop, structure)
     if structure.periodic.anisotropic_displacements is not None:
         _write_anisotropic(block, structure)
-    _write_disorder(block, loop, structure)
+    _write_adp_types(gemmi, block, loop, structure)
+    _write_disorder_groups(block, loop, structure)
+    _write_disorder_assemblies(gemmi, block, loop, structure)
     _write_declared_symmetry(gemmi, block, structure)
     return document
 

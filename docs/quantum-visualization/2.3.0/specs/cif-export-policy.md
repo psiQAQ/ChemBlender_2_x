@@ -16,6 +16,7 @@ Supported patches are:
   coordinates;
 - occupancy;
 - isotropic and anisotropic displacement values;
+- atom-site ADP type, disorder group and disorder assembly;
 - source-declared symmetry name, IT number, Hall symbol and operations.
 
 Other blocks, unknown pairs and unknown loops remain in the Gemmi document.

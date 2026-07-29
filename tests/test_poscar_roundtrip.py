@@ -77,6 +77,69 @@ class PoscarRoundTripTests(unittest.TestCase):
         self.assertEqual(semantic_poscar_differences(original, reparsed), ())
         self.assertIsNotNone(exported_document.lattice_velocities)
 
+    def test_velocity_mode_conversion_uses_the_structure_cell(self):
+        from ChemBlender.core.exporters import (
+            PoscarExportSettings,
+            export_poscar,
+            semantic_poscar_differences,
+        )
+        from ChemBlender.core.formats.poscar import parse_poscar_document
+
+        source_text = """velocity basis
+1
+2 0 0
+0 2 0
+0 0 2
+H
+1
+Direct
+0 0 0
+Direct
+0.1 0.2 0.3
+"""
+        with TemporaryDirectory() as directory:
+            directory = Path(directory)
+            source = directory / "source.POSCAR"
+            source.write_text(source_text, encoding="utf-8")
+            original = parse_poscar(source)
+            velocity = next(
+                value
+                for value in original.datasets
+                if value.semantic_role == "atomic_velocity"
+            )
+
+            converted = directory / "converted.POSCAR"
+            export_poscar(
+                converted,
+                original.structures[0],
+                PoscarExportSettings(velocity_mode="cartesian"),
+                velocities=velocity,
+            )
+            converted_document = parse_poscar_document(
+                converted.read_bytes()
+            )
+            reparsed = parse_poscar(converted)
+
+            wrong = directory / "wrong.POSCAR"
+            wrong.write_text(
+                source_text.replace(
+                    "\nDirect\n0.1 0.2 0.3\n",
+                    "\nCartesian\n0.1 0.2 0.3\n",
+                ),
+                encoding="utf-8",
+            )
+            wrong_batch = parse_poscar(wrong)
+
+        numpy.testing.assert_allclose(
+            converted_document.velocities,
+            ((0.2, 0.4, 0.6),),
+        )
+        self.assertEqual(semantic_poscar_differences(original, reparsed), ())
+        self.assertEqual(
+            semantic_poscar_differences(original, wrong_batch),
+            ("atoms",),
+        )
+
     def test_interleaved_species_are_grouped_without_semantic_loss(self):
         from ChemBlender.core.exporters import (
             export_poscar,

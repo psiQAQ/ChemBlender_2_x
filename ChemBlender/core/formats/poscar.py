@@ -367,7 +367,7 @@ def _periodic_site_data(document, labels, fractional):
     )
 
 
-def _datasets(document, structure_id, provenance_id, source_hash, species):
+def _datasets(document, structure, provenance_id, source_hash, species):
     import numpy
 
     values = []
@@ -386,10 +386,19 @@ def _datasets(document, structure_id, provenance_id, source_hash, species):
                 status=DatasetStatus.COMPLETE,
                 source_calculation=None,
                 provenance_ids=(provenance_id,),
-                structure_id=structure_id,
+                structure_id=structure.id,
             )
         )
     if document.velocities is not None:
+        velocities = numpy.asarray(
+            document.velocities,
+            dtype=numpy.float64,
+        )
+        if document.velocity_mode == "direct":
+            velocities = velocities @ numpy.asarray(
+                structure.cell.values,
+                dtype=numpy.float64,
+            )
         values.append(
             AtomicProperty(
                 id=_identity(source_hash, species, "atomic-velocity"),
@@ -397,14 +406,14 @@ def _datasets(document, structure_id, provenance_id, source_hash, species):
                 semantic_role="atomic_velocity",
                 domain="atom",
                 data=ArrayData(
-                    numpy.asarray(document.velocities, dtype=numpy.float64),
+                    velocities,
                     ("atom", "xyz"),
                     "unknown",
                 ),
                 status=DatasetStatus.AMBIGUOUS,
                 source_calculation=None,
                 provenance_ids=(provenance_id,),
-                structure_id=structure_id,
+                structure_id=structure.id,
             )
         )
     if document.lattice_velocities is not None:
@@ -480,7 +489,7 @@ def _parse_poscar_bytes(raw, source, species=None):
         structures = (structure,)
         datasets = _datasets(
             document,
-            structure_id,
+            structure,
             provenance_id,
             source_hash,
             species,

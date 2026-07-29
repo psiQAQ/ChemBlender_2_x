@@ -198,6 +198,8 @@ def _document(
         "atomic_velocity",
         numpy.float64,
     )
+    if velocity_values is not None and settings.velocity_mode == "direct":
+        velocity_values = velocity_values @ numpy.linalg.inv(cell)
     lines = [
         settings.comment,
         _number(scale),
