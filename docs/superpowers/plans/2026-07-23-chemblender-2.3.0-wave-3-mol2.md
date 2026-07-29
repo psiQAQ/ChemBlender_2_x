@@ -8,6 +8,14 @@
 
 **Tech Stack:** Python 3.13 standard library, NumPy, existing record/categorical/topology/import pipeline and `unittest`.
 
+## Wave 3 Pre-Gate Binding
+
+ADR 0043 is authoritative. Do not create `Mol2Envelope`,
+`Mol2MoleculeMetadata`, `Mol2SubstructureData` or another Structure type.
+Map atom type and substructure columns to categorical `AtomicProperty`,
+partial charge to numeric `AtomicProperty`, scalar molecule/charge/status
+metadata to `ChemicalAnnotation`, and raw record bytes to `MolecularRecord`.
+
 ## Global Constraints
 
 - No Open Babel or RDKit MOL2 parser dependency.
@@ -19,24 +27,29 @@
 
 ---
 
-### Task 1: Add MOL2 source metadata models
+### Task 1: Lock MOL2 mapping to the exchange contracts
 
 **Files:**
-- Create: `ChemBlender/core/model/mol2.py`
-- Modify: `ChemBlender/core/model/project.py`
-- Modify: `ChemBlender/core/model_registry.py`
 - Create: `tests/test_mol2_models.py`
+- Modify: `docs/quantum-visualization/reader-capability-matrix.json`
 
 **Interfaces:**
-- Produces: `Mol2Envelope`, `Mol2MoleculeMetadata`, `Mol2SubstructureData`.
+- Consumes: `ChemicalAnnotation`, `MolecularRecord`, `AtomicProperty` and
+  `CategoricalData`.
+- Produces: executable mapping fixtures; no new core model.
 
 - [ ] **Step 1: Write model tests**
 
-Validate molecule type, charge type and status bits as categorical strings. Substructure IDs are integer per atom; names are categorical and can be missing. Envelope stores raw record bytes and present section names.
+Validate molecule type, charge type and status bits as scalar
+`ChemicalAnnotation` values. Substructure IDs are integer per atom; names and
+atom types are categorical and can be missing. `MolecularRecord` stores exact
+raw record bytes; unsupported sections are diagnostics.
 
-- [ ] **Step 2: Implement project references**
+- [ ] **Step 2: Verify existing project references**
 
-MolecularRecord may reference a Mol2Envelope and substructure dataset. Sidecar registry includes the new types with stable tags.
+The mapping uses one Structure, optional explicit TopologyRecord, one
+MolecularRecord and referenced atomic datasets/annotations. Sidecar and
+canonical round-trip use ADR 0043 groups without a format-specific registry.
 
 - [ ] **Step 3: Run and commit**
 

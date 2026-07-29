@@ -8,6 +8,13 @@
 
 **Tech Stack:** Python 3.13 JSON, Blender Extension manifest, Reader API v1, standard-library `unittest`, Blender lifecycle tests.
 
+## Wave 3 Pre-Gate Binding
+
+ADR 0043 is authoritative. CJSON mapping uses an explicit scientific-field
+whitelist. Known scalar exchange metadata may use `ChemicalAnnotation`;
+unknown or unsafe values remain exact bytes in `CJSONEnvelope` with a
+diagnostic. Never project arbitrary JSON keys into an annotation graph.
+
 ## Global Constraints
 
 - No breaking Reader API change after beta.1 freeze.
@@ -31,7 +38,10 @@
 
 - [ ] **Step 1: Lock supported CJSON field matrix**
 
-Tests cover atoms, coordinates, bonds/orders, charges, unit cell, trajectories/conformers, scalar atom properties, vibrations/spectra references supported by current implementation and raw unknown envelope fields.
+Tests cover the whitelist of atoms, coordinates, bonds/orders, charges, unit
+cell, trajectories/conformers, scalar atom properties and supported
+vibration/spectrum references. Unknown fields remain only in the raw envelope
+and diagnostic inventory.
 
 - [ ] **Step 2: Map to new entities**
 

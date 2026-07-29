@@ -8,6 +8,13 @@
 
 **Tech Stack:** Python 3.13 standard library, NumPy, existing categorical/frame/topology/import/view systems, `unittest` and Blender smoke.
 
+## Wave 3 Pre-Gate Binding
+
+ADR 0043 is authoritative. PDB/PQR must reuse `BiologicalHierarchy`,
+`AtomicIdentityData`, `AtomicProperty`, `FrameSet`, `TopologyRecord` and
+`Structure`; do not create `BiologicalAtomData`, `ModelIdentity`,
+`SegmentData` or a PDB-specific Structure.
+
 ## Global Constraints
 
 - No Biotite, MDAnalysis or external package in the base path.
@@ -19,29 +26,34 @@
 
 ---
 
-### Task 1: Add biological atom identity model
+### Task 1: Lock PDB/PQR mapping to the exchange contracts
 
 **Files:**
-- Create: `ChemBlender/core/model/biological.py`
-- Modify: `ChemBlender/core/model/structure.py`
-- Modify: `ChemBlender/core/model/project.py`
-- Modify: `ChemBlender/core/model_registry.py`
 - Create: `tests/test_biological_atom_data.py`
+- Modify: `docs/quantum-visualization/reader-capability-matrix.json`
 
 **Interfaces:**
-- Produces: `BiologicalAtomData`, `ModelIdentity`, `SegmentData`.
+- Consumes: `BiologicalHierarchy`, `AtomicIdentityData`, `AtomicProperty` and
+  `FrameSet`.
+- Produces: executable mapping fixtures; no new core model.
 
 - [ ] **Step 1: Write shape and categorical tests**
 
-Fields include serial, atom name, residue name, residue number, insertion code, chain ID, altloc, segment/TER group, record kind and optional element/formal charge source tokens. All atom dimensions match Structure.
+`BiologicalAtomSiteData` stores serial, residue index, altloc and record kind;
+`BiologicalChain`/`BiologicalResidue` store chain, segment, residue number,
+insertion code and residue name; `AtomicIdentityData` stores atom names.
+Occupancy/B-factor and PQR charge/radius remain atomic datasets. All atom
+dimensions match Structure.
 
-- [ ] **Step 2: Implement identity key**
+- [ ] **Step 2: Verify identity key**
 
 A stable atom identity tuple uses record kind, chain, residue number, insertion code, residue name, atom name and altloc. Serial is retained but not the sole identity across models.
 
-- [ ] **Step 3: Add project/sidecar validation**
+- [ ] **Step 3: Verify project/sidecar validation**
 
-Biological data references one Structure and categorical tables. Run sidecar round-trip.
+Each Structure has at most one BiologicalHierarchy. Compatible MODEL records
+use FrameSet; incompatible identity sets create independent structures.
+Run sidecar/canonical round-trip.
 
 - [ ] **Step 4: Commit**
 

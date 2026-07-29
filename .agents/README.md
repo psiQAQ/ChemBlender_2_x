@@ -61,6 +61,7 @@ Historical documents provide provenance, not current status.
 | decision | [0040-explicit-registration-and-module-boundary.md](decisions/0040-explicit-registration-and-module-boundary.md) | Explicit registration and module boundaries |
 | decision | [0041-cube-structure-reference-policy.md](decisions/0041-cube-structure-reference-policy.md) | Cube structure references, units, and derived-view authority |
 | decision | [0042-native-crystal-contract-reuse.md](decisions/0042-native-crystal-contract-reuse.md) | Unified Structure, unit-cell, symmetry, and periodic-topology boundary |
+| decision | [0043-wave3-exchange-data-boundary.md](decisions/0043-wave3-exchange-data-boundary.md) | Exchange annotation, hierarchy, external-reference, and format-mapping boundary |
 | active | [2.3.0-wave-3-exchange-mol2-pdb-pqr.md](active/2.3.0-wave-3-exchange-mol2-pdb-pqr.md) | Wave 3 exchange and bio formats |
 | queued | [2.3.0-wave-4-migration-release.md](queued/2.3.0-wave-4-migration-release.md) | Wave 4 migration and release |
 | completed | [2.1.0-import-and-2.1.1-slimming.md](completed/2.1.0-import-and-2.1.1-slimming.md) | Legacy release history and evidence |

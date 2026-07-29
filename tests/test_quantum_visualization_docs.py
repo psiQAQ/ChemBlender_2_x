@@ -186,6 +186,40 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("5d5d11f4a9ca716f7fb9653eb92424f1714b68ac", placeholder)
         self.assertIn("d1842c4dd2c1e61eb9075a0d32ffefc7c4d5b318", placeholder)
 
+    def test_wave3_exchange_boundary_is_frozen_before_readers(self):
+        adr = self.read_doc(
+            ".agents/decisions/0043-wave3-exchange-data-boundary.md"
+        )
+        for term in (
+            "ChemicalAnnotation",
+            "ExternalReference",
+            "BiologicalHierarchy",
+            "PropertyDataset",
+            "CJSONEnvelope",
+            "Reader API `1.0-rc1`",
+        ):
+            self.assertIn(term, adr)
+
+        plans = {
+            "mol2": self.read_doc(
+                "docs/superpowers/plans/"
+                "2026-07-23-chemblender-2.3.0-wave-3-mol2.md"
+            ),
+            "pdb": self.read_doc(
+                "docs/superpowers/plans/"
+                "2026-07-23-chemblender-2.3.0-wave-3-pdb-pqr.md"
+            ),
+            "cjson": self.read_doc(
+                "docs/superpowers/plans/"
+                "2026-07-23-chemblender-2.3.0-wave-3-cjson-reader-plugin-v1.md"
+            ),
+        }
+        for text in plans.values():
+            self.assertIn("ADR 0043", text)
+        self.assertIn("ChemicalAnnotation", plans["mol2"])
+        self.assertIn("BiologicalHierarchy", plans["pdb"])
+        self.assertIn("whitelist", plans["cjson"].lower())
+
     def test_single_active_task(self):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(

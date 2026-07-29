@@ -112,8 +112,8 @@
 
 **Interfaces:** ADR 0043 fixes MOL2 annotation/property mapping, PDB hierarchy/frame/topology mapping, PQR charge/radius datasets and CJSON whitelist/envelope policy.
 
-- [ ] **RED:** add documentation contracts for the ADR, architecture inventory and downstream-plan references.
-- [ ] Document the approved mappings without implementing format code.
+- [x] **RED:** add documentation contracts for the ADR, architecture inventory and downstream-plan references.
+- [x] Document the approved mappings without implementing format code.
 - [ ] Run focused tests, then the full suite, `compileall` and `git diff --check`.
 - [ ] Run Blender 5.1.2 native validate/build and ZIP safe-path/duplicate/CRC/wheel audit.
 - [ ] Perform separate specification-compliance and code-quality review passes; fix all in-scope findings and rerun affected verification.
