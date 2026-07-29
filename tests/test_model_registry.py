@@ -27,6 +27,8 @@ from tests.test_sidecar_storage import PROJECT_ID, sample_project
 
 EXPECTED_MODEL_TYPES = {
     "ArrayData", "AtomicIdentityData", "CIFEnvelope", "QCSchemaEnvelope", "CJSONEnvelope",
+    "BiologicalAtomSiteData", "BiologicalChain", "BiologicalHierarchy",
+    "BiologicalModel", "BiologicalResidue", "ChemicalAnnotation", "ExternalReference",
     "PeriodicSiteData", "MolecularTopology", "TopologyRecord", "Structure", "SymmetryResult",
     "CalculationMetadata", "CalculationRecord", "CategoricalData",
     "PropertyDataset", "AtomicProperty", "FrameSet", "FrameProperty",

@@ -48,11 +48,11 @@
 
 **Interfaces:** Add immutable `ChemicalAnnotation`, `ExternalReference`, `BiologicalModel`, `BiologicalChain`, `BiologicalResidue`, `BiologicalAtomSiteData` and `BiologicalHierarchy`.
 
-- [ ] **RED:** prove the model classes are absent, then specify exact validation for scalar values, identifiers, hierarchy indexes and atom-aligned arrays.
-- [ ] Implement the smallest frozen dataclasses by reusing existing model validators, `ArrayData` and `CategoricalData`.
-- [ ] Reject mutable/nested annotation values, invalid confidence, duplicate hierarchy keys and inconsistent atom-site array lengths.
-- [ ] Export only the native types; import no optional parser dependency.
-- [ ] Run the focused model/public-surface tests and commit `feat: add exchange data contracts`.
+- [x] **RED:** prove the model classes are absent, then specify exact validation for scalar values, identifiers, hierarchy indexes and atom-aligned arrays.
+- [x] Implement the smallest frozen dataclasses by reusing existing model validators, `ArrayData` and `CategoricalData`.
+- [x] Reject mutable/nested annotation values, invalid confidence, duplicate hierarchy keys and inconsistent atom-site array lengths.
+- [x] Export only the native types; import no optional parser dependency.
+- [x] Run the focused model/public-surface tests and commit `feat: add exchange data contracts`.
 
 ### Task 3: Integrate exchange entities into project transactions
 

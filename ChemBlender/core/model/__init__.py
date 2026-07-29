@@ -22,6 +22,15 @@ from .diagnostics import (
     ParserReport,
     diagnostic_from_parser_issue,
 )
+from .exchange import (
+    BiologicalAtomSiteData,
+    BiologicalChain,
+    BiologicalHierarchy,
+    BiologicalModel,
+    BiologicalResidue,
+    ChemicalAnnotation,
+    ExternalReference,
+)
 from .quality import DiagnosticSeverity, QualityStatus
 from .molecular_topology import TopologyRecord, TopologySource
 from .grids import Grid3D
