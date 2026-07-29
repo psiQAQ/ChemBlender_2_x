@@ -1,6 +1,7 @@
 import ast
 import hashlib
 import importlib.util
+import re
 import sys
 import tomllib
 import unittest
@@ -79,13 +80,8 @@ class ExampleReaderBoundaryTests(unittest.TestCase):
                 module = node.module or ""
                 self.assertNotEqual(module, "bpy")
                 self.assertFalse(
-                    module.startswith(
-                        (
-                            "ChemBlender.core",
-                            "ChemBlender.ui",
-                            "ChemBlender.views",
-                        )
-                    )
+                    module == "ChemBlender"
+                    or module.startswith("ChemBlender.")
                 )
 
     def test_bootstrap_only_resolves_the_published_api_handle(self):
@@ -199,6 +195,65 @@ class ExampleReaderBoundaryTests(unittest.TestCase):
                 cancelled.report.issues[0].kind,
                 reader_api.IssueKind.WARNING,
             )
+
+    def test_malformed_sources_fail_without_partial_artifacts(self):
+        plugin = load_reader().create_plugin(reader_api)
+        cases = {
+            "invalid-utf8": (
+                b"\xff",
+                "CBSIMPLE source must be UTF-8",
+            ),
+            "wrong-header": (
+                b"CBSIMPLE 2\nunits angstrom\natoms 1\nH 0 0 0\n",
+                "CBSIMPLE 1 header is required",
+            ),
+            "wrong-units": (
+                b"CBSIMPLE 1\nunits bohr\natoms 1\nH 0 0 0\n",
+                "CBSIMPLE 1 requires units angstrom",
+            ),
+            "count-mismatch": (
+                b"CBSIMPLE 1\nunits angstrom\natoms 2\nH 0 0 0\n",
+                "atom count must match the coordinate rows",
+            ),
+            "unknown-element": (
+                b"CBSIMPLE 1\nunits angstrom\natoms 1\nX 0 0 0\n",
+                "invalid atom row 1",
+            ),
+            "non-finite": (
+                b"CBSIMPLE 1\nunits angstrom\natoms 1\nH nan 0 0\n",
+                "invalid atom row 1",
+            ),
+            "trailing-row": (
+                b"CBSIMPLE 1\nunits angstrom\natoms 1\n"
+                b"H 0 0 0\nH 1 0 0\n",
+                "atom count must match the coordinate rows",
+            ),
+        }
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name, (source_bytes, message) in cases.items():
+                with self.subTest(name=name):
+                    source_path = root / f"{name}.cbsimple"
+                    source_path.write_bytes(source_bytes)
+                    staging_root = root / f"{name}-staging"
+                    staging_root.mkdir()
+                    request = reader_api.ParseRequest(
+                        source_path=source_path,
+                        source_content_hash=hashlib.sha256(
+                            source_bytes
+                        ).hexdigest(),
+                        validation_mode="balanced",
+                        canonical_parameters={},
+                        staging_root=staging_root,
+                        progress=lambda _event: None,
+                        is_cancelled=lambda: False,
+                    )
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        f"^{re.escape(message)}$",
+                    ):
+                        plugin.parse(request)
+                    self.assertEqual(tuple(staging_root.iterdir()), ())
 
     def test_registration_lifecycle_is_idempotent_and_missing_host_is_safe(self):
         registrations = []
