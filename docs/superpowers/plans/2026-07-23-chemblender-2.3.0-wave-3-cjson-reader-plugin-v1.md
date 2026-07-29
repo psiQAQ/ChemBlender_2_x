@@ -36,28 +36,34 @@ diagnostic. Never project arbitrary JSON keys into an annotation graph.
 **Interfaces:**
 - Produces: built-in Reader API v1 CJSON reader and lightweight exporter.
 
-- [ ] **Step 1: Lock supported CJSON field matrix**
+- [x] **Step 1: Lock supported CJSON field matrix**
 
 Tests cover the whitelist of atoms, coordinates, bonds/orders, charges, unit
 cell, trajectories/conformers, scalar atom properties and supported
 vibration/spectrum references. Unknown fields remain only in the raw envelope
 and diagnostic inventory.
 
-- [ ] **Step 2: Map to new entities**
+- [x] **Step 2: Map to new entities**
 
 Use TopologyRecord, ConformerSet/FrameSet, categorical identity and SourceRevision. Existing envelopes migrate and remain readable.
 
-- [ ] **Step 3: Define large-data export behavior**
+- [x] **Step 3: Define large-data export behavior**
 
 CJSON export may include small arrays under a configured byte threshold. Larger Grid3D/orbital arrays are omitted with stable artifact references only when the receiving contract supports them; otherwise ExportReport lists omission. Never embed NPY/base64 silently.
 
-- [ ] **Step 4: Product flow test**
+- [x] **Step 4: Product flow test**
 
 Import CJSON, create view, save/reopen, export, parse export and compare lightweight semantics.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run CJSON, sidecar, reader conformance and flow tests; commit.
+
+Completion evidence: `3a13e58`, `b7da8a6`; RED was 12 tests with
+3 failures and 3 errors. Broad GREEN was 103/103. Exact source bytes survive
+BOM/whitespace/numeric lexemes and sidecar round-trip; malformed declared
+containers fail closed. Scoped independent re-review passed with 0 open
+findings.
 
 ### Task 2: Finalize Reader API v1 public documentation
 
