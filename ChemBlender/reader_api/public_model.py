@@ -9,6 +9,11 @@ from ..core import (
     AtomicProperty,
     BandPathBranch,
     BandStructure,
+    BiologicalAtomSiteData,
+    BiologicalChain,
+    BiologicalHierarchy,
+    BiologicalModel,
+    BiologicalResidue,
     BasisConvention,
     BasisFunctionKind,
     BasisSet,
@@ -17,6 +22,7 @@ from ..core import (
     CalculationRecord,
     CalculationStatus,
     CategoricalData,
+    ChemicalAnnotation,
     ConformerSet,
     CJSONEnvelope,
     CIFEnvelope,
@@ -29,6 +35,7 @@ from ..core import (
     DiagnosticSeverity,
     DiagnosticValue,
     EnergyReference,
+    ExternalReference,
     ExcitationContribution,
     ExcitedStateReferences,
     ExcitedStateSet,
@@ -80,6 +87,9 @@ _GROUP_TYPES = (
     ("structures", frozenset((Structure,))),
     ("topologies", frozenset((TopologyRecord,))),
     ("molecular_records", frozenset((MolecularRecord,))),
+    ("biological_hierarchies", frozenset((BiologicalHierarchy,))),
+    ("annotations", frozenset((ChemicalAnnotation,))),
+    ("external_references", frozenset((ExternalReference,))),
     ("cif_envelopes", frozenset((CIFEnvelope,))),
     ("qcschema_envelopes", frozenset((QCSchemaEnvelope,))),
     ("cjson_envelopes", frozenset((CJSONEnvelope,))),
@@ -180,6 +190,9 @@ class PublicImportBatch:
     structures: tuple[Structure, ...] = ()
     topologies: tuple[TopologyRecord, ...] = ()
     molecular_records: tuple[MolecularRecord, ...] = ()
+    biological_hierarchies: tuple[BiologicalHierarchy, ...] = ()
+    annotations: tuple[ChemicalAnnotation, ...] = ()
+    external_references: tuple[ExternalReference, ...] = ()
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
     qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
     cjson_envelopes: tuple[CJSONEnvelope, ...] = ()

@@ -35,6 +35,13 @@ MODEL_TAGS = (
     "MolecularTopology",
     "RawRecordProperty",
     "MolecularRecord",
+    "BiologicalModel",
+    "BiologicalChain",
+    "BiologicalResidue",
+    "BiologicalAtomSiteData",
+    "BiologicalHierarchy",
+    "ChemicalAnnotation",
+    "ExternalReference",
     "TopologyRecord",
     "Structure",
     "SymmetryResult",
@@ -423,7 +430,7 @@ class ReaderCanonicalDocumentTests(unittest.TestCase):
     def test_registered_model_and_enum_tags_are_exact(self):
         self.assertEqual(tuple(canonical_document._MODEL_TYPES), MODEL_TAGS)
         self.assertEqual(tuple(canonical_document._MODEL_ENUMS), ENUM_TAGS)
-        self.assertEqual(len(MODEL_TAGS), 52)
+        self.assertEqual(len(MODEL_TAGS), 59)
         self.assertEqual(len(ENUM_TAGS), 15)
         for name in MODEL_TAGS + ENUM_TAGS:
             with self.subTest(name=name):

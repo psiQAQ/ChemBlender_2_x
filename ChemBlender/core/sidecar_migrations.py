@@ -219,6 +219,9 @@ def migrate_manifest(document, *, migrated_topology_ids=None):
             "calculation_groups",
             "topologies",
             "molecular_records",
+            "biological_hierarchies",
+            "annotations",
+            "external_references",
         )
         if name not in project
     )
@@ -253,6 +256,9 @@ def migrate_manifest(document, *, migrated_topology_ids=None):
         "calculation_groups",
         "topologies",
         "molecular_records",
+        "biological_hierarchies",
+        "annotations",
+        "external_references",
     ):
         migrated["project"].setdefault(name, {"$dict": []})
     for _key, structure in _registry_entries(migrated["project"], "structures"):

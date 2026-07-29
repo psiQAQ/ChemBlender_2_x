@@ -71,16 +71,16 @@
 
 **Interfaces:** `ImportBatch` and `QCProject` gain `biological_hierarchies`, `annotations` and `external_references`. Existing all-or-nothing commit semantics remain authoritative.
 
-- [ ] **RED:** cover valid commit, missing target/provenance, duplicate `(target, namespace, key)`, duplicate external identity, duplicate hierarchy per Structure, atom-count mismatch and transaction rollback.
-- [ ] Add the three registries once to each existing generic entity-group pipeline.
-- [ ] Keep annotations/references pointed at pre-existing scientific/source entities; prevent self-referential metadata graphs.
-- [ ] Preserve created-entity reporting, grouping, worker payload and `project_to_batch()` behavior.
-- [ ] Run focused transaction/worker tests and commit `feat: integrate exchange project entities`.
+- [x] **RED:** cover valid commit, missing target/provenance, duplicate `(target, namespace, key)`, duplicate external identity, duplicate hierarchy per Structure, atom-count mismatch and transaction rollback.
+- [x] Add the three registries once to each existing generic entity-group pipeline.
+- [x] Keep annotations/references pointed at pre-existing scientific/source entities; prevent self-referential metadata graphs.
+- [x] Preserve created-entity reporting, grouping, worker payload and project-graph revalidation behavior.
+- [x] Run focused transaction/worker tests and commit `feat: integrate exchange project entities`.
 
 ### Task 4: Persist and publish the frozen boundary
 
 **Files:**
-- Modify: `ChemBlender/core/storage/model_codec.py`
+- Modify: `ChemBlender/core/sidecar_migrations.py`
 - Modify: `ChemBlender/core/sidecar_migrations.py`
 - Modify: `ChemBlender/reader_api/public_model.py`
 - Modify: `ChemBlender/reader_api/__init__.py`
@@ -92,11 +92,11 @@
 
 **Interfaces:** New entity groups round-trip through sidecar schema `1.0`, canonical documents and `PublicImportBatch`; legacy documents default all new groups to empty.
 
-- [ ] **RED:** cover model codec, sidecar save/open, canonical round-trip, legacy missing-group defaults, public batch conversion and deterministic schema snapshot.
-- [ ] Register the exact types and three groups in existing codecs and bridges; do not create a second serializer.
-- [ ] Regenerate the locked Reader API snapshot and SHA deterministically while keeping `1.0-rc1`.
-- [ ] Prove cold imports of `ChemBlender.core` and `ChemBlender.reader_api` do not load Open Babel, Biopython, RDKit, Gemmi or spglib.
-- [ ] Run focused persistence/API tests and commit `feat: persist exchange reader contracts`.
+- [x] **RED:** cover model codec, sidecar save/open, canonical round-trip, legacy missing-group defaults, public batch conversion and deterministic schema snapshot.
+- [x] Register the exact types and three groups in existing codecs and bridges; do not create a second serializer.
+- [x] Regenerate the locked Reader API snapshot and SHA deterministically while keeping `1.0-rc1`.
+- [x] Prove cold imports of `ChemBlender.core` and `ChemBlender.reader_api` do not load Open Babel, Biopython, RDKit, Gemmi or spglib.
+- [x] Run focused persistence/API tests and commit `feat: persist exchange reader contracts`.
 
 ### Task 5: Freeze format mapping policy and checkpoint
 
