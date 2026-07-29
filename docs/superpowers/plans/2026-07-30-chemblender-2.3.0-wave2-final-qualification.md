@@ -181,7 +181,7 @@ Add UTF-8/LF deterministic scientific fixtures:
 - quartz: trigonal cell, fractional Si/O sites and declared space group;
 - NaCl: cubic cell, fractional Na/Cl sites and declared `Fm-3m`;
 - Si: two-atom direct-coordinate diamond cell;
-- bcc Fe: one-atom direct-coordinate cubic cell.
+- bcc Fe: two-atom direct-coordinate conventional cubic cell.
 
 Reuse the existing disorder, multi-block, Selective Dynamics and velocity
 fixtures instead of duplicating them.
@@ -228,7 +228,7 @@ result = benchmark_crystal(
 ```
 
 The result must contain `environment` and metrics named
-`cif_preview`, `symmetry_expansion`, `supercell_10x10x10`,
+`cif_preview`, `symmetry_expansion`, `supercell`,
 `poscar_import` and `crystal_view_creation`; every metric contains
 `samples`, `median_seconds`, `p95_seconds`, `peak_bytes` and workload
 metadata. With `include_blender_view=False`, the view metric is explicitly

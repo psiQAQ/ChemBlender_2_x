@@ -3,7 +3,7 @@
 
 import argparse
 from ctypes import Structure as CStructure, byref, c_ulong, c_ulonglong, sizeof
-from math import ceil
+from math import ceil, prod
 import json
 import os
 from pathlib import Path
@@ -106,25 +106,35 @@ _atom_site_occupancy
 
 
 def _measure(operation, samples):
-    operation()
+    def timed_sample():
+        tracemalloc.start()
+        started = perf_counter()
+        try:
+            operation()
+        finally:
+            duration = perf_counter() - started
+            _current, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+        return duration, peak
+
+    cold_elapsed, cold_peak = timed_sample()
     elapsed = []
     peaks = []
     for _index in range(samples):
-        tracemalloc.start()
-        started = perf_counter()
-        operation()
-        elapsed.append(perf_counter() - started)
-        _current, peak = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
+        duration, peak = timed_sample()
+        elapsed.append(duration)
         peaks.append(peak)
     ordered = sorted(elapsed)
     return {
         "status": "Passed",
         "samples": samples,
+        "cold_seconds": cold_elapsed,
+        "cold_peak_bytes": cold_peak,
         "median_seconds": median(elapsed),
         "p95_seconds": ordered[max(0, ceil(samples * 0.95) - 1)],
         "peak_bytes": max(peaks),
         "samples_seconds": elapsed,
+        "cache_state": "cold first sample; hot samples after cold warmup",
     }
 
 
@@ -137,13 +147,22 @@ def _view_operation(structure):
     settings = PeriodicViewSettings(representation="source_sites")
 
     def create_view():
+        before = set(bpy.data.objects)
         obj = create_periodic_structure_view(
             structure,
             settings=settings,
             name="Wave 2 qualification benchmark",
             collection=bpy.context.scene.collection,
         )
-        remove_structure_view(obj)
+        try:
+            if len(obj.data.vertices) != len(structure.atomic_numbers):
+                raise RuntimeError(
+                    "crystal view produced an unexpected atom count"
+                )
+        finally:
+            remove_structure_view(obj)
+        if set(bpy.data.objects) != before:
+            raise RuntimeError("crystal view cleanup left objects behind")
 
     return create_view
 
@@ -198,9 +217,50 @@ def benchmark_crystal(
                 )
                 if len(result.staged_batch_ids) != 1:
                     raise RuntimeError("CIF preview did not stage one batch")
+                batch = session.result(result.staged_batch_ids[0])
+                if (
+                    len(batch.structures) != 1
+                    or len(batch.structures[0].atomic_numbers)
+                    != cif_atom_count
+                ):
+                    raise RuntimeError(
+                        "CIF preview produced an unexpected atom count"
+                    )
+                if include_blender_view:
+                    from ChemBlender.ui.import_preview import _cif_summary
+
+                    summary = _cif_summary(batch)
+                    if (
+                        summary is None
+                        or summary["block_count"] != 1
+                        or summary["valid_block_count"] != 1
+                        or summary["site_summary"]
+                        != f"{cif_atom_count} sites across 1 structure(s)"
+                    ):
+                        raise RuntimeError(
+                            "CIF preview summary did not match the workload"
+                        )
             finally:
                 session.discard()
+            if session.root.exists():
+                raise RuntimeError("CIF preview left staging data behind")
 
+        preview_metric = {
+            **_measure(preview, samples),
+            "workload": {
+                "atom_count": cif_atom_count,
+                "reader": "cif",
+                "path": (
+                    "Reader API preflight, staged ImportBatch and "
+                    "Import Preview CIF summary"
+                    if include_blender_view
+                    else "Reader API preflight and staged ImportBatch"
+                ),
+                "summary_projection": (
+                    "Passed" if include_blender_view else "Not Run"
+                ),
+            },
+        }
         large_structure = parse_cif(cif_path).structures[0]
         quartz = parse_cif(FIXTURES / "cif" / "quartz.cif").structures[0]
         expanded_settings = PeriodicViewSettings(
@@ -210,25 +270,50 @@ def benchmark_crystal(
             representation="supercell",
             supercell=supercell,
         )
+        expanded_site_count = 7
+        full_cell_site_count = 9
+        supercell_site_count = (
+            full_cell_site_count * prod(supercell) - len(quartz.atomic_numbers)
+        )
+
+        def require_derived_count(derived, expected, operation):
+            counts = {
+                len(derived["coordinates"]),
+                len(derived["source_atom_ids"]),
+                len(derived["rotations"]),
+            }
+            if counts != {expected}:
+                raise RuntimeError(
+                    f"{operation} produced unexpected site counts: "
+                    f"{sorted(counts)}"
+                )
 
         def expand_symmetry():
-            _derived_periodic_sites(quartz, expanded_settings)
+            require_derived_count(
+                _derived_periodic_sites(quartz, expanded_settings),
+                expanded_site_count,
+                "symmetry expansion",
+            )
 
         def derive_supercell():
-            _derived_periodic_sites(quartz, supercell_settings)
+            require_derived_count(
+                _derived_periodic_sites(quartz, supercell_settings),
+                supercell_site_count,
+                "supercell derivation",
+            )
 
         def import_poscar():
-            parse_poscar(FIXTURES / "poscar" / "si.POSCAR")
+            batch = parse_poscar(FIXTURES / "poscar" / "si.POSCAR")
+            if (
+                len(batch.structures) != 1
+                or len(batch.structures[0].atomic_numbers) != 2
+            ):
+                raise RuntimeError(
+                    "POSCAR import produced an unexpected atom count"
+                )
 
         metrics = {
-            "cif_preview": {
-                **_measure(preview, samples),
-                "workload": {
-                    "atom_count": cif_atom_count,
-                    "reader": "cif",
-                    "path": "Reader API preflight and staged ImportBatch",
-                },
-            },
+            "cif_preview": preview_metric,
             "symmetry_expansion": {
                 **_measure(expand_symmetry, samples),
                 "workload": {
@@ -239,7 +324,7 @@ def benchmark_crystal(
                     "representation": "expanded_cell",
                 },
             },
-            "supercell_10x10x10": {
+            "supercell": {
                 **_measure(derive_supercell, samples),
                 "workload": {
                     "source_atom_count": len(quartz.atomic_numbers),
@@ -260,7 +345,7 @@ def benchmark_crystal(
                 "workload": {
                     "atom_count": cif_atom_count,
                     "representation": "source_sites",
-                    "cache_state": "hot after one warmup",
+                    "cache_state": "hot after measured cold sample",
                 },
             }
         else:

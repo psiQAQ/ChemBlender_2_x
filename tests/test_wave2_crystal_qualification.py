@@ -1,10 +1,12 @@
 import importlib.util
+from hashlib import sha256
 import json
 from pathlib import Path
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 from uuid import uuid4
 
 import numpy
@@ -55,6 +57,12 @@ POSCAR_QUALIFICATION_CASES = (
     "cscl-selective.vasp",
     "velocities.CONTCAR",
 )
+QUALIFICATION_FIXTURE_HASHES = {
+    "quartz.cif": "c2f8e1b71efb200430f94549f42b50cebf4b28684ccca8e56cab37be42ec70ff",
+    "nacl.cif": "b5b14183e1ac9e5591fda5d9bfc57500344d20b5dd68b4fae54382ce4613b654",
+    "si.POSCAR": "6f11b9ae550f7f2c570741d05c648691bdfe5d36b91c64c5c20dd8d5ee00f8d0",
+    "fe-bcc.POSCAR": "021129ee23c9e027b269291e7424653554d29cf61a4282fd827bee3f99acc6ff",
+}
 
 
 class Wave2CrystalBoundaryQualificationTests(unittest.TestCase):
@@ -230,6 +238,111 @@ class Wave2CrystalRoundTripQualificationTests(unittest.TestCase):
         importlib.util.find_spec("gemmi") is not None,
         "Gemmi dependency unavailable",
     )
+    def test_fixed_fixtures_have_expected_scientific_identity(self):
+        from ChemBlender.core import (
+            parse_cif,
+            parse_poscar,
+            unit_cell_parameters,
+        )
+
+        expected_cif = {
+            "quartz.cif": (
+                (14, 8),
+                (4.913, 4.913, 5.405, 90.0, 90.0, 120.0),
+                ("P 31 2 1", 152, 6),
+            ),
+            "nacl.cif": (
+                (11, 17),
+                (5.6402, 5.6402, 5.6402, 90.0, 90.0, 90.0),
+                ("F m -3 m", 225, 0),
+            ),
+        }
+        expected_poscar = {
+            "si.POSCAR": (
+                (14, 14),
+                (
+                    (0.0, 2.715, 2.715),
+                    (2.715, 0.0, 2.715),
+                    (2.715, 2.715, 0.0),
+                ),
+            ),
+            "fe-bcc.POSCAR": (
+                (26, 26),
+                (
+                    (2.87, 0.0, 0.0),
+                    (0.0, 2.87, 0.0),
+                    (0.0, 0.0, 2.87),
+                ),
+            ),
+        }
+        for name, (atoms, cell, symmetry) in expected_cif.items():
+            path = CIF_FIXTURES / name
+            with self.subTest(fixture=name):
+                self.assertEqual(
+                    sha256(path.read_bytes()).hexdigest(),
+                    QUALIFICATION_FIXTURE_HASHES[name],
+                )
+                structure, = parse_cif(path).structures
+                self.assertEqual(structure.atomic_numbers, atoms)
+                numpy.testing.assert_allclose(
+                    unit_cell_parameters(structure.cell),
+                    cell,
+                    rtol=0.0,
+                    atol=1.0e-9,
+                )
+                declared = structure.periodic.declared_symmetry
+                self.assertEqual(
+                    (
+                        declared.name,
+                        declared.international_number,
+                        len(structure.periodic.symmetry_operations),
+                    ),
+                    symmetry,
+                )
+                if name == "quartz.cif":
+                    from ChemBlender.views.periodic import (
+                        PeriodicViewSettings,
+                        _derived_periodic_sites,
+                    )
+
+                    derived = _derived_periodic_sites(
+                        structure,
+                        PeriodicViewSettings(
+                            representation="expanded_cell"
+                        ),
+                    )
+                    expanded_atoms = (
+                        structure.atomic_numbers
+                        + tuple(
+                            structure.atomic_numbers[index]
+                            for index in derived["source_atom_ids"]
+                        )
+                    )
+                    self.assertEqual(len(derived["coordinates"]), 7)
+                    self.assertEqual(
+                        (expanded_atoms.count(14), expanded_atoms.count(8)),
+                        (3, 6),
+                    )
+        for name, (atoms, cell) in expected_poscar.items():
+            path = POSCAR_FIXTURES / name
+            with self.subTest(fixture=name):
+                self.assertEqual(
+                    sha256(path.read_bytes()).hexdigest(),
+                    QUALIFICATION_FIXTURE_HASHES[name],
+                )
+                structure, = parse_poscar(path).structures
+                self.assertEqual(structure.atomic_numbers, atoms)
+                numpy.testing.assert_allclose(
+                    structure.cell.values,
+                    cell,
+                    rtol=0.0,
+                    atol=1.0e-12,
+                )
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("gemmi") is not None,
+        "Gemmi dependency unavailable",
+    )
     def test_fixed_cif_inventory_survives_sidecar_and_export_roundtrip(self):
         from ChemBlender.core import (
             QCProject,
@@ -256,33 +369,36 @@ class Wave2CrystalRoundTripQualificationTests(unittest.TestCase):
                     restored = open_project(sidecar)
                     try:
                         self.assertEqual(restored.schema_version, "1.0")
-                        original = batch.structures[0]
-                        reopened = restored.structures[original.id]
-                        self.assert_periodic_structure_equal(
-                            original,
-                            reopened,
-                        )
-                        envelope = restored.cif_envelopes[
-                            reopened.periodic.cif_envelope_id
-                        ]
-                        exported = directory / f"{source.stem}-exported.cif"
-                        export_cif(
-                            exported,
-                            reopened,
-                            envelope=envelope,
-                            mode="preserve",
-                        )
-                        reparsed = parse_cif(exported)
-                        exported_structure = next(
-                            structure
-                            for structure in reparsed.structures
-                            if structure.periodic.cif_block_name
-                            == reopened.periodic.cif_block_name
-                        )
-                        self.assert_periodic_structure_equal(
-                            reopened,
-                            exported_structure,
-                        )
+                        for original in batch.structures:
+                            reopened = restored.structures[original.id]
+                            self.assert_periodic_structure_equal(
+                                original,
+                                reopened,
+                            )
+                            envelope = restored.cif_envelopes[
+                                reopened.periodic.cif_envelope_id
+                            ]
+                            exported = (
+                                directory
+                                / f"{source.stem}-exported.cif"
+                            )
+                            export_cif(
+                                exported,
+                                reopened,
+                                envelope=envelope,
+                                mode="preserve",
+                            )
+                            reparsed = parse_cif(exported)
+                            exported_structure = next(
+                                structure
+                                for structure in reparsed.structures
+                                if structure.periodic.cif_block_name
+                                == reopened.periodic.cif_block_name
+                            )
+                            self.assert_periodic_structure_equal(
+                                reopened,
+                                exported_structure,
+                            )
                     finally:
                         close_project(restored)
 
@@ -423,7 +539,7 @@ class Wave2CrystalPerformanceQualificationTests(unittest.TestCase):
             {
                 "cif_preview",
                 "symmetry_expansion",
-                "supercell_10x10x10",
+                "supercell",
                 "poscar_import",
                 "crystal_view_creation",
             },
@@ -447,12 +563,44 @@ class Wave2CrystalPerformanceQualificationTests(unittest.TestCase):
                     continue
                 self.assertEqual(metric["status"], "Passed")
                 self.assertEqual(metric["samples"], 2)
+                self.assertGreaterEqual(metric["cold_seconds"], 0.0)
+                self.assertGreater(metric["cold_peak_bytes"], 0)
                 self.assertGreaterEqual(metric["median_seconds"], 0.0)
                 self.assertGreaterEqual(
                     metric["p95_seconds"],
                     metric["median_seconds"],
                 )
                 self.assertGreater(metric["peak_bytes"], 0)
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("gemmi") is not None,
+        "Gemmi dependency unavailable",
+    )
+    def test_benchmark_rejects_empty_scientific_results(self):
+        from ChemBlender.scripts import benchmark_crystal
+
+        empty = {
+            "coordinates": (),
+            "source_atom_ids": (),
+            "rotations": (),
+        }
+        with (
+            patch.object(
+                benchmark_crystal,
+                "_derived_periodic_sites",
+                return_value=empty,
+            ),
+            self.assertRaisesRegex(
+                RuntimeError,
+                "symmetry expansion produced",
+            ),
+        ):
+            benchmark_crystal.benchmark_crystal(
+                samples=1,
+                cif_atom_count=2,
+                supercell=(2, 2, 2),
+                include_blender_view=False,
+            )
 
 
 if __name__ == "__main__":
