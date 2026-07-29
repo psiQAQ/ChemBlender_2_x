@@ -130,6 +130,14 @@ class SpglibAdapterTests(unittest.TestCase):
                 ("angle_tolerance_degree", 0.5),
             ),
         )
+        self.assertEqual(
+            derived.provenance[0].producer_version,
+            "1/spglib-test",
+        )
+        numpy.testing.assert_allclose(
+            result.transformation_matrix.values,
+            numpy.eye(3),
+        )
 
     def test_core_import_does_not_eagerly_load_spglib(self):
         code = (

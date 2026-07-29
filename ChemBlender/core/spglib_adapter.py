@@ -32,6 +32,14 @@ def _spglib():
     return spglib
 
 
+def spglib_availability():
+    try:
+        _spglib()
+    except (SpglibDependencyError, ImportError, OSError) as error:
+        return False, str(error)
+    return True, ""
+
+
 def _tolerances(symprec, angle_tolerance):
     for value, name in (
         (symprec, "symprec"),

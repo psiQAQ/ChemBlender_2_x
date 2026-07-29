@@ -28,6 +28,7 @@ from ChemBlender.core import (
     SourceRecord,
     SourceRevision,
     Structure,
+    SymmetryResult,
 )
 from ChemBlender.core.formats.sdf import parse_sdf
 from ChemBlender.core.import_pipeline.conformer_grouping import (
@@ -974,9 +975,9 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             ),
         )
         with patch.object(
-            properties.importlib.util,
-            "find_spec",
-            return_value=None,
+            properties,
+            "symmetry_availability",
+            return_value=(False, "spglib is not installed"),
         ):
             sections = properties.crystal_symmetry_property_sections(
                 structure
@@ -996,6 +997,260 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         )
         self.assertFalse(sections["derive_available"])
         self.assertIn("not installed", sections["dependency_reason"])
+        self.assertEqual(
+            sections["comparison"][0],
+            ("Status", "Not derived"),
+        )
+
+    def test_standardized_structure_view_keeps_source_view(self):
+        properties = importlib.import_module("ChemBlender.ui.properties")
+        source = sample_project().structures[STRUCTURE_ID]
+        standard = Structure(
+            id=UUID("30000000-0000-0000-0000-000000000099"),
+            revision="standard-r1",
+            atomic_numbers=source.atomic_numbers,
+            coordinates=ArrayData(
+                numpy.zeros((1, 3)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+            cell=ArrayData(
+                numpy.eye(3),
+                ("cell_vector", "xyz"),
+                "angstrom",
+            ),
+            periodic=PeriodicSiteData(
+                fractional_coordinates=ArrayData(
+                    numpy.zeros((1, 3)),
+                    ("atom", "xyz"),
+                    "dimensionless",
+                ),
+                site_labels=("O1",),
+                occupancies=ArrayData(
+                    numpy.ones(1),
+                    ("atom",),
+                    "dimensionless",
+                ),
+                isotropic_displacements=None,
+                anisotropic_displacements=None,
+                adp_types=("none",),
+                disorder_groups=(0,),
+                declared_space_group_name=None,
+                declared_space_group_number=None,
+                symmetry_operations=(),
+                cif_envelope_id=None,
+            ),
+        )
+        result = object.__new__(SymmetryResult)
+        result_id = UUID("40000000-0000-0000-0000-000000000099")
+        object.__setattr__(result, "id", result_id)
+        object.__setattr__(result, "standardized_structure_id", standard.id)
+        project = SimpleNamespace(
+            symmetry_results={result_id: result},
+            structures={source.id: source, standard.id: standard},
+            topologies={},
+        )
+        session = SimpleNamespace(
+            project=project,
+            active_entity_id=source.id,
+            active_view_object_name="Source",
+        )
+
+        class View:
+            name = "Standardized"
+
+            def __init__(self):
+                self.selected = False
+
+            def select_get(self):
+                return self.selected
+
+            def select_set(self, value):
+                self.selected = value
+
+        source_view = View()
+        source_view.name = "Source"
+        standard_view = View()
+        created = []
+
+        def create_periodic_structure_view(structure, topology, **keywords):
+            created.append((structure, topology, keywords))
+            return standard_view
+
+        fake_views = ModuleType("ChemBlender.views")
+        fake_views.create_periodic_structure_view = (
+            create_periodic_structure_view
+        )
+        fake_views.remove_structure_view = lambda _view: None
+        browser = SimpleNamespace(active_entity_id=str(source.id))
+        context = SimpleNamespace(
+            scene=SimpleNamespace(
+                chemblender_project_browser=browser,
+            ),
+            collection=object(),
+            active_object=source_view,
+            view_layer=SimpleNamespace(
+                objects=SimpleNamespace(active=source_view),
+            ),
+        )
+        operation = properties.CHEMBLENDER_OT_view_standardized_structure()
+        operation.symmetry_result_id = str(result_id)
+        with (
+            patch.dict(sys.modules, {"ChemBlender.views": fake_views}),
+            patch.object(
+                properties,
+                "get_scene_session",
+                return_value=session,
+            ),
+            patch.object(properties, "advance_browser_revision") as advance,
+        ):
+            outcome = operation.execute(context)
+
+        self.assertEqual(outcome, {"FINISHED"})
+        self.assertEqual(created[0][0], standard)
+        self.assertFalse(source_view.selected)
+        self.assertTrue(standard_view.selected)
+        self.assertEqual(session.active_entity_id, standard.id)
+        self.assertEqual(session.active_view_object_name, standard_view.name)
+        self.assertIs(context.view_layer.objects.active, standard_view)
+        self.assertEqual(browser.active_entity_id, str(standard.id))
+        advance.assert_called_once_with(session)
+
+    def test_standardized_view_failure_removes_view_and_restores_source(self):
+        properties = importlib.import_module("ChemBlender.ui.properties")
+        source = SimpleNamespace(id=STRUCTURE_ID)
+        standard_id = UUID("30000000-0000-0000-0000-000000000098")
+        standard = SimpleNamespace(
+            id=standard_id,
+            topology_ids=(),
+            periodic=object(),
+        )
+        result_id = UUID("40000000-0000-0000-0000-000000000098")
+        result = object.__new__(SymmetryResult)
+        object.__setattr__(result, "id", result_id)
+        object.__setattr__(result, "standardized_structure_id", standard_id)
+        project = SimpleNamespace(
+            symmetry_results={result_id: result},
+            structures={STRUCTURE_ID: source, standard_id: standard},
+            topologies={},
+        )
+        session = SimpleNamespace(
+            project=project,
+            active_entity_id=STRUCTURE_ID,
+            active_view_object_name="Source",
+        )
+
+        class View:
+            def __init__(self, name):
+                self.name = name
+                self.selected = True
+
+            def select_get(self):
+                return self.selected
+
+            def select_set(self, value):
+                self.selected = value
+
+        source_view = View("Source")
+        standard_view = View("Standardized")
+        removed = []
+        fake_views = ModuleType("ChemBlender.views")
+        browser = SimpleNamespace(active_entity_id=str(STRUCTURE_ID))
+        fake_views.remove_structure_view = removed.append
+        context = SimpleNamespace(
+            scene=SimpleNamespace(
+                chemblender_project_browser=browser,
+            ),
+            collection=object(),
+            active_object=source_view,
+            view_layer=SimpleNamespace(
+                objects=SimpleNamespace(active=source_view),
+            ),
+        )
+
+        def create_periodic_structure_view(*_args, **_keywords):
+            context.active_object = standard_view
+            context.view_layer.objects.active = standard_view
+            return standard_view
+
+        fake_views.create_periodic_structure_view = (
+            create_periodic_structure_view
+        )
+        operation = properties.CHEMBLENDER_OT_view_standardized_structure()
+        operation.symmetry_result_id = str(result_id)
+        with (
+            patch.dict(sys.modules, {"ChemBlender.views": fake_views}),
+            patch.object(
+                properties,
+                "get_scene_session",
+                return_value=session,
+            ),
+            patch.object(
+                properties,
+                "Structure",
+                SimpleNamespace,
+            ),
+            patch.object(
+                properties,
+                "advance_browser_revision",
+                side_effect=RuntimeError("refresh failed"),
+            ),
+        ):
+            outcome = operation.execute(context)
+
+        self.assertEqual(outcome, {"CANCELLED"})
+        self.assertEqual(removed, [standard_view])
+        self.assertEqual(session.active_entity_id, STRUCTURE_ID)
+        self.assertEqual(session.active_view_object_name, "Source")
+        self.assertEqual(browser.active_entity_id, str(STRUCTURE_ID))
+        self.assertTrue(source_view.selected)
+        self.assertIs(context.view_layer.objects.active, source_view)
+
+    def test_symmetry_derivation_invalidates_browser_projection(self):
+        properties = importlib.import_module("ChemBlender.ui.properties")
+        structure = SimpleNamespace(id=STRUCTURE_ID, periodic=object())
+        committed = []
+        dirty = []
+        project = SimpleNamespace(
+            structures={STRUCTURE_ID: structure},
+            symmetry_results={},
+            commit=committed.append,
+        )
+        session = SimpleNamespace(
+            project=project,
+            active_entity_id=STRUCTURE_ID,
+            mark_dirty=dirty.append,
+        )
+        context = SimpleNamespace(scene=object())
+        operation = properties.CHEMBLENDER_OT_derive_crystal_symmetry()
+        operation.symprec = 2.0e-5
+        operation.angle_tolerance = 0.5
+        batch = object()
+        with (
+            patch.object(
+                properties,
+                "get_scene_session",
+                return_value=session,
+            ),
+            patch.object(properties, "Structure", SimpleNamespace),
+            patch.object(
+                properties,
+                "symmetry_availability",
+                return_value=(True, ""),
+            ),
+            patch.object(
+                properties,
+                "derive_structure_symmetry",
+                return_value=batch,
+            ),
+            patch.object(properties, "advance_browser_revision") as advance,
+        ):
+            outcome = operation.execute(context)
+
+        self.assertEqual(outcome, {"FINISHED"})
+        self.assertEqual(committed, [batch])
+        self.assertEqual(dirty, ["symmetry"])
+        advance.assert_called_once_with(session)
 
     def test_topology_and_scientific_edit_classes_have_explicit_roots(self):
         registration = importlib.import_module(

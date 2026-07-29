@@ -2817,6 +2817,40 @@ def assert_cif_workflow(module_key, repository_root):
     session.active_entity_id = structure.id
     session.active_view_object_name = view.name
 
+    standard = replace(
+        structure,
+        id=uuid4(),
+        revision=f"{structure.revision}-standard-smoke",
+        topology_ids=(),
+    )
+    symmetry = object.__new__(core.SymmetryResult)
+    object.__setattr__(symmetry, "id", uuid4())
+    object.__setattr__(symmetry, "standardized_structure_id", standard.id)
+    session.project.structures[standard.id] = standard
+    session.project.symmetry_results[symmetry.id] = symmetry
+    standard_view = None
+    try:
+        bpy.context.view_layer.objects.active = view
+        view.select_set(True)
+        assert bpy.ops.chemblender.view_standardized_structure(
+            symmetry_result_id=str(symmetry.id),
+        ) == {"FINISHED"}
+        standard_view = bpy.data.objects[session.active_view_object_name]
+        assert standard_view["cb_structure_id"] == str(standard.id)
+        assert standard_view["cb_structure_contract"] == "structure_view_v1"
+        assert standard_view["cbq_periodic_representation"] == "source_sites"
+        assert view.name in bpy.data.objects
+    finally:
+        if (
+            standard_view is not None
+            and standard_view.name in bpy.data.objects
+        ):
+            views.remove_structure_view(standard_view)
+        session.project.symmetry_results.pop(symmetry.id, None)
+        session.project.structures.pop(standard.id, None)
+        session.active_entity_id = structure.id
+        session.active_view_object_name = view.name
+
     mixed, = core.parse_cif(
         repository_root / "tests" / "fixtures" / "cif" / "mixed-site-data.cif"
     ).structures
@@ -3866,6 +3900,12 @@ expected_inventory["registered_classes"] += [
         "module": ".ui.properties",
         "name": "CHEMBLENDER_OT_derive_crystal_symmetry",
         "id": "chemblender.derive_crystal_symmetry",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.properties",
+        "name": "CHEMBLENDER_OT_view_standardized_structure",
+        "id": "chemblender.view_standardized_structure",
         "base": "Operator",
     },
     {

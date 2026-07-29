@@ -1,7 +1,7 @@
 """Small Blender properties and in-memory state for Quick Import."""
 
 from dataclasses import dataclass
-import importlib.util
+from uuid import UUID
 
 import bpy
 from bpy.props import EnumProperty, FloatProperty, PointerProperty, StringProperty
@@ -11,7 +11,12 @@ from ..core.import_pipeline.preview import ImportPreview
 from ..core.import_pipeline.request import ValidationMode
 from ..core.import_pipeline.staging import StagedImportSession
 from ..core.session import ProjectSession
-from ..core.spglib_adapter import SpglibDependencyError, derive_symmetry
+from ..core.spglib_adapter import SpglibDependencyError
+from ..core.symmetry_service import (
+    derive_structure_symmetry,
+    symmetry_availability,
+    symmetry_comparison_rows,
+)
 from .session import (
     get_scene_session,
     register_session_cleanup,
@@ -28,6 +33,12 @@ VALIDATION_MODE_ITEMS = tuple(
 _QUICK_IMPORT_STATES = {}
 _SCENE_PROPERTY_NAME = "chemblender_quick_import"
 _OWNED_SCENE_PROPERTY = None
+_FATAL_EXCEPTIONS = (
+    KeyboardInterrupt,
+    SystemExit,
+    GeneratorExit,
+    MemoryError,
+)
 
 
 class CHEMBLENDER_PG_quick_import(bpy.types.PropertyGroup):
@@ -39,18 +50,6 @@ class CHEMBLENDER_PG_quick_import(bpy.types.PropertyGroup):
     recent_summary: StringProperty(name="Recent Preview", default="")
 
 
-def spglib_action_availability():
-    try:
-        available = importlib.util.find_spec("spglib") is not None
-    except (ImportError, AttributeError, ValueError) as error:
-        return False, f"spglib availability check failed: {error}"
-    return (
-        (True, "")
-        if available
-        else (False, "spglib is not installed in the core/worker environment")
-    )
-
-
 def crystal_symmetry_property_sections(structure, derived=None):
     if not isinstance(structure, Structure) or structure.periodic is None:
         raise TypeError("structure must be a periodic Structure")
@@ -60,7 +59,7 @@ def crystal_symmetry_property_sections(structure, derived=None):
     ):
         raise ValueError("derived symmetry must belong to structure")
     declared = structure.periodic.declared_symmetry
-    available, reason = spglib_action_availability()
+    available, reason = symmetry_availability()
     return {
         "declared": (
             ("Name", declared.name or "Not declared"),
@@ -90,6 +89,7 @@ def crystal_symmetry_property_sections(structure, derived=None):
                 derived.hall_symbol if derived is not None else "Not derived",
             ),
         ),
+        "comparison": symmetry_comparison_rows(structure, derived),
         "derive_available": available,
         "dependency_reason": reason,
     }
@@ -106,7 +106,7 @@ class CHEMBLENDER_OT_derive_crystal_symmetry(bpy.types.Operator):
     def execute(self, context):
         session = get_scene_session(context.scene)
         structure = session.project.structures.get(session.active_entity_id)
-        available, reason = spglib_action_availability()
+        available, reason = symmetry_availability()
         if not available:
             self.report({"ERROR"}, reason)
             return {"CANCELLED"}
@@ -127,18 +127,116 @@ class CHEMBLENDER_OT_derive_crystal_symmetry(bpy.types.Operator):
             )
             if existing is None:
                 session.project.commit(
-                    derive_symmetry(
+                    derive_structure_symmetry(
                         structure,
                         symprec=self.symprec,
                         angle_tolerance=self.angle_tolerance,
                     )
                 )
                 session.mark_dirty("symmetry")
+                advance_browser_revision(session)
         except (
             SpglibDependencyError,
             TypeError,
             ValueError,
         ) as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
+class CHEMBLENDER_OT_view_standardized_structure(bpy.types.Operator):
+    bl_idname = "chemblender.view_standardized_structure"
+    bl_label = "View Standardized Structure"
+    bl_description = "Create a view without replacing the source Structure"
+
+    symmetry_result_id: StringProperty()
+
+    def execute(self, context):
+        session = None
+        view = None
+        remove_view = None
+        previous_entity_id = None
+        previous_view_name = ""
+        previous_active = context.active_object
+        active_selected = (
+            previous_active.select_get()
+            if previous_active is not None
+            else False
+        )
+        browser = getattr(
+            context.scene,
+            "chemblender_project_browser",
+            None,
+        )
+        previous_browser_entity_id = (
+            browser.active_entity_id if browser is not None else None
+        )
+        try:
+            session = get_scene_session(context.scene)
+            previous_entity_id = session.active_entity_id
+            previous_view_name = session.active_view_object_name
+            result_id = UUID(self.symmetry_result_id)
+            result = session.project.symmetry_results.get(result_id)
+            if not isinstance(result, SymmetryResult):
+                raise ValueError("symmetry result is no longer available")
+            structure = session.project.structures.get(
+                result.standardized_structure_id
+            )
+            if not isinstance(structure, Structure):
+                raise ValueError("standardized Structure is no longer available")
+            topology = next(
+                (
+                    session.project.topologies[topology_id]
+                    for topology_id in structure.topology_ids
+                    if topology_id in session.project.topologies
+                ),
+                None,
+            )
+            from ..views import (
+                create_periodic_structure_view,
+                remove_structure_view,
+            )
+
+            remove_view = remove_structure_view
+            view = create_periodic_structure_view(
+                structure,
+                topology,
+                name=f"Standardized {str(structure.id)[:8]}",
+                collection=context.collection,
+            )
+            if previous_active is not None and previous_active is not view:
+                previous_active.select_set(False)
+            view.select_set(True)
+            context.view_layer.objects.active = view
+            session.active_entity_id = structure.id
+            session.active_view_object_name = view.name
+            if browser is not None:
+                browser.active_entity_id = str(structure.id)
+            advance_browser_revision(session)
+        except BaseException as error:
+            if view is not None and remove_view is not None:
+                try:
+                    remove_view(view)
+                except BaseException as cleanup_error:
+                    error.add_note(
+                        f"standardized View cleanup failed: {cleanup_error}"
+                    )
+            if session is not None:
+                session.active_entity_id = previous_entity_id
+                session.active_view_object_name = previous_view_name
+            if browser is not None:
+                browser.active_entity_id = previous_browser_entity_id
+            try:
+                if previous_active is not None:
+                    previous_active.select_set(active_selected)
+                context.view_layer.objects.active = previous_active
+            except BaseException as rollback_error:
+                error.add_note(
+                    f"source View rollback failed: {rollback_error}"
+                )
+            if isinstance(error, _FATAL_EXCEPTIONS):
+                raise
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
         return {"FINISHED"}
@@ -217,7 +315,7 @@ def draw_selective_dynamics_properties(layout, project, structure):
 
 def draw_crystal_symmetry_properties(layout, structure, derived=None):
     sections = crystal_symmetry_property_sections(structure, derived)
-    for title in ("declared", "derived"):
+    for title in ("declared", "derived", "comparison"):
         box = layout.box()
         box.label(text=f"{title.title()} Symmetry")
         for name, value in sections[title]:
@@ -225,6 +323,12 @@ def draw_crystal_symmetry_properties(layout, structure, derived=None):
     row = layout.row()
     row.enabled = sections["derive_available"]
     row.operator(CHEMBLENDER_OT_derive_crystal_symmetry.bl_idname)
+    if derived is not None:
+        button = layout.operator(
+            CHEMBLENDER_OT_view_standardized_structure.bl_idname,
+            icon="MESH_DATA",
+        )
+        button.symmetry_result_id = str(derived.id)
     if sections["dependency_reason"]:
         layout.label(text=sections["dependency_reason"], icon="INFO")
 

@@ -433,7 +433,11 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
                 derived = next(
                     (
                         result
-                        for result in session.project.symmetry_results.values()
+                        for result in reversed(
+                            tuple(
+                                session.project.symmetry_results.values()
+                            )
+                        )
                         if result.structure_id == selected_structure.id
                     ),
                     None,
