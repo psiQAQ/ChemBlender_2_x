@@ -48,6 +48,32 @@ class Mol2SniffTests(unittest.TestCase):
 
 
 class Mol2TokenizerTests(unittest.TestCase):
+    def test_utf8_bom_is_only_accepted_on_first_source_header(self):
+        raw = (
+            b"\xef\xbb\xbf@<TRIPOS>MOLECULE\n"
+            b"bom\n"
+            b"1 0 0 0 0\n"
+            b"SMALL\n"
+            b"NO_CHARGES\n"
+            b"@<TRIPOS>ATOM\n"
+            b"5 He1 0 0 0 He\n"
+        )
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "bom.data"
+            source.write_bytes(raw)
+            self.assertIs(sniff_mol2(source, raw).match, SniffMatch.EXACT)
+        records = tuple(iter_mol2_records(raw))
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].raw_block, raw)
+        self.assertEqual(parse_mol2_record(records[0]).name, "bom")
+
+        later_bom = raw[3:].replace(
+            b"@<TRIPOS>ATOM",
+            b"\xef\xbb\xbf@<TRIPOS>ATOM",
+        )
+        with self.assertRaisesRegex(ValueError, "one ATOM section"):
+            parse_mol2_record(tuple(iter_mol2_records(later_bom))[0])
+
     def test_section_headers_are_case_insensitive_exact_markers(self):
         raw = (
             b"@<tripos>molecule\r\n"
@@ -132,6 +158,30 @@ class Mol2MoleculeAndAtomTests(unittest.TestCase):
             ((IssueKind.AMBIGUOUS, "atom[0].element"),),
         )
 
+    def test_empty_required_molecule_metadata_is_rejected(self):
+        cases = (
+            ("molecule type", b"", b"NO_CHARGES"),
+            ("charge type", b"SMALL", b""),
+        )
+        for field, molecule_type, charge_type in cases:
+            with self.subTest(field=field):
+                raw = (
+                    b"@<TRIPOS>MOLECULE\n"
+                    b"empty metadata\n"
+                    b"1 0 0 0 0\n"
+                    + molecule_type
+                    + b"\n"
+                    + charge_type
+                    + b"\n"
+                    b"@<TRIPOS>ATOM\n"
+                    b"1 He1 0 0 0 He\n"
+                )
+                with self.assertRaisesRegex(
+                    ValueError,
+                    f"MOL2 {field} must be non-empty",
+                ):
+                    parse_mol2_record(tuple(iter_mol2_records(raw))[0])
+
 
 class Mol2BondAndSubstructureTests(unittest.TestCase):
     def parse_fixture(self, name):
@@ -207,6 +257,25 @@ class Mol2BondAndSubstructureTests(unittest.TestCase):
                 (5, "RES_A", 11, 0, "RESIDUE"),
                 (9, "RES_B", 33, 2, "RESIDUE"),
             ),
+        )
+
+    def test_dangling_atom_substructure_reference_invalidates_topology(self):
+        raw = (
+            b"@<TRIPOS>MOLECULE\n"
+            b"dangling substructure\n"
+            b"1 0 1 0 0\n"
+            b"SMALL\n"
+            b"NO_CHARGES\n"
+            b"@<TRIPOS>ATOM\n"
+            b"1 C1 0 0 0 C.3 9 GHOST\n"
+            b"@<TRIPOS>SUBSTRUCTURE\n"
+            b"5 REAL 1 GROUP\n"
+        )
+        record = parse_mol2_record(tuple(iter_mol2_records(raw))[0])
+        self.assertFalse(record.topology_valid)
+        self.assertIn(
+            (IssueKind.INVALID, "atom[0].substructure_reference"),
+            tuple((issue.kind, issue.path) for issue in record.issues),
         )
 
     def test_unknown_sections_are_preserved_and_reported(self):

@@ -95,17 +95,20 @@ def _header_name(line):
     return None if match is None else match.group(1)
 
 
-def _raw_header_name(line):
+def _raw_header_name(line, *, allow_bom=False):
     try:
-        return _header_name(line.decode("ascii"))
+        return _header_name(line.decode("utf-8-sig" if allow_bom else "ascii"))
     except UnicodeDecodeError:
         return None
 
 
-def _syntax_record(lines):
+def _syntax_record(lines, *, allow_initial_bom=False):
     sections = []
-    for line in lines:
-        name = _raw_header_name(line)
+    for index, line in enumerate(lines):
+        name = _raw_header_name(
+            line,
+            allow_bom=allow_initial_bom and index == 0,
+        )
         if name is None:
             sections[-1][1].append(line)
         else:
@@ -123,11 +126,13 @@ def iter_mol2_records(raw_source: bytes):
     starts = [
         index
         for index, line in enumerate(lines)
-        if (_raw_header_name(line) or "").upper() == "MOLECULE"
+        if (
+            _raw_header_name(line, allow_bom=index == 0) or ""
+        ).upper() == "MOLECULE"
     ]
     for position, start in enumerate(starts):
         end = starts[position + 1] if position + 1 < len(starts) else len(lines)
-        yield _syntax_record(lines[start:end])
+        yield _syntax_record(lines[start:end], allow_initial_bom=start == 0)
 
 
 def _section_lines(section):
@@ -302,6 +307,12 @@ def parse_mol2_record(record: Mol2SyntaxRecord) -> Mol2ParsedRecord:
     molecule_lines = _section_lines(_required_section(record, "MOLECULE"))
     if len(molecule_lines) < 4:
         raise ValueError("MOL2 MOLECULE section is incomplete")
+    molecule_type = molecule_lines[2]
+    charge_type = molecule_lines[3]
+    if not molecule_type.strip():
+        raise ValueError("MOL2 molecule type must be non-empty")
+    if not charge_type.strip():
+        raise ValueError("MOL2 charge type must be non-empty")
     counts = _parse_counts(molecule_lines[1])
     issues = []
     atom_lines = [
@@ -355,6 +366,21 @@ def parse_mol2_record(record: Mol2SyntaxRecord) -> Mol2ParsedRecord:
         substructures
     ):
         raise ValueError("MOL2 substructure IDs must be unique")
+    substructure_ids = {value.substructure_id for value in substructures}
+    dangling_substructures = tuple(
+        (index, atom.substructure_id)
+        for index, atom in enumerate(atoms)
+        if atom.substructure_id is not None
+        and atom.substructure_id not in substructure_ids
+    )
+    issues.extend(
+        ParserIssue(
+            IssueKind.INVALID,
+            f"atom[{index}].substructure_reference",
+            f"atom references unknown substructure ID {substructure_id}",
+        )
+        for index, substructure_id in dangling_substructures
+    )
 
     known_sections = {"MOLECULE", "ATOM", "BOND", "SUBSTRUCTURE"}
     unknown_sections = tuple(
@@ -370,16 +396,18 @@ def parse_mol2_record(record: Mol2SyntaxRecord) -> Mol2ParsedRecord:
         )
         for section in unknown_sections
     )
-    topology_valid = not any(
-        bond.atom_indices is None or bond.unknown for bond in bonds
-    ) and all(value.root_atom_index is not None for value in substructures)
+    topology_valid = (
+        not any(bond.atom_indices is None or bond.unknown for bond in bonds)
+        and all(value.root_atom_index is not None for value in substructures)
+        and not dangling_substructures
+    )
     return Mol2ParsedRecord(
         raw_block=record.raw_block,
         sections=record.sections,
         name=molecule_lines[0],
         counts=counts,
-        molecule_type=molecule_lines[2],
-        charge_type=molecule_lines[3],
+        molecule_type=molecule_type,
+        charge_type=charge_type,
         status_bits=(
             molecule_lines[4] if len(molecule_lines) > 4 and molecule_lines[4] else None
         ),
