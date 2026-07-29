@@ -3,7 +3,15 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from ..model import AtomicProperty, CategoricalData, DatasetStatus, QualityStatus
+import numpy
+
+from ..model import (
+    ArrayData,
+    AtomicProperty,
+    CategoricalData,
+    DatasetStatus,
+    QualityStatus,
+)
 
 
 class Mol2ExportStatus(str, Enum):
@@ -36,19 +44,47 @@ def _complete_categorical(property_value):
     )
 
 
-def _complete_property(property_value):
+def _complete_numeric(property_value, kinds):
+    if (
+        not isinstance(property_value, AtomicProperty)
+        or property_value.status is not DatasetStatus.COMPLETE
+        or not isinstance(property_value.data, ArrayData)
+    ):
+        return False
+    values = numpy.asarray(property_value.data.values)
     return (
-        isinstance(property_value, AtomicProperty)
-        and property_value.status is DatasetStatus.COMPLETE
+        numpy.dtype(property_value.data.dtype).kind in kinds
+        and bool(numpy.all(numpy.isfinite(values)))
     )
 
 
 def _bond_types_are_mappable(topology):
-    if any(label not in ("", "amide") for label in topology.stereo_labels):
-        return False
-    if topology.aromatic_flags is not None:
-        return True
-    return all(float(order) in (1.0, 2.0, 3.0) for order in topology.bond_orders.values)
+    aromatic_flags = (
+        (False,) * len(topology.stereo_labels)
+        if topology.aromatic_flags is None
+        else topology.aromatic_flags.values
+    )
+    return all(
+        label in ("", "amide")
+        and (
+            bool(aromatic)
+            or label == "amide"
+            or float(order) in (1.0, 2.0, 3.0)
+        )
+        for order, aromatic, label in zip(
+            topology.bond_orders.values,
+            aromatic_flags,
+            topology.stereo_labels,
+        )
+    )
+
+
+def _one(values, missing_token, ambiguous_token, missing):
+    values = tuple(values)
+    if len(values) == 1:
+        return values[0]
+    missing.add(ambiguous_token if len(values) > 1 else missing_token)
+    return None
 
 
 def mol2_export_readiness(project_entities):
@@ -69,59 +105,93 @@ def mol2_export_readiness(project_entities):
             for code in identity.atom_names.codes.values
         ):
             missing.add("structure.atomic_identity.atom_names")
-        topology = next(
-            (
-                value
-                for value in topologies
-                if value.structure_id == structure.id
-                and value.quality_status is QualityStatus.COMPLETE
-            ),
-            None,
-        )
-        if topology is None:
-            missing.add("topology")
-        elif not _bond_types_are_mappable(topology):
+        topology_ids = tuple(structure.topology_ids)
+        if len(topology_ids) != 1:
+            missing.add("topology.ambiguous" if topology_ids else "topology")
+            topology = None
+        else:
+            topology = _one(
+                (
+                    value
+                    for value in topologies
+                    if value.id == topology_ids[0]
+                    and value.structure_id == structure.id
+                    and value.quality_status is QualityStatus.COMPLETE
+                ),
+                "topology",
+                "topology.ambiguous",
+                missing,
+            )
+        if topology is not None and not _bond_types_are_mappable(topology):
             missing.add("topology.bond_type_mapping")
 
-        properties = {
-            value.semantic_role: value
-            for value in datasets
-            if isinstance(value, AtomicProperty) and value.structure_id == structure.id
-        }
-        if not _complete_categorical(properties.get("atom_type")):
+        properties = lambda role: _one(
+            (
+                value
+                for value in datasets
+                if isinstance(value, AtomicProperty)
+                and value.structure_id == structure.id
+                and value.semantic_role == role
+            ),
+            f"dataset.{role}",
+            f"dataset.{role}.ambiguous",
+            missing,
+        )
+        atom_type = properties("atom_type")
+        if atom_type is not None and not _complete_categorical(atom_type):
             missing.add("dataset.atom_type")
-        if not _complete_property(properties.get("substructure_id")):
+        substructure_id = properties("substructure_id")
+        if substructure_id is not None and not _complete_numeric(substructure_id, "iu"):
             missing.add("dataset.substructure_id")
-        if not _complete_categorical(properties.get("substructure_name")):
+        substructure_name = properties("substructure_name")
+        if substructure_name is not None and not _complete_categorical(substructure_name):
             missing.add("dataset.substructure_name")
 
-        tripos_annotations = {
-            value.key: value.value
-            for value in annotations
-            if value.target_entity_id == structure.id and value.namespace == "tripos"
-        }
-        for key in ("charge_type", "molecule_type"):
-            if not isinstance(tripos_annotations.get(key), str):
-                missing.add(f"annotation.{key}")
-        if tripos_annotations.get("charge_type") != "NO_CHARGES" and not _complete_property(
-            properties.get("partial_charge")
+        annotation = lambda key: _one(
+            (
+                value
+                for value in annotations
+                if value.target_entity_id == structure.id
+                and value.namespace == "tripos"
+                and value.key == key
+            ),
+            f"annotation.{key}",
+            f"annotation.{key}.ambiguous",
+            missing,
+        )
+        charge_type = annotation("charge_type")
+        molecule_type = annotation("molecule_type")
+        if charge_type is not None and not isinstance(charge_type.value, str):
+            missing.add("annotation.charge_type")
+        if molecule_type is not None and not isinstance(molecule_type.value, str):
+            missing.add("annotation.molecule_type")
+        partial_charge = properties("partial_charge")
+        if charge_type is not None and charge_type.value != "NO_CHARGES" and (
+            partial_charge is None or not _complete_numeric(partial_charge, "iuf")
         ):
             missing.add("dataset.partial_charge")
-        if not any(
-            value.structure_id == structure.id
-            and (topology is None or value.topology_id == topology.id)
-            and value.raw_block.startswith(b"@<TRIPOS>MOLECULE")
-            for value in records
-        ):
-            missing.add("molecular_record.raw_tripos")
+        _one(
+            (
+                value
+                for value in records
+                if value.structure_id == structure.id
+                and value.topology_id in topology_ids
+                and value.raw_block.startswith(b"@<TRIPOS>MOLECULE")
+            ),
+            "molecular_record.raw_tripos",
+            "molecular_record.ambiguous",
+            missing,
+        )
 
     fields = tuple(sorted(missing))
     unsupported = {
         "structure",
         "structure.atomic_identity.atom_names",
         "topology",
+        "topology.ambiguous",
         "topology.bond_type_mapping",
         "dataset.atom_type",
+        "dataset.atom_type.ambiguous",
     }
     status = (
         Mol2ExportStatus.UNSUPPORTED
