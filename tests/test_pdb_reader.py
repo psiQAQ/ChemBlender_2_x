@@ -681,8 +681,9 @@ class PDBReaderTests(unittest.TestCase):
                         ).sniff(source, source.read_bytes()).match,
                         SniffMatch.NONE,
                     )
-                    with self.assertRaises(ReaderNotFoundError):
-                        registry.select(source)
+            with self.assertRaises(ReaderNotFoundError):
+                registry.select(text)
+            self.assertEqual(registry.select(pqr_source).reader_id, "pqr")
 
     def test_reader_api_v1_conformance(self):
         registry = builtin_reader_plugin_registry()
