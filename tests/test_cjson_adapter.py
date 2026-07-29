@@ -1,3 +1,4 @@
+import hashlib
 import json
 import tempfile
 import unittest
@@ -199,6 +200,77 @@ class CJSONAdapterTests(unittest.TestCase):
         self.assertIn("orbitals", issue_paths)
         self.assertIn("cube", issue_paths)
         self.assertIn("customProjectField", issue_paths)
+
+    def test_raw_envelope_preserves_exact_bom_whitespace_and_numeric_lexemes(self):
+        source_bytes = (
+            b"\xef\xbb\xbf{\r\n"
+            b'  "chemicalJson": 1,\r\n'
+            b'  "atoms": {\r\n'
+            b'    "elements": {"number": [8]},\r\n'
+            b'    "coords": {"3d": [0.00, 0e0, -0.0]}\r\n'
+            b"  },\r\n"
+            b'  "customUnknown": {"numeric": 1.2300}\r\n'
+            b"}\r\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            path = directory / "exact.cjson"
+            path.write_bytes(source_bytes)
+            batch = parse_cjson(path)
+            envelope = batch.cjson_envelopes[0]
+            self.assertEqual(envelope.source_bytes, source_bytes)
+            self.assertEqual(
+                envelope.revision,
+                hashlib.sha256(source_bytes).hexdigest(),
+            )
+            self.assertEqual(
+                export_cjson(envelope)["customUnknown"]["numeric"],
+                1.23,
+            )
+
+            project = QCProject(batch.structures[0].id, "1.0")
+            project.commit(batch)
+            root = save_project(directory / "exact.cbq", project)
+            restored = open_project(root)
+            try:
+                restored_envelope = next(iter(restored.cjson_envelopes.values()))
+                self.assertEqual(restored_envelope.source_bytes, source_bytes)
+                self.assertEqual(
+                    export_cjson(restored_envelope)["atoms"]["coords"]["3d"],
+                    [0.0, 0.0, -0.0],
+                )
+            finally:
+                close_project(restored)
+
+    def test_malformed_known_object_containers_fail_closed(self):
+        cases = (
+            ("unitCell", [], "unitCell"),
+            ("spectra", None, "spectra"),
+            ("spectra.electronic", False, "spectra.electronic"),
+            ("vibrations", "", "vibrations"),
+            ("atoms.partialCharges", [], "atoms.partialCharges"),
+            ("partialCharges", False, "partialCharges"),
+        )
+        for name, value, expected_path in cases:
+            with self.subTest(name=name):
+                source = json.loads(FIXTURE.read_text(encoding="utf-8"))
+                if name == "spectra.electronic":
+                    source["spectra"]["electronic"] = value
+                elif name == "atoms.partialCharges":
+                    source["atoms"]["partialCharges"] = value
+                elif name == "partialCharges":
+                    del source["atoms"]["partialCharges"]
+                    source["partialCharges"] = value
+                else:
+                    source[name] = value
+                with tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory) / "malformed.cjson"
+                    path.write_text(json.dumps(source), encoding="utf-8")
+                    with self.assertRaisesRegex(
+                        CJSONError,
+                        rf"^{expected_path} must be an object$",
+                    ):
+                        parse_cjson(path)
 
     def test_unknown_nested_fields_remain_only_in_envelope_and_diagnostics(self):
         source = json.loads(FIXTURE.read_text(encoding="utf-8"))

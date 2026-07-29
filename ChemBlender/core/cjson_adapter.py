@@ -103,6 +103,12 @@ def _mapping(value, path):
     return value
 
 
+def _optional_mapping(parent, key, path):
+    if key not in parent:
+        return None
+    return _mapping(parent[key], path)
+
+
 def _identity(source_hash, role):
     return uuid5(_IDENTITY_NAMESPACE, f"{source_hash}:{role}")
 
@@ -213,10 +219,9 @@ def _atomic_identity(atom_count, formal_charges):
 def _topology_arrays(document, atom_count):
     import numpy
 
-    bonds = document.get("bonds")
+    bonds = _optional_mapping(document, "bonds", "bonds")
     if bonds is None:
         return None
-    bonds = _mapping(bonds, "bonds")
     connections = _mapping(bonds.get("connections"), "bonds.connections")
     indices = _finite_array(
         connections.get("index"), "bonds.connections.index", dtype=int
@@ -334,9 +339,8 @@ def _atom_datasets(
         if values.shape != (atom_count,) or values.dtype.kind not in "biu":
             raise CJSONError("atoms.selected must match the atom count and contain booleans")
         datasets.append(_atomic_dataset(source_hash, "selected", values.astype(bool), "dimensionless", structure_id, provenance_id))
-    partial = atoms.get("partialCharges", {})
-    if partial:
-        partial = _mapping(partial, "atoms.partialCharges")
+    partial = _optional_mapping(atoms, "partialCharges", "atoms.partialCharges")
+    if partial is not None:
         for method, raw in sorted(partial.items()):
             values = _finite_array(raw, f"atoms.partialCharges.{method}")
             if values.shape != (atom_count,):
@@ -423,10 +427,16 @@ def _trajectory(atoms, atom_count, source_hash, structure_id, provenance_id):
 def _electronic_spectra(document, source_hash, structure_id, provenance_id):
     import numpy
 
-    spectra = document.get("spectra")
-    if not isinstance(spectra, dict) or not isinstance(spectra.get("electronic"), dict):
+    spectra = _optional_mapping(document, "spectra", "spectra")
+    if spectra is None:
         return []
-    electronic = spectra["electronic"]
+    electronic = _optional_mapping(
+        spectra,
+        "electronic",
+        "spectra.electronic",
+    )
+    if electronic is None:
+        return []
     energies_ev = _finite_array(electronic.get("energies"), "spectra.electronic.energies")
     strengths = _finite_array(electronic.get("intensities"), "spectra.electronic.intensities")
     if energies_ev.ndim != 1 or strengths.shape != energies_ev.shape or numpy.any(energies_ev < 0.0) or numpy.any(strengths < 0.0):
@@ -522,12 +532,13 @@ def parse_cjson(source):
     atom_count = len(atomic_numbers)
     issues = _unknown_field_issues(document)
     cell = None
-    if isinstance(document.get("unitCell"), dict) and "cellVectors" in document["unitCell"]:
-        vectors = _finite_array(document["unitCell"]["cellVectors"], "unitCell.cellVectors")
+    unit_cell = _optional_mapping(document, "unitCell", "unitCell")
+    if unit_cell is not None and "cellVectors" in unit_cell:
+        vectors = _finite_array(unit_cell["cellVectors"], "unitCell.cellVectors")
         if vectors.size != 9:
             raise CJSONError("unitCell.cellVectors must contain nine values")
         cell = ArrayData(vectors.reshape((3, 3)), ("cell_vector", "xyz"), "angstrom")
-    coords_object = _mapping(atoms.get("coords", {}), "atoms.coords")
+    coords_object = _optional_mapping(atoms, "coords", "atoms.coords") or {}
     if "3d" in coords_object:
         coordinates = _finite_array(coords_object["3d"], "atoms.coords.3d")
         if coordinates.size != atom_count * 3:
@@ -544,8 +555,7 @@ def parse_cjson(source):
         coordinates = numpy.zeros((atom_count, 3), dtype=float)
         issues.append(ParserIssue(IssueKind.MISSING, "atoms.coords.3d", "missing coordinates were initialized to zero like Avogadro CjsonFormat"))
 
-    properties = document.get("properties", {})
-    properties = _mapping(properties, "properties")
+    properties = _optional_mapping(document, "properties", "properties") or {}
     charge = _integer(properties.get("totalCharge", 0), "properties.totalCharge")
     multiplicity = _integer(properties.get("totalSpinMultiplicity", 1), "properties.totalSpinMultiplicity", positive=True)
     formal_charges = _formal_charges(atoms, atom_count)
@@ -590,8 +600,16 @@ def parse_cjson(source):
         atomic_identity=_atomic_identity(atom_count, formal_charges),
     )
     atom_fields = dict(atoms)
-    if "partialCharges" not in atom_fields and "partialCharges" in document:
-        atom_fields["partialCharges"] = document["partialCharges"]
+    top_level_partial_charges = _optional_mapping(
+        document,
+        "partialCharges",
+        "partialCharges",
+    )
+    if (
+        "partialCharges" not in atom_fields
+        and top_level_partial_charges is not None
+    ):
+        atom_fields["partialCharges"] = top_level_partial_charges
     datasets = _atom_datasets(
         atom_fields,
         atom_count,
@@ -606,8 +624,8 @@ def parse_cjson(source):
         datasets.append(trajectory)
     datasets.extend(_electronic_spectra(document, source_hash, structure_id, provenance_id))
 
-    vibrations = document.get("vibrations")
-    if isinstance(vibrations, dict) and "frequencies" in vibrations:
+    vibrations = _optional_mapping(document, "vibrations", "vibrations")
+    if vibrations is not None and "frequencies" in vibrations:
         frequencies = _finite_array(vibrations["frequencies"], "vibrations.frequencies")
         if frequencies.ndim != 1:
             raise CJSONError("vibrations.frequencies must be one-dimensional")
@@ -645,7 +663,7 @@ def parse_cjson(source):
         id=_identity(source_hash, "envelope"),
         revision=source_hash,
         format_version=version,
-        source_bytes=_canonical(document),
+        source_bytes=source_bytes,
         provenance_ids=(provenance_id,),
     )
     annotations = _annotations(
@@ -692,7 +710,10 @@ def _envelope_document(envelope):
     if not isinstance(envelope, CJSONEnvelope):
         raise TypeError("envelope must be a CJSONEnvelope")
     try:
-        return json.loads(envelope.source_bytes.decode("utf-8"), parse_constant=_reject_constant)
+        return json.loads(
+            envelope.source_bytes.decode("utf-8-sig"),
+            parse_constant=_reject_constant,
+        )
     except (UnicodeError, json.JSONDecodeError) as error:
         raise CJSONError("CJSON envelope is not valid UTF-8 JSON") from error
 
