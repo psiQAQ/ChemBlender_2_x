@@ -1447,6 +1447,12 @@ def assert_mol2_browser_view(module_key, repository_root):
             reopened_selected,
         )
         assert reopened_selected == [False, False, True]
+        reopened_colors = [0.0] * 12
+        reopened_view.data.attributes["colour"].data.foreach_get(
+            "color",
+            reopened_colors,
+        )
+        assert reopened_colors == colors
         ui.close_scene_session(bpy.context.scene)
 
 

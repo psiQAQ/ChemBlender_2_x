@@ -5,6 +5,7 @@ from enum import Enum
 
 import numpy
 
+from ..formats.mol2 import _raw_header_name
 from ..model import (
     ArrayData,
     AtomicProperty,
@@ -85,6 +86,15 @@ def _one(values, missing_token, ambiguous_token, missing):
         return values[0]
     missing.add(ambiguous_token if len(values) > 1 else missing_token)
     return None
+
+
+def _is_raw_tripos_record(raw_block):
+    first_line = raw_block.splitlines()[:1]
+    return bool(
+        first_line
+        and (_raw_header_name(first_line[0], allow_bom=True) or "").upper()
+        == "MOLECULE"
+    )
 
 
 def mol2_export_readiness(project_entities):
@@ -176,7 +186,7 @@ def mol2_export_readiness(project_entities):
                 for value in records
                 if value.structure_id == structure.id
                 and value.topology_id in topology_ids
-                and value.raw_block.startswith(b"@<TRIPOS>MOLECULE")
+                and _is_raw_tripos_record(value.raw_block)
             ),
             "molecular_record.raw_tripos",
             "molecular_record.ambiguous",

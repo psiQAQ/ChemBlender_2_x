@@ -259,7 +259,7 @@ class Mol2BondAndSubstructureTests(unittest.TestCase):
             ),
         )
 
-    def test_dangling_atom_substructure_reference_invalidates_topology(self):
+    def test_dangling_atom_substructure_reference_does_not_invalidate_topology(self):
         raw = (
             b"@<TRIPOS>MOLECULE\n"
             b"dangling substructure\n"
@@ -272,10 +272,71 @@ class Mol2BondAndSubstructureTests(unittest.TestCase):
             b"5 REAL 1 GROUP\n"
         )
         record = parse_mol2_record(tuple(iter_mol2_records(raw))[0])
-        self.assertFalse(record.topology_valid)
+        self.assertTrue(record.topology_valid)
+        self.assertFalse(record.substructure_valid)
         self.assertIn(
             (IssueKind.INVALID, "atom[0].substructure_reference"),
             tuple((issue.kind, issue.path) for issue in record.issues),
+        )
+
+    def test_malformed_optional_substructure_keeps_valid_bond_topology(self):
+        raw = (
+            b"@<TRIPOS>MOLECULE\n"
+            b"optional metadata failure\n"
+            b"2 1 1 0 0\n"
+            b"SMALL\n"
+            b"NO_CHARGES\n"
+            b"@<TRIPOS>ATOM\n"
+            b"1 C1 0 0 0 C.3\n"
+            b"2 H1 1 0 0 H\n"
+            b"@<TRIPOS>BOND\n"
+            b"1 1 2 1\n"
+            b"@<TRIPOS>SUBSTRUCTURE\n"
+            b"broken\n"
+        )
+
+        record = parse_mol2_record(tuple(iter_mol2_records(raw))[0])
+
+        self.assertTrue(record.topology_valid)
+        self.assertFalse(record.substructure_valid)
+        self.assertIn(
+            (IssueKind.INVALID, "substructure[0].syntax"),
+            tuple((issue.kind, issue.path) for issue in record.issues),
+        )
+
+    def test_atom_bond_and_substructure_source_ids_must_be_positive(self):
+        atom = (
+            b"@<TRIPOS>MOLECULE\natom id\n1 0 0 0 0\nSMALL\nNO_CHARGES\n"
+            b"@<TRIPOS>ATOM\n0 C1 0 0 0 C.3\n"
+        )
+        with self.assertRaisesRegex(ValueError, "atom 0 ID must be positive"):
+            parse_mol2_record(tuple(iter_mol2_records(atom))[0])
+
+        bond = (
+            b"@<TRIPOS>MOLECULE\nbond id\n2 1 0 0 0\nSMALL\nNO_CHARGES\n"
+            b"@<TRIPOS>ATOM\n1 C1 0 0 0 C.3\n2 H1 1 0 0 H\n"
+            b"@<TRIPOS>BOND\n0 1 2 1\n"
+        )
+        bond_record = parse_mol2_record(tuple(iter_mol2_records(bond))[0])
+        self.assertFalse(bond_record.topology_valid)
+        self.assertIn(
+            (IssueKind.INVALID, "bond[0].syntax"),
+            tuple((issue.kind, issue.path) for issue in bond_record.issues),
+        )
+
+        substructure = (
+            b"@<TRIPOS>MOLECULE\nsubstructure id\n1 0 1 0 0\nSMALL\n"
+            b"NO_CHARGES\n@<TRIPOS>ATOM\n1 C1 0 0 0 C.3\n"
+            b"@<TRIPOS>SUBSTRUCTURE\n0 RES 1 GROUP\n"
+        )
+        substructure_record = parse_mol2_record(
+            tuple(iter_mol2_records(substructure))[0]
+        )
+        self.assertTrue(substructure_record.topology_valid)
+        self.assertFalse(substructure_record.substructure_valid)
+        self.assertIn(
+            (IssueKind.INVALID, "substructure[0].syntax"),
+            tuple((issue.kind, issue.path) for issue in substructure_record.issues),
         )
 
     def test_unknown_sections_are_preserved_and_reported(self):

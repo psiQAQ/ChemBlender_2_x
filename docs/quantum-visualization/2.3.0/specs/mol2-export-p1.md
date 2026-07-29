@@ -36,7 +36,7 @@ confirming a value. The additional tokens are:
 | `dataset.partial_charge` | complete atom `partial_charge`, unless charge type is exactly `NO_CHARGES` |
 | `dataset.substructure_id` | complete atom `substructure_id` |
 | `dataset.substructure_name` | complete categorical atom `substructure_name` |
-| `molecular_record.raw_tripos` | a linked raw block beginning `@<TRIPOS>MOLECULE` |
+| `molecular_record.raw_tripos` | a linked raw block whose first whole-line marker is `@<TRIPOS>MOLECULE`, using the import tokenizer's optional initial UTF-8 BOM, ASCII case-insensitive and surrounding-whitespace rules |
 | `annotation.<key>.ambiguous` | more than one `tripos` annotation for `charge_type` or `molecule_type` |
 | `dataset.<role>.ambiguous` | more than one atom property for an optional role |
 | `molecular_record.ambiguous` | more than one raw Tripos record linked to the explicit topology |

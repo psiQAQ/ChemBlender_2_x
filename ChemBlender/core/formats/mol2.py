@@ -6,6 +6,7 @@ import math
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from itertools import chain
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
@@ -132,6 +133,7 @@ class Mol2ParsedRecord:
     substructures: tuple[Mol2Substructure, ...]
     unknown_sections: tuple[Mol2Section, ...]
     topology_valid: bool
+    substructure_valid: bool
     issues: tuple[ParserIssue, ...]
 
 
@@ -240,6 +242,17 @@ def _parse_atom(line, index, issues):
         charge = None if len(fields) < 9 else float(fields[8])
     except ValueError as error:
         raise ValueError(f"MOL2 atom {index} has invalid numeric fields") from error
+    if atom_id <= 0:
+        raise ValueError(f"MOL2 atom {index} ID must be positive")
+    if substructure_id is not None and substructure_id <= 0:
+        issues.append(
+            ParserIssue(
+                IssueKind.INVALID,
+                f"atom[{index}].substructure_id",
+                "MOL2 substructure IDs must be positive",
+            )
+        )
+        substructure_id = None
     if not all(math.isfinite(value) for value in coordinates) or (
         charge is not None and not math.isfinite(charge)
     ):
@@ -277,6 +290,8 @@ def _parse_bond(line, index, atom_indices, issues):
         bond_id, first, second = (int(value) for value in fields[:3])
     except ValueError as error:
         raise ValueError(f"MOL2 bond {index} has invalid IDs") from error
+    if bond_id <= 0 or first <= 0 or second <= 0:
+        raise ValueError(f"MOL2 bond {index} IDs must be positive")
     atom_pair = (
         (atom_indices[first], atom_indices[second])
         if first in atom_indices and second in atom_indices
@@ -329,6 +344,8 @@ def _parse_substructure(line, index, atom_indices, issues):
         root_atom_id = int(fields[2])
     except ValueError as error:
         raise ValueError(f"MOL2 substructure {index} has invalid IDs") from error
+    if substructure_id <= 0 or root_atom_id <= 0:
+        raise ValueError(f"MOL2 substructure {index} IDs must be positive")
     root_atom_index = atom_indices.get(root_atom_id)
     if root_atom_index is None:
         issues.append(
@@ -414,28 +431,76 @@ def parse_mol2_record(record: Mol2SyntaxRecord) -> Mol2ParsedRecord:
             )
         )
 
-    substructure_section = _optional_section(record, "SUBSTRUCTURE")
-    substructure_lines = (
-        []
-        if substructure_section is None
-        else [
-            line
-            for line in _section_lines(substructure_section)
-            if line.strip()
-        ]
+    substructure_sections = tuple(
+        section
+        for section in record.sections
+        if section.name.upper() == "SUBSTRUCTURE"
     )
-    substructures = tuple(
-        _parse_substructure(line, index, atom_indices, issues)
-        for index, line in enumerate(substructure_lines)
+    invalid_substructure_data = any(
+        issue.kind is IssueKind.INVALID
+        and issue.path.endswith(".substructure_id")
+        for issue in issues
     )
+    if len(substructure_sections) > 1:
+        invalid_substructure_data = True
+        issues.append(
+            ParserIssue(
+                IssueKind.INVALID,
+                "substructure.sections",
+                "MOL2 record contains more than one SUBSTRUCTURE section",
+            )
+        )
+    substructure_lines = []
+    for section in substructure_sections:
+        try:
+            substructure_lines.extend(
+                line for line in _section_lines(section) if line.strip()
+            )
+        except ValueError as error:
+            invalid_substructure_data = True
+            issues.append(
+                ParserIssue(
+                    IssueKind.INVALID,
+                    "substructure.syntax",
+                    str(error),
+                )
+            )
+    substructures = []
+    for index, line in enumerate(substructure_lines):
+        try:
+            substructures.append(
+                _parse_substructure(line, index, atom_indices, issues)
+            )
+        except ValueError as error:
+            invalid_substructure_data = True
+            issues.append(
+                ParserIssue(
+                    IssueKind.INVALID,
+                    f"substructure[{index}].syntax",
+                    str(error),
+                )
+            )
+    substructures = tuple(substructures)
     if len(substructures) != counts.substructure_count:
-        raise ValueError(
-            "MOL2 SUBSTRUCTURE section does not match the declared count"
+        invalid_substructure_data = True
+        issues.append(
+            ParserIssue(
+                IssueKind.INVALID,
+                "substructure.count",
+                "MOL2 SUBSTRUCTURE section does not match the declared count",
+            )
         )
     if len({value.substructure_id for value in substructures}) != len(
         substructures
     ):
-        raise ValueError("MOL2 substructure IDs must be unique")
+        invalid_substructure_data = True
+        issues.append(
+            ParserIssue(
+                IssueKind.INVALID,
+                "substructure.ids",
+                "MOL2 substructure IDs must be unique",
+            )
+        )
     substructure_ids = {value.substructure_id for value in substructures}
     dangling_substructures = tuple(
         (index, atom.substructure_id)
@@ -450,6 +515,11 @@ def parse_mol2_record(record: Mol2SyntaxRecord) -> Mol2ParsedRecord:
             f"atom references unknown substructure ID {substructure_id}",
         )
         for index, substructure_id in dangling_substructures
+    )
+    invalid_substructure_data = (
+        invalid_substructure_data
+        or bool(dangling_substructures)
+        or any(value.root_atom_index is None for value in substructures)
     )
 
     known_sections = {"MOLECULE", "ATOM", "BOND", "SUBSTRUCTURE"}
@@ -469,8 +539,6 @@ def parse_mol2_record(record: Mol2SyntaxRecord) -> Mol2ParsedRecord:
     topology_valid = (
         not invalid_bond_data
         and not any(bond.atom_indices is None or bond.unknown for bond in bonds)
-        and all(value.root_atom_index is not None for value in substructures)
-        and not dangling_substructures
     )
     return Mol2ParsedRecord(
         raw_block=record.raw_block,
@@ -488,6 +556,7 @@ def parse_mol2_record(record: Mol2SyntaxRecord) -> Mol2ParsedRecord:
         substructures=substructures,
         unknown_sections=unknown_sections,
         topology_valid=topology_valid,
+        substructure_valid=not invalid_substructure_data,
         issues=tuple(issues),
     )
 
@@ -533,18 +602,22 @@ def sniff_mol2(source: Path, prefix: bytes) -> SniffResult:
     )
 
 
-def _identity(source_revision_id, source_hash, record_index, raw_block, role):
+def _record_namespace(source_revision_id, source_hash, record_index, raw_block):
     raw_hash = hashlib.sha256(raw_block).hexdigest()
     return uuid5(
         source_revision_id,
-        f"mol2:{source_hash}:{record_index}:{raw_hash}:{role}",
+        f"mol2:{source_hash}:{record_index}:{raw_hash}",
     )
 
 
-def _record_key(source_revision_id, source_hash, record_index, raw_block):
+def _identity(record_namespace, role):
+    return uuid5(record_namespace, role)
+
+
+def _record_key(record_index, record_namespace):
     return (
         f"record-{record_index:06d}-"
-        f"{_identity(source_revision_id, source_hash, record_index, raw_block, 'key')}"
+        f"{_identity(record_namespace, 'key')}"
     )
 
 
@@ -569,10 +642,8 @@ def _categorical(values):
 
 
 def _property(
-    source_revision_id,
+    record_namespace,
     source_hash,
-    parsed,
-    record_index,
     structure_id,
     provenance_id,
     semantic_role,
@@ -580,13 +651,7 @@ def _property(
     status,
 ):
     return AtomicProperty(
-        id=_identity(
-            source_revision_id,
-            source_hash,
-            record_index,
-            parsed.raw_block,
-            f"property:{semantic_role}",
-        ),
+        id=_identity(record_namespace, f"property:{semantic_role}"),
         revision=source_hash,
         semantic_role=semantic_role,
         domain="atom",
@@ -599,10 +664,8 @@ def _property(
 
 
 def _diagnostic(
+    record_namespace,
     source_revision_id,
-    source_hash,
-    record_index,
-    raw_block,
     record_key,
     issue,
     occurrence,
@@ -639,10 +702,7 @@ def _diagnostic(
     }[issue.kind]
     return ImportDiagnostic(
         id=_identity(
-            source_revision_id,
-            source_hash,
-            record_index,
-            raw_block,
+            record_namespace,
             f"diagnostic:{issue.kind.value}:{issue.path}{occurrence_suffix}",
         ),
         severity=severity,
@@ -668,20 +728,14 @@ def _diagnostic(
 def _map_record(parsed, record_index, source_revision_id, source_hash, source):
     import numpy
 
-    provenance_id = _identity(
+    record_namespace = _record_namespace(
         source_revision_id,
         source_hash,
         record_index,
         parsed.raw_block,
-        "provenance",
     )
-    structure_id = _identity(
-        source_revision_id,
-        source_hash,
-        record_index,
-        parsed.raw_block,
-        "structure",
-    )
+    provenance_id = _identity(record_namespace, "provenance")
+    structure_id = _identity(record_namespace, "structure")
     provenance = ProvenanceRecord(
         id=provenance_id,
         revision=source_hash,
@@ -693,12 +747,7 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
         operation="parse",
         parameters=(("format", "mol2"),),
     )
-    record_key = _record_key(
-        source_revision_id,
-        source_hash,
-        record_index,
-        parsed.raw_block,
-    )
+    record_key = _record_key(record_index, record_namespace)
 
     issues = list(parsed.issues)
     topology = None
@@ -715,13 +764,7 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
         )
         try:
             topology = TopologyRecord(
-                id=_identity(
-                    source_revision_id,
-                    source_hash,
-                    record_index,
-                    parsed.raw_block,
-                    "topology",
-                ),
+                id=_identity(record_namespace, "topology"),
                 revision=source_hash,
                 structure_id=structure_id,
                 bond_indices=ArrayData(
@@ -756,18 +799,31 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
                     f"invalid MOL2 bond topology: {error}",
                 )
             )
-    missing_categories = tuple(
+    missing_atom_names = tuple(
         index
         for index, atom in enumerate(parsed.atoms)
-        if atom.name == "*" or atom.atom_type == "*"
+        if atom.name == "*"
     )
     issues.extend(
         ParserIssue(
             IssueKind.MISSING,
-            f"atom[{index}].name_and_type",
-            "MOL2 * recovery sentinel maps to categorical missing codes",
+            f"atom[{index}].name",
+            "MOL2 * atom-name sentinel maps to a categorical missing code",
         )
-        for index in missing_categories
+        for index in missing_atom_names
+    )
+    missing_atom_types = tuple(
+        index
+        for index, atom in enumerate(parsed.atoms)
+        if atom.atom_type == "*"
+    )
+    issues.extend(
+        ParserIssue(
+            IssueKind.MISSING,
+            f"atom[{index}].atom_type",
+            "MOL2 * atom-type sentinel maps to a categorical missing code",
+        )
+        for index in missing_atom_types
     )
     atom_names = tuple(
         None if atom.name == "*" else atom.name for atom in parsed.atoms
@@ -801,10 +857,8 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
 
     datasets = [
         _property(
-            source_revision_id,
+            record_namespace,
             source_hash,
-            parsed,
-            record_index,
             structure.id,
             provenance_id,
             "atom_type",
@@ -816,7 +870,7 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
             ),
             (
                 DatasetStatus.PARTIAL
-                if missing_categories
+                if missing_atom_types
                 else DatasetStatus.COMPLETE
             ),
         )
@@ -825,10 +879,8 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
     if any(value is not None for value in substructure_ids):
         datasets.append(
             _property(
-                source_revision_id,
+                record_namespace,
                 source_hash,
-                parsed,
-                record_index,
                 structure.id,
                 provenance_id,
                 "substructure_id",
@@ -839,26 +891,45 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
                 ),
                 (
                     DatasetStatus.COMPLETE
-                    if all(value is not None for value in substructure_ids)
+                    if parsed.substructure_valid
+                    and all(value is not None for value in substructure_ids)
                     else DatasetStatus.PARTIAL
                 ),
             )
         )
-    substructure_names = tuple(atom.substructure_name for atom in parsed.atoms)
+    names_by_id = {}
+    for substructure in parsed.substructures:
+        names_by_id.setdefault(substructure.substructure_id, substructure.name)
+    substructure_names = []
+    for index, atom in enumerate(parsed.atoms):
+        table_name = names_by_id.get(atom.substructure_id)
+        if (
+            atom.substructure_name is not None
+            and table_name is not None
+            and atom.substructure_name != table_name
+        ):
+            issues.append(
+                ParserIssue(
+                    IssueKind.AMBIGUOUS,
+                    f"atom[{index}].substructure_name",
+                    "inline and SUBSTRUCTURE names conflict; inline name was retained",
+                )
+            )
+        substructure_names.append(atom.substructure_name or table_name)
+    substructure_names = tuple(substructure_names)
     if any(value is not None for value in substructure_names):
         datasets.append(
             _property(
-                source_revision_id,
+                record_namespace,
                 source_hash,
-                parsed,
-                record_index,
                 structure.id,
                 provenance_id,
                 "substructure_name",
                 _categorical(substructure_names),
                 (
                     DatasetStatus.COMPLETE
-                    if all(value is not None for value in substructure_names)
+                    if parsed.substructure_valid
+                    and all(value is not None for value in substructure_names)
                     else DatasetStatus.PARTIAL
                 ),
             )
@@ -867,15 +938,13 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
     if any(value is not None for value in charges):
         datasets.append(
             _property(
-                source_revision_id,
+                record_namespace,
                 source_hash,
-                parsed,
-                record_index,
                 structure.id,
                 provenance_id,
                 "partial_charge",
                 _array(
-                    tuple(0.0 if value is None else value for value in charges),
+                    tuple(math.nan if value is None else value for value in charges),
                     ("atom",),
                     dtype="float64",
                 ),
@@ -889,13 +958,7 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
 
     annotations = tuple(
         ChemicalAnnotation(
-            id=_identity(
-                source_revision_id,
-                source_hash,
-                record_index,
-                parsed.raw_block,
-                f"annotation:{key}",
-            ),
+            id=_identity(record_namespace, f"annotation:{key}"),
             revision=source_hash,
             target_entity_id=structure.id,
             namespace="tripos",
@@ -913,13 +976,7 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
         if value is not None
     )
     record = MolecularRecord(
-        id=_identity(
-            source_revision_id,
-            source_hash,
-            record_index,
-            parsed.raw_block,
-            "record",
-        ),
+        id=_identity(record_namespace, "record"),
         revision=source_hash,
         source_revision_id=source_revision_id,
         record_key=record_key,
@@ -942,10 +999,8 @@ def _map_record(parsed, record_index, source_revision_id, source_hash, source):
         occurrences[key] = occurrence + 1
         diagnostics.append(
             _diagnostic(
+                record_namespace,
                 source_revision_id,
-                source_hash,
-                record_index,
-                parsed.raw_block,
                 record_key,
                 issue,
                 occurrence,
@@ -972,23 +1027,18 @@ def _record_failure_diagnostic(
     raw_block,
     message,
 ):
+    record_namespace = _record_namespace(
+        source_revision_id,
+        source_hash,
+        record_index,
+        raw_block,
+    )
     return ImportDiagnostic(
-        id=_identity(
-            source_revision_id,
-            source_hash,
-            record_index,
-            raw_block,
-            "diagnostic:record_parse_failed",
-        ),
+        id=_identity(record_namespace, "diagnostic:record_parse_failed"),
         severity=DiagnosticSeverity.ERROR,
         quality_status=QualityStatus.INVALID,
         source_revision_id=source_revision_id,
-        record_key=_record_key(
-            source_revision_id,
-            source_hash,
-            record_index,
-            raw_block,
-        ),
+        record_key=_record_key(record_index, record_namespace),
         entity_id=None,
         field_path=f"record.{record_index}",
         code="mol2.record_parse_failed",
@@ -1024,7 +1074,11 @@ def _parse_bytes(
 ):
     mapped = []
     failure_diagnostics = []
-    for index, syntax in enumerate(iter_mol2_records(raw_source)):
+    records = iter_mol2_records(raw_source)
+    first_record = next(records, None)
+    if first_record is None:
+        raise ValueError("MOL2 source contains no MOLECULE records")
+    for index, syntax in enumerate(chain((first_record,), records)):
         try:
             parsed = parse_mol2_record(syntax)
         except ValueError as error:

@@ -1,6 +1,7 @@
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 import numpy
@@ -31,6 +32,27 @@ class Mol2ExportReadinessTests(unittest.TestCase):
 
         self.assertEqual(report.status.value, "Complete")
         self.assertEqual(report.missing_fields, ())
+
+    def test_raw_marker_acceptance_matches_the_mol2_tokenizer(self):
+        raw = FIXTURE.read_bytes()
+        molecule_tail = raw.split(b"\n", 1)[1]
+        variants = (
+            b"\xef\xbb\xbf  @<tripos>molecule  \r\n"
+            + molecule_tail.replace(b"\n", b"\r\n"),
+            b"\t@<TrIpOs>MoLeCuLe\t\n" + molecule_tail,
+        )
+        with TemporaryDirectory() as directory:
+            for index, variant in enumerate(variants):
+                with self.subTest(index=index):
+                    source = Path(directory) / f"variant-{index}.mol2"
+                    source.write_bytes(variant)
+                    batch = parse_mol2(source)
+                    report = mol2_export_readiness(batch)
+                    self.assertEqual(report.status.value, "Complete")
+                    self.assertNotIn(
+                        "molecular_record.raw_tripos",
+                        report.missing_fields,
+                    )
 
     def test_missing_annotations_are_partial_not_a_structural_blocker(self):
         report = mol2_export_readiness(replace(self.batch, annotations=()))

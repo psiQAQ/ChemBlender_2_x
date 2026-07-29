@@ -1,6 +1,9 @@
 import hashlib
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
+from uuid import uuid4
 
 import numpy
 
@@ -10,10 +13,14 @@ from ChemBlender.core import (
     CategoricalData,
     DatasetStatus,
     IssueKind,
+    QCProject,
     QualityStatus,
     TopologySource,
     builtin_reader_descriptors,
     builtin_reader_registry,
+    close_project,
+    open_project,
+    save_project,
 )
 from ChemBlender.core.formats import mol2
 
@@ -378,24 +385,40 @@ class Mol2RecoveryTests(unittest.TestCase):
 
     def test_missing_charge_values_make_a_partial_property(self):
         raw = (
-            b"@<TRIPOS>MOLECULE\npartial charges\n2 0 0 0 0\nSMALL\nUSER_CHARGES\n"
+            b"@<TRIPOS>MOLECULE\npartial charges\n2 1 0 0 0\nSMALL\nUSER_CHARGES\n"
             b"@<TRIPOS>ATOM\n"
             b"1 C1 0 0 0 C.3 **** **** -0.2\n"
             b"2 H1 1 0 0 H\n"
+            b"@<TRIPOS>BOND\n1 1 2 1\n"
         )
-        from tempfile import TemporaryDirectory
-
         with TemporaryDirectory() as directory:
-            source = Path(directory) / "partial-charge.mol2"
+            root = Path(directory)
+            source = root / "partial-charge.mol2"
             source.write_bytes(raw)
             batch = mol2.parse_mol2(source)
 
-        charges = _datasets(batch)["partial_charge"]
-        self.assertEqual(
-            numpy.asarray(charges.data.values).tolist(),
-            [-0.2, 0.0],
-        )
-        self.assertIs(charges.status, DatasetStatus.PARTIAL)
+            charges = _datasets(batch)["partial_charge"]
+            values = numpy.asarray(charges.data.values)
+            self.assertEqual(values[0], -0.2)
+            self.assertTrue(numpy.isnan(values[1]))
+            self.assertEqual(numpy.isfinite(values).tolist(), [True, False])
+            self.assertIs(charges.status, DatasetStatus.PARTIAL)
+
+            project = QCProject(uuid4(), "1.0")
+            project.commit(batch)
+            sidecar = root / "partial-charge.cbq"
+            save_project(sidecar, project)
+            reopened = open_project(sidecar)
+            try:
+                restored = next(
+                    value
+                    for value in reopened.datasets.values()
+                    if value.semantic_role == "partial_charge"
+                )
+                self.assertTrue(numpy.isnan(restored.data.values[1]))
+                self.assertIs(restored.status, DatasetStatus.PARTIAL)
+            finally:
+                close_project(reopened)
 
     def test_recovery_sentinels_become_missing_categories(self):
         raw = (
@@ -425,9 +448,122 @@ class Mol2RecoveryTests(unittest.TestCase):
         self.assertEqual(atom_types.data.categories, ("C.3",))
         self.assertIs(atom_types.status, DatasetStatus.PARTIAL)
         self.assertIn(
-            (IssueKind.MISSING, "atom[1].name_and_type"),
+            (IssueKind.MISSING, "atom[1].name"),
             tuple((issue.kind, issue.path) for issue in batch.report.issues),
         )
+        self.assertIn(
+            (IssueKind.MISSING, "atom[1].atom_type"),
+            tuple((issue.kind, issue.path) for issue in batch.report.issues),
+        )
+
+    def test_missing_atom_name_does_not_make_atom_type_partial(self):
+        raw = (
+            b"@<TRIPOS>MOLECULE\nmissing name\n1 0 0 0 0\nSMALL\n"
+            b"NO_CHARGES\n@<TRIPOS>ATOM\n1 * 0 0 0 C.3\n"
+        )
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "missing-name.mol2"
+            source.write_bytes(raw)
+            batch = mol2.parse_mol2(source)
+
+        atom_type = _datasets(batch)["atom_type"]
+        self.assertIs(atom_type.status, DatasetStatus.COMPLETE)
+        self.assertIn(
+            (IssueKind.MISSING, "atom[0].name"),
+            tuple((issue.kind, issue.path) for issue in batch.report.issues),
+        )
+        self.assertNotIn(
+            (IssueKind.MISSING, "atom[0].atom_type"),
+            tuple((issue.kind, issue.path) for issue in batch.report.issues),
+        )
+
+    def test_balanced_keeps_topology_and_substructure_labels_are_recovered(self):
+        raw = (
+            b"@<TRIPOS>MOLECULE\nsubstructure recovery\n3 2 2 0 0\nSMALL\n"
+            b"NO_CHARGES\n@<TRIPOS>ATOM\n"
+            b"1 C1 0 0 0 C.3 5 ****\n"
+            b"2 C2 1 0 0 C.3 5 INLINE\n"
+            b"3 H1 2 0 0 H\n"
+            b"@<TRIPOS>BOND\n1 1 2 1\n2 2 3 1\n"
+            b"@<TRIPOS>SUBSTRUCTURE\n5 TABLE 1 GROUP\nbroken\n"
+        )
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "substructure-recovery.mol2"
+            source.write_bytes(raw)
+            batch = mol2.parse_mol2(source)
+
+        self.assertEqual(len(batch.structures), 1)
+        self.assertEqual(len(batch.topologies), 1)
+        substructure_ids = _datasets(batch)["substructure_id"]
+        self.assertEqual(substructure_ids.data.values.tolist(), [5, 5, 0])
+        self.assertIs(substructure_ids.status, DatasetStatus.PARTIAL)
+        names = _datasets(batch)["substructure_name"]
+        self.assertEqual(names.data.categories, ("TABLE", "INLINE"))
+        self.assertEqual(names.data.codes.values.tolist(), [0, 1, -1])
+        self.assertIs(names.status, DatasetStatus.PARTIAL)
+        self.assertIn(
+            (IssueKind.AMBIGUOUS, "atom[1].substructure_name"),
+            tuple((issue.kind, issue.path) for issue in batch.report.issues),
+        )
+        self.assertIn(
+            (IssueKind.INVALID, "substructure[1].syntax"),
+            tuple((issue.kind, issue.path) for issue in batch.report.issues),
+        )
+        self._assert_strict_rejects(raw)
+
+    def test_each_record_raw_block_is_hashed_once_for_entity_identity(self):
+        source = FIXTURES / "small.mol2"
+        raw = source.read_bytes()
+        real_sha256 = hashlib.sha256
+
+        with patch.object(mol2.hashlib, "sha256", wraps=real_sha256) as sha256:
+            mol2.parse_mol2(source)
+
+        self.assertEqual(
+            sum(call.args == (raw,) for call in sha256.call_args_list),
+            2,
+        )
+
+    def test_zero_molecule_records_fail_closed_for_all_reader_routes(self):
+        from ChemBlender.reader_api import ParseRequest
+
+        raw = b"ordinary text\n@<TRIPOS>ATOM\n1 C1 0 0 0 C.3\n"
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "not-mol2.mol2"
+            source.write_bytes(raw)
+            calls = (
+                ("direct", lambda: mol2.parse_mol2(source)),
+                (
+                    "explicit-reader",
+                    lambda: builtin_reader_registry().parse(
+                        source, reader_id="mol2"
+                    ),
+                ),
+                *(
+                    (
+                        mode,
+                        lambda mode=mode: mol2.parse_mol2_request(
+                            ParseRequest(
+                                source,
+                                hashlib.sha256(raw).hexdigest(),
+                                mode,
+                                {},
+                                root,
+                                lambda _event: None,
+                                lambda: False,
+                            )
+                        ),
+                    )
+                    for mode in ("strict", "balanced", "maximum")
+                ),
+            )
+            for route, call in calls:
+                with self.subTest(route=route):
+                    with self.assertRaisesRegex(
+                        ValueError, "contains no MOLECULE records"
+                    ):
+                        call()
 
 
 class Mol2RegistrationTests(unittest.TestCase):
