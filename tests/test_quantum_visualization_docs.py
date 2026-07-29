@@ -5,10 +5,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = (
-    "2.3.0-wave-3-exchange-mol2-pdb-pqr.md",
     "2.3.0-wave-4-migration-release.md",
 )
-WAVE_230_ACTIVE_FILE = "2.3.0-wave-2-native-crystal.md"
+WAVE_230_ACTIVE_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 
 
 class QuantumVisualizationDocsTests(unittest.TestCase):
@@ -52,7 +51,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for name in (WAVE_230_ACTIVE_FILE, *WAVE_230_QUEUE_FILES):
             self.assertIn(name, agent_index)
 
-    def test_230_wave_2_is_active_and_later_waves_remain_queued(self):
+    def test_230_wave_3_is_active_and_wave_4_remains_queued(self):
         queued = sorted(
             path.name
             for path in (ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md")
