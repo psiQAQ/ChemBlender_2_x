@@ -124,7 +124,7 @@ class ImportPreflightTests(unittest.TestCase):
                 tuple(item.id for item in batch.diagnostics),
             )
             self.assertEqual(revision.reader_plugin_id, "chemblender.builtin")
-            self.assertEqual(revision.reader_api_version, "0.1")
+            self.assertEqual(revision.reader_api_version, "1.0-rc1")
             self.assertEqual(revision.locator, str(row.source_path))
             self.assertEqual(
                 revision.parse_identity,

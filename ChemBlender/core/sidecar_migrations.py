@@ -4,9 +4,10 @@ import json
 from uuid import UUID, uuid5
 
 
-CURRENT_MANIFEST_VERSION = "0.2"
+CURRENT_MANIFEST_VERSION = "1.0"
 LEGACY_MANIFEST_VERSION = "0.1"
-CURRENT_PROJECT_SCHEMA_VERSION = "0.2"
+HASHED_LEGACY_MANIFEST_VERSION = "0.2"
+CURRENT_PROJECT_SCHEMA_VERSION = "1.0"
 _EXPLICIT_TOPOLOGY_READERS = frozenset(
     ("cjson", "mol", "mol2", "mol_v2000", "pdb", "pqr", "sdf")
 )
@@ -166,91 +167,94 @@ def migrate_manifest(document, *, migrated_topology_ids=None):
     if not isinstance(document, dict):
         raise SidecarIntegrityError("sidecar manifest must be an object")
     version = document.get("manifest_version")
-    if version == CURRENT_MANIFEST_VERSION:
-        project = document.get("project")
-        if isinstance(project, dict) and project.get("$type") == "QCProject":
-            missing = tuple(
-                name
-                for name in (
-                    "diagnostics",
-                    "calculation_groups",
-                    "topologies",
-                    "molecular_records",
-                )
-                if name not in project
-            )
-        else:
-            missing = ()
-        has_legacy_structure = any(
-            isinstance(structure, dict)
-            and (
-                "topology_ids" not in structure
-                or structure.get("topology") is not None
-            )
-            for _key, structure in _registry_entries(project or {}, "structures")
-        )
-        has_legacy_topology = any(
-            isinstance(topology, dict)
-            and topology.get("$type") == "TopologyRecord"
-            and "bond_lattice_shifts" not in topology
-            for _key, topology in _registry_entries(project or {}, "topologies")
-        )
-        has_pre_task1_structure = any(
-            isinstance(structure, dict)
-            and structure.get("$type") == "Structure"
-            and "atomic_identity" not in structure
-            for _key, structure in _registry_entries(project or {}, "structures")
-        )
-        if missing or has_legacy_structure or has_legacy_topology or has_pre_task1_structure:
-            migrated = deepcopy(document)
-            for name in missing:
-                migrated["project"][name] = {"$dict": []}
-            for _key, structure in _registry_entries(migrated["project"], "structures"):
-                if (
-                    isinstance(structure, dict)
-                    and structure.get("$type") == "Structure"
-                    and "atomic_identity" not in structure
-                ):
-                    structure["atomic_identity"] = None
-            migrate_topologies(migrated["project"])
-            return migrated
-        return document
-    if version != LEGACY_MANIFEST_VERSION:
+    if version not in (
+        CURRENT_MANIFEST_VERSION,
+        LEGACY_MANIFEST_VERSION,
+        HASHED_LEGACY_MANIFEST_VERSION,
+    ):
         raise SidecarCompatibilityError("unsupported sidecar manifest version")
 
-    expected_fields = {
-        "format",
-        "manifest_version",
-        "project_id",
-        "project_schema_version",
-        "project",
-    }
-    if set(document) != expected_fields:
-        raise SidecarIntegrityError(
-            "legacy sidecar manifest has invalid top-level fields"
-        )
-    if document.get("project_schema_version") != LEGACY_MANIFEST_VERSION:
-        raise SidecarCompatibilityError("unsupported legacy project schema")
     project = document.get("project")
-    if (
-        not isinstance(project, dict)
+    if version == CURRENT_MANIFEST_VERSION:
+        if not isinstance(project, dict) or project.get("$type") != "QCProject":
+            return document
+    elif version == LEGACY_MANIFEST_VERSION:
+        expected_fields = {
+            "format",
+            "manifest_version",
+            "project_id",
+            "project_schema_version",
+            "project",
+        }
+        if set(document) != expected_fields:
+            raise SidecarIntegrityError(
+                "legacy sidecar manifest has invalid top-level fields"
+            )
+        if document.get("project_schema_version") != LEGACY_MANIFEST_VERSION:
+            raise SidecarCompatibilityError("unsupported legacy project schema")
+        if (
+            not isinstance(project, dict)
+            or project.get("$type") != "QCProject"
+            or project.get("schema_version") != LEGACY_MANIFEST_VERSION
+            or "sources" in project
+            or "source_revisions" in project
+        ):
+            raise SidecarIntegrityError("invalid legacy QCProject payload")
+    elif (
+        document.get("project_schema_version")
+        != HASHED_LEGACY_MANIFEST_VERSION
+        or not isinstance(project, dict)
         or project.get("$type") != "QCProject"
-        or project.get("schema_version") != LEGACY_MANIFEST_VERSION
-        or "sources" in project
-        or "source_revisions" in project
+        or project.get("schema_version")
+        != HASHED_LEGACY_MANIFEST_VERSION
     ):
         raise SidecarIntegrityError("invalid legacy QCProject payload")
 
+    missing = tuple(
+        name
+        for name in (
+            "sources",
+            "source_revisions",
+            "diagnostics",
+            "calculation_groups",
+            "topologies",
+            "molecular_records",
+        )
+        if name not in project
+    )
+    has_legacy_structure = any(
+        isinstance(structure, dict)
+        and (
+            "topology_ids" not in structure
+            or structure.get("topology") is not None
+            or "atomic_identity" not in structure
+        )
+        for _key, structure in _registry_entries(project, "structures")
+    )
+    has_legacy_topology = any(
+        isinstance(topology, dict)
+        and topology.get("$type") == "TopologyRecord"
+        and "bond_lattice_shifts" not in topology
+        for _key, topology in _registry_entries(project, "topologies")
+    )
+    if (
+        version == CURRENT_MANIFEST_VERSION
+        and not missing
+        and not has_legacy_structure
+        and not has_legacy_topology
+    ):
+        return document
+
     migrated = deepcopy(document)
-    migrated["manifest_version"] = CURRENT_MANIFEST_VERSION
-    migrated["project_schema_version"] = CURRENT_PROJECT_SCHEMA_VERSION
-    migrated["project"]["schema_version"] = CURRENT_PROJECT_SCHEMA_VERSION
-    migrated["project"]["sources"] = {"$dict": []}
-    migrated["project"]["source_revisions"] = {"$dict": []}
-    migrated["project"]["diagnostics"] = {"$dict": []}
-    migrated["project"]["calculation_groups"] = {"$dict": []}
-    migrated["project"]["topologies"] = {"$dict": []}
-    migrated["project"]["molecular_records"] = {"$dict": []}
+    for name in (
+        "sources",
+        "source_revisions",
+        "diagnostics",
+        "calculation_groups",
+        "topologies",
+        "molecular_records",
+    ):
+        migrated["project"].setdefault(name, {"$dict": []})
     for _key, structure in _registry_entries(migrated["project"], "structures"):
         if (
             isinstance(structure, dict)
@@ -259,4 +263,8 @@ def migrate_manifest(document, *, migrated_topology_ids=None):
         ):
             structure["atomic_identity"] = None
     migrate_topologies(migrated["project"])
+    if version != CURRENT_MANIFEST_VERSION:
+        migrated["manifest_version"] = CURRENT_MANIFEST_VERSION
+        migrated["project_schema_version"] = CURRENT_PROJECT_SCHEMA_VERSION
+        migrated["project"]["schema_version"] = CURRENT_PROJECT_SCHEMA_VERSION
     return migrated

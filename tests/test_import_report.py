@@ -442,7 +442,7 @@ class ImportReportTests(unittest.TestCase):
                             batch.source_revisions[0].reader_version,
                             batch.source_revisions[0].reader_api_version,
                         ),
-                        ("chemblender.preflight", "0", "0.1"),
+                        ("chemblender.preflight", "0", "1.0-rc1"),
                     )
                     self.assertEqual(
                         batch.source_revisions[0].reader_id,

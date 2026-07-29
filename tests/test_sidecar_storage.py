@@ -63,7 +63,7 @@ def manifest_hash(manifest):
 
 
 def write_manifest(path, manifest, *, update_hash=True):
-    if update_hash and manifest.get("manifest_version") == "0.2":
+    if update_hash and manifest.get("manifest_version") in ("0.2", "1.0"):
         manifest["manifest_sha256"] = manifest_hash(manifest)
     path.write_text(
         json.dumps(
@@ -454,7 +454,7 @@ class SidecarStorageTests(unittest.TestCase):
         project = open_project(FIXTURES / "sidecar" / "model-v01")
         try:
             self.assertEqual(project.id, PROJECT_ID)
-            self.assertEqual(project.schema_version, "0.2")
+            self.assertEqual(project.schema_version, "1.0")
             self.assertEqual(project.calculation_groups, {})
             self.assertEqual(project.sources, {})
             self.assertEqual(project.source_revisions, {})
@@ -502,12 +502,15 @@ class SidecarStorageTests(unittest.TestCase):
             save_project(root, sample_project())
             manifest_path = root / "manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["manifest_version"] = "0.2"
+            manifest["project_schema_version"] = "0.2"
+            manifest["project"]["schema_version"] = "0.2"
             del manifest["project"]["calculation_groups"]
             write_manifest(manifest_path, manifest)
 
             project = open_project(root)
             try:
-                self.assertEqual(project.schema_version, "0.2")
+                self.assertEqual(project.schema_version, "1.0")
                 self.assertEqual(project.calculation_groups, {})
             finally:
                 close_project(project)
@@ -528,7 +531,7 @@ class SidecarStorageTests(unittest.TestCase):
             with self.assertRaises(SidecarCompatibilityError):
                 open_project(root)
 
-    def test_new_manifest_is_v02_canonical_hashed_and_does_not_mutate_v01_caller(self):
+    def test_new_manifest_is_v1_canonical_hashed_and_does_not_mutate_v01_caller(self):
         project = sample_project()
         with TemporaryDirectory() as directory:
             root = save_project(Path(directory) / "h2.cbq", project)
@@ -537,9 +540,9 @@ class SidecarStorageTests(unittest.TestCase):
             manifest = json.loads(document)
 
             self.assertEqual(project.schema_version, "0.1")
-            self.assertEqual(manifest["manifest_version"], "0.2")
-            self.assertEqual(manifest["project_schema_version"], "0.2")
-            self.assertEqual(manifest["project"]["schema_version"], "0.2")
+            self.assertEqual(manifest["manifest_version"], "1.0")
+            self.assertEqual(manifest["project_schema_version"], "1.0")
+            self.assertEqual(manifest["project"]["schema_version"], "1.0")
             self.assertEqual(UUID(manifest["generation_id"]).version, 4)
             created = datetime.fromisoformat(
                 manifest["created_at_utc"].replace("Z", "+00:00")
@@ -558,27 +561,27 @@ class SidecarStorageTests(unittest.TestCase):
                 + b"\n",
             )
             restored = open_project(root, expected_schema_version="0.1")
-            self.assertEqual(restored.schema_version, "0.2")
+            self.assertEqual(restored.schema_version, "1.0")
             close_project(restored)
 
-    def test_v02_manifest_hash_detects_tampering(self):
+    def test_v1_manifest_hash_detects_tampering(self):
         with TemporaryDirectory() as directory:
             root = save_project(Path(directory) / "h2.cbq", sample_project())
             manifest_path = root / "manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            self.assertEqual(manifest["manifest_version"], "0.2")
+            self.assertEqual(manifest["manifest_version"], "1.0")
             manifest["project_schema_version"] = "tampered"
             write_manifest(manifest_path, manifest, update_hash=False)
 
             with self.assertRaisesRegex(SidecarIntegrityError, "manifest hash"):
                 open_project(root)
 
-    def test_v02_manifest_strictly_validates_generation_metadata_and_fields(self):
+    def test_v1_manifest_strictly_validates_generation_metadata_and_fields(self):
         with TemporaryDirectory() as directory:
             root = save_project(Path(directory) / "h2.cbq", sample_project())
             manifest_path = root / "manifest.json"
             original = json.loads(manifest_path.read_text(encoding="utf-8"))
-            self.assertEqual(original["manifest_version"], "0.2")
+            self.assertEqual(original["manifest_version"], "1.0")
             invalid_documents = (
                 {key: value for key, value in original.items() if key != "format"},
                 original | {"generation_id": "not-a-uuid"},
@@ -596,7 +599,7 @@ class SidecarStorageTests(unittest.TestCase):
                         with self.assertRaises(SidecarIntegrityError):
                             open_project(root)
 
-    def test_v02_header_payload_mismatch_is_integrity_error_before_decode(self):
+    def test_v1_header_payload_mismatch_is_integrity_error_before_decode(self):
         with TemporaryDirectory() as directory:
             root = save_project(Path(directory) / "h2.cbq", sample_project())
             manifest_path = root / "manifest.json"
@@ -638,7 +641,7 @@ class SidecarStorageTests(unittest.TestCase):
                         ):
                             open_project(root)
 
-    def test_v02_matching_unsupported_schema_is_compatibility_error_before_decode(self):
+    def test_v1_matching_unsupported_schema_is_compatibility_error_before_decode(self):
         with TemporaryDirectory() as directory:
             root = save_project(Path(directory) / "h2.cbq", sample_project())
             manifest_path = root / "manifest.json"
@@ -729,7 +732,7 @@ class SidecarStorageTests(unittest.TestCase):
             close_project(project)
             restored = open_project(root)
             try:
-                self.assertEqual(restored.schema_version, "0.2")
+                self.assertEqual(restored.schema_version, "1.0")
                 self.assertEqual(restored.sources, {source.id: source})
                 self.assertEqual(
                     restored.source_revisions,

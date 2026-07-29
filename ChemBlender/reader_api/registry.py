@@ -79,7 +79,7 @@ def _builtin_manifest(descriptors):
         schema_version="1",
         plugin_id=_BUILTIN_PLUGIN_ID,
         plugin_version=_BUILTIN_PLUGIN_VERSION,
-        chemblender_api=">=0.1,<1.0",
+        chemblender_api=">=1.0,<2.0",
         execution_mode=ExecutionMode.BUILT_IN,
         license=("SPDX:GPL-3.0-or-later",),
         readers=tuple(_manifest_entry(item) for item in descriptors),

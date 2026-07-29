@@ -69,7 +69,7 @@ class SidecarPublicationTests(unittest.TestCase):
 
         self.assertEqual(published.path, destination.resolve())
         self.assertEqual(published.project_id, session.project.id)
-        self.assertEqual(published.schema_version, "0.2")
+        self.assertEqual(published.schema_version, "1.0")
         self.assertRegex(published.manifest_sha256, r"^[0-9a-f]{64}$")
         self.assertIsInstance(published.generation_id, UUID)
         self.assertEqual(session.sidecar_path, destination.resolve())
@@ -77,7 +77,7 @@ class SidecarPublicationTests(unittest.TestCase):
         restored = open_project(
             destination,
             expected_project_id=session.project.id,
-            expected_schema_version="0.2",
+            expected_schema_version="1.0",
             verify_arrays=True,
         )
         close_project(restored)

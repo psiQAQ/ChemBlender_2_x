@@ -11,6 +11,7 @@ from ..model import (
     SourceRecord,
     SourceRevision,
 )
+from ..readers import READER_API_VERSION
 from .preview import ImportPreview
 from .staging import StagedImportSession
 
@@ -84,7 +85,7 @@ def _live_diagnostics(preview, session):
             if (
                 revision.reader_plugin_id != "chemblender.preflight"
                 or revision.reader_version != "0"
-                or revision.reader_api_version != "0.1"
+                or revision.reader_api_version != READER_API_VERSION
                 or not batch.diagnostics
                 or any(
                     type(item) is not ImportDiagnostic

@@ -179,7 +179,7 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(result.path, destination.resolve())
         self.assertEqual(result.manifest_sha256, manifest["manifest_sha256"])
         self.assertEqual(scene[PROJECT_ID_KEY], str(PROJECT_ID))
-        self.assertEqual(scene[PROJECT_SCHEMA_KEY], "0.2")
+        self.assertEqual(scene[PROJECT_SCHEMA_KEY], "1.0")
         self.assertEqual(scene[MANIFEST_HASH_KEY], result.manifest_sha256)
         self.assertEqual(session.sidecar_path, destination.resolve())
         self.assertEqual(session.link_status, "connected")

@@ -15,7 +15,7 @@ from zipfile import ZipFile
 import bpy
 
 
-READER_API_HANDLE_KEY = "chemblender.reader_api.v0"
+READER_API_HANDLE_KEY = "chemblender.reader_api.v1"
 OPTIONAL_STACK_PREFIXES = (
     "ase",
     "cclib",
@@ -295,7 +295,7 @@ def assert_disabled(module_key, owned_classes):
 
 def assert_reader_api_handle(module_key):
     handle = bpy.app.driver_namespace[READER_API_HANDLE_KEY]
-    assert handle.api_version == "0.1"
+    assert handle.api_version == "1.0-rc1"
     assert handle.module_name == f"{module_key}.reader_api"
     assert importlib.import_module(handle.module_name).__name__ == handle.module_name
     assert callable(handle.register_callback)

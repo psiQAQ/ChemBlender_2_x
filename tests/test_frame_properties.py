@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import numpy
 
+import ChemBlender.reader_api as reader_api
 from ChemBlender.core import (
     ArrayData,
     AtomFrameProperty,
@@ -502,18 +503,29 @@ class FramePropertyProjectTests(unittest.TestCase):
                 frame_set_id=frames.id,
             )
         )
-        project = QCProject(id=uuid4(), schema_version="0.2")
-        project.commit(
-            ImportBatch(
-                structures=(structure,),
-                datasets=(
-                    frames,
-                    frame_property,
-                    atom_property,
-                    cell_property,
-                ),
-            )
+        batch = ImportBatch(
+            structures=(structure,),
+            datasets=(
+                frames,
+                frame_property,
+                atom_property,
+                cell_property,
+            ),
         )
+        public = reader_api.public_batch_from_internal(batch)
+        with TemporaryDirectory() as temporary:
+            document = reader_api.public_batch_document(public, temporary)
+            restored_public = reader_api.public_batch_from_document(
+                document,
+                temporary,
+            )
+        self.assertEqual(
+            tuple(type(value) for value in restored_public.datasets[1:]),
+            (FrameProperty, AtomFrameProperty, CellFrameProperty),
+        )
+
+        project = QCProject(id=uuid4(), schema_version="0.2")
+        project.commit(batch)
 
         with TemporaryDirectory() as temporary:
             root = save_project(Path(temporary) / "frames.cbq", project)

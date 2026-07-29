@@ -14,6 +14,10 @@ _EXTENSION_PATTERN = re.compile(
 )
 _VERSION_PATTERN = re.compile(r"[0-9]+(?:\.[0-9]+)*", re.ASCII)
 _API_RANGE_PATTERN = re.compile(r">=([0-9]+)\.([0-9]+),<([0-9]+)\.([0-9]+)", re.ASCII)
+_READER_API_VERSION_PATTERN = re.compile(
+    r"([0-9]+)\.([0-9]+)(?:-rc[1-9][0-9]*)?",
+    re.ASCII,
+)
 _TOP_LEVEL_KEYS = frozenset(
     {"schema_version", "plugin_id", "plugin_version", "chemblender_api", "execution_mode", "license", "readers"}
 )
@@ -44,8 +48,16 @@ def _api_range(value):
     minimum, maximum = (int(match[1]), int(match[2])), (int(match[3]), int(match[4]))
     if minimum >= maximum:
         raise ValueError("chemblender_api range must not be empty or inverted")
-    current = tuple(map(int, READER_API_VERSION.split(".")))
+    current_match = _READER_API_VERSION_PATTERN.fullmatch(READER_API_VERSION)
+    if current_match is None:
+        raise RuntimeError("invalid built-in Reader API version")
+    current = (int(current_match[1]), int(current_match[2]))
     if not minimum <= current < maximum:
+        if maximum <= (1, 0):
+            raise ValueError(
+                "Reader API 0.x plugin manifest is incompatible with "
+                f"Reader API {READER_API_VERSION}"
+            )
         raise ValueError("chemblender_api range does not include this Reader API version")
     return value
 

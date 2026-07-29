@@ -36,7 +36,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 1. `ReaderRegistry` 通过扩展名和内容 sniffing 选择 reader。
 2. reader 返回只含标准语义对象的 `ImportBatch`。
 3. `QCProject.commit()` 校验引用后原子接纳 source/revision、结构、计算、数据集和 provenance。
-4. `sidecar.py` 将项目元数据写入 v0.2 manifest，将大型数组写入 `.npy`；v0.1 只在内存中迁移后读取。
+4. `sidecar.py` 将项目元数据写入 v1 manifest，将大型数组写入 `.npy`；v0.1/v0.2 只在内存中迁移后读取。
 5. Blender adapter 根据实体 UUID/revision 创建临时 Mesh、Curve、Volume、Material 或 Geometry Nodes。
 6. 重计算任务通过 `worker_client.py` 启动独立 Python；worker 只在成功并复验结果后更新 sidecar。
 
@@ -163,7 +163,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
 | `ChemBlender/reader_api/__init__.py` | 模块级 re-export | Reader API 0.x 的严格公共门面；导出版本、manifest/runtime descriptor、exact `SniffMatch`/`SniffResult`、受控科学实体和 `PublicImportBatch`，不导出 `QCProject` 或内部 `ImportBatch`。 |
-| `ChemBlender/reader_api/version.py` | `READER_API_VERSION` | 声明当前实验性 Reader API 版本 `0.1`，供 manifest 兼容范围校验。 |
+| `ChemBlender/reader_api/version.py` | `READER_API_VERSION` | 声明冻结的 Reader API `1.0-rc1` token，供 manifest v1 兼容范围校验。 |
 | `ChemBlender/reader_api/manifest.py` | `ExecutionMode`、`ReaderManifestEntry`、`ReaderPluginManifest.from_toml()` | 用标准库 `tomllib` 读取受控 UTF-8 TOML，拒绝未知字段和不兼容 API 范围，并确定性规范化静态 reader 声明；manifest capability list 恒表示 `SUPPORTED`。 |
 | `ChemBlender/reader_api/descriptors.py` | `PublicReaderDescriptor`、`_probe_availability()` | 定义不含 callable、模块路径或项目上下文的不可变 runtime 元数据；以相对导入取得现有 `CapabilitySupport`/`ReaderAvailability`，并保留 `SUPPORTED`、`PARTIAL`、`UNSUPPORTED` 三态 capability。 |
 | `ChemBlender/reader_api/public_model.py` | `PublicImportBatch` | 以精确受信科学实体类型构成不可变、无复制的导入批次；拒绝子类和未批准数据集，并为 bridge 提供递归嵌套值校验，插件不能经此获得项目。 |
@@ -225,8 +225,8 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/core/grid_semantics.py` | `GridSemanticPreset`、`builtin_grid_semantic_presets()`、`resolve_grid_semantics()`、`default_grid_isovalue()` | 定义 Cube/Grid 显式语义与 unit 组合、默认 surface/isovalue policy；从 raw ambiguous 多 dataset grid 选择一个 dataset，生成不改 voxel 值的确定性 complete `Grid3D` revision 和 provenance。 |
 | `ChemBlender/core/grid_cache_service.py` | `VolumeCacheRequest`、`CacheResult`、`prepare_volume_cache()`、`volume_cache_path()` | 不导入 Blender/OpenVDB 的 derived Volume cache transaction：计算 dataset/render identity 与 affine metadata，在 array load、slice、VDB population、publish 前后提供 progress/cancel checkpoint，以同目录短临时名验证后原子替换；cache hit 不重写，取消/失败保留既有目标并清理 staging。 |
 | `ChemBlender/core/model_registry.py` | `MODEL_TYPES`、`MODEL_ENUMS`、`model_type_tag()`、`model_type_from_tag()` | 明确登记 sidecar 可序列化的 dataclass 和 enum；以不可变映射固定 type tag 与具体模型类的对应关系。 |
-| `ChemBlender/core/sidecar.py` | `LazyNpyArray`、`save_project()`、`open_project()`、`close_project()` | `.cbq` v0.2 存储实现：写 generation metadata 与 canonical manifest hash，原子发布 manifest/数组；读取当前 manifest 时先验证原始 hash/header，对新增 CIF block identity 字段应用明确缺省，再以迁移副本严格 decode 并在写入和读取边界复验完整项目图，最后向内部 publication 返回未经改写的已验证 metadata。 |
-| `ChemBlender/core/sidecar_migrations.py` | `migrate_manifest()` | 在严格模型 decode 前复制已校验文档：把 v0.1 升到 schema `0.2`，为早期 v0.2 项目补 registry/可选 lattice-shift 字段，并把 Structure 内嵌 `MolecularTopology` 确定性提升为独立 `TopologyRecord`；无法证明来源的旧连接以 ambiguous、legacy-unverified 距离推断记录恢复，不改写 fixture 或已发布 sidecar。 |
+| `ChemBlender/core/sidecar.py` | `LazyNpyArray`、`save_project()`、`open_project()`、`close_project()` | `.cbq` v1 存储实现：写 generation metadata 与 canonical manifest hash，原子发布 manifest/数组；读取 v0.2/v1 hashed manifest 时先验证原始 hash/header，再以迁移副本严格 decode 并复验完整项目图，最后向内部 publication 返回未经改写的已验证 metadata。 |
+| `ChemBlender/core/sidecar_migrations.py` | `migrate_manifest()` | 在严格模型 decode 前复制已校验文档：把 v0.1/v0.2 升到 schema `1.0`，补实验期新增 registry、atomic identity 与 lattice-shift 缺省，并把 Structure 内嵌 `MolecularTopology` 确定性提升为独立 `TopologyRecord`；不改写旧 fixture 或已发布 sidecar。 |
 | `ChemBlender/core/storage/atomic_paths.py` | `short_sibling_temporary_path()` | 为 NPY、JSON 和 VDB writer 生成同目录、完整随机 UUID 且不重复 content hash 的短原子临时路径，避免 Windows 临时路径预算被 basename 放大。 |
 | `ChemBlender/core/storage/hashing.py` | `sha256_bytes()`、`sha256_file_snapshot()`、`sha256_file()` | 为 preflight、Reader API source recheck 和延迟 snapshot 提供共享、可取消 SHA-256；Windows ≤256 MiB 输入使用系统 CNG one-shot 并保持 64 KiB 取消检查语义，其他平台或更大文件退回 stdlib streaming，不导入 Blender。 |
 | `ChemBlender/core/storage/publication.py` | `solidify_session()`、`inspect_publication_orphans()`、`PublishedProject`、`PublicationRecoveryReport`、`PublicationRecoveryError` | 在目标同目录写入并复验完整 `.cbq` generation，经 backup rename 发布或非破坏回滚；默认关闭验证时打开的 project，仅在显式 opt-in 时把 final generation 的 exact verified project ownership 移交给事务；恢复不完整时同时保留原发布错误、回滚错误和不可变路径报告，不删除无法证明归属的目录。 |

@@ -90,7 +90,7 @@ class _Plugin:
             "1",
             descriptor.plugin_id,
             descriptor.plugin_version,
-            ">=0.1,<1.0",
+            ">=1.0,<2.0",
             descriptor.execution_mode,
             ("SPDX:MIT",),
             (entry,),
@@ -254,7 +254,7 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
             descriptor.plugin_id,
             descriptor.reader_id,
             descriptor.reader_version,
-            "0.1",
+            "1.0-rc1",
             _parameter_hash(parameters),
             source_parse_identity(
                 content_hash,

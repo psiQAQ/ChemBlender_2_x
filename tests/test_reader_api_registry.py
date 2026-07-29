@@ -71,7 +71,7 @@ def manifest_for(descriptor, **changes):
         "schema_version": "1",
         "plugin_id": descriptor.plugin_id,
         "plugin_version": descriptor.plugin_version,
-        "chemblender_api": ">=0.1,<1.0",
+        "chemblender_api": ">=1.0,<2.0",
         "execution_mode": descriptor.execution_mode,
         "license": ("SPDX:MIT",),
         "readers": (
@@ -458,7 +458,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
         self.assertEqual(len(registry.descriptors), 16)
         self.assertEqual({id(plugin.manifest) for plugin in plugins}, {id(plugins[0].manifest)})
         self.assertEqual(plugins[0].manifest.schema_version, "1")
-        self.assertEqual(plugins[0].manifest.chemblender_api, ">=0.1,<1.0")
+        self.assertEqual(plugins[0].manifest.chemblender_api, ">=1.0,<2.0")
         self.assertEqual(
             plugins[0].manifest.license,
             ("SPDX:GPL-3.0-or-later",),

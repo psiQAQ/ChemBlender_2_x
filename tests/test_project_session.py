@@ -46,7 +46,7 @@ class ProjectSessionTests(unittest.TestCase):
             (session.temporary_root / OWNER_MARKER).read_text(encoding="utf-8"),
             f"{session.id}\n",
         )
-        self.assertEqual(session.project.schema_version, "0.2")
+        self.assertEqual(session.project.schema_version, "1.0")
         self.assertIsNone(session.sidecar_path)
         self.assertIsNone(session.active_entity_id)
         self.assertIsNone(session.active_view_object_name)

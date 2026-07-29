@@ -60,7 +60,7 @@ class ProjectLinkPureTests(unittest.TestCase):
             write_project_link(scene, project, sidecar)
 
             self.assertEqual(scene[PROJECT_ID_KEY], str(PROJECT_ID))
-            self.assertEqual(scene[PROJECT_SCHEMA_KEY], "0.2")
+            self.assertEqual(scene[PROJECT_SCHEMA_KEY], "1.0")
             self.assertEqual(scene[MANIFEST_HASH_KEY], manifest["manifest_sha256"])
             self.assertIn(SIDECAR_LOCATOR_KEY, scene)
 
@@ -73,7 +73,7 @@ class ProjectLinkPureTests(unittest.TestCase):
 
             write_project_link(scene, project, sidecar)
 
-            self.assertEqual(scene[PROJECT_SCHEMA_KEY], "0.2")
+            self.assertEqual(scene[PROJECT_SCHEMA_KEY], "1.0")
 
     def test_each_scene_assignment_failure_restores_mixed_link_state(self):
         class FailingScene(dict):
