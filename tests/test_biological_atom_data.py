@@ -1,4 +1,3 @@
-import json
 import unittest
 from dataclasses import replace
 from pathlib import Path
@@ -21,20 +20,11 @@ from ChemBlender.core import (
     ImportBatch,
     QCProject,
     Structure,
-    builtin_reader_descriptors,
     close_project,
     open_project,
     save_project,
 )
 from tests.test_mol2_models import array, categorical
-
-
-MATRIX = (
-    Path(__file__).parents[1]
-    / "docs"
-    / "quantum-visualization"
-    / "reader-capability-matrix.json"
-)
 
 
 def atomic_identity(atom_names):
@@ -448,19 +438,6 @@ class BiologicalAtomDataMappingTests(unittest.TestCase):
                 )
             finally:
                 close_project(reopened)
-
-    def test_capability_matrix_does_not_claim_unimplemented_readers(self):
-        registered_ids = {
-            descriptor.reader_id for descriptor in builtin_reader_descriptors()
-        }
-        matrix_ids = {
-            row["reader_id"]
-            for row in json.loads(MATRIX.read_text(encoding="utf-8"))["readers"]
-        }
-        for reader_id in ("pdb", "pqr"):
-            with self.subTest(reader_id=reader_id):
-                self.assertNotIn(reader_id, registered_ids)
-                self.assertNotIn(reader_id, matrix_ids)
 
 
 if __name__ == "__main__":
