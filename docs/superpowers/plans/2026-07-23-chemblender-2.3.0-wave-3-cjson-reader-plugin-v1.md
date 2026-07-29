@@ -80,21 +80,28 @@ findings.
 **Interfaces:**
 - Produces: stable v1 imports, manifest schema, execution modes and compatibility policy.
 
-- [ ] **Step 1: Generate the public symbol list**
+- [x] **Step 1: Generate the public symbol list**
 
 Source-tree tests import every documented symbol from `ChemBlender.reader_api` and assert `__all__` exactness. Installed-extension documentation uses the API-handle bootstrap and never hardcodes `bl_ext.user_default` or imports `ChemBlender.core.model.*`.
 
-- [ ] **Step 2: Document lifecycle**
+- [x] **Step 2: Document lifecycle**
 
 Explain discovery, availability, sniff, parse, progress/cancel, diagnostics, canonical artifacts, exception isolation and sidecar behavior when plugins are missing.
 
-- [ ] **Step 3: Document compatibility**
+- [x] **Step 3: Document compatibility**
 
 Same major preserves required fields and behavior; optional fields may be added; deprecations last at least two formal minor releases; incompatible plugin is disabled with diagnostic.
 
-- [ ] **Step 4: Run docs tests and commit**
+- [x] **Step 4: Run docs tests and commit**
 
 Add local-link/no-BOM tests and commit.
+
+Completion evidence: `ef860d5`; RED was 5 expected missing-document errors.
+GREEN was 137/137. Reader API remains the frozen `1.0-rc1` token; the docs
+publish the exact import surface, versioned-handle bootstrap, manifest,
+worker, diagnostics and compatibility contracts. Independent review approved
+with no Critical/Important findings. Real extension lifecycle and failing
+plugin diagnostics remain explicitly owned by Tasks 3 and 5.
 
 ### Task 3: Build a standalone example Reader Extension
 
