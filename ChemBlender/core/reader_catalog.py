@@ -8,6 +8,7 @@ from .formats.cif import CIF_READER
 from .formats.extxyz import EXTXYZ_READER
 from .iodata_adapter import IODATA_WAVEFUNCTION_READER
 from .formats.mol import MOL_READER
+from .formats.poscar import POSCAR_READER
 from .formats.sdf import SDF_READER
 from .formats.smiles import SMILES_READER
 from .mol_v2000 import MOL_V2000_READER
@@ -45,6 +46,7 @@ def builtin_reader_descriptors():
                 IODATA_WAVEFUNCTION_READER,
                 MOL_READER,
                 MOL_V2000_READER,
+                POSCAR_READER,
                 SDF_READER,
                 SMILES_READER,
                 PYMATGEN_VASP_ELECTRONIC_READER,

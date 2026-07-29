@@ -1,16 +1,43 @@
 """Dependency-free POSCAR/CONTCAR syntax parsing."""
 
 from dataclasses import dataclass
+import hashlib
 import math
 from pathlib import Path
 import re
+from uuid import NAMESPACE_URL, uuid5
 
-from ..model import IssueKind, ParserIssue
-from ..readers import SNIFF_PREFIX_BYTES, SniffMatch, SniffResult
+from ...Chem_data import ELEMENTS_DEFAULT
+from ..model import (
+    ArrayData,
+    AtomicProperty,
+    DatasetStatus,
+    ImportBatch,
+    IssueKind,
+    ParserIssue,
+    ParserReport,
+    PeriodicSiteData,
+    PropertyDataset,
+    ProvenanceRecord,
+    Structure,
+)
+from ..readers import (
+    SNIFF_PREFIX_BYTES,
+    CapabilitySupport,
+    ReaderDescriptor,
+    SniffMatch,
+    SniffResult,
+)
 
 
 _INTEGER = re.compile(r"[+-]?[0-9]+\Z")
 _POSCAR_SUFFIXES = frozenset((".vasp", ".poscar", ".contcar"))
+_ATOMIC_NUMBERS = {
+    symbol: data[0]
+    for symbol, data in ELEMENTS_DEFAULT.items()
+    if 0 < data[0] <= 118
+}
+_READER_VERSION = "1"
 
 
 class PoscarSyntaxError(ValueError):
@@ -278,10 +305,293 @@ def sniff_poscar(source, prefix):
     return SniffResult(SniffMatch.NONE, "POSCAR filename or VASP suffix is required")
 
 
+def _species_assignment(document, species):
+    if species is None:
+        return document.species
+    species = tuple(species)
+    if document.species is not None:
+        raise ValueError("species assignment is only valid for VASP 4 files")
+    if len(species) != len(document.counts):
+        raise ValueError("species assignment must match the POSCAR count groups")
+    if any(type(value) is not str or value not in _ATOMIC_NUMBERS for value in species):
+        raise ValueError("species assignment must contain recognized element symbols")
+    return species
+
+
+def _identity(source_hash, species, name):
+    assignment = "" if species is None else ",".join(species)
+    return uuid5(
+        NAMESPACE_URL,
+        f"chemblender:poscar:{_READER_VERSION}:{source_hash}:{assignment}:{name}",
+    )
+
+
+def _site_inventory(species, counts):
+    atomic_numbers = []
+    labels = []
+    for symbol, count in zip(species, counts):
+        atomic_numbers.extend((_ATOMIC_NUMBERS[symbol],) * count)
+        labels.extend(f"{symbol}{index + 1}" for index in range(count))
+    return tuple(atomic_numbers), tuple(labels)
+
+
+def _periodic_site_data(document, labels, fractional):
+    import numpy
+
+    atom_count = len(labels)
+    return PeriodicSiteData(
+        fractional_coordinates=ArrayData(
+            fractional,
+            ("atom", "xyz"),
+            "dimensionless",
+        ),
+        site_labels=labels,
+        occupancies=ArrayData(
+            numpy.ones(atom_count, dtype=numpy.float64),
+            ("atom",),
+            "dimensionless",
+        ),
+        isotropic_displacements=None,
+        anisotropic_displacements=None,
+        adp_types=("none",) * atom_count,
+        disorder_groups=(0,) * atom_count,
+        declared_space_group_name=None,
+        declared_space_group_number=None,
+        symmetry_operations=(),
+        cif_envelope_id=None,
+        pbc=(True, True, True),
+    )
+
+
+def _datasets(document, structure_id, provenance_id, source_hash, species):
+    import numpy
+
+    values = []
+    if document.selective_dynamics is not None:
+        values.append(
+            AtomicProperty(
+                id=_identity(source_hash, species, "selective-dynamics"),
+                revision=f"{source_hash}:{','.join(species)}:selective-dynamics",
+                semantic_role="selective_dynamics",
+                domain="atom",
+                data=ArrayData(
+                    numpy.asarray(document.selective_dynamics, dtype=numpy.bool_),
+                    ("atom", "xyz"),
+                    "dimensionless",
+                ),
+                status=DatasetStatus.COMPLETE,
+                source_calculation=None,
+                provenance_ids=(provenance_id,),
+                structure_id=structure_id,
+            )
+        )
+    if document.velocities is not None:
+        values.append(
+            AtomicProperty(
+                id=_identity(source_hash, species, "atomic-velocity"),
+                revision=f"{source_hash}:{','.join(species)}:atomic-velocity",
+                semantic_role="atomic_velocity",
+                domain="atom",
+                data=ArrayData(
+                    numpy.asarray(document.velocities, dtype=numpy.float64),
+                    ("atom", "xyz"),
+                    "unknown",
+                ),
+                status=DatasetStatus.AMBIGUOUS,
+                source_calculation=None,
+                provenance_ids=(provenance_id,),
+                structure_id=structure_id,
+            )
+        )
+    if document.lattice_velocities is not None:
+        values.append(
+            PropertyDataset(
+                id=_identity(source_hash, species, "lattice-velocity"),
+                revision=f"{source_hash}:{','.join(species)}:lattice-velocity",
+                semantic_role="lattice_velocity",
+                domain="cell",
+                data=ArrayData(
+                    numpy.asarray(
+                        document.lattice_velocities.velocities,
+                        dtype=numpy.float64,
+                    ),
+                    ("cell_vector", "xyz"),
+                    "unknown",
+                ),
+                status=DatasetStatus.AMBIGUOUS,
+                source_calculation=None,
+                provenance_ids=(provenance_id,),
+            )
+        )
+    return tuple(values)
+
+
+def _parse_poscar_bytes(raw, source, species=None):
+    import numpy
+
+    source_hash = hashlib.sha256(raw).hexdigest()
+    document = parse_poscar_document(raw)
+    species = _species_assignment(document, species)
+    provenance_id = _identity(source_hash, species, "provenance")
+    issues = list(document.diagnostics)
+    structures = ()
+    datasets = ()
+    invalid = any(issue.kind is IssueKind.INVALID for issue in issues)
+    if species is None:
+        issues.append(
+            ParserIssue(
+                IssueKind.AMBIGUOUS,
+                "poscar.species",
+                "VASP 4 count groups require an explicit ordered species assignment",
+            )
+        )
+    elif not invalid:
+        if any(symbol not in _ATOMIC_NUMBERS for symbol in species):
+            raise ValueError("POSCAR species must contain recognized element symbols")
+        atomic_numbers, labels = _site_inventory(species, document.counts)
+        cell = numpy.asarray(document.lattice, dtype=numpy.float64)
+        if document.coordinate_mode == "direct":
+            fractional = numpy.asarray(document.coordinates, dtype=numpy.float64)
+            cartesian = fractional @ cell
+        else:
+            cartesian = numpy.asarray(document.coordinates, dtype=numpy.float64)
+            fractional = cartesian @ numpy.linalg.inv(cell)
+        structure_id = _identity(source_hash, species, "structure")
+        structure = Structure(
+            id=structure_id,
+            revision=f"{source_hash}:{','.join(species)}",
+            atomic_numbers=atomic_numbers,
+            coordinates=ArrayData(
+                cartesian,
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+            cell=ArrayData(
+                cell,
+                ("cell_vector", "xyz"),
+                "angstrom",
+            ),
+            periodic=_periodic_site_data(document, labels, fractional),
+        )
+        structures = (structure,)
+        datasets = _datasets(
+            document,
+            structure_id,
+            provenance_id,
+            source_hash,
+            species,
+        )
+
+    lattice_velocity = document.lattice_velocities
+    provenance = ProvenanceRecord(
+        id=provenance_id,
+        revision=(
+            f"{source_hash}:{','.join(species)}"
+            if species is not None
+            else f"{source_hash}:unassigned"
+        ),
+        producer="ChemBlender POSCAR adapter",
+        producer_version=_READER_VERSION,
+        source=str(Path(source).resolve()),
+        source_hash=source_hash,
+        parent_ids=(),
+        operation="parse",
+        parameters=(
+            ("format", "poscar"),
+            ("comment", document.comment),
+            ("scale", document.scale),
+            ("scale_factor", document.scale_factor),
+            ("coordinate_mode", document.coordinate_mode),
+            ("species_order", document.species),
+            ("species_assignment", species if document.species is None else None),
+            ("counts", document.counts),
+            ("selective_dynamics", document.selective_dynamics is not None),
+            ("velocity_mode", document.velocity_mode),
+            ("lattice_velocity_initialization_state", (
+                None if lattice_velocity is None
+                else lattice_velocity.initialization_state
+            )),
+            ("lattice_velocity_vectors", (
+                None if lattice_velocity is None
+                else lattice_velocity.lattice_vectors
+            )),
+        ),
+    )
+    created_ids = tuple(
+        [value.id for value in structures]
+        + [value.id for value in datasets]
+        + [provenance_id]
+    )
+    report = ParserReport(
+        reader_id="poscar",
+        reader_version=_READER_VERSION,
+        created_entity_ids=created_ids,
+        parsed_capabilities=(
+            ("structure", "crystal", "atomic_property")
+            if structures
+            else ("crystal",)
+        ),
+        issues=tuple(issues),
+    )
+    return ImportBatch(
+        structures=structures,
+        datasets=datasets,
+        provenance=(provenance,),
+        report=report,
+    )
+
+
+def parse_poscar(source, *, species=None):
+    source = Path(source)
+    return _parse_poscar_bytes(source.read_bytes(), source, species)
+
+
+def parse_poscar_request(request):
+    parameters = dict(request.canonical_parameters)
+    if parameters.keys() - {"species"}:
+        raise ValueError("unsupported POSCAR parse parameter")
+    cancelled = request.is_cancelled()
+    if type(cancelled) is not bool:
+        raise TypeError("is_cancelled must return bool")
+    if cancelled:
+        raise RuntimeError("POSCAR parse was cancelled")
+    raw = Path(request.source_path).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != request.source_content_hash:
+        raise ValueError("POSCAR source content hash does not match ParseRequest")
+    species = parameters.get("species")
+    assignment = (
+        None
+        if species is None
+        else tuple(value.strip() for value in species.split(","))
+    )
+    if assignment is not None and any(not value for value in assignment):
+        raise ValueError("species parameter must be comma-separated element symbols")
+    return _parse_poscar_bytes(raw, request.source_path, assignment)
+
+
+POSCAR_READER = ReaderDescriptor(
+    reader_id="poscar",
+    reader_version=_READER_VERSION,
+    extensions=(".vasp", ".poscar", ".contcar"),
+    capabilities={
+        "structure": CapabilitySupport.SUPPORTED,
+        "crystal": CapabilitySupport.SUPPORTED,
+        "atomic_property": CapabilitySupport.SUPPORTED,
+    },
+    priority=120,
+    sniff=sniff_poscar,
+    parse=parse_poscar,
+    parse_request=parse_poscar_request,
+)
+
+
 __all__ = (
+    "POSCAR_READER",
     "PoscarDocument",
     "PoscarLatticeVelocityBlock",
     "PoscarSyntaxError",
+    "parse_poscar",
     "parse_poscar_document",
+    "parse_poscar_request",
     "sniff_poscar",
 )

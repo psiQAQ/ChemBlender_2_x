@@ -455,7 +455,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
         plugins = builtin_reader_plugins()
         registry = ReaderPluginRegistry(plugins)
 
-        self.assertEqual(len(registry.descriptors), 15)
+        self.assertEqual(len(registry.descriptors), 16)
         self.assertEqual({id(plugin.manifest) for plugin in plugins}, {id(plugins[0].manifest)})
         self.assertEqual(plugins[0].manifest.schema_version, "1")
         self.assertEqual(plugins[0].manifest.chemblender_api, ">=0.1,<1.0")
@@ -463,7 +463,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
             plugins[0].manifest.license,
             ("SPDX:GPL-3.0-or-later",),
         )
-        self.assertEqual(len(plugins[0].manifest.readers), 15)
+        self.assertEqual(len(plugins[0].manifest.readers), 16)
         self.assertEqual(
             {item.plugin_id for item in registry.descriptors},
             {"chemblender.builtin"},

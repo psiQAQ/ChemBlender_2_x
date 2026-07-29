@@ -69,6 +69,7 @@ from .formats.cif import (
     parse_cif,
     sniff_cif,
 )
+from .formats.poscar import POSCAR_READER, parse_poscar, sniff_poscar
 # Derived/reporting compatibility exports.
 from .grid_lod import (
     derive_grid_lod,
@@ -334,6 +335,7 @@ __all__ = [
     "CCLIB_OUTPUT_READER",
     "CCLibDependencyError",
     "CIF_READER",
+    "POSCAR_READER",
     "CUBE_READER",
     "DatasetStatus",
     "DiagnosticSeverity",
@@ -452,6 +454,7 @@ __all__ = [
     "parse_qcschema_atomic_result",
     "parse_qcschema_molecule",
     "parse_cif",
+    "parse_poscar",
     "parse_xyz",
     "parse_mol",
     "parse_sdf",
@@ -468,6 +471,7 @@ __all__ = [
     "sniff_ase_structure",
     "sniff_cclib_output",
     "sniff_cif",
+    "sniff_poscar",
     "sniff_xyz",
     "adapt_ccdata",
     "adapt_iodata",
