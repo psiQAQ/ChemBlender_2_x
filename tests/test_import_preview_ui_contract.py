@@ -1,4 +1,5 @@
 import importlib
+import json
 import sys
 import threading
 import time
@@ -1924,6 +1925,105 @@ class ImportPreviewUIContractTests(unittest.TestCase):
 
         self.assertIs(raised.exception, fatal)
         self.assertEqual(removed, [created])
+
+    def test_quick_import_structure_preset_creates_biological_default_view(self):
+        registry, state = self.stage("tests/fixtures/pdb/conect.pdb")
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+        scene_preset_view = importlib.import_module(
+            "ChemBlender.scene_preset_view"
+        )
+        created = {}
+
+        class View(dict):
+            pass
+
+        def capture(*args, **kwargs):
+            created["args"] = args
+            created["kwargs"] = kwargs
+            return View()
+
+        self.fake_bpy.context.scene = SimpleNamespace(
+            chemblender_topology=SimpleNamespace(
+                decisions_json=json.dumps(
+                    {
+                        str(uuid4()): {
+                            "accepted": None,
+                            "rejected": [],
+                        }
+                    }
+                )
+            )
+        )
+        with patch.object(
+            scene_preset_view,
+            "create_structure_view",
+            side_effect=capture,
+        ):
+            result = self.module.commit_project_import(
+                self.session,
+                state,
+                rows,
+                collection=object(),
+                apply_view=scene_preset_view.apply_scene_preset,
+            )
+
+        structure = created["args"][0]
+        hierarchy = created["kwargs"]["biological_hierarchy"]
+        properties = created["kwargs"]["atomic_properties"]
+        self.assertEqual(result.status, "committed")
+        self.assertEqual(hierarchy.structure_id, structure.id)
+        self.assertEqual(
+            {value.semantic_role for value in properties},
+            {"occupancy", "b_factor"},
+        )
+        self.assertEqual(created["args"][1].structure_id, structure.id)
+        self.assertTrue(created["args"][2].attach_ball_and_stick)
+
+    def test_quick_import_rejects_stale_current_structure_topology_decision(self):
+        registry, state = self.stage("tests/fixtures/pdb/conect.pdb")
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+        staged_source = state.preview.source_previews[0]
+        batch = state.staging_session.result(
+            staged_source.staged_batch_ids[0]
+        )
+        structure = batch.structures[0]
+        self.fake_bpy.context.scene = SimpleNamespace(
+            chemblender_topology=SimpleNamespace(
+                decisions_json=json.dumps(
+                    {
+                        str(structure.id): {
+                            "accepted": str(uuid4()),
+                            "rejected": [],
+                        }
+                    }
+                )
+            )
+        )
+        scene_preset_view = importlib.import_module(
+            "ChemBlender.scene_preset_view"
+        )
+        with patch.object(
+            scene_preset_view,
+            "create_structure_view",
+        ) as create:
+            result = self.module.commit_project_import(
+                self.session,
+                state,
+                rows,
+                collection=object(),
+                apply_view=scene_preset_view.apply_scene_preset,
+            )
+
+        self.assertEqual(result.status, "data committed; view failed")
+        create.assert_not_called()
 
     def test_view_failure_uses_surface_cleanup_for_prior_surface_objects(self):
         registry, state = self.stage(

@@ -6,6 +6,7 @@ import bpy
 
 from .core import (
     AtomicProperty,
+    BiologicalHierarchy,
     DatasetStatus,
     EnergyReference,
     validate_scene_plan,
@@ -20,7 +21,11 @@ from .surface_view import (
     remove_surface_object,
 )
 from .vibration_view import create_vibration_view
-from .views.structure import create_structure_view, remove_structure_view
+from .views.structure import (
+    BIOLOGICAL_NUMERIC_ROLE_SPECS,
+    create_structure_view,
+    remove_structure_view,
+)
 
 
 class ScenePresetApplicationError(RuntimeError):
@@ -100,6 +105,41 @@ def _remove_objects(objects):
             bpy.data.batch_remove(ids=(data,))
 
 
+def _selected_or_unique_topology(project, structure):
+    topologies = tuple(
+        project.topologies[topology_id]
+        for topology_id in structure.topology_ids
+        if topology_id in project.topologies
+    )
+    scene = getattr(bpy.context, "scene", None)
+    settings = getattr(scene, "chemblender_topology", None)
+    if settings is not None:
+        from .ui.topology import _decode_decisions
+
+        decision = _decode_decisions(settings.decisions_json).get(
+            structure.id
+        )
+        if decision is not None:
+            accepted, rejected = decision
+            for topology_id in (
+                *((accepted,) if accepted is not None else ()),
+                *rejected,
+            ):
+                topology = project.topologies.get(topology_id)
+                if topology is None or topology.structure_id != structure.id:
+                    raise ScenePresetApplicationError(
+                        "current Structure topology decision is stale"
+                    )
+            if accepted is not None:
+                return project.topologies[accepted]
+            topologies = tuple(
+                topology
+                for topology in topologies
+                if topology.id not in rejected
+            )
+    return topologies[0] if len(topologies) == 1 else None
+
+
 def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
     """Apply a current plan, removing every created object if an adapter fails."""
     plan = validate_scene_plan(plan, project)
@@ -165,13 +205,63 @@ def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
                 ),
                 None,
             )
-            created.append(
-                create_structure_view(
-                    structure,
-                    selective_dynamics=selective,
-                    collection=target,
+            hierarchies = tuple(
+                value
+                for value in project.biological_hierarchies.values()
+                if (
+                    isinstance(value, BiologicalHierarchy)
+                    and value.structure_id == structure.id
                 )
             )
+            if len(hierarchies) > 1:
+                raise ScenePresetApplicationError(
+                    "Structure has multiple biological hierarchies"
+                )
+            if hierarchies:
+                from .ui.biological import plan_biological_view
+
+                properties = tuple(
+                    sorted(
+                        (
+                            value
+                            for value in project.datasets.values()
+                            if (
+                                isinstance(value, AtomicProperty)
+                                and value.structure_id == structure.id
+                                and value.semantic_role
+                                in BIOLOGICAL_NUMERIC_ROLE_SPECS
+                            )
+                        ),
+                        key=lambda value: (
+                            value.semantic_role,
+                            str(value.id),
+                        ),
+                    )
+                )
+                topology = _selected_or_unique_topology(project, structure)
+                view_settings, reason = plan_biological_view(
+                    structure,
+                    topology,
+                )
+                view = create_structure_view(
+                    structure,
+                    topology,
+                    view_settings,
+                    selective_dynamics=selective,
+                    biological_hierarchy=hierarchies[0],
+                    atomic_properties=properties,
+                    collection=target,
+                )
+                view["cb_biological_default_reason"] = reason
+                created.append(view)
+            else:
+                created.append(
+                    create_structure_view(
+                        structure,
+                        selective_dynamics=selective,
+                        collection=target,
+                    )
+                )
         elif plan.view_kind == "vibration_spectrum_linked":
             structure = create_structure_view(entities["structure"], collection=target)
             created.append(structure)

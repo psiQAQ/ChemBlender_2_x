@@ -260,7 +260,7 @@ def _biological_detail_rows(entity, parent_id, depth):
                 ),
                 "",
                 0,
-                None,
+                entity.id,
             )
         )
         rows.extend(
@@ -275,7 +275,7 @@ def _biological_detail_rows(entity, parent_id, depth):
                 ),
                 "",
                 0,
-                None,
+                entity.id,
             )
             for residue_index, residue in chain_residues
         )

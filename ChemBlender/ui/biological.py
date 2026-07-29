@@ -1,7 +1,7 @@
 """Biological hierarchy projection and view-only atom filters."""
 
 import json
-from math import isfinite
+from math import isclose, isfinite
 
 import bpy
 from bpy.props import (
@@ -21,9 +21,10 @@ from ..core import (
 )
 from ..dataset_view import apply_atom_selection
 from .. import trajectory_view
-from ..views.structure import _write_attribute
 from ..views.structure import (
+    BIOLOGICAL_NUMERIC_ROLE_SPECS,
     StructureViewSettings,
+    _write_attribute,
     biological_point_data,
     default_altloc_mask,
 )
@@ -31,13 +32,14 @@ from .properties import active_session_view
 from .session import get_scene_session
 
 
-_NUMERIC_ROLES = {
-    "occupancy": "cbq_occupancy",
-    "b_factor": "cbq_b_factor",
-    "partial_charge": "cbq_partial_charge",
-    "radius": "cbq_pqr_radius",
-}
 _BALL_STICK_ATOM_LIMIT = 50_000
+
+
+def biological_numeric_role_items():
+    return tuple(
+        (role, spec["label"], "")
+        for role, spec in BIOLOGICAL_NUMERIC_ROLE_SPECS.items()
+    )
 
 
 def _values(categorical):
@@ -91,7 +93,7 @@ def biological_selection_indices(
         for value in (property_role, comparison, threshold)
     )
     if property_filter:
-        if property_role not in _NUMERIC_ROLES:
+        if property_role not in BIOLOGICAL_NUMERIC_ROLE_SPECS:
             raise ValueError("property_role is not supported")
         if comparison not in {"greater_equal", "less_equal"}:
             raise ValueError("comparison is not supported")
@@ -108,7 +110,16 @@ def biological_selection_indices(
     alternate_locations = _values(hierarchy.atom_sites.alternate_locations)
     selected = []
     property_values = (
-        projection[_NUMERIC_ROLES[property_role]]
+        projection[
+            BIOLOGICAL_NUMERIC_ROLE_SPECS[property_role]["attribute"]
+        ]
+        if property_filter
+        else None
+    )
+    property_valid = (
+        projection[
+            f"{BIOLOGICAL_NUMERIC_ROLE_SPECS[property_role]['attribute']}_valid"
+        ]
         if property_filter
         else None
     )
@@ -136,7 +147,7 @@ def biological_selection_indices(
         if altloc is not None and (alternate_locations[index] or "") != altloc:
             continue
         if property_filter and (
-            not isfinite(property_values[index])
+            not property_valid[index]
             or not compare(property_values[index])
         ):
             continue
@@ -180,7 +191,7 @@ def resolve_biological_context(project, entity_id):
                 if (
                     isinstance(value, AtomicProperty)
                     and value.structure_id == structure.id
-                    and value.semantic_role in _NUMERIC_ROLES
+                    and value.semantic_role in BIOLOGICAL_NUMERIC_ROLE_SPECS
                 )
             ),
             key=lambda value: (value.semantic_role, str(value.id)),
@@ -218,8 +229,48 @@ def _canonical_json(value):
     )
 
 
-def require_live_biological_view(obj, structure, hierarchy, properties=()):
-    """Fail closed for foreign, stale or remapped Blender objects."""
+def _point_attribute_values(mesh, name, data_type, atom_count):
+    attributes = getattr(mesh, "attributes", None)
+    attribute = None if attributes is None else attributes.get(name)
+    if (
+        attribute is None
+        or getattr(attribute, "domain", None) != "POINT"
+        or getattr(attribute, "data_type", None) != data_type
+        or len(getattr(attribute, "data", ())) != atom_count
+    ):
+        raise ValueError(f"biological attribute {name} is missing or stale")
+    default = (
+        0.0
+        if data_type == "FLOAT"
+        else False
+        if data_type == "BOOLEAN"
+        else 0
+    )
+    values = [default] * atom_count
+    try:
+        attribute.data.foreach_get("value", values)
+    except (AttributeError, RuntimeError, TypeError, ValueError) as error:
+        raise ValueError(f"biological attribute {name} is unreadable") from error
+    return tuple(values)
+
+
+def _require_projected_attribute(mesh, name, data_type, expected, atom_count):
+    actual = _point_attribute_values(mesh, name, data_type, atom_count)
+    if data_type == "FLOAT":
+        matches = all(
+            isfinite(value)
+            and isclose(value, target, rel_tol=1.0e-6, abs_tol=1.0e-6)
+            for value, target in zip(actual, expected, strict=True)
+        )
+    else:
+        matches = actual == tuple(expected)
+    if not matches:
+        raise ValueError(f"biological attribute {name} is stale")
+    return actual
+
+
+def _biological_view_snapshot(obj, structure, hierarchy, properties=()):
+    """Validate and capture one live biological Mesh snapshot."""
     projection = biological_point_data(structure, hierarchy, properties)
     if (
         obj is None
@@ -230,8 +281,9 @@ def require_live_biological_view(obj, structure, hierarchy, properties=()):
         or obj.get("cb_biological_hierarchy_revision") != hierarchy.revision
     ):
         raise ValueError("active object is not the current biological Structure view")
-    vertices = getattr(getattr(obj, "data", None), "vertices", None)
-    if vertices is not None and len(vertices) != hierarchy.atom_count:
+    mesh = getattr(obj, "data", None)
+    vertices = getattr(mesh, "vertices", None)
+    if vertices is None or len(vertices) != hierarchy.atom_count:
         raise ValueError("biological Structure view atom count is stale")
     expected = {
         "cb_biological_categories": projection["categories"],
@@ -246,7 +298,155 @@ def require_live_biological_view(obj, structure, hierarchy, properties=()):
             raise ValueError("biological attribute mapping is stale") from None
         if actual != _canonical_json(value):
             raise ValueError("biological attribute mapping is stale")
+    atom_count = hierarchy.atom_count
+    for name in projection["categories"]:
+        _require_projected_attribute(
+            mesh,
+            name,
+            "INT",
+            projection[name],
+            atom_count,
+        )
+        _require_projected_attribute(
+            mesh,
+            f"{name}_valid",
+            "BOOLEAN",
+            projection[f"{name}_valid"],
+            atom_count,
+        )
+    _require_projected_attribute(
+        mesh,
+        "cbq_residue_number",
+        "INT",
+        projection["cbq_residue_number"],
+        atom_count,
+    )
+    for spec in BIOLOGICAL_NUMERIC_ROLE_SPECS.values():
+        name = spec["attribute"]
+        _require_projected_attribute(
+            mesh,
+            name,
+            "FLOAT",
+            projection[name],
+            atom_count,
+        )
+        _require_projected_attribute(
+            mesh,
+            f"{name}_valid",
+            "BOOLEAN",
+            projection[f"{name}_valid"],
+            atom_count,
+        )
+    return {
+        "selected": _point_attribute_values(
+            mesh,
+            "cbq_selected",
+            "BOOLEAN",
+            atom_count,
+        ),
+        "visible": _point_attribute_values(
+            mesh,
+            "cbq_visible",
+            "BOOLEAN",
+            atom_count,
+        ),
+        "altloc_filter_present": "cb_altloc_filter" in obj,
+        "altloc_filter": obj.get("cb_altloc_filter"),
+        "selection_name_present": "cb_selection_name" in obj,
+        "selection_name": obj.get("cb_selection_name"),
+        "selection_domain_present": "cb_selection_domain" in obj,
+        "selection_domain": obj.get("cb_selection_domain"),
+    }
+
+
+def require_live_biological_view(obj, structure, hierarchy, properties=()):
+    """Fail closed for foreign, stale or remapped Blender objects."""
+    _biological_view_snapshot(obj, structure, hierarchy, properties)
     return obj
+
+
+def _restore_custom_property(obj, name, present, value):
+    if present:
+        obj[name] = value
+    elif name in obj:
+        del obj[name]
+
+
+def _apply_altloc_view_mutation(obj, indices, mask, name, filter_value, snapshot):
+    try:
+        _write_attribute(
+            obj.data,
+            "cbq_visible",
+            "BOOLEAN",
+            "value",
+            mask,
+        )
+        obj["cb_altloc_filter"] = filter_value
+        apply_atom_selection(obj, indices, name=name)
+    except BaseException as error:
+        cleanup = (
+            (
+                "selected mask",
+                lambda: _write_attribute(
+                    obj.data,
+                    "cbq_selected",
+                    "BOOLEAN",
+                    "value",
+                    snapshot["selected"],
+                ),
+            ),
+            (
+                "visible mask",
+                lambda: _write_attribute(
+                    obj.data,
+                    "cbq_visible",
+                    "BOOLEAN",
+                    "value",
+                    snapshot["visible"],
+                ),
+            ),
+            (
+                "altloc filter",
+                lambda: _restore_custom_property(
+                    obj,
+                    "cb_altloc_filter",
+                    snapshot["altloc_filter_present"],
+                    snapshot["altloc_filter"],
+                ),
+            ),
+            (
+                "selection name",
+                lambda: _restore_custom_property(
+                    obj,
+                    "cb_selection_name",
+                    snapshot["selection_name_present"],
+                    snapshot["selection_name"],
+                ),
+            ),
+            (
+                "selection domain",
+                lambda: _restore_custom_property(
+                    obj,
+                    "cb_selection_domain",
+                    snapshot["selection_domain_present"],
+                    snapshot["selection_domain"],
+                ),
+            ),
+        )
+        for label, restore in cleanup:
+            try:
+                restore()
+            except BaseException as cleanup_error:
+                error.add_note(f"failed to restore {label}: {cleanup_error}")
+        update = getattr(obj.data, "update", None)
+        if update is not None:
+            try:
+                update()
+            except BaseException as cleanup_error:
+                error.add_note(
+                    f"failed to update restored biological view: {cleanup_error}"
+                )
+        raise
 
 
 def plan_biological_view(structure, topology):
@@ -333,10 +533,7 @@ class CHEMBLENDER_OT_select_biological_atoms(bpy.types.Operator):
     altloc: StringProperty(name="Alternate Location")
     use_default_altloc: BoolProperty(name="Default Alternate Location")
     property_role: EnumProperty(
-        items=tuple(
-            (role, role.replace("_", " ").title(), "")
-            for role in _NUMERIC_ROLES
-        ),
+        items=biological_numeric_role_items(),
         default="occupancy",
     )
     comparison: EnumProperty(
@@ -358,7 +555,7 @@ class CHEMBLENDER_OT_select_biological_atoms(bpy.types.Operator):
                     session.active_entity_id,
                 )
             )
-            require_live_biological_view(
+            snapshot = _biological_view_snapshot(
                 obj,
                 structure,
                 hierarchy,
@@ -380,14 +577,7 @@ class CHEMBLENDER_OT_select_biological_atoms(bpy.types.Operator):
                     if requested is None
                     else f"altloc:{requested or '[blank]'}"
                 )
-                _write_attribute(
-                    obj.data,
-                    "cbq_visible",
-                    "BOOLEAN",
-                    "value",
-                    mask,
-                )
-                obj["cb_altloc_filter"] = (
+                filter_value = (
                     "[default]" if requested is None else requested
                 )
             else:
@@ -416,7 +606,17 @@ class CHEMBLENDER_OT_select_biological_atoms(bpy.types.Operator):
                 )
                 label = next(iter(keywords.values()))
                 name = f"{self.selector}:{label}"
-            apply_atom_selection(obj, indices, name=name)
+            if self.selector == "altloc":
+                _apply_altloc_view_mutation(
+                    obj,
+                    indices,
+                    mask,
+                    name,
+                    filter_value,
+                    snapshot,
+                )
+            else:
+                apply_atom_selection(obj, indices, name=name)
         except (
             AttributeError,
             KeyError,

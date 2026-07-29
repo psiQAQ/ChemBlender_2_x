@@ -2,11 +2,14 @@ from dataclasses import dataclass
 from hashlib import sha256
 import json
 from math import isfinite
+from types import MappingProxyType
 
 from ..Chem_data import ELEMENTS_DEFAULT
 from ..core import (
+    ArrayData,
     AtomicProperty,
     BiologicalHierarchy,
+    DatasetStatus,
     Structure,
     TopologyRecord,
 )
@@ -33,12 +36,42 @@ _FATAL_EXCEPTIONS = (
     GeneratorExit,
     MemoryError,
 )
-_BIOLOGICAL_NUMERIC_ROLES = {
-    "occupancy": "cbq_occupancy",
-    "b_factor": "cbq_b_factor",
-    "partial_charge": "cbq_partial_charge",
-    "radius": "cbq_pqr_radius",
-}
+BIOLOGICAL_NUMERIC_ROLE_SPECS = MappingProxyType(
+    {
+        "occupancy": MappingProxyType(
+            {
+                "attribute": "cbq_occupancy",
+                "unit": "dimensionless",
+                "label": "Occupancy",
+                "missing_policy": "nan_is_missing",
+            }
+        ),
+        "b_factor": MappingProxyType(
+            {
+                "attribute": "cbq_b_factor",
+                "unit": "angstrom_squared",
+                "label": "B-Factor",
+                "missing_policy": "nan_is_missing",
+            }
+        ),
+        "partial_charge": MappingProxyType(
+            {
+                "attribute": "cbq_partial_charge",
+                "unit": "elementary_charge",
+                "label": "Partial Charge",
+                "missing_policy": "nan_is_missing",
+            }
+        ),
+        "radius": MappingProxyType(
+            {
+                "attribute": "cbq_pqr_radius",
+                "unit": "angstrom",
+                "label": "PQR Radius",
+                "missing_policy": "nan_is_missing",
+            }
+        ),
+    }
+)
 
 
 def _is_view_contract(owner, contract):
@@ -97,6 +130,8 @@ def _unique_labels(values, prefixes):
 
 
 def _matching_atomic_property(datasets, structure_id, role, atom_count):
+    import numpy
+
     matches = tuple(
         value
         for value in datasets
@@ -104,13 +139,41 @@ def _matching_atomic_property(datasets, structure_id, role, atom_count):
             isinstance(value, AtomicProperty)
             and value.structure_id == structure_id
             and value.semantic_role == role
-            and value.data.dims == ("atom",)
-            and value.data.shape == (atom_count,)
         )
     )
     if len(matches) > 1:
         raise ValueError(f"multiple {role} properties match Structure")
-    return matches[0] if matches else None
+    if not matches:
+        return None
+    dataset = matches[0]
+    spec = BIOLOGICAL_NUMERIC_ROLE_SPECS[role]
+    if (
+        not isinstance(dataset.data, ArrayData)
+        or dataset.data.dims != ("atom",)
+        or dataset.data.shape != (atom_count,)
+    ):
+        raise ValueError(f"{role} must be atom-aligned numeric ArrayData")
+    if dataset.status not in {DatasetStatus.COMPLETE, DatasetStatus.PARTIAL}:
+        raise ValueError(f"{role} status must be complete or partial")
+    if dataset.data.unit != spec["unit"]:
+        raise ValueError(f"{role} unit must be {spec['unit']}")
+    try:
+        dtype = numpy.dtype(dataset.data.dtype)
+        values = numpy.asarray(dataset.data.values)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"{role} must contain real numeric values") from error
+    if dtype.kind not in "iuf" or values.dtype.kind not in "iuf":
+        raise ValueError(f"{role} must contain real numeric values")
+    if values.shape != (atom_count,):
+        raise ValueError(f"{role} values do not match declared shape")
+    if numpy.any(numpy.isinf(values)):
+        raise ValueError(f"{role} must not contain infinite values")
+    if (
+        numpy.any(numpy.isnan(values))
+        and dataset.status is not DatasetStatus.PARTIAL
+    ):
+        raise ValueError(f"{role} NaN values require partial status")
+    return dataset
 
 
 def _category_hash(categories):
@@ -210,20 +273,28 @@ def biological_point_data(structure, hierarchy, datasets=()):
         hierarchy.residues[index].sequence_number
         for index in residue_indices
     )
-    for role, name in _BIOLOGICAL_NUMERIC_ROLES.items():
+    matched = {}
+    for role, spec in BIOLOGICAL_NUMERIC_ROLE_SPECS.items():
         dataset = _matching_atomic_property(
             datasets,
             structure.id,
             role,
             atom_count,
         )
-        values = (
+        matched[role] = dataset
+        source_values = (
             (float("nan"),) * atom_count
             if dataset is None
             else tuple(float(value) for value in dataset.data.values)
         )
+        valid = tuple(isfinite(value) for value in source_values)
+        values = tuple(
+            value if value_valid else 0.0
+            for value, value_valid in zip(source_values, valid, strict=True)
+        )
+        name = spec["attribute"]
         result[name] = values
-        result[f"{name}_valid"] = tuple(isfinite(value) for value in values)
+        result[f"{name}_valid"] = valid
     for name, (values, _categories, missing_code) in categorical.items():
         result[f"{name}_valid"] = tuple(
             value != missing_code for value in values
@@ -238,19 +309,17 @@ def biological_point_data(structure, hierarchy, datasets=()):
         name: _category_hash(categories)
         for name, categories in result["categories"].items()
     }
-    result["dataset_bindings"] = {
-        role: (str(dataset.id), dataset.revision)
-        for role in _BIOLOGICAL_NUMERIC_ROLES
-        if (
-            dataset := _matching_atomic_property(
-                datasets,
-                structure.id,
-                role,
-                atom_count,
-            )
-        )
-        is not None
-    }
+    bindings = {}
+    for role, spec in BIOLOGICAL_NUMERIC_ROLE_SPECS.items():
+        dataset = matched[role]
+        bindings[role] = {
+            "role": role,
+            "id": None if dataset is None else str(dataset.id),
+            "revision": None if dataset is None else dataset.revision,
+            "unit": spec["unit"],
+            "missing_policy": spec["missing_policy"],
+        }
+    result["dataset_bindings"] = bindings
     return result
 
 
@@ -266,6 +335,7 @@ def default_altloc_mask(structure, hierarchy, datasets=()):
         int(value) for value in hierarchy.atom_sites.residue_indices.values
     )
     occupancy = projection["cbq_occupancy"]
+    occupancy_valid = projection["cbq_occupancy_valid"]
     groups = {}
     for index, identity in enumerate(
         zip(residue_indices, atom_names, record_kinds)
@@ -288,7 +358,7 @@ def default_altloc_mask(structure, hierarchy, datasets=()):
                 indices,
                 key=lambda index: (
                     occupancy[index]
-                    if isfinite(occupancy[index])
+                    if occupancy_valid[index]
                     else float("-inf")
                 ),
             )
@@ -668,7 +738,8 @@ def _write_biological_attributes(obj, data):
         "value",
         data["cbq_residue_number"],
     )
-    for name in _BIOLOGICAL_NUMERIC_ROLES.values():
+    for spec in BIOLOGICAL_NUMERIC_ROLE_SPECS.values():
+        name = spec["attribute"]
         _write_attribute(obj.data, name, "FLOAT", "value", data[name])
         _write_attribute(
             obj.data,

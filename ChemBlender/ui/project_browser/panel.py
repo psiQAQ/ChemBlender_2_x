@@ -121,12 +121,7 @@ class CHEMBLENDER_PG_project_browser(bpy.types.PropertyGroup):
     biological_atom_name: StringProperty(name="Atom Name")
     biological_altloc: StringProperty(name="Alternate Location")
     biological_property_role: EnumProperty(
-        items=(
-            ("occupancy", "Occupancy", ""),
-            ("b_factor", "B-Factor", ""),
-            ("partial_charge", "Partial Charge", ""),
-            ("radius", "PQR Radius", ""),
-        ),
+        items=_biological.biological_numeric_role_items(),
         default="occupancy",
     )
     biological_comparison: EnumProperty(

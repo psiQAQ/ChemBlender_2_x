@@ -681,6 +681,11 @@ def assert_project_session_manager(module_key):
             for callbacks in (bpy.app.handlers.load_post, bpy.app.handlers.save_pre)
             for handler in callbacks
         )
+        ui.register()
+        assert sum(
+            handler is ui._save_pre_handler
+            for handler in bpy.app.handlers.save_pre
+        ) == 1
 
 
 def assert_quick_import(module_key, repository_root):
@@ -1425,6 +1430,9 @@ def assert_mol2_browser_view(module_key, repository_root):
             filepath=str(blend),
             check_existing=False,
         ) == {"FINISHED"}
+        assert session.dirty
+        assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        assert not session.dirty
         assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
         ui = importlib.import_module(f"{module_key}.ui.session")
         reopened = ui.get_scene_session(bpy.context.scene)
@@ -1458,8 +1466,6 @@ def assert_mol2_browser_view(module_key, repository_root):
 
 def assert_biological_workflow(module_key, repository_root):
     core = importlib.import_module(f"{module_key}.core")
-    pdb_format = importlib.import_module(f"{module_key}.core.formats.pdb")
-    pqr_format = importlib.import_module(f"{module_key}.core.formats.pqr")
     ui = importlib.import_module(f"{module_key}.ui.session")
     browser = importlib.import_module(
         f"{module_key}.ui.project_browser.panel"
@@ -1468,32 +1474,53 @@ def assert_biological_workflow(module_key, repository_root):
     scene = bpy.context.scene
     fixture_root = repository_root / "tests" / "fixtures"
 
-    def entity_context(batch):
-        structure = batch.structures[0]
-        hierarchy = batch.biological_hierarchies[0]
+    def revision_entity(revision, registry):
+        return next(
+            registry[entity_id]
+            for entity_id in revision.created_entity_ids
+            if entity_id in registry
+        )
+
+    def imported_context(revision):
+        structure = revision_entity(revision, session.project.structures)
+        hierarchy = revision_entity(
+            revision,
+            session.project.biological_hierarchies,
+        )
         properties = tuple(
             dataset
-            for dataset in batch.datasets
-            if isinstance(dataset, core.AtomicProperty)
+            for dataset in session.project.datasets.values()
+            if (
+                isinstance(dataset, core.AtomicProperty)
+                and dataset.structure_id == structure.id
+            )
         )
         frames = next(
             (
                 dataset
-                for dataset in batch.datasets
-                if isinstance(dataset, core.FrameSet)
+                for dataset in session.project.datasets.values()
+                if (
+                    isinstance(dataset, core.FrameSet)
+                    and dataset.structure_id == structure.id
+                )
             ),
             None,
         )
-        return structure, hierarchy, properties, frames
-
-    def create_default_view(batch):
-        session.project.commit(batch)
-        structure, hierarchy, properties, frames = entity_context(batch)
-        session.active_entity_id = hierarchy.id
-        assert bpy.ops.chemblender.create_biological_view() == {"FINISHED"}
-        view = bpy.data.objects[session.active_view_object_name]
+        views = tuple(
+            obj
+            for obj in bpy.data.objects
+            if (
+                obj.get("cb_structure_id") == str(structure.id)
+                and obj.get("cb_biological_hierarchy_id")
+                == str(hierarchy.id)
+                and obj.get("cb_scene_preset_id") == "structure_publication"
+            )
+        )
+        assert len(views) == 1
+        view = views[0]
         assert view["cb_structure_id"] == str(structure.id)
         assert view["cb_biological_hierarchy_id"] == str(hierarchy.id)
+        assert view["cb_biological_default_reason"]
         return view, structure, hierarchy, properties, frames
 
     def attribute_values(view, name, field, initial):
@@ -1520,6 +1547,18 @@ def assert_biological_workflow(module_key, repository_root):
 
     with TemporaryDirectory() as directory:
         root = Path(directory)
+        altloc_source = root / "altloc.pdb"
+        altloc_source.write_bytes(
+            (fixture_root / "pdb" / "altloc.pdb").read_bytes()
+        )
+        pqr_source = root / "with-chain.pqr"
+        pqr_source.write_bytes(
+            (fixture_root / "pqr" / "with-chain.pqr").read_bytes()
+        )
+        connected_source = root / "conect.pdb"
+        connected_source.write_bytes(
+            (fixture_root / "pdb" / "conect.pdb").read_bytes()
+        )
         model_source = root / "biological-models.pdb"
         model_source.write_bytes(
             b"\n".join(
@@ -1536,17 +1575,29 @@ def assert_biological_workflow(module_key, repository_root):
                 )
             )
         )
-        altloc = create_default_view(
-            pdb_format.parse_pdb(fixture_root / "pdb" / "altloc.pdb")
+        sources = (
+            altloc_source,
+            pqr_source,
+            model_source,
+            connected_source,
         )
-        pqr = create_default_view(
-            pqr_format.parse_pqr(fixture_root / "pqr" / "with-chain.pqr")
-        )
-        model = create_default_view(pdb_format.parse_pdb(model_source))
-        connected = create_default_view(
-            pdb_format.parse_pdb(fixture_root / "pdb" / "conect.pdb")
-        )
-        session.mark_dirty("import")
+        assert bpy.ops.chemblender.quick_import(
+            "INVOKE_DEFAULT",
+            directory=str(root),
+            files=[{"name": source.name} for source in sources],
+            validation_mode="balanced",
+        ) == {"FINISHED"}
+        assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+        revisions = {
+            revision.original_filename: revision
+            for revision in session.project.source_revisions.values()
+            if revision.original_filename in {source.name for source in sources}
+        }
+        assert set(revisions) == {source.name for source in sources}
+        altloc = imported_context(revisions[altloc_source.name])
+        pqr = imported_context(revisions[pqr_source.name])
+        model = imported_context(revisions[model_source.name])
+        connected = imported_context(revisions[connected_source.name])
 
         (
             altloc_view,
@@ -1659,7 +1710,17 @@ def assert_biological_workflow(module_key, repository_root):
             for actual, expected in zip(radii, (1.55, 1.4))
         )
         bindings = json.loads(pqr_view["cb_biological_dataset_bindings"])
-        assert {"partial_charge", "radius"} <= set(bindings)
+        assert bindings["partial_charge"]["unit"] == "elementary_charge"
+        assert bindings["partial_charge"]["id"]
+        assert bindings["radius"]["unit"] == "angstrom"
+        assert bindings["radius"]["id"]
+        assert bindings["occupancy"] == {
+            "role": "occupancy",
+            "id": None,
+            "revision": None,
+            "unit": "dimensionless",
+            "missing_policy": "nan_is_missing",
+        }
 
         browser_settings = scene.chemblender_project_browser
         browser_settings.mode = "by_data"
@@ -1670,6 +1731,11 @@ def assert_biological_workflow(module_key, repository_root):
         ) == 1
         assert any(row.kind == "biological_chain" for row in browser_rows)
         assert any(row.kind == "biological_residue" for row in browser_rows)
+        assert all(
+            row.entity_id in session.project.biological_hierarchies
+            for row in browser_rows
+            if row.kind in {"biological_chain", "biological_residue"}
+        )
 
         activate(pqr_view, pqr_hierarchy.id)
         assert bpy.ops.chemblender.select_biological_atoms(
@@ -1742,23 +1808,6 @@ def assert_biological_workflow(module_key, repository_root):
             model_frames,
         ) = model
         assert model_frames is not None
-        activate(model_view, model_frames.id)
-        scene.frame_set(1)
-        assert bpy.ops.chemblender.play_biological_models(
-            frame_start=1,
-            frame_step=1,
-        ) == {"FINISHED"}
-        scene.frame_set(2)
-        coordinates = [0.0] * 6
-        model_view.data.vertices.foreach_get("co", coordinates)
-        assert abs(coordinates[0] - 14.0) < 1.0e-6
-        _attribute, model_mask = attribute_values(
-            model_view,
-            "cbq_visible",
-            "value",
-            [False] * 2,
-        )
-        assert model_mask == [True, False]
         assert model_hierarchy.id in session.project.biological_hierarchies
 
         connected_view = connected[0]
@@ -1820,6 +1869,7 @@ def assert_biological_workflow(module_key, repository_root):
         altloc_view["cb_structure_revision"] = revision
 
         altloc_name = altloc_view.name
+        model_name = model_view.name
         altloc_hierarchy_id = altloc_hierarchy.id
         model_frame_id = model_frames.id
         blend = root / "biological-smoke.blend"
@@ -1832,6 +1882,8 @@ def assert_biological_workflow(module_key, repository_root):
         assert not session.dirty
         assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
         reopened = ui.get_scene_session(bpy.context.scene)
+        session = reopened
+        scene = bpy.context.scene
         assert altloc_hierarchy_id in reopened.project.biological_hierarchies
         assert model_frame_id in reopened.project.datasets
         reopened_view = bpy.data.objects[altloc_name]
@@ -1845,7 +1897,50 @@ def assert_biological_workflow(module_key, repository_root):
             [False] * 2,
         )
         assert reopened_mask == [True, False]
-        ui.close_scene_session(bpy.context.scene)
+        reopened_model = bpy.data.objects[model_name]
+
+        def foreign_frame_handler(*_args):
+            return None
+
+        handlers = bpy.app.handlers.frame_change_post
+        handlers.append(foreign_frame_handler)
+        try:
+            activate(reopened_model, model_frame_id)
+            assert bpy.ops.chemblender.play_biological_models(
+                frame_start=1,
+                frame_step=1,
+            ) == {"FINISHED"}
+            assert bpy.ops.chemblender.play_biological_models(
+                frame_start=1,
+                frame_step=1,
+            ) == {"FINISHED"}
+            owned_handlers = tuple(
+                handler
+                for handler in handlers
+                if (
+                    getattr(handler, "__module__", None)
+                    == f"{module_key}.trajectory_view"
+                    and getattr(handler, "__name__", None)
+                    == "_frame_change_handler"
+                )
+            )
+            assert foreign_frame_handler in handlers
+            assert len(owned_handlers) == 1
+            scene.frame_set(2)
+            coordinates = [0.0] * 6
+            reopened_model.data.vertices.foreach_get("co", coordinates)
+            assert abs(coordinates[0] - 14.0) < 1.0e-6
+            _attribute, model_mask = attribute_values(
+                reopened_model,
+                "cbq_visible",
+                "value",
+                [False] * 2,
+            )
+            assert model_mask == [True, False]
+        finally:
+            if foreign_frame_handler in handlers:
+                handlers.remove(foreign_frame_handler)
+            ui.close_scene_session(bpy.context.scene)
 
 
 def assert_optional_workspace(module_key):

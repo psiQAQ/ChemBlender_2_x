@@ -2,13 +2,16 @@ import importlib
 import json
 import sys
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4
 
-from ChemBlender.core import QCProject
+import numpy
+
+from ChemBlender.core import ArrayData, DatasetStatus, QCProject
 from ChemBlender.core.formats.pdb import parse_pdb
 from ChemBlender.core.formats.pqr import parse_pqr
 from ChemBlender.ui.project_browser.model import BrowserMode, build_browser_rows
@@ -17,6 +20,46 @@ from ChemBlender.views import structure as structure_view
 
 
 FIXTURES = Path(__file__).with_name("fixtures")
+
+
+class _AttributeData(list):
+    def foreach_get(self, _field, values):
+        values[:] = self
+
+
+class _Attribute:
+    def __init__(self, data_type, values):
+        self.data_type = data_type
+        self.domain = "POINT"
+        self.data = _AttributeData(values)
+
+
+def _biological_view(module, structure, hierarchy, properties):
+    data = _structure_view_data(
+        structure,
+        biological_hierarchy=hierarchy,
+        atomic_properties=properties,
+    )
+
+    class View(dict):
+        name = "Biological view"
+
+    view = View(
+        cb_structure_contract="structure_view_v1",
+        cb_structure_id=str(structure.id),
+        cb_structure_revision=structure.revision,
+    )
+    view.data = SimpleNamespace(
+        vertices=(None,) * len(structure.atomic_numbers),
+        attributes={},
+    )
+
+    def write(mesh, name, data_type, _field, values):
+        mesh.attributes[name] = _Attribute(data_type, tuple(values))
+
+    with patch.object(structure_view, "_write_attribute", side_effect=write):
+        structure_view._write_biological_attributes(view, data)
+    return view
 
 
 class BiologicalUIContractTests(unittest.TestCase):
@@ -142,8 +185,106 @@ class BiologicalUIContractTests(unittest.TestCase):
         self.assertEqual(projection["cbq_pqr_radius"], (1.55, 1.4))
         self.assertEqual(projection["cbq_partial_charge_valid"], (True, True))
         self.assertEqual(projection["cbq_pqr_radius_valid"], (True, True))
-        self.assertTrue(all(map(lambda value: value != value, projection["cbq_occupancy"])))
+        self.assertEqual(projection["cbq_occupancy"], (0.0, 0.0))
         self.assertEqual(projection["cbq_occupancy_valid"], (False, False))
+        self.assertEqual(
+            projection["dataset_bindings"]["occupancy"],
+            {
+                "role": "occupancy",
+                "id": None,
+                "revision": None,
+                "unit": "dimensionless",
+                "missing_policy": "nan_is_missing",
+            },
+        )
+
+    def test_numeric_role_spec_enforces_unit_status_and_finite_mesh_values(self):
+        batch = parse_pdb(FIXTURES / "pdb" / "altloc.pdb")
+        structure = batch.structures[0]
+        hierarchy = batch.biological_hierarchies[0]
+        occupancy = next(
+            value
+            for value in batch.datasets
+            if value.semantic_role == "occupancy"
+        )
+        expected = {
+            "occupancy": ("cbq_occupancy", "dimensionless"),
+            "b_factor": ("cbq_b_factor", "angstrom_squared"),
+            "partial_charge": ("cbq_partial_charge", "elementary_charge"),
+            "radius": ("cbq_pqr_radius", "angstrom"),
+        }
+        self.assertEqual(
+            {
+                role: (spec["attribute"], spec["unit"])
+                for role, spec in structure_view.BIOLOGICAL_NUMERIC_ROLE_SPECS.items()
+            },
+            expected,
+        )
+
+        partial = replace(
+            occupancy,
+            status=DatasetStatus.PARTIAL,
+            data=ArrayData(
+                numpy.asarray((0.6, numpy.nan)),
+                ("atom",),
+                "dimensionless",
+            ),
+        )
+        projection = self.module.biological_point_data(
+            structure,
+            hierarchy,
+            (partial,),
+        )
+        self.assertEqual(projection["cbq_occupancy"], (0.6, 0.0))
+        self.assertEqual(projection["cbq_occupancy_valid"], (True, False))
+        self.assertEqual(
+            projection["dataset_bindings"]["occupancy"],
+            {
+                "role": "occupancy",
+                "id": str(partial.id),
+                "revision": partial.revision,
+                "unit": "dimensionless",
+                "missing_policy": "nan_is_missing",
+            },
+        )
+
+        invalid = (
+            replace(
+                occupancy,
+                data=ArrayData(
+                    numpy.asarray((0.6, 0.4)),
+                    ("atom",),
+                    "angstrom",
+                ),
+            ),
+            replace(
+                occupancy,
+                data=ArrayData(
+                    numpy.asarray((0.6, numpy.nan)),
+                    ("atom",),
+                    "dimensionless",
+                ),
+            ),
+            replace(
+                occupancy,
+                status=DatasetStatus.PARTIAL,
+                data=ArrayData(
+                    numpy.asarray((0.6, numpy.inf)),
+                    ("atom",),
+                    "dimensionless",
+                ),
+            ),
+        )
+        for dataset in invalid:
+            with (
+                self.subTest(dataset=dataset),
+                self.assertRaises(ValueError),
+            ):
+                self.module.biological_point_data(
+                    structure,
+                    hierarchy,
+                    (dataset,),
+                )
 
     def test_structure_view_data_includes_biological_projection_and_default_filter(self):
         batch = parse_pdb(FIXTURES / "pdb" / "altloc.pdb")
@@ -238,16 +379,12 @@ class BiologicalUIContractTests(unittest.TestCase):
             atomic_properties=properties,
         )
 
-        class View(dict):
-            data = SimpleNamespace(vertices=(None,) * len(structure.atomic_numbers))
-
-        view = View(
-            cb_structure_contract="structure_view_v1",
-            cb_structure_id=str(structure.id),
-            cb_structure_revision=structure.revision,
+        view = _biological_view(
+            self.module,
+            structure,
+            hierarchy,
+            properties,
         )
-        with patch.object(structure_view, "_write_attribute"):
-            structure_view._write_biological_attributes(view, data)
 
         self.module.require_live_biological_view(
             view,
@@ -259,6 +396,17 @@ class BiologicalUIContractTests(unittest.TestCase):
             {"cbq_altloc_code": "0" * 64}
         )
         with self.assertRaisesRegex(ValueError, "mapping"):
+            self.module.require_live_biological_view(
+                view,
+                structure,
+                hierarchy,
+                properties,
+            )
+        view["cb_biological_category_hashes"] = json.dumps(
+            data["biological_category_hashes"]
+        )
+        view.data.attributes["cbq_altloc_code"].data[0] = 99
+        with self.assertRaisesRegex(ValueError, "attribute"):
             self.module.require_live_biological_view(
                 view,
                 structure,
@@ -307,8 +455,19 @@ class BiologicalUIContractTests(unittest.TestCase):
 
         groups = [row for row in rows if row.id == "group:biological_hierarchies"]
         self.assertEqual(len(groups), 1)
-        self.assertTrue(any(row.kind == "biological_chain" for row in rows))
-        self.assertTrue(any(row.kind == "biological_residue" for row in rows))
+        detail_rows = tuple(
+            row
+            for row in rows
+            if row.kind in {"biological_chain", "biological_residue"}
+        )
+        self.assertTrue(any(row.kind == "biological_chain" for row in detail_rows))
+        self.assertTrue(any(row.kind == "biological_residue" for row in detail_rows))
+        self.assertTrue(
+            all(
+                row.entity_id == batch.biological_hierarchies[0].id
+                for row in detail_rows
+            )
+        )
 
     def test_selection_operator_uses_selected_entity_and_fails_closed_when_stale(self):
         batch = parse_pqr(FIXTURES / "pqr" / "with-chain.pqr")
@@ -317,23 +476,14 @@ class BiologicalUIContractTests(unittest.TestCase):
         structure = batch.structures[0]
         hierarchy = batch.biological_hierarchies[0]
         properties = tuple(batch.datasets)
-        data = _structure_view_data(
+
+        view = _biological_view(
+            self.module,
             structure,
-            biological_hierarchy=hierarchy,
-            atomic_properties=properties,
+            hierarchy,
+            properties,
         )
-
-        class View(dict):
-            name = "PQR biological view"
-            data = SimpleNamespace(vertices=(None, None))
-
-        view = View(
-            cb_structure_contract="structure_view_v1",
-            cb_structure_id=str(structure.id),
-            cb_structure_revision=structure.revision,
-        )
-        with patch.object(structure_view, "_write_attribute"):
-            structure_view._write_biological_attributes(view, data)
+        view.name = "PQR biological view"
         session = SimpleNamespace(
             project=project,
             active_entity_id=hierarchy.id,
@@ -391,6 +541,79 @@ class BiologicalUIContractTests(unittest.TestCase):
             (True, False),
         )
 
+    def test_altloc_mutation_rolls_back_all_view_state_after_write_failure(self):
+        batch = parse_pdb(FIXTURES / "pdb" / "altloc.pdb")
+        project = QCProject(uuid4(), "1.0")
+        project.commit(batch)
+        structure = batch.structures[0]
+        hierarchy = batch.biological_hierarchies[0]
+        properties = tuple(batch.datasets)
+        view = _biological_view(
+            self.module,
+            structure,
+            hierarchy,
+            properties,
+        )
+        view["cb_altloc_filter"] = "[default]"
+        view["cb_selection_name"] = "altloc:default"
+        view["cb_selection_domain"] = "atom"
+        session = SimpleNamespace(
+            project=project,
+            active_entity_id=hierarchy.id,
+            active_view_object_name=view.name,
+        )
+        context = SimpleNamespace(
+            active_object=view,
+            scene=SimpleNamespace(objects={view.name: view}),
+        )
+
+        def write(mesh, name, _data_type, _field, values):
+            mesh.attributes[name].data[:] = tuple(values)
+
+        def fail_selection(obj, _indices, *, name):
+            obj.data.attributes["cbq_selected"].data[:] = (False, True)
+            obj["cb_selection_name"] = name
+            obj["cb_selection_domain"] = "atom"
+            raise RuntimeError("injected selection write failure")
+
+        operation = self.module.CHEMBLENDER_OT_select_biological_atoms()
+        operation.selector = "altloc"
+        operation.use_default_altloc = False
+        operation.altloc = "B"
+        errors = []
+        operation.report = lambda _levels, message: errors.append(message)
+        with (
+            patch.object(
+                self.module,
+                "get_scene_session",
+                return_value=session,
+            ),
+            patch.object(
+                self.module,
+                "_write_attribute",
+                side_effect=write,
+            ),
+            patch.object(
+                self.module,
+                "apply_atom_selection",
+                side_effect=fail_selection,
+            ),
+        ):
+            self.assertEqual(operation.execute(context), {"CANCELLED"})
+
+        self.assertIn("injected selection write failure", errors)
+        self.assertEqual(
+            tuple(view.data.attributes["cbq_selected"].data),
+            (True, False),
+        )
+        self.assertEqual(
+            tuple(view.data.attributes["cbq_visible"].data),
+            (True, False),
+        )
+        self.assertEqual(view["cb_altloc_filter"], "[default]")
+        self.assertEqual(view["cb_selection_name"], "altloc:default")
+        self.assertEqual(view["cb_selection_domain"], "atom")
+
     def test_model_operator_reuses_existing_trajectory_configuration(self):
         with TemporaryDirectory() as directory:
             source = Path(directory) / "models.pdb"
@@ -422,23 +645,14 @@ class BiologicalUIContractTests(unittest.TestCase):
             for value in batch.datasets
             if type(value).__name__ == "AtomicProperty"
         )
-        data = _structure_view_data(
+
+        view = _biological_view(
+            self.module,
             structure,
-            biological_hierarchy=hierarchy,
-            atomic_properties=properties,
+            hierarchy,
+            properties,
         )
-
-        class View(dict):
-            name = "PDB model view"
-            data = SimpleNamespace(vertices=(None,))
-
-        view = View(
-            cb_structure_contract="structure_view_v1",
-            cb_structure_id=str(structure.id),
-            cb_structure_revision=structure.revision,
-        )
-        with patch.object(structure_view, "_write_attribute"):
-            structure_view._write_biological_attributes(view, data)
+        view.name = "PDB model view"
         session = SimpleNamespace(
             project=project,
             active_entity_id=frame_set.id,
