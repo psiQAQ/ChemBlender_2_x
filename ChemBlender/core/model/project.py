@@ -13,6 +13,7 @@ from .common import (
     _require_uuid_tuple,
 )
 from .diagnostics import ImportDiagnostic, ParserReport
+from .exchange import BiologicalHierarchy, ChemicalAnnotation, ExternalReference
 from .grids import Grid3D
 from .grouping import CalculationGroup
 from .molecular_topology import TopologyRecord
@@ -250,6 +251,9 @@ class ImportBatch:
     structures: tuple[Structure, ...] = ()
     topologies: tuple[TopologyRecord, ...] = ()
     molecular_records: tuple[MolecularRecord, ...] = ()
+    biological_hierarchies: tuple[BiologicalHierarchy, ...] = ()
+    annotations: tuple[ChemicalAnnotation, ...] = ()
+    external_references: tuple[ExternalReference, ...] = ()
     cif_envelopes: tuple[CIFEnvelope, ...] = ()
     qcschema_envelopes: tuple[QCSchemaEnvelope, ...] = ()
     cjson_envelopes: tuple[CJSONEnvelope, ...] = ()
@@ -270,6 +274,9 @@ class ImportBatch:
             ("structures", Structure),
             ("topologies", TopologyRecord),
             ("molecular_records", MolecularRecord),
+            ("biological_hierarchies", BiologicalHierarchy),
+            ("annotations", ChemicalAnnotation),
+            ("external_references", ExternalReference),
             ("cif_envelopes", CIFEnvelope),
             ("qcschema_envelopes", QCSchemaEnvelope),
             ("cjson_envelopes", CJSONEnvelope),
@@ -300,6 +307,13 @@ class QCProject:
     structures: dict[UUID, Structure] = field(default_factory=dict)
     topologies: dict[UUID, TopologyRecord] = field(default_factory=dict)
     molecular_records: dict[UUID, MolecularRecord] = field(default_factory=dict)
+    biological_hierarchies: dict[UUID, BiologicalHierarchy] = field(
+        default_factory=dict
+    )
+    annotations: dict[UUID, ChemicalAnnotation] = field(default_factory=dict)
+    external_references: dict[UUID, ExternalReference] = field(
+        default_factory=dict
+    )
     cif_envelopes: dict[UUID, CIFEnvelope] = field(default_factory=dict)
     qcschema_envelopes: dict[UUID, QCSchemaEnvelope] = field(default_factory=dict)
     cjson_envelopes: dict[UUID, CJSONEnvelope] = field(default_factory=dict)
@@ -328,6 +342,9 @@ class QCProject:
             batch.structures,
             batch.topologies,
             batch.molecular_records,
+            batch.biological_hierarchies,
+            batch.annotations,
+            batch.external_references,
             batch.cif_envelopes,
             batch.qcschema_envelopes,
             batch.cjson_envelopes,
@@ -395,6 +412,38 @@ class QCProject:
                 )
             record_keys.add(source_key)
             record_indices.add(source_index)
+        biological_hierarchies = dict(self.biological_hierarchies)
+        biological_hierarchies.update(
+            (value.id, value) for value in batch.biological_hierarchies
+        )
+        biological_hierarchy_ids = set(biological_hierarchies)
+        hierarchy_structure_ids = tuple(
+            value.structure_id for value in biological_hierarchies.values()
+        )
+        if len(hierarchy_structure_ids) != len(set(hierarchy_structure_ids)):
+            raise ValueError(
+                "only one biological hierarchy is allowed per structure"
+            )
+        annotations = dict(self.annotations)
+        annotations.update((value.id, value) for value in batch.annotations)
+        annotation_ids = set(annotations)
+        annotation_keys = tuple(
+            (value.target_entity_id, value.namespace, value.key)
+            for value in annotations.values()
+        )
+        if len(annotation_keys) != len(set(annotation_keys)):
+            raise ValueError("chemical annotation identity must be unique")
+        external_references = dict(self.external_references)
+        external_references.update(
+            (value.id, value) for value in batch.external_references
+        )
+        external_reference_ids = set(external_references)
+        external_reference_keys = tuple(
+            (value.target_entity_id, value.namespace, value.identifier)
+            for value in external_references.values()
+        )
+        if len(external_reference_keys) != len(set(external_reference_keys)):
+            raise ValueError("external reference identity must be unique")
         cif_envelopes = dict(self.cif_envelopes)
         cif_envelopes.update(
             (envelope.id, envelope) for envelope in batch.cif_envelopes
@@ -432,6 +481,59 @@ class QCProject:
             (diagnostic.id, diagnostic) for diagnostic in batch.diagnostics
         )
         diagnostic_ids = set(diagnostics)
+        exchange_target_ids = (
+            source_ids
+            | source_revision_ids
+            | structure_ids
+            | topology_ids
+            | molecular_record_ids
+            | cif_envelope_ids
+            | qcschema_envelope_ids
+            | cjson_envelope_ids
+            | symmetry_result_ids
+            | calculation_ids
+            | dataset_ids
+            | basis_set_ids
+            | orbital_set_ids
+            | density_matrix_ids
+        )
+
+        for hierarchy in batch.biological_hierarchies:
+            try:
+                reference = structures[hierarchy.structure_id]
+            except KeyError as error:
+                raise ValueError(
+                    "biological hierarchy has a dangling structure reference"
+                ) from error
+            if hierarchy.atom_count != len(reference.atomic_numbers):
+                raise ValueError(
+                    "biological hierarchy atom dimension must match its structure"
+                )
+            self._require_references(
+                hierarchy.provenance_ids,
+                provenance_ids,
+                "biological hierarchy provenance",
+            )
+        for annotation in batch.annotations:
+            if annotation.target_entity_id not in exchange_target_ids:
+                raise ValueError(
+                    "chemical annotation has a dangling or invalid target reference"
+                )
+            self._require_references(
+                annotation.provenance_ids,
+                provenance_ids,
+                "chemical annotation provenance",
+            )
+        for reference in batch.external_references:
+            if reference.target_entity_id not in exchange_target_ids:
+                raise ValueError(
+                    "external reference has a dangling or invalid target reference"
+                )
+            self._require_references(
+                reference.provenance_ids,
+                provenance_ids,
+                "external reference provenance",
+            )
 
         for structure in batch.structures:
             if (
@@ -827,6 +929,9 @@ class QCProject:
             | structure_ids
             | topology_ids
             | molecular_record_ids
+            | biological_hierarchy_ids
+            | annotation_ids
+            | external_reference_ids
             | cif_envelope_ids
             | qcschema_envelope_ids
             | cjson_envelope_ids
@@ -871,6 +976,13 @@ class QCProject:
         self.topologies.update((entity.id, entity) for entity in batch.topologies)
         self.molecular_records.update(
             (entity.id, entity) for entity in batch.molecular_records
+        )
+        self.biological_hierarchies.update(
+            (entity.id, entity) for entity in batch.biological_hierarchies
+        )
+        self.annotations.update((entity.id, entity) for entity in batch.annotations)
+        self.external_references.update(
+            (entity.id, entity) for entity in batch.external_references
         )
         self.cif_envelopes.update(
             (entity.id, entity) for entity in batch.cif_envelopes
@@ -923,6 +1035,9 @@ class QCProject:
             self.structures,
             self.topologies,
             self.molecular_records,
+            self.biological_hierarchies,
+            self.annotations,
+            self.external_references,
             self.cif_envelopes,
             self.qcschema_envelopes,
             self.cjson_envelopes,
@@ -948,6 +1063,17 @@ class QCProject:
             (self.structures, Structure, "structures"),
             (self.topologies, TopologyRecord, "topologies"),
             (self.molecular_records, MolecularRecord, "molecular_records"),
+            (
+                self.biological_hierarchies,
+                BiologicalHierarchy,
+                "biological_hierarchies",
+            ),
+            (self.annotations, ChemicalAnnotation, "annotations"),
+            (
+                self.external_references,
+                ExternalReference,
+                "external_references",
+            ),
             (self.cif_envelopes, CIFEnvelope, "cif_envelopes"),
             (self.qcschema_envelopes, QCSchemaEnvelope, "qcschema_envelopes"),
             (self.cjson_envelopes, CJSONEnvelope, "cjson_envelopes"),
@@ -1061,6 +1187,11 @@ def validate_project_graph(project):
             structures=tuple(project.structures.values()),
             topologies=tuple(project.topologies.values()),
             molecular_records=tuple(project.molecular_records.values()),
+            biological_hierarchies=tuple(
+                project.biological_hierarchies.values()
+            ),
+            annotations=tuple(project.annotations.values()),
+            external_references=tuple(project.external_references.values()),
             cif_envelopes=tuple(project.cif_envelopes.values()),
             qcschema_envelopes=tuple(project.qcschema_envelopes.values()),
             cjson_envelopes=tuple(project.cjson_envelopes.values()),
