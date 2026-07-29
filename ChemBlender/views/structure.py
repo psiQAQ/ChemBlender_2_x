@@ -1,8 +1,15 @@
 from dataclasses import dataclass
+from hashlib import sha256
+import json
 from math import isfinite
 
 from ..Chem_data import ELEMENTS_DEFAULT
-from ..core import AtomicProperty, Structure, TopologyRecord
+from ..core import (
+    AtomicProperty,
+    BiologicalHierarchy,
+    Structure,
+    TopologyRecord,
+)
 from ..core.topology.periodic import _pbc_primary_coordinates
 
 
@@ -26,6 +33,12 @@ _FATAL_EXCEPTIONS = (
     GeneratorExit,
     MemoryError,
 )
+_BIOLOGICAL_NUMERIC_ROLES = {
+    "occupancy": "cbq_occupancy",
+    "b_factor": "cbq_b_factor",
+    "partial_charge": "cbq_partial_charge",
+    "radius": "cbq_pqr_radius",
+}
 
 
 def _is_view_contract(owner, contract):
@@ -59,6 +72,229 @@ def _coordinate_scale(unit):
         return _ANGSTROM_SCALE[unit]
     except KeyError as error:
         raise ValueError(f"unsupported coordinate unit: {unit}") from error
+
+
+def _categorical_values(categorical):
+    return tuple(
+        None if int(code) == categorical.missing_code
+        else categorical.categories[int(code)]
+        for code in categorical.codes.values
+    )
+
+
+def _categorical(values):
+    categories = tuple(dict.fromkeys(values))
+    indices = {value: index for index, value in enumerate(categories)}
+    return tuple(indices[value] for value in values), categories
+
+
+def _unique_labels(values, prefixes):
+    counts = {value: values.count(value) for value in set(values)}
+    return tuple(
+        value if counts[value] == 1 else f"{prefix}:{value}"
+        for value, prefix in zip(values, prefixes)
+    )
+
+
+def _matching_atomic_property(datasets, structure_id, role, atom_count):
+    matches = tuple(
+        value
+        for value in datasets
+        if (
+            isinstance(value, AtomicProperty)
+            and value.structure_id == structure_id
+            and value.semantic_role == role
+            and value.data.dims == ("atom",)
+            and value.data.shape == (atom_count,)
+        )
+    )
+    if len(matches) > 1:
+        raise ValueError(f"multiple {role} properties match Structure")
+    return matches[0] if matches else None
+
+
+def _category_hash(categories):
+    payload = json.dumps(
+        categories,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    return sha256(payload).hexdigest()
+
+
+def biological_point_data(structure, hierarchy, datasets=()):
+    """Project typed biological data to atom-aligned view attributes."""
+    if not isinstance(structure, Structure):
+        raise TypeError("structure must be a Structure")
+    if not isinstance(hierarchy, BiologicalHierarchy):
+        raise TypeError("hierarchy must be a BiologicalHierarchy")
+    if (
+        hierarchy.structure_id != structure.id
+        or hierarchy.atom_count != len(structure.atomic_numbers)
+    ):
+        raise ValueError("hierarchy does not match Structure")
+    if structure.atomic_identity is None:
+        raise ValueError("biological Structure requires atomic identity")
+    atom_count = hierarchy.atom_count
+    residue_indices = tuple(
+        int(value) for value in hierarchy.atom_sites.residue_indices.values
+    )
+    chain_indices = tuple(
+        hierarchy.residues[index].chain_index for index in residue_indices
+    )
+    raw_chain_labels = tuple(
+        chain.chain_id if chain.chain_id else f"[blank {chain.segment_index}]"
+        for chain in hierarchy.chains
+    )
+    chain_labels = _unique_labels(
+        raw_chain_labels,
+        tuple(
+            f"segment {chain.segment_index}" for chain in hierarchy.chains
+        ),
+    )
+    raw_residue_labels = tuple(
+        (
+            f"{residue.residue_name} {residue.sequence_number}"
+            f"{residue.insertion_code}"
+        )
+        for residue in hierarchy.residues
+    )
+    residue_labels = _unique_labels(
+        raw_residue_labels,
+        tuple(chain_labels[value.chain_index] for value in hierarchy.residues),
+    )
+    residue_names, residue_name_categories = _categorical(
+        tuple(
+            hierarchy.residues[index].residue_name
+            for index in residue_indices
+        )
+    )
+    categorical = {
+        "cbq_chain_code": (chain_indices, chain_labels, -1),
+        "cbq_residue_code": (residue_indices, residue_labels, -1),
+        "cbq_residue_name_code": (
+            residue_names,
+            residue_name_categories,
+            -1,
+        ),
+        "cbq_altloc_code": (
+            tuple(
+                int(value)
+                for value in hierarchy.atom_sites.alternate_locations.codes.values
+            ),
+            hierarchy.atom_sites.alternate_locations.categories,
+            hierarchy.atom_sites.alternate_locations.missing_code,
+        ),
+        "cbq_record_kind_code": (
+            tuple(
+                int(value)
+                for value in hierarchy.atom_sites.record_kinds.codes.values
+            ),
+            hierarchy.atom_sites.record_kinds.categories,
+            hierarchy.atom_sites.record_kinds.missing_code,
+        ),
+        "cbq_atom_name_code": (
+            tuple(
+                int(value)
+                for value in structure.atomic_identity.atom_names.codes.values
+            ),
+            structure.atomic_identity.atom_names.categories,
+            structure.atomic_identity.atom_names.missing_code,
+        ),
+    }
+    result = {
+        name: tuple(values)
+        for name, (values, _categories, _missing_code) in categorical.items()
+    }
+    result["cbq_residue_number"] = tuple(
+        hierarchy.residues[index].sequence_number
+        for index in residue_indices
+    )
+    for role, name in _BIOLOGICAL_NUMERIC_ROLES.items():
+        dataset = _matching_atomic_property(
+            datasets,
+            structure.id,
+            role,
+            atom_count,
+        )
+        values = (
+            (float("nan"),) * atom_count
+            if dataset is None
+            else tuple(float(value) for value in dataset.data.values)
+        )
+        result[name] = values
+        result[f"{name}_valid"] = tuple(isfinite(value) for value in values)
+    for name, (values, _categories, missing_code) in categorical.items():
+        result[f"{name}_valid"] = tuple(
+            value != missing_code for value in values
+        )
+    result["categories"] = {
+        name: tuple(categories)
+        for name, (_values, categories, _missing_code) in sorted(
+            categorical.items()
+        )
+    }
+    result["category_hashes"] = {
+        name: _category_hash(categories)
+        for name, categories in result["categories"].items()
+    }
+    result["dataset_bindings"] = {
+        role: (str(dataset.id), dataset.revision)
+        for role in _BIOLOGICAL_NUMERIC_ROLES
+        if (
+            dataset := _matching_atomic_property(
+                datasets,
+                structure.id,
+                role,
+                atom_count,
+            )
+        )
+        is not None
+    }
+    return result
+
+
+def default_altloc_mask(structure, hierarchy, datasets=()):
+    """Choose blank altloc, else highest finite occupancy, per atom site."""
+    projection = biological_point_data(structure, hierarchy, datasets)
+    alternate_locations = _categorical_values(
+        hierarchy.atom_sites.alternate_locations
+    )
+    atom_names = _categorical_values(structure.atomic_identity.atom_names)
+    record_kinds = _categorical_values(hierarchy.atom_sites.record_kinds)
+    residue_indices = tuple(
+        int(value) for value in hierarchy.atom_sites.residue_indices.values
+    )
+    occupancy = projection["cbq_occupancy"]
+    groups = {}
+    for index, identity in enumerate(
+        zip(residue_indices, atom_names, record_kinds)
+    ):
+        groups.setdefault(identity, []).append(index)
+    selected = [False] * hierarchy.atom_count
+    for indices in groups.values():
+        blank = next(
+            (
+                index
+                for index in indices
+                if alternate_locations[index] is None
+            ),
+            None,
+        )
+        chosen = (
+            blank
+            if blank is not None
+            else max(
+                indices,
+                key=lambda index: (
+                    occupancy[index]
+                    if isfinite(occupancy[index])
+                    else float("-inf")
+                ),
+            )
+        )
+        selected[chosen] = True
+    return tuple(selected)
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,6 +334,8 @@ def _structure_view_data(
     *,
     selective_dynamics=None,
     periodic_boundary_tolerance=None,
+    biological_hierarchy=None,
+    atomic_properties=(),
 ):
     import numpy
 
@@ -205,6 +443,37 @@ def _structure_view_data(
             )
         ),
     }
+    if biological_hierarchy is not None:
+        biological = biological_point_data(
+            structure,
+            biological_hierarchy,
+            atomic_properties,
+        )
+        point_data.update(
+            {
+                name: values
+                for name, values in biological.items()
+                if name not in {"categories", "category_hashes"}
+            }
+        )
+        active = default_altloc_mask(
+            structure,
+            biological_hierarchy,
+            atomic_properties,
+        )
+        point_data["cbq_selected"] = active
+        point_data["cbq_visible"] = active
+        point_data["biological_categories"] = biological["categories"]
+        point_data["biological_category_hashes"] = biological[
+            "category_hashes"
+        ]
+        point_data["biological_dataset_bindings"] = biological[
+            "dataset_bindings"
+        ]
+        point_data["biological_hierarchy_id"] = biological_hierarchy.id
+        point_data["biological_hierarchy_revision"] = (
+            biological_hierarchy.revision
+        )
     if topology is None:
         return {
             **point_data,
@@ -377,6 +646,63 @@ def _write_point_attributes(mesh, data, *, atom_ids=None):
                 else tuple(data[name][index] for index in atom_ids)
             )
             _write_attribute(mesh, name, "BOOLEAN", "value", values)
+
+
+def _write_biological_attributes(obj, data):
+    categories = data.get("biological_categories")
+    if categories is None:
+        return
+    for name in categories:
+        _write_attribute(obj.data, name, "INT", "value", data[name])
+        _write_attribute(
+            obj.data,
+            f"{name}_valid",
+            "BOOLEAN",
+            "value",
+            data[f"{name}_valid"],
+        )
+    _write_attribute(
+        obj.data,
+        "cbq_residue_number",
+        "INT",
+        "value",
+        data["cbq_residue_number"],
+    )
+    for name in _BIOLOGICAL_NUMERIC_ROLES.values():
+        _write_attribute(obj.data, name, "FLOAT", "value", data[name])
+        _write_attribute(
+            obj.data,
+            f"{name}_valid",
+            "BOOLEAN",
+            "value",
+            data[f"{name}_valid"],
+        )
+    for name in ("cbq_selected", "cbq_visible"):
+        _write_attribute(obj.data, name, "BOOLEAN", "value", data[name])
+    obj["cb_biological_hierarchy_id"] = str(
+        data["biological_hierarchy_id"]
+    )
+    obj["cb_biological_hierarchy_revision"] = data[
+        "biological_hierarchy_revision"
+    ]
+    obj["cb_biological_categories"] = json.dumps(
+        categories,
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    obj["cb_biological_category_hashes"] = json.dumps(
+        data["biological_category_hashes"],
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    obj["cb_biological_dataset_bindings"] = json.dumps(
+        data["biological_dataset_bindings"],
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
 
 
 def _write_edge_attributes(
@@ -809,6 +1135,8 @@ def create_structure_view(
     *,
     selective_dynamics=None,
     periodic_boundary_tolerance=None,
+    biological_hierarchy=None,
+    atomic_properties=(),
     name="ChemBlender Structure",
     collection=None,
 ):
@@ -826,6 +1154,8 @@ def create_structure_view(
         settings,
         selective_dynamics=selective_dynamics,
         periodic_boundary_tolerance=periodic_boundary_tolerance,
+        biological_hierarchy=biological_hierarchy,
+        atomic_properties=atomic_properties,
     )
     settings = data["settings"]
     mesh = bpy.data.meshes.new(name)
@@ -835,6 +1165,7 @@ def create_structure_view(
         obj = bpy.data.objects.new(name, mesh)
         collection.objects.link(obj)
         _write_point_attributes(mesh, data)
+        _write_biological_attributes(obj, data)
         _write_edge_attributes(
             mesh,
             bond_ids=data["primary_bond_ids"],

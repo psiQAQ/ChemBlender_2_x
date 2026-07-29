@@ -46,6 +46,7 @@ from .model import (
 
 _scientific_edit = importlib.import_module("..scientific_edit", __package__)
 _topology = importlib.import_module("..topology", __package__)
+_biological = importlib.import_module("..biological", __package__)
 _grid = importlib.import_module("..grid", __package__)
 
 
@@ -113,6 +114,29 @@ class CHEMBLENDER_PG_project_browser(bpy.types.PropertyGroup):
         default=0,
         min=0,
     )
+    biological_chain: StringProperty(name="Chain")
+    biological_residue_start: IntProperty(name="First Residue")
+    biological_residue_end: IntProperty(name="Last Residue")
+    biological_residue_name: StringProperty(name="Residue Name")
+    biological_atom_name: StringProperty(name="Atom Name")
+    biological_altloc: StringProperty(name="Alternate Location")
+    biological_property_role: EnumProperty(
+        items=(
+            ("occupancy", "Occupancy", ""),
+            ("b_factor", "B-Factor", ""),
+            ("partial_charge", "Partial Charge", ""),
+            ("radius", "PQR Radius", ""),
+        ),
+        default="occupancy",
+    )
+    biological_comparison: EnumProperty(
+        items=(
+            ("greater_equal", "At Least", ""),
+            ("less_equal", "At Most", ""),
+        ),
+        default="greater_equal",
+    )
+    biological_threshold: StringProperty(name="Threshold", default="0.0")
     selected_index: IntProperty(default=0, update=_selection_changed)
     active_entity_id: StringProperty()
     total_row_count: IntProperty(default=0)
@@ -586,6 +610,12 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
                     icon="FORCE_FORCE",
                 )
             draw_substructure_controls(layout, selected, settings)
+            _biological.draw_biological_controls(
+                layout,
+                session.project,
+                session.active_entity_id,
+                settings,
+            )
             if (
                 session.active_entity_id in session.project.structures
                 or isinstance(selected, (FrameSet, ConformerSet))

@@ -1456,6 +1456,398 @@ def assert_mol2_browser_view(module_key, repository_root):
         ui.close_scene_session(bpy.context.scene)
 
 
+def assert_biological_workflow(module_key, repository_root):
+    core = importlib.import_module(f"{module_key}.core")
+    pdb_format = importlib.import_module(f"{module_key}.core.formats.pdb")
+    pqr_format = importlib.import_module(f"{module_key}.core.formats.pqr")
+    ui = importlib.import_module(f"{module_key}.ui.session")
+    browser = importlib.import_module(
+        f"{module_key}.ui.project_browser.panel"
+    )
+    session = ui.new_scene_session(bpy.context.scene)
+    scene = bpy.context.scene
+    fixture_root = repository_root / "tests" / "fixtures"
+
+    def entity_context(batch):
+        structure = batch.structures[0]
+        hierarchy = batch.biological_hierarchies[0]
+        properties = tuple(
+            dataset
+            for dataset in batch.datasets
+            if isinstance(dataset, core.AtomicProperty)
+        )
+        frames = next(
+            (
+                dataset
+                for dataset in batch.datasets
+                if isinstance(dataset, core.FrameSet)
+            ),
+            None,
+        )
+        return structure, hierarchy, properties, frames
+
+    def create_default_view(batch):
+        session.project.commit(batch)
+        structure, hierarchy, properties, frames = entity_context(batch)
+        session.active_entity_id = hierarchy.id
+        assert bpy.ops.chemblender.create_biological_view() == {"FINISHED"}
+        view = bpy.data.objects[session.active_view_object_name]
+        assert view["cb_structure_id"] == str(structure.id)
+        assert view["cb_biological_hierarchy_id"] == str(hierarchy.id)
+        return view, structure, hierarchy, properties, frames
+
+    def attribute_values(view, name, field, initial):
+        attribute = view.data.attributes[name]
+        assert attribute.domain == "POINT"
+        values = list(initial)
+        attribute.data.foreach_get(field, values)
+        return attribute, values
+
+    def activate(view, entity_id):
+        bpy.ops.object.select_all(action="DESELECT")
+        view.select_set(True)
+        bpy.context.view_layer.objects.active = view
+        session.active_entity_id = entity_id
+        session.active_view_object_name = view.name
+
+    def assert_rejected(operation, expected_message):
+        try:
+            result = operation()
+        except RuntimeError as error:
+            assert expected_message in str(error), error
+        else:
+            assert result == {"CANCELLED"}, result
+
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        model_source = root / "biological-models.pdb"
+        model_source.write_bytes(
+            b"\n".join(
+                (
+                    b"MODEL        1",
+                    b"ATOM      1  CA AALA A   1      11.000  12.000  13.000  0.60 20.00           C",
+                    b"ATOM      2  CA BALA A   1      11.100  12.100  13.100  0.40 21.00           C",
+                    b"ENDMDL",
+                    b"MODEL        2",
+                    b"ATOM      1  CA AALA A   1      14.000  15.000  16.000  0.60 22.00           C",
+                    b"ATOM      2  CA BALA A   1      14.100  15.100  16.100  0.40 23.00           C",
+                    b"ENDMDL",
+                    b"",
+                )
+            )
+        )
+        altloc = create_default_view(
+            pdb_format.parse_pdb(fixture_root / "pdb" / "altloc.pdb")
+        )
+        pqr = create_default_view(
+            pqr_format.parse_pqr(fixture_root / "pqr" / "with-chain.pqr")
+        )
+        model = create_default_view(pdb_format.parse_pdb(model_source))
+        connected = create_default_view(
+            pdb_format.parse_pdb(fixture_root / "pdb" / "conect.pdb")
+        )
+        session.mark_dirty("import")
+
+        (
+            altloc_view,
+            _altloc_structure,
+            altloc_hierarchy,
+            _altloc_properties,
+            _altloc_frames,
+        ) = altloc
+        int_attributes = (
+            "cbq_chain_code",
+            "cbq_residue_code",
+            "cbq_residue_name_code",
+            "cbq_altloc_code",
+            "cbq_record_kind_code",
+            "cbq_atom_name_code",
+            "cbq_residue_number",
+        )
+        float_attributes = (
+            "cbq_occupancy",
+            "cbq_b_factor",
+            "cbq_partial_charge",
+            "cbq_pqr_radius",
+        )
+        boolean_attributes = (
+            *(f"{name}_valid" for name in int_attributes[:-1]),
+            *(f"{name}_valid" for name in float_attributes),
+            "cbq_selected",
+            "cbq_visible",
+        )
+        for name in int_attributes:
+            attribute, _values = attribute_values(
+                altloc_view,
+                name,
+                "value",
+                [0] * 2,
+            )
+            assert attribute.data_type == "INT"
+        for name in float_attributes:
+            attribute, _values = attribute_values(
+                altloc_view,
+                name,
+                "value",
+                [0.0] * 2,
+            )
+            assert attribute.data_type == "FLOAT"
+        for name in boolean_attributes:
+            attribute, _values = attribute_values(
+                altloc_view,
+                name,
+                "value",
+                [False] * 2,
+            )
+            assert attribute.data_type == "BOOLEAN"
+        _attribute, altloc_codes = attribute_values(
+            altloc_view,
+            "cbq_altloc_code",
+            "value",
+            [0] * 2,
+        )
+        _attribute, occupancy = attribute_values(
+            altloc_view,
+            "cbq_occupancy",
+            "value",
+            [0.0] * 2,
+        )
+        _attribute, default_mask = attribute_values(
+            altloc_view,
+            "cbq_visible",
+            "value",
+            [False] * 2,
+        )
+        assert altloc_codes == [0, 1]
+        assert all(
+            abs(actual - expected) < 1.0e-6
+            for actual, expected in zip(occupancy, (0.6, 0.4))
+        )
+        assert default_mask == [True, False]
+        categories = json.loads(altloc_view["cb_biological_categories"])
+        category_hashes = json.loads(
+            altloc_view["cb_biological_category_hashes"]
+        )
+        assert categories["cbq_altloc_code"] == ["A", "B"]
+        assert all(len(value) == 64 for value in category_hashes.values())
+
+        (
+            pqr_view,
+            _pqr_structure,
+            pqr_hierarchy,
+            _pqr_properties,
+            _pqr_frames,
+        ) = pqr
+        _attribute, charges = attribute_values(
+            pqr_view,
+            "cbq_partial_charge",
+            "value",
+            [0.0] * 2,
+        )
+        _attribute, radii = attribute_values(
+            pqr_view,
+            "cbq_pqr_radius",
+            "value",
+            [0.0] * 2,
+        )
+        assert all(
+            abs(actual - expected) < 1.0e-6
+            for actual, expected in zip(charges, (-0.3, -0.55))
+        )
+        assert all(
+            abs(actual - expected) < 1.0e-6
+            for actual, expected in zip(radii, (1.55, 1.4))
+        )
+        bindings = json.loads(pqr_view["cb_biological_dataset_bindings"])
+        assert {"partial_charge", "radius"} <= set(bindings)
+
+        browser_settings = scene.chemblender_project_browser
+        browser_settings.mode = "by_data"
+        browser_rows = browser.refresh_project_browser(scene)
+        assert sum(
+            row.id == "group:biological_hierarchies"
+            for row in browser_rows
+        ) == 1
+        assert any(row.kind == "biological_chain" for row in browser_rows)
+        assert any(row.kind == "biological_residue" for row in browser_rows)
+
+        activate(pqr_view, pqr_hierarchy.id)
+        assert bpy.ops.chemblender.select_biological_atoms(
+            selector="chain",
+            chain_id="A",
+        ) == {"FINISHED"}
+        _attribute, selected = attribute_values(
+            pqr_view,
+            "cbq_selected",
+            "value",
+            [False] * 2,
+        )
+        assert selected == [True, False]
+        assert bpy.ops.chemblender.select_biological_atoms(
+            selector="residue_range",
+            residue_start=2,
+            residue_end=2,
+        ) == {"FINISHED"}
+        _attribute, selected = attribute_values(
+            pqr_view,
+            "cbq_selected",
+            "value",
+            [False] * 2,
+        )
+        assert selected == [False, True]
+        assert bpy.ops.chemblender.select_biological_atoms(
+            selector="property",
+            property_role="partial_charge",
+            comparison="less_equal",
+            threshold=-0.4,
+        ) == {"FINISHED"}
+        _attribute, selected = attribute_values(
+            pqr_view,
+            "cbq_selected",
+            "value",
+            [False] * 2,
+        )
+        assert selected == [False, True]
+
+        activate(altloc_view, altloc_hierarchy.id)
+        assert bpy.ops.chemblender.select_biological_atoms(
+            selector="altloc",
+            altloc="B",
+            use_default_altloc=False,
+        ) == {"FINISHED"}
+        _attribute, selected = attribute_values(
+            altloc_view,
+            "cbq_selected",
+            "value",
+            [False] * 2,
+        )
+        assert selected == [False, True]
+        assert bpy.ops.chemblender.select_biological_atoms(
+            selector="altloc",
+            use_default_altloc=True,
+        ) == {"FINISHED"}
+        _attribute, selected = attribute_values(
+            altloc_view,
+            "cbq_selected",
+            "value",
+            [False] * 2,
+        )
+        assert selected == [True, False]
+
+        (
+            model_view,
+            _model_structure,
+            model_hierarchy,
+            _model_properties,
+            model_frames,
+        ) = model
+        assert model_frames is not None
+        activate(model_view, model_frames.id)
+        scene.frame_set(1)
+        assert bpy.ops.chemblender.play_biological_models(
+            frame_start=1,
+            frame_step=1,
+        ) == {"FINISHED"}
+        scene.frame_set(2)
+        coordinates = [0.0] * 6
+        model_view.data.vertices.foreach_get("co", coordinates)
+        assert abs(coordinates[0] - 14.0) < 1.0e-6
+        _attribute, model_mask = attribute_values(
+            model_view,
+            "cbq_visible",
+            "value",
+            [False] * 2,
+        )
+        assert model_mask == [True, False]
+        assert model_hierarchy.id in session.project.biological_hierarchies
+
+        connected_view = connected[0]
+        assert any(
+            modifier.node_group is not None
+            and modifier.node_group.get("cbq_contract")
+            == "structure_ball_stick_v1"
+            for modifier in connected_view.modifiers
+        )
+        assert not any(
+            modifier.node_group is not None
+            and "ribbon" in modifier.node_group.name.lower()
+            for modifier in connected_view.modifiers
+        )
+
+        foreign_mesh = bpy.data.meshes.new("Biological foreign mesh")
+        foreign_mesh.from_pydata(((0.0, 0.0, 0.0),), (), ())
+        foreign = bpy.data.objects.new(
+            "Biological foreign object",
+            foreign_mesh,
+        )
+        scene.collection.objects.link(foreign)
+        activate(foreign, altloc_hierarchy.id)
+        assert_rejected(
+            lambda: bpy.ops.chemblender.select_biological_atoms(
+                selector="chain",
+                chain_id="A",
+            ),
+            "active object is not the current biological Structure view",
+        )
+        assert foreign.data.attributes.get("cbq_selected") is None
+        bpy.data.objects.remove(foreign, do_unlink=True)
+        if foreign_mesh.users == 0:
+            bpy.data.meshes.remove(foreign_mesh)
+
+        activate(altloc_view, altloc_hierarchy.id)
+        revision = altloc_view["cb_structure_revision"]
+        altloc_view["cb_structure_revision"] = "stale-smoke"
+        _attribute, before = attribute_values(
+            altloc_view,
+            "cbq_selected",
+            "value",
+            [False] * 2,
+        )
+        assert_rejected(
+            lambda: bpy.ops.chemblender.select_biological_atoms(
+                selector="chain",
+                chain_id="A",
+            ),
+            "active object is not the current biological Structure view",
+        )
+        _attribute, after = attribute_values(
+            altloc_view,
+            "cbq_selected",
+            "value",
+            [False] * 2,
+        )
+        assert after == before
+        altloc_view["cb_structure_revision"] = revision
+
+        altloc_name = altloc_view.name
+        altloc_hierarchy_id = altloc_hierarchy.id
+        model_frame_id = model_frames.id
+        blend = root / "biological-smoke.blend"
+        assert bpy.ops.wm.save_as_mainfile(
+            filepath=str(blend),
+            check_existing=False,
+        ) == {"FINISHED"}
+        assert session.dirty
+        assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+        assert not session.dirty
+        assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
+        reopened = ui.get_scene_session(bpy.context.scene)
+        assert altloc_hierarchy_id in reopened.project.biological_hierarchies
+        assert model_frame_id in reopened.project.datasets
+        reopened_view = bpy.data.objects[altloc_name]
+        assert json.loads(reopened_view["cb_biological_categories"])[
+            "cbq_altloc_code"
+        ] == ["A", "B"]
+        _attribute, reopened_mask = attribute_values(
+            reopened_view,
+            "cbq_visible",
+            "value",
+            [False] * 2,
+        )
+        assert reopened_mask == [True, False]
+        ui.close_scene_session(bpy.context.scene)
+
+
 def assert_optional_workspace(module_key):
     workspace_module = importlib.import_module(
         f"{module_key}.ui.workspace"
@@ -4096,6 +4488,24 @@ expected_inventory["module_callbacks"] += [
 ]
 expected_inventory["registered_classes"] += [
     {
+        "module": ".ui.biological",
+        "name": "CHEMBLENDER_OT_create_biological_view",
+        "id": "chemblender.create_biological_view",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.biological",
+        "name": "CHEMBLENDER_OT_play_biological_models",
+        "id": "chemblender.play_biological_models",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.biological",
+        "name": "CHEMBLENDER_OT_select_biological_atoms",
+        "id": "chemblender.select_biological_atoms",
+        "base": "Operator",
+    },
+    {
         "module": ".ui.grid",
         "name": "CHEMBLENDER_OT_create_grid_view",
         "id": "chemblender.create_grid_view",
@@ -4431,6 +4841,7 @@ assert_extxyz_workflow(module_key, package.parent.parent)
 assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 assert_sdf_10k_workflow_budget(module_key)
 assert_project_browser_rna_budget(module_key)
+assert_biological_workflow(module_key, package.parent.parent)
 assert_mol2_browser_view(module_key, package.parent.parent)
 
 import rdkit

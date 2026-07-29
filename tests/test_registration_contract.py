@@ -24,6 +24,7 @@ EXPECTED_ROOTS = (
     ".ui.quick_import",
     ".ui.import_preview",
     ".ui.topology",
+    ".ui.biological",
     ".ui.scientific_edit",
     ".ui.export",
     ".ui.grid",

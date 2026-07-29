@@ -50,6 +50,13 @@ class CHEMBLENDER_PG_quick_import(bpy.types.PropertyGroup):
     recent_summary: StringProperty(name="Recent Preview", default="")
 
 
+def active_session_view(context, session):
+    obj = context.active_object
+    if obj is None and session.active_view_object_name:
+        obj = context.scene.objects.get(session.active_view_object_name)
+    return obj
+
+
 def crystal_symmetry_property_sections(structure, derived=None):
     if not isinstance(structure, Structure) or structure.periodic is None:
         raise TypeError("structure must be a periodic Structure")
