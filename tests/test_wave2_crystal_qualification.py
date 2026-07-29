@@ -402,5 +402,58 @@ class Wave2CrystalRoundTripQualificationTests(unittest.TestCase):
                         close_project(restored)
 
 
+class Wave2CrystalPerformanceQualificationTests(unittest.TestCase):
+    @unittest.skipUnless(
+        importlib.util.find_spec("gemmi") is not None,
+        "Gemmi dependency unavailable",
+    )
+    def test_benchmark_reports_measured_metrics_and_explicit_view_skip(self):
+        from ChemBlender.scripts.benchmark_crystal import benchmark_crystal
+
+        result = benchmark_crystal(
+            samples=2,
+            cif_atom_count=10,
+            supercell=(2, 2, 2),
+            include_blender_view=False,
+        )
+
+        self.assertIn("environment", result)
+        self.assertEqual(
+            set(result["metrics"]),
+            {
+                "cif_preview",
+                "symmetry_expansion",
+                "supercell_10x10x10",
+                "poscar_import",
+                "crystal_view_creation",
+            },
+        )
+        self.assertGreater(
+            result["metrics"]["symmetry_expansion"]["workload"][
+                "operation_count"
+            ],
+            1,
+        )
+        for name, metric in result["metrics"].items():
+            with self.subTest(metric=name):
+                self.assertIn("status", metric)
+                self.assertIn("workload", metric)
+                if name == "crystal_view_creation":
+                    self.assertEqual(metric["status"], "Not Run")
+                    self.assertEqual(
+                        metric["reason"],
+                        "requires Blender runtime",
+                    )
+                    continue
+                self.assertEqual(metric["status"], "Passed")
+                self.assertEqual(metric["samples"], 2)
+                self.assertGreaterEqual(metric["median_seconds"], 0.0)
+                self.assertGreaterEqual(
+                    metric["p95_seconds"],
+                    metric["median_seconds"],
+                )
+                self.assertGreater(metric["peak_bytes"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()

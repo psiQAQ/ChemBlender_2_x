@@ -243,6 +243,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
 | `ChemBlender/scripts/benchmark_cube_flow.py` | `generate_cube()`、`run_benchmark()`、`main()` | 生成不入库的 128³ Cube，以真实 Blender/OpenVDB 路径分别测量 parse、NPY staging、sidecar save、cold/hot VDB 和 hot Volume view 的 samples/median/p95，并记录 peak Python allocation、硬件、cache 状态与 10 s 产品流门限。 |
+| `ChemBlender/scripts/benchmark_crystal.py` | `benchmark_crystal()`、`main()` | 以固定 CIF/POSCAR 和合成 1000-site CIF 记录 Reader API preview、对称展开、10×10×10 supercell、POSCAR import 与真实 Blender periodic view 的 samples/median/p95、tracemalloc peak 和硬件环境；非 Blender 运行必须把 view 明确记为 `Not Run`。 |
 | `ChemBlender/scripts/validate_extension.py` | `main()` | 检查 manifest、共享 release version grammar、wheel 路径、依赖策略、绝对 import 和源码布局；非法 release version 是本地 preflight error，再调用 Blender 原生 Extension validate。 |
 | `ChemBlender/scripts/release_metadata.py` | `ParsedReleaseVersion`、`parse_release_version()`、`ReleaseMetadata`、`read_release_metadata()`、`release_metadata_document()`、`main()` | 以单一 strict parser 定义 Blender 已验证的 stable/alpha/beta/rc version grammar；从 production manifest 严格读取 extension id、version 和单一 Windows platform，并确定性派生 package、checksum 与 artifact 名称；CLI 只输出稳定 UTF-8 JSON，不导入 Blender 或执行构建。 |
 | `ChemBlender/scripts/probe_prerelease_version.py` | `probe_prerelease_version()`、`main()` | 把 Extension 复制到自动清理的临时目录，排除本地构建产物、缓存、Git metadata 和 wheel 目录，仅替换副本中的单一 manifest version，再调用 Blender 原生 validate 记录预发布版本兼容性；不修改 production manifest。 |
