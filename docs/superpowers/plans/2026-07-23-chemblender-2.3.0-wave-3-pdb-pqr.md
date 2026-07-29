@@ -149,21 +149,27 @@ diagnostics and real PDB persistence.
 **Interfaces:**
 - Produces: reader ID `pqr`, Structure, BiologicalAtomData, charge/radius properties.
 
-- [ ] **Step 1: Write dialect tests**
+- [x] **Step 1: Write dialect tests**
 
 Support validated forms with and without chain ID. Detect positions of xyz, charge and radius by allowed field counts and numeric validation, not by best-effort shifting. Ambiguous lines are rejected with field-level diagnostic.
 
-- [ ] **Step 2: Map identity and properties**
+- [x] **Step 2: Map identity and properties**
 
 Partial charge uses elementary_charge; radius uses angstrom. Atom/residue/chain fields map to BiologicalAtomData. PQR does not imply bonds.
 
-- [ ] **Step 3: Register and conform**
+- [x] **Step 3: Register and conform**
 
 Sniff distinguishes PQR from PDB by valid trailing charge/radius fields and content. Run conformance.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit reader, fixtures, catalog and tests.
+
+Completion evidence: `c528908`, `f0d4852`, `d43f7b4`; 12 focused and
+175 related tests passed, `compileall` and `git diff --check` passed. Two
+review-fix rounds closed padded PQR routing, token-only element ambiguity,
+residue conflict isolation, Reader API metadata and conservative polymer
+element inference with no open findings.
 
 ### Task 5: Add chain/residue/altloc selection and view controls
 
