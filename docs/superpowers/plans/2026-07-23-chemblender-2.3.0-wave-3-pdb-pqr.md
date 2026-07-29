@@ -112,25 +112,31 @@ confidence findings with no open Critical/Important issues.
 **Interfaces:**
 - Produces: reader ID `pdb`, structures/models/frame sets, BiologicalAtomData, occupancy/B-factor properties and explicit topology.
 
-- [ ] **Step 1: Write model compatibility tests**
+- [x] **Step 1: Write model compatibility tests**
 
 Two models with identical identity keys form a FrameSet. Reordered atoms are mapped deterministically by identity. Missing/different altloc or residue identity splits models and reports why.
 
-- [ ] **Step 2: Implement altloc policy**
+- [x] **Step 2: Implement altloc policy**
 
 All altloc atoms are imported. Default view policy selects blank then highest occupancy per site, but source Structure/records retain all alternatives. The selected-altloc view is a view filter, not data deletion.
 
-- [ ] **Step 3: Map properties**
+- [x] **Step 3: Map properties**
 
 Occupancy and B-factor are AtomicProperties with validity masks. Missing values are Partial. CONECT becomes explicit TopologyRecord. Without CONECT, no automatic reader topology; Import Preview may suggest distance inference.
 
-- [ ] **Step 4: Register and conform**
+- [x] **Step 4: Register and conform**
 
 Capabilities include structure, topology partial, trajectory/model, hierarchy and atomic property. Run Reader API conformance.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run reader/sidecar/preview tests and commit.
+
+Completion evidence: `e3cc301`, `348554e`; 42 focused, 156 related and
+23 sidecar tests passed, `compileall` and `git diff --check` passed. Fix
+round 1 closed all review findings for MODEL occurrence identity,
+duplicate-identity topology recovery, serial/occupancy validation,
+diagnostics and real PDB persistence.
 
 ### Task 4: Implement PQR parser and dialect detection
 
