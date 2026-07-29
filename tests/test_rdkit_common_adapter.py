@@ -24,11 +24,17 @@ RDKIT_SITE = (
     / "python3.13"
     / "site-packages"
 )
-if RDKIT_SITE.is_dir():
-    sys.path.insert(0, str(RDKIT_SITE))
+_RDKIT_SITE_PATH = str(RDKIT_SITE)
+_added_rdkit_site = RDKIT_SITE.is_dir() and _RDKIT_SITE_PATH not in sys.path
+if _added_rdkit_site:
+    sys.path.insert(0, _RDKIT_SITE_PATH)
 
-from rdkit import Chem
-from rdkit.Chem import rdDepictor
+try:
+    from rdkit import Chem
+    from rdkit.Chem import rdDepictor
+finally:
+    if _added_rdkit_site:
+        sys.path.remove(_RDKIT_SITE_PATH)
 
 from ChemBlender.core import ImportBatch
 from ChemBlender.core.import_pipeline import ValidationMode
@@ -73,6 +79,36 @@ def _add_conformer(molecule):
     conformer.Set3D(True)
     molecule.AddConformer(conformer)
     return molecule
+
+
+class RDKitHarnessIsolationTests(unittest.TestCase):
+    def test_import_does_not_retain_or_reorder_shared_dependency_path(self):
+        self.assertTrue(RDKIT_SITE.is_dir())
+        environment = os.environ.copy()
+        environment.pop("PYTHONPATH", None)
+        for already_present in (False, True):
+            with self.subTest(already_present=already_present):
+                code = f"""
+import os
+import sys
+from pathlib import Path
+
+site = Path(os.environ["APPDATA"]) / "Blender Foundation" / "Blender" / "5.1" / "extensions" / ".local" / "lib" / "python3.13" / "site-packages"
+site_text = str(site)
+if {already_present}:
+    sys.path.insert(2, site_text)
+else:
+    assert site_text not in sys.path
+before = list(sys.path)
+import tests.test_rdkit_common_adapter
+assert sys.path == before, (before, sys.path)
+"""
+                subprocess.run(
+                    [sys.executable, "-c", code],
+                    cwd=ROOT,
+                    check=True,
+                    env=environment,
+                )
 
 
 class RDKitCommonAdapterTests(unittest.TestCase):
