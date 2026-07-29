@@ -131,11 +131,21 @@ def ensure_structure_ball_stick_modifier(obj):
         group["cbq_contract"] = _STRUCTURE_BALL_STICK_CONTRACT
         modifier["cbq_contract"] = _STRUCTURE_BALL_STICK_CONTRACT
         return modifier
-    except Exception:
-        obj.modifiers.remove(modifier)
+    except BaseException as error:
+        from .views.structure import _run_cleanup
+
+        error = _run_cleanup(
+            error,
+            "Structure ball-and-stick modifier cleanup failed",
+            lambda: obj.modifiers.remove(modifier),
+        )
         if group.users == 0:
-            bpy.data.node_groups.remove(group)
-        raise
+            error = _run_cleanup(
+                error,
+                "Structure ball-and-stick node-group cleanup failed",
+                lambda: bpy.data.node_groups.remove(group),
+            )
+        raise error
 
 
 

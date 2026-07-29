@@ -15,6 +15,7 @@ _ELEMENT_BY_NUMBER = {
 _STRUCTURE_CONTRACT = "structure_view_v1"
 _BALL_STICK_CONTRACT = "structure_ball_stick_v1"
 _PERIODIC_DISPLAY_CONTRACT = "structure_periodic_display_v1"
+_PERIODIC_SITE_DISPLAY_CONTRACT = "structure_periodic_sites_v1"
 _PERIODIC_MODIFIER_NAME = "ChemBlender Periodic Images"
 _SELECTIVE_MARKER_CONTRACT = "structure_selective_marker_v1"
 _SELECTIVE_MARKER_GROUP = "ChemBlender Selective Constraints"
@@ -88,6 +89,7 @@ def _structure_view_data(
     settings=None,
     *,
     selective_dynamics=None,
+    periodic_boundary_tolerance=None,
 ):
     import numpy
 
@@ -105,6 +107,38 @@ def _structure_view_data(
     coordinates = numpy.asarray(structure.coordinates.values, dtype=float) * scale
     if numpy.iscomplexobj(coordinates) or not numpy.all(numpy.isfinite(coordinates)):
         raise ValueError("structure coordinates must be finite and real")
+    if periodic_boundary_tolerance is not None:
+        if (
+            structure.periodic is None
+            or isinstance(periodic_boundary_tolerance, bool)
+            or not isinstance(periodic_boundary_tolerance, (int, float))
+            or not isfinite(periodic_boundary_tolerance)
+            or periodic_boundary_tolerance < 0.0
+        ):
+            raise ValueError(
+                "periodic_boundary_tolerance requires a periodic Structure "
+                "and a finite non-negative value"
+            )
+        fractional = numpy.asarray(
+            structure.periodic.fractional_coordinates.values,
+            dtype=float,
+        ).copy()
+        for axis, enabled in enumerate(structure.periodic.pbc):
+            if enabled:
+                fractional[:, axis] %= 1.0
+                values = fractional[:, axis]
+                values[
+                    (numpy.abs(values) <= periodic_boundary_tolerance)
+                    | (
+                        numpy.abs(values - 1.0)
+                        <= periodic_boundary_tolerance
+                    )
+                ] = 0.0
+        coordinates = (
+            fractional
+            @ numpy.asarray(structure.cell.values, dtype=float)
+            * scale
+        )
 
     atom_count = len(structure.atomic_numbers)
     selective = None
@@ -304,7 +338,12 @@ def _write_point_attributes(mesh, data, *, atom_ids=None):
         for component in range(4)
     )
     _write_attribute(mesh, "colour", "FLOAT_COLOR", "color", colors)
-    _write_attribute(mesh, "siteid", "INT", "value", (0,) * count)
+    site_ids = (
+        data["siteid"]
+        if atom_ids == data["cbq_atom_id"]
+        else tuple(data["siteid"][index] for index in atom_ids)
+    )
+    _write_attribute(mesh, "siteid", "INT", "value", site_ids)
     for name, vector in (
         ("u_scale", (1.0, 1.0, 1.0)),
         ("u_v1", (1.0, 0.0, 0.0)),
@@ -663,7 +702,17 @@ def update_structure_view_topology(
         raise ValueError("obj is not a ChemBlender Structure view")
     if obj.get("cb_structure_id") != str(structure.id):
         raise ValueError("Structure does not match the Blender object")
-    data = _structure_view_data(structure, topology, settings)
+    tolerance = (
+        obj.get("cbq_periodic_boundary_tolerance")
+        if obj.get("cbq_periodic_representation") != "source_sites"
+        else None
+    )
+    data = _structure_view_data(
+        structure,
+        topology,
+        settings,
+        periodic_boundary_tolerance=tolerance,
+    )
     if len(obj.data.vertices) != len(data["coordinates"]):
         raise ValueError("Structure atom count does not match the Blender object")
 
@@ -706,6 +755,7 @@ def create_structure_view(
     settings=None,
     *,
     selective_dynamics=None,
+    periodic_boundary_tolerance=None,
     name="ChemBlender Structure",
     collection=None,
 ):
@@ -722,6 +772,7 @@ def create_structure_view(
         topology,
         settings,
         selective_dynamics=selective_dynamics,
+        periodic_boundary_tolerance=periodic_boundary_tolerance,
     )
     settings = data["settings"]
     mesh = bpy.data.meshes.new(name)
@@ -801,6 +852,12 @@ def remove_structure_view(obj):
         if isinstance(marker_name, str)
         else None
     )
+    site_display_name = obj.get("cbq_periodic_site_display_object")
+    site_display = (
+        bpy.data.objects.get(site_display_name)
+        if isinstance(site_display_name, str)
+        else None
+    )
     groups = tuple(
         modifier.node_group
         for modifier in obj.modifiers
@@ -822,10 +879,24 @@ def remove_structure_view(obj):
             == _SELECTIVE_MARKER_CONTRACT
         )
         bpy.data.objects.remove(marker, do_unlink=True)
+    if site_display is not None:
+        data_blocks.append(site_display.data)
+        groups += tuple(
+            modifier.node_group
+            for modifier in site_display.modifiers
+            if modifier.node_group is not None
+            and modifier.node_group.get("cbq_contract")
+            in {_BALL_STICK_CONTRACT, _PERIODIC_SITE_DISPLAY_CONTRACT}
+        )
+        bpy.data.objects.remove(site_display, do_unlink=True)
     bpy.data.objects.remove(obj, do_unlink=True)
     for data in data_blocks:
         if data is not None and data.users == 0:
             bpy.data.meshes.remove(data)
+    unique_groups = []
     for group in groups:
+        if group not in unique_groups:
+            unique_groups.append(group)
+    for group in unique_groups:
         if group.users == 0:
             bpy.data.node_groups.remove(group)

@@ -2725,11 +2725,41 @@ def assert_cif_workflow(module_key, repository_root):
     session = ui.new_scene_session(bpy.context.scene)
     session.project.commit(batch)
     session.mark_dirty("import")
-    view = views.create_structure_view(
+    view = views.create_periodic_structure_view(
         structure,
+        settings=views.PeriodicViewSettings(
+            representation="supercell",
+            supercell=(2, 1, 1),
+        ),
         name="ChemBlender CIF smoke",
         collection=bpy.context.scene.collection,
     )
+    assert len(view.data.vertices) == len(structure.atomic_numbers)
+    assert view["cbq_periodic_representation"] == "supercell"
+    assert tuple(view["cbq_periodic_supercell"]) == (2, 1, 1)
+    derived = bpy.data.objects[view["cbq_periodic_site_display_object"]]
+    assert derived["cbq_contract"] == "structure_periodic_sites_v1"
+    assert len(derived.data.vertices) == view["cbq_periodic_derived_site_count"]
+    assert len(derived.data.vertices) > 0
+    assert derived.data.attributes["cbq_display_only"] is not None
+    occupancy = [0.0] * len(structure.atomic_numbers)
+    view.data.attributes["cbq_occupancy"].data.foreach_get("value", occupancy)
+    assert occupancy == [0.5]
+    for attribute in (
+        "siteid",
+        "cbq_site_label",
+        "cbq_disorder_group",
+        "cbq_disorder_assembly",
+        "cbq_adp_type",
+        "cbq_u_iso",
+        "cbq_u11",
+        "cbq_u22",
+        "cbq_u33",
+        "cbq_u12",
+        "cbq_u13",
+        "cbq_u23",
+    ):
+        assert view.data.attributes[attribute] is not None
     session.active_entity_id = structure.id
     session.active_view_object_name = view.name
 
@@ -2750,6 +2780,12 @@ def assert_cif_workflow(module_key, repository_root):
         restored_view = bpy.data.objects["ChemBlender CIF smoke"]
         assert restored_view["cb_structure_id"] == str(structure.id)
         assert restored_view["cb_periodic"] is True
+        assert len(restored_view.data.vertices) == len(structure.atomic_numbers)
+        assert restored_view["cbq_periodic_representation"] == "supercell"
+        restored_derived = bpy.data.objects[
+            restored_view["cbq_periodic_site_display_object"]
+        ]
+        assert restored_derived["cbq_contract"] == "structure_periodic_sites_v1"
 
         destination = root / "partial-disorder-export.cif"
         selection = export_ui.resolve_export_selection(
@@ -2801,8 +2837,9 @@ def assert_poscar_workflow(module_key, repository_root):
     session = ui.new_scene_session(bpy.context.scene)
     session.project.commit(batch)
     session.mark_dirty("import")
-    view = views.create_structure_view(
+    view = views.create_periodic_structure_view(
         structure,
+        settings=views.PeriodicViewSettings(show_constraints=False),
         selective_dynamics=selective,
         name="ChemBlender POSCAR smoke",
         collection=bpy.context.scene.collection,
@@ -2813,14 +2850,15 @@ def assert_poscar_workflow(module_key, repository_root):
     assert view.data.attributes["cbq_selective_z"] is not None
     assert marker["cbq_contract"] == "structure_selective_marker_v1"
     assert view["cb_selective_constraint_count"] == 2
+    assert marker.hide_get()
     session.active_entity_id = structure.id
     session.active_view_object_name = view.name
     bpy.context.view_layer.objects.active = view
     view.select_set(True)
     assert bpy.ops.chemblender.toggle_selective_constraints() == {"FINISHED"}
-    assert marker.hide_get()
-    assert bpy.ops.chemblender.toggle_selective_constraints() == {"FINISHED"}
     assert not marker.hide_get()
+    assert bpy.ops.chemblender.toggle_selective_constraints() == {"FINISHED"}
+    assert marker.hide_get()
 
     with TemporaryDirectory(prefix="chemblender-poscar-smoke-") as directory:
         root = Path(directory)
