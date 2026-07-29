@@ -3,7 +3,6 @@
 import importlib
 import json
 import operator
-from dataclasses import replace
 from uuid import UUID
 
 import bpy
@@ -25,7 +24,6 @@ from ..properties import (
 )
 from ..session import get_scene_session
 from ...core import (
-    ArrayData,
     AtomFrameProperty,
     AtomicProperty,
     CategoricalData,
@@ -252,16 +250,10 @@ class CHEMBLENDER_OT_apply_substructure_category(bpy.types.Operator):
                 raise ValueError(
                     "active object is not the current matching Structure view"
                 )
-            import numpy
-
-            codes = numpy.asarray(dataset.data.codes.values, dtype=float)
-            codes[codes == dataset.data.missing_code] = numpy.nan
             apply_atomic_scalar(
                 obj,
-                replace(
-                    dataset,
-                    data=ArrayData(codes, ("atom",), "dimensionless"),
-                ),
+                dataset,
+                presentation_only=True,
             )
             apply_atom_selection(
                 obj,

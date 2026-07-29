@@ -311,6 +311,61 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertEqual(row.mol2_partial_charge_summary, "available (complete)")
         self.assertEqual(row.mol2_unsupported_sections, "SET")
 
+    def test_mol2_preview_reports_partial_charge_molecule_coverage(self):
+        source = Path(self.temporary.name) / "mixed-charges.mol2"
+        source.write_text(
+            "\n".join(
+                (
+                    "@<TRIPOS>MOLECULE",
+                    "charged",
+                    "1 0 1 0 0",
+                    "SMALL",
+                    "USER_CHARGES",
+                    "@<TRIPOS>ATOM",
+                    "1 C1 0.0 0.0 0.0 C.3 1 RES_A -0.1",
+                    "@<TRIPOS>SUBSTRUCTURE",
+                    "1 RES_A 1 GROUP 0 **** 0 ROOT",
+                    "@<TRIPOS>MOLECULE",
+                    "uncharged",
+                    "1 0 0 0 0",
+                    "SMALL",
+                    "NO_CHARGES",
+                    "@<TRIPOS>ATOM",
+                    "1 He1 1.0 0.0 0.0 He",
+                    "",
+                )
+            ),
+            encoding="utf-8",
+            newline="\n",
+        )
+        registry, state = self.stage(source)
+        source_preview = state.preview.source_previews[0]
+        batch = state.staging_session.result(
+            source_preview.staged_batch_ids[0]
+        )
+
+        row = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )[0]
+
+        self.assertEqual(len(batch.structures), 2)
+        self.assertEqual(
+            {
+                dataset.structure_id
+                for dataset in batch.datasets
+                if dataset.semantic_role == "partial_charge"
+            },
+            {batch.structures[0].id},
+        )
+        self.assertEqual(batch.report.reader_id, "mol2")
+        self.assertEqual(row.mol2_molecule_count, 2)
+        self.assertEqual(
+            row.mol2_partial_charge_summary,
+            "1/2 molecules available",
+        )
+
     def stage_two_candidate_conflict(self):
         for action in (None, "independent_copy"):
             registry, state = self.stage("tests/fixtures/xyz/water.xyz")

@@ -1521,8 +1521,9 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             active_object=obj,
         )
 
-        def color(view, numeric_dataset):
-            view["category_codes"] = tuple(numeric_dataset.data.values)
+        def color(view, color_dataset, *, presentation_only=False):
+            view["color_dataset"] = color_dataset
+            view["presentation_only"] = presentation_only
 
         def select(view, indices, *, name):
             view["selected_indices"] = tuple(indices)
@@ -1538,7 +1539,8 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             result = operation.execute(context)
 
         self.assertEqual(result, {"FINISHED"})
-        self.assertEqual(obj["category_codes"], (0.0, 0.0, 1.0))
+        self.assertIs(obj["color_dataset"], dataset)
+        self.assertTrue(obj["presentation_only"])
         self.assertEqual(obj["selected_indices"], (2,))
         self.assertEqual(obj["selection_name"], "substructure:RES_B")
         self.assertEqual(obj["cb_categorical_dataset_id"], str(dataset.id))

@@ -624,6 +624,12 @@ def _mol2_summary(batch):
         for dataset in batch.datasets
         if dataset.semantic_role == "partial_charge"
     )
+    structure_ids = {structure.id for structure in batch.structures}
+    charged_structure_ids = {
+        dataset.structure_id
+        for dataset in charges
+        if dataset.structure_id in structure_ids
+    }
     charge_statuses = tuple(
         sorted({dataset.status.value for dataset in charges})
     )
@@ -651,8 +657,13 @@ def _mol2_summary(batch):
         "charge_types": ", ".join(annotations["charge_type"]),
         "partial_charge_summary": (
             "unavailable"
-            if not charges
-            else f"available ({', '.join(charge_statuses)})"
+            if not charged_structure_ids
+            else (
+                f"{len(charged_structure_ids)}/{len(structure_ids)} "
+                "molecules available"
+                if len(charged_structure_ids) < len(structure_ids)
+                else f"available ({', '.join(charge_statuses)})"
+            )
         ),
         "unsupported_sections": (
             ", ".join(unsupported_sections) if unsupported_sections else "none"

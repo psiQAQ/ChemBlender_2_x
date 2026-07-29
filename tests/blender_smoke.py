@@ -1246,6 +1246,8 @@ def assert_quick_import(module_key, repository_root):
 
 
 def assert_mol2_browser_view(module_key, repository_root):
+    core = importlib.import_module(f"{module_key}.core")
+    dataset_view = importlib.import_module(f"{module_key}.dataset_view")
     ui = importlib.import_module(f"{module_key}.ui.session")
     properties = importlib.import_module(f"{module_key}.ui.properties")
     preview_ui = importlib.import_module(f"{module_key}.ui.import_preview")
@@ -1324,6 +1326,15 @@ def assert_mol2_browser_view(module_key, repository_root):
             == "substructure_name"
         )
     )
+    partial_charge_dataset = next(
+        session.project.datasets[entity_id]
+        for entity_id in substructure_revision.created_entity_ids
+        if (
+            entity_id in session.project.datasets
+            and session.project.datasets[entity_id].semantic_role
+            == "partial_charge"
+        )
+    )
     browser_settings = bpy.context.scene.chemblender_project_browser
     browser_settings.mode = "by_data"
     browser_rows = browser.refresh_project_browser(bpy.context.scene)
@@ -1360,6 +1371,17 @@ def assert_mol2_browser_view(module_key, repository_root):
     bpy.ops.object.select_all(action="DESELECT")
     substructure_view.select_set(True)
     bpy.context.view_layer.objects.active = substructure_view
+    dataset_view.apply_atomic_scalar(
+        substructure_view,
+        partial_charge_dataset,
+    )
+    assert substructure_view["cb_scalar_dataset_id"] == str(
+        partial_charge_dataset.id
+    )
+    assert substructure_view.data.attributes["cbq_atom_scalar"] is not None
+    assert (
+        substructure_view.data.attributes["cbq_atom_scalar_valid"] is not None
+    )
     session.active_entity_id = substructure_dataset.id
     session.active_view_object_name = substructure_view.name
     assert bpy.ops.chemblender.apply_substructure_category(
@@ -1383,6 +1405,18 @@ def assert_mol2_browser_view(module_key, repository_root):
     )
     assert substructure_view["cb_categorical_code"] == 1
     assert substructure_view["cb_categorical_label"] == "RES_B"
+    assert (
+        session.project.datasets[substructure_dataset.id]
+        is substructure_dataset
+    )
+    assert isinstance(substructure_dataset.data, core.CategoricalData)
+    assert not any(
+        key.startswith("cb_scalar_") for key in substructure_view.keys()
+    )
+    assert substructure_view.data.attributes.get("cbq_atom_scalar") is None
+    assert (
+        substructure_view.data.attributes.get("cbq_atom_scalar_valid") is None
+    )
 
     substructure_view_name = substructure_view.name
     with TemporaryDirectory() as directory:
@@ -1400,6 +1434,13 @@ def assert_mol2_browser_view(module_key, repository_root):
             substructure_dataset.id
         )
         assert reopened_view["cb_categorical_code"] == 1
+        assert not any(
+            key.startswith("cb_scalar_") for key in reopened_view.keys()
+        )
+        assert reopened_view.data.attributes.get("cbq_atom_scalar") is None
+        assert (
+            reopened_view.data.attributes.get("cbq_atom_scalar_valid") is None
+        )
         reopened_selected = [False] * 3
         reopened_view.data.attributes["cbq_selected"].data.foreach_get(
             "value",
