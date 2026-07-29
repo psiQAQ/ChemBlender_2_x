@@ -116,6 +116,174 @@ class PDBPQRExportReadinessTests(unittest.TestCase):
                 self.assertEqual(report.status.value, status)
                 self.assertEqual(report.tokens, issues)
 
+    def test_pqr_rejects_frames_and_multiple_structures_without_losing_boundaries(self):
+        structure = self.pqr.structures[0]
+        coordinates = numpy.asarray(structure.coordinates.values)
+        frames = FrameSet(
+            id=uuid4(),
+            revision="pqr-frames-r1",
+            semantic_role="coordinates",
+            domain="frame",
+            data=ArrayData(
+                numpy.stack((coordinates, coordinates + 1.0)),
+                ("frame", "atom", "xyz"),
+                "angstrom",
+            ),
+            status=DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+            structure_id=structure.id,
+            comments=("frame 1", "frame 2"),
+        )
+        report = pqr_export_readiness(
+            replace(self.pqr, datasets=(*self.pqr.datasets, frames))
+        )
+        self.assertEqual(report.status.value, "Invalid")
+        self.assertEqual(report.tokens, ("dataset.coordinates.unsupported",))
+
+        hierarchy = self.pqr.biological_hierarchies[0]
+        second_structure = replace(
+            structure,
+            id=uuid4(),
+            revision="pqr-second-structure-r1",
+        )
+        second_hierarchy = replace(
+            hierarchy,
+            id=uuid4(),
+            revision="pqr-second-hierarchy-r1",
+            structure_id=second_structure.id,
+        )
+        second_datasets = tuple(
+            replace(
+                value,
+                id=uuid4(),
+                revision=f"pqr-second-{value.semantic_role}-r1",
+                structure_id=second_structure.id,
+            )
+            for value in self.pqr.datasets
+        )
+        first = replace(
+            self.pqr,
+            structures=(structure, second_structure),
+            biological_hierarchies=(hierarchy, second_hierarchy),
+            datasets=(*self.pqr.datasets, *second_datasets),
+        )
+        last = replace(
+            self.pqr,
+            structures=(second_structure, structure),
+            biological_hierarchies=(second_hierarchy, hierarchy),
+            datasets=(*second_datasets, *self.pqr.datasets),
+        )
+
+        self.assertEqual(pqr_export_readiness(first), pqr_export_readiness(last))
+        self.assertEqual(pqr_export_readiness(first).status.value, "Ambiguous")
+        self.assertEqual(
+            pqr_export_readiness(first).tokens,
+            ("structure.ambiguous",),
+        )
+
+    def test_live_hierarchy_and_identity_mutations_fail_closed(self):
+        structure = self.pdb.structures[0]
+        hierarchy = self.pdb.biological_hierarchies[0]
+
+        def mutate_value(array, index, value, token):
+            values = numpy.asarray(array.values)
+            original = values[index]
+            values[index] = value
+            try:
+                report = pdb_export_readiness(self.pdb)
+            finally:
+                values[index] = original
+            self.assertEqual(report.status.value, "Invalid")
+            self.assertEqual(report.tokens, (token,))
+
+        def mutate_attribute(instance, name, value, token):
+            original = getattr(instance, name)
+            object.__setattr__(instance, name, value)
+            try:
+                report = pdb_export_readiness(self.pdb)
+            finally:
+                object.__setattr__(instance, name, original)
+            self.assertEqual(report.status.value, "Invalid")
+            self.assertEqual(report.tokens, (token,))
+
+        mutate_value(
+            hierarchy.atom_sites.residue_indices,
+            0,
+            999,
+            "hierarchy.shape",
+        )
+        mutate_value(
+            structure.atomic_identity.atom_names.codes,
+            0,
+            999,
+            "identity.atom_name.invalid",
+        )
+        mutate_value(
+            hierarchy.atom_sites.alternate_locations.codes,
+            0,
+            999,
+            "identity.altloc.invalid",
+        )
+        mutate_value(
+            hierarchy.atom_sites.record_kinds.codes,
+            0,
+            hierarchy.atom_sites.record_kinds.missing_code,
+            "identity.record_kind",
+        )
+
+        residue = hierarchy.residues[0]
+        original_chain_index = residue.chain_index
+        object.__setattr__(residue, "chain_index", 999)
+        try:
+            report = pdb_export_readiness(self.pdb)
+        finally:
+            object.__setattr__(residue, "chain_index", original_chain_index)
+        self.assertEqual(report.status.value, "Invalid")
+        self.assertEqual(report.tokens, ("hierarchy.shape",))
+
+        mutate_attribute(
+            hierarchy.atom_sites.serial_numbers,
+            "values",
+            numpy.asarray(((32, 3835, 33),), dtype=numpy.int64),
+            "hierarchy.shape",
+        )
+        mutate_attribute(
+            hierarchy.atom_sites.residue_indices,
+            "values",
+            numpy.asarray((0.0, 1.0, 2.0), dtype=numpy.float64),
+            "hierarchy.shape",
+        )
+
+        altloc_codes = hierarchy.atom_sites.alternate_locations.codes
+        mutate_attribute(
+            altloc_codes,
+            "values",
+            numpy.asarray(altloc_codes.values, dtype=numpy.float64),
+            "identity.altloc.invalid",
+        )
+        mutate_attribute(
+            hierarchy.atom_sites.record_kinds.codes,
+            "values",
+            numpy.asarray(
+                (hierarchy.atom_sites.record_kinds.codes.values,),
+                dtype=numpy.int64,
+            ),
+            "identity.record_kind",
+        )
+        mutate_attribute(
+            altloc_codes,
+            "dims",
+            ("site",),
+            "identity.altloc.invalid",
+        )
+        mutate_attribute(
+            altloc_codes,
+            "unit",
+            "angstrom",
+            "identity.altloc.invalid",
+        )
+
     def test_long_identifiers_report_field_overflow(self):
         hierarchy = self.pdb.biological_hierarchies[0]
         chain = replace(hierarchy.chains[0], chain_id="AB")

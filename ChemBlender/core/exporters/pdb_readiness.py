@@ -5,7 +5,13 @@ from enum import Enum
 
 import numpy
 
-from ..model import ArrayData, AtomicProperty, DatasetStatus, FrameSet
+from ..model import (
+    ArrayData,
+    AtomicProperty,
+    CategoricalData,
+    DatasetStatus,
+    FrameSet,
+)
 
 
 class PDBPQRExportStatus(str, Enum):
@@ -29,10 +35,40 @@ def _entities(project_entities, name):
     return tuple(values.values() if isinstance(values, dict) else values)
 
 
-def _categorical_values(data):
+def _integer_atom_values(data, atom_count):
+    if (
+        not isinstance(data, ArrayData)
+        or data.dims != ("atom",)
+        or data.unit != "dimensionless"
+    ):
+        return None
+    values = numpy.asarray(data.values)
+    if values.shape != (atom_count,) or values.dtype.kind not in "iu":
+        return None
+    return values
+
+
+def _categorical_values(data, atom_count, *, allow_missing):
+    if not isinstance(data, CategoricalData):
+        return None
+    codes = _integer_atom_values(data.codes, atom_count)
+    categories = tuple(data.categories)
+    if (
+        codes is None
+        or any(type(value) is not str for value in categories)
+        or len(categories) != len(set(categories))
+        or type(data.missing_code) is not int
+        or 0 <= data.missing_code < len(categories)
+    ):
+        return None
+    missing = codes == data.missing_code
+    if numpy.any((~missing) & ((codes < 0) | (codes >= len(categories)))):
+        return None
+    if not allow_missing and numpy.any(missing):
+        return None
     return tuple(
-        None if int(code) == data.missing_code else data.categories[int(code)]
-        for code in numpy.asarray(data.codes.values)
+        None if is_missing else categories[int(code)]
+        for code, is_missing in zip(codes, missing)
     )
 
 
@@ -115,6 +151,7 @@ def _property(
 
 
 def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
+    atom_count = len(structure.atomic_numbers)
     hierarchy = _one(
         (
             candidate
@@ -130,56 +167,91 @@ def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
     if identity is None:
         issues.add("identity.atom_name.missing")
     else:
-        atom_names = _categorical_values(identity.atom_names)
-        if any(value is None or not value for value in atom_names):
+        atom_names = _categorical_values(
+            identity.atom_names,
+            atom_count,
+            allow_missing=True,
+        )
+        if atom_names is None:
+            issues.add("identity.atom_name.invalid")
+        elif any(value is None or not value.strip() for value in atom_names):
             issues.add("identity.atom_name.missing")
-        if any(value is not None and len(value) > 4 for value in atom_names):
+        if atom_names is not None and any(
+            value is not None and len(value) > 4 for value in atom_names
+        ):
             issues.add("identity.atom_name.overflow")
 
     if hierarchy is not None:
-        if hierarchy.atom_count != len(structure.atomic_numbers):
-            issues.add("hierarchy.shape")
-        else:
-            chains = hierarchy.chains
-            residues = hierarchy.residues
-            if any(len(chain.chain_id) > 1 for chain in chains):
-                issues.add("identity.chain_id.overflow")
-            if any(len(residue.residue_name) > 3 for residue in residues):
-                issues.add("identity.residue_name.overflow")
-            if any(len(residue.insertion_code) > 1 for residue in residues):
-                issues.add("identity.insertion_code.overflow")
-            if any(len(str(residue.sequence_number)) > 4 for residue in residues):
-                issues.add("identity.residue_number.overflow")
-            altlocs = _categorical_values(
-                hierarchy.atom_sites.alternate_locations
+        serials = _integer_atom_values(
+            hierarchy.atom_sites.serial_numbers,
+            atom_count,
+        )
+        residue_indices = _integer_atom_values(
+            hierarchy.atom_sites.residue_indices,
+            atom_count,
+        )
+        chains = hierarchy.chains
+        residues = hierarchy.residues
+        if (
+            serials is None
+            or residue_indices is None
+            or numpy.any(residue_indices < 0)
+            or numpy.any(residue_indices >= len(residues))
+            or any(
+                type(residue.chain_index) is not int
+                or residue.chain_index < 0
+                or residue.chain_index >= len(chains)
+                for residue in residues
             )
+        ):
+            issues.add("hierarchy.shape")
+        if any(len(chain.chain_id) > 1 for chain in chains):
+            issues.add("identity.chain_id.overflow")
+        if any(len(residue.residue_name) > 3 for residue in residues):
+            issues.add("identity.residue_name.overflow")
+        if any(len(residue.insertion_code) > 1 for residue in residues):
+            issues.add("identity.insertion_code.overflow")
+        if any(len(str(residue.sequence_number)) > 4 for residue in residues):
+            issues.add("identity.residue_number.overflow")
+
+        altlocs = _categorical_values(
+            hierarchy.atom_sites.alternate_locations,
+            atom_count,
+            allow_missing=True,
+        )
+        if altlocs is None:
+            issues.add("identity.altloc.invalid")
+        else:
             if any(value is not None and len(value) > 1 for value in altlocs):
                 issues.add("identity.altloc.overflow")
             if pqr and any(value not in (None, "") for value in altlocs):
                 issues.add("identity.altloc.unsupported")
-            if any(
-                value not in {"atom", "hetatm"}
-                for value in _categorical_values(
-                    hierarchy.atom_sites.record_kinds
-                )
-            ):
-                issues.add("identity.record_kind")
+        record_kinds = _categorical_values(
+            hierarchy.atom_sites.record_kinds,
+            atom_count,
+            allow_missing=False,
+        )
+        if record_kinds is None or any(
+            value not in {"atom", "hetatm"} for value in record_kinds
+        ):
+            issues.add("identity.record_kind")
 
-            serials = tuple(
-                int(value)
-                for value in hierarchy.atom_sites.serial_numbers.values
-            )
-            if len(serials) > 99999:
+        if serials is not None:
+            serial_values = tuple(int(value) for value in serials)
+            if len(serial_values) > 99999:
                 issues.add("serial.overflow")
             elif (
-                len(serials) != len(set(serials))
-                or any(value <= 0 or value > 99999 for value in serials)
+                len(serial_values) != len(set(serial_values))
+                or any(
+                    value <= 0 or value > 99999
+                    for value in serial_values
+                )
             ):
                 issues.add("serial.renumber")
 
-            model_number = hierarchy.model.number
-            if model_number is not None and len(str(model_number)) > 4:
-                issues.add("model.overflow")
+        model_number = hierarchy.model.number
+        if model_number is not None and len(str(model_number)) > 4:
+            issues.add("model.overflow")
 
     coordinates = numpy.asarray(structure.coordinates.values)
     if structure.coordinates.unit != "angstrom":
@@ -191,18 +263,24 @@ def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
     elif not _fits(coordinates.flat, 8, 3):
         issues.add("coordinates.overflow")
 
-    frames = _one(
-        (
-            candidate
-            for candidate in datasets
-            if isinstance(candidate, FrameSet)
-            and candidate.structure_id == structure.id
-        ),
-        "dataset.coordinates.missing",
-        "dataset.coordinates.ambiguous",
-        issues,
-        required=False,
+    frame_candidates = tuple(
+        candidate
+        for candidate in datasets
+        if isinstance(candidate, FrameSet)
+        and candidate.structure_id == structure.id
     )
+    frames = None
+    if pqr:
+        if frame_candidates:
+            issues.add("dataset.coordinates.unsupported")
+    else:
+        frames = _one(
+            frame_candidates,
+            "dataset.coordinates.missing",
+            "dataset.coordinates.ambiguous",
+            issues,
+            required=False,
+        )
     if frames is not None:
         values = numpy.asarray(frames.data.values)
         if (
@@ -271,7 +349,9 @@ def _readiness(project_entities, *, pqr):
     issues = set()
     if not structures:
         issues.add("structure.missing")
-    if len({value.id for value in structures}) != len(structures):
+    if (pqr and len(structures) > 1) or (
+        len({value.id for value in structures}) != len(structures)
+    ):
         issues.add("structure.ambiguous")
     for structure in structures:
         _structure_readiness(structure, hierarchies, datasets, issues, pqr=pqr)

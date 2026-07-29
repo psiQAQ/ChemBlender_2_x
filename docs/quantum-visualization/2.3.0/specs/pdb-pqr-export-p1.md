@@ -17,8 +17,9 @@ files, add UI, register an exporter, or change reader capabilities. The frozen
 | `tokens` | ordinally sorted, duplicate-free machine tokens |
 
 The inputs are the existing `Structure`/embedded `AtomicIdentityData`,
-`BiologicalHierarchy`, `AtomicProperty`, and optional `FrameSet` groups on an
-`ImportBatch` or `QCProject`. No PDB/PQR-specific model is introduced.
+`BiologicalHierarchy`, `AtomicProperty`, and `FrameSet` groups on an
+`ImportBatch` or `QCProject`. No PDB/PQR-specific model is introduced; a PQR
+report explicitly rejects, rather than ignores, any matching `FrameSet`.
 
 ## Deterministic association
 
@@ -29,11 +30,13 @@ readiness never assumes that a hierarchy/property revision must equal the
 Structure revision and never uses a revision string as a tiebreaker.
 
 Exactly one matching hierarchy is required. PQR requires exactly one
-`partial_charge` and one `radius` property. PDB `occupancy` and `b_factor`, and
-both formats' `FrameSet`, are optional, but more than one matching entity is
-ambiguous. Duplicate Structure IDs are also ambiguous. Candidate enumeration
-order, UUID spelling, category whitespace, and dictionary insertion order do
-not choose a winner. Every ambiguity produces a stable `.ambiguous` token.
+`partial_charge`, one `radius` property, exactly one project-wide Structure,
+and no matching `FrameSet`. PDB `occupancy`, `b_factor`, and one matching
+`FrameSet` are optional; more than one matching PDB entity is ambiguous.
+Duplicate Structure IDs, or multiple otherwise independent Structures in a
+PQR input, are ambiguous. Candidate enumeration order, UUID spelling, category
+whitespace, and dictionary insertion order do not choose a winner. Every
+ambiguity produces a stable `.ambiguous` token.
 
 ## Status contract
 
@@ -43,7 +46,7 @@ not choose a winner. Every ambiguity produces a stable `.ambiguous` token.
 | `ReadyWithRenumbering` | only source atom serials change; deterministic allocation is available |
 | `MissingHierarchy` | at least one Structure has no matching hierarchy |
 | `MissingProperty` | required atom identity or PQR charge/radius is absent |
-| `Invalid` | shape, unit, status, value, record kind, or PQR altloc is invalid |
+| `Invalid` | shape, unit, status, value, record kind, PQR altloc, or PQR FrameSet is invalid/unsupported |
 | `FieldOverflow` | a required formatted field exceeds the P1 budget |
 | `Ambiguous` | an explicit association has multiple candidates |
 
@@ -65,6 +68,14 @@ PDB and PQR require:
 
 PDB permits blank altlocs or one-character altlocs. PQR P1 permits only blank
 altlocs because the validated PQR reader dialect has no altloc field.
+
+Every call revalidates the live atom-site numeric and categorical arrays
+before decoding them: actual dims, shape, dtype, unit, categorical code bounds,
+record-kind completeness, residue-index bounds, and residue-to-chain bounds.
+This is a trust-boundary check, not a cache or graph copy. A hierarchy array
+mutated after model construction returns stable `hierarchy.shape` or
+`identity.<field>.invalid` tokens instead of becoming Ready or raising an
+indexing exception.
 
 Source serials are preserved only when all are positive, unique, and fit five
 decimal columns. Otherwise readiness reports `ReadyWithRenumbering` plus
@@ -88,7 +99,7 @@ decimal formatting, including rounding that can create a new leading digit.
 | chain ID | width 1; blank allowed | width 1; blank allowed |
 | residue number | signed decimal width 4 | signed decimal width 4 |
 | insertion code | width 1; blank allowed | width 1; blank allowed |
-| MODEL number | decimal width 4 | not emitted; hierarchy value is still checked when present |
+| MODEL number | decimal width 4 | not emitted; any matching FrameSet is unsupported |
 | x/y/z | each `8.3` | each `8.3` |
 | occupancy | optional `6.2`, `dimensionless` | not emitted |
 | B-factor | optional `6.2`, `angstrom_squared` | not emitted |
@@ -106,10 +117,16 @@ exact shape, exact units, `DatasetStatus.COMPLETE`, and contain only finite
 values; radius must be positive. Missing, `NaN`, `Inf`, wrong-unit, wrong-shape,
 or non-complete PQR data is never replaced with zero.
 
-One matching `FrameSet` may supply MODEL coordinates. It must be complete,
-atom-aligned, finite, and in `angstrom`; more than 9,999 output frames is
-`model.overflow`. Multiple matching frame sets are
+For PDB, one matching `FrameSet` may supply MODEL coordinates. It must be
+complete, atom-aligned, finite, and in `angstrom`; more than 9,999 output
+frames is `model.overflow`. Multiple matching PDB frame sets are
 `dataset.coordinates.ambiguous`.
+
+PQR has no MODEL or other frame/Structure delimiter in the validated 10/11
+field dialect. Therefore any matching `FrameSet` is
+`dataset.coordinates.unsupported`, and more than one project-wide Structure is
+`structure.ambiguous`. Readiness never silently drops frames, concatenates
+Structures, or invents MODEL records.
 
 ## Stable token families
 
@@ -118,8 +135,9 @@ atom-aligned, finite, and in `angstrom`; more than 9,999 output frames is
 - required data: `identity.atom_name.missing`,
   `dataset.partial_charge.missing`, `dataset.radius.missing`;
 - invalid data: `coordinates.*`, `hierarchy.shape`, `identity.record_kind`,
+  `identity.atom_name.invalid`, `identity.altloc.invalid`,
   `identity.altloc.unsupported`, `dataset.<role>.shape|unit|status|values`,
-  `dataset.coordinates.invalid`;
+  `dataset.coordinates.invalid|unsupported`;
 - width/allocation: `serial.renumber`, `serial.overflow`, `model.overflow`,
   `identity.<field>.overflow`, `coordinates.overflow`,
   `dataset.<role>.overflow`.
