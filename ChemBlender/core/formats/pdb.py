@@ -4,6 +4,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 import math
 from pathlib import Path
+import re
 
 from ...Chem_data import ELEMENTS_DEFAULT
 from ..model import IssueKind, ParserIssue
@@ -12,6 +13,10 @@ from ..readers import SniffMatch, SniffResult
 
 _ELEMENT_SYMBOLS = frozenset(
     symbol for symbol, data in ELEMENTS_DEFAULT.items() if data[0] > 0
+)
+_SPACE_GROUP_PATTERN = re.compile(
+    r"[PABCIFRH][ 0-9+\-/.ABCDMNabcdmn]*\Z",
+    re.ASCII,
 )
 _STANDARD_POLYMER_RESIDUES = frozenset(
     {
@@ -99,10 +104,12 @@ class PDBConectRecord:
     line_number: int
     source_serial: int
     target_serials: tuple[int, ...]
+    model_number: int | None
 
 
 @dataclass(frozen=True, slots=True)
 class PDBBond:
+    model_number: int
     atom_serials: tuple[int, int]
     atom_indices: tuple[int, int] | None
     order: int | None
@@ -118,6 +125,7 @@ class PDBCryst1Record:
     alpha: float
     beta: float
     gamma: float
+    space_group_field: str
     declared_space_group: str
     z_value: int | None
     source_record: str = "CRYST1"
@@ -163,30 +171,44 @@ def _float(field, name, *, optional=False):
 
 
 def _element_symbol(field):
-    text = field.strip()
-    if not text:
+    if not field.strip():
         return None
-    symbol = text[:1].upper() + text[1:].lower()
+    if len(field) != 2:
+        return None
+    if field[0] == " " and field[1].isalpha():
+        symbol = field[1].upper()
+    elif field[0].isalpha() and field[1].isalpha():
+        symbol = field[0].upper() + field[1].lower()
+    else:
+        return None
     return symbol if symbol in _ELEMENT_SYMBOLS else None
 
 
 def _infer_element(atom_name_field, record_name, residue_name):
-    if atom_name_field[0].isspace() or atom_name_field[0].isdigit():
-        candidate = next(
-            (character for character in atom_name_field[1:] if character.isalpha()),
-            "",
-        ).upper()
+    if len(atom_name_field) != 4:
+        return None
+    if atom_name_field[0] == " " and atom_name_field[1].isalpha():
+        candidate = atom_name_field[1].upper()
+    elif atom_name_field[0].isdigit() and atom_name_field[1].isalpha():
+        candidate = atom_name_field[1].upper()
+    elif not (
+        atom_name_field[0].isalpha() and atom_name_field[1].isalpha()
+    ):
+        return None
     elif (
         record_name == "ATOM  "
         and residue_name in _STANDARD_POLYMER_RESIDUES
-        and atom_name_field[0].upper() in {"C", "H", "N", "O", "P", "S"}
+        and atom_name_field[:2].upper() == "CA"
     ):
-        candidate = atom_name_field[0].upper()
+        candidate = "C"
+    elif (
+        record_name == "ATOM  "
+        and residue_name == "SEC"
+        and atom_name_field[:2].upper() == "SE"
+    ):
+        candidate = "Se"
     else:
-        letters = "".join(
-            character for character in atom_name_field[:2] if character.isalpha()
-        )
-        candidate = letters[:1].upper() + letters[1:].lower()
+        candidate = atom_name_field[0].upper() + atom_name_field[1].lower()
     return candidate if candidate in _ELEMENT_SYMBOLS else None
 
 
@@ -329,7 +351,7 @@ def _parse_ter(line, raw_line, record_index, model_number, segment_index, issues
     )
 
 
-def _parse_conect(line, raw_line, record_index, issues):
+def _parse_conect(line, raw_line, record_index, model_number, issues):
     if len(line) < 11:
         issues.append(
             _issue(
@@ -356,7 +378,13 @@ def _parse_conect(line, raw_line, record_index, issues):
             )
         )
         return None
-    return PDBConectRecord(raw_line, record_index + 1, serials[0], serials[1:])
+    return PDBConectRecord(
+        raw_line,
+        record_index + 1,
+        serials[0],
+        serials[1:],
+        model_number,
+    )
 
 
 def _parse_cryst1(line, raw_line, record_index, issues):
@@ -400,7 +428,26 @@ def _parse_cryst1(line, raw_line, record_index, issues):
             )
         )
         return None
-    space_group = line[55:66].strip()
+    alpha, beta, gamma = (math.radians(value) for value in values[3:])
+    volume_factor = (
+        1
+        - math.cos(alpha) ** 2
+        - math.cos(beta) ** 2
+        - math.cos(gamma) ** 2
+        + 2 * math.cos(alpha) * math.cos(beta) * math.cos(gamma)
+    )
+    if volume_factor <= 1e-12:
+        issues.append(
+            _issue(
+                IssueKind.INVALID,
+                record_index,
+                "cell",
+                "CRYST1 angles do not define a positive-volume triclinic cell",
+            )
+        )
+        return None
+    space_group_field = line[55:66]
+    space_group = space_group_field.strip()
     if not space_group:
         issues.append(
             _issue(
@@ -410,57 +457,144 @@ def _parse_cryst1(line, raw_line, record_index, issues):
                 "CRYST1 declared space group is blank",
             )
         )
+    elif _SPACE_GROUP_PATTERN.fullmatch(space_group) is None:
+        issues.append(
+            _issue(
+                IssueKind.INVALID,
+                record_index,
+                "space_group",
+                "CRYST1 space group is outside the Hermann-Mauguin lexical envelope",
+            )
+        )
+    if z_value is None:
+        issues.append(
+            _issue(
+                IssueKind.MISSING,
+                record_index,
+                "z_value",
+                "CRYST1 Z value is blank",
+            )
+        )
+    elif z_value <= 0:
+        issues.append(
+            _issue(
+                IssueKind.INVALID,
+                record_index,
+                "z_value",
+                "CRYST1 Z value must be positive",
+            )
+        )
     return PDBCryst1Record(
-        raw_line,
-        record_index + 1,
-        *values,
-        space_group,
-        z_value,
+        raw_line=raw_line,
+        line_number=record_index + 1,
+        a=values[0],
+        b=values[1],
+        c=values[2],
+        alpha=values[3],
+        beta=values[4],
+        gamma=values[5],
+        space_group_field=space_group_field,
+        declared_space_group=space_group,
+        z_value=z_value,
     )
 
 
 def _resolve_bonds(atoms, records, issues):
-    indices_by_serial = defaultdict(list)
+    indices_by_key = defaultdict(list)
     for index, atom in enumerate(atoms):
-        indices_by_serial[atom.serial].append(index)
-    directional = Counter(
-        (record.source_serial, target)
-        for record in records
-        for target in record.target_serials
-        if target != record.source_serial
+        indices_by_key[atom.model_number, atom.serial].append(index)
+    model_numbers = tuple(sorted({atom.model_number for atom in atoms})) or (1,)
+    unique_records = tuple(
+        {
+            (record.model_number, record.source_serial, record.target_serials): record
+            for record in records
+        }.values()
     )
-    pairs = sorted(
-        {tuple(sorted((source, target))) for source, target in directional}
-    )
-    bonds = []
-    for first, second in pairs:
-        forward = directional[first, second]
-        reverse = directional[second, first]
-        order = forward if forward and forward == reverse else None
-        if order is None:
-            issues.append(
-                ParserIssue(
-                    IssueKind.AMBIGUOUS,
-                    f"bond[{first},{second}].order",
-                    "CONECT establishes connectivity but not unambiguous bond order",
-                )
-            )
-        first_indices = indices_by_serial[first]
-        second_indices = indices_by_serial[second]
-        atom_indices = (
-            (first_indices[0], second_indices[0])
-            if len(first_indices) == len(second_indices) == 1
-            else None
+    directional = defaultdict(set)
+    pair_models = defaultdict(set)
+    for record in unique_records:
+        target_counts = Counter(record.target_serials)
+        scopes = (
+            model_numbers
+            if record.model_number is None
+            else (record.model_number,)
         )
-        if atom_indices is None:
-            issues.append(
-                ParserIssue(
-                    IssueKind.INVALID,
-                    f"bond[{first},{second}].atom_references",
-                    "CONECT serials must each resolve to exactly one parsed atom",
+        for target, count in target_counts.items():
+            if target == record.source_serial:
+                for model_number in scopes:
+                    issues.append(
+                        ParserIssue(
+                            IssueKind.INVALID,
+                            (
+                                f"bond[model={model_number},"
+                                f"{record.source_serial},{target}].self_reference"
+                            ),
+                            "CONECT self-reference is invalid",
+                        )
+                    )
+                continue
+            directional[
+                record.model_number,
+                record.source_serial,
+                target,
+            ].add(count)
+            pair = tuple(sorted((record.source_serial, target)))
+            pair_models[pair].update(scopes)
+
+    bonds = []
+    for (first, second), scopes in sorted(pair_models.items()):
+        for model_number in sorted(scopes):
+            first_indices = indices_by_key[model_number, first]
+            second_indices = indices_by_key[model_number, second]
+            if len(first_indices) != 1 or len(second_indices) != 1:
+                issues.append(
+                    ParserIssue(
+                        IssueKind.INVALID,
+                        (
+                            f"bond[model={model_number},"
+                            f"{first},{second}].atom_references"
+                        ),
+                        (
+                            "CONECT serials must each resolve to exactly one "
+                            "atom in the same model"
+                        ),
+                    )
+                )
+                continue
+            forward = (
+                directional[None, first, second]
+                | directional[model_number, first, second]
+            )
+            reverse = (
+                directional[None, second, first]
+                | directional[model_number, second, first]
+            )
+            order = (
+                next(iter(forward))
+                if len(forward) == len(reverse) == 1
+                and forward == reverse
+                and next(iter(forward)) > 1
+                else None
+            )
+            if order is None:
+                issues.append(
+                    ParserIssue(
+                        IssueKind.AMBIGUOUS,
+                        f"bond[model={model_number},{first},{second}].order",
+                        (
+                            "CONECT establishes connectivity but not "
+                            "unambiguous bond order"
+                        ),
+                    )
+                )
+            bonds.append(
+                PDBBond(
+                    model_number,
+                    (first, second),
+                    (first_indices[0], second_indices[0]),
+                    order,
                 )
             )
-        bonds.append(PDBBond((first, second), atom_indices, order))
     return tuple(bonds)
 
 
@@ -536,19 +670,26 @@ def parse_pdb_records(raw_source, *, validation_mode="balanced"):
             else:
                 active_model = None
         elif record_name == "TER   ":
+            current_segment = segment_indices[model_number]
             ter = _parse_ter(
                 line,
                 raw_line,
                 record_index,
                 model_number,
-                segment_indices[model_number],
+                current_segment,
                 issues,
             )
             if ter is not None:
                 ters.append(ter)
-                segment_indices[model_number] += 1
+            segment_indices[model_number] = current_segment + 1
         elif record_name == "CONECT":
-            conect = _parse_conect(line, raw_line, record_index, issues)
+            conect = _parse_conect(
+                line,
+                raw_line,
+                record_index,
+                active_model,
+                issues,
+            )
             if conect is not None:
                 conect_records.append(conect)
         elif record_name == "CRYST1":
@@ -590,14 +731,30 @@ def parse_pdb_records(raw_source, *, validation_mode="balanced"):
 
 
 def sniff_pdb(source: Path, prefix: bytes) -> SniffResult:
-    del source
     try:
         parsed = parse_pdb_records(prefix)
     except (PDBSyntaxError, TypeError, ValueError):
         return SniffResult(SniffMatch.NONE, "content is not fixed-column PDB")
-    if parsed.atoms or parsed.cryst1 is not None:
-        return SniffResult(SniffMatch.EXACT, "valid fixed-column PDB records")
-    return SniffResult(SniffMatch.NONE, "missing valid PDB coordinate or CRYST1 record")
+    if not parsed.atoms and parsed.cryst1 is None:
+        return SniffResult(
+            SniffMatch.NONE,
+            "missing valid PDB coordinate or CRYST1 record",
+        )
+    try:
+        truncated = Path(source).stat().st_size > len(prefix)
+    except OSError:
+        truncated = True
+    if truncated:
+        return SniffResult(
+            SniffMatch.PROBABLE,
+            "valid fixed-column PDB prefix is truncated",
+        )
+    if parsed.issues:
+        return SniffResult(
+            SniffMatch.PROBABLE,
+            "fixed-column PDB content has recoverable syntax issues",
+        )
+    return SniffResult(SniffMatch.EXACT, "complete fixed-column PDB content")
 
 
 __all__ = (
