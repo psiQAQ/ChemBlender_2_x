@@ -9,21 +9,32 @@ import numpy
 from ChemBlender.core import (
     BiologicalHierarchy,
     CapabilitySupport,
+    close_project,
     DatasetStatus,
     FrameSet,
+    open_project,
     QCProject,
     QualityStatus,
     ReaderNotFoundError,
+    save_project,
     SniffMatch,
     TopologySource,
     unit_cell_parameters,
 )
 from ChemBlender.core.formats import pdb
+from ChemBlender.core.model.project import validate_project_graph
 from ChemBlender.core.reader_catalog import (
     builtin_reader_descriptors,
     builtin_reader_registry,
 )
-from ChemBlender.reader_api import ParseRequest, builtin_reader_plugin_registry
+from ChemBlender.reader_api import (
+    internal_batch_from_public,
+    ParseRequest,
+    public_batch_document,
+    public_batch_from_document,
+    public_batch_from_internal,
+    builtin_reader_plugin_registry,
+)
 from ChemBlender.reader_api.conformance import (
     ReaderConformanceCase,
     run_reader_conformance,
@@ -198,6 +209,53 @@ class PDBReaderTests(unittest.TestCase):
             tuple(value.id for value in repeated.structures + repeated.datasets),
         )
 
+    def test_repeated_model_numbers_keep_frames_and_topologies_occurrence_scoped(self):
+        raw = b"\n".join(
+            (
+                model_line(1),
+                atom_line(1, b" N  ", x=1.0, element=b"N"),
+                atom_line(2, b" CA ", x=2.0),
+                conect_line(1, 2),
+                b"ENDMDL",
+                model_line(1),
+                atom_line(2, b" CA ", x=20.0),
+                atom_line(1, b" N  ", x=10.0, element=b"N"),
+                conect_line(1, 2),
+                b"ENDMDL",
+                b"",
+            )
+        )
+
+        batch = parse_bytes(raw)
+
+        self.assertEqual(len(batch.structures), 1)
+        frames = [value for value in batch.datasets if isinstance(value, FrameSet)]
+        self.assertEqual(len(frames), 1)
+        self.assertEqual(frames[0].comments, ("MODEL 1", "MODEL 1"))
+        self.assertEqual(
+            numpy.asarray(frames[0].data.values)[:, :, 0].tolist(),
+            [[1.0, 2.0], [10.0, 20.0]],
+        )
+        self.assertEqual(len(batch.topologies), 2)
+        self.assertEqual(
+            tuple(
+                (
+                    dict(topology.inference_parameters)["model_number"],
+                    dict(topology.inference_parameters)["model_occurrence"],
+                    numpy.asarray(topology.bond_indices.values).tolist(),
+                )
+                for topology in batch.topologies
+            ),
+            ((1, 1, [[0, 1]]), (1, 2, [[0, 1]])),
+        )
+        self.assertTrue(
+            any(
+                issue.kind.value == "ambiguous"
+                and issue.path == "record[5].model"
+                for issue in batch.report.issues
+            )
+        )
+
     def test_missing_different_and_duplicate_identity_split_models_with_diagnostics(self):
         raw = b"\n".join(
             (
@@ -317,6 +375,58 @@ class PDBReaderTests(unittest.TestCase):
             ([[0, 1]], [[0, 1]]),
         )
 
+    def test_duplicate_identity_conect_recovers_by_source_atom_index(self):
+        raw = b"\n".join(
+            (
+                model_line(1),
+                atom_line(1, b" N  ", element=b"N"),
+                atom_line(2, b" N  ", element=b"N"),
+                atom_line(3, b" CA "),
+                atom_line(4, b" CA "),
+                conect_line(1, 2, 1, 9),
+                b"ENDMDL",
+                b"",
+            )
+        )
+
+        batch = parse_bytes(raw)
+
+        self.assertEqual(len(batch.structures[0].atomic_numbers), 4)
+        self.assertEqual(len(batch.topologies), 1)
+        self.assertEqual(
+            numpy.asarray(batch.topologies[0].bond_indices.values).tolist(),
+            [[0, 1]],
+        )
+        duplicate = next(
+            issue
+            for issue in batch.report.issues
+            if issue.path == "model[1].identity"
+        )
+        self.assertEqual(
+            duplicate.message,
+            (
+                "duplicate seven-field atom identity prevents MODEL "
+                "alignment: duplicates=((('atom', 'A', 1, '', 'GLY', "
+                "'CA', ''), 2), (('atom', 'A', 1, '', 'GLY', 'N', ''), "
+                "2))"
+            ),
+        )
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "duplicate-conect.pdb"
+            source.write_bytes(raw)
+            request = ParseRequest(
+                source,
+                hashlib.sha256(raw).hexdigest(),
+                "strict",
+                {},
+                root,
+                lambda _event: None,
+                lambda: False,
+            )
+            with self.assertRaises((pdb.PDBSyntaxError, ValueError)):
+                pdb.parse_pdb_request(request)
+
     def test_missing_occupancy_and_b_factor_are_nan_partial_properties(self):
         raw = b"\n".join(
             (
@@ -334,6 +444,103 @@ class PDBReaderTests(unittest.TestCase):
             self.assertTrue(numpy.isfinite(values[0]))
             self.assertTrue(numpy.isnan(values[1]))
             self.assertIs(datasets[role].status, DatasetStatus.PARTIAL)
+
+    def test_occupancy_bounds_and_missing_are_partial_with_or_without_cryst1(self):
+        zero = parse_bytes(atom_line(1, b" C0 ", occupancy=0.0) + b"\n")
+        zero_occupancy = next(
+            value
+            for value in zero.datasets
+            if value.semantic_role == "occupancy"
+        )
+        self.assertEqual(
+            numpy.asarray(zero_occupancy.data.values).tolist(),
+            [0.0],
+        )
+        self.assertIs(zero_occupancy.status, DatasetStatus.COMPLETE)
+
+        atom_records = b"\n".join(
+            (
+                atom_line(1, b" C1 ", occupancy=-0.1),
+                atom_line(2, b" C2 ", occupancy=0.0),
+                atom_line(3, b" C3 ", occupancy=1.0),
+                atom_line(4, b" C4 ", occupancy=None),
+                atom_line(5, b" C5 ", occupancy=1.1),
+                b"",
+            )
+        )
+
+        for with_cryst1 in (False, True):
+            with self.subTest(with_cryst1=with_cryst1):
+                raw = atom_records
+                if with_cryst1:
+                    raw = (FIXTURES / "cryst1.pdb").read_bytes() + raw
+                batch = parse_bytes(raw)
+                occupancy = next(
+                    value
+                    for value in batch.datasets
+                    if value.semantic_role == "occupancy"
+                )
+                values = numpy.asarray(occupancy.data.values)
+                self.assertTrue(numpy.isnan(values[0]))
+                self.assertEqual(values[1:3].tolist(), [0.0, 1.0])
+                self.assertTrue(numpy.isnan(values[3]))
+                self.assertTrue(numpy.isnan(values[4]))
+                self.assertIs(occupancy.status, DatasetStatus.PARTIAL)
+                self.assertEqual(
+                    sum(
+                        issue.kind.value == "invalid"
+                        and issue.path.endswith(".occupancy")
+                        for issue in batch.report.issues
+                    ),
+                    2,
+                )
+                if with_cryst1:
+                    periodic = numpy.asarray(
+                        batch.structures[0].periodic.occupancies.values
+                    )
+                    numpy.testing.assert_equal(periodic, values)
+
+    def test_nonpositive_atom_serials_are_skipped_balanced_and_rejected_strict(self):
+        raw = b"\n".join(
+            (
+                atom_line(0, b" C0 "),
+                atom_line(-1, b" CN "),
+                atom_line(1, b" C1 "),
+                b"",
+            )
+        )
+
+        batch = parse_bytes(raw)
+
+        self.assertEqual(
+            numpy.asarray(
+                batch.biological_hierarchies[0].atom_sites.serial_numbers.values
+            ).tolist(),
+            [1],
+        )
+        self.assertEqual(
+            tuple(
+                issue.path
+                for issue in batch.report.issues
+                if issue.path.endswith(".serial")
+            ),
+            ("record[0].serial", "record[1].serial"),
+        )
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "invalid-serial.pdb"
+            source.write_bytes(raw)
+            request = ParseRequest(
+                source,
+                hashlib.sha256(raw).hexdigest(),
+                "strict",
+                {},
+                root,
+                lambda _event: None,
+                lambda: False,
+            )
+            with self.assertRaisesRegex(pdb.PDBSyntaxError, "invalid records"):
+                pdb.parse_pdb_request(request)
 
     def test_cryst1_uses_existing_cell_periodic_and_source_metadata(self):
         raw = (
@@ -499,6 +706,78 @@ class PDBReaderTests(unittest.TestCase):
         )
 
         self.assertTrue(result.passed, result.as_dict())
+
+    def test_multimodel_periodic_batch_round_trips_sidecar_and_canonical_document(self):
+        raw = (FIXTURES / "cryst1.pdb").read_bytes() + b"\n".join(
+            (
+                model_line(1),
+                atom_line(
+                    1,
+                    b" N  ",
+                    x=1.0,
+                    occupancy=None,
+                    b_factor=None,
+                    element=b"N",
+                ),
+                atom_line(2, b" CA ", x=2.0),
+                conect_line(1, 2),
+                b"ENDMDL",
+                model_line(2),
+                atom_line(20, b" CA ", x=20.0),
+                atom_line(
+                    10,
+                    b" N  ",
+                    x=10.0,
+                    occupancy=None,
+                    b_factor=None,
+                    element=b"N",
+                ),
+                conect_line(10, 20),
+                b"ENDMDL",
+                b"",
+            )
+        )
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "roundtrip.pdb"
+            source.write_bytes(raw)
+            batch = pdb.parse_pdb(source)
+
+            project = QCProject(uuid4(), "1.0")
+            project.commit(batch)
+            validate_project_graph(project)
+            restored = open_project(
+                save_project(root / "roundtrip.cbq", project)
+            )
+            try:
+                validate_project_graph(restored)
+                revision = next(iter(restored.source_revisions.values()))
+                self.assertEqual(
+                    revision.created_entity_ids,
+                    batch.report.created_entity_ids,
+                )
+                self.assertEqual(len(restored.structures), 1)
+                self.assertEqual(len(restored.topologies), 2)
+                self.assertEqual(len(restored.biological_hierarchies), 1)
+                self.assertEqual(len(restored.datasets), 3)
+            finally:
+                close_project(restored)
+
+            canonical_root = root / "canonical"
+            canonical_root.mkdir()
+            public = public_batch_from_internal(batch)
+            document = public_batch_document(public, canonical_root)
+            restored_batch = internal_batch_from_public(
+                public_batch_from_document(document, canonical_root)
+            )
+            canonical_project = QCProject(uuid4(), "1.0")
+            canonical_project.commit(restored_batch)
+            validate_project_graph(canonical_project)
+            self.assertEqual(
+                restored_batch.report.created_entity_ids,
+                batch.report.created_entity_ids,
+            )
 
 
 if __name__ == "__main__":

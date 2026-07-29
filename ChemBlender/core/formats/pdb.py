@@ -135,6 +135,7 @@ class PDBAtomRecord:
     formal_charge: int | None
     element_inferred: bool
     model_number: int
+    model_occurrence: int
     segment_index: int
 
 
@@ -148,6 +149,7 @@ class PDBTerRecord:
     residue_number: int | None
     insertion_code: str
     model_number: int
+    model_occurrence: int
     segment_index: int
 
 
@@ -158,11 +160,13 @@ class PDBConectRecord:
     source_serial: int
     target_serials: tuple[int, ...]
     model_number: int | None
+    model_occurrence: int | None
 
 
 @dataclass(frozen=True, slots=True)
 class PDBBond:
     model_number: int
+    model_occurrence: int
     atom_serials: tuple[int, int]
     atom_indices: tuple[int, int] | None
     order: int | None
@@ -276,7 +280,15 @@ def _formal_charge(field):
     return magnitude if text[1] == "+" else -magnitude
 
 
-def _parse_atom(line, raw_line, record_index, model_number, segment_index, issues):
+def _parse_atom(
+    line,
+    raw_line,
+    record_index,
+    model_number,
+    model_occurrence,
+    segment_index,
+    issues,
+):
     if len(line) < 54:
         issues.append(
             _issue(
@@ -303,6 +315,26 @@ def _parse_atom(line, raw_line, record_index, model_number, segment_index, issue
     except PDBSyntaxError as error:
         issues.append(_issue(IssueKind.INVALID, record_index, "syntax", str(error)))
         return None
+    if serial <= 0:
+        issues.append(
+            _issue(
+                IssueKind.INVALID,
+                record_index,
+                "serial",
+                "atom serial must be positive",
+            )
+        )
+        return None
+    if occupancy is not None and not 0.0 <= occupancy <= 1.0:
+        issues.append(
+            _issue(
+                IssueKind.INVALID,
+                record_index,
+                "occupancy",
+                "occupancy must be between 0 and 1 or blank",
+            )
+        )
+        occupancy = None
 
     atom_name_field = line[12:16]
     residue_name = line[17:20].strip()
@@ -367,11 +399,20 @@ def _parse_atom(line, raw_line, record_index, model_number, segment_index, issue
         formal_charge=formal_charge,
         element_inferred=inferred,
         model_number=model_number,
+        model_occurrence=model_occurrence,
         segment_index=segment_index,
     )
 
 
-def _parse_ter(line, raw_line, record_index, model_number, segment_index, issues):
+def _parse_ter(
+    line,
+    raw_line,
+    record_index,
+    model_number,
+    model_occurrence,
+    segment_index,
+    issues,
+):
     if len(line) < 26:
         issues.append(
             _issue(
@@ -401,11 +442,19 @@ def _parse_ter(line, raw_line, record_index, model_number, segment_index, issues
         residue_number,
         line[26:27].strip(),
         model_number,
+        model_occurrence,
         segment_index,
     )
 
 
-def _parse_conect(line, raw_line, record_index, model_number, issues):
+def _parse_conect(
+    line,
+    raw_line,
+    record_index,
+    model_number,
+    model_occurrence,
+    issues,
+):
     if len(line) < 11:
         issues.append(
             _issue(
@@ -438,6 +487,7 @@ def _parse_conect(line, raw_line, record_index, model_number, issues):
         serials[0],
         serials[1:],
         model_number,
+        model_occurrence,
     )
 
 
@@ -556,26 +606,47 @@ def _parse_cryst1(line, raw_line, record_index, issues):
 def _resolve_bonds(atoms, records, issues):
     indices_by_key = defaultdict(list)
     for index, atom in enumerate(atoms):
-        indices_by_key[atom.model_number, atom.serial].append(index)
-    model_numbers = tuple(sorted({atom.model_number for atom in atoms})) or (1,)
+        indices_by_key[atom.model_occurrence, atom.serial].append(index)
+    occurrence_numbers = {
+        atom.model_occurrence: atom.model_number for atom in atoms
+    }
+    for record in records:
+        if (
+            record.model_occurrence is not None
+            and record.model_number is not None
+        ):
+            occurrence_numbers.setdefault(
+                record.model_occurrence,
+                record.model_number,
+            )
+    if not occurrence_numbers:
+        occurrence_numbers[0] = 1
     unique_records = tuple(
         {
-            (record.model_number, record.source_serial, record.target_serials): record
+            (
+                record.model_occurrence,
+                record.source_serial,
+                record.target_serials,
+            ): record
             for record in records
         }.values()
     )
     directional = defaultdict(set)
-    pair_models = defaultdict(set)
+    pair_occurrences = defaultdict(set)
     for record in unique_records:
         target_counts = Counter(record.target_serials)
         scopes = (
-            model_numbers
-            if record.model_number is None
-            else (record.model_number,)
+            tuple(sorted(occurrence_numbers))
+            if record.model_occurrence is None
+            else (record.model_occurrence,)
         )
         for target, count in target_counts.items():
             if target == record.source_serial:
-                for model_number in scopes:
+                for model_occurrence in scopes:
+                    model_number = occurrence_numbers.get(
+                        model_occurrence,
+                        record.model_number,
+                    )
                     issues.append(
                         ParserIssue(
                             IssueKind.INVALID,
@@ -588,18 +659,19 @@ def _resolve_bonds(atoms, records, issues):
                     )
                 continue
             directional[
-                record.model_number,
+                record.model_occurrence,
                 record.source_serial,
                 target,
             ].add(count)
             pair = tuple(sorted((record.source_serial, target)))
-            pair_models[pair].update(scopes)
+            pair_occurrences[pair].update(scopes)
 
     bonds = []
-    for (first, second), scopes in sorted(pair_models.items()):
-        for model_number in sorted(scopes):
-            first_indices = indices_by_key[model_number, first]
-            second_indices = indices_by_key[model_number, second]
+    for (first, second), scopes in sorted(pair_occurrences.items()):
+        for model_occurrence in sorted(scopes):
+            model_number = occurrence_numbers.get(model_occurrence, 1)
+            first_indices = indices_by_key[model_occurrence, first]
+            second_indices = indices_by_key[model_occurrence, second]
             if len(first_indices) != 1 or len(second_indices) != 1:
                 issues.append(
                     ParserIssue(
@@ -617,11 +689,11 @@ def _resolve_bonds(atoms, records, issues):
                 continue
             forward = (
                 directional[None, first, second]
-                | directional[model_number, first, second]
+                | directional[model_occurrence, first, second]
             )
             reverse = (
                 directional[None, second, first]
-                | directional[model_number, second, first]
+                | directional[model_occurrence, second, first]
             )
             order = (
                 next(iter(forward))
@@ -644,6 +716,7 @@ def _resolve_bonds(atoms, records, issues):
             bonds.append(
                 PDBBond(
                     model_number,
+                    model_occurrence,
                     (first, second),
                     (first_indices[0], second_indices[0]),
                     order,
@@ -665,6 +738,9 @@ def parse_pdb_records(raw_source, *, validation_mode="balanced"):
     issues = []
     cryst1 = None
     active_model = None
+    active_occurrence = None
+    next_occurrence = 0
+    seen_model_numbers = set()
     segment_indices = defaultdict(int)
     raw_lines = raw_source.splitlines(keepends=True)
 
@@ -683,13 +759,15 @@ def parse_pdb_records(raw_source, *, validation_mode="balanced"):
             continue
         record_name = line[:6]
         model_number = 1 if active_model is None else active_model
+        model_occurrence = 0 if active_occurrence is None else active_occurrence
         if record_name in {"ATOM  ", "HETATM"}:
             atom = _parse_atom(
                 line,
                 raw_line,
                 record_index,
                 model_number,
-                segment_indices[model_number],
+                model_occurrence,
+                segment_indices[model_occurrence],
                 issues,
             )
             if atom is not None:
@@ -709,8 +787,24 @@ def parse_pdb_records(raw_source, *, validation_mode="balanced"):
                         f"nested MODEL replaced unclosed model {active_model}",
                     )
                 )
+            next_occurrence += 1
+            if new_model in seen_model_numbers:
+                issues.append(
+                    _issue(
+                        IssueKind.AMBIGUOUS,
+                        record_index,
+                        "model",
+                        (
+                            f"MODEL serial {new_model} is repeated in "
+                            f"occurrence {next_occurrence}; source blocks "
+                            "remain distinct"
+                        ),
+                    )
+                )
+            seen_model_numbers.add(new_model)
             active_model = new_model
-            segment_indices[new_model] = 0
+            active_occurrence = next_occurrence
+            segment_indices[active_occurrence] = 0
         elif record_name == "ENDMDL":
             if active_model is None:
                 issues.append(
@@ -723,25 +817,28 @@ def parse_pdb_records(raw_source, *, validation_mode="balanced"):
                 )
             else:
                 active_model = None
+                active_occurrence = None
         elif record_name == "TER   ":
-            current_segment = segment_indices[model_number]
+            current_segment = segment_indices[model_occurrence]
             ter = _parse_ter(
                 line,
                 raw_line,
                 record_index,
                 model_number,
+                model_occurrence,
                 current_segment,
                 issues,
             )
             if ter is not None:
                 ters.append(ter)
-            segment_indices[model_number] = current_segment + 1
+            segment_indices[model_occurrence] = current_segment + 1
         elif record_name == "CONECT":
             conect = _parse_conect(
                 line,
                 raw_line,
                 record_index,
                 active_model,
+                active_occurrence,
                 issues,
             )
             if conect is not None:
@@ -917,28 +1014,41 @@ def _topologies(
     source_hash,
     provenance_id,
     group,
-    bonds_by_model,
+    bonds_by_occurrence,
 ):
     import numpy
 
     reference = group[0]
-    reference_indices = {
+    reference_indices_by_global = {
+        global_index: index
+        for index, (global_index, _atom) in enumerate(reference["atoms"])
+    }
+    reference_indices_by_identity = {
         _atom_identity(atom): index
         for index, (_global_index, atom) in enumerate(reference["atoms"])
     }
     result = []
     for model in group:
         model_number = model["number"]
+        model_occurrence = model["occurrence"]
         edges = {}
         atoms_by_global = dict(model["atoms"])
-        for bond in bonds_by_model[model_number]:
+        for bond in bonds_by_occurrence[model_occurrence]:
             if bond.atom_indices is None:
                 continue
             try:
-                endpoints = tuple(
-                    reference_indices[_atom_identity(atoms_by_global[index])]
-                    for index in bond.atom_indices
-                )
+                if model_occurrence == reference["occurrence"]:
+                    endpoints = tuple(
+                        reference_indices_by_global[index]
+                        for index in bond.atom_indices
+                    )
+                else:
+                    endpoints = tuple(
+                        reference_indices_by_identity[
+                            _atom_identity(atoms_by_global[index])
+                        ]
+                        for index in bond.atom_indices
+                    )
             except KeyError:
                 continue
             edge = tuple(sorted(endpoints))
@@ -949,7 +1059,13 @@ def _topologies(
             continue
         ordered = tuple(sorted(edges.items()))
         topology = TopologyRecord(
-            id=uuid5(structure_id, f"topology:model:{model_number}"),
+            id=uuid5(
+                structure_id,
+                (
+                    f"topology:model:{model_number}:"
+                    f"occurrence:{model_occurrence}"
+                ),
+            ),
             revision=source_hash,
             structure_id=structure_id,
             bond_indices=ArrayData(
@@ -973,7 +1089,10 @@ def _topologies(
                 if any(order == 0.0 for _edge, order in ordered)
                 else QualityStatus.COMPLETE
             ),
-            inference_parameters=(("model_number", model_number),),
+            inference_parameters=(
+                ("model_number", model_number),
+                ("model_occurrence", model_occurrence),
+            ),
             provenance_ids=(provenance_id,),
         )
         result.append(topology)
@@ -1085,11 +1204,12 @@ def _property(
 def _groups(atoms, issues):
     models = {}
     for global_index, atom in enumerate(atoms):
-        models.setdefault(atom.model_number, []).append((global_index, atom))
+        models.setdefault(atom.model_occurrence, []).append((global_index, atom))
     groups = []
     compatible = {}
     baseline_identities = None
-    for model_number, model_atoms in models.items():
+    for model_occurrence, model_atoms in models.items():
+        model_number = model_atoms[0][1].model_number
         if model_number <= 0:
             issues.append(
                 ParserIssue(
@@ -1099,20 +1219,23 @@ def _groups(atoms, issues):
                 )
             )
         identities = tuple(_atom_identity(atom) for _index, atom in model_atoms)
-        duplicates = tuple(
-            identity
+        duplicates = tuple(sorted(
+            (identity, count)
             for identity, count in Counter(identities).items()
             if count > 1
-        )
+        ))
         if duplicates:
             issues.append(
                 ParserIssue(
                     IssueKind.INVALID,
                     f"model[{model_number}].identity",
-                    "duplicate seven-field atom identity prevents MODEL alignment",
+                    (
+                        "duplicate seven-field atom identity prevents MODEL "
+                        f"alignment: duplicates={duplicates!r}"
+                    ),
                 )
             )
-            key = ("duplicate", model_number)
+            key = ("duplicate", model_occurrence)
         else:
             key = frozenset(identities)
         identity_set = frozenset(identities)
@@ -1139,7 +1262,11 @@ def _groups(atoms, issues):
             compatible[key] = group_index
             groups.append([])
         groups[group_index].append(
-            {"number": model_number, "atoms": tuple(model_atoms)}
+            {
+                "number": model_number,
+                "occurrence": model_occurrence,
+                "atoms": tuple(model_atoms),
+            }
         )
     return tuple(tuple(group) for group in groups)
 
@@ -1267,14 +1394,16 @@ def _parse_bytes(
     topologies = []
     hierarchies = []
     datasets = []
-    bonds_by_model = defaultdict(list)
+    bonds_by_occurrence = defaultdict(list)
     for bond in parsed.bonds:
-        bonds_by_model[bond.model_number].append(bond)
+        bonds_by_occurrence[bond.model_occurrence].append(bond)
     for group_index, group in enumerate(groups):
-        model_numbers = ",".join(str(model["number"]) for model in group)
+        model_occurrences = ",".join(
+            f"{model['occurrence']}:{model['number']}" for model in group
+        )
         structure_id = uuid5(
             source_revision_id,
-            f"pdb:structure:{group_index}:models:{model_numbers}",
+            f"pdb:structure:{group_index}:models:{model_occurrences}",
         )
         reference = group[0]
         reference_atoms = tuple(atom for _index, atom in reference["atoms"])
@@ -1283,7 +1412,7 @@ def _parse_bytes(
             source_hash,
             provenance_id,
             group,
-            bonds_by_model,
+            bonds_by_occurrence,
         )
         coordinates = _array(
             tuple(atom.coordinates for atom in reference_atoms),

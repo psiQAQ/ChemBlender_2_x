@@ -155,6 +155,59 @@ class PDBFixedColumnTests(unittest.TestCase):
         self.assertEqual(parsed.raw_source, raw)
         self.assertEqual(parsed.atoms[0].raw_line, raw)
 
+    def test_atom_serial_and_occupancy_are_validated_at_parse_boundary(self):
+        from ChemBlender.core.formats.pdb import PDBSyntaxError, parse_pdb_records
+
+        def with_occupancy(serial, name, occupancy):
+            line = bytearray(
+                atom_line(serial, name, element_field=b" C")
+            )
+            line[54:60] = (
+                b" " * 6
+                if occupancy is None
+                else f"{occupancy:6.2f}".encode()
+            )
+            return bytes(line)
+
+        raw = b"\n".join(
+            (
+                with_occupancy(0, b" C0 ", 1.0),
+                with_occupancy(-1, b" CN ", 1.0),
+                with_occupancy(1, b" C1 ", -0.1),
+                with_occupancy(2, b" C2 ", 0.0),
+                with_occupancy(3, b" C3 ", 1.0),
+                with_occupancy(4, b" C4 ", None),
+                with_occupancy(5, b" C5 ", 1.1),
+                b"",
+            )
+        )
+
+        parsed = parse_pdb_records(raw)
+
+        self.assertEqual(
+            tuple(atom.serial for atom in parsed.atoms),
+            (1, 2, 3, 4, 5),
+        )
+        self.assertEqual(
+            tuple(atom.occupancy for atom in parsed.atoms),
+            (None, 0.0, 1.0, None, None),
+        )
+        self.assertEqual(
+            tuple(
+                (issue.kind, issue.path)
+                for issue in parsed.issues
+                if issue.path.endswith((".serial", ".occupancy"))
+            ),
+            (
+                (IssueKind.INVALID, "record[0].serial"),
+                (IssueKind.INVALID, "record[1].serial"),
+                (IssueKind.INVALID, "record[2].occupancy"),
+                (IssueKind.INVALID, "record[6].occupancy"),
+            ),
+        )
+        with self.assertRaisesRegex(PDBSyntaxError, "invalid records"):
+            parse_pdb_records(raw, validation_mode="strict")
+
     def test_standard_residue_context_disambiguates_left_aligned_ca(self):
         from ChemBlender.core.formats.pdb import parse_pdb_records
 
@@ -422,6 +475,61 @@ class PDBModelAndSegmentTests(unittest.TestCase):
                 (IssueKind.INVALID, "record[7].model"),
                 (IssueKind.INVALID, "document.model"),
             ),
+        )
+
+    def test_repeated_model_numbers_keep_distinct_atom_and_bond_occurrences(self):
+        from ChemBlender.core.formats.pdb import parse_pdb_records
+
+        parsed = parse_pdb_records(
+            b"MODEL        1\n"
+            + atom_line(1, b" N  ", element_field=b" N")
+            + b"\n"
+            + atom_line(2, b" C  ", element_field=b" C")
+            + b"\n"
+            + conect_line(1, 2)
+            + b"\nENDMDL\nMODEL        1\n"
+            + atom_line(2, b" C  ", model_coordinate=1.0, element_field=b" C")
+            + b"\n"
+            + atom_line(1, b" N  ", model_coordinate=1.0, element_field=b" N")
+            + b"\n"
+            + conect_line(1, 2)
+            + b"\nENDMDL\n"
+        )
+
+        self.assertEqual(
+            tuple(
+                (
+                    atom.model_number,
+                    getattr(atom, "model_occurrence", None),
+                )
+                for atom in parsed.atoms
+            ),
+            ((1, 1), (1, 1), (1, 2), (1, 2)),
+        )
+        self.assertEqual(
+            tuple(
+                (
+                    bond.model_number,
+                    getattr(bond, "model_occurrence", None),
+                    bond.atom_indices,
+                )
+                for bond in parsed.bonds
+            ),
+            ((1, 1, (0, 1)), (1, 2, (3, 2))),
+        )
+        self.assertEqual(
+            tuple(
+                (
+                    record.model_number,
+                    record.model_occurrence,
+                )
+                for record in parsed.conect_records
+            ),
+            ((1, 1), (1, 2)),
+        )
+        self.assertIn(
+            (IssueKind.AMBIGUOUS, "record[5].model"),
+            tuple((issue.kind, issue.path) for issue in parsed.issues),
         )
 
 
