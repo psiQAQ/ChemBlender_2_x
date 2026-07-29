@@ -29,6 +29,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         entrypoints = (
             "docs/quantum-visualization/2.3.0/README.md",
             "docs/quantum-visualization/2.3.0/audits/2026-07-23-main-deep-audit.md",
+            "docs/quantum-visualization/crystal-capability-matrix-v1.json",
             "docs/superpowers/specs/2026-07-23-chemblender-2.3.0-native-platform-design.md",
             "docs/superpowers/plans/2026-07-23-chemblender-2.3.0-master-sequencing.md",
         )
