@@ -178,6 +178,42 @@ class PQRReaderTests(unittest.TestCase):
             ("CA", "CD", "FE", "CL", "BR", "1HG1"),
         )
 
+    def test_element_policy_matrix_keeps_polymer_and_ion_context_separate(self):
+        cases = (
+            ("ATOM", "CA", "ALA", "C"),
+            ("ATOM", "CD", "GLU", "C"),
+            ("ATOM", "FE", "ALA", None),
+            ("ATOM", "BR", "ALA", None),
+            ("ATOM", "FA", "ALA", None),
+            ("ATOM", "SE", "SEC", "Se"),
+            ("HETATM", "CA", "CA", "Ca"),
+            ("HETATM", "FE", "LIG", "Fe"),
+            ("HETATM", "CL", "LIG", "Cl"),
+            ("HETATM", "BR", "LIG", "Br"),
+            ("HETATM", "CA", "LIG", None),
+            ("ATOM", "1HG1", "ALA", "H"),
+        )
+        for record_name, atom_name, residue_name, expected in cases:
+            with self.subTest(
+                record_name=record_name,
+                atom_name=atom_name,
+                residue_name=residue_name,
+            ):
+                raw = (
+                    f"{record_name} 1 {atom_name} {residue_name} A 1 "
+                    "0 0 0 0 1.5\n"
+                ).encode("ascii")
+                parsed = pqr.parse_pqr_records(raw)
+                if expected is None:
+                    self.assertEqual(parsed.atoms, ())
+                    self.assertEqual(parsed.issues[0].path, "record[0].element")
+                    self.assertIn(atom_name, parsed.issues[0].message)
+                else:
+                    self.assertEqual(
+                        tuple(atom.element for atom in parsed.atoms),
+                        (expected,),
+                    )
+
     def test_balanced_isolates_invalid_rows_and_strict_rejects_them(self):
         raw = (FIXTURES / "malformed.pqr").read_bytes()
         parsed = pqr.parse_pqr_records(raw)

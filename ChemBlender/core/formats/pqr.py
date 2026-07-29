@@ -152,6 +152,7 @@ def _infer_pqr_element(atom_name, record_name, residue_name):
             return "Se"
         if token[0] in "CHNOPS":
             return token[0]
+        return None
     if len(token) == 1 and token in _ELEMENT_NUMBERS:
         return token
     if token in _EXPLICIT_TWO_LETTER_ELEMENTS:
