@@ -119,14 +119,19 @@ def _property(
     if (
         not isinstance(value.data, ArrayData)
         or value.data.dims != ("atom",)
-        or value.data.shape != (len(structure.atomic_numbers),)
     ):
         issues.add(f"{token}.shape")
         return
     if value.data.unit != unit:
         issues.add(f"{token}.unit")
     values = numpy.asarray(value.data.values)
-    if numpy.dtype(value.data.dtype).kind not in "iuf":
+    if values.shape != (len(structure.atomic_numbers),):
+        issues.add(f"{token}.shape")
+        return
+    if (
+        numpy.dtype(value.data.dtype).kind not in "iuf"
+        or values.dtype.kind not in "iuf"
+    ):
         issues.add(f"{token}.values")
         return
     finite = numpy.isfinite(values)
@@ -256,9 +261,14 @@ def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
     coordinates = numpy.asarray(structure.coordinates.values)
     if structure.coordinates.unit != "angstrom":
         issues.add("coordinates.unit")
-    if numpy.dtype(structure.coordinates.dtype).kind not in "iuf" or not numpy.all(
-        numpy.isfinite(coordinates)
+    if coordinates.shape != (atom_count, 3):
+        issues.add("coordinates.shape")
+    elif (
+        numpy.dtype(structure.coordinates.dtype).kind not in "iuf"
+        or coordinates.dtype.kind not in "iuf"
     ):
+        issues.add("coordinates.values")
+    elif not numpy.all(numpy.isfinite(coordinates)):
         issues.add("coordinates.values")
     elif not _fits(coordinates.flat, 8, 3):
         issues.add("coordinates.overflow")
@@ -286,14 +296,18 @@ def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
         if (
             frames.status is not DatasetStatus.COMPLETE
             or frames.data.unit != "angstrom"
-            or frames.data.shape[1:] != (len(structure.atomic_numbers), 3)
+            or frames.data.dims != ("frame", "atom", "xyz")
+            or values.ndim != 3
+            or values.shape[0] == 0
+            or values.shape[1:] != (atom_count, 3)
             or numpy.dtype(frames.data.dtype).kind not in "iuf"
+            or values.dtype.kind not in "iuf"
             or not numpy.all(numpy.isfinite(values))
         ):
             issues.add("dataset.coordinates.invalid")
         elif not _fits(values.flat, 8, 3):
             issues.add("coordinates.overflow")
-        if frames.data.shape[0] > 9999:
+        if values.ndim == 3 and values.shape[0] > 9999:
             issues.add("model.overflow")
 
     if pqr:

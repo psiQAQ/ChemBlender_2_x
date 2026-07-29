@@ -1,3 +1,4 @@
+from collections import Counter
 from dataclasses import dataclass
 from hashlib import sha256
 import json
@@ -9,6 +10,7 @@ from ..core import (
     ArrayData,
     AtomicProperty,
     BiologicalHierarchy,
+    CategoricalData,
     DatasetStatus,
     Structure,
     TopologyRecord,
@@ -122,11 +124,56 @@ def _categorical(values):
 
 
 def _unique_labels(values, prefixes):
-    counts = {value: values.count(value) for value in set(values)}
-    return tuple(
+    counts = Counter(values)
+    labels = tuple(
         value if counts[value] == 1 else f"{prefix}:{value}"
         for value, prefix in zip(values, prefixes)
     )
+    label_counts = Counter(labels)
+    return tuple(
+        label if label_counts[label] == 1 else f"{label} [{index}]"
+        for index, label in enumerate(labels)
+    )
+
+
+def _live_integer_atom_values(data, atom_count, label):
+    import numpy
+
+    if (
+        not isinstance(data, ArrayData)
+        or data.dims != ("atom",)
+        or data.unit != "dimensionless"
+    ):
+        raise ValueError(f"{label} must be a dimensionless atom array")
+    try:
+        values = numpy.asarray(data.values)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"{label} values are invalid") from error
+    if values.shape != (atom_count,) or values.dtype.kind not in "iu":
+        raise ValueError(f"{label} must be an integer atom array")
+    return values
+
+
+def _live_categorical_codes(data, atom_count, label, *, allow_missing):
+    import numpy
+
+    if not isinstance(data, CategoricalData):
+        raise ValueError(f"{label} must be categorical")
+    codes = _live_integer_atom_values(data.codes, atom_count, f"{label} codes")
+    categories = tuple(data.categories)
+    if (
+        any(type(value) is not str for value in categories)
+        or len(categories) != len(set(categories))
+        or type(data.missing_code) is not int
+        or 0 <= data.missing_code < len(categories)
+    ):
+        raise ValueError(f"{label} categories are invalid")
+    missing = codes == data.missing_code
+    if numpy.any((~missing) & ((codes < 0) | (codes >= len(categories)))):
+        raise ValueError(f"{label} code is outside categories")
+    if not allow_missing and numpy.any(missing):
+        raise ValueError(f"{label} is required for every atom")
+    return tuple(int(value) for value in codes), categories
 
 
 def _matching_atomic_property(datasets, structure_id, role, atom_count):
@@ -191,17 +238,55 @@ def biological_point_data(structure, hierarchy, datasets=()):
         raise TypeError("structure must be a Structure")
     if not isinstance(hierarchy, BiologicalHierarchy):
         raise TypeError("hierarchy must be a BiologicalHierarchy")
-    if (
-        hierarchy.structure_id != structure.id
-        or hierarchy.atom_count != len(structure.atomic_numbers)
-    ):
+    atom_count = len(structure.atomic_numbers)
+    if hierarchy.structure_id != structure.id:
         raise ValueError("hierarchy does not match Structure")
     if structure.atomic_identity is None:
         raise ValueError("biological Structure requires atomic identity")
-    atom_count = hierarchy.atom_count
-    residue_indices = tuple(
-        int(value) for value in hierarchy.atom_sites.residue_indices.values
+    serials = _live_integer_atom_values(
+        hierarchy.atom_sites.serial_numbers,
+        atom_count,
+        "serial numbers",
     )
+    residue_values = _live_integer_atom_values(
+        hierarchy.atom_sites.residue_indices,
+        atom_count,
+        "residue indices",
+    )
+    if any(value <= 0 for value in serials):
+        raise ValueError("serial numbers must be positive")
+    if any(value < 0 or value >= len(hierarchy.residues) for value in residue_values):
+        raise ValueError("residue index is outside residues")
+    if any(
+        type(residue.chain_index) is not int
+        or residue.chain_index < 0
+        or residue.chain_index >= len(hierarchy.chains)
+        for residue in hierarchy.residues
+    ):
+        raise ValueError("residue chain index is outside chains")
+    altloc_codes, altloc_categories = _live_categorical_codes(
+        hierarchy.atom_sites.alternate_locations,
+        atom_count,
+        "alternate locations",
+        allow_missing=True,
+    )
+    record_kind_codes, record_kind_categories = _live_categorical_codes(
+        hierarchy.atom_sites.record_kinds,
+        atom_count,
+        "record kinds",
+        allow_missing=False,
+    )
+    atom_name_codes, atom_name_categories = _live_categorical_codes(
+        structure.atomic_identity.atom_names,
+        atom_count,
+        "atom names",
+        allow_missing=True,
+    )
+    if any(not value for value in altloc_categories):
+        raise ValueError("alternate-location categories must be non-empty")
+    if any(value not in {"atom", "hetatm"} for value in record_kind_categories):
+        raise ValueError("record kinds must be atom or hetatm")
+    residue_indices = tuple(int(value) for value in residue_values)
     chain_indices = tuple(
         hierarchy.residues[index].chain_index for index in residue_indices
     )
@@ -241,27 +326,18 @@ def biological_point_data(structure, hierarchy, datasets=()):
             -1,
         ),
         "cbq_altloc_code": (
-            tuple(
-                int(value)
-                for value in hierarchy.atom_sites.alternate_locations.codes.values
-            ),
-            hierarchy.atom_sites.alternate_locations.categories,
+            altloc_codes,
+            altloc_categories,
             hierarchy.atom_sites.alternate_locations.missing_code,
         ),
         "cbq_record_kind_code": (
-            tuple(
-                int(value)
-                for value in hierarchy.atom_sites.record_kinds.codes.values
-            ),
-            hierarchy.atom_sites.record_kinds.categories,
+            record_kind_codes,
+            record_kind_categories,
             hierarchy.atom_sites.record_kinds.missing_code,
         ),
         "cbq_atom_name_code": (
-            tuple(
-                int(value)
-                for value in structure.atomic_identity.atom_names.codes.values
-            ),
-            structure.atomic_identity.atom_names.categories,
+            atom_name_codes,
+            atom_name_categories,
             structure.atomic_identity.atom_names.missing_code,
         ),
     }

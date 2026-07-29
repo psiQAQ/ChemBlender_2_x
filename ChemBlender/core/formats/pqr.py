@@ -234,6 +234,7 @@ def parse_pqr_records(raw_source, *, validation_mode="balanced"):
     atoms = []
     issues = []
     residue_names = {}
+    source_dialect = None
     for record_index, raw_line in enumerate(raw_source.splitlines(keepends=True)):
         line_bytes = raw_line.rstrip(b"\r\n")
         if len(line_bytes) > _MAX_LINE_BYTES:
@@ -281,6 +282,20 @@ def parse_pqr_records(raw_source, *, validation_mode="balanced"):
                 )
         if len(candidates) == 1:
             atom = candidates[0]
+            if source_dialect is not None and atom.dialect != source_dialect:
+                issues.append(
+                    _issue(
+                        IssueKind.INVALID,
+                        record_index,
+                        "dialect",
+                        (
+                            f"source dialect is {source_dialect!r}; isolated "
+                            f"{atom.dialect!r} atom record"
+                        ),
+                    )
+                )
+                continue
+            source_dialect = atom.dialect
             residue_key = (
                 atom.chain_id,
                 atom.segment_index,
@@ -483,7 +498,10 @@ def _parse_bytes(
         source_hash=source_hash,
         parent_ids=(),
         operation="parse",
-        parameters=(("format", "pqr"),),
+        parameters=(
+            ("dialect", parsed.atoms[0].dialect),
+            ("format", "pqr"),
+        ),
     )
     structure_id = uuid5(source_revision_id, "pqr:structure")
     atoms = parsed.atoms

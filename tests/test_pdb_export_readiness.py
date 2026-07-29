@@ -388,6 +388,58 @@ class PDBPQRExportReadinessTests(unittest.TestCase):
         self.assertEqual(report.status.value, "Ambiguous")
         self.assertEqual(report.tokens, ("dataset.coordinates.ambiguous",))
 
+    def test_live_numeric_array_mutations_use_actual_shape_and_dtype(self):
+        def mutate(array, values, batch, token):
+            original = array.values
+            object.__setattr__(array, "values", values)
+            try:
+                report = (
+                    pqr_export_readiness(batch)
+                    if batch is self.pqr
+                    else pdb_export_readiness(batch)
+                )
+            finally:
+                object.__setattr__(array, "values", original)
+            self.assertEqual(report.status.value, "Invalid")
+            self.assertEqual(report.tokens, (token,))
+
+        structure = self.pdb.structures[0]
+        mutate(
+            structure.coordinates,
+            numpy.asarray(structure.coordinates.values).reshape(-1),
+            self.pdb,
+            "coordinates.shape",
+        )
+        charge = self.property(self.pqr, "partial_charge")
+        mutate(
+            charge.data,
+            numpy.asarray(charge.data.values)[:1],
+            self.pqr,
+            "dataset.partial_charge.shape",
+        )
+        radius = self.property(self.pqr, "radius")
+        mutate(
+            radius.data,
+            numpy.asarray(radius.data.values).reshape((-1, 1)),
+            self.pqr,
+            "dataset.radius.shape",
+        )
+
+        multimodel = biological_mapping_fixture()
+        frames = next(
+            value for value in multimodel.datasets if isinstance(value, FrameSet)
+        )
+        mutate(
+            frames.data,
+            numpy.full(
+                numpy.asarray(frames.data.values).shape,
+                "bad",
+                dtype=object,
+            ),
+            multimodel,
+            "dataset.coordinates.invalid",
+        )
+
     def test_numeric_property_shape_and_status_are_validated(self):
         charge = self.property(self.pqr, "partial_charge")
         radius = self.property(self.pqr, "radius")

@@ -14,7 +14,11 @@ import numpy
 from ChemBlender.core import ArrayData, DatasetStatus, QCProject
 from ChemBlender.core.formats.pdb import parse_pdb
 from ChemBlender.core.formats.pqr import parse_pqr
-from ChemBlender.ui.project_browser.model import BrowserMode, build_browser_rows
+from ChemBlender.ui.project_browser.model import (
+    _biological_detail_rows,
+    BrowserMode,
+    build_browser_rows,
+)
 from ChemBlender.views.structure import _structure_view_data
 from ChemBlender.views import structure as structure_view
 
@@ -32,6 +36,27 @@ class _Attribute:
         self.data_type = data_type
         self.domain = "POINT"
         self.data = _AttributeData(values)
+
+
+class _CountingSequence:
+    def __init__(self, values):
+        self.values = tuple(values)
+        self.items_seen = 0
+
+    def __iter__(self):
+        for value in self.values:
+            self.items_seen += 1
+            yield value
+
+    def __len__(self):
+        return len(self.values)
+
+    def __getitem__(self, index):
+        return self.values[index]
+
+    def count(self, value):
+        self.items_seen += len(self.values)
+        return self.values.count(value)
 
 
 def _biological_view(module, structure, hierarchy, properties):
@@ -197,6 +222,126 @@ class BiologicalUIContractTests(unittest.TestCase):
                 "missing_policy": "nan_is_missing",
             },
         )
+
+    def test_projection_revalidates_live_atom_site_arrays_and_bounds(self):
+        batch = parse_pdb(FIXTURES / "pdb" / "altloc.pdb")
+        structure = batch.structures[0]
+        hierarchy = batch.biological_hierarchies[0]
+        residue_indices = hierarchy.atom_sites.residue_indices
+
+        def reject(instance, name, value):
+            original = getattr(instance, name)
+            object.__setattr__(instance, name, value)
+            try:
+                with self.assertRaises(ValueError):
+                    self.module.biological_point_data(
+                        structure,
+                        hierarchy,
+                        batch.datasets,
+                    )
+            finally:
+                object.__setattr__(instance, name, original)
+
+        reject(residue_indices, "values", numpy.asarray((-1, 0), dtype=numpy.int64))
+        reject(residue_indices, "values", numpy.asarray((999, 0), dtype=numpy.int64))
+        reject(
+            residue_indices,
+            "values",
+            numpy.asarray(((0, 0),), dtype=numpy.int64),
+        )
+        reject(
+            residue_indices,
+            "values",
+            numpy.asarray((0.0, 0.0), dtype=numpy.float64),
+        )
+        reject(
+            hierarchy.atom_sites.serial_numbers,
+            "unit",
+            "angstrom",
+        )
+        reject(
+            hierarchy.atom_sites.alternate_locations.codes,
+            "values",
+            numpy.asarray((999, 1), dtype=numpy.int64),
+        )
+        reject(
+            hierarchy.atom_sites.record_kinds.codes,
+            "values",
+            numpy.asarray((0.0, 0.0), dtype=numpy.float64),
+        )
+
+        residue = hierarchy.residues[0]
+        reject(residue, "chain_index", -1)
+        reject(residue, "chain_index", 999)
+
+    def test_residue_categories_are_unique_for_atom_and_hetero_residues(self):
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "record-kinds.pdb"
+            source.write_bytes(
+                b"\n".join(
+                    (
+                        b"ATOM      1  C1  GLY A   1       0.000   0.000   0.000  1.00 10.00           C",
+                        b"HETATM    2  C2  GLY A   1       1.000   0.000   0.000  1.00 10.00           C",
+                        b"",
+                    )
+                )
+            )
+            batch = parse_pdb(source)
+
+        categories = self.module.biological_point_data(
+            batch.structures[0],
+            batch.biological_hierarchies[0],
+            batch.datasets,
+        )["categories"]["cbq_residue_code"]
+
+        self.assertEqual(len(categories), len(set(categories)))
+
+    def test_biological_label_and_browser_scale_contract_is_linear(self):
+        size = 4000
+        labels = _CountingSequence(f"R{index}" for index in range(size))
+        prefixes = _CountingSequence("A" for _index in range(size))
+
+        projected = structure_view._unique_labels(labels, prefixes)
+
+        self.assertEqual(len(projected), size)
+        self.assertLessEqual(labels.items_seen, size * 2)
+        self.assertEqual(prefixes.items_seen, size)
+
+        chain_count = 200
+        residue_count = 2000
+        atom_count = 10000
+        chains = tuple(
+            SimpleNamespace(chain_id=str(index), segment_index=0)
+            for index in range(chain_count)
+        )
+        residues = _CountingSequence(
+            SimpleNamespace(
+                chain_index=index % chain_count,
+                residue_name="GLY",
+                sequence_number=index,
+                insertion_code="",
+            )
+            for index in range(residue_count)
+        )
+        atom_residue_indices = _CountingSequence(
+            index % residue_count for index in range(atom_count)
+        )
+        entity = SimpleNamespace(
+            id=uuid4(),
+            chains=chains,
+            residues=residues,
+            atom_sites=SimpleNamespace(
+                residue_indices=SimpleNamespace(
+                    values=atom_residue_indices,
+                )
+            ),
+        )
+
+        rows = _biological_detail_rows(entity, "hierarchy", 1)
+
+        self.assertEqual(len(rows), chain_count + residue_count)
+        self.assertEqual(residues.items_seen, residue_count)
+        self.assertEqual(atom_residue_indices.items_seen, atom_count)
 
     def test_numeric_role_spec_enforces_unit_status_and_finite_mesh_values(self):
         batch = parse_pdb(FIXTURES / "pdb" / "altloc.pdb")
@@ -518,6 +663,53 @@ class BiologicalUIContractTests(unittest.TestCase):
             self.assertEqual(operation.execute(context), {"CANCELLED"})
 
         self.assertEqual(selected, [((0,), "chain:A")])
+
+    def test_selection_operator_rejects_corrupt_hierarchy_before_view_mutation(self):
+        batch = parse_pqr(FIXTURES / "pqr" / "with-chain.pqr")
+        project = QCProject(uuid4(), "1.0")
+        project.commit(batch)
+        structure = batch.structures[0]
+        hierarchy = batch.biological_hierarchies[0]
+        properties = tuple(batch.datasets)
+        view = _biological_view(
+            self.module,
+            structure,
+            hierarchy,
+            properties,
+        )
+        view.name = "PQR corrupt hierarchy view"
+        session = SimpleNamespace(
+            project=project,
+            active_entity_id=hierarchy.id,
+            active_view_object_name=view.name,
+        )
+        context = SimpleNamespace(
+            active_object=view,
+            scene=SimpleNamespace(objects={view.name: view}),
+        )
+        values = numpy.asarray(hierarchy.atom_sites.residue_indices.values)
+        original = int(values[0])
+        values[0] = 999
+        errors = []
+        operation = self.module.CHEMBLENDER_OT_select_biological_atoms()
+        operation.report = lambda _levels, message: errors.append(message)
+        operation.selector = "chain"
+        operation.chain_id = "A"
+        try:
+            with (
+                patch.object(
+                    self.module,
+                    "get_scene_session",
+                    return_value=session,
+                ),
+                patch.object(self.module, "apply_atom_selection") as apply,
+            ):
+                self.assertEqual(operation.execute(context), {"CANCELLED"})
+                apply.assert_not_called()
+        finally:
+            values[0] = original
+
+        self.assertTrue(errors)
 
     def test_explicit_altloc_filter_updates_only_view_mask(self):
         batch = parse_pdb(FIXTURES / "pdb" / "altloc.pdb")

@@ -1271,6 +1271,38 @@ def _groups(atoms, issues):
     return tuple(tuple(group) for group in groups)
 
 
+def _isolate_residue_conflicts(atoms, issues):
+    residue_names = {}
+    retained = []
+    for atom in atoms:
+        key = (
+            atom.model_occurrence,
+            atom.chain_id,
+            atom.segment_index,
+            atom.residue_number,
+            atom.insertion_code,
+            atom.record_kind == "hetatm",
+        )
+        previous = residue_names.get(key)
+        if previous is not None and previous != atom.residue_name:
+            issues.append(
+                _issue(
+                    IssueKind.INVALID,
+                    atom.line_number - 1,
+                    "residue_name",
+                    (
+                        f"residue key was first labeled {previous!r} and "
+                        f"conflicts with {atom.residue_name!r}; isolated "
+                        "the conflicting atom record"
+                    ),
+                )
+            )
+            continue
+        residue_names[key] = atom.residue_name
+        retained.append(atom)
+    return tuple(retained)
+
+
 def _diagnostics(source_revision_id, issues):
     outcomes = {
         IssueKind.MISSING: (
@@ -1362,11 +1394,12 @@ def _parse_bytes(
     if not parsed.atoms:
         raise ValueError("PDB source contains no valid atoms")
     issues = list(parsed.issues)
-    groups = _groups(parsed.atoms, issues)
+    atoms = _isolate_residue_conflicts(parsed.atoms, issues)
+    groups = _groups(atoms, issues)
     if validation_mode == "strict" and any(
         issue.kind is IssueKind.INVALID for issue in issues
     ):
-        raise ValueError("PDB source contains invalid model mapping")
+        raise PDBSyntaxError("PDB source contains invalid model mapping")
 
     provenance_id = uuid5(source_revision_id, "pdb:provenance")
     provenance_parameters = [("format", "pdb")]

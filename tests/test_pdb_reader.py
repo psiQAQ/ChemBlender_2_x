@@ -542,6 +542,107 @@ class PDBReaderTests(unittest.TestCase):
             with self.assertRaisesRegex(pdb.PDBSyntaxError, "invalid records"):
                 pdb.parse_pdb_request(request)
 
+    def test_residue_name_conflict_isolated_by_recovery_modes_and_round_trips(self):
+        raw = b"\n".join(
+            (
+                atom_line(1, b" N  ", residue_name=b"ALA", element=b"N"),
+                atom_line(
+                    2,
+                    b" CA ",
+                    residue_name=b"GLY",
+                    altloc=b"B",
+                ),
+                atom_line(3, b" C  ", residue_name=b"ALA"),
+                b"",
+            )
+        )
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "residue-conflict.pdb"
+            source.write_bytes(raw)
+            source_hash = hashlib.sha256(raw).hexdigest()
+
+            recovered = []
+            for mode in ("balanced", "maximum"):
+                request = ParseRequest(
+                    source,
+                    source_hash,
+                    mode,
+                    {},
+                    root,
+                    lambda _event: None,
+                    lambda: False,
+                )
+                batch = pdb.parse_pdb_request(request)
+                recovered.append(batch)
+                self.assertEqual(batch.structures[0].atomic_numbers, (7, 6))
+                self.assertEqual(
+                    tuple(
+                        issue.path
+                        for issue in batch.report.issues
+                        if issue.path.endswith(".residue_name")
+                    ),
+                    ("record[1].residue_name",),
+                )
+                self.assertEqual(
+                    tuple(
+                        value.field_path
+                        for value in batch.diagnostics
+                        if value.field_path.endswith(".residue_name")
+                    ),
+                    ("record[1].residue_name",),
+                )
+
+            strict = ParseRequest(
+                source,
+                source_hash,
+                "strict",
+                {},
+                root,
+                lambda _event: None,
+                lambda: False,
+            )
+            with self.assertRaisesRegex(
+                pdb.PDBSyntaxError,
+                "invalid model mapping",
+            ):
+                pdb.parse_pdb_request(strict)
+
+            batch = recovered[0]
+            project = QCProject(uuid4(), "1.0")
+            project.commit(batch)
+            restored = open_project(save_project(root / "conflict.cbq", project))
+            try:
+                validate_project_graph(restored)
+                self.assertEqual(
+                    next(iter(restored.structures.values())).atomic_numbers,
+                    (7, 6),
+                )
+                self.assertIn(
+                    "record[1].residue_name",
+                    tuple(
+                        value.field_path
+                        for value in restored.diagnostics.values()
+                    ),
+                )
+            finally:
+                close_project(restored)
+
+            canonical_root = root / "canonical-conflict"
+            canonical_root.mkdir()
+            document = public_batch_document(
+                public_batch_from_internal(batch),
+                canonical_root,
+            )
+            canonical = internal_batch_from_public(
+                public_batch_from_document(document, canonical_root)
+            )
+            self.assertEqual(canonical.structures[0].atomic_numbers, (7, 6))
+            self.assertIn(
+                "record[1].residue_name",
+                tuple(value.field_path for value in canonical.diagnostics),
+            )
+
     def test_cryst1_uses_existing_cell_periodic_and_source_metadata(self):
         raw = (
             (FIXTURES / "cryst1.pdb").read_bytes()

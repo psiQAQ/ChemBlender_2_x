@@ -98,6 +98,65 @@ class PQRReaderTests(unittest.TestCase):
             all(issue.path.endswith(".element") for issue in with_chain.issues)
         )
 
+    def test_source_dialect_is_exact_persisted_and_mixed_input_is_isolated(self):
+        for filename, dialect in (
+            ("with-chain.pqr", "with_chain"),
+            ("no-chain.pqr", "no_chain"),
+        ):
+            with self.subTest(filename=filename):
+                source = FIXTURES / filename
+                batch = pqr.parse_pqr(source)
+                self.assertEqual(
+                    dict(batch.provenance[0].parameters)["dialect"],
+                    dialect,
+                )
+                with TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    project = QCProject(batch.sources[0].id, "1.0")
+                    project.commit(batch)
+                    restored = open_project(
+                        save_project(root / f"{dialect}.cbq", project)
+                    )
+                    try:
+                        self.assertEqual(
+                            dict(
+                                next(iter(restored.provenance.values())).parameters
+                            )["dialect"],
+                            dialect,
+                        )
+                    finally:
+                        close_project(restored)
+
+                    canonical_root = root / "canonical"
+                    canonical_root.mkdir()
+                    document = public_batch_document(
+                        public_batch_from_internal(batch),
+                        canonical_root,
+                    )
+                    canonical = internal_batch_from_public(
+                        public_batch_from_document(document, canonical_root)
+                    )
+                    self.assertEqual(
+                        dict(canonical.provenance[0].parameters)["dialect"],
+                        dialect,
+                    )
+
+        mixed = b"\n".join(
+            (
+                b"ATOM 1 N ARG 1 1.000 2.000 3.000 -0.3000 1.5500",
+                b"HETATM 2 O HOH W 2 4.000 5.000 6.000 -0.5500 1.4000",
+                b"",
+            )
+        )
+        parsed = pqr.parse_pqr_records(mixed)
+        self.assertEqual(tuple(atom.serial for atom in parsed.atoms), (1,))
+        self.assertIn(
+            ("invalid", "record[1].dialect"),
+            tuple((issue.kind.value, issue.path) for issue in parsed.issues),
+        )
+        with self.assertRaisesRegex(pqr.PQRSyntaxError, "invalid records"):
+            pqr.parse_pqr_records(mixed, validation_mode="strict")
+
     def test_padded_pqr_parser_and_suffix_handoff_keep_explicit_route_available(self):
         padded = FIXTURES / "padded.pqr"
         registry = builtin_reader_registry()

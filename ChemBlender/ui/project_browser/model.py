@@ -234,19 +234,16 @@ def _biological_detail_rows(entity, parent_id, depth):
     atom_sites = getattr(entity, "atom_sites", None)
     if chains is None or residues is None or atom_sites is None:
         return ()
+    residues_by_chain = [[] for _chain in chains]
+    for residue_index, residue in enumerate(residues):
+        residues_by_chain[residue.chain_index].append((residue_index, residue))
+    atom_counts = [0] * len(chains)
+    for residue_index in atom_sites.residue_indices.values:
+        atom_counts[residues[int(residue_index)].chain_index] += 1
     rows = []
     for chain_index, chain in enumerate(chains):
         chain_id = f"{parent_id}/chain:{chain_index}"
-        chain_residues = tuple(
-            (index, residue)
-            for index, residue in enumerate(residues)
-            if residue.chain_index == chain_index
-        )
-        residue_ids = {index for index, _residue in chain_residues}
-        atom_count = sum(
-            int(value) in residue_ids
-            for value in atom_sites.residue_indices.values
-        )
+        chain_residues = residues_by_chain[chain_index]
         label = chain.chain_id or "[blank]"
         rows.append(
             BrowserRow(
@@ -256,7 +253,8 @@ def _biological_detail_rows(entity, parent_id, depth):
                 "biological_chain",
                 (
                     f"Chain {label} · Segment {chain.segment_index} · "
-                    f"{len(chain_residues)} residues · {atom_count} atoms"
+                    f"{len(chain_residues)} residues · "
+                    f"{atom_counts[chain_index]} atoms"
                 ),
                 "",
                 0,
