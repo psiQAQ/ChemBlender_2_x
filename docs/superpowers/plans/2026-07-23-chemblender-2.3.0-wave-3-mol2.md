@@ -31,29 +31,35 @@ metadata to `ChemicalAnnotation`, and raw record bytes to `MolecularRecord`.
 
 **Files:**
 - Create: `tests/test_mol2_models.py`
-- Modify: `docs/quantum-visualization/reader-capability-matrix.json`
+- Deferred to Task 3:
+  `docs/quantum-visualization/reader-capability-matrix.json` remains the exact
+  registered-reader snapshot until the `mol2` descriptor exists.
 
 **Interfaces:**
 - Consumes: `ChemicalAnnotation`, `MolecularRecord`, `AtomicProperty` and
   `CategoricalData`.
 - Produces: executable mapping fixtures; no new core model.
 
-- [ ] **Step 1: Write model tests**
+- [x] **Step 1: Write model tests**
 
 Validate molecule type, charge type and status bits as scalar
 `ChemicalAnnotation` values. Substructure IDs are integer per atom; names and
 atom types are categorical and can be missing. `MolecularRecord` stores exact
 raw record bytes; unsupported sections are diagnostics.
 
-- [ ] **Step 2: Verify existing project references**
+- [x] **Step 2: Verify existing project references**
 
 The mapping uses one Structure, optional explicit TopologyRecord, one
 MolecularRecord and referenced atomic datasets/annotations. Sidecar and
 canonical round-trip use ADR 0043 groups without a format-specific registry.
 
-- [ ] **Step 3: Run and commit**
+- [x] **Step 3: Run and commit**
 
 Run model/sidecar tests and commit.
+
+Completion evidence: `aafba99`, `c694e00`, `5d6cc25`, `b08a69b`; 25 focused
+tests passed, `git diff --check` passed, and fix round 3 closed all
+Critical/Important review findings.
 
 ### Task 2: Implement MOL2 tokenizer and molecule block parser
 
