@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 from tempfile import TemporaryDirectory
 from uuid import uuid4
 
@@ -221,7 +222,117 @@ def mol2_fixture():
     )
 
 
+def recoverable_missing_fixture():
+    batch = mol2_fixture()
+    structure = batch.structures[0]
+    record = batch.molecular_records[0]
+    raw_block = (
+        b"@<TRIPOS>MOLECULE\r\n"
+        b"methane\r\n"
+        b"2 1 1 1 0\r\n"
+        b"SMALL\r\n"
+        b"USER_CHARGES\r\n"
+        b"INVALID_CHARGES\r\n"
+        b"@<TRIPOS>ATOM\r\n"
+        b"10 C1 0.0 0.0 0.0 C.3 101 METHANE -0.12\r\n"
+        b"42 * 1.0 0.0 0.0 * 101 METHANE 0.12\r\n"
+        b"@<TRIPOS>BOND\r\n"
+        b"7 10 42 1\r\n"
+        b"@<TRIPOS>SUBSTRUCTURE\r\n"
+        b"101 METHANE 10 GROUP 0 **** 0 ROOT\r\n"
+        b"@<TRIPOS>SET\r\n"
+        b"1 SELECTED ATOMS STATIC\r\n"
+        b"2 10 42\r\n"
+    )
+    structure = replace(
+        structure,
+        atomic_identity=replace(
+            structure.atomic_identity,
+            atom_names=categorical((0, -1), ("C1",)),
+        ),
+    )
+    atom_types = replace(
+        batch.datasets[0],
+        data=categorical((0, -1), ("C.3",)),
+        status=DatasetStatus.PARTIAL,
+    )
+    report = replace(
+        batch.report,
+        issues=(
+            *batch.report.issues,
+            ParserIssue(
+                IssueKind.MISSING,
+                "atom[1].name_and_type",
+                "MOL2 * recovery sentinel maps to categorical missing codes",
+            ),
+        ),
+    )
+    return replace(
+        batch,
+        source_revisions=(
+            replace(batch.source_revisions[0], byte_size=len(raw_block)),
+        ),
+        structures=(structure,),
+        molecular_records=(replace(record, raw_block=raw_block),),
+        datasets=(atom_types, *batch.datasets[1:]),
+        report=report,
+    )
+
+
 class Mol2ModelMappingTests(unittest.TestCase):
+    def test_recoverable_missing_categories_survive_exchange_boundaries(self):
+        batch = recoverable_missing_fixture()
+        structure = batch.structures[0]
+        record = batch.molecular_records[0]
+        atom_types = batch.datasets[0]
+
+        def assert_missing_categories(structures, datasets):
+            structure_value = {value.id: value for value in structures}[structure.id]
+            atom_types_value = {value.id: value for value in datasets}[atom_types.id]
+            for value, categories in (
+                (structure_value.atomic_identity.atom_names, ("C1",)),
+                (atom_types_value.data, ("C.3",)),
+            ):
+                self.assertIsInstance(value, CategoricalData)
+                self.assertEqual(numpy.asarray(value.codes.values).tolist(), [0, -1])
+                self.assertEqual(value.categories, categories)
+                self.assertEqual(value.missing_code, -1)
+            self.assertIs(atom_types_value.status, DatasetStatus.PARTIAL)
+
+        self.assertIs(atom_types.status, DatasetStatus.PARTIAL)
+        self.assertIn(b"42 * 1.0 0.0 0.0 * 101 METHANE 0.12\r\n", record.raw_block)
+        self.assertIn(
+            ParserIssue(
+                IssueKind.MISSING,
+                "atom[1].name_and_type",
+                "MOL2 * recovery sentinel maps to categorical missing codes",
+            ),
+            batch.report.issues,
+        )
+        assert_missing_categories(batch.structures, batch.datasets)
+
+        project = QCProject(uuid4(), "1.0")
+        project.commit(batch)
+        assert_missing_categories(project.structures.values(), project.datasets.values())
+
+        public = reader_api.public_batch_from_internal(batch)
+        with TemporaryDirectory() as temporary:
+            document = reader_api.public_batch_document(public, temporary)
+            restored = reader_api.internal_batch_from_public(
+                reader_api.public_batch_from_document(document, temporary)
+            )
+            assert_missing_categories(restored.structures, restored.datasets)
+
+            root = f"{temporary}/missing-mol2.cbq"
+            save_project(root, project)
+            reopened = open_project(root)
+            try:
+                assert_missing_categories(
+                    reopened.structures.values(), reopened.datasets.values()
+                )
+            finally:
+                close_project(reopened)
+
     def test_mol2_mapping_reuses_exchange_and_project_contracts(self):
         batch = mol2_fixture()
         structure = batch.structures[0]
