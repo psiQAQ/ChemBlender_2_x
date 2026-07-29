@@ -82,8 +82,19 @@ def mol2_fixture():
         revision="mol2-substructure-ids-r1",
         semantic_role="substructure_id",
         domain="atom",
-        data=array((1, 1), ("atom",)),
+        data=array((101, 101), ("atom",)),
         status=DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(),
+        structure_id=structure.id,
+    )
+    substructure_names = AtomicProperty(
+        id=uuid4(),
+        revision="mol2-substructure-names-r1",
+        semantic_role="substructure_name",
+        domain="atom",
+        data=categorical((0, -1), ("METHANE",)),
+        status=DatasetStatus.PARTIAL,
         source_calculation=None,
         provenance_ids=(),
         structure_id=structure.id,
@@ -120,9 +131,19 @@ def mol2_fixture():
     raw_block = (
         b"@<TRIPOS>MOLECULE\r\n"
         b"methane\r\n"
-        b"2 1 1 0 0\r\n"
+        b"2 1 1 1 0\r\n"
         b"SMALL\r\n"
         b"USER_CHARGES\r\n"
+        b"@<TRIPOS>ATOM\r\n"
+        b"10 C1 0.0 0.0 0.0 C.3 101 METHANE -0.12\r\n"
+        b"42 H1 1.0 0.0 0.0 H 101 METHANE 0.12\r\n"
+        b"@<TRIPOS>BOND\r\n"
+        b"7 10 42 1\r\n"
+        b"@<TRIPOS>SUBSTRUCTURE\r\n"
+        b"101 METHANE 10 GROUP 0 **** 0 ROOT\r\n"
+        b"@<TRIPOS>SET\r\n"
+        b"1 SELECTED ATOMS STATIC\r\n"
+        b"2 10 42\r\n"
     )
     record = MolecularRecord(
         id=uuid4(),
@@ -148,6 +169,7 @@ def mol2_fixture():
         *(annotation.id for annotation in annotations),
         atom_types.id,
         substructure_ids.id,
+        substructure_names.id,
         partial_charges.id,
     )
     revision = SourceRevision(
@@ -193,7 +215,7 @@ def mol2_fixture():
         topologies=(topology,),
         molecular_records=(record,),
         annotations=annotations,
-        datasets=(atom_types, substructure_ids, partial_charges),
+        datasets=(atom_types, substructure_ids, substructure_names, partial_charges),
         report=report,
     )
 
@@ -203,26 +225,91 @@ class Mol2ModelMappingTests(unittest.TestCase):
         batch = mol2_fixture()
         structure = batch.structures[0]
         record = batch.molecular_records[0]
-        atom_types, substructure_ids, partial_charges = batch.datasets
+        self.assertEqual(len(batch.datasets), 4)
+        atom_types, substructure_ids, substructure_names, partial_charges = batch.datasets
+        expected_annotations = {
+            value.id: (value.key, value.value) for value in batch.annotations
+        }
 
-        self.assertEqual(
-            tuple((value.key, value.value) for value in batch.annotations),
-            (
-                ("molecule_type", "SMALL"),
-                ("charge_type", "USER_CHARGES"),
-                ("status_bits", "INVALID_CHARGES"),
-            ),
+        def assert_mapping(structures, topologies, records, datasets, annotations):
+            structure_value = {value.id: value for value in structures}[structure.id]
+            topology_value = {value.id: value for value in topologies}[record.topology_id]
+            record_value = {value.id: value for value in records}[record.id]
+            datasets_by_id = {value.id: value for value in datasets}
+            annotations_by_id = {value.id: value for value in annotations}
+
+            self.assertEqual(
+                {key: (value.key, value.value) for key, value in annotations_by_id.items()},
+                expected_annotations,
+            )
+            for annotation_id in expected_annotations:
+                self.assertIsInstance(annotations_by_id[annotation_id], ChemicalAnnotation)
+                self.assertIsInstance(annotations_by_id[annotation_id].value, str)
+            self.assertIsInstance(structure_value.atomic_identity.atom_names, CategoricalData)
+            self.assertIsInstance(datasets_by_id[atom_types.id].data, CategoricalData)
+            self.assertIsInstance(datasets_by_id[substructure_names.id].data, CategoricalData)
+            self.assertIsInstance(datasets_by_id[substructure_ids.id], AtomicProperty)
+            self.assertEqual(
+                numpy.asarray(structure_value.atomic_identity.atom_names.codes.values).tolist(),
+                [0, -1],
+            )
+            self.assertEqual(structure_value.atomic_identity.atom_names.categories, ("C1",))
+            self.assertEqual(structure_value.atomic_identity.atom_names.missing_code, -1)
+            self.assertEqual(
+                numpy.asarray(datasets_by_id[atom_types.id].data.codes.values).tolist(),
+                [0, -1],
+            )
+            self.assertEqual(datasets_by_id[atom_types.id].data.categories, ("C.3",))
+            self.assertEqual(datasets_by_id[atom_types.id].data.missing_code, -1)
+            self.assertEqual(
+                numpy.asarray(datasets_by_id[substructure_names.id].data.codes.values).tolist(),
+                [0, -1],
+            )
+            self.assertEqual(
+                datasets_by_id[substructure_names.id].data.categories,
+                ("METHANE",),
+            )
+            self.assertEqual(datasets_by_id[substructure_names.id].data.missing_code, -1)
+            self.assertIn(numpy.dtype(datasets_by_id[substructure_ids.id].data.dtype).kind, "iu")
+            self.assertEqual(
+                numpy.asarray(datasets_by_id[substructure_ids.id].data.values).tolist(),
+                [101, 101],
+            )
+            self.assertEqual(
+                numpy.asarray(datasets_by_id[partial_charges.id].data.values).tolist(),
+                [-0.12, 0.12],
+            )
+            self.assertEqual(
+                numpy.asarray(topology_value.bond_indices.values).tolist(), [[0, 1]]
+            )
+            self.assertEqual(
+                record_value.raw_block,
+                (
+                    b"@<TRIPOS>MOLECULE\r\n"
+                    b"methane\r\n"
+                    b"2 1 1 1 0\r\n"
+                    b"SMALL\r\n"
+                    b"USER_CHARGES\r\n"
+                    b"@<TRIPOS>ATOM\r\n"
+                    b"10 C1 0.0 0.0 0.0 C.3 101 METHANE -0.12\r\n"
+                    b"42 H1 1.0 0.0 0.0 H 101 METHANE 0.12\r\n"
+                    b"@<TRIPOS>BOND\r\n"
+                    b"7 10 42 1\r\n"
+                    b"@<TRIPOS>SUBSTRUCTURE\r\n"
+                    b"101 METHANE 10 GROUP 0 **** 0 ROOT\r\n"
+                    b"@<TRIPOS>SET\r\n"
+                    b"1 SELECTED ATOMS STATIC\r\n"
+                    b"2 10 42\r\n"
+                ),
+            )
+
+        assert_mapping(
+            batch.structures,
+            batch.topologies,
+            batch.molecular_records,
+            batch.datasets,
+            batch.annotations,
         )
-        self.assertIsInstance(structure.atomic_identity.atom_names, CategoricalData)
-        self.assertIsInstance(atom_types.data, CategoricalData)
-        self.assertIsInstance(substructure_ids, AtomicProperty)
-        self.assertEqual(structure.atomic_identity.atom_names.codes.values.tolist(), [0, -1])
-        self.assertEqual(atom_types.data.codes.values.tolist(), [0, -1])
-        self.assertEqual(atom_types.data.categories, ("C.3",))
-        self.assertIn(numpy.dtype(substructure_ids.data.dtype).kind, "iu")
-        self.assertEqual(substructure_ids.data.values.tolist(), [1, 1])
-        self.assertEqual(partial_charges.data.values.tolist(), [-0.12, 0.12])
-        self.assertEqual(record.raw_block, b"@<TRIPOS>MOLECULE\r\nmethane\r\n2 1 1 0 0\r\nSMALL\r\nUSER_CHARGES\r\n")
         self.assertEqual(
             batch.report.issues,
             (ParserIssue(IssueKind.UNSUPPORTED, "set", "MOL2 SET sections are not represented"),),
@@ -230,9 +317,13 @@ class Mol2ModelMappingTests(unittest.TestCase):
 
         project = QCProject(uuid4(), "1.0")
         project.commit(batch)
-        self.assertIs(project.structures[structure.id], structure)
-        self.assertIs(project.topologies[record.topology_id], batch.topologies[0])
-        self.assertEqual(project.molecular_records[record.id].raw_block, record.raw_block)
+        assert_mapping(
+            project.structures.values(),
+            project.topologies.values(),
+            project.molecular_records.values(),
+            project.datasets.values(),
+            project.annotations.values(),
+        )
 
         public = reader_api.public_batch_from_internal(batch)
         with TemporaryDirectory() as temporary:
@@ -240,17 +331,24 @@ class Mol2ModelMappingTests(unittest.TestCase):
             restored = reader_api.internal_batch_from_public(
                 reader_api.public_batch_from_document(document, temporary)
             )
-            self.assertEqual(restored.molecular_records[0].raw_block, record.raw_block)
-            self.assertEqual(restored.datasets[1].data.values.tolist(), [1, 1])
+            assert_mapping(
+                restored.structures,
+                restored.topologies,
+                restored.molecular_records,
+                restored.datasets,
+                restored.annotations,
+            )
 
             root = f"{temporary}/mol2.cbq"
             save_project(root, project)
             reopened = open_project(root)
             try:
-                self.assertEqual(reopened.molecular_records[record.id].raw_block, record.raw_block)
-                self.assertEqual(
-                    numpy.asarray(reopened.datasets[substructure_ids.id].data.values).tolist(),
-                    [1, 1],
+                assert_mapping(
+                    reopened.structures.values(),
+                    reopened.topologies.values(),
+                    reopened.molecular_records.values(),
+                    reopened.datasets.values(),
+                    reopened.annotations.values(),
                 )
             finally:
                 close_project(reopened)
