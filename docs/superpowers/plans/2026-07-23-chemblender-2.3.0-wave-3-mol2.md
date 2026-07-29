@@ -72,25 +72,29 @@ Critical/Important review findings.
 **Interfaces:**
 - Produces: `sniff_mol2()`, `iter_mol2_records()`, `parse_mol2_record()`.
 
-- [ ] **Step 1: Write sniff tests**
+- [x] **Step 1: Write sniff tests**
 
 Require `@<TRIPOS>MOLECULE` followed by plausible counts and `@<TRIPOS>ATOM`. `.mol2` ordinary text returns NONE. Complete source is EXACT; truncated valid prefix is PROBABLE.
 
-- [ ] **Step 2: Tokenize sections**
+- [x] **Step 2: Tokenize sections**
 
 Section headers are case-insensitive exact markers. Preserve unknown sections as raw lines and section names. A new `MOLECULE` begins the next record.
 
-- [ ] **Step 3: Parse MOLECULE and ATOM**
+- [x] **Step 3: Parse MOLECULE and ATOM**
 
 Read name, counts, molecule type, charge type and status/comment lines. Atom fields include ID, name, x/y/z, atom type, optional substructure ID/name and charge. Determine element from Tripos atom type prefix with explicit fallback diagnostic; never default unknown element to hydrogen/carbon.
 
-- [ ] **Step 4: Parse BOND and SUBSTRUCTURE**
+- [x] **Step 4: Parse BOND and SUBSTRUCTURE**
 
 Resolve arbitrary atom IDs to zero-based indices. Map bond type strings into bond order/aromatic/amide/unknown semantics. Unknown references invalidate topology but may preserve structure. Parse common substructure ID/name/root fields.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 Run syntax tests and commit parser primitives.
+
+Completion evidence: `64f18fb`, `de524b8`; 39 focused tests passed,
+`compileall` and `git diff --check` passed, and fix round 1 closed all
+Critical/Important review findings.
 
 ### Task 3: Map MOL2 into project entities with record recovery
 
