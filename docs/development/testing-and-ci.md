@@ -39,7 +39,23 @@ This proves that an existing user extension or shared `.local` directory did not
 
 Reinstall the same package into the real `user_default` repository from a fresh Blender process. Do not close an interactive Blender automatically; save work and close it before replacing loaded wheel DLLs.
 
-GitHub Actions repeats the local sequence on `windows-latest` with a temporary `BLENDER_USER_RESOURCES`, downloads Blender and RDKit from pinned sources, and verifies their checksums. It uploads the tested ZIP together with `chemblender-2.2.0.sha256`; action implementations are pinned to full commit SHAs and the job has read-only repository access. Pull-request and `main` runs gate integration; the successful run for the exact annotated tag is the authority for public Release assets. A local equivalent run alone is not CI proof.
+GitHub Actions starts with the `native-core` job on `windows-latest`. It uses
+only repository checkout and `actions/setup-python`, then runs the explicit
+standard-library dependency-inventory, legacy-fixture, documentation, and
+repository-contract suites, `compileall`, and `git diff --check`. It neither
+downloads Blender or wheels nor installs runtime packages; Gemmi/RDKit coverage
+therefore remains in the package job instead of being misreported as native
+coverage.
+
+The `package` job explicitly `needs: native-core`. It uses a temporary
+`BLENDER_USER_RESOURCES`, downloads Blender and the approved RDKit/Gemmi wheels
+from pinned sources, verifies their checksums, validates/builds the ZIP, and
+runs the isolated cold-install lifecycle smoke. Only this job uploads the
+tested ZIP and checksum, so its artifact is authoritative. Action
+implementations are pinned to full commit SHAs and both jobs have read-only
+repository access. Pull-request and `main` runs gate integration; the
+successful run for the exact annotated tag is the authority for public Release
+assets. A local equivalent run alone is not CI proof.
 
 `ChemBlender/scripts/verify_release_artifact.py` audits a downloaded artifact against its adjacent checksum and package contract. Local and CI archive hashes may differ because ZIP metadata is regenerated; the tag CI checksum is authoritative for the package selected by the Release workflow.
 
