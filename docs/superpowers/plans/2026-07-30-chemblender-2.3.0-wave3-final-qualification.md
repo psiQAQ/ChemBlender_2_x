@@ -182,7 +182,7 @@ qualification checks. Scoped re-review approved with no open findings.
 - Consumes: Tasks 1–3 commits and all three completed Wave 3 plans.
 - Produces: completed Wave 3 evidence and a clean branch stopped before Wave 4.
 
-- [ ] **Step 1: Run focused and full Python verification**
+- [x] **Step 1: Run focused and full Python verification**
 
 Run Wave 3 format/model/UI/export-readiness, sidecar, Reader API,
 conformance, example, registration, qualification and documentation modules,
@@ -194,21 +194,21 @@ then:
 git diff --check
 ```
 
-- [ ] **Step 2: Run Blender 5.1.2 product qualification**
+- [x] **Step 2: Run Blender 5.1.2 product qualification**
 
 Run native validate/build, exact ZIP safe-path/duplicate/CRC/wheel audit and
 isolated install. Qualify MOL2, PDB, PQR and CJSON import/view/save/reopen;
 base + good + duplicate-ID failing Reader Extensions; missing-plugin reopen;
 register/unregister/reload x2; and the repository product smoke.
 
-- [ ] **Step 3: Request two independent reviews**
+- [x] **Step 3: Request two independent reviews**
 
 One review checks specification/scientific compliance. A second checks code
 quality, benchmark honesty, resource ownership, packaging and
 over-engineering. Fix all Critical, Important and gate-related Minor findings,
 then rerun affected and full verification.
 
-- [ ] **Step 4: Complete the cursor and checkpoint**
+- [x] **Step 4: Complete the cursor and checkpoint**
 
 Record commits, RED/GREEN counts, benchmark metrics, Blender/package evidence,
 `Remote CI: Not Run`, worktree status and:
@@ -223,3 +223,10 @@ Commit:
 ```text
 chore: checkpoint Wave 3 final qualification
 ```
+
+Completion evidence: focused `498/498`; full `1803 Passed / 26 Skipped /
+0 Failed`; compileall and diff-check passed. Blender 5.1.2 native
+validate/build, exact ZIP audit, isolated product lifecycle, Reader Extension
+failure isolation and three-process missing-plugin reopen passed. The two
+independent reviews found no code or scientific defect; their shared stale
+cursor Minor was corrected in the final checkpoint. Remote CI was not run.
