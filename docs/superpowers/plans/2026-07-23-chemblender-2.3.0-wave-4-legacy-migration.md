@@ -31,17 +31,29 @@
 **Interfaces:**
 - Produces: fixed old-scene evidence with hashes and expected recoverable fields.
 
-- [ ] **Step 1: Build fixtures using the actual released versions**
+- [x] **Step 1: Build fixtures using the actual released versions**
 
 Create one molecule with explicit bonds/orders and display settings, one CIF-derived crystal with cell/space group/occupancy/Uij, and one edited scaffold. Do not resave them with 2.3.0.
 
-- [ ] **Step 2: Record provenance**
+- [x] **Step 2: Record provenance**
 
 README records ChemBlender version, Blender version, generation steps, SHA-256, object/collection names and expected fields. Binary fixtures are reviewed for redistributable content.
 
-- [ ] **Step 3: Add inventory tests**
+- [x] **Step 3: Add inventory tests**
 
 Assert files/hashes and expected companion metadata. Commit fixtures separately before migration code.
+
+**Task 1 checkpoint (2026-07-30):**
+
+- Prepared commits `ab29560a54557ca4bb794e9e8043cd2110abc10b` and
+  `e26319dd7697e49373840e00dbfbb13270b5cc42` were integrated in order as
+  `63b298ad39f374d3e19777b62d01f3e96b8a0b13` and
+  `69665c329395449e468f23fa7b954a9b58df4f08`.
+- Inventory tests: 3 passed; complete suite: 1811 passed, 26 skipped,
+  0 failed; documentation contracts: 16 passed.
+- Blender 5.1.2 independently reopened all three fixtures without linked
+  libraries or external file images. `compileall` and `git diff --check`
+  passed.
 
 ### Task 2: Implement non-mutating legacy detection and extraction
 
