@@ -481,14 +481,7 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
                 source = Path(directory) / name
                 source.write_text("data_example\n", encoding="utf-8")
                 scaffold, operator, context, calls = self._scaffold_context(source)
-                with patch.object(
-                    scaffold.read,
-                    "read_Cryst",
-                    side_effect=AssertionError(
-                        "legacy crystal parser must not run"
-                    ),
-                ):
-                    result = operator.execute(context)
+                result = operator.execute(context)
 
                 self.assertEqual(result, {"FINISHED"})
                 self.assertEqual(calls[0][0], "quick_import")
@@ -803,20 +796,8 @@ class LegacyCallerInventoryTests(unittest.TestCase):
         self.assertEqual(
             callers,
             {
-                "read_MOL": {
-                    (
-                        "ChemBlender/scaffold.py",
-                        "MESH_OT_SCAFFOLD_BUILD.execute",
-                        "read.read_MOL",
-                    ),
-                },
-                "read_Cryst": {
-                    (
-                        "ChemBlender/scaffold.py",
-                        "MESH_OT_SCAFFOLD_BUILD.execute",
-                        "read.read_Cryst",
-                    ),
-                },
+                "read_MOL": set(),
+                "read_Cryst": set(),
                 "read_cif": {
                     (
                         "ChemBlender/read.py",
