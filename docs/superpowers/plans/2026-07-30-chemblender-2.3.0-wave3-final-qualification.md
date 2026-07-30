@@ -134,7 +134,7 @@ reopen passed. Independent review approved with no findings.
 - Produces: canonical benchmark JSON with environment, workload, warmup,
   sample count, median, p95 and peak Python memory.
 
-- [ ] **Step 1: Write the benchmark RED contract**
+- [x] **Step 1: Write the benchmark RED contract**
 
 Require a small in-process API and CLI using only the standard library plus
 existing ChemBlender APIs. Metrics are `mol2_parse`, `pdb_parse`,
@@ -142,14 +142,14 @@ existing ChemBlender APIs. Metrics are `mol2_parse`, `pdb_parse`,
 median, p95, peak bytes and workload size. Disabled Blender-only work is
 reported `Not Run`, never fabricated.
 
-- [ ] **Step 2: Implement the minimum deterministic benchmark**
+- [x] **Step 2: Implement the minimum deterministic benchmark**
 
 Generate bounded synthetic files directly to a temporary directory; do not
 build nested full-project copies or Blender objects. Use stable numeric text,
 one warmup and at least five measured samples. Output sorted compact UTF-8
 JSON with one trailing LF.
 
-- [ ] **Step 3: Measure the reference workloads**
+- [x] **Step 3: Measure the reference workloads**
 
 Measure small product preview latency and 50,000-atom native parsing for
 MOL2/PDB/PQR/CJSON on the reference machine. Record whether quick feedback is
@@ -157,13 +157,19 @@ within 0.5 seconds, whether peak memory is bounded relative to source bytes
 and whether work exceeding one second remains outside the Blender draw path.
 Do not turn one desktop timing into a cloud-CI absolute threshold.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run the benchmark contract, CLI, compileall and `git diff --check`. Commit:
 
 ```text
 perf: record Wave 3 exchange baseline
 ```
+
+Completion evidence: `7e9152b`, `920b644`; RED was the missing benchmark
+module and the Windows CRLF stdout regression. GREEN was 6/6 qualification
+tests plus direct canonical-byte CLI verification. The reference 50,000-atom
+MOL2/PDB/PQR/CJSON and small preview measurements passed the declared
+qualification checks. Scoped re-review approved with no open findings.
 
 ### Task 4: Run the final product gate and checkpoint
 
