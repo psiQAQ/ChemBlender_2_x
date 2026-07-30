@@ -151,6 +151,13 @@ def _mean(values):
     return 1.0 if not values else sum(values) / len(values)
 
 
+def _object_diagnostic_messages(preview, legacy_object_name):
+    return tuple(
+        item.message for item in preview.plan.report.diagnostics
+        if item.object_name == legacy_object_name
+    )
+
+
 def _write_display_attribute(mesh, name, values, data_type, domain, field):
     attribute = mesh.attributes.get(name)
     if attribute is None or attribute.data_type != data_type or attribute.domain != domain:
@@ -374,13 +381,13 @@ def _backup_legacy(objects, scene, project_id, transaction_id):
     existing = bpy.data.collections.get(_BACKUP_COLLECTION)
     if existing is not None:
         raise ValueError("ChemBlender Legacy Backup already exists")
-    backup = bpy.data.collections.new(_BACKUP_COLLECTION)
     snapshot = tuple(
         (obj, tuple(obj.users_collection), obj.hide_viewport,
          tuple((view_layer, obj.hide_get(view_layer=view_layer)) for view_layer in scene.view_layers),
          {key: deepcopy(obj[key]) for key in obj.keys()})
         for obj in objects
     )
+    backup = bpy.data.collections.new(_BACKUP_COLLECTION)
     try:
         scene.collection.children.link(backup)
         backup.hide_viewport = True
@@ -512,25 +519,22 @@ class CHEMBLENDER_OT_preview_legacy_migration(bpy.types.Operator):
                 layout.label(
                     text=f"{item.legacy_object_name}: backup only (no project entity or view)",
                 )
-                continue
-            view_plan = view_plans[item.legacy_object_name]
-            settings = view_plan.settings
-            layout.label(text=f"{view_plan.legacy_object_name} -> {view_plan.legacy_object_name} (Migrated)")
-            layout.label(text=f"  entities: {', '.join(item.entity_types)}")
-            layout.label(text=f"  ids: {', '.join(item.entity_ids)}")
-            recovered = [
-                name for name, value in (
-                    ("radii", settings.radii), ("vdw", settings.vdw_radii),
-                    ("atom scale", settings.atom_scales), ("colour", settings.colors),
-                    ("bond scale", settings.bond_scales), ("dashed", settings.dashed),
-                    ("materials", settings.materials), ("node settings", settings.node_modifiers),
-                ) if value
-            ]
-            layout.label(text=f"  recovered: {', '.join(recovered) or 'structure only'}")
-            unsupported = [
-                item.message for item in preview.plan.report.diagnostics
-                if item.object_name == view_plan.legacy_object_name
-            ]
+            else:
+                view_plan = view_plans[item.legacy_object_name]
+                settings = view_plan.settings
+                layout.label(text=f"{view_plan.legacy_object_name} -> {view_plan.legacy_object_name} (Migrated)")
+                layout.label(text=f"  entities: {', '.join(item.entity_types)}")
+                layout.label(text=f"  ids: {', '.join(item.entity_ids)}")
+                recovered = [
+                    name for name, value in (
+                        ("radii", settings.radii), ("vdw", settings.vdw_radii),
+                        ("atom scale", settings.atom_scales), ("colour", settings.colors),
+                        ("bond scale", settings.bond_scales), ("dashed", settings.dashed),
+                        ("materials", settings.materials), ("node settings", settings.node_modifiers),
+                    ) if value
+                ]
+                layout.label(text=f"  recovered: {', '.join(recovered) or 'structure only'}")
+            unsupported = _object_diagnostic_messages(preview, item.legacy_object_name)
             if unsupported:
                 layout.label(text=f"  unsupported: {'; '.join(unsupported)}", icon="ERROR")
         for item in preview.plan.report.diagnostics:

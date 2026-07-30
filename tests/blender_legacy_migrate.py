@@ -209,12 +209,47 @@ def main():
         if item.kind == "crystal" and not item.backup_only
     ]
     assert all("PeriodicSiteData" in item.entity_types for item in crystal_inventory)
+    if "cell_edges_partial_uij" in preview.plan.report.object_names:
+        assert hasattr(migration, "_object_diagnostic_messages"), (
+            "preview popup needs a shared object-diagnostic renderer"
+        )
+        assert "scientific coordinates use the original base mesh, not modifier output" in (
+            migration._object_diagnostic_messages(preview, "cell_edges_partial_uij")
+        ), "backup-only object diagnostics must render in the preview popup"
     try:
         migration.migrate_legacy_scene(scene, confirmed=False)
     except ValueError as error:
         assert "confirmation" in str(error)
     else:
         raise AssertionError("migration accepted without explicit confirmation")
+
+    originals = tuple(bpy.data.objects[name] for name in preview.plan.report.object_names)
+    collections_before = tuple(sorted(item.name for item in bpy.data.collections))
+    inventory_before = _inventory()
+    objects_before = _object_snapshot(originals, scene)
+    links_before_snapshot = _scene_links_snapshot()
+    siblings_before_snapshot = _sibling_inventory(preview.sidecar_path)
+    snapshot_failure = RuntimeError("injected snapshot deepcopy failure")
+    original_deepcopy = migration.deepcopy
+
+    def fail_snapshot_deepcopy(_value):
+        raise snapshot_failure
+
+    migration.deepcopy = fail_snapshot_deepcopy
+    try:
+        migration._backup_legacy(originals, scene, uuid4(), uuid4())
+    except RuntimeError as error:
+        assert error is snapshot_failure
+    else:
+        raise AssertionError("snapshot failure did not escape")
+    finally:
+        migration.deepcopy = original_deepcopy
+    assert tuple(sorted(item.name for item in bpy.data.collections)) == collections_before
+    assert _inventory() == inventory_before
+    assert _object_snapshot(originals, scene) == objects_before
+    assert _scene_links_snapshot() == links_before_snapshot
+    assert _sibling_inventory(preview.sidecar_path) == siblings_before_snapshot
+    assert "ChemBlender Legacy Backup" not in bpy.data.collections
 
     alternate_layer = scene.view_layers.new("Migration Target Alternate")
     for obj in (bpy.data.objects[name] for name in preview.plan.report.object_names):
