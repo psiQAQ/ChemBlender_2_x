@@ -14,6 +14,7 @@ permissions:
 
 jobs:
   native-core:
+    if: ${{ !github.event.deleted }}
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
@@ -32,6 +33,7 @@ jobs:
             tests.test_quantum_visualization_docs `
             tests.test_repository_contract `
             tests.test_native_core_ci_contract `
+            tests.test_committed_format_range `
             -v
           if ($LASTEXITCODE -ne 0) { throw "Native stdlib contracts failed" }
       - name: Compile native source and tests
@@ -45,30 +47,13 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           PULL_REQUEST_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          $base = switch ($env:EVENT_NAME) {
-            "pull_request" { $env:PULL_REQUEST_BASE }
-            "push" { $env:PUSH_BEFORE }
-            default { "" }
-          }
-          $validBase = $base -match '^[0-9a-fA-F]{40}$' -and $base -notmatch '^0{40}$'
-          if ($validBase) {
-            & git cat-file -e "$base^{commit}" 2>$null
-            $validBase = $LASTEXITCODE -eq 0
-          }
-          if (-not $validBase) {
-            $base = [string](& git rev-parse --verify HEAD^ 2>$null)
-            $validBase = $LASTEXITCODE -eq 0 -and $base.Trim() -match '^[0-9a-fA-F]{40}$'
-            $base = $base.Trim()
-          }
-          if (-not $validBase) {
-            $base = [string](& git rev-list --max-parents=0 HEAD)
-            if ($LASTEXITCODE -ne 0 -or $base.Trim() -notmatch '^[0-9a-fA-F]{40}$') {
-              throw "Cannot determine a committed format base"
-            }
-            $base = $base.Trim()
-          }
-          & git diff --check $base HEAD
+          python tests/check_committed_format_range.py `
+            --event-name $env:EVENT_NAME `
+            --pull-request-base $env:PULL_REQUEST_BASE `
+            --push-before $env:PUSH_BEFORE `
+            --default-branch $env:DEFAULT_BRANCH
           if ($LASTEXITCODE -ne 0) { throw "Committed format check failed" }
 
   package:

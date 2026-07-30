@@ -47,12 +47,21 @@ downloads Blender or wheels nor installs runtime packages; Gemmi/RDKit coverage
 therefore remains in the package job instead of being misreported as native
 coverage.
 
-The native checkout fetches full history. Its format check compares committed
-changes, not the clean runner worktree: pull requests use the event base SHA,
-pushes use the previous SHA, and an empty, all-zero, invalid, or unavailable
-event value falls back to `HEAD^` or the repository root. The final command is
-`git diff --check <base> HEAD`, so trailing whitespace in a committed head
-cannot be hidden by a clean checkout.
+The native checkout fetches full history. Its format check calls the
+standard-library `tests/check_committed_format_range.py` helper, so the
+workflow and local contract tests use the same event selection. A nonzero
+40-hex pull-request base SHA or push `before` SHA must identify an exact local
+commit; if it is absent locally, the helper explicitly fetches that SHA from
+`origin` and fails closed if it remains unavailable. It never substitutes a
+parent for a declared event base.
+
+An empty or all-zero push `before` (a new branch), and events without a base,
+first use the merge base with the default branch. If that ref cannot be used,
+the helper compares the complete committed tree from Git's empty tree rather
+than silently checking only the last commit. Its final command is
+`git diff --check <base> HEAD`, so trailing whitespace in an earlier committed
+head cannot be hidden by a clean checkout. Deleted pushes skip `native-core`;
+because `package` needs that job, it cannot build or upload an artifact.
 
 The `package` job explicitly `needs: native-core`. It uses a temporary
 `BLENDER_USER_RESOURCES`, downloads Blender and the approved RDKit/Gemmi wheels
