@@ -224,6 +224,13 @@ class ReleaseArtifactTests(unittest.TestCase):
         )
         with zipfile.ZipFile(io.BytesIO(wheel)) as archive:
             wheel_unpacked = sum(info.file_size for info in archive.infolist())
+        with zipfile.ZipFile(package) as archive:
+            package_member_unpacked = sum(info.file_size for info in archive.infolist())
+            resource_unpacked = sum(
+                info.file_size
+                for info in archive.infolist()
+                if not info.filename.startswith("wheels/")
+            )
         (extension / "dependencies.toml").write_text(
             "\n".join(
                 (
@@ -291,6 +298,27 @@ class ReleaseArtifactTests(unittest.TestCase):
             "schema_version": "1",
             "baseline_package_bytes": package.stat().st_size,
             "allowed_unexplained_growth_bytes": 0,
+            "baseline_member_unpacked_bytes": package_member_unpacked,
+            "allowed_unexplained_member_unpacked_growth_bytes": 0,
+            "max_member_unpacked_bytes": 30_000_000,
+            "section_unpacked_budgets": {
+                "code": {
+                    "baseline_unpacked_bytes": 0,
+                    "allowed_unexplained_growth_bytes": 0,
+                },
+                "resources": {
+                    "baseline_unpacked_bytes": resource_unpacked,
+                    "allowed_unexplained_growth_bytes": 0,
+                },
+                "wheels": {
+                    "baseline_unpacked_bytes": len(wheel),
+                    "allowed_unexplained_growth_bytes": 0,
+                },
+                "other": {
+                    "baseline_unpacked_bytes": 0,
+                    "allowed_unexplained_growth_bytes": 0,
+                },
+            },
             "existing_wheel_distributions": ["fixture"],
             "new_wheel_budget": {
                 "max_compressed_bytes_per_wheel": 10_000_000,

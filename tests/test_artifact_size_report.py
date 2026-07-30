@@ -8,6 +8,7 @@ import unittest
 import warnings
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -97,11 +98,39 @@ class ArtifactSizeReportTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def _section_unpacked_baselines(self):
+        baselines = {"code": 0, "resources": 0, "wheels": 0, "other": 0}
+        with zipfile.ZipFile(self.package) as archive:
+            for info in archive.infolist():
+                if info.is_dir():
+                    continue
+                if info.filename.startswith("wheels/"):
+                    section = "wheels"
+                elif info.filename == "src/code.py":
+                    section = "code"
+                elif info.filename in {"LICENSE", "assets/Chem_Nodes.blend"}:
+                    section = "resources"
+                else:
+                    section = "other"
+                baselines[section] += info.file_size
+        return baselines
+
     def _write_budget(self, baseline_bytes, **overrides):
+        section_baselines = self._section_unpacked_baselines()
         budget = {
             "schema_version": "1",
             "baseline_package_bytes": baseline_bytes,
             "allowed_unexplained_growth_bytes": 0,
+            "baseline_member_unpacked_bytes": sum(section_baselines.values()),
+            "allowed_unexplained_member_unpacked_growth_bytes": 0,
+            "max_member_unpacked_bytes": 30_000_000,
+            "section_unpacked_budgets": {
+                section: {
+                    "baseline_unpacked_bytes": baseline,
+                    "allowed_unexplained_growth_bytes": 0,
+                }
+                for section, baseline in section_baselines.items()
+            },
             "existing_wheel_distributions": ["rdkit"],
             "new_wheel_budget": {
                 "max_compressed_bytes_per_wheel": 10_000_000,
@@ -155,6 +184,17 @@ class ArtifactSizeReportTests(unittest.TestCase):
             hashlib.sha256(self.package.read_bytes()).hexdigest(),
         )
         self.assertEqual(report["baseline"]["actual_growth_bytes"], 0)
+        self.assertEqual(
+            report["member_unpacked_budget"],
+            {
+                "actual_growth_bytes": 0,
+                "allowed_unexplained_growth_bytes": 0,
+                "baseline_unpacked_bytes": sum(
+                    value["unpacked_bytes"] for value in report["sections"].values()
+                ),
+                "max_member_unpacked_bytes": 30_000_000,
+            },
+        )
         self.assertEqual(
             report["new_wheel_allowance"],
             {
@@ -246,6 +286,31 @@ class ArtifactSizeReportTests(unittest.TestCase):
         self._write_budget(self.package.stat().st_size)
 
         with self.assertRaisesRegex(ValueError, "package wheel members"):
+            artifact_size_report.build_report(
+                self.package, self.inventory, self.license_list, self.budget
+            )
+
+    def test_unpacked_bomb_is_rejected_before_zip_content_is_read(self):
+        self._prepare_valid_package()
+        with zipfile.ZipFile(self.package, "a", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("assets/highly-compressible.json", b"\0" * 64 * 1024 * 1024)
+
+        with (
+            mock.patch.object(
+                zipfile.ZipFile,
+                "testzip",
+                side_effect=AssertionError("CRC validation must not run"),
+            ),
+            mock.patch.object(
+                zipfile.ZipFile,
+                "read",
+                side_effect=AssertionError("member read must not run"),
+            ),
+            self.assertRaisesRegex(
+                ValueError,
+                "archive member unpacked size exceeds budget: assets/highly-compressible.json",
+            ),
+        ):
             artifact_size_report.build_report(
                 self.package, self.inventory, self.license_list, self.budget
             )
@@ -353,6 +418,32 @@ class ArtifactSizeReportTests(unittest.TestCase):
 
         self.assertEqual(budget["baseline_package_bytes"], 29_936_732)
         self.assertEqual(budget["allowed_unexplained_growth_bytes"], 0)
+        self.assertEqual(budget["baseline_member_unpacked_bytes"], 31_881_277)
+        self.assertEqual(
+            budget["allowed_unexplained_member_unpacked_growth_bytes"], 0
+        )
+        self.assertEqual(budget["max_member_unpacked_bytes"], 30_000_000)
+        self.assertEqual(
+            budget["section_unpacked_budgets"],
+            {
+                "code": {
+                    "baseline_unpacked_bytes": 2_487_326,
+                    "allowed_unexplained_growth_bytes": 0,
+                },
+                "resources": {
+                    "baseline_unpacked_bytes": 2_505_199,
+                    "allowed_unexplained_growth_bytes": 0,
+                },
+                "wheels": {
+                    "baseline_unpacked_bytes": 26_888_752,
+                    "allowed_unexplained_growth_bytes": 0,
+                },
+                "other": {
+                    "baseline_unpacked_bytes": 0,
+                    "allowed_unexplained_growth_bytes": 0,
+                },
+            },
+        )
         self.assertEqual(budget["existing_wheel_distributions"], ["rdkit"])
         self.assertEqual(budget["approved_distributions"], ["gemmi"])
         self.assertEqual(budget["max_compressed_bytes_per_wheel"], 10_000_000)

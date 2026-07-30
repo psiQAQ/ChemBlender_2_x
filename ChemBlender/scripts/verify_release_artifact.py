@@ -3,21 +3,29 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import io
 import json
 import re
-import stat
 import sys
 import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath
 
 if __package__:
-    from .artifact_size_report import build_report, canonical_json
+    from .artifact_size_report import (
+        _bounded_outer_archive,
+        _load_budget,
+        build_report,
+        canonical_json,
+    )
     from .dependency_inventory import _license_target, _safe_members, _validate_schema
     from .release_metadata import parse_release_version, read_release_metadata
 else:
-    from artifact_size_report import build_report, canonical_json
+    from artifact_size_report import (
+        _bounded_outer_archive,
+        _load_budget,
+        build_report,
+        canonical_json,
+    )
     from dependency_inventory import _license_target, _safe_members, _validate_schema
     from release_metadata import parse_release_version, read_release_metadata
 
@@ -77,75 +85,66 @@ def _canonical_json_file(path: Path, label: str) -> bytes:
 
 
 def _tagged_dependency_metadata(
-    extension_root: Path, package: Path
+    extension_root: Path,
+    inventory: bytes,
 ) -> tuple[dict[str, object], dict[str, object]]:
     with (extension_root / "dependencies.toml").open("rb") as stream:
         dependencies = _validate_schema(tomllib.load(stream))
-    required = [dependency for dependency in dependencies if dependency["required"]]
-    expected_members = {f"wheels/{dependency['filename']}" for dependency in required}
+    document = json.loads(inventory)
+    wheels_document = document.get("wheels")
+    if type(wheels_document) is not list:
+        raise ValueError("wheel inventory does not match tagged dependencies")
+    actual_by_filename: dict[str, dict[str, object]] = {}
+    for wheel in wheels_document:
+        if type(wheel) is not dict or type(wheel.get("filename")) is not str:
+            raise ValueError("wheel inventory does not match tagged dependencies")
+        filename = wheel["filename"]
+        if filename in actual_by_filename:
+            raise ValueError("wheel inventory does not match tagged dependencies")
+        actual_by_filename[filename] = wheel
+    required = sorted(
+        (dependency for dependency in dependencies if dependency["required"]),
+        key=lambda dependency: dependency["filename"],
+    )
+    if set(actual_by_filename) != {dependency["filename"] for dependency in required}:
+        raise ValueError("wheel inventory does not match tagged dependencies")
     wheels: list[dict[str, object]] = []
     licenses: list[dict[str, str]] = []
-    with zipfile.ZipFile(package) as archive:
-        members = _safe_members(archive)
-        actual_members = {
-            name
-            for name, (_, is_directory, _) in members.items()
-            if not is_directory and name.lower().endswith(".whl")
-        }
-        if actual_members != expected_members:
-            raise ValueError("package wheel members do not match tagged dependencies")
-        for dependency in required:
-            filename = dependency["filename"]
-            member = members[f"wheels/{filename}"]
-            info, is_directory, _ = member
-            if is_directory:
-                raise ValueError(f"packaged wheel is a directory: {filename}")
-            contents = archive.read(info)
-            if hashlib.sha256(contents).hexdigest() != dependency["sha256"]:
-                raise ValueError(f"packaged wheel hash does not match tagged dependencies: {filename}")
-            try:
-                with zipfile.ZipFile(io.BytesIO(contents)) as wheel:
-                    wheel_members = _safe_members(wheel)
-                    if wheel.testzip() is not None:
-                        raise ValueError(f"packaged wheel CRC validation failed: {filename}")
-            except zipfile.BadZipFile as exc:
-                raise ValueError(f"invalid packaged wheel: {filename}") from exc
-            license_member = wheel_members.get(dependency["license_source"])
-            if (
-                license_member is None
-                or license_member[1]
-                or license_member[2] not in {0, stat.S_IFREG}
-            ):
-                raise ValueError(f"packaged wheel license does not match tagged dependencies: {filename}")
-            compressed_bytes = len(contents)
-            unpacked_bytes = sum(
-                wheel_member.file_size
-                for wheel_member, _, _ in wheel_members.values()
-            )
-            if compressed_bytes > dependency["max_compressed_bytes"]:
-                raise ValueError(f"packaged wheel compressed size exceeds tagged budget: {filename}")
-            if unpacked_bytes > dependency["max_unpacked_bytes"]:
-                raise ValueError(f"packaged wheel unpacked size exceeds tagged budget: {filename}")
-            item = dict(dependency)
-            item["compressed_bytes"] = compressed_bytes
-            item["unpacked_bytes"] = unpacked_bytes
-            wheels.append(item)
-            licenses.append(
-                {
-                    "distribution": dependency["distribution"],
-                    "filename": filename,
-                    "source": dependency["license_source"],
-                    "target": _license_target(dependency),
-                    "version": dependency["version"],
-                }
-            )
+    for dependency in required:
+        filename = dependency["filename"]
+        actual = actual_by_filename[filename]
+        compressed_bytes = actual.get("compressed_bytes")
+        unpacked_bytes = actual.get("unpacked_bytes")
+        if (
+            type(compressed_bytes) is not int
+            or compressed_bytes <= 0
+            or type(unpacked_bytes) is not int
+            or unpacked_bytes <= 0
+        ):
+            raise ValueError("wheel inventory does not match tagged dependencies")
+        item = dict(dependency)
+        item["compressed_bytes"] = compressed_bytes
+        item["unpacked_bytes"] = unpacked_bytes
+        wheels.append(item)
+        licenses.append(
+            {
+                "distribution": dependency["distribution"],
+                "filename": filename,
+                "source": dependency["license_source"],
+                "target": _license_target(dependency),
+                "version": dependency["version"],
+            }
+        )
     wheels.sort(key=lambda wheel: str(wheel["filename"]))
     licenses.sort(key=lambda license_entry: license_entry["filename"])
     return {"wheels": wheels}, {"licenses": licenses}
 
 
 def _verify_package_metadata(
-    artifact_dir: Path, extension_root: Path, package: Path, budget_path: Path
+    artifact_dir: Path,
+    extension_root: Path,
+    package: Path,
+    budget_path: Path,
 ) -> None:
     report_path = artifact_dir / "artifact-size.json"
     inventory_path = artifact_dir / "wheel-inventory.json"
@@ -154,7 +153,7 @@ def _verify_package_metadata(
     inventory = _canonical_json_file(inventory_path, "wheel inventory")
     licenses = _canonical_json_file(license_path, "license copy list")
     expected_inventory, expected_licenses = _tagged_dependency_metadata(
-        extension_root, package
+        extension_root, inventory
     )
     if inventory != canonical_json(expected_inventory):
         raise ValueError("wheel inventory does not match tagged dependencies")
@@ -186,6 +185,7 @@ def verify_artifact(
         raise ValueError("package-ci metadata mode requires a budget path")
     if metadata_mode == "release-assets" and budget_path is not None:
         raise ValueError("release-assets metadata mode must not have a budget path")
+    budget = _load_budget(budget_path) if budget_path is not None else None
     artifact_dir = artifact_dir.resolve()
     extension_root = extension_root.resolve()
     metadata = read_release_metadata(extension_root)
@@ -231,11 +231,12 @@ def verify_artifact(
 
     with zipfile.ZipFile(package) as archive:
         members = _safe_members(archive)
-        infos = [member for member in members.values() if not member[1]]
+        if budget is not None:
+            _bounded_outer_archive(members, budget)
         names = list(members)
         for name in names:
             _validate_archive_path(name)
-        if archive.testzip() is not None:
+        if metadata_mode == "release-assets" and archive.testzip() is not None:
             raise ValueError("ZIP CRC validation failed")
         archive_files = set(names)
         missing = REQUIRED_FILES - archive_files
@@ -251,9 +252,13 @@ def verify_artifact(
         )
         if packaged_manifest != manifest:
             raise ValueError("packaged manifest differs from checked-out tag")
-
     if metadata_mode == "package-ci":
-        _verify_package_metadata(artifact_dir, extension_root, package, budget_path)
+        _verify_package_metadata(
+            artifact_dir,
+            extension_root,
+            package,
+            budget_path,
+        )
 
     return {
         "version": version,

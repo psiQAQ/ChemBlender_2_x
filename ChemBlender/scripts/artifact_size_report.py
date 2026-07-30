@@ -71,6 +71,10 @@ def _load_budget(path: Path) -> dict[str, Any]:
         "schema_version",
         "baseline_package_bytes",
         "allowed_unexplained_growth_bytes",
+        "baseline_member_unpacked_bytes",
+        "allowed_unexplained_member_unpacked_growth_bytes",
+        "max_member_unpacked_bytes",
+        "section_unpacked_budgets",
         "existing_wheel_distributions",
         "new_wheel_budget",
     }:
@@ -83,6 +87,47 @@ def _load_budget(path: Path) -> dict[str, Any]:
         "budget schema allowed growth",
         allow_zero=True,
     )
+    member_unpacked_baseline = _positive_int(
+        budget["baseline_member_unpacked_bytes"],
+        "budget schema member unpacked baseline",
+    )
+    member_unpacked_growth = _positive_int(
+        budget["allowed_unexplained_member_unpacked_growth_bytes"],
+        "budget schema member unpacked growth",
+        allow_zero=True,
+    )
+    max_member_unpacked_bytes = _positive_int(
+        budget["max_member_unpacked_bytes"],
+        "budget schema max member unpacked bytes",
+    )
+    section_budgets = budget["section_unpacked_budgets"]
+    if type(section_budgets) is not dict or set(section_budgets) != set(SECTION_NAMES):
+        raise ValueError("invalid budget schema: section unpacked budgets")
+    parsed_section_budgets: dict[str, dict[str, int]] = {}
+    for section in SECTION_NAMES:
+        section_budget = section_budgets[section]
+        if type(section_budget) is not dict or set(section_budget) != {
+            "baseline_unpacked_bytes",
+            "allowed_unexplained_growth_bytes",
+        }:
+            raise ValueError("invalid budget schema: section unpacked budget")
+        parsed_section_budgets[section] = {
+            "baseline_unpacked_bytes": _positive_int(
+                section_budget["baseline_unpacked_bytes"],
+                "budget schema section unpacked baseline",
+                allow_zero=True,
+            ),
+            "allowed_unexplained_growth_bytes": _positive_int(
+                section_budget["allowed_unexplained_growth_bytes"],
+                "budget schema section unpacked growth",
+                allow_zero=True,
+            ),
+        }
+    if (
+        sum(item["baseline_unpacked_bytes"] for item in parsed_section_budgets.values())
+        != member_unpacked_baseline
+    ):
+        raise ValueError("invalid budget schema: member unpacked baseline")
     existing = budget["existing_wheel_distributions"]
     if type(existing) is not list or not existing:
         raise ValueError("invalid budget schema: existing wheels")
@@ -114,6 +159,10 @@ def _load_budget(path: Path) -> dict[str, Any]:
     return {
         "baseline_package_bytes": baseline,
         "allowed_unexplained_growth_bytes": allowed_growth,
+        "baseline_member_unpacked_bytes": member_unpacked_baseline,
+        "allowed_unexplained_member_unpacked_growth_bytes": member_unpacked_growth,
+        "max_member_unpacked_bytes": max_member_unpacked_bytes,
+        "section_unpacked_budgets": parsed_section_budgets,
         "existing_wheel_distributions": existing_distributions,
         "max_compressed_bytes_per_wheel": _positive_int(
             new["max_compressed_bytes_per_wheel"], "budget schema compressed wheel limit"
@@ -206,8 +255,70 @@ def _member_document(name: str, info: zipfile.ZipInfo) -> dict[str, int | str]:
     }
 
 
+def _bounded_outer_archive(
+    members: dict[str, tuple[zipfile.ZipInfo, bool, int]], budget: dict[str, Any]
+) -> tuple[dict[str, tuple[zipfile.ZipInfo, bool, int]], dict[str, dict[str, Any]]]:
+    files: dict[str, tuple[zipfile.ZipInfo, bool, int]] = {}
+    sections: dict[str, dict[str, Any]] = {
+        name: {"compressed_bytes": 0, "members": [], "unpacked_bytes": 0}
+        for name in SECTION_NAMES
+    }
+    for name, member in sorted(members.items()):
+        info, is_directory, _ = member
+        if is_directory:
+            continue
+        if info.file_size > budget["max_member_unpacked_bytes"]:
+            raise ValueError(f"archive member unpacked size exceeds budget: {name}")
+        files[name] = member
+        section = sections[_section(name)]
+        section["members"].append(_member_document(name, info))
+        section["compressed_bytes"] += info.compress_size
+        section["unpacked_bytes"] += info.file_size
+    member_unpacked = sum(section["unpacked_bytes"] for section in sections.values())
+    if (
+        member_unpacked
+        > budget["baseline_member_unpacked_bytes"]
+        + budget["allowed_unexplained_member_unpacked_growth_bytes"]
+    ):
+        raise ValueError("archive total unpacked size exceeds budget")
+    for name, section in sections.items():
+        section_budget = budget["section_unpacked_budgets"][name]
+        if (
+            section["unpacked_bytes"]
+            > section_budget["baseline_unpacked_bytes"]
+            + section_budget["allowed_unexplained_growth_bytes"]
+        ):
+            raise ValueError(f"archive section unpacked size exceeds budget: {name}")
+        section["unpacked_budget"] = {
+            "actual_growth_bytes": (
+                section["unpacked_bytes"]
+                - section_budget["baseline_unpacked_bytes"]
+            ),
+            **section_budget,
+        }
+    return files, sections
+
+
+def _bounded_wheel_members(
+    members: dict[str, tuple[zipfile.ZipInfo, bool, int]],
+    max_member_unpacked_bytes: int,
+    filename: str,
+) -> int:
+    unpacked_bytes = 0
+    for info, is_directory, _ in members.values():
+        if is_directory:
+            continue
+        if info.file_size > max_member_unpacked_bytes:
+            raise ValueError(f"wheel member unpacked size exceeds budget: {filename}")
+        unpacked_bytes += info.file_size
+    return unpacked_bytes
+
+
 def _wheel_report(
-    archive: zipfile.ZipFile, member: tuple[zipfile.ZipInfo, bool, int], wheel: dict[str, Any]
+    archive: zipfile.ZipFile,
+    member: tuple[zipfile.ZipInfo, bool, int],
+    wheel: dict[str, Any],
+    max_member_unpacked_bytes: int,
 ) -> dict[str, Any]:
     info, is_directory, _ = member
     if is_directory:
@@ -220,6 +331,13 @@ def _wheel_report(
     try:
         with zipfile.ZipFile(io.BytesIO(contents)) as nested:
             members = _safe_archive_members(nested)
+            nested_unpacked = _bounded_wheel_members(
+                members,
+                max_member_unpacked_bytes,
+                wheel["filename"],
+            )
+            if nested_unpacked != wheel["unpacked_bytes"]:
+                raise ValueError(f"wheel unpacked size mismatch: {wheel['filename']}")
             if nested.testzip() is not None:
                 raise ValueError(f"nested wheel CRC validation failed: {wheel['filename']}")
     except zipfile.BadZipFile as exc:
@@ -228,9 +346,6 @@ def _wheel_report(
     if license_member is None or license_member[1]:
         raise ValueError(f"wheel license source missing: {wheel['filename']}")
     nested_compressed = sum(member_info.compress_size for member_info, _, _ in members.values())
-    nested_unpacked = sum(member_info.file_size for member_info, _, _ in members.values())
-    if nested_unpacked != wheel["unpacked_bytes"]:
-        raise ValueError(f"wheel unpacked size mismatch: {wheel['filename']}")
     return {
         "distribution": wheel["distribution"],
         "filename": wheel["filename"],
@@ -264,33 +379,23 @@ def build_report(
     if new_distributions != budget["approved_distributions"]:
         raise ValueError("new wheel is not approved by the budget")
 
-    sections: dict[str, dict[str, Any]] = {
-        name: {"compressed_bytes": 0, "members": [], "unpacked_bytes": 0}
-        for name in SECTION_NAMES
-    }
     expected_members = {f"wheels/{wheel['filename']}": wheel for wheel in wheels}
     try:
         with zipfile.ZipFile(package) as archive:
             members = _safe_archive_members(archive)
+            files, sections = _bounded_outer_archive(members, budget)
             if archive.testzip() is not None:
                 raise ValueError("package ZIP CRC validation failed")
-            files = {
-                name: member
-                for name, member in members.items()
-                if not member[1]
-            }
             actual_wheels = {name for name in files if name.lower().endswith(".whl")}
             if actual_wheels != set(expected_members):
                 raise ValueError("package wheel members do not match inventory")
-            for name, member in sorted(files.items()):
-                info, _, _ = member
-                section = sections[_section(name)]
-                document = _member_document(name, info)
-                section["members"].append(document)
-                section["compressed_bytes"] += info.compress_size
-                section["unpacked_bytes"] += info.file_size
             wheel_documents = [
-                _wheel_report(archive, files[f"wheels/{wheel['filename']}"], wheel)
+                _wheel_report(
+                    archive,
+                    files[f"wheels/{wheel['filename']}"],
+                    wheel,
+                    budget["max_member_unpacked_bytes"],
+                )
                 for wheel in wheels
             ]
     except zipfile.BadZipFile as exc:
@@ -328,6 +433,16 @@ def build_report(
             "compressed_bytes": new_compressed,
             "max_compressed_bytes": budget["max_compressed_bytes_total"],
             "unpacked_bytes": new_unpacked,
+        },
+        "member_unpacked_budget": {
+            "actual_growth_bytes": (
+                member_unpacked - budget["baseline_member_unpacked_bytes"]
+            ),
+            "allowed_unexplained_growth_bytes": budget[
+                "allowed_unexplained_member_unpacked_growth_bytes"
+            ],
+            "baseline_unpacked_bytes": budget["baseline_member_unpacked_bytes"],
+            "max_member_unpacked_bytes": budget["max_member_unpacked_bytes"],
         },
         "package": {
             "bytes": package_bytes,
