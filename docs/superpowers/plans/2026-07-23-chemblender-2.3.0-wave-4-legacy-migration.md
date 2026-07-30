@@ -108,21 +108,39 @@ Run detection/extraction against fixtures and commit.
 **Interfaces:**
 - Produces: `plan_legacy_migration()`, `commit_legacy_migration()` and stable migration report.
 
-- [ ] **Step 1: Write conversion tests**
+- [x] **Step 1: Write conversion tests**
 
 Molecule snapshot maps to Structure, explicit TopologyRecord and ViewSettings. Crystal snapshot maps to periodic Structure/site data and declared symmetry. No source file creates provenance operation `legacy_blend_migration` with empty source hash and legacy object parents encoded as parameters.
 
-- [ ] **Step 2: Separate scientific and view data**
+- [x] **Step 2: Separate scientific and view data**
 
 Atomic number/coordinates/bonds/cell/occupancy/Uij are scientific. Colors/radii/material/node parameters are ViewSettings. Unverified fields receive Ambiguous/legacy_unverified diagnostics.
 
-- [ ] **Step 3: Build a staged session**
+- [x] **Step 3: Build a staged session**
 
 Migration preview returns a staged QCProject and view plans. Commit uses ProjectTransaction/sidecar publication and does not touch old objects until new data and views verify.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run pure conversion, sidecar and report tests; commit.
+
+**Task 3 checkpoint (2026-07-30):**
+
+- Implementation `f848a8f9b820fe74e8c3c036700d31e3f1706408`;
+  review fixes `d6e5283ec1b58c1ff9a17fe46899113cebbdae97`,
+  `576f6e0f3acc85ee08f1d885b32276fd072f933d`, and
+  `2837a03874181d867c2f24438625f7bd1a3b5ae7`.
+- `LegacyMigrationPlan` owns the staged `QCProject`, view plans, report and
+  content-bound base/candidate inventories. Commit rejects stale or modified
+  plans before verified sidecar publication.
+- Molecule and crystal conversion keeps scientific data in unified project
+  entities, display data in frozen view settings, and only trusts a saved
+  non-link `.blend` whose current SHA-256 still matches extraction-time proof.
+- Focused migration/detection/inventory/publication/documentation verification:
+  67 passed. Complete suite: 1842 passed, 26 skipped, 0 failed.
+- Blender 5.1.2 fixture extraction, extension validate/build, ZIP CRC/path
+  safety/inventory, outside-Blender import, `compileall`, and
+  `git diff --check` passed. Independent closure review was clean.
 
 ### Task 4: Implement Blender migration wizard and rollback
 
