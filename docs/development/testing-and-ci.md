@@ -55,6 +55,11 @@ commit; if it is absent locally, the helper explicitly fetches that SHA from
 `origin` and fails closed if it remains unavailable. It never substitutes a
 parent for a declared event base.
 
+The Windows PowerShell workflow passes every helper value as
+`--flag="$env:VAR"`. Keeping the option and its possibly empty value in one
+native-command argument prevents PowerShell from dropping nullable GitHub
+event values before `argparse` receives them.
+
 An empty or all-zero push `before` (a new branch), and events without a base,
 first use the merge base with the default branch. If that ref cannot be used,
 the helper compares the complete committed tree from Git's empty tree rather

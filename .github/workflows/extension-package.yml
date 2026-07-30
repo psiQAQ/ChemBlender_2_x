@@ -50,10 +50,10 @@ jobs:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           python tests/check_committed_format_range.py `
-            --event-name $env:EVENT_NAME `
-            --pull-request-base $env:PULL_REQUEST_BASE `
-            --push-before $env:PUSH_BEFORE `
-            --default-branch $env:DEFAULT_BRANCH
+            --event-name="$env:EVENT_NAME" `
+            --pull-request-base="$env:PULL_REQUEST_BASE" `
+            --push-before="$env:PUSH_BEFORE" `
+            --default-branch="$env:DEFAULT_BRANCH"
           if ($LASTEXITCODE -ne 0) { throw "Committed format check failed" }
 
   package:

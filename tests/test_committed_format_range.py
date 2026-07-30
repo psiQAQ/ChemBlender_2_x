@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
 CHECKER = ROOT / "tests" / "check_committed_format_range.py"
+WORKFLOW = ROOT / ".github" / "workflows" / "extension-package.yml"
 ZERO_SHA = "0" * 40
 
 
@@ -63,6 +68,73 @@ class CommittedFormatRangeTests(unittest.TestCase):
             capture_output=True,
             encoding="utf-8",
         )
+
+    def _workflow_range_command(self) -> str:
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        step = workflow.split("      - name: Check committed format range\n", 1)[1]
+        run = step.split("        run: |\n", 1)[1].split("\n\n  package:", 1)[0]
+        return textwrap.dedent(run)
+
+    def _run_workflow_range_command(
+        self,
+        repository: Path,
+        *,
+        event_name: str,
+        pull_request_base: str | None,
+        push_before: str | None,
+        default_branch: str | None,
+    ) -> tuple[subprocess.CompletedProcess[str], list[str]]:
+        tests = repository / "tests"
+        tests.mkdir()
+        shutil.copyfile(CHECKER, tests / CHECKER.name)
+        capture = repository / "capture_python.py"
+        arguments = repository / "checker-arguments.json"
+        capture.write_text(
+            "\n".join(
+                (
+                    "import json, os, runpy, sys",
+                    "from pathlib import Path",
+                    'Path(os.environ["CHECKER_ARGUMENTS"]).write_text(',
+                    "    json.dumps(sys.argv[1:]), encoding=\"utf-8\"",
+                    ")",
+                    "target = sys.argv[1]",
+                    "sys.argv = sys.argv[1:]",
+                    "runpy.run_path(target, run_name=\"__main__\")",
+                    "",
+                )
+            ),
+            encoding="utf-8",
+            newline="\n",
+        )
+        python_directory = repository / "python-bin"
+        python_directory.mkdir()
+        (python_directory / "python.bat").write_text(
+            f'@echo off\r\n"{sys.executable}" "{capture}" %*\r\n',
+            encoding="utf-8",
+            newline="",
+        )
+        environment = os.environ.copy()
+        environment["PATH"] = f"{python_directory}{os.pathsep}{environment['PATH']}"
+        environment["CHECKER_ARGUMENTS"] = str(arguments)
+        environment["EVENT_NAME"] = event_name
+        for name, value in (
+            ("PULL_REQUEST_BASE", pull_request_base),
+            ("PUSH_BEFORE", push_before),
+            ("DEFAULT_BRANCH", default_branch),
+        ):
+            if value is None:
+                environment.pop(name, None)
+            else:
+                environment[name] = value
+        result = subprocess.run(
+            ("powershell.exe", "-NoProfile", "-Command", self._workflow_range_command()),
+            cwd=repository,
+            check=False,
+            capture_output=True,
+            encoding="utf-8",
+            env=environment,
+        )
+        return result, json.loads(arguments.read_text(encoding="utf-8"))
 
     def test_known_event_base_checks_earlier_committed_whitespace(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -151,6 +223,55 @@ class CommittedFormatRangeTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_workflow_push_with_null_pull_request_base_passes_empty_argument(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = self._repository(Path(temp_dir), "repository")
+            base = self._commit(repository, "base.txt", "base\n", "base")
+            self._commit(repository, "head.txt", "clean\n", "head")
+            result, arguments = self._run_workflow_range_command(
+                repository,
+                event_name="push",
+                pull_request_base=None,
+                push_before=base,
+                default_branch="main",
+            )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("--pull-request-base=", arguments)
+
+    def test_workflow_pull_request_with_null_push_before_passes_empty_argument(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = self._repository(Path(temp_dir), "repository")
+            base = self._commit(repository, "base.txt", "base\n", "base")
+            self._commit(repository, "head.txt", "clean\n", "head")
+            result, arguments = self._run_workflow_range_command(
+                repository,
+                event_name="pull_request",
+                pull_request_base=base,
+                push_before=None,
+                default_branch="main",
+            )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("--push-before=", arguments)
+
+    def test_workflow_dispatch_with_null_event_bases_passes_empty_arguments(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = self._repository(Path(temp_dir), "repository")
+            self._commit(repository, "head.txt", "clean\n", "head")
+            result, arguments = self._run_workflow_range_command(
+                repository,
+                event_name="workflow_dispatch",
+                pull_request_base=None,
+                push_before=None,
+                default_branch=None,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("--pull-request-base=", arguments)
+        self.assertIn("--push-before=", arguments)
+        self.assertIn("--default-branch=", arguments)
 
 
 if __name__ == "__main__":

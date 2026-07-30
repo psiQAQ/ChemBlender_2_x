@@ -50,6 +50,10 @@ class NativeCoreCiContractTests(unittest.TestCase):
             "DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}",
             native,
         )
+        self.assertIn('--event-name="$env:EVENT_NAME"', native)
+        self.assertIn('--pull-request-base="$env:PULL_REQUEST_BASE"', native)
+        self.assertIn('--push-before="$env:PUSH_BEFORE"', native)
+        self.assertIn('--default-branch="$env:DEFAULT_BRANCH"', native)
         self.assertNotIn("git diff --check", native)
         for forbidden in (
             "Download pinned extension wheels",
