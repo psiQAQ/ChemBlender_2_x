@@ -78,6 +78,18 @@ repository access. Pull-request and `main` runs gate integration; the
 successful run for the exact annotated tag is the authority for public Release
 assets. A local equivalent run alone is not CI proof.
 
+`optional-qc-core` is a separate read-only workflow for the optional scientific
+backends. Its cclib and IOData jobs use isolated CPython 3.13 environments; its
+GBasis job uses the supported CPython 3.12 and NumPy 1.26.4 environment. Each
+job initializes only its pinned submodule commit, checks every selected fixture
+SHA-256 before loading tests, and invokes
+`ChemBlender/scripts/run_required_integration.py` with an explicit module list.
+The runner writes a canonical JSON summary containing Python/package versions,
+fixture hashes, counts and test IDs. A targeted skip, load error, no discovered
+tests, version/fixture mismatch, failure or error fails that job. Unrelated
+optional tests are not in these required module lists. The workflow uploads
+only the small JSON summaries, never a submodule source archive.
+
 `ChemBlender/scripts/verify_release_artifact.py` audits a downloaded artifact against its adjacent checksum and package contract. Local and CI archive hashes may differ because ZIP metadata is regenerated; the tag CI checksum is authoritative for the package selected by the Release workflow.
 
 Pillow is outside the 2.2.0 package while no extension code imports PIL or uses Pillow-dependent RDKit behavior. Any such feature must update the dependency decision, manifest, and CI together.

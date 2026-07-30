@@ -1,0 +1,139 @@
+name: optional-qc-core
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cclib:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Initialize pinned cclib fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          git submodule update --init --depth 1 submodules/cclib
+          test "$(git -C submodules/cclib rev-parse HEAD)" = "07260dd0394cb1a2381d4d897746d727a12ad6ce"
+      - name: Install pinned cclib
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "cclib==1.8.1"
+      - name: Run required cclib integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python ChemBlender/scripts/run_required_integration.py \
+            --summary summary-cclib.json \
+            --module tests.test_cclib_adapter \
+            --require-version cclib==1.8.1 \
+            --fixture submodules/cclib/data/Gaussian/basicGaussian16/water_hf_solvent_cpcm.log=02bc605f57477477f17d1f305f91cd9e4e62239456cb9a0ef288384c714d04d9 \
+            --fixture submodules/cclib/data/ORCA/basicORCA4.1/water_mp2.out=18923bf60ff3c4bac650a0cd871a7417e2f779c5161dfa138ea677fad4f7eb42 \
+            --fixture submodules/cclib/data/Gaussian/basicGaussian16/dvb_ir.out=eae40334346cea9177ab5c75ca81cd53ed1fbcaf5d567a8818f067439e5c744f \
+            --fixture submodules/cclib/data/Gaussian/basicGaussian16/dvb_raman.out=f208f87b45aaa9792cc5c032d7ad9d0e2e89f70df16d38a32916837c478248fe \
+            --fixture submodules/cclib/data/ORCA/basicORCA5.0/dvb_ir.out=17aaa6f1ca3d4bdc9ce90d857c6b4ffbbeda2ceb660934cfc8caa211d9d34e29 \
+            --fixture submodules/cclib/data/ORCA/basicORCA5.0/dvb_raman.out=8389fcfb2014a4c320c800d1bb8e3003588ef845b4cee3f342ebe5c3d0398113 \
+            --fixture submodules/cclib/data/Gaussian/basicGaussian16/dvb_td.out=d608b388b408a123447a637efeafd7e3c3436c645b01c4c48a446fb22648006b \
+            --fixture submodules/cclib/data/Gaussian/basicGaussian09/dvb_td.out=1b22bead2a4b13260f3ec870e8fe26a6c6400e52fd93f3fcbc1dff0301dfa9ff \
+            --fixture submodules/cclib/data/ORCA/basicORCA5.0/dvb_td.out=908be982bb2a50b88ded46e0df397c26e1d3399ea9fcac8f70940a4cb45c4be8 \
+            --fixture submodules/cclib/data/ORCA/basicORCA5.0/dvb_adc2.log=fcb6c4b0bc8d35aa34a0e58a86c148622820f3234c5309c7719014a8d6fe556f
+      - name: Upload cclib summary
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: optional-qc-core-cclib-${{ github.run_id }}
+          path: summary-cclib.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  iodata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Initialize pinned IOData fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          git submodule update --init --depth 1 submodules/iodata
+          test "$(git -C submodules/iodata rev-parse HEAD)" = "adab5813713ba64641565eb2a8c11803a4e9bba6"
+      - name: Install pinned IOData
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "qc-iodata==1.0.1"
+      - name: Run required IOData integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python ChemBlender/scripts/run_required_integration.py \
+            --summary summary-iodata.json \
+            --module tests.test_iodata_adapter \
+            --require-version qc-iodata==1.0.1 \
+            --fixture submodules/iodata/iodata/test/data/water_sto3g_hf_g03.fchk=2385f3da057bcc3a33327de7f36703bada5069ed3089fc581ece401473218415 \
+            --fixture submodules/iodata/iodata/test/data/ch3_hf_sto3g.fchk=2b958cb5e03ca5d9e506b215aa424f9f1998b3ac4ce30b8fcb64795e8b895f3b \
+            --fixture submodules/iodata/iodata/test/data/h2o.molden.input=9395e96ca9e464d883849e29d0f7ffb331f371512d2af6aa67f25061615bd3b7
+      - name: Upload IOData summary
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: optional-qc-core-iodata-${{ github.run_id }}
+          path: summary-iodata.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  gbasis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Initialize pinned GBasis and IOData fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          git submodule update --init --depth 1 submodules/gbasis submodules/iodata
+          test "$(git -C submodules/gbasis rev-parse HEAD)" = "6440c84f3fcf8d42cbd9b5de53ae8d70bed4cd4f"
+          test "$(git -C submodules/iodata rev-parse HEAD)" = "adab5813713ba64641565eb2a8c11803a4e9bba6"
+      - name: Install pinned GBasis environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "numpy==1.26.4" "qc-iodata==1.0.1" "qc-gbasis==0.1.0"
+      - name: Run required GBasis integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python ChemBlender/scripts/run_required_integration.py \
+            --summary summary-gbasis.json \
+            --module tests.test_wavefunction_grid \
+            --module tests.test_wavefunction_observables \
+            --require-version numpy==1.26.4 \
+            --require-version qc-iodata==1.0.1 \
+            --require-version qc-gbasis==0.1.0 \
+            --fixture submodules/iodata/iodata/test/data/water_sto3g_hf_g03.fchk=2385f3da057bcc3a33327de7f36703bada5069ed3089fc581ece401473218415 \
+            --fixture submodules/iodata/iodata/test/data/ch3_hf_sto3g.fchk=2b958cb5e03ca5d9e506b215aa424f9f1998b3ac4ce30b8fcb64795e8b895f3b \
+            --fixture submodules/iodata/iodata/test/data/water_ccpvdz_pure_hf_g03.fchk=ef4b97f94cf701647f40042f2c44ea864f5ce9ac3cfeda7985acf31ac16fe7f3
+      - name: Upload GBasis summary
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: optional-qc-core-gbasis-${{ github.run_id }}
+          path: summary-gbasis.json
+          if-no-files-found: ignore
+          retention-days: 14

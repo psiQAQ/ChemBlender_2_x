@@ -61,6 +61,13 @@ IOData is the optional FCHK/Molden basis, orbital, AO-basis 1-RDM, and effective
 
 GBasis evaluates normalized Gaussian basis functions, molecular orbitals, total/spin density and electrostatic-potential grids. Install the modern distribution as `qc-gbasis`; do not install the withdrawn legacy `gbasis` distribution. Version 0.1.0 declares `numpy<2` on Windows, so its standard dependency set has no Python 3.13-compatible NumPy wheel. A Python 3.12/NumPy 1.26.4 worker is the supported local baseline. Python 3.13 with forced NumPy 2.5.1 produced matching probe results but is not a supported installation path. GBasis, IOData, SciPy and their submodules remain outside the Blender Extension ZIP.
 
+The read-only `optional-qc-core` workflow keeps these backends outside the
+extension package: cclib and IOData run in isolated CPython 3.13 environments,
+while GBasis runs in CPython 3.12 with NumPy 1.26.4. Before each explicit
+adapter module list runs, CI checks the recorded submodule commit and fixture
+SHA-256 values; its stdlib runner rejects targeted skips, load errors and zero
+discovery instead of converting a missing optional backend into success.
+
 | Item | Value |
 | --- | --- |
 | Package version | `gemmi==0.7.5` |
