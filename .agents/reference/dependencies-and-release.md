@@ -21,6 +21,8 @@ Use Blender's bundled NumPy and Requests. Verify their origins from an isolated 
 | Target | CPython 3.13, Windows x64 |
 | SHA-256 | `f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48` |
 | Source | `https://files.pythonhosted.org/packages/68/d0/5de3d0d7e66f0e7e7795ab94a53b826e257176c15c9ee79f15621ac040ed/rdkit-2026.3.3-cp313-cp313-win_amd64.whl` |
+| Compressed / unpacked | 24,618,400 / 57,121,218 bytes |
+| License | BSD-3-Clause; wheel path `rdkit-2026.3.3.dist-info/LICENSE.md` |
 
 The wheel is downloaded to `ChemBlender/wheels/`, verified before build, declared in `blender_manifest.toml`, and ignored by Git. Runtime code only checks/imports RDKit; it never downloads or installs it.
 
@@ -74,6 +76,31 @@ Gemmi is a bundled base wheel and owns CIF parsing and raw-envelope access.
 Its adapter uses a late import: extension enable, `ChemBlender.core` and
 `ChemBlender.reader_api` imports must not load Gemmi. Gemmi objects never enter
 the project, sidecar, canonical document or public Reader API.
+
+## Machine-readable Bundled Inventory
+
+`ChemBlender/dependencies.toml` is the canonical record for each bundled wheel:
+distribution, version, filename, platform, Python ABI, fixed URL, SHA-256, SPDX
+license, in-wheel license path, required boundary, and compressed/unpacked byte
+ceilings. The RDKit and Gemmi ceilings lock the exact hash-verified artifacts
+above; any dependency update must update all of those fields together with its
+reviewed size/license evidence.
+
+After CI or a developer has downloaded the fixed wheels, run:
+
+```powershell
+& <Blender Python> ChemBlender/scripts/dependency_inventory.py `
+  --manifest ChemBlender/blender_manifest.toml `
+  --output wheel-inventory.json `
+  --license-copy-list wheel-license-copy-list.json
+```
+
+The standard-library-only CLI reads local wheels only: it checks required
+manifest paths, SHA-256, archive member paths, in-wheel license sources, and
+compressed/unpacked ceilings, then writes canonical JSON plus deterministic
+license-copy targets. It does not download, install, extract, or delete data;
+it rejects traversal, absolute, drive-qualified, and duplicate archive paths.
+Optional external packages remain outside `blender_manifest.toml` wheels.
 
 | Item | Value |
 | --- | --- |
@@ -154,6 +181,7 @@ license, authentication and deployment decision; credential values never enter `
 - Tag version equals manifest version after stripping leading `v`.
 - `CHANGELOG.md` has exactly one non-empty dated entry for the manifest version; future tags contain that same entry.
 - CI downloads Blender, RDKit and Gemmi from pinned official locations and verifies checksums.
+- CI emits the hash-verified `wheel-inventory.json` and license-copy list from `dependencies.toml` before package artifact upload.
 - Built ZIP contains exactly the declared wheels; Git contains no `.whl`.
 - Built ZIP excludes development scripts, tests, caches, and nested ZIP files.
 - Unit, validate, build, isolated install, real install, register, unregister, reload, RDKit operation, Gemmi import/version, and `.blend` checks pass.
