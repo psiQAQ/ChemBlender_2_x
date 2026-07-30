@@ -798,20 +798,8 @@ class LegacyCallerInventoryTests(unittest.TestCase):
             {
                 "read_MOL": set(),
                 "read_Cryst": set(),
-                "read_cif": {
-                    (
-                        "ChemBlender/read.py",
-                        "read_Cryst",
-                        "read_cif",
-                    ),
-                },
-                "read_poscar": {
-                    (
-                        "ChemBlender/read.py",
-                        "read_Cryst",
-                        "read_poscar",
-                    ),
-                },
+                "read_cif": set(),
+                "read_poscar": set(),
                 "mol_block_v2000": {
                     (
                         "ChemBlender/output.py",

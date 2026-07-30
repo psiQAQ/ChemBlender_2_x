@@ -4331,29 +4331,6 @@ def assert_poscar_workflow(module_key, repository_root):
         ui.close_scene_session(bpy.context.scene)
 
 
-def assert_legacy_crystal_reader_baseline(module_key, repository_root):
-    reader = importlib.import_module(f"{module_key}.read")
-    cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
-    poscar = repository_root / "tests" / "fixtures" / "poscar" / "cscl.vasp"
-    cif_result = reader.read_cif(cif)
-    assert cif_result[0] == [4.12, 4.12, 4.12]
-    assert cif_result[1] == [90.0, 90.0, 90.0]
-    assert cif_result[3] == 221
-    assert cif_result[4] == ["Cs", "Cl"]
-    assert cif_result[5] == ["Cs1", "Cl1"]
-    assert cif_result[6:9] == ([0.0, 0.5], [0.0, 0.5], [0.0, 0.5])
-    assert cif_result[9] == ["x,y,z"]
-
-    poscar_result = reader.read_poscar(poscar)
-    assert poscar_result[0] == (4.12, 4.12, 4.12), poscar_result
-    assert poscar_result[1] == (90.0, 90.0, 90.0)
-    assert poscar_result[3] == 221
-    assert poscar_result[4] == ["Cs", "Cl"]
-    assert poscar_result[5] == ["Cs1", "Cl1"]
-    assert poscar_result[6:9] == ([0.0, 0.5], [0.0, 0.5], [0.0, 0.5])
-    assert len(poscar_result[9]) == 48
-
-
 def assert_sdf_10k_workflow_budget(module_key):
     from statistics import median
     from time import perf_counter
@@ -5124,7 +5101,6 @@ assert_optional_workspace(module_key)
 assert_project_session_manager(module_key)
 assert_topology_view(module_key, package.parent.parent)
 assert_extxyz_workflow(module_key, package.parent.parent)
-assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 assert_sdf_10k_workflow_budget(module_key)
 assert_project_browser_rna_budget(module_key)
 assert_biological_workflow(module_key, package.parent.parent)

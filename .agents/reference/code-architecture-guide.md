@@ -69,7 +69,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/ui/workspace.py` | `CHEMBLENDER_OT_open_workspace`、`workspace_is_compatible()` | 从 Extension 包内安全追加或复用唯一 `ChemBlender` WorkSpace；切换前验证 3D View、浏览侧栏、Properties 和底部编辑区布局，失败时只回滚本次追加的 datablock，不影响 Quick Import、Project Browser 或科学项目状态。 |
 | `ChemBlender/ui/migration.py` | `legacy_migration_detection()`、`preview_legacy_migration()`、`migrate_legacy_scene()`、`CHEMBLENDER_OT_migrate_legacy_scene` | 旧 `.blend` 的显式注册 UI root：`load_post` 只缓存冻结检测结果，不写 Scene link 或改旧对象；确认迁移复用 legacy plan/commit、现有 Structure/periodic view builder 和多 Scene relink service，先创建并验证全部稳定命名的 View，随后将旧对象移入隐藏且带窄 owner contract 的 Backup collection。任一异常只回滚本事务创建的 View、sidecar、Backup 和 Scene link/session projection，恢复旧 collection/hide state；fatal exception 继续抛出，foreign 同名 View、Backup 或无 session-owned proof 的既有 `.cbq` 均 fail closed。 |
 | `ChemBlender/Chem_data.py` | `ELEMENTS_DEFAULT` | 保存元素序数、名称、颜色及共价/原子/范德华/离子半径等静态数据。该文件没有行为函数。 |
-| `ChemBlender/_math.py` | `rotate_vec()`、`symop_xyz_to_matrix()`、`fract_symop_expand()`、`make_cell_matrix()`、`fract_to_cartn()`、`compute_thermal_ellipsoid()` | 旧结构建模层共享的向量、晶胞、分数坐标、对称操作和热振动椭球数学函数。 |
+| `ChemBlender/_math.py` | `rotate_vec()`、`symop_xyz_to_matrix()`、`fract_symop_expand()`、`make_cell_matrix()`、`fract_to_cartn()` | 旧 direct crystal writer 共享的向量、晶胞、分数坐标和对称操作数学函数；不再承担文件解析或热振动椭球计算。 |
 | `ChemBlender/ex_package.py` | `safe_check_rdkit()` | 检查 RDKit 是否存在并满足最低版本；不负责在线安装。 |
 | `ChemBlender/extension.py` | `cat_generator()`、`NODE_MT_chem_GN_menu`、`NODE_OT_group_add`、`register()`、`unregister()` | 从节点库生成 Geometry Nodes 菜单，将节点组插入当前树，并管理菜单回调。 |
 | `ChemBlender/legacy/__init__.py` | `detect_legacy_scene()`、`extract_legacy_objects()`、`plan_legacy_migration()`、`commit_legacy_migration()`、`LegacyMigrationPlan` | 旧场景迁移 bridge 的公开、Blender-neutral 门面；不注册 UI，导入时不加载 `bpy`。 |
@@ -85,7 +85,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
-| `ChemBlender/read.py` | `add_BONDS()`、`CIF_Atom`、`CIF_Structure`、`init_cif_data()`、`copy_cif_data()` | 旧 direct crystal scaffold 的最小数据 helper；分子 parser 已删除，MOL/SDF/SMILES/XYZ/JSON 均由 Reader API 负责。当前仍定义但无 caller 的 crystal parser 是下一格式族删码步骤，direct crystal writer helpers 在其入口完成统一 Structure View 迁移后于 2.4 清理。 |
+| `ChemBlender/read.py` | `add_BONDS()`、`CIF_Atom`、`CIF_Structure`、`init_cif_data()`、`copy_cif_data()` | 旧 direct crystal scaffold 的最小数据 helper；所有分子和晶体文件格式均由 Reader API 负责，direct crystal writer helpers 在其入口完成统一 Structure View 迁移后于 2.4 清理。 |
 | `ChemBlender/scaffold.py` | `MESH_OT_SCAFFOLD_BUILD.execute()`、`show_error_dialog()` | 保留旧控件 ID、标签和输入校验；File（含 CIF/POSCAR）、SMILES/preset 与 PubChem 分别经 `ImportRequest` 或 session-owned PubChem staging 进入统一 Quick Import/Reader API。PubChem 只携带 URL/SHA-256 provenance 参数，失败显示 diagnostic；不再解析或直接构建 legacy scaffold。 |
 | `ChemBlender/mesh.py` | `create_object()`、`add_scaffold_attr()`、`scaffold_to_mol()`、`set_sel_atoms_attr()`、`set_sel_bonds_attr()`、`mol_optimize()`、`unit_cell_edges()` | Mesh/BMesh 主工具箱：创建和合并对象、写原子/键属性、选择和编辑结构、RDKit 转换与优化、生成晶胞边。 |
 | `ChemBlender/node.py` | `add_geometry_nodetree()`、`append()`、`Ball_Stick_nodetree()`、`ensure_structure_ball_stick_modifier()`、`ensure_periodic_cell_modifier()`、`ensure_periodic_adp_modifier()`、`Supercell()`、`CoordPolyhedra()`、`crys_filter()` | 创建或加载 Geometry Node Group，连接球棍、超胞、晶胞边、配位多面体和晶体过滤节点；统一 Structure view 通过 data API 建立带显式 contract/version 的球棍、完整晶格矩阵 cell-edge 与热椭球 modifier，拒绝同名不兼容节点，避免依赖活动对象 operator context；legacy 超胞桥保持原节点输入并写入独立 contract。 |
