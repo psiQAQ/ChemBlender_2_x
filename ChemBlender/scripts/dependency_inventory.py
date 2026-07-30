@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import stat
+import tempfile
 import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath, PureWindowsPath
@@ -229,23 +230,32 @@ def _json_text(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
 
 
-def _write_json(path: Path, text: str) -> None:
+def _write_bytes(path: Path, contents: bytes) -> None:
     with path.open("wb") as handle:
-        handle.write(text.encode("utf-8") + b"\n")
+        handle.write(contents)
         handle.flush()
         os.fsync(handle.fileno())
 
 
-def _temporary_path(parent: Path) -> Path:
-    for _ in range(100):
-        path = parent / f".{os.urandom(4).hex()}.tmp"
-        try:
-            descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError:
-            continue
+def _transaction_file(parent: Path, suffix: str) -> Path:
+    descriptor, filename = tempfile.mkstemp(dir=parent, prefix=".cbi-", suffix=suffix)
+    path = Path(filename)
+    try:
         os.close(descriptor)
-        return path
-    raise OSError("could not create output temporary file")
+    except OSError:
+        _cleanup([path])
+        raise
+    return path
+
+
+def _write_transaction_file(parent: Path, suffix: str, contents: bytes) -> Path:
+    path = _transaction_file(parent, suffix)
+    try:
+        _write_bytes(path, contents)
+    except OSError:
+        _cleanup([path])
+        raise
+    return path
 
 
 def _cleanup(paths: list[Path | None]) -> None:
@@ -257,53 +267,93 @@ def _cleanup(paths: list[Path | None]) -> None:
                 pass
 
 
-def _snapshot(path: Path) -> bytes | None:
-    return path.read_bytes() if path.exists() else None
+def _preflight_output_paths(output: Path, license_copy_list: Path) -> None:
+    if output.resolve() == license_copy_list.resolve():
+        raise ValueError("output paths must be distinct")
+    if output.exists() and license_copy_list.exists():
+        try:
+            same_file = os.path.samefile(output, license_copy_list)
+        except OSError as exc:
+            raise ValueError(f"could not compare output paths: {exc}") from exc
+        if same_file:
+            raise ValueError("output paths must be distinct")
+    for path in (output, license_copy_list):
+        if not path.parent.is_dir():
+            raise ValueError(f"output parent does not exist: {path.parent}")
 
 
-def _restore(path: Path, previous: bytes | None) -> None:
-    try:
-        if previous is None:
-            if path.exists() or path.is_symlink():
+def _backup_output(path: Path) -> Path | None:
+    if not path.exists():
+        return None
+    return _write_transaction_file(path.parent, ".bak", path.read_bytes())
+
+
+def _restore_outputs(
+    paths: tuple[Path, Path], backups: list[Path | None], replaced: list[bool]
+) -> list[str]:
+    errors: list[str] = []
+    for index in reversed(range(len(paths))):
+        if not replaced[index]:
+            continue
+        path = paths[index]
+        backup = backups[index]
+        try:
+            if backup is None:
                 path.unlink()
-        else:
-            with path.open("wb") as handle:
-                handle.write(previous)
-                handle.flush()
-                os.fsync(handle.fileno())
-    except OSError:
-        pass
+            else:
+                os.replace(backup, path)
+                backups[index] = None
+        except OSError as exc:
+            errors.append(f"{path}: {exc}")
+    return errors
 
 
 def _write_outputs(
     output: Path, license_copy_list: Path, wheel_inventory: dict[str, Any], licenses: dict[str, Any]
 ) -> str:
-    for path in (output, license_copy_list):
-        if not path.parent.is_dir():
-            raise ValueError(f"output parent does not exist: {path.parent}")
+    _preflight_output_paths(output, license_copy_list)
     output_text = _json_text(wheel_inventory)
     license_text = _json_text(licenses)
-    previous = [_snapshot(output), _snapshot(license_copy_list)]
+    paths = (output, license_copy_list)
     temporary: list[Path | None] = []
     try:
-        for path, text in ((output, output_text), (license_copy_list, license_text)):
-            temp = _temporary_path(path.parent)
-            temporary.append(temp)
-            _write_json(temp, text)
+        for path, text in zip(paths, (output_text, license_text), strict=True):
+            temporary.append(
+                _write_transaction_file(path.parent, ".tmp", text.encode("utf-8") + b"\n")
+            )
     except OSError as exc:
         _cleanup(temporary)
         raise ValueError(f"output write failed: {exc}") from exc
+    backups: list[Path | None] = []
     try:
-        os.replace(temporary[0], output)
-        temporary[0] = None
-        os.replace(temporary[1], license_copy_list)
-        temporary[1] = None
+        for path in paths:
+            backups.append(_backup_output(path))
     except OSError as exc:
-        _restore(output, previous[0])
-        _restore(license_copy_list, previous[1])
+        _cleanup(backups)
+        _cleanup(temporary)
+        raise ValueError(f"output backup failed: {exc}") from exc
+    replaced = [False, False]
+    try:
+        for index, path in enumerate(paths):
+            os.replace(temporary[index], path)
+            temporary[index] = None
+            replaced[index] = True
+    except OSError as exc:
+        recovery_errors = _restore_outputs(paths, backups, replaced)
+        if recovery_errors:
+            retained_backups = [
+                str(backup.absolute()) for backup in backups if backup is not None
+            ]
+            backup_detail = ", ".join(retained_backups) or "none"
+            raise ValueError(
+                f"output replace failed: {exc}; recovery failed: {'; '.join(recovery_errors)}; "
+                f"recoverable backups: {backup_detail}"
+            ) from exc
+        _cleanup(backups)
         raise ValueError(f"output replace failed: {exc}") from exc
     finally:
         _cleanup(temporary)
+    _cleanup(backups)
     return output_text
 
 

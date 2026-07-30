@@ -162,7 +162,11 @@ class DependencyInventoryTests(unittest.TestCase):
     def _assert_outputs_unchanged(self) -> None:
         self.assertEqual(self.output.read_bytes(), b"old inventory")
         self.assertEqual(self.licenses.read_bytes(), b"old licenses")
+        self._assert_no_transaction_files()
+
+    def _assert_no_transaction_files(self) -> None:
         self.assertEqual(list(self.root.glob(".*.tmp")), [])
+        self.assertEqual(list(self.root.glob(".*.bak")), [])
 
     def test_cli_writes_hash_verified_canonical_inventory_and_license_copy_list(self):
         sha256, compressed, unpacked = self._write_wheel(
@@ -197,6 +201,7 @@ class DependencyInventoryTests(unittest.TestCase):
                 ]
             },
         )
+        self._assert_no_transaction_files()
 
     def test_cli_rejects_manifest_wheel_not_in_required_inventory(self):
         sha256, compressed, unpacked = self._write_wheel(
@@ -371,6 +376,33 @@ class DependencyInventoryTests(unittest.TestCase):
         self.assertIn("output parent does not exist", stdout)
         self._assert_outputs_unchanged()
 
+    def test_cli_rejects_same_output_target_before_changes(self):
+        self._prepare_valid_inventory()
+        self.output.write_bytes(b"old inventory")
+
+        result, stdout = self._run_main(output=self.output, licenses=self.output)
+
+        self.assertEqual(result, 1)
+        self.assertIn("output paths must be distinct", stdout)
+        self.assertEqual(self.output.read_bytes(), b"old inventory")
+        self._assert_no_transaction_files()
+
+    def test_cli_rejects_hardlink_output_alias_before_changes(self):
+        self._prepare_valid_inventory()
+        self.output.write_bytes(b"old inventory")
+        try:
+            os.link(self.output, self.licenses)
+        except OSError as exc:
+            self.skipTest(f"hard links unavailable: {exc}")
+
+        result, stdout = self._run_main()
+
+        self.assertEqual(result, 1)
+        self.assertIn("output paths must be distinct", stdout)
+        self.assertEqual(self.output.read_bytes(), b"old inventory")
+        self.assertTrue(os.path.samefile(self.output, self.licenses))
+        self._assert_no_transaction_files()
+
     def test_cli_rejects_nonregular_wheel_path(self):
         self._prepare_valid_inventory()
         self.wheel.unlink()
@@ -385,7 +417,7 @@ class DependencyInventoryTests(unittest.TestCase):
         self._prepare_valid_inventory()
         self.output.write_bytes(b"old inventory")
         self.licenses.write_bytes(b"old licenses")
-        original = dependency_inventory._write_json
+        original = dependency_inventory._write_bytes
         calls = 0
 
         def fail_second(*args, **kwargs):
@@ -395,7 +427,7 @@ class DependencyInventoryTests(unittest.TestCase):
                 raise OSError("injected write failure")
             return original(*args, **kwargs)
 
-        with mock.patch.object(dependency_inventory, "_write_json", side_effect=fail_second):
+        with mock.patch.object(dependency_inventory, "_write_bytes", side_effect=fail_second):
             result, stdout = self._run_main()
 
         self.assertEqual(result, 1)
@@ -424,6 +456,35 @@ class DependencyInventoryTests(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn("output replace failed", stdout)
         self._assert_outputs_unchanged()
+
+    def test_cli_restore_failure_keeps_readable_backup_and_reports_both_errors(self):
+        self._prepare_valid_inventory()
+        self.output.write_bytes(b"old inventory")
+        self.licenses.write_bytes(b"old licenses")
+        real_replace = os.replace
+
+        def fail_replace_and_restore(source, destination):
+            source_path = Path(source)
+            destination_path = Path(destination)
+            if destination_path == self.licenses and source_path.suffix == ".tmp":
+                raise OSError("injected replace failure")
+            if destination_path == self.output and source_path.suffix == ".bak":
+                raise OSError("injected restore failure")
+            return real_replace(source, destination)
+
+        with mock.patch.object(dependency_inventory, "os", os, create=True), mock.patch.object(
+            os, "replace", side_effect=fail_replace_and_restore
+        ):
+            result, stdout = self._run_main()
+
+        self.assertEqual(result, 1)
+        self.assertIn("injected replace failure", stdout)
+        self.assertIn("injected restore failure", stdout)
+        backups = list(self.root.glob(".*.bak"))
+        self.assertTrue(backups)
+        self.assertIn(str(backups[0].resolve()), stdout)
+        self.assertIn(b"old inventory", [backup.read_bytes() for backup in backups])
+        self.assertEqual(list(self.root.glob(".*.tmp")), [])
 
     def test_repository_manifest_matches_required_inventory(self):
         with (ROOT / "ChemBlender" / "dependencies.toml").open("rb") as handle:
