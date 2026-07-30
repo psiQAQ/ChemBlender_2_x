@@ -251,3 +251,15 @@ cursor Minor was corrected in the final checkpoint. Remote CI was not run.
   an exact-HEAD run can exist only after a separately authorized push. Manual
   dispatch becomes available after this workflow version reaches the default
   branch.
+
+### Exact-HEAD CI follow-up
+
+- Exact HEAD `e2e397d6ddc39f767ba534d6ab856202fb19cf18` was pushed under
+  separate authorization.
+- `extension-package` run `30522943050` failed after Windows checkout changed
+  raw MOL2 fixtures and Reader API Markdown to CRLF, and because the isolated
+  dependency bootstrap did not populate Blender's shared
+  `.local/site-packages` path.
+- The minimal retry fix pins those byte-sensitive paths to LF and reuses the
+  existing `$testSite` installation at the shared dependency location. No
+  runtime model, Reader API, dependency, or test expectation changed.

@@ -6,6 +6,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "extension-package.yml"
+ATTRIBUTES = ROOT / ".gitattributes"
 WAVE3_BRANCH = "feat/2.3.0-wave3-exchange-mol2-pdb-pqr"
 
 
@@ -40,6 +41,22 @@ class Wave3CiGateTests(unittest.TestCase):
                 {path.name for path in (ROOT / "tests").glob("test_*.py")}
             )
         )
+
+    def test_windows_ci_uses_the_blender_shared_dependency_site(self):
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn(
+            '$testSite = Join-Path $env:APPDATA '
+            '"Blender Foundation/Blender/5.1/extensions/.local/lib/'
+            'python3.13/site-packages"',
+            workflow,
+        )
+
+    def test_raw_fixtures_and_reader_api_docs_are_checked_out_as_lf(self):
+        attributes = ATTRIBUTES.read_text(encoding="utf-8")
+
+        self.assertIn("tests/fixtures/mol2/*.mol2 text eol=lf", attributes)
+        self.assertIn("docs/reader-api-v1/*.md text eol=lf", attributes)
 
 
 if __name__ == "__main__":
