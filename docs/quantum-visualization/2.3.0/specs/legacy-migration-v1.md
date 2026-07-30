@@ -12,19 +12,23 @@ migration_report)`. Molecular snapshots produce `Structure` and explicit
 symmetry. Expanded crystal mesh atoms and cell-only auxiliary objects are
 display data and do not create scientific sites or duplicate structures.
 
-`ViewSettings` and `ViewPlan` retain legacy radii, colours, atom scales and
-bond display values as immutable presentation data. They contain no Blender
-objects. Extraction diagnostics and unavailable or unverified legacy data are
-reported as immutable `legacy_unverified` diagnostics with
+`ViewSettings` and `ViewPlan` retain legacy radii, colours, atom scales, bond
+display values, material display parameters and safe Geometry Nodes modifier
+inputs as immutable presentation data. They contain no Blender objects.
+Extraction diagnostics and unavailable or unverified legacy data are reported
+as immutable `legacy_unverified` diagnostics with
 `QualityStatus.AMBIGUOUS`; malformed atomic shape or edge indices fail closed.
 
 Each migrated object receives a `ProvenanceRecord` with operation
-`legacy_blend_migration`. A real regular source `.blend` may contribute its
-SHA-256. Otherwise source and source hash are empty, and immutable provenance
-parameters retain the legacy object name and collection parents.
+`legacy_blend_migration`. Only a real regular, non-link `.blend` source may
+contribute its SHA-256. Otherwise source and source hash are empty, and
+immutable provenance parameters retain the legacy object name and collection
+parents.
 
 `commit_legacy_migration(session, candidate_project)` publishes the candidate
 through `solidify_session(..., transfer_verified_project=True)`. The live
-session changes only after that path returns its verified reopened project.
+session changes only after that path returns its verified reopened project; it
+first requires the exact planned base-project object and unchanged project
+inventory.
 Blender view creation, legacy-object backup and rollback are UI responsibilities
 outside this module.

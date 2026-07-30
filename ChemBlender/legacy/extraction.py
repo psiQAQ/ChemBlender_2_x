@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from math import sqrt
+from math import isfinite, sqrt
 
 from .detection import LegacySceneDetection, detect_legacy_scene
 
@@ -40,6 +40,21 @@ class LegacyCIFSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class LegacyMaterialSnapshot:
+    name: str
+    diffuse_color: tuple[float, float, float, float]
+    metallic: float
+    roughness: float
+
+
+@dataclass(frozen=True, slots=True)
+class LegacyNodeModifierSnapshot:
+    name: str
+    node_group_name: str | None
+    inputs: tuple[tuple[str, object], ...]
+
+
+@dataclass(frozen=True, slots=True)
 class LegacyObjectSnapshot:
     name: str
     kind: str
@@ -54,6 +69,8 @@ class LegacyObjectSnapshot:
     cell: tuple[float, float, float, float, float, float] | None
     cif_original: LegacyCIFSnapshot | None
     cif_current: LegacyCIFSnapshot | None
+    materials: tuple[LegacyMaterialSnapshot, ...] = ()
+    node_modifiers: tuple[LegacyNodeModifierSnapshot, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,6 +127,65 @@ def _cif(value):
             for atom in value.atoms
         ),
     )
+
+
+def _display_value(value):
+    if type(value) in (str, bool, int):
+        return value
+    if type(value) is float and isfinite(value):
+        return value
+    try:
+        values = tuple(value)
+    except TypeError:
+        return None
+    if (
+        2 <= len(values) <= 4
+        and all(type(item) in (int, float) and isfinite(item) for item in values)
+    ):
+        return tuple(float(item) for item in values)
+    return None
+
+
+def _materials(obj, diagnostics):
+    materials = []
+    for material in obj.data.materials:
+        if material is None:
+            continue
+        color = tuple(float(value) for value in material.diffuse_color)
+        metallic = float(material.metallic)
+        roughness = float(material.roughness)
+        if (
+            len(color) != 4
+            or not all(isfinite(value) and 0.0 <= value <= 1.0 for value in color)
+            or not isfinite(metallic)
+            or not isfinite(roughness)
+        ):
+            diagnostics.append(LegacyDiagnostic("invalid_material_display", material.name, obj.name))
+            continue
+        materials.append(LegacyMaterialSnapshot(material.name, color, metallic, roughness))
+    return tuple(materials)
+
+
+def _node_modifiers(obj, diagnostics):
+    modifiers = []
+    for modifier in obj.modifiers:
+        if modifier.type != "NODES":
+            continue
+        inputs = []
+        for name in sorted(modifier.keys()):
+            value = _display_value(modifier[name])
+            if value is None:
+                diagnostics.append(LegacyDiagnostic("unsupported_node_input", f"{modifier.name}.{name}", obj.name))
+                continue
+            inputs.append((name, value))
+        modifiers.append(
+            LegacyNodeModifierSnapshot(
+                modifier.name,
+                modifier.node_group.name if modifier.node_group else None,
+                tuple(inputs),
+            )
+        )
+    return tuple(modifiers)
 
 
 def _has_nonuniform_world_transform(matrix):
@@ -169,6 +245,8 @@ def _snapshot(obj, detection, diagnostics):
         cell=_cell(obj),
         cif_original=_cif(getattr(obj, "cif_original", None)),
         cif_current=_cif(getattr(obj, "cif_current", None)),
+        materials=_materials(obj, diagnostics),
+        node_modifiers=_node_modifiers(obj, diagnostics),
     )
 
 

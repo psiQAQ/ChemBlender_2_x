@@ -22,7 +22,11 @@ from ..core import (
 from ..core.model import ImportBatch
 from ..core.storage.publication import solidify_session
 from ..core.sidecar import close_project
-from .extraction import LegacyExtractionReport, LegacyObjectSnapshot
+from .extraction import (
+    LegacyExtractionReport,
+    LegacyMaterialSnapshot,
+    LegacyNodeModifierSnapshot,
+)
 
 
 _REVISION = "legacy-migration-v1"
@@ -34,8 +38,10 @@ class ViewSettings:
     vdw_radii: tuple[float, ...] | None
     atom_scales: tuple[float, ...] | None
     colors: tuple[tuple[float, float, float, float], ...] | None
-    bond_scales: tuple[float | None, ...]
-    dashed: tuple[bool | None, ...]
+    bond_scales: tuple[float, ...] | None
+    dashed: tuple[bool, ...] | None
+    materials: tuple[LegacyMaterialSnapshot, ...]
+    node_modifiers: tuple[LegacyNodeModifierSnapshot, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +76,15 @@ class LegacyMigrationCommitResult:
     cleanup_warnings: tuple[str, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class _MigrationBinding:
+    base_project: QCProject
+    base_inventory: tuple[object, ...]
+
+
+_MIGRATION_BINDINGS = {}
+
+
 def _copy_project(project):
     if type(project) is not QCProject:
         raise TypeError("base_project must be a QCProject")
@@ -98,12 +113,39 @@ def _diagnostic(diagnostics, object_name, field_path, message):
 def _source(report, diagnostics):
     if report.source_path:
         path = Path(report.source_path)
-        if path.is_file():
-            return str(path), sha256(path.read_bytes()).hexdigest()
-        _diagnostic(diagnostics, None, "source_path", "legacy blend source is not a regular file")
+        try:
+            linked = path.is_symlink() or getattr(path, "is_junction", lambda: False)()
+            reparse = bool(getattr(path.stat(), "st_file_attributes", 0) & 0x400)
+            if path.suffix.lower() == ".blend" and path.is_file() and not linked and not reparse:
+                return str(path), sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            pass
+        _diagnostic(diagnostics, None, "source_path", "legacy blend source is not a trusted regular .blend file")
     else:
         _diagnostic(diagnostics, None, "source_path", "legacy blend source path is unavailable")
     return "", ""
+
+
+def _project_inventory(project):
+    inventory = [("project", str(project.id), project.schema_version)]
+    for field in fields(QCProject):
+        values = getattr(project, field.name)
+        if not isinstance(values, dict):
+            inventory.append((field.name, values))
+            continue
+        entries = []
+        for key, value in sorted(values.items(), key=lambda item: str(item[0])):
+            entries.append(
+                (
+                    str(key),
+                    type(value).__module__,
+                    type(value).__qualname__,
+                    str(getattr(value, "id", key)),
+                    getattr(value, "revision", None),
+                )
+            )
+        inventory.append((field.name, tuple(entries)))
+    return tuple(inventory)
 
 
 def _cell(parameters):
@@ -170,17 +212,34 @@ def _molecule_topology(snapshot, structure_id, provenance_id, diagnostics):
 
 def _view_settings(snapshot, diagnostics):
     count = len(snapshot.atomic_numbers)
-    def values(name, value, width=1):
+    def values(name, value, valid):
         if value is None:
+            _diagnostic(diagnostics, snapshot.name, name, f"legacy {name} is unavailable")
             return None
-        if len(value) != count or any(len(item) != width for item in value if width > 1):
-            _diagnostic(diagnostics, snapshot.name, name, f"legacy {name} shape does not match atom count")
+        try:
+            valid_values = len(value) == count and all(valid(item) for item in value)
+        except TypeError:
+            valid_values = False
+        if not valid_values:
+            _diagnostic(diagnostics, snapshot.name, name, f"legacy {name} is invalid")
             return None
         return value
+    def bonds(name, valid):
+        values = tuple(getattr(edge, name) for edge in snapshot.edges)
+        if not values:
+            return values
+        if any(not valid(value) for value in values):
+            _diagnostic(diagnostics, snapshot.name, f"edges.{name}", f"legacy bond {name} is invalid or unavailable")
+            return None
+        return values
     return ViewSettings(
-        values("radii", snapshot.radii), values("vdw_radii", snapshot.vdw_radii),
-        values("atom_scales", snapshot.atom_scales), values("colors", snapshot.colors, 4),
-        tuple(edge.scale for edge in snapshot.edges), tuple(edge.dashed for edge in snapshot.edges),
+        values("radii", snapshot.radii, lambda value: type(value) in (int, float) and isfinite(value) and value > 0.0),
+        values("vdw_radii", snapshot.vdw_radii, lambda value: type(value) in (int, float) and isfinite(value) and value > 0.0),
+        values("atom_scales", snapshot.atom_scales, lambda value: type(value) in (int, float) and isfinite(value) and value > 0.0),
+        values("colors", snapshot.colors, lambda value: len(value) == 4 and all(type(item) in (int, float) and isfinite(item) and 0.0 <= item <= 1.0 for item in value)),
+        bonds("scale", lambda value: type(value) in (int, float) and isfinite(value) and value > 0.0),
+        bonds("dashed", lambda value: type(value) is bool),
+        tuple(snapshot.materials), tuple(snapshot.node_modifiers),
     )
 
 
@@ -243,6 +302,10 @@ def plan_legacy_migration(extraction_report, base_project):
         provenance.append(record)
         view_plans.append(ViewPlan(structure.id, snapshot.name, snapshot.kind, _view_settings(snapshot, diagnostics)))
     candidate.commit(ImportBatch(structures=tuple(structures), topologies=tuple(topologies), provenance=tuple(provenance)))
+    _MIGRATION_BINDINGS[id(candidate)] = (
+        candidate,
+        _MigrationBinding(base_project, _project_inventory(base_project)),
+    )
     report = LegacyMigrationReport(source, source_hash, tuple(snapshot.name for snapshot in extraction_report.objects), tuple(diagnostics))
     return candidate, tuple(view_plans), report
 
@@ -250,8 +313,14 @@ def plan_legacy_migration(extraction_report, base_project):
 def commit_legacy_migration(project_session, candidate_project):
     if type(project_session) is not ProjectSession:
         raise TypeError("project_session must be a ProjectSession")
-    if type(candidate_project) is not QCProject or candidate_project.id != project_session.project.id:
-        raise ValueError("candidate_project must be a copy of the session project")
+    binding = _MIGRATION_BINDINGS.get(id(candidate_project))
+    if type(candidate_project) is not QCProject or binding is None or binding[0] is not candidate_project:
+        raise ValueError("candidate_project must be a planned migration candidate")
+    binding = binding[1]
+    if project_session.project is not binding.base_project:
+        raise ValueError("session base project no longer matches the migration plan")
+    if _project_inventory(project_session.project) != binding.base_inventory:
+        raise ValueError("session base project inventory changed after migration planning")
     destination = project_session.sidecar_path or project_session.temporary_root / "project.cbq"
     candidate_session = ProjectSession(project_session.id, candidate_project, project_session.temporary_root, project_session.sidecar_path, link_status=project_session.link_status)
     published = solidify_session(candidate_session, destination, transfer_verified_project=True)
@@ -267,4 +336,5 @@ def commit_legacy_migration(project_session, candidate_project):
         close_project(previous)
     except Exception as error:
         warnings.append(f"previous project cleanup failed: {error}")
+    _MIGRATION_BINDINGS.pop(id(candidate_project), None)
     return LegacyMigrationCommitResult(reopened, published.path, tuple(warnings))

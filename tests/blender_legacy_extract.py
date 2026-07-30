@@ -101,11 +101,24 @@ def create_ambiguous_legacy_object():
     bpy.context.scene.collection.objects.link(obj)
     obj["Type"] = "scaffold"
     obj["unexpected legacy value"] = "unverified"
+    material = bpy.data.materials.new("synthetic legacy material")
+    material.diffuse_color = (0.1, 0.2, 0.3, 1.0)
+    material.metallic = 0.4
+    material.roughness = 0.5
+    mesh.materials.append(material)
     parent = bpy.data.objects.new("synthetic legacy parent", None)
     bpy.context.scene.collection.objects.link(parent)
     parent.scale = (2.0, 1.0, 1.0)
     obj.parent = parent
     obj.modifiers.new("legacy display", "NODES")
+    modifier = obj.modifiers[-1]
+    modifier.node_group = bpy.data.node_groups.new(
+        "synthetic legacy nodes", "GeometryNodeTree"
+    )
+    modifier["legacy_scalar"] = 1.5
+    modifier["legacy_text"] = "legacy display"
+    modifier["legacy_vector"] = (1.0, 2.0, 3.0)
+    modifier["legacy_unsupported"] = {"nested": 1}
     bpy.context.view_layer.update()
 
 
@@ -158,12 +171,23 @@ def main():
         assert_fixture(report)
     elif MODE == "synthetic":
         assert len(report.objects) == 1
-        assert report.objects[0].coordinates == ((2.0, 0.0, 0.0),)
+        snapshot = report.objects[0]
+        assert snapshot.coordinates == ((2.0, 0.0, 0.0),)
+        assert snapshot.materials[0].name == "synthetic legacy material"
+        assert abs(snapshot.materials[0].metallic - 0.4) < 1.0e-6
+        assert snapshot.node_modifiers[0].node_group_name == "synthetic legacy nodes"
+        assert snapshot.node_modifiers[0].inputs == (
+            ("legacy_scalar", 1.5),
+            ("legacy_text", "legacy display"),
+            ("legacy_vector", (1.0, 2.0, 3.0)),
+        )
+        assert "unsupported_node_input" in {item.code for item in report.diagnostics}
         assert {item.code for item in report.diagnostics} == {
             "evaluated_geometry_ignored",
             "missing_blend_source_path",
             "nonuniform_transform",
             "unknown_custom_property",
+            "unsupported_node_input",
         }
     elif MODE == "current":
         assert detection.objects == ()
