@@ -67,21 +67,36 @@ Assert files/hashes and expected companion metadata. Commit fixtures separately 
 **Interfaces:**
 - Produces: `detect_legacy_scene()`, `extract_legacy_objects()` and `LegacyExtractionReport`.
 
-- [ ] **Step 1: Write detection tests**
+- [x] **Step 1: Write detection tests**
 
 Open each fixture in background Blender and assert detection identifies legacy object types without creating/deleting/renaming any datablock. A new 2.3 project scene reports no legacy objects.
 
-- [ ] **Step 2: Implement extraction to neutral snapshots**
+- [x] **Step 2: Implement extraction to neutral snapshots**
 
 Extract atom numbers/coordinates, edge topology/order, old radii/colors/scales, CIF original/current fields, cell, occupancy/Uij, object names and collections into immutable snapshots. Do not construct QCProject yet.
 
-- [ ] **Step 3: Record ambiguity**
+- [x] **Step 3: Record ambiguity**
 
 Unknown custom properties, missing source path, evaluated modifier geometry and nonuniform object transforms produce diagnostics. Apply object transform only according to a documented scientific-coordinate rule and show the effect in preview.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run detection/extraction against fixtures and commit.
+
+**Task 2 checkpoint (2026-07-30):**
+
+- Implementation `85870573586f196f3860c2141b97a829721287f1`,
+  review fix `9ed363c0ace00b089cc11af56f13a5c1565ac544`, and final-review
+  fix `10c561df95be6171858e373063354dd460eebbe2`.
+- Detection/extraction stays read-only, returns frozen Blender-neutral
+  snapshots, uses base-mesh coordinates transformed by `matrix_world`, and
+  records ambiguity without consuming evaluated geometry.
+- Blender 5.1.2 contracts cover all three fixtures, factory/current
+  StructureView scenes, mixed current/legacy scenes, parent-induced world
+  transforms, and unchanged datablock inventories.
+- Focused inventory/detection/documentation: 24 passed; complete suite:
+  1816 passed, 26 skipped, 0 failed. Outside-Blender import, extension
+  validate, `compileall`, and `git diff --check` passed.
 
 ### Task 3: Build migration preview and project conversion
 
