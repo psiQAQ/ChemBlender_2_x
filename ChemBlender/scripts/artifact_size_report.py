@@ -279,7 +279,7 @@ def build_report(
                 for name, member in members.items()
                 if not member[1]
             }
-            actual_wheels = {name for name in files if name.endswith(".whl")}
+            actual_wheels = {name for name in files if name.lower().endswith(".whl")}
             if actual_wheels != set(expected_members):
                 raise ValueError("package wheel members do not match inventory")
             for name, member in sorted(files.items()):

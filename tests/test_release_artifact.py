@@ -224,6 +224,30 @@ class ReleaseArtifactTests(unittest.TestCase):
         )
         with zipfile.ZipFile(io.BytesIO(wheel)) as archive:
             wheel_unpacked = sum(info.file_size for info in archive.infolist())
+        (extension / "dependencies.toml").write_text(
+            "\n".join(
+                (
+                    'schema_version = "1"',
+                    "",
+                    "[[dependency]]",
+                    'distribution = "fixture"',
+                    'version = "1.0.0"',
+                    f'filename = "{wheel_name}"',
+                    'platform = "windows-x64"',
+                    'python_abi = "py3-none-any"',
+                    'url = "https://example.invalid/fixture.whl"',
+                    f'sha256 = "{wheel_sha256}"',
+                    'spdx_license = "MIT"',
+                    'license_source = "fixture-1.0.0.dist-info/LICENSE.txt"',
+                    "required = true",
+                    f"max_compressed_bytes = {len(wheel)}",
+                    f"max_unpacked_bytes = {wheel_unpacked}",
+                    "",
+                )
+            ),
+            encoding="utf-8",
+            newline="\n",
+        )
         inventory = {
             "wheels": [
                 {
@@ -231,9 +255,15 @@ class ReleaseArtifactTests(unittest.TestCase):
                     "distribution": "fixture",
                     "filename": wheel_name,
                     "license_source": "fixture-1.0.0.dist-info/LICENSE.txt",
+                    "max_compressed_bytes": len(wheel),
+                    "max_unpacked_bytes": wheel_unpacked,
+                    "platform": "windows-x64",
+                    "python_abi": "py3-none-any",
+                    "required": True,
                     "sha256": wheel_sha256,
                     "spdx_license": "MIT",
                     "unpacked_bytes": wheel_unpacked,
+                    "url": "https://example.invalid/fixture.whl",
                     "version": "1.0.0",
                 }
             ]
@@ -288,6 +318,45 @@ class ReleaseArtifactTests(unittest.TestCase):
             budget_path=extension / "artifact-budgets.json",
         )
         self.assertEqual(result["package_sha256"], checksum)
+
+        inventory["wheels"][0]["license_source"] = "fixture/module.py"
+        inventory["wheels"][0]["spdx_license"] = "BOGUS-SPDX"
+        licenses["licenses"][0]["source"] = "fixture/module.py"
+        licenses["licenses"][0]["target"] = "licenses/fixture-1.0.0-module.py"
+        inventory_path.write_bytes(
+            (json.dumps(inventory, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+        )
+        license_path.write_bytes(
+            (json.dumps(licenses, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+        )
+        report = artifact_size_report.build_report(
+            package, inventory_path, license_path, extension / "artifact-budgets.json"
+        )
+        (package_dir / "artifact-size.json").write_bytes(
+            artifact_size_report.canonical_json(report)
+        )
+        with self.assertRaisesRegex(ValueError, "wheel inventory does not match tagged dependencies"):
+            verify_artifact(
+                package_dir,
+                extension,
+                self.tag,
+                metadata_mode="package-ci",
+                budget_path=extension / "artifact-budgets.json",
+            )
+
+        inventory["wheels"][0]["license_source"] = "fixture-1.0.0.dist-info/LICENSE.txt"
+        inventory["wheels"][0]["spdx_license"] = "MIT"
+        licenses["licenses"][0]["source"] = "fixture-1.0.0.dist-info/LICENSE.txt"
+        licenses["licenses"][0]["target"] = "licenses/fixture-1.0.0-LICENSE.txt"
+        inventory_path.write_bytes(
+            (json.dumps(inventory, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+        )
+        license_path.write_bytes(
+            (json.dumps(licenses, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+        )
+        report = artifact_size_report.build_report(
+            package, inventory_path, license_path, extension / "artifact-budgets.json"
+        )
 
         report["package"]["bytes"] += 1
         (package_dir / "artifact-size.json").write_bytes(

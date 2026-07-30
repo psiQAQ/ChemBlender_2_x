@@ -239,6 +239,17 @@ class ArtifactSizeReportTests(unittest.TestCase):
                 self.package, self.inventory, self.license_list, self.budget
             )
 
+    def test_uppercase_wheel_member_cannot_bypass_inventory_validation(self):
+        self._prepare_valid_package()
+        with zipfile.ZipFile(self.package, "a", zipfile.ZIP_STORED) as archive:
+            archive.writestr("wheels/rogue.WHL", b"rogue")
+        self._write_budget(self.package.stat().st_size)
+
+        with self.assertRaisesRegex(ValueError, "package wheel members"):
+            artifact_size_report.build_report(
+                self.package, self.inventory, self.license_list, self.budget
+            )
+
     def test_duplicate_nested_wheel_members_are_rejected(self):
         rdkit, gemmi = self._prepare_valid_package()
         bad_wheel = io.BytesIO()
