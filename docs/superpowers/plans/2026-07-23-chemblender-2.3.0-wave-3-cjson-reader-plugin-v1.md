@@ -206,18 +206,27 @@ installed. Scoped re-review approved with no open findings.
 **Interfaces:**
 - Produces: discovery refresh, plugin state UI and isolated failures.
 
-- [ ] **Step 1: Write discovery tests**
+- [x] **Step 1: Write discovery tests**
 
 Discover built-in readers and registered extension plugins by explicit hook/registry, not scanning arbitrary `sys.path`. Duplicate plugin/reader IDs are rejected per plugin and reported.
 
-- [ ] **Step 2: Add refresh lifecycle**
+- [x] **Step 2: Add refresh lifecycle**
 
 Extension enable registers its reader; disable unregisters it. ChemBlender refreshes registry without re-registering Blender classes. A failing plugin callback becomes an unavailable plugin diagnostic.
 
-- [ ] **Step 3: Blender smoke**
+- [x] **Step 3: Blender smoke**
 
 Install good and intentionally failing test plugins. Main extension remains enabled, good reader works, failing reader is visible/unavailable, all unregister cleanly.
 
-- [ ] **Step 4: Commit and beta.2 gate**
+- [x] **Step 4: Commit and beta.2 gate**
 
 Run full Reader API v1, example plugin, Blender lifecycle and Wave 3 format tests. Commit final compatible API additions.
+
+Completion evidence: `53b0ca5`, `7d3c0e0`, `8f931ed`; RED was 27
+discovery/registration tests with one failure and five errors, followed by
+ownership and manifest-matching review regressions. GREEN was 354/354 broad
+Reader/Wave 3 tests and 150/150 qualified scoped tests. Base, good and
+duplicate-ID failing extensions validated, built, passed ZIP audit and were
+installed together in an isolated Blender 5.1.2 profile. Good parsing,
+unavailable failure projection, independent disable/uninstall and base
+lifecycle x2 passed. Final scoped review approved with no open findings.
