@@ -130,13 +130,17 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
           RUN_ID: ${{ steps.release_info.outputs.run_id }}
           ARTIFACT_NAME: ${{ steps.release_info.outputs.artifact_name }}
+          PACKAGE_NAME: ${{ steps.release_info.outputs.package_name }}
+          CHECKSUM_NAME: ${{ steps.release_info.outputs.checksum_name }}
           VERSION: ${{ steps.release_info.outputs.version }}
         run: |
           set -euo pipefail
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
+          mkdir release-assets
+          cp -- "dist/$PACKAGE_NAME" "dist/$CHECKSUM_NAME" release-assets/
           python3 ChemBlender/scripts/verify_release_artifact.py \
-            --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG" \
-            --metadata-mode package-ci \
+            --artifact-dir release-assets --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG" \
+            --metadata-mode release-assets \
             --budget tag-source/.github/artifact-budgets.json
           python3 ChemBlender/scripts/extract_release_notes.py \
             --changelog CHANGELOG.md --version "$VERSION" --output release-notes.md
@@ -169,13 +173,17 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
           RUN_ID: ${{ needs.verify.outputs.run_id }}
           ARTIFACT_NAME: ${{ needs.verify.outputs.artifact_name }}
+          PACKAGE_NAME: ${{ needs.verify.outputs.package_name }}
+          CHECKSUM_NAME: ${{ needs.verify.outputs.checksum_name }}
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
+          mkdir release-assets
+          cp -- "dist/$PACKAGE_NAME" "dist/$CHECKSUM_NAME" release-assets/
           python3 ChemBlender/scripts/verify_release_artifact.py \
-            --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG" \
-            --metadata-mode package-ci \
+            --artifact-dir release-assets --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG" \
+            --metadata-mode release-assets \
             --budget tag-source/.github/artifact-budgets.json
           python3 ChemBlender/scripts/extract_release_notes.py \
             --changelog CHANGELOG.md --version "$VERSION" --output release-notes.md

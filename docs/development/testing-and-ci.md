@@ -105,9 +105,10 @@ never a submodule source archive.
 `ChemBlender/scripts/verify_release_artifact.py` has an explicit metadata mode.
 `package-ci` requires and recomputes the size report, wheel inventory and
 license list against the ZIP; `release-assets` accepts only ZIP/checksum for a
-published asset pair. Local and CI archive hashes may differ because ZIP
-metadata is regenerated; the tag CI checksum is authoritative for the package
-selected by the Release workflow.
+published asset pair. Both modes require the tagged-source outer ZIP budget
+before any ZIP content read or CRC scan. Local and CI archive hashes may differ
+because ZIP metadata is regenerated; the tag CI checksum is authoritative for
+the package selected by the Release workflow.
 
 Pillow is outside the 2.2.0 package while no extension code imports PIL or uses Pillow-dependent RDKit behavior. Any such feature must update the dependency decision, manifest, and CI together.
 

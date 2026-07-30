@@ -181,11 +181,9 @@ def verify_artifact(
 ) -> dict[str, str]:
     if metadata_mode not in METADATA_MODES:
         raise ValueError(f"invalid metadata mode: {metadata_mode}")
-    if metadata_mode == "package-ci" and budget_path is None:
-        raise ValueError("package-ci metadata mode requires a budget path")
-    if metadata_mode == "release-assets" and budget_path is not None:
-        raise ValueError("release-assets metadata mode must not have a budget path")
-    budget = _load_budget(budget_path) if budget_path is not None else None
+    if budget_path is None:
+        raise ValueError(f"{metadata_mode} metadata mode requires a budget path")
+    budget = _load_budget(budget_path)
     artifact_dir = artifact_dir.resolve()
     extension_root = extension_root.resolve()
     metadata = read_release_metadata(extension_root)
@@ -231,8 +229,7 @@ def verify_artifact(
 
     with zipfile.ZipFile(package) as archive:
         members = _safe_members(archive)
-        if budget is not None:
-            _bounded_outer_archive(members, budget)
+        _bounded_outer_archive(members, budget)
         names = list(members)
         for name in names:
             _validate_archive_path(name)

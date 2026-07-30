@@ -12,6 +12,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 EXTENSION = ROOT / "ChemBlender"
+BUDGET = ROOT / ".github" / "artifact-budgets.json"
 sys.path.insert(0, str(EXTENSION / "scripts"))
 
 import verify_release_artifact
@@ -77,13 +78,55 @@ class ReleaseArtifactTests(unittest.TestCase):
         package = self._write_artifact()
 
         result = verify_artifact(
-            self.artifact_dir, EXTENSION, self.tag, metadata_mode="release-assets"
+            self.artifact_dir,
+            EXTENSION,
+            self.tag,
+            metadata_mode="release-assets",
+            budget_path=BUDGET,
         )
 
         self.assertEqual(result["version"], "2.3.0-alpha.1")
         self.assertEqual(
             result["package_sha256"], hashlib.sha256(package.read_bytes()).hexdigest()
         )
+
+    def test_release_assets_requires_budget_and_rejects_bomb_before_zip_reads(self):
+        package = self._write_artifact()
+        with zipfile.ZipFile(package, "a", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("assets/highly-compressible.json", b"\0" * 64 * 1024 * 1024)
+        digest = hashlib.sha256(package.read_bytes()).hexdigest()
+        metadata = read_release_metadata(EXTENSION)
+        (self.artifact_dir / metadata.checksum_name).write_text(
+            f"{digest}  {package.name}\n", encoding="utf-8", newline="\n"
+        )
+
+        with self.assertRaisesRegex(ValueError, "release-assets metadata mode requires a budget path"):
+            verify_artifact(
+                self.artifact_dir, EXTENSION, self.tag, metadata_mode="release-assets"
+            )
+        with (
+            mock.patch.object(
+                zipfile.ZipFile,
+                "testzip",
+                side_effect=AssertionError("CRC validation must not run"),
+            ),
+            mock.patch.object(
+                zipfile.ZipFile,
+                "read",
+                side_effect=AssertionError("member read must not run"),
+            ),
+            self.assertRaisesRegex(
+                ValueError,
+                "archive member unpacked size exceeds budget: assets/highly-compressible.json",
+            ),
+        ):
+            verify_artifact(
+                self.artifact_dir,
+                EXTENSION,
+                self.tag,
+                metadata_mode="release-assets",
+                budget_path=BUDGET,
+            )
 
     def test_verifier_reads_release_metadata_once(self):
         self._write_artifact()
@@ -94,7 +137,11 @@ class ReleaseArtifactTests(unittest.TestCase):
             wraps=read_release_metadata,
         ) as read_metadata:
             verify_release_artifact.verify_artifact(
-                self.artifact_dir, EXTENSION, self.tag, metadata_mode="release-assets"
+                self.artifact_dir,
+                EXTENSION,
+                self.tag,
+                metadata_mode="release-assets",
+                budget_path=BUDGET,
             )
 
         read_metadata.assert_called_once_with(EXTENSION.resolve())
@@ -105,7 +152,11 @@ class ReleaseArtifactTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "checksum mismatch"):
             verify_artifact(
-                self.artifact_dir, EXTENSION, self.tag, metadata_mode="release-assets"
+                self.artifact_dir,
+                EXTENSION,
+                self.tag,
+                metadata_mode="release-assets",
+                budget_path=BUDGET,
             )
 
     def test_manifest_line_endings_do_not_change_package_contract(self):
@@ -114,7 +165,11 @@ class ReleaseArtifactTests(unittest.TestCase):
         self._write_artifact(packaged_manifest=linux_manifest)
 
         result = verify_artifact(
-            self.artifact_dir, EXTENSION, self.tag, metadata_mode="release-assets"
+            self.artifact_dir,
+            EXTENSION,
+            self.tag,
+            metadata_mode="release-assets",
+            budget_path=BUDGET,
         )
 
         self.assertEqual(result["version"], "2.3.0-alpha.1")
@@ -131,6 +186,7 @@ class ReleaseArtifactTests(unittest.TestCase):
                 EXTENSION,
                 "v2.3.0-beta.1",
                 metadata_mode="release-assets",
+                budget_path=BUDGET,
             )
 
     def test_prerelease_tag_matches_prerelease_metadata(self):
@@ -149,6 +205,7 @@ class ReleaseArtifactTests(unittest.TestCase):
                 extension,
                 "v2.3.0-alpha.1",
                 metadata_mode="release-assets",
+                budget_path=BUDGET,
             )
 
         self.assertEqual(result["version"], "2.3.0-alpha.1")
@@ -170,7 +227,11 @@ class ReleaseArtifactTests(unittest.TestCase):
             with self.subTest(tag=tag):
                 with self.assertRaisesRegex(ValueError, "invalid release tag"):
                     verify_artifact(
-                        self.artifact_dir, EXTENSION, tag, metadata_mode="release-assets"
+                        self.artifact_dir,
+                        EXTENSION,
+                        tag,
+                        metadata_mode="release-assets",
+                        budget_path=BUDGET,
                     )
 
     def test_extra_wheel_fails_package_contract(self):
@@ -178,7 +239,11 @@ class ReleaseArtifactTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "wheel entries"):
             verify_artifact(
-                self.artifact_dir, EXTENSION, self.tag, metadata_mode="release-assets"
+                self.artifact_dir,
+                EXTENSION,
+                self.tag,
+                metadata_mode="release-assets",
+                budget_path=BUDGET,
             )
 
     def test_nested_artifact_file_fails(self):
@@ -189,7 +254,11 @@ class ReleaseArtifactTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "artifact files"):
             verify_artifact(
-                self.artifact_dir, EXTENSION, self.tag, metadata_mode="release-assets"
+                self.artifact_dir,
+                EXTENSION,
+                self.tag,
+                metadata_mode="release-assets",
+                budget_path=BUDGET,
             )
 
     def test_package_ci_metadata_is_required_and_bound_to_the_package(self):
@@ -405,7 +474,11 @@ class ReleaseArtifactTests(unittest.TestCase):
             (release_assets / name).write_bytes((package_dir / name).read_bytes())
         self.assertEqual(
             verify_artifact(
-                release_assets, extension, self.tag, metadata_mode="release-assets"
+                release_assets,
+                extension,
+                self.tag,
+                metadata_mode="release-assets",
+                budget_path=extension / "artifact-budgets.json",
             )["package_sha256"],
             checksum,
         )

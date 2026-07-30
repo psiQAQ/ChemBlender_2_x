@@ -308,6 +308,14 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertEqual(workflow.count("verify_release_artifact.py"), 2)
         self.assertEqual(workflow.count("path: tag-source"), 2)
         self.assertEqual(workflow.count("--extension-root tag-source/ChemBlender"), 3)
+        self.assertEqual(workflow.count("--metadata-mode release-assets"), 2)
+        self.assertEqual(
+            workflow.count("--budget tag-source/.github/artifact-budgets.json"), 2
+        )
+        self.assertEqual(
+            workflow.count('cp -- "dist/$PACKAGE_NAME" "dist/$CHECKSUM_NAME" release-assets/'),
+            2,
+        )
         self.assertIn("git -C tag-source", workflow)
         self.assertEqual(workflow.count("contents: write"), 1)
         actions = re.findall(r"uses:\s+([^\s]+)", workflow)
