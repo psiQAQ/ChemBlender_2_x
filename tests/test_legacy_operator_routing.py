@@ -22,6 +22,7 @@ from ChemBlender.core import (
     save_project,
 )
 from ChemBlender.core.import_pipeline import (
+    ImportRequest,
     StagedImportSession,
     ValidationMode,
 )
@@ -41,6 +42,7 @@ OUTPUT_MODULE = "ChemBlender.output"
 PANEL_MODULE = "ChemBlender.panel"
 CRYS_MODULE = "ChemBlender.crys_utils"
 QUICK_IMPORT_MODULE = "ChemBlender.ui.quick_import"
+LEGACY_READ_MODULE = "ChemBlender.read"
 
 
 class _Response:
@@ -424,6 +426,7 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
             CRYS_MODULE,
             SCAFFOLD_BRIDGE,
             QUICK_IMPORT_MODULE,
+            LEGACY_READ_MODULE,
         ):
             sys.modules.pop(name, None)
 
@@ -435,6 +438,7 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
             CRYS_MODULE,
             SCAFFOLD_BRIDGE,
             QUICK_IMPORT_MODULE,
+            LEGACY_READ_MODULE,
         ):
             sys.modules.pop(name, None)
         self.modules.stop()
@@ -446,7 +450,7 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
 
         return invoke
 
-    def _scaffold_context(self, filetext, *, choose="File"):
+    def _scaffold_context(self, filetext="", *, choose="File", smilestext=""):
         calls = []
         self.fake_bpy.ops.chemblender = SimpleNamespace(
             quick_import=self._operation(calls, "quick_import"),
@@ -464,7 +468,7 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
                     choose=choose,
                     filetext=str(filetext),
                     pubchemtext="2244",
-                    smilestext="",
+                    smilestext=smilestext,
                     Saccharides="sugar",
                     Amino_Acids="amino",
                     Polymer_Units="polymer",
@@ -486,6 +490,133 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
                 self.assertEqual(result, {"FINISHED"})
                 self.assertEqual(calls[0][0], "quick_import")
                 self.assertEqual(calls[0][2]["files"], [{"name": name}])
+
+    def test_legacy_sdf_and_mol2_operator_create_requests_for_quick_import(self):
+        cases = (
+            ("legacy.sdf", "legacy SDF\n$$$$\n"),
+            ("legacy.mol2", "@<TRIPOS>MOLECULE\nlegacy\n"),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            for name, content in cases:
+                with self.subTest(source=name):
+                    source = Path(directory) / name
+                    source.write_text(content, encoding="utf-8")
+                    scaffold, operator, context, calls = self._scaffold_context(source)
+                    requests = []
+                    build_request = scaffold.file_import_request
+
+                    def capture_request(*args):
+                        request = build_request(*args)
+                        requests.append(request)
+                        return request
+
+                    with patch.object(
+                        scaffold,
+                        "file_import_request",
+                        side_effect=capture_request,
+                    ):
+                        result = operator.execute(context)
+
+                    self.assertEqual(result, {"FINISHED"})
+                    self.assertEqual(len(requests), 1)
+                    self.assertIsInstance(requests[0], ImportRequest)
+                    self.assertEqual(requests[0].sources[0].path, source.resolve())
+                    self.assertEqual(
+                        calls,
+                        [
+                            (
+                                "quick_import",
+                                ("EXEC_DEFAULT",),
+                                {
+                                    "directory": str(source.parent),
+                                    "files": [{"name": name}],
+                                    "validation_mode": "strict",
+                                },
+                            )
+                        ],
+                    )
+                    self.assertNotIn(LEGACY_READ_MODULE, sys.modules)
+
+    def test_legacy_smiles_operator_creates_a_request_for_unified_import(self):
+        scaffold, operator, context, calls = self._scaffold_context(
+            choose="SMILES",
+            smilestext="C/C=C/C",
+        )
+        requests = []
+        build_request = scaffold.smiles_import_request
+
+        def capture_request(*args):
+            request = build_request(*args)
+            requests.append(request)
+            return request
+
+        with patch.object(
+            scaffold,
+            "smiles_import_request",
+            side_effect=capture_request,
+        ):
+            result = operator.execute(context)
+
+        self.assertEqual(result, {"FINISHED"})
+        self.assertEqual(len(requests), 1)
+        self.assertIsInstance(requests[0], ImportRequest)
+        self.assertEqual(requests[0].sources[0].text, "C/C=C/C")
+        self.assertEqual(
+            calls,
+            [
+                (
+                    "import_smiles_text",
+                    ("EXEC_DEFAULT",),
+                    {"smiles_text": "C/C=C/C", "validation_mode": "strict"},
+                )
+            ],
+        )
+        self.assertNotIn(LEGACY_READ_MODULE, sys.modules)
+
+    def test_legacy_smiles_presets_create_requests_for_unified_import(self):
+        cases = (
+            ("Saccharides", "OC"),
+            ("Amino_Acids", "NCC(=O)O"),
+            ("Polymer_Units", "CC"),
+        )
+        for choose, expected_smiles in cases:
+            with self.subTest(choose=choose):
+                scaffold, operator, context, calls = self._scaffold_context(
+                    choose=choose,
+                )
+                requests = []
+                build_request = scaffold.smiles_import_request
+
+                def capture_request(*args):
+                    request = build_request(*args)
+                    requests.append(request)
+                    return request
+
+                with patch.object(
+                    scaffold,
+                    "smiles_import_request",
+                    side_effect=capture_request,
+                ):
+                    result = operator.execute(context)
+
+                self.assertEqual(result, {"FINISHED"})
+                self.assertEqual(len(requests), 1)
+                self.assertIsInstance(requests[0], ImportRequest)
+                self.assertEqual(requests[0].sources[0].text, expected_smiles)
+                self.assertEqual(
+                    calls,
+                    [
+                        (
+                            "import_smiles_text",
+                            ("EXEC_DEFAULT",),
+                            {
+                                "smiles_text": expected_smiles,
+                                "validation_mode": "strict",
+                            },
+                        )
+                    ],
+                )
+                self.assertNotIn(LEGACY_READ_MODULE, sys.modules)
 
     def test_legacy_pubchem_operator_does_not_forward_trust_claims_to_quick_import(self):
         with tempfile.TemporaryDirectory() as directory:
