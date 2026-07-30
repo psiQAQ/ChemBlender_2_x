@@ -57,6 +57,7 @@ class LegacyMigrationInventory:
     kind: str
     entity_types: tuple[str, ...]
     entity_ids: tuple[str, ...]
+    backup_only: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,7 +103,18 @@ def preview_legacy_migration(scene):
         if item.id not in base_project.provenance
     )
     inventory = []
-    for view_plan in plan.view_plans:
+    detection_by_name = {item.name: item for item in detection.objects}
+    view_plans_by_name = {item.legacy_object_name: item for item in plan.view_plans}
+    for legacy_object_name in plan.report.object_names:
+        view_plan = view_plans_by_name.get(legacy_object_name)
+        if view_plan is None:
+            detected = detection_by_name.get(legacy_object_name)
+            if detected is None:
+                raise ValueError(f"migration object is not detected: {legacy_object_name}")
+            inventory.append(LegacyMigrationInventory(
+                legacy_object_name, detected.kind, (), (), backup_only=True,
+            ))
+            continue
         structure = plan.project.structures[view_plan.structure_id]
         topology = next(
             (item for item in plan.project.topologies.values()
@@ -136,7 +148,7 @@ def preview_legacy_migration(scene):
 
 
 def _mean(values):
-    return 1.0 if values is None else sum(values) / len(values)
+    return 1.0 if not values else sum(values) / len(values)
 
 
 def _write_display_attribute(mesh, name, values, data_type, domain, field):
@@ -494,11 +506,16 @@ class CHEMBLENDER_OT_preview_legacy_migration(bpy.types.Operator):
         layout = self.layout
         layout.label(text=f"Destination: {preview.sidecar_path}")
         layout.label(text=f"Legacy entities: {len(preview.plan.report.object_names)}")
-        inventory = {item.legacy_object_name: item for item in preview.entity_inventory}
-        for view_plan in preview.plan.view_plans:
+        view_plans = {item.legacy_object_name: item for item in preview.plan.view_plans}
+        for item in preview.entity_inventory:
+            if item.backup_only:
+                layout.label(
+                    text=f"{item.legacy_object_name}: backup only (no project entity or view)",
+                )
+                continue
+            view_plan = view_plans[item.legacy_object_name]
             settings = view_plan.settings
             layout.label(text=f"{view_plan.legacy_object_name} -> {view_plan.legacy_object_name} (Migrated)")
-            item = inventory[view_plan.legacy_object_name]
             layout.label(text=f"  entities: {', '.join(item.entity_types)}")
             layout.label(text=f"  ids: {', '.join(item.entity_ids)}")
             recovered = [

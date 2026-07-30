@@ -73,6 +73,14 @@ def _sibling_inventory(destination):
     ))
 
 
+def _entity_id_sets(project):
+    return (
+        frozenset(project.structures),
+        frozenset(project.topologies),
+        frozenset(project.provenance),
+    )
+
+
 def _attribute_values(view, name, field):
     return tuple(
         tuple(getattr(item, field)) if field == "color" else getattr(item, field)
@@ -166,12 +174,40 @@ def main():
         old_provenance_id, "base", "ChemBlender", "2.3.0", "", "", (),
         "legacy_blend_migration", (("legacy_object_name", detection.objects[0].name),),
     ),)))
+    bondless_mesh = bpy.data.meshes.new("bondless legacy scaffold")
+    bondless_mesh.from_pydata(((0.0, 0.0, 0.0),), (), ())
+    atomic_num = bondless_mesh.attributes.new("atomic_num", "INT", "POINT")
+    atomic_num.data[0].value = 6
+    bondless = bpy.data.objects.new("bondless legacy scaffold", bondless_mesh)
+    scene.collection.objects.link(bondless)
+    bondless["Type"] = "scaffold"
+    migration._legacy_load_post_handler(None)
     preview = migration.preview_legacy_migration(scene)
     assert preview.plan.view_plans
+    bondless_plan = next(
+        item for item in preview.plan.view_plans
+        if item.legacy_object_name == bondless.name
+    )
+    assert bondless_plan.settings.bond_scales == ()
     assert preview.entity_inventory
-    assert all("Structure" in item.entity_types and "ProvenanceRecord" in item.entity_types for item in preview.entity_inventory)
+    assert tuple(item.legacy_object_name for item in preview.entity_inventory) == preview.plan.report.object_names
+    if "cell_edges_partial_uij" in preview.plan.report.object_names:
+        backup_only = next(
+            item for item in preview.entity_inventory
+            if item.legacy_object_name == "cell_edges_partial_uij"
+        )
+        assert backup_only.backup_only
+        assert backup_only.entity_types == ()
+        assert backup_only.entity_ids == ()
+    assert all(
+        "Structure" in item.entity_types and "ProvenanceRecord" in item.entity_types
+        for item in preview.entity_inventory if not item.backup_only
+    )
     assert all(str(old_provenance_id) not in item.entity_ids for item in preview.entity_inventory)
-    crystal_inventory = [item for item in preview.entity_inventory if item.kind == "crystal"]
+    crystal_inventory = [
+        item for item in preview.entity_inventory
+        if item.kind == "crystal" and not item.backup_only
+    ]
     assert all("PeriodicSiteData" in item.entity_types for item in crystal_inventory)
     try:
         migration.migrate_legacy_scene(scene, confirmed=False)
@@ -264,19 +300,32 @@ def main():
     original = _object_snapshot(
         tuple(bpy.data.objects[name] for name in preview.plan.report.object_names), scene,
     )
-    result = migration.migrate_legacy_scene(scene, confirmed=True)
+    expected_entity_ids = None
+    expected_view_plans = ()
+    original_commit = migration.commit_legacy_migration
+
+    def capture_migration_plan(current_session, plan):
+        nonlocal expected_entity_ids, expected_view_plans
+        expected_entity_ids = _entity_id_sets(plan.project)
+        expected_view_plans = plan.view_plans
+        return original_commit(current_session, plan)
+
+    migration.commit_legacy_migration = capture_migration_plan
+    try:
+        result = migration.migrate_legacy_scene(scene, confirmed=True)
+    finally:
+        migration.commit_legacy_migration = original_commit
     assert result.sidecar_path.is_dir()
     assert result.cleanup_warnings == ()
+    assert _entity_id_sets(session.project) == expected_entity_ids
     assert {item.name for item in bpy.data.objects if item.name.endswith(" (Migrated)")} == {
-        f"{name} (Migrated)" for name in preview.plan.report.object_names if name != "cell_edges_partial_uij"
+        f"{item.legacy_object_name} (Migrated)" for item in expected_view_plans
     }
     assert session.link_status == "connected"
     assert base_id in session.project.structures
-    assert len(session.project.structures) == len(preview.plan.project.structures)
-    assert len(session.project.topologies) == len(preview.plan.project.topologies)
-    assert len(session.project.provenance) == len(preview.plan.project.provenance)
     backup = bpy.data.collections["ChemBlender Legacy Backup"]
     assert backup.hide_viewport
+    assert backup.hide_render
     assert backup.name in {item.name for item in scene.collection.children}
     assert backup.name not in {item.name for item in active_scene.collection.children}
     for name, (collections, hidden_viewport, hidden_layers, properties) in original.items():
@@ -288,18 +337,26 @@ def main():
         assert tuple(obj["cb_legacy_original_collections"]) == collections
         assert obj["cb_legacy_migration_project_id"] == backup["cb_legacy_migration_project_id"]
         assert obj["cb_legacy_migration_transaction_id"] == backup["cb_legacy_migration_transaction_id"]
-    for view_plan in preview.plan.view_plans:
+    for view_plan in expected_view_plans:
         view = bpy.data.objects[f"{view_plan.legacy_object_name} (Migrated)"]
         assert view.get("cb_structure_contract") == "structure_view_v1"
+        assert view["cb_structure_id"] == str(view_plan.structure_id)
+        topology = next(
+            (item for item in session.project.topologies.values()
+             if item.structure_id == view_plan.structure_id),
+            None,
+        )
+        if topology is None:
+            assert "cb_topology_id" not in view
+            assert view["cb_topology_render_identity"] == "atoms-only"
+        else:
+            assert view["cb_topology_id"] == str(topology.id)
+            assert view["cb_topology_revision"] == topology.revision
         assert view.users_collection[0].name == scene.collection.name
         assert all(child.parent == view and child.get("cbq_contract") for child in view.children)
         _verify_display(view, view_plan.settings)
     assert migration.legacy_migration_detection(scene).objects == ()
 
-    expected_counts = (
-        len(session.project.structures), len(session.project.topologies),
-        len(session.project.provenance),
-    )
     assert bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath) == {"FINISHED"}
     assert bpy.ops.wm.open_mainfile(filepath=bpy.data.filepath) == {"FINISHED"}
     reopened_scene = bpy.data.scenes[target_scene_name]
@@ -308,13 +365,31 @@ def main():
     try:
         assert reopened_link.status.value == "connected"
         reopened_project = reopened_link.project
-        assert (len(reopened_project.structures), len(reopened_project.topologies), len(reopened_project.provenance)) == expected_counts
-        assert reopened_project.structures[base_id].coordinates.values[0, 0] == 0.0
+        assert _entity_id_sets(reopened_project) == expected_entity_ids
+        base_coordinates = reopened_project.structures[base_id].coordinates.values
+        assert isinstance(base_coordinates, LazyNpyArray)
+        assert not base_coordinates.loaded
+        assert base_coordinates[0, 0] == 0.0
+        assert base_coordinates.loaded
         reopened_backup = bpy.data.collections["ChemBlender Legacy Backup"]
+        assert reopened_backup.hide_viewport
+        assert reopened_backup.hide_render
         assert reopened_backup.name in {item.name for item in reopened_scene.collection.children}
-        for view_plan in preview.plan.view_plans:
+        for view_plan in expected_view_plans:
             reopened_view = bpy.data.objects[f"{view_plan.legacy_object_name} (Migrated)"]
             assert reopened_view.get("cb_structure_contract") == "structure_view_v1"
+            assert reopened_view["cb_structure_id"] == str(view_plan.structure_id)
+            topology = next(
+                (item for item in reopened_project.topologies.values()
+                 if item.structure_id == view_plan.structure_id),
+                None,
+            )
+            if topology is None:
+                assert "cb_topology_id" not in reopened_view
+                assert reopened_view["cb_topology_render_identity"] == "atoms-only"
+            else:
+                assert reopened_view["cb_topology_id"] == str(topology.id)
+                assert reopened_view["cb_topology_revision"] == topology.revision
             assert all(child.parent == reopened_view and child.get("cbq_contract") for child in reopened_view.children)
             _verify_display(reopened_view, view_plan.settings)
         for name, (collections, hidden_viewport, hidden_layers, _properties) in original.items():
