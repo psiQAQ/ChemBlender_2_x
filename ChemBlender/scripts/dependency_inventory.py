@@ -4,10 +4,29 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import stat
 import tomllib
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
+
+
+SCHEMA_VERSION = "1"
+TEXT_FIELDS = (
+    "distribution",
+    "version",
+    "filename",
+    "platform",
+    "python_abi",
+    "url",
+    "sha256",
+    "spdx_license",
+    "license_source",
+)
+DEPENDENCY_FIELDS = frozenset(
+    (*TEXT_FIELDS, "required", "max_compressed_bytes", "max_unpacked_bytes")
+)
 
 
 def _sha256(path: Path) -> str:
@@ -18,30 +37,133 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _write_json(path: Path, value: Any) -> str:
-    text = json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-    path.write_text(text + "\n", encoding="utf-8", newline="\n")
-    return text
+def _schema_error(reason: str) -> ValueError:
+    return ValueError(f"invalid dependency inventory schema: {reason}")
 
 
-def _safe_members(archive: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
-    members = archive.infolist()
-    names: set[str] = set()
-    for member in members:
-        name = member.filename.replace("\\", "/")
-        if member.is_dir():
-            name = name.removesuffix("/")
-        parts = name.split("/")
-        if (
-            not name
-            or name.startswith("/")
-            or (len(name) >= 2 and name[0].isalpha() and name[1] == ":")
-            or any(part in {"", ".", ".."} for part in parts)
-        ):
-            raise ValueError(f"unsafe wheel member path: {member.filename}")
-        if name in names:
-            raise ValueError(f"duplicate wheel member path: {member.filename}")
-        names.add(name)
+def _safe_text(value: Any) -> bool:
+    return (
+        type(value) is str
+        and bool(value)
+        and value == value.strip()
+        and value.isascii()
+        and all(" " <= char <= "~" for char in value)
+    )
+
+
+def _member_path(name: str, *, is_directory: bool) -> str:
+    if "\0" in name:
+        raise ValueError(f"unsafe wheel member path: {name!r}")
+    normalized = name.replace("\\", "/")
+    if is_directory:
+        normalized = normalized.removesuffix("/")
+    parts = normalized.split("/")
+    if (
+        not normalized
+        or normalized.startswith("/")
+        or (len(normalized) >= 2 and normalized[0].isalpha() and normalized[1] == ":")
+        or any(part in {"", ".", ".."} for part in parts)
+    ):
+        raise ValueError(f"unsafe wheel member path: {name!r}")
+    return "/".join(parts)
+
+
+def _wheel_filename(value: str) -> bool:
+    posix = PurePosixPath(value)
+    windows = PureWindowsPath(value)
+    return (
+        value.endswith(".whl")
+        and value not in {".", ".."}
+        and "/" not in value
+        and "\\" not in value
+        and not posix.is_absolute()
+        and not windows.is_absolute()
+        and not windows.drive
+    )
+
+
+def _license_target(dependency: dict[str, Any]) -> str:
+    return (
+        f"licenses/{dependency['distribution']}-{dependency['version']}-"
+        f"{PurePosixPath(dependency['license_source']).name}"
+    )
+
+
+def _validate_schema(config: Any) -> list[dict[str, Any]]:
+    if type(config) is not dict or set(config) != {"schema_version", "dependency"}:
+        raise _schema_error("root keys must be schema_version and dependency")
+    if type(config["schema_version"]) is not str or config["schema_version"] != SCHEMA_VERSION:
+        raise _schema_error(f"schema_version must be {SCHEMA_VERSION!r}")
+    dependencies = config["dependency"]
+    if type(dependencies) is not list or not dependencies:
+        raise _schema_error("dependency must be a non-empty array of tables")
+
+    distributions: set[str] = set()
+    filenames: set[str] = set()
+    targets: set[str] = set()
+    for index, dependency in enumerate(dependencies):
+        if type(dependency) is not dict or set(dependency) != DEPENDENCY_FIELDS:
+            raise _schema_error(f"dependency[{index}] has unexpected fields")
+        for field in TEXT_FIELDS:
+            if not _safe_text(dependency[field]):
+                raise _schema_error(f"dependency[{index}].{field} must be non-empty ASCII text")
+        if type(dependency["required"]) is not bool:
+            raise _schema_error(f"dependency[{index}].required must be bool")
+        for field in ("max_compressed_bytes", "max_unpacked_bytes"):
+            if type(dependency[field]) is not int or dependency[field] <= 0:
+                raise _schema_error(f"dependency[{index}].{field} must be a positive int")
+        if not _wheel_filename(dependency["filename"]):
+            raise _schema_error(f"dependency[{index}].filename must be a .whl basename")
+        try:
+            _member_path(dependency["license_source"], is_directory=False)
+        except ValueError as exc:
+            raise _schema_error(f"dependency[{index}].license_source is unsafe") from exc
+        if "/" in dependency["distribution"] or "\\" in dependency["distribution"]:
+            raise _schema_error(f"dependency[{index}].distribution is unsafe")
+        if "/" in dependency["version"] or "\\" in dependency["version"]:
+            raise _schema_error(f"dependency[{index}].version is unsafe")
+        target = _license_target(dependency)
+        if dependency["distribution"] in distributions:
+            raise _schema_error(f"duplicate distribution: {dependency['distribution']}")
+        if dependency["filename"] in filenames:
+            raise _schema_error(f"duplicate filename: {dependency['filename']}")
+        if target in targets:
+            raise _schema_error(f"duplicate license target: {target}")
+        distributions.add(dependency["distribution"])
+        filenames.add(dependency["filename"])
+        targets.add(target)
+    return dependencies
+
+
+def _wheel_path(wheel_dir: Path, filename: str) -> Path:
+    try:
+        root = wheel_dir.resolve()
+        candidate = wheel_dir / filename
+        resolved = candidate.resolve()
+        resolved.relative_to(root)
+        if candidate.is_symlink() or not stat.S_ISREG(resolved.stat().st_mode):
+            raise ValueError
+    except (OSError, ValueError) as exc:
+        raise ValueError("wheel path must be an ordinary file within wheel directory") from exc
+    return resolved
+
+
+def _safe_members(archive: zipfile.ZipFile) -> dict[str, tuple[zipfile.ZipInfo, bool, int]]:
+    members: dict[str, tuple[zipfile.ZipInfo, bool, int]] = {}
+    for member in archive.infolist():
+        original = member.orig_filename
+        named_directory = original.endswith("/")
+        name = _member_path(original, is_directory=named_directory)
+        mode = (member.external_attr >> 16) & 0xFFFF
+        file_type = stat.S_IFMT(mode)
+        if file_type not in {0, stat.S_IFREG, stat.S_IFDIR}:
+            raise ValueError(f"unsafe wheel member type: {original!r}")
+        if named_directory and file_type == stat.S_IFREG:
+            raise ValueError(f"unsafe wheel member type: {original!r}")
+        is_directory = named_directory or file_type == stat.S_IFDIR
+        if name in members:
+            raise ValueError(f"duplicate wheel member path: {original!r}")
+        members[name] = (member, is_directory, file_type)
     return members
 
 
@@ -49,33 +171,37 @@ def inventory(
     inventory_path: Path, wheel_dir: Path, manifest_path: Path | None = None
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     with inventory_path.open("rb") as handle:
-        config = tomllib.load(handle)
-    dependencies = config["dependency"]
+        dependencies = _validate_schema(tomllib.load(handle))
     if manifest_path is not None:
         with manifest_path.open("rb") as handle:
             manifest = tomllib.load(handle)
         expected_wheels = [
             f"./wheels/{dependency['filename']}"
             for dependency in dependencies
-            if dependency["required"]
+            if dependency["required"] is True
         ]
         if manifest.get("wheels") != expected_wheels:
             raise ValueError("manifest wheel paths must equal required inventory")
+
     wheels: list[dict[str, Any]] = []
     licenses: list[dict[str, str]] = []
     for dependency in dependencies:
-        if not dependency["required"]:
+        if dependency["required"] is not True:
             continue
-        wheel = wheel_dir / dependency["filename"]
+        wheel = _wheel_path(wheel_dir, dependency["filename"])
         actual_sha256 = _sha256(wheel)
         if actual_sha256 != dependency["sha256"]:
             raise ValueError(f"wheel hash mismatch: {wheel.name}")
         with zipfile.ZipFile(wheel) as archive:
             members = _safe_members(archive)
-            member_names = {member.filename for member in members}
-            if dependency["license_source"] not in member_names:
+            source = _member_path(dependency["license_source"], is_directory=False)
+            license_member = members.get(source)
+            if license_member is None:
                 raise ValueError(f"license source missing: {dependency['license_source']}")
-            unpacked_bytes = sum(member.file_size for member in members)
+            _, is_directory, file_type = license_member
+            if is_directory or file_type not in {0, stat.S_IFREG}:
+                raise ValueError("license source must be a regular wheel member")
+            unpacked_bytes = sum(member.file_size for member, _, _ in members.values())
         compressed_bytes = wheel.stat().st_size
         if compressed_bytes > dependency["max_compressed_bytes"]:
             raise ValueError(f"compressed size exceeds budget: {wheel.name}")
@@ -85,19 +211,100 @@ def inventory(
         item["compressed_bytes"] = compressed_bytes
         item["unpacked_bytes"] = unpacked_bytes
         wheels.append(item)
-        license_name = Path(dependency["license_source"]).name
         licenses.append(
             {
                 "distribution": dependency["distribution"],
                 "filename": dependency["filename"],
                 "source": dependency["license_source"],
-                "target": f"licenses/{dependency['distribution']}-{dependency['version']}-{license_name}",
+                "target": _license_target(dependency),
                 "version": dependency["version"],
             }
         )
     wheels.sort(key=lambda item: item["filename"])
     licenses.sort(key=lambda item: item["filename"])
     return {"wheels": wheels}, {"licenses": licenses}
+
+
+def _json_text(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def _write_json(path: Path, text: str) -> None:
+    with path.open("wb") as handle:
+        handle.write(text.encode("utf-8") + b"\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def _temporary_path(parent: Path) -> Path:
+    for _ in range(100):
+        path = parent / f".{os.urandom(4).hex()}.tmp"
+        try:
+            descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            continue
+        os.close(descriptor)
+        return path
+    raise OSError("could not create output temporary file")
+
+
+def _cleanup(paths: list[Path | None]) -> None:
+    for path in paths:
+        if path is not None:
+            try:
+                path.unlink()
+            except OSError:
+                pass
+
+
+def _snapshot(path: Path) -> bytes | None:
+    return path.read_bytes() if path.exists() else None
+
+
+def _restore(path: Path, previous: bytes | None) -> None:
+    try:
+        if previous is None:
+            if path.exists() or path.is_symlink():
+                path.unlink()
+        else:
+            with path.open("wb") as handle:
+                handle.write(previous)
+                handle.flush()
+                os.fsync(handle.fileno())
+    except OSError:
+        pass
+
+
+def _write_outputs(
+    output: Path, license_copy_list: Path, wheel_inventory: dict[str, Any], licenses: dict[str, Any]
+) -> str:
+    for path in (output, license_copy_list):
+        if not path.parent.is_dir():
+            raise ValueError(f"output parent does not exist: {path.parent}")
+    output_text = _json_text(wheel_inventory)
+    license_text = _json_text(licenses)
+    previous = [_snapshot(output), _snapshot(license_copy_list)]
+    temporary: list[Path | None] = []
+    try:
+        for path, text in ((output, output_text), (license_copy_list, license_text)):
+            temp = _temporary_path(path.parent)
+            temporary.append(temp)
+            _write_json(temp, text)
+    except OSError as exc:
+        _cleanup(temporary)
+        raise ValueError(f"output write failed: {exc}") from exc
+    try:
+        os.replace(temporary[0], output)
+        temporary[0] = None
+        os.replace(temporary[1], license_copy_list)
+        temporary[1] = None
+    except OSError as exc:
+        _restore(output, previous[0])
+        _restore(license_copy_list, previous[1])
+        raise ValueError(f"output replace failed: {exc}") from exc
+    finally:
+        _cleanup(temporary)
+    return output_text
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -113,9 +320,10 @@ def main(argv: list[str] | None = None) -> int:
         wheel_inventory, license_copy_list = inventory(
             args.inventory, args.wheel_dir, args.manifest
         )
-        output = _write_json(args.output, wheel_inventory)
-        _write_json(args.license_copy_list, license_copy_list)
-    except (KeyError, OSError, ValueError, zipfile.BadZipFile, tomllib.TOMLDecodeError) as exc:
+        output = _write_outputs(
+            args.output, args.license_copy_list, wheel_inventory, license_copy_list
+        )
+    except (OSError, TypeError, ValueError, zipfile.BadZipFile, tomllib.TOMLDecodeError) as exc:
         print(f"ERROR: {exc}")
         return 1
     print(output)
