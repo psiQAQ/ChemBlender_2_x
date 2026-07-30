@@ -78,7 +78,7 @@ docs: start Wave 3 final qualification
   fixed Wave 3 fixtures and Reader API conformance.
 - Produces: executable capability, dependency and lifecycle qualification.
 
-- [ ] **Step 1: Write the RED qualification contract**
+- [x] **Step 1: Write the RED qualification contract**
 
 Require exact capability-matrix entries for `mol2`, `pdb`, `pqr` and `cjson`;
 public exchange entities without parser/vendor objects; and imports of
@@ -99,14 +99,14 @@ the format-specific scientific identity. CJSON additionally exports and
 reparses semantically. MOL2/PDB/PQR use their P1 readiness reports and do not
 pretend that an exporter exists.
 
-- [ ] **Step 2: Qualify Reader API v1 and plugin-missing recovery**
+- [x] **Step 2: Qualify Reader API v1 and plugin-missing recovery**
 
 Run the 12 required built-in conformance cases and the standalone example
 case. Verify a saved example-reader project opens from sidecar after the
 example business module is absent, while reparse is explicitly unavailable.
 Do not scan arbitrary `sys.path`.
 
-- [ ] **Step 3: Run GREEN and commit**
+- [x] **Step 3: Run GREEN and commit**
 
 Run the new qualification test plus Wave 3 parser, sidecar, conformance,
 plugin discovery and documentation modules. Commit:
@@ -114,6 +114,12 @@ plugin discovery and documentation modules. Commit:
 ```text
 test: qualify Wave 3 exchange boundaries
 ```
+
+Completion evidence: `90c4fdb`; RED was the missing qualification module,
+followed by a real zero-sized topology-array hash failure. GREEN was 4/4
+focused and 152/152 related tests. Thirteen fixed fixtures, schema-1.0
+sidecar reopen, CJSON semantic reparse, 12+1 conformance and missing-plugin
+reopen passed. Independent review approved with no findings.
 
 ### Task 3: Record a reproducible Wave 3 scale baseline
 
