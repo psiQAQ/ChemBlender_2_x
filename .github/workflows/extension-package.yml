@@ -130,6 +130,7 @@ jobs:
           if (-not (Test-Path -LiteralPath $package -PathType Leaf)) { throw "Expected package missing: $packageName" }
           $package = (Resolve-Path -LiteralPath $package).Path
           & $blender --background --factory-startup --python-exit-code 1 --python tests/blender_smoke.py -- $package
+          if ($LASTEXITCODE -ne 0) { throw "Blender smoke failed" }
           $hash = (Get-FileHash -Algorithm SHA256 $package).Hash.ToLowerInvariant()
           $checksum = Join-Path (Split-Path $package) $checksumName
           [IO.File]::WriteAllText(

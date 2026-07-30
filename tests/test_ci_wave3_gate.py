@@ -58,6 +58,18 @@ class Wave3CiGateTests(unittest.TestCase):
         self.assertIn("tests/fixtures/mol2/*.mol2 text eol=lf", attributes)
         self.assertIn("docs/reader-api-v1/*.md text eol=lf", attributes)
 
+    def test_blender_smoke_failure_stops_the_package_job(self):
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        smoke = (
+            "& $blender --background --factory-startup --python-exit-code 1 "
+            "--python tests/blender_smoke.py -- $package"
+        )
+        failure = (
+            'if ($LASTEXITCODE -ne 0) { throw "Blender smoke failed" }'
+        )
+
+        self.assertLess(workflow.index(smoke), workflow.index(failure))
+
 
 if __name__ == "__main__":
     unittest.main()

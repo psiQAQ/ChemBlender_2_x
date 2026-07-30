@@ -263,3 +263,9 @@ cursor Minor was corrected in the final checkpoint. Remote CI was not run.
 - The minimal retry fix pins those byte-sensitive paths to LF and reuses the
   existing `$testSite` installation at the shared dependency location. No
   runtime model, Reader API, dependency, or test expectation changed.
+- Exact follow-up HEAD `eaeaed2607e94d177e3c828297e69e00a4822049`
+  passed `extension-package` run `30523437383`.
+- Independent code-quality review then found one gate-related Minor: Blender
+  smoke needed an explicit `$LASTEXITCODE` check before checksum generation.
+  The fail-closed check is the only workflow behavior change in the final
+  review fix.
