@@ -800,13 +800,7 @@ class LegacyCallerInventoryTests(unittest.TestCase):
                 "read_Cryst": set(),
                 "read_cif": set(),
                 "read_poscar": set(),
-                "mol_block_v2000": {
-                    (
-                        "ChemBlender/output.py",
-                        "sdf_block",
-                        "mol_block_v2000",
-                    ),
-                },
+                "mol_block_v2000": set(),
                 "mol_block_v3000": set(),
                 "sdf_block": set(),
                 "cif_block": set(),

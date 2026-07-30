@@ -1,5 +1,4 @@
 import unittest
-import ast
 from dataclasses import replace
 from pathlib import Path
 import subprocess
@@ -101,21 +100,6 @@ class RDKitMolecularExportTests(unittest.TestCase):
         seed = replace(raw_z.molecular_records[0], topology_id=conflicting.id)
         with self.assertRaisesRegex(ValueError, "bond semantics differ"):
             export_mol(raw_z.structures[0], conflicting, record=seed)
-
-    def test_legacy_v3000_bond_ids_start_at_one(self):
-        source = (Path(__file__).parents[1] / "ChemBlender" / "output.py").read_text(
-            encoding="utf-8"
-        )
-        module = ast.parse(source)
-        function = next(
-            item for item in module.body
-            if isinstance(item, ast.FunctionDef) and item.name == "mol_block_v3000"
-        )
-        namespace = {"_legacy_mol_export_warning": lambda: None}
-        exec(compile(ast.Module([function], []), "output.py", "exec"), namespace)
-        lines = namespace["mol_block_v3000"]("x", (), ((1, 2, 1), (2, 3, 2)))
-        self.assertIn("M  V30 1 1 1 2", lines)
-        self.assertIn("M  V30 2 2 2 3", lines)
 
     def test_v3000_has_one_based_bond_ids_and_v2000_refuses_overflow(self):
         from ChemBlender.core.exporters.rdkit_molecular import export_mol
