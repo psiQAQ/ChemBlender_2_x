@@ -194,6 +194,7 @@ def assert_registration_isolation(module_key, before_install_modules):
     assert f"{module_key}.ui.project_browser.panel" in sys.modules
     assert f"{module_key}.ui.file_handlers" in sys.modules
     assert f"{module_key}.ui.workspace" in sys.modules
+    assert f"{module_key}.ui.migration" in sys.modules
     newly_loaded = set(sys.modules) - before_install_modules
     assert not any(
         name == prefix or name.startswith(prefix + ".")
@@ -235,6 +236,7 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_quick_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_open_workspace")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_confirm_import")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_migrate_legacy_scene")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_cancel_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_compute_topology")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_accept_topology")
@@ -4580,8 +4582,27 @@ expected_inventory["module_callbacks"] += [
     {"module": ".ui.project_browser.panel", "register": True, "unregister": True},
     {"module": ".ui.file_handlers", "register": True, "unregister": True},
     {"module": ".ui.workspace", "register": True, "unregister": True},
+    {"module": ".ui.migration", "register": True, "unregister": True},
 ]
 expected_inventory["registered_classes"] += [
+    {
+        "module": ".ui.migration",
+        "name": "CHEMBLENDER_OT_migrate_legacy_scene",
+        "id": "chemblender.migrate_legacy_scene",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.migration",
+        "name": "CHEMBLENDER_OT_preview_legacy_migration",
+        "id": "chemblender.preview_legacy_migration",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.migration",
+        "name": "CHEMBLENDER_PT_legacy_migration",
+        "id": "CHEMBLENDER_PT_LEGACY_MIGRATION",
+        "base": "Panel",
+    },
     {
         "module": ".ui.biological",
         "name": "CHEMBLENDER_OT_create_biological_view",
@@ -4820,6 +4841,7 @@ expected_inventory["registered_classes"].sort(
     )
 )
 expected_inventory["handlers"] += [
+    {"owner": "load_post", "module": ".ui.migration", "name": "_legacy_load_post_handler"},
     {"owner": "load_post", "module": ".runtime.registration", "name": "_reader_api_load_post_handler"},
     {"owner": "load_post", "module": ".ui.session", "name": "_load_post_handler"},
     {"owner": "load_pre", "module": ".ui.properties", "name": "_load_pre_handler"},

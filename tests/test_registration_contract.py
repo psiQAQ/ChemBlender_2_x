@@ -31,6 +31,7 @@ EXPECTED_ROOTS = (
     ".ui.project_browser.panel",
     ".ui.file_handlers",
     ".ui.workspace",
+    ".ui.migration",
 )
 
 

@@ -20,6 +20,8 @@ def detect_legacy_scene() -> LegacySceneDetection:
     for obj in bpy.data.objects:
         if obj.type != "MESH":
             continue
+        if obj.get("cb_legacy_migration_backup") == "v1":
+            continue
         if obj.get("cb_structure_contract") == "structure_view_v1":
             continue
         if obj.get("Type") == "scaffold":
