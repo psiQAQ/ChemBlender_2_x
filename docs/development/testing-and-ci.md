@@ -47,6 +47,13 @@ downloads Blender or wheels nor installs runtime packages; Gemmi/RDKit coverage
 therefore remains in the package job instead of being misreported as native
 coverage.
 
+The native checkout fetches full history. Its format check compares committed
+changes, not the clean runner worktree: pull requests use the event base SHA,
+pushes use the previous SHA, and an empty, all-zero, invalid, or unavailable
+event value falls back to `HEAD^` or the repository root. The final command is
+`git diff --check <base> HEAD`, so trailing whitespace in a committed head
+cannot be hidden by a clean checkout.
+
 The `package` job explicitly `needs: native-core`. It uses a temporary
 `BLENDER_USER_RESOURCES`, downloads Blender and the approved RDKit/Gemmi wheels
 from pinned sources, verifies their checksums, validates/builds the ZIP, and

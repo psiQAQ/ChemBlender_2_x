@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+import subprocess
+import tempfile
 import unittest
 
 
@@ -21,12 +23,44 @@ class NativeCoreCiContractTests(unittest.TestCase):
         next_job = re.search(r"(?m)^  [a-z][a-z0-9-]*:\n", remainder)
         return remainder[: next_job.start()] if next_job else remainder
 
+    def _git(self, cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ("git", *args),
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+            encoding="utf-8",
+        )
+
+    def _committed_range_result(self, contents: str) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = Path(temp_dir)
+            self._git(repository, "init")
+            self._git(repository, "config", "user.email", "ci@example.invalid")
+            self._git(repository, "config", "user.name", "CI Contract")
+            fixture = repository / "fixture.txt"
+            fixture.write_text("base\n", encoding="utf-8", newline="\n")
+            self._git(repository, "add", "fixture.txt")
+            self._git(repository, "commit", "-m", "base")
+            base = self._git(repository, "rev-parse", "HEAD").stdout.strip()
+            fixture.write_text(contents, encoding="utf-8", newline="\n")
+            self._git(repository, "add", "fixture.txt")
+            self._git(repository, "commit", "-m", "head")
+            return subprocess.run(
+                ("git", "diff", "--check", base, "HEAD"),
+                cwd=repository,
+                check=False,
+                capture_output=True,
+                encoding="utf-8",
+            )
+
     def test_native_core_is_a_stdlib_only_fast_gate(self):
         native = self._job("native-core")
 
         self.assertIn(CHECKOUT, native)
         self.assertIn(SETUP_PYTHON, native)
         self.assertEqual(native.count("uses:"), 2)
+        self.assertIn("fetch-depth: 0", native)
         self.assertIn('python-version: "3.13"', native)
         self.assertIn("timeout-minutes: 10", native)
         for module in (
@@ -38,7 +72,14 @@ class NativeCoreCiContractTests(unittest.TestCase):
         ):
             self.assertIn(module, native)
         self.assertIn("python -m compileall -q ChemBlender tests", native)
-        self.assertIn("git diff --check", native)
+        self.assertIn("github.event.pull_request.base.sha", native)
+        self.assertIn("github.event.before", native)
+        self.assertIn("^[0-9a-fA-F]{40}$", native)
+        self.assertIn("^0{40}$", native)
+        self.assertIn("git rev-parse --verify HEAD^", native)
+        self.assertIn("git rev-list --max-parents=0 HEAD", native)
+        self.assertIn("git diff --check $base HEAD", native)
+        self.assertIn('throw "Committed format check failed"', native)
         for forbidden in (
             "Download pinned extension wheels",
             "Download Blender",
@@ -48,6 +89,14 @@ class NativeCoreCiContractTests(unittest.TestCase):
             "BLENDER_USER_RESOURCES",
         ):
             self.assertNotIn(forbidden, native)
+
+    def test_committed_range_check_rejects_bad_head_and_accepts_clean_head(self):
+        bad = self._committed_range_result("bad trailing whitespace  \n")
+        clean = self._committed_range_result("clean\n")
+
+        self.assertNotEqual(bad.returncode, 0)
+        self.assertIn("trailing whitespace", bad.stdout)
+        self.assertEqual(clean.returncode, 0, clean.stdout + clean.stderr)
 
     def test_package_waits_for_native_and_is_the_only_artifact_authority(self):
         native = self._job("native-core")
