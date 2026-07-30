@@ -71,8 +71,14 @@ because `package` needs that job, it cannot build or upload an artifact.
 The `package` job explicitly `needs: native-core`. It uses a temporary
 `BLENDER_USER_RESOURCES`, downloads Blender and the approved RDKit/Gemmi wheels
 from pinned sources, verifies their checksums, validates/builds the ZIP, and
-runs the isolated cold-install lifecycle smoke. Only this job uploads the
-tested ZIP and checksum, so its artifact is authoritative. Action
+runs the isolated cold-install lifecycle smoke. Before its only upload, it
+generates canonical `wheel-inventory.json`, `wheel-license-copy-list.json` and
+`artifact-size.json`, rechecks nested wheel hash/size/license evidence and the
+versioned `.github/artifact-budgets.json`, then verifies the staged five-file
+artifact in explicit `package-ci` mode. The budget has zero unexplained package
+growth: a future baseline change must be reviewed with fresh package evidence.
+Only this job uploads the tested ZIP, checksum and those small metadata files,
+so its artifact is authoritative. Action
 implementations are pinned to full commit SHAs and both jobs have read-only
 repository access. Pull-request and `main` runs gate integration; the
 successful run for the exact annotated tag is the authority for public Release
@@ -96,7 +102,12 @@ or ordinary failure/error fails that job. Unrelated optional tests are not in
 these required module lists. The workflow uploads only the small JSON summaries,
 never a submodule source archive.
 
-`ChemBlender/scripts/verify_release_artifact.py` audits a downloaded artifact against its adjacent checksum and package contract. Local and CI archive hashes may differ because ZIP metadata is regenerated; the tag CI checksum is authoritative for the package selected by the Release workflow.
+`ChemBlender/scripts/verify_release_artifact.py` has an explicit metadata mode.
+`package-ci` requires and recomputes the size report, wheel inventory and
+license list against the ZIP; `release-assets` accepts only ZIP/checksum for a
+published asset pair. Local and CI archive hashes may differ because ZIP
+metadata is regenerated; the tag CI checksum is authoritative for the package
+selected by the Release workflow.
 
 Pillow is outside the 2.2.0 package while no extension code imports PIL or uses Pillow-dependent RDKit behavior. Any such feature must update the dependency decision, manifest, and CI together.
 

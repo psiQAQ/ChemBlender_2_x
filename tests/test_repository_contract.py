@@ -159,7 +159,10 @@ class RepositoryContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertNotIn("chemblender-2.2.0", workflow)
-        self.assertNotIn("blender_manifest.toml", workflow)
+        metadata_step = workflow.split(
+            "\n      - name: Read release metadata\n", 1
+        )[1].split("\n      - name: Verify changelog entry\n", 1)[0]
+        self.assertNotIn("blender_manifest.toml", metadata_step)
         self.assertEqual(workflow.count("release_metadata.py"), 1)
         self.assertIn("id: release_metadata", workflow)
         self.assertIn(
@@ -180,7 +183,7 @@ class RepositoryContractTests(unittest.TestCase):
 
         self.assertEqual(
             workflow.count("steps.release_metadata.outputs.version"),
-            2,
+            3,
         )
         self.assertEqual(
             workflow.count("steps.release_metadata.outputs.package_name"),

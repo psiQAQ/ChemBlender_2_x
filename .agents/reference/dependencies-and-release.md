@@ -118,6 +118,19 @@ license-copy targets. It does not download, install, extract, or delete data;
 it rejects traversal, absolute, drive-qualified, and duplicate archive paths.
 Optional external packages remain outside `blender_manifest.toml` wheels.
 
+## Artifact Size Budget
+
+`.github/artifact-budgets.json` is the versioned package-budget authority. Its
+`baseline_package_bytes` is a fresh built ZIP measurement and
+`allowed_unexplained_growth_bytes` is zero: any package growth requires an
+explicit baseline update with reviewed build evidence. It records `rdkit` as
+an existing wheel, so RDKit remains in the total package report but does not
+consume the new-wheel allowance. Gemmi is the only approved new wheel for
+2.3.0: each new wheel is limited to 10,000,000 compressed bytes and
+30,000,000 unpacked bytes, with 20,000,000 compressed bytes across all new
+wheels. Every approved new wheel must have a non-empty rationale; missing,
+ambiguous or exceeded budgets fail closed.
+
 | Item | Value |
 | --- | --- |
 | Package | `spglib==2.7.0` |
@@ -198,6 +211,7 @@ license, authentication and deployment decision; credential values never enter `
 - `CHANGELOG.md` has exactly one non-empty dated entry for the manifest version; future tags contain that same entry.
 - CI downloads Blender, RDKit and Gemmi from pinned official locations and verifies checksums.
 - CI emits the hash-verified `wheel-inventory.json` and license-copy list from `dependencies.toml` before package artifact upload.
+- Package CI also emits `artifact-size.json`, verifies the ZIP/package digest and nested wheel license evidence in explicit `package-ci` mode before its only upload, and uploads all five small package metadata files together.
 - Built ZIP contains exactly the declared wheels; Git contains no `.whl`.
 - Built ZIP excludes development scripts, tests, caches, and nested ZIP files.
 - Unit, validate, build, isolated install, real install, register, unregister, reload, RDKit operation, Gemmi import/version, and `.blend` checks pass.

@@ -11,8 +11,12 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 if __package__:
+    from .artifact_size_report import build_report, canonical_json
+    from .dependency_inventory import _safe_members
     from .release_metadata import parse_release_version, read_release_metadata
 else:
+    from artifact_size_report import build_report, canonical_json
+    from dependency_inventory import _safe_members
     from release_metadata import parse_release_version, read_release_metadata
 
 
@@ -22,6 +26,12 @@ REQUIRED_FILES = {
     "LICENSE",
     "Chem_Nodes.blend",
     "Chem_Nodes_En.blend",
+}
+METADATA_MODES = frozenset({"package-ci", "release-assets"})
+PACKAGE_CI_METADATA_FILES = {
+    "artifact-size.json",
+    "wheel-inventory.json",
+    "wheel-license-copy-list.json",
 }
 
 
@@ -44,17 +54,61 @@ def _version_from_tag(tag: str) -> str:
 
 def _validate_archive_path(name: str) -> None:
     path = PurePosixPath(name)
-    if not path.parts or "\\" in name or path.is_absolute() or ".." in path.parts:
-        raise ValueError(f"unsafe ZIP path: {name}")
     if "__pycache__" in path.parts or path.parts[0] in {"scripts", "tests"}:
         raise ValueError(f"development path in ZIP: {name}")
     if path.suffix.lower() == ".zip":
         raise ValueError(f"nested ZIP in package: {name}")
 
 
+def _canonical_json_file(path: Path, label: str) -> bytes:
+    try:
+        contents = path.read_bytes()
+        document = json.loads(contents.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"invalid {label} metadata: {exc}") from exc
+    if type(document) is not dict:
+        raise ValueError(f"invalid {label} metadata: root must be an object")
+    expected = json.dumps(document, sort_keys=True, separators=(",", ":")).encode("utf-8") + b"\n"
+    if contents != expected:
+        raise ValueError(f"invalid {label} metadata: not canonical")
+    return contents
+
+
+def _verify_package_metadata(
+    artifact_dir: Path, extension_root: Path, package: Path, budget_path: Path
+) -> None:
+    report_path = artifact_dir / "artifact-size.json"
+    inventory_path = artifact_dir / "wheel-inventory.json"
+    license_path = artifact_dir / "wheel-license-copy-list.json"
+    report = _canonical_json_file(report_path, "artifact-size")
+    _canonical_json_file(inventory_path, "wheel inventory")
+    _canonical_json_file(license_path, "license copy list")
+    expected = canonical_json(
+        build_report(
+            package,
+            inventory_path,
+            license_path,
+            budget_path,
+        )
+    )
+    if report != expected:
+        raise ValueError("artifact-size metadata does not match package")
+
+
 def verify_artifact(
-    artifact_dir: Path, extension_root: Path, tag: str
+    artifact_dir: Path,
+    extension_root: Path,
+    tag: str,
+    *,
+    metadata_mode: str,
+    budget_path: Path | None = None,
 ) -> dict[str, str]:
+    if metadata_mode not in METADATA_MODES:
+        raise ValueError(f"invalid metadata mode: {metadata_mode}")
+    if metadata_mode == "package-ci" and budget_path is None:
+        raise ValueError("package-ci metadata mode requires a budget path")
+    if metadata_mode == "release-assets" and budget_path is not None:
+        raise ValueError("release-assets metadata mode must not have a budget path")
     artifact_dir = artifact_dir.resolve()
     extension_root = extension_root.resolve()
     metadata = read_release_metadata(extension_root)
@@ -67,6 +121,8 @@ def verify_artifact(
     package_name = metadata.package_name
     checksum_name = metadata.checksum_name
     expected_files = {package_name, checksum_name}
+    if metadata_mode == "package-ci":
+        expected_files |= PACKAGE_CI_METADATA_FILES
     actual_files = {
         path.relative_to(artifact_dir).as_posix()
         for path in artifact_dir.rglob("*")
@@ -97,10 +153,9 @@ def verify_artifact(
     }
 
     with zipfile.ZipFile(package) as archive:
-        infos = [info for info in archive.infolist() if not info.is_dir()]
-        names = [info.filename for info in infos]
-        if len(names) != len(set(names)):
-            raise ValueError("duplicate ZIP entries")
+        members = _safe_members(archive)
+        infos = [member for member in members.values() if not member[1]]
+        names = list(members)
         for name in names:
             _validate_archive_path(name)
         if archive.testzip() is not None:
@@ -120,12 +175,16 @@ def verify_artifact(
         if packaged_manifest != manifest:
             raise ValueError("packaged manifest differs from checked-out tag")
 
+    if metadata_mode == "package-ci":
+        _verify_package_metadata(artifact_dir, extension_root, package, budget_path)
+
     return {
         "version": version,
         "package": package_name,
         "checksum": checksum_name,
         "package_sha256": package_digest,
         "checksum_sha256": _sha256(checksum),
+        "metadata_mode": metadata_mode,
     }
 
 
@@ -134,10 +193,18 @@ def main() -> int:
     parser.add_argument("--artifact-dir", required=True, type=Path)
     parser.add_argument("--extension-root", type=Path, default=Path(__file__).parents[1])
     parser.add_argument("--tag", required=True)
+    parser.add_argument("--metadata-mode", required=True, choices=sorted(METADATA_MODES))
+    parser.add_argument("--budget", type=Path)
     args = parser.parse_args()
 
     try:
-        result = verify_artifact(args.artifact_dir, args.extension_root, args.tag)
+        result = verify_artifact(
+            args.artifact_dir,
+            args.extension_root,
+            args.tag,
+            metadata_mode=args.metadata_mode,
+            budget_path=args.budget,
+        )
     except (OSError, ValueError, tomllib.TOMLDecodeError, zipfile.BadZipFile) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

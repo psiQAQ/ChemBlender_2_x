@@ -92,6 +92,33 @@ class NativeCoreCiContractTests(unittest.TestCase):
             1,
         )
 
+    def test_package_metadata_is_verified_before_the_only_upload(self):
+        native = self._job("native-core")
+        package = self._job("package")
+
+        for module in (
+            "tests.test_artifact_size_report",
+            "tests.test_release_artifact",
+        ):
+            self.assertIn(module, native)
+        for expected in (
+            "dependency_inventory.py",
+            "artifact_size_report.py",
+            "--budget .github/artifact-budgets.json",
+            "verify_release_artifact.py",
+            "--metadata-mode package-ci",
+            '$artifactDir = "release-artifact"',
+            "wheel-inventory.json",
+            "wheel-license-copy-list.json",
+            "artifact-size.json",
+        ):
+            self.assertIn(expected, package)
+        self.assertLess(
+            package.index("verify_release_artifact.py"), package.index(UPLOAD_ARTIFACT)
+        )
+        upload = package.split(UPLOAD_ARTIFACT, 1)[1]
+        self.assertIn("${{ env.PACKAGE_ARTIFACT_DIR }}/*", upload)
+
     def test_package_workflow_keeps_read_only_permissions_and_full_action_pins(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
 

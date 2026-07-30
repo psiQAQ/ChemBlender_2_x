@@ -135,7 +135,9 @@ jobs:
           set -euo pipefail
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
           python3 ChemBlender/scripts/verify_release_artifact.py \
-            --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG"
+            --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG" \
+            --metadata-mode package-ci \
+            --budget tag-source/.github/artifact-budgets.json
           python3 ChemBlender/scripts/extract_release_notes.py \
             --changelog CHANGELOG.md --version "$VERSION" --output release-notes.md
           if [[ -f tag-source/CHANGELOG.md ]]; then
@@ -172,7 +174,9 @@ jobs:
           set -euo pipefail
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
           python3 ChemBlender/scripts/verify_release_artifact.py \
-            --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG"
+            --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG" \
+            --metadata-mode package-ci \
+            --budget tag-source/.github/artifact-budgets.json
           python3 ChemBlender/scripts/extract_release_notes.py \
             --changelog CHANGELOG.md --version "$VERSION" --output release-notes.md
           if [[ -f tag-source/CHANGELOG.md ]]; then

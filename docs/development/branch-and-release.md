@@ -52,7 +52,7 @@ The Release workflow verifies all of these conditions before publication:
 | Release identity | Input is an annotated `vMAJOR.MINOR.PATCH`, `vMAJOR.MINOR.PATCH-alpha.N`, `vMAJOR.MINOR.PATCH-beta.N`, or `vMAJOR.MINOR.PATCH-rc.N` tag in `origin/main`; tag version and channel equal tagged-source metadata |
 | Package provenance | Successful `extension-package` push run has the same tag name and exact commit SHA |
 | Artifact availability | Exactly one metadata-named, unexpired Actions artifact exists; tagged artifacts have a 30-day review window |
-| Package integrity | Artifact has only the versioned ZIP and checksum; SHA-256 matches |
+| Package integrity | CI artifact has the versioned ZIP/checksum plus canonical size, wheel-inventory and license-list metadata; `package-ci` verification recomputes their package digest/evidence before Release selection. Published Release assets may remain the explicit ZIP/checksum-only `release-assets` pair. |
 | Package contract | Manifest, license, declared wheel, and both `.blend` libraries exist; development paths and extra wheels do not |
 | Publication safety | No Release already exists; draft asset digests equal the downloaded files; prereleases remain non-latest and final releases become latest |
 

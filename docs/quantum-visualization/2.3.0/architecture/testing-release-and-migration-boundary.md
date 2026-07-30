@@ -92,5 +92,5 @@ release-contract-ubuntu
 - tag必须与 manifest/version mapping一致；
 - exact-tag artifact保留期足够覆盖发布；
 - release不重建；
-- artifact size、wheel inventory、licenses作为制品；
+- artifact size、wheel inventory、licenses作为制品；CI 在 upload 前以 package SHA-256、嵌套 wheel/license evidence 和零未解释增长的版本化预算重新绑定三者；
 - CI摘要列出 run/skip/fail counts。
