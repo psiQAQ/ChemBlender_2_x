@@ -434,10 +434,31 @@ class DependencyInventoryTests(unittest.TestCase):
         self.assertIn("output write failed", stdout)
         self._assert_outputs_unchanged()
 
+    def test_backup_preserves_readonly_mode_and_can_be_cleaned(self):
+        self.output.write_bytes(b"old inventory")
+        original_mode = stat.S_IMODE(self.output.stat().st_mode)
+        os.chmod(self.output, stat.S_IREAD)
+        output_mode = stat.S_IMODE(self.output.stat().st_mode)
+        backup: Path | None = None
+        try:
+            backup = dependency_inventory._backup_output(self.output)
+
+            self.assertIsNotNone(backup)
+            self.assertEqual(backup.read_bytes(), b"old inventory")
+            self.assertEqual(stat.S_IMODE(backup.stat().st_mode), output_mode)
+            dependency_inventory._cleanup([backup])
+            self.assertFalse(backup.exists())
+        finally:
+            if backup is not None and backup.exists():
+                os.chmod(backup, stat.S_IREAD | stat.S_IWRITE)
+                backup.unlink()
+            os.chmod(self.output, original_mode)
+
     def test_cli_second_replace_failure_restores_existing_outputs(self):
         self._prepare_valid_inventory()
         self.output.write_bytes(b"old inventory")
         self.licenses.write_bytes(b"old licenses")
+        output_mode = stat.S_IMODE(self.output.stat().st_mode)
         real_replace = os.replace
         calls = 0
 
@@ -456,11 +477,13 @@ class DependencyInventoryTests(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn("output replace failed", stdout)
         self._assert_outputs_unchanged()
+        self.assertEqual(stat.S_IMODE(self.output.stat().st_mode), output_mode)
 
     def test_cli_restore_failure_keeps_readable_backup_and_reports_both_errors(self):
         self._prepare_valid_inventory()
         self.output.write_bytes(b"old inventory")
         self.licenses.write_bytes(b"old licenses")
+        output_mode = stat.S_IMODE(self.output.stat().st_mode)
         real_replace = os.replace
 
         def fail_replace_and_restore(source, destination):
@@ -481,9 +504,14 @@ class DependencyInventoryTests(unittest.TestCase):
         self.assertIn("injected replace failure", stdout)
         self.assertIn("injected restore failure", stdout)
         backups = list(self.root.glob(".*.bak"))
-        self.assertTrue(backups)
+        self.assertEqual(len(backups), 1)
         self.assertIn(str(backups[0].resolve()), stdout)
-        self.assertIn(b"old inventory", [backup.read_bytes() for backup in backups])
+        self.assertEqual(
+            stdout.split("recoverable backups: ", maxsplit=1)[1].strip(),
+            str(backups[0].resolve()),
+        )
+        self.assertEqual(backups[0].read_bytes(), b"old inventory")
+        self.assertEqual(stat.S_IMODE(backups[0].stat().st_mode), output_mode)
         self.assertEqual(list(self.root.glob(".*.tmp")), [])
 
     def test_repository_manifest_matches_required_inventory(self):

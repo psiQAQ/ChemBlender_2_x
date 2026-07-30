@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import stat
 import tempfile
 import tomllib
@@ -262,6 +263,9 @@ def _cleanup(paths: list[Path | None]) -> None:
     for path in paths:
         if path is not None:
             try:
+                mode = stat.S_IMODE(path.stat().st_mode)
+                if not mode & stat.S_IWUSR:
+                    path.chmod(mode | stat.S_IWUSR)
                 path.unlink()
             except OSError:
                 pass
@@ -285,13 +289,29 @@ def _preflight_output_paths(output: Path, license_copy_list: Path) -> None:
 def _backup_output(path: Path) -> Path | None:
     if not path.exists():
         return None
-    return _write_transaction_file(path.parent, ".bak", path.read_bytes())
+    backup = _transaction_file(path.parent, ".bak")
+    try:
+        shutil.copy2(path, backup)
+        mode = stat.S_IMODE(backup.stat().st_mode)
+        if not mode & stat.S_IWUSR:
+            backup.chmod(mode | stat.S_IWUSR)
+        try:
+            with backup.open("r+b") as handle:
+                handle.flush()
+                os.fsync(handle.fileno())
+        finally:
+            if not mode & stat.S_IWUSR:
+                backup.chmod(mode)
+    except OSError:
+        _cleanup([backup])
+        raise
+    return backup
 
 
 def _restore_outputs(
     paths: tuple[Path, Path], backups: list[Path | None], replaced: list[bool]
-) -> list[str]:
-    errors: list[str] = []
+) -> list[tuple[int, OSError]]:
+    errors: list[tuple[int, OSError]] = []
     for index in reversed(range(len(paths))):
         if not replaced[index]:
             continue
@@ -304,7 +324,7 @@ def _restore_outputs(
                 os.replace(backup, path)
                 backups[index] = None
         except OSError as exc:
-            errors.append(f"{path}: {exc}")
+            errors.append((index, exc))
     return errors
 
 
@@ -340,16 +360,25 @@ def _write_outputs(
             replaced[index] = True
     except OSError as exc:
         recovery_errors = _restore_outputs(paths, backups, replaced)
+        failed_indices = {index for index, _ in recovery_errors}
+        _cleanup(
+            [backup for index, backup in enumerate(backups) if index not in failed_indices]
+        )
         if recovery_errors:
             retained_backups = [
-                str(backup.absolute()) for backup in backups if backup is not None
+                str(backups[index].absolute())
+                for index, _ in recovery_errors
+                if backups[index] is not None
             ]
             backup_detail = ", ".join(retained_backups) or "none"
+            recovery_detail = "; ".join(
+                f"{paths[index]}: {recovery_error}"
+                for index, recovery_error in recovery_errors
+            )
             raise ValueError(
-                f"output replace failed: {exc}; recovery failed: {'; '.join(recovery_errors)}; "
+                f"output replace failed: {exc}; recovery failed: {recovery_detail}; "
                 f"recoverable backups: {backup_detail}"
             ) from exc
-        _cleanup(backups)
         raise ValueError(f"output replace failed: {exc}") from exc
     finally:
         _cleanup(temporary)
