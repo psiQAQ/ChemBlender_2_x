@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from copy import deepcopy
+import json
 from pathlib import Path
 from uuid import uuid4
 import os
@@ -47,6 +48,15 @@ class LegacyMigrationPreview:
     detection: object
     plan: object
     sidecar_path: Path
+    entity_inventory: tuple["LegacyMigrationInventory", ...]
+
+
+@dataclass(frozen=True, slots=True)
+class LegacyMigrationInventory:
+    legacy_object_name: str
+    kind: str
+    entity_types: tuple[str, ...]
+    entity_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,33 +96,83 @@ def preview_legacy_migration(scene):
     detection = legacy_migration_detection(scene)
     report = extract_legacy_objects(detection)
     plan = plan_legacy_migration(report, get_scene_session(scene).project)
-    return LegacyMigrationPreview(detection, plan, _blend_sidecar_path())
+    inventory = []
+    for view_plan in plan.view_plans:
+        structure = plan.project.structures[view_plan.structure_id]
+        topology = next(
+            (item for item in plan.project.topologies.values()
+             if item.structure_id == structure.id),
+            None,
+        )
+        provenance = next(
+            item for item in plan.project.provenance.values()
+            if ("legacy_object_name", view_plan.legacy_object_name) in item.parameters
+        )
+        entity_types = ["Structure"]
+        entity_ids = [str(structure.id)]
+        if topology is not None:
+            entity_types.append("TopologyRecord")
+            entity_ids.append(str(topology.id))
+        if structure.periodic is not None:
+            entity_types.append("PeriodicSiteData")
+            entity_ids.append(str(structure.id))
+        entity_types.append("ProvenanceRecord")
+        entity_ids.append(str(provenance.id))
+        inventory.append(LegacyMigrationInventory(
+            view_plan.legacy_object_name, view_plan.kind,
+            tuple(entity_types), tuple(entity_ids),
+        ))
+    return LegacyMigrationPreview(detection, plan, _blend_sidecar_path(), tuple(inventory))
 
 
 def _mean(values):
     return 1.0 if values is None else sum(values) / len(values)
 
 
+def _write_display_attribute(mesh, name, values, data_type, domain, field):
+    attribute = mesh.attributes.get(name)
+    if attribute is None or attribute.data_type != data_type or attribute.domain != domain:
+        raise ValueError(f"migration display target is incompatible: {name}")
+    if len(attribute.data) != len(values):
+        raise ValueError(f"migration display target length is incompatible: {name}")
+    for item, value in zip(attribute.data, values):
+        setattr(item, field, value)
+    observed = tuple(
+        tuple(getattr(item, field)) if field == "color" else getattr(item, field)
+        for item in attribute.data
+    )
+    if observed != tuple(values):
+        raise RuntimeError(f"migration display verification failed: {name}")
+
+
+def _node_audit(settings):
+    return json.dumps(
+        [
+            {"inputs": item.inputs, "name": item.name,
+             "node_group_name": item.node_group_name}
+            for item in settings.node_modifiers
+        ],
+        ensure_ascii=False, separators=(",", ":"), sort_keys=True,
+    )
+
+
 def _apply_view_settings(view, settings, owned_materials):
     mesh = view.data
-    for name, values, field in (
-        ("radius", settings.radii, "value"),
-        ("vdw_radius", settings.vdw_radii, "value"),
-        ("atom_scale_f", settings.atom_scales, "value"),
-        ("bond_scale_f", settings.bond_scales, "value"),
+    for name, values, data_type, domain, field in (
+        ("radius", settings.radii, "FLOAT", "POINT", "value"),
+        ("vdw_radius", settings.vdw_radii, "FLOAT", "POINT", "value"),
+        ("atom_scale_f", settings.atom_scales, "FLOAT", "POINT", "value"),
+        ("bond_scale_f", settings.bond_scales, "FLOAT", "EDGE", "value"),
     ):
         if values is not None:
-            for item, value in zip(mesh.attributes[name].data, values):
-                setattr(item, field, value)
+            _write_display_attribute(mesh, name, values, data_type, domain, field)
     if settings.dashed is not None:
         dashed = mesh.attributes.get("dashed")
         if dashed is None:
             dashed = mesh.attributes.new("dashed", "BOOLEAN", "EDGE")
-        for item, value in zip(dashed.data, settings.dashed):
-            item.value = bool(value)
+        _write_display_attribute(mesh, "dashed", settings.dashed, "BOOLEAN", "EDGE", "value")
     if settings.colors is not None:
-        for item, value in zip(mesh.attributes["colour"].data, settings.colors):
-            item.color = value
+        _write_display_attribute(mesh, "colour", settings.colors, "FLOAT_COLOR", "POINT", "color")
     for index, snapshot in enumerate(settings.materials):
         material = bpy.data.materials.new(f"{view.name} Legacy Material {index}")
         material.diffuse_color = snapshot.diffuse_color
@@ -120,9 +180,16 @@ def _apply_view_settings(view, settings, owned_materials):
         material.roughness = snapshot.roughness
         mesh.materials.append(material)
         owned_materials.append(material)
-    view["cb_legacy_node_settings"] = tuple(
-        (item.name, item.node_group_name, item.inputs) for item in settings.node_modifiers
-    )
+        if (
+            tuple(material.diffuse_color) != snapshot.diffuse_color
+            or material.metallic != snapshot.metallic
+            or material.roughness != snapshot.roughness
+        ):
+            raise RuntimeError(f"migration material verification failed: {snapshot.name}")
+    audit = _node_audit(settings)
+    view["cb_legacy_node_settings"] = audit
+    if view["cb_legacy_node_settings"] != audit:
+        raise RuntimeError("migration node audit verification failed")
 
 
 def _new_view(plan, view_plan, collection, owned_materials):
@@ -172,12 +239,33 @@ def _restore_scene_links(snapshot):
                 del scene[key]
 
 
-def _restore_session(session, snapshot):
-    session.project, session.sidecar_path, session.link_status = snapshot[:3]
+def _restore_session_metadata(session, snapshot, *, sidecar_path=None, link_status=None):
+    session.sidecar_path = snapshot[1] if sidecar_path is None else sidecar_path
+    session.link_status = snapshot[2] if link_status is None else link_status
     session.active_entity_id, session.active_view_object_name = snapshot[3:5]
     session.mark_clean()
     for reason in snapshot[5]:
         session.mark_dirty(reason)
+
+
+def _restore_session(session, snapshot):
+    session.project = snapshot[0]
+    _restore_session_metadata(session, snapshot)
+
+
+def _restore_existing_sidecar_session(session, snapshot, destination):
+    restored = open_project(
+        destination, expected_project_id=snapshot[0].id,
+        expected_schema_version=snapshot[0].schema_version,
+    )
+    try:
+        _restore_session_metadata(
+            session, snapshot, sidecar_path=destination, link_status="connected",
+        )
+    except BaseException:
+        close_project(restored)
+        raise
+    session.project = restored
 
 
 def _verified_existing_sidecar(session, destination, blend_path):
@@ -212,13 +300,15 @@ def _cleanup(error, label, callback):
         error.add_note(f"{label}: {cleanup}")
 
 
-def _restore_legacy(backup, collection_snapshot):
-    for obj, collections, hidden, properties in collection_snapshot:
+def _restore_legacy(scene, backup, collection_snapshot):
+    for obj, collections, hidden_viewport, hidden_layers, properties in collection_snapshot:
         for collection in tuple(obj.users_collection):
             collection.objects.unlink(obj)
         for collection in collections:
             collection.objects.link(obj)
-        obj.hide_set(hidden)
+        obj.hide_viewport = hidden_viewport
+        for view_layer, hidden in hidden_layers:
+            obj.hide_set(hidden, view_layer=view_layer)
         for key in tuple(obj.keys()):
             if key not in properties:
                 del obj[key]
@@ -231,35 +321,40 @@ def _restore_legacy(backup, collection_snapshot):
         bpy.data.collections.remove(backup)
 
 
-def _backup_legacy(objects, collection, project_id, transaction_id):
+def _move_backup_object(backup, obj, collections, project_id, transaction_id):
+    for parent in collections:
+        parent.objects.unlink(obj)
+    backup.objects.link(obj)
+    obj["cb_legacy_migration_backup"] = _BACKUP_CONTRACT
+    obj["cb_legacy_migration_project_id"] = str(project_id)
+    obj["cb_legacy_migration_transaction_id"] = str(transaction_id)
+    obj["cb_legacy_original_collections"] = tuple(parent.name for parent in collections)
+
+
+def _backup_legacy(objects, scene, project_id, transaction_id):
     existing = bpy.data.collections.get(_BACKUP_COLLECTION)
     if existing is not None:
         raise ValueError("ChemBlender Legacy Backup already exists")
     backup = bpy.data.collections.new(_BACKUP_COLLECTION)
     snapshot = tuple(
-        (obj, tuple(obj.users_collection), obj.hide_get(),
+        (obj, tuple(obj.users_collection), obj.hide_viewport,
+         tuple((view_layer, obj.hide_get(view_layer=view_layer)) for view_layer in scene.view_layers),
          {key: deepcopy(obj[key]) for key in obj.keys()})
         for obj in objects
     )
     try:
-        collection.children.link(backup)
+        scene.collection.children.link(backup)
         backup.hide_viewport = True
         backup.hide_render = True
         backup["cb_legacy_migration_collection"] = _BACKUP_CONTRACT
         backup["cb_legacy_migration_project_id"] = str(project_id)
         backup["cb_legacy_migration_transaction_id"] = str(transaction_id)
-        for obj, collections, _hidden, _properties in snapshot:
-            for parent in collections:
-                parent.objects.unlink(obj)
-            backup.objects.link(obj)
-            obj["cb_legacy_migration_backup"] = _BACKUP_CONTRACT
-            obj["cb_legacy_migration_project_id"] = str(project_id)
-            obj["cb_legacy_migration_transaction_id"] = str(transaction_id)
-            obj["cb_legacy_original_collections"] = tuple(parent.name for parent in collections)
+        for obj, collections, _hidden_viewport, _hidden_layers, _properties in snapshot:
+            _move_backup_object(backup, obj, collections, project_id, transaction_id)
         return backup, snapshot
     except BaseException as error:
         try:
-            _restore_legacy(backup, snapshot)
+            _restore_legacy(scene, backup, snapshot)
         except BaseException as cleanup:
             error.add_note(f"legacy backup rollback failed: {cleanup}")
         raise
@@ -308,7 +403,7 @@ def migrate_legacy_scene(scene, *, confirmed):
             raise RuntimeError(linked.message)
         backup, legacy_snapshot = _backup_legacy(
             tuple(bpy.data.objects[name] for name in preview.plan.report.object_names),
-            scene.collection, session.project.id, transaction_id,
+            scene, session.project.id, transaction_id,
         )
         session.mark_dirty("legacy_migration")
         _legacy_load_post_handler(None)
@@ -324,7 +419,7 @@ def migrate_legacy_scene(scene, *, confirmed):
         )
     except BaseException as error:
         if backup is not None:
-            _cleanup(error, "legacy backup rollback failed", lambda: _restore_legacy(backup, legacy_snapshot))
+            _cleanup(error, "legacy backup rollback failed", lambda: _restore_legacy(scene, backup, legacy_snapshot))
         for view in reversed(views):
             if view.name in bpy.data.objects:
                 _cleanup(error, "migration view rollback failed", lambda view=view: remove_structure_view(view))
@@ -339,10 +434,12 @@ def migrate_legacy_scene(scene, *, confirmed):
         if previous_sidecar is not None and previous_sidecar.exists():
             _cleanup(error, "previous sidecar restore failed", lambda: os.replace(previous_sidecar, destination))
         if has_existing_sidecar:
-            restored = open_project(destination, expected_project_id=session_snapshot[0].id,
-                                    expected_schema_version=session_snapshot[0].schema_version)
-            session_snapshot = (restored, destination, "connected", *session_snapshot[3:])
-        _restore_session(session, session_snapshot)
+            _cleanup(
+                error, "existing sidecar session restore failed",
+                lambda: _restore_existing_sidecar_session(session, session_snapshot, destination),
+            )
+        else:
+            _cleanup(error, "session rollback failed", lambda: _restore_session(session, session_snapshot))
         _cleanup(error, "legacy detection refresh failed", lambda: _legacy_load_post_handler(None))
         raise
 
@@ -368,9 +465,13 @@ class CHEMBLENDER_OT_preview_legacy_migration(bpy.types.Operator):
         layout = self.layout
         layout.label(text=f"Destination: {preview.sidecar_path}")
         layout.label(text=f"Legacy entities: {len(preview.plan.report.object_names)}")
+        inventory = {item.legacy_object_name: item for item in preview.entity_inventory}
         for view_plan in preview.plan.view_plans:
             settings = view_plan.settings
             layout.label(text=f"{view_plan.legacy_object_name} -> {view_plan.legacy_object_name} (Migrated)")
+            item = inventory[view_plan.legacy_object_name]
+            layout.label(text=f"  entities: {', '.join(item.entity_types)}")
+            layout.label(text=f"  ids: {', '.join(item.entity_ids)}")
             recovered = [
                 name for name, value in (
                     ("radii", settings.radii), ("vdw", settings.vdw_radii),
