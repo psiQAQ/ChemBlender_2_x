@@ -63,10 +63,19 @@ GBasis evaluates normalized Gaussian basis functions, molecular orbitals, total/
 
 The read-only `optional-qc-core` workflow keeps these backends outside the
 extension package: cclib and IOData run in isolated CPython 3.13 environments,
-while GBasis runs in CPython 3.12 with NumPy 1.26.4. Before each explicit
+while GBasis runs in CPython 3.12 with NumPy 1.26.4. Its per-backend exact
+runtime locks are `.github/constraints/cclib-py313.txt`,
+`.github/constraints/iodata-py313.txt` and
+`.github/constraints/gbasis-py312.txt`. Each lock contains the direct package
+and every resolved runtime dependency (not installer tooling); it must be
+derived from the pinned submodule metadata and a matching `pip --dry-run
+--report` resolution before changing the workflow. CI uses the file for both
+`pip -c` and runtime `importlib.metadata` verification. Before each explicit
 adapter module list runs, CI checks the recorded submodule commit and fixture
-SHA-256 values; its stdlib runner rejects targeted skips, load errors and zero
-discovery instead of converting a missing optional backend into success.
+SHA-256 values; its stdlib runner rejects every non-ordinary result, including
+targeted skips, expected failures, unexpected successes, subtest failure/error,
+load errors and zero discovery instead of converting a missing optional backend
+into success.
 
 | Item | Value |
 | --- | --- |

@@ -11,6 +11,11 @@ DOCUMENTATION = ROOT / "docs" / "development" / "testing-and-ci.md"
 CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
 SETUP_PYTHON = "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97"
 UPLOAD_ARTIFACT = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+LOCKS = {
+    "cclib": ROOT / ".github" / "constraints" / "cclib-py313.txt",
+    "iodata": ROOT / ".github" / "constraints" / "iodata-py313.txt",
+    "gbasis": ROOT / ".github" / "constraints" / "gbasis-py312.txt",
+}
 
 
 class OptionalQcCoreCiContractTests(unittest.TestCase):
@@ -31,18 +36,21 @@ class OptionalQcCoreCiContractTests(unittest.TestCase):
             "cclib": {
                 "python": 'python-version: "3.13"',
                 "package": "cclib==1.8.1",
+                "lock": ".github/constraints/cclib-py313.txt",
                 "submodule": "07260dd0394cb1a2381d4d897746d727a12ad6ce",
                 "module": "tests.test_cclib_adapter",
             },
             "iodata": {
                 "python": 'python-version: "3.13"',
                 "package": "qc-iodata==1.0.1",
+                "lock": ".github/constraints/iodata-py313.txt",
                 "submodule": "adab5813713ba64641565eb2a8c11803a4e9bba6",
                 "module": "tests.test_iodata_adapter",
             },
             "gbasis": {
                 "python": 'python-version: "3.12"',
                 "package": "qc-gbasis==0.1.0",
+                "lock": ".github/constraints/gbasis-py312.txt",
                 "submodule": "6440c84f3fcf8d42cbd9b5de53ae8d70bed4cd4f",
                 "module": "tests.test_wavefunction_grid",
             },
@@ -59,12 +67,68 @@ class OptionalQcCoreCiContractTests(unittest.TestCase):
                 self.assertIn(requirement["module"], job)
                 self.assertIn("git submodule update --init --depth 1", job)
                 self.assertIn("run_required_integration.py", job)
+                self.assertIn(f"-c {requirement['lock']}", job)
+                self.assertIn(
+                    f"--require-version-file {requirement['lock']}", job
+                )
                 self.assertIn("timeout-minutes: 15", job)
                 self.assertNotIn("unittest discover", job)
         gbasis = self._job("gbasis")
         self.assertIn("numpy==1.26.4", gbasis)
         self.assertIn("qc-iodata==1.0.1", gbasis)
         self.assertIn("tests.test_wavefunction_observables", gbasis)
+
+    def test_each_backend_lock_is_full_exact_and_used_by_its_own_job(self):
+        expected = {
+            "cclib": {
+                "cclib==1.8.1",
+                "numpy==2.2.6",
+                "packaging==26.2",
+                "periodictable==2.1.0",
+                "pyparsing==3.3.2",
+                "scipy==1.16.3",
+            },
+            "iodata": {
+                "attrs==26.1.0",
+                "numpy==2.2.6",
+                "qc-iodata==1.0.1",
+                "scipy==1.16.3",
+            },
+            "gbasis": {
+                "attrs==26.1.0",
+                "importlib_resources==7.1.0",
+                "mpmath==1.3.0",
+                "numpy==1.26.4",
+                "qc-gbasis==0.1.0",
+                "qc-iodata==1.0.1",
+                "scipy==1.16.3",
+                "sympy==1.14.0",
+            },
+        }
+
+        for backend, requirements in expected.items():
+            with self.subTest(backend=backend):
+                lock = LOCKS[backend]
+                self.assertTrue(lock.is_file(), f"{backend} lock is missing")
+                entries = {
+                    line
+                    for line in lock.read_text(encoding="utf-8").splitlines()
+                    if line and not line.startswith("#")
+                }
+                self.assertEqual(entries, requirements)
+                self.assertTrue(
+                    all(
+                        re.fullmatch(r"[A-Za-z0-9_.-]+==[^=\s]+", entry)
+                        for entry in entries
+                    )
+                )
+                self.assertIn(
+                    f"-c {lock.relative_to(ROOT).as_posix()}", self._job(backend)
+                )
+                self.assertIn(
+                    f"--require-version-file {lock.relative_to(ROOT).as_posix()}",
+                    self._job(backend),
+                )
 
     def test_fixture_hash_preflight_and_summary_artifact_are_required(self):
         workflow = self._workflow()

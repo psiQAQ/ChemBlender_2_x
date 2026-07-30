@@ -1,0 +1,4 @@
+attrs==26.1.0
+numpy==2.2.6
+qc-iodata==1.0.1
+scipy==1.16.3

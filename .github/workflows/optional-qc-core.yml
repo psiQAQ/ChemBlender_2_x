@@ -28,7 +28,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --disable-pip-version-check "cclib==1.8.1"
+          python -m pip install --disable-pip-version-check -c .github/constraints/cclib-py313.txt "cclib==1.8.1"
       - name: Run required cclib integration
         shell: bash
         run: |
@@ -36,7 +36,7 @@ jobs:
           python ChemBlender/scripts/run_required_integration.py \
             --summary summary-cclib.json \
             --module tests.test_cclib_adapter \
-            --require-version cclib==1.8.1 \
+            --require-version-file .github/constraints/cclib-py313.txt \
             --fixture submodules/cclib/data/Gaussian/basicGaussian16/water_hf_solvent_cpcm.log=02bc605f57477477f17d1f305f91cd9e4e62239456cb9a0ef288384c714d04d9 \
             --fixture submodules/cclib/data/ORCA/basicORCA4.1/water_mp2.out=18923bf60ff3c4bac650a0cd871a7417e2f779c5161dfa138ea677fad4f7eb42 \
             --fixture submodules/cclib/data/Gaussian/basicGaussian16/dvb_ir.out=eae40334346cea9177ab5c75ca81cd53ed1fbcaf5d567a8818f067439e5c744f \
@@ -74,7 +74,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --disable-pip-version-check "qc-iodata==1.0.1"
+          python -m pip install --disable-pip-version-check -c .github/constraints/iodata-py313.txt "qc-iodata==1.0.1"
       - name: Run required IOData integration
         shell: bash
         run: |
@@ -82,7 +82,7 @@ jobs:
           python ChemBlender/scripts/run_required_integration.py \
             --summary summary-iodata.json \
             --module tests.test_iodata_adapter \
-            --require-version qc-iodata==1.0.1 \
+            --require-version-file .github/constraints/iodata-py313.txt \
             --fixture submodules/iodata/iodata/test/data/water_sto3g_hf_g03.fchk=2385f3da057bcc3a33327de7f36703bada5069ed3089fc581ece401473218415 \
             --fixture submodules/iodata/iodata/test/data/ch3_hf_sto3g.fchk=2b958cb5e03ca5d9e506b215aa424f9f1998b3ac4ce30b8fcb64795e8b895f3b \
             --fixture submodules/iodata/iodata/test/data/h2o.molden.input=9395e96ca9e464d883849e29d0f7ffb331f371512d2af6aa67f25061615bd3b7
@@ -114,7 +114,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --disable-pip-version-check "numpy==1.26.4" "qc-iodata==1.0.1" "qc-gbasis==0.1.0"
+          python -m pip install --disable-pip-version-check -c .github/constraints/gbasis-py312.txt "numpy==1.26.4" "qc-iodata==1.0.1" "qc-gbasis==0.1.0"
       - name: Run required GBasis integration
         shell: bash
         run: |
@@ -123,9 +123,7 @@ jobs:
             --summary summary-gbasis.json \
             --module tests.test_wavefunction_grid \
             --module tests.test_wavefunction_observables \
-            --require-version numpy==1.26.4 \
-            --require-version qc-iodata==1.0.1 \
-            --require-version qc-gbasis==0.1.0 \
+            --require-version-file .github/constraints/gbasis-py312.txt \
             --fixture submodules/iodata/iodata/test/data/water_sto3g_hf_g03.fchk=2385f3da057bcc3a33327de7f36703bada5069ed3089fc581ece401473218415 \
             --fixture submodules/iodata/iodata/test/data/ch3_hf_sto3g.fchk=2b958cb5e03ca5d9e506b215aa424f9f1998b3ac4ce30b8fcb64795e8b895f3b \
             --fixture submodules/iodata/iodata/test/data/water_ccpvdz_pure_hf_g03.fchk=ef4b97f94cf701647f40042f2c44ea864f5ce9ac3cfeda7985acf31ac16fe7f3

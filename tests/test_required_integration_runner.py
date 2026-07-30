@@ -71,29 +71,37 @@ class RequiredIntegrationRunnerTests(unittest.TestCase):
             fixture.write_bytes(b"fixture contents\n")
             digest = hashlib.sha256(fixture.read_bytes()).hexdigest()
             numpy_version = importlib.metadata.version("numpy")
+            version_lock = root / "versions.lock"
+            version_lock.write_text(
+                f"# resolved runtime dependency\nnumpy=={numpy_version}\n",
+                encoding="utf-8",
+            )
 
             result, summary, summary_path = self._summary_for(
                 root,
                 module,
                 "--fixture",
                 f"fixture.bin={digest}",
-                "--require-version",
-                f"numpy=={numpy_version}",
+                "--require-version-file",
+                str(version_lock),
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(summary["counts"], {
                 "error": 0,
+                "expected_failure": 0,
                 "failed": 0,
                 "load_error": 0,
                 "passed": 1,
                 "skipped": 0,
                 "total": 1,
+                "unexpected_success": 0,
             })
             self.assertEqual(summary["fixture_hashes"], {"fixture.bin": digest})
             self.assertEqual(summary["test_ids"]["passed"], [
                 "required_runner_sample.passing.Passing.test_passes"
             ])
+            self.assertEqual(summary["required_versions"], {"numpy": numpy_version})
             self.assertEqual(summary["versions"]["numpy"], numpy_version)
             self.assertEqual(summary["version_errors"], [])
             self.assertEqual(
@@ -124,6 +132,41 @@ class RequiredIntegrationRunnerTests(unittest.TestCase):
             self.assertEqual(summary["test_ids"]["skipped"], [
                 "required_runner_sample.skipped.Skipped.test_is_skipped"
             ])
+
+    def test_version_lock_mismatch_is_recorded_before_loading_the_module(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            module = self._write_module(
+                root,
+                "passing",
+                """
+                import unittest
+
+                class Passing(unittest.TestCase):
+                    def test_passes(self):
+                        self.assertTrue(True)
+                """,
+            )
+            version_lock = root / "versions.lock"
+            version_lock.write_text("numpy==0.0.0\n", encoding="utf-8")
+
+            result, summary, _ = self._summary_for(
+                root,
+                module,
+                "--require-version-file",
+                str(version_lock),
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(summary["counts"]["total"], 0)
+            self.assertEqual(summary["required_versions"], {"numpy": "0.0.0"})
+            self.assertEqual(
+                summary["version_errors"],
+                [
+                    "numpy: expected 0.0.0, found "
+                    + importlib.metadata.version("numpy")
+                ],
+            )
 
     def test_failed_required_test_is_recorded_and_fails_the_runner(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -169,6 +212,102 @@ class RequiredIntegrationRunnerTests(unittest.TestCase):
             self.assertEqual(summary["counts"]["error"], 1)
             self.assertEqual(summary["test_ids"]["error"], [
                 "required_runner_sample.errored.Errored.test_errors"
+            ])
+
+    def test_failed_subtest_is_recorded_with_its_stable_id_and_fails_the_runner(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            module = self._write_module(
+                root,
+                "subtest_failure",
+                """
+                import unittest
+
+                class Subtests(unittest.TestCase):
+                    def test_cases(self):
+                        with self.subTest(case="failure"):
+                            self.fail("expected subtest failure")
+                """,
+            )
+
+            result, summary, _ = self._summary_for(root, module)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(summary["counts"]["failed"], 1)
+            self.assertEqual(summary["test_ids"]["failed"], [
+                "required_runner_sample.subtest_failure.Subtests.test_cases (case='failure')"
+            ])
+
+    def test_errored_subtest_is_recorded_with_its_stable_id_and_fails_the_runner(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            module = self._write_module(
+                root,
+                "subtest_error",
+                """
+                import unittest
+
+                class Subtests(unittest.TestCase):
+                    def test_cases(self):
+                        with self.subTest(case="error"):
+                            raise RuntimeError("expected subtest error")
+                """,
+            )
+
+            result, summary, _ = self._summary_for(root, module)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(summary["counts"]["error"], 1)
+            self.assertEqual(summary["test_ids"]["error"], [
+                "required_runner_sample.subtest_error.Subtests.test_cases (case='error')"
+            ])
+
+    def test_expected_failure_is_explicit_and_fails_the_required_gate(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            module = self._write_module(
+                root,
+                "expected_failure",
+                """
+                import unittest
+
+                class ExpectedFailure(unittest.TestCase):
+                    @unittest.expectedFailure
+                    def test_expected_failure(self):
+                        self.fail("expected failure")
+                """,
+            )
+
+            result, summary, _ = self._summary_for(root, module)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(summary["counts"]["expected_failure"], 1)
+            self.assertEqual(summary["test_ids"]["expected_failure"], [
+                "required_runner_sample.expected_failure.ExpectedFailure.test_expected_failure"
+            ])
+
+    def test_unexpected_success_is_explicit_and_fails_the_required_gate(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            module = self._write_module(
+                root,
+                "unexpected_success",
+                """
+                import unittest
+
+                class UnexpectedSuccess(unittest.TestCase):
+                    @unittest.expectedFailure
+                    def test_unexpected_success(self):
+                        pass
+                """,
+            )
+
+            result, summary, _ = self._summary_for(root, module)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(summary["counts"]["unexpected_success"], 1)
+            self.assertEqual(summary["test_ids"]["unexpected_success"], [
+                "required_runner_sample.unexpected_success.UnexpectedSuccess.test_unexpected_success"
             ])
 
     def test_empty_required_module_is_recorded_and_fails_the_runner(self):

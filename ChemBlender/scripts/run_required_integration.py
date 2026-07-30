@@ -16,9 +16,11 @@ class RecordingResult(unittest.TestResult):
         super().__init__()
         self.test_ids = {
             "error": [],
+            "expected_failure": [],
             "failed": [],
             "passed": [],
             "skipped": [],
+            "unexpected_success": [],
         }
 
     def addSuccess(self, test):
@@ -37,16 +39,43 @@ class RecordingResult(unittest.TestResult):
         super().addSkip(test, reason)
         self.test_ids["skipped"].append(test.id())
 
+    def addSubTest(self, test, subtest, err):
+        super().addSubTest(test, subtest, err)
+        if err is not None:
+            category = (
+                "failed" if issubclass(err[0], test.failureException) else "error"
+            )
+            self.test_ids[category].append(subtest.id())
+
+    def addExpectedFailure(self, test, err):
+        super().addExpectedFailure(test, err)
+        self.test_ids["expected_failure"].append(test.id())
+
+    def addUnexpectedSuccess(self, test):
+        super().addUnexpectedSuccess(test)
+        self.test_ids["unexpected_success"].append(test.id())
+
 
 def _version_requirements(specifications: list[str]):
+    required_versions = {}
     versions = {}
     errors = []
     for specification in sorted(specifications):
         name, separator, expected = specification.partition("==")
-        if not separator or not name or not expected:
+        if (
+            not separator
+            or not name
+            or not expected
+            or "==" in expected
+            or any(character.isspace() for character in specification)
+        ):
             raise ValueError(
                 "--require-version must use the exact distribution==version form"
             )
+        if name in required_versions and required_versions[name] != expected:
+            raise ValueError(f"conflicting required versions for {name}")
+        required_versions[name] = expected
+    for name, expected in required_versions.items():
         try:
             actual = importlib.metadata.version(name)
         except importlib.metadata.PackageNotFoundError:
@@ -54,7 +83,19 @@ def _version_requirements(specifications: list[str]):
         versions[name] = actual
         if actual != expected:
             errors.append(f"{name}: expected {expected}, found {actual}")
-    return versions, errors
+    return required_versions, versions, errors
+
+
+def _version_specs_from_files(paths: list[Path]):
+    specifications = []
+    for path in paths:
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("--require-version-file must name a regular file")
+        for line in path.read_text(encoding="utf-8").splitlines():
+            specification = line.strip()
+            if specification and not specification.startswith("#"):
+                specifications.append(specification)
+    return specifications
 
 
 def _fixture_hashes(specifications: list[str]):
@@ -127,7 +168,7 @@ def run_required_modules(
     module_names: list[str], fixture_specs: list[str], version_specs: list[str]
 ):
     fixture_hashes, fixture_errors = _fixture_hashes(fixture_specs)
-    versions, version_errors = _version_requirements(version_specs)
+    required_versions, versions, version_errors = _version_requirements(version_specs)
     if fixture_errors or version_errors:
         suite = unittest.TestSuite()
         load_errors = []
@@ -142,11 +183,13 @@ def run_required_modules(
     }
     counts = {
         "error": len(test_ids["error"]),
+        "expected_failure": len(test_ids["expected_failure"]),
         "failed": len(test_ids["failed"]),
         "load_error": len(load_errors),
         "passed": len(test_ids["passed"]),
         "skipped": len(test_ids["skipped"]),
         "total": result.testsRun,
+        "unexpected_success": len(test_ids["unexpected_success"]),
     }
     summary = {
         "counts": counts,
@@ -157,21 +200,19 @@ def run_required_modules(
             "implementation": sys.implementation.name,
             "version": sys.version.split()[0],
         },
+        "required_versions": required_versions,
         "test_ids": test_ids,
         "version_errors": version_errors,
         "versions": versions,
         "zero_discovered": zero_discovered,
     }
-    failed = any(
-        (
-            counts["error"],
-            counts["failed"],
-            counts["load_error"],
-            counts["skipped"],
-            bool(fixture_errors),
-            bool(version_errors),
-            bool(zero_discovered),
-        )
+    failed = (
+        bool(fixture_errors)
+        or bool(version_errors)
+        or bool(load_errors)
+        or bool(zero_discovered)
+        or not result.wasSuccessful()
+        or counts["passed"] != counts["total"]
     )
     return summary, failed
 
@@ -184,10 +225,17 @@ def main(arguments: list[str] | None = None) -> int:
     parser.add_argument("--module", action="append", required=True)
     parser.add_argument("--fixture", action="append", default=[])
     parser.add_argument("--require-version", action="append", default=[])
+    parser.add_argument(
+        "--require-version-file", action="append", default=[], type=Path
+    )
     namespace = parser.parse_args(arguments)
     try:
+        version_specs = [
+            *namespace.require_version,
+            *_version_specs_from_files(namespace.require_version_file),
+        ]
         summary, failed = run_required_modules(
-            namespace.module, namespace.fixture, namespace.require_version
+            namespace.module, namespace.fixture, version_specs
         )
         _write_summary(namespace.summary, summary)
     except ValueError as error:
