@@ -4,6 +4,10 @@ import numpy as np
 import warnings
 from . import read, mesh, _math
 from .Chem_data import ELEMENTS_DEFAULT
+from .legacy.scaffold_bridge import (
+    route_legacy_export,
+    route_legacy_scientific_edit,
+)
 from bpy.types import Operator
 from bpy.props import IntProperty, FloatProperty, BoolProperty, StringProperty,EnumProperty, FloatVectorProperty
 language = 1 if 'zh_HAN' in bpy.context.preferences.view.language else 0
@@ -253,97 +257,15 @@ class SaveMolButton(Operator):
             layout.prop(self, "vasp_coord_mode")
 
     def execute(self, context):
-        ao = context.object
-        if not ao or ao.get('Type') != 'scaffold':
-            self.report({'WARNING'}, warning_text)
-            return {'CANCELLED'}
-
-        atomic_num_to_symbol = {num: sym for sym, (num, *_) in ELEMENTS_DEFAULT.items()}
-        bond_type_map = {1: 1, 2: 2, 3: 3, 12: 4}
-        Atomic_Nums = mesh.get_attr(ao, 'atomic_num', 'INT', 'VERT')
-        Bond_Orders  = mesh.get_attr(ao, 'bond_order',  'INT', 'EDGE')
-
-        atoms = []
-        for vert, atomic_num in zip(ao.data.vertices, Atomic_Nums):
-            x, y, z = vert.co
-            symbol = atomic_num_to_symbol.get(atomic_num, 'C')
-            atoms.append( (x, y, z, atomic_num, symbol) )
-
-        vert_to_idx = {v.index: i + 1 for i, v in enumerate(ao.data.vertices)}
-        bonds = []
-        for e, bond_order in zip(ao.data.edges, Bond_Orders):
-            v1 = vert_to_idx[e.vertices[0]]
-            v2 = vert_to_idx[e.vertices[1]]
-            bond_type = bond_type_map.get(bond_order, 1)
-            bonds.append((v1, v2, bond_type))
-
-        if self.export_format == 'MOL':
-            if self.mol_version == 'V2000':
-                mol_lines = mol_block_v2000(ao.name, atoms, bonds)
-            else:
-                mol_lines = mol_block_v3000(ao.name, atoms, bonds)
-
-            if not self.filepath.lower().endswith('.mol'):
-                self.filepath += '.mol'
-                
-            with open(self.filepath, "w", encoding='utf-8') as f:
-                f.write("\n".join(mol_lines))
-            self.report({'INFO'}, f"Molecule Saved As: {self.filepath}")
-            return {'FINISHED'}
-        
-        elif self.export_format == 'SDF':
-            sdf_lines = sdf_block(ao.name, atoms, bonds)
-            if not self.filepath.lower().endswith('.sdf'):
-                self.filepath += '.sdf'
-            with open(self.filepath, "w", encoding='utf-8') as f:
-                f.write("\n".join(sdf_lines))
-            self.report({'INFO'}, f"SDF Saved As: {self.filepath}")
-            return {'FINISHED'}
-
-        elif self.export_format == 'XYZ':
-            xyz_lines = xyz_block(ao.name, atoms)
-            if not self.filepath.lower().endswith('.xyz'):
-                self.filepath += '.xyz'
-            with open(self.filepath, "w", encoding='utf-8') as f:
-                f.write("\n".join(xyz_lines))
-            self.report({'INFO'}, f"XYZ Saved As: {self.filepath}")
-            return {'FINISHED'}
-
-        elif self.export_format in ('CIF','VASP'):
-            if not hasattr(ao, 'cif_original') or ao.cif_original.atom_count == 0:
-                self.report({'ERROR'}, "No Crystal CIF data.")
-                return {'CANCELLED'}
-            
-            cif_data = ao.cif_current
-            # generate standard cif file
-            cif_lines = cif_block(cif_data, ao.name)
-
-            if self.export_format == 'VASP':
-                use_cart = (self.vasp_coord_mode == 'CARTESIAN')
-                vasp_lines = vasp_block(cif_data, ao.name, use_cartesian=use_cart)
-
-            if self.export_format == 'CIF':
-                if not self.filepath.lower().endswith('.cif'):
-                    self.filepath += '.cif'
-                with open(self.filepath, "w", encoding='utf-8') as f:
-                    f.write("\n".join(cif_lines))
-                self.report({'INFO'}, f"CIF Saved As: {self.filepath}")
-
-            elif self.export_format == 'VASP':
-                if not self.filepath.lower().endswith('.vasp'):
-                    self.filepath += '.vasp'
-                with open(self.filepath, "w", encoding='utf-8') as f:
-                    f.write("\n".join(vasp_lines))
-                self.report({'INFO'}, f"VASP File Saved As: {self.filepath}")
-
-            
-            return {'FINISHED'}
+        return route_legacy_export(
+            lambda operator_id: getattr(
+                bpy.ops.chemblender,
+                operator_id.rsplit(".", 1)[1],
+            )("INVOKE_DEFAULT")
+        )
         
     def invoke(self, context, event):
-        # 调用文件选择器对话框
-        self.filepath = context.object.name
-        context.window_manager.fileselect_add(self)  # 打开文件保存路径设置窗口
-        return {'RUNNING_MODAL'}
+        return self.execute(context)
 
 
 class UpdateCIFFromMesh(Operator):
@@ -355,17 +277,12 @@ class UpdateCIFFromMesh(Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        ao = context.object
-        if not ao or ao.get('Type') != 'scaffold':
-            self.report({'WARNING'}, "请选择分子骨架" if language else "Please select a scaffold object")
-            return {'CANCELLED'}
-        if not hasattr(ao, 'cif_original') or ao.cif_original.atom_count == 0:
-            self.report({'ERROR'}, "No CIF data found.")
-            return {'CANCELLED'}
-
-        ok, msg = read.update_cif_from_mesh(ao)
-        self.report({'INFO'} if ok else {'ERROR'}, msg)
-        return {'FINISHED'} if ok else {'CANCELLED'}
+        return route_legacy_scientific_edit(
+            lambda operator_id: getattr(
+                bpy.ops.chemblender,
+                operator_id.rsplit(".", 1)[1],
+            )("INVOKE_DEFAULT")
+        )
 
 
 class AddCameraButton(Operator):

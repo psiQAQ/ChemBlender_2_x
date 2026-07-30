@@ -3,6 +3,13 @@ import os, re
 from . import node, mesh, read
 from .Chem_data import preset_smiles,ELEMENTS_DEFAULT
 from bpy.props import FloatProperty, StringProperty, IntProperty
+from .core.import_pipeline import ValidationMode
+from .legacy.reader_bridge import (
+    file_import_request,
+    smiles_import_request,
+    stage_pubchem_import,
+)
+from .ui.session import get_scene_session
 language = 1 if 'zh_HAN' in bpy.context.preferences.view.language else 0
 
 selected_pubchem_cid = None
@@ -177,7 +184,7 @@ class MESH_OT_SCAFFOLD_BUILD(bpy.types.Operator):
             
             if not self.mode_judge(mytool, moltext):
                 return {'CANCELLED'}
-            validation_mode = getattr(
+            validation_mode = ValidationMode(getattr(
                 getattr(
                     context.scene,
                     "chemblender_quick_import",
@@ -185,61 +192,49 @@ class MESH_OT_SCAFFOLD_BUILD(bpy.types.Operator):
                 ),
                 "validation_mode",
                 "balanced",
-            )
+            ))
             if mytool.choose in {
                 "SMILES",
                 "Saccharides",
                 "Amino_Acids",
                 "Polymer_Units",
             }:
+                request = smiles_import_request(moltext, validation_mode)
                 return bpy.ops.chemblender.import_smiles_text(
                     "EXEC_DEFAULT",
-                    smiles_text=moltext,
-                    validation_mode=validation_mode,
+                    smiles_text=request.sources[0].text,
+                    validation_mode=request.validation_mode.value,
                 )
-            if (
-                mytool.choose == "File"
-                and (
-                    os.path.splitext(moltext)[1].lower()
-                    in {
-                        ".mol",
-                        ".mol2",
-                        ".sdf",
-                        ".xyz",
-                        ".json",
-                        ".vasp",
-                        ".poscar",
-                        ".contcar",
-                    }
-                    or (read.check_type(moltext) or "").lower()
-                    in {"vasp", "poscar", "contcar"}
+            if mytool.choose == "File":
+                request = file_import_request(
+                    os.path.abspath(bpy.path.abspath(moltext)),
+                    validation_mode,
                 )
-            ):
-                source = os.path.abspath(bpy.path.abspath(moltext))
+                source = request.sources[0].path
                 return bpy.ops.chemblender.quick_import(
                     "EXEC_DEFAULT",
                     directory=os.path.dirname(source),
                     files=[{"name": os.path.basename(source)}],
-                    validation_mode=validation_mode,
+                    validation_mode=request.validation_mode.value,
                 )
             if mytool.choose == "PubChem":
-                from urllib.parse import quote
-                import requests
-
-                # 自动搜索：输入名称 → 拿第一个（最匹配）CID
-                if not is_valid_cid(moltext):
-                    try:
-                        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{quote(moltext)}/cids/JSON"
-                        res = requests.get(url, timeout=30)
-                        data = res.json()
-                        cid = str(data["IdentifierList"]["CID"][0])
-                    except:
-                        show_error_dialog(f"Cannot find molecule: {moltext}")
-                        return {'CANCELLED'}
-                else:
-                    cid = moltext.strip()
-
-                moltext = cid
+                stage = stage_pubchem_import(
+                    moltext,
+                    get_scene_session(context.scene),
+                    validation_mode=validation_mode,
+                )
+                if stage.request is None:
+                    show_error_dialog(stage.diagnostics[0].message)
+                    return {'CANCELLED'}
+                source = stage.request.sources[0].path
+                return bpy.ops.chemblender.quick_import(
+                    "EXEC_DEFAULT",
+                    directory=os.path.dirname(source),
+                    files=[{"name": os.path.basename(source)}],
+                    validation_mode=stage.request.validation_mode.value,
+                    legacy_source_url=stage.source_url,
+                    legacy_source_hash=stage.content_hash,
+                )
             molname = self.name_input(mytool, moltext)
             text_type = read.check_type(moltext)
             filter_text = self.filter

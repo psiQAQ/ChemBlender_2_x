@@ -79,6 +79,25 @@ def _preview_summary(preview):
     return f"{len(preview.source_previews)} source(s) staged{suffix}"
 
 
+def _legacy_source_parameters(request, source_url, source_hash):
+    if not source_url and not source_hash:
+        return None
+    if type(source_url) is not str or not source_url:
+        raise ValueError("legacy source URL must be a non-empty string")
+    if (
+        type(source_hash) is not str
+        or len(source_hash) != 64
+        or any(char not in "0123456789abcdef" for char in source_hash)
+    ):
+        raise ValueError("legacy source hash must be a SHA-256 hex digest")
+    return {
+        request.sources[0].id: {
+            "legacy_source_url": source_url,
+            "legacy_source_sha256": source_hash,
+        }
+    }
+
+
 class _PreflightJob:
     def __init__(
         self,
@@ -226,6 +245,8 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
         items=VALIDATION_MODE_ITEMS,
         default=ValidationMode.BALANCED.value,
     )
+    legacy_source_url: StringProperty(options={"SKIP_SAVE", "HIDDEN"})
+    legacy_source_hash: StringProperty(options={"SKIP_SAVE", "HIDDEN"})
 
     def invoke(self, context, _event):
         self.validation_mode = (
@@ -247,6 +268,11 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
                 sources=tuple(ImportSource(path) for path in paths),
                 validation_mode=ValidationMode(self.validation_mode),
             )
+            canonical_parameters_by_source = _legacy_source_parameters(
+                request,
+                getattr(self, "legacy_source_url", ""),
+                getattr(self, "legacy_source_hash", ""),
+            )
             project_session = get_scene_session(context.scene)
             staging = create_quick_import_staging(project_session)
             registry = get_reader_plugin_registry()
@@ -259,12 +285,14 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
                 staging,
                 request,
                 registry,
+                canonical_parameters_by_source,
             )
         try:
             preview = preflight_reader_plugins(
                 request,
                 registry,
                 staging,
+                canonical_parameters_by_source=canonical_parameters_by_source,
                 progress=lambda _stage, _completed, _total: None,
                 is_cancelled=lambda: False,
             )
@@ -290,8 +318,14 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
         staging,
         request,
         registry,
+        canonical_parameters_by_source=None,
     ):
-        job = _PreflightJob(request, registry, staging)
+        job = _PreflightJob(
+            request,
+            registry,
+            staging,
+            canonical_parameters_by_source=canonical_parameters_by_source,
+        )
         try:
             store_quick_import_job(project_session, staging, job)
             manager = context.window_manager
