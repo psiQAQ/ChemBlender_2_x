@@ -289,6 +289,10 @@ def _batch_references(batch):
     groups = (
         batch.structures,
         batch.topologies,
+        batch.molecular_records,
+        batch.biological_hierarchies,
+        batch.annotations,
+        batch.external_references,
         batch.cif_envelopes,
         batch.qcschema_envelopes,
         batch.cjson_envelopes,

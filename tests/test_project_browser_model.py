@@ -31,6 +31,7 @@ from ChemBlender.core import (
     SymmetryResult,
 )
 from ChemBlender.core.formats.sdf import parse_sdf
+from ChemBlender.core.formats.mol2 import parse_mol2
 from ChemBlender.core.import_pipeline.conformer_grouping import (
     accept_conformer_group,
     suggest_conformer_groups,
@@ -53,6 +54,9 @@ FRAME_SET_ID = UUID("30000000-0000-0000-0000-000000000003")
 FORCE_ID = UUID("30000000-0000-0000-0000-000000000004")
 DIAGNOSTIC_ID = UUID("40000000-0000-0000-0000-000000000001")
 SDF_FIXTURE = Path(__file__).with_name("fixtures") / "sdf" / "records.sdf"
+MOL2_SUBSTRUCTURE_FIXTURE = (
+    Path(__file__).with_name("fixtures") / "mol2" / "substructure.mol2"
+)
 
 
 class _ArraySentinel:
@@ -241,6 +245,32 @@ def sample_molecular_project():
 
 
 class ProjectBrowserModelTests(unittest.TestCase):
+    def test_mol2_atom_type_substructure_and_charge_datasets_are_browsable(self):
+        batch = parse_mol2(MOL2_SUBSTRUCTURE_FIXTURE)
+        project = QCProject(PROJECT_ID, "1.0")
+        project.commit(batch)
+
+        rows = build_browser_rows(
+            project,
+            mode=BrowserMode.BY_DATA,
+            session_id=SESSION_ID,
+            browser_revision=1,
+        )
+
+        labels = {
+            row.label
+            for row in rows
+            if row.entity_id in project.datasets
+        }
+        self.assertTrue(
+            {
+                "Atom Type",
+                "Substructure Id",
+                "Substructure Name",
+                "Partial Charge",
+            }.issubset(labels)
+        )
+
     def test_molecular_records_and_conformer_properties_are_grouped(self):
         project, batch, acceptance = sample_molecular_project()
 
@@ -929,6 +959,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             {value.kind for value in state_properties.values()},
             {"collection", "enum", "int", "string"},
         )
+        self.assertIn("substructure_code", state_properties)
         quality = state_properties["quality_filter"]
         self.assertEqual(quality.keywords["default"], "all")
         self.assertTrue(
@@ -1433,6 +1464,135 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.assertEqual(structure.revision, "structure-r1")
         self.assertEqual(dataset.id, FORCE_ID)
         numpy.testing.assert_array_equal(values, [[4.0, 5.0, 6.0]])
+
+    def test_substructure_category_uses_dataset_codes_for_atom_selection(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        batch = parse_mol2(MOL2_SUBSTRUCTURE_FIXTURE)
+        project = QCProject(PROJECT_ID, "1.0")
+        project.commit(batch)
+        dataset = next(
+            value
+            for value in project.datasets.values()
+            if value.semantic_role == "substructure_name"
+        )
+
+        structure, selected, label, indices = panel.substructure_category(
+            project,
+            dataset.id,
+            1,
+        )
+
+        self.assertEqual(structure.id, dataset.structure_id)
+        self.assertIs(selected, dataset)
+        self.assertEqual(label, "RES_B")
+        self.assertEqual(indices, (2,))
+
+    def test_substructure_operator_colors_codes_and_writes_shared_selection(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        batch = parse_mol2(MOL2_SUBSTRUCTURE_FIXTURE)
+        project = QCProject(PROJECT_ID, "1.0")
+        project.commit(batch)
+        dataset = next(
+            value
+            for value in project.datasets.values()
+            if value.semantic_role == "substructure_name"
+        )
+        structure = project.structures[dataset.structure_id]
+
+        class ViewObject(dict):
+            name = "MOL2 substructures"
+
+        obj = ViewObject(
+            cb_structure_contract="structure_view_v1",
+            cb_structure_id=str(structure.id),
+            cb_structure_revision=structure.revision,
+        )
+        session = SimpleNamespace(
+            project=project,
+            active_entity_id=dataset.id,
+            active_view_object_name=obj.name,
+        )
+        context = SimpleNamespace(
+            scene=SimpleNamespace(objects={obj.name: obj}),
+            active_object=obj,
+        )
+
+        def color(view, color_dataset, *, presentation_only=False):
+            view["color_dataset"] = color_dataset
+            view["presentation_only"] = presentation_only
+
+        def select(view, indices, *, name):
+            view["selected_indices"] = tuple(indices)
+            view["selection_name"] = name
+
+        operation = panel.CHEMBLENDER_OT_apply_substructure_category()
+        operation.category_code = 1
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(panel, "apply_atomic_scalar", color),
+            patch.object(panel, "apply_atom_selection", select),
+        ):
+            result = operation.execute(context)
+
+        self.assertEqual(result, {"FINISHED"})
+        self.assertIs(obj["color_dataset"], dataset)
+        self.assertTrue(obj["presentation_only"])
+        self.assertEqual(obj["selected_indices"], (2,))
+        self.assertEqual(obj["selection_name"], "substructure:RES_B")
+        self.assertEqual(obj["cb_categorical_dataset_id"], str(dataset.id))
+        self.assertEqual(obj["cb_categorical_code"], 1)
+        self.assertEqual(obj["cb_categorical_label"], "RES_B")
+        self.assertEqual(session.active_view_object_name, obj.name)
+
+    def test_substructure_controls_show_category_code_and_action(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        batch = parse_mol2(MOL2_SUBSTRUCTURE_FIXTURE)
+        dataset = next(
+            value
+            for value in batch.datasets
+            if value.semantic_role == "substructure_name"
+        )
+        events = []
+
+        class Layout:
+            def label(self, **keywords):
+                events.append(("label", keywords))
+
+            def prop(self, owner, name, **keywords):
+                events.append(("prop", owner, name, keywords))
+
+            def operator(self, operator_id, **keywords):
+                action = SimpleNamespace()
+                events.append(("operator", operator_id, keywords, action))
+                return action
+
+        settings = SimpleNamespace(substructure_code=1)
+        panel.draw_substructure_controls(Layout(), dataset, settings)
+
+        self.assertIn(
+            ("label", {"text": "Substructures: 2 categories"}),
+            events,
+        )
+        self.assertIn(
+            ("label", {"text": "Code 1: RES_B"}),
+            events,
+        )
+        self.assertTrue(
+            any(
+                event[:3] == ("prop", settings, "substructure_code")
+                for event in events
+            )
+        )
+        action = next(
+            event[3] for event in events if event[0] == "operator"
+        )
+        self.assertEqual(action.category_code, 1)
 
     def test_force_operator_rejects_missing_or_stale_structure_view(self):
         panel = importlib.import_module(

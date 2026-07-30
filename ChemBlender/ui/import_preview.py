@@ -53,7 +53,10 @@ from ..scene_preset_view import (
     _remove_objects as _remove_scene_preset_objects,
     apply_scene_preset,
 )
-from ..runtime.reader_api_bridge import get_reader_plugin_registry
+from ..runtime.reader_api_bridge import (
+    get_reader_plugin_registry,
+    refresh_reader_plugin_discovery,
+)
 from .default_views import describe_default_view, plan_default_view
 from .extxyz_preview import extxyz_preview_summary
 from .grid import grid_preview_summary
@@ -226,6 +229,13 @@ class CHEMBLENDER_PG_import_preview_row(bpy.types.PropertyGroup):
     molecular_recovery_summary: StringProperty()
     molecular_topology_summary: StringProperty()
     molecular_property_summary: StringProperty()
+    mol2_molecule_count: IntProperty()
+    mol2_atom_count: IntProperty()
+    mol2_bond_count: IntProperty()
+    mol2_molecule_types: StringProperty()
+    mol2_charge_types: StringProperty()
+    mol2_partial_charge_summary: StringProperty()
+    mol2_unsupported_sections: StringProperty()
     grid_dataset_count: IntProperty()
     grid_source_ids: StringProperty()
     grid_sample_range: StringProperty()
@@ -291,6 +301,13 @@ class PreviewProjection:
     molecular_recovery_summary: str = ""
     molecular_topology_summary: str = ""
     molecular_property_summary: str = ""
+    mol2_molecule_count: int = 0
+    mol2_atom_count: int = 0
+    mol2_bond_count: int = 0
+    mol2_molecule_types: str = ""
+    mol2_charge_types: str = ""
+    mol2_partial_charge_summary: str = ""
+    mol2_unsupported_sections: str = ""
     grid_dataset_count: int = 0
     grid_source_ids: str = ""
     grid_sample_range: str = ""
@@ -590,6 +607,71 @@ def _molecular_summary(batch, conformer_count):
         f"{raw_fields} raw fields · {typed_columns} typed columns",
         conformer_count,
     )
+
+
+def _mol2_summary(batch):
+    annotations = {
+        key: tuple(
+            sorted(
+                {
+                    str(value.value)
+                    for value in batch.annotations
+                    if value.namespace == "tripos" and value.key == key
+                }
+            )
+        )
+        for key in ("molecule_type", "charge_type")
+    }
+    charges = tuple(
+        dataset
+        for dataset in batch.datasets
+        if dataset.semantic_role == "partial_charge"
+    )
+    structure_ids = {structure.id for structure in batch.structures}
+    charged_structure_ids = {
+        dataset.structure_id
+        for dataset in charges
+        if dataset.structure_id in structure_ids
+    }
+    charge_statuses = tuple(
+        sorted({dataset.status.value for dataset in charges})
+    )
+    unsupported_sections = tuple(
+        sorted(
+            {
+                diagnostic.field_path.removeprefix("section.").upper()
+                for diagnostic in batch.diagnostics
+                if (
+                    diagnostic.code == "mol2.unsupported"
+                    and diagnostic.field_path.startswith("section.")
+                )
+            }
+        )
+    )
+    return {
+        "molecule_count": len(batch.molecular_records),
+        "atom_count": sum(
+            len(structure.atomic_numbers) for structure in batch.structures
+        ),
+        "bond_count": sum(
+            topology.bond_indices.shape[0] for topology in batch.topologies
+        ),
+        "molecule_types": ", ".join(annotations["molecule_type"]),
+        "charge_types": ", ".join(annotations["charge_type"]),
+        "partial_charge_summary": (
+            "unavailable"
+            if not charged_structure_ids
+            else (
+                f"{len(charged_structure_ids)}/{len(structure_ids)} "
+                "molecules available"
+                if len(charged_structure_ids) < len(structure_ids)
+                else f"available ({', '.join(charge_statuses)})"
+            )
+        ),
+        "unsupported_sections": (
+            ", ".join(unsupported_sections) if unsupported_sections else "none"
+        ),
+    }
 
 
 def _cif_summary(batch):
@@ -933,6 +1015,7 @@ def project_import_preview(project_session, state, registry):
         grid_summary = None
         cif_summary = None
         poscar_summary = None
+        mol2_summary = None
         molecular_summary = (0, "", "", "", "", 0)
         if len(source.staged_batch_ids) == 1:
             batch = staging.result(source.staged_batch_ids[0])
@@ -951,6 +1034,8 @@ def project_import_preview(project_session, state, registry):
                     )
             if source.selected_reader_id == "extxyz":
                 extxyz_summary = extxyz_preview_summary(batch)
+            if source.selected_reader_id == "mol2":
+                mol2_summary = _mol2_summary(batch)
             batch_record_ids = {
                 record.id for record in batch.molecular_records
             }
@@ -1030,6 +1115,39 @@ def project_import_preview(project_session, state, registry):
                 molecular_recovery_summary=molecular_summary[2],
                 molecular_topology_summary=molecular_summary[3],
                 molecular_property_summary=molecular_summary[4],
+                mol2_molecule_count=(
+                    0
+                    if mol2_summary is None
+                    else mol2_summary["molecule_count"]
+                ),
+                mol2_atom_count=(
+                    0 if mol2_summary is None else mol2_summary["atom_count"]
+                ),
+                mol2_bond_count=(
+                    0 if mol2_summary is None else mol2_summary["bond_count"]
+                ),
+                mol2_molecule_types=(
+                    ""
+                    if mol2_summary is None
+                    else _rna_preview_text(mol2_summary["molecule_types"])
+                ),
+                mol2_charge_types=(
+                    ""
+                    if mol2_summary is None
+                    else _rna_preview_text(mol2_summary["charge_types"])
+                ),
+                mol2_partial_charge_summary=(
+                    ""
+                    if mol2_summary is None
+                    else mol2_summary["partial_charge_summary"]
+                ),
+                mol2_unsupported_sections=(
+                    ""
+                    if mol2_summary is None
+                    else _rna_preview_text(
+                        mol2_summary["unsupported_sections"]
+                    )
+                ),
                 grid_dataset_count=(
                     0 if grid_summary is None else grid_summary.dataset_count
                 ),
@@ -1172,6 +1290,23 @@ def project_import_preview(project_session, state, registry):
             )
         )
     return tuple(rows)
+
+
+def unavailable_reader_plugin_status(snapshot):
+    return tuple(
+        (
+            f"Reader plugin {plugin.plugin_id} "
+            f"({', '.join(plugin.reader_ids) or 'no readers'}) unavailable: "
+            f"{plugin.availability.reason_code}"
+            + (
+                f" ({plugin.availability.detail})"
+                if plugin.availability.detail
+                else ""
+            )
+        )
+        for plugin in snapshot.plugins
+        if not plugin.availability.available
+    )
 
 
 def project_grouping_suggestions(state):
@@ -2061,6 +2196,7 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
         type=CHEMBLENDER_PG_import_conformer_suggestion
     )
     blocking_reason: StringProperty()
+    reader_plugin_status: StringProperty()
 
     def _project(self, context):
         session = get_scene_session(context.scene)
@@ -2071,6 +2207,11 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             get_reader_plugin_registry(),
         )
         _copy_projections(self.rows, projected)
+        self.reader_plugin_status = "\n".join(
+            unavailable_reader_plugin_status(
+                refresh_reader_plugin_discovery()
+            )
+        )
         grouping_suggestions = project_grouping_suggestions(state)
         collection = getattr(self, "grouping_suggestions", None)
         copied = _copy_projections(collection, grouping_suggestions)
@@ -2106,6 +2247,8 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
         layout = self.layout
         if self.blocking_reason:
             layout.label(text=self.blocking_reason, icon="ERROR")
+        for status in self.reader_plugin_status.splitlines():
+            layout.label(text=status, icon="ERROR")
         for row in self.rows:
             box = layout.box()
             box.label(text=row.source_name)
@@ -2140,6 +2283,32 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                     text=(
                         f"Conformer suggestions: "
                         f"{row.conformer_suggestion_count}"
+                    )
+                )
+            if row.reader_id == "mol2":
+                box.label(
+                    text=(
+                        f"Molecules: {row.mol2_molecule_count} · "
+                        f"Atoms: {row.mol2_atom_count} · "
+                        f"Bonds: {row.mol2_bond_count}"
+                    )
+                )
+                box.label(
+                    text=f"Molecule types: {row.mol2_molecule_types or 'none'}"
+                )
+                box.label(
+                    text=f"Charge types: {row.mol2_charge_types or 'none'}"
+                )
+                box.label(
+                    text=(
+                        "Partial charges: "
+                        f"{row.mol2_partial_charge_summary}"
+                    )
+                )
+                box.label(
+                    text=(
+                        "Unsupported sections: "
+                        f"{row.mol2_unsupported_sections}"
                     )
                 )
             if row.grid_dataset_count:

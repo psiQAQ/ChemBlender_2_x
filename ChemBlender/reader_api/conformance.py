@@ -1,6 +1,8 @@
 import hashlib
 import json
+import platform
 import re
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass, fields, is_dataclass
 from pathlib import Path
@@ -10,7 +12,9 @@ from uuid import uuid4
 
 from ..core.import_pipeline import ImportSource, ValidationMode
 from ..core.import_pipeline.parse import stage_import_batch
+from ..core.import_pipeline.staging import _close_memmaps
 from ..core.model.sources import source_parse_identity
+from ..core.model import QualityStatus
 from ..core.readers import SniffResult
 from .builtin_bridge import (
     _internal_batch_from_public_unchecked,
@@ -21,7 +25,7 @@ from .canonical_document import (
     read_public_batch_bundle,
     write_public_batch_bundle,
 )
-from .protocol import ParseRequest, SniffRequest
+from .protocol import ParseRequest, ProgressEvent, SniffRequest
 from .public_model import ArrayData, PublicImportBatch
 from .registry import ReaderPluginRegistry, _BuiltinReaderPlugin
 from .version import READER_API_VERSION
@@ -47,10 +51,20 @@ _CHECK_NAMES = (
     "cancellation",
     "exception_isolation",
 )
+_V1_CHECK_NAMES = (
+    *_CHECK_NAMES,
+    "quality_diagnostics",
+    "progress_monotonicity",
+    "artifact_security",
+    "declared_capabilities",
+)
 _ENTITY_GROUPS = (
     "structures",
     "topologies",
     "molecular_records",
+    "biological_hierarchies",
+    "annotations",
+    "external_references",
     "cif_envelopes",
     "qcschema_envelopes",
     "cjson_envelopes",
@@ -274,6 +288,8 @@ def run_reader_conformance(case):
     state = {
         "descriptor": None,
         "batch": None,
+        "identity_batch": None,
+        "parse_temporary": None,
         "parse_request": None,
         "source_hash": _source_hash(case.source_path),
         "isolated_exception_types": [],
@@ -327,17 +343,18 @@ def run_reader_conformance(case):
         )
 
     def parse_output():
-        with TemporaryDirectory() as temporary:
-            request = _parse_request(
-                case,
-                state["source_hash"],
-                Path(temporary),
-            )
-            state["parse_request"] = request
-            batch = case.registry.parse(
-                case.reader_id,
-                request,
-            )
+        temporary = TemporaryDirectory()
+        state["parse_temporary"] = temporary
+        request = _parse_request(
+            case,
+            state["source_hash"],
+            Path(temporary.name),
+        )
+        state["parse_request"] = request
+        batch = case.registry.parse(
+            case.reader_id,
+            request,
+        )
         exception_type = case.registry._last_parse_exception_type
         if exception_type is not None:
             state["isolated_exception_types"].append(exception_type)
@@ -357,11 +374,31 @@ def run_reader_conformance(case):
         if type(batch) is not PublicImportBatch:
             return False, "parse output unavailable"
         descriptor = state["descriptor"]
-        revisions = tuple(batch.source_revisions)
+        identity_batch = batch
+        plugin = case.registry._plugin(case.reader_id)
+        if not batch.source_revisions and type(plugin) is _BuiltinReaderPlugin:
+            request = state["parse_request"]
+            identity_batch = stage_import_batch(
+                source=ImportSource(case.source_path),
+                validation_mode=ValidationMode(request.validation_mode),
+                content_hash=request.source_content_hash,
+                byte_size=case.source_path.stat().st_size,
+                plugin_id=descriptor.plugin_id,
+                reader_id=descriptor.reader_id,
+                reader_version=descriptor.reader_version,
+                api_version=READER_API_VERSION,
+                canonical_parameters=tuple(
+                    sorted(request.canonical_parameters.items())
+                ),
+                parsed_batch=_internal_batch_from_public_unchecked(batch),
+                revision_id=request.source_revision_id,
+            )
+        state["identity_batch"] = identity_batch
+        revisions = tuple(identity_batch.source_revisions)
         if revisions:
-            source_ids = {value.id for value in batch.sources}
-            entity_ids = set(_entity_ids(batch))
-            diagnostic_ids = {value.id for value in batch.diagnostics}
+            source_ids = {value.id for value in identity_batch.sources}
+            entity_ids = set(_entity_ids(identity_batch))
+            diagnostic_ids = {value.id for value in identity_batch.diagnostics}
             parameters = _identity_parameters(case)
             expected_identity = source_parse_identity(
                 state["source_hash"],
@@ -486,12 +523,15 @@ def run_reader_conformance(case):
         if type(batch) is not PublicImportBatch or batch.report is None:
             return False, "parser report unavailable"
         report = batch.report
-        diagnostic_ids = {value.id for value in batch.diagnostics}
-        source_revisions = {value.id: value for value in batch.source_revisions}
+        identity_batch = state["identity_batch"] or batch
+        diagnostic_ids = {value.id for value in identity_batch.diagnostics}
+        source_revisions = {
+            value.id: value for value in identity_batch.source_revisions
+        }
         references_complete = all(
             value.source_revision_id in source_revisions
             and value.id in source_revisions[value.source_revision_id].diagnostic_ids
-            for value in batch.diagnostics
+            for value in identity_batch.diagnostics
         )
         return (
             report.reader_id == descriptor.reader_id
@@ -518,25 +558,50 @@ def run_reader_conformance(case):
         return same_document and same_artifacts, "canonical document bytes and artifact hashes match"
 
     def cancellation():
-        with TemporaryDirectory() as temporary:
-            request = _parse_request(
-                case,
-                state["source_hash"],
-                Path(temporary),
-                is_cancelled=lambda: True,
+        temporary = TemporaryDirectory()
+        results = []
+        try:
+            root = Path(temporary.name)
+            residues = []
+            for name in ("first", "second"):
+                staging_root = root / name
+                staging_root.mkdir()
+                request = _parse_request(
+                    case,
+                    state["source_hash"],
+                    staging_root,
+                    is_cancelled=lambda: True,
+                )
+                results.append(case.registry.parse(case.reader_id, request))
+                residues.extend(
+                    path.relative_to(root).as_posix()
+                    for path in sorted(staging_root.rglob("*"))
+                )
+            first, second = results
+            reports = (
+                getattr(first, "report", None),
+                getattr(second, "report", None),
             )
-            first = case.registry.parse(case.reader_id, request)
-            second = case.registry.parse(case.reader_id, request)
-        reports = (getattr(first, "report", None), getattr(second, "report", None))
-        valid = all(
-            report is not None
-            and report.issues
-            and report.issues[0].path == "reader.parse"
-            and "cancel" in report.issues[0].message
-            for report in reports
-        )
-        stable = valid and reports[0] == reports[1]
-        return stable, "pre-cancelled parse returns stable cancellation evidence"
+            valid = all(
+                report is not None
+                and report.issues
+                and report.issues[0].path == "reader.parse"
+                and "cancel" in report.issues[0].message
+                for report in reports
+            )
+            stable = valid and reports[0] == reports[1] and not residues
+            detail = "pre-cancelled parse returns stable cancellation evidence"
+            if residues:
+                detail = (
+                    "cancelled parse left staging residue: "
+                    + ", ".join(residues)
+                )
+            return stable, detail
+        finally:
+            for batch in results:
+                if type(batch) is PublicImportBatch:
+                    _close_memmaps(batch, set())
+            temporary.cleanup()
 
     def exception_isolation():
         types = tuple(dict.fromkeys(state["isolated_exception_types"]))
@@ -559,11 +624,306 @@ def run_reader_conformance(case):
         exception_isolation,
     )
     checks = []
-    for name, action in zip(_CHECK_NAMES, actions, strict=True):
-        checks.append(_run_check(name, action, case.registry, state))
+    try:
+        for name, action in zip(_CHECK_NAMES, actions, strict=True):
+            checks.append(_run_check(name, action, case.registry, state))
+    finally:
+        if type(state["batch"]) is PublicImportBatch:
+            _close_memmaps(state["batch"], set())
+        if state["parse_temporary"] is not None:
+            state["parse_temporary"].cleanup()
     return ReaderConformanceResult(
         _SCHEMA_VERSION,
         case.name,
         case.reader_id,
         tuple(checks),
     )
+
+
+def _progress_is_monotonic(events):
+    previous = {}
+    for event in events:
+        if type(event) is not ProgressEvent:
+            return False
+        prior = previous.get(event.stage)
+        if prior is not None and (
+            event.total != prior.total or event.completed < prior.completed
+        ):
+            return False
+        previous[event.stage] = event
+    return bool(events)
+
+
+def _artifact_inventory_is_safe(root):
+    root = root.resolve()
+    for path in root.rglob("*"):
+        if path.is_symlink():
+            return False
+        resolved = path.resolve()
+        if not resolved.is_relative_to(root):
+            return False
+        if path.is_file() and path.parent.name == "artifacts":
+            if (
+                path.suffix != ".npy"
+                or re.fullmatch(r"[0-9a-f]{64}", path.stem) is None
+            ):
+                return False
+    return True
+
+
+def _v1_checks(case, legacy):
+    staging = TemporaryDirectory()
+    state = {"batch": None}
+    try:
+        return _v1_checks_in_staging(
+            case,
+            legacy,
+            Path(staging.name),
+            state,
+        )
+    finally:
+        if type(state["batch"]) is PublicImportBatch:
+            _close_memmaps(state["batch"], set())
+        staging.cleanup()
+
+
+def _v1_checks_in_staging(case, legacy, staging_root, state):
+    descriptor = case.registry.select(
+        SniffRequest(case.source_path, b""),
+        case.reader_id,
+    )
+    events = []
+    batch = None
+    parse_error = None
+    try:
+        batch = case.registry.parse(
+            case.reader_id,
+            ParseRequest(
+                source_path=case.source_path,
+                source_content_hash=_source_hash(case.source_path),
+                validation_mode=case.validation_mode,
+                canonical_parameters=case.canonical_parameters,
+                staging_root=staging_root,
+                progress=events.append,
+                is_cancelled=lambda: False,
+                source_revision_id=uuid4(),
+            ),
+        )
+        state["batch"] = batch
+    except Exception as error:
+        parse_error = type(error).__name__
+
+    quality_values = (
+        ()
+        if type(batch) is not PublicImportBatch
+        else tuple(
+            value.quality_status
+            for value in _walk(batch)
+            if is_dataclass(value) and hasattr(value, "quality_status")
+        )
+    )
+    quality_ok = (
+        type(batch) is PublicImportBatch
+        and batch.report is not None
+        and all(isinstance(value, QualityStatus) for value in quality_values)
+    )
+    progress_ok = parse_error is None and _progress_is_monotonic(events)
+
+    artifact_ok = False
+    if type(batch) is PublicImportBatch:
+        try:
+            with TemporaryDirectory() as temporary:
+                root = Path(temporary) / "bundle"
+                write_public_batch_bundle(root, batch)
+                read_public_batch_bundle(root)
+                artifact_ok = _artifact_inventory_is_safe(root)
+        except Exception:
+            artifact_ok = False
+
+    declared_ok = set(case.expected_capabilities) <= set(
+        descriptor.capabilities
+    )
+
+    extra = (
+        ReaderConformanceCheck(
+            "quality_diagnostics",
+            quality_ok,
+            (
+                "quality values and parser diagnostics are canonical"
+                if quality_ok
+                else "quality or parser diagnostics are invalid"
+            ),
+        ),
+        ReaderConformanceCheck(
+            "progress_monotonicity",
+            progress_ok,
+            (
+                "progress is bounded and monotonic per stage"
+                if progress_ok
+                else f"progress is not monotonic ({parse_error or 'event regression'})"
+            ),
+        ),
+        ReaderConformanceCheck(
+            "artifact_security",
+            artifact_ok,
+            (
+                "canonical artifacts are content-addressed and path-safe"
+                if artifact_ok
+                else "canonical artifact inventory is unsafe or invalid"
+            ),
+        ),
+        ReaderConformanceCheck(
+            "declared_capabilities",
+            declared_ok,
+            (
+                "parsed capabilities are declared by the reader"
+                if declared_ok
+                else "parsed capabilities are not declared by the reader"
+            ),
+        ),
+    )
+    diagnostics = (
+        []
+        if type(batch) is not PublicImportBatch or batch.report is None
+        else [
+            {
+                "kind": issue.kind.value,
+                "message": issue.message,
+                "path": issue.path,
+            }
+            for issue in batch.report.issues
+        ]
+    )
+    return (*legacy.checks, *extra), diagnostics
+
+
+def _environment(process_isolation):
+    return {
+        "implementation": platform.python_implementation(),
+        "machine": platform.machine(),
+        "platform": platform.system(),
+        "process_isolation": process_isolation,
+        "python": platform.python_version(),
+    }
+
+
+def run_reader_conformance_v1(
+    cases,
+    *,
+    optional_skip_reasons=None,
+    process_isolation="in_process",
+):
+    """Return the v1 machine-readable suite document without changing the 0.1 API."""
+    cases = tuple(cases)
+    if not cases or any(type(case) is not ReaderConformanceCase for case in cases):
+        raise TypeError("cases must contain ReaderConformanceCase values")
+    if len({case.name for case in cases}) != len(cases):
+        raise ValueError("case names must be unique")
+    if process_isolation not in {"in_process", "subprocess"}:
+        raise ValueError("process_isolation must be in_process or subprocess")
+    reasons = {} if optional_skip_reasons is None else dict(optional_skip_reasons)
+    if set(reasons) - {case.name for case in cases}:
+        raise ValueError("optional skip case is not present")
+    if any(type(reason) is not str or not reason.strip() for reason in reasons.values()):
+        raise ValueError("optional skip reason must be a non-empty string")
+
+    descriptors = tuple(
+        case.registry.select(
+            SniffRequest(case.source_path, b""),
+            case.reader_id,
+        )
+        for case in cases
+    )
+    plugin_identity = {
+        (descriptor.plugin_id, descriptor.plugin_version)
+        for descriptor in descriptors
+    }
+    if len(plugin_identity) != 1:
+        raise ValueError("all cases must belong to one plugin")
+    plugin_id, plugin_version = plugin_identity.pop()
+
+    results = []
+    for case, descriptor in zip(cases, descriptors, strict=True):
+        fixture = {
+            "path": case.source_path.name,
+            "sha256": _source_hash(case.source_path),
+        }
+        if case.name in reasons:
+            results.append(
+                {
+                    "case_id": case.name,
+                    "checks": [],
+                    "diagnostics": [],
+                    "duration_seconds": 0.0,
+                    "fixture": fixture,
+                    "reader": {
+                        "id": descriptor.reader_id,
+                        "version": descriptor.reader_version,
+                    },
+                    "required": False,
+                    "skip_reason": reasons[case.name],
+                    "status": "skip",
+                }
+            )
+            continue
+
+        started = time.perf_counter()
+        legacy = run_reader_conformance(case)
+        checks, diagnostics = _v1_checks(case, legacy)
+        if tuple(check.name for check in checks) != _V1_CHECK_NAMES:
+            raise RuntimeError("v1 checks are not in canonical order")
+        duration = round(time.perf_counter() - started, 6)
+        status = "pass" if all(check.passed for check in checks) else "fail"
+        diagnostics.extend(
+            {
+                "kind": "conformance_failure",
+                "message": check.detail,
+                "path": f"checks.{check.name}",
+            }
+            for check in checks
+            if not check.passed
+        )
+        results.append(
+            {
+                "case_id": case.name,
+                "checks": [
+                    {
+                        "detail": check.detail,
+                        "id": check.name,
+                        "status": "pass" if check.passed else "fail",
+                    }
+                    for check in checks
+                ],
+                "diagnostics": sorted(
+                    diagnostics,
+                    key=lambda value: (
+                        value["path"],
+                        value["kind"],
+                        value["message"],
+                    ),
+                ),
+                "duration_seconds": duration,
+                "fixture": fixture,
+                "reader": {
+                    "id": descriptor.reader_id,
+                    "version": descriptor.reader_version,
+                },
+                "required": True,
+                "skip_reason": None,
+                "status": status,
+            }
+        )
+
+    summary = {
+        status: sum(result["status"] == status for result in results)
+        for status in ("fail", "pass", "skip")
+    }
+    return {
+        "cases": results,
+        "environment": _environment(process_isolation),
+        "passed": summary["fail"] == 0,
+        "plugin": {"id": plugin_id, "version": plugin_version},
+        "reader_api_version": READER_API_VERSION,
+        "schema_version": "1",
+        "summary": summary,
+    }

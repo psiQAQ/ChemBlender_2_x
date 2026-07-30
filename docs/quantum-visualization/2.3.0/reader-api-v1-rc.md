@@ -29,6 +29,11 @@ ChemBlender 2.3.0 冻结 Reader API `1.0-rc1`。它是 reader 插件与宿主之
 
 breaking change 在 2.3.0 冻结后必须先提交 release-blocking ADR。
 
+Wave 3 以带空 tuple 默认值的兼容字段增加
+`biological_hierarchies`、`annotations` 和 `external_references`。旧 canonical
+document 缺少这些字段时按空组读取；新 writer 在三组均为空时省略字段，避免
+改变既有文档字节。对应实体仅使用 ChemBlender 原生不可变模型和数组类型。
+
 ## Reader plugin manifest v1
 
 顶层字段固定为：

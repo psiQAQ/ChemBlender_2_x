@@ -1,0 +1,6 @@
+CBSIMPLE 1
+units angstrom
+atoms 3
+O 0.0 0.0 0.0
+H 0.7 0.0 0.5
+H -0.7 0.0 0.5

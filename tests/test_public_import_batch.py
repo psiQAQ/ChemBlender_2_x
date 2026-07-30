@@ -19,6 +19,9 @@ CUBE = ROOT / "tests" / "fixtures" / "cube" / "sheared.cube"
 SCIENTIFIC_TYPES = (
     "ArrayData", "SourceRecord", "SourceRevision", "CIFEnvelope",
     "QCSchemaEnvelope", "CJSONEnvelope", "PeriodicSiteData",
+    "BiologicalAtomSiteData", "BiologicalChain", "BiologicalHierarchy",
+    "BiologicalModel", "BiologicalResidue", "ChemicalAnnotation",
+    "ExternalReference",
     "MolecularTopology", "TopologyRecord", "Structure", "SymmetryResult",
     "CalculationMetadata", "CalculationRecord", "PropertyDataset",
     "AtomicProperty", "FrameSet", "Grid3D", "VibrationalModeSet",

@@ -8,6 +8,14 @@
 
 **Tech Stack:** Python 3.13 standard library, NumPy, existing record/categorical/topology/import pipeline and `unittest`.
 
+## Wave 3 Pre-Gate Binding
+
+ADR 0043 is authoritative. Do not create `Mol2Envelope`,
+`Mol2MoleculeMetadata`, `Mol2SubstructureData` or another Structure type.
+Map atom type and substructure columns to categorical `AtomicProperty`,
+partial charge to numeric `AtomicProperty`, scalar molecule/charge/status
+metadata to `ChemicalAnnotation`, and raw record bytes to `MolecularRecord`.
+
 ## Global Constraints
 
 - No Open Babel or RDKit MOL2 parser dependency.
@@ -19,28 +27,39 @@
 
 ---
 
-### Task 1: Add MOL2 source metadata models
+### Task 1: Lock MOL2 mapping to the exchange contracts
 
 **Files:**
-- Create: `ChemBlender/core/model/mol2.py`
-- Modify: `ChemBlender/core/model/project.py`
-- Modify: `ChemBlender/core/model_registry.py`
 - Create: `tests/test_mol2_models.py`
+- Deferred to Task 3:
+  `docs/quantum-visualization/reader-capability-matrix.json` remains the exact
+  registered-reader snapshot until the `mol2` descriptor exists.
 
 **Interfaces:**
-- Produces: `Mol2Envelope`, `Mol2MoleculeMetadata`, `Mol2SubstructureData`.
+- Consumes: `ChemicalAnnotation`, `MolecularRecord`, `AtomicProperty` and
+  `CategoricalData`.
+- Produces: executable mapping fixtures; no new core model.
 
-- [ ] **Step 1: Write model tests**
+- [x] **Step 1: Write model tests**
 
-Validate molecule type, charge type and status bits as categorical strings. Substructure IDs are integer per atom; names are categorical and can be missing. Envelope stores raw record bytes and present section names.
+Validate molecule type, charge type and status bits as scalar
+`ChemicalAnnotation` values. Substructure IDs are integer per atom; names and
+atom types are categorical and can be missing. `MolecularRecord` stores exact
+raw record bytes; unsupported sections are diagnostics.
 
-- [ ] **Step 2: Implement project references**
+- [x] **Step 2: Verify existing project references**
 
-MolecularRecord may reference a Mol2Envelope and substructure dataset. Sidecar registry includes the new types with stable tags.
+The mapping uses one Structure, optional explicit TopologyRecord, one
+MolecularRecord and referenced atomic datasets/annotations. Sidecar and
+canonical round-trip use ADR 0043 groups without a format-specific registry.
 
-- [ ] **Step 3: Run and commit**
+- [x] **Step 3: Run and commit**
 
 Run model/sidecar tests and commit.
+
+Completion evidence: `aafba99`, `c694e00`, `5d6cc25`, `b08a69b`; 25 focused
+tests passed, `git diff --check` passed, and fix round 3 closed all
+Critical/Important review findings.
 
 ### Task 2: Implement MOL2 tokenizer and molecule block parser
 
@@ -53,25 +72,29 @@ Run model/sidecar tests and commit.
 **Interfaces:**
 - Produces: `sniff_mol2()`, `iter_mol2_records()`, `parse_mol2_record()`.
 
-- [ ] **Step 1: Write sniff tests**
+- [x] **Step 1: Write sniff tests**
 
 Require `@<TRIPOS>MOLECULE` followed by plausible counts and `@<TRIPOS>ATOM`. `.mol2` ordinary text returns NONE. Complete source is EXACT; truncated valid prefix is PROBABLE.
 
-- [ ] **Step 2: Tokenize sections**
+- [x] **Step 2: Tokenize sections**
 
 Section headers are case-insensitive exact markers. Preserve unknown sections as raw lines and section names. A new `MOLECULE` begins the next record.
 
-- [ ] **Step 3: Parse MOLECULE and ATOM**
+- [x] **Step 3: Parse MOLECULE and ATOM**
 
 Read name, counts, molecule type, charge type and status/comment lines. Atom fields include ID, name, x/y/z, atom type, optional substructure ID/name and charge. Determine element from Tripos atom type prefix with explicit fallback diagnostic; never default unknown element to hydrogen/carbon.
 
-- [ ] **Step 4: Parse BOND and SUBSTRUCTURE**
+- [x] **Step 4: Parse BOND and SUBSTRUCTURE**
 
 Resolve arbitrary atom IDs to zero-based indices. Map bond type strings into bond order/aromatic/amide/unknown semantics. Unknown references invalidate topology but may preserve structure. Parse common substructure ID/name/root fields.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 Run syntax tests and commit parser primitives.
+
+Completion evidence: `64f18fb`, `de524b8`; 39 focused tests passed,
+`compileall` and `git diff --check` passed, and fix round 1 closed all
+Critical/Important review findings.
 
 ### Task 3: Map MOL2 into project entities with record recovery
 
@@ -84,21 +107,25 @@ Run syntax tests and commit parser primitives.
 **Interfaces:**
 - Produces: reader ID `mol2`, Structure, TopologyRecord, AtomicProperties, categorical atom/substructure data and MolecularRecords.
 
-- [ ] **Step 1: Write mapping tests**
+- [x] **Step 1: Write mapping tests**
 
 Assert coordinates, elements, atom types, partial charges, topology source explicit_file, aromatic/amide flags, substructure IDs/names and envelope.
 
-- [ ] **Step 2: Implement partial recovery**
+- [x] **Step 2: Implement partial recovery**
 
 A malformed record does not invalidate other records under Balanced mode. A valid atom block with invalid bonds yields a Structure and Invalid topology diagnostic. Missing charge values produce Partial property, not zero Complete values.
 
-- [ ] **Step 3: Register and conform**
+- [x] **Step 3: Register and conform**
 
 Add execution mode built-in, capabilities structure/topology/atomic_property/substructure/multi_record. Run Reader API v1 conformance.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run reader, catalog, sidecar, preview and record tests; commit.
+
+Completion evidence: `e4acf7f`, `baa13bd`, `83e142a`; 132 focused tests
+passed, `compileall` and `git diff --check` passed, and fix round 2 closed all
+Critical/Important review findings.
 
 ### Task 4: Add MOL2 Project Browser and view behavior
 
@@ -111,21 +138,25 @@ Run reader, catalog, sidecar, preview and record tests; commit.
 **Interfaces:**
 - Produces: molecule/record/substructure browsing and styling.
 
-- [ ] **Step 1: Preview summary**
+- [x] **Step 1: Preview summary**
 
 Show molecule count, atom/bond counts, molecule/charge types, partial-charge availability and unsupported sections.
 
-- [ ] **Step 2: Browser and selection**
+- [x] **Step 2: Browser and selection**
 
 Expose atom type, substructure and charge datasets. Add substructure selection/coloring through categorical codes and existing selection attributes.
 
-- [ ] **Step 3: Legacy bridge**
+- [x] **Step 3: Legacy bridge**
 
 Route legacy `.mol2` file action to Quick Import. Remove the temporary unsupported diagnostic introduced in Wave 1.
 
-- [ ] **Step 4: Blender smoke and commit**
+- [x] **Step 4: Blender smoke and commit**
 
 Import aromatic/substructure fixture, create ball-and-stick view, color by substructure, save/reopen. Commit.
+
+Completion evidence: `40bdc39`, `f0ffe03`; 217 focused tests passed,
+native validate/build and Blender 5.1.2 isolated lifecycle smoke passed, and
+fix round 1 closed all Critical/Important review findings.
 
 ### Task 5: Establish MOL2 export P1 boundary
 
@@ -136,14 +167,30 @@ Import aromatic/substructure fixture, create ball-and-stick view, color by subst
 **Interfaces:**
 - Produces: a machine-readable readiness check, not an exporter requirement.
 
-- [ ] **Step 1: Define representability rules**
+- [x] **Step 1: Define representability rules**
 
 Document required atom names/types, charge type, substructure and bond type mappings for future export. Identify data that cannot be reconstructed from generic Structure/Topology alone.
 
-- [ ] **Step 2: Add readiness report**
+- [x] **Step 2: Add readiness report**
 
 `mol2_export_readiness(project_entities)` returns Complete/Partial/Unsupported with missing fields. UI may display this but does not promise export.
 
-- [ ] **Step 3: Test and commit**
+- [x] **Step 3: Test and commit**
 
 Run readiness tests and commit the explicit P1 boundary.
+
+Completion evidence: `46bb656`, `c578915`; 32 MOL2/readiness and 21
+documentation/core-public tests passed, `compileall` and `git diff --check`
+passed, and fix round 1 closed all Critical/Important review findings.
+
+## Final whole-plan review
+
+- [x] Review the complete MOL2 implementation against this plan.
+- [x] Close all Critical/Important findings in one scoped fix wave.
+- [x] Re-review only the fix wave and record the remaining non-blocking items.
+
+Completion evidence: `4719f84`; 79 focused tests passed, native extension
+validate/build and Blender 5.1.2 isolated lifecycle passed. The scoped
+re-review reported 0 Critical, 0 Important and one non-blocking test-strength
+Minor. Fixture `set_count`, duplicate preview count and multi-record raw-hash
+test strengthening are deferred to the Wave 3 final qualification.

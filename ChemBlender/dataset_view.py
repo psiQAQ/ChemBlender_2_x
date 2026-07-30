@@ -6,6 +6,7 @@ import bpy
 
 from .core import (
     AtomicProperty,
+    CategoricalData,
     DatasetStatus,
     ExcitedStateSet,
     Spectrum,
@@ -168,6 +169,7 @@ def apply_atomic_scalar(
     display_min=None,
     display_max=None,
     symmetric=False,
+    presentation_only=False,
 ):
     import numpy
 
@@ -177,8 +179,18 @@ def apply_atomic_scalar(
         raise ValueError("atomic scalar data must have dims (atom,)")
     if not isinstance(symmetric, bool):
         raise TypeError("symmetric must be a bool")
+    if not isinstance(presentation_only, bool):
+        raise TypeError("presentation_only must be a bool")
     _require_structure_match(obj, dataset.structure_id, dataset.data.shape[0])
-    values = numpy.asarray(dataset.data.values)
+    if presentation_only:
+        if not isinstance(dataset.data, CategoricalData):
+            raise TypeError(
+                "presentation-only atomic scalar data must be categorical"
+            )
+        values = numpy.asarray(dataset.data.codes.values, dtype=float)
+        values[values == dataset.data.missing_code] = numpy.nan
+    else:
+        values = numpy.asarray(dataset.data.values)
     if numpy.iscomplexobj(values) or numpy.any(numpy.isinf(values)):
         raise ValueError("atomic scalar values must be real and not infinite")
     valid = numpy.isfinite(values)
@@ -191,14 +203,15 @@ def apply_atomic_scalar(
         stored, valid, display_min, display_max, symmetric
     )
     colors = _scalar_colors(stored, valid, lower, upper, symmetric)
-    _write_attribute(obj.data, "cbq_atom_scalar", "FLOAT", "value", stored)
-    _write_attribute(
-        obj.data,
-        "cbq_atom_scalar_valid",
-        "BOOLEAN",
-        "value",
-        valid.tolist(),
-    )
+    if not presentation_only:
+        _write_attribute(obj.data, "cbq_atom_scalar", "FLOAT", "value", stored)
+        _write_attribute(
+            obj.data,
+            "cbq_atom_scalar_valid",
+            "BOOLEAN",
+            "value",
+            valid.tolist(),
+        )
     _write_attribute(
         obj.data,
         "colour",
@@ -206,14 +219,22 @@ def apply_atomic_scalar(
         "color",
         colors.reshape(-1),
     )
-    obj["cb_scalar_dataset_id"] = str(dataset.id)
-    obj["cb_scalar_dataset_revision"] = dataset.revision
-    obj["cb_scalar_semantic_role"] = dataset.semantic_role
-    obj["cb_scalar_unit"] = dataset.data.unit
-    obj["cb_scalar_display_min"] = lower
-    obj["cb_scalar_display_max"] = upper
-    obj["cb_scalar_symmetric"] = symmetric
-    obj["cb_scalar_missing_policy"] = "mask_nan"
+    if presentation_only:
+        for attribute in tuple(obj.data.attributes):
+            if attribute.name.startswith("cbq_atom_scalar"):
+                obj.data.attributes.remove(attribute)
+        for name in tuple(obj.keys()):
+            if name.startswith("cb_scalar_"):
+                del obj[name]
+    else:
+        obj["cb_scalar_dataset_id"] = str(dataset.id)
+        obj["cb_scalar_dataset_revision"] = dataset.revision
+        obj["cb_scalar_semantic_role"] = dataset.semantic_role
+        obj["cb_scalar_unit"] = dataset.data.unit
+        obj["cb_scalar_display_min"] = lower
+        obj["cb_scalar_display_max"] = upper
+        obj["cb_scalar_symmetric"] = symmetric
+        obj["cb_scalar_missing_policy"] = "mask_nan"
     obj.data.update()
 
 

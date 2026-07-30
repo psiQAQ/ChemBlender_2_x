@@ -2,4 +2,10 @@ ChemBlender/auto_load.py whitespace=cr-at-eol
 tests/fixtures/mol/*.mol text eol=lf
 tests/fixtures/sdf/*.sdf text eol=lf
 tests/fixtures/sdf/crlf.sdf -text whitespace=cr-at-eol
+tests/fixtures/mol2/*.mol2 text eol=lf
 tests/fixtures/reader-api/public-schema-v1-rc1.json -text
+tests/fixtures/cif/nacl.cif text eol=lf
+tests/fixtures/cif/quartz.cif text eol=lf
+tests/fixtures/poscar/fe-bcc.POSCAR text eol=lf
+tests/fixtures/poscar/si.POSCAR text eol=lf
+docs/reader-api-v1/*.md text eol=lf

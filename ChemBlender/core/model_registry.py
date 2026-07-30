@@ -5,6 +5,8 @@ from . import model
 
 _MODEL_TYPE_NAMES = (
     "ArrayData", "AtomicIdentityData", "CIFEnvelope", "QCSchemaEnvelope", "CJSONEnvelope",
+    "BiologicalAtomSiteData", "BiologicalChain", "BiologicalHierarchy",
+    "BiologicalModel", "BiologicalResidue", "ChemicalAnnotation", "ExternalReference",
     "PeriodicSiteData", "MolecularTopology", "TopologyRecord", "Structure", "SymmetryResult",
     "CalculationMetadata", "CalculationRecord", "CategoricalData",
     "PropertyDataset", "AtomicProperty", "FrameSet", "FrameProperty",

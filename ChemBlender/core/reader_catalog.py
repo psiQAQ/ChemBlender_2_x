@@ -6,6 +6,9 @@ from .cjson_adapter import CJSON_READER
 from .cube import CUBE_READER
 from .formats.cif import CIF_READER
 from .formats.extxyz import EXTXYZ_READER
+from .formats.mol2 import MOL2_READER
+from .formats.pdb import PDB_READER
+from .formats.pqr import PQR_READER
 from .iodata_adapter import IODATA_WAVEFUNCTION_READER
 from .formats.mol import MOL_READER
 from .formats.poscar import POSCAR_READER
@@ -45,7 +48,10 @@ def builtin_reader_descriptors():
                 EXTXYZ_READER,
                 IODATA_WAVEFUNCTION_READER,
                 MOL_READER,
+                MOL2_READER,
                 MOL_V2000_READER,
+                PDB_READER,
+                PQR_READER,
                 POSCAR_READER,
                 SDF_READER,
                 SMILES_READER,

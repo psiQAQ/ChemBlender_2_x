@@ -1,0 +1,39 @@
+{
+  "forbidden_parallel_model": [
+    "CrystalStructure",
+    "PeriodicTopology",
+    "UnitCell"
+  ],
+  "formats": {
+    "cif": {
+      "adp": "supported",
+      "export": "supported",
+      "fractional_coordinates": "supported",
+      "occupancy": "supported",
+      "periodic_topology": "partial",
+      "selective_dynamics": "unsupported",
+      "structure": "supported",
+      "symmetry": "supported",
+      "velocity": "unsupported"
+    },
+    "poscar": {
+      "adp": "unsupported",
+      "export": "supported",
+      "fractional_coordinates": "supported",
+      "occupancy": "unsupported",
+      "periodic_topology": "partial",
+      "selective_dynamics": "supported",
+      "structure": "supported",
+      "symmetry": "unsupported",
+      "velocity": "supported"
+    }
+  },
+  "public_model": [
+    "PeriodicSiteData",
+    "Structure",
+    "SymmetryResult",
+    "TopologyRecord"
+  ],
+  "schema_name": "chemblender_crystal_capability_matrix",
+  "schema_version": 1
+}

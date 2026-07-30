@@ -1,0 +1,17 @@
+schema_version = "1.0.0"
+id = "chemblender_reader_example"
+version = "1.0.0"
+name = "ChemBlender SimpleCoords Reader Example"
+tagline = "Example external reader for the ChemBlender Reader API"
+maintainer = "ChemBlender contributors"
+type = "add-on"
+blender_version_min = "5.1.0"
+license = ["SPDX:MIT"]
+
+[build]
+paths_exclude_pattern = [
+  "__pycache__/",
+  "*.zip",
+  "fixtures/",
+  "tests/",
+]

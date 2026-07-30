@@ -57,6 +57,7 @@ _REGISTRY_GROUPS = (
     ("molecular_records", "Molecular Records"),
     ("datasets", "Datasets"),
     ("structures", "Structures"),
+    ("biological_hierarchies", "Biological Hierarchies"),
     ("topologies", "Topologies"),
     ("calculations", "Calculations"),
     ("symmetry_results", "Symmetry"),
@@ -167,7 +168,10 @@ def _entity_views(entity, views):
 def _entity_row(entity, parent_id, depth, views):
     entity_views = _entity_views(entity, views)
     row_id = f"{parent_id}/entity:{entity.id}"
-    details = _periodic_detail_rows(entity, row_id, depth + 1)
+    details = (
+        *_periodic_detail_rows(entity, row_id, depth + 1),
+        *_biological_detail_rows(entity, row_id, depth + 1),
+    )
     return (
         BrowserRow(
             id=row_id,
@@ -222,6 +226,58 @@ def _periodic_detail_rows(entity, parent_id, depth):
             None,
         ),
     )
+
+
+def _biological_detail_rows(entity, parent_id, depth):
+    chains = getattr(entity, "chains", None)
+    residues = getattr(entity, "residues", None)
+    atom_sites = getattr(entity, "atom_sites", None)
+    if chains is None or residues is None or atom_sites is None:
+        return ()
+    residues_by_chain = [[] for _chain in chains]
+    for residue_index, residue in enumerate(residues):
+        residues_by_chain[residue.chain_index].append((residue_index, residue))
+    atom_counts = [0] * len(chains)
+    for residue_index in atom_sites.residue_indices.values:
+        atom_counts[residues[int(residue_index)].chain_index] += 1
+    rows = []
+    for chain_index, chain in enumerate(chains):
+        chain_id = f"{parent_id}/chain:{chain_index}"
+        chain_residues = residues_by_chain[chain_index]
+        label = chain.chain_id or "[blank]"
+        rows.append(
+            BrowserRow(
+                chain_id,
+                parent_id,
+                depth,
+                "biological_chain",
+                (
+                    f"Chain {label} · Segment {chain.segment_index} · "
+                    f"{len(chain_residues)} residues · "
+                    f"{atom_counts[chain_index]} atoms"
+                ),
+                "",
+                0,
+                entity.id,
+            )
+        )
+        rows.extend(
+            BrowserRow(
+                f"{chain_id}/residue:{residue_index}",
+                chain_id,
+                depth + 1,
+                "biological_residue",
+                (
+                    f"{residue.residue_name} {residue.sequence_number}"
+                    f"{residue.insertion_code}"
+                ),
+                "",
+                0,
+                entity.id,
+            )
+            for residue_index, residue in chain_residues
+        )
+    return tuple(rows)
 
 
 def _entity_lookup(project):

@@ -153,7 +153,8 @@ def _array_content_hash(array):
         separators=(",", ":"),
     ).encode("ascii")
     digest = hashlib.sha256(header)
-    digest.update(memoryview(contiguous).cast("B"))
+    if contiguous.size:
+        digest.update(memoryview(contiguous).cast("B"))
     return digest.hexdigest(), contiguous
 
 

@@ -5,10 +5,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = (
-    "2.3.0-wave-3-exchange-mol2-pdb-pqr.md",
     "2.3.0-wave-4-migration-release.md",
 )
-WAVE_230_ACTIVE_FILE = "2.3.0-wave-2-native-crystal.md"
+WAVE_230_ACTIVE_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 
 
 class QuantumVisualizationDocsTests(unittest.TestCase):
@@ -29,6 +28,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         entrypoints = (
             "docs/quantum-visualization/2.3.0/README.md",
             "docs/quantum-visualization/2.3.0/audits/2026-07-23-main-deep-audit.md",
+            "docs/quantum-visualization/crystal-capability-matrix-v1.json",
             "docs/superpowers/specs/2026-07-23-chemblender-2.3.0-native-platform-design.md",
             "docs/superpowers/plans/2026-07-23-chemblender-2.3.0-master-sequencing.md",
         )
@@ -51,7 +51,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for name in (WAVE_230_ACTIVE_FILE, *WAVE_230_QUEUE_FILES):
             self.assertIn(name, agent_index)
 
-    def test_230_wave_2_is_active_and_later_waves_remain_queued(self):
+    def test_230_wave_3_is_active_and_wave_4_remains_queued(self):
         queued = sorted(
             path.name
             for path in (ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md")
@@ -185,6 +185,40 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("46034a0587e2e74426cb1ae2d4d7f66ad5cf6090", placeholder)
         self.assertIn("5d5d11f4a9ca716f7fb9653eb92424f1714b68ac", placeholder)
         self.assertIn("d1842c4dd2c1e61eb9075a0d32ffefc7c4d5b318", placeholder)
+
+    def test_wave3_exchange_boundary_is_frozen_before_readers(self):
+        adr = self.read_doc(
+            ".agents/decisions/0043-wave3-exchange-data-boundary.md"
+        )
+        for term in (
+            "ChemicalAnnotation",
+            "ExternalReference",
+            "BiologicalHierarchy",
+            "PropertyDataset",
+            "CJSONEnvelope",
+            "Reader API `1.0-rc1`",
+        ):
+            self.assertIn(term, adr)
+
+        plans = {
+            "mol2": self.read_doc(
+                "docs/superpowers/plans/"
+                "2026-07-23-chemblender-2.3.0-wave-3-mol2.md"
+            ),
+            "pdb": self.read_doc(
+                "docs/superpowers/plans/"
+                "2026-07-23-chemblender-2.3.0-wave-3-pdb-pqr.md"
+            ),
+            "cjson": self.read_doc(
+                "docs/superpowers/plans/"
+                "2026-07-23-chemblender-2.3.0-wave-3-cjson-reader-plugin-v1.md"
+            ),
+        }
+        for text in plans.values():
+            self.assertIn("ADR 0043", text)
+        self.assertIn("ChemicalAnnotation", plans["mol2"])
+        self.assertIn("BiologicalHierarchy", plans["pdb"])
+        self.assertIn("whitelist", plans["cjson"].lower())
 
     def test_single_active_task(self):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))

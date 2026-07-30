@@ -16,7 +16,7 @@ MATRIX = Path(__file__).parents[1] / "docs" / "quantum-visualization" / "reader-
 class ReaderCatalogTests(unittest.TestCase):
     def test_builtin_catalog_has_unique_descriptors_and_fresh_matrix(self):
         readers = builtin_reader_descriptors()
-        self.assertEqual(len(readers), 16)
+        self.assertEqual(len(readers), 19)
         self.assertEqual(len({reader.reader_id for reader in readers}), len(readers))
         registry = builtin_reader_registry()
         for reader in readers:

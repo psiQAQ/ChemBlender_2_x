@@ -1,4 +1,5 @@
 import importlib
+import json
 import sys
 import threading
 import time
@@ -252,6 +253,60 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             session.dirty_reasons,
         )
 
+    def test_import_preview_projects_and_draws_unavailable_reader_plugin(self):
+        registry, _state = self.stage("tests/fixtures/xyz/water.xyz")
+        unavailable = SimpleNamespace(
+            plugin_id="org.example.failed",
+            reader_ids=("failed-reader",),
+            availability=SimpleNamespace(
+                available=False,
+                reason_code="plugin_registration_failed",
+                detail="ValueError",
+            ),
+        )
+        snapshot = SimpleNamespace(plugins=(unavailable,))
+        operator = self.module.CHEMBLENDER_OT_confirm_import()
+        operator.rows = _RNACollection()
+        operator.grouping_suggestions = _RNACollection()
+        operator.conformer_grouping_suggestions = _RNACollection()
+        operator.blocking_reason = ""
+        operator.reader_plugin_status = ""
+        context = SimpleNamespace(scene=object())
+
+        with patch.object(
+            self.module,
+            "get_scene_session",
+            return_value=self.session,
+        ), patch.object(
+            self.module,
+            "get_reader_plugin_registry",
+            return_value=registry,
+        ), patch.object(
+            self.module,
+            "refresh_reader_plugin_discovery",
+            return_value=snapshot,
+        ):
+            operator._project(context)
+
+        expected = (
+            "Reader plugin org.example.failed (failed-reader) unavailable: "
+            "plugin_registration_failed (ValueError)"
+        )
+        self.assertEqual(operator.reader_plugin_status, expected)
+
+        labels = []
+        operator.layout = SimpleNamespace(
+            label=lambda **keywords: labels.append(keywords),
+        )
+        operator.rows = ()
+        operator.grouping_suggestions = ()
+        operator.conformer_grouping_suggestions = ()
+        operator.draw(None)
+        self.assertIn(
+            {"text": expected, "icon": "ERROR"},
+            labels,
+        )
+
     def test_extxyz_preview_summary_reports_frames_properties_cell_and_units(self):
         source = Path(self.temporary.name) / "force.extxyz"
         source.write_text(
@@ -292,6 +347,78 @@ class ImportPreviewUIContractTests(unittest.TestCase):
                 "electron_volt_per_angstrom was assumed because extXYZ "
                 "declared no unit",
             ),
+        )
+
+    def test_mol2_preview_reports_counts_types_charges_and_unsupported_sections(self):
+        registry, state = self.stage("tests/fixtures/mol2/small.mol2")
+
+        row = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )[0]
+
+        self.assertEqual(row.mol2_molecule_count, 1)
+        self.assertEqual(row.mol2_atom_count, 2)
+        self.assertEqual(row.mol2_bond_count, 1)
+        self.assertEqual(row.mol2_molecule_types, "SMALL")
+        self.assertEqual(row.mol2_charge_types, "USER_CHARGES")
+        self.assertEqual(row.mol2_partial_charge_summary, "available (complete)")
+        self.assertEqual(row.mol2_unsupported_sections, "SET")
+
+    def test_mol2_preview_reports_partial_charge_molecule_coverage(self):
+        source = Path(self.temporary.name) / "mixed-charges.mol2"
+        source.write_text(
+            "\n".join(
+                (
+                    "@<TRIPOS>MOLECULE",
+                    "charged",
+                    "1 0 1 0 0",
+                    "SMALL",
+                    "USER_CHARGES",
+                    "@<TRIPOS>ATOM",
+                    "1 C1 0.0 0.0 0.0 C.3 1 RES_A -0.1",
+                    "@<TRIPOS>SUBSTRUCTURE",
+                    "1 RES_A 1 GROUP 0 **** 0 ROOT",
+                    "@<TRIPOS>MOLECULE",
+                    "uncharged",
+                    "1 0 0 0 0",
+                    "SMALL",
+                    "NO_CHARGES",
+                    "@<TRIPOS>ATOM",
+                    "1 He1 1.0 0.0 0.0 He",
+                    "",
+                )
+            ),
+            encoding="utf-8",
+            newline="\n",
+        )
+        registry, state = self.stage(source)
+        source_preview = state.preview.source_previews[0]
+        batch = state.staging_session.result(
+            source_preview.staged_batch_ids[0]
+        )
+
+        row = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )[0]
+
+        self.assertEqual(len(batch.structures), 2)
+        self.assertEqual(
+            {
+                dataset.structure_id
+                for dataset in batch.datasets
+                if dataset.semantic_role == "partial_charge"
+            },
+            {batch.structures[0].id},
+        )
+        self.assertEqual(batch.report.reader_id, "mol2")
+        self.assertEqual(row.mol2_molecule_count, 2)
+        self.assertEqual(
+            row.mol2_partial_charge_summary,
+            "1/2 molecules available",
         )
 
     def stage_two_candidate_conflict(self):
@@ -335,6 +462,13 @@ class ImportPreviewUIContractTests(unittest.TestCase):
                 "molecular_recovery_summary",
                 "molecular_topology_summary",
                 "molecular_property_summary",
+                "mol2_molecule_count",
+                "mol2_atom_count",
+                "mol2_bond_count",
+                "mol2_molecule_types",
+                "mol2_charge_types",
+                "mol2_partial_charge_summary",
+                "mol2_unsupported_sections",
                 "grid_dataset_count",
                 "grid_source_ids",
                 "grid_sample_range",
@@ -1845,6 +1979,105 @@ class ImportPreviewUIContractTests(unittest.TestCase):
 
         self.assertIs(raised.exception, fatal)
         self.assertEqual(removed, [created])
+
+    def test_quick_import_structure_preset_creates_biological_default_view(self):
+        registry, state = self.stage("tests/fixtures/pdb/conect.pdb")
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+        scene_preset_view = importlib.import_module(
+            "ChemBlender.scene_preset_view"
+        )
+        created = {}
+
+        class View(dict):
+            pass
+
+        def capture(*args, **kwargs):
+            created["args"] = args
+            created["kwargs"] = kwargs
+            return View()
+
+        self.fake_bpy.context.scene = SimpleNamespace(
+            chemblender_topology=SimpleNamespace(
+                decisions_json=json.dumps(
+                    {
+                        str(uuid4()): {
+                            "accepted": None,
+                            "rejected": [],
+                        }
+                    }
+                )
+            )
+        )
+        with patch.object(
+            scene_preset_view,
+            "create_structure_view",
+            side_effect=capture,
+        ):
+            result = self.module.commit_project_import(
+                self.session,
+                state,
+                rows,
+                collection=object(),
+                apply_view=scene_preset_view.apply_scene_preset,
+            )
+
+        structure = created["args"][0]
+        hierarchy = created["kwargs"]["biological_hierarchy"]
+        properties = created["kwargs"]["atomic_properties"]
+        self.assertEqual(result.status, "committed")
+        self.assertEqual(hierarchy.structure_id, structure.id)
+        self.assertEqual(
+            {value.semantic_role for value in properties},
+            {"occupancy", "b_factor"},
+        )
+        self.assertEqual(created["args"][1].structure_id, structure.id)
+        self.assertTrue(created["args"][2].attach_ball_and_stick)
+
+    def test_quick_import_rejects_stale_current_structure_topology_decision(self):
+        registry, state = self.stage("tests/fixtures/pdb/conect.pdb")
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+        staged_source = state.preview.source_previews[0]
+        batch = state.staging_session.result(
+            staged_source.staged_batch_ids[0]
+        )
+        structure = batch.structures[0]
+        self.fake_bpy.context.scene = SimpleNamespace(
+            chemblender_topology=SimpleNamespace(
+                decisions_json=json.dumps(
+                    {
+                        str(structure.id): {
+                            "accepted": str(uuid4()),
+                            "rejected": [],
+                        }
+                    }
+                )
+            )
+        )
+        scene_preset_view = importlib.import_module(
+            "ChemBlender.scene_preset_view"
+        )
+        with patch.object(
+            scene_preset_view,
+            "create_structure_view",
+        ) as create:
+            result = self.module.commit_project_import(
+                self.session,
+                state,
+                rows,
+                collection=object(),
+                apply_view=scene_preset_view.apply_scene_preset,
+            )
+
+        self.assertEqual(result.status, "data committed; view failed")
+        create.assert_not_called()
 
     def test_view_failure_uses_surface_cleanup_for_prior_surface_objects(self):
         registry, state = self.stage(

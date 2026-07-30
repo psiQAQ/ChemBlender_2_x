@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from ..reader_api.discovery import ReaderPluginDiscovery
 from ..reader_api.registry import (
     ReaderPluginRegistry,
     builtin_reader_plugin_registry,
@@ -25,6 +26,7 @@ class ReaderAPIHandle:
 
 _OWNER_TOKEN = object()
 _REGISTRY = builtin_reader_plugin_registry()
+_DISCOVERY = ReaderPluginDiscovery(_REGISTRY)
 _published_handle = None
 
 
@@ -32,18 +34,16 @@ def get_reader_plugin_registry() -> ReaderPluginRegistry:
     return _REGISTRY
 
 
+def refresh_reader_plugin_discovery():
+    return _DISCOVERY.refresh()
+
+
 def _register_plugin(plugin):
-    if getattr(getattr(plugin, "descriptor", None), "plugin_id", None) == (
-        "chemblender.builtin"
-    ):
-        raise ValueError("built-in reader plugins cannot be replaced")
-    return _REGISTRY.register(plugin)
+    return _DISCOVERY.register(plugin)
 
 
 def _unregister_plugin(manifest):
-    if getattr(manifest, "plugin_id", None) == "chemblender.builtin":
-        raise ValueError("built-in reader plugins cannot be removed")
-    return _REGISTRY.unregister(manifest)
+    return _DISCOVERY.unregister(manifest)
 
 
 def _driver_namespace():

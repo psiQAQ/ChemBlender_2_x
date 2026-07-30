@@ -42,6 +42,13 @@ _TYPE_NAMES = (
     "MolecularTopology",
     "RawRecordProperty",
     "MolecularRecord",
+    "BiologicalModel",
+    "BiologicalChain",
+    "BiologicalResidue",
+    "BiologicalAtomSiteData",
+    "BiologicalHierarchy",
+    "ChemicalAnnotation",
+    "ExternalReference",
     "TopologyRecord",
     "Structure",
     "SymmetryResult",
@@ -274,7 +281,17 @@ class _Encoder:
                         "incomplete public model value"
                     ) from error
                 if (
-                    (tag == "PublicImportBatch" and item.name == "molecular_records" and field_value == ())
+                    (
+                        tag == "PublicImportBatch"
+                        and item.name
+                        in {
+                            "molecular_records",
+                            "biological_hierarchies",
+                            "annotations",
+                            "external_references",
+                        }
+                        and field_value == ()
+                    )
                     or (tag == "Structure" and item.name == "atomic_identity" and field_value is None)
                 ):
                     continue
@@ -456,8 +473,15 @@ class _Decoder:
             raise CanonicalDocumentCompatibilityError(
                 f"unknown public model type: {type_name!r}"
             )
-        if type_name == "PublicImportBatch" and "molecular_records" not in value:
-            value = dict(value, molecular_records={"$tuple": []})
+        if type_name == "PublicImportBatch":
+            value = dict(value)
+            for name in (
+                "molecular_records",
+                "biological_hierarchies",
+                "annotations",
+                "external_references",
+            ):
+                value.setdefault(name, {"$tuple": []})
         elif type_name == "Structure" and "atomic_identity" not in value:
             value = dict(value, atomic_identity=None)
         elif type_name == "CIFEnvelope":

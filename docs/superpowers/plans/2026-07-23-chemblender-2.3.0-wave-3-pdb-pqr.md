@@ -8,6 +8,13 @@
 
 **Tech Stack:** Python 3.13 standard library, NumPy, existing categorical/frame/topology/import/view systems, `unittest` and Blender smoke.
 
+## Wave 3 Pre-Gate Binding
+
+ADR 0043 is authoritative. PDB/PQR must reuse `BiologicalHierarchy`,
+`AtomicIdentityData`, `AtomicProperty`, `FrameSet`, `TopologyRecord` and
+`Structure`; do not create `BiologicalAtomData`, `ModelIdentity`,
+`SegmentData` or a PDB-specific Structure.
+
 ## Global Constraints
 
 - No Biotite, MDAnalysis or external package in the base path.
@@ -19,33 +26,43 @@
 
 ---
 
-### Task 1: Add biological atom identity model
+### Task 1: Lock PDB/PQR mapping to the exchange contracts
 
 **Files:**
-- Create: `ChemBlender/core/model/biological.py`
-- Modify: `ChemBlender/core/model/structure.py`
-- Modify: `ChemBlender/core/model/project.py`
-- Modify: `ChemBlender/core/model_registry.py`
 - Create: `tests/test_biological_atom_data.py`
+- Modify: `docs/quantum-visualization/reader-capability-matrix.json`
 
 **Interfaces:**
-- Produces: `BiologicalAtomData`, `ModelIdentity`, `SegmentData`.
+- Consumes: `BiologicalHierarchy`, `AtomicIdentityData`, `AtomicProperty` and
+  `FrameSet`.
+- Produces: executable mapping fixtures; no new core model.
 
-- [ ] **Step 1: Write shape and categorical tests**
+- [x] **Step 1: Write shape and categorical tests**
 
-Fields include serial, atom name, residue name, residue number, insertion code, chain ID, altloc, segment/TER group, record kind and optional element/formal charge source tokens. All atom dimensions match Structure.
+`BiologicalAtomSiteData` stores serial, residue index, altloc and record kind;
+`BiologicalChain`/`BiologicalResidue` store chain, segment, residue number,
+insertion code and residue name; `AtomicIdentityData` stores atom names.
+Occupancy/B-factor and PQR charge/radius remain atomic datasets. All atom
+dimensions match Structure.
 
-- [ ] **Step 2: Implement identity key**
+- [x] **Step 2: Verify identity key**
 
 A stable atom identity tuple uses record kind, chain, residue number, insertion code, residue name, atom name and altloc. Serial is retained but not the sole identity across models.
 
-- [ ] **Step 3: Add project/sidecar validation**
+- [x] **Step 3: Verify project/sidecar validation**
 
-Biological data references one Structure and categorical tables. Run sidecar round-trip.
+Each Structure has at most one BiologicalHierarchy. Compatible MODEL records
+use FrameSet; incompatible identity sets create independent structures.
+Run sidecar/canonical round-trip.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit model and tests.
+
+Completion evidence: `ac924e6`, `3eade23`; 22 focused tests passed,
+`compileall` and `git diff --check` passed, and fix round 1 closed the only
+Important review finding. The registered-reader capability matrix remains
+unchanged until PDB/PQR reader registration in Tasks 3 and 4.
 
 ### Task 2: Implement fixed-column PDB parser
 
@@ -58,25 +75,31 @@ Commit model and tests.
 **Interfaces:**
 - Produces: `sniff_pdb()`, `parse_pdb_records()` and record dataclasses.
 
-- [ ] **Step 1: Write column tests**
+- [x] **Step 1: Write column tests**
 
 Test exact slices for serial, atom name, altloc, residue, chain, residue number, insertion, xyz, occupancy, B-factor, element and charge. Lines shorter than required generate record diagnostics.
 
-- [ ] **Step 2: Implement element resolution**
+- [x] **Step 2: Implement element resolution**
 
 Use element columns when valid. Otherwise infer from atom name using PDB conventions and chemical context, preserving inferred flag and diagnostic. Unknown remains invalid atom identity; do not default.
 
-- [ ] **Step 3: Parse MODEL/ENDMDL and TER**
+- [x] **Step 3: Parse MODEL/ENDMDL and TER**
 
 Maintain model number and segment index. ATOM/HETATM outside MODEL belong to model 1. Nested/mismatched model markers produce diagnostics and balanced recovery.
 
-- [ ] **Step 4: Parse CONECT and CRYST1**
+- [x] **Step 4: Parse CONECT and CRYST1**
 
 CONECT serial references map after atoms are known. Repeated entries can encode bond multiplicity only when unambiguous; otherwise store connectivity/unknown order. CRYST1 maps cell and declared space group/source metadata.
 
-- [ ] **Step 5: Run and commit**
+- [x] **Step 5: Run and commit**
 
 Run syntax tests and commit parser primitives.
+
+Completion evidence: `22b566a`, `b848b0c`, `ed7b0e0`, `089f0c5`;
+22 focused and 89 related tests passed, `compileall` and `git diff --check`
+passed. Three review-fix rounds closed fixed-column element alignment,
+malformed TER recovery, model-scoped CONECT, CRYST1 validation and sniff
+confidence findings with no open Critical/Important issues.
 
 ### Task 3: Map PDB models, altlocs and topology into project entities
 
@@ -89,25 +112,31 @@ Run syntax tests and commit parser primitives.
 **Interfaces:**
 - Produces: reader ID `pdb`, structures/models/frame sets, BiologicalAtomData, occupancy/B-factor properties and explicit topology.
 
-- [ ] **Step 1: Write model compatibility tests**
+- [x] **Step 1: Write model compatibility tests**
 
 Two models with identical identity keys form a FrameSet. Reordered atoms are mapped deterministically by identity. Missing/different altloc or residue identity splits models and reports why.
 
-- [ ] **Step 2: Implement altloc policy**
+- [x] **Step 2: Implement altloc policy**
 
 All altloc atoms are imported. Default view policy selects blank then highest occupancy per site, but source Structure/records retain all alternatives. The selected-altloc view is a view filter, not data deletion.
 
-- [ ] **Step 3: Map properties**
+- [x] **Step 3: Map properties**
 
 Occupancy and B-factor are AtomicProperties with validity masks. Missing values are Partial. CONECT becomes explicit TopologyRecord. Without CONECT, no automatic reader topology; Import Preview may suggest distance inference.
 
-- [ ] **Step 4: Register and conform**
+- [x] **Step 4: Register and conform**
 
 Capabilities include structure, topology partial, trajectory/model, hierarchy and atomic property. Run Reader API conformance.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run reader/sidecar/preview tests and commit.
+
+Completion evidence: `e3cc301`, `348554e`; 42 focused, 156 related and
+23 sidecar tests passed, `compileall` and `git diff --check` passed. Fix
+round 1 closed all review findings for MODEL occurrence identity,
+duplicate-identity topology recovery, serial/occupancy validation,
+diagnostics and real PDB persistence.
 
 ### Task 4: Implement PQR parser and dialect detection
 
@@ -120,21 +149,27 @@ Run reader/sidecar/preview tests and commit.
 **Interfaces:**
 - Produces: reader ID `pqr`, Structure, BiologicalAtomData, charge/radius properties.
 
-- [ ] **Step 1: Write dialect tests**
+- [x] **Step 1: Write dialect tests**
 
 Support validated forms with and without chain ID. Detect positions of xyz, charge and radius by allowed field counts and numeric validation, not by best-effort shifting. Ambiguous lines are rejected with field-level diagnostic.
 
-- [ ] **Step 2: Map identity and properties**
+- [x] **Step 2: Map identity and properties**
 
 Partial charge uses elementary_charge; radius uses angstrom. Atom/residue/chain fields map to BiologicalAtomData. PQR does not imply bonds.
 
-- [ ] **Step 3: Register and conform**
+- [x] **Step 3: Register and conform**
 
 Sniff distinguishes PQR from PDB by valid trailing charge/radius fields and content. Run conformance.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit reader, fixtures, catalog and tests.
+
+Completion evidence: `c528908`, `f0d4852`, `d43f7b4`; 12 focused and
+175 related tests passed, `compileall` and `git diff --check` passed. Two
+review-fix rounds closed padded PQR routing, token-only element ambiguity,
+residue conflict isolation, Reader API metadata and conservative polymer
+element inference with no open findings.
 
 ### Task 5: Add chain/residue/altloc selection and view controls
 
@@ -148,25 +183,32 @@ Commit reader, fixtures, catalog and tests.
 **Interfaces:**
 - Produces: hierarchy attributes, selection operators, altloc filter, model playback and size-aware default representation.
 
-- [ ] **Step 1: Write Blender attribute contract**
+- [x] **Step 1: Write Blender attribute contract**
 
 Point attributes contain chain/residue/altloc categorical codes, residue number, occupancy, B-factor, PQR charge/radius and record kind. Mapping metadata stores categories and hashes.
 
-- [ ] **Step 2: Add selection operators**
+- [x] **Step 2: Add selection operators**
 
 Select by chain, residue range/name, atom name, altloc and property threshold. Selections write existing boolean named attributes and do not change source data.
 
-- [ ] **Step 3: Model/frame playback**
+- [x] **Step 3: Model/frame playback**
 
 Compatible models use existing trajectory manager. Altloc filtering is applied consistently across frames or reports incompatibility.
 
-- [ ] **Step 4: Default view**
+- [x] **Step 4: Default view**
 
 Small files use ball-and-stick when explicit/inferred topology selected; large files default to atoms/points with an explanation. No ribbon option is exposed.
 
-- [ ] **Step 5: Blender smoke and commit**
+- [x] **Step 5: Blender smoke and commit**
 
 Import PDB altloc/multimodel and PQR charge/radius; select chain/residue, switch altloc, play frames, save/reopen. Commit.
+
+Completion evidence: `d58f90c`, `a8d2988`; 111 focused/documentation tests,
+native extension validate/build and the full Blender 5.1.2 lifecycle smoke
+passed. Fix round 1 closed all six Important findings for Quick Import,
+finite/unit-aware projection, live Mesh validation, atomic altloc updates,
+browser context and reopened MODEL playback. The remaining duplicate
+categorical decoder is a non-blocking final-qualification cleanup.
 
 ### Task 6: Define PDB/PQR export readiness P1
 
@@ -178,14 +220,35 @@ Import PDB altloc/multimodel and PQR charge/radius; select chain/residue, switch
 **Interfaces:**
 - Produces: readiness reports for future export.
 
-- [ ] **Step 1: Define required identity fields and representability**
+- [x] **Step 1: Define required identity fields and representability**
 
 PDB readiness requires atom names, residue identity, serial allocation and coordinates. PQR additionally requires finite charge/radius. Report line-width/field overflow risks.
 
-- [ ] **Step 2: Implement and test**
+- [x] **Step 2: Implement and test**
 
 Complete imported entities report Ready; generic molecules report MissingHierarchy; long identifiers report FieldOverflow.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 Commit readiness boundary without claiming exporter support.
+
+Completion evidence: `d57aac0`, `ec713f3`; 11 focused and 112 related tests
+passed, public imports, `compileall` and `git diff --check` passed. Fix round 1
+closed PQR cardinality/FrameSet and live hierarchy validation findings with no
+open issues.
+
+## Final whole-plan review
+
+- [x] Review the complete PDB/PQR diff against this plan.
+- [x] Fix all Critical, Important and plan-related Minor findings in one final
+  fix wave.
+- [x] Run a scoped independent re-review of that fix wave.
+
+Completion evidence: `e480154`; 247 impacted tests and 30
+structure/registration tests passed. Native extension validate/build and the
+Blender 5.1.2 lifecycle smoke passed. The final fix wave closed 5 Important
+and 2 Minor findings covering transactional residue-conflict recovery, PQR
+dialect provenance, live export-readiness validation, fail-closed biological
+projection and linear-time labels/browser mapping. Scoped re-review approved
+the result with no new findings. Deferred scope remains PDB/PQR writing,
+ribbon/cartoon, secondary structure and biological assembly.

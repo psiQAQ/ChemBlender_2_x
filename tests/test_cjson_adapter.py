@@ -1,3 +1,4 @@
+import hashlib
 import json
 import tempfile
 import unittest
@@ -5,6 +6,7 @@ from pathlib import Path
 
 import numpy
 
+from ChemBlender.core import cjson_adapter
 from ChemBlender.core.cjson_adapter import (
     CJSON_READER,
     CJSONCompatibilityError,
@@ -13,7 +15,9 @@ from ChemBlender.core.cjson_adapter import (
     parse_cjson,
 )
 from ChemBlender.core.model import (
+    AtomicIdentityData,
     AtomicProperty,
+    CategoricalData,
     DatasetStatus,
     ExcitedStateSet,
     FrameSet,
@@ -52,6 +56,30 @@ class CJSONAdapterTests(unittest.TestCase):
         self.assertIsNone(topology.aromatic_flags)
         self.assertEqual(topology.stereo_labels, ("", ""))
         self.assertEqual(topology.provenance_ids, (batch.provenance[0].id,))
+        self.assertIsInstance(structure.atomic_identity, AtomicIdentityData)
+        numpy.testing.assert_array_equal(
+            structure.atomic_identity.formal_charges.values,
+            [0, 0, 0],
+        )
+        for categorical in (
+            structure.atomic_identity.atom_names,
+            structure.atomic_identity.stereo_labels,
+        ):
+            self.assertIsInstance(categorical, CategoricalData)
+            self.assertEqual(categorical.categories, ())
+            self.assertEqual(categorical.missing_code, -1)
+            numpy.testing.assert_array_equal(categorical.codes.values, [-1, -1, -1])
+
+        self.assertEqual(
+            {
+                (annotation.namespace, annotation.key, annotation.value)
+                for annotation in batch.annotations
+            },
+            {
+                ("cjson", "method", "B3LYP"),
+                ("cjson", "name", "Water result fixture"),
+            },
+        )
 
         project = QCProject(id=structure.id, schema_version="0.2")
         project.commit(batch)
@@ -68,6 +96,7 @@ class CJSONAdapterTests(unittest.TestCase):
             (
                 structure.id,
                 topology.id,
+                *(annotation.id for annotation in batch.annotations),
                 batch.cjson_envelopes[0].id,
                 *(dataset.id for dataset in batch.datasets),
                 batch.provenance[0].id,
@@ -86,6 +115,87 @@ class CJSONAdapterTests(unittest.TestCase):
         self.assertEqual(atom_data["selected"].data.values.tolist(), [True, False, True])
         frames = next(item for item in batch.datasets if isinstance(item, FrameSet))
         self.assertEqual(frames.data.shape, (2, 3, 3))
+        self.assertEqual(
+            batch.report.parsed_capabilities,
+            (
+                "atomic_identity",
+                "atomic_property",
+                "excited_state",
+                "spectrum",
+                "structure",
+                "topology",
+                "trajectory",
+                "vibration",
+            ),
+        )
+
+    def test_trajectory_only_uses_frame_zero_without_missing_coordinate_fallback(self):
+        source = {
+            "chemicalJson": 1,
+            "atoms": {
+                "elements": {"number": [1]},
+                "coords": {"3dSets": [[1, 2, 3], [4, 5, 6]]},
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "trajectory.cjson"
+            path.write_text(json.dumps(source), encoding="utf-8")
+            batch = parse_cjson(path)
+
+        numpy.testing.assert_allclose(
+            batch.structures[0].coordinates.values,
+            [[1, 2, 3]],
+        )
+        frames = next(item for item in batch.datasets if isinstance(item, FrameSet))
+        numpy.testing.assert_allclose(
+            frames.data.values,
+            [[[1, 2, 3]], [[4, 5, 6]]],
+        )
+        self.assertNotIn(
+            "atoms.coords.3d",
+            {issue.path for issue in batch.report.issues},
+        )
+
+    def test_fractional_coordinates_remain_primary_when_trajectory_is_present(self):
+        source = {
+            "chemicalJson": 1,
+            "unitCell": {"cellVectors": [2, 0, 0, 0, 2, 0, 0, 0, 2]},
+            "atoms": {
+                "elements": {"number": [1]},
+                "coords": {
+                    "3dFractional": [0.25, 0.5, 0.75],
+                    "3dSets": [[9, 8, 7]],
+                },
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "fractional-trajectory.cjson"
+            path.write_text(json.dumps(source), encoding="utf-8")
+            batch = parse_cjson(path)
+
+        numpy.testing.assert_allclose(
+            batch.structures[0].coordinates.values,
+            [[0.5, 1.0, 1.5]],
+        )
+
+    def test_empty_or_malformed_trajectory_sets_fail_closed(self):
+        for values in ([], [[1, 2]]):
+            with self.subTest(values=values):
+                source = {
+                    "chemicalJson": 1,
+                    "atoms": {
+                        "elements": {"number": [1]},
+                        "coords": {"3dSets": values},
+                    },
+                }
+                with tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory) / "invalid-trajectory.cjson"
+                    path.write_text(json.dumps(source), encoding="utf-8")
+                    with self.assertRaisesRegex(
+                        CJSONError,
+                        "3dSets must contain complete coordinate frames",
+                    ):
+                        parse_cjson(path)
 
     def test_explicit_bonds_are_canonicalized_before_topology_identity(self):
         source = json.loads(FIXTURE.read_text(encoding="utf-8"))
@@ -100,6 +210,20 @@ class CJSONAdapterTests(unittest.TestCase):
 
         numpy.testing.assert_array_equal(topology.bond_indices.values, [[0, 1], [0, 2]])
         numpy.testing.assert_array_equal(topology.bond_orders.values, [1, 2])
+
+    def test_structure_revision_includes_formal_charge_identity(self):
+        source = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            neutral = directory / "neutral.cjson"
+            neutral.write_text(json.dumps(source), encoding="utf-8")
+            neutral_structure = parse_cjson(neutral).structures[0]
+            source["atoms"]["formalCharges"] = [-1, 0, 1]
+            charged = directory / "charged.cjson"
+            charged.write_text(json.dumps(source), encoding="utf-8")
+            charged_structure = parse_cjson(charged).structures[0]
+
+        self.assertNotEqual(neutral_structure.revision, charged_structure.revision)
 
     def test_duplicate_explicit_bonds_are_rejected_after_canonicalization(self):
         source = json.loads(FIXTURE.read_text(encoding="utf-8"))
@@ -132,6 +256,7 @@ class CJSONAdapterTests(unittest.TestCase):
             (
                 batch.structures[0].id,
                 batch.topologies[0].id,
+                *(annotation.id for annotation in batch.annotations),
                 batch.cjson_envelopes[0].id,
                 *(dataset.id for dataset in batch.datasets),
                 batch.provenance[0].id,
@@ -155,6 +280,149 @@ class CJSONAdapterTests(unittest.TestCase):
         self.assertIn("vibrations.eigenVectors", issue_paths)
         self.assertIn("orbitals", issue_paths)
         self.assertIn("cube", issue_paths)
+        self.assertIn("customProjectField", issue_paths)
+
+    def test_raw_envelope_preserves_exact_bom_whitespace_and_numeric_lexemes(self):
+        source_bytes = (
+            b"\xef\xbb\xbf{\r\n"
+            b'  "chemicalJson": 1,\r\n'
+            b'  "atoms": {\r\n'
+            b'    "elements": {"number": [8]},\r\n'
+            b'    "coords": {"3d": [0.00, 0e0, -0.0]}\r\n'
+            b"  },\r\n"
+            b'  "customUnknown": {"numeric": 1.2300}\r\n'
+            b"}\r\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            path = directory / "exact.cjson"
+            path.write_bytes(source_bytes)
+            batch = parse_cjson(path)
+            envelope = batch.cjson_envelopes[0]
+            self.assertEqual(envelope.source_bytes, source_bytes)
+            self.assertEqual(
+                envelope.revision,
+                hashlib.sha256(source_bytes).hexdigest(),
+            )
+            self.assertEqual(
+                export_cjson(envelope)["customUnknown"]["numeric"],
+                1.23,
+            )
+
+            project = QCProject(batch.structures[0].id, "1.0")
+            project.commit(batch)
+            root = save_project(directory / "exact.cbq", project)
+            restored = open_project(root)
+            try:
+                restored_envelope = next(iter(restored.cjson_envelopes.values()))
+                self.assertEqual(restored_envelope.source_bytes, source_bytes)
+                self.assertEqual(
+                    export_cjson(restored_envelope)["atoms"]["coords"]["3d"],
+                    [0.0, 0.0, -0.0],
+                )
+            finally:
+                close_project(restored)
+
+    def test_malformed_known_object_containers_fail_closed(self):
+        cases = (
+            ("unitCell", [], "unitCell"),
+            ("spectra", None, "spectra"),
+            ("spectra.electronic", False, "spectra.electronic"),
+            ("vibrations", "", "vibrations"),
+            ("atoms.partialCharges", [], "atoms.partialCharges"),
+            ("partialCharges", False, "partialCharges"),
+        )
+        for name, value, expected_path in cases:
+            with self.subTest(name=name):
+                source = json.loads(FIXTURE.read_text(encoding="utf-8"))
+                if name == "spectra.electronic":
+                    source["spectra"]["electronic"] = value
+                elif name == "atoms.partialCharges":
+                    source["atoms"]["partialCharges"] = value
+                elif name == "partialCharges":
+                    del source["atoms"]["partialCharges"]
+                    source["partialCharges"] = value
+                else:
+                    source[name] = value
+                with tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory) / "malformed.cjson"
+                    path.write_text(json.dumps(source), encoding="utf-8")
+                    with self.assertRaisesRegex(
+                        CJSONError,
+                        rf"^{expected_path} must be an object$",
+                    ):
+                        parse_cjson(path)
+
+    def test_unknown_nested_fields_remain_only_in_envelope_and_diagnostics(self):
+        source = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        source["atoms"]["customAtomField"] = {"preserve": True}
+        source["properties"]["customProperty"] = [1, 2, 3]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "unknown-fields.cjson"
+            path.write_text(json.dumps(source), encoding="utf-8")
+            batch = parse_cjson(path)
+
+        self.assertEqual(batch.annotations[0].target_entity_id, batch.structures[0].id)
+        self.assertEqual(
+            {annotation.key for annotation in batch.annotations},
+            {"method", "name"},
+        )
+        self.assertTrue(
+            export_cjson(batch.cjson_envelopes[0])["atoms"]["customAtomField"][
+                "preserve"
+            ]
+        )
+        issue_paths = {issue.path for issue in batch.report.issues}
+        self.assertIn("atoms.customAtomField", issue_paths)
+        self.assertIn("properties.customProperty", issue_paths)
+
+    def test_destination_export_omits_large_arrays_only_with_confirmation(self):
+        self.assertTrue(
+            hasattr(cjson_adapter, "preview_cjson_export"),
+            "CJSON destination export needs an omission preview",
+        )
+        batch = parse_cjson(FIXTURE)
+        envelope = batch.cjson_envelopes[0]
+        preview = cjson_adapter.preview_cjson_export(
+            envelope,
+            max_inline_bytes=8,
+        )
+        self.assertTrue(preview.requires_confirmation)
+        self.assertEqual(
+            [entry.code for entry in preview.entries],
+            ["large_array_omitted", "large_array_omitted"],
+        )
+        self.assertEqual(
+            [entry.message.split()[0] for entry in preview.entries],
+            ["cube.scalars", "orbitals.energies"],
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "safe.cjson"
+            try:
+                blocked = export_cjson(
+                    envelope,
+                    destination,
+                    max_inline_bytes=8,
+                )
+            except TypeError as error:
+                self.fail(f"CJSON destination export is missing: {error}")
+            self.assertFalse(blocked.written)
+            self.assertFalse(destination.exists())
+
+            written = export_cjson(
+                envelope,
+                destination,
+                max_inline_bytes=8,
+                confirm_loss=True,
+            )
+            self.assertTrue(written.written)
+            document = json.loads(destination.read_text(encoding="utf-8"))
+            self.assertNotIn("scalars", document["cube"])
+            self.assertNotIn("energies", document["orbitals"])
+            encoded = destination.read_bytes().lower()
+            self.assertNotIn(b"base64", encoded)
+            self.assertNotIn(b".npy", encoded)
 
     def test_envelope_and_topology_round_trip_through_sidecar(self):
         batch = parse_cjson(FIXTURE)
@@ -176,6 +444,14 @@ class CJSONAdapterTests(unittest.TestCase):
 
     def test_reader_registry_detects_cjson(self):
         self.assertIs(ReaderRegistry((CJSON_READER,)).select(FIXTURE), CJSON_READER)
+        self.assertEqual(
+            CJSON_READER.capabilities["atomic_identity"].value,
+            "supported",
+        )
+        self.assertEqual(
+            CJSON_READER.capabilities["atomic_property"].value,
+            "supported",
+        )
 
     def test_unknown_cjson_version_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

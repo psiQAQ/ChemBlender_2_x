@@ -3,8 +3,11 @@ name: extension-package
 on:
   pull_request:
   push:
-    branches: [main]
+    branches:
+      - main
+      - "feat/2.3.0-wave3-exchange-mol2-pdb-pqr"
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -104,7 +107,7 @@ jobs:
           $env:TMP = $env:RUNNER_TEMP
           $env:BLENDER_USER_RESOURCES = Join-Path $env:RUNNER_TEMP "blender-user"
           New-Item -ItemType Directory -Path $env:BLENDER_USER_RESOURCES -Force | Out-Null
-          $testSite = Join-Path $env:RUNNER_TEMP "extension-test-site"
+          $testSite = Join-Path $env:APPDATA "Blender Foundation/Blender/5.1/extensions/.local/lib/python3.13/site-packages"
           & $blenderPython -m pip install --disable-pip-version-check --no-index --no-deps --target $testSite $env:RDKIT_WHEEL $env:GEMMI_WHEEL
           if ($LASTEXITCODE -ne 0) { throw "Extension dependency test bootstrap failed" }
           $previousPythonPath = $env:PYTHONPATH
@@ -127,6 +130,7 @@ jobs:
           if (-not (Test-Path -LiteralPath $package -PathType Leaf)) { throw "Expected package missing: $packageName" }
           $package = (Resolve-Path -LiteralPath $package).Path
           & $blender --background --factory-startup --python-exit-code 1 --python tests/blender_smoke.py -- $package
+          if ($LASTEXITCODE -ne 0) { throw "Blender smoke failed" }
           $hash = (Get-FileHash -Algorithm SHA256 $package).Hash.ToLowerInvariant()
           $checksum = Join-Path (Split-Path $package) $checksumName
           [IO.File]::WriteAllText(

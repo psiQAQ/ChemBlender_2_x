@@ -16,6 +16,7 @@ REGISTER_MODULE_NAMES: tuple[str, ...] = (
     ".ui.quick_import",
     ".ui.import_preview",
     ".ui.topology",
+    ".ui.biological",
     ".ui.scientific_edit",
     ".ui.export",
     ".ui.grid",
@@ -40,6 +41,7 @@ def _reader_api_load_post_handler(_dummy):
         _package_root,
     )
     _reader_api_handle = bridge.register_reader_api_handle(_package_root)
+    bridge.refresh_reader_plugin_discovery()
 
 
 def _reader_api_load_handler_list():

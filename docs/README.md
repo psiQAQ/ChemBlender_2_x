@@ -10,6 +10,7 @@
 
 - [Development entrypoint](quantum-visualization/README.md)
 - [ChemBlender 2.3.0 development entrypoint](quantum-visualization/2.3.0/README.md)
+- [Reader API v1](reader-api-v1/README.md)
 - [ChemBlender 2.3.0 main audit](quantum-visualization/2.3.0/audits/2026-07-23-main-deep-audit.md)
 - [Phase 0–4 roadmap](quantum-visualization/roadmap.md)
 - [Data-boundary decision agenda](quantum-visualization/architecture/data-boundary.md)
