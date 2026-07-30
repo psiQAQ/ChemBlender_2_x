@@ -53,6 +53,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
 MATRIX = ROOT / "docs" / "quantum-visualization" / "reader-capability-matrix.json"
 EXAMPLE = ROOT / "examples" / "reader-extension"
+BENCHMARK = ROOT / "ChemBlender" / "scripts" / "benchmark_exchange.py"
 WAVE3_READERS = ("cjson", "mol2", "pdb", "pqr")
 VENDOR_ROOTS = frozenset(
     {"Bio", "ase", "gemmi", "openbabel", "pymatgen", "rdkit"}
@@ -105,6 +106,82 @@ def _vendor_types(value, seen=None):
 
 
 class Wave3ExchangeQualificationTests(unittest.TestCase):
+    def test_exchange_benchmark_reports_native_parse_and_preview_metrics(self):
+        spec = importlib.util.spec_from_file_location(
+            "benchmark_exchange",
+            BENCHMARK,
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        report = module.benchmark_exchange(
+            atom_count=4,
+            preview_atom_count=3,
+            samples=5,
+        )
+
+        self.assertEqual(report["benchmark"], "chemblender-wave3-exchange-v1")
+        self.assertEqual(
+            set(report["metrics"]),
+            {
+                "mol2_parse",
+                "pdb_parse",
+                "pqr_parse",
+                "cjson_parse",
+                "preview_projection",
+            },
+        )
+        for name, metric in report["metrics"].items():
+            with self.subTest(metric=name):
+                self.assertEqual(metric["status"], "Passed")
+                self.assertEqual(metric["sample_count"], 5)
+                self.assertGreaterEqual(
+                    metric["p95_seconds"],
+                    metric["median_seconds"],
+                )
+                self.assertGreater(metric["peak_bytes"], 0)
+                self.assertGreater(metric["source_bytes"], 0)
+                self.assertGreater(metric["atom_count"], 0)
+                self.assertFalse(metric["draw_path"])
+        self.assertEqual(report["warmup_count"], 1)
+        self.assertEqual(
+            report["metrics"]["preview_projection"]["blender_rna_projection"],
+            "Not Run",
+        )
+        self.assertNotIn("bpy", sys.modules)
+        self.assertIn("numpy_version", report["environment"])
+
+    def test_exchange_benchmark_cli_emits_canonical_json(self):
+        completed = subprocess.run(
+            (
+                sys.executable,
+                BENCHMARK,
+                "--atoms",
+                "4",
+                "--preview-atoms",
+                "3",
+                "--samples",
+                "5",
+            ),
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        document = json.loads(completed.stdout)
+        self.assertEqual(
+            completed.stdout,
+            json.dumps(
+                document,
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            + "\n",
+        )
+
     def test_capability_public_model_and_fresh_import_boundaries(self):
         recorded = {
             row["reader_id"]: row
