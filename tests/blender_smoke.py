@@ -814,10 +814,39 @@ def assert_quick_import(module_key, repository_root):
     )
     assert pubchem_provenance.source == pubchem_stage.source_url
     assert pubchem_provenance.source_hash == pubchem_stage.content_hash
-    assert dict(pubchem_provenance.parameters) == {
-        "legacy_source_sha256": pubchem_stage.content_hash,
-        "legacy_source_url": pubchem_stage.source_url,
-    }
+    pubchem_parameters = dict(pubchem_provenance.parameters)
+    assert pubchem_parameters["legacy_source_sha256"] == pubchem_stage.content_hash
+    assert pubchem_parameters["legacy_source_url"] == pubchem_stage.source_url
+    assert pubchem_parameters["source_id"] == str(pubchem_batch.sources[0].id)
+    pubchem_revision, = pubchem_batch.source_revisions
+    assert pubchem_parameters["reader_id"] == pubchem_revision.reader_id
+    assert (
+        pubchem_parameters["reader_plugin_id"]
+        == pubchem_revision.reader_plugin_id
+    )
+    assert pubchem_parameters["reader_version"] == pubchem_revision.reader_version
+    assert pubchem_revision.created_entity_ids == tuple(
+        item.id
+        for name in (
+            "structures",
+            "topologies",
+            "molecular_records",
+            "biological_hierarchies",
+            "annotations",
+            "external_references",
+            "cif_envelopes",
+            "qcschema_envelopes",
+            "cjson_envelopes",
+            "symmetry_results",
+            "calculations",
+            "datasets",
+            "basis_sets",
+            "orbital_sets",
+            "density_matrices",
+            "provenance",
+        )
+        for item in getattr(pubchem_batch, name)
+    )
     pubchem_rows = preview_ui.project_import_preview(session, state, registry)
     pubchem_conformer_rows = preview_ui.project_conformer_suggestions(state)
     for row in pubchem_conformer_rows:
@@ -837,6 +866,16 @@ def assert_quick_import(module_key, repository_root):
         if item.id == pubchem_provenance.id
     )
     assert persisted_pubchem_provenance == pubchem_provenance
+    reopened_pubchem = core.open_project(pubchem_result.commit_result.sidecar_path)
+    try:
+        reopened_provenance = reopened_pubchem.provenance[pubchem_provenance.id]
+        assert reopened_provenance.id == pubchem_provenance.id
+        assert reopened_provenance.source == pubchem_stage.source_url
+        assert reopened_provenance.source_hash == pubchem_stage.content_hash
+        assert reopened_provenance.operation == "pubchem_import"
+        assert reopened_provenance.parameters == pubchem_provenance.parameters
+    finally:
+        core.close_project(reopened_pubchem)
 
     state = stage(repository_root / "tests/fixtures/sdf/records.sdf")
     molecular_rows = preview_ui.project_import_preview(
@@ -957,12 +996,22 @@ def assert_quick_import(module_key, repository_root):
     assert xyz_view["cb_structure_revision"] == xyz_structure.revision
     bpy.context.view_layer.objects.active = xyz_view
     xyz_view.select_set(True)
-    try:
-        bpy.ops.chem.supercell()
-    except RuntimeError as error:
-        assert "Apply Scientific Edits" in str(error)
-    else:
-        raise AssertionError("legacy supercell write was not rejected")
+    for operator_id in (
+        "add_unit_cell",
+        "add_crys_scaffold",
+        "add_coordpolyhedra",
+        "add_dummy",
+        "duplicate_symmetry",
+        "supercell",
+    ):
+        try:
+            getattr(bpy.ops.chem, operator_id)()
+        except RuntimeError as error:
+            assert "Apply Scientific Edits" in str(error)
+        else:
+            raise AssertionError(
+                f"legacy {operator_id} write was not rejected"
+            )
     legacy_output = importlib.import_module(f"{module_key}.output")
     assert legacy_output.SaveMolButton.is_registered
     legacy_export_properties = legacy_output.SaveMolButton.bl_rna.properties

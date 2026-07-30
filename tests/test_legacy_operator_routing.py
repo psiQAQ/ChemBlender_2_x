@@ -9,9 +9,29 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 
-from ChemBlender.core import create_session
-from ChemBlender.core.import_pipeline import ValidationMode
+from ChemBlender.core import (
+    CapabilitySupport,
+    ImportBatch,
+    ReaderDescriptor,
+    SniffMatch,
+    SniffResult,
+    close_session,
+    close_project,
+    create_session,
+    open_project,
+    save_project,
+)
+from ChemBlender.core.import_pipeline import (
+    StagedImportSession,
+    ValidationMode,
+)
 from ChemBlender.core.import_pipeline.parse import stage_import_batch
+from ChemBlender.reader_api import (
+    ReaderPluginRegistry,
+    builtin_reader_plugin_registry,
+)
+from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from ChemBlender.reader_api.registry import _builtin_manifest, _builtin_plugin
 
 
 READER_BRIDGE = "ChemBlender.legacy.reader_bridge"
@@ -20,6 +40,7 @@ SCAFFOLD_MODULE = "ChemBlender.scaffold"
 OUTPUT_MODULE = "ChemBlender.output"
 PANEL_MODULE = "ChemBlender.panel"
 CRYS_MODULE = "ChemBlender.crys_utils"
+QUICK_IMPORT_MODULE = "ChemBlender.ui.quick_import"
 
 
 class _Response:
@@ -164,20 +185,17 @@ class LegacyReaderBridgeTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "legacy.pubchem_untrusted"):
                 self.bridge.verified_pubchem_parameters(source, session)
 
-    def test_pubchem_provenance_is_inspectable_after_project_commit(self):
+    def test_pubchem_provenance_is_verified_at_the_host_boundary_and_reopens(self):
         payload = b"PubChem SDF\n$$$$\n"
         with tempfile.TemporaryDirectory() as directory:
-            session = create_session(temp_parent=Path(directory))
+            root = Path(directory)
+            session = create_session(temp_parent=root)
             stage = self.bridge.stage_pubchem_import(
                 "2244",
                 session,
                 fetch=lambda _url, timeout: _Response(payload),
             )
             source, = stage.request.sources
-            parameters = self.bridge.verified_pubchem_parameters(
-                source.path,
-                session,
-            )
             batch = stage_import_batch(
                 source=source,
                 validation_mode=stage.request.validation_mode,
@@ -187,22 +205,159 @@ class LegacyReaderBridgeTests(unittest.TestCase):
                 reader_id="test",
                 reader_version="1",
                 api_version="1",
-                canonical_parameters=tuple(parameters.items()),
             )
-            session.project.commit(batch)
+            attached = self.bridge.attach_verified_pubchem_provenance(
+                source,
+                stage.content_hash,
+                batch,
+                session,
+            )
+            session.project.commit(attached)
+            provenance, = session.project.provenance.values()
+            revision, = session.project.source_revisions.values()
+            sidecar = root / "pubchem.cbq"
+            save_project(sidecar, session.project)
+            reopened = open_project(sidecar)
+            try:
+                persisted = reopened.provenance[provenance.id]
+                self.assertEqual(persisted.id, provenance.id)
+                self.assertEqual(persisted.source, stage.source_url)
+                self.assertEqual(persisted.source_hash, stage.content_hash)
+                self.assertEqual(persisted.operation, "pubchem_import")
+                self.assertEqual(persisted.parameters, provenance.parameters)
+            finally:
+                close_project(reopened)
 
-        provenance, = session.project.provenance.values()
-        revision, = session.project.source_revisions.values()
         self.assertEqual(provenance.source, stage.source_url)
         self.assertEqual(provenance.source_hash, stage.content_hash)
-        self.assertEqual(
-            dict(provenance.parameters),
-            {
-                "legacy_source_sha256": stage.content_hash,
-                "legacy_source_url": stage.source_url,
-            },
-        )
+        self.assertEqual(provenance.operation, "pubchem_import")
         self.assertIn(provenance.id, revision.created_entity_ids)
+
+    def test_pubchem_host_attachment_reverifies_sync_and_modal_previews(self):
+        payload = b"PubChem SDF\n$$$$\n"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            project_session = create_session(temp_parent=root)
+            stage = self.bridge.stage_pubchem_import(
+                "2244",
+                project_session,
+                fetch=lambda _url, timeout: _Response(payload),
+            )
+
+            def attach(source, content_hash, batch):
+                return self.bridge.attach_verified_pubchem_provenance(
+                    source,
+                    content_hash,
+                    batch,
+                    project_session,
+                )
+
+            previews = []
+            batches = []
+            for _mode in ("sync", "modal"):
+                staged = StagedImportSession.create(temp_parent=root)
+                try:
+                    preview = preflight_reader_plugins(
+                        stage.request,
+                        builtin_reader_plugin_registry(),
+                        staged,
+                        _batch_attachment=attach,
+                    )
+                    batch = staged.result(preview.staged_batch_ids[0])
+                    provenance, = tuple(
+                        item
+                        for item in batch.provenance
+                        if item.operation == "pubchem_import"
+                    )
+                    previews.append(preview)
+                    batches.append((batch, provenance))
+                finally:
+                    staged.discard()
+
+        self.assertEqual(previews[0].source_previews[0].source_id, previews[1].source_previews[0].source_id)
+        self.assertEqual(batches[0][1].id, batches[1][1].id)
+        for batch, provenance in batches:
+            self.assertEqual(provenance.source, stage.source_url)
+            self.assertEqual(provenance.source_hash, stage.content_hash)
+            self.assertIn(provenance.id, batch.source_revisions[0].created_entity_ids)
+
+    def test_pubchem_host_attachment_reverifies_deferred_materialization(self):
+        payload = b"PubChem SDF\n$$$$\n"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            project_session = create_session(temp_parent=root)
+            stage = self.bridge.stage_pubchem_import(
+                "2244",
+                project_session,
+                fetch=lambda _url, timeout: _Response(payload),
+            )
+
+            def preview_request(request):
+                (request.staging_root / "preview.marker").write_bytes(
+                    b"preview"
+                )
+                return ImportBatch()
+
+            descriptor = ReaderDescriptor(
+                reader_id="deferred_sdf",
+                reader_version="1",
+                extensions=(".sdf",),
+                capabilities={"structure": CapabilitySupport.SUPPORTED},
+                priority=100,
+                sniff=lambda _path, _prefix: SniffResult(
+                    SniffMatch.EXACT,
+                    "fixture",
+                ),
+                parse=lambda _path: ImportBatch(),
+                preview_request=preview_request,
+                materialize_request=lambda _request: ImportBatch(),
+            )
+            registry = ReaderPluginRegistry((
+                _builtin_plugin(descriptor, _builtin_manifest((descriptor,))),
+            ))
+            calls = []
+
+            def attach(source, content_hash, batch):
+                calls.append((source.id, content_hash))
+                return self.bridge.attach_verified_pubchem_provenance(
+                    source,
+                    content_hash,
+                    batch,
+                    project_session,
+                )
+
+            staged = StagedImportSession.create(temp_parent=root)
+            try:
+                preview = preflight_reader_plugins(
+                    stage.request,
+                    registry,
+                    staged,
+                    _batch_attachment=attach,
+                )
+                result_id, = preview.staged_batch_ids
+                preview_batch = staged.result(result_id)
+                preview_provenance, = tuple(
+                    item
+                    for item in preview_batch.provenance
+                    if item.operation == "pubchem_import"
+                )
+
+                self.assertTrue(staged.has_pending_materializer(result_id))
+                materialized = staged.materialize_result(result_id)
+                materialized_provenance, = tuple(
+                    item
+                    for item in materialized.provenance
+                    if item.operation == "pubchem_import"
+                )
+            finally:
+                staged.discard()
+
+        self.assertEqual(calls, [(stage.request.sources[0].id, stage.content_hash)] * 2)
+        self.assertEqual(materialized_provenance.id, preview_provenance.id)
+        self.assertIn(
+            materialized_provenance.id,
+            materialized.source_revisions[0].created_entity_ids,
+        )
 
 
 class LegacyOperatorRoutingTests(unittest.TestCase):
@@ -218,11 +373,13 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
             "FloatVectorProperty",
             "IntProperty",
             "IntVectorProperty",
+            "PointerProperty",
             "StringProperty",
         ):
             setattr(fake_props, name, lambda **_keywords: None)
         fake_bpy.props = fake_props
         fake_types.Operator = object
+        fake_types.OperatorFileListElement = object
         fake_types.PropertyGroup = object
         fake_types.Panel = object
         fake_bpy.types = fake_types
@@ -266,6 +423,7 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
             PANEL_MODULE,
             CRYS_MODULE,
             SCAFFOLD_BRIDGE,
+            QUICK_IMPORT_MODULE,
         ):
             sys.modules.pop(name, None)
 
@@ -276,6 +434,7 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
             PANEL_MODULE,
             CRYS_MODULE,
             SCAFFOLD_BRIDGE,
+            QUICK_IMPORT_MODULE,
         ):
             sys.modules.pop(name, None)
         self.modules.stop()
@@ -363,6 +522,59 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
         self.assertNotIn("legacy_source_url", calls[0][2])
         self.assertNotIn("legacy_source_hash", calls[0][2])
 
+    def test_modal_preflight_job_uses_the_same_pubchem_attachment(self):
+        quick_import = importlib.import_module(QUICK_IMPORT_MODULE)
+        payload = b"PubChem SDF\n$$$$\n"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            project_session = create_session(temp_parent=root)
+            stage = importlib.import_module(READER_BRIDGE).stage_pubchem_import(
+                "2244",
+                project_session,
+                fetch=lambda _url, timeout: _Response(payload),
+            )
+            sync_staged = StagedImportSession.create(temp_parent=root)
+            modal_staged = StagedImportSession.create(temp_parent=root)
+            try:
+                attachment = quick_import._legacy_pubchem_batch_attachment(
+                    project_session,
+                )
+                sync_preview = preflight_reader_plugins(
+                    stage.request,
+                    builtin_reader_plugin_registry(),
+                    sync_staged,
+                    _batch_attachment=attachment,
+                )
+                job = quick_import._PreflightJob(
+                    stage.request,
+                    builtin_reader_plugin_registry(),
+                    modal_staged,
+                    batch_attachment=attachment,
+                    prepare_conformers=False,
+                )
+                job._run()
+                self.assertIsNone(job.error)
+                sync_batch = sync_staged.result(sync_preview.staged_batch_ids[0])
+                modal_batch = modal_staged.result(
+                    job.preview.staged_batch_ids[0]
+                )
+                sync_provenance, = tuple(
+                    item
+                    for item in sync_batch.provenance
+                    if item.operation == "pubchem_import"
+                )
+                modal_provenance, = tuple(
+                    item
+                    for item in modal_batch.provenance
+                    if item.operation == "pubchem_import"
+                )
+            finally:
+                sync_staged.discard()
+                modal_staged.discard()
+                close_session(project_session)
+
+        self.assertEqual(sync_provenance.id, modal_provenance.id)
+
     def test_scaffold_bridge_routes_export_and_scientific_changes_to_unified_operators(self):
         bridge = importlib.import_module(SCAFFOLD_BRIDGE)
         calls = []
@@ -436,7 +648,7 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
             ["chemblender.apply_scientific_edits"],
         )
 
-    def test_legacy_crystal_direct_write_operator_cancels_for_unified_view(self):
+    def test_all_legacy_crystal_direct_write_operators_cancel_for_unified_view(self):
         fake_bmesh = ModuleType("bmesh")
         fake_mathutils = ModuleType("mathutils")
         with patch.dict(
@@ -455,12 +667,29 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
                     return "structure_view_v1"
                 return default
 
-        operator = crystal.SupercellButton()
-        operator.report = lambda level, message: reports.append((level, message))
-        result = operator.execute(SimpleNamespace(object=UnifiedObject()))
+        context = SimpleNamespace(
+            object=UnifiedObject(),
+            active_object=UnifiedObject(),
+        )
+        for class_name in (
+            "SupercellButton",
+            "AddCellButton",
+            "AddCrysScaffoldButton",
+            "AddCoordPolyhedraButton",
+            "AddDummyButton",
+            "SymmetryDuplicate",
+        ):
+            with self.subTest(operator=class_name):
+                reports.clear()
+                operator = getattr(crystal, class_name)()
+                operator.report = (
+                    lambda level, message: reports.append((level, message))
+                )
 
-        self.assertEqual(result, {"CANCELLED"})
-        self.assertIn("Apply Scientific Edits", reports[0][1])
+                result = operator.execute(context)
+
+                self.assertEqual(result, {"CANCELLED"})
+                self.assertIn("Apply Scientific Edits", reports[0][1])
 
 
 class LegacyCallerInventoryTests(unittest.TestCase):
@@ -487,6 +716,7 @@ class LegacyCallerInventoryTests(unittest.TestCase):
             "AddCellButton": {"mesh.unit_cell_edges"},
             "AddCrysScaffoldButton": {"mesh.create_object", "node.crys_expand"},
             "AddCoordPolyhedraButton": {"node.CoordPolyhedra"},
+            "AddDummyButton": {"bpy.data.meshes.new", "bpy.data.objects.new"},
             "SymmetryDuplicate": {"bpy.data.meshes.new", "bpy.data.objects.new"},
         }
         for class_name, expected_calls in direct_writers.items():
@@ -516,6 +746,101 @@ class LegacyCallerInventoryTests(unittest.TestCase):
                 "chem.add_dummy",
                 "chem.update_cif_from_mesh",
                 "chem.view_set",
+            },
+        )
+
+    def test_legacy_reader_and_block_helper_callers_have_an_exact_ast_contract(self):
+        root = Path(__file__).resolve().parents[1]
+        targets = {
+            "read_MOL",
+            "read_Cryst",
+            "read_cif",
+            "read_poscar",
+            "mol_block_v2000",
+            "mol_block_v3000",
+            "sdf_block",
+            "cif_block",
+            "vasp_block",
+        }
+        callers = {name: set() for name in targets}
+
+        class Calls(ast.NodeVisitor):
+            def __init__(self, relative_path):
+                self.relative_path = relative_path
+                self.scope = []
+
+            def visit_ClassDef(self, node):
+                self.scope.append(node.name)
+                self.generic_visit(node)
+                self.scope.pop()
+
+            def visit_FunctionDef(self, node):
+                self.scope.append(node.name)
+                self.generic_visit(node)
+                self.scope.pop()
+
+            def visit_AsyncFunctionDef(self, node):
+                self.visit_FunctionDef(node)
+
+            def visit_Call(self, node):
+                target = ast.unparse(node.func).rsplit(".", 1)[-1]
+                if target in callers:
+                    callers[target].add(
+                        (
+                            self.relative_path,
+                            ".".join(self.scope) or "<module>",
+                            ast.unparse(node.func),
+                        )
+                    )
+                self.generic_visit(node)
+
+        source_root = root / "ChemBlender"
+        for path in sorted(source_root.rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            Calls(path.relative_to(root).as_posix()).visit(tree)
+
+        self.assertEqual(
+            callers,
+            {
+                "read_MOL": {
+                    (
+                        "ChemBlender/scaffold.py",
+                        "MESH_OT_SCAFFOLD_BUILD.execute",
+                        "read.read_MOL",
+                    ),
+                },
+                "read_Cryst": {
+                    (
+                        "ChemBlender/scaffold.py",
+                        "MESH_OT_SCAFFOLD_BUILD.execute",
+                        "read.read_Cryst",
+                    ),
+                },
+                "read_cif": {
+                    (
+                        "ChemBlender/read.py",
+                        "read_Cryst",
+                        "read_cif",
+                    ),
+                },
+                "read_poscar": {
+                    (
+                        "ChemBlender/read.py",
+                        "read_Cryst",
+                        "read_poscar",
+                    ),
+                },
+                "mol_block_v2000": {
+                    (
+                        "ChemBlender/output.py",
+                        "sdf_block",
+                        "mol_block_v2000",
+                    ),
+                },
+                "mol_block_v3000": set(),
+                "sdf_block": set(),
+                "cif_block": set(),
+                "vasp_block": set(),
             },
         )
 

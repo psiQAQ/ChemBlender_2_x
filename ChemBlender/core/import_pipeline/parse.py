@@ -8,7 +8,6 @@ from ..model import (
     DiagnosticSeverity,
     ImportBatch,
     ImportDiagnostic,
-    ProvenanceRecord,
     QualityStatus,
     SourceRecord,
     SourceRevision,
@@ -36,42 +35,6 @@ _ENTITY_GROUPS = (
     "density_matrices",
     "provenance",
 )
-
-
-_LEGACY_PUBCHEM_PARAMETER_KEYS = frozenset(
-    ("legacy_source_sha256", "legacy_source_url")
-)
-
-
-def _legacy_pubchem_provenance(parameters, content_hash):
-    parameter_map = dict(parameters)
-    present = _LEGACY_PUBCHEM_PARAMETER_KEYS.intersection(parameter_map)
-    if not present:
-        return None
-    if present != _LEGACY_PUBCHEM_PARAMETER_KEYS:
-        raise ValueError("legacy PubChem provenance parameters are incomplete")
-    source_url = parameter_map["legacy_source_url"]
-    source_hash = parameter_map["legacy_source_sha256"]
-    if source_hash != content_hash:
-        raise ValueError("legacy PubChem source hash does not match imported content")
-    return ProvenanceRecord(
-        id=uuid4(),
-        revision=content_hash,
-        producer="ChemBlender legacy PubChem bridge",
-        producer_version="1",
-        source=source_url,
-        source_hash=source_hash,
-        parent_ids=(),
-        operation="pubchem_import",
-        parameters=tuple(
-            sorted(
-                (
-                    ("legacy_source_sha256", source_hash),
-                    ("legacy_source_url", source_url),
-                )
-            )
-        ),
-    )
 
 
 def staged_reader_batch(
@@ -176,16 +139,6 @@ def stage_import_batch(
         )
         return parsed_batch
 
-    legacy_provenance = _legacy_pubchem_provenance(
-        parameters,
-        content_hash,
-    )
-    if legacy_provenance is not None:
-        parsed_batch = replace(
-            parsed_batch,
-            provenance=parsed_batch.provenance + (legacy_provenance,),
-        )
-
     revision_id = uuid4() if revision_id is None else revision_id
     if reader_id == "smiles" and any(
         record.source_revision_id != revision_id
@@ -231,14 +184,6 @@ def stage_import_batch(
         for name in _ENTITY_GROUPS
         for entity in getattr(parsed_batch, name)
     )
-    if legacy_provenance is not None and parsed_batch.report is not None:
-        parsed_batch = replace(
-            parsed_batch,
-            report=replace(
-                parsed_batch.report,
-                created_entity_ids=created_entity_ids,
-            ),
-        )
     source_record = SourceRecord(
         id=source.id,
         display_name=source.display_name,

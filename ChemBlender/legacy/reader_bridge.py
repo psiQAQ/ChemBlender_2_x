@@ -3,12 +3,13 @@
 import hashlib
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from urllib.parse import quote
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from ..core.import_pipeline import ImportRequest, ImportSource, ValidationMode
+from ..core.model import ImportBatch, ProvenanceRecord
 from ..core.session import ProjectSession
 
 
@@ -19,6 +20,24 @@ _PUBCHEM_SOURCE_PATTERN = re.compile(
     r"^pubchem-([1-9][0-9]*)-([0-9a-f]{32})\.sdf$"
 )
 _SESSION_OWNER_MARKER = ".chemblender-session-owner"
+_SCIENTIFIC_GROUPS = (
+    "structures",
+    "topologies",
+    "molecular_records",
+    "biological_hierarchies",
+    "annotations",
+    "external_references",
+    "cif_envelopes",
+    "qcschema_envelopes",
+    "cjson_envelopes",
+    "symmetry_results",
+    "calculations",
+    "datasets",
+    "basis_sets",
+    "orbital_sets",
+    "density_matrices",
+    "provenance",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -188,6 +207,98 @@ def verified_pubchem_parameters(path, session):
         "legacy_source_url": expected_url,
         "legacy_source_sha256": declared_hash,
     }
+
+
+def _pubchem_provenance_id(source, revision, parameters):
+    identity = json.dumps(
+        {
+            "content_hash": parameters["legacy_source_sha256"],
+            "reader_id": revision.reader_id,
+            "reader_plugin_id": revision.reader_plugin_id,
+            "reader_version": revision.reader_version,
+            "source_id": str(source.id),
+            "source_url": parameters["legacy_source_url"],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return uuid5(NAMESPACE_URL, identity)
+
+
+def attach_verified_pubchem_provenance(source, content_hash, batch, session):
+    """Attach reverified PubChem evidence at the legacy host boundary only."""
+    if type(batch) is not ImportBatch:
+        raise TypeError("batch must be an ImportBatch")
+    source_path = getattr(source, "path", None)
+    if source_path is None:
+        return batch
+    parameters = verified_pubchem_parameters(source_path, session)
+    if parameters is None:
+        return batch
+    if content_hash != parameters["legacy_source_sha256"]:
+        _untrusted_pubchem_source("source content changed after preflight verification")
+    if len(batch.sources) != 1 or len(batch.source_revisions) != 1:
+        _untrusted_pubchem_source("staged batch does not have one source identity")
+    source_record, = batch.sources
+    revision, = batch.source_revisions
+    if source_record.id != source.id or revision.source_id != source.id:
+        _untrusted_pubchem_source("staged batch source identity does not match")
+    provenance = ProvenanceRecord(
+        id=_pubchem_provenance_id(source, revision, parameters),
+        revision=parameters["legacy_source_sha256"],
+        producer="ChemBlender legacy PubChem bridge",
+        producer_version="1",
+        source=parameters["legacy_source_url"],
+        source_hash=parameters["legacy_source_sha256"],
+        parent_ids=(),
+        operation="pubchem_import",
+        parameters=tuple(
+            sorted(
+                (
+                    ("legacy_source_sha256", parameters["legacy_source_sha256"]),
+                    ("legacy_source_url", parameters["legacy_source_url"]),
+                    ("reader_id", revision.reader_id),
+                    ("reader_plugin_id", revision.reader_plugin_id),
+                    ("reader_version", revision.reader_version),
+                    ("source_id", str(source.id)),
+                )
+            )
+        ),
+    )
+    existing = tuple(
+        item for item in batch.provenance if item.id == provenance.id
+    )
+    if existing:
+        if existing != (provenance,):
+            _untrusted_pubchem_source("staged batch already has conflicting provenance")
+        return batch
+    enriched = replace(
+        batch,
+        provenance=batch.provenance + (provenance,),
+    )
+    created_entity_ids = tuple(
+        entity.id
+        for name in _SCIENTIFIC_GROUPS
+        for entity in getattr(enriched, name)
+    )
+    enriched = replace(
+        enriched,
+        source_revisions=(
+            replace(
+                revision,
+                created_entity_ids=created_entity_ids,
+            ),
+        ),
+    )
+    if enriched.report is None:
+        return enriched
+    return replace(
+        enriched,
+        report=replace(
+            enriched.report,
+            created_entity_ids=created_entity_ids,
+        ),
+    )
 
 
 def stage_pubchem_import(

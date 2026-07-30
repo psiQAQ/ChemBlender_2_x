@@ -568,8 +568,10 @@ class QuickImportContractTests(unittest.TestCase):
             canonical_parameters_by_source=None,
             progress,
             is_cancelled,
+            _batch_attachment=None,
         ):
             self.assertIsNone(canonical_parameters_by_source)
+            self.assertTrue(callable(_batch_attachment))
             progress("hash", 1, 3)
             started.set()
             while not is_cancelled():

@@ -15,7 +15,7 @@ from ..core.import_pipeline.request import (
 from ..core.import_pipeline.conformer_grouping import (
     suggest_staged_conformer_groups as prepare_conformer_suggestions,
 )
-from ..legacy.reader_bridge import verified_pubchem_parameters
+from ..legacy.reader_bridge import attach_verified_pubchem_provenance
 from ..reader_api.import_pipeline_bridge import preflight_reader_plugins
 from ..runtime.reader_api_bridge import get_reader_plugin_registry
 from .properties import (
@@ -80,15 +80,16 @@ def _preview_summary(preview):
     return f"{len(preview.source_previews)} source(s) staged{suffix}"
 
 
-def _legacy_source_parameters(request, project_session):
-    parameters = {}
-    for source in request.sources:
-        if source.path is None:
-            continue
-        verified = verified_pubchem_parameters(source.path, project_session)
-        if verified is not None:
-            parameters[source.id] = verified
-    return parameters or None
+def _legacy_pubchem_batch_attachment(project_session):
+    def attach(source, content_hash, batch):
+        return attach_verified_pubchem_provenance(
+            source,
+            content_hash,
+            batch,
+            project_session,
+        )
+
+    return attach
 
 
 class _PreflightJob:
@@ -99,12 +100,14 @@ class _PreflightJob:
         staging,
         *,
         canonical_parameters_by_source=None,
+        batch_attachment=None,
         prepare_conformers=True,
     ):
         self.request = request
         self.registry = registry
         self.staging = staging
         self.canonical_parameters_by_source = canonical_parameters_by_source
+        self.batch_attachment = batch_attachment
         self.prepare_conformers = prepare_conformers
         self.preview = None
         self.conformer_suggestions = None
@@ -129,6 +132,7 @@ class _PreflightJob:
                 ),
                 progress=self._progress,
                 is_cancelled=self._cancelled.is_set,
+                _batch_attachment=self.batch_attachment,
             )
             if self.prepare_conformers:
                 self._progress("conformer_grouping", 0, 1)
@@ -259,8 +263,7 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
                 validation_mode=ValidationMode(self.validation_mode),
             )
             project_session = get_scene_session(context.scene)
-            canonical_parameters_by_source = _legacy_source_parameters(
-                request,
+            batch_attachment = _legacy_pubchem_batch_attachment(
                 project_session,
             )
             staging = create_quick_import_staging(project_session)
@@ -274,16 +277,16 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
                 staging,
                 request,
                 registry,
-                canonical_parameters_by_source,
+                batch_attachment,
             )
         try:
             preview = preflight_reader_plugins(
                 request,
                 registry,
                 staging,
-                canonical_parameters_by_source=canonical_parameters_by_source,
                 progress=lambda _stage, _completed, _total: None,
                 is_cancelled=lambda: False,
+                _batch_attachment=batch_attachment,
             )
             conformer_suggestions = prepare_conformer_suggestions(
                 preview,
@@ -307,13 +310,13 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
         staging,
         request,
         registry,
-        canonical_parameters_by_source=None,
+        batch_attachment=None,
     ):
         job = _PreflightJob(
             request,
             registry,
             staging,
-            canonical_parameters_by_source=canonical_parameters_by_source,
+            batch_attachment=batch_attachment,
         )
         try:
             store_quick_import_job(project_session, staging, job)

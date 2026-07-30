@@ -215,6 +215,71 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                         canonical_parameters_by_source=parameters,
                     )
 
+    def test_local_reader_parameters_cannot_synthesize_pubchem_provenance(self):
+        source = self.root / "local.ext"
+        source.write_bytes(b"local reader fixture")
+        request = self.request(source)
+        content_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        session = self.session()
+
+        preview = preflight_reader_plugins(
+            request,
+            ReaderPluginRegistry((
+                _Plugin(_descriptor(), PublicImportBatch()),
+            )),
+            session,
+            canonical_parameters_by_source={
+                request.sources[0].id: {
+                    "legacy_source_url": (
+                        "https://pubchem.ncbi.nlm.nih.gov/rest/pug/"
+                        "compound/cid/2244/SDF"
+                    ),
+                    "legacy_source_sha256": content_hash,
+                }
+            },
+        )
+
+        batch = session.result(preview.staged_batch_ids[0])
+        self.assertFalse(
+            any(item.operation == "pubchem_import" for item in batch.provenance)
+        )
+
+    def test_deferred_extxyz_with_canonical_parameters_keeps_its_identity(self):
+        source = FIXTURES / "extxyz" / "multiframe-cell.extxyz"
+        request = self.request(source)
+        content_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        session = self.session()
+
+        preview = preflight_reader_plugins(
+            request,
+            builtin_reader_plugin_registry(),
+            session,
+            canonical_parameters_by_source={
+                request.sources[0].id: {
+                    "legacy_source_url": (
+                        "https://pubchem.ncbi.nlm.nih.gov/rest/pug/"
+                        "compound/cid/2244/SDF"
+                    ),
+                    "legacy_source_sha256": content_hash,
+                }
+            },
+        )
+        result_id, = preview.staged_batch_ids
+        preview_batch = session.result(result_id)
+
+        self.assertTrue(session.has_pending_materializer(result_id))
+        self.assertFalse(
+            any(
+                item.operation == "pubchem_import"
+                for item in preview_batch.provenance
+            )
+        )
+        materialized = session.materialize_result(result_id)
+        self.assertEqual(
+            tuple(item.id for item in materialized.provenance),
+            tuple(item.id for item in preview_batch.provenance),
+        )
+
     def test_external_identity_is_preserved_through_runtime_registration(self):
         source_path = self.root / "source.ext"
         source_path.write_bytes(b"external")

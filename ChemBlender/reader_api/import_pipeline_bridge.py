@@ -21,6 +21,7 @@ from ..core.import_pipeline.staging import (
     StagedImportSession,
     _close_memmaps,
 )
+from ..core.model import ImportBatch
 from ..core.readers import (
     AmbiguousReaderError,
     CapabilitySupport,
@@ -190,6 +191,15 @@ def _source_changed_failure(error):
     )
 
 
+def _attach_host_batch(batch_attachment, source, content_hash, batch):
+    if batch_attachment is None:
+        return batch
+    attached = batch_attachment(source, content_hash, batch)
+    if type(attached) is not ImportBatch:
+        raise TypeError("_batch_attachment must return an ImportBatch")
+    return attached
+
+
 def preflight_reader_plugins(
     request,
     registry,
@@ -198,6 +208,7 @@ def preflight_reader_plugins(
     canonical_parameters_by_source=None,
     progress=None,
     is_cancelled=None,
+    _batch_attachment=None,
 ) -> ImportPreview:
     if type(request) is not ImportRequest:
         raise TypeError("request must be an ImportRequest")
@@ -209,6 +220,8 @@ def preflight_reader_plugins(
     is_cancelled = _not_cancelled if is_cancelled is None else is_cancelled
     if not callable(progress) or not callable(is_cancelled):
         raise TypeError("progress and is_cancelled must be callable")
+    if _batch_attachment is not None and not callable(_batch_attachment):
+        raise TypeError("_batch_attachment must be callable or None")
     parameters_by_source = _parameters(
         request, canonical_parameters_by_source
     )
@@ -258,6 +271,12 @@ def preflight_reader_plugins(
                     _failure_message(error),
                     "the source content could not be read or verified",
                 ),
+            )
+            batch = _attach_host_batch(
+                _batch_attachment,
+                source,
+                content_hash,
+                batch,
             )
             source_previews.append(_register_preview(
                 source, None, content_hash, byte_size, (), batch, session,
@@ -310,6 +329,12 @@ def preflight_reader_plugins(
                 api_version=READER_API_VERSION,
                 canonical_parameters=parameters,
                 failure=failure,
+            )
+            batch = _attach_host_batch(
+                _batch_attachment,
+                source,
+                content_hash,
+                batch,
             )
             source_previews.append(_register_preview(
                 source, None, content_hash, byte_size, (), batch, session,
@@ -435,6 +460,12 @@ def preflight_reader_plugins(
                             preserve_source_identity=supplied_identity,
                             revision_id=revision_id,
                         )
+                        internal = _attach_host_batch(
+                            _batch_attachment,
+                            source,
+                            content_hash,
+                            internal,
+                        )
                         _validate_internal_batch_graph(internal)
                         failure = None
                         keep_reader_artifacts = (
@@ -467,6 +498,7 @@ def preflight_reader_plugins(
                                 _reader_version=descriptor.reader_version,
                                 _parameters=parameters,
                                 _revision_id=revision_id,
+                                _batch_attachment=_batch_attachment,
                             ):
                                 before_artifacts = frozenset(
                                     _request.staging_root.iterdir()
@@ -516,6 +548,12 @@ def preflight_reader_plugins(
                                         canonical_parameters=_parameters,
                                         parsed_batch=parsed,
                                         revision_id=_revision_id,
+                                    )
+                                    candidate = _attach_host_batch(
+                                        _batch_attachment,
+                                        _source,
+                                        _content_hash,
+                                        candidate,
                                     )
                                     _validate_internal_batch_graph(candidate)
                                     if (
@@ -622,6 +660,12 @@ def preflight_reader_plugins(
                 canonical_parameters=parameters,
                 failure=failure,
                 revision_id=revision_id,
+            )
+            internal = _attach_host_batch(
+                _batch_attachment,
+                source,
+                content_hash,
+                internal,
             )
         try:
             progress("parse", completed + 3, total)
