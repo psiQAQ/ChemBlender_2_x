@@ -230,3 +230,9 @@ duplicate-ID failing extensions validated, built, passed ZIP audit and were
 installed together in an isolated Blender 5.1.2 profile. Good parsing,
 unavailable failure projection, independent disable/uninstall and base
 lifecycle x2 passed. Final scoped review approved with no open findings.
+
+Final whole-plan review: `c1eca19` closed three Important findings and one
+plan-related Minor covering trajectory-only CJSON coordinates, complete
+capability evidence, cancellation staging cleanup and retry discovery state.
+Qualified focused tests passed 93/93 and scoped re-review approved with no
+open findings.
