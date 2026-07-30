@@ -76,13 +76,14 @@ class LegacyMigrationCommitResult:
     cleanup_warnings: tuple[str, ...]
 
 
-@dataclass(frozen=True, slots=True)
-class _MigrationBinding:
+@dataclass(frozen=True, slots=True, weakref_slot=True)
+class LegacyMigrationPlan:
+    project: QCProject
+    view_plans: tuple[ViewPlan, ...]
+    report: LegacyMigrationReport
     base_project: QCProject
     base_inventory: tuple[object, ...]
-
-
-_MIGRATION_BINDINGS = {}
+    candidate_inventory: tuple[object, ...]
 
 
 def _copy_project(project):
@@ -111,7 +112,7 @@ def _diagnostic(diagnostics, object_name, field_path, message):
 
 
 def _source(report, diagnostics):
-    if report.source_path:
+    if report.source_verified and report.source_path:
         path = Path(report.source_path)
         try:
             linked = path.is_symlink() or getattr(path, "is_junction", lambda: False)()
@@ -122,7 +123,7 @@ def _source(report, diagnostics):
             pass
         _diagnostic(diagnostics, None, "source_path", "legacy blend source is not a trusted regular .blend file")
     else:
-        _diagnostic(diagnostics, None, "source_path", "legacy blend source path is unavailable")
+        _diagnostic(diagnostics, None, "source_path", "legacy blend source was not verified by extraction")
     return "", ""
 
 
@@ -142,6 +143,7 @@ def _project_inventory(project):
                     type(value).__qualname__,
                     str(getattr(value, "id", key)),
                     getattr(value, "revision", None),
+                    id(value),
                 )
             )
         inventory.append((field.name, tuple(entries)))
@@ -195,7 +197,7 @@ def _molecule_topology(snapshot, structure_id, provenance_id, diagnostics):
             raise ValueError("edge order must be finite and non-negative")
         else:
             order = float(edge.order)
-        edges.append((left, right, order))
+        edges.append((left, right, order, index))
     if len({edge[:2] for edge in edges}) != len(edges):
         raise ValueError("legacy edges must not repeat")
     edges.sort()
@@ -207,11 +209,37 @@ def _molecule_topology(snapshot, structure_id, provenance_id, diagnostics):
         source_kind=TopologySource.EXPLICIT_FILE,
         quality_status=QualityStatus.AMBIGUOUS if any(edge.order is None for edge in snapshot.edges) else QualityStatus.COMPLETE,
         inference_parameters=(), provenance_ids=(provenance_id,),
+    ), tuple(edge[3] for edge in edges)
+
+
+def _valid_material(value):
+    try:
+        return (
+            type(value) is LegacyMaterialSnapshot
+            and isinstance(value.name, str)
+            and bool(value.name)
+            and type(value.diffuse_color) is tuple
+            and len(value.diffuse_color) == 4
+            and all(type(item) in (int, float) and isfinite(item) and 0.0 <= item <= 1.0 for item in value.diffuse_color)
+            and all(type(item) in (int, float) and isfinite(item) and 0.0 <= item <= 1.0 for item in (value.metallic, value.roughness))
+        )
+    except TypeError:
+        return False
+
+
+def _valid_node_value(value):
+    if type(value) in (str, bool, int):
+        return True
+    if type(value) is float:
+        return isfinite(value)
+    return (
+        type(value) is tuple
+        and 2 <= len(value) <= 4
+        and all(type(item) in (int, float) and isfinite(item) for item in value)
     )
 
 
-def _view_settings(snapshot, diagnostics):
-    count = len(snapshot.atomic_numbers)
+def _view_settings(snapshot, diagnostics, count, edge_indices):
     def values(name, value, valid):
         if value is None:
             _diagnostic(diagnostics, snapshot.name, name, f"legacy {name} is unavailable")
@@ -225,13 +253,50 @@ def _view_settings(snapshot, diagnostics):
             return None
         return value
     def bonds(name, valid):
-        values = tuple(getattr(edge, name) for edge in snapshot.edges)
+        values = tuple(getattr(snapshot.edges[index], name) for index in edge_indices)
         if not values:
             return values
         if any(not valid(value) for value in values):
             _diagnostic(diagnostics, snapshot.name, f"edges.{name}", f"legacy bond {name} is invalid or unavailable")
             return None
         return values
+    materials = []
+    legacy_materials = snapshot.materials if type(snapshot.materials) is tuple else ()
+    if legacy_materials is not snapshot.materials:
+        _diagnostic(diagnostics, snapshot.name, "materials", "legacy material display is invalid")
+    for index, material in enumerate(legacy_materials):
+        if _valid_material(material):
+            materials.append(material)
+        else:
+            _diagnostic(diagnostics, snapshot.name, f"materials[{index}]", "legacy material display is invalid")
+    node_modifiers = []
+    legacy_modifiers = snapshot.node_modifiers if type(snapshot.node_modifiers) is tuple else ()
+    if legacy_modifiers is not snapshot.node_modifiers:
+        _diagnostic(diagnostics, snapshot.name, "node_modifiers", "legacy node modifier display is invalid")
+    for index, modifier in enumerate(legacy_modifiers):
+        if (
+            type(modifier) is not LegacyNodeModifierSnapshot
+            or not isinstance(modifier.name, str)
+            or not modifier.name
+            or modifier.node_group_name is not None
+            and (not isinstance(modifier.node_group_name, str) or not modifier.node_group_name)
+            or type(modifier.inputs) is not tuple
+        ):
+            _diagnostic(diagnostics, snapshot.name, f"node_modifiers[{index}]", "legacy node modifier identity is invalid")
+            continue
+        inputs = []
+        keys = set()
+        for item in modifier.inputs:
+            if type(item) is not tuple or len(item) != 2 or not isinstance(item[0], str) or not item[0] or item[0] in keys or not _valid_node_value(item[1]):
+                _diagnostic(diagnostics, snapshot.name, f"node_modifiers[{index}].inputs", "legacy node modifier input is invalid")
+                continue
+            keys.add(item[0])
+            inputs.append(item)
+        node_modifiers.append(
+            LegacyNodeModifierSnapshot(
+                modifier.name, modifier.node_group_name, tuple(inputs)
+            )
+        )
     return ViewSettings(
         values("radii", snapshot.radii, lambda value: type(value) in (int, float) and isfinite(value) and value > 0.0),
         values("vdw_radii", snapshot.vdw_radii, lambda value: type(value) in (int, float) and isfinite(value) and value > 0.0),
@@ -239,7 +304,7 @@ def _view_settings(snapshot, diagnostics):
         values("colors", snapshot.colors, lambda value: len(value) == 4 and all(type(item) in (int, float) and isfinite(item) and 0.0 <= item <= 1.0 for item in value)),
         bonds("scale", lambda value: type(value) in (int, float) and isfinite(value) and value > 0.0),
         bonds("dashed", lambda value: type(value) is bool),
-        tuple(snapshot.materials), tuple(snapshot.node_modifiers),
+        tuple(materials), tuple(node_modifiers),
     )
 
 
@@ -291,38 +356,42 @@ def plan_legacy_migration(extraction_report, base_project):
             parameters=(("legacy_object_name", snapshot.name), ("legacy_collection_parents", tuple(snapshot.collections))))
         if snapshot.kind == "crystal":
             structure = _periodic_structure(snapshot)
+            edge_indices = ()
         else:
             if not snapshot.atomic_numbers or any(type(number) is not int or not 1 <= number <= 118 for number in snapshot.atomic_numbers):
                 raise ValueError("atomic_numbers must contain values from 1 to 118")
             coordinates = _coordinates(snapshot.coordinates, len(snapshot.atomic_numbers))
-            topology = _molecule_topology(snapshot, uuid4(), record.id, diagnostics)
+            topology, edge_indices = _molecule_topology(snapshot, uuid4(), record.id, diagnostics)
             structure = Structure(id=topology.structure_id, revision=_REVISION, atomic_numbers=tuple(snapshot.atomic_numbers), coordinates=coordinates, topology_ids=(topology.id,))
             topologies.append(topology)
         structures.append(structure)
         provenance.append(record)
-        view_plans.append(ViewPlan(structure.id, snapshot.name, snapshot.kind, _view_settings(snapshot, diagnostics)))
+        view_plans.append(ViewPlan(structure.id, snapshot.name, snapshot.kind, _view_settings(snapshot, diagnostics, len(structure.atomic_numbers), edge_indices)))
     candidate.commit(ImportBatch(structures=tuple(structures), topologies=tuple(topologies), provenance=tuple(provenance)))
-    _MIGRATION_BINDINGS[id(candidate)] = (
-        candidate,
-        _MigrationBinding(base_project, _project_inventory(base_project)),
-    )
     report = LegacyMigrationReport(source, source_hash, tuple(snapshot.name for snapshot in extraction_report.objects), tuple(diagnostics))
-    return candidate, tuple(view_plans), report
+    return LegacyMigrationPlan(
+        candidate,
+        tuple(view_plans),
+        report,
+        base_project,
+        _project_inventory(base_project),
+        _project_inventory(candidate),
+    )
 
 
-def commit_legacy_migration(project_session, candidate_project):
+def commit_legacy_migration(project_session, plan):
     if type(project_session) is not ProjectSession:
         raise TypeError("project_session must be a ProjectSession")
-    binding = _MIGRATION_BINDINGS.get(id(candidate_project))
-    if type(candidate_project) is not QCProject or binding is None or binding[0] is not candidate_project:
-        raise ValueError("candidate_project must be a planned migration candidate")
-    binding = binding[1]
-    if project_session.project is not binding.base_project:
+    if type(plan) is not LegacyMigrationPlan:
+        raise TypeError("plan must be a LegacyMigrationPlan")
+    if project_session.project is not plan.base_project:
         raise ValueError("session base project no longer matches the migration plan")
-    if _project_inventory(project_session.project) != binding.base_inventory:
+    if _project_inventory(project_session.project) != plan.base_inventory:
         raise ValueError("session base project inventory changed after migration planning")
+    if _project_inventory(plan.project) != plan.candidate_inventory:
+        raise ValueError("migration candidate inventory changed after planning")
     destination = project_session.sidecar_path or project_session.temporary_root / "project.cbq"
-    candidate_session = ProjectSession(project_session.id, candidate_project, project_session.temporary_root, project_session.sidecar_path, link_status=project_session.link_status)
+    candidate_session = ProjectSession(project_session.id, plan.project, project_session.temporary_root, project_session.sidecar_path, link_status=project_session.link_status)
     published = solidify_session(candidate_session, destination, transfer_verified_project=True)
     reopened = published.project
     if type(reopened) is not QCProject:
@@ -336,5 +405,4 @@ def commit_legacy_migration(project_session, candidate_project):
         close_project(previous)
     except Exception as error:
         warnings.append(f"previous project cleanup failed: {error}")
-    _MIGRATION_BINDINGS.pop(id(candidate_project), None)
     return LegacyMigrationCommitResult(reopened, published.path, tuple(warnings))

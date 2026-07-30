@@ -29,6 +29,7 @@ def datablock_names():
 
 def assert_fixture(report):
     by_name = {item.name: item for item in report.objects}
+    assert report.source_verified
     name = Path(bpy.data.filepath).name
     if name == "chemblender-2.1-molecule.blend":
         scaffold = by_name["legacy_formaldehyde"]

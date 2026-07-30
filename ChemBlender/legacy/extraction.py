@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from math import isfinite, sqrt
+from pathlib import Path
 
 from .detection import LegacySceneDetection, detect_legacy_scene
 
@@ -51,7 +52,7 @@ class LegacyMaterialSnapshot:
 class LegacyNodeModifierSnapshot:
     name: str
     node_group_name: str | None
-    inputs: tuple[tuple[str, object], ...]
+    inputs: tuple[tuple[str, str | bool | int | float | tuple[float, ...]], ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +79,7 @@ class LegacyExtractionReport:
     objects: tuple[LegacyObjectSnapshot, ...]
     diagnostics: tuple[LegacyDiagnostic, ...]
     source_path: str | None
+    source_verified: bool = False
 
 
 _KNOWN_PROPERTIES = frozenset(
@@ -250,6 +252,21 @@ def _snapshot(obj, detection, diagnostics):
     )
 
 
+def _verified_saved_blend_path(value):
+    if not value:
+        return False
+    path = Path(value)
+    try:
+        return (
+            path.suffix.lower() == ".blend"
+            and path.is_file()
+            and not path.is_symlink()
+            and not bool(getattr(path.stat(), "st_file_attributes", 0) & 0x400)
+        )
+    except OSError:
+        return False
+
+
 def extract_legacy_objects(detection: LegacySceneDetection | None = None) -> LegacyExtractionReport:
     import bpy
 
@@ -258,10 +275,12 @@ def extract_legacy_objects(detection: LegacySceneDetection | None = None) -> Leg
         return LegacyExtractionReport((), (), None)
     diagnostics = []
     source_path = bpy.data.filepath or None
+    source_verified = _verified_saved_blend_path(source_path)
     if source_path is None:
         diagnostics.append(LegacyDiagnostic("missing_blend_source_path", "legacy scene has no saved blend source path"))
     return LegacyExtractionReport(
         tuple(_snapshot(bpy.data.objects[item.name], item, diagnostics) for item in detection.objects),
         tuple(diagnostics),
         source_path,
+        source_verified,
     )
