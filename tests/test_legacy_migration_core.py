@@ -2,7 +2,7 @@ import gc
 import tempfile
 import unittest
 import weakref
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from hashlib import sha256
 from pathlib import Path
 from unittest.mock import patch
@@ -32,6 +32,11 @@ from ChemBlender.legacy.migration import (
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "legacy-blend"
+
+
+@dataclass(frozen=True)
+class UnsupportedPersistedValue:
+    value: int
 
 
 def molecule_snapshot():
@@ -184,17 +189,61 @@ class LegacyMigrationCoreTests(unittest.TestCase):
 
     def test_plan_hashes_only_verified_hash_locked_legacy_fixture(self):
         source = FIXTURES / "chemblender-2.1-molecule.blend"
+        expected = sha256(source.read_bytes()).hexdigest()
         plan = plan_legacy_migration(
-            LegacyExtractionReport((molecule_snapshot(),), (), str(source), True),
+            LegacyExtractionReport((molecule_snapshot(),), (), str(source), True, expected),
             self.project,
         )
         report = plan.report
 
         provenance = next(iter(plan.project.provenance.values()))
-        expected = sha256(source.read_bytes()).hexdigest()
         self.assertEqual(report.source_hash, expected)
         self.assertEqual(provenance.source, str(source))
         self.assertEqual(provenance.source_hash, expected)
+
+    def test_extraction_report_exposes_empty_source_hash_by_default(self):
+        report = LegacyExtractionReport((molecule_snapshot(),), (), None)
+        self.assertEqual(getattr(report, "source_hash", None), "")
+
+    def test_plan_rejects_non_bool_source_proof(self):
+        source = FIXTURES / "chemblender-2.1-molecule.blend"
+        plan = plan_legacy_migration(
+            LegacyExtractionReport((molecule_snapshot(),), (), str(source), 1),
+            self.project,
+        )
+        provenance = next(iter(plan.project.provenance.values()))
+        self.assertEqual((provenance.source, provenance.source_hash), ("", ""))
+        self.assertTrue(any(item.code == "legacy_unverified" for item in plan.report.diagnostics))
+
+    def test_plan_rejects_invalid_or_unverified_source_hash(self):
+        source = FIXTURES / "chemblender-2.1-molecule.blend"
+        expected = sha256(source.read_bytes()).hexdigest()
+        reports = (
+            LegacyExtractionReport((molecule_snapshot(),), (), str(source), True, "x" * 64),
+            LegacyExtractionReport((molecule_snapshot(),), (), str(source), False, expected),
+        )
+        for report in reports:
+            with self.subTest(source_verified=report.source_verified):
+                plan = plan_legacy_migration(report, self.project)
+                provenance = next(iter(plan.project.provenance.values()))
+                self.assertEqual((provenance.source, provenance.source_hash), ("", ""))
+                self.assertTrue(
+                    any(item.code == "legacy_unverified" for item in plan.report.diagnostics)
+                )
+
+    def test_plan_rejects_source_replaced_after_extraction(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "legacy.blend"
+            source.write_bytes(b"extraction-time source")
+            report = LegacyExtractionReport(
+                (molecule_snapshot(),), (), str(source), True,
+                sha256(source.read_bytes()).hexdigest(),
+            )
+            source.write_bytes(b"replacement source")
+            plan = plan_legacy_migration(report, self.project)
+        provenance = next(iter(plan.project.provenance.values()))
+        self.assertEqual((provenance.source, provenance.source_hash), ("", ""))
+        self.assertTrue(any(item.code == "legacy_unverified" for item in plan.report.diagnostics))
 
     def test_plan_rejects_missing_nonblend_and_linked_sources(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -354,6 +403,52 @@ class LegacyMigrationCoreTests(unittest.TestCase):
                     commit_legacy_migration(session, plan)
             publish.assert_not_called()
 
+    def test_plan_fails_closed_for_unregistered_persisted_dataclass(self):
+        base = plan_legacy_migration(
+            LegacyExtractionReport((molecule_snapshot(),), (), None), self.project
+        ).project
+        record = next(iter(base.provenance.values()))
+        object.__setattr__(record, "parameters", (("unsafe", UnsupportedPersistedValue(1)),))
+        with self.assertRaisesRegex(TypeError, "unsupported persisted value"):
+            plan_legacy_migration(
+                LegacyExtractionReport((molecule_snapshot(),), (), None), base
+            )
+
+    def test_commit_rejects_candidate_coordinate_mutation_before_publication(self):
+        plan = plan_legacy_migration(
+            LegacyExtractionReport((molecule_snapshot(),), (), None), self.project
+        )
+        structure = next(iter(plan.project.structures.values()))
+        structure.coordinates.values[0, 0] = 9.0
+        with tempfile.TemporaryDirectory() as directory:
+            session = create_session(temp_parent=directory, project=self.project)
+            with patch("ChemBlender.legacy.migration.solidify_session") as publish:
+                publish.return_value = type(
+                    "Published", (), {"project": plan.project, "path": session.temporary_root / "project.cbq"}
+                )()
+                with self.assertRaisesRegex(ValueError, "candidate inventory"):
+                    commit_legacy_migration(session, plan)
+            publish.assert_not_called()
+
+    def test_commit_rejects_base_coordinate_mutation_before_publication(self):
+        base = plan_legacy_migration(
+            LegacyExtractionReport((molecule_snapshot(),), (), None), self.project
+        ).project
+        plan = plan_legacy_migration(
+            LegacyExtractionReport((molecule_snapshot(),), (), None), base
+        )
+        structure = next(iter(base.structures.values()))
+        structure.coordinates.values[0, 0] = 9.0
+        with tempfile.TemporaryDirectory() as directory:
+            session = create_session(temp_parent=directory, project=base)
+            with patch("ChemBlender.legacy.migration.solidify_session") as publish:
+                publish.return_value = type(
+                    "Published", (), {"project": plan.project, "path": session.temporary_root / "project.cbq"}
+                )()
+                with self.assertRaisesRegex(ValueError, "base project inventory"):
+                    commit_legacy_migration(session, plan)
+            publish.assert_not_called()
+
     def test_commit_rejects_same_id_candidate_registry_replacement(self):
         plan = plan_legacy_migration(
             LegacyExtractionReport((molecule_snapshot(),), (), None), self.project
@@ -403,6 +498,25 @@ class LegacyMigrationCoreTests(unittest.TestCase):
         self.assertEqual(tuple(item.name for item in settings.node_modifiers), ("bad input", "safe"))
         self.assertEqual(settings.node_modifiers[0].inputs, ())
         self.assertTrue(any(item.code == "legacy_unverified" for item in plan.report.diagnostics))
+
+    def test_plan_rejects_whitespace_only_display_names(self):
+        snapshot = replace(
+            molecule_snapshot(),
+            materials=(
+                LegacyMaterialSnapshot("   ", (0.1, 0.2, 0.3, 1.0), 0.4, 0.5),
+                LegacyMaterialSnapshot("safe", (0.1, 0.2, 0.3, 1.0), 0.4, 0.5),
+            ),
+            node_modifiers=(
+                LegacyNodeModifierSnapshot(" ", "group", ()),
+                LegacyNodeModifierSnapshot("safe", " ", ((" ", 1.0), ("value", 1.0))),
+                LegacyNodeModifierSnapshot("safe", "group", (("value", 1.0),)),
+            ),
+        )
+        plan = plan_legacy_migration(LegacyExtractionReport((snapshot,), (), None), self.project)
+        settings = plan.view_plans[0].settings
+        self.assertEqual(tuple(item.name for item in settings.materials), ("safe",))
+        self.assertEqual(tuple(item.name for item in settings.node_modifiers), ("safe",))
+        self.assertEqual(settings.node_modifiers[0].inputs, (("value", 1.0),))
 
     def test_plan_aligns_bond_display_with_canonical_topology_order(self):
         snapshot = replace(

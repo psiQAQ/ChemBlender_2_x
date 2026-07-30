@@ -1,4 +1,7 @@
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, is_dataclass
+import json
+import re
+from enum import Enum
 from hashlib import sha256
 from math import cos, isfinite, pi, sin, sqrt
 from pathlib import Path
@@ -20,8 +23,9 @@ from ..core import (
     fractional_to_cartesian,
 )
 from ..core.model import ImportBatch
+from ..core.model_registry import model_type_tag
 from ..core.storage.publication import solidify_session
-from ..core.sidecar import close_project
+from ..core.sidecar import LazyNpyArray, _array_content_hash, close_project
 from .extraction import (
     LegacyExtractionReport,
     LegacyMaterialSnapshot,
@@ -30,6 +34,7 @@ from .extraction import (
 
 
 _REVISION = "legacy-migration-v1"
+_SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,19 +117,74 @@ def _diagnostic(diagnostics, object_name, field_path, message):
 
 
 def _source(report, diagnostics):
-    if report.source_verified and report.source_path:
+    if (
+        type(report.source_verified) is bool
+        and report.source_verified
+        and type(report.source_hash) is str
+        and _SHA256.fullmatch(report.source_hash)
+        and report.source_path
+    ):
         path = Path(report.source_path)
         try:
             linked = path.is_symlink() or getattr(path, "is_junction", lambda: False)()
             reparse = bool(getattr(path.stat(), "st_file_attributes", 0) & 0x400)
             if path.suffix.lower() == ".blend" and path.is_file() and not linked and not reparse:
-                return str(path), sha256(path.read_bytes()).hexdigest()
+                current_hash = sha256(path.read_bytes()).hexdigest()
+                if current_hash == report.source_hash:
+                    return str(path), current_hash
         except OSError:
             pass
-        _diagnostic(diagnostics, None, "source_path", "legacy blend source is not a trusted regular .blend file")
+        _diagnostic(diagnostics, None, "source_path", "legacy blend source changed or is not a trusted regular .blend file")
     else:
-        _diagnostic(diagnostics, None, "source_path", "legacy blend source was not verified by extraction")
+        _diagnostic(diagnostics, None, "source_path", "legacy blend source proof is invalid or was not verified by extraction")
     return "", ""
+
+
+def _persisted_value(value):
+    if value is None or type(value) in (str, bool, int):
+        return value
+    if type(value) is float:
+        if not isfinite(value):
+            raise TypeError("non-finite persisted float")
+        return ("float", value.hex())
+    if type(value) is bytes:
+        return ("bytes", value.hex())
+    if type(value) is UUID:
+        return ("uuid", str(value))
+    if isinstance(value, Enum):
+        return ("enum", type(value).__module__, type(value).__qualname__, _persisted_value(value.value))
+    if type(value) is ArrayData:
+        values = value.values
+        content_hash = (
+            values.content_hash
+            if isinstance(values, LazyNpyArray) and not values.loaded
+            else _array_content_hash(values)[0]
+        )
+        return ("array", content_hash, _persisted_value(value.dims), value.unit)
+    if type(value) is tuple:
+        return ("tuple", tuple(_persisted_value(item) for item in value))
+    if type(value) is list:
+        return ("list", tuple(_persisted_value(item) for item in value))
+    if type(value) is dict:
+        entries = [(_persisted_value(key), _persisted_value(item)) for key, item in value.items()]
+        return ("dict", tuple(sorted(entries, key=lambda item: repr(item[0]))))
+    if is_dataclass(value):
+        try:
+            type_name = model_type_tag(value)
+        except TypeError as error:
+            raise TypeError(f"unsupported persisted value: {type(value).__name__}") from error
+        return (
+            "dataclass",
+            type_name,
+            tuple((item.name, _persisted_value(getattr(value, item.name))) for item in fields(value) if item.init),
+        )
+    raise TypeError(f"unsupported persisted value: {type(value).__name__}")
+
+
+def _content_fingerprint(value):
+    return sha256(
+        json.dumps(_persisted_value(value), ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    ).hexdigest()
 
 
 def _project_inventory(project):
@@ -144,6 +204,7 @@ def _project_inventory(project):
                     str(getattr(value, "id", key)),
                     getattr(value, "revision", None),
                     id(value),
+                    _content_fingerprint(value),
                 )
             )
         inventory.append((field.name, tuple(entries)))
@@ -217,7 +278,7 @@ def _valid_material(value):
         return (
             type(value) is LegacyMaterialSnapshot
             and isinstance(value.name, str)
-            and bool(value.name)
+            and bool(value.name.strip())
             and type(value.diffuse_color) is tuple
             and len(value.diffuse_color) == 4
             and all(type(item) in (int, float) and isfinite(item) and 0.0 <= item <= 1.0 for item in value.diffuse_color)
@@ -277,9 +338,9 @@ def _view_settings(snapshot, diagnostics, count, edge_indices):
         if (
             type(modifier) is not LegacyNodeModifierSnapshot
             or not isinstance(modifier.name, str)
-            or not modifier.name
+            or not modifier.name.strip()
             or modifier.node_group_name is not None
-            and (not isinstance(modifier.node_group_name, str) or not modifier.node_group_name)
+            and (not isinstance(modifier.node_group_name, str) or not modifier.node_group_name.strip())
             or type(modifier.inputs) is not tuple
         ):
             _diagnostic(diagnostics, snapshot.name, f"node_modifiers[{index}]", "legacy node modifier identity is invalid")
@@ -287,7 +348,7 @@ def _view_settings(snapshot, diagnostics, count, edge_indices):
         inputs = []
         keys = set()
         for item in modifier.inputs:
-            if type(item) is not tuple or len(item) != 2 or not isinstance(item[0], str) or not item[0] or item[0] in keys or not _valid_node_value(item[1]):
+            if type(item) is not tuple or len(item) != 2 or not isinstance(item[0], str) or not item[0].strip() or item[0] in keys or not _valid_node_value(item[1]):
                 _diagnostic(diagnostics, snapshot.name, f"node_modifiers[{index}].inputs", "legacy node modifier input is invalid")
                 continue
             keys.add(item[0])

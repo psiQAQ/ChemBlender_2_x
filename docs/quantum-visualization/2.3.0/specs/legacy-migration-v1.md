@@ -7,7 +7,9 @@ views, or alter legacy objects.
 `plan_legacy_migration(report, base_project)` copies `base_project`, appends
 new scientific entities, and returns a frozen `LegacyMigrationPlan` that owns
 the staged `QCProject`, `ViewPlan` tuple, report, exact base-project reference,
-and base/candidate registry inventories. Molecular snapshots produce `Structure` and explicit
+and base/candidate registry inventories. Each inventory includes entity identity
+and a deterministic persisted-content fingerprint, so an in-place array change
+is rejected before publication. Molecular snapshots produce `Structure` and explicit
 `TopologyRecord`; crystal snapshots use `cif_current`, falling back to
 `cif_original`, for periodic sites, cell, occupancy, Uij and declared
 symmetry. Expanded crystal mesh atoms and cell-only auxiliary objects are
@@ -24,8 +26,10 @@ as immutable `legacy_unverified` diagnostics with
 
 Each migrated object receives a `ProvenanceRecord` with operation
 `legacy_blend_migration`. Only a source marked `source_verified` by actual
-extraction from a saved, regular, non-link `.blend` may contribute its
-SHA-256. Otherwise source and source hash are empty, and
+extraction from a saved, regular, non-link `.blend`, with its exact
+extraction-time SHA-256, may contribute provenance. Planning rechecks the
+regular path and requires the current file hash to match; otherwise source and
+source hash are empty, and
 immutable provenance parameters retain the legacy object name and collection
 parents.
 

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from hashlib import sha256
 from math import isfinite, sqrt
 from pathlib import Path
 
@@ -80,6 +81,7 @@ class LegacyExtractionReport:
     diagnostics: tuple[LegacyDiagnostic, ...]
     source_path: str | None
     source_verified: bool = False
+    source_hash: str = ""
 
 
 _KNOWN_PROPERTIES = frozenset(
@@ -267,6 +269,14 @@ def _verified_saved_blend_path(value):
         return False
 
 
+def _file_hash(path):
+    digest = sha256()
+    with Path(path).open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 def extract_legacy_objects(detection: LegacySceneDetection | None = None) -> LegacyExtractionReport:
     import bpy
 
@@ -276,6 +286,12 @@ def extract_legacy_objects(detection: LegacySceneDetection | None = None) -> Leg
     diagnostics = []
     source_path = bpy.data.filepath or None
     source_verified = _verified_saved_blend_path(source_path)
+    source_hash = ""
+    if source_verified:
+        try:
+            source_hash = _file_hash(source_path)
+        except OSError:
+            source_verified = False
     if source_path is None:
         diagnostics.append(LegacyDiagnostic("missing_blend_source_path", "legacy scene has no saved blend source path"))
     return LegacyExtractionReport(
@@ -283,4 +299,5 @@ def extract_legacy_objects(detection: LegacySceneDetection | None = None) -> Leg
         tuple(diagnostics),
         source_path,
         source_verified,
+        source_hash,
     )
