@@ -10,6 +10,16 @@ def is_unified_structure_view(obj):
     return obj is not None and obj.get("cb_structure_contract") == _STRUCTURE_VIEW_CONTRACT
 
 
+def legacy_scaffold_write_blocked(obj, report):
+    if not is_unified_structure_view(obj):
+        return False
+    report(
+        {"ERROR"},
+        "Unified Structure Views require Apply Scientific Edits",
+    )
+    return True
+
+
 def route_legacy_export(invoke):
     return invoke(UNIFIED_EXPORT_OPERATOR)
 

@@ -4,6 +4,7 @@ from . import read, mesh, node, _math
 from bpy.types import Operator
 from bpy.props import IntProperty, FloatProperty, BoolProperty, StringProperty, EnumProperty, FloatVectorProperty
 from .Chem_data import metals,SPACE_GROUP_DATA,ELEMENTS_DEFAULT,SYMOP_OPERATIONS
+from .legacy.scaffold_bridge import legacy_scaffold_write_blocked
 
 language = 1 if 'zh_HAN' in bpy.context.preferences.view.language else 0
 # -------------------------------------------------------------------------------------------
@@ -51,6 +52,8 @@ class SupercellButton(Operator):
 
     def execute(self, context):
         ao = context.object
+        if legacy_scaffold_write_blocked(ao, self.report):
+            return {'CANCELLED'}
         if not ao.get('cell angles', None) or not 'unit' in ao.name:
             self.report({'WARNING'}, "该功能需作用于单胞骨架！" if language else "This Function Must Act on Unit Cell Scaffold!")
             return {'CANCELLED'}
@@ -228,6 +231,8 @@ class AddCellButton(Operator):
     #    return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
+        if legacy_scaffold_write_blocked(context.object, self.report):
+            return {'CANCELLED'}
         data = SPACE_GROUP_DATA[self.crystal_system]
         locked = data.get("locked")
         angle_locked = data.get("angle_locked")
@@ -324,6 +329,8 @@ z{_i}: FloatProperty(name="", default=0.0, min=0, max=1)
         row.operator("chem.remove_atom", text="删除原子" if language else "Delete Atom")
 
     def execute(self, context):
+        if legacy_scaffold_write_blocked(context.object, self.report):
+            return {'CANCELLED'}
         import re
         from rdkit import Chem
         periodic_table = Chem.GetPeriodicTable()
@@ -472,6 +479,8 @@ class AddCoordPolyhedraButton(Operator):
             sub.prop(self, 'RMax')
 
     def execute(self, context):
+        if legacy_scaffold_write_blocked(context.object, self.report):
+            return {'CANCELLED'}
         from rdkit import Chem
         periodic_table = Chem.GetPeriodicTable()
         ao = context.object
@@ -667,6 +676,8 @@ class AddDummyButton(Operator):
         
 
     def execute(self, context):
+        if legacy_scaffold_write_blocked(context.object, self.report):
+            return {'CANCELLED'}
         from rdkit import Chem
         pt = Chem.GetPeriodicTable()
 
@@ -846,6 +857,8 @@ class SymmetryDuplicate(Operator):
         row.prop(self, 'boundary')
 
     def execute(self, context):
+        if legacy_scaffold_write_blocked(context.active_object, self.report):
+            return {'CANCELLED'}
         from rdkit import Chem
         from rdkit.Chem import PeriodicTable
         pt = Chem.GetPeriodicTable()

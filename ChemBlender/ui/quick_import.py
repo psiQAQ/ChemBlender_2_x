@@ -15,6 +15,7 @@ from ..core.import_pipeline.request import (
 from ..core.import_pipeline.conformer_grouping import (
     suggest_staged_conformer_groups as prepare_conformer_suggestions,
 )
+from ..legacy.reader_bridge import verified_pubchem_parameters
 from ..reader_api.import_pipeline_bridge import preflight_reader_plugins
 from ..runtime.reader_api_bridge import get_reader_plugin_registry
 from .properties import (
@@ -79,23 +80,15 @@ def _preview_summary(preview):
     return f"{len(preview.source_previews)} source(s) staged{suffix}"
 
 
-def _legacy_source_parameters(request, source_url, source_hash):
-    if not source_url and not source_hash:
-        return None
-    if type(source_url) is not str or not source_url:
-        raise ValueError("legacy source URL must be a non-empty string")
-    if (
-        type(source_hash) is not str
-        or len(source_hash) != 64
-        or any(char not in "0123456789abcdef" for char in source_hash)
-    ):
-        raise ValueError("legacy source hash must be a SHA-256 hex digest")
-    return {
-        request.sources[0].id: {
-            "legacy_source_url": source_url,
-            "legacy_source_sha256": source_hash,
-        }
-    }
+def _legacy_source_parameters(request, project_session):
+    parameters = {}
+    for source in request.sources:
+        if source.path is None:
+            continue
+        verified = verified_pubchem_parameters(source.path, project_session)
+        if verified is not None:
+            parameters[source.id] = verified
+    return parameters or None
 
 
 class _PreflightJob:
@@ -245,9 +238,6 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
         items=VALIDATION_MODE_ITEMS,
         default=ValidationMode.BALANCED.value,
     )
-    legacy_source_url: StringProperty(options={"SKIP_SAVE", "HIDDEN"})
-    legacy_source_hash: StringProperty(options={"SKIP_SAVE", "HIDDEN"})
-
     def invoke(self, context, _event):
         self.validation_mode = (
             context.scene.chemblender_quick_import.validation_mode
@@ -268,12 +258,11 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
                 sources=tuple(ImportSource(path) for path in paths),
                 validation_mode=ValidationMode(self.validation_mode),
             )
+            project_session = get_scene_session(context.scene)
             canonical_parameters_by_source = _legacy_source_parameters(
                 request,
-                getattr(self, "legacy_source_url", ""),
-                getattr(self, "legacy_source_hash", ""),
+                project_session,
             )
-            project_session = get_scene_session(context.scene)
             staging = create_quick_import_staging(project_session)
             registry = get_reader_plugin_registry()
         except BaseException as error:

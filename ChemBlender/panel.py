@@ -403,6 +403,12 @@ class CRYSTAL_PT_TOOLS(bpy.types.Panel):
         layout = self.layout
         mytool = context.scene.my_tool
 
+        if is_unified_structure_view(context.active_object):
+            layout.label(text="Scientific changes create a derived Structure")
+            layout.operator(UNIFIED_SCIENTIFIC_EDIT_OPERATOR, icon="DUPLICATE")
+            layout.label(text="Use Project Browser for export and view controls")
+            return
+
         row = layout.row()
         text = "创建晶胞" if language else "Add New Cell"
         row.operator("chem.add_unit_cell", text=text)

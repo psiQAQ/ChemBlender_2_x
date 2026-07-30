@@ -782,6 +782,62 @@ def assert_quick_import(module_key, repository_root):
             )
         assert bpy.ops.chemblender.cancel_import() == {"FINISHED"}
 
+    legacy_reader_bridge = importlib.import_module(
+        f"{module_key}.legacy.reader_bridge"
+    )
+    payload = (
+        repository_root / "tests/fixtures/sdf/missing-final.sdf"
+    ).read_bytes()
+    pubchem_stage = legacy_reader_bridge.stage_pubchem_import(
+        "2244",
+        session,
+        fetch=lambda _url, timeout: SimpleNamespace(
+            status_code=200,
+            content=payload,
+        ),
+    )
+    assert pubchem_stage.request is not None
+    assert "legacy_source_url" not in (
+        bpy.types.CHEMBLENDER_OT_quick_import.bl_rna.properties
+    )
+    assert "legacy_source_hash" not in (
+        bpy.types.CHEMBLENDER_OT_quick_import.bl_rna.properties
+    )
+    state = stage(pubchem_stage.request.sources[0].path)
+    pubchem_batch = state.staging_session.result(
+        state.preview.source_previews[0].staged_batch_ids[0]
+    )
+    pubchem_provenance, = (
+        item
+        for item in pubchem_batch.provenance
+        if item.operation == "pubchem_import"
+    )
+    assert pubchem_provenance.source == pubchem_stage.source_url
+    assert pubchem_provenance.source_hash == pubchem_stage.content_hash
+    assert dict(pubchem_provenance.parameters) == {
+        "legacy_source_sha256": pubchem_stage.content_hash,
+        "legacy_source_url": pubchem_stage.source_url,
+    }
+    pubchem_rows = preview_ui.project_import_preview(session, state, registry)
+    pubchem_conformer_rows = preview_ui.project_conformer_suggestions(state)
+    for row in pubchem_conformer_rows:
+        row.grouping_action = "accept_group"
+        row.review_confirmed = row.requires_review
+    pubchem_result = preview_ui.commit_project_import(
+        session,
+        state,
+        pubchem_rows,
+        conformer_rows=pubchem_conformer_rows,
+        collection=bpy.context.scene.collection,
+    )
+    assert pubchem_result.status == "committed"
+    persisted_pubchem_provenance = next(
+        item
+        for item in session.project.provenance.values()
+        if item.id == pubchem_provenance.id
+    )
+    assert persisted_pubchem_provenance == pubchem_provenance
+
     state = stage(repository_root / "tests/fixtures/sdf/records.sdf")
     molecular_rows = preview_ui.project_import_preview(
         session,
@@ -899,6 +955,21 @@ def assert_quick_import(module_key, repository_root):
     )
     assert xyz_view.type == "MESH"
     assert xyz_view["cb_structure_revision"] == xyz_structure.revision
+    bpy.context.view_layer.objects.active = xyz_view
+    xyz_view.select_set(True)
+    try:
+        bpy.ops.chem.supercell()
+    except RuntimeError as error:
+        assert "Apply Scientific Edits" in str(error)
+    else:
+        raise AssertionError("legacy supercell write was not rejected")
+    legacy_output = importlib.import_module(f"{module_key}.output")
+    assert legacy_output.SaveMolButton.is_registered
+    legacy_export_properties = legacy_output.SaveMolButton.bl_rna.properties
+    assert "export_format" not in legacy_export_properties
+    assert "mol_version" not in legacy_export_properties
+    assert "vasp_coord_mode" not in legacy_export_properties
+    assert "filepath" not in legacy_export_properties
     xyz_bindings = json.loads(xyz_view["cb_scene_bindings_json"])
     assert xyz_bindings["structure"] == {
         "entity_id": str(xyz_structure.id),

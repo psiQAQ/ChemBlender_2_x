@@ -208,53 +208,11 @@ def vasp_block(cif_data, name, use_cartesian):
 
 
 class SaveMolButton(Operator):
-    """Convert scaffold structure to molecular file"""
+    """Open the unified project export action."""
     bl_idname = "chem.molecule_output"
     bl_label = "保存分子文件" if language else "Export Molecular File"
-    bl_description = "从分子骨架生成分子文件" if language else "Generate a molecular file from the selected molecular graph scaffold"
+    bl_description = "打开项目实体导出" if language else "Open unified project entity export"
     bl_options = {'REGISTER', 'UNDO'}
-
-    export_format: EnumProperty(
-        name="",
-        description="Export file format",
-        items=[
-            ('CIF',"CIF","Crystallographic Information File"),
-            ('MOL',"MOL","MDL format"),
-            ('SDF',"SDF","Structure data file"),
-            ('VASP',"VASP/POSCAR","Crystal file"),
-            ('XYZ',"XYZ","XYZ Coordinate file")
-        ],
-        default='MOL'
-    )
-
-    mol_version: EnumProperty(
-        name ="",
-        default='V2000',
-        items=[
-            ('V2000', 'V2000', ''),
-            ('V3000', 'V3000', '')
-        ]
-    )
-
-    vasp_coord_mode: EnumProperty(
-        name="",
-        default = 'DIRECT',
-        items=[
-            ('DIRECT', 'Fractional coordinates',''),
-            ('CARTESIAN', 'Cartesian coordinates', '')
-        ]
-    )
-    filepath: StringProperty(subtype="FILE_PATH")
-
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(self,"export_format")
-
-        if self.export_format == 'MOL':
-            layout.prop(self, "mol_version")
-
-        if self.export_format == 'VASP':
-            layout.prop(self, "vasp_coord_mode")
 
     def execute(self, context):
         return route_legacy_export(
@@ -271,9 +229,9 @@ class SaveMolButton(Operator):
 class UpdateCIFFromMesh(Operator):
     bl_idname = "chem.update_cif_from_mesh"
     bl_label = "更新CIF数据" if language else "Update CIF from Mesh"
-    bl_description = ("从当前骨架重新计算原子坐标、分子式、空间群等信息并更新到cif_original"
+    bl_description = ("打开统一的科学修改操作"
                       if language else
-                      "Recalculate atom coords, formula and space group from current mesh and update cif_original")
+                      "Open unified Apply Scientific Edits")
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):

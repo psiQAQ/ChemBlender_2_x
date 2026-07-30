@@ -232,8 +232,6 @@ class MESH_OT_SCAFFOLD_BUILD(bpy.types.Operator):
                     directory=os.path.dirname(source),
                     files=[{"name": os.path.basename(source)}],
                     validation_mode=stage.request.validation_mode.value,
-                    legacy_source_url=stage.source_url,
-                    legacy_source_hash=stage.content_hash,
                 )
             molname = self.name_input(mytool, moltext)
             text_type = read.check_type(moltext)
