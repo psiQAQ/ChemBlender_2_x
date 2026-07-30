@@ -87,7 +87,7 @@ class LegacyDetectionContractTests(unittest.TestCase):
             result.stdout + result.stderr,
         )
 
-    def test_ambiguous_legacy_data_has_diagnostics_without_mutation(self):
+    def test_parent_induced_nonuniform_legacy_data_has_diagnostics_without_mutation(self):
         result = self.run_blender(synthetic=True)
         self.assertEqual(
             result.returncode,

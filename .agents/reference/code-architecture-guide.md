@@ -73,7 +73,7 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/extension.py` | `cat_generator()`、`NODE_MT_chem_GN_menu`、`NODE_OT_group_add`、`register()`、`unregister()` | 从节点库生成 Geometry Nodes 菜单，将节点组插入当前树，并管理菜单回调。 |
 | `ChemBlender/legacy/__init__.py` | `detect_legacy_scene()`、`extract_legacy_objects()`、`LegacyExtractionReport` | 旧场景迁移 bridge 的公开、Blender-neutral 门面；不注册 UI、不构造 `QCProject`，导入时不加载 `bpy`。 |
 | `ChemBlender/legacy/detection.py` | `detect_legacy_scene()`、`LegacySceneDetection` | 延迟访问 `bpy`，仅从旧 scaffold/cell 标识生成冻结检测结果；不创建、删除或重命名 datablock。 |
-| `ChemBlender/legacy/extraction.py` | `extract_legacy_objects()`、`LegacyExtractionReport` | 将旧 Mesh、属性、CIF PropertyGroup、collection 与显示数据复制为冻结 primitive 快照。科学坐标始终由原始 base mesh 顶点经 `matrix_world` 转为世界坐标，绝不取 modifier evaluated geometry；modifier、非均匀变换、未知属性和缺失 `.blend` 来源均成为诊断。 |
+| `ChemBlender/legacy/extraction.py` | `extract_legacy_objects()`、`LegacyExtractionReport` | 将旧 Mesh、covalent/van der Waals radii、属性、CIF PropertyGroup、collection 与显示数据复制为冻结 primitive 快照。科学坐标始终由原始 base mesh 顶点经 `matrix_world` 转为世界坐标，绝不取 modifier evaluated geometry；modifier、实际 world matrix 的非均匀/剪切变换、未知属性和缺失 `.blend` 来源均成为诊断。 |
 
 ## 传统分子与晶体建模层
 

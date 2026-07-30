@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from math import sqrt
 
 from .detection import LegacySceneDetection, detect_legacy_scene
 
@@ -47,6 +48,7 @@ class LegacyObjectSnapshot:
     coordinates: tuple[tuple[float, float, float], ...]
     edges: tuple[LegacyEdgeSnapshot, ...]
     radii: tuple[float, ...] | None
+    vdw_radii: tuple[float, ...] | None
     atom_scales: tuple[float, ...] | None
     colors: tuple[tuple[float, float, float, float], ...] | None
     cell: tuple[float, float, float, float, float, float] | None
@@ -110,6 +112,23 @@ def _cif(value):
     )
 
 
+def _has_nonuniform_world_transform(matrix):
+    axes = tuple(
+        tuple(float(matrix[row][column]) for row in range(3))
+        for column in range(3)
+    )
+    lengths = tuple(sqrt(sum(value * value for value in axis)) for axis in axes)
+    if min(lengths) <= 1.0e-12:
+        return True
+    if max(lengths) - min(lengths) > 1.0e-9:
+        return True
+    return any(
+        abs(sum(left[index] * right[index] for index in range(3)) / (left_length * right_length)) > 1.0e-9
+        for index, (left, left_length) in enumerate(zip(axes, lengths))
+        for right, right_length in zip(axes[index + 1 :], lengths[index + 1 :])
+    )
+
+
 def _snapshot(obj, detection, diagnostics):
     mesh = obj.data
     atomic_numbers = _attribute_values(mesh, "atomic_num", "value") or ()
@@ -122,7 +141,7 @@ def _snapshot(obj, detection, diagnostics):
     dashed = _attribute_values(mesh, "dashed", "value")
     if obj.modifiers:
         diagnostics.append(LegacyDiagnostic("evaluated_geometry_ignored", "scientific coordinates use the original base mesh, not modifier output", obj.name))
-    if len({round(float(value), 12) for value in obj.scale}) != 1:
+    if _has_nonuniform_world_transform(obj.matrix_world):
         diagnostics.append(LegacyDiagnostic("nonuniform_transform", "coordinates were transformed through matrix_world", obj.name))
     diagnostics.extend(
         LegacyDiagnostic("unknown_custom_property", name, obj.name)
@@ -144,6 +163,7 @@ def _snapshot(obj, detection, diagnostics):
             for index, edge in enumerate(mesh.edges)
         ),
         radii=tuple(float(value) for value in (_attribute_values(mesh, "radius", "value") or ())) or None,
+        vdw_radii=tuple(float(value) for value in (_attribute_values(mesh, "vdw_radius", "value") or ())) or None,
         atom_scales=tuple(float(value) for value in (_attribute_values(mesh, "atom_scale_f", "value") or ())) or None,
         colors=tuple(tuple(float(component) for component in value.color) for value in (mesh.attributes.get("colour").data if mesh.attributes.get("colour") else ())) or None,
         cell=_cell(obj),

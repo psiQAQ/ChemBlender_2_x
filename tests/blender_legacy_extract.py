@@ -40,6 +40,18 @@ def assert_fixture(report):
             (-0.6000000238418579, 0.9399999976158142, 0.0),
             (-0.6000000238418579, -0.9399999976158142, 0.0),
         )
+        assert scaffold.radii == (
+            0.7599999904632568,
+            0.6600000262260437,
+            0.3100000023841858,
+            0.3100000023841858,
+        )
+        assert scaffold.vdw_radii == (
+            1.7000000476837158,
+            1.5499999523162842,
+            1.2000000476837158,
+            1.2000000476837158,
+        )
         assert tuple(edge.order for edge in scaffold.edges) == (2, 1, 1)
         assert scaffold.atom_scales == (1.25, 1.100000023841858, 0.800000011920929, 0.800000011920929)
         assert tuple(edge.scale for edge in scaffold.edges) == (0.6499999761581421, 0.8500000238418579, 0.8500000238418579)
@@ -89,7 +101,10 @@ def create_ambiguous_legacy_object():
     bpy.context.scene.collection.objects.link(obj)
     obj["Type"] = "scaffold"
     obj["unexpected legacy value"] = "unverified"
-    obj.scale = (2.0, 1.0, 1.0)
+    parent = bpy.data.objects.new("synthetic legacy parent", None)
+    bpy.context.scene.collection.objects.link(parent)
+    parent.scale = (2.0, 1.0, 1.0)
+    obj.parent = parent
     obj.modifiers.new("legacy display", "NODES")
     bpy.context.view_layer.update()
 
