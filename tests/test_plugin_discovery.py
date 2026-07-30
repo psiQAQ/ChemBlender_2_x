@@ -242,6 +242,64 @@ class ReaderPluginDiscoveryTests(unittest.TestCase):
             {item.plugin_id for item in discovery.refresh().plugins},
         )
 
+    def test_successful_retry_clears_equal_registration_and_unregistration_failures(self):
+        discovery, registry = self.discovery()
+        plugin = external_plugin(
+            "org.example.transient",
+            "external.transient",
+        )
+        failed_unregister = discovery.unregister(plugin.manifest)
+        original_register = registry.register
+        attempts = 0
+
+        def transient_register(value):
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise OSError("registry temporarily unavailable")
+            return original_register(value)
+
+        with patch.object(registry, "register", side_effect=transient_register):
+            failed_register = discovery.register(plugin)
+            available = discovery.register(plugin)
+
+        self.assertFalse(failed_unregister.availability.available)
+        self.assertFalse(failed_register.availability.available)
+        self.assertTrue(available.availability.available)
+        self.assertEqual(
+            tuple(
+                state
+                for state in discovery.refresh().plugins
+                if state.plugin_id == plugin.manifest.plugin_id
+            ),
+            (available,),
+        )
+
+    def test_repeated_equal_registration_failure_stays_one_snapshot_row(self):
+        discovery, registry = self.discovery()
+        plugin = external_plugin(
+            "org.example.repeated_failure",
+            "external.repeated_failure",
+        )
+
+        with patch.object(
+            registry,
+            "register",
+            side_effect=OSError("registry unavailable"),
+        ):
+            first = discovery.register(plugin)
+            second = discovery.register(plugin)
+
+        self.assertEqual(first, second)
+        self.assertEqual(
+            tuple(
+                state
+                for state in discovery.refresh().plugins
+                if state.plugin_id == plugin.manifest.plugin_id
+            ),
+            (second,),
+        )
+
     def test_partial_multi_reader_registration_is_reconciled_once(self):
         discovery, registry = self.discovery()
         first = external_plugin(

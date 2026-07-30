@@ -401,14 +401,22 @@ def _annotations(document, structure_id, source_hash, provenance_id, issues):
     return tuple(result)
 
 
-def _trajectory(atoms, atom_count, source_hash, structure_id, provenance_id):
-    coords = _mapping(atoms.get("coords", {}), "atoms.coords")
+def _trajectory_values(coords, atom_count):
     if "3dSets" not in coords:
         return None
     values = _finite_array(coords["3dSets"], "atoms.coords.3dSets")
-    if values.ndim != 2 or values.shape[1] != atom_count * 3:
+    if (
+        values.ndim != 2
+        or values.shape[0] == 0
+        or values.shape[1] != atom_count * 3
+    ):
         raise CJSONError("atoms.coords.3dSets must contain complete coordinate frames")
-    values = values.reshape((values.shape[0], atom_count, 3))
+    return values.reshape((values.shape[0], atom_count, 3))
+
+
+def _trajectory(values, source_hash, structure_id, provenance_id):
+    if values is None:
+        return None
     revision = hashlib.sha256(values.tobytes()).hexdigest()
     return FrameSet(
         id=_identity(source_hash, "dataset:trajectory"),
@@ -539,6 +547,7 @@ def parse_cjson(source):
             raise CJSONError("unitCell.cellVectors must contain nine values")
         cell = ArrayData(vectors.reshape((3, 3)), ("cell_vector", "xyz"), "angstrom")
     coords_object = _optional_mapping(atoms, "coords", "atoms.coords") or {}
+    trajectory_values = _trajectory_values(coords_object, atom_count)
     if "3d" in coords_object:
         coordinates = _finite_array(coords_object["3d"], "atoms.coords.3d")
         if coordinates.size != atom_count * 3:
@@ -551,6 +560,8 @@ def parse_cjson(source):
         if fractional.size != atom_count * 3:
             raise CJSONError("atoms.coords.3dFractional must contain three values per atom")
         coordinates = fractional.reshape((atom_count, 3)) @ cell.values
+    elif trajectory_values is not None:
+        coordinates = trajectory_values[0].copy()
     else:
         coordinates = numpy.zeros((atom_count, 3), dtype=float)
         issues.append(ParserIssue(IssueKind.MISSING, "atoms.coords.3d", "missing coordinates were initialized to zero like Avogadro CjsonFormat"))
@@ -619,7 +630,12 @@ def parse_cjson(source):
         issues,
         formal_charges,
     )
-    trajectory = _trajectory(atoms, atom_count, source_hash, structure_id, provenance_id)
+    trajectory = _trajectory(
+        trajectory_values,
+        source_hash,
+        structure_id,
+        provenance_id,
+    )
     if trajectory is not None:
         datasets.append(trajectory)
     datasets.extend(_electronic_spectra(document, source_hash, structure_id, provenance_id))
@@ -681,18 +697,30 @@ def parse_cjson(source):
         *(dataset.id for dataset in datasets),
         provenance.id,
     )
-    capabilities = ["structure"]
+    capabilities = {"structure"}
+    if structure.atomic_identity is not None:
+        capabilities.add("atomic_identity")
     if topology is not None:
-        capabilities.append("topology")
-    if trajectory is not None:
-        capabilities.append("trajectory")
+        capabilities.add("topology")
+    if any(isinstance(item, AtomicProperty) for item in datasets):
+        capabilities.add("atomic_property")
+    if any(isinstance(item, FrameSet) for item in datasets):
+        capabilities.add("trajectory")
     if any(isinstance(item, ExcitedStateSet) for item in datasets):
-        capabilities.extend(("excited_state", "spectrum"))
+        capabilities.add("excited_state")
+    if any(isinstance(item, Spectrum) for item in datasets):
+        capabilities.add("spectrum")
+    if any(
+        isinstance(item, PropertyDataset)
+        and item.semantic_role == "vibrational_frequencies"
+        for item in datasets
+    ):
+        capabilities.add("vibration")
     report = ParserReport(
         reader_id="cjson",
         reader_version=ADAPTER_VERSION,
         created_entity_ids=created_ids,
-        parsed_capabilities=tuple(capabilities),
+        parsed_capabilities=tuple(sorted(capabilities)),
         issues=tuple(issues),
     )
     return ImportBatch(

@@ -96,6 +96,50 @@ class _InvalidProgressMappedPlugin(_RegressingProgressPlugin):
         )
 
 
+class _CancellationResiduePlugin:
+    def __init__(self, wrapped):
+        self.wrapped = wrapped
+        self.manifest = wrapped.manifest
+        self.descriptor = wrapped.descriptor
+        self.priority = wrapped.priority
+        self.staging_roots = []
+        self.mappings = []
+
+    def sniff(self, request):
+        return self.wrapped.sniff(request)
+
+    def parse(self, request):
+        if request.is_cancelled():
+            import numpy
+
+            self.staging_roots.append(request.staging_root)
+            (request.staging_root / "leak.tmp").write_bytes(b"leak")
+            cancelled = self.wrapped.parse(request)
+            normal = self.wrapped.parse(replace(request, is_cancelled=lambda: False))
+            mapping = numpy.lib.format.open_memmap(
+                request.staging_root / "mapped.npy",
+                mode="w+",
+                dtype=numpy.float64,
+                shape=(3, 3),
+            )
+            mapping[...] = normal.structures[0].coordinates.values
+            self.mappings.append(mapping)
+            return replace(
+                cancelled,
+                structures=(
+                    replace(
+                        normal.structures[0],
+                        coordinates=reader_api.ArrayData(
+                            mapping,
+                            ("atom", "xyz"),
+                            "angstrom",
+                        ),
+                    ),
+                ),
+            )
+        return self.wrapped.parse(request)
+
+
 class ReaderConformanceV1Tests(unittest.TestCase):
     def test_documented_cli_and_result_contract_are_present(self):
         document = (
@@ -204,6 +248,39 @@ class ReaderConformanceV1Tests(unittest.TestCase):
         self.assertFalse(plugin.staging_root.exists())
         self.assertTrue(plugin.mapping._mmap.closed)
 
+    def test_cancelled_staging_residue_is_a_machine_readable_required_failure(self):
+        plugin = _CancellationResiduePlugin(load_example_plugin())
+        case = example_case(plugin)
+        original_parse = case.registry.parse
+
+        def parse_plugin_directly(reader_id, request):
+            if request.is_cancelled():
+                return plugin.parse(request)
+            return original_parse(reader_id, request)
+
+        case.registry.parse = parse_plugin_directly
+        document = run_reader_conformance_v1((case,))
+
+        self.assertFalse(document["passed"])
+        result = document["cases"][0]
+        self.assertEqual(result["status"], "fail")
+        cancellation = next(
+            check for check in result["checks"] if check["id"] == "cancellation"
+        )
+        self.assertEqual(cancellation["status"], "fail")
+        self.assertIn("staging residue", cancellation["detail"])
+        self.assertIn(
+            {
+                "kind": "conformance_failure",
+                "message": cancellation["detail"],
+                "path": "checks.cancellation",
+            },
+            result["diagnostics"],
+        )
+        self.assertTrue(plugin.staging_roots)
+        self.assertTrue(all(not root.exists() for root in plugin.staging_roots))
+        self.assertTrue(all(mapping._mmap.closed for mapping in plugin.mappings))
+
     def test_wave1_to_wave3_builtin_matrix_has_no_required_skip(self):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -228,7 +305,7 @@ specifications = (
     ("xyz", root / "xyz/water.xyz", ("structure",)),
     ("extxyz", root / "extxyz/multiframe-cell.extxyz", ("properties", "structure", "trajectory")),
     ("cube", root / "cube/sheared.cube", ("atomic_property", "grid", "structure")),
-    ("cjson", root / "cjson/water-results.cjson", ("excited_state", "spectrum", "structure", "topology", "trajectory")),
+    ("cjson", root / "cjson/water-results.cjson", ("atomic_identity", "atomic_property", "excited_state", "spectrum", "structure", "topology", "trajectory", "vibration")),
     ("mol2", root / "mol2/small.mol2", ("atomic_property", "multi_record", "structure", "substructure", "topology")),
     ("pdb", root / "pdb/altloc.pdb", ("atomic_identity", "atomic_property", "crystal", "hierarchy", "multi_model", "structure", "topology", "trajectory")),
     ("pqr", root / "pqr/no-chain.pqr", ("atomic_identity", "atomic_property", "hierarchy", "structure")),

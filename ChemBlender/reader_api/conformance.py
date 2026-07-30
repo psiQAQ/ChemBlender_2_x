@@ -558,25 +558,50 @@ def run_reader_conformance(case):
         return same_document and same_artifacts, "canonical document bytes and artifact hashes match"
 
     def cancellation():
-        with TemporaryDirectory() as temporary:
-            request = _parse_request(
-                case,
-                state["source_hash"],
-                Path(temporary),
-                is_cancelled=lambda: True,
+        temporary = TemporaryDirectory()
+        results = []
+        try:
+            root = Path(temporary.name)
+            residues = []
+            for name in ("first", "second"):
+                staging_root = root / name
+                staging_root.mkdir()
+                request = _parse_request(
+                    case,
+                    state["source_hash"],
+                    staging_root,
+                    is_cancelled=lambda: True,
+                )
+                results.append(case.registry.parse(case.reader_id, request))
+                residues.extend(
+                    path.relative_to(root).as_posix()
+                    for path in sorted(staging_root.rglob("*"))
+                )
+            first, second = results
+            reports = (
+                getattr(first, "report", None),
+                getattr(second, "report", None),
             )
-            first = case.registry.parse(case.reader_id, request)
-            second = case.registry.parse(case.reader_id, request)
-        reports = (getattr(first, "report", None), getattr(second, "report", None))
-        valid = all(
-            report is not None
-            and report.issues
-            and report.issues[0].path == "reader.parse"
-            and "cancel" in report.issues[0].message
-            for report in reports
-        )
-        stable = valid and reports[0] == reports[1]
-        return stable, "pre-cancelled parse returns stable cancellation evidence"
+            valid = all(
+                report is not None
+                and report.issues
+                and report.issues[0].path == "reader.parse"
+                and "cancel" in report.issues[0].message
+                for report in reports
+            )
+            stable = valid and reports[0] == reports[1] and not residues
+            detail = "pre-cancelled parse returns stable cancellation evidence"
+            if residues:
+                detail = (
+                    "cancelled parse left staging residue: "
+                    + ", ".join(residues)
+                )
+            return stable, detail
+        finally:
+            for batch in results:
+                if type(batch) is PublicImportBatch:
+                    _close_memmaps(batch, set())
+            temporary.cleanup()
 
     def exception_isolation():
         types = tuple(dict.fromkeys(state["isolated_exception_types"]))

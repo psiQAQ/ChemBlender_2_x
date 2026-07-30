@@ -115,6 +115,87 @@ class CJSONAdapterTests(unittest.TestCase):
         self.assertEqual(atom_data["selected"].data.values.tolist(), [True, False, True])
         frames = next(item for item in batch.datasets if isinstance(item, FrameSet))
         self.assertEqual(frames.data.shape, (2, 3, 3))
+        self.assertEqual(
+            batch.report.parsed_capabilities,
+            (
+                "atomic_identity",
+                "atomic_property",
+                "excited_state",
+                "spectrum",
+                "structure",
+                "topology",
+                "trajectory",
+                "vibration",
+            ),
+        )
+
+    def test_trajectory_only_uses_frame_zero_without_missing_coordinate_fallback(self):
+        source = {
+            "chemicalJson": 1,
+            "atoms": {
+                "elements": {"number": [1]},
+                "coords": {"3dSets": [[1, 2, 3], [4, 5, 6]]},
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "trajectory.cjson"
+            path.write_text(json.dumps(source), encoding="utf-8")
+            batch = parse_cjson(path)
+
+        numpy.testing.assert_allclose(
+            batch.structures[0].coordinates.values,
+            [[1, 2, 3]],
+        )
+        frames = next(item for item in batch.datasets if isinstance(item, FrameSet))
+        numpy.testing.assert_allclose(
+            frames.data.values,
+            [[[1, 2, 3]], [[4, 5, 6]]],
+        )
+        self.assertNotIn(
+            "atoms.coords.3d",
+            {issue.path for issue in batch.report.issues},
+        )
+
+    def test_fractional_coordinates_remain_primary_when_trajectory_is_present(self):
+        source = {
+            "chemicalJson": 1,
+            "unitCell": {"cellVectors": [2, 0, 0, 0, 2, 0, 0, 0, 2]},
+            "atoms": {
+                "elements": {"number": [1]},
+                "coords": {
+                    "3dFractional": [0.25, 0.5, 0.75],
+                    "3dSets": [[9, 8, 7]],
+                },
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "fractional-trajectory.cjson"
+            path.write_text(json.dumps(source), encoding="utf-8")
+            batch = parse_cjson(path)
+
+        numpy.testing.assert_allclose(
+            batch.structures[0].coordinates.values,
+            [[0.5, 1.0, 1.5]],
+        )
+
+    def test_empty_or_malformed_trajectory_sets_fail_closed(self):
+        for values in ([], [[1, 2]]):
+            with self.subTest(values=values):
+                source = {
+                    "chemicalJson": 1,
+                    "atoms": {
+                        "elements": {"number": [1]},
+                        "coords": {"3dSets": values},
+                    },
+                }
+                with tempfile.TemporaryDirectory() as directory:
+                    path = Path(directory) / "invalid-trajectory.cjson"
+                    path.write_text(json.dumps(source), encoding="utf-8")
+                    with self.assertRaisesRegex(
+                        CJSONError,
+                        "3dSets must contain complete coordinate frames",
+                    ):
+                        parse_cjson(path)
 
     def test_explicit_bonds_are_canonicalized_before_topology_identity(self):
         source = json.loads(FIXTURE.read_text(encoding="utf-8"))

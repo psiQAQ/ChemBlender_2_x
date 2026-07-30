@@ -112,6 +112,20 @@ def _same_manifest(left, right):
         return False
 
 
+def _without_equal_manifest(failures, manifest):
+    plugin_id = _safe_attribute(manifest, "plugin_id")
+    kept = []
+    for failure in failures:
+        failed_plugin_id = _safe_attribute(failure.manifest, "plugin_id")
+        if (
+            type(plugin_id) is str
+            and type(failed_plugin_id) is str
+            and failed_plugin_id != plugin_id
+        ) or not _same_manifest(failure.manifest, manifest):
+            kept.append(failure)
+    return kept
+
+
 class ReaderPluginDiscovery:
     def __init__(self, registry):
         if type(registry) is not ReaderPluginRegistry:
@@ -129,6 +143,14 @@ class ReaderPluginDiscovery:
 
     def register(self, plugin):
         manifest = _safe_attribute(plugin, "manifest")
+        failed_registrations = _without_equal_manifest(
+            self._failed_registrations,
+            manifest,
+        )
+        unregistration_failures = _without_equal_manifest(
+            self._unregistration_failures,
+            manifest,
+        )
         try:
             self._registry.register(plugin)
         except MemoryError:
@@ -139,11 +161,14 @@ class ReaderPluginDiscovery:
                 error,
                 "plugin_registration_failed",
             )
-            self._failed_registrations.append(
+            self._failed_registrations = failed_registrations + [
                 _FailedRegistration(manifest, state)
-            )
+            ]
+            self._unregistration_failures = unregistration_failures
             self._invalidate()
             return state
+        self._failed_registrations = failed_registrations
+        self._unregistration_failures = unregistration_failures
         self._registered_manifests.append(manifest)
         self._invalidate()
         descriptor = plugin.descriptor
