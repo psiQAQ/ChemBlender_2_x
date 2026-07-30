@@ -165,21 +165,26 @@ class Wave3ExchangeQualificationTests(unittest.TestCase):
             ),
             cwd=ROOT,
             capture_output=True,
-            text=True,
             check=False,
         )
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
         document = json.loads(completed.stdout)
+        self.assertFalse(completed.stdout.startswith(b"\xef\xbb\xbf"))
+        self.assertTrue(completed.stdout.endswith(b"\n"))
+        self.assertFalse(completed.stdout.endswith(b"\n\n"))
+        self.assertNotIn(b"\r\n", completed.stdout)
         self.assertEqual(
             completed.stdout,
-            json.dumps(
-                document,
-                ensure_ascii=False,
-                separators=(",", ":"),
-                sort_keys=True,
-            )
-            + "\n",
+            (
+                json.dumps(
+                    document,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                )
+                + "\n"
+            ).encode("utf-8"),
         )
 
     def test_capability_public_model_and_fresh_import_boundaries(self):
