@@ -62,6 +62,7 @@ _SCIENTIFIC_GROUPS = (
     "density_matrices",
     "provenance",
 )
+_NON_PROVENANCE_GROUPS = _SCIENTIFIC_GROUPS[:-1]
 
 
 def _noop_progress(stage, completed, total):
@@ -87,6 +88,13 @@ class _BridgeCancelled(BaseException):
 class _BridgeHostCallbackError(BaseException):
     def __init__(self, error):
         self.error = error
+
+
+class _HostBatchAttachmentContractError(ValueError):
+    code = "preflight.host_attachment_contract"
+
+    def __init__(self, message):
+        super().__init__(f"{self.code}: {message}")
 
 
 def _parameters(request, values):
@@ -191,13 +199,107 @@ def _source_changed_failure(error):
     )
 
 
+def _created_entity_ids(batch):
+    return tuple(
+        entity.id
+        for name in _SCIENTIFIC_GROUPS
+        for entity in getattr(batch, name)
+    )
+
+
+def _validate_host_batch_attachment(batch, attached):
+    if type(attached) is not ImportBatch:
+        raise _HostBatchAttachmentContractError(
+            "attachment must return an ImportBatch"
+        )
+    if attached.sources is not batch.sources:
+        raise _HostBatchAttachmentContractError(
+            "attachment must preserve SourceRecord identity"
+        )
+    if len(attached.source_revisions) != len(batch.source_revisions):
+        raise _HostBatchAttachmentContractError(
+            "attachment must preserve SourceRevision identity"
+        )
+    for original, replacement in zip(
+        batch.source_revisions,
+        attached.source_revisions,
+        strict=True,
+    ):
+        if replace(
+            replacement,
+            created_entity_ids=original.created_entity_ids,
+        ) != original:
+            raise _HostBatchAttachmentContractError(
+                "attachment may only update SourceRevision created entity IDs"
+            )
+    for name in _NON_PROVENANCE_GROUPS:
+        if getattr(attached, name) is not getattr(batch, name):
+            raise _HostBatchAttachmentContractError(
+                "attachment may not replace reader scientific entities"
+            )
+    if attached.diagnostics is not batch.diagnostics:
+        raise _HostBatchAttachmentContractError(
+            "attachment may not replace reader diagnostics"
+        )
+    if (attached.report is None) != (batch.report is None):
+        raise _HostBatchAttachmentContractError(
+            "attachment may not add or remove the reader report"
+        )
+    if batch.report is not None and replace(
+        attached.report,
+        created_entity_ids=batch.report.created_entity_ids,
+    ) != batch.report:
+        raise _HostBatchAttachmentContractError(
+            "attachment may only update report created entity IDs"
+        )
+    prefix_size = len(batch.provenance)
+    if attached.provenance[:prefix_size] != batch.provenance:
+        raise _HostBatchAttachmentContractError(
+            "attachment may only append provenance"
+        )
+    created_entity_ids = _created_entity_ids(attached)
+    if any(
+        revision.created_entity_ids != created_entity_ids
+        for revision in attached.source_revisions
+    ):
+        raise _HostBatchAttachmentContractError(
+            "attachment created entity IDs must match the batch"
+        )
+    if (
+        attached.report is not None
+        and attached.report.created_entity_ids != created_entity_ids
+    ):
+        raise _HostBatchAttachmentContractError(
+            "attachment report created entity IDs must match the batch"
+        )
+    try:
+        _validate_internal_batch_graph(attached)
+    except (PublicBatchError, TypeError, ValueError, KeyError) as error:
+        raise _HostBatchAttachmentContractError(
+            "attachment produced an invalid ImportBatch"
+        ) from error
+
+
+def _cleanup_failed_host_attachment(error, *batches, reader_staging_root=None):
+    try:
+        _close_memmaps(
+            tuple(batch for batch in batches if type(batch) is ImportBatch),
+            set(),
+        )
+    except BaseException as cleanup_error:
+        error.add_note(f"host attachment array cleanup failed: {cleanup_error}")
+    if reader_staging_root is None or not reader_staging_root.exists():
+        return
+    try:
+        _remove_reader_staging_root(reader_staging_root)
+    except BaseException as cleanup_error:
+        error.add_note(f"host attachment artifact cleanup failed: {cleanup_error}")
+
+
 def _attach_host_batch(batch_attachment, source, content_hash, batch):
     if batch_attachment is None:
         return batch
-    attached = batch_attachment(source, content_hash, batch)
-    if type(attached) is not ImportBatch:
-        raise TypeError("_batch_attachment must return an ImportBatch")
-    return attached
+    return batch_attachment(source, content_hash, batch)
 
 
 def preflight_reader_plugins(
@@ -272,12 +374,19 @@ def preflight_reader_plugins(
                     "the source content could not be read or verified",
                 ),
             )
-            batch = _attach_host_batch(
-                _batch_attachment,
-                source,
-                content_hash,
-                batch,
-            )
+            attached = batch
+            try:
+                attached = _attach_host_batch(
+                    _batch_attachment,
+                    source,
+                    content_hash,
+                    batch,
+                )
+                _validate_host_batch_attachment(batch, attached)
+            except BaseException as error:
+                _cleanup_failed_host_attachment(error, batch, attached)
+                raise
+            batch = attached
             source_previews.append(_register_preview(
                 source, None, content_hash, byte_size, (), batch, session,
                 batch_ids, diagnostic_ids,
@@ -330,12 +439,19 @@ def preflight_reader_plugins(
                 canonical_parameters=parameters,
                 failure=failure,
             )
-            batch = _attach_host_batch(
-                _batch_attachment,
-                source,
-                content_hash,
-                batch,
-            )
+            attached = batch
+            try:
+                attached = _attach_host_batch(
+                    _batch_attachment,
+                    source,
+                    content_hash,
+                    batch,
+                )
+                _validate_host_batch_attachment(batch, attached)
+            except BaseException as error:
+                _cleanup_failed_host_attachment(error, batch, attached)
+                raise
+            batch = attached
             source_previews.append(_register_preview(
                 source, None, content_hash, byte_size, (), batch, session,
                 batch_ids, diagnostic_ids,
@@ -351,6 +467,7 @@ def preflight_reader_plugins(
         ))
         reader_staging_root = None
         materializer = None
+        materializer_attachment_state = None
         if not descriptor.availability.available:
             failure = (
                 "preflight.reader_unavailable",
@@ -460,18 +577,8 @@ def preflight_reader_plugins(
                             preserve_source_identity=supplied_identity,
                             revision_id=revision_id,
                         )
-                        internal = _attach_host_batch(
-                            _batch_attachment,
-                            source,
-                            content_hash,
-                            internal,
-                        )
                         _validate_internal_batch_graph(internal)
                         failure = None
-                        keep_reader_artifacts = (
-                            _has_scientific_entities(internal)
-                            and any(reader_staging_root.iterdir())
-                        )
                         materialize_parser = (
                             plugin.core_descriptor.materialize_request
                             if trusted_builtin
@@ -480,6 +587,7 @@ def preflight_reader_plugins(
                         if materialize_parser is not None:
                             expected_identity = _staged_identity(internal)
                             expected_diagnostics = internal.diagnostics
+                            materializer_attachment_state = {}
 
                             def materialize(
                                 materialize_progress,
@@ -487,8 +595,9 @@ def preflight_reader_plugins(
                                 *,
                                 _parser=materialize_parser,
                                 _request=parse_request,
-                                _expected=expected_identity,
+                                _expected_reader=expected_identity,
                                 _expected_diagnostics=expected_diagnostics,
+                                _expected_host=materializer_attachment_state,
                                 _source=source,
                                 _validation=request.validation_mode,
                                 _content_hash=content_hash,
@@ -532,6 +641,7 @@ def preflight_reader_plugins(
                                 if parsed is None:
                                     return None
                                 candidate = None
+                                attached = None
                                 try:
                                     parsed = _internal_batch_from_public_unchecked(
                                         public_batch_from_internal(parsed)
@@ -549,15 +659,10 @@ def preflight_reader_plugins(
                                         parsed_batch=parsed,
                                         revision_id=_revision_id,
                                     )
-                                    candidate = _attach_host_batch(
-                                        _batch_attachment,
-                                        _source,
-                                        _content_hash,
-                                        candidate,
-                                    )
                                     _validate_internal_batch_graph(candidate)
                                     if (
-                                        _staged_identity(candidate) != _expected
+                                        _staged_identity(candidate)
+                                        != _expected_reader
                                         or tuple(
                                             map(
                                                 _diagnostic_signature,
@@ -575,6 +680,24 @@ def preflight_reader_plugins(
                                             "materialized reader result changed; "
                                             "refresh Import Preview"
                                         )
+                                    attached = _attach_host_batch(
+                                        _batch_attachment,
+                                        _source,
+                                        _content_hash,
+                                        candidate,
+                                    )
+                                    _validate_host_batch_attachment(
+                                        candidate,
+                                        attached,
+                                    )
+                                    if _staged_identity(attached) != _expected_host[
+                                        "identity"
+                                    ]:
+                                        raise ValueError(
+                                            "materialized host attachment changed; "
+                                            "refresh Import Preview"
+                                        )
+                                    candidate = attached
                                     diagnostic_ids = tuple(
                                         item.id for item in _expected_diagnostics
                                     )
@@ -599,7 +722,15 @@ def preflight_reader_plugins(
                                 except BaseException as error:
                                     try:
                                         _close_memmaps(
-                                            candidate or parsed,
+                                            tuple(
+                                                value
+                                                for value in (
+                                                    parsed,
+                                                    candidate,
+                                                    attached,
+                                                )
+                                                if type(value) is ImportBatch
+                                            ),
                                             set(),
                                         )
                                     except BaseException as cleanup_error:
@@ -631,6 +762,13 @@ def preflight_reader_plugins(
                                     raise
 
                             materializer = materialize
+                        keep_reader_artifacts = (
+                            (
+                                _has_scientific_entities(internal)
+                                or materializer is not None
+                            )
+                            and any(reader_staging_root.iterdir())
+                        )
                     except (
                         PublicBatchError,
                         TypeError,
@@ -661,12 +799,28 @@ def preflight_reader_plugins(
                 failure=failure,
                 revision_id=revision_id,
             )
-            internal = _attach_host_batch(
+        attached = internal
+        try:
+            attached = _attach_host_batch(
                 _batch_attachment,
                 source,
                 content_hash,
                 internal,
             )
+            _validate_host_batch_attachment(internal, attached)
+            internal = attached
+            if materializer_attachment_state is not None:
+                materializer_attachment_state["identity"] = _staged_identity(
+                    internal
+                )
+        except BaseException as error:
+            _cleanup_failed_host_attachment(
+                error,
+                internal,
+                attached,
+                reader_staging_root=reader_staging_root,
+            )
+            raise
         try:
             progress("parse", completed + 3, total)
             _check_cancelled(is_cancelled)

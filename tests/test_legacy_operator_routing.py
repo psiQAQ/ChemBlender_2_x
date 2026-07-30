@@ -761,6 +761,7 @@ class LegacyCallerInventoryTests(unittest.TestCase):
             "sdf_block",
             "cif_block",
             "vasp_block",
+            "xyz_block",
         }
         callers = {name: set() for name in targets}
 
@@ -841,6 +842,13 @@ class LegacyCallerInventoryTests(unittest.TestCase):
                 "sdf_block": set(),
                 "cif_block": set(),
                 "vasp_block": set(),
+                "xyz_block": {
+                    (
+                        "ChemBlender/ui/scientific_edit.py",
+                        "_write_xyz",
+                        "xyz_block",
+                    ),
+                },
             },
         )
 
