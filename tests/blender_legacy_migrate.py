@@ -26,6 +26,13 @@ def main():
     assert tuple(sorted(item.name for item in bpy.data.objects)) == before_objects
     assert tuple(sorted(scene.keys())) == before_keys
 
+    forged = bpy.data.objects[detection.objects[0].name]
+    forged["cb_legacy_migration_backup"] = "v1"
+    migration._legacy_load_post_handler(None)
+    assert any(item.name == forged.name for item in migration.legacy_migration_detection(scene).objects), "foreign marker must not suppress detection"
+    del forged["cb_legacy_migration_backup"]
+    migration._legacy_load_post_handler(None)
+
     preview = migration.preview_legacy_migration(scene)
     assert preview.plan.view_plans
     try:
@@ -42,7 +49,7 @@ def main():
         if obj.name in preview.plan.report.object_names
     )
     original_backup = migration._backup_legacy
-    migration._backup_legacy = lambda _objects: (_ for _ in ()).throw(OSError("injected backup failure"))
+    migration._backup_legacy = lambda *_args: (_ for _ in ()).throw(OSError("injected backup failure"))
     try:
         migration.migrate_legacy_scene(scene, confirmed=True)
     except OSError as error:
@@ -72,6 +79,22 @@ def main():
     (preview.sidecar_path / "unrelated").unlink()
     preview.sidecar_path.rmdir()
 
+    # The normal replacement path begins with a real, session-owned lazy
+    # sidecar.  This catches Windows handle ordering during staged publication.
+    from ChemBlender.core.project_service import relink_project_session_for_scenes
+    from ChemBlender.core.storage.publication import solidify_session
+    from ChemBlender.ui.session import get_scene_session
+
+    session = get_scene_session(scene)
+    solidify_session(session, preview.sidecar_path)
+    linked = relink_project_session_for_scenes(
+        session=session,
+        scenes=tuple(bpy.data.scenes),
+        sidecar_path=preview.sidecar_path,
+        blend_path=bpy.data.filepath,
+    )
+    assert linked.status.value == "connected"
+
     original = tuple(
         (obj.name, tuple(sorted(group.name for group in obj.users_collection)), obj.hide_get())
         for obj in bpy.data.objects
@@ -79,6 +102,7 @@ def main():
     )
     result = migration.migrate_legacy_scene(scene, confirmed=True)
     assert result.sidecar_path.is_dir()
+    assert result.cleanup_warnings == ()
     assert {item.name for item in bpy.data.objects if item.name.endswith(" (Migrated)")} == {
         f"{name} (Migrated)" for name in preview.plan.report.object_names if name != "cell_edges_partial_uij"
     }
@@ -88,8 +112,10 @@ def main():
         obj = bpy.data.objects[name]
         assert tuple(sorted(group.name for group in obj.users_collection)) == (backup.name,)
         assert obj.hide_get() == hidden
-        assert obj["cb_legacy_migration_backup"] == "v1"
+        assert obj["cb_legacy_migration_backup"] == "v2"
         assert tuple(obj["cb_legacy_original_collections"]) == collections
+        assert obj["cb_legacy_migration_project_id"] == backup["cb_legacy_migration_project_id"]
+        assert obj["cb_legacy_migration_transaction_id"] == backup["cb_legacy_migration_transaction_id"]
     assert migration.legacy_migration_detection(scene).objects == ()
 
     bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath)
