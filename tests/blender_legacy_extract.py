@@ -109,12 +109,42 @@ def create_ambiguous_legacy_object():
     bpy.context.view_layer.update()
 
 
+def create_current_structure_view():
+    import numpy
+    from uuid import uuid4
+
+    from ChemBlender.core import ArrayData, Structure
+    from ChemBlender.views import StructureViewSettings, create_structure_view
+
+    return create_structure_view(
+        Structure(
+            id=uuid4(),
+            revision="legacy-detection-current-view-r1",
+            atomic_numbers=(6,),
+            coordinates=ArrayData(
+                numpy.asarray(((0.0, 0.0, 0.0),)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        ),
+        settings=StructureViewSettings(attach_ball_and_stick=False),
+        name="current structure view",
+        collection=bpy.context.scene.collection,
+    )
+
+
 def main():
     import ChemBlender
 
     if bpy.data.filepath:
         ChemBlender.register()
     elif MODE == "synthetic":
+        create_ambiguous_legacy_object()
+    elif MODE == "current":
+        current = create_current_structure_view()
+        assert current["cb_structure_contract"] == "structure_view_v1"
+    elif MODE == "mixed":
+        create_current_structure_view()
         create_ambiguous_legacy_object()
     before = datablock_names()
     from ChemBlender.legacy import detect_legacy_scene, extract_legacy_objects
@@ -135,6 +165,17 @@ def main():
             "nonuniform_transform",
             "unknown_custom_property",
         }
+    elif MODE == "current":
+        assert detection.objects == ()
+        assert report.objects == ()
+        assert report.diagnostics == ()
+    elif MODE == "mixed":
+        assert tuple(item.name for item in detection.objects) == (
+            "synthetic legacy",
+        )
+        assert tuple(item.name for item in report.objects) == (
+            "synthetic legacy",
+        )
     else:
         assert detection.objects == ()
         assert report.objects == ()

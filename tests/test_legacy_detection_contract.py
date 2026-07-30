@@ -32,7 +32,7 @@ class LegacyDetectionContractTests(unittest.TestCase):
         if cls.blender is None:
             raise unittest.SkipTest("Blender 5.1 executable unavailable")
 
-    def run_blender(self, fixture=None, synthetic=False):
+    def run_blender(self, fixture=None, mode="fixture"):
         with tempfile.TemporaryDirectory(prefix="cb-legacy-") as profile:
             environment = os.environ.copy()
             environment.update(
@@ -57,7 +57,7 @@ class LegacyDetectionContractTests(unittest.TestCase):
                     str(BLENDER_SCRIPT),
                     "--",
                     str(ROOT),
-                    "synthetic" if synthetic else "fixture",
+                    mode,
                 )
             )
             return subprocess.run(
@@ -88,7 +88,23 @@ class LegacyDetectionContractTests(unittest.TestCase):
         )
 
     def test_parent_induced_nonuniform_legacy_data_has_diagnostics_without_mutation(self):
-        result = self.run_blender(synthetic=True)
+        result = self.run_blender(mode="synthetic")
+        self.assertEqual(
+            result.returncode,
+            0,
+            result.stdout + result.stderr,
+        )
+
+    def test_current_structure_view_is_not_legacy_without_datablock_mutation(self):
+        result = self.run_blender(mode="current")
+        self.assertEqual(
+            result.returncode,
+            0,
+            result.stdout + result.stderr,
+        )
+
+    def test_current_structure_view_does_not_hide_true_legacy_objects(self):
+        result = self.run_blender(mode="mixed")
         self.assertEqual(
             result.returncode,
             0,

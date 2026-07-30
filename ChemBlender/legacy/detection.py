@@ -20,6 +20,8 @@ def detect_legacy_scene() -> LegacySceneDetection:
     for obj in bpy.data.objects:
         if obj.type != "MESH":
             continue
+        if obj.get("cb_structure_contract") == "structure_view_v1":
+            continue
         if obj.get("Type") == "scaffold":
             kind = "crystal" if "cell lengths" in obj else "scaffold"
         elif "cell lengths" in obj and "cell angles" in obj:
