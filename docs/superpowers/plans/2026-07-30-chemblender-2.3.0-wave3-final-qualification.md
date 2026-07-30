@@ -230,3 +230,24 @@ validate/build, exact ZIP audit, isolated product lifecycle, Reader Extension
 failure isolation and three-process missing-plugin reopen passed. The two
 independent reviews found no code or scientific defect; their shared stale
 cursor Minor was corrected in the final checkpoint. Remote CI was not run.
+
+### Post-qualification review fix: exact-HEAD CI trigger
+
+- Reviewed baseline: `6a056e0032c37d811f7561d95d908ef3ce43490d`.
+- Confirmed limitation: GitHub had no workflow run for that exact SHA because
+  `extension-package` accepted only `main`/tag pushes and no pull request
+  existed.
+- Minimal fix: reuse the existing Python 3.13 plus Blender 5.1.2 package
+  workflow for Wave 3 branch pushes and manual dispatch. No duplicate workflow
+  or dependency was added.
+- RED: `2 Ran / 1 Failed`; `tests.test_ci_wave3_gate` failed because the Wave
+  3 branch and `workflow_dispatch` triggers were absent.
+- GREEN: focused `57/57`; full `1805 Passed / 26 Skipped / 0 Failed`; the
+  existing Blender-Python full `unittest` discovery includes every Wave 3
+  qualification module.
+- Pytest: `Not Run` because neither the repository nor Blender bundled Python
+  provides pytest, and this gate is required to remain standard-library-only.
+- Remote CI: `Not Run`. This review-fix commit is local-only by instruction;
+  an exact-HEAD run can exist only after a separately authorized push. Manual
+  dispatch becomes available after this workflow version reaches the default
+  branch.
