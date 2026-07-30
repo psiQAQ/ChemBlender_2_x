@@ -153,25 +153,54 @@ Run pure conversion, sidecar and report tests; commit.
 **Interfaces:**
 - Produces: legacy status panel, preview dialog, `Migrate to Project`, backup collection and rollback.
 
-- [ ] **Step 1: Add load-time detection handler**
+- [x] **Step 1: Add load-time detection handler**
 
 Handler stores a transient summary in session/UI state only. It does not write Scene project keys or alter legacy objects.
 
-- [ ] **Step 2: Implement preview UI**
+- [x] **Step 2: Implement preview UI**
 
 List objects, recoverable fields, diagnostics, proposed project entities, new view names and sidecar destination. Require explicit confirmation.
 
-- [ ] **Step 3: Implement commit and backup**
+- [x] **Step 3: Implement commit and backup**
 
 Create/verify project and new views. Then link legacy objects into or move them to `ChemBlender Legacy Backup`, preserve original collection references in migration report, hide the backup by default and never delete it.
 
-- [ ] **Step 4: Implement rollback**
+- [x] **Step 4: Implement rollback**
 
 On any failure, remove new views/project link/staged sidecar, restore any collection moves/hide state and leave original file dirty state unchanged except for user-visible error log.
 
-- [ ] **Step 5: Run fixture smoke and commit**
+- [x] **Step 5: Run fixture smoke and commit**
 
 Migrate all fixtures, save/reopen, verify new entities and backup objects. Commit.
+
+**Task 4 checkpoint (2026-07-30):**
+
+- Implementation `2f819d9fc9ec859973d3a618b6cfe545e3a4e478`; review fixes
+  `171cbdf09c02fb5898ee3e9b97128dd9a53b44ee`,
+  `a91fac3247e684d131dfe3cb2f99f8696437bc31`,
+  `3a22879a4df5d53957e482ca86d3f251405bb105`,
+  `9d6768952b36cb351404f6d58239b6ce31ea5e52`, and
+  `00b07f9a72c9710699f69e90b81471869f9fda80`.
+- The load handler is non-mutating. Preview lists every legacy object,
+  candidate-only entity IDs, backup-only objects and diagnostics, and requires
+  `confirmed is True`.
+- Migration publishes through a same-parent staging sidecar, creates verified
+  views, then moves legacy objects into a paired `v2` owned Backup collection.
+  Rollback restores Scene links, session ownership, lazy arrays, memberships,
+  properties and per-view-layer hide state without leaving views, materials,
+  sidecars or Backup datablocks.
+- Real RED cases covered display-readback failure, post-mutation backup failure,
+  unloaded lazy-array restoration, ambiguous provenance, bondless scaffold,
+  backup-only preview omission and snapshot failure before Backup allocation.
+- Controller focused verification: 54 passed. Complete suite: 1843 passed,
+  26 skipped, 0 failed.
+- Blender 5.1.2 migrated all three hash-locked fixtures, verified exact entity
+  IDs, display/material/node settings, Backup ownership, save/reopen and lazy
+  sidecar reads. Native validate/build, 176-entry ZIP CRC/path/wheel audit,
+  isolated installed-extension lifecycle, `compileall` and `git diff --check`
+  passed.
+- Final independent review: Approved, with no Critical, Important or Minor
+  findings. Remote CI: Not Run. Task 5 has not started.
 
 ### Task 5: Route all migrated legacy UI actions to the unified backend
 
