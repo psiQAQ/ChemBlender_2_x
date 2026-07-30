@@ -58,6 +58,21 @@ def _tree_hash(path):
     return digest.hexdigest()
 
 
+def _inventory():
+    return (
+        tuple(sorted(item.name for item in bpy.data.objects)),
+        tuple(sorted(item.name for item in bpy.data.meshes)),
+        tuple(sorted(item.name for item in bpy.data.materials)),
+    )
+
+
+def _sibling_inventory(destination):
+    return tuple(sorted(
+        item.name for item in destination.parent.iterdir()
+        if item.name.startswith(".") and item.suffix == ".cbq"
+    ))
+
+
 def _attribute_values(view, name, field):
     return tuple(
         tuple(getattr(item, field)) if field == "color" else getattr(item, field)
@@ -91,7 +106,7 @@ def _verify_display(view, settings):
 
 def main():
     import ChemBlender
-    from ChemBlender.core import ArrayData, ImportBatch, Structure
+    from ChemBlender.core import ArrayData, ImportBatch, ProvenanceRecord, Structure
     from ChemBlender.core.project_service import relink_project_session_for_scenes
     from ChemBlender.core.sidecar import LazyNpyArray, close_project
     from ChemBlender.core.storage.publication import solidify_session
@@ -104,7 +119,9 @@ def main():
 
     active_scene = bpy.context.scene
     scene = bpy.data.scenes.new("Migration Target")
-    scene.collection.children.link(active_scene.collection.children[0])
+    target_scene_name = scene.name
+    for collection in active_scene.collection.children:
+        scene.collection.children.link(collection)
     assert scene is not bpy.context.scene
     before_objects = tuple(sorted(item.name for item in bpy.data.objects))
     before_keys = tuple(sorted(active_scene.keys()))
@@ -115,22 +132,45 @@ def main():
     assert tuple(sorted(active_scene.keys())) == before_keys
 
     forged = bpy.data.objects[detection.objects[0].name]
-    forged["cb_legacy_migration_backup"] = "v1"
+    foreign_project, foreign_transaction = str(uuid4()), str(uuid4())
+    forged["cb_legacy_migration_backup"] = "v2"
+    forged["cb_legacy_migration_project_id"] = foreign_project
+    forged["cb_legacy_migration_transaction_id"] = foreign_transaction
     migration._legacy_load_post_handler(None)
     assert any(item.name == forged.name for item in migration.legacy_migration_detection(scene).objects), "foreign marker must not suppress detection"
     del forged["cb_legacy_migration_backup"]
+    del forged["cb_legacy_migration_project_id"]
+    del forged["cb_legacy_migration_transaction_id"]
+    foreign_backup = bpy.data.collections.new("ChemBlender Legacy Backup")
+    scene.collection.children.link(foreign_backup)
+    original_collections = tuple(forged.users_collection)
+    for collection in original_collections:
+        collection.objects.unlink(forged)
+    foreign_backup.objects.link(forged)
+    migration._legacy_load_post_handler(None)
+    assert any(item.name == forged.name for item in migration.legacy_migration_detection(scene).objects), "foreign backup collection must not suppress detection"
+    foreign_backup.objects.unlink(forged)
+    for collection in original_collections:
+        collection.objects.link(forged)
+    scene.collection.children.unlink(foreign_backup)
+    bpy.data.collections.remove(foreign_backup)
     migration._legacy_load_post_handler(None)
 
     session = get_scene_session(scene)
     base_id = uuid4()
+    old_provenance_id = uuid4()
     session.project.commit(ImportBatch(structures=(Structure(
         base_id, "base", (1,),
         ArrayData(numpy.asarray(((0.0, 0.0, 0.0),)), ("atom", "xyz"), "angstrom"),
+    ),), provenance=(ProvenanceRecord(
+        old_provenance_id, "base", "ChemBlender", "2.3.0", "", "", (),
+        "legacy_blend_migration", (("legacy_object_name", detection.objects[0].name),),
     ),)))
     preview = migration.preview_legacy_migration(scene)
     assert preview.plan.view_plans
     assert preview.entity_inventory
     assert all("Structure" in item.entity_types and "ProvenanceRecord" in item.entity_types for item in preview.entity_inventory)
+    assert all(str(old_provenance_id) not in item.entity_ids for item in preview.entity_inventory)
     crystal_inventory = [item for item in preview.entity_inventory if item.kind == "crystal"]
     assert all("PeriodicSiteData" in item.entity_types for item in crystal_inventory)
     try:
@@ -139,6 +179,32 @@ def main():
         assert "confirmation" in str(error)
     else:
         raise AssertionError("migration accepted without explicit confirmation")
+
+    alternate_layer = scene.view_layers.new("Migration Target Alternate")
+    for obj in (bpy.data.objects[name] for name in preview.plan.report.object_names):
+        obj.hide_set(not obj.hide_get(view_layer=scene.view_layers[0]), view_layer=alternate_layer)
+
+    view_inventory = _inventory()
+    original_readback = migration._write_display_attribute
+    readback_failed = False
+
+    def fail_after_readback(*args):
+        nonlocal readback_failed
+        original_readback(*args)
+        readback_failed = True
+        raise RuntimeError("injected readback failure")
+
+    migration._write_display_attribute = fail_after_readback
+    try:
+        migration._new_view(preview.plan, preview.plan.view_plans[0], scene.collection, [])
+    except RuntimeError as error:
+        assert str(error) == "injected readback failure"
+    else:
+        raise AssertionError("readback failure did not escape")
+    finally:
+        migration._write_display_attribute = original_readback
+    assert readback_failed
+    assert _inventory() == view_inventory
 
     preview.sidecar_path.mkdir()
     (preview.sidecar_path / "unrelated").write_text("do not replace", encoding="utf-8")
@@ -162,6 +228,7 @@ def main():
     assert isinstance(lazy_before.structures[base_id].coordinates.values, LazyNpyArray)
     assert not lazy_before.structures[base_id].coordinates.values.loaded
     sidecar_before = _tree_hash(preview.sidecar_path)
+    siblings_before = _sibling_inventory(preview.sidecar_path)
     links_before = _scene_links_snapshot()
     originals = tuple(bpy.data.objects[name] for name in preview.plan.report.object_names)
     rollback_before = _object_snapshot(originals, scene)
@@ -189,6 +256,7 @@ def main():
     assert _object_snapshot(originals, scene) == rollback_before
     assert _scene_links_snapshot() == links_before
     assert _tree_hash(preview.sidecar_path) == sidecar_before
+    assert _sibling_inventory(preview.sidecar_path) == siblings_before
     assert session.project is not lazy_before
     assert session.project.structures[base_id].coordinates.values[0, 0] == 0.0
 
@@ -224,15 +292,39 @@ def main():
         view = bpy.data.objects[f"{view_plan.legacy_object_name} (Migrated)"]
         assert view.get("cb_structure_contract") == "structure_view_v1"
         assert view.users_collection[0].name == scene.collection.name
+        assert all(child.parent == view and child.get("cbq_contract") for child in view.children)
         _verify_display(view, view_plan.settings)
     assert migration.legacy_migration_detection(scene).objects == ()
 
+    expected_counts = (
+        len(session.project.structures), len(session.project.topologies),
+        len(session.project.provenance),
+    )
     assert bpy.ops.wm.save_as_mainfile(filepath=bpy.data.filepath) == {"FINISHED"}
     assert bpy.ops.wm.open_mainfile(filepath=bpy.data.filepath) == {"FINISHED"}
-    assert migration.legacy_migration_detection(bpy.context.scene).objects == ()
-    reopened_link = migration.resolve_project_link(bpy.context.scene, blend_path=bpy.data.filepath)
+    reopened_scene = bpy.data.scenes[target_scene_name]
+    assert migration.legacy_migration_detection(reopened_scene).objects == ()
+    reopened_link = migration.resolve_project_link(reopened_scene, blend_path=bpy.data.filepath)
     try:
         assert reopened_link.status.value == "connected"
+        reopened_project = reopened_link.project
+        assert (len(reopened_project.structures), len(reopened_project.topologies), len(reopened_project.provenance)) == expected_counts
+        assert reopened_project.structures[base_id].coordinates.values[0, 0] == 0.0
+        reopened_backup = bpy.data.collections["ChemBlender Legacy Backup"]
+        assert reopened_backup.name in {item.name for item in reopened_scene.collection.children}
+        for view_plan in preview.plan.view_plans:
+            reopened_view = bpy.data.objects[f"{view_plan.legacy_object_name} (Migrated)"]
+            assert reopened_view.get("cb_structure_contract") == "structure_view_v1"
+            assert all(child.parent == reopened_view and child.get("cbq_contract") for child in reopened_view.children)
+            _verify_display(reopened_view, view_plan.settings)
+        for name, (collections, hidden_viewport, hidden_layers, _properties) in original.items():
+            obj = bpy.data.objects[name]
+            assert tuple(sorted(group.name for group in obj.users_collection)) == (reopened_backup.name,)
+            assert obj.hide_viewport == hidden_viewport
+            assert tuple((layer.name, obj.hide_get(view_layer=layer)) for layer in reopened_scene.view_layers) == hidden_layers
+            assert obj["cb_legacy_migration_backup"] == "v2"
+            assert obj["cb_legacy_migration_project_id"] == reopened_backup["cb_legacy_migration_project_id"]
+            assert obj["cb_legacy_migration_transaction_id"] == reopened_backup["cb_legacy_migration_transaction_id"]
     finally:
         if reopened_link.project is not None:
             close_project(reopened_link.project)

@@ -95,7 +95,12 @@ def _blend_sidecar_path():
 def preview_legacy_migration(scene):
     detection = legacy_migration_detection(scene)
     report = extract_legacy_objects(detection)
-    plan = plan_legacy_migration(report, get_scene_session(scene).project)
+    base_project = get_scene_session(scene).project
+    plan = plan_legacy_migration(report, base_project)
+    candidate_provenance = tuple(
+        item for item in plan.project.provenance.values()
+        if item.id not in base_project.provenance
+    )
     inventory = []
     for view_plan in plan.view_plans:
         structure = plan.project.structures[view_plan.structure_id]
@@ -104,10 +109,15 @@ def preview_legacy_migration(scene):
              if item.structure_id == structure.id),
             None,
         )
-        provenance = next(
-            item for item in plan.project.provenance.values()
+        matches = tuple(
+            item for item in candidate_provenance
             if ("legacy_object_name", view_plan.legacy_object_name) in item.parameters
         )
+        if len(matches) != 1:
+            raise ValueError(
+                f"migration provenance is ambiguous: {view_plan.legacy_object_name}"
+            )
+        provenance = matches[0]
         entity_types = ["Structure"]
         entity_ids = [str(structure.id)]
         if topology is not None:
@@ -201,25 +211,42 @@ def _new_view(plan, view_plan, collection, owned_materials):
     name = f"{view_plan.legacy_object_name} (Migrated)"
     if bpy.data.objects.get(name) is not None:
         raise ValueError(f"migration view name already exists: {name}")
-    if view_plan.kind == "crystal":
-        view = create_periodic_structure_view(
-            structure, topology, PeriodicViewSettings(), name=name,
-            collection=collection, attach_ball_and_stick=False,
-        )
-    else:
-        view = create_structure_view(
-            structure, topology,
-            StructureViewSettings(
-                atom_scale=_mean(view_plan.settings.atom_scales),
-                bond_scale=_mean(view_plan.settings.bond_scales),
-                attach_ball_and_stick=False,
-            ),
-            name=name, collection=collection,
-        )
-    if view.get("cb_structure_contract") != "structure_view_v1":
-        raise RuntimeError(f"migration view verification failed: {name}")
-    _apply_view_settings(view, view_plan.settings, owned_materials)
-    return view
+    view = None
+    material_start = len(owned_materials)
+    try:
+        if view_plan.kind == "crystal":
+            view = create_periodic_structure_view(
+                structure, topology, PeriodicViewSettings(), name=name,
+                collection=collection, attach_ball_and_stick=False,
+            )
+        else:
+            view = create_structure_view(
+                structure, topology,
+                StructureViewSettings(
+                    atom_scale=_mean(view_plan.settings.atom_scales),
+                    bond_scale=_mean(view_plan.settings.bond_scales),
+                    attach_ball_and_stick=False,
+                ),
+                name=name, collection=collection,
+            )
+        if view.get("cb_structure_contract") != "structure_view_v1":
+            raise RuntimeError(f"migration view verification failed: {name}")
+        _apply_view_settings(view, view_plan.settings, owned_materials)
+        return view
+    except BaseException as error:
+        if view is not None and view.name in bpy.data.objects:
+            try:
+                remove_structure_view(view)
+            except BaseException as cleanup:
+                error.add_note(f"migration view cleanup failed: {cleanup}")
+        for material in owned_materials[material_start:]:
+            if material.name in bpy.data.materials and material.users == 0:
+                try:
+                    bpy.data.materials.remove(material)
+                except BaseException as cleanup:
+                    error.add_note(f"migration material cleanup failed: {cleanup}")
+        del owned_materials[material_start:]
+        raise
 
 
 def _scene_links_snapshot():
@@ -433,6 +460,8 @@ def migrate_legacy_scene(scene, *, confirmed):
             _cleanup(error, "candidate sidecar rollback failed", lambda: os.replace(destination, staging))
         if previous_sidecar is not None and previous_sidecar.exists():
             _cleanup(error, "previous sidecar restore failed", lambda: os.replace(previous_sidecar, destination))
+        if staging.exists():
+            _cleanup(error, "candidate staging cleanup failed", lambda: shutil.rmtree(staging))
         if has_existing_sidecar:
             _cleanup(
                 error, "existing sidecar session restore failed",
