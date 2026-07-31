@@ -18,18 +18,22 @@ trajectory/grid 使用 NPY memmap 按 frame/slab 写入。每次生成都会返�
 
 ## 运行边界
 
-| Case | 当前执行位置 |
+| Case | 当前执行位置与证据类型 |
 | --- | --- |
-| `preflight_feedback`、`parse`、`project_commit`、`sidecar_save_open`、`trajectory_frame`、`browser_projection_filter` | 现有 pure-Python API，可由 harness 运行。 |
-| `extension_enable`、`vdb_cache`、`default_view` | 仅 Blender；普通 CPython JSON 明确写入 `Not Run` 和边界原因。 |
+| `preflight_feedback`、`parse`、`project_commit`、`sidecar_save_open`、`trajectory_frame`、`browser_projection_filter` | 现有 pure-Python API，可由 harness 运行，但当前均为 `diagnostic`，不能作为产品 SLA 证据。 |
+| `extension_enable`、`vdb_cache`、`default_view` | 当前没有对应 runner；JSON 明确写入 `Not Run` 和边界原因。 |
 | `cancel_cleanup` | 等待 Wave 4 cancellable task state machine；不会伪造取消证据。 |
 
 `--case` 可重复选择单个 case，`--case all` 只用于汇总边界状态。完整
-qualification 只接受所有所选 case 为 `Passed` 的报告。
+qualification 要求 clean Git source、已验证 Blender/RDKit/Gemmi runtime、所有
+所选 case 为 `Passed`，并且每个 budget case 的 measurement 与其 `cold_p95` 或
+`hot_p95` 声明一致；`diagnostic` 结果必定被拒绝。
 
 harness 先在计时外准备一次选中 scale 的 fixture；`cold_seconds` 是同一
 fixture 的首次访问，随后执行 warmup，再记录至少两个 hot samples。`--samples`
 必须不小于 `2`，避免生成没有可比 `hot_seconds` 的报告。
+因此单个 `cold_seconds` 不是 cold p95，当前 pure-Python runner 的 p95 也不能
+替代产品 cold gate。
 
 ```powershell
 & 'C:\Program Files\Blender Foundation\Blender 5.1\5.1\python\bin\python.exe' `
@@ -45,6 +49,8 @@ fixture 的首次访问，随后执行 warmup，再记录至少两个 hot sample
 ## JSON 契约
 
 输出是 sorted-key、compact、UTF-8/LF 的 JSON，并以同目录 temporary file +
-`os.replace()` 原子发布。每份 report 必含 environment、warmup/sample count、
-per-case cold/hot、median/p95/min/max、samples 和 failure count。非有限数值、
-缺字段、失败或 `Not Run` case 都不能通过 qualification。
+`os.replace()` 原子发布。每份 report 必含 Git `source_commit`/`source_dirty`、
+经 background Blender probe 验证的 Blender/RDKit/Gemmi 版本、warmup/sample
+count、per-case measurement/cold/hot、median/p95/min/max、samples 和 failure
+count。非有限数值、缺字段、dirty source、runtime 不匹配、`diagnostic`、失败或
+`Not Run` case 都不能通过 qualification。

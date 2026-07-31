@@ -56,7 +56,7 @@ Unit-test JSON and small generators, then commit.
 **Interfaces:**
 - Produces: approved budgets and comparison function.
 
-- [x] **Step 1: Record reference environment and explicit Not Run boundaries**
+- [x] **Step 1: Record provenance-bound diagnostics and explicit Not Run product boundaries**
 
 Use Windows x64, Blender 5.1.2, CPU/RAM/storage and clean user resources. Run cold and warm cases. Store raw JSON as a release artifact or tracked small baseline if stable.
 
