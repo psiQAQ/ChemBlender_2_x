@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 from time import perf_counter
 from types import SimpleNamespace
 from unittest import TestCase
+from unittest.mock import patch
 from uuid import UUID, NAMESPACE_URL, uuid5
 
 import numpy
@@ -183,6 +184,49 @@ def _p95(samples):
     return ordered[math.ceil(len(ordered) * 0.95) - 1]
 
 
+def _source_only_project(source_count, *, with_revisions):
+    sources = {}
+    source_revisions = {}
+    for index in range(source_count):
+        source_id = uuid5(NAMESPACE_URL, f"browser-source-only:{index}")
+        sources[source_id] = SimpleNamespace(
+            id=source_id,
+            display_name=f"Standalone source {index:04d}",
+        )
+        if with_revisions:
+            revision_id = uuid5(
+                NAMESPACE_URL,
+                f"browser-source-only-revision:{index}",
+            )
+            source_revisions[revision_id] = SimpleNamespace(
+                id=revision_id,
+                source_id=source_id,
+                original_filename=f"source-{index:04d}.xyz",
+                created_entity_ids=(),
+                diagnostic_ids=(),
+            )
+    return SimpleNamespace(
+        id=PROJECT_ID,
+        sources=sources,
+        source_revisions=source_revisions,
+        structures={},
+        topologies={},
+        molecular_records={},
+        biological_hierarchies={},
+        cif_envelopes={},
+        qcschema_envelopes={},
+        cjson_envelopes={},
+        symmetry_results={},
+        calculations={},
+        datasets={},
+        basis_sets={},
+        orbital_sets={},
+        density_matrices={},
+        provenance={},
+        diagnostics={},
+    )
+
+
 class ProjectBrowserPerformanceTests(TestCase):
     def test_page_arguments_require_exact_bounded_integers(self):
         with TemporaryDirectory() as directory:
@@ -312,6 +356,94 @@ class ProjectBrowserPerformanceTests(TestCase):
         self.assertLess(len(rows), 70)
         self.assertFalse(lazy.loaded)
 
+    def test_large_standalone_sources_page_without_eager_tree_materialization(self):
+        project = _source_only_project(1001, with_revisions=False)
+        with patch.object(
+            browser_model,
+            "_by_source",
+            side_effect=AssertionError("eager source tree materialized"),
+        ):
+            rows = build_browser_rows(
+                project,
+                mode=BrowserMode.BY_SOURCE,
+                session_id=SESSION_ID,
+                browser_revision=1,
+                page=15,
+                page_size=64,
+            )
+
+        pages = [row for row in rows if row.kind == "result_page"]
+        self.assertEqual(len(pages), 1)
+        page = pages[0]
+        self.assertEqual(page.total_count, 1001)
+        self.assertEqual(page.page, 15)
+        self.assertEqual(page.page_count, 16)
+        self.assertEqual(
+            len([row for row in rows if row.kind == "source"]),
+            41,
+        )
+        self.assertLessEqual(len(rows), 1000)
+
+        match = build_browser_rows(
+            project,
+            mode=BrowserMode.BY_SOURCE,
+            session_id=SESSION_ID,
+            browser_revision=1,
+            search="standalone source 1000",
+            page_size=64,
+        )
+        self.assertEqual(
+            [row.label for row in match if row.kind == "source"],
+            ["Standalone source 1000"],
+        )
+        self.assertEqual(
+            next(
+                row for row in match if row.kind == "result_page"
+            ).total_count,
+            1,
+        )
+
+    def test_large_empty_source_revision_branches_page_search_and_navigate(self):
+        project = _source_only_project(1001, with_revisions=True)
+        rows = build_browser_rows(
+            project,
+            mode=BrowserMode.BY_SOURCE,
+            session_id=SESSION_ID,
+            browser_revision=1,
+            page=1,
+            page_size=998,
+        )
+
+        pages = [row for row in rows if row.kind == "result_page"]
+        self.assertEqual(len(pages), 1)
+        page = pages[0]
+        self.assertEqual(page.total_count, 1001)
+        self.assertEqual(page.page, 1)
+        self.assertEqual(page.page_count, 3)
+        self.assertLessEqual(len(rows), 1000)
+        self.assertEqual(
+            len([row for row in rows if row.kind == "source"]),
+            len([row for row in rows if row.kind == "source_revision"]),
+        )
+
+        match = build_browser_rows(
+            project,
+            mode=BrowserMode.BY_SOURCE,
+            session_id=SESSION_ID,
+            browser_revision=1,
+            search="source-1000.xyz",
+        )
+        self.assertEqual(
+            [row.label for row in match if row.kind == "source_revision"],
+            ["source-1000.xyz"],
+        )
+        self.assertEqual(
+            next(
+                row for row in match if row.kind == "result_page"
+            ).total_count,
+            1,
+        )
+
     def test_paged_records_keep_view_children_within_rna_row_limit(self):
         with TemporaryDirectory() as directory:
             project, lazy = _project_with_indexed_records(
@@ -340,7 +472,7 @@ class ProjectBrowserPerformanceTests(TestCase):
         self.assertLessEqual(len(rows), 1000)
         self.assertFalse(lazy.loaded)
 
-    def test_large_search_and_filter_include_view_fields_and_siblings(self):
+    def test_large_view_only_search_and_filter_show_only_matching_views(self):
         with TemporaryDirectory() as directory:
             project, lazy = _project_with_indexed_records(Path(directory), 1000)
             first = next(iter(project.molecular_records.values()))
@@ -401,9 +533,122 @@ class ProjectBrowserPerformanceTests(TestCase):
                 )
                 self.assertEqual(
                     {row.label for row in rows if row.kind == "view"},
-                    {"Rare surface label", "Sibling record view"},
+                    {"Rare surface label"},
                 )
                 self.assertLessEqual(len(rows), 1000)
+        self.assertFalse(lazy.loaded)
+
+    def test_small_and_large_view_filtering_have_the_same_visible_results(self):
+        semantic_results = {}
+        for record_count in (10, 1000):
+            with self.subTest(record_count=record_count), TemporaryDirectory() as directory:
+                project, lazy = _project_with_indexed_records(
+                    Path(directory),
+                    record_count,
+                )
+                first = next(iter(project.molecular_records.values()))
+                views = (
+                    ViewRecord(
+                        object_name="Partial surface",
+                        entity_id=first.id,
+                        revision=first.revision,
+                        view_kind="isosurface",
+                        label="Rare surface label",
+                        quality="partial",
+                        report_eligible=False,
+                    ),
+                    ViewRecord(
+                        object_name="Sibling view",
+                        entity_id=first.id,
+                        revision=first.revision,
+                        view_kind="record",
+                        label="Sibling record view",
+                    ),
+                )
+                cases = {
+                    "view_search": {"search": "rare surface label"},
+                    "view_quality": {"filters": ("partial",)},
+                    "entity_search": {"search": "benchmark-000000"},
+                }
+                semantic_results[record_count] = {}
+                for name, keywords in cases.items():
+                    rows = build_browser_rows(
+                        project,
+                        mode=BrowserMode.BY_SOURCE,
+                        session_id=f"{SESSION_ID}-{record_count}-{name}",
+                        browser_revision=1,
+                        views=views,
+                        **keywords,
+                    )
+                    semantic_results[record_count][name] = [
+                        (row.kind, row.label, row.quality)
+                        for row in rows
+                        if row.kind in {"molecular_record", "view"}
+                    ]
+                self.assertFalse(lazy.loaded)
+
+        self.assertEqual(semantic_results[10], semantic_results[1000])
+        self.assertEqual(
+            semantic_results[1000]["view_search"],
+            [
+                ("molecular_record", "benchmark-000000 · V2000", ""),
+                ("view", "Rare surface label", "partial"),
+            ],
+        )
+        self.assertEqual(
+            semantic_results[1000]["view_quality"],
+            semantic_results[1000]["view_search"],
+        )
+        self.assertEqual(
+            semantic_results[1000]["entity_search"],
+            [
+                ("molecular_record", "benchmark-000000 · V2000", ""),
+                ("view", "Rare surface label", "partial"),
+                ("view", "Sibling record view", ""),
+            ],
+        )
+
+    def test_mixed_large_project_summarizes_and_searches_empty_sources(self):
+        with TemporaryDirectory() as directory:
+            project, lazy = _project_with_indexed_records(
+                Path(directory),
+                1000,
+            )
+            empty = _source_only_project(1, with_revisions=False)
+            empty_source = next(iter(empty.sources.values()))
+            empty_source.display_name = "Reachable empty source"
+            project.sources[empty_source.id] = empty_source
+
+            default_rows = build_browser_rows(
+                project,
+                mode=BrowserMode.BY_SOURCE,
+                session_id=SESSION_ID,
+                browser_revision=1,
+            )
+            summary = next(
+                row
+                for row in default_rows
+                if row.kind == "projection_summary"
+            )
+            match = build_browser_rows(
+                project,
+                mode=BrowserMode.BY_SOURCE,
+                session_id=SESSION_ID,
+                browser_revision=1,
+                search="reachable empty source",
+            )
+
+        self.assertIn("empty source", summary.label.casefold())
+        self.assertEqual(
+            [row.label for row in match if row.kind == "source"],
+            ["Reachable empty source"],
+        )
+        self.assertEqual(
+            next(
+                row for row in match if row.kind == "result_page"
+            ).total_count,
+            1,
+        )
         self.assertFalse(lazy.loaded)
 
     def test_record_search_index_includes_source_names(self):

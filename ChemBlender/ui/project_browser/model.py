@@ -587,7 +587,7 @@ def _source_sort_key(entry):
         str(entry.source_id),
         entry.source_revision_label.casefold(),
         str(entry.source_revision_id),
-        _REGISTRY_ORDER[entry.registry],
+        _REGISTRY_ORDER.get(entry.registry, -1),
         entry.label.casefold(),
         str(entry.entity_id),
     )
@@ -714,8 +714,82 @@ def _projection_index(project, scope):
                 0,
             )
         )
+    covered_revision_ids = {
+        entry.source_revision_id
+        for entry in entries
+        if entry.source_revision_id is not None
+    }
+    revisions_by_source = {}
+    for source_revision in revisions.values():
+        revisions_by_source.setdefault(
+            source_revision.source_id,
+            [],
+        ).append(source_revision)
+    source_branches = []
+    for source in sources.values():
+        source_revisions = revisions_by_source.get(source.id, ())
+        if not source_revisions:
+            source_branches.append(
+                _EntityIndexEntry(
+                    "",
+                    "",
+                    source.id,
+                    "",
+                    "source",
+                    source.display_name,
+                    "",
+                    " ".join(
+                        (
+                            source.display_name,
+                            "source",
+                            str(source.id),
+                        )
+                    ).casefold(),
+                    source.id,
+                    source.display_name,
+                    None,
+                    "",
+                    None,
+                    0,
+                )
+            )
+            continue
+        for source_revision in source_revisions:
+            if source_revision.id in covered_revision_ids:
+                continue
+            source_branches.append(
+                _EntityIndexEntry(
+                    "",
+                    "",
+                    source_revision.id,
+                    "",
+                    "source_revision",
+                    source_revision.original_filename,
+                    "",
+                    " ".join(
+                        (
+                            source.display_name,
+                            source_revision.original_filename,
+                            "source revision",
+                            str(source.id),
+                            str(source_revision.id),
+                        )
+                    ).casefold(),
+                    source.id,
+                    source.display_name,
+                    source_revision.id,
+                    source_revision.original_filename,
+                    None,
+                    0,
+                )
+            )
     result = _ProjectionIndex(
-        tuple(sorted(entries, key=_source_sort_key)),
+        tuple(
+            sorted(
+                (*entries, *source_branches),
+                key=_source_sort_key,
+            )
+        ),
         tuple(sorted(entries, key=_data_sort_key)),
     )
     if scope is None:
@@ -764,27 +838,42 @@ def _matches_projection(search, filters, normalized, kind, quality):
     )
 
 
-def _entry_matches(entry, search, filters, views):
-    if _matches_projection(
-        search,
-        filters,
-        entry.normalized,
-        entry.kind,
-        entry.quality,
-    ):
-        return True
-    return any(
-        _matches_projection(
+def _matching_entries(entries, search, filters, views, visible_views):
+    for entry in entries:
+        if _matches_projection(
             search,
             filters,
-            " ".join(
-                (view.label, view.view_kind, view.quality)
-            ).casefold(),
-            view.view_kind,
-            view.quality,
+            entry.normalized,
+            entry.kind,
+            entry.quality,
+        ):
+            if views and entry.registry:
+                key = (entry.entity_id, entry.revision)
+                entity_views = views.get(key, ())
+                if entity_views:
+                    visible_views[key] = entity_views
+            yield entry
+            continue
+        if not views or not entry.registry:
+            continue
+        key = (entry.entity_id, entry.revision)
+        entity_views = views.get(key, ())
+        matching_views = tuple(
+            view
+            for view in entity_views
+            if _matches_projection(
+                search,
+                filters,
+                " ".join(
+                    (view.label, view.view_kind, view.quality)
+                ).casefold(),
+                view.view_kind,
+                view.quality,
+            )
         )
-        for view in views.get((entry.entity_id, entry.revision), ())
-    )
+        if matching_views:
+            visible_views[key] = matching_views
+            yield entry
 
 
 def _large_projection_required(entries, views, mode, page_size):
@@ -794,14 +883,26 @@ def _large_projection_required(entries, views, mode, page_size):
         ancestor_count = len({entry.registry for entry in entries})
     else:
         ancestor_count = (
-            len({entry.source_id for entry in entries})
-            + len({entry.source_revision_id for entry in entries})
+            len({
+                entry.source_id
+                for entry in entries
+                if entry.registry or entry.kind == "source_revision"
+            })
+            + len({
+                entry.source_revision_id
+                for entry in entries
+                if entry.registry
+            })
         )
     return (
         1
         + len(entries)
         + ancestor_count
-        + sum(entry.detail_count for entry in entries)
+        + sum(
+            entry.detail_count
+            for entry in entries
+            if entry.registry
+        )
         + sum(len(values) for values in views.values())
         > _BROWSER_ROW_LIMIT
     )
@@ -852,16 +953,23 @@ def _page_slice(
         if mode is BrowserMode.BY_DATA:
             if entry.registry not in registry_ids:
                 ancestor_count = 1
+        elif not entry.registry:
+            if (
+                entry.kind == "source_revision"
+                and entry.source_id not in source_ids
+            ):
+                ancestor_count = 1
         else:
             if entry.source_id not in source_ids:
                 ancestor_count += 1
             if entry.source_revision_id not in revision_ids:
                 ancestor_count += 1
-        entry_count = (
-            1
-            + len(views.get((entry.entity_id, entry.revision), ()))
-            + (entry.detail_count > 0)
-        )
+        entry_count = 1
+        if entry.registry:
+            entry_count += (
+                len(views.get((entry.entity_id, entry.revision), ()))
+                + (entry.detail_count > 0)
+            )
         if current and (
             len(current) >= page_size
             or row_count + ancestor_count + entry_count > row_limit
@@ -874,6 +982,8 @@ def _page_slice(
             revision_ids = set()
             if mode is BrowserMode.BY_DATA:
                 ancestor_count = entry.registry not in registry_ids
+            elif not entry.registry:
+                ancestor_count = entry.kind == "source_revision"
             else:
                 ancestor_count = 2
         if row_count + ancestor_count + entry_count > row_limit:
@@ -885,7 +995,8 @@ def _page_slice(
         row_count += ancestor_count + entry_count
         registry_ids.add(entry.registry)
         source_ids.add(entry.source_id)
-        revision_ids.add(entry.source_revision_id)
+        if entry.registry or entry.source_revision_id is not None:
+            revision_ids.add(entry.source_revision_id)
     if current:
         finish_page()
     if not page_count:
@@ -1052,6 +1163,8 @@ def _page_rows(
                     None,
                 )
             )
+        if not entry.registry and entry.kind == "source":
+            continue
         revision_key = (source_key, entry.source_revision_id)
         revision_path = revision_paths.get(revision_key)
         if revision_path is None:
@@ -1071,6 +1184,8 @@ def _page_rows(
                     None,
                 )
             )
+        if not entry.registry:
+            continue
         rows.extend(
             _indexed_entity_rows(entry, revision_path, 3, entity_views)
         )
@@ -1095,6 +1210,9 @@ def _additional_summary(index, mode):
             if entry.source_revision_id is not None
         })
         details = f"{source_count} source / {revision_count} revision"
+        branch_count = sum(not entry.registry for entry in entries)
+        if branch_count:
+            details = f"{details}; {branch_count} empty source branches"
     else:
         counts = {}
         labels = {}
@@ -1276,23 +1394,25 @@ def build_browser_rows(
         page_size,
     ):
         if search or filters or not records:
+            visible_views = {}
             entries = (
-                (
-                    entry
-                    for entry in index
-                    if _entry_matches(
-                        entry,
-                        search,
-                        filters,
-                        entity_views,
-                    )
+                _matching_entries(
+                    index,
+                    search,
+                    filters,
+                    entity_views,
+                    visible_views,
                 )
                 if search or filters
                 else index
             )
             rows = _page_rows(
                 entries,
-                entity_views,
+                (
+                    visible_views
+                    if search or filters
+                    else entity_views
+                ),
                 page,
                 page_size,
                 mode,
@@ -1339,20 +1459,7 @@ def build_browser_rows(
         rows = (*record_rows, *summary_rows)
         return _remember_rows(
             key,
-            tuple(rows)
-            if rows
-            else (
-                BrowserRow(
-                    f"empty:{mode.value}",
-                    None,
-                    0,
-                    "empty",
-                    "No matching project data",
-                    "",
-                    0,
-                    None,
-                ),
-            ),
+            tuple(rows),
         )
 
     if search or filters:

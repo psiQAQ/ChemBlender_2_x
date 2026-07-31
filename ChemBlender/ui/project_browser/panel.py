@@ -149,7 +149,7 @@ class CHEMBLENDER_PG_project_browser(bpy.types.PropertyGroup):
     record_count: IntProperty(default=0, min=0)
     page: IntProperty(default=0, min=0)
     page_size: IntProperty(
-        name="Records per Page",
+        name="Entries per Page",
         default=998,
         min=1,
         max=998,
@@ -749,65 +749,56 @@ def register():
     global _OWNED_TOPOLOGY_SCENE_PROPERTY
     current = _scene_property_identity(_SCENE_PROPERTY_NAME)
     if _OWNED_SCENE_PROPERTY is not None:
-        if _same_scene_property(current, _OWNED_SCENE_PROPERTY):
-            topology_current = _scene_property_identity(
-                _TOPOLOGY_SCENE_PROPERTY_NAME
+        if not _same_scene_property(current, _OWNED_SCENE_PROPERTY):
+            raise RuntimeError(
+                f"Scene.{_SCENE_PROPERTY_NAME} is no longer owned by "
+                "ChemBlender"
             )
-            if not _same_scene_property(
-                topology_current,
-                _OWNED_TOPOLOGY_SCENE_PROPERTY,
-            ):
-                raise RuntimeError(
-                    f"Scene.{_TOPOLOGY_SCENE_PROPERTY_NAME} is no longer "
-                    "owned by ChemBlender"
-                )
-            return
-        raise RuntimeError(
-            f"Scene.{_SCENE_PROPERTY_NAME} is no longer owned by ChemBlender"
+    else:
+        if current is not None:
+            raise RuntimeError(f"Scene.{_SCENE_PROPERTY_NAME} is already owned")
+        created_property = PointerProperty(
+            type=CHEMBLENDER_PG_project_browser
         )
-    if current is not None:
-        raise RuntimeError(f"Scene.{_SCENE_PROPERTY_NAME} is already owned")
-    created_property = PointerProperty(
-        type=CHEMBLENDER_PG_project_browser
-    )
-    setattr(
-        bpy.types.Scene,
-        _SCENE_PROPERTY_NAME,
-        created_property,
-    )
-    identity = _scene_property_identity(_SCENE_PROPERTY_NAME)
-    if identity is None:
-        failure = RuntimeError(
-            "Project Browser Scene property registration failed"
-        )
-        current_property = getattr(
+        setattr(
             bpy.types.Scene,
             _SCENE_PROPERTY_NAME,
-            None,
+            created_property,
         )
-        if current_property is not created_property:
-            failure.add_note(
-                "property replaced before rollback; foreign property preserved"
+        identity = _scene_property_identity(_SCENE_PROPERTY_NAME)
+        if identity is None:
+            failure = RuntimeError(
+                "Project Browser Scene property registration failed"
             )
+            current_property = getattr(
+                bpy.types.Scene,
+                _SCENE_PROPERTY_NAME,
+                None,
+            )
+            if current_property is not created_property:
+                failure.add_note(
+                    "property replaced before rollback; foreign property "
+                    "preserved"
+                )
+                raise failure
+            try:
+                delattr(bpy.types.Scene, _SCENE_PROPERTY_NAME)
+            except BaseException as error:
+                if (
+                    getattr(
+                        bpy.types.Scene,
+                        _SCENE_PROPERTY_NAME,
+                        None,
+                    )
+                    is created_property
+                ):
+                    _OWNED_SCENE_PROPERTY = (
+                        "python",
+                        created_property,
+                    )
+                failure.add_note(f"property rollback failed: {error}")
             raise failure
-        try:
-            delattr(bpy.types.Scene, _SCENE_PROPERTY_NAME)
-        except BaseException as error:
-            if (
-                getattr(
-                    bpy.types.Scene,
-                    _SCENE_PROPERTY_NAME,
-                    None,
-                )
-                is created_property
-            ):
-                _OWNED_SCENE_PROPERTY = (
-                    "python",
-                    created_property,
-                )
-            failure.add_note(f"property rollback failed: {error}")
-        raise failure
-    _OWNED_SCENE_PROPERTY = identity
+        _OWNED_SCENE_PROPERTY = identity
     topology_current = _scene_property_identity(
         _TOPOLOGY_SCENE_PROPERTY_NAME
     )
@@ -816,6 +807,7 @@ def register():
             topology_current,
             _OWNED_TOPOLOGY_SCENE_PROPERTY,
         ):
+            register_session_cleanup(clear_browser_session_cache)
             return
         raise RuntimeError(
             f"Scene.{_TOPOLOGY_SCENE_PROPERTY_NAME} is no longer owned "
@@ -852,7 +844,6 @@ def register():
 def unregister():
     global _OWNED_SCENE_PROPERTY
     global _OWNED_TOPOLOGY_SCENE_PROPERTY
-    unregister_session_cleanup(clear_browser_session_cache)
     clear_browser_caches()
     topology_owned = _OWNED_TOPOLOGY_SCENE_PROPERTY
     if (
@@ -865,14 +856,14 @@ def unregister():
         delattr(bpy.types.Scene, _TOPOLOGY_SCENE_PROPERTY_NAME)
     _OWNED_TOPOLOGY_SCENE_PROPERTY = None
     owned = _OWNED_SCENE_PROPERTY
-    if owned is None:
-        return
-    if _same_scene_property(
-        _scene_property_identity(_SCENE_PROPERTY_NAME),
-        owned,
-    ):
-        delattr(bpy.types.Scene, _SCENE_PROPERTY_NAME)
-    _OWNED_SCENE_PROPERTY = None
+    if owned is not None:
+        if _same_scene_property(
+            _scene_property_identity(_SCENE_PROPERTY_NAME),
+            owned,
+        ):
+            delattr(bpy.types.Scene, _SCENE_PROPERTY_NAME)
+        _OWNED_SCENE_PROPERTY = None
+    unregister_session_cleanup(clear_browser_session_cache)
 
 
 __all__ = (

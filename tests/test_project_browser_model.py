@@ -972,6 +972,10 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             state_properties["page_size"].keywords["max"],
             998,
         )
+        self.assertEqual(
+            state_properties["page_size"].keywords["name"],
+            "Entries per Page",
+        )
         quality = state_properties["quality_filter"]
         self.assertEqual(quality.keywords["default"], "all")
         self.assertTrue(
@@ -2254,6 +2258,70 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         )
         self.assertFalse(browser_model._CACHE)
         self.assertFalse(browser_model._INDEX_CACHE)
+
+    def test_failed_rna_teardown_keeps_cleanup_callback_for_register_retry(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        browser_model = importlib.import_module(
+            "ChemBlender.ui.project_browser.model"
+        )
+        session_module = importlib.import_module("ChemBlender.ui.session")
+        native_delattr = delattr
+
+        def fail_project_property(owner, name):
+            if name == "chemblender_project_browser":
+                raise OSError("project property delete blocked")
+            native_delattr(owner, name)
+
+        panel.register()
+        browser_model._CACHE[("project", "session", 1)] = ("rows",)
+        browser_model._INDEX_CACHE[
+            ("project", "session", 1)
+        ] = ("index",)
+        with (
+            patch.object(
+                panel,
+                "delattr",
+                side_effect=fail_project_property,
+                create=True,
+            ),
+            self.assertRaisesRegex(
+                OSError,
+                "project property delete blocked",
+            ),
+        ):
+            panel.unregister()
+
+        self.assertFalse(browser_model._CACHE)
+        self.assertFalse(browser_model._INDEX_CACHE)
+        self.assertIn(
+            browser_model.clear_browser_session_cache,
+            session_module._SESSION_CLEANUP_CALLBACKS,
+        )
+        self.assertTrue(
+            hasattr(_Scene, "chemblender_project_browser")
+        )
+        self.assertFalse(hasattr(_Scene, "chemblender_topology"))
+
+        panel.register()
+        self.assertEqual(
+            session_module._SESSION_CLEANUP_CALLBACKS.count(
+                browser_model.clear_browser_session_cache
+            ),
+            1,
+        )
+        self.assertTrue(hasattr(_Scene, "chemblender_topology"))
+
+        panel.unregister()
+        self.assertNotIn(
+            browser_model.clear_browser_session_cache,
+            session_module._SESSION_CLEANUP_CALLBACKS,
+        )
+        self.assertFalse(
+            hasattr(_Scene, "chemblender_project_browser")
+        )
+        self.assertFalse(hasattr(_Scene, "chemblender_topology"))
 
     def test_post_set_verification_failure_rolls_back_cleanly(self):
         panel = importlib.import_module(
