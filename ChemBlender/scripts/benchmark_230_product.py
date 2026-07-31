@@ -1176,7 +1176,7 @@ def _measure_browser(_bpy, workspace, _sample_index):
             session_id=uuid4(),
             browser_revision=0,
             search="benchmark-42",
-            page_size=1_000,
+            page_size=998,
         )
         elapsed = perf_counter() - started
         if (

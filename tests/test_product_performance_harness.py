@@ -496,6 +496,41 @@ class ProductPerformanceHarnessTests(unittest.TestCase):
         self.assertEqual(events, ["update"])
         self.assertTrue(assertions["openvdb_loaded"])
 
+    def test_browser_product_case_uses_the_bounded_page_contract(self):
+        harness = load_harness()
+        events = []
+        project = SimpleNamespace(molecular_records=tuple(range(10_000)))
+
+        def build_browser_rows(candidate, **kwargs):
+            if candidate is not project or kwargs["page_size"] != 998:
+                raise AssertionError("browser benchmark exceeded the RNA page bound")
+            return (SimpleNamespace(kind="molecular_record"),)
+
+        modules = {
+            "core": SimpleNamespace(
+                close_project=lambda candidate: events.append("close"),
+                open_project=lambda path: project,
+            ),
+            "ui.project_browser.model": SimpleNamespace(
+                build_browser_rows=build_browser_rows,
+                clear_browser_caches=lambda: events.append("clear"),
+            ),
+        }
+
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            with patch.object(
+                harness,
+                "_product_module",
+                side_effect=lambda name: modules[name],
+            ):
+                _elapsed, assertions = harness._measure_browser(
+                    None, workspace, 0
+                )
+
+        self.assertEqual(events, ["clear", "close"])
+        self.assertTrue(assertions["ten_thousand_sdf_records"])
+
 
 if __name__ == "__main__":
     unittest.main()
