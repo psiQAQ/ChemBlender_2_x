@@ -30,6 +30,10 @@ ChemBlender uses **read-only package CI plus a manually dispatched, deterministi
 
 This is the preferred balance for the current Windows-only release line. A tag push alone cannot publish, routine CI remains least-privileged, and deterministic checks replace manual artifact transfer. Release timing is still a human decision; package selection and digest verification are not. No large language model is used.
 
+The current named merge checks, optional-backend ownership, and un-applied
+branch-protection recommendation are maintained in
+[2.3.0 Required Checks](2.3.0-required-checks.md).
+
 GitHub recommends full commit SHA pins for immutable action code and supports SHA-256 validation when workflow artifacts are uploaded and downloaded. See [Secure use reference](https://docs.github.com/en/actions/reference/security/secure-use) and [Store and share data with workflow artifacts](https://docs.github.com/en/actions/tutorials/store-and-share-data).
 
 ## Changelog Policy

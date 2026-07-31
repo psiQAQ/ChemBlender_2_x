@@ -24,6 +24,10 @@ Dynamic branch tips must be checked live. This document records stable roles and
 - Investigation history may contain diagnostics; final upstream PR history contains only required code and tests.
 - Record branch creation, role changes, integration, archival, renaming, and deletion in the same development phase.
 - Do not delete local or remote branches without explicit authorization and a verified retained evidence path.
+- The current 2.3.0 required-check contexts and branch-protection recommendation
+  are documented in [2.3.0 Required Checks](../../docs/development/2.3.0-required-checks.md).
+  They are not applied GitHub settings; an authorized administrator operation is
+  required to change branch protection.
 
 ## Rebuild and Integration Record
 
