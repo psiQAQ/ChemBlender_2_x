@@ -32,26 +32,48 @@ foreach ($wheel in @($rdkitWheel, $gemmiWheel)) {
     throw "Missing reviewed offline wheel: $wheel"
   }
 }
+$tempParent = (Resolve-Path -LiteralPath ([IO.Path]::GetTempPath())).Path
+$separator = [IO.Path]::DirectorySeparatorChar.ToString()
+$tempPrefix = $tempParent
+if (-not $tempPrefix.EndsWith($separator, [StringComparison]::OrdinalIgnoreCase)) {
+  $tempPrefix += $separator
+}
 $qualificationRoot = Join-Path `
-  ([IO.Path]::GetTempPath()) `
+  $tempParent `
   ("cb23-qualification-" + [guid]::NewGuid().ToString('N'))
 $dependencySite = Join-Path $qualificationRoot 'site-packages'
-New-Item -ItemType Directory -Path $dependencySite | Out-Null
-
-& $pythonBin ChemBlender/scripts/dependency_inventory.py `
-  --inventory ChemBlender/dependencies.toml `
-  --wheel-dir $wheelDir `
-  --manifest ChemBlender/blender_manifest.toml `
-  --output (Join-Path $qualificationRoot 'wheel-inventory.json') `
-  --license-copy-list (Join-Path $qualificationRoot 'wheel-license-copy-list.json')
-if ($LASTEXITCODE -ne 0) { throw 'Pinned wheel inventory validation failed' }
-
-& $pythonBin -m pip install --disable-pip-version-check `
-  --no-index --no-deps --target $dependencySite $rdkitWheel $gemmiWheel
-if ($LASTEXITCODE -ne 0) { throw 'Offline dependency bootstrap failed' }
-
 $previousPythonPath = $env:PYTHONPATH
+$resolvedQualificationRoot = $null
 try {
+  if (Test-Path -LiteralPath $qualificationRoot) {
+    throw 'Refusing to reuse a qualification temp root'
+  }
+  New-Item -ItemType Directory -Path $dependencySite | Out-Null
+  $resolvedQualificationRoot = (
+    Resolve-Path -LiteralPath $qualificationRoot
+  ).Path
+  if (
+    $resolvedQualificationRoot -eq $tempParent -or
+    -not $resolvedQualificationRoot.StartsWith(
+      $tempPrefix,
+      [StringComparison]::OrdinalIgnoreCase
+    )
+  ) {
+    throw 'Qualification temp root escaped its expected parent'
+  }
+
+  & $pythonBin ChemBlender/scripts/dependency_inventory.py `
+    --inventory ChemBlender/dependencies.toml `
+    --wheel-dir $wheelDir `
+    --manifest ChemBlender/blender_manifest.toml `
+    --output (Join-Path $qualificationRoot 'wheel-inventory.json') `
+    --license-copy-list (Join-Path $qualificationRoot 'wheel-license-copy-list.json')
+  if ($LASTEXITCODE -ne 0) { throw 'Pinned wheel inventory validation failed' }
+
+  & $pythonBin -m pip install --disable-pip-version-check `
+    --no-index --no-deps --target $dependencySite $rdkitWheel $gemmiWheel
+  if ($LASTEXITCODE -ne 0) { throw 'Offline dependency bootstrap failed' }
+
   $env:PYTHONPATH = $dependencySite
   & $pythonBin -c "from importlib.metadata import version; import gemmi; from rdkit import rdBase; assert version('gemmi') == '0.7.5'; assert gemmi.__version__ == '0.7.5'; assert version('rdkit') == '2026.3.3'; assert rdBase.rdkitVersion == '2026.03.3'"
   if ($LASTEXITCODE -ne 0) { throw 'Exact Gemmi/RDKit probe failed' }
@@ -64,6 +86,26 @@ try {
     Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
   } else {
     $env:PYTHONPATH = $previousPythonPath
+  }
+  if (Test-Path -LiteralPath $qualificationRoot) {
+    $cleanupRoot = (Resolve-Path -LiteralPath $qualificationRoot).Path
+    $cleanupItem = Get-Item -LiteralPath $cleanupRoot -Force
+    if (
+      $cleanupRoot -eq $tempParent -or
+      -not $cleanupRoot.StartsWith(
+        $tempPrefix,
+        [StringComparison]::OrdinalIgnoreCase
+      ) -or
+      ($null -ne $resolvedQualificationRoot -and
+        $cleanupRoot -ne $resolvedQualificationRoot) -or
+      ($cleanupItem.Attributes -band [IO.FileAttributes]::ReparsePoint)
+    ) {
+      throw 'Refusing unsafe qualification temp cleanup'
+    }
+    Remove-Item -LiteralPath $cleanupRoot -Recurse -Force
+    if (Test-Path -LiteralPath $cleanupRoot) {
+      throw 'Qualification temp cleanup failed'
+    }
   }
 }
 git diff --check
@@ -79,11 +121,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Extension build failed' }
 该前置只读取已审核、已下载并通过 `dependencies.toml` hash/size/license contract 的
 pinned wheels；`--no-index --no-deps` 保证 pip 不得联网下载或解析其他依赖，目标是
 一次性的隔离目录，不是 Blender global site-packages。不得将包安装到 Blender
-global site-packages。开发者也可显式复用已安装 Extension 的共享
-`extensions/.local/lib/python3.13/site-packages` 作为 `$dependencySite`，但仍须先运行
-相同的 exact Gemmi/RDKit probe；这不能替代 package gate 对原始 wheels 的 inventory
-验证。裸 Blender Python 未完成上述前置时，不得把 full suite 失败或 skip 解释为
-产品结果。
+global site-packages，也不得把 `$dependencySite` 指向已安装 Extension 的共享依赖
+目录。唯一允许的 qualification flow 是由当前任务创建 GUID temp root、离线安装、
+exact probe，并在 `finally` 中验证 resolved child path 后清理。裸 Blender Python
+未完成上述前置时，不得把 full suite 失败或 skip 解释为产品结果。
 
 `release_metadata.py` 是 version、package、checksum 和 artifact 名称的单一来源；
 不要再拼接 `chemblender-{version}`。构建后还必须完成 ZIP path/type/CRC/inventory、

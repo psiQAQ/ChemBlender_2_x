@@ -399,9 +399,13 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "--target $dependencySite",
             "version('rdkit') == '2026.3.3'",
             "gemmi.__version__ == '0.7.5'",
-            "extensions/.local/lib/python3.13/site-packages",
             "Blender global site-packages",
             "不得联网下载",
+            "cb23-qualification-",
+            "$cleanupRoot = (Resolve-Path -LiteralPath $qualificationRoot).Path",
+            "-not $cleanupRoot.StartsWith(",
+            "Remove-Item -LiteralPath $cleanupRoot -Recurse -Force",
+            "throw 'Qualification temp cleanup failed'",
             "throw 'Release metadata probe failed'",
             "throw 'Generated documentation check failed'",
             "throw 'git diff --check failed'",
@@ -409,6 +413,14 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "throw 'Extension build failed'",
         ):
             self.assertIn(term, release)
+        self.assertNotIn(
+            "extensions/.local/lib/python3.13/site-packages",
+            release,
+        )
+        self.assertLess(
+            release.index("try {"),
+            release.index("Remove-Item -LiteralPath $cleanupRoot -Recurse -Force"),
+        )
         self.assertLess(
             release.index("dependency_inventory.py"),
             release.index("$env:PYTHONPATH = $dependencySite"),
