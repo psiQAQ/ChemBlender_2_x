@@ -52,9 +52,41 @@ OpenVDB files generated for Blender Volumes/Surfaces are derived caches, not a
 scientific interchange format. Grid3D remains the authoritative field and can
 rebuild those caches.
 
-The machine-readable
-[reader capability matrix](../quantum-visualization/reader-capability-matrix.json)
-is the source of built-in reader availability and dependency contracts.
+The generated
+[format capability document](format-capabilities.json) and
+[dependency document](dependencies.json) record built-in reader contracts and
+pinned release-wheel facts without claiming the current machine is available.
+The earlier
+[reader-capability-matrix.json](../quantum-visualization/reader-capability-matrix.json)
+path is generated from the same bytes for compatibility.
 
 For project storage, read [Project and sidecar](project-sidecar.md). For
 assumptions and recovered values, read [Data quality](data-quality.md).
+
+<!-- BEGIN GENERATED FORMAT CAPABILITIES -->
+## Generated format capability reference
+
+Reader API `1.0-rc1`. Runtime availability is evaluated when a reader is selected; this table records the probe contract, not the current machine state.
+
+| Reader | Import | Export | Runtime | Fixtures |
+| --- | --- | --- | --- | --- |
+| `ase-structure` (`.vasp`, `.poscar`, `.contcar`, `.extxyz`, `.xyz`) | atomic_property=partial, crystal=supported, structure=supported | F0 / none / not_available | runtime module `ase` | ASE extXYZ, ASE POSCAR |
+| `cclib_output` (`.log`, `.out`) | atomic_property=supported, energy=supported, excited_state=supported, structure=supported, trajectory=supported, vibration=supported | F0 / none / not_available | runtime module `cclib` | Gaussian output, ORCA output |
+| `cif` (`.cif`) | cif_envelope=supported, crystal=supported, structure=supported | F5 / project_browser / preview_confirmation | runtime module `gemmi` | CIF crystal, CIF disorder, CIF multi-block |
+| `cjson` (`.cjson`) | atomic_identity=supported, atomic_property=supported, excited_state=partial, grid=partial, orbital=partial, spectrum=partial, structure=supported, topology=supported, trajectory=partial, vibration=partial | F5 / core / controlled_envelope | built-in | CJSON result envelope |
+| `cube` (`.cube`, `.cub`) | atomic_property=supported, grid=supported, structure=supported | F0 / none / not_available | built-in | Gaussian Cube, multi-dataset Cube |
+| `extxyz` (`.xyz`, `.extxyz`) | properties=supported, structure=supported, trajectory=supported | F5 / project_browser / preview_confirmation | built-in | ASE extXYZ, libAtoms extXYZ, OVITO extXYZ |
+| `iodata_wavefunction` (`.fchk`, `.fch`, `.molden`, `.input`) | atomic_property=supported, basis_set=supported, density_matrix=supported, orbital=supported, structure=supported | F0 / none / not_available | runtime module `iodata` | FCHK, Molden |
+| `mol` (`.mol`) | atomic_identity=supported, molecular_record=supported, structure=supported, topology=supported | F5 / project_browser / preview_confirmation | runtime module `rdkit` | MOL V2000, MOL V3000 |
+| `mol-v2000` (`.mol`) | atomic_identity=supported, molecular_record=supported, structure=supported, topology=supported | F5 / project_browser / preview_confirmation | runtime module `rdkit` | MOL V2000 |
+| `mol2` (`.mol2`) | atomic_property=supported, multi_record=supported, structure=supported, substructure=supported, topology=supported | F0 / none / not_available | built-in | Tripos MOL2, MOL2 multi-record, MOL2 substructure |
+| `pdb` (`.pdb`) | atomic_identity=supported, atomic_property=supported, crystal=partial, hierarchy=supported, multi_model=supported, structure=supported, topology=partial, trajectory=supported | F0 / none / not_available | built-in | PDB altloc, PDB CONECT, PDB multi-model |
+| `poscar` (`.vasp`, `.poscar`, `.contcar`, `CONTCAR`, `POSCAR`) | atomic_property=supported, crystal=supported, structure=supported | F5 / project_browser / preview_confirmation | built-in | VASP 4, VASP 5, POSCAR velocity |
+| `pqr` (`.pqr`) | atomic_identity=supported, atomic_property=supported, hierarchy=supported, structure=supported | F0 / none / not_available | built-in | PQR chain, PQR no-chain |
+| `pymatgen-vasp-grid` (`.chgcar`, `.parchg`, `.elfcar`, `.locpot`) | crystal=supported, grid=supported, structure=supported | F0 / none / not_available | runtime module `pymatgen` | CHGCAR, ELFCAR, LOCPOT, PARCHG |
+| `pymatgen-vasprun-electronic` (`.xml`) | band_structure=supported, dos=supported, projection=partial, structure=supported | F0 / none / not_available | runtime module `pymatgen` | vasprun.xml band/DOS |
+| `qcschema` (`.json`) | calculation_record=partial, energy=partial, gradient=partial, structure=supported | F5 / core / source_envelope | built-in | QCSchema AtomicResult, QCSchema Molecule |
+| `sdf` (`.sdf`) | atomic_identity=supported, molecular_record=supported, record_property=partial, structure=supported, topology=supported | F5 / project_browser / preview_confirmation | runtime module `rdkit` | SDF malformed-record recovery, SDF multi-record |
+| `smiles` (`.smi`, `.smiles`) | atomic_identity=supported, molecular_record=supported, structure=supported, topology=supported | F5 / project_browser / preview_confirmation | runtime module `rdkit` | SMILES file, SMILES text |
+| `xyz` (`.xyz`) | structure=supported, trajectory=supported | F5 / project_browser / lossless | built-in | XYZ single-frame, XYZ trajectory |
+<!-- END GENERATED FORMAT CAPABILITIES -->
