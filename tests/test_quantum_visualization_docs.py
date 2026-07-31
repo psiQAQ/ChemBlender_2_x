@@ -144,6 +144,9 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "bpy.ops.chemblender.migrate_legacy_scene",
             "bpy.ops.wm.save_mainfile",
             "bpy.ops.wm.open_mainfile",
+            'cb_legacy_migration_backup") == "v2"',
+            "cb_legacy_migration_project_id",
+            "cb_legacy_migration_transaction_id",
             "PASS: packaged legacy migration and reopen",
         ):
             self.assertIn(operation, legacy_source)

@@ -13,6 +13,21 @@ def _sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _assert_backup_preservation(backup, legacy_names):
+    project_id = backup["cb_legacy_migration_project_id"]
+    transaction_id = backup["cb_legacy_migration_transaction_id"]
+    for name in legacy_names:
+        assert name in bpy.data.objects, name
+        obj = bpy.data.objects[name]
+        assert tuple(obj.users_collection) == (backup,), (
+            name,
+            tuple(collection.name for collection in obj.users_collection),
+        )
+        assert obj.get("cb_legacy_migration_backup") == "v2"
+        assert obj.get("cb_legacy_migration_project_id") == project_id
+        assert obj.get("cb_legacy_migration_transaction_id") == transaction_id
+
+
 def main():
     arguments = sys.argv[sys.argv.index("--") + 1 :]
     assert len(arguments) == 3, (
@@ -59,6 +74,7 @@ def main():
     assert migration.legacy_migration_detection(scene).objects == ()
     backup = bpy.data.collections["ChemBlender Legacy Backup"]
     assert backup.hide_viewport and backup.hide_render
+    _assert_backup_preservation(backup, legacy_names)
     assert any(
         obj.get("cb_structure_contract") == "structure_view_v1"
         for obj in bpy.data.objects
@@ -70,6 +86,7 @@ def main():
     assert migration.legacy_migration_detection(reopened_scene).objects == ()
     reopened_backup = bpy.data.collections["ChemBlender Legacy Backup"]
     assert reopened_backup.hide_viewport and reopened_backup.hide_render
+    _assert_backup_preservation(reopened_backup, legacy_names)
     assert any(
         obj.get("cb_structure_contract") == "structure_view_v1"
         for obj in bpy.data.objects

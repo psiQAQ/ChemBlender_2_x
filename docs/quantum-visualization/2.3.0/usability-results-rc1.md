@@ -29,7 +29,7 @@ U07 使用合成 canonical report 驱动真实 copy/page/export operators。它�
 | package SHA-256 | `0db367c18fd849897bb5ca0189c50c573bda40ea5db35c565a99f882115356ec` |
 | isolated product profile | `D:\cbu-product-3d7aa3a8` |
 | product command result | exit `0`; `PASS: ChemBlender extension lifecycle`; 253.574215 s raw wall time |
-| legacy packaged acceptance | exact ZIP installed separately for all 3 fixtures; real preview/migrate operators; save/reopen |
+| legacy packaged acceptance | exact ZIP installed separately for all 3 fixtures; real preview/migrate operators; original-object backup ownership; save/reopen |
 | focused/full verification | 73 passed; 2014 passed / 26 skipped / 0 failed |
 | Remote CI | Not Run — local Task 6 evidence only |
 
@@ -45,8 +45,8 @@ U07 使用合成 canonical report 驱动真实 copy/page/export operators。它�
 - validate/build：`task6-final-validate.log`、`task6-final-build.log`；
 - product：`task6-final-product-stdout.log`、
   `task6-final-product-stderr.log`、`task6-final-product-timing.json`；
-- legacy：`task6-final-legacy-*-stdout.log`、
-  `task6-final-legacy-*-stderr.log`、`task6-final-legacy-timings.json`。
+- legacy backup-preservation rerun：`task6-backup-legacy-*-stdout.log`、
+  `task6-backup-legacy-*-stderr.log`、`task6-backup-legacy-timings.json`。
 
 ## 任务结果
 
@@ -63,9 +63,9 @@ U07 使用合成 canonical report 驱动真实 copy/page/export operators。它�
 | U09 revision actions | Passed | 253.574 s shared product run | None | Built-in Keep/Update/Comparison choices | None; real operators acted only on the selected logical View, using an in-process replacement revision/Grid |
 | U10 scientific edit | Passed | 253.574 s shared product run | None | Built-in confirmation | None; direct preview plus real apply operator kept the original Structure immutable and derived `USER_EDITED` topology |
 | U11 export/reimport | Passed | 253.574 s shared product run | None | Built-in loss preview where required | None; SDF used the export operator, while XYZ/extXYZ/CIF also used installed-package core/`ExportJob` semantic re-import |
-| U12 legacy 2.1 molecule | Passed | 8.119 s | None | Explicit preview/confirm operators | None |
-| U12 legacy 2.2 crystal | Passed | 8.107 s | None | Explicit preview/confirm operators | None |
-| U12 legacy 2.2 edited scaffold | Passed | 8.083 s | None | Explicit preview/confirm operators | None |
+| U12 legacy 2.1 molecule | Passed | 8.124480 s | None | Explicit preview/confirm operators | None |
+| U12 legacy 2.2 crystal | Passed | 9.107583 s | None | Explicit preview/confirm operators | None |
+| U12 legacy 2.2 edited scaffold | Passed | 8.137975 s | None | Explicit preview/confirm operators | None |
 
 每个 legacy 进程都使用独立 fresh profile，输出
 `PASS: packaged legacy migration and reopen` 且 exit `0`。运行前 SHA-256 分别
@@ -75,10 +75,11 @@ U07 使用合成 canonical report 驱动真实 copy/page/export operators。它�
 `a6af8e232fe7b934bf850f8e6b24d396596b79cc1fd38e8ff6eb071c50bf8740`；
 安装包 SHA-256 均匹配
 `0db367c18fd849897bb5ca0189c50c573bda40ea5db35c565a99f882115356ec`。
-profiles 为 `D:\cbu-legacy-21-cef600a7`、
-`D:\cbu-legacy-22-crystal-65299021` 和
-`D:\cbu-legacy-22-edited-323bf25f`；这三项不使用 checkout
-`ChemBlender` import。
+profiles 为 `D:\cbu-backup-legacy-21-70185766`、
+`D:\cbu-backup-legacy-22-crystal-d194d82f` 和
+`D:\cbu-backup-legacy-22-edited-e68c8f21`。迁移后和 reopen 后，每个原对象均
+只属于 `ChemBlender Legacy Backup`，且 `v2`、project 和 transaction markers
+与 backup collection 一致；这三项不使用 checkout `ChemBlender` import。
 
 ## 问题分级
 
