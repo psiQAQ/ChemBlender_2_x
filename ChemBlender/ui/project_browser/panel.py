@@ -71,6 +71,9 @@ _ROW_ICONS = {
     "source": "FILE",
     "source_revision": "FILE",
     "molecular_record": "FILE_TEXT",
+    "projection_summary": "INFO",
+    "record_page": "LINENUMBERS_ON",
+    "result_page": "LINENUMBERS_ON",
     "record_property_column": "PROPERTIES",
     "structure": "MESH_DATA",
     "topology_record": "MOD_WIREFRAME",
@@ -87,6 +90,8 @@ def _selection_changed(state, context):
 
 
 def _projection_changed(_state, context):
+    _state.page = 0
+    _state.page_jump = 1
     refresh_project_browser(context.scene)
 
 
@@ -135,7 +140,44 @@ class CHEMBLENDER_PG_project_browser(bpy.types.PropertyGroup):
     selected_index: IntProperty(default=0, update=_selection_changed)
     active_entity_id: StringProperty()
     total_row_count: IntProperty(default=0)
+    record_count: IntProperty(default=0, min=0)
+    page: IntProperty(default=0, min=0)
+    page_size: IntProperty(
+        name="Records per Page",
+        default=998,
+        min=1,
+        max=998,
+        update=_projection_changed,
+    )
+    page_jump: IntProperty(name="Jump to Page", default=1, min=1)
+    page_count: IntProperty(default=1, min=1)
     rows: CollectionProperty(type=CHEMBLENDER_PG_project_browser_row)
+
+
+class CHEMBLENDER_OT_project_browser_page(bpy.types.Operator):
+    bl_idname = "chemblender.project_browser_page"
+    bl_label = "Change Project Browser Page"
+
+    action: EnumProperty(
+        items=(
+            ("previous", "Previous", ""),
+            ("next", "Next", ""),
+            ("jump", "Jump", ""),
+        )
+    )
+
+    def execute(self, context):
+        settings = getattr(context.scene, _SCENE_PROPERTY_NAME)
+        last_page = max(settings.page_count - 1, 0)
+        target = {
+            "previous": settings.page - 1,
+            "next": settings.page + 1,
+            "jump": settings.page_jump - 1,
+        }[self.action]
+        settings.page = max(0, min(target, last_page))
+        settings.page_jump = settings.page + 1
+        refresh_project_browser(context.scene)
+        return {"FINISHED"}
 
 
 def _project_entity_id(project, value):
@@ -481,14 +523,36 @@ def refresh_project_browser(scene):
         search=settings.search,
         filters=filters,
         views=presentation_view_records(scene),
+        page=getattr(settings, "page", 0),
+        page_size=getattr(settings, "page_size", 998),
     )
+    if len(rows) > _BROWSER_RNA_ROW_LIMIT:
+        raise RuntimeError(
+            "Project Browser model must return a bounded RNA projection"
+        )
+    summary = next(
+        (
+            row
+            for row in rows
+            if row.kind in {"record_page", "result_page"}
+        ),
+        None,
+    )
+    settings.record_count = (
+        summary.total_count
+        if summary is not None
+        else sum(row.kind == "molecular_record" for row in rows)
+    )
+    settings.page = summary.page if summary is not None else 0
+    settings.page_count = summary.page_count if summary is not None else 1
+    settings.page_jump = settings.page + 1
     selected = _project_entity_id(
         session.project,
         settings.active_entity_id,
     )
     selected_id = str(selected) if selected is not None else ""
     settings.total_row_count = len(rows)
-    _copy_rows(settings.rows, rows[:_BROWSER_RNA_ROW_LIMIT])
+    _copy_rows(settings.rows, rows)
     selected_index = next(
         (
             index
@@ -545,6 +609,46 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
         layout.prop(settings, "mode", expand=True)
         layout.prop(settings, "search", icon="VIEWZOOM")
         layout.prop(settings, "quality_filter")
+        if settings.record_count:
+            subject = (
+                "matching entries"
+                if (
+                    settings.search.strip()
+                    or settings.quality_filter != "all"
+                )
+                else "molecular records"
+            )
+            layout.label(
+                text=(
+                    f"{settings.record_count} {subject} · "
+                    f"Page {settings.page + 1} of {settings.page_count}"
+                ),
+                icon="LINENUMBERS_ON",
+            )
+            layout.prop(settings, "page_size")
+            navigation = layout.row(align=True)
+            previous = navigation.operator(
+                CHEMBLENDER_OT_project_browser_page.bl_idname,
+                text="Prev",
+                icon="TRIA_LEFT",
+            )
+            previous.action = "previous"
+            navigation.label(
+                text=f"{settings.page + 1}/{settings.page_count}"
+            )
+            following = navigation.operator(
+                CHEMBLENDER_OT_project_browser_page.bl_idname,
+                text="Next",
+                icon="TRIA_RIGHT",
+            )
+            following.action = "next"
+            jump = layout.row(align=True)
+            jump.prop(settings, "page_jump")
+            action = jump.operator(
+                CHEMBLENDER_OT_project_browser_page.bl_idname,
+                text="Jump",
+            )
+            action.action = "jump"
         layout.template_list(
             "CHEMBLENDER_UL_project_rows",
             "",
@@ -553,14 +657,6 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
             settings,
             "selected_index",
         )
-        if settings.total_row_count > len(settings.rows):
-            layout.label(
-                text=(
-                    f"Showing {len(settings.rows)} of "
-                    f"{settings.total_row_count} rows; refine Search or Filter"
-                ),
-                icon="INFO",
-            )
         if settings.active_entity_id:
             layout.label(text=f"Selected: {settings.active_entity_id}")
             selected = session.project.datasets.get(session.active_entity_id)
@@ -768,6 +864,7 @@ def unregister():
 __all__ = (
     "CHEMBLENDER_OT_apply_frame_force",
     "CHEMBLENDER_OT_apply_substructure_category",
+    "CHEMBLENDER_OT_project_browser_page",
     "CHEMBLENDER_PG_project_browser",
     "CHEMBLENDER_PG_project_browser_row",
     "CHEMBLENDER_PT_project_browser",

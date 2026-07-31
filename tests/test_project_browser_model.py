@@ -604,7 +604,7 @@ class ProjectBrowserModelTests(unittest.TestCase):
                 )
                 self.assertTrue(rows)
 
-    def test_cache_key_includes_revision_project_and_view_fingerprint(self):
+    def test_cache_key_uses_stable_project_revision_and_view_fingerprint(self):
         project = sample_project()
         keywords = {
             "mode": BrowserMode.BY_DATA,
@@ -614,6 +614,12 @@ class ProjectBrowserModelTests(unittest.TestCase):
 
         first = build_browser_rows(project, browser_revision=4, **keywords)
         repeated = build_browser_rows(project, browser_revision=4, **keywords)
+        replacement = sample_project()
+        replaced = build_browser_rows(
+            replacement,
+            browser_revision=4,
+            **keywords,
+        )
         refreshed = build_browser_rows(project, browser_revision=5, **keywords)
         changed_view = build_browser_rows(
             project,
@@ -626,17 +632,11 @@ class ProjectBrowserModelTests(unittest.TestCase):
                 label="Alternate density",
             ),)}),
         )
-        replacement = sample_project()
-        replaced = build_browser_rows(
-            replacement,
-            browser_revision=4,
-            **keywords,
-        )
 
         self.assertIs(first, repeated)
+        self.assertIs(first, replaced)
         self.assertIsNot(first, refreshed)
         self.assertIsNot(first, changed_view)
-        self.assertIsNot(first, replaced)
         self.assertEqual(first, refreshed)
 
     def test_cache_normalizes_search_and_filters(self):
@@ -683,13 +683,13 @@ class ProjectBrowserModelTests(unittest.TestCase):
             key
             for key in model._CACHE
             if (
-                key[0] == id(project)
-                and key[2] == SESSION_ID
-                and key[4] is BrowserMode.BY_DATA
+                key[0] == str(project.id)
+                and key[1] == str(SESSION_ID)
+                and key[3] is BrowserMode.BY_DATA
             )
         )
         self.assertEqual(len(scoped), 1)
-        self.assertEqual(scoped[0][3], 39)
+        self.assertEqual(scoped[0][2], 39)
 
     def test_filter_reuses_cached_unfiltered_projection(self):
         project = sample_project()
@@ -960,6 +960,17 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             {"collection", "enum", "int", "string"},
         )
         self.assertIn("substructure_code", state_properties)
+        self.assertTrue({
+            "page",
+            "page_size",
+            "page_jump",
+            "page_count",
+            "record_count",
+        }.issubset(state_properties))
+        self.assertEqual(
+            state_properties["page_size"].keywords["max"],
+            998,
+        )
         quality = state_properties["quality_filter"]
         self.assertEqual(quality.keywords["default"], "all")
         self.assertTrue(
@@ -1744,7 +1755,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.assertEqual(session.active_entity_id, GRID_ID)
         self.assertEqual(settings.active_entity_id, str(GRID_ID))
 
-    def test_refresh_bounds_rna_rows_and_records_total_count(self):
+    def test_refresh_rejects_an_unbounded_model_projection(self):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"
         )
@@ -1796,12 +1807,115 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             ),
             patch.object(panel, "build_browser_rows", return_value=rows),
         ):
-            projected = panel.refresh_project_browser(scene)
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "bounded",
+            ):
+                panel.refresh_project_browser(scene)
 
         self.assertEqual(panel._BROWSER_RNA_ROW_LIMIT, limit)
-        self.assertEqual(len(projected), limit + 5)
-        self.assertEqual(len(settings.rows), limit)
-        self.assertEqual(settings.total_row_count, limit + 5)
+        self.assertEqual(len(settings.rows), 0)
+
+    def test_refresh_projects_result_page_and_navigation_arguments(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class Rows(list):
+            def clear(self):
+                super().clear()
+
+            def add(self):
+                row = SimpleNamespace()
+                self.append(row)
+                return row
+
+        summary = BrowserRow(
+            id="page:result:2",
+            parent_id=None,
+            depth=0,
+            kind="result_page",
+            label="Matches 129-192 of 10000",
+            quality="",
+            view_count=0,
+            entity_id=None,
+            total_count=10_000,
+            page=2,
+            page_count=157,
+        )
+        session = SimpleNamespace(
+            id="session",
+            project=sample_project(),
+            active_entity_id=None,
+        )
+        settings = SimpleNamespace(
+            mode="by_data",
+            search="",
+            quality_filter="all",
+            selected_index=0,
+            active_entity_id="",
+            total_row_count=0,
+            record_count=0,
+            page=2,
+            page_size=64,
+            page_jump=1,
+            page_count=0,
+            rows=Rows(),
+        )
+        scene = SimpleNamespace(
+            chemblender_project_browser=settings,
+            objects=(),
+        )
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=SimpleNamespace(browser_revision=1),
+            ),
+            patch.object(
+                panel,
+                "build_browser_rows",
+                return_value=(summary,),
+            ) as build,
+        ):
+            panel.refresh_project_browser(scene)
+
+        self.assertEqual(build.call_args.kwargs["page"], 2)
+        self.assertEqual(build.call_args.kwargs["page_size"], 64)
+        self.assertEqual(settings.record_count, 10_000)
+        self.assertEqual(settings.page, 2)
+        self.assertEqual(settings.page_jump, 3)
+        self.assertEqual(settings.page_count, 157)
+
+    def test_page_operator_handles_previous_next_and_jump(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        settings = SimpleNamespace(
+            page=1,
+            page_count=3,
+            page_jump=99,
+        )
+        context = SimpleNamespace(
+            scene=SimpleNamespace(
+                chemblender_project_browser=settings,
+            )
+        )
+        operation = panel.CHEMBLENDER_OT_project_browser_page()
+        with patch.object(panel, "refresh_project_browser") as refresh:
+            operation.action = "next"
+            self.assertEqual(operation.execute(context), {"FINISHED"})
+            self.assertEqual(settings.page, 2)
+            operation.action = "previous"
+            self.assertEqual(operation.execute(context), {"FINISHED"})
+            self.assertEqual(settings.page, 1)
+            settings.page_jump = 99
+            operation.action = "jump"
+            self.assertEqual(operation.execute(context), {"FINISHED"})
+            self.assertEqual(settings.page, 2)
+
+        self.assertEqual(refresh.call_count, 3)
 
     def test_refresh_clears_stale_and_malformed_hidden_selection(self):
         panel = importlib.import_module(

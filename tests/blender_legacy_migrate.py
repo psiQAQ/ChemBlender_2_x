@@ -119,6 +119,7 @@ def main():
     from ChemBlender.core.sidecar import LazyNpyArray, close_project
     from ChemBlender.core.storage.publication import solidify_session
     from ChemBlender.ui.session import get_scene_session
+    from ChemBlender.ui.properties import get_quick_import_state
 
     path = Path(tempfile.mkdtemp()) / Path(bpy.data.filepath).name
     assert bpy.ops.wm.save_as_mainfile(filepath=str(path)) == {"FINISHED"}
@@ -303,6 +304,7 @@ def main():
     links_before = _scene_links_snapshot()
     originals = tuple(bpy.data.objects[name] for name in preview.plan.report.object_names)
     rollback_before = _object_snapshot(originals, scene)
+    revision_before_rollback = get_quick_import_state(session).browser_revision
     original_move = migration._move_backup_object
     moved = False
 
@@ -330,6 +332,7 @@ def main():
     assert _sibling_inventory(preview.sidecar_path) == siblings_before
     assert session.project is not lazy_before
     assert session.project.structures[base_id].coordinates.values[0, 0] == 0.0
+    assert get_quick_import_state(session).browser_revision == revision_before_rollback
 
     preview = migration.preview_legacy_migration(scene)
     original = _object_snapshot(
@@ -346,12 +349,14 @@ def main():
         return original_commit(current_session, plan)
 
     migration.commit_legacy_migration = capture_migration_plan
+    revision_before_migration = get_quick_import_state(session).browser_revision
     try:
         result = migration.migrate_legacy_scene(scene, confirmed=True)
     finally:
         migration.commit_legacy_migration = original_commit
     assert result.sidecar_path.is_dir()
     assert result.cleanup_warnings == ()
+    assert get_quick_import_state(session).browser_revision == revision_before_migration + 1
     assert _entity_id_sets(session.project) == expected_entity_ids
     assert {item.name for item in bpy.data.objects if item.name.endswith(" (Migrated)")} == {
         f"{item.legacy_object_name} (Migrated)" for item in expected_view_plans

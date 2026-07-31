@@ -459,10 +459,14 @@ def migrate_legacy_scene(scene, *, confirmed):
                 shutil.rmtree(previous_sidecar)
             except OSError as cleanup:
                 warnings.append(f"previous sidecar cleanup failed: {cleanup}")
-        return LegacyMigrationResult(
+        result = LegacyMigrationResult(
             destination, tuple(view.name for view in views), backup.name,
             tuple(warnings),
         )
+        from .properties import advance_browser_revision
+
+        advance_browser_revision(session)
+        return result
     except BaseException as error:
         if backup is not None:
             _cleanup(error, "legacy backup rollback failed", lambda: _restore_legacy(scene, backup, legacy_snapshot))

@@ -224,10 +224,7 @@ def assert_task_boundary(module_key):
     assert snapshot.progress == 0.5
 
 
-def assert_grid_unload_cancels_active_worker(
-    module_key,
-    before_install_modules,
-):
+def assert_grid_unload_cancels_active_worker(module_key):
     grid = importlib.import_module(f"{module_key}.ui.grid")
     tasks = importlib.import_module(f"{module_key}.ui.tasks")
     entered = threading.Event()
@@ -274,8 +271,9 @@ def assert_grid_unload_cancels_active_worker(
     assert cleanup_calls[1] == ("progress",)
     assert grid._ACTIVE_VOLUME_OPERATORS == []
     assert_disabled(module_key, owned_classes)
+    before_reenable_modules = set(sys.modules)
     assert bpy.ops.preferences.addon_enable(module=module_key) == {"FINISHED"}
-    assert_enabled(module_key, before_install_modules)
+    assert_enabled(module_key, before_reenable_modules)
 
 
 def assert_enabled(module_key, before_install_modules):
@@ -4428,6 +4426,7 @@ def assert_sdf_10k_workflow_budget(module_key):
     browser_model = importlib.import_module(
         f"{module_key}.ui.project_browser.model"
     )
+    sidecar = importlib.import_module(f"{module_key}.core.sidecar")
     suffixes = (
         "",
         "O",
@@ -4548,6 +4547,41 @@ def assert_sdf_10k_workflow_budget(module_key):
                 1,
                 lambda _index: session.project.commit(batch),
             )
+            import numpy
+
+            lazy_path = root / "browser-lazy-grid.npy"
+            lazy_values = numpy.zeros((2, 2, 2), dtype=numpy.float32)
+            numpy.save(lazy_path, lazy_values, allow_pickle=False)
+            lazy_hash, _size = sidecar._array_content_hash(lazy_values)
+            lazy_grid_values = sidecar.LazyNpyArray(
+                lazy_path,
+                lazy_values.shape,
+                str(lazy_values.dtype),
+                lazy_hash,
+            )
+            lazy_grid = core.Grid3D(
+                id=uuid4(),
+                revision="browser-lazy-grid-r1",
+                semantic_role="browser_lazy_density",
+                domain="grid",
+                data=core.ArrayData(
+                    lazy_grid_values,
+                    ("x", "y", "z"),
+                    "dimensionless",
+                ),
+                status=core.DatasetStatus.COMPLETE,
+                source_calculation=None,
+                provenance_ids=(),
+                origin=(0.0, 0.0, 0.0),
+                step_vectors=(
+                    (1.0, 0.0, 0.0),
+                    (0.0, 1.0, 0.0),
+                    (0.0, 0.0, 1.0),
+                ),
+                coordinate_unit="angstrom",
+            )
+            session.project.datasets[lazy_grid.id] = lazy_grid
+            assert not lazy_grid_values.loaded
 
             browser_samples = []
             filter_samples = []
@@ -4567,6 +4601,27 @@ def assert_sdf_10k_workflow_budget(module_key):
                     search="Identity 042",
                 )
                 filter_samples.append(perf_counter() - started)
+            structure_rows = browser_model.build_browser_rows(
+                session.project,
+                session_id=session.id,
+                browser_revision=3,
+                search="structure",
+                page_size=64,
+            )
+            topology_rows = browser_model.build_browser_rows(
+                session.project,
+                session_id=session.id,
+                browser_revision=3,
+                search="topology_record",
+                page_size=64,
+            )
+            lazy_rows = browser_model.build_browser_rows(
+                session.project,
+                session_id=session.id,
+                browser_revision=3,
+                search="browser lazy density",
+                page_size=64,
+            )
             timings["browser_projection"] = browser_samples
             timings["browser_filter"] = filter_samples
             timings["measured_sequence_wall"] = [
@@ -4574,14 +4629,60 @@ def assert_sdf_10k_workflow_budget(module_key):
             ]
             _current, peak = tracemalloc.get_traced_memory()
 
+            browser_page = next(
+                row for row in browser_rows
+                if row.kind == "record_page"
+            )
+            assert browser_page.total_count == 10_000
+            registry_names = (
+                "datasets",
+                "structures",
+                "biological_hierarchies",
+                "topologies",
+                "calculations",
+                "symmetry_results",
+                "basis_sets",
+                "orbital_sets",
+                "density_matrices",
+                "cif_envelopes",
+                "qcschema_envelopes",
+                "cjson_envelopes",
+                "provenance",
+            )
+            additional_count = sum(
+                len(getattr(session.project, name))
+                for name in registry_names
+            ) + len(session.project.diagnostics)
+            additional = next(
+                row for row in browser_rows
+                if row.kind == "projection_summary"
+            )
+            assert additional.total_count == additional_count
             assert sum(
                 row.kind == "molecular_record"
                 for row in browser_rows
-            ) == 10_000
+            ) <= 998
+            assert len(browser_rows) <= 1000
             assert sum(
                 row.kind == "molecular_record"
                 for row in filtered_rows
             ) == 100
+            assert next(
+                row for row in structure_rows if row.kind == "result_page"
+            ).total_count == len(session.project.structures)
+            assert any(row.kind == "structure" for row in structure_rows)
+            assert next(
+                row for row in topology_rows if row.kind == "result_page"
+            ).total_count == len(session.project.topologies)
+            assert any(
+                row.kind == "topology_record" for row in topology_rows
+            )
+            assert any(row.kind == "grid3d" for row in lazy_rows)
+            assert all(
+                len(rows) <= 1000
+                for rows in (structure_rows, topology_rows, lazy_rows)
+            )
+            assert not lazy_grid_values.loaded
             assert tuple(bpy.data.objects) == before_objects
         finally:
             tracemalloc.stop()
@@ -4620,6 +4721,7 @@ def assert_sdf_10k_workflow_budget(module_key):
                     "memory": {"peak_bytes": peak},
                     "output": {
                         "browser_row_count": len(browser_rows),
+                        "additional_entry_count": additional_count,
                         "conformer_suggestion_count": len(suggestions),
                         "filtered_record_count": sum(
                             row.kind == "molecular_record"
@@ -4659,7 +4761,7 @@ def assert_project_browser_rna_budget(module_key):
             view_count=0,
             entity_id=None,
         )
-        for index in range(40007)
+        for index in range(1000)
     )
     session = SimpleNamespace(
         id=uuid4(),
@@ -4687,11 +4789,11 @@ def assert_project_browser_rna_budget(module_key):
         settings = scene.chemblender_project_browser
         assert projected is rows
         assert settings.total_row_count == len(rows)
-        assert len(settings.rows) == panel._BROWSER_RNA_ROW_LIMIT
+        assert len(settings.rows) == len(rows) == panel._BROWSER_RNA_ROW_LIMIT
         assert max(samples) < 200.0, samples
         ordered = sorted(samples)
         print(
-            "PERF: Project Browser 40,007-row RNA projection "
+            "PERF: Project Browser 1,000-row RNA projection "
             f"median={ordered[1]:.2f}ms p95={ordered[-1]:.2f}ms "
             f"peak={peak}B visible={len(settings.rows)}"
         )
@@ -4975,6 +5077,12 @@ expected_inventory["registered_classes"] += [
     },
     {
         "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_project_browser_page",
+        "id": "chemblender.project_browser_page",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
         "name": "CHEMBLENDER_PG_project_browser",
         "id": None,
         "base": "PropertyGroup",
@@ -5174,7 +5282,7 @@ assert_sdf_10k_workflow_budget(module_key)
 assert_project_browser_rna_budget(module_key)
 assert_biological_workflow(module_key, package.parent.parent)
 assert_mol2_browser_view(module_key, package.parent.parent)
-assert_grid_unload_cancels_active_worker(module_key, before_install_modules)
+assert_grid_unload_cancels_active_worker(module_key)
 
 import rdkit
 import gemmi
