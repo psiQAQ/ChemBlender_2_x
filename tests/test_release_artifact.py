@@ -25,7 +25,7 @@ class ReleaseArtifactTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.artifact_dir = Path(self.temp_dir.name)
-        self.tag = "v2.3.0-alpha.1"
+        self.tag = "v2.3.0-rc.1"
 
     def tearDown(self):
         self.temp_dir.cleanup()
@@ -85,7 +85,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             budget_path=BUDGET,
         )
 
-        self.assertEqual(result["version"], "2.3.0-alpha.1")
+        self.assertEqual(result["version"], "2.3.0-rc.1")
         self.assertEqual(
             result["package_sha256"], hashlib.sha256(package.read_bytes()).hexdigest()
         )
@@ -172,14 +172,14 @@ class ReleaseArtifactTests(unittest.TestCase):
             budget_path=BUDGET,
         )
 
-        self.assertEqual(result["version"], "2.3.0-alpha.1")
+        self.assertEqual(result["version"], "2.3.0-rc.1")
 
     def test_tag_version_must_match_release_metadata(self):
         self._write_artifact()
 
         with self.assertRaisesRegex(
             ValueError,
-            "tag version 2.3.0-beta.1 does not match manifest 2.3.0-alpha.1",
+            "tag version 2.3.0-beta.1 does not match manifest 2.3.0-rc.1",
         ):
             verify_artifact(
                 self.artifact_dir,
@@ -203,13 +203,13 @@ class ReleaseArtifactTests(unittest.TestCase):
             result = verify_artifact(
                 artifact,
                 extension,
-                "v2.3.0-alpha.1",
+                "v2.3.0-rc.1",
                 metadata_mode="release-assets",
                 budget_path=BUDGET,
             )
 
-        self.assertEqual(result["version"], "2.3.0-alpha.1")
-        self.assertEqual(result["package"], "chemblender-2.3.0-alpha.1.zip")
+        self.assertEqual(result["version"], "2.3.0-rc.1")
+        self.assertEqual(result["package"], "chemblender-2.3.0-rc.1.zip")
 
     def test_tag_requires_v_and_shared_release_version_grammar(self):
         self._write_artifact()
@@ -410,7 +410,7 @@ class ReleaseArtifactTests(unittest.TestCase):
         result = verify_artifact(
             package_dir,
             extension,
-            self.tag,
+            "v2.3.0-alpha.1",
             metadata_mode="package-ci",
             budget_path=extension / "artifact-budgets.json",
         )
@@ -436,7 +436,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             verify_artifact(
                 package_dir,
                 extension,
-                self.tag,
+                "v2.3.0-alpha.1",
                 metadata_mode="package-ci",
                 budget_path=extension / "artifact-budgets.json",
             )
@@ -463,7 +463,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             verify_artifact(
                 package_dir,
                 extension,
-                self.tag,
+                "v2.3.0-alpha.1",
                 metadata_mode="package-ci",
                 budget_path=extension / "artifact-budgets.json",
             )
@@ -476,7 +476,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             verify_artifact(
                 release_assets,
                 extension,
-                self.tag,
+                "v2.3.0-alpha.1",
                 metadata_mode="release-assets",
                 budget_path=extension / "artifact-budgets.json",
             )["package_sha256"],
