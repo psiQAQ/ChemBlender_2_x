@@ -104,8 +104,10 @@ request 指定 revision UUID 的完整 `PublicImportBatch`，不能使用 built-
 task directory 内的 source artifact、SHA-256、validation mode 和 canonical
 parameters。worker 写 content-addressed NPY 与 canonical import document；
 主进程通过
-[`parse_with_worker()`](../../ChemBlender/reader_api/worker_bridge.py) 复验 request、
-路径、inventory、hash、dtype/shape 和完整 batch 图。
+[`parse_with_worker()`](../../ChemBlender/reader_api/worker_bridge.py) 核对 request/result
+UUID、source/bundle hash、operation/schema、inventory、dtype/shape 和完整 batch
+图。reader/plugin/version/`parse_identity` 由固定 worker 构造，host 当前不
+独立重算；精确信任边界见 [Worker API](../reader-api-v1/worker-api.md)。
 
 worker request 不得包含任意 module、callable、argv、shell 或 pickle。启动、超时、
 crash、cancel 和日志生命周期见 [Worker API](../reader-api-v1/worker-api.md)。

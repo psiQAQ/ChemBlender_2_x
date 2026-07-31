@@ -27,8 +27,20 @@ reader-bundle/artifacts/<content-sha256>.npy
 ```
 
 `import-batch.json` 是 UTF-8、无 BOM 的 canonical JSON。数组使用
-content-addressed NPY，`allow_pickle=False`；主进程复验 inventory、document、
-artifact SHA-256、dtype、shape、content hash 与 source revision identity。
+content-addressed NPY，`allow_pickle=False`。主进程独立校验：
+
+- `WorkerResult.request_id == WorkerRequest.request_id`，以及唯一
+  `SourceRevision.id` 等于 request 指定的 revision UUID；
+- worker/protocol/operation/schema version、安全路径和 exact inventory；
+- source、document 和 artifact SHA-256，以及 canonical NPY 的 dtype、
+  shape 和 content hash；
+- public-to-internal 转换后的完整 bundle graph 与引用。
+
+`reader_plugin_id`、`reader_id`、reader version、canonical parameters 与
+`parse_identity` 由固定受信 worker 的 `stage_import_batch()` 构造；当前 host
+不独立重算这些字段与 source bytes 的全部关系。这是当前的明示信任
+边界；完整 identity 复验属于后续 runtime hardening，不是本文档任务已
+实现的保证。
 
 ## cancellation 与错误
 

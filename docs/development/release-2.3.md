@@ -13,22 +13,77 @@ budget。Reader/依赖文档必须保持可再生：
 ```powershell
 $pythonBin = 'C:\Program Files\Blender Foundation\Blender 5.1\5.1\python\bin\python.exe'
 $blenderBin = 'C:\Program Files\Blender Foundation\Blender 5.1\blender.exe'
+$ErrorActionPreference = 'Stop'
 
-$metadata = (
-  & $pythonBin ChemBlender/scripts/release_metadata.py `
-    --extension-root ChemBlender --format json --include-channel
-) | ConvertFrom-Json
+$metadataJson = & $pythonBin ChemBlender/scripts/release_metadata.py `
+  --extension-root ChemBlender --format json --include-channel
+if ($LASTEXITCODE -ne 0) { throw 'Release metadata probe failed' }
+$metadata = $metadataJson | ConvertFrom-Json
 $version = $metadata.version
 $metadata
 & $pythonBin ChemBlender/scripts/generate_format_docs.py --check
-& $pythonBin -m unittest discover -s tests -p 'test_*.py' -v
-& $pythonBin -m compileall -q ChemBlender worker tests
+if ($LASTEXITCODE -ne 0) { throw 'Generated documentation check failed' }
+
+$wheelDir = Join-Path (Get-Location) 'ChemBlender/wheels'
+$rdkitWheel = Join-Path $wheelDir 'rdkit-2026.3.3-cp313-cp313-win_amd64.whl'
+$gemmiWheel = Join-Path $wheelDir 'gemmi-0.7.5-cp313-cp313-win_amd64.whl'
+foreach ($wheel in @($rdkitWheel, $gemmiWheel)) {
+  if (-not (Test-Path -LiteralPath $wheel -PathType Leaf)) {
+    throw "Missing reviewed offline wheel: $wheel"
+  }
+}
+$qualificationRoot = Join-Path `
+  ([IO.Path]::GetTempPath()) `
+  ("cb23-qualification-" + [guid]::NewGuid().ToString('N'))
+$dependencySite = Join-Path $qualificationRoot 'site-packages'
+New-Item -ItemType Directory -Path $dependencySite | Out-Null
+
+& $pythonBin ChemBlender/scripts/dependency_inventory.py `
+  --inventory ChemBlender/dependencies.toml `
+  --wheel-dir $wheelDir `
+  --manifest ChemBlender/blender_manifest.toml `
+  --output (Join-Path $qualificationRoot 'wheel-inventory.json') `
+  --license-copy-list (Join-Path $qualificationRoot 'wheel-license-copy-list.json')
+if ($LASTEXITCODE -ne 0) { throw 'Pinned wheel inventory validation failed' }
+
+& $pythonBin -m pip install --disable-pip-version-check `
+  --no-index --no-deps --target $dependencySite $rdkitWheel $gemmiWheel
+if ($LASTEXITCODE -ne 0) { throw 'Offline dependency bootstrap failed' }
+
+$previousPythonPath = $env:PYTHONPATH
+try {
+  $env:PYTHONPATH = $dependencySite
+  & $pythonBin -c "from importlib.metadata import version; import gemmi; from rdkit import rdBase; assert version('gemmi') == '0.7.5'; assert gemmi.__version__ == '0.7.5'; assert version('rdkit') == '2026.3.3'; assert rdBase.rdkitVersion == '2026.03.3'"
+  if ($LASTEXITCODE -ne 0) { throw 'Exact Gemmi/RDKit probe failed' }
+  & $pythonBin -m unittest discover -s tests -p 'test_*.py' -v
+  if ($LASTEXITCODE -ne 0) { throw 'Unit tests failed' }
+  & $pythonBin -m compileall -q ChemBlender worker tests
+  if ($LASTEXITCODE -ne 0) { throw 'compileall failed' }
+} finally {
+  if ($null -eq $previousPythonPath) {
+    Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+  } else {
+    $env:PYTHONPATH = $previousPythonPath
+  }
+}
 git diff --check
+if ($LASTEXITCODE -ne 0) { throw 'git diff --check failed' }
 & $pythonBin ChemBlender/scripts/validate_extension.py `
   --source-path ChemBlender --blender $blenderBin
+if ($LASTEXITCODE -ne 0) { throw 'Extension validation failed' }
 & $pythonBin ChemBlender/scripts/build_extension.py `
   --python $pythonBin --blender $blenderBin
+if ($LASTEXITCODE -ne 0) { throw 'Extension build failed' }
 ```
+
+该前置只读取已审核、已下载并通过 `dependencies.toml` hash/size/license contract 的
+pinned wheels；`--no-index --no-deps` 保证 pip 不得联网下载或解析其他依赖，目标是
+一次性的隔离目录，不是 Blender global site-packages。不得将包安装到 Blender
+global site-packages。开发者也可显式复用已安装 Extension 的共享
+`extensions/.local/lib/python3.13/site-packages` 作为 `$dependencySite`，但仍须先运行
+相同的 exact Gemmi/RDKit probe；这不能替代 package gate 对原始 wheels 的 inventory
+验证。裸 Blender Python 未完成上述前置时，不得把 full suite 失败或 skip 解释为
+产品结果。
 
 `release_metadata.py` 是 version、package、checksum 和 artifact 名称的单一来源；
 不要再拼接 `chemblender-{version}`。构建后还必须完成 ZIP path/type/CRC/inventory、

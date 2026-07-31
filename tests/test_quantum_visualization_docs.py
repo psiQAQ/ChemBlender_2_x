@@ -390,6 +390,49 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("Reader API v1 RC 门面", architecture)
         self.assertNotIn("Reader API alpha 门面", architecture)
 
+    def test_release_and_worker_guides_fail_closed_at_real_dependency_boundaries(self):
+        release = self.read_doc("docs/development/release-2.3.md")
+        for term in (
+            "dependency_inventory.py",
+            "--no-index",
+            "--no-deps",
+            "--target $dependencySite",
+            "version('rdkit') == '2026.3.3'",
+            "gemmi.__version__ == '0.7.5'",
+            "extensions/.local/lib/python3.13/site-packages",
+            "Blender global site-packages",
+            "不得联网下载",
+            "throw 'Release metadata probe failed'",
+            "throw 'Generated documentation check failed'",
+            "throw 'git diff --check failed'",
+            "throw 'Extension validation failed'",
+            "throw 'Extension build failed'",
+        ):
+            self.assertIn(term, release)
+        self.assertLess(
+            release.index("dependency_inventory.py"),
+            release.index("$env:PYTHONPATH = $dependencySite"),
+        )
+        self.assertLess(
+            release.index("$env:PYTHONPATH = $dependencySite"),
+            release.index("-m unittest discover"),
+        )
+
+        worker = self.read_doc("docs/reader-api-v1/worker-api.md")
+        for term in (
+            "request_id",
+            "SourceRevision.id",
+            "bundle graph",
+            "固定受信 worker",
+            "不独立重算",
+            "runtime hardening",
+        ):
+            self.assertIn(term, worker)
+        self.assertNotIn(
+            "content hash 与 source revision identity",
+            worker,
+        )
+
     def test_230_wave_4_is_active_and_wave_3_is_completed(self):
         queued = sorted(
             path.name
