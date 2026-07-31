@@ -55,6 +55,9 @@ class ProductPerformanceHarnessTests(unittest.TestCase):
             self.assertEqual(case.measurement, f"{expected_cache}_p95")
             self.assertEqual(case.execution, "blender")
             self.assertTrue(case.boundary)
+        browser = harness.PRODUCT_CASES["browser_projection_filter"]
+        self.assertIn("cold search/filter over prepared revision index", browser.boundary)
+        self.assertIn("search-result cache cold", browser.boundary)
 
     def test_worker_command_installs_the_exact_package_in_blender(self):
         harness = load_harness()
@@ -534,6 +537,8 @@ class ProductPerformanceHarnessTests(unittest.TestCase):
         self.assertEqual([call["search"] for call in calls], ["", "benchmark-42"])
         self.assertEqual(calls[0]["session_id"], calls[1]["session_id"])
         self.assertEqual(calls[0]["browser_revision"], calls[1]["browser_revision"])
+        self.assertTrue(assertions["cold_search_cache"])
+        self.assertTrue(assertions["prepared_structural_index"])
         self.assertTrue(assertions["ten_thousand_sdf_records"])
 
 

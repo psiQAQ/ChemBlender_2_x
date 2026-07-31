@@ -70,7 +70,10 @@ PRODUCT_CASES = {
     "browser_projection_filter": ProductCase(
         "browser_projection_filter",
         "blender",
-        "cold Project Browser projection/filter over 10k SDF records",
+        (
+            "cold search/filter over prepared revision index for 10k SDF "
+            "records with the search-result cache cold"
+        ),
         "cold",
         "cold_p95",
     ),
@@ -1194,7 +1197,7 @@ def _measure_browser(_bpy, workspace, _sample_index):
         ):
             raise RuntimeError("10k browser product filter is incomplete")
         return elapsed, {
-            "cold_projection_cache": True,
+            "cold_search_cache": True,
             "prepared_structural_index": True,
             "product_boundary": True,
             "ten_thousand_sdf_records": True,
