@@ -25,6 +25,7 @@ class BrowserRow:
     total_count: int = 0
     page: int = 0
     page_count: int = 0
+    view_kind: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,6 +178,7 @@ def _view_row(view, parent_id, depth):
         quality=view.quality,
         view_count=0,
         entity_id=None,
+        view_kind=view.view_kind,
     )
 
 
@@ -1251,7 +1253,9 @@ def _filtered(rows, search, filters, mode):
         if (
             not search
             or search
-            in " ".join((row.label, row.kind, row.quality)).casefold()
+            in " ".join(
+                (row.label, row.kind, row.view_kind, row.quality)
+            ).casefold()
         )
         and (
             not filters

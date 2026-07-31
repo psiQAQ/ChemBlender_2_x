@@ -567,6 +567,7 @@ class ProjectBrowserPerformanceTests(TestCase):
                 )
                 cases = {
                     "view_search": {"search": "rare surface label"},
+                    "view_kind_search": {"search": "isosurface"},
                     "view_quality": {"filters": ("partial",)},
                     "entity_search": {"search": "benchmark-000000"},
                 }
@@ -597,6 +598,10 @@ class ProjectBrowserPerformanceTests(TestCase):
         )
         self.assertEqual(
             semantic_results[1000]["view_quality"],
+            semantic_results[1000]["view_search"],
+        )
+        self.assertEqual(
+            semantic_results[1000]["view_kind_search"],
             semantic_results[1000]["view_search"],
         )
         self.assertEqual(
