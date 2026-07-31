@@ -54,6 +54,45 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         ):
             self.assertIn(name, agent_index)
 
+    def test_wave4_usability_acceptance_is_repeatable_and_measurable(self):
+        index = self.read_doc("docs/quantum-visualization/2.3.0/README.md")
+        paths = (
+            "docs/quantum-visualization/2.3.0/usability-test-script.md",
+            "docs/quantum-visualization/2.3.0/usability-results-rc1.md",
+        )
+        for path in paths:
+            self.assertTrue((ROOT / path).is_file(), path)
+        script, results = (self.read_doc(path) for path in paths)
+        for name in ("usability-test-script.md", "usability-results-rc1.md"):
+            self.assertIn(name, index)
+        for term in (
+            "XYZ",
+            "SDF",
+            "Cube",
+            "CIF",
+            "PDB",
+            "diagnostics",
+            "conformers",
+            "save/reopen",
+            "revision",
+            "scientific edit",
+            "export",
+            "legacy",
+        ):
+            self.assertIn(term, script)
+        for field in (
+            "Completion",
+            "Elapsed time",
+            "Errors",
+            "Help required",
+            "Scientific misunderstanding",
+        ):
+            self.assertIn(field, script)
+            self.assertIn(field, results)
+        for severity in ("Blocker", "Major", "Minor"):
+            self.assertIn(severity, script)
+            self.assertIn(severity, results)
+
     def test_230_wave_4_is_active_and_wave_3_is_completed(self):
         queued = sorted(
             path.name
