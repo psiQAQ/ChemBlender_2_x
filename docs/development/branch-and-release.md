@@ -24,7 +24,7 @@ ChemBlender uses **read-only package CI plus a manually dispatched, deterministi
 - The workflow downloads pinned Blender and RDKit inputs, verifies their checksums, runs repository contracts, builds the extension, exercises it in an isolated Blender profile, and uploads the tested ZIP plus its SHA-256 record.
 - Tagged package artifacts are retained for 30 days to allow prerelease review; pull-request and branch artifacts retain the existing 14 days.
 - `.github/workflows/extension-package.yml` has `contents: read`; it never creates a GitHub Release.
-- `.github/workflows/extension-release.yml` locates one successful exact-tag run, validates its metadata-named unexpired artifact, verifies all five package files (ZIP, checksum, wheel inventory, license-copy list, and artifact-size report) against tagged source, and performs no write when `publish=false`.
+- `.github/workflows/extension-release.yml` paginates all matching exact-tag runs and their artifacts, selects one unexpired metadata-named artifact ID, verifies all five package files (ZIP, checksum, wheel inventory, license-copy list, and artifact-size report) against tagged source, and performs no write when `publish=false`.
 - With `publish=true`, only the `publish` job receives `contents: write`. It creates a draft, verifies the uploaded asset digests, and then publishes the Release. Alpha, beta, and release-candidate tags remain prereleases and are never marked latest; final releases are marked latest.
 - Never rebuild between the successful tag run and publication. The GitHub Release assets must be byte-for-byte identical to the files downloaded from that run.
 
@@ -50,8 +50,8 @@ The Release workflow verifies all of these conditions before publication:
 | Check | Evidence |
 | --- | --- | --- |
 | Release identity | Input is an annotated `vMAJOR.MINOR.PATCH`, `vMAJOR.MINOR.PATCH-alpha.N`, `vMAJOR.MINOR.PATCH-beta.N`, or `vMAJOR.MINOR.PATCH-rc.N` tag in `origin/main`; tag version and channel equal tagged-source metadata |
-| Package provenance | Successful `extension-package` push run has the same tag name and exact commit SHA |
-| Artifact availability | Exactly one metadata-named, unexpired Actions artifact exists; tagged artifacts have a 30-day review window |
+| Package provenance | All paginated successful `extension-package` push runs have the tag name and exact commit SHA filtered server-side; exactly one is selected |
+| Artifact availability | All paginated artifacts for the selected run are checked; exactly one metadata-named, unexpired artifact ID is downloaded, and its outer bundle must contain exactly the five expected files; tagged artifacts have a 30-day review window |
 | Package integrity | Release verification first checks the complete five-file package artifact in `package-ci` mode against tagged dependency and budget sources. It then copies only the ZIP/checksum pair into `release-assets` mode, applies the tagged-source outer ZIP budget before CRC or content reads, and publishes only that pair. |
 | Package contract | Manifest, license, declared wheel, and both `.blend` libraries exist; development paths and extra wheels do not |
 | Publication safety | No Release already exists; draft asset digests equal the downloaded files; prereleases remain non-latest and final releases become latest |

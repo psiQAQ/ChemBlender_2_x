@@ -295,9 +295,9 @@ class RepositoryContractTests(unittest.TestCase):
             "contents: write",
             "environment: release",
             "if: ${{ inputs.publish }}",
-            "gh run list",
-            "--workflow extension-package.yml",
-            "--commit \"$tag_commit\"",
+            "gh api --paginate --slurp",
+            "actions/workflows/extension-package.yml/runs?event=push&status=success&head_sha=$tag_commit&branch=$RELEASE_TAG&per_page=100",
+            "actions/artifacts/$ARTIFACT_ID/zip",
             "gh release create",
             "--draft",
             ".digest",
@@ -344,6 +344,55 @@ class RepositoryContractTests(unittest.TestCase):
             release_assets = step.index("--metadata-mode release-assets")
             self.assertLess(package_ci, copied_assets)
             self.assertLess(copied_assets, release_assets)
+
+    def test_release_workflow_paginates_and_extracts_only_selected_artifact(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "extension-release.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn("gh run list", workflow)
+        self.assertNotIn("--limit 10", workflow)
+        self.assertEqual(workflow.count("gh api --paginate --slurp"), 2)
+        self.assertIn(
+            "actions/workflows/extension-package.yml/runs?event=push&status=success&head_sha=$tag_commit&branch=$RELEASE_TAG&per_page=100",
+            workflow,
+        )
+        self.assertIn(
+            "actions/runs/$run_id/artifacts?per_page=100",
+            workflow,
+        )
+        self.assertIn("jq -ce '{artifacts: [.[].artifacts[]]}'", workflow)
+        self.assertIn(
+            "artifact_id: ${{ steps.release_info.outputs.artifact_id }}",
+            workflow,
+        )
+        self.assertIn("ARTIFACT_ID: ${{ needs.verify.outputs.artifact_id }}", workflow)
+        self.assertNotIn("gh run download", workflow)
+        self.assertIn("actions/artifacts/$ARTIFACT_ID/zip", workflow)
+        for job in ("verify", "publish"):
+            job_text = workflow.split(f"\n  {job}:", 1)[1]
+            if job == "verify":
+                job_text = job_text.split("\n  publish:", 1)[0]
+            step = job_text.split("- name: Download and", 1)[1].split(
+                "\n      - name:", 1
+            )[0]
+            self.assertIn('BUNDLE="bundle.zip"', step)
+            self.assertIn('unzip -Z1 "$BUNDLE"', step)
+            self.assertIn('unzip -q "$BUNDLE" -d dist', step)
+            self.assertIn(
+                'if [[ "${#bundle_members[@]}" -ne "${#expected_members[@]}" ]]',
+                step,
+            )
+            self.assertIn('for index in "${!expected_sorted[@]}"; do', step)
+            self.assertIn("unexpected, duplicate, directory, or unsafe members", step)
+            for name in (
+                '"$PACKAGE_NAME"',
+                '"$CHECKSUM_NAME"',
+                '"wheel-inventory.json"',
+                '"wheel-license-copy-list.json"',
+                '"artifact-size.json"',
+            ):
+                self.assertIn(name, step)
 
     def test_release_workflow_requires_default_branch_dispatch_ref(self):
         workflow = (
@@ -433,7 +482,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('expected_tag="v$version"', workflow)
         self.assertIn('if [[ "$RELEASE_TAG" != "$expected_tag" ]]', workflow)
         self.assertIn(
-            "--commit \"$tag_commit\"",
+            "actions/workflows/extension-package.yml/runs?event=push&status=success&head_sha=$tag_commit&branch=$RELEASE_TAG&per_page=100",
             workflow,
         )
         self.assertIn(

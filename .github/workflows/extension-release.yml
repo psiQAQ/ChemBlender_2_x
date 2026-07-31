@@ -27,6 +27,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       run_id: ${{ steps.release_info.outputs.run_id }}
+      artifact_id: ${{ steps.release_info.outputs.artifact_id }}
       tag_commit: ${{ steps.release_info.outputs.tag_commit }}
       version: ${{ steps.release_info.outputs.version }}
       artifact_name: ${{ steps.release_info.outputs.artifact_name }}
@@ -91,16 +92,16 @@ jobs:
           fi
 
           run_id="$(
-            gh run list --repo "$GH_REPO" --workflow extension-package.yml \
-              --event push --branch "$RELEASE_TAG" --commit "$tag_commit" \
-              --status success --limit 10 \
-              --json databaseId,headSha,headBranch,event,conclusion |
+            gh api --paginate --slurp \
+              "repos/$GH_REPO/actions/workflows/extension-package.yml/runs?event=push&status=success&head_sha=$tag_commit&branch=$RELEASE_TAG&per_page=100" |
             python3 ChemBlender/scripts/release_metadata.py \
               --select-package-run --tag "$RELEASE_TAG" --tag-commit "$tag_commit" |
             jq -er '.database_id'
           )"
           artifact_id="$(
-            gh api "repos/$GH_REPO/actions/runs/$run_id/artifacts" |
+            gh api --paginate --slurp \
+              "repos/$GH_REPO/actions/runs/$run_id/artifacts?per_page=100" |
+            jq -ce '{artifacts: [.[].artifacts[]]}' |
             python3 ChemBlender/scripts/release_metadata.py \
               --select-package-artifact --artifact-name "$artifact_name" |
             jq -er '.artifact_id'
@@ -109,6 +110,7 @@ jobs:
 
           {
             echo "run_id=$run_id"
+            echo "artifact_id=$artifact_id"
             echo "tag_commit=$tag_commit"
             echo "version=$version"
             echo "artifact_name=$artifact_name"
@@ -123,14 +125,35 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ inputs.tag }}
-          RUN_ID: ${{ steps.release_info.outputs.run_id }}
-          ARTIFACT_NAME: ${{ steps.release_info.outputs.artifact_name }}
+          ARTIFACT_ID: ${{ steps.release_info.outputs.artifact_id }}
           PACKAGE_NAME: ${{ steps.release_info.outputs.package_name }}
           CHECKSUM_NAME: ${{ steps.release_info.outputs.checksum_name }}
           VERSION: ${{ steps.release_info.outputs.version }}
         run: |
           set -euo pipefail
-          gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
+          BUNDLE="bundle.zip"
+          gh api "repos/$GH_REPO/actions/artifacts/$ARTIFACT_ID/zip" > "$BUNDLE"
+          expected_members=(
+            "$PACKAGE_NAME"
+            "$CHECKSUM_NAME"
+            "wheel-inventory.json"
+            "wheel-license-copy-list.json"
+            "artifact-size.json"
+          )
+          mapfile -t bundle_members < <(unzip -Z1 "$BUNDLE")
+          if [[ "${#bundle_members[@]}" -ne "${#expected_members[@]}" ]]; then
+            echo "Artifact bundle has an unexpected member count" >&2
+            exit 1
+          fi
+          mapfile -t actual_members < <(printf '%s\n' "${bundle_members[@]}" | LC_ALL=C sort)
+          mapfile -t expected_sorted < <(printf '%s\n' "${expected_members[@]}" | LC_ALL=C sort)
+          for index in "${!expected_sorted[@]}"; do
+            if [[ "${actual_members[$index]}" != "${expected_sorted[$index]}" ]]; then
+              echo "Artifact bundle has unexpected, duplicate, directory, or unsafe members" >&2
+              exit 1
+            fi
+          done
+          unzip -q "$BUNDLE" -d dist
           python3 ChemBlender/scripts/verify_release_artifact.py \
             --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG" \
             --metadata-mode package-ci \
@@ -168,14 +191,35 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ inputs.tag }}
-          RUN_ID: ${{ needs.verify.outputs.run_id }}
-          ARTIFACT_NAME: ${{ needs.verify.outputs.artifact_name }}
+          ARTIFACT_ID: ${{ needs.verify.outputs.artifact_id }}
           PACKAGE_NAME: ${{ needs.verify.outputs.package_name }}
           CHECKSUM_NAME: ${{ needs.verify.outputs.checksum_name }}
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
-          gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
+          BUNDLE="bundle.zip"
+          gh api "repos/$GH_REPO/actions/artifacts/$ARTIFACT_ID/zip" > "$BUNDLE"
+          expected_members=(
+            "$PACKAGE_NAME"
+            "$CHECKSUM_NAME"
+            "wheel-inventory.json"
+            "wheel-license-copy-list.json"
+            "artifact-size.json"
+          )
+          mapfile -t bundle_members < <(unzip -Z1 "$BUNDLE")
+          if [[ "${#bundle_members[@]}" -ne "${#expected_members[@]}" ]]; then
+            echo "Artifact bundle has an unexpected member count" >&2
+            exit 1
+          fi
+          mapfile -t actual_members < <(printf '%s\n' "${bundle_members[@]}" | LC_ALL=C sort)
+          mapfile -t expected_sorted < <(printf '%s\n' "${expected_members[@]}" | LC_ALL=C sort)
+          for index in "${!expected_sorted[@]}"; do
+            if [[ "${actual_members[$index]}" != "${expected_sorted[$index]}" ]]; then
+              echo "Artifact bundle has unexpected, duplicate, directory, or unsafe members" >&2
+              exit 1
+            fi
+          done
+          unzip -q "$BUNDLE" -d dist
           python3 ChemBlender/scripts/verify_release_artifact.py \
             --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG" \
             --metadata-mode package-ci \

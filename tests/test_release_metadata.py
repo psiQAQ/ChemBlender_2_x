@@ -234,6 +234,49 @@ class ReleaseMetadataTests(unittest.TestCase):
                         tag_commit=commit,
                     )
 
+    def test_paginated_workflow_run_records_keep_matches_after_page_one(self):
+        tag = "v2.3.0-alpha.1"
+        commit = "1" * 40
+        pages = [
+            {
+                "total_count": 101,
+                "workflow_runs": [
+                    {
+                        "databaseId": index,
+                        "headSha": "2" * 40,
+                        "headBranch": tag,
+                        "event": "push",
+                        "conclusion": "success",
+                    }
+                    for index in range(1, 101)
+                ],
+            },
+            {
+                "total_count": 101,
+                "workflow_runs": [
+                    {
+                        "databaseId": 501,
+                        "headSha": commit,
+                        "headBranch": tag,
+                        "event": "push",
+                        "conclusion": "success",
+                    }
+                ],
+            },
+        ]
+
+        records = release_metadata.workflow_run_records_from_pages(pages)
+
+        self.assertEqual(len(records), 101)
+        self.assertEqual(
+            release_metadata.select_exact_package_run(
+                records,
+                tag=tag,
+                tag_commit=commit,
+            ),
+            501,
+        )
+
     def test_select_exact_package_artifact_requires_one_unexpired_exact_name(self):
         artifact_name = "chemblender-2.3.0-alpha.1-windows-x64"
         selected = release_metadata.select_exact_package_artifact(
@@ -286,11 +329,16 @@ class ReleaseMetadataTests(unittest.TestCase):
             input=json.dumps(
                 [
                     {
-                        "databaseId": 501,
-                        "headSha": commit,
-                        "headBranch": tag,
-                        "event": "push",
-                        "conclusion": "success",
+                        "total_count": 1,
+                        "workflow_runs": [
+                            {
+                                "databaseId": 501,
+                                "headSha": commit,
+                                "headBranch": tag,
+                                "event": "push",
+                                "conclusion": "success",
+                            }
+                        ],
                     }
                 ]
             ).encode("utf-8"),

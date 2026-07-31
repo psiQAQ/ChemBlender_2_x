@@ -189,6 +189,21 @@ def select_exact_package_run(
     return matching_ids[0]
 
 
+def workflow_run_records_from_pages(pages: object) -> list[dict[str, object]]:
+    """Flatten every paginated workflow-runs response without truncating it."""
+    if type(pages) is not list:
+        raise ValueError("workflow run pages must be a list")
+    records: list[dict[str, object]] = []
+    for page in pages:
+        if type(page) is not dict:
+            raise ValueError("workflow run page must be an object")
+        workflow_runs = page.get("workflow_runs")
+        if type(workflow_runs) is not list:
+            raise ValueError("workflow_runs must be a list")
+        records.extend(workflow_runs)
+    return records
+
+
 def select_exact_package_artifact(document: object, *, artifact_name: str) -> int:
     """Return the sole unexpired artifact with the metadata-derived name."""
     if type(document) is not dict:
@@ -243,7 +258,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.tag is None or args.tag_commit is None:
                 parser.error("--select-package-run requires --tag and --tag-commit")
             selected = select_exact_package_run(
-                json.load(sys.stdin),
+                workflow_run_records_from_pages(json.load(sys.stdin)),
                 tag=args.tag,
                 tag_commit=args.tag_commit,
             )
