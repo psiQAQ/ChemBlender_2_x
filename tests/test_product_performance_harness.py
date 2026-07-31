@@ -349,6 +349,92 @@ class ProductPerformanceHarnessTests(unittest.TestCase):
         self.assertTrue(assertions["sidecar_written"])
         self.assertTrue(assertions["ten_thousand_sdf_records"])
 
+    def test_default_view_uses_staged_source_revision(self):
+        harness = load_harness()
+        events = []
+        revision = object()
+        batch = SimpleNamespace(source_revisions=(revision,))
+
+        class Project:
+            structures = {}
+            datasets = {}
+
+            def commit(self, candidate):
+                if candidate is not batch:
+                    raise AssertionError("unexpected staged batch")
+                events.append("commit")
+
+        project = Project()
+        session = SimpleNamespace(project=project)
+        staging = SimpleNamespace(result=lambda batch_id: batch)
+        obj = SimpleNamespace(
+            name="Structure View",
+            type="MESH",
+            data=SimpleNamespace(vertices=tuple(range(50_000))),
+        )
+
+        def reject_direct_parse(_source):
+            raise AssertionError("default view bypassed reader staging")
+
+        modules = {
+            "core": SimpleNamespace(
+                builtin_scene_presets=lambda: {"preset": object()},
+                close_session=lambda candidate: events.append("close"),
+                create_session=lambda **_kwargs: session,
+                parse_xyz=reject_direct_parse,
+                plan_scene_preset=lambda *_args: object(),
+            ),
+            "core.import_pipeline.request": SimpleNamespace(
+                ImportRequest=lambda **kwargs: SimpleNamespace(**kwargs),
+                ImportSource=lambda path: path,
+            ),
+            "reader_api.import_pipeline_bridge": SimpleNamespace(
+                preflight_reader_plugins=lambda *_args, **_kwargs: SimpleNamespace(
+                    staged_batch_ids=("batch",)
+                )
+            ),
+            "reader_api.registry": SimpleNamespace(
+                builtin_reader_plugin_registry=lambda: object()
+            ),
+            "scene_preset_view": SimpleNamespace(
+                _remove_objects=lambda objects: events.append("remove"),
+                apply_scene_preset=lambda *_args: (obj,),
+            ),
+            "ui.default_views": SimpleNamespace(
+                plan_default_view=lambda candidate, *_args: SimpleNamespace(
+                    preset_id="preset", bindings=(), settings=()
+                )
+            ),
+            "ui.properties": SimpleNamespace(
+                clear_quick_import_state=lambda candidate: events.append("clear"),
+                create_quick_import_staging=lambda candidate: staging,
+            ),
+        }
+        bpy = SimpleNamespace(
+            context=SimpleNamespace(
+                view_layer=SimpleNamespace(update=lambda: events.append("update"))
+            ),
+            data=SimpleNamespace(objects={obj.name: obj}),
+        )
+
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            (workspace / "structure.xyz").write_bytes(b"fixture")
+            with patch.object(
+                harness,
+                "_product_module",
+                side_effect=lambda name: modules[name],
+            ):
+                _elapsed, assertions = harness._measure_default_view(
+                    bpy, workspace, 0
+                )
+
+        self.assertEqual(
+            events,
+            ["commit", "update", "remove", "clear", "close"],
+        )
+        self.assertTrue(assertions["structure_scene_preset"])
+
 
 if __name__ == "__main__":
     unittest.main()

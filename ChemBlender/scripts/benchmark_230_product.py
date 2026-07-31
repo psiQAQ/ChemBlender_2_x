@@ -855,6 +855,25 @@ def _installed_origin():
     return origin
 
 
+def _stage_product_source(session, source, properties):
+    request_model = _product_module("core.import_pipeline.request")
+    bridge = _product_module("reader_api.import_pipeline_bridge")
+    registry_module = _product_module("reader_api.registry")
+    staging = properties.create_quick_import_staging(session)
+    preview = bridge.preflight_reader_plugins(
+        request_model.ImportRequest(
+            sources=(request_model.ImportSource(source),)
+        ),
+        registry_module.builtin_reader_plugin_registry(),
+        staging,
+        progress=lambda *_args: None,
+        is_cancelled=lambda: False,
+    )
+    if len(preview.staged_batch_ids) != 1:
+        raise RuntimeError("product source did not stage exactly one batch")
+    return staging.result(preview.staged_batch_ids[0])
+
+
 def _prepare_product_profile(bpy, package, package_sha256):
     started = perf_counter()
     _install_product(bpy, package, enable=False)
@@ -942,28 +961,34 @@ def _measure_preflight(_bpy, workspace, _sample_index):
 def _measure_default_view(bpy, workspace, _sample_index):
     core = _product_module("core")
     default_views = _product_module("ui.default_views")
+    properties = _product_module("ui.properties")
     scene_view = _product_module("scene_preset_view")
-    batch = core.parse_xyz(workspace / "structure.xyz")
-    project = core.QCProject(uuid4(), "1.0")
-    project.commit(batch)
-    revision, = batch.source_revisions
-    started = perf_counter()
-    default = default_views.plan_default_view(
-        revision, project.structures, project.datasets
-    )
-    if default is None:
-        raise RuntimeError("automatic default view planner returned no plan")
-    preset = core.builtin_scene_presets()[default.preset_id]
-    plan = core.plan_scene_preset(
-        preset,
-        project,
-        dict(default.bindings),
-        dict(default.settings),
-    )
-    created = scene_view.apply_scene_preset(plan, project)
-    bpy.context.view_layer.update()
-    elapsed = perf_counter() - started
+    session_root = workspace / f"default-view-session-{uuid4().hex}"
+    session_root.mkdir()
+    session = core.create_session(temp_parent=session_root)
+    created = ()
     try:
+        batch = _stage_product_source(
+            session, workspace / "structure.xyz", properties
+        )
+        session.project.commit(batch)
+        revision, = batch.source_revisions
+        started = perf_counter()
+        default = default_views.plan_default_view(
+            revision, session.project.structures, session.project.datasets
+        )
+        if default is None:
+            raise RuntimeError("automatic default view planner returned no plan")
+        preset = core.builtin_scene_presets()[default.preset_id]
+        plan = core.plan_scene_preset(
+            preset,
+            session.project,
+            dict(default.bindings),
+            dict(default.settings),
+        )
+        created = scene_view.apply_scene_preset(plan, session.project)
+        bpy.context.view_layer.update()
+        elapsed = perf_counter() - started
         if (
             len(created) != 1
             or created[0].type != "MESH"
@@ -979,6 +1004,13 @@ def _measure_default_view(bpy, workspace, _sample_index):
         for obj in tuple(created):
             if obj.name in bpy.data.objects:
                 scene_view._remove_objects((obj,))
+        try:
+            properties.clear_quick_import_state(session)
+        finally:
+            try:
+                core.close_session(session)
+            finally:
+                shutil.rmtree(session_root, ignore_errors=True)
 
 
 def _measure_vdb_cache(bpy, workspace, _sample_index):
@@ -1099,30 +1131,16 @@ def _measure_trajectory(bpy, workspace, sample_index):
 
 def _prepare_browser_project(_bpy, workspace, _sample_index):
     core = _product_module("core")
-    request_model = _product_module("core.import_pipeline.request")
-    bridge = _product_module("reader_api.import_pipeline_bridge")
-    registry_module = _product_module("reader_api.registry")
     properties = _product_module("ui.properties")
     destination = workspace / "browser.cbq"
     session_root = workspace / f"browser-session-{uuid4().hex}"
     session_root.mkdir()
     session = core.create_session(temp_parent=session_root)
-    staging = properties.create_quick_import_staging(session)
-    request = request_model.ImportRequest(
-        sources=(request_model.ImportSource(workspace / "records.sdf"),)
-    )
     try:
         started = perf_counter()
-        preview = bridge.preflight_reader_plugins(
-            request,
-            registry_module.builtin_reader_plugin_registry(),
-            staging,
-            progress=lambda *_args: None,
-            is_cancelled=lambda: False,
+        batch = _stage_product_source(
+            session, workspace / "records.sdf", properties
         )
-        if len(preview.staged_batch_ids) != 1:
-            raise RuntimeError("10k SDF browser preparation did not stage one batch")
-        batch = staging.result(preview.staged_batch_ids[0])
         session.project.commit(batch)
         core.save_project(destination, session.project)
         elapsed = perf_counter() - started
