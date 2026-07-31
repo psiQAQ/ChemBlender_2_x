@@ -90,27 +90,22 @@ jobs:
             exit 1
           fi
 
-          mapfile -t run_ids < <(
+          run_id="$(
             gh run list --repo "$GH_REPO" --workflow extension-package.yml \
               --event push --branch "$RELEASE_TAG" --commit "$tag_commit" \
               --status success --limit 10 \
-              --json databaseId,headSha,headBranch,event,conclusion \
-              --jq ".[] | select(.headSha == \"$tag_commit\" and .headBranch == \"$RELEASE_TAG\" and .event == \"push\" and .conclusion == \"success\") | .databaseId"
-          )
-          if [[ "${#run_ids[@]}" -ne 1 ]]; then
-            echo "Expected one successful exact-tag package run, found ${#run_ids[@]}" >&2
-            exit 1
-          fi
-          run_id="${run_ids[0]}"
-          mapfile -t artifact_ids < <(
+              --json databaseId,headSha,headBranch,event,conclusion |
+            python3 ChemBlender/scripts/release_metadata.py \
+              --select-package-run --tag "$RELEASE_TAG" --tag-commit "$tag_commit" |
+            jq -er '.database_id'
+          )"
+          artifact_id="$(
             gh api "repos/$GH_REPO/actions/runs/$run_id/artifacts" |
-              jq -r --arg name "$artifact_name" \
-                '.artifacts[] | select(.name == $name and .expired == false) | .id'
-          )
-          if [[ "${#artifact_ids[@]}" -ne 1 ]]; then
-            echo "Expected one unexpired artifact named $artifact_name, found ${#artifact_ids[@]}" >&2
-            exit 1
-          fi
+            python3 ChemBlender/scripts/release_metadata.py \
+              --select-package-artifact --artifact-name "$artifact_name" |
+            jq -er '.artifact_id'
+          )"
+          echo "Selected package artifact $artifact_id from run $run_id"
 
           {
             echo "run_id=$run_id"
@@ -136,6 +131,10 @@ jobs:
         run: |
           set -euo pipefail
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
+          python3 ChemBlender/scripts/verify_release_artifact.py \
+            --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG" \
+            --metadata-mode package-ci \
+            --budget tag-source/.github/artifact-budgets.json
           mkdir release-assets
           cp -- "dist/$PACKAGE_NAME" "dist/$CHECKSUM_NAME" release-assets/
           python3 ChemBlender/scripts/verify_release_artifact.py \
@@ -144,11 +143,9 @@ jobs:
             --budget tag-source/.github/artifact-budgets.json
           python3 ChemBlender/scripts/extract_release_notes.py \
             --changelog CHANGELOG.md --version "$VERSION" --output release-notes.md
-          if [[ -f tag-source/CHANGELOG.md ]]; then
-            python3 ChemBlender/scripts/extract_release_notes.py \
-              --changelog tag-source/CHANGELOG.md --version "$VERSION" --output tag-release-notes.md
-            cmp release-notes.md tag-release-notes.md
-          fi
+          python3 ChemBlender/scripts/extract_release_notes.py \
+            --changelog tag-source/CHANGELOG.md --version "$VERSION" --output tag-release-notes.md
+          cmp release-notes.md tag-release-notes.md
 
   publish:
     if: ${{ inputs.publish }}
@@ -179,6 +176,10 @@ jobs:
         run: |
           set -euo pipefail
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT_NAME" --dir dist
+          python3 ChemBlender/scripts/verify_release_artifact.py \
+            --artifact-dir dist --extension-root tag-source/ChemBlender --tag "$RELEASE_TAG" \
+            --metadata-mode package-ci \
+            --budget tag-source/.github/artifact-budgets.json
           mkdir release-assets
           cp -- "dist/$PACKAGE_NAME" "dist/$CHECKSUM_NAME" release-assets/
           python3 ChemBlender/scripts/verify_release_artifact.py \
@@ -187,11 +188,9 @@ jobs:
             --budget tag-source/.github/artifact-budgets.json
           python3 ChemBlender/scripts/extract_release_notes.py \
             --changelog CHANGELOG.md --version "$VERSION" --output release-notes.md
-          if [[ -f tag-source/CHANGELOG.md ]]; then
-            python3 ChemBlender/scripts/extract_release_notes.py \
-              --changelog tag-source/CHANGELOG.md --version "$VERSION" --output tag-release-notes.md
-            cmp release-notes.md tag-release-notes.md
-          fi
+          python3 ChemBlender/scripts/extract_release_notes.py \
+            --changelog tag-source/CHANGELOG.md --version "$VERSION" --output tag-release-notes.md
+          cmp release-notes.md tag-release-notes.md
       - name: Create verified GitHub Release
         shell: bash
         env:

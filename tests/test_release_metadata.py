@@ -174,6 +174,134 @@ class ReleaseMetadataTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "release version"):
             release_metadata.release_channel_document("2.3.0-preview.1")
 
+    def test_select_exact_package_run_accepts_one_successful_tag_run(self):
+        tag = "v2.3.0-alpha.1"
+        commit = "1" * 40
+
+        selected = release_metadata.select_exact_package_run(
+            [
+                {
+                    "databaseId": 101,
+                    "headSha": commit,
+                    "headBranch": tag,
+                    "event": "push",
+                    "conclusion": "failure",
+                },
+                {
+                    "databaseId": 102,
+                    "headSha": "2" * 40,
+                    "headBranch": tag,
+                    "event": "push",
+                    "conclusion": "success",
+                },
+                {
+                    "databaseId": 103,
+                    "headSha": commit,
+                    "headBranch": tag,
+                    "event": "push",
+                    "conclusion": "success",
+                },
+            ],
+            tag=tag,
+            tag_commit=commit,
+        )
+
+        self.assertEqual(selected, 103)
+
+    def test_select_exact_package_run_rejects_ambiguous_or_malformed_results(self):
+        tag = "v2.3.0-alpha.1"
+        commit = "1" * 40
+        matching_run = {
+            "databaseId": 103,
+            "headSha": commit,
+            "headBranch": tag,
+            "event": "push",
+            "conclusion": "success",
+        }
+        cases = (
+            ([], "successful exact package run"),
+            ([matching_run, {**matching_run, "databaseId": 104}], "successful exact package run"),
+            ([{**matching_run, "databaseId": "103"}], "databaseId"),
+            ({"databaseId": 103}, "run records"),
+        )
+
+        for records, message in cases:
+            with self.subTest(records=records):
+                with self.assertRaisesRegex(ValueError, message):
+                    release_metadata.select_exact_package_run(
+                        records,
+                        tag=tag,
+                        tag_commit=commit,
+                    )
+
+    def test_select_exact_package_artifact_requires_one_unexpired_exact_name(self):
+        artifact_name = "chemblender-2.3.0-alpha.1-windows-x64"
+        selected = release_metadata.select_exact_package_artifact(
+            {
+                "artifacts": [
+                    {"id": 301, "name": artifact_name, "expired": True},
+                    {"id": 302, "name": "other", "expired": False},
+                    {"id": 303, "name": artifact_name, "expired": False},
+                ]
+            },
+            artifact_name=artifact_name,
+        )
+
+        self.assertEqual(selected, 303)
+
+        for document, message in (
+            ({"artifacts": []}, "unexpired exact artifact"),
+            (
+                {
+                    "artifacts": [
+                        {"id": 303, "name": artifact_name, "expired": False},
+                        {"id": 304, "name": artifact_name, "expired": False},
+                    ]
+                },
+                "unexpired exact artifact",
+            ),
+            ({"artifacts": [{"id": "303", "name": artifact_name, "expired": False}]}, "id"),
+            ({"artifacts": "not-a-list"}, "artifacts"),
+        ):
+            with self.subTest(document=document):
+                with self.assertRaisesRegex(ValueError, message):
+                    release_metadata.select_exact_package_artifact(
+                        document,
+                        artifact_name=artifact_name,
+                    )
+
+    def test_selection_cli_parses_real_gh_json_shapes(self):
+        tag = "v2.3.0-alpha.1"
+        commit = "1" * 40
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "release_metadata.py"),
+                "--select-package-run",
+                "--tag",
+                tag,
+                "--tag-commit",
+                commit,
+            ],
+            input=json.dumps(
+                [
+                    {
+                        "databaseId": 501,
+                        "headSha": commit,
+                        "headBranch": tag,
+                        "event": "push",
+                        "conclusion": "success",
+                    }
+                ]
+            ).encode("utf-8"),
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        self.assertEqual(result.stdout, b'{"database_id":501}\n')
+        self.assertEqual(result.stderr, b"")
+
     def test_rejects_versions_outside_proven_grammar(self):
         invalid = (
             "2.3.0-alpha",

@@ -305,12 +305,12 @@ class RepositoryContractTests(unittest.TestCase):
             "--draft=false --latest",
         ):
             self.assertIn(expected, workflow)
-        self.assertEqual(workflow.count("verify_release_artifact.py"), 2)
+        self.assertEqual(workflow.count("verify_release_artifact.py"), 4)
         self.assertEqual(workflow.count("path: tag-source"), 2)
-        self.assertEqual(workflow.count("--extension-root tag-source/ChemBlender"), 3)
+        self.assertEqual(workflow.count("--extension-root tag-source/ChemBlender"), 5)
         self.assertEqual(workflow.count("--metadata-mode release-assets"), 2)
         self.assertEqual(
-            workflow.count("--budget tag-source/.github/artifact-budgets.json"), 2
+            workflow.count("--budget tag-source/.github/artifact-budgets.json"), 4
         )
         self.assertEqual(
             workflow.count('cp -- "dist/$PACKAGE_NAME" "dist/$CHECKSUM_NAME" release-assets/'),
@@ -322,6 +322,28 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertTrue(actions)
         for action in actions:
             self.assertRegex(action, r"@[0-9a-f]{40}$")
+
+    def test_release_workflow_reverifies_complete_package_artifact_before_publish_assets(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "extension-release.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("--select-package-run", workflow)
+        self.assertIn("--select-package-artifact", workflow)
+        for job in ("verify", "publish"):
+            job_text = workflow.split(f"\n  {job}:", 1)[1]
+            if job == "verify":
+                job_text = job_text.split("\n  publish:", 1)[0]
+            step = job_text.split("- name: Download and", 1)[1].split(
+                "\n      - name:", 1
+            )[0]
+            package_ci = step.index("--metadata-mode package-ci")
+            copied_assets = step.index(
+                'cp -- "dist/$PACKAGE_NAME" "dist/$CHECKSUM_NAME" release-assets/'
+            )
+            release_assets = step.index("--metadata-mode release-assets")
+            self.assertLess(package_ci, copied_assets)
+            self.assertLess(copied_assets, release_assets)
 
     def test_release_workflow_requires_default_branch_dispatch_ref(self):
         workflow = (
@@ -372,7 +394,7 @@ class RepositoryContractTests(unittest.TestCase):
             ROOT / ".github" / "workflows" / "extension-release.yml"
         ).read_text(encoding="utf-8")
 
-        self.assertEqual(workflow.count("release_metadata.py"), 1)
+        self.assertEqual(workflow.count("release_metadata.py"), 3)
         self.assertIn(
             "python3 ChemBlender/scripts/release_metadata.py",
             workflow,
@@ -414,11 +436,18 @@ class RepositoryContractTests(unittest.TestCase):
             "--commit \"$tag_commit\"",
             workflow,
         )
-        self.assertIn('--arg name "$artifact_name"', workflow)
         self.assertIn(
-            "select(.name == $name and .expired == false)",
+            '--select-package-run --tag "$RELEASE_TAG" --tag-commit "$tag_commit"',
             workflow,
         )
+        self.assertIn(
+            '--select-package-artifact --artifact-name "$artifact_name"',
+            workflow,
+        )
+        self.assertNotIn("select(.name == $name and .expired == false)", workflow)
+        self.assertNotIn("if [[ -f tag-source/CHANGELOG.md ]]", workflow)
+        self.assertEqual(workflow.count("--changelog tag-source/CHANGELOG.md"), 2)
+        self.assertEqual(workflow.count("cmp release-notes.md tag-release-notes.md"), 2)
 
     def test_release_workflow_binds_publish_to_verified_tag_commit(self):
         workflow = (

@@ -24,7 +24,7 @@ ChemBlender uses **read-only package CI plus a manually dispatched, deterministi
 - The workflow downloads pinned Blender and RDKit inputs, verifies their checksums, runs repository contracts, builds the extension, exercises it in an isolated Blender profile, and uploads the tested ZIP plus its SHA-256 record.
 - Tagged package artifacts are retained for 30 days to allow prerelease review; pull-request and branch artifacts retain the existing 14 days.
 - `.github/workflows/extension-package.yml` has `contents: read`; it never creates a GitHub Release.
-- `.github/workflows/extension-release.yml` locates the successful exact-tag run, downloads and audits its artifact, and performs no write when `publish=false`.
+- `.github/workflows/extension-release.yml` locates one successful exact-tag run, validates its metadata-named unexpired artifact, verifies all five package files (ZIP, checksum, wheel inventory, license-copy list, and artifact-size report) against tagged source, and performs no write when `publish=false`.
 - With `publish=true`, only the `publish` job receives `contents: write`. It creates a draft, verifies the uploaded asset digests, and then publishes the Release. Alpha, beta, and release-candidate tags remain prereleases and are never marked latest; final releases are marked latest.
 - Never rebuild between the successful tag run and publication. The GitHub Release assets must be byte-for-byte identical to the files downloaded from that run.
 
@@ -41,7 +41,7 @@ GitHub recommends full commit SHA pins for immutable action code and supports SH
 3. Update `blender_manifest.toml` to the same version in that pre-tag commit.
 4. Do not rewrite a published version entry except to correct a factual error; release behavior changes use a new version.
 
-`ChemBlender/scripts/extract_release_notes.py` requires exactly one non-empty dated entry. Package CI checks the manifest version entry, and the Release workflow extracts it into `release-notes.md`. When the tag contains `CHANGELOG.md`, the workflow also requires the tag and dispatch-commit entries to match. The historical v2.2.0 tag predates the changelog and is the only backfilled release.
+`ChemBlender/scripts/extract_release_notes.py` requires exactly one non-empty dated entry. Package CI checks the manifest version entry, and the Release workflow extracts it into `release-notes.md`. Every supported release tag must contain the same version entry, byte-for-byte, as the dispatch commit; a missing or different tagged `CHANGELOG.md` entry fails closed. The historical v2.2.0 tag predates the changelog and is the only backfilled release.
 
 ## CI-to-Release Checks
 
@@ -52,7 +52,7 @@ The Release workflow verifies all of these conditions before publication:
 | Release identity | Input is an annotated `vMAJOR.MINOR.PATCH`, `vMAJOR.MINOR.PATCH-alpha.N`, `vMAJOR.MINOR.PATCH-beta.N`, or `vMAJOR.MINOR.PATCH-rc.N` tag in `origin/main`; tag version and channel equal tagged-source metadata |
 | Package provenance | Successful `extension-package` push run has the same tag name and exact commit SHA |
 | Artifact availability | Exactly one metadata-named, unexpired Actions artifact exists; tagged artifacts have a 30-day review window |
-| Package integrity | Exact-tag package CI recomputes canonical size, wheel-inventory and license-list evidence. Release selection extracts only the ZIP/checksum pair and applies the tagged-source outer ZIP budget before CRC or content reads. |
+| Package integrity | Release verification first checks the complete five-file package artifact in `package-ci` mode against tagged dependency and budget sources. It then copies only the ZIP/checksum pair into `release-assets` mode, applies the tagged-source outer ZIP budget before CRC or content reads, and publishes only that pair. |
 | Package contract | Manifest, license, declared wheel, and both `.blend` libraries exist; development paths and extra wheels do not |
 | Publication safety | No Release already exists; draft asset digests equal the downloaded files; prereleases remain non-latest and final releases become latest |
 
@@ -108,7 +108,7 @@ gh run list --repo $repo --workflow extension-release.yml `
   --event workflow_dispatch --limit 5
 ```
 
-This run is read-only. It selects the successful package run by exact tag commit, downloads its artifact, and runs `ChemBlender/scripts/verify_release_artifact.py`. Inspect and require a green result before requesting publication.
+This run is read-only. It selects exactly one successful package run by exact tag commit, validates the metadata-named unexpired artifact, verifies the complete five-file package artifact, then separately verifies the ZIP/checksum pair that alone may become public assets. It also requires the dispatch-commit and tagged `CHANGELOG.md` entries to match. Inspect and require a green result before requesting publication.
 
 ### 4. Dispatch publication
 
@@ -117,7 +117,7 @@ gh workflow run extension-release.yml --repo $repo --ref main `
   -f tag=$tag -f publish=true
 ```
 
-This is the explicit publication authorization. The workflow repeats artifact verification inside its `release` environment, extracts the matching `CHANGELOG.md` entry, creates a draft with that text, compares both GitHub asset digests, and publishes only after they match. For `alpha`, `beta`, and `rc` channels it creates and publishes a GitHub prerelease without changing the latest Release. For the final channel it publishes with `--latest` and confirms the tag is the latest public Release. Publication remains manual for every channel.
+This is the explicit publication authorization. The workflow repeats complete-artifact and public-asset verification inside its `release` environment, extracts the matching `CHANGELOG.md` entry, creates a draft with that text, compares both GitHub asset digests, and publishes only after they match. For `alpha`, `beta`, and `rc` channels it creates and publishes a GitHub prerelease without changing the latest Release. For the final channel it publishes with `--latest` and confirms the tag is the latest public Release. Publication remains manual for every channel.
 
 Repository administrators should configure required reviewers under **Settings → Environments → release** when a second approval is desired. Without that protection rule, the manual `publish=true` dispatch remains the sole human approval.
 
@@ -129,6 +129,7 @@ Record the tag commit, package run URL, verification and publication run URLs, c
 
 - If a local, pull-request, `main`, or tag gate fails, do not publish.
 - Fix the issue on a branch, merge it into `main`, and create a new version/tag as appropriate; do not silently move a published tag.
+- If the target GitHub Release already exists, the workflow refuses before creating or editing anything; inspect it manually and use a separately authorized repair procedure if one is ever needed.
 - A digest or publication failure may leave a private draft. Inspect and remove it manually before retrying; the workflow never deletes Releases.
 - Once users may have downloaded a Release, publish a patch release instead of replacing its tag or binaries.
 - Actions artifacts expire; the durable public deliverables are the Release ZIP and checksum. GitHub documents artifact retention separately from repository Releases in [Downloading workflow artifacts](https://docs.github.com/actions/managing-workflow-runs/downloading-workflow-artifacts) and [About releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases).
