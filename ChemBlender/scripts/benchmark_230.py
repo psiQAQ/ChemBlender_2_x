@@ -27,7 +27,7 @@ from ChemBlender.benchmarks.datasets import (
 
 
 BenchmarkCase = namedtuple(
-    "BenchmarkCase", "name execution boundary"
+    "BenchmarkCase", "name execution boundary cache_state"
 )
 PreparedFixtures = namedtuple(
     "PreparedFixtures", "workspace scale source trajectory batch"
@@ -35,28 +35,49 @@ PreparedFixtures = namedtuple(
 
 CASE_REGISTRY = {
     "extension_enable": BenchmarkCase(
-        "extension_enable", "blender", "requires a separate Blender launch"
+        "extension_enable", "blender", "requires a separate Blender launch", "cold"
     ),
-    "preflight_feedback": BenchmarkCase("preflight_feedback", "core", ""),
-    "parse": BenchmarkCase("parse", "core", ""),
-    "project_commit": BenchmarkCase("project_commit", "core", ""),
-    "sidecar_save_open": BenchmarkCase("sidecar_save_open", "core", ""),
+    "preflight_feedback": BenchmarkCase("preflight_feedback", "core", "", "cold"),
+    "parse": BenchmarkCase("parse", "core", "", "cold"),
+    "project_commit": BenchmarkCase("project_commit", "core", "", "cold"),
+    "sidecar_save_open": BenchmarkCase("sidecar_save_open", "core", "", "cold"),
     "vdb_cache": BenchmarkCase(
-        "vdb_cache", "blender", "requires Blender and OpenVDB runtime"
+        "vdb_cache", "blender", "requires Blender and OpenVDB runtime", "cold"
     ),
     "default_view": BenchmarkCase(
-        "default_view", "blender", "requires Blender scene datablocks"
+        "default_view", "blender", "requires Blender scene datablocks", "cold"
     ),
-    "trajectory_frame": BenchmarkCase("trajectory_frame", "core", ""),
+    "trajectory_frame": BenchmarkCase("trajectory_frame", "core", "", "hot"),
     "browser_projection_filter": BenchmarkCase(
-        "browser_projection_filter", "core", ""
+        "browser_projection_filter", "core", "", "cold"
     ),
     "cancel_cleanup": BenchmarkCase(
         "cancel_cleanup",
         "future",
         "requires the Wave 4 cancellable task state machine",
+        "cold",
     ),
 }
+
+_BUDGET_SCHEMA_VERSION = "1.0"
+_REQUIRED_BUDGET_CASES = frozenset(
+    {
+        "extension_enable",
+        "preflight_feedback",
+        "default_view",
+        "vdb_cache",
+        "trajectory_frame",
+        "browser_projection_filter",
+    }
+)
+_TREND_ENVIRONMENT_FIELDS = (
+    "cpu_count",
+    "machine",
+    "platform",
+    "processor",
+    "python_implementation",
+    "python_version",
+)
 
 
 def canonical_json(document):
@@ -97,6 +118,118 @@ def benchmark_environment():
         "python_executable": sys.executable,
         "python_implementation": platform.python_implementation(),
         "python_version": platform.python_version(),
+    }
+
+
+def load_performance_budget(path):
+    """Load the versioned local-SLA and CI trend policy."""
+    try:
+        budget = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError("performance budget is not valid JSON") from error
+    required = {
+        "cases",
+        "hard_local_metric",
+        "schema_version",
+        "trend_max_regression_percent",
+        "trend_metric",
+    }
+    if type(budget) is not dict or set(budget) != required:
+        raise ValueError("performance budget has missing or unexpected fields")
+    if budget["schema_version"] != _BUDGET_SCHEMA_VERSION:
+        raise ValueError("performance budget schema version is unsupported")
+    if budget["hard_local_metric"] != "p95_seconds" or budget["trend_metric"] != "p95_seconds":
+        raise ValueError("performance budget must use p95_seconds")
+    percent = budget["trend_max_regression_percent"]
+    if (
+        isinstance(percent, bool)
+        or not isinstance(percent, (int, float))
+        or not isfinite(percent)
+        or not 0 <= percent <= 100
+    ):
+        raise ValueError("performance budget trend percentage is invalid")
+    cases = budget["cases"]
+    if type(cases) is not dict or set(cases) != _REQUIRED_BUDGET_CASES:
+        raise ValueError("performance budget cases are incomplete")
+    for name, definition in cases.items():
+        if type(definition) is not dict or set(definition) != {
+            "cache_state",
+            "hard_limit_seconds",
+            "scale",
+        }:
+            raise ValueError(f"performance budget case is invalid: {name}")
+        limit = definition["hard_limit_seconds"]
+        if (
+            isinstance(limit, bool)
+            or not isinstance(limit, (int, float))
+            or not isfinite(limit)
+            or limit <= 0
+        ):
+            raise ValueError(f"performance budget limit is invalid: {name}")
+        if definition["scale"] not in BENCHMARK_SCALES:
+            raise ValueError(f"performance budget scale is invalid: {name}")
+        if definition["cache_state"] not in {"cold", "hot"}:
+            raise ValueError(f"performance budget cache_state is invalid: {name}")
+        if CASE_REGISTRY[name].cache_state != definition["cache_state"]:
+            raise ValueError(f"performance budget cache_state disagrees: {name}")
+    return budget
+
+
+def _required_budget_cases(report, budget):
+    validate_qualified_report(report)
+    cases = {}
+    for case in report["cases"]:
+        name = case["name"]
+        if name in cases or name not in CASE_REGISTRY:
+            raise ValueError("benchmark report has duplicate or unknown case")
+        cases[name] = case
+    missing = set(budget["cases"]) - set(cases)
+    if missing:
+        raise ValueError(f"benchmark report is missing required cases: {sorted(missing)}")
+    for name, definition in budget["cases"].items():
+        case = cases[name]
+        if report["scale"] != definition["scale"]:
+            raise ValueError(f"benchmark report scale disagrees: {name}")
+        if case["cache_state"] != definition["cache_state"]:
+            raise ValueError(f"benchmark report cache_state disagrees: {name}")
+        if not isfinite(case["p95_seconds"]):
+            raise ValueError(f"benchmark report p95_seconds is not finite: {name}")
+    return cases
+
+
+def _matching_trend_environment(candidate, baseline):
+    for name in _TREND_ENVIRONMENT_FIELDS:
+        if candidate["environment"][name] != baseline["environment"][name]:
+            raise ValueError(f"benchmark environment mismatch: {name}")
+
+
+def compare_performance_report(report, budget, *, baseline_report=None):
+    """Fail closed for incomplete data; return failed hard/trend budget checks."""
+    cases = _required_budget_cases(report, budget)
+    hard_failures = [
+        name
+        for name, definition in budget["cases"].items()
+        if cases[name][budget["hard_local_metric"]] > definition["hard_limit_seconds"]
+    ]
+    trend_failures = []
+    if baseline_report is not None:
+        baseline_cases = _required_budget_cases(baseline_report, budget)
+        if report["scale"] != baseline_report["scale"]:
+            raise ValueError("benchmark scale mismatch")
+        _matching_trend_environment(report, baseline_report)
+        for name in budget["cases"]:
+            if cases[name]["cache_state"] != baseline_cases[name]["cache_state"]:
+                raise ValueError(f"benchmark cache_state mismatch: {name}")
+            baseline_p95 = baseline_cases[name][budget["trend_metric"]]
+            if baseline_p95 <= 0:
+                raise ValueError(f"benchmark baseline p95_seconds must be positive: {name}")
+            candidate_p95 = cases[name][budget["trend_metric"]]
+            if candidate_p95 > baseline_p95 * (1 + budget["trend_max_regression_percent"] / 100):
+                trend_failures.append(name)
+    return {
+        "hard_local_failures": hard_failures,
+        "passed": not hard_failures and not trend_failures,
+        "trend_failures": trend_failures,
     }
 
 
@@ -142,6 +275,7 @@ def _measure_case(case, runner, fixtures, warmup_count, sample_count, clock, *, 
         samples = []
     result = {
         "boundary": case.boundary,
+        "cache_state": case.cache_state,
         "cold_seconds": cold_seconds,
         "execution": case.execution,
         "failure_count": len(failures),
@@ -163,6 +297,7 @@ def _measure_case(case, runner, fixtures, warmup_count, sample_count, clock, *, 
 def _not_run_case(case):
     return {
         "boundary": case.boundary,
+        "cache_state": case.cache_state,
         "cold_seconds": None,
         "execution": case.execution,
         "failure_count": 0,
@@ -405,6 +540,7 @@ def validate_qualified_report(report):
     required_environment = set(benchmark_environment())
     required_case = {
         "boundary",
+        "cache_state",
         "cold_seconds",
         "execution",
         "failure_count",
@@ -435,6 +571,8 @@ def validate_qualified_report(report):
             raise ValueError("benchmark case has missing or unexpected fields")
         if case["status"] != "Passed":
             raise ValueError("benchmark qualification requires every selected case")
+        if case["cache_state"] not in {"cold", "hot"}:
+            raise ValueError("benchmark case cache_state is invalid")
         if len(case["sample_seconds"]) != report["sample_count"]:
             raise ValueError("benchmark case sample count does not match report")
         for name in (
