@@ -188,6 +188,7 @@ def assert_registration_isolation(module_key, before_install_modules):
     assert f"{module_key}.ui.properties" in sys.modules
     assert f"{module_key}.ui.quick_import" in sys.modules
     assert f"{module_key}.ui.import_preview" in sys.modules
+    assert f"{module_key}.ui.diagnostics" in sys.modules
     assert f"{module_key}.ui.topology" in sys.modules
     assert f"{module_key}.ui.scientific_edit" in sys.modules
     assert f"{module_key}.ui.export" in sys.modules
@@ -222,6 +223,114 @@ def assert_task_boundary(module_key):
     snapshot = task.snapshot()
     assert snapshot.state is tasks.TaskState.CANCELLED
     assert snapshot.progress == 0.5
+
+
+def assert_quality_revision_recovery_contract(module_key):
+    diagnostics = importlib.import_module(f"{module_key}.ui.diagnostics")
+    properties = importlib.import_module(f"{module_key}.ui.properties")
+    session_ui = importlib.import_module(f"{module_key}.ui.session")
+    core = importlib.import_module(f"{module_key}.core")
+    links = importlib.import_module(f"{module_key}.project_link")
+    presentations = {
+        status.value: diagnostics.quality_presentation(status)
+        for status in core.QualityStatus
+    }
+    assert tuple(presentations) == (
+        "complete",
+        "partial",
+        "ambiguous",
+        "incomplete",
+        "invalid",
+    )
+    assert all(value.label and value.icon for value in presentations.values())
+
+    document = {
+        "schema_name": "chemblender_import_report",
+        "schema_version": 1,
+        "session_id": "00000000-0000-0000-0000-000000000001",
+        "staged_batch_ids": [],
+        "summary": {
+            "overall": {
+                "complete": 0,
+                "partial": 0,
+                "ambiguous": 0,
+                "incomplete": 0,
+                "invalid": 0,
+            },
+            "by_source": [],
+            "by_entity": [],
+        },
+        "diagnostics": [],
+    }
+    session = session_ui.get_scene_session(bpy.context.scene)
+    state = properties.get_quick_import_state(session)
+    previous_report = state.diagnostics_report
+    previous_prompts = state.revision_prompts
+    previous_status = session.link_status
+    previous_clipboard = bpy.context.window_manager.clipboard
+    try:
+        state.diagnostics_report = document
+        assert bpy.ops.chemblender.copy_diagnostics(
+            format_name="json"
+        ) == {"FINISHED"}
+        # Blender's background WindowManager accepts clipboard writes but
+        # intentionally returns an empty value because no platform window is
+        # available.  The operator result still exercises the real bpy path;
+        # foreground runs additionally verify the copied canonical bytes.
+        if not bpy.app.background:
+            assert bpy.context.window_manager.clipboard == (
+                diagnostics.canonical_report_text(document, "json")
+            )
+        with TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "diagnostics.md"
+            assert bpy.ops.chemblender.export_diagnostics(
+                filepath=str(destination),
+                format_name="markdown",
+            ) == {"FINISHED"}
+            assert destination.read_text(encoding="utf-8") == (
+                diagnostics.canonical_report_text(document, "markdown")
+            )
+
+        prompt = diagnostics.RevisionViewPrompt(
+            current_revision_id=UUID(
+                "00000000-0000-0000-0000-000000000011"
+            ),
+            new_revision_id=UUID(
+                "00000000-0000-0000-0000-000000000012"
+            ),
+        )
+        state.revision_prompts = (prompt,)
+        assert bpy.ops.chemblender.revision_view_action(
+            current_revision_id=str(prompt.current_revision_id),
+            new_revision_id=str(prompt.new_revision_id),
+            action="keep_current",
+        ) == {"FINISHED"}
+        assert state.revision_prompts == ()
+
+        session.link_status = "connected"
+        try:
+            bpy.ops.chemblender.project_link_recovery(action="detach")
+        except RuntimeError as exc:
+            assert "recovery action is not allowed" in str(exc)
+        else:
+            raise AssertionError(
+                "live connected status must reject detach recovery"
+            )
+        scene = {
+            links.PROJECT_ID_KEY: "project",
+            links.PROJECT_SCHEMA_KEY: "1.0",
+            links.SIDECAR_LOCATOR_KEY: "example.cbq",
+            links.MANIFEST_HASH_KEY: "a" * 64,
+            "objects": object(),
+        }
+        objects = scene["objects"]
+        assert diagnostics.detach_project_links_for_scenes((scene,)) == 1
+        assert scene["objects"] is objects
+    finally:
+        state.diagnostics_report = previous_report
+        state.revision_prompts = previous_prompts
+        session.link_status = previous_status
+        bpy.context.window_manager.clipboard = previous_clipboard
 
 
 def assert_grid_unload_cancels_active_worker(module_key):
@@ -300,6 +409,10 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_quick_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_open_workspace")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_confirm_import")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_copy_diagnostics")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_export_diagnostics")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_revision_view_action")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_project_link_recovery")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_migrate_legacy_scene")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_cancel_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_compute_topology")
@@ -5062,6 +5175,30 @@ expected_inventory["registered_classes"] += [
     },
     {
         "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_copy_diagnostics",
+        "id": "chemblender.copy_diagnostics",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_export_diagnostics",
+        "id": "chemblender.export_diagnostics",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_project_link_recovery",
+        "id": "chemblender.project_link_recovery",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_revision_view_action",
+        "id": "chemblender.revision_view_action",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
         "name": "CHEMBLENDER_OT_apply_frame_force",
         "id": "chemblender.apply_frame_force",
         "base": "Operator",
@@ -5273,6 +5410,7 @@ assert_cif_workflow(module_key, package.parent.parent)
 assert_poscar_workflow(module_key, package.parent.parent)
 assert_optional_workspace(module_key)
 assert_project_session_manager(module_key)
+assert_quality_revision_recovery_contract(module_key)
 assert_topology_view(module_key, package.parent.parent)
 assert_extxyz_workflow(module_key, package.parent.parent)
 assert_sdf_10k_workflow_budget(module_key)

@@ -1565,6 +1565,22 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertIsNone(state.preview)
         self.assertIsNone(state.staging_session)
 
+    def test_canonical_diagnostics_survive_staging_cleanup_for_ui_actions(self):
+        _registry, state = self.stage("tests/fixtures/xyz/water.xyz")
+        report = state.diagnostics_report
+
+        self.assertEqual(
+            report["schema_name"],
+            "chemblender_import_report",
+        )
+        self.assertEqual(report["schema_version"], 1)
+
+        self.properties.discard_quick_import_preview(self.session)
+
+        self.assertIs(state.diagnostics_report, report)
+        self.assertIsNone(state.preview)
+        self.assertIsNone(state.staging_session)
+
     def test_confirm_calls_transaction_once_creates_format_aware_plans(self):
         registry, state = self.stage(
             "tests/fixtures/xyz/water.xyz",
@@ -1651,6 +1667,85 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertEqual(view_calls, [])
         self.assertEqual(result.created_view_count, 0)
         self.assertEqual(state.browser_revision, 1)
+
+    def test_new_revision_never_creates_an_automatic_default_view(self):
+        revision_id = uuid4()
+        row = SimpleNamespace(
+            conflict_id=str(uuid4()),
+            conflict_action="new_revision",
+            default_view=True,
+        )
+        result = SimpleNamespace(
+            committed_source_revision_ids=(revision_id,),
+            project=SimpleNamespace(
+                source_revisions={
+                    revision_id: SimpleNamespace(
+                        created_entity_ids=(uuid4(),),
+                    )
+                },
+                structures={},
+                datasets={},
+            ),
+        )
+
+        with patch.object(self.module, "plan_default_view") as planner:
+            plans = self.module._committed_default_view_plans(
+                result,
+                (row,),
+            )
+
+        self.assertEqual(plans, ())
+        planner.assert_not_called()
+
+    def test_new_revision_prompt_records_exact_revision_and_entity_ids(self):
+        source_id = uuid4()
+        conflict_id = uuid4()
+        current_revision_id = uuid4()
+        new_revision_id = uuid4()
+        current_entity_ids = (uuid4(), uuid4())
+        new_entity_ids = (uuid4(), uuid4())
+        row = SimpleNamespace(
+            source_id=str(source_id),
+            conflict_id=str(conflict_id),
+            conflict_action="new_revision",
+        )
+        candidate = SimpleNamespace(
+            revision_id=current_revision_id,
+            created_entity_ids=current_entity_ids,
+        )
+        conflict = SimpleNamespace(
+            id=conflict_id,
+            staged_source_id=source_id,
+            candidates=(candidate,),
+        )
+        result = SimpleNamespace(
+            committed_source_revision_ids=(new_revision_id,),
+            project=SimpleNamespace(
+                source_revisions={
+                    new_revision_id: SimpleNamespace(
+                        created_entity_ids=new_entity_ids,
+                    )
+                },
+            ),
+        )
+
+        prompts = self.module._committed_revision_prompts(
+            result,
+            (row,),
+            (conflict,),
+        )
+
+        self.assertEqual(len(prompts), 1)
+        self.assertEqual(
+            prompts[0].current_revision_id,
+            current_revision_id,
+        )
+        self.assertEqual(prompts[0].new_revision_id, new_revision_id)
+        self.assertEqual(
+            prompts[0].entity_id_map,
+            tuple(zip(current_entity_ids, new_entity_ids, strict=True)),
+        )
+        self.assertEqual(prompts[0].action, "keep_current")
 
     def test_sequential_xyz_cube_commits_rotate_owned_sidecar_generation(self):
         registry, state = self.stage("tests/fixtures/xyz/water.xyz")

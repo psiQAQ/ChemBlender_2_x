@@ -59,6 +59,7 @@ from ..runtime.reader_api_bridge import (
     refresh_reader_plugin_discovery,
 )
 from .default_views import describe_default_view, plan_default_view
+from .diagnostics import RevisionViewPrompt, draw_quality_badge
 from .extxyz_preview import extxyz_preview_summary
 from .grid import grid_preview_summary
 from .properties import (
@@ -1666,7 +1667,14 @@ def _committed_default_view_plans(commit_result, rows):
         commit_result.committed_source_revision_ids,
         strict=True,
     ):
-        if not row.default_view:
+        if (
+            not row.default_view
+            or (
+                row.conflict_id
+                and DuplicateAction(row.conflict_action)
+                is DuplicateAction.NEW_REVISION
+            )
+        ):
             continue
         revision = project.source_revisions[revision_id]
         plan = plan_default_view(
@@ -1677,6 +1685,60 @@ def _committed_default_view_plans(commit_result, rows):
         if plan is not None:
             selected.append(plan)
     return tuple(selected)
+
+
+def _committed_revision_prompts(commit_result, rows, conflicts):
+    committing_rows = tuple(
+        row
+        for row in rows
+        if not row.conflict_id
+        or DuplicateAction(row.conflict_action) not in _SKIP_ACTIONS
+    )
+    if len(committing_rows) != len(
+        commit_result.committed_source_revision_ids
+    ):
+        raise RuntimeError("committed source revisions do not match preview")
+    conflicts_by_id = {
+        str(conflict.id): conflict for conflict in conflicts
+    }
+    prompts = []
+    for row, new_revision_id in zip(
+        committing_rows,
+        commit_result.committed_source_revision_ids,
+        strict=True,
+    ):
+        if (
+            not row.conflict_id
+            or DuplicateAction(row.conflict_action)
+            is not DuplicateAction.NEW_REVISION
+        ):
+            continue
+        conflict = conflicts_by_id.get(row.conflict_id)
+        if conflict is None:
+            raise RuntimeError("new revision conflict is no longer available")
+        new_entity_ids = commit_result.project.source_revisions[
+            new_revision_id
+        ].created_entity_ids
+        for candidate in conflict.candidates:
+            entity_id_map = (
+                tuple(
+                    zip(
+                        candidate.created_entity_ids,
+                        new_entity_ids,
+                        strict=True,
+                    )
+                )
+                if len(candidate.created_entity_ids) == len(new_entity_ids)
+                else ()
+            )
+            prompts.append(
+                RevisionViewPrompt(
+                    current_revision_id=candidate.revision_id,
+                    new_revision_id=new_revision_id,
+                    entity_id_map=entity_id_map,
+                )
+            )
+    return tuple(prompts)
 
 
 def _finish_committed_import(
@@ -1690,6 +1752,11 @@ def _finish_committed_import(
     discard_staging=True,
 ):
     state.browser_revision += 1
+    state.revision_prompts = _committed_revision_prompts(
+        commit_result,
+        rows,
+        state.conflicts,
+    )
     created = []
     cleanup_pending = bool(commit_result.cleanup_warnings)
     view_failed = False
@@ -2290,7 +2357,7 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                 text=f"{row.reader_id}: {row.reader_availability}"
             )
             box.label(text=f"Capabilities: {row.capability_summary}")
-            box.label(text=f"Quality: {row.quality}")
+            draw_quality_badge(box, row.quality)
             if row.frame_count:
                 box.label(text=f"Frames: {row.frame_count}")
                 box.label(
@@ -2354,12 +2421,11 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                 )
                 box.label(text=f"Dataset IDs: {row.grid_source_ids}")
                 box.label(text=f"Sample range: {row.grid_sample_range}")
-                box.label(
-                    text=(
-                        f"Value unit: {row.grid_value_unit} · "
-                        f"{row.grid_quality}"
-                    ),
-                    icon="ERROR" if row.grid_quality == "ambiguous" else "INFO",
+                box.label(text=f"Value unit: {row.grid_value_unit}")
+                draw_quality_badge(
+                    box,
+                    row.grid_quality,
+                    prefix="Grid quality",
                 )
             if row.cif_block_count:
                 box.label(

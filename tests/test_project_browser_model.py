@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 from uuid import UUID
+from uuid import uuid4
 
 import numpy
 
@@ -979,8 +980,300 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         quality = state_properties["quality_filter"]
         self.assertEqual(quality.keywords["default"], "all")
         self.assertTrue(
-            all(identifier for identifier, _label, _description in quality.keywords["items"])
+            all(
+                identifier
+                for identifier, _label, _description
+                in quality.keywords["items"]
+            )
         )
+
+    def test_diagnostics_and_relink_operators_use_file_contracts(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        export_properties = (
+            panel.CHEMBLENDER_OT_export_diagnostics.__annotations__
+        )
+        recovery_properties = (
+            panel.CHEMBLENDER_OT_project_link_recovery.__annotations__
+        )
+
+        self.assertEqual(
+            export_properties["filepath"].keywords["subtype"],
+            "FILE_PATH",
+        )
+        self.assertEqual(
+            recovery_properties["filepath"].keywords["subtype"],
+            "FILE_PATH",
+        )
+
+    def test_recovery_execute_revalidates_the_live_link_status(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        operation = panel.CHEMBLENDER_OT_project_link_recovery()
+        operation.action = "detach"
+        session = SimpleNamespace(link_status="connected")
+        context = SimpleNamespace(scene=object())
+        self.fake_bpy.data = SimpleNamespace(scenes=(), filepath="")
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel._diagnostics,
+                "detach_project_links_for_scenes",
+            ) as detach,
+        ):
+            result = operation.execute(context)
+
+        self.assertEqual(result, {"CANCELLED"})
+        self.assertIn(
+            "not allowed",
+            operation.last_report[1],
+        )
+        detach.assert_not_called()
+
+    def test_open_read_only_is_inspection_only_without_candidate_adoption(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        operation = panel.CHEMBLENDER_OT_project_link_recovery()
+        operation.action = "open_read_only"
+        session = SimpleNamespace(link_status="missing")
+        state = SimpleNamespace(
+            project_link_inspection_only=False,
+            show_project_link_diagnostics=False,
+        )
+        context = SimpleNamespace(scene=object())
+        self.fake_bpy.data = SimpleNamespace(scenes=(), filepath="")
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+            patch.object(panel, "relink_project_session_for_scenes") as relink,
+            patch.object(panel, "verify_project_session_for_scenes") as verify,
+            patch.object(
+                panel._diagnostics,
+                "detach_project_links_for_scenes",
+            ) as detach,
+        ):
+            result = operation.execute(context)
+
+        self.assertEqual(result, {"FINISHED"})
+        self.assertTrue(state.project_link_inspection_only)
+        relink.assert_not_called()
+        verify.assert_not_called()
+        detach.assert_not_called()
+
+    def test_copy_and_export_diagnostics_use_the_canonical_report(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        document = {
+            "schema_name": "chemblender_import_report",
+            "schema_version": 1,
+            "session_id": "00000000-0000-0000-0000-000000000001",
+            "staged_batch_ids": [],
+            "summary": {
+                "overall": {
+                    "complete": 0,
+                    "partial": 0,
+                    "ambiguous": 0,
+                    "incomplete": 0,
+                    "invalid": 0,
+                },
+                "by_source": [],
+                "by_entity": [],
+            },
+            "diagnostics": [],
+        }
+        session = object()
+        state = SimpleNamespace(diagnostics_report=document)
+        manager = SimpleNamespace(clipboard="")
+        context = SimpleNamespace(scene=object(), window_manager=manager)
+
+        copy_action = panel.CHEMBLENDER_OT_copy_diagnostics()
+        copy_action.format_name = "markdown"
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+        ):
+            self.assertEqual(copy_action.execute(context), {"FINISHED"})
+        self.assertEqual(
+            manager.clipboard,
+            panel._diagnostics.canonical_report_text(
+                document,
+                "markdown",
+            ),
+        )
+
+        with TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "report.json"
+            export_action = panel.CHEMBLENDER_OT_export_diagnostics()
+            export_action.filepath = str(destination)
+            export_action.format_name = "json"
+            with (
+                patch.object(
+                    panel,
+                    "get_scene_session",
+                    return_value=session,
+                ),
+                patch.object(
+                    panel,
+                    "get_quick_import_state",
+                    return_value=state,
+                ),
+            ):
+                self.assertEqual(
+                    export_action.execute(context),
+                    {"FINISHED"},
+                )
+            self.assertEqual(
+                destination.read_text(encoding="utf-8"),
+                panel._diagnostics.canonical_report_text(
+                    document,
+                    "json",
+                ),
+            )
+            self.assertEqual(tuple(Path(temporary).glob(".*.tmp")), ())
+
+    def test_revision_action_keeps_current_by_default_and_updates_explicitly(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        current_revision_id = uuid4()
+        new_revision_id = uuid4()
+        prompt = panel._diagnostics.RevisionViewPrompt(
+            current_revision_id=current_revision_id,
+            new_revision_id=new_revision_id,
+            entity_id_map=((uuid4(), uuid4()),),
+        )
+        state = SimpleNamespace(revision_prompts=(prompt,))
+        session = SimpleNamespace(
+            project=object(),
+            temporary_root=Path(".").resolve(),
+        )
+        context = SimpleNamespace(
+            scene=object(),
+            collection=object(),
+        )
+        keep = panel.CHEMBLENDER_OT_revision_view_action()
+        keep.current_revision_id = str(current_revision_id)
+        keep.new_revision_id = str(new_revision_id)
+        keep.action = "keep_current"
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+            patch.object(panel, "_revision_view_targets") as targets,
+        ):
+            self.assertEqual(keep.execute(context), {"FINISHED"})
+        self.assertEqual(state.revision_prompts, ())
+        targets.assert_not_called()
+
+        class CurrentView:
+            hide_render = False
+
+            def __init__(self):
+                self.hidden = False
+
+            def hide_get(self):
+                return self.hidden
+
+            def hide_set(self, value):
+                self.hidden = value
+
+        current = CurrentView()
+        prompt = panel._diagnostics.RevisionViewPrompt(
+            current_revision_id=current_revision_id,
+            new_revision_id=new_revision_id,
+            entity_id_map=((uuid4(), uuid4()),),
+        )
+        state.revision_prompts = (prompt,)
+        update = panel.CHEMBLENDER_OT_revision_view_action()
+        update.current_revision_id = str(current_revision_id)
+        update.new_revision_id = str(new_revision_id)
+        update.action = "update_selected_views"
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+            patch.object(
+                panel,
+                "_revision_view_targets",
+                return_value=((current, object()),),
+            ),
+            patch.object(
+                panel,
+                "apply_scene_preset",
+                return_value=(object(),),
+            ),
+            patch.object(panel, "advance_browser_revision") as advance,
+        ):
+            self.assertEqual(update.execute(context), {"FINISHED"})
+
+        self.assertTrue(current.hidden)
+        self.assertTrue(current.hide_render)
+        self.assertEqual(state.revision_prompts, ())
+        advance.assert_called_once_with(session)
+
+    def test_revision_action_reraises_fatal_view_failure(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        prompt = panel._diagnostics.RevisionViewPrompt(
+            current_revision_id=uuid4(),
+            new_revision_id=uuid4(),
+            entity_id_map=((uuid4(), uuid4()),),
+        )
+        state = SimpleNamespace(revision_prompts=(prompt,))
+        session = SimpleNamespace(
+            project=object(),
+            temporary_root=Path(".").resolve(),
+        )
+        context = SimpleNamespace(scene=object(), collection=object())
+        action = panel.CHEMBLENDER_OT_revision_view_action()
+        action.current_revision_id = str(prompt.current_revision_id)
+        action.new_revision_id = str(prompt.new_revision_id)
+        action.action = "comparison_view"
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+            patch.object(
+                panel,
+                "_revision_view_targets",
+                return_value=((object(), object()),),
+            ),
+            patch.object(
+                panel,
+                "apply_scene_preset",
+                side_effect=MemoryError("out of memory"),
+            ),
+        ):
+            with self.assertRaisesRegex(MemoryError, "out of memory"):
+                action.execute(context)
+
+        self.assertEqual(state.revision_prompts, (prompt,))
 
     def test_crystal_symmetry_sections_survive_missing_spglib(self):
         properties = importlib.import_module("ChemBlender.ui.properties")
@@ -1409,7 +1702,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             labels,
             [
                 {"text": "    Density (3)", "icon": "VOLUME_DATA"},
-                {"text": "Partial"},
+                {"text": "Partial", "icon": "INFO"},
             ],
         )
 

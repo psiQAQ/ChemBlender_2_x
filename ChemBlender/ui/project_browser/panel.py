@@ -3,6 +3,8 @@
 import importlib
 import json
 import operator
+import os
+from pathlib import Path
 from uuid import UUID
 
 import bpy
@@ -20,10 +22,12 @@ from ..properties import (
     _scene_property_identity,
     draw_crystal_symmetry_properties,
     draw_selective_dynamics_properties,
+    advance_browser_revision,
     get_quick_import_state,
 )
 from ..session import (
     get_scene_session,
+    get_scene_session_status,
     register_session_cleanup,
     unregister_session_cleanup,
 )
@@ -35,11 +39,23 @@ from ...core import (
     FrameSet,
     MolecularRecord,
     Structure,
+    builtin_scene_presets,
+    plan_scene_preset,
 )
+from ...core.project_service import (
+    relink_project_session_for_scenes,
+    verify_project_session_for_scenes,
+)
+from ...core.storage.atomic_paths import short_sibling_temporary_path
 from ...dataset_view import (
     apply_atom_selection,
     apply_atomic_scalar,
     write_vector_view,
+)
+from ...project_link import ProjectLinkStatus
+from ...scene_preset_view import (
+    _remove_objects as _remove_scene_preset_objects,
+    apply_scene_preset,
 )
 from .model import (
     BrowserMode,
@@ -53,6 +69,7 @@ from .model import (
 _scientific_edit = importlib.import_module("..scientific_edit", __package__)
 _topology = importlib.import_module("..topology", __package__)
 _biological = importlib.import_module("..biological", __package__)
+_diagnostics = importlib.import_module("..diagnostics", __package__)
 _grid = importlib.import_module("..grid", __package__)
 
 
@@ -89,6 +106,329 @@ _SCENE_PROPERTY_NAME = "chemblender_project_browser"
 _TOPOLOGY_SCENE_PROPERTY_NAME = "chemblender_topology"
 _OWNED_SCENE_PROPERTY = None
 _OWNED_TOPOLOGY_SCENE_PROPERTY = None
+_FATAL_EXCEPTIONS = (
+    KeyboardInterrupt,
+    SystemExit,
+    GeneratorExit,
+    MemoryError,
+)
+
+
+def _diagnostics_report(session):
+    return get_quick_import_state(session).diagnostics_report
+
+
+class CHEMBLENDER_OT_copy_diagnostics(bpy.types.Operator):
+    bl_idname = "chemblender.copy_diagnostics"
+    bl_label = "Copy Diagnostics"
+
+    format_name: EnumProperty(
+        items=(
+            ("markdown", "Markdown", ""),
+            ("json", "JSON", ""),
+        ),
+        default="markdown",
+    )
+
+    def execute(self, context):
+        try:
+            session = get_scene_session(context.scene)
+            document = _diagnostics_report(session)
+            if document is None:
+                raise ValueError("no import diagnostics are available")
+            context.window_manager.clipboard = (
+                _diagnostics.canonical_report_text(
+                    document,
+                    self.format_name,
+                )
+            )
+        except BaseException as error:
+            if isinstance(error, _FATAL_EXCEPTIONS):
+                raise
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
+class CHEMBLENDER_OT_export_diagnostics(bpy.types.Operator):
+    bl_idname = "chemblender.export_diagnostics"
+    bl_label = "Export Diagnostics"
+
+    filepath: StringProperty(subtype="FILE_PATH")
+    format_name: EnumProperty(
+        items=(
+            ("markdown", "Markdown", ""),
+            ("json", "JSON", ""),
+        ),
+        default="markdown",
+    )
+
+    def invoke(self, context, _event):
+        if not self.filepath:
+            extension = ".md" if self.format_name == "markdown" else ".json"
+            self.filepath = f"chemblender-diagnostics{extension}"
+        context.window_manager.fileselect_add(self)
+        return {"RUNNING_MODAL"}
+
+    def execute(self, context):
+        temporary = None
+        try:
+            session = get_scene_session(context.scene)
+            document = _diagnostics_report(session)
+            if document is None:
+                raise ValueError("no import diagnostics are available")
+            destination = Path(self.filepath).resolve()
+            if not destination.parent.is_dir():
+                raise ValueError(
+                    "diagnostics destination directory does not exist"
+                )
+            text = _diagnostics.canonical_report_text(
+                document,
+                self.format_name,
+            )
+            temporary = short_sibling_temporary_path(destination)
+            with temporary.open("x", encoding="utf-8", newline="\n") as stream:
+                stream.write(text)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, destination)
+            temporary = None
+        except BaseException as error:
+            if temporary is not None:
+                try:
+                    temporary.unlink(missing_ok=True)
+                except OSError as cleanup_error:
+                    error.add_note(
+                        f"diagnostics temporary cleanup failed: {cleanup_error}"
+                    )
+            if isinstance(error, _FATAL_EXCEPTIONS):
+                raise
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
+def _revision_view_targets(context, prompt, *, selected_only):
+    entity_map = dict(prompt.entity_id_map)
+    if not entity_map:
+        return ()
+    presets = builtin_scene_presets()
+    session = get_scene_session(context.scene)
+    targets = []
+    for obj in context.scene.objects:
+        preset_id = obj.get("cb_scene_preset_id")
+        if preset_id is None:
+            continue
+        if selected_only and not obj.select_get():
+            continue
+        if preset_id not in presets:
+            raise ValueError("current View references an unknown preset")
+        try:
+            encoded_bindings = json.loads(
+                obj["cb_scene_bindings_json"]
+            )
+            settings = json.loads(obj["cb_scene_settings_json"])
+            bindings = {
+                name: entity_map.get(
+                    UUID(value["entity_id"]),
+                    UUID(value["entity_id"]),
+                )
+                for name, value in encoded_bindings.items()
+            }
+        except (KeyError, TypeError, ValueError) as error:
+            raise ValueError(
+                "current View has invalid revision metadata"
+            ) from error
+        if all(
+            UUID(value["entity_id"]) == bindings[name]
+            for name, value in encoded_bindings.items()
+        ):
+            continue
+        plan = plan_scene_preset(
+            presets[preset_id],
+            session.project,
+            bindings,
+            settings,
+        )
+        targets.append((obj, plan))
+    return tuple(targets)
+
+
+def _remove_revision_prompt(state, prompt):
+    state.revision_prompts = tuple(
+        value
+        for value in state.revision_prompts
+        if not (
+            value.current_revision_id == prompt.current_revision_id
+            and value.new_revision_id == prompt.new_revision_id
+        )
+    )
+
+
+class CHEMBLENDER_OT_revision_view_action(bpy.types.Operator):
+    bl_idname = "chemblender.revision_view_action"
+    bl_label = "Resolve Revision Views"
+
+    current_revision_id: StringProperty()
+    new_revision_id: StringProperty()
+    action: EnumProperty(items=_diagnostics.revision_action_items())
+
+    def execute(self, context):
+        created = []
+        hidden = []
+        try:
+            session = get_scene_session(context.scene)
+            state = get_quick_import_state(session)
+            current_id = UUID(self.current_revision_id)
+            new_id = UUID(self.new_revision_id)
+            prompt = next(
+                (
+                    value
+                    for value in state.revision_prompts
+                    if (
+                        value.current_revision_id == current_id
+                        and value.new_revision_id == new_id
+                    )
+                ),
+                None,
+            )
+            if prompt is None:
+                raise ValueError("revision prompt is no longer available")
+            if self.action == "keep_current":
+                _remove_revision_prompt(state, prompt)
+                return {"FINISHED"}
+            targets = _revision_view_targets(
+                context,
+                prompt,
+                selected_only=self.action == "update_selected_views",
+            )
+            if not targets:
+                raise ValueError("no matching current Views are selected")
+            cache_root = Path(session.temporary_root) / "view-cache"
+            cache_root.mkdir(exist_ok=True)
+            for old_view, plan in targets:
+                created.extend(
+                    apply_scene_preset(
+                        plan,
+                        session.project,
+                        collection=context.collection,
+                        cache_root=cache_root,
+                    )
+                )
+                if self.action == "update_selected_views":
+                    previous = (
+                        old_view.hide_get(),
+                        old_view.hide_render,
+                    )
+                    hidden.append((old_view, previous))
+                    old_view.hide_set(True)
+                    old_view.hide_render = True
+            _remove_revision_prompt(state, prompt)
+            advance_browser_revision(session)
+        except BaseException as error:
+            for old_view, previous in reversed(hidden):
+                try:
+                    old_view.hide_set(previous[0])
+                    old_view.hide_render = previous[1]
+                except BaseException as cleanup_error:
+                    error.add_note(
+                        f"revision View visibility rollback failed: "
+                        f"{cleanup_error}"
+                    )
+            if created:
+                try:
+                    _remove_scene_preset_objects(created)
+                except BaseException as cleanup_error:
+                    error.add_note(
+                        f"revision View cleanup failed: {cleanup_error}"
+                    )
+            if isinstance(error, _FATAL_EXCEPTIONS):
+                raise
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
+class CHEMBLENDER_OT_project_link_recovery(bpy.types.Operator):
+    bl_idname = "chemblender.project_link_recovery"
+    bl_label = "Recover Project Link"
+
+    action: EnumProperty(
+        items=(
+            ("relink", "Relink", ""),
+            ("verify", "Verify", ""),
+            ("open_read_only", "Open Read-only", ""),
+            ("open_diagnostics", "Open Diagnostics", ""),
+            ("detach", "Detach", ""),
+        )
+    )
+    filepath: StringProperty(subtype="FILE_PATH")
+
+    def invoke(self, context, _event):
+        if self.action == "relink":
+            context.window_manager.fileselect_add(self)
+            return {"RUNNING_MODAL"}
+        return self.execute(context)
+
+    def execute(self, context):
+        try:
+            session = get_scene_session(context.scene)
+            scenes = tuple(bpy.data.scenes)
+            blend_path = bpy.data.filepath
+            try:
+                live_status = ProjectLinkStatus(session.link_status)
+            except ValueError as error:
+                raise ValueError(
+                    "project link state does not allow recovery actions"
+                ) from error
+            if self.action not in _diagnostics.project_recovery_actions(
+                live_status
+            ):
+                raise ValueError(
+                    "recovery action is not allowed for the current link state"
+                )
+            state = get_quick_import_state(session)
+            if self.action == "relink":
+                if not self.filepath:
+                    raise ValueError("select a ChemBlender .cbq sidecar")
+                result = relink_project_session_for_scenes(
+                    session=session,
+                    scenes=scenes,
+                    sidecar_path=self.filepath,
+                    blend_path=blend_path,
+                )
+                if result.status.value != "connected":
+                    raise ValueError(result.message or result.status.value)
+                state.project_link_inspection_only = False
+                state.show_project_link_diagnostics = False
+            elif self.action == "verify":
+                result = verify_project_session_for_scenes(
+                    session=session,
+                    scenes=scenes,
+                    blend_path=blend_path,
+                )
+                if result.status.value != "connected":
+                    raise ValueError(result.message or result.status.value)
+                state.project_link_inspection_only = False
+                state.show_project_link_diagnostics = False
+            elif self.action == "open_read_only":
+                state.project_link_inspection_only = True
+            elif self.action == "open_diagnostics":
+                state.show_project_link_diagnostics = True
+            elif self.action == "detach":
+                _diagnostics.detach_project_links_for_scenes(scenes)
+                session.sidecar_path = None
+                session.link_status = "unlinked"
+                state.project_link_inspection_only = False
+                state.show_project_link_diagnostics = False
+            else:
+                raise ValueError("unknown project recovery action")
+        except BaseException as error:
+            if isinstance(error, _FATAL_EXCEPTIONS):
+                raise
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        return {"FINISHED"}
 
 
 def _selection_changed(state, context):
@@ -592,6 +932,114 @@ def _page_subject(settings):
     return "project entries"
 
 
+def _draw_import_diagnostics(layout, session):
+    state = get_quick_import_state(session)
+    document = state.diagnostics_report
+    if document is None:
+        return
+    box = layout.box()
+    diagnostics = document["diagnostics"]
+    box.label(
+        text=f"Import Diagnostics ({len(diagnostics)})",
+        icon="INFO",
+    )
+    actions = box.row(align=True)
+    copy_action = actions.operator(
+        CHEMBLENDER_OT_copy_diagnostics.bl_idname,
+        text="Copy",
+        icon="COPYDOWN",
+    )
+    copy_action.format_name = "markdown"
+    export_action = actions.operator(
+        CHEMBLENDER_OT_export_diagnostics.bl_idname,
+        text="Export",
+        icon="EXPORT",
+    )
+    export_action.format_name = "markdown"
+    if diagnostics:
+        item = diagnostics[0]
+        _diagnostics.draw_quality_badge(
+            box,
+            item["quality_status"],
+        )
+        for label, value in _diagnostics.diagnostic_detail_rows(item):
+            box.label(text=f"{label}: {value}")
+
+
+def _draw_revision_prompts(layout, session):
+    state = get_quick_import_state(session)
+    for prompt in state.revision_prompts:
+        box = layout.box()
+        box.label(text="Revision Available", icon="FILE_REFRESH")
+        box.label(
+            text=f"Current: {prompt.current_revision_id}"
+        )
+        box.label(text=f"New: {prompt.new_revision_id}")
+        actions = box.row(align=True)
+        for identifier, label, _description in (
+            _diagnostics.revision_action_items()
+        ):
+            action = actions.operator(
+                CHEMBLENDER_OT_revision_view_action.bl_idname,
+                text=label,
+            )
+            action.current_revision_id = str(prompt.current_revision_id)
+            action.new_revision_id = str(prompt.new_revision_id)
+            action.action = identifier
+
+
+def _draw_project_link_recovery(layout, context, session):
+    status_text = session.link_status
+    try:
+        status = ProjectLinkStatus(status_text)
+    except ValueError:
+        return
+    actions = _diagnostics.project_recovery_actions(status)
+    if not actions:
+        return
+    state = get_quick_import_state(session)
+    box = layout.box()
+    box.alert = status in {
+        ProjectLinkStatus.INCOMPATIBLE,
+        ProjectLinkStatus.INVALID,
+    }
+    box.label(
+        text=f"Project link: {status.value.title()}",
+        icon="ERROR",
+    )
+    _reported_status, message = get_scene_session_status(context.scene)
+    if message and (
+        state.show_project_link_diagnostics
+        or status in {
+            ProjectLinkStatus.INCOMPATIBLE,
+            ProjectLinkStatus.INVALID,
+        }
+    ):
+        box.label(text=message)
+    if state.project_link_inspection_only:
+        box.label(
+            text=(
+                "Candidate not adopted or written; existing Blender "
+                "objects are preserved"
+            ),
+            icon="LOCKED",
+        )
+    row = box.row(align=True)
+    labels = {
+        "relink": "Relink",
+        "verify": "Verify",
+        "open_read_only": "Open Read-only",
+        "open_diagnostics": "Diagnostics",
+        "detach": "Detach",
+    }
+    for identifier in actions:
+        action = row.operator(
+            CHEMBLENDER_OT_project_link_recovery.bl_idname,
+            text=labels[identifier],
+        )
+        action.action = identifier
+
+
 class CHEMBLENDER_UL_project_rows(bpy.types.UIList):
     def draw_item(
         self,
@@ -610,7 +1058,11 @@ class CHEMBLENDER_UL_project_rows(bpy.types.UIList):
         row = layout.row(align=True)
         row.label(text=text, icon=_ROW_ICONS.get(item.kind, "DOT"))
         if item.quality:
-            row.label(text=item.quality.title())
+            _diagnostics.draw_quality_badge(
+                row,
+                item.quality,
+                prefix="",
+            )
 
 
 class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
@@ -668,6 +1120,9 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
             settings,
             "selected_index",
         )
+        _draw_import_diagnostics(layout, session)
+        _draw_revision_prompts(layout, session)
+        _draw_project_link_recovery(layout, context, session)
         if settings.active_entity_id:
             layout.label(text=f"Selected: {settings.active_entity_id}")
             selected = session.project.datasets.get(session.active_entity_id)

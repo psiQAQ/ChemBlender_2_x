@@ -15,6 +15,7 @@ REGISTER_MODULE_NAMES: tuple[str, ...] = (
     ".ui.properties",
     ".ui.quick_import",
     ".ui.import_preview",
+    ".ui.diagnostics",
     ".ui.topology",
     ".ui.biological",
     ".ui.scientific_edit",

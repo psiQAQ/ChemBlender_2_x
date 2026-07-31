@@ -96,6 +96,20 @@ def _live_diagnostics(preview, session):
                 raise ValueError(
                     "missing selected reader requires preflight failure provenance"
                 )
+        locator_matches = (
+            (
+                revision.locator_kind == "absolute_path"
+                and _path_key(revision.locator)
+                == _path_key(source_preview.source_path)
+            )
+            or (
+                revision.locator_kind == "inline_text"
+                and source.source_kind == "text"
+                and revision.locator == "inline:smiles"
+                and source_preview.source_path
+                == session.artifact_root / f"{source.id}.smi"
+            )
+        )
         if (
             source.id != source_preview.source_id
             or revision.source_id != source.id
@@ -105,8 +119,7 @@ def _live_diagnostics(preview, session):
                 and revision.reader_id != source_preview.selected_reader_id
             )
             or revision.byte_size != source_preview.byte_size
-            or revision.locator_kind != "absolute_path"
-            or _path_key(revision.locator) != _path_key(source_preview.source_path)
+            or not locator_matches
         ):
             raise ValueError("staged source and revision do not match source preview")
 
