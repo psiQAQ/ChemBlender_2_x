@@ -3,7 +3,9 @@ import json
 import math
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -98,15 +100,111 @@ class BenchmarkHarnessTests(unittest.TestCase):
                 case_names=tuple(harness.BUILTIN_RUNNERS),
                 scale="test",
                 warmup_count=0,
-                sample_count=1,
+                sample_count=2,
             )
         finally:
             del harness.BENCHMARK_SCALES["test"]
         self.assertTrue(report["passed"])
 
+    def test_fixture_preparation_happens_once_before_timed_samples(self):
+        from ChemBlender.benchmarks.datasets import BenchmarkScale
+
+        harness = load_harness()
+        harness.BENCHMARK_SCALES["test"] = BenchmarkScale(
+            "test", 3, 3, (2, 2, 2), 3
+        )
+        events = []
+
+        def runner(_fixtures, _sample):
+            events.append("runner")
+
+        original_generator = harness.generate_structure_xyz
+
+        def generate(*args, **kwargs):
+            events.append("prepare")
+            return original_generator(*args, **kwargs)
+
+        def clock():
+            events.append("clock")
+            return len(events) / 10
+
+        try:
+            with (
+                patch.object(
+                    harness,
+                    "generate_structure_xyz",
+                    side_effect=generate,
+                ) as generated,
+                patch.dict(harness.BUILTIN_RUNNERS, {"parse": runner}),
+            ):
+                report = harness.run_benchmark(
+                    case_names=("parse",),
+                    scale="test",
+                    warmup_count=0,
+                    sample_count=2,
+                    clock=clock,
+                )
+        finally:
+            del harness.BENCHMARK_SCALES["test"]
+        self.assertTrue(report["passed"])
+        self.assertEqual(generated.call_count, 1)
+        self.assertLess(events.index("prepare"), events.index("clock"))
+        self.assertEqual(
+            events,
+            [
+                "prepare",
+                "clock", "runner", "clock",
+                "clock", "runner", "clock",
+                "clock", "runner", "clock",
+            ],
+        )
+
+    def test_trajectory_uses_one_fixture_with_cold_then_hot_access(self):
+        from ChemBlender.benchmarks.datasets import BenchmarkScale
+
+        harness = load_harness()
+        harness.BENCHMARK_SCALES["test"] = BenchmarkScale(
+            "test", 3, 3, (2, 2, 2), 3
+        )
+
+        class LazyArray:
+            def __init__(self):
+                self.loaded = False
+                self.access_states = []
+                self.closed = False
+
+            def __getitem__(self, _index):
+                self.access_states.append(self.loaded)
+                self.loaded = True
+                return SimpleNamespace(shape=(1, 3))
+
+            def close(self):
+                self.closed = True
+
+        array = LazyArray()
+        fixture = SimpleNamespace(array=array)
+        try:
+            with patch.object(
+                harness,
+                "generate_trajectory_npy",
+                return_value=fixture,
+            ) as generated:
+                report = harness.run_benchmark(
+                    case_names=("trajectory_frame",),
+                    scale="test",
+                    warmup_count=0,
+                    sample_count=2,
+                )
+        finally:
+            del harness.BENCHMARK_SCALES["test"]
+        self.assertTrue(report["passed"])
+        self.assertEqual(generated.call_count, 1)
+        self.assertEqual(array.access_states, [False, True, True])
+        self.assertTrue(array.closed)
+
     def test_measurement_report_is_canonical_and_complete(self):
         harness = load_harness()
-        clock_values = iter((0.0, 0.1, 1.0, 1.4, 2.0, 2.2, 3.0, 3.5))
+        clock_values = iter((0.0, 0.1, 1.0, 1.4, 2.0, 2.2, 3.0, 3.5, 4.0, 4.4))
         report = harness.run_benchmark(
             case_names=("parse",),
             scale="interactive",
@@ -122,8 +220,8 @@ class BenchmarkHarnessTests(unittest.TestCase):
         self.assertEqual(report["failure_count"], 0)
         case, = report["cases"]
         self.assertEqual(case["status"], "Passed")
-        self.assertAlmostEqual(case["cold_seconds"], 0.4)
-        self.assertAlmostEqual(case["hot_seconds"], 0.35)
+        self.assertAlmostEqual(case["cold_seconds"], 0.1)
+        self.assertAlmostEqual(case["hot_seconds"], 0.4)
         self.assertAlmostEqual(case["minimum_seconds"], 0.2)
         self.assertAlmostEqual(case["median_seconds"], 0.4)
         self.assertAlmostEqual(case["p95_seconds"], 0.5)
@@ -139,7 +237,7 @@ class BenchmarkHarnessTests(unittest.TestCase):
             case_names=("parse",),
             scale="interactive",
             warmup_count=0,
-            sample_count=1,
+            sample_count=2,
             runners={"parse": lambda _scale, _workspace: (_ for _ in ()).throw(RuntimeError("boom"))},
         )
         self.assertFalse(failed["passed"])
@@ -157,7 +255,7 @@ class BenchmarkHarnessTests(unittest.TestCase):
             case_names=("extension_enable",),
             scale="interactive",
             warmup_count=0,
-            sample_count=1,
+            sample_count=2,
         )
         self.assertFalse(not_run["passed"])
         self.assertEqual(not_run["cases"][0]["status"], "Not Run")
@@ -166,13 +264,32 @@ class BenchmarkHarnessTests(unittest.TestCase):
             case_names=("parse",),
             scale="interactive",
             warmup_count=0,
-            sample_count=1,
+            sample_count=2,
             runners={"parse": lambda _scale, _workspace: None},
         )
         incomplete = dict(complete)
         del incomplete["sample_count"]
         with self.assertRaises(ValueError):
             harness.validate_qualified_report(incomplete)
+        too_few = dict(complete)
+        too_few["sample_count"] = 1
+        with self.assertRaises(ValueError):
+            harness.validate_qualified_report(too_few)
+
+    def test_one_sample_is_rejected_by_api_and_cli(self):
+        harness = load_harness()
+        with self.assertRaises(ValueError):
+            harness.run_benchmark(
+                case_names=("parse",),
+                scale="interactive",
+                warmup_count=0,
+                sample_count=1,
+                runners={"parse": lambda _fixtures, _sample: None},
+            )
+        with patch.object(harness, "run_benchmark", side_effect=AssertionError):
+            with self.assertRaises(SystemExit) as error:
+                harness.main(["--case", "parse", "--samples", "1"])
+        self.assertEqual(error.exception.code, 2)
 
     def test_atomic_json_output_uses_utf8_lf(self):
         harness = load_harness()

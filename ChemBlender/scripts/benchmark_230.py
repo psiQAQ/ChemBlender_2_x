@@ -29,6 +29,9 @@ from ChemBlender.benchmarks.datasets import (
 BenchmarkCase = namedtuple(
     "BenchmarkCase", "name execution boundary"
 )
+PreparedFixtures = namedtuple(
+    "PreparedFixtures", "workspace scale source trajectory batch"
+)
 
 CASE_REGISTRY = {
     "extension_enable": BenchmarkCase(
@@ -107,22 +110,31 @@ def _summary(samples):
     }
 
 
-def _call_timed(runner, scale, workspace, clock):
-    started = clock()
-    runner(scale, workspace)
-    elapsed = clock() - started
-    if not isfinite(elapsed) or elapsed < 0:
-        raise ValueError("benchmark timer must return a finite non-negative duration")
-    return elapsed
-
-
-def _measure_case(case, runner, scale, workspace, warmup_count, sample_count, clock):
-    failures = []
+def _call_timed(case_name, runner, fixtures, clock, *, builtin):
+    sample = _prepare_sample(case_name, fixtures) if builtin else None
     try:
+        started = clock()
+        runner(fixtures, sample)
+        elapsed = clock() - started
+        if not isfinite(elapsed) or elapsed < 0:
+            raise ValueError("benchmark timer must return a finite non-negative duration")
+        return elapsed
+    finally:
+        if builtin:
+            _cleanup_sample(case_name, sample)
+
+
+def _measure_case(case, runner, fixtures, warmup_count, sample_count, clock, *, builtin):
+    failures = []
+    cold_seconds = None
+    try:
+        cold_seconds = _call_timed(
+            case.name, runner, fixtures, clock, builtin=builtin
+        )
         for _index in range(warmup_count):
-            _call_timed(runner, scale, workspace, clock)
+            _call_timed(case.name, runner, fixtures, clock, builtin=builtin)
         samples = [
-            _call_timed(runner, scale, workspace, clock)
+            _call_timed(case.name, runner, fixtures, clock, builtin=builtin)
             for _index in range(sample_count)
         ]
     except Exception as error:
@@ -130,11 +142,11 @@ def _measure_case(case, runner, scale, workspace, warmup_count, sample_count, cl
         samples = []
     result = {
         "boundary": case.boundary,
-        "cold_seconds": None if not samples else samples[0],
+        "cold_seconds": cold_seconds,
         "execution": case.execution,
         "failure_count": len(failures),
         "failures": failures,
-        "hot_seconds": None if len(samples) < 2 else median(samples[1:]),
+        "hot_seconds": None if not samples else median(samples),
         "maximum_seconds": None,
         "median_seconds": None,
         "minimum_seconds": None,
@@ -166,87 +178,132 @@ def _not_run_case(case):
     }
 
 
-def _source_path(workspace, scale):
-    return generate_structure_xyz(
-        Path(workspace) / f"{scale.name}-structure.xyz",
-        atom_count=scale.structure_atoms,
-    ).path
+_SOURCE_CASES = frozenset(
+    {
+        "preflight_feedback",
+        "parse",
+        "project_commit",
+        "sidecar_save_open",
+        "browser_projection_filter",
+    }
+)
+_BATCH_CASES = frozenset(
+    {"project_commit", "sidecar_save_open", "browser_projection_filter"}
+)
 
 
-def _preflight_feedback(scale, workspace):
+def _prepare_fixtures(case_names, scale, workspace):
+    source = None
+    trajectory = None
+    batch = None
+    if _SOURCE_CASES.intersection(case_names):
+        source = generate_structure_xyz(
+            Path(workspace) / f"{scale.name}-structure.xyz",
+            atom_count=scale.structure_atoms,
+        )
+    if "trajectory_frame" in case_names:
+        trajectory = generate_trajectory_npy(
+            Path(workspace) / f"{scale.name}-trajectory.npy",
+            frames=scale.trajectory_frames,
+        )
+    if _BATCH_CASES.intersection(case_names):
+        from ChemBlender.core.xyz import parse_xyz
+
+        batch = parse_xyz(source.path)
+    return PreparedFixtures(Path(workspace), scale, source, trajectory, batch)
+
+
+def _cleanup_fixtures(fixtures):
+    if fixtures.trajectory is not None:
+        fixtures.trajectory.array.close()
+
+
+def _prepare_sample(case_name, fixtures):
+    if case_name == "preflight_feedback":
+        from ChemBlender.core.import_pipeline.staging import StagedImportSession
+
+        return StagedImportSession.create(temp_parent=fixtures.workspace)
+    if case_name == "project_commit":
+        from ChemBlender.core import QCProject
+
+        return QCProject(uuid4(), "0.2")
+    if case_name == "sidecar_save_open":
+        from ChemBlender.core import QCProject
+
+        project = QCProject(uuid4(), "0.2")
+        project.commit(fixtures.batch)
+        return {
+            "destination": fixtures.workspace / f"sidecar-{uuid4().hex}.cbq",
+            "project": project,
+            "reopened": None,
+        }
+    if case_name == "browser_projection_filter":
+        from ChemBlender.core import QCProject
+
+        project = QCProject(uuid4(), "0.2")
+        project.commit(fixtures.batch)
+        return project
+    return None
+
+
+def _cleanup_sample(case_name, sample):
+    if case_name == "preflight_feedback" and sample is not None:
+        sample.discard()
+    elif case_name == "sidecar_save_open" and sample is not None:
+        if sample["reopened"] is not None:
+            from ChemBlender.core import close_project
+
+            close_project(sample["reopened"])
+        if sample["destination"].exists():
+            shutil.rmtree(sample["destination"])
+
+
+def _preflight_feedback(fixtures, session):
     from ChemBlender.core.import_pipeline.request import ImportRequest, ImportSource
-    from ChemBlender.core.import_pipeline.staging import StagedImportSession
     from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
     from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
 
-    session = StagedImportSession.create(temp_parent=Path(workspace))
-    try:
-        result = preflight_reader_plugins(
-            ImportRequest(sources=(ImportSource(_source_path(workspace, scale)),)),
-            builtin_reader_plugin_registry(),
-            session,
-        )
-        if len(result.staged_batch_ids) != 1:
-            raise RuntimeError("preflight did not stage one batch")
-    finally:
-        session.discard()
+    result = preflight_reader_plugins(
+        ImportRequest(sources=(ImportSource(fixtures.source.path),)),
+        builtin_reader_plugin_registry(),
+        session,
+    )
+    if len(result.staged_batch_ids) != 1:
+        raise RuntimeError("preflight did not stage one batch")
 
 
-def _parse(scale, workspace):
+def _parse(fixtures, _sample):
     from ChemBlender.core.xyz import parse_xyz
 
-    batch = parse_xyz(_source_path(workspace, scale))
-    if len(batch.structures[0].atomic_numbers) != scale.structure_atoms:
+    batch = parse_xyz(fixtures.source.path)
+    if len(batch.structures[0].atomic_numbers) != fixtures.scale.structure_atoms:
         raise RuntimeError("XYZ parser returned the wrong atom count")
 
 
-def _project_commit(scale, workspace):
-    from ChemBlender.core import QCProject
-    from ChemBlender.core.xyz import parse_xyz
-
-    project = QCProject(uuid4(), "0.2")
-    project.commit(parse_xyz(_source_path(workspace, scale)))
+def _project_commit(fixtures, project):
+    project.commit(fixtures.batch)
     if len(project.structures) != 1:
         raise RuntimeError("project commit did not retain the parsed structure")
 
 
-def _sidecar_save_open(scale, workspace):
-    from ChemBlender.core import QCProject, close_project, open_project, save_project
-    from ChemBlender.core.xyz import parse_xyz
+def _sidecar_save_open(_fixtures, sample):
+    from ChemBlender.core import open_project, save_project
 
-    destination = Path(workspace) / "benchmark.cbq"
-    project = QCProject(uuid4(), "0.2")
-    project.commit(parse_xyz(_source_path(workspace, scale)))
-    save_project(destination, project)
-    reopened = open_project(destination)
-    try:
-        if len(reopened.structures) != 1:
-            raise RuntimeError("sidecar reopen did not retain the structure")
-    finally:
-        close_project(reopened)
-        shutil.rmtree(destination)
+    save_project(sample["destination"], sample["project"])
+    sample["reopened"] = open_project(sample["destination"])
+    if len(sample["reopened"].structures) != 1:
+        raise RuntimeError("sidecar reopen did not retain the structure")
 
 
-def _trajectory_frame(scale, workspace):
-    fixture = generate_trajectory_npy(
-        Path(workspace) / f"{scale.name}-trajectory.npy",
-        frames=scale.trajectory_frames,
-    )
-    try:
-        frame = fixture.array[scale.trajectory_frames - 1]
-        if not frame.shape == (1, 3):
-            raise RuntimeError("lazy trajectory frame has the wrong shape")
-    finally:
-        fixture.array.close()
+def _trajectory_frame(fixtures, _sample):
+    frame = fixtures.trajectory.array[fixtures.scale.trajectory_frames - 1]
+    if not frame.shape == (1, 3):
+        raise RuntimeError("lazy trajectory frame has the wrong shape")
 
 
-def _browser_projection_filter(scale, workspace):
-    from ChemBlender.core import QCProject
-    from ChemBlender.core.xyz import parse_xyz
+def _browser_projection_filter(_fixtures, project):
     from ChemBlender.ui.project_browser import build_browser_rows
 
-    project = QCProject(uuid4(), "0.2")
-    project.commit(parse_xyz(_source_path(workspace, scale)))
     if not build_browser_rows(project, search="benchmark"):
         raise RuntimeError("browser projection did not retain the benchmark source")
 
@@ -275,34 +332,44 @@ def run_benchmark(
     if any(
         isinstance(value, bool) or not isinstance(value, int) or value < 0
         for value in (warmup_count, sample_count)
-    ) or sample_count == 0:
-        raise ValueError("warmup_count must be non-negative and sample_count positive")
+    ) or sample_count < 2:
+        raise ValueError("warmup_count must be non-negative and sample_count at least two")
     names = tuple(case_names)
     if not names or len(set(names)) != len(names) or any(
         name not in CASE_REGISTRY for name in names
     ):
         raise ValueError("case_names must be distinct registered benchmark cases")
-    active_runners = dict(BUILTIN_RUNNERS if runners is None else runners)
+    builtin = runners is None
+    active_runners = dict(BUILTIN_RUNNERS if builtin else runners)
     results = []
     with TemporaryDirectory(prefix="chemblender-230-benchmark-") as directory:
         workspace = Path(directory)
-        for name in names:
-            case = CASE_REGISTRY[name]
-            runner = active_runners.get(name)
-            if runner is None:
-                results.append(_not_run_case(case))
-            else:
-                results.append(
-                    _measure_case(
-                        case,
-                        runner,
-                        BENCHMARK_SCALES[scale],
-                        workspace,
-                        warmup_count,
-                        sample_count,
-                        clock,
+        fixtures = (
+            _prepare_fixtures(names, BENCHMARK_SCALES[scale], workspace)
+            if builtin
+            else PreparedFixtures(workspace, BENCHMARK_SCALES[scale], None, None, None)
+        )
+        try:
+            for name in names:
+                case = CASE_REGISTRY[name]
+                runner = active_runners.get(name)
+                if runner is None:
+                    results.append(_not_run_case(case))
+                else:
+                    results.append(
+                        _measure_case(
+                            case,
+                            runner,
+                            fixtures,
+                            warmup_count,
+                            sample_count,
+                            clock,
+                            builtin=builtin,
+                        )
                     )
-                )
+        finally:
+            if builtin:
+                _cleanup_fixtures(fixtures)
     report = {
         "benchmark": "chemblender-2.3.0-v1",
         "cases": results,
@@ -347,6 +414,12 @@ def validate_qualified_report(report):
         raise ValueError("benchmark report has missing or unexpected fields")
     if set(report.get("environment", ())) != required_environment:
         raise ValueError("benchmark environment is incomplete")
+    if (
+        isinstance(report["sample_count"], bool)
+        or not isinstance(report["sample_count"], int)
+        or report["sample_count"] < 2
+    ):
+        raise ValueError("benchmark qualification requires at least two samples")
     if not report.get("passed") or report.get("failure_count"):
         raise ValueError("benchmark report contains failed cases")
     for case in report.get("cases", ()):
@@ -354,6 +427,8 @@ def validate_qualified_report(report):
             raise ValueError("benchmark case has missing or unexpected fields")
         if case["status"] != "Passed":
             raise ValueError("benchmark qualification requires every selected case")
+        if len(case["sample_seconds"]) != report["sample_count"]:
+            raise ValueError("benchmark case sample count does not match report")
         for name in (
             "cold_seconds",
             "hot_seconds",
@@ -376,6 +451,8 @@ def main(argv=None):
     parser.add_argument("--samples", type=int, default=5)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
+    if args.samples < 2:
+        parser.error("--samples must be at least 2")
     case_names = tuple(CASE_REGISTRY) if not args.case or "all" in args.case else tuple(args.case)
     report = run_benchmark(
         case_names=case_names,

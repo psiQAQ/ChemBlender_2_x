@@ -27,6 +27,10 @@ trajectory/grid 使用 NPY memmap 按 frame/slab 写入。每次生成都会返�
 `--case` 可重复选择单个 case，`--case all` 只用于汇总边界状态。完整
 qualification 只接受所有所选 case 为 `Passed` 的报告。
 
+harness 先在计时外准备一次选中 scale 的 fixture；`cold_seconds` 是同一
+fixture 的首次访问，随后执行 warmup，再记录至少两个 hot samples。`--samples`
+必须不小于 `2`，避免生成没有可比 `hot_seconds` 的报告。
+
 ```powershell
 & 'C:\Program Files\Blender Foundation\Blender 5.1\5.1\python\bin\python.exe' `
   ChemBlender\scripts\benchmark_230.py --case parse --scale interactive `
