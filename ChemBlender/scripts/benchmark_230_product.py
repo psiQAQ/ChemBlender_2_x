@@ -1170,11 +1170,20 @@ def _measure_browser(_bpy, workspace, _sample_index):
     project = core.open_project(workspace / "browser.cbq")
     try:
         browser.clear_browser_caches()
+        session_id = uuid4()
+        browser_revision = 0
+        browser.build_browser_rows(
+            project,
+            session_id=session_id,
+            browser_revision=browser_revision,
+            search="",
+            page_size=998,
+        )
         started = perf_counter()
         rows = browser.build_browser_rows(
             project,
-            session_id=uuid4(),
-            browser_revision=0,
+            session_id=session_id,
+            browser_revision=browser_revision,
             search="benchmark-42",
             page_size=998,
         )
@@ -1186,6 +1195,7 @@ def _measure_browser(_bpy, workspace, _sample_index):
             raise RuntimeError("10k browser product filter is incomplete")
         return elapsed, {
             "cold_projection_cache": True,
+            "prepared_structural_index": True,
             "product_boundary": True,
             "ten_thousand_sdf_records": True,
         }

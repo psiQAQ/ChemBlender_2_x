@@ -499,11 +499,13 @@ class ProductPerformanceHarnessTests(unittest.TestCase):
     def test_browser_product_case_uses_the_bounded_page_contract(self):
         harness = load_harness()
         events = []
+        calls = []
         project = SimpleNamespace(molecular_records=tuple(range(10_000)))
 
         def build_browser_rows(candidate, **kwargs):
             if candidate is not project or kwargs["page_size"] != 998:
                 raise AssertionError("browser benchmark exceeded the RNA page bound")
+            calls.append(kwargs)
             return (SimpleNamespace(kind="molecular_record"),)
 
         modules = {
@@ -529,6 +531,9 @@ class ProductPerformanceHarnessTests(unittest.TestCase):
                 )
 
         self.assertEqual(events, ["clear", "close"])
+        self.assertEqual([call["search"] for call in calls], ["", "benchmark-42"])
+        self.assertEqual(calls[0]["session_id"], calls[1]["session_id"])
+        self.assertEqual(calls[0]["browser_revision"], calls[1]["browser_revision"])
         self.assertTrue(assertions["ten_thousand_sdf_records"])
 
 
