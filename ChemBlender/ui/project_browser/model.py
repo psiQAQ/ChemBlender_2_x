@@ -46,6 +46,12 @@ class _EntityIndexEntry:
 
 
 @dataclass(frozen=True, slots=True)
+class _ProjectionIndex:
+    by_source: tuple[_EntityIndexEntry, ...]
+    by_data: tuple[_EntityIndexEntry, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class ViewRecord:
     object_name: str
     entity_id: UUID
@@ -92,10 +98,30 @@ _REGISTRY_GROUPS = (
 )
 _CACHE = OrderedDict()
 _INDEX_CACHE = OrderedDict()
-_CACHE_LIMIT = 32
+_ROW_CACHE_LIMIT = 32
+_INDEX_CACHE_LIMIT = 2
 _DEFAULT_PAGE_SIZE = 998
 _MAX_PAGE_SIZE = 998
 _BROWSER_ROW_LIMIT = 1000
+_REGISTRY_ORDER = {
+    name: index for index, (name, _label_text) in enumerate(_REGISTRY_GROUPS)
+}
+_REGISTRY_ORDER["diagnostics"] = len(_REGISTRY_ORDER)
+
+
+def clear_browser_session_cache(session):
+    """Release cached projections owned by one UI session."""
+    session_id = str(getattr(session, "id", session))
+    for cache in (_CACHE, _INDEX_CACHE):
+        for key in tuple(cache):
+            if key[1] == session_id:
+                del cache[key]
+
+
+def clear_browser_caches():
+    """Release all Project Browser projection state."""
+    _CACHE.clear()
+    _INDEX_CACHE.clear()
 
 
 def _token(value):
@@ -522,6 +548,7 @@ def _index_scope(project, session_id, browser_revision):
     return (
         str(getattr(project, "id", "")),
         str(session_id),
+        id(project),
         tuple(
             len(getattr(project, name, {}))
             for name, _label_text in _REGISTRY_GROUPS
@@ -532,12 +559,46 @@ def _index_scope(project, session_id, browser_revision):
     )
 
 
-def _remember(cache, key, value):
+def _remember(cache, key, value, limit):
     cache[key] = value
     cache.move_to_end(key)
-    while len(cache) > _CACHE_LIMIT:
+    while len(cache) > limit:
         cache.popitem(last=False)
     return value
+
+
+def _remember_rows(key, rows):
+    if key is None:
+        return rows
+    for stale in tuple(_CACHE):
+        if (
+            stale[0] == key[0]
+            and stale[1] == key[1]
+            and stale[3] == key[3]
+            and stale[2] != key[2]
+        ):
+            del _CACHE[stale]
+    return _remember(_CACHE, key, rows, _ROW_CACHE_LIMIT)
+
+
+def _source_sort_key(entry):
+    return (
+        entry.source_label.casefold(),
+        str(entry.source_id),
+        entry.source_revision_label.casefold(),
+        str(entry.source_revision_id),
+        _REGISTRY_ORDER[entry.registry],
+        entry.label.casefold(),
+        str(entry.entity_id),
+    )
+
+
+def _data_sort_key(entry):
+    return (
+        _REGISTRY_ORDER[entry.registry],
+        entry.label.casefold(),
+        str(entry.entity_id),
+    )
 
 
 def _index_detail_count(entity):
@@ -653,22 +714,21 @@ def _projection_index(project, scope):
                 0,
             )
         )
-    result = tuple(
-        sorted(
-            entries,
-            key=lambda value: (
-                value.registry,
-                value.label.casefold(),
-                str(value.entity_id),
-            ),
-        )
+    result = _ProjectionIndex(
+        tuple(sorted(entries, key=_source_sort_key)),
+        tuple(sorted(entries, key=_data_sort_key)),
     )
     if scope is None:
         return result
     for stale in tuple(_INDEX_CACHE):
         if stale[:2] == scope[:2] and stale != scope:
             del _INDEX_CACHE[stale]
-    return _remember(_INDEX_CACHE, scope, result)
+    return _remember(
+        _INDEX_CACHE,
+        scope,
+        result,
+        _INDEX_CACHE_LIMIT,
+    )
 
 
 def _record_views(views):
@@ -693,9 +753,64 @@ def _record_views(views):
     }
 
 
-def _entry_pages(
+def _matches_projection(search, filters, normalized, kind, quality):
+    return (
+        (not search or search in normalized)
+        and (
+            not filters
+            or kind.casefold() in filters
+            or quality.casefold() in filters
+        )
+    )
+
+
+def _entry_matches(entry, search, filters, views):
+    if _matches_projection(
+        search,
+        filters,
+        entry.normalized,
+        entry.kind,
+        entry.quality,
+    ):
+        return True
+    return any(
+        _matches_projection(
+            search,
+            filters,
+            " ".join(
+                (view.label, view.view_kind, view.quality)
+            ).casefold(),
+            view.view_kind,
+            view.quality,
+        )
+        for view in views.get((entry.entity_id, entry.revision), ())
+    )
+
+
+def _large_projection_required(entries, views, mode, page_size):
+    if len(entries) > page_size:
+        return True
+    if mode is BrowserMode.BY_DATA:
+        ancestor_count = len({entry.registry for entry in entries})
+    else:
+        ancestor_count = (
+            len({entry.source_id for entry in entries})
+            + len({entry.source_revision_id for entry in entries})
+        )
+    return (
+        1
+        + len(entries)
+        + ancestor_count
+        + sum(entry.detail_count for entry in entries)
+        + sum(len(values) for values in views.values())
+        > _BROWSER_ROW_LIMIT
+    )
+
+
+def _page_slice(
     entries,
     views,
+    page,
     page_size,
     mode,
     row_limit,
@@ -703,12 +818,35 @@ def _entry_pages(
     base_row_count=1,
     initial_registries=(),
 ):
-    pages = []
     current = []
+    current_start = 0
+    selected = None
+    selected_start = 0
+    last = ()
+    last_start = 0
+    page_count = 0
+    total_count = 0
     row_count = base_row_count
     registry_ids = set(initial_registries)
     source_ids = set()
     revision_ids = set()
+
+    def finish_page():
+        nonlocal current
+        nonlocal last
+        nonlocal last_start
+        nonlocal page_count
+        nonlocal selected
+        nonlocal selected_start
+        values = tuple(current)
+        if page_count == page:
+            selected = values
+            selected_start = current_start
+        last = values
+        last_start = current_start
+        page_count += 1
+        current = []
+
     for entry in entries:
         ancestor_count = 0
         if mode is BrowserMode.BY_DATA:
@@ -728,8 +866,8 @@ def _entry_pages(
             len(current) >= page_size
             or row_count + ancestor_count + entry_count > row_limit
         ):
-            pages.append(tuple(current))
-            current = []
+            finish_page()
+            current_start = total_count
             row_count = base_row_count
             registry_ids = set(initial_registries)
             source_ids = set()
@@ -743,13 +881,18 @@ def _entry_pages(
                 "one project entity has too many Project Browser views"
             )
         current.append(entry)
+        total_count += 1
         row_count += ancestor_count + entry_count
         registry_ids.add(entry.registry)
         source_ids.add(entry.source_id)
         revision_ids.add(entry.source_revision_id)
     if current:
-        pages.append(tuple(current))
-    return tuple(pages)
+        finish_page()
+    if not page_count:
+        return (), 0, 0, 0, 0
+    if selected is None:
+        return last, last_start, page_count - 1, page_count, total_count
+    return selected, selected_start, page, page_count, total_count
 
 
 def _indexed_entity_rows(entry, parent_id, depth, views):
@@ -793,7 +936,7 @@ def _indexed_entity_rows(entry, parent_id, depth, views):
 
 def _page_rows(
     entries,
-    views,
+    entity_views,
     page,
     page_size,
     mode,
@@ -803,37 +946,10 @@ def _page_rows(
     summary_noun,
     data_group=None,
 ):
-    if not entries:
-        return ()
-    entries = list(entries)
-    registry_order = {
-        name: index for index, (name, _label_text) in enumerate(_REGISTRY_GROUPS)
-    }
-    registry_order["diagnostics"] = len(registry_order)
-    if mode is BrowserMode.BY_SOURCE:
-        entries.sort(
-            key=lambda entry: (
-                entry.source_label.casefold(),
-                str(entry.source_id),
-                entry.source_revision_label.casefold(),
-                str(entry.source_revision_id),
-                registry_order[entry.registry],
-                entry.label.casefold(),
-                str(entry.entity_id),
-            )
-        )
-    else:
-        entries.sort(
-            key=lambda entry: (
-                registry_order[entry.registry],
-                entry.label.casefold(),
-                str(entry.entity_id),
-            )
-        )
-    entity_views = _record_views(views)
-    pages = _entry_pages(
+    selected, start, page, page_count, total_count = _page_slice(
         entries,
         entity_views,
+        page,
         page_size,
         mode,
         row_limit,
@@ -842,10 +958,8 @@ def _page_rows(
             (data_group[0],) if data_group is not None else ()
         ),
     )
-    page_count = len(pages)
-    page = min(page, page_count - 1)
-    selected = pages[page]
-    start = sum(len(values) for values in pages[:page])
+    if not selected:
+        return ()
     page_id = f"page:{summary_kind}:{mode.value}:{page}"
     parent_id = None
     summary_depth = 0
@@ -873,12 +987,12 @@ def _page_rows(
             summary_kind,
             (
                 f"{summary_noun} {start + 1}-{start + len(selected)} "
-                f"of {len(entries)}"
+                f"of {total_count}"
             ),
             "",
             0,
             None,
-            len(entries),
+            total_count,
             page,
             page_count,
         )
@@ -1131,72 +1245,85 @@ def build_browser_rows(
         for view in views
     )
     scope = _cache_scope(project, session_id, browser_revision)
+    key = (
+        *scope,
+        mode,
+        page,
+        page_size,
+        view_fingerprint,
+    ) if scope is not None and not search and not filters else None
+    if key is not None:
+        cached = _CACHE.get(key)
+        if cached is not None:
+            _CACHE.move_to_end(key)
+            return cached
+
+    projection = _projection_index(
+        project,
+        _index_scope(project, session_id, browser_revision),
+    )
+    index = (
+        projection.by_source
+        if mode is BrowserMode.BY_SOURCE
+        else projection.by_data
+    )
+    entity_views = _record_views(views)
     records = getattr(project, "molecular_records", {})
-    if len(records) > page_size:
-        index = _projection_index(
-            project,
-            _index_scope(project, session_id, browser_revision),
-        )
-        if search or filters:
-            matching = [
-                entry
-                for entry in index
-                if (
-                    not search
-                    or search in entry.normalized
+    if _large_projection_required(
+        index,
+        entity_views,
+        mode,
+        page_size,
+    ):
+        if search or filters or not records:
+            entries = (
+                (
+                    entry
+                    for entry in index
+                    if _entry_matches(
+                        entry,
+                        search,
+                        filters,
+                        entity_views,
+                    )
                 )
-                and (
-                    not filters
-                    or entry.kind in filters
-                    or entry.quality in filters
-                )
-            ]
+                if search or filters
+                else index
+            )
             rows = _page_rows(
-                matching,
-                views,
+                entries,
+                entity_views,
                 page,
                 page_size,
                 mode,
                 _BROWSER_ROW_LIMIT,
                 summary_kind="result_page",
-                summary_noun="Matches",
+                summary_noun=(
+                    "Matches" if search or filters else "Entries"
+                ),
             )
+            if rows:
+                return _remember_rows(key, rows)
             return (
-                rows
-                if rows
-                else (
-                    BrowserRow(
-                        f"empty:{mode.value}",
-                        None,
-                        0,
-                        "empty",
-                        "No matching project data",
-                        "",
-                        0,
-                        None,
-                    ),
-                )
+                BrowserRow(
+                    f"empty:{mode.value}",
+                    None,
+                    0,
+                    "empty",
+                    "No matching project data",
+                    "",
+                    0,
+                    None,
+                ),
             )
-        key = (
-            *scope,
-            mode,
-            page,
-            page_size,
-            view_fingerprint,
-        ) if scope is not None and not search and not filters else None
-        if key is not None:
-            cached = _CACHE.get(key)
-            if cached is not None:
-                _CACHE.move_to_end(key)
-                return cached
         summary_rows = _additional_summary(index, mode)
         record_rows = _page_rows(
-            [
+            (
                 entry
                 for entry in index
                 if entry.registry == "molecular_records"
-            ],
-            views,
+            ),
+            entity_views,
             page,
             page_size,
             mode,
@@ -1210,7 +1337,8 @@ def build_browser_rows(
             ),
         )
         rows = (*record_rows, *summary_rows)
-        result = (
+        return _remember_rows(
+            key,
             tuple(rows)
             if rows
             else (
@@ -1224,19 +1352,9 @@ def build_browser_rows(
                     0,
                     None,
                 ),
-            )
+            ),
         )
-        if key is None:
-            return result
-        for stale in tuple(_CACHE):
-            if (
-                stale[0] == key[0]
-                and stale[1] == key[1]
-                and stale[3] == key[3]
-                and stale[2] != key[2]
-            ):
-                del _CACHE[stale]
-        return _remember(_CACHE, key, result)
+
     if search or filters:
         rows = build_browser_rows(
             project,
@@ -1252,43 +1370,19 @@ def build_browser_rows(
             if len(rows) == 1 and rows[0].kind == "empty"
             else _filtered(rows, search, filters, mode)
         )
-    key = (
-        *scope,
-        mode,
-        page,
-        page_size,
-        view_fingerprint,
-    ) if scope is not None else None
-    if key is not None:
-        cached = _CACHE.get(key)
-        if cached is not None:
-            _CACHE.move_to_end(key)
-            return cached
     rows = (
         _by_source(project, views)
         if mode is BrowserMode.BY_SOURCE
         else _by_data(project, views)
     )
-    result = (
-        rows
-        if len(rows) == 1 and rows[0].kind == "empty"
-        else (
-            _filtered(rows, "", (), mode)
-            if rows
-            else _empty_rows(mode)
-        )
-    )
-    if key is None:
-        return result
-    for stale in tuple(_CACHE):
-        if (
-            stale[0] == key[0]
-            and stale[1] == key[1]
-            and stale[3] == key[3]
-            and stale[2] != key[2]
-        ):
-            del _CACHE[stale]
-    return _remember(_CACHE, key, result)
+    return _remember_rows(key, rows if rows else _empty_rows(mode))
 
 
-__all__ = ("BrowserMode", "BrowserRow", "ViewRecord", "build_browser_rows")
+__all__ = (
+    "BrowserMode",
+    "BrowserRow",
+    "ViewRecord",
+    "build_browser_rows",
+    "clear_browser_caches",
+    "clear_browser_session_cache",
+)

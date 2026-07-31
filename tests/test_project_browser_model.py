@@ -965,6 +965,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             "page_size",
             "page_jump",
             "page_count",
+            "page_kind",
             "record_count",
         }.issubset(state_properties))
         self.assertEqual(
@@ -1816,6 +1817,68 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.assertEqual(panel._BROWSER_RNA_ROW_LIMIT, limit)
         self.assertEqual(len(settings.rows), 0)
 
+    def test_refresh_accepts_997_records_with_related_project_data(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        from tests.test_project_browser_performance import (
+            _project_with_indexed_records,
+        )
+
+        class Rows(list):
+            def clear(self):
+                super().clear()
+
+            def add(self):
+                row = SimpleNamespace()
+                self.append(row)
+                return row
+
+        with TemporaryDirectory() as directory:
+            project, lazy = _project_with_indexed_records(
+                Path(directory), 997
+            )
+            session = SimpleNamespace(
+                id=SESSION_ID,
+                project=project,
+                active_entity_id=None,
+            )
+            settings = SimpleNamespace(
+                mode="by_data",
+                search="",
+                quality_filter="all",
+                selected_index=0,
+                active_entity_id="",
+                total_row_count=0,
+                record_count=0,
+                page=0,
+                page_size=998,
+                page_jump=1,
+                page_count=1,
+                rows=Rows(),
+            )
+            scene = SimpleNamespace(
+                chemblender_project_browser=settings,
+                objects=(),
+            )
+            with (
+                patch.object(
+                    panel,
+                    "get_scene_session",
+                    return_value=session,
+                ),
+                patch.object(
+                    panel,
+                    "get_quick_import_state",
+                    return_value=SimpleNamespace(browser_revision=1),
+                ),
+            ):
+                panel.refresh_project_browser(scene)
+
+        self.assertLessEqual(len(settings.rows), 1000)
+        self.assertEqual(settings.record_count, 997)
+        self.assertFalse(lazy.loaded)
+
     def test_refresh_projects_result_page_and_navigation_arguments(self):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"
@@ -1860,6 +1923,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             page_size=64,
             page_jump=1,
             page_count=0,
+            page_kind="",
             rows=Rows(),
         )
         scene = SimpleNamespace(
@@ -1887,6 +1951,8 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.assertEqual(settings.page, 2)
         self.assertEqual(settings.page_jump, 3)
         self.assertEqual(settings.page_count, 157)
+        self.assertEqual(settings.page_kind, "result_page")
+        self.assertEqual(panel._page_subject(settings), "project entries")
 
     def test_page_operator_handles_previous_next_and_jump(self):
         panel = importlib.import_module(
@@ -2152,6 +2218,42 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             panel.register()
         panel.unregister()
         self.assertIs(_Scene.chemblender_project_browser, foreign)
+
+    def test_registration_owns_browser_cache_cleanup_lifecycle(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        browser_model = importlib.import_module(
+            "ChemBlender.ui.project_browser.model"
+        )
+        session_module = importlib.import_module("ChemBlender.ui.session")
+        browser_model._CACHE[("project", "session", 1)] = ("rows",)
+        browser_model._INDEX_CACHE[
+            ("project", "session", 1)
+        ] = ("index",)
+
+        panel.register()
+        self.assertIn(
+            browser_model.clear_browser_session_cache,
+            session_module._SESSION_CLEANUP_CALLBACKS,
+        )
+        session_module._run_session_cleanups(
+            SimpleNamespace(id="session")
+        )
+        self.assertFalse(browser_model._CACHE)
+        self.assertFalse(browser_model._INDEX_CACHE)
+
+        browser_model._CACHE[("project", "other", 1)] = ("rows",)
+        browser_model._INDEX_CACHE[
+            ("project", "other", 1)
+        ] = ("index",)
+        panel.unregister()
+        self.assertNotIn(
+            browser_model.clear_browser_session_cache,
+            session_module._SESSION_CLEANUP_CALLBACKS,
+        )
+        self.assertFalse(browser_model._CACHE)
+        self.assertFalse(browser_model._INDEX_CACHE)
 
     def test_post_set_verification_failure_rolls_back_cleanly(self):
         panel = importlib.import_module(

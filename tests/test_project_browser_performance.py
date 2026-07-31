@@ -224,6 +224,63 @@ class ProjectBrowserPerformanceTests(TestCase):
         self.assertLess(len(rows), 80)
         self.assertFalse(lazy.loaded)
 
+    def test_total_projection_cost_pages_997_records_and_related_data(self):
+        browser_model._CACHE.clear()
+        browser_model._INDEX_CACHE.clear()
+        with TemporaryDirectory() as directory:
+            project, lazy = _project_with_indexed_records(Path(directory), 997)
+            rows = build_browser_rows(
+                project,
+                mode=BrowserMode.BY_DATA,
+                session_id=SESSION_ID,
+                browser_revision=1,
+                page_size=998,
+            )
+
+        page = next(row for row in rows if row.kind == "record_page")
+        additional = next(
+            row for row in rows if row.kind == "projection_summary"
+        )
+        self.assertEqual(page.total_count, 997)
+        self.assertEqual(additional.total_count, 3)
+        self.assertLessEqual(len(rows), 1000)
+        self.assertFalse(lazy.loaded)
+
+    def test_large_project_without_records_uses_generic_result_pages(self):
+        browser_model._CACHE.clear()
+        browser_model._INDEX_CACHE.clear()
+        with TemporaryDirectory() as directory:
+            project, lazy = _project_with_indexed_records(Path(directory), 1)
+            project.molecular_records.clear()
+            template = project.datasets[GRID_ID]
+            project.datasets = {
+                grid_id: replace(
+                    template,
+                    id=grid_id,
+                    revision=f"grid-{index}",
+                    semantic_role=f"field_{index:04d}",
+                )
+                for index in range(1000)
+                for grid_id in (uuid5(NAMESPACE_URL, f"browser-grid:{index}"),)
+            }
+            rows = build_browser_rows(
+                project,
+                mode=BrowserMode.BY_DATA,
+                session_id=SESSION_ID,
+                browser_revision=1,
+                page_size=64,
+            )
+
+        page = next(row for row in rows if row.kind == "result_page")
+        self.assertEqual(page.total_count, 1002)
+        self.assertEqual(page.page_count, 16)
+        self.assertEqual(
+            len([row for row in rows if row.kind == "grid3d"]),
+            64,
+        )
+        self.assertLessEqual(len(rows), 1000)
+        self.assertFalse(lazy.loaded)
+
     def test_large_source_projection_keeps_bounded_source_ancestors(self):
         with TemporaryDirectory() as directory:
             project, lazy = _project_with_indexed_records(
@@ -281,6 +338,72 @@ class ProjectBrowserPerformanceTests(TestCase):
             ["Record view"],
         )
         self.assertLessEqual(len(rows), 1000)
+        self.assertFalse(lazy.loaded)
+
+    def test_large_search_and_filter_include_view_fields_and_siblings(self):
+        with TemporaryDirectory() as directory:
+            project, lazy = _project_with_indexed_records(Path(directory), 1000)
+            first = next(iter(project.molecular_records.values()))
+            views = (
+                ViewRecord(
+                    object_name="Partial surface",
+                    entity_id=first.id,
+                    revision=first.revision,
+                    view_kind="isosurface",
+                    label="Rare surface label",
+                    quality="partial",
+                    report_eligible=False,
+                ),
+                ViewRecord(
+                    object_name="Sibling view",
+                    entity_id=first.id,
+                    revision=first.revision,
+                    view_kind="record",
+                    label="Sibling record view",
+                ),
+            )
+            projections = (
+                build_browser_rows(
+                    project,
+                    mode=BrowserMode.BY_SOURCE,
+                    session_id=SESSION_ID,
+                    browser_revision=1,
+                    search="rare surface label",
+                    views=views,
+                ),
+                build_browser_rows(
+                    project,
+                    mode=BrowserMode.BY_SOURCE,
+                    session_id=SESSION_ID,
+                    browser_revision=1,
+                    search="isosurface",
+                    views=views,
+                ),
+                build_browser_rows(
+                    project,
+                    mode=BrowserMode.BY_SOURCE,
+                    session_id=SESSION_ID,
+                    browser_revision=1,
+                    filters=("partial",),
+                    views=views,
+                ),
+            )
+
+        for rows in projections:
+            with self.subTest(summary=rows[0].label):
+                page = next(
+                    row for row in rows if row.kind == "result_page"
+                )
+                self.assertEqual(page.total_count, 1)
+                self.assertEqual(
+                    [row.kind for row in rows[:3]],
+                    ["result_page", "source", "source_revision"],
+                )
+                self.assertEqual(
+                    {row.label for row in rows if row.kind == "view"},
+                    {"Rare surface label", "Sibling record view"},
+                )
+                self.assertLessEqual(len(rows), 1000)
         self.assertFalse(lazy.loaded)
 
     def test_record_search_index_includes_source_names(self):
@@ -412,11 +535,91 @@ class ProjectBrowserPerformanceTests(TestCase):
             rebuilt = next(iter(browser_model._INDEX_CACHE.values()))
 
         self.assertIsNot(rebuilt, first_index)
-        self.assertEqual(len(rebuilt), len(first_index) + 1)
+        self.assertEqual(
+            len(rebuilt.by_data),
+            len(first_index.by_data) + 1,
+        )
+        self.assertFalse(lazy.loaded)
+
+    def test_same_identity_replacement_does_not_reuse_an_old_project_index(self):
+        browser_model._CACHE.clear()
+        browser_model._INDEX_CACHE.clear()
+        with TemporaryDirectory() as first_directory, TemporaryDirectory() as second_directory:
+            first_project, first_lazy = _project_with_indexed_records(
+                Path(first_directory), 1000
+            )
+            second_project, second_lazy = _project_with_indexed_records(
+                Path(second_directory), 1000
+            )
+            source = second_project.sources[SOURCE_ID]
+            second_project.sources[SOURCE_ID] = replace(
+                source,
+                display_name="Replacement project source",
+            )
+            build_browser_rows(
+                first_project,
+                session_id=SESSION_ID,
+                browser_revision=1,
+                search="browser benchmark sdf",
+            )
+            first_index = next(iter(browser_model._INDEX_CACHE.values()))
+            rows = build_browser_rows(
+                second_project,
+                session_id=SESSION_ID,
+                browser_revision=1,
+                search="replacement project source",
+            )
+            replacement_index = next(
+                iter(browser_model._INDEX_CACHE.values())
+            )
+
+        self.assertIsNot(replacement_index, first_index)
+        self.assertEqual(
+            next(row for row in rows if row.kind == "result_page").total_count,
+            1003,
+        )
+        self.assertFalse(first_lazy.loaded)
+        self.assertFalse(second_lazy.loaded)
+
+    def test_session_and_global_clear_release_large_indexes_with_small_lru(self):
+        browser_model.clear_browser_caches()
+        with TemporaryDirectory() as directory:
+            project, lazy = _project_with_indexed_records(
+                Path(directory), 100_000
+            )
+            build_browser_rows(
+                project,
+                session_id=SESSION_ID,
+                browser_revision=1,
+            )
+            self.assertEqual(len(browser_model._INDEX_CACHE), 1)
+            browser_model.clear_browser_session_cache(
+                SimpleNamespace(id=SESSION_ID)
+            )
+            self.assertFalse(browser_model._CACHE)
+            self.assertFalse(browser_model._INDEX_CACHE)
+            self.assertFalse(lazy.loaded)
+
+        with TemporaryDirectory() as directory:
+            project, lazy = _project_with_indexed_records(
+                Path(directory), 1000
+            )
+            for session_number in range(4):
+                build_browser_rows(
+                    project,
+                    session_id=f"session-{session_number}",
+                    browser_revision=1,
+                )
+                self.assertLessEqual(len(browser_model._INDEX_CACHE), 2)
+            browser_model.clear_browser_caches()
+
+        self.assertFalse(browser_model._CACHE)
+        self.assertFalse(browser_model._INDEX_CACHE)
         self.assertFalse(lazy.loaded)
 
     def test_casefolded_filter_is_bounded_for_reference_record_scales(self):
         measurements = {}
+        broad_measurements = {}
         for record_count in (10_000, 100_000):
             with self.subTest(record_count=record_count), TemporaryDirectory() as directory:
                 project, lazy = _project_with_indexed_records(
@@ -453,9 +656,39 @@ class ProjectBrowserPerformanceTests(TestCase):
                     )
                     self.assertFalse(lazy.loaded)
                 measurements[record_count] = _p95(samples)
+                if record_count == 100_000:
+                    for term, expected_count in (
+                        ("browser benchmark sdf", 100_003),
+                        ("molecular records", 100_000),
+                    ):
+                        samples = []
+                        for _sample in range(5):
+                            started = perf_counter()
+                            rows = build_browser_rows(
+                                project,
+                                mode=BrowserMode.BY_DATA,
+                                session_id=SESSION_ID,
+                                browser_revision=record_count,
+                                search=term,
+                                page_size=100,
+                            )
+                            samples.append(perf_counter() - started)
+                            self.assertEqual(
+                                next(
+                                    row
+                                    for row in rows
+                                    if row.kind == "result_page"
+                                ).total_count,
+                                expected_count,
+                            )
+                            self.assertLessEqual(len(rows), 1000)
+                        broad_measurements[term] = _p95(samples)
 
         self.assertLessEqual(measurements[10_000], 0.2)
         self.assertLessEqual(measurements[100_000], 0.2)
+        self.assertTrue(broad_measurements)
+        for p95 in broad_measurements.values():
+            self.assertLessEqual(p95, 0.2)
 
 
 if __name__ == "__main__":

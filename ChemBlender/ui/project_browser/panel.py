@@ -22,7 +22,11 @@ from ..properties import (
     draw_selective_dynamics_properties,
     get_quick_import_state,
 )
-from ..session import get_scene_session
+from ..session import (
+    get_scene_session,
+    register_session_cleanup,
+    unregister_session_cleanup,
+)
 from ...core import (
     AtomFrameProperty,
     AtomicProperty,
@@ -42,6 +46,8 @@ from .model import (
     ViewRecord,
     _browser_entity_ids,
     build_browser_rows,
+    clear_browser_caches,
+    clear_browser_session_cache,
 )
 
 _scientific_edit = importlib.import_module("..scientific_edit", __package__)
@@ -151,6 +157,7 @@ class CHEMBLENDER_PG_project_browser(bpy.types.PropertyGroup):
     )
     page_jump: IntProperty(name="Jump to Page", default=1, min=1)
     page_count: IntProperty(default=1, min=1)
+    page_kind: StringProperty()
     rows: CollectionProperty(type=CHEMBLENDER_PG_project_browser_row)
 
 
@@ -543,6 +550,7 @@ def refresh_project_browser(scene):
         if summary is not None
         else sum(row.kind == "molecular_record" for row in rows)
     )
+    settings.page_kind = summary.kind if summary is not None else ""
     settings.page = summary.page if summary is not None else 0
     settings.page_count = summary.page_count if summary is not None else 1
     settings.page_jump = settings.page + 1
@@ -571,6 +579,17 @@ def refresh_project_browser(scene):
         session.active_entity_id = None
         settings.active_entity_id = ""
     return rows
+
+
+def _page_subject(settings):
+    if (
+        settings.search.strip()
+        or settings.quality_filter != "all"
+    ):
+        return "matching entries"
+    if settings.page_kind == "record_page":
+        return "molecular records"
+    return "project entries"
 
 
 class CHEMBLENDER_UL_project_rows(bpy.types.UIList):
@@ -610,17 +629,9 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
         layout.prop(settings, "search", icon="VIEWZOOM")
         layout.prop(settings, "quality_filter")
         if settings.record_count:
-            subject = (
-                "matching entries"
-                if (
-                    settings.search.strip()
-                    or settings.quality_filter != "all"
-                )
-                else "molecular records"
-            )
             layout.label(
                 text=(
-                    f"{settings.record_count} {subject} · "
+                    f"{settings.record_count} {_page_subject(settings)} · "
                     f"Page {settings.page + 1} of {settings.page_count}"
                 ),
                 icon="LINENUMBERS_ON",
@@ -835,11 +846,14 @@ def register():
             failure.add_note(f"property rollback failed: {error}")
         raise failure
     _OWNED_TOPOLOGY_SCENE_PROPERTY = topology_identity
+    register_session_cleanup(clear_browser_session_cache)
 
 
 def unregister():
     global _OWNED_SCENE_PROPERTY
     global _OWNED_TOPOLOGY_SCENE_PROPERTY
+    unregister_session_cleanup(clear_browser_session_cache)
+    clear_browser_caches()
     topology_owned = _OWNED_TOPOLOGY_SCENE_PROPERTY
     if (
         topology_owned is not None

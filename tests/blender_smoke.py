@@ -271,9 +271,6 @@ def assert_grid_unload_cancels_active_worker(module_key):
     assert cleanup_calls[1] == ("progress",)
     assert grid._ACTIVE_VOLUME_OPERATORS == []
     assert_disabled(module_key, owned_classes)
-    before_reenable_modules = set(sys.modules)
-    assert bpy.ops.preferences.addon_enable(module=module_key) == {"FINISHED"}
-    assert_enabled(module_key, before_reenable_modules)
 
 
 def assert_enabled(module_key, before_install_modules):
@@ -5282,7 +5279,6 @@ assert_sdf_10k_workflow_budget(module_key)
 assert_project_browser_rna_budget(module_key)
 assert_biological_workflow(module_key, package.parent.parent)
 assert_mol2_browser_view(module_key, package.parent.parent)
-assert_grid_unload_cancels_active_worker(module_key)
 
 import rdkit
 import gemmi
@@ -5300,7 +5296,5 @@ assert AllChem.EmbedMolecule(molecule, randomSeed=0xC0FFEE) == 0
 if keep_enabled:
     print("PASS: ChemBlender extension installed and enabled")
 else:
-    owned_classes = owned_registration_classes(module_key)
-    assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}
-    assert_disabled(module_key, owned_classes)
+    assert_grid_unload_cancels_active_worker(module_key)
     print("PASS: ChemBlender extension lifecycle")

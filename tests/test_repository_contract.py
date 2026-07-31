@@ -276,6 +276,32 @@ class RepositoryContractTests(unittest.TestCase):
         ):
             self.assertIn(expected, smoke)
 
+    def test_blender_smoke_unloads_active_grid_worker_only_at_final_exit(self):
+        smoke = (ROOT / "tests" / "blender_smoke.py").read_text(encoding="utf-8")
+        tree = ast.parse(smoke)
+        unload = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "assert_grid_unload_cancels_active_worker"
+        )
+        unload_source = ast.get_source_segment(smoke, unload)
+        self.assertEqual(unload_source.count("addon_disable("), 1)
+        self.assertNotIn("addon_enable(", unload_source)
+
+        dependency_probe = smoke.index("from rdkit.Chem import AllChem")
+        keep_enabled_branch = smoke.index("if keep_enabled:", dependency_probe)
+        final_unload = smoke.index(
+            "assert_grid_unload_cancels_active_worker(module_key)",
+            keep_enabled_branch,
+        )
+        self.assertLess(dependency_probe, keep_enabled_branch)
+        self.assertLess(keep_enabled_branch, final_unload)
+        self.assertNotIn(
+            "addon_disable(",
+            smoke[keep_enabled_branch:],
+        )
+
     def test_release_workflow_is_manual_and_deterministic(self):
         workflow = (ROOT / ".github" / "workflows" / "extension-release.yml").read_text(
             encoding="utf-8"
