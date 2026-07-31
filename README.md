@@ -1,17 +1,59 @@
 # ChemBlender
 
-ChemBlender provides molecular and crystal structure modeling and visualization tools for Blender Geometry Nodes.
+ChemBlender turns scientific structure and calculation files into inspectable
+Blender projects and views. It is **result-first** and **program-neutral**:
+scientific entities, provenance, revisions and quality states belong to the
+project, while Blender objects are views and rebuildable caches.
 
-The maintained 2.2.x line is a Blender Extension. Extension source and `blender_manifest.toml` live in `ChemBlender/`; the repository root is the development workspace.
+## Requirements
+
+- Windows x64.
+- Blender 5.1 or newer.
+- Install the release ZIP as a Blender Extension; do not copy it into the
+  legacy add-on directory.
+
+Release packages bundle RDKit and Gemmi for the workflows that require them.
+Other optional backends, including cclib, IOData, ASE and pymatgen, are
+available only when their separately managed runtime is present. The base
+format workflows do not depend on those optional backends.
+
+## Start with a project
+
+1. Use [Quick Import](docs/user/quick-import.md) for a single file, multiple
+   files, SMILES text or drag and drop.
+2. Review reader choice, quality, conflicts, grouping and the proposed default
+   View in Import Preview.
+3. Inspect committed sources, data and views in the
+   [Project Browser](docs/user/project-browser.md).
+4. Save the Blender file to publish its scientific project.
+
+The 2.3.0 base format scope is XYZ/extXYZ, MOL V2000/V3000, SDF, SMILES, CIF,
+POSCAR/CONTCAR, MOL2, PDB/PQR, Cube and CJSON. Import, export, loss and
+dependency maturity differ by format; see the
+[format guide](docs/user/formats.md) before relying on round-trip behavior.
+
+## Keep the project pair together
+
+Saving a project uses two paths: `example.blend` for Blender views and
+`example.cbq/` for authoritative scientific data. The `.blend` stores a
+relative link when possible. Back up and move both paths together—**keep them together**—
+or the project can reopen with a missing or mismatched link.
+Recovery and cache safety are covered in the
+[project sidecar guide](docs/user/project-sidecar.md).
+
+Related user guides:
+
+- [Data quality and diagnostics](docs/user/data-quality.md)
+- [Scientific editing and topology](docs/user/scientific-editing.md)
 
 ## Development
 
-- Documentation index: `docs/README.md`
-- Extension migration and local build: `docs/migration/2.2.0-extension.md`
-- Branch and release workflow: `docs/development/branch-and-release.md`
-- Quantum chemistry visualization roadmap: `docs/quantum-visualization/roadmap.md`
-- 中文代码架构导览：[`.agents/reference/code-architecture-guide.md`](.agents/reference/code-architecture-guide.md)
+- [Documentation index](docs/README.md)
+- [Extension migration and local build](docs/migration/2.2.0-extension.md)
+- [Branch and release workflow](docs/development/branch-and-release.md)
+- [Quantum chemistry visualization roadmap](docs/quantum-visualization/roadmap.md)
+- [中文代码架构导览](.agents/reference/code-architecture-guide.md)
 
-RDKit is bundled into release packages by CI. Wheel files are downloaded locally when needed and are not tracked by Git.
+Wheel files are downloaded locally when needed and are not tracked by Git.
 
 Project website: https://www.chemblender.com

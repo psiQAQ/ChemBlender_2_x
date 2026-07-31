@@ -1,5 +1,14 @@
 # ChemBlender Documentation
 
+## User Guides
+
+- [Quick Import](user/quick-import.md)
+- [Project Browser](user/project-browser.md)
+- [Project and sidecar](user/project-sidecar.md)
+- [Data quality and diagnostics](user/data-quality.md)
+- [Scientific editing and topology](user/scientific-editing.md)
+- [Formats, maturity and dependencies](user/formats.md)
+
 ## Development
 
 - [Changelog](../CHANGELOG.md)

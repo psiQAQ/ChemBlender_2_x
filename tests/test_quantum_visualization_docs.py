@@ -151,6 +151,113 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         ):
             self.assertIn(operation, legacy_source)
 
+    def test_user_guides_describe_verified_product_workflows(self):
+        import tomllib
+
+        readme = self.read_doc("README.md")
+        for term in (
+            "result-first",
+            "program-neutral",
+            "Windows x64",
+            "Blender 5.1",
+            "XYZ/extXYZ",
+            "MOL V2000/V3000",
+            "SDF",
+            "SMILES",
+            "CIF",
+            "POSCAR/CONTCAR",
+            "MOL2",
+            "PDB/PQR",
+            "Cube",
+            "CJSON",
+            ".blend",
+            ".cbq",
+            "keep them together",
+            "optional backends",
+        ):
+            self.assertIn(term, readme)
+
+        manifest = tomllib.loads(
+            self.read_doc("ChemBlender/blender_manifest.toml")
+        )
+        tagline = manifest["tagline"]
+        self.assertEqual(tagline, tagline.strip())
+        self.assertNotIn("\n", tagline)
+        self.assertLessEqual(len(tagline), 64)
+        self.assertTrue(tagline[-1].isalnum())
+        self.assertIn("results", tagline.lower())
+
+        index = self.read_doc("docs/README.md")
+        contracts = {
+            "quick-import.md": (
+                "single file",
+                "multiple files",
+                "drag and drop",
+                "Import Preview",
+                "Keep Independent",
+                "Accept Group",
+                "Default View",
+                "Cancel",
+            ),
+            "project-browser.md": (
+                "By Source",
+                "By Data",
+                "Complete",
+                "Partial",
+                "Ambiguous",
+                "Update Selected Views",
+                "Comparison View",
+                "Keep Current",
+            ),
+            "project-sidecar.md": (
+                ".blend",
+                ".cbq",
+                "relative",
+                "Missing",
+                "Mismatch",
+                "Incompatible",
+                "backup",
+                "Clear Derived Cache",
+            ),
+            "data-quality.md": (
+                "Complete",
+                "Partial",
+                "Ambiguous",
+                "Incomplete",
+                "Invalid",
+                "scientific consequence",
+                "suggested action",
+            ),
+            "scientific-editing.md": (
+                "Object transforms",
+                "Apply Scientific Edits",
+                "source Structure",
+                "derived Structure",
+                "explicit_file",
+                "distance_inferred",
+                "revision",
+            ),
+            "formats.md": (
+                "F0–F5",
+                "XYZ/extXYZ",
+                "MOL V2000/V3000",
+                "POSCAR/CONTCAR",
+                "PDB/PQR",
+                "import",
+                "export",
+                "loss",
+                "RDKit",
+                "Gemmi",
+                "optional backend",
+            ),
+        }
+        for name, terms in contracts.items():
+            path = f"docs/user/{name}"
+            text = self.read_doc(path)
+            self.assertIn(f"user/{name}", index)
+            for term in terms:
+                self.assertIn(term, text, path)
+
     def test_230_wave_4_is_active_and_wave_3_is_completed(self):
         queued = sorted(
             path.name
@@ -167,6 +274,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             *(ROOT / ".agents" / "active").glob("2.3.0-wave-*.md"),
             *(ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md"),
             *(ROOT / "docs" / "quantum-visualization" / "2.3.0").rglob("*.md"),
+            *(ROOT / "docs" / "user").rglob("*.md"),
             *(ROOT / "docs" / "superpowers" / "plans").glob(
                 "2026-07-23-chemblender-2.3.0-*.md"
             ),
@@ -479,6 +587,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             *(ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md"),
             ROOT / "docs" / "README.md",
             *DOCS.rglob("*.md"),
+            *(ROOT / "docs" / "user").rglob("*.md"),
             *(ROOT / "docs" / "superpowers" / "plans").glob(
                 "2026-07-23-chemblender-2.3.0-*.md"
             ),
