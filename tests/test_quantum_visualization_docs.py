@@ -402,6 +402,11 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Blender global site-packages",
             "不得联网下载",
             "cb23-qualification-",
+            "$qualificationRootOwned = $false",
+            "$createdRoot = New-Item -ItemType Directory -Path $qualificationRoot",
+            "$createdPath = [IO.Path]::GetFullPath($createdRoot.FullName)",
+            "$qualificationRootOwned = $true",
+            "if ($qualificationRootOwned -and (Test-Path -LiteralPath $qualificationRoot))",
             "$cleanupRoot = (Resolve-Path -LiteralPath $qualificationRoot).Path",
             "-not $cleanupRoot.StartsWith(",
             "Remove-Item -LiteralPath $cleanupRoot -Recurse -Force",
@@ -420,6 +425,20 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertLess(
             release.index("try {"),
             release.index("Remove-Item -LiteralPath $cleanupRoot -Recurse -Force"),
+        )
+        self.assertLess(
+            release.index("throw 'Refusing to reuse a qualification temp root'"),
+            release.index(
+                "$createdRoot = New-Item -ItemType Directory -Path $qualificationRoot"
+            ),
+        )
+        self.assertLess(
+            release.index("$createdPath = [IO.Path]::GetFullPath($createdRoot.FullName)"),
+            release.index("$qualificationRootOwned = $true"),
+        )
+        self.assertLess(
+            release.index("$qualificationRootOwned = $true"),
+            release.index("New-Item -ItemType Directory -Path $dependencySite"),
         )
         self.assertLess(
             release.index("dependency_inventory.py"),

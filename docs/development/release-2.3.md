@@ -44,23 +44,32 @@ $qualificationRoot = Join-Path `
 $dependencySite = Join-Path $qualificationRoot 'site-packages'
 $previousPythonPath = $env:PYTHONPATH
 $resolvedQualificationRoot = $null
+$qualificationRootOwned = $false
 try {
   if (Test-Path -LiteralPath $qualificationRoot) {
     throw 'Refusing to reuse a qualification temp root'
   }
-  New-Item -ItemType Directory -Path $dependencySite | Out-Null
+  $createdRoot = New-Item -ItemType Directory -Path $qualificationRoot
+  $createdPath = [IO.Path]::GetFullPath($createdRoot.FullName)
   $resolvedQualificationRoot = (
     Resolve-Path -LiteralPath $qualificationRoot
   ).Path
   if (
     $resolvedQualificationRoot -eq $tempParent -or
+    -not $resolvedQualificationRoot.Equals(
+      $createdPath,
+      [StringComparison]::OrdinalIgnoreCase
+    ) -or
     -not $resolvedQualificationRoot.StartsWith(
       $tempPrefix,
       [StringComparison]::OrdinalIgnoreCase
-    )
+    ) -or
+    ($createdRoot.Attributes -band [IO.FileAttributes]::ReparsePoint)
   ) {
     throw 'Qualification temp root escaped its expected parent'
   }
+  $qualificationRootOwned = $true
+  New-Item -ItemType Directory -Path $dependencySite | Out-Null
 
   & $pythonBin ChemBlender/scripts/dependency_inventory.py `
     --inventory ChemBlender/dependencies.toml `
@@ -87,7 +96,7 @@ try {
   } else {
     $env:PYTHONPATH = $previousPythonPath
   }
-  if (Test-Path -LiteralPath $qualificationRoot) {
+  if ($qualificationRootOwned -and (Test-Path -LiteralPath $qualificationRoot)) {
     $cleanupRoot = (Resolve-Path -LiteralPath $qualificationRoot).Path
     $cleanupItem = Get-Item -LiteralPath $cleanupRoot -Force
     if (
