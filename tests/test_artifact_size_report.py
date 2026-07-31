@@ -416,9 +416,9 @@ class ArtifactSizeReportTests(unittest.TestCase):
     def test_repository_budget_is_versioned_and_has_no_unexplained_growth(self):
         budget = artifact_size_report._load_budget(BUDGET)
 
-        self.assertEqual(budget["baseline_package_bytes"], 29_956_551)
+        self.assertEqual(budget["baseline_package_bytes"], 29_956_027)
         self.assertEqual(budget["allowed_unexplained_growth_bytes"], 0)
-        self.assertEqual(budget["baseline_member_unpacked_bytes"], 31_972_070)
+        self.assertEqual(budget["baseline_member_unpacked_bytes"], 31_975_749)
         self.assertEqual(
             budget["allowed_unexplained_member_unpacked_growth_bytes"], 0
         )
@@ -427,11 +427,11 @@ class ArtifactSizeReportTests(unittest.TestCase):
             budget["section_unpacked_budgets"],
             {
                 "code": {
-                    "baseline_unpacked_bytes": 2_577_310,
+                    "baseline_unpacked_bytes": 2_580_988,
                     "allowed_unexplained_growth_bytes": 0,
                 },
                 "resources": {
-                    "baseline_unpacked_bytes": 2_506_008,
+                    "baseline_unpacked_bytes": 2_506_009,
                     "allowed_unexplained_growth_bytes": 0,
                 },
                 "wheels": {
