@@ -69,6 +69,10 @@ class PublicationRecoveryError(RuntimeError):
         self.backup_path = backup_path
 
 
+class PublicationCancelled(RuntimeError):
+    """Publication stopped before the irreversible atomic replacement."""
+
+
 def _is_link_like(path):
     return path.is_symlink() or (
         hasattr(path, "is_junction") and path.is_junction()
@@ -235,11 +239,25 @@ def _restore_final_failure(destination, stage, backup, staged, publication_error
             ) from publication_error
 
 
+def _cancel_staged_publication(stage):
+    try:
+        shutil.rmtree(stage)
+    except OSError as error:
+        raise RuntimeError(
+            "cancelled sidecar publication could not remove its staging tree"
+        ) from error
+    raise PublicationCancelled(
+        "sidecar publication cancelled before atomic replacement"
+    )
+
+
 def solidify_session(
     session,
     destination,
     *,
     transfer_verified_project=False,
+    progress=None,
+    is_cancelled=None,
 ):
     if not isinstance(session, ProjectSession):
         raise TypeError("session must be a ProjectSession")
@@ -248,8 +266,18 @@ def solidify_session(
     destination = _validated_destination(destination)
     stage = _new_stage(destination)
     backup = None
+    if progress is not None:
+        progress("staging", 0.0)
+    if is_cancelled is not None and is_cancelled():
+        _cancel_staged_publication(stage)
     _write_project_tree(stage, session.project)
+    if progress is not None:
+        progress("verifying", 0.8)
     staged = _verify_staged_project(stage, session.project.id)
+    if progress is not None:
+        progress("before_publish", 1.0)
+    if is_cancelled is not None and is_cancelled():
+        _cancel_staged_publication(stage)
 
     if destination.exists():
         backup = _new_backup(destination)

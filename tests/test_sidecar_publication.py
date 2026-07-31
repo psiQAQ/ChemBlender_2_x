@@ -18,6 +18,7 @@ from ChemBlender.core.sidecar import (
     save_project,
 )
 from ChemBlender.core.storage.publication import (
+    PublicationCancelled,
     PublicationRecoveryReport,
     inspect_publication_orphans,
     solidify_session,
@@ -112,6 +113,33 @@ class SidecarPublicationTests(unittest.TestCase):
         published = solidify_session(session, self.root / "project.cbq")
 
         self.assertIsNone(published.project)
+
+    def test_cancel_before_atomic_swap_removes_stage_and_keeps_destination(self):
+        destination = self.root / "project.cbq"
+        old_session = self.create_session(sample_project())
+        solidify_session(old_session, destination)
+        old_tree = tree_bytes(destination)
+        new_session = self.create_session(
+            QCProject(id=uuid4(), schema_version="0.2")
+        )
+        cancelled = False
+
+        def request_cancel(stage, _progress):
+            nonlocal cancelled
+            if stage == "before_publish":
+                cancelled = True
+
+        with self.assertRaisesRegex(PublicationCancelled, "before atomic"):
+            solidify_session(
+                new_session,
+                destination,
+                progress=request_cancel,
+                is_cancelled=lambda: cancelled,
+            )
+
+        self.assertEqual(tree_bytes(destination), old_tree)
+        self.assertIsNone(new_session.sidecar_path)
+        self.assertFalse(inspect_publication_orphans(destination).has_orphans)
 
     def test_new_destination_final_verify_failure_leaves_only_stage_orphan(self):
         session = self.create_session(sample_project())

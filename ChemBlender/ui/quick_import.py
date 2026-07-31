@@ -12,6 +12,7 @@ from ..core.import_pipeline.request import (
     ImportSource,
     ValidationMode,
 )
+from ..core.import_pipeline.preflight import ImportCancelled
 from ..core.import_pipeline.conformer_grouping import (
     suggest_staged_conformer_groups as prepare_conformer_suggestions,
 )
@@ -28,6 +29,7 @@ from .properties import (
     store_quick_import_preview,
 )
 from .session import get_scene_session
+from .tasks import Task, TaskProgressAdapter, TaskState
 
 
 _FATAL_EXCEPTIONS = (
@@ -112,6 +114,8 @@ class _PreflightJob:
         self.preview = None
         self.conformer_suggestions = None
         self.error = None
+        self.task = Task()
+        self._task_progress = TaskProgressAdapter(self.task)
         self.progress_events = SimpleQueue()
         self._cancelled = Event()
         self._done = Event()
@@ -123,6 +127,10 @@ class _PreflightJob:
 
     def _run(self):
         try:
+            if self.task.snapshot().state is TaskState.PENDING:
+                self.task.start("preflight")
+            if self._cancelled.is_set():
+                raise ImportCancelled("import preflight cancelled")
             self.preview = preflight_reader_plugins(
                 self.request,
                 self.registry,
@@ -144,10 +152,26 @@ class _PreflightJob:
                 self._progress("conformer_grouping", 1, 1)
         except BaseException as error:
             self.error = error
+            if isinstance(error, ImportCancelled):
+                if self.task.snapshot().state is TaskState.RUNNING:
+                    self.task.request_cancel()
+                if self.task.snapshot().state is TaskState.CANCELLING:
+                    self.task.cancel()
+            elif self.task.snapshot().state in {
+                TaskState.RUNNING,
+                TaskState.CANCELLING,
+            }:
+                self.task.fail(error)
+        else:
+            if self.task.is_cancelled():
+                self.task.cancel()
+            else:
+                self.task.succeed("preview ready")
         finally:
             self._done.set()
 
     def _progress(self, stage, completed, total):
+        self._task_progress(stage, completed, total)
         self.progress_events.put((stage, completed, total))
 
     def attach_ui(self, window_manager, timer):
@@ -158,11 +182,17 @@ class _PreflightJob:
         self._progress_started = True
 
     def start(self):
+        self.task.start("preflight")
         self._thread.start()
         self._started = True
 
     def cancel(self):
         self._cancelled.set()
+        if self.task.snapshot().state in {
+            TaskState.PENDING,
+            TaskState.RUNNING,
+        }:
+            self.task.request_cancel()
 
     def join(self, timeout):
         if not self._started:
@@ -536,7 +566,24 @@ class CHEMBLENDER_PT_quick_import(bpy.types.Panel):
         smiles.validation_mode = settings.validation_mode
         if settings.recent_summary:
             layout.label(text=settings.recent_summary)
-        if get_quick_import_state(session).preview is not None:
+        quick_import_state = get_quick_import_state(session)
+        active_job = quick_import_state.active_job
+        task = getattr(active_job, "task", None)
+        if task is not None:
+            snapshot = task.snapshot()
+            layout.label(
+                text=(
+                    f"{snapshot.stage}: {int(snapshot.progress * 100)}% "
+                    f"({snapshot.state.value})"
+                ),
+                icon="TIME",
+            )
+            layout.operator(
+                "chemblender.cancel_import",
+                text="Cancel",
+                icon="X",
+            )
+        elif quick_import_state.preview is not None:
             row = layout.row(align=True)
             row.operator(
                 "chemblender.confirm_import",

@@ -2429,9 +2429,11 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertIs(job.result, expected)
         self.assertIsNone(job.error)
         self.assertEqual(job.drain_progress(), ("materialize", 1, 4))
+        self.assertEqual(job.task.snapshot().state.value, "succeeded")
         self.assertFalse(observed["is_cancelled"]())
         job.cancel()
         self.assertTrue(observed["is_cancelled"]())
+        self.assertEqual(job.task.snapshot().state.value, "succeeded")
 
     def test_modal_fatal_worker_error_rethrows_after_cleanup(self):
         timer = object()

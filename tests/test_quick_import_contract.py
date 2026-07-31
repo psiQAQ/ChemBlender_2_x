@@ -777,6 +777,10 @@ class QuickImportContractTests(unittest.TestCase):
             job.drain_progress(),
             ("conformer_grouping", 1, 1),
         )
+        snapshot = job.task.snapshot()
+        self.assertEqual(snapshot.state.value, "succeeded")
+        self.assertEqual(snapshot.stage, "preview ready")
+        self.assertEqual(snapshot.progress, 1.0)
 
     def test_preflight_job_cancels_conformer_precompute(self):
         module = importlib.import_module(QUICK_IMPORT_MODULE)
@@ -807,6 +811,7 @@ class QuickImportContractTests(unittest.TestCase):
         self.assertTrue(job.done)
         self.assertIsInstance(job.error, ImportCancelled)
         self.assertEqual(str(job.error), "conformer grouping cancelled")
+        self.assertEqual(job.task.snapshot().state.value, "cancelled")
 
     def test_modal_thread_start_failure_releases_owned_staging(self):
         source = Path(self.temporary.name) / "start-failure.xyz"
@@ -986,6 +991,7 @@ class QuickImportContractTests(unittest.TestCase):
         self.assertIn('"chemblender.quick_import"', quick_import_source)
         self.assertIn('"wm.save_mainfile"', quick_import_source)
         self.assertIn("Open Workspace", quick_import_source)
+        self.assertIn("snapshot = task.snapshot()", quick_import_source)
 
 
 if __name__ == "__main__":

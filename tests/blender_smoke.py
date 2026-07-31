@@ -210,10 +210,24 @@ def assert_registration_isolation(module_key, before_install_modules):
     )
 
 
+def assert_task_boundary(module_key):
+    tasks = importlib.import_module(f"{module_key}.ui.tasks")
+    assert not hasattr(tasks, "bpy")
+    task = tasks.Task()
+    task.start("smoke")
+    task.progress("smoke", 0.5)
+    task.request_cancel()
+    task.cancel()
+    snapshot = task.snapshot()
+    assert snapshot.state is tasks.TaskState.CANCELLED
+    assert snapshot.progress == 0.5
+
+
 def assert_enabled(module_key, before_install_modules):
     assert module_key in bpy.context.preferences.addons
     assert f"{module_key}.trajectory_view" in sys.modules
     assert_registration_isolation(module_key, before_install_modules)
+    assert_task_boundary(module_key)
     assert sum(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
         for handler in bpy.app.handlers.frame_change_post

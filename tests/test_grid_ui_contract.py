@@ -22,6 +22,15 @@ TWO_DATASETS = ROOT / "tests/fixtures/cube/two-datasets.cube"
 
 
 class GridUIContractTests(unittest.TestCase):
+    def test_volume_modal_uses_shared_pure_task_worker(self):
+        source = (ROOT / "ChemBlender" / "ui" / "grid.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("from .tasks import Task, TaskWorker", source)
+        self.assertNotIn("Thread(", source)
+        self.assertNotIn("Event(", source)
+
     def test_cube_preview_reports_bounded_dataset_summary(self):
         batch = CUBE_READER.parse(TWO_DATASETS)
 

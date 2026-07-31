@@ -11,6 +11,7 @@ from ChemBlender.core.grid_cache_service import (
     VolumeCacheRequest,
     prepare_volume_cache,
 )
+from tests.test_task_state_machine import load_tasks_without_bpy
 
 
 def sample_grid():
@@ -149,6 +150,66 @@ class GridCacheServiceTests(unittest.TestCase):
                     list(request.cache_path.parent.glob(".*.tmp")),
                     [],
                 )
+
+    def test_vdb_task_worker_cancels_before_publish_without_staging_leak(self):
+        with TemporaryDirectory() as temporary:
+            tasks = load_tasks_without_bpy()
+            request = self.request(temporary)
+            task = tasks.Task()
+
+            def prepare(cancelled, progress):
+                def track(stage, fraction):
+                    progress(f"vdb.{stage}", fraction)
+                    if stage == "before_publish":
+                        task.request_cancel()
+
+                return prepare_volume_cache(
+                    sample_grid(),
+                    request,
+                    writer=FakeWriter(),
+                    cancelled=cancelled,
+                    progress=track,
+                )
+
+            worker = tasks.TaskWorker(task, prepare)
+            worker.start("vdb.prepare")
+            self.assertTrue(worker.join(1))
+
+            self.assertIsNone(worker.error)
+            self.assertEqual(worker.result.status, "cancelled")
+            self.assertEqual(task.snapshot().state.value, "cancelled")
+            self.assertFalse(request.cache_path.exists())
+            self.assertEqual(
+                list(request.cache_path.parent.glob(".*.tmp")),
+                [],
+            )
+
+    def test_vdb_task_worker_returns_ready_cache_without_bpy(self):
+        with TemporaryDirectory() as temporary:
+            tasks = load_tasks_without_bpy()
+            request = self.request(temporary)
+            task = tasks.Task()
+
+            worker = tasks.TaskWorker(
+                task,
+                lambda cancelled, progress: prepare_volume_cache(
+                    sample_grid(),
+                    request,
+                    writer=FakeWriter(),
+                    cancelled=cancelled,
+                    progress=lambda stage, fraction: progress(
+                        f"vdb.{stage}", fraction
+                    ),
+                ),
+            )
+            worker.start("vdb.prepare")
+            self.assertTrue(worker.join(1))
+
+            self.assertIsNone(worker.error)
+            self.assertEqual(task.snapshot().state.value, "succeeded")
+            self.assertEqual(worker.result.status, "published")
+            self.assertEqual(worker.result.cache_path, request.cache_path)
+            self.assertTrue(request.cache_path.is_file())
 
     def test_writer_and_publish_failure_cleanup_without_replacing_prior(self):
         for failure in ("writer", "publish"):

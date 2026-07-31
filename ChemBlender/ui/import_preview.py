@@ -67,6 +67,7 @@ from .properties import (
     store_quick_import_job,
 )
 from .session import get_scene_session
+from .tasks import Task, TaskProgressAdapter, TaskState
 
 
 _ACTION_ITEMS = tuple(
@@ -1832,6 +1833,8 @@ class _CommitJob:
         self.decisions = decisions
         self.result = None
         self.error = None
+        self.task = Task()
+        self._task_progress = TaskProgressAdapter(self.task)
         self.progress_events = SimpleQueue()
         self._cancelled = Event()
         self._commit_started = Event()
@@ -1856,6 +1859,8 @@ class _CommitJob:
 
     def _run(self):
         try:
+            if self.task.snapshot().state is TaskState.PENDING:
+                self.task.start("commit")
             if self._cancelled.is_set():
                 raise ImportCommitCancelled("import commit cancelled")
             self._commit_started.set()
@@ -1871,17 +1876,39 @@ class _CommitJob:
             )
         except BaseException as error:
             self.error = error
+            if isinstance(error, (ImportCommitCancelled, ImportCancelled)):
+                if self.task.snapshot().state is TaskState.RUNNING:
+                    self.task.request_cancel()
+                if self.task.snapshot().state is TaskState.CANCELLING:
+                    self.task.cancel()
+            elif self.task.snapshot().state in {
+                TaskState.RUNNING,
+                TaskState.CANCELLING,
+            }:
+                self.task.fail(error)
+        else:
+            if self.task.is_cancelled():
+                self.task.cancel()
+            else:
+                self.task.succeed("data committed")
         finally:
             self._done.set()
 
     def start(self):
+        self.task.start("commit")
         self._thread.start()
         self._started = True
 
     def cancel(self):
         self._cancelled.set()
+        if self.task.snapshot().state in {
+            TaskState.PENDING,
+            TaskState.RUNNING,
+        }:
+            self.task.request_cancel()
 
     def _progress(self, stage, completed, total):
+        self._task_progress(stage, completed, total)
         self.progress_events.put((stage, completed, total))
 
     def drain_progress(self):
@@ -2771,9 +2798,12 @@ class CHEMBLENDER_OT_cancel_import(bpy.types.Operator):
         state = get_quick_import_state(session)
         if state.active_job is not None:
             state.active_job.cancel()
+            message = "cancellation requested"
+            if getattr(state.active_job, "commit_started", False):
+                message += "; published data cannot be undone"
             self.report(
                 {"WARNING"},
-                "cancellation requested; published data cannot be undone",
+                message,
             )
         else:
             cancel_project_import(session)
