@@ -3,13 +3,16 @@
 
 import argparse
 from collections import namedtuple
+from functools import lru_cache
 import json
-from math import ceil, isfinite
+from math import ceil, isclose, isfinite
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 from statistics import median
+import subprocess
 import sys
 from tempfile import TemporaryDirectory
 from time import perf_counter
@@ -27,7 +30,7 @@ from ChemBlender.benchmarks.datasets import (
 
 
 BenchmarkCase = namedtuple(
-    "BenchmarkCase", "name execution boundary cache_state"
+    "BenchmarkCase", "name execution boundary cache_state measurement"
 )
 PreparedFixtures = namedtuple(
     "PreparedFixtures", "workspace scale source trajectory batch"
@@ -35,31 +38,32 @@ PreparedFixtures = namedtuple(
 
 CASE_REGISTRY = {
     "extension_enable": BenchmarkCase(
-        "extension_enable", "blender", "requires a separate Blender launch", "cold"
+        "extension_enable", "blender", "requires a separate Blender launch", "cold", "diagnostic"
     ),
-    "preflight_feedback": BenchmarkCase("preflight_feedback", "core", "", "cold"),
-    "parse": BenchmarkCase("parse", "core", "", "cold"),
-    "project_commit": BenchmarkCase("project_commit", "core", "", "cold"),
-    "sidecar_save_open": BenchmarkCase("sidecar_save_open", "core", "", "cold"),
+    "preflight_feedback": BenchmarkCase("preflight_feedback", "core", "", "cold", "diagnostic"),
+    "parse": BenchmarkCase("parse", "core", "", "cold", "diagnostic"),
+    "project_commit": BenchmarkCase("project_commit", "core", "", "cold", "diagnostic"),
+    "sidecar_save_open": BenchmarkCase("sidecar_save_open", "core", "", "cold", "diagnostic"),
     "vdb_cache": BenchmarkCase(
-        "vdb_cache", "blender", "requires Blender and OpenVDB runtime", "cold"
+        "vdb_cache", "blender", "requires Blender and OpenVDB runtime", "cold", "diagnostic"
     ),
     "default_view": BenchmarkCase(
-        "default_view", "blender", "requires Blender scene datablocks", "cold"
+        "default_view", "blender", "requires Blender scene datablocks", "cold", "diagnostic"
     ),
-    "trajectory_frame": BenchmarkCase("trajectory_frame", "core", "", "hot"),
+    "trajectory_frame": BenchmarkCase("trajectory_frame", "core", "", "hot", "diagnostic"),
     "browser_projection_filter": BenchmarkCase(
-        "browser_projection_filter", "core", "", "cold"
+        "browser_projection_filter", "core", "", "cold", "diagnostic"
     ),
     "cancel_cleanup": BenchmarkCase(
         "cancel_cleanup",
         "future",
         "requires the Wave 4 cancellable task state machine",
         "cold",
+        "diagnostic",
     ),
 }
 
-_BUDGET_SCHEMA_VERSION = "1.0"
+_BUDGET_SCHEMA_VERSION = "2.0"
 _REQUIRED_BUDGET_CASES = frozenset(
     {
         "extension_enable",
@@ -77,7 +81,97 @@ _TREND_ENVIRONMENT_FIELDS = (
     "processor",
     "python_implementation",
     "python_version",
+    "blender_version",
+    "rdkit_version",
+    "gemmi_version",
 )
+_PRODUCT_MEASUREMENTS = frozenset({"cold_p95", "hot_p95"})
+
+
+def _blender_executable():
+    candidates = []
+    configured = os.environ.get("BLENDER_BINARY")
+    if configured:
+        candidates.append(Path(configured))
+    candidates.extend(parent / "blender.exe" for parent in Path(sys.executable).resolve().parents[:4])
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        return candidate
+    return None
+
+
+@lru_cache(maxsize=1)
+def _blender_runtime_versions():
+    empty = {"blender_version": None, "gemmi_version": None, "rdkit_version": None}
+    executable = _blender_executable()
+    if executable is None:
+        return empty
+    code = (
+        "bpy=__import__('bpy');gemmi=__import__('gemmi');json=__import__('json');rdkit=__import__('rdkit');"
+        "print('CHEMBLENDER_RUNTIME=' + json.dumps({'blender_version': bpy.app.version_string, "
+        "'gemmi_version': gemmi.__version__, 'rdkit_version': rdkit.__version__}, sort_keys=True))"
+    )
+    try:
+        result = subprocess.run(
+            [
+                str(executable),
+                "--background",
+                "--factory-startup",
+                "--python-expr",
+                code,
+                "--python-exit-code",
+                "1",
+            ],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=120,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return empty
+    for line in result.stdout.splitlines():
+        if not line.startswith("CHEMBLENDER_RUNTIME="):
+            continue
+        try:
+            versions = json.loads(line.removeprefix("CHEMBLENDER_RUNTIME="))
+        except json.JSONDecodeError:
+            return empty
+        if (
+            result.returncode == 0
+            and type(versions) is dict
+            and set(versions) == set(empty)
+            and all(isinstance(value, str) and value for value in versions.values())
+        ):
+            return versions
+    return empty
+
+
+def benchmark_source_state():
+    root = Path(__file__).resolve().parents[2]
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=root,
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=10,
+        )
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=root,
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=10,
+        )
+    except OSError:
+        return None, None
+    source_commit = commit.stdout.strip()
+    if commit.returncode or dirty.returncode or not re.fullmatch(r"[0-9a-f]{40}", source_commit):
+        return None, None
+    return source_commit, bool(dirty.stdout)
 
 
 def canonical_json(document):
@@ -110,6 +204,7 @@ def write_canonical_json(path, document):
 
 
 def benchmark_environment():
+    runtime = _blender_runtime_versions()
     return {
         "cpu_count": os.cpu_count(),
         "machine": platform.machine(),
@@ -118,6 +213,7 @@ def benchmark_environment():
         "python_executable": sys.executable,
         "python_implementation": platform.python_implementation(),
         "python_version": platform.python_version(),
+        **runtime,
     }
 
 
@@ -155,6 +251,7 @@ def load_performance_budget(path):
         if type(definition) is not dict or set(definition) != {
             "cache_state",
             "hard_limit_seconds",
+            "measurement",
             "scale",
         }:
             raise ValueError(f"performance budget case is invalid: {name}")
@@ -170,6 +267,8 @@ def load_performance_budget(path):
             raise ValueError(f"performance budget scale is invalid: {name}")
         if definition["cache_state"] not in {"cold", "hot"}:
             raise ValueError(f"performance budget cache_state is invalid: {name}")
+        if definition["measurement"] != f"{definition['cache_state']}_p95":
+            raise ValueError(f"performance budget measurement is invalid: {name}")
         if CASE_REGISTRY[name].cache_state != definition["cache_state"]:
             raise ValueError(f"performance budget cache_state disagrees: {name}")
     return budget
@@ -192,6 +291,10 @@ def _required_budget_cases(report, budget):
             raise ValueError(f"benchmark report scale disagrees: {name}")
         if case["cache_state"] != definition["cache_state"]:
             raise ValueError(f"benchmark report cache_state disagrees: {name}")
+        if case["measurement"] == "diagnostic":
+            raise ValueError(f"benchmark report diagnostic-only case: {name}")
+        if case["measurement"] != definition["measurement"]:
+            raise ValueError(f"benchmark report measurement disagrees: {name}")
         if not isfinite(case["p95_seconds"]):
             raise ValueError(f"benchmark report p95_seconds is not finite: {name}")
     return cases
@@ -224,7 +327,8 @@ def compare_performance_report(report, budget, *, baseline_report=None):
             if baseline_p95 <= 0:
                 raise ValueError(f"benchmark baseline p95_seconds must be positive: {name}")
             candidate_p95 = cases[name][budget["trend_metric"]]
-            if candidate_p95 > baseline_p95 * (1 + budget["trend_max_regression_percent"] / 100):
+            limit = baseline_p95 * (1 + budget["trend_max_regression_percent"] / 100)
+            if candidate_p95 > limit and not isclose(candidate_p95, limit, rel_tol=1e-12, abs_tol=1e-12):
                 trend_failures.append(name)
     return {
         "hard_local_failures": hard_failures,
@@ -283,6 +387,7 @@ def _measure_case(case, runner, fixtures, warmup_count, sample_count, clock, *, 
         "hot_seconds": None if not samples else median(samples),
         "maximum_seconds": None,
         "median_seconds": None,
+        "measurement": case.measurement,
         "minimum_seconds": None,
         "name": case.name,
         "p95_seconds": None,
@@ -305,6 +410,7 @@ def _not_run_case(case):
         "hot_seconds": None,
         "maximum_seconds": None,
         "median_seconds": None,
+        "measurement": case.measurement,
         "minimum_seconds": None,
         "name": case.name,
         "p95_seconds": None,
@@ -513,14 +619,17 @@ def run_benchmark(
         finally:
             if builtin:
                 _cleanup_fixtures(fixtures)
+    source_commit, source_dirty = benchmark_source_state()
     report = {
-        "benchmark": "chemblender-2.3.0-v1",
+        "benchmark": "chemblender-2.3.0-v2",
         "cases": results,
         "environment": benchmark_environment(),
         "failure_count": sum(case["failure_count"] for case in results),
         "passed": all(case["status"] == "Passed" for case in results),
         "sample_count": sample_count,
         "scale": scale,
+        "source_commit": source_commit,
+        "source_dirty": source_dirty,
         "warmup_count": warmup_count,
     }
     return report
@@ -535,6 +644,8 @@ def validate_qualified_report(report):
         "passed",
         "sample_count",
         "scale",
+        "source_commit",
+        "source_dirty",
         "warmup_count",
     }
     required_environment = set(benchmark_environment())
@@ -548,6 +659,7 @@ def validate_qualified_report(report):
         "hot_seconds",
         "maximum_seconds",
         "median_seconds",
+        "measurement",
         "minimum_seconds",
         "name",
         "p95_seconds",
@@ -556,8 +668,19 @@ def validate_qualified_report(report):
     }
     if not isinstance(report, dict) or set(report) != required_report:
         raise ValueError("benchmark report has missing or unexpected fields")
+    if report["benchmark"] != "chemblender-2.3.0-v2":
+        raise ValueError("benchmark report schema version is unsupported")
+    if not isinstance(report["source_commit"], str) or not re.fullmatch(
+        r"[0-9a-f]{40}", report["source_commit"]
+    ):
+        raise ValueError("benchmark report source_commit is invalid")
+    if report["source_dirty"] is not False:
+        raise ValueError("benchmark report source_dirty must be false")
     if set(report.get("environment", ())) != required_environment:
         raise ValueError("benchmark environment is incomplete")
+    for name in ("blender_version", "rdkit_version", "gemmi_version"):
+        if not isinstance(report["environment"][name], str) or not report["environment"][name]:
+            raise ValueError(f"benchmark environment {name} is invalid")
     if (
         isinstance(report["sample_count"], bool)
         or not isinstance(report["sample_count"], int)
@@ -573,6 +696,8 @@ def validate_qualified_report(report):
             raise ValueError("benchmark qualification requires every selected case")
         if case["cache_state"] not in {"cold", "hot"}:
             raise ValueError("benchmark case cache_state is invalid")
+        if case["measurement"] not in _PRODUCT_MEASUREMENTS | {"diagnostic"}:
+            raise ValueError("benchmark case measurement is invalid")
         if len(case["sample_seconds"]) != report["sample_count"]:
             raise ValueError("benchmark case sample count does not match report")
         for name in (
