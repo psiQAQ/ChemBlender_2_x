@@ -1,4 +1,5 @@
 import unittest
+import re
 from pathlib import Path
 
 
@@ -92,6 +93,60 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for severity in ("Blocker", "Major", "Minor"):
             self.assertIn(severity, script)
             self.assertIn(severity, results)
+        expected_tasks = {f"U{number:02d}" for number in range(1, 13)}
+        for document in (script, results):
+            self.assertEqual(
+                set(
+                    re.findall(
+                        r"(?m)^\|\s*(U(?:0[1-9]|1[0-2]))(?:\s|\|)",
+                        document,
+                    )
+                ),
+                expected_tasks,
+            )
+        for contract in (
+            "fresh profile",
+            "refuse reuse",
+            "--python-exit-code",
+            "$process.ExitCode",
+            "PASS:",
+        ):
+            self.assertIn(contract, script)
+        self.assertIn('"--python-exit-code", "1"', script)
+        hashes = (
+            "0db367c18fd849897bb5ca0189c50c573bda40ea5db35c565a99f882115356ec",
+            "36b05c3cacbcc067714615a49df35cf20973bc8122329194ddaecd249df6c3d4",
+            "f2995e826762a85bfb6854e314483175c3d39c2cceef109db3f395ab2e83c06a",
+            "a6af8e232fe7b934bf850f8e6b24d396596b79cc1fd38e8ff6eb071c50bf8740",
+        )
+        for digest in hashes:
+            self.assertIn(digest, script)
+            self.assertIn(digest, results)
+        for marker in (
+            "PASS: ChemBlender extension lifecycle",
+            "PASS: packaged legacy migration and reopen",
+        ):
+            self.assertIn(marker, script)
+            self.assertIn(marker, results)
+        self.assertIn("hybrid", script)
+        self.assertIn("packaged Extension", script)
+        self.assertIn("hybrid", results)
+        self.assertIn("packaged Extension", results)
+        self.assertIn("Remote CI: Not Run", results)
+
+        legacy_acceptance = ROOT / "tests" / "blender_usability_legacy.py"
+        self.assertTrue(legacy_acceptance.is_file(), legacy_acceptance)
+        legacy_source = legacy_acceptance.read_text(encoding="utf-8")
+        for operation in (
+            "bpy.ops.extensions.package_install_files",
+            "bl_ext.user_default.chemblender",
+            "bpy.ops.chemblender.preview_legacy_migration",
+            "bpy.ops.chemblender.migrate_legacy_scene",
+            "bpy.ops.wm.save_mainfile",
+            "bpy.ops.wm.open_mainfile",
+            "PASS: packaged legacy migration and reopen",
+        ):
+            self.assertIn(operation, legacy_source)
 
     def test_230_wave_4_is_active_and_wave_3_is_completed(self):
         queued = sorted(
