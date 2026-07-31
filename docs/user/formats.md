@@ -29,6 +29,7 @@ automatically a lossless round-trip format.
 | PDB/PQR | Native import of biological hierarchy/alternate locations or charge/radius data; no general Project Browser writer |
 | Cube | Native Structure + Grid3D import and Blender Volume/Surface workflow; no lossless Cube re-export claim |
 | CJSON | Lightweight structure/topology/property envelope import and controlled core export; no general Project Browser writer |
+| QCSchema | Dependency-free built-in import for Molecule and AtomicResult JSON; maps Structure and supported numeric properties while preserving the complete source JSON as a raw envelope; no general Project Browser writer |
 
 The Project Browser export workflow currently writes XYZ, extXYZ, MOL, SDF,
 SMILES, CIF and POSCAR. It shows a loss preview and requires confirmation when
@@ -50,6 +51,10 @@ reader availability diagnostic instead of a silent fallback.
 OpenVDB files generated for Blender Volumes/Surfaces are derived caches, not a
 scientific interchange format. Grid3D remains the authoritative field and can
 rebuild those caches.
+
+The machine-readable
+[reader capability matrix](../quantum-visualization/reader-capability-matrix.json)
+is the source of built-in reader availability and dependency contracts.
 
 For project storage, read [Project and sidecar](project-sidecar.md). For
 assumptions and recovered values, read [Data quality](data-quality.md).

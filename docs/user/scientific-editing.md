@@ -23,8 +23,10 @@ the derived revision; recompute or import a result for the derived geometry.
 ## Understand topology sources
 
 A Structure can have more than one TopologyRecord. The Project Browser and
-topology controls display its source, quality, parameters, edge count and
-revision.
+topology controls display its source, quality, parameters and edge count. The
+current topology controls do not display the revision as a separate field;
+that revision remains recorded in the project entity, View binding and
+provenance.
 
 | Source token | Meaning |
 | --- | --- |

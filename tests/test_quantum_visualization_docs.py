@@ -170,6 +170,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "PDB/PQR",
             "Cube",
             "CJSON",
+            "QCSchema",
             ".blend",
             ".cbq",
             "keep them together",
@@ -249,14 +250,64 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 "RDKit",
                 "Gemmi",
                 "optional backend",
+                "QCSchema",
+                "Molecule",
+                "AtomicResult",
+                "Dependency-free",
+                "raw envelope",
+                "reader-capability-matrix.json",
             ),
         }
+        guide_text = {}
         for name, terms in contracts.items():
             path = f"docs/user/{name}"
             text = self.read_doc(path)
+            guide_text[name] = text
             self.assertIn(f"user/{name}", index)
             for term in terms:
                 self.assertIn(term, text, path)
+
+        for name in ("quick-import.md", "data-quality.md"):
+            compact = " ".join(guide_text[name].split())
+            self.assertIn("selected reader", compact, name)
+            self.assertIn("reader and format", compact, name)
+            self.assertIn("diagnostics", compact, name)
+            self.assertNotIn(
+                "Maximum keeps more trustworthy partial data",
+                compact,
+                name,
+            )
+            self.assertNotIn(
+                "Maximum retains more trustworthy partial data",
+                compact,
+                name,
+            )
+
+        scientific_editing = " ".join(
+            guide_text["scientific-editing.md"].split()
+        )
+        self.assertIn(
+            "current topology controls do not display the revision",
+            scientific_editing,
+        )
+        self.assertIn("binding", scientific_editing)
+        self.assertIn("provenance", scientific_editing)
+        self.assertNotIn(
+            "topology controls display its source, quality, parameters, "
+            "edge count and revision",
+            scientific_editing,
+        )
+
+        from ChemBlender.core import reader_capability_document
+
+        qcschema = next(
+            row
+            for row in reader_capability_document()["readers"]
+            if row["reader_id"] == "qcschema"
+        )
+        self.assertEqual(qcschema["execution_mode"], "built_in")
+        self.assertEqual(qcschema["availability_contract"], {"kind": "always"})
+        self.assertEqual(qcschema["extensions"], [".json"])
 
     def test_230_wave_4_is_active_and_wave_3_is_completed(self):
         queued = sorted(

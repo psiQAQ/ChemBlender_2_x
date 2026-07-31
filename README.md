@@ -15,7 +15,8 @@ project, while Blender objects are views and rebuildable caches.
 Release packages bundle RDKit and Gemmi for the workflows that require them.
 Other optional backends, including cclib, IOData, ASE and pymatgen, are
 available only when their separately managed runtime is present. The base
-format workflows do not depend on those optional backends.
+format workflows do not depend on those optional backends. QCSchema is a
+dependency-free built-in reader for Molecule and AtomicResult JSON.
 
 ## Start with a project
 
@@ -28,8 +29,8 @@ format workflows do not depend on those optional backends.
 4. Save the Blender file to publish its scientific project.
 
 The 2.3.0 base format scope is XYZ/extXYZ, MOL V2000/V3000, SDF, SMILES, CIF,
-POSCAR/CONTCAR, MOL2, PDB/PQR, Cube and CJSON. Import, export, loss and
-dependency maturity differ by format; see the
+POSCAR/CONTCAR, MOL2, PDB/PQR, Cube, CJSON and QCSchema. Import, export, loss
+and dependency maturity differ by format; see the
 [format guide](docs/user/formats.md) before relying on round-trip behavior.
 
 ## Keep the project pair together

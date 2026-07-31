@@ -12,9 +12,11 @@ it does not certify the underlying experiment or calculation.
 | Incomplete | Required content is not complete enough for the intended workflow | Supply a better source or use only the explicitly retained subset |
 | Invalid | Identity, integrity or required semantics failed validation | Do not commit/use the affected entity |
 
-Balanced validation is the default. Strict rejects more recoveries; Maximum
-retains more trustworthy partial data. None of the modes silently repairs an
-unrecoverable structure identity.
+Balanced validation is the default. ChemBlender passes Strict, Balanced or
+Maximum to the selected reader; the effect depends on that reader and format.
+Review its diagnostics because any retained partial or ambiguous data remains
+explicitly labeled. None of the modes silently repairs an unrecoverable
+structure identity.
 
 ## Read a diagnostic
 

@@ -15,10 +15,11 @@ drag and drop.
   File Handler input enters the same Quick Import path.
 - **SMILES text:** choose **Import SMILES** and enter the text directly.
 
-Validation defaults to **Balanced**. **Strict** rejects recoveries that
-Balanced may retain with diagnostics; **Maximum** keeps more trustworthy
-partial data. The selected mode never turns invalid identity data into a valid
-Structure.
+Validation defaults to **Balanced**. ChemBlender passes **Strict**,
+**Balanced** or **Maximum** to the selected reader; the effect depends on that
+reader and format. Review the resulting diagnostics and quality badge because
+retained partial or ambiguous data remains explicitly labeled. The selected
+mode never turns invalid identity data into a valid Structure.
 
 ## Review Import Preview
 
