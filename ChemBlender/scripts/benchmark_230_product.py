@@ -1018,7 +1018,7 @@ def _measure_vdb_cache(bpy, workspace, _sample_index):
 
     core = _product_module("core")
     grid_volume = _product_module("grid_volume")
-    values = numpy.load(workspace / "grid.npy", mmap_mode="r", allow_pickle=False)
+    values = numpy.load(workspace / "grid.npy", allow_pickle=False)
     grid = core.Grid3D(
         id=uuid4(),
         revision="product-performance-grid-r1",

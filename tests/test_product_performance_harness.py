@@ -435,6 +435,67 @@ class ProductPerformanceHarnessTests(unittest.TestCase):
         )
         self.assertTrue(assertions["structure_scene_preset"])
 
+    def test_vdb_product_case_supplies_a_plain_numpy_array(self):
+        import numpy
+
+        harness = load_harness()
+        events = []
+
+        class VolumeObject(dict):
+            name = "Grid Volume"
+            type = "VOLUME"
+            data = SimpleNamespace(grids={"density": object()})
+
+        def array_data(values, *_args):
+            return SimpleNamespace(values=values)
+
+        def grid_3d(**kwargs):
+            return SimpleNamespace(
+                data=kwargs["data"],
+                grid_shape=tuple(kwargs["data"].values.shape),
+            )
+
+        def create_grid_volume(grid, cache):
+            if type(grid.data.values) is not numpy.ndarray:
+                raise AssertionError("OpenVDB requires a plain numpy.ndarray")
+            path = cache / "density.vdb"
+            path.write_bytes(b"vdb")
+            return VolumeObject(cb_cache_path=str(path))
+
+        modules = {
+            "core": SimpleNamespace(
+                ArrayData=array_data,
+                DatasetStatus=SimpleNamespace(COMPLETE="Complete"),
+                Grid3D=grid_3d,
+            ),
+            "grid_volume": SimpleNamespace(create_grid_volume=create_grid_volume),
+        }
+        bpy = SimpleNamespace(
+            context=SimpleNamespace(
+                view_layer=SimpleNamespace(update=lambda: events.append("update"))
+            ),
+            data=SimpleNamespace(objects={}),
+        )
+
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            numpy.save(
+                workspace / "grid.npy",
+                numpy.zeros((128, 128, 128), dtype=numpy.float32),
+                allow_pickle=False,
+            )
+            with patch.object(
+                harness,
+                "_product_module",
+                side_effect=lambda name: modules[name],
+            ):
+                _elapsed, assertions = harness._measure_vdb_cache(
+                    bpy, workspace, 0
+                )
+
+        self.assertEqual(events, ["update"])
+        self.assertTrue(assertions["openvdb_loaded"])
+
 
 if __name__ == "__main__":
     unittest.main()
