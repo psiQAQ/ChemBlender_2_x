@@ -1,10 +1,15 @@
+import ast
 import importlib.util
 import json
 import subprocess
 import sys
+import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+from unittest import mock
+
+import ChemBlender.core.reader_catalog as reader_catalog
 
 
 ROOT = Path(__file__).parents[1]
@@ -12,6 +17,7 @@ SCRIPT = ROOT / "ChemBlender" / "scripts" / "generate_format_docs.py"
 FORMAT_CAPABILITIES = ROOT / "docs" / "user" / "format-capabilities.json"
 DEPENDENCIES = ROOT / "docs" / "user" / "dependencies.json"
 FORMATS = ROOT / "docs" / "user" / "formats.md"
+UI_EXPORT = ROOT / "ChemBlender" / "ui" / "export.py"
 
 
 def _canonical_json(document):
@@ -121,13 +127,82 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
             {
                 "execution_mode": "project_browser",
                 "format_id": "xyz",
-                "loss_policy": "lossless",
-                "maturity": "F5",
+                "loss_policy": "single_structure_coordinates_only",
+                "maturity": "F4",
             },
         )
         self.assertEqual(by_id["cube"]["export"]["maturity"], "F0")
         self.assertEqual(by_id["cube"]["export"]["execution_mode"], "none")
         self.assertEqual(by_id["cjson"]["export"]["execution_mode"], "core")
+
+    def test_extensionless_reader_basenames_are_exact(self):
+        document = reader_catalog.reader_capability_document()
+        by_id = {
+            reader["reader_id"]: reader
+            for reader in document["readers"]
+        }
+
+        self.assertEqual(
+            by_id["ase-structure"]["basenames"],
+            ["POSCAR", "CONTCAR"],
+        )
+        self.assertEqual(
+            by_id["pymatgen-vasp-grid"]["basenames"],
+            ["CHGCAR", "PARCHG", "ELFCAR", "LOCPOT"],
+        )
+
+    def test_fixture_families_exactly_cover_builtin_readers(self):
+        reader_ids = {
+            reader.reader_id
+            for reader in reader_catalog.builtin_reader_descriptors()
+        }
+        self.assertEqual(
+            set(reader_catalog._READER_FIXTURE_FAMILIES),
+            reader_ids,
+        )
+
+        incomplete = dict(reader_catalog._READER_FIXTURE_FAMILIES)
+        incomplete.pop("xyz")
+        with mock.patch.object(
+            reader_catalog,
+            "_READER_FIXTURE_FAMILIES",
+            incomplete,
+        ):
+            with self.assertRaisesRegex(ValueError, "fixture family coverage"):
+                reader_catalog.reader_capability_document()
+
+    def test_project_browser_export_ids_come_from_ui_source_without_bpy(self):
+        module = self._module()
+        before = sys.modules.get("bpy")
+
+        tree = ast.parse(UI_EXPORT.read_text(encoding="utf-8"))
+        assignment = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name)
+                and target.id == "_FORMAT_ITEMS"
+                for target in node.targets
+            )
+        )
+        expected = tuple(row[0] for row in ast.literal_eval(assignment.value))
+        capabilities = json.loads(
+            module.render_documents(ROOT)[
+                "docs/user/format-capabilities.json"
+            ]
+        )
+        documented = {
+            reader["export"]["format_id"]
+            for reader in capabilities["readers"]
+            if reader["export"]["execution_mode"] == "project_browser"
+        }
+        self.assertEqual(
+            module._project_browser_export_ids(ROOT),
+            expected,
+        )
+        self.assertEqual(documented, set(expected))
+        self.assertIs(sys.modules.get("bpy"), before)
 
     def test_dependency_document_uses_the_pinned_inventory_without_runtime_claims(self):
         document = json.loads(
@@ -202,6 +277,69 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
             encoding="utf-8",
         )
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_marked_section_rejects_every_noncanonical_marker_layout(self):
+        module = self._module()
+        begin = module.BEGIN_MARKER
+        end = module.END_MARKER
+        invalid = {
+            "missing": "Introduction\n",
+            "begin-only": f"Introduction\n{begin}\n",
+            "end-only": f"Introduction\n{end}\n",
+            "duplicate": (
+                f"{begin}\nold\n{end}\n{begin}\nold\n{end}\n"
+            ),
+            "reversed": f"{end}\nold\n{begin}\n",
+            "inline": f"prefix {begin}\nold\n{end} suffix\n",
+        }
+        for label, source in invalid.items():
+            with self.subTest(label=label):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "one ordered standalone generated marker pair",
+                ):
+                    module._replace_marked_section(source, "new", "\n")
+
+    def test_cli_check_does_not_write_when_markers_are_invalid(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repository = Path(temporary)
+            inventory = repository / "ChemBlender" / "dependencies.toml"
+            inventory.parent.mkdir(parents=True)
+            inventory.write_bytes(
+                (ROOT / "ChemBlender" / "dependencies.toml").read_bytes()
+            )
+            formats = repository / "docs" / "user" / "formats.md"
+            formats.parent.mkdir(parents=True)
+            original = b"Introduction without generated markers\n"
+            formats.write_bytes(original)
+
+            result = subprocess.run(
+                (
+                    sys.executable,
+                    str(SCRIPT),
+                    "--repository-root",
+                    str(repository),
+                    "--check",
+                ),
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                encoding="utf-8",
+            )
+
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(formats.read_bytes(), original)
+            self.assertEqual(
+                sorted(
+                    path.relative_to(repository).as_posix()
+                    for path in repository.rglob("*")
+                    if path.is_file()
+                ),
+                [
+                    "ChemBlender/dependencies.toml",
+                    "docs/user/formats.md",
+                ],
+            )
 
     def test_formats_generation_preserves_the_tracked_crlf_contract(self):
         generated = self._module().render_documents(ROOT)[

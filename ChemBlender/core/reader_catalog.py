@@ -36,7 +36,9 @@ _OPTIONAL_READER_DEPENDENCIES = {
 }
 
 _READER_BASENAMES = {
+    "ase-structure": ("POSCAR", "CONTCAR"),
     "poscar": ("CONTCAR", "POSCAR"),
+    "pymatgen-vasp-grid": ("CHGCAR", "PARCHG", "ELFCAR", "LOCPOT"),
 }
 
 _READER_FIXTURE_FAMILIES = {
@@ -71,7 +73,12 @@ _READER_EXPORTS = {
     "qcschema": ("qcschema", "F5", "core", "source_envelope"),
     "sdf": ("sdf", "F5", "project_browser", "preview_confirmation"),
     "smiles": ("smiles", "F5", "project_browser", "preview_confirmation"),
-    "xyz": ("xyz", "F5", "project_browser", "lossless"),
+    "xyz": (
+        "xyz",
+        "F4",
+        "project_browser",
+        "single_structure_coordinates_only",
+    ),
 }
 
 
@@ -128,6 +135,14 @@ def reader_capability_document(readers=None):
     readers = sorted(readers, key=lambda reader: reader.reader_id)
     if len({reader.reader_id for reader in readers}) != len(readers):
         raise ValueError("reader catalog contains duplicate reader IDs")
+    reader_ids = {reader.reader_id for reader in readers}
+    fixture_ids = set(_READER_FIXTURE_FAMILIES)
+    if reader_ids != fixture_ids:
+        raise ValueError(
+            "reader fixture family coverage must exactly match built-in "
+            f"readers; missing={sorted(reader_ids - fixture_ids)!r}; "
+            f"extra={sorted(fixture_ids - reader_ids)!r}"
+        )
     return {
         "schema_name": "chemblender_reader_capability_matrix",
         "schema_version": 2,
@@ -155,10 +170,7 @@ def reader_capability_document(readers=None):
                 },
                 "export": _export_document(reader.reader_id),
                 "fixture_families": list(
-                    _READER_FIXTURE_FAMILIES.get(
-                        reader.reader_id,
-                        (reader.reader_id,),
-                    )
+                    _READER_FIXTURE_FAMILIES[reader.reader_id]
                 ),
             }
             for reader in readers

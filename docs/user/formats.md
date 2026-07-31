@@ -70,7 +70,7 @@ Reader API `1.0-rc1`. Runtime availability is evaluated when a reader is selecte
 
 | Reader | Import | Export | Runtime | Fixtures |
 | --- | --- | --- | --- | --- |
-| `ase-structure` (`.vasp`, `.poscar`, `.contcar`, `.extxyz`, `.xyz`) | atomic_property=partial, crystal=supported, structure=supported | F0 / none / not_available | runtime module `ase` | ASE extXYZ, ASE POSCAR |
+| `ase-structure` (`.vasp`, `.poscar`, `.contcar`, `.extxyz`, `.xyz`, `POSCAR`, `CONTCAR`) | atomic_property=partial, crystal=supported, structure=supported | F0 / none / not_available | runtime module `ase` | ASE extXYZ, ASE POSCAR |
 | `cclib_output` (`.log`, `.out`) | atomic_property=supported, energy=supported, excited_state=supported, structure=supported, trajectory=supported, vibration=supported | F0 / none / not_available | runtime module `cclib` | Gaussian output, ORCA output |
 | `cif` (`.cif`) | cif_envelope=supported, crystal=supported, structure=supported | F5 / project_browser / preview_confirmation | runtime module `gemmi` | CIF crystal, CIF disorder, CIF multi-block |
 | `cjson` (`.cjson`) | atomic_identity=supported, atomic_property=supported, excited_state=partial, grid=partial, orbital=partial, spectrum=partial, structure=supported, topology=supported, trajectory=partial, vibration=partial | F5 / core / controlled_envelope | built-in | CJSON result envelope |
@@ -83,10 +83,10 @@ Reader API `1.0-rc1`. Runtime availability is evaluated when a reader is selecte
 | `pdb` (`.pdb`) | atomic_identity=supported, atomic_property=supported, crystal=partial, hierarchy=supported, multi_model=supported, structure=supported, topology=partial, trajectory=supported | F0 / none / not_available | built-in | PDB altloc, PDB CONECT, PDB multi-model |
 | `poscar` (`.vasp`, `.poscar`, `.contcar`, `CONTCAR`, `POSCAR`) | atomic_property=supported, crystal=supported, structure=supported | F5 / project_browser / preview_confirmation | built-in | VASP 4, VASP 5, POSCAR velocity |
 | `pqr` (`.pqr`) | atomic_identity=supported, atomic_property=supported, hierarchy=supported, structure=supported | F0 / none / not_available | built-in | PQR chain, PQR no-chain |
-| `pymatgen-vasp-grid` (`.chgcar`, `.parchg`, `.elfcar`, `.locpot`) | crystal=supported, grid=supported, structure=supported | F0 / none / not_available | runtime module `pymatgen` | CHGCAR, ELFCAR, LOCPOT, PARCHG |
+| `pymatgen-vasp-grid` (`.chgcar`, `.parchg`, `.elfcar`, `.locpot`, `CHGCAR`, `PARCHG`, `ELFCAR`, `LOCPOT`) | crystal=supported, grid=supported, structure=supported | F0 / none / not_available | runtime module `pymatgen` | CHGCAR, ELFCAR, LOCPOT, PARCHG |
 | `pymatgen-vasprun-electronic` (`.xml`) | band_structure=supported, dos=supported, projection=partial, structure=supported | F0 / none / not_available | runtime module `pymatgen` | vasprun.xml band/DOS |
 | `qcschema` (`.json`) | calculation_record=partial, energy=partial, gradient=partial, structure=supported | F5 / core / source_envelope | built-in | QCSchema AtomicResult, QCSchema Molecule |
 | `sdf` (`.sdf`) | atomic_identity=supported, molecular_record=supported, record_property=partial, structure=supported, topology=supported | F5 / project_browser / preview_confirmation | runtime module `rdkit` | SDF malformed-record recovery, SDF multi-record |
 | `smiles` (`.smi`, `.smiles`) | atomic_identity=supported, molecular_record=supported, structure=supported, topology=supported | F5 / project_browser / preview_confirmation | runtime module `rdkit` | SMILES file, SMILES text |
-| `xyz` (`.xyz`) | structure=supported, trajectory=supported | F5 / project_browser / lossless | built-in | XYZ single-frame, XYZ trajectory |
+| `xyz` (`.xyz`) | structure=supported, trajectory=supported | F4 / project_browser / single_structure_coordinates_only | built-in | XYZ single-frame, XYZ trajectory |
 <!-- END GENERATED FORMAT CAPABILITIES -->

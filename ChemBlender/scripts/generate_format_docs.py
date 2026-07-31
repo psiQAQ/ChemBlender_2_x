@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
+import re
 import sys
 import tomllib
 from pathlib import Path
@@ -134,15 +136,67 @@ def _format_table(document):
 
 def _replace_marked_section(source, generated, newline):
     block = f"{BEGIN_MARKER}{newline}{generated}{newline}{END_MARKER}"
-    begin_count = source.count(BEGIN_MARKER)
-    end_count = source.count(END_MARKER)
-    if begin_count == end_count == 0:
-        return source.rstrip() + newline * 2 + block + newline
-    if begin_count != 1 or end_count != 1:
-        raise ValueError("formats.md must contain one generated marker pair")
-    start = source.index(BEGIN_MARKER)
-    end = source.index(END_MARKER, start) + len(END_MARKER)
+    begin_matches = tuple(
+        re.finditer(
+            rf"(?m)^{re.escape(BEGIN_MARKER)}(?=\r?$)",
+            source,
+        )
+    )
+    end_matches = tuple(
+        re.finditer(
+            rf"(?m)^{re.escape(END_MARKER)}(?=\r?$)",
+            source,
+        )
+    )
+    if (
+        source.count(BEGIN_MARKER) != 1
+        or source.count(END_MARKER) != 1
+        or len(begin_matches) != 1
+        or len(end_matches) != 1
+        or begin_matches[0].start() >= end_matches[0].start()
+    ):
+        raise ValueError(
+            "formats.md must contain one ordered standalone generated "
+            "marker pair"
+        )
+    start = begin_matches[0].start()
+    end = end_matches[0].end()
     return source[:start] + block + source[end:]
+
+
+def _project_browser_export_ids(repository_root):
+    export_path = Path(repository_root) / "ChemBlender" / "ui" / "export.py"
+    tree = ast.parse(export_path.read_text(encoding="utf-8"), export_path)
+    assignments = [
+        node
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == "_FORMAT_ITEMS"
+            for target in node.targets
+        )
+    ]
+    if len(assignments) != 1:
+        raise ValueError("ui.export must define exactly one _FORMAT_ITEMS")
+    try:
+        rows = ast.literal_eval(assignments[0].value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("ui.export _FORMAT_ITEMS must be literal data") from exc
+    if (
+        not isinstance(rows, tuple)
+        or any(
+            not isinstance(row, tuple)
+            or not row
+            or type(row[0]) is not str
+            or not row[0]
+            for row in rows
+        )
+    ):
+        raise ValueError("ui.export _FORMAT_ITEMS has an invalid shape")
+    format_ids = tuple(row[0] for row in rows)
+    if len(set(format_ids)) != len(format_ids):
+        raise ValueError("ui.export _FORMAT_ITEMS contains duplicate IDs")
+    return format_ids
 
 
 def render_documents(repository_root):
@@ -160,6 +214,18 @@ def render_documents(repository_root):
         _format_table(capabilities).replace("\n", newline),
         newline,
     ).encode("utf-8")
+    documented_export_ids = {
+        reader["export"]["format_id"]
+        for reader in capabilities["readers"]
+        if reader["export"]["execution_mode"] == "project_browser"
+    }
+    source_export_ids = set(_project_browser_export_ids(repository_root))
+    if documented_export_ids != source_export_ids:
+        raise ValueError(
+            "project browser export IDs differ between reader capabilities "
+            f"and ui.export: documented={sorted(documented_export_ids)!r}; "
+            f"source={sorted(source_export_ids)!r}"
+        )
     return {
         "docs/quantum-visualization/reader-capability-matrix.json": (
             capability_bytes
