@@ -274,6 +274,16 @@ class ProductPerformanceHarnessTests(unittest.TestCase):
                     package_sha256="e" * 64,
                 )
 
+    def test_prepare_process_creates_profile_and_measurement_reuses_it(self):
+        harness = load_harness()
+        with TemporaryDirectory() as directory:
+            profile = Path(directory) / "profile"
+            harness.ensure_process_profile(profile, "prepare_profile")
+            self.assertTrue((profile / "temp").is_dir())
+            harness.ensure_process_profile(profile, "default_view")
+            with self.assertRaises(FileExistsError):
+                harness.ensure_process_profile(profile, "prepare_profile")
+
 
 if __name__ == "__main__":
     unittest.main()

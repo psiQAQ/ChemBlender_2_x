@@ -160,6 +160,17 @@ def sample_profile(root, case_name, sample_index):
     return Path(root) / case_name / f"sample-{sample_index:03d}"
 
 
+def ensure_process_profile(profile, case_name):
+    profile = Path(profile)
+    if case_name == "prepare_profile":
+        profile.mkdir(parents=True)
+        (profile / "temp").mkdir()
+        return
+    if not profile.is_dir():
+        raise ValueError("measurement requires a prepared profile")
+    (profile / "temp").mkdir(exist_ok=True)
+
+
 def write_prepared_profile_marker(
     profile, *, package_sha256, installed_origin
 ):
@@ -498,9 +509,8 @@ def _run_worker_process(
     timeout_seconds,
     evidence_label=None,
 ):
-    profile.mkdir(parents=True)
+    ensure_process_profile(profile, case_name)
     temp = profile / "temp"
-    temp.mkdir()
     environment = os.environ.copy()
     selected_environment = {
         "BLENDER_USER_RESOURCES": str(profile),
