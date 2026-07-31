@@ -8,6 +8,7 @@
 - [Data quality and diagnostics](user/data-quality.md)
 - [Scientific editing and topology](user/scientific-editing.md)
 - [Formats, maturity and dependencies](user/formats.md)
+- [Legacy scene migration](user/legacy-migration.md)
 
 ## Development
 
@@ -18,6 +19,7 @@
 - [2.3 development and Release gates](development/release-2.3.md)
 - [Branch and release workflow](development/branch-and-release.md)
 - [2.2.0 extension migration](migration/2.2.0-extension.md)
+- [Upgrade to ChemBlender 2.3.0](migration/2.3.0.md)
 
 ## Quantum Visualization Development
 
