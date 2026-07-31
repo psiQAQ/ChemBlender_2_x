@@ -1,8 +1,12 @@
 from dataclasses import replace
+import importlib.util
 from pathlib import Path
+import sys
 from tempfile import TemporaryDirectory
+from types import ModuleType, SimpleNamespace
 import unittest
 from uuid import uuid4
+from unittest.mock import patch
 
 import numpy
 
@@ -63,9 +67,88 @@ class GridUIContractTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("from .tasks import Task, TaskWorker", source)
+        self.assertIn("from .tasks import Task, TaskState, TaskWorker", source)
         self.assertNotIn("Thread(", source)
         self.assertNotIn("Event(", source)
+
+    def test_volume_modal_success_accepts_succeeded_task(self):
+        class Operator:
+            def report(self, levels, message):
+                self.reports = getattr(self, "reports", []) + [
+                    (levels, message)
+                ]
+
+        fake_bpy = ModuleType("bpy")
+        fake_props = ModuleType("bpy.props")
+
+        def property_factory(**_kwargs):
+            return None
+
+        for name in (
+            "EnumProperty",
+            "FloatProperty",
+            "IntProperty",
+            "PointerProperty",
+            "StringProperty",
+        ):
+            setattr(fake_props, name, property_factory)
+        fake_bpy.props = fake_props
+        fake_bpy.types = SimpleNamespace(
+            Operator=Operator,
+            PropertyGroup=type("PropertyGroup", (), {}),
+        )
+        fake_bpy.app = SimpleNamespace(background=False)
+
+        module_name = "ChemBlender.ui._grid_modal_contract"
+        spec = importlib.util.spec_from_file_location(
+            module_name,
+            ROOT / "ChemBlender" / "ui" / "grid.py",
+        )
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, {"bpy": fake_bpy, "bpy.props": fake_props}):
+            sys.modules[module_name] = module
+            try:
+                spec.loader.exec_module(module)
+
+                result = SimpleNamespace(status="published")
+                task = module.Task()
+                task.start("vdb.prepare")
+                task.complete(result)
+                joined = []
+                operator = module.CHEMBLENDER_OT_create_grid_view()
+                operator._cache_task = task
+                operator._cache_job = SimpleNamespace(
+                    done=True,
+                    join=lambda timeout: joined.append(timeout),
+                    error=None,
+                    result=result,
+                )
+                operator._cache_values = (object(), object(), object())
+                finished = []
+                operator._finish_modal = lambda: finished.append(True)
+                applied = []
+                operator._apply = lambda *args: applied.append(args) or [
+                    SimpleNamespace(name="Volume")
+                ]
+                progress = []
+                context = SimpleNamespace(
+                    window_manager=SimpleNamespace(
+                        progress_update=lambda value: progress.append(value)
+                    )
+                )
+
+                self.assertEqual(
+                    operator.modal(context, SimpleNamespace(type="TIMER")),
+                    {"FINISHED"},
+                )
+                self.assertEqual(joined, [0])
+                self.assertEqual(finished, [True])
+                self.assertEqual(progress, [100])
+                self.assertEqual(len(applied), 1)
+            finally:
+                sys.modules.pop(module_name, None)
 
     def test_cube_preview_reports_bounded_dataset_summary(self):
         batch = CUBE_READER.parse(TWO_DATASETS)

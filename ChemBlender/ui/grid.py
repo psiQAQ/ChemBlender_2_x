@@ -15,7 +15,7 @@ from ..core import (
     plan_scene_preset,
     resolve_grid_semantics,
 )
-from .tasks import Task, TaskWorker
+from .tasks import Task, TaskState, TaskWorker
 
 
 _SCENE_PROPERTY_NAME = "chemblender_grid"
