@@ -167,9 +167,9 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/core/reader_catalog.py` | `builtin_reader_descriptors()`、`builtin_reader_registry()`、`reader_capability_document()` | 汇总内置 reader，并以 Reader API version、运行时依赖契约、扩展名/basename、import capability、export maturity/loss policy 和 fixture family 生成确定性的机器可读格式能力矩阵；不把当前机器 availability 固化为成功。 |
 | `ChemBlender/core/cache_identity.py` | `source_hash_bytes()`、`parser_cache_key()`、`derivation_cache_key()`、`render_cache_key()` | 用规范 JSON 和 SHA-256 分别标识源文件、解析、派生和渲染缓存。 |
 
-### Reader API alpha 门面
+### Reader API v1 RC 门面
 
-`reader_api` 是面向实验性 0.x reader plugin 的公共、纯 Python（`bpy`-free）门面。manifest 是可安装插件的静态声明，runtime descriptor 是已解析 reader 的只读元数据；两者都不持有 parse callable，插件也不能取得或修改 `QCProject`。模块只通过相对导入解析已安装命名空间，不绑定源码包名或 extension repository namespace。可选依赖 availability 探测只使用 `find_spec()`，不导入该依赖。
+`reader_api` 是冻结为 `1.0-rc1` 的公共、纯 Python（`bpy`-free）门面。manifest 是可安装插件的静态声明，runtime descriptor 是已解析 reader 的只读元数据；两者都不持有 parse callable，插件也不能取得或修改 `QCProject`。模块只通过相对导入解析已安装命名空间，不绑定源码包名或 extension repository namespace。可选依赖 availability 探测只使用 `find_spec()`，不导入该依赖。
 
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
@@ -308,11 +308,11 @@ worker 使用调用者明确提供的 Python 环境。默认 registry 只接受�
 ## 阅读建议
 
 - 想理解数据边界：先从 `model/__init__.py` 找到对应领域模块，再读 `readers.py`、一个具体 reader 和 `sidecar.py`。
-- 想增加文件格式：复用 `ReaderDescriptor`，返回 `ImportBatch`，不要从 parser 直接创建 `bpy` 对象。
+- 想增加文件格式：阅读 `docs/development/import-pipeline.md`，复用 `ReaderDescriptor`，返回 `ImportBatch`，不要从 parser 直接创建 `bpy` 对象。
 - 想增加物理量：先扩展 `PropertyDataset` 语义和 provenance，再添加派生函数与 Blender adapter。
 - 想增加 Blender 显示：从 `dataset_view.py`、`grid_volume.py`、`surface_view.py` 或 `scene_preset_view.py` 选择最近的现有 contract。
 - 想增加重型计算：在 `worker/` 注册固定 operation；不要让 Extension import、安装或同步运行重型后端。
-- 想修改发布流程：阅读 `docs/development/testing-and-ci.md` 和 `.agents/reference/dependencies-and-release.md`，不要只验证 ZIP 是否生成。
+- 想修改发布流程：阅读 `docs/development/release-2.3.md`、`docs/development/testing-and-ci.md` 和 `.agents/reference/dependencies-and-release.md`，不要只验证 ZIP 是否生成。
 
 ## 附录 A：量子化学术语与缩写
 

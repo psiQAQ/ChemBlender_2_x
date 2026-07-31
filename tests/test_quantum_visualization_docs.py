@@ -309,6 +309,87 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertEqual(qcschema["availability_contract"], {"kind": "always"})
         self.assertEqual(qcschema["extensions"], [".json"])
 
+    def test_developer_guides_cover_reader_and_release_boundaries(self):
+        docs_index = self.read_doc("docs/README.md")
+        agent_index = self.read_doc(".agents/README.md")
+        guides = {
+            "import-pipeline.md": (
+                "ReaderDescriptor",
+                "ReaderRuntimeDescriptor",
+                "ReaderPluginManifest",
+                "PublicImportBatch",
+                "ImportDiagnostic",
+                "ImportCommitDecisions",
+                "commit_import_preview()",
+                "generate_format_docs.py --check",
+                "tests.test_reader_conformance_v1",
+            ),
+            "source-revisions.md": (
+                "SourceRecord",
+                "SourceRevision",
+                "parse_identity",
+                "created_entity_ids",
+                "immutable",
+                "derived Structure",
+                "entity_id",
+                "revision",
+            ),
+            "testing-fixtures.md": (
+                "SHA-256",
+                "provenance",
+                "license",
+                ".gitattributes",
+                "hash-locked",
+                "tests/fixtures/legacy-blend/README.md",
+            ),
+            "release-2.3.md": (
+                "release_metadata.py",
+                "generate_format_docs.py --check",
+                "artifact_size_report.py",
+                "verify_release_artifact.py",
+                "exact HEAD",
+                "exact tag",
+                "explicit authorization",
+                "Remote CI: Not Run",
+            ),
+        }
+        for name, terms in guides.items():
+            relative = f"docs/development/{name}"
+            text = self.read_doc(relative)
+            self.assertIn(f"development/{name}", docs_index)
+            self.assertIn(name, agent_index)
+            for term in terms:
+                self.assertIn(term, text, relative)
+
+            path = ROOT / relative
+            for destination in re.findall(r"\[[^]]+\]\(([^)]+)\)", text):
+                destination = destination.strip("<>").split("#", 1)[0]
+                if not destination or destination.startswith(("http://", "https://")):
+                    continue
+                self.assertTrue(
+                    (path.parent / destination).resolve().exists(),
+                    f"{relative}: {destination}",
+                )
+
+        reader_index = self.read_doc("docs/reader-api-v1/README.md")
+        self.assertIn("../development/import-pipeline.md", reader_index)
+        self.assertIn("../../examples/reader-extension/README.md", reader_index)
+        worker = self.read_doc("docs/reader-api-v1/worker-api.md")
+        for term in (
+            "WorkerHandle.wait(timeout=...)",
+            "request_cancel()",
+            "terminate()",
+            "reader.parse@0.1",
+            "worker exited with code",
+        ):
+            self.assertIn(term, worker)
+
+        architecture = self.read_doc(
+            ".agents/reference/code-architecture-guide.md"
+        )
+        self.assertIn("Reader API v1 RC 门面", architecture)
+        self.assertNotIn("Reader API alpha 门面", architecture)
+
     def test_230_wave_4_is_active_and_wave_3_is_completed(self):
         queued = sorted(
             path.name

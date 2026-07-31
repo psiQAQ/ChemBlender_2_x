@@ -12,6 +12,10 @@
 ## Development
 
 - [Changelog](../CHANGELOG.md)
+- [Import Pipeline and reader development](development/import-pipeline.md)
+- [Source revisions, derived entities and View bindings](development/source-revisions.md)
+- [Testing fixture maintenance](development/testing-fixtures.md)
+- [2.3 development and Release gates](development/release-2.3.md)
 - [Branch and release workflow](development/branch-and-release.md)
 - [2.2.0 extension migration](migration/2.2.0-extension.md)
 

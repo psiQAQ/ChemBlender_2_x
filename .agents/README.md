@@ -97,6 +97,10 @@ Historical documents provide provenance, not current status.
 | completed | [quantum-visualization-roadmap-audit.md](completed/quantum-visualization-roadmap-audit.md) | Phase 0-4 evidence, capability and conditional-boundary audit |
 | documentation | [ChemBlender 2.3.0 development entrypoint](../docs/quantum-visualization/2.3.0/README.md) | Native compatibility and platform-foundation execution roadmap |
 | documentation | [quantum visualization roadmap](../docs/quantum-visualization/roadmap.md) | Durable Phase 0–4 themes, gates, and priorities |
+| documentation | [import-pipeline.md](../docs/development/import-pipeline.md) | Built-in, Extension and worker reader contribution flow |
+| documentation | [source-revisions.md](../docs/development/source-revisions.md) | Immutable source revisions, derived entities and View bindings |
+| documentation | [testing-fixtures.md](../docs/development/testing-fixtures.md) | Fixture provenance, license, hash and line-ending policy |
+| documentation | [release-2.3.md](../docs/development/release-2.3.md) | Local 2.3 qualification and explicit remote authorization gates |
 
 Repository-local extension workflow guidance remains under `skills/blender-mcp-skills/` and is locked by root `skills-lock.json`.
 
