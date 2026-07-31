@@ -2,7 +2,9 @@ import importlib.util
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +21,20 @@ def load_harness():
 
 
 class ProductPerformanceHarnessTests(unittest.TestCase):
+    def test_orchestrator_initializes_checkout_imports_before_any_work(self):
+        harness = load_harness()
+
+        class Initialized(Exception):
+            pass
+
+        with patch.object(
+            harness,
+            "_base_harness",
+            side_effect=Initialized("initialized"),
+        ):
+            with self.assertRaisesRegex(Initialized, "initialized"):
+                harness.run_product_qualification(SimpleNamespace())
+
     def test_product_registry_is_exact_and_uses_approved_measurements(self):
         harness = load_harness()
 

@@ -663,6 +663,7 @@ def _markdown_report(report, budget, comparison, *, package, package_sha256):
 
 
 def run_product_qualification(args):
+    _base_harness()
     checkout_root = args.checkout_root.resolve(strict=True)
     source_commit, source_dirty = _git_source_state(checkout_root)
     if source_dirty:
