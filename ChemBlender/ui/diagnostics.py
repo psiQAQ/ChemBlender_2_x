@@ -1,4 +1,5 @@
 import json
+import reprlib
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -41,6 +42,21 @@ _PROJECT_LINK_KEYS = (
     SIDECAR_LOCATOR_KEY,
     MANIFEST_HASH_KEY,
 )
+DIAGNOSTIC_PREVIEW_CHAR_LIMIT = 256
+_TRUNCATION_SUFFIX = " [truncated]"
+_PREVIEW_REPR = reprlib.Repr()
+_PREVIEW_REPR.maxlevel = 3
+_PREVIEW_REPR.maxdict = 8
+_PREVIEW_REPR.maxlist = 8
+_PREVIEW_REPR.maxtuple = 8
+_PREVIEW_REPR.maxstring = 96
+_PREVIEW_REPR.maxother = 96
+_FATAL_EXCEPTIONS = (
+    KeyboardInterrupt,
+    SystemExit,
+    GeneratorExit,
+    MemoryError,
+)
 _REVISION_ACTION_ITEMS = (
     (
         "update_selected_views",
@@ -63,13 +79,13 @@ _RECOVERY_ACTIONS = {
     ProjectLinkStatus.MISSING: (
         "relink",
         "verify",
-        "open_read_only",
+        "inspect_existing",
         "detach",
     ),
     ProjectLinkStatus.MISMATCH: (
         "relink",
         "verify",
-        "open_read_only",
+        "inspect_existing",
         "detach",
     ),
     ProjectLinkStatus.INCOMPATIBLE: (
@@ -92,8 +108,6 @@ _RECOVERY_ACTIONS = {
 class RevisionViewPrompt:
     current_revision_id: UUID
     new_revision_id: UUID
-    entity_id_map: tuple[tuple[UUID, UUID], ...] = ()
-    selected_view_names: tuple[str, ...] = ()
     action: str = "keep_current"
 
     def __post_init__(self):
@@ -106,25 +120,6 @@ class RevisionViewPrompt:
             raise ValueError("current and new revision IDs must differ")
         if self.action not in _REVISION_ACTIONS:
             raise ValueError("unknown revision view action")
-        if type(self.entity_id_map) is not tuple or any(
-            type(pair) is not tuple
-            or len(pair) != 2
-            or any(type(identifier) is not UUID for identifier in pair)
-            for pair in self.entity_id_map
-        ):
-            raise TypeError("entity_id_map must contain UUID pairs")
-        if (
-            type(self.selected_view_names) is not tuple
-            or any(
-                type(name) is not str or not name
-                for name in self.selected_view_names
-            )
-            or len(self.selected_view_names)
-            != len(set(self.selected_view_names))
-        ):
-            raise ValueError(
-                "selected_view_names must contain unique non-empty names"
-            )
 
 
 class ProjectLinkDetachRecoveryError(RuntimeError):
@@ -162,14 +157,23 @@ def _display_value(value):
     if value is None:
         return "—"
     if type(value) in (dict, list):
-        return json.dumps(
-            value,
-            ensure_ascii=False,
-            allow_nan=False,
-            sort_keys=True,
-            separators=(",", ":"),
+        text = _PREVIEW_REPR.repr(value)
+        truncated = (
+            "..." in text
+            or len(text) > DIAGNOSTIC_PREVIEW_CHAR_LIMIT
         )
-    return str(value)
+    else:
+        text = str(value)
+        truncated = len(text) > DIAGNOSTIC_PREVIEW_CHAR_LIMIT
+    if truncated:
+        text = (
+            text[
+                : DIAGNOSTIC_PREVIEW_CHAR_LIMIT
+                - len(_TRUNCATION_SUFFIX)
+            ]
+            + _TRUNCATION_SUFFIX
+        )
+    return text
 
 
 def diagnostic_detail_rows(item):
@@ -269,10 +273,46 @@ def detach_project_links_for_scenes(scenes):
                     )
                     for key in _PROJECT_LINK_KEYS
                 )
-            except BaseException:
+            except BaseException as rollback_error:
+                rollback_errors.append(
+                    (scene_index, "<verification>", rollback_error)
+                )
                 restored = False
             if not restored:
                 residual.append(scene_index)
+        fatal_rollback = next(
+            (
+                rollback_error
+                for _scene_index, _key, rollback_error in rollback_errors
+                if isinstance(rollback_error, _FATAL_EXCEPTIONS)
+            ),
+            None,
+        )
+        if isinstance(detach_error, _FATAL_EXCEPTIONS):
+            if rollback_errors:
+                detach_error.add_note(
+                    "project link rollback failures: "
+                    + "; ".join(
+                        f"scene {scene_index} {key}: {error}"
+                        for scene_index, key, error in rollback_errors
+                    )
+                )
+            if residual:
+                detach_error.add_note(
+                    "project link rollback residual scenes: "
+                    + ", ".join(str(value) for value in residual)
+                )
+            raise
+        if fatal_rollback is not None:
+            fatal_rollback.add_note(
+                f"project link detach failed first: {detach_error}"
+            )
+            if residual:
+                fatal_rollback.add_note(
+                    "project link rollback residual scenes: "
+                    + ", ".join(str(value) for value in residual)
+                )
+            raise fatal_rollback from detach_error
         if rollback_errors or residual:
             raise ProjectLinkDetachRecoveryError(
                 detach_error,

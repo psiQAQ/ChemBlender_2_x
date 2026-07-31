@@ -118,6 +118,51 @@ def _diagnostics_report(session):
     return get_quick_import_state(session).diagnostics_report
 
 
+def _current_diagnostic(state):
+    document = state.diagnostics_report
+    diagnostics = () if document is None else document["diagnostics"]
+    total = len(diagnostics)
+    if not total:
+        state.diagnostic_index = 0
+        return 0, 0, None
+    index = max(
+        0,
+        min(int(getattr(state, "diagnostic_index", 0)), total - 1),
+    )
+    state.diagnostic_index = index
+    return index + 1, total, diagnostics[index]
+
+
+class CHEMBLENDER_OT_diagnostic_page(bpy.types.Operator):
+    bl_idname = "chemblender.diagnostic_page"
+    bl_label = "Navigate Diagnostics"
+
+    direction: EnumProperty(
+        items=(
+            ("previous", "Previous", ""),
+            ("next", "Next", ""),
+        )
+    )
+
+    def execute(self, context):
+        try:
+            session = get_scene_session(context.scene)
+            state = get_quick_import_state(session)
+            _index, total, _item = _current_diagnostic(state)
+            if total:
+                delta = -1 if self.direction == "previous" else 1
+                state.diagnostic_index = max(
+                    0,
+                    min(state.diagnostic_index + delta, total - 1),
+                )
+        except BaseException as error:
+            if isinstance(error, _FATAL_EXCEPTIONS):
+                raise
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
 class CHEMBLENDER_OT_copy_diagnostics(bpy.types.Operator):
     bl_idname = "chemblender.copy_diagnostics"
     bl_label = "Copy Diagnostics"
@@ -208,49 +253,208 @@ class CHEMBLENDER_OT_export_diagnostics(bpy.types.Operator):
         return {"FINISHED"}
 
 
-def _revision_view_targets(context, prompt, *, selected_only):
-    entity_map = dict(prompt.entity_id_map)
-    if not entity_map:
-        return ()
-    presets = builtin_scene_presets()
-    session = get_scene_session(context.scene)
-    targets = []
-    for obj in context.scene.objects:
-        preset_id = obj.get("cb_scene_preset_id")
-        if preset_id is None:
-            continue
-        if selected_only and not obj.select_get():
-            continue
-        if preset_id not in presets:
-            raise ValueError("current View references an unknown preset")
-        try:
-            encoded_bindings = json.loads(
-                obj["cb_scene_bindings_json"]
+def _logical_view_metadata(obj):
+    try:
+        preset_id = obj["cb_scene_preset_id"]
+        preset_version = obj["cb_scene_preset_version"]
+        view_kind = obj["cb_scene_view_kind"]
+        render_identity = obj["cb_scene_render_identity"]
+        encoded_bindings = json.loads(obj["cb_scene_bindings_json"])
+        settings = json.loads(obj["cb_scene_settings_json"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError(
+            "current View has invalid revision metadata"
+        ) from error
+    if (
+        any(
+            type(value) is not str or not value
+            for value in (
+                preset_id,
+                preset_version,
+                view_kind,
+                render_identity,
             )
-            settings = json.loads(obj["cb_scene_settings_json"])
-            bindings = {
-                name: entity_map.get(
-                    UUID(value["entity_id"]),
-                    UUID(value["entity_id"]),
-                )
-                for name, value in encoded_bindings.items()
-            }
-        except (KeyError, TypeError, ValueError) as error:
+        )
+        or type(encoded_bindings) is not dict
+        or type(settings) is not dict
+    ):
+        raise ValueError("current View has invalid revision metadata")
+    return (
+        render_identity,
+        preset_id,
+        preset_version,
+        view_kind,
+        encoded_bindings,
+        settings,
+    )
+
+
+def _logical_view_groups(objects):
+    grouped = {}
+    order = []
+    for obj in objects:
+        if obj.get("cb_scene_preset_id") is None:
+            continue
+        metadata = _logical_view_metadata(obj)
+        render_identity = metadata[0]
+        if render_identity not in grouped:
+            grouped[render_identity] = [metadata[1:], [obj]]
+            order.append(render_identity)
+            continue
+        expected, components = grouped[render_identity]
+        if expected != metadata[1:]:
+            raise ValueError(
+                "logical View components have conflicting metadata"
+            )
+        components.append(obj)
+    return tuple(
+        (tuple(grouped[identity][1]), grouped[identity][0])
+        for identity in order
+    )
+
+
+def _mapped_revision_bindings(
+    project,
+    preset,
+    encoded_bindings,
+    current_revision,
+    new_revision,
+):
+    if set(encoded_bindings) != {
+        spec.name for spec in preset.bindings
+    }:
+        raise ValueError("current View has invalid revision metadata")
+    current = {}
+    mapped = {}
+    changed = False
+    for spec in preset.bindings:
+        value = encoded_bindings[spec.name]
+        if (
+            type(value) is not dict
+            or set(value) != {"entity_id", "revision"}
+            or type(value["entity_id"]) is not str
+            or type(value["revision"]) is not str
+            or not value["revision"]
+        ):
+            raise ValueError("current View has invalid revision metadata")
+        try:
+            current_id = UUID(value["entity_id"])
+        except ValueError as error:
             raise ValueError(
                 "current View has invalid revision metadata"
             ) from error
-        if all(
-            UUID(value["entity_id"]) == bindings[name]
-            for name, value in encoded_bindings.items()
+        registry = (
+            project.structures
+            if spec.entity_kind == "structure"
+            else project.datasets
+        )
+        current_entity = registry.get(current_id)
+        if (
+            current_entity is None
+            or current_entity.revision != value["revision"]
+        ):
+            raise ValueError("current View binding is stale")
+        current[spec.name] = current_id
+        if current_id not in current_revision.created_entity_ids:
+            mapped[spec.name] = current_id
+            continue
+        candidates = tuple(
+            candidate
+            for candidate_id in new_revision.created_entity_ids
+            if (
+                (candidate := registry.get(candidate_id)) is not None
+                and type(candidate) is type(current_entity)
+                and getattr(candidate, "semantic_role", None)
+                == getattr(current_entity, "semantic_role", None)
+            )
+        )
+        if len(candidates) != 1:
+            qualifier = "no" if not candidates else "ambiguous"
+            raise ValueError(
+                f"{qualifier} new revision entity matches "
+                f"View binding {spec.name!r}"
+            )
+        mapped[spec.name] = candidates[0].id
+        changed = True
+    return current, mapped if changed else None
+
+
+def _revision_view_targets(context, prompt, *, selected_only):
+    presets = builtin_scene_presets()
+    session = get_scene_session(context.scene)
+    project = session.project
+    try:
+        current_revision = project.source_revisions[
+            prompt.current_revision_id
+        ]
+        new_revision = project.source_revisions[prompt.new_revision_id]
+    except KeyError as error:
+        raise ValueError("revision prompt is stale") from error
+    targets = []
+    for components, metadata in _logical_view_groups(
+        context.scene.objects
+    ):
+        if selected_only and not any(
+            component.select_get() for component in components
         ):
             continue
-        plan = plan_scene_preset(
-            presets[preset_id],
-            session.project,
-            bindings,
+        (
+            preset_id,
+            preset_version,
+            view_kind,
+            encoded_bindings,
             settings,
+        ) = metadata
+        preset = presets.get(preset_id)
+        if preset is None:
+            raise ValueError("current View references an unknown preset")
+        if (
+            preset.version != preset_version
+            or preset.view_kind != view_kind
+        ):
+            raise ValueError("current View references a stale preset")
+        current_bindings, bindings = _mapped_revision_bindings(
+            project,
+            preset,
+            encoded_bindings,
+            current_revision,
+            new_revision,
         )
-        targets.append((obj, plan))
+        if bindings is None:
+            continue
+        try:
+            supplied_settings = {
+                name: settings[name]
+                for name, _default in preset.default_settings
+            }
+        except KeyError as error:
+            raise ValueError(
+                "current View has invalid revision metadata"
+            ) from error
+        current_plan = plan_scene_preset(
+            preset,
+            project,
+            current_bindings,
+            supplied_settings,
+        )
+        normalized_settings = json.loads(
+            json.dumps(
+                dict(current_plan.settings),
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
+        if normalized_settings != settings:
+            raise ValueError(
+                "current View has invalid revision metadata"
+            )
+        plan = plan_scene_preset(
+            preset,
+            project,
+            bindings,
+            supplied_settings,
+        )
+        targets.append((components, plan))
     return tuple(targets)
 
 
@@ -306,7 +510,7 @@ class CHEMBLENDER_OT_revision_view_action(bpy.types.Operator):
                 raise ValueError("no matching current Views are selected")
             cache_root = Path(session.temporary_root) / "view-cache"
             cache_root.mkdir(exist_ok=True)
-            for old_view, plan in targets:
+            for old_views, plan in targets:
                 created.extend(
                     apply_scene_preset(
                         plan,
@@ -316,13 +520,14 @@ class CHEMBLENDER_OT_revision_view_action(bpy.types.Operator):
                     )
                 )
                 if self.action == "update_selected_views":
-                    previous = (
-                        old_view.hide_get(),
-                        old_view.hide_render,
-                    )
-                    hidden.append((old_view, previous))
-                    old_view.hide_set(True)
-                    old_view.hide_render = True
+                    for old_view in old_views:
+                        previous = (
+                            old_view.hide_get(),
+                            old_view.hide_render,
+                        )
+                        hidden.append((old_view, previous))
+                        old_view.hide_set(True)
+                        old_view.hide_render = True
             _remove_revision_prompt(state, prompt)
             advance_browser_revision(session)
         except BaseException as error:
@@ -357,7 +562,7 @@ class CHEMBLENDER_OT_project_link_recovery(bpy.types.Operator):
         items=(
             ("relink", "Relink", ""),
             ("verify", "Verify", ""),
-            ("open_read_only", "Open Read-only", ""),
+            ("inspect_existing", "Inspect Existing Objects", ""),
             ("open_diagnostics", "Open Diagnostics", ""),
             ("detach", "Detach", ""),
         )
@@ -411,7 +616,7 @@ class CHEMBLENDER_OT_project_link_recovery(bpy.types.Operator):
                     raise ValueError(result.message or result.status.value)
                 state.project_link_inspection_only = False
                 state.show_project_link_diagnostics = False
-            elif self.action == "open_read_only":
+            elif self.action == "inspect_existing":
                 state.project_link_inspection_only = True
             elif self.action == "open_diagnostics":
                 state.show_project_link_diagnostics = True
@@ -419,6 +624,9 @@ class CHEMBLENDER_OT_project_link_recovery(bpy.types.Operator):
                 _diagnostics.detach_project_links_for_scenes(scenes)
                 session.sidecar_path = None
                 session.link_status = "unlinked"
+                for reason in ("project_link", "view_cache"):
+                    if reason in session.dirty_reasons:
+                        session.clear_dirty(reason)
                 state.project_link_inspection_only = False
                 state.show_project_link_diagnostics = False
             else:
@@ -938,9 +1146,9 @@ def _draw_import_diagnostics(layout, session):
     if document is None:
         return
     box = layout.box()
-    diagnostics = document["diagnostics"]
+    index, total, item = _current_diagnostic(state)
     box.label(
-        text=f"Import Diagnostics ({len(diagnostics)})",
+        text=f"Import Diagnostics ({total})",
         icon="INFO",
     )
     actions = box.row(align=True)
@@ -956,8 +1164,21 @@ def _draw_import_diagnostics(layout, session):
         icon="EXPORT",
     )
     export_action.format_name = "markdown"
-    if diagnostics:
-        item = diagnostics[0]
+    if item is not None:
+        navigation = box.row(align=True)
+        previous = navigation.operator(
+            CHEMBLENDER_OT_diagnostic_page.bl_idname,
+            text="Previous",
+            icon="TRIA_LEFT",
+        )
+        previous.direction = "previous"
+        navigation.label(text=f"{index} / {total}")
+        following = navigation.operator(
+            CHEMBLENDER_OT_diagnostic_page.bl_idname,
+            text="Next",
+            icon="TRIA_RIGHT",
+        )
+        following.direction = "next"
         _diagnostics.draw_quality_badge(
             box,
             item["quality_status"],
@@ -1019,16 +1240,16 @@ def _draw_project_link_recovery(layout, context, session):
     if state.project_link_inspection_only:
         box.label(
             text=(
-                "Candidate not adopted or written; existing Blender "
-                "objects are preserved"
+                "Inspection mode does not lock Blender editing or saving; "
+                "no candidate is adopted or written"
             ),
-            icon="LOCKED",
+            icon="INFO",
         )
     row = box.row(align=True)
     labels = {
         "relink": "Relink",
         "verify": "Verify",
-        "open_read_only": "Open Read-only",
+        "inspect_existing": "Inspect Existing",
         "open_diagnostics": "Diagnostics",
         "detach": "Detach",
     }

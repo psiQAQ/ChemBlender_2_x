@@ -15,6 +15,7 @@ from ChemBlender.project_link import (
     ProjectLinkStatus,
 )
 from ChemBlender.ui.diagnostics import (
+    DIAGNOSTIC_PREVIEW_CHAR_LIMIT,
     RevisionViewPrompt,
     canonical_report_text,
     detach_project_links_for_scenes,
@@ -125,6 +126,67 @@ class QualityUIContractTests(unittest.TestCase):
         self.assertEqual(rows["Original"], "1")
         self.assertEqual(rows["Normalized"], "1.0")
 
+    def test_diagnostic_preview_is_bounded_but_canonical_export_is_full(self):
+        class CountingValue:
+            visits = 0
+
+            def __init__(self, value):
+                self.value = value
+
+            def __repr__(self):
+                type(self).visits += 1
+                return f"CountingValue({self.value})"
+
+        document = _report_document()
+        full_value = {"values": list(range(500))}
+        item = {
+            "id": "00000000-0000-0000-0000-000000000010",
+            "severity": "warning",
+            "quality_status": "ambiguous",
+            "source_revision_id": "00000000-0000-0000-0000-000000000011",
+            "source_id": "00000000-0000-0000-0000-000000000012",
+            "record_key": None,
+            "entity_id": None,
+            "field_path": "metadata",
+            "code": "metadata.large",
+            "message": "m" * 1000,
+            "original_value": full_value,
+            "normalized_value": full_value,
+            "recovery_action": "r" * 1000,
+            "scientific_consequence": "c" * 1000,
+            "suggested_action": "s" * 1000,
+        }
+        document["diagnostics"] = [item]
+        document["summary"]["overall"]["ambiguous"] = 1
+        document["summary"]["by_source"] = [
+            {
+                "source_id": item["source_id"],
+                "counts": dict(_ZERO_COUNTS, ambiguous=1),
+            }
+        ]
+
+        rows = dict(diagnostic_detail_rows(item))
+
+        self.assertTrue(
+            all(
+                len(value) <= DIAGNOSTIC_PREVIEW_CHAR_LIMIT
+                for value in rows.values()
+            )
+        )
+        self.assertTrue(rows["Original"].endswith(" [truncated]"))
+        exported = canonical_report_text(document, "json")
+        self.assertIn('"values":[0,1,2,3,4,5', exported)
+        self.assertIn(str(499), exported)
+
+        counted = [CountingValue(index) for index in range(10_000)]
+        bounded = dict(
+            diagnostic_detail_rows(
+                dict(item, original_value=counted)
+            )
+        )["Original"]
+        self.assertLessEqual(len(bounded), DIAGNOSTIC_PREVIEW_CHAR_LIMIT)
+        self.assertLess(CountingValue.visits, 100)
+
     def test_copy_export_text_uses_the_canonical_report_contract(self):
         document = _report_document()
 
@@ -212,11 +274,11 @@ class QualityUIContractTests(unittest.TestCase):
     def test_recovery_actions_are_status_specific_and_safe(self):
         self.assertEqual(
             project_recovery_actions(ProjectLinkStatus.MISSING),
-            ("relink", "verify", "open_read_only", "detach"),
+            ("relink", "verify", "inspect_existing", "detach"),
         )
         self.assertEqual(
             project_recovery_actions(ProjectLinkStatus.MISMATCH),
-            ("relink", "verify", "open_read_only", "detach"),
+            ("relink", "verify", "inspect_existing", "detach"),
         )
         for status in (
             ProjectLinkStatus.INCOMPATIBLE,
@@ -284,6 +346,79 @@ class QualityUIContractTests(unittest.TestCase):
             detach_project_links_for_scenes((first, second))
 
         self.assertEqual((dict(first), dict(second)), before)
+
+    def test_fatal_detach_remains_primary_when_rollback_is_incomplete(self):
+        fatal = MemoryError("detach allocation failed")
+
+        class RollbackFailScene(dict):
+            deleted = False
+
+            def __delitem__(self, key):
+                super().__delitem__(key)
+                self.deleted = True
+
+            def __setitem__(self, key, value):
+                if self.deleted and key == PROJECT_ID_KEY:
+                    raise OSError("rollback write failed")
+                super().__setitem__(key, value)
+
+        class FatalScene(dict):
+            def __delitem__(self, key):
+                raise fatal
+
+        values = {
+            PROJECT_ID_KEY: "project",
+            PROJECT_SCHEMA_KEY: "1.0",
+            SIDECAR_LOCATOR_KEY: "example.cbq",
+            MANIFEST_HASH_KEY: "a" * 64,
+        }
+
+        with self.assertRaises(MemoryError) as captured:
+            detach_project_links_for_scenes(
+                (RollbackFailScene(values), FatalScene(values))
+            )
+
+        self.assertIs(captured.exception, fatal)
+        self.assertTrue(
+            any("rollback" in note for note in captured.exception.__notes__)
+        )
+
+    def test_fatal_rollback_is_not_wrapped_by_ordinary_detach_error(self):
+        primary = OSError("detach failed")
+        fatal = MemoryError("rollback allocation failed")
+
+        class FatalRollbackScene(dict):
+            deleted = False
+
+            def __delitem__(self, key):
+                super().__delitem__(key)
+                self.deleted = True
+
+            def __setitem__(self, key, value):
+                if self.deleted:
+                    raise fatal
+                super().__setitem__(key, value)
+
+        class PrimaryFailScene(dict):
+            def __delitem__(self, key):
+                raise primary
+
+        values = {
+            PROJECT_ID_KEY: "project",
+            PROJECT_SCHEMA_KEY: "1.0",
+            SIDECAR_LOCATOR_KEY: "example.cbq",
+            MANIFEST_HASH_KEY: "a" * 64,
+        }
+
+        with self.assertRaises(MemoryError) as captured:
+            detach_project_links_for_scenes(
+                (FatalRollbackScene(values), PrimaryFailScene(values))
+            )
+
+        self.assertIs(captured.exception, fatal)
+        self.assertTrue(
+            any("detach failed" in note for note in captured.exception.__notes__)
+        )
 
 
 if __name__ == "__main__":

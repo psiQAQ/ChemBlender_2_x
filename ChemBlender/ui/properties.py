@@ -351,6 +351,7 @@ class QuickImportUIState:
     conformer_grouping_suggestions: tuple | None = None
     revision_prompts: tuple = ()
     diagnostics_report: dict | None = None
+    diagnostic_index: int = 0
     project_link_inspection_only: bool = False
     show_project_link_diagnostics: bool = False
     browser_revision: int = 0
@@ -416,6 +417,7 @@ def store_quick_import_preview(
     state.grouping_suggestions = ()
     state.conformer_grouping_suggestions = conformer_grouping_suggestions
     state.diagnostics_report = report
+    state.diagnostic_index = 0
 
 
 def store_quick_import_job(session, staging_session, job):

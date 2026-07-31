@@ -1716,29 +1716,25 @@ def _committed_revision_prompts(commit_result, rows, conflicts):
         conflict = conflicts_by_id.get(row.conflict_id)
         if conflict is None:
             raise RuntimeError("new revision conflict is no longer available")
-        new_entity_ids = commit_result.project.source_revisions[
-            new_revision_id
-        ].created_entity_ids
         for candidate in conflict.candidates:
-            entity_id_map = (
-                tuple(
-                    zip(
-                        candidate.created_entity_ids,
-                        new_entity_ids,
-                        strict=True,
-                    )
-                )
-                if len(candidate.created_entity_ids) == len(new_entity_ids)
-                else ()
-            )
             prompts.append(
                 RevisionViewPrompt(
                     current_revision_id=candidate.revision_id,
                     new_revision_id=new_revision_id,
-                    entity_id_map=entity_id_map,
                 )
             )
     return tuple(prompts)
+
+
+def _merge_revision_prompts(existing, incoming):
+    merged = []
+    seen = set()
+    for prompt in (*existing, *incoming):
+        key = (prompt.current_revision_id, prompt.new_revision_id)
+        if key not in seen:
+            merged.append(prompt)
+            seen.add(key)
+    return tuple(merged)
 
 
 def _finish_committed_import(
@@ -1752,10 +1748,13 @@ def _finish_committed_import(
     discard_staging=True,
 ):
     state.browser_revision += 1
-    state.revision_prompts = _committed_revision_prompts(
-        commit_result,
-        rows,
-        state.conflicts,
+    state.revision_prompts = _merge_revision_prompts(
+        state.revision_prompts,
+        _committed_revision_prompts(
+            commit_result,
+            rows,
+            state.conflicts,
+        ),
     )
     created = []
     cleanup_pending = bool(commit_result.cleanup_warnings)

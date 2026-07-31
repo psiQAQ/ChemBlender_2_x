@@ -1697,13 +1697,55 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertEqual(plans, ())
         planner.assert_not_called()
 
-    def test_new_revision_prompt_records_exact_revision_and_entity_ids(self):
+    def test_normal_import_preserves_unresolved_revision_prompts(self):
+        existing = self.module.RevisionViewPrompt(
+            current_revision_id=uuid4(),
+            new_revision_id=uuid4(),
+        )
+        registry, state = self.stage("tests/fixtures/xyz/water.xyz")
+        state.revision_prompts = (existing,)
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+
+        self.module.commit_project_import(
+            self.session,
+            state,
+            rows,
+            collection=object(),
+            apply_view=lambda *_args, **_kwargs: (),
+        )
+
+        self.assertEqual(state.revision_prompts, (existing,))
+
+    def test_revision_prompt_merge_is_stable_and_pair_deduplicated(self):
+        first = self.module.RevisionViewPrompt(
+            current_revision_id=uuid4(),
+            new_revision_id=uuid4(),
+        )
+        second = self.module.RevisionViewPrompt(
+            current_revision_id=uuid4(),
+            new_revision_id=uuid4(),
+        )
+        duplicate = self.module.RevisionViewPrompt(
+            current_revision_id=first.current_revision_id,
+            new_revision_id=first.new_revision_id,
+        )
+
+        merged = self.module._merge_revision_prompts(
+            (first, second),
+            (duplicate, first),
+        )
+
+        self.assertEqual(merged, (first, second))
+
+    def test_new_revision_prompt_records_exact_revision_pair(self):
         source_id = uuid4()
         conflict_id = uuid4()
         current_revision_id = uuid4()
         new_revision_id = uuid4()
-        current_entity_ids = (uuid4(), uuid4())
-        new_entity_ids = (uuid4(), uuid4())
         row = SimpleNamespace(
             source_id=str(source_id),
             conflict_id=str(conflict_id),
@@ -1711,7 +1753,6 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         )
         candidate = SimpleNamespace(
             revision_id=current_revision_id,
-            created_entity_ids=current_entity_ids,
         )
         conflict = SimpleNamespace(
             id=conflict_id,
@@ -1722,9 +1763,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             committed_source_revision_ids=(new_revision_id,),
             project=SimpleNamespace(
                 source_revisions={
-                    new_revision_id: SimpleNamespace(
-                        created_entity_ids=new_entity_ids,
-                    )
+                    new_revision_id: SimpleNamespace()
                 },
             ),
         )
@@ -1741,10 +1780,6 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             current_revision_id,
         )
         self.assertEqual(prompts[0].new_revision_id, new_revision_id)
-        self.assertEqual(
-            prompts[0].entity_id_map,
-            tuple(zip(current_entity_ids, new_entity_ids, strict=True)),
-        )
         self.assertEqual(prompts[0].action, "keep_current")
 
     def test_sequential_xyz_cube_commits_rotate_owned_sidecar_generation(self):

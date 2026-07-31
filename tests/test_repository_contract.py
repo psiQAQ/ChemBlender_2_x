@@ -272,6 +272,10 @@ class RepositoryContractTests(unittest.TestCase):
             "Chem_Nodes.blend",
             "Chem_Nodes_En.blend",
             "EmbedMolecule",
+            "assert_signed_surface_revision_actions",
+            '"inspect_existing"',
+            "CHEMBLENDER_OT_diagnostic_page",
+            "session_ui._save_pre_handler(None)",
             "--keep-enabled",
         ):
             self.assertIn(expected, smoke)

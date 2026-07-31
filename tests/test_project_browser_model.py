@@ -1034,12 +1034,12 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         )
         detach.assert_not_called()
 
-    def test_open_read_only_is_inspection_only_without_candidate_adoption(self):
+    def test_inspect_existing_is_explicitly_not_read_only(self):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"
         )
         operation = panel.CHEMBLENDER_OT_project_link_recovery()
-        operation.action = "open_read_only"
+        operation.action = "inspect_existing"
         session = SimpleNamespace(link_status="missing")
         state = SimpleNamespace(
             project_link_inspection_only=False,
@@ -1069,6 +1069,112 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         relink.assert_not_called()
         verify.assert_not_called()
         detach.assert_not_called()
+
+    def test_detach_clears_only_link_retry_reasons_and_preserves_project(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class Session:
+            link_status = "missing"
+            sidecar_path = Path("example.cbq")
+
+            def __init__(self):
+                self.project = object()
+                self._dirty_reasons = {
+                    "project_link",
+                    "view_cache",
+                    "scientific_edit",
+                }
+
+            @property
+            def dirty_reasons(self):
+                return frozenset(self._dirty_reasons)
+
+            def clear_dirty(self, reason):
+                self._dirty_reasons.remove(reason)
+
+        objects = object()
+        scene = {
+            "cb_project_uuid": "project",
+            "cb_project_schema": "1.0",
+            "cb_project_sidecar": "example.cbq",
+            "cb_project_manifest_hash": "a" * 64,
+            "objects": objects,
+        }
+        session = Session()
+        project = session.project
+        state = SimpleNamespace(
+            project_link_inspection_only=True,
+            show_project_link_diagnostics=True,
+        )
+        context = SimpleNamespace(scene=scene)
+        self.fake_bpy.data = SimpleNamespace(
+            scenes=(scene,),
+            filepath="example.blend",
+        )
+        operation = panel.CHEMBLENDER_OT_project_link_recovery()
+        operation.action = "detach"
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+        ):
+            result = operation.execute(context)
+
+        self.assertEqual(result, {"FINISHED"})
+        self.assertEqual(session.dirty_reasons, frozenset({"scientific_edit"}))
+        self.assertIs(session.project, project)
+        self.assertIs(scene["objects"], objects)
+        self.assertIsNone(session.sidecar_path)
+        self.assertEqual(session.link_status, "unlinked")
+
+    def test_diagnostic_navigation_reaches_second_entry_and_clamps(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        diagnostics = ({"code": "first"}, {"code": "second"})
+        state = SimpleNamespace(
+            diagnostics_report={"diagnostics": list(diagnostics)},
+            diagnostic_index=0,
+        )
+        context = SimpleNamespace(scene=object())
+        session = object()
+        action = panel.CHEMBLENDER_OT_diagnostic_page()
+        action.direction = "next"
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+        ):
+            self.assertEqual(action.execute(context), {"FINISHED"})
+            self.assertEqual(action.execute(context), {"FINISHED"})
+
+        self.assertEqual(state.diagnostic_index, 1)
+        self.assertEqual(
+            panel._current_diagnostic(state),
+            (2, 2, diagnostics[1]),
+        )
+
+        action.direction = "previous"
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+        ):
+            self.assertEqual(action.execute(context), {"FINISHED"})
+        self.assertEqual(state.diagnostic_index, 0)
 
     def test_copy_and_export_diagnostics_use_the_canonical_report(self):
         panel = importlib.import_module(
@@ -1155,7 +1261,6 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         prompt = panel._diagnostics.RevisionViewPrompt(
             current_revision_id=current_revision_id,
             new_revision_id=new_revision_id,
-            entity_id_map=((uuid4(), uuid4()),),
         )
         state = SimpleNamespace(revision_prompts=(prompt,))
         session = SimpleNamespace(
@@ -1199,7 +1304,6 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         prompt = panel._diagnostics.RevisionViewPrompt(
             current_revision_id=current_revision_id,
             new_revision_id=new_revision_id,
-            entity_id_map=((uuid4(), uuid4()),),
         )
         state.revision_prompts = (prompt,)
         update = panel.CHEMBLENDER_OT_revision_view_action()
@@ -1216,7 +1320,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(
                 panel,
                 "_revision_view_targets",
-                return_value=((current, object()),),
+                return_value=(((current,), object()),),
             ),
             patch.object(
                 panel,
@@ -1232,6 +1336,182 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.assertEqual(state.revision_prompts, ())
         advance.assert_called_once_with(session)
 
+    def test_multi_object_revision_view_is_planned_once_as_one_group(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        current_entity_id = uuid4()
+        new_entity_id = uuid4()
+        current_revision_id = uuid4()
+        new_revision_id = uuid4()
+        prompt = panel._diagnostics.RevisionViewPrompt(
+            current_revision_id=current_revision_id,
+            new_revision_id=new_revision_id,
+        )
+        bindings = json.dumps(
+            {
+                "grid": {
+                    "entity_id": str(current_entity_id),
+                    "revision": "grid-old",
+                }
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        normalized_settings = {
+            "dataset_index": 0,
+            "isovalue": 0.05,
+            "negative_isovalue": -0.05,
+            "negative_color": [0.95, 0.20, 0.15, 1.0],
+            "opacity": 1.0,
+            "positive_color": [0.15, 0.35, 0.95, 1.0],
+        }
+        settings = json.dumps(
+            normalized_settings,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
+        class View(dict):
+            def __init__(self, name, selected):
+                super().__init__(
+                    cb_scene_preset_id="signed_isosurface",
+                    cb_scene_preset_version="1",
+                    cb_scene_view_kind="signed_isosurface",
+                    cb_scene_render_identity="logical-view",
+                    cb_scene_bindings_json=bindings,
+                    cb_scene_settings_json=settings,
+                )
+                self.name = name
+                self._selected = selected
+
+            def select_get(self):
+                return self._selected
+
+        positive = View("positive", False)
+        negative = View("negative", True)
+        plan = object()
+        current_plan = SimpleNamespace(
+            settings=tuple(
+                (name, value)
+                for name, value in normalized_settings.items()
+            )
+        )
+        current_entity = SimpleNamespace(
+            id=current_entity_id,
+            revision="grid-old",
+            semantic_role="electron_density",
+        )
+        new_entity = SimpleNamespace(
+            id=new_entity_id,
+            revision="grid-new",
+            semantic_role="electron_density",
+        )
+        project = SimpleNamespace(
+            source_revisions={
+                current_revision_id: SimpleNamespace(
+                    created_entity_ids=(current_entity_id,),
+                ),
+                new_revision_id: SimpleNamespace(
+                    created_entity_ids=(new_entity_id,),
+                ),
+            },
+            structures={},
+            datasets={
+                current_entity_id: current_entity,
+                new_entity_id: new_entity,
+            },
+        )
+        session = SimpleNamespace(project=project)
+        context = SimpleNamespace(
+            scene=SimpleNamespace(objects=(positive, negative)),
+        )
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "plan_scene_preset",
+                side_effect=(current_plan, plan),
+            ) as planner,
+        ):
+            targets = panel._revision_view_targets(
+                context,
+                prompt,
+                selected_only=True,
+            )
+
+        self.assertEqual(targets, (((positive, negative), plan),))
+        self.assertEqual(planner.call_count, 2)
+
+    def test_logical_view_metadata_conflict_fails_closed(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        current_entity_id = uuid4()
+        current_revision_id = uuid4()
+        new_revision_id = uuid4()
+        prompt = panel._diagnostics.RevisionViewPrompt(
+            current_revision_id=current_revision_id,
+            new_revision_id=new_revision_id,
+        )
+        bindings = json.dumps(
+            {
+                "grid": {
+                    "entity_id": str(current_entity_id),
+                    "revision": "grid-old",
+                }
+            }
+        )
+
+        class View(dict):
+            def __init__(self, settings):
+                super().__init__(
+                    cb_scene_preset_id="signed_isosurface",
+                    cb_scene_preset_version="1",
+                    cb_scene_view_kind="signed_isosurface",
+                    cb_scene_render_identity="logical-view",
+                    cb_scene_bindings_json=bindings,
+                    cb_scene_settings_json=json.dumps(settings),
+                )
+
+            def select_get(self):
+                return True
+
+        context = SimpleNamespace(
+            scene=SimpleNamespace(
+                objects=(
+                    View({"isovalue": 0.05}),
+                    View({"isovalue": 0.10}),
+                )
+            )
+        )
+
+        with (
+            patch.object(
+                panel,
+                "get_scene_session",
+                return_value=SimpleNamespace(
+                    project=SimpleNamespace(
+                        source_revisions={
+                            current_revision_id: SimpleNamespace(
+                                created_entity_ids=(current_entity_id,),
+                            ),
+                            new_revision_id: SimpleNamespace(
+                                created_entity_ids=(),
+                            ),
+                        },
+                    )
+                ),
+            ),
+            self.assertRaisesRegex(ValueError, "conflicting"),
+        ):
+            panel._revision_view_targets(
+                context,
+                prompt,
+                selected_only=True,
+            )
+
     def test_revision_action_reraises_fatal_view_failure(self):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"
@@ -1239,7 +1519,6 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         prompt = panel._diagnostics.RevisionViewPrompt(
             current_revision_id=uuid4(),
             new_revision_id=uuid4(),
-            entity_id_map=((uuid4(), uuid4()),),
         )
         state = SimpleNamespace(revision_prompts=(prompt,))
         session = SimpleNamespace(
@@ -1262,7 +1541,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(
                 panel,
                 "_revision_view_targets",
-                return_value=((object(), object()),),
+                return_value=(((object(),), object()),),
             ),
             patch.object(
                 panel,

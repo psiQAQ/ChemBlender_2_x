@@ -265,9 +265,26 @@ def assert_quality_revision_recovery_contract(module_key):
     session = session_ui.get_scene_session(bpy.context.scene)
     state = properties.get_quick_import_state(session)
     previous_report = state.diagnostics_report
+    previous_diagnostic_index = state.diagnostic_index
     previous_prompts = state.revision_prompts
     previous_status = session.link_status
+    previous_sidecar = session.sidecar_path
+    previous_dirty_reasons = session.dirty_reasons
+    previous_inspection = state.project_link_inspection_only
+    previous_link_diagnostics = state.show_project_link_diagnostics
     previous_clipboard = bpy.context.window_manager.clipboard
+    recovery_snapshots = tuple(
+        {
+            key: scene[key] if key in scene else None
+            for key in (
+                links.PROJECT_ID_KEY,
+                links.PROJECT_SCHEMA_KEY,
+                links.SIDECAR_LOCATOR_KEY,
+                links.MANIFEST_HASH_KEY,
+            )
+        }
+        for scene in bpy.data.scenes
+    )
     try:
         state.diagnostics_report = document
         assert bpy.ops.chemblender.copy_diagnostics(
@@ -291,6 +308,44 @@ def assert_quality_revision_recovery_contract(module_key):
                 diagnostics.canonical_report_text(document, "markdown")
             )
 
+        diagnostic_item = {
+            "severity": "warning",
+            "quality_status": "ambiguous",
+            "source_revision_id": None,
+            "source_id": None,
+            "record_key": None,
+            "entity_id": None,
+            "field_path": "metadata",
+            "code": "metadata.large",
+            "message": "m" * 1_000,
+            "original_value": {"values": list(range(10_000))},
+            "normalized_value": None,
+            "recovery_action": None,
+            "scientific_consequence": "review required",
+            "suggested_action": "inspect",
+        }
+        state.diagnostics_report = {
+            "diagnostics": [
+                dict(diagnostic_item, code="first"),
+                dict(diagnostic_item, code="second"),
+            ]
+        }
+        state.diagnostic_index = 0
+        assert bpy.ops.chemblender.diagnostic_page(
+            direction="next"
+        ) == {"FINISHED"}
+        assert state.diagnostic_index == 1
+        browser = importlib.import_module(
+            f"{module_key}.ui.project_browser.panel"
+        )
+        assert browser._current_diagnostic(state)[2]["code"] == "second"
+        assert all(
+            len(value) <= diagnostics.DIAGNOSTIC_PREVIEW_CHAR_LIMIT
+            for _label, value in diagnostics.diagnostic_detail_rows(
+                diagnostic_item
+            )
+        )
+
         prompt = diagnostics.RevisionViewPrompt(
             current_revision_id=UUID(
                 "00000000-0000-0000-0000-000000000011"
@@ -307,6 +362,34 @@ def assert_quality_revision_recovery_contract(module_key):
         ) == {"FINISHED"}
         assert state.revision_prompts == ()
 
+        project = session.project
+        for status, action in (
+            ("missing", "inspect_existing"),
+            ("mismatch", "inspect_existing"),
+            ("incompatible", "open_diagnostics"),
+            ("invalid", "open_diagnostics"),
+        ):
+            session.link_status = status
+            state.project_link_inspection_only = False
+            state.show_project_link_diagnostics = False
+            assert bpy.ops.chemblender.project_link_recovery(
+                action=action
+            ) == {"FINISHED"}
+            assert session.project is project
+            assert session.sidecar_path == previous_sidecar
+            assert tuple(
+                {
+                    key: scene[key] if key in scene else None
+                    for key in (
+                        links.PROJECT_ID_KEY,
+                        links.PROJECT_SCHEMA_KEY,
+                        links.SIDECAR_LOCATOR_KEY,
+                        links.MANIFEST_HASH_KEY,
+                    )
+                }
+                for scene in bpy.data.scenes
+            ) == recovery_snapshots
+
         session.link_status = "connected"
         try:
             bpy.ops.chemblender.project_link_recovery(action="detach")
@@ -316,6 +399,53 @@ def assert_quality_revision_recovery_contract(module_key):
             raise AssertionError(
                 "live connected status must reject detach recovery"
             )
+
+        for scene in bpy.data.scenes:
+            scene[links.PROJECT_ID_KEY] = str(project.id)
+            scene[links.PROJECT_SCHEMA_KEY] = project.schema_version
+            scene[links.SIDECAR_LOCATOR_KEY] = "detached.cbq"
+            scene[links.MANIFEST_HASH_KEY] = "b" * 64
+        session.mark_clean()
+        session.mark_dirty("project_link")
+        session.mark_dirty("view_cache")
+        session.link_status = "missing"
+        assert bpy.ops.chemblender.project_link_recovery(
+            action="detach"
+        ) == {"FINISHED"}
+        assert session.project is project
+        assert session.sidecar_path is None
+        assert session.link_status == "unlinked"
+        assert not session.dirty_reasons
+        assert all(
+            key not in scene
+            for scene in bpy.data.scenes
+            for key in (
+                links.PROJECT_ID_KEY,
+                links.PROJECT_SCHEMA_KEY,
+                links.SIDECAR_LOCATOR_KEY,
+                links.MANIFEST_HASH_KEY,
+            )
+        )
+        original_save = session_ui.save_project_session_for_scenes
+        original_sync = session_ui.sync_project_session_links_for_scenes
+        save_calls = []
+        try:
+            def unexpected_save(**_kwargs):
+                save_calls.append("publication")
+                raise AssertionError("detached clean save must be a no-op")
+
+            def unexpected_sync(**_kwargs):
+                save_calls.append("link-sync")
+                raise AssertionError("detached clean save must be a no-op")
+
+            session_ui.save_project_session_for_scenes = unexpected_save
+            session_ui.sync_project_session_links_for_scenes = unexpected_sync
+            session_ui._save_pre_handler(None)
+        finally:
+            session_ui.save_project_session_for_scenes = original_save
+            session_ui.sync_project_session_links_for_scenes = original_sync
+        assert save_calls == []
+
         scene = {
             links.PROJECT_ID_KEY: "project",
             links.PROJECT_SCHEMA_KEY: "1.0",
@@ -328,9 +458,136 @@ def assert_quality_revision_recovery_contract(module_key):
         assert scene["objects"] is objects
     finally:
         state.diagnostics_report = previous_report
+        state.diagnostic_index = previous_diagnostic_index
         state.revision_prompts = previous_prompts
+        state.project_link_inspection_only = previous_inspection
+        state.show_project_link_diagnostics = previous_link_diagnostics
+        for scene, snapshot in zip(
+            bpy.data.scenes,
+            recovery_snapshots,
+            strict=True,
+        ):
+            for key, value in snapshot.items():
+                if value is None:
+                    if key in scene:
+                        del scene[key]
+                else:
+                    scene[key] = value
+        session.sidecar_path = previous_sidecar
         session.link_status = previous_status
+        session.mark_clean()
+        for reason in previous_dirty_reasons:
+            session.mark_dirty(reason)
         bpy.context.window_manager.clipboard = previous_clipboard
+
+
+def assert_signed_surface_revision_actions(
+    module_key,
+    session,
+    surface_objects,
+    current_grid,
+    template_revision,
+):
+    diagnostics = importlib.import_module(f"{module_key}.ui.diagnostics")
+    properties = importlib.import_module(f"{module_key}.ui.properties")
+    surface_view = importlib.import_module(f"{module_key}.surface_view")
+    project = session.project
+    current_revision = replace(
+        template_revision,
+        id=uuid4(),
+        content_hash="d" * 64,
+        parse_identity="e" * 64,
+        created_entity_ids=(current_grid.id,),
+        diagnostic_ids=(),
+    )
+    new_grid = replace(
+        current_grid,
+        id=uuid4(),
+        revision=f"{current_grid.revision}-replacement",
+    )
+    new_revision = replace(
+        template_revision,
+        id=uuid4(),
+        content_hash="f" * 64,
+        parse_identity="1" * 64,
+        created_entity_ids=(new_grid.id,),
+        diagnostic_ids=(),
+    )
+    project.datasets[new_grid.id] = new_grid
+    project.source_revisions[current_revision.id] = current_revision
+    project.source_revisions[new_revision.id] = new_revision
+    state = properties.get_quick_import_state(session)
+    previous_prompts = state.revision_prompts
+    previous_selection = tuple(
+        (obj, obj.select_get()) for obj in bpy.context.scene.objects
+    )
+    created = []
+    try:
+        for obj, _selected in previous_selection:
+            obj.select_set(False)
+        surface_objects[0].select_set(True)
+        prompt = diagnostics.RevisionViewPrompt(
+            current_revision_id=current_revision.id,
+            new_revision_id=new_revision.id,
+        )
+        state.revision_prompts = (prompt,)
+        before = set(bpy.data.objects)
+        assert bpy.ops.chemblender.revision_view_action(
+            current_revision_id=str(current_revision.id),
+            new_revision_id=str(new_revision.id),
+            action="update_selected_views",
+        ) == {"FINISHED"}
+        updated = tuple(set(bpy.data.objects) - before)
+        created.extend(updated)
+        assert len(updated) == 2
+        assert all(obj.hide_get() and obj.hide_render for obj in surface_objects)
+        assert all(
+            json.loads(obj["cb_scene_bindings_json"])["grid"][
+                "entity_id"
+            ]
+            == str(new_grid.id)
+            for obj in updated
+        )
+        assert len(
+            {obj["cb_scene_render_identity"] for obj in updated}
+        ) == 1
+
+        for obj in surface_objects:
+            obj.hide_set(False)
+            obj.hide_render = False
+        state.revision_prompts = (prompt,)
+        before = set(bpy.data.objects)
+        assert bpy.ops.chemblender.revision_view_action(
+            current_revision_id=str(current_revision.id),
+            new_revision_id=str(new_revision.id),
+            action="comparison_view",
+        ) == {"FINISHED"}
+        compared = tuple(set(bpy.data.objects) - before)
+        created.extend(compared)
+        assert len(compared) == 2
+        assert all(
+            not obj.hide_get() and not obj.hide_render
+            for obj in surface_objects
+        )
+        assert all(
+            json.loads(obj["cb_scene_bindings_json"])["grid"][
+                "entity_id"
+            ]
+            == str(new_grid.id)
+            for obj in compared
+        )
+        assert state.revision_prompts == ()
+    finally:
+        state.revision_prompts = previous_prompts
+        for obj in reversed(created):
+            if obj.name in bpy.data.objects:
+                surface_view.remove_surface_object(obj)
+        for obj, selected in previous_selection:
+            if obj.name in bpy.data.objects:
+                obj.select_set(selected)
+        project.source_revisions.pop(current_revision.id, None)
+        project.source_revisions.pop(new_revision.id, None)
+        project.datasets.pop(new_grid.id, None)
 
 
 def assert_grid_unload_cancels_active_worker(module_key):
@@ -411,6 +668,7 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_confirm_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_copy_diagnostics")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_export_diagnostics")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_diagnostic_page")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_revision_view_action")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_project_link_recovery")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_migrate_legacy_scene")
@@ -1379,6 +1637,13 @@ def assert_quick_import(module_key, repository_root):
             "entity_id": str(resolved_grid.id),
             "revision": resolved_grid.revision,
         }
+    assert_signed_surface_revision_actions(
+        module_key,
+        session,
+        cube_surface_objects,
+        resolved_grid,
+        cube_revision,
+    )
     browser_settings.mode = "by_data"
     rows_after_cube = browser.refresh_project_browser(bpy.context.scene)
     assert browser_settings.quality_filter == "all"
@@ -5177,6 +5442,12 @@ expected_inventory["registered_classes"] += [
         "module": ".ui.project_browser.panel",
         "name": "CHEMBLENDER_OT_copy_diagnostics",
         "id": "chemblender.copy_diagnostics",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_diagnostic_page",
+        "id": "chemblender.diagnostic_page",
         "base": "Operator",
     },
     {
