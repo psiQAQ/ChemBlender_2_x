@@ -21,6 +21,7 @@ class TaskSnapshot:
     progress: float
     stage: str
     error: BaseException | None
+    result: object | None
 
 
 class Task:
@@ -32,6 +33,7 @@ class Task:
         self._progress = 0.0
         self._stage = "pending"
         self._error = None
+        self._result = None
 
     def snapshot(self):
         with self._lock:
@@ -40,6 +42,7 @@ class Task:
                 self._progress,
                 self._stage,
                 self._error,
+                self._result,
             )
 
     def _require(self, *states):
@@ -122,6 +125,29 @@ class Task:
             self._stage = self._stage_text(stage)
             return self.snapshot()
 
+    def complete(self, result, stage="complete"):
+        """Atomically publish a result, or discard it if cancellation won.
+
+        Repeated completion after a completed/cancelled task is idempotent;
+        completion after a failed task remains an invalid transition.
+        """
+        with self._lock:
+            if self._state is TaskState.RUNNING:
+                self._state = TaskState.SUCCEEDED
+                self._progress = 1.0
+                self._stage = self._stage_text(stage)
+                self._result = result
+            elif self._state is TaskState.CANCELLING:
+                self._state = TaskState.CANCELLED
+                self._stage = "cancelled"
+                self._result = None
+            elif self._state not in (
+                TaskState.CANCELLED,
+                TaskState.SUCCEEDED,
+            ):
+                self._require(TaskState.RUNNING, TaskState.CANCELLING)
+            return self.snapshot()
+
     def fail(self, error, stage="failed"):
         if not isinstance(error, BaseException):
             raise TypeError("error must be a BaseException")
@@ -202,15 +228,17 @@ class TaskWorker:
 
     def _run(self):
         try:
-            self.result = self._work(self.task.is_cancelled, self.task.progress)
+            result = self._work(self.task.is_cancelled, self.task.progress)
         except BaseException as error:
             self.error = error
             self.task.fail(error)
         else:
-            if self.task.is_cancelled():
-                self.task.cancel()
-            else:
-                self.task.succeed("complete")
+            snapshot = self.task.complete(result)
+            self.result = (
+                snapshot.result
+                if snapshot.state is TaskState.SUCCEEDED
+                else None
+            )
         finally:
             self._done.set()
 

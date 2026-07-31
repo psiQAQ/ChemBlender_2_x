@@ -4,6 +4,7 @@ import importlib.util
 import json
 import math
 import sys
+import threading
 from dataclasses import replace
 from importlib.metadata import version
 from pathlib import Path
@@ -221,6 +222,60 @@ def assert_task_boundary(module_key):
     snapshot = task.snapshot()
     assert snapshot.state is tasks.TaskState.CANCELLED
     assert snapshot.progress == 0.5
+
+
+def assert_grid_unload_cancels_active_worker(
+    module_key,
+    before_install_modules,
+):
+    grid = importlib.import_module(f"{module_key}.ui.grid")
+    tasks = importlib.import_module(f"{module_key}.ui.tasks")
+    entered = threading.Event()
+    cleanup_calls = []
+
+    def prepare(cancelled, _progress):
+        entered.set()
+        while not cancelled():
+            entered.wait(0.01)
+        return "discarded cache"
+
+    operator = SimpleNamespace()
+    operator.cancel = lambda context: grid.CHEMBLENDER_OT_create_grid_view.cancel(
+        operator,
+        context,
+    )
+    operator._finish_modal = (
+        lambda: grid.CHEMBLENDER_OT_create_grid_view._finish_modal(operator)
+    )
+    operator._cache_task = tasks.Task()
+    operator._cache_job = tasks.TaskWorker(
+        operator._cache_task,
+        prepare,
+    )
+    timer = object()
+    operator._cache_window_manager = SimpleNamespace(
+        event_timer_remove=lambda timer: cleanup_calls.append(
+            ("timer", timer)
+        ),
+        progress_end=lambda: cleanup_calls.append(("progress",)),
+    )
+    operator._cache_timer = timer
+    operator._cache_progress_started = True
+    operator._cache_job.start("vdb.prepare")
+    assert entered.wait(1)
+    grid._register_active_volume_operator(operator)
+
+    owned_classes = owned_registration_classes(module_key)
+    assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}
+    assert operator._cache_job.join(0)
+    assert operator._cache_task.snapshot().state is tasks.TaskState.CANCELLED
+    assert operator._cache_job.result is None
+    assert cleanup_calls[0] == ("timer", timer)
+    assert cleanup_calls[1] == ("progress",)
+    assert grid._ACTIVE_VOLUME_OPERATORS == []
+    assert_disabled(module_key, owned_classes)
+    assert bpy.ops.preferences.addon_enable(module=module_key) == {"FINISHED"}
+    assert_enabled(module_key, before_install_modules)
 
 
 def assert_enabled(module_key, before_install_modules):
@@ -5119,6 +5174,7 @@ assert_sdf_10k_workflow_budget(module_key)
 assert_project_browser_rna_budget(module_key)
 assert_biological_workflow(module_key, package.parent.parent)
 assert_mol2_browser_view(module_key, package.parent.parent)
+assert_grid_unload_cancels_active_worker(module_key, before_install_modules)
 
 import rdkit
 import gemmi

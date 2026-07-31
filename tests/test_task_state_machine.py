@@ -62,20 +62,46 @@ class TaskStateMachineTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "succeeded"):
             task.request_cancel()
 
-    def test_cancellation_wins_over_late_worker_success(self):
+    def test_atomic_completion_discards_result_after_cancellation(self):
         task = self.tasks.Task()
 
         task.start("vdb.prepare")
         task.progress("vdb.prepare", 0.75)
         task.request_cancel()
-        task.cancel()
+        snapshot = task.complete("prepared cache", "complete")
 
-        snapshot = task.snapshot()
         self.assertIs(snapshot.state, self.tasks.TaskState.CANCELLED)
         self.assertTrue(task.is_cancelled())
         self.assertEqual(snapshot.progress, 0.75)
-        with self.assertRaisesRegex(RuntimeError, "cancelled"):
-            task.succeed("complete")
+        self.assertIsNone(snapshot.result)
+        self.assertIsNone(task.snapshot().result)
+
+    def test_completion_is_idempotent_only_after_success_or_cancellation(self):
+        succeeded = self.tasks.Task()
+        succeeded.start("parse")
+        self.assertEqual(
+            succeeded.complete("first", "complete").result,
+            "first",
+        )
+        self.assertEqual(
+            succeeded.complete("replacement", "complete").result,
+            "first",
+        )
+
+        cancelled = self.tasks.Task()
+        cancelled.start("parse")
+        cancelled.request_cancel()
+        self.assertIs(
+            cancelled.complete("discarded", "complete").state,
+            self.tasks.TaskState.CANCELLED,
+        )
+        self.assertIsNone(cancelled.complete("discarded", "complete").result)
+
+        failed = self.tasks.Task()
+        failed.start("parse")
+        failed.fail(RuntimeError("parse failed"))
+        with self.assertRaisesRegex(RuntimeError, "failed"):
+            failed.complete("discarded", "complete")
 
     def test_event_adapter_keeps_nested_stage_events_monotonic(self):
         task = self.tasks.Task()
@@ -93,7 +119,7 @@ class TaskStateMachineTests(unittest.TestCase):
         self.assertLess(snapshot.progress, 1.0)
         self.assertEqual(snapshot.stage, "reader.parse")
 
-    def test_worker_runs_pure_callback_and_finishes_cancelled(self):
+    def test_worker_discards_cancelled_result_without_thread_failure(self):
         task = self.tasks.Task()
         reached_worker = Event()
 
@@ -110,7 +136,8 @@ class TaskStateMachineTests(unittest.TestCase):
         task.request_cancel()
         self.assertTrue(worker.join(1))
 
-        self.assertEqual(worker.result, "cancelled")
+        self.assertIsNone(worker.result)
+        self.assertIsNone(worker.error)
         self.assertIs(task.snapshot().state, self.tasks.TaskState.CANCELLED)
 
     def test_worker_cancel_request_is_safe_after_completion(self):

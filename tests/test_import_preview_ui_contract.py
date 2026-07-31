@@ -33,6 +33,7 @@ from ChemBlender.core.import_pipeline.request import (
 )
 from ChemBlender.core.import_pipeline.staging import StagedImportSession
 from ChemBlender.core.formats.extxyz import parse_extxyz
+from ChemBlender.core.storage.publication import PublicationCancelled
 from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
 from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
 
@@ -2434,6 +2435,24 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         job.cancel()
         self.assertTrue(observed["is_cancelled"]())
         self.assertEqual(job.task.snapshot().state.value, "succeeded")
+
+    def test_commit_job_marks_publication_cancellation_cancelled(self):
+        job = self.module._CommitJob(
+            self.session,
+            object(),
+            object(),
+            object(),
+        )
+        with patch.object(
+            self.module,
+            "_commit_to_fresh_generation",
+            side_effect=PublicationCancelled("cancelled before publish"),
+        ):
+            job._run()
+
+        self.assertIsInstance(job.error, PublicationCancelled)
+        self.assertIsNone(job.result)
+        self.assertEqual(job.task.snapshot().state.value, "cancelled")
 
     def test_modal_fatal_worker_error_rethrows_after_cleanup(self):
         timer = object()

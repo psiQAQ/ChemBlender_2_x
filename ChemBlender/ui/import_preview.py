@@ -48,6 +48,7 @@ from ..core.import_pipeline.transaction import (
     ImportCommitDecisions,
     commit_import_preview,
 )
+from ..core.storage.publication import PublicationCancelled
 from ..reader_api.import_pipeline_bridge import preflight_reader_plugins
 from ..scene_preset_view import (
     _remove_objects as _remove_scene_preset_objects,
@@ -1876,21 +1877,27 @@ class _CommitJob:
             )
         except BaseException as error:
             self.error = error
-            if isinstance(error, (ImportCommitCancelled, ImportCancelled)):
+            if isinstance(
+                error,
+                (
+                    ImportCommitCancelled,
+                    ImportCancelled,
+                    PublicationCancelled,
+                ),
+            ):
                 if self.task.snapshot().state is TaskState.RUNNING:
                     self.task.request_cancel()
                 if self.task.snapshot().state is TaskState.CANCELLING:
-                    self.task.cancel()
+                    self.task.complete(None)
             elif self.task.snapshot().state in {
                 TaskState.RUNNING,
                 TaskState.CANCELLING,
             }:
                 self.task.fail(error)
         else:
-            if self.task.is_cancelled():
-                self.task.cancel()
-            else:
-                self.task.succeed("data committed")
+            snapshot = self.task.complete(self.result, "data committed")
+            if snapshot.state is not TaskState.SUCCEEDED:
+                self.result = None
         finally:
             self._done.set()
 
@@ -2704,11 +2711,22 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             try:
                 job.join(0)
                 state = get_quick_import_state(job.project_session)
-                if job.error is None:
+                task = getattr(job, "task", None)
+                if (
+                    job.error is None
+                    and (
+                        task is None
+                        or task.snapshot().state is not TaskState.CANCELLED
+                    )
+                ):
                     result = self._finalize_committed_job(
                         context,
                         job,
                         state,
+                    )
+                elif job.error is None:
+                    job.error = ImportCommitCancelled(
+                        "import commit cancelled before UI application"
                     )
             except BaseException as error:
                 completion_error = error
@@ -2764,7 +2782,14 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                     "Import Preview UI cleanup failed",
                     release_error,
                 )
-            if isinstance(job.error, (ImportCommitCancelled, ImportCancelled)):
+            if isinstance(
+                job.error,
+                (
+                    ImportCommitCancelled,
+                    ImportCancelled,
+                    PublicationCancelled,
+                ),
+            ):
                 self.report({"INFO"}, str(job.error))
             elif isinstance(job.error, _FATAL_EXCEPTIONS):
                 raise job.error

@@ -697,6 +697,8 @@ def commit_import_preview(
         candidate_session,
         destination,
         transfer_verified_project=True,
+        progress=lambda stage, fraction: progress(stage, fraction, 1),
+        is_cancelled=is_cancelled,
     )
     reopened = published.project
     if type(reopened) is not QCProject:

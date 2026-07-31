@@ -616,6 +616,49 @@ class QuickImportContractTests(unittest.TestCase):
         self.assertIn(("progress_end",), calls)
         self.assertNotIn(project_session.id, properties._QUICK_IMPORT_STATES)
 
+    def test_modal_does_not_consume_late_cancelled_preflight_result(self):
+        module = importlib.import_module(QUICK_IMPORT_MODULE)
+        operator = module.CHEMBLENDER_OT_quick_import()
+        task = module.Task()
+        task.start("preflight")
+        task.request_cancel()
+        task.complete(object(), "preview ready")
+        job = SimpleNamespace(
+            done=True,
+            error=None,
+            task=task,
+            staging=object(),
+            preview=None,
+            conformer_suggestions=None,
+            drain_progress=lambda: None,
+            join=lambda _timeout: True,
+            release_ui=lambda: None,
+            timer_pending=False,
+            abandon_ui=lambda: None,
+        )
+        operator._job = job
+        operator._project_session = object()
+        operator.report = lambda *_args: None
+
+        with (
+            patch.object(module, "finish_quick_import_job"),
+            patch.object(module, "clear_quick_import_state") as clear,
+            patch.object(module, "store_quick_import_preview") as store,
+            patch.object(
+                module.CHEMBLENDER_OT_quick_import,
+                "_finish_preview",
+                return_value={"FINISHED"},
+            ),
+        ):
+            result = operator.modal(
+                SimpleNamespace(window_manager=SimpleNamespace()),
+                SimpleNamespace(type="TIMER"),
+            )
+
+        self.assertEqual(result, {"CANCELLED"})
+        store.assert_not_called()
+        clear.assert_called_once()
+
     def test_modal_retries_timer_cleanup_before_reraising_progress_fatal(self):
         module = importlib.import_module(QUICK_IMPORT_MODULE)
         operator = module.CHEMBLENDER_OT_quick_import()

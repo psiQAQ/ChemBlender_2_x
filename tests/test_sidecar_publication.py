@@ -141,6 +141,36 @@ class SidecarPublicationTests(unittest.TestCase):
         self.assertIsNone(new_session.sidecar_path)
         self.assertFalse(inspect_publication_orphans(destination).has_orphans)
 
+    def test_cancel_cleanup_failure_keeps_primary_cancellation_error(self):
+        session = self.create_session(sample_project())
+        destination = self.root / "project.cbq"
+        cancelled = False
+
+        def request_cancel(stage, _progress):
+            nonlocal cancelled
+            if stage == "before_publish":
+                cancelled = True
+
+        with patch.object(
+            publication.shutil,
+            "rmtree",
+            side_effect=OSError("staging tree is locked"),
+        ):
+            with self.assertRaises(PublicationCancelled) as captured:
+                solidify_session(
+                    session,
+                    destination,
+                    progress=request_cancel,
+                    is_cancelled=lambda: cancelled,
+                )
+
+        notes = "\n".join(captured.exception.__notes__)
+        self.assertIn("staging tree is locked", notes)
+        self.assertIn("residual staging tree", notes)
+        self.assertTrue(
+            any(self.root.glob(".project.cbq.*.tmp"))
+        )
+
     def test_new_destination_final_verify_failure_leaves_only_stage_orphan(self):
         session = self.create_session(sample_project())
         destination = self.root / "project.cbq"

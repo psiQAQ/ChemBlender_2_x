@@ -9,6 +9,7 @@ import numpy
 from ChemBlender.core import ArrayData, DatasetStatus, Grid3D, ImportBatch
 from ChemBlender.core.cube import CUBE_READER
 from ChemBlender.core.session import close_session, create_session
+from ChemBlender.ui import grid as grid_module
 from ChemBlender.ui.grid import (
     grid_action_availability,
     grid_preview_summary,
@@ -22,6 +23,41 @@ TWO_DATASETS = ROOT / "tests/fixtures/cube/two-datasets.cube"
 
 
 class GridUIContractTests(unittest.TestCase):
+    def test_active_volume_unload_cancels_joins_and_releases_once(self):
+        class Worker:
+            def __init__(self):
+                self.cancel_calls = 0
+                self.join_timeout = object()
+
+            def request_cancel(self):
+                self.cancel_calls += 1
+
+            def join(self, timeout):
+                self.join_timeout = timeout
+                return True
+
+        class ActiveVolume:
+            def __init__(self):
+                self._cache_job = Worker()
+                self.finished = 0
+
+            def cancel(self, _context):
+                self._cache_job.request_cancel()
+
+            def _finish_modal(self):
+                self.finished += 1
+
+        active = ActiveVolume()
+        grid_module._register_active_volume_operator(active)
+
+        grid_module._cancel_active_volume_operators()
+        grid_module._cancel_active_volume_operators()
+
+        self.assertEqual(active._cache_job.cancel_calls, 1)
+        self.assertIsNone(active._cache_job.join_timeout)
+        self.assertEqual(active.finished, 1)
+        self.assertEqual(grid_module._ACTIVE_VOLUME_OPERATORS, [])
+
     def test_volume_modal_uses_shared_pure_task_worker(self):
         source = (ROOT / "ChemBlender" / "ui" / "grid.py").read_text(
             encoding="utf-8"

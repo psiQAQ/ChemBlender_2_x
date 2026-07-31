@@ -176,7 +176,7 @@ class GridCacheServiceTests(unittest.TestCase):
             self.assertTrue(worker.join(1))
 
             self.assertIsNone(worker.error)
-            self.assertEqual(worker.result.status, "cancelled")
+            self.assertIsNone(worker.result)
             self.assertEqual(task.snapshot().state.value, "cancelled")
             self.assertFalse(request.cache_path.exists())
             self.assertEqual(

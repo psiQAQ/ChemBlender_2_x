@@ -156,17 +156,17 @@ class _PreflightJob:
                 if self.task.snapshot().state is TaskState.RUNNING:
                     self.task.request_cancel()
                 if self.task.snapshot().state is TaskState.CANCELLING:
-                    self.task.cancel()
+                    self.task.complete(None)
             elif self.task.snapshot().state in {
                 TaskState.RUNNING,
                 TaskState.CANCELLING,
             }:
                 self.task.fail(error)
         else:
-            if self.task.is_cancelled():
-                self.task.cancel()
-            else:
-                self.task.succeed("preview ready")
+            snapshot = self.task.complete(self.preview, "preview ready")
+            if snapshot.state is not TaskState.SUCCEEDED:
+                self.preview = None
+                self.conformer_suggestions = None
         finally:
             self._done.set()
 
@@ -400,6 +400,15 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
         failure = job._completion_error
         if failure is None:
             failure = job.error
+        task = getattr(job, "task", None)
+        if (
+            failure is None
+            and task is not None
+            and task.snapshot().state is TaskState.CANCELLED
+        ):
+            failure = ImportCancelled(
+                "import preflight cancelled before UI preview"
+            )
         try:
             job.release_ui()
         except BaseException as error:

@@ -240,15 +240,16 @@ def _restore_final_failure(destination, stage, backup, staged, publication_error
 
 
 def _cancel_staged_publication(stage):
+    cancellation = PublicationCancelled(
+        "sidecar publication cancelled before atomic replacement"
+    )
     try:
         shutil.rmtree(stage)
     except OSError as error:
-        raise RuntimeError(
-            "cancelled sidecar publication could not remove its staging tree"
-        ) from error
-    raise PublicationCancelled(
-        "sidecar publication cancelled before atomic replacement"
-    )
+        cancellation.add_note(
+            f"residual staging tree {stage}: {error}"
+        )
+    raise cancellation
 
 
 def solidify_session(
