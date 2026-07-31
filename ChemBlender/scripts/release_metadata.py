@@ -168,9 +168,9 @@ def select_exact_package_run(
     for record in records:
         if type(record) is not dict:
             raise ValueError("run record must be an object")
-        database_id = _required_positive_int(record, "databaseId")
-        head_sha = _required_string(record, "headSha")
-        head_branch = _required_string(record, "headBranch")
+        run_id = _required_positive_int(record, "id")
+        head_sha = _required_string(record, "head_sha")
+        head_branch = _required_string(record, "head_branch")
         event = _required_string(record, "event")
         conclusion = _required_string(record, "conclusion")
         if (
@@ -179,7 +179,7 @@ def select_exact_package_run(
             and event == "push"
             and conclusion == "success"
         ):
-            matching_ids.append(database_id)
+            matching_ids.append(run_id)
 
     if len(matching_ids) != 1:
         raise ValueError(
@@ -262,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
                 tag=args.tag,
                 tag_commit=args.tag_commit,
             )
-            sys.stdout.buffer.write(_selection_payload("database_id", selected))
+            sys.stdout.buffer.write(_selection_payload("run_id", selected))
             return 0
         if args.select_package_artifact:
             if args.artifact_name is None:

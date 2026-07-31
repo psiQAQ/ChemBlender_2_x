@@ -96,7 +96,7 @@ jobs:
               "repos/$GH_REPO/actions/workflows/extension-package.yml/runs?event=push&status=success&head_sha=$tag_commit&branch=$RELEASE_TAG&per_page=100" |
             python3 ChemBlender/scripts/release_metadata.py \
               --select-package-run --tag "$RELEASE_TAG" --tag-commit "$tag_commit" |
-            jq -er '.database_id'
+            jq -er '.run_id'
           )"
           artifact_id="$(
             gh api --paginate --slurp \

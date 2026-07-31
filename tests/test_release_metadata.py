@@ -181,23 +181,23 @@ class ReleaseMetadataTests(unittest.TestCase):
         selected = release_metadata.select_exact_package_run(
             [
                 {
-                    "databaseId": 101,
-                    "headSha": commit,
-                    "headBranch": tag,
+                    "id": 101,
+                    "head_sha": commit,
+                    "head_branch": tag,
                     "event": "push",
                     "conclusion": "failure",
                 },
                 {
-                    "databaseId": 102,
-                    "headSha": "2" * 40,
-                    "headBranch": tag,
+                    "id": 102,
+                    "head_sha": "2" * 40,
+                    "head_branch": tag,
                     "event": "push",
                     "conclusion": "success",
                 },
                 {
-                    "databaseId": 103,
-                    "headSha": commit,
-                    "headBranch": tag,
+                    "id": 103,
+                    "head_sha": commit,
+                    "head_branch": tag,
                     "event": "push",
                     "conclusion": "success",
                 },
@@ -212,17 +212,17 @@ class ReleaseMetadataTests(unittest.TestCase):
         tag = "v2.3.0-alpha.1"
         commit = "1" * 40
         matching_run = {
-            "databaseId": 103,
-            "headSha": commit,
-            "headBranch": tag,
+            "id": 103,
+            "head_sha": commit,
+            "head_branch": tag,
             "event": "push",
             "conclusion": "success",
         }
         cases = (
             ([], "successful exact package run"),
-            ([matching_run, {**matching_run, "databaseId": 104}], "successful exact package run"),
-            ([{**matching_run, "databaseId": "103"}], "databaseId"),
-            ({"databaseId": 103}, "run records"),
+            ([matching_run, {**matching_run, "id": 104}], "successful exact package run"),
+            ([{**matching_run, "id": "103"}], "id"),
+            ({"id": 103}, "run records"),
         )
 
         for records, message in cases:
@@ -242,9 +242,9 @@ class ReleaseMetadataTests(unittest.TestCase):
                 "total_count": 101,
                 "workflow_runs": [
                     {
-                        "databaseId": index,
-                        "headSha": "2" * 40,
-                        "headBranch": tag,
+                        "id": index,
+                        "head_sha": "2" * 40,
+                        "head_branch": tag,
                         "event": "push",
                         "conclusion": "success",
                     }
@@ -255,9 +255,9 @@ class ReleaseMetadataTests(unittest.TestCase):
                 "total_count": 101,
                 "workflow_runs": [
                     {
-                        "databaseId": 501,
-                        "headSha": commit,
-                        "headBranch": tag,
+                        "id": 501,
+                        "head_sha": commit,
+                        "head_branch": tag,
                         "event": "push",
                         "conclusion": "success",
                     }
@@ -313,7 +313,7 @@ class ReleaseMetadataTests(unittest.TestCase):
                         artifact_name=artifact_name,
                     )
 
-    def test_selection_cli_parses_real_gh_json_shapes(self):
+    def test_selection_cli_parses_paginated_rest_workflow_run_pages(self):
         tag = "v2.3.0-alpha.1"
         commit = "1" * 40
         result = subprocess.run(
@@ -332,9 +332,9 @@ class ReleaseMetadataTests(unittest.TestCase):
                         "total_count": 1,
                         "workflow_runs": [
                             {
-                                "databaseId": 501,
-                                "headSha": commit,
-                                "headBranch": tag,
+                                "id": 501,
+                                "head_sha": commit,
+                                "head_branch": tag,
                                 "event": "push",
                                 "conclusion": "success",
                             }
@@ -347,7 +347,7 @@ class ReleaseMetadataTests(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr.decode())
-        self.assertEqual(result.stdout, b'{"database_id":501}\n')
+        self.assertEqual(result.stdout, b'{"run_id":501}\n')
         self.assertEqual(result.stderr, b"")
 
     def test_rejects_versions_outside_proven_grammar(self):

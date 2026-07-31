@@ -361,6 +361,7 @@ class RepositoryContractTests(unittest.TestCase):
             "actions/runs/$run_id/artifacts?per_page=100",
             workflow,
         )
+        self.assertIn("jq -er '.run_id'", workflow)
         self.assertIn("jq -ce '{artifacts: [.[].artifacts[]]}'", workflow)
         self.assertIn(
             "artifact_id: ${{ steps.release_info.outputs.artifact_id }}",
