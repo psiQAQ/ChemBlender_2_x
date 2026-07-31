@@ -284,6 +284,71 @@ class ProductPerformanceHarnessTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 harness.ensure_process_profile(profile, "prepare_profile")
 
+    def test_browser_preparation_uses_product_reader_staging(self):
+        harness = load_harness()
+        events = []
+        batch = SimpleNamespace(molecular_records=tuple(range(10_000)))
+
+        class Project:
+            molecular_records = ()
+
+            def commit(self, candidate):
+                self.molecular_records = candidate.molecular_records
+                events.append("commit")
+
+        project = Project()
+        session = SimpleNamespace(project=project)
+        staging = SimpleNamespace(result=lambda batch_id: batch)
+
+        def reject_direct_parse(_source):
+            raise AssertionError("browser preparation bypassed reader staging")
+
+        def save_project(destination, candidate):
+            self.assertIs(candidate, project)
+            destination.mkdir()
+            events.append("save")
+
+        modules = {
+            "core": SimpleNamespace(
+                close_session=lambda candidate: events.append("close"),
+                create_session=lambda **_kwargs: session,
+                parse_sdf=reject_direct_parse,
+                save_project=save_project,
+            ),
+            "core.import_pipeline.request": SimpleNamespace(
+                ImportRequest=lambda **kwargs: SimpleNamespace(**kwargs),
+                ImportSource=lambda path: path,
+            ),
+            "reader_api.import_pipeline_bridge": SimpleNamespace(
+                preflight_reader_plugins=lambda *_args, **_kwargs: SimpleNamespace(
+                    staged_batch_ids=("batch",)
+                )
+            ),
+            "reader_api.registry": SimpleNamespace(
+                builtin_reader_plugin_registry=lambda: object()
+            ),
+            "ui.properties": SimpleNamespace(
+                clear_quick_import_state=lambda candidate: events.append("clear"),
+                create_quick_import_staging=lambda candidate: staging,
+            ),
+        }
+
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            (workspace / "records.sdf").write_bytes(b"fixture")
+            with patch.object(
+                harness,
+                "_product_module",
+                side_effect=lambda name: modules[name],
+            ):
+                _elapsed, assertions = harness._prepare_browser_project(
+                    None, workspace, -1
+                )
+
+        self.assertEqual(events, ["commit", "save", "clear", "close"])
+        self.assertTrue(assertions["sidecar_written"])
+        self.assertTrue(assertions["ten_thousand_sdf_records"])
+
 
 if __name__ == "__main__":
     unittest.main()

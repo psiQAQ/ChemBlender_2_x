@@ -1099,20 +1099,51 @@ def _measure_trajectory(bpy, workspace, sample_index):
 
 def _prepare_browser_project(_bpy, workspace, _sample_index):
     core = _product_module("core")
+    request_model = _product_module("core.import_pipeline.request")
+    bridge = _product_module("reader_api.import_pipeline_bridge")
+    registry_module = _product_module("reader_api.registry")
+    properties = _product_module("ui.properties")
     destination = workspace / "browser.cbq"
-    started = perf_counter()
-    batch = core.parse_sdf(workspace / "records.sdf")
-    project = core.QCProject(uuid4(), "1.0")
-    project.commit(batch)
-    core.save_project(destination, project)
-    elapsed = perf_counter() - started
-    if len(project.molecular_records) != 10_000 or not destination.is_dir():
-        raise RuntimeError("10k SDF browser preparation is incomplete")
-    return elapsed, {
-        "product_boundary": True,
-        "sidecar_written": True,
-        "ten_thousand_sdf_records": True,
-    }
+    session_root = workspace / f"browser-session-{uuid4().hex}"
+    session_root.mkdir()
+    session = core.create_session(temp_parent=session_root)
+    staging = properties.create_quick_import_staging(session)
+    request = request_model.ImportRequest(
+        sources=(request_model.ImportSource(workspace / "records.sdf"),)
+    )
+    try:
+        started = perf_counter()
+        preview = bridge.preflight_reader_plugins(
+            request,
+            registry_module.builtin_reader_plugin_registry(),
+            staging,
+            progress=lambda *_args: None,
+            is_cancelled=lambda: False,
+        )
+        if len(preview.staged_batch_ids) != 1:
+            raise RuntimeError("10k SDF browser preparation did not stage one batch")
+        batch = staging.result(preview.staged_batch_ids[0])
+        session.project.commit(batch)
+        core.save_project(destination, session.project)
+        elapsed = perf_counter() - started
+        if (
+            len(session.project.molecular_records) != 10_000
+            or not destination.is_dir()
+        ):
+            raise RuntimeError("10k SDF browser preparation is incomplete")
+        return elapsed, {
+            "product_boundary": True,
+            "sidecar_written": True,
+            "ten_thousand_sdf_records": True,
+        }
+    finally:
+        try:
+            properties.clear_quick_import_state(session)
+        finally:
+            try:
+                core.close_session(session)
+            finally:
+                shutil.rmtree(session_root, ignore_errors=True)
 
 
 def _measure_browser(_bpy, workspace, _sample_index):
