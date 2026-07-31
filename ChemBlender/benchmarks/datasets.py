@@ -144,7 +144,7 @@ def generate_sdf_fixture(path, *, record_count):
         for index in range(record_count):
             stream.write(
                 f"benchmark-{index}\nChemBlender\n\n"
-                "  1  0  0  0  0  0  0  0  0  0  0  0 V2000\n"
+                "  1  0  0  0  0  0  0  0  0  0  0 V2000\n"
                 f"    {index % 101 * 0.01:6.4f}    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
                 "M  END\n$$$$\n"
             )

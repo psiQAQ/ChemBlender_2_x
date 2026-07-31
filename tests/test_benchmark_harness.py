@@ -62,6 +62,12 @@ class BenchmarkDatasetTests(unittest.TestCase):
             self.assertEqual(sdf.record_count, 3)
             self.assertEqual(sdf.sha256, generate_sdf_fixture(root / "copy.sdf", record_count=3).sha256)
             self.assertEqual(len(tuple(iter_sdf_file_records(sdf.path))), 3)
+            counts_lines = [
+                record.splitlines()[3]
+                for record in sdf.path.read_text(encoding="ascii").split("$$$$\n")
+                if record
+            ]
+            self.assertEqual(counts_lines, ["  1" + "  0" * 10 + " V2000"] * 3)
 
 
 class BenchmarkHarnessTests(unittest.TestCase):
