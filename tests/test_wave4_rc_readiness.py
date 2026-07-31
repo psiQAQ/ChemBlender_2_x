@@ -1,9 +1,10 @@
+import hashlib
 import json
 import re
 import sys
 import tomllib
 import unittest
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +23,58 @@ RC_VERSION = "2.3.0-rc.1"
 RC_TAG = f"v{RC_VERSION}"
 QUALIFICATION_SOURCE = "c796ee9469b44c418da729c25b114a5b06595d46"
 PACKAGE_SHA256 = "fed220ad7d9ababe03e821e630ae5beee1a834245060864a8611c5b74f5cfd64"
+EXACT_COMMAND_MANIFEST_SHA256 = (
+    "fe118ec093fd8e4bec48a15ea9e26eb7b510077d1089afca70e2f189ce92cf5a"
+)
+EXACT_COMMAND_EVIDENCE = (
+    ROOT
+    / ".superpowers"
+    / "sdd"
+    / "docs-release"
+    / "task5-final-performance"
+    / "exact-command-manifest.json"
+)
+REQUIRED_GATE_LABELS = {
+    "dependency-inventory",
+    "optional-dependency-probe",
+    "focused",
+    "full",
+    "compileall",
+    "generated-docs",
+    "native-validate",
+    "artifact-size",
+    "package-ci-verifier",
+    "release-assets-verifier",
+    "diff-check",
+    "package-tree-guard",
+    "zip-source-byte-inventory",
+    "short-product-smoke",
+    "default-temp-product-smoke",
+    "legacy-1",
+    "legacy-2",
+    "legacy-3",
+}
+REQUIRED_GATE_FIELDS = {
+    "label",
+    "argv",
+    "cwd",
+    "qualification_source",
+    "verification_head",
+    "package",
+    "package_sha256",
+    "environment_overrides",
+    "selected_env",
+    "started_at_utc",
+    "duration_seconds",
+    "exit_code",
+    "missing_markers",
+    "stdout",
+    "stdout_bytes",
+    "stdout_sha256",
+    "stderr",
+    "stderr_bytes",
+    "stderr_sha256",
+}
 
 sys.path.insert(0, str(SCRIPTS))
 
@@ -141,6 +194,73 @@ class Wave4RCReadinessTests(unittest.TestCase):
         ):
             with self.subTest(text=text):
                 self.assertIn(text, readiness)
+
+    def test_exact_command_evidence_contract_is_complete(self):
+        readiness = READINESS.read_text(encoding="utf-8")
+        match = re.search(
+            r"<!-- RC_EXACT_COMMAND_EVIDENCE (\{[^\r\n]+\}) -->",
+            readiness,
+        )
+        self.assertIsNotNone(match, "missing exact command evidence summary")
+        summary = json.loads(match.group(1))
+        self.assertEqual(summary["status"], "passed")
+        self.assertEqual(summary["command_count"], 18)
+        self.assertEqual(set(summary["required_labels"]), REQUIRED_GATE_LABELS)
+        self.assertEqual(
+            set(summary["required_record_fields"]),
+            REQUIRED_GATE_FIELDS,
+        )
+        self.assertEqual(summary["qualification_source"], QUALIFICATION_SOURCE)
+        self.assertEqual(summary["package_sha256"], PACKAGE_SHA256)
+        self.assertEqual(
+            summary["manifest_sha256"],
+            EXACT_COMMAND_MANIFEST_SHA256,
+        )
+        self.assertTrue(PureWindowsPath(summary["cwd"]).is_absolute())
+
+        if not EXACT_COMMAND_EVIDENCE.is_file():
+            return
+        manifest_bytes = EXACT_COMMAND_EVIDENCE.read_bytes()
+        self.assertEqual(
+            hashlib.sha256(manifest_bytes).hexdigest(),
+            EXACT_COMMAND_MANIFEST_SHA256,
+        )
+        manifest = json.loads(manifest_bytes)
+        self.assertEqual(manifest["status"], "passed")
+        self.assertEqual(manifest["command_count"], 18)
+        self.assertFalse(manifest["verification_head_dirty"])
+        self.assertEqual(manifest["qualification_source"], QUALIFICATION_SOURCE)
+        self.assertEqual(manifest["package_sha256"], PACKAGE_SHA256)
+        self.assertEqual(
+            {record["label"] for record in manifest["commands"]},
+            REQUIRED_GATE_LABELS,
+        )
+        evidence_root = EXACT_COMMAND_EVIDENCE.parent
+        for record in manifest["commands"]:
+            with self.subTest(gate=record["label"]):
+                self.assertTrue(REQUIRED_GATE_FIELDS <= record.keys())
+                self.assertTrue(PureWindowsPath(record["cwd"]).is_absolute())
+                self.assertTrue(PureWindowsPath(record["argv"][0]).is_absolute())
+                self.assertTrue(PureWindowsPath(record["package"]).is_absolute())
+                self.assertEqual(record["qualification_source"], QUALIFICATION_SOURCE)
+                self.assertEqual(
+                    record["verification_head"], manifest["verification_head"]
+                )
+                self.assertEqual(record["package_sha256"], PACKAGE_SHA256)
+                self.assertEqual(record["exit_code"], 0)
+                self.assertEqual(record["missing_markers"], [])
+                self.assertEqual(
+                    set(record["selected_env"]),
+                    {"BLENDER_USER_RESOURCES", "PYTHONPATH", "TEMP", "TMP"},
+                )
+                for stream in ("stdout", "stderr"):
+                    log = evidence_root / record[stream]
+                    self.assertTrue(log.is_file(), f"missing {stream}: {log}")
+                    self.assertEqual(log.stat().st_size, record[f"{stream}_bytes"])
+                    self.assertEqual(
+                        hashlib.sha256(log.read_bytes()).hexdigest(),
+                        record[f"{stream}_sha256"],
+                    )
 
 
 if __name__ == "__main__":
