@@ -267,6 +267,9 @@ manifest、descriptor、request 和科学模型读取 `CBSIMPLE 1`，不导入 `
 
 | 文件 | 主要入口 | 职责 |
 | --- | --- | --- |
+| `ChemBlender/benchmarks/__init__.py` | package marker | 声明 2.3.0 基准数据集 package；不导入 `bpy` 或在 import 时生成/测量数据。 |
+| `ChemBlender/benchmarks/datasets.py` | `BENCHMARK_SCALES`、`generate_structure_xyz()`、`generate_trajectory_npy()`、`generate_grid_npy()`、`generate_sdf_fixture()` | 固定 seed 的 50k/250k structure、1k/100k lazy NPY trajectory、128³/256³ grid 和 10k/100k SDF 流式 fixture；生成时逐行或 memmap 写入，不构造大型 Python tuple，并返回 SHA-256。 |
+| `ChemBlender/scripts/benchmark_230.py` | `CASE_REGISTRY`、`run_benchmark()`、`canonical_json()`、`write_canonical_json()`、`main()` | 统一 2.3.0 benchmark 输出：记录完整 CPython environment、warmup/sample、cold/hot、median/p95/min/max 和 failure count；只延迟调用已存在的 pure-core stage，Blender enable/VDB/default-view 显式为外部运行时边界，canonical JSON 原子写入且不导入 `bpy`。 |
 | `ChemBlender/scripts/benchmark_cube_flow.py` | `generate_cube()`、`run_benchmark()`、`main()` | 生成不入库的 128³ Cube，以真实 Blender/OpenVDB 路径分别测量 parse、NPY staging、sidecar save、cold/hot VDB 和 hot Volume view 的 samples/median/p95，并记录 peak Python allocation、硬件、cache 状态与 10 s 产品流门限。 |
 | `ChemBlender/scripts/benchmark_crystal.py` | `benchmark_crystal()`、`main()` | 以固定 CIF/POSCAR 和合成 1000-site CIF 记录 Reader API preview、对称展开、10×10×10 supercell、POSCAR import 与真实 Blender periodic view 的 samples/median/p95、tracemalloc peak 和硬件环境；非 Blender 运行必须把 view 明确记为 `Not Run`。 |
 | `ChemBlender/scripts/benchmark_exchange.py` | `benchmark_exchange()`、`main()` | 逐行生成 50k-atom MOL2/PDB/PQR/CJSON，记录 native parse 与 Reader API preflight/staged summary 的 cold/median/p95、`tracemalloc` peak、source bytes、硬件和 draw-path 边界；无 `bpy` 的 CLI 必须将 Blender RNA projection 记为 `Not Run`。 |
