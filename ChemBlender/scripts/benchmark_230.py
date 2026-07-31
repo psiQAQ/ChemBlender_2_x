@@ -196,21 +196,29 @@ def _prepare_fixtures(case_names, scale, workspace):
     source = None
     trajectory = None
     batch = None
-    if _SOURCE_CASES.intersection(case_names):
-        source = generate_structure_xyz(
-            Path(workspace) / f"{scale.name}-structure.xyz",
-            atom_count=scale.structure_atoms,
-        )
-    if "trajectory_frame" in case_names:
-        trajectory = generate_trajectory_npy(
-            Path(workspace) / f"{scale.name}-trajectory.npy",
-            frames=scale.trajectory_frames,
-        )
-    if _BATCH_CASES.intersection(case_names):
-        from ChemBlender.core.xyz import parse_xyz
+    try:
+        if _SOURCE_CASES.intersection(case_names):
+            source = generate_structure_xyz(
+                Path(workspace) / f"{scale.name}-structure.xyz",
+                atom_count=scale.structure_atoms,
+            )
+        if "trajectory_frame" in case_names:
+            trajectory = generate_trajectory_npy(
+                Path(workspace) / f"{scale.name}-trajectory.npy",
+                frames=scale.trajectory_frames,
+            )
+        if _BATCH_CASES.intersection(case_names):
+            from ChemBlender.core.xyz import parse_xyz
 
-        batch = parse_xyz(source.path)
-    return PreparedFixtures(Path(workspace), scale, source, trajectory, batch)
+            batch = parse_xyz(source.path)
+        return PreparedFixtures(Path(workspace), scale, source, trajectory, batch)
+    except BaseException as error:
+        if trajectory is not None:
+            try:
+                trajectory.array.close()
+            except BaseException as cleanup_error:
+                error.add_note(f"benchmark fixture cleanup failed: {cleanup_error}")
+        raise
 
 
 def _cleanup_fixtures(fixtures):

@@ -202,6 +202,46 @@ class BenchmarkHarnessTests(unittest.TestCase):
         self.assertEqual(array.access_states, [False, True, True])
         self.assertTrue(array.closed)
 
+    def test_prepare_failure_closes_created_trajectory_without_hiding_parse_error(self):
+        from ChemBlender.benchmarks.datasets import BenchmarkScale
+
+        harness = load_harness()
+        harness.BENCHMARK_SCALES["test"] = BenchmarkScale(
+            "test", 3, 3, (2, 2, 2), 3
+        )
+
+        class FailingArray:
+            def __init__(self):
+                self.close_calls = 0
+
+            def close(self):
+                self.close_calls += 1
+                raise OSError("cleanup failed")
+
+        array = FailingArray()
+        trajectory = SimpleNamespace(array=array)
+        source = SimpleNamespace(path=Path("generated.xyz"), sha256="source-hash")
+        try:
+            with (
+                patch.object(harness, "generate_structure_xyz", return_value=source),
+                patch.object(harness, "generate_trajectory_npy", return_value=trajectory),
+                patch(
+                    "ChemBlender.core.xyz.parse_xyz",
+                    side_effect=RuntimeError("parse failed"),
+                ),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "parse failed") as error:
+                    harness.run_benchmark(
+                        case_names=("trajectory_frame", "project_commit"),
+                        scale="test",
+                        warmup_count=0,
+                        sample_count=2,
+                    )
+        finally:
+            del harness.BENCHMARK_SCALES["test"]
+        self.assertEqual(array.close_calls, 1)
+        self.assertIn("cleanup failed", "\n".join(error.exception.__notes__))
+
     def test_measurement_report_is_canonical_and_complete(self):
         harness = load_harness()
         clock_values = iter((0.0, 0.1, 1.0, 1.4, 2.0, 2.2, 3.0, 3.5, 4.0, 4.4))
