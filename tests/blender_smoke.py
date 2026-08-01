@@ -2016,6 +2016,15 @@ def assert_mol2_browser_view(module_key, repository_root):
         assert tuple(map(tuple, reparsed.topologies[0].bond_indices.values)) == (
             tuple(map(tuple, selection.topology.bond_indices.values))
         )
+        assert {
+            (value.namespace, value.key): value.value
+            for value in reparsed.annotations
+            if value.target_entity_id == reparsed.structures[0].id
+        } == {
+            (value.namespace, value.key): value.value
+            for value in selection.annotations
+            if value.target_entity_id == selection.structure.id
+        }
         for role in (
             "atom_type",
             "partial_charge",

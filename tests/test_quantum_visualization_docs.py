@@ -261,7 +261,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 "AtomicResult",
                 "Dependency-free",
                 "raw envelope",
-                "normalized core export with semantic round-trip",
+                "normalized Project Browser export with semantic round-trip",
                 "reader-capability-matrix.json",
             ),
         }

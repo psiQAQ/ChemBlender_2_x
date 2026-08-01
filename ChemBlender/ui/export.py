@@ -200,6 +200,11 @@ def _molecular_selection(
     elif record is not None and record.topology_id not in {None, topology.id}:
         record = None
     properties, provenance = _structure_context(project, structure)
+    properties = tuple(
+        value
+        for value in properties
+        if getattr(value, "structure_id", None) == structure.id
+    )
     annotation_targets = {
         structure.id,
         topology.id,

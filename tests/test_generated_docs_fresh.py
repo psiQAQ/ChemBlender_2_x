@@ -165,7 +165,7 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
         self.assertEqual(
             by_id["mol2"]["export"],
             {
-                "execution_mode": "core",
+                "execution_mode": "project_browser",
                 "format_id": "mol2",
                 "loss_policy": "preview_confirmation",
                 "maturity": "F5",

@@ -171,6 +171,33 @@ class ExtXYZWorkflowTests(unittest.TestCase):
             )
         )
 
+    def test_mol2_multi_record_selection_excludes_sibling_datasets(self):
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _mol2_project("multi.mol2")
+
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+        projection = module._mol2_entities(selection)
+        selected_ids = {
+            selection.structure.id,
+            selection.topology.id,
+            selection.record.id,
+            *(value.id for value in projection.datasets),
+        }
+
+        self.assertEqual(
+            {value.structure_id for value in projection.datasets},
+            {selection.structure.id},
+        )
+        self.assertTrue(
+            all(
+                value.target_entity_id in selected_ids
+                for value in projection.annotations
+            )
+        )
+
     def test_mol2_preview_matches_core_and_rejects_conformers(self):
         from ChemBlender.core.exporters import preview_mol2_export
 
