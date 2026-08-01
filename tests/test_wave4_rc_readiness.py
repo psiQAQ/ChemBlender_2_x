@@ -31,7 +31,8 @@ RC_ARTIFACT_ID = "8812929666"
 RC_PACKAGE_SHA256_PUBLISHED = (
     "7d45bfe9e208e6d50d2b90e875316092c12e51177f39f8835e8ad71af3d2de17"
 )
-RC_FEEDBACK_CHECKED_AT = "2026-08-01T04:02:01Z"
+RC_PUBLISHED_AT = "2026-08-01T04:02:01Z"
+RC_FEEDBACK_CHECKED_AT = "2026-08-01T05:25:58Z"
 QUALIFICATION_SOURCE = "c796ee9469b44c418da729c25b114a5b06595d46"
 PACKAGE_SHA256 = "fed220ad7d9ababe03e821e630ae5beee1a834245060864a8611c5b74f5cfd64"
 EXACT_COMMAND_MANIFEST_SHA256 = (
@@ -169,15 +170,38 @@ class Wave4RCReadinessTests(unittest.TestCase):
             "30683112170",
             "https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0-rc.1",
             "must not be copied into the final `2.3.0` changelog or readiness record",
+            RC_PUBLISHED_AT,
             RC_FEEDBACK_CHECKED_AT,
-            "Issues are disabled; PR #6 has no reviews or comments; the RC Release has no discussion or reactions",
         ):
             with self.subTest(text=text):
                 self.assertIn(text, readiness)
 
         cursor = ACTIVE_CURSOR.read_text(encoding="utf-8")
         self.assertIn(RC_FEEDBACK_CHECKED_AT, cursor)
-        self.assertIn("no visible user-feedback channel event", cursor)
+
+    def test_rc_feedback_window_is_nonzero_and_evidence_bounded(self):
+        evidence = (
+            f"published at `{RC_PUBLISHED_AT}`",
+            f"fresh feedback check at `{RC_FEEDBACK_CHECKED_AT}`",
+            "`1h23m57s`",
+            "Issues disabled",
+            "PR #6 `reviews=0`, `review comments=0`, and `issue comments=0`",
+            "`gh api --jq length`",
+            "`discussion_url=null`",
+            "`reactions=null`",
+            "no blocker was found",
+            "plan defines no minimum feedback-window duration",
+            "current user explicitly authorized continuing to final",
+            "does not claim that user feedback was received",
+        )
+        for name, path in (
+            ("readiness", READINESS),
+            ("active", ACTIVE_CURSOR),
+        ):
+            document = " ".join(path.read_text(encoding="utf-8").split())
+            with self.subTest(document=name):
+                for expected in evidence:
+                    self.assertIn(expected, document)
 
     def test_rc_changelog_scopes_pre_tag_remote_ci_snapshot(self):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
