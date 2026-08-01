@@ -6,8 +6,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
-WAVE_230_ACTIVE_FILE = "2.3.0-wave-4-migration-release.md"
+WAVE_230_ACTIVE_FILES = ()
 WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
+WAVE_230_FINAL_COMPLETED_FILE = "2.3.0-wave-4-migration-release.md"
 
 
 class QuantumVisualizationDocsTests(unittest.TestCase):
@@ -49,9 +50,10 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 name,
             )
         for name in (
-            WAVE_230_ACTIVE_FILE,
+            *WAVE_230_ACTIVE_FILES,
             *WAVE_230_QUEUE_FILES,
             WAVE_230_COMPLETED_FILE,
+            WAVE_230_FINAL_COMPLETED_FILE,
         ):
             self.assertIn(name, agent_index)
 
@@ -464,7 +466,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             worker,
         )
 
-    def test_230_wave_4_is_active_and_wave_3_is_completed(self):
+    def test_230_wave_4_and_wave_3_are_completed(self):
         queued = sorted(
             path.name
             for path in (ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md")
@@ -473,11 +475,20 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertTrue(
             (ROOT / ".agents" / "completed" / WAVE_230_COMPLETED_FILE).is_file()
         )
+        self.assertTrue(
+            (
+                ROOT
+                / ".agents"
+                / "completed"
+                / WAVE_230_FINAL_COMPLETED_FILE
+            ).is_file()
+        )
 
     def test_230_markdown_is_utf8_without_bom(self):
         paths = [
             *(ROOT / ".agents" / "decisions").glob("00[234][0-9]-*.md"),
             *(ROOT / ".agents" / "active").glob("2.3.0-wave-*.md"),
+            *(ROOT / ".agents" / "completed").glob("2.3.0-wave-*.md"),
             *(ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md"),
             *(ROOT / "docs" / "quantum-visualization" / "2.3.0").rglob("*.md"),
             *(ROOT / "docs" / "user").rglob("*.md"),
@@ -641,7 +652,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            [WAVE_230_ACTIVE_FILE],
+            list(WAVE_230_ACTIVE_FILES),
         )
 
     def test_code_architecture_guide_tracks_source_files(self):
@@ -789,6 +800,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             ROOT / "AGENTS.md",
             ROOT / ".agents" / "README.md",
             *(ROOT / ".agents" / "active").glob("*.md"),
+            *(ROOT / ".agents" / "completed").glob("2.3.0-wave-*.md"),
             *(ROOT / ".agents" / "decisions").glob("00[234][0-9]-*.md"),
             *(ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md"),
             ROOT / "docs" / "README.md",

@@ -142,4 +142,4 @@ Record the tag commit, package run URL, verification and publication run URLs, c
 
 - 2.1.1: final legacy add-on; asset compression only.
 - 2.2.0: first published extension; source under `ChemBlender/`, offline RDKit wheel, extension-native install, and package CI.
-- 2.3.0-alpha.1: Wave 0 platform-foundation prerelease candidate; publication pending PR, `main`, and exact-tag remote gates.
+- 2.3.0: published final extension; Waves 0–4, exact-tag artifact verification, Release dry-run, and public Release are complete.

@@ -1,8 +1,9 @@
 # Reader API v1 Compatibility
 
 当前发布 token 为 `1.0-rc1`，插件声明 `chemblender_api = ">=1.0,<2.0"`。
-兼容判断使用 major/minor family；RC token 参与 `(1, 0)` 范围。v1 stable token
-只在 2.3.0 正式发布门更新。
+兼容判断使用 major/minor family；RC token 参与 `(1, 0)` 范围。2.3.0 正式版
+保留 `1.0-rc1` token；stable token 提升留待后续明确的 Reader API 兼容门，
+不因 final Release 状态自动改写。
 
 ## 兼容规则
 

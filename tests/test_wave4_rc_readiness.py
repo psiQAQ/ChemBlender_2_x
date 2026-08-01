@@ -10,7 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 EXTENSION = ROOT / "ChemBlender"
 SCRIPTS = EXTENSION / "scripts"
 READINESS = ROOT / ".agents" / "completed" / "2.3.0-rc-readiness.md"
-ACTIVE_CURSOR = ROOT / ".agents" / "active" / "2.3.0-wave-4-migration-release.md"
+FINAL_CURSOR = (
+    ROOT / ".agents" / "completed" / "2.3.0-wave-4-migration-release.md"
+)
 PERFORMANCE_REPORT = (
     ROOT
     / "docs"
@@ -176,7 +178,7 @@ class Wave4RCReadinessTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertIn(text, readiness)
 
-        cursor = ACTIVE_CURSOR.read_text(encoding="utf-8")
+        cursor = FINAL_CURSOR.read_text(encoding="utf-8")
         self.assertIn(RC_FEEDBACK_CHECKED_AT, cursor)
 
     def test_rc_feedback_window_is_nonzero_and_evidence_bounded(self):
@@ -191,17 +193,21 @@ class Wave4RCReadinessTests(unittest.TestCase):
             "`reactions=null`",
             "no blocker was found",
             "plan defines no minimum feedback-window duration",
-            "current user explicitly authorized continuing to final",
+            "user authorized continuing to final in that release execution",
             "does not claim that user feedback was received",
         )
         for name, path in (
             ("readiness", READINESS),
-            ("active", ACTIVE_CURSOR),
+            ("completed", FINAL_CURSOR),
         ):
             document = " ".join(path.read_text(encoding="utf-8").split())
             with self.subTest(document=name):
                 for expected in evidence:
                     self.assertIn(expected, document)
+                self.assertNotIn(
+                    "current user explicitly authorized continuing to final",
+                    document,
+                )
 
     def test_rc_changelog_scopes_pre_tag_remote_ci_snapshot(self):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
