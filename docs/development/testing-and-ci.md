@@ -93,7 +93,10 @@ it with `-c`, and the same file is passed to
 direct and resolved transitive runtime distribution, excluding installer tools.
 Each job initializes only its pinned submodule commit, checks every selected
 fixture SHA-256 before loading tests, and invokes the runner with an explicit
-module list. The runner checks every lock entry through `importlib.metadata`
+module list. Fixture hashes cover the raw bytes of the pinned Git blobs; the
+checkout disables `core.autocrlf` before materializing submodules so a runner's
+working-tree conversion cannot change that evidence. The runner checks every
+lock entry through `importlib.metadata`
 and writes a canonical JSON summary containing required and actual
 Python/package versions, fixture hashes, counts and test IDs. Only ordinary
 successes may pass: a targeted skip, expected failure, unexpected success,

@@ -16,6 +16,78 @@ LOCKS = {
     "iodata": ROOT / ".github" / "constraints" / "iodata-py313.txt",
     "gbasis": ROOT / ".github" / "constraints" / "gbasis-py312.txt",
 }
+FIXTURES = {
+    "cclib": [
+        (
+            "submodules/cclib/data/Gaussian/basicGaussian16/water_hf_solvent_cpcm.log",
+            "d3ade6a479a83ee3ae684c5ebc3cc0b0e30088b3e525063aeb217484f740acf5",
+        ),
+        (
+            "submodules/cclib/data/ORCA/basicORCA4.1/water_mp2.out",
+            "ed7bf74f17cc47bf378e35cda9035a98854e7609ac67510a7a55bebac952e8be",
+        ),
+        (
+            "submodules/cclib/data/Gaussian/basicGaussian16/dvb_ir.out",
+            "bc1a21de15ada135d5188b11d44226389022d92488ddfa8163ba7d4d713e5061",
+        ),
+        (
+            "submodules/cclib/data/Gaussian/basicGaussian16/dvb_raman.out",
+            "fc97b8c179dbad721262be6077be893b13b785b36f8ae3493a1dd4b3d4bf18b9",
+        ),
+        (
+            "submodules/cclib/data/ORCA/basicORCA5.0/dvb_ir.out",
+            "deb64567281a4673849812a63fc7b1147c33d1c4ad3b67f6b3bf7ec03ab1046c",
+        ),
+        (
+            "submodules/cclib/data/ORCA/basicORCA5.0/dvb_raman.out",
+            "956e9a7989c8fc917ef358f57423286d7228f59fff18f159e25c19e71e3181e8",
+        ),
+        (
+            "submodules/cclib/data/Gaussian/basicGaussian16/dvb_td.out",
+            "c9255c92b829a4d2072ffca262be4dd9212f35a9c75d84c1fe8eb5969c166eef",
+        ),
+        (
+            "submodules/cclib/data/Gaussian/basicGaussian09/dvb_td.out",
+            "01619fecb8ca4d80b1ddfddb6cb9dc1983e52e23616e20ac0e4f1a6bb55462e0",
+        ),
+        (
+            "submodules/cclib/data/ORCA/basicORCA5.0/dvb_td.out",
+            "b4262a21e11ea441551f465f4ae04aee0d4f9ddf35e6a94c0309400c924f17f6",
+        ),
+        (
+            "submodules/cclib/data/ORCA/basicORCA5.0/dvb_adc2.log",
+            "d6d371f25ae50c27a3046ec35217d2d528c4ba0fb28fd71738e69f5980ecbe35",
+        ),
+    ],
+    "iodata": [
+        (
+            "submodules/iodata/iodata/test/data/water_sto3g_hf_g03.fchk",
+            "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816",
+        ),
+        (
+            "submodules/iodata/iodata/test/data/ch3_hf_sto3g.fchk",
+            "b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c",
+        ),
+        (
+            "submodules/iodata/iodata/test/data/h2o.molden.input",
+            "2bf025dc02fdb689e61c980ac55dc4bef35a31e4bfc819a668ac36d721f44f06",
+        ),
+    ],
+    "gbasis": [
+        (
+            "submodules/iodata/iodata/test/data/water_sto3g_hf_g03.fchk",
+            "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816",
+        ),
+        (
+            "submodules/iodata/iodata/test/data/ch3_hf_sto3g.fchk",
+            "b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c",
+        ),
+        (
+            "submodules/iodata/iodata/test/data/water_ccpvdz_pure_hf_g03.fchk",
+            "c86f46db444f31613dbc2602b7b37b4ee4375d722b86e69eb04a163d3a1ec90a",
+        ),
+    ],
+}
 
 
 class OptionalQcCoreCiContractTests(unittest.TestCase):
@@ -132,23 +204,13 @@ class OptionalQcCoreCiContractTests(unittest.TestCase):
 
     def test_fixture_hash_preflight_and_summary_artifact_are_required(self):
         workflow = self._workflow()
-        for fixture_hash in (
-            "02bc605f57477477f17d1f305f91cd9e4e62239456cb9a0ef288384c714d04d9",
-            "18923bf60ff3c4bac650a0cd871a7417e2f779c5161dfa138ea677fad4f7eb42",
-            "eae40334346cea9177ab5c75ca81cd53ed1fbcaf5d567a8818f067439e5c744f",
-            "f208f87b45aaa9792cc5c032d7ad9d0e2e89f70df16d38a32916837c478248fe",
-            "17aaa6f1ca3d4bdc9ce90d857c6b4ffbbeda2ceb660934cfc8caa211d9d34e29",
-            "8389fcfb2014a4c320c800d1bb8e3003588ef845b4cee3f342ebe5c3d0398113",
-            "d608b388b408a123447a637efeafd7e3c3436c645b01c4c48a446fb22648006b",
-            "1b22bead2a4b13260f3ec870e8fe26a6c6400e52fd93f3fcbc1dff0301dfa9ff",
-            "908be982bb2a50b88ded46e0df397c26e1d3399ea9fcac8f70940a4cb45c4be8",
-            "fcb6c4b0bc8d35aa34a0e58a86c148622820f3234c5309c7719014a8d6fe556f",
-            "2385f3da057bcc3a33327de7f36703bada5069ed3089fc581ece401473218415",
-            "2b958cb5e03ca5d9e506b215aa424f9f1998b3ac4ce30b8fcb64795e8b895f3b",
-            "9395e96ca9e464d883849e29d0f7ffb331f371512d2af6aa67f25061615bd3b7",
-            "ef4b97f94cf701647f40042f2c44ea864f5ce9ac3cfeda7985acf31ac16fe7f3",
-        ):
-            self.assertIn(fixture_hash, workflow)
+        for backend, expected_fixtures in FIXTURES.items():
+            with self.subTest(backend=backend):
+                job = self._job(backend)
+                fixtures = re.findall(
+                    r"--fixture ([^=\s]+)=([0-9a-f]{64})", job
+                )
+                self.assertEqual(fixtures, expected_fixtures)
         self.assertEqual(workflow.count(UPLOAD_ARTIFACT), 3)
         self.assertIn("if: always()", workflow)
         self.assertIn("if-no-files-found: ignore", workflow)
@@ -160,6 +222,15 @@ class OptionalQcCoreCiContractTests(unittest.TestCase):
             ["summary-cclib.json", "summary-iodata.json", "summary-gbasis.json"],
         )
         self.assertNotIn("tar", workflow.lower())
+
+    def test_each_fixture_checkout_disables_autocrlf_before_submodule_update(self):
+        autocrlf = "git config --global core.autocrlf false"
+        submodule_update = "git submodule update --init --depth 1"
+        for backend in FIXTURES:
+            with self.subTest(backend=backend):
+                job = self._job(backend)
+                self.assertEqual(job.count(autocrlf), 1)
+                self.assertLess(job.index(autocrlf), job.index(submodule_update))
 
     def test_workflow_is_read_only_pinned_and_documented_as_zero_skip_gate(self):
         workflow = self._workflow()

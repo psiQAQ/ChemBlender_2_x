@@ -505,13 +505,13 @@ class DependencyInventoryTests(unittest.TestCase):
         self.assertIn("injected restore failure", stdout)
         backups = list(self.root.glob(".*.bak"))
         self.assertEqual(len(backups), 1)
-        self.assertIn(str(backups[0].resolve()), stdout)
-        self.assertEqual(
-            stdout.split("recoverable backups: ", maxsplit=1)[1].strip(),
-            str(backups[0].resolve()),
+        reported_backup = Path(
+            stdout.split("recoverable backups: ", maxsplit=1)[1].strip()
         )
-        self.assertEqual(backups[0].read_bytes(), b"old inventory")
-        self.assertEqual(stat.S_IMODE(backups[0].stat().st_mode), output_mode)
+        self.assertTrue(reported_backup.is_absolute())
+        self.assertTrue(os.path.samefile(reported_backup, backups[0]))
+        self.assertEqual(reported_backup.read_bytes(), b"old inventory")
+        self.assertEqual(stat.S_IMODE(reported_backup.stat().st_mode), output_mode)
         self.assertEqual(list(self.root.glob(".*.tmp")), [])
 
     def test_repository_manifest_matches_required_inventory(self):
