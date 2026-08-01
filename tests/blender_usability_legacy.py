@@ -13,6 +13,15 @@ def _sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _tree_hash(path):
+    digest = hashlib.sha256()
+    for child in sorted(path.rglob("*"), key=lambda item: str(item.relative_to(path))):
+        if child.is_file():
+            digest.update(str(child.relative_to(path)).replace("\\", "/").encode())
+            digest.update(child.read_bytes())
+    return digest.hexdigest()
+
+
 def _assert_backup_preservation(backup, legacy_names):
     project_id = backup["cb_legacy_migration_project_id"]
     transaction_id = backup["cb_legacy_migration_transaction_id"]
@@ -59,6 +68,8 @@ def main():
     assert module_keys == ["bl_ext.user_default.chemblender"], module_keys
     module_key = module_keys[0]
     migration = importlib.import_module(f"{module_key}.ui.migration")
+    session_ui = importlib.import_module(f"{module_key}.ui.session")
+    publication = importlib.import_module(f"{module_key}.core.storage.publication")
 
     scene = bpy.context.scene
     scene_name = scene.name
@@ -80,9 +91,23 @@ def main():
         for obj in bpy.data.objects
     )
 
+    session = session_ui.get_scene_session(scene)
+    assert session.link_status == "connected"
+    assert not session.dirty, session.dirty_reasons
+    sidecar = Path(session.sidecar_path)
+    manifest_before = (sidecar / "manifest.json").read_bytes()
+    tree_before = _tree_hash(sidecar)
+    assert not publication.inspect_publication_orphans(sidecar).has_orphans
     assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
+    assert session.link_status == "connected"
+    assert not session.dirty, session.dirty_reasons
+    assert session_ui.get_scene_session_status(scene)[0] == "connected"
+    assert (sidecar / "manifest.json").read_bytes() == manifest_before
+    assert _tree_hash(sidecar) == tree_before
+    assert not publication.inspect_publication_orphans(sidecar).has_orphans
     assert bpy.ops.wm.open_mainfile(filepath=str(destination)) == {"FINISHED"}
     reopened_scene = bpy.data.scenes[scene_name]
+    assert session_ui.get_scene_session_status(reopened_scene)[0] == "connected"
     assert migration.legacy_migration_detection(reopened_scene).objects == ()
     reopened_backup = bpy.data.collections["ChemBlender Legacy Backup"]
     assert reopened_backup.hide_viewport and reopened_backup.hide_render

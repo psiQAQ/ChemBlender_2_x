@@ -302,6 +302,8 @@ def main():
     sidecar_before = _tree_hash(preview.sidecar_path)
     siblings_before = _sibling_inventory(preview.sidecar_path)
     links_before = _scene_links_snapshot()
+    session.mark_dirty("preexisting_migration_state")
+    dirty_before = session.dirty_reasons
     originals = tuple(bpy.data.objects[name] for name in preview.plan.report.object_names)
     rollback_before = _object_snapshot(originals, scene)
     revision_before_rollback = get_quick_import_state(session).browser_revision
@@ -332,6 +334,7 @@ def main():
     assert _sibling_inventory(preview.sidecar_path) == siblings_before
     assert session.project is not lazy_before
     assert session.project.structures[base_id].coordinates.values[0, 0] == 0.0
+    assert session.dirty_reasons == dirty_before
     assert get_quick_import_state(session).browser_revision == revision_before_rollback
 
     preview = migration.preview_legacy_migration(scene)
@@ -362,6 +365,7 @@ def main():
         f"{item.legacy_object_name} (Migrated)" for item in expected_view_plans
     }
     assert session.link_status == "connected"
+    assert not session.dirty, session.dirty_reasons
     assert base_id in session.project.structures
     backup = bpy.data.collections["ChemBlender Legacy Backup"]
     assert backup.hide_viewport

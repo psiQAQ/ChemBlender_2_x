@@ -89,3 +89,9 @@
 - RC后只修阻断问题。
 
 退出门：2.2.x升级、旧场景迁移、基础格式、安装生命周期、性能和Release workflow全部验证；正式版不新增范围。
+
+当前发布门状态：
+
+- 本地 final qualification：Passed（2026-08-01）。
+- 远端 final exact-tag CI 与最终公开 Release：Pending（本地任务中 Not Run）。
+- Wave 4 保持进行中；只有最终 exact-tag artifact、Release dry-run 和公开 Release 均经独立验证后，才能记录为 `2.3.0` 发布完成。

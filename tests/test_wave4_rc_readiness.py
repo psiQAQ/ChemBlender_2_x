@@ -2,7 +2,6 @@ import hashlib
 import json
 import re
 import sys
-import tomllib
 import unittest
 from pathlib import Path, PureWindowsPath
 
@@ -11,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EXTENSION = ROOT / "ChemBlender"
 SCRIPTS = EXTENSION / "scripts"
 READINESS = ROOT / ".agents" / "completed" / "2.3.0-rc-readiness.md"
+ACTIVE_CURSOR = ROOT / ".agents" / "active" / "2.3.0-wave-4-migration-release.md"
 PERFORMANCE_REPORT = (
     ROOT
     / "docs"
@@ -21,6 +21,18 @@ PERFORMANCE_REPORT = (
 )
 RC_VERSION = "2.3.0-rc.1"
 RC_TAG = f"v{RC_VERSION}"
+RC_RELEASE_NOTES_UTF8_SHA256 = (
+    "d19666306b6afe45c33640b8032535c713bdc6d49164f305c5d2ae5cfe4da14b"
+)
+RC_TAG_OBJECT = "e450d0c29ca9244df05debd3022467f153fda8d1"
+RC_TAG_COMMIT = "86e4391a73128f0262e0fbf6960443c3be4cb310"
+RC_PACKAGE_RUN = "30682833534"
+RC_ARTIFACT_ID = "8812929666"
+RC_PACKAGE_SHA256_PUBLISHED = (
+    "7d45bfe9e208e6d50d2b90e875316092c12e51177f39f8835e8ad71af3d2de17"
+)
+RC_PUBLISHED_AT = "2026-08-01T04:02:01Z"
+RC_FEEDBACK_CHECKED_AT = "2026-08-01T05:25:58Z"
 QUALIFICATION_SOURCE = "c796ee9469b44c418da729c25b114a5b06595d46"
 PACKAGE_SHA256 = "fed220ad7d9ababe03e821e630ae5beee1a834245060864a8611c5b74f5cfd64"
 EXACT_COMMAND_MANIFEST_SHA256 = (
@@ -79,20 +91,10 @@ REQUIRED_GATE_FIELDS = {
 sys.path.insert(0, str(SCRIPTS))
 
 from extract_release_notes import extract_release_notes
-from release_metadata import read_release_metadata
 
 
 class Wave4RCReadinessTests(unittest.TestCase):
-    def test_rc_metadata_and_changelog_are_exact(self):
-        metadata = read_release_metadata(EXTENSION)
-        self.assertEqual(metadata.version, RC_VERSION)
-        self.assertEqual(metadata.package_name, f"chemblender-{RC_VERSION}.zip")
-        self.assertEqual(metadata.checksum_name, f"chemblender-{RC_VERSION}.sha256")
-        self.assertEqual(
-            metadata.artifact_name,
-            f"chemblender-{RC_VERSION}-windows-x64",
-        )
-
+    def test_rc_changelog_is_complete(self):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         self.assertIn(f"## [{RC_VERSION}] - ", changelog)
         notes = extract_release_notes(changelog, RC_VERSION)
@@ -155,11 +157,69 @@ class Wave4RCReadinessTests(unittest.TestCase):
             )
         )
 
-    def test_manifest_version_is_a_single_root_assignment(self):
-        source = (EXTENSION / "blender_manifest.toml").read_bytes()
-        self.assertEqual(source.count(f'version = "{RC_VERSION}"'.encode()), 1)
-        with (EXTENSION / "blender_manifest.toml").open("rb") as stream:
-            self.assertEqual(tomllib.load(stream)["version"], RC_VERSION)
+    def test_readiness_separates_historical_pre_tag_snapshot_from_published_rc(self):
+        readiness = READINESS.read_text(encoding="utf-8")
+        for text in (
+            "Historical pre-tag qualification snapshot",
+            RC_TAG_OBJECT,
+            RC_TAG_COMMIT,
+            RC_PACKAGE_RUN,
+            RC_ARTIFACT_ID,
+            RC_PACKAGE_SHA256_PUBLISHED,
+            "30683074015",
+            "30683112170",
+            "https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0-rc.1",
+            "must not be copied into the final `2.3.0` changelog or readiness record",
+            RC_PUBLISHED_AT,
+            RC_FEEDBACK_CHECKED_AT,
+        ):
+            with self.subTest(text=text):
+                self.assertIn(text, readiness)
+
+        cursor = ACTIVE_CURSOR.read_text(encoding="utf-8")
+        self.assertIn(RC_FEEDBACK_CHECKED_AT, cursor)
+
+    def test_rc_feedback_window_is_nonzero_and_evidence_bounded(self):
+        evidence = (
+            f"published at `{RC_PUBLISHED_AT}`",
+            f"fresh feedback check at `{RC_FEEDBACK_CHECKED_AT}`",
+            "`1h23m57s`",
+            "Issues disabled",
+            "PR #6 `reviews=0`, `review comments=0`, and `issue comments=0`",
+            "`gh api --jq length`",
+            "`discussion_url=null`",
+            "`reactions=null`",
+            "no blocker was found",
+            "plan defines no minimum feedback-window duration",
+            "current user explicitly authorized continuing to final",
+            "does not claim that user feedback was received",
+        )
+        for name, path in (
+            ("readiness", READINESS),
+            ("active", ACTIVE_CURSOR),
+        ):
+            document = " ".join(path.read_text(encoding="utf-8").split())
+            with self.subTest(document=name):
+                for expected in evidence:
+                    self.assertIn(expected, document)
+
+    def test_rc_changelog_scopes_pre_tag_remote_ci_snapshot(self):
+        changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        notes = extract_release_notes(changelog, RC_VERSION)
+        self.assertEqual(
+            hashlib.sha256(notes.encode("utf-8")).hexdigest(),
+            RC_RELEASE_NOTES_UTF8_SHA256,
+            "RC release notes must match the immutable tagged/public UTF-8 body",
+        )
+
+        for text in (
+            "Remote CI has not run for this exact RC commit. Local qualification "
+            "evidence must not be described as exact-HEAD CI evidence.",
+            "`Remote CI: Not Run`. Tagging, package CI and prerelease publication "
+            "require separate authorization and exact-tag evidence.",
+        ):
+            with self.subTest(text=text):
+                self.assertIn(text, notes)
 
     def test_product_performance_and_readiness_bind_exact_local_evidence(self):
         report = json.loads(PERFORMANCE_REPORT.read_text(encoding="utf-8"))

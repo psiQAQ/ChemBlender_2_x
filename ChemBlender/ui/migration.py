@@ -451,7 +451,6 @@ def migrate_legacy_scene(scene, *, confirmed):
             tuple(bpy.data.objects[name] for name in preview.plan.report.object_names),
             scene, session.project.id, transaction_id,
         )
-        session.mark_dirty("legacy_migration")
         _legacy_load_post_handler(None)
         warnings = list(committed_result.cleanup_warnings)
         if previous_sidecar is not None and previous_sidecar.exists():
@@ -466,6 +465,7 @@ def migrate_legacy_scene(scene, *, confirmed):
         from .properties import advance_browser_revision
 
         advance_browser_revision(session)
+        session.mark_clean()
         return result
     except BaseException as error:
         if backup is not None:
