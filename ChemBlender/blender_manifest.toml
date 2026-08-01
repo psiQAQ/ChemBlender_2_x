@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "chemblender"
-version = "2.3.0-rc.1"
+version = "2.3.0"
 name = "ChemBlender"
 tagline = "Scientific results, structures and fields for Blender"
 maintainer = "LiHaodong"

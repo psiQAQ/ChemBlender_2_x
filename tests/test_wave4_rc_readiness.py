@@ -2,7 +2,6 @@ import hashlib
 import json
 import re
 import sys
-import tomllib
 import unittest
 from pathlib import Path, PureWindowsPath
 
@@ -91,20 +90,10 @@ REQUIRED_GATE_FIELDS = {
 sys.path.insert(0, str(SCRIPTS))
 
 from extract_release_notes import extract_release_notes
-from release_metadata import read_release_metadata
 
 
 class Wave4RCReadinessTests(unittest.TestCase):
-    def test_rc_metadata_and_changelog_are_exact(self):
-        metadata = read_release_metadata(EXTENSION)
-        self.assertEqual(metadata.version, RC_VERSION)
-        self.assertEqual(metadata.package_name, f"chemblender-{RC_VERSION}.zip")
-        self.assertEqual(metadata.checksum_name, f"chemblender-{RC_VERSION}.sha256")
-        self.assertEqual(
-            metadata.artifact_name,
-            f"chemblender-{RC_VERSION}-windows-x64",
-        )
-
+    def test_rc_changelog_is_complete(self):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         self.assertIn(f"## [{RC_VERSION}] - ", changelog)
         notes = extract_release_notes(changelog, RC_VERSION)
@@ -207,28 +196,6 @@ class Wave4RCReadinessTests(unittest.TestCase):
         ):
             with self.subTest(text=text):
                 self.assertIn(text, notes)
-
-        unreleased = changelog.split("## [Unreleased]\n", 1)[1].split(
-            f"## [{RC_VERSION}]", 1
-        )[0]
-        for text in (
-            "Post-RC qualification follow-up",
-            "immutable pre-tag qualification snapshot",
-            "exact-tag `extension-package` run `30682833534`",
-            "release dry-run `30683074015`",
-            "public prerelease workflow `30683112170`",
-            "`.agents/completed/2.3.0-rc-readiness.md`",
-            "final `2.3.0` changelog or readiness record must not inherit an "
-            "unqualified `Remote CI: Not Run` statement",
-        ):
-            with self.subTest(text=text):
-                self.assertIn(text, unreleased)
-
-    def test_manifest_version_is_a_single_root_assignment(self):
-        source = (EXTENSION / "blender_manifest.toml").read_bytes()
-        self.assertEqual(source.count(f'version = "{RC_VERSION}"'.encode()), 1)
-        with (EXTENSION / "blender_manifest.toml").open("rb") as stream:
-            self.assertEqual(tomllib.load(stream)["version"], RC_VERSION)
 
     def test_product_performance_and_readiness_bind_exact_local_evidence(self):
         report = json.loads(PERFORMANCE_REPORT.read_text(encoding="utf-8"))

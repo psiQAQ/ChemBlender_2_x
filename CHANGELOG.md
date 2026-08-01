@@ -4,9 +4,56 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ## [Unreleased]
 
-### Post-RC qualification follow-up
+## [2.3.0] - 2026-08-01
 
-- The published `2.3.0-rc.1` entry remains the immutable pre-tag qualification snapshot. exact-tag `extension-package` run `30682833534`, release dry-run `30683074015`, and public prerelease workflow `30683112170` passed; see `.agents/completed/2.3.0-rc-readiness.md`. The final `2.3.0` changelog or readiness record must not inherit an unqualified `Remote CI: Not Run` statement.
+### Added
+
+- Added native XYZ/extXYZ, Cube, MOL2, PDB/PQR and POSCAR/CONTCAR readers, plus RDKit-backed MOL/SDF/SMILES and Gemmi-backed CIF readers, mapped into one vendor-neutral Project model.
+- Added first-class Structure, topology, trajectory/property, crystal/symmetry, Grid3D/Surface and biological/exchange records with immutable source revisions and provenance.
+- Added Project Browser export workflows for extXYZ, MOL, SDF, SMILES, CIF and POSCAR at F5 maturity with explicit loss preview; XYZ export is F4 and intentionally writes one structure's coordinates only. CJSON and QCSchema provide controlled core-envelope export paths.
+- Added scientific editing, explicit/inferred topology selection, unified molecular/crystal Structure views, periodic views, Grid3D Volume/Surface workflows, background task cancellation and paged Project Browser projections.
+- Added Reader API `1.0-rc1`, explicit Extension reader discovery/conformance, generated format/dependency capability documents and deterministic diagnostic export.
+- Added explicit legacy 2.1/2.2 scene preview and migration with hash-locked fixture evidence, original-object backup ownership and save/reopen verification.
+
+### Changed
+
+- Froze the sidecar/project schema at `1.0` and Reader API at `1.0-rc1`; post-RC work remained limited to release qualification and documentation clarity.
+- Made the `.blend` plus same-basename `.cbq/` pair the durable project boundary; scientific arrays and provenance remain authoritative while VDB and mesh products remain rebuildable derived caches.
+- Bundled exact Windows CPython 3.13 wheels for RDKit `2026.3.3` and Gemmi `0.7.5`; external scientific stacks remain optional worker/runtime backends.
+- Added bounded benchmark, cancellation, diagnostics, revision-selection and recovery workflows without placing large scientific arrays in Blender RNA.
+
+### Fixed
+
+- Canonicalized explicit and inferred topology records, including periodic image shifts and unwrapped-coordinate invariance, and made new CJSON topology immediately available without save/reopen migration.
+- Hardened project adoption, multi-Scene links, sidecar publication, cache repair and import/relink rollback so failures retain the previous verified project or report recoverable residuals.
+- Preserved Grid3D native coordinates, units, Cube nuclear charges/dataset metadata, crystal fractional coordinates, occupancy, symmetry and supported biological/exchange annotations through project and sidecar round trips.
+- Made cancellable import/export/worker jobs clean their owned staging state and prevented stale browser/revision/cache state from being presented as current data.
+
+### Compatibility
+
+- Supports Blender 5.1.0 or later on Windows x64; release qualification uses Blender 5.1.2 and its bundled Python 3.13.
+- The base ZIP includes RDKit and Gemmi. cclib, IOData, GBasis, ASE, pymatgen, phonopy, spglib and large external programs are not bundled base requirements and remain explicitly availability-gated.
+- Sidecar v0.1/v0.2 projects are integrity-checked and migrated in memory; a successful 2.3 save publishes schema v1 rather than rewriting the old source in place.
+- Reader and export maturity is format-specific. MOL2, PDB/PQR and Cube have no general Project Browser writer in this release; import support must not be interpreted as lossless round-trip support.
+
+### Migration
+
+- Back up the complete `.blend`/`.cbq` pair, close all Blender processes, verify the official ZIP checksum and install the Extension from a cold process before opening the working copy.
+- Prefer **Save As** for the first schema-v1 publication. A v1 sidecar cannot be downgraded for ChemBlender 2.2; rollback requires restoring the paired pre-upgrade backup.
+- Legacy direct-object scenes require the explicit preview/confirm wizard. Original objects move to `ChemBlender Legacy Backup`; the migration is not claimed to be lossless and has no automatic post-success undo.
+
+### Known Limitations
+
+- This release is Windows x64 only. Loaded RDKit or Gemmi DLLs can keep isolated-profile files locked until Blender exits; a successful process exit and fresh-profile reinstall remain the functional checks.
+- Optional readers/workers are unavailable unless their separately managed runtime passes the exact availability check; the base package does not install or download them.
+- MOL2 and PDB/PQR export remain readiness-only, Cube has no lossless re-export, and XYZ export intentionally omits trajectory/property semantics. Lossy Project Browser exports require preview and confirmation.
+- Scripted usability acceptance covers the packaged workflows and hash-locked fixtures but is not an independent human-participant study.
+
+### Verification
+
+- The published `2.3.0-rc.1` entry remains the immutable pre-tag qualification snapshot. Its exact-tag `extension-package` run `30682833534`, release dry-run `30683074015`, and public prerelease workflow `30683112170` passed; see `.agents/completed/2.3.0-rc-readiness.md`.
+- The final local gate covers the full standard-library suite, generated-document freshness, dependency hashes/licenses, native Extension validation/build, ZIP path/type/CRC/member audits, isolated installation, lifecycle smoke and three legacy save/reopen fixtures.
+- Final exact-tag package CI and publication are pending separate authorization; local qualification is not a substitute for those remote gates.
 
 ## [2.3.0-rc.1] - 2026-07-31
 
@@ -132,7 +179,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 - Imported the latest ChemBlender 2.1.0 source as commit `78c2d8d8d6361302bf8f19a568c3d7cfccde4c19`, based on upstream commit `9077096b776cd18ca85adb4b50253a0d3c18fd76`.
 
-[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/v2.3.0-rc.1...HEAD
+[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0
 [2.3.0-rc.1]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0-rc.1
 [2.3.0-alpha.1]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0-alpha.1
 [2.2.0]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.2.0
