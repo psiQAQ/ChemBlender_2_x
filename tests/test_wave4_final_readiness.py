@@ -126,9 +126,9 @@ class Wave4FinalReadinessTests(unittest.TestCase):
         ordered_gates = (
             "1. Independent final review: Passed; record reviewed release HEAD as `H`.",
             "2. Ordinary-push `release/2.3.0` to `origin`.",
-            "3. Before merge, fetch and record pre-merge `origin/main` as `B`.",
-            "4. Create PR: `release/2.3.0` to `main`.",
-            "5. PR exact HEAD: all five required checks Passed:",
+            "3. Create PR: `release/2.3.0` to `main`.",
+            "4. PR exact HEAD `H`: all five required checks Passed:",
+            "5. Immediately after PR checks pass, run `git fetch origin --prune`, record `B = origin/main`, and require the remote PR base still equals `B` and has not advanced.",
             "6. Merge to `main` with an ordinary merge commit and record it as `M`; squash/rebase are forbidden.",
             "7. Fetch and require exact merge identities:",
             "8. Main exact merge commit: all five required checks Passed.",
@@ -165,16 +165,19 @@ class Wave4FinalReadinessTests(unittest.TestCase):
                 positions = [normalized.index(gate) for gate in ordered_gates]
                 self.assertEqual(positions, sorted(positions))
                 push_start = positions[1]
-                base_start = positions[2]
                 remote_release_equality = normalized.index(
                     "`origin/release/2.3.0 == H`", push_start
                 )
-                self.assertLess(remote_release_equality, base_start)
-                pr_checks_start = positions[4]
+                pr_start = positions[2]
+                self.assertLess(remote_release_equality, pr_start)
+                pr_checks_start = positions[3]
+                base_capture_start = positions[4]
                 merge_start = positions[5]
                 for check in required_checks:
                     check_position = normalized.index(check, pr_checks_start)
-                    self.assertLess(check_position, merge_start)
+                    self.assertLess(check_position, base_capture_start)
+                self.assertLess(pr_checks_start, base_capture_start)
+                self.assertLess(base_capture_start, merge_start)
                 identity_start = positions[6]
                 main_checks_start = positions[7]
                 identity_positions = [
