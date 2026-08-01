@@ -192,20 +192,29 @@ class Wave4RCReadinessTests(unittest.TestCase):
         notes = extract_release_notes(changelog, RC_VERSION)
 
         for text in (
-            "Historical pre-tag qualification snapshot",
+            "Remote CI has not run for this exact RC commit. Local qualification "
+            "evidence must not be described as exact-HEAD CI evidence.",
+            "`Remote CI: Not Run`. Tagging, package CI and prerelease publication "
+            "require separate authorization and exact-tag evidence.",
+        ):
+            with self.subTest(text=text):
+                self.assertIn(text, notes)
+
+        unreleased = changelog.split("## [Unreleased]\n", 1)[1].split(
+            f"## [{RC_VERSION}]", 1
+        )[0]
+        for text in (
+            "Post-RC qualification follow-up",
+            "immutable pre-tag qualification snapshot",
             "exact-tag `extension-package` run `30682833534`",
             "release dry-run `30683074015`",
             "public prerelease workflow `30683112170`",
             "`.agents/completed/2.3.0-rc-readiness.md`",
+            "final `2.3.0` changelog or readiness record must not inherit an "
+            "unqualified `Remote CI: Not Run` statement",
         ):
             with self.subTest(text=text):
-                self.assertIn(text, notes)
-        self.assertNotIn("Remote CI has not run for this exact RC commit.", notes)
-        self.assertNotIn(
-            "`Remote CI: Not Run`. Tagging, package CI and prerelease publication"
-            " require separate authorization and exact-tag evidence.",
-            notes,
-        )
+                self.assertIn(text, unreleased)
 
     def test_manifest_version_is_a_single_root_assignment(self):
         source = (EXTENSION / "blender_manifest.toml").read_bytes()
