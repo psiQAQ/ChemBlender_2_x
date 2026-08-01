@@ -114,5 +114,60 @@ class Wave4FinalReadinessTests(unittest.TestCase):
         self.assertNotIn("2.3.0 Release-qualified", active)
         self.assertNotIn("2.3.0 Release-qualified", roadmap)
 
+    def test_remote_handoff_is_fail_closed_and_ordered_through_main(self):
+        documents = {
+            "active": (
+                ROOT / ".agents/active/2.3.0-wave-4-migration-release.md"
+            ).read_text(encoding="utf-8"),
+            "readiness": (
+                ROOT / ".agents/completed/2.3.0-release-readiness.md"
+            ).read_text(encoding="utf-8"),
+        }
+        ordered_gates = (
+            "1. Independent final review: Passed.",
+            "2. Ordinary-push `release/2.3.0` to `origin`.",
+            "3. Create PR: `release/2.3.0` to `main`.",
+            "4. PR exact HEAD: all five required checks Passed:",
+            "5. Merge to `main` with an ordinary merge commit; squash/rebase are forbidden.",
+            "6. Fetch and verify `origin/main`: exact merge commit, expected two parents, and reviewed release HEAD in ancestry.",
+            "7. Main exact merge commit: all five required checks Passed.",
+            "8. Create/push annotated `v2.3.0` from the verified `origin/main` merge commit.",
+            "9. Exact-tag CI: unique successful `extension-package` run for the tag's exact commit.",
+            "10. Artifact verify: unexpired metadata-named five-file artifact, ZIP/checksum digests, inventory, licenses, size, install, and lifecycle evidence.",
+            "11. Dry-run: `extension-release.yml` with `publish=false` must pass.",
+            "12. Publish: dispatch with `publish=true`, then verify the public final Release, assets, body, digests, and latest status.",
+        )
+        required_checks = (
+            "`extension-package / native-core`",
+            "`extension-package / package`",
+            "`optional-qc-core / cclib`",
+            "`optional-qc-core / iodata`",
+            "`optional-qc-core / gbasis`",
+        )
+        authorization = (
+            "The user has explicitly authorized all remaining Git and remote "
+            "operations in this execution.",
+            "No further confirmation is required for this sequence.",
+            "This execution-specific authorization does not change the "
+            "repository's general authorization policy.",
+        )
+
+        for name, document in documents.items():
+            with self.subTest(document=name):
+                normalized = " ".join(document.split())
+                positions = [normalized.index(gate) for gate in ordered_gates]
+                self.assertEqual(positions, sorted(positions))
+                pr_checks_start = positions[3]
+                merge_start = positions[4]
+                for check in required_checks:
+                    check_position = normalized.index(check, pr_checks_start)
+                    self.assertLess(check_position, merge_start)
+                self.assertIn(
+                    "If any gate fails, is missing, or is ambiguous, stop before all later steps.",
+                    normalized,
+                )
+                for statement in authorization:
+                    self.assertIn(statement, normalized)
+
 if __name__ == "__main__":
     unittest.main()
