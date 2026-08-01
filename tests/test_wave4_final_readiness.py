@@ -124,18 +124,19 @@ class Wave4FinalReadinessTests(unittest.TestCase):
             ).read_text(encoding="utf-8"),
         }
         ordered_gates = (
-            "1. Independent final review: Passed.",
+            "1. Independent final review: Passed; record reviewed release HEAD as `H`.",
             "2. Ordinary-push `release/2.3.0` to `origin`.",
-            "3. Create PR: `release/2.3.0` to `main`.",
-            "4. PR exact HEAD: all five required checks Passed:",
-            "5. Merge to `main` with an ordinary merge commit; squash/rebase are forbidden.",
-            "6. Fetch and verify `origin/main`: exact merge commit, expected two parents, and reviewed release HEAD in ancestry.",
-            "7. Main exact merge commit: all five required checks Passed.",
-            "8. Create/push annotated `v2.3.0` from the verified `origin/main` merge commit.",
-            "9. Exact-tag CI: unique successful `extension-package` run for the tag's exact commit.",
-            "10. Artifact verify: unexpired metadata-named five-file artifact, ZIP/checksum digests, inventory, licenses, size, install, and lifecycle evidence.",
-            "11. Dry-run: `extension-release.yml` with `publish=false` must pass.",
-            "12. Publish: dispatch with `publish=true`, then verify the public final Release, assets, body, digests, and latest status.",
+            "3. Before merge, fetch and record pre-merge `origin/main` as `B`.",
+            "4. Create PR: `release/2.3.0` to `main`.",
+            "5. PR exact HEAD: all five required checks Passed:",
+            "6. Merge to `main` with an ordinary merge commit and record it as `M`; squash/rebase are forbidden.",
+            "7. Fetch and require exact merge identities:",
+            "8. Main exact merge commit: all five required checks Passed.",
+            "9. Create/push annotated `v2.3.0` from the verified `origin/main` merge commit.",
+            "10. Exact-tag CI: unique successful `extension-package` run for the tag's exact commit.",
+            "11. Artifact verify: unexpired metadata-named five-file artifact, ZIP/checksum digests, inventory, licenses, size, install, and lifecycle evidence.",
+            "12. Dry-run: `extension-release.yml` with `publish=false` must pass.",
+            "13. Publish: dispatch with `publish=true`, then verify the public final Release, assets, body, digests, and latest status.",
         )
         required_checks = (
             "`extension-package / native-core`",
@@ -151,17 +152,39 @@ class Wave4FinalReadinessTests(unittest.TestCase):
             "This execution-specific authorization does not change the "
             "repository's general authorization policy.",
         )
+        merge_identity_anchors = (
+            "`M^1 == B` (first parent equals the recorded pre-merge `origin/main`).",
+            "`M^2 == H` (second parent equals the reviewed release HEAD).",
+            "`origin/main == M`.",
+            "`H` is an ancestor of `M` (additional check; it does not replace either parent equality).",
+        )
 
         for name, document in documents.items():
             with self.subTest(document=name):
                 normalized = " ".join(document.split())
                 positions = [normalized.index(gate) for gate in ordered_gates]
                 self.assertEqual(positions, sorted(positions))
-                pr_checks_start = positions[3]
-                merge_start = positions[4]
+                push_start = positions[1]
+                base_start = positions[2]
+                remote_release_equality = normalized.index(
+                    "`origin/release/2.3.0 == H`", push_start
+                )
+                self.assertLess(remote_release_equality, base_start)
+                pr_checks_start = positions[4]
+                merge_start = positions[5]
                 for check in required_checks:
                     check_position = normalized.index(check, pr_checks_start)
                     self.assertLess(check_position, merge_start)
+                identity_start = positions[6]
+                main_checks_start = positions[7]
+                identity_positions = [
+                    normalized.index(anchor, identity_start)
+                    for anchor in merge_identity_anchors
+                ]
+                self.assertEqual(identity_positions, sorted(identity_positions))
+                self.assertTrue(
+                    all(position < main_checks_start for position in identity_positions)
+                )
                 self.assertIn(
                     "If any gate fails, is missing, or is ambiguous, stop before all later steps.",
                     normalized,
