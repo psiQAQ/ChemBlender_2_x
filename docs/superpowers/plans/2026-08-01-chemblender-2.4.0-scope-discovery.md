@@ -208,3 +208,50 @@ Expected: documentation tests and `compileall` exit 0; Git checks report no whit
 - [ ] **Step 3: Record the handoff**
 
 Report the design, planning and activation commit SHAs; the RED/GREEN commands; documentation test count; exact modified-file inventory; worktree status; and next active task `Evidence-backed candidate intake`. Stop without product implementation or remote writes.
+
+---
+
+### Task 4: Complete evidence-backed candidate intake
+
+**Files:**
+- Create: `docs/quantum-visualization/2.4.0/candidate-intake.md`
+- Create: `docs/superpowers/plans/2026-08-01-chemblender-2.4.0-mol2-export.md`
+- Create: `.agents/queued/2.4.0-mol2-export.md`
+- Modify then move: `.agents/active/2.4.0-scope-discovery.md`
+- Modify: `tests/test_quantum_visualization_docs.py`
+
+**Interfaces:**
+- Consumes: live GitHub feedback, 2.3.0 usability/known-limit evidence, generated format capabilities, performance baselines and Reader API compatibility policy.
+- Produces: one completed Scope Discovery record and one `not_started` MOL2 export Task 1; no product task is active.
+
+- [x] **Step 1: Refresh live feedback**
+
+GitHub live queries on 2026-08-01 confirmed that Issues and Discussions were disabled,
+there were no issues, open PRs or milestones, and the newly published v2.3.0 ZIP had no
+downloads. The evidence window is insufficient for a Reader API stable promotion.
+
+- [x] **Step 2: Apply the 2.3.1/2.4.0 gate**
+
+The release evidence contains 0 Blocker, 0 Major and three non-functional Minor
+warnings. No regression, data-loss, installation, upgrade, security or in-contract
+compatibility defect was found, so the selected version remains 2.4.0.
+
+- [x] **Step 3: Rank the minimum candidates**
+
+Compare deterministic native MOL2 export, Reader API v1 stable promotion and an
+independent human usability gate. Select MOL2 because its import-only F0 export gap,
+readiness contract and native fixtures provide the strongest local evidence and the
+smallest dependency-free implementation boundary.
+
+- [x] **Step 4: Queue, but do not activate, Task 1**
+
+Create the executable MOL2 plan and `not_started` queued cursor. The plan stops at the
+core writer and semantic re-import; Blender UI, PDB/PQR, dependencies and release work
+remain out of scope.
+
+- [ ] **Step 5: Complete RED/GREEN, review and checkpoint**
+
+Run the focused documentation contract, full documentation module, `compileall`, BOM
+audit, runtime-scope diff, `git diff --check` and an independent read-only review. Then
+move the Scope Discovery cursor to completed, leave `.agents/active/` empty, record the
+planning commit SHA in the queued cursor and commit the checkpoint locally without push.

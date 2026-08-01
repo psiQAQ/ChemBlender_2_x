@@ -8,6 +8,7 @@ DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
 NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-scope-discovery.md",)
+NEXT_RELEASE_QUEUED_FILES = ("2.4.0-mol2-export.md",)
 WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 WAVE_230_FINAL_COMPLETED_FILE = "2.3.0-wave-4-migration-release.md"
 
@@ -655,6 +656,49 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             [path.name for path in active],
             list(NEXT_RELEASE_ACTIVE_FILES),
         )
+        queued = sorted((ROOT / ".agents" / "queued").glob("*.md"))
+        self.assertEqual(
+            [path.name for path in queued],
+            list(NEXT_RELEASE_QUEUED_FILES),
+        )
+
+    def test_240_candidate_intake_selects_one_queued_task(self):
+        intake_path = (
+            "docs/quantum-visualization/2.4.0/candidate-intake.md"
+        )
+        plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-01-chemblender-2.4.0-mol2-export.md"
+        )
+        queue_path = ".agents/queued/2.4.0-mol2-export.md"
+        for relative_path in (intake_path, plan_path, queue_path):
+            self.assertTrue((ROOT / relative_path).is_file(), relative_path)
+        intake = self.read_doc(intake_path)
+        plan = self.read_doc(plan_path)
+        queue = self.read_doc(queue_path)
+
+        for term in (
+            "GitHub Issues: disabled",
+            "2.3.1",
+            "2.4.0",
+            "MOL2",
+            "F0",
+        ):
+            self.assertIn(term, intake)
+        for term in (
+            "export_mol2",
+            "mol2_export_readiness",
+            "No UI",
+        ):
+            self.assertIn(term, plan)
+        for term in (
+            "CB240-MOL2-EXPORT-T1",
+            "State: `not_started`",
+            plan_path,
+            "No product implementation has started",
+            "No push",
+        ):
+            self.assertIn(term, queue)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
