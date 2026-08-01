@@ -74,5 +74,45 @@ class Wave4FinalReadinessTests(unittest.TestCase):
             changelog,
         )
 
+    def test_local_final_qualification_is_recorded_without_claiming_publication(self):
+        readiness = (
+            ROOT / ".agents/completed/2.3.0-release-readiness.md"
+        ).read_text(encoding="utf-8")
+        active = (
+            ROOT / ".agents/active/2.3.0-wave-4-migration-release.md"
+        ).read_text(encoding="utf-8")
+        roadmap = (
+            ROOT / "docs/quantum-visualization/2.3.0/roadmap.md"
+        ).read_text(encoding="utf-8")
+
+        for expected in (
+            "Local final qualification: Passed",
+            "`chemblender-2.3.0.zip`",
+            "`chemblender-2.3.0.sha256`",
+            "`chemblender-2.3.0-windows-x64`",
+            "`60585ac9fd757b53cf20947dd83c281670d3192784e23ae09537e77d9ff00ba3`",
+            "Final exact-tag package CI: Not Run in this local preparation task",
+            "Final public Release: Not Run in this local preparation task",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, readiness)
+
+        self.assertIn("- State: `in_progress`.", active)
+        self.assertIn("Task 7 local final qualification: Passed", active)
+        self.assertIn(
+            "final exact-tag CI and final public Release remain Pending",
+            active,
+        )
+        self.assertIn(
+            "本地 final qualification：Passed（2026-08-01）",
+            roadmap,
+        )
+        self.assertIn(
+            "远端 final exact-tag CI 与最终公开 Release：Pending（本地任务中 Not Run）",
+            roadmap,
+        )
+        self.assertNotIn("2.3.0 Release-qualified", active)
+        self.assertNotIn("2.3.0 Release-qualified", roadmap)
+
 if __name__ == "__main__":
     unittest.main()
