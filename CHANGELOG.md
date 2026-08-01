@@ -53,7 +53,7 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 - The published `2.3.0-rc.1` entry remains the immutable pre-tag qualification snapshot. Its exact-tag `extension-package` run `30682833534`, release dry-run `30683074015`, and public prerelease workflow `30683112170` passed; see `.agents/completed/2.3.0-rc-readiness.md`.
 - The final local gate covers the full standard-library suite, generated-document freshness, dependency hashes/licenses, native Extension validation/build, ZIP path/type/CRC/member audits, isolated installation, lifecycle smoke and three legacy save/reopen fixtures.
-- Final exact-tag package CI and publication are pending separate authorization; local qualification is not a substitute for those remote gates.
+- The final Release publishes only the successful exact-tag package CI artifact after independent artifact and Release workflow verification; it does not rebuild the package.
 
 ## [2.3.0-rc.1] - 2026-07-31
 

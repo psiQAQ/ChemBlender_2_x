@@ -35,7 +35,7 @@ class Wave4FinalReadinessTests(unittest.TestCase):
             FINAL_MANIFEST_SHA256,
         )
 
-    def test_final_changelog_preserves_published_rc_and_scopes_remote_pending(self):
+    def test_final_changelog_preserves_published_rc_and_stable_release_contract(self):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         final_notes = extract_release_notes(changelog, FINAL_VERSION)
         rc_notes = extract_release_notes(changelog, "2.3.0-rc.1")
@@ -53,8 +53,14 @@ class Wave4FinalReadinessTests(unittest.TestCase):
             with self.subTest(heading=heading):
                 self.assertIn(f"### {heading}", final_notes)
         self.assertIn("exact-tag `extension-package` run `30682833534`", final_notes)
-        self.assertIn("Final exact-tag package CI and publication are pending", final_notes)
+        self.assertIn(
+            "The final Release publishes only the successful exact-tag package CI "
+            "artifact after independent artifact and Release workflow verification",
+            final_notes,
+        )
         self.assertNotIn("Remote CI: Not Run", final_notes)
+        self.assertNotIn("pending", final_notes.lower())
+        self.assertNotIn("authorization", final_notes.lower())
         self.assertIn(
             "[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/v2.3.0...HEAD",
             changelog,
