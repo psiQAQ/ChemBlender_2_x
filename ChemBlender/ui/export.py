@@ -3,6 +3,7 @@
 from dataclasses import dataclass, replace
 from pathlib import Path
 from threading import Event, Thread
+from types import SimpleNamespace
 from uuid import UUID
 
 import bpy
@@ -25,11 +26,13 @@ from ..core.exporters import (
     export_cif,
     export_xyz,
     export_mol,
+    export_mol2,
     export_poscar,
     export_sdf,
     export_smiles,
     preview_extxyz_export,
     preview_molecular_export,
+    preview_mol2_export,
     plan_cif_export,
     sdf_entries_from_conformer_set,
 )
@@ -41,6 +44,7 @@ _FORMAT_ITEMS = (
     ("xyz", "XYZ", "Export one Structure"),
     ("extxyz", "extXYZ", "Export a Structure or trajectory with properties"),
     ("mol", "MOL", "Export a molecular Structure"),
+    ("mol2", "MOL2", "Export a molecular Structure with Tripos metadata"),
     ("sdf", "SDF", "Export molecular records or conformers"),
     ("smiles", "SMILES", "Export a molecular Structure"),
     ("cif", "CIF", "Export a periodic Structure"),
@@ -85,6 +89,7 @@ class ExportSelection:
     cif_envelope: CIFEnvelope | None = None
     provenance: tuple = ()
     source_structure_id: UUID | None = None
+    annotations: tuple = ()
 
 
 def _with_structure_origin(project, selection):
@@ -195,6 +200,18 @@ def _molecular_selection(
     elif record is not None and record.topology_id not in {None, topology.id}:
         record = None
     properties, provenance = _structure_context(project, structure)
+    annotation_targets = {
+        structure.id,
+        topology.id,
+        *(value.id for value in properties),
+    }
+    if record is not None:
+        annotation_targets.add(record.id)
+    annotations = tuple(
+        value
+        for value in getattr(project, "annotations", {}).values()
+        if value.target_entity_id in annotation_targets
+    )
     return ExportSelection(
         structure, None, properties, topology, record, conformer_set,
         {item.id: item for item in project.molecular_records.values()},
@@ -204,6 +221,19 @@ def _molecular_selection(
             else None
         ),
         provenance,
+        annotations=annotations,
+    )
+
+
+def _mol2_entities(selection):
+    if selection.conformer_set is not None:
+        raise ValueError("ConformerSet export requires SDF")
+    return SimpleNamespace(
+        structures=(selection.structure,),
+        topologies=(() if selection.topology is None else (selection.topology,)),
+        molecular_records=(() if selection.record is None else (selection.record,)),
+        annotations=selection.annotations,
+        datasets=selection.properties,
     )
 
 
@@ -533,6 +563,10 @@ def preview_export_selection(
             ),
             entries=context_entries + report.entries,
         )
+    if format_name == "mol2":
+        if selection.topology is None:
+            raise ValueError("molecular export requires a complete topology")
+        return preview_mol2_export(_mol2_entities(selection))
     if format_name in {"mol", "sdf", "smiles"}:
         if selection.topology is None:
             raise ValueError("molecular export requires a complete topology")
@@ -574,7 +608,7 @@ def preview_export_selection(
         )
     if format_name != "extxyz":
         raise ValueError(
-            "format_name must be xyz, extxyz, mol, sdf, smiles, cif or poscar"
+            "format_name must be xyz, extxyz, mol, mol2, sdf, smiles, cif or poscar"
         )
     return preview_extxyz_export(
         selection.structure,
@@ -653,6 +687,13 @@ class ExportJob:
                     destination=self.destination,
                     is_cancelled=self._cancelled.is_set,
                 ).report
+            elif self.format_name == "mol2":
+                self.result = export_mol2(
+                    _mol2_entities(self.selection),
+                    confirm_loss=self.confirm_loss,
+                    destination=self.destination,
+                    is_cancelled=self._cancelled.is_set,
+                ).report
             elif self.format_name == "sdf":
                 if self.selection.conformer_set is not None:
                     entries = sdf_entries_from_conformer_set(
@@ -719,7 +760,7 @@ class ExportJob:
                 )
             else:
                 raise ValueError(
-                    "format_name must be xyz, extxyz, mol, sdf, smiles, cif "
+                    "format_name must be xyz, extxyz, mol, mol2, sdf, smiles, cif "
                     "or poscar"
                 )
         except BaseException as error:
@@ -821,7 +862,7 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
     )
     filter_glob: StringProperty(
         default=(
-            "*.xyz;*.extxyz;*.mol;*.sdf;*.smi;*.smiles;*.cif;"
+            "*.xyz;*.extxyz;*.mol;*.mol2;*.sdf;*.smi;*.smiles;*.cif;"
             "*.vasp;*.poscar;*.contcar"
         ),
         options={"HIDDEN"},

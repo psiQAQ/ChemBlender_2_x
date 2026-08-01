@@ -1816,6 +1816,8 @@ def assert_quick_import(module_key, repository_root):
 
 def assert_mol2_browser_view(module_key, repository_root):
     core = importlib.import_module(f"{module_key}.core")
+    export_ui = importlib.import_module(f"{module_key}.ui.export")
+    mol2 = importlib.import_module(f"{module_key}.core.formats.mol2")
     dataset_view = importlib.import_module(f"{module_key}.dataset_view")
     ui = importlib.import_module(f"{module_key}.ui.session")
     properties = importlib.import_module(f"{module_key}.ui.properties")
@@ -1989,6 +1991,55 @@ def assert_mol2_browser_view(module_key, repository_root):
 
     substructure_view_name = substructure_view.name
     with TemporaryDirectory() as directory:
+        export_path = Path(directory) / "substructure-export.mol2"
+        selection = export_ui.resolve_export_selection(
+            session.project,
+            substructure_structure.id,
+        )
+        export_preview = export_ui.preview_export_selection(selection, "mol2")
+        assert export_preview.requires_confirmation
+        export_job = export_ui.ExportJob(
+            export_path,
+            selection,
+            format_name="mol2",
+            confirm_loss=True,
+            missing_value_token=None,
+        )
+        export_job.start()
+        assert export_job.join(30)
+        assert export_job.error is None
+        assert export_job.result.written
+        reparsed = mol2.parse_mol2(export_path)
+        assert reparsed.structures[0].atomic_numbers == (
+            substructure_structure.atomic_numbers
+        )
+        assert tuple(map(tuple, reparsed.topologies[0].bond_indices.values)) == (
+            tuple(map(tuple, selection.topology.bond_indices.values))
+        )
+        for role in (
+            "atom_type",
+            "partial_charge",
+            "substructure_id",
+            "substructure_name",
+        ):
+            source_data = next(
+                value.data
+                for value in selection.properties
+                if value.semantic_role == role
+            )
+            reparsed_data = next(
+                value.data
+                for value in reparsed.datasets
+                if value.semantic_role == role
+            )
+            if hasattr(source_data, "categories"):
+                assert source_data.categories == reparsed_data.categories
+                assert tuple(source_data.codes.values) == tuple(
+                    reparsed_data.codes.values
+                )
+            else:
+                assert tuple(source_data.values) == tuple(reparsed_data.values)
+
         blend = Path(directory) / "mol2-substructure-smoke.blend"
         assert bpy.ops.wm.save_as_mainfile(
             filepath=str(blend),
