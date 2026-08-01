@@ -17,7 +17,7 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Changed
 
-- Froze the sidecar/project schema at `1.0` and Reader API at `1.0-rc1`; post-RC work remained limited to release qualification and documentation clarity.
+- Froze the sidecar/project schema at `1.0` and Reader API at `1.0-rc1`; post-RC work remained limited to release-blocking fixes, qualification, and documentation clarity.
 - Made the `.blend` plus same-basename `.cbq/` pair the durable project boundary; scientific arrays and provenance remain authoritative while VDB and mesh products remain rebuildable derived caches.
 - Bundled exact Windows CPython 3.13 wheels for RDKit `2026.3.3` and Gemmi `0.7.5`; external scientific stacks remain optional worker/runtime backends.
 - Added bounded benchmark, cancellation, diagnostics, revision-selection and recovery workflows without placing large scientific arrays in Blender RNA.

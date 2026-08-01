@@ -41,6 +41,11 @@ class Wave4FinalReadinessTests(unittest.TestCase):
         rc_notes = extract_release_notes(changelog, "2.3.0-rc.1")
 
         self.assertEqual(hashlib.sha256(rc_notes.encode()).hexdigest(), RC_NOTES_SHA256)
+        self.assertIn(
+            "post-RC work remained limited to release-blocking fixes, "
+            "qualification, and documentation clarity",
+            final_notes,
+        )
         for heading in (
             "Added",
             "Changed",
@@ -113,6 +118,27 @@ class Wave4FinalReadinessTests(unittest.TestCase):
         )
         self.assertNotIn("2.3.0 Release-qualified", active)
         self.assertNotIn("2.3.0 Release-qualified", roadmap)
+
+    def test_active_recovery_skips_completed_task5_and_rc_work(self):
+        active = (
+            ROOT / ".agents/active/2.3.0-wave-4-migration-release.md"
+        ).read_text(encoding="utf-8")
+
+        for obsolete in (
+            "close all Task 5 review findings",
+            "Docs Tasks 6–7 require an authorized RC tag/push",
+        ):
+            with self.subTest(obsolete=obsolete):
+                self.assertNotIn(obsolete, active)
+        for expected in (
+            "Remaining execution order:",
+            "complete the independent final review",
+            "execute the ordered final remote gate",
+            "Final annotated tag `v2.3.0`, exact-tag CI, Release dry-run, "
+            "and public Release remain `Not Run`.",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, active)
 
     def test_remote_handoff_is_fail_closed_and_ordered_through_main(self):
         documents = {
