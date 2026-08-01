@@ -747,11 +747,20 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for term in (
             "CB240-MOL2-EXPORT-UI-T2",
             "State: `in_progress`",
-            "Written design review",
-            "Do not implement product code until the written design is reviewed",
+            "Approved by user on 2026-08-01",
+            "Task 2 — Project exactly one MOL2 export selection",
             design_path,
         ):
             self.assertIn(term, cursor)
+
+        plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-01-chemblender-2.4.0-mol2-export-ui.md"
+        )
+        plan = self.read_doc(plan_path)
+        self.assertIn("Task 7: Remote integration gate", plan)
+        self.assertIn("exact pushed head", plan)
+        self.assertIn(plan_path, cursor)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
