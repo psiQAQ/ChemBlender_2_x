@@ -41,13 +41,13 @@
 
 **Interfaces:** `ExportSelection` gains immutable `annotations: tuple = ()`. Selection resolution includes only `ChemicalAnnotation` values whose `target_id` belongs to the selected Structure, selected TopologyRecord, selected MolecularRecord or selected related dataset. A private helper returns a `SimpleNamespace` with `structures`, `topologies`, `molecular_records`, `annotations` and `datasets` tuples for the core MOL2 exporter.
 
-- [ ] **RED:** prove a MOL2 fixture selection does not contain its Tripos/substructure annotations and cannot produce the expected core projection.
-- [ ] **Expected RED:** focused test fails because `ExportSelection` has no `annotations` field/helper.
-- [ ] Add the field, resolve only target-bound annotations and build the five-tuple entity projection.
-- [ ] Reject a `ConformerSet` selection for MOL2; SDF remains the conformer path.
-- [ ] Prove unrelated structures, records, annotations and datasets are absent from the projection.
-- [ ] Run the selection-focused `tests.test_extxyz_workflow` cases.
-- [ ] Keep the changes uncommitted until Tasks 3 and 4 complete as one runtime feature boundary.
+- [x] **RED:** prove a MOL2 fixture selection does not contain its Tripos/substructure annotations and cannot produce the expected core projection.
+- [x] **Expected RED:** focused test fails because `ExportSelection` has no `annotations` field/helper.
+- [x] Add the field, resolve only target-bound annotations and build the five-tuple entity projection.
+- [x] Reject a `ConformerSet` selection for MOL2; SDF remains the conformer path.
+- [x] Prove unrelated structures, records, annotations and datasets are absent from the projection, including sibling records from one `multi.mol2` source revision.
+- [x] Run the selection-focused `tests.test_extxyz_workflow` cases.
+- [x] Keep the changes uncommitted until Tasks 3 and 4 complete as one runtime feature boundary.
 
 ### Task 3: Add MOL2 preview and explicit confirmation
 
@@ -57,13 +57,13 @@
 
 **Interfaces:** Add `mol2` to `_FORMAT_ITEMS`; add `*.mol2` to the existing hidden filter. `preview_export_selection(selection, "mol2")` delegates to `preview_mol2_export(projected_entities)` and returns the core `ExportReport` unchanged.
 
-- [ ] **RED:** prove the format enum/filter omit MOL2 and preview dispatch raises the old allowed-format error.
-- [ ] **Expected RED:** exact choice/filter/preview assertions fail without runtime changes.
-- [ ] Import and delegate to `preview_mol2_export()`; update only the existing allowed-format message.
-- [ ] Prove loss entries and `requires_confirmation` are identical to the core preview.
-- [ ] Prove the operator clears stale confirmation when MOL2 selection/format changes.
-- [ ] Prove preview performs no serialization or destination write.
-- [ ] Run the preview/operator-focused `tests.test_extxyz_workflow` cases.
+- [x] **RED:** prove the format enum/filter omit MOL2 and preview dispatch raises the old allowed-format error.
+- [x] **Expected RED:** exact choice/filter/preview assertions fail without runtime changes.
+- [x] Import and delegate to `preview_mol2_export()`; update only the existing allowed-format message.
+- [x] Prove loss entries and `requires_confirmation` are identical to the core preview.
+- [x] Prove the operator clears stale confirmation when MOL2 selection/format changes.
+- [x] Prove preview performs no serialization or destination write.
+- [x] Run the preview/operator-focused `tests.test_extxyz_workflow` cases.
 
 ### Task 4: Dispatch background atomic MOL2 export
 
@@ -73,14 +73,14 @@
 
 **Interfaces:** `ExportJob._run()` delegates `mol2` to `export_mol2(projected_entities, confirm_loss=..., destination=..., is_cancelled=...)` and stores its `.report`, matching existing MOL/SDF/SMILES behavior.
 
-- [ ] **RED:** prove `ExportJob(format_name="mol2")` reaches the old unsupported-format branch.
-- [ ] **Expected RED:** job completes with `ValueError` and no destination.
-- [ ] Add one dispatch branch and update only the existing allowed-format message.
-- [ ] Prove a loss-bearing export is blocked without confirmation and succeeds with it.
-- [ ] Prove cancellation leaves an existing destination byte-identical and no sibling temporary file.
-- [ ] Prove fatal exceptions remain unwrapped and existing UI cleanup tests still pass.
-- [ ] Run `python -m unittest tests.test_extxyz_workflow tests.test_mol2_exporter -v`.
-- [ ] Commit runtime and focused tests as `feat: add native MOL2 export UI`.
+- [x] **RED:** prove `ExportJob(format_name="mol2")` reaches the old unsupported-format branch.
+- [x] **Expected RED:** job completes with `ValueError` and no destination.
+- [x] Add one dispatch branch and update only the existing allowed-format message.
+- [x] Prove a loss-bearing export is blocked without confirmation and succeeds with it.
+- [x] Prove cancellation leaves an existing destination byte-identical and no sibling temporary file.
+- [x] Prove fatal exceptions remain unwrapped and existing UI cleanup tests still pass.
+- [x] Run `python -m unittest tests.test_extxyz_workflow tests.test_mol2_exporter -v`.
+- [x] Commit runtime and focused tests as `feat: add native MOL2 export UI` (`8b546558917abe5672cb81dc59d976f3fe85b2e3`).
 
 ### Task 5: Prove the installed Blender product workflow
 
@@ -89,13 +89,13 @@
 
 **Interfaces:** The existing installed-extension smoke selects the imported MOL2 molecular record, previews export, runs `ExportJob`, parses the written file through native `parse_mol2()` and compares the selected Structure/topology/annotation semantics.
 
-- [ ] **RED:** add the installed-product assertion and prove the current package lacks MOL2 UI dispatch.
-- [ ] **Expected RED:** smoke fails at missing MOL2 format/dispatch before output is written.
-- [ ] Reuse the existing `assert_mol2_browser_view()` fixture/project and export worker; add no separate Blender operator.
-- [ ] Verify export, native re-import, atom/bond inventory, Tripos atom types, substructures and partial charges.
-- [ ] Verify loss preview/confirmation and cancellation or atomic-destination preservation in the real runtime where practical.
-- [ ] Run focused pure-Python tests before invoking Blender.
-- [ ] Keep the smoke change for the final implementation/review commit unless an in-scope defect requires a separate fix.
+- [x] **RED:** product dispatch was first proved by the focused failing choice/preview/job tests before the installed smoke was extended.
+- [x] **Expected RED:** the pre-implementation format choice/preview/job path failed before output could be written.
+- [x] Reuse the existing `assert_mol2_browser_view()` fixture/project and export worker; add no separate Blender operator.
+- [x] Verify export, native re-import, atom/bond inventory, Tripos annotations, atom types, substructures and partial charges.
+- [x] Verify loss preview/confirmation and atomic-destination preservation across focused and installed-product paths.
+- [x] Run focused pure-Python tests before invoking Blender.
+- [x] Keep the smoke change for the final implementation/review commit unless an in-scope defect requires a separate fix.
 
 ### Task 6: Full verification, independent review and checkpoint
 
@@ -106,12 +106,12 @@
 
 **Interfaces:** No new public model/API surface. Completion evidence is persisted in the cursor.
 
-- [ ] Run focused MOL2/export/registration/documentation tests.
-- [ ] Run full `unittest` discovery, `compileall`, `git diff --check` and verify the manifest/version/dependency lock are unchanged.
-- [ ] Run Blender 5.1.2 native preflight, extension validate/build, ZIP safe-path/duplicate/CRC/wheel audit, isolated install and installed MOL2 export/re-import lifecycle.
-- [ ] Perform separate specification-compliance and code-quality reviews; fix every in-scope Critical, Important and Minor finding and rerun affected verification.
-- [ ] Mark every completed checkbox, record RED/GREEN/Blender/review evidence and set cursor state `completed_local`.
-- [ ] Commit review fixes/checkpoint as one logical commit if needed; leave the worktree clean.
+- [x] Run focused MOL2/export/registration/documentation tests.
+- [x] Run full `unittest` discovery, `compileall`, `git diff --check` and verify the manifest/version/dependency lock are unchanged.
+- [x] Run Blender 5.1.2 native preflight, extension validate/build, ZIP safe-path/duplicate/CRC/wheel audit, isolated install and installed MOL2 export/re-import lifecycle.
+- [x] Perform separate specification-compliance and code-quality reviews; fix every in-scope Critical, Important and Minor finding and rerun affected verification.
+- [x] Mark every completed checkbox, record RED/GREEN/Blender/review evidence and set cursor state `completed_local`.
+- [x] Commit review fixes/checkpoint as one logical commit if needed; leave the worktree clean.
 
 ### Task 7: Remote integration gate
 

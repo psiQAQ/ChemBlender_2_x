@@ -746,9 +746,9 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             self.assertIn(term, design)
         for term in (
             "CB240-MOL2-EXPORT-UI-T2",
-            "State: `in_progress`",
+            "State: `completed_local`",
             "Approved by user on 2026-08-01",
-            "Task 2 — Project exactly one MOL2 export selection",
+            "Task 7 — Remote integration gate",
             design_path,
         ):
             self.assertIn(term, cursor)
