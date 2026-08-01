@@ -2,8 +2,16 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from uuid import uuid4
 
-from ChemBlender.core.exporters import export_pdb, preview_pdb_export
+import numpy
+
+from ChemBlender.core import ArrayData, QCProject
+from ChemBlender.core.exporters import (
+    ExportCancelled,
+    export_pdb,
+    preview_pdb_export,
+)
 from ChemBlender.core.formats.pdb import parse_pdb
 from tests.test_biological_atom_data import biological_mapping_fixture
 
@@ -11,7 +19,7 @@ from tests.test_biological_atom_data import biological_mapping_fixture
 FIXTURES = Path(__file__).with_name("fixtures") / "pdb"
 
 
-def ready_single_model():
+def pdb_batch(*, include_frames=False, include_second=False):
     batch = biological_mapping_fixture()
     structure = next(
         value for value in batch.structures if value.revision == "pdb-reference-r1"
@@ -25,14 +33,36 @@ def ready_single_model():
         value
         for value in batch.datasets
         if value.structure_id == structure.id
-        and value.semantic_role in {"occupancy", "b_factor"}
+        and (
+            value.semantic_role in {"occupancy", "b_factor"}
+            or include_frames
+            and value.semantic_role == "coordinates"
+        )
     )
+    structures = (structure,)
+    hierarchies = (hierarchy,)
+    if include_second:
+        second = next(
+            value
+            for value in batch.structures
+            if value.revision == "pdb-incompatible-model-r1"
+        )
+        structures += (second,)
+        hierarchies += tuple(
+            value
+            for value in batch.biological_hierarchies
+            if value.structure_id == second.id
+        )
     return replace(
         batch,
-        structures=(structure,),
-        biological_hierarchies=(hierarchy,),
+        structures=structures,
+        biological_hierarchies=hierarchies,
         datasets=datasets,
     )
+
+
+def ready_single_model():
+    return pdb_batch()
 
 
 class PDBExporterTests(unittest.TestCase):
@@ -105,6 +135,201 @@ class PDBExporterTests(unittest.TestCase):
             "MissingHierarchy.*hierarchy.missing",
         ):
             preview_pdb_export(batch)
+
+    def test_container_order_does_not_change_multiple_structure_bytes(self):
+        batch = pdb_batch(include_second=True)
+        reversed_batch = replace(
+            batch,
+            structures=tuple(reversed(batch.structures)),
+            biological_hierarchies=tuple(
+                reversed(batch.biological_hierarchies)
+            ),
+            datasets=tuple(reversed(batch.datasets)),
+        )
+        project = QCProject(uuid4(), "1.0")
+        project.commit(batch)
+        for name in ("structures", "biological_hierarchies", "datasets"):
+            values = getattr(project, name)
+            setattr(project, name, dict(reversed(tuple(values.items()))))
+
+        expected = export_pdb(batch).text
+
+        self.assertEqual(export_pdb(reversed_batch).text, expected)
+        self.assertEqual(export_pdb(project).text, expected)
+
+    def test_fixed_columns_preserve_hierarchy_and_record_kind(self):
+        text = export_pdb(pdb_batch(include_second=True)).text
+        atom_lines = tuple(
+            line
+            for line in text.splitlines()
+            if line.startswith(("ATOM  ", "HETATM"))
+        )
+
+        self.assertEqual(tuple(line[:6] for line in atom_lines), (
+            "HETATM",
+            "ATOM  ",
+            "ATOM  ",
+        ))
+        self.assertEqual(atom_lines[1][12:17], " CA A")
+        self.assertEqual(atom_lines[1][17:27], "GLY A   7A")
+        self.assertEqual(atom_lines[0][16], " ")
+        self.assertEqual(atom_lines[0][26], " ")
+        self.assertEqual(atom_lines[0][21], "B")
+
+    def test_duplicate_source_serials_renumber_in_atom_order(self):
+        batch = ready_single_model()
+        hierarchy = batch.biological_hierarchies[0]
+        sites = replace(
+            hierarchy.atom_sites,
+            serial_numbers=ArrayData(
+                numpy.asarray((20, 20), dtype=numpy.int64),
+                ("atom",),
+                "dimensionless",
+            ),
+        )
+        batch = replace(
+            batch,
+            biological_hierarchies=(replace(hierarchy, atom_sites=sites),),
+        )
+
+        preview = preview_pdb_export(batch)
+        lines = export_pdb(batch, confirm_loss=True).text.splitlines()
+
+        self.assertEqual(
+            tuple(entry.code for entry in preview.entries),
+            ("atom_serials_renumbered",),
+        )
+        self.assertEqual((lines[0][6:11], lines[1][6:11]), ("    1", "    2"))
+
+    def test_partial_occupancy_and_b_factor_use_exact_blank_fields(self):
+        lines = export_pdb(ready_single_model()).text.splitlines()
+
+        self.assertEqual((lines[0][54:60], lines[0][60:66]), ("  1.00", " 12.50"))
+        self.assertEqual((lines[1][54:60], lines[1][60:66]), ("      ", "      "))
+
+        batch = ready_single_model()
+        occupancy = next(
+            value for value in batch.datasets if value.semantic_role == "occupancy"
+        )
+        invalid = replace(
+            batch,
+            datasets=tuple(
+                replace(
+                    value,
+                    data=replace(value.data, unit="angstrom"),
+                )
+                if value.id == occupancy.id
+                else value
+                for value in batch.datasets
+            ),
+        )
+        with self.assertRaisesRegex(ValueError, "dataset.occupancy.unit"):
+            export_pdb(invalid)
+
+    def test_frame_set_is_the_complete_model_inventory(self):
+        exported = export_pdb(pdb_batch(include_frames=True)).text
+
+        self.assertEqual(exported.count("MODEL"), 2)
+        self.assertEqual(exported.count("ENDMDL"), 2)
+        self.assertEqual(exported.count("ATOM  "), 4)
+        self.assertNotIn("MODEL        3", exported)
+        self.assertTrue(exported.endswith("END\n"))
+
+    def test_model_number_overflow_fails_before_publication(self):
+        batch = pdb_batch(include_frames=True)
+        frames = next(
+            value for value in batch.datasets if value.semantic_role == "coordinates"
+        )
+        repeated = numpy.repeat(frames.data.values[:1], 10_000, axis=0)
+        batch = replace(
+            batch,
+            datasets=tuple(
+                replace(
+                    value,
+                    data=replace(value.data, values=repeated),
+                    comments=("",) * 10_000,
+                )
+                if value.id == frames.id
+                else value
+                for value in batch.datasets
+            ),
+        )
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "too-many-models.pdb"
+            with self.assertRaisesRegex(ValueError, "model\\.overflow"):
+                export_pdb(batch, destination=destination)
+            self.assertFalse(destination.exists())
+            self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+    def test_invalid_live_element_after_preview_fails_before_publication(self):
+        batch = ready_single_model()
+        calls = 0
+
+        def mutate_after_preview():
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                object.__setattr__(batch.structures[0], "atomic_numbers", (0, 7))
+            return False
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "invalid.pdb"
+            with self.assertRaisesRegex(ValueError, "atomic number"):
+                export_pdb(
+                    batch,
+                    destination=destination,
+                    is_cancelled=mutate_after_preview,
+                )
+            self.assertFalse(destination.exists())
+            self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+    def test_cancellation_preempts_invalid_data_and_cleans_mid_write(self):
+        invalid = ready_single_model()
+        invalid.structures[0].coordinates.values[0, 0] = numpy.nan
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "cancelled.pdb"
+            with self.assertRaises(ExportCancelled):
+                export_pdb(
+                    invalid,
+                    destination=destination,
+                    is_cancelled=lambda: True,
+                )
+            self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+        calls = 0
+
+        def cancel_during_atomic_write():
+            nonlocal calls
+            calls += 1
+            return calls == 7
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "cancelled.pdb"
+            with self.assertRaises(ExportCancelled):
+                export_pdb(
+                    ready_single_model(),
+                    destination=destination,
+                    is_cancelled=cancel_during_atomic_write,
+                )
+            self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+    def test_normalized_output_never_emits_conect_or_cryst1(self):
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "periodic-connected.pdb"
+            source.write_bytes(
+                (FIXTURES / "cryst1.pdb").read_bytes()
+                + (FIXTURES / "conect.pdb").read_bytes()
+            )
+            batch = parse_pdb(source)
+
+            preview = preview_pdb_export(batch)
+            text = export_pdb(batch, confirm_loss=True).text
+
+        self.assertIn("cell_omitted", tuple(entry.code for entry in preview.entries))
+        self.assertIn("topology_omitted", tuple(entry.code for entry in preview.entries))
+        self.assertNotIn("CRYST1", text)
+        self.assertNotIn("CONECT", text)
 
 
 if __name__ == "__main__":
