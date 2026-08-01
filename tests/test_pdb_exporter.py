@@ -65,6 +65,13 @@ def ready_single_model():
     return pdb_batch()
 
 
+def categorical_values(data):
+    return tuple(
+        None if int(code) == data.missing_code else data.categories[int(code)]
+        for code in data.codes.values
+    )
+
+
 class PDBExporterTests(unittest.TestCase):
     def test_ready_single_model_is_deterministic_without_confirmation(self):
         batch = ready_single_model()
@@ -330,6 +337,74 @@ class PDBExporterTests(unittest.TestCase):
         self.assertIn("topology_omitted", tuple(entry.code for entry in preview.entries))
         self.assertNotIn("CRYST1", text)
         self.assertNotIn("CONECT", text)
+
+    def test_semantic_native_reimport_preserves_representable_fields(self):
+        original = pdb_batch(include_frames=True)
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "roundtrip.pdb"
+            export_pdb(original, destination=destination)
+            imported = parse_pdb(destination)
+
+        source_structure = original.structures[0]
+        target_structure = imported.structures[0]
+        self.assertEqual(target_structure.atomic_numbers, source_structure.atomic_numbers)
+        numpy.testing.assert_allclose(
+            target_structure.coordinates.values,
+            source_structure.coordinates.values,
+            atol=5e-4,
+            rtol=0.0,
+        )
+        self.assertEqual(
+            categorical_values(target_structure.atomic_identity.atom_names),
+            categorical_values(source_structure.atomic_identity.atom_names),
+        )
+
+        source_hierarchy = original.biological_hierarchies[0]
+        target_hierarchy = imported.biological_hierarchies[0]
+        self.assertEqual(
+            categorical_values(target_hierarchy.atom_sites.record_kinds),
+            categorical_values(source_hierarchy.atom_sites.record_kinds),
+        )
+        self.assertEqual(
+            categorical_values(target_hierarchy.atom_sites.alternate_locations),
+            categorical_values(source_hierarchy.atom_sites.alternate_locations),
+        )
+        self.assertEqual(target_hierarchy.chains, source_hierarchy.chains)
+        self.assertEqual(target_hierarchy.residues, source_hierarchy.residues)
+
+        source_frames = next(
+            value for value in original.datasets if value.semantic_role == "coordinates"
+        )
+        target_frames = next(
+            value for value in imported.datasets if value.semantic_role == "coordinates"
+        )
+        self.assertEqual(target_frames.data.shape, source_frames.data.shape)
+        numpy.testing.assert_allclose(
+            target_frames.data.values,
+            source_frames.data.values,
+            atol=5e-4,
+            rtol=0.0,
+        )
+
+        for role in ("occupancy", "b_factor"):
+            source = next(
+                value for value in original.datasets if value.semantic_role == role
+            )
+            target = next(
+                value for value in imported.datasets if value.semantic_role == role
+            )
+            source_values = numpy.asarray(source.data.values)
+            target_values = numpy.asarray(target.data.values)
+            self.assertEqual(
+                tuple(numpy.isfinite(target_values)),
+                tuple(numpy.isfinite(source_values)),
+            )
+            numpy.testing.assert_allclose(
+                target_values[numpy.isfinite(target_values)],
+                source_values[numpy.isfinite(source_values)],
+                atol=0.005,
+                rtol=0.0,
+            )
 
 
 if __name__ == "__main__":
