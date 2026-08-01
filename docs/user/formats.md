@@ -25,7 +25,7 @@ automatically a lossless round-trip format.
 | SMILES | RDKit-backed text/file import, deterministic 3D derivation and SMILES export |
 | CIF | Gemmi-backed import of crystal/site/symmetry metadata and controlled CIF export |
 | POSCAR/CONTCAR | Native import/export with Direct/Cartesian, scale, selective dynamics and supported velocity data |
-| MOL2 | Native multi-molecule import with atom/bond/substructure/charge annotations; export readiness is lower maturity than import |
+| MOL2 | Native multi-molecule import plus normalized core export with semantic round-trip and explicit loss confirmation |
 | PDB/PQR | Native import of biological hierarchy/alternate locations or charge/radius data; no general Project Browser writer |
 | Cube | Native Structure + Grid3D import and Blender Volume/Surface workflow; no lossless Cube re-export claim |
 | CJSON | Lightweight structure/topology/property envelope import and controlled core export; no general Project Browser writer |

@@ -26,11 +26,11 @@ class Mol2ExporterTests(unittest.TestCase):
     def test_aromatic_fixture_exports_deterministically(self):
         batch = parse_mol2(FIXTURES / "aromatic.mol2")
 
-        first = export_mol2(batch)
-        second = export_mol2(batch)
+        first = export_mol2(batch, confirm_loss=True)
+        second = export_mol2(batch, confirm_loss=True)
 
         self.assertEqual(first.text, second.text)
-        self.assertFalse(first.report.requires_confirmation)
+        self.assertTrue(first.report.requires_confirmation)
         self.assertIn("@<TRIPOS>MOLECULE\n", first.text)
         self.assertIn(" ar\n", first.text)
 
@@ -178,6 +178,134 @@ class Mol2ExporterTests(unittest.TestCase):
 
         self.assertIn(" C.3 **** **** -0.12\n", exported.text)
 
+    def test_confirmed_missing_charge_data_downgrades_to_no_charges(self):
+        batch = parse_mol2(FIXTURES / "small.mol2")
+        batch = replace(
+            batch,
+            datasets=tuple(
+                value
+                for value in batch.datasets
+                if value.semantic_role != "partial_charge"
+            ),
+        )
+
+        preview = preview_mol2_export(batch)
+        exported = export_mol2(batch, confirm_loss=True)
+
+        self.assertIn("missing:dataset.partial_charge", tuple(entry.code for entry in preview.entries))
+        self.assertIn("\nNO_CHARGES\n", exported.text)
+
+    def test_no_charges_with_authoritative_charge_requires_confirmation(self):
+        batch = parse_mol2(FIXTURES / "small.mol2")
+        charge_type = next(value for value in batch.annotations if value.key == "charge_type")
+        batch = replace(
+            batch,
+            annotations=tuple(
+                replace(value, value="NO_CHARGES") if value.id == charge_type.id else value
+                for value in batch.annotations
+            ),
+        )
+
+        preview = preview_mol2_export(batch)
+        blocked = export_mol2(batch)
+        exported = export_mol2(batch, confirm_loss=True)
+
+        self.assertIn(
+            "partial_charge_omitted",
+            tuple(entry.code for entry in preview.entries),
+        )
+        self.assertEqual(blocked.text, "")
+        self.assertIn("\nNO_CHARGES\n", exported.text)
+        self.assertNotIn("-0.12", exported.text)
+
+    def test_non_tripos_raw_record_can_be_confirmed_and_normalized(self):
+        batch = parse_mol2(FIXTURES / "aromatic.mol2")
+        batch = replace(
+            batch,
+            molecular_records=(replace(batch.molecular_records[0], raw_block=b"not MOL2\n"),),
+        )
+
+        preview = preview_mol2_export(batch)
+        exported = export_mol2(batch, confirm_loss=True)
+
+        self.assertIn("missing:molecular_record.raw_tripos", tuple(entry.code for entry in preview.entries))
+        self.assertIn("@<TRIPOS>MOLECULE\n", exported.text)
+
+    def test_partial_substructure_is_omitted_after_confirmation(self):
+        batch = parse_mol2(FIXTURES / "small.mol2")
+        substructure_name = self.dataset(batch, "substructure_name")
+        batch = replace(
+            batch,
+            datasets=tuple(
+                replace(value, status=value.status.PARTIAL)
+                if value.id == substructure_name.id
+                else value
+                for value in batch.datasets
+            ),
+        )
+
+        preview = preview_mol2_export(batch)
+        exported = export_mol2(batch, confirm_loss=True)
+
+        self.assertIn("missing:dataset.substructure_name", tuple(entry.code for entry in preview.entries))
+        self.assertNotIn("@<TRIPOS>SUBSTRUCTURE", exported.text)
+        self.assertIn(" C.3 **** **** -0.12\n", exported.text)
+
+    def test_nonfinite_bond_order_is_rejected_even_for_aromatic_bond(self):
+        batch = parse_mol2(FIXTURES / "aromatic.mol2")
+        batch.topologies[0].bond_orders.values[0] = numpy.nan
+
+        with self.assertRaisesRegex(ValueError, "bond orders.*finite"):
+            export_mol2(batch, confirm_loss=True)
+
+    def test_raw_bond_identity_reordering_requires_confirmation(self):
+        batch = parse_mol2(FIXTURES / "aromatic.mol2")
+        record = batch.molecular_records[0]
+        canonical = record.raw_block.replace(
+            b"1 1 2 ar\n2 2 3 ar\n3 3 4 ar\n4 4 5 ar\n5 5 6 ar\n6 6 1 ar\n",
+            b"1 1 2 ar\n2 6 1 ar\n3 2 3 ar\n4 3 4 ar\n5 4 5 ar\n6 5 6 ar\n",
+        )
+        raw = canonical.replace(
+            b"1 1 2 ar\n2 6 1 ar\n",
+            b"1 6 1 ar\n2 1 2 ar\n",
+        )
+        canonical_batch = replace(
+            batch,
+            molecular_records=(replace(record, raw_block=canonical),),
+        )
+        batch = replace(batch, molecular_records=(replace(record, raw_block=raw),))
+
+        canonical_preview = preview_mol2_export(canonical_batch)
+        preview = preview_mol2_export(batch)
+
+        self.assertNotIn(
+            "source_bond_ids_renumbered",
+            tuple(entry.code for entry in canonical_preview.entries),
+        )
+        self.assertIn("source_bond_ids_renumbered", tuple(entry.code for entry in preview.entries))
+
+    def test_changed_raw_substructure_root_requires_confirmation(self):
+        batch = parse_mol2(FIXTURES / "aromatic.mol2")
+        record = batch.molecular_records[0]
+        raw = record.raw_block.replace(b"1 BENZENE 1 GROUP", b"1 BENZENE 2 GROUP")
+        batch = replace(batch, molecular_records=(replace(record, raw_block=raw),))
+
+        preview = preview_mol2_export(batch)
+
+        self.assertIn("substructure_fields_omitted", tuple(entry.code for entry in preview.entries))
+
+    def test_title_rejects_unicode_line_boundaries(self):
+        for separator in ("\u0085", "\u2028"):
+            with self.subTest(separator=repr(separator)):
+                batch = parse_mol2(FIXTURES / "aromatic.mol2")
+                record = batch.molecular_records[0]
+                batch = replace(
+                    batch,
+                    molecular_records=(replace(record, title=f"bad{separator}title"),),
+                )
+                with self.assertRaisesRegex(ValueError, "title"):
+                    export_mol2(batch, confirm_loss=True)
+
     def test_cancelled_export_preempts_invalid_data_and_publishes_nothing(self):
         batch = parse_mol2(FIXTURES / "aromatic.mol2")
         batch.structures[0].coordinates.values[0, 0] = numpy.nan
@@ -208,6 +336,7 @@ class Mol2ExporterTests(unittest.TestCase):
             with self.assertRaises(ExportCancelled):
                 export_mol2(
                     batch,
+                    confirm_loss=True,
                     destination=destination,
                     is_cancelled=cancelled,
                 )
@@ -224,7 +353,11 @@ class Mol2ExporterTests(unittest.TestCase):
                 side_effect=OSError("replace failed"),
             ):
                 with self.assertRaisesRegex(OSError, "replace failed"):
-                    export_mol2(batch, destination=destination)
+                    export_mol2(
+                        batch,
+                        confirm_loss=True,
+                        destination=destination,
+                    )
             self.assertEqual(destination.read_text(encoding="utf-8"), "old\n")
             self.assertEqual(tuple(Path(directory).iterdir()), (destination,))
 

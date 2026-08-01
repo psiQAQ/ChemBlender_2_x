@@ -21,6 +21,7 @@ from ..model import (
 from .mol2_readiness import (
     Mol2ExportStatus,
     _entities,
+    _is_raw_tripos_record,
     mol2_export_readiness,
 )
 from .rdkit_molecular import MolecularExport, _categories, _values
@@ -62,6 +63,13 @@ def _one(values):
     return values[0] if len(values) == 1 else None
 
 
+def _complete_property(value):
+    return (
+        isinstance(value, AtomicProperty)
+        and value.status is DatasetStatus.COMPLETE
+    )
+
+
 def _ordered_entries(project_entities):
     structures = _entities(project_entities, "structures")
     topologies = _entities(project_entities, "topologies")
@@ -84,6 +92,7 @@ def _ordered_entries(project_entities):
             for value in records
             if value.structure_id == structure.id
             and value.topology_id == topology.id
+            and _is_raw_tripos_record(value.raw_block)
         )
         annotation = lambda key: _one(
             value
@@ -103,6 +112,20 @@ def _ordered_entries(project_entities):
         if atom_type is None:
             raise ValueError("MOL2 export requires one atom_type property")
         charge_type = annotation("charge_type")
+        substructure_id = property_value("substructure_id")
+        substructure_name = property_value("substructure_name")
+        if not (
+            _complete_property(substructure_id)
+            and _complete_property(substructure_name)
+        ):
+            substructure_id = substructure_name = None
+        partial_charge = property_value("partial_charge")
+        if (
+            charge_type is None
+            or charge_type.value == "NO_CHARGES"
+            or not _complete_property(partial_charge)
+        ):
+            partial_charge = None
         entries.append(
             _Mol2Entry(
                 structure,
@@ -111,14 +134,9 @@ def _ordered_entries(project_entities):
                 annotation("molecule_type"),
                 charge_type,
                 atom_type,
-                property_value("substructure_id"),
-                property_value("substructure_name"),
-                (
-                    None
-                    if charge_type is not None
-                    and charge_type.value == "NO_CHARGES"
-                    else property_value("partial_charge")
-                ),
+                substructure_id,
+                substructure_name,
+                partial_charge,
             )
         )
     return tuple(
@@ -152,8 +170,18 @@ def _raw_loss_entries(entries):
             range(1, len(parsed.atoms) + 1)
         ):
             codes.add("source_atom_ids_renumbered")
-        if tuple(bond.bond_id for bond in parsed.bonds) != tuple(
-            range(1, len(parsed.bonds) + 1)
+        raw_bonds = tuple(sorted(parsed.bonds, key=lambda bond: bond.bond_id))
+        raw_edges = tuple(
+            tuple(sorted(bond.atom_indices)) for bond in raw_bonds
+        )
+        emitted_edges = tuple(
+            tuple(int(index) for index in endpoints)
+            for endpoints in _values(entry.topology.bond_indices)
+        )
+        if (
+            tuple(bond.bond_id for bond in raw_bonds)
+            != tuple(range(1, len(raw_bonds) + 1))
+            or raw_edges != emitted_edges
         ):
             codes.add("source_bond_ids_renumbered")
         if parsed.status_bits is not None:
@@ -162,10 +190,34 @@ def _raw_loss_entries(entries):
             codes.add("molecule_comments_omitted")
         if any(atom.status_bits is not None for atom in parsed.atoms):
             codes.add("atom_status_bits_omitted")
+        substructure_ids, substructure_names, groups = _substructure_groups(
+            entry,
+            len(entry.structure.atomic_numbers),
+        )
+        expected_substructures = tuple(
+            (identifier, name, root)
+            for identifier, (name, root) in sorted(groups.items())
+        )
+        raw_substructures = tuple(
+            sorted(
+                (
+                    value.substructure_id,
+                    value.name,
+                    None
+                    if value.root_atom_index is None
+                    else value.root_atom_index + 1,
+                )
+                for value in parsed.substructures
+            )
+        )
         if any(
             len(value.raw_fields) != 4
             or (value.substructure_type or "").upper() != "GROUP"
             for value in parsed.substructures
+        ) or (
+            substructure_ids is not None
+            and substructure_names is not None
+            and raw_substructures != expected_substructures
         ):
             codes.add("substructure_fields_omitted")
         if parsed.unknown_sections:
@@ -173,6 +225,28 @@ def _raw_loss_entries(entries):
     return tuple(
         ExportReportEntry(code, _RAW_LOSS_MESSAGES[code]) for code in sorted(codes)
     )
+
+
+def _normalized_loss_entries(project_entities, entries):
+    datasets = _entities(project_entities, "datasets")
+    if any(
+        entry.charge_type is not None
+        and entry.charge_type.value == "NO_CHARGES"
+        and any(
+            isinstance(value, AtomicProperty)
+            and value.structure_id == entry.structure.id
+            and value.semantic_role == "partial_charge"
+            for value in datasets
+        )
+        for entry in entries
+    ):
+        return (
+            ExportReportEntry(
+                "partial_charge_omitted",
+                "NO_CHARGES omits the bound partial-charge property",
+            ),
+        )
+    return ()
 
 
 def preview_mol2_export(project_entities):
@@ -188,7 +262,9 @@ def preview_mol2_export(project_entities):
             f"MOL2 field is missing: {token}",
         )
         for token in readiness.missing_fields
-    ) + _raw_loss_entries(entries)
+    ) + _raw_loss_entries(entries) + _normalized_loss_entries(
+        project_entities, entries
+    )
     report_entries = tuple(
         sorted(
             set(report_entries),
@@ -213,7 +289,7 @@ def _token(value, name):
 
 
 def _title(value):
-    if not isinstance(value, str) or not value or "\n" in value or "\r" in value:
+    if not isinstance(value, str) or not value or value.splitlines() != [value]:
         raise ValueError("MOL2 title must be one non-empty line")
     return value
 
@@ -257,6 +333,24 @@ def _numeric(property_value, count, role, kinds):
     return values
 
 
+def _substructure_groups(entry, count):
+    if entry.substructure_id is None or entry.substructure_name is None:
+        return None, None, {}
+    identifiers = _numeric(entry.substructure_id, count, "substructure_id", "iu")
+    if numpy.any(identifiers <= 0):
+        raise ValueError("MOL2 substructure IDs must be positive")
+    names = _categorical(entry.substructure_name, count, "substructure_name")
+    groups = {}
+    for atom_index, (identifier, name) in enumerate(
+        zip(identifiers, names, strict=True)
+    ):
+        identifier = int(identifier)
+        previous = groups.setdefault(identifier, (name, atom_index + 1))
+        if previous[0] != name:
+            raise ValueError("one MOL2 substructure ID maps to multiple names")
+    return identifiers, names, groups
+
+
 def _normalized_record(entry):
     structure = entry.structure
     topology = entry.topology
@@ -281,6 +375,14 @@ def _normalized_record(entry):
         numpy.any(indices < 0) or numpy.any(indices >= count)
     ):
         raise ValueError("MOL2 bond endpoint is out of range")
+    if numpy.iscomplexobj(orders):
+        raise ValueError("MOL2 bond orders must be finite real values")
+    try:
+        finite_orders = numpy.asarray(orders, dtype=float)
+    except (TypeError, ValueError):
+        raise ValueError("MOL2 bond orders must be finite real values") from None
+    if not numpy.all(numpy.isfinite(finite_orders)):
+        raise ValueError("MOL2 bond orders must be finite real values")
     aromatic = (
         (False,) * len(orders)
         if topology.aromatic_flags is None
@@ -305,34 +407,20 @@ def _normalized_record(entry):
         "SMALL" if entry.molecule_type is None else entry.molecule_type.value,
         "molecule type",
     )
-    charge_type = _token(
-        "NO_CHARGES" if entry.charge_type is None else entry.charge_type.value,
-        "charge type",
+    substructure_ids, substructure_names, groups = _substructure_groups(
+        entry, count
     )
-    substructure_ids = substructure_names = None
-    if entry.substructure_id is not None and entry.substructure_name is not None:
-        substructure_ids = _numeric(
-            entry.substructure_id, count, "substructure_id", "iu"
-        )
-        if numpy.any(substructure_ids <= 0):
-            raise ValueError("MOL2 substructure IDs must be positive")
-        substructure_names = _categorical(
-            entry.substructure_name, count, "substructure_name"
-        )
     charges = (
         None
         if entry.partial_charge is None
         else _numeric(entry.partial_charge, count, "partial_charge", "iuf")
     )
-    groups = {}
-    if substructure_ids is not None:
-        for atom_index, (identifier, name) in enumerate(
-            zip(substructure_ids, substructure_names, strict=True)
-        ):
-            identifier = int(identifier)
-            previous = groups.setdefault(identifier, (name, atom_index + 1))
-            if previous[0] != name:
-                raise ValueError("one MOL2 substructure ID maps to multiple names")
+    charge_type = _token(
+        "NO_CHARGES"
+        if charges is None or entry.charge_type is None
+        else entry.charge_type.value,
+        "charge type",
+    )
 
     title = _title(
         str(structure.id)

@@ -260,6 +260,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 "AtomicResult",
                 "Dependency-free",
                 "raw envelope",
+                "normalized core export with semantic round-trip",
                 "reader-capability-matrix.json",
             ),
         }
@@ -701,7 +702,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "State: `in_progress`",
             "fed930d21fef0aaa4dc334c5a0db1e550ab2e0a2",
             plan_path,
-            "Core writer contract",
+            "Current task:",
             "No push",
         ):
             self.assertIn(term, cursor)

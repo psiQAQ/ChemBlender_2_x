@@ -12,6 +12,9 @@ not promise byte-identical or lossless Tripos round-trip and does not add Blende
 - `NO_CHARGES` does not require a `partial_charge` property.
 - A destination is not created until `confirm_loss=True` when the preview requires
   confirmation.
+- `NO_CHARGES` with a bound `partial_charge` property reports
+  `partial_charge_omitted`; readiness stays on the frozen P1 boundary while the writer
+  still requires explicit loss confirmation.
 
 The raw-loss codes are exactly:
 

@@ -242,12 +242,11 @@ print(json.dumps(sorted(blocked & roots)))
     def test_fixed_exchange_fixtures_survive_schema_1_sidecar_round_trip(self):
         mol2_expectations = {
             "small": ("Complete", ()),
-            "aromatic": ("Partial", ("dataset.partial_charge",)),
+            "aromatic": ("Complete", ()),
             "substructure": ("Complete", ()),
             "multi": (
                 "Partial",
                 (
-                    "dataset.partial_charge",
                     "dataset.substructure_id",
                     "dataset.substructure_name",
                 ),
