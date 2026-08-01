@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
+NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-scope-discovery.md",)
 WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 WAVE_230_FINAL_COMPLETED_FILE = "2.3.0-wave-4-migration-release.md"
 
@@ -652,8 +653,55 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         active = sorted((ROOT / ".agents" / "active").glob("*.md"))
         self.assertEqual(
             [path.name for path in active],
-            list(WAVE_230_ACTIVE_FILES),
+            list(NEXT_RELEASE_ACTIVE_FILES),
         )
+
+    def test_240_scope_discovery_entrypoints_exist(self):
+        design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-01-chemblender-2.4.0-scope-discovery-design.md"
+        )
+        plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-01-chemblender-2.4.0-scope-discovery.md"
+        )
+        cursor_path = ".agents/active/2.4.0-scope-discovery.md"
+        design = self.read_doc(design_path)
+        plan = self.read_doc(plan_path)
+        self.assertTrue((ROOT / cursor_path).is_file(), cursor_path)
+        self.read_doc(cursor_path)
+
+        for term in ("2.4.0 Scope Discovery", "2.3.1"):
+            self.assertTrue(
+                any(term in document for document in (design, plan)),
+                term,
+            )
+
+    def test_240_scope_discovery_cursor_is_recoverable(self):
+        design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-01-chemblender-2.4.0-scope-discovery-design.md"
+        )
+        plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-01-chemblender-2.4.0-scope-discovery.md"
+        )
+        cursor_path = ".agents/active/2.4.0-scope-discovery.md"
+        self.assertTrue((ROOT / cursor_path).is_file(), cursor_path)
+        cursor = self.read_doc(cursor_path)
+
+        for term in (
+            "CB240-SCOPE-DISCOVERY",
+            "State: `in_progress`",
+            "Evidence-backed candidate intake",
+            "224155fa6986a4a51deaae3f9cf3d5f87ea0941a",
+            design_path,
+            plan_path,
+            ".agents/completed/2.3.0-release-readiness.md",
+            "No product implementation has started",
+            "No push",
+        ):
+            self.assertIn(term, cursor)
 
     def test_code_architecture_guide_tracks_source_files(self):
         import re
