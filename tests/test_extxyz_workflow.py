@@ -20,6 +20,18 @@ from tests.test_project_browser_model import (
 
 
 MODULE = "ChemBlender.ui.export"
+MOL2_FIXTURES = Path(__file__).parent / "fixtures" / "mol2"
+
+
+def _mol2_project(*names):
+    from ChemBlender.core import QCProject
+    from ChemBlender.core.formats.mol2 import parse_mol2
+
+    project = QCProject(uuid4(), "1.0")
+    batches = tuple(parse_mol2(MOL2_FIXTURES / name) for name in names)
+    for batch in batches:
+        project.commit(batch)
+    return project, batches
 
 
 class _Property:
@@ -119,6 +131,167 @@ class ExtXYZWorkflowTests(unittest.TestCase):
     def test_molecular_formats_are_public_export_choices(self):
         module = importlib.import_module(MODULE)
         self.assertTrue({"mol", "sdf", "smiles"}.issubset({item[0] for item in module._FORMAT_ITEMS}))
+
+    def test_mol2_is_a_public_export_choice_and_filter(self):
+        module = importlib.import_module(MODULE)
+
+        self.assertIn("mol2", {item[0] for item in module._FORMAT_ITEMS})
+        filter_glob = (
+            module.CHEMBLENDER_OT_export_project_entity
+            .__annotations__["filter_glob"]
+            .keywords["default"]
+        )
+        self.assertIn("*.mol2", filter_glob.split(";"))
+
+    def test_mol2_selection_projects_only_the_selected_record(self):
+        module = importlib.import_module(MODULE)
+        project, (selected, unrelated) = _mol2_project(
+            "small.mol2",
+            "aromatic.mol2",
+        )
+
+        selection = module.resolve_export_selection(
+            project,
+            selected.structures[0].id,
+        )
+        projection = module._mol2_entities(selection)
+
+        self.assertEqual(projection.structures, (selection.structure,))
+        self.assertEqual(projection.topologies, (selection.topology,))
+        self.assertEqual(projection.molecular_records, (selection.record,))
+        self.assertEqual(projection.datasets, selection.properties)
+        self.assertEqual(projection.annotations, selection.annotations)
+        self.assertEqual(
+            {value.id for value in projection.annotations},
+            {value.id for value in selected.annotations},
+        )
+        self.assertTrue(
+            {value.id for value in projection.datasets}.isdisjoint(
+                value.id for value in unrelated.datasets
+            )
+        )
+
+    def test_mol2_multi_record_selection_excludes_sibling_datasets(self):
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _mol2_project("multi.mol2")
+
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+        projection = module._mol2_entities(selection)
+        selected_ids = {
+            selection.structure.id,
+            selection.topology.id,
+            selection.record.id,
+            *(value.id for value in projection.datasets),
+        }
+
+        self.assertEqual(
+            {value.structure_id for value in projection.datasets},
+            {selection.structure.id},
+        )
+        self.assertTrue(
+            all(
+                value.target_entity_id in selected_ids
+                for value in projection.annotations
+            )
+        )
+
+    def test_mol2_preview_matches_core_and_rejects_conformers(self):
+        from ChemBlender.core.exporters import preview_mol2_export
+
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _mol2_project("small.mol2")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        with patch.object(
+            module,
+            "export_mol2",
+            side_effect=AssertionError("preview serialized MOL2"),
+        ):
+            report = module.preview_export_selection(selection, "mol2")
+
+        self.assertEqual(
+            report,
+            preview_mol2_export(module._mol2_entities(selection)),
+        )
+        self.assertTrue(report.requires_confirmation)
+        operator = module.CHEMBLENDER_OT_export_project_entity()
+        operator.filepath = "blocked.mol2"
+        operator.format_name = "mol2"
+        operator.confirm_loss = False
+        operator.missing_value_token = ""
+        with (
+            patch.object(
+                module,
+                "get_scene_session",
+                return_value=SimpleNamespace(
+                    project=project,
+                    active_entity_id=batch.structures[0].id,
+                ),
+            ),
+            patch.object(module.ExportJob, "start") as start,
+        ):
+            result = operator.execute(SimpleNamespace(scene=object()))
+        self.assertEqual(result, {"CANCELLED"})
+        start.assert_not_called()
+        with self.assertRaisesRegex(ValueError, "ConformerSet export requires SDF"):
+            module.preview_export_selection(
+                replace(selection, conformer_set=object()),
+                "mol2",
+            )
+
+    def test_mol2_background_export_roundtrips_and_cancels_atomically(self):
+        from ChemBlender.core.formats.mol2 import parse_mol2
+
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _mol2_project("small.mol2")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            destination = root / "selected.mol2"
+            job = module.ExportJob(
+                destination,
+                selection,
+                format_name="mol2",
+                confirm_loss=True,
+                missing_value_token=None,
+            )
+            job.start()
+            self.assertTrue(job.join(5))
+            self.assertIsNone(job.error)
+            reparsed = parse_mol2(destination)
+            self.assertEqual(
+                reparsed.structures[0].atomic_numbers,
+                selection.structure.atomic_numbers,
+            )
+            self.assertEqual(
+                tuple(map(tuple, reparsed.topologies[0].bond_indices.values)),
+                tuple(map(tuple, selection.topology.bond_indices.values)),
+            )
+
+            destination.write_bytes(b"prior destination\n")
+            cancelled = module.ExportJob(
+                destination,
+                selection,
+                format_name="mol2",
+                confirm_loss=True,
+                missing_value_token=None,
+            )
+            cancelled.cancel()
+            cancelled.start()
+            self.assertTrue(cancelled.join(5))
+            self.assertIsInstance(cancelled.error, ExportCancelled)
+            self.assertEqual(destination.read_bytes(), b"prior destination\n")
+            self.assertEqual(tuple(root.iterdir()), (destination,))
 
     def test_molecular_structure_selection_binds_topology_and_raw_record(self):
         from ChemBlender.core.formats.smiles import parse_smiles_text
