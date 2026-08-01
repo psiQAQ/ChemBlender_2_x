@@ -90,7 +90,7 @@ class Wave4FinalReadinessTests(unittest.TestCase):
             "`chemblender-2.3.0.zip`",
             "`chemblender-2.3.0.sha256`",
             "`chemblender-2.3.0-windows-x64`",
-            "`60585ac9fd757b53cf20947dd83c281670d3192784e23ae09537e77d9ff00ba3`",
+            "`7eea1c2db9a4bc22a66b99b8ea374a5c04a908f72dc64e6c27ad3dd12e6c0edf`",
             "Final exact-tag package CI: Not Run in this local preparation task",
             "Final public Release: Not Run in this local preparation task",
         ):
