@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ()
+NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-mol2-export-ui.md",)
 NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
@@ -716,6 +716,42 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Semantic round-trip",
         ):
             self.assertIn(term, contract)
+
+    def test_240_mol2_export_ui_design_is_recoverable(self):
+        intake_path = (
+            "docs/quantum-visualization/2.4.0/mol2-export-ui-intake.md"
+        )
+        design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-01-chemblender-2.4.0-mol2-export-ui-design.md"
+        )
+        cursor_path = ".agents/active/2.4.0-mol2-export-ui.md"
+        intake = self.read_doc(intake_path)
+        design = self.read_doc(design_path)
+        cursor = self.read_doc(cursor_path)
+
+        for term in (
+            "Task 2 — MOL2 Export UI Workflow",
+            "63f6043bdfe1a15fa411662f2bd418de6ebee85e",
+            "extension-package",
+        ):
+            self.assertIn(term, intake)
+        for term in (
+            "CHEMBLENDER_OT_export_project_entity",
+            "preview_mol2_export",
+            "export_mol2",
+            "ConformerSet-to-MOL2 is rejected",
+            "atomic destination replacement",
+        ):
+            self.assertIn(term, design)
+        for term in (
+            "CB240-MOL2-EXPORT-UI-T2",
+            "State: `in_progress`",
+            "Written design review",
+            "Do not implement product code until the written design is reviewed",
+            design_path,
+        ):
+            self.assertIn(term, cursor)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
