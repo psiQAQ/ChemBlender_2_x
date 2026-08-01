@@ -249,9 +249,14 @@ Create the executable MOL2 plan and `not_started` queued cursor. The plan stops 
 core writer and semantic re-import; Blender UI, PDB/PQR, dependencies and release work
 remain out of scope.
 
-- [ ] **Step 5: Complete RED/GREEN, review and checkpoint**
+- [x] **Step 5: Complete RED/GREEN, review and checkpoint**
 
 Run the focused documentation contract, full documentation module, `compileall`, BOM
 audit, runtime-scope diff, `git diff --check` and an independent read-only review. Then
 move the Scope Discovery cursor to completed, leave `.agents/active/` empty, record the
 planning commit SHA in the queued cursor and commit the checkpoint locally without push.
+
+Independent review found two Important plan gaps and two Minor wording/state gaps. The
+plan now includes the documented `NO_CHARGES` readiness correction and the literal
+`**** ****` charge-column placeholders; wording and completed-state findings were also
+fixed. Focused re-review returned `Ready` with no remaining findings.

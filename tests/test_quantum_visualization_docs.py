@@ -7,8 +7,9 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-scope-discovery.md",)
+NEXT_RELEASE_ACTIVE_FILES = ()
 NEXT_RELEASE_QUEUED_FILES = ("2.4.0-mol2-export.md",)
+NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 WAVE_230_FINAL_COMPLETED_FILE = "2.3.0-wave-4-migration-release.md"
 
@@ -709,7 +710,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-08-01-chemblender-2.4.0-scope-discovery.md"
         )
-        cursor_path = ".agents/active/2.4.0-scope-discovery.md"
+        cursor_path = f".agents/completed/{NEXT_RELEASE_COMPLETED_FILE}"
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
         self.assertTrue((ROOT / cursor_path).is_file(), cursor_path)
@@ -730,19 +731,22 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-08-01-chemblender-2.4.0-scope-discovery.md"
         )
-        cursor_path = ".agents/active/2.4.0-scope-discovery.md"
+        cursor_path = f".agents/completed/{NEXT_RELEASE_COMPLETED_FILE}"
         self.assertTrue((ROOT / cursor_path).is_file(), cursor_path)
         cursor = self.read_doc(cursor_path)
 
         for term in (
             "CB240-SCOPE-DISCOVERY",
-            "State: `in_progress`",
+            "State: `completed`",
             "Evidence-backed candidate intake",
             "224155fa6986a4a51deaae3f9cf3d5f87ea0941a",
+            "89090a0c698cf87cd1f42ba14a206aa0637e5b5d",
             design_path,
             plan_path,
             ".agents/completed/2.3.0-release-readiness.md",
-            "No product implementation has started",
+            "docs/superpowers/plans/2026-08-01-chemblender-2.4.0-mol2-export.md",
+            ".agents/queued/2.4.0-mol2-export.md",
+            "No product implementation was started",
             "No push",
         ):
             self.assertIn(term, cursor)

@@ -27,6 +27,8 @@
 - Move: `.agents/queued/2.4.0-mol2-export.md` to `.agents/active/2.4.0-mol2-export.md`
 - Create: `docs/quantum-visualization/2.4.0/mol2-export-contract.md`
 - Create: `tests/test_mol2_exporter.py`
+- Modify: `ChemBlender/core/exporters/mol2_readiness.py`
+- Modify: `tests/test_mol2_export_readiness.py`
 - Modify: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
@@ -47,12 +49,22 @@ Create `mol2-export-contract.md` with these exact rules:
 - `Unsupported` readiness raises `ValueError` containing the ordinally sorted tokens;
 - `Partial` readiness returns a preview with one `missing:<token>` entry per token;
 - raw-only information that a normalized writer omits produces stable loss entries;
+- `NO_CHARGES` does not require a `partial_charge` property, matching the frozen P1
+  readiness specification;
 - no destination is created until `confirm_loss=True` when confirmation is required;
 - atom and bond IDs are allocated `1..N` in emitted order;
 - records sort by `(source_record_index, record_key, structure UUID)` rather than container order;
 - numeric text uses finite, locale-independent `.17g` formatting with negative zero normalized;
 - semantic round-trip compares scientific entities, not UUIDs, whitespace or provenance;
 - unsupported periodic shifts, non-angstrom coordinates, malformed token fields and non-finite values fail closed.
+
+The raw-loss codes are exactly `source_atom_ids_renumbered`,
+`source_bond_ids_renumbered`, `molecule_status_bits_omitted`,
+`molecule_comments_omitted`, `atom_status_bits_omitted`,
+`substructure_fields_omitted` and `unknown_sections_omitted`. Parse the unique bound
+raw record with existing `iter_mol2_records()`/`parse_mol2_record()` to derive them.
+A substructure row containing only the emitted canonical `GROUP` type is not a loss;
+additional raw substructure fields are.
 
 - [ ] **Step 3: Write the first failing exporter tests**
 
@@ -71,7 +83,7 @@ def test_aromatic_fixture_exports_deterministically(self):
     self.assertEqual(first.text, second.text)
     self.assertFalse(first.report.requires_confirmation)
     self.assertIn("@<TRIPOS>MOLECULE\n", first.text)
-    self.assertIn("  ar\n", first.text)
+    self.assertIn(" ar\n", first.text)
 
 
 def test_loss_preview_blocks_the_destination_until_confirmed(self):
@@ -87,6 +99,15 @@ def test_loss_preview_blocks_the_destination_until_confirmed(self):
 Also assert that missing topology raises `ValueError` with `topology`, and that the
 small fixture reports source-ID/unknown-section loss rather than silently dropping it.
 
+Add this readiness regression before changing the writer:
+
+```python
+def test_no_charges_does_not_require_a_partial_charge_property(self):
+    report = mol2_export_readiness(self.aromatic_batch)
+    self.assertEqual(report.status.value, "Complete")
+    self.assertEqual(report.missing_fields, ())
+```
+
 - [ ] **Step 4: Run RED**
 
 ```powershell
@@ -94,8 +115,9 @@ $pythonBin = 'C:\Program Files\Blender Foundation\Blender 5.1\5.1\python\bin\pyt
 & $pythonBin -m unittest tests.test_mol2_exporter -v
 ```
 
-Expected: import failure because `preview_mol2_export` and `export_mol2` are not yet
-public.
+Expected: the exporter module import fails because `preview_mol2_export` and
+`export_mol2` are not yet public; the isolated readiness regression fails with
+`Partial ('dataset.partial_charge',)`.
 
 - [ ] **Step 5: Commit the activated contract after it is GREEN in Task 2**
 
@@ -108,8 +130,10 @@ commit after the writer passes.
 
 **Files:**
 - Create: `ChemBlender/core/exporters/mol2.py`
+- Modify: `ChemBlender/core/exporters/mol2_readiness.py`
 - Modify: `ChemBlender/core/exporters/__init__.py`
 - Test: `tests/test_mol2_exporter.py`
+- Test: `tests/test_mol2_export_readiness.py`
 - Modify: `.agents/reference/code-architecture-guide.md`
 
 **Interfaces:**
@@ -117,6 +141,12 @@ commit after the writer passes.
 - Produces: deterministic UTF-8 MOL2 text and a report whose `frame_count` is the number of emitted MOL2 records.
 
 - [ ] **Step 1: Add the minimal public module**
+
+First fix the documented `NO_CHARGES` readiness branch: do not call `_one()` for
+`partial_charge` until the unique charge-type annotation exists and is not exactly
+`NO_CHARGES`. Preserve all existing status values and token spellings for every other
+branch. Run the isolated readiness regression to prove the correction before adding the
+writer module.
 
 Create `ChemBlender/core/exporters/mol2.py`. The public flow must have this shape:
 
@@ -192,6 +222,12 @@ Rules:
 - missing/inconsistent charge metadata becomes `NO_CHARGES` only after loss confirmation;
 - omit optional atom substructure/charge columns when their complete property is absent;
 - emit `SUBSTRUCTURE` only when complete ID and name properties exist;
+- for each unique `(substructure_id, substructure_name)` pair, use the first member atom
+  as root and emit `<id> <name> <root_atom_id> GROUP`, ordered by numeric ID then name;
+  reject one ID mapped to multiple names instead of choosing by input order;
+- when a complete charge is present but either substructure property is unavailable,
+  emit the literal placeholders `**** ****` before the charge column; do not invent a
+  substructure ID/name and do not shift charge into columns 7 or 8;
 - emit bond types as `ar`, `amide`, `1`, `2` or `3` from the already validated topology;
 - use the atom order from `Structure` and canonical bond order from `TopologyRecord`;
 - reject whitespace/newlines in token fields and reject invalid array shape/unit/value at the writer trust boundary.
@@ -234,8 +270,10 @@ git add -- `
   .agents/active/2.4.0-mol2-export.md `
   .agents/reference/code-architecture-guide.md `
   ChemBlender/core/exporters/mol2.py `
+  ChemBlender/core/exporters/mol2_readiness.py `
   ChemBlender/core/exporters/__init__.py `
   docs/quantum-visualization/2.4.0/mol2-export-contract.md `
+  tests/test_mol2_export_readiness.py `
   tests/test_mol2_exporter.py `
   tests/test_quantum_visualization_docs.py
 git diff --cached --check
