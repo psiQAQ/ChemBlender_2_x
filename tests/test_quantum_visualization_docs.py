@@ -7,12 +7,13 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-pdb-export.md",)
+NEXT_RELEASE_ACTIVE_FILES = ()
 NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
 TASK3_SCOPE_COMPLETED_FILE = "2.4.0-task3-scope-discovery.md"
+PDB_EXPORT_COMPLETED_FILE = "2.4.0-pdb-export.md"
 WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 WAVE_230_FINAL_COMPLETED_FILE = "2.3.0-wave-4-migration-release.md"
 
@@ -790,7 +791,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         completed_path = (
             f".agents/completed/{TASK3_SCOPE_COMPLETED_FILE}"
         )
-        active_path = ".agents/active/2.4.0-pdb-export.md"
+        pdb_export_path = f".agents/completed/{PDB_EXPORT_COMPLETED_FILE}"
         documents = {
             path: self.read_doc(path)
             for path in (
@@ -799,7 +800,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 discovery_plan_path,
                 selected_plan_path,
                 completed_path,
-                active_path,
+                pdb_export_path,
             )
         }
 
@@ -828,15 +829,18 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         ):
             self.assertIn(term, selected_plan)
 
-        active = documents[active_path]
+        pdb_export = documents[pdb_export_path]
         for term in (
             "CB240-PDB-EXPORT-T3",
-            "State: `in_progress`",
+            "State: `completed`",
             selected_plan_path,
             intake_path,
             "Task 1 — Freeze native PDB export contract",
+            "2114 Passed / 26 Skipped / 0 Failed",
+            "PASS: installed native PDB export and re-import",
+            "Remote CI: `Not Run`",
         ):
-            self.assertIn(term, active)
+            self.assertIn(term, pdb_export)
 
         completed = documents[completed_path]
         for term in (
