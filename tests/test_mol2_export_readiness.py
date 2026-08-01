@@ -33,6 +33,12 @@ class Mol2ExportReadinessTests(unittest.TestCase):
         self.assertEqual(report.status.value, "Complete")
         self.assertEqual(report.missing_fields, ())
 
+    def test_no_charges_does_not_require_a_partial_charge_property(self):
+        report = mol2_export_readiness(self.aromatic_batch)
+
+        self.assertEqual(report.status.value, "Complete")
+        self.assertEqual(report.missing_fields, ())
+
     def test_raw_marker_acceptance_matches_the_mol2_tokenizer(self):
         raw = FIXTURE.read_bytes()
         molecule_tail = raw.split(b"\n", 1)[1]

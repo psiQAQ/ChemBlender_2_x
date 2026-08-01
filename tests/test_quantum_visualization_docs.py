@@ -7,8 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ()
-NEXT_RELEASE_QUEUED_FILES = ("2.4.0-mol2-export.md",)
+NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-mol2-export.md",)
+NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 WAVE_230_FINAL_COMPLETED_FILE = "2.3.0-wave-4-migration-release.md"
@@ -663,7 +663,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             list(NEXT_RELEASE_QUEUED_FILES),
         )
 
-    def test_240_candidate_intake_selects_one_queued_task(self):
+    def test_240_candidate_intake_activates_selected_task(self):
         intake_path = (
             "docs/quantum-visualization/2.4.0/candidate-intake.md"
         )
@@ -671,12 +671,16 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-08-01-chemblender-2.4.0-mol2-export.md"
         )
-        queue_path = ".agents/queued/2.4.0-mol2-export.md"
-        for relative_path in (intake_path, plan_path, queue_path):
+        cursor_path = ".agents/active/2.4.0-mol2-export.md"
+        contract_path = (
+            "docs/quantum-visualization/2.4.0/mol2-export-contract.md"
+        )
+        for relative_path in (intake_path, plan_path, cursor_path, contract_path):
             self.assertTrue((ROOT / relative_path).is_file(), relative_path)
         intake = self.read_doc(intake_path)
         plan = self.read_doc(plan_path)
-        queue = self.read_doc(queue_path)
+        cursor = self.read_doc(cursor_path)
+        contract = self.read_doc(contract_path)
 
         for term in (
             "GitHub Issues: disabled",
@@ -694,12 +698,20 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             self.assertIn(term, plan)
         for term in (
             "CB240-MOL2-EXPORT-T1",
-            "State: `not_started`",
+            "State: `in_progress`",
+            "fed930d21fef0aaa4dc334c5a0db1e550ab2e0a2",
             plan_path,
-            "No product implementation has started",
+            "Core writer contract",
             "No push",
         ):
-            self.assertIn(term, queue)
+            self.assertIn(term, cursor)
+        for term in (
+            "NO_CHARGES",
+            "source_atom_ids_renumbered",
+            "confirm_loss=True",
+            "Semantic round-trip",
+        ):
+            self.assertIn(term, contract)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
