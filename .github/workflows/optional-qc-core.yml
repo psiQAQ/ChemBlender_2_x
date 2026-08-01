@@ -31,6 +31,8 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check -c .github/constraints/cclib-py313.txt "cclib==1.8.1"
       - name: Run required cclib integration
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         shell: bash
         run: |
           set -euo pipefail
@@ -78,6 +80,8 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check -c .github/constraints/iodata-py313.txt "qc-iodata==1.0.1"
       - name: Run required IOData integration
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         shell: bash
         run: |
           set -euo pipefail
@@ -119,6 +123,8 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check -c .github/constraints/gbasis-py312.txt "numpy==1.26.4" "qc-iodata==1.0.1" "qc-gbasis==0.1.0"
       - name: Run required GBasis integration
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         shell: bash
         run: |
           set -euo pipefail

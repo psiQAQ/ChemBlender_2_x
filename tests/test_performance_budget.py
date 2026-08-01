@@ -3,6 +3,7 @@ import importlib.util
 import math
 from pathlib import Path
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,6 +64,48 @@ def qualified_report(harness, values, *, environment=None, scale="interactive"):
 
 
 class PerformanceBudgetTests(unittest.TestCase):
+    def test_runtime_probe_enables_blender_python_environment(self):
+        harness = load_harness()
+        expected = {
+            "blender_version": "5.1.2",
+            "gemmi_version": "0.7.5",
+            "rdkit_version": "2026.03.3",
+        }
+        completed = mock.Mock(
+            returncode=0,
+            stdout=(
+                'CHEMBLENDER_RUNTIME={"blender_version":"5.1.2",'
+                '"gemmi_version":"0.7.5","rdkit_version":"2026.03.3"}\n'
+            ),
+        )
+
+        with (
+            mock.patch.object(
+                harness,
+                "_blender_executable",
+                return_value=Path("blender.exe"),
+            ),
+            mock.patch.object(
+                harness.subprocess,
+                "run",
+                return_value=completed,
+            ) as run,
+        ):
+            harness._blender_runtime_versions.cache_clear()
+            self.addCleanup(harness._blender_runtime_versions.cache_clear)
+            self.assertEqual(harness._blender_runtime_versions(), expected)
+
+        command = run.call_args.args[0]
+        self.assertIn("--python-use-system-env", command)
+        self.assertLess(
+            command.index("--python-use-system-env"),
+            command.index("--python-expr"),
+        )
+        self.assertLess(
+            command.index("--python-exit-code"),
+            command.index("--python-expr"),
+        )
+
     def test_harness_reports_runtime_and_git_provenance(self):
         harness = load_harness()
         report = harness.run_benchmark(

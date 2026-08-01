@@ -72,6 +72,34 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
             document = json.loads(first[relative_path])
             self.assertEqual(first[relative_path], _canonical_json(document))
 
+    def test_canonical_json_checkout_eol_is_lf(self):
+        for relative_path in (
+            "docs/quantum-visualization/reader-capability-matrix.json",
+            "docs/user/dependencies.json",
+            "docs/user/format-capabilities.json",
+        ):
+            with self.subTest(relative_path=relative_path):
+                result = subprocess.run(
+                    (
+                        "git",
+                        "-c",
+                        f"safe.directory={ROOT.as_posix()}",
+                        "check-attr",
+                        "eol",
+                        "--",
+                        relative_path,
+                    ),
+                    cwd=ROOT,
+                    check=False,
+                    capture_output=True,
+                    encoding="utf-8",
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(
+                    result.stdout.strip(),
+                    f"{relative_path}: eol: lf",
+                )
+
     def test_format_capabilities_derive_runtime_contracts_and_export_maturity(self):
         document = json.loads(
             self._module().render_documents(ROOT)[

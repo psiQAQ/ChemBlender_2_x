@@ -232,6 +232,21 @@ class OptionalQcCoreCiContractTests(unittest.TestCase):
                 self.assertEqual(job.count(autocrlf), 1)
                 self.assertLess(job.index(autocrlf), job.index(submodule_update))
 
+    def test_each_required_integration_imports_tests_from_checkout_root(self):
+        expected = "PYTHONPATH: ${{ github.workspace }}"
+        for backend in FIXTURES:
+            with self.subTest(backend=backend):
+                steps = [
+                    step
+                    for step in re.split(
+                        r"(?m)(?=^      - (?:name:|uses:))",
+                        self._job(backend),
+                    )
+                    if "python ChemBlender/scripts/run_required_integration.py" in step
+                ]
+                self.assertEqual(len(steps), 1)
+                self.assertEqual(steps[0].count(expected), 1)
+
     def test_workflow_is_read_only_pinned_and_documented_as_zero_skip_gate(self):
         workflow = self._workflow()
         documentation = DOCUMENTATION.read_text(encoding="utf-8")
