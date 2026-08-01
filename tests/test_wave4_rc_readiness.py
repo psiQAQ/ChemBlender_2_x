@@ -187,6 +187,26 @@ class Wave4RCReadinessTests(unittest.TestCase):
         self.assertIn(RC_FEEDBACK_CHECKED_AT, cursor)
         self.assertIn("no visible user-feedback channel event", cursor)
 
+    def test_rc_changelog_scopes_pre_tag_remote_ci_snapshot(self):
+        changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        notes = extract_release_notes(changelog, RC_VERSION)
+
+        for text in (
+            "Historical pre-tag qualification snapshot",
+            "exact-tag `extension-package` run `30682833534`",
+            "release dry-run `30683074015`",
+            "public prerelease workflow `30683112170`",
+            "`.agents/completed/2.3.0-rc-readiness.md`",
+        ):
+            with self.subTest(text=text):
+                self.assertIn(text, notes)
+        self.assertNotIn("Remote CI has not run for this exact RC commit.", notes)
+        self.assertNotIn(
+            "`Remote CI: Not Run`. Tagging, package CI and prerelease publication"
+            " require separate authorization and exact-tag evidence.",
+            notes,
+        )
+
     def test_manifest_version_is_a_single_root_assignment(self):
         source = (EXTENSION / "blender_manifest.toml").read_bytes()
         self.assertEqual(source.count(f'version = "{RC_VERSION}"'.encode()), 1)

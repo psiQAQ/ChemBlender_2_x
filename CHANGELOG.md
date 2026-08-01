@@ -48,13 +48,13 @@ All notable changes to the maintained ChemBlender release line are recorded here
 - Optional readers/workers are unavailable unless their separately managed runtime passes the exact availability check; the base package does not install or download them.
 - MOL2 and PDB/PQR export remain readiness-only, Cube has no lossless re-export, and XYZ export intentionally omits trajectory/property semantics. Lossy Project Browser exports require preview and confirmation.
 - Scripted usability acceptance covers the packaged workflows and hash-locked fixtures but is not an independent human-participant study.
-- Remote CI has not run for this exact RC commit. Local qualification evidence must not be described as exact-HEAD CI evidence.
+- Historical pre-tag qualification snapshot: `Remote CI: Not Run` was correct before publication. The later exact-tag `extension-package` run `30682833534`, release dry-run `30683074015`, and public prerelease workflow `30683112170` passed; see `.agents/completed/2.3.0-rc-readiness.md`.
 
 ### Verification
 
 - The local RC gate covers the full standard-library suite, generated-document freshness, dependency hashes/licenses, native Extension validation/build, ZIP path/type/CRC/member audits, isolated installation, two lifecycle reloads, product smoke and three legacy save/reopen fixtures.
 - Performance and usability evidence is recorded under `docs/quantum-visualization/2.3.0/`; package size and section baselines retain zero unexplained-growth allowances.
-- `Remote CI: Not Run`. Tagging, package CI and prerelease publication require separate authorization and exact-tag evidence.
+- Historical pre-tag qualification snapshot: `Remote CI: Not Run` and the separate-authorization wording apply only before publication. The exact-tag package, dry-run, and prerelease publication evidence passed; see `.agents/completed/2.3.0-rc-readiness.md`.
 
 ## [2.3.0-alpha.1] - 2026-07-26
 
