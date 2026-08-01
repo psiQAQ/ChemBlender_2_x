@@ -27,8 +27,13 @@ _ELEMENTS_BY_NUMBER = {
 }
 _LOSS_MESSAGES = {
     "atom_serials_renumbered": "source atom serials are normalized to 1..N",
+    "atom_map_numbers_omitted": "atom-map numbers are omitted",
+    "atom_stereo_omitted": "atom stereo labels are omitted",
     "cell_omitted": "PDB CRYST1/unit-cell data is omitted",
     "formal_charge_omitted": "PDB formal charges are omitted",
+    "isotopes_omitted": "isotope labels are omitted",
+    "molecular_charge_omitted": "molecular total charge is omitted",
+    "molecular_multiplicity_omitted": "molecular spin multiplicity is omitted",
     "source_records_omitted": "PDB source-only records are omitted",
     "topology_omitted": "PDB CONECT/topology data is omitted",
 }
@@ -122,20 +127,44 @@ def _loss_entries(project_entities, readiness, entries):
         for structure, *_rest in entries
     ):
         codes.add("cell_omitted")
-    if any(
-        numpy.any(_values(structure.atomic_identity.formal_charges) != 0)
-        for structure, *_rest in entries
-    ):
-        codes.add("formal_charge_omitted")
-    if any(
-        revision.reader_id == "pdb"
-        and structure_ids.intersection(revision.created_entity_ids)
-        for revision in _entities(project_entities, "source_revisions")
-    ):
-        codes.add("source_records_omitted")
+    for structure, hierarchy, *_rest in entries:
+        identity = structure.atomic_identity
+        if structure.molecular_charge is not None:
+            codes.add("molecular_charge_omitted")
+        if structure.molecular_multiplicity is not None:
+            codes.add("molecular_multiplicity_omitted")
+        if numpy.any(_values(identity.isotopes) != 0):
+            codes.add("isotopes_omitted")
+        if numpy.any(_values(identity.formal_charges) != 0):
+            codes.add("formal_charge_omitted")
+        if numpy.any(_values(identity.atom_map_numbers) != 0):
+            codes.add("atom_map_numbers_omitted")
+        stereo = _categorical_values(
+            identity.stereo_labels,
+            len(structure.atomic_numbers),
+            allow_missing=True,
+        )
+        if stereo is None:
+            raise ValueError("PDB atom stereo labels are invalid")
+        if any(value not in (None, "") for value in stereo):
+            codes.add("atom_stereo_omitted")
+        if hierarchy is not None and len(
+            {chain.chain_id for chain in hierarchy.chains}
+        ) != len(hierarchy.chains):
+            codes.add("source_records_omitted")
     return tuple(
         ExportReportEntry(code, _LOSS_MESSAGES[code]) for code in sorted(codes)
     )
+
+
+def _frame_count(entries):
+    count = sum(
+        1 if frames is None else numpy.asarray(frames.data.values).shape[0]
+        for _structure, _hierarchy, frames, _occupancy, _b_factor in entries
+    )
+    if count > 9999:
+        raise ValueError("PDB export is FieldOverflow: model.overflow")
+    return count
 
 
 def preview_pdb_export(project_entities):
@@ -150,10 +179,7 @@ def preview_pdb_export(project_entities):
         )
     entries = _ordered_entries(project_entities)
     losses = _loss_entries(project_entities, readiness, entries)
-    frame_count = sum(
-        1 if frames is None else frames.data.shape[0]
-        for _structure, _hierarchy, frames, _occupancy, _b_factor in entries
-    )
+    frame_count = _frame_count(entries)
     return ExportReport("pdb", False, frame_count, bool(losses), losses)
 
 
@@ -346,10 +372,10 @@ def _chunks(project_entities, is_cancelled):
             + ", ".join(readiness.tokens)
         )
     preserve_serials = readiness.status is PDBPQRExportStatus.READY
+    entries = _ordered_entries(project_entities)
+    _frame_count(entries)
     models = []
-    for entry in _ordered_entries(project_entities):
-        if _cancelled(is_cancelled):
-            raise ExportCancelled("export cancelled")
+    for entry in entries:
         models.extend(_entry_models(entry, preserve_serials))
     chunks = []
     multiple = len(models) > 1

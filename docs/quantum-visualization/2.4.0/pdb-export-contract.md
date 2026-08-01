@@ -34,14 +34,24 @@ order. Numeric formatting is locale-independent, negative zero is normalized,
 and every record ends with LF.
 
 This core slice is intentionally **No CONECT** and **No UI**. It does not emit
-`CRYST1`, formal charge, secondary structure, assemblies, comments, or raw
-source records. The preview reports these real omissions using stable codes:
+`CRYST1`, atomic isotope/map/stereo metadata, formal charge, molecular total
+charge/spin multiplicity, secondary structure, assemblies, comments, or raw
+source records. The preview reports identifiable omissions using stable codes:
 
 - `atom_serials_renumbered`;
+- `atom_map_numbers_omitted`;
+- `atom_stereo_omitted`;
 - `topology_omitted`;
 - `cell_omitted`;
 - `formal_charge_omitted`;
+- `isotopes_omitted`;
+- `molecular_charge_omitted`;
+- `molecular_multiplicity_omitted`;
 - `source_records_omitted`.
+
+`source_records_omitted` is emitted only when the model retains a real PDB
+segment boundary (multiple hierarchy segments sharing one chain ID); merely
+originating from the PDB reader is not evidence of loss.
 
 Any such entry requires `confirm_loss=True` before publication. UUIDs,
 provenance IDs, raw whitespace and regenerated revisions are not compared as
@@ -49,9 +59,10 @@ scientific semantics.
 
 ## Safety and round-trip boundary
 
-The writer revalidates live arrays and fixed-column widths immediately before
-formatting. Non-finite data, invalid units/shapes/status, control characters,
-or overflow fail before destination replacement. Publication reuses
+The writer revalidates live arrays and fixed-column widths, then projects all
+records into one immutable text snapshot before later cancellation callbacks.
+Non-finite data, invalid units/shapes/status, control characters, or overflow
+fail before destination replacement. Publication reuses
 `atomic_write_chunks`; cancellation and writer errors leave neither a partial
 destination nor a sibling temporary file.
 

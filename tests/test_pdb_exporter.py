@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import ArrayData, QCProject
+from ChemBlender.core import ArrayData, DatasetStatus, QCProject
 from ChemBlender.core.exporters import (
     ExportCancelled,
     export_pdb,
@@ -94,7 +94,7 @@ class PDBExporterTests(unittest.TestCase):
             "formal_charge_omitted": parse_pdb(
                 FIXTURES / "atom-hetatm.pdb"
             ),
-            "source_records_omitted": parse_pdb(FIXTURES / "altloc.pdb"),
+            "source_records_omitted": parse_pdb(FIXTURES / "multimodel.pdb"),
         }
         with TemporaryDirectory() as directory:
             source = Path(directory) / "cell.pdb"
@@ -109,6 +109,56 @@ class PDBExporterTests(unittest.TestCase):
                     preview = preview_pdb_export(batch)
                     self.assertIn(code, tuple(entry.code for entry in preview.entries))
                     self.assertTrue(preview.requires_confirmation)
+
+    def test_plain_pdb_reexport_does_not_invent_source_record_loss(self):
+        preview = preview_pdb_export(parse_pdb(FIXTURES / "altloc.pdb"))
+
+        self.assertFalse(preview.requires_confirmation)
+        self.assertNotIn(
+            "source_records_omitted",
+            tuple(entry.code for entry in preview.entries),
+        )
+
+    def test_omitted_atomic_identity_semantics_have_stable_loss_codes(self):
+        batch = ready_single_model()
+        identity = batch.structures[0].atomic_identity
+        structure = replace(
+            batch.structures[0],
+            molecular_charge=1,
+            molecular_multiplicity=2,
+            atomic_identity=replace(
+                identity,
+                isotopes=replace(
+                    identity.isotopes,
+                    values=numpy.asarray((13, 0), dtype=numpy.int64),
+                ),
+                atom_map_numbers=replace(
+                    identity.atom_map_numbers,
+                    values=numpy.asarray((7, 0), dtype=numpy.int64),
+                ),
+                stereo_labels=replace(
+                    identity.stereo_labels,
+                    codes=replace(
+                        identity.stereo_labels.codes,
+                        values=numpy.asarray((0, -1), dtype=numpy.int64),
+                    ),
+                    categories=("R",),
+                ),
+            ),
+        )
+
+        preview = preview_pdb_export(replace(batch, structures=(structure,)))
+
+        self.assertEqual(
+            tuple(entry.code for entry in preview.entries),
+            (
+                "atom_map_numbers_omitted",
+                "atom_stereo_omitted",
+                "isotopes_omitted",
+                "molecular_charge_omitted",
+                "molecular_multiplicity_omitted",
+            ),
+        )
 
     def test_loss_preview_blocks_destination_until_confirmed(self):
         batch = parse_pdb(FIXTURES / "conect.pdb")
@@ -242,6 +292,85 @@ class PDBExporterTests(unittest.TestCase):
         self.assertNotIn("MODEL        3", exported)
         self.assertTrue(exported.endswith("END\n"))
 
+    def test_live_frame_values_define_preview_and_report_count(self):
+        batch = pdb_batch(include_frames=True)
+        frames = next(
+            value for value in batch.datasets if value.semantic_role == "coordinates"
+        )
+        object.__setattr__(
+            frames.data,
+            "values",
+            numpy.concatenate((frames.data.values, frames.data.values[:1]), axis=0),
+        )
+
+        preview = preview_pdb_export(batch)
+        exported = export_pdb(batch)
+
+        self.assertEqual(preview.frame_count, 3)
+        self.assertEqual(exported.report.frame_count, 3)
+        self.assertEqual(exported.text.count("MODEL"), 3)
+
+    def test_total_model_inventory_overflow_fails_before_publication(self):
+        batch = pdb_batch(include_frames=True, include_second=True)
+        frames = next(
+            value for value in batch.datasets if value.semantic_role == "coordinates"
+        )
+        first, second = batch.structures
+        first_frames = replace(
+            frames,
+            data=replace(
+                frames.data,
+                values=numpy.repeat(first.coordinates.values[None, ...], 5_000, axis=0),
+            ),
+            comments=("",) * 5_000,
+        )
+        second_frames = replace(
+            frames,
+            id=uuid4(),
+            revision="second-models-r1",
+            structure_id=second.id,
+            data=replace(
+                frames.data,
+                values=numpy.repeat(second.coordinates.values[None, ...], 5_000, axis=0),
+            ),
+            comments=("",) * 5_000,
+        )
+        batch = replace(
+            batch,
+            datasets=tuple(
+                value for value in batch.datasets if value.id != frames.id
+            )
+            + (first_frames, second_frames),
+        )
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "too-many-models.pdb"
+            with self.assertRaisesRegex(ValueError, "model\\.overflow"):
+                export_pdb(batch, destination=destination)
+            self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+    def test_cancellation_callback_cannot_change_the_projected_snapshot(self):
+        batch = pdb_batch(include_frames=True)
+        frames = next(
+            value for value in batch.datasets if value.semantic_role == "coordinates"
+        )
+        calls = 0
+
+        def mutate_after_projection():
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                frames.data.values[0, 0, 0] = 9.0
+                object.__setattr__(frames.data, "unit", "bohr")
+            return False
+
+        exported = export_pdb(batch, is_cancelled=mutate_after_projection)
+
+        first_atom = next(
+            line for line in exported.text.splitlines() if line.startswith("ATOM")
+        )
+        self.assertEqual(first_atom[30:38], "   1.000")
+
     def test_model_number_overflow_fails_before_publication(self):
         batch = pdb_batch(include_frames=True)
         frames = next(
@@ -271,25 +400,139 @@ class PDBExporterTests(unittest.TestCase):
 
     def test_invalid_live_element_after_preview_fails_before_publication(self):
         batch = ready_single_model()
-        calls = 0
-
-        def mutate_after_preview():
-            nonlocal calls
-            calls += 1
-            if calls == 2:
-                object.__setattr__(batch.structures[0], "atomic_numbers", (0, 7))
-            return False
+        preview_pdb_export(batch)
+        object.__setattr__(batch.structures[0], "atomic_numbers", (0, 7))
 
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "invalid.pdb"
             with self.assertRaisesRegex(ValueError, "atomic number"):
-                export_pdb(
-                    batch,
-                    destination=destination,
-                    is_cancelled=mutate_after_preview,
-                )
+                export_pdb(batch, destination=destination)
             self.assertFalse(destination.exists())
             self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+    def test_invalid_fields_leave_destination_untouched(self):
+        def occupancy_shape(batch):
+            occupancy = next(
+                value for value in batch.datasets if value.semantic_role == "occupancy"
+            )
+            object.__setattr__(
+                occupancy.data,
+                "values",
+                numpy.asarray(((1.0, numpy.nan),)),
+            )
+            return batch
+
+        def occupancy_status(batch):
+            return replace(
+                batch,
+                datasets=tuple(
+                    replace(value, status=DatasetStatus.AMBIGUOUS)
+                    if value.semantic_role == "occupancy"
+                    else value
+                    for value in batch.datasets
+                ),
+            )
+
+        def coordinate_overflow(batch):
+            structure = batch.structures[0]
+            values = numpy.asarray(structure.coordinates.values).copy()
+            values[0, 0] = 10_000.0
+            return replace(
+                batch,
+                structures=(
+                    replace(
+                        structure,
+                        coordinates=ArrayData(values, ("atom", "xyz"), "angstrom"),
+                    ),
+                ),
+            )
+
+        def residue_overflow(batch):
+            hierarchy = batch.biological_hierarchies[0]
+            return replace(
+                batch,
+                biological_hierarchies=(
+                    replace(
+                        hierarchy,
+                        residues=(
+                            replace(hierarchy.residues[0], sequence_number=10_000),
+                        ),
+                    ),
+                ),
+            )
+
+        def atom_name_overflow(batch):
+            structure = batch.structures[0]
+            identity = structure.atomic_identity
+            return replace(
+                batch,
+                structures=(
+                    replace(
+                        structure,
+                        atomic_identity=replace(
+                            identity,
+                            atom_names=replace(
+                                identity.atom_names,
+                                categories=("LONGER", "N"),
+                            ),
+                        ),
+                    ),
+                ),
+            )
+
+        def serial_overflow(batch):
+            atom_count = 100_000
+            structure = batch.structures[0]
+            hierarchy = batch.biological_hierarchies[0]
+            object.__setattr__(structure, "atomic_numbers", (6,) * atom_count)
+            object.__setattr__(
+                structure.coordinates,
+                "values",
+                numpy.zeros((atom_count, 3), dtype=numpy.float64),
+            )
+            object.__setattr__(
+                structure.atomic_identity.atom_names.codes,
+                "values",
+                numpy.zeros(atom_count, dtype=numpy.int64),
+            )
+            object.__setattr__(
+                hierarchy.atom_sites.serial_numbers,
+                "values",
+                numpy.arange(1, atom_count + 1, dtype=numpy.int64),
+            )
+            object.__setattr__(
+                hierarchy.atom_sites.residue_indices,
+                "values",
+                numpy.zeros(atom_count, dtype=numpy.int64),
+            )
+            object.__setattr__(
+                hierarchy.atom_sites.alternate_locations.codes,
+                "values",
+                numpy.full(atom_count, -1, dtype=numpy.int64),
+            )
+            object.__setattr__(
+                hierarchy.atom_sites.record_kinds.codes,
+                "values",
+                numpy.zeros(atom_count, dtype=numpy.int64),
+            )
+            return batch
+
+        cases = (
+            (occupancy_shape, "dataset\\.occupancy\\.shape"),
+            (occupancy_status, "dataset\\.occupancy\\.status"),
+            (coordinate_overflow, "coordinates\\.overflow"),
+            (residue_overflow, "identity\\.residue_number\\.overflow"),
+            (atom_name_overflow, "identity\\.atom_name\\.overflow"),
+            (serial_overflow, "serial\\.overflow"),
+        )
+        for mutate, token in cases:
+            with self.subTest(token=token), TemporaryDirectory() as directory:
+                destination = Path(directory) / "unchanged.pdb"
+                destination.write_text("keep\n", encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, token):
+                    export_pdb(mutate(ready_single_model()), destination=destination)
+                self.assertEqual(destination.read_text(encoding="utf-8"), "keep\n")
+                self.assertEqual(tuple(Path(directory).iterdir()), (destination,))
 
     def test_cancellation_preempts_invalid_data_and_cleans_mid_write(self):
         invalid = ready_single_model()
