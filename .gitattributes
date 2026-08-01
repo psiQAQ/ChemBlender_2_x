@@ -9,3 +9,6 @@ tests/fixtures/cif/quartz.cif text eol=lf
 tests/fixtures/poscar/fe-bcc.POSCAR text eol=lf
 tests/fixtures/poscar/si.POSCAR text eol=lf
 docs/reader-api-v1/*.md text eol=lf
+docs/quantum-visualization/reader-capability-matrix.json text eol=lf
+docs/user/dependencies.json text eol=lf
+docs/user/format-capabilities.json text eol=lf

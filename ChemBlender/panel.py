@@ -3,6 +3,10 @@ from bpy.props import StringProperty, EnumProperty, BoolProperty, FloatVectorPro
 language = 1 if 'zh_HAN' in bpy.context.preferences.view.language else 0
 from .Chem_data import preset_smiles
 from . import ex_package
+from .legacy.scaffold_bridge import (
+    UNIFIED_SCIENTIFIC_EDIT_OPERATOR,
+    is_unified_structure_view,
+)
 
 # ------------------------------------------------------------------------------------
 # This class lists properties shown in Panel but not in Operator.
@@ -335,6 +339,12 @@ class CHEM_PT_TOOLS(bpy.types.Panel):
         layout = self.layout
         mytool = context.scene.my_tool
 
+        if is_unified_structure_view(context.active_object):
+            layout.label(text="Scientific changes create a derived Structure")
+            layout.operator(UNIFIED_SCIENTIFIC_EDIT_OPERATOR, icon="DUPLICATE")
+            layout.label(text="Use Project Browser for export and view controls")
+            return
+
         row = layout.row(align=True)
         row.prop(mytool, "select_text")
         row.scale_x = 0.75
@@ -392,6 +402,12 @@ class CRYSTAL_PT_TOOLS(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         mytool = context.scene.my_tool
+
+        if is_unified_structure_view(context.active_object):
+            layout.label(text="Scientific changes create a derived Structure")
+            layout.operator(UNIFIED_SCIENTIFIC_EDIT_OPERATOR, icon="DUPLICATE")
+            layout.label(text="Use Project Browser for export and view controls")
+            return
 
         row = layout.row()
         text = "创建晶胞" if language else "Add New Cell"

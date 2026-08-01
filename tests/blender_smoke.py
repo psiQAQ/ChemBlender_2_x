@@ -4,6 +4,7 @@ import importlib.util
 import json
 import math
 import sys
+import threading
 from dataclasses import replace
 from importlib.metadata import version
 from pathlib import Path
@@ -187,6 +188,7 @@ def assert_registration_isolation(module_key, before_install_modules):
     assert f"{module_key}.ui.properties" in sys.modules
     assert f"{module_key}.ui.quick_import" in sys.modules
     assert f"{module_key}.ui.import_preview" in sys.modules
+    assert f"{module_key}.ui.diagnostics" in sys.modules
     assert f"{module_key}.ui.topology" in sys.modules
     assert f"{module_key}.ui.scientific_edit" in sys.modules
     assert f"{module_key}.ui.export" in sys.modules
@@ -194,6 +196,7 @@ def assert_registration_isolation(module_key, before_install_modules):
     assert f"{module_key}.ui.project_browser.panel" in sys.modules
     assert f"{module_key}.ui.file_handlers" in sys.modules
     assert f"{module_key}.ui.workspace" in sys.modules
+    assert f"{module_key}.ui.migration" in sys.modules
     newly_loaded = set(sys.modules) - before_install_modules
     assert not any(
         name == prefix or name.startswith(prefix + ".")
@@ -209,10 +212,438 @@ def assert_registration_isolation(module_key, before_install_modules):
     )
 
 
+def assert_task_boundary(module_key):
+    tasks = importlib.import_module(f"{module_key}.ui.tasks")
+    assert not hasattr(tasks, "bpy")
+    task = tasks.Task()
+    task.start("smoke")
+    task.progress("smoke", 0.5)
+    task.request_cancel()
+    task.cancel()
+    snapshot = task.snapshot()
+    assert snapshot.state is tasks.TaskState.CANCELLED
+    assert snapshot.progress == 0.5
+
+
+def assert_quality_revision_recovery_contract(module_key):
+    diagnostics = importlib.import_module(f"{module_key}.ui.diagnostics")
+    properties = importlib.import_module(f"{module_key}.ui.properties")
+    session_ui = importlib.import_module(f"{module_key}.ui.session")
+    core = importlib.import_module(f"{module_key}.core")
+    links = importlib.import_module(f"{module_key}.project_link")
+    presentations = {
+        status.value: diagnostics.quality_presentation(status)
+        for status in core.QualityStatus
+    }
+    assert tuple(presentations) == (
+        "complete",
+        "partial",
+        "ambiguous",
+        "incomplete",
+        "invalid",
+    )
+    assert all(value.label and value.icon for value in presentations.values())
+
+    document = {
+        "schema_name": "chemblender_import_report",
+        "schema_version": 1,
+        "session_id": "00000000-0000-0000-0000-000000000001",
+        "staged_batch_ids": [],
+        "summary": {
+            "overall": {
+                "complete": 0,
+                "partial": 0,
+                "ambiguous": 0,
+                "incomplete": 0,
+                "invalid": 0,
+            },
+            "by_source": [],
+            "by_entity": [],
+        },
+        "diagnostics": [],
+    }
+    session = session_ui.get_scene_session(bpy.context.scene)
+    state = properties.get_quick_import_state(session)
+    previous_report = state.diagnostics_report
+    previous_diagnostic_index = state.diagnostic_index
+    previous_prompts = state.revision_prompts
+    previous_status = session.link_status
+    previous_sidecar = session.sidecar_path
+    previous_dirty_reasons = session.dirty_reasons
+    previous_inspection = state.project_link_inspection_only
+    previous_link_diagnostics = state.show_project_link_diagnostics
+    previous_clipboard = bpy.context.window_manager.clipboard
+    recovery_snapshots = tuple(
+        {
+            key: scene[key] if key in scene else None
+            for key in (
+                links.PROJECT_ID_KEY,
+                links.PROJECT_SCHEMA_KEY,
+                links.SIDECAR_LOCATOR_KEY,
+                links.MANIFEST_HASH_KEY,
+            )
+        }
+        for scene in bpy.data.scenes
+    )
+    try:
+        state.diagnostics_report = document
+        assert bpy.ops.chemblender.copy_diagnostics(
+            format_name="json"
+        ) == {"FINISHED"}
+        # Blender's background WindowManager accepts clipboard writes but
+        # intentionally returns an empty value because no platform window is
+        # available.  The operator result still exercises the real bpy path;
+        # foreground runs additionally verify the copied canonical bytes.
+        if not bpy.app.background:
+            assert bpy.context.window_manager.clipboard == (
+                diagnostics.canonical_report_text(document, "json")
+            )
+        with TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "diagnostics.md"
+            assert bpy.ops.chemblender.export_diagnostics(
+                filepath=str(destination),
+                format_name="markdown",
+            ) == {"FINISHED"}
+            assert destination.read_text(encoding="utf-8") == (
+                diagnostics.canonical_report_text(document, "markdown")
+            )
+
+        diagnostic_item = {
+            "severity": "warning",
+            "quality_status": "ambiguous",
+            "source_revision_id": None,
+            "source_id": None,
+            "record_key": None,
+            "entity_id": None,
+            "field_path": "metadata",
+            "code": "metadata.large",
+            "message": "m" * 1_000,
+            "original_value": {"values": list(range(10_000))},
+            "normalized_value": None,
+            "recovery_action": None,
+            "scientific_consequence": "review required",
+            "suggested_action": "inspect",
+        }
+        state.diagnostics_report = {
+            "diagnostics": [
+                dict(diagnostic_item, code="first"),
+                dict(diagnostic_item, code="second"),
+            ]
+        }
+        state.diagnostic_index = 0
+        assert bpy.ops.chemblender.diagnostic_page(
+            direction="next"
+        ) == {"FINISHED"}
+        assert state.diagnostic_index == 1
+        browser = importlib.import_module(
+            f"{module_key}.ui.project_browser.panel"
+        )
+        assert browser._current_diagnostic(state)[2]["code"] == "second"
+        assert all(
+            len(value) <= diagnostics.DIAGNOSTIC_PREVIEW_CHAR_LIMIT
+            for _label, value in diagnostics.diagnostic_detail_rows(
+                diagnostic_item
+            )
+        )
+
+        prompt = diagnostics.RevisionViewPrompt(
+            current_revision_id=UUID(
+                "00000000-0000-0000-0000-000000000011"
+            ),
+            new_revision_id=UUID(
+                "00000000-0000-0000-0000-000000000012"
+            ),
+        )
+        state.revision_prompts = (prompt,)
+        assert bpy.ops.chemblender.revision_view_action(
+            current_revision_id=str(prompt.current_revision_id),
+            new_revision_id=str(prompt.new_revision_id),
+            action="keep_current",
+        ) == {"FINISHED"}
+        assert state.revision_prompts == ()
+
+        project = session.project
+        for status, action in (
+            ("missing", "inspect_existing"),
+            ("mismatch", "inspect_existing"),
+            ("incompatible", "open_diagnostics"),
+            ("invalid", "open_diagnostics"),
+        ):
+            session.link_status = status
+            state.project_link_inspection_only = False
+            state.show_project_link_diagnostics = False
+            assert bpy.ops.chemblender.project_link_recovery(
+                action=action
+            ) == {"FINISHED"}
+            assert session.project is project
+            assert session.sidecar_path == previous_sidecar
+            assert tuple(
+                {
+                    key: scene[key] if key in scene else None
+                    for key in (
+                        links.PROJECT_ID_KEY,
+                        links.PROJECT_SCHEMA_KEY,
+                        links.SIDECAR_LOCATOR_KEY,
+                        links.MANIFEST_HASH_KEY,
+                    )
+                }
+                for scene in bpy.data.scenes
+            ) == recovery_snapshots
+
+        session.link_status = "connected"
+        try:
+            bpy.ops.chemblender.project_link_recovery(action="detach")
+        except RuntimeError as exc:
+            assert "recovery action is not allowed" in str(exc)
+        else:
+            raise AssertionError(
+                "live connected status must reject detach recovery"
+            )
+
+        for scene in bpy.data.scenes:
+            scene[links.PROJECT_ID_KEY] = str(project.id)
+            scene[links.PROJECT_SCHEMA_KEY] = project.schema_version
+            scene[links.SIDECAR_LOCATOR_KEY] = "detached.cbq"
+            scene[links.MANIFEST_HASH_KEY] = "b" * 64
+        session.mark_clean()
+        session.mark_dirty("project_link")
+        session.mark_dirty("view_cache")
+        session.link_status = "missing"
+        assert bpy.ops.chemblender.project_link_recovery(
+            action="detach"
+        ) == {"FINISHED"}
+        assert session.project is project
+        assert session.sidecar_path is None
+        assert session.link_status == "unlinked"
+        assert not session.dirty_reasons
+        assert all(
+            key not in scene
+            for scene in bpy.data.scenes
+            for key in (
+                links.PROJECT_ID_KEY,
+                links.PROJECT_SCHEMA_KEY,
+                links.SIDECAR_LOCATOR_KEY,
+                links.MANIFEST_HASH_KEY,
+            )
+        )
+        original_save = session_ui.save_project_session_for_scenes
+        original_sync = session_ui.sync_project_session_links_for_scenes
+        save_calls = []
+        try:
+            def unexpected_save(**_kwargs):
+                save_calls.append("publication")
+                raise AssertionError("detached clean save must be a no-op")
+
+            def unexpected_sync(**_kwargs):
+                save_calls.append("link-sync")
+                raise AssertionError("detached clean save must be a no-op")
+
+            session_ui.save_project_session_for_scenes = unexpected_save
+            session_ui.sync_project_session_links_for_scenes = unexpected_sync
+            session_ui._save_pre_handler(None)
+        finally:
+            session_ui.save_project_session_for_scenes = original_save
+            session_ui.sync_project_session_links_for_scenes = original_sync
+        assert save_calls == []
+
+        scene = {
+            links.PROJECT_ID_KEY: "project",
+            links.PROJECT_SCHEMA_KEY: "1.0",
+            links.SIDECAR_LOCATOR_KEY: "example.cbq",
+            links.MANIFEST_HASH_KEY: "a" * 64,
+            "objects": object(),
+        }
+        objects = scene["objects"]
+        assert diagnostics.detach_project_links_for_scenes((scene,)) == 1
+        assert scene["objects"] is objects
+    finally:
+        state.diagnostics_report = previous_report
+        state.diagnostic_index = previous_diagnostic_index
+        state.revision_prompts = previous_prompts
+        state.project_link_inspection_only = previous_inspection
+        state.show_project_link_diagnostics = previous_link_diagnostics
+        for scene, snapshot in zip(
+            bpy.data.scenes,
+            recovery_snapshots,
+            strict=True,
+        ):
+            for key, value in snapshot.items():
+                if value is None:
+                    if key in scene:
+                        del scene[key]
+                else:
+                    scene[key] = value
+        session.sidecar_path = previous_sidecar
+        session.link_status = previous_status
+        session.mark_clean()
+        for reason in previous_dirty_reasons:
+            session.mark_dirty(reason)
+        bpy.context.window_manager.clipboard = previous_clipboard
+
+
+def assert_signed_surface_revision_actions(
+    module_key,
+    session,
+    surface_objects,
+    current_grid,
+    template_revision,
+):
+    diagnostics = importlib.import_module(f"{module_key}.ui.diagnostics")
+    properties = importlib.import_module(f"{module_key}.ui.properties")
+    surface_view = importlib.import_module(f"{module_key}.surface_view")
+    project = session.project
+    current_revision = replace(
+        template_revision,
+        id=uuid4(),
+        content_hash="d" * 64,
+        parse_identity="e" * 64,
+        created_entity_ids=(current_grid.id,),
+        diagnostic_ids=(),
+    )
+    new_grid = replace(
+        current_grid,
+        id=uuid4(),
+        revision=f"{current_grid.revision}-replacement",
+    )
+    new_revision = replace(
+        template_revision,
+        id=uuid4(),
+        content_hash="f" * 64,
+        parse_identity="1" * 64,
+        created_entity_ids=(new_grid.id,),
+        diagnostic_ids=(),
+    )
+    project.datasets[new_grid.id] = new_grid
+    project.source_revisions[current_revision.id] = current_revision
+    project.source_revisions[new_revision.id] = new_revision
+    state = properties.get_quick_import_state(session)
+    previous_prompts = state.revision_prompts
+    previous_selection = tuple(
+        (obj, obj.select_get()) for obj in bpy.context.scene.objects
+    )
+    created = []
+    try:
+        for obj, _selected in previous_selection:
+            obj.select_set(False)
+        surface_objects[0].select_set(True)
+        prompt = diagnostics.RevisionViewPrompt(
+            current_revision_id=current_revision.id,
+            new_revision_id=new_revision.id,
+        )
+        state.revision_prompts = (prompt,)
+        before = set(bpy.data.objects)
+        assert bpy.ops.chemblender.revision_view_action(
+            current_revision_id=str(current_revision.id),
+            new_revision_id=str(new_revision.id),
+            action="update_selected_views",
+        ) == {"FINISHED"}
+        updated = tuple(set(bpy.data.objects) - before)
+        created.extend(updated)
+        assert len(updated) == 2
+        assert all(obj.hide_get() and obj.hide_render for obj in surface_objects)
+        assert all(
+            json.loads(obj["cb_scene_bindings_json"])["grid"][
+                "entity_id"
+            ]
+            == str(new_grid.id)
+            for obj in updated
+        )
+        assert len(
+            {obj["cb_scene_render_identity"] for obj in updated}
+        ) == 1
+
+        for obj in surface_objects:
+            obj.hide_set(False)
+            obj.hide_render = False
+        state.revision_prompts = (prompt,)
+        before = set(bpy.data.objects)
+        assert bpy.ops.chemblender.revision_view_action(
+            current_revision_id=str(current_revision.id),
+            new_revision_id=str(new_revision.id),
+            action="comparison_view",
+        ) == {"FINISHED"}
+        compared = tuple(set(bpy.data.objects) - before)
+        created.extend(compared)
+        assert len(compared) == 2
+        assert all(
+            not obj.hide_get() and not obj.hide_render
+            for obj in surface_objects
+        )
+        assert all(
+            json.loads(obj["cb_scene_bindings_json"])["grid"][
+                "entity_id"
+            ]
+            == str(new_grid.id)
+            for obj in compared
+        )
+        assert state.revision_prompts == ()
+    finally:
+        state.revision_prompts = previous_prompts
+        for obj in reversed(created):
+            if obj.name in bpy.data.objects:
+                surface_view.remove_surface_object(obj)
+        for obj, selected in previous_selection:
+            if obj.name in bpy.data.objects:
+                obj.select_set(selected)
+        project.source_revisions.pop(current_revision.id, None)
+        project.source_revisions.pop(new_revision.id, None)
+        project.datasets.pop(new_grid.id, None)
+
+
+def assert_grid_unload_cancels_active_worker(module_key):
+    grid = importlib.import_module(f"{module_key}.ui.grid")
+    tasks = importlib.import_module(f"{module_key}.ui.tasks")
+    entered = threading.Event()
+    cleanup_calls = []
+
+    def prepare(cancelled, _progress):
+        entered.set()
+        while not cancelled():
+            entered.wait(0.01)
+        return "discarded cache"
+
+    operator = SimpleNamespace()
+    operator.cancel = lambda context: grid.CHEMBLENDER_OT_create_grid_view.cancel(
+        operator,
+        context,
+    )
+    operator._finish_modal = (
+        lambda: grid.CHEMBLENDER_OT_create_grid_view._finish_modal(operator)
+    )
+    operator._cache_task = tasks.Task()
+    operator._cache_job = tasks.TaskWorker(
+        operator._cache_task,
+        prepare,
+    )
+    timer = object()
+    operator._cache_window_manager = SimpleNamespace(
+        event_timer_remove=lambda timer: cleanup_calls.append(
+            ("timer", timer)
+        ),
+        progress_end=lambda: cleanup_calls.append(("progress",)),
+    )
+    operator._cache_timer = timer
+    operator._cache_progress_started = True
+    operator._cache_job.start("vdb.prepare")
+    assert entered.wait(1)
+    grid._register_active_volume_operator(operator)
+
+    owned_classes = owned_registration_classes(module_key)
+    assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}
+    assert operator._cache_job.join(0)
+    assert operator._cache_task.snapshot().state is tasks.TaskState.CANCELLED
+    assert operator._cache_job.result is None
+    assert cleanup_calls[0] == ("timer", timer)
+    assert cleanup_calls[1] == ("progress",)
+    assert grid._ACTIVE_VOLUME_OPERATORS == []
+    assert_disabled(module_key, owned_classes)
+
+
 def assert_enabled(module_key, before_install_modules):
     assert module_key in bpy.context.preferences.addons
     assert f"{module_key}.trajectory_view" in sys.modules
     assert_registration_isolation(module_key, before_install_modules)
+    assert_task_boundary(module_key)
     assert sum(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
         for handler in bpy.app.handlers.frame_change_post
@@ -235,6 +666,12 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_quick_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_open_workspace")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_confirm_import")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_copy_diagnostics")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_export_diagnostics")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_diagnostic_page")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_revision_view_action")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_project_link_recovery")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_migrate_legacy_scene")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_cancel_import")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_compute_topology")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_accept_topology")
@@ -780,6 +1217,101 @@ def assert_quick_import(module_key, repository_root):
             )
         assert bpy.ops.chemblender.cancel_import() == {"FINISHED"}
 
+    legacy_reader_bridge = importlib.import_module(
+        f"{module_key}.legacy.reader_bridge"
+    )
+    payload = (
+        repository_root / "tests/fixtures/sdf/missing-final.sdf"
+    ).read_bytes()
+    pubchem_stage = legacy_reader_bridge.stage_pubchem_import(
+        "2244",
+        session,
+        fetch=lambda _url, timeout: SimpleNamespace(
+            status_code=200,
+            content=payload,
+        ),
+    )
+    assert pubchem_stage.request is not None
+    assert "legacy_source_url" not in (
+        bpy.types.CHEMBLENDER_OT_quick_import.bl_rna.properties
+    )
+    assert "legacy_source_hash" not in (
+        bpy.types.CHEMBLENDER_OT_quick_import.bl_rna.properties
+    )
+    state = stage(pubchem_stage.request.sources[0].path)
+    pubchem_batch = state.staging_session.result(
+        state.preview.source_previews[0].staged_batch_ids[0]
+    )
+    pubchem_provenance, = (
+        item
+        for item in pubchem_batch.provenance
+        if item.operation == "pubchem_import"
+    )
+    assert pubchem_provenance.source == pubchem_stage.source_url
+    assert pubchem_provenance.source_hash == pubchem_stage.content_hash
+    pubchem_parameters = dict(pubchem_provenance.parameters)
+    assert pubchem_parameters["legacy_source_sha256"] == pubchem_stage.content_hash
+    assert pubchem_parameters["legacy_source_url"] == pubchem_stage.source_url
+    assert pubchem_parameters["source_id"] == str(pubchem_batch.sources[0].id)
+    pubchem_revision, = pubchem_batch.source_revisions
+    assert pubchem_parameters["reader_id"] == pubchem_revision.reader_id
+    assert (
+        pubchem_parameters["reader_plugin_id"]
+        == pubchem_revision.reader_plugin_id
+    )
+    assert pubchem_parameters["reader_version"] == pubchem_revision.reader_version
+    assert pubchem_revision.created_entity_ids == tuple(
+        item.id
+        for name in (
+            "structures",
+            "topologies",
+            "molecular_records",
+            "biological_hierarchies",
+            "annotations",
+            "external_references",
+            "cif_envelopes",
+            "qcschema_envelopes",
+            "cjson_envelopes",
+            "symmetry_results",
+            "calculations",
+            "datasets",
+            "basis_sets",
+            "orbital_sets",
+            "density_matrices",
+            "provenance",
+        )
+        for item in getattr(pubchem_batch, name)
+    )
+    pubchem_rows = preview_ui.project_import_preview(session, state, registry)
+    pubchem_conformer_rows = preview_ui.project_conformer_suggestions(state)
+    for row in pubchem_conformer_rows:
+        row.grouping_action = "accept_group"
+        row.review_confirmed = row.requires_review
+    pubchem_result = preview_ui.commit_project_import(
+        session,
+        state,
+        pubchem_rows,
+        conformer_rows=pubchem_conformer_rows,
+        collection=bpy.context.scene.collection,
+    )
+    assert pubchem_result.status == "committed"
+    persisted_pubchem_provenance = next(
+        item
+        for item in session.project.provenance.values()
+        if item.id == pubchem_provenance.id
+    )
+    assert persisted_pubchem_provenance == pubchem_provenance
+    reopened_pubchem = core.open_project(pubchem_result.commit_result.sidecar_path)
+    try:
+        reopened_provenance = reopened_pubchem.provenance[pubchem_provenance.id]
+        assert reopened_provenance.id == pubchem_provenance.id
+        assert reopened_provenance.source == pubchem_stage.source_url
+        assert reopened_provenance.source_hash == pubchem_stage.content_hash
+        assert reopened_provenance.operation == "pubchem_import"
+        assert reopened_provenance.parameters == pubchem_provenance.parameters
+    finally:
+        core.close_project(reopened_pubchem)
+
     state = stage(repository_root / "tests/fixtures/sdf/records.sdf")
     molecular_rows = preview_ui.project_import_preview(
         session,
@@ -897,6 +1429,31 @@ def assert_quick_import(module_key, repository_root):
     )
     assert xyz_view.type == "MESH"
     assert xyz_view["cb_structure_revision"] == xyz_structure.revision
+    bpy.context.view_layer.objects.active = xyz_view
+    xyz_view.select_set(True)
+    for operator_id in (
+        "add_unit_cell",
+        "add_crys_scaffold",
+        "add_coordpolyhedra",
+        "add_dummy",
+        "duplicate_symmetry",
+        "supercell",
+    ):
+        try:
+            getattr(bpy.ops.chem, operator_id)()
+        except RuntimeError as error:
+            assert "Apply Scientific Edits" in str(error)
+        else:
+            raise AssertionError(
+                f"legacy {operator_id} write was not rejected"
+            )
+    legacy_output = importlib.import_module(f"{module_key}.output")
+    assert legacy_output.SaveMolButton.is_registered
+    legacy_export_properties = legacy_output.SaveMolButton.bl_rna.properties
+    assert "export_format" not in legacy_export_properties
+    assert "mol_version" not in legacy_export_properties
+    assert "vasp_coord_mode" not in legacy_export_properties
+    assert "filepath" not in legacy_export_properties
     xyz_bindings = json.loads(xyz_view["cb_scene_bindings_json"])
     assert xyz_bindings["structure"] == {
         "entity_id": str(xyz_structure.id),
@@ -1080,6 +1637,13 @@ def assert_quick_import(module_key, repository_root):
             "entity_id": str(resolved_grid.id),
             "revision": resolved_grid.revision,
         }
+    assert_signed_surface_revision_actions(
+        module_key,
+        session,
+        cube_surface_objects,
+        resolved_grid,
+        cube_revision,
+    )
     browser_settings.mode = "by_data"
     rows_after_cube = browser.refresh_project_browser(bpy.context.scene)
     assert browser_settings.quality_filter == "all"
@@ -4209,29 +4773,6 @@ def assert_poscar_workflow(module_key, repository_root):
         ui.close_scene_session(bpy.context.scene)
 
 
-def assert_legacy_crystal_reader_baseline(module_key, repository_root):
-    reader = importlib.import_module(f"{module_key}.read")
-    cif = repository_root / "tests" / "fixtures" / "cif" / "cscl.cif"
-    poscar = repository_root / "tests" / "fixtures" / "poscar" / "cscl.vasp"
-    cif_result = reader.read_cif(cif)
-    assert cif_result[0] == [4.12, 4.12, 4.12]
-    assert cif_result[1] == [90.0, 90.0, 90.0]
-    assert cif_result[3] == 221
-    assert cif_result[4] == ["Cs", "Cl"]
-    assert cif_result[5] == ["Cs1", "Cl1"]
-    assert cif_result[6:9] == ([0.0, 0.5], [0.0, 0.5], [0.0, 0.5])
-    assert cif_result[9] == ["x,y,z"]
-
-    poscar_result = reader.read_poscar(poscar)
-    assert poscar_result[0] == (4.12, 4.12, 4.12), poscar_result
-    assert poscar_result[1] == (90.0, 90.0, 90.0)
-    assert poscar_result[3] == 221
-    assert poscar_result[4] == ["Cs", "Cl"]
-    assert poscar_result[5] == ["Cs1", "Cl1"]
-    assert poscar_result[6:9] == ([0.0, 0.5], [0.0, 0.5], [0.0, 0.5])
-    assert len(poscar_result[9]) == 48
-
-
 def assert_sdf_10k_workflow_budget(module_key):
     from statistics import median
     from time import perf_counter
@@ -4260,6 +4801,7 @@ def assert_sdf_10k_workflow_budget(module_key):
     browser_model = importlib.import_module(
         f"{module_key}.ui.project_browser.model"
     )
+    sidecar = importlib.import_module(f"{module_key}.core.sidecar")
     suffixes = (
         "",
         "O",
@@ -4380,6 +4922,41 @@ def assert_sdf_10k_workflow_budget(module_key):
                 1,
                 lambda _index: session.project.commit(batch),
             )
+            import numpy
+
+            lazy_path = root / "browser-lazy-grid.npy"
+            lazy_values = numpy.zeros((2, 2, 2), dtype=numpy.float32)
+            numpy.save(lazy_path, lazy_values, allow_pickle=False)
+            lazy_hash, _size = sidecar._array_content_hash(lazy_values)
+            lazy_grid_values = sidecar.LazyNpyArray(
+                lazy_path,
+                lazy_values.shape,
+                str(lazy_values.dtype),
+                lazy_hash,
+            )
+            lazy_grid = core.Grid3D(
+                id=uuid4(),
+                revision="browser-lazy-grid-r1",
+                semantic_role="browser_lazy_density",
+                domain="grid",
+                data=core.ArrayData(
+                    lazy_grid_values,
+                    ("x", "y", "z"),
+                    "dimensionless",
+                ),
+                status=core.DatasetStatus.COMPLETE,
+                source_calculation=None,
+                provenance_ids=(),
+                origin=(0.0, 0.0, 0.0),
+                step_vectors=(
+                    (1.0, 0.0, 0.0),
+                    (0.0, 1.0, 0.0),
+                    (0.0, 0.0, 1.0),
+                ),
+                coordinate_unit="angstrom",
+            )
+            session.project.datasets[lazy_grid.id] = lazy_grid
+            assert not lazy_grid_values.loaded
 
             browser_samples = []
             filter_samples = []
@@ -4399,6 +4976,27 @@ def assert_sdf_10k_workflow_budget(module_key):
                     search="Identity 042",
                 )
                 filter_samples.append(perf_counter() - started)
+            structure_rows = browser_model.build_browser_rows(
+                session.project,
+                session_id=session.id,
+                browser_revision=3,
+                search="structure",
+                page_size=64,
+            )
+            topology_rows = browser_model.build_browser_rows(
+                session.project,
+                session_id=session.id,
+                browser_revision=3,
+                search="topology_record",
+                page_size=64,
+            )
+            lazy_rows = browser_model.build_browser_rows(
+                session.project,
+                session_id=session.id,
+                browser_revision=3,
+                search="browser lazy density",
+                page_size=64,
+            )
             timings["browser_projection"] = browser_samples
             timings["browser_filter"] = filter_samples
             timings["measured_sequence_wall"] = [
@@ -4406,14 +5004,60 @@ def assert_sdf_10k_workflow_budget(module_key):
             ]
             _current, peak = tracemalloc.get_traced_memory()
 
+            browser_page = next(
+                row for row in browser_rows
+                if row.kind == "record_page"
+            )
+            assert browser_page.total_count == 10_000
+            registry_names = (
+                "datasets",
+                "structures",
+                "biological_hierarchies",
+                "topologies",
+                "calculations",
+                "symmetry_results",
+                "basis_sets",
+                "orbital_sets",
+                "density_matrices",
+                "cif_envelopes",
+                "qcschema_envelopes",
+                "cjson_envelopes",
+                "provenance",
+            )
+            additional_count = sum(
+                len(getattr(session.project, name))
+                for name in registry_names
+            ) + len(session.project.diagnostics)
+            additional = next(
+                row for row in browser_rows
+                if row.kind == "projection_summary"
+            )
+            assert additional.total_count == additional_count
             assert sum(
                 row.kind == "molecular_record"
                 for row in browser_rows
-            ) == 10_000
+            ) <= 998
+            assert len(browser_rows) <= 1000
             assert sum(
                 row.kind == "molecular_record"
                 for row in filtered_rows
             ) == 100
+            assert next(
+                row for row in structure_rows if row.kind == "result_page"
+            ).total_count == len(session.project.structures)
+            assert any(row.kind == "structure" for row in structure_rows)
+            assert next(
+                row for row in topology_rows if row.kind == "result_page"
+            ).total_count == len(session.project.topologies)
+            assert any(
+                row.kind == "topology_record" for row in topology_rows
+            )
+            assert any(row.kind == "grid3d" for row in lazy_rows)
+            assert all(
+                len(rows) <= 1000
+                for rows in (structure_rows, topology_rows, lazy_rows)
+            )
+            assert not lazy_grid_values.loaded
             assert tuple(bpy.data.objects) == before_objects
         finally:
             tracemalloc.stop()
@@ -4452,6 +5096,7 @@ def assert_sdf_10k_workflow_budget(module_key):
                     "memory": {"peak_bytes": peak},
                     "output": {
                         "browser_row_count": len(browser_rows),
+                        "additional_entry_count": additional_count,
                         "conformer_suggestion_count": len(suggestions),
                         "filtered_record_count": sum(
                             row.kind == "molecular_record"
@@ -4491,7 +5136,7 @@ def assert_project_browser_rna_budget(module_key):
             view_count=0,
             entity_id=None,
         )
-        for index in range(40007)
+        for index in range(1000)
     )
     session = SimpleNamespace(
         id=uuid4(),
@@ -4519,11 +5164,11 @@ def assert_project_browser_rna_budget(module_key):
         settings = scene.chemblender_project_browser
         assert projected is rows
         assert settings.total_row_count == len(rows)
-        assert len(settings.rows) == panel._BROWSER_RNA_ROW_LIMIT
+        assert len(settings.rows) == len(rows) == panel._BROWSER_RNA_ROW_LIMIT
         assert max(samples) < 200.0, samples
         ordered = sorted(samples)
         print(
-            "PERF: Project Browser 40,007-row RNA projection "
+            "PERF: Project Browser 1,000-row RNA projection "
             f"median={ordered[1]:.2f}ms p95={ordered[-1]:.2f}ms "
             f"peak={peak}B visible={len(settings.rows)}"
         )
@@ -4580,8 +5225,27 @@ expected_inventory["module_callbacks"] += [
     {"module": ".ui.project_browser.panel", "register": True, "unregister": True},
     {"module": ".ui.file_handlers", "register": True, "unregister": True},
     {"module": ".ui.workspace", "register": True, "unregister": True},
+    {"module": ".ui.migration", "register": True, "unregister": True},
 ]
 expected_inventory["registered_classes"] += [
+    {
+        "module": ".ui.migration",
+        "name": "CHEMBLENDER_OT_migrate_legacy_scene",
+        "id": "chemblender.migrate_legacy_scene",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.migration",
+        "name": "CHEMBLENDER_OT_preview_legacy_migration",
+        "id": "chemblender.preview_legacy_migration",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.migration",
+        "name": "CHEMBLENDER_PT_legacy_migration",
+        "id": "CHEMBLENDER_PT_LEGACY_MIGRATION",
+        "base": "Panel",
+    },
     {
         "module": ".ui.biological",
         "name": "CHEMBLENDER_OT_create_biological_view",
@@ -4776,6 +5440,36 @@ expected_inventory["registered_classes"] += [
     },
     {
         "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_copy_diagnostics",
+        "id": "chemblender.copy_diagnostics",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_diagnostic_page",
+        "id": "chemblender.diagnostic_page",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_export_diagnostics",
+        "id": "chemblender.export_diagnostics",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_project_link_recovery",
+        "id": "chemblender.project_link_recovery",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_revision_view_action",
+        "id": "chemblender.revision_view_action",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
         "name": "CHEMBLENDER_OT_apply_frame_force",
         "id": "chemblender.apply_frame_force",
         "base": "Operator",
@@ -4784,6 +5478,12 @@ expected_inventory["registered_classes"] += [
         "module": ".ui.project_browser.panel",
         "name": "CHEMBLENDER_OT_apply_substructure_category",
         "id": "chemblender.apply_substructure_category",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_project_browser_page",
+        "id": "chemblender.project_browser_page",
         "base": "Operator",
     },
     {
@@ -4820,6 +5520,7 @@ expected_inventory["registered_classes"].sort(
     )
 )
 expected_inventory["handlers"] += [
+    {"owner": "load_post", "module": ".ui.migration", "name": "_legacy_load_post_handler"},
     {"owner": "load_post", "module": ".runtime.registration", "name": "_reader_api_load_post_handler"},
     {"owner": "load_post", "module": ".ui.session", "name": "_load_post_handler"},
     {"owner": "load_pre", "module": ".ui.properties", "name": "_load_pre_handler"},
@@ -4980,9 +5681,9 @@ assert_cif_workflow(module_key, package.parent.parent)
 assert_poscar_workflow(module_key, package.parent.parent)
 assert_optional_workspace(module_key)
 assert_project_session_manager(module_key)
+assert_quality_revision_recovery_contract(module_key)
 assert_topology_view(module_key, package.parent.parent)
 assert_extxyz_workflow(module_key, package.parent.parent)
-assert_legacy_crystal_reader_baseline(module_key, package.parent.parent)
 assert_sdf_10k_workflow_budget(module_key)
 assert_project_browser_rna_budget(module_key)
 assert_biological_workflow(module_key, package.parent.parent)
@@ -5004,7 +5705,5 @@ assert AllChem.EmbedMolecule(molecule, randomSeed=0xC0FFEE) == 0
 if keep_enabled:
     print("PASS: ChemBlender extension installed and enabled")
 else:
-    owned_classes = owned_registration_classes(module_key)
-    assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}
-    assert_disabled(module_key, owned_classes)
+    assert_grid_unload_cancels_active_worker(module_key)
     print("PASS: ChemBlender extension lifecycle")

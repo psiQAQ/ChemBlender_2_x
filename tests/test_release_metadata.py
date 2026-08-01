@@ -29,7 +29,7 @@ from release_metadata import (
 
 
 PRODUCTION_MANIFEST_SHA256 = (
-    "229d1da9c624e756f3e6114fd4ea3675075a23302dc0cba3273dde162f17d185"
+    "ec73b31fc8f9341105376c73510dbba7857f57775d7ba2d1f568843fcce5df29"
 )
 
 
@@ -75,11 +75,11 @@ class ReleaseMetadataTests(unittest.TestCase):
             metadata,
             ReleaseMetadata(
                 extension_id="chemblender",
-                version="2.3.0-alpha.1",
+                version="2.3.0-rc.1",
                 platform="windows-x64",
-                package_name="chemblender-2.3.0-alpha.1.zip",
-                checksum_name="chemblender-2.3.0-alpha.1.sha256",
-                artifact_name="chemblender-2.3.0-alpha.1-windows-x64",
+                package_name="chemblender-2.3.0-rc.1.zip",
+                checksum_name="chemblender-2.3.0-rc.1.sha256",
+                artifact_name="chemblender-2.3.0-rc.1-windows-x64",
             ),
         )
 
@@ -174,6 +174,182 @@ class ReleaseMetadataTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "release version"):
             release_metadata.release_channel_document("2.3.0-preview.1")
 
+    def test_select_exact_package_run_accepts_one_successful_tag_run(self):
+        tag = "v2.3.0-alpha.1"
+        commit = "1" * 40
+
+        selected = release_metadata.select_exact_package_run(
+            [
+                {
+                    "id": 101,
+                    "head_sha": commit,
+                    "head_branch": tag,
+                    "event": "push",
+                    "conclusion": "failure",
+                },
+                {
+                    "id": 102,
+                    "head_sha": "2" * 40,
+                    "head_branch": tag,
+                    "event": "push",
+                    "conclusion": "success",
+                },
+                {
+                    "id": 103,
+                    "head_sha": commit,
+                    "head_branch": tag,
+                    "event": "push",
+                    "conclusion": "success",
+                },
+            ],
+            tag=tag,
+            tag_commit=commit,
+        )
+
+        self.assertEqual(selected, 103)
+
+    def test_select_exact_package_run_rejects_ambiguous_or_malformed_results(self):
+        tag = "v2.3.0-alpha.1"
+        commit = "1" * 40
+        matching_run = {
+            "id": 103,
+            "head_sha": commit,
+            "head_branch": tag,
+            "event": "push",
+            "conclusion": "success",
+        }
+        cases = (
+            ([], "successful exact package run"),
+            ([matching_run, {**matching_run, "id": 104}], "successful exact package run"),
+            ([{**matching_run, "id": "103"}], "id"),
+            ({"id": 103}, "run records"),
+        )
+
+        for records, message in cases:
+            with self.subTest(records=records):
+                with self.assertRaisesRegex(ValueError, message):
+                    release_metadata.select_exact_package_run(
+                        records,
+                        tag=tag,
+                        tag_commit=commit,
+                    )
+
+    def test_paginated_workflow_run_records_keep_matches_after_page_one(self):
+        tag = "v2.3.0-alpha.1"
+        commit = "1" * 40
+        pages = [
+            {
+                "total_count": 101,
+                "workflow_runs": [
+                    {
+                        "id": index,
+                        "head_sha": "2" * 40,
+                        "head_branch": tag,
+                        "event": "push",
+                        "conclusion": "success",
+                    }
+                    for index in range(1, 101)
+                ],
+            },
+            {
+                "total_count": 101,
+                "workflow_runs": [
+                    {
+                        "id": 501,
+                        "head_sha": commit,
+                        "head_branch": tag,
+                        "event": "push",
+                        "conclusion": "success",
+                    }
+                ],
+            },
+        ]
+
+        records = release_metadata.workflow_run_records_from_pages(pages)
+
+        self.assertEqual(len(records), 101)
+        self.assertEqual(
+            release_metadata.select_exact_package_run(
+                records,
+                tag=tag,
+                tag_commit=commit,
+            ),
+            501,
+        )
+
+    def test_select_exact_package_artifact_requires_one_unexpired_exact_name(self):
+        artifact_name = "chemblender-2.3.0-alpha.1-windows-x64"
+        selected = release_metadata.select_exact_package_artifact(
+            {
+                "artifacts": [
+                    {"id": 301, "name": artifact_name, "expired": True},
+                    {"id": 302, "name": "other", "expired": False},
+                    {"id": 303, "name": artifact_name, "expired": False},
+                ]
+            },
+            artifact_name=artifact_name,
+        )
+
+        self.assertEqual(selected, 303)
+
+        for document, message in (
+            ({"artifacts": []}, "unexpired exact artifact"),
+            (
+                {
+                    "artifacts": [
+                        {"id": 303, "name": artifact_name, "expired": False},
+                        {"id": 304, "name": artifact_name, "expired": False},
+                    ]
+                },
+                "unexpired exact artifact",
+            ),
+            ({"artifacts": [{"id": "303", "name": artifact_name, "expired": False}]}, "id"),
+            ({"artifacts": "not-a-list"}, "artifacts"),
+        ):
+            with self.subTest(document=document):
+                with self.assertRaisesRegex(ValueError, message):
+                    release_metadata.select_exact_package_artifact(
+                        document,
+                        artifact_name=artifact_name,
+                    )
+
+    def test_selection_cli_parses_paginated_rest_workflow_run_pages(self):
+        tag = "v2.3.0-alpha.1"
+        commit = "1" * 40
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "release_metadata.py"),
+                "--select-package-run",
+                "--tag",
+                tag,
+                "--tag-commit",
+                commit,
+            ],
+            input=json.dumps(
+                [
+                    {
+                        "total_count": 1,
+                        "workflow_runs": [
+                            {
+                                "id": 501,
+                                "head_sha": commit,
+                                "head_branch": tag,
+                                "event": "push",
+                                "conclusion": "success",
+                            }
+                        ],
+                    }
+                ]
+            ).encode("utf-8"),
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        self.assertEqual(result.stdout, b'{"run_id":501}\n')
+        self.assertEqual(result.stderr, b"")
+
     def test_rejects_versions_outside_proven_grammar(self):
         invalid = (
             "2.3.0-alpha",
@@ -212,12 +388,12 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertEqual(
             release_metadata_document(metadata),
             {
-                "artifact_name": "chemblender-2.3.0-alpha.1-windows-x64",
-                "checksum_name": "chemblender-2.3.0-alpha.1.sha256",
+                "artifact_name": "chemblender-2.3.0-rc.1-windows-x64",
+                "checksum_name": "chemblender-2.3.0-rc.1.sha256",
                 "extension_id": "chemblender",
-                "package_name": "chemblender-2.3.0-alpha.1.zip",
+                "package_name": "chemblender-2.3.0-rc.1.zip",
                 "platform": "windows-x64",
-                "version": "2.3.0-alpha.1",
+                "version": "2.3.0-rc.1",
             },
         )
 
@@ -333,11 +509,11 @@ class ReleaseMetadataTests(unittest.TestCase):
         second = subprocess.run(command, capture_output=True, check=False)
 
         expected = (
-            b'{"artifact_name":"chemblender-2.3.0-alpha.1-windows-x64",'
-            b'"checksum_name":"chemblender-2.3.0-alpha.1.sha256",'
+            b'{"artifact_name":"chemblender-2.3.0-rc.1-windows-x64",'
+            b'"checksum_name":"chemblender-2.3.0-rc.1.sha256",'
             b'"extension_id":"chemblender",'
-            b'"package_name":"chemblender-2.3.0-alpha.1.zip",'
-            b'"platform":"windows-x64","version":"2.3.0-alpha.1"}\n'
+            b'"package_name":"chemblender-2.3.0-rc.1.zip",'
+            b'"platform":"windows-x64","version":"2.3.0-rc.1"}\n'
         )
         self.assertEqual(first.returncode, 0, first.stderr.decode())
         self.assertEqual(first.stdout, expected)
@@ -360,12 +536,12 @@ class ReleaseMetadataTests(unittest.TestCase):
         )
 
         expected = (
-            b'{"artifact_name":"chemblender-2.3.0-alpha.1-windows-x64",'
-            b'"channel":"alpha",'
-            b'"checksum_name":"chemblender-2.3.0-alpha.1.sha256",'
+            b'{"artifact_name":"chemblender-2.3.0-rc.1-windows-x64",'
+            b'"channel":"rc",'
+            b'"checksum_name":"chemblender-2.3.0-rc.1.sha256",'
             b'"extension_id":"chemblender","is_prerelease":true,'
-            b'"package_name":"chemblender-2.3.0-alpha.1.zip",'
-            b'"platform":"windows-x64","version":"2.3.0-alpha.1"}\n'
+            b'"package_name":"chemblender-2.3.0-rc.1.zip",'
+            b'"platform":"windows-x64","version":"2.3.0-rc.1"}\n'
         )
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         self.assertEqual(result.stdout, expected)

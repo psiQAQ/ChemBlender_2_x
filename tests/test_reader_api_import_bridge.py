@@ -215,6 +215,71 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                         canonical_parameters_by_source=parameters,
                     )
 
+    def test_local_reader_parameters_cannot_synthesize_pubchem_provenance(self):
+        source = self.root / "local.ext"
+        source.write_bytes(b"local reader fixture")
+        request = self.request(source)
+        content_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        session = self.session()
+
+        preview = preflight_reader_plugins(
+            request,
+            ReaderPluginRegistry((
+                _Plugin(_descriptor(), PublicImportBatch()),
+            )),
+            session,
+            canonical_parameters_by_source={
+                request.sources[0].id: {
+                    "legacy_source_url": (
+                        "https://pubchem.ncbi.nlm.nih.gov/rest/pug/"
+                        "compound/cid/2244/SDF"
+                    ),
+                    "legacy_source_sha256": content_hash,
+                }
+            },
+        )
+
+        batch = session.result(preview.staged_batch_ids[0])
+        self.assertFalse(
+            any(item.operation == "pubchem_import" for item in batch.provenance)
+        )
+
+    def test_deferred_extxyz_with_canonical_parameters_keeps_its_identity(self):
+        source = FIXTURES / "extxyz" / "multiframe-cell.extxyz"
+        request = self.request(source)
+        content_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        session = self.session()
+
+        preview = preflight_reader_plugins(
+            request,
+            builtin_reader_plugin_registry(),
+            session,
+            canonical_parameters_by_source={
+                request.sources[0].id: {
+                    "legacy_source_url": (
+                        "https://pubchem.ncbi.nlm.nih.gov/rest/pug/"
+                        "compound/cid/2244/SDF"
+                    ),
+                    "legacy_source_sha256": content_hash,
+                }
+            },
+        )
+        result_id, = preview.staged_batch_ids
+        preview_batch = session.result(result_id)
+
+        self.assertTrue(session.has_pending_materializer(result_id))
+        self.assertFalse(
+            any(
+                item.operation == "pubchem_import"
+                for item in preview_batch.provenance
+            )
+        )
+        materialized = session.materialize_result(result_id)
+        self.assertEqual(
+            tuple(item.id for item in materialized.provenance),
+            tuple(item.id for item in preview_batch.provenance),
+        )
+
     def test_external_identity_is_preserved_through_runtime_registration(self):
         source_path = self.root / "source.ext"
         source_path.write_bytes(b"external")
@@ -917,6 +982,224 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                     )
                 self.assertIsNone(registry._last_parse_exception_type)
                 self.assertEqual(session.result_ids, ())
+
+    def test_host_attachment_value_error_propagates_once_without_reader_retry(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        session = self.session()
+        sentinel = ValueError("host attachment sentinel")
+        calls = []
+
+        def attach(source, content_hash, batch):
+            calls.append((source, content_hash, batch))
+            raise sentinel
+
+        with self.assertRaises(ValueError) as raised:
+            preflight_reader_plugins(
+                self.request(source),
+                ReaderPluginRegistry((
+                    _Plugin(_descriptor(), PublicImportBatch()),
+                )),
+                session,
+                _batch_attachment=attach,
+            )
+
+        self.assertIs(raised.exception, sentinel)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(session.result_ids, ())
+        self.assertEqual(tuple(session.artifact_root.iterdir()), ())
+
+    def test_host_attachment_rejects_empty_or_replaced_science_batches(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        structure = Structure(
+            id=uuid4(),
+            revision="structure-r1",
+            atomic_numbers=(1,),
+            coordinates=ArrayData(
+                numpy.asarray(((0.0, 0.0, 0.0),)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        )
+        descriptor = ReaderDescriptor(
+            reader_id="host-contract",
+            reader_version="1",
+            extensions=(".ext",),
+            capabilities={"structure": CapabilitySupport.SUPPORTED},
+            priority=100,
+            sniff=lambda _path, _prefix: SniffResult(
+                SniffMatch.EXACT,
+                "fixture",
+            ),
+            parse=lambda _path: ImportBatch(),
+            parse_request=lambda _request: ImportBatch(
+                structures=(structure,),
+            ),
+        )
+        registry = ReaderPluginRegistry((
+            _builtin_plugin(descriptor, _builtin_manifest((descriptor,))),
+        ))
+        for name, mutate in (
+            ("empty", lambda _batch: ImportBatch()),
+            ("science", lambda batch: replace(batch, structures=())),
+        ):
+            with self.subTest(attachment=name):
+                session = self.session()
+                with self.assertRaises(ValueError) as raised:
+                    preflight_reader_plugins(
+                        self.request(source),
+                        registry,
+                        session,
+                        _batch_attachment=lambda _source, _hash, batch: mutate(
+                            batch
+                        ),
+                    )
+                self.assertEqual(
+                    getattr(raised.exception, "code", None),
+                    "preflight.host_attachment_contract",
+                )
+                self.assertEqual(session.result_ids, ())
+                self.assertEqual(tuple(session.artifact_root.iterdir()), ())
+
+    def test_host_attachment_rejects_reader_report_replacement(self):
+        session = self.session()
+
+        with self.assertRaises(ValueError) as raised:
+            preflight_reader_plugins(
+                self.request(FIXTURES / "xyz" / "water.xyz"),
+                builtin_reader_plugin_registry(),
+                session,
+                _batch_attachment=lambda _source, _hash, batch: replace(
+                    batch,
+                    report=None,
+                ),
+            )
+
+        self.assertEqual(
+            getattr(raised.exception, "code", None),
+            "preflight.host_attachment_contract",
+        )
+        self.assertEqual(session.result_ids, ())
+        self.assertEqual(tuple(session.artifact_root.iterdir()), ())
+
+    def test_deferred_invalid_reader_candidate_does_not_call_host_attachment(self):
+        source = self.root / "source.ext"
+        source.write_bytes(b"fixture")
+        preview_structure = Structure(
+            id=uuid4(),
+            revision="preview-r1",
+            atomic_numbers=(1,),
+            coordinates=ArrayData(
+                numpy.asarray(((0.0, 0.0, 0.0),)),
+                ("atom", "xyz"),
+                "angstrom",
+            ),
+        )
+        materialized_structure = replace(
+            preview_structure,
+            id=uuid4(),
+            revision="materialized-r1",
+        )
+
+        def preview(request):
+            (request.staging_root / "preview.marker").write_bytes(b"preview")
+            return ImportBatch(structures=(preview_structure,))
+
+        descriptor = ReaderDescriptor(
+            reader_id="deferred-host-contract",
+            reader_version="1",
+            extensions=(".ext",),
+            capabilities={"structure": CapabilitySupport.SUPPORTED},
+            priority=100,
+            sniff=lambda _path, _prefix: SniffResult(
+                SniffMatch.EXACT,
+                "fixture",
+            ),
+            parse=lambda _path: ImportBatch(),
+            preview_request=preview,
+            materialize_request=lambda _request: ImportBatch(
+                structures=(materialized_structure,),
+            ),
+        )
+        session = self.session()
+        calls = []
+        preview_result = preflight_reader_plugins(
+            self.request(source),
+            ReaderPluginRegistry((
+                _builtin_plugin(descriptor, _builtin_manifest((descriptor,))),
+            )),
+            session,
+            _batch_attachment=lambda _source, _hash, batch: calls.append(
+                batch
+            ) or batch,
+        )
+        result_id, = preview_result.staged_batch_ids
+
+        with self.assertRaisesRegex(ValueError, "materialized reader result changed"):
+            session.materialize_result(result_id)
+
+        self.assertEqual(len(calls), 1)
+
+    @unittest.skipUnless(os.name == "nt", "Windows file ownership regression")
+    def test_host_attachment_exception_releases_memmap_artifacts_once(self):
+        source = self.root / "memoryview.synthetic"
+        source.write_bytes(b"memoryview")
+        session = self.session()
+        sentinel = ValueError("host attachment memmap sentinel")
+        calls = []
+
+        def parse(request):
+            array_path = request.staging_root / "coordinates.npy"
+            numpy.save(array_path, numpy.zeros((1, 3)))
+            mapped = numpy.load(array_path, mmap_mode="r")
+            return ImportBatch(
+                structures=(
+                    Structure(
+                        id=uuid4(),
+                        revision="structure-r1",
+                        atomic_numbers=(1,),
+                        coordinates=ArrayData(
+                            memoryview(mapped),
+                            ("atom", "xyz"),
+                            "angstrom",
+                        ),
+                    ),
+                ),
+            )
+
+        descriptor = ReaderDescriptor(
+            reader_id="attachment-memoryview",
+            reader_version="1",
+            extensions=(".synthetic",),
+            capabilities={"structure": CapabilitySupport.SUPPORTED},
+            priority=100,
+            sniff=lambda _path, _prefix: SniffResult(
+                SniffMatch.EXACT,
+                "fixture",
+            ),
+            parse=lambda _path: ImportBatch(),
+            parse_request=parse,
+        )
+
+        def attach(source, content_hash, batch):
+            calls.append((source, content_hash, batch))
+            raise sentinel
+
+        with self.assertRaises(ValueError) as raised:
+            preflight_reader_plugins(
+                self.request(source),
+                ReaderPluginRegistry((
+                    _builtin_plugin(descriptor, _builtin_manifest((descriptor,))),
+                )),
+                session,
+                _batch_attachment=attach,
+            )
+
+        self.assertIs(raised.exception, sentinel)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(session.result_ids, ())
+        self.assertEqual(tuple(session.artifact_root.iterdir()), ())
 
     def test_forged_builtin_metadata_cannot_bypass_external_identity(self):
         source = self.root / "source.ext"

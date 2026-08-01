@@ -48,6 +48,7 @@ from ..core.import_pipeline.transaction import (
     ImportCommitDecisions,
     commit_import_preview,
 )
+from ..core.storage.publication import PublicationCancelled
 from ..reader_api.import_pipeline_bridge import preflight_reader_plugins
 from ..scene_preset_view import (
     _remove_objects as _remove_scene_preset_objects,
@@ -58,6 +59,7 @@ from ..runtime.reader_api_bridge import (
     refresh_reader_plugin_discovery,
 )
 from .default_views import describe_default_view, plan_default_view
+from .diagnostics import RevisionViewPrompt, draw_quality_badge
 from .extxyz_preview import extxyz_preview_summary
 from .grid import grid_preview_summary
 from .properties import (
@@ -67,6 +69,7 @@ from .properties import (
     store_quick_import_job,
 )
 from .session import get_scene_session
+from .tasks import Task, TaskProgressAdapter, TaskState
 
 
 _ACTION_ITEMS = tuple(
@@ -1664,7 +1667,14 @@ def _committed_default_view_plans(commit_result, rows):
         commit_result.committed_source_revision_ids,
         strict=True,
     ):
-        if not row.default_view:
+        if (
+            not row.default_view
+            or (
+                row.conflict_id
+                and DuplicateAction(row.conflict_action)
+                is DuplicateAction.NEW_REVISION
+            )
+        ):
             continue
         revision = project.source_revisions[revision_id]
         plan = plan_default_view(
@@ -1675,6 +1685,56 @@ def _committed_default_view_plans(commit_result, rows):
         if plan is not None:
             selected.append(plan)
     return tuple(selected)
+
+
+def _committed_revision_prompts(commit_result, rows, conflicts):
+    committing_rows = tuple(
+        row
+        for row in rows
+        if not row.conflict_id
+        or DuplicateAction(row.conflict_action) not in _SKIP_ACTIONS
+    )
+    if len(committing_rows) != len(
+        commit_result.committed_source_revision_ids
+    ):
+        raise RuntimeError("committed source revisions do not match preview")
+    conflicts_by_id = {
+        str(conflict.id): conflict for conflict in conflicts
+    }
+    prompts = []
+    for row, new_revision_id in zip(
+        committing_rows,
+        commit_result.committed_source_revision_ids,
+        strict=True,
+    ):
+        if (
+            not row.conflict_id
+            or DuplicateAction(row.conflict_action)
+            is not DuplicateAction.NEW_REVISION
+        ):
+            continue
+        conflict = conflicts_by_id.get(row.conflict_id)
+        if conflict is None:
+            raise RuntimeError("new revision conflict is no longer available")
+        for candidate in conflict.candidates:
+            prompts.append(
+                RevisionViewPrompt(
+                    current_revision_id=candidate.revision_id,
+                    new_revision_id=new_revision_id,
+                )
+            )
+    return tuple(prompts)
+
+
+def _merge_revision_prompts(existing, incoming):
+    merged = []
+    seen = set()
+    for prompt in (*existing, *incoming):
+        key = (prompt.current_revision_id, prompt.new_revision_id)
+        if key not in seen:
+            merged.append(prompt)
+            seen.add(key)
+    return tuple(merged)
 
 
 def _finish_committed_import(
@@ -1688,6 +1748,14 @@ def _finish_committed_import(
     discard_staging=True,
 ):
     state.browser_revision += 1
+    state.revision_prompts = _merge_revision_prompts(
+        state.revision_prompts,
+        _committed_revision_prompts(
+            commit_result,
+            rows,
+            state.conflicts,
+        ),
+    )
     created = []
     cleanup_pending = bool(commit_result.cleanup_warnings)
     view_failed = False
@@ -1832,6 +1900,8 @@ class _CommitJob:
         self.decisions = decisions
         self.result = None
         self.error = None
+        self.task = Task()
+        self._task_progress = TaskProgressAdapter(self.task)
         self.progress_events = SimpleQueue()
         self._cancelled = Event()
         self._commit_started = Event()
@@ -1856,6 +1926,8 @@ class _CommitJob:
 
     def _run(self):
         try:
+            if self.task.snapshot().state is TaskState.PENDING:
+                self.task.start("commit")
             if self._cancelled.is_set():
                 raise ImportCommitCancelled("import commit cancelled")
             self._commit_started.set()
@@ -1871,17 +1943,45 @@ class _CommitJob:
             )
         except BaseException as error:
             self.error = error
+            if isinstance(
+                error,
+                (
+                    ImportCommitCancelled,
+                    ImportCancelled,
+                    PublicationCancelled,
+                ),
+            ):
+                if self.task.snapshot().state is TaskState.RUNNING:
+                    self.task.request_cancel()
+                if self.task.snapshot().state is TaskState.CANCELLING:
+                    self.task.complete(None)
+            elif self.task.snapshot().state in {
+                TaskState.RUNNING,
+                TaskState.CANCELLING,
+            }:
+                self.task.fail(error)
+        else:
+            snapshot = self.task.complete(self.result, "data committed")
+            if snapshot.state is not TaskState.SUCCEEDED:
+                self.result = None
         finally:
             self._done.set()
 
     def start(self):
+        self.task.start("commit")
         self._thread.start()
         self._started = True
 
     def cancel(self):
         self._cancelled.set()
+        if self.task.snapshot().state in {
+            TaskState.PENDING,
+            TaskState.RUNNING,
+        }:
+            self.task.request_cancel()
 
     def _progress(self, stage, completed, total):
+        self._task_progress(stage, completed, total)
         self.progress_events.put((stage, completed, total))
 
     def drain_progress(self):
@@ -2256,7 +2356,7 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                 text=f"{row.reader_id}: {row.reader_availability}"
             )
             box.label(text=f"Capabilities: {row.capability_summary}")
-            box.label(text=f"Quality: {row.quality}")
+            draw_quality_badge(box, row.quality)
             if row.frame_count:
                 box.label(text=f"Frames: {row.frame_count}")
                 box.label(
@@ -2320,12 +2420,11 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                 )
                 box.label(text=f"Dataset IDs: {row.grid_source_ids}")
                 box.label(text=f"Sample range: {row.grid_sample_range}")
-                box.label(
-                    text=(
-                        f"Value unit: {row.grid_value_unit} · "
-                        f"{row.grid_quality}"
-                    ),
-                    icon="ERROR" if row.grid_quality == "ambiguous" else "INFO",
+                box.label(text=f"Value unit: {row.grid_value_unit}")
+                draw_quality_badge(
+                    box,
+                    row.grid_quality,
+                    prefix="Grid quality",
                 )
             if row.cif_block_count:
                 box.label(
@@ -2677,11 +2776,22 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             try:
                 job.join(0)
                 state = get_quick_import_state(job.project_session)
-                if job.error is None:
+                task = getattr(job, "task", None)
+                if (
+                    job.error is None
+                    and (
+                        task is None
+                        or task.snapshot().state is not TaskState.CANCELLED
+                    )
+                ):
                     result = self._finalize_committed_job(
                         context,
                         job,
                         state,
+                    )
+                elif job.error is None:
+                    job.error = ImportCommitCancelled(
+                        "import commit cancelled before UI application"
                     )
             except BaseException as error:
                 completion_error = error
@@ -2737,7 +2847,14 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                     "Import Preview UI cleanup failed",
                     release_error,
                 )
-            if isinstance(job.error, (ImportCommitCancelled, ImportCancelled)):
+            if isinstance(
+                job.error,
+                (
+                    ImportCommitCancelled,
+                    ImportCancelled,
+                    PublicationCancelled,
+                ),
+            ):
                 self.report({"INFO"}, str(job.error))
             elif isinstance(job.error, _FATAL_EXCEPTIONS):
                 raise job.error
@@ -2771,9 +2888,12 @@ class CHEMBLENDER_OT_cancel_import(bpy.types.Operator):
         state = get_quick_import_state(session)
         if state.active_job is not None:
             state.active_job.cancel()
+            message = "cancellation requested"
+            if getattr(state.active_job, "commit_started", False):
+                message += "; published data cannot be undone"
             self.report(
                 {"WARNING"},
-                "cancellation requested; published data cannot be undone",
+                message,
             )
         else:
             cancel_project_import(session)

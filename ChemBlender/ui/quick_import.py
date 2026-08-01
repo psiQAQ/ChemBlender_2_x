@@ -12,9 +12,11 @@ from ..core.import_pipeline.request import (
     ImportSource,
     ValidationMode,
 )
+from ..core.import_pipeline.preflight import ImportCancelled
 from ..core.import_pipeline.conformer_grouping import (
     suggest_staged_conformer_groups as prepare_conformer_suggestions,
 )
+from ..legacy.reader_bridge import attach_verified_pubchem_provenance
 from ..reader_api.import_pipeline_bridge import preflight_reader_plugins
 from ..runtime.reader_api_bridge import get_reader_plugin_registry
 from .properties import (
@@ -27,6 +29,7 @@ from .properties import (
     store_quick_import_preview,
 )
 from .session import get_scene_session
+from .tasks import Task, TaskProgressAdapter, TaskState
 
 
 _FATAL_EXCEPTIONS = (
@@ -79,6 +82,18 @@ def _preview_summary(preview):
     return f"{len(preview.source_previews)} source(s) staged{suffix}"
 
 
+def _legacy_pubchem_batch_attachment(project_session):
+    def attach(source, content_hash, batch):
+        return attach_verified_pubchem_provenance(
+            source,
+            content_hash,
+            batch,
+            project_session,
+        )
+
+    return attach
+
+
 class _PreflightJob:
     def __init__(
         self,
@@ -87,16 +102,20 @@ class _PreflightJob:
         staging,
         *,
         canonical_parameters_by_source=None,
+        batch_attachment=None,
         prepare_conformers=True,
     ):
         self.request = request
         self.registry = registry
         self.staging = staging
         self.canonical_parameters_by_source = canonical_parameters_by_source
+        self.batch_attachment = batch_attachment
         self.prepare_conformers = prepare_conformers
         self.preview = None
         self.conformer_suggestions = None
         self.error = None
+        self.task = Task()
+        self._task_progress = TaskProgressAdapter(self.task)
         self.progress_events = SimpleQueue()
         self._cancelled = Event()
         self._done = Event()
@@ -108,6 +127,10 @@ class _PreflightJob:
 
     def _run(self):
         try:
+            if self.task.snapshot().state is TaskState.PENDING:
+                self.task.start("preflight")
+            if self._cancelled.is_set():
+                raise ImportCancelled("import preflight cancelled")
             self.preview = preflight_reader_plugins(
                 self.request,
                 self.registry,
@@ -117,6 +140,7 @@ class _PreflightJob:
                 ),
                 progress=self._progress,
                 is_cancelled=self._cancelled.is_set,
+                _batch_attachment=self.batch_attachment,
             )
             if self.prepare_conformers:
                 self._progress("conformer_grouping", 0, 1)
@@ -128,10 +152,26 @@ class _PreflightJob:
                 self._progress("conformer_grouping", 1, 1)
         except BaseException as error:
             self.error = error
+            if isinstance(error, ImportCancelled):
+                if self.task.snapshot().state is TaskState.RUNNING:
+                    self.task.request_cancel()
+                if self.task.snapshot().state is TaskState.CANCELLING:
+                    self.task.complete(None)
+            elif self.task.snapshot().state in {
+                TaskState.RUNNING,
+                TaskState.CANCELLING,
+            }:
+                self.task.fail(error)
+        else:
+            snapshot = self.task.complete(self.preview, "preview ready")
+            if snapshot.state is not TaskState.SUCCEEDED:
+                self.preview = None
+                self.conformer_suggestions = None
         finally:
             self._done.set()
 
     def _progress(self, stage, completed, total):
+        self._task_progress(stage, completed, total)
         self.progress_events.put((stage, completed, total))
 
     def attach_ui(self, window_manager, timer):
@@ -142,11 +182,17 @@ class _PreflightJob:
         self._progress_started = True
 
     def start(self):
+        self.task.start("preflight")
         self._thread.start()
         self._started = True
 
     def cancel(self):
         self._cancelled.set()
+        if self.task.snapshot().state in {
+            TaskState.PENDING,
+            TaskState.RUNNING,
+        }:
+            self.task.request_cancel()
 
     def join(self, timeout):
         if not self._started:
@@ -226,7 +272,6 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
         items=VALIDATION_MODE_ITEMS,
         default=ValidationMode.BALANCED.value,
     )
-
     def invoke(self, context, _event):
         self.validation_mode = (
             context.scene.chemblender_quick_import.validation_mode
@@ -248,6 +293,9 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
                 validation_mode=ValidationMode(self.validation_mode),
             )
             project_session = get_scene_session(context.scene)
+            batch_attachment = _legacy_pubchem_batch_attachment(
+                project_session,
+            )
             staging = create_quick_import_staging(project_session)
             registry = get_reader_plugin_registry()
         except BaseException as error:
@@ -259,6 +307,7 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
                 staging,
                 request,
                 registry,
+                batch_attachment,
             )
         try:
             preview = preflight_reader_plugins(
@@ -267,6 +316,7 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
                 staging,
                 progress=lambda _stage, _completed, _total: None,
                 is_cancelled=lambda: False,
+                _batch_attachment=batch_attachment,
             )
             conformer_suggestions = prepare_conformer_suggestions(
                 preview,
@@ -290,8 +340,14 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
         staging,
         request,
         registry,
+        batch_attachment=None,
     ):
-        job = _PreflightJob(request, registry, staging)
+        job = _PreflightJob(
+            request,
+            registry,
+            staging,
+            batch_attachment=batch_attachment,
+        )
         try:
             store_quick_import_job(project_session, staging, job)
             manager = context.window_manager
@@ -344,6 +400,15 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
         failure = job._completion_error
         if failure is None:
             failure = job.error
+        task = getattr(job, "task", None)
+        if (
+            failure is None
+            and task is not None
+            and task.snapshot().state is TaskState.CANCELLED
+        ):
+            failure = ImportCancelled(
+                "import preflight cancelled before UI preview"
+            )
         try:
             job.release_ui()
         except BaseException as error:
@@ -510,7 +575,24 @@ class CHEMBLENDER_PT_quick_import(bpy.types.Panel):
         smiles.validation_mode = settings.validation_mode
         if settings.recent_summary:
             layout.label(text=settings.recent_summary)
-        if get_quick_import_state(session).preview is not None:
+        quick_import_state = get_quick_import_state(session)
+        active_job = quick_import_state.active_job
+        task = getattr(active_job, "task", None)
+        if task is not None:
+            snapshot = task.snapshot()
+            layout.label(
+                text=(
+                    f"{snapshot.stage}: {int(snapshot.progress * 100)}% "
+                    f"({snapshot.state.value})"
+                ),
+                icon="TIME",
+            )
+            layout.operator(
+                "chemblender.cancel_import",
+                text="Cancel",
+                icon="X",
+            )
+        elif quick_import_state.preview is not None:
             row = layout.row(align=True)
             row.operator(
                 "chemblender.confirm_import",

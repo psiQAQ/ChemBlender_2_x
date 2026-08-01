@@ -4,6 +4,7 @@ from math import isfinite
 
 from ..core import Structure
 from .structure import (
+    StructureViewSettings,
     _PERIODIC_SITE_DISPLAY_CONTRACT,
     _coordinate_scale,
     _run_cleanup,
@@ -1286,6 +1287,7 @@ def create_periodic_structure_view(
     settings=None,
     *,
     selective_dynamics=None,
+    attach_ball_and_stick=True,
     name="ChemBlender Periodic Structure",
     collection=None,
 ):
@@ -1295,12 +1297,15 @@ def create_periodic_structure_view(
         settings = PeriodicViewSettings()
     if not isinstance(settings, PeriodicViewSettings):
         raise TypeError("settings must be PeriodicViewSettings")
+    if type(attach_ball_and_stick) is not bool:
+        raise TypeError("attach_ball_and_stick must be a bool")
     obj = None
     try:
         derived = _derived_periodic_sites(structure, settings)
         obj = create_structure_view(
             structure,
             topology,
+            StructureViewSettings(attach_ball_and_stick=attach_ball_and_stick),
             selective_dynamics=selective_dynamics,
             periodic_boundary_tolerance=(
                 None

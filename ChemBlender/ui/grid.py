@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from threading import Event, Thread
 from uuid import UUID
 
 from ..core import (
@@ -16,11 +15,43 @@ from ..core import (
     plan_scene_preset,
     resolve_grid_semantics,
 )
+from .tasks import Task, TaskState, TaskWorker
 
 
 _SCENE_PROPERTY_NAME = "chemblender_grid"
 _OWNED_SCENE_PROPERTY = None
 _PREVIEW_DATASET_LIMIT = 32
+_ACTIVE_VOLUME_OPERATORS = []
+
+
+def _register_active_volume_operator(operator):
+    if operator not in _ACTIVE_VOLUME_OPERATORS:
+        _ACTIVE_VOLUME_OPERATORS.append(operator)
+
+
+def _release_active_volume_operator(operator):
+    try:
+        _ACTIVE_VOLUME_OPERATORS.remove(operator)
+    except ValueError:
+        pass
+
+
+def _cancel_active_volume_operators():
+    failure = None
+    for operator in tuple(_ACTIVE_VOLUME_OPERATORS):
+        for operation in (
+            lambda: operator.cancel(None),
+            lambda: operator._cache_job.join(None),
+            operator._finish_modal,
+        ):
+            try:
+                operation()
+            except BaseException as error:
+                if failure is None:
+                    failure = error
+        _release_active_volume_operator(operator)
+    if failure is not None:
+        raise failure
 
 
 @dataclass(frozen=True, slots=True)
@@ -402,54 +433,40 @@ if bpy is not None:
                     ),
                     dataset_index,
                 )
-                self._cache_job = {
-                    "result": None,
-                    "error": None,
-                    "stage": "starting",
-                    "progress": 0.0,
-                }
-                self._cache_cancel = Event()
                 self._cache_values = (session, plan, cache_root)
 
-                def progress(stage, fraction):
-                    self._cache_job["stage"] = stage
-                    self._cache_job["progress"] = fraction
+                def prepare(cancelled, progress):
+                    return prepare_volume_cache(
+                        grid,
+                        request,
+                        writer=_OPENVDB_WRITER,
+                        cancelled=cancelled,
+                        progress=progress,
+                    )
 
-                def run():
-                    try:
-                        self._cache_job["result"] = prepare_volume_cache(
-                            grid,
-                            request,
-                            writer=_OPENVDB_WRITER,
-                            cancelled=self._cache_cancel.is_set,
-                            progress=progress,
-                        )
-                    except BaseException as error:
-                        self._cache_job["error"] = error
-
-                self._cache_thread = Thread(
-                    target=run,
-                    name="ChemBlender volume cache",
-                    daemon=True,
+                self._cache_task = Task()
+                self._cache_job = TaskWorker(
+                    self._cache_task,
+                    prepare,
                 )
                 manager = context.window_manager
+                self._cache_window_manager = manager
                 self._cache_timer = None
-                progress_started = False
+                self._cache_progress_started = False
                 try:
                     manager.progress_begin(0, 100)
-                    progress_started = True
+                    self._cache_progress_started = True
                     self._cache_timer = manager.event_timer_add(
                         0.1,
                         window=context.window,
                     )
                     manager.modal_handler_add(self)
-                    self._cache_thread.start()
+                    self._cache_job.start("vdb.prepare")
+                    _register_active_volume_operator(self)
                 except BaseException:
-                    self._cache_cancel.set()
-                    if self._cache_timer is not None:
-                        manager.event_timer_remove(self._cache_timer)
-                    if progress_started:
-                        manager.progress_end()
+                    self.cancel(context)
+                    self._cache_job.join(None)
+                    self._finish_modal()
                     raise
                 return {"RUNNING_MODAL"}
             except Exception as error:
@@ -458,24 +475,45 @@ if bpy is not None:
                 self.report({"ERROR"}, str(error))
                 return {"CANCELLED"}
 
-        def _finish_modal(self, context):
-            manager = context.window_manager
-            manager.event_timer_remove(self._cache_timer)
-            manager.progress_end()
+        def _finish_modal(self):
+            manager = getattr(self, "_cache_window_manager", None)
+            timer = getattr(self, "_cache_timer", None)
+            if manager is not None and timer is not None:
+                try:
+                    manager.event_timer_remove(timer)
+                except (RuntimeError, ValueError):
+                    pass
+            self._cache_timer = None
+            if (
+                manager is not None
+                and getattr(self, "_cache_progress_started", False)
+            ):
+                try:
+                    manager.progress_end()
+                except (RuntimeError, ValueError):
+                    pass
+            self._cache_progress_started = False
+            _release_active_volume_operator(self)
+
+        def cancel(self, _context):
+            job = getattr(self, "_cache_job", None)
+            if job is not None:
+                job.request_cancel()
 
         def modal(self, context, event):
             if event.type == "ESC":
-                self._cache_cancel.set()
+                self.cancel(context)
             if event.type != "TIMER":
                 return {"RUNNING_MODAL"}
             manager = context.window_manager
             manager.progress_update(
-                int(self._cache_job["progress"] * 100)
+                int(self._cache_task.snapshot().progress * 100)
             )
-            if self._cache_thread.is_alive():
+            if not self._cache_job.done:
                 return {"RUNNING_MODAL"}
-            self._finish_modal(context)
-            error = self._cache_job["error"]
+            self._cache_job.join(0)
+            self._finish_modal()
+            error = self._cache_job.error
             if error is not None:
                 if isinstance(
                     error,
@@ -484,7 +522,10 @@ if bpy is not None:
                     raise error
                 self.report({"ERROR"}, str(error))
                 return {"CANCELLED"}
-            result = self._cache_job["result"]
+            if self._cache_task.snapshot().state is not TaskState.SUCCEEDED:
+                self.report({"INFO"}, "Grid cache creation cancelled")
+                return {"CANCELLED"}
+            result = self._cache_job.result
             if result.status == "cancelled":
                 self.report({"INFO"}, "Grid cache creation cancelled")
                 return {"CANCELLED"}
@@ -586,6 +627,7 @@ if bpy is not None:
         global _OWNED_SCENE_PROPERTY
         from .properties import _same_scene_property, _scene_property_identity
 
+        _cancel_active_volume_operators()
         if (
             _OWNED_SCENE_PROPERTY is not None
             and _same_scene_property(

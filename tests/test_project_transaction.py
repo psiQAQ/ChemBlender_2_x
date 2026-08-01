@@ -44,6 +44,7 @@ from ChemBlender.core.import_pipeline import (
     suggest_source_groups,
 )
 from ChemBlender.core.import_pipeline import transaction as transaction_module
+from ChemBlender.core.storage.publication import PublicationCancelled
 
 
 class ProjectTransactionTests(unittest.TestCase):
@@ -196,6 +197,38 @@ class ProjectTransactionTests(unittest.TestCase):
 
         self.assertIs(project_session.project, original_project)
         self.assertEqual(project_session.dirty_reasons, original_dirty)
+        self.assertIsNone(project_session.sidecar_path)
+        self.assertEqual(
+            tuple(project_session.temporary_root.glob("*.cbq")),
+            (),
+        )
+
+    def test_publication_cancellation_rolls_back_unadopted_transaction(self):
+        project_session = self.project_session()
+        staged_session = self.staged_session()
+        staged = self.stage(staged_session, 91, structure=self.structure())
+        preview = self.preview(staged_session, (staged,))
+        previous_project = project_session.project
+        previous_dirty = project_session.dirty_reasons
+        cancelled = False
+
+        def progress(stage, _completed, _total):
+            nonlocal cancelled
+            if stage == "before_publish":
+                cancelled = True
+
+        with self.assertRaises(PublicationCancelled):
+            commit_import_preview(
+                project_session,
+                staged_session,
+                preview,
+                ImportCommitDecisions(),
+                progress=progress,
+                is_cancelled=lambda: cancelled,
+            )
+
+        self.assertIs(project_session.project, previous_project)
+        self.assertEqual(project_session.dirty_reasons, previous_dirty)
         self.assertIsNone(project_session.sidecar_path)
         self.assertEqual(
             tuple(project_session.temporary_root.glob("*.cbq")),

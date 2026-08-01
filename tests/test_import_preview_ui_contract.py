@@ -33,6 +33,7 @@ from ChemBlender.core.import_pipeline.request import (
 )
 from ChemBlender.core.import_pipeline.staging import StagedImportSession
 from ChemBlender.core.formats.extxyz import parse_extxyz
+from ChemBlender.core.storage.publication import PublicationCancelled
 from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
 from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
 
@@ -1564,6 +1565,22 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertIsNone(state.preview)
         self.assertIsNone(state.staging_session)
 
+    def test_canonical_diagnostics_survive_staging_cleanup_for_ui_actions(self):
+        _registry, state = self.stage("tests/fixtures/xyz/water.xyz")
+        report = state.diagnostics_report
+
+        self.assertEqual(
+            report["schema_name"],
+            "chemblender_import_report",
+        )
+        self.assertEqual(report["schema_version"], 1)
+
+        self.properties.discard_quick_import_preview(self.session)
+
+        self.assertIs(state.diagnostics_report, report)
+        self.assertIsNone(state.preview)
+        self.assertIsNone(state.staging_session)
+
     def test_confirm_calls_transaction_once_creates_format_aware_plans(self):
         registry, state = self.stage(
             "tests/fixtures/xyz/water.xyz",
@@ -1650,6 +1667,120 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertEqual(view_calls, [])
         self.assertEqual(result.created_view_count, 0)
         self.assertEqual(state.browser_revision, 1)
+
+    def test_new_revision_never_creates_an_automatic_default_view(self):
+        revision_id = uuid4()
+        row = SimpleNamespace(
+            conflict_id=str(uuid4()),
+            conflict_action="new_revision",
+            default_view=True,
+        )
+        result = SimpleNamespace(
+            committed_source_revision_ids=(revision_id,),
+            project=SimpleNamespace(
+                source_revisions={
+                    revision_id: SimpleNamespace(
+                        created_entity_ids=(uuid4(),),
+                    )
+                },
+                structures={},
+                datasets={},
+            ),
+        )
+
+        with patch.object(self.module, "plan_default_view") as planner:
+            plans = self.module._committed_default_view_plans(
+                result,
+                (row,),
+            )
+
+        self.assertEqual(plans, ())
+        planner.assert_not_called()
+
+    def test_normal_import_preserves_unresolved_revision_prompts(self):
+        existing = self.module.RevisionViewPrompt(
+            current_revision_id=uuid4(),
+            new_revision_id=uuid4(),
+        )
+        registry, state = self.stage("tests/fixtures/xyz/water.xyz")
+        state.revision_prompts = (existing,)
+        rows = self.module.project_import_preview(
+            self.session,
+            state,
+            registry,
+        )
+
+        self.module.commit_project_import(
+            self.session,
+            state,
+            rows,
+            collection=object(),
+            apply_view=lambda *_args, **_kwargs: (),
+        )
+
+        self.assertEqual(state.revision_prompts, (existing,))
+
+    def test_revision_prompt_merge_is_stable_and_pair_deduplicated(self):
+        first = self.module.RevisionViewPrompt(
+            current_revision_id=uuid4(),
+            new_revision_id=uuid4(),
+        )
+        second = self.module.RevisionViewPrompt(
+            current_revision_id=uuid4(),
+            new_revision_id=uuid4(),
+        )
+        duplicate = self.module.RevisionViewPrompt(
+            current_revision_id=first.current_revision_id,
+            new_revision_id=first.new_revision_id,
+        )
+
+        merged = self.module._merge_revision_prompts(
+            (first, second),
+            (duplicate, first),
+        )
+
+        self.assertEqual(merged, (first, second))
+
+    def test_new_revision_prompt_records_exact_revision_pair(self):
+        source_id = uuid4()
+        conflict_id = uuid4()
+        current_revision_id = uuid4()
+        new_revision_id = uuid4()
+        row = SimpleNamespace(
+            source_id=str(source_id),
+            conflict_id=str(conflict_id),
+            conflict_action="new_revision",
+        )
+        candidate = SimpleNamespace(
+            revision_id=current_revision_id,
+        )
+        conflict = SimpleNamespace(
+            id=conflict_id,
+            staged_source_id=source_id,
+            candidates=(candidate,),
+        )
+        result = SimpleNamespace(
+            committed_source_revision_ids=(new_revision_id,),
+            project=SimpleNamespace(
+                source_revisions={
+                    new_revision_id: SimpleNamespace()
+                },
+            ),
+        )
+
+        prompts = self.module._committed_revision_prompts(
+            result,
+            (row,),
+            (conflict,),
+        )
+
+        self.assertEqual(len(prompts), 1)
+        self.assertEqual(
+            prompts[0].current_revision_id,
+            current_revision_id,
+        )
+        self.assertEqual(prompts[0].new_revision_id, new_revision_id)
+        self.assertEqual(prompts[0].action, "keep_current")
 
     def test_sequential_xyz_cube_commits_rotate_owned_sidecar_generation(self):
         registry, state = self.stage("tests/fixtures/xyz/water.xyz")
@@ -2429,9 +2560,29 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertIs(job.result, expected)
         self.assertIsNone(job.error)
         self.assertEqual(job.drain_progress(), ("materialize", 1, 4))
+        self.assertEqual(job.task.snapshot().state.value, "succeeded")
         self.assertFalse(observed["is_cancelled"]())
         job.cancel()
         self.assertTrue(observed["is_cancelled"]())
+        self.assertEqual(job.task.snapshot().state.value, "succeeded")
+
+    def test_commit_job_marks_publication_cancellation_cancelled(self):
+        job = self.module._CommitJob(
+            self.session,
+            object(),
+            object(),
+            object(),
+        )
+        with patch.object(
+            self.module,
+            "_commit_to_fresh_generation",
+            side_effect=PublicationCancelled("cancelled before publish"),
+        ):
+            job._run()
+
+        self.assertIsInstance(job.error, PublicationCancelled)
+        self.assertIsNone(job.result)
+        self.assertEqual(job.task.snapshot().state.value, "cancelled")
 
     def test_modal_fatal_worker_error_rethrows_after_cleanup(self):
         timer = object()

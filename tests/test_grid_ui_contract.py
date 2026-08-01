@@ -1,14 +1,19 @@
 from dataclasses import replace
+import importlib.util
 from pathlib import Path
+import sys
 from tempfile import TemporaryDirectory
+from types import ModuleType, SimpleNamespace
 import unittest
 from uuid import uuid4
+from unittest.mock import patch
 
 import numpy
 
 from ChemBlender.core import ArrayData, DatasetStatus, Grid3D, ImportBatch
 from ChemBlender.core.cube import CUBE_READER
 from ChemBlender.core.session import close_session, create_session
+from ChemBlender.ui import grid as grid_module
 from ChemBlender.ui.grid import (
     grid_action_availability,
     grid_preview_summary,
@@ -22,6 +27,129 @@ TWO_DATASETS = ROOT / "tests/fixtures/cube/two-datasets.cube"
 
 
 class GridUIContractTests(unittest.TestCase):
+    def test_active_volume_unload_cancels_joins_and_releases_once(self):
+        class Worker:
+            def __init__(self):
+                self.cancel_calls = 0
+                self.join_timeout = object()
+
+            def request_cancel(self):
+                self.cancel_calls += 1
+
+            def join(self, timeout):
+                self.join_timeout = timeout
+                return True
+
+        class ActiveVolume:
+            def __init__(self):
+                self._cache_job = Worker()
+                self.finished = 0
+
+            def cancel(self, _context):
+                self._cache_job.request_cancel()
+
+            def _finish_modal(self):
+                self.finished += 1
+
+        active = ActiveVolume()
+        grid_module._register_active_volume_operator(active)
+
+        grid_module._cancel_active_volume_operators()
+        grid_module._cancel_active_volume_operators()
+
+        self.assertEqual(active._cache_job.cancel_calls, 1)
+        self.assertIsNone(active._cache_job.join_timeout)
+        self.assertEqual(active.finished, 1)
+        self.assertEqual(grid_module._ACTIVE_VOLUME_OPERATORS, [])
+
+    def test_volume_modal_uses_shared_pure_task_worker(self):
+        source = (ROOT / "ChemBlender" / "ui" / "grid.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("from .tasks import Task, TaskState, TaskWorker", source)
+        self.assertNotIn("Thread(", source)
+        self.assertNotIn("Event(", source)
+
+    def test_volume_modal_success_accepts_succeeded_task(self):
+        class Operator:
+            def report(self, levels, message):
+                self.reports = getattr(self, "reports", []) + [
+                    (levels, message)
+                ]
+
+        fake_bpy = ModuleType("bpy")
+        fake_props = ModuleType("bpy.props")
+
+        def property_factory(**_kwargs):
+            return None
+
+        for name in (
+            "EnumProperty",
+            "FloatProperty",
+            "IntProperty",
+            "PointerProperty",
+            "StringProperty",
+        ):
+            setattr(fake_props, name, property_factory)
+        fake_bpy.props = fake_props
+        fake_bpy.types = SimpleNamespace(
+            Operator=Operator,
+            PropertyGroup=type("PropertyGroup", (), {}),
+        )
+        fake_bpy.app = SimpleNamespace(background=False)
+
+        module_name = "ChemBlender.ui._grid_modal_contract"
+        spec = importlib.util.spec_from_file_location(
+            module_name,
+            ROOT / "ChemBlender" / "ui" / "grid.py",
+        )
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, {"bpy": fake_bpy, "bpy.props": fake_props}):
+            sys.modules[module_name] = module
+            try:
+                spec.loader.exec_module(module)
+
+                result = SimpleNamespace(status="published")
+                task = module.Task()
+                task.start("vdb.prepare")
+                task.complete(result)
+                joined = []
+                operator = module.CHEMBLENDER_OT_create_grid_view()
+                operator._cache_task = task
+                operator._cache_job = SimpleNamespace(
+                    done=True,
+                    join=lambda timeout: joined.append(timeout),
+                    error=None,
+                    result=result,
+                )
+                operator._cache_values = (object(), object(), object())
+                finished = []
+                operator._finish_modal = lambda: finished.append(True)
+                applied = []
+                operator._apply = lambda *args: applied.append(args) or [
+                    SimpleNamespace(name="Volume")
+                ]
+                progress = []
+                context = SimpleNamespace(
+                    window_manager=SimpleNamespace(
+                        progress_update=lambda value: progress.append(value)
+                    )
+                )
+
+                self.assertEqual(
+                    operator.modal(context, SimpleNamespace(type="TIMER")),
+                    {"FINISHED"},
+                )
+                self.assertEqual(joined, [0])
+                self.assertEqual(finished, [True])
+                self.assertEqual(progress, [100])
+                self.assertEqual(len(applied), 1)
+            finally:
+                sys.modules.pop(module_name, None)
+
     def test_cube_preview_reports_bounded_dataset_summary(self):
         batch = CUBE_READER.parse(TWO_DATASETS)
 

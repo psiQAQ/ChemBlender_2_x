@@ -13,7 +13,53 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  native-core:
+    if: ${{ !github.event.deleted }}
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Run native stdlib contracts
+        shell: pwsh
+        run: |
+          python -m unittest `
+            tests.test_dependency_inventory `
+            tests.test_artifact_size_report `
+            tests.test_release_artifact `
+            tests.test_legacy_fixture_inventory `
+            tests.test_quantum_visualization_docs `
+            tests.test_repository_contract `
+            tests.test_native_core_ci_contract `
+            tests.test_committed_format_range `
+            -v
+          if ($LASTEXITCODE -ne 0) { throw "Native stdlib contracts failed" }
+      - name: Compile native source and tests
+        shell: pwsh
+        run: |
+          python -m compileall -q ChemBlender tests
+          if ($LASTEXITCODE -ne 0) { throw "Native compile failed" }
+      - name: Check committed format range
+        shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PULL_REQUEST_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          python tests/check_committed_format_range.py `
+            --event-name="$env:EVENT_NAME" `
+            --pull-request-base="$env:PULL_REQUEST_BASE" `
+            --push-before="$env:PUSH_BEFORE" `
+            --default-branch="$env:DEFAULT_BRANCH"
+          if ($LASTEXITCODE -ne 0) { throw "Committed format check failed" }
+
+  package:
+    needs: native-core
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -138,11 +184,54 @@ jobs:
             "$hash  $packageName`n",
             [Text.UTF8Encoding]::new($false)
           )
+      - name: Generate and verify package metadata
+        shell: pwsh
+        env:
+          PACKAGE_NAME: ${{ steps.release_metadata.outputs.package_name }}
+          CHECKSUM_NAME: ${{ steps.release_metadata.outputs.checksum_name }}
+          RELEASE_VERSION: ${{ steps.release_metadata.outputs.version }}
+        run: |
+          $blender = (Get-ChildItem "blender" -Recurse -Filter "blender.exe" | Select-Object -First 1).FullName
+          $blenderPython = Join-Path (Split-Path $blender) "5.1/python/bin/python.exe"
+          if (-not (Test-Path -LiteralPath $blenderPython -PathType Leaf)) { throw "Blender bundled Python missing" }
+          $artifactDir = "release-artifact"
+          New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+          $wheelInventory = Join-Path $artifactDir "wheel-inventory.json"
+          $licenseCopyList = Join-Path $artifactDir "wheel-license-copy-list.json"
+          $sizeReport = Join-Path $artifactDir "artifact-size.json"
+          & $blenderPython ChemBlender/scripts/dependency_inventory.py `
+            --inventory ChemBlender/dependencies.toml `
+            --wheel-dir ChemBlender/wheels `
+            --manifest ChemBlender/blender_manifest.toml `
+            --output $wheelInventory `
+            --license-copy-list $licenseCopyList
+          if ($LASTEXITCODE -ne 0) { throw "Wheel inventory failed" }
+          $package = Join-Path "ChemBlender" $env:PACKAGE_NAME
+          $checksum = Join-Path "ChemBlender" $env:CHECKSUM_NAME
+          & $blenderPython ChemBlender/scripts/artifact_size_report.py `
+            --package $package `
+            --wheel-inventory $wheelInventory `
+            --license-copy-list $licenseCopyList `
+            --budget .github/artifact-budgets.json `
+            --output $sizeReport
+          if ($LASTEXITCODE -ne 0) { throw "Artifact size report failed" }
+          Copy-Item -LiteralPath $package -Destination $artifactDir
+          Copy-Item -LiteralPath $checksum -Destination $artifactDir
+          & $blenderPython ChemBlender/scripts/verify_release_artifact.py `
+            --artifact-dir $artifactDir `
+            --extension-root ChemBlender `
+            --tag "v$env:RELEASE_VERSION" `
+            --metadata-mode package-ci `
+            --budget .github/artifact-budgets.json
+          if ($LASTEXITCODE -ne 0) { throw "Package metadata verification failed" }
+          [IO.File]::AppendAllText(
+            $env:GITHUB_ENV,
+            "PACKAGE_ARTIFACT_DIR=$artifactDir`n",
+            [Text.UTF8Encoding]::new($false)
+          )
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ steps.release_metadata.outputs.artifact_name }}
-          path: |
-            ChemBlender/${{ steps.release_metadata.outputs.package_name }}
-            ChemBlender/${{ steps.release_metadata.outputs.checksum_name }}
+          path: ${{ env.PACKAGE_ARTIFACT_DIR }}/*
           if-no-files-found: error
           retention-days: ${{ github.ref_type == 'tag' && 30 || 14 }}

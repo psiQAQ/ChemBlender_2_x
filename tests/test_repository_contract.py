@@ -20,7 +20,7 @@ class RepositoryContractTests(unittest.TestCase):
             (EXTENSION / "blender_manifest.toml").read_text(encoding="utf-8")
         )
         self.assertEqual(manifest["id"], "chemblender")
-        self.assertEqual(manifest["version"], "2.3.0-alpha.1")
+        self.assertEqual(manifest["version"], "2.3.0-rc.1")
         self.assertEqual(manifest["blender_version_min"], "5.1.0")
         self.assertEqual(manifest["platforms"], ["windows-x64"])
         self.assertEqual(
@@ -159,7 +159,10 @@ class RepositoryContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertNotIn("chemblender-2.2.0", workflow)
-        self.assertNotIn("blender_manifest.toml", workflow)
+        metadata_step = workflow.split(
+            "\n      - name: Read release metadata\n", 1
+        )[1].split("\n      - name: Verify changelog entry\n", 1)[0]
+        self.assertNotIn("blender_manifest.toml", metadata_step)
         self.assertEqual(workflow.count("release_metadata.py"), 1)
         self.assertIn("id: release_metadata", workflow)
         self.assertIn(
@@ -180,7 +183,7 @@ class RepositoryContractTests(unittest.TestCase):
 
         self.assertEqual(
             workflow.count("steps.release_metadata.outputs.version"),
-            2,
+            3,
         )
         self.assertEqual(
             workflow.count("steps.release_metadata.outputs.package_name"),
@@ -269,9 +272,39 @@ class RepositoryContractTests(unittest.TestCase):
             "Chem_Nodes.blend",
             "Chem_Nodes_En.blend",
             "EmbedMolecule",
+            "assert_signed_surface_revision_actions",
+            '"inspect_existing"',
+            "CHEMBLENDER_OT_diagnostic_page",
+            "session_ui._save_pre_handler(None)",
             "--keep-enabled",
         ):
             self.assertIn(expected, smoke)
+
+    def test_blender_smoke_unloads_active_grid_worker_only_at_final_exit(self):
+        smoke = (ROOT / "tests" / "blender_smoke.py").read_text(encoding="utf-8")
+        tree = ast.parse(smoke)
+        unload = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "assert_grid_unload_cancels_active_worker"
+        )
+        unload_source = ast.get_source_segment(smoke, unload)
+        self.assertEqual(unload_source.count("addon_disable("), 1)
+        self.assertNotIn("addon_enable(", unload_source)
+
+        dependency_probe = smoke.index("from rdkit.Chem import AllChem")
+        keep_enabled_branch = smoke.index("if keep_enabled:", dependency_probe)
+        final_unload = smoke.index(
+            "assert_grid_unload_cancels_active_worker(module_key)",
+            keep_enabled_branch,
+        )
+        self.assertLess(dependency_probe, keep_enabled_branch)
+        self.assertLess(keep_enabled_branch, final_unload)
+        self.assertNotIn(
+            "addon_disable(",
+            smoke[keep_enabled_branch:],
+        )
 
     def test_release_workflow_is_manual_and_deterministic(self):
         workflow = (ROOT / ".github" / "workflows" / "extension-release.yml").read_text(
@@ -292,9 +325,9 @@ class RepositoryContractTests(unittest.TestCase):
             "contents: write",
             "environment: release",
             "if: ${{ inputs.publish }}",
-            "gh run list",
-            "--workflow extension-package.yml",
-            "--commit \"$tag_commit\"",
+            "gh api --paginate --slurp",
+            "actions/workflows/extension-package.yml/runs?event=push&status=success&head_sha=$tag_commit&branch=$RELEASE_TAG&per_page=100",
+            "actions/artifacts/$ARTIFACT_ID/zip",
             "gh release create",
             "--draft",
             ".digest",
@@ -302,15 +335,95 @@ class RepositoryContractTests(unittest.TestCase):
             "--draft=false --latest",
         ):
             self.assertIn(expected, workflow)
-        self.assertEqual(workflow.count("verify_release_artifact.py"), 2)
+        self.assertEqual(workflow.count("verify_release_artifact.py"), 4)
         self.assertEqual(workflow.count("path: tag-source"), 2)
-        self.assertEqual(workflow.count("--extension-root tag-source/ChemBlender"), 3)
+        self.assertEqual(workflow.count("--extension-root tag-source/ChemBlender"), 5)
+        self.assertEqual(workflow.count("--metadata-mode release-assets"), 2)
+        self.assertEqual(
+            workflow.count("--budget tag-source/.github/artifact-budgets.json"), 4
+        )
+        self.assertEqual(
+            workflow.count('cp -- "dist/$PACKAGE_NAME" "dist/$CHECKSUM_NAME" release-assets/'),
+            2,
+        )
         self.assertIn("git -C tag-source", workflow)
         self.assertEqual(workflow.count("contents: write"), 1)
         actions = re.findall(r"uses:\s+([^\s]+)", workflow)
         self.assertTrue(actions)
         for action in actions:
             self.assertRegex(action, r"@[0-9a-f]{40}$")
+
+    def test_release_workflow_reverifies_complete_package_artifact_before_publish_assets(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "extension-release.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("--select-package-run", workflow)
+        self.assertIn("--select-package-artifact", workflow)
+        for job in ("verify", "publish"):
+            job_text = workflow.split(f"\n  {job}:", 1)[1]
+            if job == "verify":
+                job_text = job_text.split("\n  publish:", 1)[0]
+            step = job_text.split("- name: Download and", 1)[1].split(
+                "\n      - name:", 1
+            )[0]
+            package_ci = step.index("--metadata-mode package-ci")
+            copied_assets = step.index(
+                'cp -- "dist/$PACKAGE_NAME" "dist/$CHECKSUM_NAME" release-assets/'
+            )
+            release_assets = step.index("--metadata-mode release-assets")
+            self.assertLess(package_ci, copied_assets)
+            self.assertLess(copied_assets, release_assets)
+
+    def test_release_workflow_paginates_and_extracts_only_selected_artifact(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "extension-release.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn("gh run list", workflow)
+        self.assertNotIn("--limit 10", workflow)
+        self.assertEqual(workflow.count("gh api --paginate --slurp"), 2)
+        self.assertIn(
+            "actions/workflows/extension-package.yml/runs?event=push&status=success&head_sha=$tag_commit&branch=$RELEASE_TAG&per_page=100",
+            workflow,
+        )
+        self.assertIn(
+            "actions/runs/$run_id/artifacts?per_page=100",
+            workflow,
+        )
+        self.assertIn("jq -er '.run_id'", workflow)
+        self.assertIn("jq -ce '{artifacts: [.[].artifacts[]]}'", workflow)
+        self.assertIn(
+            "artifact_id: ${{ steps.release_info.outputs.artifact_id }}",
+            workflow,
+        )
+        self.assertIn("ARTIFACT_ID: ${{ needs.verify.outputs.artifact_id }}", workflow)
+        self.assertNotIn("gh run download", workflow)
+        self.assertIn("actions/artifacts/$ARTIFACT_ID/zip", workflow)
+        for job in ("verify", "publish"):
+            job_text = workflow.split(f"\n  {job}:", 1)[1]
+            if job == "verify":
+                job_text = job_text.split("\n  publish:", 1)[0]
+            step = job_text.split("- name: Download and", 1)[1].split(
+                "\n      - name:", 1
+            )[0]
+            self.assertIn('BUNDLE="bundle.zip"', step)
+            self.assertIn('unzip -Z1 "$BUNDLE"', step)
+            self.assertIn('unzip -q "$BUNDLE" -d dist', step)
+            self.assertIn(
+                'if [[ "${#bundle_members[@]}" -ne "${#expected_members[@]}" ]]',
+                step,
+            )
+            self.assertIn('for index in "${!expected_sorted[@]}"; do', step)
+            self.assertIn("unexpected, duplicate, directory, or unsafe members", step)
+            for name in (
+                '"$PACKAGE_NAME"',
+                '"$CHECKSUM_NAME"',
+                '"wheel-inventory.json"',
+                '"wheel-license-copy-list.json"',
+                '"artifact-size.json"',
+            ):
+                self.assertIn(name, step)
 
     def test_release_workflow_requires_default_branch_dispatch_ref(self):
         workflow = (
@@ -361,7 +474,7 @@ class RepositoryContractTests(unittest.TestCase):
             ROOT / ".github" / "workflows" / "extension-release.yml"
         ).read_text(encoding="utf-8")
 
-        self.assertEqual(workflow.count("release_metadata.py"), 1)
+        self.assertEqual(workflow.count("release_metadata.py"), 3)
         self.assertIn(
             "python3 ChemBlender/scripts/release_metadata.py",
             workflow,
@@ -400,14 +513,21 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('expected_tag="v$version"', workflow)
         self.assertIn('if [[ "$RELEASE_TAG" != "$expected_tag" ]]', workflow)
         self.assertIn(
-            "--commit \"$tag_commit\"",
+            "actions/workflows/extension-package.yml/runs?event=push&status=success&head_sha=$tag_commit&branch=$RELEASE_TAG&per_page=100",
             workflow,
         )
-        self.assertIn('--arg name "$artifact_name"', workflow)
         self.assertIn(
-            "select(.name == $name and .expired == false)",
+            '--select-package-run --tag "$RELEASE_TAG" --tag-commit "$tag_commit"',
             workflow,
         )
+        self.assertIn(
+            '--select-package-artifact --artifact-name "$artifact_name"',
+            workflow,
+        )
+        self.assertNotIn("select(.name == $name and .expired == false)", workflow)
+        self.assertNotIn("if [[ -f tag-source/CHANGELOG.md ]]", workflow)
+        self.assertEqual(workflow.count("--changelog tag-source/CHANGELOG.md"), 2)
+        self.assertEqual(workflow.count("cmp release-notes.md tag-release-notes.md"), 2)
 
     def test_release_workflow_binds_publish_to_verified_tag_commit(self):
         workflow = (

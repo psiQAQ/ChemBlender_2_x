@@ -200,25 +200,10 @@ def fract_symop(fract_xyz, symop_operations):
         sym_rotations.append(npS)
     return sym_fracts, sym_rotations
 
-def transform_U_aniso(u_aniso_tuple, R):
-    if u_aniso_tuple is None:
-        return None
-    U11, U22, U33, U23, U13, U12 = u_aniso_tuple
-    U_mat = np.array([
-        [U11, U12, U13],
-        [U12, U22, U23],
-        [U13, U23, U33]
-    ])
-    R = np.array(R, dtype=float)
-    U_new = R @ U_mat @ R.T
-    return (U_new[0,0], U_new[1,1], U_new[2,2],
-            U_new[1,2], U_new[0,2], U_new[0,1])
-
 def fract_symop_expand(fract_xyz, symop_operations, boundary):
     sym_fracts, _ = fract_symop(fract_xyz, symop_operations)
     sym_fracts = fracts_normalize(sym_fracts, boundary)
     return sym_fracts
-
 def make_cell_matrix(cell_lengths, cell_angles):
     a, b, c = cell_lengths
     alpha, beta, gamma = np.radians(cell_angles)
@@ -230,47 +215,6 @@ def make_cell_matrix(cell_lengths, cell_angles):
     ])
     M_inv = np.linalg.inv(M)
     return M, M_inv
-
-def get_cell_lengths_angles(cell_vecs):
-        a_vec, b_vec, c_vec = np.array(cell_vecs)
-        a = np.linalg.norm(a_vec)
-        b = np.linalg.norm(b_vec)
-        c = np.linalg.norm(c_vec)
-
-        def angle(u, v):
-            dot = np.clip(np.dot(u, v) / (np.linalg.norm(u)*np.linalg.norm(v)), -1, 1)
-            return np.degrees(np.arccos(dot))
-
-        alpha = angle(b_vec, c_vec)
-        beta  = angle(a_vec, c_vec)
-        gamma = angle(a_vec, b_vec)
-        return (float(a), float(b), float(c)), (float(alpha), float(beta), float(gamma))
-
-def get_crystal_system_from_params(cell_lengths, cell_angles):
-    a, b, c = cell_lengths
-    alpha, beta, gamma = cell_angles
-    eps = 0.5
-    if abs(a-b)<eps and abs(b-c)<eps and abs(alpha-90)<eps and abs(beta-90)<eps and abs(gamma-90)<eps:
-        return "cubic"
-    if abs(a-b)<eps and abs(gamma-120)<eps:
-        return "trigonal"
-    if abs(a-b)<eps and abs(alpha-90)<eps and abs(beta-90)<eps and abs(gamma-90)<eps:
-        return "tetragonal"
-    if abs(alpha-90)<eps and abs(beta-90)<eps and abs(gamma-90)<eps:
-        return "orthorhombic"
-    if abs(alpha-90)>eps or abs(beta-90)>eps or abs(gamma-90)>eps:
-        return "monoclinic"
-    return "triclinic"
-
-def calc_cell_volume(a, b, c, alpha, beta, gamma):
-    al = np.radians(alpha)
-    be = np.radians(beta)
-    ga = np.radians(gamma)
-    vol = a*b*c * np.sqrt(
-        1 - np.cos(al)**2 - np.cos(be)**2 - np.cos(ga)**2
-        + 2*np.cos(al)*np.cos(be)*np.cos(ga)
-    )
-    return round(vol, 4)
 
 def fract_to_cartn(fract_xyz,a,b,c,alpha,beta,gamma):
     M, _ = make_cell_matrix((a,b,c),(alpha,beta,gamma))
@@ -321,79 +265,3 @@ def fracts_normalize(sym_fracts, boundary):
 
     sym_fracts = list(set([tuple(fract) for fract in new_sym_fracts]))
     return sym_fracts
-
-
-def deduplicate_fracts(fracts, digits):
-    seen = set()
-    unique = []
-    
-    for x, y, z in fracts:
-        # 四舍五入到指定位数（默认 4 位小数）
-        key = (round(x, digits), round(y, digits), round(z, digits))
-        
-        if key not in seen:
-            seen.add(key)
-            unique.append((float(x), float(y), float(z)))
-    
-    return unique
-
-
-def compute_thermal_ellipsoid(U_Aniso, U_Iso, cell_lengths, cell_angles, prob_factor=1.54):
-    scales = []
-    vec1 = []   # 第一个特征向量（主轴1）
-    vec2 = []   # 第二个特征向量（主轴2）
-    vec3 = []   # 第三个特征向量（主轴3）
-
-    if cell_angles is not None:
-        a,b,c = cell_lengths
-        M, _ = make_cell_matrix(cell_lengths, cell_angles)
-        A = M @ np.diag([1.0/a, 1.0/b, 1.0/c])
-    else:
-        A = None
-
-    for i in range(len(U_Aniso)):
-        u_aniso = U_Aniso[i]
-        u_iso = U_Iso[i]
-
-        if u_aniso is not None and len(u_aniso) >= 6:
-            U11, U22, U33, U23, U13, U12 = u_aniso[:6]
-            det_sign = u_aniso[6] if len(u_aniso) > 6 else 1
-            U_mat = np.array([
-                [U11, U12, U13],
-                [U12, U22, U23],
-                [U13, U23, U33]
-            ])
-
-            if A is not None:
-                U_cart = A @ U_mat @ A.T
-            else:
-                U_cart = U_mat
-
-            eigvals, eigvecs = np.linalg.eigh(U_cart)
-            eigvals = np.clip(eigvals, 0.0, None)
-      
-            idx = np.argsort(eigvals)[::-1]  # 降序
-            eigvals = eigvals[idx]
-            eigvecs = eigvecs[:, idx]
-
-            if det_sign < 0:
-                eigvecs = -eigvecs
-
-            scale = prob_factor * np.sqrt(eigvals)
-            v1 = eigvecs[:, 0]
-            v2 = eigvecs[:, 1]
-            v3 = eigvecs[:, 2]
-
-        else:
-            u_iso = float(u_iso) if u_iso and u_iso > 0 else 0.001
-            scale = [prob_factor * np.sqrt(u_iso)] * 3
-            v1 = np.array([1, 0, 0])
-            v2 = np.array([0, 1, 0])
-            v3 = np.array([0, 0, 1])
-
-        scales.extend(scale)
-        vec1.extend(v1)
-        vec2.extend(v2)
-        vec3.extend(v3)
-
-    return scales, vec1, vec2, vec3

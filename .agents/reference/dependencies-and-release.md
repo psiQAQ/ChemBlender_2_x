@@ -21,6 +21,8 @@ Use Blender's bundled NumPy and Requests. Verify their origins from an isolated 
 | Target | CPython 3.13, Windows x64 |
 | SHA-256 | `f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48` |
 | Source | `https://files.pythonhosted.org/packages/68/d0/5de3d0d7e66f0e7e7795ab94a53b826e257176c15c9ee79f15621ac040ed/rdkit-2026.3.3-cp313-cp313-win_amd64.whl` |
+| Compressed / unpacked | 24,618,400 / 57,121,218 bytes |
+| License | BSD-3-Clause; wheel path `rdkit-2026.3.3.dist-info/LICENSE.md` |
 
 The wheel is downloaded to `ChemBlender/wheels/`, verified before build, declared in `blender_manifest.toml`, and ignored by Git. Runtime code only checks/imports RDKit; it never downloads or installs it.
 
@@ -59,6 +61,22 @@ IOData is the optional FCHK/Molden basis, orbital, AO-basis 1-RDM, and effective
 
 GBasis evaluates normalized Gaussian basis functions, molecular orbitals, total/spin density and electrostatic-potential grids. Install the modern distribution as `qc-gbasis`; do not install the withdrawn legacy `gbasis` distribution. Version 0.1.0 declares `numpy<2` on Windows, so its standard dependency set has no Python 3.13-compatible NumPy wheel. A Python 3.12/NumPy 1.26.4 worker is the supported local baseline. Python 3.13 with forced NumPy 2.5.1 produced matching probe results but is not a supported installation path. GBasis, IOData, SciPy and their submodules remain outside the Blender Extension ZIP.
 
+The read-only `optional-qc-core` workflow keeps these backends outside the
+extension package: cclib and IOData run in isolated CPython 3.13 environments,
+while GBasis runs in CPython 3.12 with NumPy 1.26.4. Its per-backend exact
+runtime locks are `.github/constraints/cclib-py313.txt`,
+`.github/constraints/iodata-py313.txt` and
+`.github/constraints/gbasis-py312.txt`. Each lock contains the direct package
+and every resolved runtime dependency (not installer tooling); it must be
+derived from the pinned submodule metadata and a matching `pip --dry-run
+--report` resolution before changing the workflow. CI uses the file for both
+`pip -c` and runtime `importlib.metadata` verification. Before each explicit
+adapter module list runs, CI checks the recorded submodule commit and fixture
+SHA-256 values; its stdlib runner rejects every non-ordinary result, including
+targeted skips, expected failures, unexpected successes, subtest failure/error,
+load errors and zero discovery instead of converting a missing optional backend
+into success.
+
 | Item | Value |
 | --- | --- |
 | Package version | `gemmi==0.7.5` |
@@ -74,6 +92,44 @@ Gemmi is a bundled base wheel and owns CIF parsing and raw-envelope access.
 Its adapter uses a late import: extension enable, `ChemBlender.core` and
 `ChemBlender.reader_api` imports must not load Gemmi. Gemmi objects never enter
 the project, sidecar, canonical document or public Reader API.
+
+## Machine-readable Bundled Inventory
+
+`ChemBlender/dependencies.toml` is the canonical record for each bundled wheel:
+distribution, version, filename, platform, Python ABI, fixed URL, SHA-256, SPDX
+license, in-wheel license path, required boundary, and compressed/unpacked byte
+ceilings. The RDKit and Gemmi ceilings lock the exact hash-verified artifacts
+above; any dependency update must update all of those fields together with its
+reviewed size/license evidence.
+
+After CI or a developer has downloaded the fixed wheels, run:
+
+```powershell
+& <Blender Python> ChemBlender/scripts/dependency_inventory.py `
+  --manifest ChemBlender/blender_manifest.toml `
+  --output wheel-inventory.json `
+  --license-copy-list wheel-license-copy-list.json
+```
+
+The standard-library-only CLI reads local wheels only: it checks required
+manifest paths, SHA-256, archive member paths, in-wheel license sources, and
+compressed/unpacked ceilings, then writes canonical JSON plus deterministic
+license-copy targets. It does not download, install, extract, or delete data;
+it rejects traversal, absolute, drive-qualified, and duplicate archive paths.
+Optional external packages remain outside `blender_manifest.toml` wheels.
+
+## Artifact Size Budget
+
+`.github/artifact-budgets.json` is the versioned package-budget authority. Its
+`baseline_package_bytes` is a fresh built ZIP measurement and
+`allowed_unexplained_growth_bytes` is zero: any package growth requires an
+explicit baseline update with reviewed build evidence. It records `rdkit` as
+an existing wheel, so RDKit remains in the total package report but does not
+consume the new-wheel allowance. Gemmi is the only approved new wheel for
+2.3.0: each new wheel is limited to 10,000,000 compressed bytes and
+30,000,000 unpacked bytes, with 20,000,000 compressed bytes across all new
+wheels. Every approved new wheel must have a non-empty rationale; missing,
+ambiguous or exceeded budgets fail closed.
 
 | Item | Value |
 | --- | --- |
@@ -154,6 +210,8 @@ license, authentication and deployment decision; credential values never enter `
 - Tag version equals manifest version after stripping leading `v`.
 - `CHANGELOG.md` has exactly one non-empty dated entry for the manifest version; future tags contain that same entry.
 - CI downloads Blender, RDKit and Gemmi from pinned official locations and verifies checksums.
+- CI emits the hash-verified `wheel-inventory.json` and license-copy list from `dependencies.toml` before package artifact upload.
+- Package CI also emits `artifact-size.json`, verifies the ZIP/package digest and nested wheel license evidence in explicit `package-ci` mode before its only upload, and uploads all five small package metadata files together.
 - Built ZIP contains exactly the declared wheels; Git contains no `.whl`.
 - Built ZIP excludes development scripts, tests, caches, and nested ZIP files.
 - Unit, validate, build, isolated install, real install, register, unregister, reload, RDKit operation, Gemmi import/version, and `.blend` checks pass.

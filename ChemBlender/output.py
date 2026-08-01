@@ -1,16 +1,12 @@
 import bpy
 import os
-import numpy as np
-import warnings
-from . import read, mesh, _math
-from .Chem_data import ELEMENTS_DEFAULT
+from .legacy.scaffold_bridge import (
+    route_legacy_export,
+    route_legacy_scientific_edit,
+)
 from bpy.types import Operator
 from bpy.props import IntProperty, FloatProperty, BoolProperty, StringProperty,EnumProperty, FloatVectorProperty
 language = 1 if 'zh_HAN' in bpy.context.preferences.view.language else 0
-warning_text = "请选择一个有效的分子骨架！" if language else "Please Select a Effective Mol Scaffold"
-
-def _legacy_mol_export_warning():
-    warnings.warn("legacy Blender-scaffold MOL/SDF helpers are deprecated; use core.exporters for new data-model exports", DeprecationWarning, stacklevel=2)
 
 def xyz_block(name, atoms):
     lines = []
@@ -20,352 +16,40 @@ def xyz_block(name, atoms):
         lines.append(f"{symbol:<3s}  {x:12.6f}  {y:12.6f}  {z:12.6f}")
     return lines
 
-def mol_block_v2000(name, atoms, bonds):
-    _legacy_mol_export_warning()
-    lines = []
-    lines.append(name)
-    lines.append("  ChemBlender")
-    lines.append("")
-    # Counts line
-    na, nb = len(atoms), len(bonds)
-    lines.append(f"{na:3d}{nb:3d}  0  0  0  0  0  0  0  0  0 V2000")
-    # Atom block
-    for x, y, z, atomic_num, symbol in atoms:
-        lines.append(f"{x:10.4f}{y:10.4f}{z:10.4f} {symbol:<3s} 0  0  0  0  0  0  0  0  0  0  0  0")
-    # Bond block
-    for v1, v2, bond_type in bonds:
-        lines.append(f"{v1:3d}{v2:3d}{bond_type:3d}  0  0  0  0")
-    lines.append("M  END")
-    return lines
-
-def mol_block_v3000(name, atoms, bonds):
-    _legacy_mol_export_warning()
-    lines = []
-    # Header block
-    lines.append(name)
-    lines.append("  ChemBlender")
-    lines.append("")
-    lines.append("  0  0  0  0  0  0  0  0  0  0  0 V3000")
-    lines.append("M  V30 BEGIN CTAB")
-    lines.append(f"M  V30 COUNTS {len(atoms)} {len(bonds)} 0 0 0")
-    # Atom block
-    lines.append("M  V30 BEGIN ATOM")
-    for atom_id, (x, y, z, atomic_num, symbol) in enumerate(atoms, start=1):
-        lines.append(f"M  V30 {atom_id} {symbol} {x:.4f} {y:.4f} {z:.4f} 0")
-    lines.append("M  V30 END ATOM")
-    # Bond block
-    lines.append("M  V30 BEGIN BOND")
-    for bond_id, (v1, v2, bond_type) in enumerate(bonds, start=1):
-        lines.append(f"M  V30 {bond_id} {bond_type} {v1} {v2}")
-    lines.append("M  V30 END BOND")
-    lines.append("M  V30 END CTAB")
-    lines.append("M  END")
-    return lines
-
-def sdf_block(name, atoms, bonds):
-    _legacy_mol_export_warning()
-    lines = mol_block_v2000(name, atoms, bonds)
-    lines.append("$$$$")
-    return lines
-
-def cif_block(cif_data, name):
-    for prefix in ('unit_', 'crystal_'):
-        if name.startswith(prefix):
-            name = 'ChemBlender_' + name[len(prefix):]
-            break
-    else:
-        name = 'ChemBlender_' + name
-
-    cif_lines = []
-    cif_lines.append("data_" + name)
-
-    if cif_data.chemical_name_common:
-        cif_lines.append(f"_chemical_name_common  '{cif_data.chemical_name_common}'")
-    if cif_data.chemical_formula_sum:
-        cif_lines.append(f"_chemical_formula_sum  '{cif_data.chemical_formula_sum}'")
-    if cif_data.chemical_formula_weight > 0:
-        cif_lines.append(f"_chemical_formula_weight  {cif_data.chemical_formula_weight:.3f}")
-
-    cif_lines.append(f"_cell_length_a         {cif_data.a:.6f}")
-    cif_lines.append(f"_cell_length_b         {cif_data.b:.6f}")
-    cif_lines.append(f"_cell_length_c         {cif_data.c:.6f}")
-    cif_lines.append(f"_cell_angle_alpha      {cif_data.alpha:.6f}")
-    cif_lines.append(f"_cell_angle_beta       {cif_data.beta:.6f}")
-    cif_lines.append(f"_cell_angle_gamma      {cif_data.gamma:.6f}")
-    if cif_data.cell_volume > 0:
-        cif_lines.append(f"_cell_volume           {cif_data.cell_volume:.4f}")
-    cif_lines.append(f"_space_group_name_H-M  '{cif_data.sg_name}'")
-    cif_lines.append(f"_space_group_IT_number {cif_data.sg_num}")
-
-    cif_lines.append("")
-    cif_lines.append("loop_")
-    cif_lines.append("_symmetry_equiv_pos_as_xyz")
-
-    sym_ops = cif_data.sym_ops.split(';') if cif_data.sym_ops else ['x,y,z']
-    for op in sym_ops:
-        cif_lines.append(f"'{op.strip()}'")
-    
-    cif_lines.append("")
-    cif_lines.append("loop_")
-    cif_lines.append("_atom_site_label")
-    cif_lines.append("_atom_site_type_symbol")
-    cif_lines.append("_atom_site_fract_x")
-    cif_lines.append("_atom_site_fract_y")
-    cif_lines.append("_atom_site_fract_z")
-    cif_lines.append("_atom_site_occupancy")
-    cif_lines.append("_atom_site_U_iso_or_equiv")
-    cif_lines.append("_atom_site_adp_type")
-    for atom in cif_data.atoms:
-        line = f"{atom.label:6s} {atom.element:2s}  {atom.x:.6f}  {atom.y:.6f}  {atom.z:.6f}  {atom.occupancy:.4f}  {atom.u_iso_equiv:.6f}  {atom.adp_type:.10s}"
-        cif_lines.append(line)
-    
-    has_aniso = False
-    for atom in cif_data.atoms:
-        if atom.adp_type == 'Uani':
-            has_aniso = True
-            break
-    if has_aniso:
-        cif_lines.append("")
-        cif_lines.append("loop_")
-        cif_lines.append("_atom_site_aniso_label")
-        cif_lines.append("_atom_site_aniso_U_11")
-        cif_lines.append("_atom_site_aniso_U_22")
-        cif_lines.append("_atom_site_aniso_U_33")
-        cif_lines.append("_atom_site_aniso_U_12")
-        cif_lines.append("_atom_site_aniso_U_13")
-        cif_lines.append("_atom_site_aniso_U_23")
-        for atom in cif_data.atoms:
-            if atom.adp_type == 'Uani':
-                line = f"{atom.label:6s}  {atom.u11:.6f}  {atom.u22:.6f}  {atom.u33:.6f}  {atom.u12:.6f}  {atom.u13:.6f}  {atom.u23:.6f}"
-                cif_lines.append(line)
-
-    return cif_lines
-
-
-def expand_cif_atoms(cif_atoms, sym_ops_list, boundary=-1e-4, decimals=4):
-    from copy import copy
-    full_atoms = []
-    for atom in cif_atoms:
-        element = atom.element.strip()
-        fract = np.array([atom.x, atom.y, atom.z])
-        sym_fracts, _ = _math.fract_symop(fract, sym_ops_list)
-        sym_fracts = _math.fracts_normalize(sym_fracts, boundary)
-        fract_tuples = [tuple(f) for f in sym_fracts]
-        unique_fracts = _math.deduplicate_fracts(fract_tuples, decimals)
-
-        for f in unique_fracts:
-            full_atoms.append((element, f[0], f[1], f[2]))
-    return full_atoms
-
-
-def vasp_block(cif_data, name, use_cartesian):
-    vasp_lines = []
-    vasp_lines.append("ChemBlender_"+name)
-    scale = 1.0
-    vasp_lines.append(f"{scale}")
-
-    cell_lengths = (cif_data.a, cif_data.b, cif_data.c)
-    cell_angles  = (cif_data.alpha, cif_data.beta, cif_data.gamma)
-    cell_mat, _ = _math.make_cell_matrix(cell_lengths, cell_angles)
-
-    for row in cell_mat.T:
-        vasp_lines.append(f"{row[0]:16.8f} {row[1]:16.8f} {row[2]:16.8f}")
-    sym_op_list = cif_data.sym_ops.split(';') if cif_data.sym_ops else ['x,y,z']
-    full_atoms = expand_cif_atoms(cif_data.atoms, sym_op_list)
-
-    elem_dict = {}
-    for element,_,_,_ in full_atoms:
-        if element not in elem_dict:
-            elem_dict[element] = 0
-        elem_dict[element] += 1
-    elem_list = list(elem_dict.keys())
-    count_list = [str(n) for n in elem_dict.values()]
-
-    vasp_lines.append("   ".join(elem_list))
-    vasp_lines.append("   ".join(count_list))
-
-    if use_cartesian:
-        vasp_lines.append("Cartesian")
-    else:
-        vasp_lines.append("Direct")
-    
-    if use_cartesian:
-        for element,x,y,z in full_atoms:
-            fracts = np.array([x,y,z])
-            carts = fracts @ cell_mat
-            line = f"{carts[0]:16.8f} {carts[1]:16.8f} {carts[2]:16.8f}"
-            vasp_lines.append(line)
-    else:
-        for element,x,y,z in full_atoms:
-            line = f"{x:16.8f} {y:16.8f} {z:16.8f}"
-            vasp_lines.append(line)
-
-    return vasp_lines
-
-
 class SaveMolButton(Operator):
-    """Convert scaffold structure to molecular file"""
+    """Open the unified project export action."""
     bl_idname = "chem.molecule_output"
     bl_label = "保存分子文件" if language else "Export Molecular File"
-    bl_description = "从分子骨架生成分子文件" if language else "Generate a molecular file from the selected molecular graph scaffold"
+    bl_description = "打开项目实体导出" if language else "Open unified project entity export"
     bl_options = {'REGISTER', 'UNDO'}
 
-    export_format: EnumProperty(
-        name="",
-        description="Export file format",
-        items=[
-            ('CIF',"CIF","Crystallographic Information File"),
-            ('MOL',"MOL","MDL format"),
-            ('SDF',"SDF","Structure data file"),
-            ('VASP',"VASP/POSCAR","Crystal file"),
-            ('XYZ',"XYZ","XYZ Coordinate file")
-        ],
-        default='MOL'
-    )
-
-    mol_version: EnumProperty(
-        name ="",
-        default='V2000',
-        items=[
-            ('V2000', 'V2000', ''),
-            ('V3000', 'V3000', '')
-        ]
-    )
-
-    vasp_coord_mode: EnumProperty(
-        name="",
-        default = 'DIRECT',
-        items=[
-            ('DIRECT', 'Fractional coordinates',''),
-            ('CARTESIAN', 'Cartesian coordinates', '')
-        ]
-    )
-    filepath: StringProperty(subtype="FILE_PATH")
-
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(self,"export_format")
-
-        if self.export_format == 'MOL':
-            layout.prop(self, "mol_version")
-
-        if self.export_format == 'VASP':
-            layout.prop(self, "vasp_coord_mode")
-
     def execute(self, context):
-        ao = context.object
-        if not ao or ao.get('Type') != 'scaffold':
-            self.report({'WARNING'}, warning_text)
-            return {'CANCELLED'}
-
-        atomic_num_to_symbol = {num: sym for sym, (num, *_) in ELEMENTS_DEFAULT.items()}
-        bond_type_map = {1: 1, 2: 2, 3: 3, 12: 4}
-        Atomic_Nums = mesh.get_attr(ao, 'atomic_num', 'INT', 'VERT')
-        Bond_Orders  = mesh.get_attr(ao, 'bond_order',  'INT', 'EDGE')
-
-        atoms = []
-        for vert, atomic_num in zip(ao.data.vertices, Atomic_Nums):
-            x, y, z = vert.co
-            symbol = atomic_num_to_symbol.get(atomic_num, 'C')
-            atoms.append( (x, y, z, atomic_num, symbol) )
-
-        vert_to_idx = {v.index: i + 1 for i, v in enumerate(ao.data.vertices)}
-        bonds = []
-        for e, bond_order in zip(ao.data.edges, Bond_Orders):
-            v1 = vert_to_idx[e.vertices[0]]
-            v2 = vert_to_idx[e.vertices[1]]
-            bond_type = bond_type_map.get(bond_order, 1)
-            bonds.append((v1, v2, bond_type))
-
-        if self.export_format == 'MOL':
-            if self.mol_version == 'V2000':
-                mol_lines = mol_block_v2000(ao.name, atoms, bonds)
-            else:
-                mol_lines = mol_block_v3000(ao.name, atoms, bonds)
-
-            if not self.filepath.lower().endswith('.mol'):
-                self.filepath += '.mol'
-                
-            with open(self.filepath, "w", encoding='utf-8') as f:
-                f.write("\n".join(mol_lines))
-            self.report({'INFO'}, f"Molecule Saved As: {self.filepath}")
-            return {'FINISHED'}
-        
-        elif self.export_format == 'SDF':
-            sdf_lines = sdf_block(ao.name, atoms, bonds)
-            if not self.filepath.lower().endswith('.sdf'):
-                self.filepath += '.sdf'
-            with open(self.filepath, "w", encoding='utf-8') as f:
-                f.write("\n".join(sdf_lines))
-            self.report({'INFO'}, f"SDF Saved As: {self.filepath}")
-            return {'FINISHED'}
-
-        elif self.export_format == 'XYZ':
-            xyz_lines = xyz_block(ao.name, atoms)
-            if not self.filepath.lower().endswith('.xyz'):
-                self.filepath += '.xyz'
-            with open(self.filepath, "w", encoding='utf-8') as f:
-                f.write("\n".join(xyz_lines))
-            self.report({'INFO'}, f"XYZ Saved As: {self.filepath}")
-            return {'FINISHED'}
-
-        elif self.export_format in ('CIF','VASP'):
-            if not hasattr(ao, 'cif_original') or ao.cif_original.atom_count == 0:
-                self.report({'ERROR'}, "No Crystal CIF data.")
-                return {'CANCELLED'}
-            
-            cif_data = ao.cif_current
-            # generate standard cif file
-            cif_lines = cif_block(cif_data, ao.name)
-
-            if self.export_format == 'VASP':
-                use_cart = (self.vasp_coord_mode == 'CARTESIAN')
-                vasp_lines = vasp_block(cif_data, ao.name, use_cartesian=use_cart)
-
-            if self.export_format == 'CIF':
-                if not self.filepath.lower().endswith('.cif'):
-                    self.filepath += '.cif'
-                with open(self.filepath, "w", encoding='utf-8') as f:
-                    f.write("\n".join(cif_lines))
-                self.report({'INFO'}, f"CIF Saved As: {self.filepath}")
-
-            elif self.export_format == 'VASP':
-                if not self.filepath.lower().endswith('.vasp'):
-                    self.filepath += '.vasp'
-                with open(self.filepath, "w", encoding='utf-8') as f:
-                    f.write("\n".join(vasp_lines))
-                self.report({'INFO'}, f"VASP File Saved As: {self.filepath}")
-
-            
-            return {'FINISHED'}
+        return route_legacy_export(
+            lambda operator_id: getattr(
+                bpy.ops.chemblender,
+                operator_id.rsplit(".", 1)[1],
+            )("INVOKE_DEFAULT")
+        )
         
     def invoke(self, context, event):
-        # 调用文件选择器对话框
-        self.filepath = context.object.name
-        context.window_manager.fileselect_add(self)  # 打开文件保存路径设置窗口
-        return {'RUNNING_MODAL'}
+        return self.execute(context)
 
 
 class UpdateCIFFromMesh(Operator):
     bl_idname = "chem.update_cif_from_mesh"
     bl_label = "更新CIF数据" if language else "Update CIF from Mesh"
-    bl_description = ("从当前骨架重新计算原子坐标、分子式、空间群等信息并更新到cif_original"
+    bl_description = ("打开统一的科学修改操作"
                       if language else
-                      "Recalculate atom coords, formula and space group from current mesh and update cif_original")
+                      "Open unified Apply Scientific Edits")
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        ao = context.object
-        if not ao or ao.get('Type') != 'scaffold':
-            self.report({'WARNING'}, "请选择分子骨架" if language else "Please select a scaffold object")
-            return {'CANCELLED'}
-        if not hasattr(ao, 'cif_original') or ao.cif_original.atom_count == 0:
-            self.report({'ERROR'}, "No CIF data found.")
-            return {'CANCELLED'}
-
-        ok, msg = read.update_cif_from_mesh(ao)
-        self.report({'INFO'} if ok else {'ERROR'}, msg)
-        return {'FINISHED'} if ok else {'CANCELLED'}
+        return route_legacy_scientific_edit(
+            lambda operator_id: getattr(
+                bpy.ops.chemblender,
+                operator_id.rsplit(".", 1)[1],
+            )("INVOKE_DEFAULT")
+        )
 
 
 class AddCameraButton(Operator):

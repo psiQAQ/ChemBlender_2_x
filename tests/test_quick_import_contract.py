@@ -568,8 +568,10 @@ class QuickImportContractTests(unittest.TestCase):
             canonical_parameters_by_source=None,
             progress,
             is_cancelled,
+            _batch_attachment=None,
         ):
             self.assertIsNone(canonical_parameters_by_source)
+            self.assertTrue(callable(_batch_attachment))
             progress("hash", 1, 3)
             started.set()
             while not is_cancelled():
@@ -613,6 +615,49 @@ class QuickImportContractTests(unittest.TestCase):
         self.assertIn(("timer_remove", timer), calls)
         self.assertIn(("progress_end",), calls)
         self.assertNotIn(project_session.id, properties._QUICK_IMPORT_STATES)
+
+    def test_modal_does_not_consume_late_cancelled_preflight_result(self):
+        module = importlib.import_module(QUICK_IMPORT_MODULE)
+        operator = module.CHEMBLENDER_OT_quick_import()
+        task = module.Task()
+        task.start("preflight")
+        task.request_cancel()
+        task.complete(object(), "preview ready")
+        job = SimpleNamespace(
+            done=True,
+            error=None,
+            task=task,
+            staging=object(),
+            preview=None,
+            conformer_suggestions=None,
+            drain_progress=lambda: None,
+            join=lambda _timeout: True,
+            release_ui=lambda: None,
+            timer_pending=False,
+            abandon_ui=lambda: None,
+        )
+        operator._job = job
+        operator._project_session = object()
+        operator.report = lambda *_args: None
+
+        with (
+            patch.object(module, "finish_quick_import_job"),
+            patch.object(module, "clear_quick_import_state") as clear,
+            patch.object(module, "store_quick_import_preview") as store,
+            patch.object(
+                module.CHEMBLENDER_OT_quick_import,
+                "_finish_preview",
+                return_value={"FINISHED"},
+            ),
+        ):
+            result = operator.modal(
+                SimpleNamespace(window_manager=SimpleNamespace()),
+                SimpleNamespace(type="TIMER"),
+            )
+
+        self.assertEqual(result, {"CANCELLED"})
+        store.assert_not_called()
+        clear.assert_called_once()
 
     def test_modal_retries_timer_cleanup_before_reraising_progress_fatal(self):
         module = importlib.import_module(QUICK_IMPORT_MODULE)
@@ -775,6 +820,10 @@ class QuickImportContractTests(unittest.TestCase):
             job.drain_progress(),
             ("conformer_grouping", 1, 1),
         )
+        snapshot = job.task.snapshot()
+        self.assertEqual(snapshot.state.value, "succeeded")
+        self.assertEqual(snapshot.stage, "preview ready")
+        self.assertEqual(snapshot.progress, 1.0)
 
     def test_preflight_job_cancels_conformer_precompute(self):
         module = importlib.import_module(QUICK_IMPORT_MODULE)
@@ -805,6 +854,7 @@ class QuickImportContractTests(unittest.TestCase):
         self.assertTrue(job.done)
         self.assertIsInstance(job.error, ImportCancelled)
         self.assertEqual(str(job.error), "conformer grouping cancelled")
+        self.assertEqual(job.task.snapshot().state.value, "cancelled")
 
     def test_modal_thread_start_failure_releases_owned_staging(self):
         source = Path(self.temporary.name) / "start-failure.xyz"
@@ -984,6 +1034,7 @@ class QuickImportContractTests(unittest.TestCase):
         self.assertIn('"chemblender.quick_import"', quick_import_source)
         self.assertIn('"wm.save_mainfile"', quick_import_source)
         self.assertIn("Open Workspace", quick_import_source)
+        self.assertIn("snapshot = task.snapshot()", quick_import_source)
 
 
 if __name__ == "__main__":

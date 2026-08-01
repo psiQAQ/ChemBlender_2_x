@@ -8,6 +8,7 @@ from bpy.props import EnumProperty, FloatProperty, PointerProperty, StringProper
 
 from ..core import AtomicProperty, Structure, SymmetryResult
 from ..core.import_pipeline.preview import ImportPreview
+from ..core.import_pipeline.report import diagnostics_document
 from ..core.import_pipeline.request import ValidationMode
 from ..core.import_pipeline.staging import StagedImportSession
 from ..core.session import ProjectSession
@@ -348,6 +349,11 @@ class QuickImportUIState:
     conflicts: tuple = ()
     grouping_suggestions: tuple = ()
     conformer_grouping_suggestions: tuple | None = None
+    revision_prompts: tuple = ()
+    diagnostics_report: dict | None = None
+    diagnostic_index: int = 0
+    project_link_inspection_only: bool = False
+    show_project_link_diagnostics: bool = False
     browser_revision: int = 0
 
 
@@ -401,10 +407,17 @@ def store_quick_import_preview(
     state = get_quick_import_state(session)
     if state.staging_session is not staging_session:
         raise ValueError("staging_session is not owned by session")
+    report = (
+        diagnostics_document(preview, staging_session)
+        if preview.staged_batch_ids
+        else None
+    )
     state.preview = preview
     state.conflicts = ()
     state.grouping_suggestions = ()
     state.conformer_grouping_suggestions = conformer_grouping_suggestions
+    state.diagnostics_report = report
+    state.diagnostic_index = 0
 
 
 def store_quick_import_job(session, staging_session, job):

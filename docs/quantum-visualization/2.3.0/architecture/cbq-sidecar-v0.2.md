@@ -99,6 +99,11 @@ hash 与数组后才进入发布步骤。publication metadata 来自同一次 ma
 严格验证和模型 decode，不再二次读取未验证文档。Windows 不提供此处可移植的目录
 `fsync`，因此不把目录 `fsync` 记为已执行。
 
+显式长任务可在该最终预发布检查点通过 `is_cancelled` 取消；服务删除本次 owned
+staging 并抛出 `PublicationCancelled`，不会替换目标或更新 `sidecar_path`。一旦开始
+目标/backup 的 rename、最终复验或 rollback，取消即不再被接受。Blender `save_pre`
+使用默认同步路径，不能把这一原子 publication 延后到 handler 返回之后。
+
 目标不存在时，暂存目录通过同卷 rename 成为目标；目标已存在时，先把旧目录
 rename 为本次唯一 `.<name>.cbq.<uuid>.backup/`，再发布候选目录。发布后再次完整
 复验，并要求 project、schema、manifest hash 与 generation ID 精确匹配已复验的

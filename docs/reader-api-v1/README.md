@@ -13,6 +13,19 @@ Reader API 是 Reader Extension 与 ChemBlender 之间的纯 Python 数据边界
 - [Conformance kit](conformance.md)
 - [兼容与弃用策略](compatibility.md)
 
+## 开发入口
+
+- 内置 reader、capability 文档和 UI 接入：
+  [Import Pipeline 与 Reader 开发](../development/import-pipeline.md)
+- 可独立构建的外部 Extension：
+  [SimpleCoords example](../../examples/reader-extension/README.md)
+
+Extension reader 使用 in-process API；worker reader 使用固定 operation 和
+canonical bundle。两者都不得扫描任意 `sys.path`、接收 `QCProject`、写 Blender
+RNA，或传递 pickle、任意 callable/module/shell command。具体 failure、
+cancellation 和兼容规则分别见 [诊断](diagnostics.md)、[Worker API](worker-api.md)
+和 [兼容策略](compatibility.md)。
+
 ## Installed Extension bootstrap
 
 安装后的模块名由 Blender repository 决定，插件不得猜测宿主模块路径。只有

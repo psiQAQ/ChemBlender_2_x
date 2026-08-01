@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 from uuid import UUID
+from uuid import uuid4
 
 import numpy
 
@@ -604,7 +605,7 @@ class ProjectBrowserModelTests(unittest.TestCase):
                 )
                 self.assertTrue(rows)
 
-    def test_cache_key_includes_revision_project_and_view_fingerprint(self):
+    def test_cache_key_uses_stable_project_revision_and_view_fingerprint(self):
         project = sample_project()
         keywords = {
             "mode": BrowserMode.BY_DATA,
@@ -614,6 +615,12 @@ class ProjectBrowserModelTests(unittest.TestCase):
 
         first = build_browser_rows(project, browser_revision=4, **keywords)
         repeated = build_browser_rows(project, browser_revision=4, **keywords)
+        replacement = sample_project()
+        replaced = build_browser_rows(
+            replacement,
+            browser_revision=4,
+            **keywords,
+        )
         refreshed = build_browser_rows(project, browser_revision=5, **keywords)
         changed_view = build_browser_rows(
             project,
@@ -626,17 +633,11 @@ class ProjectBrowserModelTests(unittest.TestCase):
                 label="Alternate density",
             ),)}),
         )
-        replacement = sample_project()
-        replaced = build_browser_rows(
-            replacement,
-            browser_revision=4,
-            **keywords,
-        )
 
         self.assertIs(first, repeated)
+        self.assertIs(first, replaced)
         self.assertIsNot(first, refreshed)
         self.assertIsNot(first, changed_view)
-        self.assertIsNot(first, replaced)
         self.assertEqual(first, refreshed)
 
     def test_cache_normalizes_search_and_filters(self):
@@ -683,13 +684,13 @@ class ProjectBrowserModelTests(unittest.TestCase):
             key
             for key in model._CACHE
             if (
-                key[0] == id(project)
-                and key[2] == SESSION_ID
-                and key[4] is BrowserMode.BY_DATA
+                key[0] == str(project.id)
+                and key[1] == str(SESSION_ID)
+                and key[3] is BrowserMode.BY_DATA
             )
         )
         self.assertEqual(len(scoped), 1)
-        self.assertEqual(scoped[0][3], 39)
+        self.assertEqual(scoped[0][2], 39)
 
     def test_filter_reuses_cached_unfiltered_projection(self):
         project = sample_project()
@@ -960,11 +961,598 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             {"collection", "enum", "int", "string"},
         )
         self.assertIn("substructure_code", state_properties)
+        self.assertTrue({
+            "page",
+            "page_size",
+            "page_jump",
+            "page_count",
+            "page_kind",
+            "record_count",
+        }.issubset(state_properties))
+        self.assertEqual(
+            state_properties["page_size"].keywords["max"],
+            998,
+        )
+        self.assertEqual(
+            state_properties["page_size"].keywords["name"],
+            "Entries per Page",
+        )
         quality = state_properties["quality_filter"]
         self.assertEqual(quality.keywords["default"], "all")
         self.assertTrue(
-            all(identifier for identifier, _label, _description in quality.keywords["items"])
+            all(
+                identifier
+                for identifier, _label, _description
+                in quality.keywords["items"]
+            )
         )
+
+    def test_diagnostics_and_relink_operators_use_file_contracts(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        export_properties = (
+            panel.CHEMBLENDER_OT_export_diagnostics.__annotations__
+        )
+        recovery_properties = (
+            panel.CHEMBLENDER_OT_project_link_recovery.__annotations__
+        )
+
+        self.assertEqual(
+            export_properties["filepath"].keywords["subtype"],
+            "FILE_PATH",
+        )
+        self.assertEqual(
+            recovery_properties["filepath"].keywords["subtype"],
+            "FILE_PATH",
+        )
+
+    def test_recovery_execute_revalidates_the_live_link_status(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        operation = panel.CHEMBLENDER_OT_project_link_recovery()
+        operation.action = "detach"
+        session = SimpleNamespace(link_status="connected")
+        context = SimpleNamespace(scene=object())
+        self.fake_bpy.data = SimpleNamespace(scenes=(), filepath="")
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel._diagnostics,
+                "detach_project_links_for_scenes",
+            ) as detach,
+        ):
+            result = operation.execute(context)
+
+        self.assertEqual(result, {"CANCELLED"})
+        self.assertIn(
+            "not allowed",
+            operation.last_report[1],
+        )
+        detach.assert_not_called()
+
+    def test_inspect_existing_is_explicitly_not_read_only(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        operation = panel.CHEMBLENDER_OT_project_link_recovery()
+        operation.action = "inspect_existing"
+        session = SimpleNamespace(link_status="missing")
+        state = SimpleNamespace(
+            project_link_inspection_only=False,
+            show_project_link_diagnostics=False,
+        )
+        context = SimpleNamespace(scene=object())
+        self.fake_bpy.data = SimpleNamespace(scenes=(), filepath="")
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+            patch.object(panel, "relink_project_session_for_scenes") as relink,
+            patch.object(panel, "verify_project_session_for_scenes") as verify,
+            patch.object(
+                panel._diagnostics,
+                "detach_project_links_for_scenes",
+            ) as detach,
+        ):
+            result = operation.execute(context)
+
+        self.assertEqual(result, {"FINISHED"})
+        self.assertTrue(state.project_link_inspection_only)
+        relink.assert_not_called()
+        verify.assert_not_called()
+        detach.assert_not_called()
+
+    def test_detach_clears_only_link_retry_reasons_and_preserves_project(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class Session:
+            link_status = "missing"
+            sidecar_path = Path("example.cbq")
+
+            def __init__(self):
+                self.project = object()
+                self._dirty_reasons = {
+                    "project_link",
+                    "view_cache",
+                    "scientific_edit",
+                }
+
+            @property
+            def dirty_reasons(self):
+                return frozenset(self._dirty_reasons)
+
+            def clear_dirty(self, reason):
+                self._dirty_reasons.remove(reason)
+
+        objects = object()
+        scene = {
+            "cb_project_uuid": "project",
+            "cb_project_schema": "1.0",
+            "cb_project_sidecar": "example.cbq",
+            "cb_project_manifest_hash": "a" * 64,
+            "objects": objects,
+        }
+        session = Session()
+        project = session.project
+        state = SimpleNamespace(
+            project_link_inspection_only=True,
+            show_project_link_diagnostics=True,
+        )
+        context = SimpleNamespace(scene=scene)
+        self.fake_bpy.data = SimpleNamespace(
+            scenes=(scene,),
+            filepath="example.blend",
+        )
+        operation = panel.CHEMBLENDER_OT_project_link_recovery()
+        operation.action = "detach"
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+        ):
+            result = operation.execute(context)
+
+        self.assertEqual(result, {"FINISHED"})
+        self.assertEqual(session.dirty_reasons, frozenset({"scientific_edit"}))
+        self.assertIs(session.project, project)
+        self.assertIs(scene["objects"], objects)
+        self.assertIsNone(session.sidecar_path)
+        self.assertEqual(session.link_status, "unlinked")
+
+    def test_diagnostic_navigation_reaches_second_entry_and_clamps(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        diagnostics = ({"code": "first"}, {"code": "second"})
+        state = SimpleNamespace(
+            diagnostics_report={"diagnostics": list(diagnostics)},
+            diagnostic_index=0,
+        )
+        context = SimpleNamespace(scene=object())
+        session = object()
+        action = panel.CHEMBLENDER_OT_diagnostic_page()
+        action.direction = "next"
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+        ):
+            self.assertEqual(action.execute(context), {"FINISHED"})
+            self.assertEqual(action.execute(context), {"FINISHED"})
+
+        self.assertEqual(state.diagnostic_index, 1)
+        self.assertEqual(
+            panel._current_diagnostic(state),
+            (2, 2, diagnostics[1]),
+        )
+
+        action.direction = "previous"
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+        ):
+            self.assertEqual(action.execute(context), {"FINISHED"})
+        self.assertEqual(state.diagnostic_index, 0)
+
+    def test_copy_and_export_diagnostics_use_the_canonical_report(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        document = {
+            "schema_name": "chemblender_import_report",
+            "schema_version": 1,
+            "session_id": "00000000-0000-0000-0000-000000000001",
+            "staged_batch_ids": [],
+            "summary": {
+                "overall": {
+                    "complete": 0,
+                    "partial": 0,
+                    "ambiguous": 0,
+                    "incomplete": 0,
+                    "invalid": 0,
+                },
+                "by_source": [],
+                "by_entity": [],
+            },
+            "diagnostics": [],
+        }
+        session = object()
+        state = SimpleNamespace(diagnostics_report=document)
+        manager = SimpleNamespace(clipboard="")
+        context = SimpleNamespace(scene=object(), window_manager=manager)
+
+        copy_action = panel.CHEMBLENDER_OT_copy_diagnostics()
+        copy_action.format_name = "markdown"
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+        ):
+            self.assertEqual(copy_action.execute(context), {"FINISHED"})
+        self.assertEqual(
+            manager.clipboard,
+            panel._diagnostics.canonical_report_text(
+                document,
+                "markdown",
+            ),
+        )
+
+        with TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "report.json"
+            export_action = panel.CHEMBLENDER_OT_export_diagnostics()
+            export_action.filepath = str(destination)
+            export_action.format_name = "json"
+            with (
+                patch.object(
+                    panel,
+                    "get_scene_session",
+                    return_value=session,
+                ),
+                patch.object(
+                    panel,
+                    "get_quick_import_state",
+                    return_value=state,
+                ),
+            ):
+                self.assertEqual(
+                    export_action.execute(context),
+                    {"FINISHED"},
+                )
+            self.assertEqual(
+                destination.read_text(encoding="utf-8"),
+                panel._diagnostics.canonical_report_text(
+                    document,
+                    "json",
+                ),
+            )
+            self.assertEqual(tuple(Path(temporary).glob(".*.tmp")), ())
+
+    def test_revision_action_keeps_current_by_default_and_updates_explicitly(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        current_revision_id = uuid4()
+        new_revision_id = uuid4()
+        prompt = panel._diagnostics.RevisionViewPrompt(
+            current_revision_id=current_revision_id,
+            new_revision_id=new_revision_id,
+        )
+        state = SimpleNamespace(revision_prompts=(prompt,))
+        session = SimpleNamespace(
+            project=object(),
+            temporary_root=Path(".").resolve(),
+        )
+        context = SimpleNamespace(
+            scene=object(),
+            collection=object(),
+        )
+        keep = panel.CHEMBLENDER_OT_revision_view_action()
+        keep.current_revision_id = str(current_revision_id)
+        keep.new_revision_id = str(new_revision_id)
+        keep.action = "keep_current"
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+            patch.object(panel, "_revision_view_targets") as targets,
+        ):
+            self.assertEqual(keep.execute(context), {"FINISHED"})
+        self.assertEqual(state.revision_prompts, ())
+        targets.assert_not_called()
+
+        class CurrentView:
+            hide_render = False
+
+            def __init__(self):
+                self.hidden = False
+
+            def hide_get(self):
+                return self.hidden
+
+            def hide_set(self, value):
+                self.hidden = value
+
+        current = CurrentView()
+        prompt = panel._diagnostics.RevisionViewPrompt(
+            current_revision_id=current_revision_id,
+            new_revision_id=new_revision_id,
+        )
+        state.revision_prompts = (prompt,)
+        update = panel.CHEMBLENDER_OT_revision_view_action()
+        update.current_revision_id = str(current_revision_id)
+        update.new_revision_id = str(new_revision_id)
+        update.action = "update_selected_views"
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+            patch.object(
+                panel,
+                "_revision_view_targets",
+                return_value=(((current,), object()),),
+            ),
+            patch.object(
+                panel,
+                "apply_scene_preset",
+                return_value=(object(),),
+            ),
+            patch.object(panel, "advance_browser_revision") as advance,
+        ):
+            self.assertEqual(update.execute(context), {"FINISHED"})
+
+        self.assertTrue(current.hidden)
+        self.assertTrue(current.hide_render)
+        self.assertEqual(state.revision_prompts, ())
+        advance.assert_called_once_with(session)
+
+    def test_multi_object_revision_view_is_planned_once_as_one_group(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        current_entity_id = uuid4()
+        new_entity_id = uuid4()
+        current_revision_id = uuid4()
+        new_revision_id = uuid4()
+        prompt = panel._diagnostics.RevisionViewPrompt(
+            current_revision_id=current_revision_id,
+            new_revision_id=new_revision_id,
+        )
+        bindings = json.dumps(
+            {
+                "grid": {
+                    "entity_id": str(current_entity_id),
+                    "revision": "grid-old",
+                }
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        normalized_settings = {
+            "dataset_index": 0,
+            "isovalue": 0.05,
+            "negative_isovalue": -0.05,
+            "negative_color": [0.95, 0.20, 0.15, 1.0],
+            "opacity": 1.0,
+            "positive_color": [0.15, 0.35, 0.95, 1.0],
+        }
+        settings = json.dumps(
+            normalized_settings,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
+        class View(dict):
+            def __init__(self, name, selected):
+                super().__init__(
+                    cb_scene_preset_id="signed_isosurface",
+                    cb_scene_preset_version="1",
+                    cb_scene_view_kind="signed_isosurface",
+                    cb_scene_render_identity="logical-view",
+                    cb_scene_bindings_json=bindings,
+                    cb_scene_settings_json=settings,
+                )
+                self.name = name
+                self._selected = selected
+
+            def select_get(self):
+                return self._selected
+
+        positive = View("positive", False)
+        negative = View("negative", True)
+        plan = object()
+        current_plan = SimpleNamespace(
+            settings=tuple(
+                (name, value)
+                for name, value in normalized_settings.items()
+            )
+        )
+        current_entity = SimpleNamespace(
+            id=current_entity_id,
+            revision="grid-old",
+            semantic_role="electron_density",
+        )
+        new_entity = SimpleNamespace(
+            id=new_entity_id,
+            revision="grid-new",
+            semantic_role="electron_density",
+        )
+        project = SimpleNamespace(
+            source_revisions={
+                current_revision_id: SimpleNamespace(
+                    created_entity_ids=(current_entity_id,),
+                ),
+                new_revision_id: SimpleNamespace(
+                    created_entity_ids=(new_entity_id,),
+                ),
+            },
+            structures={},
+            datasets={
+                current_entity_id: current_entity,
+                new_entity_id: new_entity,
+            },
+        )
+        session = SimpleNamespace(project=project)
+        context = SimpleNamespace(
+            scene=SimpleNamespace(objects=(positive, negative)),
+        )
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "plan_scene_preset",
+                side_effect=(current_plan, plan),
+            ) as planner,
+        ):
+            targets = panel._revision_view_targets(
+                context,
+                prompt,
+                selected_only=True,
+            )
+
+        self.assertEqual(targets, (((positive, negative), plan),))
+        self.assertEqual(planner.call_count, 2)
+
+    def test_logical_view_metadata_conflict_fails_closed(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        current_entity_id = uuid4()
+        current_revision_id = uuid4()
+        new_revision_id = uuid4()
+        prompt = panel._diagnostics.RevisionViewPrompt(
+            current_revision_id=current_revision_id,
+            new_revision_id=new_revision_id,
+        )
+        bindings = json.dumps(
+            {
+                "grid": {
+                    "entity_id": str(current_entity_id),
+                    "revision": "grid-old",
+                }
+            }
+        )
+
+        class View(dict):
+            def __init__(self, settings):
+                super().__init__(
+                    cb_scene_preset_id="signed_isosurface",
+                    cb_scene_preset_version="1",
+                    cb_scene_view_kind="signed_isosurface",
+                    cb_scene_render_identity="logical-view",
+                    cb_scene_bindings_json=bindings,
+                    cb_scene_settings_json=json.dumps(settings),
+                )
+
+            def select_get(self):
+                return True
+
+        context = SimpleNamespace(
+            scene=SimpleNamespace(
+                objects=(
+                    View({"isovalue": 0.05}),
+                    View({"isovalue": 0.10}),
+                )
+            )
+        )
+
+        with (
+            patch.object(
+                panel,
+                "get_scene_session",
+                return_value=SimpleNamespace(
+                    project=SimpleNamespace(
+                        source_revisions={
+                            current_revision_id: SimpleNamespace(
+                                created_entity_ids=(current_entity_id,),
+                            ),
+                            new_revision_id: SimpleNamespace(
+                                created_entity_ids=(),
+                            ),
+                        },
+                    )
+                ),
+            ),
+            self.assertRaisesRegex(ValueError, "conflicting"),
+        ):
+            panel._revision_view_targets(
+                context,
+                prompt,
+                selected_only=True,
+            )
+
+    def test_revision_action_reraises_fatal_view_failure(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        prompt = panel._diagnostics.RevisionViewPrompt(
+            current_revision_id=uuid4(),
+            new_revision_id=uuid4(),
+        )
+        state = SimpleNamespace(revision_prompts=(prompt,))
+        session = SimpleNamespace(
+            project=object(),
+            temporary_root=Path(".").resolve(),
+        )
+        context = SimpleNamespace(scene=object(), collection=object())
+        action = panel.CHEMBLENDER_OT_revision_view_action()
+        action.current_revision_id = str(prompt.current_revision_id)
+        action.new_revision_id = str(prompt.new_revision_id)
+        action.action = "comparison_view"
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=state,
+            ),
+            patch.object(
+                panel,
+                "_revision_view_targets",
+                return_value=(((object(),), object()),),
+            ),
+            patch.object(
+                panel,
+                "apply_scene_preset",
+                side_effect=MemoryError("out of memory"),
+            ),
+        ):
+            with self.assertRaisesRegex(MemoryError, "out of memory"):
+                action.execute(context)
+
+        self.assertEqual(state.revision_prompts, (prompt,))
 
     def test_crystal_symmetry_sections_survive_missing_spglib(self):
         properties = importlib.import_module("ChemBlender.ui.properties")
@@ -1393,7 +1981,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             labels,
             [
                 {"text": "    Density (3)", "icon": "VOLUME_DATA"},
-                {"text": "Partial"},
+                {"text": "Partial", "icon": "INFO"},
             ],
         )
 
@@ -1744,7 +2332,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.assertEqual(session.active_entity_id, GRID_ID)
         self.assertEqual(settings.active_entity_id, str(GRID_ID))
 
-    def test_refresh_bounds_rna_rows_and_records_total_count(self):
+    def test_refresh_rejects_an_unbounded_model_projection(self):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"
         )
@@ -1796,12 +2384,180 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             ),
             patch.object(panel, "build_browser_rows", return_value=rows),
         ):
-            projected = panel.refresh_project_browser(scene)
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "bounded",
+            ):
+                panel.refresh_project_browser(scene)
 
         self.assertEqual(panel._BROWSER_RNA_ROW_LIMIT, limit)
-        self.assertEqual(len(projected), limit + 5)
-        self.assertEqual(len(settings.rows), limit)
-        self.assertEqual(settings.total_row_count, limit + 5)
+        self.assertEqual(len(settings.rows), 0)
+
+    def test_refresh_accepts_997_records_with_related_project_data(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        from tests.test_project_browser_performance import (
+            _project_with_indexed_records,
+        )
+
+        class Rows(list):
+            def clear(self):
+                super().clear()
+
+            def add(self):
+                row = SimpleNamespace()
+                self.append(row)
+                return row
+
+        with TemporaryDirectory() as directory:
+            project, lazy = _project_with_indexed_records(
+                Path(directory), 997
+            )
+            session = SimpleNamespace(
+                id=SESSION_ID,
+                project=project,
+                active_entity_id=None,
+            )
+            settings = SimpleNamespace(
+                mode="by_data",
+                search="",
+                quality_filter="all",
+                selected_index=0,
+                active_entity_id="",
+                total_row_count=0,
+                record_count=0,
+                page=0,
+                page_size=998,
+                page_jump=1,
+                page_count=1,
+                rows=Rows(),
+            )
+            scene = SimpleNamespace(
+                chemblender_project_browser=settings,
+                objects=(),
+            )
+            with (
+                patch.object(
+                    panel,
+                    "get_scene_session",
+                    return_value=session,
+                ),
+                patch.object(
+                    panel,
+                    "get_quick_import_state",
+                    return_value=SimpleNamespace(browser_revision=1),
+                ),
+            ):
+                panel.refresh_project_browser(scene)
+
+        self.assertLessEqual(len(settings.rows), 1000)
+        self.assertEqual(settings.record_count, 997)
+        self.assertFalse(lazy.loaded)
+
+    def test_refresh_projects_result_page_and_navigation_arguments(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class Rows(list):
+            def clear(self):
+                super().clear()
+
+            def add(self):
+                row = SimpleNamespace()
+                self.append(row)
+                return row
+
+        summary = BrowserRow(
+            id="page:result:2",
+            parent_id=None,
+            depth=0,
+            kind="result_page",
+            label="Matches 129-192 of 10000",
+            quality="",
+            view_count=0,
+            entity_id=None,
+            total_count=10_000,
+            page=2,
+            page_count=157,
+        )
+        session = SimpleNamespace(
+            id="session",
+            project=sample_project(),
+            active_entity_id=None,
+        )
+        settings = SimpleNamespace(
+            mode="by_data",
+            search="",
+            quality_filter="all",
+            selected_index=0,
+            active_entity_id="",
+            total_row_count=0,
+            record_count=0,
+            page=2,
+            page_size=64,
+            page_jump=1,
+            page_count=0,
+            page_kind="",
+            rows=Rows(),
+        )
+        scene = SimpleNamespace(
+            chemblender_project_browser=settings,
+            objects=(),
+        )
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(
+                panel,
+                "get_quick_import_state",
+                return_value=SimpleNamespace(browser_revision=1),
+            ),
+            patch.object(
+                panel,
+                "build_browser_rows",
+                return_value=(summary,),
+            ) as build,
+        ):
+            panel.refresh_project_browser(scene)
+
+        self.assertEqual(build.call_args.kwargs["page"], 2)
+        self.assertEqual(build.call_args.kwargs["page_size"], 64)
+        self.assertEqual(settings.record_count, 10_000)
+        self.assertEqual(settings.page, 2)
+        self.assertEqual(settings.page_jump, 3)
+        self.assertEqual(settings.page_count, 157)
+        self.assertEqual(settings.page_kind, "result_page")
+        self.assertEqual(panel._page_subject(settings), "project entries")
+
+    def test_page_operator_handles_previous_next_and_jump(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        settings = SimpleNamespace(
+            page=1,
+            page_count=3,
+            page_jump=99,
+        )
+        context = SimpleNamespace(
+            scene=SimpleNamespace(
+                chemblender_project_browser=settings,
+            )
+        )
+        operation = panel.CHEMBLENDER_OT_project_browser_page()
+        with patch.object(panel, "refresh_project_browser") as refresh:
+            operation.action = "next"
+            self.assertEqual(operation.execute(context), {"FINISHED"})
+            self.assertEqual(settings.page, 2)
+            operation.action = "previous"
+            self.assertEqual(operation.execute(context), {"FINISHED"})
+            self.assertEqual(settings.page, 1)
+            settings.page_jump = 99
+            operation.action = "jump"
+            self.assertEqual(operation.execute(context), {"FINISHED"})
+            self.assertEqual(settings.page, 2)
+
+        self.assertEqual(refresh.call_count, 3)
 
     def test_refresh_clears_stale_and_malformed_hidden_selection(self):
         panel = importlib.import_module(
@@ -2038,6 +2794,106 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             panel.register()
         panel.unregister()
         self.assertIs(_Scene.chemblender_project_browser, foreign)
+
+    def test_registration_owns_browser_cache_cleanup_lifecycle(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        browser_model = importlib.import_module(
+            "ChemBlender.ui.project_browser.model"
+        )
+        session_module = importlib.import_module("ChemBlender.ui.session")
+        browser_model._CACHE[("project", "session", 1)] = ("rows",)
+        browser_model._INDEX_CACHE[
+            ("project", "session", 1)
+        ] = ("index",)
+
+        panel.register()
+        self.assertIn(
+            browser_model.clear_browser_session_cache,
+            session_module._SESSION_CLEANUP_CALLBACKS,
+        )
+        session_module._run_session_cleanups(
+            SimpleNamespace(id="session")
+        )
+        self.assertFalse(browser_model._CACHE)
+        self.assertFalse(browser_model._INDEX_CACHE)
+
+        browser_model._CACHE[("project", "other", 1)] = ("rows",)
+        browser_model._INDEX_CACHE[
+            ("project", "other", 1)
+        ] = ("index",)
+        panel.unregister()
+        self.assertNotIn(
+            browser_model.clear_browser_session_cache,
+            session_module._SESSION_CLEANUP_CALLBACKS,
+        )
+        self.assertFalse(browser_model._CACHE)
+        self.assertFalse(browser_model._INDEX_CACHE)
+
+    def test_failed_rna_teardown_keeps_cleanup_callback_for_register_retry(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        browser_model = importlib.import_module(
+            "ChemBlender.ui.project_browser.model"
+        )
+        session_module = importlib.import_module("ChemBlender.ui.session")
+        native_delattr = delattr
+
+        def fail_project_property(owner, name):
+            if name == "chemblender_project_browser":
+                raise OSError("project property delete blocked")
+            native_delattr(owner, name)
+
+        panel.register()
+        browser_model._CACHE[("project", "session", 1)] = ("rows",)
+        browser_model._INDEX_CACHE[
+            ("project", "session", 1)
+        ] = ("index",)
+        with (
+            patch.object(
+                panel,
+                "delattr",
+                side_effect=fail_project_property,
+                create=True,
+            ),
+            self.assertRaisesRegex(
+                OSError,
+                "project property delete blocked",
+            ),
+        ):
+            panel.unregister()
+
+        self.assertFalse(browser_model._CACHE)
+        self.assertFalse(browser_model._INDEX_CACHE)
+        self.assertIn(
+            browser_model.clear_browser_session_cache,
+            session_module._SESSION_CLEANUP_CALLBACKS,
+        )
+        self.assertTrue(
+            hasattr(_Scene, "chemblender_project_browser")
+        )
+        self.assertFalse(hasattr(_Scene, "chemblender_topology"))
+
+        panel.register()
+        self.assertEqual(
+            session_module._SESSION_CLEANUP_CALLBACKS.count(
+                browser_model.clear_browser_session_cache
+            ),
+            1,
+        )
+        self.assertTrue(hasattr(_Scene, "chemblender_topology"))
+
+        panel.unregister()
+        self.assertNotIn(
+            browser_model.clear_browser_session_cache,
+            session_module._SESSION_CLEANUP_CALLBACKS,
+        )
+        self.assertFalse(
+            hasattr(_Scene, "chemblender_project_browser")
+        )
+        self.assertFalse(hasattr(_Scene, "chemblender_topology"))
 
     def test_post_set_verification_failure_rolls_back_cleanly(self):
         panel = importlib.import_module(

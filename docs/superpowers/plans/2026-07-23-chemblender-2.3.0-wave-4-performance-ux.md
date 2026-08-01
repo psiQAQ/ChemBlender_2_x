@@ -56,19 +56,19 @@ Unit-test JSON and small generators, then commit.
 **Interfaces:**
 - Produces: approved budgets and comparison function.
 
-- [ ] **Step 1: Record reference environment**
+- [x] **Step 1: Record provenance-bound diagnostics and explicit Not Run product boundaries**
 
 Use Windows x64, Blender 5.1.2, CPU/RAM/storage and clean user resources. Run cold and warm cases. Store raw JSON as a release artifact or tracked small baseline if stable.
 
-- [ ] **Step 2: Encode budgets**
+- [x] **Step 2: Encode budgets**
 
 Use approved targets: enable 2s, feedback 0.5s, common view 3s, Cube 10s, cached frame 100ms, browser filter 200ms. Trend thresholds for cloud CI are documented separately.
 
-- [ ] **Step 3: Add comparison tests**
+- [x] **Step 3: Add comparison tests**
 
 A result over hard local budget fails reference qualification. CI trend regression over the approved percentage fails unless baseline change is reviewed with evidence.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit budgets, tests and observed reference document.
 

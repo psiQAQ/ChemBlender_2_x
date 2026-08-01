@@ -18,6 +18,8 @@
 12. `docs/superpowers/specs/` 中的 2.3.0 总设计和 Wave 设计
 13. `docs/superpowers/plans/` 中的总排序计划和各实施计划
 14. [Reader API 0.x alpha conformance](reader-api-0.x.md)
+15. [RC 可用性验收脚本](usability-test-script.md)
+16. [RC1 可用性验收结果](usability-results-rc1.md)
 
 ## 核心原则
 

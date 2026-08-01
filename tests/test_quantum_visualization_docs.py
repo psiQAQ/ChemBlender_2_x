@@ -1,13 +1,13 @@
 import unittest
+import re
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
-WAVE_230_QUEUE_FILES = (
-    "2.3.0-wave-4-migration-release.md",
-)
-WAVE_230_ACTIVE_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
+WAVE_230_QUEUE_FILES = ()
+WAVE_230_ACTIVE_FILE = "2.3.0-wave-4-migration-release.md"
+WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 
 
 class QuantumVisualizationDocsTests(unittest.TestCase):
@@ -48,15 +48,431 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 any(name in index for index in (docs_index, quantum_index)),
                 name,
             )
-        for name in (WAVE_230_ACTIVE_FILE, *WAVE_230_QUEUE_FILES):
+        for name in (
+            WAVE_230_ACTIVE_FILE,
+            *WAVE_230_QUEUE_FILES,
+            WAVE_230_COMPLETED_FILE,
+        ):
             self.assertIn(name, agent_index)
 
-    def test_230_wave_3_is_active_and_wave_4_remains_queued(self):
+    def test_wave4_usability_acceptance_is_repeatable_and_measurable(self):
+        index = self.read_doc("docs/quantum-visualization/2.3.0/README.md")
+        paths = (
+            "docs/quantum-visualization/2.3.0/usability-test-script.md",
+            "docs/quantum-visualization/2.3.0/usability-results-rc1.md",
+        )
+        for path in paths:
+            self.assertTrue((ROOT / path).is_file(), path)
+        script, results = (self.read_doc(path) for path in paths)
+        for name in ("usability-test-script.md", "usability-results-rc1.md"):
+            self.assertIn(name, index)
+        for term in (
+            "XYZ",
+            "SDF",
+            "Cube",
+            "CIF",
+            "PDB",
+            "diagnostics",
+            "conformers",
+            "save/reopen",
+            "revision",
+            "scientific edit",
+            "export",
+            "legacy",
+        ):
+            self.assertIn(term, script)
+        for field in (
+            "Completion",
+            "Elapsed time",
+            "Errors",
+            "Help required",
+            "Scientific misunderstanding",
+        ):
+            self.assertIn(field, script)
+            self.assertIn(field, results)
+        for severity in ("Blocker", "Major", "Minor"):
+            self.assertIn(severity, script)
+            self.assertIn(severity, results)
+        expected_tasks = {f"U{number:02d}" for number in range(1, 13)}
+        for document in (script, results):
+            self.assertEqual(
+                set(
+                    re.findall(
+                        r"(?m)^\|\s*(U(?:0[1-9]|1[0-2]))(?:\s|\|)",
+                        document,
+                    )
+                ),
+                expected_tasks,
+            )
+        for contract in (
+            "fresh profile",
+            "refuse reuse",
+            "--python-exit-code",
+            "$process.ExitCode",
+            "PASS:",
+        ):
+            self.assertIn(contract, script)
+        self.assertIn('"--python-exit-code", "1"', script)
+        hashes = (
+            "0db367c18fd849897bb5ca0189c50c573bda40ea5db35c565a99f882115356ec",
+            "36b05c3cacbcc067714615a49df35cf20973bc8122329194ddaecd249df6c3d4",
+            "f2995e826762a85bfb6854e314483175c3d39c2cceef109db3f395ab2e83c06a",
+            "a6af8e232fe7b934bf850f8e6b24d396596b79cc1fd38e8ff6eb071c50bf8740",
+        )
+        for digest in hashes:
+            self.assertIn(digest, script)
+            self.assertIn(digest, results)
+        for marker in (
+            "PASS: ChemBlender extension lifecycle",
+            "PASS: packaged legacy migration and reopen",
+        ):
+            self.assertIn(marker, script)
+            self.assertIn(marker, results)
+        self.assertIn("hybrid", script)
+        self.assertIn("packaged Extension", script)
+        self.assertIn("hybrid", results)
+        self.assertIn("packaged Extension", results)
+        self.assertIn("Remote CI: Not Run", results)
+
+        legacy_acceptance = ROOT / "tests" / "blender_usability_legacy.py"
+        self.assertTrue(legacy_acceptance.is_file(), legacy_acceptance)
+        legacy_source = legacy_acceptance.read_text(encoding="utf-8")
+        for operation in (
+            "bpy.ops.extensions.package_install_files",
+            "bl_ext.user_default.chemblender",
+            "bpy.ops.chemblender.preview_legacy_migration",
+            "bpy.ops.chemblender.migrate_legacy_scene",
+            "bpy.ops.wm.save_mainfile",
+            "bpy.ops.wm.open_mainfile",
+            'cb_legacy_migration_backup") == "v2"',
+            "cb_legacy_migration_project_id",
+            "cb_legacy_migration_transaction_id",
+            "PASS: packaged legacy migration and reopen",
+        ):
+            self.assertIn(operation, legacy_source)
+
+    def test_user_guides_describe_verified_product_workflows(self):
+        import tomllib
+
+        readme = self.read_doc("README.md")
+        for term in (
+            "result-first",
+            "program-neutral",
+            "Windows x64",
+            "Blender 5.1",
+            "XYZ/extXYZ",
+            "MOL V2000/V3000",
+            "SDF",
+            "SMILES",
+            "CIF",
+            "POSCAR/CONTCAR",
+            "MOL2",
+            "PDB/PQR",
+            "Cube",
+            "CJSON",
+            "QCSchema",
+            ".blend",
+            ".cbq",
+            "keep them together",
+            "optional backends",
+        ):
+            self.assertIn(term, readme)
+
+        manifest = tomllib.loads(
+            self.read_doc("ChemBlender/blender_manifest.toml")
+        )
+        tagline = manifest["tagline"]
+        self.assertEqual(tagline, tagline.strip())
+        self.assertNotIn("\n", tagline)
+        self.assertLessEqual(len(tagline), 64)
+        self.assertTrue(tagline[-1].isalnum())
+        self.assertIn("results", tagline.lower())
+
+        index = self.read_doc("docs/README.md")
+        contracts = {
+            "quick-import.md": (
+                "single file",
+                "multiple files",
+                "drag and drop",
+                "Import Preview",
+                "Keep Independent",
+                "Accept Group",
+                "Default View",
+                "Cancel",
+            ),
+            "project-browser.md": (
+                "By Source",
+                "By Data",
+                "Complete",
+                "Partial",
+                "Ambiguous",
+                "Update Selected Views",
+                "Comparison View",
+                "Keep Current",
+            ),
+            "project-sidecar.md": (
+                ".blend",
+                ".cbq",
+                "relative",
+                "Missing",
+                "Mismatch",
+                "Incompatible",
+                "backup",
+                "Clear Derived Cache",
+            ),
+            "data-quality.md": (
+                "Complete",
+                "Partial",
+                "Ambiguous",
+                "Incomplete",
+                "Invalid",
+                "scientific consequence",
+                "suggested action",
+            ),
+            "scientific-editing.md": (
+                "Object transforms",
+                "Apply Scientific Edits",
+                "source Structure",
+                "derived Structure",
+                "explicit_file",
+                "distance_inferred",
+                "revision",
+            ),
+            "formats.md": (
+                "F0–F5",
+                "XYZ/extXYZ",
+                "MOL V2000/V3000",
+                "POSCAR/CONTCAR",
+                "PDB/PQR",
+                "import",
+                "export",
+                "loss",
+                "RDKit",
+                "Gemmi",
+                "optional backend",
+                "QCSchema",
+                "Molecule",
+                "AtomicResult",
+                "Dependency-free",
+                "raw envelope",
+                "reader-capability-matrix.json",
+            ),
+        }
+        guide_text = {}
+        for name, terms in contracts.items():
+            path = f"docs/user/{name}"
+            text = self.read_doc(path)
+            guide_text[name] = text
+            self.assertIn(f"user/{name}", index)
+            for term in terms:
+                self.assertIn(term, text, path)
+
+        for name in ("quick-import.md", "data-quality.md"):
+            compact = " ".join(guide_text[name].split())
+            self.assertIn("selected reader", compact, name)
+            self.assertIn("reader and format", compact, name)
+            self.assertIn("diagnostics", compact, name)
+            self.assertNotIn(
+                "Maximum keeps more trustworthy partial data",
+                compact,
+                name,
+            )
+            self.assertNotIn(
+                "Maximum retains more trustworthy partial data",
+                compact,
+                name,
+            )
+
+        scientific_editing = " ".join(
+            guide_text["scientific-editing.md"].split()
+        )
+        self.assertIn(
+            "current topology controls do not display the revision",
+            scientific_editing,
+        )
+        self.assertIn("binding", scientific_editing)
+        self.assertIn("provenance", scientific_editing)
+        self.assertNotIn(
+            "topology controls display its source, quality, parameters, "
+            "edge count and revision",
+            scientific_editing,
+        )
+
+        from ChemBlender.core import reader_capability_document
+
+        qcschema = next(
+            row
+            for row in reader_capability_document()["readers"]
+            if row["reader_id"] == "qcschema"
+        )
+        self.assertEqual(qcschema["execution_mode"], "built_in")
+        self.assertEqual(qcschema["availability_contract"], {"kind": "always"})
+        self.assertEqual(qcschema["extensions"], [".json"])
+
+    def test_developer_guides_cover_reader_and_release_boundaries(self):
+        docs_index = self.read_doc("docs/README.md")
+        agent_index = self.read_doc(".agents/README.md")
+        guides = {
+            "import-pipeline.md": (
+                "ReaderDescriptor",
+                "ReaderRuntimeDescriptor",
+                "ReaderPluginManifest",
+                "PublicImportBatch",
+                "ImportDiagnostic",
+                "ImportCommitDecisions",
+                "commit_import_preview()",
+                "generate_format_docs.py --check",
+                "tests.test_reader_conformance_v1",
+            ),
+            "source-revisions.md": (
+                "SourceRecord",
+                "SourceRevision",
+                "parse_identity",
+                "created_entity_ids",
+                "immutable",
+                "derived Structure",
+                "entity_id",
+                "revision",
+            ),
+            "testing-fixtures.md": (
+                "SHA-256",
+                "provenance",
+                "license",
+                ".gitattributes",
+                "hash-locked",
+                "tests/fixtures/legacy-blend/README.md",
+            ),
+            "release-2.3.md": (
+                "release_metadata.py",
+                "generate_format_docs.py --check",
+                "artifact_size_report.py",
+                "verify_release_artifact.py",
+                "exact HEAD",
+                "exact tag",
+                "explicit authorization",
+                "Remote CI: Not Run",
+            ),
+        }
+        for name, terms in guides.items():
+            relative = f"docs/development/{name}"
+            text = self.read_doc(relative)
+            self.assertIn(f"development/{name}", docs_index)
+            self.assertIn(name, agent_index)
+            for term in terms:
+                self.assertIn(term, text, relative)
+
+            path = ROOT / relative
+            for destination in re.findall(r"\[[^]]+\]\(([^)]+)\)", text):
+                destination = destination.strip("<>").split("#", 1)[0]
+                if not destination or destination.startswith(("http://", "https://")):
+                    continue
+                self.assertTrue(
+                    (path.parent / destination).resolve().exists(),
+                    f"{relative}: {destination}",
+                )
+
+        reader_index = self.read_doc("docs/reader-api-v1/README.md")
+        self.assertIn("../development/import-pipeline.md", reader_index)
+        self.assertIn("../../examples/reader-extension/README.md", reader_index)
+        worker = self.read_doc("docs/reader-api-v1/worker-api.md")
+        for term in (
+            "WorkerHandle.wait(timeout=...)",
+            "request_cancel()",
+            "terminate()",
+            "reader.parse@0.1",
+            "worker exited with code",
+        ):
+            self.assertIn(term, worker)
+
+        architecture = self.read_doc(
+            ".agents/reference/code-architecture-guide.md"
+        )
+        self.assertIn("Reader API v1 RC 门面", architecture)
+        self.assertNotIn("Reader API alpha 门面", architecture)
+
+    def test_release_and_worker_guides_fail_closed_at_real_dependency_boundaries(self):
+        release = self.read_doc("docs/development/release-2.3.md")
+        for term in (
+            "dependency_inventory.py",
+            "--no-index",
+            "--no-deps",
+            "--target $dependencySite",
+            "version('rdkit') == '2026.3.3'",
+            "gemmi.__version__ == '0.7.5'",
+            "Blender global site-packages",
+            "不得联网下载",
+            "cb23-qualification-",
+            "$qualificationRootOwned = $false",
+            "$createdRoot = New-Item -ItemType Directory -Path $qualificationRoot",
+            "$createdPath = [IO.Path]::GetFullPath($createdRoot.FullName)",
+            "$qualificationRootOwned = $true",
+            "if ($qualificationRootOwned -and (Test-Path -LiteralPath $qualificationRoot))",
+            "$cleanupRoot = (Resolve-Path -LiteralPath $qualificationRoot).Path",
+            "-not $cleanupRoot.StartsWith(",
+            "Remove-Item -LiteralPath $cleanupRoot -Recurse -Force",
+            "throw 'Qualification temp cleanup failed'",
+            "throw 'Release metadata probe failed'",
+            "throw 'Generated documentation check failed'",
+            "throw 'git diff --check failed'",
+            "throw 'Extension validation failed'",
+            "throw 'Extension build failed'",
+        ):
+            self.assertIn(term, release)
+        self.assertNotIn(
+            "extensions/.local/lib/python3.13/site-packages",
+            release,
+        )
+        self.assertLess(
+            release.index("try {"),
+            release.index("Remove-Item -LiteralPath $cleanupRoot -Recurse -Force"),
+        )
+        self.assertLess(
+            release.index("throw 'Refusing to reuse a qualification temp root'"),
+            release.index(
+                "$createdRoot = New-Item -ItemType Directory -Path $qualificationRoot"
+            ),
+        )
+        self.assertLess(
+            release.index("$createdPath = [IO.Path]::GetFullPath($createdRoot.FullName)"),
+            release.index("$qualificationRootOwned = $true"),
+        )
+        self.assertLess(
+            release.index("$qualificationRootOwned = $true"),
+            release.index("New-Item -ItemType Directory -Path $dependencySite"),
+        )
+        self.assertLess(
+            release.index("dependency_inventory.py"),
+            release.index("$env:PYTHONPATH = $dependencySite"),
+        )
+        self.assertLess(
+            release.index("$env:PYTHONPATH = $dependencySite"),
+            release.index("-m unittest discover"),
+        )
+
+        worker = self.read_doc("docs/reader-api-v1/worker-api.md")
+        for term in (
+            "request_id",
+            "SourceRevision.id",
+            "bundle graph",
+            "固定受信 worker",
+            "不独立重算",
+            "runtime hardening",
+        ):
+            self.assertIn(term, worker)
+        self.assertNotIn(
+            "content hash 与 source revision identity",
+            worker,
+        )
+
+    def test_230_wave_4_is_active_and_wave_3_is_completed(self):
         queued = sorted(
             path.name
             for path in (ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md")
         )
         self.assertEqual(queued, sorted(WAVE_230_QUEUE_FILES))
+        self.assertTrue(
+            (ROOT / ".agents" / "completed" / WAVE_230_COMPLETED_FILE).is_file()
+        )
 
     def test_230_markdown_is_utf8_without_bom(self):
         paths = [
@@ -64,6 +480,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             *(ROOT / ".agents" / "active").glob("2.3.0-wave-*.md"),
             *(ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md"),
             *(ROOT / "docs" / "quantum-visualization" / "2.3.0").rglob("*.md"),
+            *(ROOT / "docs" / "user").rglob("*.md"),
             *(ROOT / "docs" / "superpowers" / "plans").glob(
                 "2026-07-23-chemblender-2.3.0-*.md"
             ),
@@ -376,6 +793,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             *(ROOT / ".agents" / "queued").glob("2.3.0-wave-*.md"),
             ROOT / "docs" / "README.md",
             *DOCS.rglob("*.md"),
+            *(ROOT / "docs" / "user").rglob("*.md"),
             *(ROOT / "docs" / "superpowers" / "plans").glob(
                 "2026-07-23-chemblender-2.3.0-*.md"
             ),

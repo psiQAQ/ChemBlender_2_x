@@ -31,17 +31,29 @@
 **Interfaces:**
 - Produces: fixed old-scene evidence with hashes and expected recoverable fields.
 
-- [ ] **Step 1: Build fixtures using the actual released versions**
+- [x] **Step 1: Build fixtures using the actual released versions**
 
 Create one molecule with explicit bonds/orders and display settings, one CIF-derived crystal with cell/space group/occupancy/Uij, and one edited scaffold. Do not resave them with 2.3.0.
 
-- [ ] **Step 2: Record provenance**
+- [x] **Step 2: Record provenance**
 
 README records ChemBlender version, Blender version, generation steps, SHA-256, object/collection names and expected fields. Binary fixtures are reviewed for redistributable content.
 
-- [ ] **Step 3: Add inventory tests**
+- [x] **Step 3: Add inventory tests**
 
 Assert files/hashes and expected companion metadata. Commit fixtures separately before migration code.
+
+**Task 1 checkpoint (2026-07-30):**
+
+- Prepared commits `ab29560a54557ca4bb794e9e8043cd2110abc10b` and
+  `e26319dd7697e49373840e00dbfbb13270b5cc42` were integrated in order as
+  `63b298ad39f374d3e19777b62d01f3e96b8a0b13` and
+  `69665c329395449e468f23fa7b954a9b58df4f08`.
+- Inventory tests: 3 passed; complete suite: 1811 passed, 26 skipped,
+  0 failed; documentation contracts: 16 passed.
+- Blender 5.1.2 independently reopened all three fixtures without linked
+  libraries or external file images. `compileall` and `git diff --check`
+  passed.
 
 ### Task 2: Implement non-mutating legacy detection and extraction
 
@@ -55,21 +67,36 @@ Assert files/hashes and expected companion metadata. Commit fixtures separately 
 **Interfaces:**
 - Produces: `detect_legacy_scene()`, `extract_legacy_objects()` and `LegacyExtractionReport`.
 
-- [ ] **Step 1: Write detection tests**
+- [x] **Step 1: Write detection tests**
 
 Open each fixture in background Blender and assert detection identifies legacy object types without creating/deleting/renaming any datablock. A new 2.3 project scene reports no legacy objects.
 
-- [ ] **Step 2: Implement extraction to neutral snapshots**
+- [x] **Step 2: Implement extraction to neutral snapshots**
 
 Extract atom numbers/coordinates, edge topology/order, old radii/colors/scales, CIF original/current fields, cell, occupancy/Uij, object names and collections into immutable snapshots. Do not construct QCProject yet.
 
-- [ ] **Step 3: Record ambiguity**
+- [x] **Step 3: Record ambiguity**
 
 Unknown custom properties, missing source path, evaluated modifier geometry and nonuniform object transforms produce diagnostics. Apply object transform only according to a documented scientific-coordinate rule and show the effect in preview.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run detection/extraction against fixtures and commit.
+
+**Task 2 checkpoint (2026-07-30):**
+
+- Implementation `85870573586f196f3860c2141b97a829721287f1`,
+  review fix `9ed363c0ace00b089cc11af56f13a5c1565ac544`, and final-review
+  fix `10c561df95be6171858e373063354dd460eebbe2`.
+- Detection/extraction stays read-only, returns frozen Blender-neutral
+  snapshots, uses base-mesh coordinates transformed by `matrix_world`, and
+  records ambiguity without consuming evaluated geometry.
+- Blender 5.1.2 contracts cover all three fixtures, factory/current
+  StructureView scenes, mixed current/legacy scenes, parent-induced world
+  transforms, and unchanged datablock inventories.
+- Focused inventory/detection/documentation: 24 passed; complete suite:
+  1816 passed, 26 skipped, 0 failed. Outside-Blender import, extension
+  validate, `compileall`, and `git diff --check` passed.
 
 ### Task 3: Build migration preview and project conversion
 
@@ -81,21 +108,39 @@ Run detection/extraction against fixtures and commit.
 **Interfaces:**
 - Produces: `plan_legacy_migration()`, `commit_legacy_migration()` and stable migration report.
 
-- [ ] **Step 1: Write conversion tests**
+- [x] **Step 1: Write conversion tests**
 
 Molecule snapshot maps to Structure, explicit TopologyRecord and ViewSettings. Crystal snapshot maps to periodic Structure/site data and declared symmetry. No source file creates provenance operation `legacy_blend_migration` with empty source hash and legacy object parents encoded as parameters.
 
-- [ ] **Step 2: Separate scientific and view data**
+- [x] **Step 2: Separate scientific and view data**
 
 Atomic number/coordinates/bonds/cell/occupancy/Uij are scientific. Colors/radii/material/node parameters are ViewSettings. Unverified fields receive Ambiguous/legacy_unverified diagnostics.
 
-- [ ] **Step 3: Build a staged session**
+- [x] **Step 3: Build a staged session**
 
 Migration preview returns a staged QCProject and view plans. Commit uses ProjectTransaction/sidecar publication and does not touch old objects until new data and views verify.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 Run pure conversion, sidecar and report tests; commit.
+
+**Task 3 checkpoint (2026-07-30):**
+
+- Implementation `f848a8f9b820fe74e8c3c036700d31e3f1706408`;
+  review fixes `d6e5283ec1b58c1ff9a17fe46899113cebbdae97`,
+  `576f6e0f3acc85ee08f1d885b32276fd072f933d`, and
+  `2837a03874181d867c2f24438625f7bd1a3b5ae7`.
+- `LegacyMigrationPlan` owns the staged `QCProject`, view plans, report and
+  content-bound base/candidate inventories. Commit rejects stale or modified
+  plans before verified sidecar publication.
+- Molecule and crystal conversion keeps scientific data in unified project
+  entities, display data in frozen view settings, and only trusts a saved
+  non-link `.blend` whose current SHA-256 still matches extraction-time proof.
+- Focused migration/detection/inventory/publication/documentation verification:
+  67 passed. Complete suite: 1842 passed, 26 skipped, 0 failed.
+- Blender 5.1.2 fixture extraction, extension validate/build, ZIP CRC/path
+  safety/inventory, outside-Blender import, `compileall`, and
+  `git diff --check` passed. Independent closure review was clean.
 
 ### Task 4: Implement Blender migration wizard and rollback
 
@@ -108,25 +153,54 @@ Run pure conversion, sidecar and report tests; commit.
 **Interfaces:**
 - Produces: legacy status panel, preview dialog, `Migrate to Project`, backup collection and rollback.
 
-- [ ] **Step 1: Add load-time detection handler**
+- [x] **Step 1: Add load-time detection handler**
 
 Handler stores a transient summary in session/UI state only. It does not write Scene project keys or alter legacy objects.
 
-- [ ] **Step 2: Implement preview UI**
+- [x] **Step 2: Implement preview UI**
 
 List objects, recoverable fields, diagnostics, proposed project entities, new view names and sidecar destination. Require explicit confirmation.
 
-- [ ] **Step 3: Implement commit and backup**
+- [x] **Step 3: Implement commit and backup**
 
 Create/verify project and new views. Then link legacy objects into or move them to `ChemBlender Legacy Backup`, preserve original collection references in migration report, hide the backup by default and never delete it.
 
-- [ ] **Step 4: Implement rollback**
+- [x] **Step 4: Implement rollback**
 
 On any failure, remove new views/project link/staged sidecar, restore any collection moves/hide state and leave original file dirty state unchanged except for user-visible error log.
 
-- [ ] **Step 5: Run fixture smoke and commit**
+- [x] **Step 5: Run fixture smoke and commit**
 
 Migrate all fixtures, save/reopen, verify new entities and backup objects. Commit.
+
+**Task 4 checkpoint (2026-07-30):**
+
+- Implementation `2f819d9fc9ec859973d3a618b6cfe545e3a4e478`; review fixes
+  `171cbdf09c02fb5898ee3e9b97128dd9a53b44ee`,
+  `a91fac3247e684d131dfe3cb2f99f8696437bc31`,
+  `3a22879a4df5d53957e482ca86d3f251405bb105`,
+  `9d6768952b36cb351404f6d58239b6ce31ea5e52`, and
+  `00b07f9a72c9710699f69e90b81471869f9fda80`.
+- The load handler is non-mutating. Preview lists every legacy object,
+  candidate-only entity IDs, backup-only objects and diagnostics, and requires
+  `confirmed is True`.
+- Migration publishes through a same-parent staging sidecar, creates verified
+  views, then moves legacy objects into a paired `v2` owned Backup collection.
+  Rollback restores Scene links, session ownership, lazy arrays, memberships,
+  properties and per-view-layer hide state without leaving views, materials,
+  sidecars or Backup datablocks.
+- Real RED cases covered display-readback failure, post-mutation backup failure,
+  unloaded lazy-array restoration, ambiguous provenance, bondless scaffold,
+  backup-only preview omission and snapshot failure before Backup allocation.
+- Controller focused verification: 54 passed. Complete suite: 1843 passed,
+  26 skipped, 0 failed.
+- Blender 5.1.2 migrated all three hash-locked fixtures, verified exact entity
+  IDs, display/material/node settings, Backup ownership, save/reopen and lazy
+  sidecar reads. Native validate/build, 176-entry ZIP CRC/path/wheel audit,
+  isolated installed-extension lifecycle, `compileall` and `git diff --check`
+  passed.
+- Final independent review: Approved, with no Critical, Important or Minor
+  findings. Remote CI: Not Run. Task 5 has not started.
 
 ### Task 5: Route all migrated legacy UI actions to the unified backend
 

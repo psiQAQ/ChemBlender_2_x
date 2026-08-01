@@ -1,0 +1,146 @@
+name: optional-qc-core
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cclib:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Initialize pinned cclib fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global core.autocrlf false
+          git submodule update --init --depth 1 submodules/cclib
+          test "$(git -C submodules/cclib rev-parse HEAD)" = "07260dd0394cb1a2381d4d897746d727a12ad6ce"
+      - name: Install pinned cclib
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -c .github/constraints/cclib-py313.txt "cclib==1.8.1"
+      - name: Run required cclib integration
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python ChemBlender/scripts/run_required_integration.py \
+            --summary summary-cclib.json \
+            --module tests.test_cclib_adapter \
+            --require-version-file .github/constraints/cclib-py313.txt \
+            --fixture submodules/cclib/data/Gaussian/basicGaussian16/water_hf_solvent_cpcm.log=d3ade6a479a83ee3ae684c5ebc3cc0b0e30088b3e525063aeb217484f740acf5 \
+            --fixture submodules/cclib/data/ORCA/basicORCA4.1/water_mp2.out=ed7bf74f17cc47bf378e35cda9035a98854e7609ac67510a7a55bebac952e8be \
+            --fixture submodules/cclib/data/Gaussian/basicGaussian16/dvb_ir.out=bc1a21de15ada135d5188b11d44226389022d92488ddfa8163ba7d4d713e5061 \
+            --fixture submodules/cclib/data/Gaussian/basicGaussian16/dvb_raman.out=fc97b8c179dbad721262be6077be893b13b785b36f8ae3493a1dd4b3d4bf18b9 \
+            --fixture submodules/cclib/data/ORCA/basicORCA5.0/dvb_ir.out=deb64567281a4673849812a63fc7b1147c33d1c4ad3b67f6b3bf7ec03ab1046c \
+            --fixture submodules/cclib/data/ORCA/basicORCA5.0/dvb_raman.out=956e9a7989c8fc917ef358f57423286d7228f59fff18f159e25c19e71e3181e8 \
+            --fixture submodules/cclib/data/Gaussian/basicGaussian16/dvb_td.out=c9255c92b829a4d2072ffca262be4dd9212f35a9c75d84c1fe8eb5969c166eef \
+            --fixture submodules/cclib/data/Gaussian/basicGaussian09/dvb_td.out=01619fecb8ca4d80b1ddfddb6cb9dc1983e52e23616e20ac0e4f1a6bb55462e0 \
+            --fixture submodules/cclib/data/ORCA/basicORCA5.0/dvb_td.out=b4262a21e11ea441551f465f4ae04aee0d4f9ddf35e6a94c0309400c924f17f6 \
+            --fixture submodules/cclib/data/ORCA/basicORCA5.0/dvb_adc2.log=d6d371f25ae50c27a3046ec35217d2d528c4ba0fb28fd71738e69f5980ecbe35
+      - name: Upload cclib summary
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: optional-qc-core-cclib-${{ github.run_id }}
+          path: summary-cclib.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  iodata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Initialize pinned IOData fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global core.autocrlf false
+          git submodule update --init --depth 1 submodules/iodata
+          test "$(git -C submodules/iodata rev-parse HEAD)" = "adab5813713ba64641565eb2a8c11803a4e9bba6"
+      - name: Install pinned IOData
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -c .github/constraints/iodata-py313.txt "qc-iodata==1.0.1"
+      - name: Run required IOData integration
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python ChemBlender/scripts/run_required_integration.py \
+            --summary summary-iodata.json \
+            --module tests.test_iodata_adapter \
+            --require-version-file .github/constraints/iodata-py313.txt \
+            --fixture submodules/iodata/iodata/test/data/water_sto3g_hf_g03.fchk=aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816 \
+            --fixture submodules/iodata/iodata/test/data/ch3_hf_sto3g.fchk=b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c \
+            --fixture submodules/iodata/iodata/test/data/h2o.molden.input=2bf025dc02fdb689e61c980ac55dc4bef35a31e4bfc819a668ac36d721f44f06
+      - name: Upload IOData summary
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: optional-qc-core-iodata-${{ github.run_id }}
+          path: summary-iodata.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  gbasis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Initialize pinned GBasis and IOData fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global core.autocrlf false
+          git submodule update --init --depth 1 submodules/gbasis submodules/iodata
+          test "$(git -C submodules/gbasis rev-parse HEAD)" = "6440c84f3fcf8d42cbd9b5de53ae8d70bed4cd4f"
+          test "$(git -C submodules/iodata rev-parse HEAD)" = "adab5813713ba64641565eb2a8c11803a4e9bba6"
+      - name: Install pinned GBasis environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -c .github/constraints/gbasis-py312.txt "numpy==1.26.4" "qc-iodata==1.0.1" "qc-gbasis==0.1.0"
+      - name: Run required GBasis integration
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python ChemBlender/scripts/run_required_integration.py \
+            --summary summary-gbasis.json \
+            --module tests.test_wavefunction_grid \
+            --module tests.test_wavefunction_observables \
+            --require-version-file .github/constraints/gbasis-py312.txt \
+            --fixture submodules/iodata/iodata/test/data/water_sto3g_hf_g03.fchk=aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816 \
+            --fixture submodules/iodata/iodata/test/data/ch3_hf_sto3g.fchk=b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c \
+            --fixture submodules/iodata/iodata/test/data/water_ccpvdz_pure_hf_g03.fchk=c86f46db444f31613dbc2602b7b37b4ee4375d722b86e69eb04a163d3a1ec90a
+      - name: Upload GBasis summary
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: optional-qc-core-gbasis-${{ github.run_id }}
+          path: summary-gbasis.json
+          if-no-files-found: ignore
+          retention-days: 14

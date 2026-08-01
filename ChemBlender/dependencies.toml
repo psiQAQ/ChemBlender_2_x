@@ -1,0 +1,29 @@
+schema_version = "1"
+
+[[dependency]]
+distribution = "rdkit"
+version = "2026.3.3"
+filename = "rdkit-2026.3.3-cp313-cp313-win_amd64.whl"
+platform = "windows-x64"
+python_abi = "cp313-cp313"
+url = "https://files.pythonhosted.org/packages/68/d0/5de3d0d7e66f0e7e7795ab94a53b826e257176c15c9ee79f15621ac040ed/rdkit-2026.3.3-cp313-cp313-win_amd64.whl"
+sha256 = "f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48"
+spdx_license = "BSD-3-Clause"
+license_source = "rdkit-2026.3.3.dist-info/LICENSE.md"
+required = true
+max_compressed_bytes = 24618400
+max_unpacked_bytes = 57121218
+
+[[dependency]]
+distribution = "gemmi"
+version = "0.7.5"
+filename = "gemmi-0.7.5-cp313-cp313-win_amd64.whl"
+platform = "windows-x64"
+python_abi = "cp313-cp313"
+url = "https://files.pythonhosted.org/packages/ee/ab/7d7463cda94f8b68b969ea97aaad679655a0e436efd6a643e528a8de114e/gemmi-0.7.5-cp313-cp313-win_amd64.whl"
+sha256 = "ad1f72ffa24adbfaf259e11471f6f071a668667f6ca846051f3bfea024fd337d"
+spdx_license = "MPL-2.0"
+license_source = "gemmi-0.7.5.dist-info/licenses/LICENSE.txt"
+required = true
+max_compressed_bytes = 2270352
+max_unpacked_bytes = 5345458
