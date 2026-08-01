@@ -22,6 +22,9 @@ PERFORMANCE_REPORT = (
 )
 RC_VERSION = "2.3.0-rc.1"
 RC_TAG = f"v{RC_VERSION}"
+RC_RELEASE_NOTES_UTF8_SHA256 = (
+    "d19666306b6afe45c33640b8032535c713bdc6d49164f305c5d2ae5cfe4da14b"
+)
 RC_TAG_OBJECT = "e450d0c29ca9244df05debd3022467f153fda8d1"
 RC_TAG_COMMIT = "86e4391a73128f0262e0fbf6960443c3be4cb310"
 RC_PACKAGE_RUN = "30682833534"
@@ -190,6 +193,11 @@ class Wave4RCReadinessTests(unittest.TestCase):
     def test_rc_changelog_scopes_pre_tag_remote_ci_snapshot(self):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         notes = extract_release_notes(changelog, RC_VERSION)
+        self.assertEqual(
+            hashlib.sha256(notes.encode("utf-8")).hexdigest(),
+            RC_RELEASE_NOTES_UTF8_SHA256,
+            "RC release notes must match the immutable tagged/public UTF-8 body",
+        )
 
         for text in (
             "Remote CI has not run for this exact RC commit. Local qualification "
