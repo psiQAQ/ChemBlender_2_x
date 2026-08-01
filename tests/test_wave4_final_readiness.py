@@ -14,6 +14,22 @@ FINAL_MANIFEST_SHA256 = (
 RC_NOTES_SHA256 = (
     "d19666306b6afe45c33640b8032535c713bdc6d49164f305c5d2ae5cfe4da14b"
 )
+RELEASE_HEAD = "bd3e4a730ee687974d46e8c16d87ebe91b1b49ae"
+PRE_MERGE_MAIN = "86e4391a73128f0262e0fbf6960443c3be4cb310"
+MERGE_COMMIT = "26e4d51b8be6915618d4230006fabad6c2326d0c"
+TAG_OBJECT = "01f97d594e9d857980dcd920e2f49df729536c92"
+PACKAGE_SHA256 = (
+    "5ba1ad9c8f41f413c355343d357dd26bb037128a0f8adfad01ec704f96ba069f"
+)
+CHECKSUM_SHA256 = (
+    "54573f54562dcf765c5bb544d1df1eba74e0e38fe476111307dfb8c9c0fefd95"
+)
+RELEASE_BODY_SHA256 = (
+    "cad6ea6f3761f345fe5330ee62e869bdaed72ef10933ce9ad49542b4ea2490fd"
+)
+FINAL_CURSOR = ROOT / ".agents/completed/2.3.0-wave-4-migration-release.md"
+READINESS = ROOT / ".agents/completed/2.3.0-release-readiness.md"
+ROADMAP = ROOT / "docs/quantum-visualization/2.3.0/roadmap.md"
 
 sys.path.insert(0, str(SCRIPTS))
 
@@ -79,147 +95,123 @@ class Wave4FinalReadinessTests(unittest.TestCase):
             changelog,
         )
 
-    def test_local_final_qualification_is_recorded_without_claiming_publication(self):
-        readiness = (
-            ROOT / ".agents/completed/2.3.0-release-readiness.md"
-        ).read_text(encoding="utf-8")
-        active = (
-            ROOT / ".agents/active/2.3.0-wave-4-migration-release.md"
-        ).read_text(encoding="utf-8")
-        roadmap = (
-            ROOT / "docs/quantum-visualization/2.3.0/roadmap.md"
-        ).read_text(encoding="utf-8")
+    def test_final_publication_is_recorded_at_exact_remote_identities(self):
+        readiness = READINESS.read_text(encoding="utf-8")
+        completed = FINAL_CURSOR.read_text(encoding="utf-8")
+        roadmap = ROADMAP.read_text(encoding="utf-8")
 
         for expected in (
             "Local final qualification: Passed",
+            "Final public Release: Passed",
             "`chemblender-2.3.0.zip`",
             "`chemblender-2.3.0.sha256`",
             "`chemblender-2.3.0-windows-x64`",
             "`7eea1c2db9a4bc22a66b99b8ea374a5c04a908f72dc64e6c27ad3dd12e6c0edf`",
-            "Final exact-tag package CI: Not Run in this local preparation task",
-            "Final public Release: Not Run in this local preparation task",
+            RELEASE_HEAD,
+            PRE_MERGE_MAIN,
+            MERGE_COMMIT,
+            TAG_OBJECT,
+            "PR [#7](https://github.com/psiQAQ/ChemBlender_2_x/pull/7)",
+            "30688290548",
+            "30688290557",
+            "30688503614",
+            "30688503615",
+            "30688727561",
+            "8814949707",
+            PACKAGE_SHA256,
+            CHECKSUM_SHA256,
+            "30689352612",
+            "30689376447",
+            "363458494",
+            "https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0",
+            RELEASE_BODY_SHA256,
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, readiness)
 
-        self.assertIn("- State: `in_progress`.", active)
-        self.assertIn("Task 7 local final qualification: Passed", active)
-        self.assertIn(
-            "final exact-tag CI and final public Release remain Pending",
-            active,
+        self.assertFalse(
+            (ROOT / ".agents/active/2.3.0-wave-4-migration-release.md").exists()
         )
+        self.assertIn("- State: `completed`.", completed)
+        self.assertIn("2.3.0 Release-qualified: Passed", completed)
         self.assertIn(
-            "本地 final qualification：Passed（2026-08-01）",
-            roadmap,
+            ".agents/completed/2.3.0-release-readiness.md",
+            completed,
         )
-        self.assertIn(
-            "远端 final exact-tag CI 与最终公开 Release：Pending（本地任务中 Not Run）",
-            roadmap,
-        )
-        self.assertNotIn("2.3.0 Release-qualified", active)
-        self.assertNotIn("2.3.0 Release-qualified", roadmap)
+        self.assertIn("2.3.0 Release-qualified：Passed（2026-08-01）", roadmap)
+        self.assertIn("Wave 4 已完成", roadmap)
 
-    def test_active_recovery_skips_completed_task5_and_rc_work(self):
-        active = (
-            ROOT / ".agents/active/2.3.0-wave-4-migration-release.md"
-        ).read_text(encoding="utf-8")
+        stale_claims = (
+            "Final exact-tag package CI: Not Run in this local preparation task",
+            "Final public Release: Not Run in this local preparation task",
+            "final exact-tag CI and final public Release remain Pending",
+            "远端 final exact-tag CI 与最终公开 Release：Pending",
+        )
+        for document in (readiness, completed, roadmap):
+            for stale in stale_claims:
+                with self.subTest(stale=stale):
+                    self.assertNotIn(stale, document)
+
+    def test_completed_cursor_has_no_remaining_release_work(self):
+        completed = FINAL_CURSOR.read_text(encoding="utf-8")
 
         for obsolete in (
             "close all Task 5 review findings",
             "Docs Tasks 6–7 require an authorized RC tag/push",
-        ):
-            with self.subTest(obsolete=obsolete):
-                self.assertNotIn(obsolete, active)
-        for expected in (
             "Remaining execution order:",
             "complete the independent final review",
-            "execute the ordered final remote gate",
-            "Final annotated tag `v2.3.0`, exact-tag CI, Release dry-run, "
-            "and public Release remain `Not Run`.",
+            "Final annotated tag `v2.3.0`, exact-tag CI, Release dry-run, and public Release remain `Not Run`.",
+        ):
+            with self.subTest(obsolete=obsolete):
+                self.assertNotIn(obsolete, completed)
+        for expected in (
+            "Final publication evidence:",
+            "No remaining Wave 4 task.",
+            "Release Groundwork and Waves 0–4 are complete.",
         ):
             with self.subTest(expected=expected):
-                self.assertIn(expected, active)
+                self.assertIn(expected, completed)
 
-    def test_remote_handoff_is_fail_closed_and_ordered_through_main(self):
+    def test_durable_entrypoints_match_the_published_release(self):
+        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        branch_release = (
+            ROOT / "docs/development/branch-and-release.md"
+        ).read_text(encoding="utf-8")
+        reader_compatibility = (
+            ROOT / "docs/reader-api-v1/compatibility.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "Latest release readiness evidence: "
+            "`.agents/completed/2.3.0-release-readiness.md`",
+            agents,
+        )
+        self.assertIn("2.3.0: published final extension", branch_release)
+        self.assertNotIn("2.3.0-alpha.1: Wave 0", branch_release)
+        self.assertIn(
+            "2.3.0 正式版\n保留 `1.0-rc1` token",
+            reader_compatibility,
+        )
+        self.assertNotIn("only at the 2.3.0 final release gate", reader_compatibility)
+
+    def test_completed_records_contain_no_live_remote_runbook(self):
         documents = {
-            "active": (
-                ROOT / ".agents/active/2.3.0-wave-4-migration-release.md"
-            ).read_text(encoding="utf-8"),
-            "readiness": (
-                ROOT / ".agents/completed/2.3.0-release-readiness.md"
-            ).read_text(encoding="utf-8"),
+            "completed": FINAL_CURSOR.read_text(encoding="utf-8"),
+            "readiness": READINESS.read_text(encoding="utf-8"),
         }
-        ordered_gates = (
-            "1. Independent final review: Passed; record reviewed release HEAD as `H`.",
-            "2. Ordinary-push `release/2.3.0` to `origin`.",
-            "3. Create PR: `release/2.3.0` to `main`.",
-            "4. PR exact HEAD `H`: all five required checks Passed:",
-            "5. Immediately after PR checks pass, run `git fetch origin --prune`, record `B = origin/main`, and require the remote PR base still equals `B` and has not advanced.",
-            "6. Merge to `main` with an ordinary merge commit and record it as `M`; squash/rebase are forbidden.",
-            "7. Fetch and require exact merge identities:",
-            "8. Main exact merge commit: all five required checks Passed.",
-            "9. Create/push annotated `v2.3.0` from the verified `origin/main` merge commit.",
-            "10. Exact-tag CI: unique successful `extension-package` run for the tag's exact commit.",
-            "11. Artifact verify: unexpired metadata-named five-file artifact, ZIP/checksum digests, inventory, licenses, size, install, and lifecycle evidence.",
-            "12. Dry-run: `extension-release.yml` with `publish=false` must pass.",
-            "13. Publish: dispatch with `publish=true`, then verify the public final Release, assets, body, digests, and latest status.",
-        )
-        required_checks = (
-            "`extension-package / native-core`",
-            "`extension-package / package`",
-            "`optional-qc-core / cclib`",
-            "`optional-qc-core / iodata`",
-            "`optional-qc-core / gbasis`",
-        )
-        authorization = (
-            "The user has explicitly authorized all remaining Git and remote "
-            "operations in this execution.",
-            "No further confirmation is required for this sequence.",
-            "This execution-specific authorization does not change the "
-            "repository's general authorization policy.",
-        )
-        merge_identity_anchors = (
-            "`M^1 == B` (first parent equals the recorded pre-merge `origin/main`).",
-            "`M^2 == H` (second parent equals the reviewed release HEAD).",
-            "`origin/main == M`.",
-            "`H` is an ancestor of `M` (additional check; it does not replace either parent equality).",
+        obsolete = (
+            "all remaining Git and remote operations",
+            "No further confirmation is required",
+            "Immediately after PR checks pass",
+            "Create/push annotated `v2.3.0`",
+            "dispatch with `publish=true`",
+            "Before final handoff",
         )
 
         for name, document in documents.items():
             with self.subTest(document=name):
-                normalized = " ".join(document.split())
-                positions = [normalized.index(gate) for gate in ordered_gates]
-                self.assertEqual(positions, sorted(positions))
-                push_start = positions[1]
-                remote_release_equality = normalized.index(
-                    "`origin/release/2.3.0 == H`", push_start
-                )
-                pr_start = positions[2]
-                self.assertLess(remote_release_equality, pr_start)
-                pr_checks_start = positions[3]
-                base_capture_start = positions[4]
-                merge_start = positions[5]
-                for check in required_checks:
-                    check_position = normalized.index(check, pr_checks_start)
-                    self.assertLess(check_position, base_capture_start)
-                self.assertLess(pr_checks_start, base_capture_start)
-                self.assertLess(base_capture_start, merge_start)
-                identity_start = positions[6]
-                main_checks_start = positions[7]
-                identity_positions = [
-                    normalized.index(anchor, identity_start)
-                    for anchor in merge_identity_anchors
-                ]
-                self.assertEqual(identity_positions, sorted(identity_positions))
-                self.assertTrue(
-                    all(position < main_checks_start for position in identity_positions)
-                )
-                self.assertIn(
-                    "If any gate fails, is missing, or is ambiguous, stop before all later steps.",
-                    normalized,
-                )
-                for statement in authorization:
-                    self.assertIn(statement, normalized)
+                for statement in obsolete:
+                    self.assertNotIn(statement, document)
 
 if __name__ == "__main__":
     unittest.main()

@@ -93,5 +93,6 @@
 当前发布门状态：
 
 - 本地 final qualification：Passed（2026-08-01）。
-- 远端 final exact-tag CI 与最终公开 Release：Pending（本地任务中 Not Run）。
-- Wave 4 保持进行中；只有最终 exact-tag artifact、Release dry-run 和公开 Release 均经独立验证后，才能记录为 `2.3.0` 发布完成。
+- PR 与 `main` 精确提交 CI、annotated tag、exact-tag artifact、Release dry-run 和公开 Release：Passed。
+- 2.3.0 Release-qualified：Passed（2026-08-01）。
+- Wave 4 已完成；公开版本：<https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0>。
