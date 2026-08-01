@@ -7,8 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ()
-NEXT_RELEASE_QUEUED_FILES = ("2.4.0-pdb-export.md",)
+NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-pdb-export.md",)
+NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
@@ -790,7 +790,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         completed_path = (
             f".agents/completed/{TASK3_SCOPE_COMPLETED_FILE}"
         )
-        queued_path = ".agents/queued/2.4.0-pdb-export.md"
+        active_path = ".agents/active/2.4.0-pdb-export.md"
         documents = {
             path: self.read_doc(path)
             for path in (
@@ -799,7 +799,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 discovery_plan_path,
                 selected_plan_path,
                 completed_path,
-                queued_path,
+                active_path,
             )
         }
 
@@ -828,15 +828,15 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         ):
             self.assertIn(term, selected_plan)
 
-        queued = documents[queued_path]
+        active = documents[active_path]
         for term in (
             "CB240-PDB-EXPORT-T3",
-            "State: `not_started`",
+            "State: `in_progress`",
             selected_plan_path,
             intake_path,
-            "explicit user instruction",
+            "Task 1 — Freeze native PDB export contract",
         ):
-            self.assertIn(term, queued)
+            self.assertIn(term, active)
 
         completed = documents[completed_path]
         for term in (
@@ -849,7 +849,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             design_path,
             discovery_plan_path,
             selected_plan_path,
-            queued_path,
+            ".agents/queued/2.4.0-pdb-export.md",
         ):
             self.assertIn(term, completed)
 

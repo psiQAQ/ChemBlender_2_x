@@ -31,6 +31,7 @@ from .mol2_readiness import (
     mol2_export_readiness,
 )
 from .mol2 import export_mol2, preview_mol2_export
+from .pdb import export_pdb, preview_pdb_export
 from .pdb_readiness import (
     PDBPQRExportReadiness,
     PDBPQRExportStatus,
@@ -56,10 +57,12 @@ __all__ = (
     "export_mol",
     "export_mol2",
     "export_poscar",
+    "export_pdb",
     "export_sdf",
     "export_smiles",
     "preview_molecular_export",
     "preview_mol2_export",
+    "preview_pdb_export",
     "sdf_entries_from_conformer_set",
     "export_xyz",
     "mol2_export_readiness",
