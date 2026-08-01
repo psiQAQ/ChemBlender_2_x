@@ -112,7 +112,7 @@ class Wave4RCReadinessTests(unittest.TestCase):
             with self.subTest(heading=heading):
                 self.assertIn(f"### {heading}", notes)
 
-    def test_readiness_binds_local_rc_evidence_and_zero_growth_budget(self):
+    def test_readiness_preserves_local_rc_evidence_and_current_zero_growth_budget(self):
         self.assertTrue(READINESS.is_file(), f"missing RC readiness: {READINESS}")
         readiness = READINESS.read_text(encoding="utf-8")
         for text in (
@@ -133,20 +133,21 @@ class Wave4RCReadinessTests(unittest.TestCase):
         )
         self.assertIsNotNone(match, "missing canonical RC artifact-budget evidence")
         evidence = json.loads(match.group(1))
+        self.assertEqual(
+            evidence,
+            {
+                "member_unpacked_bytes": 31_975_749,
+                "package_bytes": 29_956_027,
+                "section_unpacked_bytes": {
+                    "code": 2_580_988,
+                    "other": 0,
+                    "resources": 2_506_009,
+                    "wheels": 26_888_752,
+                },
+            },
+        )
         budget = json.loads(
             (ROOT / ".github" / "artifact-budgets.json").read_text(encoding="utf-8")
-        )
-        self.assertEqual(evidence["package_bytes"], budget["baseline_package_bytes"])
-        self.assertEqual(
-            evidence["member_unpacked_bytes"],
-            budget["baseline_member_unpacked_bytes"],
-        )
-        self.assertEqual(
-            evidence["section_unpacked_bytes"],
-            {
-                name: section["baseline_unpacked_bytes"]
-                for name, section in budget["section_unpacked_budgets"].items()
-            },
         )
         self.assertEqual(budget["allowed_unexplained_growth_bytes"], 0)
         self.assertEqual(

@@ -175,9 +175,13 @@ def mol2_export_readiness(project_entities):
             missing.add("annotation.charge_type")
         if molecule_type is not None and not isinstance(molecule_type.value, str):
             missing.add("annotation.molecule_type")
-        partial_charge = properties("partial_charge")
-        if charge_type is not None and charge_type.value != "NO_CHARGES" and (
-            partial_charge is None or not _complete_numeric(partial_charge, "iuf")
+        partial_charge = (
+            None
+            if charge_type is not None and charge_type.value == "NO_CHARGES"
+            else properties("partial_charge")
+        )
+        if partial_charge is not None and not _complete_numeric(
+            partial_charge, "iuf"
         ):
             missing.add("dataset.partial_charge")
         _one(

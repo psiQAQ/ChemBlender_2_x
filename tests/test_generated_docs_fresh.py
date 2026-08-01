@@ -162,6 +162,15 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
         self.assertEqual(by_id["cube"]["export"]["maturity"], "F0")
         self.assertEqual(by_id["cube"]["export"]["execution_mode"], "none")
         self.assertEqual(by_id["cjson"]["export"]["execution_mode"], "core")
+        self.assertEqual(
+            by_id["mol2"]["export"],
+            {
+                "execution_mode": "core",
+                "format_id": "mol2",
+                "loss_policy": "preview_confirmation",
+                "maturity": "F5",
+            },
+        )
 
     def test_extensionless_reader_basenames_are_exact(self):
         document = reader_catalog.reader_capability_document()
