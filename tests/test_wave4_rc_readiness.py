@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EXTENSION = ROOT / "ChemBlender"
 SCRIPTS = EXTENSION / "scripts"
 READINESS = ROOT / ".agents" / "completed" / "2.3.0-rc-readiness.md"
+ACTIVE_CURSOR = ROOT / ".agents" / "active" / "2.3.0-wave-4-migration-release.md"
 PERFORMANCE_REPORT = (
     ROOT
     / "docs"
@@ -21,6 +22,14 @@ PERFORMANCE_REPORT = (
 )
 RC_VERSION = "2.3.0-rc.1"
 RC_TAG = f"v{RC_VERSION}"
+RC_TAG_OBJECT = "e450d0c29ca9244df05debd3022467f153fda8d1"
+RC_TAG_COMMIT = "86e4391a73128f0262e0fbf6960443c3be4cb310"
+RC_PACKAGE_RUN = "30682833534"
+RC_ARTIFACT_ID = "8812929666"
+RC_PACKAGE_SHA256_PUBLISHED = (
+    "7d45bfe9e208e6d50d2b90e875316092c12e51177f39f8835e8ad71af3d2de17"
+)
+RC_FEEDBACK_CHECKED_AT = "2026-08-01T04:02:01Z"
 QUALIFICATION_SOURCE = "c796ee9469b44c418da729c25b114a5b06595d46"
 PACKAGE_SHA256 = "fed220ad7d9ababe03e821e630ae5beee1a834245060864a8611c5b74f5cfd64"
 EXACT_COMMAND_MANIFEST_SHA256 = (
@@ -154,6 +163,29 @@ class Wave4RCReadinessTests(unittest.TestCase):
                 for section in budget["section_unpacked_budgets"].values()
             )
         )
+
+    def test_readiness_separates_historical_pre_tag_snapshot_from_published_rc(self):
+        readiness = READINESS.read_text(encoding="utf-8")
+        for text in (
+            "Historical pre-tag qualification snapshot",
+            RC_TAG_OBJECT,
+            RC_TAG_COMMIT,
+            RC_PACKAGE_RUN,
+            RC_ARTIFACT_ID,
+            RC_PACKAGE_SHA256_PUBLISHED,
+            "30683074015",
+            "30683112170",
+            "https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0-rc.1",
+            "must not be copied into the final `2.3.0` changelog or readiness record",
+            RC_FEEDBACK_CHECKED_AT,
+            "Issues are disabled; PR #6 has no reviews or comments; the RC Release has no discussion or reactions",
+        ):
+            with self.subTest(text=text):
+                self.assertIn(text, readiness)
+
+        cursor = ACTIVE_CURSOR.read_text(encoding="utf-8")
+        self.assertIn(RC_FEEDBACK_CHECKED_AT, cursor)
+        self.assertIn("no visible user-feedback channel event", cursor)
 
     def test_manifest_version_is_a_single_root_assignment(self):
         source = (EXTENSION / "blender_manifest.toml").read_bytes()
