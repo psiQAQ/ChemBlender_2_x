@@ -304,13 +304,34 @@ class CubeExportUIContractTests(unittest.TestCase):
         batch = CUBE_READER.parse(TWO_DATASETS)
         project = self._project(batch)
         module = self.export
-        operator = module.CHEMBLENDER_OT_export_project_entity()
+        update = (
+            module.CHEMBLENDER_OT_export_project_entity
+            .__annotations__["format_name"]
+            .keywords["update"]
+        )
+
+        class _UpdatingExportOperator(
+            module.CHEMBLENDER_OT_export_project_entity
+        ):
+            def __setattr__(self, name, value):
+                object.__setattr__(self, name, value)
+                if name == "format_name" and getattr(
+                    self,
+                    "_updates_enabled",
+                    False,
+                ):
+                    update(self, self._update_context)
+
+        operator = _UpdatingExportOperator()
+        operator._updates_enabled = False
         operator.format_name = "extxyz"
         operator.missing_value_token = ""
         operator.cube_dataset_index = -1
         operator.confirm_loss = False
         manager = _WindowManager()
         context = SimpleNamespace(scene=object(), window_manager=manager)
+        operator._update_context = context
+        operator._updates_enabled = True
         session = SimpleNamespace(project=project, active_entity_id=self._grid(batch).id)
 
         with (
@@ -328,7 +349,6 @@ class CubeExportUIContractTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "selected.cube"
             operator.filepath = str(destination)
-            operator.format_name = "cube"
             with patch.object(module, "get_scene_session", return_value=session):
                 result = operator.execute(context)
             self.assertEqual(result, {"CANCELLED"})

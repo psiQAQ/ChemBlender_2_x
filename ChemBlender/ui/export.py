@@ -987,6 +987,8 @@ def _report_text(report):
 
 def _export_preview_changed(self, context):
     self.confirm_loss = False
+    if getattr(self, "_suppress_preview_update", False):
+        return
     preview = getattr(self, "_selection_and_preview", None)
     if preview is None:
         return
@@ -1140,43 +1142,50 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
             session.active_entity_id,
         )
         if default_format:
-            if selection.grid is not None:
-                self.format_name = "cube"
-            elif selection.conformer_set is not None or selection.record is not None:
-                self.format_name = "sdf"
-            elif selection.frame_set is not None:
-                self.format_name = "extxyz"
-            elif selection.structure.periodic is not None:
-                self.format_name = (
-                    "poscar"
-                    if any(
-                        value.producer == "ChemBlender POSCAR adapter"
-                        for value in selection.provenance
+            self._suppress_preview_update = True
+            try:
+                if selection.grid is not None:
+                    self.format_name = "cube"
+                elif (
+                    selection.conformer_set is not None
+                    or selection.record is not None
+                ):
+                    self.format_name = "sdf"
+                elif selection.frame_set is not None:
+                    self.format_name = "extxyz"
+                elif selection.structure.periodic is not None:
+                    self.format_name = (
+                        "poscar"
+                        if any(
+                            value.producer == "ChemBlender POSCAR adapter"
+                            for value in selection.provenance
+                        )
+                        else "cif"
                     )
-                    else "cif"
-                )
-            if self.format_name == "cif":
-                self.cif_mode = (
-                    "preserve"
-                    if selection.cif_envelope is not None
-                    else "normalized"
-                )
-            elif self.format_name == "poscar":
-                settings, _selective, _velocities, _lattice = _poscar_parts(
-                    selection
-                )
-                self.poscar_coordinate_mode = settings.coordinate_mode
-                self.poscar_scale_policy = settings.scale_policy
-                self.poscar_comment = settings.comment
-                import numpy
+                if self.format_name == "cif":
+                    self.cif_mode = (
+                        "preserve"
+                        if selection.cif_envelope is not None
+                        else "normalized"
+                    )
+                elif self.format_name == "poscar":
+                    settings, _selective, _velocities, _lattice = _poscar_parts(
+                        selection
+                    )
+                    self.poscar_coordinate_mode = settings.coordinate_mode
+                    self.poscar_scale_policy = settings.scale_policy
+                    self.poscar_comment = settings.comment
+                    import numpy
 
-                self.poscar_target_volume = abs(
-                    float(numpy.linalg.det(selection.structure.cell.values))
-                )
-                self.poscar_include_selective_dynamics = (
-                    settings.include_selective_dynamics
-                )
-                self.poscar_velocity_mode = settings.velocity_mode
+                    self.poscar_target_volume = abs(
+                        float(numpy.linalg.det(selection.structure.cell.values))
+                    )
+                    self.poscar_include_selective_dynamics = (
+                        settings.include_selective_dynamics
+                    )
+                    self.poscar_velocity_mode = settings.velocity_mode
+            finally:
+                self._suppress_preview_update = False
         cube_requires_dataset_index = (
             selection.grid is not None
             and selection.grid.data.dims == ("dataset", "x", "y", "z")
