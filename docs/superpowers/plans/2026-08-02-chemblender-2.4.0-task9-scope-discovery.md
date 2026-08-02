@@ -102,25 +102,25 @@ Commit as `docs: record Cube export remote integration`.
 **Interfaces:** Compare the live capability catalog, export selection flow,
 Reader API adoption evidence and release qualification dependency order.
 
-- [ ] **Step 1: Recheck live facts**
+- [x] **Step 1: Recheck live facts**
 
 Confirm PR #15 exact-head CI, merge and ancestry; Cube
 `F5 / core / preview_confirmation`; Reader API `1.0-rc1`; selectable `Grid3D`
 Project Browser rows; no visible external reader-manifest adopter.
 
-- [ ] **Step 2: Write candidate-intake RED**
+- [x] **Step 2: Write candidate-intake RED**
 
 Require all three candidates, explicit selection of
 `Task 10 — Native Cube Export UI`, and explicit deferral reasons for Reader API
 stable and Final Qualification.
 
-- [ ] **Step 3: Write the evidence record**
+- [x] **Step 3: Write the evidence record**
 
 Separate confirmed facts, inference and recommendation. Select Cube UI only if
 the existing Project Browser operator and core exporter can be reused without
 a new module, model, schema or dependency.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Commit as `docs: select native Cube export UI for Task 10`.
 

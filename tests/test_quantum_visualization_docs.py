@@ -1293,9 +1293,13 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-08-02-chemblender-2.4.0-task9-scope-discovery.md"
         )
+        intake_path = (
+            "docs/quantum-visualization/2.4.0/task9-candidate-intake.md"
+        )
         active = self.read_doc(active_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
+        intake = self.read_doc(intake_path)
 
         for term in (
             "CB240-TASK9-SCOPE-DISCOVERY",
@@ -1308,6 +1312,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "2.4.0 Final Qualification",
             "No runtime implementation",
             "No push",
+            "Selection: `Native Cube Export UI`",
+            intake_path,
         ):
             self.assertIn(term, active)
         for term in (
@@ -1325,6 +1331,20 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Task 5: Verify, review and checkpoint",
         ):
             self.assertIn(term, plan)
+        for term in (
+            "Cube: F5 / core / preview_confirmation",
+            "Reader API: 1.0-rc1",
+            "Task 10 — Native Cube Export UI",
+            "Reader API stable: deferred",
+            "Final Qualification: deferred",
+            "Grid3D",
+            "resolve_export_selection",
+            "164a681bb3d9cb788f778eca71f9fe61a0361019",
+            "30747458150",
+            "30747458152",
+            "cd265d95c3cc73cae5355657cc0a5a8f1931d98b",
+        ):
+            self.assertIn(term, intake)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
