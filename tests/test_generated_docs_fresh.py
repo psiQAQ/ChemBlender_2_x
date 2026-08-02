@@ -183,7 +183,7 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
         self.assertEqual(
             by_id["pqr"]["export"],
             {
-                "execution_mode": "core",
+                "execution_mode": "project_browser",
                 "format_id": "pqr",
                 "loss_policy": "preview_confirmation",
                 "maturity": "F5",

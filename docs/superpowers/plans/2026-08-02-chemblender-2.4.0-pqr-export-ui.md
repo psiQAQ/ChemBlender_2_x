@@ -145,26 +145,26 @@ Run workflow/PQR/registration tests and commit:
 **Interfaces:** PQR becomes
 `("pqr", "F5", "project_browser", "preview_confirmation")` in the catalog.
 
-- [ ] **Step 1: Write capability RED**
+- [x] **Step 1: Write capability RED**
 
 Update the generated-doc contract to require `project_browser`; run it and
 observe the current `core` mismatch.
 
-- [ ] **Step 2: Update the catalog and regenerate documents**
+- [x] **Step 2: Update the catalog and regenerate documents**
 
 Run:
 `python ChemBlender/scripts/generate_format_docs.py`
 
 Only catalog-derived PQR execution claims may change.
 
-- [ ] **Step 3: Extend installed Blender smoke**
+- [x] **Step 3: Extend installed Blender smoke**
 
 Within the existing biological workflow, export the selected imported PQR
 Structure through `ExportJob`, reparse it with native `parse_pqr()`, and compare
 atomic numbers, coordinates, hierarchy labels, partial charges and radii.
 Retain register/unregister/reload x2 and the existing small RNA budget.
 
-- [ ] **Step 4: Run focused GREEN and commit**
+- [x] **Step 4: Run focused GREEN and commit**
 
 Run workflow, generated docs, PQR reader/exporter, registration and smoke source
 contracts, then commit: `docs: publish PQR Project Browser export`.

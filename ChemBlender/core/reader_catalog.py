@@ -72,7 +72,7 @@ _READER_EXPORTS = {
     "mol2": ("mol2", "F5", "project_browser", "preview_confirmation"),
     "pdb": ("pdb", "F5", "project_browser", "preview_confirmation"),
     "poscar": ("poscar", "F5", "project_browser", "preview_confirmation"),
-    "pqr": ("pqr", "F5", "core", "preview_confirmation"),
+    "pqr": ("pqr", "F5", "project_browser", "preview_confirmation"),
     "qcschema": ("qcschema", "F5", "core", "source_envelope"),
     "sdf": ("sdf", "F5", "project_browser", "preview_confirmation"),
     "smiles": ("smiles", "F5", "project_browser", "preview_confirmation"),
