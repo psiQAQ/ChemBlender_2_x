@@ -17,12 +17,6 @@ from .ase_adapter import (
 )
 # Reader compatibility exports.
 from .cube import CUBE_READER, parse_cube, sniff_cube
-from .exporters.cube_readiness import (
-    CubeExportReadiness,
-    CubeExportStatus,
-    cube_export_readiness,
-)
-from .exporters.cube import CubeExport, export_cube, preview_cube_export
 # Adapter compatibility exports.
 from .cjson_adapter import (
     CJSON_READER,
@@ -313,6 +307,43 @@ from .vibration_spectrum import (
     derive_electronic_spectrum,
     derive_vibrational_spectrum,
 )
+
+
+_CUBE_EXPORT_NAMES = frozenset(
+    (
+        "CubeExport",
+        "CubeExportReadiness",
+        "CubeExportStatus",
+        "cube_export_readiness",
+        "export_cube",
+        "preview_cube_export",
+    )
+)
+
+
+def __getattr__(name):
+    if name not in _CUBE_EXPORT_NAMES:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    from .exporters import (
+        CubeExport,
+        CubeExportReadiness,
+        CubeExportStatus,
+        cube_export_readiness,
+        export_cube,
+        preview_cube_export,
+    )
+
+    values = {
+        "CubeExport": CubeExport,
+        "CubeExportReadiness": CubeExportReadiness,
+        "CubeExportStatus": CubeExportStatus,
+        "cube_export_readiness": cube_export_readiness,
+        "export_cube": export_cube,
+        "preview_cube_export": preview_cube_export,
+    }
+    globals().update(values)
+    return values[name]
+
 
 # Exact public names are documented in docs/quantum-visualization/2.3.0/public-core-api.md.
 __all__ = [
