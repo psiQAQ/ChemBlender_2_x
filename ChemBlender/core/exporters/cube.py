@@ -217,6 +217,8 @@ def _assert_snapshot_unchanged(snapshot):
 
 
 def _trusted_dataset_ids(project_entities, grid):
+    if len(grid.provenance_ids) != 1:
+        return None, bool(grid.provenance_ids)
     provenance = _entities(project_entities, "provenance")
     direct = tuple(
         value
@@ -284,6 +286,8 @@ def _loss_codes(project_entities, structure, grid, charge):
     if (
         grid.provenance_ids
         or charge.provenance_ids
+        or grid.source_calculation is not None
+        or charge.source_calculation is not None
         or _optional_entities(project_entities, "provenance")
     ):
         codes.add("provenance_omitted")
@@ -338,7 +342,7 @@ def _bohr(values, unit):
 
 def _number(value):
     value = float(value)
-    return f"{0.0 if value == 0.0 else value:.12E}"
+    return f"{0.0 if value == 0.0 else value:.16E}"
 
 
 def _line(count, values):
@@ -350,10 +354,19 @@ def _text_chunks(snapshot, identifier, *, is_cancelled=None, collected=None):
     grid = snapshot.grid
     charge = snapshot.charge
     signed_atom_count = -len(structure.atomic_numbers) if identifier is not None else len(structure.atomic_numbers)
-    chunks = [f"{_COMMENTS[0]}\n", f"{_COMMENTS[1]}\n"]
-    chunks.append(_line(signed_atom_count, _bohr(grid.origin, grid.coordinate_unit)))
+
+    def emit(chunk):
+        if _cancelled(is_cancelled):
+            raise ExportCancelled("export cancelled")
+        if collected is not None:
+            collected.append(chunk)
+        return chunk
+
+    yield emit(f"{_COMMENTS[0]}\n")
+    yield emit(f"{_COMMENTS[1]}\n")
+    yield emit(_line(signed_atom_count, _bohr(grid.origin, grid.coordinate_unit)))
     for count, vector in zip(grid.grid_shape, grid.step_vectors, strict=True):
-        chunks.append(_line(count, _bohr(vector, grid.coordinate_unit)))
+        yield emit(_line(count, _bohr(vector, grid.coordinate_unit)))
     coordinates = _bohr(structure.coordinates.values, structure.coordinates.unit)
     charges = numpy.asarray(charge.data.values)
     for atomic_number, nuclear_charge, row in zip(
@@ -362,18 +375,12 @@ def _text_chunks(snapshot, identifier, *, is_cancelled=None, collected=None):
         coordinates,
         strict=True,
     ):
-        chunks.append(_line(atomic_number, (nuclear_charge, *row)))
+        yield emit(_line(atomic_number, (nuclear_charge, *row)))
     if identifier is not None:
-        chunks.append(f"{1:5d} {identifier:5d}\n")
+        yield emit(f"{1:5d} {identifier:5d}\n")
     flat = snapshot.selected_values.ravel(order="C")
     for offset in range(0, len(flat), 6):
-        chunks.append(" ".join(_number(value) for value in flat[offset : offset + 6]) + "\n")
-    for chunk in chunks:
-        if _cancelled(is_cancelled):
-            raise ExportCancelled("export cancelled")
-        if collected is not None:
-            collected.append(chunk)
-        yield chunk
+        yield emit(" ".join(_number(value) for value in flat[offset : offset + 6]) + "\n")
 
 
 def export_cube(

@@ -330,6 +330,33 @@ class CubeExportReadinessTests(unittest.TestCase):
             ),
         )
 
+    def test_lazy_close_failure_does_not_replace_primary_exception(self):
+        batch = self.scalar()
+        coordinates = numpy.asarray(batch.structures[0].coordinates.values)
+
+        class ReadAndCloseFailure:
+            shape = coordinates.shape
+            dtype = coordinates.dtype
+            loaded = False
+
+            def __array__(self, dtype=None, copy=None):
+                raise MemoryError("read failed")
+
+            def close(self):
+                raise OSError("close failed")
+
+        structure = replace(
+            batch.structures[0],
+            coordinates=replace(
+                batch.structures[0].coordinates,
+                values=ReadAndCloseFailure(),
+            ),
+        )
+
+        with self.assertRaisesRegex(MemoryError, "read failed") as caught:
+            cube_export_readiness(replace(batch, structures=(structure,)))
+        self.assertTrue(any("close failed" in note for note in caught.exception.__notes__))
+
 
 if __name__ == "__main__":
     unittest.main()

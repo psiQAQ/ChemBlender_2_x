@@ -1360,9 +1360,9 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         )
         for value in (
             "128 × 128 × 128",
-            "4.260949 s",
-            "2.665624",
-            "40,890,796 bytes",
+            "4.716870 s",
+            "3.089668",
+            "49,279,468 bytes",
             "Blender 5.1.2",
             "cold VDB cache",
             "Remote CI: Not Run",

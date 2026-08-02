@@ -89,8 +89,9 @@ class CorePublicApiTests(unittest.TestCase):
     def test_import_does_not_load_blender_or_optional_stacks(self):
         code = (
             "import sys; import ChemBlender.core; "
-            "forbidden = {'bpy', 'cclib', 'iodata', 'gbasis', 'ase', 'gemmi', "
-            "'pymatgen', 'rdkit', 'spglib'}; "
+            "forbidden = {'bpy', 'numpy', 'cclib', 'iodata', 'gbasis', 'ase', "
+            "'gemmi', 'pymatgen', 'rdkit', 'spglib', "
+            "'ChemBlender.core.exporters.cube'}; "
             "raise SystemExit(bool(forbidden & set(sys.modules)))"
         )
         result = subprocess.run(

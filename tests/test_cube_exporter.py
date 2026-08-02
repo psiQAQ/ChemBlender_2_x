@@ -216,6 +216,22 @@ class CubeExporterTests(unittest.TestCase):
         confirmed = export_cube(malformed_batch, confirm_loss=True)
         self.assertEqual(int(self.lines(confirmed)[2].split()[0]), 1)
 
+        dangling_grid = replace(
+            scalar_grid,
+            provenance_ids=(trusted.id, uuid4()),
+        )
+        dangling_batch = replace(
+            trusted_batch,
+            datasets=(dangling_grid, self.charge(multi)),
+        )
+        dangling_preview = preview_cube_export(dangling_batch)
+        self.assertIn(
+            "dataset_id_omitted",
+            tuple(entry.code for entry in dangling_preview.entries),
+        )
+        dangling_export = export_cube(dangling_batch, confirm_loss=True)
+        self.assertEqual(int(self.lines(dangling_export)[2].split()[0]), 1)
+
     def test_missing_multi_dataset_id_is_normalized_with_confirmation(self):
         batch = self.multi()
         grid = replace(self.grid(batch), provenance_ids=())
@@ -277,6 +293,109 @@ class CubeExporterTests(unittest.TestCase):
             self.assertTrue(exported.report.written)
             self.assertEqual(exported.report.format, "cube")
             self.assertEqual(exported.report.frame_count, 1)
+
+    def test_destination_yields_header_before_formatting_numeric_rows(self):
+        observed = []
+
+        def consume_first(_destination, chunks, *, is_cancelled=None):
+            observed.append(next(iter(chunks)))
+
+        with (
+            patch(
+                "ChemBlender.core.exporters.cube.atomic_write_chunks",
+                side_effect=consume_first,
+            ),
+            patch(
+                "ChemBlender.core.exporters.cube._number",
+                side_effect=AssertionError("numeric rows formatted before first yield"),
+            ),
+        ):
+            export_cube(
+                self.scalar(),
+                confirm_loss=True,
+                destination=Path("unused.cube"),
+            )
+
+        self.assertEqual(observed, ["ChemBlender deterministic Cube export\n"])
+
+    def test_destination_cancels_before_formatting_the_full_payload(self):
+        from ChemBlender.core.exporters.cube import _number
+
+        checks = 0
+        numeric_rows = 0
+
+        def cancel_before_first_write():
+            nonlocal checks
+            checks += 1
+            return checks >= 3
+
+        def count_number(value):
+            nonlocal numeric_rows
+            numeric_rows += 1
+            return _number(value)
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "field.cube"
+            with patch(
+                "ChemBlender.core.exporters.cube._number",
+                side_effect=count_number,
+            ):
+                with self.assertRaises(ExportCancelled):
+                    export_cube(
+                        self.scalar(),
+                        confirm_loss=True,
+                        destination=destination,
+                        is_cancelled=cancel_before_first_write,
+                    )
+
+            self.assertEqual(numeric_rows, 0)
+            self.assertFalse(destination.exists())
+
+    def test_near_degenerate_affine_grid_round_trips_without_becoming_singular(self):
+        batch = self.scalar()
+        grid = replace(
+            self.grid(batch),
+            step_vectors=(
+                (1.0, 1.0, 0.0),
+                (1.0, 1.0 + 1.0e-13, 0.0),
+                (0.0, 0.0, 1.0),
+            ),
+        )
+        candidate = replace(
+            batch,
+            datasets=(grid, self.charge(batch)),
+        )
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "near-degenerate.cube"
+            export_cube(candidate, confirm_loss=True, destination=destination)
+            restored = CUBE_READER.parse(destination)
+
+        self.assertNotEqual(
+            float(numpy.linalg.det(numpy.asarray(self.grid(restored).step_vectors))),
+            0.0,
+        )
+
+    def test_source_calculation_is_reported_as_omitted_provenance(self):
+        batch = self.scalar()
+        grid = replace(
+            self.grid(batch),
+            source_calculation=uuid4(),
+            provenance_ids=(),
+        )
+        charge = replace(self.charge(batch), provenance_ids=())
+        candidate = replace(
+            batch,
+            datasets=(grid, charge),
+            provenance=(),
+        )
+
+        preview = preview_cube_export(candidate)
+
+        self.assertIn(
+            "provenance_omitted",
+            tuple(entry.code for entry in preview.entries),
+        )
 
     def test_loss_preview_is_sorted_complete_and_blocks_publication(self):
         batch = self.scalar()

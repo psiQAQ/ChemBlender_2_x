@@ -37,20 +37,30 @@ def _real_finite(data, expected_shape, *, dataset_index=None):
         return False
     live = data.values
     was_unloaded = getattr(live, "loaded", None) is False
+    primary = None
     try:
-        values = numpy.asarray(live)
-        if (
-            values.shape != expected_shape
-            or numpy.dtype(data.dtype).kind not in _REAL_KINDS
-            or values.dtype.kind not in _REAL_KINDS
-            or numpy.dtype(data.dtype) != values.dtype
-        ):
-            return False
-        selected = values if dataset_index is None else values[dataset_index]
-        return bool(numpy.all(numpy.isfinite(selected)))
+        try:
+            values = numpy.asarray(live)
+            if (
+                values.shape != expected_shape
+                or numpy.dtype(data.dtype).kind not in _REAL_KINDS
+                or values.dtype.kind not in _REAL_KINDS
+                or numpy.dtype(data.dtype) != values.dtype
+            ):
+                return False
+            selected = values if dataset_index is None else values[dataset_index]
+            return bool(numpy.all(numpy.isfinite(selected)))
+        except BaseException as error:
+            primary = error
+            raise
     finally:
         if was_unloaded:
-            live.close()
+            try:
+                live.close()
+            except BaseException as close_error:
+                if primary is None:
+                    raise
+                primary.add_note(f"lazy Cube readiness array close failed: {close_error}")
 
 
 def cube_export_readiness(project_entities, *, dataset_index=None):
