@@ -4,6 +4,42 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ## [Unreleased]
 
+## [2.4.0-rc.1] - 2026-08-03
+
+### Added
+
+- Added deterministic dependency-free normalized MOL2, PDB, PQR and Cube exporters over the existing vendor-neutral Project model.
+- Added Project Browser preview, explicit loss confirmation, cancellation and atomic destination publication for all four exporters.
+- Added explicit multi-dataset Cube selection with semantic native re-import checks for the selected scalar field.
+
+### Changed
+
+- Raised MOL2, PDB, PQR and Cube export maturity to F5 `project_browser` / `preview_confirmation` while preserving Reader API `1.0-rc1`, sidecar/project schema `1.0` and canonical document `0.1`.
+- Kept RDKit `2026.3.3` and Gemmi `0.7.5` as the only bundled Windows CPython 3.13 wheels; no dependency or workflow was added for export.
+
+### Fixed
+
+- Bound Project Browser export selections to the chosen Structure/Grid3D closure so sibling datasets and annotations cannot leak into output.
+- Preserved PQR snapshot diagnostics and resource ownership, PDB topology-loss evidence and Cube confirmation across Blender RNA property updates.
+- Hardened all four writers against non-finite or stale inputs, cancellation races, partial destinations and leftover temporary siblings.
+
+### Compatibility
+
+- Supports Windows x64 with Blender 5.1.0 or later; release qualification uses Blender 5.1.2 and its bundled Python 3.13.
+- Existing 2.3 projects, sidecars, reader manifests and scientific model identities remain compatible; this RC changes export capability and release metadata only.
+
+### Known Limitations
+
+- The new files are deterministic normalized projections, not byte-identical or generally lossless source round trips. Every detected omission requires explicit confirmation.
+- MOL2 can renumber source atom/bond IDs and omit unsupported raw fields. PDB emits normalized atom/model records without `CONECT` or `CRYST1`. PQR requires complete charge/radius properties. Cube writes one selected scalar dataset and cannot preserve all project, topology, cell, provenance or semantic-unit metadata.
+- Loaded RDKit or Gemmi DLLs can keep isolated-profile files locked until Blender exits; successful process exit and fresh-profile reinstall remain the functional checks.
+
+### Verification
+
+- The merged Final Qualification baseline passed 2,200 tests with 26 skips, native Blender 5.1.2 validate/build/install, isolated lifecycle and installed MOL2/PDB/PQR/Cube Project Browser smoke.
+- Final Qualification and Release Planning passed exact feature-head and exact merge-SHA `extension-package` and `optional-qc-core` workflows before this metadata change.
+- RC local qualification is recorded separately. Remote CI: `Not Run`; tag creation, exact-tag CI, verification-only Release workflow and publication require later gates.
+
 ## [2.3.0] - 2026-08-01
 
 ### Added
@@ -179,7 +215,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 - Imported the latest ChemBlender 2.1.0 source as commit `78c2d8d8d6361302bf8f19a568c3d7cfccde4c19`, based on upstream commit `9077096b776cd18ca85adb4b50253a0d3c18fd76`.
 
-[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/v2.4.0-rc.1...HEAD
+[2.4.0-rc.1]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.4.0-rc.1
 [2.3.0]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0
 [2.3.0-rc.1]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0-rc.1
 [2.3.0-alpha.1]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0-alpha.1

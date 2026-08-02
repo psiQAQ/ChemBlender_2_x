@@ -42,6 +42,8 @@ Require exactly one active cursor and commit as
 - Modify: `CHANGELOG.md`
 - Modify: `tests/test_repository_contract.py`
 - Modify: `tests/test_release_metadata.py`
+- Modify: `tests/test_release_artifact.py`
+- Modify: `tests/test_prerelease_probe_script.py`
 - Create: `tests/test_240_rc_readiness.py`
 
 **Interfaces:**
@@ -50,23 +52,23 @@ Require exactly one active cursor and commit as
 - Checksum: `chemblender-2.4.0-rc.1.sha256`.
 - Artifact: `chemblender-2.4.0-rc.1-windows-x64`.
 
-- [ ] **Step 1: Change only the manifest and capture RED**
+- [x] **Step 1: Change only the manifest and capture RED**
 
 Run production repository/metadata/readiness tests. Expected failures are old
 `2.3.0` production expectations and the missing dated RC entry/link.
 
-- [ ] **Step 2: Add the complete RC CHANGELOG entry**
+- [x] **Step 2: Add the complete RC CHANGELOG entry**
 
 Describe only merged 2.4.0 behavior: deterministic MOL2/PDB/PQR/Cube core and
 Project Browser export, explicit loss confirmation/cancellation, frozen public
 boundaries, compatibility, known format losses and Final Qualification.
 
-- [ ] **Step 3: Update exact production-state tests**
+- [x] **Step 3: Update exact production-state tests**
 
 Preserve generic `2.3.0` fixtures. Update only tests that read the production
 manifest and add one RC readiness contract for names, notes and boundaries.
 
-- [ ] **Step 4: Run focused GREEN and commit**
+- [x] **Step 4: Run focused GREEN and commit**
 
 Run release metadata, notes, artifact, repository, readiness and documentation
 tests. Commit as `chore: prepare 2.4.0 release candidate`.
