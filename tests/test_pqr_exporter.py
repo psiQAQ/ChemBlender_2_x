@@ -2,8 +2,13 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from unittest.mock import patch
+from uuid import uuid4
 
+import numpy
+
+from ChemBlender.core import ArrayData, CategoricalData, DatasetStatus, FrameSet
 from ChemBlender.core.exporters import (
     ExportCancelled,
     export_pqr,
@@ -20,6 +25,36 @@ FIXTURES = Path(__file__).with_name("fixtures") / "pqr"
 
 
 class PQRExporterTests(unittest.TestCase):
+    def _property(self, batch, role):
+        return next(value for value in batch.datasets if value.semantic_role == role)
+
+    def _replace_property(self, batch, property):
+        return replace(
+            batch,
+            datasets=tuple(
+                property if value.id == property.id else value
+                for value in batch.datasets
+            ),
+        )
+
+    def _atom_semantics(self, batch):
+        structure = batch.structures[0]
+        hierarchy = batch.biological_hierarchies[0]
+        names = structure.atomic_identity.atom_names
+        kinds = hierarchy.atom_sites.record_kinds
+        residue_indices = hierarchy.atom_sites.residue_indices.values
+        return tuple(
+            (
+                names.categories[int(names.codes.values[index])],
+                kinds.categories[int(kinds.codes.values[index])],
+                hierarchy.chains[hierarchy.residues[int(residue_index)].chain_index].chain_id,
+                hierarchy.residues[int(residue_index)].residue_name,
+                hierarchy.residues[int(residue_index)].sequence_number,
+                hierarchy.residues[int(residue_index)].insertion_code,
+            )
+            for index, residue_index in enumerate(residue_indices)
+        )
+
     def test_ready_chain_and_no_chain_exports_are_deterministic_ascii_lf(self):
         cases = (
             ("with-chain.pqr", (11, 11)),
@@ -138,6 +173,347 @@ class PQRExporterTests(unittest.TestCase):
 
             self.assertFalse(destination.exists())
             self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+    def test_reversed_entity_container_insertion_order_is_byte_deterministic(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        ordered = SimpleNamespace(
+            structures={"structure": batch.structures[0]},
+            biological_hierarchies={"hierarchy": batch.biological_hierarchies[0]},
+            datasets={value.semantic_role: value for value in batch.datasets},
+            topologies={},
+        )
+        reversed_entities = SimpleNamespace(
+            structures=dict(reversed(tuple(ordered.structures.items()))),
+            biological_hierarchies=dict(
+                reversed(tuple(ordered.biological_hierarchies.items()))
+            ),
+            datasets=dict(reversed(tuple(ordered.datasets.items()))),
+            topologies={},
+        )
+        reversed_tuple = SimpleNamespace(
+            structures=(batch.structures[0],),
+            biological_hierarchies=(batch.biological_hierarchies[0],),
+            datasets=tuple(reversed(batch.datasets)),
+            topologies=(),
+        )
+
+        self.assertEqual(
+            export_pqr(ordered).text,
+            export_pqr(reversed_entities).text,
+        )
+        self.assertEqual(export_pqr(ordered).text, export_pqr(reversed_tuple).text)
+
+    def test_duplicate_and_out_of_range_serials_renumber_in_structure_order(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        hierarchy = batch.biological_hierarchies[0]
+        for serials in ((1, 1), (1, 100000)):
+            with self.subTest(serials=serials):
+                renumbered = replace(
+                    hierarchy,
+                    atom_sites=replace(
+                        hierarchy.atom_sites,
+                        serial_numbers=ArrayData(
+                            numpy.asarray(serials),
+                            ("atom",),
+                            "dimensionless",
+                        ),
+                    ),
+                )
+                text = export_pqr(
+                    replace(batch, biological_hierarchies=(renumbered,)),
+                    confirm_loss=True,
+                ).text
+
+                self.assertEqual(
+                    tuple(line.split()[1] for line in text.splitlines()),
+                    ("1", "2"),
+                )
+
+    def test_charge_radius_units_finiteness_and_precision_are_enforced(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        charge = self._property(batch, "partial_charge")
+        radius = self._property(batch, "radius")
+        formatted = self._replace_property(
+            self._replace_property(
+                batch,
+                replace(
+                    charge,
+                    data=replace(
+                        charge.data,
+                        values=numpy.asarray((0.123456, -0.0)),
+                    ),
+                ),
+            ),
+            replace(
+                radius,
+                data=replace(
+                    radius.data,
+                    values=numpy.asarray((1.23456, 1.4)),
+                ),
+            ),
+        )
+        self.assertTrue(
+            export_pqr(formatted).text.splitlines()[0].endswith("0.1235 1.2346")
+        )
+        self.assertTrue(
+            export_pqr(formatted).text.splitlines()[1].endswith("0.0000 1.4000")
+        )
+        invalid_cases = (
+            (
+                replace(charge, data=replace(charge.data, unit="dimensionless")),
+                "dataset.partial_charge.unit",
+            ),
+            (
+                replace(
+                    radius,
+                    data=replace(
+                        radius.data,
+                        values=numpy.asarray((numpy.inf, 1.4)),
+                    ),
+                ),
+                "dataset.radius.values",
+            ),
+        )
+        for property, token in invalid_cases:
+            with self.subTest(token=token), TemporaryDirectory() as directory:
+                destination = Path(directory) / "invalid.pqr"
+                with self.assertRaisesRegex(ValueError, token):
+                    export_pqr(
+                        self._replace_property(batch, property),
+                        destination=destination,
+                    )
+                self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+    def test_overflow_and_writer_serial_guard_fail_before_publication(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        structure = batch.structures[0]
+        hierarchy = batch.biological_hierarchies[0]
+        charge = self._property(batch, "partial_charge")
+        radius = self._property(batch, "radius")
+        coordinates = numpy.asarray(structure.coordinates.values).copy()
+        coordinates[0, 0] = 10000.0
+        cases = (
+            (
+                replace(
+                    batch,
+                    structures=(replace(structure, coordinates=replace(structure.coordinates, values=coordinates)),),
+                ),
+                "coordinates.overflow",
+            ),
+            (
+                replace(
+                    batch,
+                    structures=(
+                        replace(
+                            structure,
+                            atomic_identity=replace(
+                                structure.atomic_identity,
+                                atom_names=replace(
+                                    structure.atomic_identity.atom_names,
+                                    categories=("LONGER", "O"),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+                "identity.atom_name.overflow",
+            ),
+            (
+                replace(
+                    batch,
+                    biological_hierarchies=(
+                        replace(
+                            hierarchy,
+                            residues=(
+                                replace(hierarchy.residues[0], sequence_number=10000),
+                                hierarchy.residues[1],
+                            ),
+                        ),
+                    ),
+                ),
+                "identity.residue_number.overflow",
+            ),
+            (
+                self._replace_property(
+                    batch,
+                    replace(
+                        charge,
+                        data=replace(charge.data, values=numpy.asarray((1000.0, -0.55))),
+                    ),
+                ),
+                "dataset.partial_charge.overflow",
+            ),
+            (
+                self._replace_property(
+                    batch,
+                    replace(
+                        radius,
+                        data=replace(radius.data, values=numpy.asarray((100.0, 1.4))),
+                    ),
+                ),
+                "dataset.radius.overflow",
+            ),
+        )
+        for invalid, token in cases:
+            with self.subTest(token=token), TemporaryDirectory() as directory:
+                destination = Path(directory) / "overflow.pqr"
+                with self.assertRaisesRegex(ValueError, token):
+                    export_pqr(invalid, destination=destination)
+                self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+        serials = replace(
+            hierarchy,
+            atom_sites=replace(
+                hierarchy.atom_sites,
+                serial_numbers=replace(
+                    hierarchy.atom_sites.serial_numbers,
+                    values=numpy.asarray((100000, 2)),
+                ),
+            ),
+        )
+        ready = PDBPQRExportReadiness(PDBPQRExportStatus.READY, ())
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "serial-overflow.pqr"
+            with patch(
+                "ChemBlender.core.exporters.pqr.pqr_export_readiness",
+                return_value=ready,
+            ), self.assertRaisesRegex(ValueError, "PQR atom serial is invalid"):
+                export_pqr(
+                    replace(batch, biological_hierarchies=(serials,)),
+                    destination=destination,
+                )
+            self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+    def test_frames_and_multiple_structures_remain_unexportable(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        structure = batch.structures[0]
+        frames = FrameSet(
+            id=uuid4(),
+            revision="pqr-export-test",
+            semantic_role="coordinates",
+            domain="frame",
+            data=ArrayData(
+                numpy.stack((structure.coordinates.values, structure.coordinates.values)),
+                ("frame", "atom", "xyz"),
+                "angstrom",
+            ),
+            status=DatasetStatus.COMPLETE,
+            source_calculation=None,
+            provenance_ids=(),
+            structure_id=structure.id,
+            comments=("frame 1", "frame 2"),
+        )
+        with self.assertRaisesRegex(ValueError, "dataset.coordinates.unsupported"):
+            export_pqr(replace(batch, datasets=(*batch.datasets, frames)))
+        ambiguous = SimpleNamespace(
+            structures=(structure, structure),
+            biological_hierarchies=batch.biological_hierarchies,
+            datasets=batch.datasets,
+            topologies=(),
+        )
+        with self.assertRaisesRegex(ValueError, "structure.ambiguous"):
+            export_pqr(ambiguous)
+
+    def test_mid_write_cancellation_cleans_destination_and_temporary(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        calls = 0
+
+        def cancelled():
+            nonlocal calls
+            calls += 1
+            return calls == 5
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "cancelled.pqr"
+            with self.assertRaises(ExportCancelled):
+                export_pqr(
+                    batch,
+                    destination=destination,
+                    is_cancelled=cancelled,
+                )
+            self.assertGreaterEqual(calls, 5)
+            self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+    def test_loss_codes_are_sorted_and_cover_real_omissions(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        structure = batch.structures[0]
+        identity = structure.atomic_identity
+        identity = replace(
+            identity,
+            isotopes=replace(identity.isotopes, values=numpy.asarray((1, 0))),
+            formal_charges=replace(
+                identity.formal_charges,
+                values=numpy.asarray((1, 0)),
+            ),
+            atom_map_numbers=replace(
+                identity.atom_map_numbers,
+                values=numpy.asarray((1, 0)),
+            ),
+            stereo_labels=CategoricalData(
+                ArrayData(numpy.asarray((0, -1)), ("atom",), "dimensionless"),
+                ("R",),
+                -1,
+            ),
+        )
+        omitted = SimpleNamespace(
+            structures=(
+                replace(
+                    structure,
+                    atomic_identity=identity,
+                    cell=ArrayData(
+                        numpy.eye(3),
+                        ("cell_vector", "xyz"),
+                        "angstrom",
+                    ),
+                    molecular_charge=1,
+                    molecular_multiplicity=2,
+                ),
+            ),
+            biological_hierarchies=batch.biological_hierarchies,
+            datasets=batch.datasets,
+            topologies=(SimpleNamespace(structure_id=structure.id),),
+        )
+
+        codes = tuple(entry.code for entry in preview_pqr_export(omitted).entries)
+
+        self.assertEqual(codes, tuple(sorted(codes)))
+        self.assertEqual(
+            codes,
+            (
+                "atom_map_numbers_omitted",
+                "atom_stereo_omitted",
+                "cell_omitted",
+                "formal_charge_omitted",
+                "isotopes_omitted",
+                "molecular_charge_omitted",
+                "molecular_multiplicity_omitted",
+                "topology_omitted",
+            ),
+        )
+
+    def test_native_parse_pqr_reimport_preserves_normalized_semantics(self):
+        source = parse_pqr(FIXTURES / "with-chain.pqr")
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "round-trip.pqr"
+            export_pqr(source, destination=destination)
+            restored = parse_pqr(destination)
+
+        self.assertEqual(source.structures[0].atomic_numbers, restored.structures[0].atomic_numbers)
+        numpy.testing.assert_allclose(
+            source.structures[0].coordinates.values,
+            restored.structures[0].coordinates.values,
+            atol=0.001,
+            rtol=0.0,
+        )
+        self.assertEqual(self._atom_semantics(source), self._atom_semantics(restored))
+        for role, tolerance in (("partial_charge", 0.0001), ("radius", 0.0001)):
+            with self.subTest(role=role):
+                numpy.testing.assert_allclose(
+                    self._property(source, role).data.values,
+                    self._property(restored, role).data.values,
+                    atol=tolerance,
+                    rtol=0.0,
+                )
 
 
 if __name__ == "__main__":
