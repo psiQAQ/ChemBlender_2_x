@@ -308,6 +308,43 @@ from .vibration_spectrum import (
     derive_vibrational_spectrum,
 )
 
+
+_CUBE_EXPORT_NAMES = frozenset(
+    (
+        "CubeExport",
+        "CubeExportReadiness",
+        "CubeExportStatus",
+        "cube_export_readiness",
+        "export_cube",
+        "preview_cube_export",
+    )
+)
+
+
+def __getattr__(name):
+    if name not in _CUBE_EXPORT_NAMES:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    from .exporters import (
+        CubeExport,
+        CubeExportReadiness,
+        CubeExportStatus,
+        cube_export_readiness,
+        export_cube,
+        preview_cube_export,
+    )
+
+    values = {
+        "CubeExport": CubeExport,
+        "CubeExportReadiness": CubeExportReadiness,
+        "CubeExportStatus": CubeExportStatus,
+        "cube_export_readiness": cube_export_readiness,
+        "export_cube": export_cube,
+        "preview_cube_export": preview_cube_export,
+    }
+    globals().update(values)
+    return values[name]
+
+
 # Exact public names are documented in docs/quantum-visualization/2.3.0/public-core-api.md.
 __all__ = [
     "AnalysisReportError",
@@ -350,6 +387,9 @@ __all__ = [
     "CIF_READER",
     "POSCAR_READER",
     "CUBE_READER",
+    "CubeExportReadiness",
+    "CubeExportStatus",
+    "CubeExport",
     "DatasetStatus",
     "DiagnosticSeverity",
     "DiagnosticValue",
@@ -457,9 +497,11 @@ __all__ = [
     "adapt_ase_atoms",
     "build_analysis_report",
     "export_qcschema",
+    "export_cube",
     "export_cjson",
     "export_qcschema_atomic_result",
     "parse_cube",
+    "preview_cube_export",
     "parse_cjson",
     "parse_ase_structure",
     "parse_cclib_output",
@@ -508,6 +550,7 @@ __all__ = [
     "ExternalConnectorError",
     "ExternalRecordRequest",
     "derive_grid_lod",
+    "cube_export_readiness",
     "default_grid_isovalue",
     "derive_phonon_frames",
     "derive_symmetry",

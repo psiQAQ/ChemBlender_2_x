@@ -24,6 +24,7 @@ from ChemBlender.ui.grid import grid_preview_summary
 ROOT = Path(__file__).resolve().parents[1]
 TWO_DATASETS = ROOT / "tests" / "fixtures" / "cube" / "two-datasets.cube"
 BENCHMARK = ROOT / "ChemBlender" / "scripts" / "benchmark_cube_flow.py"
+BLENDER_SMOKE = ROOT / "tests" / "blender_smoke.py"
 
 
 class CubeProductFlowTests(unittest.TestCase):
@@ -120,6 +121,7 @@ class CubeProductFlowTests(unittest.TestCase):
             set(report["stages"]),
             {
                 "parse",
+                "export",
                 "stage_npy",
                 "sidecar_save",
                 "cache_vdb_cold",
@@ -142,8 +144,18 @@ class CubeProductFlowTests(unittest.TestCase):
             },
         )
         self.assertIn("peak_python_bytes", report)
+        self.assertIn("export_peak_python_bytes", report)
+        self.assertGreater(report["export_bytes"], 0)
+        self.assertTrue(report["budget"]["export_p95_lte_10_seconds"])
         self.assertIn("environment", report)
         self.assertIn("budget", report)
+
+    def test_installed_smoke_contains_native_cube_export_reimport(self):
+        smoke = BLENDER_SMOKE.read_text(encoding="utf-8")
+
+        self.assertIn("def assert_cube_export_workflow", smoke)
+        self.assertIn("PASS: installed native Cube export and re-import", smoke)
+        self.assertIn("dataset_index=1", smoke)
 
 
 if __name__ == "__main__":

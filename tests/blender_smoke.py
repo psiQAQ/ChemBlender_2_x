@@ -4178,6 +4178,64 @@ def assert_extxyz_workflow(module_key, repository_root):
             core.close_project(reopened)
 
 
+def assert_cube_export_workflow(module_key, repository_root):
+    import numpy
+
+    core = importlib.import_module(f"{module_key}.core")
+    cube = importlib.import_module(f"{module_key}.core.cube")
+    source = repository_root / "tests/fixtures/cube/two-datasets.cube"
+    batch = cube.CUBE_READER.parse(source)
+    structure = batch.structures[0]
+    grid = next(value for value in batch.datasets if isinstance(value, core.Grid3D))
+    charge = next(
+        value
+        for value in batch.datasets
+        if isinstance(value, core.AtomicProperty)
+        and value.semantic_role == "nuclear_charge"
+    )
+    assert grid.structure_id == structure.id
+    preview = core.preview_cube_export(batch, dataset_index=1)
+    assert preview.requires_confirmation
+
+    with TemporaryDirectory() as directory:
+        destination = Path(directory) / "selected.cube"
+        exported = core.export_cube(
+            batch,
+            dataset_index=1,
+            confirm_loss=True,
+            destination=destination,
+        )
+        assert exported.report.written
+        restored = cube.CUBE_READER.parse(destination)
+
+    restored_structure = restored.structures[0]
+    restored_grid = next(
+        value for value in restored.datasets if isinstance(value, core.Grid3D)
+    )
+    restored_charge = next(
+        value
+        for value in restored.datasets
+        if isinstance(value, core.AtomicProperty)
+        and value.semantic_role == "nuclear_charge"
+    )
+    assert restored_grid.structure_id == restored_structure.id
+    assert structure.atomic_numbers == restored_structure.atomic_numbers
+    assert numpy.allclose(
+        structure.coordinates.values,
+        restored_structure.coordinates.values,
+    )
+    assert numpy.allclose(charge.data.values, restored_charge.data.values)
+    assert numpy.allclose(grid.origin, restored_grid.origin)
+    assert numpy.allclose(grid.step_vectors, restored_grid.step_vectors)
+    assert grid.grid_shape == restored_grid.grid_shape
+    assert numpy.allclose(
+        numpy.asarray(grid.data.values)[1],
+        restored_grid.data.values,
+    )
+    assert dict(restored.provenance[0].parameters)["dataset_ids"] == (7,)
+    print("PASS: installed native Cube export and re-import")
+
+
 def assert_cif_workflow(module_key, repository_root):
     import numpy
 
@@ -5881,6 +5939,7 @@ assert_complex_phonon_trajectory(module_key)
 assert_fermi_surface_view(module_key)
 assert_project_sidecar_link(module_key)
 assert_quick_import(module_key, package.parent.parent)
+assert_cube_export_workflow(module_key, package.parent.parent)
 assert_cif_workflow(module_key, package.parent.parent)
 assert_poscar_workflow(module_key, package.parent.parent)
 assert_optional_workspace(module_key)

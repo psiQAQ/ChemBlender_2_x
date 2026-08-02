@@ -20,7 +20,7 @@ if not __package__:
 
 import numpy
 
-from ChemBlender.core import Grid3D, QCProject, save_project
+from ChemBlender.core import Grid3D, QCProject, export_cube, save_project
 from ChemBlender.core.cube import CUBE_READER
 
 
@@ -130,6 +130,13 @@ def run_benchmark(
     grid = _grid(batch)
     project = QCProject(uuid4(), "0.2")
     project.commit(batch)
+    export_sizes = []
+
+    def export(index):
+        destination = workspace / f"export-{index}.cube"
+        export_cube(batch, confirm_loss=True, destination=destination)
+        export_sizes.append(destination.stat().st_size)
+        destination.unlink()
 
     def stage_npy(index):
         destination = workspace / f"stage-{index}.npy"
@@ -159,6 +166,7 @@ def run_benchmark(
 
     operations = {
         "parse": parse,
+        "export": export,
         "stage_npy": stage_npy,
         "sidecar_save": sidecar_save,
         **blender_operations,
@@ -173,8 +181,19 @@ def run_benchmark(
     _current, peak_python_bytes = tracemalloc.get_traced_memory()
     tracemalloc.stop()
 
+    peak_export = workspace / "export-peak.cube"
+    tracemalloc.start()
+    export_cube(batch, confirm_loss=True, destination=peak_export)
+    _current, export_peak_python_bytes = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    export_bytes = peak_export.stat().st_size
+    peak_export.unlink()
+    if not export_sizes or any(value != export_bytes for value in export_sizes):
+        raise RuntimeError("Cube export size is not deterministic")
+
     total_stage_names = (
         "parse",
+        "export",
         "stage_npy",
         "sidecar_save",
         "cache_vdb_cold",
@@ -186,6 +205,7 @@ def run_benchmark(
     budget = {
         "reference_shape_is_128_cubed": size == 128,
         "real_blender_stages": actual_blender,
+        "export_p95_lte_10_seconds": stages["export"]["p95_seconds"] <= 10.0,
         "total_median_lte_10_seconds": total_median_seconds <= 10.0,
     }
     report = {
@@ -204,6 +224,7 @@ def run_benchmark(
             "repeats": repeats,
         },
         "source_bytes": source.stat().st_size,
+        "export_bytes": export_bytes,
         "cache_state": {
             "parse": "warm OS cache after generated input",
             "cache_vdb_cold": "derived VDB removed before each run",
@@ -214,6 +235,7 @@ def run_benchmark(
         "total_stage_names": list(total_stage_names),
         "total_median_seconds": total_median_seconds,
         "peak_python_bytes": peak_python_bytes,
+        "export_peak_python_bytes": export_peak_python_bytes,
         "budget": budget,
     }
     report["passed"] = all(budget.values())

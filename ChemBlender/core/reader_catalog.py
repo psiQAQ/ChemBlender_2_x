@@ -66,6 +66,7 @@ _READER_FIXTURE_FAMILIES = {
 _READER_EXPORTS = {
     "cif": ("cif", "F5", "project_browser", "preview_confirmation"),
     "cjson": ("cjson", "F5", "core", "controlled_envelope"),
+    "cube": ("cube", "F5", "core", "preview_confirmation"),
     "extxyz": ("extxyz", "F5", "project_browser", "preview_confirmation"),
     "mol": ("mol", "F5", "project_browser", "preview_confirmation"),
     "mol-v2000": ("mol", "F5", "project_browser", "preview_confirmation"),

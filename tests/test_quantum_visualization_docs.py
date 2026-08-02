@@ -18,6 +18,9 @@ TASK4_SCOPE_COMPLETED_FILE = "2.4.0-task4-scope-discovery.md"
 TASK5_SCOPE_COMPLETED_FILE = "2.4.0-task5-scope-discovery.md"
 PQR_EXPORT_COMPLETED_FILE = "2.4.0-pqr-export.md"
 PQR_EXPORT_UI_COMPLETED_FILE = "2.4.0-pqr-export-ui.md"
+CUBE_EXPORT_QUEUED_FILE = "2.4.0-cube-export.md"
+CUBE_EXPORT_COMPLETED_FILE = "2.4.0-cube-export.md"
+TASK7_SCOPE_COMPLETED_FILE = "2.4.0-task7-scope-discovery.md"
 WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 WAVE_230_FINAL_COMPLETED_FILE = "2.3.0-wave-4-migration-release.md"
 
@@ -1106,6 +1109,13 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "installed-pqr-export-reimport",
             "Cube export",
             "Reader API v1 stable",
+            "https://github.com/psiQAQ/ChemBlender_2_x/pull/14",
+            "3bab75429d37276e27dc158ba5bbf69d9085b9bd",
+            "30741155445",
+            "30741155450",
+            "eb3fc4ea6f86e8fc3f9475bd03d379445349db57",
+            "Ancestor verification: `Passed`",
+            "Remote CI: `Passed`",
         ):
             self.assertIn(term, completed)
         for term in (
@@ -1125,6 +1135,145 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Task 6: Exact-head remote integration gate",
         ):
             self.assertIn(term, plan)
+
+    def test_240_task7_scope_discovery_is_recoverable(self):
+        completed_path = f".agents/completed/{TASK7_SCOPE_COMPLETED_FILE}"
+        intake_path = (
+            "docs/quantum-visualization/2.4.0/task7-candidate-intake.md"
+        )
+        design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-02-chemblender-2.4.0-task7-scope-discovery-design.md"
+        )
+        plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-task7-scope-discovery.md"
+        )
+        selected_plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-cube-export.md"
+        )
+        contract_path = (
+            "docs/quantum-visualization/2.4.0/cube-export-contract.md"
+        )
+        cube_completed_path = f".agents/completed/{CUBE_EXPORT_COMPLETED_FILE}"
+        completed = self.read_doc(completed_path)
+        design = self.read_doc(design_path)
+        plan = self.read_doc(plan_path)
+        intake = self.read_doc(intake_path)
+        selected_plan = self.read_doc(selected_plan_path)
+        contract = self.read_doc(contract_path)
+        cube_completed = self.read_doc(cube_completed_path)
+        self.assertFalse(
+            (ROOT / ".agents/active" / CUBE_EXPORT_COMPLETED_FILE).exists()
+        )
+
+        for term in (
+            "CB240-TASK7-SCOPE-DISCOVERY",
+            "State: `completed`",
+            "eb3fc4ea6f86e8fc3f9475bd03d379445349db57",
+            design_path,
+            plan_path,
+            "Native Cube export",
+            "Reader API v1 stable gate",
+            "Cube runtime remains unstarted",
+            "Selection: `Native Cube export`",
+            "Current task: `Task 7 Scope Discovery checkpoint complete`",
+            intake_path,
+            selected_plan_path,
+            ".agents/queued/2.4.0-cube-export.md",
+        ):
+            self.assertIn(term, completed)
+        for term in (
+            "Selected: deterministic native Cube export",
+            "Deferred: Reader API v1 stable",
+            "PQR Export UI PR #14",
+        ):
+            self.assertIn(term, design)
+        for term in (
+            "Task 1: Persist the Task 7 discovery boundary",
+            "Task 2: Freeze PQR Export UI remote evidence",
+            "Task 3: Audit and select one candidate",
+            "Task 4: Queue deterministic native Cube export",
+            "Task 5: Verify, review and checkpoint",
+        ):
+            self.assertIn(term, plan)
+        for term in (
+            "PQR: F5 / project_browser / preview_confirmation",
+            "Cube: F0 / none",
+            "Reader API: 1.0-rc1",
+            "Task 8 — Deterministic native Cube export",
+            "Reader API stable: deferred",
+            "writer/readiness",
+            "bohr",
+            "dataset selection",
+            "3bab75429d37276e27dc158ba5bbf69d9085b9bd",
+            "30741155445",
+            "30741155450",
+            "eb3fc4ea6f86e8fc3f9475bd03d379445349db57",
+        ):
+            self.assertIn(term, intake)
+        for term in (
+            "preview_cube_export",
+            "export_cube",
+            "CubeExportReadiness",
+            "authoritative lazy snapshots",
+            "bohr output",
+            "explicit dataset selection",
+            "DSET_IDS",
+            "positive `NATOMS`",
+            "trustworthy source ID",
+            "including zero",
+            "dataset_id_omitted",
+            "positive voxel counts",
+            "real numeric arrays",
+            "cell/periodic metadata",
+            "final pre-publication checkpoint",
+            "tests/test_cube_product_flow.py",
+            "Semantic native re-import",
+            "parse_cube",
+            "Task 7: Exact-head remote integration gate",
+        ):
+            self.assertIn(term, selected_plan)
+        for term in (
+            "CB240-CUBE-EXPORT-T8",
+            "State: `completed`",
+            "Task 6 — Full qualification, reviews and checkpoint completed",
+            selected_plan_path,
+            intake_path,
+            "Cube UI remains unstarted",
+            "Reader API v1 stable remains unstarted",
+            "9fc7e996871b4b6019ca7ef56e7209578c76a641",
+            "codex/2.4.0-cube-export",
+            contract_path,
+            "Completed Commits",
+            "Task 1: `c92fe2bffc9997192cb1b659037084973f987289`",
+            "Task 2: `e96b20e86f061ea2dad29748a8dd0561be5a9ab1`",
+            "Task 3: `fd05baf1d6e3b6beae66a8b61d41b363f17a3d0c`",
+            "Task 4: `fd73c872a7227ef4a2384211587b00d3cc83000d`",
+            "Task 5 product proof: `613c15076b96a969e0d72b00072b796b46387449`",
+            "Task 5 artifact budget: `16e36dc4d79c6afb986ae6cfb81dc2063a239b92`",
+            "lazy core facade fix: `de867967671d4724a3ead9133bde8e9af63918ed`",
+            "review fixes: `a690f8144e2d63f2174aaeecf419d31be5b5a208`",
+            "final artifact budget: `f0c8a393161477ef42606b0011a0b2f40c663a3e`",
+            "2186 Passed / 26 Skipped / 0 Failed",
+            "Task 7 — Exact-head remote integration gate",
+            "59 Passed",
+            "66 Passed",
+            "71 Passed",
+            "41 Passed",
+        ):
+            self.assertIn(term, cube_completed)
+        for term in (
+            "cube_export_readiness",
+            "MissingSelection",
+            "finite real numeric arrays",
+            "dataset_index=None",
+            "bohr",
+            "angstrom",
+            "OpenVDB",
+        ):
+            self.assertIn(term, contract)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
@@ -1219,7 +1368,9 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         )
         for value in (
             "128 × 128 × 128",
-            "1.679902 s",
+            "4.716870 s",
+            "3.089668",
+            "49,279,468 bytes",
             "Blender 5.1.2",
             "cold VDB cache",
             "Remote CI: Not Run",
