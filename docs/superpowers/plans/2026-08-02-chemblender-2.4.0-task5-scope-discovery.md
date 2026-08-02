@@ -36,17 +36,17 @@ runtime state remain read-only.
 
 **Interfaces:** Produce one active recovery cursor; no product interface.
 
-- [ ] Change the routing contract to expect only
+- [x] Change the routing contract to expect only
   `.agents/active/2.4.0-task5-scope-discovery.md` and no queued task.
-- [ ] Add a recoverability contract for the design, plan, goal, baseline,
+- [x] Add a recoverability contract for the design, plan, goal, baseline,
   selection candidates, stop boundary and pending implementation state.
-- [ ] Run the focused contract before creating the active cursor; expect failure
+- [x] Run the focused contract before creating the active cursor; expect failure
   because the merged PDB UI cursor is still active and the Task 5 cursor is
   absent.
-- [ ] Create the active cursor with goal `CB240-TASK5-SCOPE-DISCOVERY`, baseline
+- [x] Create the active cursor with goal `CB240-TASK5-SCOPE-DISCOVERY`, baseline
   `d5028aa5d8568a44181b822293fbe62462d9a496`, the approved design and this plan.
-- [ ] Run the focused documentation GREEN and `git diff --check`.
-- [ ] Commit as `docs: start Task 5 scope discovery`.
+- [x] Run the focused documentation GREEN and `git diff --check`.
+- [x] Commit as `docs: start Task 5 scope discovery`.
 
 ### Task 2: Archive PDB Export UI integration
 
@@ -58,16 +58,16 @@ runtime state remain read-only.
 **Interfaces:** Consume PR #12 and exact-head GitHub Actions evidence; produce
 one immutable completed cursor.
 
-- [ ] Require the completed cursor to record PR #12, exact feature head
+- [x] Require the completed cursor to record PR #12, exact feature head
   `5756532077d8aca8cebc54becf411133af7f96d8`, runs `30728969782` and
   `30728969751`, ordinary merge `d5028aa5d8568a44181b822293fbe62462d9a496`
   and passed ancestry verification.
-- [ ] Run the focused test and record RED because the cursor still contains the
+- [x] Run the focused test and record RED because the cursor still contains the
   pre-merge attempt state and remains active.
-- [ ] Move the cursor to completed, preserve its local RED/GREEN, package,
+- [x] Move the cursor to completed, preserve its local RED/GREEN, package,
   Blender and review evidence, and replace the pending remote gate with the
   final exact-head evidence.
-- [ ] Run the focused test GREEN.
+- [x] Run the focused test GREEN.
 
 ### Task 3: Audit and select one candidate
 
@@ -80,16 +80,16 @@ one immutable completed cursor.
 readiness/reader fixtures, Cube contracts and Reader API policy. Produce one
 auditable selection.
 
-- [ ] Confirm PR #12, exact feature head, two exact-head runs, merge commit and
+- [x] Confirm PR #12, exact feature head, two exact-head runs, merge commit and
   ancestry live.
-- [ ] Confirm PDB is `F5 / project_browser`, PQR and Cube are F0, and Reader API
+- [x] Confirm PDB is `F5 / project_browser`, PQR and Cube are F0, and Reader API
   is `1.0-rc1`.
-- [ ] Add a documentation RED requiring all three candidates, exact facts,
+- [x] Add a documentation RED requiring all three candidates, exact facts,
   `Task 5 — Deterministic native PQR export` and distinct Cube/Reader API
   deferral reasons.
-- [ ] Write the minimum evidence-backed intake. Select PQR only if the live
+- [x] Write the minimum evidence-backed intake. Select PQR only if the live
   audit still proves its readiness/reader boundary and absent writer.
-- [ ] Run the focused test GREEN.
+- [x] Run the focused test GREEN.
 
 ### Task 4: Queue deterministic native PQR export
 
@@ -103,16 +103,16 @@ auditable selection.
 short sibling atomic writer. Produce an executable TDD plan and a
 `not_started` cursor; no exporter code.
 
-- [ ] Add a RED requiring public `preview_pqr_export(project_entities)` and
+- [x] Add a RED requiring public `preview_pqr_export(project_entities)` and
   `export_pqr(project_entities, ...)` boundaries, deterministic 10/11-field
   whitespace records, explicit loss confirmation, cancellation cleanup and
   native semantic re-import.
-- [ ] Write the implementation plan with core contract, writer, semantic
+- [x] Write the implementation plan with core contract, writer, semantic
   round-trip, capability docs, package/Blender verification, two independent
   reviews, commits, exact-head remote gate and stop boundary.
-- [ ] Create queued goal `CB240-PQR-EXPORT-T5` with `State: not_started` and
+- [x] Create queued goal `CB240-PQR-EXPORT-T5` with `State: not_started` and
   keep PQR UI, Cube and Reader API stable unstarted.
-- [ ] Run the documentation routing GREEN.
+- [x] Run the documentation routing GREEN.
 
 ### Task 5: Verify and checkpoint
 
@@ -123,14 +123,14 @@ short sibling atomic writer. Produce an executable TDD plan and a
 
 **Interfaces:** Leave no active cursor and exactly one queued implementation.
 
-- [ ] Run `python -m unittest tests.test_quantum_visualization_docs
+- [x] Run `python -m unittest tests.test_quantum_visualization_docs
   tests.test_generated_docs_fresh -v`.
-- [ ] Run `python -m compileall -q tests`, strict UTF-8/no-BOM checks for edited
+- [x] Run `python -m compileall -q tests`, strict UTF-8/no-BOM checks for edited
   files, and `git diff --check`.
-- [ ] Prove the branch has zero diff under `ChemBlender/`, `worker/`, `.github/`,
+- [x] Prove the branch has zero diff under `ChemBlender/`, `worker/`, `.github/`,
   `ChemBlender/blender_manifest.toml` and `CHANGELOG.md`.
-- [ ] Move the discovery cursor to completed and record planning/selection
+- [x] Move the discovery cursor to completed and record planning/selection
   commits, RED/GREEN, protected-boundary audit and `Remote CI: Not Run`.
-- [ ] Commit as `docs: select native PQR export for Task 5`.
-- [ ] Re-run the full documentation/static verification and confirm a clean
+- [x] Commit as `docs: select native PQR export for Task 5`.
+- [x] Re-run the full documentation/static verification and confirm a clean
   worktree. Stop without activating PQR runtime implementation or pushing.
