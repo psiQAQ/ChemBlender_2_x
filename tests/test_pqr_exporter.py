@@ -37,6 +37,23 @@ class PQRExporterTests(unittest.TestCase):
             ),
         )
 
+    def _assert_rejected_without_publication(
+        self,
+        entities,
+        token,
+        *,
+        confirm_loss=False,
+    ):
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "rejected.pqr"
+            with self.assertRaisesRegex(ValueError, token):
+                export_pqr(
+                    entities,
+                    confirm_loss=confirm_loss,
+                    destination=destination,
+                )
+            self.assertEqual(tuple(Path(directory).iterdir()), ())
+
     def _atom_semantics(self, batch):
         structure = batch.structures[0]
         hierarchy = batch.biological_hierarchies[0]
@@ -48,9 +65,13 @@ class PQRExporterTests(unittest.TestCase):
                 names.categories[int(names.codes.values[index])],
                 kinds.categories[int(kinds.codes.values[index])],
                 hierarchy.chains[hierarchy.residues[int(residue_index)].chain_index].chain_id,
+                hierarchy.chains[
+                    hierarchy.residues[int(residue_index)].chain_index
+                ].segment_index,
                 hierarchy.residues[int(residue_index)].residue_name,
                 hierarchy.residues[int(residue_index)].sequence_number,
                 hierarchy.residues[int(residue_index)].insertion_code,
+                hierarchy.residues[int(residue_index)].hetero,
             )
             for index, residue_index in enumerate(residue_indices)
         )
@@ -202,6 +223,107 @@ class PQRExporterTests(unittest.TestCase):
             export_pqr(reversed_entities).text,
         )
         self.assertEqual(export_pqr(ordered).text, export_pqr(reversed_tuple).text)
+
+    def test_entity_containers_are_snapshotted_once_before_validation(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        charge = self._property(batch, "partial_charge")
+
+        class FlappingEntities:
+            def __init__(self):
+                self.values = {
+                    "structures": batch.structures,
+                    "biological_hierarchies": batch.biological_hierarchies,
+                    "datasets": batch.datasets,
+                    "topologies": batch.topologies,
+                }
+                self.accesses = {
+                    name: 0 for name in self.values
+                }
+
+            def __getattr__(self, name):
+                values = self.values[name]
+                if name == "datasets" and self.accesses[name]:
+                    values = tuple(
+                        replace(value, data=replace(value.data, unit="dimensionless"))
+                        if value.id == charge.id else value
+                        for value in values
+                    )
+                self.accesses[name] += 1
+                return values
+
+        entities = FlappingEntities()
+
+        result = export_pqr(entities)
+
+        self.assertEqual(result.text, (FIXTURES / "with-chain.pqr").read_text("ascii"))
+        self.assertEqual(
+            entities.accesses,
+            {
+                "structures": 1,
+                "biological_hierarchies": 1,
+                "datasets": 1,
+                "topologies": 1,
+            },
+        )
+
+    def test_live_loss_array_mutation_aborts_before_publication(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        isotopes = batch.structures[0].atomic_identity.isotopes.values
+        calls = 0
+
+        def mutate_after_preview():
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                isotopes[0] = 1
+            return False
+
+        try:
+            with TemporaryDirectory() as directory:
+                destination = Path(directory) / "mutated.pqr"
+
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "inputs changed after snapshot",
+                ):
+                    export_pqr(
+                        batch,
+                        destination=destination,
+                        is_cancelled=mutate_after_preview,
+                    )
+
+                self.assertEqual(tuple(Path(directory).iterdir()), ())
+        finally:
+            isotopes[0] = 0
+
+    def test_writer_revalidates_property_contract_after_readiness_bypass(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        charge = self._property(batch, "partial_charge")
+        ready = PDBPQRExportReadiness(PDBPQRExportStatus.READY, ())
+        invalid_properties = (
+            replace(
+                charge,
+                data=replace(charge.data, unit="dimensionless"),
+            ),
+            replace(charge, status=DatasetStatus.PARTIAL),
+            replace(
+                charge,
+                data=ArrayData(
+                    numpy.asarray(((0.1,), (-0.55,))),
+                    ("atom", "component"),
+                    "elementary_charge",
+                ),
+            ),
+        )
+        for invalid_property in invalid_properties:
+            with self.subTest(invalid_property=invalid_property), patch(
+                "ChemBlender.core.exporters.pqr.pqr_export_readiness",
+                return_value=ready,
+            ), self.assertRaisesRegex(
+                ValueError,
+                "partial_charge property is invalid",
+            ):
+                export_pqr(self._replace_property(batch, invalid_property))
 
     def test_duplicate_and_out_of_range_serials_renumber_in_structure_order(self):
         batch = parse_pqr(FIXTURES / "with-chain.pqr")
@@ -489,6 +611,134 @@ class PQRExporterTests(unittest.TestCase):
                 "molecular_multiplicity_omitted",
                 "topology_omitted",
             ),
+        )
+
+    def test_model_and_chain_segment_loss_requires_confirmation_and_round_trips_explicitly(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        hierarchy = batch.biological_hierarchies[0]
+        hierarchy = replace(
+            hierarchy,
+            model=replace(hierarchy.model, number=7),
+            chains=tuple(
+                replace(chain, segment_index=3) for chain in hierarchy.chains
+            ),
+        )
+        batch = replace(batch, biological_hierarchies=(hierarchy,))
+
+        preview = preview_pqr_export(batch)
+
+        self.assertEqual(
+            tuple(entry.code for entry in preview.entries),
+            ("chain_segment_indices_omitted", "model_number_omitted"),
+        )
+        self.assertEqual(export_pqr(batch).text, "")
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "normalized.pqr"
+            written = export_pqr(
+                batch,
+                confirm_loss=True,
+                destination=destination,
+            )
+            restored = parse_pqr(destination)
+
+        self.assertNotIn("MODEL", written.text)
+        self.assertEqual(len(restored.structures[0].atomic_numbers), 2)
+        self.assertEqual(restored.biological_hierarchies[0].model.number, None)
+        self.assertEqual(
+            tuple(
+                chain.segment_index
+                for chain in restored.biological_hierarchies[0].chains
+            ),
+            (0, 0),
+        )
+        self.assertEqual(
+            tuple(residue.hetero for residue in hierarchy.residues),
+            tuple(
+                residue.hetero
+                for residue in restored.biological_hierarchies[0].residues
+            ),
+        )
+
+    def test_hierarchy_hetero_kind_mismatch_fails_before_publication(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        hierarchy = batch.biological_hierarchies[0]
+        hierarchy = replace(
+            hierarchy,
+            residues=(
+                replace(hierarchy.residues[0], hetero=True),
+                hierarchy.residues[1],
+            ),
+        )
+        self._assert_rejected_without_publication(
+            replace(batch, biological_hierarchies=(hierarchy,)),
+            "hierarchy.residue_kind.mismatch",
+        )
+
+    def test_colliding_native_residue_keys_fail_before_atoms_can_be_dropped(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        hierarchy = batch.biological_hierarchies[0]
+        hierarchy = replace(
+            hierarchy,
+            chains=(
+                hierarchy.chains[0],
+                replace(hierarchy.chains[1], chain_id="A", segment_index=1),
+            ),
+            residues=(
+                hierarchy.residues[0],
+                replace(
+                    hierarchy.residues[1],
+                    sequence_number=1,
+                    insertion_code="A",
+                    hetero=False,
+                ),
+            ),
+            atom_sites=replace(
+                hierarchy.atom_sites,
+                record_kinds=CategoricalData(
+                    ArrayData(
+                        numpy.asarray((0, 0)),
+                        ("atom",),
+                        "dimensionless",
+                    ),
+                    ("atom",),
+                    -1,
+                ),
+            ),
+        )
+        self._assert_rejected_without_publication(
+            replace(batch, biological_hierarchies=(hierarchy,)),
+            "hierarchy.residue_key.conflict",
+            confirm_loss=True,
+        )
+
+    def test_topology_ids_require_loss_confirmation_and_dangling_refs_fail_closed(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        topology_id = uuid4()
+        structure = replace(batch.structures[0], topology_ids=(topology_id,))
+        topology = SimpleNamespace(id=topology_id, structure_id=structure.id)
+        bound = SimpleNamespace(
+            structures=(structure,),
+            biological_hierarchies=batch.biological_hierarchies,
+            datasets=batch.datasets,
+            topologies=(topology,),
+        )
+
+        self.assertEqual(
+            tuple(entry.code for entry in preview_pqr_export(bound).entries),
+            ("topology_omitted",),
+        )
+        self.assertEqual(export_pqr(bound).text, "")
+
+        dangling = SimpleNamespace(
+            structures=bound.structures,
+            biological_hierarchies=bound.biological_hierarchies,
+            datasets=bound.datasets,
+            topologies=(),
+        )
+        self._assert_rejected_without_publication(
+            dangling,
+            "topology.reference.invalid",
+            confirm_loss=True,
         )
 
     def test_native_parse_pqr_reimport_preserves_normalized_semantics(self):

@@ -272,6 +272,7 @@ def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
         and all(value is not None for value in atom_names)
         and all(value in {"atom", "hetatm"} for value in record_kinds)
     ):
+        native_residue_names = {}
         for atomic_number, atom_name, record_kind, residue_index in zip(
             structure.atomic_numbers,
             atom_names,
@@ -282,6 +283,23 @@ def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
             if not 0 <= int(residue_index) < len(hierarchy.residues):
                 continue
             residue = hierarchy.residues[int(residue_index)]
+            if not 0 <= residue.chain_index < len(hierarchy.chains):
+                continue
+            if residue.hetero != (record_kind == "hetatm"):
+                issues.add("hierarchy.residue_kind.mismatch")
+            chain = hierarchy.chains[residue.chain_index]
+            native_key = (
+                chain.chain_id,
+                residue.sequence_number,
+                residue.insertion_code,
+                residue.hetero,
+            )
+            previous_name = native_residue_names.setdefault(
+                native_key,
+                residue.residue_name,
+            )
+            if previous_name != residue.residue_name:
+                issues.add("hierarchy.residue_key.conflict")
             element = _infer_pqr_element(
                 atom_name,
                 record_kind.upper(),
