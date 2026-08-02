@@ -2094,6 +2094,7 @@ def assert_biological_workflow(module_key, repository_root):
     core = importlib.import_module(f"{module_key}.core")
     export_ui = importlib.import_module(f"{module_key}.ui.export")
     pdb_format = importlib.import_module(f"{module_key}.core.formats.pdb")
+    pqr_format = importlib.import_module(f"{module_key}.core.formats.pqr")
     ui = importlib.import_module(f"{module_key}.ui.session")
     browser = importlib.import_module(
         f"{module_key}.ui.project_browser.panel"
@@ -2312,9 +2313,9 @@ def assert_biological_workflow(module_key, repository_root):
 
         (
             pqr_view,
-            _pqr_structure,
+            pqr_structure,
             pqr_hierarchy,
-            _pqr_properties,
+            pqr_properties,
             _pqr_frames,
         ) = pqr
         _attribute, charges = attribute_values(
@@ -2475,6 +2476,74 @@ def assert_biological_workflow(module_key, repository_root):
             return tuple(
                 "" if code == data.missing_code else data.categories[code]
                 for code in data.codes.values
+            )
+
+        pqr_destination = root / "project-browser.pqr"
+        pqr_selection = export_ui.resolve_export_selection(
+            session.project,
+            pqr_structure.id,
+        )
+        pqr_preview = export_ui.preview_export_selection(
+            pqr_selection,
+            "pqr",
+        )
+        pqr_job = export_ui.ExportJob(
+            pqr_destination,
+            pqr_selection,
+            format_name="pqr",
+            confirm_loss=pqr_preview.requires_confirmation,
+            missing_value_token=None,
+        )
+        pqr_job.start()
+        assert pqr_job.join(30)
+        assert pqr_job.error is None
+        assert pqr_job.result.written
+        reparsed_pqr = pqr_format.parse_pqr(pqr_destination)
+        reparsed_pqr_structure, = reparsed_pqr.structures
+        reparsed_pqr_hierarchy, = reparsed_pqr.biological_hierarchies
+        assert (
+            reparsed_pqr_structure.atomic_numbers
+            == pqr_structure.atomic_numbers
+        )
+        assert reparsed_pqr_hierarchy.atom_count == pqr_hierarchy.atom_count
+        assert reparsed_pqr_hierarchy.model == pqr_hierarchy.model
+        assert reparsed_pqr_hierarchy.chains == pqr_hierarchy.chains
+        assert reparsed_pqr_hierarchy.residues == pqr_hierarchy.residues
+        assert categories(
+            reparsed_pqr_hierarchy.atom_sites.alternate_locations
+        ) == categories(pqr_hierarchy.atom_sites.alternate_locations)
+        assert categories(
+            reparsed_pqr_hierarchy.atom_sites.record_kinds
+        ) == categories(pqr_hierarchy.atom_sites.record_kinds)
+        assert numpy.array_equal(
+            reparsed_pqr_hierarchy.atom_sites.residue_indices.values,
+            pqr_hierarchy.atom_sites.residue_indices.values,
+        )
+        assert categories(
+            reparsed_pqr_structure.atomic_identity.atom_names
+        ) == categories(pqr_structure.atomic_identity.atom_names)
+        assert numpy.allclose(
+            reparsed_pqr_structure.coordinates.values,
+            pqr_structure.coordinates.values,
+            rtol=0.0,
+            atol=1.0e-3,
+        )
+        for role in ("partial_charge", "radius"):
+            expected = next(
+                value
+                for value in pqr_properties
+                if value.semantic_role == role
+            )
+            actual = next(
+                value
+                for value in reparsed_pqr.datasets
+                if value.semantic_role == role
+            )
+            assert numpy.allclose(
+                actual.data.values,
+                expected.data.values,
+                rtol=0.0,
+                atol=1.0e-4,
             )
 
         assert (

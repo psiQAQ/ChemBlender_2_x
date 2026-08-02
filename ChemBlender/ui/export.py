@@ -29,6 +29,7 @@ from ..core.exporters import (
     export_mol,
     export_mol2,
     export_pdb,
+    export_pqr,
     export_poscar,
     export_sdf,
     export_smiles,
@@ -36,6 +37,7 @@ from ..core.exporters import (
     preview_molecular_export,
     preview_mol2_export,
     preview_pdb_export,
+    preview_pqr_export,
     plan_cif_export,
     sdf_entries_from_conformer_set,
 )
@@ -49,6 +51,7 @@ _FORMAT_ITEMS = (
     ("mol", "MOL", "Export a molecular Structure"),
     ("mol2", "MOL2", "Export a molecular Structure with Tripos metadata"),
     ("pdb", "PDB", "Export a biological Structure"),
+    ("pqr", "PQR", "Export a biological Structure with charges and radii"),
     ("sdf", "SDF", "Export molecular records or conformers"),
     ("smiles", "SMILES", "Export a molecular Structure"),
     ("cif", "CIF", "Export a periodic Structure"),
@@ -629,6 +632,8 @@ def preview_export_selection(
         return preview_mol2_export(_mol2_entities(selection))
     if format_name == "pdb":
         return preview_pdb_export(_pdb_entities(selection))
+    if format_name == "pqr":
+        return preview_pqr_export(_pdb_entities(selection))
     if format_name in {"mol", "sdf", "smiles"}:
         if selection.topology is None:
             raise ValueError("molecular export requires a complete topology")
@@ -670,8 +675,8 @@ def preview_export_selection(
         )
     if format_name != "extxyz":
         raise ValueError(
-            "format_name must be xyz, extxyz, mol, mol2, pdb, sdf, smiles, "
-            "cif or poscar"
+            "format_name must be xyz, extxyz, mol, mol2, pdb, pqr, sdf, "
+            "smiles, cif or poscar"
         )
     return preview_extxyz_export(
         selection.structure,
@@ -764,6 +769,13 @@ class ExportJob:
                     destination=self.destination,
                     is_cancelled=self._cancelled.is_set,
                 ).report
+            elif self.format_name == "pqr":
+                self.result = export_pqr(
+                    _pdb_entities(self.selection),
+                    confirm_loss=self.confirm_loss,
+                    destination=self.destination,
+                    is_cancelled=self._cancelled.is_set,
+                ).report
             elif self.format_name == "sdf":
                 if self.selection.conformer_set is not None:
                     entries = sdf_entries_from_conformer_set(
@@ -830,8 +842,8 @@ class ExportJob:
                 )
             else:
                 raise ValueError(
-                    "format_name must be xyz, extxyz, mol, mol2, pdb, sdf, "
-                    "smiles, cif or poscar"
+                    "format_name must be xyz, extxyz, mol, mol2, pdb, pqr, "
+                    "sdf, smiles, cif or poscar"
                 )
         except BaseException as error:
             self.error = error
@@ -932,7 +944,7 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
     )
     filter_glob: StringProperty(
         default=(
-            "*.xyz;*.extxyz;*.mol;*.mol2;*.pdb;*.sdf;*.smi;*.smiles;*.cif;"
+            "*.xyz;*.extxyz;*.mol;*.mol2;*.pdb;*.pqr;*.sdf;*.smi;*.smiles;*.cif;"
             "*.vasp;*.poscar;*.contcar"
         ),
         options={"HIDDEN"},
