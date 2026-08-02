@@ -13,8 +13,8 @@ CUBE_EXPORT_UI_CURSOR_FILE = "2.4.0-cube-export-ui.md"
 TASK11_SCOPE_ACTIVE_FILE = "2.4.0-task11-scope-discovery.md"
 TASK11_SCOPE_COMPLETED_FILE = "2.4.0-task11-scope-discovery.md"
 FINAL_QUALIFICATION_CURSOR_FILE = "2.4.0-final-qualification.md"
-NEXT_RELEASE_ACTIVE_FILES = ()
-NEXT_RELEASE_QUEUED_FILES = (FINAL_QUALIFICATION_CURSOR_FILE,)
+NEXT_RELEASE_ACTIVE_FILES = (FINAL_QUALIFICATION_CURSOR_FILE,)
+NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
@@ -1463,20 +1463,22 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-08-02-chemblender-2.4.0-final-qualification.md"
         )
-        queued_path = (
-            f".agents/queued/{FINAL_QUALIFICATION_CURSOR_FILE}"
+        queued_path = f".agents/queued/{FINAL_QUALIFICATION_CURSOR_FILE}"
+        qualification_path = (
+            f".agents/active/{FINAL_QUALIFICATION_CURSOR_FILE}"
         )
         cube_cursor_path = ".agents/completed/2.4.0-cube-export-ui.md"
         self.assertFalse((ROOT / active_path).exists(), active_path)
         self.assertTrue((ROOT / completed_path).is_file(), completed_path)
-        self.assertTrue((ROOT / queued_path).is_file(), queued_path)
+        self.assertFalse((ROOT / queued_path).exists(), queued_path)
+        self.assertTrue((ROOT / qualification_path).is_file(), qualification_path)
         cursor = self.read_doc(completed_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
         intake = self.read_doc(intake_path)
         selected_design = self.read_doc(selected_design_path)
         selected_plan = self.read_doc(selected_plan_path)
-        queued = self.read_doc(queued_path)
+        qualification = self.read_doc(qualification_path)
         cube_cursor = self.read_doc(cube_cursor_path)
 
         for term in (
@@ -1492,7 +1494,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             intake_path,
             "Reader API stable: `Deferred`",
             selected_plan_path,
-            queued_path,
+            qualification_path,
             "072f5fe108bb70e80c4306e6c84e5a050efe4ffc",
             "2bb6b2a7fc6a0c8f9c8dea56a1c10b246888a298",
             "1bab04155aeeaaed534f3902b8ab336ab96a2e83",
@@ -1502,10 +1504,13 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "43 Passed",
             "UTF-8/no-BOM",
             "zero runtime diff",
-            "Remote CI: `Not Run`",
-            "Task 0 — Activate the queued qualification",
+            "PR #18",
+            "30756421957",
+            "30756421955",
+            "aa6a92978f397011dafb3d79adac29d608262db4",
+            "Remote CI: `Passed`",
+            "Task 0 activation complete",
             "No runtime implementation",
-            "No push",
         ):
             self.assertIn(term, cursor)
         for term in (
@@ -1573,15 +1578,19 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             self.assertIn(term, selected_plan)
         for term in (
             "CB240-FINAL-QUALIFICATION-T12",
-            "State: `not_started`",
-            "Task 0 — Activate the queued qualification",
-            "85368c86632ac5015ecf0a53a93b62222bb2da20",
+            "State: `in_progress`",
+            "Task 1 — Audit frozen public and scientific boundaries",
+            "aa6a92978f397011dafb3d79adac29d608262db4",
+            "codex/2.4.0-final-qualification",
+            "PR #18",
+            "30756421957",
+            "30756421955",
             selected_design_path,
             selected_plan_path,
             "Reader API `1.0-rc1`",
             "No version, tag or Release",
         ):
-            self.assertIn(term, queued)
+            self.assertIn(term, qualification)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
