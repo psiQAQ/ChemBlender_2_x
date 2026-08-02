@@ -117,6 +117,7 @@ class ExtXYZWorkflowTests(unittest.TestCase):
             ("BoolProperty", "bool"),
             ("EnumProperty", "enum"),
             ("FloatProperty", "float"),
+            ("IntProperty", "int"),
             ("StringProperty", "string"),
         ):
             setattr(fake_props, name, _property(kind))
@@ -1160,7 +1161,7 @@ class ExtXYZWorkflowTests(unittest.TestCase):
         self.assertEqual(operator.__module__, MODULE)
         self.assertTrue(
             all(
-                value.kind in {"bool", "enum", "float", "string"}
+                value.kind in {"bool", "enum", "float", "int", "string"}
                 for value in operator.__annotations__.values()
             )
         )

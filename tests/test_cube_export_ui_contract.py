@@ -3,6 +3,7 @@ import sys
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4
@@ -25,6 +26,9 @@ from ChemBlender.core.cube import CUBE_READER
 
 MODULE = "ChemBlender.ui.export"
 SHEARED = Path(__file__).with_name("fixtures") / "cube" / "sheared.cube"
+TWO_DATASETS = (
+    Path(__file__).with_name("fixtures") / "cube" / "two-datasets.cube"
+)
 
 
 class _Property:
@@ -42,6 +46,25 @@ class _Operator:
         self.last_report = (levels, message)
 
 
+class _WindowManager:
+    def __init__(self):
+        self.selected = None
+
+    def fileselect_add(self, operator):
+        self.selected = operator
+
+
+class _Layout:
+    def __init__(self):
+        self.properties = []
+
+    def prop(self, _owner, name):
+        self.properties.append(name)
+
+    def label(self, **_keywords):
+        pass
+
+
 class CubeExportUIContractTests(unittest.TestCase):
     def setUp(self):
         fake_bpy = ModuleType("bpy")
@@ -50,6 +73,7 @@ class CubeExportUIContractTests(unittest.TestCase):
             ("BoolProperty", "bool"),
             ("EnumProperty", "enum"),
             ("FloatProperty", "float"),
+            ("IntProperty", "int"),
             ("StringProperty", "string"),
         ):
             setattr(props, name, _property(kind))
@@ -89,6 +113,16 @@ class CubeExportUIContractTests(unittest.TestCase):
             return self.export.resolve_export_selection(project, grid.id)
         except ValueError as error:
             self.fail(f"Grid3D should be exportable: {error}")
+
+    def _preview_cube(self, selection, *, dataset_index=None):
+        try:
+            return self.export.preview_export_selection(
+                selection,
+                "cube",
+                dataset_index=dataset_index,
+            )
+        except (TypeError, ValueError) as error:
+            self.fail(f"Cube preview should be available: {error}")
 
     @staticmethod
     def _topology(structure, provenance_id):
@@ -201,3 +235,118 @@ class CubeExportUIContractTests(unittest.TestCase):
             "dataset.nuclear_charge.ambiguous",
         ):
             preview_cube_export(ambiguous_entities)
+
+    def test_cube_format_filter_and_selected_grid_default(self):
+        module = self.export
+        operator_type = module.CHEMBLENDER_OT_export_project_entity
+        self.assertIn("cube", {item[0] for item in module._FORMAT_ITEMS})
+        self.assertIn(
+            "*.cube",
+            operator_type.__annotations__["filter_glob"].keywords["default"],
+        )
+
+        batch = CUBE_READER.parse(SHEARED)
+        project = self._project(batch)
+        operator = operator_type()
+        operator.format_name = "extxyz"
+        operator.missing_value_token = ""
+        context = SimpleNamespace(scene=object())
+        session = SimpleNamespace(project=project, active_entity_id=self._grid(batch).id)
+        with (
+            patch.object(module, "get_scene_session", return_value=session),
+            patch.object(
+                module,
+                "preview_export_selection",
+                return_value=SimpleNamespace(entries=()),
+            ),
+        ):
+            operator._selection_and_preview(context, default_format=True)
+
+        self.assertEqual(operator.format_name, "cube")
+
+    def test_cube_preview_is_read_only_and_requires_explicit_multi_dataset_index(self):
+        scalar_batch = CUBE_READER.parse(SHEARED)
+        scalar_selection = self._select_grid(
+            self._project(scalar_batch),
+            self._grid(scalar_batch),
+        )
+        expected_scalar = preview_cube_export(
+            self.export._cube_entities(scalar_selection),
+            dataset_index=None,
+        )
+        with patch(
+            "ChemBlender.core.exporters.cube.export_cube",
+        ) as writer:
+            self.assertEqual(self._preview_cube(scalar_selection), expected_scalar)
+        writer.assert_not_called()
+
+        multi_batch = CUBE_READER.parse(TWO_DATASETS)
+        multi_selection = self._select_grid(
+            self._project(multi_batch),
+            self._grid(multi_batch),
+        )
+        with self.assertRaisesRegex(ValueError, "dataset_index.missing"):
+            self.export.preview_export_selection(
+                multi_selection,
+                "cube",
+                dataset_index=None,
+            )
+        expected_multi = preview_cube_export(
+            self.export._cube_entities(multi_selection),
+            dataset_index=1,
+        )
+        self.assertEqual(
+            self._preview_cube(multi_selection, dataset_index=1),
+            expected_multi,
+        )
+
+    def test_unset_multi_dataset_invoke_opens_dialog_but_execute_fails_closed(self):
+        batch = CUBE_READER.parse(TWO_DATASETS)
+        project = self._project(batch)
+        module = self.export
+        operator = module.CHEMBLENDER_OT_export_project_entity()
+        operator.format_name = "extxyz"
+        operator.missing_value_token = ""
+        operator.cube_dataset_index = -1
+        operator.confirm_loss = False
+        manager = _WindowManager()
+        context = SimpleNamespace(scene=object(), window_manager=manager)
+        session = SimpleNamespace(project=project, active_entity_id=self._grid(batch).id)
+
+        with (
+            patch.object(module, "get_scene_session", return_value=session),
+            patch.object(module, "preview_cube_export", create=True) as preview,
+        ):
+            result = operator.invoke(context, None)
+
+        self.assertEqual(result, {"RUNNING_MODAL"})
+        self.assertIs(manager.selected, operator)
+        self.assertEqual(operator.format_name, "cube")
+        self.assertEqual(operator.loss_preview, "Select Dataset Index")
+        preview.assert_not_called()
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "selected.cube"
+            operator.filepath = str(destination)
+            operator.format_name = "cube"
+            with patch.object(module, "get_scene_session", return_value=session):
+                result = operator.execute(context)
+            self.assertEqual(result, {"CANCELLED"})
+            self.assertFalse(destination.exists())
+
+    def test_dataset_index_control_is_shown_only_for_multi_dataset_cube(self):
+        operator = self.export.CHEMBLENDER_OT_export_project_entity()
+        operator.format_name = "cube"
+        operator.loss_preview = "No data loss"
+        operator.confirm_loss = False
+        operator._preview_report = None
+
+        operator._cube_requires_dataset_index = True
+        operator.layout = _Layout()
+        operator.draw(None)
+        self.assertIn("cube_dataset_index", operator.layout.properties)
+
+        operator._cube_requires_dataset_index = False
+        operator.layout = _Layout()
+        operator.draw(None)
+        self.assertNotIn("cube_dataset_index", operator.layout.properties)

@@ -7,7 +7,13 @@ from types import SimpleNamespace
 from uuid import UUID
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, FloatProperty, StringProperty
+from bpy.props import (
+    BoolProperty,
+    EnumProperty,
+    FloatProperty,
+    IntProperty,
+    StringProperty,
+)
 
 from ..core import (
     AtomicProperty,
@@ -35,6 +41,7 @@ from ..core.exporters import (
     export_sdf,
     export_smiles,
     preview_extxyz_export,
+    preview_cube_export,
     preview_molecular_export,
     preview_mol2_export,
     preview_pdb_export,
@@ -49,6 +56,7 @@ from .session import get_scene_session
 _FORMAT_ITEMS = (
     ("xyz", "XYZ", "Export one Structure"),
     ("extxyz", "extXYZ", "Export a Structure or trajectory with properties"),
+    ("cube", "Cube", "Export one selected Grid3D dataset"),
     ("mol", "MOL", "Export a molecular Structure"),
     ("mol2", "MOL2", "Export a molecular Structure with Tripos metadata"),
     ("pdb", "PDB", "Export a biological Structure"),
@@ -616,9 +624,15 @@ def preview_export_selection(
     cif_mode=None,
     poscar_settings=None,
     destination=None,
+    dataset_index=None,
 ):
     if type(selection) is not ExportSelection:
         raise TypeError("selection must be an ExportSelection")
+    if format_name == "cube":
+        return preview_cube_export(
+            _cube_entities(selection),
+            dataset_index=dataset_index,
+        )
     if format_name == "xyz":
         if selection.frame_set is not None:
             raise ValueError("FrameSet export requires extXYZ")
@@ -725,7 +739,7 @@ def preview_export_selection(
         )
     if format_name != "extxyz":
         raise ValueError(
-            "format_name must be xyz, extxyz, mol, mol2, pdb, pqr, sdf, "
+            "format_name must be xyz, extxyz, cube, mol, mol2, pdb, pqr, sdf, "
             "smiles, cif or poscar"
         )
     return preview_extxyz_export(
@@ -994,8 +1008,8 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
     )
     filter_glob: StringProperty(
         default=(
-            "*.xyz;*.extxyz;*.mol;*.mol2;*.pdb;*.pqr;*.sdf;*.smi;*.smiles;*.cif;"
-            "*.vasp;*.poscar;*.contcar"
+            "*.xyz;*.extxyz;*.cube;*.mol;*.mol2;*.pdb;*.pqr;*.sdf;*.smi;"
+            "*.smiles;*.cif;*.vasp;*.poscar;*.contcar"
         ),
         options={"HIDDEN"},
     )
@@ -1073,6 +1087,12 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
         name="Missing Value Token",
         update=_export_preview_changed,
     )
+    cube_dataset_index: IntProperty(
+        name="Dataset Index",
+        default=-1,
+        min=-1,
+        update=_export_preview_changed,
+    )
     loss_preview: StringProperty(name="Loss Preview")
 
     def _poscar_settings(self, selection):
@@ -1120,7 +1140,9 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
             session.active_entity_id,
         )
         if default_format:
-            if selection.conformer_set is not None or selection.record is not None:
+            if selection.grid is not None:
+                self.format_name = "cube"
+            elif selection.conformer_set is not None or selection.record is not None:
                 self.format_name = "sdf"
             elif selection.frame_set is not None:
                 self.format_name = "extxyz"
@@ -1155,6 +1177,20 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
                     settings.include_selective_dynamics
                 )
                 self.poscar_velocity_mode = settings.velocity_mode
+        cube_requires_dataset_index = (
+            selection.grid is not None
+            and selection.grid.data.dims == ("dataset", "x", "y", "z")
+        )
+        self._cube_requires_dataset_index = cube_requires_dataset_index
+        if (
+            self.format_name == "cube"
+            and cube_requires_dataset_index
+            and getattr(self, "cube_dataset_index", -1) == -1
+            and default_format
+        ):
+            self.loss_preview = "Select Dataset Index"
+            self._preview_report = None
+            return selection, None
         keywords = {}
         if self.format_name == "cif":
             keywords = {
@@ -1165,6 +1201,15 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
             keywords = {
                 "poscar_settings": self._poscar_settings(selection),
                 "destination": getattr(self, "filepath", None) or None,
+            }
+        elif self.format_name == "cube":
+            keywords = {
+                "dataset_index": (
+                    None
+                    if not cube_requires_dataset_index
+                    or getattr(self, "cube_dataset_index", -1) == -1
+                    else getattr(self, "cube_dataset_index", -1)
+                ),
             }
         report = preview_export_selection(
             selection,
@@ -1190,6 +1235,11 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
         layout.prop(self, "format_name")
         if self.format_name == "cif":
             layout.prop(self, "cif_mode")
+        elif (
+            self.format_name == "cube"
+            and getattr(self, "_cube_requires_dataset_index", False)
+        ):
+            layout.prop(self, "cube_dataset_index")
         elif self.format_name == "poscar":
             layout.prop(self, "poscar_comment")
             layout.prop(self, "poscar_coordinate_mode")
