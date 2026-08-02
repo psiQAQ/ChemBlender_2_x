@@ -16,7 +16,7 @@ PUBLIC_CORE_NAMES = (
     "CalculationStatus", "CategoricalData", "ChemicalAnnotation", "ConformerSet", "CriticalPointKind", "CJSONEnvelope", "CJSON_READER",
     "CJSONCompatibilityError", "CJSONError", "CacheIdentityError", "CacheClearResult", "CIFEnvelope",
     "CapabilitySupport", "CCLIB_OUTPUT_READER", "CCLibDependencyError", "CIF_READER", "POSCAR_READER",
-    "CUBE_READER", "DatasetStatus", "DiagnosticSeverity", "DiagnosticValue",
+    "CUBE_READER", "CubeExportReadiness", "CubeExportStatus", "DatasetStatus", "DiagnosticSeverity", "DiagnosticValue",
     "DensityMatrix", "DensityMatrixLevel",
     "DensityMatrixSpin", "DensityOfStates", "DeclaredSymmetry", "EnergyReference", "ExternalReference",
     "ExcitationContribution", "ExcitedStateReferences", "ExcitedStateSet", "FrameSet", "FrameProperty",
@@ -53,7 +53,7 @@ PUBLIC_CORE_NAMES = (
     "evaluate_density_matrix_grid", "evaluate_electrostatic_potential_grid",
     "evaluate_molecular_orbital_grid", "derive_electronic_spectrum",
     "ExternalConnectorDescriptor", "ExternalConnectorError", "ExternalRecordRequest",
-    "derive_grid_lod", "default_grid_isovalue", "derive_phonon_frames", "derive_symmetry", "compare_symmetry",
+    "derive_grid_lod", "cube_export_readiness", "default_grid_isovalue", "derive_phonon_frames", "derive_symmetry", "compare_symmetry",
     "derive_vibrational_spectrum", "describe_report_artifact", "close_project",
     "close_session", "clear_derived_cache", "create_session", "derivation_cache_key", "open_project",
     "parser_cache_key", "render_cache_key", "resolve_grid_semantics",
@@ -75,7 +75,7 @@ class CorePublicApiTests(unittest.TestCase):
     def test_public_names_are_frozen(self):
         self.assertEqual(tuple(core.__all__), PUBLIC_CORE_NAMES)
         self.assertEqual(len(core.__all__), len(set(core.__all__)))
-        self.assertEqual(len(core.__all__), 246)
+        self.assertEqual(len(core.__all__), 249)
 
     def test_public_names_resolve_to_attributes(self):
         missing = [name for name in core.__all__ if not hasattr(core, name)]

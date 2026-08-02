@@ -7,8 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ()
-NEXT_RELEASE_QUEUED_FILES = ("2.4.0-cube-export.md",)
+NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-cube-export.md",)
+NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
@@ -19,6 +19,7 @@ TASK5_SCOPE_COMPLETED_FILE = "2.4.0-task5-scope-discovery.md"
 PQR_EXPORT_COMPLETED_FILE = "2.4.0-pqr-export.md"
 PQR_EXPORT_UI_COMPLETED_FILE = "2.4.0-pqr-export-ui.md"
 CUBE_EXPORT_QUEUED_FILE = "2.4.0-cube-export.md"
+CUBE_EXPORT_ACTIVE_FILE = "2.4.0-cube-export.md"
 TASK7_SCOPE_COMPLETED_FILE = "2.4.0-task7-scope-discovery.md"
 WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 WAVE_230_FINAL_COMPLETED_FILE = "2.3.0-wave-4-migration-release.md"
@@ -1152,13 +1153,17 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-08-02-chemblender-2.4.0-cube-export.md"
         )
-        queued_path = f".agents/queued/{CUBE_EXPORT_QUEUED_FILE}"
+        contract_path = (
+            "docs/quantum-visualization/2.4.0/cube-export-contract.md"
+        )
+        active_path = f".agents/active/{CUBE_EXPORT_ACTIVE_FILE}"
         completed = self.read_doc(completed_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
         intake = self.read_doc(intake_path)
         selected_plan = self.read_doc(selected_plan_path)
-        queued = self.read_doc(queued_path)
+        contract = self.read_doc(contract_path)
+        active = self.read_doc(active_path)
 
         for term in (
             "CB240-TASK7-SCOPE-DISCOVERY",
@@ -1173,7 +1178,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Current task: `Task 7 Scope Discovery checkpoint complete`",
             intake_path,
             selected_plan_path,
-            queued_path,
+            ".agents/queued/2.4.0-cube-export.md",
         ):
             self.assertIn(term, completed)
         for term in (
@@ -1229,14 +1234,30 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             self.assertIn(term, selected_plan)
         for term in (
             "CB240-CUBE-EXPORT-T8",
-            "State: `not_started`",
-            "Task 1 — Freeze Cube export readiness",
+            "State: `in_progress`",
+            "Task 2 — Write deterministic scalar and selected-dataset Cube",
             selected_plan_path,
             intake_path,
             "Cube UI remains unstarted",
             "Reader API v1 stable remains unstarted",
+            "9fc7e996871b4b6019ca7ef56e7209578c76a641",
+            "codex/2.4.0-cube-export",
+            contract_path,
+            "Completed tasks:",
+            "Task 1: `this commit`",
+            "59 Passed",
         ):
-            self.assertIn(term, queued)
+            self.assertIn(term, active)
+        for term in (
+            "cube_export_readiness",
+            "MissingSelection",
+            "finite real numeric arrays",
+            "dataset_index=None",
+            "bohr",
+            "angstrom",
+            "OpenVDB",
+        ):
+            self.assertIn(term, contract)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (

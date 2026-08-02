@@ -53,7 +53,7 @@ bohr without mutating source entities and never read OpenVDB or Blender caches.
 - `CubeExportReadiness` is a frozen, slotted dataclass with `status` and sorted
   `tokens`; it does not serialize or modify entities.
 
-- [ ] **Step 1: Activate the queued cursor and write readiness RED**
+- [x] **Step 1: Activate the queued cursor and write readiness RED**
 
 Require exactly one selected `Grid3D`, its linked `Structure`, and one matching
 complete finite `nuclear_charge` `AtomicProperty` in `elementary_charge` with
@@ -63,7 +63,7 @@ must contain at least one atom. Coordinates, nuclear charges and the selected
 grid slice must be real numeric arrays (never bool, complex, string or object)
 whose values are finite.
 
-- [ ] **Step 2: Add dataset and unit RED**
+- [x] **Step 2: Add dataset and unit RED**
 
 Test these exact rules:
 
@@ -81,7 +81,7 @@ Structure coordinates and Grid geometry may independently use `bohr` or
 `angstrom`; both are converted to one bohr output frame later. Leading dims
 other than exactly `("dataset",)` are unsupported.
 
-- [ ] **Step 3: Run RED**
+- [x] **Step 3: Run RED**
 
 Run:
 
@@ -92,7 +92,7 @@ Run:
 Expected: import error because `cube_readiness.py` and its public symbols do
 not exist.
 
-- [ ] **Step 4: Implement the minimum readiness boundary**
+- [x] **Step 4: Implement the minimum readiness boundary**
 
 Define:
 
@@ -115,7 +115,7 @@ class CubeExportReadiness:
 Return stable sorted tokens. Reuse the package's existing entity-container
 projection pattern; add no generic selection framework.
 
-- [ ] **Step 5: Publish the contract and run GREEN**
+- [x] **Step 5: Publish the contract and run GREEN**
 
 Document the entity, affine-grid, unit, dataset and loss boundaries. Export the
 three public readiness symbols through `ChemBlender.core`, update the
