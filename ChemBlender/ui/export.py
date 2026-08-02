@@ -1094,10 +1094,6 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
         default="cartesian",
         update=_export_preview_changed,
     )
-    confirm_loss: BoolProperty(
-        name="Confirm Loss/Partial/Ambiguous Export",
-        default=False,
-    )
     missing_value_token: StringProperty(
         name="Missing Value Token",
         update=_export_preview_changed,
@@ -1107,6 +1103,10 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
         default=-1,
         min=-1,
         update=_export_preview_changed,
+    )
+    confirm_loss: BoolProperty(
+        name="Confirm Loss/Partial/Ambiguous Export",
+        default=False,
     )
     loss_preview: StringProperty(name="Loss Preview")
 

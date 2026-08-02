@@ -31,7 +31,7 @@
 - Consumes: completed Task 11 cursor and its exact remote integration evidence.
 - Produces: isolated branch `codex/2.4.0-final-qualification` from live `origin/main` and the sole active goal `CB240-FINAL-QUALIFICATION-T12`.
 
-- [ ] **Step 1: Integrate the Task 11 discovery gate**
+- [x] **Step 1: Integrate the Task 11 discovery gate**
 
 Require a clean discovery worktree and query existing PRs for the exact head
 before any remote write. If it is already merged, verify exact-head runs and
@@ -40,7 +40,7 @@ ready PR, wait for `extension-package` and `optional-qc-core` to pass the exact
 discovery head, merge with `--merge --delete-branch=false`, fetch and prove
 ancestry.
 
-- [ ] **Step 2: Create an isolated qualification worktree**
+- [x] **Step 2: Create an isolated qualification worktree**
 
 Run:
 
@@ -55,12 +55,12 @@ git -C $repositoryRoot worktree add $qualificationPath `
 
 Record the actual full baseline SHA; do not reuse the discovery branch.
 
-- [ ] **Step 3: Move queued to active with routing RED/GREEN**
+- [x] **Step 3: Move queued to active with routing RED/GREEN**
 
 Update the routing contract to one active qualification cursor and no queued
 cursor. Preserve goal, selected design/plan and Reader API stop boundary.
 
-- [ ] **Step 4: Verify and commit activation**
+- [x] **Step 4: Verify and commit activation**
 
 Run focused documentation routing tests and `git diff --check`. Commit as
 `docs: activate 2.4.0 final qualification`.
@@ -77,13 +77,13 @@ Run focused documentation routing tests and `git diff --check`. Commit as
 - Consumes: current public core/model, Reader API, schema, catalog and generated-document contracts.
 - Produces: a versioned evidence matrix with no public-surface enlargement.
 
-- [ ] **Step 1: Write the evidence-record RED**
+- [x] **Step 1: Write the evidence-record RED**
 
 Require the evidence document to record Reader API `1.0-rc1`, sidecar and
 canonical schema versions, public import audits, every F4/F5 exporter execution
 mode, optional dependency isolation and zero unexplained generated-doc drift.
 
-- [ ] **Step 2: Run focused boundary tests**
+- [x] **Step 2: Run focused boundary tests**
 
 Run:
 
@@ -101,13 +101,13 @@ Run:
 
 Record exact counts and failures; do not weaken assertions or add skips.
 
-- [ ] **Step 3: Write the evidence matrix and focused fixes**
+- [x] **Step 3: Write the evidence matrix and focused fixes**
 
 Populate only observed facts. For each confirmed defect, add one failing
 contract test, implement the smallest shared-boundary fix, and rerun the
 affected module set.
 
-- [ ] **Step 4: Commit the frozen-boundary audit**
+- [x] **Step 4: Commit the frozen-boundary audit**
 
 Run focused GREEN and `git diff --check`. Commit as
 `test: qualify 2.4.0 public boundaries`.
@@ -123,7 +123,7 @@ Run focused GREEN and `git diff --check`. Commit as
 - Consumes: Blender bundled Python, pinned wheels/constraints and existing test discovery.
 - Produces: complete pass/skip/fail counts plus optional integration evidence.
 
-- [ ] **Step 1: Run full Python qualification**
+- [x] **Step 1: Run full Python qualification**
 
 Run:
 
@@ -134,13 +134,13 @@ Run:
 git diff --check
 ```
 
-- [ ] **Step 2: Run import isolation**
+- [x] **Step 2: Run import isolation**
 
 In fresh subprocesses import `ChemBlender.core` and `ChemBlender.reader_api`;
 assert `rdkit`, `gemmi`, `spglib`, `cclib`, `iodata`, `gbasis`, `ase` and
 `pymatgen` are absent from `sys.modules` until their adapter is called.
 
-- [ ] **Step 3: Run existing optional integrations**
+- [x] **Step 3: Run existing optional integrations**
 
 With the workflow-pinned environments and fixtures active, run the exact
 integration module set:
@@ -158,7 +158,7 @@ Record package versions and fixture SHAs from
 integration proof; the exact-head `cclib`, `iodata` and `gbasis` jobs in Task 5
 remain mandatory. Do not install into Blender global site-packages.
 
-- [ ] **Step 4: Fix, rerun and commit only if needed**
+- [x] **Step 4: Fix, rerun and commit only if needed**
 
 If no defect is found, update evidence/cursor only. Otherwise add focused RED,
 apply the smallest fix and rerun full discovery. Commit as
@@ -175,12 +175,12 @@ apply the smallest fix and rerun full discovery. Commit as
 - Consumes: clean committed tree, Blender 5.1.2 and pinned RDKit/Gemmi wheels.
 - Produces: validated ZIP, checksum, inventory, artifact-size and release-metadata evidence.
 
-- [ ] **Step 1: Verify dependency inputs**
+- [x] **Step 1: Verify dependency inputs**
 
 Resolve exact wheel filenames and SHA-256 values from
 `ChemBlender/dependencies.toml`; reject missing, extra or mismatched wheels.
 
-- [ ] **Step 2: Validate and build**
+- [x] **Step 2: Validate and build**
 
 Run:
 
@@ -192,7 +192,7 @@ Run:
 Require native validate/build success and the exact package name from
 `release_metadata.py`.
 
-- [ ] **Step 3: Audit the artifact**
+- [x] **Step 3: Audit the artifact**
 
 Run `dependency_inventory.py`, `artifact_size_report.py` and
 `verify_release_artifact.py --metadata-mode package-ci` with the exact
@@ -200,7 +200,7 @@ arguments used by `extension-package.yml`. Inspect all ZIP paths and CRCs;
 record package hash, member count, packed/unpacked/section sizes and budget
 result.
 
-- [ ] **Step 4: Commit evidence or a focused fix**
+- [x] **Step 4: Commit evidence or a focused fix**
 
 Rebuild from a clean committed tree after any change. Commit as
 `test: qualify 2.4.0 extension artifact`.
@@ -216,27 +216,27 @@ Rebuild from a clean committed tree after any change. Commit as
 - Consumes: exact ZIP from Task 3.
 - Produces: isolated Blender 5.1.2 install, lifecycle and representative product-flow evidence.
 
-- [ ] **Step 1: Run isolated install and lifecycle**
+- [x] **Step 1: Run isolated install and lifecycle**
 
 Set a fresh temporary `BLENDER_USER_RESOURCES`; execute
 `tests/blender_smoke.py -- <exact-package>` with `--factory-startup` and
 `--python-exit-code 1`. Require install, enable, register/unregister/reload
 twice and final cleanup to exit zero.
 
-- [ ] **Step 2: Run representative export workflows**
+- [x] **Step 2: Run representative export workflows**
 
 Through the installed Project Browser, import, preview, confirm, export and
 native-reimport one MOL2, PDB, PQR and multi-dataset Cube fixture. Compare
 scientific semantics and confirm cancellation preserves an existing
 destination.
 
-- [ ] **Step 3: Run save/reopen and resource checks**
+- [x] **Step 3: Run save/reopen and resource checks**
 
 Save, close and reopen a representative molecular and Grid3D project; verify
 sidecar links, derived cache reconstruction and no duplicate registration or
 object creation.
 
-- [ ] **Step 4: Commit evidence or a focused fix**
+- [x] **Step 4: Commit evidence or a focused fix**
 
 Rerun affected Blender and full Python checks after any change. Commit as
 `test: qualify 2.4.0 Blender workflows`.
@@ -253,13 +253,13 @@ Rerun affected Blender and full Python checks after any change. Commit as
 - Consumes: all qualification evidence and findings.
 - Produces: one clean final feature head, exact-head CI and ordinary merge ancestry.
 
-- [ ] **Step 1: Run two independent reviews**
+- [x] **Step 1: Run two independent reviews**
 
 Require specification-compliance and code-quality/security/scientific-
 correctness verdicts. Fix all Critical, Important and task-related Minor
 findings, then rerun every affected gate.
 
-- [ ] **Step 2: Run final local qualification**
+- [x] **Step 2: Run final local qualification**
 
 Freshly rerun full unittest discovery, compileall, generated docs, optional
 import audit, committed-tree artifact build/audit, Blender installed smoke and

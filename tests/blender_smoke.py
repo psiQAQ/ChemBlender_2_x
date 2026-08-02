@@ -4183,21 +4183,71 @@ def assert_cube_export_workflow(module_key, repository_root):
 
     core = importlib.import_module(f"{module_key}.core")
     cube = importlib.import_module(f"{module_key}.core.cube")
+    exporters = importlib.import_module(f"{module_key}.core.exporters")
     export_ui = importlib.import_module(f"{module_key}.ui.export")
+    preview_ui = importlib.import_module(f"{module_key}.ui.import_preview")
+    properties = importlib.import_module(f"{module_key}.ui.properties")
+    ui = importlib.import_module(f"{module_key}.ui.session")
+    browser = importlib.import_module(
+        f"{module_key}.ui.project_browser.panel"
+    )
+    bridge = importlib.import_module(
+        f"{module_key}.runtime.reader_api_bridge"
+    )
     source = repository_root / "tests/fixtures/cube/two-datasets.cube"
-    batch = cube.CUBE_READER.parse(source)
-    structure = batch.structures[0]
-    grid = next(value for value in batch.datasets if isinstance(value, core.Grid3D))
+    session = ui.get_scene_session(bpy.context.scene)
+    source_revisions = set(session.project.source_revisions)
+    assert bpy.ops.chemblender.quick_import(
+        "INVOKE_DEFAULT",
+        directory=str(source.parent),
+        files=[{"name": source.name}],
+        validation_mode="balanced",
+    ) == {"FINISHED"}
+    state = properties.get_quick_import_state(session)
+    rows = preview_ui.project_import_preview(
+        session,
+        state,
+        bridge.get_reader_plugin_registry(),
+    )
+    assert len(rows) == 1
+    assert rows[0].grid_dataset_count == 2
+    assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+    revision_id, = set(session.project.source_revisions) - source_revisions
+    revision = session.project.source_revisions[revision_id]
+    structure = next(
+        session.project.structures[entity_id]
+        for entity_id in revision.created_entity_ids
+        if entity_id in session.project.structures
+    )
+    grid = next(
+        session.project.datasets[entity_id]
+        for entity_id in revision.created_entity_ids
+        if (
+            entity_id in session.project.datasets
+            and isinstance(session.project.datasets[entity_id], core.Grid3D)
+        )
+    )
     charge = next(
-        value
-        for value in batch.datasets
-        if isinstance(value, core.AtomicProperty)
-        and value.semantic_role == "nuclear_charge"
+        session.project.datasets[entity_id]
+        for entity_id in revision.created_entity_ids
+        if (
+            entity_id in session.project.datasets
+            and isinstance(session.project.datasets[entity_id], core.AtomicProperty)
+            and session.project.datasets[entity_id].semantic_role
+            == "nuclear_charge"
+        )
     )
     assert grid.structure_id == structure.id
-    project = core.QCProject(uuid4(), "1.0")
-    project.commit(batch)
-    selection = export_ui.resolve_export_selection(project, grid.id)
+    browser_settings = bpy.context.scene.chemblender_project_browser
+    browser_settings.mode = "by_data"
+    browser.refresh_project_browser(bpy.context.scene)
+    browser_settings.selected_index = next(
+        index
+        for index, row in enumerate(browser_settings.rows)
+        if row.entity_id == str(grid.id)
+    )
+    assert session.active_entity_id == grid.id
+    selection = export_ui.resolve_export_selection(session.project, grid.id)
     preview = export_ui.preview_export_selection(
         selection,
         "cube",
@@ -4206,20 +4256,33 @@ def assert_cube_export_workflow(module_key, repository_root):
     assert preview.requires_confirmation
 
     with TemporaryDirectory() as directory:
-        destination = Path(directory) / "selected.cube"
-        job = export_ui.ExportJob(
-            destination,
+        root = Path(directory)
+        destination = root / "selected.cube"
+        assert bpy.ops.chemblender.export_project_entity(
+            filepath=str(destination),
+            format_name="cube",
+            cube_dataset_index=1,
+            confirm_loss=True,
+        ) == {"FINISHED"}
+        restored = cube.CUBE_READER.parse(destination)
+
+        cancelled_destination = root / "cancelled.cube"
+        previous = b"prior destination\n"
+        cancelled_destination.write_bytes(previous)
+        cancelled = export_ui.ExportJob(
+            cancelled_destination,
             selection,
             format_name="cube",
             dataset_index=1,
             confirm_loss=True,
             missing_value_token=None,
         )
-        job.start()
-        assert job.join(30)
-        assert job.error is None
-        assert job.result.written
-        restored = cube.CUBE_READER.parse(destination)
+        cancelled.cancel()
+        cancelled.start()
+        assert cancelled.join(30)
+        assert isinstance(cancelled.error, exporters.ExportCancelled)
+        assert cancelled_destination.read_bytes() == previous
+        assert tuple(root.glob(".*.tmp")) == ()
 
     restored_structure = restored.structures[0]
     restored_grid = next(
@@ -4246,7 +4309,7 @@ def assert_cube_export_workflow(module_key, repository_root):
         restored_grid.data.values,
     )
     assert dict(restored.provenance[0].parameters)["dataset_ids"] == (7,)
-    print("PASS: installed native Cube export and re-import")
+    print("PASS: installed Project Browser multi-dataset Cube export")
 
 
 def assert_cif_workflow(module_key, repository_root):
