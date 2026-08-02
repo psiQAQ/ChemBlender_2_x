@@ -7,8 +7,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
+TASK9_SCOPE_ACTIVE_FILE = "2.4.0-task9-scope-discovery.md"
+TASK9_SCOPE_COMPLETED_FILE = "2.4.0-task9-scope-discovery.md"
 NEXT_RELEASE_ACTIVE_FILES = ()
-NEXT_RELEASE_QUEUED_FILES = ()
+CUBE_EXPORT_UI_QUEUED_FILE = "2.4.0-cube-export-ui.md"
+NEXT_RELEASE_QUEUED_FILES = (CUBE_EXPORT_UI_QUEUED_FILE,)
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
@@ -1258,6 +1261,13 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "final artifact budget: `f0c8a393161477ef42606b0011a0b2f40c663a3e`",
             "2186 Passed / 26 Skipped / 0 Failed",
             "Task 7 — Exact-head remote integration gate",
+            "https://github.com/psiQAQ/ChemBlender_2_x/pull/15",
+            "164a681bb3d9cb788f778eca71f9fe61a0361019",
+            "30747458150",
+            "30747458152",
+            "cd265d95c3cc73cae5355657cc0a5a8f1931d98b",
+            "Ancestor verification: `Passed`",
+            "Remote CI: `Passed`",
             "59 Passed",
             "66 Passed",
             "71 Passed",
@@ -1274,6 +1284,129 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "OpenVDB",
         ):
             self.assertIn(term, contract)
+
+    def test_240_task9_scope_discovery_is_recoverable(self):
+        active_path = f".agents/active/{TASK9_SCOPE_ACTIVE_FILE}"
+        completed_path = f".agents/completed/{TASK9_SCOPE_COMPLETED_FILE}"
+        design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-02-chemblender-2.4.0-task9-scope-discovery-design.md"
+        )
+        plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-task9-scope-discovery.md"
+        )
+        intake_path = (
+            "docs/quantum-visualization/2.4.0/task9-candidate-intake.md"
+        )
+        selected_design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-02-chemblender-2.4.0-cube-export-ui-design.md"
+        )
+        selected_plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-cube-export-ui.md"
+        )
+        queued_path = f".agents/queued/{CUBE_EXPORT_UI_QUEUED_FILE}"
+        self.assertFalse((ROOT / active_path).exists(), active_path)
+        completed = self.read_doc(completed_path)
+        design = self.read_doc(design_path)
+        plan = self.read_doc(plan_path)
+        intake = self.read_doc(intake_path)
+        selected_design = self.read_doc(selected_design_path)
+        selected_plan = self.read_doc(selected_plan_path)
+        queued = self.read_doc(queued_path)
+
+        for term in (
+            "CB240-TASK9-SCOPE-DISCOVERY",
+            "State: `completed`",
+            "Current task: `Task 9 Scope Discovery checkpoint complete`",
+            "cd265d95c3cc73cae5355657cc0a5a8f1931d98b",
+            design_path,
+            plan_path,
+            "Native Cube Export UI",
+            "Reader API v1 stable gate",
+            "2.4.0 Final Qualification",
+            "No runtime implementation",
+            "No push",
+            "Selection: `Native Cube Export UI`",
+            intake_path,
+            selected_plan_path,
+            queued_path,
+            "ceca5e8476dc7773ea3d183075e96685f915affc",
+            "30c244602b36ffdcc6c471f95d0456a71f0ff819",
+            "09ab20004434262555aa79827866aaf890624e54",
+            "2eeaec0568726da70d24c2be71794225b081a339",
+            "2f7c525bff7c7fdf59769c1e1610b7e017407968",
+            "13a334a345e55f1bc36226639839e4251ff08045",
+            "18c7dbffbb509a69f5ea4b0a91e210d9d8fd8f0c",
+            "42 Passed",
+            "zero runtime diff",
+            "Remote CI: `Not Run`",
+        ):
+            self.assertIn(term, completed)
+        for term in (
+            "Selected: native Cube export UI",
+            "Deferred: Reader API v1 stable gate",
+            "Deferred: 2.4.0 final qualification",
+            "PR #15",
+        ):
+            self.assertIn(term, design)
+        for term in (
+            "Task 1: Persist the Task 9 discovery boundary",
+            "Task 2: Freeze native Cube export remote evidence",
+            "Task 3: Audit and select one candidate",
+            "Task 4: Queue native Cube export UI",
+            "Task 5: Verify, review and checkpoint",
+        ):
+            self.assertIn(term, plan)
+        for term in (
+            "Cube: F5 / core / preview_confirmation",
+            "Reader API: 1.0-rc1",
+            "Task 10 — Native Cube Export UI",
+            "Reader API stable: deferred",
+            "Final Qualification: deferred",
+            "Grid3D",
+            "resolve_export_selection",
+            "164a681bb3d9cb788f778eca71f9fe61a0361019",
+            "30747458150",
+            "30747458152",
+            "cd265d95c3cc73cae5355657cc0a5a8f1931d98b",
+        ):
+            self.assertIn(term, intake)
+        for term in (
+            "Reuse `ChemBlender.ui.export`",
+            "Grid3D",
+            "preview_cube_export",
+            "export_cube",
+            "explicit dataset index",
+            "no Cube-specific operator",
+        ):
+            self.assertIn(term, selected_design)
+        for term in (
+            "Task 0: Activate the queued implementation",
+            "Task 1: Resolve selected Grid3D export context",
+            "Task 2: Add Cube format, dataset choice and preview",
+            "Task 3: Dispatch cancellable atomic Cube export",
+            "Task 4: Publish and prove the reachable capability",
+            "Task 5: Full qualification, reviews and checkpoint",
+            "Task 6: Exact-head remote integration gate",
+            "tests/test_cube_export_ui_contract.py",
+            "preview_cube_export",
+            "export_cube",
+        ):
+            self.assertIn(term, selected_plan)
+        for term in (
+            "CB240-CUBE-EXPORT-UI-T10",
+            "State: `not_started`",
+            "Task 0 — Activate the queued implementation",
+            selected_design_path,
+            selected_plan_path,
+            intake_path,
+            "Reader API v1 stable remains unstarted",
+            "Final Qualification remains unstarted",
+        ):
+            self.assertIn(term, queued)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
