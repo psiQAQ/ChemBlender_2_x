@@ -143,7 +143,7 @@ git commit -m "feat: freeze native Cube export readiness"
   `export_cube(project_entities, *, dataset_index=None, confirm_loss=False,
   destination=None, is_cancelled=None)`.
 
-- [ ] **Step 1: Write scalar-format RED**
+- [x] **Step 1: Write scalar-format RED**
 
 Use `tests/fixtures/cube/sheared.cube`. Require two deterministic ASCII comment
 lines, atom count/origin, three full affine step-vector lines, atom rows
@@ -155,7 +155,7 @@ A scalar grid with one trustworthy source ID preserves it with negative
 `NATOMS` and a one-entry `DSET_IDS` record. Both forms write all three voxel
 counts as positive integers because output geometry is always bohr.
 
-- [ ] **Step 2: Write bohr output RED**
+- [x] **Step 2: Write bohr output RED**
 
 Create equivalent bohr and angstrom entities. Require byte-identical output
 after converting angstrom by:
@@ -168,7 +168,7 @@ bohr_value = angstrom_value / BOHR_TO_ANGSTROM
 Do not alter source arrays or unit tokens. Preserve sheared axes and determinant
 sign exactly within the writer's numeric precision.
 
-- [ ] **Step 3: Write explicit dataset selection and DSET_IDS RED**
+- [x] **Step 3: Write explicit dataset selection and DSET_IDS RED**
 
 For `tests/fixtures/cube/two-datasets.cube`, require one explicit selected index.
 Write negative `NATOMS`, a one-entry `DSET_IDS` record, positive voxel counts
@@ -184,19 +184,19 @@ that fallback: trustworthy one-entry IDs are preserved, ordinary scalars omit
 `DSET_IDS`, and malformed scalar provenance is omitted with a
 `dataset_id_omitted` confirmation-required loss.
 
-- [ ] **Step 4: Run RED**
+- [x] **Step 4: Run RED**
 
 Run the named exporter tests. Expected: public import error because `cube.py`
 does not exist.
 
-- [ ] **Step 5: Implement the minimum writer**
+- [x] **Step 5: Implement the minimum writer**
 
 Use locale-independent uppercase scientific notation with one frozen precision
 for geometry, charges and values. Convert source geometry to bohr, stream text
 chunks in deterministic order and delegate destination publication to the
 existing atomic writer. Do not create a second temporary-path implementation.
 
-- [ ] **Step 6: Run GREEN and commit**
+- [x] **Step 6: Run GREEN and commit**
 
 Run Cube reader/readiness/exporter/public tests and commit:
 

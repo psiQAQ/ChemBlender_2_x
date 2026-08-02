@@ -6,6 +6,7 @@ from .cube_readiness import (
     CubeExportStatus,
     cube_export_readiness,
 )
+from .cube import CubeExport, export_cube, preview_cube_export
 from .poscar import (
     PoscarExportSettings,
     export_poscar,
@@ -53,6 +54,7 @@ __all__ = (
     "CIFExportPlan",
     "CubeExportReadiness",
     "CubeExportStatus",
+    "CubeExport",
     "MolecularExport",
     "Mol2ExportReadiness",
     "Mol2ExportStatus",
@@ -62,6 +64,7 @@ __all__ = (
     "SDFExportEntry",
     "export_extxyz",
     "export_cif",
+    "export_cube",
     "export_mol",
     "export_mol2",
     "export_poscar",
@@ -80,6 +83,7 @@ __all__ = (
     "pdb_export_readiness",
     "pqr_export_readiness",
     "preview_extxyz_export",
+    "preview_cube_export",
     "plan_cif_export",
     "semantic_extxyz_differences",
     "semantic_molecular_differences",

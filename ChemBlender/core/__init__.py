@@ -22,6 +22,7 @@ from .exporters.cube_readiness import (
     CubeExportStatus,
     cube_export_readiness,
 )
+from .exporters.cube import CubeExport, export_cube, preview_cube_export
 # Adapter compatibility exports.
 from .cjson_adapter import (
     CJSON_READER,
@@ -357,6 +358,7 @@ __all__ = [
     "CUBE_READER",
     "CubeExportReadiness",
     "CubeExportStatus",
+    "CubeExport",
     "DatasetStatus",
     "DiagnosticSeverity",
     "DiagnosticValue",
@@ -464,9 +466,11 @@ __all__ = [
     "adapt_ase_atoms",
     "build_analysis_report",
     "export_qcschema",
+    "export_cube",
     "export_cjson",
     "export_qcschema_atomic_result",
     "parse_cube",
+    "preview_cube_export",
     "parse_cjson",
     "parse_ase_structure",
     "parse_cclib_output",
