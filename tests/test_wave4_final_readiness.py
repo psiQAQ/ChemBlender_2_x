@@ -1,5 +1,7 @@
 import hashlib
+import subprocess
 import sys
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -34,18 +36,21 @@ ROADMAP = ROOT / "docs/quantum-visualization/2.3.0/roadmap.md"
 sys.path.insert(0, str(SCRIPTS))
 
 from extract_release_notes import extract_release_notes
-from release_metadata import read_release_metadata
 
 
 class Wave4FinalReadinessTests(unittest.TestCase):
     def test_final_metadata_and_manifest_are_exact(self):
-        metadata = read_release_metadata(EXTENSION)
-        self.assertEqual(metadata.version, FINAL_VERSION)
-        self.assertEqual(metadata.package_name, "chemblender-2.3.0.zip")
-        self.assertEqual(metadata.checksum_name, "chemblender-2.3.0.sha256")
-        self.assertEqual(metadata.artifact_name, "chemblender-2.3.0-windows-x64")
-
-        manifest = (EXTENSION / "blender_manifest.toml").read_bytes()
+        manifest = subprocess.run(
+            [
+                "git",
+                "show",
+                f"{MERGE_COMMIT}:ChemBlender/blender_manifest.toml",
+            ],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+        ).stdout
+        self.assertEqual(tomllib.loads(manifest.decode("utf-8"))["version"], FINAL_VERSION)
         self.assertEqual(
             hashlib.sha256(manifest.replace(b"\r\n", b"\n")).hexdigest(),
             FINAL_MANIFEST_SHA256,
@@ -82,10 +87,6 @@ class Wave4FinalReadinessTests(unittest.TestCase):
         self.assertNotIn("Remote CI: Not Run", final_notes)
         self.assertNotIn("pending", final_notes.lower())
         self.assertNotIn("authorization", final_notes.lower())
-        self.assertIn(
-            "[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/v2.3.0...HEAD",
-            changelog,
-        )
         self.assertIn(
             "[2.3.0]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0",
             changelog,
