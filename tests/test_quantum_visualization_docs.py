@@ -1135,6 +1135,9 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
 
     def test_240_task7_scope_discovery_is_recoverable(self):
         active_path = ".agents/active/2.4.0-task7-scope-discovery.md"
+        intake_path = (
+            "docs/quantum-visualization/2.4.0/task7-candidate-intake.md"
+        )
         design_path = (
             "docs/superpowers/specs/"
             "2026-08-02-chemblender-2.4.0-task7-scope-discovery-design.md"
@@ -1146,6 +1149,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         active = self.read_doc(active_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
+        intake = self.read_doc(intake_path)
 
         for term in (
             "CB240-TASK7-SCOPE-DISCOVERY",
@@ -1156,6 +1160,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Native Cube export",
             "Reader API v1 stable gate",
             "Cube runtime remains unstarted",
+            "Selection: `Native Cube export`",
+            intake_path,
         ):
             self.assertIn(term, active)
         for term in (
@@ -1172,6 +1178,21 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Task 5: Verify, review and checkpoint",
         ):
             self.assertIn(term, plan)
+        for term in (
+            "PQR: F5 / project_browser / preview_confirmation",
+            "Cube: F0 / none",
+            "Reader API: 1.0-rc1",
+            "Task 8 — Deterministic native Cube export",
+            "Reader API stable: deferred",
+            "writer/readiness",
+            "bohr",
+            "dataset selection",
+            "3bab75429d37276e27dc158ba5bbf69d9085b9bd",
+            "30741155445",
+            "30741155450",
+            "eb3fc4ea6f86e8fc3f9475bd03d379445349db57",
+        ):
+            self.assertIn(term, intake)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
