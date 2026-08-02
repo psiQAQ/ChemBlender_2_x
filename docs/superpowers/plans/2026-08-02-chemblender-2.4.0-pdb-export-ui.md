@@ -150,14 +150,14 @@ is_cancelled=...)` and stores the returned report.
 **Interfaces:** No public model/API addition. Completion evidence is persisted
 in the cursor.
 
-- [ ] Run focused export/PDB/registration/generated-doc tests.
-- [ ] Run full unittest discovery, `compileall`, optional-import audit and
+- [x] Run focused export/PDB/registration/generated-doc tests.
+- [x] Run full unittest discovery, `compileall`, optional-import audit and
   `git diff --check`.
-- [ ] Run Blender 5.1.2 preflight, validate/build, ZIP audit, isolated install,
+- [x] Run Blender 5.1.2 preflight, validate/build, ZIP audit, isolated install,
   PDB export/re-import and lifecycle smoke.
-- [ ] Run independent specification and code-quality reviews; fix all Critical,
+- [x] Run independent specification and code-quality reviews; fix all Critical,
   Important and task-related Minor findings and rerun affected checks.
-- [ ] Record RED/GREEN/Blender/review evidence and commit the checkpoint.
+- [x] Record RED/GREEN/Blender/review evidence and commit the checkpoint.
 
 ### Task 7: Remote integration gate
 
