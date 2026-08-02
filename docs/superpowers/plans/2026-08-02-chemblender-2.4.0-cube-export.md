@@ -339,7 +339,7 @@ export/re-import. Refresh only measured exact artifact baselines after a fresh
 Windows checkout proves required source growth; keep all unexplained-growth
 allowances at zero.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Commit product/benchmark proof as `test: qualify installed native Cube export`
 and any exact fresh-checkout budget update separately as
