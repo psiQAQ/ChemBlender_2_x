@@ -1403,10 +1403,12 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for term in (
             "CB240-CUBE-EXPORT-UI-T10",
             "State: `in_progress`",
-            "Task 1 — Resolve selected Grid3D export context",
+            "Task 2 — Add Cube format, dataset choice and preview",
             "00e7c6548a555813cfefc97fd00341e6f0ec27d8",
             "codex/2.4.0-cube-export-ui",
             "Task 0 activation: `Passed`",
+            "5c558aba0231f36ecc4f3f54cdf0dad3b6e521ad",
+            "Task 1 review: `Ready`",
             selected_design_path,
             selected_plan_path,
             intake_path,

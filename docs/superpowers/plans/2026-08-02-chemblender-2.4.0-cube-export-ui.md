@@ -75,7 +75,7 @@ Run the focused documentation test and `git diff --check`; commit as
 `resolve_export_selection(project, entity_id)` to resolve one selected
 `Grid3D`; add a private `_cube_entities(selection)` projection.
 
-- [ ] **Step 1: Write selection RED**
+- [x] **Step 1: Write selection RED**
 
 Parse `tests/fixtures/cube/sheared.cube`, then add both an unrelated Cube and a
 second `Grid3D` with the selected grid's same `structure_id`. Select the first
@@ -83,7 +83,7 @@ grid UUID and assert exact linked Structure, selected grid, all matching
 `nuclear_charge` candidates, direct provenance and associated topology only.
 Assert both unrelated and same-Structure sibling grids are excluded.
 
-- [ ] **Step 2: Write fail-closed RED**
+- [x] **Step 2: Write fail-closed RED**
 
 Cover missing/cross-linked Structure in the resolver and a non-Grid dataset.
 For a valid linked grid with missing or duplicate nuclear charge, assert
@@ -92,7 +92,7 @@ core preview reports `dataset.nuclear_charge.missing` or
 `dataset.nuclear_charge.ambiguous`. Expected RED: the current resolver rejects
 the Grid3D before these target contracts are reachable.
 
-- [ ] **Step 3: Implement the minimal projection**
+- [x] **Step 3: Implement the minimal projection**
 
 Import `Grid3D`; add the optional field last to preserve existing construction.
 Resolve the selected dataset before FrameSet handling. `_cube_entities()` must
@@ -100,7 +100,7 @@ return one Structure, the selected Grid3D, all matching charge candidates,
 direct provenance and associated topology; it must not duplicate core
 readiness or choose among ambiguous charges.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run:
 
