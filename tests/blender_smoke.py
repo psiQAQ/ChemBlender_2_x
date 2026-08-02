@@ -4258,18 +4258,12 @@ def assert_cube_export_workflow(module_key, repository_root):
     with TemporaryDirectory() as directory:
         root = Path(directory)
         destination = root / "selected.cube"
-        export = export_ui.ExportJob(
-            destination,
-            selection,
+        assert bpy.ops.chemblender.export_project_entity(
+            filepath=str(destination),
             format_name="cube",
-            dataset_index=1,
+            cube_dataset_index=1,
             confirm_loss=True,
-            missing_value_token=None,
-        )
-        export.start()
-        assert export.join(30)
-        assert export.error is None
-        assert export.result.written
+        ) == {"FINISHED"}
         restored = cube.CUBE_READER.parse(destination)
 
         cancelled_destination = root / "cancelled.cube"

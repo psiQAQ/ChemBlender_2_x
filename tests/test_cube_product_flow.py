@@ -157,7 +157,10 @@ class CubeProductFlowTests(unittest.TestCase):
         )[0]
 
         self.assertIn("def assert_cube_export_workflow", smoke)
-        self.assertIn("PASS: installed native Cube export and re-import", smoke)
+        self.assertIn(
+            "PASS: installed Project Browser multi-dataset Cube export",
+            smoke,
+        )
         self.assertIn("dataset_index=1", workflow)
         self.assertIn("export_ui.resolve_export_selection", workflow)
         self.assertIn("export_ui.ExportJob", workflow)
