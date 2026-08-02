@@ -381,32 +381,86 @@ class PQRExporterTests(unittest.TestCase):
         finally:
             coordinates.shape = (2, 3)
 
+    def test_live_rank_mutations_keep_family_readiness_tokens(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        structure = batch.structures[0]
+        hierarchy = batch.biological_hierarchies[0]
+        cases = (
+            (
+                self._property(batch, "partial_charge").data.values,
+                "dataset.partial_charge.shape",
+            ),
+            (
+                self._property(batch, "radius").data.values,
+                "dataset.radius.shape",
+            ),
+            (structure.atomic_identity.isotopes.values, "identity.isotopes.invalid"),
+            (
+                structure.atomic_identity.atom_names.codes.values,
+                "identity.atom_name.invalid",
+            ),
+            (hierarchy.atom_sites.serial_numbers.values, "hierarchy.shape"),
+            (hierarchy.atom_sites.residue_indices.values, "hierarchy.shape"),
+            (
+                hierarchy.atom_sites.alternate_locations.codes.values,
+                "identity.altloc.invalid",
+            ),
+            (
+                hierarchy.atom_sites.record_kinds.codes.values,
+                "identity.record_kind",
+            ),
+        )
+        for values, token in cases:
+            with self.subTest(token=token), TemporaryDirectory() as directory:
+                destination = Path(directory) / "invalid.pqr"
+                original_shape = values.shape
+                values.shape = (1, values.size)
+                try:
+                    with self.assertRaises(ValueError) as raised:
+                        export_pqr(batch, destination=destination)
+                    self.assertEqual(
+                        str(raised.exception),
+                        f"PQR export is Invalid: {token}",
+                    )
+                    self.assertEqual(tuple(Path(directory).iterdir()), ())
+                finally:
+                    values.shape = original_shape
+
     def test_writer_revalidates_property_contract_after_readiness_bypass(self):
         batch = parse_pqr(FIXTURES / "with-chain.pqr")
         charge = self._property(batch, "partial_charge")
         ready = PDBPQRExportReadiness(PDBPQRExportStatus.READY, ())
         invalid_properties = (
-            replace(
-                charge,
-                data=replace(charge.data, unit="dimensionless"),
-            ),
-            replace(charge, status=DatasetStatus.PARTIAL),
-            replace(
-                charge,
-                data=ArrayData(
-                    numpy.asarray(((0.1,), (-0.55,))),
-                    ("atom", "component"),
-                    "elementary_charge",
+            (
+                replace(
+                    charge,
+                    data=replace(charge.data, unit="dimensionless"),
                 ),
+                "partial_charge property is invalid",
+            ),
+            (
+                replace(charge, status=DatasetStatus.PARTIAL),
+                "partial_charge property is invalid",
+            ),
+            (
+                replace(
+                    charge,
+                    data=ArrayData(
+                        numpy.asarray(((0.1,), (-0.55,))),
+                        ("atom", "component"),
+                        "elementary_charge",
+                    ),
+                ),
+                "dataset.partial_charge.shape",
             ),
         )
-        for invalid_property in invalid_properties:
+        for invalid_property, message in invalid_properties:
             with self.subTest(invalid_property=invalid_property), patch(
                 "ChemBlender.core.exporters.pqr.pqr_export_readiness",
                 return_value=ready,
             ), self.assertRaisesRegex(
                 ValueError,
-                "partial_charge property is invalid",
+                message,
             ):
                 export_pqr(self._replace_property(batch, invalid_property))
 

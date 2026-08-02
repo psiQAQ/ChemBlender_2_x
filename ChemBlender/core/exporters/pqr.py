@@ -64,19 +64,57 @@ def _snapshot_array(
             live.close()
 
 
-def _snapshot_categorical(data, live_arrays):
-    return replace(data, codes=_snapshot_array(data.codes, live_arrays))
+def _snapshot_categorical(data, live_arrays, *, expected_shape, invalid_token):
+    return replace(
+        data,
+        codes=_snapshot_array(
+            data.codes,
+            live_arrays,
+            expected_dims=("atom",),
+            expected_shape=expected_shape,
+            invalid_token=invalid_token,
+        ),
+    )
 
 
 def _snapshot_structure(structure, live_arrays):
+    atom_shape = (len(structure.atomic_numbers),)
     identity = structure.atomic_identity
     identity = None if identity is None else replace(
         identity,
-        isotopes=_snapshot_array(identity.isotopes, live_arrays),
-        formal_charges=_snapshot_array(identity.formal_charges, live_arrays),
-        atom_map_numbers=_snapshot_array(identity.atom_map_numbers, live_arrays),
-        atom_names=_snapshot_categorical(identity.atom_names, live_arrays),
-        stereo_labels=_snapshot_categorical(identity.stereo_labels, live_arrays),
+        isotopes=_snapshot_array(
+            identity.isotopes,
+            live_arrays,
+            expected_dims=("atom",),
+            expected_shape=atom_shape,
+            invalid_token="identity.isotopes.invalid",
+        ),
+        formal_charges=_snapshot_array(
+            identity.formal_charges,
+            live_arrays,
+            expected_dims=("atom",),
+            expected_shape=atom_shape,
+            invalid_token="identity.formal_charges.invalid",
+        ),
+        atom_map_numbers=_snapshot_array(
+            identity.atom_map_numbers,
+            live_arrays,
+            expected_dims=("atom",),
+            expected_shape=atom_shape,
+            invalid_token="identity.atom_map_numbers.invalid",
+        ),
+        atom_names=_snapshot_categorical(
+            identity.atom_names,
+            live_arrays,
+            expected_shape=atom_shape,
+            invalid_token="identity.atom_name.invalid",
+        ),
+        stereo_labels=_snapshot_categorical(
+            identity.stereo_labels,
+            live_arrays,
+            expected_shape=atom_shape,
+            invalid_token="identity.atom_stereo.invalid",
+        ),
     )
     return replace(
         structure,
@@ -93,14 +131,37 @@ def _snapshot_structure(structure, live_arrays):
 
 def _snapshot_hierarchy(hierarchy, live_arrays):
     sites = hierarchy.atom_sites
+    atom_shape = (sites.atom_count,)
     return replace(
         hierarchy,
         atom_sites=replace(
             sites,
-            serial_numbers=_snapshot_array(sites.serial_numbers, live_arrays),
-            residue_indices=_snapshot_array(sites.residue_indices, live_arrays),
-            alternate_locations=_snapshot_categorical(sites.alternate_locations, live_arrays),
-            record_kinds=_snapshot_categorical(sites.record_kinds, live_arrays),
+            serial_numbers=_snapshot_array(
+                sites.serial_numbers,
+                live_arrays,
+                expected_dims=("atom",),
+                expected_shape=atom_shape,
+                invalid_token="hierarchy.shape",
+            ),
+            residue_indices=_snapshot_array(
+                sites.residue_indices,
+                live_arrays,
+                expected_dims=("atom",),
+                expected_shape=atom_shape,
+                invalid_token="hierarchy.shape",
+            ),
+            alternate_locations=_snapshot_categorical(
+                sites.alternate_locations,
+                live_arrays,
+                expected_shape=atom_shape,
+                invalid_token="identity.altloc.invalid",
+            ),
+            record_kinds=_snapshot_categorical(
+                sites.record_kinds,
+                live_arrays,
+                expected_shape=atom_shape,
+                invalid_token="identity.record_kind",
+            ),
         ),
     )
 
@@ -111,7 +172,16 @@ def _snapshot_dataset(dataset, live_arrays):
         "radius",
     }:
         return dataset
-    return replace(dataset, data=_snapshot_array(dataset.data, live_arrays))
+    return replace(
+        dataset,
+        data=_snapshot_array(
+            dataset.data,
+            live_arrays,
+            expected_dims=("atom",),
+            expected_shape=dataset.data.shape,
+            invalid_token=f"dataset.{dataset.semantic_role}.shape",
+        ),
+    )
 
 
 def _snapshot(project_entities):
