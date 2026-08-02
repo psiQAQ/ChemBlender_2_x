@@ -58,7 +58,10 @@ bohr without mutating source entities and never read OpenVDB or Blender caches.
 Require exactly one selected `Grid3D`, its linked `Structure`, and one matching
 complete finite `nuclear_charge` `AtomicProperty` in `elementary_charge` with
 shape `("atom",)`. Test missing, duplicate and cross-linked entities, invalid
-atom/grid shapes, non-finite values and duplicate UUIDs.
+atom/grid shapes, non-finite values and duplicate UUIDs. The linked Structure
+must contain at least one atom. Coordinates, nuclear charges and the selected
+grid slice must be real numeric arrays (never bool, complex, string or object)
+whose values are finite.
 
 - [ ] **Step 2: Add dataset and unit RED**
 
@@ -143,10 +146,12 @@ git commit -m "feat: freeze native Cube export readiness"
 - [ ] **Step 1: Write scalar-format RED**
 
 Use `tests/fixtures/cube/sheared.cube`. Require two deterministic ASCII comment
-lines, signed atom count/origin, three full affine step-vector lines, atom rows
+lines, atom count/origin, three full affine step-vector lines, atom rows
 with distinct atomic number/nuclear charge, C-order values with z fastest, at
 most six values per data line and exactly one trailing LF. Repeated export and
-dict/tuple container order must produce identical bytes.
+dict/tuple container order must produce identical bytes. Scalar output uses a
+positive `NATOMS`, omits `DSET_IDS`, and writes all three voxel counts as
+positive integers because output geometry is always bohr.
 
 - [ ] **Step 2: Write bohr output RED**
 
@@ -164,10 +169,15 @@ sign exactly within the writer's numeric precision.
 - [ ] **Step 3: Write explicit dataset selection and DSET_IDS RED**
 
 For `tests/fixtures/cube/two-datasets.cube`, require one explicit selected index.
-Write negative `NATOMS`, a one-entry `DSET_IDS` record and only the selected
-values. Preserve source IDs `(5, 7)` through trustworthy parser provenance;
-index 1 writes ID `7`. A grid without a trustworthy matching ID uses
-`dataset_index + 1` and reports `dataset_id_normalized`.
+Write negative `NATOMS`, a one-entry `DSET_IDS` record, positive voxel counts
+and only the selected values. Preserve source IDs `(5, 7)` only when exactly
+one `ProvenanceRecord` is referenced directly by the selected Grid3D and has
+`operation == "parse"`, `format == "cube"`, `dataset_count` equal to the grid's
+dataset dimension, and `dataset_ids` of the same length containing positive
+exact integers (not bool). Do not traverse unrelated provenance lineage. Index
+1 then writes ID `7`. If those checks fail, use deterministic positive ID
+`dataset_index + 1` and report `dataset_id_normalized`. Scalar grids never use
+that fallback because they omit `DSET_IDS` entirely.
 
 - [ ] **Step 4: Run RED**
 
@@ -203,24 +213,31 @@ no new public symbol.
 
 Require stable sorted entries for semantic role, value unit, project-only
 identity/provenance and normalized comment or dataset ID information that Cube
-cannot encode. `preview_cube_export()` returns no written output. Any loss makes
-`requires_confirmation=True`; `export_cube()` publishes nothing until exact
-`confirm_loss=True`.
+cannot encode. Also report stable losses for every present Structure-only
+semantic: cell/periodic metadata, molecular charge, multiplicity, embedded or
+referenced topology, and atomic identity. `preview_cube_export()` returns no
+written output. Any loss makes `requires_confirmation=True`; `export_cube()`
+publishes nothing until exact `confirm_loss=True`.
 
 - [ ] **Step 2: Write authoritative lazy snapshots RED**
 
 Snapshot coordinates, nuclear charges and selected grid values exactly once.
 Initially unloaded `LazyNpyArray` objects return to unloaded state after preview,
 success, validation failure and cancellation; caller-preloaded arrays remain
-loaded. Mutation after snapshot and before replace fails without replacing an
-existing destination.
+loaded. Recompute the authoritative snapshot fingerprints through the existing
+`is_cancelled` callback at its final pre-publication checkpoint; mutation
+detected by that checkpoint fails without replacing an existing destination.
+The contract intentionally makes no impossible claim about mutation in the
+unobservable interval after that final checkpoint and before `os.replace()`.
 
 - [ ] **Step 3: Write failure/cancellation RED**
 
 Cover pre-cancel, mid-stream cancel, writer error, `os.replace()` failure and
 cleanup failure. The main error remains primary, temporary siblings are absent,
 and an existing destination is byte-identical. `KeyboardInterrupt`,
-`SystemExit`, `GeneratorExit` and `MemoryError` pass through unchanged.
+`SystemExit`, `GeneratorExit` and `MemoryError` pass through unchanged. A lazy
+array `close()` failure is attached to an existing primary error and never
+replaces it; without a primary error the close failure is raised.
 
 - [ ] **Step 4: Write Semantic native re-import RED**
 
@@ -287,6 +304,7 @@ Commit as `docs: publish native Cube core export`.
 **Files:**
 - Modify: `tests/blender_smoke.py`
 - Modify: `ChemBlender/scripts/benchmark_cube_flow.py`
+- Modify: `tests/test_cube_product_flow.py`
 - Modify: `docs/quantum-visualization/2.3.0/benchmarks/cube-flow-baseline.md`
 - Modify: `.github/artifact-budgets.json`
 - Modify: `tests/test_artifact_size_report.py`
@@ -303,7 +321,8 @@ existing RNA budget.
 
 - [ ] **Step 2: Extend the existing benchmark minimally**
 
-Add one `export` stage to `benchmark_cube_flow.py`. For 128 cubed data record
+Add one `export` stage to `benchmark_cube_flow.py` and update the existing exact
+stage-set contract in `tests/test_cube_product_flow.py`. For 128 cubed data record
 median, p95, output bytes and peak Python memory. Require p95 not to exceed the
 existing 10-second Cube product budget; do not add a new benchmark framework.
 

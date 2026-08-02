@@ -38,7 +38,7 @@ No runtime or public API state changes.
 
 **Interfaces:** Produce one active recovery cursor; no product interface.
 
-- [ ] **Step 1: Write the routing RED**
+- [x] **Step 1: Write the routing RED**
 
 Set `NEXT_RELEASE_ACTIVE_FILES` to
 `("2.4.0-task7-scope-discovery.md",)` and keep
@@ -47,7 +47,7 @@ Set `NEXT_RELEASE_ACTIVE_FILES` to
 plan, goal `CB240-TASK7-SCOPE-DISCOVERY`, baseline merge, both candidates and
 the no-runtime stop boundary.
 
-- [ ] **Step 2: Run the routing RED**
+- [x] **Step 2: Run the routing RED**
 
 Run:
 
@@ -59,14 +59,14 @@ Run:
 
 Expected: failure/error because the active cursor does not exist.
 
-- [ ] **Step 3: Create the active cursor**
+- [x] **Step 3: Create the active cursor**
 
 Create the sole active cursor with state `in_progress`, current task
 `Live candidate audit`, baseline `eb3fc4e...`, the design/plan paths,
 candidates `Native Cube export` and `Reader API v1 stable gate`, and a stop
 boundary that forbids Cube runtime and API-token changes.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run the two focused tests and `git diff --check`, then commit:
 
@@ -87,7 +87,7 @@ git commit -m "docs: start Task 7 scope discovery"
 **Interfaces:** Consume PR #14 and exact-head GitHub Actions evidence; update
 the completed cursor without changing product code.
 
-- [ ] **Step 1: Write the exact-remote RED**
+- [x] **Step 1: Write the exact-remote RED**
 
 Require the completed cursor to contain:
 
@@ -101,18 +101,18 @@ Ancestor verification: `Passed`
 Remote CI: `Passed`
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run the PQR UI recoverability test. Expected: failure because the cursor still
 records `Remote CI: Not Run`.
 
-- [ ] **Step 3: Update only final remote evidence**
+- [x] **Step 3: Update only final remote evidence**
 
 Preserve local, Blender, package and review evidence. Replace the pending
 remote section with the exact feature head, both matching runs, ordinary merge
 commit and ancestor result.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Commit as `docs: record PQR UI remote integration`.
 
@@ -127,25 +127,25 @@ Commit as `docs: record PQR UI remote integration`.
 artifact capabilities and Reader API compatibility policy. Produce one
 auditable selection.
 
-- [ ] **Step 1: Recheck live facts**
+- [x] **Step 1: Recheck live facts**
 
 Confirm PR #14, exact feature head, runs, merge and ancestry. Confirm Cube is
 `F0 / none`, PQR is `F5 / project_browser / preview_confirmation`, Reader API
 is `1.0-rc1`, and no external `chemblender.reader.json` adopter is visible.
 
-- [ ] **Step 2: Write candidate-intake RED**
+- [x] **Step 2: Write candidate-intake RED**
 
 Require the intake to contain both candidates, current capability facts,
 `Task 8 — Deterministic native Cube export`, explicit Reader API deferral, and
 the unit/multi-dataset/readiness boundaries.
 
-- [ ] **Step 3: Write the evidence record**
+- [x] **Step 3: Write the evidence record**
 
 Separate confirmed facts, inference and recommendation. Select Cube only if
 the reader, Grid3D, nuclear-charge, sidecar, cache and fixture evidence remains
 valid and no writer already exists.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Commit the intake and updated cursor as
 `docs: select native Cube export for Task 8`.
@@ -162,7 +162,7 @@ Commit the intake and updated cursor as
 `export_cube(project_entities, *, dataset_index=None, confirm_loss=False,
 destination=None, is_cancelled=None)`. Leave state `not_started`.
 
-- [ ] **Step 1: Write plan/queue RED**
+- [x] **Step 1: Write plan/queue RED**
 
 Require the selected plan to cover readiness, authoritative lazy snapshots,
 bohr output conversion, explicit dataset selection, dataset IDs, stable loss
@@ -170,12 +170,12 @@ preview, atomic cancellation and semantic native `parse_cube()` re-import.
 Require queued goal `CB240-CUBE-EXPORT-T8` and stop boundaries for UI and
 Reader API stable.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run the Task 7 recoverability test. Expected: error because the selected plan
 and queued cursor do not exist.
 
-- [ ] **Step 3: Write the Cube implementation plan**
+- [x] **Step 3: Write the Cube implementation plan**
 
 Define independent TDD tasks for readiness, writer, unit/dataset semantics,
 semantic re-import/resource ownership, capability publication, complete local
@@ -183,7 +183,7 @@ and Blender qualification, two reviews, checkpoint and exact-head remote gate.
 Use the existing `ExportReport`, short-sibling atomic writer, `Grid3D`,
 `AtomicProperty` and native parser. Add no model or dependency.
 
-- [ ] **Step 4: Create the queued cursor and run GREEN**
+- [x] **Step 4: Create the queued cursor and run GREEN**
 
 Set `State: not_started`, baseline to this discovery branch, current task
 `Task 1 — Freeze Cube export readiness`, and keep Cube UI and Reader API stable
