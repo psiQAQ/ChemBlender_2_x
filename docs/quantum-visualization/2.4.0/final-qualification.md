@@ -119,6 +119,30 @@ was validated and built with Blender `5.1.2` on Windows. The exact output was
 exact arguments used by `extension-package.yml`. The package contains only the
 two required, hash-matched Gemmi and RDKit wheels.
 
+## Blender 5.1.2 product qualification
+
+The exact Task 3 ZIP was installed into a fresh temporary `user_default`
+repository and exercised with:
+
+```text
+blender --background --factory-startup --python-exit-code 1 \
+  --python tests/blender_smoke.py -- <exact-package>
+```
+
+The process exited `0` and reported `PASS: ChemBlender extension lifecycle`.
+The installed-package smoke covered enable/register, disable/unregister and
+reload twice; MOL2, PDB, PQR and multi-dataset Cube preview/confirm/export and
+native semantic re-import; cancellation destination preservation; molecular
+and Grid3D save/reopen; sidecar relinking; derived-cache reconstruction; and
+duplicate registration/object prevention.
+
+The same run completed the 10,000-record SDF product workflow and emitted its
+measured performance record. Windows retained some loaded Gemmi/RDKit binary
+files in the isolated temporary resource directory during Blender's final
+cleanup. This was reported as cleanup warnings after every product assertion
+had passed; the Blender process exited normally and no user installation was
+used or modified.
+
 ## Generated documents
 
 - `generate_format_docs.py --check`: `Passed`.
@@ -137,7 +161,7 @@ two required, hash-matched Gemmi and RDKit wheels.
 | Python compile/import/docs checks | `Passed` |
 | Local optional integrations | `30 Passed / 7 Skipped / 0 Failed` |
 | Committed-tree artifact audit | `Passed` |
-| Blender product qualification | Not Run — Task 4 |
+| Blender product qualification | `Passed` — isolated install and lifecycle |
 | Remote exact-head CI | Not Run — Task 5 |
 
 ## Stop boundary

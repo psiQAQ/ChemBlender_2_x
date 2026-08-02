@@ -216,27 +216,27 @@ Rebuild from a clean committed tree after any change. Commit as
 - Consumes: exact ZIP from Task 3.
 - Produces: isolated Blender 5.1.2 install, lifecycle and representative product-flow evidence.
 
-- [ ] **Step 1: Run isolated install and lifecycle**
+- [x] **Step 1: Run isolated install and lifecycle**
 
 Set a fresh temporary `BLENDER_USER_RESOURCES`; execute
 `tests/blender_smoke.py -- <exact-package>` with `--factory-startup` and
 `--python-exit-code 1`. Require install, enable, register/unregister/reload
 twice and final cleanup to exit zero.
 
-- [ ] **Step 2: Run representative export workflows**
+- [x] **Step 2: Run representative export workflows**
 
 Through the installed Project Browser, import, preview, confirm, export and
 native-reimport one MOL2, PDB, PQR and multi-dataset Cube fixture. Compare
 scientific semantics and confirm cancellation preserves an existing
 destination.
 
-- [ ] **Step 3: Run save/reopen and resource checks**
+- [x] **Step 3: Run save/reopen and resource checks**
 
 Save, close and reopen a representative molecular and Grid3D project; verify
 sidecar links, derived cache reconstruction and no duplicate registration or
 object creation.
 
-- [ ] **Step 4: Commit evidence or a focused fix**
+- [x] **Step 4: Commit evidence or a focused fix**
 
 Rerun affected Blender and full Python checks after any change. Commit as
 `test: qualify 2.4.0 Blender workflows`.
