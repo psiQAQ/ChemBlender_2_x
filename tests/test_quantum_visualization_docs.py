@@ -9,9 +9,9 @@ WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
 TASK9_SCOPE_ACTIVE_FILE = "2.4.0-task9-scope-discovery.md"
 TASK9_SCOPE_COMPLETED_FILE = "2.4.0-task9-scope-discovery.md"
+CUBE_EXPORT_UI_CURSOR_FILE = "2.4.0-cube-export-ui.md"
 NEXT_RELEASE_ACTIVE_FILES = ()
-CUBE_EXPORT_UI_QUEUED_FILE = "2.4.0-cube-export-ui.md"
-NEXT_RELEASE_QUEUED_FILES = (CUBE_EXPORT_UI_QUEUED_FILE,)
+NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
@@ -1307,15 +1307,19 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-08-02-chemblender-2.4.0-cube-export-ui.md"
         )
-        queued_path = f".agents/queued/{CUBE_EXPORT_UI_QUEUED_FILE}"
+        queued_path = f".agents/queued/{CUBE_EXPORT_UI_CURSOR_FILE}"
+        selected_cursor_path = (
+            f".agents/completed/{CUBE_EXPORT_UI_CURSOR_FILE}"
+        )
         self.assertFalse((ROOT / active_path).exists(), active_path)
+        self.assertFalse((ROOT / queued_path).exists(), queued_path)
         completed = self.read_doc(completed_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
         intake = self.read_doc(intake_path)
         selected_design = self.read_doc(selected_design_path)
         selected_plan = self.read_doc(selected_plan_path)
-        queued = self.read_doc(queued_path)
+        selected_cursor = self.read_doc(selected_cursor_path)
 
         for term in (
             "CB240-TASK9-SCOPE-DISCOVERY",
@@ -1398,15 +1402,36 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             self.assertIn(term, selected_plan)
         for term in (
             "CB240-CUBE-EXPORT-UI-T10",
-            "State: `not_started`",
-            "Task 0 — Activate the queued implementation",
+            "State: `completed`",
+            "Task 6 — Exact-head remote integration gate",
+            "00e7c6548a555813cfefc97fd00341e6f0ec27d8",
+            "codex/2.4.0-cube-export-ui",
+            "Task 0 activation: `Passed`",
+            "5c558aba0231f36ecc4f3f54cdf0dad3b6e521ad",
+            "Task 1 review: `Ready`",
+            "076731bd9acd0f2c841cef6db08c6b4926689ff9",
+            "05b297161eedd4e1094f587560378db8d5f994ba",
+            "Task 2 review: `Ready`",
+            "47fa76e312f2568c8a56dacba22d88563a290010",
+            "Task 3 review: `Ready`",
+            "4d6e97a772b2b5225b81a92be22968539cefa69a",
+            "Task 4 review: `Ready`",
+            "a2bc97fd26bec51b35df1012695a43b0a08218d5",
+            "5fead06f2a3d1643d2fb3fd87706b495aabbe036",
+            "3b8ec7b75bbf17854c66310c04b10c6c26834679",
+            "2198 Passed / 26 Skipped / 0 Failed",
+            "625673281ca42553bfef0dcb24cad2d064dd309e4a82d9452b0ebd6593055255",
+            "Task 5 reviews: `Ready`",
+            "30754668448",
+            "30754668445",
+            "Remote CI: `Not Run`",
             selected_design_path,
             selected_plan_path,
             intake_path,
             "Reader API v1 stable remains unstarted",
             "Final Qualification remains unstarted",
         ):
-            self.assertIn(term, queued)
+            self.assertIn(term, selected_cursor)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (

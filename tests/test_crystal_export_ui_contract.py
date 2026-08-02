@@ -43,6 +43,7 @@ class CrystalExportUIContractTests(unittest.TestCase):
             ("BoolProperty", "bool"),
             ("EnumProperty", "enum"),
             ("FloatProperty", "float"),
+            ("IntProperty", "int"),
             ("StringProperty", "string"),
         ):
             setattr(props, name, _property(kind))
