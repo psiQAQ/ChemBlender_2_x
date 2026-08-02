@@ -24,8 +24,8 @@ and installed Blender native re-import proof.
 
 ## Selected approach
 
-Extend the existing `ChemBlender.ui.export` format table and dispatches. Reuse
-`_pdb_entities()` directly for PQR preview and writing because it is a
+Extend the existing `ChemBlender.ui.export` format table and dispatches.
+Reuse `_pdb_entities()` directly for PQR preview and writing because it is a
 vendor-neutral biological Structure projection despite its private historical
 name. Do not add a wrapper, operator, RNA property, registration root, module or
 generic exporter abstraction.
@@ -89,4 +89,3 @@ boundary. The UI must not choose among ambiguous entities or repair data.
 - no Cube export or Reader API v1 stable work;
 - no dependency, schema, workflow, manifest version, CHANGELOG version, tag or
   Release change.
-
