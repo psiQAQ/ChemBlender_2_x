@@ -10,7 +10,10 @@ WAVE_230_ACTIVE_FILES = ()
 TASK9_SCOPE_ACTIVE_FILE = "2.4.0-task9-scope-discovery.md"
 TASK9_SCOPE_COMPLETED_FILE = "2.4.0-task9-scope-discovery.md"
 CUBE_EXPORT_UI_CURSOR_FILE = "2.4.0-cube-export-ui.md"
-NEXT_RELEASE_ACTIVE_FILES = ()
+TASK11_SCOPE_ACTIVE_FILE = "2.4.0-task11-scope-discovery.md"
+TASK11_SCOPE_COMPLETED_FILE = "2.4.0-task11-scope-discovery.md"
+FINAL_QUALIFICATION_CURSOR_FILE = "2.4.0-final-qualification.md"
+NEXT_RELEASE_ACTIVE_FILES = (TASK11_SCOPE_ACTIVE_FILE,)
 NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
@@ -1432,6 +1435,56 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Final Qualification remains unstarted",
         ):
             self.assertIn(term, selected_cursor)
+
+    def test_240_task11_scope_discovery_is_recoverable(self):
+        active_path = f".agents/active/{TASK11_SCOPE_ACTIVE_FILE}"
+        completed_path = f".agents/completed/{TASK11_SCOPE_COMPLETED_FILE}"
+        design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-02-chemblender-2.4.0-task11-scope-discovery-design.md"
+        )
+        plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-task11-scope-discovery.md"
+        )
+        self.assertTrue((ROOT / active_path).is_file(), active_path)
+        self.assertFalse((ROOT / completed_path).exists(), completed_path)
+        self.assertFalse(
+            (ROOT / ".agents" / "queued" / FINAL_QUALIFICATION_CURSOR_FILE).exists()
+        )
+        cursor = self.read_doc(active_path)
+        design = self.read_doc(design_path)
+        plan = self.read_doc(plan_path)
+
+        for term in (
+            "CB240-TASK11-SCOPE-DISCOVERY",
+            "State: `in_progress`",
+            "73e774bb1da93bf009e8dedaa3e67f5860cf6722",
+            design_path,
+            plan_path,
+            "Reader API v1 stable gate",
+            "2.4.0 Final Qualification",
+            "No runtime implementation",
+            "No push",
+        ):
+            self.assertIn(term, cursor)
+        for term in (
+            "Selected: 2.4.0 Final Qualification",
+            "Deferred: Reader API v1 stable gate",
+            "PR #17",
+            "f63b0a5da47f76dd38f7cf5e79a39e99cf918005",
+            "30755106798",
+            "30755106795",
+        ):
+            self.assertIn(term, design)
+        for term in (
+            "Task 1: Persist the Task 11 discovery boundary",
+            "Task 2: Freeze Native Cube Export UI remote evidence",
+            "Task 3: Audit and select one candidate",
+            "Task 4: Queue 2.4.0 Final Qualification",
+            "Task 5: Verify, review and checkpoint",
+        ):
+            self.assertIn(term, plan)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
