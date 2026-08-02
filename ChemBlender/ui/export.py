@@ -1,4 +1,4 @@
-"""Background XYZ/extXYZ export for the active Project Browser entity."""
+"""Background export for the active Project Browser entity."""
 
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -327,7 +327,7 @@ def _extxyz_properties(selection):
 
 def resolve_export_selection(project, entity_id):
     if type(entity_id) is not UUID:
-        raise TypeError("select a Structure or FrameSet before exporting")
+        raise TypeError("select a Structure, FrameSet or Grid3D before exporting")
     structure = project.structures.get(entity_id)
     if structure is not None:
         properties, provenance = _structure_context(project, structure)
@@ -400,7 +400,9 @@ def resolve_export_selection(project, entity_id):
             ),
         )
     if not isinstance(frame_set, FrameSet):
-        raise ValueError("selected entity is not an exportable Structure or FrameSet")
+        raise ValueError(
+            "selected entity is not an exportable Structure, FrameSet or Grid3D"
+        )
     structure = project.structures.get(frame_set.structure_id)
     if structure is None:
         raise ValueError("selected FrameSet has no Structure")
@@ -1013,7 +1015,7 @@ def _export_preview_changed(self, context):
 class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
     bl_idname = "chemblender.export_project_entity"
     bl_label = "Export Selected Data"
-    bl_description = "Export the selected Structure or FrameSet"
+    bl_description = "Export the selected Structure, FrameSet or Grid3D"
 
     filepath: StringProperty(
         subtype="FILE_PATH",

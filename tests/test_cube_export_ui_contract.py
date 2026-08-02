@@ -199,6 +199,26 @@ class CubeExportUIContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.export.resolve_export_selection(non_grid, self._charge(batch).id)
 
+    def test_export_prompts_name_grid3d_as_a_supported_entity(self):
+        project = self._project(CUBE_READER.parse(SHEARED))
+        operator = self.export.CHEMBLENDER_OT_export_project_entity
+
+        self.assertIn("Grid3D", operator.bl_description)
+        self.assertEqual(
+            self.export.__doc__,
+            "Background export for the active Project Browser entity.",
+        )
+        with self.assertRaisesRegex(
+            TypeError,
+            "Structure, FrameSet or Grid3D",
+        ):
+            self.export.resolve_export_selection(project, "not-a-uuid")
+        with self.assertRaisesRegex(
+            ValueError,
+            "Structure, FrameSet or Grid3D",
+        ):
+            self.export.resolve_export_selection(project, uuid4())
+
     def test_projection_preserves_missing_and_ambiguous_charge_for_core_preview(self):
         missing_batch = CUBE_READER.parse(SHEARED)
         missing_project = self._project(missing_batch)
