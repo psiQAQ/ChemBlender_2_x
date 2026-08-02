@@ -136,25 +136,25 @@ Commit as `docs: select native Cube export UI for Task 10`.
 explicit multi-dataset choice, core preview/write dispatch and installed
 Project Browser proof. Leave state `not_started`.
 
-- [ ] **Step 1: Write plan/queue RED**
+- [x] **Step 1: Write plan/queue RED**
 
 Require the selected design/plan to reuse `.ui.export`,
 `preview_cube_export()` and `export_cube()`, forbid a new UI module, and cover
 dataset selection, loss confirmation, cancellation, native re-import and
 catalog publication. Require queued goal `CB240-CUBE-EXPORT-UI-T10`.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run the Task 9 recoverability test. Expected: error because the selected
 design, plan and queued cursor do not exist.
 
-- [ ] **Step 3: Write the implementation design and plan**
+- [x] **Step 3: Write the implementation design and plan**
 
 Define minimal TDD tasks for `Grid3D` selection, format/filter/preview,
 cancellable writer dispatch, capability publication, installed Blender smoke,
 qualification, reviews, checkpoint and exact-head remote gate.
 
-- [ ] **Step 4: Create the queued cursor and run GREEN**
+- [x] **Step 4: Create the queued cursor and run GREEN**
 
 Set state `not_started`, baseline to this discovery branch, current task
 `Task 1 — Resolve selected Grid3D export context`, and keep Reader API stable
