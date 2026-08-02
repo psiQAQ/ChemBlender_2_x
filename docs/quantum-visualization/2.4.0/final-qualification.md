@@ -61,6 +61,39 @@ The ignored local wheel inputs were verified against `dependencies.toml`:
 No wheel was installed into Blender or the system environment during this
 boundary audit.
 
+## Python and dependency qualification
+
+- Blender bundled Python: `3.13.9`.
+- Full discovery with the existing extension dependency site on `PYTHONPATH`:
+  `2200 Passed / 26 Skipped / 0 Failed`.
+- `compileall -q ChemBlender worker tests`: `Passed`.
+- Fresh-process core/Reader API import isolation: `4 Passed`.
+- Local optional-integration modules: `30 Passed / 7 Skipped / 0 Failed`.
+  The skips are the real cclib, IOData and GBasis fixture cases because those
+  optional environments are not installed locally; they remain mandatory
+  zero-skip jobs in the exact-head remote gate.
+
+The first unconfigured discovery run produced `1 Failed / 23 Errors / 36
+Skipped`: every product failure was caused by `ModuleNotFoundError: gemmi`.
+The repository workflow supplies the extension dependency site through
+`PYTHONPATH`; using the already installed, manifest-pinned `gemmi 0.7.5` and
+`rdkit 2026.03.3` from that same site made the full run pass. No package was
+installed or changed during this diagnosis.
+
+The required remote integration environments remain pinned to:
+
+- cclib: `cclib 1.8.1`, fixture checkout
+  `07260dd0394cb1a2381d4d897746d727a12ad6ce`;
+- IOData: `qc-iodata 1.0.1`, fixture checkout
+  `adab5813713ba64641565eb2a8c11803a4e9bba6`;
+- GBasis: `qc-gbasis 0.1.0` with `qc-iodata 1.0.1`, fixture checkouts
+  `6440c84f3fcf8d42cbd9b5de53ae8d70bed4cd4f` and
+  `adab5813713ba64641565eb2a8c11803a4e9bba6`.
+
+The workflow additionally binds every required scientific fixture to its
+literal SHA-256 argument in `.github/workflows/optional-qc-core.yml`; those
+hash checks are executed before each exact-head integration module.
+
 ## Generated documents
 
 - `generate_format_docs.py --check`: `Passed`.
@@ -75,7 +108,9 @@ boundary audit.
 | Task 0 documentation routing | `31 Passed` |
 | Task 1 evidence RED | missing `final-qualification.md` |
 | Task 1 frozen-boundary focused suite | `162 Passed` |
-| Full Python qualification | Not Run — Task 2 |
+| Full Python qualification | `2200 Passed / 26 Skipped / 0 Failed` |
+| Python compile/import/docs checks | `Passed` |
+| Local optional integrations | `30 Passed / 7 Skipped / 0 Failed` |
 | Committed-tree artifact audit | Not Run — Task 3 |
 | Blender product qualification | Not Run — Task 4 |
 | Remote exact-head CI | Not Run — Task 5 |
