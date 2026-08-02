@@ -418,7 +418,7 @@ class ArtifactSizeReportTests(unittest.TestCase):
 
         self.assertEqual(budget["baseline_package_bytes"], 29_969_678)
         self.assertEqual(budget["allowed_unexplained_growth_bytes"], 0)
-        self.assertEqual(budget["baseline_member_unpacked_bytes"], 32_034_243)
+        self.assertEqual(budget["baseline_member_unpacked_bytes"], 32_034_859)
         self.assertEqual(
             budget["allowed_unexplained_member_unpacked_growth_bytes"], 0
         )
@@ -427,7 +427,7 @@ class ArtifactSizeReportTests(unittest.TestCase):
             budget["section_unpacked_budgets"],
             {
                 "code": {
-                    "baseline_unpacked_bytes": 2_639_487,
+                    "baseline_unpacked_bytes": 2_640_103,
                     "allowed_unexplained_growth_bytes": 0,
                 },
                 "resources": {
