@@ -1403,7 +1403,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for term in (
             "CB240-CUBE-EXPORT-UI-T10",
             "State: `in_progress`",
-            "Task 4 — Publish and prove the reachable capability",
+            "Task 5 — Full qualification, reviews and checkpoint",
             "00e7c6548a555813cfefc97fd00341e6f0ec27d8",
             "codex/2.4.0-cube-export-ui",
             "Task 0 activation: `Passed`",
@@ -1414,6 +1414,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Task 2 review: `Ready`",
             "47fa76e312f2568c8a56dacba22d88563a290010",
             "Task 3 review: `Ready`",
+            "4d6e97a772b2b5225b81a92be22968539cefa69a",
+            "Task 4 review: `Ready`",
             selected_design_path,
             selected_plan_path,
             intake_path,

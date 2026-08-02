@@ -191,24 +191,24 @@ tests. Commit as `feat: add native Cube export UI`.
 **Interfaces:** Cube becomes
 `("cube", "F5", "project_browser", "preview_confirmation")` in the catalog.
 
-- [ ] **Step 1: Write capability RED**
+- [x] **Step 1: Write capability RED**
 
 Require `project_browser`; run the generated-doc contract and observe the
 current `core` mismatch.
 
-- [ ] **Step 2: Update catalog and regenerate documents**
+- [x] **Step 2: Update catalog and regenerate documents**
 
 Run `python ChemBlender/scripts/generate_format_docs.py`. Only catalog-derived
 Cube execution claims may change.
 
-- [ ] **Step 3: Extend installed Blender smoke**
+- [x] **Step 3: Extend installed Blender smoke**
 
 Select the imported multi-dataset Cube `Grid3D`, set one explicit zero-based
 dataset index, export through `ExportJob`, reparse with native `parse_cube()`
 and compare atomic numbers, nuclear charges, coordinates, affine grid, dataset
 ID and selected values. Retain lifecycle x2 and RNA budget checks.
 
-- [ ] **Step 4: Run focused GREEN and commit**
+- [x] **Step 4: Run focused GREEN and commit**
 
 Run UI/Cube/generated-doc/registration/smoke source contracts. Commit as
 `docs: publish Cube Project Browser export`.
