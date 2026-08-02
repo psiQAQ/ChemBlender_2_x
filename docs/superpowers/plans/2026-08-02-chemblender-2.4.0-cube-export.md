@@ -356,19 +356,19 @@ and any exact fresh-checkout budget update separately as
 
 **Interfaces:** No additional public API.
 
-- [ ] **Step 1: Run focused and full verification**
+- [x] **Step 1: Run focused and full verification**
 
 Run Cube readiness/exporter/reader/product/docs/artifact tests, full unittest
 discovery, `compileall`, generated docs, optional-import audit and
 `git diff --check`.
 
-- [ ] **Step 2: Run two independent reviews**
+- [x] **Step 2: Run two independent reviews**
 
 Run specification-compliance and code-quality/correctness/security reviews.
 Fix every Critical, Important and task-related Minor finding and rerun affected
 checks.
 
-- [ ] **Step 3: Checkpoint**
+- [x] **Step 3: Checkpoint**
 
 Record per-task commits, RED/GREEN evidence, 128 cubed performance, exact
 package data, Blender results and reviews. Move the cursor to completed, mark

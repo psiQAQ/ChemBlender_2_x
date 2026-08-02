@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-cube-export.md",)
+NEXT_RELEASE_ACTIVE_FILES = ()
 NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
@@ -19,7 +19,7 @@ TASK5_SCOPE_COMPLETED_FILE = "2.4.0-task5-scope-discovery.md"
 PQR_EXPORT_COMPLETED_FILE = "2.4.0-pqr-export.md"
 PQR_EXPORT_UI_COMPLETED_FILE = "2.4.0-pqr-export-ui.md"
 CUBE_EXPORT_QUEUED_FILE = "2.4.0-cube-export.md"
-CUBE_EXPORT_ACTIVE_FILE = "2.4.0-cube-export.md"
+CUBE_EXPORT_COMPLETED_FILE = "2.4.0-cube-export.md"
 TASK7_SCOPE_COMPLETED_FILE = "2.4.0-task7-scope-discovery.md"
 WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 WAVE_230_FINAL_COMPLETED_FILE = "2.3.0-wave-4-migration-release.md"
@@ -1156,14 +1156,17 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         contract_path = (
             "docs/quantum-visualization/2.4.0/cube-export-contract.md"
         )
-        active_path = f".agents/active/{CUBE_EXPORT_ACTIVE_FILE}"
+        cube_completed_path = f".agents/completed/{CUBE_EXPORT_COMPLETED_FILE}"
         completed = self.read_doc(completed_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
         intake = self.read_doc(intake_path)
         selected_plan = self.read_doc(selected_plan_path)
         contract = self.read_doc(contract_path)
-        active = self.read_doc(active_path)
+        cube_completed = self.read_doc(cube_completed_path)
+        self.assertFalse(
+            (ROOT / ".agents/active" / CUBE_EXPORT_COMPLETED_FILE).exists()
+        )
 
         for term in (
             "CB240-TASK7-SCOPE-DISCOVERY",
@@ -1234,8 +1237,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             self.assertIn(term, selected_plan)
         for term in (
             "CB240-CUBE-EXPORT-T8",
-            "State: `in_progress`",
-            "Task 6 — Full qualification, reviews and checkpoint",
+            "State: `completed`",
+            "Task 6 — Full qualification, reviews and checkpoint completed",
             selected_plan_path,
             intake_path,
             "Cube UI remains unstarted",
@@ -1243,19 +1246,24 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "9fc7e996871b4b6019ca7ef56e7209578c76a641",
             "codex/2.4.0-cube-export",
             contract_path,
-            "Completed tasks:",
+            "Completed Commits",
             "Task 1: `c92fe2bffc9997192cb1b659037084973f987289`",
             "Task 2: `e96b20e86f061ea2dad29748a8dd0561be5a9ab1`",
             "Task 3: `fd05baf1d6e3b6beae66a8b61d41b363f17a3d0c`",
             "Task 4: `fd73c872a7227ef4a2384211587b00d3cc83000d`",
             "Task 5 product proof: `613c15076b96a969e0d72b00072b796b46387449`",
-            "Task 5 artifact budget: `this commit`",
+            "Task 5 artifact budget: `16e36dc4d79c6afb986ae6cfb81dc2063a239b92`",
+            "lazy core facade fix: `de867967671d4724a3ead9133bde8e9af63918ed`",
+            "review fixes: `a690f8144e2d63f2174aaeecf419d31be5b5a208`",
+            "final artifact budget: `f0c8a393161477ef42606b0011a0b2f40c663a3e`",
+            "2186 Passed / 26 Skipped / 0 Failed",
+            "Task 7 — Exact-head remote integration gate",
             "59 Passed",
             "66 Passed",
             "71 Passed",
             "41 Passed",
         ):
-            self.assertIn(term, active)
+            self.assertIn(term, cube_completed)
         for term in (
             "cube_export_readiness",
             "MissingSelection",
