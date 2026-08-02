@@ -125,14 +125,14 @@ is_cancelled=...)` and stores the returned report.
 **Interfaces:** Change PDB export execution mode from `core` to
 `project_browser`; maturity/loss policy remain `F5 / preview_confirmation`.
 
-- [ ] **RED:** generated-document contract still reports PDB as core-only.
-- [ ] Update the catalog source once, regenerate/check canonical user documents,
+- [x] **RED:** generated-document contract still reports PDB as core-only.
+- [x] Update the catalog source once, regenerate/check canonical user documents,
   and avoid hand-maintained divergent capability claims.
-- [ ] Extend the existing biological/PDB installed smoke: select the imported
+- [x] Extend the existing biological/PDB installed smoke: select the imported
   Structure, preview loss, run `ExportJob`, parse with native `parse_pdb()` and
   compare representable structure/hierarchy/frame/property semantics.
-- [ ] Prove register/unregister/reload x2 without new classes or RNA growth.
-- [ ] Commit capability/product proof with the implementation or one focused
+- [x] Prove register/unregister/reload x2 without new classes or RNA growth.
+- [x] Commit capability/product proof with the implementation or one focused
   follow-up commit.
 
 ### Task 6: Full qualification, reviews and checkpoint

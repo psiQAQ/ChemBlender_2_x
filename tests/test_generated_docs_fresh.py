@@ -174,7 +174,7 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
         self.assertEqual(
             by_id["pdb"]["export"],
             {
-                "execution_mode": "core",
+                "execution_mode": "project_browser",
                 "format_id": "pdb",
                 "loss_policy": "preview_confirmation",
                 "maturity": "F5",
@@ -249,6 +249,18 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
         )
         self.assertEqual(documented, set(expected))
         self.assertIs(sys.modules.get("bpy"), before)
+
+    def test_user_guide_exposes_pdb_project_browser_export(self):
+        formats = (ROOT / "docs" / "user" / "formats.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("PDB export through Project Browser", formats)
+        self.assertNotIn(
+            "PDB/PQR | Native import of biological hierarchy/alternate "
+            "locations or charge/radius data; no general Project Browser writer",
+            formats,
+        )
 
     def test_dependency_document_uses_the_pinned_inventory_without_runtime_claims(self):
         document = json.loads(
