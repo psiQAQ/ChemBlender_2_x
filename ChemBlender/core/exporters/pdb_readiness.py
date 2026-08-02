@@ -12,6 +12,8 @@ from ..model import (
     DatasetStatus,
     FrameSet,
 )
+from ..formats.pdb import _ELEMENT_NUMBERS
+from ..formats.pqr import _infer_pqr_element
 
 
 class PDBPQRExportStatus(str, Enum):
@@ -157,6 +159,9 @@ def _property(
 
 def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
     atom_count = len(structure.atomic_numbers)
+    atom_names = None
+    record_kinds = None
+    residue_indices = None
     hierarchy = _one(
         (
             candidate
@@ -257,6 +262,34 @@ def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
         model_number = hierarchy.model.number
         if model_number is not None and len(str(model_number)) > 4:
             issues.add("model.overflow")
+
+    if (
+        pqr
+        and hierarchy is not None
+        and atom_names is not None
+        and record_kinds is not None
+        and residue_indices is not None
+        and all(value is not None for value in atom_names)
+        and all(value in {"atom", "hetatm"} for value in record_kinds)
+    ):
+        for atomic_number, atom_name, record_kind, residue_index in zip(
+            structure.atomic_numbers,
+            atom_names,
+            record_kinds,
+            residue_indices,
+            strict=True,
+        ):
+            if not 0 <= int(residue_index) < len(hierarchy.residues):
+                continue
+            residue = hierarchy.residues[int(residue_index)]
+            element = _infer_pqr_element(
+                atom_name,
+                record_kind.upper(),
+                residue.residue_name,
+            )
+            if _ELEMENT_NUMBERS.get(element) != atomic_number:
+                issues.add("identity.element.mismatch")
+                break
 
     coordinates = numpy.asarray(structure.coordinates.values)
     if structure.coordinates.unit != "angstrom":

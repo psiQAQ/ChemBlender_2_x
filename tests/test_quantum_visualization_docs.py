@@ -7,8 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ()
-NEXT_RELEASE_QUEUED_FILES = ("2.4.0-pqr-export.md",)
+NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-pqr-export.md",)
+NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
@@ -978,13 +978,16 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-08-02-chemblender-2.4.0-pqr-export.md"
         )
-        queued_path = ".agents/queued/2.4.0-pqr-export.md"
+        active_path = ".agents/active/2.4.0-pqr-export.md"
+        discovery_queued_path = ".agents/queued/2.4.0-pqr-export.md"
+        contract_path = "docs/quantum-visualization/2.4.0/pqr-export-contract.md"
         completed_path = f".agents/completed/{TASK5_SCOPE_COMPLETED_FILE}"
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
         intake = self.read_doc(intake_path)
         selected_plan = self.read_doc(selected_plan_path)
-        queued = self.read_doc(queued_path)
+        active = self.read_doc(active_path)
+        contract = self.read_doc(contract_path)
         completed = self.read_doc(completed_path)
 
         for term in (
@@ -1010,7 +1013,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             plan_path,
             intake_path,
             selected_plan_path,
-            queued_path,
+            discovery_queued_path,
             "Native PQR export",
             "Native Cube export",
             "Reader API v1 stable gate",
@@ -1046,13 +1049,22 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             self.assertIn(term, selected_plan)
         for term in (
             "CB240-PQR-EXPORT-T5",
-            "State: `not_started`",
+            "State: `in_progress`",
             "Task 1 — Freeze native PQR export contract",
             selected_plan_path,
             intake_path,
             "PQR UI remains unstarted",
         ):
-            self.assertIn(term, queued)
+            self.assertIn(term, active)
+        for term in (
+            "preview_pqr_export",
+            "export_pqr",
+            "10 whitespace fields",
+            "11 whitespace fields",
+            "confirm_loss",
+            "atomic writer",
+        ):
+            self.assertIn(term, contract)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (

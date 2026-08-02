@@ -38,6 +38,19 @@ class PDBPQRExportReadinessTests(unittest.TestCase):
                 with self.assertRaises(FrozenInstanceError):
                     report.status = None
 
+    def test_pqr_requires_atom_name_to_infer_the_structure_element(self):
+        mismatched = replace(
+            self.pqr.structures[0],
+            atomic_numbers=(7, 7),
+        )
+
+        report = pqr_export_readiness(
+            replace(self.pqr, structures=(mismatched,))
+        )
+
+        self.assertEqual(report.status.value, "Invalid")
+        self.assertEqual(report.tokens, ("identity.element.mismatch",))
+
     def test_generic_structure_reports_missing_hierarchy(self):
         generic = ImportBatch(structures=self.pdb.structures)
 
