@@ -44,23 +44,23 @@ reader/exporter, Blender 5.1.2 Extensions.
 **Interfaces:** Create the implementation branch from live `origin/main` and
 persist its exact baseline before any runtime edit.
 
-- [ ] **Step 1: Verify the activation gate**
+- [x] **Step 1: Verify the activation gate**
 
 Fetch read-only state, require a clean worktree, prove Task 9 is integrated and
 `cd265d9...` is an ancestor of live `origin/main`, and confirm no competing
 active task.
 
-- [ ] **Step 2: Create the implementation branch/worktree**
+- [x] **Step 2: Create the implementation branch/worktree**
 
 Create an isolated `codex/2.4.0-cube-export-ui` worktree from live
 `origin/main`. Do not reuse the discovery branch or rewrite history.
 
-- [ ] **Step 3: Move queued to active and write routing RED/GREEN**
+- [x] **Step 3: Move queued to active and write routing RED/GREEN**
 
 Move the cursor, record the actual full baseline SHA, preserve goal
 `CB240-CUBE-EXPORT-UI-T10`, and update the documentation routing contract.
 
-- [ ] **Step 4: Commit activation**
+- [x] **Step 4: Commit activation**
 
 Run the focused documentation test and `git diff --check`; commit as
 `docs: activate native Cube export UI`. Only then begin Task 1.
