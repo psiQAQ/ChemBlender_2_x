@@ -40,11 +40,28 @@ _LOSS_MESSAGES = {
 }
 
 
-def _snapshot_array(data, live_arrays):
-    values = numpy.array(data.values, copy=True, order="C", subok=False)
-    values.setflags(write=False)
-    live_arrays.append((data.values, values))
-    return replace(data, values=values)
+def _snapshot_array(
+    data,
+    live_arrays,
+    *,
+    expected_dims=None,
+    expected_shape=None,
+    invalid_token=None,
+):
+    live = data.values
+    unloaded = getattr(live, "loaded", None) is False
+    try:
+        values = numpy.array(live, copy=True, order="C", subok=False)
+        if invalid_token is not None and (
+            data.dims != expected_dims or values.shape != expected_shape
+        ):
+            raise ValueError(f"PQR export is Invalid: {invalid_token}")
+        values.setflags(write=False)
+        live_arrays.append((live, values))
+        return replace(data, values=values)
+    finally:
+        if unloaded:
+            live.close()
 
 
 def _snapshot_categorical(data, live_arrays):
@@ -63,7 +80,13 @@ def _snapshot_structure(structure, live_arrays):
     )
     return replace(
         structure,
-        coordinates=_snapshot_array(structure.coordinates, live_arrays),
+        coordinates=_snapshot_array(
+            structure.coordinates,
+            live_arrays,
+            expected_dims=("atom", "xyz"),
+            expected_shape=(len(structure.atomic_numbers), 3),
+            invalid_token="coordinates.shape",
+        ),
         atomic_identity=identity,
     )
 
@@ -114,6 +137,7 @@ def _snapshot(project_entities):
 
 def _assert_snapshot_unchanged(snapshot):
     for live, captured in snapshot.live_arrays:
+        unloaded = getattr(live, "loaded", None) is False
         try:
             current = numpy.asarray(live)
             equal = (
@@ -128,6 +152,9 @@ def _assert_snapshot_unchanged(snapshot):
             )
         except (TypeError, ValueError):
             unchanged = False
+        finally:
+            if unloaded:
+                live.close()
         if not unchanged:
             raise ValueError("PQR export inputs changed after snapshot")
 

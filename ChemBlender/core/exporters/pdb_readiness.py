@@ -307,7 +307,6 @@ def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
             )
             if _ELEMENT_NUMBERS.get(element) != atomic_number:
                 issues.add("identity.element.mismatch")
-                break
 
     coordinates = numpy.asarray(structure.coordinates.values)
     if structure.coordinates.unit != "angstrom":

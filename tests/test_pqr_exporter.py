@@ -37,6 +37,24 @@ class PQRExporterTests(unittest.TestCase):
             ),
         )
 
+    def _lazy_coordinates(self, batch, directory, name):
+        from ChemBlender.core.sidecar import LazyNpyArray, _array_content_hash
+
+        array = numpy.asarray(batch.structures[0].coordinates.values)
+        path = Path(directory) / f"{name}.npy"
+        numpy.save(path, array)
+        lazy = LazyNpyArray(
+            path,
+            array.shape,
+            array.dtype,
+            _array_content_hash(array)[0],
+        )
+        structure = replace(
+            batch.structures[0],
+            coordinates=ArrayData(lazy, ("atom", "xyz"), "angstrom"),
+        )
+        return replace(batch, structures=(structure,)), lazy
+
     def _assert_rejected_without_publication(
         self,
         entities,
@@ -295,6 +313,73 @@ class PQRExporterTests(unittest.TestCase):
                 self.assertEqual(tuple(Path(directory).iterdir()), ())
         finally:
             isotopes[0] = 0
+
+    def test_lazy_snapshot_arrays_release_exporter_owned_mmaps(self):
+        source = parse_pqr(FIXTURES / "with-chain.pqr")
+        with TemporaryDirectory() as directory:
+            cases = (
+                ("preview", lambda batch: preview_pqr_export(batch), None),
+                ("export", lambda batch: export_pqr(batch), None),
+                (
+                    "validation",
+                    lambda batch: preview_pqr_export(
+                        replace(batch, biological_hierarchies=())
+                    ),
+                    ValueError,
+                ),
+                (
+                    "cancellation",
+                    lambda batch: export_pqr(
+                        batch,
+                        is_cancelled=iter((False, True)).__next__,
+                    ),
+                    ExportCancelled,
+                ),
+            )
+            for name, operation, error in cases:
+                with self.subTest(name=name):
+                    batch, lazy = self._lazy_coordinates(source, directory, name)
+                    try:
+                        self.assertFalse(lazy.loaded)
+                        if error is None:
+                            operation(batch)
+                        else:
+                            with self.assertRaises(error):
+                                operation(batch)
+                        self.assertFalse(lazy.loaded)
+                    finally:
+                        lazy.close()
+
+            batch, lazy = self._lazy_coordinates(source, directory, "mutation")
+            isotopes = batch.structures[0].atomic_identity.isotopes.values
+            calls = 0
+
+            def mutate():
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    isotopes[0] = 1
+                return False
+
+            try:
+                with self.assertRaisesRegex(ValueError, "inputs changed"):
+                    export_pqr(batch, is_cancelled=mutate)
+                self.assertFalse(lazy.loaded)
+            finally:
+                isotopes[0] = 0
+                lazy.close()
+
+    def test_live_coordinate_shape_mutation_keeps_stable_readiness_token(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        coordinates = batch.structures[0].coordinates.values
+        coordinates.shape = (coordinates.size,)
+        try:
+            self._assert_rejected_without_publication(
+                batch,
+                "PQR export is Invalid: coordinates.shape",
+            )
+        finally:
+            coordinates.shape = (2, 3)
 
     def test_writer_revalidates_property_contract_after_readiness_bypass(self):
         batch = parse_pqr(FIXTURES / "with-chain.pqr")
