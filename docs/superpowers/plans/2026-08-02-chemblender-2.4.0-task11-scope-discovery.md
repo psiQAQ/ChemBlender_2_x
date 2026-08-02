@@ -64,7 +64,7 @@ absent.
 Record baseline, design/plan paths, two candidates, current task
 `Live candidate audit`, resume rule, protected boundaries and `No push`.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run the two focused tests and `git diff --check`. Commit as
 `docs: start Task 11 scope discovery`.
@@ -79,7 +79,7 @@ Run the two focused tests and `git diff --check`. Commit as
 - Consumes: PR #17, exact feature head, two exact-head workflow runs and merge ancestry.
 - Produces: final `Remote CI: Passed` evidence without changing qualified product files.
 
-- [ ] **Step 1: Write the exact-remote RED**
+- [x] **Step 1: Write the exact-remote RED**
 
 Require the completed Cube cursor to contain:
 
@@ -92,18 +92,18 @@ f63b0a5da47f76dd38f7cf5e79a39e99cf918005
 Remote CI: `Passed`
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run the Task 11 recoverability test. Expected: failure because the completed
 Cube cursor still records the pre-merge retry boundary.
 
-- [ ] **Step 3: Replace only stale remote state**
+- [x] **Step 3: Replace only stale remote state**
 
 Preserve local tests, package, Blender and review evidence. Add final PR/run/job,
 ordinary merge and ancestor verification facts; remove the stale instruction
 that the post-fix run is pending.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run the focused Task 9 and Task 11 recoverability tests. Commit as
 `docs: record Cube UI remote integration`.
@@ -119,24 +119,24 @@ Run the focused Task 9 and Task 11 recoverability tests. Commit as
 - Consumes: live capability catalog, Reader API token/adoption evidence and completed export-product matrix.
 - Produces: one explicit candidate selection with alternatives and deferral rationale.
 
-- [ ] **Step 1: Recheck live facts**
+- [x] **Step 1: Recheck live facts**
 
 Confirm PR #17 exact-head CI and ancestry, Cube
 `F5 / project_browser / preview_confirmation`, Reader API `1.0-rc1`, external
 manifest code-search result and 2.3.0 Release asset download counts.
 
-- [ ] **Step 2: Write candidate-intake RED**
+- [x] **Step 2: Write candidate-intake RED**
 
 Require both candidates, explicit selection of
 `Task 12 — 2.4.0 Final Qualification`, explicit Reader API stable deferral and
 the prohibition on combining the gates.
 
-- [ ] **Step 3: Write evidence and update cursor**
+- [x] **Step 3: Write evidence and update cursor**
 
 Separate confirmed facts, inference and recommendation. Record the selection
 only after the live facts match the approved design.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run Task 11 recoverability and `git diff --check`. Commit as
 `docs: select 2.4.0 final qualification`.
@@ -153,7 +153,7 @@ Run Task 11 recoverability and `git diff --check`. Commit as
 - Consumes: selected boundary from the Task 11 design and candidate intake.
 - Produces: queued goal `CB240-FINAL-QUALIFICATION-T12`, state `not_started`.
 
-- [ ] **Step 1: Write plan/queue RED**
+- [x] **Step 1: Write plan/queue RED**
 
 Require the future plan to contain these independently reviewable tasks:
 
@@ -169,12 +169,12 @@ Task 5: Review, checkpoint and exact-head remote gate
 Require preservation of Reader API `1.0-rc1`, no new capability, ordinary
 merge only, and explicit version/tag/Release stop boundaries.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run the Task 11 recoverability test. Expected: failure/error because selected
 design, plan and queued cursor do not exist.
 
-- [ ] **Step 3: Create selected design, plan and queued cursor**
+- [x] **Step 3: Create selected design, plan and queued cursor**
 
 Define exact commands and evidence for full unittest discovery, optional
 dependency integrations, generated docs, compileall/import isolation, clean
@@ -182,7 +182,7 @@ committed-tree package/ZIP audit, Blender 5.1.2 validate/build/install/product
 smoke, two reviews, exact-head CI and ordinary merge. State remains
 `not_started`.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run Task 11 recoverability and documentation tests. Commit as
 `docs: queue 2.4.0 final qualification`.
@@ -199,7 +199,7 @@ Run Task 11 recoverability and documentation tests. Commit as
 - Consumes: all Task 11 commits and review findings.
 - Produces: no active cursor and exactly one queued Final Qualification cursor.
 
-- [ ] **Step 1: Run documentation qualification**
+- [x] **Step 1: Run documentation qualification**
 
 Run:
 
@@ -215,26 +215,26 @@ Audit all changed text as UTF-8 without BOM and prove zero diff under
 `ChemBlender/`, `worker/`, `.github/`, `ChemBlender/blender_manifest.toml` and
 `CHANGELOG.md`.
 
-- [ ] **Step 2: Run two independent reviews**
+- [x] **Step 2: Run two independent reviews**
 
 Run specification-compliance and plan/code-quality/scientific-correctness
 reviews. Fix every Critical, Important and task-related Minor finding, then
 rerun affected verification.
 
-- [ ] **Step 3: Write completion RED**
+- [x] **Step 3: Write completion RED**
 
 Change routing constants to no active cursor and exactly one queued Final
 Qualification cursor. Require completed goal `CB240-TASK11-SCOPE-DISCOVERY`.
 Run focused routing and observe failure until the completed cursor replaces
 the active cursor.
 
-- [ ] **Step 4: Checkpoint and commit**
+- [x] **Step 4: Checkpoint and commit**
 
 Record design/planning/evidence/selection/queue/review commit SHAs, RED/GREEN
 evidence, reviews, zero runtime diff and `Remote CI: Not Run`. Mark all plan
 steps checked and commit as `chore: checkpoint Task 11 scope discovery`.
 
-- [ ] **Step 5: Final verification and stop**
+- [x] **Step 5: Final verification and stop**
 
 Rerun the documentation qualification and confirm a clean worktree. Do not
 activate Final Qualification or perform any remote mutation.

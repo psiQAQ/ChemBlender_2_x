@@ -13,7 +13,7 @@ CUBE_EXPORT_UI_CURSOR_FILE = "2.4.0-cube-export-ui.md"
 TASK11_SCOPE_ACTIVE_FILE = "2.4.0-task11-scope-discovery.md"
 TASK11_SCOPE_COMPLETED_FILE = "2.4.0-task11-scope-discovery.md"
 FINAL_QUALIFICATION_CURSOR_FILE = "2.4.0-final-qualification.md"
-NEXT_RELEASE_ACTIVE_FILES = (TASK11_SCOPE_ACTIVE_FILE,)
+NEXT_RELEASE_ACTIVE_FILES = ()
 NEXT_RELEASE_QUEUED_FILES = (FINAL_QUALIFICATION_CURSOR_FILE,)
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
@@ -1467,10 +1467,10 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             f".agents/queued/{FINAL_QUALIFICATION_CURSOR_FILE}"
         )
         cube_cursor_path = ".agents/completed/2.4.0-cube-export-ui.md"
-        self.assertTrue((ROOT / active_path).is_file(), active_path)
-        self.assertFalse((ROOT / completed_path).exists(), completed_path)
+        self.assertFalse((ROOT / active_path).exists(), active_path)
+        self.assertTrue((ROOT / completed_path).is_file(), completed_path)
         self.assertTrue((ROOT / queued_path).is_file(), queued_path)
-        cursor = self.read_doc(active_path)
+        cursor = self.read_doc(completed_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
         intake = self.read_doc(intake_path)
@@ -1481,7 +1481,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
 
         for term in (
             "CB240-TASK11-SCOPE-DISCOVERY",
-            "State: `in_progress`",
+            "State: `completed`",
+            "Current task: `Task 11 Scope Discovery checkpoint complete`",
             "73e774bb1da93bf009e8dedaa3e67f5860cf6722",
             design_path,
             plan_path,
@@ -1492,6 +1493,17 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Reader API stable: `Deferred`",
             selected_plan_path,
             queued_path,
+            "072f5fe108bb70e80c4306e6c84e5a050efe4ffc",
+            "2bb6b2a7fc6a0c8f9c8dea56a1c10b246888a298",
+            "1bab04155aeeaaed534f3902b8ab336ab96a2e83",
+            "85368c86632ac5015ecf0a53a93b62222bb2da20",
+            "f540bebb9ef97da3eb458d9ebab4dd91a4f84fce",
+            "3e39a85e507d4749b51c3f3eed8c1fa7df7088ea",
+            "43 Passed",
+            "UTF-8/no-BOM",
+            "zero runtime diff",
+            "Remote CI: `Not Run`",
+            "Task 0 — Activate the queued qualification",
             "No runtime implementation",
             "No push",
         ):
