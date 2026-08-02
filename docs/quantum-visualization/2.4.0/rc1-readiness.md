@@ -14,7 +14,7 @@ an annotated tag, or a published GitHub Release.
 | --- | --- |
 | Baseline | `ab00bbec7551c31e41b5acacf7f8bde8bb69e52f` |
 | Candidate metadata commit | `6f605d2a1c3ec18379fc60b599b78fcc0b06ed9a` |
-| Qualification HEAD | `b172e37d25cb483736f90460b4ed4f9cf4777bb2` |
+| Qualification HEAD | `07f7a53c178209a4e697a696f4ffd2fc00d3545b` |
 | Version | `2.4.0-rc.1` |
 | Package | `chemblender-2.4.0-rc.1.zip` |
 | Checksum | `chemblender-2.4.0-rc.1.sha256` |
@@ -33,7 +33,7 @@ schema remains `1.0`; canonical document remains `0.1`.
 - Release metadata and `2.4.0-rc.1` CHANGELOG extraction: `Passed`.
 - Prerelease validation probe: `Passed` with Blender 5.1.2; temporary source
   tree removed and the production manifest was not rewritten.
-- Standard-library suite: 2,202 passed / 26 skipped / 0 failed.
+- Standard-library suite: 2,203 passed / 26 skipped / 0 failed.
 - `compileall`, generated format-document freshness and `git diff --check`:
   `Passed`.
 - Native Blender 5.1.2 extension validate/build: `Passed`.

@@ -113,18 +113,18 @@ package SHA, size, member count and success markers.
 - Modify: `docs/superpowers/plans/2026-08-03-chemblender-2.4.0-rc1-preparation.md`
 - Modify: `tests/test_quantum_visualization_docs.py`
 
-- [ ] **Step 1: Run independent reviews**
+- [x] **Step 1: Run independent reviews**
 
 Require specification-compliance and code-quality/release-safety reviews. Fix
 all Critical, Important and task-related Minor findings and rerun affected
 gates.
 
-- [ ] **Step 2: Freshly rerun the complete local gate**
+- [x] **Step 2: Freshly rerun the complete local gate**
 
 Re-run focused/full tests, compileall, docs, committed-tree artifact audit,
 installed Blender smoke and `git diff --check`.
 
-- [ ] **Step 3: Complete the cursor and checkpoint**
+- [x] **Step 3: Complete the cursor and checkpoint**
 
 Move active to completed and commit as
 `chore: checkpoint 2.4.0 release candidate`.

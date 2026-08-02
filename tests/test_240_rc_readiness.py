@@ -64,7 +64,7 @@ class ReleaseCandidateReadinessTests(unittest.TestCase):
             "`b3df84593f79e14dc594b075c57f09f53fbed0ea75199fa1739ea8c30deb64b7`",
             "29,976,427 bytes",
             "189 members",
-            "2,202 passed / 26 skipped / 0 failed",
+            "2,203 passed / 26 skipped / 0 failed",
             "Blender 5.1.2",
             "Prerelease validation probe: `Passed`",
             "Package-CI artifact verification: `Passed`",
