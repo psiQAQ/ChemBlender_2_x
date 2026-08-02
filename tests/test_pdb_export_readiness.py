@@ -38,6 +38,44 @@ class PDBPQRExportReadinessTests(unittest.TestCase):
                 with self.assertRaises(FrozenInstanceError):
                     report.status = None
 
+    def test_pqr_requires_atom_name_to_infer_the_structure_element(self):
+        mismatched = replace(
+            self.pqr.structures[0],
+            atomic_numbers=(7, 7),
+        )
+
+        report = pqr_export_readiness(
+            replace(self.pqr, structures=(mismatched,))
+        )
+
+        self.assertEqual(report.status.value, "Invalid")
+        self.assertEqual(report.tokens, ("identity.element.mismatch",))
+
+    def test_pqr_collects_element_and_hierarchy_issues_independently(self):
+        structure = replace(self.pqr.structures[0], atomic_numbers=(8, 8))
+        hierarchy = self.pqr.biological_hierarchies[0]
+        hierarchy = replace(
+            hierarchy,
+            residues=(
+                hierarchy.residues[0],
+                replace(hierarchy.residues[1], hetero=False),
+            ),
+        )
+
+        report = pqr_export_readiness(
+            replace(
+                self.pqr,
+                structures=(structure,),
+                biological_hierarchies=(hierarchy,),
+            )
+        )
+
+        self.assertEqual(report.status.value, "Invalid")
+        self.assertEqual(
+            report.tokens,
+            ("hierarchy.residue_kind.mismatch", "identity.element.mismatch"),
+        )
+
     def test_generic_structure_reports_missing_hierarchy(self):
         generic = ImportBatch(structures=self.pdb.structures)
 

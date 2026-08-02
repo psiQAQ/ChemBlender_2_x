@@ -26,7 +26,7 @@ automatically a lossless round-trip format.
 | CIF | Gemmi-backed import of crystal/site/symmetry metadata and controlled CIF export |
 | POSCAR/CONTCAR | Native import/export with Direct/Cartesian, scale, selective dynamics and supported velocity data |
 | MOL2 | Native multi-molecule import plus normalized Project Browser export with semantic round-trip and explicit loss confirmation |
-| PDB/PQR | Native import of biological hierarchy/alternate locations or charge/radius data; PDB export through Project Browser with loss preview, while PQR has no writer |
+| PDB/PQR | Native import of biological hierarchy/alternate locations or charge/radius data; PDB export through Project Browser with loss preview, while PQR has core export with loss preview |
 | Cube | Native Structure + Grid3D import and Blender Volume/Surface workflow; no lossless Cube re-export claim |
 | CJSON | Lightweight structure/topology/property envelope import and controlled core export; no general Project Browser writer |
 | QCSchema | Dependency-free built-in import for Molecule and AtomicResult JSON; maps Structure and supported numeric properties while preserving the complete source JSON as a raw envelope; no general Project Browser writer |
@@ -82,7 +82,7 @@ Reader API `1.0-rc1`. Runtime availability is evaluated when a reader is selecte
 | `mol2` (`.mol2`) | atomic_property=supported, multi_record=supported, structure=supported, substructure=supported, topology=supported | F5 / project_browser / preview_confirmation | built-in | Tripos MOL2, MOL2 multi-record, MOL2 substructure |
 | `pdb` (`.pdb`) | atomic_identity=supported, atomic_property=supported, crystal=partial, hierarchy=supported, multi_model=supported, structure=supported, topology=partial, trajectory=supported | F5 / project_browser / preview_confirmation | built-in | PDB altloc, PDB CONECT, PDB multi-model |
 | `poscar` (`.vasp`, `.poscar`, `.contcar`, `CONTCAR`, `POSCAR`) | atomic_property=supported, crystal=supported, structure=supported | F5 / project_browser / preview_confirmation | built-in | VASP 4, VASP 5, POSCAR velocity |
-| `pqr` (`.pqr`) | atomic_identity=supported, atomic_property=supported, hierarchy=supported, structure=supported | F0 / none / not_available | built-in | PQR chain, PQR no-chain |
+| `pqr` (`.pqr`) | atomic_identity=supported, atomic_property=supported, hierarchy=supported, structure=supported | F5 / core / preview_confirmation | built-in | PQR chain, PQR no-chain |
 | `pymatgen-vasp-grid` (`.chgcar`, `.parchg`, `.elfcar`, `.locpot`, `CHGCAR`, `PARCHG`, `ELFCAR`, `LOCPOT`) | crystal=supported, grid=supported, structure=supported | F0 / none / not_available | runtime module `pymatgen` | CHGCAR, ELFCAR, LOCPOT, PARCHG |
 | `pymatgen-vasprun-electronic` (`.xml`) | band_structure=supported, dos=supported, projection=partial, structure=supported | F0 / none / not_available | runtime module `pymatgen` | vasprun.xml band/DOS |
 | `qcschema` (`.json`) | calculation_record=partial, energy=partial, gradient=partial, structure=supported | F5 / core / source_envelope | built-in | QCSchema AtomicResult, QCSchema Molecule |
