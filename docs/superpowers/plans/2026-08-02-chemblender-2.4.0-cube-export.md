@@ -317,21 +317,21 @@ Commit as `docs: publish native Cube core export`.
 **Interfaces:** No UI. The installed extension imports, exports and natively
 reparses Cube through core APIs.
 
-- [ ] **Step 1: Extend installed smoke**
+- [x] **Step 1: Extend installed smoke**
 
 Using the existing Cube product workflow, export the selected second dataset,
 reparse it, and assert linked Structure, nuclear charge, affine geometry,
 selected values and dataset ID. Keep register/unregister/reload x2 and the
 existing RNA budget.
 
-- [ ] **Step 2: Extend the existing benchmark minimally**
+- [x] **Step 2: Extend the existing benchmark minimally**
 
 Add one `export` stage to `benchmark_cube_flow.py` and update the existing exact
 stage-set contract in `tests/test_cube_product_flow.py`. For 128 cubed data record
 median, p95, output bytes and peak Python memory. Require p95 not to exceed the
 existing 10-second Cube product budget; do not add a new benchmark framework.
 
-- [ ] **Step 3: Run native package qualification**
+- [x] **Step 3: Run native package qualification**
 
 Run Blender 5.1.2 preflight, validate/build, exact ZIP path/CRC/two-wheel audit,
 normal `user_default` install, isolated lifecycle and installed Cube
