@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-pdb-export-ui.md",)
+NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-task5-scope-discovery.md",)
 NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
@@ -882,7 +882,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         )
         cursor_path = ".agents/completed/2.4.0-task4-scope-discovery.md"
         queued_record_path = ".agents/queued/2.4.0-pdb-export-ui.md"
-        active_path = ".agents/active/2.4.0-pdb-export-ui.md"
+        active_path = ".agents/completed/2.4.0-pdb-export-ui.md"
         intake = self.read_doc(intake_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
@@ -952,6 +952,48 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "State: `in_progress`",
             selected_plan_path,
             "Task 4 — PDB Export UI",
+        ):
+            self.assertIn(term, active)
+
+    def test_240_task5_scope_discovery_is_recoverable(self):
+        design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-02-chemblender-2.4.0-task5-scope-discovery-design.md"
+        )
+        plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-task5-scope-discovery.md"
+        )
+        active_path = ".agents/active/2.4.0-task5-scope-discovery.md"
+        design = self.read_doc(design_path)
+        plan = self.read_doc(plan_path)
+        active = self.read_doc(active_path)
+
+        for term in (
+            "Native PQR export",
+            "Native Cube export",
+            "Reader API v1 stable gate",
+            "zero runtime diff",
+        ):
+            self.assertIn(term, design)
+        for term in (
+            "Task 1: Persist the Task 5 discovery boundary",
+            "Task 2: Archive PDB Export UI integration",
+            "Task 3: Audit and select one candidate",
+            "Task 4: Queue deterministic native PQR export",
+            "Task 5: Verify and checkpoint",
+        ):
+            self.assertIn(term, plan)
+        for term in (
+            "CB240-TASK5-SCOPE-DISCOVERY",
+            "State: `in_progress`",
+            "d5028aa5d8568a44181b822293fbe62462d9a496",
+            design_path,
+            plan_path,
+            "Native PQR export",
+            "Native Cube export",
+            "Reader API v1 stable gate",
+            "Runtime implementation remains unstarted",
         ):
             self.assertIn(term, active)
 
