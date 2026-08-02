@@ -88,7 +88,7 @@ Run the focused test and `git diff --check`. Commit as
 - Consumes: frozen planning evidence and current release contracts.
 - Produces: a clean checkpoint ready for exact-head CI.
 
-- [ ] **Step 1: Run focused release/document contracts**
+- [x] **Step 1: Run focused release/document contracts**
 
 Run:
 
@@ -102,17 +102,17 @@ Run:
   tests.test_artifact_size_report -v
 ```
 
-- [ ] **Step 2: Run static verification**
+- [x] **Step 2: Run static verification**
 
 Run `compileall`, `git diff --check`, verify the manifest and CHANGELOG hashes
 are unchanged, and confirm no workflow or runtime source file changed.
 
-- [ ] **Step 3: Review the frozen boundary**
+- [x] **Step 3: Review the frozen boundary**
 
 Perform specification-compliance and code-quality/YAGNI reviews. Fix every
 task-related finding and rerun affected checks.
 
-- [ ] **Step 4: Complete the cursor and checkpoint**
+- [x] **Step 4: Complete the cursor and checkpoint**
 
 Move the active cursor to completed, mark this plan complete and commit as
 `chore: checkpoint 2.4.0 release planning`.
