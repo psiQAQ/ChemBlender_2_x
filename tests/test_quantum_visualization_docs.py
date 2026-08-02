@@ -8,7 +8,7 @@ DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
 NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-task7-scope-discovery.md",)
-NEXT_RELEASE_QUEUED_FILES = ()
+NEXT_RELEASE_QUEUED_FILES = ("2.4.0-cube-export.md",)
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
@@ -18,6 +18,7 @@ TASK4_SCOPE_COMPLETED_FILE = "2.4.0-task4-scope-discovery.md"
 TASK5_SCOPE_COMPLETED_FILE = "2.4.0-task5-scope-discovery.md"
 PQR_EXPORT_COMPLETED_FILE = "2.4.0-pqr-export.md"
 PQR_EXPORT_UI_COMPLETED_FILE = "2.4.0-pqr-export-ui.md"
+CUBE_EXPORT_QUEUED_FILE = "2.4.0-cube-export.md"
 WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 WAVE_230_FINAL_COMPLETED_FILE = "2.3.0-wave-4-migration-release.md"
 
@@ -1146,10 +1147,17 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-08-02-chemblender-2.4.0-task7-scope-discovery.md"
         )
+        selected_plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-cube-export.md"
+        )
+        queued_path = f".agents/queued/{CUBE_EXPORT_QUEUED_FILE}"
         active = self.read_doc(active_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
         intake = self.read_doc(intake_path)
+        selected_plan = self.read_doc(selected_plan_path)
+        queued = self.read_doc(queued_path)
 
         for term in (
             "CB240-TASK7-SCOPE-DISCOVERY",
@@ -1162,6 +1170,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Cube runtime remains unstarted",
             "Selection: `Native Cube export`",
             intake_path,
+            selected_plan_path,
+            queued_path,
         ):
             self.assertIn(term, active)
         for term in (
@@ -1193,6 +1203,29 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "eb3fc4ea6f86e8fc3f9475bd03d379445349db57",
         ):
             self.assertIn(term, intake)
+        for term in (
+            "preview_cube_export",
+            "export_cube",
+            "CubeExportReadiness",
+            "authoritative lazy snapshots",
+            "bohr output",
+            "explicit dataset selection",
+            "DSET_IDS",
+            "Semantic native re-import",
+            "parse_cube",
+            "Task 7: Exact-head remote integration gate",
+        ):
+            self.assertIn(term, selected_plan)
+        for term in (
+            "CB240-CUBE-EXPORT-T8",
+            "State: `not_started`",
+            "Task 1 — Freeze Cube export readiness",
+            selected_plan_path,
+            intake_path,
+            "Cube UI remains unstarted",
+            "Reader API v1 stable remains unstarted",
+        ):
+            self.assertIn(term, queued)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
