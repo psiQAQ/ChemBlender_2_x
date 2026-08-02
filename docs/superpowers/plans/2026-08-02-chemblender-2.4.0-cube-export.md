@@ -386,7 +386,7 @@ git commit -m "chore: checkpoint native Cube export"
 **Interfaces:** Only workflow runs whose `headSha` equals the pushed exact head
 are valid. Merge mode is ordinary merge commit.
 
-- [ ] **Step 1: Push and create a ready PR to main**
+- [x] **Step 1: Push and create a ready PR to main**
 
 Confirm a clean worktree, ordinary push, and `origin/main` as an ancestor.
 
