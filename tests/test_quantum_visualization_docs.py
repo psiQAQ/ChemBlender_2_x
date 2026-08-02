@@ -7,8 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ()
-NEXT_RELEASE_QUEUED_FILES = ("2.4.0-pdb-export-ui.md",)
+NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-pdb-export-ui.md",)
+NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
@@ -881,13 +881,14 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "2026-08-02-chemblender-2.4.0-pdb-export-ui.md"
         )
         cursor_path = ".agents/completed/2.4.0-task4-scope-discovery.md"
-        queued_path = ".agents/queued/2.4.0-pdb-export-ui.md"
+        queued_record_path = ".agents/queued/2.4.0-pdb-export-ui.md"
+        active_path = ".agents/active/2.4.0-pdb-export-ui.md"
         intake = self.read_doc(intake_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
         selected_plan = self.read_doc(selected_plan_path)
         cursor = self.read_doc(cursor_path)
-        queued = self.read_doc(queued_path)
+        active = self.read_doc(active_path)
 
         for term in (
             "PDB Export UI",
@@ -939,7 +940,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             plan_path,
             intake_path,
             selected_plan_path,
-            queued_path,
+            queued_record_path,
             "Selection: `PDB Export UI`",
             "zero runtime diff",
             "Remote CI: `Not Run`",
@@ -948,11 +949,11 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             self.assertIn(term, cursor)
         for term in (
             "CB240-PDB-EXPORT-UI-T4",
-            "State: `not_started`",
+            "State: `in_progress`",
             selected_plan_path,
             "Task 4 — PDB Export UI",
         ):
-            self.assertIn(term, queued)
+            self.assertIn(term, active)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (

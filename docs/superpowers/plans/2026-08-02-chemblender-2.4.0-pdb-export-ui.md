@@ -38,9 +38,9 @@ Blender 5.1.2 Extensions.
 
 **Interfaces:** Persist goal `CB240-PDB-EXPORT-UI-T4`; no runtime change.
 
-- [ ] Add the routing/documentation RED.
-- [ ] Activate the queued cursor and record approved plan/baseline.
-- [ ] Run focused documentation GREEN and commit the activation checkpoint.
+- [x] Add the routing/documentation RED.
+- [x] Activate the queued cursor and record approved plan/baseline.
+- [x] Run focused documentation GREEN and commit the activation checkpoint.
 
 ### Task 2: Project exactly one PDB export selection
 
