@@ -57,19 +57,19 @@ Blender 5.1.2 Extensions.
 deduplicated by entity ID; unrelated datasets are excluded. Source ordering
 metadata is unnecessary for one output Structure.
 
-- [ ] **RED:** prove a PDB fixture selection cannot currently project its
+- [x] **RED:** prove a PDB fixture selection cannot currently project its
   BiologicalHierarchy into the core writer contract.
-- [ ] **Expected RED:** selection lacks the hierarchy field/helper and PDB
+- [x] **Expected RED:** selection lacks the hierarchy field/helper and PDB
   readiness reports `MissingHierarchy`.
-- [ ] Project every hierarchy with the exact selected `structure_id` (normally
+- [x] Project every hierarchy with the exact selected `structure_id` (normally
   zero or one); preserve absence or ambiguity for fail-closed core readiness
   rather than picking by order.
-- [ ] Include `selection.frame_set` when present plus only properties bound to
+- [x] Include `selection.frame_set` when present plus only properties bound to
   the selected Structure, deduplicate by entity ID, and include at most the
   selected complete topology; exclude unrelated project entities.
-- [ ] Prove a FrameSet selection emits all `MODEL` blocks with no duplicate base frame.
-- [ ] Prove generic XYZ/crystal/molecular selection behavior does not regress.
-- [ ] Run selection-focused workflow and PDB readiness tests.
+- [x] Prove a FrameSet selection emits all `MODEL` blocks with no duplicate base frame.
+- [x] Prove generic XYZ/crystal/molecular selection behavior does not regress.
+- [x] Run selection-focused workflow and PDB readiness tests.
 
 ### Task 3: Add PDB choice, preview and explicit confirmation
 
@@ -81,14 +81,14 @@ metadata is unnecessary for one output Structure.
 delegate `preview_export_selection(selection, "pdb")` to
 `preview_pdb_export(_pdb_entities(selection))`.
 
-- [ ] **RED:** prove the enum/filter omit PDB and preview reaches the unsupported
+- [x] **RED:** prove the enum/filter omit PDB and preview reaches the unsupported
   format branch.
-- [ ] Add one explicit format choice; do not infer PDB from source bytes or
+- [x] Add one explicit format choice; do not infer PDB from source bytes or
   change the current default-format heuristic.
-- [ ] Prove preview returns the core loss entries unchanged, writes nothing and
+- [x] Prove preview returns the core loss entries unchanged, writes nothing and
   blocks job start until the exact bool confirmation is set.
-- [ ] Prove missing/ambiguous hierarchy and invalid live arrays fail closed.
-- [ ] Run preview/operator-focused workflow tests.
+- [x] Prove missing/ambiguous hierarchy and invalid live arrays fail closed.
+- [x] Run preview/operator-focused workflow tests.
 
 ### Task 4: Dispatch background atomic PDB export
 
@@ -100,17 +100,17 @@ delegate `preview_export_selection(selection, "pdb")` to
 `export_pdb(_pdb_entities(selection), confirm_loss=..., destination=...,
 is_cancelled=...)` and stores the returned report.
 
-- [ ] **RED:** prove `ExportJob(format_name="pdb")` with a valid destination
+- [x] **RED:** prove `ExportJob(format_name="pdb")` with a valid destination
   currently reaches the unsupported-format branch and produces no file.
-- [ ] Add one dispatch branch and update only the shared allowed-format error.
-- [ ] Prove loss-bearing output is blocked without confirmation and succeeds
+- [x] Add one dispatch branch and update only the shared allowed-format error.
+- [x] Prove loss-bearing output is blocked without confirmation and succeeds
   with it.
-- [ ] Prove cancellation/failure leaves an existing destination byte-identical
+- [x] Prove cancellation/failure leaves an existing destination byte-identical
   and no sibling temporary file.
-- [ ] Prove fatal exceptions remain unwrapped and UI timer/progress ownership is
+- [x] Prove fatal exceptions remain unwrapped and UI timer/progress ownership is
   released once.
-- [ ] Run workflow, PDB exporter and registration contract tests.
-- [ ] Commit the runtime slice as `feat: add native PDB export UI`.
+- [x] Run workflow, PDB exporter and registration contract tests.
+- [x] Commit the runtime slice as `feat: add native PDB export UI`.
 
 ### Task 5: Publish and prove the product capability
 

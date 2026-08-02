@@ -21,6 +21,7 @@ from tests.test_project_browser_model import (
 
 MODULE = "ChemBlender.ui.export"
 MOL2_FIXTURES = Path(__file__).parent / "fixtures" / "mol2"
+PDB_FIXTURES = Path(__file__).parent / "fixtures" / "pdb"
 
 
 def _mol2_project(*names):
@@ -29,6 +30,17 @@ def _mol2_project(*names):
 
     project = QCProject(uuid4(), "1.0")
     batches = tuple(parse_mol2(MOL2_FIXTURES / name) for name in names)
+    for batch in batches:
+        project.commit(batch)
+    return project, batches
+
+
+def _pdb_project(*names):
+    from ChemBlender.core import QCProject
+    from ChemBlender.core.formats.pdb import parse_pdb
+
+    project = QCProject(uuid4(), "1.0")
+    batches = tuple(parse_pdb(PDB_FIXTURES / name) for name in names)
     for batch in batches:
         project.commit(batch)
     return project, batches
@@ -143,6 +155,17 @@ class ExtXYZWorkflowTests(unittest.TestCase):
         )
         self.assertIn("*.mol2", filter_glob.split(";"))
 
+    def test_pdb_is_a_public_export_choice_and_filter(self):
+        module = importlib.import_module(MODULE)
+
+        self.assertIn("pdb", {item[0] for item in module._FORMAT_ITEMS})
+        filter_glob = (
+            module.CHEMBLENDER_OT_export_project_entity
+            .__annotations__["filter_glob"]
+            .keywords["default"]
+        )
+        self.assertIn("*.pdb", filter_glob.split(";"))
+
     def test_mol2_selection_projects_only_the_selected_record(self):
         module = importlib.import_module(MODULE)
         project, (selected, unrelated) = _mol2_project(
@@ -197,6 +220,210 @@ class ExtXYZWorkflowTests(unittest.TestCase):
                 for value in projection.annotations
             )
         )
+
+    def test_pdb_structure_selection_projects_exact_hierarchy_and_properties(self):
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _pdb_project("atom-hetatm.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        helper = getattr(module, "_pdb_entities", None)
+        self.assertIsNotNone(helper)
+        projection = helper(selection)
+
+        self.assertEqual(projection.structures, (selection.structure,))
+        self.assertEqual(
+            projection.biological_hierarchies,
+            batch.biological_hierarchies,
+        )
+        self.assertEqual(
+            {value.id for value in projection.datasets},
+            {
+                value.id
+                for value in batch.datasets
+                if getattr(value, "structure_id", None) == selection.structure.id
+            },
+        )
+
+    def test_pdb_frame_set_selection_emits_each_model_once_with_exact_datasets(self):
+        from ChemBlender.core import FrameSet, QCProject
+        from ChemBlender.core.exporters import export_pdb
+        from tests.test_biological_atom_data import biological_mapping_fixture
+
+        module = importlib.import_module(MODULE)
+        batch = biological_mapping_fixture()
+        project = QCProject(uuid4(), "1.0")
+        project.commit(batch)
+        frame_set = next(
+            value for value in batch.datasets if isinstance(value, FrameSet)
+        )
+
+        selection = module.resolve_export_selection(project, frame_set.id)
+        projection = module._pdb_entities(selection)
+
+        expected_datasets = {
+            value.id
+            for value in batch.datasets
+            if value is frame_set
+            or getattr(value, "structure_id", None) == selection.structure.id
+        }
+        self.assertEqual(
+            {value.id for value in projection.datasets},
+            expected_datasets,
+        )
+        self.assertEqual(len(projection.biological_hierarchies), 1)
+        exported = export_pdb(projection).text
+        self.assertEqual(exported.count("MODEL"), 2)
+        self.assertEqual(exported.count("ATOM  "), 4)
+        self.assertEqual(
+            module.preview_export_selection(selection, "extxyz").frame_count,
+            2,
+        )
+
+    def test_pdb_preview_matches_core_and_requires_explicit_loss_confirmation(self):
+        from ChemBlender.core.exporters import preview_pdb_export
+
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _pdb_project("atom-hetatm.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        self.assertIsNotNone(getattr(module, "preview_pdb_export", None))
+        report = module.preview_export_selection(selection, "pdb")
+        self.assertEqual(report, preview_pdb_export(module._pdb_entities(selection)))
+        self.assertTrue(report.requires_confirmation)
+
+        operator = module.CHEMBLENDER_OT_export_project_entity()
+        operator.filepath = "blocked.pdb"
+        operator.format_name = "pdb"
+        operator.confirm_loss = False
+        operator.missing_value_token = ""
+        with (
+            patch.object(
+                module,
+                "get_scene_session",
+                return_value=SimpleNamespace(
+                    project=project,
+                    active_entity_id=batch.structures[0].id,
+                ),
+            ),
+            patch.object(module.ExportJob, "start") as start,
+        ):
+            result = operator.execute(SimpleNamespace(scene=object()))
+        self.assertEqual(result, {"CANCELLED"})
+        start.assert_not_called()
+
+    def test_pdb_preview_preserves_missing_and_ambiguous_hierarchy_fail_closed(self):
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _pdb_project("atom-hetatm.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        with self.assertRaisesRegex(ValueError, "MissingHierarchy"):
+            module.preview_export_selection(
+                replace(selection, biological_hierarchies=()),
+                "pdb",
+            )
+        hierarchy = selection.biological_hierarchies[0]
+        with self.assertRaisesRegex(ValueError, "Ambiguous"):
+            module.preview_export_selection(
+                replace(
+                    selection,
+                    biological_hierarchies=(hierarchy, hierarchy),
+                ),
+                "pdb",
+            )
+
+    def test_pdb_background_job_roundtrips_selected_structure(self):
+        from ChemBlender.core.formats.pdb import parse_pdb
+
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _pdb_project("atom-hetatm.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "selected.pdb"
+            job = module.ExportJob(
+                destination,
+                selection,
+                format_name="pdb",
+                confirm_loss=True,
+                missing_value_token=None,
+            )
+            job.start()
+            self.assertTrue(job.join(5))
+
+            self.assertIsNone(job.error)
+            self.assertTrue(job.result.written)
+            reparsed = parse_pdb(destination)
+            self.assertEqual(
+                reparsed.structures[0].atomic_numbers,
+                selection.structure.atomic_numbers,
+            )
+            self.assertEqual(
+                reparsed.biological_hierarchies[0].atom_count,
+                selection.biological_hierarchies[0].atom_count,
+            )
+
+    def test_pdb_background_job_blocks_unconfirmed_loss_without_writing(self):
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _pdb_project("atom-hetatm.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "blocked.pdb"
+            job = module.ExportJob(
+                destination,
+                selection,
+                format_name="pdb",
+                confirm_loss=False,
+                missing_value_token=None,
+            )
+            job.start()
+            self.assertTrue(job.join(5))
+
+            self.assertIsNone(job.error)
+            self.assertFalse(job.result.written)
+            self.assertFalse(destination.exists())
+
+    def test_cancelled_pdb_job_preserves_destination_and_cleans_temporary(self):
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _pdb_project("atom-hetatm.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            destination = root / "selected.pdb"
+            destination.write_bytes(b"prior destination\n")
+            job = module.ExportJob(
+                destination,
+                selection,
+                format_name="pdb",
+                confirm_loss=True,
+                missing_value_token=None,
+            )
+            job.cancel()
+            job.start()
+            self.assertTrue(job.join(5))
+
+            self.assertIsInstance(job.error, ExportCancelled)
+            self.assertEqual(destination.read_bytes(), b"prior destination\n")
+            self.assertEqual(tuple(root.iterdir()), (destination,))
 
     def test_mol2_preview_matches_core_and_rejects_conformers(self):
         from ChemBlender.core.exporters import preview_mol2_export
