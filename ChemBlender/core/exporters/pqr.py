@@ -53,7 +53,9 @@ def _snapshot_array(
     try:
         values = numpy.array(live, copy=True, order="C", subok=False)
         if invalid_token is not None and (
-            data.dims != expected_dims or values.shape != expected_shape
+            data.dims != expected_dims
+            or values.shape != expected_shape
+            or values.dtype != numpy.dtype(data.dtype)
         ):
             raise ValueError(f"PQR export is Invalid: {invalid_token}")
         values.setflags(write=False)
@@ -65,16 +67,17 @@ def _snapshot_array(
 
 
 def _snapshot_categorical(data, live_arrays, *, expected_shape, invalid_token):
-    return replace(
-        data,
-        codes=_snapshot_array(
-            data.codes,
-            live_arrays,
-            expected_dims=("atom",),
-            expected_shape=expected_shape,
-            invalid_token=invalid_token,
-        ),
+    codes = _snapshot_array(
+        data.codes,
+        live_arrays,
+        expected_dims=("atom",),
+        expected_shape=expected_shape,
+        invalid_token=invalid_token,
     )
+    try:
+        return replace(data, codes=codes)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"PQR export is Invalid: {invalid_token}") from error
 
 
 def _snapshot_structure(structure, live_arrays):

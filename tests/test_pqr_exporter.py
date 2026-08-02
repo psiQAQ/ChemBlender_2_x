@@ -426,6 +426,81 @@ class PQRExporterTests(unittest.TestCase):
                 finally:
                     values.shape = original_shape
 
+    def test_live_categorical_codes_keep_family_readiness_tokens(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        structure = batch.structures[0]
+        hierarchy = batch.biological_hierarchies[0]
+        cases = (
+            (structure.atomic_identity.atom_names, "identity.atom_name.invalid"),
+            (
+                hierarchy.atom_sites.alternate_locations,
+                "identity.altloc.invalid",
+            ),
+            (hierarchy.atom_sites.record_kinds, "identity.record_kind"),
+        )
+        for categorical, token in cases:
+            with self.subTest(token=token), TemporaryDirectory() as directory:
+                destination = Path(directory) / "invalid.pqr"
+                values = categorical.codes.values
+                original = int(values[0])
+                values[0] = len(categorical.categories)
+                try:
+                    with self.assertRaises(ValueError) as raised:
+                        export_pqr(batch, destination=destination)
+                    self.assertEqual(
+                        str(raised.exception),
+                        f"PQR export is Invalid: {token}",
+                    )
+                    self.assertEqual(
+                        str(raised.exception.__cause__),
+                        "categorical code has no matching category",
+                    )
+                    self.assertEqual(tuple(Path(directory).iterdir()), ())
+                finally:
+                    values[0] = original
+
+    def test_live_dtype_mutations_keep_family_readiness_tokens(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        structure = batch.structures[0]
+        hierarchy = batch.biological_hierarchies[0]
+        cases = (
+            (
+                self._property(batch, "partial_charge").data.values,
+                numpy.dtype("int64"),
+                "dataset.partial_charge.shape",
+            ),
+            (
+                structure.atomic_identity.isotopes.values,
+                numpy.dtype("float64"),
+                "identity.isotopes.invalid",
+            ),
+            (
+                structure.atomic_identity.atom_names.codes.values,
+                numpy.dtype("float64"),
+                "identity.atom_name.invalid",
+            ),
+            (
+                hierarchy.atom_sites.serial_numbers.values,
+                numpy.dtype("float64"),
+                "hierarchy.shape",
+            ),
+        )
+        for values, mutated_dtype, token in cases:
+            with self.subTest(token=token), TemporaryDirectory() as directory:
+                destination = Path(directory) / "invalid.pqr"
+                original_dtype = values.dtype
+                values.dtype = mutated_dtype
+                try:
+                    with self.assertRaises(ValueError) as raised:
+                        export_pqr(batch, destination=destination)
+                    self.assertEqual(
+                        str(raised.exception),
+                        f"PQR export is Invalid: {token}",
+                    )
+                    self.assertEqual(tuple(Path(directory).iterdir()), ())
+                finally:
+                    values.dtype = original_dtype
+
     def test_writer_revalidates_property_contract_after_readiness_bypass(self):
         batch = parse_pqr(FIXTURES / "with-chain.pqr")
         charge = self._property(batch, "partial_charge")
