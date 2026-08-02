@@ -1579,7 +1579,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for term in (
             "CB240-FINAL-QUALIFICATION-T12",
             "State: `in_progress`",
-            "Task 1 — Audit frozen public and scientific boundaries",
+            "Task 1 frozen-boundary audit",
             "aa6a92978f397011dafb3d79adac29d608262db4",
             "codex/2.4.0-final-qualification",
             "PR #18",
@@ -1591,6 +1591,35 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "No version, tag or Release",
         ):
             self.assertIn(term, qualification)
+
+    def test_240_final_qualification_records_frozen_boundaries(self):
+        evidence_path = (
+            "docs/quantum-visualization/2.4.0/final-qualification.md"
+        )
+        evidence = self.read_doc(evidence_path)
+        for term in (
+            "Reader API: `1.0-rc1`",
+            "Sidecar manifest: `1.0`",
+            "Project schema: `1.0`",
+            "Canonical document: `0.1`",
+            "ChemBlender.core",
+            "ChemBlender.reader_api",
+            "rdkit",
+            "gemmi",
+            "spglib",
+            "cclib",
+            "iodata",
+            "gbasis",
+            "ase",
+            "pymatgen",
+            "14 export-capable reader descriptors",
+            "| XYZ | F4 | project_browser | single_structure_coordinates_only |",
+            "| Cube | F5 | project_browser | preview_confirmation |",
+            "| CJSON | F5 | core | controlled_envelope |",
+            "| QCSchema | F5 | core | source_envelope |",
+            "Generated document drift: `0 files`",
+        ):
+            self.assertIn(term, evidence)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
