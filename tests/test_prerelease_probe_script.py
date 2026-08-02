@@ -306,6 +306,8 @@ class PrereleaseProbeScriptTests(unittest.TestCase):
             run.call_args.kwargs,
             {
                 "capture_output": True,
+                "encoding": "utf-8",
+                "errors": "replace",
                 "text": True,
                 "check": False,
             },

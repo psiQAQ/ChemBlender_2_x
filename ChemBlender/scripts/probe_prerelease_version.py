@@ -131,6 +131,8 @@ def probe_prerelease_version(
         completed = subprocess.run(
             command,
             capture_output=True,
+            encoding="utf-8",
+            errors="replace",
             text=True,
             check=False,
         )
