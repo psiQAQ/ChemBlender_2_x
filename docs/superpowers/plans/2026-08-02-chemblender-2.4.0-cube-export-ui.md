@@ -160,20 +160,20 @@ tests. Commit as `feat: add native Cube export preview`.
 `export_cube(_cube_entities(selection), dataset_index=..., confirm_loss=...,
 destination=..., is_cancelled=...).report`.
 
-- [ ] **Step 1: Write job RED**
+- [x] **Step 1: Write job RED**
 
 Assert the current job rejects `cube`, unconfirmed loss leaves the destination
 untouched, confirmed scalar and explicit multi-dataset output reparses through
 native `parse_cube()`, and cancellation preserves an existing destination with
 no temporary sibling.
 
-- [ ] **Step 2: Implement one dispatch branch**
+- [x] **Step 2: Implement one dispatch branch**
 
 Import `export_cube`; store one UI dataset selection in `ExportJob`; delegate
 all validation, snapshots and publication to core. Do not catch fatal
 exceptions or add another atomic writer.
 
-- [ ] **Step 3: Run GREEN and commit**
+- [x] **Step 3: Run GREEN and commit**
 
 Run the UI contract, Cube exporter/readiness/product-flow and registration
 tests. Commit as `feat: add native Cube export UI`.
