@@ -10,6 +10,7 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, StringProperty
 
 from ..core import (
+    AtomicProperty,
     CIFEnvelope,
     ConformerSet,
     DatasetStatus,
@@ -27,12 +28,14 @@ from ..core.exporters import (
     export_xyz,
     export_mol,
     export_mol2,
+    export_pdb,
     export_poscar,
     export_sdf,
     export_smiles,
     preview_extxyz_export,
     preview_molecular_export,
     preview_mol2_export,
+    preview_pdb_export,
     plan_cif_export,
     sdf_entries_from_conformer_set,
 )
@@ -45,6 +48,7 @@ _FORMAT_ITEMS = (
     ("extxyz", "extXYZ", "Export a Structure or trajectory with properties"),
     ("mol", "MOL", "Export a molecular Structure"),
     ("mol2", "MOL2", "Export a molecular Structure with Tripos metadata"),
+    ("pdb", "PDB", "Export a biological Structure"),
     ("sdf", "SDF", "Export molecular records or conformers"),
     ("smiles", "SMILES", "Export a molecular Structure"),
     ("cif", "CIF", "Export a periodic Structure"),
@@ -90,6 +94,8 @@ class ExportSelection:
     provenance: tuple = ()
     source_structure_id: UUID | None = None
     annotations: tuple = ()
+    biological_hierarchies: tuple = ()
+    associated_topologies: tuple = ()
 
 
 def _with_structure_origin(project, selection):
@@ -101,10 +107,21 @@ def _with_structure_origin(project, selection):
         ),
         None,
     )
-    return (
-        selection
-        if source_id is None
-        else replace(selection, source_structure_id=source_id)
+    biological_hierarchies = tuple(
+        value
+        for value in getattr(project, "biological_hierarchies", {}).values()
+        if value.structure_id == selection.structure.id
+    )
+    associated_topologies = tuple(
+        value
+        for value in getattr(project, "topologies", {}).values()
+        if value.structure_id == selection.structure.id
+    )
+    return replace(
+        selection,
+        source_structure_id=source_id,
+        biological_hierarchies=biological_hierarchies,
+        associated_topologies=associated_topologies,
     )
 
 
@@ -242,6 +259,40 @@ def _mol2_entities(selection):
     )
 
 
+def _pdb_entities(selection):
+    datasets = []
+    seen = set()
+    for value in (
+        *((selection.frame_set,) if selection.frame_set is not None else ()),
+        *selection.properties,
+    ):
+        if (
+            getattr(value, "structure_id", None) != selection.structure.id
+            or value.id in seen
+        ):
+            continue
+        seen.add(value.id)
+        datasets.append(value)
+    return SimpleNamespace(
+        structures=(selection.structure,),
+        biological_hierarchies=selection.biological_hierarchies,
+        datasets=tuple(datasets),
+        topologies=selection.associated_topologies,
+        sources=(),
+        source_revisions=(),
+    )
+
+
+def _extxyz_properties(selection):
+    if selection.frame_set is None:
+        return selection.properties
+    return tuple(
+        value
+        for value in selection.properties
+        if getattr(value, "frame_set_id", None) == selection.frame_set.id
+    )
+
+
 def resolve_export_selection(project, entity_id):
     if type(entity_id) is not UUID:
         raise TypeError("select a Structure or FrameSet before exporting")
@@ -299,7 +350,11 @@ def resolve_export_selection(project, entity_id):
             tuple(
                 dataset
                 for dataset in project.datasets.values()
-                if getattr(dataset, "frame_set_id", None) == frame_set.id
+                if (
+                    getattr(dataset, "frame_set_id", None) == frame_set.id
+                    or isinstance(dataset, AtomicProperty)
+                    and dataset.structure_id == structure.id
+                )
             ),
         ),
     )
@@ -572,6 +627,8 @@ def preview_export_selection(
         if selection.topology is None:
             raise ValueError("molecular export requires a complete topology")
         return preview_mol2_export(_mol2_entities(selection))
+    if format_name == "pdb":
+        return preview_pdb_export(_pdb_entities(selection))
     if format_name in {"mol", "sdf", "smiles"}:
         if selection.topology is None:
             raise ValueError("molecular export requires a complete topology")
@@ -613,12 +670,13 @@ def preview_export_selection(
         )
     if format_name != "extxyz":
         raise ValueError(
-            "format_name must be xyz, extxyz, mol, mol2, sdf, smiles, cif or poscar"
+            "format_name must be xyz, extxyz, mol, mol2, pdb, sdf, smiles, "
+            "cif or poscar"
         )
     return preview_extxyz_export(
         selection.structure,
         frame_set=selection.frame_set,
-        properties=selection.properties,
+        properties=_extxyz_properties(selection),
         missing_value_token=missing_value_token or None,
     )
 
@@ -678,7 +736,7 @@ class ExportJob:
                     self.destination,
                     self.selection.structure,
                     frame_set=self.selection.frame_set,
-                    properties=self.selection.properties,
+                    properties=_extxyz_properties(self.selection),
                     confirm_loss=self.confirm_loss,
                     missing_value_token=self.missing_value_token or None,
                     is_cancelled=self._cancelled.is_set,
@@ -695,6 +753,13 @@ class ExportJob:
             elif self.format_name == "mol2":
                 self.result = export_mol2(
                     _mol2_entities(self.selection),
+                    confirm_loss=self.confirm_loss,
+                    destination=self.destination,
+                    is_cancelled=self._cancelled.is_set,
+                ).report
+            elif self.format_name == "pdb":
+                self.result = export_pdb(
+                    _pdb_entities(self.selection),
                     confirm_loss=self.confirm_loss,
                     destination=self.destination,
                     is_cancelled=self._cancelled.is_set,
@@ -765,8 +830,8 @@ class ExportJob:
                 )
             else:
                 raise ValueError(
-                    "format_name must be xyz, extxyz, mol, mol2, sdf, smiles, cif "
-                    "or poscar"
+                    "format_name must be xyz, extxyz, mol, mol2, pdb, sdf, "
+                    "smiles, cif or poscar"
                 )
         except BaseException as error:
             self.error = error
@@ -867,7 +932,7 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
     )
     filter_glob: StringProperty(
         default=(
-            "*.xyz;*.extxyz;*.mol;*.mol2;*.sdf;*.smi;*.smiles;*.cif;"
+            "*.xyz;*.extxyz;*.mol;*.mol2;*.pdb;*.sdf;*.smi;*.smiles;*.cif;"
             "*.vasp;*.poscar;*.contcar"
         ),
         options={"HIDDEN"},

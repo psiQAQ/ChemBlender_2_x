@@ -70,7 +70,7 @@ _READER_EXPORTS = {
     "mol": ("mol", "F5", "project_browser", "preview_confirmation"),
     "mol-v2000": ("mol", "F5", "project_browser", "preview_confirmation"),
     "mol2": ("mol2", "F5", "project_browser", "preview_confirmation"),
-    "pdb": ("pdb", "F5", "core", "preview_confirmation"),
+    "pdb": ("pdb", "F5", "project_browser", "preview_confirmation"),
     "poscar": ("poscar", "F5", "project_browser", "preview_confirmation"),
     "qcschema": ("qcschema", "F5", "core", "source_envelope"),
     "sdf": ("sdf", "F5", "project_browser", "preview_confirmation"),

@@ -2089,7 +2089,11 @@ def assert_mol2_browser_view(module_key, repository_root):
 
 
 def assert_biological_workflow(module_key, repository_root):
+    import numpy
+
     core = importlib.import_module(f"{module_key}.core")
+    export_ui = importlib.import_module(f"{module_key}.ui.export")
+    pdb_format = importlib.import_module(f"{module_key}.core.formats.pdb")
     ui = importlib.import_module(f"{module_key}.ui.session")
     browser = importlib.import_module(
         f"{module_key}.ui.project_browser.panel"
@@ -2426,13 +2430,84 @@ def assert_biological_workflow(module_key, repository_root):
 
         (
             model_view,
-            _model_structure,
+            model_structure,
             model_hierarchy,
-            _model_properties,
+            model_properties,
             model_frames,
         ) = model
         assert model_frames is not None
         assert model_hierarchy.id in session.project.biological_hierarchies
+
+        pdb_destination = root / "project-browser-models.pdb"
+        pdb_selection = export_ui.resolve_export_selection(
+            session.project,
+            model_structure.id,
+        )
+        pdb_preview = export_ui.preview_export_selection(
+            pdb_selection,
+            "pdb",
+        )
+        assert pdb_preview.frame_count == 2
+        pdb_job = export_ui.ExportJob(
+            pdb_destination,
+            pdb_selection,
+            format_name="pdb",
+            confirm_loss=pdb_preview.requires_confirmation,
+            missing_value_token=None,
+        )
+        pdb_job.start()
+        assert pdb_job.join(30)
+        assert pdb_job.error is None
+        assert pdb_job.result.written
+        pdb_text = pdb_destination.read_text(encoding="utf-8")
+        assert pdb_text.count("MODEL") == 2
+        assert pdb_text.count("ATOM  ") == 4
+        reparsed_pdb = pdb_format.parse_pdb(pdb_destination)
+        reparsed_structure, = reparsed_pdb.structures
+        reparsed_hierarchy, = reparsed_pdb.biological_hierarchies
+        reparsed_frames = next(
+            value
+            for value in reparsed_pdb.datasets
+            if isinstance(value, core.FrameSet)
+        )
+
+        def categories(data):
+            return tuple(
+                "" if code == data.missing_code else data.categories[code]
+                for code in data.codes.values
+            )
+
+        assert (
+            reparsed_structure.atomic_numbers
+            == model_structure.atomic_numbers
+        )
+        assert reparsed_hierarchy.atom_count == model_hierarchy.atom_count
+        assert categories(
+            reparsed_structure.atomic_identity.atom_names
+        ) == categories(model_structure.atomic_identity.atom_names)
+        assert numpy.allclose(
+            reparsed_frames.data.values,
+            model_frames.data.values,
+            rtol=0.0,
+            atol=1.0e-6,
+        )
+        for role in ("occupancy", "b_factor"):
+            expected = next(
+                value
+                for value in model_properties
+                if value.semantic_role == role
+            )
+            actual = next(
+                value
+                for value in reparsed_pdb.datasets
+                if value.semantic_role == role
+            )
+            assert numpy.allclose(
+                actual.data.values,
+                expected.data.values,
+                rtol=0.0,
+                atol=1.0e-6,
+            )
 
         connected_view = connected[0]
         assert any(
