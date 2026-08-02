@@ -136,6 +136,26 @@ native semantic re-import; cancellation destination preservation; molecular
 and Grid3D save/reopen; sidecar relinking; derived-cache reconstruction; and
 duplicate registration/object prevention.
 
+The first independent code-quality review found that the original Cube smoke
+used direct parser/project construction and did not prove the Project Browser
+multi-dataset path or cancelled-destination preservation. Commit
+`8ba30c729d0f6840384a3b968d702644e0a9c20a` added the installed Quick Import
+preview/confirm flow, selected the imported Grid3D through Project Browser,
+reparsed exported dataset index `1`, and cancelled a second export after
+seeding its destination. A fresh isolated rerun exited `0` and emitted
+`PASS: installed Project Browser multi-dataset Cube export`; the seeded file
+was unchanged and no temporary sibling remained.
+
+The follow-up specification review then found that the successful export still
+called `ExportJob` directly. The installed `bpy.ops` reproduction exposed a
+real RNA ordering defect: assigning `cube_dataset_index` after `confirm_loss`
+ran the preview update and reset the explicit confirmation. Commit
+`5662919d1c35397db58486a2e7ecb4338529f695` declares `confirm_loss` after all
+preview-changing properties and routes the successful smoke export through
+`bpy.ops.chemblender.export_project_entity`. The focused Cube product/export
+suite passed `30/30`; committed-tree package and installed Blender evidence are
+rerun below before checkpoint.
+
 The same run completed the 10,000-record SDF product workflow and emitted its
 measured performance record. Windows retained some loaded Gemmi/RDKit binary
 files in the isolated temporary resource directory during Blender's final
@@ -162,6 +182,10 @@ used or modified.
 | Local optional integrations | `30 Passed / 7 Skipped / 0 Failed` |
 | Committed-tree artifact audit | `Passed` |
 | Blender product qualification | `Passed` — isolated install and lifecycle |
+| Independent review RED | Cube browser/export/cancellation evidence incomplete |
+| Independent review GREEN | `8ba30c729d0f6840384a3b968d702644e0a9c20a`; fresh installed smoke Passed |
+| Follow-up specification RED | installed Blender Operator success path bypassed |
+| Operator focused GREEN | `5662919d1c35397db58486a2e7ecb4338529f695`; `30 Passed` |
 | Remote exact-head CI | Not Run — Task 5 |
 
 ## Stop boundary
