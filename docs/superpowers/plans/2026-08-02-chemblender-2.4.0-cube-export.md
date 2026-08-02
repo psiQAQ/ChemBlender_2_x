@@ -279,18 +279,18 @@ git commit -m "test: qualify native Cube export semantics"
 **Interfaces:** Cube export becomes
 `("cube", "F5", "core", "preview_confirmation")`; no UI claim.
 
-- [ ] **Step 1: Write capability RED**
+- [x] **Step 1: Write capability RED**
 
 Require catalog-derived documents to report Cube as
 `F5 / core / preview_confirmation` while Project Browser remains without a Cube
 export choice.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run generated-document freshness tests. Expected: current catalog still reports
 `F0 / none / not_available`.
 
-- [ ] **Step 3: Change the single catalog source and regenerate**
+- [x] **Step 3: Change the single catalog source and regenerate**
 
 Run:
 
@@ -300,7 +300,7 @@ Run:
 
 Only catalog-derived Cube export claims may change.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Commit as `docs: publish native Cube core export`.
 

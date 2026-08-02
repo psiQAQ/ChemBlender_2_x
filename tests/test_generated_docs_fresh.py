@@ -159,8 +159,15 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
                 "maturity": "F4",
             },
         )
-        self.assertEqual(by_id["cube"]["export"]["maturity"], "F0")
-        self.assertEqual(by_id["cube"]["export"]["execution_mode"], "none")
+        self.assertEqual(
+            by_id["cube"]["export"],
+            {
+                "execution_mode": "core",
+                "format_id": "cube",
+                "loss_policy": "preview_confirmation",
+                "maturity": "F5",
+            },
+        )
         self.assertEqual(by_id["cjson"]["export"]["execution_mode"], "core")
         self.assertEqual(
             by_id["mol2"]["export"],
@@ -257,6 +264,7 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
             expected,
         )
         self.assertEqual(documented, set(expected))
+        self.assertNotIn("cube", expected)
         self.assertIs(sys.modules.get("bpy"), before)
 
     def test_user_guide_exposes_pdb_project_browser_export(self):
