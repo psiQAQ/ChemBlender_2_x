@@ -164,6 +164,8 @@ class CubeProductFlowTests(unittest.TestCase):
         self.assertIn("dataset_index=1", workflow)
         self.assertIn("export_ui.resolve_export_selection", workflow)
         self.assertIn("export_ui.ExportJob", workflow)
+        self.assertIn("bpy.ops.chemblender.export_project_entity(", workflow)
+        self.assertIn("cube_dataset_index=1", workflow)
 
 
 if __name__ == "__main__":

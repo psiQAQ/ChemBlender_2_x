@@ -96,18 +96,20 @@ hash checks are executed before each exact-head integration module.
 
 ## Committed-tree extension artifact
 
-The clean Task 2 commit `6ac2e5283275ce309f09456f4400de33c0825546`
-was validated and built with Blender `5.1.2` on Windows. The exact output was
-`chemblender-2.3.0.zip`; no version or release metadata changed.
+The reviewed committed tree through
+`648310676618fdd5f34aa63f64c6790f761c2d1b` was validated and built with
+Blender `5.1.2` on Windows. The exact output was `chemblender-2.3.0.zip`; no
+version or release metadata changed.
 
 | Artifact property | Observed value |
 | --- | --- |
-| Package SHA-256 | `8e7f3c8a7af0feb100cf8ec37cfc9200f98cd7e2cb5149f15e21be74e578b32b` |
-| Package bytes | `29,976,421` |
+| Package SHA-256 | `078d0d29fd94bcfd18bd9ce00a9c469b27994ae6e384078a18f56ae3d912cb0b` |
+| Package bytes | `29,976,432` |
 | ZIP members | `189` |
-| Member compressed bytes | `29,953,927` |
-| Member unpacked bytes | `32,063,479` |
-| Code compressed bytes | `587,908` |
+| Member compressed bytes | `29,953,938` |
+| Member unpacked bytes | `32,063,468` |
+| Code compressed bytes | `587,919` |
+| Code unpacked bytes | `2,668,712` |
 | Resource compressed bytes | `2,477,267` |
 | Wheel compressed bytes | `26,888,752` |
 | Bad CRC member | `none` |
