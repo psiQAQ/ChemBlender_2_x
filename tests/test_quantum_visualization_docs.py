@@ -1106,6 +1106,13 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "installed-pqr-export-reimport",
             "Cube export",
             "Reader API v1 stable",
+            "https://github.com/psiQAQ/ChemBlender_2_x/pull/14",
+            "3bab75429d37276e27dc158ba5bbf69d9085b9bd",
+            "30741155445",
+            "30741155450",
+            "eb3fc4ea6f86e8fc3f9475bd03d379445349db57",
+            "Ancestor verification: `Passed`",
+            "Remote CI: `Passed`",
         ):
             self.assertIn(term, completed)
         for term in (
