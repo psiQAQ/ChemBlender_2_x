@@ -7,7 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ()
+TASK9_SCOPE_ACTIVE_FILE = "2.4.0-task9-scope-discovery.md"
+NEXT_RELEASE_ACTIVE_FILES = (TASK9_SCOPE_ACTIVE_FILE,)
 NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
@@ -1274,6 +1275,49 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "OpenVDB",
         ):
             self.assertIn(term, contract)
+
+    def test_240_task9_scope_discovery_is_recoverable(self):
+        active_path = f".agents/active/{TASK9_SCOPE_ACTIVE_FILE}"
+        design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-02-chemblender-2.4.0-task9-scope-discovery-design.md"
+        )
+        plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-task9-scope-discovery.md"
+        )
+        active = self.read_doc(active_path)
+        design = self.read_doc(design_path)
+        plan = self.read_doc(plan_path)
+
+        for term in (
+            "CB240-TASK9-SCOPE-DISCOVERY",
+            "State: `in_progress`",
+            "cd265d95c3cc73cae5355657cc0a5a8f1931d98b",
+            design_path,
+            plan_path,
+            "Native Cube Export UI",
+            "Reader API v1 stable gate",
+            "2.4.0 Final Qualification",
+            "No runtime implementation",
+            "No push",
+        ):
+            self.assertIn(term, active)
+        for term in (
+            "Selected: native Cube export UI",
+            "Deferred: Reader API v1 stable gate",
+            "Deferred: 2.4.0 final qualification",
+            "PR #15",
+        ):
+            self.assertIn(term, design)
+        for term in (
+            "Task 1: Persist the Task 9 discovery boundary",
+            "Task 2: Freeze native Cube export remote evidence",
+            "Task 3: Audit and select one candidate",
+            "Task 4: Queue native Cube export UI",
+            "Task 5: Verify, review and checkpoint",
+        ):
+            self.assertIn(term, plan)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
