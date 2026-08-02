@@ -33,17 +33,23 @@
 
 - [ ] **Step 1: Integrate the Task 11 discovery gate**
 
-Require a clean discovery worktree, ordinary push and ready PR. Wait for
-`extension-package` and `optional-qc-core` to pass the exact discovery head,
-merge with `--merge --delete-branch=false`, fetch and prove ancestry.
+Require a clean discovery worktree and query existing PRs for the exact head
+before any remote write. If it is already merged, verify exact-head runs and
+ancestry and do not create a duplicate PR. Otherwise use ordinary push and one
+ready PR, wait for `extension-package` and `optional-qc-core` to pass the exact
+discovery head, merge with `--merge --delete-branch=false`, fetch and prove
+ancestry.
 
 - [ ] **Step 2: Create an isolated qualification worktree**
 
 Run:
 
 ```powershell
-git fetch origin --prune
-git worktree add .worktrees/2.4.0-final-qualification `
+$commonDir = git rev-parse --path-format=absolute --git-common-dir
+$repositoryRoot = Split-Path -Parent $commonDir
+$qualificationPath = Join-Path $repositoryRoot ".worktrees/2.4.0-final-qualification"
+git -C $repositoryRoot fetch origin --prune
+git -C $repositoryRoot worktree add $qualificationPath `
   -b codex/2.4.0-final-qualification origin/main
 ```
 
@@ -83,9 +89,10 @@ Run:
 
 ```powershell
 & $pythonBin -m unittest `
-  tests.test_reader_api_version `
-  tests.test_reader_manifest `
+  tests.test_reader_api_v1_rc `
+  tests.test_reader_plugin_manifest `
   tests.test_reader_conformance_v1 `
+  tests.test_sidecar_v1_schema `
   tests.test_sidecar_storage `
   tests.test_reader_canonical_document `
   tests.test_generated_docs_fresh `
@@ -135,9 +142,21 @@ assert `rdkit`, `gemmi`, `spglib`, `cclib`, `iodata`, `gbasis`, `ase` and
 
 - [ ] **Step 3: Run existing optional integrations**
 
-Use the pinned commands and fixtures from `.github/workflows/optional-qc-core.yml`
-for `cclib`, `iodata` and `gbasis`. Record package versions, fixture SHAs and
-job-equivalent conclusions; do not install into Blender global site-packages.
+With the workflow-pinned environments and fixtures active, run the exact
+integration module set:
+
+```powershell
+& $pythonBin -m unittest `
+  tests.test_cclib_adapter `
+  tests.test_iodata_adapter `
+  tests.test_wavefunction_grid `
+  tests.test_wavefunction_observables -v
+```
+
+Record package versions and fixture SHAs from
+`.github/workflows/optional-qc-core.yml`. A skipped module is not local
+integration proof; the exact-head `cclib`, `iodata` and `gbasis` jobs in Task 5
+remain mandatory. Do not install into Blender global site-packages.
 
 - [ ] **Step 4: Fix, rerun and commit only if needed**
 
@@ -261,8 +280,15 @@ Every job must finish success with `headSha` equal to the checkpoint head.
 
 - [ ] **Step 4: Merge ordinarily and verify ancestry**
 
-Merge using `gh pr merge --merge --delete-branch=false`, fetch and require
-`git merge-base --is-ancestor <checkpoint-head> origin/main` to exit zero.
+Merge using `gh pr merge --merge --delete-branch=false`, then run:
+
+```powershell
+$checkpointHead = git rev-parse HEAD
+git fetch origin --prune
+git merge-base --is-ancestor $checkpointHead origin/main
+if ($LASTEXITCODE -ne 0) { throw "Qualification head is not in origin/main" }
+```
+
 Do not squash, rebase, delete the branch, tag or publish a Release.
 
 ## Stop Boundary
