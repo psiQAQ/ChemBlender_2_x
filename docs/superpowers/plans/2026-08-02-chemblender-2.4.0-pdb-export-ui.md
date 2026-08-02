@@ -48,14 +48,18 @@ Blender 5.1.2 Extensions.
 - Modify: `ChemBlender/ui/export.py`
 - Modify: `tests/test_extxyz_workflow.py`
 
-**Interfaces:** `ExportSelection` gains one immutable
-`biological_hierarchies: tuple = ()` field. A private
+**Interfaces:** `ExportSelection` gains immutable
+`biological_hierarchies: tuple = ()` and
+`associated_topologies: tuple = ()` fields. A private
 `_pdb_entities(selection)` returns a `SimpleNamespace` with `structures`,
 `biological_hierarchies`, `datasets`, `topologies`, `sources=()` and
 `source_revisions=()` for the single selected Structure. `datasets` contains
 `selection.frame_set` when present plus exact Structure-bound properties,
-deduplicated by entity ID; unrelated datasets are excluded. Source ordering
-metadata is unnecessary for one output Structure.
+deduplicated by entity ID; `topologies` contains every topology associated with
+the exact Structure, including ambiguous CONECT records needed by loss preview.
+The generic singular `selection.topology` remains complete-only for molecular
+writers. Unrelated entities are excluded. Source ordering metadata is
+unnecessary for one output Structure.
 
 - [x] **RED:** prove a PDB fixture selection cannot currently project its
   BiologicalHierarchy into the core writer contract.
@@ -65,8 +69,9 @@ metadata is unnecessary for one output Structure.
   zero or one); preserve absence or ambiguity for fail-closed core readiness
   rather than picking by order.
 - [x] Include `selection.frame_set` when present plus only properties bound to
-  the selected Structure, deduplicate by entity ID, and include at most the
-  selected complete topology; exclude unrelated project entities.
+  the selected Structure, deduplicate by entity ID, and project all exact
+  Structure-associated topologies for PDB loss reporting without changing the
+  molecular complete-topology selection; exclude unrelated project entities.
 - [x] Prove a FrameSet selection emits all `MODEL` blocks with no duplicate base frame.
 - [x] Prove generic XYZ/crystal/molecular selection behavior does not regress.
 - [x] Run selection-focused workflow and PDB readiness tests.

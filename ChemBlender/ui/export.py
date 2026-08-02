@@ -95,6 +95,7 @@ class ExportSelection:
     source_structure_id: UUID | None = None
     annotations: tuple = ()
     biological_hierarchies: tuple = ()
+    associated_topologies: tuple = ()
 
 
 def _with_structure_origin(project, selection):
@@ -111,10 +112,16 @@ def _with_structure_origin(project, selection):
         for value in getattr(project, "biological_hierarchies", {}).values()
         if value.structure_id == selection.structure.id
     )
+    associated_topologies = tuple(
+        value
+        for value in getattr(project, "topologies", {}).values()
+        if value.structure_id == selection.structure.id
+    )
     return replace(
         selection,
         source_structure_id=source_id,
         biological_hierarchies=biological_hierarchies,
+        associated_topologies=associated_topologies,
     )
 
 
@@ -270,7 +277,7 @@ def _pdb_entities(selection):
         structures=(selection.structure,),
         biological_hierarchies=selection.biological_hierarchies,
         datasets=tuple(datasets),
-        topologies=(() if selection.topology is None else (selection.topology,)),
+        topologies=selection.associated_topologies,
         sources=(),
         source_revisions=(),
     )
@@ -278,7 +285,7 @@ def _pdb_entities(selection):
 
 def _extxyz_properties(selection):
     if selection.frame_set is None:
-        return ()
+        return selection.properties
     return tuple(
         value
         for value in selection.properties

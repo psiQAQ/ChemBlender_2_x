@@ -247,6 +247,64 @@ class ExtXYZWorkflowTests(unittest.TestCase):
             },
         )
 
+    def test_pdb_conect_topology_reaches_loss_preview_and_confirmation(self):
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _pdb_project("conect.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        self.assertIsNone(selection.topology)
+        self.assertEqual(selection.associated_topologies, batch.topologies)
+        projection = module._pdb_entities(selection)
+        self.assertEqual(projection.topologies, batch.topologies)
+        report = module.preview_export_selection(selection, "pdb")
+        self.assertTrue(report.requires_confirmation)
+        self.assertIn(
+            "topology_omitted",
+            tuple(entry.code for entry in report.entries),
+        )
+
+        operator = module.CHEMBLENDER_OT_export_project_entity()
+        operator.filepath = "blocked-conect.pdb"
+        operator.format_name = "pdb"
+        operator.confirm_loss = False
+        operator.missing_value_token = ""
+        with (
+            patch.object(
+                module,
+                "get_scene_session",
+                return_value=SimpleNamespace(
+                    project=project,
+                    active_entity_id=batch.structures[0].id,
+                ),
+            ),
+            patch.object(module.ExportJob, "start") as start,
+        ):
+            result = operator.execute(SimpleNamespace(scene=object()))
+        self.assertEqual(result, {"CANCELLED"})
+        start.assert_not_called()
+
+    def test_structure_extxyz_does_not_silently_drop_bound_properties(self):
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _pdb_project("altloc.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        self.assertTrue(selection.properties)
+        self.assertEqual(
+            module._extxyz_properties(selection),
+            selection.properties,
+        )
+        with self.assertRaisesRegex(
+            TypeError,
+            "properties must contain frame property datasets",
+        ):
+            module.preview_export_selection(selection, "extxyz")
+
     def test_pdb_frame_set_selection_emits_each_model_once_with_exact_datasets(self):
         from ChemBlender.core import FrameSet, QCProject
         from ChemBlender.core.exporters import export_pdb
