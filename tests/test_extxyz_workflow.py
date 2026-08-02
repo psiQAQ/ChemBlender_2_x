@@ -22,6 +22,7 @@ from tests.test_project_browser_model import (
 MODULE = "ChemBlender.ui.export"
 MOL2_FIXTURES = Path(__file__).parent / "fixtures" / "mol2"
 PDB_FIXTURES = Path(__file__).parent / "fixtures" / "pdb"
+PQR_FIXTURES = Path(__file__).parent / "fixtures" / "pqr"
 
 
 def _mol2_project(*names):
@@ -41,6 +42,17 @@ def _pdb_project(*names):
 
     project = QCProject(uuid4(), "1.0")
     batches = tuple(parse_pdb(PDB_FIXTURES / name) for name in names)
+    for batch in batches:
+        project.commit(batch)
+    return project, batches
+
+
+def _pqr_project(*names):
+    from ChemBlender.core import QCProject
+    from ChemBlender.core.formats.pqr import parse_pqr
+
+    project = QCProject(uuid4(), "1.0")
+    batches = tuple(parse_pqr(PQR_FIXTURES / name) for name in names)
     for batch in batches:
         project.commit(batch)
     return project, batches
@@ -165,6 +177,142 @@ class ExtXYZWorkflowTests(unittest.TestCase):
             .keywords["default"]
         )
         self.assertIn("*.pdb", filter_glob.split(";"))
+
+    def test_pqr_is_a_public_export_choice_and_filter(self):
+        module = importlib.import_module(MODULE)
+
+        self.assertIn("pqr", {item[0] for item in module._FORMAT_ITEMS})
+        filter_glob = (
+            module.CHEMBLENDER_OT_export_project_entity
+            .__annotations__["filter_glob"]
+            .keywords["default"]
+        )
+        self.assertIn("*.pqr", filter_glob.split(";"))
+
+    def test_pqr_selection_reuses_biological_projection_and_core_preview(self):
+        from ChemBlender.core.exporters import preview_pqr_export
+
+        module = importlib.import_module(MODULE)
+        project, batches = _pqr_project("with-chain.pqr", "no-chain.pqr")
+        selected, unrelated = batches
+        selection = module.resolve_export_selection(
+            project,
+            selected.structures[0].id,
+        )
+        projection = module._pdb_entities(selection)
+
+        self.assertEqual(projection.structures, selected.structures)
+        self.assertEqual(
+            projection.biological_hierarchies,
+            selected.biological_hierarchies,
+        )
+        self.assertEqual(
+            {value.semantic_role for value in projection.datasets},
+            {"partial_charge", "radius"},
+        )
+        self.assertNotIn(unrelated.structures[0], projection.structures)
+        self.assertTrue(
+            all(
+                value.structure_id == selection.structure.id
+                for value in projection.datasets
+            )
+        )
+        self.assertEqual(
+            module.preview_export_selection(selection, "pqr"),
+            preview_pqr_export(projection),
+        )
+
+        missing_radius = replace(
+            selection,
+            properties=tuple(
+                value
+                for value in selection.properties
+                if getattr(value, "semantic_role", None) != "radius"
+            ),
+        )
+        with self.assertRaisesRegex(ValueError, "Radius|radius"):
+            module.preview_export_selection(missing_radius, "pqr")
+
+    def test_pqr_background_export_roundtrips_and_cancels_atomically(self):
+        from ChemBlender.core.formats.pqr import parse_pqr
+
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _pqr_project("with-chain.pqr")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            destination = root / "selected.pqr"
+            job = module.ExportJob(
+                destination,
+                selection,
+                format_name="pqr",
+                confirm_loss=True,
+                missing_value_token=None,
+            )
+            job.start()
+            self.assertTrue(job.join(5))
+            self.assertIsNone(job.error)
+            self.assertTrue(job.result.written)
+            reparsed = parse_pqr(destination)
+            self.assertEqual(
+                reparsed.structures[0].atomic_numbers,
+                selection.structure.atomic_numbers,
+            )
+            self.assertEqual(
+                {
+                    value.semantic_role
+                    for value in reparsed.datasets
+                },
+                {"partial_charge", "radius"},
+            )
+
+            destination.write_bytes(b"prior destination\n")
+            cancelled = module.ExportJob(
+                destination,
+                selection,
+                format_name="pqr",
+                confirm_loss=True,
+                missing_value_token=None,
+            )
+            cancelled.cancel()
+            cancelled.start()
+            self.assertTrue(cancelled.join(5))
+            self.assertIsInstance(cancelled.error, ExportCancelled)
+            self.assertEqual(destination.read_bytes(), b"prior destination\n")
+            self.assertEqual(tuple(root.iterdir()), (destination,))
+
+    def test_pqr_loss_preview_blocks_unconfirmed_background_write(self):
+        module = importlib.import_module(MODULE)
+        project, (batch,) = _pqr_project("with-chain.pqr")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+        selection = replace(
+            selection,
+            structure=replace(selection.structure, molecular_charge=0),
+        )
+        preview = module.preview_export_selection(selection, "pqr")
+        self.assertTrue(preview.requires_confirmation)
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "blocked.pqr"
+            job = module.ExportJob(
+                destination,
+                selection,
+                format_name="pqr",
+                confirm_loss=False,
+                missing_value_token=None,
+            )
+            job.start()
+            self.assertTrue(job.join(5))
+            self.assertIsNone(job.error)
+            self.assertFalse(job.result.written)
+            self.assertFalse(destination.exists())
 
     def test_mol2_selection_projects_only_the_selected_record(self):
         module = importlib.import_module(MODULE)

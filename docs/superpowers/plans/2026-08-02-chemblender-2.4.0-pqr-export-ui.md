@@ -73,29 +73,29 @@ Run the focused documentation module and `git diff --check`, then commit:
 `_FORMAT_ITEMS`, `*.pqr` to `filter_glob`, and dispatch preview with
 `preview_pqr_export(_pdb_entities(selection))`.
 
-- [ ] **Step 1: Write failing selection and format tests**
+- [x] **Step 1: Write failing selection and format tests**
 
 Add tests that select `tests/fixtures/pqr/with-chain.pqr`, assert the existing
 projection contains exactly one Structure, one matching hierarchy, complete
 `partial_charge` and `radius`, no unrelated sibling data, and prove `pqr` and
 `*.pqr` are currently absent.
 
-- [ ] **Step 2: Write failing preview tests**
+- [x] **Step 2: Write failing preview tests**
 
 Assert the UI preview equals `preview_pqr_export(_pdb_entities(selection))`,
 does not call `export_pqr`, preserves stable loss entries, and fails closed for
 missing/partial charge, radius or hierarchy.
 
-- [ ] **Step 3: Run RED**
+- [x] **Step 3: Run RED**
 
 Run the named new tests. Expected: enum/filter and preview unsupported failures.
 
-- [ ] **Step 4: Implement the minimal preview surface**
+- [x] **Step 4: Implement the minimal preview surface**
 
 Add only the import, tuple item, filter suffix, preview branch and shared
 allowed-format error text.
 
-- [ ] **Step 5: Run GREEN**
+- [x] **Step 5: Run GREEN**
 
 Run `tests.test_extxyz_workflow`, `tests.test_pqr_exporter` and
 `tests.test_pdb_export_readiness` with the installed extension shared dependency
@@ -111,23 +111,23 @@ path.
 `export_pqr(_pdb_entities(self.selection), confirm_loss=self.confirm_loss,
 destination=self.destination, is_cancelled=self._cancelled.is_set).report`.
 
-- [ ] **Step 1: Write job RED**
+- [x] **Step 1: Write job RED**
 
 Add tests proving the current job rejects `pqr`, loss-bearing output does not
 write without confirmation, confirmed output reparses through native
 `parse_pqr()`, and cancellation preserves an existing destination with no
 temporary sibling.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run the named job tests. Expected: unsupported `format_name` and no output.
 
-- [ ] **Step 3: Add one dispatch branch**
+- [x] **Step 3: Add one dispatch branch**
 
 Delegate to the core exporter and update only the shared allowed-format error.
 Do not catch fatal exceptions or duplicate atomic-write logic.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run workflow/PQR/registration tests and commit:
 `feat: add native PQR export UI`.
