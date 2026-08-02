@@ -1452,6 +1452,9 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-08-02-chemblender-2.4.0-task11-scope-discovery.md"
         )
+        intake_path = (
+            "docs/quantum-visualization/2.4.0/task11-candidate-intake.md"
+        )
         cube_cursor_path = ".agents/completed/2.4.0-cube-export-ui.md"
         self.assertTrue((ROOT / active_path).is_file(), active_path)
         self.assertFalse((ROOT / completed_path).exists(), completed_path)
@@ -1461,6 +1464,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         cursor = self.read_doc(active_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
+        intake = self.read_doc(intake_path)
         cube_cursor = self.read_doc(cube_cursor_path)
 
         for term in (
@@ -1471,6 +1475,9 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             plan_path,
             "Reader API v1 stable gate",
             "2.4.0 Final Qualification",
+            "Selection: `2.4.0 Final Qualification`",
+            intake_path,
+            "Reader API stable: `Deferred`",
             "No runtime implementation",
             "No push",
         ):
@@ -1502,6 +1509,20 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "ancestor",
         ):
             self.assertIn(term, cube_cursor)
+        for term in (
+            "Task 12 — 2.4.0 Final Qualification",
+            "Reader API v1 stable gate",
+            "Selected",
+            "Deferred",
+            "chemblender.reader.json",
+            "0 downloads",
+            "1.0-rc1",
+            "F5 / project_browser / preview_confirmation",
+            "do not combine",
+            "30755106798",
+            "30755106795",
+        ):
+            self.assertIn(term, intake)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
