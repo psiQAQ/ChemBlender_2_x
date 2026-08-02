@@ -200,7 +200,7 @@ unstarted. Run the documentation tests and commit as
 
 **Interfaces:** Leave no active cursor and exactly one queued implementation.
 
-- [ ] **Step 1: Run documentation/static qualification**
+- [x] **Step 1: Run documentation/static qualification**
 
 Run:
 
@@ -215,18 +215,18 @@ git diff --check
 Prove zero diff under `ChemBlender/`, `worker/`, `.github/`, manifest and
 CHANGELOG.
 
-- [ ] **Step 2: Run two independent reviews**
+- [x] **Step 2: Run two independent reviews**
 
 Review specification compliance and plan/code-quality correctness. Fix every
 Critical, Important and task-related Minor finding; rerun affected checks.
 
-- [ ] **Step 3: Write completion RED**
+- [x] **Step 3: Write completion RED**
 
 Change routing to no active cursor, queued Cube only, and require completed
 goal `CB240-TASK7-SCOPE-DISCOVERY`. Run the focused tests; expect failure/error
 until the completed cursor replaces the active cursor.
 
-- [ ] **Step 4: Checkpoint and commit**
+- [x] **Step 4: Checkpoint and commit**
 
 Record design/planning/selection/queue commits, RED/GREEN evidence, reviews,
 zero runtime diff and `Remote CI: Not Run`. Mark Tasks 1–5 checked and commit:
@@ -241,7 +241,7 @@ git add -- `
 git commit -m "chore: checkpoint Task 7 scope discovery"
 ```
 
-- [ ] **Step 5: Final verification and stop**
+- [x] **Step 5: Final verification and stop**
 
 Rerun the full documentation/static qualification and confirm a clean
 worktree. Do not activate or implement Cube export and do not push.
