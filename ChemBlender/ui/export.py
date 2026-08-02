@@ -15,6 +15,7 @@ from ..core import (
     ConformerSet,
     DatasetStatus,
     FrameSet,
+    Grid3D,
     MolecularRecord,
     Structure,
     TopologyRecord,
@@ -99,6 +100,7 @@ class ExportSelection:
     annotations: tuple = ()
     biological_hierarchies: tuple = ()
     associated_topologies: tuple = ()
+    grid: Grid3D | None = None
 
 
 def _with_structure_origin(project, selection):
@@ -286,6 +288,24 @@ def _pdb_entities(selection):
     )
 
 
+def _cube_entities(selection):
+    if selection.grid is None:
+        raise ValueError("Cube export requires a Grid3D selection")
+    charges = tuple(
+        value
+        for value in selection.properties
+        if isinstance(value, AtomicProperty)
+        and value.structure_id == selection.structure.id
+        and value.semantic_role == "nuclear_charge"
+    )
+    return SimpleNamespace(
+        structures=(selection.structure,),
+        datasets=(selection.grid, *charges),
+        provenance=selection.provenance,
+        topologies=selection.associated_topologies,
+    )
+
+
 def _extxyz_properties(selection):
     if selection.frame_set is None:
         return selection.properties
@@ -328,6 +348,36 @@ def resolve_export_selection(project, entity_id):
             _molecular_selection(project, structure, record=record),
         )
     frame_set = project.datasets.get(entity_id)
+    if isinstance(frame_set, Grid3D):
+        structure = project.structures.get(frame_set.structure_id)
+        if structure is None or structure.id != frame_set.structure_id:
+            raise ValueError("selected Grid3D has no matching Structure")
+        charges = tuple(
+            value
+            for value in project.datasets.values()
+            if isinstance(value, AtomicProperty)
+            and value.structure_id == structure.id
+            and value.semantic_role == "nuclear_charge"
+        )
+        provenance_ids = {
+            provenance_id
+            for value in (frame_set, *charges)
+            for provenance_id in value.provenance_ids
+        }
+        return _with_structure_origin(
+            project,
+            ExportSelection(
+                structure,
+                None,
+                charges,
+                provenance=tuple(
+                    value
+                    for value in project.provenance.values()
+                    if value.id in provenance_ids
+                ),
+                grid=frame_set,
+            ),
+        )
     if isinstance(frame_set, ConformerSet):
         structure = project.structures.get(frame_set.reference_structure_id)
         if structure is None:
