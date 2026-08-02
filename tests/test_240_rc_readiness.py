@@ -7,6 +7,7 @@ from ChemBlender.scripts.release_metadata import read_release_metadata
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = "2.4.0-rc.1"
+READINESS = ROOT / "docs/quantum-visualization/2.4.0/rc1-readiness.md"
 
 
 class ReleaseCandidateReadinessTests(unittest.TestCase):
@@ -52,6 +53,29 @@ class ReleaseCandidateReadinessTests(unittest.TestCase):
             "releases/tag/v2.4.0-rc.1",
             changelog,
         )
+
+    def test_local_readiness_records_exact_candidate_evidence_and_stop_boundary(self):
+        readiness = READINESS.read_text(encoding="utf-8")
+        for term in (
+            "State: `Passed`",
+            "`chemblender-2.4.0-rc.1.zip`",
+            "`chemblender-2.4.0-rc.1.sha256`",
+            "`chemblender-2.4.0-rc.1-windows-x64`",
+            "`55c35de04a52158900a208cab24ac311d3f3cfe1efe8e5ddb3168d6e3cde4775`",
+            "29,976,429 bytes",
+            "189 members",
+            "2,202 passed / 26 skipped / 0 failed",
+            "Blender 5.1.2",
+            "Prerelease validation probe: `Passed`",
+            "Package-CI artifact verification: `Passed`",
+            "Release-assets verification: `Passed`",
+            "Isolated installed-product smoke: `Passed`",
+            "Remote CI: `Not Run`",
+            "Annotated tag: `Not Run`",
+            "GitHub Release: `Not Run`",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, readiness)
 
 
 if __name__ == "__main__":

@@ -80,25 +80,25 @@ tests. Commit as `chore: prepare 2.4.0 release candidate`.
 - Modify: `.agents/active/2.4.0-rc1-preparation.md`
 - Modify: `tests/test_240_rc_readiness.py`
 
-- [ ] **Step 1: Run metadata, probe and release-note qualification**
+- [x] **Step 1: Run metadata, probe and release-note qualification**
 
 Require exact metadata JSON/channel, native prerelease validation probe, and
 byte-preserving production manifest behavior outside the intentional commit.
 
-- [ ] **Step 2: Run the full Python gate**
+- [x] **Step 2: Run the full Python gate**
 
 Run complete unittest discovery with the existing pinned dependency site,
 `compileall`, generated-document check and `git diff --check`. Do not turn a
 failure into a skip.
 
-- [ ] **Step 3: Validate/build/audit the committed RC tree**
+- [x] **Step 3: Validate/build/audit the committed RC tree**
 
 Use Blender 5.1.2 and the existing pinned wheels. Require native validate and
 build, exact ZIP/checksum names, ZIP path/CRC/member audit, dependency/license
 inventory, zero unexplained artifact growth and both package/release-assets
 verifier modes.
 
-- [ ] **Step 4: Run isolated installed-product smoke**
+- [x] **Step 4: Run isolated installed-product smoke**
 
 Install the exact RC ZIP under fresh `BLENDER_USER_RESOURCES`, run two
 lifecycle cycles and representative MOL2/PDB/PQR/Cube workflows. Record the
