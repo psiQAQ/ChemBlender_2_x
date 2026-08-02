@@ -180,6 +180,15 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
                 "maturity": "F5",
             },
         )
+        self.assertEqual(
+            by_id["pqr"]["export"],
+            {
+                "execution_mode": "core",
+                "format_id": "pqr",
+                "loss_policy": "preview_confirmation",
+                "maturity": "F5",
+            },
+        )
 
     def test_extensionless_reader_basenames_are_exact(self):
         document = reader_catalog.reader_capability_document()

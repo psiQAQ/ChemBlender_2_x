@@ -23,7 +23,7 @@
 | SMILES | 旧路径可生成结构 | F4/F5文本 | RDKit | canonical/isomeric、3D parameters、source text |
 | MOL2 | 未统一支持 | F5 core，显式 loss confirmation | 原生 | atom/bond/substructure/charge type、deterministic normalized writer |
 | PDB | 旧 RDKit浅支持 | F5，core export P1 | 原生 | ATOM/HETATM/MODEL/CONECT/CRYST1/altloc |
-| PQR | 未支持 | F4，export P1 | 原生 | charge/radius、optional chain、identity |
+| PQR | 未支持 | F5，core export P1 | 原生 | charge/radius、optional chain、identity |
 | CIF | Gemmi adapter可选，旧 parser基础 | F4/F5 controlled | Gemmi bundled | loops/occupancy/Uij/raw envelope/controlled export |
 | POSCAR/CONTCAR | 旧 parser/ASE optional | F5 | 原生 | scale、Direct/Cartesian、Selective Dynamics、basename sniff |
 | Cube | F2/F3强，缺 UI | F4 | 原生 + Blender OpenVDB | multi dataset、oblique grid、semantic confirmation、VDB/surface |
