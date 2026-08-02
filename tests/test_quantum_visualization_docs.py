@@ -1427,7 +1427,12 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Task 5 reviews: `Ready`",
             "30754668448",
             "30754668445",
-            "Remote CI: `Not Run`",
+            "PR #17",
+            "f63b0a5da47f76dd38f7cf5e79a39e99cf918005",
+            "30755106798",
+            "30755106795",
+            "73e774bb1da93bf009e8dedaa3e67f5860cf6722",
+            "Remote CI: `Passed`",
             selected_design_path,
             selected_plan_path,
             intake_path,
@@ -1447,6 +1452,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-08-02-chemblender-2.4.0-task11-scope-discovery.md"
         )
+        cube_cursor_path = ".agents/completed/2.4.0-cube-export-ui.md"
         self.assertTrue((ROOT / active_path).is_file(), active_path)
         self.assertFalse((ROOT / completed_path).exists(), completed_path)
         self.assertFalse(
@@ -1455,6 +1461,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         cursor = self.read_doc(active_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
+        cube_cursor = self.read_doc(cube_cursor_path)
 
         for term in (
             "CB240-TASK11-SCOPE-DISCOVERY",
@@ -1485,6 +1492,16 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Task 5: Verify, review and checkpoint",
         ):
             self.assertIn(term, plan)
+        for term in (
+            "PR #17",
+            "f63b0a5da47f76dd38f7cf5e79a39e99cf918005",
+            "30755106798",
+            "30755106795",
+            "73e774bb1da93bf009e8dedaa3e67f5860cf6722",
+            "Remote CI: `Passed`",
+            "ancestor",
+        ):
+            self.assertIn(term, cube_cursor)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
