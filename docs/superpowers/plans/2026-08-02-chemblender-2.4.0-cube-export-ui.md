@@ -123,13 +123,13 @@ Commit as `feat: resolve Cube export selections`.
 add an integer `cube_dataset_index` UI property with `-1` unset; extend
 `preview_export_selection(..., dataset_index=None)`.
 
-- [ ] **Step 1: Write format/filter RED**
+- [x] **Step 1: Write format/filter RED**
 
 Assert the target behavior: Cube is present in enum/filter and a selected
 `Grid3D` defaults to Cube. Expected RED: all three assertions fail on the
 baseline.
 
-- [ ] **Step 2: Write preview RED**
+- [x] **Step 2: Write preview RED**
 
 Assert scalar preview delegates with `dataset_index=None`; an unset
 multi-dataset selection opens the dialog, records `Select Dataset Index` and
@@ -137,7 +137,7 @@ does not call core preview; `execute()` while unset fails without writing.
 After explicit selection, preview matches `preview_cube_export()`. Patch
 `export_cube` and prove preview never writes.
 
-- [ ] **Step 3: Implement the UI-only choice**
+- [x] **Step 3: Implement the UI-only choice**
 
 Import `IntProperty` and `preview_cube_export`; add Cube format/filter/default;
 show `Dataset Index` only for a selected multi-dataset grid. During initial
@@ -145,7 +145,7 @@ show `Dataset Index` only for a selected multi-dataset grid. During initial
 non-invoke preview/execute paths convert it to missing selection and fail
 closed. Never infer zero. Keep scalar grids at `None`.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Run the new UI contract, Cube readiness/exporter and existing extXYZ workflow
 tests. Commit as `feat: add native Cube export preview`.
