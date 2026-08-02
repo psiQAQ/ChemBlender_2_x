@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-pqr-export.md",)
+NEXT_RELEASE_ACTIVE_FILES = ()
 NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
@@ -16,6 +16,7 @@ TASK3_SCOPE_COMPLETED_FILE = "2.4.0-task3-scope-discovery.md"
 PDB_EXPORT_COMPLETED_FILE = "2.4.0-pdb-export.md"
 TASK4_SCOPE_COMPLETED_FILE = "2.4.0-task4-scope-discovery.md"
 TASK5_SCOPE_COMPLETED_FILE = "2.4.0-task5-scope-discovery.md"
+PQR_EXPORT_COMPLETED_FILE = "2.4.0-pqr-export.md"
 WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 WAVE_230_FINAL_COMPLETED_FILE = "2.3.0-wave-4-migration-release.md"
 
@@ -979,14 +980,17 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "2026-08-02-chemblender-2.4.0-pqr-export.md"
         )
         active_path = ".agents/active/2.4.0-pqr-export.md"
+        pqr_completed_path = f".agents/completed/{PQR_EXPORT_COMPLETED_FILE}"
         discovery_queued_path = ".agents/queued/2.4.0-pqr-export.md"
         contract_path = "docs/quantum-visualization/2.4.0/pqr-export-contract.md"
         completed_path = f".agents/completed/{TASK5_SCOPE_COMPLETED_FILE}"
+        self.assertFalse((ROOT / active_path).exists(), active_path)
+        self.assertTrue((ROOT / pqr_completed_path).is_file(), pqr_completed_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
         intake = self.read_doc(intake_path)
         selected_plan = self.read_doc(selected_plan_path)
-        active = self.read_doc(active_path)
+        pqr_completed = self.read_doc(pqr_completed_path)
         contract = self.read_doc(contract_path)
         completed = self.read_doc(completed_path)
 
@@ -1049,13 +1053,18 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             self.assertIn(term, selected_plan)
         for term in (
             "CB240-PQR-EXPORT-T5",
-            "State: `in_progress`",
-            "Task 1 — Freeze native PQR export contract",
+            "State: `completed`",
+            "Task 5 — Local qualification checkpoint complete",
+            "Task 6 — Exact-head remote integration gate",
+            "e713363619faf5d9b2dccbea00c1cce9713b4969",
+            "92 Passed",
+            "2156 Passed / 26 Skipped / 0 Failed",
+            "Remote CI: `Not Run`",
             selected_plan_path,
             intake_path,
             "PQR UI remains unstarted",
         ):
-            self.assertIn(term, active)
+            self.assertIn(term, pqr_completed)
         for term in (
             "preview_pqr_export",
             "export_pqr",
