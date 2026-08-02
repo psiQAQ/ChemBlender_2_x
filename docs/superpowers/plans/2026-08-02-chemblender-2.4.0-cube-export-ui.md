@@ -224,24 +224,24 @@ Run UI/Cube/generated-doc/registration/smoke source contracts. Commit as
 **Interfaces:** No model or Reader API addition. Persist local completion
 evidence before remote integration.
 
-- [ ] **Step 1: Run local qualification**
+- [x] **Step 1: Run local qualification**
 
 Run focused tests, full unittest discovery, `compileall`, generated-doc check,
 optional-import audit and `git diff --check`.
 
-- [ ] **Step 2: Run Blender qualification**
+- [x] **Step 2: Run Blender qualification**
 
 Run native preflight, validate/build, exact ZIP audit, isolated install,
 selected-grid Cube Project Browser export/re-import and lifecycle twice with
 Blender 5.1.2.
 
-- [ ] **Step 3: Run two independent reviews**
+- [x] **Step 3: Run two independent reviews**
 
 Run specification-compliance and code-quality/correctness/security reviews.
 Fix all Critical, Important and task-related Minor findings and rerun affected
 checks.
 
-- [ ] **Step 4: Checkpoint**
+- [x] **Step 4: Checkpoint**
 
 Record exact RED/GREEN/Blender/review evidence, move the cursor to completed,
 mark Tasks 0-5 checked and commit as

@@ -10,7 +10,7 @@ WAVE_230_ACTIVE_FILES = ()
 TASK9_SCOPE_ACTIVE_FILE = "2.4.0-task9-scope-discovery.md"
 TASK9_SCOPE_COMPLETED_FILE = "2.4.0-task9-scope-discovery.md"
 CUBE_EXPORT_UI_CURSOR_FILE = "2.4.0-cube-export-ui.md"
-NEXT_RELEASE_ACTIVE_FILES = (CUBE_EXPORT_UI_CURSOR_FILE,)
+NEXT_RELEASE_ACTIVE_FILES = ()
 NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
@@ -1309,7 +1309,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         )
         queued_path = f".agents/queued/{CUBE_EXPORT_UI_CURSOR_FILE}"
         selected_cursor_path = (
-            f".agents/active/{CUBE_EXPORT_UI_CURSOR_FILE}"
+            f".agents/completed/{CUBE_EXPORT_UI_CURSOR_FILE}"
         )
         self.assertFalse((ROOT / active_path).exists(), active_path)
         self.assertFalse((ROOT / queued_path).exists(), queued_path)
@@ -1402,8 +1402,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             self.assertIn(term, selected_plan)
         for term in (
             "CB240-CUBE-EXPORT-UI-T10",
-            "State: `in_progress`",
-            "Task 5 — Full qualification, reviews and checkpoint",
+            "State: `completed`",
+            "Task 6 — Exact-head remote integration gate",
             "00e7c6548a555813cfefc97fd00341e6f0ec27d8",
             "codex/2.4.0-cube-export-ui",
             "Task 0 activation: `Passed`",
@@ -1416,6 +1416,12 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Task 3 review: `Ready`",
             "4d6e97a772b2b5225b81a92be22968539cefa69a",
             "Task 4 review: `Ready`",
+            "a2bc97fd26bec51b35df1012695a43b0a08218d5",
+            "5fead06f2a3d1643d2fb3fd87706b495aabbe036",
+            "2198 Passed / 26 Skipped / 0 Failed",
+            "67dc72512bcd953914e4bf00caf571f93e302f587f16225f8b9460a0e7e96f51",
+            "Task 5 reviews: `Ready`",
+            "Remote CI: `Not Run`",
             selected_design_path,
             selected_plan_path,
             intake_path,
