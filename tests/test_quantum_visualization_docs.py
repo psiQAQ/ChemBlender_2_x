@@ -1370,6 +1370,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         ):
             self.assertIn(term, selected_design)
         for term in (
+            "Task 0: Activate the queued implementation",
             "Task 1: Resolve selected Grid3D export context",
             "Task 2: Add Cube format, dataset choice and preview",
             "Task 3: Dispatch cancellable atomic Cube export",
@@ -1384,7 +1385,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for term in (
             "CB240-CUBE-EXPORT-UI-T10",
             "State: `not_started`",
-            "Task 1 — Resolve selected Grid3D export context",
+            "Task 0 — Activate the queued implementation",
             selected_design_path,
             selected_plan_path,
             intake_path,

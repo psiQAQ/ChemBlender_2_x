@@ -20,8 +20,11 @@ reader/exporter, Blender 5.1.2 Extensions.
 
 ## Global Constraints
 
-- Baseline is ordinary Cube core merge
-  `cd265d95c3cc73cae5355657cc0a5a8f1931d98b`.
+- The ordinary Cube core merge
+  `cd265d95c3cc73cae5355657cc0a5a8f1931d98b` must be an ancestor. The
+  implementation baseline is the then-current `origin/main` recorded by Task 0
+  after Task 9 integration; do not hardcode the older merge as the new branch
+  baseline.
 - Follow
   `docs/superpowers/specs/2026-08-02-chemblender-2.4.0-cube-export-ui-design.md`.
 - Reuse the existing operator, `ExportSelection`, preview and `ExportJob`.
@@ -30,6 +33,37 @@ reader/exporter, Blender 5.1.2 Extensions.
 - Do not begin Reader API v1 stable, Final Qualification, tag or Release work.
 
 ---
+
+### Task 0: Activate the queued implementation
+
+**Files:**
+- Delete: `.agents/queued/2.4.0-cube-export-ui.md`
+- Create: `.agents/active/2.4.0-cube-export-ui.md`
+- Modify: `tests/test_quantum_visualization_docs.py`
+
+**Interfaces:** Create the implementation branch from live `origin/main` and
+persist its exact baseline before any runtime edit.
+
+- [ ] **Step 1: Verify the activation gate**
+
+Fetch read-only state, require a clean worktree, prove Task 9 is integrated and
+`cd265d9...` is an ancestor of live `origin/main`, and confirm no competing
+active task.
+
+- [ ] **Step 2: Create the implementation branch/worktree**
+
+Create an isolated `codex/2.4.0-cube-export-ui` worktree from live
+`origin/main`. Do not reuse the discovery branch or rewrite history.
+
+- [ ] **Step 3: Move queued to active and write routing RED/GREEN**
+
+Move the cursor, record the actual full baseline SHA, preserve goal
+`CB240-CUBE-EXPORT-UI-T10`, and update the documentation routing contract.
+
+- [ ] **Step 4: Commit activation**
+
+Run the focused documentation test and `git diff --check`; commit as
+`docs: activate native Cube export UI`. Only then begin Task 1.
 
 ### Task 1: Resolve selected Grid3D export context
 
@@ -43,10 +77,11 @@ reader/exporter, Blender 5.1.2 Extensions.
 
 - [ ] **Step 1: Write selection RED**
 
-Parse `tests/fixtures/cube/sheared.cube` and a second unrelated Cube into one
-project. Select the first grid UUID and assert exact linked Structure, selected
-grid, one matching complete `nuclear_charge`, direct provenance and associated
-topology only. Assert unrelated sibling grids/charges are excluded.
+Parse `tests/fixtures/cube/sheared.cube`, then add both an unrelated Cube and a
+second `Grid3D` with the selected grid's same `structure_id`. Select the first
+grid UUID and assert exact linked Structure, selected grid, all matching
+`nuclear_charge` candidates, direct provenance and associated topology only.
+Assert both unrelated and same-Structure sibling grids are excluded.
 
 - [ ] **Step 2: Write fail-closed RED**
 
@@ -86,20 +121,25 @@ add an integer `cube_dataset_index` UI property with `-1` unset; extend
 
 - [ ] **Step 1: Write format/filter RED**
 
-Assert Cube is absent from the current enum/filter and a selected grid does not
-default to Cube.
+Assert the target behavior: Cube is present in enum/filter and a selected
+`Grid3D` defaults to Cube. Expected RED: all three assertions fail on the
+baseline.
 
 - [ ] **Step 2: Write preview RED**
 
-Assert scalar preview delegates with `dataset_index=None`; multi-dataset
-preview fails while unset and matches `preview_cube_export()` after explicit
-selection. Patch `export_cube` and prove preview never writes.
+Assert scalar preview delegates with `dataset_index=None`; an unset
+multi-dataset selection opens the dialog, records `Select Dataset Index` and
+does not call core preview; `execute()` while unset fails without writing.
+After explicit selection, preview matches `preview_cube_export()`. Patch
+`export_cube` and prove preview never writes.
 
 - [ ] **Step 3: Implement the UI-only choice**
 
 Import `IntProperty` and `preview_cube_export`; add Cube format/filter/default;
-show `Dataset Index` only for a selected multi-dataset grid. Convert `-1` to
-`None`; never infer zero. Keep scalar grids at `None`.
+show `Dataset Index` only for a selected multi-dataset grid. During initial
+`invoke()`, keep `-1` as an incomplete dialog state and skip core preview; all
+non-invoke preview/execute paths convert it to missing selection and fail
+closed. Never infer zero. Keep scalar grids at `None`.
 
 - [ ] **Step 4: Run GREEN and commit**
 
@@ -173,37 +213,31 @@ Run UI/Cube/generated-doc/registration/smoke source contracts. Commit as
 
 **Files:**
 - Modify only in-scope files required by findings
-- Move: `.agents/queued/2.4.0-cube-export-ui.md`
-- Create: `.agents/active/2.4.0-cube-export-ui.md`
+- Delete: `.agents/active/2.4.0-cube-export-ui.md`
 - Create: `.agents/completed/2.4.0-cube-export-ui.md`
 - Modify: `docs/superpowers/plans/2026-08-02-chemblender-2.4.0-cube-export-ui.md`
 
 **Interfaces:** No model or Reader API addition. Persist local completion
 evidence before remote integration.
 
-- [ ] **Step 1: Activate from the queued cursor**
-
-On a clean branch from current `origin/main`, atomically move the queued cursor
-to active, record the actual baseline and commit activation before runtime work.
-
-- [ ] **Step 2: Run local qualification**
+- [ ] **Step 1: Run local qualification**
 
 Run focused tests, full unittest discovery, `compileall`, generated-doc check,
 optional-import audit and `git diff --check`.
 
-- [ ] **Step 3: Run Blender qualification**
+- [ ] **Step 2: Run Blender qualification**
 
 Run native preflight, validate/build, exact ZIP audit, isolated install,
 selected-grid Cube Project Browser export/re-import and lifecycle twice with
 Blender 5.1.2.
 
-- [ ] **Step 4: Run two independent reviews**
+- [ ] **Step 3: Run two independent reviews**
 
 Run specification-compliance and code-quality/correctness/security reviews.
 Fix all Critical, Important and task-related Minor findings and rerun affected
 checks.
 
-- [ ] **Step 5: Checkpoint**
+- [ ] **Step 4: Checkpoint**
 
 Record exact RED/GREEN/Blender/review evidence, move the cursor to completed,
 mark Tasks 1-5 checked and commit as

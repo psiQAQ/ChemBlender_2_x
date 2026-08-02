@@ -28,7 +28,8 @@ Reuse `ChemBlender.ui.export`. Extend `ExportSelection` with one optional
 
 - the selected grid;
 - its exact linked `Structure`;
-- the single matching `nuclear_charge` `AtomicProperty`;
+- all matching `nuclear_charge` `AtomicProperty` candidates, so the core
+  readiness boundary still detects missing or ambiguous charges;
 - direct provenance needed by the core writer;
 - topology context already used for loss reporting.
 
@@ -46,14 +47,18 @@ serializer, model or generic export abstraction.
 2. Default format becomes `cube`; the filter includes `*.cube`.
 3. Scalar grids pass `dataset_index=None`.
 4. Multi-dataset grids expose one integer `Dataset Index` field. Its initial
-   value is `-1`, meaning not selected; the core preview rejects it until the
-   user supplies an explicit zero-based index. This is an explicit dataset index,
-   never a default selection.
-5. `preview_export_selection()` delegates to `preview_cube_export()` and shows
+   value is `-1`, meaning not selected. On first `invoke()`, this incomplete UI
+   state opens the existing file dialog with a `Select Dataset Index` message
+   instead of calling the core preview and cancelling the dialog. This is an
+   explicit dataset index, never a default selection.
+5. Property updates call the core preview once the index is valid. `execute()`
+   always rejects `-1` or an out-of-range index, so the incomplete invoke state
+   can never publish output.
+6. `preview_export_selection()` delegates to `preview_cube_export()` and shows
    the existing loss messages and confirmation checkbox.
-6. `ExportJob` delegates to `export_cube()` with the same projection, selected
+7. `ExportJob` delegates to `export_cube()` with the same projection, selected
    index, destination, confirmation and cancellation callback.
-7. The capability catalog changes to `project_browser` only after installed
+8. The capability catalog changes to `project_browser` only after installed
    Blender export and native `parse_cube()` re-import succeed.
 
 The `-1` sentinel is UI state only and is converted to `None`; it never enters
@@ -66,7 +71,11 @@ index state and always passes `None`.
 - Missing/cross-linked Structure or nuclear charge fails closed.
 - More than one matching charge property fails closed; the UI never chooses
   among ambiguous scientific entities.
+- Another `Grid3D` linked to the same Structure is excluded unless it is the
+  selected grid; the UI must not recreate the core `grid.ambiguous` condition.
 - Multi-dataset export never silently selects index zero.
+- The incomplete `-1` invoke state may open the dialog but cannot execute or
+  create/replace a destination.
 - Loss-bearing output requires the existing exact confirmation bool.
 - Cancellation and failure preserve an existing destination and leave no
   temporary sibling.
