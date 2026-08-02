@@ -192,6 +192,8 @@ used or modified.
 | Final code-quality/security/scientific review | `Ready` — no remaining Critical, Important or task-related Minor |
 | Final full Python qualification | `2200 Passed / 26 Skipped / 0 Failed` |
 | Final focused Cube/artifact/docs suite | `44 Passed` |
+| Exact-head CI attempt 1 | `0392f35153800384545a3dc3e53cb446b47eafa9`: optional integrations Passed; package metadata Failed after product checks Passed |
+| CI fix | restored standard Windows-checkout unpacked baselines; compressed package baseline unchanged |
 | Remote exact-head CI | Pending — after the local checkpoint |
 
 ## Stop boundary
