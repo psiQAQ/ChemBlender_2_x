@@ -10,8 +10,11 @@ WAVE_230_ACTIVE_FILES = ()
 TASK9_SCOPE_ACTIVE_FILE = "2.4.0-task9-scope-discovery.md"
 TASK9_SCOPE_COMPLETED_FILE = "2.4.0-task9-scope-discovery.md"
 CUBE_EXPORT_UI_CURSOR_FILE = "2.4.0-cube-export-ui.md"
+TASK11_SCOPE_ACTIVE_FILE = "2.4.0-task11-scope-discovery.md"
+TASK11_SCOPE_COMPLETED_FILE = "2.4.0-task11-scope-discovery.md"
+FINAL_QUALIFICATION_CURSOR_FILE = "2.4.0-final-qualification.md"
 NEXT_RELEASE_ACTIVE_FILES = ()
-NEXT_RELEASE_QUEUED_FILES = ()
+NEXT_RELEASE_QUEUED_FILES = (FINAL_QUALIFICATION_CURSOR_FILE,)
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
@@ -1424,7 +1427,12 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Task 5 reviews: `Ready`",
             "30754668448",
             "30754668445",
-            "Remote CI: `Not Run`",
+            "PR #17",
+            "f63b0a5da47f76dd38f7cf5e79a39e99cf918005",
+            "30755106798",
+            "30755106795",
+            "73e774bb1da93bf009e8dedaa3e67f5860cf6722",
+            "Remote CI: `Passed`",
             selected_design_path,
             selected_plan_path,
             intake_path,
@@ -1432,6 +1440,148 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Final Qualification remains unstarted",
         ):
             self.assertIn(term, selected_cursor)
+
+    def test_240_task11_scope_discovery_is_recoverable(self):
+        active_path = f".agents/active/{TASK11_SCOPE_ACTIVE_FILE}"
+        completed_path = f".agents/completed/{TASK11_SCOPE_COMPLETED_FILE}"
+        design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-02-chemblender-2.4.0-task11-scope-discovery-design.md"
+        )
+        plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-task11-scope-discovery.md"
+        )
+        intake_path = (
+            "docs/quantum-visualization/2.4.0/task11-candidate-intake.md"
+        )
+        selected_design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-02-chemblender-2.4.0-final-qualification-design.md"
+        )
+        selected_plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-final-qualification.md"
+        )
+        queued_path = (
+            f".agents/queued/{FINAL_QUALIFICATION_CURSOR_FILE}"
+        )
+        cube_cursor_path = ".agents/completed/2.4.0-cube-export-ui.md"
+        self.assertFalse((ROOT / active_path).exists(), active_path)
+        self.assertTrue((ROOT / completed_path).is_file(), completed_path)
+        self.assertTrue((ROOT / queued_path).is_file(), queued_path)
+        cursor = self.read_doc(completed_path)
+        design = self.read_doc(design_path)
+        plan = self.read_doc(plan_path)
+        intake = self.read_doc(intake_path)
+        selected_design = self.read_doc(selected_design_path)
+        selected_plan = self.read_doc(selected_plan_path)
+        queued = self.read_doc(queued_path)
+        cube_cursor = self.read_doc(cube_cursor_path)
+
+        for term in (
+            "CB240-TASK11-SCOPE-DISCOVERY",
+            "State: `completed`",
+            "Current task: `Task 11 Scope Discovery checkpoint complete`",
+            "73e774bb1da93bf009e8dedaa3e67f5860cf6722",
+            design_path,
+            plan_path,
+            "Reader API v1 stable gate",
+            "2.4.0 Final Qualification",
+            "Selection: `2.4.0 Final Qualification`",
+            intake_path,
+            "Reader API stable: `Deferred`",
+            selected_plan_path,
+            queued_path,
+            "072f5fe108bb70e80c4306e6c84e5a050efe4ffc",
+            "2bb6b2a7fc6a0c8f9c8dea56a1c10b246888a298",
+            "1bab04155aeeaaed534f3902b8ab336ab96a2e83",
+            "85368c86632ac5015ecf0a53a93b62222bb2da20",
+            "f540bebb9ef97da3eb458d9ebab4dd91a4f84fce",
+            "3e39a85e507d4749b51c3f3eed8c1fa7df7088ea",
+            "43 Passed",
+            "UTF-8/no-BOM",
+            "zero runtime diff",
+            "Remote CI: `Not Run`",
+            "Task 0 — Activate the queued qualification",
+            "No runtime implementation",
+            "No push",
+        ):
+            self.assertIn(term, cursor)
+        for term in (
+            "Selected: 2.4.0 Final Qualification",
+            "Deferred: Reader API v1 stable gate",
+            "PR #17",
+            "f63b0a5da47f76dd38f7cf5e79a39e99cf918005",
+            "30755106798",
+            "30755106795",
+        ):
+            self.assertIn(term, design)
+        for term in (
+            "Task 1: Persist the Task 11 discovery boundary",
+            "Task 2: Freeze Native Cube Export UI remote evidence",
+            "Task 3: Audit and select one candidate",
+            "Task 4: Queue 2.4.0 Final Qualification",
+            "Task 5: Verify, review and checkpoint",
+        ):
+            self.assertIn(term, plan)
+        for term in (
+            "PR #17",
+            "f63b0a5da47f76dd38f7cf5e79a39e99cf918005",
+            "30755106798",
+            "30755106795",
+            "73e774bb1da93bf009e8dedaa3e67f5860cf6722",
+            "Remote CI: `Passed`",
+            "ancestor",
+        ):
+            self.assertIn(term, cube_cursor)
+        for term in (
+            "Task 12 — 2.4.0 Final Qualification",
+            "Reader API v1 stable gate",
+            "Selected",
+            "Deferred",
+            "chemblender.reader.json",
+            "0 downloads",
+            "1.0-rc1",
+            "F5 / project_browser / preview_confirmation",
+            "do not combine",
+            "30755106798",
+            "30755106795",
+        ):
+            self.assertIn(term, intake)
+        for term in (
+            "Preserve Reader API `1.0-rc1`",
+            "No new capability",
+            "committed tree",
+            "Blender 5.1.2",
+            "exact-head CI",
+            "ordinary merge commit",
+        ):
+            self.assertIn(term, selected_design)
+        for term in (
+            "Task 0: Activate the queued qualification",
+            "Task 1: Audit frozen public and scientific boundaries",
+            "Task 2: Run complete Python and dependency qualification",
+            "Task 3: Rebuild and audit the committed extension artifact",
+            "Task 4: Run Blender product qualification",
+            "Task 5: Review, checkpoint and exact-head remote gate",
+            "1.0-rc1",
+            "version",
+            "tag",
+            "Release",
+        ):
+            self.assertIn(term, selected_plan)
+        for term in (
+            "CB240-FINAL-QUALIFICATION-T12",
+            "State: `not_started`",
+            "Task 0 — Activate the queued qualification",
+            "85368c86632ac5015ecf0a53a93b62222bb2da20",
+            selected_design_path,
+            selected_plan_path,
+            "Reader API `1.0-rc1`",
+            "No version, tag or Release",
+        ):
+            self.assertIn(term, queued)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
