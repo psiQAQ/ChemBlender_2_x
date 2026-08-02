@@ -47,13 +47,13 @@ Run `git diff --check` and commit the plan plus active cursor as
 - Consumes: final qualification evidence, merged capabilities, manifest and release automation.
 - Produces: a checked release-scope/evidence record with no runtime change.
 
-- [ ] **Step 1: Write documentation RED**
+- [x] **Step 1: Write documentation RED**
 
 Require the record to name `2.4.0-rc.1`, stable `2.4.0`, frozen capabilities,
 Reader API `1.0-rc1`, PR #19, both exact-head workflow runs and the ordinary
 merge SHA. Require manifest/version/tag/Release to remain unchanged.
 
-- [ ] **Step 2: Run the focused failing test**
+- [x] **Step 2: Run the focused failing test**
 
 Run:
 
@@ -64,12 +64,12 @@ Run:
 
 The expected RED is the missing evidence document and active-cursor terms.
 
-- [ ] **Step 3: Add the minimum evidence record**
+- [x] **Step 3: Add the minimum evidence record**
 
 Document only verified scope, live integration evidence, release stages,
 failure policy and explicit stop boundaries. Do not duplicate release scripts.
 
-- [ ] **Step 4: Run focused GREEN and commit**
+- [x] **Step 4: Run focused GREEN and commit**
 
 Run the focused test and `git diff --check`. Commit as
 `docs: freeze 2.4.0 release train`.

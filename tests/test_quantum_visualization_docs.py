@@ -1852,5 +1852,51 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 self.assertTrue(target.exists(), f"{path}: {destination}")
 
 
+class ReleasePlanningContractTests(unittest.TestCase):
+    def read_doc(self, relative_path: str) -> str:
+        path = ROOT / relative_path
+        raw = path.read_bytes()
+        self.assertFalse(raw.startswith(b"\xef\xbb\xbf"), path)
+        return raw.decode("utf-8")
+
+    def test_release_planning_is_routed_and_records_exact_evidence(self):
+        active = ROOT / ".agents/active/2.4.0-release-planning.md"
+        completed = ROOT / ".agents/completed/2.4.0-release-planning.md"
+        evidence_path = ROOT / "docs/quantum-visualization/2.4.0/release-planning.md"
+        self.assertEqual(1, sum(path.is_file() for path in (active, completed)))
+        self.assertTrue(evidence_path.is_file(), evidence_path)
+        cursor_path = active if active.is_file() else completed
+        cursor = self.read_doc(str(cursor_path.relative_to(ROOT)))
+        evidence = self.read_doc(
+            str(evidence_path.relative_to(ROOT))
+        )
+
+        for term in (
+            "CB240-RELEASE-PLANNING",
+            "98b4da6e13e28fa95c7abdc52494dd4aa7e1e86e",
+            "30759984026",
+            "30759984023",
+            "9763d2afbb38a68061161a855ec333ce0e970fe4",
+            "Reader API",
+            "1.0-rc1",
+        ):
+            self.assertIn(term, cursor)
+        for term in (
+            "2.4.0-rc.1",
+            "Stable `2.4.0`",
+            "MOL2",
+            "PDB",
+            "PQR",
+            "Cube",
+            "PR #19",
+            "30759984026",
+            "30759984023",
+            "9763d2afbb38a68061161a855ec333ce0e970fe4",
+            "Reader API `1.0-rc1`",
+            "explicit tag/Release authorization",
+        ):
+            self.assertIn(term, evidence)
+
+
 if __name__ == "__main__":
     unittest.main()
