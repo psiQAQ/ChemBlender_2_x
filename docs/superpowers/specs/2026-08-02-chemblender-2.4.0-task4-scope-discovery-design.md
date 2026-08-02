@@ -36,7 +36,7 @@ This discovery produces planning and recovery artifacts only:
 
 | Candidate | Existing evidence | Primary risk |
 | --- | --- | --- |
-| PDB Export UI | core PDB writer and loss preview are F5; the shared Project Browser export lifecycle is proven | selecting exactly one Structure, hierarchy, related datasets and source metadata |
+| PDB Export UI | core PDB writer and loss preview are F5; the shared Project Browser export lifecycle is proven | selecting exactly one Structure, optional topology, and exact hierarchy/dataset projection |
 | Native PQR export | frozen PQR readiness contract and native reader fixtures | mandatory charge/radius, single-Structure whitespace dialect |
 | Native Cube export | mature Structure/Grid3D import and derived-cache boundary | no writer/readiness contract; multi-dataset and native-unit policy |
 | Reader API v1 stable gate | `1.0-rc1` snapshot and conformance suite | premature compatibility promise without external adopter evidence |
@@ -50,9 +50,10 @@ publication. The implementation should reuse that operator and the existing
 `preview_pdb_export()` / `export_pdb()` core boundary.
 
 The UI needs only a selected-entity projection containing one Structure, its
-one BiologicalHierarchy, related datasets, topology/source/revision context,
-plus one preview and job dispatch branch. It must not create a PDB-specific
-operator, model, writer, registration root or lifecycle.
+one BiologicalHierarchy, related datasets and optional topology, plus one
+preview and job dispatch branch. Source ordering metadata is unnecessary for a
+single selected Structure and remains outside the UI projection. It must not
+create a PDB-specific operator, model, writer, registration root or lifecycle.
 
 ## Selection method
 

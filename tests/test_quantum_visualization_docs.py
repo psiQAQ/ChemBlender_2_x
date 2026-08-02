@@ -7,8 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-task4-scope-discovery.md",)
-NEXT_RELEASE_QUEUED_FILES = ()
+NEXT_RELEASE_ACTIVE_FILES = ()
+NEXT_RELEASE_QUEUED_FILES = ("2.4.0-pdb-export-ui.md",)
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
@@ -865,6 +865,9 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             self.assertIn(term, completed)
 
     def test_240_task4_scope_discovery_is_recoverable(self):
+        intake_path = (
+            "docs/quantum-visualization/2.4.0/task4-candidate-intake.md"
+        )
         design_path = (
             "docs/superpowers/specs/"
             "2026-08-02-chemblender-2.4.0-task4-scope-discovery-design.md"
@@ -873,10 +876,18 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "docs/superpowers/plans/"
             "2026-08-02-chemblender-2.4.0-task4-scope-discovery.md"
         )
-        cursor_path = ".agents/active/2.4.0-task4-scope-discovery.md"
+        selected_plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-pdb-export-ui.md"
+        )
+        cursor_path = ".agents/completed/2.4.0-task4-scope-discovery.md"
+        queued_path = ".agents/queued/2.4.0-pdb-export-ui.md"
+        intake = self.read_doc(intake_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
+        selected_plan = self.read_doc(selected_plan_path)
         cursor = self.read_doc(cursor_path)
+        queued = self.read_doc(queued_path)
 
         for term in (
             "PDB Export UI",
@@ -894,17 +905,54 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         ):
             self.assertIn(term, plan)
         for term in (
+            "PDB: F5 / core / preview_confirmation",
+            "PDB UI: absent",
+            "PQR: F0",
+            "Cube: F0",
+            "Reader API: 1.0-rc1",
+            "Task 4 — PDB Export UI",
+            "PQR: deferred",
+            "Cube: deferred",
+            "Reader API stable: deferred",
+        ):
+            self.assertIn(term, intake)
+        for term in (
+            "_pdb_entities",
+            "selection.frame_set",
+            "all `MODEL` blocks",
+            "no duplicate base frame",
+            "preview_pdb_export",
+            "export_pdb",
+            "No new operator",
+            "Task 7: Remote integration gate",
+        ):
+            self.assertIn(term, selected_plan)
+        for term in (
             "CB240-TASK4-SCOPE-DISCOVERY",
-            "State: `in_progress`",
+            "State: `completed`",
             "79a93f52053fdf809c28c24800366010577a1984",
             "2995386744768b424e8276db7cd72a90154edf25",
             "30724971581",
             "30724971598",
+            "c613edfdbf4b299a7c44d3d288c8484c0545f6e6",
             design_path,
             plan_path,
+            intake_path,
+            selected_plan_path,
+            queued_path,
+            "Selection: `PDB Export UI`",
+            "zero runtime diff",
+            "Remote CI: `Not Run`",
             "PDB UI runtime implementation remains unstarted",
         ):
             self.assertIn(term, cursor)
+        for term in (
+            "CB240-PDB-EXPORT-UI-T4",
+            "State: `not_started`",
+            selected_plan_path,
+            "Task 4 — PDB Export UI",
+        ):
+            self.assertIn(term, queued)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (

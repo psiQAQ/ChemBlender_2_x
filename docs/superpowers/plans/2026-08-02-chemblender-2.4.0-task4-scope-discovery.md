@@ -52,12 +52,12 @@ read-only.
 dispatch, PDB/PQR readiness, Cube contracts and Reader API policy. Produce one
 auditable selection.
 
-- [ ] Confirm PR #11, exact feature head, two exact-head runs, merge commit and
+- [x] Confirm PR #11, exact feature head, two exact-head runs, merge commit and
   ancestry live.
-- [ ] Confirm PDB is core-only F5 and absent from `_FORMAT_ITEMS`; confirm PQR
+- [x] Confirm PDB is core-only F5 and absent from `_FORMAT_ITEMS`; confirm PQR
   and Cube are F0 and Reader API is `1.0-rc1`.
-- [ ] Record separate facts, inference, recommendation and deferral reasons.
-- [ ] Select exactly one bounded implementation or explicitly select none.
+- [x] Record separate facts, inference, recommendation and deferral reasons.
+- [x] Select exactly one bounded implementation or explicitly select none.
 
 ### Task 3: Queue the selected implementation
 
@@ -70,11 +70,11 @@ auditable selection.
 points, RED/GREEN commands, Blender verification, reviews, commits, remote gate
 and stop boundary. Runtime stays untouched.
 
-- [ ] Add the selection/queue documentation RED.
-- [ ] Write the minimum implementation design into the plan; reuse existing
+- [x] Add the selection/queue documentation RED.
+- [x] Write the minimum implementation design into the plan; reuse existing
   code paths and add no speculative abstraction.
-- [ ] Set the queued cursor to `State: not_started`.
-- [ ] Keep all deferred candidates unstarted.
+- [x] Set the queued cursor to `State: not_started`.
+- [x] Keep all deferred candidates unstarted.
 
 ### Task 4: Verify and checkpoint
 
@@ -85,12 +85,12 @@ and stop boundary. Runtime stays untouched.
 
 **Interfaces:** Leave no active cursor and exactly one queued implementation.
 
-- [ ] Run focused documentation and generated-capability tests.
-- [ ] Run `python -m compileall -q tests`, UTF-8/no-BOM audit and
+- [x] Run focused documentation and generated-capability tests.
+- [x] Run `python -m compileall -q tests`, UTF-8/no-BOM audit and
   `git diff --check`.
-- [ ] Prove zero runtime/dependency/manifest/workflow/version diff.
-- [ ] Obtain an independent read-only documentation review and fix every
+- [x] Prove zero runtime/dependency/manifest/workflow/version diff.
+- [x] Obtain an independent read-only documentation review and fix every
   Critical, Important and task-related Minor finding.
-- [ ] Move the cursor to completed, record evidence and commit the checkpoint.
-- [ ] Push the scope-discovery branch normally; do not create a PR, tag or
+- [x] Move the cursor to completed, record evidence and commit the checkpoint.
+- [x] Push the scope-discovery branch normally; do not create a PR, tag or
   Release.
