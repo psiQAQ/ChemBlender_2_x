@@ -85,16 +85,20 @@ Assert both unrelated and same-Structure sibling grids are excluded.
 
 - [ ] **Step 2: Write fail-closed RED**
 
-Cover missing/cross-linked Structure, missing/duplicate nuclear charge and a
-non-Grid dataset. Expected: current resolver reports the selected Grid3D is not
-exportable.
+Cover missing/cross-linked Structure in the resolver and a non-Grid dataset.
+For a valid linked grid with missing or duplicate nuclear charge, assert
+`_cube_entities()` preserves zero or all matching candidates and the delegated
+core preview reports `dataset.nuclear_charge.missing` or
+`dataset.nuclear_charge.ambiguous`. Expected RED: the current resolver rejects
+the Grid3D before these target contracts are reachable.
 
 - [ ] **Step 3: Implement the minimal projection**
 
 Import `Grid3D`; add the optional field last to preserve existing construction.
 Resolve the selected dataset before FrameSet handling. `_cube_entities()` must
-return one Structure, the selected Grid3D, matching charge, direct provenance
-and associated topology; it must not duplicate core readiness.
+return one Structure, the selected Grid3D, all matching charge candidates,
+direct provenance and associated topology; it must not duplicate core
+readiness or choose among ambiguous charges.
 
 - [ ] **Step 4: Run GREEN and commit**
 
@@ -240,7 +244,7 @@ checks.
 - [ ] **Step 4: Checkpoint**
 
 Record exact RED/GREEN/Blender/review evidence, move the cursor to completed,
-mark Tasks 1-5 checked and commit as
+mark Tasks 0-5 checked and commit as
 `chore: checkpoint native Cube export UI`.
 
 ### Task 6: Exact-head remote integration gate
