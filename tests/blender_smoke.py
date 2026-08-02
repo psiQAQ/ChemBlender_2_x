@@ -2506,6 +2506,19 @@ def assert_biological_workflow(module_key, repository_root):
             == pqr_structure.atomic_numbers
         )
         assert reparsed_pqr_hierarchy.atom_count == pqr_hierarchy.atom_count
+        assert reparsed_pqr_hierarchy.model == pqr_hierarchy.model
+        assert reparsed_pqr_hierarchy.chains == pqr_hierarchy.chains
+        assert reparsed_pqr_hierarchy.residues == pqr_hierarchy.residues
+        assert categories(
+            reparsed_pqr_hierarchy.atom_sites.alternate_locations
+        ) == categories(pqr_hierarchy.atom_sites.alternate_locations)
+        assert categories(
+            reparsed_pqr_hierarchy.atom_sites.record_kinds
+        ) == categories(pqr_hierarchy.atom_sites.record_kinds)
+        assert numpy.array_equal(
+            reparsed_pqr_hierarchy.atom_sites.residue_indices.values,
+            pqr_hierarchy.atom_sites.residue_indices.values,
+        )
         assert categories(
             reparsed_pqr_structure.atomic_identity.atom_names
         ) == categories(pqr_structure.atomic_identity.atom_names)

@@ -190,6 +190,7 @@ class ExtXYZWorkflowTests(unittest.TestCase):
         self.assertIn("*.pqr", filter_glob.split(";"))
 
     def test_pqr_selection_reuses_biological_projection_and_core_preview(self):
+        from ChemBlender.core import DatasetStatus
         from ChemBlender.core.exporters import preview_pqr_export
 
         module = importlib.import_module(MODULE)
@@ -217,21 +218,82 @@ class ExtXYZWorkflowTests(unittest.TestCase):
                 for value in projection.datasets
             )
         )
-        self.assertEqual(
-            module.preview_export_selection(selection, "pqr"),
-            preview_pqr_export(projection),
-        )
+        with patch.object(module, "export_pqr") as writer:
+            self.assertEqual(
+                module.preview_export_selection(selection, "pqr"),
+                preview_pqr_export(projection),
+            )
+        writer.assert_not_called()
 
-        missing_radius = replace(
-            selection,
-            properties=tuple(
-                value
-                for value in selection.properties
-                if getattr(value, "semantic_role", None) != "radius"
+        hierarchy = selection.biological_hierarchies[0]
+        for label, invalid, message in (
+            (
+                "missing charge",
+                replace(
+                    selection,
+                    properties=tuple(
+                        value
+                        for value in selection.properties
+                        if value.semantic_role != "partial_charge"
+                    ),
+                ),
+                "Charge|charge",
             ),
-        )
-        with self.assertRaisesRegex(ValueError, "Radius|radius"):
-            module.preview_export_selection(missing_radius, "pqr")
+            (
+                "missing radius",
+                replace(
+                    selection,
+                    properties=tuple(
+                        value
+                        for value in selection.properties
+                        if value.semantic_role != "radius"
+                    ),
+                ),
+                "Radius|radius",
+            ),
+            (
+                "partial charge",
+                replace(
+                    selection,
+                    properties=tuple(
+                        replace(value, status=DatasetStatus.PARTIAL)
+                        if value.semantic_role == "partial_charge"
+                        else value
+                        for value in selection.properties
+                    ),
+                ),
+                "partial_charge",
+            ),
+            (
+                "partial radius",
+                replace(
+                    selection,
+                    properties=tuple(
+                        replace(value, status=DatasetStatus.PARTIAL)
+                        if value.semantic_role == "radius"
+                        else value
+                        for value in selection.properties
+                    ),
+                ),
+                "radius",
+            ),
+            (
+                "missing hierarchy",
+                replace(selection, biological_hierarchies=()),
+                "MissingHierarchy",
+            ),
+            (
+                "ambiguous hierarchy",
+                replace(
+                    selection,
+                    biological_hierarchies=(hierarchy, hierarchy),
+                ),
+                "Ambiguous",
+            ),
+        ):
+            with self.subTest(label=label):
+                with self.assertRaisesRegex(ValueError, message):
+                    module.preview_export_selection(invalid, "pqr")
 
     def test_pqr_background_export_roundtrips_and_cancels_atomically(self):
         from ChemBlender.core.formats.pqr import parse_pqr
