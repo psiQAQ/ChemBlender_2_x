@@ -171,30 +171,30 @@ and Final Qualification unstarted. Commit as
 
 **Interfaces:** Leave no active cursor and exactly one queued implementation.
 
-- [ ] **Step 1: Run documentation qualification**
+- [x] **Step 1: Run documentation qualification**
 
 Run `tests.test_quantum_visualization_docs`,
 `tests.test_generated_docs_fresh`, `compileall -q tests`, UTF-8/no-BOM audit
 and `git diff --check`. Prove zero diff under protected runtime/release paths.
 
-- [ ] **Step 2: Run two independent reviews**
+- [x] **Step 2: Run two independent reviews**
 
 Review specification compliance and plan/code-quality correctness. Fix every
 Critical, Important and task-related Minor finding; rerun affected checks.
 
-- [ ] **Step 3: Write completion RED**
+- [x] **Step 3: Write completion RED**
 
 Change routing to no active cursor and one queued Cube UI cursor; require
 completed goal `CB240-TASK9-SCOPE-DISCOVERY`. Run the focused test and observe
 failure until the completed cursor replaces the active cursor.
 
-- [ ] **Step 4: Checkpoint and commit**
+- [x] **Step 4: Checkpoint and commit**
 
 Record all commit SHAs, RED/GREEN evidence, reviews, zero runtime diff and
 `Remote CI: Not Run`; mark Tasks 1-5 checked and commit as
 `chore: checkpoint Task 9 scope discovery`.
 
-- [ ] **Step 5: Final verification and stop**
+- [x] **Step 5: Final verification and stop**
 
 Rerun the documentation qualification and confirm a clean worktree. Do not
 activate Cube UI, push or create a PR.

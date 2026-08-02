@@ -8,7 +8,8 @@ DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
 TASK9_SCOPE_ACTIVE_FILE = "2.4.0-task9-scope-discovery.md"
-NEXT_RELEASE_ACTIVE_FILES = (TASK9_SCOPE_ACTIVE_FILE,)
+TASK9_SCOPE_COMPLETED_FILE = "2.4.0-task9-scope-discovery.md"
+NEXT_RELEASE_ACTIVE_FILES = ()
 CUBE_EXPORT_UI_QUEUED_FILE = "2.4.0-cube-export-ui.md"
 NEXT_RELEASE_QUEUED_FILES = (CUBE_EXPORT_UI_QUEUED_FILE,)
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
@@ -1286,6 +1287,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
 
     def test_240_task9_scope_discovery_is_recoverable(self):
         active_path = f".agents/active/{TASK9_SCOPE_ACTIVE_FILE}"
+        completed_path = f".agents/completed/{TASK9_SCOPE_COMPLETED_FILE}"
         design_path = (
             "docs/superpowers/specs/"
             "2026-08-02-chemblender-2.4.0-task9-scope-discovery-design.md"
@@ -1306,7 +1308,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "2026-08-02-chemblender-2.4.0-cube-export-ui.md"
         )
         queued_path = f".agents/queued/{CUBE_EXPORT_UI_QUEUED_FILE}"
-        active = self.read_doc(active_path)
+        self.assertFalse((ROOT / active_path).exists(), active_path)
+        completed = self.read_doc(completed_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
         intake = self.read_doc(intake_path)
@@ -1316,7 +1319,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
 
         for term in (
             "CB240-TASK9-SCOPE-DISCOVERY",
-            "State: `in_progress`",
+            "State: `completed`",
+            "Current task: `Task 9 Scope Discovery checkpoint complete`",
             "cd265d95c3cc73cae5355657cc0a5a8f1931d98b",
             design_path,
             plan_path,
@@ -1329,8 +1333,18 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             intake_path,
             selected_plan_path,
             queued_path,
+            "ceca5e8476dc7773ea3d183075e96685f915affc",
+            "30c244602b36ffdcc6c471f95d0456a71f0ff819",
+            "09ab20004434262555aa79827866aaf890624e54",
+            "2eeaec0568726da70d24c2be71794225b081a339",
+            "2f7c525bff7c7fdf59769c1e1610b7e017407968",
+            "13a334a345e55f1bc36226639839e4251ff08045",
+            "18c7dbffbb509a69f5ea4b0a91e210d9d8fd8f0c",
+            "42 Passed",
+            "zero runtime diff",
+            "Remote CI: `Not Run`",
         ):
-            self.assertIn(term, active)
+            self.assertIn(term, completed)
         for term in (
             "Selected: native Cube export UI",
             "Deferred: Reader API v1 stable gate",
