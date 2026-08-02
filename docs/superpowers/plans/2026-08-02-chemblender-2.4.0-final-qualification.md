@@ -253,13 +253,13 @@ Rerun affected Blender and full Python checks after any change. Commit as
 - Consumes: all qualification evidence and findings.
 - Produces: one clean final feature head, exact-head CI and ordinary merge ancestry.
 
-- [ ] **Step 1: Run two independent reviews**
+- [x] **Step 1: Run two independent reviews**
 
 Require specification-compliance and code-quality/security/scientific-
 correctness verdicts. Fix all Critical, Important and task-related Minor
 findings, then rerun every affected gate.
 
-- [ ] **Step 2: Run final local qualification**
+- [x] **Step 2: Run final local qualification**
 
 Freshly rerun full unittest discovery, compileall, generated docs, optional
 import audit, committed-tree artifact build/audit, Blender installed smoke and

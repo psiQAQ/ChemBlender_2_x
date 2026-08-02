@@ -188,7 +188,11 @@ used or modified.
 | Independent review GREEN | `8ba30c729d0f6840384a3b968d702644e0a9c20a`; fresh installed smoke Passed |
 | Follow-up specification RED | installed Blender Operator success path bypassed |
 | Operator focused GREEN | `5662919d1c35397db58486a2e7ecb4338529f695`; `30 Passed` |
-| Remote exact-head CI | Not Run — Task 5 |
+| Final specification review | `Ready` — no remaining Critical, Important or task-related Minor |
+| Final code-quality/security/scientific review | `Ready` — no remaining Critical, Important or task-related Minor |
+| Final full Python qualification | `2200 Passed / 26 Skipped / 0 Failed` |
+| Final focused Cube/artifact/docs suite | `44 Passed` |
+| Remote exact-head CI | Pending — after the local checkpoint |
 
 ## Stop boundary
 
