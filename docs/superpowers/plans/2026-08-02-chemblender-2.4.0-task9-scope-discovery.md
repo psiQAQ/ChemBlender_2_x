@@ -71,24 +71,24 @@ Run the focused documentation tests and `git diff --check`; commit as
 **Interfaces:** Consume PR #15 and exact-head GitHub Actions evidence without
 changing the qualified exporter.
 
-- [ ] **Step 1: Write the exact-remote RED**
+- [x] **Step 1: Write the exact-remote RED**
 
 Require the completed cursor to contain PR URL, feature head
 `164a681bb3d9cb788f778eca71f9fe61a0361019`, runs `30747458150` and
 `30747458152`, merge commit `cd265d95c3cc73cae5355657cc0a5a8f1931d98b`,
 ancestor verification and `Remote CI: Passed`.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run the Cube recoverability test. Expected: failure because the cursor still
 records a pending retry.
 
-- [ ] **Step 3: Update final remote evidence**
+- [x] **Step 3: Update final remote evidence**
 
 Preserve local, Blender, package, benchmark and review evidence. Replace only
 the pending remote section with the exact successful integration evidence.
 
-- [ ] **Step 4: Run GREEN and commit**
+- [x] **Step 4: Run GREEN and commit**
 
 Commit as `docs: record Cube export remote integration`.
 
