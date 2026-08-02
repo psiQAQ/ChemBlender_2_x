@@ -180,23 +180,23 @@ contracts, then commit: `docs: publish PQR Project Browser export`.
 **Interfaces:** No public model/API addition. Completion evidence is persisted
 before remote integration.
 
-- [ ] **Step 1: Run local qualification**
+- [x] **Step 1: Run local qualification**
 
 Run focused tests, full unittest discovery, `compileall`, generated-doc check,
 optional-import audit and `git diff --check`.
 
-- [ ] **Step 2: Run Blender qualification**
+- [x] **Step 2: Run Blender qualification**
 
 Run native preflight, validate/build, exact ZIP audit, isolated install, PQR
 Project Browser export/re-import and lifecycle twice with Blender 5.1.2.
 
-- [ ] **Step 3: Run two independent reviews**
+- [x] **Step 3: Run two independent reviews**
 
 Run specification-compliance and code-quality/correctness/security reviews.
 Fix all Critical, Important and task-related Minor findings and rerun affected
 checks.
 
-- [ ] **Step 4: Checkpoint**
+- [x] **Step 4: Checkpoint**
 
 Record exact RED/GREEN/Blender/review evidence, move the cursor to completed,
 mark Tasks 1–5 checked and commit: `chore: checkpoint native PQR export UI`.
