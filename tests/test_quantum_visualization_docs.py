@@ -14,7 +14,7 @@ TASK11_SCOPE_ACTIVE_FILE = "2.4.0-task11-scope-discovery.md"
 TASK11_SCOPE_COMPLETED_FILE = "2.4.0-task11-scope-discovery.md"
 FINAL_QUALIFICATION_CURSOR_FILE = "2.4.0-final-qualification.md"
 NEXT_RELEASE_ACTIVE_FILES = (TASK11_SCOPE_ACTIVE_FILE,)
-NEXT_RELEASE_QUEUED_FILES = ()
+NEXT_RELEASE_QUEUED_FILES = (FINAL_QUALIFICATION_CURSOR_FILE,)
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
@@ -1455,16 +1455,28 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         intake_path = (
             "docs/quantum-visualization/2.4.0/task11-candidate-intake.md"
         )
+        selected_design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-02-chemblender-2.4.0-final-qualification-design.md"
+        )
+        selected_plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-final-qualification.md"
+        )
+        queued_path = (
+            f".agents/queued/{FINAL_QUALIFICATION_CURSOR_FILE}"
+        )
         cube_cursor_path = ".agents/completed/2.4.0-cube-export-ui.md"
         self.assertTrue((ROOT / active_path).is_file(), active_path)
         self.assertFalse((ROOT / completed_path).exists(), completed_path)
-        self.assertFalse(
-            (ROOT / ".agents" / "queued" / FINAL_QUALIFICATION_CURSOR_FILE).exists()
-        )
+        self.assertTrue((ROOT / queued_path).is_file(), queued_path)
         cursor = self.read_doc(active_path)
         design = self.read_doc(design_path)
         plan = self.read_doc(plan_path)
         intake = self.read_doc(intake_path)
+        selected_design = self.read_doc(selected_design_path)
+        selected_plan = self.read_doc(selected_plan_path)
+        queued = self.read_doc(queued_path)
         cube_cursor = self.read_doc(cube_cursor_path)
 
         for term in (
@@ -1478,6 +1490,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Selection: `2.4.0 Final Qualification`",
             intake_path,
             "Reader API stable: `Deferred`",
+            selected_plan_path,
+            queued_path,
             "No runtime implementation",
             "No push",
         ):
@@ -1523,6 +1537,39 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "30755106795",
         ):
             self.assertIn(term, intake)
+        for term in (
+            "Preserve Reader API `1.0-rc1`",
+            "No new capability",
+            "committed tree",
+            "Blender 5.1.2",
+            "exact-head CI",
+            "ordinary merge commit",
+        ):
+            self.assertIn(term, selected_design)
+        for term in (
+            "Task 0: Activate the queued qualification",
+            "Task 1: Audit frozen public and scientific boundaries",
+            "Task 2: Run complete Python and dependency qualification",
+            "Task 3: Rebuild and audit the committed extension artifact",
+            "Task 4: Run Blender product qualification",
+            "Task 5: Review, checkpoint and exact-head remote gate",
+            "1.0-rc1",
+            "version",
+            "tag",
+            "Release",
+        ):
+            self.assertIn(term, selected_plan)
+        for term in (
+            "CB240-FINAL-QUALIFICATION-T12",
+            "State: `not_started`",
+            "Task 0 — Activate the queued qualification",
+            "85368c86632ac5015ecf0a53a93b62222bb2da20",
+            selected_design_path,
+            selected_plan_path,
+            "Reader API `1.0-rc1`",
+            "No version, tag or Release",
+        ):
+            self.assertIn(term, queued)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
