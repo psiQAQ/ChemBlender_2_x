@@ -838,7 +838,13 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             "Task 1 — Freeze native PDB export contract",
             "2114 Passed / 26 Skipped / 0 Failed",
             "PASS: installed native PDB export and re-import",
-            "Remote CI: `Not Run`",
+            "`TER` segment omission is reported as `source_records_omitted`",
+            "29,964,601",
+            "2,616,399",
+            "2d5854788a602ffad8c64d8adebd40727f9bcda6266cc6d59d27cbb83758a025",
+            "30724509726",
+            "30724509723",
+            "a6c1cbb71ef5269cfe864fb924749f000fa060d5",
         ):
             self.assertIn(term, pdb_export)
 
