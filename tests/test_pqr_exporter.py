@@ -2,6 +2,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from ChemBlender.core.exporters import (
     ExportCancelled,
@@ -9,6 +10,10 @@ from ChemBlender.core.exporters import (
     preview_pqr_export,
 )
 from ChemBlender.core.formats.pqr import parse_pqr
+from ChemBlender.core.exporters.pdb_readiness import (
+    PDBPQRExportReadiness,
+    PDBPQRExportStatus,
+)
 
 
 FIXTURES = Path(__file__).with_name("fixtures") / "pqr"
@@ -85,6 +90,51 @@ class PQRExporterTests(unittest.TestCase):
                     destination=destination,
                     is_cancelled=lambda: True,
                 )
+
+            self.assertFalse(destination.exists())
+            self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+    def test_control_label_is_rejected_before_destination_publication(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        identity = batch.structures[0].atomic_identity
+        structure = replace(
+            batch.structures[0],
+            atomic_identity=replace(
+                identity,
+                atom_names=replace(
+                    identity.atom_names,
+                    categories=("N\x7f", "O"),
+                ),
+            ),
+        )
+        batch = replace(batch, structures=(structure,))
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "invalid-label.pqr"
+
+            with self.assertRaisesRegex(ValueError, "PQR atom name is invalid"):
+                export_pqr(batch, destination=destination)
+
+            self.assertFalse(destination.exists())
+            self.assertEqual(tuple(Path(directory).iterdir()), ())
+
+    def test_writer_rechecks_element_identity_after_readiness_bypass(self):
+        batch = parse_pqr(FIXTURES / "with-chain.pqr")
+        batch = replace(
+            batch,
+            structures=(replace(batch.structures[0], atomic_numbers=(7, 7)),),
+        )
+        ready = PDBPQRExportReadiness(PDBPQRExportStatus.READY, ())
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "mismatched-element.pqr"
+            with patch(
+                "ChemBlender.core.exporters.pqr.pqr_export_readiness",
+                return_value=ready,
+            ):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "PQR identity.element.mismatch",
+                ):
+                    export_pqr(batch, destination=destination)
 
             self.assertFalse(destination.exists())
             self.assertEqual(tuple(Path(directory).iterdir()), ())

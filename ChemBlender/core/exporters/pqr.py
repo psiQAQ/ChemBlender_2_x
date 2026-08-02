@@ -62,7 +62,7 @@ def _label(value, name, maximum, *, required=True):
         or not value
         or len(value) > maximum
         or not value.isascii()
-        or any(ord(character) < 33 for character in value)
+        or any(not 33 <= ord(character) <= 126 for character in value)
     ):
         raise ValueError(f"PQR {name} is invalid")
     return value
