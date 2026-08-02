@@ -7,6 +7,8 @@ runtime, manifest version, CHANGELOG release entry, workflow, tag or Release.
 
 ## Frozen Product Scope
 
+Frozen scope: `MOL2, PDB, PQR, Cube`; Reader API: `1.0-rc1`; source: PR #19.
+
 The release contains only the capabilities already qualified and merged by
 PR #19:
 
@@ -34,11 +36,12 @@ justifies coupling that API transition to the exporter release.
 ## Final Qualification Remote Evidence
 
 - PR #19: `https://github.com/psiQAQ/ChemBlender_2_x/pull/19`.
-- Exact feature head: `98b4da6e13e28fa95c7abdc52494dd4aa7e1e86e`.
-- `extension-package` run `30759984026`: `Passed` for the exact feature head.
-- `optional-qc-core` run `30759984023`: `Passed` for the exact feature head.
-- Ordinary merge: `9763d2afbb38a68061161a855ec333ce0e970fe4`.
-- Feature-head ancestry in the merge: `Passed`.
+- `extension-package` run `30759984026`: `Passed` for exact feature head
+  `98b4da6e13e28fa95c7abdc52494dd4aa7e1e86e`.
+- `optional-qc-core` run `30759984023`: `Passed` for exact feature head
+  `98b4da6e13e28fa95c7abdc52494dd4aa7e1e86e`.
+- Ordinary merge `9763d2afbb38a68061161a855ec333ce0e970fe4`:
+  `Passed`; exact feature head ancestry: `Passed`.
 
 These post-checkpoint results replace the completed cursor's earlier
 pre-remote `Not Run` snapshot. Old or branch-mismatched runs remain invalid.
@@ -51,11 +54,21 @@ pre-remote `Not Run` snapshot. Old or branch-mismatched runs remain invalid.
 3. From the clean committed RC tree run full Python tests, compileall,
    generated-document checks, native Blender validate/build, ZIP
    inventory/budget, isolated install and product smoke.
-4. Require exact-head PR CI and an ordinary merge to `main`.
-5. Stop for explicit tag/Release authorization before creating the annotated
-   RC tag or publishing any GitHub Release.
-6. Require exact-tag package CI and installed-runtime evidence for the RC.
-7. Review RC feedback before a separate Stable `2.4.0` preparation change.
+4. With current push/PR authorization, require exact PR-head CI, then stop for
+   merge authorization.
+5. After an ordinary merge, require both workflows to pass for the exact
+   `origin/main` merge SHA.
+6. Stop for tag authorization, create the annotated RC tag, then require
+   exact-tag CI and installed-runtime evidence.
+7. Run `extension-release` with `publish=false`, then stop for separate
+   publication authorization.
+8. Review RC feedback before a separate Stable `2.4.0` preparation change.
+
+Release order: exact PR-head CI -> ordinary merge -> exact merge-SHA CI -> tag
+authorization -> annotated tag -> exact-tag CI and installed-runtime evidence
+-> verification-only release run -> publication authorization.
+
+CI success is evidence, not merge or publication authority.
 
 ## Failure Policy
 

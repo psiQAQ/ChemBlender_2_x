@@ -1870,32 +1870,39 @@ class ReleasePlanningContractTests(unittest.TestCase):
         evidence = self.read_doc(
             str(evidence_path.relative_to(ROOT))
         )
+        normalized_cursor = " ".join(cursor.split())
+        normalized_evidence = " ".join(evidence.split())
 
+        self.assertIn("CB240-RELEASE-PLANNING", cursor)
+        self.assertIn("Reader API: `1.0-rc1`, unchanged", cursor)
+        self.assertIn(
+            "PR #19: `https://github.com/psiQAQ/ChemBlender_2_x/pull/19`; "
+            "- exact feature head: "
+            "`98b4da6e13e28fa95c7abdc52494dd4aa7e1e86e`; "
+            "- `extension-package` run `30759984026`: `Passed`; "
+            "- `optional-qc-core` run `30759984023`: `Passed`; "
+            "- ordinary merge: "
+            "`9763d2afbb38a68061161a855ec333ce0e970fe4`; "
+            "- ancestor verification: `Passed`.",
+            normalized_cursor,
+        )
         for term in (
-            "CB240-RELEASE-PLANNING",
-            "98b4da6e13e28fa95c7abdc52494dd4aa7e1e86e",
-            "30759984026",
-            "30759984023",
-            "9763d2afbb38a68061161a855ec333ce0e970fe4",
-            "Reader API",
-            "1.0-rc1",
+            "Prepare `2.4.0-rc.1` before Stable `2.4.0`.",
+            "Frozen scope: `MOL2, PDB, PQR, Cube`; Reader API: `1.0-rc1`; "
+            "source: PR #19.",
+            "`extension-package` run `30759984026`: `Passed` for exact "
+            "feature head `98b4da6e13e28fa95c7abdc52494dd4aa7e1e86e`.",
+            "`optional-qc-core` run `30759984023`: `Passed` for exact "
+            "feature head `98b4da6e13e28fa95c7abdc52494dd4aa7e1e86e`.",
+            "Ordinary merge `9763d2afbb38a68061161a855ec333ce0e970fe4`: "
+            "`Passed`; exact feature head ancestry: `Passed`.",
+            "Release order: exact PR-head CI -> ordinary merge -> exact "
+            "merge-SHA CI -> tag authorization -> annotated tag -> exact-tag "
+            "CI and installed-runtime evidence -> verification-only release "
+            "run -> publication authorization.",
+            "CI success is evidence, not merge or publication authority.",
         ):
-            self.assertIn(term, cursor)
-        for term in (
-            "2.4.0-rc.1",
-            "Stable `2.4.0`",
-            "MOL2",
-            "PDB",
-            "PQR",
-            "Cube",
-            "PR #19",
-            "30759984026",
-            "30759984023",
-            "9763d2afbb38a68061161a855ec333ce0e970fe4",
-            "Reader API `1.0-rc1`",
-            "explicit tag/Release authorization",
-        ):
-            self.assertIn(term, evidence)
+            self.assertIn(term, normalized_evidence)
 
 
 if __name__ == "__main__":

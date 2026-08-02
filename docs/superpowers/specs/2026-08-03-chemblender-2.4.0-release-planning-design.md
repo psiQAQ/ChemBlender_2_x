@@ -35,14 +35,23 @@ only Release-body source.
 3. Re-run full Python tests, compileall, generated-document checks, native
    Blender validate/build, ZIP inventory/budget, isolated install and product
    smoke from the clean committed RC tree.
-4. Require exact-head pull-request CI and an ordinary merge to `main`.
-5. Stop for explicit tag/Release authorization. An annotated RC tag must then
-   receive exact-tag package CI before publication.
-6. Review RC feedback and evidence before creating a separate stable-release
+4. With current external-write authorization, push and open the pull request;
+   require exact PR-head CI, then stop for merge authorization.
+5. After an ordinary merge, require both workflows to pass for the exact
+   `origin/main` merge SHA.
+6. Stop for tag authorization, create the annotated RC tag, then require
+   exact-tag package CI and installed-runtime evidence.
+7. Run `extension-release` with `publish=false`; stop again for independent
+   publication authorization before any GitHub Release is created.
+8. Review RC feedback and evidence before creating a separate stable-release
    preparation change.
 
 No old run, branch-mismatched run or merely existing artifact can replace
 exact commit/tag evidence.
+
+CI success is evidence, not merge or publication authority. A current explicit
+authorization may satisfy one named gate, but must not be inferred from an old
+instruction or from a green workflow.
 
 ## Reader API Decision
 

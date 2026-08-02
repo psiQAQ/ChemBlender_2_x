@@ -13,8 +13,10 @@
 - Follow `docs/superpowers/specs/2026-08-03-chemblender-2.4.0-release-planning-design.md`.
 - Preserve manifest `2.3.0`, Reader API `1.0-rc1`, schemas, dependencies and workflows.
 - Do not add product code, a capability, tag or GitHub Release.
-- Use ordinary commits, push, ready PR and merge; no rebase, force-push, squash or branch deletion.
-- Tagging and publishing require separate explicit authorization.
+- External writes require current explicit authority for the named gate. A
+  green workflow never grants merge, tag or publication authority.
+- Use ordinary commits and merges; no rebase, force-push, squash or branch deletion.
+- Tagging and publishing require separate explicit authorizations.
 
 ### Task 0: Activate release planning
 
@@ -126,8 +128,9 @@ Move the active cursor to completed, mark this plan complete and commit as
 
 - [ ] **Step 1: Push and create a ready PR**
 
-Ordinarily push `codex/2.4.0-release-planning` and create one ready PR to
-`main`. Record the exact feature head.
+After confirming current push/PR authority, ordinarily push
+`codex/2.4.0-release-planning` and create one ready PR to `main`. Record the
+exact feature head. Without that authority, stop and report the checkpoint.
 
 - [ ] **Step 2: Require exact-head CI**
 
@@ -135,10 +138,16 @@ Require every job in `extension-package` and `optional-qc-core` to finish
 success with `headSha` equal to the checkpoint head. Old or branch-mismatched
 runs are invalid.
 
-- [ ] **Step 3: Merge ordinarily and verify ancestry**
+- [ ] **Step 3: Stop for merge authority, then merge ordinarily**
 
-Use a normal merge commit, fetch, and prove the checkpoint head is an ancestor
-of `origin/main`. Do not delete the feature branch.
+Report exact-head CI and require current merge authority. Only then use a
+normal merge commit. Do not delete the feature branch.
+
+- [ ] **Step 4: Require exact merge-SHA CI and verify ancestry**
+
+Fetch, prove the checkpoint head is an ancestor of `origin/main`, and require
+both workflows to pass for the exact merge commit SHA. This evidence does not
+authorize any tag or Release.
 
 ## Stop Boundary
 
