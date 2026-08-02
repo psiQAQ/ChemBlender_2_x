@@ -152,10 +152,15 @@ class CubeProductFlowTests(unittest.TestCase):
 
     def test_installed_smoke_contains_native_cube_export_reimport(self):
         smoke = BLENDER_SMOKE.read_text(encoding="utf-8")
+        workflow = smoke.split("def assert_cube_export_workflow", 1)[1].split(
+            "\ndef ", 1
+        )[0]
 
         self.assertIn("def assert_cube_export_workflow", smoke)
         self.assertIn("PASS: installed native Cube export and re-import", smoke)
-        self.assertIn("dataset_index=1", smoke)
+        self.assertIn("dataset_index=1", workflow)
+        self.assertIn("export_ui.resolve_export_selection", workflow)
+        self.assertIn("export_ui.ExportJob", workflow)
 
 
 if __name__ == "__main__":

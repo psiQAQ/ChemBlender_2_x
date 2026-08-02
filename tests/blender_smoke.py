@@ -4183,6 +4183,7 @@ def assert_cube_export_workflow(module_key, repository_root):
 
     core = importlib.import_module(f"{module_key}.core")
     cube = importlib.import_module(f"{module_key}.core.cube")
+    export_ui = importlib.import_module(f"{module_key}.ui.export")
     source = repository_root / "tests/fixtures/cube/two-datasets.cube"
     batch = cube.CUBE_READER.parse(source)
     structure = batch.structures[0]
@@ -4194,18 +4195,30 @@ def assert_cube_export_workflow(module_key, repository_root):
         and value.semantic_role == "nuclear_charge"
     )
     assert grid.structure_id == structure.id
-    preview = core.preview_cube_export(batch, dataset_index=1)
+    project = core.QCProject(uuid4(), "1.0")
+    project.commit(batch)
+    selection = export_ui.resolve_export_selection(project, grid.id)
+    preview = export_ui.preview_export_selection(
+        selection,
+        "cube",
+        dataset_index=1,
+    )
     assert preview.requires_confirmation
 
     with TemporaryDirectory() as directory:
         destination = Path(directory) / "selected.cube"
-        exported = core.export_cube(
-            batch,
+        job = export_ui.ExportJob(
+            destination,
+            selection,
+            format_name="cube",
             dataset_index=1,
             confirm_loss=True,
-            destination=destination,
+            missing_value_token=None,
         )
-        assert exported.report.written
+        job.start()
+        assert job.join(30)
+        assert job.error is None
+        assert job.result.written
         restored = cube.CUBE_READER.parse(destination)
 
     restored_structure = restored.structures[0]

@@ -162,7 +162,7 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
         self.assertEqual(
             by_id["cube"]["export"],
             {
-                "execution_mode": "core",
+                "execution_mode": "project_browser",
                 "format_id": "cube",
                 "loss_policy": "preview_confirmation",
                 "maturity": "F5",
@@ -264,7 +264,7 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
             expected,
         )
         self.assertEqual(documented, set(expected))
-        self.assertNotIn("cube", expected)
+        self.assertIn("cube", expected)
         self.assertIs(sys.modules.get("bpy"), before)
 
     def test_user_guide_exposes_pdb_project_browser_export(self):
