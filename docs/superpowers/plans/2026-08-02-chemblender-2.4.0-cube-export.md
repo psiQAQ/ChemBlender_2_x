@@ -149,9 +149,11 @@ Use `tests/fixtures/cube/sheared.cube`. Require two deterministic ASCII comment
 lines, atom count/origin, three full affine step-vector lines, atom rows
 with distinct atomic number/nuclear charge, C-order values with z fastest, at
 most six values per data line and exactly one trailing LF. Repeated export and
-dict/tuple container order must produce identical bytes. Scalar output uses a
-positive `NATOMS`, omits `DSET_IDS`, and writes all three voxel counts as
-positive integers because output geometry is always bohr.
+dict/tuple container order must produce identical bytes. A scalar grid without
+a trustworthy source dataset ID uses positive `NATOMS` and omits `DSET_IDS`.
+A scalar grid with one trustworthy source ID preserves it with negative
+`NATOMS` and a one-entry `DSET_IDS` record. Both forms write all three voxel
+counts as positive integers because output geometry is always bohr.
 
 - [ ] **Step 2: Write bohr output RED**
 
@@ -173,11 +175,14 @@ Write negative `NATOMS`, a one-entry `DSET_IDS` record, positive voxel counts
 and only the selected values. Preserve source IDs `(5, 7)` only when exactly
 one `ProvenanceRecord` is referenced directly by the selected Grid3D and has
 `operation == "parse"`, `format == "cube"`, `dataset_count` equal to the grid's
-dataset dimension, and `dataset_ids` of the same length containing positive
-exact integers (not bool). Do not traverse unrelated provenance lineage. Index
+dataset dimension, and `dataset_ids` of the same length containing non-negative
+exact integers (including zero, never bool). Do not traverse unrelated
+provenance lineage. Index
 1 then writes ID `7`. If those checks fail, use deterministic positive ID
-`dataset_index + 1` and report `dataset_id_normalized`. Scalar grids never use
-that fallback because they omit `DSET_IDS` entirely.
+`dataset_index + 1` and report `dataset_id_normalized`. Scalar grids do not use
+that fallback: trustworthy one-entry IDs are preserved, ordinary scalars omit
+`DSET_IDS`, and malformed scalar provenance is omitted with a
+`dataset_id_omitted` confirmation-required loss.
 
 - [ ] **Step 4: Run RED**
 
