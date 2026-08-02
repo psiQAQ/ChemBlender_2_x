@@ -19,9 +19,9 @@ an annotated tag, or a published GitHub Release.
 | Package | `chemblender-2.4.0-rc.1.zip` |
 | Checksum | `chemblender-2.4.0-rc.1.sha256` |
 | Artifact | `chemblender-2.4.0-rc.1-windows-x64` |
-| Package SHA-256 | `55c35de04a52158900a208cab24ac311d3f3cfe1efe8e5ddb3168d6e3cde4775` |
-| Checksum SHA-256 | `d5af30277fb443791f050fe2df6d29d11d252c9315faee6922dd4e695d52c9f6` |
-| Package size | 29,976,429 bytes |
+| Package SHA-256 | `b3df84593f79e14dc594b075c57f09f53fbed0ea75199fa1739ea8c30deb64b7` |
+| Checksum SHA-256 | `d119f3cfb5b72e83ffadf20ce0b011a498e39cb07e9811fa1ef323467ea89b27` |
+| Package size | 29,976,427 bytes |
 | ZIP inventory | 189 members; CRC/path/type checks Passed |
 
 The package contains the unchanged pinned RDKit `2026.3.3` and Gemmi `0.7.5`
@@ -40,9 +40,9 @@ schema remains `1.0`; canonical document remains `0.1`.
 - Dependency hashes and license inventory: `Passed`.
 - Package-CI artifact verification: `Passed`.
 - Release-assets verification: `Passed`.
-- Artifact budget: `Passed`; the intentional manifest resource baseline is
-  4 bytes larger, package bytes are 3 below the previous baseline, and every
-  unexplained-growth allowance remains zero.
+- Artifact budget: `Passed`; the canonical Windows-checkout manifest resource
+  baseline is 5 bytes larger, package bytes are 5 below the previous baseline,
+  and every unexplained-growth allowance remains zero.
 - Isolated installed-product smoke: `Passed` under a fresh default Windows
   `TEMP`-rooted `BLENDER_USER_RESOURCES`, including two lifecycle cycles and
   representative MOL2, PDB, PQR and Cube Project Browser workflows.

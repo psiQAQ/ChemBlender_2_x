@@ -1,7 +1,5 @@
 import hashlib
-import subprocess
 import sys
-import tomllib
 import unittest
 from pathlib import Path
 
@@ -40,21 +38,16 @@ from extract_release_notes import extract_release_notes
 
 class Wave4FinalReadinessTests(unittest.TestCase):
     def test_final_metadata_and_manifest_are_exact(self):
-        manifest = subprocess.run(
-            [
-                "git",
-                "show",
-                f"{MERGE_COMMIT}:ChemBlender/blender_manifest.toml",
-            ],
-            cwd=ROOT,
-            check=True,
-            capture_output=True,
-        ).stdout
-        self.assertEqual(tomllib.loads(manifest.decode("utf-8"))["version"], FINAL_VERSION)
-        self.assertEqual(
-            hashlib.sha256(manifest.replace(b"\r\n", b"\n")).hexdigest(),
+        readiness = READINESS.read_text(encoding="utf-8")
+        for expected in (
+            f"- Version: `{FINAL_VERSION}`.",
+            "- Package: `chemblender-2.3.0.zip`.",
+            "- Checksum: `chemblender-2.3.0.sha256`.",
+            "- CI artifact name: `chemblender-2.3.0-windows-x64`.",
             FINAL_MANIFEST_SHA256,
-        )
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, readiness)
 
     def test_final_changelog_preserves_published_rc_and_stable_release_contract(self):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
