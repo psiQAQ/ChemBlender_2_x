@@ -32,6 +32,7 @@ from ..core.exporters import (
     PoscarExportSettings,
     export_extxyz,
     export_cif,
+    export_cube,
     export_xyz,
     export_mol,
     export_mol2,
@@ -759,6 +760,7 @@ class ExportJob:
         format_name,
         confirm_loss,
         missing_value_token,
+        dataset_index=None,
         cif_mode=None,
         poscar_settings=None,
     ):
@@ -767,6 +769,7 @@ class ExportJob:
         self.format_name = format_name
         self.confirm_loss = confirm_loss
         self.missing_value_token = missing_value_token
+        self.dataset_index = dataset_index
         self.cif_mode = cif_mode
         self.poscar_settings = poscar_settings
         self.result = None
@@ -810,6 +813,14 @@ class ExportJob:
                     missing_value_token=self.missing_value_token or None,
                     is_cancelled=self._cancelled.is_set,
                 )
+            elif self.format_name == "cube":
+                self.result = export_cube(
+                    _cube_entities(self.selection),
+                    dataset_index=self.dataset_index,
+                    confirm_loss=self.confirm_loss,
+                    destination=self.destination,
+                    is_cancelled=self._cancelled.is_set,
+                ).report
             elif self.format_name == "mol":
                 self.result = export_mol(
                     self.selection.structure,
@@ -906,7 +917,7 @@ class ExportJob:
                 )
             else:
                 raise ValueError(
-                    "format_name must be xyz, extxyz, mol, mol2, pdb, pqr, "
+                    "format_name must be xyz, extxyz, cube, mol, mol2, pdb, pqr, "
                     "sdf, smiles, cif or poscar"
                 )
         except BaseException as error:
@@ -1310,6 +1321,12 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
                 format_name=self.format_name,
                 confirm_loss=self.confirm_loss,
                 missing_value_token=self.missing_value_token or None,
+                dataset_index=(
+                    getattr(self, "cube_dataset_index", -1)
+                    if self.format_name == "cube"
+                    and getattr(self, "_cube_requires_dataset_index", False)
+                    else None
+                ),
                 cif_mode=(
                     getattr(self, "cif_mode", None)
                     if self.format_name == "cif"

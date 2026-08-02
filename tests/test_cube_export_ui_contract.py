@@ -22,6 +22,7 @@ from ChemBlender.core import (
     preview_cube_export,
 )
 from ChemBlender.core.cube import CUBE_READER
+from ChemBlender.core.exporters import ExportCancelled
 
 
 MODULE = "ChemBlender.ui.export"
@@ -370,3 +371,85 @@ class CubeExportUIContractTests(unittest.TestCase):
         operator.layout = _Layout()
         operator.draw(None)
         self.assertNotIn("cube_dataset_index", operator.layout.properties)
+
+    def test_cube_job_preserves_unconfirmed_destination(self):
+        batch = CUBE_READER.parse(SHEARED)
+        selection = self._select_grid(self._project(batch), self._grid(batch))
+        self.assertTrue(self._preview_cube(selection).requires_confirmation)
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "selected.cube"
+            destination.write_bytes(b"prior destination\n")
+            job = self.export.ExportJob(
+                destination,
+                selection,
+                format_name="cube",
+                confirm_loss=False,
+                missing_value_token=None,
+                dataset_index=None,
+            )
+            job.start()
+            self.assertTrue(job.join(5))
+
+            self.assertIsNone(job.error)
+            self.assertFalse(job.result.written)
+            self.assertEqual(destination.read_bytes(), b"prior destination\n")
+
+    def test_cube_job_writes_scalar_and_selected_multi_dataset(self):
+        cases = (
+            (CUBE_READER.parse(SHEARED), None),
+            (CUBE_READER.parse(TWO_DATASETS), 1),
+        )
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            for batch, dataset_index in cases:
+                with self.subTest(dataset_index=dataset_index):
+                    grid = self._grid(batch)
+                    selection = self._select_grid(self._project(batch), grid)
+                    destination = root / f"selected-{dataset_index}.cube"
+                    job = self.export.ExportJob(
+                        destination,
+                        selection,
+                        format_name="cube",
+                        confirm_loss=True,
+                        missing_value_token=None,
+                        dataset_index=dataset_index,
+                    )
+                    job.start()
+                    self.assertTrue(job.join(5))
+
+                    self.assertIsNone(job.error)
+                    self.assertTrue(job.result.written)
+                    reparsed = CUBE_READER.parse(destination)
+                    reparsed_grid = self._grid(reparsed)
+                    expected = numpy.asarray(grid.data.values)
+                    if dataset_index is not None:
+                        expected = expected[dataset_index]
+                    numpy.testing.assert_allclose(reparsed_grid.data.values, expected)
+                    self.assertEqual(
+                        reparsed.structures[0].atomic_numbers,
+                        selection.structure.atomic_numbers,
+                    )
+
+    def test_cancelled_cube_job_preserves_destination_and_cleans_temporary(self):
+        batch = CUBE_READER.parse(SHEARED)
+        selection = self._select_grid(self._project(batch), self._grid(batch))
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            destination = root / "selected.cube"
+            destination.write_bytes(b"prior destination\n")
+            job = self.export.ExportJob(
+                destination,
+                selection,
+                format_name="cube",
+                confirm_loss=True,
+                missing_value_token=None,
+                dataset_index=None,
+            )
+            job.cancel()
+            job.start()
+            self.assertTrue(job.join(5))
+
+            self.assertIsInstance(job.error, ExportCancelled)
+            self.assertEqual(destination.read_bytes(), b"prior destination\n")
+            self.assertEqual(tuple(root.iterdir()), (destination,))
