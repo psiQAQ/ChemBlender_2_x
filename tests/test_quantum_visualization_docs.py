@@ -7,13 +7,14 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs" / "quantum-visualization"
 WAVE_230_QUEUE_FILES = ()
 WAVE_230_ACTIVE_FILES = ()
-NEXT_RELEASE_ACTIVE_FILES = ()
+NEXT_RELEASE_ACTIVE_FILES = ("2.4.0-task4-scope-discovery.md",)
 NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
 TASK3_SCOPE_COMPLETED_FILE = "2.4.0-task3-scope-discovery.md"
 PDB_EXPORT_COMPLETED_FILE = "2.4.0-pdb-export.md"
+TASK4_SCOPE_COMPLETED_FILE = "2.4.0-task4-scope-discovery.md"
 WAVE_230_COMPLETED_FILE = "2.3.0-wave-3-exchange-mol2-pdb-pqr.md"
 WAVE_230_FINAL_COMPLETED_FILE = "2.3.0-wave-4-migration-release.md"
 
@@ -862,6 +863,48 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             ".agents/queued/2.4.0-pdb-export.md",
         ):
             self.assertIn(term, completed)
+
+    def test_240_task4_scope_discovery_is_recoverable(self):
+        design_path = (
+            "docs/superpowers/specs/"
+            "2026-08-02-chemblender-2.4.0-task4-scope-discovery-design.md"
+        )
+        plan_path = (
+            "docs/superpowers/plans/"
+            "2026-08-02-chemblender-2.4.0-task4-scope-discovery.md"
+        )
+        cursor_path = ".agents/active/2.4.0-task4-scope-discovery.md"
+        design = self.read_doc(design_path)
+        plan = self.read_doc(plan_path)
+        cursor = self.read_doc(cursor_path)
+
+        for term in (
+            "PDB Export UI",
+            "Native PQR export",
+            "Native Cube export",
+            "Reader API v1 stable gate",
+            "zero runtime diff",
+        ):
+            self.assertIn(term, design)
+        for term in (
+            "Task 1: Persist the Task 4 discovery boundary",
+            "Task 2: Audit and select one candidate",
+            "Task 3: Queue the selected implementation",
+            "Task 4: Verify and checkpoint",
+        ):
+            self.assertIn(term, plan)
+        for term in (
+            "CB240-TASK4-SCOPE-DISCOVERY",
+            "State: `in_progress`",
+            "79a93f52053fdf809c28c24800366010577a1984",
+            "2995386744768b424e8276db7cd72a90154edf25",
+            "30724971581",
+            "30724971598",
+            design_path,
+            plan_path,
+            "PDB UI runtime implementation remains unstarted",
+        ):
+            self.assertIn(term, cursor)
 
     def test_240_scope_discovery_entrypoints_exist(self):
         design_path = (
