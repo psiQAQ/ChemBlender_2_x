@@ -175,12 +175,12 @@ apply the smallest fix and rerun full discovery. Commit as
 - Consumes: clean committed tree, Blender 5.1.2 and pinned RDKit/Gemmi wheels.
 - Produces: validated ZIP, checksum, inventory, artifact-size and release-metadata evidence.
 
-- [ ] **Step 1: Verify dependency inputs**
+- [x] **Step 1: Verify dependency inputs**
 
 Resolve exact wheel filenames and SHA-256 values from
 `ChemBlender/dependencies.toml`; reject missing, extra or mismatched wheels.
 
-- [ ] **Step 2: Validate and build**
+- [x] **Step 2: Validate and build**
 
 Run:
 
@@ -192,7 +192,7 @@ Run:
 Require native validate/build success and the exact package name from
 `release_metadata.py`.
 
-- [ ] **Step 3: Audit the artifact**
+- [x] **Step 3: Audit the artifact**
 
 Run `dependency_inventory.py`, `artifact_size_report.py` and
 `verify_release_artifact.py --metadata-mode package-ci` with the exact
@@ -200,7 +200,7 @@ arguments used by `extension-package.yml`. Inspect all ZIP paths and CRCs;
 record package hash, member count, packed/unpacked/section sizes and budget
 result.
 
-- [ ] **Step 4: Commit evidence or a focused fix**
+- [x] **Step 4: Commit evidence or a focused fix**
 
 Rebuild from a clean committed tree after any change. Commit as
 `test: qualify 2.4.0 extension artifact`.

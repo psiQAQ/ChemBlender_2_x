@@ -94,6 +94,31 @@ The workflow additionally binds every required scientific fixture to its
 literal SHA-256 argument in `.github/workflows/optional-qc-core.yml`; those
 hash checks are executed before each exact-head integration module.
 
+## Committed-tree extension artifact
+
+The clean Task 2 commit `6ac2e5283275ce309f09456f4400de33c0825546`
+was validated and built with Blender `5.1.2` on Windows. The exact output was
+`chemblender-2.3.0.zip`; no version or release metadata changed.
+
+| Artifact property | Observed value |
+| --- | --- |
+| Package SHA-256 | `8e7f3c8a7af0feb100cf8ec37cfc9200f98cd7e2cb5149f15e21be74e578b32b` |
+| Package bytes | `29,976,421` |
+| ZIP members | `189` |
+| Member compressed bytes | `29,953,927` |
+| Member unpacked bytes | `32,063,479` |
+| Code compressed bytes | `587,908` |
+| Resource compressed bytes | `2,477,267` |
+| Wheel compressed bytes | `26,888,752` |
+| Bad CRC member | `none` |
+| Unsafe ZIP paths | `0` |
+| Unexplained budget growth | `0 bytes` |
+
+`dependency_inventory.py`, `artifact_size_report.py` and
+`verify_release_artifact.py --metadata-mode package-ci` all passed with the
+exact arguments used by `extension-package.yml`. The package contains only the
+two required, hash-matched Gemmi and RDKit wheels.
+
 ## Generated documents
 
 - `generate_format_docs.py --check`: `Passed`.
@@ -111,7 +136,7 @@ hash checks are executed before each exact-head integration module.
 | Full Python qualification | `2200 Passed / 26 Skipped / 0 Failed` |
 | Python compile/import/docs checks | `Passed` |
 | Local optional integrations | `30 Passed / 7 Skipped / 0 Failed` |
-| Committed-tree artifact audit | Not Run — Task 3 |
+| Committed-tree artifact audit | `Passed` |
 | Blender product qualification | Not Run — Task 4 |
 | Remote exact-head CI | Not Run — Task 5 |
 
