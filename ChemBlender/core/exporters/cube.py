@@ -1,6 +1,7 @@
 """Deterministic native Cube export from authoritative core entities."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from types import SimpleNamespace
 
 import numpy
 
@@ -21,8 +22,18 @@ _COMMENTS = (
     "selected scalar dataset",
 )
 _LOSS_MESSAGES = {
+    "atomic_identity_omitted": "Cube omits project atomic-identity metadata",
+    "cell_periodicity_omitted": "Cube omits Structure cell and periodic metadata",
+    "comments_normalized": "Cube source comments are replaced by deterministic comments",
     "dataset_id_normalized": "Cube dataset ID is normalized to selected index plus one",
     "dataset_id_omitted": "Malformed scalar Cube dataset ID is omitted",
+    "grid_semantic_role_omitted": "Cube does not preserve the Grid3D semantic role",
+    "grid_value_unit_omitted": "Cube does not preserve the Grid3D value unit",
+    "molecular_charge_omitted": "Cube omits molecular total charge",
+    "molecular_multiplicity_omitted": "Cube omits molecular spin multiplicity",
+    "project_identity_omitted": "Cube omits project UUID and revision identity",
+    "provenance_omitted": "Cube omits project provenance identity",
+    "topology_omitted": "Cube omits molecular topology",
 }
 
 
@@ -44,22 +55,165 @@ def _ready(project_entities, dataset_index):
         )
 
 
-def _projection(project_entities):
+def _optional_entities(project_entities, name):
+    return _entities(project_entities, name) if hasattr(project_entities, name) else ()
+
+
+def _close_after_read(live, unloaded, primary):
+    if not unloaded:
+        return
+    try:
+        live.close()
+    except BaseException as close_error:
+        if primary is None:
+            raise
+        primary.add_note(f"lazy Cube export array close failed: {close_error}")
+
+
+def _snapshot_array(data, live_arrays, *, selection=None, expected_shape, token):
+    live = data.values
+    unloaded = getattr(live, "loaded", None) is False
+    primary = None
+    try:
+        source = numpy.asarray(live)
+        selected = source if selection is None else source[selection]
+        values = numpy.array(selected, copy=True, order="C", subok=False)
+        if (
+            values.shape != expected_shape
+            or values.dtype != numpy.dtype(data.dtype)
+        ):
+            raise ValueError(f"Cube export is Invalid: {token}")
+        values.setflags(write=False)
+        live_arrays.append((live, values, selection))
+        return values
+    except BaseException as error:
+        primary = error
+        raise
+    finally:
+        _close_after_read(live, unloaded, primary)
+
+
+def _snapshot(project_entities, dataset_index):
+    structures = _entities(project_entities, "structures")
     datasets = _entities(project_entities, "datasets")
-    grid = next(value for value in datasets if isinstance(value, Grid3D))
-    structure = next(
-        value
-        for value in _entities(project_entities, "structures")
-        if value.id == grid.structure_id
+    provenance = _optional_entities(project_entities, "provenance")
+    topologies = _optional_entities(project_entities, "topologies")
+    raw = SimpleNamespace(
+        structures=structures,
+        datasets=datasets,
+        provenance=provenance,
+        topologies=topologies,
     )
-    charge = next(
+    grids = tuple(value for value in datasets if isinstance(value, Grid3D))
+    if len(grids) != 1:
+        _ready(raw, dataset_index)
+    grid = grids[0]
+    linked = tuple(value for value in structures if value.id == grid.structure_id)
+    charges = tuple(
         value
         for value in datasets
         if isinstance(value, AtomicProperty)
-        and value.structure_id == structure.id
+        and value.structure_id == grid.structure_id
         and value.semantic_role == "nuclear_charge"
     )
-    return structure, grid, charge
+    if len(linked) != 1 or len(charges) != 1:
+        _ready(raw, dataset_index)
+    structure = linked[0]
+    charge = charges[0]
+    scalar = grid.data.dims == ("x", "y", "z")
+    multi = grid.data.dims == ("dataset", "x", "y", "z")
+    if (
+        (scalar and dataset_index is not None)
+        or (multi and (
+            type(dataset_index) is not int
+            or not 0 <= dataset_index < grid.data.shape[0]
+        ))
+        or not (scalar or multi)
+    ):
+        _ready(raw, dataset_index)
+
+    live_arrays = []
+    coordinates = _snapshot_array(
+        structure.coordinates,
+        live_arrays,
+        expected_shape=(len(structure.atomic_numbers), 3),
+        token="structure.coordinates",
+    )
+    charges_snapshot = _snapshot_array(
+        charge.data,
+        live_arrays,
+        expected_shape=(len(structure.atomic_numbers),),
+        token="dataset.nuclear_charge",
+    )
+    selected = _snapshot_array(
+        grid.data,
+        live_arrays,
+        selection=None if scalar else dataset_index,
+        expected_shape=grid.grid_shape,
+        token="grid.data",
+    )
+    structure_snapshot = replace(
+        structure,
+        coordinates=replace(structure.coordinates, values=coordinates),
+    )
+    charge_snapshot = replace(
+        charge,
+        data=replace(charge.data, values=charges_snapshot),
+    )
+    grid_values = selected if scalar else numpy.broadcast_to(selected, grid.data.shape)
+    grid_snapshot = replace(
+        grid,
+        data=replace(grid.data, values=grid_values),
+    )
+    projected_datasets = tuple(
+        grid_snapshot
+        if value is grid
+        else charge_snapshot
+        if value is charge
+        else value
+        for value in datasets
+    )
+    entities = SimpleNamespace(
+        structures=tuple(
+            structure_snapshot if value is structure else value for value in structures
+        ),
+        datasets=projected_datasets,
+        provenance=provenance,
+        topologies=topologies,
+    )
+    _ready(entities, dataset_index)
+    return SimpleNamespace(
+        entities=entities,
+        structure=structure_snapshot,
+        grid=grid_snapshot,
+        charge=charge_snapshot,
+        selected_values=selected,
+        live_arrays=tuple(live_arrays),
+    )
+
+
+def _assert_snapshot_unchanged(snapshot):
+    for live, captured, selection in snapshot.live_arrays:
+        unloaded = getattr(live, "loaded", None) is False
+        primary = None
+        try:
+            try:
+                current = numpy.asarray(live)
+                current = current if selection is None else current[selection]
+                unchanged = (
+                    current.shape == captured.shape
+                    and current.dtype == captured.dtype
+                    and numpy.array_equal(current, captured, equal_nan=True)
+                )
+            except (TypeError, ValueError):
+                unchanged = False
+            if not unchanged:
+                raise ValueError("Cube export inputs changed after snapshot")
+        except BaseException as error:
+            primary = error
+            raise
+        finally:
+            _close_after_read(live, unloaded, primary)
 
 
 def _trusted_dataset_ids(project_entities, grid):
@@ -107,22 +261,74 @@ def _dataset_identifier(project_entities, grid, dataset_index):
     return dataset_index + 1, ("dataset_id_normalized",)
 
 
-def _preview(project_entities, dataset_index):
-    _ready(project_entities, dataset_index)
-    _structure, grid, _charge = _projection(project_entities)
+def _source_comments(project_entities, grid):
+    direct = tuple(
+        value
+        for value in _optional_entities(project_entities, "provenance")
+        if isinstance(value, ProvenanceRecord) and value.id in grid.provenance_ids
+    )
+    return any(
+        any(key in {"comment_1", "comment_2"} for key, _value in record.parameters)
+        for record in direct
+    )
+
+
+def _loss_codes(project_entities, structure, grid, charge):
+    codes = {
+        "grid_semantic_role_omitted",
+        "grid_value_unit_omitted",
+        "project_identity_omitted",
+    }
+    if _source_comments(project_entities, grid):
+        codes.add("comments_normalized")
+    if (
+        grid.provenance_ids
+        or charge.provenance_ids
+        or _optional_entities(project_entities, "provenance")
+    ):
+        codes.add("provenance_omitted")
+    if structure.cell is not None or structure.periodic is not None:
+        codes.add("cell_periodicity_omitted")
+    if structure.molecular_charge is not None:
+        codes.add("molecular_charge_omitted")
+    if structure.molecular_multiplicity is not None:
+        codes.add("molecular_multiplicity_omitted")
+    if (
+        structure.topology is not None
+        or structure.topology_ids
+        or any(
+            getattr(value, "structure_id", None) == structure.id
+            for value in _optional_entities(project_entities, "topologies")
+        )
+    ):
+        codes.add("topology_omitted")
+    if structure.atomic_identity is not None:
+        codes.add("atomic_identity_omitted")
+    return codes
+
+
+def _prepare(snapshot, dataset_index):
+    project_entities = snapshot.entities
+    structure = snapshot.structure
+    grid = snapshot.grid
+    charge = snapshot.charge
     _identifier, codes = _dataset_identifier(
         project_entities,
         grid,
         dataset_index,
     )
+    codes = set(codes) | _loss_codes(project_entities, structure, grid, charge)
     entries = tuple(
         ExportReportEntry(code, _LOSS_MESSAGES[code]) for code in sorted(codes)
     )
-    return ExportReport("cube", False, 1, bool(entries), entries)
+    return ExportReport("cube", False, 1, bool(entries), entries), _identifier
 
 
 def preview_cube_export(project_entities, *, dataset_index=None):
-    return _preview(project_entities, dataset_index)
+    snapshot = _snapshot(project_entities, dataset_index)
+    report, _identifier = _prepare(snapshot, dataset_index)
+    _assert_snapshot_unchanged(snapshot)
+    return report
 
 
 def _bohr(values, unit):
@@ -139,9 +345,10 @@ def _line(count, values):
     return f"{count:5d} " + " ".join(_number(value) for value in values) + "\n"
 
 
-def _text_chunks(project_entities, dataset_index):
-    structure, grid, charge = _projection(project_entities)
-    identifier, _codes = _dataset_identifier(project_entities, grid, dataset_index)
+def _text_chunks(snapshot, identifier, *, is_cancelled=None, collected=None):
+    structure = snapshot.structure
+    grid = snapshot.grid
+    charge = snapshot.charge
     signed_atom_count = -len(structure.atomic_numbers) if identifier is not None else len(structure.atomic_numbers)
     chunks = [f"{_COMMENTS[0]}\n", f"{_COMMENTS[1]}\n"]
     chunks.append(_line(signed_atom_count, _bohr(grid.origin, grid.coordinate_unit)))
@@ -158,12 +365,15 @@ def _text_chunks(project_entities, dataset_index):
         chunks.append(_line(atomic_number, (nuclear_charge, *row)))
     if identifier is not None:
         chunks.append(f"{1:5d} {identifier:5d}\n")
-    values = numpy.asarray(grid.data.values)
-    selected = values if dataset_index is None else values[dataset_index]
-    flat = selected.ravel(order="C")
+    flat = snapshot.selected_values.ravel(order="C")
     for offset in range(0, len(flat), 6):
         chunks.append(" ".join(_number(value) for value in flat[offset : offset + 6]) + "\n")
-    return tuple(chunks)
+    for chunk in chunks:
+        if _cancelled(is_cancelled):
+            raise ExportCancelled("export cancelled")
+        if collected is not None:
+            collected.append(chunk)
+        yield chunk
 
 
 def export_cube(
@@ -178,13 +388,41 @@ def export_cube(
         raise TypeError("confirm_loss must be bool")
     if _cancelled(is_cancelled):
         raise ExportCancelled("export cancelled")
-    preview = _preview(project_entities, dataset_index)
+    snapshot = _snapshot(project_entities, dataset_index)
+    preview, identifier = _prepare(snapshot, dataset_index)
     if preview.requires_confirmation and not confirm_loss:
+        _assert_snapshot_unchanged(snapshot)
         return CubeExport("", preview)
-    chunks = _text_chunks(project_entities, dataset_index)
-    text = "".join(chunks)
+    collected = []
     if destination is not None:
-        atomic_write_chunks(destination, chunks, is_cancelled=is_cancelled)
+        complete = False
+
+        def chunks():
+            nonlocal complete
+            yield from _text_chunks(snapshot, identifier, collected=collected)
+            complete = True
+
+        def guarded_cancelled():
+            cancelled = _cancelled(is_cancelled)
+            if complete:
+                _assert_snapshot_unchanged(snapshot)
+            return cancelled
+
+        atomic_write_chunks(
+            destination,
+            chunks(),
+            is_cancelled=guarded_cancelled,
+        )
+    else:
+        collected.extend(
+            _text_chunks(
+                snapshot,
+                identifier,
+                is_cancelled=is_cancelled,
+            )
+        )
+        _assert_snapshot_unchanged(snapshot)
+    text = "".join(collected)
     return CubeExport(
         text,
         ExportReport(

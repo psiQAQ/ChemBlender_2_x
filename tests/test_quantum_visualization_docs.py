@@ -1235,7 +1235,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for term in (
             "CB240-CUBE-EXPORT-T8",
             "State: `in_progress`",
-            "Task 3 — Qualify authoritative lazy snapshots and semantic losses",
+            "Task 4 — Publish the core Cube export capability",
             selected_plan_path,
             intake_path,
             "Cube UI remains unstarted",
@@ -1245,9 +1245,11 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             contract_path,
             "Completed tasks:",
             "Task 1: `c92fe2bffc9997192cb1b659037084973f987289`",
-            "Task 2: `this commit`",
+            "Task 2: `e96b20e86f061ea2dad29748a8dd0561be5a9ab1`",
+            "Task 3: `this commit`",
             "59 Passed",
             "66 Passed",
+            "71 Passed",
         ):
             self.assertIn(term, active)
         for term in (

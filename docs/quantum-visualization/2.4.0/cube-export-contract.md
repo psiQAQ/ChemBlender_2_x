@@ -33,3 +33,18 @@ unit, project identity, provenance, topology, periodic/cell data or atomic
 identity. The writer must report every present non-representable semantic before
 publication and require explicit confirmation. OpenVDB, Blender Volume and mesh
 caches remain derived data and are never export sources.
+
+## Snapshot and Publication
+
+Preview and export copy authoritative coordinates, nuclear charges and only the
+selected scalar grid once. Exporter-owned mappings are closed after each read;
+arrays already loaded by the caller remain loaded. Before an atomic destination
+replacement, the live selected values are compared with the snapshot. A changed
+input, cancellation or write failure leaves an existing destination unchanged.
+
+Cube output uses normalized comments and cannot preserve Grid3D semantic/value
+units, project UUID/revision/provenance, Structure cell/periodicity, molecular
+charge/multiplicity, topology or atomic identity. Loss entries are sorted and
+any entry requires exact `confirm_loss=True` before text is returned or written.
+Re-import qualification compares atoms, nuclear charges, bohr geometry, affine
+grid shape/steps, selected values and the preserved or normalized dataset ID.

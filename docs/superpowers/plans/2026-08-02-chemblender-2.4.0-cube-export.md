@@ -214,7 +214,7 @@ git commit -m "feat: export deterministic native Cube data"
 **Interfaces:** Preview and publication consume one authoritative lazy snapshot;
 no new public symbol.
 
-- [ ] **Step 1: Write loss-preview RED**
+- [x] **Step 1: Write loss-preview RED**
 
 Require stable sorted entries for semantic role, value unit, project-only
 identity/provenance and normalized comment or dataset ID information that Cube
@@ -224,7 +224,7 @@ referenced topology, and atomic identity. `preview_cube_export()` returns no
 written output. Any loss makes `requires_confirmation=True`; `export_cube()`
 publishes nothing until exact `confirm_loss=True`.
 
-- [ ] **Step 2: Write authoritative lazy snapshots RED**
+- [x] **Step 2: Write authoritative lazy snapshots RED**
 
 Snapshot coordinates, nuclear charges and selected grid values exactly once.
 Initially unloaded `LazyNpyArray` objects return to unloaded state after preview,
@@ -235,7 +235,7 @@ detected by that checkpoint fails without replacing an existing destination.
 The contract intentionally makes no impossible claim about mutation in the
 unobservable interval after that final checkpoint and before `os.replace()`.
 
-- [ ] **Step 3: Write failure/cancellation RED**
+- [x] **Step 3: Write failure/cancellation RED**
 
 Cover pre-cancel, mid-stream cancel, writer error, `os.replace()` failure and
 cleanup failure. The main error remains primary, temporary siblings are absent,
@@ -244,7 +244,7 @@ and an existing destination is byte-identical. `KeyboardInterrupt`,
 array `close()` failure is attached to an existing primary error and never
 replaces it; without a primary error the close failure is raised.
 
-- [ ] **Step 4: Write Semantic native re-import RED**
+- [x] **Step 4: Write Semantic native re-import RED**
 
 Reparse with native `parse_cube()` and compare:
 
@@ -257,7 +257,7 @@ Reparse with native `parse_cube()` and compare:
 Do not compare UUID, revision, provenance identity, comment whitespace, value
 semantic/unit fields acknowledged as losses, OpenVDB or mesh cache.
 
-- [ ] **Step 5: Implement, run GREEN and commit**
+- [x] **Step 5: Implement, run GREEN and commit**
 
 Reuse the existing PQR live-snapshot/resource-ownership pattern only where the
 same behavior is needed; do not extract a speculative shared framework. Commit:
