@@ -4,6 +4,28 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-08-03
+
+### Changed
+
+- Promoted the published `2.4.0-rc.1` candidate to Stable after exact-tag package, installed-runtime, public-asset and Release-body verification.
+- Kept the qualified MOL2, PDB, PQR and Cube export scope unchanged, with Reader API `1.0-rc1`, sidecar/project schema `1.0`, canonical document `0.1`, RDKit `2026.3.3` and Gemmi `0.7.5` unchanged from the RC.
+
+### Compatibility
+
+- Supports Windows x64 with Blender 5.1.0 or later; Stable qualification uses Blender 5.1.2 and its bundled Python 3.13.
+- Existing 2.3/2.4 RC projects, sidecars, reader manifests and scientific model identities remain compatible; Stable changes release metadata only.
+
+### Known Limitations
+
+- Normalized MOL2, PDB, PQR and Cube exports retain the format-specific losses documented for `2.4.0-rc.1`; every detected omission still requires explicit confirmation.
+- Loaded RDKit or Gemmi DLLs can keep isolated-profile files locked until Blender exits; successful process exit and fresh-profile reinstall remain the functional checks.
+
+### Verification
+
+- The published `2.4.0-rc.1` exact-tag package run, verification-only Release run, public prerelease workflow, assets and Release body passed independent verification before Stable preparation.
+- Stable publication uses the existing exact-tag package artifact and Release workflow; local readiness and final public evidence are recorded separately from this immutable Release-notes entry.
+
 ## [2.4.0-rc.1] - 2026-08-03
 
 ### Added
@@ -215,7 +237,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 - Imported the latest ChemBlender 2.1.0 source as commit `78c2d8d8d6361302bf8f19a568c3d7cfccde4c19`, based on upstream commit `9077096b776cd18ca85adb4b50253a0d3c18fd76`.
 
-[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/v2.4.0-rc.1...HEAD
+[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.4.0
 [2.4.0-rc.1]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.4.0-rc.1
 [2.3.0]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0
 [2.3.0-rc.1]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0-rc.1

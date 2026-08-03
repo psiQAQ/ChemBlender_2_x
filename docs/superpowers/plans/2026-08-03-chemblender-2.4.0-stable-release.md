@@ -61,6 +61,7 @@ git commit -m "docs: activate stable 2.4.0 release"
 - Create: `tests/test_240_release_readiness.py`
 - Create: `docs/quantum-visualization/2.4.0/rc1-feedback-review.md`
 - Modify: `ChemBlender/blender_manifest.toml`
+- Modify: `ChemBlender/scripts/release_metadata.py`
 - Modify: `CHANGELOG.md`
 - Modify: `tests/test_240_rc_readiness.py`
 - Modify: `tests/test_repository_contract.py`
@@ -71,7 +72,7 @@ git commit -m "docs: activate stable 2.4.0 release"
 - Consumes: existing `read_release_metadata()` and `extract_release_notes()`.
 - Produces: production metadata `2.4.0`, stable package names and a checked feedback-review record; it adds no runtime API.
 
-- [ ] **Step 1: Write the Stable contract before production changes**
+- [x] **Step 1: Write the Stable contract before production changes**
 
 Create `tests/test_240_release_readiness.py` with assertions that current
 metadata is `2.4.0`, package/checksum/artifact names are exact, Stable notes
@@ -80,7 +81,7 @@ contain `### Changed`, `### Compatibility`, `### Known Limitations` and
 from `v2.4.0`, and the feedback-review document exists. Stable readiness is
 added to this test only after Task 2 creates its evidence document.
 
-- [ ] **Step 2: Run RED and record the exact failures**
+- [x] **Step 2: Run RED and record the exact failures**
 
 ```powershell
 & $pythonBin -m unittest tests.test_240_release_readiness -v
@@ -89,27 +90,27 @@ added to this test only after Task 2 creates its evidence document.
 Expected: fail because production metadata is `2.4.0-rc.1` and the Stable
 entry, links and evidence documents do not exist.
 
-- [ ] **Step 3: Apply the minimal Stable metadata and notes change**
+- [x] **Step 3: Apply the minimal Stable metadata and notes change**
 
 Change only the manifest version. Add one dated `2.4.0` CHANGELOG entry that
 states promotion from the qualified RC, unchanged product/API/schema/dependency
 scope, retained known limitations and verification boundary. Add exact Stable
 compare/release links without altering the RC entry.
 
-- [ ] **Step 4: Preserve RC readiness as historical evidence**
+- [x] **Step 4: Preserve RC readiness as historical evidence**
 
 Change `tests/test_240_rc_readiness.py` so it checks the immutable published RC
 entry and readiness evidence without requiring current production metadata to
 remain prerelease. Add `rc1-feedback-review.md` containing the exact RC tag,
 runs, Release URL, public hashes, issue/discussion/PR audit and blocker result.
 
-- [ ] **Step 5: Update only production-state assertions**
+- [x] **Step 5: Update only production-state assertions**
 
 Update exact production expectations in repository/metadata/artifact tests to
 `2.4.0` and Stable filenames. Preserve generic prerelease fixtures and tag
 mismatch coverage.
 
-- [ ] **Step 6: Run GREEN and commit**
+- [x] **Step 6: Run GREEN and commit**
 
 ```powershell
 & $pythonBin -m unittest tests.test_240_release_readiness tests.test_240_rc_readiness tests.test_release_metadata tests.test_release_artifact tests.test_release_notes tests.test_repository_contract -v
