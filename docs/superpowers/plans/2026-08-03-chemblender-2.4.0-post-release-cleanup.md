@@ -6,6 +6,9 @@
 entrypoints, one human UX review guide, and only the Git refs/worktrees whose
 content is not already recoverable from maintained history.
 
+**Status:** Tasks 1–7 completed locally; Task 8 exact-head integration is the
+only remaining gate.
+
 **Architecture:** Keep historical plan/spec files in place and add navigation
 instead of rewriting provenance. Audit every Git deletion against live
 `origin/main`, PR evidence, worktree cleanliness and ignored content. Runtime
