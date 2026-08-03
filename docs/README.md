@@ -33,6 +33,7 @@
 
 ## Approved Design and Plan
 
+- [Superpowers design and implementation provenance](superpowers/README.md)
 - [ChemBlender 2.3.0 native platform design](superpowers/specs/2026-07-23-chemblender-2.3.0-native-platform-design.md)
 - [ChemBlender 2.3.0 master sequencing plan](superpowers/plans/2026-07-23-chemblender-2.3.0-master-sequencing.md)
 - [2.2.0 repository governance design](superpowers/specs/2026-07-20-chemblender-2.2.0-repository-governance-design.md)

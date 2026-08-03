@@ -103,9 +103,8 @@ def test_post_release_documentation_routes_current_and_historical_state(self):
     docs = self.read_doc("docs/README.md")
     agents = self.read_doc(".agents/README.md")
     superpowers = self.read_doc("docs/superpowers/README.md")
-    for index in (root, docs):
-        self.assertIn("2.4.0-experience-review.md", index)
     self.assertIn("superpowers/README.md", docs)
+    self.assertIn("ChemBlender 2.4.0", root)
     self.assertIn("2.4.0-stable-release.md", agents)
     for term in (".agents/active/", ".agents/queued/", ".agents/completed/"):
         self.assertIn(term, superpowers)
@@ -139,8 +138,8 @@ Create `docs/superpowers/README.md` with four sections: `Current authority`,
 
 Update the existing indexes without enumerating all 141 historical files:
 
-- root `README.md`: add the human UX review guide under related user guides;
-- `docs/README.md`: add the UX guide and Superpowers provenance index;
+- root `README.md`: name the current 2.4.0 product boundary;
+- `docs/README.md`: add the Superpowers provenance index;
 - `.agents/README.md`: add the 2.4.0 Stable completion record and route detailed
   2.4.0 task history through `.agents/completed/`;
 - branch architecture: replace stale statements about retired feature refs
@@ -176,6 +175,8 @@ git commit -m "docs: organize post-release navigation"
 
 **Files:**
 - Create: `docs/user/2.4.0-experience-review.md`
+- Modify: `README.md`
+- Modify: `docs/README.md`
 - Modify: `tests/test_quantum_visualization_docs.py`
 - Modify: `.agents/active/2.4.0-post-release-cleanup.md`
 
@@ -192,6 +193,8 @@ Add:
 ```python
 def test_240_human_experience_review_is_complete_and_observational(self):
     guide = self.read_doc("docs/user/2.4.0-experience-review.md")
+    for index_path in ("README.md", "docs/README.md"):
+        self.assertIn("2.4.0-experience-review.md", self.read_doc(index_path))
     for workflow in (
         "Install", "First launch", "Quick Import", "Import Preview",
         "Project Browser", "Structure", "Volume", "Surface", "Export",
@@ -245,7 +248,7 @@ ignored-evidence audit`.
 
 ```powershell
 git add -- `
-  docs/user/2.4.0-experience-review.md `
+  README.md docs/README.md docs/user/2.4.0-experience-review.md `
   tests/test_quantum_visualization_docs.py `
   .agents/active/2.4.0-post-release-cleanup.md
 git commit -m "docs: add 2.4.0 human experience review"
