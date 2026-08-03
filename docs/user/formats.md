@@ -15,7 +15,7 @@ yes/no flag:
 Maturity can differ between import and export. A readable format is not
 automatically a lossless round-trip format.
 
-## Base 2.3.0 format scope
+## ChemBlender 2.4.0 format scope
 
 | Format | Current product boundary |
 | --- | --- |
@@ -26,13 +26,13 @@ automatically a lossless round-trip format.
 | CIF | Gemmi-backed import of crystal/site/symmetry metadata and controlled CIF export |
 | POSCAR/CONTCAR | Native import/export with Direct/Cartesian, scale, selective dynamics and supported velocity data |
 | MOL2 | Native multi-molecule import plus normalized Project Browser export with semantic round-trip and explicit loss confirmation |
-| PDB/PQR | Native import of biological hierarchy/alternate locations or charge/radius data; PDB export through Project Browser with loss preview, while PQR has core export with loss preview |
-| Cube | Native Structure + Grid3D import and Blender Volume/Surface workflow; no lossless Cube re-export claim |
+| PDB/PQR | Native import of biological hierarchy/alternate locations or charge/radius data; PDB export through Project Browser and PQR export through Project Browser, both with representability and loss preview |
+| Cube | Native Structure + Grid3D import, Blender Volume/Surface workflow and Project Browser Cube export for representable scalar grids; export is semantic, not byte-for-byte source reproduction |
 | CJSON | Lightweight structure/topology/property envelope import and controlled core export; no general Project Browser writer |
 | QCSchema | Dependency-free built-in import for Molecule and AtomicResult JSON; maps Structure and supported numeric properties while preserving the complete source JSON as a raw envelope; no general Project Browser writer |
 
 The Project Browser export workflow currently writes XYZ, extXYZ, MOL, MOL2,
-PDB, SDF, SMILES, CIF and POSCAR. It shows a loss preview and requires confirmation when
+PDB, PQR, Cube, SDF, SMILES, CIF and POSCAR. It shows a loss preview and requires confirmation when
 the selected format cannot represent source semantics. Never infer export
 support merely because an import reader exists.
 

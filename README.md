@@ -28,7 +28,7 @@ dependency-free built-in reader for Molecule and AtomicResult JSON.
    [Project Browser](docs/user/project-browser.md).
 4. Save the Blender file to publish its scientific project.
 
-The 2.3.0 base format scope is XYZ/extXYZ, MOL V2000/V3000, SDF, SMILES, CIF,
+The ChemBlender 2.4.0 base format scope is XYZ/extXYZ, MOL V2000/V3000, SDF, SMILES, CIF,
 POSCAR/CONTCAR, MOL2, PDB/PQR, Cube, CJSON and QCSchema. Import, export, loss
 and dependency maturity differ by format; see the
 [format guide](docs/user/formats.md) before relying on round-trip behavior.
@@ -44,6 +44,7 @@ Recovery and cache safety are covered in the
 
 Related user guides:
 
+- [ChemBlender 2.4.0 human experience review](docs/user/2.4.0-experience-review.md)
 - [Data quality and diagnostics](docs/user/data-quality.md)
 - [Scientific editing and topology](docs/user/scientific-editing.md)
 

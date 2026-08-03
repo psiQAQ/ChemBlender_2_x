@@ -33,7 +33,14 @@ Dynamic branch tips must be checked live. This document records stable roles and
 
 - `archive/extension-spike-20260707` preserves the mixed Blender extension experiment and planning records.
 - Annotated `v2.1.1` preserves the final legacy add-on at `2b72abf`.
-- `feat/2.2.0-extension` started from `main@v2.1.1` and remains available for review provenance.
 - PR #1 merged the verified extension history into maintained `main` as merge commit `8deeea1`.
 - Annotated `v2.2.0` preserves the first extension release at `cdc7236`; the matching GitHub Release publishes only the tested ZIP and checksum.
-- `archive/extension-spike-20260707` and the old remote snapshot remain separate retained evidence; neither is a release base.
+- Annotated `v2.3.0` and `v2.4.0` preserve their published release trees; merged feature and release branches are not required for release recovery.
+- `archive/extension-spike-20260707` and the remote snapshot remain separate retained evidence; neither is a release base.
+
+## Post-release Retention
+
+- Merged `feat/*`, `release/*`, `docs/*` and `codex/*` refs may be removed after their exact heads are verified as retained by `origin/main` and their PR or Release evidence remains available.
+- Prepared non-ancestor refs require patch, file and evidence equivalence before deletion.
+- Removing a branch never authorizes moving or recreating an annotated tag or public Release.
+- The ordinary Git history and `.agents/completed/` records, rather than redundant merged refs, are the durable development record.

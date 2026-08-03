@@ -45,6 +45,58 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         for phase in range(5):
             self.assertIn(f"Phase {phase}", roadmap)
 
+    def test_post_release_documentation_routes_current_and_historical_state(self):
+        root = self.read_doc("README.md")
+        docs = self.read_doc("docs/README.md")
+        agents = self.read_doc(".agents/README.md")
+        superpowers = self.read_doc("docs/superpowers/README.md")
+        self.assertIn("superpowers/README.md", docs)
+        self.assertIn("ChemBlender 2.4.0", root)
+        self.assertIn("2.4.0-stable-release.md", agents)
+        for term in (".agents/active/", ".agents/queued/", ".agents/completed/"):
+            self.assertIn(term, superpowers)
+        self.assertIn("historical", superpowers.lower())
+        self.assertIn("2.4.0", superpowers)
+
+    def test_user_format_summary_matches_published_240_capabilities(self):
+        formats = self.read_doc("docs/user/formats.md")
+        self.assertIn("ChemBlender 2.4.0 format scope", formats)
+        self.assertNotIn("Base 2.3.0 format scope", formats)
+        self.assertIn("Cube export", formats)
+        self.assertIn("PQR export", formats)
+        self.assertIn("Project Browser", formats)
+
+    def test_240_human_experience_review_is_complete_and_observational(self):
+        guide = self.read_doc("docs/user/2.4.0-experience-review.md")
+        for index_path in ("README.md", "docs/README.md"):
+            self.assertIn("2.4.0-experience-review.md", self.read_doc(index_path))
+        for workflow in (
+            "Install",
+            "First launch",
+            "Quick Import",
+            "Import Preview",
+            "Project Browser",
+            "Structure",
+            "Volume",
+            "Surface",
+            "Export",
+            "save",
+            "reopen",
+            "Cancel",
+            "recover",
+        ):
+            self.assertIn(workflow, guide)
+        for field in (
+            "Environment",
+            "Severity",
+            "Reproducibility",
+            "Expected result",
+            "Actual result",
+            "Evidence",
+        ):
+            self.assertIn(field, guide)
+        self.assertIn("do not implement", guide.lower())
+
     def test_230_planning_entrypoints_exist_and_are_discoverable(self):
         entrypoints = (
             "docs/quantum-visualization/2.3.0/README.md",

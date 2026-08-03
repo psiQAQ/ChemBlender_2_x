@@ -71,6 +71,7 @@ Historical documents provide provenance, not current status.
 | completed | [2.3.0-wave-3-exchange-mol2-pdb-pqr.md](completed/2.3.0-wave-3-exchange-mol2-pdb-pqr.md) | Wave 3 exchange formats, Reader API, CI, PR and merge evidence |
 | completed | [2.3.0-wave-4-migration-release.md](completed/2.3.0-wave-4-migration-release.md) | Wave 4 migration and published 2.3.0 release evidence |
 | completed | [2.3.0-release-readiness.md](completed/2.3.0-release-readiness.md) | Final 2.3.0 local qualification, exact CI artifact and public Release evidence |
+| completed | [2.4.0-stable-release.md](completed/2.4.0-stable-release.md) | Stable 2.4.0 local qualification, exact CI, tag, assets and public Release evidence |
 | completed | [quantum-visualization-foundation.md](completed/quantum-visualization-foundation.md) | Phase 0 semantic model, reader contract, and cross-format normalization evidence |
 | completed | [molecular-quantum-chemistry-ingestion.md](completed/molecular-quantum-chemistry-ingestion.md) | Cube/OpenVDB, cclib, IOData, basis, and orbital ingestion evidence |
 | completed | [wavefunction-derived-fields.md](completed/wavefunction-derived-fields.md) | GBasis MO/density grids, numerical baselines, and Blender Volume evidence |
