@@ -131,7 +131,7 @@ def release_metadata_document(metadata: ReleaseMetadata) -> dict[str, str]:
 def release_channel_document(version: str) -> dict[str, str | bool]:
     parsed = parse_release_version(version)
     return {
-        "channel": parsed.channel or "final",
+        "channel": parsed.channel or "stable",
         "is_prerelease": parsed.is_prerelease,
     }
 

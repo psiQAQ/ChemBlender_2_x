@@ -1,8 +1,8 @@
+import hashlib
 import unittest
 from pathlib import Path
 
 from ChemBlender.scripts.extract_release_notes import extract_release_notes
-from ChemBlender.scripts.release_metadata import read_release_metadata
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,21 +11,13 @@ READINESS = ROOT / "docs/quantum-visualization/2.4.0/rc1-readiness.md"
 
 
 class ReleaseCandidateReadinessTests(unittest.TestCase):
-    def test_production_metadata_and_notes_describe_the_exact_candidate(self):
-        metadata = read_release_metadata(ROOT / "ChemBlender")
-        self.assertEqual(VERSION, metadata.version)
-        self.assertEqual("chemblender-2.4.0-rc.1.zip", metadata.package_name)
-        self.assertEqual(
-            "chemblender-2.4.0-rc.1.sha256",
-            metadata.checksum_name,
-        )
-        self.assertEqual(
-            "chemblender-2.4.0-rc.1-windows-x64",
-            metadata.artifact_name,
-        )
-
+    def test_published_candidate_notes_remain_immutable(self):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         notes = extract_release_notes(changelog, VERSION)
+        self.assertEqual(
+            "8f72aa7fa17c993196181de0c66c772f10d16d4a8be0630dd8fd04e136467d5f",
+            hashlib.sha256(notes.encode("utf-8")).hexdigest(),
+        )
         for term in (
             "### Added",
             "MOL2",
@@ -42,10 +34,9 @@ class ReleaseCandidateReadinessTests(unittest.TestCase):
             "Remote CI: `Not Run`",
         ):
             self.assertIn(term, notes)
-        self.assertNotIn("## [2.4.0]", changelog)
         self.assertIn(
             "[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/"
-            "v2.4.0-rc.1...HEAD",
+            "v2.4.0...HEAD",
             changelog,
         )
         self.assertIn(
