@@ -31,14 +31,14 @@
 - Consumes: `origin/main` at the published `v2.4.0-rc.1` commit and the approved Stable design.
 - Produces: the sole active goal `CB240-STABLE-RELEASE` on `release/2.4.0`.
 
-- [ ] **Step 1: Record the exact baseline and publication evidence**
+- [x] **Step 1: Record the exact baseline and publication evidence**
 
 Record main/tag ancestry, exact-tag package run `30770885098`, verification-only
 run `30771253311`, publication run `30772029322`, public Release URL and public
 asset hashes from the approved design. Record that Issues and Discussions are
 disabled, no PR is open and no blocker was reported.
 
-- [ ] **Step 2: Verify the plan and cursor**
+- [x] **Step 2: Verify the plan and cursor**
 
 Run:
 
@@ -48,7 +48,7 @@ Run:
 git diff --check
 ```
 
-- [ ] **Step 3: Commit activation**
+- [x] **Step 3: Commit activation**
 
 ```powershell
 git add .agents/active/2.4.0-stable-release.md docs/superpowers/plans/2026-08-03-chemblender-2.4.0-stable-release.md tests/test_quantum_visualization_docs.py
@@ -77,7 +77,8 @@ Create `tests/test_240_release_readiness.py` with assertions that current
 metadata is `2.4.0`, package/checksum/artifact names are exact, Stable notes
 contain `### Changed`, `### Compatibility`, `### Known Limitations` and
 `### Verification`, the RC entry/link remains present, `[Unreleased]` compares
-from `v2.4.0`, and the feedback/readiness documents exist.
+from `v2.4.0`, and the feedback-review document exists. Stable readiness is
+added to this test only after Task 2 creates its evidence document.
 
 - [ ] **Step 2: Run RED and record the exact failures**
 
