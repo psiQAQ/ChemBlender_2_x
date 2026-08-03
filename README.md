@@ -44,6 +44,7 @@ Recovery and cache safety are covered in the
 
 Related user guides:
 
+- [ChemBlender 2.4.0 human experience review](docs/user/2.4.0-experience-review.md)
 - [Data quality and diagnostics](docs/user/data-quality.md)
 - [Scientific editing and topology](docs/user/scientific-editing.md)
 

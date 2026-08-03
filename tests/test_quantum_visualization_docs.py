@@ -66,6 +66,37 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("PQR export", formats)
         self.assertIn("Project Browser", formats)
 
+    def test_240_human_experience_review_is_complete_and_observational(self):
+        guide = self.read_doc("docs/user/2.4.0-experience-review.md")
+        for index_path in ("README.md", "docs/README.md"):
+            self.assertIn("2.4.0-experience-review.md", self.read_doc(index_path))
+        for workflow in (
+            "Install",
+            "First launch",
+            "Quick Import",
+            "Import Preview",
+            "Project Browser",
+            "Structure",
+            "Volume",
+            "Surface",
+            "Export",
+            "save",
+            "reopen",
+            "Cancel",
+            "recover",
+        ):
+            self.assertIn(workflow, guide)
+        for field in (
+            "Environment",
+            "Severity",
+            "Reproducibility",
+            "Expected result",
+            "Actual result",
+            "Evidence",
+        ):
+            self.assertIn(field, guide)
+        self.assertIn("do not implement", guide.lower())
+
     def test_230_planning_entrypoints_exist_and_are_discoverable(self):
         entrypoints = (
             "docs/quantum-visualization/2.3.0/README.md",

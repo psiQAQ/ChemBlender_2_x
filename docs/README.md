@@ -2,6 +2,7 @@
 
 ## User Guides
 
+- [ChemBlender 2.4.0 human experience review](user/2.4.0-experience-review.md)
 - [Quick Import](user/quick-import.md)
 - [Project Browser](user/project-browser.md)
 - [Project and sidecar](user/project-sidecar.md)
