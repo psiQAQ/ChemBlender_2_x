@@ -84,7 +84,7 @@ class StableReleaseReadinessTests(unittest.TestCase):
             "`6a7bb40dbf4b1be1c4572fe5f7d4093809b786ce8569ff682a9a8149e0aed1ff`",
             "29,976,424 bytes",
             "189 members",
-            "2,205 passed / 26 skipped / 0 failed",
+            "2,206 passed / 26 skipped / 0 failed",
             "Blender 5.1.2",
             "Stable manifest probe: `Passed`",
             "Package-CI artifact verification: `Passed`",

@@ -29,12 +29,17 @@ their required license records. Native preflight, Extension validate/build,
 ZIP safety and inventory checks, dependency inventory and artifact-size budget
 all passed.
 
+A repeated local build initially included the previous ignored checksum as an
+extra ZIP member. Removing that generated input before the clean build restored
+the exact 189-member package and the SHA-256 recorded above; the final package
+and both verifier inputs contain no nested checksum artifact.
+
 ## Verification
 
 | Gate | Result |
 | --- | --- |
 | Focused Stable/release contracts | `Passed` |
-| Full Python discovery | 2,205 passed / 26 skipped / 0 failed |
+| Full Python discovery | 2,206 passed / 26 skipped / 0 failed |
 | `compileall -q ChemBlender worker tests` | `Passed` |
 | Generated documentation drift | `Passed` — no drift |
 | Stable manifest probe | `Passed` |

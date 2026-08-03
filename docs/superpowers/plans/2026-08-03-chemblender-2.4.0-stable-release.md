@@ -174,18 +174,18 @@ commit as `docs: record stable 2.4.0 local qualification`.
 - Consumes: verified Stable metadata and local qualification evidence.
 - Produces: a clean checkpoint suitable for one ready PR.
 
-- [ ] **Step 1: Review scope and release safety**
+- [x] **Step 1: Review scope and release safety**
 
 Confirm the diff contains no runtime, schema, dependency, wheel, workflow or RC
 entry modification. Review every design requirement and all release-sensitive
 tests; fix task-related findings only.
 
-- [ ] **Step 2: Rerun the complete local gate freshly**
+- [x] **Step 2: Rerun the complete local gate freshly**
 
 Rerun focused/full tests, compileall, native validate/build, ZIP/verifier audit,
 isolated installed-product smoke and `git diff --check` from the committed tree.
 
-- [ ] **Step 3: Complete and commit the cursor**
+- [x] **Step 3: Complete and commit the cursor**
 
 Move the active cursor to completed, mark Tasks 0-3 complete and commit as
 `chore: checkpoint stable 2.4.0 release`.
