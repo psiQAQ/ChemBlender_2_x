@@ -90,9 +90,35 @@ class StableReleaseReadinessTests(unittest.TestCase):
             "Package-CI artifact verification: `Passed`",
             "Release-assets verification: `Passed`",
             "Isolated installed-product smoke: `Passed`",
-            "Remote CI: `Not Run`",
-            "Annotated tag: `Not Run`",
-            "GitHub Release: `Not Run`",
+            "Remote CI: `Passed`",
+            "Annotated tag: `Passed`",
+            "GitHub Release: `Passed`",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, readiness)
+
+    def test_public_release_records_exact_remote_and_public_evidence(self):
+        self.assertTrue(READINESS.is_file(), READINESS)
+        readiness = READINESS.read_text(encoding="utf-8")
+        for term in (
+            "PR #22",
+            "`a39894d38d170b29a218d9b16f38230fb8bc6987`",
+            "`30777435670`",
+            "`30777435669`",
+            "`302b6efec366f1f1657663659b89e8ce526877a5`",
+            "`30777713611`",
+            "`30777713610`",
+            "`65212c7bdee8a3e14ed86b8d7b4e2d8e989bd0cf`",
+            "`30777953426`",
+            "`30778221407`",
+            "`30778260789`",
+            "Release ID: `363951894`",
+            "`939d00f292ca41748870094c15a24ac6adf95f28eab293d3c55d6315d8244571`",
+            "`f50e93ff8a828732a6518faac7789a2ccea00ca50e7aca5283134348228666a7`",
+            "Release body match: `Byte-identical`",
+            "Remote CI: `Passed`",
+            "Annotated tag: `Passed`",
+            "GitHub Release: `Passed`",
         ):
             with self.subTest(term=term):
                 self.assertIn(term, readiness)

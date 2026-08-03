@@ -199,29 +199,29 @@ Move the active cursor to completed, mark Tasks 0-3 complete and commit as
 - Consumes: the clean Stable checkpoint SHA.
 - Produces: ordinary main integration, annotated `v2.4.0`, exact CI and public non-prerelease Release.
 
-- [ ] **Step 1: Push and create one ready PR**
+- [x] **Step 1: Push and create one ready PR**
 
 Push `release/2.4.0`, open one ready PR to `main`, and record its exact head SHA.
 Require `extension-package` and `optional-qc-core` success for that exact SHA.
 
-- [ ] **Step 2: Merge ordinarily and verify the merge SHA**
+- [x] **Step 2: Merge ordinarily and verify the merge SHA**
 
 Use a normal merge commit, fetch, prove the checkpoint is an ancestor of
 `origin/main`, and require both workflows for the exact merge commit.
 
-- [ ] **Step 3: Create the annotated Stable tag and require tag CI**
+- [x] **Step 3: Create the annotated Stable tag and require tag CI**
 
 Create annotated `v2.4.0` at the exact merge commit, push only the tag, and
 require exact-tag `extension-package` success including installed-runtime
 evidence. Never move or recreate a published tag.
 
-- [ ] **Step 4: Verify then publish through the existing workflow**
+- [x] **Step 4: Verify then publish through the existing workflow**
 
 Dispatch `extension-release` for `v2.4.0` with `publish=false` and require a
 successful verification job with publication skipped. Then dispatch the same
 tag with `publish=true` and require a successful non-prerelease publication.
 
-- [ ] **Step 5: Independently verify the public Release**
+- [x] **Step 5: Independently verify the public Release**
 
 Download both public assets to a fresh temporary directory. Verify checksum,
 ZIP inventory and release-assets mode; extract tagged CHANGELOG notes and
@@ -238,20 +238,20 @@ require byte-identical public Release body. Record Release/run URLs and IDs.
 - Consumes: public Stable Release and exact run evidence.
 - Produces: final durable evidence and a verified audit of remaining plans.
 
-- [ ] **Step 1: Add exact public evidence**
+- [x] **Step 1: Add exact public evidence**
 
 Record PR, checkpoint/merge/tag object and peeled SHAs, exact PR/merge/tag CI,
 verification/publication runs, Release URL/ID, public asset hashes, body match
 and ancestry.
 
-- [ ] **Step 2: Audit all plan states**
+- [x] **Step 2: Audit all plan states**
 
 Inspect `.agents/active/`, `.agents/queued/`, roadmap entrypoints and unchecked
 implementation-plan boxes. Distinguish historical unmarked remote steps from
 approved unfinished product work; do not invent work merely to satisfy old
 checkboxes whose final state is already evidenced elsewhere.
 
-- [ ] **Step 3: Commit the post-release checkpoint**
+- [x] **Step 3: Commit the post-release checkpoint**
 
 Run documentation contracts and `git diff --check`, then commit the evidence
 as `chore: record stable 2.4.0 release evidence` on a focused post-release
