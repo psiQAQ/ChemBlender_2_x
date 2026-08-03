@@ -63,12 +63,49 @@ profile during final cleanup. Those cleanup warnings occurred after all
 product assertions passed and did not affect Blender's exit status or the
 verified artifact.
 
-## Remote and publication boundary
+## Remote integration and publication
 
-- Remote CI: `Not Run`.
-- Annotated tag: `Not Run`.
-- GitHub Release: `Not Run`.
+- Remote CI: `Passed`.
+- PR #22: `https://github.com/psiQAQ/ChemBlender_2_x/pull/22`.
+- Exact checkpoint: `a39894d38d170b29a218d9b16f38230fb8bc6987`.
+- PR-head `extension-package`: run `30777435670`, `Passed`.
+- PR-head `optional-qc-core`: run `30777435669`, `Passed`.
+- Ordinary merge commit: `302b6efec366f1f1657663659b89e8ce526877a5`.
+- Merge-head `extension-package`: run `30777713611`, `Passed`.
+- Merge-head `optional-qc-core`: run `30777713610`, `Passed`.
+- Checkpoint ancestry in `origin/main`: `Passed`.
+- Annotated tag: `Passed`.
+- Tag object: `65212c7bdee8a3e14ed86b8d7b4e2d8e989bd0cf`.
+- Tag peeled commit: `302b6efec366f1f1657663659b89e8ce526877a5`.
+- Exact-tag `extension-package`: run `30777953426`, `Passed`.
+- Exact package artifact: ID `8842759083`, name
+  `chemblender-2.4.0-windows-x64`, not expired at publication.
+- Verification-only `extension-release`: run `30778221407`, `Passed`; publish
+  job skipped.
+- Publication `extension-release`: run `30778260789`, `Passed`.
+- GitHub Release: `Passed`.
+- Release ID: `363951894`.
+- Release URL:
+  `https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.4.0`.
+- Release state: latest, non-draft and non-prerelease.
 
-No remote result, tag or public Release is inferred from this local record.
-The Stable branch must still pass exact-head PR and merge CI, exact-tag package
-CI, verification-only publication and independent public asset/body checks.
+## Independent public verification
+
+| Public asset | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `chemblender-2.4.0.zip` | 29,976,423 | `939d00f292ca41748870094c15a24ac6adf95f28eab293d3c55d6315d8244571` |
+| `chemblender-2.4.0.sha256` | 88 | `f50e93ff8a828732a6518faac7789a2ccea00ca50e7aca5283134348228666a7` |
+
+- Release-assets verification: `Passed`.
+- ZIP inventory: 189 members; bad CRC member: none; nested checksum: none.
+- Release body match: `Byte-identical` to the tagged `CHANGELOG.md` entry
+  (1,431 UTF-8 bytes).
+
+## Remaining-plan audit
+
+The repository has no tracked `.agents/active/` or `.agents/queued/` task.
+The quantum-visualization roadmap marks Phase 0–4 and all 29 ordered entries
+complete. Unchecked boxes remaining in older implementation plans are
+historical execution notation whose outcomes are recorded in completed
+cursors, merged PRs and published Releases; they do not define approved
+unfinished product work.
