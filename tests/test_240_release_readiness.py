@@ -8,6 +8,7 @@ from ChemBlender.scripts.release_metadata import read_release_metadata
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = "2.4.0"
 FEEDBACK = ROOT / "docs/quantum-visualization/2.4.0/rc1-feedback-review.md"
+READINESS = ROOT / "docs/quantum-visualization/2.4.0/stable-readiness.md"
 
 
 class StableReleaseReadinessTests(unittest.TestCase):
@@ -70,6 +71,31 @@ class StableReleaseReadinessTests(unittest.TestCase):
         ):
             with self.subTest(term=term):
                 self.assertIn(term, feedback)
+
+    def test_local_readiness_records_exact_stable_evidence_and_stop_boundary(self):
+        self.assertTrue(READINESS.is_file(), READINESS)
+        readiness = READINESS.read_text(encoding="utf-8")
+        for term in (
+            "State: `Passed`",
+            "`chemblender-2.4.0.zip`",
+            "`chemblender-2.4.0.sha256`",
+            "`chemblender-2.4.0-windows-x64`",
+            "`a8d99de7246c1d06d3cb84e8b915597a3821ead2451ef0bd6a546a5c94920bcf`",
+            "`6a7bb40dbf4b1be1c4572fe5f7d4093809b786ce8569ff682a9a8149e0aed1ff`",
+            "29,976,424 bytes",
+            "189 members",
+            "2,205 passed / 26 skipped / 0 failed",
+            "Blender 5.1.2",
+            "Stable manifest probe: `Passed`",
+            "Package-CI artifact verification: `Passed`",
+            "Release-assets verification: `Passed`",
+            "Isolated installed-product smoke: `Passed`",
+            "Remote CI: `Not Run`",
+            "Annotated tag: `Not Run`",
+            "GitHub Release: `Not Run`",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, readiness)
 
 
 if __name__ == "__main__":

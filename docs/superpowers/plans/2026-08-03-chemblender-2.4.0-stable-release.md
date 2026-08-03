@@ -130,7 +130,7 @@ git commit -m "chore: prepare stable 2.4.0 release"
 - Consumes: committed Stable metadata tree.
 - Produces: reproducible local release evidence with exact package identity.
 
-- [ ] **Step 1: Run focused and full Python gates**
+- [x] **Step 1: Run focused and full Python gates**
 
 Run focused Stable/release/document tests, then:
 
@@ -142,20 +142,20 @@ git diff --check
 
 Record passed/skipped/failed counts; do not convert failures into skips.
 
-- [ ] **Step 2: Validate, build and audit with Blender 5.1.2**
+- [x] **Step 2: Validate, build and audit with Blender 5.1.2**
 
 Run the existing native preflight, Extension validate/build, exact ZIP name,
 CRC/path/type/member inventory, dependency/license inventory and artifact-size
 budget. Run both package-CI and release-assets verifier modes against the built
 Stable package and checksum.
 
-- [ ] **Step 3: Verify the installed product**
+- [x] **Step 3: Verify the installed product**
 
 Install the exact Stable ZIP under a fresh `BLENDER_USER_RESOURCES`, run two
 register/unregister/reload cycles and representative MOL2/PDB/PQR/Cube Project
 Browser workflows. Run the stable manifest probe; do not reuse the RC install.
 
-- [ ] **Step 4: Record exact readiness and test it**
+- [x] **Step 4: Record exact readiness and test it**
 
 Write `stable-readiness.md` with the actual package SHA, checksum SHA, size,
 member count, Python results, Blender results and `Remote CI: Not Run` boundary.
