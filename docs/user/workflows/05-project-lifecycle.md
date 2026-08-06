@@ -14,6 +14,8 @@
 
 普通保存/重开可从 [water.xyz](../../../examples/user-workflows/inputs/xyz/water.xyz)创建项目。旧版本迁移使用 hash-locked 的 [chemblender-2.1-molecule.blend](../../../examples/user-workflows/inputs/legacy/chemblender-2.1-molecule.blend)，只在副本上操作。
 
+仓库还提供已经冷重开的 [workflow.blend](../../../examples/user-workflows/outputs/workflow-project/workflow.blend)和 [migrated.blend](../../../examples/user-workflows/outputs/legacy-migration/migrated.blend)。它们各自依赖同目录的完整同名 `.cbq/`，用于直接查看和对照，不替代下面的手工保存、迁移与重开练习。
+
 ## 操作前检查
 
 1. 准备一个可写、路径稳定的测试目录。关闭其他正在使用同一项目的 Blender 进程。

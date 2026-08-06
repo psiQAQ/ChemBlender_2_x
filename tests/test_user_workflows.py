@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOC_ROOT = ROOT / "docs" / "user" / "workflows"
 EXAMPLE_ROOT = ROOT / "examples" / "user-workflows"
 RUNNER = EXAMPLE_ROOT / "scripts" / "run_ui_workflows.py"
+RUNTIME_RESULT = EXAMPLE_ROOT / "results" / "local-2.4.0.json"
 EXPECTED_FAMILIES = (
     "cif",
     "cjson",
@@ -37,6 +38,7 @@ EXPECTED_FAMILIES = (
     "smiles",
     "xyz",
 )
+EXPECTED_OUTPUT_BUNDLES = ("legacy-migration", "workflow-project")
 EXPECTED_DOCS = (
     "README.md",
     "01-import.md",
@@ -145,6 +147,10 @@ class UserWorkflowContractTests(unittest.TestCase):
             (EXAMPLE_ROOT / record["path"]).resolve()
             for record in self.manifest()["files"]
         }
+        expected.update(
+            (EXAMPLE_ROOT / bundle["blend"]).resolve()
+            for bundle in self.manifest()["output_bundles"]
+        )
         self.assertEqual(expected - linked, set())
 
     def test_plugin_workflow_prompts_keep_the_public_ui_boundary(self):
@@ -303,6 +309,38 @@ class UserWorkflowContractTests(unittest.TestCase):
             }
             <= constants
         )
+
+    def test_runtime_result_is_sanitized_and_complete(self):
+        self.assertTrue(RUNTIME_RESULT.is_file(), RUNTIME_RESULT)
+        report = json.loads(RUNTIME_RESULT.read_text(encoding="utf-8"))
+        self.assertEqual(report["schema_version"], "1")
+        self.assertEqual(report["product_version"], "2.4.0")
+        self.assertRegex(report["runner_commit"], r"^[0-9a-f]{40}$")
+        self.assertEqual(
+            report["package"]["sha256"],
+            "079b00b8a47dba56298eb9635b5a5dff76bcb1c4983aeefe5dfe360cc149c79d",
+        )
+        cases = {case["id"]: case for case in report["cases"]}
+        self.assertEqual(tuple(cases), RUNNER_CASE_IDS)
+        self.assertEqual({case["status"] for case in cases.values()}, {"passed"})
+        self.assertEqual(report["deferred"], [])
+        self.assertIn(
+            "bpy.ops.wm.save_mainfile",
+            cases["LIFE-SAVE-REOPEN-PREP"]["operator_ids"],
+        )
+        self.assertIn(
+            "bpy.ops.chemblender.migrate_legacy_scene",
+            cases["MIG-PREVIEW-PREP"]["operator_ids"],
+        )
+        self.assertEqual(
+            tuple(bundle["id"] for bundle in report["tracked_outputs"]),
+            EXPECTED_OUTPUT_BUNDLES,
+        )
+        self.assertEqual(report["outside_plugin"]["status"], "passed")
+        self.assertTrue(all(report["outside_plugin"]["scientific_state_unchanged"].values()))
+        serialized = json.dumps(report, ensure_ascii=False)
+        self.assertNotIn(str(ROOT), serialized)
+        self.assertNotIn(".agents/cache", serialized.replace("\\", "/"))
         source = RUNNER.read_text(encoding="utf-8")
         self.assertIn("NamedTemporaryFile", source)
         self.assertIn(".replace(", source)
@@ -384,6 +422,32 @@ class UserWorkflowContractTests(unittest.TestCase):
             self.assertLessEqual(len(data), 100 * 1024 * 1024, path)
             if len(data) > 50 * 1024 * 1024:
                 self.assertTrue(record.get("size_exception_reason"), path)
+
+    def test_output_bundles_match_every_tracked_file(self):
+        attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
+        self.assertIn("examples/user-workflows/outputs/** -text", attributes)
+        bundles = self.manifest()["output_bundles"]
+        self.assertEqual(tuple(bundle["id"] for bundle in bundles), EXPECTED_OUTPUT_BUNDLES)
+        records = [record for bundle in bundles for record in bundle["files"]]
+        paths = [record["path"] for record in records]
+        tracked = sorted(
+            path.relative_to(EXAMPLE_ROOT).as_posix()
+            for path in (EXAMPLE_ROOT / "outputs").rglob("*")
+            if path.is_file()
+        )
+        self.assertEqual(paths, tracked)
+        self.assertEqual(len(paths), len(set(paths)))
+        for bundle in bundles:
+            self.assertEqual(bundle["cold_reopen"], "passed")
+            self.assertTrue((EXAMPLE_ROOT / bundle["blend"]).is_file())
+            self.assertTrue((EXAMPLE_ROOT / bundle["sidecar"]).is_dir())
+            self.assertTrue(bundle["covers"])
+        for record in records:
+            path = EXAMPLE_ROOT / record["path"]
+            data = path.read_bytes()
+            self.assertEqual(record["bytes"], len(data), path)
+            self.assertEqual(record["sha256"], hashlib.sha256(data).hexdigest(), path)
+            self.assertLess(len(data), 50 * 1024 * 1024, path)
 
     def test_builtin_samples_parse_to_expected_entities(self):
         cases = (

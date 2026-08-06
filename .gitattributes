@@ -12,3 +12,4 @@ docs/reader-api-v1/*.md text eol=lf
 docs/quantum-visualization/reader-capability-matrix.json text eol=lf
 docs/user/dependencies.json text eol=lf
 docs/user/format-capabilities.json text eol=lf
+examples/user-workflows/outputs/** -text

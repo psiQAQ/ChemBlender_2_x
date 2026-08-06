@@ -5,6 +5,7 @@
 - `inputs/` 是不可变输入。文档操作不得覆盖这些文件。
 - `outputs/` 由 Blender 5.1 实测流程生成；只有通过冷启动重开、hash 和大小检查的代表性结果才会纳入仓库。
 - `scripts/` 保存通过 ChemBlender 公开 Operator 复现 UI 流程的脚本。
+- `results/` 保存去除本机绝对路径后的实测结果；当前记录见 [`local-2.4.0.json`](results/local-2.4.0.json)。
 - `manifest.json` 记录每个输入的来源、运行时依赖、预期数据、实测字节数和 SHA-256。
 
 从 `tests/fixtures/` 复制的文件是独立快照，不会在运行时引用测试目录。`ethanol.smi` 是本地生成的最小 SMILES。当前全部输入远小于 50 MiB；新文件应尽量保持在 50 MiB 以内，任何文件都不得超过 100 MiB。
@@ -20,6 +21,13 @@
 | Cube | two-datasets | Structure、Grid3D 与多 dataset 选择 |
 | CJSON / QCSchema | water results、AtomicResult | 计算结果 envelope 与可支持属性 |
 | Legacy | ChemBlender 2.1 molecule | 显式迁移、诊断与另存 |
+
+## 可直接查看的结果
+
+- [workflow.blend](outputs/workflow-project/workflow.blend) 配套同目录的 [workflow.cbq manifest](outputs/workflow-project/workflow.cbq/manifest.json)，包含分子、晶体、轨迹、Grid Volume 和 Signed Surface 等代表性 View。
+- [migrated.blend](outputs/legacy-migration/migrated.blend) 配套同目录的 [migrated.cbq manifest](outputs/legacy-migration/migrated.cbq/manifest.json)，展示 2.1 对象迁移、显式 topology 与 legacy backup collection。
+
+两组文件均由 Blender 5.1.2 冷启动从仓库内当前位置重开通过。下载或复制时要保留 `.blend` 与完整同名 `.cbq/` 目录的相对位置；不要只拿 `.blend`。
 
 操作入口见 [`docs/user/workflows/README.md`](../../docs/user/workflows/README.md)。
 

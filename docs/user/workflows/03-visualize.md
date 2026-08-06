@@ -14,6 +14,8 @@ Project 中的 Structure、Grid3D、属性和结果是科学实体；Blender Obj
 
 用 [two-datasets.cube](../../../examples/user-workflows/inputs/cube/two-datasets.cube)练习多 dataset Grid3D。结构与轨迹可用 [carbon-trajectory.extxyz](../../../examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz)和 [model-trajectory.pdb](../../../examples/user-workflows/inputs/pdb/model-trajectory.pdb)。轻量结果展示可用 [water-results.cjson](../../../examples/user-workflows/inputs/cjson/water-results.cjson)和 [atomic-result.json](../../../examples/user-workflows/inputs/qcschema/atomic-result.json)。
 
+若要直接查看实测结果，可打开 [workflow.blend](../../../examples/user-workflows/outputs/workflow-project/workflow.blend)。必须保留同目录的完整 `workflow.cbq/`；该项目已在仓库内当前位置冷重开，并确认三个 Volume 路径都解析到配套 sidecar。
+
 ## 操作前检查
 
 1. 在 Project Browser 选中目标科学实体，核对 source revision、单位、semantic role、shape 和 quality。

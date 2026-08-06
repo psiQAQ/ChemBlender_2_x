@@ -7,8 +7,8 @@
 - Baseline: `60da41fa450a8715fab39c3e368a4a43af01f9d6`
 - Design: `docs/superpowers/specs/2026-08-07-chemblender-user-workflow-experience-gate-design.md`
 - Plan: `docs/superpowers/plans/2026-08-07-chemblender-user-workflow-experience-gate.md`
-- Current task: `Task 7 — Run Blender MCP build/install workflows and fix reproduced defects`
-- Completed tasks: `Design, implementation plan, Tasks 1–6`
+- Current task: `Task 8 — Final qualification, archive and local main merge`
+- Completed tasks: `Design, implementation plan, Tasks 1–7`
 
 ## Goal
 
@@ -40,6 +40,9 @@ locally committed result into local `main`.
 | Task 5 | `aec862f` | 9-case UX-GATE, review template and pre-tag release blocking policy verified |
 | Task 6 | `1d910da` | Public-Operator runner compiled; 15/15 workflow contracts and `git diff --check` Passed |
 | Task 7 fixes | `4fbcf0e` | Two locale-independent identifier lookups fixed; 78 adjacent tests and installed-product smoke Passed |
+| Task 7 runner | `43f64f1`, `a161f8f`, `69e93c0`, `588beef` | UI context, export confirmation, first-save and resume evidence contracts Passed |
+| Task 7 publication | `4e46d63` | Windows sidecar publication path bounded; 94 adjacent tests and packaged migration Passed |
+| Task 7 prompts | `3218cfd` | Renderability, material fallback and rendered-image inspection added after live MCP diagnosis |
 
 ## Blender Runtime Evidence
 
@@ -47,7 +50,7 @@ locally committed result into local `main`.
 - Live MCP runtime: Blender `5.1.2`, bundled Python `3.13.9`, Windows,
   `C:\Program Files\Blender Foundation\Blender 5.1\blender.exe`, enabled
   `bl_ext.user_default.chemblender`, empty clean background file.
-- Dependency inventory: RDKit `2026.3.3` SHA-256 `f8bd59b2...e767c48` and
+- Dependency inventory: RDKit `2026.03.3` SHA-256 `f8bd59b2...e767c48` and
   Gemmi `0.7.5` SHA-256 `ad1f72ff...fd337d` matched `dependencies.toml`.
 - Extension validate/build and ZIP audit: Passed; current
   `chemblender-2.4.0.zip` is 29,976,721 bytes, 189 regular files, CRC clean,
@@ -111,6 +114,25 @@ locally committed result into local `main`.
   save/migration Operator list and elapsed time. The runner now carries prior Operator
   evidence forward and accumulates elapsed time; a focused contract prevents regression.
 
+## Final Public-Operator Run
+
+- Fresh isolated profile: `.agents/cache/user-workflows/profile-4e46d63-final`.
+  Exact package SHA-256: `079b00b8a47dba56298eb9635b5a5dff76bcb1c4983aeefe5dfe360cc149c79d`.
+- Final run: `.agents/cache/user-workflows/run-588beef-1/report.json`. Four fresh
+  Blender 5.1.2 processes exercised the main flow, project cold reopen, legacy
+  migration and migrated-project cold reopen. All 11 cases are `passed`; `deferred=[]`.
+- LIFE evidence retains both `bpy.ops.wm.save_as_mainfile` and
+  `bpy.ops.wm.save_mainfile`: 88 Project Browser rows, 16 objects and clean state.
+  MIG evidence retains preview, confirmed migration and both Save As calls: 7 rows,
+  2 objects and the `legacy_formaldehyde` backup.
+- The portable tracked result is
+  `examples/user-workflows/results/local-2.4.0.json`; its focused contract and all
+  22 user-workflow contracts Passed.
+- `examples/user-workflows/outputs/` contains 52 files totaling 479,453 bytes. The
+  largest file is 200,053 bytes. Both `.blend`/`.cbq` pairs cold reopened from their
+  tracked paths; workflow Volume paths stay inside the paired sidecar and no external
+  files are missing.
+
 ## Outside-Plugin Prompt Correction
 
 - The explicitly selected Biological View had two points and zero evaluated polygons;
@@ -134,6 +156,5 @@ local `main` only after final qualification.
 
 ## Next Action
 
-Commit the Windows sidecar-path fix, then execute every public-Operator runner
-checkpoint from scratch against the corrected packaged Extension in a new empty run
-directory and fresh Blender 5.1 processes.
+Commit the tracked runtime evidence, run final repository/package/runtime qualification,
+archive this cursor, then normally merge the clean feature branch into local `main`.
