@@ -343,25 +343,25 @@ git commit -m "docs: add manual plugin experience gate"
 - Consumes: Blender `bpy`, public `bpy.ops.chemblender.*`, public Scene RNA, example manifest, output root passed after `--`.
 - Produces: one JSON report `{schema_version, runtime, cases, deferred}`; each case has `id`, `input`, `operators`, `status`, `evidence`, `outputs`, `elapsed_seconds`, and `error`.
 
-- [ ] **Step 1: Add failing static runner-contract tests**
+- [x] **Step 1: Add failing static runner-contract tests**
 
 Parse the runner with `ast`; reject imports whose module starts with `ChemBlender` or `bl_ext`; reject source tokens `cbq.write`, `write_project`, `ProjectSession`, `QCProject`, and assignment to string-keyed `cb_` subscripts. Require calls through `bpy.ops.chemblender` and report schema/case IDs.
 
-- [ ] **Step 2: Run RED because the runner is absent**
+- [x] **Step 2: Run RED because the runner is absent**
 
-- [ ] **Step 3: Implement argument, runtime, and report plumbing**
+- [x] **Step 3: Implement argument, runtime, and report plumbing**
 
 Use only standard library plus `bpy`. Resolve repository/example/output paths from explicit arguments; never infer the checkout from the installed extension. Record Blender version, executable, Python, runtime system, active file, enabled key, and extension repos. Write the report atomically with `tempfile.NamedTemporaryFile(delete=False, dir=destination.parent)` plus `Path.replace()`.
 
-- [ ] **Step 4: Implement UI-equivalent case helpers**
+- [x] **Step 4: Implement UI-equivalent case helpers**
 
 Helpers may inspect `bpy.types.<Operator>.bl_rna.properties`, set public Scene RNA used by the visible panel, call `bpy.ops.chemblender.*`, inspect `bpy.context.scene`, visible objects and files, and collect Operator return values. They may not import the installed package. Implement cases in this order: ENV, IMP-XYZ, IMP-SMILES, IMP-CANCEL, DATA-TOPOLOGY, DATA-CRYSTAL, DATA-BIOLOGICAL, VIEW-CUBE, EXP-FORMATS, LIFE-SAVE-REOPEN-PREP, MIG-PREVIEW-PREP. Reopen-dependent continuation uses a report/checkpoint argument in a fresh Blender process rather than pretending a single process proves cold reopen.
 
-- [ ] **Step 5: Add safe failure and cleanup behavior**
+- [x] **Step 5: Add safe failure and cleanup behavior**
 
 Each case catches `Exception`, records the exact stage/error, verifies owned staging/temp outputs, and stops cases that depend on the failed state. `MemoryError`, `KeyboardInterrupt`, and process loss are not converted to Passed. The script never deletes an existing user path; it operates only below the explicit empty run directory.
 
-- [ ] **Step 6: Run static tests and commit runner before runtime execution**
+- [x] **Step 6: Run static tests and commit runner before runtime execution**
 
 Run workflow tests, `compileall` for the script, and `git diff --check`; commit:
 

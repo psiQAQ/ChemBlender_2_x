@@ -7,8 +7,8 @@
 - Baseline: `60da41fa450a8715fab39c3e368a4a43af01f9d6`
 - Design: `docs/superpowers/specs/2026-08-07-chemblender-user-workflow-experience-gate-design.md`
 - Plan: `docs/superpowers/plans/2026-08-07-chemblender-user-workflow-experience-gate.md`
-- Current task: `Task 6 — Implement the public-Operator Blender workflow runner`
-- Completed tasks: `Design, implementation plan, Tasks 1–5`
+- Current task: `Task 7 — Run Blender MCP build/install workflows and fix reproduced defects`
+- Completed tasks: `Design, implementation plan, Tasks 1–6`
 
 ## Goal
 
@@ -37,7 +37,8 @@ locally committed result into local `main`.
 | Task 2 | `1ae8779` | 5 corpus contracts and 135 reader tests Passed; all 16 inputs below 50 MiB |
 | Task 3 | `cbee68b` | 7 workflow documents, 16 sample links and 3 repository entrypoints verified |
 | Task 4 | `63d9b34` | 18 plugin prompts, 5 outside-plugin prompts and public-UI safety contracts verified |
-| Task 5 | this commit | 9-case UX-GATE, review template and pre-tag release blocking policy verified |
+| Task 5 | `aec862f` | 9-case UX-GATE, review template and pre-tag release blocking policy verified |
+| Task 6 | this commit | Public-Operator runner compiled; 15/15 workflow contracts and `git diff --check` Passed |
 
 ## Blender Runtime Evidence
 
@@ -58,5 +59,5 @@ local `main` only after final qualification.
 
 ## Next Action
 
-Add AST/static safety tests, then implement the minimal public-Operator Blender runner
-with atomic structured JSON reports and no private module/sidecar shortcuts.
+Run `blender-mcp --help`, query the live Blender 5.1 runtime once, then build/install
+the extension and execute every runner checkpoint with defect-driven RED/GREEN fixes.

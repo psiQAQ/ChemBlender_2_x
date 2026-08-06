@@ -22,3 +22,43 @@
 | Legacy | ChemBlender 2.1 molecule | 显式迁移、诊断与另存 |
 
 操作入口见 [`docs/user/workflows/README.md`](../../docs/user/workflows/README.md)。
+
+## 自动走查
+
+`scripts/run_ui_workflows.py` 只调用已注册的 `bpy.ops.chemblender.*` Operator 和公开 Scene RNA，不能代替 UI 手工验收。它需要一个已安装并启用 ChemBlender 的 Blender 5.1 环境、一个显式指定且初次运行时为空的目录，以及位于该目录第一层的 JSON 报告路径。
+
+下面的 PowerShell 命令也可由 Blender MCP 在确认实时版本、可执行文件和扩展状态后启动。不要把 `--run-dir` 指向 `inputs/` 或已有用户目录。
+
+```powershell
+$blender = "C:\Program Files\Blender Foundation\Blender 5.1\blender.exe"
+$examples = (Resolve-Path "examples\user-workflows").Path
+$runner = Join-Path $examples "scripts\run_ui_workflows.py"
+$run = Join-Path $env:TEMP "chemblender-user-workflows"
+New-Item -ItemType Directory -Path $run
+
+& $blender --background --python $runner -- `
+  --examples-root $examples `
+  --run-dir $run `
+  --report (Join-Path $run "report.json")
+```
+
+主流程会生成项目和迁移检查点；以下三次冷启动依次续跑，不得省略 `--resume`：
+
+```powershell
+& $blender --background (Join-Path $run "outputs\project\workflow.blend") `
+  --python $runner -- --examples-root $examples --run-dir $run `
+  --report (Join-Path $run "report.json") --resume `
+  --checkpoint reopen --cases LIFE-SAVE-REOPEN-PREP
+
+& $blender --background (Join-Path $examples "inputs\legacy\chemblender-2.1-molecule.blend") `
+  --python $runner -- --examples-root $examples --run-dir $run `
+  --report (Join-Path $run "report.json") --resume `
+  --checkpoint migration --cases MIG-PREVIEW-PREP
+
+& $blender --background (Join-Path $run "outputs\legacy\migrated.blend") `
+  --python $runner -- --examples-root $examples --run-dir $run `
+  --report (Join-Path $run "report.json") --resume `
+  --checkpoint migration-reopen --cases MIG-PREVIEW-PREP
+```
+
+每个案例的 `operators`、`evidence`、`outputs`、耗时和错误都会原子写入 `report.json`。`prepared` 只表示等待下一次冷启动；最终判定还要填写 [`docs/user/workflows/reviews/template.md`](../../docs/user/workflows/reviews/template.md)，核对 UI 与 Agent/MCP 两条路径。

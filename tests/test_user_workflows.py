@@ -1,3 +1,4 @@
+import ast
 import hashlib
 import json
 import re
@@ -18,6 +19,7 @@ from ChemBlender.core.xyz import parse_xyz
 ROOT = Path(__file__).resolve().parents[1]
 DOC_ROOT = ROOT / "docs" / "user" / "workflows"
 EXAMPLE_ROOT = ROOT / "examples" / "user-workflows"
+RUNNER = EXAMPLE_ROOT / "scripts" / "run_ui_workflows.py"
 EXPECTED_FAMILIES = (
     "cif",
     "cjson",
@@ -79,9 +81,26 @@ REVIEW_CASE_IDS = (
     "AGENT",
     "OUTSIDE",
 )
+RUNNER_CASE_IDS = (
+    "ENV",
+    "IMP-XYZ",
+    "IMP-SMILES",
+    "IMP-CANCEL",
+    "DATA-TOPOLOGY",
+    "DATA-CRYSTAL",
+    "DATA-BIOLOGICAL",
+    "VIEW-CUBE",
+    "EXP-FORMATS",
+    "LIFE-SAVE-REOPEN-PREP",
+    "MIG-PREVIEW-PREP",
+)
 
 
 class UserWorkflowContractTests(unittest.TestCase):
+    def runner_tree(self):
+        self.assertTrue(RUNNER.is_file(), RUNNER)
+        return ast.parse(RUNNER.read_text(encoding="utf-8"), filename=str(RUNNER))
+
     def manifest(self):
         path = EXAMPLE_ROOT / "manifest.json"
         self.assertTrue(path.is_file(), path)
@@ -218,6 +237,72 @@ class UserWorkflowContractTests(unittest.TestCase):
             "Passed / Failed / Blocked",
         ):
             self.assertIn(term, template)
+
+    def test_runner_uses_only_public_blender_boundaries(self):
+        tree = self.runner_tree()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                modules = tuple(alias.name for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                modules = (node.module or "",)
+            else:
+                modules = ()
+            self.assertFalse(
+                any(name.startswith(("ChemBlender", "bl_ext")) for name in modules),
+                (RUNNER, getattr(node, "lineno", None), modules),
+            )
+            if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                targets = (
+                    node.targets
+                    if isinstance(node, ast.Assign)
+                    else (node.target,)
+                )
+                for target in targets:
+                    for child in ast.walk(target):
+                        if isinstance(child, ast.Subscript) and isinstance(
+                            child.slice, ast.Constant
+                        ):
+                            key = child.slice.value
+                            self.assertFalse(
+                                isinstance(key, str) and key.startswith("cb_"),
+                                (RUNNER, getattr(node, "lineno", None), key),
+                            )
+
+        source = RUNNER.read_text(encoding="utf-8")
+        for token in (
+            "cbq.write",
+            "write_project",
+            "ProjectSession",
+            "QCProject",
+        ):
+            self.assertNotIn(token, source)
+        self.assertIn("bpy.ops.chemblender", source)
+
+    def test_runner_declares_cases_and_atomic_report_contract(self):
+        tree = self.runner_tree()
+        constants = {
+            value.value
+            for value in ast.walk(tree)
+            if isinstance(value, ast.Constant) and isinstance(value.value, str)
+        }
+        self.assertTrue(set(RUNNER_CASE_IDS) <= constants)
+        self.assertTrue(
+            {
+                "schema_version",
+                "runtime",
+                "cases",
+                "deferred",
+                "operators",
+                "evidence",
+                "outputs",
+                "elapsed_seconds",
+                "error",
+            }
+            <= constants
+        )
+        source = RUNNER.read_text(encoding="utf-8")
+        self.assertIn("NamedTemporaryFile", source)
+        self.assertIn(".replace(", source)
 
     def test_manifest_covers_each_base_format_family(self):
         manifest = self.manifest()
