@@ -42,7 +42,9 @@
 3. [展示数据](03-visualize.md)
 4. [导出数据](04-export.md)
 5. [保存、重开、恢复与迁移](05-project-lifecycle.md)
-6. [格式与支持范围](formats.md)
+6. [Agent 与 Blender MCP](06-agent-and-mcp.md)
+7. [Agent 辅助的插件能力外案例](07-agent-beyond-plugin.md)
+8. [格式与支持范围](formats.md)
 
 细节事实仍以现有的 [Quick Import](../quick-import.md)、[Project Browser](../project-browser.md)、[数据质量](../data-quality.md)、[科学编辑](../scientific-editing.md)和[项目 sidecar](../project-sidecar.md)指南为准。教程输入集中在[用户流程样例目录](../../../examples/user-workflows/README.md)，输入文件不要原地覆盖。
 

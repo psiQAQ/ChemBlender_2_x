@@ -242,7 +242,7 @@ git commit -m "docs: add user workflow center"
 
 ---
 
-### Task 4: Add UI-equivalent Agent/MCP prompts and outside-plugin cases
+### Task 4: Add UI-equivalent Agent/MCP prompts and outside-plugin cases — completed
 
 **Files:**
 - Create: `docs/user/workflows/06-agent-and-mcp.md`
@@ -259,27 +259,27 @@ git commit -m "docs: add user workflow center"
 - Consumes: public Operator names from `ChemBlender/runtime/registration.py` and `ChemBlender/ui/**`.
 - Produces: copyable Agent-neutral prompt blocks and a static prompt-safety contract.
 
-- [ ] **Step 1: Add a failing prompt-safety test**
+- [x] **Step 1: Add a failing prompt-safety test**
 
 Extend `EXPECTED_DOCS` with `06-agent-and-mcp.md` and `07-agent-beyond-plugin.md`. Require every numbered plugin workflow page to contain a fenced `text` prompt with `Blender MCP`, `bpy.ops.chemblender`, `检查 Operator RNA`, and an explicit “do not import private modules/directly edit .cbq/bypass confirmation” boundary. Reject executable Python lines beginning with `from ChemBlender` or `import ChemBlender`, plus `project.write`, direct `obj["cb_` assignment, and direct writes below a `.cbq` path in `run_ui_workflows.py`; allow the prose guide to name those forbidden patterns while explaining the boundary.
 
-- [ ] **Step 2: Run RED before adding prompts**
+- [x] **Step 2: Run RED before adding prompts**
 
 Expected: prompt sections are incomplete or missing.
 
-- [ ] **Step 3: Write the Agent/MCP operating guide**
+- [x] **Step 3: Write the Agent/MCP operating guide**
 
 Include connectivity preflight, one-shot runtime query, active file/dirty-state checks, Operator RNA introspection, public Operator execution, visible-state verification, cancellation, failure stop rules, crash recovery, and Codex/Claude Code portability without guessing a specific MCP server tool name.
 
-- [ ] **Step 4: Add one prompt per documented operation**
+- [x] **Step 4: Add one prompt per documented operation**
 
 Each prompt must name the exact sample, ask the Agent to discover the live Operator RNA signature, call the public Operator, wait conditionally, inspect the same state the UI exposes, and return evidence. Prompts must preserve Import Preview, quality decisions, loss confirmation, save/reopen, and migration confirmation.
 
-- [ ] **Step 5: Write outside-plugin examples**
+- [x] **Step 5: Write outside-plugin examples**
 
 Provide separate generic `bpy` prompts for material styling, world/light/camera setup, collection organization, Eevee/Cycles render setup, and saving a presentation copy. Precede every case with “这不是 ChemBlender 插件能力”; prohibit scientific edits through Object transform/material changes.
 
-- [ ] **Step 6: Run prompt tests and commit**
+- [x] **Step 6: Run prompt tests and commit**
 
 Run workflow tests plus docs tests and commit:
 

@@ -64,7 +64,29 @@ ChemBlender 自有的 Volume/Surface cache 位于 sidecar 的 derived cache 范�
 
 ## Agent 提示词
 
-> 在 Blender 5.1 中通过 ChemBlender 公开 Operator 导入 `examples/user-workflows/inputs/cube/two-datasets.cube`。在 Import Preview 后从 Project Browser 选中 Grid3D，读取公开 RNA 的 status、dims、dataset count 和 unit；显式选择一个 dataset，必要时运行 Resolve Grid Semantics，再创建 Volume 或 Signed Surface。完成后验证 View binding、dataset index、isovalue 和对象存在。不要直接调用私有 cache/service 函数。
+### Structure View
+
+```text
+使用当前 Blender MCP 导入 `examples/user-workflows/inputs/xyz/water.xyz`。完成 Blender 5.1/Extension 预检并检查 Quick Import/Preview 的 Operator RNA；通过 `bpy.ops.chemblender.quick_import` 与 `confirm_import` 走完 UI confirmation。读取 Project Browser 的 Structure 和 Default View，验证 3 atoms、quality、entity/revision binding 与对象存在。不得 import private modules、直接编辑 `.cbq`/cache/`cb_` state 或 bypass confirmation；材质和 transform 不算 scientific verification。
+```
+
+### Grid Volume / Signed Surface
+
+```text
+使用当前 Blender MCP 导入 `examples/user-workflows/inputs/cube/two-datasets.cube`。确认 Blender >= 5.1、Extension key 和 clean state；检查 `bpy.ops.chemblender.resolve_grid_semantics` 与 `create_grid_view` 的 Operator RNA/poll。Import Preview confirmation 后选中 Grid3D，读取 status、dims、dataset count、unit 和 semantic role；显式选择 dataset index，歧义存在时先停下报告。按我确认的 preset/unit/isovalue 创建 Volume 或 Signed Surface，并验证 View binding、dataset index、cache ownership 和对象。不得 import private modules、直写 `.cbq`/cache 或 bypass confirmation。
+```
+
+### trajectory / MODEL playback
+
+```text
+使用当前 Blender MCP 导入 `examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz`；也可按同一流程改用 `examples/user-workflows/inputs/pdb/multimodel.pdb`。检查所有导入和 playback Operator RNA，走 `bpy.ops.chemblender.quick_import`/`confirm_import` confirmation，再从公开 Project Browser/View RNA 读取 frame/model count 和 source revision。调用 live playback Operator 后验证帧变化但 source revision 不变。不得 import private modules、修改 `.cbq` 或 bypass confirmation。
+```
+
+### 冷重开后的缓存重建
+
+```text
+使用当前 Blender MCP 审计一个已保存的 Cube Project。先检查 active file、dirty state、Project link 与 `bpy.ops.chemblender.create_grid_view` Operator RNA；只在 `.cbq` 已由插件验证且 authoritative Grid3D 完整时，通过公开 UI Operator 重建缺失 View。不得手工删除/写入 `.cbq` 或 cache，也不得 import private modules。若需要任何 link/quality confirmation，先停止。重建后验证 entity/revision、dataset、isovalue、owned cache path 和冷重开状态，不以对象存在代替 confirmation。
+```
 
 ## 常见问题
 

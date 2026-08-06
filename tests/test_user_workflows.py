@@ -41,6 +41,8 @@ EXPECTED_DOCS = (
     "03-visualize.md",
     "04-export.md",
     "05-project-lifecycle.md",
+    "06-agent-and-mcp.md",
+    "07-agent-beyond-plugin.md",
     "formats.md",
 )
 REQUIRED_RECORD_KEYS = {
@@ -55,6 +57,15 @@ REQUIRED_RECORD_KEYS = {
     "workflow",
 }
 MARKDOWN_LINK = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
+TEXT_FENCE = re.compile(r"```text\s+(.*?)```", re.DOTALL)
+PLUGIN_WORKFLOW_DOCS = (
+    "01-import.md",
+    "02-process.md",
+    "03-visualize.md",
+    "04-export.md",
+    "05-project-lifecycle.md",
+    "06-agent-and-mcp.md",
+)
 
 
 class UserWorkflowContractTests(unittest.TestCase):
@@ -102,6 +113,37 @@ class UserWorkflowContractTests(unittest.TestCase):
             for record in self.manifest()["files"]
         }
         self.assertEqual(expected - linked, set())
+
+    def test_plugin_workflow_prompts_keep_the_public_ui_boundary(self):
+        for name in PLUGIN_WORKFLOW_DOCS:
+            path = DOC_ROOT / name
+            self.assertTrue(path.is_file(), path)
+            prompts = TEXT_FENCE.findall(path.read_text(encoding="utf-8"))
+            self.assertTrue(prompts, path)
+            contract = "\n".join(prompts)
+            for term in (
+                "Blender MCP",
+                "bpy.ops.chemblender",
+                "Operator RNA",
+                "private modules",
+                ".cbq",
+                "confirmation",
+            ):
+                self.assertIn(term, contract, (path, term))
+
+    def test_guides_do_not_contain_executable_private_imports(self):
+        forbidden = re.compile(r"^\s*(?:from|import)\s+ChemBlender\b", re.MULTILINE)
+        for name in EXPECTED_DOCS:
+            path = DOC_ROOT / name
+            if path.is_file():
+                self.assertIsNone(forbidden.search(path.read_text(encoding="utf-8")), path)
+
+    def test_outside_plugin_examples_are_explicitly_scoped(self):
+        path = DOC_ROOT / "07-agent-beyond-plugin.md"
+        self.assertTrue(path.is_file(), path)
+        document = path.read_text(encoding="utf-8")
+        self.assertGreaterEqual(document.count("这不是 ChemBlender 插件能力"), 5)
+        self.assertNotIn("bpy.ops.chemblender", document)
 
     def test_manifest_covers_each_base_format_family(self):
         manifest = self.manifest()

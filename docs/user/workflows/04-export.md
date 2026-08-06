@@ -61,7 +61,29 @@ CJSON 和 QCSchema reader 都能保留 source envelope，core 也有受控 expor
 
 ## Agent 提示词
 
-> 在 Blender 5.1 的 ChemBlender Project Browser 中选中当前 Structure，调用公开 `Export Selected Data` Operator 导出到一个新的临时目录。先从公开 RNA 读取 format、selection closure 和 loss preview；有任何 loss、Partial 或 Ambiguous 时停止并把预览交给我，不要自动确认。成功后用同一 Quick Import/Import Preview 公共流程回读，并比较该格式承诺保留的语义。不要直接调用 exporter 私有函数或覆盖输入文件。
+### 导出与 loss preview
+
+```text
+使用当前 Blender MCP，通过公开导入流程把 `examples/user-workflows/inputs/pqr/with-chain.pqr` 提交到 Project。完成 Blender 5.1/Extension/active-file 预检后，检查 `bpy.ops.chemblender.export_project_entity` 的 Operator RNA 与 poll。在 Project Browser 选中目标 Structure，设置一个新的临时输出路径和 PQR format，返回 selection closure、quality 与完整 Loss Preview；任何 loss/Partial/Ambiguous confirmation 都停下等我决定。只有我确认后才执行。不得 import private modules、直接写 `.cbq`、调用 exporter service 或 bypass confirmation。
+```
+
+### 多 dataset Cube
+
+```text
+使用当前 Blender MCP 导入 `examples/user-workflows/inputs/cube/two-datasets.cube`，走完 `bpy.ops.chemblender.quick_import`/`confirm_import` 的 Import Preview confirmation。检查 export Operator RNA 后，从 Project Browser 选中 Grid3D，显式设置一个 Dataset Index 和新的 `.cube` destination。先报告 shape、unit、semantic role 和 loss confirmation；批准后调用 live `bpy.ops.chemblender.export_project_entity`。验证只导出所选 dataset，并做公开 reader 回读。不得 import private modules、编辑 `.cbq` 或 bypass confirmation。
+```
+
+### 取消导出
+
+```text
+使用当前 Blender MCP，先检查 `bpy.ops.chemblender.export_project_entity` Operator RNA、modal/cancel 行为和目标不存在。启动一个公开 UI 导出后按 Agent 当前可用的公开取消路径请求取消，条件轮询 job state，验证 destination 没有被报告为成功、Project/entity/View 不变。不要删除未知文件来伪造取消，不得 import private modules、写 `.cbq` 或 bypass loss/quality confirmation。
+```
+
+### 语义回读
+
+```text
+使用当前 Blender MCP 对我指定的新导出文件执行 UI 等价回读。先检查 Quick Import/Import Preview Operator RNA，再调用 `bpy.ops.chemblender.quick_import`，停在 confirmation 前返回 reader、quality、atom/cell/topology/frame/dataset/property 摘要。与导出前记录和该格式的 Loss Preview 逐项比较，明确哪些保留、归一化或省略；不要只比文件存在或 bytes。不得 import private modules、直接编辑 `.cbq` 或 bypass confirmation。
+```
 
 ## 常见问题
 

@@ -76,7 +76,29 @@ ChemBlender 自有的 `cache/render/` 与 `cache/derivation/` 可以重建。冷
 
 ## Agent 提示词
 
-> 在 Blender 5.1 中用 ChemBlender 公开 UI 保存当前 Project 到新的测试目录。验证 `.blend` 与同 basename `.cbq/` 都存在、Project 状态为 clean/Connected。然后正常关闭并重新启动同一 Blender 5.1，打开 `.blend`，只通过公开 UI/RNA 核对 project identity、source、Structure、View binding 和 diagnostics。不要直接改 `.cbq`、manifest 或 scene 的私有 link 属性；若 link 不一致，停在 Project Browser recovery UI。
+### Save Project 与冷重开
+
+```text
+使用当前 Blender MCP 通过 `bpy.ops.chemblender.quick_import`/`confirm_import` 导入 `examples/user-workflows/inputs/xyz/water.xyz`。一次完成 Blender 5.1/Extension/active-file/dirty-state 预检，并检查 ChemBlender Operator RNA、`bpy.ops.wm.save_as_mainfile` RNA 与 poll。用 UI 等价 Save Project 保存到新的测试目录；不得直接写 `.cbq`。验证 `.blend` 和同 basename `.cbq/`、clean/Connected、project identity。然后正常关闭并重启 exact Blender 5.1，重开 `.blend`，核对 source、3-atom Structure、View binding 和 diagnostics。不得 import private modules 或 bypass save/link confirmation。
+```
+
+### Verify / Relink
+
+```text
+使用当前 Blender MCP 在测试副本中检查 Project link。先返回 active file、dirty state、link state 和 `bpy.ops.chemblender.project_link_recovery` Operator RNA/poll。只调用 UI 当前显示允许的 Verify 或 Relink action；候选 `.cbq` 的 project UUID、schema、manifest hash 和 arrays 必须通过公开验证，任何 Mismatch/Invalid confirmation 都停止。不得 import private modules、直接改 scene link custom property、manifest 或 `.cbq`。完成后冷重开并验证 Connected，不得 bypass confirmation。
+```
+
+### Revision 与 View
+
+```text
+使用当前 Blender MCP 导入同一 source 的新 revision，先检查 `bpy.ops.chemblender.revision_view_action` Operator RNA 和 Project Browser 显示的 current/replacement revision。把 `Update Selected Views`、`Comparison View`、`Keep Current` 及其 confirmation 返回给我，不自动选择。调用批准的公开 Operator 后验证旧/新 View visibility、entity/revision binding 和旧结果仍绑定旧 Structure。不得 import private modules、写 `.cbq`、直接改 `cb_` state 或 bypass confirmation。
+```
+
+### Legacy migration
+
+```text
+使用当前 Blender MCP 打开 `examples/user-workflows/inputs/legacy/chemblender-2.1-molecule.blend` 的工作副本，要求 Blender >= 5.1 和 enabled key 正确。检查 `bpy.ops.chemblender.preview_legacy_migration`、`migrate_legacy_scene` 及保存 Operator RNA/poll。先执行非突变 preview，返回 destination、legacy objects、拟创建实体、backup-only items、diagnostics 和 migration confirmation；未经我确认不迁移。批准后调用公开 Operator，保存新的 `.blend`/`.cbq` 配对并冷重开，验证 Connected、migrated View 和 `ChemBlender Legacy Backup`。不得 import private modules、直接编辑 `.cbq`/custom properties 或 bypass confirmation。
+```
 
 ## 常见问题
 

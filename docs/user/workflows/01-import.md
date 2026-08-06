@@ -64,7 +64,29 @@ RDKit 流程可用 [water-v2000.mol](../../../examples/user-workflows/inputs/mol
 
 ## Agent 提示词
 
-> 在当前 Blender 5.1 中，通过 ChemBlender UI 等价的公开 Operator 导入 `examples/user-workflows/inputs/xyz/water.xyz`。先检查扩展、Project 状态和 Operator RNA；使用 Balanced validation，打开并核对 Import Preview，再确认。完成后从公开 UI/RNA 验证 source、3 原子 Structure、quality 和默认 View。不要直接导入 ChemBlender 私有 Python 模块，也不要绕过 Preview。
+### 单文件与 Import Preview
+
+```text
+使用当前 Blender MCP。一次查询 Blender >= 5.1、executable、bundled Python、runtime system、Extension repositories、active file/dirty state 和 enabled key `bl_ext.user_default.chemblender`。检查 Operator RNA 与 poll 后，只调用 live registered `bpy.ops.chemblender.quick_import` 和 `bpy.ops.chemblender.confirm_import`，以 Balanced 导入 `examples/user-workflows/inputs/xyz/water.xyz`。先停在 Import Preview，报告 reader、quality、diagnostics、Default View 和所有 confirmation；无冲突/歧义且与 3 原子 water 预期一致时再确认。完成后从公开 Scene RNA/Project Browser 状态验证 source、Structure 和 View。不得 import private modules、直接编辑 `.cbq`/cache/`cb_` state，或 bypass confirmation。
+```
+
+### 多文件
+
+```text
+使用当前 Blender MCP，先完成 Blender 5.1/Extension/active-file 预检并检查 Operator RNA。通过 live `bpy.ops.chemblender.quick_import` 一次选择 `examples/user-workflows/inputs/xyz/water.xyz` 与 `examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz`，不得扫描目录。等待公开 job state 完成，停在 Preview，逐来源返回 reader、quality、frame/cell 摘要、grouping/conflict confirmation；不要自动 Accept Group。只在决定明确后调用 `bpy.ops.chemblender.confirm_import`。验证两个 source revision 和对应实体/View。不得 import private modules、写 `.cbq` 或 bypass confirmation。
+```
+
+### SMILES
+
+```text
+使用当前 Blender MCP，确认 Blender >= 5.1、`bl_ext.user_default.chemblender`、RDKit availability 和 clean Project。检查 Operator RNA 后调用 live `bpy.ops.chemblender.import_smiles_text` 导入 `CCO`（来源样例 `examples/user-workflows/inputs/smiles/ethanol.smi`），使用 Balanced。停在 Import Preview，报告 3D derivation、Structure、topology、quality 和 confirmation，再调用 `bpy.ops.chemblender.confirm_import`。验证 Project Browser 中的 MolecularRecord/Structure/View；不要 import private modules、直改 `.cbq` 或 bypass confirmation。
+```
+
+### 取消
+
+```text
+使用当前 Blender MCP，先检查 Operator RNA。通过 `bpy.ops.chemblender.quick_import` 启动 `examples/user-workflows/inputs/cube/two-datasets.cube` 的 staging，在确认前调用 live `bpy.ops.chemblender.cancel_import`。条件轮询公开 job/Preview state，直到活动任务消失；验证 Project Browser 没有本次 source/entity/View，且没有半成品被报告为成功。不得 import private modules、操作 `.cbq`/cache 或调用 `bpy.ops.chemblender.confirm_import` 绕过取消；任何 confirmation 都保持未确认。
+```
 
 ## 常见问题
 

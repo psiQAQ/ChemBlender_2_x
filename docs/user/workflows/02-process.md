@@ -78,7 +78,29 @@ ChemBlender 把科学数据修改与 Blender 外观修改分开。移动对象�
 
 ## Agent 提示词
 
-> 在当前 Blender 5.1 项目中选中 ChemBlender Structure View，通过公开 UI/RNA 检查 source revision 和 topology。只调用 ChemBlender 公开 Operator：预览并执行 Apply Scientific Edits，确认创建 derived Structure 而非覆盖 source；随后验证 provenance、revision 和 View binding。若有歧义或 loss/quality 决策，停在 UI 预览并报告，不要替用户确认。
+### Apply Scientific Edits
+
+```text
+使用当前 Blender MCP，先查询 Blender 5.1/Extension/active file/dirty state，并从公开 UI/RNA 确认我选中的是 ChemBlender Structure View。检查 Operator RNA 与 poll 后调用 live `bpy.ops.chemblender.apply_scientific_edits`，先返回 atom/coordinate/element/bond/cell preview 和所有 confirmation；未经我确认不提交。提交后验证 source Structure 未变、derived Structure/provenance/revision/View binding 已创建。不得 import private modules、写 `.cbq`/cache/`cb_` state 或 bypass confirmation。
+```
+
+### topology proposal 与选择
+
+```text
+使用当前 Blender MCP 导入并选中 `examples/user-workflows/inputs/mol2/substructure.mol2` 的 Structure。预检 runtime 后检查 `bpy.ops.chemblender.compute_topology`、`accept_topology`、`reject_topology`、`switch_topology` 的 Operator RNA 与 poll。只调用当前 UI 允许的 Operator，先报告 existing topology source/quality/edge count 和 proposal parameters；任何 scientific confirmation 交给我。执行我指定的 accept/reject/switch 后验证 TopologyRecord 与 View binding，不能覆盖 explicit_file 证据。不得 import private modules、改 `.cbq` 或 bypass confirmation。
+```
+
+### 晶体属性
+
+```text
+使用当前 Blender MCP 通过公开导入流程打开 `examples/user-workflows/inputs/poscar/velocities.CONTCAR`。确认 Blender >= 5.1 和 Extension key，检查 Operator RNA 后读取 declared/derived/comparison symmetry、Selective Dynamics 和 velocity 的公开 UI 状态。Gemmi availability 和 cell 完整时才允许调用 live `bpy.ops.chemblender.derive_crystal_symmetry` 或 `toggle_selective_constraints`；先报告 confirmation 与 dependency reason。验证 derived result 或 constraint View，不把它写成源文件事实。不得 import private modules、编辑 `.cbq` 或 bypass confirmation。
+```
+
+### biological hierarchy 与 MODEL
+
+```text
+使用当前 Blender MCP 导入 `examples/user-workflows/inputs/pdb/multimodel.pdb`，在 Import Preview confirmation 后选中 BiologicalHierarchy/Structure。检查 `bpy.ops.chemblender.select_biological_atoms`、`play_biological_models`、`create_biological_view` 的 Operator RNA 与 poll，再按我给的 model/chain/residue 条件调用。返回 hierarchy、MODEL count、selection 和 View binding。不得 import private modules、改 mesh/scientific attributes、写 `.cbq` 或 bypass confirmation。
+```
 
 ## 常见问题
 
