@@ -339,6 +339,15 @@ class UserWorkflowContractTests(unittest.TestCase):
         ):
             self.assertIn(token, source)
 
+    def test_runner_resume_preserves_operator_and_elapsed_evidence(self):
+        source = RUNNER.read_text(encoding="utf-8")
+        for token in (
+            'list(previous["operators"]) if previous else []',
+            'float(previous["elapsed_seconds"]) if previous else 0.0',
+            "previous_elapsed + time.perf_counter() - started",
+        ):
+            self.assertIn(token, source)
+
     def test_first_project_save_documents_and_runs_the_second_save_step(self):
         source = RUNNER.read_text(encoding="utf-8")
         self.assertIn('context.call_wm("save_as_mainfile"', source)

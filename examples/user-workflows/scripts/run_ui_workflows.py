@@ -924,16 +924,17 @@ def _run_case(context, case_id):
         (item for item in context.report["cases"] if item["id"] == case_id),
         None,
     )
+    previous_elapsed = float(previous["elapsed_seconds"]) if previous else 0.0
     started = time.perf_counter()
     record = {
         "id": case_id,
         "input": list(CASE_INPUTS[case_id]),
-        "operators": [],
+        "operators": list(previous["operators"]) if previous else [],
         "status": "running",
         "stage": "start",
         "evidence": {},
         "outputs": list(previous["outputs"]) if previous else [],
-        "elapsed_seconds": 0.0,
+        "elapsed_seconds": previous_elapsed,
         "error": None,
     }
     if blocked:
@@ -954,7 +955,10 @@ def _run_case(context, case_id):
             "type": type(error).__name__,
             "message": str(error),
         }
-        record["elapsed_seconds"] = round(time.perf_counter() - started, 6)
+        record["elapsed_seconds"] = round(
+            previous_elapsed + time.perf_counter() - started,
+            6,
+        )
         _upsert_case(context.report, record)
         _atomic_report(context.report_path, context.report)
         raise
@@ -969,7 +973,10 @@ def _run_case(context, case_id):
         }
     else:
         record.update(payload)
-    record["elapsed_seconds"] = round(time.perf_counter() - started, 6)
+    record["elapsed_seconds"] = round(
+        previous_elapsed + time.perf_counter() - started,
+        6,
+    )
     _update_deferred(context.report, record)
     _upsert_case(context.report, record)
     _atomic_report(context.report_path, context.report)

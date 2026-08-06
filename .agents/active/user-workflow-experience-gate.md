@@ -107,6 +107,9 @@ locally committed result into local `main`.
   both UI steps; focused RED/GREEN passed.
 - Run `.agents/cache/user-workflows/run-69e93c0-1/report.json` passed main and LIFE
   cold reopen, then preserved the `WinError 3` migration failure that led to defect 3.
+- The final resume checkpoints replaced each LIFE/MIG record and discarded the earlier
+  save/migration Operator list and elapsed time. The runner now carries prior Operator
+  evidence forward and accumulates elapsed time; a focused contract prevents regression.
 
 ## Outside-Plugin Prompt Correction
 
