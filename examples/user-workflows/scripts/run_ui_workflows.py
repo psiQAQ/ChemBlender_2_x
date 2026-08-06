@@ -252,7 +252,12 @@ class RunContext:
         details["arguments"] = _json_value(kwargs)
         if details["poll"] is not True:
             raise RuntimeError(f"Operator poll failed: bpy.ops.chemblender.{name}")
-        result = operator(**kwargs)
+        try:
+            result = operator(**kwargs)
+        except Exception as error:
+            details["error"] = f"{type(error).__name__}: {error}"
+            self.current["operators"].append(details)
+            raise
         details["result"] = sorted(result)
         self.current["operators"].append(details)
         return result
@@ -643,8 +648,16 @@ def _export_one(context, entity_id, format_name, filename, **settings):
         "confirm_loss": False,
         **settings,
     }
-    gate = context.call_chem("export_project_entity", **values)
     confirmed = False
+    try:
+        gate = context.call_chem("export_project_entity", **values)
+    except RuntimeError as error:
+        if (
+            "Loss/Partial/Ambiguous export requires explicit confirmation"
+            not in str(error)
+        ):
+            raise
+        gate = {"CANCELLED"}
     if not _finished(gate):
         if destination.exists():
             raise RuntimeError("cancelled loss gate left an export target")

@@ -81,6 +81,11 @@ locally committed result into local `main`.
   derived from the repository smoke fixture.
 - RED/GREEN: two focused contracts failed before the corrections and passed after;
   all 17 user-workflow contracts and runner compilation then passed.
+- Corrected rerun `.agents/cache/user-workflows/run-43f64f1-1/report.json` passed
+  through `VIEW-CUBE`, then exposed a runner-only export-gate mismatch: Blender Python
+  raises `RuntimeError` when the UI Operator rejects an unconfirmed lossy export. The
+  runner now audits that expected rejection and retries with explicit confirmation;
+  unexpected Operator errors still fail the case. Focused RED/GREEN passed.
 
 ## Deferred External Cases
 
@@ -93,6 +98,6 @@ local `main` only after final qualification.
 
 ## Next Action
 
-Commit the runner/sample corrections, then start a fresh MCP-backed Blender 5.1
+Commit the export-gate runner correction, then start a fresh MCP-backed Blender 5.1
 runtime and execute every public-Operator runner checkpoint in a new empty run
 directory with report inspection.

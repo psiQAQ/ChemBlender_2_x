@@ -328,6 +328,15 @@ class UserWorkflowContractTests(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0].data.shape, (2, 2, 3))
 
+    def test_runner_handles_the_expected_export_confirmation_rejection(self):
+        source = RUNNER.read_text(encoding="utf-8")
+        for token in (
+            'details["error"] = f"{type(error).__name__}: {error}"',
+            "except RuntimeError as error:",
+            "Loss/Partial/Ambiguous export requires explicit confirmation",
+        ):
+            self.assertIn(token, source)
+
     def test_manifest_covers_each_base_format_family(self):
         manifest = self.manifest()
         self.assertEqual(manifest["schema_version"], "1")
