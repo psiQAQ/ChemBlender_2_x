@@ -177,6 +177,8 @@ class UserWorkflowContractTests(unittest.TestCase):
         document = path.read_text(encoding="utf-8")
         self.assertGreaterEqual(document.count("这不是 ChemBlender 插件能力"), 5)
         self.assertNotIn("bpy.ops.chemblender", document)
+        for term in ("evaluated geometry", "没有材质", "空白、全黑、严重裁切"):
+            self.assertIn(term, document)
 
     def test_manual_experience_gate_blocks_release_when_incomplete(self):
         policy_paths = (

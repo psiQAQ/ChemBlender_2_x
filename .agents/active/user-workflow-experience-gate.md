@@ -108,6 +108,18 @@ locally committed result into local `main`.
 - Run `.agents/cache/user-workflows/run-69e93c0-1/report.json` passed main and LIFE
   cold reopen, then preserved the `WinError 3` migration failure that led to defect 3.
 
+## Outside-Plugin Prompt Correction
+
+- The explicitly selected Biological View had two points and zero evaluated polygons;
+  the render Operator returned `FINISHED` and wrote a PNG, but visual inspection found
+  an almost black image. The guide now requires live evaluated-geometry checks, a
+  no-material fallback, and image inspection instead of accepting status/file existence.
+- A second MCP run selected the only visible Structure View with an enabled Geometry
+  Nodes modifier and nonzero evaluated polygons, then exercised material, world, Area
+  light, camera, Collection and Eevee settings. The visually inspected 320x240 PNG was
+  84,047 bytes; mesh coordinates, Object transform and custom-property keys stayed
+  unchanged. Ordinary Save As was correctly not called because the `.cbq` pair exists.
+
 ## Deferred External Cases
 
 None currently known.
