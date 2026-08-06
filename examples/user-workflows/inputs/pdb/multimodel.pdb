@@ -1,0 +1,8 @@
+MODEL        4
+ATOM      1  N   GLY A   1      11.000  12.000  13.000  1.00 20.00           N
+TER       2      GLY A   1
+HETATM    2  O   HOH A   2      14.000  15.000  16.000  1.00 10.00           O
+ENDMDL
+MODEL        7
+ATOM      1  N   GLY A   1      11.500  12.500  13.500  1.00 21.00           N
+ENDMDL

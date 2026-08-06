@@ -1,0 +1,496 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "inputs/cif/nacl.cif",
+      "family": "cif",
+      "source": "tests/fixtures/cif/nacl.cif",
+      "provenance": "repository fixture snapshot",
+      "sha256": "b5b14183e1ac9e5591fda5d9bfc57500344d20b5dd68b4fae54382ce4613b654",
+      "bytes": 413,
+      "runtime": "gemmi",
+      "expected": ["Structure", "CIFEnvelope", "crystal metadata"],
+      "workflow": ["import", "visualize", "export"]
+    },
+    {
+      "path": "inputs/cjson/water-results.cjson",
+      "family": "cjson",
+      "source": "tests/fixtures/cjson/water-results.cjson",
+      "provenance": "repository fixture snapshot",
+      "sha256": "82221e1b98092ccc05c74fd27ad5d52f63fef7d37d988516b2d2542dcbfae3ce",
+      "bytes": 1539,
+      "runtime": "built-in",
+      "expected": ["Structure", "Topology", "CJSONEnvelope", "result data"],
+      "workflow": ["import", "inspect", "visualize"]
+    },
+    {
+      "path": "inputs/cube/two-datasets.cube",
+      "family": "cube",
+      "source": "tests/fixtures/cube/two-datasets.cube",
+      "provenance": "repository fixture snapshot",
+      "sha256": "cba9356dbd6901a725810aab63a17c79eb2508f178b7b8b77ee306de2f0b31ba",
+      "bytes": 354,
+      "runtime": "built-in",
+      "expected": ["Structure", "Grid3D", "two datasets"],
+      "workflow": ["import", "visualize", "export"]
+    },
+    {
+      "path": "inputs/extxyz/carbon-trajectory.extxyz",
+      "family": "extxyz",
+      "source": "tests/fixtures/extxyz/multiframe-cell.extxyz",
+      "provenance": "repository fixture snapshot",
+      "sha256": "c44eb9eacf3b4890f64bb2b633103f30bfb98b52638849a1caa7c6fd2e8453ff",
+      "bytes": 170,
+      "runtime": "built-in",
+      "expected": ["Structure", "trajectory", "cell and PBC"],
+      "workflow": ["import", "inspect", "visualize", "export"]
+    },
+    {
+      "path": "inputs/legacy/chemblender-2.1-molecule.blend",
+      "family": "legacy",
+      "source": "tests/fixtures/legacy-blend/chemblender-2.1-molecule.blend",
+      "provenance": "repository fixture snapshot",
+      "sha256": "36b05c3cacbcc067714615a49df35cf20973bc8122329194ddaecd249df6c3d4",
+      "bytes": 153914,
+      "runtime": "Blender 5.1 migration operator",
+      "expected": ["legacy molecule objects", "migration diagnostics"],
+      "workflow": ["migrate", "inspect", "save"]
+    },
+    {
+      "path": "inputs/mol/water-v2000.mol",
+      "family": "mol",
+      "source": "tests/fixtures/mol/water-v2000.mol",
+      "provenance": "repository fixture snapshot",
+      "sha256": "44adc72cdd4e670a10f2d0c3c50da11b9044e08e9761f4c7135057bc59ca87f7",
+      "bytes": 326,
+      "runtime": "rdkit",
+      "expected": ["Structure", "Topology", "MolecularRecord V2000"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/mol/water-v3000.mol",
+      "family": "mol",
+      "source": "tests/fixtures/mol/water-v3000.mol",
+      "provenance": "repository fixture snapshot",
+      "sha256": "ea321b6296d22e787889780b5a4a62183a45652aa9b7c8a5eda7e5d3262c7a01",
+      "bytes": 331,
+      "runtime": "rdkit",
+      "expected": ["Structure", "Topology", "MolecularRecord V3000"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/mol2/substructure.mol2",
+      "family": "mol2",
+      "source": "tests/fixtures/mol2/substructure.mol2",
+      "provenance": "repository fixture snapshot",
+      "sha256": "70b955ea460074b47110f59ba9b757aa61bfe5e2d62d0743a931e74df8ae9ef7",
+      "bytes": 344,
+      "runtime": "built-in",
+      "expected": ["Structure", "Topology", "charge and substructure"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/pdb/model-trajectory.pdb",
+      "family": "pdb",
+      "source": "tests/blender_smoke.py biological-models fixture",
+      "provenance": "repository-generated fixture snapshot",
+      "sha256": "b5b86a4dff1f21f1d8132be6dd64627d7b1cc23278f99cdff896b05f5859c6ff",
+      "bytes": 360,
+      "runtime": "built-in",
+      "expected": ["Structure", "two-frame trajectory", "biological hierarchy"],
+      "workflow": ["import", "inspect", "visualize", "export"]
+    },
+    {
+      "path": "inputs/pdb/multimodel.pdb",
+      "family": "pdb",
+      "source": "tests/fixtures/pdb/multimodel.pdb",
+      "provenance": "repository fixture snapshot",
+      "sha256": "45ccec78bcdaa1a1bfe877fea3d9b41f40e5ffa7833fb47a76439184209ec679",
+      "bytes": 316,
+      "runtime": "built-in",
+      "expected": ["two Structures", "biological hierarchy", "MODEL identity mismatch diagnostic"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/poscar/si.POSCAR",
+      "family": "poscar",
+      "source": "tests/fixtures/poscar/si.POSCAR",
+      "provenance": "repository fixture snapshot",
+      "sha256": "6f11b9ae550f7f2c570741d05c648691bdfe5d36b91c64c5c20dd8d5ee00f8d0",
+      "bytes": 212,
+      "runtime": "built-in",
+      "expected": ["Structure", "cell", "fractional coordinates"],
+      "workflow": ["import", "visualize", "export"]
+    },
+    {
+      "path": "inputs/poscar/velocities.CONTCAR",
+      "family": "poscar",
+      "source": "tests/fixtures/poscar/velocities.CONTCAR",
+      "provenance": "repository fixture snapshot",
+      "sha256": "7cba0e025bf1a5f5930ff41b6069470e192dd05c9154955c552d44c5b8ea451a",
+      "bytes": 289,
+      "runtime": "built-in",
+      "expected": ["Structure", "cell", "selective dynamics and velocity data"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/pqr/with-chain.pqr",
+      "family": "pqr",
+      "source": "tests/fixtures/pqr/with-chain.pqr",
+      "provenance": "repository fixture snapshot",
+      "sha256": "7abdc850d0ae2bbf58de9ebeb8e4ddf6f51715290c011531e8ca02ec15a12c93",
+      "bytes": 105,
+      "runtime": "built-in",
+      "expected": ["Structure", "biological hierarchy", "charge and radius"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/qcschema/atomic-result.json",
+      "family": "qcschema",
+      "source": "tests/fixtures/qcschema/atomic_result_v2.json",
+      "provenance": "repository fixture snapshot",
+      "sha256": "8261281b7211576fcafa619ad1c20863ff2e91f226307413553490a695e332f5",
+      "bytes": 1390,
+      "runtime": "built-in",
+      "expected": ["Structure", "QCSchemaEnvelope", "supported result properties"],
+      "workflow": ["import", "inspect", "visualize"]
+    },
+    {
+      "path": "inputs/sdf/mixed-properties.sdf",
+      "family": "sdf",
+      "source": "tests/fixtures/sdf/mixed-properties.sdf",
+      "provenance": "repository fixture snapshot",
+      "sha256": "c37ff47810613f7eca3cc22ab27397812ab32bd3afef7c1dd4d72875fb5a22cf",
+      "bytes": 1061,
+      "runtime": "rdkit",
+      "expected": ["multiple Structure records", "Topology", "record properties"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/smiles/ethanol.smi",
+      "family": "smiles",
+      "source": "locally generated",
+      "provenance": "locally generated minimal SMILES",
+      "sha256": "5c9aa2a3024d56c903d547798cbd04ff743433ba0950dbfd8e19238e40651172",
+      "bytes": 4,
+      "runtime": "rdkit",
+      "expected": ["Structure", "Topology", "deterministic 3D derivation"],
+      "workflow": ["import", "visualize", "export"]
+    },
+    {
+      "path": "inputs/xyz/water.xyz",
+      "family": "xyz",
+      "source": "tests/fixtures/xyz/water.xyz",
+      "provenance": "repository fixture snapshot",
+      "sha256": "f10d94aaa2bf5bd2e15b2b1cd996e95b7ca6fbd3255f62195707d3d3ff1da6b8",
+      "bytes": 101,
+      "runtime": "built-in",
+      "expected": ["Structure"],
+      "workflow": ["import", "visualize", "export"]
+    }
+  ],
+  "output_bundles": [
+    {
+      "id": "legacy-migration",
+      "blend": "outputs/legacy-migration/migrated.blend",
+      "sidecar": "outputs/legacy-migration/migrated.cbq",
+      "runtime": "ChemBlender 2.4.0 on Blender 5.1.2",
+      "provenance": "generated through public UI-equivalent Operators from package 079b00b8a47dba56298eb9635b5a5dff76bcb1c4983aeefe5dfe360cc149c79d at commit 4e46d63; copied byte-for-byte and cold reopened at the tracked path",
+      "covers": [
+        "2.1 legacy preview and confirmed migration",
+        "Structure and explicit Topology",
+        "migrated View and legacy backup collection"
+      ],
+      "cold_reopen": "passed",
+      "verification": {
+        "project_rows": 7,
+        "backup_collection": true,
+        "missing_external_files": 0
+      },
+      "files": [
+        {
+          "path": "outputs/legacy-migration/migrated.blend",
+          "bytes": 155987,
+          "sha256": "c22a9bf7bc52f91716f09975beeff66fb292534acac80d13548c2db73fef5e5a"
+        },
+        {
+          "path": "outputs/legacy-migration/migrated.cbq/arrays/068ff5a5cab9ee2fe5531c44d6e313f75523b084fc0cda6c64506cfe41ecb6c5.npy",
+          "bytes": 152,
+          "sha256": "d4bc2f6ec597b6a06fcaf152ac400a3834b77dc4f9435e8a1190f4d97c5a2ab0"
+        },
+        {
+          "path": "outputs/legacy-migration/migrated.cbq/arrays/39a4031d2f755d60432e418d59a7ade8dcb9131fab1f2d9c0209077e99171789.npy",
+          "bytes": 224,
+          "sha256": "ea0a51cd1bc6224313158971b99886323c080aedd9a6b3058b5d4acf16019e87"
+        },
+        {
+          "path": "outputs/legacy-migration/migrated.cbq/arrays/ebcff91158a30efd20d5cca75fd136d43f9703667ba7bb78b6d4b59de948df98.npy",
+          "bytes": 176,
+          "sha256": "bd65103bc94ea4625fee4e17810105709346ebf0878963f199ac4a689fc83c49"
+        },
+        {
+          "path": "outputs/legacy-migration/migrated.cbq/manifest.json",
+          "bytes": 3844,
+          "sha256": "a9ea44a6a052d9512d3e798444618e97a51957406120333b9736d59ac9a4b57d"
+        }
+      ]
+    },
+    {
+      "id": "workflow-project",
+      "blend": "outputs/workflow-project/workflow.blend",
+      "sidecar": "outputs/workflow-project/workflow.cbq",
+      "runtime": "ChemBlender 2.4.0 on Blender 5.1.2",
+      "provenance": "generated through public UI-equivalent Operators from package 079b00b8a47dba56298eb9635b5a5dff76bcb1c4983aeefe5dfe360cc149c79d at commit 4e46d63; copied byte-for-byte and cold reopened at the tracked path",
+      "covers": [
+        "molecular, trajectory and biological Views",
+        "crystal and selective-dynamics Views",
+        "Grid3D Volume and signed Surface Views",
+        "topology, QCSchema and provenance data"
+      ],
+      "cold_reopen": "passed",
+      "verification": {
+        "project_rows": 88,
+        "volume_files": 3,
+        "volume_paths_inside_sidecar": true,
+        "missing_external_files": 0
+      },
+      "files": [
+        {
+          "path": "outputs/workflow-project/workflow.blend",
+          "bytes": 200053,
+          "sha256": "7b5ca57bdfb9c7d2eac12955331f0d937b425ed725a571cb815dbedd1e4e2cd0"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/05618b08656bbafe0d21d966328f7447a701b8d28670976e99feb99815f8ec52.npy",
+          "bytes": 152,
+          "sha256": "ef6c5981e8939ebdec7644aee4386ccdd7a7b79d20e884d9c1e2ba30032a8bcb"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/0605e8fae81790798be1647e081dfddfecf6da9683e3331f0ea5168239d332e9.npy",
+          "bytes": 176,
+          "sha256": "293e4fcdaa86bf886e8346a6be96199bce1d14ed2a4238cc0ed59ce41d1ea45a"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/0640f71055efe8c6c0d59dcd652ec8442b71d1a2e5c9831e27c57d379c589743.npy",
+          "bytes": 136,
+          "sha256": "7fba2820d732875ed34993f58cfa812d6e9d3cbb4a3f9e98925f75986d3f8a60"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/07e6ad6096fe0a2484f623568cd71ebfe406b949767762be1014430178685369.npy",
+          "bytes": 144,
+          "sha256": "97543ef511946fb0ed9a767d663daec2de16bd78efcb58cc58de37e31c96c0e6"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/1e4ad9a4d4c5a7a6a23d6c55f4d764b9ea43bdcdf4883ad60f5a4671b8c19cd7.npy",
+          "bytes": 176,
+          "sha256": "0061a9dc1bbb16020ec8a328557e7da22d3148f5c3f410e4d9499c5fce3b2259"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/220d631a90e0436ff33e5af0fb60e294b90a43db4b1fab970f07d7dde2ef8ccb.npy",
+          "bytes": 160,
+          "sha256": "bc8cc8be39d14af34e5864b0962891316a9ca3bf7687596997669553cc98ac35"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/239c200eef03a35d557876363a31c3564dcdb200747c65ad24072d5970bcbc0c.npy",
+          "bytes": 176,
+          "sha256": "a60b80b7a64f4c0ddc04047b3cc4045f96e0ab985c3eb665647e5c44ed107f28"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/2804e8d8c39b4759459874f611ba4164fafa54932526a0515603944ecdc50605.npy",
+          "bytes": 176,
+          "sha256": "a2d25909bdbc5c07fd5a99f6e7fff5ec9afb7039842dc09480caca2fd8a16ce5"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/290d856a97ec746188ae05ce1dbef31b4c8a28df4fcf56f287c5d515857a96d2.npy",
+          "bytes": 152,
+          "sha256": "fd7afc58b38f99c822c6297a2aac2764d1e150682e866dd395d7abc33678b131"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/2d01fa77ee7d5297465b5f0432d3b7493f5909bf99c03e0e3f4541a99e464d78.npy",
+          "bytes": 272,
+          "sha256": "c9e60164b9086d71b3cdefb7365eea74d4e54eee3d5370d6463580caa6b2e255"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/3092bbe5b104f34eec6be6e087142fa7fa836d8c7056c6999b4fdae92ce124a3.npy",
+          "bytes": 176,
+          "sha256": "deb421ed8c6470346a3244e15213ae7d19d840735f59c858fb091bbcec7ca665"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/35c295a60e901c7e5dc73061dcbf3b0c7a6af18a0b0583a5d1b4ab187299f31e.npy",
+          "bytes": 200,
+          "sha256": "a0e8697effa63433d352efe3ed32006e06338a6b44343c55f7e53320ac26a97e"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/37a7abd933b705dd5c05a291069fa023651ac58960ea19c62ce7cbe59be5619f.npy",
+          "bytes": 130,
+          "sha256": "2a90bd7cf517a722cf90b6a613f42217196e80c40bd72a505e9307a7b976e18e"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/429f28eaf8a3f5252e2b68183a5e98b633be21e09e31ca23ff6a1db9ef7dc602.npy",
+          "bytes": 152,
+          "sha256": "2f9d2a50cd8fc0122a22c6745f5f03d7a5d2c1c4a3152197492ab44e5a12544c"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/472a33b5b7ceb98b33f984578589b681b878e897cc37fea0b9d33e087732fcf2.npy",
+          "bytes": 134,
+          "sha256": "4178cec57ce3d9ffc463d792c79e3fd37d91b2d16395664d0c53badde8f4772a"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/4b46ed1c36d9b4482fa2bbb3b8d2f1fd7dea161c242dbf856fc9e38beb868e91.npy",
+          "bytes": 176,
+          "sha256": "9f351a016f0d2c30bc3bf8bb0fb9a21bd40a7f8908dc4023e4a093cb8e61a0de"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/528da102ff5726c8f435eb926f8cca25ba037e69f4b142c23a9bc64cf527e6aa.npy",
+          "bytes": 152,
+          "sha256": "eed7c944a674e7e9a3f4baf8393c37b9f169123e13a884a08b151a39da2adef5"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/5d660cf3c4a87ab09af642f0d0b1af8a866d64baa1f684aba2b141c8fbfa2ab8.npy",
+          "bytes": 152,
+          "sha256": "e12872538491bacaa0462caacc7350ebee89ac9d8c53af720f272ca879742a06"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/5da1c8b766dc3511befaa8eb5351420190b5f47352df42d7714964d556a81876.npy",
+          "bytes": 176,
+          "sha256": "c8226f52914f81d69b92c8a3da7b8e34e78375dd5206b389805fc547735d681f"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/5dbf49fcbdd269f8920eced203d60366fa5adb36a71196b7b6801f9827d674e7.npy",
+          "bytes": 144,
+          "sha256": "5514189811a638b34c7d3b5e1e41d7e496e0f24eceffe1a774e0d1df6f754bd0"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/6d6025f3f21942d7b2fc74d47efcbed7d4915a0be53803008925a7c23631336a.npy",
+          "bytes": 224,
+          "sha256": "96e328939c962c85e53b3431350ce982e7d521f2a6af93efeb2521a5ba085ffe"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/6eea2662127232b1c4d0efa75fbf9283738d3ce341c9cbf08c767e61331a1784.npy",
+          "bytes": 144,
+          "sha256": "9da04ceefae520e4fc977e8983b1cddaa5fe4052ccb50028e3cb5d47b292188d"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/717de43efb849c1e98a6c85d989e63eb063f12c48c2c4e7a315d8e551c999e4b.npy",
+          "bytes": 144,
+          "sha256": "16ce3579de63bc66efaea992be8b419b07b98cf1f558941f2c5f4b0abd50fe78"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/82fcf7ef7e786b90c8120928fd134b88f1e3d6a576e4c88f74f13e66bd6936d1.npy",
+          "bytes": 192,
+          "sha256": "bbadda1dd3353555e961ab41db7385c18d2905ec07ae00d6ff803ea8002c6aea"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/8e55c4d9350dc64b6e791c2a89511d099327d0c9ebbfb183767c19a8cb3fc0cc.npy",
+          "bytes": 144,
+          "sha256": "a7fceac4334028999e5c1432a40887e3756e17a745ea2c26558dd86267102c82"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/8f570aeb2b86cf28af87e053e4607c149cfd6d7118635bcfab2e1abd6af11d9f.npy",
+          "bytes": 144,
+          "sha256": "f5c214683ef792c6fdcc0a3c4efd22a748b0df4af4c26df0181beb7423d6a3a3"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/92157f1e0027c9961f21d273fe7d14938724003e27a2200fc7c475b11b25e4f8.npy",
+          "bytes": 144,
+          "sha256": "edf57b3e7cc4d837db7a3b400e84ffa2cc07b6adc347edef9feabbc11c5183cb"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/9ffcd7e2dbfe247d82e64291d5a31f3c9747db69661a6a18db4a171a923fba50.npy",
+          "bytes": 144,
+          "sha256": "723265df90c105e8290a129c092a5823162690355689b82634a8c6afa2f7fdc6"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/a683e029b81184d66e1974ae7b819011d1d93639cd0028a4bfe324f991f72c20.npy",
+          "bytes": 136,
+          "sha256": "ee636818b9566eda53de204ca61270d01fb39ba4e16d950e14100de2ee3fc267"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/ac3f7d213c7af95298579b3e34b1e3198e5ccab4e9b168a3b0d15f7f3e85af36.npy",
+          "bytes": 144,
+          "sha256": "7500f15e4319372a86620f1b865dac4901887634e69213f76e1df4927cbd5f51"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/b3bb90b529a201fef7c32d6f8fbbbabe2776b11dd8ac4728b6efea40bbab8651.npy",
+          "bytes": 200,
+          "sha256": "35f4d56a73146cce189847e74532fd530d379d1fcc98b7610520ac1ab05e92a1"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/c2bfa2da17439cd2389776bfafb32c015446164a335988de6cbbbec758f56fc2.npy",
+          "bytes": 136,
+          "sha256": "23dd9625d24644656662ca7303243396e67b51e057569add945ffb4505059573"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/c557c8687bc7163a317383d2349e8bbdcf77472edfaa016fa380fa21d0c57853.npy",
+          "bytes": 200,
+          "sha256": "a4a54b3840dbf8c4ab261e4b5082bbba472068cbf24e76a54e48591d728d930a"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/c879f818a6d5b1efa41f388a8af44d3a246c5e5930271221238792d23ef8f918.npy",
+          "bytes": 176,
+          "sha256": "139d5e466ffbee84d896709fdf262851dfcd2ed6158e02846c4398860c467239"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/d1a8fad7436fab10597b0f657f5cc2805b0950ea6f83b44b83dcc77340bf8fe4.npy",
+          "bytes": 200,
+          "sha256": "17299b445d11cd37cd3a014e26ff73e32bff9c1894ea930bdfde13d8876dde86"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/d7e3dd4ea67414b86be9ae6a27b64c64e976055cc9dc6a5f2991e69d9c20621c.npy",
+          "bytes": 152,
+          "sha256": "9fffeef8450686340f307d9f7e51056036dd332ba0f7fa0d76aa58fe8bc5c2e4"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/defaf1a3e12e21edf5b0f9bc72eb5b719f9f03a3024c1165f7b40b5ac1a6d0f7.npy",
+          "bytes": 160,
+          "sha256": "26af5108cfa74b247a5f5392131ef63f909b56df4bacda14298c74eafb2d8b40"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/e7355bd93563623bc0af6097c8e02c3316ffb1267b3ab611398a9865a7f84f58.npy",
+          "bytes": 144,
+          "sha256": "d3e9522b590fdfc7a2d40b40a4ab6f4cb417bb6fdcc0a34de7839d004cd56122"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/f0bcebb43acaddcfc8bc322740443f2edddb8a3cb58fb02eb1c3cb43a1cac36a.npy",
+          "bytes": 200,
+          "sha256": "28de855d511892577a96b46141c7f5b58ffffa61540dce934677b925d3d5ba97"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/f2bdec64618f2092b8484b1b9a561a7a0845f9b55fb370fa3cfeba7bc2fc311a.npy",
+          "bytes": 200,
+          "sha256": "c00a56994f46f94832070a5890d8dcc417ff076f8af2e57502b6fb40ff925384"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/f4aacdc52c367b142449f6d6b7c9765632cc6331518a836e2548edc9c2e3a47a.npy",
+          "bytes": 176,
+          "sha256": "ea497920bdd64ddc5a58f796cade1efc5300b6caec5781037b1fca7f4715fb3a"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/arrays/f7fba71ece7ca098153c8c0295ef588832cc0bd15c72a5d51b1905f95b2292a7.npy",
+          "bytes": 152,
+          "sha256": "f7cf4ad3a954133b57f3e54a44235710094ba0eeeba50f52174f1ed5c9e75c3f"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/cache/render/surface/7507e3e5ea9c8301994988cbba609ec7433c4c1683a1f9a7b24ba01fb721f5ff.vdb",
+          "bytes": 10188,
+          "sha256": "f130308810a21c4166f3f902690f5b640ab611bfd9ed02aa1032ae2683a2b849"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/cache/render/surface/eeef2fd11d7dbaa6888b0df182143aa34701db17660f7a5d4934b48a125e0595.vdb",
+          "bytes": 10188,
+          "sha256": "e4a711973ac56ca0e7439a0848d57759988e4d63ac771600786f12a57c3cc3b5"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/cache/render/volume/d47601ee08f63cad7a71e6004c4fadd88b58423d0520630d908fa82b80d82795.vdb",
+          "bytes": 10824,
+          "sha256": "0d899cf2804bbae3b104ed0921c6b825030a7054cbe0fdb58398ce95d21c02d7"
+        },
+        {
+          "path": "outputs/workflow-project/workflow.cbq/manifest.json",
+          "bytes": 80849,
+          "sha256": "d7906ed93e6bb500ab871410251362421c93ee8031359a54b799b3dda72eb655"
+        }
+      ]
+    }
+  ]
+}

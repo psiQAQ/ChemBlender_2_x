@@ -127,6 +127,49 @@ class RepositoryContractTests(unittest.TestCase):
             }.issubset(auto_load_functions)
         )
 
+    def test_geometry_node_menu_ids_do_not_depend_on_ui_language(self):
+        source = (EXTENSION / "extension.py").read_text(encoding="utf-8")
+        function = next(
+            (
+                node
+                for node in ast.parse(source).body
+                if isinstance(node, ast.FunctionDef)
+                and node.name == "_menu_categories"
+            ),
+            None,
+        )
+        self.assertIsNotNone(function, "extension.py must pair stable and localized menu names")
+        namespace = {}
+        exec(
+            compile(
+                ast.Module(body=[function], type_ignores=[]),
+                filename="extension.py",
+                mode="exec",
+            ),
+            namespace,
+        )
+        pair = namespace["_menu_categories"]
+        self.assertEqual(
+            pair(
+                {"分子结构": ["中文节点"], "晶体结构": ["中文晶体节点"]},
+                {
+                    "Molecular Structure": ["English node"],
+                    "Crystal Structure": ["English crystal node"],
+                },
+            ),
+            (
+                ("Molecular Structure", "分子结构"),
+                ("Crystal Structure", "晶体结构"),
+            ),
+        )
+        with self.assertRaisesRegex(ValueError, "menu schemas do not match"):
+            pair({"分子结构": []}, {"Molecular Structure": ["English node"]})
+
+    def test_surface_material_node_lookup_is_locale_independent(self):
+        source = (EXTENSION / "surface_view.py").read_text(encoding="utf-8")
+        self.assertNotIn('.get("Principled BSDF")', source)
+        self.assertGreaterEqual(source.count('node.type == "BSDF_PRINCIPLED"'), 2)
+
     def test_package_workflow_pins_and_verifies_release_inputs(self):
         workflow = (ROOT / ".github" / "workflows" / "extension-package.yml").read_text(
             encoding="utf-8"

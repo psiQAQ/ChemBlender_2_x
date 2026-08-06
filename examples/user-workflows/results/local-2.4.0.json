@@ -1,0 +1,565 @@
+{
+  "schema_version": "1",
+  "product_version": "2.4.0",
+  "runner_commit": "588beef81a381169b9404b9aceedfd4f8f5b50a4",
+  "package": {
+    "path": "ChemBlender/chemblender-2.4.0.zip",
+    "bytes": 29976721,
+    "sha256": "079b00b8a47dba56298eb9635b5a5dff76bcb1c4983aeefe5dfe360cc149c79d",
+    "member_unpacked_bytes": 32064525,
+    "member_count": 189
+  },
+  "runtime": {
+    "blender_version": "5.1.2",
+    "python_version": "3.13.9",
+    "system": "Windows",
+    "background": true,
+    "enabled_key": "bl_ext.user_default.chemblender",
+    "rdkit_version": "2026.03.3",
+    "gemmi_version": "0.7.5",
+    "profile": "fresh isolated BLENDER_USER_RESOURCES"
+  },
+  "checkpoints": [
+    {
+      "id": "main-public-operator-run",
+      "status": "passed",
+      "case_count": 10
+    },
+    {
+      "id": "workflow-cold-reopen",
+      "status": "passed",
+      "project_rows": 88,
+      "object_count": 16,
+      "dirty": false
+    },
+    {
+      "id": "legacy-migration-public-operator-run",
+      "status": "passed",
+      "project_rows": 7,
+      "backup_object_count": 1
+    },
+    {
+      "id": "migrated-cold-reopen",
+      "status": "passed",
+      "project_rows": 7,
+      "object_count": 2,
+      "dirty": false
+    }
+  ],
+  "cases": [
+    {
+      "id": "ENV",
+      "status": "passed",
+      "input": [],
+      "operator_ids": [],
+      "elapsed_seconds": 0.002952,
+      "evidence": {
+        "runtime": {
+          "blender_version": "5.1.2",
+          "background": true,
+          "enabled": true,
+          "enabled_key": "bl_ext.user_default.chemblender",
+          "runtime_system": "Windows"
+        },
+        "scene_rna": [
+          "chemblender_quick_import",
+          "chemblender_project_browser",
+          "chemblender_topology",
+          "chemblender_grid"
+        ]
+      },
+      "outputs": [],
+      "error": null
+    },
+    {
+      "id": "IMP-XYZ",
+      "status": "passed",
+      "input": [
+        "inputs/xyz/water.xyz",
+        "inputs/extxyz/carbon-trajectory.extxyz",
+        "inputs/qcschema/atomic-result.json"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.confirm_import",
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.confirm_import"
+      ],
+      "elapsed_seconds": 0.338312,
+      "evidence": {
+        "single_preview": {
+          "recent_summary": "1 source(s) staged via xyz",
+          "validation_mode": "balanced"
+        },
+        "single_structure": {
+          "kind": "structure",
+          "label": "Structure",
+          "quality": "",
+          "view_count": 1
+        },
+        "multi_preview": {
+          "recent_summary": "2 source(s) staged via extxyz, qcschema",
+          "validation_mode": "balanced"
+        },
+        "multi_row_count": 13,
+        "multi_row_kinds": [
+          "calculation_record",
+          "cell_frame_property",
+          "frame_set",
+          "property_dataset",
+          "provenance_record",
+          "q_c_schema_envelope",
+          "structure"
+        ],
+        "object_count": 6
+      },
+      "outputs": [],
+      "error": null
+    },
+    {
+      "id": "IMP-SMILES",
+      "status": "passed",
+      "input": [
+        "inputs/smiles/ethanol.smi"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.import_smiles_text",
+        "bpy.ops.chemblender.confirm_import"
+      ],
+      "elapsed_seconds": 0.288927,
+      "evidence": {
+        "preview": {
+          "recent_summary": "1 source(s) staged via smiles",
+          "validation_mode": "balanced"
+        },
+        "record": {
+          "kind": "molecular_record",
+          "label": "0 бд SMILES",
+          "quality": "",
+          "view_count": 0
+        },
+        "structure": {
+          "kind": "structure",
+          "label": "Structure",
+          "quality": "",
+          "view_count": 1
+        }
+      },
+      "outputs": [],
+      "error": null
+    },
+    {
+      "id": "IMP-CANCEL",
+      "status": "passed",
+      "input": [
+        "inputs/cube/two-datasets.cube"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.cancel_import"
+      ],
+      "elapsed_seconds": 0.022365,
+      "evidence": {
+        "preview": {
+          "recent_summary": "1 source(s) staged via cube",
+          "validation_mode": "balanced"
+        },
+        "new_row_count": 0
+      },
+      "outputs": [],
+      "error": null
+    },
+    {
+      "id": "DATA-TOPOLOGY",
+      "status": "passed",
+      "input": [
+        "inputs/mol2/substructure.mol2"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.confirm_import",
+        "bpy.ops.chemblender.compute_topology",
+        "bpy.ops.chemblender.reject_topology",
+        "bpy.ops.chemblender.compute_topology",
+        "bpy.ops.chemblender.accept_topology",
+        "bpy.ops.chemblender.switch_topology",
+        "bpy.ops.chemblender.switch_topology"
+      ],
+      "elapsed_seconds": 0.280507,
+      "evidence": {
+        "proposal_id": "887a027d-ac4e-5ff3-af47-c6aece30bb47",
+        "structure": {
+          "kind": "structure",
+          "label": "Structure",
+          "quality": "",
+          "view_count": 1
+        },
+        "settings": {
+          "covalent_scale": 1.149999976158142,
+          "max_coordination_default": 8,
+          "metal_mode": "coordination",
+          "minimum_distance_angstrom": 0.25,
+          "tolerance_angstrom": 0.20000000298023224
+        }
+      },
+      "outputs": [],
+      "error": null
+    },
+    {
+      "id": "DATA-CRYSTAL",
+      "status": "passed",
+      "input": [
+        "inputs/poscar/velocities.CONTCAR"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.confirm_import",
+        "bpy.ops.chemblender.toggle_selective_constraints"
+      ],
+      "elapsed_seconds": 0.33688,
+      "evidence": {
+        "structure": {
+          "kind": "structure",
+          "label": "Structure",
+          "quality": "",
+          "view_count": 1
+        },
+        "object_count": 10,
+        "derive_symmetry_poll": true
+      },
+      "outputs": [],
+      "error": null
+    },
+    {
+      "id": "DATA-BIOLOGICAL",
+      "status": "passed",
+      "input": [
+        "inputs/pdb/model-trajectory.pdb"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.confirm_import",
+        "bpy.ops.chemblender.create_biological_view",
+        "bpy.ops.chemblender.play_biological_models",
+        "bpy.ops.chemblender.select_biological_atoms"
+      ],
+      "elapsed_seconds": 0.431272,
+      "evidence": {
+        "structure": {
+          "kind": "structure",
+          "label": "Structure",
+          "quality": "",
+          "view_count": 1
+        },
+        "object_count": 12,
+        "frame_end": 2
+      },
+      "outputs": [],
+      "error": null
+    },
+    {
+      "id": "VIEW-CUBE",
+      "status": "passed",
+      "input": [
+        "inputs/cube/two-datasets.cube"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.confirm_import",
+        "bpy.ops.chemblender.resolve_grid_semantics",
+        "bpy.ops.chemblender.create_grid_view"
+      ],
+      "elapsed_seconds": 0.484437,
+      "evidence": {
+        "source_grid": {
+          "kind": "grid3d",
+          "label": "Scalar Field",
+          "quality": "ambiguous",
+          "view_count": 1
+        },
+        "created_objects": [
+          {
+            "name": "ChemBlender Negative Surface",
+            "type": "VOLUME"
+          },
+          {
+            "name": "ChemBlender Positive Surface",
+            "type": "VOLUME"
+          }
+        ],
+        "settings": {
+          "dataset_index": 0,
+          "isovalue": 1.2999999523162842,
+          "preset_id": "generic_scalar",
+          "value_unit": "dimensionless"
+        }
+      },
+      "outputs": [],
+      "error": null
+    },
+    {
+      "id": "EXP-FORMATS",
+      "status": "passed",
+      "input": [
+        "inputs/pqr/with-chain.pqr"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.confirm_import",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.export_project_entity",
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.cancel_import"
+      ],
+      "elapsed_seconds": 0.788423,
+      "evidence": {
+        "pqr_structure": {
+          "kind": "structure",
+          "label": "Structure",
+          "quality": "",
+          "view_count": 1
+        },
+        "export_roles": [
+          "xyz_export",
+          "extxyz_export",
+          "mol_export",
+          "mol2_export",
+          "pdb_export",
+          "pqr_export",
+          "sdf_export",
+          "smiles_export",
+          "cif_export",
+          "poscar_export",
+          "cube_export"
+        ],
+        "confirmation_gate_count": 5,
+        "reimport_preview": {
+          "recent_summary": "11 source(s) staged via cif, cube, extxyz, mol, mol2, pdb, poscar, pqr, sdf, smiles, xyz",
+          "validation_mode": "balanced"
+        },
+        "reimport_new_row_count": 0
+      },
+      "outputs": [
+        {
+          "bytes": 78,
+          "confirmation_required": false,
+          "path": "<run-dir>/outputs/exports/water.xyz",
+          "role": "xyz_export",
+          "sha256": "cdb2fd42685c402e166dfb59b2d1c9cb5db6ec07329395eafb7e4e40bd29b075"
+        },
+        {
+          "bytes": 108,
+          "confirmation_required": false,
+          "path": "<run-dir>/outputs/exports/water.extxyz",
+          "role": "extxyz_export",
+          "sha256": "dc5f1adee2d28d751cd5b0737cf0079bbfd2c72f758acd2236115b8d990c9f7a"
+        },
+        {
+          "bytes": 308,
+          "confirmation_required": false,
+          "path": "<run-dir>/outputs/exports/ethanol.mol",
+          "role": "mol_export",
+          "sha256": "c632f8087de09946aa0a12382d7a1ab9fc9df402c96d825629ea41399e1f02a9"
+        },
+        {
+          "bytes": 297,
+          "confirmation_required": true,
+          "path": "<run-dir>/outputs/exports/substructure.mol2",
+          "role": "mol2_export",
+          "sha256": "cf20721d312fcfc21576d8cac377f815d4ca64deaca8022c819f85f34ffab174"
+        },
+        {
+          "bytes": 372,
+          "confirmation_required": false,
+          "path": "<run-dir>/outputs/exports/model-trajectory.pdb",
+          "role": "pdb_export",
+          "sha256": "c8f6841ba77de39ce2c96f4f5c72961d86b111593a90e619076e4f4a47ae229b"
+        },
+        {
+          "bytes": 103,
+          "confirmation_required": false,
+          "path": "<run-dir>/outputs/exports/with-chain.pqr",
+          "role": "pqr_export",
+          "sha256": "b3595a465830d2510ac84338a31c1844c538cda622778be0a1754c120660fb64"
+        },
+        {
+          "bytes": 313,
+          "confirmation_required": false,
+          "path": "<run-dir>/outputs/exports/ethanol.sdf",
+          "role": "sdf_export",
+          "sha256": "f4835419da95267ad2ef566a121b981011c202c882b071b86d35fc82b683563f"
+        },
+        {
+          "bytes": 4,
+          "confirmation_required": true,
+          "path": "<run-dir>/outputs/exports/ethanol.smi",
+          "role": "smiles_export",
+          "sha256": "5c9aa2a3024d56c903d547798cbd04ff743433ba0950dbfd8e19238e40651172"
+        },
+        {
+          "bytes": 339,
+          "confirmation_required": true,
+          "path": "<run-dir>/outputs/exports/crystal.cif",
+          "role": "cif_export",
+          "sha256": "d46e0d1f4ec7ff76c06cfe851bac97a4fb7dd3b1f5d11168f9cb97c7a57299eb"
+        },
+        {
+          "bytes": 358,
+          "confirmation_required": true,
+          "path": "<run-dir>/outputs/exports/crystal.POSCAR",
+          "role": "poscar_export",
+          "sha256": "926f41b015adf4dccf3a12f53d6d4c2e8c46dfabfaf0ecdd9b9b982c21236398"
+        },
+        {
+          "bytes": 564,
+          "confirmation_required": true,
+          "path": "<run-dir>/outputs/exports/dataset-0.cube",
+          "role": "cube_export",
+          "sha256": "8ce02f6e8a0c6c29fdeead4046e3217bda537feb217d6b631e32aacd6a5279a6"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "LIFE-SAVE-REOPEN-PREP",
+      "status": "passed",
+      "input": [],
+      "operator_ids": [
+        "bpy.ops.wm.save_as_mainfile",
+        "bpy.ops.wm.save_mainfile"
+      ],
+      "elapsed_seconds": 0.743554,
+      "evidence": {
+        "active_file": "<run-dir>/outputs/project/workflow.blend",
+        "dirty": false,
+        "object_count": 16,
+        "project_rows": 88
+      },
+      "outputs": [
+        {
+          "bytes": 200102,
+          "path": "<run-dir>/outputs/project/workflow.blend",
+          "role": "project_blend",
+          "sha256": "0bf8340f042a5f1f2cdb9717e6a9cd35f8c65d1f71465281cd77178b5e05a3a1"
+        },
+        {
+          "path": "<run-dir>/outputs/project/workflow.cbq",
+          "role": "project_sidecar"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "MIG-PREVIEW-PREP",
+      "status": "passed",
+      "input": [
+        "inputs/legacy/chemblender-2.1-molecule.blend"
+      ],
+      "operator_ids": [
+        "bpy.ops.wm.save_as_mainfile",
+        "bpy.ops.chemblender.preview_legacy_migration",
+        "bpy.ops.chemblender.migrate_legacy_scene",
+        "bpy.ops.wm.save_as_mainfile"
+      ],
+      "elapsed_seconds": 0.173303,
+      "evidence": {
+        "active_file": "<run-dir>/outputs/legacy/migrated.blend",
+        "backup_objects": [
+          "legacy_formaldehyde"
+        ],
+        "object_count": 2,
+        "project_rows": 7
+      },
+      "outputs": [
+        {
+          "bytes": 155984,
+          "path": "<run-dir>/outputs/legacy/migrated.blend",
+          "role": "legacy_blend",
+          "sha256": "d189eed268dc98ac064b7ce7cb8fe0309a8cc0ab032a3efe66f98489eb8df2dc"
+        },
+        {
+          "path": "<run-dir>/outputs/legacy/migrated.cbq",
+          "role": "legacy_sidecar"
+        }
+      ],
+      "error": null
+    }
+  ],
+  "outside_plugin": {
+    "status": "passed",
+    "scope": "outside_chemblender_product",
+    "selection_method": "single visible cb_structure_id View with enabled Geometry Nodes and nonzero evaluated polygons",
+    "selected_view": {
+      "name": "ChemBlender Structure.004",
+      "vertex_count": 3,
+      "evaluated_polygons": 48,
+      "geometry_sha256": "0423310a633dac6be5fc184bf2734770b8b79580f1180edcd59539ba0d859852"
+    },
+    "render": {
+      "path": "<run-dir>/outputs/outside/presentation-structure-clean.png",
+      "bytes": 84047,
+      "sha256": "fe93fa0b745d874c273183b7311da491fdb2e13c13a6bf2637577970c589a77c",
+      "resolution": [
+        320,
+        240
+      ],
+      "engine": "BLENDER_EEVEE",
+      "samples": 16
+    },
+    "first_render_diagnostic": {
+      "finding": "explicitly selected Biological View had zero evaluated polygons and was not renderable"
+    },
+    "save_copy": {
+      "decision": "blocked_paired_project",
+      "operator_called": false,
+      "sidecar_exists": true
+    },
+    "scientific_state_unchanged": {
+      "custom_property_keys": true,
+      "matrix_world": true,
+      "mesh_coordinates": true
+    }
+  },
+  "tracked_outputs": [
+    {
+      "id": "legacy-migration",
+      "blend": "outputs/legacy-migration/migrated.blend",
+      "sidecar": "outputs/legacy-migration/migrated.cbq",
+      "file_count": 5,
+      "total_bytes": 160383,
+      "largest_bytes": 155987,
+      "cold_reopen": "passed",
+      "project_rows": 7,
+      "backup_collection": true,
+      "missing_external_files": 0
+    },
+    {
+      "id": "workflow-project",
+      "blend": "outputs/workflow-project/workflow.blend",
+      "sidecar": "outputs/workflow-project/workflow.cbq",
+      "file_count": 47,
+      "total_bytes": 319070,
+      "largest_bytes": 200053,
+      "cold_reopen": "passed",
+      "project_rows": 88,
+      "volume_files": 3,
+      "volume_paths_inside_sidecar": true,
+      "missing_external_files": 0
+    }
+  ],
+  "deferred": []
+}
