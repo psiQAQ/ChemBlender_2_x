@@ -383,15 +383,15 @@ git commit -m "test: add public operator workflow runner"
 - Consumes: MCP-discovered Blender paths/runtime, built ZIP, public runner, samples.
 - Produces: installed-runtime report, focused defect commits, and selected moderate-size reopenable outputs.
 
-- [ ] **Step 1: Run the mandatory Blender MCP gate**
+- [x] **Step 1: Run the mandatory Blender MCP gate**
 
 Run `blender-mcp --help`. Through the available Blender MCP code-execution tool query in one call: `bpy.app.version_string`, `bpy.app.binary_path`, `bpy.app.binary_path_python`, `platform.system()`, extension repos, current file, dirty state, and installed ChemBlender key. Record exact evidence in the active cursor. If no matching Blender 5.1 process/listener exists, start the exact `C:\Program Files\Blender Foundation\Blender 5.1\blender.exe` only after verifying that path, wait conditionally, and repeat the query.
 
-- [ ] **Step 2: Resolve wheels without changing dependency policy**
+- [x] **Step 2: Resolve wheels without changing dependency policy**
 
 Check manifest/dependency references and local ignored wheel inventory. Reuse exact hash-matching local files when present. If absent, download only the already pinned RDKit/Gemmi URLs and verify SHA-256; do not add or change dependencies. A network/repository requirement for an additional example goes to the deferred list, not this wheel gate.
 
-- [ ] **Step 3: Validate, build, inspect, and install Extension-native**
+- [x] **Step 3: Validate, build, inspect, and install Extension-native**
 
 Use the MCP-returned Blender/Python paths to run `ChemBlender/scripts/validate_extension.py` and `build_extension.py`; inspect ZIP inventory/CRC/type/size and verify-wheel modes; install into `user_default` with `bpy.ops.extensions.package_install_files`. Verify `bl_ext.user_default.chemblender`, RDKit/Gemmi versions/imports, Panel/Operator/Scene properties, bundled `.blend` assets, and two lifecycle cycles.
 

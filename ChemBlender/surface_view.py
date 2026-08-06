@@ -176,7 +176,10 @@ def _material(name, color, opacity):
     material = bpy.data.materials.new(name)
     material.diffuse_color = (*color[:3], opacity)
     material.use_nodes = True
-    principled = material.node_tree.nodes.get("Principled BSDF")
+    principled = next(
+        node for node in material.node_tree.nodes
+        if node.type == "BSDF_PRINCIPLED"
+    )
     principled.inputs["Base Color"].default_value = color
     principled.inputs["Alpha"].default_value = opacity
     if opacity < 1.0 and hasattr(material, "surface_render_method"):
@@ -188,7 +191,7 @@ def _property_material(name, color_min, color_max):
     material = _material(name, (0.8, 0.8, 0.8, 1.0), 1.0)
     nodes = material.node_tree.nodes
     links = material.node_tree.links
-    principled = nodes.get("Principled BSDF")
+    principled = next(node for node in nodes if node.type == "BSDF_PRINCIPLED")
     attribute = nodes.new("ShaderNodeAttribute")
     attribute.attribute_name = _PROPERTY_ATTRIBUTE
     mapping = nodes.new("ShaderNodeMapRange")

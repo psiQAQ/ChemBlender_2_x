@@ -16,9 +16,25 @@ dir_path = os.path.dirname(__file__)
 geo_node_group = {}
 cat_list = []
 
+
+def _menu_categories(localized, canonical):
+    if len(localized) != len(canonical):
+        raise ValueError("menu schemas do not match")
+    categories = []
+    for (identifier, expected), (label, groups) in zip(
+        canonical.items(), localized.items()
+    ):
+        if len(groups) != len(expected):
+            raise ValueError("menu schemas do not match")
+        categories.append((identifier, label))
+    return tuple(categories)
+
+
 # 生成分类菜单
-def cat_generator():
-    for item in geo_node_group.items():
+def cat_generator(canonical_geo_node_group):
+    for identifier, label in _menu_categories(
+        geo_node_group, canonical_geo_node_group
+    ):
         def my_list(self, context):
             layout = self.layout
             for name_group in geo_node_group[self.bl_label]:
@@ -28,10 +44,10 @@ def cat_generator():
                 )
                 props.name_group = name_group
 
-        menu_type = type("NODE_MT_group_" + item[0], (bpy.types.Menu,), {
-            "bl_idname": "NODE_MT_group_" + item[0].replace(" ", "_"),   # Replace spaces with underscores to avoid alpha-numeric suffic warning
+        menu_type = type("NODE_MT_group_" + identifier, (bpy.types.Menu,), {
+            "bl_idname": "NODE_MT_group_" + identifier.replace(" ", "_"),   # Replace spaces with underscores to avoid alpha-numeric suffic warning
             "bl_space_type": 'NODE_EDITOR',
-            "bl_label": item[0],
+            "bl_label": label,
             "draw": my_list,
         })
         def generate_menu_draw(name, label): # 强制唯一引用
@@ -131,6 +147,8 @@ def register():
     json_file = "GN_menu.json" if language else "GN_menu_En.json"
     with open(os.path.join(dir_path, json_file), 'r', encoding='utf-8') as stream:
         geo_node_group = json.load(stream)
+    with open(os.path.join(dir_path, "GN_menu_En.json"), 'r', encoding='utf-8') as stream:
+        canonical_geo_node_group = json.load(stream)
 
     try:
         bpy.types.NODE_MT_add.remove(add_chem_button)
@@ -148,7 +166,7 @@ def register():
     bpy.types.Object.cif_original = bpy.props.PointerProperty(type=CIF_Structure)
     bpy.types.Object.cif_current = bpy.props.PointerProperty(type=CIF_Structure)
     bpy.types.Scene.my_tool = bpy.props.PointerProperty(type=CHEM_texts)
-    cat_generator()
+    cat_generator(canonical_geo_node_group)
 
 
 def unregister():

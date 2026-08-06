@@ -42,11 +42,31 @@ locally committed result into local `main`.
 
 ## Blender Runtime Evidence
 
-Not Run. Task 7 begins with `blender-mcp --help` and one live runtime query.
+- `blender-mcp --help`: Passed.
+- Live MCP runtime: Blender `5.1.2`, bundled Python `3.13.9`, Windows,
+  `C:\Program Files\Blender Foundation\Blender 5.1\blender.exe`, enabled
+  `bl_ext.user_default.chemblender`, empty clean background file.
+- Dependency inventory: RDKit `2026.3.3` SHA-256 `f8bd59b2...e767c48` and
+  Gemmi `0.7.5` SHA-256 `ad1f72ff...fd337d` matched `dependencies.toml`.
+- Extension validate/build and ZIP audit: Passed; `chemblender-2.4.0.zip`,
+  29,976,638 bytes after fixes, 189 regular files, CRC clean, exact two wheels.
+- Installed-product smoke: Passed in Blender 5.1.2 after fixes, including exact
+  RDKit/Gemmi imports, two lifecycle cycles, assets, project reopen, native
+  molecular/crystal/grid flows, and 10k-SDF performance checks.
 
 ## Defect Ledger
 
-None observed. Add only reproduced product defects with RED/GREEN and runtime evidence.
+1. Chinese Geometry Nodes categories used localized display text as Blender/Python
+   registration identifiers. The installed smoke failed its stable inventory check and
+   Blender warned about every Chinese identifier. RED:
+   `test_geometry_node_menu_ids_do_not_depend_on_ui_language`; fix: pair canonical
+   English identifiers with localized labels; GREEN: 44 registration/repository tests
+   and the installed smoke.
+2. `surface_view.py` looked up the Principled BSDF node by the English display name.
+   Chinese Blender returned `None`, crashing signed-surface scene preset creation. RED:
+   `test_surface_material_node_lookup_is_locale_independent`; fix: select the stable
+   `BSDF_PRINCIPLED` node type in both material paths; GREEN: 47 adjacent tests and the
+   complete 253-second installed-product smoke.
 
 ## Deferred External Cases
 
@@ -59,5 +79,5 @@ local `main` only after final qualification.
 
 ## Next Action
 
-Run `blender-mcp --help`, query the live Blender 5.1 runtime once, then build/install
-the extension and execute every runner checkpoint with defect-driven RED/GREEN fixes.
+Start a fresh MCP-backed Blender 5.1 runtime, create one empty owned workflow run
+directory, and execute every public-Operator runner checkpoint with report inspection.
