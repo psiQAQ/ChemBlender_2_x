@@ -1,0 +1,181 @@
+{
+  "schema_version": "1",
+  "files": [
+    {
+      "path": "inputs/cif/nacl.cif",
+      "family": "cif",
+      "source": "tests/fixtures/cif/nacl.cif",
+      "provenance": "repository fixture snapshot",
+      "sha256": "b5b14183e1ac9e5591fda5d9bfc57500344d20b5dd68b4fae54382ce4613b654",
+      "bytes": 413,
+      "runtime": "gemmi",
+      "expected": ["Structure", "CIFEnvelope", "crystal metadata"],
+      "workflow": ["import", "visualize", "export"]
+    },
+    {
+      "path": "inputs/cjson/water-results.cjson",
+      "family": "cjson",
+      "source": "tests/fixtures/cjson/water-results.cjson",
+      "provenance": "repository fixture snapshot",
+      "sha256": "82221e1b98092ccc05c74fd27ad5d52f63fef7d37d988516b2d2542dcbfae3ce",
+      "bytes": 1539,
+      "runtime": "built-in",
+      "expected": ["Structure", "Topology", "CJSONEnvelope", "result data"],
+      "workflow": ["import", "inspect", "visualize"]
+    },
+    {
+      "path": "inputs/cube/two-datasets.cube",
+      "family": "cube",
+      "source": "tests/fixtures/cube/two-datasets.cube",
+      "provenance": "repository fixture snapshot",
+      "sha256": "cba9356dbd6901a725810aab63a17c79eb2508f178b7b8b77ee306de2f0b31ba",
+      "bytes": 354,
+      "runtime": "built-in",
+      "expected": ["Structure", "Grid3D", "two datasets"],
+      "workflow": ["import", "visualize", "export"]
+    },
+    {
+      "path": "inputs/extxyz/carbon-trajectory.extxyz",
+      "family": "extxyz",
+      "source": "tests/fixtures/extxyz/multiframe-cell.extxyz",
+      "provenance": "repository fixture snapshot",
+      "sha256": "c44eb9eacf3b4890f64bb2b633103f30bfb98b52638849a1caa7c6fd2e8453ff",
+      "bytes": 170,
+      "runtime": "built-in",
+      "expected": ["Structure", "trajectory", "cell and PBC"],
+      "workflow": ["import", "inspect", "visualize", "export"]
+    },
+    {
+      "path": "inputs/legacy/chemblender-2.1-molecule.blend",
+      "family": "legacy",
+      "source": "tests/fixtures/legacy-blend/chemblender-2.1-molecule.blend",
+      "provenance": "repository fixture snapshot",
+      "sha256": "36b05c3cacbcc067714615a49df35cf20973bc8122329194ddaecd249df6c3d4",
+      "bytes": 153914,
+      "runtime": "Blender 5.1 migration operator",
+      "expected": ["legacy molecule objects", "migration diagnostics"],
+      "workflow": ["migrate", "inspect", "save"]
+    },
+    {
+      "path": "inputs/mol/water-v2000.mol",
+      "family": "mol",
+      "source": "tests/fixtures/mol/water-v2000.mol",
+      "provenance": "repository fixture snapshot",
+      "sha256": "44adc72cdd4e670a10f2d0c3c50da11b9044e08e9761f4c7135057bc59ca87f7",
+      "bytes": 326,
+      "runtime": "rdkit",
+      "expected": ["Structure", "Topology", "MolecularRecord V2000"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/mol/water-v3000.mol",
+      "family": "mol",
+      "source": "tests/fixtures/mol/water-v3000.mol",
+      "provenance": "repository fixture snapshot",
+      "sha256": "ea321b6296d22e787889780b5a4a62183a45652aa9b7c8a5eda7e5d3262c7a01",
+      "bytes": 331,
+      "runtime": "rdkit",
+      "expected": ["Structure", "Topology", "MolecularRecord V3000"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/mol2/substructure.mol2",
+      "family": "mol2",
+      "source": "tests/fixtures/mol2/substructure.mol2",
+      "provenance": "repository fixture snapshot",
+      "sha256": "70b955ea460074b47110f59ba9b757aa61bfe5e2d62d0743a931e74df8ae9ef7",
+      "bytes": 344,
+      "runtime": "built-in",
+      "expected": ["Structure", "Topology", "charge and substructure"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/pdb/multimodel.pdb",
+      "family": "pdb",
+      "source": "tests/fixtures/pdb/multimodel.pdb",
+      "provenance": "repository fixture snapshot",
+      "sha256": "45ccec78bcdaa1a1bfe877fea3d9b41f40e5ffa7833fb47a76439184209ec679",
+      "bytes": 316,
+      "runtime": "built-in",
+      "expected": ["Structure", "trajectory", "biological hierarchy"],
+      "workflow": ["import", "inspect", "visualize", "export"]
+    },
+    {
+      "path": "inputs/poscar/si.POSCAR",
+      "family": "poscar",
+      "source": "tests/fixtures/poscar/si.POSCAR",
+      "provenance": "repository fixture snapshot",
+      "sha256": "6f11b9ae550f7f2c570741d05c648691bdfe5d36b91c64c5c20dd8d5ee00f8d0",
+      "bytes": 212,
+      "runtime": "built-in",
+      "expected": ["Structure", "cell", "fractional coordinates"],
+      "workflow": ["import", "visualize", "export"]
+    },
+    {
+      "path": "inputs/poscar/velocities.CONTCAR",
+      "family": "poscar",
+      "source": "tests/fixtures/poscar/velocities.CONTCAR",
+      "provenance": "repository fixture snapshot",
+      "sha256": "7cba0e025bf1a5f5930ff41b6069470e192dd05c9154955c552d44c5b8ea451a",
+      "bytes": 289,
+      "runtime": "built-in",
+      "expected": ["Structure", "cell", "selective dynamics and velocity data"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/pqr/with-chain.pqr",
+      "family": "pqr",
+      "source": "tests/fixtures/pqr/with-chain.pqr",
+      "provenance": "repository fixture snapshot",
+      "sha256": "7abdc850d0ae2bbf58de9ebeb8e4ddf6f51715290c011531e8ca02ec15a12c93",
+      "bytes": 105,
+      "runtime": "built-in",
+      "expected": ["Structure", "biological hierarchy", "charge and radius"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/qcschema/atomic-result.json",
+      "family": "qcschema",
+      "source": "tests/fixtures/qcschema/atomic_result_v2.json",
+      "provenance": "repository fixture snapshot",
+      "sha256": "8261281b7211576fcafa619ad1c20863ff2e91f226307413553490a695e332f5",
+      "bytes": 1390,
+      "runtime": "built-in",
+      "expected": ["Structure", "QCSchemaEnvelope", "supported result properties"],
+      "workflow": ["import", "inspect", "visualize"]
+    },
+    {
+      "path": "inputs/sdf/mixed-properties.sdf",
+      "family": "sdf",
+      "source": "tests/fixtures/sdf/mixed-properties.sdf",
+      "provenance": "repository fixture snapshot",
+      "sha256": "c37ff47810613f7eca3cc22ab27397812ab32bd3afef7c1dd4d72875fb5a22cf",
+      "bytes": 1061,
+      "runtime": "rdkit",
+      "expected": ["multiple Structure records", "Topology", "record properties"],
+      "workflow": ["import", "inspect", "export"]
+    },
+    {
+      "path": "inputs/smiles/ethanol.smi",
+      "family": "smiles",
+      "source": "locally generated",
+      "provenance": "locally generated minimal SMILES",
+      "sha256": "5c9aa2a3024d56c903d547798cbd04ff743433ba0950dbfd8e19238e40651172",
+      "bytes": 4,
+      "runtime": "rdkit",
+      "expected": ["Structure", "Topology", "deterministic 3D derivation"],
+      "workflow": ["import", "visualize", "export"]
+    },
+    {
+      "path": "inputs/xyz/water.xyz",
+      "family": "xyz",
+      "source": "tests/fixtures/xyz/water.xyz",
+      "provenance": "repository fixture snapshot",
+      "sha256": "f10d94aaa2bf5bd2e15b2b1cd996e95b7ca6fbd3255f62195707d3d3ff1da6b8",
+      "bytes": 101,
+      "runtime": "built-in",
+      "expected": ["Structure"],
+      "workflow": ["import", "visualize", "export"]
+    }
+  ]
+}

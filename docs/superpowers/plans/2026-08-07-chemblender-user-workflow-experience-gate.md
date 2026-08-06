@@ -62,7 +62,7 @@ git commit -m "docs: activate user workflow experience gate"
 
 ---
 
-### Task 2: Create the immutable full-format example corpus
+### Task 2: Create the immutable full-format example corpus — completed
 
 **Files:**
 - Create: `examples/user-workflows/README.md`
@@ -75,7 +75,7 @@ git commit -m "docs: activate user workflow experience gate"
 - Consumes: `EXPECTED_FAMILIES`, existing `tests/fixtures/**`, `hashlib.sha256`, and JSON.
 - Produces: sorted manifest records with keys `path`, `family`, `source`, `provenance`, `sha256`, `bytes`, `runtime`, `expected`, `workflow`, and optional `size_exception_reason`.
 
-- [ ] **Step 1: Write the failing manifest contract**
+- [x] **Step 1: Write the failing manifest contract**
 
 Create `tests/test_user_workflows.py` with the following imports/constants, then add tests that load `manifest.json`, require `schema_version == "1"`, require records ordered by Python `sorted(path)`, require exactly `EXPECTED_FAMILIES`, reject duplicate paths, verify every file/hash/byte count, reject files over 100 MiB, and reject files over 50 MiB without a non-empty `size_exception_reason`.
 
@@ -118,11 +118,11 @@ Use this exact validation core:
                 self.assertTrue(record.get("size_exception_reason"))
 ```
 
-- [ ] **Step 2: Run the manifest tests to verify RED**
+- [x] **Step 2: Run the manifest tests to verify RED**
 
 Expected: FAIL because `examples/user-workflows/manifest.json` is absent.
 
-- [ ] **Step 3: Copy the exact verified fixture snapshots**
+- [x] **Step 3: Copy the exact verified fixture snapshots**
 
 Create the directory tree and copy these exact source/destination pairs without modifying bytes:
 
@@ -146,19 +146,19 @@ tests/fixtures/legacy-blend/chemblender-2.1-molecule.blend -> inputs/legacy/chem
 
 Create `inputs/smiles/ethanol.smi` as UTF-8 without BOM containing exactly `CCO` plus LF.
 
-- [ ] **Step 4: Write the checked manifest with observed hashes and provenance**
+- [x] **Step 4: Write the checked manifest with observed hashes and provenance**
 
 Measure each copied file with `Path.read_bytes()`, insert the exact observed SHA-256 and size, and sort records with Python `sorted(record["path"])`. Use `repository fixture snapshot` provenance for copies and `locally generated minimal SMILES` for `ethanol.smi`. Do not retain a manifest value that was not measured from the destination file.
 
-- [ ] **Step 5: Write the user-readable sample catalog**
+- [x] **Step 5: Write the user-readable sample catalog**
 
 `examples/user-workflows/README.md` must explain immutable input versus generated output, path conventions, source/provenance, file-size rules, which workflows use each sample, and that copied examples are independent snapshots rather than imports from `tests/`.
 
-- [ ] **Step 6: Add built-in parser checks**
+- [x] **Step 6: Add built-in parser checks**
 
 Extend `tests/test_user_workflows.py` to call the public readers for XYZ, extXYZ, POSCAR, MOL2, PDB, PQR, Cube, CJSON, and QCSchema and assert non-empty expected entities. RDKit MOL/SDF/SMILES and Gemmi CIF are required later in installed Blender and must be listed in a separate `test_dependency_backed_samples_are_declared_for_blender_runtime` assertion instead of silently skipped.
 
-- [ ] **Step 7: Run GREEN verification and commit**
+- [x] **Step 7: Run GREEN verification and commit**
 
 Run `tests.test_user_workflows`, the corresponding reader modules, and `git diff --check`; then commit:
 

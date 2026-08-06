@@ -7,8 +7,8 @@
 - Baseline: `60da41fa450a8715fab39c3e368a4a43af01f9d6`
 - Design: `docs/superpowers/specs/2026-08-07-chemblender-user-workflow-experience-gate-design.md`
 - Plan: `docs/superpowers/plans/2026-08-07-chemblender-user-workflow-experience-gate.md`
-- Current task: `Task 2 — Create the immutable full-format example corpus`
-- Completed tasks: `Design, implementation plan, Task 1`
+- Current task: `Task 3 — Write the user-facing workflow center and format boundary`
+- Completed tasks: `Design, implementation plan, Tasks 1–2`
 
 ## Goal
 
@@ -34,6 +34,7 @@ locally committed result into local `main`.
 | --- | --- | --- |
 | Design | `9d28023` | 69/69 docs/repository baseline; `git diff --check` Passed |
 | Plan | `86d63fc` | 8-task coverage and placeholder scan; 69/69 baseline Passed |
+| Task 2 | this commit | 5 corpus contracts and 135 reader tests Passed; all 16 inputs below 50 MiB |
 
 ## Blender Runtime Evidence
 
@@ -54,5 +55,5 @@ local `main` only after final qualification.
 
 ## Next Action
 
-Write the RED example-manifest contract, copy verified fixture snapshots, generate the
-minimal SMILES example, then record measured hashes/sizes and run public reader checks.
+Add resolvable workflow-document contracts, then write the user-facing overview,
+import, processing, visualization, export, lifecycle and complete format-boundary guides.
