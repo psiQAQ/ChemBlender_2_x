@@ -1,0 +1,8 @@
+MODEL        1
+ATOM      1  CA AALA A   1      11.000  12.000  13.000  0.60 20.00           C
+ATOM      2  CA BALA A   1      11.100  12.100  13.100  0.40 21.00           C
+ENDMDL
+MODEL        2
+ATOM      1  CA AALA A   1      14.000  15.000  16.000  0.60 22.00           C
+ATOM      2  CA BALA A   1      14.100  15.100  16.100  0.40 23.00           C
+ENDMDL

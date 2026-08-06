@@ -5,6 +5,7 @@ import re
 import unittest
 from pathlib import Path
 
+from ChemBlender.core import FrameSet
 from ChemBlender.core.cjson_adapter import parse_cjson
 from ChemBlender.core.cube import parse_cube
 from ChemBlender.core.formats.extxyz import parse_extxyz
@@ -304,6 +305,29 @@ class UserWorkflowContractTests(unittest.TestCase):
         self.assertIn("NamedTemporaryFile", source)
         self.assertIn(".replace(", source)
 
+    def test_runner_activates_matching_structure_view_for_context_operator(self):
+        source = RUNNER.read_text(encoding="utf-8")
+        activation = 'context.activate_structure_view(structure["entity_id"])'
+        toggle = 'context.call_chem("toggle_selective_constraints")'
+        self.assertIn(activation, source)
+        self.assertLess(source.index(activation), source.index(toggle))
+        for token in (
+            'obj.get("cb_structure_id")',
+            "obj.select_set(True)",
+            "bpy.context.view_layer.objects.active = obj",
+        ):
+            self.assertIn(token, source)
+
+    def test_biological_playback_sample_has_compatible_model_frames(self):
+        path = EXAMPLE_ROOT / "inputs" / "pdb" / "model-trajectory.pdb"
+        batch = parse_pdb(path)
+        frames = tuple(
+            dataset for dataset in batch.datasets if isinstance(dataset, FrameSet)
+        )
+        self.assertEqual(len(batch.structures), 1)
+        self.assertEqual(len(frames), 1)
+        self.assertEqual(frames[0].data.shape, (2, 2, 3))
+
     def test_manifest_covers_each_base_format_family(self):
         manifest = self.manifest()
         self.assertEqual(manifest["schema_version"], "1")
@@ -353,6 +377,11 @@ class UserWorkflowContractTests(unittest.TestCase):
                 "inputs/mol2/substructure.mol2",
                 parse_mol2,
                 ("structures", "topologies"),
+            ),
+            (
+                "inputs/pdb/model-trajectory.pdb",
+                parse_pdb,
+                ("structures", "biological_hierarchies", "datasets"),
             ),
             ("inputs/pdb/multimodel.pdb", parse_pdb, ("structures",)),
             ("inputs/poscar/si.POSCAR", parse_poscar, ("structures",)),

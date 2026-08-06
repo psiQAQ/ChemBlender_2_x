@@ -90,6 +90,17 @@
       "workflow": ["import", "inspect", "export"]
     },
     {
+      "path": "inputs/pdb/model-trajectory.pdb",
+      "family": "pdb",
+      "source": "tests/blender_smoke.py biological-models fixture",
+      "provenance": "repository-generated fixture snapshot",
+      "sha256": "b5b86a4dff1f21f1d8132be6dd64627d7b1cc23278f99cdff896b05f5859c6ff",
+      "bytes": 360,
+      "runtime": "built-in",
+      "expected": ["Structure", "two-frame trajectory", "biological hierarchy"],
+      "workflow": ["import", "inspect", "visualize", "export"]
+    },
+    {
       "path": "inputs/pdb/multimodel.pdb",
       "family": "pdb",
       "source": "tests/fixtures/pdb/multimodel.pdb",
@@ -97,8 +108,8 @@
       "sha256": "45ccec78bcdaa1a1bfe877fea3d9b41f40e5ffa7833fb47a76439184209ec679",
       "bytes": 316,
       "runtime": "built-in",
-      "expected": ["Structure", "trajectory", "biological hierarchy"],
-      "workflow": ["import", "inspect", "visualize", "export"]
+      "expected": ["two Structures", "biological hierarchy", "MODEL identity mismatch diagnostic"],
+      "workflow": ["import", "inspect", "export"]
     },
     {
       "path": "inputs/poscar/si.POSCAR",

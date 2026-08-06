@@ -12,7 +12,7 @@ Project 中的 Structure、Grid3D、属性和结果是科学实体；Blender Obj
 
 ## 示例
 
-用 [two-datasets.cube](../../../examples/user-workflows/inputs/cube/two-datasets.cube)练习多 dataset Grid3D。结构与轨迹可用 [carbon-trajectory.extxyz](../../../examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz)和 [multimodel.pdb](../../../examples/user-workflows/inputs/pdb/multimodel.pdb)。轻量结果展示可用 [water-results.cjson](../../../examples/user-workflows/inputs/cjson/water-results.cjson)和 [atomic-result.json](../../../examples/user-workflows/inputs/qcschema/atomic-result.json)。
+用 [two-datasets.cube](../../../examples/user-workflows/inputs/cube/two-datasets.cube)练习多 dataset Grid3D。结构与轨迹可用 [carbon-trajectory.extxyz](../../../examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz)和 [model-trajectory.pdb](../../../examples/user-workflows/inputs/pdb/model-trajectory.pdb)。轻量结果展示可用 [water-results.cjson](../../../examples/user-workflows/inputs/cjson/water-results.cjson)和 [atomic-result.json](../../../examples/user-workflows/inputs/qcschema/atomic-result.json)。
 
 ## 操作前检查
 
@@ -79,7 +79,7 @@ ChemBlender 自有的 Volume/Surface cache 位于 sidecar 的 derived cache 范�
 ### trajectory / MODEL playback
 
 ```text
-使用当前 Blender MCP 导入 `examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz`；也可按同一流程改用 `examples/user-workflows/inputs/pdb/multimodel.pdb`。检查所有导入和 playback Operator RNA，走 `bpy.ops.chemblender.quick_import`/`confirm_import` confirmation，再从公开 Project Browser/View RNA 读取 frame/model count 和 source revision。调用 live playback Operator 后验证帧变化但 source revision 不变。不得 import private modules、修改 `.cbq` 或 bypass confirmation。
+使用当前 Blender MCP 导入 `examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz`；也可按同一流程改用 `examples/user-workflows/inputs/pdb/model-trajectory.pdb`。检查所有导入和 playback Operator RNA，走 `bpy.ops.chemblender.quick_import`/`confirm_import` confirmation，再从公开 Project Browser/View RNA 读取 frame/model count 和 source revision。调用 live playback Operator 后验证帧变化但 source revision 不变。不得 import private modules、修改 `.cbq` 或 bypass confirmation。
 ```
 
 ### 冷重开后的缓存重建

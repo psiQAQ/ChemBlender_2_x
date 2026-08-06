@@ -38,7 +38,8 @@ locally committed result into local `main`.
 | Task 3 | `cbee68b` | 7 workflow documents, 16 sample links and 3 repository entrypoints verified |
 | Task 4 | `63d9b34` | 18 plugin prompts, 5 outside-plugin prompts and public-UI safety contracts verified |
 | Task 5 | `aec862f` | 9-case UX-GATE, review template and pre-tag release blocking policy verified |
-| Task 6 | this commit | Public-Operator runner compiled; 15/15 workflow contracts and `git diff --check` Passed |
+| Task 6 | `1d910da` | Public-Operator runner compiled; 15/15 workflow contracts and `git diff --check` Passed |
+| Task 7 fixes | `4fbcf0e` | Two locale-independent identifier lookups fixed; 78 adjacent tests and installed-product smoke Passed |
 
 ## Blender Runtime Evidence
 
@@ -68,6 +69,19 @@ locally committed result into local `main`.
    `BSDF_PRINCIPLED` node type in both material paths; GREEN: 47 adjacent tests and the
    complete 253-second installed-product smoke.
 
+## Workflow Runner Corrections
+
+- Initial report: `.agents/cache/user-workflows/run-4fbcf0e-1/report.json`.
+- `DATA-CRYSTAL` exposed a runner context omission: selecting a Project Browser row
+  does not activate its Structure View. The runner now activates the matching public
+  View with Blender selection APIs before the context-sensitive Operator.
+- The original `multimodel.pdb` intentionally has different atom identity sets across
+  MODEL records, so the parser correctly creates independent Structures. It remains a
+  diagnostic example; MODEL playback now uses the 360-byte `model-trajectory.pdb`
+  derived from the repository smoke fixture.
+- RED/GREEN: two focused contracts failed before the corrections and passed after;
+  all 17 user-workflow contracts and runner compilation then passed.
+
 ## Deferred External Cases
 
 None currently known.
@@ -79,5 +93,6 @@ local `main` only after final qualification.
 
 ## Next Action
 
-Start a fresh MCP-backed Blender 5.1 runtime, create one empty owned workflow run
-directory, and execute every public-Operator runner checkpoint with report inspection.
+Commit the runner/sample corrections, then start a fresh MCP-backed Blender 5.1
+runtime and execute every public-Operator runner checkpoint in a new empty run
+directory with report inspection.

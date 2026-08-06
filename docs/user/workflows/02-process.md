@@ -17,7 +17,8 @@ ChemBlender 把科学数据修改与 Blender 外观修改分开。移动对象�
 | 多帧与 revision | [carbon-trajectory.extxyz](../../../examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz) |
 | MOL2 topology、charge、substructure | [substructure.mol2](../../../examples/user-workflows/inputs/mol2/substructure.mol2) |
 | 晶体与 Selective Dynamics | [si.POSCAR](../../../examples/user-workflows/inputs/poscar/si.POSCAR)、[velocities.CONTCAR](../../../examples/user-workflows/inputs/poscar/velocities.CONTCAR) |
-| PDB MODEL 与层级 | [multimodel.pdb](../../../examples/user-workflows/inputs/pdb/multimodel.pdb) |
+| PDB MODEL 播放与层级 | [model-trajectory.pdb](../../../examples/user-workflows/inputs/pdb/model-trajectory.pdb) |
+| PDB MODEL 身份不一致诊断 | [multimodel.pdb](../../../examples/user-workflows/inputs/pdb/multimodel.pdb) |
 | PQR charge/radius 与层级 | [with-chain.pqr](../../../examples/user-workflows/inputs/pqr/with-chain.pqr) |
 
 ## 操作前检查
@@ -59,7 +60,7 @@ ChemBlender 把科学数据修改与 Blender 外观修改分开。移动对象�
 1. 导入 PDB/PQR 后，在 Project Browser 选择 BiologicalHierarchy 或对应 Structure。
 2. 用 model、chain、residue、atom name、altloc 或 occupancy 条件设置选择，再运行 `Select Biological Atoms`。
 3. 需要默认生物视图时选择 `Create Biological Default View`。
-4. 多 MODEL PDB 使用 `Configure MODEL Playback`，核对帧数与当前 model。PQR 一般没有 MODEL trajectory，不应出现伪造播放帧。
+4. 原子身份集合一致的多 MODEL PDB 使用 `Configure MODEL Playback`，核对帧数与当前 model。身份不一致时插件会建立独立 Structure 并给出诊断，不会伪造 trajectory；PQR 一般也没有 MODEL trajectory。
 
 ## 屏幕上应看到什么
 
@@ -99,7 +100,7 @@ ChemBlender 把科学数据修改与 Blender 外观修改分开。移动对象�
 ### biological hierarchy 与 MODEL
 
 ```text
-使用当前 Blender MCP 导入 `examples/user-workflows/inputs/pdb/multimodel.pdb`，在 Import Preview confirmation 后选中 BiologicalHierarchy/Structure。检查 `bpy.ops.chemblender.select_biological_atoms`、`play_biological_models`、`create_biological_view` 的 Operator RNA 与 poll，再按我给的 model/chain/residue 条件调用。返回 hierarchy、MODEL count、selection 和 View binding。不得 import private modules、改 mesh/scientific attributes、写 `.cbq` 或 bypass confirmation。
+使用当前 Blender MCP 导入 `examples/user-workflows/inputs/pdb/model-trajectory.pdb`，在 Import Preview confirmation 后选中 BiologicalHierarchy/Structure。检查 `bpy.ops.chemblender.select_biological_atoms`、`play_biological_models`、`create_biological_view` 的 Operator RNA 与 poll，再按我给的 model/chain/residue 条件调用。返回 hierarchy、MODEL count、selection 和 View binding。可另行导入 `examples/user-workflows/inputs/pdb/multimodel.pdb`，确认身份不一致的 MODEL 被拆为独立 Structure 并显示诊断，而不是强行播放。不得 import private modules、改 mesh/scientific attributes、写 `.cbq` 或 bypass confirmation。
 ```
 
 ## 常见问题

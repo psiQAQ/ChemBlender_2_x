@@ -41,7 +41,7 @@ CASE_INPUTS = {
     "IMP-CANCEL": ("inputs/cube/two-datasets.cube",),
     "DATA-TOPOLOGY": ("inputs/mol2/substructure.mol2",),
     "DATA-CRYSTAL": ("inputs/poscar/velocities.CONTCAR",),
-    "DATA-BIOLOGICAL": ("inputs/pdb/multimodel.pdb",),
+    "DATA-BIOLOGICAL": ("inputs/pdb/model-trajectory.pdb",),
     "VIEW-CUBE": ("inputs/cube/two-datasets.cube",),
     "EXP-FORMATS": ("inputs/pqr/with-chain.pqr",),
     "LIFE-SAVE-REOPEN-PREP": (),
@@ -297,6 +297,25 @@ class RunContext:
             raise RuntimeError(f"Project Browser selection did not activate: {entity_id}")
         return row
 
+    def activate_structure_view(self, entity_id):
+        obj = next(
+            (
+                obj
+                for obj in sorted(bpy.context.scene.objects, key=lambda item: item.name)
+                if obj.type == "MESH" and obj.get("cb_structure_id") == entity_id
+            ),
+            None,
+        )
+        if obj is None:
+            raise ValueError(f"Structure has no matching View: {entity_id}")
+        for selected in tuple(bpy.context.selected_objects):
+            selected.select_set(False)
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        if bpy.context.active_object is not obj:
+            raise RuntimeError(f"Structure View did not activate: {obj.name}")
+        return obj
+
     def remember(self, name, rows, kind):
         expected = _normal(kind)
         row = next(
@@ -534,6 +553,7 @@ def _case_crystal(context):
     )
     structure = context.remember("crystal_structure", imported["new_rows"], "structure")
     context.select(structure["entity_id"])
+    context.activate_structure_view(structure["entity_id"])
     context.current["stage"] = "Selective Dynamics view"
     toggled = context.call_chem("toggle_selective_constraints")
     if not _finished(toggled):
@@ -556,7 +576,7 @@ def _case_biological(context):
     context.current["stage"] = "PDB import"
     imported = _import_files(
         context,
-        [context.input("inputs/pdb/multimodel.pdb")],
+        [context.input("inputs/pdb/model-trajectory.pdb")],
     )
     structure = context.remember("bio_structure", imported["new_rows"], "structure")
     context.select(structure["entity_id"])
@@ -670,7 +690,7 @@ def _case_exports(context):
         (context.entities["xyz_structure"], "extxyz", "water.extxyz", {}),
         (context.entities["smiles_structure"], "mol", "ethanol.mol", {}),
         (context.entities["mol2_structure"], "mol2", "substructure.mol2", {}),
-        (context.entities["bio_structure"], "pdb", "multimodel.pdb", {}),
+        (context.entities["bio_structure"], "pdb", "model-trajectory.pdb", {}),
         (context.entities["pqr_structure"], "pqr", "with-chain.pqr", {}),
         (context.entities["smiles_record"], "sdf", "ethanol.sdf", {}),
         (context.entities["smiles_structure"], "smiles", "ethanol.smi", {}),
