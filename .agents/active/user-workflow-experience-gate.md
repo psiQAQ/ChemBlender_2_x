@@ -7,8 +7,8 @@
 - Baseline: `60da41fa450a8715fab39c3e368a4a43af01f9d6`
 - Design: `docs/superpowers/specs/2026-08-07-chemblender-user-workflow-experience-gate-design.md`
 - Plan: `docs/superpowers/plans/2026-08-07-chemblender-user-workflow-experience-gate.md`
-- Current task: `Task 3 — Write the user-facing workflow center and format boundary`
-- Completed tasks: `Design, implementation plan, Tasks 1–2`
+- Current task: `Task 4 — Add UI-equivalent Agent/MCP prompts and outside-plugin cases`
+- Completed tasks: `Design, implementation plan, Tasks 1–3`
 
 ## Goal
 
@@ -34,7 +34,8 @@ locally committed result into local `main`.
 | --- | --- | --- |
 | Design | `9d28023` | 69/69 docs/repository baseline; `git diff --check` Passed |
 | Plan | `86d63fc` | 8-task coverage and placeholder scan; 69/69 baseline Passed |
-| Task 2 | this commit | 5 corpus contracts and 135 reader tests Passed; all 16 inputs below 50 MiB |
+| Task 2 | `1ae8779` | 5 corpus contracts and 135 reader tests Passed; all 16 inputs below 50 MiB |
+| Task 3 | this commit | 7 workflow documents, 16 sample links and 3 repository entrypoints verified |
 
 ## Blender Runtime Evidence
 
@@ -55,5 +56,5 @@ local `main` only after final qualification.
 
 ## Next Action
 
-Add resolvable workflow-document contracts, then write the user-facing overview,
-import, processing, visualization, export, lifecycle and complete format-boundary guides.
+Add prompt-safety contracts, the Agent/Blender MCP guide and clearly separated
+outside-plugin scene/material cases, then refine every workflow prompt.

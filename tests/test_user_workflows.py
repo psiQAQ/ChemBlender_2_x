@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -33,6 +34,15 @@ EXPECTED_FAMILIES = (
     "smiles",
     "xyz",
 )
+EXPECTED_DOCS = (
+    "README.md",
+    "01-import.md",
+    "02-process.md",
+    "03-visualize.md",
+    "04-export.md",
+    "05-project-lifecycle.md",
+    "formats.md",
+)
 REQUIRED_RECORD_KEYS = {
     "path",
     "family",
@@ -44,6 +54,7 @@ REQUIRED_RECORD_KEYS = {
     "expected",
     "workflow",
 }
+MARKDOWN_LINK = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
 
 
 class UserWorkflowContractTests(unittest.TestCase):
@@ -51,6 +62,46 @@ class UserWorkflowContractTests(unittest.TestCase):
         path = EXAMPLE_ROOT / "manifest.json"
         self.assertTrue(path.is_file(), path)
         return json.loads(path.read_text(encoding="utf-8"))
+
+    def local_link_targets(self, path):
+        targets = set()
+        for raw_target in MARKDOWN_LINK.findall(path.read_text(encoding="utf-8")):
+            raw_target = raw_target.strip().strip("<>").split("#", 1)[0]
+            if not raw_target or raw_target.startswith(("http://", "https://", "mailto:")):
+                continue
+            target = (path.parent / raw_target).resolve()
+            self.assertTrue(target.is_relative_to(ROOT.resolve()), (path, raw_target))
+            self.assertTrue(target.exists(), (path, raw_target))
+            targets.add(target)
+        return targets
+
+    def test_workflow_document_inventory_and_links(self):
+        paths = tuple(DOC_ROOT / name for name in EXPECTED_DOCS)
+        for path in paths:
+            self.assertTrue(path.is_file(), path)
+        for path in paths:
+            self.local_link_targets(path)
+
+    def test_repository_entrypoints_link_to_workflow_index(self):
+        index = (DOC_ROOT / "README.md").resolve()
+        for path in (
+            ROOT / "README.md",
+            ROOT / "docs" / "README.md",
+            ROOT / "docs" / "user" / "2.4.0-experience-review.md",
+        ):
+            self.assertIn(index, self.local_link_targets(path), path)
+
+    def test_every_sample_is_linked_from_the_workflow_documents(self):
+        linked = set()
+        for name in EXPECTED_DOCS:
+            path = DOC_ROOT / name
+            if path.is_file():
+                linked.update(self.local_link_targets(path))
+        expected = {
+            (EXAMPLE_ROOT / record["path"]).resolve()
+            for record in self.manifest()["files"]
+        }
+        self.assertEqual(expected - linked, set())
 
     def test_manifest_covers_each_base_format_family(self):
         manifest = self.manifest()

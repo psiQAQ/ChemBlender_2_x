@@ -169,7 +169,7 @@ git commit -m "test: add user workflow example corpus"
 
 ---
 
-### Task 3: Write the user-facing workflow center and format boundary
+### Task 3: Write the user-facing workflow center and format boundary — completed
 
 **Files:**
 - Create: `docs/user/workflows/README.md`
@@ -189,7 +189,7 @@ git commit -m "test: add user workflow example corpus"
 - Consumes: `examples/user-workflows/manifest.json`, existing user guides, generated format/dependency documents, and real UI labels/operators.
 - Produces: ordered UI workflows with sample links, success criteria, failure handling, and prompt anchors.
 
-- [ ] **Step 1: Extend the contract test for document structure and links**
+- [x] **Step 1: Extend the contract test for document structure and links**
 
 Add this exact inventory constant, require every listed file, and require the root entrypoints:
 
@@ -207,31 +207,31 @@ EXPECTED_DOCS = (
 
 For each numbered workflow document require headings `## 操作前检查`, `## UI 操作`, `## 成功判据`, `## Agent 提示词`, and `## 常见问题`. Parse Markdown links with a small regex and assert every repository-relative link resolves under `ROOT`. Require root `README.md`, `docs/README.md`, and the historical 2.4.0 review to link the new index. Task 4 extends `EXPECTED_DOCS` with the two Agent documents; Task 5 extends it with the two review files.
 
-- [ ] **Step 2: Run RED before creating the documents**
+- [x] **Step 2: Run RED before creating the documents**
 
 Expected: missing document and link failures.
 
-- [ ] **Step 3: Write the overview and import workflow**
+- [x] **Step 3: Write the overview and import workflow**
 
 The overview must explain the 2.1 direct-object versus current Project boundary, distinguish `基础安装可用` / `需要可选 runtime` / `开发接口或条件能力`, and route users through preparation, import, processing, visualization, export, lifecycle, Agent help, and review evidence. `01-import.md` must cover single/multiple files, drag/drop, SMILES, validation modes, Import Preview decisions, quality/diagnostics, cancel, and the exact sample paths.
 
-- [ ] **Step 4: Write processing and visualization workflows**
+- [x] **Step 4: Write processing and visualization workflows**
 
 `02-process.md` must cover immutable source, Apply Scientific Edits, derived Structure, topology compute/accept/reject/switch, crystal declared/derived symmetry, selective dynamics, biological hierarchy/selection/model playback, and revision validity. `03-visualize.md` must cover Structure, Grid Volume, Signed Surface, property mapping, trajectory/model playback, cache rebuild, and the difference between scientific entities and Blender Views.
 
-- [ ] **Step 5: Write export and project lifecycle workflows**
+- [x] **Step 5: Write export and project lifecycle workflows**
 
 `04-export.md` must enumerate Project Browser export formats, selection closure, format-specific loss preview, explicit confirmation, cancellation, atomic destination, semantic re-import check, and current no-general-Project-Browser-writer boundary for CJSON/QCSchema. `05-project-lifecycle.md` must cover Save Project, `.blend`/`.cbq` pairing, cold reopen, Verify/Relink/Inspect/Diagnostics/Detach, missing cache reconstruction, revision prompts, and explicit 2.1 legacy preview/migration/backup/reopen.
 
-- [ ] **Step 6: Write the complete curated format reference**
+- [x] **Step 6: Write the complete curated format reference**
 
 For every base family, include a table row for potential source data, imported ChemBlender data, default/available View, processing, export/maturity, dependency, known loss, and sample link. Cross-check every claim against `docs/user/formats.md` and the generated JSON; do not claim optional runtime availability on the current machine.
 
-- [ ] **Step 7: Add entrypoint links and historical routing**
+- [x] **Step 7: Add entrypoint links and historical routing**
 
 Add one prominent root README link under Related user guides, add the workflow index first in `docs/README.md` User Guides, and add a short “长期发布前检阅” link to `docs/user/2.4.0-experience-review.md` without rewriting historical 2.4.0 facts.
 
-- [ ] **Step 8: Run doc/link/format verification and commit**
+- [x] **Step 8: Run doc/link/format verification and commit**
 
 Run `tests.test_user_workflows`, `tests.test_quantum_visualization_docs`, `tests.test_generated_docs_fresh`, and `git diff --check`. Commit:
 
