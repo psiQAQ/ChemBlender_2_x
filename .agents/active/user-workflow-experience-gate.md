@@ -49,8 +49,10 @@ locally committed result into local `main`.
   `bl_ext.user_default.chemblender`, empty clean background file.
 - Dependency inventory: RDKit `2026.3.3` SHA-256 `f8bd59b2...e767c48` and
   Gemmi `0.7.5` SHA-256 `ad1f72ff...fd337d` matched `dependencies.toml`.
-- Extension validate/build and ZIP audit: Passed; `chemblender-2.4.0.zip`,
-  29,976,638 bytes after fixes, 189 regular files, CRC clean, exact two wheels.
+- Extension validate/build and ZIP audit: Passed; current
+  `chemblender-2.4.0.zip` is 29,976,721 bytes, 189 regular files, CRC clean,
+  exact two wheels, 32,064,525 unpacked bytes, and exact zero-growth budgets.
+  SHA-256: `079b00b8a47dba56298eb9635b5a5dff76bcb1c4983aeefe5dfe360cc149c79d`.
 - Installed-product smoke: Passed in Blender 5.1.2 after fixes, including exact
   RDKit/Gemmi imports, two lifecycle cycles, assets, project reopen, native
   molecular/crystal/grid flows, and 10k-SDF performance checks.
@@ -68,6 +70,17 @@ locally committed result into local `main`.
    `test_surface_material_node_lookup_is_locale_independent`; fix: select the stable
    `BSDF_PRINCIPLED` node type in both material paths; GREEN: 47 adjacent tests and the
    complete 253-second installed-product smoke.
+3. Legacy migration nested an atomic sidecar publication below a long working path.
+   Publication stage/backup names repeated the destination name, making the final NPY
+   replace path 283 characters and failing with Windows `WinError 3`. RED:
+   `test_sidecar_publication_orphan_names_stay_bounded_and_discoverable` observed a
+   126-character stage name. Fix: destination names longer than 15 characters use a
+   stable 12-hex association prefix while UUID recovery semantics stay unchanged.
+   GREEN: 66 atomic-path/publication/migration tests; isolated packaged Blender 5.1.2
+   public preview/migrate/save Operators all returned `FINISHED`, producing a verified
+   `.blend`/`.cbq` pair and `ChemBlender Legacy Backup` collection.
+   Final adjacent verification: 94/94 publication, migration, artifact-budget and
+   user-workflow contracts Passed; modified Python and runner compilation Passed.
 
 ## Workflow Runner Corrections
 
@@ -92,6 +105,8 @@ locally committed result into local `main`.
   then a second `Save Project` publishes the `.cbq` via `save_pre`. The repository
   smoke confirms this behavior. The runner and lifecycle guide now perform and explain
   both UI steps; focused RED/GREEN passed.
+- Run `.agents/cache/user-workflows/run-69e93c0-1/report.json` passed main and LIFE
+  cold reopen, then preserved the `WinError 3` migration failure that led to defect 3.
 
 ## Deferred External Cases
 
@@ -104,6 +119,6 @@ local `main` only after final qualification.
 
 ## Next Action
 
-Commit the first-save workflow correction, then start a fresh MCP-backed Blender 5.1
-runtime and execute every public-Operator runner checkpoint in a new empty run
-directory with report inspection.
+Commit the Windows sidecar-path fix, then execute every public-Operator runner
+checkpoint from scratch against the corrected packaged Extension in a new empty run
+directory and fresh Blender 5.1 processes.

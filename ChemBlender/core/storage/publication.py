@@ -1,4 +1,5 @@
 import os
+import hashlib
 import re
 import shutil
 from dataclasses import dataclass, field
@@ -100,7 +101,7 @@ def _validated_destination(destination):
 
 def _new_stage(destination):
     while True:
-        path = destination.parent / f".{destination.name}.{uuid4()}.tmp"
+        path = destination.parent / f"{_orphan_prefix(destination)}{uuid4()}.tmp"
         try:
             path.mkdir()
         except FileExistsError:
@@ -110,7 +111,7 @@ def _new_stage(destination):
 
 def _new_backup(destination):
     while True:
-        path = destination.parent / f".{destination.name}.{uuid4()}.backup"
+        path = destination.parent / f"{_orphan_prefix(destination)}{uuid4()}.backup"
         if not path.exists() and not _is_link_like(path):
             return path
 
@@ -341,8 +342,15 @@ def inspect_publication_orphans(destination):
     return _orphan_report(destination)
 
 
+def _orphan_prefix(destination):
+    name = Path(destination).name
+    if len(name) > 15:
+        name = hashlib.sha256(name.encode("utf-8")).hexdigest()[:12]
+    return f".{name}."
+
+
 def _orphan_report(destination):
-    prefix = f".{destination.name}."
+    prefix = _orphan_prefix(destination)
     temporary = []
     backups = []
     for path in destination.parent.iterdir():

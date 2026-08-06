@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import patch
 
 import ChemBlender.core.sidecar as sidecar
+import ChemBlender.core.storage.publication as publication
 import ChemBlender.reader_api as reader_api
 import ChemBlender.reader_api.canonical_document as canonical_document
 from tests.test_reader_canonical_document import sample_batch
@@ -131,6 +132,19 @@ class AtomicPathBudgetTests(unittest.TestCase):
             with self.subTest(suffix=suffix):
                 with self.assertRaises(ValueError):
                     helper(destinations[0], suffix=suffix)
+
+    def test_sidecar_publication_orphan_names_stay_bounded_and_discoverable(self):
+        with TemporaryDirectory() as temporary:
+            destination = Path(temporary) / ("p" * 80 + ".cbq")
+            stage = publication._new_stage(destination)
+            backup = publication._new_backup(destination)
+            backup.mkdir()
+
+            self.assertLessEqual(len(stage.name), 64)
+            self.assertLessEqual(len(backup.name), 64)
+            report = publication.inspect_publication_orphans(destination)
+            self.assertEqual(report.temporary_paths, (stage.resolve(),))
+            self.assertEqual(report.backup_paths, (backup.resolve(),))
 
     def test_sidecar_array_writer_uses_short_replace_source(self):
         with TemporaryDirectory() as temporary:
