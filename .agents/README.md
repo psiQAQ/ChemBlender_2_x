@@ -16,6 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
+| active | [user-workflow-experience-gate.md](active/user-workflow-experience-gate.md) | User workflow docs, full-format examples, Blender MCP runtime checks and manual prerelease experience gate |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
 | reference | [code-architecture-guide.md](reference/code-architecture-guide.md) | 中文代码分层、每个源码文件的职责、主要入口与术语表 |

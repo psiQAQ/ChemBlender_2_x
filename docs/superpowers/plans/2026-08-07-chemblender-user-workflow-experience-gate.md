@@ -26,21 +26,22 @@
 
 ---
 
-### Task 1: Activate the tracked task and add the workflow contract
+### Task 1: Activate the tracked task
 
 **Files:**
 - Create: `.agents/active/user-workflow-experience-gate.md`
 - Modify: `.agents/README.md`
+- Modify: `tests/test_quantum_visualization_docs.py`
 
 **Interfaces:**
 - Consumes: approved design at `docs/superpowers/specs/2026-08-07-chemblender-user-workflow-experience-gate-design.md`.
 - Produces: one active cursor used by every later task.
 
-- [ ] **Step 1: Add the active task cursor and route it from `.agents/README.md`**
+- [x] **Step 1: Add the active task cursor and route it from `.agents/README.md`**
 
-Create an active document with Goal ID `CB-USER-WORKFLOW-EXPERIENCE-GATE`, state `active`, branch/worktree paths, design/plan paths, explicit no-push/no-release boundary, current task, completed tasks, deferred-external list, Blender runtime evidence section, defect ledger, and next action. Add one `active` row to `.agents/README.md`.
+Create an active document with Goal ID `CB-USER-WORKFLOW-EXPERIENCE-GATE`, state `active`, branch/worktree paths, design/plan paths, explicit no-push/no-release boundary, current task, completed tasks, deferred-external list, Blender runtime evidence section, defect ledger, and next action. Add one `active` row to `.agents/README.md`. Update `NEXT_RELEASE_ACTIVE_FILES` in `tests/test_quantum_visualization_docs.py` to the exact single active filename; restore it to empty when Task 8 archives the cursor.
 
-- [ ] **Step 2: Verify the active cursor does not disturb the baseline**
+- [x] **Step 2: Verify the active cursor does not disturb the baseline**
 
 Run:
 
@@ -52,10 +53,10 @@ git diff --check
 
 Expected: existing tests PASS and the worktree contains only the active-task documentation changes.
 
-- [ ] **Step 3: Commit the task activation**
+- [x] **Step 3: Commit the task activation**
 
 ```powershell
-git add -- .agents/README.md .agents/active/user-workflow-experience-gate.md
+git add -- .agents/README.md .agents/active/user-workflow-experience-gate.md tests/test_quantum_visualization_docs.py docs/superpowers/plans/2026-08-07-chemblender-user-workflow-experience-gate.md
 git commit -m "docs: activate user workflow experience gate"
 ```
 
