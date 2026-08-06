@@ -205,6 +205,23 @@ license, authentication and deployment decision; credential values never enter `
 7. Verify package contents, module key, representative RDKit operations, Gemmi import/version, properties, installed `.blend` assets, and two disable/enable cycles.
 8. Reinstall the same ZIP into the real `user_default` repository from a fresh Blender process.
 
+## 人工插件使用体验检阅
+
+After the local installed-product gates pass, copy the tracked
+[review template](../../docs/user/workflows/reviews/template.md) to
+`reviews/<version>.md` and run the version-neutral
+[UX-GATE](../../docs/user/workflows/reviews/README.md) against the same package.
+Record the manual UI result and Agent/MCP result for every required case, including
+real save/cold-reopen and format-specific output evidence. The automated public-
+Operator runner accompanies this record but never replaces manual evidence.
+
+Any required case with status `Incomplete`, `Failed`, or `Blocked` blocks the
+tag/Release. `OUTSIDE` is required only to prove that generic Blender scene,
+material and render work remains clearly outside ChemBlender product scope; it
+does not judge scientific correctness. Commit the completed review before tag or
+Release authorization. Do not infer that a version passed because the template or
+an older review exists.
+
 ## Release Gates
 
 - Tag version equals manifest version after stripping leading `v`.

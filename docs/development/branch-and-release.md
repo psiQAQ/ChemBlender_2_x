@@ -92,7 +92,21 @@ git diff --check
 
 Do not release directly from `archive/*` or a downstream branch. Do not treat a locally built ZIP as a substitute for GitHub Actions evidence.
 
-### 2. Create and push one annotated tag
+### 2. Run 人工插件使用体验检阅
+
+After local installed-product validation, copy the
+[UX-GATE template](../user/workflows/reviews/template.md) to
+`reviews/<version>.md` and execute every required case from the
+[manual gate](../user/workflows/reviews/README.md) against the candidate package.
+Commit the filled review with UI result, Agent/MCP result, output hashes/sizes,
+cold-reopen evidence, findings, fix commits and rerun results.
+
+Any required case marked `Incomplete`, `Failed`, or `Blocked` blocks the
+tag/Release. A green automated runner report accompanies the review but cannot
+replace manual evidence. This gate does not authorize a push, tag, PR or Release;
+the external-write rules and explicit publication authorization below are unchanged.
+
+### 3. Create and push one annotated tag
 
 ```powershell
 git tag -a $tag -m "Release $tag"
@@ -102,7 +116,7 @@ git push origin $tag
 
 Push only the intended tag; do not use `git push --follow-tags`. Supported tags are final `vMAJOR.MINOR.PATCH` tags and numbered `alpha`, `beta`, or `rc` prerelease tags shown in the CI-to-Release table. The tag workflow rejects a tag whose exact version does not equal tagged-source metadata.
 
-### 3. Run verification only
+### 4. Run verification only
 
 ```powershell
 $repo = 'psiQAQ/ChemBlender_2_x'
@@ -114,7 +128,7 @@ gh run list --repo $repo --workflow extension-release.yml `
 
 This run is read-only. It selects exactly one successful package run by exact tag commit, validates the metadata-named unexpired artifact, verifies the complete five-file package artifact, then separately verifies the ZIP/checksum pair that alone may become public assets. It also requires the dispatch-commit and tagged `CHANGELOG.md` entries to match. Inspect and require a green result before requesting publication.
 
-### 4. Dispatch publication
+### 5. Dispatch publication
 
 ```powershell
 gh workflow run extension-release.yml --repo $repo --ref main `
@@ -125,7 +139,7 @@ This is the explicit publication authorization. The workflow repeats complete-ar
 
 Repository administrators should configure required reviewers under **Settings → Environments → release** when a second approval is desired. Without that protection rule, the manual `publish=true` dispatch remains the sole human approval.
 
-### 5. Record evidence
+### 6. Record evidence
 
 Record the tag commit, package run URL, verification and publication run URLs, changelog version, artifact name, package SHA-256, and Release URL in the release completion evidence. Confirm that the public Release body equals the extracted changelog entry.
 

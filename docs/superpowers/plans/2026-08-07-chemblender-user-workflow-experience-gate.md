@@ -290,7 +290,7 @@ git commit -m "docs: add Blender MCP workflow prompts"
 
 ---
 
-### Task 5: Establish the tracked manual prerelease experience gate
+### Task 5: Establish the tracked manual prerelease experience gate — completed
 
 **Files:**
 - Create: `docs/user/workflows/reviews/README.md`
@@ -304,23 +304,23 @@ git commit -m "docs: add Blender MCP workflow prompts"
 - Consumes: workflow case IDs, sample manifest, and existing local Extension gates.
 - Produces: version-neutral gate `UX-GATE` and tracked `reviews/<version>.md` evidence contract.
 
-- [ ] **Step 1: Add failing release-gate assertions**
+- [x] **Step 1: Add failing release-gate assertions**
 
 Extend `EXPECTED_DOCS` with `reviews/README.md` and `reviews/template.md`. Require both release-policy documents to contain `人工插件使用体验检阅`, `reviews/<version>.md`, and a statement that incomplete/failed required cases block tag/Release. Require the template to include environment, commit/package hashes, every workflow ID, UI result, Agent/MCP result, time, evidence, findings, fix commit, rerun result, file sizes/hashes/reopen state, and final Passed/Failed/Blocked.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Expected: release policy and review files absent.
 
-- [ ] **Step 3: Write gate rules and template**
+- [x] **Step 3: Write gate rules and template**
 
 Define required cases with stable IDs `ENV`, `IMP`, `DATA`, `VIEW`, `EXP`, `LIFE`, `MIG`, `AGENT`, and `OUTSIDE`. `OUTSIDE` is required only for evidence that it remains clearly outside product scope; it does not gate scientific correctness. State that automated runner results accompany but never replace manual evidence.
 
-- [ ] **Step 4: Integrate the gate into release policy**
+- [x] **Step 4: Integrate the gate into release policy**
 
 Insert the manual gate after local installed-product validation and before tag/Release authorization. Do not change existing remote authorization rules or imply a current version passed.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run workflow/repository/doc tests and commit:
 

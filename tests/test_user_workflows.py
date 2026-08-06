@@ -44,6 +44,8 @@ EXPECTED_DOCS = (
     "06-agent-and-mcp.md",
     "07-agent-beyond-plugin.md",
     "formats.md",
+    "reviews/README.md",
+    "reviews/template.md",
 )
 REQUIRED_RECORD_KEYS = {
     "path",
@@ -65,6 +67,17 @@ PLUGIN_WORKFLOW_DOCS = (
     "04-export.md",
     "05-project-lifecycle.md",
     "06-agent-and-mcp.md",
+)
+REVIEW_CASE_IDS = (
+    "ENV",
+    "IMP",
+    "DATA",
+    "VIEW",
+    "EXP",
+    "LIFE",
+    "MIG",
+    "AGENT",
+    "OUTSIDE",
 )
 
 
@@ -144,6 +157,67 @@ class UserWorkflowContractTests(unittest.TestCase):
         document = path.read_text(encoding="utf-8")
         self.assertGreaterEqual(document.count("这不是 ChemBlender 插件能力"), 5)
         self.assertNotIn("bpy.ops.chemblender", document)
+
+    def test_manual_experience_gate_blocks_release_when_incomplete(self):
+        policy_paths = (
+            ROOT / ".agents" / "reference" / "dependencies-and-release.md",
+            ROOT / "docs" / "development" / "branch-and-release.md",
+        )
+        for path in policy_paths:
+            document = path.read_text(encoding="utf-8")
+            for term in (
+                "人工插件使用体验检阅",
+                "reviews/<version>.md",
+                "Incomplete",
+                "Failed",
+                "Blocked",
+                "tag/Release",
+            ):
+                self.assertIn(term, document, (path, term))
+
+        dependency_policy = policy_paths[0].read_text(encoding="utf-8")
+        self.assertLess(
+            dependency_policy.index("## Local Extension Gates"),
+            dependency_policy.index("## 人工插件使用体验检阅"),
+        )
+        self.assertLess(
+            dependency_policy.index("## 人工插件使用体验检阅"),
+            dependency_policy.index("## Release Gates"),
+        )
+
+        branch_policy = policy_paths[1].read_text(encoding="utf-8")
+        self.assertLess(
+            branch_policy.index("Run all local gates"),
+            branch_policy.index("人工插件使用体验检阅"),
+        )
+        self.assertLess(
+            branch_policy.index("人工插件使用体验检阅"),
+            branch_policy.index("Create and push one annotated tag"),
+        )
+
+    def test_manual_review_template_has_required_cases_and_evidence(self):
+        path = DOC_ROOT / "reviews" / "template.md"
+        self.assertTrue(path.is_file(), path)
+        template = path.read_text(encoding="utf-8")
+        for case_id in REVIEW_CASE_IDS:
+            self.assertIn(f"| {case_id} |", template)
+        for term in (
+            "Environment",
+            "Git commit",
+            "Package SHA-256",
+            "UI result",
+            "Agent/MCP result",
+            "Duration",
+            "Evidence",
+            "Findings",
+            "Fix commit",
+            "Rerun result",
+            "File size",
+            "File SHA-256",
+            "Reopen state",
+            "Passed / Failed / Blocked",
+        ):
+            self.assertIn(term, template)
 
     def test_manifest_covers_each_base_format_family(self):
         manifest = self.manifest()
