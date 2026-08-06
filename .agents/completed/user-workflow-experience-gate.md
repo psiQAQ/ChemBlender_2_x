@@ -1,14 +1,14 @@
 # ChemBlender User Workflow Experience Gate
 
 - Goal ID: `CB-USER-WORKFLOW-EXPERIENCE-GATE`
-- State: `active`
+- State: `completed`
 - Branch: `codex/user-workflow-experience-gate`
 - Worktree: `D:\workspace\ChemBlender_2_x\.worktrees\user-workflow-experience-gate`
 - Baseline: `60da41fa450a8715fab39c3e368a4a43af01f9d6`
 - Design: `docs/superpowers/specs/2026-08-07-chemblender-user-workflow-experience-gate-design.md`
 - Plan: `docs/superpowers/plans/2026-08-07-chemblender-user-workflow-experience-gate.md`
-- Current task: `Task 8 — Final qualification, archive and local main merge`
-- Completed tasks: `Design, implementation plan, Tasks 1–7`
+- Current task: Completed locally; ordinary local `main` integration follows this archive commit.
+- Completed tasks: `Design, implementation plan, Tasks 1–8`
 
 ## Goal
 
@@ -43,6 +43,7 @@ locally committed result into local `main`.
 | Task 7 runner | `43f64f1`, `a161f8f`, `69e93c0`, `588beef` | UI context, export confirmation, first-save and resume evidence contracts Passed |
 | Task 7 publication | `4e46d63` | Windows sidecar publication path bounded; 94 adjacent tests and packaged migration Passed |
 | Task 7 prompts | `3218cfd` | Renderability, material fallback and rendered-image inspection added after live MCP diagnosis |
+| Task 7 evidence | `8e5076a` | 11-case portable runtime report, 52 output files and checkout-stable hashes committed |
 
 ## Blender Runtime Evidence
 
@@ -145,16 +146,80 @@ locally committed result into local `main`.
   84,047 bytes; mesh coordinates, Object transform and custom-property keys stayed
   unchanged. Ordinary Save As was correctly not called because the `.cbq` pair exists.
 
+## Requirement Audit
+
+| Design requirement | Tracked or runtime evidence | Result |
+| --- | --- | --- |
+| User-first workflow route and 2.1.0 comparison | `docs/user/workflows/README.md`, seven ordered guides, root/docs README links | Passed |
+| Base, optional-runtime and development-only boundaries | workflow overview, `formats.md`, generated capability/dependency documents | Passed |
+| Full base-format corpus with provenance and hashes | 17 inputs across 14 families in `examples/user-workflows/manifest.json`; parser/contracts Passed | Passed |
+| Small, directly viewable saved results | two tracked `.blend`/`.cbq` pairs; 52 files, 479,453 bytes total, largest 200,053 bytes | Passed |
+| UI-equivalent Agent prompts | `06-agent-and-mcp.md`; MCP preflight, public Operator/RNA and no-bypass contracts | Passed |
+| Plugin-external Agent examples remain separate | `07-agent-beyond-plugin.md`; live render evidence preserved scientific mesh/transform/property state | Passed |
+| Public-Operator automation | `run_ui_workflows.py` and `results/local-2.4.0.json`; 11/11 cases and four fresh processes Passed | Passed |
+| Real Blender 5.1 installation and crash-safe continuation | Blender 5.1.2 MCP inventory, exact package install, runtime restarts and final isolated smoke | Passed |
+| Reproduced defects fixed at shared boundaries | locale IDs/BSDF lookup, Windows publication path and resume evidence commits with RED/GREEN/runtime retests | Passed |
+| Manual prerelease experience gate | version-neutral review template, release-policy gate and blocking contracts | Passed |
+| Local-only Git boundary and consolidated external decision | isolated branch/worktree, `deferred=[]`, no push/tag/PR/release/remote modification | Passed |
+
+## Final Qualification
+
+| Gate | Exact result |
+| --- | --- |
+| Full standard-library discovery | `2235` tests, `26` skipped, `0` failed in 224.462 s using Blender Python 3.13.9 plus the exact isolated-install dependency path |
+| Generated documentation | `tests.test_generated_docs_fresh`: 12/12 Passed |
+| Compilation | `compileall -q ChemBlender worker tests examples/user-workflows/scripts`: Passed |
+| Native Extension validate/build | Blender 5.1.2 preflight, validate and build: Passed |
+| Package-CI/ZIP audit | 29,976,721 bytes; SHA-256 `079b00b8a47dba56298eb9635b5a5dff76bcb1c4983aeefe5dfe360cc149c79d`; 189 members; 32,064,525 unpacked bytes; CRC clean; exact Gemmi/RDKit wheels; zero budget growth |
+| Fresh isolated installed-product smoke | Blender exit 0 in 250.3 s; two lifecycle cycles, assets, RDKit/Gemmi, full native reader/View/export and 10k-SDF checks Passed |
+| Public-Operator workflow report | 11/11 Passed; main, project reopen, legacy migration and migrated reopen all used fresh Blender processes |
+| Tracked output cold reopen | workflow: 88 rows, 16 objects, 3 sidecar-local VDBs; migration: 7 By Data rows, 2 objects and backup collection; no missing image/library |
+| Repository hygiene | `git diff --check`, untracked-file check and feature worktree status: Passed/clean |
+
+The first full-suite attempt used only bare bundled Python and failed
+with 23 errors plus one failure because Gemmi was not on `sys.path`. The exact
+fresh-profile `.local/site-packages` contained Gemmi 0.7.5 and RDKit 2026.03.3;
+the five affected modules then passed 32/32 before the complete successful rerun.
+No dependency was installed and no product code changed for that environment correction.
+
+## Local Commit Series
+
+```text
+9d28023 docs: design user workflow experience gate
+86d63fc docs: plan user workflow experience gate
+96dbe47 docs: activate user workflow experience gate
+1ae8779 test: add user workflow example corpus
+cbee68b docs: add user workflow center
+63d9b34 docs: add Blender MCP workflow prompts
+aec862f docs: add manual plugin experience gate
+1d910da test: add public operator workflow runner
+4fbcf0e fix: make localized Blender identifiers stable
+43f64f1 test: align workflow runner with UI context
+a161f8f test: handle export confirmation gate
+69e93c0 docs: clarify first project save flow
+4e46d63 fix: bound sidecar publication paths
+3218cfd docs: harden Blender presentation prompts
+588beef fix: preserve resumed workflow evidence
+8e5076a test: record user workflow runtime evidence
+```
+
 ## Deferred External Cases
 
-None currently known.
+None.
 
-## Stop Boundary
+## Remaining Limitations
 
-Do not publish or push. Complete all local workflow evidence and merge normally into
-local `main` only after final qualification.
+- No versioned human review result was created because no candidate is being released.
+  A future tag/Release remains blocked until a person copies and completes the template.
+- The fresh smoke can emit temporary-profile asset remap warnings and post-pass Windows
+  RDKit/Gemmi DLL cleanup warnings; assertions and Blender exit status remain successful.
+- Python 3.13 reports the existing `mesh.py:513` invalid-escape `SyntaxWarning`;
+  it did not affect a documented workflow or any runtime assertion.
+- Optional cclib/IOData/ASE/pymatgen runtimes were not provisioned and are explicitly
+  outside the base-install success boundary documented for this workflow center.
 
-## Next Action
+## External-Write Boundary
 
-Commit the tracked runtime evidence, run final repository/package/runtime qualification,
-archive this cursor, then normally merge the clean feature branch into local `main`.
+No push, PR, tag, Release, remote modification or other external write was performed.
+After this archive commit, verify both worktrees and normally merge the clean feature
+branch into local `main`; publication remains unauthorized.
