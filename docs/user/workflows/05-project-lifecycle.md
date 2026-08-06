@@ -26,10 +26,11 @@
 ### 保存与冷重开
 
 1. 导入并确认数据后，在 `Quick Import` 选择 `Save Project`。未保存的 `.blend` 会进入 Save As。
-2. 保存到 `example.blend`。ChemBlender 在同目录发布 `example.cbq/`，验证 sidecar 后再完成 Blender 保存。
-3. 查看 Quick Import/Project Browser 状态应为 clean、Connected。
-4. 关闭 Blender。重新启动 Blender 5.1，再打开 `example.blend`；这才是冷重开测试。
-5. 在 Project Browser 核对 Project identity、sources、entities、quality、active View 和 sidecar locator。
+2. 保存到 `example.blend`。首次 Save As 只确定 Blender 文件路径，Project 仍会显示 dirty。
+3. 回到 `Quick Import`，再次选择 `Save Project`。ChemBlender 在同目录发布并验证 `example.cbq/`，再把 link 写入 `.blend`；已有路径的文件只需这一步。
+4. 查看 Quick Import/Project Browser 状态应为 clean、Connected。
+5. 关闭 Blender。重新启动 Blender 5.1，再打开 `example.blend`；这才是冷重开测试。
+6. 在 Project Browser 核对 Project identity、sources、entities、quality、active View 和 sidecar locator。
 
 ### Link 恢复
 
@@ -79,7 +80,7 @@ ChemBlender 自有的 `cache/render/` 与 `cache/derivation/` 可以重建。冷
 ### Save Project 与冷重开
 
 ```text
-使用当前 Blender MCP 通过 `bpy.ops.chemblender.quick_import`/`confirm_import` 导入 `examples/user-workflows/inputs/xyz/water.xyz`。一次完成 Blender 5.1/Extension/active-file/dirty-state 预检，并检查 ChemBlender Operator RNA、`bpy.ops.wm.save_as_mainfile` RNA 与 poll。用 UI 等价 Save Project 保存到新的测试目录；不得直接写 `.cbq`。验证 `.blend` 和同 basename `.cbq/`、clean/Connected、project identity。然后正常关闭并重启 exact Blender 5.1，重开 `.blend`，核对 source、3-atom Structure、View binding 和 diagnostics。不得 import private modules 或 bypass save/link confirmation。
+使用当前 Blender MCP 通过 `bpy.ops.chemblender.quick_import`/`confirm_import` 导入 `examples/user-workflows/inputs/xyz/water.xyz`。一次完成 Blender 5.1/Extension/active-file/dirty-state 预检，并检查 ChemBlender Operator RNA、`bpy.ops.wm.save_as_mainfile`、`bpy.ops.wm.save_mainfile` 的 RNA 与 poll。对未保存文件先用 UI 等价 Save As 选择全新测试路径，再模拟用户回到 Quick Import 再次选择 `Save Project`；不得直接写 `.cbq`。验证 `.blend` 和同 basename `.cbq/`、clean/Connected、project identity。然后正常关闭并重启 exact Blender 5.1，重开 `.blend`，核对 source、3-atom Structure、View binding 和 diagnostics。不得 import private modules 或 bypass save/link confirmation。
 ```
 
 ### Verify / Relink

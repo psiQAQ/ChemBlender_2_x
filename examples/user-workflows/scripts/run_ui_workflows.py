@@ -768,9 +768,15 @@ def _case_life(context):
         if destination.exists() or destination.with_suffix(".cbq").exists():
             raise FileExistsError("project output already exists")
         context.current["stage"] = "Save Project"
-        result = context.call_wm("save_as_mainfile", filepath=str(destination))
+        save_as = context.call_wm("save_as_mainfile", filepath=str(destination))
+        saved = context.call_wm("save_mainfile")
         sidecar = destination.with_suffix(".cbq")
-        if not _finished(result) or not destination.is_file() or not sidecar.is_dir():
+        if (
+            not _finished(save_as)
+            or not _finished(saved)
+            or not destination.is_file()
+            or not sidecar.is_dir()
+        ):
             raise RuntimeError("Save Project did not produce a .blend/.cbq pair")
         return {
             "status": "prepared",

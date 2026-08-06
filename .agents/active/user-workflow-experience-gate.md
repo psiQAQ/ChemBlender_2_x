@@ -86,6 +86,12 @@ locally committed result into local `main`.
   raises `RuntimeError` when the UI Operator rejects an unconfirmed lossy export. The
   runner now audits that expected rejection and retries with explicit confirmation;
   unexpected Operator errors still fail the case. Focused RED/GREEN passed.
+- Fresh run `.agents/cache/user-workflows/run-a161f8f-1/report.json` passed all
+  imports, scientific operations, Views and 11 exports. Its lifecycle check exposed
+  the established first-save contract: `Save As` determines the new `.blend` path,
+  then a second `Save Project` publishes the `.cbq` via `save_pre`. The repository
+  smoke confirms this behavior. The runner and lifecycle guide now perform and explain
+  both UI steps; focused RED/GREEN passed.
 
 ## Deferred External Cases
 
@@ -98,6 +104,6 @@ local `main` only after final qualification.
 
 ## Next Action
 
-Commit the export-gate runner correction, then start a fresh MCP-backed Blender 5.1
+Commit the first-save workflow correction, then start a fresh MCP-backed Blender 5.1
 runtime and execute every public-Operator runner checkpoint in a new empty run
 directory with report inspection.
