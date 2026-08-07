@@ -1,6 +1,6 @@
 # ChemBlender <version> 人工插件使用体验检阅
 
-从本文件复制到 `reviews/<version>.md` 后再填写。未实际执行的字段保持 `Incomplete`，不得预填 Passed。
+从本文件复制到 `reviews/<version>.md` 后再填写。未实际执行的人工路径写 `Not Run`，对应 case 的最终状态保持 `Incomplete`；不得用自动结果预填人工 Passed。
 
 ## Environment
 
@@ -32,19 +32,24 @@
 
 ## Required case summary
 
-Result values: `Passed` / `Failed` / `Blocked` / `Incomplete`.
+UI/Agent result values: `Not Run` / `Passed` / `Failed` / `Blocked`. Final case values: `Passed` / `Failed` / `Blocked` / `Incomplete`.
 
-| Case | Required | Workflow | UI result | Agent/MCP result | Duration | Evidence | Findings | Fix commit | Rerun result |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ENV | Yes | Environment / install | Incomplete | Incomplete |  |  |  |  |  |
-| IMP | Yes | Import / Preview / cancel | Incomplete | Incomplete |  |  |  |  |  |
-| DATA | Yes | Process / revision validity | Incomplete | Incomplete |  |  |  |  |  |
-| VIEW | Yes | Structure / Grid / playback | Incomplete | Incomplete |  |  |  |  |  |
-| EXP | Yes | Export / loss / re-import | Incomplete | Incomplete |  |  |  |  |  |
-| LIFE | Yes | Save / cold reopen / recovery | Incomplete | Incomplete |  |  |  |  |  |
-| MIG | Yes | Legacy preview / migration / reopen | Incomplete | Incomplete |  |  |  |  |  |
-| AGENT | Yes | Public Operator / MCP / crash recovery | Incomplete | Incomplete |  |  |  |  |  |
-| OUTSIDE | Yes, scope only | Generic Blender cases stay outside product scope | Incomplete | Incomplete |  |  |  |  |  |
+| Case | Required | Workflow | UI result | Agent/MCP result | Duration | Evidence | Findings | Fix commit | Rerun result | Final case result |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ENV | Yes | Environment / install | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| IMP | Yes | Import / Preview / cancel | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| DATA | Yes | Process / revision validity | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| VIEW | Yes | Structure / Grid / playback | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| EXP | Yes | Export / loss / re-import | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| LIFE | Yes | Save / cold reopen / recovery | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| MIG | Yes | Legacy preview / migration / reopen | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| AGENT | Yes | Public Operator / MCP / crash recovery | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| OUTSIDE | Yes, scope only | Generic Blender cases stay outside product scope | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| REP-MOLECULAR | Yes | 8-format molecular/exchange project | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| REP-TRAJECTORY | Yes | 32-frame extXYZ playback project | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| REP-BIOLOGICAL | Yes | PDB/PQR hierarchy and MODEL project | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| REP-CRYSTAL | Yes | CIF/POSCAR periodic project | Not Run | Not Run |  |  |  |  |  | Incomplete |
+| REP-GRID | Yes | `64³` Grid Volume/Surface project | Not Run | Not Run |  |  |  |  |  | Incomplete |
 
 ## Case evidence
 
@@ -76,7 +81,11 @@ Result values: `Passed` / `Failed` / `Blocked` / `Incomplete`.
 
 | Path | Role | File size | File SHA-256 | Reopen state | External references | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-|  |  |  |  | Incomplete |  |  |
+| `outputs/representative/molecular/molecular.blend` + `.cbq/` | molecular/exchange |  |  | Not Run | source locator hints may need relocation | Keep the complete pair together |
+| `outputs/representative/trajectory/trajectory.blend` + `.cbq/` | trajectory |  |  | Not Run | source locator hints may need relocation | Verify frame 1/32 geometry |
+| `outputs/representative/biological/biological.blend` + `.cbq/` | biological |  |  | Not Run | source locator hints may need relocation | Verify MODEL/hierarchy controls |
+| `outputs/representative/crystal/crystal.blend` + `.cbq/` | crystal |  |  | Not Run | source locator hints may need relocation | Record optional spglib state |
+| `outputs/representative/grid/grid.blend` + `.cbq/` | Grid3D |  |  | Not Run | VDB paths must stay sidecar-local | Verify Volume and both surfaces |
 
 对 `.blend`/`.cbq` 配对补充：
 

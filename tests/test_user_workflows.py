@@ -65,6 +65,7 @@ EXPECTED_DOCS = (
     "07-agent-beyond-plugin.md",
     "formats.md",
     "reviews/README.md",
+    "reviews/local-2.4.0-representative-corpus.md",
     "reviews/template.md",
 )
 REQUIRED_RECORD_KEYS = {
@@ -108,6 +109,11 @@ REVIEW_CASE_IDS = (
     "MIG",
     "AGENT",
     "OUTSIDE",
+    "REP-MOLECULAR",
+    "REP-TRAJECTORY",
+    "REP-BIOLOGICAL",
+    "REP-CRYSTAL",
+    "REP-GRID",
 )
 RUNNER_CASE_IDS = (
     "ENV",
@@ -321,6 +327,8 @@ class UserWorkflowContractTests(unittest.TestCase):
         template = path.read_text(encoding="utf-8")
         for case_id in REVIEW_CASE_IDS:
             self.assertIn(f"| {case_id} |", template)
+        for relative in REPRESENTATIVE_OUTPUTS:
+            self.assertIn(relative, template)
         for term in (
             "Environment",
             "Git commit",
