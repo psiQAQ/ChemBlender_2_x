@@ -28,18 +28,18 @@
 
 ## ChemBlender 支持边界
 
-ChemBlender 保留 Structure、biological hierarchy、partial charge 和 radius。该文件没有 chain id；解析器在 residue number 下降时推断新 segment，共得到 2 段，而不会丢弃后半部分。推断 segment 不是来源 chain 声明，UI 和导出必须保留这一 provenance 区别。
+ChemBlender 保留 Structure、biological hierarchy、partial charge 和 radius。该文件没有 chain id；解析器在 residue number 下降时推断新 segment，共得到 2 段，而不会丢弃后半部分。PQR 没有独立 element 列；解析器只接受能从 atom name 与 residue context 明确推断的元素，并在 Preview 把 998 条逐原子证据汇总为 1 条 warning。推断 segment 不是来源 chain 声明，UI 和导出必须保留这一 provenance 区别。
 
 ## 操作流程
 
 1. 用 `Quick Import` 选择 [`apbs-protein-rna-nb.pqr`](apbs-protein-rna-nb.pqr)。
-2. 在 Preview 核对 998 atoms、41 residues、2 inferred segments 和 22 个零半径诊断。
+2. 在 Preview 核对 998 atoms、41 residues、2 inferred segments、22 个合法零半径，以及 1 条元素推断汇总 warning。
 3. 确认后创建结构 View，可按 segment/residue 选择并检查 charge/radius 属性。
 
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，再用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.pqr 的绝对路径。只使用公开的 bpy.ops.chemblender.*；先报告 998 个原子、41 个残基、998 行 charge/radius、22 个零半径、无 chain 字段和 2 个 inferred segment 的 Preview 诊断，等我确认后调用 bpy.ops.chemblender.confirm_import。可用 bpy.ops.chemblender.select_biological_atoms 做公开选择，但不得把 inferred segment 写成源 chain。保存 .blend 与相邻 .cbq；有损导出停下请求确认。
+通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，再用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.pqr 的绝对路径。只使用公开的 bpy.ops.chemblender.*；先报告 998 个原子、41 个残基、998 行 charge/radius、22 个合法零半径、无 chain 字段、2 个 inferred segment，以及 1 条元素推断汇总 warning，等我确认后调用 bpy.ops.chemblender.confirm_import。可用 bpy.ops.chemblender.select_biological_atoms 做公开选择，但不得把 inferred segment 写成源 chain。保存 .blend 与相邻 .cbq；有损导出停下请求确认。
 ```
 
 ## 完整性与验证

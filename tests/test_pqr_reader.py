@@ -236,6 +236,16 @@ class PQRReaderTests(unittest.TestCase):
             batch.structures[0].atomic_identity.atom_names.categories,
             ("CA", "CD", "FE", "CL", "BR", "1HG1"),
         )
+        inferred = tuple(
+            diagnostic
+            for diagnostic in batch.diagnostics
+            if diagnostic.recovery_action
+            == "inferred element from PQR atom name"
+        )
+        self.assertEqual(len(inferred), 1)
+        self.assertEqual(inferred[0].field_path, "record[*].element")
+        self.assertIn("7 atom records", inferred[0].message)
+        self.assertEqual(len(batch.diagnostics), 3)
 
     def test_element_policy_matrix_keeps_polymer_and_ion_context_separate(self):
         cases = (
