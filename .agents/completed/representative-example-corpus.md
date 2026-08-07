@@ -60,6 +60,10 @@
   `grid_volume` / `signed_isosurface` View kinds.
 - `git diff --check`: Passed before and after the local merge. No remote write, push, PR, tag,
   release or remote change was performed.
+- After the green merge, the dedicated feature worktree and merged feature branch were removed.
+  This deleted 253,131,041 bytes of regenerable download/build caches and left the unrelated
+  `codex/user-workflow-experience-gate` worktree untouched. The task-owned Blender 5.1 process
+  was stopped by verified PID/executable; the user's pre-existing Blender process was not touched.
 
 ## Human release gate
 
