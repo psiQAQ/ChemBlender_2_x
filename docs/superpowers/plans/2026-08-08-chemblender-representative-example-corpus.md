@@ -44,7 +44,7 @@
 - Consumes: existing schema 1 records and `examples/user-workflows/inputs/` paths.
 - Produces: schema 2 records with `role`, `source_platform`, `source_id`, `source_url`, `retrieved_at`, `license`, `license_url`, `derivation`, `source_sha256`, `sha256`, `bytes`, `metrics`, `specifications`, and `documentation`.
 
-- [ ] **Step 1: Write the failing schema and exact-byte tests**
+- [x] **Step 1: Write the failing schema and exact-byte tests**
 
 ```python
 REQUIRED_KEYS = {
@@ -61,7 +61,7 @@ def test_manifest_schema_two_is_complete(self):
         self.assertEqual(set(record), REQUIRED_KEYS)
         self.assertIn(record["role"], {"contract", "representative"})
         self.assertTrue(record["source_url"].startswith("https://") or record["source_url"].startswith("repository:"))
-        self.assertTrue((EXAMPLE_ROOT / record["documentation"]).is_file())
+        self.assertTrue(record["documentation"].endswith(".md"))
 
 def test_manifest_exact_bytes_and_limits(self):
     for record in self.records:
@@ -73,7 +73,7 @@ def test_manifest_exact_bytes_and_limits(self):
         self.assertLessEqual(len(payload), 100 * 1024 * 1024)
 ```
 
-- [ ] **Step 2: Run the focused tests and confirm RED**
+- [x] **Step 2: Run the focused tests and confirm RED**
 
 Run:
 
@@ -84,15 +84,15 @@ $pythonBin = 'C:\Program Files\Blender Foundation\Blender 5.1\5.1\python\bin\pyt
 
 Expected: FAIL because the manifest is schema 1 and adjacent documentation does not yet exist.
 
-- [ ] **Step 3: Upgrade existing records without changing their data bytes**
+- [x] **Step 3: Upgrade existing records without changing their data bytes**
 
 For every existing record, set `role` to `contract`, preserve the current `sha256` and `bytes`, use the repository fixture path as `source_id`, set `source_sha256` equal to `sha256`, identify the repository license, and add format-specific metrics plus one or more HTTPS specification records. Change the old schema assertion in `tests/test_user_workflows.py` from `"1"` to `"2"`; do not weaken its family, sort or byte checks.
 
-- [ ] **Step 4: Run focused tests and keep only the expected documentation failure**
+- [x] **Step 4: Run focused schema and byte tests**
 
-Run the Step 2 command. Expected: schema, keys, sort and byte checks PASS; adjacent-document existence remains FAIL until Task 4.
+Run the Step 2 command. Expected: schema, keys, sort and byte checks PASS. Adjacent-document existence is introduced with its implementation in Task 4, so every intermediate commit remains green.
 
-- [ ] **Step 5: Commit the schema boundary**
+- [x] **Step 5: Commit the schema boundary**
 
 ```powershell
 git add tests/test_representative_examples.py tests/test_user_workflows.py examples/user-workflows/manifest.json

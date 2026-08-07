@@ -55,13 +55,23 @@ EXPECTED_DOCS = (
 REQUIRED_RECORD_KEYS = {
     "path",
     "family",
-    "source",
-    "provenance",
+    "role",
+    "source_platform",
+    "source_id",
+    "source_url",
+    "retrieved_at",
+    "license",
+    "license_url",
+    "derivation",
+    "source_sha256",
     "sha256",
     "bytes",
     "runtime",
     "expected",
     "workflow",
+    "metrics",
+    "specifications",
+    "documentation",
 }
 MARKDOWN_LINK = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
 TEXT_FENCE = re.compile(r"```text\s+(.*?)```", re.DOTALL)
@@ -397,7 +407,7 @@ class UserWorkflowContractTests(unittest.TestCase):
 
     def test_manifest_covers_each_base_format_family(self):
         manifest = self.manifest()
-        self.assertEqual(manifest["schema_version"], "1")
+        self.assertEqual(manifest["schema_version"], "2")
         families = tuple(
             sorted({record["family"] for record in manifest["files"]})
         )

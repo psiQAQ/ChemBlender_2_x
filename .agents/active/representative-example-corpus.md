@@ -7,7 +7,7 @@
 - Baseline: `03786d497cf9c8a2021a7633fcbf3c67ecc81115`
 - Design: `docs/superpowers/specs/2026-08-08-chemblender-representative-example-corpus-design.md`
 - Plan: `docs/superpowers/plans/2026-08-08-chemblender-representative-example-corpus.md`
-- Current task: review and commit the implementation plan, then execute Task 1 inline.
+- Current task: Task 1 schema 2 is green; commit it, then acquire and pin Task 2 source bytes.
 
 ## Goal
 
@@ -40,3 +40,5 @@ commits into local `main` without remote writes.
   Avogadro/QCSchema records below 4 KiB. Size is treated as encoding size, not resolution.
 - Local PySCF cannot import because SciPy is absent. No dependency install is authorized;
   the representative Cube will be a documented analytic H2 1s LCAO density on a 64-cubed grid.
+- Manifest schema 2 contract is implemented for all 17 existing inputs without changing any
+  data bytes; 60 focused workflow/documentation tests Passed.
