@@ -1,7 +1,7 @@
 """Dependency-free validated whitespace PQR reader."""
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -190,8 +190,8 @@ def _parse_fields(fields, dialect, raw_line, record_index):
     )
     charge = _finite_float(fields[coordinate_index + 3], "charge")
     radius = _finite_float(fields[coordinate_index + 4], "radius")
-    if radius <= 0:
-        raise _FieldError("radius", "radius must be positive")
+    if radius < 0:
+        raise _FieldError("radius", "radius must be non-negative")
     record_name = fields[0]
     element = _infer_pqr_element(
         atom_name,
@@ -235,6 +235,8 @@ def parse_pqr_records(raw_source, *, validation_mode="balanced"):
     issues = []
     residue_names = {}
     source_dialect = None
+    segment_index = 0
+    last_residue_number = None
     for record_index, raw_line in enumerate(raw_source.splitlines(keepends=True)):
         line_bytes = raw_line.rstrip(b"\r\n")
         if len(line_bytes) > _MAX_LINE_BYTES:
@@ -296,6 +298,14 @@ def parse_pqr_records(raw_source, *, validation_mode="balanced"):
                 )
                 continue
             source_dialect = atom.dialect
+            if atom.dialect == "no_chain":
+                if (
+                    last_residue_number is not None
+                    and atom.residue_number < last_residue_number
+                ):
+                    segment_index += 1
+                atom = replace(atom, segment_index=segment_index)
+                last_residue_number = atom.residue_number
             residue_key = (
                 atom.chain_id,
                 atom.segment_index,

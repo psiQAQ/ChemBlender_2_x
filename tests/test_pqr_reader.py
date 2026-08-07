@@ -339,6 +339,23 @@ class PQRReaderTests(unittest.TestCase):
             (("ALA", 1), ("ALA", 2)),
         )
 
+    def test_no_chain_residue_restart_starts_a_new_segment(self):
+        raw = b"\n".join(
+            (
+                b"ATOM 1 N MET 1 0 0 0 0 1.5",
+                b"ATOM 2 O ASN 22 1 0 0 0 1.4",
+                b"ATOM 3 P G 1 2 0 0 0 1.8",
+                b"",
+            )
+        )
+        parsed = pqr.parse_pqr_records(raw)
+        self.assertEqual(tuple(atom.serial for atom in parsed.atoms), (1, 2, 3))
+        self.assertEqual(tuple(atom.segment_index for atom in parsed.atoms), (0, 0, 1))
+
+    def test_zero_radius_is_preserved(self):
+        parsed = pqr.parse_pqr_records(b"ATOM 1 H MET 1 0 0 0 0 0.0\n")
+        self.assertEqual(tuple(atom.radius for atom in parsed.atoms), (0.0,))
+
     def test_residue_range_zero_charge_ignored_records_and_truncated_prefix(self):
         raw = b"\n".join(
             (
