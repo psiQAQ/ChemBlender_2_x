@@ -20,7 +20,8 @@
 ## Source and package
 
 - Version: 2.4.0（不发布新版本）
-- Branch: `codex/representative-example-corpus`
+- Qualification branch: `codex/representative-example-corpus` at `07022082726ca8c9ef2b28ddcb02660a769c5217`
+- Local `main` merge: `6c693ebe5d6ff8616eaf95f3e619b79ed7c18bf1`
 - Runtime/output commit: `e9f32ae1f49d736fa63fe2961b5baa974eaebcfb`
 - Runner commit: `3279f79a5300547d4b7767bc9d8e270c26195253`
 - Final package-budget commit: `255cdce5245ea07aaab8523a7ae891cc99e12837`

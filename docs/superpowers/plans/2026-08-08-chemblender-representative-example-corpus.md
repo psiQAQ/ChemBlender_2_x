@@ -529,18 +529,18 @@ git ls-files examples/user-workflows/inputs | ForEach-Object { if ((Get-Item $_)
 
 Also repeat Blender extension validate/build, exact ZIP audit, enabled-key check and one cold reopen from the final commit. Expected: all Passed, no unexplained warning promoted to success, and worktree clean after final records are committed.
 
-- [ ] **Step 3: Archive the active task with evidence**
+- [x] **Step 3: Archive the active task with evidence**
 
 Record source IDs/commits, hashes and sizes; test counts; Blender 5.1 version/executable; package hash; representative case results; cold reopen results; defects fixed; remaining human review status. Move the active cursor to completed and update `.agents/README.md` in the same commit.
 
-- [ ] **Step 4: Commit the completion record**
+- [x] **Step 4: Commit the completion record**
 
 ```powershell
 git add .agents docs/user/workflows/reviews
 git commit -m "docs: record representative corpus verification"
 ```
 
-- [ ] **Step 5: Verify local `main` has not drifted and merge**
+- [x] **Step 5: Verify local `main` has not drifted and merge**
 
 In `D:\workspace\ChemBlender_2_x`, require a clean `main`, verify its current HEAD is an ancestor of `codex/representative-example-corpus`, then merge non-interactively. If main changed incompatibly or has user edits, stop and report rather than rebasing or overwriting.
 
@@ -549,7 +549,7 @@ git -C D:\workspace\ChemBlender_2_x status --short --branch
 git -C D:\workspace\ChemBlender_2_x merge --no-ff codex/representative-example-corpus -m "merge: representative example corpus"
 ```
 
-- [ ] **Step 6: Verify the merged local main**
+- [x] **Step 6: Verify the merged local main**
 
 Rerun focused corpus/workflow tests, `git diff --check`, and `git status --short --branch` from local `main`. Do not push or publish.
 

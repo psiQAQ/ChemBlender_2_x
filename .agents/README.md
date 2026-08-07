@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [representative-example-corpus.md](active/representative-example-corpus.md) | Provenance-backed representative scientific examples, per-file documentation and Blender runtime validation |
+| completed | [representative-example-corpus.md](completed/representative-example-corpus.md) | Provenance-backed representative scientific examples, per-file documentation and Blender runtime validation |
 | completed | [user-workflow-experience-gate.md](completed/user-workflow-experience-gate.md) | User workflow docs, full-format examples, Blender MCP runtime checks and manual prerelease experience gate |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |
 | reference | [dependencies-and-release.md](reference/dependencies-and-release.md) | Blender, RDKit, package, CI, and release gates |
