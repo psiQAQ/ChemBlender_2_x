@@ -2,6 +2,48 @@
   "schema_version": "2",
   "files": [
     {
+      "path": "inputs/cif/cod-4503272-caffeine-cocrystal.cif",
+      "family": "cif",
+      "role": "representative",
+      "source_platform": "Crystallography Open Database",
+      "source_id": "COD 4503272",
+      "source_url": "https://www.crystallography.net/cod/4503272.cif",
+      "retrieved_at": "2026-08-08",
+      "license": "CC0-1.0",
+      "license_url": "https://www.crystallography.net/cod/new.html",
+      "derivation": "downloaded byte-for-byte from COD",
+      "source_sha256": "0ab8afbcc0f931327a5cba664df8317bf557f3b6f06b1fe5b27908676b89c5f5",
+      "sha256": "0ab8afbcc0f931327a5cba664df8317bf557f3b6f06b1fe5b27908676b89c5f5",
+      "bytes": 14996,
+      "runtime": "gemmi",
+      "expected": [
+        "Structure",
+        "CIFEnvelope",
+        "partial occupancy and disorder metadata"
+      ],
+      "workflow": [
+        "import",
+        "inspect",
+        "visualize",
+        "export"
+      ],
+      "metrics": {
+        "blocks": 1,
+        "asymmetric_sites": 64,
+        "partial_occupancy_sites": 23,
+        "disorder_group_sites": 9,
+        "space_group_number": 64
+      },
+      "specifications": [
+        {
+          "title": "IUCr CIF 1.1 syntax",
+          "version": "1.1",
+          "url": "https://www.iucr.org/resources/cif/spec/version1.1/cifsyntax"
+        }
+      ],
+      "documentation": "inputs/cif/cod-4503272-caffeine-cocrystal.md"
+    },
+    {
       "path": "inputs/cif/nacl.cif",
       "family": "cif",
       "role": "contract",
@@ -21,6 +63,46 @@
       "metrics": {"blocks": 1, "sites": 2, "space_group_number": 225},
       "specifications": [{"title": "IUCr CIF 1.1 syntax", "version": "1.1", "url": "https://www.iucr.org/resources/cif/spec/version1.1/cifsyntax"}],
       "documentation": "inputs/cif/nacl.md"
+    },
+    {
+      "path": "inputs/cjson/avogadro-phthalocyanine.cjson",
+      "family": "cjson",
+      "role": "representative",
+      "source_platform": "OpenChemistry Avogadro repository",
+      "source_id": "OpenChemistry/avogadrolibs@e32739bed4b9d79db080a32a0026947e15b240d9:4-phthalocyanine.cjson",
+      "source_url": "https://raw.githubusercontent.com/OpenChemistry/avogadrolibs/e32739bed4b9d79db080a32a0026947e15b240d9/avogadro/qtplugins/templatetool/ligands/4-phthalocyanine.cjson",
+      "retrieved_at": "2026-08-08",
+      "license": "BSD-3-Clause",
+      "license_url": "https://raw.githubusercontent.com/OpenChemistry/avogadrolibs/e32739bed4b9d79db080a32a0026947e15b240d9/LICENSE",
+      "derivation": "downloaded byte-for-byte from the fixed Avogadro commit",
+      "source_sha256": "310cb5b4d48a08662d9e956b1a7ac778a05ea9060be6cffcdfaedecfd390097e",
+      "sha256": "310cb5b4d48a08662d9e956b1a7ac778a05ea9060be6cffcdfaedecfd390097e",
+      "bytes": 2708,
+      "runtime": "built-in",
+      "expected": [
+        "Structure",
+        "Topology",
+        "CJSONEnvelope",
+        "atomic partial charges"
+      ],
+      "workflow": [
+        "import",
+        "inspect",
+        "visualize"
+      ],
+      "metrics": {
+        "atoms": 57,
+        "bonds": 68,
+        "atomic_properties": 1
+      },
+      "specifications": [
+        {
+          "title": "Chemical JSON schema",
+          "version": "Avogadro CJSON",
+          "url": "https://github.com/OpenChemistry/chemicaljson/blob/master/chemicaljson.schema.json"
+        }
+      ],
+      "documentation": "inputs/cjson/avogadro-phthalocyanine.md"
     },
     {
       "path": "inputs/cjson/water-results.cjson",
@@ -149,6 +231,52 @@
       "documentation": "inputs/mol/water-v3000.md"
     },
     {
+      "path": "inputs/mol2/openbabel-5sun-protein.mol2",
+      "family": "mol2",
+      "role": "representative",
+      "source_platform": "Open Babel repository",
+      "source_id": "openbabel/openbabel@0e94434fa75c9f61095023e3c12e0d5f2ac035ff:test/files/5sun_protein.mol2",
+      "source_url": "https://raw.githubusercontent.com/openbabel/openbabel/0e94434fa75c9f61095023e3c12e0d5f2ac035ff/test/files/5sun_protein.mol2",
+      "retrieved_at": "2026-08-08",
+      "license": "GPL-2.0-only",
+      "license_url": "https://raw.githubusercontent.com/openbabel/openbabel/0e94434fa75c9f61095023e3c12e0d5f2ac035ff/COPYING",
+      "derivation": "downloaded byte-for-byte from the fixed Open Babel commit",
+      "source_sha256": "1ac476afd860c326995e28125cc4cf4007b33e022a8c9f397d9e350f3e5a4fbd",
+      "sha256": "1ac476afd860c326995e28125cc4cf4007b33e022a8c9f397d9e350f3e5a4fbd",
+      "bytes": 779286,
+      "runtime": "built-in",
+      "expected": [
+        "Structure",
+        "four atomic properties",
+        "390 substructures",
+        "raw MOL2 record",
+        "explicit diagnostics for un bond and extension sections"
+      ],
+      "workflow": [
+        "import",
+        "inspect",
+        "visualize"
+      ],
+      "metrics": {
+        "atoms": 6185,
+        "declared_bonds": 6248,
+        "substructures": 390,
+        "unsupported_bond_types": [
+          "un"
+        ],
+        "interpreted_topologies": 0,
+        "unknown_sections": 4
+      },
+      "specifications": [
+        {
+          "title": "Tripos MOL2 format overview",
+          "version": "MOL2",
+          "url": "https://www.chemcomp.com/journal/mol2.htm"
+        }
+      ],
+      "documentation": "inputs/mol2/openbabel-5sun-protein.md"
+    },
+    {
       "path": "inputs/mol2/substructure.mol2",
       "family": "mol2",
       "role": "contract",
@@ -168,6 +296,48 @@
       "metrics": {"atoms": 3, "bonds": 2, "substructures": 2},
       "specifications": [{"title": "Tripos MOL2 format overview", "version": "MOL2", "url": "https://www.chemcomp.com/journal/mol2.htm"}],
       "documentation": "inputs/mol2/substructure.md"
+    },
+    {
+      "path": "inputs/pdb/1d3z-ubiquitin-nmr.pdb",
+      "family": "pdb",
+      "role": "representative",
+      "source_platform": "RCSB Protein Data Bank",
+      "source_id": "PDB 1D3Z",
+      "source_url": "https://files.rcsb.org/download/1D3Z.pdb",
+      "retrieved_at": "2026-08-08",
+      "license": "CC0-1.0",
+      "license_url": "https://www.rcsb.org/pages/policies",
+      "derivation": "downloaded byte-for-byte from RCSB PDB",
+      "source_sha256": "21099cb88231455fdfab4095dddfadcc85cc4213e105cf5f9cfff2ca21993378",
+      "sha256": "21099cb88231455fdfab4095dddfadcc85cc4213e105cf5f9cfff2ca21993378",
+      "bytes": 1015821,
+      "runtime": "built-in",
+      "expected": [
+        "Structure",
+        "10-frame trajectory",
+        "biological hierarchy",
+        "crystal metadata"
+      ],
+      "workflow": [
+        "import",
+        "inspect",
+        "visualize",
+        "export"
+      ],
+      "metrics": {
+        "models": 10,
+        "atoms_per_model": 1231,
+        "chains": 1,
+        "residues": 76
+      },
+      "specifications": [
+        {
+          "title": "wwPDB legacy PDB format",
+          "version": "3.30",
+          "url": "https://www.wwpdb.org/documentation/file-format-content/format33/sect1.html"
+        }
+      ],
+      "documentation": "inputs/pdb/1d3z-ubiquitin-nmr.md"
     },
     {
       "path": "inputs/pdb/model-trajectory.pdb",
@@ -254,6 +424,49 @@
       "documentation": "inputs/poscar/velocities.md"
     },
     {
+      "path": "inputs/pqr/apbs-protein-rna-nb.pqr",
+      "family": "pqr",
+      "role": "representative",
+      "source_platform": "APBS repository",
+      "source_id": "Electrostatics/apbs@4613d0d547c3c71df8815dcb85e9e19abf61822c:examples/protein-rna/model_outNB.pqr",
+      "source_url": "https://raw.githubusercontent.com/Electrostatics/apbs/4613d0d547c3c71df8815dcb85e9e19abf61822c/examples/protein-rna/model_outNB.pqr",
+      "retrieved_at": "2026-08-08",
+      "license": "BSD-3-Clause",
+      "license_url": "https://raw.githubusercontent.com/Electrostatics/apbs/4613d0d547c3c71df8815dcb85e9e19abf61822c/LICENSE.md",
+      "derivation": "downloaded byte-for-byte from the fixed APBS commit",
+      "source_sha256": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68",
+      "sha256": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68",
+      "bytes": 70047,
+      "runtime": "built-in",
+      "expected": [
+        "Structure",
+        "biological hierarchy",
+        "partial charge and radius"
+      ],
+      "workflow": [
+        "import",
+        "inspect",
+        "visualize",
+        "export"
+      ],
+      "metrics": {
+        "atoms": 998,
+        "residues": 41,
+        "inferred_segments": 2,
+        "charge_rows": 998,
+        "radius_rows": 998,
+        "zero_radius_rows": 22
+      },
+      "specifications": [
+        {
+          "title": "APBS PQR molecular structure format",
+          "version": "APBS 3.4.1",
+          "url": "https://apbs.readthedocs.io/en/latest/formats/pqr.html"
+        }
+      ],
+      "documentation": "inputs/pqr/apbs-protein-rna-nb.md"
+    },
+    {
       "path": "inputs/pqr/with-chain.pqr",
       "family": "pqr",
       "role": "contract",
@@ -294,6 +507,48 @@
       "metrics": {"atoms": 2, "schema_version": 2, "driver": "gradient"},
       "specifications": [{"title": "QCSchema AtomicResult", "version": "v2", "url": "https://molssi.github.io/QCElemental/dev/api/qcelemental.models.v2.AtomicResult.html"}],
       "documentation": "inputs/qcschema/atomic-result.md"
+    },
+    {
+      "path": "inputs/qcschema/molssi-water-gradient-hf.json",
+      "family": "qcschema",
+      "role": "representative",
+      "source_platform": "MolSSI QCSchema repository",
+      "source_id": "MolSSI/QCSchema@5390e6f11d21847e4e7ca2ad14a97594f957cb2d:tests/simple/water_gradient_HF_output.json",
+      "source_url": "https://raw.githubusercontent.com/MolSSI/QCSchema/5390e6f11d21847e4e7ca2ad14a97594f957cb2d/tests/simple/water_gradient_HF_output.json",
+      "retrieved_at": "2026-08-08",
+      "license": "BSD-3-Clause",
+      "license_url": "https://raw.githubusercontent.com/MolSSI/QCSchema/5390e6f11d21847e4e7ca2ad14a97594f957cb2d/LICENSE",
+      "derivation": "downloaded byte-for-byte from the fixed MolSSI QCSchema commit",
+      "source_sha256": "73b28251edde763490937d303cee0b4c2cf4bf55c566d4139c5e33220ffae451",
+      "sha256": "73b28251edde763490937d303cee0b4c2cf4bf55c566d4139c5e33220ffae451",
+      "bytes": 1378,
+      "runtime": "built-in",
+      "expected": [
+        "Structure",
+        "CalculationRecord",
+        "QCSchemaEnvelope",
+        "gradient and energy properties"
+      ],
+      "workflow": [
+        "import",
+        "inspect",
+        "visualize"
+      ],
+      "metrics": {
+        "atoms": 3,
+        "schema_name": "qc_schema_output",
+        "schema_version": 1,
+        "driver": "gradient",
+        "numeric_datasets": 13
+      },
+      "specifications": [
+        {
+          "title": "MolSSI Quantum Chemistry Schema v1 output",
+          "version": "qc_schema_output/1",
+          "url": "https://github.com/MolSSI/QCSchema/blob/5390e6f11d21847e4e7ca2ad14a97594f957cb2d/qcschema/data/v1/qc_schema_output.schema"
+        }
+      ],
+      "documentation": "inputs/qcschema/molssi-water-gradient-hf.md"
     },
     {
       "path": "inputs/sdf/mixed-properties.sdf",

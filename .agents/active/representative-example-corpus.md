@@ -7,7 +7,7 @@
 - Baseline: `03786d497cf9c8a2021a7633fcbf3c67ecc81115`
 - Design: `docs/superpowers/specs/2026-08-08-chemblender-representative-example-corpus-design.md`
 - Plan: `docs/superpowers/plans/2026-08-08-chemblender-representative-example-corpus.md`
-- Current task: Task 1 schema 2 is green; commit it, then acquire and pin Task 2 source bytes.
+- Current task: Task 2 authoritative inputs are green; build deterministic Task 3 derived formats.
 
 ## Goal
 
@@ -42,3 +42,12 @@ commits into local `main` without remote writes.
   the representative Cube will be a documented analytic H2 1s LCAO density on a 64-cubed grid.
 - Manifest schema 2 contract is implemented for all 17 existing inputs without changing any
   data bytes; 60 focused workflow/documentation tests Passed.
+- Six direct representative files are pinned by URL, commit/record identity, license, byte size
+  and SHA-256. All committed direct files are below 1 MiB except the 1,015,821-byte PDB file.
+- The rMD17 container is range-read without being stored; only the 153,601,803-byte aspirin NPZ
+  exists in ignored cache and will produce a small 32-frame extXYZ subset.
+- Real parser checks found and fixed two source-backed bugs: official `qc_schema_output/1` is now
+  accepted while the legacy alias remains compatible; APBS PQR zero radii and no-chain residue
+  restarts now preserve all 998 atoms as two inferred segments.
+- Direct-source acquisition and reader regressions Passed: 29 focused tests plus manifest sort,
+  byte and runtime-dependency checks.

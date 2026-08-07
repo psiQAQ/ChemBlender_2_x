@@ -115,7 +115,7 @@ git commit -m "test: define representative corpus contract"
 - Consumes: official URLs and a caller-supplied `.agents/cache/representative-examples/` directory.
 - Produces: `download(url: str, destination: Path) -> tuple[str, int]`, returning SHA-256 and byte length; exact direct-source records in the manifest.
 
-- [ ] **Step 1: Add a failing acquisition-script contract**
+- [x] **Step 1: Add a failing acquisition-script contract**
 
 ```python
 def test_preparation_script_pins_only_https_sources(self):
@@ -127,17 +127,17 @@ def test_preparation_script_pins_only_https_sources(self):
         self.assertTrue(source["source_id"])
 ```
 
-- [ ] **Step 2: Run the one test and confirm RED**
+- [x] **Step 2: Run the one test and confirm RED**
 
 Run: `& $pythonBin -m unittest tests.test_representative_examples.RepresentativeExampleTests.test_preparation_script_pins_only_https_sources -v`
 
 Expected: FAIL because `prepare_representative_inputs.py` does not exist.
 
-- [ ] **Step 3: Implement the minimal source table and atomic downloader**
+- [x] **Step 3: Implement the minimal source table and atomic downloader**
 
-Pin these exact upstream identities in `SOURCES`: wwPDB CCD `AIN`, `CFF`, `TA1`; PDB entry `1D3Z`; COD `4503272` and `9012293`; rMD17 DOI `10.6084/m9.figshare.12672038.v4`; Open Babel commit `0e94434fa75c9f61095023e3c12e0d5f2ac035ff`; APBS commit `4613d0d547c3c71df8815dcb85e9e19abf61822c`; Avogadro commit `e32739bed4b9d79db080a32a0026947e15b240d9`; QCSchema commit `5390e6f11d21847e4e7ca2ad14a97594f957cb2d`. Use `urllib.request`, a descriptive User-Agent, a temporary file followed by `Path.replace`, and `hashlib.sha256`; do not add retry frameworks or network dependencies.
+Pin these exact upstream identities in `SOURCES`: wwPDB CCD `AIN`, `CFF`, `TA1`; PDB entry `1D3Z`; COD `4503272` and `9012293`; rMD17 DOI `10.6084/m9.figshare.12672038.v3`; Open Babel commit `0e94434fa75c9f61095023e3c12e0d5f2ac035ff`; APBS commit `4613d0d547c3c71df8815dcb85e9e19abf61822c`; Avogadro commit `e32739bed4b9d79db080a32a0026947e15b240d9`; QCSchema commit `5390e6f11d21847e4e7ca2ad14a97594f957cb2d`. Use `urllib.request`, a descriptive User-Agent, a temporary file followed by `Path.replace`, and `hashlib.sha256`. The Figshare endpoint proved range-only and the first proxy stream was truncated, so the implemented standard-library reader retries only the failed 64 MiB range and validates every `Content-Range`; no retry framework or network dependency was added.
 
-- [ ] **Step 4: Download only the selected source files and record exact evidence**
+- [x] **Step 4: Download only the selected source files and record exact evidence**
 
 Run:
 
@@ -148,19 +148,19 @@ Run:
   --stage download
 ```
 
-Expected: the selected files are fetched, source SHA-256 and bytes are printed as JSON, and the aggregate temporary download stays below 100 MiB. If Figshare blocks the command-line route, use the official version-4 file download control or the official Materials Cloud rMD17 record; retain the same CC0 dataset identity and record the chosen URL and source hash.
+Expected: selected files are fetched and source SHA-256 plus bytes are printed as JSON. The full 1,066,301,513-byte rMD17 container is never stored; only its 153,601,803-byte aspirin NPZ is retained in ignored `.agents/cache` for derivation. No cached source is committed, and every committed direct source remains below 50 MiB.
 
-- [ ] **Step 5: Verify upstream licenses before copying bytes**
+- [x] **Step 5: Verify upstream licenses before copying bytes**
 
 Record: PDB archive and CCD as CC0; COD as CC0; rMD17 as CC0; Avogadro as BSD-3-Clause; QCSchema as BSD-3-Clause; APBS using its pinned three-clause redistribution text; Open Babel using the pinned repository `COPYING`. Reject the file if the pinned source does not cover it.
 
-- [ ] **Step 6: Add direct-source manifest records and run tests**
+- [x] **Step 6: Add direct-source manifest records and run tests**
 
 Run: `& $pythonBin -m unittest tests.test_representative_examples -v`
 
 Expected: source identity, HTTPS, exact bytes and size checks PASS for direct-source files; derived-file and documentation checks remain pending.
 
-- [ ] **Step 7: Commit authoritative source bytes**
+- [x] **Step 7: Commit authoritative source bytes**
 
 ```powershell
 git add examples/user-workflows/scripts/prepare_representative_inputs.py examples/user-workflows/inputs examples/user-workflows/manifest.json tests/test_representative_examples.py
