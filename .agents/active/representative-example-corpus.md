@@ -7,7 +7,7 @@
 - Baseline: `03786d497cf9c8a2021a7633fcbf3c67ecc81115`
 - Design: `docs/superpowers/specs/2026-08-08-chemblender-representative-example-corpus-design.md`
 - Plan: `docs/superpowers/plans/2026-08-08-chemblender-representative-example-corpus.md`
-- Current task: Task 2 authoritative inputs are green; build deterministic Task 3 derived formats.
+- Current task: Task 3 deterministic derivations are green; document every input in Task 4.
 
 ## Goal
 
@@ -51,3 +51,9 @@ commits into local `main` without remote writes.
   restarts now preserve all 998 atoms as two inferred segments.
 - Direct-source acquisition and reader regressions Passed: 29 focused tests plus manifest sort,
   byte and runtime-dependency checks.
+- Nine derived files reproduce byte-for-byte from the pinned cache: a 32-frame rMD17 aspirin
+  extXYZ trajectory, a 64-cubed analytic H2 Cube, CCD-backed MOL/SDF/SMILES/XYZ examples and
+  COD-backed 8/64-site POSCAR/CONTCAR structures. The largest is 3,932,577 bytes.
+- ChemBlender parsed all nine derived files through their public readers. The semantic check
+  covers finite arrays, units, source indices, records, atom/bond counts, stereochemistry,
+  the 2-electron grid integral, supercell velocities and representable cross-format equality.

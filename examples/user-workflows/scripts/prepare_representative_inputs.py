@@ -6,6 +6,7 @@ import io
 import json
 import os
 import shutil
+import sys
 import tarfile
 import tempfile
 import urllib.request
@@ -127,6 +128,23 @@ DIRECT_OUTPUTS = {
     "apbs_pqr": "pqr/apbs-protein-rna-nb.pqr",
     "qcschema_gradient": "qcschema/molssi-water-gradient-hf.json",
 }
+DERIVED_OUTPUTS = (
+    "cube/h2-lcao-1s-density-64.cube",
+    "extxyz/aspirin-rmd17-32.extxyz",
+    "mol/ain-aspirin-v2000.mol",
+    "mol/ta1-paclitaxel-v3000.mol",
+    "poscar/cod-9012293-diamond-2x2x2.CONTCAR",
+    "poscar/cod-9012293-diamond.POSCAR",
+    "sdf/ccd-3d-showcase.sdf",
+    "smiles/ta1-paclitaxel-isomeric.smi",
+    "xyz/ta1-paclitaxel-ccd.xyz",
+)
+KCAL_PER_MOL_PER_EV = 23.060547830619
+CUBE_SOURCE_DESCRIPTOR = (
+    "chemblender-analytic-h2-lcao-density-v1|R=1.4 bohr|"
+    "extent=[-6,6] bohr|grid=64x64x64|phi=exp(-r)/sqrt(pi)|"
+    "S=exp(-R)*(1+R+R^2/3)|rho=(phi_A+phi_B)^2/(1+S)|electrons=2"
+)
 
 
 def _request(url, headers=None):
@@ -271,6 +289,36 @@ def _atomic_copy(source, destination):
         raise
 
 
+def _write_bytes(destination, content):
+    destination = Path(destination)
+    temporary_path = None
+    try:
+        with _atomic_destination(destination) as temporary:
+            temporary_path = Path(temporary.name)
+            temporary.write(content)
+            temporary.flush()
+            os.fsync(temporary.fileno())
+        temporary_path.replace(destination)
+    except Exception:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+        raise
+
+
+def _validated_cache(cache, key):
+    cached = Path(cache) / CACHE_NAMES[key]
+    if not cached.is_file():
+        raise FileNotFoundError(f"missing cached source {key}; run --stage download")
+    digest = _sha256(cached)
+    size = cached.stat().st_size
+    source = SOURCES[key]
+    if digest != source["sha256"] or size != source["bytes"]:
+        raise RuntimeError(
+            f"source mismatch for {key}: {size} bytes, sha256 {digest}"
+        )
+    return cached
+
+
 def fetch_sources(cache, output_root):
     cache = Path(cache)
     output_root = Path(output_root)
@@ -281,12 +329,9 @@ def fetch_sources(cache, output_root):
         if not cached.is_file():
             fetch = download_rmd17_aspirin if key == "rmd17_aspirin" else download
             fetch(source["url"], cached)
-        digest = _sha256(cached)
-        size = cached.stat().st_size
-        if digest != source["sha256"] or size != source["bytes"]:
-            raise RuntimeError(
-                f"source mismatch for {key}: {size} bytes, sha256 {digest}"
-            )
+        cached = _validated_cache(cache, key)
+        digest = source["sha256"]
+        size = source["bytes"]
         if key in DIRECT_OUTPUTS:
             output = output_root / DIRECT_OUTPUTS[key]
             _atomic_copy(cached, output)
@@ -307,17 +352,346 @@ def fetch_sources(cache, output_root):
     return evidence
 
 
+def _load_dependencies():
+    repository_root = str(Path(__file__).resolve().parents[3])
+    if repository_root not in sys.path:
+        sys.path.insert(0, repository_root)
+    site = (
+        Path(os.environ["APPDATA"])
+        / "Blender Foundation"
+        / "Blender"
+        / "5.1"
+        / "extensions"
+        / ".local"
+        / "lib"
+        / "python3.13"
+        / "site-packages"
+    )
+    if not site.is_dir():
+        raise RuntimeError(f"Blender 5.1 extension dependency site is missing: {site}")
+    site_text = str(site)
+    if site_text not in sys.path:
+        sys.path.insert(0, site_text)
+    import numpy
+    from rdkit import Chem
+
+    return numpy, Chem
+
+
+def _ccd_molecules(cache, Chem):
+    molecules = {}
+    for key, label in (("ccd_ain", "AIN"), ("ccd_cff", "CFF"), ("ccd_ta1", "TA1")):
+        source = _validated_cache(cache, key)
+        molecule = Chem.SDMolSupplier(
+            str(source),
+            removeHs=False,
+            sanitize=True,
+        )[0]
+        if molecule is None or molecule.GetNumConformers() != 1:
+            raise RuntimeError(f"cannot load one 3D CCD record from {source}")
+        molecule.SetProp("_Name", label)
+        molecules[label] = molecule
+    return molecules
+
+
+def _derive_molecules(cache, output_root, Chem):
+    molecules = _ccd_molecules(cache, Chem)
+    blocks = {
+        "mol/ain-aspirin-v2000.mol": Chem.MolToMolBlock(
+            molecules["AIN"],
+            forceV3000=False,
+        ),
+        "mol/ta1-paclitaxel-v3000.mol": Chem.MolToMolBlock(
+            molecules["TA1"],
+            forceV3000=True,
+        ),
+    }
+    for relative, text in blocks.items():
+        _write_bytes(output_root / relative, text.replace("\r\n", "\n").encode("utf-8"))
+
+    sdf = b"".join(
+        _validated_cache(cache, key).read_bytes()
+        for key in ("ccd_ain", "ccd_cff", "ccd_ta1")
+    )
+    _write_bytes(output_root / "sdf/ccd-3d-showcase.sdf", sdf)
+
+    smiles = (
+        f"{Chem.MolToSmiles(molecules['TA1'], canonical=True, isomericSmiles=True)}"
+        "\tTA1 paclitaxel\n"
+    )
+    _write_bytes(
+        output_root / "smiles/ta1-paclitaxel-isomeric.smi",
+        smiles.encode("ascii"),
+    )
+
+    paclitaxel = molecules["TA1"]
+    conformer = paclitaxel.GetConformer()
+    xyz = [
+        str(paclitaxel.GetNumAtoms()),
+        (
+            "wwPDB CCD TA1 ideal coordinates; source_sha256="
+            f"{SOURCES['ccd_ta1']['sha256']}"
+        ),
+    ]
+    for index, atom in enumerate(paclitaxel.GetAtoms()):
+        position = conformer.GetAtomPosition(index)
+        xyz.append(
+            f"{atom.GetSymbol()} {position.x:.8f} {position.y:.8f} {position.z:.8f}"
+        )
+    _write_bytes(
+        output_root / "xyz/ta1-paclitaxel-ccd.xyz",
+        ("\n".join(xyz) + "\n").encode("ascii"),
+    )
+
+
+def _derive_rmd17(cache, output_root, numpy, Chem):
+    selected = tuple(range(0, 3200, 100))
+    with numpy.load(_validated_cache(cache, "rmd17_aspirin"), allow_pickle=False) as data:
+        charges = numpy.asarray(data["nuclear_charges"], dtype=int)
+        coordinates = numpy.asarray(data["coords"])[list(selected)]
+        energies = numpy.asarray(data["energies"])[list(selected)] / KCAL_PER_MOL_PER_EV
+        forces = numpy.asarray(data["forces"])[list(selected)] / KCAL_PER_MOL_PER_EV
+        source_indices = numpy.asarray(data["old_indices"])[list(selected)]
+    symbols = tuple(Chem.GetPeriodicTable().GetElementSymbol(int(value)) for value in charges)
+    lines = []
+    for frame, subset_index in enumerate(selected):
+        lines.append(str(len(symbols)))
+        lines.append(
+            "Properties=species:S:1:pos:R:3:forces:R:3 "
+            f"energy={energies[frame]:.12g} step={subset_index} "
+            f"source_index={int(source_indices[frame])} "
+            "energy_unit=electron_volt "
+            "forces_unit=electron_volt_per_angstrom "
+            "step_unit=dimensionless"
+        )
+        for symbol, position, force in zip(
+            symbols,
+            coordinates[frame],
+            forces[frame],
+        ):
+            lines.append(
+                f"{symbol} "
+                + " ".join(f"{float(value):.10f}" for value in position)
+                + " "
+                + " ".join(f"{float(value):.10f}" for value in force)
+            )
+    _write_bytes(
+        output_root / "extxyz/aspirin-rmd17-32.extxyz",
+        ("\n".join(lines) + "\n").encode("ascii"),
+    )
+
+
+def _periodic_structure(numpy, numbers, cell, fractional, revision, label):
+    from uuid import NAMESPACE_URL, uuid5
+
+    from ChemBlender.core.model import ArrayData, PeriodicSiteData, Structure
+
+    identifier = uuid5(NAMESPACE_URL, f"chemblender:representative:{revision}:{label}")
+    count = len(numbers)
+    fractional_data = ArrayData(
+        numpy.asarray(fractional, dtype=float),
+        ("atom", "xyz"),
+        "dimensionless",
+    )
+    cell_data = ArrayData(
+        numpy.asarray(cell, dtype=float),
+        ("cell_vector", "xyz"),
+        "angstrom",
+    )
+    periodic = PeriodicSiteData(
+        fractional_coordinates=fractional_data,
+        site_labels=tuple(f"C{index + 1}" for index in range(count)),
+        occupancies=ArrayData(numpy.ones(count), ("atom",), "dimensionless"),
+        isotropic_displacements=None,
+        anisotropic_displacements=None,
+        adp_types=("none",) * count,
+        disorder_groups=(0,) * count,
+        declared_space_group_name=None,
+        declared_space_group_number=None,
+        symmetry_operations=(),
+        cif_envelope_id=None,
+    )
+    return Structure(
+        id=identifier,
+        revision=revision,
+        atomic_numbers=tuple(numbers),
+        coordinates=ArrayData(
+            fractional_data.values @ cell_data.values,
+            ("atom", "xyz"),
+            "angstrom",
+        ),
+        cell=cell_data,
+        periodic=periodic,
+    )
+
+
+def _derive_crystal(cache, output_root, numpy):
+    from uuid import uuid5
+
+    import gemmi
+
+    from ChemBlender.core.exporters import PoscarExportSettings, export_poscar
+    from ChemBlender.core.formats.cif import parse_cif
+    from ChemBlender.core.model import ArrayData, AtomicProperty, DatasetStatus
+
+    source = _validated_cache(cache, "cod_9012293")
+    parsed = parse_cif(source).structures[0]
+    block = gemmi.cif.read_file(str(source)).sole_block()
+    small = gemmi.make_small_structure_from_block(block)
+    group = gemmi.find_spacegroup_by_name(small.spacegroup_hm)
+    fractional = sorted(
+        {
+            tuple(round(float(value) % 1.0, 12) for value in operation.apply_to_xyz([0.0, 0.0, 0.0]))
+            for operation in group.operations()
+        }
+    )
+    if len(fractional) != 8 or parsed.atomic_numbers != (6,):
+        raise RuntimeError("COD 9012293 did not expand to the expected 8-site diamond cell")
+    revision = SOURCES["cod_9012293"]["sha256"]
+    conventional = _periodic_structure(
+        numpy,
+        (6,) * 8,
+        parsed.cell.values,
+        fractional,
+        revision,
+        "diamond-conventional",
+    )
+    export_poscar(
+        output_root / "poscar/cod-9012293-diamond.POSCAR",
+        conventional,
+        PoscarExportSettings(comment="COD 9012293 diamond conventional cell"),
+    )
+
+    super_fractional = tuple(
+        tuple((numpy.asarray(position) + (x, y, z)) / 2.0)
+        for x in range(2)
+        for y in range(2)
+        for z in range(2)
+        for position in fractional
+    )
+    supercell = _periodic_structure(
+        numpy,
+        (6,) * 64,
+        numpy.asarray(parsed.cell.values) * 2.0,
+        super_fractional,
+        revision,
+        "diamond-2x2x2",
+    )
+    velocities = AtomicProperty(
+        id=uuid5(supercell.id, "zero-ion-velocities"),
+        revision=revision,
+        semantic_role="atomic_velocity",
+        domain="atom",
+        data=ArrayData(
+            numpy.zeros((64, 3)),
+            ("atom", "xyz"),
+            "angstrom_per_femtosecond",
+        ),
+        status=DatasetStatus.COMPLETE,
+        source_calculation=None,
+        provenance_ids=(),
+        structure_id=supercell.id,
+    )
+    export_poscar(
+        output_root / "poscar/cod-9012293-diamond-2x2x2.CONTCAR",
+        supercell,
+        PoscarExportSettings(
+            comment="COD 9012293 diamond 2x2x2 supercell with zero velocities",
+            velocity_mode="cartesian",
+        ),
+        velocities=velocities,
+    )
+
+
+def _derive_cube(output_root, numpy):
+    count = 64
+    lower = -6.0
+    upper = 6.0
+    separation = 1.4
+    step = (upper - lower) / (count - 1)
+    axis = numpy.linspace(lower, upper, count)
+    x, y, z = numpy.meshgrid(axis, axis, axis, indexing="ij")
+    left = numpy.sqrt(x * x + y * y + (z + separation / 2.0) ** 2)
+    right = numpy.sqrt(x * x + y * y + (z - separation / 2.0) ** 2)
+    phi_left = numpy.exp(-left) / numpy.sqrt(numpy.pi)
+    phi_right = numpy.exp(-right) / numpy.sqrt(numpy.pi)
+    overlap = numpy.exp(-separation) * (
+        1.0 + separation + separation * separation / 3.0
+    )
+    density = (phi_left + phi_right) ** 2 / (1.0 + overlap)
+    lines = [
+        "ChemBlender analytic H2 1s LCAO two-electron density",
+        "Not HF or DFT; coordinates and density grid are in atomic units",
+        f"    2 {lower:.10f} {lower:.10f} {lower:.10f}",
+        f"   {count} {step:.10f} 0.0000000000 0.0000000000",
+        f"   {count} 0.0000000000 {step:.10f} 0.0000000000",
+        f"   {count} 0.0000000000 0.0000000000 {step:.10f}",
+        f"    1 0.0000000000 0.0000000000 0.0000000000 {-separation / 2.0:.10f}",
+        f"    1 0.0000000000 0.0000000000 0.0000000000 {separation / 2.0:.10f}",
+    ]
+    values = density.ravel(order="C")
+    lines.extend(
+        " ".join(f"{float(value):.8e}" for value in values[start : start + 6])
+        for start in range(0, len(values), 6)
+    )
+    _write_bytes(
+        output_root / "cube/h2-lcao-1s-density-64.cube",
+        ("\n".join(lines) + "\n").encode("ascii"),
+    )
+
+
+def derive(cache, output_root):
+    cache = Path(cache)
+    output_root = Path(output_root)
+    for relative in DERIVED_OUTPUTS:
+        (output_root / relative).parent.mkdir(parents=True, exist_ok=True)
+    numpy, Chem = _load_dependencies()
+    _derive_molecules(cache, output_root, Chem)
+    _derive_rmd17(cache, output_root, numpy, Chem)
+    _derive_crystal(cache, output_root, numpy)
+    _derive_cube(output_root, numpy)
+    return {
+        relative: {
+            "sha256": _sha256(output_root / relative),
+            "bytes": (output_root / relative).stat().st_size,
+        }
+        for relative in DERIVED_OUTPUTS
+    }
+
+
+def verify_derived(cache, output_root):
+    output_root = Path(output_root)
+    with tempfile.TemporaryDirectory(prefix="chemblender-representative-verify-") as directory:
+        fresh_root = Path(directory)
+        evidence = derive(cache, fresh_root)
+        for relative in DERIVED_OUTPUTS:
+            current = output_root / relative
+            fresh = fresh_root / relative
+            if not current.is_file() or current.read_bytes() != fresh.read_bytes():
+                raise RuntimeError(f"derived output drift: {relative}")
+    return evidence
+
+
 def _parse_args(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--cache", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
-    parser.add_argument("--stage", choices=("download",), required=True)
+    parser.add_argument(
+        "--stage",
+        choices=("download", "derive", "verify"),
+        required=True,
+    )
     return parser.parse_args(argv)
 
 
 def main(argv=None):
     args = _parse_args(argv)
-    evidence = fetch_sources(args.cache.resolve(), args.output_root.resolve())
+    if args.stage == "download":
+        evidence = fetch_sources(args.cache.resolve(), args.output_root.resolve())
+    elif args.stage == "derive":
+        evidence = derive(args.cache.resolve(), args.output_root.resolve())
+    else:
+        evidence = verify_derived(args.cache.resolve(), args.output_root.resolve())
     print(json.dumps(evidence, indent=2, sort_keys=True))
     return 0
 

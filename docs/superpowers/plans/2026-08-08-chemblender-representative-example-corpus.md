@@ -176,7 +176,7 @@ git commit -m "data: add pinned representative source files"
 - Create: `examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol`
 - Create: `examples/user-workflows/inputs/mol/ta1-paclitaxel-v3000.mol`
 - Create: `examples/user-workflows/inputs/sdf/ccd-3d-showcase.sdf`
-- Create: `examples/user-workflows/inputs/smiles/ccd-isomeric-showcase.smi`
+- Create: `examples/user-workflows/inputs/smiles/ta1-paclitaxel-isomeric.smi`
 - Create: `examples/user-workflows/inputs/poscar/cod-9012293-diamond.POSCAR`
 - Create: `examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR`
 - Create: `examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.cube`
@@ -186,7 +186,7 @@ git commit -m "data: add pinned representative source files"
 - Consumes: cached wwPDB CCD SDFs, COD `9012293`, and rMD17 aspirin NPZ.
 - Produces: `derive(cache: Path, output_root: Path) -> dict[str, dict[str, object]]`, with one metrics/hash record per derived path.
 
-- [ ] **Step 1: Write failing semantic thresholds**
+- [x] **Step 1: Write failing semantic thresholds**
 
 ```python
 MINIMUMS = {
@@ -206,25 +206,25 @@ def test_representative_metrics_meet_format_thresholds(self):
             self.assertEqual(by_path[path]["metrics"][key], value)
 ```
 
-- [ ] **Step 2: Run the threshold test and confirm RED**
+- [x] **Step 2: Run the threshold test and confirm RED**
 
 Run: `& $pythonBin -m unittest tests.test_representative_examples.RepresentativeExampleTests.test_representative_metrics_meet_format_thresholds -v`
 
 Expected: FAIL because derived paths are absent.
 
-- [ ] **Step 3: Implement CCD molecular derivations with existing RDKit**
+- [x] **Step 3: Implement CCD molecular derivations with existing RDKit**
 
-Load `AIN`, `CFF`, and `TA1` ideal SDF records with RDKit 2026.3.3. Write `AIN` as V2000, force `TA1` as V3000, concatenate the three valid SDF records in the order `AIN`, `CFF`, `TA1`, write canonical isomeric SMILES with CCD ID as the second field, and write `TA1` elements plus coordinates as XYZ. Preserve explicit hydrogens and record RDKit version, source hashes and ordering in `derivation`.
+Load `AIN`, `CFF`, and `TA1` ideal SDF records with RDKit 2026.3.3. Write `AIN` as V2000, force `TA1` as V3000, concatenate the three valid SDF records in the order `AIN`, `CFF`, `TA1`, write one canonical isomeric `TA1` SMILES record because the public ChemBlender reader intentionally accepts one non-empty line, and write `TA1` elements plus coordinates as XYZ. Preserve explicit hydrogens where the target format represents them and record RDKit version, source hashes and ordering in `derivation`.
 
-- [ ] **Step 4: Implement the fixed rMD17 subset**
+- [x] **Step 4: Implement the fixed rMD17 subset**
 
-Read NPZ with `numpy.load(..., allow_pickle=False)`, choose source indices `0, 100, ..., 3100`, and write 32 extXYZ frames using `Properties=species:S:1:pos:R:3:forces:R:3`, `energy=<kcal/mol>`, `source_index=<old index>`, coordinates in angstrom and forces in kcal/mol/angstrom. Do not relabel this time-series subset as statistically independent training data.
+Read NPZ with `numpy.load(..., allow_pickle=False)`, choose array rows `0, 100, ..., 3100`, and write 32 extXYZ frames using `Properties=species:S:1:pos:R:3:forces:R:3` plus the original `old_indices` value as `source_index`. Convert rMD17 kcal/mol and kcal/mol/angstrom values to the reader's declared electron-volt units instead of silently relabelling them. Do not present this time-series subset as statistically independent training data.
 
-- [ ] **Step 5: Implement crystal and grid derivations**
+- [x] **Step 5: Implement crystal and grid derivations**
 
 Parse COD `9012293` through existing Gemmi-backed `parse_cif`, export its periodic structure with existing `export_poscar`, then generate the `2 × 2 × 2` direct-coordinate supercell with 64 sites and a zero ion-velocity block. Generate the Cube on a `64 × 64 × 64` grid spanning `[-6, 6]` bohr around H nuclei separated by 1.4 bohr, using the normalized two-electron bonding density `rho=(phi_A+phi_B)^2/(1+S)` where `phi=exp(-r)/sqrt(pi)` and `S=exp(-R)*(1+R+R^2/3)`; label it an analytic LCAO model, not HF/DFT.
 
-- [ ] **Step 6: Run derivation twice and prove byte determinism**
+- [x] **Step 6: Run derivation twice and prove byte determinism**
 
 Run:
 
@@ -235,11 +235,11 @@ Run:
 
 Expected: the second run reports no byte/hash drift and all outputs stay below 50 MiB.
 
-- [ ] **Step 7: Parse derived files and compare representable semantics**
+- [x] **Step 7: Parse derived files and compare representable semantics**
 
 Use ChemBlender readers to assert atom/frame/record/site/grid counts, finite coordinates and fields, `source_index` preservation, and non-zero Cube range. Compare CCD-derived molecular outputs by atomic number, bond topology, formal charge and stereochemistry; do not require formats to preserve fields they cannot represent.
 
-- [ ] **Step 8: Commit derived inputs**
+- [x] **Step 8: Commit derived inputs**
 
 ```powershell
 git add examples/user-workflows/scripts/prepare_representative_inputs.py examples/user-workflows/inputs examples/user-workflows/manifest.json tests/test_representative_examples.py
