@@ -107,6 +107,45 @@ RUNNER_CASE_IDS = (
     "LIFE-SAVE-REOPEN-PREP",
     "MIG-PREVIEW-PREP",
 )
+REPRESENTATIVE_CASE_IDS = (
+    "REP-MOLECULAR",
+    "REP-TRAJECTORY",
+    "REP-BIOLOGICAL",
+    "REP-CRYSTAL",
+    "REP-GRID",
+    "REP-SAVE-REOPEN-PREP",
+)
+REPRESENTATIVE_CASE_INPUTS = {
+    "REP-MOLECULAR": (
+        "inputs/cjson/avogadro-phthalocyanine.cjson",
+        "inputs/mol/ain-aspirin-v2000.mol",
+        "inputs/mol/ta1-paclitaxel-v3000.mol",
+        "inputs/mol2/openbabel-5sun-protein.mol2",
+        "inputs/qcschema/molssi-water-gradient-hf.json",
+        "inputs/sdf/ccd-3d-showcase.sdf",
+        "inputs/smiles/ta1-paclitaxel-isomeric.smi",
+        "inputs/xyz/ta1-paclitaxel-ccd.xyz",
+    ),
+    "REP-TRAJECTORY": ("inputs/extxyz/aspirin-rmd17-32.extxyz",),
+    "REP-BIOLOGICAL": (
+        "inputs/pdb/1d3z-ubiquitin-nmr.pdb",
+        "inputs/pqr/apbs-protein-rna-nb.pqr",
+    ),
+    "REP-CRYSTAL": (
+        "inputs/cif/cod-4503272-caffeine-cocrystal.cif",
+        "inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR",
+        "inputs/poscar/cod-9012293-diamond.POSCAR",
+    ),
+    "REP-GRID": ("inputs/cube/h2-lcao-1s-density-64.cube",),
+    "REP-SAVE-REOPEN-PREP": (),
+}
+REPRESENTATIVE_OUTPUTS = (
+    "outputs/representative/molecular/molecular.blend",
+    "outputs/representative/trajectory/trajectory.blend",
+    "outputs/representative/biological/biological.blend",
+    "outputs/representative/crystal/crystal.blend",
+    "outputs/representative/grid/grid.blend",
+)
 
 
 class UserWorkflowContractTests(unittest.TestCase):
@@ -348,6 +387,53 @@ class UserWorkflowContractTests(unittest.TestCase):
             <= constants
         )
 
+    def test_runner_declares_representative_inputs_operators_and_outputs(self):
+        tree = self.runner_tree()
+
+        def literal(name):
+            node = next(
+                item
+                for item in tree.body
+                if isinstance(item, ast.Assign)
+                and any(
+                    isinstance(target, ast.Name) and target.id == name
+                    for target in item.targets
+                )
+            )
+            return ast.literal_eval(node.value)
+
+        case_ids = literal("CASE_IDS")
+        case_inputs = literal("CASE_INPUTS")
+        self.assertEqual(case_ids[-len(REPRESENTATIVE_CASE_IDS) :], REPRESENTATIVE_CASE_IDS)
+        self.assertEqual(
+            {
+                case_id: tuple(case_inputs[case_id])
+                for case_id in REPRESENTATIVE_CASE_IDS
+            },
+            REPRESENTATIVE_CASE_INPUTS,
+        )
+        constants = {
+            value.value
+            for value in ast.walk(tree)
+            if isinstance(value, ast.Constant) and isinstance(value.value, str)
+        }
+        for value in REPRESENTATIVE_OUTPUTS:
+            self.assertIn(value, constants)
+        for operator in (
+            "quick_import",
+            "confirm_import",
+            "derive_crystal_symmetry",
+            "create_biological_view",
+            "play_biological_models",
+            "select_biological_atoms",
+            "resolve_grid_semantics",
+            "create_grid_view",
+            "project_link_recovery",
+            "save_as_mainfile",
+            "save_mainfile",
+        ):
+            self.assertIn(operator, constants)
+
     def test_runtime_result_is_sanitized_and_complete(self):
         self.assertTrue(RUNTIME_RESULT.is_file(), RUNTIME_RESULT)
         report = json.loads(RUNTIME_RESULT.read_text(encoding="utf-8"))
@@ -419,6 +505,8 @@ class UserWorkflowContractTests(unittest.TestCase):
         source = RUNNER.read_text(encoding="utf-8")
         for token in (
             'list(previous["operators"]) if previous else []',
+            'dict(previous["evidence"]) if previous else {}',
+            'list(previous["outputs"]) if previous else []',
             'float(previous["elapsed_seconds"]) if previous else 0.0',
             "previous_elapsed + time.perf_counter() - started",
         ):
