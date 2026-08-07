@@ -83,7 +83,7 @@
         "Structure",
         "Topology",
         "CJSONEnvelope",
-        "atomic partial charges"
+        "formal charge property"
       ],
       "workflow": [
         "import",
@@ -99,7 +99,7 @@
         {
           "title": "Chemical JSON schema",
           "version": "Avogadro CJSON",
-          "url": "https://github.com/OpenChemistry/chemicaljson/blob/master/chemicaljson.schema.json"
+          "url": "https://github.com/OpenChemistry/chemicaljson/blob/main/cjson.schema"
         }
       ],
       "documentation": "inputs/cjson/avogadro-phthalocyanine.md"
@@ -122,7 +122,7 @@
       "expected": ["Structure", "Topology", "CJSONEnvelope", "result data"],
       "workflow": ["import", "inspect", "visualize"],
       "metrics": {"atoms": 3, "bonds": 2, "records": 1},
-      "specifications": [{"title": "Chemical JSON schema", "version": "Avogadro CJSON", "url": "https://github.com/OpenChemistry/chemicaljson/blob/master/chemicaljson.schema.json"}],
+      "specifications": [{"title": "Chemical JSON schema", "version": "Avogadro CJSON", "url": "https://github.com/OpenChemistry/chemicaljson/blob/main/cjson.schema"}],
       "documentation": "inputs/cjson/water-results.md"
     },
     {
@@ -163,7 +163,7 @@
       "runtime": "built-in",
       "expected": ["Structure", "Grid3D", "two datasets"],
       "workflow": ["import", "visualize", "export"],
-      "metrics": {"atoms": 1, "datasets": 2, "grid": [2, 2, 2]},
+      "metrics": {"atoms": 1, "datasets": 2, "grid": [2, 2, 1]},
       "specifications": [{"title": "Gaussian Cube format", "version": "h5cube specification", "url": "https://h5cube-spec.readthedocs.io/en/latest/cubeformat.html"}],
       "documentation": "inputs/cube/two-datasets.md"
     },
@@ -715,7 +715,7 @@
       "runtime": "rdkit",
       "expected": ["multiple Structure records", "Topology", "record properties"],
       "workflow": ["import", "inspect", "export"],
-      "metrics": {"records": 2, "property_keys": 3, "ctab_versions": ["V2000"]},
+      "metrics": {"records": 3, "property_keys": 2, "ctab_versions": ["V2000"]},
       "specifications": [{"title": "BIOVIA SDfile and CTfile formats", "version": "V2000", "url": "https://3dswym.3dexperience.3ds.com/post/biovia-laboratory-informatics/can-i-store-molfiles-of-chemical-structures-in-my-database_FXvWcYPER3KN7sxun8F6SA"}],
       "documentation": "inputs/sdf/mixed-properties.md"
     },

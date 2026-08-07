@@ -33,6 +33,17 @@ REPRESENTATIVE_MINIMUMS = {
     "inputs/sdf/ccd-3d-showcase.sdf": {"records": 3},
     "inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR": {"sites": 64},
 }
+REQUIRED_DOCUMENT_HEADINGS = (
+    "## 用途与选择理由",
+    "## 来源与许可",
+    "## 规模与分辨率",
+    "## 字段说明",
+    "## ChemBlender 支持边界",
+    "## 操作流程",
+    "## Agent 提示词",
+    "## 完整性与验证",
+    "## 参考资料",
+)
 REQUIRED_KEYS = {
     "path",
     "family",
@@ -108,6 +119,36 @@ class RepresentativeExampleTests(unittest.TestCase):
                 self.assertEqual(by_path[path]["role"], "representative")
                 for key, value in expected.items():
                     self.assertEqual(by_path[path]["metrics"][key], value)
+
+    def test_each_input_has_user_facing_adjacent_documentation(self):
+        for record in self.records:
+            with self.subTest(path=record["path"]):
+                document = EXAMPLE_ROOT / record["documentation"]
+                text = document.read_text(encoding="utf-8")
+                for heading in REQUIRED_DOCUMENT_HEADINGS:
+                    self.assertIn(heading, text)
+                self.assertIn(record["source_id"], text)
+                self.assertIn(record["license"], text)
+                self.assertIn(record["retrieved_at"], text)
+                self.assertIn(record["sha256"], text)
+                self.assertIn(str(record["bytes"]), text)
+                self.assertIn("Blender MCP", text)
+                self.assertIn("bpy.ops.chemblender", text)
+
+    def test_manifest_sdf_metrics_match_parsed_records(self):
+        from ChemBlender.core.formats.sdf import parse_sdf
+
+        for record in (item for item in self.records if item["family"] == "sdf"):
+            with self.subTest(path=record["path"]):
+                batch = parse_sdf(EXAMPLE_ROOT / record["path"])
+                self.assertEqual(record["metrics"]["records"], len(batch.molecular_records))
+                if "property_keys" in record["metrics"]:
+                    property_keys = {
+                        item.name
+                        for molecular_record in batch.molecular_records
+                        for item in molecular_record.ordered_raw_properties
+                    }
+                    self.assertEqual(record["metrics"]["property_keys"], len(property_keys))
 
     def test_derived_examples_parse_with_expected_semantics(self):
         import numpy

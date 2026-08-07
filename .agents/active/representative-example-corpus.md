@@ -7,7 +7,7 @@
 - Baseline: `03786d497cf9c8a2021a7633fcbf3c67ecc81115`
 - Design: `docs/superpowers/specs/2026-08-08-chemblender-representative-example-corpus-design.md`
 - Plan: `docs/superpowers/plans/2026-08-08-chemblender-representative-example-corpus.md`
-- Current task: Task 3 deterministic derivations are green; document every input in Task 4.
+- Current task: Task 4 adjacent documents are green; route every representative input through the user workflows in Task 5.
 
 ## Goal
 
@@ -57,3 +57,12 @@ commits into local `main` without remote writes.
 - ChemBlender parsed all nine derived files through their public readers. The semantic check
   covers finite arrays, units, source indices, records, atom/bond counts, stereochemistry,
   the 2-electron grid integral, supercell velocities and representable cross-format equality.
+- All 32 inputs now have same-stem user documents with provenance, retrieval date, license,
+  size/resolution meaning, fields, ChemBlender support boundary, public-Operator workflow and
+  Blender MCP prompt. Nine representative-example tests Passed.
+- Source-backed review corrected three earlier manifest descriptions: Avogadro CJSON carries
+  formal charges rather than partial charges; the small multi-dataset Cube grid is 2x2x1; and
+  `mixed-properties.sdf` parses as three records with two unique property keys. A parser-backed
+  regression now locks the SDF record/property counts.
+- The workflow suite is intentionally 21 Passed / 1 Failed at the Task 5 boundary because 15
+  new representative data paths are not yet linked from `docs/user/workflows/`.

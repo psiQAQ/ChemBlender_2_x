@@ -278,7 +278,7 @@ git commit -m "data: derive representative format corpus"
 - Create: `examples/user-workflows/inputs/sdf/mixed-properties.md`
 - Create: `examples/user-workflows/inputs/sdf/ccd-3d-showcase.md`
 - Create: `examples/user-workflows/inputs/smiles/ethanol.md`
-- Create: `examples/user-workflows/inputs/smiles/ccd-isomeric-showcase.md`
+- Create: `examples/user-workflows/inputs/smiles/ta1-paclitaxel-isomeric.md`
 - Create: `examples/user-workflows/inputs/xyz/water.md`
 - Create: `examples/user-workflows/inputs/xyz/ta1-paclitaxel-ccd.md`
 - Modify: `examples/user-workflows/manifest.json`
@@ -287,7 +287,7 @@ git commit -m "data: derive representative format corpus"
 - Consumes: final manifest records and parser/runtime evidence.
 - Produces: one same-stem Markdown path per data file, referenced by `record["documentation"]`.
 
-- [ ] **Step 1: Add a failing adjacent-document content test**
+- [x] **Step 1: Add a failing adjacent-document content test**
 
 ```python
 REQUIRED_HEADINGS = (
@@ -307,31 +307,33 @@ def test_each_input_has_user_facing_adjacent_documentation(self):
         self.assertIn("bpy.ops.chemblender", text)
 ```
 
-- [ ] **Step 2: Run the documentation test and confirm RED**
+- [x] **Step 2: Run the documentation test and confirm RED**
 
 Run: `& $pythonBin -m unittest tests.test_representative_examples.RepresentativeExampleTests.test_each_input_has_user_facing_adjacent_documentation -v`
 
 Expected: FAIL at the first missing document.
 
-- [ ] **Step 3: Write each document from actual file content**
+- [x] **Step 3: Write each document from actual file content**
 
 Use the nine required headings. Explain each field with an actual value/range from that file; distinguish format capacity from ChemBlender 2.4.0 support; state whether size measures atom count, frames, grid points or only text encoding; include source ID, source URL, retrieval date, license, derivation, bytes and SHA-256. Mark contract fixtures as synthetic/repository fixtures and never present them as experimental data.
 
-- [ ] **Step 4: Add one copyable public-Operator prompt per file**
+- [x] **Step 4: Add one copyable public-Operator prompt per file**
 
 Each fenced `text` prompt must tell the Agent to connect through Blender MCP, use UI-equivalent `bpy.ops.chemblender.*` and Operator RNA, avoid private modules, report import diagnostics and project entities, request confirmation for lossy export, keep `.cbq` beside `.blend`, and stop rather than bypass a confirmation/cancellation boundary.
 
-- [ ] **Step 5: Review Chinese prose with `humanizer-zh`**
+- [x] **Step 5: Review Chinese prose with `humanizer-zh`**
 
 Remove promotional wording, repetitive transition phrases and unsupported claims. Keep exact identifiers, field names, units, warnings and citations unchanged.
 
-- [ ] **Step 6: Run documentation and link tests**
+- [x] **Step 6: Run adjacent-document tests and expose the Task 5 link gap**
 
 Run: `& $pythonBin -m unittest tests.test_representative_examples tests.test_user_workflows -v`
 
-Expected: all adjacent-document, hash, local-link and public-Operator prompt checks PASS.
+Result: all 9 representative-example tests PASS. The existing workflow suite has 21 PASS
+and the one expected RED link-inventory test for the 15 new representative paths; Task 5
+owns those workflow-document links.
 
-- [ ] **Step 7: Commit adjacent documentation**
+- [x] **Step 7: Commit adjacent documentation**
 
 ```powershell
 git add examples/user-workflows/inputs examples/user-workflows/manifest.json tests/test_representative_examples.py
