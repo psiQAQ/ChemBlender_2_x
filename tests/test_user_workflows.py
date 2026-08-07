@@ -512,6 +512,14 @@ class UserWorkflowContractTests(unittest.TestCase):
         ):
             self.assertIn(token, source)
 
+    def test_representative_fresh_project_ignores_empty_browser_placeholder(self):
+        source = RUNNER.read_text(encoding="utf-8")
+        self.assertIn(
+            'any(row["entity_id"] for row in context.rows())',
+            source,
+        )
+        self.assertIn("if bpy.context.scene.objects:", source)
+
     def test_first_project_save_documents_and_runs_the_second_save_step(self):
         source = RUNNER.read_text(encoding="utf-8")
         self.assertIn('context.call_wm("save_as_mainfile"', source)

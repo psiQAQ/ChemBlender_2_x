@@ -49,6 +49,21 @@ def _batch(*entries):
 
 
 class SDFConformerGroupingTests(unittest.TestCase):
+    def test_record_without_topology_is_not_a_grouping_candidate(self):
+        from ChemBlender.core.import_pipeline.conformer_grouping import (
+            suggest_conformer_groups,
+        )
+
+        batch = _batch((_molecule("CCO"), ()),)
+        record = replace(batch.molecular_records[0], topology_id=None)
+
+        self.assertEqual(
+            suggest_conformer_groups(
+                replace(batch, molecular_records=(record,), topologies=())
+            ),
+            (),
+        )
+
     def test_suggestions_are_immutable_and_never_create_a_conformer_set(self):
         from ChemBlender.core.import_pipeline.conformer_grouping import (
             ConformerGroupSuggestion,

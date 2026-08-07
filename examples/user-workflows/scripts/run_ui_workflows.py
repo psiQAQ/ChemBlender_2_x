@@ -457,12 +457,13 @@ def _copy_import_batch(context, relative_paths):
 
 
 def _clear_scene_objects(context):
-    if context.rows():
+    if any(row["entity_id"] for row in context.rows()):
         raise RuntimeError("representative case requires a fresh project")
-    selected = bpy.ops.object.select_all(action="SELECT")
-    deleted = bpy.ops.object.delete(use_global=False)
-    if not _finished(selected) or not _finished(deleted):
-        raise RuntimeError("fresh-scene cleanup failed")
+    if bpy.context.scene.objects:
+        selected = bpy.ops.object.select_all(action="SELECT")
+        deleted = bpy.ops.object.delete(use_global=False)
+        if not _finished(selected) or not _finished(deleted):
+            raise RuntimeError("fresh-scene cleanup failed")
 
 
 def _row_counts(rows):
