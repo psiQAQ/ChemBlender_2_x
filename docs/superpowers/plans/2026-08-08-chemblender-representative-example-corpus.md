@@ -406,19 +406,19 @@ git commit -m "docs: route representative user workflows"
 - Consumes: every representative input through its registered reader.
 - Produces: semantic assertions over structures, topology, records, trajectories, hierarchy, charge/radius, periodic data, Grid3D, CJSON and QCSchema.
 
-- [ ] **Step 1: Add parser-level assertions for every representative path**
+- [x] **Step 1: Add parser-level assertions for every representative path**
 
 Assert `TA1=113 atoms/119 bonds`, `rMD17=32 frames/21 atoms with energy and force`, `SDF=3 records`, `1D3Z=10 MODEL frames with chain/residue hierarchy`, `5SUN MOL2=6185 atoms/6248 bonds/390 substructures`, APBS PQR charge/radius completeness, COD cell/symmetry/occupancy, POSCAR/CONTCAR site and velocity counts, Cube dimensions/value range, and successful CJSON/QCSchema envelope recovery.
 
-- [ ] **Step 2: Run the smallest failing parser test first**
+- [x] **Step 2: Run the smallest failing parser test first**
 
 Run one `unittest` node for each family. Expected: PASS for supported semantics; any failure must reproduce a reader defect or correct an inaccurate fixture expectation before broader work.
 
-- [ ] **Step 3: Fix only confirmed defects with systematic debugging and TDD**
+- [x] **Step 3: Fix only confirmed defects with systematic debugging and TDD**
 
 Trace all callers of the failing shared parser/exporter, add one focused regression test that fails for the root cause, implement the smallest shared fix, and rerun sibling reader/exporter tests. Do not broaden ChemBlender capability merely to consume an unsupported optional field; document preserved raw fields and diagnostics instead.
 
-- [ ] **Step 4: Run the static and reader suites**
+- [x] **Step 4: Run the static and reader suites**
 
 Run:
 
@@ -429,7 +429,7 @@ Run:
 
 Expected: PASS with optional-dependency skips reported separately; no representative format remains unparsed.
 
-- [ ] **Step 5: Commit semantic coverage and any root-cause fixes**
+- [x] **Step 5: Commit semantic coverage and any root-cause fixes**
 
 ```powershell
 git add tests/test_representative_examples.py ChemBlender .agents/reference/code-architecture-guide.md
@@ -456,41 +456,41 @@ Omit unchanged paths from `git add`; if no product defect exists, the commit con
 - Consumes: public Operator RNA, schema 2 manifest and representative inputs.
 - Produces: runner cases `REP-MOLECULAR`, `REP-TRAJECTORY`, `REP-BIOLOGICAL`, `REP-CRYSTAL`, `REP-GRID`, `REP-SAVE-REOPEN-PREP` plus cold-reopen evidence.
 
-- [ ] **Step 1: Write failing runner inventory assertions**
+- [x] **Step 1: Write failing runner inventory assertions**
 
 Require the six representative case IDs, their exact input paths, public Operator names and retained outputs. Reject executable imports from `ChemBlender` private modules in the runner.
 
-- [ ] **Step 2: Run runner-contract tests and confirm RED**
+- [x] **Step 2: Run runner-contract tests and confirm RED**
 
 Run: `& $pythonBin -m unittest tests.test_user_workflows -v`
 
 Expected: FAIL because representative case IDs do not exist.
 
-- [ ] **Step 3: Extend the existing runner without a second framework**
+- [x] **Step 3: Extend the existing runner without a second framework**
 
 Reuse `RunContext`, `_operator`, `_project_rows`, `_run_case`, save/checkpoint and cold-reopen helpers. Each case imports via `bpy.ops.chemblender.*`, inspects only public Scene RNA, records diagnostics/counts/timing, and saves only the five bounded evidence bundles. Do not call private core parsers to make an Operator failure look successful.
 
-- [ ] **Step 4: Query and recover the Blender MCP runtime**
+- [x] **Step 4: Query and recover the Blender MCP runtime**
 
 Run `blender-mcp --help`, then query Blender version, exact executable, bundled Python, runtime system and extension repositories together. Require Blender 5.1.0+; if the exact Blender 5.1 process is absent, start that executable, wait for the listener and repeat the live query.
 
-- [ ] **Step 5: Build and install the exact extension package**
+- [x] **Step 5: Build and install the exact extension package**
 
 Run repository contracts, Blender native extension validation/build, inspect ZIP contents, install to a temporary profile, then install and enable `bl_ext.user_default.chemblender` in `user_default`. Record Git commit and package SHA-256 in the result JSON.
 
-- [ ] **Step 6: Run all representative cases through Blender MCP**
+- [x] **Step 6: Run all representative cases through Blender MCP**
 
 Execute `REP-MOLECULAR`, `REP-TRAJECTORY`, `REP-BIOLOGICAL`, `REP-CRYSTAL`, `REP-GRID`, then `REP-SAVE-REOPEN-PREP`. Confirm loss dialogs rather than bypassing them; verify trajectory playback, hierarchy, periodic view, volume/surface, saved project rows and sidecar-local paths.
 
-- [ ] **Step 7: Cold reopen each retained `.blend`**
+- [x] **Step 7: Cold reopen each retained `.blend`**
 
 Start a fresh Blender process/profile for reopen, verify linked entities/views, missing external files equals zero, frame counts/grid identity survive, and every `.blend`, `.cbq` member and VDB remains below 50 MiB and never above 100 MiB.
 
-- [ ] **Step 8: Debug and fix any Blender defect at its root cause**
+- [x] **Step 8: Debug and fix any Blender defect at its root cause**
 
 For each failure, preserve the runner report, reproduce with the smallest public Operator case, use systematic debugging, add a regression test, implement the narrow fix and rerun that case plus siblings. A Blender crash triggers restart of Blender 5.1 and resumption from the last completed case.
 
-- [ ] **Step 9: Commit runtime evidence**
+- [x] **Step 9: Commit runtime evidence**
 
 ```powershell
 git add examples/user-workflows/scripts/run_ui_workflows.py examples/user-workflows/results/local-representative-2.4.0.json examples/user-workflows/outputs/representative examples/user-workflows/manifest.json tests ChemBlender .agents/reference/code-architecture-guide.md
@@ -512,11 +512,11 @@ Omit unchanged product/architecture paths from `git add`.
 - Consumes: all static, parser, package, Blender runtime and cold-reopen evidence.
 - Produces: an explicit `人工插件使用体验检阅` checklist for the user and a clean local merge into `main`.
 
-- [ ] **Step 1: Add representative cases to the manual review template**
+- [x] **Step 1: Add representative cases to the manual review template**
 
 Add user-executable rows for every representative family and five saved bundles. Leave manual status `Not Run`; automation may prefill evidence references but must not claim the human review passed.
 
-- [ ] **Step 2: Run final verification from the branch HEAD**
+- [x] **Step 2: Run final verification from the branch HEAD**
 
 Run:
 

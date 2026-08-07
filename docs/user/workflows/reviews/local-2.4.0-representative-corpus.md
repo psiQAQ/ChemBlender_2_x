@@ -13,7 +13,7 @@
 - Runtime system: Windows
 - Extension repository: `user_default`
 - Enabled key: `bl_ext.user_default.chemblender`
-- Automated profile: installed `user_default`；五次 cold reopen 各用新后台进程
+- Automated profile: installed `user_default`；五个 bundle 各用新后台进程 cold reopen，最终 `HEAD` 再次冷重开 Grid bundle
 - Human test profile / initial dirty state: Not Run
 - Display scale, language and viewport size: Not Run
 
@@ -23,9 +23,10 @@
 - Branch: `codex/representative-example-corpus`
 - Runtime/output commit: `e9f32ae1f49d736fa63fe2961b5baa974eaebcfb`
 - Runner commit: `3279f79a5300547d4b7767bc9d8e270c26195253`
+- Final package-budget commit: `255cdce5245ea07aaab8523a7ae891cc99e12837`
 - Package filename: `ChemBlender/chemblender-2.4.0.zip`
 - Package SHA-256: `5555bbd3ebc6b8cc4066af78d5ffc929a70c72bae76b797a4cffded7a428e321`
-- Package inventory: 29,977,165 bytes；189 members；32,066,803 unpacked bytes；CRC、duplicate 和 safe-path 检查通过
+- Package inventory: 29,977,165 bytes；189 members；32,066,803 unpacked bytes；CRC、duplicate、safe-path 和 zero-unexplained-growth budget 检查通过
 - Manifest version: schema 2
 - RDKit: 2026.03.3，Extension 离线 wheel
 - Gemmi: 0.7.5，Extension 离线 wheel
@@ -57,11 +58,12 @@
 ## Automated preparation evidence
 
 - 15 个 representative 输入与 17 个 contract 输入均有相邻 Markdown、来源/许可证/规范、bytes 和 SHA-256；parser semantic suite 已覆盖全部 15 个 representative 输入。
-- 相关 Project Browser、workflow、biological UI、registration 与 representative contracts：144/144 Passed。
+- Blender bundled Python 全量测试：2,257 tests，26 skipped，0 failed；最终 `HEAD` 的 corpus/workflow 38/38、artifact budget 16/16 另行通过。
 - 公共 Operator runner 的 `REP-MOLECULAR`、`REP-TRAJECTORY`、`REP-BIOLOGICAL`、`REP-CRYSTAL`、`REP-GRID` 和 `REP-SAVE-REOPEN-PREP` 均为 `passed`，`deferred=[]`。
-- 五个仓库内 `.blend/.cbq` 配对分别由新 Blender 5.1.2 进程打开；sidecar arrays 完整，Grid 的四个 VDB 路径位于配套 sidecar。
+- 五个仓库内 `.blend/.cbq` 配对分别由新 Blender 5.1.2 进程打开；sidecar arrays 完整，Grid 的四个 VDB 路径位于配套 sidecar。最终 Grid 重开再次确认 11 个 Project Browser rows、4 个 Volume、8 个 sidecar 文件和 `grid_volume` / `signed_isosurface` View kinds。
 - 119 个新输出文件共 9,008,581 bytes；最大单文件 2,097,280 bytes；无文件达到 50 MiB 或超过 100 MiB。
-- Extension validate/build 与 ZIP 审计通过。现有 `mesh.py:513` invalid-escape warning 不影响断言；spglib 缺失按可选依赖边界显示，不视为 base-install 失败。
+- Blender MCP live query 确认 Blender 5.1.2、bundled Python 3.13.9、`user_default`、启用键、RDKit 2026.03.3、Gemmi 0.7.5、四组 Scene RNA 与所需公开 Operator。
+- Extension validate/build 与 ZIP 审计通过，包体和代码解压预算已精确锁定且 unexplained-growth allowance 仍为 0。现有 `mesh.py:513` invalid-escape warning 不影响断言；spglib 缺失按可选依赖边界显示，不视为 base-install 失败。
 
 ## Representative case checklist
 
@@ -137,6 +139,7 @@ Project UUID / internal sidecar manifest hash：
 2. Open Babel 5SUN MOL2 含 unsupported `un` bond，合法地没有 topology；`4f1d793` 让 Preview 跳过无 topology 的 conformer grouping，而不伪造键。
 3. 通用 extXYZ FrameSet 原先没有公开 playback 入口；`91c25c5` 在 Project Browser 提供 `bpy.ops.chemblender.configure_trajectory_playback`。
 4. runner 曾把 Gemmi 当成 symmetry derive 后端，并把 signed Surface 错当成 Mesh；`3279f79` 改为可选 spglib 边界和公开 View-kind 合同。
+5. 最终 ZIP audit 发现预算仍指向修复前包体；`255cdce` 将 package/member/code 三个基线精确更新到已验证产物，所有 unexplained-growth allowance 保持为 0。
 
 这些修复均有 RED/GREEN 和 Blender runtime 证据，但仍需人在本记录中确认可发现性、文案、视觉结果和操作感受。
 
