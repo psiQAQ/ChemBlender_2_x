@@ -7,7 +7,7 @@
 - Baseline: `03786d497cf9c8a2021a7633fcbf3c67ecc81115`
 - Design: `docs/superpowers/specs/2026-08-08-chemblender-representative-example-corpus-design.md`
 - Plan: `docs/superpowers/plans/2026-08-08-chemblender-representative-example-corpus.md`
-- Current task: Task 4 adjacent documents are green; route every representative input through the user workflows in Task 5.
+- Current task: Task 5 user routing is green; exercise every representative parser and static contract in Task 6.
 
 ## Goal
 
@@ -66,3 +66,11 @@ commits into local `main` without remote writes.
   regression now locks the SDF record/property counts.
 - The workflow suite is intentionally 21 Passed / 1 Failed at the Task 5 boundary because 15
   new representative data paths are not yet linked from `docs/user/workflows/`.
+- Root/documentation entrypoints, the workflow overview and a single format matrix now route all
+  32 data files, all 32 adjacent documents and both retained `.blend`/sidecar manifests. Each
+  import/process/view/export/lifecycle/Agent chapter uses representative cases where scale matters.
+- Documentation review corrected the SMILES product description: file/text import first creates a
+  deterministic planar 2D Structure with a diagnostic; provenance-tracked 3D construction is a
+  separate derivation rather than source data.
+- User-workflow, quantum-visualization documentation and representative-example contracts are
+  68 Passed / 0 Failed on Blender bundled Python 3.13.9.

@@ -46,6 +46,24 @@ Operator 的短名不等于参数名。Agent 必须先“检查 Operator RNA”�
 4. 有质量、冲突、归组、loss 或 migration confirmation 时停在 Preview，把选项和后果交给用户；没有用户授权就不自动确认。
 5. 调用后读取与人工 UI 相同的状态。导入要检查 Project Browser entity/View，Grid 要检查 binding/dataset/isovalue，导出要回读语义，保存要冷重开。
 
+## 代表样例执行顺序
+
+先用 contract 样例确认 Operator、依赖和确认边界，再在干净项目中逐个运行 representative 样例。不要把所有大样例塞进一次不可恢复的长调用。
+
+| 范围 | 代表输入 | 最低可见证据 |
+| --- | --- | --- |
+| molecular | `mol/ta1-paclitaxel-v3000.mol` | 113 atoms、119 bonds、stereo、source/interpreted topology |
+| trajectory | `extxyz/aspirin-rmd17-32.extxyz` | 32×21 coordinates、energy、force、source index、帧变化 |
+| biological | `pdb/1d3z-ubiquitin-nmr.pdb`、`pqr/apbs-protein-rna-nb.pqr` | 10 MODEL；998 charge/radius 与 2 inferred segments |
+| crystal | `cif/cod-4503272-caffeine-cocrystal.cif`、`poscar/cod-9012293-diamond-2x2x2.CONTCAR` | occupancy/disorder；64 sites 与 atomic velocity |
+| grid | `cube/h2-lcao-1s-density-64.cube` | 64³、semantic/unit confirmation、Volume/Surface binding |
+
+每个相对路径都位于 `examples/user-workflows/inputs/`；精确指标、来源和限制见[样例矩阵](formats.md#样例矩阵)。
+
+```text
+通过当前 Blender MCP，在一个干净项目中只执行我指定的一项 representative case。先一次返回 Blender 5.1 runtime、Extension key、依赖、active file/dirty state，并读取所有目标 Operator RNA/poll；只调用公开 `bpy.ops.chemblender.*`。把 Import Preview 的实体、指标、quality、diagnostics 和 confirmation 与该输入的邻接说明逐项比较，未经我确认不提交。提交后只读取公开 Project Browser/View 状态；loss、Partial、Ambiguous、migration 或 save confirmation 一律停下。不得 import private modules、编辑 `.cbq`/cache/`cb_` state。若 Blender/MCP 断开，按 exact Blender 5.1 executable 重启、重新查询环境，并从该 case 的干净前置状态重跑。
+```
+
 ## 取消和失败停止规则
 
 - 取消只调用公开 cancel Operator，等待 active job 消失，再检查 staging/半成品没有成为成功结果。

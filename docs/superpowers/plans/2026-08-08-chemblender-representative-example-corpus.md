@@ -360,25 +360,25 @@ git commit -m "docs: explain every workflow input"
 - Consumes: schema 2 manifest and adjacent documents.
 - Produces: user routes for import, process, visualize, export, lifecycle and Agent-assisted execution.
 
-- [ ] **Step 1: Extend the failing link inventory**
+- [x] **Step 1: Extend the failing link inventory**
 
 Update the existing test so every data path, adjacent Markdown path and retained output bundle must be linked from the workflow documentation. Add assertions for the terms `contract`, `representative`, `分辨率`, `来源`, `许可证`, and `人工插件使用体验检阅`.
 
-- [ ] **Step 2: Run workflow tests and confirm RED**
+- [x] **Step 2: Run workflow tests and confirm RED**
 
 Run: `& $pythonBin -m unittest tests.test_user_workflows -v`
 
 Expected: FAIL because new adjacent documents and representative paths are not routed.
 
-- [ ] **Step 3: Update the overview and format matrix**
+- [x] **Step 3: Update the overview and format matrix**
 
 Add a concise “快速合同样本 / 代表性样本” explanation, a format-to-sample matrix, what “resolution” means for coordinate/trajectory/grid/crystal/hierarchy data, download/reproduction boundaries, and links to every adjacent file document. Preserve the existing distinction between plugin capabilities and Agent-only scene/material work.
 
-- [ ] **Step 4: Update each workflow chapter and prompts**
+- [x] **Step 4: Update each workflow chapter and prompts**
 
 Use representative examples where scale matters: rMD17 for trajectory; 1D3Z and APBS PQR for hierarchy; COD for crystals; H2 Cube for volumes/surfaces; RCSB CCD for molecular conversion; Open Babel 5SUN for MOL2. Keep loss preview/confirmation explicit and do not expose private APIs.
 
-- [ ] **Step 5: Run all documentation contracts**
+- [x] **Step 5: Run all documentation contracts**
 
 Run:
 
@@ -388,7 +388,7 @@ Run:
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit user routing**
+- [x] **Step 6: Commit user routing**
 
 ```powershell
 git add README.md docs examples/user-workflows/README.md tests/test_user_workflows.py

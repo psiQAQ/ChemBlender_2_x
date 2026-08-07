@@ -13,6 +13,8 @@ Project Browser 从当前选中的科学实体解析 export selection，再显�
 
 可用 [carbon-trajectory.extxyz](../../../examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz)练习 extXYZ round-trip；用 [with-chain.pqr](../../../examples/user-workflows/inputs/pqr/with-chain.pqr)检查 charge/radius；用 [two-datasets.cube](../../../examples/user-workflows/inputs/cube/two-datasets.cube)检查显式 dataset index。
 
+合同通过后，用 [rMD17 aspirin](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz)检查 32 帧与 energy/force，用 [APBS protein–RNA PQR](../../../examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.pqr)检查 998 组 charge/radius，用 [H₂ 64³ Cube](../../../examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.cube)检查实际网格写出。分子格式可从同源的 [AIN V2000](../../../examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol)、[TA1 V3000](../../../examples/user-workflows/inputs/mol/ta1-paclitaxel-v3000.mol)和 [CCD SDF](../../../examples/user-workflows/inputs/sdf/ccd-3d-showcase.sdf)比较可表示语义。
+
 ## 操作前检查
 
 1. 在 Project Browser 选中要导出的实体，核对 Structure revision、topology、properties、quality 和 provenance。
@@ -64,13 +66,25 @@ CJSON 和 QCSchema reader 都能保留 source envelope，core 也有受控 expor
 ### 导出与 loss preview
 
 ```text
-使用当前 Blender MCP，通过公开导入流程把 `examples/user-workflows/inputs/pqr/with-chain.pqr` 提交到 Project。完成 Blender 5.1/Extension/active-file 预检后，检查 `bpy.ops.chemblender.export_project_entity` 的 Operator RNA 与 poll。在 Project Browser 选中目标 Structure，设置一个新的临时输出路径和 PQR format，返回 selection closure、quality 与完整 Loss Preview；任何 loss/Partial/Ambiguous confirmation 都停下等我决定。只有我确认后才执行。不得 import private modules、直接写 `.cbq`、调用 exporter service 或 bypass confirmation。
+使用当前 Blender MCP，通过公开导入流程把 `examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.pqr` 提交到 Project。完成 Blender 5.1/Extension/active-file 预检后，检查 `bpy.ops.chemblender.export_project_entity` 的 Operator RNA 与 poll。在 Project Browser 选中目标 Structure，核对 998 atoms、partial charge/radius、22 个 zero radius、2 个 inferred segment，再设置新的临时输出路径和 PQR format。返回 selection closure、quality 与完整 Loss Preview；任何 loss/Partial/Ambiguous confirmation 都停下等我决定。只有我确认后才执行，并公开回读 atom/charge/radius 数。不得把 inferred segment 写成来源 chain，不得 import private modules、直接写 `.cbq`、调用 exporter service 或 bypass confirmation。
 ```
 
 ### 多 dataset Cube
 
 ```text
 使用当前 Blender MCP 导入 `examples/user-workflows/inputs/cube/two-datasets.cube`，走完 `bpy.ops.chemblender.quick_import`/`confirm_import` 的 Import Preview confirmation。检查 export Operator RNA 后，从 Project Browser 选中 Grid3D，显式设置一个 Dataset Index 和新的 `.cube` destination。先报告 shape、unit、semantic role 和 loss confirmation；批准后调用 live `bpy.ops.chemblender.export_project_entity`。验证只导出所选 dataset，并做公开 reader 回读。不得 import private modules、编辑 `.cbq` 或 bypass confirmation。
+```
+
+### 代表性分子 round-trip
+
+```text
+使用当前 Blender MCP，通过 `bpy.ops.chemblender.quick_import`/`confirm_import` 导入 `examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol`。检查 `bpy.ops.chemblender.export_project_entity` Operator RNA 后，选中对应 MolecularRecord/Structure，准备新的 V2000 MOL 和 SDF 输出路径。先报告 21 atoms、21 bonds、显式氢、stereo、source/interpreted topology、selection closure 与逐项 Loss Preview；未经我确认不导出。批准后分别调用公开 export Operator，再用 Quick Import 停在 Preview 回读 atom/bond/topology/record，比较语义而非 bytes。不得 import private modules、编辑 `.cbq` 或 bypass confirmation。
+```
+
+### 代表性单 dataset Cube
+
+```text
+使用当前 Blender MCP 导入 `examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.cube`，经公开 confirmation 明确其 64x64x64 Grid、atomic units 与“解析 LCAO 教学密度，非 HF/DFT”语义。检查 `bpy.ops.chemblender.export_project_entity` Operator RNA，设置新的 `.cube` destination，先返回 shape、origin/steps、unit、semantic role 和 Loss Preview。批准后导出并用公开 Quick Import 回读 shape 与数值摘要；不得只检查文件存在，不得 import private modules、写 `.cbq` 或 bypass confirmation。
 ```
 
 ### 取消导出

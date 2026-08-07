@@ -15,6 +15,8 @@ Quick Import 会先解析到临时 staging，再打开 Import Preview。只有�
 
 RDKit 流程可用 [water-v2000.mol](../../../examples/user-workflows/inputs/mol/water-v2000.mol)或 [mixed-properties.sdf](../../../examples/user-workflows/inputs/sdf/mixed-properties.sdf)。CIF 需要 Release 中随附的 Gemmi，可用 [nacl.cif](../../../examples/user-workflows/inputs/cif/nacl.cif)。
 
+合同流程通过后，再用代表样例检查规模：113 原子的 [TA1 V3000](../../../examples/user-workflows/inputs/mol/ta1-paclitaxel-v3000.mol)、64 位点的 [diamond CONTCAR](../../../examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR)、6185 原子的 [5SUN MOL2](../../../examples/user-workflows/inputs/mol2/openbabel-5sun-protein.mol2)。先读各自的[邻接说明与完整矩阵](formats.md#样例矩阵)，不要把大型文件的 warning 当成自动可忽略项。
+
 ## 操作前检查
 
 1. 在 Blender 5.1 的 `Edit > Preferences > Get Extensions` 中确认 ChemBlender 已启用。
@@ -40,7 +42,7 @@ RDKit 流程可用 [water-v2000.mol](../../../examples/user-workflows/inputs/mol
 
 1. 在 `Quick Import` 中选择 `Import SMILES`。
 2. 输入 `CCO`，保留需要的 validation mode。
-3. 在 Preview 中确认 RDKit availability、派生 3D Structure、topology 和质量状态。
+3. 在 Preview 中确认 RDKit availability、确定性平面 2D Structure、topology 和 `smiles.planar_2d_generated` 诊断。需要三维构象时，导入完成后再走独立的 3D 派生流程。
 4. 确认后再到 Project Browser 查找新记录。
 
 ### 取消
@@ -79,7 +81,13 @@ RDKit 流程可用 [water-v2000.mol](../../../examples/user-workflows/inputs/mol
 ### SMILES
 
 ```text
-使用当前 Blender MCP，确认 Blender >= 5.1、`bl_ext.user_default.chemblender`、RDKit availability 和 clean Project。检查 Operator RNA 后调用 live `bpy.ops.chemblender.import_smiles_text` 导入 `CCO`（来源样例 `examples/user-workflows/inputs/smiles/ethanol.smi`），使用 Balanced。停在 Import Preview，报告 3D derivation、Structure、topology、quality 和 confirmation，再调用 `bpy.ops.chemblender.confirm_import`。验证 Project Browser 中的 MolecularRecord/Structure/View；不要 import private modules、直改 `.cbq` 或 bypass confirmation。
+使用当前 Blender MCP，确认 Blender >= 5.1、`bl_ext.user_default.chemblender`、RDKit availability 和 clean Project。检查 Operator RNA 后调用 live `bpy.ops.chemblender.import_smiles_text` 导入 `CCO`（来源样例 `examples/user-workflows/inputs/smiles/ethanol.smi`），使用 Balanced。停在 Import Preview，报告确定性平面 2D Structure、topology、`smiles.planar_2d_generated`、quality 和 confirmation，再调用 `bpy.ops.chemblender.confirm_import`。验证 Project Browser 中的 MolecularRecord/Structure/View；不要把 2D 坐标称为来源 3D 构象，不要 import private modules、直改 `.cbq` 或 bypass confirmation。
+```
+
+### 代表性 V3000 导入
+
+```text
+使用当前 Blender MCP，先一次查询 Blender 5.1 runtime、Extension key、RDKit availability、active file 和 dirty state，并读取 `bpy.ops.chemblender.quick_import`、`confirm_import` 的 Operator RNA/poll。用绝对路径导入 `examples/user-workflows/inputs/mol/ta1-paclitaxel-v3000.mol`，只走公开 `bpy.ops.chemblender.*`。停在 Import Preview，报告 V3000、113 atoms、119 bonds、显式氢、stereochemistry、来源/解释 topology、quality、diagnostics 和所有 confirmation；与邻接说明预期不符时停止。经我确认后再提交，并从 Project Browser 验证 MolecularRecord、Structure、Topology 和 View。不得 import private modules、编辑 `.cbq`/cache/`cb_` state 或 bypass confirmation。
 ```
 
 ### 取消

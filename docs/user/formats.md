@@ -22,7 +22,7 @@ automatically a lossless round-trip format.
 | XYZ/extXYZ | Native import; XYZ/extXYZ export; multi-frame, typed properties, cell/PBC and validity masks where present |
 | MOL V2000/V3000 | RDKit-backed import and MOL export with representability/loss checks |
 | SDF | RDKit-backed multi-record import, conformer review and SDF export |
-| SMILES | RDKit-backed text/file import, deterministic 3D derivation and SMILES export |
+| SMILES | RDKit-backed single-record text/file import, deterministic planar 2D source View, separate provenance-tracked 3D derivation and SMILES export |
 | CIF | Gemmi-backed import of crystal/site/symmetry metadata and controlled CIF export |
 | POSCAR/CONTCAR | Native import/export with Direct/Cartesian, scale, selective dynamics and supported velocity data |
 | MOL2 | Native multi-molecule import plus normalized Project Browser export with semantic round-trip and explicit loss confirmation |

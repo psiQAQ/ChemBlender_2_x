@@ -1,26 +1,28 @@
 # ChemBlender 用户流程样例
 
-这里保存与 `docs/user/workflows/` 配套的小型、可复现样例。
+这里保存与 `docs/user/workflows/` 配套、来源可追溯且可复现的样例。
 
 - `inputs/` 是不可变输入。文档操作不得覆盖这些文件。
 - `outputs/` 由 Blender 5.1 实测流程生成；只有通过冷启动重开、hash 和大小检查的代表性结果才会纳入仓库。
 - `scripts/` 保存通过 ChemBlender 公开 Operator 复现 UI 流程的脚本。
 - `results/` 保存去除本机绝对路径后的实测结果；当前记录见 [`local-2.4.0.json`](results/local-2.4.0.json)。
-- `manifest.json` 记录每个输入的来源、运行时依赖、预期数据、实测字节数和 SHA-256。
+- `manifest.json` 记录每个输入的来源、取得日期、许可证、规范、运行时依赖、预期数据、实测字节数和 SHA-256。
 
-从 `tests/fixtures/` 复制的文件是独立快照，不会在运行时引用测试目录。`ethanol.smi` 是本地生成的最小 SMILES。当前全部输入远小于 50 MiB；新文件应尽量保持在 50 MiB 以内，任何文件都不得超过 100 MiB。
+`contract` 文件是快速语法与字段合同；`representative` 文件用于观察实际规模、帧数、层级或网格采样。几百 bytes 的合同文件并非“低分辨率”，只是覆盖范围小。坐标看原子数与单位，轨迹看 frames，晶体看 sites/cell，生物数据看 hierarchy/models，Cube 才按 grid shape/spacing 讨论采样分辨率。
+
+从 `tests/fixtures/` 复制的合同文件是独立快照，不会在运行时引用测试目录。每个数据文件旁都有同名 `.md`，说明字段、来源、许可证、规范和插件边界；总表见[格式样例矩阵](../../docs/user/workflows/formats.md#样例矩阵)。当前全部已提交输入低于 50 MiB；新文件应尽量保持在 50 MiB 以内，任何文件都不得超过 100 MiB。
 
 ## 样例选择
 
-| 格式族 | 样例 | 主要用途 |
-| --- | --- | --- |
-| XYZ / extXYZ | `water.xyz`、`carbon-trajectory.extxyz` | 单结构、多帧、cell/PBC |
-| MOL / SDF / SMILES | 两版 water MOL、混合属性 SDF、ethanol SMILES | RDKit 分子记录、属性与 3D 派生 |
-| CIF / POSCAR | NaCl、Si、含速度 CONTCAR | 晶体、周期边界与导出损失检查 |
-| MOL2 / PDB / PQR | substructure、multi-model、with-chain | 拓扑、层级、charge/radius |
-| Cube | two-datasets | Structure、Grid3D 与多 dataset 选择 |
-| CJSON / QCSchema | water results、AtomicResult | 计算结果 envelope 与可支持属性 |
-| Legacy | ChemBlender 2.1 molecule | 显式迁移、诊断与另存 |
+| 数据范围 | 快速合同 | 代表样例 | 主要用途 |
+| --- | --- | --- | --- |
+| 坐标 / trajectory | water XYZ、carbon extXYZ | [TA1 XYZ 说明](inputs/xyz/ta1-paclitaxel-ccd.md)、[rMD17 aspirin 说明](inputs/extxyz/aspirin-rmd17-32.md) | 113 原子单构象、32×21 轨迹与 force/energy |
+| 分子 graph / records | water MOL、mixed SDF、ethanol SMILES | [AIN MOL 说明](inputs/mol/ain-aspirin-v2000.md)、[TA1 V3000 说明](inputs/mol/ta1-paclitaxel-v3000.md)、[CCD SDF 说明](inputs/sdf/ccd-3d-showcase.md) | 显式氢、stereo、拓扑与多记录 |
+| 晶体 | NaCl、Si、velocity CONTCAR | [COD 共晶说明](inputs/cif/cod-4503272-caffeine-cocrystal.md)、[64-site diamond 说明](inputs/poscar/cod-9012293-diamond-2x2x2.md) | occupancy/disorder、symmetry 与 supercell |
+| 生物 / 层级 | MOL2 substructure、PDB model、PQR chain | [5SUN MOL2 说明](inputs/mol2/openbabel-5sun-protein.md)、[1D3Z PDB 说明](inputs/pdb/1d3z-ubiquitin-nmr.md)、[APBS PQR 说明](inputs/pqr/apbs-protein-rna-nb.md) | 6185 原子、10 MODEL、charge/radius 与 segment |
+| Grid3D | two-dataset Cube | [64³ H₂ density 说明](inputs/cube/h2-lcao-1s-density-64.md) | 实际 Volume/Surface 采样和语义确认 |
+| JSON exchange | water CJSON、v2 AtomicResult | [Avogadro CJSON 说明](inputs/cjson/avogadro-phthalocyanine.md)、[MolSSI QCSchema 说明](inputs/qcschema/molssi-water-gradient-hf.md) | envelope、formal charge、gradient/properties |
+| Legacy | ChemBlender 2.1 molecule | — | 显式迁移、诊断与另存 |
 
 ## 可直接查看的结果
 

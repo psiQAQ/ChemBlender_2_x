@@ -146,6 +146,10 @@ class UserWorkflowContractTests(unittest.TestCase):
             ROOT / "docs" / "user" / "2.4.0-experience-review.md",
         ):
             self.assertIn(index, self.local_link_targets(path), path)
+        self.assertIn(
+            (EXAMPLE_ROOT / "README.md").resolve(),
+            self.local_link_targets(ROOT / "README.md"),
+        )
 
     def test_every_sample_is_linked_from_the_workflow_documents(self):
         linked = set()
@@ -158,10 +162,34 @@ class UserWorkflowContractTests(unittest.TestCase):
             for record in self.manifest()["files"]
         }
         expected.update(
+            (EXAMPLE_ROOT / record["documentation"]).resolve()
+            for record in self.manifest()["files"]
+        )
+        expected.update(
             (EXAMPLE_ROOT / bundle["blend"]).resolve()
             for bundle in self.manifest()["output_bundles"]
         )
+        expected.update(
+            (EXAMPLE_ROOT / bundle["sidecar"] / "manifest.json").resolve()
+            for bundle in self.manifest()["output_bundles"]
+        )
         self.assertEqual(expected - linked, set())
+
+    def test_workflow_overview_explains_representative_corpus_boundary(self):
+        document = "\n".join(
+            (DOC_ROOT / name).read_text(encoding="utf-8")
+            for name in EXPECTED_DOCS
+            if (DOC_ROOT / name).is_file()
+        )
+        for term in (
+            "contract",
+            "representative",
+            "分辨率",
+            "来源",
+            "许可证",
+            "人工插件使用体验检阅",
+        ):
+            self.assertIn(term, document)
 
     def test_plugin_workflow_prompts_keep_the_public_ui_boundary(self):
         for name in PLUGIN_WORKFLOW_DOCS:
