@@ -22,6 +22,9 @@ DOC_ROOT = ROOT / "docs" / "user" / "workflows"
 EXAMPLE_ROOT = ROOT / "examples" / "user-workflows"
 RUNNER = EXAMPLE_ROOT / "scripts" / "run_ui_workflows.py"
 RUNTIME_RESULT = EXAMPLE_ROOT / "results" / "local-2.4.0.json"
+REPRESENTATIVE_RUNTIME_RESULT = (
+    EXAMPLE_ROOT / "results" / "local-representative-2.4.0.json"
+)
 EXPECTED_FAMILIES = (
     "cif",
     "cjson",
@@ -38,7 +41,19 @@ EXPECTED_FAMILIES = (
     "smiles",
     "xyz",
 )
-EXPECTED_OUTPUT_BUNDLES = ("legacy-migration", "workflow-project")
+REPRESENTATIVE_OUTPUT_BUNDLE_IDS = (
+    "representative-biological",
+    "representative-crystal",
+    "representative-grid",
+    "representative-molecular",
+    "representative-trajectory",
+)
+BASELINE_OUTPUT_BUNDLE_IDS = ("legacy-migration", "workflow-project")
+EXPECTED_OUTPUT_BUNDLES = (
+    BASELINE_OUTPUT_BUNDLE_IDS[0],
+    *REPRESENTATIVE_OUTPUT_BUNDLE_IDS,
+    BASELINE_OUTPUT_BUNDLE_IDS[1],
+)
 EXPECTED_DOCS = (
     "README.md",
     "01-import.md",
@@ -459,7 +474,7 @@ class UserWorkflowContractTests(unittest.TestCase):
         )
         self.assertEqual(
             tuple(bundle["id"] for bundle in report["tracked_outputs"]),
-            EXPECTED_OUTPUT_BUNDLES,
+            BASELINE_OUTPUT_BUNDLE_IDS,
         )
         self.assertEqual(report["outside_plugin"]["status"], "passed")
         self.assertTrue(all(report["outside_plugin"]["scientific_state_unchanged"].values()))
@@ -469,6 +484,50 @@ class UserWorkflowContractTests(unittest.TestCase):
         source = RUNNER.read_text(encoding="utf-8")
         self.assertIn("NamedTemporaryFile", source)
         self.assertIn(".replace(", source)
+
+    def test_representative_runtime_result_is_sanitized_and_complete(self):
+        self.assertTrue(
+            REPRESENTATIVE_RUNTIME_RESULT.is_file(),
+            REPRESENTATIVE_RUNTIME_RESULT,
+        )
+        report = json.loads(
+            REPRESENTATIVE_RUNTIME_RESULT.read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["schema_version"], "1")
+        self.assertEqual(report["product_version"], "2.4.0")
+        self.assertRegex(report["runner_commit"], r"^[0-9a-f]{40}$")
+        self.assertEqual(
+            report["package"]["sha256"],
+            "5555bbd3ebc6b8cc4066af78d5ffc929a70c72bae76b797a4cffded7a428e321",
+        )
+        cases = {case["id"]: case for case in report["cases"]}
+        self.assertEqual(
+            tuple(cases),
+            ("ENV", *REPRESENTATIVE_CASE_IDS),
+        )
+        self.assertEqual({case["status"] for case in cases.values()}, {"passed"})
+        self.assertEqual(report["deferred"], [])
+        self.assertIn(
+            "bpy.ops.chemblender.configure_trajectory_playback",
+            cases["REP-TRAJECTORY"]["operator_ids"],
+        )
+        self.assertEqual(
+            cases["REP-CRYSTAL"]["evidence"]["symmetry"]["status"],
+            "unavailable",
+        )
+        self.assertTrue(
+            cases["REP-GRID"]["evidence"]["volume_paths_inside_sidecar"]
+        )
+        self.assertEqual(
+            tuple(bundle["id"] for bundle in report["tracked_outputs"]),
+            REPRESENTATIVE_OUTPUT_BUNDLE_IDS,
+        )
+        self.assertTrue(
+            all(bundle["cold_reopen"] == "passed" for bundle in report["tracked_outputs"])
+        )
+        serialized = json.dumps(report, ensure_ascii=False)
+        self.assertNotIn(str(ROOT), serialized)
+        self.assertNotIn(".agents/cache", serialized.replace("\\", "/"))
 
     def test_runner_activates_matching_structure_view_for_context_operator(self):
         source = RUNNER.read_text(encoding="utf-8")

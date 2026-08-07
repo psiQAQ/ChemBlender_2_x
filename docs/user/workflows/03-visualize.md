@@ -16,7 +16,17 @@ Project 中的 Structure、Grid3D、属性和结果是科学实体；Blender Obj
 
 规模检阅使用 113 原子的 [TA1 XYZ](../../../examples/user-workflows/inputs/xyz/ta1-paclitaxel-ccd.xyz)、32 帧的 [rMD17 aspirin extXYZ](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz)、10 MODEL 的 [1D3Z](../../../examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb)和 `64³` 的 [H₂ density Cube](../../../examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.cube)。H₂ 场是解析教学模型，不是 HF/DFT 结果；创建 View 前仍要显式确认 semantic/unit。
 
-若要直接查看实测结果，可打开 [workflow.blend](../../../examples/user-workflows/outputs/workflow-project/workflow.blend)，并用 [workflow.cbq manifest](../../../examples/user-workflows/outputs/workflow-project/workflow.cbq/manifest.json)核对 sidecar。必须保留同目录的完整 `workflow.cbq/`；该项目已在仓库内当前位置冷重开，并确认三个 Volume 路径都解析到配套 sidecar。
+若要直接查看实测结果，可按数据类型选择下表。每个文件都必须与同目录的完整同名 `.cbq/` 一起保留；五组代表项目已从仓库内当前位置分别用新 Blender 5.1.2 进程冷重开。
+
+| 数据组 | 场景 | sidecar manifest | 检阅重点 |
+| --- | --- | --- | --- |
+| 分子与 exchange | [molecular.blend](../../../examples/user-workflows/outputs/representative/molecular/molecular.blend) | [manifest](../../../examples/user-workflows/outputs/representative/molecular/molecular.cbq/manifest.json) | 8 种输入、topology/record、CJSON/QCSchema 与 8 个 View |
+| trajectory | [trajectory.blend](../../../examples/user-workflows/outputs/representative/trajectory/trajectory.blend) | [manifest](../../../examples/user-workflows/outputs/representative/trajectory/trajectory.cbq/manifest.json) | 32 帧 playback 与坐标变化 |
+| 生物结构 | [biological.blend](../../../examples/user-workflows/outputs/representative/biological/biological.blend) | [manifest](../../../examples/user-workflows/outputs/representative/biological/biological.cbq/manifest.json) | MODEL playback、hierarchy、chain/residue selection |
+| 晶体 | [crystal.blend](../../../examples/user-workflows/outputs/representative/crystal/crystal.blend) | [manifest](../../../examples/user-workflows/outputs/representative/crystal/crystal.cbq/manifest.json) | CIF/POSCAR View 与可选 spglib 不可用提示 |
+| Grid3D | [grid.blend](../../../examples/user-workflows/outputs/representative/grid/grid.blend) | [manifest](../../../examples/user-workflows/outputs/representative/grid/grid.cbq/manifest.json) | Volume、两个 signed Surface 与 sidecar-local VDB |
+
+综合合同项目仍可打开 [workflow.blend](../../../examples/user-workflows/outputs/workflow-project/workflow.blend)，并用 [workflow.cbq manifest](../../../examples/user-workflows/outputs/workflow-project/workflow.cbq/manifest.json)核对 sidecar。
 
 ## 操作前检查
 

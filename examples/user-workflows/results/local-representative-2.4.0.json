@@ -1,0 +1,318 @@
+{
+  "schema_version": "1",
+  "product_version": "2.4.0",
+  "verification_date": "2026-08-08",
+  "runner_commit": "3279f79a5300547d4b7767bc9d8e270c26195253",
+  "source_report_sha256": "5ab24a9a7c98a67c156f083abc661e6da5836920996eca791d0288d2e29a496d",
+  "package": {
+    "path": "ChemBlender/chemblender-2.4.0.zip",
+    "bytes": 29977165,
+    "sha256": "5555bbd3ebc6b8cc4066af78d5ffc929a70c72bae76b797a4cffded7a428e321",
+    "member_unpacked_bytes": 32066803,
+    "member_count": 189,
+    "duplicate_members": 0,
+    "unsafe_paths": 0,
+    "crc_read": "passed"
+  },
+  "runtime": {
+    "blender_version": "5.1.2",
+    "python_version": "3.13.9",
+    "system": "Windows",
+    "background": true,
+    "enabled_key": "bl_ext.user_default.chemblender",
+    "rdkit_version": "2026.03.3",
+    "gemmi_version": "0.7.5",
+    "spglib": "optional and not bundled",
+    "profile": "user_default Operator run plus five fresh cold-reopen processes"
+  },
+  "checkpoints": [
+    {
+      "id": "representative-public-operator-run",
+      "status": "passed",
+      "case_count": 5
+    },
+    {
+      "id": "tracked-output-cold-reopen",
+      "status": "passed",
+      "bundle_count": 5,
+      "missing_sidecar_arrays": 0,
+      "volume_paths_inside_sidecar": true
+    }
+  ],
+  "cases": [
+    {
+      "id": "ENV",
+      "status": "passed",
+      "input": [],
+      "operator_ids": [],
+      "elapsed_seconds": 0.01961,
+      "evidence": {
+        "blender_version": "5.1.2",
+        "enabled_key": "bl_ext.user_default.chemblender",
+        "runtime_system": "Windows"
+      },
+      "outputs": [],
+      "error": null
+    },
+    {
+      "id": "REP-MOLECULAR",
+      "status": "passed",
+      "input": [
+        "inputs/cjson/avogadro-phthalocyanine.cjson",
+        "inputs/mol/ain-aspirin-v2000.mol",
+        "inputs/mol/ta1-paclitaxel-v3000.mol",
+        "inputs/mol2/openbabel-5sun-protein.mol2",
+        "inputs/qcschema/molssi-water-gradient-hf.json",
+        "inputs/sdf/ccd-3d-showcase.sdf",
+        "inputs/smiles/ta1-paclitaxel-isomeric.smi",
+        "inputs/xyz/ta1-paclitaxel-ccd.xyz"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.confirm_import",
+        "bpy.ops.wm.save_as_mainfile",
+        "bpy.ops.wm.save_mainfile"
+      ],
+      "elapsed_seconds": 8.331821,
+      "evidence": {
+        "import_count": 8,
+        "structure_rows": 10,
+        "topology_rows": 12,
+        "molecular_record_rows": 7,
+        "property_rows": 18,
+        "view_rows": 8,
+        "diagnostic_rows": 7,
+        "blend_bytes": 285732,
+        "sidecar_bytes": 1709949,
+        "sidecar_file_count": 60,
+        "missing_sidecar_arrays": 0
+      },
+      "outputs": [
+        "outputs/representative/molecular/molecular.blend",
+        "outputs/representative/molecular/molecular.cbq"
+      ],
+      "error": null
+    },
+    {
+      "id": "REP-TRAJECTORY",
+      "status": "passed",
+      "input": [
+        "inputs/extxyz/aspirin-rmd17-32.extxyz"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.confirm_import",
+        "bpy.ops.chemblender.configure_trajectory_playback",
+        "bpy.ops.wm.save_as_mainfile",
+        "bpy.ops.wm.save_mainfile"
+      ],
+      "elapsed_seconds": 1.123259,
+      "evidence": {
+        "frames": 32,
+        "atoms": 21,
+        "frame_start": 1,
+        "frame_end": 32,
+        "coordinates_changed": true,
+        "energy_properties": 1,
+        "force_properties": 1,
+        "blend_bytes": 165756,
+        "sidecar_bytes": 48601,
+        "missing_sidecar_arrays": 0
+      },
+      "outputs": [
+        "outputs/representative/trajectory/trajectory.blend",
+        "outputs/representative/trajectory/trajectory.cbq"
+      ],
+      "error": null
+    },
+    {
+      "id": "REP-BIOLOGICAL",
+      "status": "passed",
+      "input": [
+        "inputs/pdb/1d3z-ubiquitin-nmr.pdb",
+        "inputs/pqr/apbs-protein-rna-nb.pqr"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.confirm_import",
+        "bpy.ops.chemblender.create_biological_view",
+        "bpy.ops.chemblender.play_biological_models",
+        "bpy.ops.chemblender.select_biological_atoms",
+        "bpy.ops.wm.save_as_mainfile",
+        "bpy.ops.wm.save_mainfile"
+      ],
+      "elapsed_seconds": 1.971418,
+      "evidence": {
+        "model_frame_end": 10,
+        "hierarchy_rows": 2,
+        "chain_rows": 3,
+        "residue_rows": 117,
+        "atomic_property_rows": 4,
+        "view_rows": 2,
+        "blend_bytes": 162372,
+        "sidecar_bytes": 574500,
+        "missing_sidecar_arrays": 0
+      },
+      "outputs": [
+        "outputs/representative/biological/biological.blend",
+        "outputs/representative/biological/biological.cbq"
+      ],
+      "error": null
+    },
+    {
+      "id": "REP-CRYSTAL",
+      "status": "passed",
+      "input": [
+        "inputs/cif/cod-4503272-caffeine-cocrystal.cif",
+        "inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR",
+        "inputs/poscar/cod-9012293-diamond.POSCAR"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.confirm_import",
+        "bpy.ops.chemblender.derive_crystal_symmetry",
+        "bpy.ops.wm.save_as_mainfile",
+        "bpy.ops.wm.save_mainfile"
+      ],
+      "elapsed_seconds": 1.48074,
+      "evidence": {
+        "structure_rows": 3,
+        "cif_envelope_rows": 1,
+        "crystal_site_rows": 3,
+        "view_rows": 3,
+        "symmetry": {
+          "status": "unavailable",
+          "reason": "spglib is required in the optional ChemBlender core/worker environment"
+        },
+        "blend_bytes": 172350,
+        "sidecar_bytes": 65049,
+        "missing_sidecar_arrays": 0
+      },
+      "outputs": [
+        "outputs/representative/crystal/crystal.blend",
+        "outputs/representative/crystal/crystal.cbq"
+      ],
+      "error": null
+    },
+    {
+      "id": "REP-GRID",
+      "status": "passed",
+      "input": [
+        "inputs/cube/h2-lcao-1s-density-64.cube"
+      ],
+      "operator_ids": [
+        "bpy.ops.chemblender.quick_import",
+        "bpy.ops.chemblender.confirm_import",
+        "bpy.ops.chemblender.resolve_grid_semantics",
+        "bpy.ops.chemblender.create_grid_view",
+        "bpy.ops.wm.save_as_mainfile",
+        "bpy.ops.wm.save_mainfile"
+      ],
+      "elapsed_seconds": 1.86189,
+      "evidence": {
+        "grid_shape": [64, 64, 64],
+        "grid_volume_views": 1,
+        "signed_isosurface_views": 2,
+        "volume_files": 4,
+        "volume_paths_inside_sidecar": true,
+        "blend_bytes": 107971,
+        "sidecar_bytes": 5716301,
+        "largest_sidecar_file_bytes": 2097280,
+        "missing_sidecar_arrays": 0
+      },
+      "outputs": [
+        "outputs/representative/grid/grid.blend",
+        "outputs/representative/grid/grid.cbq"
+      ],
+      "error": null
+    },
+    {
+      "id": "REP-SAVE-REOPEN-PREP",
+      "status": "passed",
+      "input": [],
+      "operator_ids": [],
+      "elapsed_seconds": 0.469708,
+      "evidence": {
+        "cold_reopen": {
+          "biological": {"object_count": 4, "frame_end": 10, "sidecar_file_count": 20},
+          "crystal": {"object_count": 3, "frame_end": 250, "sidecar_file_count": 19},
+          "grid": {"object_count": 4, "frame_end": 250, "sidecar_file_count": 8, "volume_files": 4},
+          "molecular": {"object_count": 8, "frame_end": 250, "sidecar_file_count": 60},
+          "trajectory": {"object_count": 1, "frame_end": 32, "sidecar_file_count": 7}
+        },
+        "fresh_process_count": 5,
+        "missing_sidecar_arrays": 0
+      },
+      "outputs": [
+        "outputs/representative/biological/biological.blend",
+        "outputs/representative/biological/biological.cbq",
+        "outputs/representative/crystal/crystal.blend",
+        "outputs/representative/crystal/crystal.cbq",
+        "outputs/representative/grid/grid.blend",
+        "outputs/representative/grid/grid.cbq",
+        "outputs/representative/molecular/molecular.blend",
+        "outputs/representative/molecular/molecular.cbq",
+        "outputs/representative/trajectory/trajectory.blend",
+        "outputs/representative/trajectory/trajectory.cbq"
+      ],
+      "error": null
+    }
+  ],
+  "tracked_outputs": [
+    {
+      "id": "representative-biological",
+      "blend": "outputs/representative/biological/biological.blend",
+      "sidecar": "outputs/representative/biological/biological.cbq",
+      "blend_bytes": 162372,
+      "sidecar_bytes": 574500,
+      "file_count": 21,
+      "cold_reopen": "passed"
+    },
+    {
+      "id": "representative-crystal",
+      "blend": "outputs/representative/crystal/crystal.blend",
+      "sidecar": "outputs/representative/crystal/crystal.cbq",
+      "blend_bytes": 172350,
+      "sidecar_bytes": 65049,
+      "file_count": 20,
+      "cold_reopen": "passed"
+    },
+    {
+      "id": "representative-grid",
+      "blend": "outputs/representative/grid/grid.blend",
+      "sidecar": "outputs/representative/grid/grid.cbq",
+      "blend_bytes": 107971,
+      "sidecar_bytes": 5716301,
+      "file_count": 9,
+      "cold_reopen": "passed"
+    },
+    {
+      "id": "representative-molecular",
+      "blend": "outputs/representative/molecular/molecular.blend",
+      "sidecar": "outputs/representative/molecular/molecular.cbq",
+      "blend_bytes": 285732,
+      "sidecar_bytes": 1709949,
+      "file_count": 61,
+      "cold_reopen": "passed"
+    },
+    {
+      "id": "representative-trajectory",
+      "blend": "outputs/representative/trajectory/trajectory.blend",
+      "sidecar": "outputs/representative/trajectory/trajectory.cbq",
+      "blend_bytes": 165756,
+      "sidecar_bytes": 48601,
+      "file_count": 8,
+      "cold_reopen": "passed"
+    }
+  ],
+  "deferred": [],
+  "known_non_blocking_warnings": [
+    "ChemBlender/mesh.py:513 emits a Python invalid-escape SyntaxWarning",
+    "spglib is an optional worker dependency and is not bundled in the Extension"
+  ],
+  "manual_review": {
+    "gate": "人工插件使用体验检阅",
+    "status": "not_run",
+    "release_blocking_until_completed": true
+  }
+}

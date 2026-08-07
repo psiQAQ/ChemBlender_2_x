@@ -5,7 +5,7 @@
 - `inputs/` 是不可变输入。文档操作不得覆盖这些文件。
 - `outputs/` 由 Blender 5.1 实测流程生成；只有通过冷启动重开、hash 和大小检查的代表性结果才会纳入仓库。
 - `scripts/` 保存通过 ChemBlender 公开 Operator 复现 UI 流程的脚本。
-- `results/` 保存去除本机绝对路径后的实测结果；当前记录见 [`local-2.4.0.json`](results/local-2.4.0.json)。
+- `results/` 保存去除本机绝对路径后的实测结果；基础流程见 [`local-2.4.0.json`](results/local-2.4.0.json)，代表样例见 [`local-representative-2.4.0.json`](results/local-representative-2.4.0.json)。
 - `manifest.json` 记录每个输入的来源、取得日期、许可证、规范、运行时依赖、预期数据、实测字节数和 SHA-256。
 
 `contract` 文件是快速语法与字段合同；`representative` 文件用于观察实际规模、帧数、层级或网格采样。几百 bytes 的合同文件并非“低分辨率”，只是覆盖范围小。坐标看原子数与单位，轨迹看 frames，晶体看 sites/cell，生物数据看 hierarchy/models，Cube 才按 grid shape/spacing 讨论采样分辨率。
@@ -26,10 +26,18 @@
 
 ## 可直接查看的结果
 
+| 数据组 | `.blend` | `.cbq` manifest | 已保存内容 |
+| --- | --- | --- | --- |
+| 分子与 exchange | [molecular.blend](outputs/representative/molecular/molecular.blend) | [manifest](outputs/representative/molecular/molecular.cbq/manifest.json) | 8 种输入、Structure、Topology、records、CJSON/QCSchema 与默认 View |
+| trajectory | [trajectory.blend](outputs/representative/trajectory/trajectory.blend) | [manifest](outputs/representative/trajectory/trajectory.cbq/manifest.json) | 32×21 rMD17 aspirin、energy/force 与 playback |
+| 生物结构 | [biological.blend](outputs/representative/biological/biological.blend) | [manifest](outputs/representative/biological/biological.cbq/manifest.json) | 1D3Z 10 MODEL 与 APBS PQR hierarchy/charge/radius |
+| 晶体 | [crystal.blend](outputs/representative/crystal/crystal.blend) | [manifest](outputs/representative/crystal/crystal.cbq/manifest.json) | COD CIF、8-site/64-site diamond 与可选 spglib 边界 |
+| Grid3D | [grid.blend](outputs/representative/grid/grid.blend) | [manifest](outputs/representative/grid/grid.cbq/manifest.json) | `64³` H₂ density、Volume、正负 Surface 与 4 个 VDB cache |
+
 - [workflow.blend](outputs/workflow-project/workflow.blend) 配套同目录的 [workflow.cbq manifest](outputs/workflow-project/workflow.cbq/manifest.json)，包含分子、晶体、轨迹、Grid Volume 和 Signed Surface 等代表性 View。
 - [migrated.blend](outputs/legacy-migration/migrated.blend) 配套同目录的 [migrated.cbq manifest](outputs/legacy-migration/migrated.cbq/manifest.json)，展示 2.1 对象迁移、显式 topology 与 legacy backup collection。
 
-两组文件均由 Blender 5.1.2 冷启动从仓库内当前位置重开通过。下载或复制时要保留 `.blend` 与完整同名 `.cbq/` 目录的相对位置；不要只拿 `.blend`。
+以上七组文件均由 Blender 5.1.2 冷启动从仓库内当前位置重开通过。下载或复制时要保留 `.blend` 与完整同名 `.cbq/` 目录的相对位置；不要只拿 `.blend`。
 
 操作入口见 [`docs/user/workflows/README.md`](../../docs/user/workflows/README.md)。
 
@@ -72,3 +80,15 @@ New-Item -ItemType Directory -Path $run
 ```
 
 每个案例的 `operators`、`evidence`、`outputs`、耗时和错误都会原子写入 `report.json`。`prepared` 只表示等待下一次冷启动；最终判定还要填写 [`docs/user/workflows/reviews/template.md`](../../docs/user/workflows/reviews/template.md)，核对 UI 与 Agent/MCP 两条路径。
+
+默认主流程还会生成五个 `outputs/representative/<family>/` 配对。必须分别用新 Blender 进程续跑同一个报告；最后一次才会把 `REP-SAVE-REOPEN-PREP` 从 `prepared` 改为 `passed`：
+
+```powershell
+$families = "molecular", "trajectory", "biological", "crystal", "grid"
+foreach ($family in $families) {
+  & $blender --background (Join-Path $run "outputs\representative\$family\$family.blend") `
+    --python $runner -- --examples-root $examples --run-dir $run `
+    --report (Join-Path $run "report.json") --resume `
+    --checkpoint reopen --cases REP-SAVE-REOPEN-PREP
+}
+```

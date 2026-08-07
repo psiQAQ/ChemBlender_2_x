@@ -851,6 +851,708 @@
       ]
     },
     {
+      "id": "representative-biological",
+      "blend": "outputs/representative/biological/biological.blend",
+      "sidecar": "outputs/representative/biological/biological.cbq",
+      "runtime": "ChemBlender 2.4.0 on Blender 5.1.2",
+      "provenance": "generated through public Operators from package 5555bbd3ebc6b8cc4066af78d5ffc929a70c72bae76b797a4cffded7a428e321 at runner commit 3279f79a5300547d4b7767bc9d8e270c26195253; copied byte-for-byte and cold reopened at the tracked path",
+      "cold_reopen": "passed",
+      "covers": [
+        "1D3Z 10-MODEL hierarchy and playback",
+        "APBS PQR charge, radius and inferred segment data",
+        "public biological View, selection and playback Operators"
+      ],
+      "verification": {
+        "model_frame_end": 10,
+        "biological_hierarchies": 2,
+        "missing_sidecar_arrays": 0
+      },
+      "files": [
+        {
+          "path": "outputs/representative/biological/biological.blend",
+          "bytes": 162372,
+          "sha256": "2ad663b7ebe1b125cc82f102fe7b73fa5fbc698eb39a717f7377060c5c1388db"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/01e28878696290724e6f471bb9d8fe95d1a0f41bb9172ffa6a5a10f4385ef7ad.npy",
+          "bytes": 9976,
+          "sha256": "7c1ea82a7745c40e3556f0450c7604a604cbfe7d4b37940f85d7b83cde36a60f"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/120e86a2bb8e9ca09644af87b25d2efaf89dee043d45fdb4e21df416d6469dbe.npy",
+          "bytes": 9976,
+          "sha256": "0e4a8f59e4725b00488be4f2cc33af9ac71cfd033c154b27febe5d8b556eb81a"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/1be3e3de4c6cc1a7f48132d8255db903fafb8ca87e6a461238243e3f2610938f.npy",
+          "bytes": 9976,
+          "sha256": "eddf1a3295a64f4db45621ed0280694a955bf256b795650355797b0335c327d3"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/1f96608ee84f8bd1d4ab87c2db05c5955c87fbef96f1af33fe1a7627b17ea105.npy",
+          "bytes": 29672,
+          "sha256": "00524028bcf8fa292364bc025bf7a28837df7eae0e48013ff356356e9da7cd4f"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/2dd33073bb381bc894a02e502d6c2741146fe58c5ef711049521d2afe20a42ac.npy",
+          "bytes": 8112,
+          "sha256": "cb099495f46cb251815674ce1838481412246e9d2321c64484eb584dfc48ec15"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/38789814629a0386a2890003602e409a32983d168d621a02d5d6ce3ebc7793fb.npy",
+          "bytes": 8112,
+          "sha256": "2ae80849ba5ff8e1e3728f9a5106b40a1f34b46386c1678f603a2bf7643fb020"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/3e0a7be3d757704329c801031b09803476a738fa275ba97c4c56b28a31c0ba11.npy",
+          "bytes": 29672,
+          "sha256": "bafbabf3c41a48a56963f15b650045b93374b5e032e4199d52bd5b679857a971"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/47f7c9915444cd7c7e1246a47e0f161b1ba0c8134ed22e198d6cdba012dcac2d.npy",
+          "bytes": 200,
+          "sha256": "9987c4e6899bd8021e3e414afa4de017a7ca578c3df419054cedc70dd419ea08"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/85a34167385022591c1e23923e66ff47e6ff52239161921a5b744eed25507d77.npy",
+          "bytes": 8112,
+          "sha256": "f7b72d673f4c960663808775d2c3f146c3ae6455ddf91495f5a4e19fe35b8cf9"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/96fc9f7d67114b23e5b4e256de1edc2f127e38d7b633bf4481c8fbff8c32c38d.npy",
+          "bytes": 8112,
+          "sha256": "25292944a0a9695529241342201bbb2a11bcb1aa9feb24ae00cefb5b87940aa2"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/970718742cef59a1c815362828c5f949ffb3a50542602796be441e2ab5e848d1.npy",
+          "bytes": 8112,
+          "sha256": "2ece55f3e48dea4d705af32e1a1afafc0dafabbbf37c31a09ea33a9f8a8b1156"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/a19440e24c5a90fdf20ed3e795dc46684e82ed3322403cb0c3f94cd653a81cf2.npy",
+          "bytes": 9976,
+          "sha256": "cb4abe50d3a70453058a0978c5401e2487e5a62372f52a3cb54c901be8ad643f"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/a74c96b54e18ae44a75aba441d8ef3faab092a6c493607ca56bc7a15ef0e71c5.npy",
+          "bytes": 295568,
+          "sha256": "f22e5df94b3771d4ab07041f34b056e6e64e7ff83b6dc84bb9ad32a99091056f"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/a9126bfd6d8893029fb426ad96e568c9e71acc39bd6df006445d8cdd90b1e950.npy",
+          "bytes": 24080,
+          "sha256": "3382c37abdc3a461fb18f4ab5070f69c6186dd79cb4dd2aa1af99fe54cf916ae"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/c4b459e6b21b3198eca50943fc73eb8aa1d102cf72842c51bf7fa90a8fd97d4c.npy",
+          "bytes": 9976,
+          "sha256": "d3beb9307128e379e906f3566db411e1dd9f9b6652e31575eef968032c73f1dd"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/c5bdced71024886e4bd8193c9e5a81c55cc7ba9c20e4d88dacc5bad7a3939874.npy",
+          "bytes": 9976,
+          "sha256": "7d9826ef264696563a16d20dcbc9c39ed75ee2301a45ecd4a2f953143c0ea446"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/cca0b0a20b81f993544912a8cb686e805d96b7123ec06554f440036a3af6f524.npy",
+          "bytes": 8112,
+          "sha256": "aa38ba0d432b32eea40415c50a54152a67c23ceffb572e619e5b2224f324b8bc"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/f352b001d8f6cc4a7c432e7cdbab5a06c2d0c7be0f2e447fefc65c250e9a4cec.npy",
+          "bytes": 9976,
+          "sha256": "8a6983515b909a38ba79c882ba8d084d38f353fd6214f993480cafe782385ff4"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/arrays/f8310add437134da608458004138ef0b1723d4e80c70af5d50ee1bca71e93108.npy",
+          "bytes": 8112,
+          "sha256": "02121cd581956b1eacde2182f95702c662b13e2b7c7c7b60a357c9053b095416"
+        },
+        {
+          "path": "outputs/representative/biological/biological.cbq/manifest.json",
+          "bytes": 68692,
+          "sha256": "ccbddf9be3b1badc5ad740ec2fe614fdccdc40fcb0518d8e7afefeaa8d69c851"
+        }
+      ]
+    },
+    {
+      "id": "representative-crystal",
+      "blend": "outputs/representative/crystal/crystal.blend",
+      "sidecar": "outputs/representative/crystal/crystal.cbq",
+      "runtime": "ChemBlender 2.4.0 on Blender 5.1.2",
+      "provenance": "generated through public Operators from package 5555bbd3ebc6b8cc4066af78d5ffc929a70c72bae76b797a4cffded7a428e321 at runner commit 3279f79a5300547d4b7767bc9d8e270c26195253; copied byte-for-byte and cold reopened at the tracked path",
+      "cold_reopen": "passed",
+      "covers": [
+        "COD CIF occupancy, disorder and declared symmetry",
+        "8-site and 64-site diamond POSCAR/CONTCAR structures",
+        "optional spglib unavailable boundary reported through the public UI"
+      ],
+      "verification": {
+        "structures": 3,
+        "cif_envelopes": 1,
+        "missing_sidecar_arrays": 0
+      },
+      "files": [
+        {
+          "path": "outputs/representative/crystal/crystal.blend",
+          "bytes": 172350,
+          "sha256": "40fc914c896e43013b0796093b4ced0a64df74bf825c1d8500de271c6b77c5ea"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/005c0389a80d85cb9876e9b24a67603b6f735f4f3190b23c6190d9f315a0b952.npy",
+          "bytes": 200,
+          "sha256": "7a7c45f45ad11c345a86484d9e8a8c07518ddcda0affb68023dddebbfe18e97c"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/0b30a8eb6d1f969cfedf1233c30b76c780c038a4d12021bac07bcbe940c426d4.npy",
+          "bytes": 640,
+          "sha256": "dd1ba48d0bd07269ac0c1896196036a3985a7acc2363f7e6f4dce1e1be2a9f86"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/19094ef8ddb85c06f0f5be1216a554986094df1b515c90f91d5b671f4dd87669.npy",
+          "bytes": 200,
+          "sha256": "a7fd10d74414e47c05be5f1501ac2896c9c4820d23e4c22b63f6e0a39eb72773"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/1e5d65868d56d30665e84f76c88fa2e1496af27688b14062350da39bcad6a40e.npy",
+          "bytes": 200,
+          "sha256": "20d82d884ac295ddbe12cb959bea85de47877d4b52c7d5341c6251463cd4daca"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/278a66016ca1cb0e33ee80a2bdb3d5aeca39ce007b02c681858b7cd945c9f794.npy",
+          "bytes": 1664,
+          "sha256": "12a21d5031b1fa1d3a7fc0b8f75413dc8fa9492ab9dc18dab3868f5d269e097d"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/37ba5887aace0ba7526581e330ca8db833f9c6c35b33ad114a1d4c93f7ee9890.npy",
+          "bytes": 1664,
+          "sha256": "ec3585417c3b8f95db25a779d09b7dfc1843549d367c1cbcfa866a8ca5866bac"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/8d41f96eaf65042d28fce30f48f89883d3f1be805bf321089822389677e9ab1e.npy",
+          "bytes": 1664,
+          "sha256": "ab0419dbba0f1fe669029c5b855e50a7a046a0566c610b271f4a602cf8e28c8f"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/9ec8433ffa6258ace951d11d023e9f56309044651ba38eb06833941dd4997a84.npy",
+          "bytes": 1664,
+          "sha256": "4269ec8fda7d75137dd452bd0cf3021756e14c0f40c79da1e7f138c605443903"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/a73b8b4cb60390422c253c1c40aaf5e7a323d3beab0e497bc30da994853f1b02.npy",
+          "bytes": 192,
+          "sha256": "f25f05a8ef5d6eb3ed97adedd61679b737c0a8bee6c256dfacf79611c487bc44"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/a83029de490f6bcfb51b00782f97051100c980aadcb7df5cdb4fb6a278fae0ad.npy",
+          "bytes": 640,
+          "sha256": "1ed6f8b35000eaf6c4bc3c8d4170fae95710d75fefbee96a686a7db257e5bea2"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/a8a918a5b292e42c4d0454d3ae4bd95560c6da8ba52cd1bdd506677b3ea5cd28.npy",
+          "bytes": 640,
+          "sha256": "295393258d2de25222bd33b481795990b53733c60dd935f56239df0e4d230675"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/ab8f10354364f90badee696370fe49736b57cb7d7d51dcaec33d09c1024f4e6c.npy",
+          "bytes": 320,
+          "sha256": "cb251178e79d825a10d812ab52ad442c13f3e257845d2e3a7e247821643567d4"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/cc076b963762604d71cbef824218cb7a6f55bdc5be9a89378c88634eaa813959.npy",
+          "bytes": 640,
+          "sha256": "e59dc1dc4abcdbb6428e92a71180ae5aeb2747a990654bf1608a8a94ee96b5bd"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/cc6f070c631a0b2e635a32f1b9779ff6fed89032ef2f9b8ef11a4462ad222465.npy",
+          "bytes": 640,
+          "sha256": "8797f229bcb8f91dfacf4905588b8947734e2540aff8c32445322547141abcf2"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/cdf6ef4dd304a14d910686374a0f4805dd3fc64cec9c66249695eb0348d6e7a0.npy",
+          "bytes": 1664,
+          "sha256": "3a4bd2a5dcd90010bff17054fb9723ff0bdf3fa6f397081fbc49918a1ce22958"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/d780d1809e54f6680ee372056a10e2c4fbc23938f4dd92f8aa2a927e513e4e4b.npy",
+          "bytes": 640,
+          "sha256": "9722fbf9593d60da49a6a7248ca4d436ca71b0fc22e61688f127eea2e16ee206"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/dd3ce46cc00606c9aac0f6d2d0612ea29c4fdb803fcd10adae9daf08294488d4.npy",
+          "bytes": 3200,
+          "sha256": "635ac6b8b9195faf4a28b89dbac52260bf60778a081a5855ad3a22555e84747a"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/arrays/ea87cae76bbce4659f156d353575ee5ace657f4c78815c70b42a655372c47fba.npy",
+          "bytes": 320,
+          "sha256": "ede9770aac9c258ec9bb2db6fd054eaeee436ccbf1d2b555463ef850d7435cd5"
+        },
+        {
+          "path": "outputs/representative/crystal/crystal.cbq/manifest.json",
+          "bytes": 48257,
+          "sha256": "5deffe29d3bf2fa887af3a691bbbb1e3c02034098dfe9eca2db85a934e102ca6"
+        }
+      ]
+    },
+    {
+      "id": "representative-grid",
+      "blend": "outputs/representative/grid/grid.blend",
+      "sidecar": "outputs/representative/grid/grid.cbq",
+      "runtime": "ChemBlender 2.4.0 on Blender 5.1.2",
+      "provenance": "generated through public Operators from package 5555bbd3ebc6b8cc4066af78d5ffc929a70c72bae76b797a4cffded7a428e321 at runner commit 3279f79a5300547d4b7767bc9d8e270c26195253; copied byte-for-byte and cold reopened at the tracked path",
+      "cold_reopen": "passed",
+      "covers": [
+        "64x64x64 analytic H2 density Grid3D",
+        "resolved density semantics plus Volume and signed Surface Views",
+        "four sidecar-local OpenVDB cache files"
+      ],
+      "verification": {
+        "grid_shape": [
+          64,
+          64,
+          64
+        ],
+        "volume_files": 4,
+        "volume_paths_inside_sidecar": true,
+        "missing_sidecar_arrays": 0
+      },
+      "files": [
+        {
+          "path": "outputs/representative/grid/grid.blend",
+          "bytes": 107971,
+          "sha256": "964599b7f9b57b06fad509d37c03153892fe2827efd14137b332c4d167b5758a"
+        },
+        {
+          "path": "outputs/representative/grid/grid.cbq/arrays/0605e8fae81790798be1647e081dfddfecf6da9683e3331f0ea5168239d332e9.npy",
+          "bytes": 176,
+          "sha256": "293e4fcdaa86bf886e8346a6be96199bce1d14ed2a4238cc0ed59ce41d1ea45a"
+        },
+        {
+          "path": "outputs/representative/grid/grid.cbq/arrays/6dd940a77c3fb982e2d09757e3599c38cbcf1d1c417490444cb4519a2d3784f6.npy",
+          "bytes": 2097280,
+          "sha256": "385725a8c59f80e32df3b352ec972432f6e4113d3fff57d7bc20310d775df11a"
+        },
+        {
+          "path": "outputs/representative/grid/grid.cbq/arrays/d0d15494a99d365e4a3cbd2e8563747555966139b3fdbbebf6340e862eea5d2d.npy",
+          "bytes": 144,
+          "sha256": "3afed06dabc0d9764715404234454ed2e41c4e2dc175c1f257c5e76387176491"
+        },
+        {
+          "path": "outputs/representative/grid/grid.cbq/cache/render/surface/2b3f85d01c68d3e8ddd7e8aee984d5b83a8aaefd7689964be6fc359f1b174a06.vdb",
+          "bytes": 902025,
+          "sha256": "954beb24ef7e68301a016d8c1c0411ae1ecba7a0dd6b22f066581c22640e0777"
+        },
+        {
+          "path": "outputs/representative/grid/grid.cbq/cache/render/surface/41d68b6657ad0718b3e64e969177553add684e12a49cc5788679841b65be2eb7.vdb",
+          "bytes": 902025,
+          "sha256": "6875efa0596c9d84ce87b9c077ce27b775b5760292d17a3843a5a060952730b6"
+        },
+        {
+          "path": "outputs/representative/grid/grid.cbq/cache/render/volume/24e4a0131b6e983bc092fb5192967d1ec05ca966d70be637d528ddf9f75f67ea.vdb",
+          "bytes": 902681,
+          "sha256": "468903ebdd8efbcb5d98b2a69d04a4ca7cf2a1ccd31c6553e82cf6bb86f596b8"
+        },
+        {
+          "path": "outputs/representative/grid/grid.cbq/cache/render/volume/86772fe4e5f4631409e6b1eeae41dbc75c22b7957172bc5273e4194dbf4d88da.vdb",
+          "bytes": 902661,
+          "sha256": "12f8e23f55316e28f2884147e0d53b54bc6527b7a433c099dc581861a2b025d2"
+        },
+        {
+          "path": "outputs/representative/grid/grid.cbq/manifest.json",
+          "bytes": 9309,
+          "sha256": "c0d50bcc1e29292ccf36d52bd721336b85f0817692907b9780a0e942eb6275e1"
+        }
+      ]
+    },
+    {
+      "id": "representative-molecular",
+      "blend": "outputs/representative/molecular/molecular.blend",
+      "sidecar": "outputs/representative/molecular/molecular.cbq",
+      "runtime": "ChemBlender 2.4.0 on Blender 5.1.2",
+      "provenance": "generated through public Operators from package 5555bbd3ebc6b8cc4066af78d5ffc929a70c72bae76b797a4cffded7a428e321 at runner commit 3279f79a5300547d4b7767bc9d8e270c26195253; copied byte-for-byte and cold reopened at the tracked path",
+      "cold_reopen": "passed",
+      "covers": [
+        "CJSON, MOL V2000/V3000, MOL2, QCSchema, SDF, SMILES and XYZ imports",
+        "Structure, TopologyRecord, MolecularRecord and property entities",
+        "eight saved public default Views"
+      ],
+      "verification": {
+        "structures": 10,
+        "topology_records": 12,
+        "views": 8,
+        "missing_sidecar_arrays": 0
+      },
+      "files": [
+        {
+          "path": "outputs/representative/molecular/molecular.blend",
+          "bytes": 285732,
+          "sha256": "4d1325b8a8d59837f9661b8871ecaa5fd7ff349c44384f8f89967616916aeaff"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/023d5d8fd7b47752b1ac0250e057b044d9fe11f0a3ee508001046e18d2da6c55.npy",
+          "bytes": 200,
+          "sha256": "45bf5bd8569776b5ac12225ac326ec1ca7173ba59ec6753b1796ff3589b25f71"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/055d1c6d79aa6392971d1ab01444db84798202af16420700f273569c5af63ecb.npy",
+          "bytes": 136,
+          "sha256": "e76e56c9288dc32b58dcb98b7f7b6c6322693864b39ff7b641e84c30fdbb2a12"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/087b272a7dc8f6b276996175eaf5ddd3cf34164aec06b2bbaaabe29ac7885617.npy",
+          "bytes": 149,
+          "sha256": "62afd66aead24f2e184b863dbd437381d95e09eabad69271fcb7a832ce0495e9"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/0f05bdda2ec6b64c0f1cbc786febf18523b23c0cb351746d4fe16a4907d2dcb2.npy",
+          "bytes": 136,
+          "sha256": "583bf80dd58a8236f42dbda83293a9bb1614ee7b6bb58a895e6207c2f586310d"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/15a61c36e62ad43f722a1a5ca7a4fa47b5587f955f953f6f92fa71a538fbcc40.npy",
+          "bytes": 296,
+          "sha256": "48d38e46c942cd3170e067d740aef19f046c4f53d650eb2d82dcb7fdc03a9c3f"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/1ba6d0c754d00c0c289a60ee476467c04b89518fccd5af53484342c42a2e7cb8.npy",
+          "bytes": 296,
+          "sha256": "d54f83a96d6faf1ef8eaf6b4352ce0ccd93a5a89b863717f4ac834c9c1f97d44"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/1c791b5e4e977df3e14624a80d825ba53c5b313d8d9547acabd66a41717ebe2b.npy",
+          "bytes": 632,
+          "sha256": "3a26a135e578ad3ae005badc9592e9e3493b7ad007ac61b1d79223124d0cf2ff"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/21361591bafb72dd338cdd52e3b65eb30d9ddc4c1f5301715a8220be82623700.npy",
+          "bytes": 49608,
+          "sha256": "5d408a4d280321fa8a6225c516592b8ddddab44a1afe91fa89c879368aefe548"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/23ccd131ce73c7868c30b701d05acd7442491ee71985c802572d67f616638288.npy",
+          "bytes": 320,
+          "sha256": "03f5b6f1ac6db7bfc13e3c50bcf2da515c77cfe836922c99b864312b17f7b74e"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/2b0e3050a75f606e64ae421ffc3d135086f3a03308c9ea343e0b6d29d911f499.npy",
+          "bytes": 1216,
+          "sha256": "d97a41023cccff8e2e9eba000ce8e1b376b191756f146f301bc1f91981ccc18f"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/2d11a3bf4e63e23578b954b9bc7f4af010853c4877fa182f19ef7b06bde9b10a.npy",
+          "bytes": 528,
+          "sha256": "a8bcf0c6c095c1259722a41693b0d67ea833c96d2f3c22e5c7025dee58c33e43"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/2e3b1b5a60b52108309ca0274d006cbef217c89a1fc622495884e3eddd9716a1.npy",
+          "bytes": 136,
+          "sha256": "f44ebf442f8b5e4e27344af3ee8fb55b6224f8d22f04f99a8a36fc7de62d9427"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/36842198ab0b631c3936f71277898491521c9594fe9dbeb67bbf10d3b4aa9b39.npy",
+          "bytes": 1080,
+          "sha256": "50d1c2b6c4c0c3e0410ddb553a374339d449bd200120ed2f8fda0518b5ce832c"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/386909dd9e8bce1c03bc4d8f9d70e5fd4e30822b28740fd8f6ccce813dfcc267.npy",
+          "bytes": 49608,
+          "sha256": "b4324d940526ef6978142996367b5da6070b02f683030bbc2f6ec2aff680c4a2"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/3e2a8adf5acf6579790c5df54924d47660c0404325319bd7345ed5b265221504.npy",
+          "bytes": 672,
+          "sha256": "15778644df55ad7c6d087bed686cef3f7371402389be25660ad5104f58a6c8f4"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/41e76996ff0acc20ed025762e6ab3f94debc091da46abb3ec5ac6a43e1c2dbca.npy",
+          "bytes": 296,
+          "sha256": "23b695331f8a97987b41695ce8489b98f721b22ddbc6ab39a45caeee03acb369"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/422c2fd4fc08037cf75f32b129cfd7a4aa8dd6cdcf82a0ab48ad5b2115d04ed5.npy",
+          "bytes": 296,
+          "sha256": "6bf67ce6b4389896646c780579d83a2ab4b6c39312d22571fef9d85d2087a625"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/4993f10bb22fe3420f70d0d0e2b514b3c8ea28e54ae6bc434a86af8309e7b612.npy",
+          "bytes": 584,
+          "sha256": "e3a6acb65fa0b6f0782ecb3c9fc297e12c7fd4030b0ffca87c3fcd89541674da"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/4b5568e42ac926145c0ba62cb8a973e0954cdf59b852cd94c46b5390ce7961a7.npy",
+          "bytes": 200,
+          "sha256": "544f50e84fde6f451c2ef8a681da7bff7684bde1b77c8f1c9b46681d0ba737b6"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/4c95464411a27ad7aa7b546124cdff17efb1abf4b2204520c63f0ee3b348e5a0.npy",
+          "bytes": 185,
+          "sha256": "6b070404353f194284f0e4c6bbc22fc9f2dfb6fae164abd89715b0bf627567f5"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/506f2c2c9e4d82c26139b87d8487c1832dcc7e8ac9021d45ba71ad9e82702df4.npy",
+          "bytes": 672,
+          "sha256": "c8ac6cb25ebb59289d06e942d410486cb31211843ff784fdb34e79d4ae991297"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/547d473e49568f257e38e7e8fd9fd0ebd7cb6ba720aab57558c8d93bb5d25732.npy",
+          "bytes": 153,
+          "sha256": "58e6185093a55a97622a24b9e96a08dac76fa99d890451443de89e755cf1c3ab"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/54b175c1628cd34cf7fef9856cb0610d4e144b11f308d8fccea075d1ef3e140c.npy",
+          "bytes": 153,
+          "sha256": "4f7307a460c286ece3b7766748d181dd56626947eaa9e78ad4722d9e0f8395c5"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/5ba05778a203050a6c27c52e4472e9e6151f8957a561ae6e701fd4d91c3cda6f.npy",
+          "bytes": 1216,
+          "sha256": "d76ef85dec84df51ea217abbc737994b812a7cf68bf9ae2f2a09a8c6fe7eaea0"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/64b3f400d52b545e8160b2e5fb52074dfd17b821a752ad96c14fe76bdb66eb70.npy",
+          "bytes": 1032,
+          "sha256": "c79d1ec4008e888972c9a4617fb3123e6ee2a5838d42c7d5327c836ce2d71481"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/718df85c93631bd64289ae98502efbdd994c02fa6be2ea35f4bf643dad7c3388.npy",
+          "bytes": 49608,
+          "sha256": "b47f58831e0a77aba4e1561dd2f9780d96c6830ab8ffb6fd0a0633a87e41451d"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/786fe983a5521880139f5a88285e5a5cf94434d6b2cb230d2d615e820ca5b189.npy",
+          "bytes": 136,
+          "sha256": "7b9d65f6717a0911c1cdf1cc680cb167f2ef1395be2db8ca2065cb2bd8a0a8f4"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/85851dc06ccf93b0fbcac4e1b1e1346d6cc3db2f9f387870ce346a8e0f071933.npy",
+          "bytes": 624,
+          "sha256": "68661ac985613a9a186488d23ce2f68af42a12a417df1e31ce04bf6d0d2bca21"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/85f00743a4814c7302b264186772953e316794d39590c7b9f183c74be4066abb.npy",
+          "bytes": 1496,
+          "sha256": "ee9c53fa60ef020e2f32c6c01a59fc611db90ce6611661e241d2d8264fd43ec9"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/88b34a08030ca089633156fdcce52bbb794bcc7dcf368464dc0686aa2738abf9.npy",
+          "bytes": 49608,
+          "sha256": "d59e0ab8b9aa083781d280aa9cb9402541c79107bb9c05c593195701574a736b"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/95174fe9ddbb8432d542473e80fc26a8a5ddfdc043aa08a5e50887ae1a5bf338.npy",
+          "bytes": 136,
+          "sha256": "f27d13ff7b80546666bd500db581ba2f58d69518d3be4491ed2721fb94e1ad9b"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/983e44b58511552114bc6784eb3ce50fe4779bad2fc6c16f946f2607fd12b16e.npy",
+          "bytes": 247,
+          "sha256": "95d850e42ed6156a26aae815b9b02315866cbc1e1bcf806d3d936edb9f680926"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/a38a972e88b2c4913272989ddbe78c142bd741376da1cf2753b38d948a65b499.npy",
+          "bytes": 2840,
+          "sha256": "8086c0f70fd22c2425869a0d9760aa1a5173865bd7a2146d5ec44d5a58e6f5c6"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/acce57382127d90b38841291749a5cb6d218e2b8595b456ea21a14d1158252c8.npy",
+          "bytes": 148568,
+          "sha256": "0db70b2e83497626d425568e2601e860dd79e40aeeee923c5f1192e7779900e3"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/ad13cd3de7fa3e5dbece62beb3dae774b57ebb9b0c1d0f0802fd734a7dcfda02.npy",
+          "bytes": 49608,
+          "sha256": "186893c73295c7bbb203b5c6927540847f58ae9c7d362828a373399cfa32349b"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/ad8ffaa836bff99783c803d848ec275fa11d6798b5cd6aecafe8a804bfba4a63.npy",
+          "bytes": 296,
+          "sha256": "b20209f648293d81ff9bfbafb7124ab7e80065761748d52120e23fc57fe1f815"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/b3f93c8495ae76e77cbb7aa6a68626584a983d8f47c9f2fdb3b9ad83350b73d5.npy",
+          "bytes": 136,
+          "sha256": "5268c003b3c2a749f59d0daff9aab32b4d5cd85a7b978720bfe86a728446bacd"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/b6aa45ec3f8a592d1975be27f4776c4e5c9af7c95119ac32b4d3ccaf2c9a6455.npy",
+          "bytes": 136,
+          "sha256": "86f40ad4e0cc9edc07d7ca4b8c82196acf0a8396f92124df4901d20ff0d2a894"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/bfbded8da9660afb1e6034a1c1d733fbbc7fca5649bf1e297584b7357b9dcde6.npy",
+          "bytes": 2032,
+          "sha256": "84c3649b46c892646539badc112f36c3c1dac71793c04b626feaceed5a1ae615"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/c307f9a1901a456f1527f41307ce7d3f969f21e666c2e19357e5a10a77fbf2a4.npy",
+          "bytes": 49608,
+          "sha256": "ba6ff91f5815912c3baefed4d7cfbdeda4db330b789f971bcd7092ccd686c619"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/c7b5a9efdeee48648adc9e50461c69f6ca7d5ad46cce7a2d207fabc282878392.npy",
+          "bytes": 704,
+          "sha256": "2ac26fed04a0da8e023175616daf2079388f19ab10495839e8cf76a257324a28"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/c81ce7040bf34783dcf05abc8f5d868c1ead6014111f3ab226269f6c4488beb4.npy",
+          "bytes": 320,
+          "sha256": "15feb70d3ba059d4f8bc4cf46d1178f1b36cd66e39ae46690ca635ce610db567"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/c82ae18345ff2ab35bc783b44db04f51819ab9f16e2244c4c999f5f2792673b8.npy",
+          "bytes": 328,
+          "sha256": "4bdbe709f2357462c750cb993de2aa812a254a7b086cc7b4e4e1e242b6749d0b"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/c863cf781e9b7f9d7bb28e34dee146c909dec357aeaf60ebf6088a05387f609b.npy",
+          "bytes": 1080,
+          "sha256": "e124ac011fb43ca1f457aa9b4982e42b880dac4f53048d01f2adb165c5d08c0b"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/ca4773109af1a28edbe9a0c65dd0a8613c44ac477de05cb546d3d3310bca519c.npy",
+          "bytes": 136,
+          "sha256": "671ba8e6f941ae3f4c2f78a8daed09806cc89b6c09cfbd6223a85b657b0cf9b3"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/cba0cf4f58ba17330f2545ecccbda919cda08bac5266ba92a5e7073f94c0bd4f.npy",
+          "bytes": 464,
+          "sha256": "0c6cc226e060237a1ba6c37a69cce6299e19f43a1ea1184a5cbb44107540602e"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/cfb15e8c50eea4aca9c8305ffae92a9f379de7a40bdc21fcfd059934ff9f9bbc.npy",
+          "bytes": 328,
+          "sha256": "7d27daa08711ed7feab8ff0da1d06e781fe6db4ffde443383dda8c670cb62383"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/d1cfebfc57165d5e3df924877834b380a622a41aa59add7af9f884968dbfb3ea.npy",
+          "bytes": 149,
+          "sha256": "65faafe2971bf48cbedc70271672804b2bf7721c5b89578d11c2152adde41fac"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/d4287f672b3cced71322764c9d317c884b75d7c746531e89ce295f9380445602.npy",
+          "bytes": 1616,
+          "sha256": "05806667825f82f42bac85bf601be49e3789a6016bddb5f404fd60b3229ee017"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/d8ee0769150375ffc3121fcee96d3ed5468615b3cda0c3f242ea4b2515d2a138.npy",
+          "bytes": 296,
+          "sha256": "9f295630b4142eea4c926dc6eb8fc07caf4c773152b12af3e95ecb16dca5eaca"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/dcb10e3ff1e50d126c53de8db809020f98988f8d728ef3de1499503c971113b1.npy",
+          "bytes": 320,
+          "sha256": "b1a8a64f5117da6ba7e6912dc839bb45b46169756d3f2e65d363c868d1ac5b8d"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/dd882825b8166102b001924742ceb76783f62d8198075d50059453a0a12c051c.npy",
+          "bytes": 196,
+          "sha256": "d64f21160f7979f3c1570d307fcb72eb218408ccefc5b423a4ffabd3625c5d8a"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/de8c893b12c70732cad92bb3abfa2b24e78fe44e9e156af8cbc286e40d1cd696.npy",
+          "bytes": 1032,
+          "sha256": "5a33fb793e97271fc46e51315929cb866b1aeea4d5386cd865824d44cf9ca18f"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/e154cd50aa479f418af2227f89c1da21e465fd603f74cb67de032b77fe1e1d51.npy",
+          "bytes": 624,
+          "sha256": "fcf782c27b21bdb1171286ef0ec8db351d951b5c2bba79006e1bf9b03149732e"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/e5f2cf9b221b296ea0867504d84419f54648a9bc7838c05588f96bc0b78bcee1.npy",
+          "bytes": 152,
+          "sha256": "3d0fdafdbb687757969a4d586620a01e09e6d77ec3a35d4e6e69c4cc249f2887"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/e9db352793c70b25b8fc7a660d64bb41672fe607c512debca4fef1789f04114e.npy",
+          "bytes": 1032,
+          "sha256": "0586770a41486e3ea29df6c9bbc9abb11765cfe4ec2897ad4e066f6360ead08f"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/f03d587d35d1c6d603605ae1d54e739ee1ff1ceb8cd721c7f96ba115460c5d4c.npy",
+          "bytes": 247,
+          "sha256": "75c22481deba70eb971970c20596fb42aacb3d9026005084d2441ff875e9dbac"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/f2ac33fae7a41f6ba3d51e43db5d449265c527fb075bdbd7149e96efead06cce.npy",
+          "bytes": 49608,
+          "sha256": "49876031ac09b748430aec395d12f24a4dc8abc3986db3011149423d98a356ca"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/arrays/f673c5543e2e1d7dbac84ae3fed99f9abe20766476f8d8a9c339f14f1233e6a9.npy",
+          "bytes": 624,
+          "sha256": "7fa207afda0e52b7478c08afbc771880cbf2858b05c42febd5f2beec37e46fff"
+        },
+        {
+          "path": "outputs/representative/molecular/molecular.cbq/manifest.json",
+          "bytes": 1185814,
+          "sha256": "db74de042ae879b0d5161ec0f7573bfcb360318321db991171bc24ba7ae849da"
+        }
+      ]
+    },
+    {
+      "id": "representative-trajectory",
+      "blend": "outputs/representative/trajectory/trajectory.blend",
+      "sidecar": "outputs/representative/trajectory/trajectory.cbq",
+      "runtime": "ChemBlender 2.4.0 on Blender 5.1.2",
+      "provenance": "generated through public Operators from package 5555bbd3ebc6b8cc4066af78d5ffc929a70c72bae76b797a4cffded7a428e321 at runner commit 3279f79a5300547d4b7767bc9d8e270c26195253; copied byte-for-byte and cold reopened at the tracked path",
+      "cold_reopen": "passed",
+      "covers": [
+        "32-frame 21-atom rMD17 aspirin trajectory",
+        "energy, force and source-index properties",
+        "public trajectory playback with observed coordinate change"
+      ],
+      "verification": {
+        "frames": 32,
+        "atoms": 21,
+        "coordinates_changed": true,
+        "missing_sidecar_arrays": 0
+      },
+      "files": [
+        {
+          "path": "outputs/representative/trajectory/trajectory.blend",
+          "bytes": 165756,
+          "sha256": "9e0ebe2a7dfd00aeee8d6820c114dbc53c4b15390d985c176b1829d2c0bee618"
+        },
+        {
+          "path": "outputs/representative/trajectory/trajectory.cbq/arrays/2fdff7b81305d6b6a5d4d199ccf158dd3b9d1ee4f336f73d82c5de76fa38dfa6.npy",
+          "bytes": 16256,
+          "sha256": "8f10296e74acc2ad344d092f940925834b72887257c799dc065199485775cdd8"
+        },
+        {
+          "path": "outputs/representative/trajectory/trajectory.cbq/arrays/56a5f3d4561912a6fbbcf10fe1a8b4cc13a9a2736b7dcf3bbbf1c8fe3bd67934.npy",
+          "bytes": 384,
+          "sha256": "af4dddb5f8f58448629aa6d23e53670780701c51ebee07de28d6b816dd34cfc7"
+        },
+        {
+          "path": "outputs/representative/trajectory/trajectory.cbq/arrays/67eeca04c914418d3592572e1633b02fc562e8ec9b9733ac08370a50fd42c231.npy",
+          "bytes": 384,
+          "sha256": "63b64a8870e5f6b80aae56638d2356621f5c072f36864ddf19d5ac404306eca4"
+        },
+        {
+          "path": "outputs/representative/trajectory/trajectory.cbq/arrays/958c11cdef16c144f473738c69954220d245cdcb43680354207620c7bd051ac4.npy",
+          "bytes": 16256,
+          "sha256": "6a468393500226bf0f8124f57763cea0fdaf5458028799a7667d69695c096b13"
+        },
+        {
+          "path": "outputs/representative/trajectory/trajectory.cbq/arrays/c3b30ab248824277143fb54a6eb3d41f71bc26f7fe57c2742955b1ee7316548f.npy",
+          "bytes": 632,
+          "sha256": "a5e2d95c5a6452a782b429d8b78455eb2770ff1286525eb3131a0a3b9d299277"
+        },
+        {
+          "path": "outputs/representative/trajectory/trajectory.cbq/arrays/cb4ceebf75cc56040362c7789b6897b33bdd9249d79bdb643cf6120c4729e8fc.npy",
+          "bytes": 384,
+          "sha256": "2cdae1a70f259d0f482a31f5c498dc632960cc37da9eb8ef0f3a7d07913734a2"
+        },
+        {
+          "path": "outputs/representative/trajectory/trajectory.cbq/manifest.json",
+          "bytes": 14305,
+          "sha256": "15e934a68220d809cf3c0d9c5af7f3bfda14ba08b093bcc0779cde2258b692f6"
+        }
+      ]
+    },
+    {
       "id": "workflow-project",
       "blend": "outputs/workflow-project/workflow.blend",
       "sidecar": "outputs/workflow-project/workflow.cbq",

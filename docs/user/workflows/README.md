@@ -55,7 +55,7 @@
 8. [格式与支持范围](formats.md)
 9. [人工插件使用体验检阅](reviews/README.md)
 
-细节事实仍以现有的 [Quick Import](../quick-import.md)、[Project Browser](../project-browser.md)、[数据质量](../data-quality.md)、[科学编辑](../scientific-editing.md)和[项目 sidecar](../project-sidecar.md)指南为准。教程输入集中在[用户流程样例目录](../../../examples/user-workflows/README.md)，输入文件不要原地覆盖；本轮 Blender 5.1 实测结果见 [`local-2.4.0.json`](../../../examples/user-workflows/results/local-2.4.0.json)。
+细节事实仍以现有的 [Quick Import](../quick-import.md)、[Project Browser](../project-browser.md)、[数据质量](../data-quality.md)、[科学编辑](../scientific-editing.md)和[项目 sidecar](../project-sidecar.md)指南为准。教程输入集中在[用户流程样例目录](../../../examples/user-workflows/README.md)，输入文件不要原地覆盖；基础流程实测见 [`local-2.4.0.json`](../../../examples/user-workflows/results/local-2.4.0.json)，代表样例实测见 [`local-representative-2.4.0.json`](../../../examples/user-workflows/results/local-representative-2.4.0.json)。
 
 ## 开始前
 
