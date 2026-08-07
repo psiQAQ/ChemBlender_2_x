@@ -32,6 +32,7 @@ from .readers import (
 ADAPTER_VERSION = "0.1.0"
 _IDENTITY_NAMESPACE = UUID("ea4359f7-6844-421b-9bc4-d76398113d70")
 _SUPPORTED_RESULTS = {
+    ("qc_schema_output", 1),
     ("qcschema_output", 1),
     ("qcschema_atomic_result", 2),
 }

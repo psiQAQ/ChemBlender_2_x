@@ -47,6 +47,18 @@ class QCSchemaAdapterTests(unittest.TestCase):
         self.assertEqual(len(batch.qcschema_envelopes), 1)
         self.assertEqual(batch.report.issues, ())
 
+    def test_v1_import_accepts_the_official_qc_schema_output_identifier(self):
+        document = json.loads(
+            (FIXTURES / "atomic_result_v1.json").read_text(encoding="utf-8")
+        )
+        document["schema_name"] = "qc_schema_output"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "official-v1.json"
+            path.write_text(json.dumps(document), encoding="utf-8")
+            batch = parse_qcschema_atomic_result(path)
+        self.assertEqual(batch.qcschema_envelopes[0].schema_name, "qc_schema_output")
+        self.assertEqual(batch.calculations[0].metadata.driver, "energy")
+
     def test_v2_import_uses_input_specification_and_result_molecule(self):
         batch = self.parse("atomic_result_v2.json")
 
