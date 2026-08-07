@@ -32,13 +32,13 @@ ChemBlender 2.4.0 创建 21-atom Structure、32-frame FrameSet、`atomic_force` 
 ## 操作流程
 
 1. 导入 [`aspirin-rmd17-32.extxyz`](aspirin-rmd17-32.extxyz)，在 Preview 核对 frames、units、energy/force 和 source index。
-2. 确认后创建 Structure View，播放 32 帧并抽查第 0、15、31 帧。
+2. 确认后在 Project Browser 选中 FrameSet，激活匹配的 Structure View，运行 `Configure Trajectory Playback`，再抽查第 0、15、31 帧。
 3. 选择 property 显示或导出 extXYZ，确认 32 帧与单位没有丢失。
 
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz 的绝对路径。只使用公开 bpy.ops.chemblender.* 和 UI RNA。报告 Preview 的 32 帧、21 atoms/frame、energy=electron_volt、atomic_force=electron_volt_per_angstrom、step/source_index 与诊断；经我确认再调用 bpy.ops.chemblender.confirm_import。创建 Structure View 后用公开时间轴检查第 0、15、31 帧，不能把子集说成独立训练集。任何有损导出停在确认边界。保存相邻 .blend/.cbq 并报告大小。
+通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz 的绝对路径。只使用公开 bpy.ops.chemblender.* 和 UI RNA。报告 Preview 的 32 帧、21 atoms/frame、energy=electron_volt、atomic_force=electron_volt_per_angstrom、step/source_index 与诊断；经我确认再调用 bpy.ops.chemblender.confirm_import。选中 FrameSet、激活匹配 Structure View，再调用 bpy.ops.chemblender.configure_trajectory_playback，然后用公开时间轴检查第 0、15、31 帧，不能把子集说成独立训练集。任何有损导出停在确认边界。保存相邻 .blend/.cbq 并报告大小。
 ```
 
 ## 完整性与验证

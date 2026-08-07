@@ -425,6 +425,7 @@ class UserWorkflowContractTests(unittest.TestCase):
             "derive_crystal_symmetry",
             "create_biological_view",
             "play_biological_models",
+            "configure_trajectory_playback",
             "select_biological_atoms",
             "resolve_grid_semantics",
             "create_grid_view",

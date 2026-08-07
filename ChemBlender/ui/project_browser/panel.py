@@ -71,6 +71,7 @@ _topology = importlib.import_module("..topology", __package__)
 _biological = importlib.import_module("..biological", __package__)
 _diagnostics = importlib.import_module("..diagnostics", __package__)
 _grid = importlib.import_module("..grid", __package__)
+_trajectory_view = importlib.import_module("...trajectory_view", __package__)
 
 
 _MODE_ITEMS = tuple(
@@ -930,6 +931,52 @@ class CHEMBLENDER_OT_apply_frame_force(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class CHEMBLENDER_OT_configure_trajectory_playback(bpy.types.Operator):
+    bl_idname = "chemblender.configure_trajectory_playback"
+    bl_label = "Configure Trajectory Playback"
+    bl_description = "Bind the selected FrameSet to the active Structure view"
+
+    frame_start: IntProperty(name="Start Frame", default=1)
+    frame_step: IntProperty(name="Frame Step", default=1, min=1)
+
+    def execute(self, context):
+        session = get_scene_session(context.scene)
+        obj = context.active_object
+        if obj is None and session.active_view_object_name:
+            obj = context.scene.objects.get(session.active_view_object_name)
+        try:
+            frames = session.project.datasets.get(session.active_entity_id)
+            if not isinstance(frames, FrameSet):
+                raise ValueError("select a FrameSet")
+            structure = session.project.structures.get(frames.structure_id)
+            if not isinstance(structure, Structure):
+                raise ValueError("selected FrameSet has no current Structure")
+            if (
+                obj is None
+                or obj.get("cb_structure_contract") != "structure_view_v1"
+                or obj.get("cb_structure_id") != str(structure.id)
+                or obj.get("cb_structure_revision") != structure.revision
+            ):
+                raise ValueError(
+                    "active object is not the current matching Structure view"
+                )
+            _trajectory_view.register()
+            _trajectory_view.configure_trajectory_view(
+                obj,
+                frames,
+                frame_start=self.frame_start,
+                frame_step=self.frame_step,
+            )
+            context.scene.frame_end = self.frame_start + (
+                frames.data.shape[0] - 1
+            ) * self.frame_step
+        except (AttributeError, RuntimeError, TypeError, ValueError) as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        session.active_view_object_name = obj.name
+        return {"FINISHED"}
+
+
 def presentation_view_records(scene):
     records = []
     seen = set()
@@ -1045,6 +1092,17 @@ def draw_substructure_controls(layout, dataset, settings):
         icon="RESTRICT_SELECT_OFF",
     )
     action.category_code = code
+
+
+def draw_trajectory_controls(layout, dataset):
+    if not isinstance(dataset, FrameSet):
+        return
+    box = layout.box()
+    box.label(text=f"Trajectory: {dataset.data.shape[0]} frame(s)")
+    box.operator(
+        CHEMBLENDER_OT_configure_trajectory_playback.bl_idname,
+        icon="PLAY",
+    )
 
 
 def _copy_rows(collection, rows):
@@ -1387,6 +1445,7 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
                     CHEMBLENDER_OT_apply_frame_force.bl_idname,
                     icon="FORCE_FORCE",
                 )
+            draw_trajectory_controls(layout, selected)
             draw_substructure_controls(layout, selected, settings)
             _biological.draw_biological_controls(
                 layout,
@@ -1545,6 +1604,7 @@ def unregister():
 __all__ = (
     "CHEMBLENDER_OT_apply_frame_force",
     "CHEMBLENDER_OT_apply_substructure_category",
+    "CHEMBLENDER_OT_configure_trajectory_playback",
     "CHEMBLENDER_OT_project_browser_page",
     "CHEMBLENDER_PG_project_browser",
     "CHEMBLENDER_PG_project_browser_row",
@@ -1553,6 +1613,7 @@ __all__ = (
     "presentation_view_records",
     "refresh_project_browser",
     "draw_substructure_controls",
+    "draw_trajectory_controls",
     "substructure_category",
     "synchronize_browser_selection",
 )

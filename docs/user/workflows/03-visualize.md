@@ -43,9 +43,9 @@ Project 中的 Structure、Grid3D、属性和结果是科学实体；Blender Obj
 
 ### trajectory 与 MODEL playback
 
-1. 选中 extXYZ FrameSet 或 PDB multi-model 数据对应的 View。
+1. extXYZ 在 Project Browser 选中 `FrameSet`，并激活同一 Structure 的 View；PDB multi-model 选中对应的 biological Structure/View。
 2. 核对 frame/model count 与起止帧。
-3. PDB 使用 `Configure MODEL Playback`。播放时观察几何变化，并确认 Project Browser 中仍是同一 source revision。
+3. extXYZ 使用 `Configure Trajectory Playback`；PDB 使用 `Configure MODEL Playback`。播放时观察几何变化，并确认 Project Browser 中仍是同一 source revision。
 
 ### 缓存重建
 
@@ -89,7 +89,7 @@ ChemBlender 自有的 Volume/Surface cache 位于 sidecar 的 derived cache 范�
 ### trajectory / MODEL playback
 
 ```text
-使用当前 Blender MCP 导入 `examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz`；生物 MODEL 可按同一公开流程改用 `examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb`。检查所有导入和 playback Operator RNA，走 `bpy.ops.chemblender.quick_import`/`confirm_import` confirmation；先报告 32x21 trajectory、energy/force/source_index，或 1D3Z 的 10x1231 MODEL 与 hierarchy。调用 live playback Operator 后验证帧变化但 source revision 不变。不得 import private modules、修改 `.cbq` 或 bypass confirmation。
+使用当前 Blender MCP 导入 `examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz`；生物 MODEL 可按同一公开流程改用 `examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb`。检查所有导入和 playback Operator RNA，走 `bpy.ops.chemblender.quick_import`/`confirm_import` confirmation；先报告 32x21 trajectory、energy/force/source_index，或 1D3Z 的 10x1231 MODEL 与 hierarchy。extXYZ 选中 FrameSet、激活匹配 Structure View 后调用 `bpy.ops.chemblender.configure_trajectory_playback`；PDB 调用 `bpy.ops.chemblender.play_biological_models`。验证帧变化但 source revision 不变。不得 import private modules、修改 `.cbq` 或 bypass confirmation。
 ```
 
 ### 冷重开后的缓存重建

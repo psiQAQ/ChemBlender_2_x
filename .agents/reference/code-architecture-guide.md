@@ -81,6 +81,8 @@ ChemBlender/ Blender adapters、Geometry Nodes、材质、动画和 UI
 | `ChemBlender/legacy/reader_bridge.py` | `file_import_request()`、`smiles_import_request()`、`stage_pubchem_import()`、`verified_pubchem_parameters()`、`attach_verified_pubchem_provenance()` | legacy File/SMILES/PubChem 控件的 Blender-neutral import bridge。File/SMILES 只构造共享 `ImportRequest`；PubChem 把 SDF 写入对应 `ProjectSession` 的临时根和同 token metadata。host 每次附加 provenance 前复验当前 session ownership marker、非链接 `legacy-pubchem` root、严格 CID URL、metadata owner/hash 与实际文件 SHA-256；随后以 URL、实际 SHA-256、reader/source identity 生成确定性既有 `ProvenanceRecord`，并同步完整 `SourceRevision.created_entity_ids` 与 parser report。篡改或越界以 `legacy.pubchem_untrusted` fail closed。网络或协议失败转换为受控 import diagnostic，不在 UI 中解析 SDF。 |
 | `ChemBlender/legacy/scaffold_bridge.py` | `route_legacy_export()`、`route_legacy_scientific_edit()`、`is_unified_structure_view()`、`legacy_scaffold_write_blocked()` | legacy scaffold 控件到统一 Project Browser export、Scientific Edit 与 Structure View contract 的窄映射；保留旧 operator ID/标签，不创建或解释科学数据。统一 Structure View 上该 guard 拒绝 legacy scaffold 直写并要求 Apply Scientific Edits。 |
 
+`ChemBlender/ui/project_browser/panel.py` 还公开 `CHEMBLENDER_OT_configure_trajectory_playback`：仅当 Project Browser 选中 `FrameSet` 且 active object 是当前 revision 的匹配 Structure View 时，才复用 `trajectory_view` 绑定时间轴；它不修改 source revision 或科学数组。
+
 ## 传统分子与晶体建模层
 
 这组模块直接操作 `bpy`、BMesh、RDKit 和既有 Geometry Nodes，是原 ChemBlender 结构编辑功能的主体。

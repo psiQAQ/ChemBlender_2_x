@@ -629,6 +629,7 @@ def _case_env(context):
         "derive_crystal_symmetry",
         "create_biological_view",
         "play_biological_models",
+        "configure_trajectory_playback",
         "select_biological_atoms",
         "resolve_grid_semantics",
         "create_grid_view",
@@ -1119,12 +1120,19 @@ def _case_rep_trajectory(context):
     imports = _import_representative_inputs(context, "REP-TRAJECTORY")
     rows = context.rows()
     structure = context.remember("rep_trajectory_structure", rows, "structure")
-    context.remember("rep_trajectory_frames", rows, "frame_set")
-    context.select(structure["entity_id"])
-    view = _active_mesh()
+    frames = context.remember("rep_trajectory_frames", rows, "frame_set")
+    context.select(frames["entity_id"])
+    view = context.activate_structure_view(structure["entity_id"])
     if len(view.data.vertices) != 21:
         raise RuntimeError(f"rMD17 aspirin View has {len(view.data.vertices)} atoms, expected 21")
     context.current["stage"] = "public timeline playback"
+    playback = context.call_chem(
+        "configure_trajectory_playback",
+        frame_start=1,
+        frame_step=1,
+    )
+    if not _finished(playback):
+        raise RuntimeError("rMD17 trajectory playback did not configure")
     bpy.context.scene.frame_set(1)
     first = _mesh_coordinates(view)
     bpy.context.scene.frame_set(32)

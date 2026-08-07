@@ -33,13 +33,13 @@ ChemBlender 2.4.0 把兼容帧组成 FrameSet，并保留逐帧 cell/PBC 属性�
 ## 操作流程
 
 1. 导入 [`carbon-trajectory.extxyz`](carbon-trajectory.extxyz)，核对 Preview 显示 2 帧和变化晶胞。
-2. 确认后创建 Structure View，通过时间轴查看位置和 cell frame property。
+2. 确认后在 Project Browser 选中 FrameSet，激活匹配的 Structure View，运行 `Configure Trajectory Playback`，再查看位置和 cell frame property。
 3. 导出 extXYZ 时检查帧数、cell/PBC 和 property schema。
 
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz 的绝对路径。只用公开 bpy.ops.chemblender.* 和 UI RNA。报告 Preview 的 2 帧、每帧 1 个 C、两个晶胞、PBC、FrameSet 和所有诊断，等我确认后再调用 bpy.ops.chemblender.confirm_import。用公开时间轴/RNA切换两帧，不访问私有项目状态。导出前显示 loss preview；保存相邻 .blend/.cbq。
+通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz 的绝对路径。只用公开 bpy.ops.chemblender.* 和 UI RNA。报告 Preview 的 2 帧、每帧 1 个 C、两个晶胞、PBC、FrameSet 和所有诊断，等我确认后再调用 bpy.ops.chemblender.confirm_import。选中 FrameSet、激活匹配 Structure View，再调用 bpy.ops.chemblender.configure_trajectory_playback，然后用公开时间轴/RNA切换两帧，不访问私有项目状态。导出前显示 loss preview；保存相邻 .blend/.cbq。
 ```
 
 ## 完整性与验证

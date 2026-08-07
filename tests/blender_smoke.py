@@ -680,6 +680,7 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_scientific_edits")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_frame_force")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_apply_substructure_category")
+    assert hasattr(bpy.types, "CHEMBLENDER_OT_configure_trajectory_playback")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_export_project_entity")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_resolve_grid_semantics")
     assert hasattr(bpy.types, "CHEMBLENDER_OT_create_grid_view")
@@ -5816,6 +5817,12 @@ expected_inventory["registered_classes"] += [
         "module": ".ui.project_browser.panel",
         "name": "CHEMBLENDER_OT_apply_substructure_category",
         "id": "chemblender.apply_substructure_category",
+        "base": "Operator",
+    },
+    {
+        "module": ".ui.project_browser.panel",
+        "name": "CHEMBLENDER_OT_configure_trajectory_playback",
+        "id": "chemblender.configure_trajectory_playback",
         "base": "Operator",
     },
     {
