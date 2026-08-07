@@ -40,7 +40,7 @@ ChemBlender 导入 periodic Structure、cell 和分数坐标。POSCAR 不携带�
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，再用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/poscar/cod-9012293-diamond.POSCAR 的绝对路径。只使用公开的 bpy.ops.chemblender.*；先报告 8 个 C 位点、3.5669 Å 晶胞、Direct 坐标、POSCAR 不含源空间群这一边界和 Preview 诊断，等我确认后调用 bpy.ops.chemblender.confirm_import。创建周期 View；如调用 bpy.ops.chemblender.derive_crystal_symmetry，要把结果标为派生值。保存 .blend 与相邻 .cbq。
+通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，再用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/poscar/cod-9012293-diamond.POSCAR 的绝对路径。只使用公开的 bpy.ops.chemblender.*；先报告 8 个 C 位点、3.5669 Å 晶胞、Direct 坐标、POSCAR 不含源空间群这一边界和 Preview 诊断，等我确认后调用 bpy.ops.chemblender.confirm_import。创建周期 View；先读取 UI 的 spglib dependency reason，只在按钮可用时调用 bpy.ops.chemblender.derive_crystal_symmetry，并把结果标为派生值；缺失时记录禁用原因且不绕过。保存 .blend 与相邻 .cbq。
 ```
 
 ## 完整性与验证

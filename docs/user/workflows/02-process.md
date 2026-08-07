@@ -56,7 +56,7 @@ ChemBlender 把科学数据修改与 Blender 外观修改分开。移动对象�
 ### 晶体数据
 
 1. 选中周期 Structure，查看 `Declared Symmetry`、`Derived Symmetry` 和 `Comparison Symmetry`。
-2. Gemmi 可用时选择 `Derive Symmetry`。派生结果是新的结果实体，不会伪装成源文件声明。
+2. 可选的 spglib 可用时选择 `Derive Symmetry`；缺失时按钮禁用并显示 dependency reason。Gemmi 负责 CIF 读取，不提供这一步派生。派生结果是新的结果实体，不会伪装成源文件声明。
 3. 需要标准化显示时选择 `View Standardized Structure`。
 4. 对含 Selective Dynamics 的 POSCAR/CONTCAR，查看 constrained atom count；`Toggle Selective Constraints` 只切换约束的 View 表现。
 
@@ -105,13 +105,13 @@ ChemBlender 把科学数据修改与 Blender 外观修改分开。移动对象�
 ### 晶体属性
 
 ```text
-使用当前 Blender MCP 通过公开导入流程打开 `examples/user-workflows/inputs/poscar/velocities.CONTCAR`。确认 Blender >= 5.1 和 Extension key，检查 Operator RNA 后读取 declared/derived/comparison symmetry、Selective Dynamics 和 velocity 的公开 UI 状态。Gemmi availability 和 cell 完整时才允许调用 live `bpy.ops.chemblender.derive_crystal_symmetry` 或 `toggle_selective_constraints`；先报告 confirmation 与 dependency reason。验证 derived result 或 constraint View，不把它写成源文件事实。不得 import private modules、编辑 `.cbq` 或 bypass confirmation。
+使用当前 Blender MCP 通过公开导入流程打开 `examples/user-workflows/inputs/poscar/velocities.CONTCAR`。确认 Blender >= 5.1 和 Extension key，检查 Operator RNA 后读取 declared/derived/comparison symmetry、Selective Dynamics 和 velocity 的公开 UI 状态。先报告 spglib availability 与 dependency reason；只有 spglib 可用且 cell 完整时才调用 live `bpy.ops.chemblender.derive_crystal_symmetry`。`toggle_selective_constraints` 只依赖当前 Structure 的 Selective Dynamics 数据。验证 derived result 或 constraint View，不把它写成源文件事实。不得 import private modules、编辑 `.cbq` 或 bypass confirmation。
 ```
 
 ### 代表性周期结构
 
 ```text
-使用当前 Blender MCP，先检查 Blender 5.1、Extension key、`bpy.ops.chemblender.quick_import`、`confirm_import` 和 `derive_crystal_symmetry` 的 Operator RNA/poll。导入 `examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR`，在 Preview 报告 64 个 C sites、7.1338 Å cell、Direct coordinates、64 行零 atomic velocity、quality 和 confirmation；经我确认后提交。需要 symmetry 时只调用公开 `bpy.ops.chemblender.derive_crystal_symmetry`，并把结果标为从 POSCAR 派生，不能写成源声明。不得 import private modules、编辑 `.cbq` 或 bypass confirmation。
+使用当前 Blender MCP，先检查 Blender 5.1、Extension key、`bpy.ops.chemblender.quick_import`、`confirm_import` 和 `derive_crystal_symmetry` 的 Operator RNA/poll。导入 `examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR`，在 Preview 报告 64 个 C sites、7.1338 Å cell、Direct coordinates、64 行零 atomic velocity、quality 和 confirmation；经我确认后提交。先读取 UI 的 spglib dependency reason；只有按钮可用时才调用公开 `bpy.ops.chemblender.derive_crystal_symmetry`，并把结果标为从 POSCAR 派生，不能写成源声明。缺失 spglib 时记录禁用原因，不尝试绕过。不得 import private modules、编辑 `.cbq` 或 bypass confirmation。
 ```
 
 ### biological hierarchy 与 MODEL

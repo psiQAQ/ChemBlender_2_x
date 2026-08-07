@@ -32,13 +32,13 @@ ChemBlender 2.4.0 保留 `CIFEnvelope`，把晶胞、位点、occupancy、disord
 ## 操作流程
 
 1. 用 `Quick Import` 选择 [`cod-4503272-caffeine-cocrystal.cif`](cod-4503272-caffeine-cocrystal.cif)，在 Preview 核对 occupancy/disorder 诊断。
-2. 确认导入，在 Structure 属性查看 declared symmetry，并按需调用 `derive_crystal_symmetry` 做比较。
+2. 确认导入，在 Structure 属性查看 declared symmetry；仅在 UI 显示可选 spglib 可用时调用 `derive_crystal_symmetry` 做比较，否则记录禁用原因。
 3. 建立周期 View；若导出 Normalized CIF，逐项确认 envelope 字段变化。
 
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，读取 Operator RNA 后，用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/cif/cod-4503272-caffeine-cocrystal.cif 的绝对路径。只走 UI 等价的 bpy.ops.chemblender.*；先报告 64 个非对称位点、部分 occupancy、disorder、声明空间群、Import Preview 诊断和项目实体，再等我确认 bpy.ops.chemblender.confirm_import。若比较 symmetry，可调用公开的 bpy.ops.chemblender.derive_crystal_symmetry，但不得覆盖源声明。任何有损导出停在确认界面；保存 .blend 时把 .cbq 放在旁边并报告路径。
+通过 Blender MCP 连接 Blender 5.1，读取 Operator RNA 后，用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/cif/cod-4503272-caffeine-cocrystal.cif 的绝对路径。只走 UI 等价的 bpy.ops.chemblender.*；先报告 64 个非对称位点、部分 occupancy、disorder、声明空间群、Import Preview 诊断和项目实体，再等我确认 bpy.ops.chemblender.confirm_import。若比较 symmetry，先读取 UI 的 spglib dependency reason；只在按钮可用时调用公开的 bpy.ops.chemblender.derive_crystal_symmetry，缺失时记录禁用原因且不得绕过，也不得覆盖源声明。任何有损导出停在确认界面；保存 .blend 时把 .cbq 放在旁边并报告路径。
 ```
 
 ## 完整性与验证

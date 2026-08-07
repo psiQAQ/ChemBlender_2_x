@@ -1233,10 +1233,21 @@ def _case_rep_crystal(context):
         "structure",
     )
     context.select(structure["entity_id"])
-    context.current["stage"] = "derive CIF symmetry"
-    symmetry = context.call_chem("derive_crystal_symmetry")
-    if not _finished(symmetry):
-        raise RuntimeError("representative CIF symmetry derivation failed")
+    context.current["stage"] = "verify optional CIF symmetry derivation"
+    try:
+        symmetry = context.call_chem("derive_crystal_symmetry")
+    except RuntimeError as error:
+        reason = str(error).strip()
+        expected = (
+            "spglib is required in the ChemBlender core/worker environment"
+        )
+        if expected not in reason:
+            raise
+        symmetry_evidence = {"status": "unavailable", "reason": reason}
+    else:
+        if not _finished(symmetry):
+            raise RuntimeError("representative CIF symmetry derivation failed")
+        symmetry_evidence = {"status": "derived"}
     imports = [
         {
             "path": CASE_INPUTS["REP-CRYSTAL"][0],
@@ -1260,6 +1271,7 @@ def _case_rep_crystal(context):
         "status": "passed",
         "evidence": {
             "imports": imports,
+            "symmetry": symmetry_evidence,
             "row_counts": _row_counts(rows),
             "objects": _objects(),
             "bundle": bundle,
@@ -1285,10 +1297,22 @@ def _case_rep_grid(context):
     surface = context.call_chem("create_grid_view", mode="signed_surface")
     if not all(_finished(result) for result in (resolved, volume, surface)):
         raise RuntimeError("representative Grid workflow did not finish")
-    created = [item for item in _objects() if item["name"] not in before]
-    created_types = {item["type"] for item in created}
-    if not {"MESH", "VOLUME"} <= created_types:
-        raise RuntimeError(f"Grid Views are incomplete: {sorted(created_types)}")
+    created_objects = [
+        obj for obj in bpy.context.scene.objects if obj.name not in before
+    ]
+    view_counts = {
+        kind: sum(
+            obj.get("cb_scene_view_kind") == kind
+            for obj in created_objects
+        )
+        for kind in ("grid_volume", "signed_isosurface")
+    }
+    expected_views = {"grid_volume": 1, "signed_isosurface": 2}
+    if view_counts != expected_views:
+        raise RuntimeError(f"Grid Views are incomplete: {view_counts}")
+    created = [
+        item for item in _objects() if item["name"] not in before
+    ]
     bundle, outputs = _save_representative_bundle(context, "grid")
     return {
         "status": "passed",
@@ -1296,6 +1320,7 @@ def _case_rep_grid(context):
             "imports": imports,
             "row_counts": _row_counts(rows),
             "grid_rna": _property_snapshot("chemblender_grid"),
+            "created_view_counts": view_counts,
             "created_objects": created,
             "bundle": bundle,
         },

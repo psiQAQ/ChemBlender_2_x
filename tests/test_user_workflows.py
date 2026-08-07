@@ -483,6 +483,25 @@ class UserWorkflowContractTests(unittest.TestCase):
         ):
             self.assertIn(token, source)
 
+    def test_representative_crystal_records_optional_spglib_boundary(self):
+        source = RUNNER.read_text(encoding="utf-8")
+        for token in (
+            'context.call_chem("derive_crystal_symmetry")',
+            "except RuntimeError as error:",
+            "spglib is required in the ChemBlender core/worker environment",
+            '"status": "unavailable"',
+        ):
+            self.assertIn(token, source)
+
+    def test_representative_grid_checks_view_contract_not_object_type(self):
+        source = RUNNER.read_text(encoding="utf-8")
+        for token in (
+            'obj.get("cb_scene_view_kind")',
+            '"grid_volume": 1',
+            '"signed_isosurface": 2',
+        ):
+            self.assertIn(token, source)
+
     def test_biological_playback_sample_has_compatible_model_frames(self):
         path = EXAMPLE_ROOT / "inputs" / "pdb" / "model-trajectory.pdb"
         batch = parse_pdb(path)

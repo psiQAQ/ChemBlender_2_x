@@ -31,12 +31,13 @@
 | 文件 / SMILES 导入 | `bpy.ops.chemblender.quick_import`、`bpy.ops.chemblender.import_smiles_text` |
 | Preview 确认 / 取消 | `bpy.ops.chemblender.confirm_import`、`bpy.ops.chemblender.cancel_import` |
 | 科学编辑 / topology | `bpy.ops.chemblender.apply_scientific_edits`、`compute_topology`、`accept_topology`、`reject_topology`、`switch_topology` |
+| trajectory | `bpy.ops.chemblender.configure_trajectory_playback` |
 | 晶体 / 生物 | `derive_crystal_symmetry`、`view_standardized_structure`、`toggle_selective_constraints`、`select_biological_atoms`、`play_biological_models`、`create_biological_view` |
 | Grid3D | `bpy.ops.chemblender.resolve_grid_semantics`、`bpy.ops.chemblender.create_grid_view` |
 | 导出 | `bpy.ops.chemblender.export_project_entity` |
 | 恢复 / 迁移 | `project_link_recovery`、`revision_view_action`、`preview_legacy_migration`、`migrate_legacy_scene` |
 
-Operator 的短名不等于参数名。Agent 必须先“检查 Operator RNA”，再按 live signature 构造调用；`FINISHED` 也只表示 Operator 返回，不代表科学状态已经验证。
+Operator 的短名不等于参数名。Agent 必须先“检查 Operator RNA”，再按 live signature 构造调用；`FINISHED` 也只表示 Operator 返回，不代表科学状态已经验证。`derive_crystal_symmetry` 的入口会注册，但当前发布包不携带可选 spglib；UI 会禁用按钮并显示原因，Agent 不应绕过。
 
 ## 调用与等待
 
