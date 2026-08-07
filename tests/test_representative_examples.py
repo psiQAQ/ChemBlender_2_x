@@ -153,17 +153,16 @@ class RepresentativeExampleTests(unittest.TestCase):
     def test_derived_examples_parse_with_expected_semantics(self):
         import numpy
 
-        from ChemBlender.core.cube import parse_cube
-        from ChemBlender.core.formats.extxyz import parse_extxyz
-        from ChemBlender.core.formats.mol import parse_mol
-        from ChemBlender.core.formats.poscar import parse_poscar
-        from ChemBlender.core.formats.sdf import parse_sdf
-        from ChemBlender.core.formats.smiles import parse_smiles
-        from ChemBlender.core.xyz import parse_xyz
+        from ChemBlender.core.reader_catalog import builtin_reader_registry
 
         inputs = EXAMPLE_ROOT / "inputs"
+        registry = builtin_reader_registry()
+
+        def parse(path, reader_id):
+            return registry.parse(path, reader_id=reader_id)
+
         trajectory_path = inputs / "extxyz" / "aspirin-rmd17-32.extxyz"
-        trajectory = parse_extxyz(trajectory_path)
+        trajectory = parse(trajectory_path, "extxyz")
         trajectory_data = {item.semantic_role: item for item in trajectory.datasets}
         self.assertEqual(len(trajectory.structures[0].atomic_numbers), 21)
         self.assertEqual(trajectory_data["coordinates"].data.shape, (32, 21, 3))
@@ -184,7 +183,7 @@ class RepresentativeExampleTests(unittest.TestCase):
             source_indices,
         )
 
-        cube = parse_cube(inputs / "cube" / "h2-lcao-1s-density-64.cube")
+        cube = parse(inputs / "cube" / "h2-lcao-1s-density-64.cube", "cube")
         grid = cube.datasets[0]
         values = numpy.asarray(grid.data.values)
         self.assertEqual(cube.structures[0].atomic_numbers, (1, 1))
@@ -194,9 +193,13 @@ class RepresentativeExampleTests(unittest.TestCase):
         self.assertGreaterEqual(float(values.min()), 0.0)
         self.assertAlmostEqual(float(values.sum()) * (12.0 / 63.0) ** 3, 2.0, places=3)
 
-        base = parse_poscar(inputs / "poscar" / "cod-9012293-diamond.POSCAR")
-        supercell = parse_poscar(
-            inputs / "poscar" / "cod-9012293-diamond-2x2x2.CONTCAR"
+        base = parse(
+            inputs / "poscar" / "cod-9012293-diamond.POSCAR",
+            "poscar",
+        )
+        supercell = parse(
+            inputs / "poscar" / "cod-9012293-diamond-2x2x2.CONTCAR",
+            "poscar",
         )
         self.assertEqual(len(base.structures[0].atomic_numbers), 8)
         self.assertEqual(len(supercell.structures[0].atomic_numbers), 64)
@@ -206,11 +209,14 @@ class RepresentativeExampleTests(unittest.TestCase):
         self.assertEqual(velocity.data.shape, (64, 3))
         self.assertTrue((numpy.asarray(velocity.data.values) == 0.0).all())
 
-        aspirin = parse_mol(inputs / "mol" / "ain-aspirin-v2000.mol")
-        paclitaxel = parse_mol(inputs / "mol" / "ta1-paclitaxel-v3000.mol")
-        showcase = parse_sdf(inputs / "sdf" / "ccd-3d-showcase.sdf")
-        smiles = parse_smiles(inputs / "smiles" / "ta1-paclitaxel-isomeric.smi")
-        xyz = parse_xyz(inputs / "xyz" / "ta1-paclitaxel-ccd.xyz")
+        aspirin = parse(inputs / "mol" / "ain-aspirin-v2000.mol", "mol")
+        paclitaxel = parse(inputs / "mol" / "ta1-paclitaxel-v3000.mol", "mol")
+        showcase = parse(inputs / "sdf" / "ccd-3d-showcase.sdf", "sdf")
+        smiles = parse(
+            inputs / "smiles" / "ta1-paclitaxel-isomeric.smi",
+            "smiles",
+        )
+        xyz = parse(inputs / "xyz" / "ta1-paclitaxel-ccd.xyz", "xyz")
         self.assertEqual([len(item.atomic_numbers) for item in showcase.structures], [21, 24, 113])
         self.assertEqual(aspirin.structures[0].atomic_numbers, showcase.structures[0].atomic_numbers)
         self.assertEqual(paclitaxel.structures[0].atomic_numbers, showcase.structures[2].atomic_numbers)
@@ -251,6 +257,123 @@ class RepresentativeExampleTests(unittest.TestCase):
             ),
             0,
         )
+
+    def test_direct_examples_parse_with_expected_semantics(self):
+        import numpy
+
+        from ChemBlender.core.formats.mol2 import (
+            iter_mol2_records,
+            parse_mol2_record,
+        )
+        from ChemBlender.core.reader_catalog import builtin_reader_registry
+
+        inputs = EXAMPLE_ROOT / "inputs"
+        registry = builtin_reader_registry()
+
+        def parse(relative_path, reader_id):
+            return registry.parse(inputs / relative_path, reader_id=reader_id)
+
+        cif_path = inputs / "cif" / "cod-4503272-caffeine-cocrystal.cif"
+        cif = parse("cif/cod-4503272-caffeine-cocrystal.cif", "cif")
+        crystal = cif.structures[0]
+        periodic = crystal.periodic
+        self.assertEqual(len(crystal.atomic_numbers), 64)
+        self.assertEqual(crystal.cell.shape, (3, 3))
+        self.assertEqual(periodic.declared_space_group_number, 64)
+        self.assertEqual(len(periodic.symmetry_operations), 16)
+        self.assertEqual(
+            int(numpy.count_nonzero(numpy.asarray(periodic.occupancies.values) < 1.0)),
+            23,
+        )
+        self.assertEqual(sum(value > 0 for value in periodic.disorder_groups), 9)
+        self.assertEqual(cif.cif_envelopes[0].source_bytes, cif_path.read_bytes())
+
+        cjson_path = inputs / "cjson" / "avogadro-phthalocyanine.cjson"
+        cjson = parse("cjson/avogadro-phthalocyanine.cjson", "cjson")
+        self.assertEqual(len(cjson.structures[0].atomic_numbers), 57)
+        self.assertEqual(cjson.topologies[0].bond_indices.shape, (68, 2))
+        self.assertEqual(
+            [(item.semantic_role, item.data.shape) for item in cjson.datasets],
+            [("formal_charge", (57,))],
+        )
+        self.assertEqual(cjson.cjson_envelopes[0].format_version, 1)
+        self.assertEqual(cjson.cjson_envelopes[0].source_bytes, cjson_path.read_bytes())
+
+        mol2 = parse("mol2/openbabel-5sun-protein.mol2", "mol2")
+        preserved = parse_mol2_record(
+            next(iter_mol2_records(mol2.molecular_records[0].raw_block))
+        )
+        self.assertEqual(len(mol2.structures[0].atomic_numbers), 6185)
+        self.assertEqual(mol2.topologies, ())
+        self.assertEqual(
+            (
+                preserved.counts.atom_count,
+                preserved.counts.bond_count,
+                preserved.counts.substructure_count,
+            ),
+            (6185, 6248, 390),
+        )
+        self.assertEqual(len(preserved.bonds), 6248)
+        self.assertEqual(len(preserved.substructures), 390)
+        self.assertEqual(
+            [bond.bond_type for bond in preserved.bonds if bond.unknown],
+            ["un"],
+        )
+        self.assertEqual(len(preserved.unknown_sections), 4)
+
+        pdb = parse("pdb/1d3z-ubiquitin-nmr.pdb", "pdb")
+        pdb_data = {item.semantic_role: item for item in pdb.datasets}
+        pdb_hierarchy = pdb.biological_hierarchies[0]
+        self.assertEqual(len(pdb.structures[0].atomic_numbers), 1231)
+        self.assertEqual(pdb_data["coordinates"].data.shape, (10, 1231, 3))
+        self.assertEqual(pdb_data["occupancy"].data.shape, (1231,))
+        self.assertEqual(pdb_data["b_factor"].data.shape, (1231,))
+        self.assertEqual(
+            [(chain.chain_id, chain.segment_index) for chain in pdb_hierarchy.chains],
+            [("A", 0)],
+        )
+        self.assertEqual(len(pdb_hierarchy.residues), 76)
+
+        pqr = parse("pqr/apbs-protein-rna-nb.pqr", "pqr")
+        pqr_data = {item.semantic_role: item for item in pqr.datasets}
+        pqr_hierarchy = pqr.biological_hierarchies[0]
+        self.assertEqual(len(pqr.structures[0].atomic_numbers), 998)
+        self.assertEqual(pqr_data["partial_charge"].data.shape, (998,))
+        self.assertEqual(pqr_data["radius"].data.shape, (998,))
+        self.assertTrue(
+            numpy.isfinite(numpy.asarray(pqr_data["partial_charge"].data.values)).all()
+        )
+        self.assertTrue(
+            numpy.isfinite(numpy.asarray(pqr_data["radius"].data.values)).all()
+        )
+        self.assertEqual(
+            int(numpy.count_nonzero(numpy.asarray(pqr_data["radius"].data.values) == 0.0)),
+            22,
+        )
+        self.assertEqual(
+            [(chain.chain_id, chain.segment_index) for chain in pqr_hierarchy.chains],
+            [("", 0), ("", 1)],
+        )
+        self.assertEqual(len(pqr_hierarchy.residues), 41)
+        self.assertEqual(len(pqr.diagnostics), 1)
+        self.assertEqual(pqr.diagnostics[0].field_path, "record[*].element")
+
+        qcschema_path = inputs / "qcschema" / "molssi-water-gradient-hf.json"
+        qcschema = parse("qcschema/molssi-water-gradient-hf.json", "qcschema")
+        qcschema_data = {item.semantic_role: item for item in qcschema.datasets}
+        envelope = qcschema.qcschema_envelopes[0]
+        calculation = qcschema.calculations[0]
+        self.assertEqual(len(qcschema.structures[0].atomic_numbers), 3)
+        self.assertEqual(qcschema.report.reader_id, "qcschema_atomic_result_v1")
+        self.assertEqual(len(qcschema.datasets), 13)
+        self.assertEqual(qcschema_data["return_result"].data.shape, (3, 3))
+        self.assertEqual(qcschema_data["return_result"].data.unit, "hartree_per_bohr")
+        self.assertEqual((envelope.schema_name, envelope.schema_version), ("qc_schema_output", 1))
+        self.assertEqual(
+            json.loads(envelope.source_bytes),
+            json.loads(qcschema_path.read_bytes()),
+        )
+        self.assertEqual(calculation.metadata.driver, "gradient")
 
     def test_preparation_script_pins_only_https_sources(self):
         spec = importlib.util.spec_from_file_location(

@@ -7,7 +7,7 @@
 - Baseline: `03786d497cf9c8a2021a7633fcbf3c67ecc81115`
 - Design: `docs/superpowers/specs/2026-08-08-chemblender-representative-example-corpus-design.md`
 - Plan: `docs/superpowers/plans/2026-08-08-chemblender-representative-example-corpus.md`
-- Current task: Task 5 user routing is green; exercise every representative parser and static contract in Task 6.
+- Current task: Task 6 parser semantics are green; run representative UI/Operator workflows and save reopenable Blender 5.1 bundles in Task 7.
 
 ## Goal
 
@@ -74,3 +74,9 @@ commits into local `main` without remote writes.
   separate derivation rather than source data.
 - User-workflow, quantum-visualization documentation and representative-example contracts are
   68 Passed / 0 Failed on Blender bundled Python 3.13.9.
+- All 15 representative inputs now parse through `builtin_reader_registry()` with source-backed
+  semantic assertions for structure, topology, trajectory, hierarchy, crystal, grid and exchange
+  envelopes. The focused PQR/representative/docs/import-preview regression is 170 Passed / 0 Failed.
+- APBS PQR still retains all 998 record-level element-inference issues in `ParserReport`, while the
+  user-facing `ImportBatch` now summarizes them as one deterministic warning instead of flooding
+  Preview. The 22 zero radii remain valid source values, not diagnostics.
