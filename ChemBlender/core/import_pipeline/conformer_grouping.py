@@ -227,6 +227,8 @@ def _ordered_records(batch):
     )
     entries = []
     for record in ordered:
+        if record.topology_id is None:
+            continue
         try:
             structure = structures[record.structure_id]
             topology = topologies[record.topology_id]

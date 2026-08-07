@@ -1008,6 +1008,82 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             "FILE_PATH",
         )
 
+    def test_trajectory_playback_operator_binds_selected_frame_set(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+
+        class ViewObject(dict):
+            name = "Water trajectory"
+
+        project = sample_trajectory_project()
+        structure = project.structures[STRUCTURE_ID]
+        frames = project.datasets[FRAME_SET_ID]
+        obj = ViewObject(
+            cb_structure_contract="structure_view_v1",
+            cb_structure_id=str(structure.id),
+            cb_structure_revision=structure.revision,
+        )
+        session = SimpleNamespace(
+            project=project,
+            active_entity_id=frames.id,
+            active_view_object_name=obj.name,
+        )
+        scene = SimpleNamespace(objects={obj.name: obj}, frame_end=1)
+        context = SimpleNamespace(scene=scene, active_object=obj)
+        operation = panel.CHEMBLENDER_OT_configure_trajectory_playback()
+        operation.frame_start = 3
+        operation.frame_step = 2
+
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(panel._trajectory_view, "register") as register,
+            patch.object(
+                panel._trajectory_view,
+                "configure_trajectory_view",
+            ) as configure,
+        ):
+            result = operation.execute(context)
+
+        self.assertEqual(result, {"FINISHED"})
+        register.assert_called_once_with()
+        configure.assert_called_once_with(
+            obj,
+            frames,
+            frame_start=3,
+            frame_step=2,
+        )
+        self.assertEqual(scene.frame_end, 5)
+        self.assertEqual(session.active_view_object_name, obj.name)
+
+    def test_trajectory_controls_expose_public_playback_action(self):
+        panel = importlib.import_module(
+            "ChemBlender.ui.project_browser.panel"
+        )
+        events = []
+
+        class Layout:
+            def box(self):
+                return self
+
+            def label(self, **keywords):
+                events.append(("label", keywords))
+
+            def operator(self, operator_id, **keywords):
+                events.append(("operator", operator_id, keywords))
+
+        frames = sample_trajectory_project().datasets[FRAME_SET_ID]
+        panel.draw_trajectory_controls(Layout(), frames)
+
+        self.assertIn(
+            (
+                "operator",
+                "chemblender.configure_trajectory_playback",
+                {"icon": "PLAY"},
+            ),
+            events,
+        )
+
     def test_recovery_execute_revalidates_the_live_link_status(self):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"

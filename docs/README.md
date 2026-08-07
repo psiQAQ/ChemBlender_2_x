@@ -3,6 +3,7 @@
 ## User Guides
 
 - [User workflow center](user/workflows/README.md)
+- [Workflow examples, sources and per-file notes](../examples/user-workflows/README.md)
 - [ChemBlender 2.4.0 human experience review](user/2.4.0-experience-review.md)
 - [Quick Import](user/quick-import.md)
 - [Project Browser](user/project-browser.md)

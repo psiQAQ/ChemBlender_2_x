@@ -1,7 +1,7 @@
 """Dependency-free validated whitespace PQR reader."""
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -190,8 +190,8 @@ def _parse_fields(fields, dialect, raw_line, record_index):
     )
     charge = _finite_float(fields[coordinate_index + 3], "charge")
     radius = _finite_float(fields[coordinate_index + 4], "radius")
-    if radius <= 0:
-        raise _FieldError("radius", "radius must be positive")
+    if radius < 0:
+        raise _FieldError("radius", "radius must be non-negative")
     record_name = fields[0]
     element = _infer_pqr_element(
         atom_name,
@@ -235,6 +235,8 @@ def parse_pqr_records(raw_source, *, validation_mode="balanced"):
     issues = []
     residue_names = {}
     source_dialect = None
+    segment_index = 0
+    last_residue_number = None
     for record_index, raw_line in enumerate(raw_source.splitlines(keepends=True)):
         line_bytes = raw_line.rstrip(b"\r\n")
         if len(line_bytes) > _MAX_LINE_BYTES:
@@ -296,6 +298,14 @@ def parse_pqr_records(raw_source, *, validation_mode="balanced"):
                 )
                 continue
             source_dialect = atom.dialect
+            if atom.dialect == "no_chain":
+                if (
+                    last_residue_number is not None
+                    and atom.residue_number < last_residue_number
+                ):
+                    segment_index += 1
+                atom = replace(atom, segment_index=segment_index)
+                last_residue_number = atom.residue_number
             residue_key = (
                 atom.chain_id,
                 atom.segment_index,
@@ -420,10 +430,32 @@ def _diagnostics(source_revision_id, issues):
             "the source was recovered with a reader warning",
         ),
     }
+    inferred_element_count = sum(
+        issue.kind is IssueKind.WARNING
+        and issue.path.endswith(".element")
+        for issue in issues
+    )
+    inferred_element_emitted = False
     occurrences = Counter()
     diagnostics = []
     for issue in issues:
-        occurrence_key = (issue.kind.value, issue.path)
+        inferred_element = (
+            issue.kind is IssueKind.WARNING
+            and issue.path.endswith(".element")
+        )
+        if inferred_element:
+            if inferred_element_emitted:
+                continue
+            inferred_element_emitted = True
+            field_path = "record[*].element"
+            message = (
+                "inferred elements from PQR atom names and record/residue "
+                f"context for {inferred_element_count} atom records"
+            )
+        else:
+            field_path = issue.path
+            message = issue.message
+        occurrence_key = (issue.kind.value, field_path)
         occurrence = occurrences[occurrence_key]
         occurrences[occurrence_key] += 1
         severity, quality, consequence = outcomes[issue.kind]
@@ -432,7 +464,7 @@ def _diagnostics(source_revision_id, issues):
                 id=uuid5(
                     source_revision_id,
                     (
-                        f"diagnostic:{issue.kind.value}:{issue.path}:"
+                        f"diagnostic:{issue.kind.value}:{field_path}:"
                         f"{occurrence}"
                     ),
                 ),
@@ -441,15 +473,14 @@ def _diagnostics(source_revision_id, issues):
                 source_revision_id=source_revision_id,
                 record_key=None,
                 entity_id=None,
-                field_path=issue.path,
+                field_path=field_path,
                 code=f"pqr.{issue.kind.value}",
-                message=issue.message,
+                message=message,
                 original_value=None,
                 normalized_value=None,
                 recovery_action=(
                     "inferred element from PQR atom name"
-                    if issue.kind is IssueKind.WARNING
-                    and issue.path.endswith(".element")
+                    if inferred_element
                     else None
                 ),
                 scientific_consequence=consequence,

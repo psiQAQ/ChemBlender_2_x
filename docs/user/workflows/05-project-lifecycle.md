@@ -12,9 +12,11 @@
 
 ## 示例
 
-普通保存/重开可从 [water.xyz](../../../examples/user-workflows/inputs/xyz/water.xyz)创建项目。旧版本迁移使用 hash-locked 的 [chemblender-2.1-molecule.blend](../../../examples/user-workflows/inputs/legacy/chemblender-2.1-molecule.blend)，只在副本上操作。
+普通保存/重开可先从 [water.xyz](../../../examples/user-workflows/inputs/xyz/water.xyz)创建合同项目，再用带 topology 的 [AIN aspirin MOL](../../../examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol)做代表性冷重开。旧版本迁移使用 hash-locked 的 [chemblender-2.1-molecule.blend](../../../examples/user-workflows/inputs/legacy/chemblender-2.1-molecule.blend)，只在副本上操作。
 
-仓库还提供已经冷重开的 [workflow.blend](../../../examples/user-workflows/outputs/workflow-project/workflow.blend)和 [migrated.blend](../../../examples/user-workflows/outputs/legacy-migration/migrated.blend)。它们各自依赖同目录的完整同名 `.cbq/`，用于直接查看和对照，不替代下面的手工保存、迁移与重开练习。
+仓库还提供已经冷重开的 [workflow.blend](../../../examples/user-workflows/outputs/workflow-project/workflow.blend)（[sidecar manifest](../../../examples/user-workflows/outputs/workflow-project/workflow.cbq/manifest.json)）和 [migrated.blend](../../../examples/user-workflows/outputs/legacy-migration/migrated.blend)（[sidecar manifest](../../../examples/user-workflows/outputs/legacy-migration/migrated.cbq/manifest.json)）。五个按数据类型拆分的代表项目见[展示数据](03-visualize.md#示例)。它们各自依赖同目录的完整同名 `.cbq/`，用于直接查看和对照，不替代下面的手工保存、迁移与重开练习。
+
+`.blend` 保存的 sidecar locator 以及 Volume/VDB 路径使用相对位置，因此配对可整体移动。`SourceRevision.locator` 可能保留首次导入时的绝对源路径；它只是重定位/重新解析提示，不参与科学身份或当前 sidecar 恢复。换机器后项目与已保存 View 仍可打开，但再次解析原始文件前可能需要重新选择来源。
 
 ## 操作前检查
 
@@ -82,7 +84,7 @@ ChemBlender 自有的 `cache/render/` 与 `cache/derivation/` 可以重建。冷
 ### Save Project 与冷重开
 
 ```text
-使用当前 Blender MCP 通过 `bpy.ops.chemblender.quick_import`/`confirm_import` 导入 `examples/user-workflows/inputs/xyz/water.xyz`。一次完成 Blender 5.1/Extension/active-file/dirty-state 预检，并检查 ChemBlender Operator RNA、`bpy.ops.wm.save_as_mainfile`、`bpy.ops.wm.save_mainfile` 的 RNA 与 poll。对未保存文件先用 UI 等价 Save As 选择全新测试路径，再模拟用户回到 Quick Import 再次选择 `Save Project`；不得直接写 `.cbq`。验证 `.blend` 和同 basename `.cbq/`、clean/Connected、project identity。然后正常关闭并重启 exact Blender 5.1，重开 `.blend`，核对 source、3-atom Structure、View binding 和 diagnostics。不得 import private modules 或 bypass save/link confirmation。
+使用当前 Blender MCP 通过 `bpy.ops.chemblender.quick_import`/`confirm_import` 导入 `examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol`。一次完成 Blender 5.1/Extension/RDKit/active-file/dirty-state 预检，并检查 ChemBlender Operator RNA、`bpy.ops.wm.save_as_mainfile`、`bpy.ops.wm.save_mainfile` 的 RNA 与 poll。对未保存文件先用 UI 等价 Save As 选择全新测试路径，再模拟用户回到 Quick Import 再次选择 `Save Project`；不得直接写 `.cbq`。验证 `.blend` 和同 basename `.cbq/`、clean/Connected、project identity。然后正常关闭并重启 exact Blender 5.1，重开 `.blend`，核对 source、21-atom Structure、21-bond Topology、View binding 和 diagnostics。不得 import private modules 或 bypass save/link confirmation。
 ```
 
 ### Verify / Relink

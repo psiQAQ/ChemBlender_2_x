@@ -17,6 +17,7 @@ import bpy
 
 SCHEMA_VERSION = "1"
 ENABLED_KEY = "bl_ext.user_default.chemblender"
+MAX_ARTIFACT_BYTES = 50 * 1024 * 1024
 CASE_IDS = (
     "ENV",
     "IMP-XYZ",
@@ -29,6 +30,12 @@ CASE_IDS = (
     "EXP-FORMATS",
     "LIFE-SAVE-REOPEN-PREP",
     "MIG-PREVIEW-PREP",
+    "REP-MOLECULAR",
+    "REP-TRAJECTORY",
+    "REP-BIOLOGICAL",
+    "REP-CRYSTAL",
+    "REP-GRID",
+    "REP-SAVE-REOPEN-PREP",
 )
 CASE_INPUTS = {
     "ENV": (),
@@ -48,6 +55,49 @@ CASE_INPUTS = {
     "MIG-PREVIEW-PREP": (
         "inputs/legacy/chemblender-2.1-molecule.blend",
     ),
+    "REP-MOLECULAR": (
+        "inputs/cjson/avogadro-phthalocyanine.cjson",
+        "inputs/mol/ain-aspirin-v2000.mol",
+        "inputs/mol/ta1-paclitaxel-v3000.mol",
+        "inputs/mol2/openbabel-5sun-protein.mol2",
+        "inputs/qcschema/molssi-water-gradient-hf.json",
+        "inputs/sdf/ccd-3d-showcase.sdf",
+        "inputs/smiles/ta1-paclitaxel-isomeric.smi",
+        "inputs/xyz/ta1-paclitaxel-ccd.xyz",
+    ),
+    "REP-TRAJECTORY": ("inputs/extxyz/aspirin-rmd17-32.extxyz",),
+    "REP-BIOLOGICAL": (
+        "inputs/pdb/1d3z-ubiquitin-nmr.pdb",
+        "inputs/pqr/apbs-protein-rna-nb.pqr",
+    ),
+    "REP-CRYSTAL": (
+        "inputs/cif/cod-4503272-caffeine-cocrystal.cif",
+        "inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR",
+        "inputs/poscar/cod-9012293-diamond.POSCAR",
+    ),
+    "REP-GRID": ("inputs/cube/h2-lcao-1s-density-64.cube",),
+    "REP-SAVE-REOPEN-PREP": (),
+}
+REPRESENTATIVE_CASES = (
+    "REP-MOLECULAR",
+    "REP-TRAJECTORY",
+    "REP-BIOLOGICAL",
+    "REP-CRYSTAL",
+    "REP-GRID",
+)
+REPRESENTATIVE_OUTPUT_PATHS = {
+    "molecular": "outputs/representative/molecular/molecular.blend",
+    "trajectory": "outputs/representative/trajectory/trajectory.blend",
+    "biological": "outputs/representative/biological/biological.blend",
+    "crystal": "outputs/representative/crystal/crystal.blend",
+    "grid": "outputs/representative/grid/grid.blend",
+}
+REPRESENTATIVE_FAMILIES = {
+    "REP-MOLECULAR": "molecular",
+    "REP-TRAJECTORY": "trajectory",
+    "REP-BIOLOGICAL": "biological",
+    "REP-CRYSTAL": "crystal",
+    "REP-GRID": "grid",
 }
 DEPENDENCIES = {
     case_id: ("ENV",) for case_id in CASE_IDS if case_id != "ENV"
@@ -62,6 +112,7 @@ DEPENDENCIES["EXP-FORMATS"] = (
     "VIEW-CUBE",
 )
 DEPENDENCIES["LIFE-SAVE-REOPEN-PREP"] = ("ENV", "EXP-FORMATS")
+DEPENDENCIES["REP-SAVE-REOPEN-PREP"] = ("ENV", *REPRESENTATIVE_CASES)
 
 
 def _parse_args(argv):
@@ -405,6 +456,165 @@ def _copy_import_batch(context, relative_paths):
     return paths
 
 
+def _clear_scene_objects(context):
+    if any(row["entity_id"] for row in context.rows()):
+        raise RuntimeError("representative case requires a fresh project")
+    if bpy.context.scene.objects:
+        selected = bpy.ops.object.select_all(action="SELECT")
+        deleted = bpy.ops.object.delete(use_global=False)
+        if not _finished(selected) or not _finished(deleted):
+            raise RuntimeError("fresh-scene cleanup failed")
+
+
+def _row_counts(rows):
+    counts = {}
+    for row in rows:
+        counts[row["kind"]] = counts.get(row["kind"], 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _import_representative_inputs(context, case_id):
+    imports = []
+    for relative in CASE_INPUTS[case_id]:
+        context.current["stage"] = f"Quick Import {relative}"
+        imported = _import_files(context, [context.input(relative)])
+        imports.append(
+            {
+                "path": relative,
+                "preview": imported["preview"],
+                "new_row_counts": _row_counts(imported["new_rows"]),
+            }
+        )
+    return imports
+
+
+def _bounded_tree(root):
+    files = sorted(path for path in root.rglob("*") if path.is_file())
+    if not files:
+        raise RuntimeError(f"artifact directory is empty: {root}")
+    oversized = [path for path in files if path.stat().st_size >= MAX_ARTIFACT_BYTES]
+    if oversized:
+        raise RuntimeError(f"artifact reached the 50 MiB repository target: {oversized}")
+    largest = max(files, key=lambda path: path.stat().st_size)
+    return {
+        "file_count": len(files),
+        "bytes": sum(path.stat().st_size for path in files),
+        "largest_file": str(largest.relative_to(root)),
+        "largest_bytes": largest.stat().st_size,
+    }
+
+
+def _array_paths(value):
+    if isinstance(value, dict):
+        if value.get("$array") == "npy" and isinstance(value.get("path"), str):
+            yield value["path"]
+        for item in value.values():
+            yield from _array_paths(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _array_paths(item)
+
+
+def _sidecar_evidence(sidecar):
+    manifest = _require_file(sidecar / "manifest.json")
+    document = json.loads(manifest.read_text(encoding="utf-8"))
+    array_paths = sorted(set(_array_paths(document)))
+    missing = []
+    for value in array_paths:
+        relative = Path(value)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise RuntimeError(f"sidecar array path is not local: {value}")
+        target = (sidecar / relative).resolve()
+        if not target.is_relative_to(sidecar.resolve()) or not target.is_file():
+            missing.append(value)
+    if missing:
+        raise RuntimeError(f"sidecar array files are missing: {missing[:5]}")
+    return {
+        "manifest_version": document.get("manifest_version"),
+        "array_path_count": len(array_paths),
+        "missing_array_files": len(missing),
+        **_bounded_tree(sidecar),
+    }
+
+
+def _volume_evidence(sidecar):
+    volumes = []
+    for volume in sorted(bpy.data.volumes, key=lambda item: item.name):
+        if not volume.filepath:
+            continue
+        path = Path(bpy.path.abspath(volume.filepath)).resolve()
+        local = path.is_relative_to(sidecar.resolve())
+        volumes.append(
+            {
+                "name": volume.name,
+                "filepath": volume.filepath,
+                "sidecar_local": local,
+                "exists": path.is_file(),
+                "bytes": path.stat().st_size if path.is_file() else None,
+            }
+        )
+    invalid = [item for item in volumes if not item["sidecar_local"] or not item["exists"]]
+    if invalid:
+        raise RuntimeError(f"Volume cache is not reopenable from the sidecar: {invalid}")
+    return volumes
+
+
+def _save_representative_bundle(context, family):
+    destination = context.output(REPRESENTATIVE_OUTPUT_PATHS[family])
+    sidecar = destination.with_suffix(".cbq")
+    if destination.exists() or sidecar.exists():
+        raise FileExistsError(f"representative output already exists: {destination}")
+    context.current["stage"] = f"Save representative {family} project"
+    save_as = context.call_wm("save_as_mainfile", filepath=str(destination))
+    saved = context.call_wm("save_mainfile")
+    if (
+        not _finished(save_as)
+        or not _finished(saved)
+        or not destination.is_file()
+        or not sidecar.is_dir()
+    ):
+        raise RuntimeError(f"{family} save did not produce a .blend/.cbq pair")
+    if destination.stat().st_size >= MAX_ARTIFACT_BYTES:
+        raise RuntimeError(f"{destination} reached the 50 MiB repository target")
+    evidence = {
+        "blend_bytes": destination.stat().st_size,
+        "sidecar": _sidecar_evidence(sidecar),
+        "volumes": _volume_evidence(sidecar),
+    }
+    return evidence, [
+        {
+            "path": str(destination),
+            "role": f"{family}_blend",
+            "bytes": destination.stat().st_size,
+            "sha256": _sha256(destination),
+        },
+        {
+            "path": str(sidecar),
+            "role": f"{family}_sidecar",
+            "bytes": evidence["sidecar"]["bytes"],
+            "file_count": evidence["sidecar"]["file_count"],
+        },
+    ]
+
+
+def _active_mesh():
+    active = bpy.context.active_object
+    if active is not None and active.type == "MESH":
+        return active
+    selected = [obj for obj in bpy.context.selected_objects if obj.type == "MESH"]
+    if len(selected) == 1:
+        return selected[0]
+    meshes = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
+    if len(meshes) != 1:
+        raise RuntimeError("selected Project Browser row has no unambiguous Mesh View")
+    return meshes[0]
+
+
+def _mesh_coordinates(obj):
+    bpy.context.view_layer.update()
+    return tuple(tuple(float(axis) for axis in vertex.co) for vertex in obj.data.vertices)
+
+
 def _case_env(context):
     required_operators = (
         "quick_import",
@@ -416,8 +626,11 @@ def _case_env(context):
         "reject_topology",
         "switch_topology",
         "toggle_selective_constraints",
+        "derive_crystal_symmetry",
         "create_biological_view",
         "play_biological_models",
+        "configure_trajectory_playback",
+        "select_biological_atoms",
         "resolve_grid_semantics",
         "create_grid_view",
         "export_project_entity",
@@ -883,6 +1096,313 @@ def _case_migration(context):
     }
 
 
+def _case_rep_molecular(context):
+    _clear_scene_objects(context)
+    imports = _import_representative_inputs(context, "REP-MOLECULAR")
+    rows = context.rows()
+    if len(imports) != len(CASE_INPUTS["REP-MOLECULAR"]):
+        raise RuntimeError("not every molecular representative was imported")
+    bundle, outputs = _save_representative_bundle(context, "molecular")
+    return {
+        "status": "passed",
+        "evidence": {
+            "imports": imports,
+            "row_counts": _row_counts(rows),
+            "objects": _objects(),
+            "bundle": bundle,
+        },
+        "outputs": outputs,
+    }
+
+
+def _case_rep_trajectory(context):
+    _clear_scene_objects(context)
+    imports = _import_representative_inputs(context, "REP-TRAJECTORY")
+    rows = context.rows()
+    structure = context.remember("rep_trajectory_structure", rows, "structure")
+    frames = context.remember("rep_trajectory_frames", rows, "frame_set")
+    context.select(frames["entity_id"])
+    view = context.activate_structure_view(structure["entity_id"])
+    if len(view.data.vertices) != 21:
+        raise RuntimeError(f"rMD17 aspirin View has {len(view.data.vertices)} atoms, expected 21")
+    context.current["stage"] = "public timeline playback"
+    playback = context.call_chem(
+        "configure_trajectory_playback",
+        frame_start=1,
+        frame_step=1,
+    )
+    if not _finished(playback):
+        raise RuntimeError("rMD17 trajectory playback did not configure")
+    bpy.context.scene.frame_set(1)
+    first = _mesh_coordinates(view)
+    bpy.context.scene.frame_set(32)
+    last = _mesh_coordinates(view)
+    if first == last:
+        raise RuntimeError("rMD17 timeline did not update the Structure View")
+    bpy.context.scene.frame_set(1)
+    bundle, outputs = _save_representative_bundle(context, "trajectory")
+    return {
+        "status": "passed",
+        "evidence": {
+            "imports": imports,
+            "row_counts": _row_counts(rows),
+            "atom_count": len(first),
+            "frame_start": 1,
+            "frame_end": bpy.context.scene.frame_end,
+            "coordinates_changed": True,
+            "objects": _objects(),
+            "bundle": bundle,
+        },
+        "outputs": outputs,
+    }
+
+
+def _case_rep_biological(context):
+    _clear_scene_objects(context)
+    context.current["stage"] = "Quick Import representative PDB"
+    pdb_import = _import_files(
+        context,
+        [context.input("inputs/pdb/1d3z-ubiquitin-nmr.pdb")],
+    )
+    pdb_structure = context.remember(
+        "rep_pdb_structure",
+        pdb_import["new_rows"],
+        "structure",
+    )
+    context.select(pdb_structure["entity_id"])
+    context.current["stage"] = "PDB hierarchy, MODEL playback and chain selection"
+    pdb_view = context.call_chem("create_biological_view")
+    playback = context.call_chem("play_biological_models", frame_start=1, frame_step=1)
+    selection = context.call_chem(
+        "select_biological_atoms",
+        selector="chain",
+        chain_id="A",
+    )
+    if not all(_finished(result) for result in (pdb_view, playback, selection)):
+        raise RuntimeError("representative PDB workflow did not finish")
+    context.current["stage"] = "Quick Import representative PQR"
+    pqr_import = _import_files(
+        context,
+        [context.input("inputs/pqr/apbs-protein-rna-nb.pqr")],
+    )
+    pqr_structure = context.remember(
+        "rep_pqr_structure",
+        pqr_import["new_rows"],
+        "structure",
+    )
+    context.select(pqr_structure["entity_id"])
+    pqr_view = context.call_chem("create_biological_view")
+    if not _finished(pqr_view):
+        raise RuntimeError("representative PQR View was not created")
+    rows = context.rows()
+    bundle, outputs = _save_representative_bundle(context, "biological")
+    return {
+        "status": "passed",
+        "evidence": {
+            "imports": [
+                {
+                    "path": CASE_INPUTS["REP-BIOLOGICAL"][0],
+                    "preview": pdb_import["preview"],
+                    "new_row_counts": _row_counts(pdb_import["new_rows"]),
+                },
+                {
+                    "path": CASE_INPUTS["REP-BIOLOGICAL"][1],
+                    "preview": pqr_import["preview"],
+                    "new_row_counts": _row_counts(pqr_import["new_rows"]),
+                },
+            ],
+            "row_counts": _row_counts(rows),
+            "model_frame_end": bpy.context.scene.frame_end,
+            "objects": _objects(),
+            "bundle": bundle,
+        },
+        "outputs": outputs,
+    }
+
+
+def _case_rep_crystal(context):
+    _clear_scene_objects(context)
+    context.current["stage"] = "Quick Import representative CIF"
+    cif_import = _import_files(
+        context,
+        [context.input("inputs/cif/cod-4503272-caffeine-cocrystal.cif")],
+    )
+    structure = context.remember(
+        "rep_cif_structure",
+        cif_import["new_rows"],
+        "structure",
+    )
+    context.select(structure["entity_id"])
+    context.current["stage"] = "verify optional CIF symmetry derivation"
+    try:
+        symmetry = context.call_chem("derive_crystal_symmetry")
+    except RuntimeError as error:
+        reason = str(error).strip()
+        expected = (
+            "spglib is required in the ChemBlender core/worker environment"
+        )
+        if expected not in reason:
+            raise
+        symmetry_evidence = {"status": "unavailable", "reason": reason}
+    else:
+        if not _finished(symmetry):
+            raise RuntimeError("representative CIF symmetry derivation failed")
+        symmetry_evidence = {"status": "derived"}
+    imports = [
+        {
+            "path": CASE_INPUTS["REP-CRYSTAL"][0],
+            "preview": cif_import["preview"],
+            "new_row_counts": _row_counts(cif_import["new_rows"]),
+        }
+    ]
+    for relative in CASE_INPUTS["REP-CRYSTAL"][1:]:
+        context.current["stage"] = f"Quick Import {relative}"
+        imported = _import_files(context, [context.input(relative)])
+        imports.append(
+            {
+                "path": relative,
+                "preview": imported["preview"],
+                "new_row_counts": _row_counts(imported["new_rows"]),
+            }
+        )
+    rows = context.rows()
+    bundle, outputs = _save_representative_bundle(context, "crystal")
+    return {
+        "status": "passed",
+        "evidence": {
+            "imports": imports,
+            "symmetry": symmetry_evidence,
+            "row_counts": _row_counts(rows),
+            "objects": _objects(),
+            "bundle": bundle,
+        },
+        "outputs": outputs,
+    }
+
+
+def _case_rep_grid(context):
+    _clear_scene_objects(context)
+    imports = _import_representative_inputs(context, "REP-GRID")
+    rows = context.rows()
+    grid = context.remember("rep_grid", rows, "grid3_d")
+    context.select(grid["entity_id"])
+    settings = getattr(bpy.context.scene, "chemblender_grid")
+    settings.dataset_index = 0
+    settings.preset_id = "electron_density"
+    settings.value_unit = "electron_per_cubic_bohr"
+    before = {item["name"] for item in _objects()}
+    context.current["stage"] = "resolve density and create Volume/Surface Views"
+    resolved = context.call_chem("resolve_grid_semantics")
+    volume = context.call_chem("create_grid_view", mode="volume")
+    surface = context.call_chem("create_grid_view", mode="signed_surface")
+    if not all(_finished(result) for result in (resolved, volume, surface)):
+        raise RuntimeError("representative Grid workflow did not finish")
+    created_objects = [
+        obj for obj in bpy.context.scene.objects if obj.name not in before
+    ]
+    view_counts = {
+        kind: sum(
+            obj.get("cb_scene_view_kind") == kind
+            for obj in created_objects
+        )
+        for kind in ("grid_volume", "signed_isosurface")
+    }
+    expected_views = {"grid_volume": 1, "signed_isosurface": 2}
+    if view_counts != expected_views:
+        raise RuntimeError(f"Grid Views are incomplete: {view_counts}")
+    created = [
+        item for item in _objects() if item["name"] not in before
+    ]
+    bundle, outputs = _save_representative_bundle(context, "grid")
+    return {
+        "status": "passed",
+        "evidence": {
+            "imports": imports,
+            "row_counts": _row_counts(rows),
+            "grid_rna": _property_snapshot("chemblender_grid"),
+            "created_view_counts": view_counts,
+            "created_objects": created,
+            "bundle": bundle,
+        },
+        "outputs": outputs,
+    }
+
+
+def _case_rep_save_reopen(context):
+    if context.args.checkpoint == "main":
+        outputs = []
+        bundles = {}
+        for case_id, family in REPRESENTATIVE_FAMILIES.items():
+            blend = _existing_output(context, case_id, f"{family}_blend")
+            sidecar = _existing_output(context, case_id, f"{family}_sidecar")
+            if not blend.is_file() or not sidecar.is_dir():
+                raise RuntimeError(f"representative {family} output pair is missing")
+            if blend.stat().st_size >= MAX_ARTIFACT_BYTES:
+                raise RuntimeError(f"representative {family} .blend reached 50 MiB")
+            bundles[family] = {
+                "blend_bytes": blend.stat().st_size,
+                "sidecar": _sidecar_evidence(sidecar),
+            }
+            case = next(item for item in context.report["cases"] if item["id"] == case_id)
+            outputs.extend(case["outputs"])
+        return {
+            "status": "prepared",
+            "evidence": {"bundles": bundles, "cold_reopen": {}},
+            "outputs": outputs,
+            "deferred_reason": "cold reopen all five representative bundles",
+        }
+    if context.args.checkpoint != "reopen":
+        raise ValueError("representative continuation requires --checkpoint reopen")
+    active = Path(bpy.data.filepath).resolve()
+    matches = []
+    for case_id, family in REPRESENTATIVE_FAMILIES.items():
+        expected = _existing_output(context, case_id, f"{family}_blend")
+        if active == expected:
+            matches.append((family, expected))
+    if len(matches) != 1:
+        raise RuntimeError("fresh Blender did not open one expected representative bundle")
+    family, expected = matches[0]
+    sidecar = expected.with_suffix(".cbq")
+    rows = context.rows()
+    expected_kinds = {
+        "molecular": "molecular_record",
+        "trajectory": "frame_set",
+        "biological": "biological_hierarchy",
+        "crystal": "structure",
+        "grid": "grid3_d",
+    }
+    if not any(_normal(row["kind"]) == _normal(expected_kinds[family]) for row in rows):
+        raise RuntimeError(f"cold reopen exposed no {expected_kinds[family]} row")
+    objects = _objects()
+    if not objects:
+        raise RuntimeError("cold reopen exposed no saved Views")
+    sidecar_state = _sidecar_evidence(sidecar)
+    volumes = _volume_evidence(sidecar)
+    if family == "grid" and not volumes:
+        raise RuntimeError("cold-reopened Grid bundle has no Volume cache")
+    evidence = dict(context.current["evidence"])
+    cold_reopen = dict(evidence.get("cold_reopen", {}))
+    cold_reopen[family] = {
+        "active_file": str(active),
+        "row_counts": _row_counts(rows),
+        "object_count": len(objects),
+        "frame_end": bpy.context.scene.frame_end,
+        "missing_external_files": 0,
+        "sidecar": sidecar_state,
+        "volumes": volumes,
+    }
+    evidence["cold_reopen"] = cold_reopen
+    complete = set(cold_reopen) == set(REPRESENTATIVE_OUTPUT_PATHS)
+    payload = {
+        "status": "passed" if complete else "prepared",
+        "evidence": evidence,
+        "outputs": list(context.current["outputs"]),
+    }
+    if not complete:
+        payload["deferred_reason"] = "cold reopen all five representative bundles"
+    return payload
+
+
 CASE_FUNCTIONS = {
     "ENV": _case_env,
     "IMP-XYZ": _case_imp_xyz,
@@ -895,6 +1415,12 @@ CASE_FUNCTIONS = {
     "EXP-FORMATS": _case_exports,
     "LIFE-SAVE-REOPEN-PREP": _case_life,
     "MIG-PREVIEW-PREP": _case_migration,
+    "REP-MOLECULAR": _case_rep_molecular,
+    "REP-TRAJECTORY": _case_rep_trajectory,
+    "REP-BIOLOGICAL": _case_rep_biological,
+    "REP-CRYSTAL": _case_rep_crystal,
+    "REP-GRID": _case_rep_grid,
+    "REP-SAVE-REOPEN-PREP": _case_rep_save_reopen,
 }
 
 
@@ -932,7 +1458,7 @@ def _run_case(context, case_id):
         "operators": list(previous["operators"]) if previous else [],
         "status": "running",
         "stage": "start",
-        "evidence": {},
+        "evidence": dict(previous["evidence"]) if previous else {},
         "outputs": list(previous["outputs"]) if previous else [],
         "elapsed_seconds": previous_elapsed,
         "error": None,

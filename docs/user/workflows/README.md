@@ -29,6 +29,14 @@
 
 不要只凭扩展名判断能力。导入内容、依赖、View、导出成熟度和已知损失见[格式与支持范围](formats.md)。
 
+## 样例层级与“分辨率”
+
+每种格式至少保留一个 `contract` 样例。它通常只有几百 bytes，用来锁定语法分支、字段映射和错误路径；文件小不等于坐标精度不足，但它不能证明大型数据的交互体验。需要观察规模、轨迹、层级或体数据时，改用 `representative` 样例。代表样例来自 COD、wwPDB CCD/PDB、APBS、Open Babel、Avogadro、MolSSI 和 rMD17，或由这些固定来源按公开规则确定性派生。
+
+“分辨率”要按数据类型读：坐标文件看原子数、单位和有效小数；trajectory 看帧数、每帧原子数和属性；Cube 看 `Nx×Ny×Nz`、步长和空间范围；晶体看位点、晶胞、symmetry/supercell；生物结构看 atom/residue/chain/model。文件 bytes 只说明编码大小。
+
+每个输入旁边都有同名 Markdown，记录来源 ID、取得日期、许可证、规范链接、字段、ChemBlender 支持边界、SHA-256 和 Agent 提示词。完整选择表见[格式样例矩阵](formats.md#样例矩阵)；输入文件保持不可变。自动检查通过后，仍要完成[人工插件使用体验检阅](reviews/README.md)，才能把候选版本视为可发布。
+
 ## 推荐路线
 
 ```text
@@ -47,7 +55,7 @@
 8. [格式与支持范围](formats.md)
 9. [人工插件使用体验检阅](reviews/README.md)
 
-细节事实仍以现有的 [Quick Import](../quick-import.md)、[Project Browser](../project-browser.md)、[数据质量](../data-quality.md)、[科学编辑](../scientific-editing.md)和[项目 sidecar](../project-sidecar.md)指南为准。教程输入集中在[用户流程样例目录](../../../examples/user-workflows/README.md)，输入文件不要原地覆盖；本轮 Blender 5.1 实测结果见 [`local-2.4.0.json`](../../../examples/user-workflows/results/local-2.4.0.json)。
+细节事实仍以现有的 [Quick Import](../quick-import.md)、[Project Browser](../project-browser.md)、[数据质量](../data-quality.md)、[科学编辑](../scientific-editing.md)和[项目 sidecar](../project-sidecar.md)指南为准。教程输入集中在[用户流程样例目录](../../../examples/user-workflows/README.md)，输入文件不要原地覆盖；基础流程实测见 [`local-2.4.0.json`](../../../examples/user-workflows/results/local-2.4.0.json)，代表样例实测见 [`local-representative-2.4.0.json`](../../../examples/user-workflows/results/local-representative-2.4.0.json)。
 
 ## 开始前
 

@@ -14,7 +14,19 @@ Project 中的 Structure、Grid3D、属性和结果是科学实体；Blender Obj
 
 用 [two-datasets.cube](../../../examples/user-workflows/inputs/cube/two-datasets.cube)练习多 dataset Grid3D。结构与轨迹可用 [carbon-trajectory.extxyz](../../../examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz)和 [model-trajectory.pdb](../../../examples/user-workflows/inputs/pdb/model-trajectory.pdb)。轻量结果展示可用 [water-results.cjson](../../../examples/user-workflows/inputs/cjson/water-results.cjson)和 [atomic-result.json](../../../examples/user-workflows/inputs/qcschema/atomic-result.json)。
 
-若要直接查看实测结果，可打开 [workflow.blend](../../../examples/user-workflows/outputs/workflow-project/workflow.blend)。必须保留同目录的完整 `workflow.cbq/`；该项目已在仓库内当前位置冷重开，并确认三个 Volume 路径都解析到配套 sidecar。
+规模检阅使用 113 原子的 [TA1 XYZ](../../../examples/user-workflows/inputs/xyz/ta1-paclitaxel-ccd.xyz)、32 帧的 [rMD17 aspirin extXYZ](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz)、10 MODEL 的 [1D3Z](../../../examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb)和 `64³` 的 [H₂ density Cube](../../../examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.cube)。H₂ 场是解析教学模型，不是 HF/DFT 结果；创建 View 前仍要显式确认 semantic/unit。
+
+若要直接查看实测结果，可按数据类型选择下表。每个文件都必须与同目录的完整同名 `.cbq/` 一起保留；五组代表项目已从仓库内当前位置分别用新 Blender 5.1.2 进程冷重开。
+
+| 数据组 | 场景 | sidecar manifest | 检阅重点 |
+| --- | --- | --- | --- |
+| 分子与 exchange | [molecular.blend](../../../examples/user-workflows/outputs/representative/molecular/molecular.blend) | [manifest](../../../examples/user-workflows/outputs/representative/molecular/molecular.cbq/manifest.json) | 8 种输入、topology/record、CJSON/QCSchema 与 8 个 View |
+| trajectory | [trajectory.blend](../../../examples/user-workflows/outputs/representative/trajectory/trajectory.blend) | [manifest](../../../examples/user-workflows/outputs/representative/trajectory/trajectory.cbq/manifest.json) | 32 帧 playback 与坐标变化 |
+| 生物结构 | [biological.blend](../../../examples/user-workflows/outputs/representative/biological/biological.blend) | [manifest](../../../examples/user-workflows/outputs/representative/biological/biological.cbq/manifest.json) | MODEL playback、hierarchy、chain/residue selection |
+| 晶体 | [crystal.blend](../../../examples/user-workflows/outputs/representative/crystal/crystal.blend) | [manifest](../../../examples/user-workflows/outputs/representative/crystal/crystal.cbq/manifest.json) | CIF/POSCAR View 与可选 spglib 不可用提示 |
+| Grid3D | [grid.blend](../../../examples/user-workflows/outputs/representative/grid/grid.blend) | [manifest](../../../examples/user-workflows/outputs/representative/grid/grid.cbq/manifest.json) | Volume、两个 signed Surface 与 sidecar-local VDB |
+
+综合合同项目仍可打开 [workflow.blend](../../../examples/user-workflows/outputs/workflow-project/workflow.blend)，并用 [workflow.cbq manifest](../../../examples/user-workflows/outputs/workflow-project/workflow.cbq/manifest.json)核对 sidecar。
 
 ## 操作前检查
 
@@ -41,9 +53,9 @@ Project 中的 Structure、Grid3D、属性和结果是科学实体；Blender Obj
 
 ### trajectory 与 MODEL playback
 
-1. 选中 extXYZ FrameSet 或 PDB multi-model 数据对应的 View。
+1. extXYZ 在 Project Browser 选中 `FrameSet`，并激活同一 Structure 的 View；PDB multi-model 选中对应的 biological Structure/View。
 2. 核对 frame/model count 与起止帧。
-3. PDB 使用 `Configure MODEL Playback`。播放时观察几何变化，并确认 Project Browser 中仍是同一 source revision。
+3. extXYZ 使用 `Configure Trajectory Playback`；PDB 使用 `Configure MODEL Playback`。播放时观察几何变化，并确认 Project Browser 中仍是同一 source revision。
 
 ### 缓存重建
 
@@ -69,7 +81,7 @@ ChemBlender 自有的 Volume/Surface cache 位于 sidecar 的 derived cache 范�
 ### Structure View
 
 ```text
-使用当前 Blender MCP 导入 `examples/user-workflows/inputs/xyz/water.xyz`。完成 Blender 5.1/Extension 预检并检查 Quick Import/Preview 的 Operator RNA；通过 `bpy.ops.chemblender.quick_import` 与 `confirm_import` 走完 UI confirmation。读取 Project Browser 的 Structure 和 Default View，验证 3 atoms、quality、entity/revision binding 与对象存在。不得 import private modules、直接编辑 `.cbq`/cache/`cb_` state 或 bypass confirmation；材质和 transform 不算 scientific verification。
+使用当前 Blender MCP 导入 `examples/user-workflows/inputs/xyz/ta1-paclitaxel-ccd.xyz`。完成 Blender 5.1/Extension 预检并检查 Quick Import/Preview 的 Operator RNA；通过 `bpy.ops.chemblender.quick_import` 与 `confirm_import` 走完 UI confirmation。读取 Project Browser 的 Structure 和 Default View，验证 113 atoms、62 heavy atoms、51 explicit H、无来源 topology、quality、entity/revision binding 与对象存在。不得把显示连线称为来源键，不得 import private modules、直接编辑 `.cbq`/cache/`cb_` state 或 bypass confirmation；材质和 transform 不算 scientific verification。
 ```
 
 ### Grid Volume / Signed Surface
@@ -78,10 +90,16 @@ ChemBlender 自有的 Volume/Surface cache 位于 sidecar 的 derived cache 范�
 使用当前 Blender MCP 导入 `examples/user-workflows/inputs/cube/two-datasets.cube`。确认 Blender >= 5.1、Extension key 和 clean state；检查 `bpy.ops.chemblender.resolve_grid_semantics` 与 `create_grid_view` 的 Operator RNA/poll。Import Preview confirmation 后选中 Grid3D，读取 status、dims、dataset count、unit 和 semantic role；显式选择 dataset index，歧义存在时先停下报告。按我确认的 preset/unit/isovalue 创建 Volume 或 Signed Surface，并验证 View binding、dataset index、cache ownership 和对象。不得 import private modules、直写 `.cbq`/cache 或 bypass confirmation。
 ```
 
+### 代表性 64³ Grid
+
+```text
+使用当前 Blender MCP，通过公开 `bpy.ops.chemblender.quick_import` 导入 `examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.cube`，读取 Operator RNA 并停在 Import Preview confirmation。报告 64x64x64 shape、两颗 H、bohr origin/steps、数值范围、约 2-electron 离散积分和 ambiguous semantic/unit；明确这是解析 LCAO 教学密度而非 HF/DFT。经我确认导入后，调用公开 `bpy.ops.chemblender.resolve_grid_semantics`，再按已确认 isovalue 用 `bpy.ops.chemblender.create_grid_view` 创建 Volume 与 Signed Surface。验证 View binding、owned cache 和对象；不得 import private modules、直写 `.cbq`/cache 或 bypass confirmation。
+```
+
 ### trajectory / MODEL playback
 
 ```text
-使用当前 Blender MCP 导入 `examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz`；也可按同一流程改用 `examples/user-workflows/inputs/pdb/model-trajectory.pdb`。检查所有导入和 playback Operator RNA，走 `bpy.ops.chemblender.quick_import`/`confirm_import` confirmation，再从公开 Project Browser/View RNA 读取 frame/model count 和 source revision。调用 live playback Operator 后验证帧变化但 source revision 不变。不得 import private modules、修改 `.cbq` 或 bypass confirmation。
+使用当前 Blender MCP 导入 `examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz`；生物 MODEL 可按同一公开流程改用 `examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb`。检查所有导入和 playback Operator RNA，走 `bpy.ops.chemblender.quick_import`/`confirm_import` confirmation；先报告 32x21 trajectory、energy/force/source_index，或 1D3Z 的 10x1231 MODEL 与 hierarchy。extXYZ 选中 FrameSet、激活匹配 Structure View 后调用 `bpy.ops.chemblender.configure_trajectory_playback`；PDB 调用 `bpy.ops.chemblender.play_biological_models`。验证帧变化但 source revision 不变。不得 import private modules、修改 `.cbq` 或 bypass confirmation。
 ```
 
 ### 冷重开后的缓存重建

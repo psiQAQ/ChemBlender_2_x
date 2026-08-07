@@ -20,6 +20,11 @@ ChemBlender 把科学数据修改与 Blender 外观修改分开。移动对象�
 | PDB MODEL 播放与层级 | [model-trajectory.pdb](../../../examples/user-workflows/inputs/pdb/model-trajectory.pdb) |
 | PDB MODEL 身份不一致诊断 | [multimodel.pdb](../../../examples/user-workflows/inputs/pdb/multimodel.pdb) |
 | PQR charge/radius 与层级 | [with-chain.pqr](../../../examples/user-workflows/inputs/pqr/with-chain.pqr) |
+| 32 帧 trajectory 与 force/energy | [aspirin-rmd17-32.extxyz](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz) |
+| 大型 MOL2 与不支持键型 | [openbabel-5sun-protein.mol2](../../../examples/user-workflows/inputs/mol2/openbabel-5sun-protein.mol2) |
+| 64 位点周期结构 | [cod-9012293-diamond-2x2x2.CONTCAR](../../../examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR) |
+| 真实 NMR MODEL 与生物层级 | [1d3z-ubiquitin-nmr.pdb](../../../examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb) |
+| 真实 PQR charge/radius 与推断 segment | [apbs-protein-rna-nb.pqr](../../../examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.pqr) |
 
 ## 操作前检查
 
@@ -51,7 +56,7 @@ ChemBlender 把科学数据修改与 Blender 外观修改分开。移动对象�
 ### 晶体数据
 
 1. 选中周期 Structure，查看 `Declared Symmetry`、`Derived Symmetry` 和 `Comparison Symmetry`。
-2. Gemmi 可用时选择 `Derive Symmetry`。派生结果是新的结果实体，不会伪装成源文件声明。
+2. 可选的 spglib 可用时选择 `Derive Symmetry`；缺失时按钮禁用并显示 dependency reason。Gemmi 负责 CIF 读取，不提供这一步派生。派生结果是新的结果实体，不会伪装成源文件声明。
 3. 需要标准化显示时选择 `View Standardized Structure`。
 4. 对含 Selective Dynamics 的 POSCAR/CONTCAR，查看 constrained atom count；`Toggle Selective Constraints` 只切换约束的 View 表现。
 
@@ -91,16 +96,34 @@ ChemBlender 把科学数据修改与 Blender 外观修改分开。移动对象�
 使用当前 Blender MCP 导入并选中 `examples/user-workflows/inputs/mol2/substructure.mol2` 的 Structure。预检 runtime 后检查 `bpy.ops.chemblender.compute_topology`、`accept_topology`、`reject_topology`、`switch_topology` 的 Operator RNA 与 poll。只调用当前 UI 允许的 Operator，先报告 existing topology source/quality/edge count 和 proposal parameters；任何 scientific confirmation 交给我。执行我指定的 accept/reject/switch 后验证 TopologyRecord 与 View binding，不能覆盖 explicit_file 证据。不得 import private modules、改 `.cbq` 或 bypass confirmation。
 ```
 
+### 大型 MOL2 的 topology 边界
+
+```text
+使用当前 Blender MCP，读取 Operator RNA 后，通过 `bpy.ops.chemblender.quick_import` 导入 `examples/user-workflows/inputs/mol2/openbabel-5sun-protein.mol2`，停在 Import Preview confirmation。报告 6185 atoms、6248 declared bonds、390 substructures、`un` bond type、4 类 unknown sections、0 interpreted topologies 和 diagnostics。经我确认后再调用 `bpy.ops.chemblender.confirm_import`；只检查 Structure、原子属性、层级和原始记录，不自动调用 compute/accept topology，也不把显示连接称为来源 topology。不得 import private modules、写 `.cbq` 或 bypass confirmation。
+```
+
 ### 晶体属性
 
 ```text
-使用当前 Blender MCP 通过公开导入流程打开 `examples/user-workflows/inputs/poscar/velocities.CONTCAR`。确认 Blender >= 5.1 和 Extension key，检查 Operator RNA 后读取 declared/derived/comparison symmetry、Selective Dynamics 和 velocity 的公开 UI 状态。Gemmi availability 和 cell 完整时才允许调用 live `bpy.ops.chemblender.derive_crystal_symmetry` 或 `toggle_selective_constraints`；先报告 confirmation 与 dependency reason。验证 derived result 或 constraint View，不把它写成源文件事实。不得 import private modules、编辑 `.cbq` 或 bypass confirmation。
+使用当前 Blender MCP 通过公开导入流程打开 `examples/user-workflows/inputs/poscar/velocities.CONTCAR`。确认 Blender >= 5.1 和 Extension key，检查 Operator RNA 后读取 declared/derived/comparison symmetry、Selective Dynamics 和 velocity 的公开 UI 状态。先报告 spglib availability 与 dependency reason；只有 spglib 可用且 cell 完整时才调用 live `bpy.ops.chemblender.derive_crystal_symmetry`。`toggle_selective_constraints` 只依赖当前 Structure 的 Selective Dynamics 数据。验证 derived result 或 constraint View，不把它写成源文件事实。不得 import private modules、编辑 `.cbq` 或 bypass confirmation。
+```
+
+### 代表性周期结构
+
+```text
+使用当前 Blender MCP，先检查 Blender 5.1、Extension key、`bpy.ops.chemblender.quick_import`、`confirm_import` 和 `derive_crystal_symmetry` 的 Operator RNA/poll。导入 `examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR`，在 Preview 报告 64 个 C sites、7.1338 Å cell、Direct coordinates、64 行零 atomic velocity、quality 和 confirmation；经我确认后提交。先读取 UI 的 spglib dependency reason；只有按钮可用时才调用公开 `bpy.ops.chemblender.derive_crystal_symmetry`，并把结果标为从 POSCAR 派生，不能写成源声明。缺失 spglib 时记录禁用原因，不尝试绕过。不得 import private modules、编辑 `.cbq` 或 bypass confirmation。
 ```
 
 ### biological hierarchy 与 MODEL
 
 ```text
-使用当前 Blender MCP 导入 `examples/user-workflows/inputs/pdb/model-trajectory.pdb`，在 Import Preview confirmation 后选中 BiologicalHierarchy/Structure。检查 `bpy.ops.chemblender.select_biological_atoms`、`play_biological_models`、`create_biological_view` 的 Operator RNA 与 poll，再按我给的 model/chain/residue 条件调用。返回 hierarchy、MODEL count、selection 和 View binding。可另行导入 `examples/user-workflows/inputs/pdb/multimodel.pdb`，确认身份不一致的 MODEL 被拆为独立 Structure 并显示诊断，而不是强行播放。不得 import private modules、改 mesh/scientific attributes、写 `.cbq` 或 bypass confirmation。
+使用当前 Blender MCP 导入 `examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb`，在 Import Preview confirmation 后报告 10 MODEL、每模型 1231 atoms、chain A、76 residues 和 trajectory，再等我确认提交。选中 BiologicalHierarchy/Structure 后检查 `bpy.ops.chemblender.select_biological_atoms`、`play_biological_models`、`create_biological_view` 的 Operator RNA 与 poll，再按我给的 model/chain/residue 条件调用，返回 selection、frame change 和 View binding。可另行用 `examples/user-workflows/inputs/pdb/multimodel.pdb` 确认身份不一致会拆成独立 Structure。不得 import private modules、改 mesh/scientific attributes、写 `.cbq` 或 bypass confirmation。
+```
+
+### 代表性 PQR 层级
+
+```text
+使用当前 Blender MCP，读取公开 Operator RNA 后，通过 `bpy.ops.chemblender.quick_import` 导入 `examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.pqr`。停在 Preview，报告 998 atoms、41 residues、998 charge/radius、22 个 zero radius、无来源 chain 和 2 个 inferred segments；经我确认后调用 `bpy.ops.chemblender.confirm_import`。可用 `bpy.ops.chemblender.select_biological_atoms` 检查 segment/residue 选择，但不得把 inferred segment 改称来源 chain。任何 confirmation 都不绕过；不得 import private modules 或编辑 `.cbq`。
 ```
 
 ## 常见问题

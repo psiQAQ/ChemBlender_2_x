@@ -236,6 +236,16 @@ class PQRReaderTests(unittest.TestCase):
             batch.structures[0].atomic_identity.atom_names.categories,
             ("CA", "CD", "FE", "CL", "BR", "1HG1"),
         )
+        inferred = tuple(
+            diagnostic
+            for diagnostic in batch.diagnostics
+            if diagnostic.recovery_action
+            == "inferred element from PQR atom name"
+        )
+        self.assertEqual(len(inferred), 1)
+        self.assertEqual(inferred[0].field_path, "record[*].element")
+        self.assertIn("7 atom records", inferred[0].message)
+        self.assertEqual(len(batch.diagnostics), 3)
 
     def test_element_policy_matrix_keeps_polymer_and_ion_context_separate(self):
         cases = (
@@ -338,6 +348,23 @@ class PQRReaderTests(unittest.TestCase):
             ),
             (("ALA", 1), ("ALA", 2)),
         )
+
+    def test_no_chain_residue_restart_starts_a_new_segment(self):
+        raw = b"\n".join(
+            (
+                b"ATOM 1 N MET 1 0 0 0 0 1.5",
+                b"ATOM 2 O ASN 22 1 0 0 0 1.4",
+                b"ATOM 3 P G 1 2 0 0 0 1.8",
+                b"",
+            )
+        )
+        parsed = pqr.parse_pqr_records(raw)
+        self.assertEqual(tuple(atom.serial for atom in parsed.atoms), (1, 2, 3))
+        self.assertEqual(tuple(atom.segment_index for atom in parsed.atoms), (0, 0, 1))
+
+    def test_zero_radius_is_preserved(self):
+        parsed = pqr.parse_pqr_records(b"ATOM 1 H MET 1 0 0 0 0 0.0\n")
+        self.assertEqual(tuple(atom.radius for atom in parsed.atoms), (0.0,))
 
     def test_residue_range_zero_charge_ignored_records_and_truncated_prefix(self):
         raw = b"\n".join(

@@ -22,6 +22,9 @@ DOC_ROOT = ROOT / "docs" / "user" / "workflows"
 EXAMPLE_ROOT = ROOT / "examples" / "user-workflows"
 RUNNER = EXAMPLE_ROOT / "scripts" / "run_ui_workflows.py"
 RUNTIME_RESULT = EXAMPLE_ROOT / "results" / "local-2.4.0.json"
+REPRESENTATIVE_RUNTIME_RESULT = (
+    EXAMPLE_ROOT / "results" / "local-representative-2.4.0.json"
+)
 EXPECTED_FAMILIES = (
     "cif",
     "cjson",
@@ -38,7 +41,19 @@ EXPECTED_FAMILIES = (
     "smiles",
     "xyz",
 )
-EXPECTED_OUTPUT_BUNDLES = ("legacy-migration", "workflow-project")
+REPRESENTATIVE_OUTPUT_BUNDLE_IDS = (
+    "representative-biological",
+    "representative-crystal",
+    "representative-grid",
+    "representative-molecular",
+    "representative-trajectory",
+)
+BASELINE_OUTPUT_BUNDLE_IDS = ("legacy-migration", "workflow-project")
+EXPECTED_OUTPUT_BUNDLES = (
+    BASELINE_OUTPUT_BUNDLE_IDS[0],
+    *REPRESENTATIVE_OUTPUT_BUNDLE_IDS,
+    BASELINE_OUTPUT_BUNDLE_IDS[1],
+)
 EXPECTED_DOCS = (
     "README.md",
     "01-import.md",
@@ -50,18 +65,29 @@ EXPECTED_DOCS = (
     "07-agent-beyond-plugin.md",
     "formats.md",
     "reviews/README.md",
+    "reviews/local-2.4.0-representative-corpus.md",
     "reviews/template.md",
 )
 REQUIRED_RECORD_KEYS = {
     "path",
     "family",
-    "source",
-    "provenance",
+    "role",
+    "source_platform",
+    "source_id",
+    "source_url",
+    "retrieved_at",
+    "license",
+    "license_url",
+    "derivation",
+    "source_sha256",
     "sha256",
     "bytes",
     "runtime",
     "expected",
     "workflow",
+    "metrics",
+    "specifications",
+    "documentation",
 }
 MARKDOWN_LINK = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
 TEXT_FENCE = re.compile(r"```text\s+(.*?)```", re.DOTALL)
@@ -83,6 +109,11 @@ REVIEW_CASE_IDS = (
     "MIG",
     "AGENT",
     "OUTSIDE",
+    "REP-MOLECULAR",
+    "REP-TRAJECTORY",
+    "REP-BIOLOGICAL",
+    "REP-CRYSTAL",
+    "REP-GRID",
 )
 RUNNER_CASE_IDS = (
     "ENV",
@@ -96,6 +127,45 @@ RUNNER_CASE_IDS = (
     "EXP-FORMATS",
     "LIFE-SAVE-REOPEN-PREP",
     "MIG-PREVIEW-PREP",
+)
+REPRESENTATIVE_CASE_IDS = (
+    "REP-MOLECULAR",
+    "REP-TRAJECTORY",
+    "REP-BIOLOGICAL",
+    "REP-CRYSTAL",
+    "REP-GRID",
+    "REP-SAVE-REOPEN-PREP",
+)
+REPRESENTATIVE_CASE_INPUTS = {
+    "REP-MOLECULAR": (
+        "inputs/cjson/avogadro-phthalocyanine.cjson",
+        "inputs/mol/ain-aspirin-v2000.mol",
+        "inputs/mol/ta1-paclitaxel-v3000.mol",
+        "inputs/mol2/openbabel-5sun-protein.mol2",
+        "inputs/qcschema/molssi-water-gradient-hf.json",
+        "inputs/sdf/ccd-3d-showcase.sdf",
+        "inputs/smiles/ta1-paclitaxel-isomeric.smi",
+        "inputs/xyz/ta1-paclitaxel-ccd.xyz",
+    ),
+    "REP-TRAJECTORY": ("inputs/extxyz/aspirin-rmd17-32.extxyz",),
+    "REP-BIOLOGICAL": (
+        "inputs/pdb/1d3z-ubiquitin-nmr.pdb",
+        "inputs/pqr/apbs-protein-rna-nb.pqr",
+    ),
+    "REP-CRYSTAL": (
+        "inputs/cif/cod-4503272-caffeine-cocrystal.cif",
+        "inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR",
+        "inputs/poscar/cod-9012293-diamond.POSCAR",
+    ),
+    "REP-GRID": ("inputs/cube/h2-lcao-1s-density-64.cube",),
+    "REP-SAVE-REOPEN-PREP": (),
+}
+REPRESENTATIVE_OUTPUTS = (
+    "outputs/representative/molecular/molecular.blend",
+    "outputs/representative/trajectory/trajectory.blend",
+    "outputs/representative/biological/biological.blend",
+    "outputs/representative/crystal/crystal.blend",
+    "outputs/representative/grid/grid.blend",
 )
 
 
@@ -136,6 +206,10 @@ class UserWorkflowContractTests(unittest.TestCase):
             ROOT / "docs" / "user" / "2.4.0-experience-review.md",
         ):
             self.assertIn(index, self.local_link_targets(path), path)
+        self.assertIn(
+            (EXAMPLE_ROOT / "README.md").resolve(),
+            self.local_link_targets(ROOT / "README.md"),
+        )
 
     def test_every_sample_is_linked_from_the_workflow_documents(self):
         linked = set()
@@ -148,10 +222,34 @@ class UserWorkflowContractTests(unittest.TestCase):
             for record in self.manifest()["files"]
         }
         expected.update(
+            (EXAMPLE_ROOT / record["documentation"]).resolve()
+            for record in self.manifest()["files"]
+        )
+        expected.update(
             (EXAMPLE_ROOT / bundle["blend"]).resolve()
             for bundle in self.manifest()["output_bundles"]
         )
+        expected.update(
+            (EXAMPLE_ROOT / bundle["sidecar"] / "manifest.json").resolve()
+            for bundle in self.manifest()["output_bundles"]
+        )
         self.assertEqual(expected - linked, set())
+
+    def test_workflow_overview_explains_representative_corpus_boundary(self):
+        document = "\n".join(
+            (DOC_ROOT / name).read_text(encoding="utf-8")
+            for name in EXPECTED_DOCS
+            if (DOC_ROOT / name).is_file()
+        )
+        for term in (
+            "contract",
+            "representative",
+            "分辨率",
+            "来源",
+            "许可证",
+            "人工插件使用体验检阅",
+        ):
+            self.assertIn(term, document)
 
     def test_plugin_workflow_prompts_keep_the_public_ui_boundary(self):
         for name in PLUGIN_WORKFLOW_DOCS:
@@ -229,6 +327,8 @@ class UserWorkflowContractTests(unittest.TestCase):
         template = path.read_text(encoding="utf-8")
         for case_id in REVIEW_CASE_IDS:
             self.assertIn(f"| {case_id} |", template)
+        for relative in REPRESENTATIVE_OUTPUTS:
+            self.assertIn(relative, template)
         for term in (
             "Environment",
             "Git commit",
@@ -310,6 +410,54 @@ class UserWorkflowContractTests(unittest.TestCase):
             <= constants
         )
 
+    def test_runner_declares_representative_inputs_operators_and_outputs(self):
+        tree = self.runner_tree()
+
+        def literal(name):
+            node = next(
+                item
+                for item in tree.body
+                if isinstance(item, ast.Assign)
+                and any(
+                    isinstance(target, ast.Name) and target.id == name
+                    for target in item.targets
+                )
+            )
+            return ast.literal_eval(node.value)
+
+        case_ids = literal("CASE_IDS")
+        case_inputs = literal("CASE_INPUTS")
+        self.assertEqual(case_ids[-len(REPRESENTATIVE_CASE_IDS) :], REPRESENTATIVE_CASE_IDS)
+        self.assertEqual(
+            {
+                case_id: tuple(case_inputs[case_id])
+                for case_id in REPRESENTATIVE_CASE_IDS
+            },
+            REPRESENTATIVE_CASE_INPUTS,
+        )
+        constants = {
+            value.value
+            for value in ast.walk(tree)
+            if isinstance(value, ast.Constant) and isinstance(value.value, str)
+        }
+        for value in REPRESENTATIVE_OUTPUTS:
+            self.assertIn(value, constants)
+        for operator in (
+            "quick_import",
+            "confirm_import",
+            "derive_crystal_symmetry",
+            "create_biological_view",
+            "play_biological_models",
+            "configure_trajectory_playback",
+            "select_biological_atoms",
+            "resolve_grid_semantics",
+            "create_grid_view",
+            "project_link_recovery",
+            "save_as_mainfile",
+            "save_mainfile",
+        ):
+            self.assertIn(operator, constants)
+
     def test_runtime_result_is_sanitized_and_complete(self):
         self.assertTrue(RUNTIME_RESULT.is_file(), RUNTIME_RESULT)
         report = json.loads(RUNTIME_RESULT.read_text(encoding="utf-8"))
@@ -334,7 +482,7 @@ class UserWorkflowContractTests(unittest.TestCase):
         )
         self.assertEqual(
             tuple(bundle["id"] for bundle in report["tracked_outputs"]),
-            EXPECTED_OUTPUT_BUNDLES,
+            BASELINE_OUTPUT_BUNDLE_IDS,
         )
         self.assertEqual(report["outside_plugin"]["status"], "passed")
         self.assertTrue(all(report["outside_plugin"]["scientific_state_unchanged"].values()))
@@ -344,6 +492,50 @@ class UserWorkflowContractTests(unittest.TestCase):
         source = RUNNER.read_text(encoding="utf-8")
         self.assertIn("NamedTemporaryFile", source)
         self.assertIn(".replace(", source)
+
+    def test_representative_runtime_result_is_sanitized_and_complete(self):
+        self.assertTrue(
+            REPRESENTATIVE_RUNTIME_RESULT.is_file(),
+            REPRESENTATIVE_RUNTIME_RESULT,
+        )
+        report = json.loads(
+            REPRESENTATIVE_RUNTIME_RESULT.read_text(encoding="utf-8")
+        )
+        self.assertEqual(report["schema_version"], "1")
+        self.assertEqual(report["product_version"], "2.4.0")
+        self.assertRegex(report["runner_commit"], r"^[0-9a-f]{40}$")
+        self.assertEqual(
+            report["package"]["sha256"],
+            "5555bbd3ebc6b8cc4066af78d5ffc929a70c72bae76b797a4cffded7a428e321",
+        )
+        cases = {case["id"]: case for case in report["cases"]}
+        self.assertEqual(
+            tuple(cases),
+            ("ENV", *REPRESENTATIVE_CASE_IDS),
+        )
+        self.assertEqual({case["status"] for case in cases.values()}, {"passed"})
+        self.assertEqual(report["deferred"], [])
+        self.assertIn(
+            "bpy.ops.chemblender.configure_trajectory_playback",
+            cases["REP-TRAJECTORY"]["operator_ids"],
+        )
+        self.assertEqual(
+            cases["REP-CRYSTAL"]["evidence"]["symmetry"]["status"],
+            "unavailable",
+        )
+        self.assertTrue(
+            cases["REP-GRID"]["evidence"]["volume_paths_inside_sidecar"]
+        )
+        self.assertEqual(
+            tuple(bundle["id"] for bundle in report["tracked_outputs"]),
+            REPRESENTATIVE_OUTPUT_BUNDLE_IDS,
+        )
+        self.assertTrue(
+            all(bundle["cold_reopen"] == "passed" for bundle in report["tracked_outputs"])
+        )
+        serialized = json.dumps(report, ensure_ascii=False)
+        self.assertNotIn(str(ROOT), serialized)
+        self.assertNotIn(".agents/cache", serialized.replace("\\", "/"))
 
     def test_runner_activates_matching_structure_view_for_context_operator(self):
         source = RUNNER.read_text(encoding="utf-8")
@@ -355,6 +547,25 @@ class UserWorkflowContractTests(unittest.TestCase):
             'obj.get("cb_structure_id")',
             "obj.select_set(True)",
             "bpy.context.view_layer.objects.active = obj",
+        ):
+            self.assertIn(token, source)
+
+    def test_representative_crystal_records_optional_spglib_boundary(self):
+        source = RUNNER.read_text(encoding="utf-8")
+        for token in (
+            'context.call_chem("derive_crystal_symmetry")',
+            "except RuntimeError as error:",
+            "spglib is required in the ChemBlender core/worker environment",
+            '"status": "unavailable"',
+        ):
+            self.assertIn(token, source)
+
+    def test_representative_grid_checks_view_contract_not_object_type(self):
+        source = RUNNER.read_text(encoding="utf-8")
+        for token in (
+            'obj.get("cb_scene_view_kind")',
+            '"grid_volume": 1',
+            '"signed_isosurface": 2',
         ):
             self.assertIn(token, source)
 
@@ -381,10 +592,20 @@ class UserWorkflowContractTests(unittest.TestCase):
         source = RUNNER.read_text(encoding="utf-8")
         for token in (
             'list(previous["operators"]) if previous else []',
+            'dict(previous["evidence"]) if previous else {}',
+            'list(previous["outputs"]) if previous else []',
             'float(previous["elapsed_seconds"]) if previous else 0.0',
             "previous_elapsed + time.perf_counter() - started",
         ):
             self.assertIn(token, source)
+
+    def test_representative_fresh_project_ignores_empty_browser_placeholder(self):
+        source = RUNNER.read_text(encoding="utf-8")
+        self.assertIn(
+            'any(row["entity_id"] for row in context.rows())',
+            source,
+        )
+        self.assertIn("if bpy.context.scene.objects:", source)
 
     def test_first_project_save_documents_and_runs_the_second_save_step(self):
         source = RUNNER.read_text(encoding="utf-8")
@@ -397,7 +618,7 @@ class UserWorkflowContractTests(unittest.TestCase):
 
     def test_manifest_covers_each_base_format_family(self):
         manifest = self.manifest()
-        self.assertEqual(manifest["schema_version"], "1")
+        self.assertEqual(manifest["schema_version"], "2")
         families = tuple(
             sorted({record["family"] for record in manifest["files"]})
         )
