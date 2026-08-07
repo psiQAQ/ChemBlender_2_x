@@ -58,24 +58,24 @@ inputs/pdb/1d3z-ubiquitin-nmr.md
 
 | 格式 | 推荐实例或派生源 | 主要证明内容 | 规范与来源 |
 | --- | --- | --- | --- |
-| XYZ | 从 PubChem 3D conformer 确定性导出的较复杂分子 | 完整元素与三维坐标；说明文本小不等于低精度 | [PubChem PUG REST](https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest) |
+| XYZ | 从 wwPDB Chemical Component Dictionary 的 `TA1` ideal coordinates 确定性导出的 paclitaxel | 113 个原子与三维坐标；说明文本小不等于低精度 | [RCSB PDB TA1](https://www.rcsb.org/ligand/TA1)、[PDB archive CC0](https://www.rcsb.org/pages/policies) |
 | extXYZ | rMD17 aspirin 的固定 32 帧子集 | 真实 DFT 轨迹、energy、force、`Properties` | [rMD17, CC0](https://figshare.com/articles/dataset/Revised_MD17_dataset_rMD17_/12672038)、[libAtoms extxyz](https://github.com/libAtoms/extxyz) |
-| MOL V2000 | PubChem CID 的 3D SDF record | atoms、bonds、charge、3D conformer | [PubChem PUG REST](https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest)、BIOVIA CTfile 规范 |
-| MOL V3000 | 同一权威结构经固定 RDKit 版本写出 | V3000 CTAB、复杂立体化学和格式版本差异 | BIOVIA CTfile 规范 |
-| SDF | PubChem 多 CID 3D 请求的固定多 record 文件 | 多分子、record property、V2000/V3000 边界 | [PubChem PUG REST](https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest) |
-| SMILES | PubChem 稳定 CID 的 isomeric SMILES 集 | graph、芳香性、charge、isotope/stereo；明确无坐标 | [Daylight SMILES](https://www.daylight.com/dayhtml/doc/theory/) |
+| MOL V2000 | wwPDB CCD `AIN` aspirin ideal SDF record | 21 个原子、21 个键、3D ideal coordinates | [RCSB PDB AIN](https://www.rcsb.org/ligand/AIN)、BIOVIA CTfile 规范 |
+| MOL V3000 | wwPDB CCD `TA1` 经固定 RDKit 版本写出 | 113 个原子、119 个键、V3000 CTAB 与立体化学 | [RCSB PDB TA1](https://www.rcsb.org/ligand/TA1)、BIOVIA CTfile 规范 |
+| SDF | wwPDB CCD `AIN`、`CFF`、`TA1` ideal SDF 的确定性组合 | 3 records、record property、规模差异 | [RCSB ligand downloads](https://www.rcsb.org/downloads/ligands) |
+| SMILES | 由上述三个 CC0 CCD records 确定性写出的 isomeric SMILES | graph、芳香性、charge、stereo；明确无坐标 | [Daylight SMILES](https://www.daylight.com/dayhtml/doc/theory/) |
 | CIF | COD 中含真实 cell、symmetry、occupancy/disorder 的条目 | 实验晶体数据、site 和 CIF envelope | [COD, CC0](https://www.crystallography.net/cod/new.html)、[IUCr CIF](https://www.iucr.org/resources/cif) |
 | POSCAR | COD 晶体经插件 loss preview 后规范化导出 | lattice、species、Direct coordinates 与跨格式损失 | [VASP POSCAR](https://vasp.at/wiki/POSCAR) |
-| CONTCAR | VASP 官方示例字段的确定性文件 | Selective Dynamics、lattice/ion velocity | [VASP POSCAR](https://vasp.at/wiki/POSCAR)、[CONTCAR](https://vasp.at/wiki/CONTCAR) |
-| MOL2 | PubChem 3D 结构经 ChemBlender normalized exporter 写出 | Tripos atom/bond type、charge、substructure 与 loss preview | Tripos MOL2 公开规范链接及本插件支持子集 |
+| CONTCAR | COD diamond 的确定性 `2 × 2 × 2` supercell，并按 VASP 规范加入零初速度 | 64 sites、Direct coordinates 与 ion velocity；明确不是 DFT relaxation 输出 | [VASP POSCAR](https://vasp.at/wiki/POSCAR)、[CONTCAR](https://vasp.at/wiki/CONTCAR) |
+| MOL2 | Open Babel 官方仓库固定 commit 的 `5sun_protein.mol2` | 6185 atoms、6248 bonds、390 substructures 与扩展 section | [Open Babel source](https://github.com/openbabel/openbabel)、Tripos MOL2 公开规范链接及本插件支持子集 |
 | PDB | RCSB PDB `1D3Z` ubiquitin NMR ensemble | 多 MODEL、chain/residue、B-factor、真实生物层级 | [RCSB 1D3Z](https://www.rcsb.org/structure/1D3Z)、[wwPDB 3.30](https://www.wwpdb.org/documentation/file-format) |
 | PQR | APBS 官方仓库的蛋白或蛋白-RNA示例 | 真实 hierarchy、每原子 charge/radius | [APBS PQR](https://apbs.readthedocs.io/en/latest/formats/pqr.html) |
-| Cube | 已有本地 PySCF 能力可用时计算 water HF/STO-3G `64³` density | 有科学含义的 Grid3D、体素分辨率和等值面 | [h5cube Cube 说明](https://h5cube-spec.readthedocs.io/en/latest/cubeformat.html)；计算输入与版本随文件记录 |
-| CJSON | 权威 3D 分子按 Avogadro Chemical JSON 字段确定性映射 | structure、bonds、properties 和 envelope | [Avogadro CJSON](https://avogadro.cc/docs/getting-started/saving-files.html) |
+| Cube | 按 hydrogenic 1s LCAO 公式生成 H2 `64³` 电子密度 | 可复算的 Grid3D、体素分辨率和等值面；明确不是 ab initio 结果 | [h5cube Cube 说明](https://h5cube-spec.readthedocs.io/en/latest/cubeformat.html)；公式与参数随文件记录 |
+| CJSON | Avogadro 官方 BSD-3-Clause 仓库固定 commit 的 phthalocyanine ligand | structure、bonds 和 CJSON envelope | [Avogadro CJSON](https://avogadro.cc/docs/getting-started/saving-files.html) |
 | QCSchema | MolSSI 官方 AtomicResult 示例，或已存在 PySCF 计算的合法 v2 文档 | Molecule、model、driver、energy/gradient、provenance | [MolSSI QCSchema](https://molssi.org/software/qcschema-2/)、[AtomicResult v2](https://molssi.github.io/QCElemental/dev/api/qcelemental.models.v2.AtomicResult.html) |
 | legacy `.blend` | 现有 2.1 hash-locked fixture | 迁移边界，不伪装成交换格式 | Blender 文件兼容说明和仓库生成记录 |
 
-同一 PubChem 或 COD 原件可派生多个格式，以便用户比较语义保留与损失；每个派生文件
+同一 wwPDB CCD 或 COD 原件可派生多个格式，以便用户比较语义保留与损失；每个派生文件
 仍须单独记录命令、工具版本、输入哈希和输出哈希。
 
 ## 相邻文档合同
@@ -100,8 +100,9 @@ fixture 或 synthetic，并解释其刻意缩小的测试目的。
 - 下载必须先保存原始 bytes、计算 SHA-256、确认许可证，再做转换。
 - HTTP 失败、内容漂移、许可证不明确或规范与样本不匹配时，候选失败关闭；改用下一
   个权威来源，不能用无出处文件填位。
-- 不添加运行时依赖。只使用标准库、仓库现有代码、Blender bundled NumPy、manifest
-  已有 RDKit/Gemmi，以及本机已经存在并能记录版本的 PySCF。
+- 不添加运行时依赖。只使用标准库、仓库现有代码、Blender bundled NumPy，以及
+  manifest 已有的 RDKit/Gemmi。当前机器的本地 PySCF 因缺少 SciPy 无法导入，不能把
+  未运行的计算写成证据，也不能未经授权安装依赖；Cube 因而使用可审计的解析模型。
 - GitHub 仓库只按固定 commit 读取必要文件。没有必要时不添加 submodule。
 - 单文件目标低于 50 MiB，硬上限 100 MiB；整套新增输入优先控制在约 15 MiB 内。
 
