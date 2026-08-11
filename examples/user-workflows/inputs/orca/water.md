@@ -22,7 +22,7 @@
 | geometry header | `* xyz 0 1` | molecular charge `0`、multiplicity `1` |
 | atom rows | O/H/H 与 Cartesian 坐标 | 3-atom Structure，unit `angstrom` |
 | terminator | `*` | 关闭唯一的 inline Cartesian block |
-| keywords | `! HF STO-3G` | 只作为原始来源保留，不解释 method/basis |
+| keywords | `! HF STO-3G TightSCF` | 只作为原始来源保留，不解释 method/basis |
 
 ## ChemBlender 支持边界
 
