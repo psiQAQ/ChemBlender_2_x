@@ -33,7 +33,7 @@
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，使用公开的 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/orca/water.inp。报告 selected reader、3 个原子、charge 0、multiplicity 1 和 Preview 诊断；确认后调用 bpy.ops.chemblender.confirm_import，并验证 Project Browser 与可见 Structure View。不得执行 ORCA，也不得解析 xyzfile 外部引用。
+通过 Blender MCP 连接 Blender 5.1，使用公开的 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/orca/water.inp。报告 Preview 中的 selected reader、capability、quality/diagnostics；确认后调用 bpy.ops.chemblender.confirm_import，并验证 Project Browser Structure 与可见 Structure View。3 atoms、charge 0、multiplicity 1 是自动合同预期，不得声称已由通用 UI 可见验证。不得执行 ORCA，也不得解析 xyzfile 外部引用。
 ```
 
 ## 完整性与验证

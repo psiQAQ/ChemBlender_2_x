@@ -272,6 +272,16 @@ class UserWorkflowContractTests(unittest.TestCase):
             ):
                 self.assertIn(term, contract, (path, term))
 
+    def test_quantum_input_prompts_separate_visible_ui_from_semantic_contract(self):
+        for relative in (
+            "inputs/gaussian/water.md",
+            "inputs/orca/water.md",
+        ):
+            with self.subTest(relative=relative):
+                guide = (EXAMPLE_ROOT / relative).read_text(encoding="utf-8")
+                self.assertIn("自动合同预期", guide)
+                self.assertIn("不得声称已由通用 UI 可见验证", guide)
+
     def test_guides_do_not_contain_executable_private_imports(self):
         forbidden = re.compile(r"^\s*(?:from|import)\s+ChemBlender\b", re.MULTILINE)
         for name in EXPECTED_DOCS:
