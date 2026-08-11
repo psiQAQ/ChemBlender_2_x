@@ -7,7 +7,7 @@
 ## 来源与许可
 
 - 取得日期：`2026-08-11`。
-- 来源标识：`tests/fixtures/orca/water.inp@bfda267`。
+- 来源标识：`tests/fixtures/orca/water.inp@bfda26791449341fdac43bb172779a710305ed40`。
 - 来源路径：仓库测试夹具 `tests/fixtures/orca/water.inp`，逐字节复制。
 - 许可：`GPL-3.0`。
 
@@ -25,8 +25,10 @@
 ## 操作流程
 
 1. 用 `Quick Import` 选择 [`water.inp`](water.inp)。
-2. 在 Preview 确认 selected reader 为 `orca-input`，结构为 3 atoms。
-3. 确认导入后，在 Project Browser 查看 Structure，并检查 charge `0`、multiplicity `1`。
+2. 在 Preview 确认 selected reader 为 `orca-input`，并显示 `structure` capability。
+3. 确认导入后，在 Project Browser 查看 Structure，并检查可见的 Structure View。
+
+3 atoms、charge `0` 和 multiplicity `1` 会保存在项目语义中并由自动合同验证；当前通用 Preview/Project Browser 行不会单独显示这三个字段。
 
 ## Agent 提示词
 

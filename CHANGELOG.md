@@ -4,6 +4,10 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ## [Unreleased]
 
+### Added
+
+- Added dependency-free strict Cartesian structure readers for Gaussian `.gjf`/`.com` and ORCA `.inp`, integrated with Quick Import, Project Browser and Structure View while preserving charge/multiplicity and rejecting unsupported complex geometry forms.
+
 ## [2.4.0] - 2026-08-03
 
 ### Changed

@@ -40,6 +40,15 @@ class GaussianInputReaderTests(unittest.TestCase):
                 GAUSSIAN_INPUT_READER,
             )
 
+    def test_sniff_recognizes_truncated_named_input(self):
+        content = b"%chk=water.chk\n#p hf/sto-3g\n\nwater\n"
+        for suffix in (".gjf", ".com"):
+            with self.subTest(suffix=suffix):
+                self.assertEqual(
+                    sniff_gaussian_input(Path(f"water{suffix}"), content).match,
+                    SniffMatch.PROBABLE,
+                )
+
     def test_parse_normalizes_structure_charge_and_provenance(self):
         batch = parse_gaussian_input(FIXTURE)
         structure, = batch.structures
@@ -123,6 +132,20 @@ class GaussianInputReaderTests(unittest.TestCase):
             with self.subTest(message=message):
                 self.assert_rejected(content, message)
 
+    def test_legacy_pseudo_symbols_are_recognized_but_rejected(self):
+        for symbol in (b"Vac", b"Default", b"Bond"):
+            with self.subTest(symbol=symbol):
+                content = (
+                    b"#p hf/sto-3g\n\ntitle\n\n0 1\n"
+                    + symbol
+                    + b" 0 0 0\n"
+                )
+                self.assertEqual(
+                    sniff_gaussian_input(Path("pseudo.gjf"), content).match,
+                    SniffMatch.PROBABLE,
+                )
+                self.assert_rejected(content, "element")
+
     def test_rejects_complex_or_ambiguous_geometry(self):
         cases = (
             (
@@ -136,6 +159,16 @@ class GaussianInputReaderTests(unittest.TestCase):
             (
                 FIXTURE.read_bytes() + b"--Link1--\n#p hf/sto-3g\n",
                 "Link1",
+            ),
+            (
+                b"#p oniom(hf/sto-3g:hf/sto-3g)\n\n"
+                b"oniom\n\n0 1\nH 0 0 0\n",
+                "ONIOM",
+            ),
+            (
+                b"#p hf/sto-3g\n\nmultiple\n\n0 1\nH 0 0 0\n\n"
+                b"O 1 0 0\n",
+                "multiple",
             ),
         )
         for content, message in cases:

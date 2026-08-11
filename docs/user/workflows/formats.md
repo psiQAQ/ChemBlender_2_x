@@ -1,6 +1,6 @@
 # 格式与支持范围
 
-这页回答两个不同问题：文件格式本身可能装什么数据，以及 ChemBlender 2.4.0 实际读取、显示、处理和导出什么。不要把“格式规范允许”当成“插件已支持”。
+这页回答两个不同问题：文件格式本身可能装什么数据，以及当前开发树实际读取、显示、处理和导出什么。已发布 2.4.0 的不可变事实以 [`CHANGELOG.md`](../../../CHANGELOG.md) 为准；不要把“格式规范允许”当成“插件已支持”。
 
 事实源是现有的[格式指南](../formats.md)、生成的 [format-capabilities.json](../format-capabilities.json)和 [dependencies.json](../dependencies.json)。生成清单对 import 使用 `supported` / `partial` capability，对 exporter 使用 F0–F5 maturity；它没有单独生成一个 import F 数字，本页不会补造。
 
@@ -27,9 +27,11 @@ F5 不是“字节无损”。只要目标格式不能表示某项来源语义�
 | CJSON | [water results](../../../examples/user-workflows/inputs/cjson/water-results.cjson) · [说明](../../../examples/user-workflows/inputs/cjson/water-results.md) | [Avogadro phthalocyanine](../../../examples/user-workflows/inputs/cjson/avogadro-phthalocyanine.cjson) · [说明](../../../examples/user-workflows/inputs/cjson/avogadro-phthalocyanine.md) |
 | Cube | [two datasets](../../../examples/user-workflows/inputs/cube/two-datasets.cube) · [说明](../../../examples/user-workflows/inputs/cube/two-datasets.md) | [H₂ LCAO density 64³](../../../examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.cube) · [说明](../../../examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.md) |
 | extXYZ | [carbon trajectory](../../../examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz) · [说明](../../../examples/user-workflows/inputs/extxyz/carbon-trajectory.md) | [rMD17 aspirin 32 frames](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz) · [说明](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.md) |
+| Gaussian input | [water](../../../examples/user-workflows/inputs/gaussian/water.gjf) · [说明](../../../examples/user-workflows/inputs/gaussian/water.md) | — |
 | Legacy `.blend` | [ChemBlender 2.1 molecule](../../../examples/user-workflows/inputs/legacy/chemblender-2.1-molecule.blend) · [说明](../../../examples/user-workflows/inputs/legacy/chemblender-2.1-molecule.md) | — |
 | MOL | [water V2000](../../../examples/user-workflows/inputs/mol/water-v2000.mol) · [说明](../../../examples/user-workflows/inputs/mol/water-v2000.md)；[water V3000](../../../examples/user-workflows/inputs/mol/water-v3000.mol) · [说明](../../../examples/user-workflows/inputs/mol/water-v3000.md) | [AIN aspirin V2000](../../../examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol) · [说明](../../../examples/user-workflows/inputs/mol/ain-aspirin-v2000.md)；[TA1 paclitaxel V3000](../../../examples/user-workflows/inputs/mol/ta1-paclitaxel-v3000.mol) · [说明](../../../examples/user-workflows/inputs/mol/ta1-paclitaxel-v3000.md) |
 | MOL2 | [substructure](../../../examples/user-workflows/inputs/mol2/substructure.mol2) · [说明](../../../examples/user-workflows/inputs/mol2/substructure.md) | [Open Babel 5SUN protein](../../../examples/user-workflows/inputs/mol2/openbabel-5sun-protein.mol2) · [说明](../../../examples/user-workflows/inputs/mol2/openbabel-5sun-protein.md) |
+| ORCA input | [water](../../../examples/user-workflows/inputs/orca/water.inp) · [说明](../../../examples/user-workflows/inputs/orca/water.md) | — |
 | PDB | [model trajectory](../../../examples/user-workflows/inputs/pdb/model-trajectory.pdb) · [说明](../../../examples/user-workflows/inputs/pdb/model-trajectory.md)；[incompatible multimodel](../../../examples/user-workflows/inputs/pdb/multimodel.pdb) · [说明](../../../examples/user-workflows/inputs/pdb/multimodel.md) | [1D3Z ubiquitin NMR](../../../examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb) · [说明](../../../examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.md) |
 | POSCAR / CONTCAR | [Si POSCAR](../../../examples/user-workflows/inputs/poscar/si.POSCAR) · [说明](../../../examples/user-workflows/inputs/poscar/si.md)；[selective dynamics / velocity](../../../examples/user-workflows/inputs/poscar/velocities.CONTCAR) · [说明](../../../examples/user-workflows/inputs/poscar/velocities.md) | [COD diamond cell](../../../examples/user-workflows/inputs/poscar/cod-9012293-diamond.POSCAR) · [说明](../../../examples/user-workflows/inputs/poscar/cod-9012293-diamond.md)；[2×2×2 supercell](../../../examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR) · [说明](../../../examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.md) |
 | PQR | [with chain](../../../examples/user-workflows/inputs/pqr/with-chain.pqr) · [说明](../../../examples/user-workflows/inputs/pqr/with-chain.md) | [APBS protein–RNA](../../../examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.pqr) · [说明](../../../examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.md) |
@@ -42,10 +44,11 @@ F5 不是“字节无损”。只要目标格式不能表示某项来源语义�
 
 ## 基础格式一览
 
-| 格式 | 文件可能提供的数据 | ChemBlender 2.4.0 导入范围 | View 与处理 | 导出 / 成熟度 | 依赖 | 已知边界或损失 | 样例 |
+| 格式 | 文件可能提供的数据 | 当前开发树导入范围 | View 与处理 | 导出 / 成熟度 | 依赖 | 已知边界或损失 | 样例 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | XYZ | 元素、笛卡尔坐标、comment；重复 block 可表示 frames | Structure、trajectory | Structure View、frame playback；可另行提议 topology | Project Browser XYZ，F4；只写一个 Structure 的 coordinates | built-in | 不保存 topology、cell/PBC、typed property；多帧应选 extXYZ | [water.xyz](../../../examples/user-workflows/inputs/xyz/water.xyz) |
 | extXYZ | XYZ frames、`Properties` schema、per-atom/per-frame values、`Lattice`、PBC、metadata | Structure、trajectory、typed properties、validity masks、cell/PBC | Structure/trajectory View；选中 FrameSet 后用 `Configure Trajectory Playback` 绑定时间轴；revision 仍受来源约束 | Project Browser extXYZ，F5 | built-in | 不受支持的 metadata 或无法表示的缺失值按 preview 归一化/省略 | [carbon-trajectory.extxyz](../../../examples/user-workflows/inputs/extxyz/carbon-trajectory.extxyz) |
+| Gaussian / ORCA inputs | 计算任务设置、charge/multiplicity 与内嵌或引用的 geometry | 严格内嵌 Cartesian Structure、molecular charge/multiplicity | Quick Import、Project Browser Structure、Structure View | 无 Project Browser exporter；export F0 | built-in | 不执行计算；拒绝 Gaussian Z-matrix/freeze/ONIOM/fragments/Link1/multiple coordinate blocks，以及 ORCA xyzfile/internal/multiple blocks/额外坐标列 | [Gaussian water](../../../examples/user-workflows/inputs/gaussian/water.gjf)、[ORCA water](../../../examples/user-workflows/inputs/orca/water.inp) |
 | MOL V2000/V3000 | atoms、bonds、2D/3D coordinates、formal charge、isotope、stereo 和 CT record | Structure、Topology、AtomicIdentity、MolecularRecord；RDKit sanitize 结果单独记录 | Structure View；可做 derived scientific edit 或切换 topology | Project Browser MOL，F5 | RDKit；Windows Release 随附 | 目标版本限制、sanitize/representability、未知 CT 字段和不支持的 record 内容会进入 preview | [V2000](../../../examples/user-workflows/inputs/mol/water-v2000.mol)、[V3000](../../../examples/user-workflows/inputs/mol/water-v3000.mol) |
 | SDF | 多个 MOL record、每条 record property、2D/3D conformer；也可能有坏记录 | 多 Structure、Topology、MolecularRecord；record property 为 partial support，坏记录按 validation mode 隔离 | Structure/record/conformer 检阅，可保留独立 records 或经确认归组 | Project Browser SDF，F5 | RDKit；Windows Release 随附 | malformed record、ordered property 和 conformer 归组必须看 Diagnostics；目标不表示的 property 会预览 | [mixed-properties.sdf](../../../examples/user-workflows/inputs/sdf/mixed-properties.sdf) |
 | SMILES | molecular graph、charge、isotope、atom/bond stereo；通常没有 3D coordinates | AtomicIdentity、Topology、MolecularRecord，并确定性生成平面 2D Structure；3D 是独立派生 | Structure View；平面 2D 或后续 3D 派生都不是源文件测量值 | Project Browser SMILES，F5 | RDKit；Windows Release 随附 | 文件入口只接受一条非空记录；导出省略 coordinates、conformer、title、properties，并可能 canonicalize atom order；非 isomeric 模式还会省略 stereo/isotope | [ethanol.smi](../../../examples/user-workflows/inputs/smiles/ethanol.smi) |
@@ -74,5 +77,6 @@ cclib、IOData、ASE 和 pymatgen adapter 可以在单独 runtime 可用时增�
 - 生物 hierarchy 用 PDB；以 charge/radius 为核心时用 PQR。不要期待 PQR 自带 topology。
 - Grid3D 用 Cube，并在多 dataset 文件中明确选择 index。
 - CJSON/QCSchema 用于保留对应 envelope；当前普通 UI 导出请选择已列入 Project Browser 的目标格式。
+- 只需查看 Gaussian/ORCA 输入里的单个内嵌 Cartesian 几何时可直接导入；复杂坐标语法、外部文件引用和计算设置留在原程序中处理。
 
 返回[工作流总览](README.md)，或直接进入[导入](01-import.md)和[导出](04-export.md)。

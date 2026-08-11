@@ -22,7 +22,9 @@ from ..readers import CapabilitySupport, ReaderDescriptor, SniffMatch, SniffResu
 _READER_ID = "gaussian-input"
 _READER_VERSION = "1"
 _ATOMIC_NUMBERS = {
-    symbol: data[0] for symbol, data in ELEMENTS_DEFAULT.items() if data[0] > 0
+    symbol: data[0]
+    for symbol, data in ELEMENTS_DEFAULT.items()
+    if 1 <= data[0] <= 118
 }
 _ELEMENT_SYMBOLS = frozenset((*_ATOMIC_NUMBERS, "D", "T"))
 
@@ -50,8 +52,12 @@ def _parse_text(text):
         index += 1
     if index >= len(lines) or not lines[index].lstrip().startswith("#"):
         raise ValueError("Gaussian route section is missing")
+    route_lines = []
     while index < len(lines) and lines[index].strip():
+        route_lines.append(lines[index].strip())
         index += 1
+    if "oniom" in " ".join(route_lines).lower():
+        raise ValueError("Gaussian ONIOM inputs are not supported")
     if index >= len(lines):
         raise ValueError("Gaussian title section is missing")
 
@@ -105,6 +111,18 @@ def _parse_text(text):
         index += 1
     if not atomic_numbers:
         raise ValueError("Gaussian Cartesian coordinate block is empty")
+    for trailing_line in lines[index + 1 :]:
+        fields = trailing_line.split()
+        if len(fields) != 4 or _normalize_symbol(fields[0]) not in _ELEMENT_SYMBOLS:
+            continue
+        try:
+            trailing_xyz = tuple(float(value) for value in fields[1:])
+        except ValueError:
+            continue
+        if all(math.isfinite(value) for value in trailing_xyz):
+            raise ValueError(
+                "multiple Gaussian Cartesian coordinate blocks are not supported"
+            )
     return (
         "\n".join(title_lines),
         charge,
@@ -115,14 +133,18 @@ def _parse_text(text):
     )
 
 
-def _looks_like_gaussian(text):
+def _looks_like_gaussian(source, text):
     lines = text.splitlines()
     has_route = any(line.lstrip().startswith("#") for line in lines)
+    has_link0 = any(line.lstrip().startswith("%") for line in lines)
     has_charge = any(
         len(fields := line.split()) == 2
         and all(value.lstrip("+-").isdigit() for value in fields)
         for line in lines
     )
+    suffix = Path(source).suffix.lower()
+    if suffix in {".gjf", ".com"} and (has_route or has_link0):
+        return True
     return has_route and has_charge
 
 
@@ -134,7 +156,7 @@ def sniff_gaussian_input(source, prefix):
     try:
         _parse_text(text)
     except ValueError as error:
-        if _looks_like_gaussian(text):
+        if _looks_like_gaussian(source, text):
             return SniffResult(SniffMatch.PROBABLE, str(error))
         return SniffResult(SniffMatch.NONE, str(error))
     return SniffResult(SniffMatch.EXACT, "complete Gaussian Cartesian input")

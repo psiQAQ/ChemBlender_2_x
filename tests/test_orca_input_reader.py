@@ -144,6 +144,16 @@ class OrcaInputReaderTests(unittest.TestCase):
             with self.subTest(message=message):
                 self.assert_rejected(content, message)
 
+    def test_legacy_pseudo_symbols_are_recognized_but_rejected(self):
+        for symbol in (b"Vac", b"Default", b"Bond"):
+            with self.subTest(symbol=symbol):
+                content = b"* xyz 0 1\n" + symbol + b" 0 0 0\n*\n"
+                self.assertEqual(
+                    sniff_orca_input(Path("pseudo.inp"), content).match,
+                    SniffMatch.PROBABLE,
+                )
+                self.assert_rejected(content, "element")
+
 
 if __name__ == "__main__":
     unittest.main()

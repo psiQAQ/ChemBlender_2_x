@@ -103,7 +103,7 @@ Element x y z
 
 sniffing 使用 registry 提供的有界 prefix，并同时参考扩展名与格式内容：
 
-- Gaussian 的 route 与 charge/multiplicity 构成可信格式标记，完整合法坐标进一步提升匹配等级；
+- Gaussian 的完整合法坐标给出 `EXACT`；带 `.gjf/.com` 后缀且包含 route 或 Link0 标记的截断/损坏输入仍给出 `PROBABLE`，以保留 reader-specific 失败诊断；无专用后缀时仍要求 route 与 charge/multiplicity 构成可信标记；
 - ORCA 需要 `* xyz` 或可识别但不支持的 `* xyzfile` 标记；
 - 扩展名本身不足以把普通 `.inp` 文本判为 ORCA；
 - 完整且合法的内嵌结构返回 `EXACT`；

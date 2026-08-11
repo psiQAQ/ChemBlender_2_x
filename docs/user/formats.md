@@ -15,7 +15,9 @@ yes/no flag:
 Maturity can differ between import and export. A readable format is not
 automatically a lossless round-trip format.
 
-## ChemBlender 2.4.0 format scope
+## Current development format scope
+
+This checked-out development table extends the released 2.4.0 scope. Released-version facts remain in `CHANGELOG.md`.
 
 | Format | Current product boundary |
 | --- | --- |

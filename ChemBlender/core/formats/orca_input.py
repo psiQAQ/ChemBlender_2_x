@@ -22,7 +22,9 @@ from ..readers import CapabilitySupport, ReaderDescriptor, SniffMatch, SniffResu
 _READER_ID = "orca-input"
 _READER_VERSION = "1"
 _ATOMIC_NUMBERS = {
-    symbol: data[0] for symbol, data in ELEMENTS_DEFAULT.items() if data[0] > 0
+    symbol: data[0]
+    for symbol, data in ELEMENTS_DEFAULT.items()
+    if 1 <= data[0] <= 118
 }
 _ELEMENT_SYMBOLS = frozenset((*_ATOMIC_NUMBERS, "D", "T"))
 

@@ -69,6 +69,30 @@ class QuantumInputImportPipelineTests(unittest.TestCase):
                     close_session(session)
                     staged.discard()
 
+    def test_truncated_gaussian_input_keeps_reader_specific_diagnostic(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "truncated.gjf"
+            source.write_bytes(b"%chk=water.chk\n#p hf/sto-3g\n\nwater\n")
+            staged = StagedImportSession.create(temp_parent=root)
+            try:
+                preview = preflight_reader_plugins(
+                    ImportRequest(sources=(ImportSource(source),)),
+                    builtin_reader_plugin_registry(),
+                    staged,
+                )
+                source_preview, = preview.source_previews
+                self.assertEqual(
+                    source_preview.selected_reader_id,
+                    "gaussian-input",
+                )
+                batch = staged.result(source_preview.staged_batch_ids[0])
+                diagnostic, = batch.diagnostics
+                self.assertEqual(diagnostic.code, "gaussian-input.invalid")
+                self.assertEqual(diagnostic.field_path, "reader.parse")
+            finally:
+                staged.discard()
+
 
 if __name__ == "__main__":
     unittest.main()

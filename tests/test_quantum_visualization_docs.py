@@ -58,9 +58,13 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("historical", superpowers.lower())
         self.assertIn("2.4.0", superpowers)
 
-    def test_user_format_summary_matches_published_240_capabilities(self):
+    def test_user_format_summary_separates_development_from_published_scope(self):
         formats = self.read_doc("docs/user/formats.md")
-        self.assertIn("ChemBlender 2.4.0 format scope", formats)
+        changelog = self.read_doc("CHANGELOG.md")
+        unreleased = changelog.split("## [2.4.0]", 1)[0]
+        self.assertIn("Current development format scope", formats)
+        self.assertIn("released 2.4.0", formats)
+        self.assertIn("Gaussian `.gjf`/`.com` and ORCA `.inp`", unreleased)
         self.assertNotIn("Base 2.3.0 format scope", formats)
         self.assertIn("Cube export", formats)
         self.assertIn("PQR export", formats)

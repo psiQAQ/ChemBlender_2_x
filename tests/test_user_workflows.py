@@ -9,7 +9,9 @@ from ChemBlender.core import FrameSet
 from ChemBlender.core.cjson_adapter import parse_cjson
 from ChemBlender.core.cube import parse_cube
 from ChemBlender.core.formats.extxyz import parse_extxyz
+from ChemBlender.core.formats.gaussian_input import parse_gaussian_input
 from ChemBlender.core.formats.mol2 import parse_mol2
+from ChemBlender.core.formats.orca_input import parse_orca_input
 from ChemBlender.core.formats.pdb import parse_pdb
 from ChemBlender.core.formats.poscar import parse_poscar
 from ChemBlender.core.formats.pqr import parse_pqr
@@ -30,9 +32,11 @@ EXPECTED_FAMILIES = (
     "cjson",
     "cube",
     "extxyz",
+    "gaussian",
     "legacy",
     "mol",
     "mol2",
+    "orca",
     "pdb",
     "poscar",
     "pqr",
@@ -644,6 +648,15 @@ class UserWorkflowContractTests(unittest.TestCase):
             if len(data) > 50 * 1024 * 1024:
                 self.assertTrue(record.get("size_exception_reason"), path)
 
+    def test_manifest_exactly_covers_input_payloads(self):
+        manifest_paths = [record["path"] for record in self.manifest()["files"]]
+        tracked_paths = sorted(
+            path.relative_to(EXAMPLE_ROOT).as_posix()
+            for path in (EXAMPLE_ROOT / "inputs").rglob("*")
+            if path.is_file() and path.suffix.lower() != ".md"
+        )
+        self.assertEqual(manifest_paths, tracked_paths)
+
     def test_output_bundles_match_every_tracked_file(self):
         attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
         self.assertIn("examples/user-workflows/outputs/** -text", attributes)
@@ -688,9 +701,19 @@ class UserWorkflowContractTests(unittest.TestCase):
                 ("structures",),
             ),
             (
+                "inputs/gaussian/water.gjf",
+                parse_gaussian_input,
+                ("structures",),
+            ),
+            (
                 "inputs/mol2/substructure.mol2",
                 parse_mol2,
                 ("structures", "topologies"),
+            ),
+            (
+                "inputs/orca/water.inp",
+                parse_orca_input,
+                ("structures",),
             ),
             (
                 "inputs/pdb/model-trajectory.pdb",
