@@ -11,13 +11,18 @@
 - 来源路径：仓库测试夹具 `tests/fixtures/gaussian/water.gjf`，逐字节复制。
 - 许可：`GPL-3.0`。
 
-## 规模与字段
+## 规模与分辨率
 
-- 3 个原子：O/H/H。
-- Cartesian 坐标单位：angstrom。
-- molecular charge：`0`。
-- molecular multiplicity：`1`。
-- Gaussian title：`water`。
+文件为 `128` bytes，包含 1 个 3 原子 O/H/H 结构。坐标以 angstrom 为单位并保留 6 位小数；这里的“分辨率”是原子数和坐标精度，不是图像分辨率。
+
+## 字段说明
+
+| 字段 | 本文件的值 | ChemBlender 语义 |
+| --- | --- | --- |
+| title | `water` | provenance parameter |
+| charge / multiplicity | `0 1` | molecular charge `0`、multiplicity `1` |
+| atom rows | O/H/H 与 Cartesian 坐标 | 3-atom Structure，unit `angstrom` |
+| route | `#p hf/sto-3g` | 只作为格式边界，不解释 method/basis |
 
 ## ChemBlender 支持边界
 
