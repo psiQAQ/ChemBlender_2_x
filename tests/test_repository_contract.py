@@ -323,6 +323,27 @@ class RepositoryContractTests(unittest.TestCase):
         ):
             self.assertIn(expected, smoke)
 
+    def test_blender_smoke_covers_quantum_input_public_workflow(self):
+        smoke = (ROOT / "tests" / "blender_smoke.py").read_text(encoding="utf-8")
+        tree = ast.parse(smoke)
+        quick_import = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "assert_quick_import"
+        )
+        source = ast.get_source_segment(smoke, quick_import)
+        for expected in (
+            "examples/user-workflows/inputs/gaussian/water.gjf",
+            "examples/user-workflows/inputs/orca/water.inp",
+            '"gaussian-input"',
+            '"orca-input"',
+            "molecular_charge",
+            "molecular_multiplicity",
+            "hide_get",
+        ):
+            self.assertIn(expected, source)
+
     def test_blender_smoke_unloads_active_grid_worker_only_at_final_exit(self):
         smoke = (ROOT / "tests" / "blender_smoke.py").read_text(encoding="utf-8")
         tree = ast.parse(smoke)

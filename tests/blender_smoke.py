@@ -1395,6 +1395,73 @@ def assert_quick_import(module_key, repository_root):
     finally:
         views.remove_structure_view(cjson_view)
 
+    for relative, reader_id in (
+        (
+            "examples/user-workflows/inputs/gaussian/water.gjf",
+            "gaussian-input",
+        ),
+        (
+            "examples/user-workflows/inputs/orca/water.inp",
+            "orca-input",
+        ),
+    ):
+        source = repository_root / relative
+        state = stage(source)
+        quantum_rows = preview_ui.project_import_preview(
+            session,
+            state,
+            registry,
+        )
+        quantum_row, = quantum_rows
+        assert quantum_row.reader_id == reader_id
+        assert quantum_row.default_view_label == "Default view: Structure"
+        quantum_batch = state.staging_session.result(
+            state.preview.source_previews[0].staged_batch_ids[0]
+        )
+        staged_structure, = quantum_batch.structures
+        assert staged_structure.atomic_numbers == (8, 1, 1)
+        assert staged_structure.coordinates.unit == "angstrom"
+        assert staged_structure.molecular_charge == 0
+        assert staged_structure.molecular_multiplicity == 1
+        source_revisions = set(session.project.source_revisions)
+        objects_before_quantum = set(bpy.data.objects)
+        assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+        quantum_revision_id, = (
+            set(session.project.source_revisions) - source_revisions
+        )
+        quantum_revision = session.project.source_revisions[
+            quantum_revision_id
+        ]
+        assert quantum_revision.original_filename == source.name
+        assert quantum_revision.reader_id == reader_id
+        quantum_structure = next(
+            session.project.structures[entity_id]
+            for entity_id in quantum_revision.created_entity_ids
+            if entity_id in session.project.structures
+        )
+        assert quantum_structure.atomic_numbers == (8, 1, 1)
+        assert quantum_structure.coordinates.unit == "angstrom"
+        assert quantum_structure.molecular_charge == 0
+        assert quantum_structure.molecular_multiplicity == 1
+        quantum_view = next(
+            obj
+            for obj in set(bpy.data.objects) - objects_before_quantum
+            if obj.get("cb_structure_id") == str(quantum_structure.id)
+        )
+        assert quantum_view.type == "MESH"
+        assert not quantum_view.hide_viewport
+        assert not quantum_view.hide_get()
+        quantum_browser_rows = browser.refresh_project_browser(
+            bpy.context.scene
+        )
+        quantum_browser_row = next(
+            row
+            for row in quantum_browser_rows
+            if row.entity_id == quantum_structure.id
+        )
+        assert quantum_browser_row.kind == "structure"
+        assert quantum_browser_row.view_count == 1
+
     state = stage(repository_root / "tests/fixtures/xyz/water.xyz")
     xyz_rows = preview_ui.project_import_preview(
         session,
