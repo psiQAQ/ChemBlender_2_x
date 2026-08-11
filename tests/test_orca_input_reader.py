@@ -107,6 +107,19 @@ class OrcaInputReaderTests(unittest.TestCase):
         )
         self.assert_rejected(content, "xyzfile")
 
+    def test_internal_coordinates_are_recognized_but_rejected(self):
+        internal = b"! HF\n* int 0 1\nH 0 0 0 0 0 0\n*\n"
+        self.assertEqual(
+            sniff_orca_input(Path("water.inp"), internal).match,
+            SniffMatch.PROBABLE,
+        )
+        self.assert_rejected(internal, "internal")
+        self.assert_rejected(
+            b"* xyz 0 1\nH 0 0 0\n*\n"
+            b"* int 0 1\nH 0 0 0 0 0 0\n*\n",
+            "internal",
+        )
+
     def test_rejects_incomplete_or_multiple_blocks(self):
         cases = (
             (b"! HF\n* xyz 0 1\nH 0 0 0\n", "terminated"),

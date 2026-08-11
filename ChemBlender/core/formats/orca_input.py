@@ -37,6 +37,7 @@ def _normalize_symbol(value):
 def _coordinate_headers(lines):
     headers = []
     xyzfiles = []
+    internal = []
     for index, line in enumerate(lines):
         fields = line.split()
         if len(fields) < 2 or fields[0] != "*":
@@ -46,14 +47,18 @@ def _coordinate_headers(lines):
             headers.append((index, fields))
         elif kind == "xyzfile":
             xyzfiles.append((index, fields))
-    return headers, xyzfiles
+        elif kind in {"int", "internal"}:
+            internal.append((index, fields))
+    return headers, xyzfiles, internal
 
 
 def _parse_text(text):
     lines = text.splitlines()
-    headers, xyzfiles = _coordinate_headers(lines)
+    headers, xyzfiles, internal = _coordinate_headers(lines)
     if xyzfiles:
         raise ValueError("ORCA xyzfile references are not supported")
+    if internal:
+        raise ValueError("ORCA internal coordinates are not supported")
     if not headers:
         raise ValueError("ORCA inline xyz coordinate block is missing")
     if len(headers) != 1:
@@ -110,11 +115,16 @@ def sniff_orca_input(source, prefix):
         text = prefix.decode("utf-8-sig")
     except UnicodeDecodeError:
         return SniffResult(SniffMatch.NONE, "content is not UTF-8 ORCA text")
-    headers, xyzfiles = _coordinate_headers(text.splitlines())
+    headers, xyzfiles, internal = _coordinate_headers(text.splitlines())
     if xyzfiles:
         return SniffResult(
             SniffMatch.PROBABLE,
             "ORCA xyzfile input requires an unsupported external reference",
+        )
+    if internal:
+        return SniffResult(
+            SniffMatch.PROBABLE,
+            "ORCA internal coordinates are not supported",
         )
     if not headers:
         return SniffResult(SniffMatch.NONE, "ORCA xyz coordinate marker is missing")
