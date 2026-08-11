@@ -118,7 +118,7 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
             [reader["reader_id"] for reader in readers],
             sorted(reader["reader_id"] for reader in readers),
         )
-        self.assertEqual(len(readers), 19)
+        self.assertEqual(len(readers), 21)
         required = {
             "availability_contract",
             "basenames",
@@ -146,6 +146,15 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
             by_id["cif"]["availability_contract"],
             {"kind": "python_module", "module": "gemmi"},
         )
+        for reader_id in ("gaussian-input", "orca-input"):
+            self.assertEqual(
+                by_id[reader_id]["availability_contract"],
+                {"kind": "always"},
+            )
+            self.assertEqual(
+                by_id[reader_id]["capabilities"],
+                {"structure": "supported"},
+            )
         self.assertEqual(
             by_id["xyz"]["availability_contract"],
             {"kind": "always"},
