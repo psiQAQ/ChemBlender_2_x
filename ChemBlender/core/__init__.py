@@ -69,6 +69,16 @@ from .formats.cif import (
     parse_cif,
     sniff_cif,
 )
+from .formats.gaussian_input import (
+    GAUSSIAN_INPUT_READER,
+    parse_gaussian_input,
+    sniff_gaussian_input,
+)
+from .formats.orca_input import (
+    ORCA_INPUT_READER,
+    parse_orca_input,
+    sniff_orca_input,
+)
 from .formats.poscar import POSCAR_READER, parse_poscar, sniff_poscar
 # Derived/reporting compatibility exports.
 from .grid_lod import (
@@ -407,6 +417,7 @@ __all__ = [
     "FrameProperty",
     "FrameCacheInfo",
     "FermiSurfaceMesh",
+    "GAUSSIAN_INPUT_READER",
     "GemmiDependencyError",
     "Grid3D",
     "GridSemanticPreset",
@@ -427,6 +438,7 @@ __all__ = [
     "RecordPropertyColumn",
     "TopologyRecord",
     "TopologySource",
+    "ORCA_INPUT_READER",
     "OrbitalChannel",
     "OrbitalKind",
     "OrbitalSet",
@@ -506,6 +518,8 @@ __all__ = [
     "parse_ase_structure",
     "parse_cclib_output",
     "parse_critic2_cpreport",
+    "parse_gaussian_input",
+    "parse_orca_input",
     "parse_qcschema",
     "parse_qcschema_atomic_result",
     "parse_qcschema_molecule",
@@ -527,6 +541,8 @@ __all__ = [
     "sniff_ase_structure",
     "sniff_cclib_output",
     "sniff_cif",
+    "sniff_gaussian_input",
+    "sniff_orca_input",
     "sniff_poscar",
     "sniff_xyz",
     "adapt_ccdata",

@@ -20,10 +20,10 @@ PUBLIC_CORE_NAMES = (
     "DensityMatrix", "DensityMatrixLevel",
     "DensityMatrixSpin", "DensityOfStates", "DeclaredSymmetry", "EnergyReference", "ExternalReference",
     "ExcitationContribution", "ExcitedStateReferences", "ExcitedStateSet", "FrameSet", "FrameProperty",
-    "FrameCacheInfo", "FermiSurfaceMesh", "GemmiDependencyError", "Grid3D", "GridSemanticPreset",
+    "FrameCacheInfo", "FermiSurfaceMesh", "GAUSSIAN_INPUT_READER", "GemmiDependencyError", "Grid3D", "GridSemanticPreset",
     "GBasisDependencyError", "ImportBatch", "ImportDiagnostic", "IssueKind", "LazyNpyArray",
     "IODATA_WAVEFUNCTION_READER", "IODataDependencyError", "MOL_V2000_READER", "MOL_READER", "SDF_READER", "SMILES_READER",
-    "MolecularTopology", "MolecularRecord", "RawRecordProperty", "RecordPropertyColumn", "TopologyRecord", "TopologySource", "OrbitalChannel", "OrbitalKind", "OrbitalSet", "ParserIssue",
+    "MolecularTopology", "MolecularRecord", "RawRecordProperty", "RecordPropertyColumn", "TopologyRecord", "TopologySource", "ORCA_INPUT_READER", "OrbitalChannel", "OrbitalKind", "OrbitalSet", "ParserIssue",
     "ParserReport", "PeriodicSiteData", "PhononModeSet", "PhonopyDependencyError",
     "PYMATGEN_VASP_GRID_READER", "PYMATGEN_VASP_ELECTRONIC_READER",
     "PymatgenDependencyError", "PymatgenElectronicDependencyError", "PropertyDataset",
@@ -42,10 +42,10 @@ PUBLIC_CORE_NAMES = (
     "TopologyGraph", "TopologyPath", "SymmetryResult", "SymmetryComparison", "VibrationalModeSet",
     "TrajectoryFrameManager", "XYZ_READER", "adapt_ase_atoms", "build_analysis_report",
     "export_qcschema", "export_cube", "export_cjson", "export_qcschema_atomic_result", "parse_cube", "preview_cube_export",
-    "parse_cjson", "parse_ase_structure", "parse_cclib_output", "parse_critic2_cpreport",
+    "parse_cjson", "parse_ase_structure", "parse_cclib_output", "parse_critic2_cpreport", "parse_gaussian_input", "parse_orca_input",
     "parse_qcschema", "parse_qcschema_atomic_result", "parse_qcschema_molecule", "parse_cif", "parse_poscar",
     "parse_xyz", "parse_mol", "parse_sdf", "parse_smiles", "parse_smiles_text", "parse_mol_v2000", "sniff_qcschema", "sniff_cjson", "sniff_mol", "sniff_sdf", "sniff_smiles", "sniff_mol_v2000",
-    "sniff_cube", "sniff_ase_structure", "sniff_cclib_output", "sniff_cif", "sniff_poscar", "sniff_xyz",
+    "sniff_cube", "sniff_ase_structure", "sniff_cclib_output", "sniff_cif", "sniff_gaussian_input", "sniff_orca_input", "sniff_poscar", "sniff_xyz",
     "adapt_ccdata", "adapt_iodata", "adapt_vasp_volumetric", "adapt_pymatgen_electronic",
     "adapt_phonopy_qpoints", "adapt_pyprocar_fermi_surface", "parse_vasp_volumetric",
     "parse_vasprun_electronic", "sniff_vasp_volumetric", "sniff_vasprun",
@@ -75,7 +75,7 @@ class CorePublicApiTests(unittest.TestCase):
     def test_public_names_are_frozen(self):
         self.assertEqual(tuple(core.__all__), PUBLIC_CORE_NAMES)
         self.assertEqual(len(core.__all__), len(set(core.__all__)))
-        self.assertEqual(len(core.__all__), 252)
+        self.assertEqual(len(core.__all__), 258)
 
     def test_public_names_resolve_to_attributes(self):
         missing = [name for name in core.__all__ if not hasattr(core, name)]

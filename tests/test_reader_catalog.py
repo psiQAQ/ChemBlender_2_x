@@ -16,7 +16,7 @@ MATRIX = Path(__file__).parents[1] / "docs" / "quantum-visualization" / "reader-
 class ReaderCatalogTests(unittest.TestCase):
     def test_builtin_catalog_has_unique_descriptors_and_fresh_matrix(self):
         readers = builtin_reader_descriptors()
-        self.assertEqual(len(readers), 19)
+        self.assertEqual(len(readers), 21)
         self.assertEqual(len({reader.reader_id for reader in readers}), len(readers))
         registry = builtin_reader_registry()
         for reader in readers:
@@ -49,6 +49,25 @@ class ReaderCatalogTests(unittest.TestCase):
             registry.select(fixtures / "periodic-extra.extxyz").reader_id,
             "extxyz",
         )
+
+    def test_builtin_registry_routes_quantum_inputs_without_dependencies(self):
+        registry = builtin_reader_registry()
+        fixtures = Path(__file__).parent / "fixtures"
+        cases = (
+            (fixtures / "gaussian" / "water.gjf", "gaussian-input"),
+            (fixtures / "orca" / "water.inp", "orca-input"),
+        )
+        document = {
+            row["reader_id"]: row
+            for row in reader_capability_document()["readers"]
+        }
+        for source, reader_id in cases:
+            with self.subTest(reader_id=reader_id):
+                self.assertEqual(registry.select(source).reader_id, reader_id)
+                self.assertEqual(
+                    document[reader_id]["availability_contract"],
+                    {"kind": "always"},
+                )
 
 
 if __name__ == "__main__":

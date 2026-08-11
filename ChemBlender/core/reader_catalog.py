@@ -6,11 +6,13 @@ from .cjson_adapter import CJSON_READER
 from .cube import CUBE_READER
 from .formats.cif import CIF_READER
 from .formats.extxyz import EXTXYZ_READER
+from .formats.gaussian_input import GAUSSIAN_INPUT_READER
 from .formats.mol2 import MOL2_READER
 from .formats.pdb import PDB_READER
 from .formats.pqr import PQR_READER
 from .iodata_adapter import IODATA_WAVEFUNCTION_READER
 from .formats.mol import MOL_READER
+from .formats.orca_input import ORCA_INPUT_READER
 from .formats.poscar import POSCAR_READER
 from .formats.sdf import SDF_READER
 from .formats.smiles import SMILES_READER
@@ -48,9 +50,11 @@ _READER_FIXTURE_FAMILIES = {
     "cjson": ("CJSON result envelope",),
     "cube": ("Gaussian Cube", "multi-dataset Cube"),
     "extxyz": ("ASE extXYZ", "libAtoms extXYZ", "OVITO extXYZ"),
+    "gaussian-input": ("Gaussian Cartesian input",),
     "iodata_wavefunction": ("FCHK", "Molden"),
     "mol": ("MOL V2000", "MOL V3000"),
     "mol-v2000": ("MOL V2000",),
+    "orca-input": ("ORCA Cartesian input",),
     "mol2": ("Tripos MOL2", "MOL2 multi-record", "MOL2 substructure"),
     "pdb": ("PDB altloc", "PDB CONECT", "PDB multi-model"),
     "poscar": ("VASP 4", "VASP 5", "POSCAR velocity"),
@@ -109,10 +113,12 @@ def builtin_reader_descriptors():
                 CJSON_READER,
                 CUBE_READER,
                 EXTXYZ_READER,
+                GAUSSIAN_INPUT_READER,
                 IODATA_WAVEFUNCTION_READER,
                 MOL_READER,
                 MOL2_READER,
                 MOL_V2000_READER,
+                ORCA_INPUT_READER,
                 PDB_READER,
                 PQR_READER,
                 POSCAR_READER,

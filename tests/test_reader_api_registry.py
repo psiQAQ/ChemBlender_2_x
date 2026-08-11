@@ -451,7 +451,12 @@ class ReaderAPIRegistryTests(unittest.TestCase):
     def test_selection_matches_existing_xyz_and_cube_registry(self):
         registry = builtin_reader_plugin_registry()
         old = builtin_reader_registry()
-        for relative in ("xyz/water.xyz", "cube/sheared.cube"):
+        for relative in (
+            "xyz/water.xyz",
+            "cube/sheared.cube",
+            "gaussian/water.gjf",
+            "orca/water.inp",
+        ):
             source = FIXTURES / relative
             selected = registry.select(
                 SniffRequest(source, source.read_bytes()[:65536])
@@ -468,7 +473,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
         plugins = builtin_reader_plugins()
         registry = ReaderPluginRegistry(plugins)
 
-        self.assertEqual(len(registry.descriptors), 19)
+        self.assertEqual(len(registry.descriptors), 21)
         self.assertEqual({id(plugin.manifest) for plugin in plugins}, {id(plugins[0].manifest)})
         self.assertEqual(plugins[0].manifest.schema_version, "1")
         self.assertEqual(plugins[0].manifest.chemblender_api, ">=1.0,<2.0")
@@ -476,7 +481,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
             plugins[0].manifest.license,
             ("SPDX:GPL-3.0-or-later",),
         )
-        self.assertEqual(len(plugins[0].manifest.readers), 19)
+        self.assertEqual(len(plugins[0].manifest.readers), 21)
         self.assertEqual(
             {item.plugin_id for item in registry.descriptors},
             {"chemblender.builtin"},
@@ -766,9 +771,14 @@ class ReaderAPIRegistryTests(unittest.TestCase):
         self.assertIs(result, expected)
         self.assertIs(result.datasets[0].data.values, values)
 
-    def test_builtin_xyz_and_cube_parse_return_exact_public_batches(self):
+    def test_builtin_structure_readers_return_exact_public_batches(self):
         registry = builtin_reader_plugin_registry()
-        for relative in ("xyz/water.xyz", "cube/sheared.cube"):
+        for relative in (
+            "xyz/water.xyz",
+            "cube/sheared.cube",
+            "gaussian/water.gjf",
+            "orca/water.inp",
+        ):
             source = FIXTURES / relative
             selected = registry.select(
                 SniffRequest(source, source.read_bytes()[:65536])

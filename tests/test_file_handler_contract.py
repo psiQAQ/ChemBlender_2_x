@@ -94,6 +94,8 @@ class FileHandlerContractTests(unittest.TestCase):
 
         self.assertTrue(expected)
         self.assertNotIn("*", expected)
+        for extension in (".com", ".gjf", ".inp"):
+            self.assertIn(extension, expected.split(";"))
         self.assertEqual(
             tuple(cls.__name__ for cls in module.FILE_HANDLER_CLASSES),
             (
