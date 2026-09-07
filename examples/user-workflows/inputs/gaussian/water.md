@@ -2,7 +2,7 @@
 
 ## 用途与选择理由
 
-这是仓库自带的最小 Gaussian Cartesian 输入，用于验证 ChemBlender 能直接展示 `.gjf/.com` 中的内嵌分子结构，并保留 charge 与 multiplicity。它不执行 Gaussian，也不解析 route、method 或 basis。
+这是仓库自带的最小 Gaussian Cartesian 输入，用于验证 ChemBlender 能直接展示 `.gjf/.com` 中的内嵌分子结构，并保留 charge 与 multiplicity。它不执行 Gaussian；只从 route 读取坐标单位，不解释 method 或 basis。
 
 ## 来源与许可
 
@@ -26,7 +26,7 @@
 
 ## ChemBlender 支持边界
 
-内置 `gaussian-input` reader 支持严格四列 `Element x y z` 坐标。Z-matrix、freeze code、ONIOM/fragment 修饰和 `--Link1--` 多任务会明确失败；坐标块之后的 basis/ECP 文本保留在原始来源中，但不进入结构语义。
+内置 `gaussian-input` reader 支持严格四列 `Element x y z` 坐标。坐标默认 Å；route 中 `Units=Bohr/AU`（含括号形式）转换为 Å，provenance 保留源单位和因子。冲突或未知单位明确失败。旧 reader 导入的项目需重新导入并选择新 revision，不能自动缩放旧数据。Z-matrix、freeze code、ONIOM/fragment 修饰和 `--Link1--` 多任务会明确失败；坐标块之后的 basis/ECP 文本保留在原始来源中，但不进入结构语义。
 
 ## 操作流程
 
@@ -39,7 +39,7 @@
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，使用公开的 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/gaussian/water.gjf。报告 Preview 中的 selected reader、capability、quality/diagnostics；确认后调用 bpy.ops.chemblender.confirm_import，并验证 Project Browser Structure 与可见 Structure View。3 atoms、charge 0、multiplicity 1 是自动合同预期，不得声称已由通用 UI 可见验证。不得执行 Gaussian，也不得声称已解析 route、method 或 basis。
+通过 Blender MCP 连接 Blender 5.1，使用公开的 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/gaussian/water.gjf。报告 Preview 中的 selected reader、capability、quality/diagnostics；确认后调用 bpy.ops.chemblender.confirm_import，并验证 Project Browser Structure 与可见 Structure View。3 atoms、charge 0、multiplicity 1 是自动合同预期，不得声称已由通用 UI 可见验证。不得执行 Gaussian，也不得声称已解释 method 或 basis。
 ```
 
 ## 完整性与验证

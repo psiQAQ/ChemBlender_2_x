@@ -13,8 +13,6 @@ CUBE_EXPORT_UI_CURSOR_FILE = "2.4.0-cube-export-ui.md"
 TASK11_SCOPE_ACTIVE_FILE = "2.4.0-task11-scope-discovery.md"
 TASK11_SCOPE_COMPLETED_FILE = "2.4.0-task11-scope-discovery.md"
 FINAL_QUALIFICATION_CURSOR_FILE = "2.4.0-final-qualification.md"
-NEXT_RELEASE_ACTIVE_FILES = ("representative-example-corpus.md",)
-NEXT_RELEASE_QUEUED_FILES = ()
 NEXT_RELEASE_COMPLETED_FILE = "2.4.0-scope-discovery.md"
 MOL2_EXPORT_COMPLETED_FILE = "2.4.0-mol2-export.md"
 MOL2_EXPORT_UI_COMPLETED_FILE = "2.4.0-mol2-export-ui.md"
@@ -726,16 +724,21 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("whitelist", plans["cjson"].lower())
 
     def test_single_active_task(self):
-        active = sorted((ROOT / ".agents" / "active").glob("*.md"))
-        self.assertEqual(
-            [path.name for path in active],
-            list(NEXT_RELEASE_ACTIVE_FILES),
-        )
-        queued = sorted((ROOT / ".agents" / "queued").glob("*.md"))
-        self.assertEqual(
-            [path.name for path in queued],
-            list(NEXT_RELEASE_QUEUED_FILES),
-        )
+        agents = ROOT / ".agents"
+        states = {
+            state: {path.name for path in (agents / state).glob("*.md")}
+            for state in ("active", "queued", "completed")
+        }
+        self.assertLessEqual(len(states["active"]), 1)
+        for first, second in (("active", "queued"), ("active", "completed"), ("queued", "completed")):
+            self.assertFalse(states[first] & states[second])
+        self.assertIn("representative-example-corpus.md", states["completed"])
+        index = self.read_doc(".agents/README.md")
+        for state in ("active", "queued"):
+            for name in states[state]:
+                self.assertIn(f"({state}/{name})", index)
+        for target in re.findall(r"\]\(((?:active|queued|completed)/[^)]+)\)", index):
+            self.assertTrue((agents / target).is_file(), target)
 
     def test_240_candidate_intake_records_completed_selected_task(self):
         intake_path = (

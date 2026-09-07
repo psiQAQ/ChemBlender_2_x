@@ -28,6 +28,43 @@ class OrcaInputReaderTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, message):
             self.parse_bytes(content)
 
+    def test_coordinate_units_and_conversion_provenance(self):
+        for control, unit, factor in (
+            (b"! HF STO-3G\n", "angstrom", 1.0),
+            (b"! HF Angs\n", "angstrom", 1.0),
+            (b"! HF Bohrs\n", "bohr", 0.529177210903),
+            (b"! HF bOhRs\n%coords Units Bohrs end\n", "bohr", 0.529177210903),
+            (b"%coords\n Units Bohrs\nend\n", "bohr", 0.529177210903),
+            (b"%coords Units Angs end\n", "angstrom", 1.0),
+        ):
+            with self.subTest(control=control):
+                batch = self.parse_bytes(control + b"* xyz 0 1\nH 0 0 0\nH 0 0 1.4\n*\n")
+                self.assertAlmostEqual(batch.structures[0].coordinates.values[1, 2], 1.4 * factor)
+                parameters = dict(batch.provenance[0].parameters)
+                self.assertEqual(parameters["source_coordinate_unit"], unit)
+                self.assertEqual(parameters["coordinate_unit"], "angstrom")
+                self.assertEqual(parameters["coordinate_conversion_factor"], factor)
+                self.assertEqual(batch.report.reader_version, "2")
+                self.assertEqual(batch.provenance[0].producer_version, "2")
+
+    def test_unit_words_in_comments_and_unrelated_blocks_are_ignored(self):
+        batch = self.parse_bytes(
+            b"! HF # Bohrs\n# ! Bohrs\n%base \"Bohrs\"\n"
+            b"%scf MaxIter 100 # Units Bohrs\nend\n"
+            b"* xyz 0 1\nH 0 0 0\nH 0 0 1.4\n*\n"
+        )
+        self.assertEqual(batch.structures[0].coordinates.values[1, 2], 1.4)
+
+    def test_rejects_ambiguous_or_unknown_coordinate_settings(self):
+        for control in (
+            b"! Bohrs Angs\n", b"! Bohrs\n%coords Units Angs end\n",
+            b"%coords Units nm end\n", b"%coords Units end\n",
+            b"%coords Units Bohrs\n", b"%coords CTyp internal end\n",
+            b"%coords coords H 0 0 0 end end\n",
+        ):
+            with self.subTest(control=control):
+                self.assert_rejected(control + b"* xyz 0 1\nH 0 0 0\nH 0 0 1.4\n*\n", "unit|coordinate")
+
     def test_sniff_selects_inline_xyz_and_rejects_generic_inp(self):
         content = FIXTURE.read_bytes()
         self.assertEqual(
@@ -67,6 +104,9 @@ class OrcaInputReaderTests(unittest.TestCase):
             dict(provenance.parameters),
             {
                 "coordinate_mode": "cartesian",
+                "source_coordinate_unit": "angstrom",
+                "coordinate_unit": "angstrom",
+                "coordinate_conversion_factor": 1.0,
                 "format": "orca-input",
             },
         )

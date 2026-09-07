@@ -1,15 +1,20 @@
 from pathlib import Path
+from dataclasses import replace
+import importlib
 from tempfile import TemporaryDirectory
 import unittest
+from unittest import mock
 
 from ChemBlender.core import close_session, create_session
 from ChemBlender.core.import_pipeline import (
     ImportCommitDecisions,
+    DuplicateAction,
     ImportRequest,
     ImportSource,
     StagedImportSession,
     ValidationMode,
     commit_import_preview,
+    detect_import_conflicts,
 )
 from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
 from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
@@ -19,6 +24,71 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class QuantumInputImportPipelineTests(unittest.TestCase):
+    def test_reader_upgrade_creates_a_revision_without_rescaling_saved_data(self):
+        for name, suffix, control in (
+            ("gaussian", ".gjf", "# HF Units=Bohr\n\nH2\n\n0 1\nH 0 0 0\nH 0 0 1.4\n\n"),
+            ("orca", ".inp", "! HF Bohrs\n* xyz 0 1\nH 0 0 0\nH 0 0 1.4\n*\n"),
+        ):
+            with self.subTest(reader=name), TemporaryDirectory() as directory:
+                root = Path(directory)
+                source = root / ("hydrogen" + suffix)
+                source.write_text(control, encoding="utf-8")
+                module = importlib.import_module(f"ChemBlender.core.formats.{name}_input")
+                descriptor = getattr(module, f"{name.upper()}_INPUT_READER")
+                session = create_session(temp_parent=root)
+                stages = []
+                try:
+                    old_stage = StagedImportSession.create(temp_parent=root)
+                    stages.append(old_stage)
+                    # Emulate the published v1 interpretation of the same source bytes.
+                    with (
+                        mock.patch.object(module, "_READER_VERSION", "1"),
+                        mock.patch.object(module, "_coordinate_unit", return_value="angstrom"),
+                        mock.patch(
+                            "ChemBlender.core.reader_catalog.builtin_reader_descriptors",
+                            return_value=(replace(descriptor, reader_version="1"),),
+                        ),
+                    ):
+                        preview = preflight_reader_plugins(
+                            ImportRequest(sources=(ImportSource(source),)),
+                            builtin_reader_plugin_registry(), old_stage,
+                        )
+                    first = commit_import_preview(session, old_stage, preview, ImportCommitDecisions())
+                    old_revision, = first.project.source_revisions.values()
+                    old_structure, = first.project.structures.values()
+                    self.assertEqual(old_structure.coordinates.values[1, 2], 1.4)
+
+                    new_stage = StagedImportSession.create(temp_parent=root)
+                    stages.append(new_stage)
+                    preview = preflight_reader_plugins(
+                        ImportRequest(sources=(ImportSource(source),)),
+                        builtin_reader_plugin_registry(), new_stage,
+                    )
+                    conflict, = detect_import_conflicts(session.project, preview, new_stage)
+                    preview = replace(preview, conflict_ids=(conflict.id,))
+                    self.assertIn(DuplicateAction.NEW_REVISION, conflict.allowed_actions)
+                    result = commit_import_preview(
+                        session, new_stage, preview,
+                        ImportCommitDecisions(conflicts=(conflict,), conflict_decisions={
+                            conflict.id: DuplicateAction.NEW_REVISION,
+                        }),
+                    )
+                    upgraded, = (
+                        item for item in result.project.source_revisions.values()
+                        if item.id != old_revision.id
+                    )
+                    self.assertEqual(upgraded.source_id, old_revision.source_id)
+                    self.assertEqual(upgraded.content_hash, old_revision.content_hash)
+                    self.assertNotEqual(upgraded.parse_identity, old_revision.parse_identity)
+                    self.assertEqual(upgraded.reader_version, "2")
+                    corrected = next(result.project.structures[key] for key in upgraded.created_entity_ids if key in result.project.structures)
+                    self.assertAlmostEqual(corrected.coordinates.values[1, 2], 1.4 * 0.529177210903)
+                    self.assertEqual(result.project.structures[old_structure.id].coordinates.values[1, 2], 1.4)
+                finally:
+                    close_session(session)
+                    for stage in stages:
+                        stage.discard()
+
     def test_preflight_preview_and_commit_preserve_quantum_input_structure(self):
         cases = (
             ("gaussian/water.gjf", "gaussian-input"),

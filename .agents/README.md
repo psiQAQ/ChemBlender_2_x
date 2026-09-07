@@ -16,6 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
+| active | [quantum-input-units-experience-review.md](active/quantum-input-units-experience-review.md) | Unit repair, exact package qualification and separate UI/MCP experience review |
 | completed | [representative-example-corpus.md](completed/representative-example-corpus.md) | Provenance-backed representative scientific examples, per-file documentation and Blender runtime validation |
 | completed | [user-workflow-experience-gate.md](completed/user-workflow-experience-gate.md) | User workflow docs, full-format examples, Blender MCP runtime checks and manual prerelease experience gate |
 | reference | [branch-architecture.md](reference/branch-architecture.md) | Maintained/upstream branch roles and lifecycle |

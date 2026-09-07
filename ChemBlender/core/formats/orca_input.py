@@ -3,6 +3,8 @@
 import array
 import hashlib
 import math
+import re
+import shlex
 from pathlib import Path
 from uuid import uuid4
 
@@ -20,7 +22,8 @@ from ..readers import CapabilitySupport, ReaderDescriptor, SniffMatch, SniffResu
 
 
 _READER_ID = "orca-input"
-_READER_VERSION = "1"
+_READER_VERSION = "2"
+_BOHR_TO_ANGSTROM = 0.529177210903
 _ATOMIC_NUMBERS = {
     symbol: data[0]
     for symbol, data in ELEMENTS_DEFAULT.items()
@@ -54,8 +57,54 @@ def _coordinate_headers(lines):
     return headers, xyzfiles, internal
 
 
+def _coordinate_unit(lines):
+    units = set()
+    block = None
+
+    def accept(value):
+        unit = {"angs": "angstrom", "bohrs": "bohr"}.get(value.lower())
+        if unit is None:
+            raise ValueError(f"unknown ORCA coordinate unit: {value}")
+        units.add(unit)
+
+    for line in lines:
+        if block is None:
+            if line.lstrip().startswith("!"):
+                for token in shlex.split(line.lstrip()[1:], comments=True):
+                    if token.lower() in {"angs", "bohrs"}:
+                        accept(token)
+            start = re.match(r"\s*%coords\b(.*)", line, re.IGNORECASE)
+            if start is None:
+                continue
+            block = []
+            line = start.group(1)
+        tokens = shlex.split(line.replace(";", " "), comments=True)
+        block.extend(token.lower() for token in tokens)
+        if "end" not in block:
+            continue
+        # Only unit/type settings are accepted beside an inline XYZ block.
+        # A second geometry or other coordinate controls must not override it silently.
+        if block[-1] != "end" or "end" in block[:-1]:
+            raise ValueError("unsupported ORCA coordinate block")
+        options = block[:-1]
+        if len(options) % 2:
+            raise ValueError("invalid ORCA coordinate unit/type setting")
+        for key, value in zip(options[::2], options[1::2]):
+            if key == "units":
+                accept(value)
+            elif key != "ctyp" or value != "xyz":
+                raise ValueError(f"unsupported ORCA coordinate setting: {key} {value}")
+        block = None
+    if block is not None:
+        raise ValueError("ORCA coordinate unit block must be terminated by end")
+    if len(units) > 1:
+        raise ValueError("conflicting ORCA coordinate units")
+    return next(iter(units), "angstrom")
+
+
 def _parse_text(text):
     lines = text.splitlines()
+    coordinate_unit = _coordinate_unit(lines)
     headers, xyzfiles, internal = _coordinate_headers(lines)
     if xyzfiles:
         raise ValueError("ORCA xyzfile references are not supported")
@@ -109,6 +158,7 @@ def _parse_text(text):
         tuple(atomic_numbers),
         tuple(coordinates),
         isotope_symbols,
+        coordinate_unit,
     )
 
 
@@ -145,7 +195,9 @@ def parse_orca_input(source):
         parsed = _parse_text(content.decode("utf-8-sig"))
     except UnicodeDecodeError as error:
         raise ValueError("ORCA input must be UTF-8 text") from error
-    charge, multiplicity, atomic_numbers, values, isotopes = parsed
+    charge, multiplicity, atomic_numbers, values, isotopes, source_unit = parsed
+    factor = _BOHR_TO_ANGSTROM if source_unit == "bohr" else 1.0
+    values = tuple(value * factor for value in values)
 
     coordinates = memoryview(array.array("d", values)).cast("B").cast(
         "d", shape=(len(atomic_numbers), 3)
@@ -180,6 +232,9 @@ def parse_orca_input(source):
         operation="parse",
         parameters=(
             ("coordinate_mode", "cartesian"),
+            ("source_coordinate_unit", source_unit),
+            ("coordinate_unit", "angstrom"),
+            ("coordinate_conversion_factor", factor),
             ("format", "orca-input"),
         ),
     )

@@ -32,7 +32,7 @@ This checked-out development table extends the released 2.4.0 scope. Released-ve
 | Cube | Native Structure + Grid3D import, Blender Volume/Surface workflow and Project Browser Cube export for representable scalar grids; export is semantic, not byte-for-byte source reproduction |
 | CJSON | Lightweight structure/topology/property envelope import and controlled core export; no general Project Browser writer |
 | QCSchema | Dependency-free built-in import for Molecule and AtomicResult JSON; maps Structure and supported numeric properties while preserving the complete source JSON as a raw envelope; no general Project Browser writer |
-| Gaussian/ORCA inputs | Dependency-free native structure import for strict inline Cartesian `.gjf`/`.com` and `.inp`; preserves charge/multiplicity, does not execute either program, and rejects ambiguous complex geometry syntax |
+| Gaussian/ORCA inputs | Dependency-free native structure import for strict inline Cartesian `.gjf`/`.com` and `.inp`; preserves charge/multiplicity and converts explicitly declared Bohr coordinates to angstrom with provenance, does not execute either program, and rejects ambiguous complex geometry syntax |
 
 The Project Browser export workflow currently writes XYZ, extXYZ, MOL, MOL2,
 PDB, PQR, Cube, SDF, SMILES, CIF and POSCAR. It shows a loss preview and requires confirmation when

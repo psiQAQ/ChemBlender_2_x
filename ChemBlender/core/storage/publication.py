@@ -281,6 +281,9 @@ def solidify_session(
     if is_cancelled is not None and is_cancelled():
         _cancel_staged_publication(stage)
 
+    # Staging can load shared lazy arrays. Release their Windows file mappings
+    # before renaming the old sidecar; a rollback can reopen the unchanged paths.
+    close_project(session.project)
     if destination.exists():
         backup = _new_backup(destination)
         os.replace(destination, backup)

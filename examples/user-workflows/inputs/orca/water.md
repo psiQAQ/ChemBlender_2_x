@@ -2,7 +2,7 @@
 
 ## 用途与选择理由
 
-这是仓库自带的最小 ORCA inline XYZ 输入，用于验证 ChemBlender 能直接展示 `.inp` 中的 `* xyz charge multiplicity ... *` 分子结构。它不执行 ORCA，也不解释 `!` 或 `%` 计算设置。
+这是仓库自带的最小 ORCA inline XYZ 输入，用于验证 ChemBlender 能直接展示 `.inp` 中的 `* xyz charge multiplicity ... *` 分子结构。它不执行 ORCA；只读取 `! Angs/Bohrs` 和 `%coords Units` 等与坐标解释直接相关的设置。
 
 ## 来源与许可
 
@@ -26,7 +26,7 @@
 
 ## ChemBlender 支持边界
 
-内置 `orca-input` reader 只支持唯一且闭合的 inline `* xyz` 坐标块以及严格四列 `Element x y z`。`xyzfile` 外部引用、多个坐标块、内部坐标或额外原子列会明确失败；ORCA 关键词不进入结构语义。
+内置 `orca-input` reader 只支持唯一且闭合的 inline `* xyz` 坐标块以及严格四列 `Element x y z`。`xyzfile` 外部引用、多个坐标块、内部坐标或额外原子列会明确失败；其他 ORCA 计算关键词不进入结构语义。坐标默认 Å；`! Bohrs` 或 `%coords Units Bohrs end` 转换为 Å，并记录源单位、目标单位和因子；一致的重复声明允许，冲突、未知单位及不支持的 `%coords` 设置明确失败。旧 reader 数据需重新导入为新 revision，不能自动缩放。
 
 ## 操作流程
 

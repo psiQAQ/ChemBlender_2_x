@@ -309,7 +309,8 @@ def detect_import_conflicts(project, preview, session):
                 revision
                 for revision in existing
                 if _locator_key(revision) == _locator_key(staged)
-                and revision.content_hash != staged.content_hash
+                # Reader upgrades can change scientific values without changing bytes.
+                and revision.parse_identity != staged.parse_identity
             )
             if candidates:
                 category = ImportConflictCategory.SAME_LOCATOR_CHANGED_CONTENT

@@ -3,6 +3,7 @@
 import array
 import hashlib
 import math
+import re
 from pathlib import Path
 from uuid import uuid4
 
@@ -20,7 +21,8 @@ from ..readers import CapabilitySupport, ReaderDescriptor, SniffMatch, SniffResu
 
 
 _READER_ID = "gaussian-input"
-_READER_VERSION = "1"
+_READER_VERSION = "2"
+_BOHR_TO_ANGSTROM = 0.529177210903
 _ATOMIC_NUMBERS = {
     symbol: data[0]
     for symbol, data in ELEMENTS_DEFAULT.items()
@@ -42,6 +44,31 @@ def _next_nonempty(lines, index):
     return index
 
 
+def _coordinate_unit(route_lines):
+    # Unit declarations affect geometry even though calculation settings are not imported.
+    route = " ".join(line.split("!", 1)[0] for line in route_lines)
+    units = set()
+    for keyword in re.finditer(r"\bunits\b", route, re.IGNORECASE):
+        match = re.match(
+            r"\s*=\s*(?:\(([^()]*)\)|([A-Za-z]+)(?=\s|$))",
+            route[keyword.end():],
+        )
+        if match is None:
+            raise ValueError("Gaussian coordinate unit declaration is invalid")
+        options = (match.group(1) if match.group(1) is not None else match.group(2)).split(",")
+        for option in options:
+            value = option.strip().lower()
+            if value in {"bohr", "bohrs", "au"}:
+                units.add("bohr")
+            elif value in {"ang", "angstrom", "angstroms"}:
+                units.add("angstrom")
+            elif value not in {"deg", "degree", "degrees", "rad", "radian", "radians"}:
+                raise ValueError(f"unknown Gaussian coordinate unit option: {option}")
+    if len(units) > 1:
+        raise ValueError("conflicting Gaussian coordinate units")
+    return next(iter(units), "angstrom")
+
+
 def _parse_text(text):
     lines = text.splitlines()
     if any(line.strip().lower() == "--link1--" for line in lines):
@@ -58,6 +85,7 @@ def _parse_text(text):
         index += 1
     if "oniom" in " ".join(route_lines).lower():
         raise ValueError("Gaussian ONIOM inputs are not supported")
+    coordinate_unit = _coordinate_unit(route_lines)
     if index >= len(lines):
         raise ValueError("Gaussian title section is missing")
 
@@ -130,6 +158,7 @@ def _parse_text(text):
         tuple(atomic_numbers),
         tuple(coordinates),
         isotope_symbols,
+        coordinate_unit,
     )
 
 
@@ -170,7 +199,9 @@ def parse_gaussian_input(source):
         parsed = _parse_text(content.decode("utf-8-sig"))
     except UnicodeDecodeError as error:
         raise ValueError("Gaussian input must be UTF-8 text") from error
-    title, charge, multiplicity, atomic_numbers, values, isotopes = parsed
+    title, charge, multiplicity, atomic_numbers, values, isotopes, source_unit = parsed
+    factor = _BOHR_TO_ANGSTROM if source_unit == "bohr" else 1.0
+    values = tuple(value * factor for value in values)
 
     coordinates = memoryview(array.array("d", values)).cast("B").cast(
         "d", shape=(len(atomic_numbers), 3)
@@ -205,6 +236,9 @@ def parse_gaussian_input(source):
         operation="parse",
         parameters=(
             ("coordinate_mode", "cartesian"),
+            ("source_coordinate_unit", source_unit),
+            ("coordinate_unit", "angstrom"),
+            ("coordinate_conversion_factor", factor),
             ("format", "gaussian-input"),
             ("title", title),
         ),

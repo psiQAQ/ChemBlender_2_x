@@ -26,6 +26,43 @@ class GaussianInputReaderTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, message):
             self.parse_bytes(content)
 
+    def test_coordinate_units_and_conversion_provenance(self):
+        for option, unit, factor in (
+            (b"", "angstrom", 1.0),
+            (b"Units=Angstrom", "angstrom", 1.0),
+            (b"Units=(Ang,Deg)", "angstrom", 1.0),
+            (b"Units=Bohr", "bohr", 0.529177210903),
+            (b"uNiTs = ( AU , Deg )", "bohr", 0.529177210903),
+            (b"Units=Bohr\n Units=AU", "bohr", 0.529177210903),
+        ):
+            with self.subTest(option=option):
+                batch = self.parse_bytes(
+                    b"# HF/STO-3G " + option
+                    + b"\n\nH2\n\n0 1\nH 0 0 0\nH 0 0 1.4\n\n"
+                )
+                self.assertAlmostEqual(batch.structures[0].coordinates.values[1, 2], 1.4 * factor)
+                parameters = dict(batch.provenance[0].parameters)
+                self.assertEqual(parameters["source_coordinate_unit"], unit)
+                self.assertEqual(parameters["coordinate_unit"], "angstrom")
+                self.assertEqual(parameters["coordinate_conversion_factor"], factor)
+                self.assertEqual(batch.report.reader_version, "2")
+                self.assertEqual(batch.provenance[0].producer_version, "2")
+
+    def test_unit_words_outside_route_do_not_change_coordinates(self):
+        batch = self.parse_bytes(
+            b"%chk=Units=Bohr.chk\n# HF/STO-3G ! Units=Bohr\n\nUnits=Bohr\n\n"
+            b"0 1\nH 0 0 0\nH 0 0 1.4\n\nUnits=Bohr\n"
+        )
+        self.assertEqual(batch.structures[0].coordinates.values[1, 2], 1.4)
+
+    def test_rejects_ambiguous_or_unknown_unit_declarations(self):
+        for option in (b"Units=Bohr Units=Ang", b"Units=nm", b"Units=", b"Units=(AU", b"Units=(AU,unknown)"):
+            with self.subTest(option=option):
+                self.assert_rejected(
+                    b"# HF/STO-3G " + option + b"\n\nH2\n\n0 1\nH 0 0 0\nH 0 0 1.4\n\n",
+                    "unit",
+                )
+
     def test_sniff_and_registry_select_complete_cartesian_input(self):
         content = FIXTURE.read_bytes()
         self.assertEqual(
@@ -66,6 +103,9 @@ class GaussianInputReaderTests(unittest.TestCase):
             dict(provenance.parameters),
             {
                 "coordinate_mode": "cartesian",
+                "source_coordinate_unit": "angstrom",
+                "coordinate_unit": "angstrom",
+                "coordinate_conversion_factor": 1.0,
                 "format": "gaussian-input",
                 "title": "water",
             },
