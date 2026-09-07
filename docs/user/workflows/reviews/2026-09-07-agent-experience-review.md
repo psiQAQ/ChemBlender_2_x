@@ -5,7 +5,7 @@
 
 ## 当前检查点
 
-最近完成自动验证的 R20 ZIP `f7dfd72611e1cd61c7519b5110e8d8e83995419fa70e31e86de13d8347a666f8`（35c3bc9）：2,309 tests，26 skips，无失败/错误；隔离 smoke 104.94 s。MIG 双路径迁移、渲染和真正冷重开通过。以下旧包数据保留为失败—修复链，最终仍需全项复核。
+最近完成自动验证的 R21 ZIP `61b64592fbab352aaaa70ea319963ab6c6436a4f2d2d0728c68fabb7daa73635`（76d1d9e）：2,310 tests，26 skips，无失败/错误；隔离 smoke104.35 s。AGENT双路径及隔离依赖修复后的冷验证通过。以下旧包结果保留为失败—修复链，最终仍需全项复核。
 
 | 项目 | UI | MCP |
 | --- | --- | --- |
@@ -16,7 +16,8 @@
 | EXP | R14 Passed；待全轮最终复核 | R14 Passed；待全轮最终复核 |
 | LIFE | R16/R17 Passed；待最终包复核 | R16/R17 Passed；待最终包复核 |
 | MIG | R20 Passed；待全轮最终复核 | R20 Passed；待全轮最终复核 |
-| AGENT / OUTSIDE | Not Run | Not Run |
+| AGENT | R21 Passed；待全轮最终复核 | R21 Passed，冷依赖已修复；待最终复核 |
+| OUTSIDE | Not Run | Not Run |
 | REP-MOLECULAR / REP-TRAJECTORY / REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
 
 ## 源码、环境与证据
@@ -76,3 +77,5 @@ VIEW 的 Grid 选择和力箭头缺陷链见 [VIEW 独立报告](2026-09-07-agen
 R13 VIEW 双路径完整重测通过，详见 [VIEW](2026-09-07-agent-experience/VIEW.md)。配对文件各有 VIEW/UI 或 VIEW/MCP 集合，截图与渲染均保留。此阶段文件重开为同进程，不代替 LIFE 的冷启动。其余 10 项继续执行。
 
 迁移独立报告：[MIG](2026-09-07-agent-experience/MIG.md)。两条路线有独立集合、渲染、完整配对和冷重开证据。继续 AGENT、OUTSIDE 和五类代表输入；最终同包复核与总展示文件尚未完成。
+
+[AGENT独立报告](2026-09-07-agent-experience/AGENT.md)包含单位诊断修复、原生连接恢复与MCP测试profile冷依赖修复的完整证据。还剩OUTSIDE与五类代表输入，以及最终同包复核和14集合总展示文件。

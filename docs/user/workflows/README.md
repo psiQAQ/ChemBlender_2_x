@@ -59,7 +59,7 @@
 
 ## 开始前
 
-- 使用 Blender 5.1 或更高版本，并把 Release ZIP 安装为 Blender Extension。
+- 使用 Blender 5.1 或更高版本，并把 Release ZIP 安装为 Blender Extension。更新后关闭并重新启动 Blender，再确认 RDKit/Gemmi；开发验证另见[Windows 冷依赖检查](../../development/windows-extension-cold-check.md)。
 - 确认 3D View 右侧边栏中有 `ChemBlender` 标签页。
 - 先复制待处理文件；本教程的 `examples/user-workflows/inputs/` 是不可变输入。
 - 重要项目先准备一个新的、可写目录，保存时让 `.blend` 与 `.cbq/` 位于同一层。
