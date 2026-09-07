@@ -597,7 +597,7 @@ class CHEMBLENDER_OT_migrate_legacy_scene(bpy.types.Operator):
     confirmed: BoolProperty(name="I understand the legacy objects move to backup", default=False)
 
     def invoke(self, context, _event):
-        return context.window_manager.invoke_props_dialog(self)
+        return context.window_manager.invoke_props_dialog(self, width=640)
 
     def execute(self, context):
         try:
