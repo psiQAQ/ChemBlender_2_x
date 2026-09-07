@@ -40,3 +40,12 @@
 修复 ZIP：`7579c1541eb242cb9220d3c7ff40296446d3f083641cf5c0c50c3f1fb9dc2112`，29,983,926 bytes；只有 `ui/project_browser/panel.py` 相对首包增加 2,087 unpacked bytes，压缩包增加 516 bytes。源码 section 2,695,847 bytes、总解压 32,090,603 bytes。新的五文件审计位于 `package-browser-fix/`，旧包保留在 `package/`，通过记录不会混用。
 
 新包 UI 安装/重启用后，`ENV-R2-04-browser.png` 已实际显示 `No project data`、By Source/By Data 与筛选，错误日志没有 draw traceback。完整隔离 smoke 通过，耗时 103.48 s；仍需重跑有数据的 IMP 与 MCP 复核。
+
+
+## 导入体验补充修复
+
+`22b654d` 修复取消摘要与预览标签；ZIP `c5e438aefeb200e32dfcb5a09b73825acdc5dc6971a3acd64d9f85349c7c4207` 为 29,983,936 bytes，相对 Browser 修复包只有 `ui/import_preview.py` 增加 185 unpacked / 10 packed bytes。完整隔离 smoke 通过，102.91 s。
+
+逐项记录：[ENV](2026-09-07-agent-experience/ENV.md)、[IMP](2026-09-07-agent-experience/IMP.md)。IMP UI 已保存六个 Structure View、IMP/UI 集合、配对 sidecar 与渲染。MCP 检查复现强制 Preview 残留及显式确认值被默认值覆盖，当前修复正在进行最终包复测；其余 12 项尚未执行，不能视为通过。
+
+新增构建 `c206b53e5cb94c8c9a568740b1297d710d001d43175ecca64f2045f8457dd311` 为 29,984,397 bytes，解压 32,092,532 bytes。相对上一包：import_preview.py +369 unpacked / +84 packed，properties.py +1287 / +353，quick_import.py +88 / +24。只有三处公开导入反馈实现变更，所有未解释增长 allowance 仍为 0；审计五文件保存在 package-mcp-preview/。

@@ -97,3 +97,10 @@ Operator 的短名不等于参数名。Agent 必须先“检查 Operator RNA”�
 ```
 
 插件内的具体提示词位于[导入](01-import.md)、[处理](02-process.md)、[展示](03-visualize.md)、[导出](04-export.md)和[项目生命周期](05-project-lifecycle.md)。调整材质、灯光、相机和渲染等通用 Blender 工作见[插件能力外案例](07-agent-beyond-plugin.md)。
+
+
+## 前台 MCP 的导入预览
+
+直接执行 `bpy.ops.chemblender.quick_import(...)` 或 `import_smiles_text(...)` 返回 `RUNNING_MODAL` 时，等待公开 `scene.chemblender_quick_import.preview_json` 非空，再用 `json.loads` 读取 `rows`、`grouping_suggestions` 和 `conformer_grouping_suggestions`。该只读投影复用 UI 预览的质量、阻断原因、默认 View 和冲突/分组决策，不写入 `.blend` 或 sidecar；任务活动期间及取消/完成后为空字符串。
+
+检查每一行后显式调用 `bpy.ops.chemblender.confirm_import(**preview)`；可修改投影中的允许决策，例如 `default_view` 或已审阅的 conflict/grouping confirmation。传入的行仍按当前 staging、source IDs 与 live conflicts 验证，不会被默认值覆盖。需要停止时调用 `bpy.ops.chemblender.cancel_import()`。直接执行不会强制弹出无法由 MCP 关闭的旧对话框；鼠标触发的 `INVOKE_DEFAULT` 保持原有预览弹窗。

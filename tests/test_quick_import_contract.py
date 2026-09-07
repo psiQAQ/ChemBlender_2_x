@@ -769,6 +769,7 @@ class QuickImportContractTests(unittest.TestCase):
         module = importlib.import_module(QUICK_IMPORT_MODULE)
         operator = module.CHEMBLENDER_OT_quick_import()
         operator.validation_mode = ValidationMode.BALANCED.value
+        operator.options = SimpleNamespace(is_invoke=True)
         preview = ImportPreview(
             session_id=uuid4(),
             source_previews=(),
@@ -787,6 +788,22 @@ class QuickImportContractTests(unittest.TestCase):
 
         self.assertEqual(result, {"FINISHED"})
         self.assertEqual(calls, ["INVOKE_DEFAULT"])
+
+    def test_direct_execute_preflight_waits_without_opening_a_dialog(self):
+        module = importlib.import_module(QUICK_IMPORT_MODULE)
+        operator = module.CHEMBLENDER_OT_quick_import()
+        operator.options = SimpleNamespace(is_invoke=False)
+        operator.validation_mode = ValidationMode.BALANCED.value
+        preview = ImportPreview(session_id=uuid4(), source_previews=())
+        calls = []
+        self.fake_bpy.app.background = False
+        self.fake_bpy.ops = SimpleNamespace(
+            chemblender=SimpleNamespace(
+                confirm_import=lambda mode: calls.append(mode) or {"RUNNING_MODAL"}
+            )
+        )
+        self.assertEqual(operator._finish_preview(self.operator_context(), preview), {"FINISHED"})
+        self.assertEqual(calls, [])
 
     def test_preflight_job_precomputes_conformer_suggestions_off_main_thread(self):
         module = importlib.import_module(QUICK_IMPORT_MODULE)

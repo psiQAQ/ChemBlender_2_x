@@ -42,6 +42,30 @@ _FATAL_EXCEPTIONS = (
 )
 
 
+def _quick_import_preview_json(settings):
+    """Expose the same review projection as the dialog, without committing it."""
+    import json
+    from dataclasses import asdict
+    from .session import get_scene_session
+    from .import_preview import (
+        project_import_preview,
+        project_grouping_suggestions,
+        project_conformer_suggestions,
+    )
+    from ..runtime.reader_api_bridge import get_reader_plugin_registry
+
+    session = get_scene_session(settings.id_data)
+    state = get_quick_import_state(session)
+    if state.preview is None or state.active_job is not None:
+        return ""
+    rows = project_import_preview(session, state, get_reader_plugin_registry())
+    return json.dumps({
+        "rows": [asdict(row) for row in rows],
+        "grouping_suggestions": [asdict(row) for row in project_grouping_suggestions(state)],
+        "conformer_grouping_suggestions": [asdict(row) for row in project_conformer_suggestions(state)],
+    }, sort_keys=True)
+
+
 class CHEMBLENDER_PG_quick_import(bpy.types.PropertyGroup):
     validation_mode: EnumProperty(
         name="Validation",
@@ -49,6 +73,12 @@ class CHEMBLENDER_PG_quick_import(bpy.types.PropertyGroup):
         default=ValidationMode.BALANCED.value,
     )
     recent_summary: StringProperty(name="Recent Preview", default="")
+    preview_json: StringProperty(
+        name="Import Preview JSON",
+        description="Read-only current preview for explicit Operator confirmation; empty while busy or after completion",
+        get=_quick_import_preview_json,
+        options={"SKIP_SAVE"},
+    )
 
 
 def active_session_view(context, session):

@@ -2306,7 +2306,11 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             state,
             get_reader_plugin_registry(),
         )
-        _copy_projections(self.rows, projected)
+        is_supplied = getattr(
+            getattr(self, "properties", None), "is_property_set", lambda _name: False
+        )
+        if not is_supplied("rows"):
+            _copy_projections(self.rows, projected)
         self.reader_plugin_status = "\n".join(
             unavailable_reader_plugin_status(
                 refresh_reader_plugin_discovery()
@@ -2314,7 +2318,10 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
         )
         grouping_suggestions = project_grouping_suggestions(state)
         collection = getattr(self, "grouping_suggestions", None)
-        copied = _copy_projections(collection, grouping_suggestions)
+        copied = (
+            collection if is_supplied("grouping_suggestions")
+            else _copy_projections(collection, grouping_suggestions)
+        )
         if collection is None:
             self.grouping_suggestions = copied
         conformer_suggestions = project_conformer_suggestions(state)
@@ -2323,7 +2330,10 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
             "conformer_grouping_suggestions",
             None,
         )
-        copied = _copy_projections(collection, conformer_suggestions)
+        copied = (
+            collection if is_supplied("conformer_grouping_suggestions")
+            else _copy_projections(collection, conformer_suggestions)
+        )
         if collection is None:
             self.conformer_grouping_suggestions = copied
         self.blocking_reason = next(

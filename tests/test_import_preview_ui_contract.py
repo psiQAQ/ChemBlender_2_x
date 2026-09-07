@@ -1601,6 +1601,23 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertIsNone(state.preview)
         self.assertIsNone(state.staging_session)
 
+    def test_public_preview_rna_matches_dialog_and_clears_after_cancel(self):
+        _registry, state = self.stage("tests/fixtures/xyz/water.xyz")
+        session_ui = importlib.import_module("ChemBlender.ui.session")
+        settings = SimpleNamespace(id_data=object())
+        getter = self.properties.CHEMBLENDER_PG_quick_import.__annotations__[
+            "preview_json"
+        ].keywords["get"]
+        with patch.object(session_ui, "get_scene_session", return_value=self.session):
+            document = json.loads(getter(settings))
+            self.assertEqual(len(document["rows"]), 1)
+            self.assertEqual(document["rows"][0]["reader_id"], "xyz")
+            self.assertEqual(document["rows"][0]["quality"], "complete")
+            self.assertFalse(document["rows"][0]["blocking"])
+            self.assertTrue(document["rows"][0]["default_view"])
+            self.module.cancel_project_import(self.session)
+            self.assertEqual(getter(settings), "")
+
     def test_confirm_calls_transaction_once_creates_format_aware_plans(self):
         registry, state = self.stage(
             "tests/fixtures/xyz/water.xyz",
@@ -1687,6 +1704,27 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertEqual(view_calls, [])
         self.assertEqual(result.created_view_count, 0)
         self.assertEqual(state.browser_revision, 1)
+
+    def test_direct_confirmation_preserves_explicit_default_view_choice(self):
+        registry, state = self.stage("tests/fixtures/xyz/water.xyz")
+        rows = self.module.project_import_preview(self.session, state, registry)
+        rows[0].default_view = False
+        operator = self.module.CHEMBLENDER_OT_confirm_import()
+        operator.rows = _RNACollection()
+        self.module._copy_projections(operator.rows, rows)
+        operator.properties = SimpleNamespace(is_property_set=lambda name: name == "rows")
+        context = SimpleNamespace(scene=SimpleNamespace(
+            collection=object(), chemblender_quick_import=SimpleNamespace(recent_summary="")
+        ))
+        with (
+            patch.object(self.module, "get_scene_session", return_value=self.session),
+            patch.object(self.module, "get_reader_plugin_registry", return_value=registry),
+            patch.object(self.module, "apply_scene_preset", return_value=()) as view,
+        ):
+            result = operator.execute(context)
+        self.assertEqual(result, {"FINISHED"})
+        view.assert_not_called()
+        self.assertEqual(len(self.session.project.structures), 1)
 
     def test_new_revision_never_creates_an_automatic_default_view(self):
         revision_id = uuid4()

@@ -14,3 +14,7 @@
 - Evidence root: .blend-analysis/2026-09-07-review/ (ignored); final report will be tracked under docs/user/workflows/reviews/.
 - Reviewer: Agent simulating a user; preserve historical human Not Run records.
 - No push, tag, release, dependency upgrades or unrelated optional backend installations.
+
+- 22b654d fixes stale cancellation summary and preview labels; its c5e438ae ZIP passes full isolated smoke (102.91 s). ENV final retest passed in isolation. IMP UI finished with six meshes, IMP/UI collection, .blend/.cbq and render.
+- IMP MCP exposed stale forced dialogs after public cancel/confirm and explicit rows overwritten by defaults. Current repair adds read-only ephemeral preview_json and respects invoke vs execute plus explicit row choices; 159 related contracts pass after failing regressions. Rebuild/retest underway; remaining 12 cases not run yet.
+- UI installer test setup accidentally created lab_blender_org/chemblender at 20:20. Exact newly-created directory quarantined after checking original process did not enable it. No existing MCP source moved. Both test repo configurations now point at copied MCP source within the run root. Original 9876 remains 1.blend, Cube/Light/Camera, dirty false.

@@ -481,7 +481,9 @@ class CHEMBLENDER_OT_quick_import(bpy.types.Operator):
         settings = context.scene.chemblender_quick_import
         settings.validation_mode = self.validation_mode
         settings.recent_summary = _preview_summary(preview)
-        if not getattr(bpy.app, "background", False):
+        if not getattr(bpy.app, "background", False) and getattr(
+            getattr(self, "options", None), "is_invoke", False
+        ):
             bpy.ops.chemblender.confirm_import("INVOKE_DEFAULT")
         return {"FINISHED"}
 
