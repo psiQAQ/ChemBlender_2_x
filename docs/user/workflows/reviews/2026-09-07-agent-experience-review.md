@@ -20,7 +20,8 @@
 | OUTSIDE | R21 Passed；待全轮最终复核 | R21 Passed；同步渲染中途取消Not Run；待最终复核 |
 | REP-MOLECULAR | R22 Passed；待全轮最终复核 | R22 Passed；待全轮最终复核 |
 | REP-TRAJECTORY | R22 Passed；待全轮最终复核 | R22 Passed；待全轮最终复核 |
-| REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
+| [REP-BIOLOGICAL](2026-09-07-agent-experience/REP-BIOLOGICAL.md) | Passed（原生首测，R24 按授权 MCP 重放复核） | Passed（独立 R24） |
+| REP-CRYSTAL / REP-GRID | Not Run | Not Run |
 
 ## 源码、环境与证据
 
