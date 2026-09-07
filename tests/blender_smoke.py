@@ -4383,11 +4383,15 @@ def assert_extxyz_workflow(module_key, repository_root):
         assert exporters.semantic_extxyz_differences(batch, reparsed) == ()
 
         xyz_destination = root / "structure.xyz"
+        xyz_selection = export_ui.resolve_export_selection(project, structure.id)
+        xyz_preview = export_ui.preview_export_selection(xyz_selection, "xyz")
+        assert xyz_preview.requires_confirmation
+        assert "omit:cell_pbc" in {entry.code for entry in xyz_preview.entries}
         xyz_job = export_ui.ExportJob(
             xyz_destination,
-            export_ui.resolve_export_selection(project, structure.id),
+            xyz_selection,
             format_name="xyz",
-            confirm_loss=False,
+            confirm_loss=True,
             missing_value_token=None,
         )
         xyz_job.start()

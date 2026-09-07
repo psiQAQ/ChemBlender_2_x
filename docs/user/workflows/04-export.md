@@ -110,3 +110,5 @@ CJSON 和 QCSchema reader 都能保留 source envelope，core 也有受控 expor
 | CJSON/QCSchema 不在格式列表 | 这是当前 UI 边界，不是 reader 失败。保留原 envelope，或使用明确支持的目标格式 |
 
 继续：[保存、重开、恢复与迁移](05-project-lifecycle.md)。
+
+更改文件选择器中的格式会刷新当前 Loss Preview 并清除旧确认。XYZ 仅保留元素与坐标；当前选择含晶胞/PBC、charge/multiplicity、topology、原子身份、科学数据集、层级或记录注释时，预览会列出被省略内容并要求确认。普通坐标-only XYZ 不增加确认。导出默认建议数据文件名，格式切换后文件后缀同步更新，并拒绝覆盖当前打开的 `.blend`。

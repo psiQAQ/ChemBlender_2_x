@@ -344,6 +344,7 @@ class CubeExportUIContractTests(unittest.TestCase):
                     update(self, self._update_context)
 
         operator = _UpdatingExportOperator()
+        operator.filepath = ""
         operator._updates_enabled = False
         operator.format_name = "extxyz"
         operator.missing_value_token = ""

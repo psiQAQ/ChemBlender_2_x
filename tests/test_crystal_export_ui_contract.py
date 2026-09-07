@@ -68,6 +68,88 @@ class CrystalExportUIContractTests(unittest.TestCase):
         project.commit(batch)
         return project
 
+    def test_file_browser_property_wrapper_refreshes_its_live_operator(self):
+        module = self.export
+        properties = SimpleNamespace(confirm_loss=True, as_pointer=lambda: 42)
+        preview = unittest.mock.Mock()
+        operation = SimpleNamespace(properties=properties, _selection_and_preview=preview)
+        context = SimpleNamespace(space_data=SimpleNamespace(active_operator=operation))
+        module._export_preview_changed(properties, context)
+        preview.assert_called_once_with(context)
+        self.assertFalse(properties.confirm_loss)
+
+    def test_xyz_reports_periodic_loss_and_blocks_unconfirmed_worker(self):
+        batch = parse_poscar(POSCAR_SOURCE)
+        selection = self.export.resolve_export_selection(
+            self._project(batch), batch.structures[0].id,
+        )
+        report = self.export.preview_export_selection(selection, "xyz")
+        self.assertTrue(report.requires_confirmation)
+        self.assertIn("omit:cell_pbc", {entry.code for entry in report.entries})
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "structure.xyz"
+            job = self.export.ExportJob(
+                destination, selection, format_name="xyz",
+                confirm_loss=False, missing_value_token=None,
+            )
+            job.start()
+            self.assertTrue(job.join(10))
+            self.assertIsInstance(job.error, ValueError)
+            self.assertFalse(destination.exists())
+            confirmed = self.export.ExportJob(
+                destination, selection, format_name="xyz",
+                confirm_loss=True, missing_value_token=None,
+            )
+            confirmed.start()
+            self.assertTrue(confirmed.join(10))
+            self.assertIsNone(confirmed.error)
+            self.assertTrue(destination.exists())
+
+    def test_xyz_without_extra_scientific_data_needs_no_confirmation(self):
+        from ChemBlender.core import parse_xyz
+        batch = parse_xyz(ROOT / "tests/fixtures/xyz/water.xyz")
+        selection = self.export.resolve_export_selection(
+            self._project(batch), batch.structures[0].id,
+        )
+        report = self.export.preview_export_selection(selection, "xyz")
+        self.assertFalse(report.requires_confirmation)
+
+    def test_invoke_suggests_data_filename_and_never_the_current_blend(self):
+        module = self.export
+        operation = module.CHEMBLENDER_OT_export_project_entity()
+        operation.filepath = ""
+        operation.format_name = "extxyz"
+        operation._selection_and_preview = unittest.mock.Mock()
+        context = SimpleNamespace(window_manager=SimpleNamespace(
+            fileselect_add=unittest.mock.Mock(),
+        ))
+        with patch.object(module.bpy, "data", SimpleNamespace(filepath="review.blend"), create=True):
+            self.assertEqual(operation.invoke(context, None), {"RUNNING_MODAL"})
+        self.assertEqual(operation.filepath, "review.extxyz")
+
+    def test_file_browser_check_updates_suffix_after_format_change(self):
+        operation = self.export.CHEMBLENDER_OT_export_project_entity()
+        operation.filepath = "review.cif"
+        operation.format_name = "xyz"
+        self.assertTrue(operation.check(SimpleNamespace()))
+        self.assertEqual(operation.filepath, "review.xyz")
+        self.assertFalse(operation.check(SimpleNamespace()))
+
+    def test_export_refuses_the_current_blend_destination(self):
+        module = self.export
+        operation = module.CHEMBLENDER_OT_export_project_entity()
+        operation.filepath = "review.blend"
+        operation._selection_and_preview = unittest.mock.Mock(
+            return_value=(object(), SimpleNamespace(requires_confirmation=False)),
+        )
+        with (
+            patch.object(module.bpy, "data", SimpleNamespace(filepath="review.blend"), create=True),
+            patch.object(module, "ExportJob") as job,
+        ):
+            self.assertEqual(operation.execute(SimpleNamespace()), {"CANCELLED"})
+        self.assertIn("current Blender file", operation.last_report[1])
+        job.assert_not_called()
+
     def test_cif_mode_is_explicit_and_preview_lists_complete_plan(self):
         batch = parse_cif(CIF_SOURCE)
         project = self._project(batch)

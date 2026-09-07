@@ -10,6 +10,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Fixed
 
+- Refresh export previews from the live file-browser Operator when RNA settings change; show XYZ scientific-data omissions and require confirmation. Suggest a data filename and reject exporting over the current Blender file.
+
 - Release trajectory bindings before loading another Blender file, so configuring playback after reopen cannot read the previous session's removed temporary arrays.
 
 - Anchor force arrows at their atoms and end them at the displayed vector tip; remove the extra half-length translation and repair saved owned arrow groups.

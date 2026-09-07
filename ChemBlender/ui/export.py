@@ -639,7 +639,29 @@ def preview_export_selection(
     if format_name == "xyz":
         if selection.frame_set is not None:
             raise ValueError("FrameSet export requires extXYZ")
-        return ExportReport("xyz", False, 1, False)
+        structure = selection.structure
+        omissions = (
+            (structure.cell is not None or structure.periodic is not None,
+             "cell_pbc", "unit cell, periodic sites and PBC"),
+            (structure.molecular_charge is not None
+             or structure.molecular_multiplicity is not None,
+             "charge_spin", "molecular charge and multiplicity"),
+            (structure.topology is not None or structure.topology_ids
+             or selection.topology is not None or selection.associated_topologies,
+             "topology", "bonds and topology"),
+            (structure.atomic_identity is not None,
+             "atomic_identity", "formal charges, isotopes and atom identities"),
+            (selection.properties, "datasets", "associated scientific datasets"),
+            (selection.biological_hierarchies, "hierarchy", "biological hierarchy"),
+            (selection.record is not None or selection.conformer_set is not None
+             or selection.annotations or selection.cif_envelope is not None,
+             "metadata", "record, annotation and source-envelope metadata"),
+        )
+        entries = tuple(
+            ExportReportEntry(f"omit:{code}", f"Omitted: {message}")
+            for present, code, message in omissions if present
+        )
+        return ExportReport("xyz", False, 1, bool(entries), entries)
     if format_name == "cif":
         if selection.frame_set is not None or selection.structure.periodic is None:
             raise ValueError("CIF export requires one periodic Structure")
@@ -786,7 +808,7 @@ class ExportJob:
 
     def _run(self):
         try:
-            if self.format_name in {"cif", "poscar"}:
+            if self.format_name in {"xyz", "cif", "poscar"}:
                 preview = preview_export_selection(
                     self.selection,
                     self.format_name,
@@ -1000,6 +1022,15 @@ def _report_text(report):
 
 def _export_preview_changed(self, context):
     self.confirm_loss = False
+    if not hasattr(self, "_selection_and_preview"):
+        # RNA update callbacks receive OperatorProperties, not the Python
+        # Operator instance holding the file browser's current preview.
+        space = getattr(context, "space_data", None)
+        active = getattr(space, "active_operator", None)
+        properties = getattr(active, "properties", None)
+        if properties is None or properties.as_pointer() != self.as_pointer():
+            return
+        self = active
     if getattr(self, "_suppress_preview_update", False):
         return
     preview = getattr(self, "_selection_and_preview", None)
@@ -1249,8 +1280,23 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
         except (TypeError, ValueError) as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
+        if not self.filepath:
+            current = getattr(getattr(bpy, "data", None), "filepath", "")
+            self.filepath = str(Path(current or "export").with_suffix(
+                "." + self.format_name
+            ))
         context.window_manager.fileselect_add(self)
         return {"RUNNING_MODAL"}
+
+    def check(self, _context):
+        if not self.filepath:
+            return False
+        path = Path(self.filepath)
+        updated = str(path.with_suffix("." + self.format_name))
+        if updated == self.filepath:
+            return False
+        self.filepath = updated
+        return True
 
     def draw(self, _context):
         layout = self.layout
@@ -1271,7 +1317,7 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
             layout.prop(self, "poscar_include_selective_dynamics")
             layout.prop(self, "poscar_velocity_mode")
         report = getattr(self, "_preview_report", None)
-        if report is None:
+        if report is None or not report.entries:
             layout.label(text=self.loss_preview or "No data loss")
         else:
             for entry in report.entries:
@@ -1317,6 +1363,9 @@ class CHEMBLENDER_OT_export_project_entity(bpy.types.Operator):
             destination = Path(self.filepath)
             if not destination.name:
                 raise ValueError("choose an export destination")
+            current = getattr(getattr(bpy, "data", None), "filepath", "")
+            if current and destination.resolve() == Path(current).resolve():
+                raise ValueError("cannot export over the current Blender file")
             job = ExportJob(
                 destination,
                 selection,
