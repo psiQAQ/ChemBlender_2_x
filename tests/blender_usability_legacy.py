@@ -2,6 +2,7 @@
 
 import hashlib
 import importlib
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -78,6 +79,11 @@ def main():
     legacy_names = tuple(item.name for item in detection.objects)
 
     assert bpy.ops.chemblender.preview_legacy_migration("EXEC_DEFAULT") == {"FINISHED"}
+    public_preview = json.loads(scene.chemblender_migration_preview_json)
+    assert public_preview["destination"] == str(destination.with_suffix(".cbq"))
+    assert public_preview["confirmation_required"] is True
+    assert tuple(item["name"] for item in public_preview["objects"]) == legacy_names
+    assert all("diagnostics" in item for item in public_preview["objects"])
     assert tuple(
         item.name for item in migration.legacy_migration_detection(scene).objects
     ) == legacy_names

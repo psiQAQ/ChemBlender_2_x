@@ -127,6 +127,28 @@ def main():
     from ChemBlender.ui import migration
 
     active_scene = bpy.context.scene
+    preview_before = _object_snapshot(bpy.data.objects, active_scene)
+    assert bpy.ops.chemblender.preview_legacy_migration() == {"FINISHED"}
+    public_preview = json.loads(active_scene.chemblender_migration_preview_json)
+    assert public_preview["destination"] == str(path.with_suffix(".cbq"))
+    assert public_preview["confirmation_required"] is True
+    assert public_preview["objects"]
+    assert any(item["entity_types"] for item in public_preview["objects"])
+    assert _object_snapshot(bpy.data.objects, active_scene) == preview_before
+    assert not path.with_suffix(".cbq").exists(), "preview must not publish"
+    from types import SimpleNamespace
+    labels = []
+    layout = SimpleNamespace(label=lambda **values: labels.append(values["text"]))
+    preview = migration.preview_legacy_migration(active_scene)
+    migration.CHEMBLENDER_OT_preview_legacy_migration.draw(
+        SimpleNamespace(_preview=preview, layout=layout), bpy.context,
+    )
+    assert labels and max(map(len, labels)) <= 84, "long preview text must wrap"
+    rendered = " ".join(" ".join(labels).split())
+    for item in preview.plan.report.diagnostics:
+        assert " ".join(item.message.split()) in rendered
+    migration._legacy_load_post_handler(None)
+    assert active_scene.chemblender_migration_preview_json == ""
     scene = bpy.data.scenes.new("Migration Target")
     target_scene_name = scene.name
     for collection in active_scene.collection.children:

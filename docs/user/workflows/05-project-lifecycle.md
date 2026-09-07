@@ -60,7 +60,7 @@ ChemBlender 自有的 `cache/render/` 与 `cache/derivation/` 可以重建。冷
 
 1. 复制 legacy `.blend` 到新目录并打开副本；先保存为普通文件。
 2. 打开 `ChemBlender > Legacy Migration`，选择 `Preview Legacy Migration`。
-3. 检查 destination、每个 legacy object、拟创建的 Structure/Topology/PeriodicSite、显示恢复和 unsupported diagnostics。`backup only` 项只保留原对象，不创建科学实体。
+3. 检查 destination、每个 legacy object、拟创建的 Structure/Topology/PeriodicSite、显示恢复和 unsupported diagnostics。长路径与科学警告会自动换行；MCP 执行公开预览 Operator 后读取 `Scene.chemblender_migration_preview_json`，其完整 JSON 不写入 `.blend`，重开或完成迁移后清空。`backup only` 项只保留原对象，不创建科学实体。
 4. 预览可接受后，选择 `Migrate to Project`，并明确确认原对象将移入 backup collection。
 5. 保存迁移后的 `.blend`，关闭 Blender，冷重开；检查 link 为 Connected、migrated View 正常，并保留隐藏的 `ChemBlender Legacy Backup` collection。
 

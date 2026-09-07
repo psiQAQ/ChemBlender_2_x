@@ -10,6 +10,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Fixed
 
+- Wrap complete legacy migration warnings and expose the same non-persistent, read-only preview JSON through Scene RNA so MCP can review destination, entities, recovered display settings and diagnostics before confirmation.
+
 - Initialize allowed conflict choices before dynamic RNA enums so public Preview JSON can confirm reuse and new source revisions through MCP.
 
 - Make Relink select the sidecar manifest through the native file browser, recover a Missing load against its saved scene identity and manifest hash, and refresh visible project status after successful Relink/Verify. Reject conflicting or incomplete links without adopting a candidate.

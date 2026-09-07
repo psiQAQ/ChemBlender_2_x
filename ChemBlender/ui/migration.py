@@ -7,9 +7,10 @@ from pathlib import Path
 from uuid import uuid4
 import os
 import shutil
+import textwrap
 
 import bpy
-from bpy.props import BoolProperty
+from bpy.props import BoolProperty, StringProperty
 
 from ..core.project_service import relink_project_session_for_scenes
 from ..core.sidecar import close_project, open_project
@@ -41,6 +42,7 @@ _LINK_KEYS = (
     "cbq_manifest_sha256",
 )
 _DETECTIONS = {}
+_PREVIEW_REPORTS = {}
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +76,7 @@ def _scene_key(scene):
 
 def _legacy_load_post_handler(_dummy):
     """Cache detection only; loading a file must not change its contents."""
+    _PREVIEW_REPORTS.clear()
     detection = detect_legacy_scene()
     for scene in bpy.data.scenes:
         _DETECTIONS[_scene_key(scene)] = detection
@@ -502,6 +505,46 @@ def migrate_legacy_scene(scene, *, confirmed):
         raise
 
 
+def _preview_report(preview):
+    view_plans = {item.legacy_object_name: item for item in preview.plan.view_plans}
+    objects = []
+    for item in preview.entity_inventory:
+        settings = view_plans[item.legacy_object_name].settings if not item.backup_only else None
+        recovered = [
+            label for label, attribute in (
+                ("radii", "radii"), ("vdw", "vdw_radii"),
+                ("atom scale", "atom_scales"), ("colour", "colors"),
+                ("bond scale", "bond_scales"), ("dashed", "dashed"),
+                ("materials", "materials"), ("node settings", "node_modifiers"),
+            ) if settings is not None and getattr(settings, attribute)
+        ]
+        objects.append({
+            "name": item.legacy_object_name,
+            "kind": item.kind,
+            "backup_only": item.backup_only,
+            "entity_types": item.entity_types,
+            "entity_ids": item.entity_ids,
+            "recovered": recovered,
+            "diagnostics": _object_diagnostic_messages(preview, item.legacy_object_name),
+        })
+    return {
+        "destination": str(preview.sidecar_path),
+        "confirmation_required": True,
+        "backup_collection": _BACKUP_COLLECTION,
+        "objects": objects,
+        "diagnostics": [
+            item.message for item in preview.plan.report.diagnostics
+            if item.object_name is None
+        ],
+    }
+
+
+def _draw_preview_text(layout, text, *, icon="NONE"):
+    # Popup labels do not wrap automatically; never hide a scientific warning.
+    for index, line in enumerate(textwrap.wrap(text, width=84) or [""]):
+        layout.label(text=line, icon=icon if index == 0 else "NONE")
+
+
 class CHEMBLENDER_OT_preview_legacy_migration(bpy.types.Operator):
     bl_idname = "chemblender.preview_legacy_migration"
     bl_label = "Preview Legacy Migration"
@@ -509,51 +552,37 @@ class CHEMBLENDER_OT_preview_legacy_migration(bpy.types.Operator):
     _preview = None
 
     def invoke(self, context, _event):
-        try:
-            self._preview = preview_legacy_migration(context.scene)
-        except _FATAL_EXCEPTIONS:
-            raise
-        except Exception as error:
-            self.report({"ERROR"}, str(error))
-            return {"CANCELLED"}
-        return context.window_manager.invoke_popup(self, width=520)
+        result = self.execute(context)
+        if result != {"FINISHED"}:
+            return result
+        return context.window_manager.invoke_popup(self, width=680)
 
     def draw(self, _context):
-        preview = self._preview
+        report = _preview_report(self._preview)
         layout = self.layout
-        layout.label(text=f"Destination: {preview.sidecar_path}")
-        layout.label(text=f"Legacy entities: {len(preview.plan.report.object_names)}")
-        view_plans = {item.legacy_object_name: item for item in preview.plan.view_plans}
-        for item in preview.entity_inventory:
-            if item.backup_only:
-                layout.label(
-                    text=f"{item.legacy_object_name}: backup only (no project entity or view)",
-                )
+        _draw_preview_text(layout, f"Destination: {report['destination']}")
+        _draw_preview_text(layout, f"Legacy entities: {len(report['objects'])}")
+        for item in report["objects"]:
+            name = item["name"]
+            if item["backup_only"]:
+                _draw_preview_text(layout, f"{name}: backup only (no project entity or view)")
             else:
-                view_plan = view_plans[item.legacy_object_name]
-                settings = view_plan.settings
-                layout.label(text=f"{view_plan.legacy_object_name} -> {view_plan.legacy_object_name} (Migrated)")
-                layout.label(text=f"  entities: {', '.join(item.entity_types)}")
-                layout.label(text=f"  ids: {', '.join(item.entity_ids)}")
-                recovered = [
-                    name for name, value in (
-                        ("radii", settings.radii), ("vdw", settings.vdw_radii),
-                        ("atom scale", settings.atom_scales), ("colour", settings.colors),
-                        ("bond scale", settings.bond_scales), ("dashed", settings.dashed),
-                        ("materials", settings.materials), ("node settings", settings.node_modifiers),
-                    ) if value
-                ]
-                layout.label(text=f"  recovered: {', '.join(recovered) or 'structure only'}")
-            unsupported = _object_diagnostic_messages(preview, item.legacy_object_name)
-            if unsupported:
-                layout.label(text=f"  unsupported: {'; '.join(unsupported)}", icon="ERROR")
-        for item in preview.plan.report.diagnostics:
-            if item.object_name is None:
-                layout.label(text=f"scene unsupported: {item.message}", icon="ERROR")
+                _draw_preview_text(layout, f"{name} -> {name} (Migrated)")
+                _draw_preview_text(layout, f"entities: {', '.join(item['entity_types'])}")
+                _draw_preview_text(layout, f"ids: {', '.join(item['entity_ids'])}")
+                _draw_preview_text(layout, f"recovered: {', '.join(item['recovered']) or 'structure only'}")
+            for message in item["diagnostics"]:
+                _draw_preview_text(layout, f"unsupported: {message}", icon="ERROR")
+        for message in report["diagnostics"]:
+            _draw_preview_text(layout, f"scene unsupported: {message}", icon="ERROR")
 
     def execute(self, context):
+        _PREVIEW_REPORTS.pop(_scene_key(context.scene), None)
         try:
             self._preview = preview_legacy_migration(context.scene)
+            _PREVIEW_REPORTS[_scene_key(context.scene)] = json.dumps(
+                _preview_report(self._preview), ensure_ascii=False,
+            )
         except _FATAL_EXCEPTIONS:
             raise
         except Exception as error:
@@ -597,6 +626,11 @@ class CHEMBLENDER_PT_legacy_migration(bpy.types.Panel):
 
 
 def register():
+    bpy.types.Scene.chemblender_migration_preview_json = StringProperty(
+        name="Legacy Migration Preview",
+        get=lambda scene: _PREVIEW_REPORTS.get(_scene_key(scene), ""),
+        options={"SKIP_SAVE"},
+    )
     bpy.app.handlers.persistent(_legacy_load_post_handler)
     while _legacy_load_post_handler in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(_legacy_load_post_handler)
@@ -604,6 +638,9 @@ def register():
 
 
 def unregister():
+    if hasattr(bpy.types.Scene, "chemblender_migration_preview_json"):
+        del bpy.types.Scene.chemblender_migration_preview_json
+    _PREVIEW_REPORTS.clear()
     while _legacy_load_post_handler in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(_legacy_load_post_handler)
     _DETECTIONS.clear()
