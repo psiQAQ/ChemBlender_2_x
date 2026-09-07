@@ -5,7 +5,7 @@
 
 ## 当前检查点
 
-最近完成自动验证的 R21 ZIP `61b64592fbab352aaaa70ea319963ab6c6436a4f2d2d0728c68fabb7daa73635`（76d1d9e）：2,310 tests，26 skips，无失败/错误；隔离 smoke104.35 s。AGENT双路径及隔离依赖修复后的冷验证通过。以下旧包结果保留为失败—修复链，最终仍需全项复核。
+最近完成自动验证的 R22 ZIP `82529f5564f8b4f9b319785c35094700c431747ff2daa3b438312c6a2b3a8e56`（1c290ee）：2,313 tests，26 skips，无失败/错误；隔离smoke104.33s，两配置独立冷依赖检查Passed。REP-MOLECULAR完整UI/MCP重测Passed。以下旧包结果保留为失败—修复链，最终仍需全项复核。
 
 | 项目 | UI | MCP |
 | --- | --- | --- |
@@ -18,7 +18,8 @@
 | MIG | R20 Passed；待全轮最终复核 | R20 Passed；待全轮最终复核 |
 | AGENT | R21 Passed；待全轮最终复核 | R21 Passed，冷依赖已修复；待最终复核 |
 | OUTSIDE | R21 Passed；待全轮最终复核 | R21 Passed；同步渲染中途取消Not Run；待最终复核 |
-| REP-MOLECULAR / REP-TRAJECTORY / REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
+| REP-MOLECULAR | R22 Passed；待全轮最终复核 | R22 Passed；待全轮最终复核 |
+| REP-TRAJECTORY / REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
 
 ## 源码、环境与证据
 
@@ -81,3 +82,5 @@ R13 VIEW 双路径完整重测通过，详见 [VIEW](2026-09-07-agent-experience
 [AGENT独立报告](2026-09-07-agent-experience/AGENT.md)包含单位诊断修复、原生连接恢复与MCP测试profile冷依赖修复的完整证据。还剩OUTSIDE与五类代表输入，以及最终同包复核和14集合总展示文件。
 
 [OUTSIDE独立报告](2026-09-07-agent-experience/OUTSIDE.md)：真实Eevee双路径渲染、材质作用范围、集合、配对与重开通过。剩五类代表输入、最终同包复核和14集合总展示文件。
+
+[REP-MOLECULAR独立报告](2026-09-07-agent-experience/REP-MOLECULAR.md)：八类输入两路线各保存集合、八张独立渲染和配对文件；59个数组hash相同。MOL2误标修复后完整重测通过。剩四类REP、最终同包全项复核和14集合总展示文件。

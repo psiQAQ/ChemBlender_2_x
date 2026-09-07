@@ -32,14 +32,16 @@ ChemBlender 流式拆分 SDF，为每个有效 record 建立 Structure、Topolog
 
 ## 操作流程
 
-1. 用 `Quick Import` 选择 [`ccd-3d-showcase.sdf`](ccd-3d-showcase.sdf)。
-2. 在 Preview 核对 AIN/CFF/TA1、3 records、原子/键数和 2D-tag/3D-coordinate 警告。
-3. 确认后分别创建 View，比较小分子与 113 原子 TA1；导出前核对记录属性与立体信息损失。
+1. 用 `Quick Import` 选择 [ccd-3d-showcase.sdf](ccd-3d-showcase.sdf)，在实际 Preview 检查 3 records、V2000: 3、3 sanitized topology records 与 Complete。
+2. 确认导入后，在 Project Browser 和保存项目中核对 AIN/CFF/TA1、原子数21/24/113和键数21/25/119；RDKit 的2D-tag/非零z警告在运行日志中，当前Preview不展示该日志警告。
+3. 查看默认 Structure View；默认原子视图不代表已接受显示拓扑。需要连接显示时明确选择并接受相应拓扑，导出前检查损失提示。
+
+Preview只显示该格式当前实现的摘要。未出现的原子/键数、计算参数和详细诊断，应在确认后的项目实体或来源文件中核对，不能报告为Preview已显示。保存时让 `.blend` 与同名 `.cbq` 相邻。
 
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，再用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/sdf/ccd-3d-showcase.sdf 的绝对路径。只使用公开的 bpy.ops.chemblender.*；先报告 AIN/CFF/TA1 三个 record、原子数 21/24/113、键数 21/25/119、源 2D 标记与非零 z 坐标警告、项目实体和 Preview 诊断，等我确认后调用 bpy.ops.chemblender.confirm_import。不要删除来源警告；有损导出停下请求确认。保存 .blend 与相邻 .cbq。
+通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA。用公开 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/sdf/ccd-3d-showcase.sdf 的绝对路径。先报告实际 preview_json 中的 reader、quality、可用摘要和诊断，等我确认再调用 confirm_import；不要把文档中的预期计数说成 Preview 已显示。确认后用公开状态和保存的项目核对：AIN/CFF/TA1、原子数21/24/113和键数21/25/119；RDKit 的2D-tag/非零z警告在运行日志中，当前Preview不展示该日志警告。查看默认 View，并说明原子显示与科学拓扑的区别；有损导出停在确认边界。保存 .blend 与相邻 .cbq 并报告路径。
 ```
 
 ## 完整性与验证

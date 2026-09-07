@@ -33,14 +33,16 @@ ChemBlender 当前 SMILES 文件入口只接受一条非空记录。RDKit 解析
 
 ## 操作流程
 
-1. 用 `Quick Import` 选择 [`ta1-paclitaxel-isomeric.smi`](ta1-paclitaxel-isomeric.smi)。
-2. 在 Preview 核对 62 graph atoms、68 bonds、stereo 和 planar 2D generated 诊断。
-3. 确认后创建分子 View；与 V3000 MOL 比较可表达的重原子拓扑，不比较来源坐标。
+1. 用 `Quick Import` 选择 [ta1-paclitaxel-isomeric.smi](ta1-paclitaxel-isomeric.smi)，在实际 Preview 检查 1 record、SMILES: 1 与 Complete；sanitized topology计数不等于图键数。
+2. 确认导入后，在 Project Browser 和保存项目中核对 62 graph atoms、68 bonds、51个隐式氢与stereo；Import Diagnostics 的 planar 2D generated 说明这些是派生坐标。
+3. 查看默认 Structure View；默认原子视图不代表已接受显示拓扑。需要连接显示时明确选择并接受相应拓扑，导出前检查损失提示。
+
+Preview只显示该格式当前实现的摘要。未出现的原子/键数、计算参数和详细诊断，应在确认后的项目实体或来源文件中核对，不能报告为Preview已显示。保存时让 `.blend` 与同名 `.cbq` 相邻。
 
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，再用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/smiles/ta1-paclitaxel-isomeric.smi 的绝对路径。只使用公开的 bpy.ops.chemblender.*；先报告 1 条记录、62 个 graph atoms、68 条 bonds、51 个隐式氢、芳香性、stereochemistry、来源无坐标和 planar 2D generated 诊断，等我确认后调用 bpy.ops.chemblender.confirm_import。不得把 2D 派生坐标当 CCD 三维坐标；保存 .blend 与相邻 .cbq，有损导出停下请求确认。
+通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA。用公开 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/smiles/ta1-paclitaxel-isomeric.smi 的绝对路径。先报告实际 preview_json 中的 reader、quality、可用摘要和诊断，等我确认再调用 confirm_import；不要把文档中的预期计数说成 Preview 已显示。确认后用公开状态和保存的项目核对：62 graph atoms、68 bonds、51个隐式氢与stereo；Import Diagnostics 的 planar 2D generated 说明这些是派生坐标。查看默认 View，并说明原子显示与科学拓扑的区别；有损导出停在确认边界。保存 .blend 与相邻 .cbq 并报告路径。
 ```
 
 ## 完整性与验证

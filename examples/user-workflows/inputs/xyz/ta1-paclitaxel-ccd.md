@@ -31,14 +31,16 @@ ChemBlender 为本文件生成单个 Structure，保留元素、坐标和注释�
 
 ## 操作流程
 
-1. 用 `Quick Import` 选择 [`ta1-paclitaxel-ccd.xyz`](ta1-paclitaxel-ccd.xyz)。
-2. 在 Preview 核对 113 atoms、1 frame、Å 坐标以及 no source topology 边界。
-3. 确认后创建点/原子 View；与同源 V3000 比较坐标和原子顺序。
+1. 用 `Quick Import` 选择 [ta1-paclitaxel-ccd.xyz](ta1-paclitaxel-ccd.xyz)，在实际 Preview 检查 XYZ reader、Complete 与默认 Structure View。
+2. 确认导入后，在 Project Browser 和保存项目中核对 1 frame、113 atoms、Å坐标以及没有来源Topology；不能把显示推断连线当作来源键。
+3. 查看默认 Structure View；默认原子视图不代表已接受显示拓扑。需要连接显示时明确选择并接受相应拓扑，导出前检查损失提示。
+
+Preview只显示该格式当前实现的摘要。未出现的原子/键数、计算参数和详细诊断，应在确认后的项目实体或来源文件中核对，不能报告为Preview已显示。保存时让 `.blend` 与同名 `.cbq` 相邻。
 
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，再用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/xyz/ta1-paclitaxel-ccd.xyz 的绝对路径。只使用公开的 bpy.ops.chemblender.*；先报告 1 帧、113 个原子、62 个重原子、51 个显式氢、Å 坐标、无来源 Topology 和 Preview 诊断，等我确认后调用 bpy.ops.chemblender.confirm_import。不得把显示用连线描述成 XYZ 来源键；保存 .blend 与相邻 .cbq，有损导出停下请求确认。
+通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA。用公开 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/xyz/ta1-paclitaxel-ccd.xyz 的绝对路径。先报告实际 preview_json 中的 reader、quality、可用摘要和诊断，等我确认再调用 confirm_import；不要把文档中的预期计数说成 Preview 已显示。确认后用公开状态和保存的项目核对：1 frame、113 atoms、Å坐标以及没有来源Topology；不能把显示推断连线当作来源键。查看默认 View，并说明原子显示与科学拓扑的区别；有损导出停在确认边界。保存 .blend 与相邻 .cbq 并报告路径。
 ```
 
 ## 完整性与验证

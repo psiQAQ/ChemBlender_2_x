@@ -32,14 +32,16 @@ ChemBlender 通过 RDKit 读取 V2000，保留原始 `MolecularRecord`，并分�
 
 ## 操作流程
 
-1. 用 `Quick Import` 选择 [`ain-aspirin-v2000.mol`](ain-aspirin-v2000.mol)，先核对 21 原子和 21 条键。
-2. 确认导入，检查显式氢、芳香环和羧基连接。
-3. 创建分子 View；导出 MOL/SDF 前检查版本和属性损失提示。
+1. 用 `Quick Import` 选择 [ain-aspirin-v2000.mol](ain-aspirin-v2000.mol)，在实际 Preview 检查 1 record、V2000、1 sanitized topology record 与 Complete。
+2. 确认导入后，在 Project Browser 和保存项目中核对 21 原子、21 条键、显式氢及分别保留的来源/解释拓扑。
+3. 查看默认 Structure View；默认原子视图不代表已接受显示拓扑。需要连接显示时明确选择并接受相应拓扑，导出前检查损失提示。
+
+Preview只显示该格式当前实现的摘要。未出现的原子/键数、计算参数和详细诊断，应在确认后的项目实体或来源文件中核对，不能报告为Preview已显示。保存时让 `.blend` 与同名 `.cbq` 相邻。
 
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，再用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol 的绝对路径。只使用公开的 bpy.ops.chemblender.*；先报告 21 个原子、21 条键、显式氢、来源/解释拓扑和 Preview 诊断，等我确认后再调用 bpy.ops.chemblender.confirm_import。创建分子 View；若导出则停在有损确认界面。保存 .blend 时把 .cbq 放在旁边并报告路径。
+通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA。用公开 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol 的绝对路径。先报告实际 preview_json 中的 reader、quality、可用摘要和诊断，等我确认再调用 confirm_import；不要把文档中的预期计数说成 Preview 已显示。确认后用公开状态和保存的项目核对：21 原子、21 条键、显式氢及分别保留的来源/解释拓扑。查看默认 View，并说明原子显示与科学拓扑的区别；有损导出停在确认边界。保存 .blend 与相邻 .cbq 并报告路径。
 ```
 
 ## 完整性与验证

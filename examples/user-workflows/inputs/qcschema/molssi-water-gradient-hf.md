@@ -34,14 +34,16 @@ ChemBlender 接受官方 `qc_schema_output/1`，同时保留旧拼写别名的�
 
 ## 操作流程
 
-1. 用 `Quick Import` 选择 [`molssi-water-gradient-hf.json`](molssi-water-gradient-hf.json)。
-2. 在 Preview 核对 `qc_schema_output/1`、3 atoms、HF/cc-pVDZ、gradient 和 13 个 numeric datasets。
-3. 确认后查看 Structure、gradient/energy 数据和 provenance；导出 v2 或其他格式时检查版本转换损失。
+1. 用 `Quick Import` 选择 [molssi-water-gradient-hf.json](molssi-water-gradient-hf.json)，在实际 Preview 检查 QCSchema reader、Ambiguous 与默认 Structure View。
+2. 确认导入后，在 Project Browser 和保存项目中核对 qc_schema_output/1、3 atoms、HF/cc-pVDZ、gradient 和 13 个 numeric datasets；properties.scf_iterations 没有当前支持的单位映射，诊断保留为 Ambiguous。
+3. 查看默认 Structure View；默认原子视图不代表已接受显示拓扑。需要连接显示时明确选择并接受相应拓扑，导出前检查损失提示。
+
+Preview只显示该格式当前实现的摘要。未出现的原子/键数、计算参数和详细诊断，应在确认后的项目实体或来源文件中核对，不能报告为Preview已显示。保存时让 `.blend` 与同名 `.cbq` 相邻。
 
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，再用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/qcschema/molssi-water-gradient-hf.json 的绝对路径。只使用公开的 bpy.ops.chemblender.*；先报告 qc_schema_output/1、O/H/H、HF/cc-pVDZ、gradient、13 个 numeric datasets、provenance 和 Preview 诊断，等我确认后调用 bpy.ops.chemblender.confirm_import。不要重新计算或改写 raw envelope；版本转换或有损导出必须停下请求确认。保存 .blend 与相邻 .cbq。
+通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA。用公开 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/qcschema/molssi-water-gradient-hf.json 的绝对路径。先报告实际 preview_json 中的 reader、quality、可用摘要和诊断，等我确认再调用 confirm_import；不要把文档中的预期计数说成 Preview 已显示。确认后用公开状态和保存的项目核对：qc_schema_output/1、3 atoms、HF/cc-pVDZ、gradient 和 13 个 numeric datasets；properties.scf_iterations 没有当前支持的单位映射，诊断保留为 Ambiguous。查看默认 View，并说明原子显示与科学拓扑的区别；有损导出停在确认边界。保存 .blend 与相邻 .cbq 并报告路径。
 ```
 
 ## 完整性与验证

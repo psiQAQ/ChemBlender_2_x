@@ -32,15 +32,16 @@ ChemBlender 可导入 6185 原子的 Structure、4 组原子属性、substructur
 
 ## 操作流程
 
-1. 用 `Quick Import` 选择 [`openbabel-5sun-protein.mol2`](openbabel-5sun-protein.mol2)。
-2. 在 Preview 核对 6185 原子、390 个 substructure、`un` 键和 4 类未知 section 诊断。
-3. 确认后创建结构 View；不要把自动显示的几何关系当作来源拓扑。
-4. 若导出，必须保留原记录或明确接受键/section 损失。
+1. 用 `Quick Import` 选择 [openbabel-5sun-protein.mol2](openbabel-5sun-protein.mol2)，在实际 Preview 检查 MOL2: 1、6185 atoms、Interpreted bonds: 0、unsupported un 和四类未知 section。
+2. 确认导入后，在 Project Browser 和保存项目中核对 6185 原子、6248 条原始声明键、390 个 substructure；解释拓扑仍为 0，不能补成权威键。
+3. 查看默认 Structure View；默认原子视图不代表已接受显示拓扑。需要连接显示时明确选择并接受相应拓扑，导出前检查损失提示。
+
+Preview只显示该格式当前实现的摘要。未出现的原子/键数、计算参数和详细诊断，应在确认后的项目实体或来源文件中核对，不能报告为Preview已显示。保存时让 `.blend` 与同名 `.cbq` 相邻。
 
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，再用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/mol2/openbabel-5sun-protein.mol2 的绝对路径。只使用公开的 bpy.ops.chemblender.*；先报告 6185 个原子、6248 条声明键、390 个 substructure、un 键、4 类未知 section、interpreted_topologies=0 和 Preview 诊断，等我确认后调用 bpy.ops.chemblender.confirm_import。不要声称已有权威解释拓扑；任何有损导出停下请求确认。保存 .blend 与相邻 .cbq。
+通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA。用公开 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/mol2/openbabel-5sun-protein.mol2 的绝对路径。先报告实际 preview_json 中的 reader、quality、可用摘要和诊断，等我确认再调用 confirm_import；不要把文档中的预期计数说成 Preview 已显示。确认后用公开状态和保存的项目核对：6185 原子、6248 条原始声明键、390 个 substructure；解释拓扑仍为 0，不能补成权威键。查看默认 View，并说明原子显示与科学拓扑的区别；有损导出停在确认边界。保存 .blend 与相邻 .cbq 并报告路径。
 ```
 
 ## 完整性与验证
