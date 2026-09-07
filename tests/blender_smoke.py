@@ -1036,6 +1036,21 @@ def assert_project_session_manager(module_key):
         ) == 1
         assert ui.get_scene_session_status(bpy.context.scene)[0] == "connected"
         assert restored.sidecar_path == blend.with_suffix(".cbq")
+        # A saved file stays connected when the extension is re-enabled;
+        # Blender does not send load_post for this operation.
+        restored_project_id = restored.project.id
+        for _ in range(2):
+            assert bpy.ops.preferences.addon_disable(module=module_key) == {"FINISHED"}
+            assert bpy.ops.preferences.addon_enable(module=module_key) == {"FINISHED"}
+            ui = importlib.import_module(f"{module_key}.ui.session")
+            # Background scripts do not tick the UI event loop. Exercise the
+            # registered callback here; the visible UI review checks its tick.
+            assert bpy.app.timers.is_registered(ui._restore_registered_session)
+            ui._restore_registered_session()
+            restored = ui.get_scene_session(bpy.context.scene)
+            assert restored.project.id == restored_project_id
+            assert derived_id in restored.project.structures
+            assert ui.get_scene_session_status(bpy.context.scene)[0] == "connected"
         relinked_sidecar = Path(directory) / "relinked.cbq"
         core.save_project(relinked_sidecar, restored.project)
         relinked = core.relink_project_session_for_scenes(

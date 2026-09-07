@@ -104,7 +104,13 @@ class UiSessionContractTests(unittest.TestCase):
         self.fake_bpy.app = SimpleNamespace(
             tempdir=self.temporary.name,
             handlers=self.handlers,
+            timers=SimpleNamespace(
+                is_registered=lambda callback: callback in self.timers,
+                register=lambda callback, **kwargs: self.timers.add(callback),
+                unregister=lambda callback: self.timers.remove(callback),
+            ),
         )
+        self.timers = set()
         self.fake_bpy.data = SimpleNamespace(filepath="", scenes=[self.scene])
         self.fake_bpy.context = SimpleNamespace(scene=self.scene)
         self.modules = patch.dict(sys.modules, {"bpy": self.fake_bpy})
@@ -940,6 +946,29 @@ class UiSessionContractTests(unittest.TestCase):
 
         self.assertEqual(self.handlers.load_post, [foreign_handler])
         self.assertEqual(self.handlers.save_pre, [foreign_handler])
+        self.assertFalse(self.timers)
+
+    def test_register_defers_access_to_restricted_blender_data(self):
+        with patch.object(self.fake_bpy, "data", object()):
+            self.ui.register()
+        self.assertIn(self.ui._restore_registered_session, self.timers)
+
+    def test_register_restores_saved_project_after_extension_reload(self):
+        self.fake_bpy.data.filepath = str(Path(self.temporary.name) / "reload.blend")
+        project, sidecar = self.link_project(self.scene, "reload")
+        before = self.storage_snapshot(sidecar)
+        self.ui.register()
+        self.assertIn(self.ui._restore_registered_session, self.timers)
+        self.ui._restore_registered_session()
+        session = self.ui.get_scene_session(self.scene)
+        self.assertEqual(session.project.id, project.id)
+        self.assertEqual(self.ui.get_scene_session_status(self.scene)[0], "connected")
+        session.mark_dirty("scientific_edit")
+        self.ui.register()
+        self.ui._restore_registered_session()
+        self.assertIs(self.ui.get_scene_session(self.scene), session)
+        self.assertTrue(session.dirty)
+        self.assertEqual(self.storage_snapshot(sidecar), before)
 
 
 if __name__ == "__main__":

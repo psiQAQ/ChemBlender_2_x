@@ -37,3 +37,9 @@
 ZIP SHA-256 `c5e438aefeb200e32dfcb5a09b73825acdc5dc6971a3acd64d9f85349c7c4207`。新 UI profile 显式 User Default 安装，`ENV-R3-07-repository-choice.png`、`ENV-R3-09-addon.png` 记录原生选择与启用；两次 UI 勾选重载及 MCP 独立重载后，Scene RNA、Reader API、公开 Quick Import poll 均正确。状态记录为 `outputs/ENV-R3-UI-install.json`、`ENV-R3-UI-reload.json`、`ENV-R3-MCP-reload.json`。`ENV-R3-UI.blend` 与 `ENV-R3-MCP.blend` 各含 ENV 集合。完整隔离 smoke 通过，102.91 s。
 
 测试环境事故：20:20 UI 安装器默认选择 Existing MCP 仓库，导致本轮新建另一份扩展并重复注册；该尝试 Failed，不计作通过。核对创建时间和原用户进程未启用后，将刚生成目录移至本轮 quarantine；原 MCP 目录保留。新 UI profile 的 MCP 源也复制到本轮目录，重新显式选择 User Default 安装通过。完整记录见 `test-environment-incidents.json`。原用户窗口核对仍为 `1.blend`、Cube/Light/Camera、dirty=false。
+
+## 保存项目 reload 修复
+
+R5 中重新安装扩展后，已保存项目的 in-memory session 未恢复；另存展示文件只写 blend。旧 ZIP 的真实 smoke 重复启用后 project UUID 断言失败（isolated-reload-before.log），P1：项目操作不能正确延续；原 sidecar 未损坏，冷重开恢复。同步恢复的中间实现被原生安装器以 `_RestrictData` 拒绝，随后改成一次性 timer，保留已有 dirty session，unregister 取消回调。
+
+R6 ZIP `b655ad3f6a1cbd1c542b072eeaf857d25b1954d4e67a6c7de0fc6621f8d25dcf` 通过 2,296 tests / 26 skips、隔离 smoke 105.5 s、原生 build 与五文件审计。实际 UI 安装到本轮 user_default 后，Browser 的 Structures/topologies/provenance 自动恢复，模块 SHA 一致（outputs/ENV-R6-UI-restored.json）。MCP 独立 profile 也已安装同包；尚需继续最终 UI/MCP 文件保存与复核。

@@ -1,6 +1,6 @@
 # IMP — 导入、预览、取消与单位
 
-执行者：**Agent 模拟用户**。当前 UI **Passed（22b654d）**；MCP **Failed，现场修复后待重测**。尚不能作为最终包的完成验收。
+执行者：**Agent 模拟用户**。当前 UI/MCP **Passed（f2cbd41 / 966dc8a7）**。后续 reload 修复产生新包，仍需最终复核。
 
 ## 前置与输入
 
@@ -58,3 +58,7 @@ UI 复测约 20:28–20:35，动作时间逐条保存在 ui-actions.jsonl；含�
 MCP 回传 JSON 确认触发 Blender collection converter 的 `keyword "name" missing`。归为 P2 接口可用性失败，无数据写入；本轮脚本最初未在失败后停止下一条命令，后续四文件暂存不作为成功确认，已据此修正编排纪律。Blender smoke 增加真实 JSON → Operator 调用并在旧 ZIP 复现同一失败（`logs/isolated-rna-conversion-before.log`）。补充修复使外层和嵌套 collection 记录包含继承的 PropertyGroup.name；保留显式 no-view 决定的 smoke 断言，修复包正在验证。
 
 RNA conversion 修复后，2,294 tests 通过（26 个已有依赖/平台 skip），真实隔离 Blender smoke 通过（103.44 s），包含外层和 MOL2 嵌套 collection 的 JSON 确认及显式不创建 View。包 SHA-256 为 `966dc8a7def7343fa29b1823ea72e2ea43a04015655bf32da0bd2f6c2a824daf`；UI 已从原生安装器安装并核对模块 hash。完整 MCP 重测继续。
+
+### R5 MCP 复测通过
+
+`IMP-R5-MCP-*` 经公开 preview_json 审阅后确认 water、四文件和 CCO；未知单位确认被拒绝，对象保持五个，取消后恢复导入。最终六个三原子 Mesh，Bohr 坐标与 UI 相同；单次暂存约 0.34–0.39 s、确认约 0.46–2.71 s。两个 route 保存为 `outputs/IMP-R5-UI.blend/.cbq` 与 `outputs/IMP-R5-MCP.blend/.cbq`，集合 IMP/UI 和 IMP/MCP，渲染 `screenshots/IMP-R5-UI-render.png`、`IMP-R5-MCP-render.png`。UI 在新包冷打开原 UI 产物，验证公开链接 Connected 后生成配对副本；完整原生导入动作是 R4，R5 是最终包数据/显示复核。

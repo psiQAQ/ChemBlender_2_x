@@ -314,16 +314,33 @@ def _remove_handler(callbacks, handler):
         callbacks.remove(handler)
 
 
+def _restore_registered_session():
+    bpy = _bpy()
+    # register() runs under Blender's restricted data context. Restore after
+    # registration, without replacing an existing (possibly dirty) session.
+    if _FILE_SESSION is None and bpy.data.filepath:
+        from ..project_link import PROJECT_ID_KEY
+
+        if any(PROJECT_ID_KEY in scene for scene in bpy.data.scenes):
+            _load_post_handler(None)
+
+
 def register():
-    handlers = _bpy().app.handlers
+    bpy = _bpy()
+    handlers = bpy.app.handlers
     handlers.persistent(_load_post_handler)
     handlers.persistent(_save_pre_handler)
     _register_handler(handlers.load_post, _load_post_handler)
     _register_handler(handlers.save_pre, _save_pre_handler)
+    if not bpy.app.timers.is_registered(_restore_registered_session):
+        bpy.app.timers.register(_restore_registered_session, first_interval=0.0)
 
 
 def unregister():
-    handlers = _bpy().app.handlers
+    bpy = _bpy()
+    if bpy.app.timers.is_registered(_restore_registered_session):
+        bpy.app.timers.unregister(_restore_registered_session)
+    handlers = bpy.app.handlers
     _remove_handler(handlers.load_post, _load_post_handler)
     _remove_handler(handlers.save_pre, _save_pre_handler)
     failure = _drain_scene_sessions()

@@ -18,6 +18,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 - Keep direct foreground Operator imports free of stale dialogs, expose their current review through read-only preview RNA, and preserve explicit confirmation choices while validating live source/conflict identities. Include inherited RNA collection names so the review JSON can be passed directly to the confirmation Operator.
 
+- Restore the saved project session after enabling or reloading the extension in an open file, using a deferred callback outside Blender registration restrictions; preserve existing dirty sessions and cancel the callback on unload.
+
 ## [2.4.0] - 2026-08-03
 
 ### Changed

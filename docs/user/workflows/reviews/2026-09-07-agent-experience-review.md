@@ -3,6 +3,18 @@
 执行者：**Agent 模拟用户**。日期：2026-09-07，Asia/Shanghai。
 本轮独立记录，不改写历史人工验收。当前仍在执行，未完成项目不能视为通过。
 
+## 当前检查点
+
+当前候选 ZIP `b655ad3f6a1cbd1c542b072eeaf857d25b1954d4e67a6c7de0fc6621f8d25dcf`：2,296 tests，26 skips，无失败/错误；隔离 smoke 105.5 s。源码修复后正在继续逐项体验；以下各阶段旧包数据保留为失败—修复链，不能混作当前包通过结果。
+
+| 项目 | UI | MCP |
+| --- | --- | --- |
+| ENV | 隔离安装与 reload 已验证；实际用户安装 Blocked | 隔离安装已验证；待最终复核 |
+| IMP | f2cbd41 通过；待 R6 最终复核 | f2cbd41 通过；待 R6 最终复核 |
+| DATA | 部分完成，整项 Not Run | Not Run |
+| VIEW / EXP / LIFE / MIG / AGENT / OUTSIDE | Not Run | Not Run |
+| REP-MOLECULAR / REP-TRAJECTORY / REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
+
 ## 源码、环境与证据
 
 - 独立分支：`fix/quantum-input-units-experience-review`；首阶段修复：`bed5cab`。
@@ -49,3 +61,5 @@
 逐项记录：[ENV](2026-09-07-agent-experience/ENV.md)、[IMP](2026-09-07-agent-experience/IMP.md)。IMP UI 已保存六个 Structure View、IMP/UI 集合、配对 sidecar 与渲染。MCP 检查复现强制 Preview 残留及显式确认值被默认值覆盖，当前修复正在进行最终包复测；其余 12 项尚未执行，不能视为通过。
 
 新增构建 `c206b53e5cb94c8c9a568740b1297d710d001d43175ecca64f2045f8457dd311` 为 29,984,397 bytes，解压 32,092,532 bytes。相对上一包：import_preview.py +369 unpacked / +84 packed，properties.py +1287 / +353，quick_import.py +88 / +24。只有三处公开导入反馈实现变更，所有未解释增长 allowance 仍为 0；审计五文件保存在 package-mcp-preview/。
+
+R6 仅 ui/session.py 增加 742 unpacked / 209 packed bytes，用于注册后恢复已保存 session；包 29,984,722 bytes，总解压 32,093,564 bytes。资源/wheel 未变，所有未解释增长 allowance 为 0。中间同步注册失败包 99234f3f 已淘汰，失败日志仍保留。
