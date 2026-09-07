@@ -24,12 +24,12 @@
 | 两行标题 | analytic H2；`Not HF or DFT` | 模型和限制 |
 | atom count / origin | `2`，origin `(-6,-6,-6)` bohr | 两个核与网格起点 |
 | axis records | 每轴 64 点 | 采样数和 step vector |
-| atom records | Z=1、nuclear charge=1、z=±0.7 bohr | H 核位置 |
+| atom records | Z=1、charge 列为 0、z=±0.7 bohr | H 位置；生成器的 charge 列是占位零值，不是氢核物理电荷 |
 | scalar block | 262144 个非负值 | 解析 LCAO 密度，atomic units |
 
 ## ChemBlender 支持边界
 
-ChemBlender 2.4.0 读入 Structure、Grid3D 和 nuclear-charge 属性，并可创建 Volume/Signed Surface。Cube 本身没有可靠的标准字段声明“电子密度”，因此插件仍要求用户显式解决 semantic/unit；标题只是证据，不能绕过确认。Cube 导出支持选定的单 dataset，不承诺保留源排版。
+ChemBlender 2.4.0 读入 Structure、Grid3D 和 nuclear-charge 属性，并可创建 Volume/Signed Surface。本文件的 nuclear_charge 按源列保留 `[0, 0]`，不能用于推断真实核电荷或核势。Cube 本身没有可靠的标准字段声明“电子密度”，因此插件仍要求用户显式解决 semantic/unit；标题只是证据，不能绕过确认。Cube 导出支持选定的单 dataset，不承诺保留源排版。
 
 ## 操作流程
 
