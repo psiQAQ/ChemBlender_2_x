@@ -2,7 +2,7 @@
 
 ## 用途与选择理由
 
-这个 `contract` 文件专门测试 Gaussian Cube 的负 atom count、多 dataset ID 和交错标量值。它只有 `2 × 2 × 2` 网格，不适合判断等值面质量。
+这个 `contract` 文件专门测试 Gaussian Cube 的负 atom count、多 dataset ID 和交错标量值。它只有 `2 × 2 × 1` 网格，不适合判断等值面质量。
 
 ## 来源与许可
 
@@ -22,7 +22,7 @@
 | --- | --- | --- |
 | 两行标题 | `two datasets` 等 | 人类可读注释，不可靠地定义场语义 |
 | origin 行 | atom count `-1`、origin `(0.1,0.2,0.3)` | 负计数表示后面有 dataset ID 区段 |
-| 三条 axis 行 | counts `-2,2,1` | 绝对值给出 `2 × 2 × 1`；负号声明 Å 坐标约定 |
+| 三条 axis 行 | counts `-2,2,1` | 绝对值给出 `2 × 2 × 1`；本 reader 保留 bohr，并对负 voxel count 报 warning；不能将此符号当作已完成 Å 转换 |
 | atom 行 | H、charge 1 | 核位置与 nuclear charge |
 | dataset ID 行 | `2 5 7` | 2 个 dataset，ID 为 5 和 7 |
 | scalar 行 | 交错的 10–13 与 100–103 | 两个场的数据值 |

@@ -325,6 +325,10 @@ if bpy is not None:
                 )
                 from .properties import advance_browser_revision
 
+                # Browser refresh preserves its RNA selection, so hand off
+                # the newly resolved entity before requesting the refresh.
+                browser = context.scene.chemblender_project_browser
+                browser.active_entity_id = str(_resolved.id)
                 advance_browser_revision(session)
                 self.report(
                     {"INFO"},

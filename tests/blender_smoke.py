@@ -912,12 +912,18 @@ def assert_project_session_manager(module_key):
         )
         assert edit_preview.coordinate_change_count == 1
         assert edit_preview.affected_result_ids == (grid.id,)
+        browser = importlib.import_module(f"{module_key}.ui.project_browser.panel")
+        browser_settings = bpy.context.scene.chemblender_project_browser
+        browser_settings.active_entity_id = str(structure.id)
         xyz_export = Path(directory) / "derived.xyz"
         assert bpy.ops.chemblender.apply_scientific_edits(
             export_xyz=True,
             export_path=str(xyz_export),
         ) == {"FINISHED"}
         derived_id = session.active_entity_id
+        browser.refresh_project_browser(bpy.context.scene)
+        assert session.active_entity_id == derived_id, "Browser reverted the derived Structure selection"
+        assert browser_settings.active_entity_id == str(derived_id)
         derived = session.project.structures[derived_id]
         derived_obj_name = session.active_view_object_name
         derived_obj = bpy.data.objects[derived_obj_name]
@@ -1705,9 +1711,14 @@ def assert_quick_import(module_key, repository_root):
     grid_settings.dataset_index = 0
     grid_settings.preset_id = "generic_scalar"
     grid_settings.value_unit = "dimensionless"
+    browser_settings = bpy.context.scene.chemblender_project_browser
+    browser_settings.active_entity_id = str(cube_grid.id)
     assert bpy.ops.chemblender.resolve_grid_semantics() == {"FINISHED"}
     resolved_grid = session.project.datasets[session.active_entity_id]
     assert resolved_grid.id != cube_grid.id
+    browser.refresh_project_browser(bpy.context.scene)
+    assert session.active_entity_id == resolved_grid.id, "Browser reverted resolved Grid semantics"
+    assert browser_settings.active_entity_id == str(resolved_grid.id)
     assert resolved_grid.status is core.DatasetStatus.COMPLETE
     assert resolved_grid.semantic_role == "scalar_field"
     assert session.project.datasets[cube_grid.id] is cube_grid

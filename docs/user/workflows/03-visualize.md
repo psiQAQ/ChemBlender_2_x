@@ -48,7 +48,7 @@ Project 中的 Structure、Grid3D、属性和结果是科学实体；Blender Obj
 ### Grid Volume 与 Signed Surface
 
 1. 导入 Cube 并在 Project Browser 选中 Grid3D。
-2. 如果状态是 `Ambiguous`，选择 dataset index、preset 和 value unit，再运行 `Resolve Grid Semantics`。
+2. 如果状态是 `Ambiguous`，选择 dataset index、preset 和 value unit，再运行 `Resolve Grid Semantics`。解析成功后 Browser 选中新建的完整 Grid3D，后续 View 使用该实体。
 3. 设置 isovalue。
 4. 选择 `Volume` 创建体渲染，或选择 `Signed Surface` 创建正负等值面。按钮被禁用时先查看 availability/quality，而不是绕过检查。
 5. 如果存在兼容 property Grid，选择 `Map <Property>` 把它映射到 surface。

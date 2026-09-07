@@ -398,6 +398,9 @@ if bpy is not None:
                     raise
                 session.mark_dirty("scientific_edit")
                 session.active_entity_id = derived.id
+                context.scene.chemblender_project_browser.active_entity_id = str(
+                    derived.id
+                )
                 session.active_view_object_name = view.name
                 source_obj.select_set(False)
                 view.select_set(True)

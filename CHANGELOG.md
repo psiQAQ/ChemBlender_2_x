@@ -10,6 +10,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Fixed
 
+- Keep Project Browser selection on the resolved Grid3D or edited Structure after refresh, so following View actions use the confirmed entity. Correct the two-dataset Cube sample dimensions and coordinate-unit warning description.
+
 - Convert explicitly declared Gaussian/ORCA Bohr coordinates to angstrom and preserve conversion provenance; reject conflicting or unsupported coordinate-unit settings. Reader version 2 imports use a new revision without rescaling existing project data.
 - Detect changed reader interpretations at the same source locator and release lazy array mappings before atomic sidecar replacement on Windows.
 - Validate current task/index consistency after task archival instead of requiring a completed task to remain active.
