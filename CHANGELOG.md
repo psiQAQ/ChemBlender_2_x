@@ -10,6 +10,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Fixed
 
+- Use the destination passed to Blender save handlers so first Save and Save As publish the correct sibling sidecar in one operation, including a different directory or basename.
+
 - Refresh export previews from the live file-browser Operator when RNA settings change; show XYZ scientific-data omissions and require confirmation. Suggest a data filename and reject exporting over the current Blender file.
 
 - Release trajectory bindings before loading another Blender file, so configuring playback after reopen cannot read the previous session's removed temporary arrays.

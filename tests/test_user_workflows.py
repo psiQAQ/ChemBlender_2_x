@@ -621,14 +621,14 @@ class UserWorkflowContractTests(unittest.TestCase):
         )
         self.assertIn("if bpy.context.scene.objects:", source)
 
-    def test_first_project_save_documents_and_runs_the_second_save_step(self):
+    def test_project_save_documents_single_operation_and_uses_native_save(self):
         source = RUNNER.read_text(encoding="utf-8")
         self.assertIn('context.call_wm("save_as_mainfile"', source)
         self.assertIn('context.call_wm("save_mainfile")', source)
         lifecycle = (DOC_ROOT / "05-project-lifecycle.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("再次选择 `Save Project`", lifecycle)
+        self.assertIn("都只需一次 Save / Save As", lifecycle)
 
     def test_manifest_covers_each_base_format_family(self):
         manifest = self.manifest()

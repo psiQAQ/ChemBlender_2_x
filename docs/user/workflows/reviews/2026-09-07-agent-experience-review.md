@@ -5,7 +5,7 @@
 
 ## 当前检查点
 
-当前候选 ZIP `a478b65910fcfff44f02914935527131a33ba131c80b26bb199074a4ce627876`（e42b16f）：2,297 tests，26 skips，无失败/错误；隔离 smoke 103.81 s。源码修复后正在继续逐项体验；以下各阶段旧包数据保留为失败—修复链，不能混作当前包通过结果。
+当前候选 ZIP `03cf499abf22e0ba1dd3dcbaace19e6b9c73103bd738f373528cad2d23cd9bd8`（ffce8ff）：2,303 tests，26 skips，无失败/错误；隔离 smoke 105.39 s。源码修复后正在继续逐项体验；以下各阶段旧包数据保留为失败—修复链，不能混作当前包通过结果。
 
 | 项目 | UI | MCP |
 | --- | --- | --- |
@@ -13,7 +13,9 @@
 | IMP | f2cbd41 通过；待最终包复核 | f2cbd41 通过；待最终包复核 |
 | DATA | R8 Passed；待全轮最终复核 | R8 Passed；待全轮最终复核 |
 | VIEW | R13 Passed；待全轮最终复核 | R13 Passed；待全轮最终复核 |
-| EXP / LIFE / MIG / AGENT / OUTSIDE | Not Run | Not Run |
+| EXP | R14 Passed；待全轮最终复核 | R14 Passed；待全轮最终复核 |
+| LIFE | 执行中 | Not Run |
+| MIG / AGENT / OUTSIDE | Not Run | Not Run |
 | REP-MOLECULAR / REP-TRAJECTORY / REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
 
 ## 源码、环境与证据

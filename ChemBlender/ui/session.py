@@ -237,9 +237,11 @@ def _load_post_handler(_dummy):
         _set_error(entry, cleanup_failure)
 
 
-def _save_pre_handler(_dummy):
+def _save_pre_handler(filepath):
     bpy = _bpy()
-    blend_path = bpy.data.filepath
+    # Save As has not updated bpy.data.filepath yet. Blender supplies its
+    # destination to the handler; None is used only by direct retry callers.
+    blend_path = filepath or bpy.data.filepath
     entry = _FILE_SESSION
     if (
         entry is None

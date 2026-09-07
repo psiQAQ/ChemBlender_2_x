@@ -709,6 +709,36 @@ class UiSessionContractTests(unittest.TestCase):
         self.assertEqual(session.link_status, "missing")
         self.assertEqual(session.dirty_reasons, frozenset({"project_link"}))
 
+    def test_first_save_uses_handler_destination_before_blender_updates_filepath(self):
+        session = self.ui.get_scene_session(self.scene)
+        session.mark_dirty("import")
+        destination = Path(self.temporary.name) / "first.blend"
+
+        self.ui._save_pre_handler(str(destination))
+
+        self.assertEqual(self.fake_bpy.data.filepath, "")
+        self.assertTrue(destination.with_suffix(".cbq").is_dir())
+        self.assertEqual(self.scene[SIDECAR_LOCATOR_KEY], "first.cbq")
+        self.assertFalse(session.dirty)
+
+    def test_save_as_uses_new_destination_and_preserves_old_pair(self):
+        session = self.ui.get_scene_session(self.scene)
+        session.mark_dirty("import")
+        old = Path(self.temporary.name) / "original.blend"
+        self.fake_bpy.data.filepath = str(old)
+        self.ui._save_pre_handler(None)
+        before = self.storage_snapshot(old.with_suffix(".cbq"))
+        destination = Path(self.temporary.name) / "moved" / "renamed.blend"
+        destination.parent.mkdir()
+
+        self.ui._save_pre_handler(str(destination))
+
+        self.assertTrue(destination.with_suffix(".cbq").is_dir())
+        self.assertEqual(self.scene[SIDECAR_LOCATOR_KEY], "renamed.cbq")
+        self.assertEqual(session.sidecar_path, destination.with_suffix(".cbq"))
+        self.assertEqual(self.storage_snapshot(old.with_suffix(".cbq")), before)
+        self.assertFalse(session.dirty)
+
     def test_save_handler_ignores_non_blend_path(self):
         session = self.ui.get_scene_session(self.scene)
         session.mark_dirty("import")

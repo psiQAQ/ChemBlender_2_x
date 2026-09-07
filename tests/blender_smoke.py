@@ -987,7 +987,7 @@ def assert_project_session_manager(module_key):
             check_existing=False,
         )
         assert result == {"FINISHED"}, result
-        assert session.dirty
+        assert not session.dirty, "first Save As did not publish its sidecar"
         result = bpy.ops.wm.save_mainfile()
         assert result == {"FINISHED"}, result
         assert not session.dirty
@@ -996,6 +996,20 @@ def assert_project_session_manager(module_key):
         manifest_before = (sidecar / "manifest.json").read_bytes()
         assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
         assert (sidecar / "manifest.json").read_bytes() == manifest_before
+        original_sidecar = sidecar
+        original_manifest = manifest_before
+        blend = Path(directory) / "save-as" / "renamed.blend"
+        blend.parent.mkdir()
+        assert bpy.ops.wm.save_as_mainfile(
+            filepath=str(blend), check_existing=False,
+        ) == {"FINISHED"}
+        sidecar = blend.with_suffix(".cbq")
+        assert sidecar.is_dir(), "Save As did not publish the new sidecar"
+        assert scene[links.SIDECAR_LOCATOR_KEY] == sidecar.name
+        assert session.sidecar_path == sidecar
+        assert not session.dirty
+        assert (original_sidecar / "manifest.json").read_bytes() == original_manifest
+        manifest_before = (sidecar / "manifest.json").read_bytes()
         third_scene = bpy.data.scenes.new(
             "ChemBlender link-only Scene smoke"
         )
@@ -1100,7 +1114,7 @@ def assert_project_session_manager(module_key):
             assert restored.project.id == restored_project_id
             assert derived_id in restored.project.structures
             assert ui.get_scene_session_status(bpy.context.scene)[0] == "connected"
-        relinked_sidecar = Path(directory) / "relinked.cbq"
+        relinked_sidecar = blend.parent / "relinked.cbq"
         core.save_project(relinked_sidecar, restored.project)
         relinked = core.relink_project_session_for_scenes(
             session=restored,
@@ -2204,7 +2218,7 @@ def assert_mol2_browser_view(module_key, repository_root):
             filepath=str(blend),
             check_existing=False,
         ) == {"FINISHED"}
-        assert session.dirty
+        assert not session.dirty
         assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
         assert not session.dirty
         assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
@@ -2804,7 +2818,7 @@ def assert_biological_workflow(module_key, repository_root):
             filepath=str(blend),
             check_existing=False,
         ) == {"FINISHED"}
-        assert session.dirty
+        assert not session.dirty
         assert bpy.ops.wm.save_mainfile() == {"FINISHED"}
         assert not session.dirty
         assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}

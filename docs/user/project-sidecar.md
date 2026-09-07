@@ -15,7 +15,9 @@ identities, provided their relative layout remains the same.
 ## Save and back up
 
 Use Blender's normal Save or Save As. ChemBlender publishes the sidecar before
-the `.blend` save completes and updates every scene link atomically. A clean
+the `.blend` save completes and updates every scene link atomically. The save
+handler uses Blender's destination argument, so first Save and Save As to a
+new directory or basename publish the matching sidecar in one operation. A clean
 save with valid links is a no-op for scientific arrays and manifest content.
 
 Before upgrading, migrating a legacy scene or making important scientific
