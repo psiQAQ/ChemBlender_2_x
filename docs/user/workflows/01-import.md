@@ -55,6 +55,7 @@ RDKit 流程可用 [water-v2000.mol](../../../examples/user-workflows/inputs/mol
 - Import Preview 为每个 source 显示 reader、依赖状态、能力、质量 badge 与格式相关摘要。
 - POSCAR 可显示 species、cell、Selective Dynamics 或 velocity 摘要；Cube 可显示 Grid3D 和 dataset 语义；多记录分子文件可显示 records、topology 和 conformer 决策。
 - 确认后，Project Browser 的 `By Source` 下出现 source revision、科学实体和 View；`By Data` 下能找到对应 Structure 等类型。
+- Preview 字段随格式变化。CJSON、QCSchema 和 MOL 的当前预览不提供完整原子/键计数；提交后在 Project Browser 检查实体和属性，不把未显示的计数当作已核对。MOL2 的 `Interpreted bonds` 是成功映射的键数；遇到 `un` 等未知键类型时可为零，原始键记录仍保留，不能解释成源文件没有键。
 
 ## 成功判据
 

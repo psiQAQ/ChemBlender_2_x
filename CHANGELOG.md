@@ -10,6 +10,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Fixed
 
+- Identify MOL2 records correctly in Preview and Project Browser; qualify interpreted bond counts and retain unsupported bond-type reasons in the preview.
+
 - Preserve actionable Gaussian/ORCA input validation reasons in public import diagnostics, including unknown and conflicting coordinate units.
 
 - Render migrated structures with fresh packaged display assets while preserving legacy backup node groups; publish Connected status immediately and include unattributed migrated/derived entities in the default By Source browser.

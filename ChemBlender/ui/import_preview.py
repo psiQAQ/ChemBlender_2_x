@@ -1,6 +1,7 @@
 """Blender Import Preview projection and transaction confirmation."""
 
 import shutil
+from textwrap import wrap
 from dataclasses import dataclass, fields, is_dataclass, replace
 from hashlib import sha256
 from pathlib import Path
@@ -578,13 +579,13 @@ def _candidate_projection(project, candidate, *, selected):
     )
 
 
-def _molecular_summary(batch, conformer_count):
+def _molecular_summary(batch, conformer_count, reader_id):
     records = batch.molecular_records
     if not records:
         return (0, "", "", "", "", 0)
     versions = {}
     for record in records:
-        name = record.block_version or "SMILES"
+        name = record.block_version or reader_id.upper()
         versions[name] = versions.get(name, 0) + 1
     version_summary = ", ".join(
         f"{name}: {versions[name]}" for name in sorted(versions)
@@ -597,6 +598,16 @@ def _molecular_summary(batch, conformer_count):
         getattr(topology.source_kind, "value", "") == "rdkit_sanitized"
         for topology in batch.topologies
     )
+    topology_summary = f"{sanitized} sanitized topology record(s)"
+    if reader_id == "mol2":
+        topology_summary = f"{len(batch.topologies)} interpreted topology record(s)"
+        unsupported_bonds = sorted({
+            diagnostic.message for diagnostic in batch.diagnostics
+            if diagnostic.code == "mol2.unsupported"
+            and diagnostic.field_path.startswith("bond[")
+        })
+        if unsupported_bonds:
+            topology_summary += "; " + "; ".join(unsupported_bonds)
     raw_fields = sum(
         len(record.ordered_raw_properties) for record in records
     )
@@ -608,7 +619,7 @@ def _molecular_summary(batch, conformer_count):
         len(records),
         version_summary,
         "none" if not recoveries else f"{recoveries} recovered record(s)",
-        f"{sanitized} sanitized topology record(s)",
+        _rna_preview_text(topology_summary),
         f"{raw_fields} raw fields · {typed_columns} typed columns",
         conformer_count,
     )
@@ -1053,6 +1064,7 @@ def project_import_preview(project_session, state, registry):
             molecular_summary = _molecular_summary(
                 batch,
                 source_suggestion_count,
+                source.selected_reader_id,
             )
             revision = next(
                 (
@@ -2389,7 +2401,8 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                     f"{row.molecular_version_summary}"
                 )
                 box.label(text=f"Recovery: {row.molecular_recovery_summary}")
-                box.label(text=row.molecular_topology_summary)
+                for line in wrap(row.molecular_topology_summary, width=84):
+                    box.label(text=line)
                 box.label(text=row.molecular_property_summary)
                 box.label(
                     text=(
@@ -2402,7 +2415,7 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                     text=(
                         f"Molecules: {row.mol2_molecule_count} · "
                         f"Atoms: {row.mol2_atom_count} · "
-                        f"Bonds: {row.mol2_bond_count}"
+                        f"Interpreted bonds: {row.mol2_bond_count}"
                     )
                 )
                 box.label(

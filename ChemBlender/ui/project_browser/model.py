@@ -141,7 +141,13 @@ def _label(value):
     record_key = getattr(value, "record_key", None)
     title = getattr(value, "title", None)
     if type(record_key) is str and type(title) is str:
-        version = getattr(value, "block_version", None) or "SMILES"
+        version = getattr(value, "block_version", None)
+        if version is None:
+            # MOL2 retains its original marker, including BOM/whitespace.
+            header = getattr(value, "raw_block", b"").lstrip(
+                b"\xef\xbb\xbf \t\r\n"
+            )[:32].upper()
+            version = "MOL2" if header.startswith(b"@<TRIPOS>MOLECULE") else "SMILES"
         return f"{title or record_key} · {version}"
     source = getattr(getattr(value, "source_kind", None), "value", None)
     bonds = getattr(getattr(value, "bond_indices", None), "shape", ())

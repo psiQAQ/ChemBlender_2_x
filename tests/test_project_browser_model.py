@@ -272,6 +272,21 @@ class ProjectBrowserModelTests(unittest.TestCase):
             }.issubset(labels)
         )
 
+    def test_mol2_record_label_does_not_claim_smiles(self):
+        with TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.mol2"
+            source.write_bytes(b"\xef\xbb\xbf" + MOL2_SUBSTRUCTURE_FIXTURE.read_bytes())
+            batch = parse_mol2(source)
+        project = QCProject(PROJECT_ID, "1.0")
+        project.commit(batch)
+        rows = build_browser_rows(
+            project, mode=BrowserMode.BY_DATA,
+            session_id=SESSION_ID, browser_revision=1,
+        )
+        records = [row for row in rows if row.kind == "molecular_record"]
+        self.assertTrue(records)
+        self.assertTrue(all(row.label.endswith(" · MOL2") for row in records))
+
     def test_molecular_records_and_conformer_properties_are_grouped(self):
         project, batch, acceptance = sample_molecular_project()
 

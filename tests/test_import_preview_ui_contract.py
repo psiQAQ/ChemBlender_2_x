@@ -367,6 +367,44 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertEqual(row.mol2_partial_charge_summary, "available (complete)")
         self.assertEqual(row.mol2_unsupported_sections, "SET")
 
+    def test_mol2_preview_distinguishes_format_and_unsupported_topology(self):
+        source = Path(self.temporary.name) / "unknown.mol2"
+        source.write_bytes(
+            (ROOT / "tests/fixtures/mol2/small.mol2").read_bytes().replace(
+                b"7 10 42 1", b"7 10 42 un"
+            )
+        )
+        registry, state = self.stage(str(source))
+        row = self.module.project_import_preview(
+            self.session, state, registry,
+        )[0]
+        self.assertEqual(row.molecular_version_summary, "MOL2: 1")
+        self.assertEqual(row.mol2_bond_count, 0)
+        self.assertIn("0 interpreted topology record(s)", row.molecular_topology_summary)
+        self.assertIn("unsupported MOL2 bond type 'un'", row.molecular_topology_summary)
+        self.assertEqual(row.quality, "incomplete")
+        self.assertFalse(row.blocking)
+
+    def test_mol2_draw_qualifies_interpreted_bond_count(self):
+        registry, state = self.stage("tests/fixtures/mol2/small.mol2")
+        rows = self.module.project_import_preview(self.session, state, registry)
+        labels = []
+        layout = SimpleNamespace(
+            label=lambda **kw: labels.append(kw["text"]),
+            prop=lambda *_args, **_kw: None,
+        )
+        layout.box = lambda: layout
+        layout.row = lambda **_kw: layout
+        operator = self.module.CHEMBLENDER_OT_confirm_import()
+        operator.layout = layout
+        operator.rows = rows
+        operator.blocking_reason = ""
+        operator.reader_plugin_status = ""
+        operator.grouping_suggestions = ()
+        operator.conformer_grouping_suggestions = ()
+        operator.draw(None)
+        self.assertTrue(any("Interpreted bonds: 1" in text for text in labels))
+
     def test_mol2_preview_reports_partial_charge_molecule_coverage(self):
         source = Path(self.temporary.name) / "mixed-charges.mol2"
         source.write_text(
