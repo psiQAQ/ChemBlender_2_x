@@ -10,6 +10,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Fixed
 
+- Preserve actionable Gaussian/ORCA input validation reasons in public import diagnostics, including unknown and conflicting coordinate units.
+
 - Render migrated structures with fresh packaged display assets while preserving legacy backup node groups; publish Connected status immediately and include unattributed migrated/derived entities in the default By Source browser.
 
 - Wrap complete legacy migration warnings and expose the same non-persistent, read-only preview JSON through Scene RNA so MCP can review destination, entities, recovered display settings and diagnostics before confirmation.

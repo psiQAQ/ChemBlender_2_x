@@ -52,13 +52,22 @@ class _BuiltinReaderPlugin:
 
     def parse(self, request):
         parser = self.core_descriptor.parse_request
-        return public_batch_from_internal(
-            (
+        try:
+            batch = (
                 self.core_descriptor.parse(request.source_path)
                 if parser is None
                 else parser(request)
             )
-        )
+        except ValueError as error:
+            # These built-in text readers raise actionable input validation errors.
+            # Keep external-reader exceptions behind the registry's generic boundary.
+            if self.descriptor.reader_id not in {"gaussian-input", "orca-input"}:
+                raise
+            return _failure_batch(
+                self.descriptor, IssueKind.INVALID, "reader.parse",
+                " ".join(str(error).split())[:200],
+            )
+        return public_batch_from_internal(batch)
 
 
 def _manifest_entry(descriptor):

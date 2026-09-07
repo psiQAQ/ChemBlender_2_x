@@ -77,6 +77,6 @@ cclib、IOData、ASE 和 pymatgen adapter 可以在单独 runtime 可用时增�
 - 生物 hierarchy 用 PDB；以 charge/radius 为核心时用 PQR。不要期待 PQR 自带 topology。
 - Grid3D 用 Cube，并在多 dataset 文件中明确选择 index。
 - CJSON/QCSchema 用于保留对应 envelope；当前普通 UI 导出请选择已列入 Project Browser 的目标格式。
-- 只需查看 Gaussian/ORCA 输入里的单个内嵌 Cartesian 几何时可直接导入；复杂坐标语法、外部文件引用和计算设置留在原程序中处理。
+- 只需查看 Gaussian/ORCA 输入里的单个内嵌 Cartesian 几何时可直接导入；复杂坐标语法、外部文件引用和计算设置留在原程序中处理。未知或冲突单位会在 Import Preview 和公开诊断中显示具体原因，取消后修正输入再导入。
 
 返回[工作流总览](README.md)，或直接进入[导入](01-import.md)和[导出](04-export.md)。

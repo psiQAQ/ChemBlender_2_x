@@ -24,6 +24,32 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class QuantumInputImportPipelineTests(unittest.TestCase):
+    def test_unit_failures_explain_the_required_correction_in_public_preview(self):
+        cases = (
+            ("unknown.gjf", "# HF Units=Nanometers\n\nH2\n\n0 1\nH 0 0 0\nH 0 0 1\n\n", "unknown Gaussian coordinate unit option: Nanometers"),
+            ("conflict.gjf", "# HF Units=Bohr Units=Angstrom\n\nH2\n\n0 1\nH 0 0 0\nH 0 0 1\n\n", "conflicting Gaussian coordinate units"),
+            ("unknown.inp", "%coords Units Nanometers end\n* xyz 0 1\nH 0 0 0\nH 0 0 1\n*\n", "unknown ORCA coordinate unit: nanometers"),
+            ("conflict.inp", "! Bohrs Angs\n* xyz 0 1\nH 0 0 0\nH 0 0 1\n*\n", "conflicting ORCA coordinate units"),
+        )
+        for filename, text, expected in cases:
+            with self.subTest(filename=filename), TemporaryDirectory() as directory:
+                source = Path(directory) / filename
+                source.write_text(text, encoding="utf-8")
+                staged = StagedImportSession.create(temp_parent=Path(directory))
+                try:
+                    preview = preflight_reader_plugins(
+                        ImportRequest(sources=(ImportSource(source),)),
+                        builtin_reader_plugin_registry(), staged,
+                    )
+                    source_preview, = preview.source_previews
+                    batch = staged.result(source_preview.staged_batch_ids[0])
+                    diagnostic, = batch.diagnostics
+                    self.assertIn(expected, diagnostic.message)
+                    self.assertEqual(diagnostic.field_path, "reader.parse")
+                    self.assertFalse(batch.structures)
+                finally:
+                    staged.discard()
+
     def test_reader_upgrade_creates_a_revision_without_rescaling_saved_data(self):
         for name, suffix, control in (
             ("gaussian", ".gjf", "# HF Units=Bohr\n\nH2\n\n0 1\nH 0 0 0\nH 0 0 1.4\n\n"),
