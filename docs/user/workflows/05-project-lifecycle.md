@@ -41,10 +41,12 @@
 | 状态 | 首选操作 |
 | --- | --- |
 | `Connected` | 继续工作；必要时选择 `Verify` 重新检查 locator、manifest 和 arrays |
-| `Missing` | 找回原配对后选择 `Relink`，指定真实 `.cbq/` |
+| `Missing` | 找回原配对后选择 `Relink`，选择真实 `.cbq/manifest.json` |
 | `Mismatch` | 停止，确认正确备份；不要仅按 basename 接受候选 |
 | `Incompatible` | 保持文件不变，使用兼容版本打开 |
 | `Invalid` | 保存证据，先开 `Diagnostics`，再决定恢复 |
+
+Relink 的文件选择器选择 `.cbq/` 内的 `manifest.json`；MCP 的 `filepath` 也可直接传 `.cbq/` 目录。候选必须匹配 `.blend` 已保存的 UUID、schema 与 manifest hash，不能仅因 UUID 相同就采用另一代数据。成功 Relink/Verify 后 Browser 与 Quick Import 同步刷新。
 
 `Inspect Existing` 只检查候选，不会采用它。`Detach` 会移除 link metadata，但保留 Blender objects；这些 detached objects 不能替代 scientific project。
 

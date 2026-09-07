@@ -26,6 +26,7 @@ from ..properties import (
     get_quick_import_state,
 )
 from ..session import (
+    _record_result,
     get_scene_session,
     get_scene_session_status,
     register_session_cleanup,
@@ -570,12 +571,21 @@ class CHEMBLENDER_OT_project_link_recovery(bpy.types.Operator):
         )
     )
     filepath: StringProperty(subtype="FILE_PATH")
+    filter_glob: StringProperty(default="manifest.json", options={"HIDDEN"})
 
     def invoke(self, context, _event):
         if self.action == "relink":
+            if not self.filepath:
+                self.filepath = str(
+                    Path(bpy.data.filepath or "project.blend").parent / "manifest.json"
+                )
             context.window_manager.fileselect_add(self)
             return {"RUNNING_MODAL"}
         return self.execute(context)
+
+    def draw(self, _context):
+        self.layout.label(text="Select manifest.json")
+        self.layout.label(text="inside the .cbq folder")
 
     def execute(self, context):
         try:
@@ -598,14 +608,19 @@ class CHEMBLENDER_OT_project_link_recovery(bpy.types.Operator):
             if self.action == "relink":
                 if not self.filepath:
                     raise ValueError("select a ChemBlender .cbq sidecar")
+                sidecar = Path(self.filepath)
+                if sidecar.name == "manifest.json":
+                    sidecar = sidecar.parent
                 result = relink_project_session_for_scenes(
                     session=session,
                     scenes=scenes,
-                    sidecar_path=self.filepath,
+                    sidecar_path=sidecar,
                     blend_path=blend_path,
                 )
                 if result.status.value != "connected":
                     raise ValueError(result.message or result.status.value)
+                _record_result(result)
+                advance_browser_revision(session)
                 state.project_link_inspection_only = False
                 state.show_project_link_diagnostics = False
             elif self.action == "verify":
@@ -616,6 +631,8 @@ class CHEMBLENDER_OT_project_link_recovery(bpy.types.Operator):
                 )
                 if result.status.value != "connected":
                     raise ValueError(result.message or result.status.value)
+                _record_result(result)
+                advance_browser_revision(session)
                 state.project_link_inspection_only = False
                 state.show_project_link_diagnostics = False
             elif self.action == "inspect_existing":

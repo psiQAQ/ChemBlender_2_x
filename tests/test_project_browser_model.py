@@ -1181,6 +1181,33 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             events,
         )
 
+    def test_relink_file_selector_accepts_manifest_and_preserves_directory_api(self):
+        panel = importlib.import_module("ChemBlender.ui.project_browser.panel")
+        session = SimpleNamespace(link_status="missing")
+        state = SimpleNamespace(project_link_inspection_only=True,
+                                show_project_link_diagnostics=True)
+        context = SimpleNamespace(scene=object())
+        self.fake_bpy.data = SimpleNamespace(scenes=(context.scene,), filepath="view.blend")
+        service_result = SimpleNamespace(status=SimpleNamespace(value="connected"))
+        for selected in ("moved.cbq/manifest.json", "moved.cbq"):
+            with self.subTest(selected=selected):
+                operation = panel.CHEMBLENDER_OT_project_link_recovery()
+                operation.action = "relink"
+                operation.filepath = selected
+                with (
+                    patch.object(panel, "get_scene_session", return_value=session),
+                    patch.object(panel, "get_quick_import_state", return_value=state),
+                    patch.object(panel, "relink_project_session_for_scenes",
+                                 return_value=service_result) as relink,
+                    patch.object(panel, "_record_result") as record,
+                    patch.object(panel, "advance_browser_revision") as advance,
+                ):
+                    result = operation.execute(context)
+                self.assertEqual(result, {"FINISHED"})
+                self.assertEqual(Path(relink.call_args.kwargs["sidecar_path"]), Path("moved.cbq"))
+                record.assert_called_once_with(service_result)
+                advance.assert_called_once_with(session)
+
     def test_recovery_execute_revalidates_the_live_link_status(self):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"

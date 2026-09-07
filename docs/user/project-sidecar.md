@@ -41,15 +41,18 @@ are removed after success and are not a substitute for your own backup.
 | Incompatible | The sidecar schema cannot be opened by this version | Keep the files unchanged and use a compatible ChemBlender version |
 | Invalid | Link metadata, manifest or array integrity is invalid | Preserve evidence; open Diagnostics before recovery |
 
-**Relink** validates the complete candidate once and updates every scene only
-after verification. **Verify** rechecks the current locator. **Detach** keeps
+**Relink** validates the complete candidate once against the UUID, schema and
+manifest hash stored in the scene, including after a Missing load has created
+an empty session. Conflicting or incomplete scene links are rejected. The UI
+selects `.cbq/manifest.json`; the public Operator also accepts a directory path.
+Every scene is updated only after verification. **Verify** rechecks the current locator. **Detach** keeps
 the current Blender objects but removes their project link; detached objects
 are not a replacement for authoritative scientific data.
 
 ## Move or restore a project
 
 Move `example.blend` and `example.cbq/` together. If the relative layout
-changed, open the `.blend`, choose Relink, select the actual `.cbq` directory
+changed, open the `.blend`, choose Relink, select `manifest.json` inside the actual `.cbq` directory
 and confirm that the expected project identity appears. Never create an empty
 directory with the old name or copy only selected array files to satisfy a
 Missing state.

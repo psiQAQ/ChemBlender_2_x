@@ -441,6 +441,12 @@ def migrate_legacy_scene(scene, *, confirmed):
             os.replace(destination, previous_sidecar)
         os.replace(committed_result.sidecar_path, destination)
         swapped = True
+        # Confirmed migration publishes a new generation.  Old scene hashes
+        # cannot identify it; the transaction snapshot restores them on failure.
+        for linked_scene in bpy.data.scenes:
+            for key in _LINK_KEYS:
+                if key in linked_scene:
+                    del linked_scene[key]
         linked = relink_project_session_for_scenes(
             session=session, scenes=tuple(bpy.data.scenes),
             sidecar_path=destination, blend_path=bpy.data.filepath,

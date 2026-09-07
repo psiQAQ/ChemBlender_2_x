@@ -1,5 +1,6 @@
 import json
 import os
+from shutil import copytree
 import subprocess
 import sys
 import unittest
@@ -1332,6 +1333,55 @@ class ProjectServiceTests(unittest.TestCase):
         )
         self.assertEqual(session.dirty_reasons, frozenset({"import"}))
 
+    def test_relink_missing_load_matches_saved_identity_not_empty_session(self):
+        sidecar = self.root / "relocated.cbq"
+        stored = QCProject(id=UUID(int=23), schema_version="0.2")
+        save_project(sidecar, stored)
+        scene = self.linked_scene(sidecar, stored)
+        scene[SIDECAR_LOCATOR_KEY] = str(self.root / "missing.cbq")
+        session = self.create_session()
+        status = project_service.verify_project_session_for_scenes(
+            session=session, scenes=(scene,),
+        )
+        self.assertEqual(status.status, ProjectServiceStatus.MISSING)
+        self.assertNotEqual(session.project.id, stored.id)
+
+        result = relink_project_session(
+            session=session, scene=scene, sidecar_path=sidecar,
+        )
+
+        self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
+        self.assertEqual(session.project.id, stored.id)
+        self.assertEqual(session.sidecar_path, sidecar)
+
+    def test_relink_rejects_saved_hash_mismatch_and_conflicting_scene_links(self):
+        sidecar = self.root / "same-uuid.cbq"
+        stored = self.create_session().project
+        save_project(sidecar, stored)
+        valid = self.linked_scene(sidecar, stored)
+        for kind in ("hash", "conflict", "partial"):
+            with self.subTest(kind=kind):
+                session = self.create_session()
+                scene = dict(valid)
+                scenes = (scene,)
+                if kind == "hash":
+                    scene[MANIFEST_HASH_KEY] = "f" * 64
+                elif kind == "conflict":
+                    scenes = (scene, dict(scene, cbq_project_id=str(UUID(int=99))))
+                else:
+                    del scene[PROJECT_SCHEMA_KEY]
+                before = (session.project, session.sidecar_path,
+                          tuple(dict(value) for value in scenes))
+
+                result = project_service.relink_project_session_for_scenes(
+                    session=session, scenes=scenes, sidecar_path=sidecar,
+                )
+
+                self.assertEqual(result.status, ProjectServiceStatus.MISMATCH
+                                 if kind == "hash" else ProjectServiceStatus.INVALID)
+                self.assertEqual((session.project, session.sidecar_path,
+                                  tuple(dict(value) for value in scenes)), before)
+
     def test_relink_uuid_mismatch_has_zero_mutation(self):
         sidecar = self.root / "other.cbq"
         save_project(sidecar, QCProject(id=UUID(int=2), schema_version="0.2"))
@@ -1525,7 +1575,7 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertFalse(lazy_values[0].loaded)
 
     def test_multi_scene_relink_opens_once_and_closes_old_project_once(self):
-        session = self.create_session()
+        session = self.create_session(project=sample_project())
         blend = self.root / "scene" / "view.blend"
         blend.parent.mkdir()
         old_sidecar = blend.with_suffix(".cbq")
@@ -1538,16 +1588,16 @@ class ProjectServiceTests(unittest.TestCase):
             blend_path=blend,
         )
         candidate = self.root / "data" / "candidate.cbq"
-        save_project(candidate, sample_project())
+        copytree(blend.with_suffix(".cbq"), candidate)
         previous = session.project
         record_open, opened_projects, lazy_values = (
             self.loaded_candidate_recorder(
-                project_service._open_project_with_manifest
+                project_service._project_links()._open_project_with_manifest
             )
         )
 
         with patch.object(
-            project_service,
+            project_service._project_links(),
             "_open_project_with_manifest",
             side_effect=record_open,
         ) as opened, patch.object(
@@ -1601,12 +1651,12 @@ class ProjectServiceTests(unittest.TestCase):
             blend_path=blend,
         )
         candidate = self.root / "candidate-lazy.cbq"
-        save_project(candidate, sample_project())
+        copytree(blend.with_suffix(".cbq"), candidate)
         originals = (dict(first), dict(second))
         previous = session.project
         opened_projects = []
         lazy_values = []
-        real_open = project_service._open_project_with_manifest
+        real_open = project_service._project_links()._open_project_with_manifest
 
         def record_open(*args, **kwargs):
             project, manifest = real_open(*args, **kwargs)
@@ -1618,7 +1668,7 @@ class ProjectServiceTests(unittest.TestCase):
 
         second.fail_next = True
         with patch.object(
-            project_service,
+            project_service._project_links(),
             "_open_project_with_manifest",
             side_effect=record_open,
         ) as opened, patch.object(
@@ -1649,9 +1699,9 @@ class ProjectServiceTests(unittest.TestCase):
 
             def __setitem__(self, key, value):
                 if (
-                    key == MANIFEST_HASH_KEY
+                    key == SIDECAR_LOCATOR_KEY
                     and self.fail_restore
-                    and value == "1" * 64
+                    and value == "old.cbq"
                 ):
                     raise RuntimeError("first Scene rollback failed")
                 super().__setitem__(key, value)
@@ -1665,14 +1715,8 @@ class ProjectServiceTests(unittest.TestCase):
         session = self.create_session()
         candidate = self.root / "structured.cbq"
         save_project(candidate, session.project)
-        first = RollbackFailingScene(
-            {
-                PROJECT_ID_KEY: "old",
-                PROJECT_SCHEMA_KEY: "0.2",
-                SIDECAR_LOCATOR_KEY: "old.cbq",
-                MANIFEST_HASH_KEY: "1" * 64,
-            }
-        )
+        first = RollbackFailingScene(self.linked_scene(candidate, session.project))
+        first[SIDECAR_LOCATOR_KEY] = "old.cbq"
         second = WriteFailingScene()
         first.fail_restore = True
         with self.assertRaises(
@@ -1688,11 +1732,11 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(str(error.write_error), "second Scene write failed")
         self.assertEqual(
             tuple((failure.scene_index, failure.key) for failure in error.rollback_failures),
-            ((0, MANIFEST_HASH_KEY),),
+            ((0, SIDECAR_LOCATOR_KEY),),
         )
         self.assertEqual(
             error.residual_keys,
-            ((0, MANIFEST_HASH_KEY),),
+            ((0, SIDECAR_LOCATOR_KEY),),
         )
 
     def test_multi_scene_relink_adoption_failure_restores_links_and_candidate(self):

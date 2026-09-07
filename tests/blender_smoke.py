@@ -8,6 +8,7 @@ import threading
 from dataclasses import replace
 from importlib.metadata import version
 from pathlib import Path
+from shutil import copytree
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from uuid import UUID, uuid4
@@ -1114,8 +1115,23 @@ def assert_project_session_manager(module_key):
             assert restored.project.id == restored_project_id
             assert derived_id in restored.project.structures
             assert ui.get_scene_session_status(bpy.context.scene)[0] == "connected"
+        ui.close_scene_session(bpy.context.scene)
+        relocated = blend.parent / "relocated.cbq"
+        sidecar.rename(relocated)
+        assert bpy.ops.wm.open_mainfile(filepath=str(blend)) == {"FINISHED"}
+        missing = ui.get_scene_session(bpy.context.scene)
+        assert missing.link_status == "missing"
+        assert missing.project.id != restored_project_id
+        assert bpy.ops.chemblender.project_link_recovery(
+            action="relink", filepath=str(relocated / "manifest.json"),
+        ) == {"FINISHED"}
+        restored = ui.get_scene_session(bpy.context.scene)
+        restored_scenes = tuple(bpy.data.scenes)
+        assert restored.project.id == restored_project_id
+        assert ui.get_scene_session_status(bpy.context.scene)[0] == "connected"
+        assert derived_id in restored.project.structures
         relinked_sidecar = blend.parent / "relinked.cbq"
-        core.save_project(relinked_sidecar, restored.project)
+        copytree(relocated, relinked_sidecar)
         relinked = core.relink_project_session_for_scenes(
             session=restored,
             scenes=restored_scenes,
@@ -1135,7 +1151,7 @@ def assert_project_session_manager(module_key):
             for value in restored_scenes
         )
         properties = importlib.import_module(f"{module_key}.ui.properties")
-        assert properties.get_quick_import_state(restored).browser_revision == 1
+        assert properties.get_quick_import_state(restored).browser_revision >= 1
 
         restored.mark_dirty("edit")
         verified_sidecar = restored.sidecar_path

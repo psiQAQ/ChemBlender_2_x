@@ -632,12 +632,39 @@ def relink_project_session_for_scenes(
     scenes = _validated_scenes(scenes)
     links = _project_links()
     path = Path(sidecar_path).resolve()
-    candidate, manifest_hash, failure = _opened_matching_project(
-        session,
-        path,
-    )
-    if failure is not None:
-        return failure
+    # A Missing load owns an empty session with a new UUID. Recovery must
+    # match the saved scene identity and generation, not that placeholder.
+    keys = _link_keys(links)
+    linked_values = None
+    for scene in scenes:
+        present = tuple(key in scene for key in keys)
+        if not any(present):
+            continue
+        if not all(present):
+            return ProjectServiceResult(
+                ProjectServiceStatus.INVALID, "invalid scene project link",
+            )
+        values = {key: scene[key] for key in keys}
+        if linked_values is not None and values != linked_values:
+            return ProjectServiceResult(
+                ProjectServiceStatus.INVALID, "conflicting scene project links",
+            )
+        linked_values = values
+    if linked_values is None:
+        candidate, manifest_hash, failure = _opened_matching_project(session, path)
+        if failure is not None:
+            return failure
+    else:
+        candidate_link = dict(linked_values)
+        candidate_link[links.SIDECAR_LOCATOR_KEY] = str(path)
+        resolved = links.resolve_project_link(
+            candidate_link, blend_path=blend_path, verify_arrays=True,
+        )
+        status = _service_status(resolved.status)
+        if status is not ProjectServiceStatus.CONNECTED:
+            return ProjectServiceResult(status, resolved.message, resolved.path)
+        candidate = resolved.project
+        manifest_hash = linked_values[links.MANIFEST_HASH_KEY]
     values = _link_values(
         candidate,
         path,
