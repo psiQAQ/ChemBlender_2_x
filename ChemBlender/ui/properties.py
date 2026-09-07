@@ -343,10 +343,12 @@ class CHEMBLENDER_OT_toggle_selective_constraints(bpy.types.Operator):
 
 
 def draw_selective_dynamics_properties(layout, project, structure):
+    import numpy
+
     dataset = _selective_dynamics(project, structure.id)
     if dataset is None:
         return
-    constrained = int((~dataset.data.values).any(axis=1).sum())
+    constrained = int((~numpy.asarray(dataset.data.values)).any(axis=1).sum())
     box = layout.box()
     box.label(
         text=f"Selective Dynamics: {constrained} constrained atom(s)"

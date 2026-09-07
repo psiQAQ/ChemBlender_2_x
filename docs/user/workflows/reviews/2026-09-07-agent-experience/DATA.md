@@ -20,3 +20,9 @@
 - 截图 `DATA-01` 至 `DATA-13` 保存在[本轮截图目录](../../../../../.blend-analysis/2026-09-07-review/screenshots/)。科学预览：[DATA-10-edit-preview.png](../../../../../.blend-analysis/2026-09-07-review/screenshots/DATA-10-edit-preview.png)；确认：[DATA-12-derived.png](../../../../../.blend-analysis/2026-09-07-review/screenshots/DATA-12-derived.png)。
 - [配对文件](../../../../../.blend-analysis/2026-09-07-review/outputs/DATA-R5-UI.blend)、[sidecar](../../../../../.blend-analysis/2026-09-07-review/outputs/DATA-R5-UI.cbq/manifest.json)。动作绑定 `f2cbd41` / ZIP `966dc8a7def7343fa29b1823ea72e2ea43a04015655bf32da0bd2f6c2a824daf`。
 - 尚需：源/派生科学数组与 provenance 完整核对、晶体约束、生物层级、独立 MCP 全路径和最终包复核。当前无 DATA 产品缺陷已确认；reload 缺陷另记 ENV/LIFE。
+
+## 晶体面板失败与修复
+
+CONTCAR 预览显示 27 Å³ cell、Na/Cl、Cartesian、Selective Dynamics 和 ion/lattice velocities。选择周期 Structure 后，面板在约束区报 `TypeError: bad operand type for unary ~: LazyNpyArray`，后续控件不显示。P2 可用性问题，未改变科学数据；两个 marker 和约束数据仍在。失败现场 `outputs/failures/DATA-lazy-constraints.blend/.cbq` 绑定 4b9882c / b655ad3f。
+
+回归用真实保存/打开 sidecar，复现同一错误；改用 NumPy array protocol 后 66 Browser tests 通过。新 ZIP `bdc869ac8aed4ffddeb5d3d65af95aed71d65f9bb2c9a79a8f0f85027317f5bc`，只有 properties.py +35 unpacked / +19 packed；完整 2,297 tests / 26 skips 和隔离 smoke 105.67 s 通过。`DATA-R7-02` 显示 2 constrained atoms、Toggle Selective Constraints；实际点击后 hidden=true / visible_flag=false（DATA-R7-UI-constraints-hidden.json），再次点击恢复两个 marker。spglib 缺失时 Derive Symmetry 禁用并显示原因。MCP 同包已安装，独立 DATA 操作待执行。

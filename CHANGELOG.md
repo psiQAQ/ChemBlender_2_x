@@ -20,6 +20,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 - Restore the saved project session after enabling or reloading the extension in an open file, using a deferred callback outside Blender registration restrictions; preserve existing dirty sessions and cancel the callback on unload.
 
+- Read saved lazy Selective Dynamics arrays through the NumPy array protocol when drawing the constrained-atom count, keeping the constraint controls available after publication and reopen.
+
 ## [2.4.0] - 2026-08-03
 
 ### Changed

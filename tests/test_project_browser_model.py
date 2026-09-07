@@ -1013,6 +1013,33 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             panel.unregister()
             self.assertEqual(callbacks, set())
 
+    def test_selective_constraints_panel_accepts_saved_lazy_arrays(self):
+        from ChemBlender.core import close_project, open_project, parse_poscar, save_project
+
+        properties = importlib.import_module("ChemBlender.ui.properties")
+        project = QCProject(id=uuid4(), schema_version="1.0")
+        project.commit(parse_poscar(
+            Path(__file__).with_name("fixtures") / "poscar" / "cscl-selective.vasp"
+        ))
+        labels = []
+        operators = []
+        layout = SimpleNamespace(
+            box=lambda: layout,
+            label=lambda **kwargs: labels.append(kwargs["text"]),
+            operator=lambda identifier, **kwargs: operators.append(identifier),
+        )
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "constraints.cbq"
+            save_project(path, project)
+            restored = open_project(path)
+            try:
+                structure = next(iter(restored.structures.values()))
+                properties.draw_selective_dynamics_properties(layout, restored, structure)
+            finally:
+                close_project(restored)
+        self.assertEqual(labels, ["Selective Dynamics: 2 constrained atom(s)"])
+        self.assertEqual(operators, ["chemblender.toggle_selective_constraints"])
+
     def test_rna_projection_contains_only_small_values(self):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"
