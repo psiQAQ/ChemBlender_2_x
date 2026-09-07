@@ -5,13 +5,13 @@
 
 ## 当前检查点
 
-当前候选 ZIP `b655ad3f6a1cbd1c542b072eeaf857d25b1954d4e67a6c7de0fc6621f8d25dcf`：2,296 tests，26 skips，无失败/错误；隔离 smoke 105.5 s。源码修复后正在继续逐项体验；以下各阶段旧包数据保留为失败—修复链，不能混作当前包通过结果。
+当前候选 ZIP `0006d0b4131b4f4a0e36639116e58bdb7aa2d4d9f777018fee3c9cd07d3983fc`（dc1ff3d）：2,297 tests，26 skips，无失败/错误；隔离 smoke 105.5 s。源码修复后正在继续逐项体验；以下各阶段旧包数据保留为失败—修复链，不能混作当前包通过结果。
 
 | 项目 | UI | MCP |
 | --- | --- | --- |
 | ENV | 隔离安装与 reload 已验证；实际用户安装 Blocked | 隔离安装已验证；待最终复核 |
 | IMP | f2cbd41 通过；待 R6 最终复核 | f2cbd41 通过；待 R6 最终复核 |
-| DATA | 部分完成，整项 Not Run | Not Run |
+| DATA | R8 Passed；待全轮最终复核 | R8 Passed；待全轮最终复核 |
 | VIEW / EXP / LIFE / MIG / AGENT / OUTSIDE | Not Run | Not Run |
 | REP-MOLECULAR / REP-TRAJECTORY / REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
 
@@ -63,3 +63,6 @@
 新增构建 `c206b53e5cb94c8c9a568740b1297d710d001d43175ecca64f2045f8457dd311` 为 29,984,397 bytes，解压 32,092,532 bytes。相对上一包：import_preview.py +369 unpacked / +84 packed，properties.py +1287 / +353，quick_import.py +88 / +24。只有三处公开导入反馈实现变更，所有未解释增长 allowance 仍为 0；审计五文件保存在 package-mcp-preview/。
 
 R6 仅 ui/session.py 增加 742 unpacked / 209 packed bytes，用于注册后恢复已保存 session；包 29,984,722 bytes，总解压 32,093,564 bytes。资源/wheel 未变，所有未解释增长 allowance 为 0。中间同步注册失败包 99234f3f 已淘汰，失败日志仍保留。
+
+
+R8 DATA 双路径完成，详见 [DATA 独立报告](2026-09-07-agent-experience/DATA.md)。该报告保留生物不可见缺陷、dc1ff3d 修复、回归与 UI/MCP 结果，以及旧证据副本被测试脚本继续使用后的状态纠正。最终配对文件按 DATA/UI 与 DATA/MCP 集合保存。其他 11 项仍未执行。
