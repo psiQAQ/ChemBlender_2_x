@@ -955,7 +955,8 @@ class BiologicalUIContractTests(unittest.TestCase):
         labels = [event[1]["text"] for event in events if event[0] == "label"]
         self.assertIn("Biological hierarchy", labels)
         self.assertIn("Model: unspecified", labels)
-        self.assertIn("2 chains / 2 residues", labels)
+        self.assertIn("Chain/segment entries: 2", labels)
+        self.assertIn("Residues: 2", labels)
         self.assertIn("Atoms: 2", labels)
 
         operator_ids = {
@@ -970,6 +971,17 @@ class BiologicalUIContractTests(unittest.TestCase):
                 for event in events
             )
         )
+
+        no_chain = parse_pqr(FIXTURES / "pqr" / "no-chain.pqr")
+        no_chain_project = QCProject(uuid4(), "1.0")
+        no_chain_project.commit(no_chain)
+        events.clear()
+        self.module.draw_biological_controls(
+            Layout(), no_chain_project, no_chain.biological_hierarchies[0].id, settings
+        )
+        labels = [event[1]["text"] for event in events if event[0] == "label"]
+        self.assertIn("Chain/segment entries: 1", labels)
+        self.assertIn("Blank source chain IDs: 1", labels)
 
         pdb_batch = parse_pdb(FIXTURES / "pdb" / "altloc.pdb")
         self.assertEqual(

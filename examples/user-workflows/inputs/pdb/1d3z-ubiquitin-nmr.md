@@ -32,14 +32,14 @@ ChemBlender 把兼容的 MODEL 映射为一个 Structure 加 10 帧 trajectory�
 
 ## 操作流程
 
-1. 用 `Quick Import` 选择 [`1d3z-ubiquitin-nmr.pdb`](1d3z-ubiquitin-nmr.pdb)，核对 10 models、1231 atoms/model 和 76 residues。
-2. 确认导入并创建 trajectory View，拖动时间轴检查模型变化。
+1. 用 `Quick Import` → `Select Files` 选择 [`1d3z-ubiquitin-nmr.pdb`](1d3z-ubiquitin-nmr.pdb)，在 Preview 核对 pdb reader、Complete 和 Default view: Structure。
+2. 确认后在 Project Browser → By Data 选择 BiologicalHierarchy，核对 1231 atoms、76 residues；选中对应 View，点击 `Configure 10 MODEL Frames` 后再拖动时间轴。10 个 NMR MODEL 是构象集合，不是有时间单位的动力学轨迹。
 3. 可用 biological selection 按 chain/residue 筛选；导出前检查元数据损失。
 
 ## Agent 提示词
 
 ```text
-通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，再用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb 的绝对路径。只使用公开的 bpy.ops.chemblender.*；先报告 10 个 MODEL、每模型 1231 个原子、chain A、76 个残基、trajectory 与 Preview 诊断，等我确认后调用 bpy.ops.chemblender.confirm_import。创建轨迹 View，并可通过 bpy.ops.chemblender.select_biological_atoms 做公开的层级选择。导出有损时停下；保存 .blend 与相邻 .cbq。
+通过 Blender MCP 连接 Blender 5.1，先读取 Operator RNA，再用 bpy.ops.chemblender.quick_import 导入 examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb 的绝对路径。只使用公开的 bpy.ops.chemblender.*；先报告实际 preview_json 的 reader、质量、能力和默认 View，等我确认后调用 bpy.ops.chemblender.confirm_import。提交后从公开 Browser 与保存项目核对 10 个 MODEL、每模型 1231 个原子、chain A 和 76 个残基；选中对应层级和 View，调用 bpy.ops.chemblender.play_biological_models 配置播放，并可通过 bpy.ops.chemblender.select_biological_atoms 做公开的层级选择。导出有损时停下；保存 .blend 与相邻 .cbq。
 ```
 
 ## 完整性与验证
@@ -54,4 +54,4 @@ ChemBlender 把兼容的 MODEL 映射为一个 Structure 加 10 帧 trajectory�
 - [wwPDB PDB 格式 3.30](https://www.wwpdb.org/documentation/file-format-content/format33/sect1.html)
 - [PDB Archive 数据政策](https://www.rcsb.org/pages/policies)
 
-筛选反馈：Biological hierarchy 分行显示 MODEL、chain/residue 和 atom 数；执行 Select Biological Atoms 后状态栏报告选中数量。筛选写入 View 的 `cbq_selected`，不改写来源坐标或层级，也不等同于隐藏其余原子。
+筛选反馈：Biological hierarchy 分行显示 MODEL、chain/segment entries、residue 和 atom 数；执行 Select Biological Atoms 后状态栏报告选中数量。筛选写入 View 的 `cbq_selected`，不改写来源坐标或层级，也不等同于隐藏其余原子。

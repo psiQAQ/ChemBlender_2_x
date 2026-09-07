@@ -768,9 +768,11 @@ def draw_biological_controls(layout, project, entity_id, settings):
     )
     box.label(text="Biological hierarchy")
     box.label(text=f"Model: {model}")
-    box.label(
-        text=f"{len(hierarchy.chains)} chains / {len(hierarchy.residues)} residues"
-    )
+    box.label(text=f"Chain/segment entries: {len(hierarchy.chains)}")
+    blank_chain_ids = sum(not chain.chain_id for chain in hierarchy.chains)
+    if blank_chain_ids:
+        box.label(text=f"Blank source chain IDs: {blank_chain_ids}")
+    box.label(text=f"Residues: {len(hierarchy.residues)}")
     box.label(text=f"Atoms: {hierarchy.atom_count}")
     for dataset in properties:
         box.label(
