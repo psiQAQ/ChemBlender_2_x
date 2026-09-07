@@ -3,8 +3,10 @@ from dataclasses import dataclass
 
 import bpy
 
-from .core import FrameSet, TrajectoryFrameManager
-from .dataset_view import _coordinate_scale, _require_structure_match
+from .core import AtomFrameProperty, FrameSet, TrajectoryFrameManager
+from .dataset_view import (
+    _MODIFIER_NAME, _coordinate_scale, _require_structure_match, write_vector_view,
+)
 
 
 _BINDINGS = {}
@@ -16,6 +18,7 @@ _PROPERTY_NAMES = (
     "cb_trajectory_frame_index",
     "cb_trajectory_cache_size",
     "cb_trajectory_prefetch_ahead",
+    "cb_trajectory_force_status",
 )
 
 
@@ -26,6 +29,7 @@ class _TrajectoryBinding:
     frame_start: int
     frame_step: int
     prefetch_ahead: int
+    frame_force: object = None
 
 
 def _integer(value, name, *, positive=False):
@@ -56,6 +60,28 @@ def _apply_binding(binding, scene_frame):
     )
     binding.obj["cb_trajectory_frame_index"] = int(index)
     binding.obj.data.update()
+    force = binding.frame_force
+    if force is not None:
+        # Never leave another frame's force visible on the current coordinates.
+        modifier = binding.obj.modifiers.get(_MODIFIER_NAME)
+        try:
+            if force.validity_mask is not None and not numpy.all(
+                force.validity_mask.values[index]
+            ):
+                raise ValueError("force values are missing in this frame")
+            modifier = write_vector_view(
+                binding.obj, force.data.values[index], dataset_id=force.id,
+                revision=force.revision, semantic_role=force.semantic_role,
+                unit=force.data.unit,
+                display_scale=binding.obj.get("cb_vector_display_scale", 1.0),
+            )
+        except (ValueError, IndexError) as error:
+            if modifier is not None:
+                modifier.show_viewport = modifier.show_render = False
+            binding.obj["cb_trajectory_force_status"] = str(error)
+        else:
+            modifier.show_viewport = modifier.show_render = True
+            binding.obj["cb_trajectory_force_status"] = "current frame"
     if binding.prefetch_ahead:
         binding.manager.prefetch_around(index, after=binding.prefetch_ahead)
 
@@ -91,6 +117,7 @@ def configure_trajectory_view(
     frame_step=1,
     cache_size=3,
     prefetch_ahead=0,
+    frame_force=None,
 ):
     if not isinstance(frames, FrameSet):
         raise TypeError("frames must be a FrameSet")
@@ -101,10 +128,18 @@ def configure_trajectory_view(
     if prefetch_ahead < 0:
         raise ValueError("prefetch_ahead must be non-negative")
     _require_structure_match(obj, frames.structure_id, frames.data.shape[1])
+    if frame_force is not None and (
+        not isinstance(frame_force, AtomFrameProperty)
+        or frame_force.frame_set_id != frames.id
+        or frame_force.semantic_role != "atomic_force"
+        or frame_force.data.dims != ("frame", "atom", "xyz")
+        or frame_force.data.shape != frames.data.shape
+    ):
+        raise ValueError("force dataset does not match the selected trajectory")
     key = obj.as_pointer()
     manager = TrajectoryFrameManager(frames, cache_size=cache_size)
     binding = _TrajectoryBinding(
-        obj, manager, frame_start, frame_step, prefetch_ahead
+        obj, manager, frame_start, frame_step, prefetch_ahead, frame_force
     )
     try:
         _apply_binding(binding, bpy.context.scene.frame_current)

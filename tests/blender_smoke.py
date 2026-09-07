@@ -3415,23 +3415,63 @@ def assert_dataset_and_trajectory_views(module_key):
             browser.atom_frame_vector(project, frame_force.id, 1)
         )
         assert force_structure is structure
-        adapter.write_vector_view(
-            obj,
-            values,
-            dataset_id=selected_force.id,
-            revision=selected_force.revision,
-            semantic_role=selected_force.semantic_role,
-            unit=selected_force.data.unit,
-            display_scale=0.5,
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        force_session = SimpleNamespace(
+            project=project, active_entity_id=frame_force.id,
+            active_view_object_name=obj.name,
         )
+        bpy.context.view_layer.objects.active = obj
+        with patch.object(browser, "get_scene_session", return_value=force_session):
+            assert bpy.ops.chemblender.apply_frame_force(
+                display_scale=0.5,
+            ) == {"FINISHED"}
         vector_values = [0.0] * 9
         obj.data.attributes["cbq_vector"].data.foreach_get(
             "vector", vector_values
         )
         assert vector_values == [2.0, 0.0, 0.0, 0.0, 2.5, 0.0, 0.0, 0.0, 3.0]
+        bpy.context.scene.frame_set(10)
+        obj.data.attributes["cbq_vector"].data.foreach_get("vector", vector_values)
+        assert vector_values == [0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.5], (
+            "force vectors did not follow the trajectory frame"
+        )
         bpy.context.scene.frame_set(100)
+        obj.data.attributes["cbq_vector"].data.foreach_get("vector", vector_values)
+        assert vector_values == [2.0, 0.0, 0.0, 0.0, 2.5, 0.0, 0.0, 0.0, 3.0]
         assert obj["cb_trajectory_frame_index"] == 1
         assert len(bpy.data.objects) >= 1
+        trajectory.clear_trajectory_view(obj)
+        # Force selected before playback configuration must bind as well.
+        force_session.active_entity_id = frames.id
+        with patch.object(browser, "get_scene_session", return_value=force_session):
+            assert bpy.ops.chemblender.configure_trajectory_playback(
+                frame_start=10, frame_step=2,
+            ) == {"FINISHED"}
+        bpy.context.scene.frame_set(10)
+        obj.data.attributes["cbq_vector"].data.foreach_get("vector", vector_values)
+        assert vector_values == [0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.5]
+        from dataclasses import replace
+
+        masked_force = replace(
+            frame_force,
+            status=core.DatasetStatus.PARTIAL,
+            validity_mask=core.ArrayData(
+                numpy.asarray([[True] * 3, [False] * 3]),
+                ("frame", "atom"), "dimensionless",
+            ),
+        )
+        trajectory.configure_trajectory_view(
+            obj, frames, frame_start=10, frame_step=2, frame_force=masked_force,
+        )
+        bpy.context.scene.frame_set(12)
+        arrows = obj.modifiers["ChemBlender Vector Arrows"]
+        assert not arrows.show_viewport and not arrows.show_render
+        assert "missing" in obj["cb_trajectory_force_status"]
+        bpy.context.scene.frame_set(10)
+        assert arrows.show_viewport and arrows.show_render
+        assert obj["cb_trajectory_force_status"] == "current frame"
         trajectory.clear_trajectory_view(obj)
     finally:
         bpy.context.scene.frame_set(1)

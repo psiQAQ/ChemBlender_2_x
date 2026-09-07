@@ -916,6 +916,10 @@ class CHEMBLENDER_OT_apply_frame_force(bpy.types.Operator):
                 raise ValueError(
                     "active object is not the current matching Structure view"
                 )
+            if obj.get("cb_trajectory_dataset_id") not in (
+                None, str(dataset.frame_set_id),
+            ):
+                raise ValueError("force dataset does not match the active trajectory")
             write_vector_view(
                 obj,
                 values,
@@ -925,6 +929,15 @@ class CHEMBLENDER_OT_apply_frame_force(bpy.types.Operator):
                 unit=dataset.data.unit,
                 display_scale=self.display_scale,
             )
+            if obj.get("cb_trajectory_dataset_id") == str(dataset.frame_set_id):
+                _trajectory_view.configure_trajectory_view(
+                    obj, session.project.datasets[dataset.frame_set_id],
+                    frame_start=obj.get("cb_trajectory_frame_start", 1),
+                    frame_step=obj.get("cb_trajectory_frame_step", 1),
+                    cache_size=obj.get("cb_trajectory_cache_size", 3),
+                    prefetch_ahead=obj.get("cb_trajectory_prefetch_ahead", 0),
+                    frame_force=dataset,
+                )
         except (AttributeError, TypeError, ValueError, IndexError) as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
@@ -961,12 +974,21 @@ class CHEMBLENDER_OT_configure_trajectory_playback(bpy.types.Operator):
                 raise ValueError(
                     "active object is not the current matching Structure view"
                 )
+            force_options = {}
+            force_id = obj.get("cb_vector_dataset_id")
+            if force_id:
+                force = session.project.datasets.get(UUID(force_id))
+                if isinstance(force, AtomFrameProperty):
+                    if force.revision != obj.get("cb_vector_dataset_revision"):
+                        raise ValueError("force View references a stale dataset")
+                    force_options["frame_force"] = force
             _trajectory_view.register()
             _trajectory_view.configure_trajectory_view(
                 obj,
                 frames,
                 frame_start=self.frame_start,
                 frame_step=self.frame_step,
+                **force_options,
             )
             context.scene.frame_end = self.frame_start + (
                 frames.data.shape[0] - 1
@@ -1492,6 +1514,9 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
                     icon="FORCE_FORCE",
                 )
             draw_trajectory_controls(layout, selected)
+            obj = context.active_object
+            if obj is not None and obj.get("cb_trajectory_force_status"):
+                layout.label(text="Force: " + obj["cb_trajectory_force_status"])
             draw_substructure_controls(layout, selected, settings)
             _biological.draw_biological_controls(
                 layout,

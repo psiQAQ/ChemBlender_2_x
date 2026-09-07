@@ -2363,9 +2363,10 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         class ViewObject(dict):
             name = "Water trajectory"
 
-        for missing_structure, revision in (
-            (True, "structure-r1"),
-            (False, "stale-structure-r0"),
+        for missing_structure, revision, trajectory_id in (
+            (True, "structure-r1", str(FRAME_SET_ID)),
+            (False, "stale-structure-r0", str(FRAME_SET_ID)),
+            (False, "structure-r1", str(FORCE_ID)),
         ):
             with self.subTest(
                 missing_structure=missing_structure,
@@ -2379,6 +2380,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
                     cb_structure_id=str(STRUCTURE_ID),
                     cb_structure_revision=revision,
                     cb_trajectory_frame_index=1,
+                    cb_trajectory_dataset_id=trajectory_id,
                 )
                 session = SimpleNamespace(
                     project=project,

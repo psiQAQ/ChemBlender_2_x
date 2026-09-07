@@ -121,3 +121,7 @@ ChemBlender 自有的 Volume/Surface cache 位于 sidecar 的 derived cache 范�
 | CJSON/QCSchema 没有自动专用 View | 先看导入到哪些实体与属性。当前 UI 只为可支持的 Structure/Grid/属性创建 View，不为每种 envelope 建独立面板 |
 
 继续：[导出数据](04-export.md)。
+
+### Trajectory force display
+
+Select the matching Structure View and its Atomic Force dataset, then choose **Show Force Vectors**. After **Configure Trajectory Playback**, the arrows follow the coordinate frame and retain their displayed scale and original unit. Either operation order is supported. Frames with missing force values hide the arrows and show a `Force:` status in Project Browser; a valid frame restores them.
