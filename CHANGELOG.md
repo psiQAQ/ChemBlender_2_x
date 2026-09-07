@@ -13,6 +13,7 @@ All notable changes to the maintained ChemBlender release line are recorded here
 - Convert explicitly declared Gaussian/ORCA Bohr coordinates to angstrom and preserve conversion provenance; reject conflicting or unsupported coordinate-unit settings. Reader version 2 imports use a new revision without rescaling existing project data.
 - Detect changed reader interpretations at the same source locator and release lazy array mappings before atomic sidecar replacement on Windows.
 - Validate current task/index consistency after task archival instead of requiring a completed task to remain active.
+- Defer Project Browser RNA projection until after panel drawing so Blender's read-only draw context no longer leaves the data list blank; coalesce unchanged redraws and cancel pending refreshes on file changes or unload.
 
 ## [2.4.0] - 2026-08-03
 

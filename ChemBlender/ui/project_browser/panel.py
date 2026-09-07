@@ -107,6 +107,7 @@ _SCENE_PROPERTY_NAME = "chemblender_project_browser"
 _TOPOLOGY_SCENE_PROPERTY_NAME = "chemblender_topology"
 _OWNED_SCENE_PROPERTY = None
 _OWNED_TOPOLOGY_SCENE_PROPERTY = None
+_DEFERRED_BROWSER_REFRESHES = {}
 _FATAL_EXCEPTIONS = (
     KeyboardInterrupt,
     SystemExit,
@@ -1119,6 +1120,51 @@ def _copy_rows(collection, rows):
         projected.view_count = row.view_count
 
 
+def _browser_refresh_key(scene):
+    session = get_scene_session(scene)
+    settings = getattr(scene, _SCENE_PROPERTY_NAME)
+    return (
+        session.id,
+        get_quick_import_state(session).browser_revision,
+        settings.mode, settings.search, settings.quality_filter,
+        settings.page, settings.page_size,
+        presentation_view_records(scene),
+    )
+
+
+def _clear_deferred_browser_refreshes(_session=None):
+    for _key, callback in _DEFERRED_BROWSER_REFRESHES.values():
+        if callback is not None and bpy.app.timers.is_registered(callback):
+            bpy.app.timers.unregister(callback)
+    _DEFERRED_BROWSER_REFRESHES.clear()
+
+
+def _request_project_browser_refresh(scene):
+    # Blender forbids Scene RNA writes while drawing. Coalesce redraw requests
+    # and publish the small projection on the next main-thread timer instead.
+    pointer = scene.as_pointer()
+    key = _browser_refresh_key(scene)
+    previous = _DEFERRED_BROWSER_REFRESHES.get(pointer)
+    if previous is not None and (previous[0] == key or previous[1] is not None):
+        return
+
+    def refresh():
+        _DEFERRED_BROWSER_REFRESHES.pop(pointer, None)
+        if not any(item.as_pointer() == pointer for item in bpy.data.scenes):
+            return None
+        refresh_project_browser(scene)
+        _DEFERRED_BROWSER_REFRESHES[pointer] = (_browser_refresh_key(scene), None)
+        for window in bpy.context.window_manager.windows:
+            if window.scene == scene:
+                for area in window.screen.areas:
+                    if area.type == "VIEW_3D":
+                        area.tag_redraw()
+        return None
+
+    bpy.app.timers.register(refresh, first_interval=0.0)
+    _DEFERRED_BROWSER_REFRESHES[pointer] = (key, refresh)
+
+
 def refresh_project_browser(scene):
     session = get_scene_session(scene)
     state = get_quick_import_state(session)
@@ -1353,7 +1399,7 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
 
     def draw(self, context):
         settings = getattr(context.scene, _SCENE_PROPERTY_NAME)
-        refresh_project_browser(context.scene)
+        _request_project_browser_refresh(context.scene)
         session = get_scene_session(context.scene)
         layout = self.layout
         layout.prop(settings, "mode", expand=True)
@@ -1543,6 +1589,7 @@ def register():
             _OWNED_TOPOLOGY_SCENE_PROPERTY,
         ):
             register_session_cleanup(clear_browser_session_cache)
+            register_session_cleanup(_clear_deferred_browser_refreshes)
             return
         raise RuntimeError(
             f"Scene.{_TOPOLOGY_SCENE_PROPERTY_NAME} is no longer owned "
@@ -1574,12 +1621,14 @@ def register():
         raise failure
     _OWNED_TOPOLOGY_SCENE_PROPERTY = topology_identity
     register_session_cleanup(clear_browser_session_cache)
+    register_session_cleanup(_clear_deferred_browser_refreshes)
 
 
 def unregister():
     global _OWNED_SCENE_PROPERTY
     global _OWNED_TOPOLOGY_SCENE_PROPERTY
     clear_browser_caches()
+    _clear_deferred_browser_refreshes()
     topology_owned = _OWNED_TOPOLOGY_SCENE_PROPERTY
     if (
         topology_owned is not None
@@ -1599,6 +1648,7 @@ def unregister():
             delattr(bpy.types.Scene, _SCENE_PROPERTY_NAME)
         _OWNED_SCENE_PROPERTY = None
     unregister_session_cleanup(clear_browser_session_cache)
+    unregister_session_cleanup(_clear_deferred_browser_refreshes)
 
 
 __all__ = (

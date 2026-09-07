@@ -943,6 +943,76 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         if hasattr(_Scene, "chemblender_topology"):
             del _Scene.chemblender_topology
 
+    def test_panel_draw_defers_rna_writes_and_cancels_pending_refresh(self):
+        panel = importlib.import_module("ChemBlender.ui.project_browser.panel")
+        callbacks = set()
+        self.fake_bpy.app = SimpleNamespace(timers=SimpleNamespace(
+            register=lambda callback, **kwargs: callbacks.add(callback),
+            unregister=callbacks.remove,
+            is_registered=lambda callback: callback in callbacks,
+        ))
+        settings = SimpleNamespace(
+            mode="by_source", search="", quality_filter="all", page=0,
+            page_size=998,
+        )
+        scene = SimpleNamespace(
+            as_pointer=lambda: 42, chemblender_project_browser=settings,
+        )
+        self.fake_bpy.data = SimpleNamespace(scenes=[scene])
+        self.fake_bpy.context = SimpleNamespace(
+            window_manager=SimpleNamespace(windows=[]),
+        )
+        state = SimpleNamespace(browser_revision=0)
+        session = SimpleNamespace(id=uuid4())
+        writes = []
+        drawing = True
+
+        def refresh(target):
+            self.assertFalse(drawing, "RNA writes are forbidden during Panel.draw")
+            writes.append(target)
+
+        class DrawReachedLayout(Exception):
+            pass
+
+        class Layout:
+            def prop(self, *args, **kwargs):
+                raise DrawReachedLayout
+
+        instance = panel.CHEMBLENDER_PT_project_browser()
+        instance.layout = Layout()
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            patch.object(panel, "get_quick_import_state", return_value=state),
+            patch.object(panel, "presentation_view_records", return_value=()),
+            patch.object(panel, "refresh_project_browser", side_effect=refresh),
+        ):
+            for _ in range(2):
+                with self.assertRaises(DrawReachedLayout):
+                    instance.draw(SimpleNamespace(scene=scene))
+            self.assertEqual(len(callbacks), 1)
+            self.assertEqual(writes, [])
+            drawing = False
+            callbacks.pop()()
+            self.assertEqual(writes, [scene])
+            drawing = True
+            with self.assertRaises(DrawReachedLayout):
+                instance.draw(SimpleNamespace(scene=scene))
+            self.assertEqual(callbacks, set())
+            state.browser_revision += 1
+            with self.assertRaises(DrawReachedLayout):
+                instance.draw(SimpleNamespace(scene=scene))
+            self.assertEqual(len(callbacks), 1)
+            self.fake_bpy.data.scenes = []
+            drawing = False
+            callbacks.pop()()
+            self.assertEqual(writes, [scene])
+            self.fake_bpy.data.scenes = [scene]
+            drawing = True
+            with self.assertRaises(DrawReachedLayout):
+                instance.draw(SimpleNamespace(scene=scene))
+            panel.unregister()
+            self.assertEqual(callbacks, set())
+
     def test_rna_projection_contains_only_small_values(self):
         panel = importlib.import_module(
             "ChemBlender.ui.project_browser.panel"

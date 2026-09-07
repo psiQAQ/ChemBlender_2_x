@@ -33,3 +33,10 @@
 
 14 项将分别保存明细，UI 和 MCP 使用独立前置状态。真实 UI 通过原生鼠标、键盘、菜单和弹窗操作；公共 MCP 仅使用公开 Operator 与公开状态。测试脚本的 HWND/键盘扫描码问题已修正，不能归为产品缺陷。
 
+## UI 现场修复：Project Browser
+
+`IMP-05-water-view.png` 与 `logs/ui-blender-error.log` 记录了真实 draw 上下文禁止写 Scene RNA 的失败，导致 Browser 空白。保存失败现场为 `outputs/failures/IMP-before-browser-fix.blend` 及其 `.cbq`。新增回归先失败；修复将投影更新延后到一次性主线程 timer，合并重复请求，并在文件切换/卸载时取消 timer。源码全量重测 2,290 tests / 26 skips / 0 failures or errors；仍需新包 UI/MCP 复核。
+
+修复 ZIP：`7579c1541eb242cb9220d3c7ff40296446d3f083641cf5c0c50c3f1fb9dc2112`，29,983,926 bytes；只有 `ui/project_browser/panel.py` 相对首包增加 2,087 unpacked bytes，压缩包增加 516 bytes。源码 section 2,695,847 bytes、总解压 32,090,603 bytes。新的五文件审计位于 `package-browser-fix/`，旧包保留在 `package/`，通过记录不会混用。
+
+新包 UI 安装/重启用后，`ENV-R2-04-browser.png` 已实际显示 `No project data`、By Source/By Data 与筛选，错误日志没有 draw traceback。完整隔离 smoke 通过，耗时 103.48 s；仍需重跑有数据的 IMP 与 MCP 复核。
