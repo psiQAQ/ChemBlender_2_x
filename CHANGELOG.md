@@ -10,6 +10,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Fixed
 
+- Initialize allowed conflict choices before dynamic RNA enums so public Preview JSON can confirm reuse and new source revisions through MCP.
+
 - Make Relink select the sidecar manifest through the native file browser, recover a Missing load against its saved scene identity and manifest hash, and refresh visible project status after successful Relink/Verify. Reject conflicting or incomplete links without adopting a candidate.
 
 - Use the destination passed to Blender save handlers so first Save and Save As publish the correct sibling sidecar in one operation, including a different directory or basename.

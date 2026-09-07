@@ -104,3 +104,5 @@ Operator 的短名不等于参数名。Agent 必须先“检查 Operator RNA”�
 直接执行 `bpy.ops.chemblender.quick_import(...)` 或 `import_smiles_text(...)` 返回 `RUNNING_MODAL` 时，等待公开 `scene.chemblender_quick_import.preview_json` 非空，再用 `json.loads` 读取 `rows`、`grouping_suggestions` 和 `conformer_grouping_suggestions`。该只读投影复用 UI 预览的质量、阻断原因、默认 View 和冲突/分组决策，不写入 `.blend` 或 sidecar；任务活动期间及取消/完成后为空字符串。
 
 检查每一行后显式调用 `bpy.ops.chemblender.confirm_import(**preview)`；可修改投影中的允许决策，例如 `default_view` 或已审阅的 conflict/grouping confirmation。传入的行仍按当前 staging、source IDs 与 live conflicts 验证，不会被默认值覆盖。需要停止时调用 `bpy.ops.chemblender.cancel_import()`。直接执行不会强制弹出无法由 MCP 关闭的旧对话框；鼠标触发的 `INVOKE_DEFAULT` 保持原有预览弹窗。
+
+重复输入的 `reuse_existing` 和同路径内容变化的 `new_revision` 也可直接通过该 JSON 确认；保留行中的 `allowed_actions`，最终允许动作仍由 live conflict 校验。Blender 按 RNA 声明顺序转换 collection 参数，插件先填充允许值再转换动态枚举。

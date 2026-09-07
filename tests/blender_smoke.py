@@ -1271,6 +1271,26 @@ def assert_quick_import(module_key, repository_root):
     assert tuple(bpy.data.objects) == objects_before_public_confirm
     assert len(session.project.structures) == 1
     assert bpy.context.scene.chemblender_quick_import.preview_json == ""
+    stage(repository_root / "tests/fixtures/xyz/water.xyz")
+    duplicate = json.loads(bpy.context.scene.chemblender_quick_import.preview_json)
+    duplicate["rows"][0]["default_view"] = False
+    assert duplicate["rows"][0]["conflict_action"] == "reuse_existing"
+    assert bpy.ops.chemblender.confirm_import(**duplicate) == {"FINISHED"}
+    assert len(session.project.structures) == 1
+    session = ui.new_scene_session(bpy.context.scene)
+    with TemporaryDirectory() as directory:
+        source = Path(directory) / "water.xyz"
+        original = (repository_root / "tests/fixtures/xyz/water.xyz").read_bytes()
+        for data in (original, original.replace(b"O 0.000000", b"O 1.000000")):
+            source.write_bytes(data)
+            stage(source)
+            public = json.loads(bpy.context.scene.chemblender_quick_import.preview_json)
+            public["rows"][0]["default_view"] = False
+            if data != original:
+                assert public["rows"][0]["conflict_action"] == "new_revision"
+            assert bpy.ops.chemblender.confirm_import(**public) == {"FINISHED"}
+        assert len(session.project.source_revisions) == 2
+        assert sorted(float(item.coordinates.values[0, 0]) for item in session.project.structures.values()) == [0.0, 1.0]
     session = ui.new_scene_session(bpy.context.scene)
 
     before = project_snapshot()

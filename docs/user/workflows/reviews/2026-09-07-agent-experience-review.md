@@ -5,7 +5,7 @@
 
 ## 当前检查点
 
-当前候选 ZIP `03cf499abf22e0ba1dd3dcbaace19e6b9c73103bd738f373528cad2d23cd9bd8`（ffce8ff）：2,303 tests，26 skips，无失败/错误；隔离 smoke 105.39 s。源码修复后正在继续逐项体验；以下各阶段旧包数据保留为失败—修复链，不能混作当前包通过结果。
+最近完成自动验证的 R16 ZIP `e79c84cdb18c6e4345e48a42747689137b82d55191a33d4baff3c27a0568b9f2`（2d55e0d）：2,308 tests，26 skips，无失败/错误；隔离 smoke 105.12 s。R17 revision RNA 修复正在全量验证。源码修复后正在继续逐项体验；以下各阶段旧包数据保留为失败—修复链，不能混作当前包通过结果。
 
 | 项目 | UI | MCP |
 | --- | --- | --- |
@@ -14,7 +14,7 @@
 | DATA | R8 Passed；待全轮最终复核 | R8 Passed；待全轮最终复核 |
 | VIEW | R13 Passed；待全轮最终复核 | R13 Passed；待全轮最终复核 |
 | EXP | R14 Passed；待全轮最终复核 | R14 Passed；待全轮最终复核 |
-| LIFE | 执行中 | Not Run |
+| LIFE | R16 Passed；待最终包复核 | 保存/恢复通过；revision Failed，修复重测中 |
 | MIG / AGENT / OUTSIDE | Not Run | Not Run |
 | REP-MOLECULAR / REP-TRAJECTORY / REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
 

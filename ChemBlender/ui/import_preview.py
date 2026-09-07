@@ -266,11 +266,13 @@ class CHEMBLENDER_PG_import_preview_row(bpy.types.PropertyGroup):
     conformer_suggestion_count: IntProperty()
     quality: StringProperty()
     conflict_id: StringProperty()
+    # Blender converts collection dictionaries in RNA declaration order.
+    # The dynamic enum must see its allowed items before accepting a value.
+    allowed_actions: StringProperty()
     conflict_action: EnumProperty(items=_conflict_action_items)
     conflict_candidates: CollectionProperty(
         type=CHEMBLENDER_PG_import_conflict_candidate
     )
-    allowed_actions: StringProperty()
     default_view: BoolProperty(name="Create Default View", default=True)
     default_view_label: StringProperty()
     blocking: BoolProperty(default=False)

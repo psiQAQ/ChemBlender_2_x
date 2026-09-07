@@ -1,6 +1,6 @@
 # LIFE — 配对保存、Save As、冷重开与恢复
 
-执行者：**Agent 模拟用户**。UI **Failed（修复后重测中）**；MCP **Not Run**。
+执行者：**Agent 模拟用户**。UI **Passed（R16，待最终包复核）**；MCP **Failed（revision 修复重测中）**。
 
 前置：独立空 LIFE UI，导入本轮不可变 ain-aspirin-v2000.mol，21 atoms / 21 bonds。原生点击 Select Files、Preview、确认；Quick Import 的 Save Project 首次仅保存 blend，第二次保存产生 cbq。随后 Ctrl+Shift+S 另存新目录，界面显示 Connected、clean，却没有新 cbq，locator 仍为 LIFE-UI.cbq。原配对完整，科学数组未改变。
 
@@ -30,3 +30,20 @@ R15 完整单测 2305 / 26 skips / 零失败；UI 首次 Save 和跨目录 Save 
 R16 修复选择器、保存身份校验和状态刷新；候选必须匹配已有 Scene 的 UUID/schema/manifest hash，冲突或残缺 link 不采用。完整测试最初暴露三个旧迁移回归，已在原有可回滚事务内显式发布新 generation，保留失败回滚及重开检查。最终 120 专项、2308 全量/26 skips、隔离 smoke 105.12 s 均通过。包 e79c84cdb18c6e4345e48a42747689137b82d55191a33d4baff3c27a0568b9f2，29,987,725 packed / 32,106,506 unpacked；相对 R15，project_service.py +1355/+177、migration.py +325/+94、Browser panel +749/+144。
 
 R16 原生输入脚本曾在未打开文件选择器时误输路径，影响了测试视图。未保存这些误操作，通过 File > Open > Don't Save 重开原测试副本；已增加文件选择器状态保护。这些截图属于测试执行故障，不是产品流程通过证据。修复后的完整 UI/MCP LIFE 仍待完成。
+
+R16 / 2d55e0d 的干净 UI 完整路径通过：Select Files 导入 21-atom MOL，Save Project 一次配对，Save As 跨目录配对，正常退出 PID33140 后以 PID2156 冷重开，启用键与 saved UUID/hash 一致。两个独立恢复副本分别完成 Missing→Verify 拒绝→恢复原目录→Verify 成功，以及 Missing→选择 relocated.cbq/manifest.json→Relink 成功。
+
+受控 water.xyz 工作副本重新导入 +1 Å X 平移版本时，UI Preview 提示 New Revision；确认后旧 View 坐标保持不变，Comparison 建立新 View。最终 LIFE/UI 集合含 21-atom aspirin 和两个 3-atom water Views，蓝色旧版本、红色新版本；展示位置偏移不写入科学数组。
+
+- [R16 UI 最终配对](../../../../../.blend-analysis/2026-09-07-review/outputs/LIFE-R16-UI-final/LIFE-UI.blend)
+- [R16 UI 渲染](../../../../../.blend-analysis/2026-09-07-review/screenshots/LIFE-R16-UI-render-final.png)
+- [冷重开](../../../../../.blend-analysis/2026-09-07-review/outputs/LIFE-R16-UI-cold.json)
+- [Verify 恢复截图](../../../../../.blend-analysis/2026-09-07-review/screenshots/LIFE-R16-21-verify-restored.png)
+- [Relink 身份](../../../../../.blend-analysis/2026-09-07-review/outputs/LIFE-R16-UI-relinked.json)
+- [Comparison 科学坐标](../../../../../.blend-analysis/2026-09-07-review/outputs/LIFE-R16-UI-revision-comparison.json)
+
+MCP 独立空场景导入 Preview 0.365 s、确认 0.337 s；公开 wm Save/Save As、Missing Verify 拒绝与原位恢复、Relink directory 均通过。冷重开最终 PID11352 的启用键、21 atoms、UUID/hash 一致。MCP weak_sandbox 禁止 wm.quit_blender；进程关闭由外部原生输入测试脚本完成，产品操作仍走 MCP。脚本曾在确认退出失败前多开 PID10484，两份自建进程正常关闭后才重启；不把该重复启动记作通过。
+
+MCP 的 New Revision 确认在 Blender collection→RNA 转换时失败：动态 conflict_action 尚看不到 allowed_actions，new_revision 被拒绝。High：阻断合法 revision，未改变源科学数据；完整失败配对与 Preview 冻结于 outputs/failures/LIFE-revision-rna/。旧 ZIP 原生回归也复现 reuse_existing 被拒绝。R17 最小修复把 allowed_actions 放在动态枚举之前；新增真实 RNA 复用/新 revision 回归。第一次新 smoke 的数值断言写错 Structure 字段，已改用 coordinates.values，保留该测试错误日志。完整验证及双路径重测仍在执行。
+
+R17 自动验证：99 专项、2308 全量（26 skips）、隔离 smoke 104.89 s、compile/docs/native build/ZIP audit/verifier 均通过。包 319de78bf3f4d27c3df5e8864cc3f67d3f2f7b02d72216f8aeb47c26331e3f91，29,987,802 packed / 32,106,657 unpacked；只有 import_preview.py +151 unpacked / +77 packed，allowance 为零。
