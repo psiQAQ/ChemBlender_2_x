@@ -349,6 +349,20 @@ class ProjectBrowserModelTests(unittest.TestCase):
         with self.assertRaises(FrozenInstanceError):
             view.label = "changed"
 
+    def test_by_source_includes_unattributed_migrated_and_derived_entities(self):
+        project = sample_project()
+        structure = Structure(
+            id=uuid4(), revision="migrated", atomic_numbers=(1,),
+            coordinates=ArrayData(numpy.zeros((1, 3)), ("atom", "xyz"), "angstrom"),
+        )
+        project.commit(ImportBatch(structures=(structure,)))
+        rows = build_browser_rows(project, mode=BrowserMode.BY_SOURCE)
+        selected = [row for row in rows if row.entity_id == structure.id]
+        self.assertEqual(len(selected), 1)
+        parent = next(row for row in rows if row.id == selected[0].parent_id)
+        self.assertEqual(parent.label, "Unattributed project data")
+        self.assertEqual(sum(row.entity_id == STRUCTURE_ID for row in rows), 1)
+
     def test_by_source_is_a_deterministic_flat_tree(self):
         source_path = f"source:{SOURCE_ID}"
         revision_path = f"{source_path}/revision:{REVISION_ID}"

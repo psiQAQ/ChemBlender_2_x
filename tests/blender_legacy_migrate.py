@@ -380,6 +380,18 @@ def main():
     finally:
         migration.commit_legacy_migration = original_commit
     assert result.sidecar_path.is_dir()
+    from ChemBlender.ui.session import get_scene_session_status
+    assert get_scene_session_status(scene)[0] == "connected"
+    with bpy.context.temp_override(scene=scene, view_layer=scene.view_layers[0]):
+        bpy.context.view_layer.update()
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        for name in result.view_names:
+            obj = bpy.data.objects[name]
+            visible_faces = sum(
+                len(item.evaluated_get(depsgraph).data.polygons)
+                for item in (obj, *obj.children) if item.type == "MESH"
+            )
+            assert visible_faces > 0, (name, "migration must render")
     assert result.cleanup_warnings == ()
     assert get_quick_import_state(session).browser_revision == revision_before_migration + 1
     assert _entity_id_sets(session.project) == expected_entity_ids

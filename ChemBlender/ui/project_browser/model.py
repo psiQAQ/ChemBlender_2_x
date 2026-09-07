@@ -355,6 +355,7 @@ def _unique_ids(values):
 def _by_source(project, views):
     rows = []
     entities = _entity_lookup(project)
+    attributed = set()
     sources = sorted(
         project.sources.values(),
         key=lambda value: (value.display_name.casefold(), str(value.id)),
@@ -400,6 +401,7 @@ def _by_source(project, views):
                 for entity_id in _unique_ids(revision.created_entity_ids)
                 if entity_id in entities
             )
+            attributed.update(entity.id for entity in created)
             for entity in created:
                 rows.extend(_entity_row(entity, revision_id, 2, views))
             diagnostics = sorted(
@@ -428,6 +430,17 @@ def _by_source(project, views):
                         diagnostic.entity_id,
                     )
                 )
+    unattributed = sorted(
+        (entity for entity in entities.values() if entity.id not in attributed),
+        key=lambda entity: (_label(entity).casefold(), str(entity.id)),
+    )
+    if unattributed:
+        parent = "source:unattributed"
+        rows.append(BrowserRow(
+            parent, None, 0, "source", "Unattributed project data", "", 0, None,
+        ))
+        for entity in unattributed:
+            rows.extend(_entity_row(entity, parent, 1, views))
     return tuple(rows)
 
 

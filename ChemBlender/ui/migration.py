@@ -224,6 +224,40 @@ def _apply_view_settings(view, settings, owned_materials):
         raise RuntimeError("migration node audit verification failed")
 
 
+def _attach_migration_display(view):
+    from .. import node
+
+    def build(modifier):
+        # Load known packaged assets under fresh datablock identities. Existing
+        # legacy groups belong to the backup and must never be stamped or edited.
+        names = (
+            ("CH_添加分子属性", "CH_分子球棍模型", "CH_添加分子材质") if node.language
+            else ("CH_Add Attributes", "CH_Ball and Stick", "CH_Add Material")
+        )
+        with bpy.data.libraries.load(node.filepath, link=False) as (source, target):
+            if any(name not in source.node_groups for name in names):
+                raise RuntimeError("packaged migration display assets are missing")
+            target.node_groups = list(names)
+        group = modifier.node_group
+        input_node, output_node = node.set_io_nodes(modifier, (0, 0), (600, 0))
+        previous = input_node.outputs[0]
+        for index, asset in enumerate(target.node_groups):
+            instance = group.nodes.new("GeometryNodeGroup")
+            instance.node_tree = asset
+            instance.location = (200 * (index + 1), 0)
+            if index == 1:
+                instance.inputs[6].default_value = 0.5
+                instance.inputs[8].default_value = True
+            group.links.new(previous, instance.inputs[0])
+            previous = instance.outputs[0]
+        group.links.new(previous, output_node.inputs[0])
+
+    node._ensure_generated_modifier(
+        view, node._STRUCTURE_BALL_STICK_MODIFIER,
+        node._STRUCTURE_BALL_STICK_CONTRACT, build,
+    )
+
+
 def _new_view(plan, view_plan, collection, owned_materials):
     structure = plan.project.structures[view_plan.structure_id]
     topology = next(
@@ -254,6 +288,7 @@ def _new_view(plan, view_plan, collection, owned_materials):
         if view.get("cb_structure_contract") != "structure_view_v1":
             raise RuntimeError(f"migration view verification failed: {name}")
         _apply_view_settings(view, view_plan.settings, owned_materials)
+        _attach_migration_display(view)
         return view
     except BaseException as error:
         if view is not None and view.name in bpy.data.objects:
@@ -430,6 +465,8 @@ def migrate_legacy_scene(scene, *, confirmed):
     swapped = False
     committed = False
     transaction_id = uuid4()
+    original_node_groups = set(bpy.data.node_groups)
+    original_materials = set(bpy.data.materials)
     try:
         for view_plan in preview.plan.view_plans:
             views.append(_new_view(preview.plan, view_plan, scene.collection, materials))
@@ -475,6 +512,9 @@ def migrate_legacy_scene(scene, *, confirmed):
 
         advance_browser_revision(session)
         session.mark_clean()
+        from .session import _record_result
+
+        _record_result(linked)
         return result
     except BaseException as error:
         if backup is not None:
@@ -485,6 +525,13 @@ def migrate_legacy_scene(scene, *, confirmed):
         for material in materials:
             if material.name in bpy.data.materials and material.users == 0:
                 _cleanup(error, "migration material rollback failed", lambda material=material: bpy.data.materials.remove(material))
+        # Fresh packaged display assets are owned by this synchronous transaction.
+        for group in tuple(bpy.data.node_groups):
+            if group not in original_node_groups:
+                _cleanup(error, "migration asset rollback failed", lambda group=group: bpy.data.node_groups.remove(group))
+        for material in tuple(bpy.data.materials):
+            if material not in original_materials and material.users == 0:
+                _cleanup(error, "migration asset material rollback failed", lambda material=material: bpy.data.materials.remove(material))
         _cleanup(error, "scene-link rollback failed", lambda: _restore_scene_links(links_snapshot))
         if committed and session.project is not session_snapshot[0]:
             _cleanup(error, "candidate project cleanup failed", lambda: close_project(session.project))
