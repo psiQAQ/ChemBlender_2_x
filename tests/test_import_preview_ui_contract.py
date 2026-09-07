@@ -1565,6 +1565,26 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.assertIsNone(state.preview)
         self.assertIsNone(state.staging_session)
 
+    def test_public_preview_cancellation_updates_visible_summary(self):
+        for operator_name, method in (
+            ("CHEMBLENDER_OT_confirm_import", "cancel"),
+            ("CHEMBLENDER_OT_cancel_import", "execute"),
+        ):
+            with self.subTest(operator=operator_name):
+                _registry, state = self.stage("tests/fixtures/xyz/water.xyz")
+                before = self.snapshot(self.session)
+                settings = SimpleNamespace(recent_summary="1 source(s) staged via xyz")
+                context = SimpleNamespace(
+                    scene=SimpleNamespace(chemblender_quick_import=settings)
+                )
+                operator = getattr(self.module, operator_name)()
+                with patch.object(self.module, "get_scene_session", return_value=self.session):
+                    getattr(operator, method)(context)
+                self.assertEqual(settings.recent_summary, "Import cancelled")
+                self.assertIsNone(state.staging_session)
+                self.assertIsNone(state.preview)
+                self.assertEqual(self.snapshot(self.session), before)
+
     def test_canonical_diagnostics_survive_staging_cleanup_for_ui_actions(self):
         _registry, state = self.stage("tests/fixtures/xyz/water.xyz")
         report = state.diagnostics_report

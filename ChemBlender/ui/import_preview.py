@@ -271,7 +271,7 @@ class CHEMBLENDER_PG_import_preview_row(bpy.types.PropertyGroup):
         type=CHEMBLENDER_PG_import_conflict_candidate
     )
     allowed_actions: StringProperty()
-    default_view: BoolProperty(default=True)
+    default_view: BoolProperty(name="Create Default View", default=True)
     default_view_label: StringProperty()
     blocking: BoolProperty(default=False)
     blocking_reason: StringProperty()
@@ -1452,7 +1452,7 @@ def _grouping_decisions(
         if row.grouping_action == "keep_independent":
             continue
         if row.grouping_action != "accept_group":
-            raise ValueError("Split/Edit grouping is unavailable in alpha.1")
+            raise ValueError("Split/Edit grouping is not available")
         if suggestion.requires_review and not row.review_confirmed:
             raise ValueError("grouping review requires explicit confirmation")
         evidence_rows = tuple(row.evidence)
@@ -2514,7 +2514,7 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
                     )
             unavailable = box.row()
             unavailable.enabled = False
-            unavailable.label(text="Split / Edit unavailable in alpha.1")
+            unavailable.label(text="Split / Edit is not available")
         for suggestion in self.conformer_grouping_suggestions:
             box = layout.box()
             box.label(
@@ -2877,6 +2877,7 @@ class CHEMBLENDER_OT_confirm_import(bpy.types.Operator):
         if session is None:
             session = get_scene_session(context.scene)
         cancel_project_import(session)
+        context.scene.chemblender_quick_import.recent_summary = "Import cancelled"
 
 
 class CHEMBLENDER_OT_cancel_import(bpy.types.Operator):
@@ -2897,6 +2898,7 @@ class CHEMBLENDER_OT_cancel_import(bpy.types.Operator):
             )
         else:
             cancel_project_import(session)
+            context.scene.chemblender_quick_import.recent_summary = "Import cancelled"
         return {"FINISHED"}
 
 
