@@ -659,6 +659,7 @@ class BiologicalUIContractTests(unittest.TestCase):
             ),
         ):
             self.assertEqual(operation.execute(context), {"FINISHED"}, errors)
+            self.assertEqual(errors, ["Selected 1 of 2 atoms (view only)"])
             view["cb_structure_revision"] = "stale"
             self.assertEqual(operation.execute(context), {"CANCELLED"})
 
@@ -950,6 +951,12 @@ class BiologicalUIContractTests(unittest.TestCase):
             batch.biological_hierarchies[0].id,
             settings,
         )
+
+        labels = [event[1]["text"] for event in events if event[0] == "label"]
+        self.assertIn("Biological hierarchy", labels)
+        self.assertIn("Model: unspecified", labels)
+        self.assertIn("2 chains / 2 residues", labels)
+        self.assertIn("Atoms: 2", labels)
 
         operator_ids = {
             event[1] for event in events if event[0] == "operator"

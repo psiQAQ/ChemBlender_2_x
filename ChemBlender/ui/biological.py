@@ -627,6 +627,10 @@ class CHEMBLENDER_OT_select_biological_atoms(bpy.types.Operator):
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
         session.active_view_object_name = obj.name
+        self.report(
+            {"INFO"},
+            f"Selected {len(indices)} of {hierarchy.atom_count} atoms (view only)",
+        )
         return {"FINISHED"}
 
 
@@ -762,14 +766,12 @@ def draw_biological_controls(layout, project, entity_id, settings):
         if hierarchy.model.number is not None
         else "unspecified"
     )
+    box.label(text="Biological hierarchy")
+    box.label(text=f"Model: {model}")
     box.label(
-        text=(
-            f"Biological hierarchy: model {model} · "
-            f"{len(hierarchy.chains)} chains · "
-            f"{len(hierarchy.residues)} residues · "
-            f"{hierarchy.atom_count} atoms"
-        )
+        text=f"{len(hierarchy.chains)} chains / {len(hierarchy.residues)} residues"
     )
+    box.label(text=f"Atoms: {hierarchy.atom_count}")
     for dataset in properties:
         box.label(
             text=(

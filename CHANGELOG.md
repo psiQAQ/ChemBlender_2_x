@@ -10,6 +10,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Fixed
 
+- Keep biological MODEL, chain, residue and atom counts readable in the default sidebar; report the number of atoms selected by biological filters.
+
 - Identify MOL2 records correctly in Preview and Project Browser; qualify interpreted bond counts and retain unsupported bond-type reasons in the preview.
 
 - Preserve actionable Gaussian/ORCA input validation reasons in public import diagnostics, including unknown and conflicting coordinate units.

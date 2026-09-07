@@ -53,3 +53,5 @@ ChemBlender 把兼容的 MODEL 映射为一个 Structure 加 10 帧 trajectory�
 - [RCSB PDB 1D3Z 条目](https://www.rcsb.org/structure/1D3Z)
 - [wwPDB PDB 格式 3.30](https://www.wwpdb.org/documentation/file-format-content/format33/sect1.html)
 - [PDB Archive 数据政策](https://www.rcsb.org/pages/policies)
+
+筛选反馈：Biological hierarchy 分行显示 MODEL、chain/residue 和 atom 数；执行 Select Biological Atoms 后状态栏报告选中数量。筛选写入 View 的 `cbq_selected`，不改写来源坐标或层级，也不等同于隐藏其余原子。

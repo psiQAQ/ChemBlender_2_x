@@ -53,3 +53,5 @@ ChemBlender 保留 Structure、biological hierarchy、partial charge 和 radius�
 - [APBS PQR 格式说明](https://apbs.readthedocs.io/en/latest/formats/pqr.html)
 - [APBS 示例源文件](https://github.com/Electrostatics/apbs/blob/4613d0d547c3c71df8815dcb85e9e19abf61822c/examples/protein-rna/model_outNB.pqr)
 - [APBS BSD-3-Clause 许可](https://github.com/Electrostatics/apbs/blob/4613d0d547c3c71df8815dcb85e9e19abf61822c/LICENSE.md)
+
+筛选反馈：Biological hierarchy 分行显示 MODEL、chain/residue 和 atom 数；执行 Select Biological Atoms 后状态栏报告选中数量。筛选写入 View 的 `cbq_selected`，不改写来源坐标或层级，也不等同于隐藏其余原子。
