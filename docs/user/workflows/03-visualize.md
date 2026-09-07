@@ -43,6 +43,8 @@ Project 中的 Structure、Grid3D、属性和结果是科学实体；Blender Obj
 2. 检查 atom count、cell、topology binding 和 quality。
 3. 可以调整 Blender transform、visibility 和 material。这些操作只改 View。
 
+生物 Structure 在无所选 topology 或超过球棍阈值时，用低细分的原子标记显示；标记半径是 van der Waals radius 的 0.25 倍，仅用于展示，不表示推断键或修改科学坐标。默认 altloc 可见性继续生效。
+
 ### Grid Volume 与 Signed Surface
 
 1. 导入 Cube 并在 Project Browser 选中 Grid3D。

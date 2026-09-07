@@ -2246,6 +2246,15 @@ def assert_biological_workflow(module_key, repository_root):
         assert view["cb_structure_id"] == str(structure.id)
         assert view["cb_biological_hierarchy_id"] == str(hierarchy.id)
         assert view["cb_biological_default_reason"]
+        if view["cb_biological_default_reason"].startswith("Atoms/points"):
+            evaluated = view.evaluated_get(bpy.context.evaluated_depsgraph_get())
+            mesh = evaluated.to_mesh()
+            try:
+                assert len(mesh.polygons) > 0, "biological default View has no renderable geometry"
+                visible_count = sum(item.value for item in view.data.attributes["cbq_visible"].data)
+                assert len(mesh.polygons) == visible_count * 20
+            finally:
+                evaluated.to_mesh_clear()
         return view, structure, hierarchy, properties, frames
 
     def attribute_values(view, name, field, initial):

@@ -219,6 +219,46 @@ def ensure_structure_ball_stick_modifier(obj):
     )
 
 
+def _biological_points_nodetree(modifier):
+    group = modifier.node_group
+    nodes, links = group.nodes, group.links
+    source, output = set_io_nodes(modifier, (0, 0), (800, 0))
+    points = nodes.new("GeometryNodeMeshToPoints")
+    points.mode = "VERTICES"
+    visible = nodes.new("GeometryNodeInputNamedAttribute")
+    visible.data_type = "BOOLEAN"
+    visible.inputs["Name"].default_value = "cbq_visible"
+    radius = nodes.new("GeometryNodeInputNamedAttribute")
+    radius.data_type = "FLOAT"
+    radius.inputs["Name"].default_value = "vdw_radius"
+    scale = nodes.new("ShaderNodeMath")
+    scale.operation = "MULTIPLY"
+    scale.inputs[1].default_value = 0.25
+    sphere = nodes.new("GeometryNodeMeshIcoSphere")
+    sphere.inputs["Radius"].default_value = 1.0
+    sphere.inputs["Subdivisions"].default_value = 1
+    instances = nodes.new("GeometryNodeInstanceOnPoints")
+    realized = nodes.new("GeometryNodeRealizeInstances")
+    links.new(source.outputs["Geometry"], points.inputs["Mesh"])
+    links.new(visible.outputs["Attribute"], points.inputs["Selection"])
+    links.new(radius.outputs["Attribute"], scale.inputs[0])
+    links.new(scale.outputs[0], instances.inputs["Scale"])
+    links.new(points.outputs["Points"], instances.inputs["Points"])
+    links.new(sphere.outputs["Mesh"], instances.inputs["Instance"])
+    links.new(instances.outputs["Instances"], realized.inputs["Geometry"])
+    links.new(realized.outputs["Geometry"], output.inputs["Geometry"])
+
+
+def ensure_biological_points_modifier(obj):
+    """Make the size-aware atom fallback visible without inventing bonds."""
+    return _ensure_generated_modifier(
+        obj,
+        "ChemBlender Biological Points",
+        "biological_points_v1",
+        _biological_points_nodetree,
+    )
+
+
 def _periodic_cell_nodetree(nodetree):
     _input, _output = set_io_nodes(nodetree, (0, 0), (600, 0))
     mesh_to_curve = add_node(

@@ -1348,6 +1348,10 @@ def create_structure_view(
             from .. import node
 
             node.ensure_structure_ball_stick_modifier(obj)
+        elif biological_hierarchy is not None:
+            from .. import node
+
+            node.ensure_biological_points_modifier(obj)
         mesh.update()
         return obj
     except BaseException as error:
@@ -1431,6 +1435,7 @@ def remove_structure_view(obj):
             and _is_view_contract(modifier, contract)
             for contract in (
                 _BALL_STICK_CONTRACT,
+                "biological_points_v1",
                 _PERIODIC_DISPLAY_CONTRACT,
             )
         )

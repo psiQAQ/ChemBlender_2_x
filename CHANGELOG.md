@@ -22,6 +22,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 - Read saved lazy Selective Dynamics arrays through the NumPy array protocol when drawing the constrained-atom count, keeping the constraint controls available after publication and reopen.
 
+- Render the size-aware biological atom/point fallback as small low-resolution glyphs instead of invisible loose vertices, preserving source atom coordinates and the alternate-location visibility mask.
+
 ## [2.4.0] - 2026-08-03
 
 ### Changed
