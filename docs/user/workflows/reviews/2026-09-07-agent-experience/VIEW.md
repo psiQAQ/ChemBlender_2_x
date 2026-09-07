@@ -1,6 +1,6 @@
 # VIEW — Structure、Grid、力属性与轨迹
 
-执行者：**Agent 模拟用户**。UI **Failed（修复后重测中）**；MCP **Not Run**。本项尚未完成，不能作为最终候选包通过证据。
+执行者：**Agent 模拟用户**。UI **Passed**；MCP **Passed**（R13 本项重测）。仍需全轮最终包复核。
 
 ## 前置与输入
 
@@ -53,3 +53,34 @@ b05dd5c / ZIP `083b8166f03319a6dfbfadce074573aff94f9038a2e6a1f57ceb58d9fbefa2c3`
 R12 首末帧与箭头渲染已正确，三个 VDB 缓存重建后科学数值、transform、metadata 一致。但同进程重新打开保存副本，再点击 Configure Trajectory Playback 后，Scene frame 1 仍显示 frame 32 坐标和力。旧绑定访问前一个 session 已清理的临时数组，阻断新绑定更新；科学源数组未变，显示影响为 High。完整失败副本、截图和日志冻结于 `outputs/failures/VIEW-trajectory-reopen/`。此前文件名中的 playback-restored 不代表通过，以其中两个 false 断言为准。
 
 新增实际 save/open 回归在旧 R12 ZIP 上失败：`file load retained old trajectory bindings`。修复在持久 load_pre 回调中释放旧帧管理器和绑定，重复注册/注销也验证回调唯一性。新包仅 trajectory_view.py 增加 455 字节，ZIP 增加 140 字节，未解释增长为零；完整隔离 smoke 103.81 秒通过。新 UI/MCP 独立重测仍待完成。
+
+## R13 双路径结果
+
+来源 `e42b16fcaf2a98447915c3310fb5b6662705a0df`，ZIP SHA-256 `a478b65910fcfff44f02914935527131a33ba131c80b26bb199074a4ce627876`，实际 Blender 5.1.1。两条路径均从独立空文件开始，全部已安装 Python 文件逐字节匹配同一 ZIP。
+
+UI 于 23:37–23:43 重走上述文件选择、Preview、dataset 1 语义确认、Volume/Surface、力显示、播放配置、时间轴 1/32、空格播放/暂停。保存后复制完整配对目录，仅移走副本 render cache；Ctrl+O 打开副本，再点击 Configure，切回第 1 帧。耗时包含截图与检查；原生动作精确时间见 `logs/ui-actions.jsonl`。
+
+MCP 于 23:43–23:46 从空文件调用公开 `quick_import`、`confirm_import`，传入与 UI 相同的行选择。设置公开 Browser selected_index 和 Grid RNA，依次 `resolve_grid_semantics`、`create_grid_view`（volume/signed_surface）、`apply_frame_force`、`configure_trajectory_playback`。使用 Scene.frame_set 检查首末帧，`screen.animation_play` / `screen.animation_cancel` 播放和停止。公开 `wm.open_mainfile` 重开独立缓存副本后再 Configure。导入 Preview 0.372 s、确认 1.430 s，Grid 三步 0.241 s，力与播放配置 0.012 s；完整请求与反馈保留在 `logs/mcp-actions.jsonl`。没有调用私有产品函数。
+
+| 检查 | UI 实际结果 | MCP 实际结果 |
+| --- | --- | --- |
+| Structure/属性 | 21 原子；32 帧 Coordinates、Atomic Force 和 Energy 可见 | 同一实体/属性范围，公开状态完整 |
+| Grid 确认/显示 | 派生 Complete Grid 保持选中；1 Volume + 正负 Surface | 相同；所有视图指向确认后的 Grid |
+| 科学数据 | 首末帧坐标和力均匹配权威数组，dataset 1 = 100–103 | 独立数组/hash 检查相同 |
+| 播放/停止 | 原生空格开始与暂停；观察 playing=true | 公开 Operator 开始/停止；返回 PASS_THROUGH 后状态确为 false |
+| 缓存恢复 | 3 VDB 重建；数值、transform、metadata 一致；manifest 未变 | 独立副本得到相同结果 |
+| 重开后播放 | 重新 Configure 后 frame 1/index 0；坐标和力均恢复 | 相同，无旧临时数组错误 |
+| 视觉 | 箭头有实体，锚定原子；正值场负表面为空符合输入 | 独立渲染同样正确 |
+
+这里的重开是**同进程文件重开**，不冒充关闭进程后的冷启动；冷启动在 LIFE/最终复核单独验证。Workbench 渲染用于检查几何和箭头，真实体积着色在 REP-GRID 单独验证。
+
+入口/文案：按钮可用且按科学实体显隐，但诊断区较长、需滚动；历史 Ambiguous 诊断仍保留，需结合当前选中行 Complete 判断。等待：这些小样例均快速完成并显示状态栏反馈。取消：播放可停止；Grid 同步小操作没有可观察的取消窗口。恢复：缺失派生缓存自动重建，播放可通过可见 Configure 恢复。上述易用性限制不影响当前科学数组。
+
+证据相机、渲染设置、集合整理和归档由通用 Blender API 完成，不计作 UI 产品流程。最终对象分别位于 `VIEW/UI`、`VIEW/MCP`，各保存独立配对文件。
+
+- [UI 配对文件](../../../../../.blend-analysis/2026-09-07-review/outputs/VIEW-R13-UI/VIEW-UI.blend)、[MCP 配对文件](../../../../../.blend-analysis/2026-09-07-review/outputs/VIEW-R13-MCP/VIEW-MCP.blend)
+- [UI 渲染](../../../../../.blend-analysis/2026-09-07-review/screenshots/VIEW-R13-UI-render-final.png)、[MCP 渲染](../../../../../.blend-analysis/2026-09-07-review/screenshots/VIEW-R13-MCP-render-final.png)
+- [UI 恢复截图](../../../../../.blend-analysis/2026-09-07-review/screenshots/VIEW-R13-09-playback-restored.png)、[MCP 播放截图](../../../../../.blend-analysis/2026-09-07-review/screenshots/VIEW-R13-MCP-playing.png)
+- [科学数组复核](../../../../../.blend-analysis/2026-09-07-review/outputs/VIEW-R13-science-check.json)、[UI 恢复状态](../../../../../.blend-analysis/2026-09-07-review/outputs/VIEW-R13-UI-playback-restored.json)、[MCP 恢复状态](../../../../../.blend-analysis/2026-09-07-review/outputs/VIEW-R13-MCP-playback-restored.json)
+
+本项修复链：`0a0a2af` 选择保持 → `b05dd5c` 力逐帧更新 → `742a3a5` 箭头实体 → `41e8482` 箭头起点 → `e42b16f` 文件切换绑定释放。R13 两条路径全部重跑通过，旧失败记录保留。
