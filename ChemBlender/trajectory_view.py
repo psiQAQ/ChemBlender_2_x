@@ -99,14 +99,25 @@ def _frame_change_handler(scene, depsgraph=None):
         _BINDINGS.pop(key, None)
 
 
+def _load_pre_handler(_unused):
+    # File loads discard objects and close the previous session's lazy arrays.
+    # Release bindings first, before a new file can register playback again.
+    for binding in _BINDINGS.values():
+        binding.manager.close()
+    _BINDINGS.clear()
+
+
 def _remove_handlers():
-    handlers = bpy.app.handlers.frame_change_post
-    for handler in tuple(handlers):
-        if (
-            getattr(handler, "__module__", None) == __name__
-            and getattr(handler, "__name__", None) == "_frame_change_handler"
-        ):
-            handlers.remove(handler)
+    for handlers, name in (
+        (bpy.app.handlers.frame_change_post, "_frame_change_handler"),
+        (bpy.app.handlers.load_pre, "_load_pre_handler"),
+    ):
+        for handler in tuple(handlers):
+            if (
+                getattr(handler, "__module__", None) == __name__
+                and getattr(handler, "__name__", None) == name
+            ):
+                handlers.remove(handler)
 
 
 def configure_trajectory_view(
@@ -171,10 +182,10 @@ def clear_trajectory_view(obj):
 def register():
     _remove_handlers()
     bpy.app.handlers.frame_change_post.append(_frame_change_handler)
+    bpy.app.handlers.persistent(_load_pre_handler)
+    bpy.app.handlers.load_pre.append(_load_pre_handler)
 
 
 def unregister():
-    for binding in _BINDINGS.values():
-        binding.manager.close()
-    _BINDINGS.clear()
+    _load_pre_handler(None)
     _remove_handlers()

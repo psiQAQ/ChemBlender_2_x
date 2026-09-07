@@ -659,6 +659,10 @@ def assert_enabled(module_key, before_install_modules):
             and handler.__name__ == name
         ]
         assert len(matching) == 1
+    assert sum(
+        getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
+        for handler in bpy.app.handlers.load_pre
+    ) == 1
     assert hasattr(bpy.types.Object, "cif_original")
     assert hasattr(bpy.types.Object, "cif_current")
     assert hasattr(bpy.types.Scene, "my_tool")
@@ -714,7 +718,8 @@ def assert_disabled(module_key, owned_classes):
     assert READER_API_HANDLE_KEY not in bpy.app.driver_namespace
     assert not any(
         getattr(handler, "__module__", None) == f"{module_key}.trajectory_view"
-        for handler in bpy.app.handlers.frame_change_post
+        for callbacks in (bpy.app.handlers.frame_change_post, bpy.app.handlers.load_pre)
+        for handler in callbacks
     )
     assert not any(
         getattr(handler, "__module__", None) == f"{module_key}.ui.session"
@@ -952,6 +957,30 @@ def assert_project_session_manager(module_key):
             derived.coordinates.values,
             atol=1.0e-6,
         )
+        # A file load must release bindings to the previous session's arrays.
+        trajectory = importlib.import_module(f"{module_key}.trajectory_view")
+        frames = core.FrameSet(
+            id=uuid4(), revision="session-playback-r1",
+            semantic_role="coordinates", domain="frame",
+            data=core.ArrayData(
+                numpy.stack((structure.coordinates.values,
+                             structure.coordinates.values + (0.0, 0.0, 1.0))),
+                ("frame", "atom", "xyz"), "angstrom",
+            ),
+            status=core.DatasetStatus.COMPLETE, source_calculation=None,
+            provenance_ids=(), structure_id=structure.id,
+            comments=("first", "second"),
+        )
+        session.project.commit(core.ImportBatch(datasets=(frames,)))
+        session.mark_dirty("import")
+        playback_obj = views.create_structure_view(
+            structure, name="ChemBlender reopened trajectory smoke",
+            collection=scene.collection,
+        )
+        scene.frame_set(1)
+        trajectory.register()
+        trajectory.configure_trajectory_view(playback_obj, frames)
+        old_manager = trajectory._BINDINGS[playback_obj.as_pointer()].manager
         blend = Path(directory) / "session-manager.blend"
         result = bpy.ops.wm.save_as_mainfile(
             filepath=str(blend),
@@ -1010,6 +1039,20 @@ def assert_project_session_manager(module_key):
         ) == model_identities
         ui = importlib.import_module(f"{module_key}.ui.session")
         restored = ui.get_scene_session(bpy.context.scene)
+        assert not trajectory._BINDINGS, "file load retained old trajectory bindings"
+        assert old_manager._closed, "file load retained an old frame manager"
+        playback_obj = bpy.data.objects["ChemBlender reopened trajectory smoke"]
+        bpy.context.view_layer.objects.active = playback_obj
+        bpy.context.scene.chemblender_project_browser.active_entity_id = str(frames.id)
+        restored.active_entity_id = frames.id
+        assert bpy.ops.chemblender.configure_trajectory_playback() == {"FINISHED"}
+        bpy.context.scene.frame_set(2)
+        actual = numpy.empty(9)
+        playback_obj.data.vertices.foreach_get("co", actual)
+        assert numpy.allclose(actual.reshape(3, 3), frames.data.values[1])
+        bpy.context.scene.frame_set(1)
+        playback_obj.data.vertices.foreach_get("co", actual)
+        assert numpy.allclose(actual.reshape(3, 3), frames.data.values[0])
         restored_obj = bpy.data.objects["ChemBlender topology UI smoke"]
         assert len(restored_obj.data.edges) == 2
         assert restored_obj["cb_topology_id"] == str(topology_id)
@@ -6049,6 +6092,7 @@ expected_inventory["registered_classes"].sort(
     )
 )
 expected_inventory["handlers"] += [
+    {"owner": "load_pre", "module": ".trajectory_view", "name": "_load_pre_handler"},
     {"owner": "load_post", "module": ".ui.migration", "name": "_legacy_load_post_handler"},
     {"owner": "load_post", "module": ".runtime.registration", "name": "_reader_api_load_post_handler"},
     {"owner": "load_post", "module": ".ui.session", "name": "_load_post_handler"},

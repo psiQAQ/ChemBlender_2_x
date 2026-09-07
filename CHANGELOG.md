@@ -10,6 +10,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Fixed
 
+- Release trajectory bindings before loading another Blender file, so configuring playback after reopen cannot read the previous session's removed temporary arrays.
+
 - Anchor force arrows at their atoms and end them at the displayed vector tip; remove the extra half-length translation and repair saved owned arrow groups.
 
 - Preserve force-arrow instances around the legacy ball-and-stick processing so arrows remain visible in renders, including already saved owned View groups.

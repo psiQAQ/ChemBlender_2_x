@@ -47,3 +47,9 @@ b05dd5c / ZIP `083b8166f03319a6dfbfadce074573aff94f9038a2e6a1f57ceb58d9fbefa2c3`
 742a3a5 / ZIP `66dfa0b6613c7bf3829de70865885af4c2b1b21028dd206b73041aad7094af9a` 已从空 UI 文件完整重跑导入、Grid、力和播放。箭头实体在 `VIEW-R11-UI-render-final.png` 可见，但几何测量发现起点与终点分别是原子位置加 0.5 和 1.5 倍显示矢量；预期应为 0 和 1。失败目录 `outputs/failures/VIEW-force-origin/` 保存配对文件和测量，旧包实际 smoke 的起点/终点断言失败。
 
 修复移除旧节点对 Blender Cone 的重复半长度平移，并在再次应用时校正已保存的受控箭头节点组。R12 新包正在完整验证和两条路径重测。初版起点回归脚本曾有多余加号语法错误，仅是测试脚本失败；有效的旧包失败证据为 `logs/isolated-force-origin-before-valid.log`。
+
+## R12 保存后重开与播放恢复缺陷
+
+R12 首末帧与箭头渲染已正确，三个 VDB 缓存重建后科学数值、transform、metadata 一致。但同进程重新打开保存副本，再点击 Configure Trajectory Playback 后，Scene frame 1 仍显示 frame 32 坐标和力。旧绑定访问前一个 session 已清理的临时数组，阻断新绑定更新；科学源数组未变，显示影响为 High。完整失败副本、截图和日志冻结于 `outputs/failures/VIEW-trajectory-reopen/`。此前文件名中的 playback-restored 不代表通过，以其中两个 false 断言为准。
+
+新增实际 save/open 回归在旧 R12 ZIP 上失败：`file load retained old trajectory bindings`。修复在持久 load_pre 回调中释放旧帧管理器和绑定，重复注册/注销也验证回调唯一性。新包仅 trajectory_view.py 增加 455 字节，ZIP 增加 140 字节，未解释增长为零；完整隔离 smoke 103.81 秒通过。新 UI/MCP 独立重测仍待完成。
