@@ -238,6 +238,33 @@ def apply_atomic_scalar(
     obj.data.update()
 
 
+def _preserve_vector_instances(modifier):
+    # Legacy atom processing recurses into instances, replacing arrow cones
+    # with zero-radius atoms. Process only the canonical mesh, then rejoin
+    # untouched display instances. This also repairs already saved owned groups.
+    group = modifier.node_group
+    nodes, links = group.nodes, group.links
+    if nodes.get("ChemBlender Vector Instances") is not None:
+        return
+    source = next(node for node in nodes if node.bl_idname == "NodeGroupInput")
+    output = next(node for node in nodes if node.bl_idname == "NodeGroupOutput")
+    incoming = tuple(source.outputs["Geometry"].links)
+    outgoing = output.inputs["Geometry"].links[0]
+    atom_geometry = outgoing.from_socket
+    separate = nodes.new("GeometryNodeSeparateComponents")
+    separate.name = "ChemBlender Vector Instances"
+    join = nodes.new("GeometryNodeJoinGeometry")
+    for link in incoming:
+        target = link.to_socket
+        links.remove(link)
+        links.new(separate.outputs["Mesh"], target)
+    links.remove(outgoing)
+    links.new(source.outputs["Geometry"], separate.inputs["Geometry"])
+    links.new(atom_geometry, join.inputs["Geometry"])
+    links.new(separate.outputs["Instances"], join.inputs["Geometry"])
+    links.new(join.outputs["Geometry"], output.inputs["Geometry"])
+
+
 def write_vector_view(
     obj,
     values,
@@ -303,6 +330,7 @@ def write_vector_view(
         None,
     )
     if ball_stick is not None:
+        _preserve_vector_instances(ball_stick)
         vector_index = tuple(obj.modifiers).index(modifier)
         ball_stick_index = tuple(obj.modifiers).index(ball_stick)
         if vector_index > ball_stick_index:

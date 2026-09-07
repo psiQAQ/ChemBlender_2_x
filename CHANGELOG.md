@@ -10,6 +10,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Fixed
 
+- Preserve force-arrow instances around the legacy ball-and-stick processing so arrows remain visible in renders, including already saved owned View groups.
+
 - Update displayed trajectory force vectors with the coordinate frame in either operation order. Hide arrows for a frame with missing force data and show the reason; restore them when valid data resumes.
 
 - Keep Project Browser selection on the resolved Grid3D or edited Structure after refresh, so following View actions use the confirmed entity. Correct the two-dataset Cube sample dimensions and coordinate-unit warning description.

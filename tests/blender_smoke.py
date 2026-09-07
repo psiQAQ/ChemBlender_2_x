@@ -3427,6 +3427,13 @@ def assert_dataset_and_trajectory_views(module_key):
             assert bpy.ops.chemblender.apply_frame_force(
                 display_scale=0.5,
             ) == {"FINISHED"}
+        bpy.context.view_layer.update()
+        assert any(
+            item.is_instance and item.parent.original == obj
+            and item.object.type == "MESH"
+            and 12 <= len(item.object.data.polygons) <= 14
+            for item in bpy.context.evaluated_depsgraph_get().object_instances
+        ), "force arrows have no renderable cone geometry"
         vector_values = [0.0] * 9
         obj.data.attributes["cbq_vector"].data.foreach_get(
             "vector", vector_values

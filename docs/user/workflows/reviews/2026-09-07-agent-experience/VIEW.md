@@ -33,3 +33,11 @@ R9 来源 `0a0a2af`；包 SHA-256 `6e4d0216843663325c8f6a44f2b7accdb67e0c86a7d96
 - [力箭头与播放入口](../../../../../.blend-analysis/2026-09-07-review/screenshots/VIEW-R9-08-trajectory-controls.png)
 - [末帧失败截图](../../../../../.blend-analysis/2026-09-07-review/screenshots/VIEW-R9-10-frame32.png)
 - [首帧状态](../../../../../.blend-analysis/2026-09-07-review/outputs/VIEW-R9-UI-frame1.json)、[末帧状态](../../../../../.blend-analysis/2026-09-07-review/outputs/VIEW-R9-UI-frame32.json)、[旧包回归失败日志](../../../../../.blend-analysis/2026-09-07-review/logs/isolated-force-before.log)
+
+## R10 UI 重测与渲染发现
+
+b05dd5c / ZIP `083b8166f03319a6dfbfadce074573aff94f9038a2e6a1f57ceb58d9fbefa2c3` 从空文件重跑相同两项导入、Grid Resolve、Volume/Surface、Force 和 Playback。首末帧坐标及力值均变化；原生空格启动时公开 `is_animation_playing=true`，再次空格可暂停。截图 VIEW-R10-04/05/06/07 与对应状态 JSON 保留。
+
+保存 VIEW/UI 集合及证据相机后，将完整配对目录复制到 `VIEW-R10-UI-cache-review`，仅移走副本内三个 render cache 文件，再通过 Ctrl+O 原生文件选择重开。三个缓存自动重建，路径均在副本 `.cbq/cache/render/`；VDB 文件 hash 不同，但逐网格数值、transform、网格及文件 metadata 均一致，详见 `VIEW-R10-UI-cache-science.json`。重开后播放 handler 为空，需要再次 Configure；文件保留可重建的 FrameSet 绑定，后续会检查恢复操作。
+
+新增 High 显示缺陷：`VIEW-R10-UI-render-final.png` 中无力箭头实体，窗口选中对象时仅显示箭头轮廓。球棍节点递归处理输入的箭头实例，将其变成零半径原子。失败副本冻结于 `outputs/failures/VIEW-force-render/`；旧包实际 smoke 的 `force arrows have no renderable cone geometry` 断言失败。修复在受控球棍节点外保留箭头实例，也修复已保存的节点组；新包重测进行中。

@@ -5,14 +5,15 @@
 
 ## 当前检查点
 
-当前候选 ZIP `0006d0b4131b4f4a0e36639116e58bdb7aa2d4d9f777018fee3c9cd07d3983fc`（dc1ff3d）：2,297 tests，26 skips，无失败/错误；隔离 smoke 105.5 s。源码修复后正在继续逐项体验；以下各阶段旧包数据保留为失败—修复链，不能混作当前包通过结果。
+当前候选 ZIP `083b8166f03319a6dfbfadce074573aff94f9038a2e6a1f57ceb58d9fbefa2c3`（b05dd5c）：2,297 tests，26 skips，无失败/错误；隔离 smoke 106.11 s。源码修复后正在继续逐项体验；以下各阶段旧包数据保留为失败—修复链，不能混作当前包通过结果。
 
 | 项目 | UI | MCP |
 | --- | --- | --- |
 | ENV | 隔离安装与 reload 已验证；实际用户安装 Blocked | 隔离安装已验证；待最终复核 |
-| IMP | f2cbd41 通过；待 R6 最终复核 | f2cbd41 通过；待 R6 最终复核 |
+| IMP | f2cbd41 通过；待最终包复核 | f2cbd41 通过；待最终包复核 |
 | DATA | R8 Passed；待全轮最终复核 | R8 Passed；待全轮最终复核 |
-| VIEW / EXP / LIFE / MIG / AGENT / OUTSIDE | Not Run | Not Run |
+| VIEW | 力箭头逐帧错误已修复，R10 重测中 | Not Run |
+| EXP / LIFE / MIG / AGENT / OUTSIDE | Not Run | Not Run |
 | REP-MOLECULAR / REP-TRAJECTORY / REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
 
 ## 源码、环境与证据
@@ -66,3 +67,5 @@ R6 仅 ui/session.py 增加 742 unpacked / 209 packed bytes，用于注册后恢
 
 
 R8 DATA 双路径完成，详见 [DATA 独立报告](2026-09-07-agent-experience/DATA.md)。该报告保留生物不可见缺陷、dc1ff3d 修复、回归与 UI/MCP 结果，以及旧证据副本被测试脚本继续使用后的状态纠正。最终配对文件按 DATA/UI 与 DATA/MCP 集合保存。其他 11 项仍未执行。
+
+VIEW 的 Grid 选择和力箭头缺陷链见 [VIEW 独立报告](2026-09-07-agent-experience/VIEW.md)。b05dd5c 对应当前最终自动验证包；相对 R9，trajectory_view.py 增加 1716 unpacked / 473 packed bytes，Browser panel 增加 1487 / 288，总包增加 761 bytes，unexplained allowance 为零。窗口重新安装后从空文件重跑 UI；MCP 仍等待 UI 完整结束后独立执行。

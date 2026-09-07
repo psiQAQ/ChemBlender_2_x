@@ -122,6 +122,6 @@ ChemBlender 自有的 Volume/Surface cache 位于 sidecar 的 derived cache 范�
 
 继续：[导出数据](04-export.md)。
 
-### Trajectory force display
+### 轨迹力显示
 
-Select the matching Structure View and its Atomic Force dataset, then choose **Show Force Vectors**. After **Configure Trajectory Playback**, the arrows follow the coordinate frame and retain their displayed scale and original unit. Either operation order is supported. Frames with missing force values hide the arrows and show a `Force:` status in Project Browser; a valid frame restores them.
+选择匹配的 Structure View 和 Atomic Force 数据，点击 **Show Force Vectors**。设置 **Configure Trajectory Playback** 后，箭头随坐标帧更新，保留显示比例及原单位；两个操作的先后顺序均可。缺失力值的帧会隐藏箭头，并在 Project Browser 显示 `Force:` 原因；回到有效帧后恢复。箭头实例独立于球棍处理中各原子的几何，窗口和渲染均保留箭头实体。
