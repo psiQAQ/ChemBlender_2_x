@@ -19,7 +19,8 @@
 | AGENT | R21 Passed；待全轮最终复核 | R21 Passed，冷依赖已修复；待最终复核 |
 | OUTSIDE | R21 Passed；待全轮最终复核 | R21 Passed；同步渲染中途取消Not Run；待最终复核 |
 | REP-MOLECULAR | R22 Passed；待全轮最终复核 | R22 Passed；待全轮最终复核 |
-| REP-TRAJECTORY / REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
+| REP-TRAJECTORY | R22 Passed；待全轮最终复核 | R22 Passed；待全轮最终复核 |
+| REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
 
 ## 源码、环境与证据
 
@@ -84,3 +85,5 @@ R13 VIEW 双路径完整重测通过，详见 [VIEW](2026-09-07-agent-experience
 [OUTSIDE独立报告](2026-09-07-agent-experience/OUTSIDE.md)：真实Eevee双路径渲染、材质作用范围、集合、配对与重开通过。剩五类代表输入、最终同包复核和14集合总展示文件。
 
 [REP-MOLECULAR独立报告](2026-09-07-agent-experience/REP-MOLECULAR.md)：八类输入两路线各保存集合、八张独立渲染和配对文件；59个数组hash相同。MOL2误标修复后完整重测通过。剩四类REP、最终同包全项复核和14集合总展示文件。
+
+[REP-TRAJECTORY独立报告](2026-09-07-agent-experience/REP-TRAJECTORY.md)：32×21坐标/力、energy/step/source_index数值与文本一致；双路径1/16/32帧、播放暂停、集合、六张渲染与配对保存通过。剩三类REP、最终同包复核和14集合总文件。
