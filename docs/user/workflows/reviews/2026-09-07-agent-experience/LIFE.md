@@ -1,6 +1,6 @@
 # LIFE — 配对保存、Save As、冷重开与恢复
 
-执行者：**Agent 模拟用户**。UI **Passed（R16，待最终包复核）**；MCP **Failed（revision 修复重测中）**。
+执行者：**Agent 模拟用户**。UI **Passed（R16 完整路径、R17 revision 重测）**；MCP **Passed（R16 保存恢复、R17 revision 重测）**。最终同包全项复核待完成。
 
 前置：独立空 LIFE UI，导入本轮不可变 ain-aspirin-v2000.mol，21 atoms / 21 bonds。原生点击 Select Files、Preview、确认；Quick Import 的 Save Project 首次仅保存 blend，第二次保存产生 cbq。随后 Ctrl+Shift+S 另存新目录，界面显示 Connected、clean，却没有新 cbq，locator 仍为 LIFE-UI.cbq。原配对完整，科学数组未改变。
 
@@ -47,3 +47,13 @@ MCP 独立空场景导入 Preview 0.365 s、确认 0.337 s；公开 wm Save/Save
 MCP 的 New Revision 确认在 Blender collection→RNA 转换时失败：动态 conflict_action 尚看不到 allowed_actions，new_revision 被拒绝。High：阻断合法 revision，未改变源科学数据；完整失败配对与 Preview 冻结于 outputs/failures/LIFE-revision-rna/。旧 ZIP 原生回归也复现 reuse_existing 被拒绝。R17 最小修复把 allowed_actions 放在动态枚举之前；新增真实 RNA 复用/新 revision 回归。第一次新 smoke 的数值断言写错 Structure 字段，已改用 coordinates.values，保留该测试错误日志。完整验证及双路径重测仍在执行。
 
 R17 自动验证：99 专项、2308 全量（26 skips）、隔离 smoke 104.89 s、compile/docs/native build/ZIP audit/verifier 均通过。包 319de78bf3f4d27c3df5e8864cc3f67d3f2f7b02d72216f8aeb47c26331e3f91，29,987,802 packed / 32,106,657 unpacked；只有 import_preview.py +151 unpacked / +77 packed，allowance 为零。
+
+R17 / 4b280c3 两个测试 profile 已安装并逐字节核对全部 packaged Python。UI 从原 aspirin 配对干净副本经真实 Open、Select Files、Preview、Reuse Existing、新 revision 无默认 View、Comparison 完成；MCP 从独立 aspirin 配对干净副本经公开 Operators 完成同样流程。MCP Preview/confirm：original 0.682/0.374 s，reuse 0.351/0.363 s，new 0.653/0.549 s。复用保持两个 mesh，Comparison 后三个 mesh；两个 water 的原子 X 分别为 [0, 0.758602, -0.758602] 与 [1, 1.758602, 0.241398]，旧数据不变。蓝/红颜色与摆位仅为展示。
+
+测试脚本曾因语法错误未打开干净副本却继续下一步；这些 LIFE-R17-MCP-original/reuse/new 前缀记录无效，说明在 outputs/LIFE-R17-MCP-invalid-prestate.json。已增加本地 compile 与 RPC 非零退出码，重新打开并验证单 aspirin 前置，仅 LIFE-R17-MCP-final-* 计入上述通过。
+
+- [UI 最终配对](../../../../../.blend-analysis/2026-09-07-review/outputs/LIFE-R17-UI/LIFE-UI-saveas.blend) / [渲染](../../../../../.blend-analysis/2026-09-07-review/screenshots/LIFE-R17-UI-render-final.png)
+- [MCP 最终配对](../../../../../.blend-analysis/2026-09-07-review/outputs/LIFE-R17-MCP/LIFE-MCP-saveas.blend) / [渲染](../../../../../.blend-analysis/2026-09-07-review/screenshots/LIFE-R17-MCP-render-final.png)
+- [UI 包绑定](../../../../../.blend-analysis/2026-09-07-review/outputs/LIFE-R17-UI-final-package.json) / [MCP 包绑定](../../../../../.blend-analysis/2026-09-07-review/outputs/LIFE-R17-MCP-final-package.json)
+
+体验评价：Save Project 入口易找到；Relink 明确选择 manifest 后可恢复；Preview 有 staged/committed 反馈和取消；revision 选择清楚，失败未改变旧数据。保存和确认通常小于一秒，文件选择输入时间另见 ui-actions.jsonl。集合均为 LIFE 下的 UI 或 MCP。完整冷重开/恢复证据属于 R16，未冒称已在 R17 全路径重走。
