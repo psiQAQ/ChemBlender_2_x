@@ -3434,6 +3434,28 @@ def assert_dataset_and_trajectory_views(module_key):
             and 12 <= len(item.object.data.polygons) <= 14
             for item in bpy.context.evaluated_depsgraph_get().object_instances
         ), "force arrows have no renderable cone geometry"
+        from mathutils import Vector
+
+        for item in bpy.context.evaluated_depsgraph_get().object_instances:
+            if not (
+                item.is_instance and item.parent.original == obj
+                and item.object.type == "MESH"
+                and 12 <= len(item.object.data.polygons) <= 14
+            ):
+                continue
+            axis = item.matrix_world.to_3x3() @ Vector((0, 0, 1))
+            length = axis.length
+            if length == 0:
+                continue
+            axis.normalize()
+            projected = [
+                ((item.matrix_world @ vertex.co) - item.matrix_world.translation)
+                .dot(axis) / length
+                for vertex in item.object.data.vertices
+            ]
+            assert numpy.allclose([min(projected), max(projected)], [0, 1]), (
+                "force arrow does not start at its atom and end at its vector tip"
+            )
         vector_values = [0.0] * 9
         obj.data.attributes["cbq_vector"].data.foreach_get(
             "vector", vector_values

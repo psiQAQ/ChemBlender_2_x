@@ -49,6 +49,10 @@ def _ensure_vector_arrow_group():
             or group.get("cbq_contract") != _VECTOR_CONTRACT
         ):
             raise RuntimeError(f"incompatible node group already uses {_GROUP_NAME}")
+        # Blender cones already span z=0..Depth; repair saved centered-cone assumptions.
+        for node in group.nodes:
+            if node.bl_idname == "GeometryNodeTransform":
+                node.inputs["Translation"].default_value = (0.0, 0.0, 0.0)
         return group
 
     group = bpy.data.node_groups.new(_GROUP_NAME, "GeometryNodeTree")
@@ -79,7 +83,7 @@ def _ensure_vector_arrow_group():
         cone.inputs["Radius Bottom"].default_value = 1.0
         cone.inputs["Depth"].default_value = 1.0
         transform = nodes.new("GeometryNodeTransform")
-        transform.inputs["Translation"].default_value = (0.0, 0.0, 0.5)
+        transform.inputs["Translation"].default_value = (0.0, 0.0, 0.0)
         combine = nodes.new("ShaderNodeCombineXYZ")
         combine.inputs["X"].default_value = 0.08
         combine.inputs["Y"].default_value = 0.08

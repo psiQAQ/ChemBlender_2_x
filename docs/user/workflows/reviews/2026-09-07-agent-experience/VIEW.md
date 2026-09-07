@@ -41,3 +41,9 @@ b05dd5c / ZIP `083b8166f03319a6dfbfadce074573aff94f9038a2e6a1f57ceb58d9fbefa2c3`
 保存 VIEW/UI 集合及证据相机后，将完整配对目录复制到 `VIEW-R10-UI-cache-review`，仅移走副本内三个 render cache 文件，再通过 Ctrl+O 原生文件选择重开。三个缓存自动重建，路径均在副本 `.cbq/cache/render/`；VDB 文件 hash 不同，但逐网格数值、transform、网格及文件 metadata 均一致，详见 `VIEW-R10-UI-cache-science.json`。重开后播放 handler 为空，需要再次 Configure；文件保留可重建的 FrameSet 绑定，后续会检查恢复操作。
 
 新增 High 显示缺陷：`VIEW-R10-UI-render-final.png` 中无力箭头实体，窗口选中对象时仅显示箭头轮廓。球棍节点递归处理输入的箭头实例，将其变成零半径原子。失败副本冻结于 `outputs/failures/VIEW-force-render/`；旧包实际 smoke 的 `force arrows have no renderable cone geometry` 断言失败。修复在受控球棍节点外保留箭头实例，也修复已保存的节点组；新包重测进行中。
+
+## R11 渲染和箭头起点
+
+742a3a5 / ZIP `66dfa0b6613c7bf3829de70865885af4c2b1b21028dd206b73041aad7094af9a` 已从空 UI 文件完整重跑导入、Grid、力和播放。箭头实体在 `VIEW-R11-UI-render-final.png` 可见，但几何测量发现起点与终点分别是原子位置加 0.5 和 1.5 倍显示矢量；预期应为 0 和 1。失败目录 `outputs/failures/VIEW-force-origin/` 保存配对文件和测量，旧包实际 smoke 的起点/终点断言失败。
+
+修复移除旧节点对 Blender Cone 的重复半长度平移，并在再次应用时校正已保存的受控箭头节点组。R12 新包正在完整验证和两条路径重测。初版起点回归脚本曾有多余加号语法错误，仅是测试脚本失败；有效的旧包失败证据为 `logs/isolated-force-origin-before-valid.log`。

@@ -10,6 +10,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Fixed
 
+- Anchor force arrows at their atoms and end them at the displayed vector tip; remove the extra half-length translation and repair saved owned arrow groups.
+
 - Preserve force-arrow instances around the legacy ball-and-stick processing so arrows remain visible in renders, including already saved owned View groups.
 
 - Update displayed trajectory force vectors with the coordinate frame in either operation order. Hide arrows for a frame with missing force data and show the reason; restore them when valid data resumes.
