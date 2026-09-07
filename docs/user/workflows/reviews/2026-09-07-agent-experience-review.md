@@ -5,7 +5,7 @@
 
 ## 当前检查点
 
-最近完成自动验证的 R16 ZIP `e79c84cdb18c6e4345e48a42747689137b82d55191a33d4baff3c27a0568b9f2`（2d55e0d）：2,308 tests，26 skips，无失败/错误；隔离 smoke 105.12 s。R17 revision RNA 修复正在全量验证。源码修复后正在继续逐项体验；以下各阶段旧包数据保留为失败—修复链，不能混作当前包通过结果。
+最近完成自动验证的 R20 ZIP `f7dfd72611e1cd61c7519b5110e8d8e83995419fa70e31e86de13d8347a666f8`（35c3bc9）：2,309 tests，26 skips，无失败/错误；隔离 smoke 104.94 s。MIG 双路径迁移、渲染和真正冷重开通过。以下旧包数据保留为失败—修复链，最终仍需全项复核。
 
 | 项目 | UI | MCP |
 | --- | --- | --- |
@@ -14,8 +14,9 @@
 | DATA | R8 Passed；待全轮最终复核 | R8 Passed；待全轮最终复核 |
 | VIEW | R13 Passed；待全轮最终复核 | R13 Passed；待全轮最终复核 |
 | EXP | R14 Passed；待全轮最终复核 | R14 Passed；待全轮最终复核 |
-| LIFE | R16 Passed；待最终包复核 | 保存/恢复通过；revision Failed，修复重测中 |
-| MIG / AGENT / OUTSIDE | Not Run | Not Run |
+| LIFE | R16/R17 Passed；待最终包复核 | R16/R17 Passed；待最终包复核 |
+| MIG | R20 Passed；待全轮最终复核 | R20 Passed；待全轮最终复核 |
+| AGENT / OUTSIDE | Not Run | Not Run |
 | REP-MOLECULAR / REP-TRAJECTORY / REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
 
 ## 源码、环境与证据
@@ -73,3 +74,5 @@ R8 DATA 双路径完成，详见 [DATA 独立报告](2026-09-07-agent-experience
 VIEW 的 Grid 选择和力箭头缺陷链见 [VIEW 独立报告](2026-09-07-agent-experience/VIEW.md)。b05dd5c 对应当前最终自动验证包；相对 R9，trajectory_view.py 增加 1716 unpacked / 473 packed bytes，Browser panel 增加 1487 / 288，总包增加 761 bytes，unexplained allowance 为零。窗口重新安装后从空文件重跑 UI；MCP 仍等待 UI 完整结束后独立执行。
 
 R13 VIEW 双路径完整重测通过，详见 [VIEW](2026-09-07-agent-experience/VIEW.md)。配对文件各有 VIEW/UI 或 VIEW/MCP 集合，截图与渲染均保留。此阶段文件重开为同进程，不代替 LIFE 的冷启动。其余 10 项继续执行。
+
+迁移独立报告：[MIG](2026-09-07-agent-experience/MIG.md)。两条路线有独立集合、渲染、完整配对和冷重开证据。继续 AGENT、OUTSIDE 和五类代表输入；最终同包复核与总展示文件尚未完成。
