@@ -1611,6 +1611,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         with patch.object(session_ui, "get_scene_session", return_value=self.session):
             document = json.loads(getter(settings))
             self.assertEqual(len(document["rows"]), 1)
+            self.assertIn("name", document["rows"][0])
             self.assertEqual(document["rows"][0]["reader_id"], "xyz")
             self.assertEqual(document["rows"][0]["quality"], "complete")
             self.assertFalse(document["rows"][0]["blocking"])

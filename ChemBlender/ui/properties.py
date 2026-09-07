@@ -59,10 +59,16 @@ def _quick_import_preview_json(settings):
     if state.preview is None or state.active_job is not None:
         return ""
     rows = project_import_preview(session, state, get_reader_plugin_registry())
+
+    def rna_fields(items):
+        # Blender's collection argument converter requires inherited PG.name,
+        # including nested evidence/candidate collections.
+        return {"name": "", **dict(items)}
+
     return json.dumps({
-        "rows": [asdict(row) for row in rows],
-        "grouping_suggestions": [asdict(row) for row in project_grouping_suggestions(state)],
-        "conformer_grouping_suggestions": [asdict(row) for row in project_conformer_suggestions(state)],
+        "rows": [asdict(row, dict_factory=rna_fields) for row in rows],
+        "grouping_suggestions": [asdict(row, dict_factory=rna_fields) for row in project_grouping_suggestions(state)],
+        "conformer_grouping_suggestions": [asdict(row, dict_factory=rna_fields) for row in project_conformer_suggestions(state)],
     }, sort_keys=True)
 
 

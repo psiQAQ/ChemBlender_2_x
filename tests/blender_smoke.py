@@ -1167,6 +1167,18 @@ def assert_quick_import(module_key, repository_root):
         assert state.active_job is None
         return state
 
+    # Exercise Blender's real collection argument conversion, including an
+    # explicit decision that must survive EXEC_DEFAULT's live projection.
+    stage(repository_root / "tests/fixtures/xyz/water.xyz")
+    public_preview = json.loads(bpy.context.scene.chemblender_quick_import.preview_json)
+    public_preview["rows"][0]["default_view"] = False
+    objects_before_public_confirm = tuple(bpy.data.objects)
+    assert bpy.ops.chemblender.confirm_import(**public_preview) == {"FINISHED"}
+    assert tuple(bpy.data.objects) == objects_before_public_confirm
+    assert len(session.project.structures) == 1
+    assert bpy.context.scene.chemblender_quick_import.preview_json == ""
+    session = ui.new_scene_session(bpy.context.scene)
+
     before = project_snapshot()
     before_objects = tuple(bpy.data.objects)
     for relative in (
@@ -1924,7 +1936,8 @@ def assert_mol2_browser_view(module_key, repository_root):
     assert summaries["substructure.mol2"].mol2_partial_charge_summary == (
         "available (complete)"
     )
-    assert bpy.ops.chemblender.confirm_import() == {"FINISHED"}
+    public_preview = json.loads(bpy.context.scene.chemblender_quick_import.preview_json)
+    assert bpy.ops.chemblender.confirm_import(**public_preview) == {"FINISHED"}
 
     revisions = {
         revision.original_filename: revision

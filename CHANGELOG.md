@@ -16,7 +16,7 @@ All notable changes to the maintained ChemBlender release line are recorded here
 - Defer Project Browser RNA projection until after panel drawing so Blender's read-only draw context no longer leaves the data list blank; coalesce unchanged redraws and cancel pending refreshes on file changes or unload.
 - Show completed import cancellation in Quick Import, name the default-view checkbox clearly, and remove obsolete prerelease text from grouping previews.
 
-- Keep direct foreground Operator imports free of stale dialogs, expose their current review through read-only preview RNA, and preserve explicit confirmation choices while validating live source/conflict identities.
+- Keep direct foreground Operator imports free of stale dialogs, expose their current review through read-only preview RNA, and preserve explicit confirmation choices while validating live source/conflict identities. Include inherited RNA collection names so the review JSON can be passed directly to the confirmation Operator.
 
 ## [2.4.0] - 2026-08-03
 

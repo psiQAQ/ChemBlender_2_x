@@ -49,3 +49,12 @@ UI 复测约 20:28–20:35，动作时间逐条保存在 ui-actions.jsonl；含�
 - [取消修复截图](../../../../../.blend-analysis/2026-09-07-review/screenshots/IMP-R3-03-cancelled.png)、[四文件预览](../../../../../.blend-analysis/2026-09-07-review/screenshots/IMP-R3-05-multi-preview.png)、[无效输入拒绝](../../../../../.blend-analysis/2026-09-07-review/screenshots/IMP-R3-07-invalid-refused.png)
 - [UI 坐标](../../../../../.blend-analysis/2026-09-07-review/outputs/IMP-R3-final-UI.json)、[MCP 旧弹窗残留](../../../../../.blend-analysis/2026-09-07-review/screenshots/IMP-R3-MCP-03-confirmed.png)
 - 旧 R2 的单次 Save As 文件没有配对 sidecar，属于中间证据；不能作为可冷重开的成功项目。R3 已按既定两步保存流程核对配对。
+
+
+### 87580c4 窗口复测与 RNA 转换补充
+
+`IMP-R4-*` 绑定 87580c4 / c206b53e ZIP。UI 再次通过水、四文件单位、Invalid 拒绝、Cancel 恢复、CCO 和配对保存；`IMP-R4-UI.blend/.cbq` 与 `IMP-R4-UI-final.json` 保留六结构及正确坐标。MCP 取消后不再残留弹窗，preview_json 在取消后为空，截图 `IMP-R4-MCP-01-cancelled.png`。
+
+MCP 回传 JSON 确认触发 Blender collection converter 的 `keyword "name" missing`。归为 P2 接口可用性失败，无数据写入；本轮脚本最初未在失败后停止下一条命令，后续四文件暂存不作为成功确认，已据此修正编排纪律。Blender smoke 增加真实 JSON → Operator 调用并在旧 ZIP 复现同一失败（`logs/isolated-rna-conversion-before.log`）。补充修复使外层和嵌套 collection 记录包含继承的 PropertyGroup.name；保留显式 no-view 决定的 smoke 断言，修复包正在验证。
+
+RNA conversion 修复后，2,294 tests 通过（26 个已有依赖/平台 skip），真实隔离 Blender smoke 通过（103.44 s），包含外层和 MOL2 嵌套 collection 的 JSON 确认及显式不创建 View。包 SHA-256 为 `966dc8a7def7343fa29b1823ea72e2ea43a04015655bf32da0bd2f6c2a824daf`；UI 已从原生安装器安装并核对模块 hash。完整 MCP 重测继续。
