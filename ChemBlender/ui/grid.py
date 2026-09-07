@@ -293,6 +293,7 @@ if bpy is not None:
             name="Isovalue",
             default=0.05,
             min=1.0e-12,
+            precision=6,
         )
 
 
@@ -561,12 +562,11 @@ if bpy is not None:
         actions = grid_action_availability(session.project, grid.id)
         layout.separator()
         layout.label(text="Grid3D", icon="VOLUME_DATA")
-        layout.label(
-            text=(
-                f"{grid.grid_shape} · {grid.coordinate_unit} · "
-                f"{grid.semantic_role} · {grid.status.value}"
-            )
-        )
+        layout.label(text=f"Shape: {grid.grid_shape}")
+        layout.label(text=f"Coordinate unit: {grid.coordinate_unit}")
+        layout.label(text=f"Semantic: {grid.semantic_role}")
+        layout.label(text=f"Value unit: {grid.data.unit}")
+        layout.label(text=f"Quality: {grid.status.value}")
         if grid.status is DatasetStatus.AMBIGUOUS:
             if grid.data.dims[0] == "dataset":
                 layout.prop(settings, "dataset_index")
@@ -577,6 +577,8 @@ if bpy is not None:
                 icon="CHECKMARK",
             )
         layout.prop(settings, "isovalue")
+        # Float controls have bounded precision; keep tiny thresholds readable.
+        layout.label(text=f"Threshold: {settings.isovalue:.6g}")
         row = layout.row(align=True)
         row.enabled = actions.volume
         operator = row.operator(

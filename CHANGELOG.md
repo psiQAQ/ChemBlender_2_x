@@ -10,6 +10,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ### Fixed
 
+- Keep Grid3D shape, semantics and both units readable in the sidebar; display small nonzero isovalues without rounding the only visible threshold to zero.
+
 - Distinguish biological chain/segment entries from source chain IDs, including blank IDs in PQR, and correct representative biological preview/playback instructions.
 
 - Keep biological MODEL, chain, residue and atom counts readable in the default sidebar; report the number of atoms selected by biological filters.

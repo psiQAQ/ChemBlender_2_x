@@ -156,6 +156,16 @@ for instance in bpy.context.evaluated_depsgraph_get().object_instances:
         entry['instances']+=1
         if instance.object.type=='MESH':entry['polygons']+=len(instance.object.data.polygons)
 """,
+    "snapshot_grid": """
+s=bpy.context.scene
+result={'file':bpy.data.filepath,'dirty':bpy.data.is_dirty,'project':{k:v for k,v in s.items() if k.startswith('cbq_')},
+ 'objects':[{'name':o.name,'type':o.type,'properties':dict(o.items()),'collections':[c.name for c in o.users_collection],
+ 'volume_filepath':bpy.path.abspath(o.data.filepath) if o.type=='VOLUME' else None,
+ 'xyz':[list(v.co) for v in o.data.vertices] if o.type=='MESH' else None,
+ 'location':list(o.location),'scale':list(o.scale),'hide_render':o.hide_render} for o in s.objects],
+ 'materials':[{'name':m.name,'nodes':[{'name':n.name,'type':n.bl_idname} for n in m.node_tree.nodes] if m.use_nodes else []} for m in bpy.data.materials]}
+result=json.loads(json.dumps(result,default=list))
+""",
     "presentation": """
 from pathlib import Path
 script=Path(args['script']).resolve()

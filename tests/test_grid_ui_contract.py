@@ -1,4 +1,5 @@
 from dataclasses import replace
+import ast
 import importlib.util
 from pathlib import Path
 import sys
@@ -27,6 +28,55 @@ TWO_DATASETS = ROOT / "tests/fixtures/cube/two-datasets.cube"
 
 
 class GridUIContractTests(unittest.TestCase):
+    def test_resolved_grid_draw_shows_units_and_small_nonzero_threshold(self):
+        # Execute the actual draw function without requiring Blender in unittest.
+        tree = ast.parse((ROOT / "ChemBlender/ui/grid.py").read_text(encoding="utf-8"))
+        draw = next(node for node in ast.walk(tree)
+                    if isinstance(node, ast.FunctionDef)
+                    and node.name == "draw_grid_controls")
+        namespace = dict(vars(grid_module))
+        namespace["CHEMBLENDER_OT_create_grid_view"] = SimpleNamespace(bl_idname="view")
+        exec(compile(ast.Module(body=[draw], type_ignores=[]), "grid draw", "exec"), namespace)
+        labels = []
+
+        class Layout:
+            enabled = True
+
+            def separator(self):
+                pass
+
+            def label(self, *, text, **_kwargs):
+                labels.append(text)
+
+            def prop(self, *_args, **_kwargs):
+                pass
+
+            def row(self, **_kwargs):
+                return self
+
+            def operator(self, *_args, **_kwargs):
+                return SimpleNamespace()
+
+        batch = CUBE_READER.parse(TWO_DATASETS)
+        raw = next(value for value in batch.datasets if isinstance(value, Grid3D))
+        with TemporaryDirectory() as temporary:
+            session = create_session(temp_parent=temporary)
+            try:
+                session.project.commit(batch)
+                resolve_grid_selection(session, raw.id, dataset_index=0,
+                                       preset_id="electron_density",
+                                       value_unit="electron_per_cubic_bohr")
+                for threshold, expected in ((0.001, "0.001"), (1e-9, "1e-09")):
+                    labels.clear()
+                    context = SimpleNamespace(scene=SimpleNamespace(
+                        chemblender_grid=SimpleNamespace(isovalue=threshold)))
+                    namespace["draw_grid_controls"](Layout(), context, session)
+                    self.assertIn("Coordinate unit: bohr", labels)
+                    self.assertIn("Value unit: electron_per_cubic_bohr", labels)
+                    self.assertIn(f"Threshold: {expected}", labels)
+            finally:
+                close_session(session)
+
     def test_active_volume_unload_cancels_joins_and_releases_once(self):
         class Worker:
             def __init__(self):
