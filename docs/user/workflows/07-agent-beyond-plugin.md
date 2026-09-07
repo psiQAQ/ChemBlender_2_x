@@ -8,6 +8,8 @@
 
 这不是 ChemBlender 插件能力。材质只影响 View 外观。
 
+对象材质槽不一定控制最终原子颜色。Geometry Nodes 生成的实例可能使用自己的材质（如 CH_Molecule）；先检查 evaluated geometry/instances 的实际材质，再用渲染验证。仅修改对象材质槽时，应明确报告其作用范围，不能根据槽值宣称画面已变色，也不要为套用展示材质而改写科学节点输入。
+
 ```text
 在当前 Blender 中使用一般 bpy，为我已明确选中的 ChemBlender View 准备展示材质。先读取 selected objects、现有 material slots 和 node RNA；不要按名称猜对象。有现有材质时复制后修改，没有材质时创建新的展示材质并说明此前 material slot 为空。只调整 Base Color、Roughness、Metallic、Alpha 等材质参数，不改 mesh、Geometry Nodes、custom properties、Object transform 或任何 scientific entity。完成后返回对象、材质、修改前后参数和渲染视口截图状态；不要声称化学元素、键级或属性发生变化。
 ```

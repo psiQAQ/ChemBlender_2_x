@@ -17,7 +17,7 @@
 | LIFE | R16/R17 Passed；待最终包复核 | R16/R17 Passed；待最终包复核 |
 | MIG | R20 Passed；待全轮最终复核 | R20 Passed；待全轮最终复核 |
 | AGENT | R21 Passed；待全轮最终复核 | R21 Passed，冷依赖已修复；待最终复核 |
-| OUTSIDE | Not Run | Not Run |
+| OUTSIDE | R21 Passed；待全轮最终复核 | R21 Passed；同步渲染中途取消Not Run；待最终复核 |
 | REP-MOLECULAR / REP-TRAJECTORY / REP-BIOLOGICAL / REP-CRYSTAL / REP-GRID | Not Run | Not Run |
 
 ## 源码、环境与证据
@@ -79,3 +79,5 @@ R13 VIEW 双路径完整重测通过，详见 [VIEW](2026-09-07-agent-experience
 迁移独立报告：[MIG](2026-09-07-agent-experience/MIG.md)。两条路线有独立集合、渲染、完整配对和冷重开证据。继续 AGENT、OUTSIDE 和五类代表输入；最终同包复核与总展示文件尚未完成。
 
 [AGENT独立报告](2026-09-07-agent-experience/AGENT.md)包含单位诊断修复、原生连接恢复与MCP测试profile冷依赖修复的完整证据。还剩OUTSIDE与五类代表输入，以及最终同包复核和14集合总展示文件。
+
+[OUTSIDE独立报告](2026-09-07-agent-experience/OUTSIDE.md)：真实Eevee双路径渲染、材质作用范围、集合、配对与重开通过。剩五类代表输入、最终同包复核和14集合总展示文件。
