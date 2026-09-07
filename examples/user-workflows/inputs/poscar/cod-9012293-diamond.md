@@ -34,7 +34,7 @@ ChemBlender 导入 periodic Structure、cell 和分数坐标。POSCAR 不携带�
 ## 操作流程
 
 1. 用 `Quick Import` 选择 [`cod-9012293-diamond.POSCAR`](cod-9012293-diamond.POSCAR)。
-2. 核对 8 个 C 位点、3.5669 Å 晶胞和 Direct 坐标，再确认导入。
+2. 在 Preview 核对 C · 8、Direct 和晶胞体积约 45.3809 Å³，再确认导入；保存数据中核对 3.5669 Å 晶胞矩阵和全部坐标。
 3. 创建周期 View；需要核查对称性时与源 CIF 对照，而不是把推断当源字段。
 
 ## Agent 提示词

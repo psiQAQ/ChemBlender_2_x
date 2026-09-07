@@ -34,8 +34,8 @@ ChemBlender 导入 periodic Structure、cell、64 个位点和 atomic velocity p
 ## 操作流程
 
 1. 用 `Quick Import` 选择 [`cod-9012293-diamond-2x2x2.CONTCAR`](cod-9012293-diamond-2x2x2.CONTCAR)。
-2. 在 Preview 核对 64 sites、Direct positions 和 64×3 velocity 数据，再确认导入。
-3. 创建周期 View，检查 2×2×2 空间分布；速度应全部为零。
+2. 在 Preview 核对 C · 64、Direct、晶胞体积约 363.047 Å³ 和 Ion velocities，再确认导入。
+3. 检查默认周期 View 的 2×2×2 空间分布；保存数据中核对 64×3 速度全部为零。当前 atomic_velocity 单位保留 unknown，不能将其当作带确定时间单位的 MD 结果。
 
 ## Agent 提示词
 

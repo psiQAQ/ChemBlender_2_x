@@ -21,6 +21,10 @@ OPERATOR_UI_EVIDENCE = {
     "wm.save_as_mainfile": "REP-TRAJECTORY-R22-12-saved.png",
     "wm.open_mainfile": "LIFE: 原生 Open/冷重开，详见 LIFE.md",
     "render.render": "OUTSIDE-R21-UI-render-final.png",
+    "chemblender.toggle_selective_constraints": "DATA-R7-02: 原生隐藏/恢复，详见 DATA.md",
+    "chemblender.derive_crystal_symmetry": "DATA: 原生禁用按钮及缺失原因，详见 DATA.md（仅验证失败停止）",
+    "chemblender.resolve_grid_semantics": "VIEW-R9-03-resolved.png；R13 干净原生重测见 VIEW.md",
+    "chemblender.create_grid_view": "VIEW-R9-04-volume.png、VIEW-R9-05-surface.png；R13 干净原生重测见 VIEW.md",
 }
 
 COMMANDS = {
@@ -53,10 +57,42 @@ assert operation.poll(), operator_id+' poll failed'
 rna=operation.get_rna_type()
 keywords=args.get('kwargs',{})
 assert set(keywords)<=set(rna.properties.keys()), 'Unknown public RNA argument'
-returned=operation(**keywords)
-result={'operator':operator_id,'returned':sorted(returned),
- 'ui_evidence':tested_operators[operator_id]}
-assert 'CANCELLED' not in returned, result
+try:
+    returned=operation(**keywords)
+except RuntimeError as error:
+    assert args.get('expected_error') and args['expected_error'] in str(error),str(error)
+    result={'operator':operator_id,'error':str(error),'expected_failure':True}
+else:
+    result={'operator':operator_id,'returned':sorted(returned),
+     'ui_evidence':tested_operators[operator_id]}
+    assert not args.get('expected_error'), 'Expected error did not occur'
+    assert sorted(returned)==args.get('expected_return',sorted(returned))
+    assert 'CANCELLED' not in returned or args.get('expected_return')==['CANCELLED'], result
+""",
+    "rna": """
+result={}
+for operator_id in args['operators']:
+    namespace,name=operator_id.split('.')
+    operation=getattr(getattr(bpy.ops,namespace),name)
+    result[operator_id]={'poll':operation.poll(),'properties':[{ 'name':p.identifier,'type':p.type} for p in operation.get_rna_type().properties]}
+""",
+    "select_context": """
+settings=bpy.context.scene.chemblender_project_browser
+if 'row' in args:settings.selected_index=args['row']
+if 'object' in args:
+    obj=bpy.data.objects[args['object']]
+    for other in bpy.context.selected_objects:other.select_set(False)
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active=obj
+for area in bpy.context.screen.areas:area.tag_redraw()
+result={'selected_index':settings.selected_index,'active_object':bpy.context.active_object.name if bpy.context.active_object else None}
+""",
+    "grid_settings": """
+settings=bpy.context.scene.chemblender_grid
+for key,value in args.get('values',{}).items():
+    assert key in settings.bl_rna.properties
+    setattr(settings,key,value)
+result={p.identifier:getattr(settings,p.identifier) for p in settings.bl_rna.properties if p.type in {'STRING','INT','FLOAT','ENUM'}}
 """,
     "clean": """
 assert not bpy.data.is_dirty or args.get('discard_test_scene')
@@ -111,6 +147,14 @@ result=json.loads(json.dumps(result,default=list))
     "render_path": """
 bpy.context.scene.render.filepath=args['path']
 result={'path':bpy.context.scene.render.filepath}
+""",
+    "instance_geometry": """
+result={}
+for instance in bpy.context.evaluated_depsgraph_get().object_instances:
+    if instance.is_instance and instance.parent:
+        entry=result.setdefault(instance.parent.original.name,{'instances':0,'polygons':0})
+        entry['instances']+=1
+        if instance.object.type=='MESH':entry['polygons']+=len(instance.object.data.polygons)
 """,
     "presentation": """
 from pathlib import Path
