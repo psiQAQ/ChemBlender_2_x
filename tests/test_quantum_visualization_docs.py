@@ -1920,6 +1920,20 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 with self.assertRaises(AssertionError):
                     self.test_local_markdown_links_resolve()
 
+    def test_document_links_do_not_require_local_package_cache(self):
+        from unittest.mock import patch
+
+        cache = (ROOT / ".agents/cache").resolve()
+        exists = Path.exists
+
+        def without_cache(path):
+            if path.resolve().is_relative_to(cache):
+                return False
+            return exists(path)
+
+        with patch.object(Path, "exists", without_cache):
+            self.test_local_markdown_links_resolve()
+
     def test_local_markdown_links_resolve(self):
         import re
 

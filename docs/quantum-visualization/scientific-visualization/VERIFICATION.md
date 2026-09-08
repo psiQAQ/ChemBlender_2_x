@@ -15,7 +15,7 @@
 | 全部可选真实后端 | Not Run | 新环境尚未批准安装；不能用合成数据、已有渲染适配器或固定输入文件代替完整科学验收 |
 | 共享真实用户安装、远端 CI / 发布 | Not Run | 本轮使用私有配置，未改变共享用户环境；远端操作未获授权 |
 
-最终开发包为 [chemblender-2.4.0.zip](../../../.agents/cache/scientific-extension-qualification-20260908-08/source/ChemBlender/chemblender-2.4.0.zip)，30109401 bytes。SHA-256：`fa66bc9f407b3e87d894fd8fc9d0069a470c3e0cc690ae33f009190ca6867995`。包名沿用当前 manifest 版本，不代表已发布新版本。
+最终开发包位于本地缓存 `.agents/cache/scientific-extension-qualification-20260908-08/source/ChemBlender/chemblender-2.4.0.zip`（从仓库根目录起算，不随 Git 分发），30109401 bytes。SHA-256：`fa66bc9f407b3e87d894fd8fc9d0069a470c3e0cc690ae33f009190ca6867995`。包名沿用当前 manifest 版本，不代表已发布新版本。
 
 完整 smoke 在 Windows 进程内卸载已加载的 RDKit 库时出现私有测试目录的 DLL 占用清理警告，最终检查和退出码均通过；未为消除警告删除共享文件。旧失败日志保留，最新通过结果没有覆盖它们。
 
