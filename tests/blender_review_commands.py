@@ -3,12 +3,15 @@
 UI 证据相对 .blend-analysis/2026-09-07-review/screenshots/。
 2026-09-08 用户授权：重复操作可用 MCP；重放不记作新的原生 UI 首测。
 宿主读取 COMMANDS，将 JSON 参数作为 args 传入 Blender；产品流程只用公开
-bpy.ops / RNA。install 仅限停止旧进程后的独立测试 profile。
+bpy.ops / RNA。默认 install 仅用于独立测试 profile；真实用户修复须有明确
+授权、已校验备份，并保留其他已启用扩展的依赖声明。
 """
 
 OPERATOR_UI_EVIDENCE = {
     "extensions.package_install_files": "REP-BIOLOGICAL-R24-00-install-user-default.png",
     "wm.save_userpref": "REP-BIOLOGICAL-R23-04-enabled.png",
+    "preferences.addon_disable": "ENV: 原生取消启用勾选，详见 ENV.md",
+    "preferences.addon_enable": "ENV: 原生恢复启用勾选，详见 ENV.md",
     "chemblender.quick_import": "REP-BIOLOGICAL-R23-05-pdb-preview.png",
     "chemblender.confirm_import": "REP-BIOLOGICAL-R23-06-hierarchy-fixed.png",
     "chemblender.cancel_import": "IMP: 原生 Preview Cancel，详见 IMP.md",

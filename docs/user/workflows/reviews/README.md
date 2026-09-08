@@ -50,3 +50,8 @@
 可接受证据包括截图或短录屏、Blender/MCP 控制台片段、runner JSON、导出文件 hash、Project Browser/Diagnostics 导出、`.blend`/`.cbq` 冷重开记录。每条证据要能对应具体 case 和步骤；只有 `FINISHED`、文件存在、监听端口或 manifest parse 不能单独判定 Passed。
 
 发现问题时按[工作流文档](../README.md)复现。问题属于插件缺陷时，应先留下 RED，再修复并记录 fix commit；属于文档、样例或环境时也要写清分类，不能把它们记成插件 Passed。
+
+## Agent 模拟用户记录
+
+- [2026-09-07 双路径体验报告](2026-09-07-agent-experience-review.md)：14 项明细、失败与修复链、同包最终复验和原始安装阻断状态。
+- [2026-09-08 实际用户安装恢复](2026-09-08-user-install-recovery.md)：后续授权后，实际 user_default 安装、完整 smoke、冷启动及 MCP 均 Passed；补充前一报告的安装阻断，不改写历史人工验收。
