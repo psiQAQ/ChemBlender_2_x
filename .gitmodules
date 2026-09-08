@@ -40,3 +40,12 @@
 [submodule "submodules/qcengine"]
 	path = submodules/qcengine
 	url = https://github.com/MolSSI/QCEngine.git
+[submodule "submodules/MolecularNodes"]
+	path = submodules/MolecularNodes
+	url = https://github.com/BradyAJohnston/MolecularNodes.git
+[submodule "submodules/morbvis"]
+	path = submodules/morbvis
+	url = https://github.com/Yasuaki-Ito/morbvis.git
+[submodule "submodules/pyscf"]
+	path = submodules/pyscf
+	url = https://github.com/pyscf/pyscf.git

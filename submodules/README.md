@@ -28,9 +28,25 @@ git add .gitmodules submodules/<name>
 | QCElemental | `https://github.com/MolSSI/QCElemental.git` | QCSchema v1/v2 model、字段迁移和 exchange fixture | `v0.50.4` / `46034a0587e2e74426cb1ae2d4d7f66ad5cf6090`；BSD-3-Clause；只用于 schema 审阅和测试，不进入 Extension |
 | avogadrolibs | `https://github.com/OpenChemistry/avogadrolibs.git` | CJSON 1 reader/writer、字段 convention 与 integration fixture | `1.103.0` / `5d5d11f4a9ca716f7fb9653eb92424f1714b68ac`；BSD-3-Clause；只用于交换格式审阅和测试，不进入 Extension |
 | QCEngine | `https://github.com/MolSSI/QCEngine.git` | QCSchema compute、program harness discovery、FailedOperation 与 provenance | `v0.50.0` / `d1842c4dd2c1e61eb9075a0d32ffefc7c4d5b318`；BSD-3-Clause；可选 worker 参考，不进入 Extension |
+| Molecular Nodes | `https://github.com/BradyAJohnston/MolecularNodes.git` | 密度网格/VDB、Geometry Nodes、session 恢复；目录 `MolecularNodes/` | `b3ab6b7a2e484f9b3a0d0a7192943700ebf183b0`；GPL-3.0；只用于源码参考，不进入 Extension |
+| MOrbVis | `https://github.com/Yasuaki-Ito/morbvis.git` | 轨道选择/比较、截面、Cube 导出、CPU/GPU 交互；目录 `morbvis/` | `724f43c6d6f25cc979e58c6848499e1a65d76d53`；BSD-3-Clause；只用于源码与交互参考，不进入 Extension |
+| PySCF | `https://github.com/pyscf/pyscf.git` | MO/密度/ESP 网格与 Cube、AO/RDM 数值对照；目录 `pyscf/` | `v2.14.0` / `c63a953ba603a5ad8c1d65d88da72aaf05ede4d8`；Apache-2.0；只用于源码参考，不安装为运行时依赖 |
 | xyzrender | `https://github.com/aligfellow/xyzrender` | reader/Cube | 未拉取 |
 | Molecular Blender | 添加前核实 | 波函数/适应性表面 | 未拉取 |
 | Beautiful Atoms | 添加前核实 | volume/周期渲染 | 未拉取 |
-| Molecular Nodes | 添加前核实 | 轨迹/session/选择 | 未拉取 |
 
-更新已固定仓库时先审阅新 release、许可证、字段变化和 integration fixture，再执行 `git -C submodules/<name> checkout <reviewed-commit>`。如移除，使用 `git submodule deinit` 和 `git rm submodules/<name>`，并同步删除 `.git/modules/submodules/<name>` 的本地缓存。不要为保持目录结构创建空仓库目录，也不要在未固定 reviewed commit 时提交 `.gitmodules`。
+2026-09-08 工作台参考仅新增以上 Molecular Nodes、MOrbVis 和 PySCF，保留原有 14 个 gitlink。三个新增仓库只取顶层浅克隆；Molecular Nodes 内的 `molecularnodes/lib/nodebpy/_520` 未初始化。
+
+| 参考仓库 | 优先阅读 | 使用边界 |
+| --- | --- | --- |
+| [Molecular Nodes](MolecularNodes/) | `molecularnodes/entities/density/grids.py`、`molecularnodes/nodes/geometry.py`、`molecularnodes/session.py` | 借鉴 VDB/节点/恢复行为；不引入其 `bpy`、databpy、gridData 依赖链或 pickle 存储。`LICENSE.OLD` 的 MIT 明确不适用于当前代码，复用时保留要求的上游通知。 |
+| [MOrbVis](morbvis/) | `src/core/moEvaluator.ts`、`src/core/cubeFile.ts`、`src/core/gpuEvaluator.ts`、`src/shaders/mo_eval.wgsl` | TypeScript/WebGPU 只作交互和算法参考，不替换当前 IOData/GBasis Python worker。 |
+| [PySCF](pyscf/) | `pyscf/tools/cubegen.py` 的 `density`/`orbital`/`mep`、`pyscf/dft/numint.py` 的 `eval_ao`/`eval_rho`、`pyscf/tools/test/test_cubegen.py` | 保留 `LICENSE`、`NOTICE` 和源码头；仅审阅或在单独批准的环境中运行数值对照，不从 Blender 自动导入此源码目录。 |
+
+新克隆开发工作区时，可限定初始化这三个顶层参考，不递归初始化其依赖：
+
+```bash
+git submodule update --init --depth 1 -- submodules/MolecularNodes submodules/morbvis submodules/pyscf
+```
+
+更新已固定仓库时先审阅新 release、许可证、字段变化和 integration fixture；浅克隆先执行 `git -C submodules/<name> fetch --depth 1 origin <reviewed-commit>`，再执行 `git -C submodules/<name> checkout --detach <reviewed-commit>` 并同步 gitlink 与引用表。如移除，使用 `git submodule deinit` 和 `git rm submodules/<name>`，并同步删除 `.git/modules/submodules/<name>` 的本地缓存。不要为保持目录结构创建空仓库目录，也不要在未固定 reviewed commit 时提交 `.gitmodules`。
