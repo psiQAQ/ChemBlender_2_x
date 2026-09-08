@@ -25,7 +25,7 @@ from .wavefunction_grid import (
 )
 
 
-DERIVATION_VERSION = "1"
+DERIVATION_VERSION = "2"
 
 
 def _validate_density_entities(structure, basis_set, density_matrix):
@@ -191,6 +191,7 @@ def _batch(
         origin=origin,
         step_vectors=step_vectors,
         coordinate_unit="bohr",
+        structure_id=density_matrix.structure_id,
     )
     return ImportBatch(datasets=(grid,), provenance=(provenance,))
 

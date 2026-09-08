@@ -76,6 +76,7 @@ class WavefunctionObservableTests(unittest.TestCase):
         grid = first.datasets[0]
         provenance = first.provenance[0]
         self.assertEqual(grid.semantic_role, "electron_density")
+        self.assertEqual(grid.structure_id, structure.id)
         self.assertEqual(grid.data.unit, "electron_per_cubic_bohr")
         numpy.testing.assert_allclose(grid.data.values[:, 0, 0], [2.0, 8.0])
         self.assertEqual(provenance.parent_ids, (structure.id, basis.id, matrix.id))
@@ -128,6 +129,7 @@ class WavefunctionObservableTests(unittest.TestCase):
         )
         grid = batch.datasets[0]
         self.assertEqual(grid.semantic_role, "electrostatic_potential")
+        self.assertEqual(grid.structure_id, structure.id)
         self.assertEqual(grid.data.unit, "hartree_per_elementary_charge")
         numpy.testing.assert_allclose(grid.data.values[:, 0, 0], [0.25, -0.5])
         self.assertEqual(

@@ -20,7 +20,7 @@ from .model import (
 
 BACKEND_NAME = "qc-gbasis"
 BACKEND_VERSION = "0.1.0"
-DERIVATION_VERSION = "1"
+DERIVATION_VERSION = "2"
 
 
 class GBasisDependencyError(RuntimeError):
@@ -302,6 +302,7 @@ def _batch(
         origin=origin,
         step_vectors=step_vectors,
         coordinate_unit="bohr",
+        structure_id=structure.id,
     )
     return ImportBatch(datasets=(grid,), provenance=(provenance,))
 

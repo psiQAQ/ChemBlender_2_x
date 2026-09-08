@@ -216,14 +216,14 @@ def builtin_scene_presets():
         ),
         ScenePresetDefinition(
             "property_on_surface",
-            "1",
+            "2",
             "Property mapped on surface",
             "property_on_surface",
             (
                 _spec("surface_grid", "dataset", "Grid3D"),
                 _spec("property_grid", "dataset", "Grid3D"),
             ),
-            ("openvdb_volume_v1", "volume_to_mesh_v1", "surface_property_plan_v1"),
+            ("openvdb_volume_v1", "grid_to_mesh_v1", "property_surface_v2"),
             (
                 ("surface_dataset_index", 0),
                 ("property_dataset_index", 0),

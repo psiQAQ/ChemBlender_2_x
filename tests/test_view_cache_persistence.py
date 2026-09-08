@@ -2,6 +2,7 @@ import hashlib
 import json
 import sys
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType
@@ -155,6 +156,128 @@ class ViewCachePersistenceTests(unittest.TestCase):
         path = Path(path)
         path.touch()
         return path
+
+    def property_object(self, *, legacy=False):
+        prop = grid("electrostatic_potential")
+        self.project.commit(ImportBatch(datasets=(prop,)))
+        preset = builtin_scene_presets()["property_on_surface"]
+        if legacy:
+            preset = replace(
+                preset,
+                version="1",
+                adapter_contracts=(
+                    "openvdb_volume_v1", "volume_to_mesh_v1", "surface_property_plan_v1"
+                ),
+            )
+        plan = plan_scene_preset(
+            preset,
+            self.project,
+            {"surface_grid": self.grid.id, "property_grid": prop.id},
+            {"color_min": -3.0, "color_max": 3.0, "surface_isovalue": 0.02},
+        )
+        metadata = plan_metadata(plan)
+        metadata.update({
+            "cb_dataset_id": str(self.grid.id),
+            "cb_dataset_revision": self.grid.revision,
+            "cb_dataset_index": 0,
+            "cb_property_dataset_id": str(prop.id),
+            "cb_property_dataset_revision": prop.revision,
+            "cb_property_dataset_index": 0,
+            "cb_cache_format_version": 1,
+            "cb_render_cache_key": hashlib.sha256(
+                f"{plan.render_identity}:property".encode("utf-8")
+            ).hexdigest(),
+            "cb_report_eligible": True,
+        })
+        return FakeObject("Property Surface", "legacy.vdb", metadata), plan
+
+    def test_legacy_property_is_stale_while_current_volume_still_repairs(self):
+        from ChemBlender.ui import view_cache
+
+        legacy, _plan = self.property_object(legacy=True)
+        current = self.grid_object()
+        datasets = dict(self.project.datasets)
+        with patch.object(
+            view_cache, "_ensure_grid_volume_cache", side_effect=self.ensured_path
+        ) as ensure, patch.object(
+            view_cache, "_ensure_property_surface_cache"
+        ) as property_ensure:
+            with self.assertRaisesRegex(view_cache.ViewCacheError, "Property Surface.*stale"):
+                view_cache.repair_project_view_caches(
+                    session=self.session, objects=(legacy, current), blend_path=self.blend_path
+                )
+        ensure.assert_called_once()
+        property_ensure.assert_not_called()
+        self.assertEqual(current.data.grids.loads, 1)
+        self.assertEqual(legacy.data.filepath, "legacy.vdb")
+        self.assertTrue(legacy["cb_view_stale"])
+        self.assertFalse(legacy["cb_report_eligible"])
+        self.assertIn("stale", legacy["cb_view_diagnostic"])
+        self.assertEqual(dict(self.project.datasets), datasets)
+
+    def test_bad_cache_metadata_does_not_block_later_view(self):
+        from ChemBlender.ui import view_cache
+
+        stale, current = self.grid_object(), self.grid_object()
+        stale["cb_dataset_revision"] = "stale"
+        with patch.object(
+            view_cache, "_ensure_grid_volume_cache", side_effect=self.ensured_path
+        ) as ensure:
+            with self.assertRaisesRegex(view_cache.ViewCacheError, "stale"):
+                view_cache.repair_project_view_caches(
+                    session=self.session, objects=(stale, current), blend_path=self.blend_path
+                )
+        ensure.assert_called_once()
+        self.assertEqual(stale.data.grids.loads, 0)
+        self.assertEqual(current.data.grids.loads, 1)
+
+    def test_explicit_rebuild_upgrades_saved_plan_and_rejects_changed_inputs(self):
+        from ChemBlender.ui import view_cache
+
+        legacy, old_plan = self.property_object(legacy=True)
+        legacy["cb_cache_path"] = r"\\attacker.invalid\share\wrong.vdb"
+        new_plan = view_cache.plan_property_view_rebuild(legacy, self.project)
+        self.assertEqual(new_plan.preset_version, "2")
+        self.assertNotEqual(new_plan.render_identity, old_plan.render_identity)
+        self.assertEqual(new_plan.bindings, old_plan.bindings)
+        self.assertEqual(new_plan.settings, old_plan.settings)
+        for key, value in (
+            ("cb_scene_preset_version", "99"),
+            ("cb_scene_render_identity", "tampered"),
+            ("cb_scene_settings_json", json.dumps({"surface_isovalue": 0.4})),
+        ):
+            with self.subTest(key=key):
+                invalid = FakeObject(legacy.name, legacy.data.filepath, dict(legacy))
+                invalid[key] = value
+                with self.assertRaises(view_cache.ViewCacheError):
+                    view_cache.plan_property_view_rebuild(invalid, self.project)
+        bindings = json.loads(legacy["cb_scene_bindings_json"])
+        bindings["property_grid"]["revision"] = "changed"
+        legacy["cb_scene_bindings_json"] = json.dumps(bindings)
+        with self.assertRaisesRegex(view_cache.ViewCacheError, "bindings.*stale"):
+            view_cache.plan_property_view_rebuild(legacy, self.project)
+
+    def test_successful_retry_clears_view_diagnostic_and_restores_eligibility(self):
+        from ChemBlender.ui import view_cache
+
+        obj, _plan = self.property_object()
+        obj["cb_view_stale"] = True
+        obj["cb_view_diagnostic"] = "cache unavailable"
+        obj["cb_report_eligible"] = False
+        self.session.mark_dirty("view_cache")
+
+        def ensure(_surface, _property, path, **_kwargs):
+            Path(path).touch()
+            return path
+
+        with patch.object(view_cache, "_ensure_property_surface_cache", side_effect=ensure):
+            self.assertEqual(view_cache.repair_project_view_caches(
+                session=self.session, objects=(obj,), blend_path=self.blend_path
+            ), 1)
+        self.assertFalse(obj["cb_view_stale"])
+        self.assertNotIn("cb_view_diagnostic", obj)
+        self.assertTrue(obj["cb_report_eligible"])
+        self.assertNotIn("view_cache", self.session.dirty_reasons)
 
     def test_grid_cache_target_is_derived_from_verified_sidecar(self):
         from ChemBlender.ui import view_cache

@@ -222,9 +222,18 @@ def _surface_group(name, threshold, material, *, property_grid=False):
         links = group.links
         group_input = nodes.new("NodeGroupInput")
         group_output = nodes.new("NodeGroupOutput")
-        volume_to_mesh = nodes.new("GeometryNodeVolumeToMesh")
+        if property_grid:
+            # Mesh only density: Volume to Mesh also meshes the coloring grid.
+            density = nodes.new("GeometryNodeGetNamedGrid")
+            density.data_type = "FLOAT"
+            density.inputs["Name"].default_value = "density"
+            links.new(group_input.outputs["Geometry"], density.inputs["Volume"])
+            volume_to_mesh = nodes.new("GeometryNodeGridToMesh")
+            links.new(density.outputs["Grid"], volume_to_mesh.inputs["Grid"])
+        else:
+            volume_to_mesh = nodes.new("GeometryNodeVolumeToMesh")
+            links.new(group_input.outputs["Geometry"], volume_to_mesh.inputs["Volume"])
         volume_to_mesh.inputs["Threshold"].default_value = float(threshold)
-        links.new(group_input.outputs["Geometry"], volume_to_mesh.inputs["Volume"])
         geometry = volume_to_mesh.outputs["Mesh"]
         if property_grid:
             named_grid = nodes.new("GeometryNodeGetNamedGrid")
@@ -248,7 +257,7 @@ def _surface_group(name, threshold, material, *, property_grid=False):
         links.new(geometry, set_material.inputs["Geometry"])
         links.new(set_material.outputs["Geometry"], group_output.inputs["Geometry"])
         group["cbq_contract"] = (
-            "property_surface_v1" if property_grid else "isosurface_v1"
+            "property_surface_v2" if property_grid else "isosurface_v1"
         )
         return group
     except Exception:

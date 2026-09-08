@@ -247,6 +247,66 @@ def plan_grid_view(
     raise ValueError("selected Grid3D does not support this view")
 
 
+def rebuild_property_view(session, obj, cache_root):
+    """Replace owned derived data only after a complete new view is available."""
+    from .view_cache import plan_property_view_rebuild
+    from ..scene_preset_view import apply_scene_preset
+    from ..surface_view import remove_surface_object
+
+    plan = plan_property_view_rebuild(obj, session.project)
+    if getattr(obj, "library", None) is not None:
+        raise ValueError("linked property surfaces cannot be rebuilt in place")
+    modifiers = tuple(
+        modifier for modifier in obj.modifiers
+        if modifier.type == "NODES"
+        and modifier.get("cbq_contract")
+        in {"property_surface_v1", "property_surface_v2"}
+        and modifier.node_group is not None
+    )
+    if len(modifiers) != 1 or not obj.users_collection:
+        raise ValueError("property surface must have one owned surface modifier")
+    modifier = modifiers[0]
+    prepared, = apply_scene_preset(
+        plan,
+        session.project,
+        collection=obj.users_collection[0],
+        cache_root=cache_root,
+    )
+    prepared_modifier = prepared.modifiers[0]
+    old_data, old_group = obj.data, modifier.node_group
+    new_data, new_group = prepared.data, prepared_modifier.node_group
+    old_metadata = dict(obj.items())
+    old_contract = modifier.get("cbq_contract")
+    try:
+        # Keep object identity, transforms, collections and user modifiers intact.
+        obj.data = new_data
+        modifier.node_group = new_group
+        modifier["cbq_contract"] = prepared_modifier["cbq_contract"]
+        for key, value in prepared.items():
+            obj[key] = value
+        obj["cb_view_stale"] = False
+        obj.pop("cb_view_diagnostic", None)
+        prepared.data = old_data
+        prepared_modifier.node_group = old_group
+    except BaseException:
+        obj.data = old_data
+        modifier.node_group = old_group
+        modifier["cbq_contract"] = old_contract
+        for key in tuple(obj.keys()):
+            if key not in old_metadata:
+                del obj[key]
+        for key, value in old_metadata.items():
+            obj[key] = value
+        prepared.data = new_data
+        prepared_modifier.node_group = new_group
+        remove_surface_object(prepared)
+        raise
+    remove_surface_object(prepared)
+    session.active_view_object_name = obj.name
+    session.mark_dirty("view_cache")
+    return obj
+
+
 try:
     import bpy
     from bpy.props import (
@@ -351,6 +411,7 @@ if bpy is not None:
 
         mode: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
         property_grid_id: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
+        object_name: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
 
         @staticmethod
         def _cache_root(session):
@@ -400,6 +461,16 @@ if bpy is not None:
 
         def execute(self, context):
             try:
+                if self.mode == "rebuild_property":
+                    from .session import get_scene_session
+                    from .properties import advance_browser_revision
+
+                    session = get_scene_session(context.scene)
+                    obj = context.scene.objects.get(self.object_name)
+                    rebuild_property_view(session, obj, self._cache_root(session))
+                    advance_browser_revision(session)
+                    self.report({"INFO"}, "Property surface rebuilt")
+                    return {"FINISHED"}
                 session, _grid, plan, cache_root = self._values(context)
                 created = self._apply(
                     context,
@@ -555,6 +626,25 @@ if bpy is not None:
 
 
     def draw_grid_controls(layout, context, session):
+        for obj in getattr(context.scene, "objects", ()):
+            if (
+                obj.get("cb_scene_preset_id") == "property_on_surface"
+                and (
+                    obj.get("cb_view_stale")
+                    or obj.get("cb_scene_preset_version")
+                    != builtin_scene_presets()["property_on_surface"].version
+                )
+            ):
+                layout.label(text=f"{obj.name}: view needs rebuilding", icon="ERROR")
+                diagnostic = obj.get("cb_view_diagnostic")
+                if diagnostic:
+                    layout.label(text=diagnostic)
+                operator = layout.operator(
+                    CHEMBLENDER_OT_create_grid_view.bl_idname,
+                    text="Rebuild View",
+                )
+                operator.mode = "rebuild_property"
+                operator.object_name = obj.name
         grid = session.project.datasets.get(session.active_entity_id)
         if not isinstance(grid, Grid3D):
             return
@@ -651,6 +741,7 @@ __all__ = (
     "grid_action_availability",
     "grid_preview_summary",
     "plan_grid_view",
+    "rebuild_property_view",
     "resolve_grid_selection",
 )
 if bpy is not None:

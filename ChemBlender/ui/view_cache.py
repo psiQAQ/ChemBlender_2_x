@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+from dataclasses import replace
 from pathlib import Path
 from uuid import UUID
 
@@ -94,11 +95,34 @@ def _document(value, name):
     return result
 
 
-def _current_plan(obj, project):
+def _current_plan(obj, project, *, rebuild_property=False):
     preset_id = obj.get("cb_scene_preset_id")
     if preset_id not in _VOLUME_PRESETS:
         return None
-    preset = builtin_scene_presets()[preset_id]
+    current_preset = preset = builtin_scene_presets()[preset_id]
+    if (
+        rebuild_property
+        and preset_id == "property_on_surface"
+        and obj.get("cb_scene_preset_version") == "1"
+        and preset.version == "2"
+    ):
+        # Validate the complete saved v1 identity before upgrading its renderer.
+        preset = replace(
+            preset,
+            version="1",
+            adapter_contracts=(
+                "openvdb_volume_v1", "volume_to_mesh_v1", "surface_property_plan_v1"
+            ),
+            default_settings=(
+                ("surface_dataset_index", 0),
+                ("property_dataset_index", 0),
+                ("surface_isovalue", 0.001),
+                ("color_min", -0.1),
+                ("color_max", 0.1),
+                ("symmetric", True),
+                ("colormap", "coolwarm"),
+            ),
+        )
     if obj.get("cb_scene_preset_version") != preset.version:
         raise ViewCacheError("scene preset metadata is stale")
     if obj.get("cb_scene_view_kind") != preset.view_kind:
@@ -146,7 +170,37 @@ def _current_plan(obj, project):
         raise ViewCacheError("scene settings metadata is stale")
     if obj.get("cb_scene_render_identity") != plan.render_identity:
         raise ViewCacheError("scene render identity is stale")
+    if preset != current_preset:
+        return plan_scene_preset(current_preset, project, bindings, supplied)
     return plan
+
+
+def plan_property_view_rebuild(obj, project):
+    """Validate saved property-view inputs without trusting its old VDB path."""
+    if (
+        getattr(obj, "type", None) != "VOLUME"
+        or obj.get("cb_scene_preset_id") != "property_on_surface"
+    ):
+        raise ViewCacheError("select a ChemBlender property surface to rebuild")
+    return _current_plan(obj, project, rebuild_property=True)
+
+
+def _mark_view_error(obj, error):
+    obj["cb_view_stale"] = True
+    obj["cb_view_diagnostic"] = str(error)
+    obj["cb_report_eligible"] = False
+
+
+def _clear_view_error(obj, plan, project):
+    if "cb_view_diagnostic" not in obj and not obj.get("cb_view_stale"):
+        return
+    obj["cb_view_stale"] = False
+    obj.pop("cb_view_diagnostic", None)
+    if plan.view_kind in {"signed_isosurface", "property_on_surface"}:
+        obj["cb_report_eligible"] = all(
+            _entity(plan, project, binding.name).status.value == "complete"
+            for binding in plan.bindings
+        )
 
 
 def _entity(plan, project, name):
@@ -386,11 +440,17 @@ def repair_project_view_caches(
     """Repair owned Volume caches without changing scientific project state."""
     repaired = 0
     try:
+        errors = []
         planned = []
         for obj in tuple(objects):
             if getattr(obj, "type", None) != "VOLUME":
                 continue
-            plan = _current_plan(obj, session.project)
+            try:
+                plan = _current_plan(obj, session.project)
+            except (TypeError, ValueError, ViewCacheError) as error:
+                _mark_view_error(obj, error)
+                errors.append(f"{obj.name}: {error}")
+                continue
             if plan is None:
                 continue
             planned.append((obj, plan))
@@ -479,8 +539,13 @@ def repair_project_view_caches(
                         obj["cb_cache_path"] = old_cache_path
                 else:
                     obj["cb_cache_path"] = str(fallback_target)
-                raise ViewCacheError(f"{obj.name}: {error}") from error
+                _mark_view_error(obj, error)
+                errors.append(f"{obj.name}: {error}")
+                continue
+            _clear_view_error(obj, plan, session.project)
             repaired += 1
+        if errors:
+            raise ViewCacheError("; ".join(errors))
     except BaseException:
         session.mark_dirty("view_cache")
         raise

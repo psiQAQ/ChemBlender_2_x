@@ -77,7 +77,7 @@ class ScenePresetTests(unittest.TestCase):
         for preset in presets.values():
             document = scene_preset_document(preset)
             json.dumps(document, allow_nan=False)
-            self.assertEqual(document["version"], "1")
+            self.assertEqual(document["version"], "2" if preset.preset_id == "property_on_surface" else "1")
             self.assertNotIn("callable", repr(document).lower())
             self.assertEqual(scene_preset_from_document(document), preset)
             document["unexpected"] = True

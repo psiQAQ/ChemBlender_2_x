@@ -181,6 +181,7 @@ class WavefunctionGridTests(unittest.TestCase):
         grid = first.datasets[0]
         provenance = first.provenance[0]
         self.assertEqual(grid.semantic_role, "molecular_orbital")
+        self.assertEqual(grid.structure_id, structure.id)
         self.assertEqual(grid.data.unit, "inverse_bohr_to_three_halves")
         numpy.testing.assert_allclose(grid.data.values[:, 0, 0], [2.0, -3.0])
         points = evaluate.call_args_list[0].args[3]
@@ -215,6 +216,7 @@ class WavefunctionGridTests(unittest.TestCase):
         batch = evaluate_electron_density_grid(structure, basis, orbitals, **GRID)
         grid = batch.datasets[0]
         self.assertEqual(grid.semantic_role, "electron_density")
+        self.assertEqual(grid.structure_id, structure.id)
         self.assertEqual(grid.data.unit, "electron_per_cubic_bohr")
         numpy.testing.assert_allclose(grid.data.values[:, 0, 0], [10.0, 20.0])
         self.assertEqual(evaluate.call_count, 2)

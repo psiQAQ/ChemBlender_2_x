@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
 import unittest
 from uuid import uuid4
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import numpy
 
@@ -28,6 +28,123 @@ TWO_DATASETS = ROOT / "tests/fixtures/cube/two-datasets.cube"
 
 
 class GridUIContractTests(unittest.TestCase):
+    def test_property_rebuild_keeps_object_identity_and_rolls_back_failures(self):
+        class Modifier(dict):
+            type = "NODES"
+
+            def __init__(self, version):
+                super().__init__(cbq_contract=f"property_surface_v{version}")
+                self.node_group = object()
+
+        class Surface(dict):
+            type = "VOLUME"
+            library = None
+
+            def __init__(self, version):
+                super().__init__(
+                    cb_scene_preset_version=str(version),
+                    cb_view_stale=version == 1,
+                    cb_report_eligible=version == 2,
+                )
+                self.name = "Saved Surface"
+                self.data = object()
+                self.modifiers = [Modifier(version)]
+                self.users_collection = (object(),)
+                self.matrix_world = object()
+                self.reject_once = False
+
+            def __setitem__(self, key, value):
+                if self.reject_once and key == "cb_scene_preset_version":
+                    self.reject_once = False
+                    raise RuntimeError("metadata assignment failed")
+                super().__setitem__(key, value)
+
+        for failure in (None, "prepare", "swap"):
+            with self.subTest(failure=failure):
+                old, prepared = Surface(1), Surface(2)
+                old_data, new_data = old.data, prepared.data
+                old_group, new_group = old.modifiers[0].node_group, prepared.modifiers[0].node_group
+                old_metadata = dict(old)
+                transform, collection = old.matrix_world, old.users_collection
+                # User-owned modifiers stay attached to the original Object.
+                user_modifier = SimpleNamespace(type="SUBSURF")
+                old.modifiers.append(user_modifier)
+                session = SimpleNamespace(project=object(), mark_dirty=Mock())
+                scene_module = ModuleType("ChemBlender.scene_preset_view")
+                surface_module = ModuleType("ChemBlender.surface_view")
+                removed = []
+
+                def apply(*_args, **_kwargs):
+                    self.assertIs(old.data, old_data)
+                    self.assertIs(old.modifiers[0].node_group, old_group)
+                    if failure == "prepare":
+                        raise RuntimeError("new surface failed")
+                    old.reject_once = failure == "swap"
+                    return (prepared,)
+
+                def remove(obj):
+                    removed.append((obj, obj.data, obj.modifiers[0].node_group))
+
+                scene_module.apply_scene_preset = apply
+                surface_module.remove_surface_object = remove
+                with patch.dict(sys.modules, {
+                    scene_module.__name__: scene_module,
+                    surface_module.__name__: surface_module,
+                }), patch("ChemBlender.ui.view_cache.plan_property_view_rebuild"):
+                    if failure is None:
+                        self.assertIs(grid_module.rebuild_property_view(session, old, "cache"), old)
+                        self.assertIs(old.data, new_data)
+                        self.assertIs(old.modifiers[0].node_group, new_group)
+                        self.assertEqual(old["cb_scene_preset_version"], "2")
+                        self.assertFalse(old["cb_view_stale"])
+                        self.assertTrue(old["cb_report_eligible"])
+                        self.assertEqual(removed, [(prepared, old_data, old_group)])
+                        session.mark_dirty.assert_called_once_with("view_cache")
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, "failed"):
+                            grid_module.rebuild_property_view(session, old, "cache")
+                        self.assertIs(old.data, old_data)
+                        self.assertIs(old.modifiers[0].node_group, old_group)
+                        self.assertEqual(dict(old), old_metadata)
+                        self.assertEqual(removed, [] if failure == "prepare" else [
+                            (prepared, new_data, new_group)
+                        ])
+                        session.mark_dirty.assert_not_called()
+                self.assertIs(old.matrix_world, transform)
+                self.assertIs(old.users_collection, collection)
+                self.assertIs(old.modifiers[1], user_modifier)
+
+    def test_rebuild_action_is_visible_without_a_selected_grid(self):
+        tree = ast.parse((ROOT / "ChemBlender/ui/grid.py").read_text(encoding="utf-8"))
+        draw = next(node for node in ast.walk(tree)
+                    if isinstance(node, ast.FunctionDef) and node.name == "draw_grid_controls")
+        namespace = dict(vars(grid_module))
+        namespace["CHEMBLENDER_OT_create_grid_view"] = SimpleNamespace(bl_idname="view")
+        exec(compile(ast.Module(body=[draw], type_ignores=[]), "grid draw", "exec"), namespace)
+        old = {"cb_scene_preset_id": "property_on_surface", "cb_view_stale": True}
+
+        class Object(dict):
+            name = "Legacy surface"
+
+        buttons = []
+
+        class Layout:
+            def label(self, **_kwargs):
+                pass
+
+            def operator(self, _operator, **kwargs):
+                button = SimpleNamespace(**kwargs)
+                buttons.append(button)
+                return button
+
+        context = SimpleNamespace(scene=SimpleNamespace(objects=(Object(old),)))
+        session = SimpleNamespace(project=SimpleNamespace(datasets={}), active_entity_id=None)
+        namespace["draw_grid_controls"](Layout(), context, session)
+        self.assertEqual(len(buttons), 1)
+        self.assertEqual(buttons[0].text, "Rebuild View")
+        self.assertEqual(buttons[0].mode, "rebuild_property")
+        self.assertEqual(buttons[0].object_name, "Legacy surface")
+
     def test_resolved_grid_draw_shows_units_and_small_nonzero_threshold(self):
         # Execute the actual draw function without requiring Blender in unittest.
         tree = ast.parse((ROOT / "ChemBlender/ui/grid.py").read_text(encoding="utf-8"))

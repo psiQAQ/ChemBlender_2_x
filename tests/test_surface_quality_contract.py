@@ -91,6 +91,9 @@ class SurfaceQualityContractTests(unittest.TestCase):
         self.assertTrue(guard(source, close))
         self.assertFalse(guard(source, mismatched))
         self.assertFalse(
+            guard(replace(source, structure_id=uuid4()), replace(source, structure_id=uuid4()))
+        )
+        self.assertFalse(
             guard(
                 source,
                 replace(source, id=uuid4(), coordinate_unit="angstrom"),
