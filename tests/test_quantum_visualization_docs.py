@@ -1885,7 +1885,10 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         from unittest.mock import patch
 
         with TemporaryDirectory() as directory:
-            checkout = Path(directory)
+            # Exercise equivalent non-canonical roots, as with Windows 8.3 paths.
+            alias = Path(directory) / "alias"
+            alias.mkdir()
+            checkout = alias / ".."
             for relative in (
                 "README.md", "AGENTS.md", ".agents/README.md", "docs/README.md"
             ):
@@ -1944,7 +1947,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 target = (path.parent / destination).resolve()
                 # This explicitly local review bundle is not distributed with Git.
                 # Keep validating every artifact when the bundle is available.
-                evidence = ROOT / ".blend-analysis/2026-09-07-review"
+                evidence = (ROOT / ".blend-analysis/2026-09-07-review").resolve()
                 if not evidence.exists() and target.is_relative_to(evidence):
                     continue
                 self.assertTrue(target.exists(), f"{path}: {destination}")
