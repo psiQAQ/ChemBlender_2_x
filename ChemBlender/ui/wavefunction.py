@@ -374,7 +374,6 @@ def clear_wavefunction_jobs(session=None):
                     failure = error
     if failure is not None:
         raise failure
-    _ENUM_ITEMS.clear()
 
 
 def _worker_progress(path):
@@ -397,11 +396,29 @@ def _selected_orbitals(session, settings):
     if selected is not None:
         return selected
     try:
-        return session.project.orbital_sets.get(UUID(settings.orbital_source)) or next(
+        identity = getattr(settings, "orbital_source_uuid", "") or settings.orbital_source
+        return session.project.orbital_sets.get(UUID(identity)) or next(
             iter(session.project.orbital_sets.values()), None
         )
     except (ValueError, AttributeError):
         return next(iter(session.project.orbital_sets.values()), None)
+
+
+def select_wavefunction_source(settings, orbitals, *, reset=True):
+    """Keep the selected scientific source when a derived grid becomes active."""
+    identity = str(orbitals.id)
+    if getattr(settings, "orbital_source_uuid", "") != identity:
+        settings.orbital_source_uuid = identity
+        if reset:
+            settings.orbital_number = 1
+            settings.nuclear_charge_uuid = ""
+            settings.density_level = "UNSET"
+    if settings.channel not in {value.label for value in orbitals.channels}:
+        settings.channel = orbitals.channels[0].label
+
+
+def _enum_number(items, identity, *, default=0):
+    return next((index for index, value in enumerate(items) if value[0] == identity), default)
 
 
 def _grid_parameters(settings):
@@ -451,7 +468,9 @@ if bpy is not None:
             return ()
         from .session import get_scene_session
         orbitals = _selected_orbitals(get_scene_session(context.scene), self)
-        return _enum_items(tuple((value.label, value.label, "") for value in orbitals.channels)) if orbitals else ()
+        numbers = {"restricted": 0, "alpha": 1, "beta": 2, "generalized": 3}
+        return _enum_items(tuple((value.label, value.label, "", numbers[value.label])
+                                for value in orbitals.channels)) if orbitals else ()
 
     def _charge_items(self, context):
         if context is None:
@@ -466,7 +485,28 @@ if bpy is not None:
             if isinstance(value, AtomicProperty) and value.semantic_role == "nuclear_charge"
             and value.status.value == "complete" and source is not None
             and value.structure_id == source.structure_id
+            and value.data.unit == "elementary_charge"
         ))
+
+    def _orbital_get(self):
+        return _enum_number(_orbital_items(self, bpy.context), self.orbital_source_uuid)
+
+    def _orbital_set(self, value):
+        from .session import get_scene_session
+        items = _orbital_items(self, bpy.context)
+        if not 0 <= value < len(items):
+            raise ValueError("orbital source selection is stale")
+        orbitals = get_scene_session(bpy.context.scene).project.orbital_sets[UUID(items[value][0])]
+        select_wavefunction_source(self, orbitals)
+
+    def _charge_get(self):
+        return _enum_number(_charge_items(self, bpy.context), self.nuclear_charge_uuid)
+
+    def _charge_set(self, value):
+        items = _charge_items(self, bpy.context)
+        if not 0 <= value < len(items):
+            raise ValueError("nuclear charge selection is stale")
+        self.nuclear_charge_uuid = "" if value == 0 else items[value][0]
 
     class CHEMBLENDER_PG_wavefunction(bpy.types.PropertyGroup):
         worker_python: StringProperty(name="Worker Python", subtype="FILE_PATH",
@@ -475,7 +515,10 @@ if bpy is not None:
             default=str(Path(__file__).resolve().parents[2])
             if (Path(__file__).resolve().parents[2] / "worker" / "runner.py").is_file() else "")
         show_worker: BoolProperty(name="Worker Setup", default=False)
-        orbital_source: EnumProperty(name="Orbital Set", items=_orbital_items)
+        orbital_source_uuid: StringProperty(options={"HIDDEN"})
+        nuclear_charge_uuid: StringProperty(options={"HIDDEN"})
+        orbital_source: EnumProperty(name="Orbital Set", items=_orbital_items,
+                                     get=_orbital_get, set=_orbital_set)
         channel: EnumProperty(name="Spin", items=_channel_items)
         orbital_number: IntProperty(name="Orbital", default=1, min=1)
         origin: FloatVectorProperty(name="Origin (bohr)", size=3, default=(-6., -6., -6.))
@@ -483,7 +526,8 @@ if bpy is not None:
         shape: IntVectorProperty(name="Grid Counts", size=3, default=(49, 49, 49), min=2)
         padding: FloatProperty(name="Padding (bohr)", default=6., min=0.)
         memory_limit_mb: IntProperty(name="Memory Budget (MiB)", default=1024, min=64)
-        nuclear_charge: EnumProperty(name="Effective Nuclear Charges", items=_charge_items)
+        nuclear_charge: EnumProperty(name="Effective Nuclear Charges", items=_charge_items,
+                                     get=_charge_get, set=_charge_set)
         density_level: EnumProperty(name="Density Level", default="UNSET", items=(
             ("UNSET", "Select density level", "Do not infer from orbital occupations"),
             ("scf", "SCF", "Explicitly identify the source as SCF"),
@@ -503,6 +547,9 @@ if bpy is not None:
             session = get_scene_session(context.scene)
             settings = getattr(context.scene, _SCENE_PROPERTY_NAME)
             executable, repository = worker_configuration(settings)
+            orbitals = session.project.orbital_sets.get(UUID(self.source_id))
+            if orbitals is not None:
+                select_wavefunction_source(settings, orbitals, reset=False)
             inputs = wavefunction_inputs(session.project, self.operation_id, UUID(self.source_id),
                 nuclear_charge_id=UUID(settings.nuclear_charge)
                 if settings.nuclear_charge not in {"", "NONE"} else None)
@@ -761,8 +808,10 @@ if bpy is not None:
         ):
             delattr(bpy.types.Scene, _SCENE_PROPERTY_NAME)
         _OWNED_SCENE_PROPERTY = None
+        _ENUM_ITEMS.clear()
 
 
-__all__ = ("WavefunctionJob", "clear_wavefunction_jobs", "wavefunction_inputs", "worker_configuration")
+__all__ = ("WavefunctionJob", "clear_wavefunction_jobs", "wavefunction_inputs", "worker_configuration",
+           "select_wavefunction_source")
 if bpy is not None:
     __all__ += ("CHEMBLENDER_PG_wavefunction", "CHEMBLENDER_OT_wavefunction", "draw_wavefunction_controls")

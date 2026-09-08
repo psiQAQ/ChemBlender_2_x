@@ -92,6 +92,14 @@ def sniff_iodata_wavefunction(source: Path, prefix: bytes) -> SniffResult:
         return SniffResult(SniffMatch.EXACT, "Molden format marker")
     if re.search(rb"(?m)^Number of atoms\s+I\s+\d+\s*$", prefix):
         return SniffResult(SniffMatch.EXACT, "Gaussian formatted-checkpoint record")
+    # Valid FCHK writers may omit the atom-count scalar; both typed arrays remain.
+    if re.search(
+        rb"(?m)^Atomic numbers[ \t]+I[ \t]+N=[ \t]*[1-9]\d*[ \t]*\r?$", prefix
+    ) and re.search(
+        rb"(?m)^Current cartesian coordinates[ \t]+R[ \t]+N=[ \t]*[1-9]\d*[ \t]*\r?$",
+        prefix,
+    ):
+        return SniffResult(SniffMatch.EXACT, "Gaussian formatted-checkpoint arrays")
     return SniffResult(SniffMatch.NONE, "no supported IOData wavefunction marker")
 
 

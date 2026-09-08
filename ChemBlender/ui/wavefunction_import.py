@@ -1,6 +1,7 @@
 """Explicit external-worker wavefunction import and transactional publication."""
 
 import hashlib
+import os
 import time
 from copy import deepcopy
 from dataclasses import replace
@@ -60,7 +61,17 @@ def load_wavefunction_batch(
         },
     )
     progress("copy source", 0.1)
-    with TemporaryDirectory(prefix="chemblender-wavefunction-", dir=temp_parent) as workspace:
+    with TemporaryDirectory(prefix="wf-", dir=temp_parent) as workspace:
+        # Blender's Windows executable does not opt into long filesystem paths.
+        # Include the immutable SHA-256 filename, not just the task directory.
+        artifact_path = (Path(workspace).absolute() / str(request.request_id)
+                         / "reader-bundle" / "artifacts" / ("0" * 64 + ".npy"))
+        if os.name == "nt" and len(str(artifact_path).encode("utf-16-le")) // 2 >= 260:
+            raise ValueError(
+                "Wavefunction import temporary path exceeds Blender's Windows "
+                "path limit. Set a shorter Temporary Files directory in Blender "
+                "Preferences and reopen the project before importing."
+            )
         handle = start_worker(
             request, workspace, python_executable=python_executable,
             working_directory=repository, staged_inputs={artifact: source},
@@ -237,6 +248,7 @@ if bpy is not None:
 
         def _complete(self, context):
             from .session import get_scene_session, _notify_session_mutation
+            from .wavefunction import select_wavefunction_source
             try:
                 if self._job.task.is_cancelled() or isinstance(self._job.error, ImportCancelled):
                     return {"CANCELLED"}
@@ -244,6 +256,11 @@ if bpy is not None:
                 if get_scene_session(context.scene) is not self._session:
                     raise RuntimeError("project changed while importing the wavefunction")
                 commit_wavefunction_batch(self._session, self._job.result)
+                context.scene.chemblender_project_browser.active_entity_id = str(self._session.active_entity_id)
+                select_wavefunction_source(
+                    context.scene.chemblender_wavefunction,
+                    self._session.project.orbital_sets[self._session.active_entity_id],
+                )
                 _notify_session_mutation(self._session)
                 self.report({"INFO"}, "Wavefunction imported")
                 return {"FINISHED"}

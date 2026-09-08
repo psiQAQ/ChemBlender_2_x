@@ -26,3 +26,9 @@
 - Final Blender 5.1.1 two-cycle regression passed after snapshot/cancel fixes, including actual FCHK worker import failure with a named qc-iodata diagnostic. An earlier assertion exposed the generic reader_unavailable message; the diagnostic is now fixed and reverified.
 - Native Extension validate/build and ZIP audit passed: 194 entries, current source bytes, existing RDKit/Gemmi wheels only; no source submodules, worker package or planning files. ZIP SHA-256: 973d7f06b2c039459f6fde9896906a4d957f5fc7e43efbee3218ccea60b1844d. Existing legacy NumPy/import and mesh escape warnings were not changed.
 - No dependency package was installed, interactive scene changed or remote write performed. B real numerical/UI success, C/D, isolated/user installation and full example lifecycle remain outstanding. Await permission for the required pinned environment before continuing the sequential B gate.
+
+- User explicitly approved the independent project-cache environment. Installed managed CPython 3.12.13 and the eight unchanged gbasis-py312 constraints under .agents/cache; uv pip check passed. No global Blender packages changed. B real-file and UI success checks resumed.
+
+- B real numerical gate passed (44 tests, 42 passed, 2 expected environment-specific skips). Fixed valid CH3 FCHK sniff with paired typed records. Blender revealed a 261-character canonical artifact path: shortened owned task prefix and checked complete Windows UTF-16 path length before launch.
+- B Blender success gate passed: same session imports water FCHK, water Molden and CH3 UHF; 729-point MO, density and ESP via real operators, RDM/spin checks, Browser source switching without losing selected orbital, two register/unregister and missing-dependency/cancel cycles. UUID-backed selections prevent enum position aliasing.
+- Phase C started: core sampling/export, Blender sample views and UI/cache ownership delegated; root integrates preset contracts, common color mapping and documentation.

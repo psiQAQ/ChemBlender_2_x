@@ -136,6 +136,26 @@ class IODataAdapterTests(unittest.TestCase):
         self.assertEqual(molden.match, SniffMatch.EXACT)
         self.assertEqual(unknown.match, SniffMatch.NONE)
 
+    def test_sniff_fchk_without_optional_atom_count_requires_both_typed_arrays(self):
+        atoms = b"Atomic numbers                             I   N=           4"
+        coordinates = b"Current cartesian coordinates              R   N=          12"
+        for newline in (b"\n", b"\r\n"):
+            prefix = newline.join((b"ch3", b"SP        UHF       STO-3G", atoms,
+                                   b"           6           1           1           1",
+                                   coordinates, b""))
+            with self.subTest(newline=newline):
+                self.assertEqual(
+                    sniff_iodata_wavefunction(Path("ch3.data"), prefix).match,
+                    SniffMatch.EXACT,
+                )
+        for prefix in (atoms + b"\n", coordinates + b"\n",
+                       atoms.replace(b" I ", b" R ") + b"\n" + coordinates + b"\n"):
+            with self.subTest(prefix=prefix):
+                self.assertEqual(
+                    sniff_iodata_wavefunction(Path("notes.fchk"), prefix).match,
+                    SniffMatch.NONE,
+                )
+
     def test_restricted_mapping_preserves_basis_convention_and_orbitals(self):
         batch = adapt_iodata(
             fake_iodata(), Path("synthetic.fchk"), iodata_version="1.0.1"

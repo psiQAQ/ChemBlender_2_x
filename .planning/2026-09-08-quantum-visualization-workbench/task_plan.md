@@ -11,8 +11,8 @@ Reuse QCProject, .cbq/.npy, worker, Grid3D and native Blender views. No new runt
 
 ## Phases
 - [x] A: Density-only surface geometry, versioned rebuild, parent structure identity; core and real Blender regressions passed. Status: complete
-- [ ] B: Orbital/worker UI and bounded MO/RDM/ESP implemented; real numerical gate awaits environment approval. Status: in_progress
-- [ ] C: Property settings, affine sampling, slices/profiles and colorbar. Status: pending
+- [x] B: Bounded MO/RDM/ESP and orbital/import UI passed real FCHK/Molden/UHF numerical and Blender gates. Status: complete
+- [ ] C: Property settings, affine sampling, slices/profiles and colorbar. Status: in_progress
 - [ ] D: Persistent views, export, real example and lifecycle validation. Status: pending
 - [x] References: Added MolecularNodes, MOrbVis and PySCF at reviewed commits; recorded later candidates; 37 documentation contracts passed. Status: complete
 - [ ] Qualification: local core, Blender failure lifecycle and validate/build/ZIP passed; scientific success and install gates pending. Status: in_progress
@@ -24,12 +24,12 @@ Track model, adapter, real-file, UI and reopen evidence separately. Reuse existi
 | --- | --- | --- |
 | Model | A identity; B blocks, cancellation and orbital metadata tested | Local regressions passed |
 | Adapter | A surface/rebuild; B atomic worker/import, independent input lifetime tested | Local regressions passed |
-| Real files | Pinned FCHK/Molden hashes verified | IOData/GBasis numerical gate pending approval |
-| UI | Blender 5.1.1 selection, grid fit, failures, cancellation and reload passed | Scientific success pending |
+| Real files | Pinned FCHK/Molden hashes verified | Cartesian/pure/UHF, FCHK/Molden, ghost charges, RDM and ESP passed |
+| UI | Blender 5.1.1 selection, grid fit, failures, cancellation and reload passed | Real numerical success, same-project source switching and cleanup passed |
 | Save/reopen | A cache/rebuild contracts passed | Complete workflow remains Phase D |
 
 ## Ownership
 Root owns this plan and findings/progress. Agents edit only assigned code and tests; stage gates remain sequential.
 
 ## Next step
-Await explicit permission to restore the pinned Python 3.12 IOData/GBasis environment. Then finish B real-file/UI checks before starting C and D. No permission has been received yet.
+User approved the project-cache environment. Python 3.12.13 and all eight existing pinned packages are installed; uv pip check passed. B real-file/UI checks passed. Implement C with pure affine sampling and native Blender views, then D.

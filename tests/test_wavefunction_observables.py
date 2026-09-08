@@ -335,6 +335,7 @@ class WavefunctionObservableTests(unittest.TestCase):
             water_basis,
             water_total,
             water_charges,
+            chunk_size=2,
             **small_grid,
         ).datasets[0]
         self.assertAlmostEqual(

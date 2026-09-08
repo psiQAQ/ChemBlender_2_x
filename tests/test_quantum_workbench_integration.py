@@ -56,7 +56,8 @@ class WavefunctionImportBoundaryTests(unittest.TestCase):
     def _load(self, **kwargs):
         return importer.load_wavefunction_batch(
             self.source, python_executable=sys.executable, repository=ROOT,
-            project_id=uuid4(), schema_version="0.2", temp_parent=self.root, **kwargs,
+            project_id=uuid4(), schema_version="0.2",
+            temp_parent=kwargs.pop("temp_parent", self.root), **kwargs,
         )
 
     def _synthetic_worker(self, request, workspace, **kwargs):
@@ -121,6 +122,29 @@ class WavefunctionImportBoundaryTests(unittest.TestCase):
             self.assertEqual(len(session.project.source_revisions), 1)
         finally:
             close_session(session)
+
+    def test_standard_blender_session_depth_allows_full_hash_artifacts(self):
+        # A normal Blender temp/session prefix on Windows is already 91 chars.
+        parent = self.root / ("s" * max(1, 91 - len(str(self.root)) - 1))
+        parent.mkdir()
+        with patch.object(importer, "start_worker", side_effect=self._synthetic_worker):
+            batch = self._load(temp_parent=parent)
+        self.assertTrue(batch.orbital_sets)
+        for task in self.task_directories:
+            self.assertLess(len(str(task / "reader-bundle" / "artifacts" / ("0" * 64 + ".npy"))), 260)
+        self.assertFalse(tuple(parent.iterdir()))
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows executable path limit")
+    def test_deep_temporary_root_is_rejected_before_launch(self):
+        for component in ("d" * 110, "\U0001f52c" * 55):
+            with self.subTest(component=component):
+                parent = self.root / component
+                parent.mkdir()
+                with patch.object(importer, "start_worker") as launch:
+                    with self.assertRaisesRegex(ValueError, "shorter Temporary Files directory"):
+                        self._load(temp_parent=parent)
+                    launch.assert_not_called()
+                self.assertFalse(tuple(parent.iterdir()))
 
     def test_failed_publication_preserves_project(self):
         with patch.object(importer, "start_worker", side_effect=self._synthetic_worker):

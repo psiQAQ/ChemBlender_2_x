@@ -19,6 +19,8 @@ Project Browser 的 `Wavefunction` 控件把 FCHK/Molden 中的轨道、密度�
 
 仓库的 Windows 数值基准使用 Python 3.12，以及[固定依赖清单](../../.github/constraints/gbasis-py312.txt)。使用当前项目已有环境时直接填写路径；创建环境或安装依赖需遵循仓库的授权规则。
 
+本地开发环境已按该清单准备在 `.agents/cache/gbasis-py312/Scripts/python.exe`。它属于项目缓存，不随 Extension ZIP 分发。Windows 上若临时路径过长，导入会在启动 worker 前提示缩短 Blender Preferences 的 Temporary Files 路径；重开项目后再导入。
+
 内存估计包括输出数组和常见临时数组，不包括已打开项目的数组、输入快照和第三方后端的额外开销。ESP 的 AO-pair 积分比单轨道求值需要更多工作内存；点块大小会随基组大小缩小。计算区间、步长和输入文件决定科学结果，不能只依据图像是否平滑选择网格。
 
 ## 导入与轨道选择

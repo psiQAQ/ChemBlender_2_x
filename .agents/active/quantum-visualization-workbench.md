@@ -6,6 +6,6 @@ Implement approved first-release A-D: density-only property geometry and old-vie
 
 The root agent owns task_plan.md, findings.md and progress.md. Recovery reads those files and verifies live Git/runtime state. Existing user Blender scene is unsaved; validation uses separate background instances.
 
-Phase A is complete and committed. Phase B implementation and local core/worker/Blender failure-lifecycle checks pass; native validate/build and ZIP audit pass. Successful real-file numerical/UI verification is pending the pinned optional environment; C/D and installation qualification have not started.
+Phases A and B are complete. Real FCHK/Molden/UHF numerical and Blender UI gates passed, including same-project source switching, cancellation and cleanup. Phase C is implementing affine slices/profiles, property controls and colorbars. D and final installation qualification remain pending.
 
-Reference submodules are downloaded and pinned. Python 3.12 scientific test environment restoration is awaiting explicit dependency-install approval. No remote write or release is authorized.
+Reference submodules are downloaded and pinned. User approved the project-cache Python environment; Python 3.12.13 and all eight pinned packages are installed and compatible. No remote write or release is authorized.

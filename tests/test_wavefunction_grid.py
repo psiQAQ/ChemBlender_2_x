@@ -431,6 +431,7 @@ class WavefunctionGridTests(unittest.TestCase):
             origin=origin,
             step_vectors=steps,
             shape=(3, 1, 1),
+            chunk_size=2,
         ).datasets[0]
 
         raw = load_one(PURE_FCHK)

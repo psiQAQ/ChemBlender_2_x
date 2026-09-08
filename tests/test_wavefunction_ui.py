@@ -12,7 +12,7 @@ import numpy
 
 from ChemBlender.core import (
     ArrayData, AtomicProperty, CalculationRecord, CalculationStatus, DatasetStatus,
-    Grid3D, ImportBatch, ProvenanceRecord, QCProject,
+    Grid3D, ImportBatch, OrbitalKind, ProvenanceRecord, QCProject,
     close_project, close_session, create_session, open_project, save_project,
 )
 from ChemBlender.core.worker_protocol import (
@@ -293,6 +293,43 @@ class WavefunctionUITests(unittest.TestCase):
             wavefunction.operation_memory(self.session.project, self.orbitals,
                                           "wavefunction.electron_density_grid", PARAMETERS)
         self.assertEqual(estimate.call_args.kwargs["orbital_count"], 2)
+
+    def test_source_selection_survives_derived_grid_and_resets_source_bound_choices(self):
+        structure, basis, orbitals = entities(OrbitalKind.UNRESTRICTED)
+        self.session.project.commit(ImportBatch(structures=(structure,), basis_sets=(basis,),
+                                               orbital_sets=(orbitals,)))
+        settings = SimpleNamespace(orbital_source=str(self.orbitals.id),
+            orbital_source_uuid=str(self.orbitals.id), channel="restricted", orbital_number=7,
+            nuclear_charge_uuid="old-charge", density_level="scf")
+        self.session.active_entity_id = orbitals.id
+        self.assertIs(wavefunction._selected_orbitals(self.session, settings), orbitals)
+        wavefunction.select_wavefunction_source(settings, orbitals)
+        self.assertEqual(settings.orbital_source_uuid, str(orbitals.id))
+        self.assertEqual(settings.channel, "alpha")
+        self.assertEqual(settings.orbital_number, 1)
+        self.assertEqual(settings.nuclear_charge_uuid, "")
+        self.assertEqual(settings.density_level, "UNSET")
+        self.session.active_entity_id = uuid4()  # Publication selects the new Grid, not the OrbitalSet.
+        self.assertIs(wavefunction._selected_orbitals(self.session, settings), orbitals)
+        settings.channel, settings.orbital_number = "beta", 2
+        settings.nuclear_charge_uuid, settings.density_level = "current-charge", "scf"
+        wavefunction.select_wavefunction_source(settings, orbitals)
+        self.assertEqual((settings.channel, settings.orbital_number), ("beta", 2))
+        self.assertEqual((settings.nuclear_charge_uuid, settings.density_level), ("current-charge", "scf"))
+        # A Browser selection followed by Compute must retain the user's parameters.
+        settings.orbital_source_uuid = str(self.orbitals.id)
+        wavefunction.select_wavefunction_source(settings, orbitals, reset=False)
+        self.assertEqual(settings.orbital_source_uuid, str(orbitals.id))
+        self.assertEqual((settings.channel, settings.orbital_number), ("beta", 2))
+        self.assertEqual((settings.nuclear_charge_uuid, settings.density_level), ("current-charge", "scf"))
+
+    def test_dynamic_entity_selection_uses_uuid_instead_of_old_list_position(self):
+        first = (("NONE", "Select", ""), ("charge-a", "A", ""), ("charge-b", "B", ""))
+        reordered = (("NONE", "Select", ""), ("charge-b", "B", ""), ("charge-a", "A", ""))
+        replaced = (("NONE", "Select", ""), ("new-session-charge", "New", ""))
+        self.assertEqual(wavefunction._enum_number(first, "charge-a"), 1)
+        self.assertEqual(wavefunction._enum_number(reordered, "charge-a"), 2)
+        self.assertEqual(wavefunction._enum_number(replaced, "charge-a"), 0)
 
 
 if __name__ == "__main__":
