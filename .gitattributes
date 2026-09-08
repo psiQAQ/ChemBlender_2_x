@@ -15,3 +15,8 @@ docs/user/format-capabilities.json text eol=lf
 examples/user-workflows/inputs/** -text whitespace=-trailing-space,cr-at-eol
 examples/user-workflows/outputs/** -text
 examples/quantum-workbench/output/** -text whitespace=cr-at-eol
+examples/scientific-visualization/inputs/** -text whitespace=-trailing-space,cr-at-eol
+examples/scientific-visualization/licenses/** -text
+examples/scientific-visualization/output/** -text whitespace=cr-at-eol
+docs/quantum-visualization/scientific-visualization/screenshots/** -text whitespace=cr-at-eol
+docs/quantum-visualization/scientific-visualization/browser-qa.json -text

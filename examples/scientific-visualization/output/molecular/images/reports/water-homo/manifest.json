@@ -1,0 +1,202 @@
+{
+  "artifacts": [
+    {
+      "media_type": "image/png",
+      "path": "water-homo-research.png",
+      "role": "scientific_image",
+      "sha256": "76138a0e63f87ac3cea4ee0c776675f497611938cd4dc0cbd0cec3a9dabafa76",
+      "size": 4177932
+    },
+    {
+      "media_type": "image/png",
+      "path": "water-homo-teaching.png",
+      "role": "scientific_image",
+      "sha256": "f07f11f770248fe3ed64517f9489aee25ba0c377f2936110e4fe497145df0cb7",
+      "size": 4074563
+    }
+  ],
+  "calculations": [],
+  "datasets": [
+    {
+      "dims": [
+        "x",
+        "y",
+        "z"
+      ],
+      "domain": "grid",
+      "id": "7d0a586a-74de-45e0-93c0-10ec67a4d93f",
+      "provenance_ids": [
+        "5ac3ea99-d625-4a80-823b-e149d4bb3afb"
+      ],
+      "revision": "e7c8421a1a2d78ac43779354b970f6d8639b9ddcb9c51d2955437ae3a7960c9b",
+      "semantic_role": "molecular_orbital",
+      "shape": [
+        56,
+        49,
+        60
+      ],
+      "source_calculation": null,
+      "status": "complete",
+      "unit": "inverse_bohr_to_three_halves"
+    }
+  ],
+  "project": {
+    "id": "98d885ae-8cfc-4212-a1ed-f83bfc3420db",
+    "schema_version": "1.0"
+  },
+  "provenance": [
+    {
+      "id": "5ac3ea99-d625-4a80-823b-e149d4bb3afb",
+      "operation": "evaluate_molecular_orbital_grid",
+      "parameters": [
+        {
+          "name": "backend",
+          "value": "qc-gbasis"
+        },
+        {
+          "name": "backend_version",
+          "value": "0.1.0"
+        },
+        {
+          "name": "basis_revision",
+          "value": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816"
+        },
+        {
+          "name": "channel",
+          "value": "restricted"
+        },
+        {
+          "name": "orbital_index",
+          "value": 4
+        },
+        {
+          "name": "orbital_revision",
+          "value": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816"
+        },
+        {
+          "name": "origin",
+          "value": [
+            -5.9075,
+            -5.9275,
+            -6.7025
+          ]
+        },
+        {
+          "name": "shape",
+          "value": [
+            56,
+            49,
+            60
+          ]
+        },
+        {
+          "name": "step_vectors",
+          "value": [
+            [
+              0.25,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.25,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.25
+            ]
+          ]
+        },
+        {
+          "name": "structure_revision",
+          "value": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816"
+        }
+      ],
+      "parent_ids": [
+        "0aea8a08-e7e8-419b-9218-5dc5fa152fab",
+        "cda32939-c4dd-440f-806a-59c6fb019175",
+        "dc21c6c7-3165-491a-a1f4-8e8dafa2333e"
+      ],
+      "producer": "qc-gbasis",
+      "producer_version": "0.1.0",
+      "revision": "e7c8421a1a2d78ac43779354b970f6d8639b9ddcb9c51d2955437ae3a7960c9b",
+      "source": "",
+      "source_hash": "e7c8421a1a2d78ac43779354b970f6d8639b9ddcb9c51d2955437ae3a7960c9b"
+    },
+    {
+      "id": "81fe3280-4b7d-43a4-b5ef-2540d9c39064",
+      "operation": "parse",
+      "parameters": [
+        {
+          "name": "basis_name",
+          "value": "sto-3g"
+        },
+        {
+          "name": "format",
+          "value": "fchk"
+        },
+        {
+          "name": "iodata_version",
+          "value": "1.0.1"
+        },
+        {
+          "name": "orbital_kind",
+          "value": "restricted"
+        },
+        {
+          "name": "scientific_example_source",
+          "value": {
+            "basis": "STO-3G",
+            "bytes": 5369,
+            "calculation_program": "not_reported_in_fchk",
+            "calculation_program_version": "not_reported",
+            "charge": 0,
+            "commit": "adab5813713ba64641565eb2a8c11803a4e9bba6",
+            "electron_count": 10,
+            "license": "LGPL-3.0 root distribution; retain per-file notices",
+            "method": "RHF",
+            "method_evidence": "SP        RHF                                                         STO-3G",
+            "multiplicity": 1,
+            "path": "D:\\workspace\\ChemBlender_2_x\\examples\\scientific-visualization\\inputs\\wavefunction\\water_sto3g_hf_g03.fchk",
+            "sha256": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816",
+            "upstream_path": "iodata/test/data/water_sto3g_hf_g03.fchk",
+            "url": "https://raw.githubusercontent.com/theochem/iodata/adab5813713ba64641565eb2a8c11803a4e9bba6/iodata/test/data/water_sto3g_hf_g03.fchk"
+          }
+        },
+        {
+          "name": "title",
+          "value": "Foo Bar"
+        },
+        {
+          "name": "unmapped_attributes",
+          "value": [
+            "atcharges",
+            "atgradient",
+            "atmasses",
+            "charge",
+            "energy",
+            "lot",
+            "moments",
+            "nelec",
+            "run_type",
+            "spinpol"
+          ]
+        }
+      ],
+      "parent_ids": [],
+      "producer": "ChemBlender IOData adapter",
+      "producer_version": "1",
+      "revision": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816",
+      "source": "D:\\workspace\\ChemBlender_2_x\\examples\\scientific-visualization\\inputs\\wavefunction\\water_sto3g_hf_g03.fchk",
+      "source_hash": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816"
+    }
+  ],
+  "recipe": null,
+  "schema_name": "chemblender_analysis_report",
+  "schema_version": 1,
+  "status": "complete",
+  "title": "H2O | RHF/STO-3G | HOMO 5",
+  "warnings": []
+}

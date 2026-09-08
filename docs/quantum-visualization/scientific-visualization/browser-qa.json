@@ -1,0 +1,25 @@
+{
+  "status": "Passed",
+  "html_sha256": "615f9dfc053d5df54155e2c10342432305b141e3622adb16b1e68b801ca79602",
+  "anchors": 17,
+  "checked_local_links": 155,
+  "viewports": [
+    {
+      "width": 1440,
+      "documentWidth": 1440,
+      "images": 39,
+      "brokenImages": 0,
+      "invalidAnchors": 0
+    },
+    {
+      "width": 390,
+      "documentWidth": 390,
+      "images": 39,
+      "brokenImages": 0,
+      "invalidAnchors": 0
+    }
+  ],
+  "consoleErrors": [],
+  "verificationLink": "Passed",
+  "replayLink": "Passed"
+}

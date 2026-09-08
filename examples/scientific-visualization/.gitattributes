@@ -1,0 +1,2 @@
+inputs/** -text whitespace=-trailing-space,cr-at-eol
+licenses/** -text whitespace=-trailing-space,cr-at-eol

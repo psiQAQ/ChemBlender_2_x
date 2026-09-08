@@ -1,0 +1,24 @@
+# H2O \| rho(r) \| RHF/STO-3G
+
+状态：`complete`
+
+## 计算
+
+| ID | 状态 | 程序 | 方法 | 基组 |
+| --- | --- | --- | --- | --- |
+
+## 数据集
+
+| ID | 语义 | 状态 | 维度 | 单位 |
+| --- | --- | --- | --- | --- |
+| ff759146-1aeb-4cd5-a5a1-ab6a74720452 | electron_density | complete | 56 × 49 × 60 | electron_per_cubic_bohr |
+
+## Provenance
+
+- `7ff1736b-1f1f-406f-bbd2-04e9b26d0105`：qc-gbasis 0.1.0 / `evaluate_electron_density_grid`
+- `81fe3280-4b7d-43a4-b5ef-2540d9c39064`：ChemBlender IOData adapter 1 / `parse`
+
+## Artifacts
+
+- `scientific_image`：`water-density-iso-research.png` (image/png, SHA-256 `ee943e0dedb8ee27fc0fb66198c00a9ff974065220a98671c13d178b6829225b`)
+- `scientific_image`：`water-density-iso-teaching.png` (image/png, SHA-256 `9253fd4c62ef248cb2bb67e694c81dd4c34f5f641849f5a07af3c1a529d31203`)

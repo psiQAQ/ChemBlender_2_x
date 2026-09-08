@@ -1,0 +1,1107 @@
+{
+  "project_id": "e8d76bda-6e7c-42d6-abaa-5f36f49afcda",
+  "schema_name": "chemblender_scientific_images",
+  "schema_version": 1,
+  "views": [
+    {
+      "display": {
+        "annotations": {
+          "aspect": 1.7777777777777777,
+          "bindings": {
+            "frames": {
+              "id": "0969bf8a-eb66-59d2-a359-58aed199d731",
+              "revision": "da959422540842747f03195620d1a65d2f56b2b071f2f82f17c14d548a984f57"
+            },
+            "structure": {
+              "id": "931d77f9-3580-551b-a023-93554733a414",
+              "revision": "01d34be31e4993f1ee98329b9deb63441e94b1ced6f16f472ea284c7be0a1bbc"
+            }
+          },
+          "categories": [],
+          "details": [
+            "Source sequence; physical time unavailable"
+          ],
+          "plane_distance": 1.0,
+          "render_identity": "6c74b2733cb79054c154b8159607dd498e18b1370a80c290043435bf75053b98",
+          "reserved_margins": {
+            "bottom": 0.04,
+            "top": 0.1
+          },
+          "scalar": null,
+          "template": "research",
+          "title": "Trajectory | Frame 32/32",
+          "value_unit": "angstrom"
+        },
+        "blender_version": "5.1.1",
+        "camera": {
+          "clip_end": 232.31971740722656,
+          "clip_start": 0.009999999776482582,
+          "lens": 50.0,
+          "matrix_world": [
+            [
+              -0.880547821521759,
+              -0.28748631477355957,
+              0.3768118917942047,
+              17.402645111083984
+            ],
+            [
+              0.473957359790802,
+              -0.5341101288795471,
+              0.7000648975372314,
+              32.19190216064453
+            ],
+            [
+              -2.8094962800651047e-08,
+              0.79503333568573,
+              0.6065657138824463,
+              28.22295570373535
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "name": "Orbital Export Camera",
+          "ortho_scale": 31.894182205200195,
+          "sensor_fit": "HORIZONTAL",
+          "sensor_height": 24.0,
+          "sensor_width": 36.0,
+          "shift_x": 0.0,
+          "shift_y": 0.0,
+          "type": "ORTHO"
+        },
+        "color_management": {
+          "exposure": 0.0,
+          "gamma": 1.0,
+          "look": "None",
+          "view_transform": "Standard"
+        },
+        "compositor_enabled": false,
+        "cycles": {
+          "adaptive_threshold": 0.009999999776482582,
+          "samples": 64,
+          "seed": 0,
+          "use_adaptive_sampling": true,
+          "use_denoising": true
+        },
+        "display_coordinate_unit": "angstrom",
+        "framing": {
+          "direction": [
+            0.376812,
+            0.700065,
+            0.606566
+          ],
+          "focus_affects": "camera only; all volume values remain rendered",
+          "margin": 1.5,
+          "volume_focus_threshold": 0.0
+        },
+        "image_format": {
+          "color_depth": "8",
+          "color_mode": "RGBA",
+          "file_format": "PNG"
+        },
+        "lights": [
+          {
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "energy": 21444.939453125,
+            "hide_render": false,
+            "matrix_world": [
+              [
+                0.6549303531646729,
+                0.5363681316375732,
+                -0.5323302149772644,
+                -20.15776824951172
+              ],
+              [
+                -0.755689263343811,
+                0.46485206484794617,
+                -0.461352676153183,
+                -17.7144832611084
+              ],
+              [
+                -7.432633708504e-08,
+                0.704430103302002,
+                0.7097733616828918,
+                26.775848388671875
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            ],
+            "name": "Scientific Key",
+            "type": "AREA"
+          },
+          {
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "energy": 8041.8525390625,
+            "hide_render": false,
+            "matrix_world": [
+              [
+                0.2676439583301544,
+                -0.33807745575904846,
+                0.9022584557533264,
+                23.957176208496094
+              ],
+              [
+                0.9635179042816162,
+                0.093910351395607,
+                -0.25062745809555054,
+                -7.019951820373535
+              ],
+              [
+                8.54217745427377e-08,
+                0.9364210963249207,
+                0.35087820887565613,
+                9.397233009338379
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            ],
+            "name": "Scientific Fill",
+            "type": "AREA"
+          },
+          {
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "energy": 14296.626953125,
+            "hide_render": false,
+            "matrix_world": [
+              [
+                -0.986393928527832,
+                -0.09032770991325378,
+                0.1373605579137802,
+                3.904930353164673
+              ],
+              [
+                0.1643989533185959,
+                -0.5419663786888123,
+                0.8241634964942932,
+                23.72682762145996
+              ],
+              [
+                6.869569357803584e-09,
+                0.8355317711830139,
+                0.5494421124458313,
+                16.081317901611328
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            ],
+            "name": "Scientific Rim",
+            "type": "AREA"
+          }
+        ],
+        "render": {
+          "border_max_x": 1.0,
+          "border_max_y": 1.0,
+          "border_min_x": 0.0,
+          "border_min_y": 0.0,
+          "engine": "CYCLES",
+          "film_transparent": false,
+          "pixel_aspect_x": 1.0,
+          "pixel_aspect_y": 1.0,
+          "resolution_percentage": 100,
+          "resolution_x": 1280,
+          "resolution_y": 720,
+          "use_border": false,
+          "use_crop_to_border": false
+        },
+        "structure_view": null,
+        "template": "research",
+        "trajectory_frame": {
+          "frame_index": 31,
+          "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7618802 step=3100 source_index=151469 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+        },
+        "world": {
+          "backgrounds": [
+            {
+              "color": [
+                0.8199999928474426,
+                0.8399999737739563,
+                0.8700000047683716,
+                1.0
+              ],
+              "color_linked": false,
+              "strength": 0.800000011920929,
+              "strength_linked": false
+            }
+          ],
+          "color": [
+            0.05000000074505806,
+            0.05000000074505806,
+            0.05000000074505806
+          ],
+          "name": "Scientific Background",
+          "use_nodes": true
+        }
+      },
+      "fps": 24,
+      "images": [
+        {
+          "path": "images/001-trajectory-research-0001.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 0,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.8287419 step=0 source_index=161596 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0002.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 1,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17616.8052725 step=100 source_index=20431 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0003.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 2,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.9662473 step=200 source_index=63614 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0004.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 3,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7248998 step=300 source_index=151981 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0005.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 4,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17618.1013737 step=400 source_index=141728 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0006.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 5,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.5789381 step=500 source_index=60740 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0007.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 6,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.9289902 step=600 source_index=172172 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0008.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 7,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.4573808 step=700 source_index=21001 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0009.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 8,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.4453709 step=800 source_index=35078 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0010.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 9,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.9491188 step=900 source_index=112900 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0011.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 10,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.795874 step=1000 source_index=154311 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0012.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 11,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.743803 step=1100 source_index=63061 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0013.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 12,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.5830516 step=1200 source_index=100253 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0014.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 13,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7339805 step=1300 source_index=77008 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0015.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 14,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17618.0024384 step=1400 source_index=69838 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0016.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 15,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.4879446 step=1500 source_index=26491 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0017.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 16,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.8126435 step=1600 source_index=78531 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0018.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 17,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.8309672 step=1700 source_index=155849 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0019.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 18,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.5078901 step=1800 source_index=56425 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0020.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 19,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7665933 step=1900 source_index=196338 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0021.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 20,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.5946197 step=2000 source_index=58097 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0022.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 21,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.6787727 step=2100 source_index=147435 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0023.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 22,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.986119 step=2200 source_index=192001 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0024.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 23,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17618.0665262 step=2300 source_index=182677 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0025.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 24,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.873034 step=2400 source_index=192191 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0026.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 25,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17618.0703621 step=2500 source_index=8324 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0027.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 26,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.819523 step=2600 source_index=86937 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0028.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 27,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.5742009 step=2700 source_index=106327 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0029.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 28,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.5551168 step=2800 source_index=197203 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0030.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 29,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7880467 step=2900 source_index=199361 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0031.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 30,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7894414 step=3000 source_index=162871 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-research-0032.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 31,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7618802 step=3100 source_index=151469 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        }
+      ],
+      "source_view": "aspirin-trajectory-animation",
+      "video": "001-trajectory-research.mp4",
+      "view": {
+        "adapter_contracts": [
+          "scientific_view_v1"
+        ],
+        "bindings": [
+          {
+            "entity_id": "931d77f9-3580-551b-a023-93554733a414",
+            "entity_kind": "structure",
+            "name": "structure",
+            "revision": "01d34be31e4993f1ee98329b9deb63441e94b1ced6f16f472ea284c7be0a1bbc"
+          },
+          {
+            "entity_id": "0969bf8a-eb66-59d2-a359-58aed199d731",
+            "entity_kind": "dataset",
+            "name": "frames",
+            "revision": "da959422540842747f03195620d1a65d2f56b2b071f2f82f17c14d548a984f57"
+          }
+        ],
+        "preset_id": "trajectory",
+        "preset_version": "1",
+        "render_identity": "6c74b2733cb79054c154b8159607dd498e18b1370a80c290043435bf75053b98",
+        "settings": {
+          "frame_index": 0,
+          "frame_start": 1,
+          "frame_step": 1,
+          "material_opacity": 1.0,
+          "shaded": false,
+          "template": "research"
+        },
+        "view_kind": "trajectory"
+      },
+      "view_instance_id": "8a85bae2-5462-4b51-8b1a-317f751bf387"
+    },
+    {
+      "display": {
+        "annotations": {
+          "aspect": 1.7777777777777777,
+          "bindings": {
+            "frames": {
+              "id": "0969bf8a-eb66-59d2-a359-58aed199d731",
+              "revision": "da959422540842747f03195620d1a65d2f56b2b071f2f82f17c14d548a984f57"
+            },
+            "structure": {
+              "id": "931d77f9-3580-551b-a023-93554733a414",
+              "revision": "01d34be31e4993f1ee98329b9deb63441e94b1ced6f16f472ea284c7be0a1bbc"
+            }
+          },
+          "categories": [],
+          "details": [
+            "Source sequence; physical time unavailable"
+          ],
+          "plane_distance": 1.0,
+          "render_identity": "cce6892d3c1f37a743c8152a9a97abb04e1ebb1d6d0a926e44504a759cde6d0b",
+          "reserved_margins": {
+            "bottom": 0.04,
+            "top": 0.1
+          },
+          "scalar": null,
+          "template": "teaching",
+          "title": "Trajectory | Frame 32/32",
+          "value_unit": "angstrom"
+        },
+        "blender_version": "5.1.1",
+        "camera": {
+          "clip_end": 232.31971740722656,
+          "clip_start": 0.009999999776482582,
+          "lens": 50.0,
+          "matrix_world": [
+            [
+              -0.880547821521759,
+              -0.28748631477355957,
+              0.3768118917942047,
+              17.402645111083984
+            ],
+            [
+              0.473957359790802,
+              -0.5341101288795471,
+              0.7000648975372314,
+              32.19190216064453
+            ],
+            [
+              -2.8094962800651047e-08,
+              0.79503333568573,
+              0.6065657138824463,
+              28.22295570373535
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "name": "Orbital Export Camera",
+          "ortho_scale": 31.894182205200195,
+          "sensor_fit": "HORIZONTAL",
+          "sensor_height": 24.0,
+          "sensor_width": 36.0,
+          "shift_x": 0.0,
+          "shift_y": 0.0,
+          "type": "PERSP"
+        },
+        "color_management": {
+          "exposure": 0.0,
+          "gamma": 1.0,
+          "look": "None",
+          "view_transform": "Standard"
+        },
+        "compositor_enabled": false,
+        "cycles": {
+          "adaptive_threshold": 0.009999999776482582,
+          "samples": 64,
+          "seed": 0,
+          "use_adaptive_sampling": true,
+          "use_denoising": true
+        },
+        "display_coordinate_unit": "angstrom",
+        "framing": {
+          "direction": [
+            0.376812,
+            0.700065,
+            0.606566
+          ],
+          "focus_affects": "camera only; all volume values remain rendered",
+          "margin": 1.5,
+          "volume_focus_threshold": 0.0
+        },
+        "image_format": {
+          "color_depth": "8",
+          "color_mode": "RGBA",
+          "file_format": "PNG"
+        },
+        "lights": [
+          {
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "energy": 21444.939453125,
+            "hide_render": false,
+            "matrix_world": [
+              [
+                0.6549303531646729,
+                0.5363681316375732,
+                -0.5323302149772644,
+                -20.15776824951172
+              ],
+              [
+                -0.755689263343811,
+                0.46485206484794617,
+                -0.461352676153183,
+                -17.7144832611084
+              ],
+              [
+                -7.432633708504e-08,
+                0.704430103302002,
+                0.7097733616828918,
+                26.775848388671875
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            ],
+            "name": "Scientific Key",
+            "type": "AREA"
+          },
+          {
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "energy": 8041.8525390625,
+            "hide_render": false,
+            "matrix_world": [
+              [
+                0.2676439583301544,
+                -0.33807745575904846,
+                0.9022584557533264,
+                23.957176208496094
+              ],
+              [
+                0.9635179042816162,
+                0.093910351395607,
+                -0.25062745809555054,
+                -7.019951820373535
+              ],
+              [
+                8.54217745427377e-08,
+                0.9364210963249207,
+                0.35087820887565613,
+                9.397233009338379
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            ],
+            "name": "Scientific Fill",
+            "type": "AREA"
+          },
+          {
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "energy": 14296.626953125,
+            "hide_render": false,
+            "matrix_world": [
+              [
+                -0.986393928527832,
+                -0.09032770991325378,
+                0.1373605579137802,
+                3.904930353164673
+              ],
+              [
+                0.1643989533185959,
+                -0.5419663786888123,
+                0.8241634964942932,
+                23.72682762145996
+              ],
+              [
+                6.869569357803584e-09,
+                0.8355317711830139,
+                0.5494421124458313,
+                16.081317901611328
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            ],
+            "name": "Scientific Rim",
+            "type": "AREA"
+          }
+        ],
+        "render": {
+          "border_max_x": 1.0,
+          "border_max_y": 1.0,
+          "border_min_x": 0.0,
+          "border_min_y": 0.0,
+          "engine": "CYCLES",
+          "film_transparent": false,
+          "pixel_aspect_x": 1.0,
+          "pixel_aspect_y": 1.0,
+          "resolution_percentage": 100,
+          "resolution_x": 1280,
+          "resolution_y": 720,
+          "use_border": false,
+          "use_crop_to_border": false
+        },
+        "structure_view": null,
+        "template": "teaching",
+        "trajectory_frame": {
+          "frame_index": 31,
+          "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7618802 step=3100 source_index=151469 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+        },
+        "world": {
+          "backgrounds": [
+            {
+              "color": [
+                0.012000000104308128,
+                0.01899999938905239,
+                0.03200000151991844,
+                1.0
+              ],
+              "color_linked": false,
+              "strength": 0.5,
+              "strength_linked": false
+            }
+          ],
+          "color": [
+            0.05000000074505806,
+            0.05000000074505806,
+            0.05000000074505806
+          ],
+          "name": "Scientific Background",
+          "use_nodes": true
+        }
+      },
+      "fps": 24,
+      "images": [
+        {
+          "path": "images/001-trajectory-teaching-0001.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 0,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.8287419 step=0 source_index=161596 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0002.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 1,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17616.8052725 step=100 source_index=20431 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0003.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 2,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.9662473 step=200 source_index=63614 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0004.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 3,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7248998 step=300 source_index=151981 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0005.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 4,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17618.1013737 step=400 source_index=141728 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0006.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 5,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.5789381 step=500 source_index=60740 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0007.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 6,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.9289902 step=600 source_index=172172 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0008.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 7,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.4573808 step=700 source_index=21001 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0009.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 8,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.4453709 step=800 source_index=35078 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0010.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 9,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.9491188 step=900 source_index=112900 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0011.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 10,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.795874 step=1000 source_index=154311 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0012.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 11,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.743803 step=1100 source_index=63061 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0013.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 12,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.5830516 step=1200 source_index=100253 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0014.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 13,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7339805 step=1300 source_index=77008 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0015.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 14,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17618.0024384 step=1400 source_index=69838 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0016.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 15,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.4879446 step=1500 source_index=26491 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0017.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 16,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.8126435 step=1600 source_index=78531 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0018.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 17,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.8309672 step=1700 source_index=155849 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0019.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 18,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.5078901 step=1800 source_index=56425 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0020.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 19,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7665933 step=1900 source_index=196338 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0021.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 20,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.5946197 step=2000 source_index=58097 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0022.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 21,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.6787727 step=2100 source_index=147435 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0023.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 22,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.986119 step=2200 source_index=192001 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0024.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 23,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17618.0665262 step=2300 source_index=182677 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0025.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 24,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.873034 step=2400 source_index=192191 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0026.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 25,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17618.0703621 step=2500 source_index=8324 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0027.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 26,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.819523 step=2600 source_index=86937 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0028.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 27,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.5742009 step=2700 source_index=106327 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0029.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 28,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.5551168 step=2800 source_index=197203 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0030.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 29,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7880467 step=2900 source_index=199361 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0031.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 30,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7894414 step=3000 source_index=162871 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        },
+        {
+          "path": "images/001-trajectory-teaching-0032.png",
+          "phase_radians": null,
+          "trajectory_frame": {
+            "frame_index": 31,
+            "frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.7618802 step=3100 source_index=151469 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless"
+          }
+        }
+      ],
+      "source_view": "aspirin-trajectory-animation",
+      "video": "001-trajectory-teaching.mp4",
+      "view": {
+        "adapter_contracts": [
+          "scientific_view_v1"
+        ],
+        "bindings": [
+          {
+            "entity_id": "931d77f9-3580-551b-a023-93554733a414",
+            "entity_kind": "structure",
+            "name": "structure",
+            "revision": "01d34be31e4993f1ee98329b9deb63441e94b1ced6f16f472ea284c7be0a1bbc"
+          },
+          {
+            "entity_id": "0969bf8a-eb66-59d2-a359-58aed199d731",
+            "entity_kind": "dataset",
+            "name": "frames",
+            "revision": "da959422540842747f03195620d1a65d2f56b2b071f2f82f17c14d548a984f57"
+          }
+        ],
+        "preset_id": "trajectory",
+        "preset_version": "1",
+        "render_identity": "cce6892d3c1f37a743c8152a9a97abb04e1ebb1d6d0a926e44504a759cde6d0b",
+        "settings": {
+          "frame_index": 0,
+          "frame_start": 1,
+          "frame_step": 1,
+          "material_opacity": 1.0,
+          "shaded": false,
+          "template": "teaching"
+        },
+        "view_kind": "trajectory"
+      },
+      "view_instance_id": "8a85bae2-5462-4b51-8b1a-317f751bf387"
+    }
+  ]
+}

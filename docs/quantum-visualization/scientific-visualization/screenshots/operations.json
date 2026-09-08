@@ -1,0 +1,191 @@
+{
+  "atomic_imports": {
+    "default_view": false,
+    "force_unit": "electron_volt_per_angstrom",
+    "operators": [
+      "chemblender.quick_import INVOKE_DEFAULT",
+      "chemblender.confirm_import"
+    ],
+    "physical_time_available": false,
+    "pqr_atoms": 998,
+    "pqr_charge_unit": "elementary_charge",
+    "rmd17_atoms": 21,
+    "rmd17_frames": 32
+  },
+  "display_check": {
+    "evaluated_vertices": 7098,
+    "hydrogen_source_radius_angstrom": 0.32,
+    "hydrogens": 8,
+    "resolution": "Only viewport use_scene_world/use_scene_lights were changed to false with forest.exr studio; no scientific arrays or materials were edited for the correction",
+    "trajectory_spheres": 21,
+    "vertices_per_sphere": 338
+  },
+  "local_replay_scripts": [
+    {
+      "path": ".agents/cache/scientific_gui_client.py",
+      "sha256": "054eb3386daa62bb75437646bc058edd7cc6397979c45d69668b08612e53d13b"
+    },
+    {
+      "path": ".agents/cache/scientific_gui_helpers.py",
+      "sha256": "5fa6e6bc90dc83750953d6f892481cde3d30e76a1d215585cab79d7cc2f83674"
+    },
+    {
+      "path": ".agents/cache/scientific_gui_water_screenshots.py",
+      "sha256": "65717befb88eceea3c6f7d3d3a628d4d432055fa1732426a1a830458b276e0e5"
+    },
+    {
+      "path": ".agents/cache/scientific-gui-cloud-preview.py",
+      "sha256": "33735f5de777ff1a5a93318f96119e7ea402938bee1685b3ba9068c884073408"
+    },
+    {
+      "path": ".agents/cache/scientific-gui-render-prepare.py",
+      "sha256": "c2da1880f0e9ee8c0fd05b6f716849b464c2f1baf98f09584ac8b00f4df557a1"
+    },
+    {
+      "path": ".agents/cache/scientific-gui-render.py",
+      "sha256": "df0e9a0bb8cf4776e2061c7c4598835bd1c8337dbc0375907fa3bfa6d65b80d3"
+    },
+    {
+      "path": ".agents/cache/scientific-gui-save-reopen.py",
+      "sha256": "941266011db8479902e27e5526d881b7162c34855065b480e267dc2bf373e011"
+    },
+    {
+      "path": ".agents/cache/scientific-gui-reopen-verify.py",
+      "sha256": "7f5b48aee4c80ad62725b2495362d0aad0ddaf8dc6b58bf41137f5cf9455efec"
+    }
+  ],
+  "playback": {
+    "applied_source_frame_index": 31,
+    "final_timeline_frame": 32,
+    "frame_start": 1,
+    "frame_step": 1,
+    "observed_playback_frame": 12,
+    "persisted_by_update": true,
+    "physical_time_claim": null,
+    "public_pause_passed": true,
+    "start_timeline_frame": 1
+  },
+  "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+  "render": {
+    "completion": "Output package published with all artifact hashes verified",
+    "direction": [
+      1.2,
+      -1.6,
+      1.1
+    ],
+    "directory": ".agents/cache/scientific-gui-render-cloud05",
+    "formal_quality_output": false,
+    "framing_margin": 1.4,
+    "height": 720,
+    "invocation_result": "RUNNING_MODAL",
+    "manifest_sha256": "745270ca150ff93849988c549be8b7dcfc712cd123fff2beba1e885ee024e234",
+    "operator": "chemblender.export_scientific INVOKE_DEFAULT",
+    "samples": 64,
+    "templates": [
+      "research",
+      "teaching"
+    ],
+    "volume_focus_threshold": 0.03,
+    "width": 960
+  },
+  "runtime": {
+    "module": "D:\\workspace/ChemBlender_2_x/.agents/cache/scientific-extension-qualification-20260908-02/profile\\extensions\\user_default\\chemblender\\ui\\scientific_view.py",
+    "package": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-extension-qualification-20260908-05\\source\\ChemBlender\\chemblender-2.4.0.zip",
+    "package_sha256": "eb92e88ee056d9cb62ffe57f45e37fcb360cd609212d158332b0835125094279",
+    "profile": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-extension-qualification-20260908-02\\profile",
+    "status": "Passed",
+    "version": "5.1.1"
+  },
+  "save_reopen": {
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-gui-all-quantities.blend",
+    "datasets": 13,
+    "project_clean": true,
+    "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+    "status": "Passed",
+    "views": {
+      "ChemBlender Positive Surface": "signed_isosurface",
+      "SOP - Aspirin Force": "trajectory_force",
+      "SOP - Aspirin Trajectory": "trajectory",
+      "SOP - Density Cloud": "grid_volume",
+      "SOP - Density Surface": "signed_isosurface",
+      "SOP - ESP Profile": "grid_profile",
+      "SOP - ESP Slice": "grid_slice",
+      "SOP - ESP Surface": "property_on_surface",
+      "SOP - HOMO Offset": "signed_isosurface",
+      "SOP - PQR Charge": "atomic_scalar"
+    }
+  },
+  "scope": "Actual public GUI operators, private installed extension, screenshots and one Cycles preview export; does not replace formal scientific or release gates",
+  "screenshots": {
+    "count": 11,
+    "dimensions": [
+      1600,
+      1001
+    ],
+    "manifest": "manifest.json",
+    "manifest_sha256": "2670a70a602db81151aba51e94c66a3edd4d54cd141e1abb1d278bdf930aa883"
+  },
+  "source_files": [
+    {
+      "path": "examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf_g03.fchk",
+      "sha256": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816",
+      "size": 5369
+    },
+    {
+      "path": "examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.pqr",
+      "sha256": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68",
+      "size": 70047
+    },
+    {
+      "path": "examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz",
+      "sha256": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a",
+      "size": 61621
+    }
+  ],
+  "status": "Passed",
+  "view_operations": {
+    "operator": "chemblender.scientific_view",
+    "parameters": "Per-screenshot saved preset/settings in manifest.json; scientific arrays are unchanged by View operations",
+    "passed_actions": [
+      "DEFAULTS",
+      "CREATE",
+      "LOAD",
+      "UPDATE",
+      "REBUILD",
+      "FRAME",
+      "PLAY",
+      "PAUSE"
+    ]
+  },
+  "wavefunction": {
+    "evidence": "Completed worker results committed into the connected project and recovered after Save/Open",
+    "fit_grid_origin_bohr": [
+      -6,
+      -6,
+      -6.75
+    ],
+    "grid_shape": [
+      56,
+      49,
+      60
+    ],
+    "grid_step_bohr": 0.25,
+    "offset_grid_origin_bohr": [
+      -5.9075,
+      -5.9275,
+      -6.7025
+    ],
+    "offset_reason": "Fit grid intersects a nuclear position and ESP rejected it without partial output; density and ESP recomputed using the same explicit offset affine",
+    "orbital_number_1_based": 5,
+    "public_operations": [
+      "import_wavefunction",
+      "wavefunction.mo_grid",
+      "wavefunction.density_matrix_grid",
+      "wavefunction.esp_grid"
+    ],
+    "reader": "iodata wavefunction via external worker",
+    "source": "examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf_g03.fchk",
+    "spin": "restricted",
+    "worker_python": ".agents/cache/gbasis-py312/Scripts/python.exe"
+  }
+}

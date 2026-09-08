@@ -4,6 +4,8 @@ ChemBlender 将继续作为 Blender 原生可视化前端；量子化学解析�
 
 ## 当前阶段
 
+科学量的面板操作、Research / Teaching 材质、Cycles 实图和保存重建流程见[科学量可视化操作手册](scientific-visualization/README.md)。手册分别标明已验证的真实工作流和仍需独立依赖验收的项目。
+
 Phase 0–4 已建立广泛的契约、合成集成和部分真实文件能力。2.3.0 转向基础安装可用的原生格式、统一导入事务、项目浏览、质量诊断和保存恢复闭环；第三方 parser、数值后端与外部分析继续保留在独立 core/worker 环境。
 
 ## 2.3.0 入口

@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "purpose": "Published copy of the completed private-profile lifecycle verification; formal scene files were not changed.",
+  "source_report": {
+    "repository_relative_path": ".agents/cache/molecular-lifecycle-20260908-01/verification.json",
+    "sha256": "0b3bfa0d45f31e3d469060976b40e9524421fffbd56d836068bdf9f26dd95688"
+  },
+  "replay_script": {
+    "repository_relative_path": "tests/blender_molecular_scene_lifecycle.py",
+    "sha256": "cadfc7b3e8c475b672df654f96b0aaf4c70b80e09b36fb532077d0df6812544e"
+  },
+  "source_scenes": "examples/scientific-visualization/output/molecular/scenes",
+  "status": "Passed",
+  "blender": "5.1.1",
+  "quantity_views": 22,
+  "total_views": 40,
+  "scientific_array_files": 61,
+  "scenes": [
+    {
+      "molecule": "water",
+      "quantity_views": 14,
+      "total_views": 24,
+      "removed_vdb_files": 15,
+      "array_files": 15,
+      "instance_ids": [
+        "02809ec2-7d7d-4a86-9171-fad2b36d9760",
+        "21f098f7-134b-4342-bb51-0b6c1db2ee62",
+        "3c46207d-201b-49f1-a4e5-8adc9164a448",
+        "3d65a17e-28cb-4a69-bb3f-a87f232d16c2",
+        "4760beeb-a9d4-4614-b610-bcbeb292fbb1",
+        "502702df-79d4-4eae-b3b4-24f05b0a2870",
+        "7b5e4a08-925d-4837-a885-8da05f7c328a",
+        "8acc908c-b7d5-437a-ad92-b4dbc9de62cb",
+        "8d98352f-29f2-4841-89af-54d7d9d1b080",
+        "957954f0-3cf7-487d-85fb-6310a5be4baf",
+        "b65cd718-face-4ab5-a503-d24f8253958b",
+        "c60a05e9-b360-4227-afd2-955dfc22bbbc",
+        "e46a5d1b-423e-486a-80f1-11797c79f1fd",
+        "f61e27c4-c128-45a0-90e3-922b860b499a"
+      ],
+      "save_as": "Passed",
+      "move": "Passed",
+      "public_rebuild": "Passed",
+      "reopen": "Passed",
+      "scientific_arrays": "unchanged"
+    },
+    {
+      "molecule": "ch3",
+      "quantity_views": 6,
+      "total_views": 12,
+      "removed_vdb_files": 12,
+      "array_files": 20,
+      "instance_ids": [
+        "709d5b44-1d1f-4cfd-97a3-9c237e00303d",
+        "78ddba97-9e99-4f94-80ed-38e7643aeff9",
+        "7f4a5970-b56d-486c-ae41-d24814436476",
+        "8ba6034a-ec30-45ad-b040-a23005fbb67a",
+        "e08f732f-6bf8-428e-bdec-120c673742c2",
+        "e3f60ff9-057b-44b2-83e3-5c320c97a95c"
+      ],
+      "save_as": "Passed",
+      "move": "Passed",
+      "public_rebuild": "Passed",
+      "reopen": "Passed",
+      "scientific_arrays": "unchanged"
+    },
+    {
+      "molecule": "nitrogen",
+      "quantity_views": 2,
+      "total_views": 4,
+      "removed_vdb_files": 4,
+      "array_files": 26,
+      "instance_ids": [
+        "5c3688f3-737d-4435-b01f-e62bc8f3a056",
+        "b487b19f-14c9-455a-bc65-43df939d7257"
+      ],
+      "save_as": "Passed",
+      "move": "Passed",
+      "public_rebuild": "Passed",
+      "reopen": "Passed",
+      "scientific_arrays": "unchanged"
+    }
+  ],
+  "formal_examples_unchanged": true
+}

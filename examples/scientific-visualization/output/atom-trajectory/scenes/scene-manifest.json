@@ -1,0 +1,316 @@
+{
+  "schema_version": 1,
+  "purpose": "Real PQR and rMD17 workbenches; source arrays remain authoritative",
+  "blender": "5.1.1",
+  "script": "examples/scientific-visualization/save_atom_trajectory.py",
+  "script_sha256": "5b09fa17532d81c2eace664c808cb240f4f858583f3e3f36d34c1357be8532a4",
+  "created_process_id": 45372,
+  "independent_reopen_verified": true,
+  "scenes": [
+    {
+      "source": "pqr",
+      "blend": "pqr.blend",
+      "sidecar": "pqr.cbq",
+      "views": [
+        {
+          "name": "pqr-charge-research",
+          "instance_id": "795e27f8-cde6-4f67-a9ed-9ba466dbdcf2",
+          "render_identity": "0d85d29039e3d2701fa220913e0dcfa60624af9f267e8002eadab9c3f419dbc7",
+          "preset": "atomic_scalar",
+          "settings": {
+            "color_max": 1.2,
+            "color_min": -1.2,
+            "colormap": "coolwarm",
+            "material_opacity": 1.0,
+            "shaded": false,
+            "symmetric": true,
+            "template": "research"
+          },
+          "matrix_world": [
+            [
+              -0.33803117275238037,
+              0.9411347508430481,
+              4.471654690973992e-08,
+              17.81134796142578
+            ],
+            [
+              -0.1255209892988205,
+              -0.04508393630385399,
+              0.9910659193992615,
+              -6.31215763092041
+            ],
+            [
+              0.9327266812324524,
+              0.33501124382019043,
+              0.1333719789981842,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "verified_frame_count": 0
+        },
+        {
+          "name": "pqr-charge-teaching",
+          "instance_id": "2cc4849c-cd1e-4262-9c1e-fadff4c60c46",
+          "render_identity": "b1adb2252194862320201775eaec9755ef86673ba2cc8986494bfb65dee0b668",
+          "preset": "atomic_scalar",
+          "settings": {
+            "color_max": 1.2,
+            "color_min": -1.2,
+            "colormap": "coolwarm",
+            "material_opacity": 1.0,
+            "shaded": true,
+            "symmetric": true,
+            "template": "teaching"
+          },
+          "matrix_world": [
+            [
+              -0.33803117275238037,
+              0.9411347508430481,
+              4.471654690973992e-08,
+              60.55464553833008
+            ],
+            [
+              -0.1255209892988205,
+              -0.04508393630385399,
+              0.9910659193992615,
+              -6.31215763092041
+            ],
+            [
+              0.9327266812324524,
+              0.33501124382019043,
+              0.1333719789981842,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "verified_frame_count": 0
+        }
+      ],
+      "blend_sha256": "4b98eee0d465bd4ae13a418103e5ed6aa8f140188693249abfe1042c18dac658",
+      "scientific_array_files": {
+        "2dd33073bb381bc894a02e502d6c2741146fe58c5ef711049521d2afe20a42ac.npy": "cb099495f46cb251815674ce1838481412246e9d2321c64484eb584dfc48ec15",
+        "38789814629a0386a2890003602e409a32983d168d621a02d5d6ce3ebc7793fb.npy": "2ae80849ba5ff8e1e3728f9a5106b40a1f34b46386c1678f603a2bf7643fb020",
+        "85a34167385022591c1e23923e66ff47e6ff52239161921a5b744eed25507d77.npy": "f7b72d673f4c960663808775d2c3f146c3ae6455ddf91495f5a4e19fe35b8cf9",
+        "96fc9f7d67114b23e5b4e256de1edc2f127e38d7b633bf4481c8fbff8c32c38d.npy": "25292944a0a9695529241342201bbb2a11bcb1aa9feb24ae00cefb5b87940aa2",
+        "970718742cef59a1c815362828c5f949ffb3a50542602796be441e2ab5e848d1.npy": "2ece55f3e48dea4d705af32e1a1afafc0dafabbbf37c31a09ea33a9f8a8b1156",
+        "a9126bfd6d8893029fb426ad96e568c9e71acc39bd6df006445d8cdd90b1e950.npy": "3382c37abdc3a461fb18f4ab5070f69c6186dd79cb4dd2aa1af99fe54cf916ae",
+        "cca0b0a20b81f993544912a8cb686e805d96b7123ec06554f440036a3af6f524.npy": "aa38ba0d432b32eea40415c50a54152a67c23ceffb572e619e5b2224f324b8bc",
+        "f8310add437134da608458004138ef0b1723d4e80c70af5d50ee1bca71e93108.npy": "02121cd581956b1eacde2182f95702c662b13e2b7c7c7b60a357c9053b095416"
+      },
+      "source_project_id": "7d0d34d5-e4a0-46f6-91f3-749923ab3a54",
+      "source_sidecar": ".agents/cache/scientific-corpus/molecular/pqr.cbq",
+      "saved_reopened": true,
+      "public_load_rebuild": "Passed",
+      "scientific_arrays_unchanged": true,
+      "independent_reopen_public_load_rebuild": "Passed"
+    },
+    {
+      "source": "rmd17",
+      "blend": "rmd17.blend",
+      "sidecar": "rmd17.cbq",
+      "views": [
+        {
+          "name": "aspirin-force-research",
+          "instance_id": "8770aeda-1f79-4a45-9593-e3a0bd9ec249",
+          "render_identity": "c1c67c3cd8213be16d2a8389a23cbb0b7bb22af386d6fae5ae4add2441ba7b73",
+          "preset": "trajectory_force",
+          "settings": {
+            "frame_index": 0,
+            "frame_start": 1,
+            "frame_step": 1,
+            "material_opacity": 1.0,
+            "shaded": false,
+            "template": "research",
+            "vector_scale": 0.5
+          },
+          "matrix_world": [
+            [
+              -0.8805475234985352,
+              0.473957359790802,
+              1.028201594976963e-07,
+              5.516607761383057
+            ],
+            [
+              -0.28748610615730286,
+              -0.5341098308563232,
+              0.7950333952903748,
+              -0.14483165740966797
+            ],
+            [
+              0.3768119812011719,
+              0.7000647187232971,
+              0.6065654754638672,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "verified_frame_count": 32
+        },
+        {
+          "name": "aspirin-force-teaching",
+          "instance_id": "796edb4e-ca03-4bf7-bec9-93fb38f652a6",
+          "render_identity": "2d58dd185f0bd6f6a8e7bd473a562f3936097bcdaa95b0af7f69472ed1b14ae3",
+          "preset": "trajectory_force",
+          "settings": {
+            "frame_index": 0,
+            "frame_start": 1,
+            "frame_step": 1,
+            "material_opacity": 1.0,
+            "shaded": true,
+            "template": "teaching",
+            "vector_scale": 0.5
+          },
+          "matrix_world": [
+            [
+              -0.8805475234985352,
+              0.473957359790802,
+              1.028201594976963e-07,
+              18.485979080200195
+            ],
+            [
+              -0.28748610615730286,
+              -0.5341098308563232,
+              0.7950333952903748,
+              -0.14483165740966797
+            ],
+            [
+              0.3768119812011719,
+              0.7000647187232971,
+              0.6065654754638672,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "verified_frame_count": 32
+        },
+        {
+          "name": "aspirin-trajectory-research",
+          "instance_id": "a8225fea-8dff-4a31-a2c7-d835e5bd5538",
+          "render_identity": "6c74b2733cb79054c154b8159607dd498e18b1370a80c290043435bf75053b98",
+          "preset": "trajectory",
+          "settings": {
+            "frame_index": 0,
+            "frame_start": 1,
+            "frame_step": 1,
+            "material_opacity": 1.0,
+            "shaded": false,
+            "template": "research"
+          },
+          "matrix_world": [
+            [
+              -0.8805475234985352,
+              0.473957359790802,
+              1.028201594976963e-07,
+              31.455350875854492
+            ],
+            [
+              -0.28748610615730286,
+              -0.5341098308563232,
+              0.7950333952903748,
+              -0.14483165740966797
+            ],
+            [
+              0.3768119812011719,
+              0.7000647187232971,
+              0.6065654754638672,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "verified_frame_count": 32
+        },
+        {
+          "name": "aspirin-trajectory-teaching",
+          "instance_id": "e1f6b079-6af0-4077-afca-f8ca1b30b16d",
+          "render_identity": "7e91219056924fdd72c7caf1c2a9b358639a539ec643022b1ec49b6ad8d8b604",
+          "preset": "trajectory",
+          "settings": {
+            "frame_index": 0,
+            "frame_start": 1,
+            "frame_step": 1,
+            "material_opacity": 1.0,
+            "shaded": true,
+            "template": "teaching"
+          },
+          "matrix_world": [
+            [
+              -0.8805475234985352,
+              0.473957359790802,
+              1.028201594976963e-07,
+              44.424720764160156
+            ],
+            [
+              -0.28748610615730286,
+              -0.5341098308563232,
+              0.7950333952903748,
+              -0.14483165740966797
+            ],
+            [
+              0.3768119812011719,
+              0.7000647187232971,
+              0.6065654754638672,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "verified_frame_count": 32
+        }
+      ],
+      "blend_sha256": "9e5401adeb6191bec2eb5c4e3da0da1a1bd69897cdf4df466aa6c6a41ead87d4",
+      "scientific_array_files": {
+        "2fdff7b81305d6b6a5d4d199ccf158dd3b9d1ee4f336f73d82c5de76fa38dfa6.npy": "8f10296e74acc2ad344d092f940925834b72887257c799dc065199485775cdd8",
+        "56a5f3d4561912a6fbbcf10fe1a8b4cc13a9a2736b7dcf3bbbf1c8fe3bd67934.npy": "af4dddb5f8f58448629aa6d23e53670780701c51ebee07de28d6b816dd34cfc7",
+        "5d06384275cc83e4b9e0b76bcb0a9c066d06b12298a46545a39a1c7fa87959e3.npy": "abdce46ce1fbf315ec5c2195f2fa8c0e4cd35ec19693e84edd9b3cc3c9738cb5",
+        "958c11cdef16c144f473738c69954220d245cdcb43680354207620c7bd051ac4.npy": "6a468393500226bf0f8124f57763cea0fdaf5458028799a7667d69695c096b13",
+        "c3b30ab248824277143fb54a6eb3d41f71bc26f7fe57c2742955b1ee7316548f.npy": "a5e2d95c5a6452a782b429d8b78455eb2770ff1286525eb3131a0a3b9d299277",
+        "cb5b4b69559824779e88accc3232a9176c64ee15031be923e089f0c2d490a4fd.npy": "f84643e8d315ec7806fc84871769ab0ffa6fab8aac09e2b626cfef2892b2fae7"
+      },
+      "source_project_id": "e8d76bda-6e7c-42d6-abaa-5f36f49afcda",
+      "source_sidecar": ".agents/cache/scientific-corpus/molecular/rmd17.cbq",
+      "saved_reopened": true,
+      "public_load_rebuild": "Passed",
+      "scientific_arrays_unchanged": true,
+      "independent_reopen_public_load_rebuild": "Passed"
+    }
+  ],
+  "render_manifest": "../manifest.json",
+  "render_manifest_sha256": "7af0c11192d036b82c2249249ae8a773822af21c8930baac0dedd7a4828fb33e",
+  "original_render_artifacts_unchanged": true,
+  "limitations": [
+    "rMD17 source sequence has no physical time interval; 32 frames are not time-calibrated",
+    "Panel layout is a View transform and does not modify source coordinates or forces"
+  ],
+  "verification_process_id": 42904,
+  "verification_script_sha256": "7ee5334d485d4bb0c293c5251120ae269cd8e23a96a06dbd8bf934bf1b9f28f7"
+}

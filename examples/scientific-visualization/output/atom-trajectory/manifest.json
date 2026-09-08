@@ -1,0 +1,1253 @@
+{
+  "artifacts": [
+    {
+      "bytes": 18829,
+      "path": "aspirin-force/display.json",
+      "sha256": "b5d58764e8c81323e5b5634c4f64a16b9c149f56cee3a6e0075ce75efeb73bd5"
+    },
+    {
+      "bytes": 4292234,
+      "path": "aspirin-force/images/001-trajectory_force-research-0001.png",
+      "sha256": "5d240ad85bd80e0c06549753a618acd3870f28fdc477a5f63021bca6c9a4a62d"
+    },
+    {
+      "bytes": 4115199,
+      "path": "aspirin-force/images/001-trajectory_force-teaching-0001.png",
+      "sha256": "24b9bf68889126f7997d86dbeba0e1857dc436d964a5497580888305848318fa"
+    },
+    {
+      "bytes": 3710,
+      "path": "aspirin-force/manifest.json",
+      "sha256": "edea3b61fdbb9c9ec85308f7ffc3670d996331b2e3d57cf0b5b037a41cc48571"
+    },
+    {
+      "bytes": 1002,
+      "path": "aspirin-force/report.md",
+      "sha256": "0777ec2b806d3d8f79a3e767d9ee572a6e4ae246db51a56dcea79c89713bd40f"
+    },
+    {
+      "bytes": 209902,
+      "path": "aspirin-force-animation/001-trajectory_force-research.mp4",
+      "sha256": "1a57b05c843e50a1233d6fd931dfbb240e7882f09869c8827a510b00e4334e1f"
+    },
+    {
+      "bytes": 151932,
+      "path": "aspirin-force-animation/001-trajectory_force-teaching.mp4",
+      "sha256": "7cc04b629a91c3055482214c887b04391def1cacab81b03ed85cf30ef6b83e5b"
+    },
+    {
+      "bytes": 44213,
+      "path": "aspirin-force-animation/display.json",
+      "sha256": "32d3b104293de86f9b4a51ab26dd0b1dace9320c1c299456efbee19012b84958"
+    },
+    {
+      "bytes": 935679,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0001.png",
+      "sha256": "f4e097e81a5f4187b202e9112a311111b4c1934d4f107ecc103b1c12cd34450e"
+    },
+    {
+      "bytes": 937775,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0002.png",
+      "sha256": "4165a1bb321f4e3e6228fb842cd2e40bd3ba6d0f08c94b7964afead9352ca090"
+    },
+    {
+      "bytes": 937951,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0003.png",
+      "sha256": "116f2cfda41d266ba04ca16f015c05063ab5472f82c6cdd01576148f2475160e"
+    },
+    {
+      "bytes": 940872,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0004.png",
+      "sha256": "ffcb55ad5e08db2f4e287fad36480a8872f4a7f419b8e4527f918bc36c6625c1"
+    },
+    {
+      "bytes": 938688,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0005.png",
+      "sha256": "70113deb3407de8432651af7a420cf664ff00d5c3b4d53c210717f41fe0c76a4"
+    },
+    {
+      "bytes": 938033,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0006.png",
+      "sha256": "69a7f7abc924931e2822f37d770e5e7abe117e4d734607e20e2f441880882d29"
+    },
+    {
+      "bytes": 936243,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0007.png",
+      "sha256": "aacb00659b93852f7f4aff7c1c4c8d152830abcd810b942b619353184eb25c06"
+    },
+    {
+      "bytes": 940797,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0008.png",
+      "sha256": "d8cc886bcd7fa4b617888a18611c7a16ec5b6c5a2587e193b2b4e8f3bb92a975"
+    },
+    {
+      "bytes": 938066,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0009.png",
+      "sha256": "77c0b2ff3dca115acf3dfef67ed6e2cd538b1df16a7c51b9516b70b6e9088ae3"
+    },
+    {
+      "bytes": 936594,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0010.png",
+      "sha256": "6875e99ec59d95b0952b4e3afc85946335edf2549c03cdce377ddccfccd1a983"
+    },
+    {
+      "bytes": 937608,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0011.png",
+      "sha256": "261a07cabfd6f6533360758d3f7b2167a5c61265ad5e80d9496c97e603f8ac0a"
+    },
+    {
+      "bytes": 940637,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0012.png",
+      "sha256": "1d9088fa0975ab54997bac6d98993cc30e5ecda1115d54d2d8e11f9be912cc7f"
+    },
+    {
+      "bytes": 942598,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0013.png",
+      "sha256": "a715db70de27ddc0166625520b49f5428bde258f289e4ead4f48d9412fc4365a"
+    },
+    {
+      "bytes": 936108,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0014.png",
+      "sha256": "43c8f9cd0ba843bf0ba53d4d56a399f2dfeb59560c587872cb1fa35446e9c216"
+    },
+    {
+      "bytes": 938109,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0015.png",
+      "sha256": "15dc7a1910cf902b1ac633a890ae7a47e3ce0f6481006bd8c6df56b703841018"
+    },
+    {
+      "bytes": 938401,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0016.png",
+      "sha256": "d4686eb8ab71af8fd9cedc7c83957e767b155c8df6b2551ae9b3defea44e638d"
+    },
+    {
+      "bytes": 939789,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0017.png",
+      "sha256": "df00c8fc61f051d623b42ee307be2c7b3a607001ee14c7edd0b15e928898c912"
+    },
+    {
+      "bytes": 935627,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0018.png",
+      "sha256": "4f6f28bb486cc4fd4a6bacb5af9cd649901ed07d2770aabe765ea25822bb2d99"
+    },
+    {
+      "bytes": 938483,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0019.png",
+      "sha256": "97ccd0c2f3c44500d1c72cce663064312f4252104525a78ed679ba228bb19008"
+    },
+    {
+      "bytes": 942284,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0020.png",
+      "sha256": "3f0500f6800eb7d528efbac2abc276acd3ee469bf2c5cfeb4883a59bf4593ed1"
+    },
+    {
+      "bytes": 940675,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0021.png",
+      "sha256": "ece2dc01a51cc4cd8f951a05c4c7b9b889724708ff24da64492a1949592e70e7"
+    },
+    {
+      "bytes": 940649,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0022.png",
+      "sha256": "ef5998860a8e5e4d82f58bf320836cb90d19276d510cb3334c092f91b0c8f9f5"
+    },
+    {
+      "bytes": 938025,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0023.png",
+      "sha256": "f01bb312584f5a1723f2d8feff06201e0fd3ee9afd6464fdcef7c81f904cb53e"
+    },
+    {
+      "bytes": 938646,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0024.png",
+      "sha256": "5a8e92e733cfb892c32501737f3eda5e583e126a78da3a20d6be48ae7eb03014"
+    },
+    {
+      "bytes": 934680,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0025.png",
+      "sha256": "9aad0acbb3b02c88bf6e39278ed1d068a892bcb892f60abcd7a4cf4073aa72cd"
+    },
+    {
+      "bytes": 937737,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0026.png",
+      "sha256": "b5d00c61099bb9b12eb5e4e2fa1a17f707fe282fe5832014a5e32574a82ff58c"
+    },
+    {
+      "bytes": 939265,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0027.png",
+      "sha256": "f50227d2822a13905bc134e57dd36bd9c0edacdaa7c0bb7032cc7c394e64678b"
+    },
+    {
+      "bytes": 941336,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0028.png",
+      "sha256": "a4784a2c468577f80d0b62f622f3b8ef4f46c7f945caf9e1fddc52d8c9fe8585"
+    },
+    {
+      "bytes": 938463,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0029.png",
+      "sha256": "361f93c158a1f458955d4d69280d4253290c2e4f18b6682ea19c5f106269505e"
+    },
+    {
+      "bytes": 938062,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0030.png",
+      "sha256": "cb009aba7c76ccb4c0b6cb3d2ab882228a1c9e8d2d0d468b110d0640691c9663"
+    },
+    {
+      "bytes": 935997,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0031.png",
+      "sha256": "2f0a196107eb4f83a337c2f60a5db5e7792588fafa01140f019db0b366f6e929"
+    },
+    {
+      "bytes": 939085,
+      "path": "aspirin-force-animation/images/001-trajectory_force-research-0032.png",
+      "sha256": "58212f9142586d32f3615a9cb1b04ba3357ea7b7ac2a8998306afbd5a912db3e"
+    },
+    {
+      "bytes": 902072,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0001.png",
+      "sha256": "ef06dca90640a4580a79d366cb609696a0b0e925cdf4ca05fcdf4e6cc778f2d3"
+    },
+    {
+      "bytes": 903709,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0002.png",
+      "sha256": "461e3d9eed831a76a5a230894572635ad3b9abf9eac984bc69c52b6e5646fc42"
+    },
+    {
+      "bytes": 906080,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0003.png",
+      "sha256": "1fda9488114ecea132d87dbdaef94e2c3b5ad9001ff143076b4d40ac95575ae4"
+    },
+    {
+      "bytes": 909331,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0004.png",
+      "sha256": "ba029216f987e5c8799d7bfe3f991f63f08a6134e6d8d9aab51fab2d4923adbf"
+    },
+    {
+      "bytes": 906305,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0005.png",
+      "sha256": "c946075ee1fab6eb6bb397d07ad321b9179fbe43bc829263b1a0aa3828fff00d"
+    },
+    {
+      "bytes": 906034,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0006.png",
+      "sha256": "f66c47b9f61448d603de0bc3e576ca1e6f68931fe1f2284c7b150d30bd387d55"
+    },
+    {
+      "bytes": 903394,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0007.png",
+      "sha256": "4fe9a1c96f2550657bc6afca2de29d6a645b333f7294584dba80f6bda5a88474"
+    },
+    {
+      "bytes": 906966,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0008.png",
+      "sha256": "38bb024a35dab3deaebf62a1ec0e2567fd884f63cfa20c700e74277c32ec6dc0"
+    },
+    {
+      "bytes": 906035,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0009.png",
+      "sha256": "711792eb09965ae132e18c41b5a651ee3c08cd233c62cea50fe86c04701d9e71"
+    },
+    {
+      "bytes": 902806,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0010.png",
+      "sha256": "8cd5ccc8b725c51d9fcd6475263bcdcf07dbf703f35615b4b37f8cc5762af113"
+    },
+    {
+      "bytes": 907292,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0011.png",
+      "sha256": "0d4aff26f09b4037f8e3812422ea050f6d32edcb68825c984d35a4cba85549ba"
+    },
+    {
+      "bytes": 908089,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0012.png",
+      "sha256": "5e568d441261fd1046d036b10a597af48d873f5bcc0aacda6b0b6278a2a03218"
+    },
+    {
+      "bytes": 907881,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0013.png",
+      "sha256": "2df398aa380f830b6793b05d255276574dde03d186129a78ffeae5ed62c312ac"
+    },
+    {
+      "bytes": 901647,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0014.png",
+      "sha256": "34a80eb2c8d475744b1a116fcdc9981cc896698012e623a09100f501bffde8a5"
+    },
+    {
+      "bytes": 904272,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0015.png",
+      "sha256": "c56c72437511e0498a0e84bb31f9b8d136472347e305ca6e6791f20b4d11bbdc"
+    },
+    {
+      "bytes": 905978,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0016.png",
+      "sha256": "c81a781e72093b39a700c4d1e504babb089486cf99ab0664264b3eec47a92186"
+    },
+    {
+      "bytes": 908015,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0017.png",
+      "sha256": "a18dfb6352b2edc29733d715c74287db1e7802aff79cc78ee1142e20d013c336"
+    },
+    {
+      "bytes": 902763,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0018.png",
+      "sha256": "eadb982ca5972671f1c8bb7ce7de717dc83cc8617b717d7f02b2a9a914ad7ad1"
+    },
+    {
+      "bytes": 906632,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0019.png",
+      "sha256": "2b6c49fcc89bef8bed701145252823b11b6931497359a6220f0b118e27e41df8"
+    },
+    {
+      "bytes": 909039,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0020.png",
+      "sha256": "376f15b2cea4cd2f4610f00ecfa8453401c0f3fe48f9f5dd9c646f564d91c979"
+    },
+    {
+      "bytes": 907629,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0021.png",
+      "sha256": "48c8587b1520cdf52b21cb62db703d497513d328723ebed6be5aaba332ffd654"
+    },
+    {
+      "bytes": 907802,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0022.png",
+      "sha256": "26c0ed064f8be97caad6182e0646fbba51cb3578f561f29b916c31982a4ae348"
+    },
+    {
+      "bytes": 905398,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0023.png",
+      "sha256": "fada187632c8fe3eec181497c980cc9d8ce1d71282aa683c4602095af855c9d3"
+    },
+    {
+      "bytes": 903902,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0024.png",
+      "sha256": "1ac68d5eecfb25aedc73f2beb9339ccdce7f29fe227a7a59fba6c302134b50b6"
+    },
+    {
+      "bytes": 900199,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0025.png",
+      "sha256": "5f40fab5fccd4ca03fb58f546bbfea681fa5fb8a9e5240f3ebacf80c3238efa3"
+    },
+    {
+      "bytes": 902648,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0026.png",
+      "sha256": "ba6f156261d4caff45ee6f1e05fa6c58bd3f30cd1a3f51f16ca161418f70014e"
+    },
+    {
+      "bytes": 907703,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0027.png",
+      "sha256": "9bd46842f2a511736801e199e3faae59ec7bcf34802d2785d1be845215b0cffa"
+    },
+    {
+      "bytes": 908634,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0028.png",
+      "sha256": "cfce6dc139e32602f5c35f8d194b548d9ce8c46ac41a3b4578e74cbf52b31cb0"
+    },
+    {
+      "bytes": 906563,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0029.png",
+      "sha256": "da254f183281d5498d33651a5f36a0d6fa55cb4a43b2d3aba91389eb6f418c19"
+    },
+    {
+      "bytes": 903235,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0030.png",
+      "sha256": "5062ddbe4041f42e1d4a799081bdffb1066b20df30f1f0d0c63318f0be1114d6"
+    },
+    {
+      "bytes": 902587,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0031.png",
+      "sha256": "c09c9d106ed27c16dd4f077b39d5be428af9ee4f54a610e8c00b11412fa7e8ec"
+    },
+    {
+      "bytes": 906021,
+      "path": "aspirin-force-animation/images/001-trajectory_force-teaching-0032.png",
+      "sha256": "0d589199a208a6c6049a47a6b4d72d6cb4015e731c3da89578a6256db530ba50"
+    },
+    {
+      "bytes": 19564,
+      "path": "aspirin-force-animation/manifest.json",
+      "sha256": "e3ce321656a930e3a733f366bad93e4b85857076af25243e8fcb54a3662672d4"
+    },
+    {
+      "bytes": 11162,
+      "path": "aspirin-force-animation/report.md",
+      "sha256": "40efd0b87bf823aca2fe879ffe803fc13020524ff0a81d6f0aac3e4f86c64d59"
+    },
+    {
+      "bytes": 17753,
+      "path": "aspirin-trajectory/display.json",
+      "sha256": "13872f7d873bcd7657cde18a982110fb24a79dd0dbe403fbc2f2e0fae35d460d"
+    },
+    {
+      "bytes": 4270846,
+      "path": "aspirin-trajectory/images/001-trajectory-research-0001.png",
+      "sha256": "dc9e804d171d357032c87558a41f64bcf1b89d93f42e7e8689ff37ce3c518fe5"
+    },
+    {
+      "bytes": 4077449,
+      "path": "aspirin-trajectory/images/001-trajectory-teaching-0001.png",
+      "sha256": "3b989b53254623e2e6592ea0fb4734aec515dad8d45cfbfe6140216e9d13e885"
+    },
+    {
+      "bytes": 3159,
+      "path": "aspirin-trajectory/manifest.json",
+      "sha256": "b0b7d7bc86bba4e32d92633f300db15a1fcd86b9195aac10904f579c5ca1b70f"
+    },
+    {
+      "bytes": 878,
+      "path": "aspirin-trajectory/report.md",
+      "sha256": "ad16f91104bc961497d94bf850fa27de99e8249417d411219d6e688713832974"
+    },
+    {
+      "bytes": 176173,
+      "path": "aspirin-trajectory-animation/001-trajectory-research.mp4",
+      "sha256": "2f483248c9cd551fb442b460a71b54a21465400fecc43f90d8a4be5935e2af36"
+    },
+    {
+      "bytes": 103183,
+      "path": "aspirin-trajectory-animation/001-trajectory-teaching.mp4",
+      "sha256": "28e175160d7eee448e0b0c0f99ae3fb0d7c492a4dcfe61c4d02dd7e30adf06c1"
+    },
+    {
+      "bytes": 42753,
+      "path": "aspirin-trajectory-animation/display.json",
+      "sha256": "9e487ccd9055aeb98056471f40bc95170b774161a58e8b226d3ba1bffea63320"
+    },
+    {
+      "bytes": 928110,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0001.png",
+      "sha256": "fc7370c072ee2c1dfc767c534ab34f93dddcdfd69e39117bd2e028cec5cc2772"
+    },
+    {
+      "bytes": 927096,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0002.png",
+      "sha256": "650d89d6538a2e8bd7a93668fb99bb817a0611b852391ab7abdcfa1fe9248e0d"
+    },
+    {
+      "bytes": 927391,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0003.png",
+      "sha256": "5e58680d6c8d2d7e345e1168edb8d0ad502d12dea6a72aa7fb232bd3383d4660"
+    },
+    {
+      "bytes": 927121,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0004.png",
+      "sha256": "12d52654fb86b5915adc7ba63eb5ab14c50cd2d657fead2cfc55548c2052386b"
+    },
+    {
+      "bytes": 926077,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0005.png",
+      "sha256": "f23c850a99eaccbb9f8d30014ca2ff62545c78e400c763849fd0c9f489604e37"
+    },
+    {
+      "bytes": 926270,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0006.png",
+      "sha256": "13887125c101a96e024ad905dccd74b220326c7da37f1adb9ae1d289b3dd3e75"
+    },
+    {
+      "bytes": 924965,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0007.png",
+      "sha256": "7f24863f2b7f1b06d58b29b285074e76487062fd295ff9d9ec000c1511aa65fb"
+    },
+    {
+      "bytes": 926708,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0008.png",
+      "sha256": "043f521c1aa5425abfbab556d54643ce13cd2028393f15f1cf42d113987919d4"
+    },
+    {
+      "bytes": 923656,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0009.png",
+      "sha256": "58ef4a9392b1cadc3e479f83162085042a2c6e4a8712cae0b5f8edb2fb8c498a"
+    },
+    {
+      "bytes": 926335,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0010.png",
+      "sha256": "0200ff76eac6cfa616ed31d0d820cbdf46f0e62a1b2ae421f8345c05ae3cdcea"
+    },
+    {
+      "bytes": 928520,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0011.png",
+      "sha256": "6d245630730526c9deb2d2b88944372ad657685166fd42e67d7b48d92155f3e2"
+    },
+    {
+      "bytes": 928333,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0012.png",
+      "sha256": "e6184e56fe63f8fa5ddb992336f975d2c0628be2a933dfa9b6a373db9b2cd0d5"
+    },
+    {
+      "bytes": 926659,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0013.png",
+      "sha256": "c7c5069ee7647725f96ff5fca0cc6a6afaf06a808d821b6e5ab1f037396d170e"
+    },
+    {
+      "bytes": 925547,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0014.png",
+      "sha256": "c3e72c43585b6687d987e16a4ed2f5ccdf3f039a0128bc430c79b1582a251701"
+    },
+    {
+      "bytes": 925611,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0015.png",
+      "sha256": "05753568e7d61c5bf256070f10b60d25046b5b54410e7b3f4bb110b402102d98"
+    },
+    {
+      "bytes": 925391,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0016.png",
+      "sha256": "a92ac754d68e03f5c220d77f48e2cd87d14bf7f50ff0697c2f5d01b73b588741"
+    },
+    {
+      "bytes": 926739,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0017.png",
+      "sha256": "9df4907c4e29439af6e491b51a6513230bdc467e8144446ade93260fde98ec78"
+    },
+    {
+      "bytes": 925282,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0018.png",
+      "sha256": "45169e6980df5373aac1350640122011380a7b99ff51c39239bb2550a2ab96ee"
+    },
+    {
+      "bytes": 927044,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0019.png",
+      "sha256": "c1bf1358ac9f02546abb6be56a36557ba5013e3afebf6fa5036aed1124623e98"
+    },
+    {
+      "bytes": 928807,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0020.png",
+      "sha256": "324e66c4dd588b096b2ee1e5aca23284a4449ce7e4ba66814971ff87073defd7"
+    },
+    {
+      "bytes": 929235,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0021.png",
+      "sha256": "64c33c996dfa08fa931ca182b6a6ee07626ed63a82bcd879164e2c68ab98434c"
+    },
+    {
+      "bytes": 927223,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0022.png",
+      "sha256": "4b9ea68dcae5cc89d94b975328ff549ba6dfa71fdbdeab58c1b5bc9877668c17"
+    },
+    {
+      "bytes": 930411,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0023.png",
+      "sha256": "2171b8ee715c0fae09aaab9d107d61a15f53f798396b4b9bb9cb13993550ad08"
+    },
+    {
+      "bytes": 928043,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0024.png",
+      "sha256": "4d2482cc5892fb8f439006c0f9b464ba5cd7c104299891dedbb75b3b89fc4c4d"
+    },
+    {
+      "bytes": 926192,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0025.png",
+      "sha256": "72f66feb2fc11c2f0030b21bc3fa484efe93da807c0771b9adb49cde69fad8f2"
+    },
+    {
+      "bytes": 929054,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0026.png",
+      "sha256": "82de9975ef40f0d1330e32107b2be31121c4ccd7607cfa22cd0aa48177dfaf90"
+    },
+    {
+      "bytes": 925348,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0027.png",
+      "sha256": "d6a6d824437af7ff435abde5fa464dbf3901a18c84e3661e3120c94c70c0d1cb"
+    },
+    {
+      "bytes": 926609,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0028.png",
+      "sha256": "374dc7d09a863cb83c6cd5b77e361c4ba345d06c81591971d1202379febd8f28"
+    },
+    {
+      "bytes": 926455,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0029.png",
+      "sha256": "2fbc3b6662b15dc8bb638efaf7dd25bce4d230e56490739370ad11f2731a978f"
+    },
+    {
+      "bytes": 926777,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0030.png",
+      "sha256": "40883bd8afd9b6831c7b17bb23c72a19b900d8882c3a7a418eb6b51b914f849f"
+    },
+    {
+      "bytes": 925496,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0031.png",
+      "sha256": "d6f10e2427a25de044aa2e530e13114dceb912fc20bc2dbac771ef48d82bc33b"
+    },
+    {
+      "bytes": 927165,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-research-0032.png",
+      "sha256": "8341cab480dc51edf62a8d16253bd656f2c57c98ed5edadf843d936a8d094d93"
+    },
+    {
+      "bytes": 889469,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0001.png",
+      "sha256": "84d52bbd86be3f8fd0b12b864c44b3dbafc9f563d337bdfeb125cab317ea6f91"
+    },
+    {
+      "bytes": 890797,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0002.png",
+      "sha256": "2c3c1aee9ced177045aa0895d7dbb6138f370724835e0ffdc89539d5a783fdae"
+    },
+    {
+      "bytes": 890349,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0003.png",
+      "sha256": "4c2f12eab29833950fce38259b1759ecd16d21860a1802d1919cf225eea377a1"
+    },
+    {
+      "bytes": 890483,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0004.png",
+      "sha256": "edefedfeb5476ea82ba15a3e6bac5a8f10d198cc57d519fd1e279bb5a20b8aa3"
+    },
+    {
+      "bytes": 887067,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0005.png",
+      "sha256": "502ca39aaad620cf0271e4b48d80d8cba5bafc528a3f4bfe949f3840f3d2d106"
+    },
+    {
+      "bytes": 887904,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0006.png",
+      "sha256": "67e01ac6edb4b80bf87517ba272fa3c8b1b17d784c71a57133e11599b1ce0cbc"
+    },
+    {
+      "bytes": 886057,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0007.png",
+      "sha256": "f97615e013d50eeace0b6b84ac1da6e4017ccefa7eb6955ddbeda0b4c4c34c8f"
+    },
+    {
+      "bytes": 890321,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0008.png",
+      "sha256": "33ee2e41d110bcbca977e96eeac72b067ac239fbc5b456bf76e7cbb519a077ab"
+    },
+    {
+      "bytes": 887792,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0009.png",
+      "sha256": "8bc824661bf47300af803331c1be69246140f7582947a2fea90476108d143222"
+    },
+    {
+      "bytes": 889828,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0010.png",
+      "sha256": "c6d0cabc2ddfc327ce1336fdd90dfe8a4956ceff8412e0a97875e4d1c23c9951"
+    },
+    {
+      "bytes": 890633,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0011.png",
+      "sha256": "d9a5f5692c99ec55608353557d20236620c109ed491f6ed06d83aeee2b865452"
+    },
+    {
+      "bytes": 891159,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0012.png",
+      "sha256": "12585027780863bcbd18e1c1dbe9b018924d11087cb35e3c2bce9fe7b168dbbf"
+    },
+    {
+      "bytes": 889992,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0013.png",
+      "sha256": "ca689eaa35b6343bc782a0c223d5d53e857421476d37b10e19f60353dfeaadc6"
+    },
+    {
+      "bytes": 887844,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0014.png",
+      "sha256": "bca4449c63d4c974a03171b0fac94683cf69b6562a7ebcde5da6bf6554a2e7f2"
+    },
+    {
+      "bytes": 886730,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0015.png",
+      "sha256": "f485c3892f9ea464486d94665f1d24704b82824d8c0378c921dcf0c3cc0a3fd7"
+    },
+    {
+      "bytes": 888889,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0016.png",
+      "sha256": "6599b4b27da600e678d6ff8bee06d3d1ef0c204e8bf59053a14811512ff90804"
+    },
+    {
+      "bytes": 889949,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0017.png",
+      "sha256": "eed6b38b39d273a2da40da860b63f881fe8a6275fb27fd825226b966db1db8b3"
+    },
+    {
+      "bytes": 887504,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0018.png",
+      "sha256": "735245f65a8d3c5f912fa6ce80e33b5b4587b5ae919c2afa7398a822c842f724"
+    },
+    {
+      "bytes": 892334,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0019.png",
+      "sha256": "4807343b2fa17731e5862963742f797130c1efd6b395efbfe53527f792f42e15"
+    },
+    {
+      "bytes": 891224,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0020.png",
+      "sha256": "b5bbb4c7a818e336295edd568770798ec7cbf04f990e66d55ee5e083bf70259f"
+    },
+    {
+      "bytes": 894127,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0021.png",
+      "sha256": "f5af25f119ca838af9b68371c48ea4fcfb0a73f8729a87e60532859fd830540e"
+    },
+    {
+      "bytes": 887843,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0022.png",
+      "sha256": "03b83cda7096615bd33f523feebd66605dc8d18c66d0560fbf189dc23fbc6a74"
+    },
+    {
+      "bytes": 893165,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0023.png",
+      "sha256": "cec25d9d6fe62719af96f20bbeb489e5db8ba02f83b5e7fc0ee4988e1d136e3a"
+    },
+    {
+      "bytes": 890632,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0024.png",
+      "sha256": "b74d3f905783e3c74a4f4c4ad3b8a44d640b1dd29abf87464d1783b87b95ac69"
+    },
+    {
+      "bytes": 888408,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0025.png",
+      "sha256": "ec073f388d42a2401c751ad79e6f3226564557b4a778df58b7ff74807fae1f50"
+    },
+    {
+      "bytes": 891759,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0026.png",
+      "sha256": "799845689bd1a4f6d499dc6bd3460a334da7abc03f4b4e92ac542c18df544ebe"
+    },
+    {
+      "bytes": 887676,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0027.png",
+      "sha256": "50536023e27194362edee2f353274e74a9e4a86032542777cf0b3e7a5043f078"
+    },
+    {
+      "bytes": 889588,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0028.png",
+      "sha256": "a474b44f5aefae6a3c40afc43301e33f8933f4d77fed839c46ca994d7b332f62"
+    },
+    {
+      "bytes": 888711,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0029.png",
+      "sha256": "2ea06c54feb088c3ee4024ced138427ffc9e284b2b661391de6a5b22fe6fd0c5"
+    },
+    {
+      "bytes": 887976,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0030.png",
+      "sha256": "ca3a45835ff31f4aa85d0ef680bb1803b5b7598e5d8bb032e6365c1fd67618c9"
+    },
+    {
+      "bytes": 887601,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0031.png",
+      "sha256": "27f2e4da3bb2204b7bf8ee11b02bb2efba42783be0f581a843eecfcf81028afc"
+    },
+    {
+      "bytes": 889900,
+      "path": "aspirin-trajectory-animation/images/001-trajectory-teaching-0032.png",
+      "sha256": "0ef1f3d4cee2bb112981fcc2e3ff9b844960520450273ea981351eafbc883672"
+    },
+    {
+      "bytes": 18629,
+      "path": "aspirin-trajectory-animation/manifest.json",
+      "sha256": "4ae52eba3100b1fb62dc4a7dc6c7a2664f0754ae347d815bd5128b1a0063edaf"
+    },
+    {
+      "bytes": 10654,
+      "path": "aspirin-trajectory-animation/report.md",
+      "sha256": "da9e9fb0e6ffcdbe9b1fc741a7ddeb187b171310bb58f958cfd118946c001502"
+    },
+    {
+      "bytes": 18371,
+      "path": "pqr-charge/display.json",
+      "sha256": "5cff59ab4148083f6871aaeaba119b5ba02bbc4672e1ddc308b5045fdb00780f"
+    },
+    {
+      "bytes": 4396533,
+      "path": "pqr-charge/images/001-atomic_scalar-research-0001.png",
+      "sha256": "3421d81b30869285b2d279bd4b8fec18d365fdab8a9f1ce858262ed1c31ae708"
+    },
+    {
+      "bytes": 4421254,
+      "path": "pqr-charge/images/001-atomic_scalar-teaching-0001.png",
+      "sha256": "d4bc335969666adcbc8ceeaf54cb4f2e84127b5bbd57e138cf4d91d678733efb"
+    },
+    {
+      "bytes": 3067,
+      "path": "pqr-charge/manifest.json",
+      "sha256": "744b2b61b32f15b3d1f1a52655895649ef5e59fa5a9655ad3fc56120d31eb6f4"
+    },
+    {
+      "bytes": 883,
+      "path": "pqr-charge/report.md",
+      "sha256": "afeddd4b2b4e9c20fb8111745c83832afcaac436969498e77e39d16d28459222"
+    }
+  ],
+  "cases": {
+    "aspirin-force": {
+      "animation": false,
+      "bindings": {
+        "force": "d3c402bc-6da5-5017-9131-b23b53fcf6a5",
+        "frames": "0969bf8a-eb66-59d2-a359-58aed199d731",
+        "structure": "931d77f9-3580-551b-a023-93554733a414"
+      },
+      "direction": [
+        0.376812,
+        0.700065,
+        0.606566
+      ],
+      "display": "aspirin-force/display.json",
+      "fps": null,
+      "framing_margin": 1.5,
+      "image_count": 2,
+      "image_metrics": {
+        "aspirin-force/images/001-trajectory_force-research-0001.png": {
+          "border_foreground_fraction": 0.0002380952380952381,
+          "foreground_fraction": 0.021119444444444444,
+          "height": 1800,
+          "width": 2400
+        },
+        "aspirin-force/images/001-trajectory_force-teaching-0001.png": {
+          "border_foreground_fraction": 0.0,
+          "foreground_fraction": 0.02118935185185185,
+          "height": 1800,
+          "width": 2400
+        }
+      },
+      "name": "aspirin-force",
+      "preset": "trajectory_force",
+      "report": "aspirin-force/manifest.json",
+      "resolution": [
+        2400,
+        1800
+      ],
+      "samples": 256,
+      "settings": {
+        "frame_index": 0,
+        "vector_scale": 0.5
+      },
+      "source": "rmd17",
+      "source_matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    "aspirin-force-animation": {
+      "animation": true,
+      "bindings": {
+        "force": "d3c402bc-6da5-5017-9131-b23b53fcf6a5",
+        "frames": "0969bf8a-eb66-59d2-a359-58aed199d731",
+        "structure": "931d77f9-3580-551b-a023-93554733a414"
+      },
+      "direction": [
+        0.376812,
+        0.700065,
+        0.606566
+      ],
+      "display": "aspirin-force-animation/display.json",
+      "fps": 24,
+      "framing_margin": 1.5,
+      "image_count": 64,
+      "image_metrics": {
+        "aspirin-force-animation/images/001-trajectory_force-research-0001.png": {
+          "border_foreground_fraction": 0.0,
+          "foreground_fraction": 0.01724609375,
+          "height": 720,
+          "width": 1280
+        },
+        "aspirin-force-animation/images/001-trajectory_force-research-0032.png": {
+          "border_foreground_fraction": 0.0,
+          "foreground_fraction": 0.01773654513888889,
+          "height": 720,
+          "width": 1280
+        },
+        "aspirin-force-animation/images/001-trajectory_force-teaching-0001.png": {
+          "border_foreground_fraction": 0.0,
+          "foreground_fraction": 0.019803602430555556,
+          "height": 720,
+          "width": 1280
+        },
+        "aspirin-force-animation/images/001-trajectory_force-teaching-0032.png": {
+          "border_foreground_fraction": 0.0,
+          "foreground_fraction": 0.020348307291666666,
+          "height": 720,
+          "width": 1280
+        }
+      },
+      "name": "aspirin-force-animation",
+      "preset": "trajectory_force",
+      "report": "aspirin-force-animation/manifest.json",
+      "resolution": [
+        1280,
+        720
+      ],
+      "samples": 64,
+      "settings": {
+        "frame_index": 0,
+        "vector_scale": 0.5
+      },
+      "source": "rmd17",
+      "source_matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    "aspirin-trajectory": {
+      "animation": false,
+      "bindings": {
+        "frames": "0969bf8a-eb66-59d2-a359-58aed199d731",
+        "structure": "931d77f9-3580-551b-a023-93554733a414"
+      },
+      "direction": [
+        0.376812,
+        0.700065,
+        0.606566
+      ],
+      "display": "aspirin-trajectory/display.json",
+      "fps": null,
+      "framing_margin": 1.5,
+      "image_count": 2,
+      "image_metrics": {
+        "aspirin-trajectory/images/001-trajectory-research-0001.png": {
+          "border_foreground_fraction": 0.0002380952380952381,
+          "foreground_fraction": 0.01805949074074074,
+          "height": 1800,
+          "width": 2400
+        },
+        "aspirin-trajectory/images/001-trajectory-teaching-0001.png": {
+          "border_foreground_fraction": 0.0,
+          "foreground_fraction": 0.017655324074074073,
+          "height": 1800,
+          "width": 2400
+        }
+      },
+      "name": "aspirin-trajectory",
+      "preset": "trajectory",
+      "report": "aspirin-trajectory/manifest.json",
+      "resolution": [
+        2400,
+        1800
+      ],
+      "samples": 256,
+      "settings": {
+        "frame_index": 0
+      },
+      "source": "rmd17",
+      "source_matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    "aspirin-trajectory-animation": {
+      "animation": true,
+      "bindings": {
+        "frames": "0969bf8a-eb66-59d2-a359-58aed199d731",
+        "structure": "931d77f9-3580-551b-a023-93554733a414"
+      },
+      "direction": [
+        0.376812,
+        0.700065,
+        0.606566
+      ],
+      "display": "aspirin-trajectory-animation/display.json",
+      "fps": 24,
+      "framing_margin": 1.5,
+      "image_count": 64,
+      "image_metrics": {
+        "aspirin-trajectory-animation/images/001-trajectory-research-0001.png": {
+          "border_foreground_fraction": 0.0,
+          "foreground_fraction": 0.014463975694444445,
+          "height": 720,
+          "width": 1280
+        },
+        "aspirin-trajectory-animation/images/001-trajectory-research-0032.png": {
+          "border_foreground_fraction": 0.0,
+          "foreground_fraction": 0.014780815972222222,
+          "height": 720,
+          "width": 1280
+        },
+        "aspirin-trajectory-animation/images/001-trajectory-teaching-0001.png": {
+          "border_foreground_fraction": 0.0,
+          "foreground_fraction": 0.015753038194444444,
+          "height": 720,
+          "width": 1280
+        },
+        "aspirin-trajectory-animation/images/001-trajectory-teaching-0032.png": {
+          "border_foreground_fraction": 0.0,
+          "foreground_fraction": 0.01607421875,
+          "height": 720,
+          "width": 1280
+        }
+      },
+      "name": "aspirin-trajectory-animation",
+      "preset": "trajectory",
+      "report": "aspirin-trajectory-animation/manifest.json",
+      "resolution": [
+        1280,
+        720
+      ],
+      "samples": 64,
+      "settings": {
+        "frame_index": 0
+      },
+      "source": "rmd17",
+      "source_matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    "pqr-charge": {
+      "animation": false,
+      "bindings": {
+        "property": "54bff613-e8ff-5f50-bdcb-52c63a7d3146",
+        "structure": "5ecf705f-0133-54f6-827d-acb925305bdd"
+      },
+      "direction": [
+        0.932727,
+        0.335011,
+        0.133372
+      ],
+      "display": "pqr-charge/display.json",
+      "fps": null,
+      "framing_margin": 1.5,
+      "image_count": 2,
+      "image_metrics": {
+        "pqr-charge/images/001-atomic_scalar-research-0001.png": {
+          "border_foreground_fraction": 0.0002380952380952381,
+          "foreground_fraction": 0.046398842592592596,
+          "height": 1800,
+          "width": 2400
+        },
+        "pqr-charge/images/001-atomic_scalar-teaching-0001.png": {
+          "border_foreground_fraction": 0.0,
+          "foreground_fraction": 0.04799976851851852,
+          "height": 1800,
+          "width": 2400
+        }
+      },
+      "name": "pqr-charge",
+      "preset": "atomic_scalar",
+      "report": "pqr-charge/manifest.json",
+      "resolution": [
+        2400,
+        1800
+      ],
+      "samples": 256,
+      "settings": {
+        "color_max": 1.2,
+        "color_min": -1.2,
+        "colormap": "coolwarm",
+        "symmetric": true
+      },
+      "source": "pqr",
+      "source_matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    }
+  },
+  "device": {
+    "device": "OPTIX",
+    "names": [
+      "NVIDIA GeForce RTX 4070 Ti SUPER"
+    ],
+    "preferences_saved": false
+  },
+  "limitations": [
+    "rMD17: 32 source configurations, rows 0..3100 stride 100; no physical time interval declared",
+    "Animation FPS controls playback only; no interpolation or time calibration",
+    "PQR element identities were inferred by the reader from atom/residue names; all 998 atoms are shown",
+    "Force arrows use an explicit display scale; source force values remain in electron_volt_per_angstrom"
+  ],
+  "post_render_changes": [
+    "The replay driver now reuses the ordinary-mkdir image staging helper; rendering parameters and images are unchanged.",
+    "Enabled existing parent ACL inheritance on this newly generated atom-trajectory output directory only.",
+    "Recorded actual identity source View matrix for all five cases; the render script never changed root transforms, and an independent native Blender reconstruction verified the same inputs and presets. Replay now asserts identity; existing images were not rerendered."
+  ],
+  "purpose": "real_scientific_render",
+  "replay_script_sha256": "c20173e470aebbabd55c6dd778ecb94e7728c9a16cdf8050f619502073860372",
+  "schema_version": 1,
+  "script": "D:\\workspace\\ChemBlender_2_x\\examples\\scientific-visualization\\render_atom_trajectory.py",
+  "script_sha256": "6f57d7bc5d88811bbbf9722061b71f4f4eee06787f330d91d985d771b298cf38",
+  "sources": {
+    "pqr": {
+      "atom_count": 998,
+      "project_id": "7d0d34d5-e4a0-46f6-91f3-749923ab3a54",
+      "provenance": [
+        {
+          "id": "6635aed0-6fa3-559d-9db7-01d3133f7cf9",
+          "parameters": {
+            "dialect": "no_chain",
+            "format": "pqr",
+            "scientific_example_source": {
+              "bytes": 70047,
+              "header_evidence": [
+                "REMARK   1 PQR file generated by PDB2PQR (Version 1.1.2)",
+                "REMARK   1",
+                "REMARK   1 Forcefield Used: amber",
+                "REMARK   1",
+                "REMARK   5",
+                "REMARK   6 Total charge on this protein: -14.0000 e",
+                "REMARK   6"
+              ],
+              "license": "BSD-3-Clause",
+              "path": "D:\\workspace\\ChemBlender_2_x\\examples\\user-workflows\\inputs\\pqr\\apbs-protein-rna-nb.pqr",
+              "sha256": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68",
+              "upstream": "Electrostatics/apbs@4613d0d547c3c71df8815dcb85e9e19abf61822c:examples/protein-rna/model_outNB.pqr"
+            }
+          },
+          "producer": "ChemBlender PQR reader",
+          "producer_version": "1",
+          "revision": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68",
+          "source": "D:\\workspace\\ChemBlender_2_x\\examples\\user-workflows\\inputs\\pqr\\apbs-protein-rna-nb.pqr",
+          "source_hash": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68"
+        }
+      ],
+      "sidecar": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-corpus\\molecular\\pqr.cbq",
+      "source_files": {
+        "arrays/2dd33073bb381bc894a02e502d6c2741146fe58c5ef711049521d2afe20a42ac.npy": "cb099495f46cb251815674ce1838481412246e9d2321c64484eb584dfc48ec15",
+        "arrays/38789814629a0386a2890003602e409a32983d168d621a02d5d6ce3ebc7793fb.npy": "2ae80849ba5ff8e1e3728f9a5106b40a1f34b46386c1678f603a2bf7643fb020",
+        "arrays/85a34167385022591c1e23923e66ff47e6ff52239161921a5b744eed25507d77.npy": "f7b72d673f4c960663808775d2c3f146c3ae6455ddf91495f5a4e19fe35b8cf9",
+        "arrays/96fc9f7d67114b23e5b4e256de1edc2f127e38d7b633bf4481c8fbff8c32c38d.npy": "25292944a0a9695529241342201bbb2a11bcb1aa9feb24ae00cefb5b87940aa2",
+        "arrays/970718742cef59a1c815362828c5f949ffb3a50542602796be441e2ab5e848d1.npy": "2ece55f3e48dea4d705af32e1a1afafc0dafabbbf37c31a09ea33a9f8a8b1156",
+        "arrays/a9126bfd6d8893029fb426ad96e568c9e71acc39bd6df006445d8cdd90b1e950.npy": "3382c37abdc3a461fb18f4ab5070f69c6186dd79cb4dd2aa1af99fe54cf916ae",
+        "arrays/cca0b0a20b81f993544912a8cb686e805d96b7123ec06554f440036a3af6f524.npy": "aa38ba0d432b32eea40415c50a54152a67c23ceffb572e619e5b2224f324b8bc",
+        "arrays/f8310add437134da608458004138ef0b1723d4e80c70af5d50ee1bca71e93108.npy": "02121cd581956b1eacde2182f95702c662b13e2b7c7c7b60a357c9053b095416",
+        "manifest.json": "a853724601ecaab868476181e3911640456ebe11ff63003f61504c34e91fc69b"
+      }
+    },
+    "rmd17": {
+      "atom_count": 21,
+      "project_id": "e8d76bda-6e7c-42d6-abaa-5f36f49afcda",
+      "provenance": [
+        {
+          "id": "1d05ca83-b009-5b90-a5cd-6cb8dff19158",
+          "parameters": {
+            "format": "extxyz",
+            "lattice_order": "ax ay az bx by bz cx cy cz",
+            "scientific_example_source": {
+              "bytes": 61621,
+              "conversion": "source kcal/mol and kcal/mol/angstrom divided by 23.060547830619",
+              "coordinate_unit": "angstrom",
+              "force_unit": "electron_volt_per_angstrom",
+              "license": "CC0-1.0",
+              "path": "D:\\workspace\\ChemBlender_2_x\\examples\\user-workflows\\inputs\\extxyz\\aspirin-rmd17-32.extxyz",
+              "sampling": "32 configurations; original rows 0,100,...,3100; no physical time step declared",
+              "sha256": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a",
+              "source_npz_sha256": "6efe3d2454c1a9215efe2bf271c58084ae556afa188a740ae06955bf43456ee8",
+              "upstream": "10.6084/m9.figshare.12672038.v3; rmd17_aspirin.npz rows 0..3100 stride100"
+            }
+          },
+          "producer": "ChemBlender extXYZ reader",
+          "producer_version": "1",
+          "revision": "369097ffb0fb596fbaad20df3d84db0a0d75cfc4c6a2ed03b991607c7a94ab25",
+          "source": "D:\\workspace\\ChemBlender_2_x\\examples\\user-workflows\\inputs\\extxyz\\aspirin-rmd17-32.extxyz",
+          "source_hash": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a"
+        }
+      ],
+      "sidecar": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-corpus\\molecular\\rmd17.cbq",
+      "source_files": {
+        "arrays/2fdff7b81305d6b6a5d4d199ccf158dd3b9d1ee4f336f73d82c5de76fa38dfa6.npy": "8f10296e74acc2ad344d092f940925834b72887257c799dc065199485775cdd8",
+        "arrays/56a5f3d4561912a6fbbcf10fe1a8b4cc13a9a2736b7dcf3bbbf1c8fe3bd67934.npy": "af4dddb5f8f58448629aa6d23e53670780701c51ebee07de28d6b816dd34cfc7",
+        "arrays/5d06384275cc83e4b9e0b76bcb0a9c066d06b12298a46545a39a1c7fa87959e3.npy": "abdce46ce1fbf315ec5c2195f2fa8c0e4cd35ec19693e84edd9b3cc3c9738cb5",
+        "arrays/958c11cdef16c144f473738c69954220d245cdcb43680354207620c7bd051ac4.npy": "6a468393500226bf0f8124f57763cea0fdaf5458028799a7667d69695c096b13",
+        "arrays/c3b30ab248824277143fb54a6eb3d41f71bc26f7fe57c2742955b1ee7316548f.npy": "a5e2d95c5a6452a782b429d8b78455eb2770ff1286525eb3131a0a3b9d299277",
+        "arrays/cb5b4b69559824779e88accc3232a9176c64ee15031be923e089f0c2d490a4fd.npy": "f84643e8d315ec7806fc84871769ab0ffa6fab8aac09e2b626cfef2892b2fae7",
+        "manifest.json": "d9b7ba750615f70ad5a1473f6b36c7d5885ba7e78bb1cc41cb27838624eb29a1"
+      }
+    }
+  }
+}

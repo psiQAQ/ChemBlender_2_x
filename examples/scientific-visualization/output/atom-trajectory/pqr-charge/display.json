@@ -1,0 +1,663 @@
+{
+  "project_id": "7d0d34d5-e4a0-46f6-91f3-749923ab3a54",
+  "schema_name": "chemblender_scientific_images",
+  "schema_version": 1,
+  "views": [
+    {
+      "display": {
+        "annotations": {
+          "aspect": 1.3333333333333333,
+          "bindings": {
+            "property": {
+              "id": "54bff613-e8ff-5f50-bdcb-52c63a7d3146",
+              "revision": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68"
+            },
+            "structure": {
+              "id": "5ecf705f-0133-54f6-827d-acb925305bdd",
+              "revision": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68"
+            }
+          },
+          "categories": [],
+          "details": [],
+          "plane_distance": 1.0,
+          "render_identity": "0d85d29039e3d2701fa220913e0dcfa60624af9f267e8002eadab9c3f419dbc7",
+          "reserved_margins": {
+            "bottom": 0.13,
+            "top": 0.1
+          },
+          "scalar": {
+            "color_max": 1.2,
+            "color_min": -1.2,
+            "colormap": "coolwarm",
+            "label": "Partial charge",
+            "stops": [
+              [
+                0.0,
+                [
+                  0.22999999999999998,
+                  0.30000000000000004,
+                  0.75,
+                  1.0
+                ]
+              ],
+              [
+                0.5,
+                [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0
+                ]
+              ],
+              [
+                1.0,
+                [
+                  0.7,
+                  0.020000000000000018,
+                  0.15000000000000002,
+                  1.0
+                ]
+              ]
+            ],
+            "unit": "elementary_charge",
+            "zero_position": 0.5
+          },
+          "template": "research",
+          "title": "Partial charge",
+          "value_unit": "elementary_charge"
+        },
+        "blender_version": "5.1.1",
+        "camera": {
+          "clip_end": 759.1965942382812,
+          "clip_start": 0.009999999776482582,
+          "lens": 50.0,
+          "matrix_world": [
+            [
+              -0.338031142950058,
+              -0.1255209594964981,
+              0.9327268600463867,
+              155.44664001464844
+            ],
+            [
+              0.9411349296569824,
+              -0.04508393257856369,
+              0.33501118421554565,
+              56.151344299316406
+            ],
+            [
+              6.841631972065443e-08,
+              0.991066038608551,
+              0.13337193429470062,
+              28.611114501953125
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "name": "Orbital Export Camera",
+          "ortho_scale": 99.6772232055664,
+          "sensor_fit": "HORIZONTAL",
+          "sensor_height": 24.0,
+          "sensor_width": 36.0,
+          "shift_x": 0.0,
+          "shift_y": 0.0,
+          "type": "ORTHO"
+        },
+        "color_management": {
+          "exposure": 0.0,
+          "gamma": 1.0,
+          "look": "None",
+          "view_transform": "Standard"
+        },
+        "compositor_enabled": false,
+        "cycles": {
+          "adaptive_threshold": 0.009999999776482582,
+          "samples": 256,
+          "seed": 0,
+          "use_adaptive_sampling": true,
+          "use_denoising": true
+        },
+        "display_coordinate_unit": "angstrom",
+        "framing": {
+          "direction": [
+            0.932727,
+            0.335011,
+            0.133372
+          ],
+          "focus_affects": "camera only; all volume values remain rendered",
+          "margin": 1.5,
+          "volume_focus_threshold": 0.0
+        },
+        "image_format": {
+          "color_depth": "8",
+          "color_mode": "RGBA",
+          "file_format": "PNG"
+        },
+        "lights": [
+          {
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "energy": 429675.5625,
+            "hide_render": false,
+            "matrix_world": [
+              [
+                0.6549303531646729,
+                0.5363681316375732,
+                -0.5323302149772644,
+                -75.935546875
+              ],
+              [
+                -0.7556892037391663,
+                0.46485215425491333,
+                -0.4613526463508606,
+                -72.5063705444336
+              ],
+              [
+                -5.7150444376929954e-09,
+                0.7044300436973572,
+                0.7097734212875366,
+                128.03672790527344
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            ],
+            "name": "Scientific Key",
+            "type": "AREA"
+          },
+          {
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "energy": 161128.34375,
+            "hide_render": false,
+            "matrix_world": [
+              [
+                0.2676439583301544,
+                -0.3380775451660156,
+                0.9022584557533264,
+                121.53105163574219
+              ],
+              [
+                0.9635179042816162,
+                0.09391043335199356,
+                -0.25062742829322815,
+                -24.63568115234375
+              ],
+              [
+                2.6136154573919157e-08,
+                0.9364210367202759,
+                0.3508783280849457,
+                50.24685287475586
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            ],
+            "name": "Scientific Fill",
+            "type": "AREA"
+          },
+          {
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "energy": 286450.375,
+            "hide_render": false,
+            "matrix_world": [
+              [
+                -0.986393928527832,
+                -0.09032771736383438,
+                0.1373605579137802,
+                31.773509979248047
+              ],
+              [
+                0.1643989533185959,
+                -0.541966438293457,
+                0.8241634368896484,
+                112.9925537109375
+              ],
+              [
+                5.097435362699798e-09,
+                0.8355317711830139,
+                0.5494421720504761,
+                80.1660385131836
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            ],
+            "name": "Scientific Rim",
+            "type": "AREA"
+          }
+        ],
+        "render": {
+          "border_max_x": 1.0,
+          "border_max_y": 1.0,
+          "border_min_x": 0.0,
+          "border_min_y": 0.0,
+          "engine": "CYCLES",
+          "film_transparent": false,
+          "pixel_aspect_x": 1.0,
+          "pixel_aspect_y": 1.0,
+          "resolution_percentage": 100,
+          "resolution_x": 2400,
+          "resolution_y": 1800,
+          "use_border": false,
+          "use_crop_to_border": false
+        },
+        "structure_view": null,
+        "template": "research",
+        "world": {
+          "backgrounds": [
+            {
+              "color": [
+                0.8199999928474426,
+                0.8399999737739563,
+                0.8700000047683716,
+                1.0
+              ],
+              "color_linked": false,
+              "strength": 0.800000011920929,
+              "strength_linked": false
+            }
+          ],
+          "color": [
+            0.05000000074505806,
+            0.05000000074505806,
+            0.05000000074505806
+          ],
+          "name": "Scientific Background",
+          "use_nodes": true
+        }
+      },
+      "images": [
+        {
+          "path": "images/001-atomic_scalar-research-0001.png",
+          "phase_radians": null,
+          "trajectory_frame": null
+        }
+      ],
+      "source_view": "pqr-charge",
+      "view": {
+        "adapter_contracts": [
+          "scientific_view_v1"
+        ],
+        "bindings": [
+          {
+            "entity_id": "5ecf705f-0133-54f6-827d-acb925305bdd",
+            "entity_kind": "structure",
+            "name": "structure",
+            "revision": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68"
+          },
+          {
+            "entity_id": "54bff613-e8ff-5f50-bdcb-52c63a7d3146",
+            "entity_kind": "dataset",
+            "name": "property",
+            "revision": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68"
+          }
+        ],
+        "preset_id": "atomic_scalar",
+        "preset_version": "1",
+        "render_identity": "0d85d29039e3d2701fa220913e0dcfa60624af9f267e8002eadab9c3f419dbc7",
+        "settings": {
+          "color_max": 1.2,
+          "color_min": -1.2,
+          "colormap": "coolwarm",
+          "material_opacity": 1.0,
+          "shaded": false,
+          "symmetric": true,
+          "template": "research"
+        },
+        "view_kind": "atomic_scalar"
+      },
+      "view_instance_id": "29c03285-729d-42ba-bb3f-22ef9b5a23de"
+    },
+    {
+      "display": {
+        "annotations": {
+          "aspect": 1.3333333333333333,
+          "bindings": {
+            "property": {
+              "id": "54bff613-e8ff-5f50-bdcb-52c63a7d3146",
+              "revision": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68"
+            },
+            "structure": {
+              "id": "5ecf705f-0133-54f6-827d-acb925305bdd",
+              "revision": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68"
+            }
+          },
+          "categories": [],
+          "details": [],
+          "plane_distance": 1.0,
+          "render_identity": "874cbb5139c041ae137aeaa8a0683d207a58bdf775e81766c9923808c24e23f0",
+          "reserved_margins": {
+            "bottom": 0.13,
+            "top": 0.1
+          },
+          "scalar": {
+            "color_max": 1.2,
+            "color_min": -1.2,
+            "colormap": "coolwarm",
+            "label": "Partial charge",
+            "stops": [
+              [
+                0.0,
+                [
+                  0.22999999999999998,
+                  0.30000000000000004,
+                  0.75,
+                  1.0
+                ]
+              ],
+              [
+                0.5,
+                [
+                  0.95,
+                  0.95,
+                  0.95,
+                  1.0
+                ]
+              ],
+              [
+                1.0,
+                [
+                  0.7,
+                  0.020000000000000018,
+                  0.15000000000000002,
+                  1.0
+                ]
+              ]
+            ],
+            "unit": "elementary_charge",
+            "zero_position": 0.5
+          },
+          "template": "teaching",
+          "title": "Partial charge",
+          "value_unit": "elementary_charge"
+        },
+        "blender_version": "5.1.1",
+        "camera": {
+          "clip_end": 759.1965942382812,
+          "clip_start": 0.009999999776482582,
+          "lens": 50.0,
+          "matrix_world": [
+            [
+              -0.338031142950058,
+              -0.1255209594964981,
+              0.9327268600463867,
+              155.44664001464844
+            ],
+            [
+              0.9411349296569824,
+              -0.04508393257856369,
+              0.33501118421554565,
+              56.151344299316406
+            ],
+            [
+              6.841631972065443e-08,
+              0.991066038608551,
+              0.13337193429470062,
+              28.611114501953125
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ],
+          "name": "Orbital Export Camera",
+          "ortho_scale": 99.6772232055664,
+          "sensor_fit": "HORIZONTAL",
+          "sensor_height": 24.0,
+          "sensor_width": 36.0,
+          "shift_x": 0.0,
+          "shift_y": 0.0,
+          "type": "PERSP"
+        },
+        "color_management": {
+          "exposure": 0.0,
+          "gamma": 1.0,
+          "look": "None",
+          "view_transform": "Standard"
+        },
+        "compositor_enabled": false,
+        "cycles": {
+          "adaptive_threshold": 0.009999999776482582,
+          "samples": 256,
+          "seed": 0,
+          "use_adaptive_sampling": true,
+          "use_denoising": true
+        },
+        "display_coordinate_unit": "angstrom",
+        "framing": {
+          "direction": [
+            0.932727,
+            0.335011,
+            0.133372
+          ],
+          "focus_affects": "camera only; all volume values remain rendered",
+          "margin": 1.5,
+          "volume_focus_threshold": 0.0
+        },
+        "image_format": {
+          "color_depth": "8",
+          "color_mode": "RGBA",
+          "file_format": "PNG"
+        },
+        "lights": [
+          {
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "energy": 429675.5625,
+            "hide_render": false,
+            "matrix_world": [
+              [
+                0.6549303531646729,
+                0.5363681316375732,
+                -0.5323302149772644,
+                -75.935546875
+              ],
+              [
+                -0.7556892037391663,
+                0.46485215425491333,
+                -0.4613526463508606,
+                -72.5063705444336
+              ],
+              [
+                -5.7150444376929954e-09,
+                0.7044300436973572,
+                0.7097734212875366,
+                128.03672790527344
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            ],
+            "name": "Scientific Key",
+            "type": "AREA"
+          },
+          {
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "energy": 161128.34375,
+            "hide_render": false,
+            "matrix_world": [
+              [
+                0.2676439583301544,
+                -0.3380775451660156,
+                0.9022584557533264,
+                121.53105163574219
+              ],
+              [
+                0.9635179042816162,
+                0.09391043335199356,
+                -0.25062742829322815,
+                -24.63568115234375
+              ],
+              [
+                2.6136154573919157e-08,
+                0.9364210367202759,
+                0.3508783280849457,
+                50.24685287475586
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            ],
+            "name": "Scientific Fill",
+            "type": "AREA"
+          },
+          {
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "energy": 286450.375,
+            "hide_render": false,
+            "matrix_world": [
+              [
+                -0.986393928527832,
+                -0.09032771736383438,
+                0.1373605579137802,
+                31.773509979248047
+              ],
+              [
+                0.1643989533185959,
+                -0.541966438293457,
+                0.8241634368896484,
+                112.9925537109375
+              ],
+              [
+                5.097435362699798e-09,
+                0.8355317711830139,
+                0.5494421720504761,
+                80.1660385131836
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            ],
+            "name": "Scientific Rim",
+            "type": "AREA"
+          }
+        ],
+        "render": {
+          "border_max_x": 1.0,
+          "border_max_y": 1.0,
+          "border_min_x": 0.0,
+          "border_min_y": 0.0,
+          "engine": "CYCLES",
+          "film_transparent": false,
+          "pixel_aspect_x": 1.0,
+          "pixel_aspect_y": 1.0,
+          "resolution_percentage": 100,
+          "resolution_x": 2400,
+          "resolution_y": 1800,
+          "use_border": false,
+          "use_crop_to_border": false
+        },
+        "structure_view": null,
+        "template": "teaching",
+        "world": {
+          "backgrounds": [
+            {
+              "color": [
+                0.012000000104308128,
+                0.01899999938905239,
+                0.03200000151991844,
+                1.0
+              ],
+              "color_linked": false,
+              "strength": 0.5,
+              "strength_linked": false
+            }
+          ],
+          "color": [
+            0.05000000074505806,
+            0.05000000074505806,
+            0.05000000074505806
+          ],
+          "name": "Scientific Background",
+          "use_nodes": true
+        }
+      },
+      "images": [
+        {
+          "path": "images/001-atomic_scalar-teaching-0001.png",
+          "phase_radians": null,
+          "trajectory_frame": null
+        }
+      ],
+      "source_view": "pqr-charge",
+      "view": {
+        "adapter_contracts": [
+          "scientific_view_v1"
+        ],
+        "bindings": [
+          {
+            "entity_id": "5ecf705f-0133-54f6-827d-acb925305bdd",
+            "entity_kind": "structure",
+            "name": "structure",
+            "revision": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68"
+          },
+          {
+            "entity_id": "54bff613-e8ff-5f50-bdcb-52c63a7d3146",
+            "entity_kind": "dataset",
+            "name": "property",
+            "revision": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68"
+          }
+        ],
+        "preset_id": "atomic_scalar",
+        "preset_version": "1",
+        "render_identity": "874cbb5139c041ae137aeaa8a0683d207a58bdf775e81766c9923808c24e23f0",
+        "settings": {
+          "color_max": 1.2,
+          "color_min": -1.2,
+          "colormap": "coolwarm",
+          "material_opacity": 1.0,
+          "shaded": false,
+          "symmetric": true,
+          "template": "teaching"
+        },
+        "view_kind": "atomic_scalar"
+      },
+      "view_instance_id": "29c03285-729d-42ba-bb3f-22ef9b5a23de"
+    }
+  ]
+}

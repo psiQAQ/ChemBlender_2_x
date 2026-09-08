@@ -1,0 +1,567 @@
+{
+  "artifacts": [
+    {
+      "media_type": "application/json",
+      "path": "display.json",
+      "role": "display_parameters",
+      "sha256": "32d3b104293de86f9b4a51ab26dd0b1dace9320c1c299456efbee19012b84958",
+      "size": 44213
+    },
+    {
+      "media_type": "video/mp4",
+      "path": "001-trajectory_force-research.mp4",
+      "role": "scientific_animation",
+      "sha256": "1a57b05c843e50a1233d6fd931dfbb240e7882f09869c8827a510b00e4334e1f",
+      "size": 209902
+    },
+    {
+      "media_type": "video/mp4",
+      "path": "001-trajectory_force-teaching.mp4",
+      "role": "scientific_animation",
+      "sha256": "7cc04b629a91c3055482214c887b04391def1cacab81b03ed85cf30ef6b83e5b",
+      "size": 151932
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0001.png",
+      "role": "scientific_image",
+      "sha256": "f4e097e81a5f4187b202e9112a311111b4c1934d4f107ecc103b1c12cd34450e",
+      "size": 935679
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0002.png",
+      "role": "scientific_image",
+      "sha256": "4165a1bb321f4e3e6228fb842cd2e40bd3ba6d0f08c94b7964afead9352ca090",
+      "size": 937775
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0003.png",
+      "role": "scientific_image",
+      "sha256": "116f2cfda41d266ba04ca16f015c05063ab5472f82c6cdd01576148f2475160e",
+      "size": 937951
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0004.png",
+      "role": "scientific_image",
+      "sha256": "ffcb55ad5e08db2f4e287fad36480a8872f4a7f419b8e4527f918bc36c6625c1",
+      "size": 940872
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0005.png",
+      "role": "scientific_image",
+      "sha256": "70113deb3407de8432651af7a420cf664ff00d5c3b4d53c210717f41fe0c76a4",
+      "size": 938688
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0006.png",
+      "role": "scientific_image",
+      "sha256": "69a7f7abc924931e2822f37d770e5e7abe117e4d734607e20e2f441880882d29",
+      "size": 938033
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0007.png",
+      "role": "scientific_image",
+      "sha256": "aacb00659b93852f7f4aff7c1c4c8d152830abcd810b942b619353184eb25c06",
+      "size": 936243
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0008.png",
+      "role": "scientific_image",
+      "sha256": "d8cc886bcd7fa4b617888a18611c7a16ec5b6c5a2587e193b2b4e8f3bb92a975",
+      "size": 940797
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0009.png",
+      "role": "scientific_image",
+      "sha256": "77c0b2ff3dca115acf3dfef67ed6e2cd538b1df16a7c51b9516b70b6e9088ae3",
+      "size": 938066
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0010.png",
+      "role": "scientific_image",
+      "sha256": "6875e99ec59d95b0952b4e3afc85946335edf2549c03cdce377ddccfccd1a983",
+      "size": 936594
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0011.png",
+      "role": "scientific_image",
+      "sha256": "261a07cabfd6f6533360758d3f7b2167a5c61265ad5e80d9496c97e603f8ac0a",
+      "size": 937608
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0012.png",
+      "role": "scientific_image",
+      "sha256": "1d9088fa0975ab54997bac6d98993cc30e5ecda1115d54d2d8e11f9be912cc7f",
+      "size": 940637
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0013.png",
+      "role": "scientific_image",
+      "sha256": "a715db70de27ddc0166625520b49f5428bde258f289e4ead4f48d9412fc4365a",
+      "size": 942598
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0014.png",
+      "role": "scientific_image",
+      "sha256": "43c8f9cd0ba843bf0ba53d4d56a399f2dfeb59560c587872cb1fa35446e9c216",
+      "size": 936108
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0015.png",
+      "role": "scientific_image",
+      "sha256": "15dc7a1910cf902b1ac633a890ae7a47e3ce0f6481006bd8c6df56b703841018",
+      "size": 938109
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0016.png",
+      "role": "scientific_image",
+      "sha256": "d4686eb8ab71af8fd9cedc7c83957e767b155c8df6b2551ae9b3defea44e638d",
+      "size": 938401
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0017.png",
+      "role": "scientific_image",
+      "sha256": "df00c8fc61f051d623b42ee307be2c7b3a607001ee14c7edd0b15e928898c912",
+      "size": 939789
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0018.png",
+      "role": "scientific_image",
+      "sha256": "4f6f28bb486cc4fd4a6bacb5af9cd649901ed07d2770aabe765ea25822bb2d99",
+      "size": 935627
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0019.png",
+      "role": "scientific_image",
+      "sha256": "97ccd0c2f3c44500d1c72cce663064312f4252104525a78ed679ba228bb19008",
+      "size": 938483
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0020.png",
+      "role": "scientific_image",
+      "sha256": "3f0500f6800eb7d528efbac2abc276acd3ee469bf2c5cfeb4883a59bf4593ed1",
+      "size": 942284
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0021.png",
+      "role": "scientific_image",
+      "sha256": "ece2dc01a51cc4cd8f951a05c4c7b9b889724708ff24da64492a1949592e70e7",
+      "size": 940675
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0022.png",
+      "role": "scientific_image",
+      "sha256": "ef5998860a8e5e4d82f58bf320836cb90d19276d510cb3334c092f91b0c8f9f5",
+      "size": 940649
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0023.png",
+      "role": "scientific_image",
+      "sha256": "f01bb312584f5a1723f2d8feff06201e0fd3ee9afd6464fdcef7c81f904cb53e",
+      "size": 938025
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0024.png",
+      "role": "scientific_image",
+      "sha256": "5a8e92e733cfb892c32501737f3eda5e583e126a78da3a20d6be48ae7eb03014",
+      "size": 938646
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0025.png",
+      "role": "scientific_image",
+      "sha256": "9aad0acbb3b02c88bf6e39278ed1d068a892bcb892f60abcd7a4cf4073aa72cd",
+      "size": 934680
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0026.png",
+      "role": "scientific_image",
+      "sha256": "b5d00c61099bb9b12eb5e4e2fa1a17f707fe282fe5832014a5e32574a82ff58c",
+      "size": 937737
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0027.png",
+      "role": "scientific_image",
+      "sha256": "f50227d2822a13905bc134e57dd36bd9c0edacdaa7c0bb7032cc7c394e64678b",
+      "size": 939265
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0028.png",
+      "role": "scientific_image",
+      "sha256": "a4784a2c468577f80d0b62f622f3b8ef4f46c7f945caf9e1fddc52d8c9fe8585",
+      "size": 941336
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0029.png",
+      "role": "scientific_image",
+      "sha256": "361f93c158a1f458955d4d69280d4253290c2e4f18b6682ea19c5f106269505e",
+      "size": 938463
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0030.png",
+      "role": "scientific_image",
+      "sha256": "cb009aba7c76ccb4c0b6cb3d2ab882228a1c9e8d2d0d468b110d0640691c9663",
+      "size": 938062
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0031.png",
+      "role": "scientific_image",
+      "sha256": "2f0a196107eb4f83a337c2f60a5db5e7792588fafa01140f019db0b366f6e929",
+      "size": 935997
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-research-0032.png",
+      "role": "scientific_image",
+      "sha256": "58212f9142586d32f3615a9cb1b04ba3357ea7b7ac2a8998306afbd5a912db3e",
+      "size": 939085
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0001.png",
+      "role": "scientific_image",
+      "sha256": "ef06dca90640a4580a79d366cb609696a0b0e925cdf4ca05fcdf4e6cc778f2d3",
+      "size": 902072
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0002.png",
+      "role": "scientific_image",
+      "sha256": "461e3d9eed831a76a5a230894572635ad3b9abf9eac984bc69c52b6e5646fc42",
+      "size": 903709
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0003.png",
+      "role": "scientific_image",
+      "sha256": "1fda9488114ecea132d87dbdaef94e2c3b5ad9001ff143076b4d40ac95575ae4",
+      "size": 906080
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0004.png",
+      "role": "scientific_image",
+      "sha256": "ba029216f987e5c8799d7bfe3f991f63f08a6134e6d8d9aab51fab2d4923adbf",
+      "size": 909331
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0005.png",
+      "role": "scientific_image",
+      "sha256": "c946075ee1fab6eb6bb397d07ad321b9179fbe43bc829263b1a0aa3828fff00d",
+      "size": 906305
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0006.png",
+      "role": "scientific_image",
+      "sha256": "f66c47b9f61448d603de0bc3e576ca1e6f68931fe1f2284c7b150d30bd387d55",
+      "size": 906034
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0007.png",
+      "role": "scientific_image",
+      "sha256": "4fe9a1c96f2550657bc6afca2de29d6a645b333f7294584dba80f6bda5a88474",
+      "size": 903394
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0008.png",
+      "role": "scientific_image",
+      "sha256": "38bb024a35dab3deaebf62a1ec0e2567fd884f63cfa20c700e74277c32ec6dc0",
+      "size": 906966
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0009.png",
+      "role": "scientific_image",
+      "sha256": "711792eb09965ae132e18c41b5a651ee3c08cd233c62cea50fe86c04701d9e71",
+      "size": 906035
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0010.png",
+      "role": "scientific_image",
+      "sha256": "8cd5ccc8b725c51d9fcd6475263bcdcf07dbf703f35615b4b37f8cc5762af113",
+      "size": 902806
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0011.png",
+      "role": "scientific_image",
+      "sha256": "0d4aff26f09b4037f8e3812422ea050f6d32edcb68825c984d35a4cba85549ba",
+      "size": 907292
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0012.png",
+      "role": "scientific_image",
+      "sha256": "5e568d441261fd1046d036b10a597af48d873f5bcc0aacda6b0b6278a2a03218",
+      "size": 908089
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0013.png",
+      "role": "scientific_image",
+      "sha256": "2df398aa380f830b6793b05d255276574dde03d186129a78ffeae5ed62c312ac",
+      "size": 907881
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0014.png",
+      "role": "scientific_image",
+      "sha256": "34a80eb2c8d475744b1a116fcdc9981cc896698012e623a09100f501bffde8a5",
+      "size": 901647
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0015.png",
+      "role": "scientific_image",
+      "sha256": "c56c72437511e0498a0e84bb31f9b8d136472347e305ca6e6791f20b4d11bbdc",
+      "size": 904272
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0016.png",
+      "role": "scientific_image",
+      "sha256": "c81a781e72093b39a700c4d1e504babb089486cf99ab0664264b3eec47a92186",
+      "size": 905978
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0017.png",
+      "role": "scientific_image",
+      "sha256": "a18dfb6352b2edc29733d715c74287db1e7802aff79cc78ee1142e20d013c336",
+      "size": 908015
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0018.png",
+      "role": "scientific_image",
+      "sha256": "eadb982ca5972671f1c8bb7ce7de717dc83cc8617b717d7f02b2a9a914ad7ad1",
+      "size": 902763
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0019.png",
+      "role": "scientific_image",
+      "sha256": "2b6c49fcc89bef8bed701145252823b11b6931497359a6220f0b118e27e41df8",
+      "size": 906632
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0020.png",
+      "role": "scientific_image",
+      "sha256": "376f15b2cea4cd2f4610f00ecfa8453401c0f3fe48f9f5dd9c646f564d91c979",
+      "size": 909039
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0021.png",
+      "role": "scientific_image",
+      "sha256": "48c8587b1520cdf52b21cb62db703d497513d328723ebed6be5aaba332ffd654",
+      "size": 907629
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0022.png",
+      "role": "scientific_image",
+      "sha256": "26c0ed064f8be97caad6182e0646fbba51cb3578f561f29b916c31982a4ae348",
+      "size": 907802
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0023.png",
+      "role": "scientific_image",
+      "sha256": "fada187632c8fe3eec181497c980cc9d8ce1d71282aa683c4602095af855c9d3",
+      "size": 905398
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0024.png",
+      "role": "scientific_image",
+      "sha256": "1ac68d5eecfb25aedc73f2beb9339ccdce7f29fe227a7a59fba6c302134b50b6",
+      "size": 903902
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0025.png",
+      "role": "scientific_image",
+      "sha256": "5f40fab5fccd4ca03fb58f546bbfea681fa5fb8a9e5240f3ebacf80c3238efa3",
+      "size": 900199
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0026.png",
+      "role": "scientific_image",
+      "sha256": "ba6f156261d4caff45ee6f1e05fa6c58bd3f30cd1a3f51f16ca161418f70014e",
+      "size": 902648
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0027.png",
+      "role": "scientific_image",
+      "sha256": "9bd46842f2a511736801e199e3faae59ec7bcf34802d2785d1be845215b0cffa",
+      "size": 907703
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0028.png",
+      "role": "scientific_image",
+      "sha256": "cfce6dc139e32602f5c35f8d194b548d9ce8c46ac41a3b4578e74cbf52b31cb0",
+      "size": 908634
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0029.png",
+      "role": "scientific_image",
+      "sha256": "da254f183281d5498d33651a5f36a0d6fa55cb4a43b2d3aba91389eb6f418c19",
+      "size": 906563
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0030.png",
+      "role": "scientific_image",
+      "sha256": "5062ddbe4041f42e1d4a799081bdffb1066b20df30f1f0d0c63318f0be1114d6",
+      "size": 903235
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0031.png",
+      "role": "scientific_image",
+      "sha256": "c09c9d106ed27c16dd4f077b39d5be428af9ee4f54a610e8c00b11412fa7e8ec",
+      "size": 902587
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory_force-teaching-0032.png",
+      "role": "scientific_image",
+      "sha256": "0d589199a208a6c6049a47a6b4d72d6cb4015e731c3da89578a6256db530ba50",
+      "size": 906021
+    }
+  ],
+  "calculations": [],
+  "datasets": [
+    {
+      "dims": [
+        "frame",
+        "atom",
+        "xyz"
+      ],
+      "domain": "frame",
+      "id": "0969bf8a-eb66-59d2-a359-58aed199d731",
+      "provenance_ids": [
+        "1d05ca83-b009-5b90-a5cd-6cb8dff19158"
+      ],
+      "revision": "da959422540842747f03195620d1a65d2f56b2b071f2f82f17c14d548a984f57",
+      "semantic_role": "coordinates",
+      "shape": [
+        32,
+        21,
+        3
+      ],
+      "source_calculation": null,
+      "status": "complete",
+      "unit": "angstrom"
+    },
+    {
+      "dims": [
+        "frame",
+        "atom",
+        "xyz"
+      ],
+      "domain": "atom_frame",
+      "id": "d3c402bc-6da5-5017-9131-b23b53fcf6a5",
+      "provenance_ids": [
+        "1d05ca83-b009-5b90-a5cd-6cb8dff19158"
+      ],
+      "revision": "09706338d1e310a22a6156711dc19fd34aea86ba0d2324c7ab98bf36686302d2",
+      "semantic_role": "atomic_force",
+      "shape": [
+        32,
+        21,
+        3
+      ],
+      "source_calculation": null,
+      "status": "complete",
+      "unit": "electron_volt_per_angstrom"
+    }
+  ],
+  "project": {
+    "id": "e8d76bda-6e7c-42d6-abaa-5f36f49afcda",
+    "schema_version": "1.0"
+  },
+  "provenance": [
+    {
+      "id": "1d05ca83-b009-5b90-a5cd-6cb8dff19158",
+      "operation": "parse",
+      "parameters": [
+        {
+          "name": "format",
+          "value": "extxyz"
+        },
+        {
+          "name": "lattice_order",
+          "value": "ax ay az bx by bz cx cy cz"
+        },
+        {
+          "name": "scientific_example_source",
+          "value": {
+            "bytes": 61621,
+            "conversion": "source kcal/mol and kcal/mol/angstrom divided by 23.060547830619",
+            "coordinate_unit": "angstrom",
+            "force_unit": "electron_volt_per_angstrom",
+            "license": "CC0-1.0",
+            "path": "D:\\workspace\\ChemBlender_2_x\\examples\\user-workflows\\inputs\\extxyz\\aspirin-rmd17-32.extxyz",
+            "sampling": "32 configurations; original rows 0,100,...,3100; no physical time step declared",
+            "sha256": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a",
+            "source_npz_sha256": "6efe3d2454c1a9215efe2bf271c58084ae556afa188a740ae06955bf43456ee8",
+            "upstream": "10.6084/m9.figshare.12672038.v3; rmd17_aspirin.npz rows 0..3100 stride100"
+          }
+        }
+      ],
+      "parent_ids": [],
+      "producer": "ChemBlender extXYZ reader",
+      "producer_version": "1",
+      "revision": "369097ffb0fb596fbaad20df3d84db0a0d75cfc4c6a2ed03b991607c7a94ab25",
+      "source": "D:\\workspace\\ChemBlender_2_x\\examples\\user-workflows\\inputs\\extxyz\\aspirin-rmd17-32.extxyz",
+      "source_hash": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a"
+    }
+  ],
+  "recipe": null,
+  "schema_name": "chemblender_analysis_report",
+  "schema_version": 1,
+  "status": "complete",
+  "title": "Scientific visualization export",
+  "warnings": []
+}

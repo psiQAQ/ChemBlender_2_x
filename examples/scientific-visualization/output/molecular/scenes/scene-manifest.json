@@ -1,0 +1,825 @@
+{
+  "schema_version": 1,
+  "scenes": [
+    {
+      "molecule": "water",
+      "blend": "water.blend",
+      "sidecar": "water.cbq",
+      "views": [
+        {
+          "name": "water-homo-research",
+          "instance_id": "e46a5d1b-423e-486a-80f1-11797c79f1fd",
+          "render_identity": "aa42a3ce3ac7ba5fc5388b99a728c66c987092e7df209dd69a592535e006e941",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.06,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "research"
+          },
+          "framing": {
+            "direction": [
+              1.1,
+              -1.5,
+              0.7
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-homo-teaching",
+          "instance_id": "7b5e4a08-925d-4837-a885-8da05f7c328a",
+          "render_identity": "f1ff0735c20c5ca25767ea8702334f40644fd873888554d55a4a41237924534d",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.06,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "teaching"
+          },
+          "framing": {
+            "direction": [
+              1.1,
+              -1.5,
+              0.7
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-lumo-research",
+          "instance_id": "8acc908c-b7d5-437a-ad92-b4dbc9de62cb",
+          "render_identity": "60289fd1809fb8360faa3eb3181852727cb32e2b80b9cee37709c654ef8316ad",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.05,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "research"
+          },
+          "framing": {
+            "direction": [
+              0.7,
+              -1.8,
+              0.9
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-lumo-teaching",
+          "instance_id": "b65cd718-face-4ab5-a503-d24f8253958b",
+          "render_identity": "2de0c56578dc925ca6a635ee69bd81ffa14c1668f41b9d1c3de743930816dc19",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.05,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "teaching"
+          },
+          "framing": {
+            "direction": [
+              0.7,
+              -1.8,
+              0.9
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-density-iso-research",
+          "instance_id": "3d65a17e-28cb-4a69-bb3f-a87f232d16c2",
+          "render_identity": "c1bc87cfd789619e39b856a7c45f4c61f5656460fb9e1ad1a258e343d11a22a5",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.08,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "research"
+          },
+          "framing": {
+            "direction": [
+              1.2,
+              -1.6,
+              1.1
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-density-iso-teaching",
+          "instance_id": "21f098f7-134b-4342-bb51-0b6c1db2ee62",
+          "render_identity": "7301c1a1084c800584444ce2e2a0ae1613716123967ca31e39e2897a12e7ceef",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.08,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "teaching"
+          },
+          "framing": {
+            "direction": [
+              1.2,
+              -1.6,
+              1.1
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-density-cloud-research",
+          "instance_id": "502702df-79d4-4eae-b3b4-24f05b0a2870",
+          "render_identity": "69a05ba524e2e5dede6a6748c88db5e914ddedfb11e5c131364dd784fed119db",
+          "preset": "grid_volume",
+          "settings": {
+            "dataset_index": 0,
+            "density_scale": 5.0,
+            "material_opacity": 1.0,
+            "negative_color": [
+              1.0,
+              0.3,
+              0.04,
+              1.0
+            ],
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": false,
+            "signed": false,
+            "template": "research"
+          },
+          "framing": {
+            "direction": [
+              1.2,
+              -1.6,
+              1.1
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.03,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-density-cloud-teaching",
+          "instance_id": "c60a05e9-b360-4227-afd2-955dfc22bbbc",
+          "render_identity": "39f052ca80fd784ab3fe76e6fd67bf206758449bf589b99072092658d0268966",
+          "preset": "grid_volume",
+          "settings": {
+            "dataset_index": 0,
+            "density_scale": 5.0,
+            "material_opacity": 1.0,
+            "negative_color": [
+              1.0,
+              0.3,
+              0.04,
+              1.0
+            ],
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "signed": false,
+            "template": "teaching"
+          },
+          "framing": {
+            "direction": [
+              1.2,
+              -1.6,
+              1.1
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.03,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-esp-surface-research",
+          "instance_id": "3c46207d-201b-49f1-a4e5-8adc9164a448",
+          "render_identity": "e23db377aedc3f932c3ed64a99adc6b6033e49c5d0b66980d1a26f115242bb5c",
+          "preset": "property_on_surface",
+          "settings": {
+            "color_max": 0.06,
+            "color_min": -0.06,
+            "colormap": "coolwarm",
+            "material_opacity": 1.0,
+            "property_dataset_index": 0,
+            "shaded": false,
+            "surface_dataset_index": 0,
+            "surface_isovalue": 0.002,
+            "symmetric": true,
+            "template": "research"
+          },
+          "framing": {
+            "direction": [
+              0.6,
+              -2.0,
+              0.6
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-esp-surface-teaching",
+          "instance_id": "8d98352f-29f2-4841-89af-54d7d9d1b080",
+          "render_identity": "8b75f8c7ca5c728eeb5df2210551c06130e4149d6128dd57dd35041a4e099975",
+          "preset": "property_on_surface",
+          "settings": {
+            "color_max": 0.06,
+            "color_min": -0.06,
+            "colormap": "coolwarm",
+            "material_opacity": 1.0,
+            "property_dataset_index": 0,
+            "shaded": true,
+            "surface_dataset_index": 0,
+            "surface_isovalue": 0.002,
+            "symmetric": true,
+            "template": "teaching"
+          },
+          "framing": {
+            "direction": [
+              0.6,
+              -2.0,
+              0.6
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-esp-slice-research",
+          "instance_id": "4760beeb-a9d4-4614-b610-bcbeb292fbb1",
+          "render_identity": "363ec6d9ce5d90ac2a702b0dd4854b8cbcda4d48b65ee301cbdfaf10a103f934",
+          "preset": "grid_slice",
+          "settings": {
+            "color_max": 0.1,
+            "color_min": -0.1,
+            "colormap": "coolwarm",
+            "counts": [
+              129,
+              129
+            ],
+            "dataset_index": 0,
+            "material_opacity": 1.0,
+            "origin": [
+              -4.0,
+              0.35,
+              -4.0
+            ],
+            "shaded": false,
+            "symmetric": true,
+            "template": "research",
+            "u_vector": [
+              9.0,
+              0.0,
+              0.0
+            ],
+            "v_vector": [
+              0.0,
+              0.0,
+              10.0
+            ]
+          },
+          "framing": {
+            "direction": [
+              0.0,
+              -1.0,
+              0.001
+            ],
+            "margin": 1.45,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-esp-slice-teaching",
+          "instance_id": "02809ec2-7d7d-4a86-9171-fad2b36d9760",
+          "render_identity": "9000fa3013cc2b7d8603e3ba44341d95ac63048b09d6c5be5c7c93bf203d2934",
+          "preset": "grid_slice",
+          "settings": {
+            "color_max": 0.1,
+            "color_min": -0.1,
+            "colormap": "coolwarm",
+            "counts": [
+              129,
+              129
+            ],
+            "dataset_index": 0,
+            "material_opacity": 1.0,
+            "origin": [
+              -4.0,
+              0.35,
+              -4.0
+            ],
+            "shaded": true,
+            "symmetric": true,
+            "template": "teaching",
+            "u_vector": [
+              9.0,
+              0.0,
+              0.0
+            ],
+            "v_vector": [
+              0.0,
+              0.0,
+              10.0
+            ]
+          },
+          "framing": {
+            "direction": [
+              0.0,
+              -1.0,
+              0.001
+            ],
+            "margin": 1.45,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-esp-profile-research",
+          "instance_id": "f61e27c4-c128-45a0-90e3-922b860b499a",
+          "render_identity": "288addb7ffb7d87c85ddd08fbdf02fc1a6666b35e1d3f24e0e094ea1ee284008",
+          "preset": "grid_profile",
+          "settings": {
+            "dataset_index": 0,
+            "end": [
+              5.0,
+              0.7,
+              0.6
+            ],
+            "material_opacity": 1.0,
+            "radius": 0.012,
+            "sample_count": 257,
+            "shaded": false,
+            "start": [
+              -4.0,
+              0.7,
+              0.6
+            ],
+            "template": "research"
+          },
+          "framing": {
+            "direction": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "water-esp-profile-teaching",
+          "instance_id": "957954f0-3cf7-487d-85fb-6310a5be4baf",
+          "render_identity": "13af14137da3b9702f6f9fbf90676ef6bc20abdc9093e2799342866ecbedb933",
+          "preset": "grid_profile",
+          "settings": {
+            "dataset_index": 0,
+            "end": [
+              5.0,
+              0.7,
+              0.6
+            ],
+            "material_opacity": 1.0,
+            "radius": 0.012,
+            "sample_count": 257,
+            "shaded": true,
+            "start": [
+              -4.0,
+              0.7,
+              0.6
+            ],
+            "template": "teaching"
+          },
+          "framing": {
+            "direction": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        }
+      ],
+      "scientific_arrays_unchanged": true,
+      "saved_reopened": true,
+      "blend_sha256": "e56cab3065b05197d352ee51d0781e8144d686d59d8bf2af4af67c9a69ed5316"
+    },
+    {
+      "molecule": "ch3",
+      "blend": "ch3.blend",
+      "sidecar": "ch3.cbq",
+      "views": [
+        {
+          "name": "ch3-alpha-homo-research",
+          "instance_id": "8ba6034a-ec30-45ad-b040-a23005fbb67a",
+          "render_identity": "b5f1100243b1020a2422008210da3fbcfdc0cd963c553c52b345245974d51e0b",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.055,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "research"
+          },
+          "framing": {
+            "direction": [
+              1.4,
+              -1.2,
+              1.0
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "ch3-alpha-homo-teaching",
+          "instance_id": "e08f732f-6bf8-428e-bdec-120c673742c2",
+          "render_identity": "fc80d208d1ed065b64f4e96c17ee7fbf543b9fdc60078a9a19b3f2d2b9e9a07d",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.055,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "teaching"
+          },
+          "framing": {
+            "direction": [
+              1.4,
+              -1.2,
+              1.0
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "ch3-beta-homo-research",
+          "instance_id": "709d5b44-1d1f-4cfd-97a3-9c237e00303d",
+          "render_identity": "ad9cfb6e6defa11997f3aff31139959b16b2cc12f89ff7fd521909ef708fe2ed",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.055,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "research"
+          },
+          "framing": {
+            "direction": [
+              1.4,
+              -1.2,
+              1.0
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "ch3-beta-homo-teaching",
+          "instance_id": "78ddba97-9e99-4f94-80ed-38e7643aeff9",
+          "render_identity": "d96abe9b02ffd432c472342bd399cc4c003c019942a8e031fd847a56e9d6fb81",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.055,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "teaching"
+          },
+          "framing": {
+            "direction": [
+              1.4,
+              -1.2,
+              1.0
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "ch3-spin-research",
+          "instance_id": "7f4a5970-b56d-486c-ae41-d24814436476",
+          "render_identity": "33b5e53012f579f50a6d4d42d60002b897585b9d492e46a0e096bcd42930c80a",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.008,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "research"
+          },
+          "framing": {
+            "direction": [
+              1.4,
+              -1.2,
+              1.0
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "ch3-spin-teaching",
+          "instance_id": "e3f60ff9-057b-44b2-83e3-5c320c97a95c",
+          "render_identity": "fa36b89deaa366ae1091bc48250dfbcd4c430d15ead18971e1c4309fd5faf016",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.008,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "teaching"
+          },
+          "framing": {
+            "direction": [
+              1.4,
+              -1.2,
+              1.0
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        }
+      ],
+      "scientific_arrays_unchanged": true,
+      "saved_reopened": true,
+      "blend_sha256": "4803ab6dde782fe0b8f299e29b98eed2a37ad6ebb5868b9c55ce17639fe435f3"
+    },
+    {
+      "molecule": "nitrogen",
+      "blend": "nitrogen.blend",
+      "sidecar": "nitrogen.cbq",
+      "views": [
+        {
+          "name": "nitrogen-mp2-minus-scf-research",
+          "instance_id": "5c3688f3-737d-4435-b01f-e62bc8f3a056",
+          "render_identity": "37d94cce25baf7e2031b958ae5aa8f666cfcab40d77761221fa9015a38ff7048",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.0007,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "research"
+          },
+          "framing": {
+            "direction": [
+              1.2,
+              -1.6,
+              1.1
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        },
+        {
+          "name": "nitrogen-mp2-minus-scf-teaching",
+          "instance_id": "b487b19f-14c9-455a-bc65-43df939d7257",
+          "render_identity": "1bc650085032670b3f85e94a9d946231e51dadd83d328839040f7a6652f29474",
+          "preset": "signed_isosurface",
+          "settings": {
+            "dataset_index": 0,
+            "isovalue": 0.0007,
+            "material_opacity": 1.0,
+            "negative_color": [
+              0.93,
+              0.16,
+              0.035,
+              1.0
+            ],
+            "opacity": 1.0,
+            "positive_color": [
+              0.035,
+              0.3,
+              0.82,
+              1.0
+            ],
+            "shaded": true,
+            "template": "teaching"
+          },
+          "framing": {
+            "direction": [
+              1.2,
+              -1.6,
+              1.1
+            ],
+            "margin": 1.4,
+            "volume_focus_threshold": 0.0,
+            "focus_affects": "camera only; all volume values remain rendered"
+          }
+        }
+      ],
+      "scientific_arrays_unchanged": true,
+      "saved_reopened": true,
+      "blend_sha256": "6a26931557b94c6a8f099c36ee8bf6f611e3039d0a64c0952b77fe40324c6bde"
+    }
+  ]
+}

@@ -1,0 +1,291 @@
+{
+  "artifacts": [
+    {
+      "media_type": "image/png",
+      "path": "nitrogen-mp2-minus-scf-research.png",
+      "role": "scientific_image",
+      "sha256": "55ad1db5419a7a876ecae6f7b364dae1c85321d4021637f48dc3d6afc8d18fb6",
+      "size": 4230578
+    },
+    {
+      "media_type": "image/png",
+      "path": "nitrogen-mp2-minus-scf-teaching.png",
+      "role": "scientific_image",
+      "sha256": "35a32f4552991fc637ff939fa1cf2504c63e7d0ec14bbc637351a8d56190bf42",
+      "size": 4080991
+    }
+  ],
+  "calculations": [],
+  "datasets": [
+    {
+      "dims": [
+        "x",
+        "y",
+        "z"
+      ],
+      "domain": "grid",
+      "id": "52c3e77f-f6cf-5b0e-b063-ae64ff621ef8",
+      "provenance_ids": [
+        "199272dc-4b37-58f2-b979-006c0f2f695b"
+      ],
+      "revision": "4087140c88225ee7aba828849aa5e90c02fa768c488622ac4842e323ff4257e5",
+      "semantic_role": "difference_density",
+      "shape": [
+        49,
+        49,
+        49
+      ],
+      "source_calculation": null,
+      "status": "complete",
+      "unit": "electron_per_cubic_bohr"
+    }
+  ],
+  "project": {
+    "id": "3152774c-0ab4-480b-8ed6-92f7fd75aa38",
+    "schema_version": "1.0"
+  },
+  "provenance": [
+    {
+      "id": "199272dc-4b37-58f2-b979-006c0f2f695b",
+      "operation": "grid_difference",
+      "parameters": [
+        {
+          "name": "left_dataset_index",
+          "value": 0
+        },
+        {
+          "name": "operation",
+          "value": "left_minus_right"
+        },
+        {
+          "name": "right_dataset_index",
+          "value": 0
+        },
+        {
+          "name": "value_unit",
+          "value": "electron_per_cubic_bohr"
+        }
+      ],
+      "parent_ids": [
+        "4d59e0cc-e5c3-49ed-97a5-5992d2881656",
+        "55eb3c0e-55e2-4f22-8407-618610279c45",
+        "9bafa91f-91c3-457a-b0f6-4af4a0d59522",
+        "ffe58b23-897d-4038-b314-5e21c397899c"
+      ],
+      "producer": "ChemBlender density difference",
+      "producer_version": "1",
+      "revision": "4087140c88225ee7aba828849aa5e90c02fa768c488622ac4842e323ff4257e5",
+      "source": "",
+      "source_hash": "4087140c88225ee7aba828849aa5e90c02fa768c488622ac4842e323ff4257e5"
+    },
+    {
+      "id": "2ffbfb6c-267f-4bfc-a6fd-79cacf36ecf4",
+      "operation": "parse",
+      "parameters": [
+        {
+          "name": "basis_name",
+          "value": "6-31g"
+        },
+        {
+          "name": "format",
+          "value": "fchk"
+        },
+        {
+          "name": "iodata_version",
+          "value": "1.0.1"
+        },
+        {
+          "name": "orbital_kind",
+          "value": "unrestricted"
+        },
+        {
+          "name": "scientific_example_source",
+          "value": {
+            "basis": "6-31G",
+            "bytes": 8975,
+            "calculation_program": "not_reported_in_fchk",
+            "calculation_program_version": "not_reported",
+            "charge": 0,
+            "commit": "adab5813713ba64641565eb2a8c11803a4e9bba6",
+            "electron_count": 7,
+            "license": "LGPL-3.0 root distribution; retain per-file notices",
+            "method": "UMP2-FC",
+            "method_evidence": "SP        UMP2-FC                                                     6-31G",
+            "multiplicity": 2,
+            "path": "D:\\workspace\\ChemBlender_2_x\\examples\\scientific-visualization\\inputs\\wavefunction\\nitrogen-mp2.fchk",
+            "sha256": "5e24d62229514689c5c0f1c904f09dbba205baf699843901d46cc5aa1cf19f7a",
+            "upstream_path": "iodata/test/data/nitrogen-mp2.fchk",
+            "url": "https://raw.githubusercontent.com/theochem/iodata/adab5813713ba64641565eb2a8c11803a4e9bba6/iodata/test/data/nitrogen-mp2.fchk"
+          }
+        },
+        {
+          "name": "title",
+          "value": "nitrogen"
+        },
+        {
+          "name": "unmapped_attributes",
+          "value": [
+            "atcharges",
+            "atgradient",
+            "atmasses",
+            "charge",
+            "energy",
+            "lot",
+            "moments",
+            "nelec",
+            "run_type",
+            "spinpol"
+          ]
+        }
+      ],
+      "parent_ids": [],
+      "producer": "ChemBlender IOData adapter",
+      "producer_version": "1",
+      "revision": "5e24d62229514689c5c0f1c904f09dbba205baf699843901d46cc5aa1cf19f7a",
+      "source": "D:\\workspace\\ChemBlender_2_x\\examples\\scientific-visualization\\inputs\\wavefunction\\nitrogen-mp2.fchk",
+      "source_hash": "5e24d62229514689c5c0f1c904f09dbba205baf699843901d46cc5aa1cf19f7a"
+    },
+    {
+      "id": "55eb3c0e-55e2-4f22-8407-618610279c45",
+      "operation": "evaluate_electron_density_grid",
+      "parameters": [
+        {
+          "name": "backend",
+          "value": "qc-gbasis"
+        },
+        {
+          "name": "backend_version",
+          "value": "0.1.0"
+        },
+        {
+          "name": "density_level",
+          "value": "post_scf"
+        },
+        {
+          "name": "origin",
+          "value": [
+            -5.9075,
+            -5.9275,
+            -5.9525
+          ]
+        },
+        {
+          "name": "shape",
+          "value": [
+            49,
+            49,
+            49
+          ]
+        },
+        {
+          "name": "spin_role",
+          "value": "total"
+        },
+        {
+          "name": "step_vectors",
+          "value": [
+            [
+              0.25,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.25,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.25
+            ]
+          ]
+        }
+      ],
+      "parent_ids": [
+        "89fa9f22-c057-4b59-b32b-f63d74bacc80",
+        "dae8514b-cf55-4935-bdae-b1662066e669",
+        "f36d2621-dfae-4de6-857b-f24d9da2dea3"
+      ],
+      "producer": "qc-gbasis",
+      "producer_version": "0.1.0",
+      "revision": "addd76d5bfdeca5b41b90c3a75ada844e1b285d3b62b49215d92f7cdc176314e",
+      "source": "",
+      "source_hash": "addd76d5bfdeca5b41b90c3a75ada844e1b285d3b62b49215d92f7cdc176314e"
+    },
+    {
+      "id": "9bafa91f-91c3-457a-b0f6-4af4a0d59522",
+      "operation": "evaluate_electron_density_grid",
+      "parameters": [
+        {
+          "name": "backend",
+          "value": "qc-gbasis"
+        },
+        {
+          "name": "backend_version",
+          "value": "0.1.0"
+        },
+        {
+          "name": "density_level",
+          "value": "scf"
+        },
+        {
+          "name": "origin",
+          "value": [
+            -5.9075,
+            -5.9275,
+            -5.9525
+          ]
+        },
+        {
+          "name": "shape",
+          "value": [
+            49,
+            49,
+            49
+          ]
+        },
+        {
+          "name": "spin_role",
+          "value": "total"
+        },
+        {
+          "name": "step_vectors",
+          "value": [
+            [
+              0.25,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.25,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.25
+            ]
+          ]
+        }
+      ],
+      "parent_ids": [
+        "51136fa7-3c9c-4531-b0bb-0c1f4c5f6bb9",
+        "89fa9f22-c057-4b59-b32b-f63d74bacc80",
+        "f36d2621-dfae-4de6-857b-f24d9da2dea3"
+      ],
+      "producer": "qc-gbasis",
+      "producer_version": "0.1.0",
+      "revision": "2444b155cb2afaa2a4652078cde40c912dc6313a0e7c724376334ff0ded43974",
+      "source": "",
+      "source_hash": "2444b155cb2afaa2a4652078cde40c912dc6313a0e7c724376334ff0ded43974"
+    }
+  ],
+  "recipe": null,
+  "schema_name": "chemblender_analysis_report",
+  "schema_version": 1,
+  "status": "complete",
+  "title": "N atom | rho_UMP2(r) - rho_UHF(r) | 6-31G",
+  "warnings": []
+}

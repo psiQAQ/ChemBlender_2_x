@@ -1,0 +1,6 @@
+# Proposed isolated Fermi worker; installation requires explicit approval.
+pyprocar==6.5.0
+numpy==1.26.4
+scipy==1.16.3
+spglib==2.7.0
+ase==3.29.0

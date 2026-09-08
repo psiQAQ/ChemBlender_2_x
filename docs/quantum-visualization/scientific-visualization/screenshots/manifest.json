@@ -1,0 +1,419 @@
+{
+  "01-water-homo-scientific-view": {
+    "active_entity_id": "50a02587-6cc2-47f9-bda9-b1989d858cc2",
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-gui-all-quantities.blend",
+    "blender": "5.1.1",
+    "capture_method": "bpy.ops.screen.screenshot; actual private Blender window, no image editing",
+    "dimensions": [
+      1600,
+      1001
+    ],
+    "kind": "actual_blender_ui",
+    "package_sha256": "eb92e88ee056d9cb62ffe57f45e37fcb360cd609212d158332b0835125094279",
+    "path": "01-water-homo-scientific-view.png",
+    "preset": "signed_isosurface",
+    "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+    "settings": {
+      "dataset_index": 0,
+      "isovalue": 0.05999999865889549,
+      "material_opacity": 1.0,
+      "negative_color": [
+        0.949999988079071,
+        0.20000000298023224,
+        0.15000000596046448,
+        1.0
+      ],
+      "negative_isovalue": -0.05999999865889549,
+      "opacity": 1.0,
+      "positive_color": [
+        0.15000000596046448,
+        0.3499999940395355,
+        0.949999988079071,
+        1.0
+      ],
+      "shaded": true,
+      "template": "research"
+    },
+    "sha256": "9cd02231bcad9368d9e06eadebf03bc8a70b4a480785df2bbaf9c8aa374e3b36",
+    "view": "SOP - HOMO Offset"
+  },
+  "02-water-density-surface": {
+    "active_entity_id": "54ff0ab0-da0d-40bb-a595-78e470b904fb",
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-gui-all-quantities.blend",
+    "blender": "5.1.1",
+    "capture_method": "bpy.ops.screen.screenshot; actual private Blender window, no image editing",
+    "dimensions": [
+      1600,
+      1001
+    ],
+    "kind": "actual_blender_ui",
+    "package_sha256": "eb92e88ee056d9cb62ffe57f45e37fcb360cd609212d158332b0835125094279",
+    "path": "02-water-density-surface.png",
+    "preset": "signed_isosurface",
+    "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+    "settings": {
+      "dataset_index": 0,
+      "isovalue": 0.07999999821186066,
+      "material_opacity": 1.0,
+      "negative_color": [
+        0.949999988079071,
+        0.20000000298023224,
+        0.15000000596046448,
+        1.0
+      ],
+      "negative_isovalue": -0.07999999821186066,
+      "opacity": 1.0,
+      "positive_color": [
+        0.15000000596046448,
+        0.3499999940395355,
+        0.949999988079071,
+        1.0
+      ],
+      "shaded": false,
+      "template": "research"
+    },
+    "sha256": "cbb2d3b57d82cb322da9274c5a550f58880c861defd29b6531e8507ffb0b8d77",
+    "view": "SOP - Density Surface"
+  },
+  "03-water-density-cloud": {
+    "active_entity_id": "54ff0ab0-da0d-40bb-a595-78e470b904fb",
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-gui-all-quantities.blend",
+    "blender": "5.1.1",
+    "capture_method": "bpy.ops.screen.screenshot; actual private Blender window, no image editing",
+    "dimensions": [
+      1600,
+      1001
+    ],
+    "displayed_image": {
+      "origin": "public chemblender.export_scientific INVOKE_DEFAULT completed",
+      "path": ".agents/cache/scientific-gui-render-cloud05/images/001-grid_volume-research-0001.png",
+      "sha256": "fba29c17b348ce3cdeb3f46b1f4f5053cbf2c53d1fb750fb808a16a2d2b49d78"
+    },
+    "kind": "actual_blender_ui",
+    "package_sha256": "eb92e88ee056d9cb62ffe57f45e37fcb360cd609212d158332b0835125094279",
+    "path": "03-water-density-cloud.png",
+    "preset": "grid_volume",
+    "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+    "settings": {
+      "dataset_index": 0,
+      "density_scale": 5.0,
+      "material_opacity": 1.0,
+      "negative_color": [
+        1.0,
+        0.30000001192092896,
+        0.03999999910593033,
+        1.0
+      ],
+      "positive_color": [
+        0.03999999910593033,
+        0.44999998807907104,
+        0.800000011920929,
+        1.0
+      ],
+      "shaded": false,
+      "signed": false,
+      "template": "research"
+    },
+    "sha256": "664f691ba1d5f36c9818e67096fcbcd2910b7b49bc571851b2abb480e6ae330d",
+    "view": "SOP - Density Cloud"
+  },
+  "04-water-esp-surface": {
+    "active_entity_id": "c43f6244-fd9c-4484-945c-33871921fadc",
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-gui-all-quantities.blend",
+    "blender": "5.1.1",
+    "capture_method": "bpy.ops.screen.screenshot; actual private Blender window, no image editing",
+    "dimensions": [
+      1600,
+      1001
+    ],
+    "kind": "actual_blender_ui",
+    "package_sha256": "eb92e88ee056d9cb62ffe57f45e37fcb360cd609212d158332b0835125094279",
+    "path": "04-water-esp-surface.png",
+    "preset": "property_on_surface",
+    "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+    "settings": {
+      "color_max": 0.05999999865889549,
+      "color_min": -0.05999999865889549,
+      "colormap": "coolwarm",
+      "material_opacity": 1.0,
+      "property_dataset_index": 0,
+      "shaded": false,
+      "surface_dataset_index": 0,
+      "surface_isovalue": 0.0020000000949949026,
+      "symmetric": true,
+      "template": "teaching"
+    },
+    "sha256": "436d690e3c1abbd6f59755872de7feebdfae33d6996142c3e6497b0d5ba283ca",
+    "view": "SOP - ESP Surface"
+  },
+  "05-water-esp-slice": {
+    "active_entity_id": "e2c1746e-c1a9-45d7-8b8c-af23f0fe6c68",
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-gui-all-quantities.blend",
+    "blender": "5.1.1",
+    "capture_method": "bpy.ops.screen.screenshot; actual private Blender window, no image editing",
+    "dimensions": [
+      1600,
+      1001
+    ],
+    "kind": "actual_blender_ui",
+    "package_sha256": "eb92e88ee056d9cb62ffe57f45e37fcb360cd609212d158332b0835125094279",
+    "path": "05-water-esp-slice.png",
+    "preset": "grid_slice",
+    "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+    "settings": {
+      "color_max": 0.10000000149011612,
+      "color_min": -0.10000000149011612,
+      "colormap": "coolwarm",
+      "counts": [
+        129,
+        129
+      ],
+      "dataset_index": 0,
+      "material_opacity": 1.0,
+      "origin": [
+        -4.0,
+        0.3499999940395355,
+        -4.0
+      ],
+      "shaded": false,
+      "symmetric": true,
+      "template": "research",
+      "u_vector": [
+        9.0,
+        0.0,
+        0.0
+      ],
+      "v_vector": [
+        0.0,
+        0.0,
+        10.0
+      ]
+    },
+    "sha256": "e1aa553ed4167dbf243775428665672f3601f4bb7d48b3a93b74268dcaf32fad",
+    "view": "SOP - ESP Slice"
+  },
+  "06-water-esp-profile": {
+    "active_entity_id": "e2c1746e-c1a9-45d7-8b8c-af23f0fe6c68",
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-gui-all-quantities.blend",
+    "blender": "5.1.1",
+    "capture_method": "bpy.ops.screen.screenshot; actual private Blender window, no image editing",
+    "dimensions": [
+      1600,
+      1001
+    ],
+    "kind": "actual_blender_ui",
+    "package_sha256": "eb92e88ee056d9cb62ffe57f45e37fcb360cd609212d158332b0835125094279",
+    "path": "06-water-esp-profile.png",
+    "preset": "grid_profile",
+    "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+    "settings": {
+      "dataset_index": 0,
+      "end": [
+        5.0,
+        0.699999988079071,
+        0.6000000238418579
+      ],
+      "material_opacity": 1.0,
+      "radius": 0.012000000104308128,
+      "sample_count": 257,
+      "shaded": false,
+      "start": [
+        -4.0,
+        0.699999988079071,
+        0.6000000238418579
+      ],
+      "template": "research"
+    },
+    "sha256": "3002df401dc5b61ec5e47b9ebf4cc0e4d2a0252dad718fc909f4f0e21bde7bc1",
+    "view": "SOP - ESP Profile"
+  },
+  "07-water-wavefunction": {
+    "active_entity_id": "50a02587-6cc2-47f9-bda9-b1989d858cc2",
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-gui-all-quantities.blend",
+    "blender": "5.1.1",
+    "capture_method": "bpy.ops.screen.screenshot; actual private Blender window, no image editing",
+    "dimensions": [
+      1600,
+      1001
+    ],
+    "kind": "actual_blender_ui",
+    "package_sha256": "eb92e88ee056d9cb62ffe57f45e37fcb360cd609212d158332b0835125094279",
+    "path": "07-water-wavefunction.png",
+    "preset": "signed_isosurface",
+    "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+    "settings": {
+      "dataset_index": 0,
+      "isovalue": 0.05999999865889549,
+      "material_opacity": 1.0,
+      "negative_color": [
+        0.949999988079071,
+        0.20000000298023224,
+        0.15000000596046448,
+        1.0
+      ],
+      "negative_isovalue": -0.05999999865889549,
+      "opacity": 1.0,
+      "positive_color": [
+        0.15000000596046448,
+        0.3499999940395355,
+        0.949999988079071,
+        1.0
+      ],
+      "shaded": true,
+      "template": "research"
+    },
+    "sha256": "b6c9d2ee3007a558a7e6320f204a6b71061c2e371a0ec5a5eaa58a4e0dcb7990",
+    "view": "SOP - HOMO Offset"
+  },
+  "08-pqr-atomic-charge": {
+    "active_entity_id": "c909da1d-5131-5035-99d3-629932edf96f",
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-gui-all-quantities.blend",
+    "blender": "5.1.1",
+    "capture_method": "bpy.ops.screen.screenshot; actual private Blender window, no image editing",
+    "dimensions": [
+      1600,
+      1001
+    ],
+    "kind": "actual_blender_ui",
+    "package_sha256": "eb92e88ee056d9cb62ffe57f45e37fcb360cd609212d158332b0835125094279",
+    "path": "08-pqr-atomic-charge.png",
+    "preset": "atomic_scalar",
+    "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+    "settings": {
+      "color_max": 1.2000000476837158,
+      "color_min": -1.2000000476837158,
+      "colormap": "coolwarm",
+      "material_opacity": 1.0,
+      "shaded": false,
+      "symmetric": true,
+      "template": "research"
+    },
+    "sha256": "c9e6a761fd0496d4cca59690b062774b01a0eea2f2207270c387f4dbd94f7bc0",
+    "view": "SOP - PQR Charge"
+  },
+  "09-rmd17-force-trajectory": {
+    "active_entity_id": "0969bf8a-eb66-59d2-a359-58aed199d731",
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-gui-all-quantities.blend",
+    "blender": "5.1.1",
+    "capture_method": "bpy.ops.screen.screenshot; actual private Blender window, no image editing",
+    "dimensions": [
+      1600,
+      1001
+    ],
+    "geometry_check": {
+      "evaluated_atom_vertices": 7098,
+      "hydrogen_attribute_radius_angstrom": 0.32,
+      "hydrogen_count": 8,
+      "scientific_atom_count": 21,
+      "vertices_per_sphere": 338
+    },
+    "kind": "actual_blender_ui",
+    "package_sha256": "eb92e88ee056d9cb62ffe57f45e37fcb360cd609212d158332b0835125094279",
+    "path": "09-rmd17-force-trajectory.png",
+    "preset": "trajectory_force",
+    "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+    "settings": {
+      "frame_index": 31,
+      "frame_start": 1,
+      "frame_step": 1,
+      "material_opacity": 1.0,
+      "shaded": true,
+      "template": "research",
+      "vector_scale": 0.5
+    },
+    "sha256": "23a4d008351f0b593e863a33e27dff98234086787f7013144b91ec6ce4985016",
+    "view": "SOP - Aspirin Force",
+    "viewport": {
+      "direction": [
+        0.376812,
+        0.700065,
+        0.606566
+      ],
+      "distance": 12.0,
+      "shading": "MATERIAL",
+      "studio_light": "forest.exr",
+      "use_scene_lights": false,
+      "use_scene_world": false
+    }
+  },
+  "10-cycles-public-export": {
+    "active_entity_id": "54ff0ab0-da0d-40bb-a595-78e470b904fb",
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-gui-all-quantities.blend",
+    "blender": "5.1.1",
+    "capture_method": "bpy.ops.screen.screenshot; actual private Blender window, no image editing",
+    "dimensions": [
+      1600,
+      1001
+    ],
+    "displayed_image": {
+      "origin": "public chemblender.export_scientific INVOKE_DEFAULT completed",
+      "path": ".agents/cache/scientific-gui-render-cloud05/images/001-grid_volume-research-0001.png",
+      "sha256": "fba29c17b348ce3cdeb3f46b1f4f5053cbf2c53d1fb750fb808a16a2d2b49d78"
+    },
+    "kind": "actual_blender_ui",
+    "package_sha256": "eb92e88ee056d9cb62ffe57f45e37fcb360cd609212d158332b0835125094279",
+    "path": "10-cycles-public-export.png",
+    "preset": "grid_volume",
+    "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+    "settings": {
+      "dataset_index": 0,
+      "density_scale": 5.0,
+      "material_opacity": 1.0,
+      "negative_color": [
+        1.0,
+        0.30000001192092896,
+        0.03999999910593033,
+        1.0
+      ],
+      "positive_color": [
+        0.03999999910593033,
+        0.44999998807907104,
+        0.800000011920929,
+        1.0
+      ],
+      "shaded": false,
+      "signed": false,
+      "template": "research"
+    },
+    "sha256": "5dbf8ec6a7d2ab373607de38f7cce3a77e9fbcca5545cf89da6a15f736fc6445",
+    "view": "SOP - Density Cloud"
+  },
+  "11-save-reopen-connected": {
+    "active_entity_id": "50a02587-6cc2-47f9-bda9-b1989d858cc2",
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-gui-all-quantities.blend",
+    "blender": "5.1.1",
+    "capture_method": "bpy.ops.screen.screenshot; actual private Blender window, no image editing",
+    "dimensions": [
+      1600,
+      1001
+    ],
+    "kind": "actual_blender_ui",
+    "package_sha256": "eb92e88ee056d9cb62ffe57f45e37fcb360cd609212d158332b0835125094279",
+    "path": "11-save-reopen-connected.png",
+    "preset": "signed_isosurface",
+    "project_id": "f212034d-457c-4ccd-b0d5-5f7f0ca9e0c2",
+    "settings": {
+      "dataset_index": 0,
+      "isovalue": 0.05999999865889549,
+      "material_opacity": 1.0,
+      "negative_color": [
+        0.949999988079071,
+        0.20000000298023224,
+        0.15000000596046448,
+        1.0
+      ],
+      "negative_isovalue": -0.05999999865889549,
+      "opacity": 1.0,
+      "positive_color": [
+        0.15000000596046448,
+        0.3499999940395355,
+        0.949999988079071,
+        1.0
+      ],
+      "shaded": true,
+      "template": "research"
+    },
+    "sha256": "6d32324de5c273116c9d5857accab53653f50cb9a80a12cd3386c2340f0818d4",
+    "view": "SOP - HOMO Offset"
+  }
+}

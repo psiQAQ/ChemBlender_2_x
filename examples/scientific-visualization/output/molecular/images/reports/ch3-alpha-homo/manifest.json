@@ -1,0 +1,200 @@
+{
+  "artifacts": [
+    {
+      "media_type": "image/png",
+      "path": "ch3-alpha-homo-research.png",
+      "role": "scientific_image",
+      "sha256": "07e07ed4facd37c6627c89921622b11f79b8cefc298de2d1bce32dad21f39d8a",
+      "size": 4204640
+    },
+    {
+      "media_type": "image/png",
+      "path": "ch3-alpha-homo-teaching.png",
+      "role": "scientific_image",
+      "sha256": "b2fa6a38429027c79ec51241d653aeb20289cae9f4874f74314c239bd2244dac",
+      "size": 4086301
+    }
+  ],
+  "calculations": [],
+  "datasets": [
+    {
+      "dims": [
+        "x",
+        "y",
+        "z"
+      ],
+      "domain": "grid",
+      "id": "c48b1afb-39c1-4601-95aa-fb9e8e99b691",
+      "provenance_ids": [
+        "74132fe4-4be8-4de4-99c2-a82eedb20edf"
+      ],
+      "revision": "bd25bf108bac6c759ce9e88770d20d50e04e7019d9e4d2ae930507763d6b6ad8",
+      "semantic_role": "molecular_orbital",
+      "shape": [
+        60,
+        60,
+        60
+      ],
+      "source_calculation": null,
+      "status": "complete",
+      "unit": "inverse_bohr_to_three_halves"
+    }
+  ],
+  "project": {
+    "id": "c94f4294-7a18-499c-b37d-0b29003f7ecf",
+    "schema_version": "1.0"
+  },
+  "provenance": [
+    {
+      "id": "6c1b97a8-9fbe-49a5-a5e8-7b6acf7a5dbd",
+      "operation": "parse",
+      "parameters": [
+        {
+          "name": "basis_name",
+          "value": "sto-3g"
+        },
+        {
+          "name": "format",
+          "value": "fchk"
+        },
+        {
+          "name": "iodata_version",
+          "value": "1.0.1"
+        },
+        {
+          "name": "orbital_kind",
+          "value": "unrestricted"
+        },
+        {
+          "name": "scientific_example_source",
+          "value": {
+            "basis": "STO-3G",
+            "bytes": 8333,
+            "calculation_program": "not_reported_in_fchk",
+            "calculation_program_version": "not_reported",
+            "charge": 0,
+            "commit": "adab5813713ba64641565eb2a8c11803a4e9bba6",
+            "electron_count": 9,
+            "license": "LGPL-3.0 root distribution; retain per-file notices",
+            "method": "UHF",
+            "method_evidence": "SP        UHF                                                         STO-3G              ",
+            "multiplicity": 2,
+            "path": "D:\\workspace\\ChemBlender_2_x\\examples\\scientific-visualization\\inputs\\wavefunction\\ch3_hf_sto3g.fchk",
+            "sha256": "b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c",
+            "upstream_path": "iodata/test/data/ch3_hf_sto3g.fchk",
+            "url": "https://raw.githubusercontent.com/theochem/iodata/adab5813713ba64641565eb2a8c11803a4e9bba6/iodata/test/data/ch3_hf_sto3g.fchk"
+          }
+        },
+        {
+          "name": "title",
+          "value": "ch3"
+        },
+        {
+          "name": "unmapped_attributes",
+          "value": [
+            "atcharges",
+            "charge",
+            "energy",
+            "lot",
+            "moments",
+            "nelec",
+            "run_type",
+            "spinpol"
+          ]
+        }
+      ],
+      "parent_ids": [],
+      "producer": "ChemBlender IOData adapter",
+      "producer_version": "1",
+      "revision": "b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c",
+      "source": "D:\\workspace\\ChemBlender_2_x\\examples\\scientific-visualization\\inputs\\wavefunction\\ch3_hf_sto3g.fchk",
+      "source_hash": "b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c"
+    },
+    {
+      "id": "74132fe4-4be8-4de4-99c2-a82eedb20edf",
+      "operation": "evaluate_molecular_orbital_grid",
+      "parameters": [
+        {
+          "name": "backend",
+          "value": "qc-gbasis"
+        },
+        {
+          "name": "backend_version",
+          "value": "0.1.0"
+        },
+        {
+          "name": "basis_revision",
+          "value": "b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c"
+        },
+        {
+          "name": "channel",
+          "value": "alpha"
+        },
+        {
+          "name": "orbital_index",
+          "value": 4
+        },
+        {
+          "name": "orbital_revision",
+          "value": "b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c"
+        },
+        {
+          "name": "origin",
+          "value": [
+            -6.4075,
+            -6.4275,
+            -6.4525
+          ]
+        },
+        {
+          "name": "shape",
+          "value": [
+            60,
+            60,
+            60
+          ]
+        },
+        {
+          "name": "step_vectors",
+          "value": [
+            [
+              0.25,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.25,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.25
+            ]
+          ]
+        },
+        {
+          "name": "structure_revision",
+          "value": "b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c"
+        }
+      ],
+      "parent_ids": [
+        "51614fa9-1fb8-45e1-a0c0-473cb6161920",
+        "60559dc8-e346-4196-bcbd-efc1cdefc163",
+        "9c08124b-756b-4d28-9df6-faff06b08104"
+      ],
+      "producer": "qc-gbasis",
+      "producer_version": "0.1.0",
+      "revision": "bd25bf108bac6c759ce9e88770d20d50e04e7019d9e4d2ae930507763d6b6ad8",
+      "source": "",
+      "source_hash": "bd25bf108bac6c759ce9e88770d20d50e04e7019d9e4d2ae930507763d6b6ad8"
+    }
+  ],
+  "recipe": null,
+  "schema_name": "chemblender_analysis_report",
+  "schema_version": 1,
+  "status": "complete",
+  "title": "CH3 radical | alpha HOMO | UHF/STO-3G",
+  "warnings": []
+}

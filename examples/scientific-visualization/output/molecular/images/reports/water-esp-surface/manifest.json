@@ -1,0 +1,281 @@
+{
+  "artifacts": [
+    {
+      "media_type": "image/png",
+      "path": "water-esp-surface-research.png",
+      "role": "scientific_image",
+      "sha256": "da0740810f086c8a8cb4ea00f485b8dd3af79423af0e8cf0ce02f37a3df098d3",
+      "size": 4286309
+    },
+    {
+      "media_type": "image/png",
+      "path": "water-esp-surface-teaching.png",
+      "role": "scientific_image",
+      "sha256": "7a9fc2e5a35743de14ee8daadab4bfd8df5ff025465df538c83a1c454728b603",
+      "size": 4074816
+    }
+  ],
+  "calculations": [],
+  "datasets": [
+    {
+      "dims": [
+        "x",
+        "y",
+        "z"
+      ],
+      "domain": "grid",
+      "id": "3d45e4cb-51ea-47fe-afaf-5dcbaa7a4a1f",
+      "provenance_ids": [
+        "7b5a4224-1a01-4762-b139-9a8e7cefa5f9"
+      ],
+      "revision": "2d26d038d5e4c090edb5b13e50c1e016598dc38e3a63d4332664317bcb3dada8",
+      "semantic_role": "electrostatic_potential",
+      "shape": [
+        56,
+        49,
+        60
+      ],
+      "source_calculation": null,
+      "status": "complete",
+      "unit": "hartree_per_elementary_charge"
+    },
+    {
+      "dims": [
+        "x",
+        "y",
+        "z"
+      ],
+      "domain": "grid",
+      "id": "ff759146-1aeb-4cd5-a5a1-ab6a74720452",
+      "provenance_ids": [
+        "7ff1736b-1f1f-406f-bbd2-04e9b26d0105"
+      ],
+      "revision": "6967df06983f5522cbfa73b63685b7deb066cbe0e7a92e3df70d4d2c224a5e1b",
+      "semantic_role": "electron_density",
+      "shape": [
+        56,
+        49,
+        60
+      ],
+      "source_calculation": null,
+      "status": "complete",
+      "unit": "electron_per_cubic_bohr"
+    }
+  ],
+  "project": {
+    "id": "98d885ae-8cfc-4212-a1ed-f83bfc3420db",
+    "schema_version": "1.0"
+  },
+  "provenance": [
+    {
+      "id": "7b5a4224-1a01-4762-b139-9a8e7cefa5f9",
+      "operation": "evaluate_electrostatic_potential_grid",
+      "parameters": [
+        {
+          "name": "backend",
+          "value": "qc-gbasis"
+        },
+        {
+          "name": "backend_version",
+          "value": "0.1.0"
+        },
+        {
+          "name": "density_level",
+          "value": "scf"
+        },
+        {
+          "name": "nuclear_exclusion_radius",
+          "value": 1e-08
+        },
+        {
+          "name": "origin",
+          "value": [
+            -5.9075,
+            -5.9275,
+            -6.7025
+          ]
+        },
+        {
+          "name": "shape",
+          "value": [
+            56,
+            49,
+            60
+          ]
+        },
+        {
+          "name": "step_vectors",
+          "value": [
+            [
+              0.25,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.25,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.25
+            ]
+          ]
+        }
+      ],
+      "parent_ids": [
+        "1b8665ac-a283-469a-8220-87ed0df7b05e",
+        "44abce8a-388d-427a-aa33-75ff168d9d49",
+        "cda32939-c4dd-440f-806a-59c6fb019175",
+        "dc21c6c7-3165-491a-a1f4-8e8dafa2333e"
+      ],
+      "producer": "qc-gbasis",
+      "producer_version": "0.1.0",
+      "revision": "2d26d038d5e4c090edb5b13e50c1e016598dc38e3a63d4332664317bcb3dada8",
+      "source": "",
+      "source_hash": "2d26d038d5e4c090edb5b13e50c1e016598dc38e3a63d4332664317bcb3dada8"
+    },
+    {
+      "id": "7ff1736b-1f1f-406f-bbd2-04e9b26d0105",
+      "operation": "evaluate_electron_density_grid",
+      "parameters": [
+        {
+          "name": "backend",
+          "value": "qc-gbasis"
+        },
+        {
+          "name": "backend_version",
+          "value": "0.1.0"
+        },
+        {
+          "name": "density_level",
+          "value": "scf"
+        },
+        {
+          "name": "origin",
+          "value": [
+            -5.9075,
+            -5.9275,
+            -6.7025
+          ]
+        },
+        {
+          "name": "shape",
+          "value": [
+            56,
+            49,
+            60
+          ]
+        },
+        {
+          "name": "spin_role",
+          "value": "total"
+        },
+        {
+          "name": "step_vectors",
+          "value": [
+            [
+              0.25,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.25,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.25
+            ]
+          ]
+        }
+      ],
+      "parent_ids": [
+        "1b8665ac-a283-469a-8220-87ed0df7b05e",
+        "cda32939-c4dd-440f-806a-59c6fb019175",
+        "dc21c6c7-3165-491a-a1f4-8e8dafa2333e"
+      ],
+      "producer": "qc-gbasis",
+      "producer_version": "0.1.0",
+      "revision": "6967df06983f5522cbfa73b63685b7deb066cbe0e7a92e3df70d4d2c224a5e1b",
+      "source": "",
+      "source_hash": "6967df06983f5522cbfa73b63685b7deb066cbe0e7a92e3df70d4d2c224a5e1b"
+    },
+    {
+      "id": "81fe3280-4b7d-43a4-b5ef-2540d9c39064",
+      "operation": "parse",
+      "parameters": [
+        {
+          "name": "basis_name",
+          "value": "sto-3g"
+        },
+        {
+          "name": "format",
+          "value": "fchk"
+        },
+        {
+          "name": "iodata_version",
+          "value": "1.0.1"
+        },
+        {
+          "name": "orbital_kind",
+          "value": "restricted"
+        },
+        {
+          "name": "scientific_example_source",
+          "value": {
+            "basis": "STO-3G",
+            "bytes": 5369,
+            "calculation_program": "not_reported_in_fchk",
+            "calculation_program_version": "not_reported",
+            "charge": 0,
+            "commit": "adab5813713ba64641565eb2a8c11803a4e9bba6",
+            "electron_count": 10,
+            "license": "LGPL-3.0 root distribution; retain per-file notices",
+            "method": "RHF",
+            "method_evidence": "SP        RHF                                                         STO-3G",
+            "multiplicity": 1,
+            "path": "D:\\workspace\\ChemBlender_2_x\\examples\\scientific-visualization\\inputs\\wavefunction\\water_sto3g_hf_g03.fchk",
+            "sha256": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816",
+            "upstream_path": "iodata/test/data/water_sto3g_hf_g03.fchk",
+            "url": "https://raw.githubusercontent.com/theochem/iodata/adab5813713ba64641565eb2a8c11803a4e9bba6/iodata/test/data/water_sto3g_hf_g03.fchk"
+          }
+        },
+        {
+          "name": "title",
+          "value": "Foo Bar"
+        },
+        {
+          "name": "unmapped_attributes",
+          "value": [
+            "atcharges",
+            "atgradient",
+            "atmasses",
+            "charge",
+            "energy",
+            "lot",
+            "moments",
+            "nelec",
+            "run_type",
+            "spinpol"
+          ]
+        }
+      ],
+      "parent_ids": [],
+      "producer": "ChemBlender IOData adapter",
+      "producer_version": "1",
+      "revision": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816",
+      "source": "D:\\workspace\\ChemBlender_2_x\\examples\\scientific-visualization\\inputs\\wavefunction\\water_sto3g_hf_g03.fchk",
+      "source_hash": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816"
+    }
+  ],
+  "recipe": null,
+  "schema_name": "chemblender_analysis_report",
+  "schema_version": 1,
+  "status": "complete",
+  "title": "H2O | V(r) on rho(r)=0.002 e/bohr^3",
+  "warnings": []
+}

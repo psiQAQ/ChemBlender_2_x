@@ -46,6 +46,7 @@ Related user guides:
 
 - [User workflow center: import, process, visualize, export and project lifecycle](docs/user/workflows/README.md)
 - [Provenance-backed workflow samples and per-file format notes](examples/user-workflows/README.md)
+- [Scientific visualization SOP, Cycles images and replayable workbenches](docs/quantum-visualization/scientific-visualization/README.md)
 - [ChemBlender 2.4.0 human experience review](docs/user/2.4.0-experience-review.md)
 - [Data quality and diagnostics](docs/user/data-quality.md)
 - [Scientific editing and topology](docs/user/scientific-editing.md)

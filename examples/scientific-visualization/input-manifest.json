@@ -1,0 +1,425 @@
+{
+  "schema_version": 1,
+  "purpose": "Real scientific inputs; source bytes and licenses, no generated scientific claims",
+  "sources": {
+    "cclib": {
+      "repository": "cclib/cclib",
+      "commit": "07260dd0394cb1a2381d4d897746d727a12ad6ce",
+      "license": "BSD-3-Clause",
+      "license_path": "LICENSE"
+    },
+    "phonopy": {
+      "repository": "phonopy/phonopy",
+      "commit": "2df40f4865d477f44d3b5d1ebcafc0b4af878e35",
+      "license": "BSD-3-Clause",
+      "license_path": "LICENSE"
+    },
+    "pymatgen": {
+      "repository": "materialsproject/pymatgen",
+      "commit": "0428f232a569ffe6b16fa030d38ea35a56d70fd6",
+      "license": "MIT",
+      "license_path": "LICENSE"
+    },
+    "iodata": {
+      "repository": "theochem/iodata",
+      "commit": "adab5813713ba64641565eb2a8c11803a4e9bba6",
+      "license": "LGPL-3.0 root distribution; retain per-file notices",
+      "license_path": "LICENSE.txt"
+    }
+  },
+  "files": [
+    {
+      "path": "licenses/cclib-LICENSE.txt",
+      "project": "cclib",
+      "upstream_path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/cclib/cclib/07260dd0394cb1a2381d4d897746d727a12ad6ce/LICENSE",
+      "commit": "07260dd0394cb1a2381d4d897746d727a12ad6ce",
+      "license": "BSD-3-Clause",
+      "sha256": "a9ed52f8c54cfefc4c9a02681e074eb7082fb29137db0b7977f40ca6ebf667a4",
+      "bytes": 1526,
+      "quantity": "upstream license notice",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/cclib"
+    },
+    {
+      "path": "licenses/phonopy-LICENSE.txt",
+      "project": "phonopy",
+      "upstream_path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/phonopy/phonopy/2df40f4865d477f44d3b5d1ebcafc0b4af878e35/LICENSE",
+      "commit": "2df40f4865d477f44d3b5d1ebcafc0b4af878e35",
+      "license": "BSD-3-Clause",
+      "sha256": "2ce26839c8b70d28765d73e934cc1a979d896d8d228d30694fdd9a92e94d43a9",
+      "bytes": 1470,
+      "quantity": "upstream license notice",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/phonopy"
+    },
+    {
+      "path": "licenses/pymatgen-LICENSE.txt",
+      "project": "pymatgen",
+      "upstream_path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/materialsproject/pymatgen/0428f232a569ffe6b16fa030d38ea35a56d70fd6/LICENSE",
+      "commit": "0428f232a569ffe6b16fa030d38ea35a56d70fd6",
+      "license": "MIT",
+      "sha256": "7e8f24f9b40be59291c7d82819edb8e93fb344f1d53997880e7db80bbc4f5d89",
+      "bytes": 1167,
+      "quantity": "upstream license notice",
+      "transformation": "none; original Git blob / HTTP response bytes"
+    },
+    {
+      "path": "licenses/iodata-LICENSE.txt",
+      "project": "iodata",
+      "upstream_path": "LICENSE.txt",
+      "url": "https://raw.githubusercontent.com/theochem/iodata/adab5813713ba64641565eb2a8c11803a4e9bba6/LICENSE.txt",
+      "commit": "adab5813713ba64641565eb2a8c11803a4e9bba6",
+      "license": "LGPL-3.0 root distribution; retain per-file notices",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651,
+      "quantity": "upstream license notice",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/iodata"
+    },
+    {
+      "path": "inputs/cclib/Gaussian/basicGaussian16/dvb_ir.out",
+      "project": "cclib",
+      "upstream_path": "data/Gaussian/basicGaussian16/dvb_ir.out",
+      "url": "https://raw.githubusercontent.com/cclib/cclib/07260dd0394cb1a2381d4d897746d727a12ad6ce/data/Gaussian/basicGaussian16/dvb_ir.out",
+      "commit": "07260dd0394cb1a2381d4d897746d727a12ad6ce",
+      "license": "BSD-3-Clause",
+      "sha256": "bc1a21de15ada135d5188b11d44226389022d92488ddfa8163ba7d4d713e5061",
+      "bytes": 185543,
+      "quantity": "vibration / IR",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/cclib"
+    },
+    {
+      "path": "inputs/cclib/Gaussian/basicGaussian16/dvb_raman.out",
+      "project": "cclib",
+      "upstream_path": "data/Gaussian/basicGaussian16/dvb_raman.out",
+      "url": "https://raw.githubusercontent.com/cclib/cclib/07260dd0394cb1a2381d4d897746d727a12ad6ce/data/Gaussian/basicGaussian16/dvb_raman.out",
+      "commit": "07260dd0394cb1a2381d4d897746d727a12ad6ce",
+      "license": "BSD-3-Clause",
+      "sha256": "fc97b8c179dbad721262be6077be893b13b785b36f8ae3493a1dd4b3d4bf18b9",
+      "bytes": 148126,
+      "quantity": "vibration / Raman activity",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/cclib"
+    },
+    {
+      "path": "inputs/cclib/Gaussian/basicGaussian16/dvb_td.out",
+      "project": "cclib",
+      "upstream_path": "data/Gaussian/basicGaussian16/dvb_td.out",
+      "url": "https://raw.githubusercontent.com/cclib/cclib/07260dd0394cb1a2381d4d897746d727a12ad6ce/data/Gaussian/basicGaussian16/dvb_td.out",
+      "commit": "07260dd0394cb1a2381d4d897746d727a12ad6ce",
+      "license": "BSD-3-Clause",
+      "sha256": "c9255c92b829a4d2072ffca262be4dd9212f35a9c75d84c1fe8eb5969c166eef",
+      "bytes": 55292,
+      "quantity": "excited states / UV-Vis",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/cclib"
+    },
+    {
+      "path": "inputs/cclib/Gaussian/basicGaussian09/dvb_td.out",
+      "project": "cclib",
+      "upstream_path": "data/Gaussian/basicGaussian09/dvb_td.out",
+      "url": "https://raw.githubusercontent.com/cclib/cclib/07260dd0394cb1a2381d4d897746d727a12ad6ce/data/Gaussian/basicGaussian09/dvb_td.out",
+      "commit": "07260dd0394cb1a2381d4d897746d727a12ad6ce",
+      "license": "BSD-3-Clause",
+      "sha256": "01619fecb8ca4d80b1ddfddb6cb9dc1983e52e23616e20ac0e4f1a6bb55462e0",
+      "bytes": 45637,
+      "quantity": "ECD length gauge; explicit 1e-40 cgs",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/cclib"
+    },
+    {
+      "path": "inputs/cclib/ORCA/basicORCA5.0/dvb_ir.out",
+      "project": "cclib",
+      "upstream_path": "data/ORCA/basicORCA5.0/dvb_ir.out",
+      "url": "https://raw.githubusercontent.com/cclib/cclib/07260dd0394cb1a2381d4d897746d727a12ad6ce/data/ORCA/basicORCA5.0/dvb_ir.out",
+      "commit": "07260dd0394cb1a2381d4d897746d727a12ad6ce",
+      "license": "BSD-3-Clause",
+      "sha256": "deb64567281a4673849812a63fc7b1147c33d1c4ad3b67f6b3bf7ec03ab1046c",
+      "bytes": 122846,
+      "quantity": "vibration / IR",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/cclib"
+    },
+    {
+      "path": "inputs/cclib/ORCA/basicORCA5.0/dvb_raman.out",
+      "project": "cclib",
+      "upstream_path": "data/ORCA/basicORCA5.0/dvb_raman.out",
+      "url": "https://raw.githubusercontent.com/cclib/cclib/07260dd0394cb1a2381d4d897746d727a12ad6ce/data/ORCA/basicORCA5.0/dvb_raman.out",
+      "commit": "07260dd0394cb1a2381d4d897746d727a12ad6ce",
+      "license": "BSD-3-Clause",
+      "sha256": "956e9a7989c8fc917ef358f57423286d7228f59fff18f159e25c19e71e3181e8",
+      "bytes": 132927,
+      "quantity": "vibration / Raman activity",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/cclib"
+    },
+    {
+      "path": "inputs/cclib/ORCA/basicORCA5.0/dvb_td.out",
+      "project": "cclib",
+      "upstream_path": "data/ORCA/basicORCA5.0/dvb_td.out",
+      "url": "https://raw.githubusercontent.com/cclib/cclib/07260dd0394cb1a2381d4d897746d727a12ad6ce/data/ORCA/basicORCA5.0/dvb_td.out",
+      "commit": "07260dd0394cb1a2381d4d897746d727a12ad6ce",
+      "license": "BSD-3-Clause",
+      "sha256": "b4262a21e11ea441551f465f4ae04aee0d4f9ddf35e6a94c0309400c924f17f6",
+      "bytes": 248644,
+      "quantity": "excited states / UV-Vis / ECD",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/cclib"
+    },
+    {
+      "path": "inputs/phonopy/NaCl/phonopy_disp.yaml",
+      "project": "phonopy",
+      "upstream_path": "example/NaCl/phonopy_disp.yaml",
+      "url": "https://raw.githubusercontent.com/phonopy/phonopy/2df40f4865d477f44d3b5d1ebcafc0b4af878e35/example/NaCl/phonopy_disp.yaml",
+      "commit": "2df40f4865d477f44d3b5d1ebcafc0b4af878e35",
+      "license": "BSD-3-Clause",
+      "sha256": "05553d717297aeef35f8d79bccbb4916a474e7b24ddbafe1b0d9ed148694a602",
+      "bytes": 12203,
+      "quantity": "NaCl phonons; VASP finite displacement",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/phonopy"
+    },
+    {
+      "path": "inputs/phonopy/NaCl/FORCE_SETS",
+      "project": "phonopy",
+      "upstream_path": "example/NaCl/FORCE_SETS",
+      "url": "https://raw.githubusercontent.com/phonopy/phonopy/2df40f4865d477f44d3b5d1ebcafc0b4af878e35/example/NaCl/FORCE_SETS",
+      "commit": "2df40f4865d477f44d3b5d1ebcafc0b4af878e35",
+      "license": "BSD-3-Clause",
+      "sha256": "2485a1ee2c43579e868c65f376c45d81caa0928a4899a8edc292ac6843aaac10",
+      "bytes": 6282,
+      "quantity": "NaCl phonons; VASP finite displacement",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/phonopy"
+    },
+    {
+      "path": "inputs/phonopy/NaCl/BORN",
+      "project": "phonopy",
+      "upstream_path": "example/NaCl/BORN",
+      "url": "https://raw.githubusercontent.com/phonopy/phonopy/2df40f4865d477f44d3b5d1ebcafc0b4af878e35/example/NaCl/BORN",
+      "commit": "2df40f4865d477f44d3b5d1ebcafc0b4af878e35",
+      "license": "BSD-3-Clause",
+      "sha256": "ee092139922747bce9a7751ec9e0d1874c22653842cc6811bf6a09738052ab66",
+      "bytes": 127,
+      "quantity": "NaCl phonons; VASP finite displacement",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/phonopy"
+    },
+    {
+      "path": "inputs/phonopy/NaCl/POSCAR-unitcell",
+      "project": "phonopy",
+      "upstream_path": "example/NaCl/POSCAR-unitcell",
+      "url": "https://raw.githubusercontent.com/phonopy/phonopy/2df40f4865d477f44d3b5d1ebcafc0b4af878e35/example/NaCl/POSCAR-unitcell",
+      "commit": "2df40f4865d477f44d3b5d1ebcafc0b4af878e35",
+      "license": "BSD-3-Clause",
+      "sha256": "e253251c217904352af3cf6f144485e5967e81a4d9b1e0b10c5b09394388b9f6",
+      "bytes": 734,
+      "quantity": "NaCl phonons; VASP finite displacement",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/phonopy"
+    },
+    {
+      "path": "inputs/phonopy/NaCl/vasprun.xml-001",
+      "project": "phonopy",
+      "upstream_path": "example/NaCl/vasprun.xml-001",
+      "url": "https://raw.githubusercontent.com/phonopy/phonopy/2df40f4865d477f44d3b5d1ebcafc0b4af878e35/example/NaCl/vasprun.xml-001",
+      "commit": "2df40f4865d477f44d3b5d1ebcafc0b4af878e35",
+      "license": "BSD-3-Clause",
+      "sha256": "8783119f733ec223afb9ca7579935a170c86acea32e0bf462f0b18c411665d7c",
+      "bytes": 46150,
+      "quantity": "NaCl phonons; VASP finite displacement",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/phonopy"
+    },
+    {
+      "path": "inputs/phonopy/NaCl/vasprun.xml-002",
+      "project": "phonopy",
+      "upstream_path": "example/NaCl/vasprun.xml-002",
+      "url": "https://raw.githubusercontent.com/phonopy/phonopy/2df40f4865d477f44d3b5d1ebcafc0b4af878e35/example/NaCl/vasprun.xml-002",
+      "commit": "2df40f4865d477f44d3b5d1ebcafc0b4af878e35",
+      "license": "BSD-3-Clause",
+      "sha256": "374bf0e5013e3089abefd2ff666f009a7c2244e31de5d55c4d5e28d0f1cb7d26",
+      "bytes": 45042,
+      "quantity": "NaCl phonons; VASP finite displacement",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/phonopy"
+    },
+    {
+      "path": "inputs/silicon/bands/vasprun.xml.gz",
+      "project": "pymatgen",
+      "upstream_path": "test-files/io/vasp/outputs/vasprun_Si_bands.xml.gz",
+      "url": "https://raw.githubusercontent.com/materialsproject/pymatgen/0428f232a569ffe6b16fa030d38ea35a56d70fd6/test-files/io/vasp/outputs/vasprun_Si_bands.xml.gz",
+      "commit": "0428f232a569ffe6b16fa030d38ea35a56d70fd6",
+      "license": "MIT",
+      "sha256": "c54b9e248c598c42fff058aab4ccb3dae90eb5362010cdece9a4542a0581b37c",
+      "bytes": 121071,
+      "quantity": "Si high-symmetry band path",
+      "transformation": "none; original Git blob / HTTP response bytes"
+    },
+    {
+      "path": "inputs/silicon/bands/KPOINTS",
+      "project": "pymatgen",
+      "upstream_path": "test-files/io/vasp/inputs/KPOINTS_Si_bands",
+      "url": "https://raw.githubusercontent.com/materialsproject/pymatgen/0428f232a569ffe6b16fa030d38ea35a56d70fd6/test-files/io/vasp/inputs/KPOINTS_Si_bands",
+      "commit": "0428f232a569ffe6b16fa030d38ea35a56d70fd6",
+      "license": "MIT",
+      "sha256": "45fb053139f5a902fe409bd5d7a56fde7530bb862b6e1a12b23611473ec3da3d",
+      "bytes": 823,
+      "quantity": "Si high-symmetry band path",
+      "transformation": "none; original Git blob / HTTP response bytes"
+    },
+    {
+      "path": "inputs/silicon/dos/vasprun.xml.gz",
+      "project": "pymatgen",
+      "upstream_path": "test-files/io/vasp/fixtures/static_silicon/vasprun.xml.gz",
+      "url": "https://raw.githubusercontent.com/materialsproject/pymatgen/0428f232a569ffe6b16fa030d38ea35a56d70fd6/test-files/io/vasp/fixtures/static_silicon/vasprun.xml.gz",
+      "commit": "0428f232a569ffe6b16fa030d38ea35a56d70fd6",
+      "license": "MIT",
+      "sha256": "a9d74c3f928cd32880d77b81a1968a6abf2ca8b88a41516ecb8bdfe210e333fc",
+      "bytes": 29148,
+      "quantity": "Si independent uniform-grid DOS / PDOS",
+      "transformation": "none; original Git blob / HTTP response bytes"
+    },
+    {
+      "path": "inputs/wavefunction/water_sto3g_hf.wfx",
+      "project": "iodata",
+      "upstream_path": "iodata/test/data/water_sto3g_hf.wfx",
+      "url": "https://raw.githubusercontent.com/theochem/iodata/adab5813713ba64641565eb2a8c11803a4e9bba6/iodata/test/data/water_sto3g_hf.wfx",
+      "commit": "adab5813713ba64641565eb2a8c11803a4e9bba6",
+      "license": "LGPL-3.0 root distribution; retain per-file notices",
+      "sha256": "7f9769dc050126f5a5bbf7e1f03d64751838269f5f123da33d28dc7e80a4e183",
+      "bytes": 5280,
+      "quantity": "water HF/STO-3G; critic2 source",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/iodata"
+    },
+    {
+      "path": "inputs/wavefunction/water_sto3g_hf_g03.fchk",
+      "project": "iodata",
+      "upstream_path": "iodata/test/data/water_sto3g_hf_g03.fchk",
+      "url": "https://raw.githubusercontent.com/theochem/iodata/adab5813713ba64641565eb2a8c11803a4e9bba6/iodata/test/data/water_sto3g_hf_g03.fchk",
+      "commit": "adab5813713ba64641565eb2a8c11803a4e9bba6",
+      "license": "LGPL-3.0 root distribution; retain per-file notices",
+      "sha256": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816",
+      "bytes": 5369,
+      "quantity": "water HF/STO-3G; MO / density / ESP",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/iodata"
+    },
+    {
+      "path": "inputs/wavefunction/ch3_hf_sto3g.fchk",
+      "project": "iodata",
+      "upstream_path": "iodata/test/data/ch3_hf_sto3g.fchk",
+      "url": "https://raw.githubusercontent.com/theochem/iodata/adab5813713ba64641565eb2a8c11803a4e9bba6/iodata/test/data/ch3_hf_sto3g.fchk",
+      "commit": "adab5813713ba64641565eb2a8c11803a4e9bba6",
+      "license": "LGPL-3.0 root distribution; retain per-file notices",
+      "sha256": "b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c",
+      "bytes": 8333,
+      "quantity": "CH3 UHF/STO-3G; alpha / beta / spin density",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/iodata"
+    },
+    {
+      "path": "inputs/wavefunction/nitrogen-mp2.fchk",
+      "project": "iodata",
+      "upstream_path": "iodata/test/data/nitrogen-mp2.fchk",
+      "url": "https://raw.githubusercontent.com/theochem/iodata/adab5813713ba64641565eb2a8c11803a4e9bba6/iodata/test/data/nitrogen-mp2.fchk",
+      "commit": "adab5813713ba64641565eb2a8c11803a4e9bba6",
+      "license": "LGPL-3.0 root distribution; retain per-file notices",
+      "sha256": "5e24d62229514689c5c0f1c904f09dbba205baf699843901d46cc5aa1cf19f7a",
+      "bytes": 8975,
+      "quantity": "N MP2; SCF and post-SCF RDM difference",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/iodata"
+    },
+    {
+      "path": "inputs/wavefunction/h2o.molden.input",
+      "project": "iodata",
+      "upstream_path": "iodata/test/data/h2o.molden.input",
+      "url": "https://raw.githubusercontent.com/theochem/iodata/adab5813713ba64641565eb2a8c11803a4e9bba6/iodata/test/data/h2o.molden.input",
+      "commit": "adab5813713ba64641565eb2a8c11803a4e9bba6",
+      "license": "LGPL-3.0 root distribution; retain per-file notices",
+      "sha256": "2bf025dc02fdb689e61c980ac55dc4bef35a31e4bfc819a668ac36d721f44f06",
+      "bytes": 11936,
+      "quantity": "water Molden; MO occupation-derived density",
+      "transformation": "none; original Git blob / HTTP response bytes",
+      "submodule": "submodules/iodata"
+    }
+  ],
+  "fermi_cache": {
+    "url": "https://huggingface.co/datasets/lllangWV/pyprocar_test_data/resolve/bf44809171f5228236c6a3716ba8933af08ddaeb/data/examples/fermi3d/non-spin-polarized.zip",
+    "commit": "bf44809171f5228236c6a3716ba8933af08ddaeb",
+    "sha256": "1d079392bb1bc4dbd30606bde763bcf1f1aef6bafd3eb9a6aef3b94f25a029d5",
+    "bytes": 5639342,
+    "cache_directory": ".agents/cache/scientific-visualization/fermi",
+    "archive_name": "non-spin-polarized.zip",
+    "license": "dataset card declares MIT; archive has no LICENSE; redistribution not approved",
+    "scientific_context": {
+      "formula": "SrVO3",
+      "lattice_angstrom": 3.84652,
+      "code": "VASP 6.4.3",
+      "mesh": [
+        21,
+        21,
+        21
+      ],
+      "mesh_style": "Gamma",
+      "irreducible_kpoints": 286,
+      "bands": 20,
+      "efermi_eV": 5.699,
+      "ISPIN": 1,
+      "ICHARG": 11,
+      "ISYM": 2,
+      "LDAUTYPE": 1,
+      "V_U_eV": 5,
+      "V_J_eV": 0
+    },
+    "members": [
+      {
+        "path": "INCAR",
+        "bytes": 2247,
+        "sha256": "037a17548d71141f50822370b26f053ec984b4cf91d4e5e6068626ab23e79496"
+      },
+      {
+        "path": "KPOINTS",
+        "bytes": 37,
+        "sha256": "93fee9666ecf366b57d18cde755ba6e257de596e2cbf8bb9b691fe058ba7bd61"
+      },
+      {
+        "path": "POSCAR",
+        "bytes": 546,
+        "sha256": "f09d098f3c9ed6feed95b8df087b44909798f051fbacbe692dc1f840415ca9fe"
+      },
+      {
+        "path": "OUTCAR",
+        "bytes": 2179251,
+        "sha256": "a807d7e3abe8663873c95e01410e3fb42546661c979c6ecfc59e062de3b41e57"
+      },
+      {
+        "path": "PROCAR",
+        "bytes": 3438384,
+        "sha256": "37a1f6debbcf8212d5fbcfa4ba75bce5a01505f3c93263409998cac4f8f27ef4"
+      },
+      {
+        "path": "IBZKPT",
+        "bytes": 256200,
+        "sha256": "9d790d544ab048dd3cedbbcbd7d1c08569a4d2f05db6744e25217331b42882c3"
+      }
+    ],
+    "dataset_card": {
+      "url": "https://huggingface.co/datasets/lllangWV/pyprocar_test_data/raw/bf44809171f5228236c6a3716ba8933af08ddaeb/README.md",
+      "path": "dataset-card.md",
+      "bytes": 306,
+      "sha256": "687ae78d0ebbb60e127bc33e136f5dcb8493b3c27c9789e9448273f91f83be77"
+    }
+  },
+  "constraints": [
+    "Band and DOS are separate calculations with separate energy references.",
+    "Fermi archive stays in ignored project cache. No POTCAR or pickle member is extracted, parsed, executed or redistributed.",
+    "Fixtures are compatibility examples, not convergence benchmarks."
+  ]
+}

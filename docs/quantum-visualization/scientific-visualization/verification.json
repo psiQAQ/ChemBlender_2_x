@@ -1,0 +1,209 @@
+{
+  "date": "2026-09-08",
+  "scope": "Local implementation and available real quantities; full plan remains open",
+  "source_commit": "67ace7363a9dcc0bab29bdc2601ea6a6357d621f",
+  "runtime": {
+    "blender": "5.1.1",
+    "python": "3.13.9",
+    "platform": "Windows",
+    "profile_policy": "private BLENDER_USER_RESOURCES; shared user installation unchanged"
+  },
+  "package": {
+    "sha256": "fa66bc9f407b3e87d894fd8fc9d0069a470c3e0cc690ae33f009190ca6867995",
+    "bytes": 30109401,
+    "member_count": 209,
+    "repository_relative_path": ".agents/cache/scientific-extension-qualification-20260908-08/source/ChemBlender/chemblender-2.4.0.zip",
+    "status": "Passed",
+    "source_drift": []
+  },
+  "full_unittest": {
+    "status": "Passed",
+    "run": 2504,
+    "skipped": 36,
+    "elapsed_seconds": 119.703
+  },
+  "full_blender_smoke": {
+    "status": "Passed",
+    "exit_code": 0,
+    "completion_marker": "PASS: ChemBlender extension lifecycle",
+    "package": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-extension-qualification-20260908-08\\source\\ChemBlender\\chemblender-2.4.0.zip",
+    "package_sha256": "fa66bc9f407b3e87d894fd8fc9d0069a470c3e0cc690ae33f009190ca6867995",
+    "qualification07_to_08": {
+      "changed_members": [
+        "render_scene.py"
+      ],
+      "change": "two trailing blank lines removed; all other member bytes identical",
+      "removed_bytes_hex": "0d0a0d0a"
+    },
+    "packaged_python_matches_live_source": true,
+    "packaged_python_module_count": 198,
+    "smoke_script_sha256": "520bdd703dc2d3e1cb4bedaa9d2576fb1a46deb5ffa8edf3b86cf923128f4b68",
+    "profile": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-full-smoke-profile-06",
+    "log": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-full-smoke-06.log",
+    "elapsed_seconds": 104.031,
+    "system_temp": "C:\\Users\\ustcw\\AppData\\Local\\Temp",
+    "python_exit_code": 1,
+    "windows_loaded_dll_cleanup_warning_count": 138,
+    "cleanup_warnings_outside_private_profile": 0,
+    "windows_cleanup_warning_scope": "private profile only; loaded DLL/PYD removal warnings during native disable",
+    "private_profile_remaining_dll_count": 49,
+    "private_profile_remaining_pyd_count": 28,
+    "extension_source_directory_retained": true,
+    "final_addon_disable_assertions_passed": true,
+    "cleanup_performed": false,
+    "native_performance": [
+      {
+        "benchmark": "sdf_10k_workflow",
+        "environment": {
+          "blender": "5.1.1",
+          "python": "3.13.9",
+          "rdkit": "2026.03.3"
+        },
+        "input": {
+          "canonical_identity_count": 100,
+          "record_count": 10000,
+          "records_per_identity": 100,
+          "size_bytes": 6404000,
+          "source_revision_count": 1
+        },
+        "memory": {
+          "peak_bytes": 127703105
+        },
+        "output": {
+          "additional_entry_count": 40001,
+          "browser_row_count": 1000,
+          "conformer_suggestion_count": 100,
+          "filtered_record_count": 100
+        },
+        "timing_seconds": {
+          "browser_filter": {
+            "median": 0.011961299984250218,
+            "p95": 0.01342940001632087,
+            "samples": 3
+          },
+          "browser_projection": {
+            "median": 0.1103904000192415,
+            "p95": 2.0123153000022285,
+            "samples": 3
+          },
+          "conformer_suggestion": {
+            "median": 5.829922100005206,
+            "p95": 5.83388200000627,
+            "samples": 3
+          },
+          "measured_sequence_wall": {
+            "median": 92.19808329999796,
+            "p95": 92.19808329999796,
+            "samples": 1
+          },
+          "preview_projection": {
+            "median": 0.11879120001685806,
+            "p95": 0.11941929999738932,
+            "samples": 3
+          },
+          "project_commit": {
+            "median": 13.726695400022436,
+            "p95": 13.726695400022436,
+            "samples": 1
+          },
+          "reader_preflight": {
+            "median": 58.19810429998324,
+            "p95": 58.19810429998324,
+            "samples": 1
+          }
+        }
+      }
+    ]
+  },
+  "artifacts": {
+    "formal_stills": 28,
+    "animation_png_frames": 128,
+    "mp4": 4,
+    "saved_workbenches": 5,
+    "real_gui_screenshots": 11,
+    "molecular_lifecycle_views": 40,
+    "molecular_npy_files": 61,
+    "atomic_trajectory_lifecycle_views": 6,
+    "atomic_trajectory_npy_files": 14
+  },
+  "pending": {
+    "optional_real_backend_gates": "Not Run: cclib, pymatgen, phonopy, PyProcar and critic2 environments await explicit installation approval",
+    "shared_actual_user_install": "Not Run: this task deliberately uses private user_default installations",
+    "remote_ci_and_release": "Not Run: no external-write authorization"
+  },
+  "evidence": [
+    {
+      "path": ".agents/cache/scientific-extension-qualification-20260908-08/source-hashes.json",
+      "sha256": "19a072307242f306c1b154b845e8046e95ccdded735d514639eeff7f72f64626"
+    },
+    {
+      "path": ".agents/cache/scientific-extension-qualification-20260908-08/zip-audit.json",
+      "sha256": "de3537e0451b3b4fa79faedf9f718171b609b6308720a58728e724f7f28cd20e"
+    },
+    {
+      "path": ".agents/cache/scientific-extension-qualification-20260908-08/qualification.json",
+      "sha256": "e0e0bf190859c3c75f1d2c991ac9a97b74a51acb93cc512766ded55adab3d49f"
+    },
+    {
+      "path": ".agents/cache/scientific-full-smoke-06.json",
+      "sha256": "161c1ee8af3ac1f61ae5d5d7fcda4946c6b5691c0b9e1c06114d762ae8658532"
+    },
+    {
+      "path": ".agents/cache/scientific-full-tests-06.log",
+      "sha256": "aeb374b03cfcc63cae809d62a2f381455437311ceed31cde8d6c6a7ed43d33c0"
+    },
+    {
+      "path": "docs/quantum-visualization/scientific-visualization/screenshots/manifest.json",
+      "sha256": "2670a70a602db81151aba51e94c66a3edd4d54cd141e1abb1d278bdf930aa883"
+    },
+    {
+      "path": "docs/quantum-visualization/scientific-visualization/screenshots/operations.json",
+      "sha256": "e2b20822d3699b58d59c215fbd0ed713807a966028cd2baa0d801f1e9b9519d3"
+    },
+    {
+      "path": "examples/scientific-visualization/output/molecular/images/render-manifest.json",
+      "sha256": "8791e8e7c93b47895b100ea896c3789dc4766f20316483da12939a1c31e6ed15"
+    },
+    {
+      "path": "examples/scientific-visualization/output/molecular/scenes/lifecycle-verification.json",
+      "sha256": "6b8c1724fc251919ab778e8af9bf030b3b5c999a422f0e69b5e7660545782723"
+    },
+    {
+      "path": "examples/scientific-visualization/output/atom-trajectory/manifest.json",
+      "sha256": "7af0c11192d036b82c2249249ae8a773822af21c8930baac0dedd7a4828fb33e"
+    },
+    {
+      "path": "examples/scientific-visualization/output/atom-trajectory/scenes/lifecycle-verification.json",
+      "sha256": "c2eb4aee2a158cb5fce3a0a2a82fadaa6db73ec646a8ae28dda018f420f5d830"
+    },
+    {
+      "path": "docs/quantum-visualization/scientific-visualization/browser-qa.json",
+      "sha256": "82fbceb1cbbc948d1d87b50d96f62c9ba0bc527d738d62956de0f546af296f76"
+    }
+  ],
+  "offline_sop_qa": {
+    "status": "Passed",
+    "html_sha256": "615f9dfc053d5df54155e2c10342432305b141e3622adb16b1e68b801ca79602",
+    "anchors": 17,
+    "checked_local_links": 155,
+    "viewports": [
+      {
+        "width": 1440,
+        "documentWidth": 1440,
+        "images": 39,
+        "brokenImages": 0,
+        "invalidAnchors": 0
+      },
+      {
+        "width": 390,
+        "documentWidth": 390,
+        "images": 39,
+        "brokenImages": 0,
+        "invalidAnchors": 0
+      }
+    ],
+    "consoleErrors": [],
+    "verificationLink": "Passed",
+    "replayLink": "Passed"
+  }
+}

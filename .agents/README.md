@@ -16,6 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
+| active | [physical-quantity-visualization-sop.md](active/physical-quantity-visualization-sop.md) | Scientific quantity panels, materials, Cycles artifacts and illustrated SOP; optional real-backend gates remain pending |
 | completed | [quantum-visualization-workbench.md](completed/quantum-visualization-workbench.md) | First-release scientific visualization workflow, real example and local qualification |
 | completed | [quantum-input-units-experience-review.md](completed/quantum-input-units-experience-review.md) | Unit repair, UI/MCP experience review and verified actual-user installation recovery |
 | completed | [representative-example-corpus.md](completed/representative-example-corpus.md) | Provenance-backed representative scientific examples, per-file documentation and Blender runtime validation |

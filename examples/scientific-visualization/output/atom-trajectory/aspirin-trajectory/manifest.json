@@ -1,0 +1,97 @@
+{
+  "artifacts": [
+    {
+      "media_type": "application/json",
+      "path": "display.json",
+      "role": "display_parameters",
+      "sha256": "13872f7d873bcd7657cde18a982110fb24a79dd0dbe403fbc2f2e0fae35d460d",
+      "size": 17753
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory-research-0001.png",
+      "role": "scientific_image",
+      "sha256": "dc9e804d171d357032c87558a41f64bcf1b89d93f42e7e8689ff37ce3c518fe5",
+      "size": 4270846
+    },
+    {
+      "media_type": "image/png",
+      "path": "images/001-trajectory-teaching-0001.png",
+      "role": "scientific_image",
+      "sha256": "3b989b53254623e2e6592ea0fb4734aec515dad8d45cfbfe6140216e9d13e885",
+      "size": 4077449
+    }
+  ],
+  "calculations": [],
+  "datasets": [
+    {
+      "dims": [
+        "frame",
+        "atom",
+        "xyz"
+      ],
+      "domain": "frame",
+      "id": "0969bf8a-eb66-59d2-a359-58aed199d731",
+      "provenance_ids": [
+        "1d05ca83-b009-5b90-a5cd-6cb8dff19158"
+      ],
+      "revision": "da959422540842747f03195620d1a65d2f56b2b071f2f82f17c14d548a984f57",
+      "semantic_role": "coordinates",
+      "shape": [
+        32,
+        21,
+        3
+      ],
+      "source_calculation": null,
+      "status": "complete",
+      "unit": "angstrom"
+    }
+  ],
+  "project": {
+    "id": "e8d76bda-6e7c-42d6-abaa-5f36f49afcda",
+    "schema_version": "1.0"
+  },
+  "provenance": [
+    {
+      "id": "1d05ca83-b009-5b90-a5cd-6cb8dff19158",
+      "operation": "parse",
+      "parameters": [
+        {
+          "name": "format",
+          "value": "extxyz"
+        },
+        {
+          "name": "lattice_order",
+          "value": "ax ay az bx by bz cx cy cz"
+        },
+        {
+          "name": "scientific_example_source",
+          "value": {
+            "bytes": 61621,
+            "conversion": "source kcal/mol and kcal/mol/angstrom divided by 23.060547830619",
+            "coordinate_unit": "angstrom",
+            "force_unit": "electron_volt_per_angstrom",
+            "license": "CC0-1.0",
+            "path": "D:\\workspace\\ChemBlender_2_x\\examples\\user-workflows\\inputs\\extxyz\\aspirin-rmd17-32.extxyz",
+            "sampling": "32 configurations; original rows 0,100,...,3100; no physical time step declared",
+            "sha256": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a",
+            "source_npz_sha256": "6efe3d2454c1a9215efe2bf271c58084ae556afa188a740ae06955bf43456ee8",
+            "upstream": "10.6084/m9.figshare.12672038.v3; rmd17_aspirin.npz rows 0..3100 stride100"
+          }
+        }
+      ],
+      "parent_ids": [],
+      "producer": "ChemBlender extXYZ reader",
+      "producer_version": "1",
+      "revision": "369097ffb0fb596fbaad20df3d84db0a0d75cfc4c6a2ed03b991607c7a94ab25",
+      "source": "D:\\workspace\\ChemBlender_2_x\\examples\\user-workflows\\inputs\\extxyz\\aspirin-rmd17-32.extxyz",
+      "source_hash": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a"
+    }
+  ],
+  "recipe": null,
+  "schema_name": "chemblender_analysis_report",
+  "schema_version": 1,
+  "status": "complete",
+  "title": "Scientific visualization export",
+  "warnings": []
+}

@@ -1,0 +1,96 @@
+{
+  "status": "Passed",
+  "blender": "5.1.1",
+  "process_id": 17552,
+  "script": "examples/scientific-visualization/save_atom_trajectory.py",
+  "script_sha256": "1af6c8611c91b6a59b1e5f288ebf93919b9c607c08b24560611160e029fea08a",
+  "source_manifest_sha256": "f5c2dd267ad60d6516b7f1fe30a3ca7616daf19ba2b95a0bf8f8730207954737",
+  "cache_evidence": ".agents/cache/at-lc-01/verification.json",
+  "scenes": [
+    {
+      "source": "pqr",
+      "project_id": "7d0d34d5-e4a0-46f6-91f3-749923ab3a54",
+      "view_count": 2,
+      "instance_ids": [
+        "795e27f8-cde6-4f67-a9ed-9ba466dbdcf2",
+        "2cc4849c-cd1e-4262-9c1e-fadff4c60c46"
+      ],
+      "render_identities": [
+        "0d85d29039e3d2701fa220913e0dcfa60624af9f267e8002eadab9c3f419dbc7",
+        "b1adb2252194862320201775eaec9755ef86673ba2cc8986494bfb65dee0b668"
+      ],
+      "array_file_count": 8,
+      "scientific_arrays": {
+        "structures/5ecf705f-0133-54f6-827d-acb925305bdd/coordinates": "5b0886c6077d62dfcf4c88b45424652f3c29ef80cd9eb12a85099241aedcb64c",
+        "structures/5ecf705f-0133-54f6-827d-acb925305bdd/atomic_identity/isotopes": "4bffc6d8558324dd3d3779cfce350dd497d48cc6d572c0e9d86af1851423dd75",
+        "structures/5ecf705f-0133-54f6-827d-acb925305bdd/atomic_identity/formal_charges": "4bffc6d8558324dd3d3779cfce350dd497d48cc6d572c0e9d86af1851423dd75",
+        "structures/5ecf705f-0133-54f6-827d-acb925305bdd/atomic_identity/atom_map_numbers": "4bffc6d8558324dd3d3779cfce350dd497d48cc6d572c0e9d86af1851423dd75",
+        "structures/5ecf705f-0133-54f6-827d-acb925305bdd/atomic_identity/atom_names/codes": "79e38fecc008872b208aeec13e66d726f5775d5d63ab737992ef2469323d8bb6",
+        "structures/5ecf705f-0133-54f6-827d-acb925305bdd/atomic_identity/stereo_labels/codes": "e9ea1e47f69697424d5b9b54baf14f0c0a08781273b923637792fa39d0e54052",
+        "datasets/54bff613-e8ff-5f50-bdcb-52c63a7d3146/data": "96d15e8582d693f94991f095c1db03b0c4f33c7af7b68d82d27b33025269555a",
+        "datasets/935d080c-8803-5553-8b5c-97e16486fee6/data": "a7ab32a085fba74deb9fd7ec6fbe75f02fe37e22e051297a37688e271bb25f92"
+      },
+      "scientific_array_files": {
+        "2dd33073bb381bc894a02e502d6c2741146fe58c5ef711049521d2afe20a42ac.npy": "cb099495f46cb251815674ce1838481412246e9d2321c64484eb584dfc48ec15",
+        "38789814629a0386a2890003602e409a32983d168d621a02d5d6ce3ebc7793fb.npy": "2ae80849ba5ff8e1e3728f9a5106b40a1f34b46386c1678f603a2bf7643fb020",
+        "85a34167385022591c1e23923e66ff47e6ff52239161921a5b744eed25507d77.npy": "f7b72d673f4c960663808775d2c3f146c3ae6455ddf91495f5a4e19fe35b8cf9",
+        "96fc9f7d67114b23e5b4e256de1edc2f127e38d7b633bf4481c8fbff8c32c38d.npy": "25292944a0a9695529241342201bbb2a11bcb1aa9feb24ae00cefb5b87940aa2",
+        "970718742cef59a1c815362828c5f949ffb3a50542602796be441e2ab5e848d1.npy": "2ece55f3e48dea4d705af32e1a1afafc0dafabbbf37c31a09ea33a9f8a8b1156",
+        "a9126bfd6d8893029fb426ad96e568c9e71acc39bd6df006445d8cdd90b1e950.npy": "3382c37abdc3a461fb18f4ab5070f69c6186dd79cb4dd2aa1af99fe54cf916ae",
+        "cca0b0a20b81f993544912a8cb686e805d96b7123ec06554f440036a3af6f524.npy": "aa38ba0d432b32eea40415c50a54152a67c23ceffb572e619e5b2224f324b8bc",
+        "f8310add437134da608458004138ef0b1723d4e80c70af5d50ee1bca71e93108.npy": "02121cd581956b1eacde2182f95702c662b13e2b7c7c7b60a357c9053b095416"
+      },
+      "save_as": "Passed",
+      "move": "Passed",
+      "public_load_rebuild": "Passed",
+      "matrices_and_settings": "unchanged",
+      "trajectory_frames": null,
+      "moved_blend_sha256": "f7c10af05620fdc6b12c845a4c185886195833836c1ceb7ba36486e1b84c4158",
+      "independent_cold_reopen": "Passed"
+    },
+    {
+      "source": "rmd17",
+      "project_id": "e8d76bda-6e7c-42d6-abaa-5f36f49afcda",
+      "view_count": 4,
+      "instance_ids": [
+        "8770aeda-1f79-4a45-9593-e3a0bd9ec249",
+        "796edb4e-ca03-4bf7-bec9-93fb38f652a6",
+        "a8225fea-8dff-4a31-a2c7-d835e5bd5538",
+        "e1f6b079-6af0-4077-afca-f8ca1b30b16d"
+      ],
+      "render_identities": [
+        "c1c67c3cd8213be16d2a8389a23cbb0b7bb22af386d6fae5ae4add2441ba7b73",
+        "2d58dd185f0bd6f6a8e7bd473a562f3936097bcdaa95b0af7f69472ed1b14ae3",
+        "6c74b2733cb79054c154b8159607dd498e18b1370a80c290043435bf75053b98",
+        "7e91219056924fdd72c7caf1c2a9b358639a539ec643022b1ec49b6ad8d8b604"
+      ],
+      "array_file_count": 6,
+      "scientific_arrays": {
+        "structures/931d77f9-3580-551b-a023-93554733a414/coordinates": "d63c4ce1b1f9dc9f7ac88ca276fbba67e1d3e0bafb275b3a408bd3bd6ec629bd",
+        "datasets/0969bf8a-eb66-59d2-a359-58aed199d731/data": "20e7775c245689d18010a144f94b0f2cf353010a1fa618b5a9d0fca59b69d5ad",
+        "datasets/48972f44-eef2-50b1-91e2-8c9f75bc3336/data": "4b04e6b242bb8c992277a91d6c24c332e298645837de43446f4bc90c829aae93",
+        "datasets/d2475947-ae55-5149-a171-c088e08eedfd/data": "c6e76103e0acd2fcf8e3038f1b7ddbb2063f9f29ae2f9a337aa8bd55551846e8",
+        "datasets/d3c402bc-6da5-5017-9131-b23b53fcf6a5/data": "1e82f0b2d5dfa5cd847ae93e8acec7f9d951100f7cb524ab8e00f0406c02f908",
+        "datasets/dfc336e0-dc16-5c66-83ed-731395585ddd/data": "e9937e0bfe2d7c6c4b55eea728186ed39d2d37a23412aff4a27b5d47b989c1ec"
+      },
+      "scientific_array_files": {
+        "2fdff7b81305d6b6a5d4d199ccf158dd3b9d1ee4f336f73d82c5de76fa38dfa6.npy": "8f10296e74acc2ad344d092f940925834b72887257c799dc065199485775cdd8",
+        "56a5f3d4561912a6fbbcf10fe1a8b4cc13a9a2736b7dcf3bbbf1c8fe3bd67934.npy": "af4dddb5f8f58448629aa6d23e53670780701c51ebee07de28d6b816dd34cfc7",
+        "5d06384275cc83e4b9e0b76bcb0a9c066d06b12298a46545a39a1c7fa87959e3.npy": "abdce46ce1fbf315ec5c2195f2fa8c0e4cd35ec19693e84edd9b3cc3c9738cb5",
+        "958c11cdef16c144f473738c69954220d245cdcb43680354207620c7bd051ac4.npy": "6a468393500226bf0f8124f57763cea0fdaf5458028799a7667d69695c096b13",
+        "c3b30ab248824277143fb54a6eb3d41f71bc26f7fe57c2742955b1ee7316548f.npy": "a5e2d95c5a6452a782b429d8b78455eb2770ff1286525eb3131a0a3b9d299277",
+        "cb5b4b69559824779e88accc3232a9176c64ee15031be923e089f0c2d490a4fd.npy": "f84643e8d315ec7806fc84871769ab0ffa6fab8aac09e2b626cfef2892b2fae7"
+      },
+      "save_as": "Passed",
+      "move": "Passed",
+      "public_load_rebuild": "Passed",
+      "matrices_and_settings": "unchanged",
+      "trajectory_frames": 32,
+      "moved_blend_sha256": "57c981c0e42401b7286cd9bf53f80b275d2ec8658d48fbf484695ebfe5a31032",
+      "independent_cold_reopen": "Passed"
+    }
+  ],
+  "formal_scenes_unchanged": true,
+  "cold_reopen_process_id": 41836,
+  "verification_script_sha256": "1af6c8611c91b6a59b1e5f288ebf93919b9c607c08b24560611160e029fea08a"
+}
