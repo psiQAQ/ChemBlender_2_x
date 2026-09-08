@@ -22,3 +22,12 @@
 - Previous live query: Blender5.1.1 Windows, Python3.13.9, Cycles+FFmpeg, RTX4070TiSUPER OptiX, unsaved default 3-object scene. Must verify on implementation entry.
 - Cache gbasis-py312 Python3.12.13, NumPy1.26.4, IOData1.0.1, GBasis0.1.0, SciPy1.16.3. Preserve existing pinned environment.
 - Bundled Node has marked17.0.5; use it for offline HTML with no added doc runtime dependency.
+## CBQ-only boundary audit
+
+Existing 22-reader registry and worker load in independent Python without bpy/RDKit/Gemmi. Core model tags are stable class names, independent of Python package locations. Keep one shared model source; split core eager exports. Move original formats/readers/derivations/edits/exporters/Reader API/Worker outside the extension.
+
+Hidden Viewer dependencies to remove: periodic symmetry rebuild uses gemmi.Op; old mesh/chemical operations use RDKit. CBQ 1.1 will store paired numeric symmetry rotation/translation arrays. Preserve old package integrity checks, including hashed schema 1.0 after changing current version. Ordinary old data remains readable; unsupported legacy symmetry expansion requires explicit external upgrade.
+
+Shared dependency traps: report semantic-reference walker lives in import grouping; grid_sampling text output imports XYZ exporter; orbital_browser imports wavefunction evaluation; Structure View imports periodic bond-inference helper; project_service imports Blender project_link. Extract only needed pure helpers. Static element data stays single source.
+
+Budget audit: qualification-08 contains 209 members, each matching current source or pinned wheels; no cache/extra source. ZIP 30,109,401 bytes; member unpacked 32,564,548; code 3,169,792 (+451,414), resources 2,506,004 and wheels 26,888,752 unchanged. Baselines updated to these measured values; all unexplained-growth allowances remain zero.

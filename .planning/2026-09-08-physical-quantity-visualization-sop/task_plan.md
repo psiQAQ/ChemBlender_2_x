@@ -70,3 +70,20 @@ Use narrow scientific tests, actual-file comparisons, native Blender materials/g
 - Source implementation: local commit 67ace73. [Illustrated SOP](../../docs/quantum-visualization/scientific-visualization/README.md), [examples](../../examples/scientific-visualization/README.md) and [verification](../../docs/quantum-visualization/scientific-visualization/VERIFICATION.md) form the concrete reviewable delivery.
 - Final package SHA-256: fa66bc9f407b3e87d894fd8fc9d0069a470c3e0cc690ae33f009190ca6867995. GUI screenshots accurately record qualification05; later changes are validated runtime fixes and EOF cleanup.
 - Next required action is approval of the already-presented hash-locked Python/Fortran proposal. After approval, finish actual optional backend execution, remaining per-quantity renders/animations and corresponding real GUI/lifecycle SOP gates. The complete all-quantity plan is not marked complete.
+
+## Approved continuation: CBQ-only architecture (2026-09-08)
+
+This section supersedes the former two-path import proposal. Prior delivered examples remain evidence; unfinished real-backend gates remain open.
+
+Goal: external GUI/CLI converts supported quantum files to CBQ 1.1; Blender only consumes CBQ and performs visualization.
+Success: 22 existing readers and dedicated adapters retained outside the ZIP; a single cbq_core source; isolated Blender without RDKit/Gemmi can render, save, reopen and rebuild.
+Authorization: merge current delivery into main, push main/archive tags, verify CI, retire old local/origin feature refs, then create feat/cbq-only-viewer. No software Release or GUI publication; user publishes GUI. New package installations still require separate approval.
+Plan:
+- [ ] C1: verified bundle, premerge checks, main integration, archive tags, remote CI, branch retirement and new feature branch.
+- [ ] C2: extract one shared cbq_core and external reader/worker code.
+- [ ] C3: CBQ 1.1 numeric symmetry, compatible reads, explicit upgrade, transactional package merge.
+- [ ] C4: external CLI formats/inspect/convert/derive/validate/upgrade/export plus thin Tk GUI calling CLI.
+- [ ] C5: CBQ-only Viewer registration, no scientific wheels/network fetch, preserve View math and rendering.
+- [ ] C6: real-file roundtrips, dependency-free Blender/Cycles lifecycle, format matrix, GUI screenshots, SOP and package audit.
+Verification: narrow unittest per change; full contracts; exact Extension package; private Blender profiles; source/result hashes and numerical tolerances; remote CI for consolidation.
+Current step: C1. Complete history bundle verified; 114 native contracts Passed; full premerge suite running.

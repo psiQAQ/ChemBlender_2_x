@@ -63,3 +63,10 @@ main was fast-forwarded from 76c7cbc to 7def513, preserving all 40 commits of th
 The origin fix branch was still at 365b7ab before consolidation; it is an ancestor of the archived local tip 7def513 and both values are recorded in the annotated tag. All original refs also have a verified local Git bundle at .blend-analysis/2026-09-08-branch-consolidation/refs-before.bundle. The existing detached budget-baseline worktree remains intact as acceptance evidence.
 
 Earlier lifecycle records above describe historical branch names. After successful synchronization, these names resolve through the archive tags listed here, and origin has only main. Version tags and published Releases are unchanged. Consolidation does not qualify a new release.
+## CBQ-only architecture consolidation (2026-09-08)
+
+The user authorized consolidating the quantum workbench and physical-quantity visualization delivery into local/origin main, retaining both feature tips with annotated archive tags, checking remote CI, retiring those refs, and only then starting feat/cbq-only-viewer. This integration is not a new software Release; optional real-backend scientific gates remain documented in the active task.
+
+Pre-consolidation tips: main ca5ce98a42979f8140204cae8d494a3bcd1ba142; feat/quantum-visualization-workbench 3c808921ef44f2e988671e84d17966943c98fccd; feat/physical-quantity-visualization-sop 0f9a6c51f8baec16959bd202a45fa8f00f971d56. Complete verified backup: .blend-analysis/2026-09-08-cbq-architecture-consolidation/refs-before.bundle. The latter feature contains all eight post-main commits and the former feature tip. Preserve upstream, existing immutable tags and the detached budget-baseline worktree.
+
+Remote retirement is gated on verified main/archive refs and successful current CI. Use exact-tip leases for origin feature deletion. Record the resulting run and refs in the continuation plan; do not treat the historical CI state above as current evidence.

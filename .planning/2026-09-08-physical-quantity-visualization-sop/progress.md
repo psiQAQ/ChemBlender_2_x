@@ -52,3 +52,10 @@
 - Source implementation, tests and architecture guide committed locally as 67ace73. Final verification.json/VERIFICATION.md record the actual gates and pending real-backend approvals. No shared-user installation or remote CI/publication was performed.
 - Read-only artifact audit found no unintended ZIP/wheel/pyc/private configuration or file above 100 MB. All 31 molecular VDB files (22,903,156 bytes) are referenced by current saved Blender objects, with no orphan files; they are intentional immediately-openable example caches. Git -text preserves 344 raw input/license/output paths.
 - Final offline SOP Passed 17 anchors and 155 local links at 1440/390 px; all 39 images loaded, no overflow or console errors, and verification/replay links opened. HTML SHA-256 615f9dfc053d5df54155e2c10342432305b141e3622adb16b1e68b801ca79602. Compact browser QA is tracked beside the SOP; screenshot evidence also preserves raw bytes through Git.
+## CBQ-only continuation: consolidation preparation
+
+User approved external preparation, CBQ 1.1, a CLI-driven lightweight GUI (user publishes it), and local/origin consolidation before the new feature branch. Created and verified `.blend-analysis/2026-09-08-cbq-architecture-consolidation/refs-before.bundle` with complete history and all 26 refs. Main ca5ce98 and feature heads 3c80892/0f9a6c5 verified locally and remotely.
+
+114 native contracts Passed. Full premerge discovery ran 2491 entries in 127.798 s with one module import blocked by sandbox access to the shared dependency directory; its 14 actual tests separately Passed in 2.106 s with read-only access, covering all 2504 cases with 36 optional skips. No dependencies installed. Blender MCP help initially failed in sandbox (uv trampoline path), then Passed using the installed executable outside sandbox. Live Blender 5.1.1 / Python 3.13.9 Windows confirmed.
+
+Old main CI 34181946309 passed build/install but failed `Generate and verify package metadata`: `archive total unpacked size exceeds budget`. Audit/fix is part of consolidation. gh stored authentication is invalid; public status and connected GitHub log tools work. No software Release or GUI publication.
