@@ -166,9 +166,11 @@ class RepositoryContractTests(unittest.TestCase):
             pair({"分子结构": []}, {"Molecular Structure": ["English node"]})
 
     def test_surface_material_node_lookup_is_locale_independent(self):
-        source = (EXTENSION / "surface_view.py").read_text(encoding="utf-8")
-        self.assertNotIn('.get("Principled BSDF")', source)
-        self.assertGreaterEqual(source.count('node.type == "BSDF_PRINCIPLED"'), 2)
+        sources = [(EXTENSION / name).read_text(encoding="utf-8")
+                   for name in ("surface_view.py", "scientific_materials.py")]
+        for source in sources:
+            self.assertNotIn('.get("Principled BSDF")', source)
+        self.assertIn('nodes.new("ShaderNodeBsdfPrincipled" if shaded', sources[1])
 
     def test_package_workflow_pins_and_verifies_release_inputs(self):
         workflow = (ROOT / ".github" / "workflows" / "extension-package.yml").read_text(

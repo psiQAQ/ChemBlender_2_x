@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 from types import SimpleNamespace
 import unittest
 from uuid import uuid4
@@ -27,6 +28,7 @@ from ChemBlender.core.cclib_adapter import (
     parse_cclib_output,
     sniff_cclib_output,
 )
+from ChemBlender.core.model.spectroscopy import ROTATORY_STRENGTH_CGS_UNIT
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -366,6 +368,37 @@ class CCLibAdapterTests(unittest.TestCase):
         )
         QCProject(id=uuid4(), schema_version="0.1").commit(batch)
 
+    def test_ecd_unit_requires_matching_original_length_gauge_table(self):
+        formula = " 1/2[<0|r|b>*<b|rxdel|0> + (<0|rxdel|b>*<b|r|0>)*]\n"
+        table = (formula + " Rotatory Strengths (R) in cgs (10**-40 erg-esu-cm/Gauss)\n"
+                 " state XX YY ZZ R(length)\n"
+                 " 1 0.0 0.0 0.0 -1.5\n 2 0.0 0.0 0.0 2.0\n\n")
+        data = fake_ccdata(etenergies=numpy.array([25000., 30000.]),
+                           etoscs=numpy.array([.1, .2]), etrotats=numpy.array([-1.5, 2.]))
+        cases = (
+            (table, True),
+            (table.replace("10**-40", "10**-30"), False),
+            (table.replace("R(length)", "R(velocity)"), False),
+            (table.replace("-1.5", "-1.6"), False),
+            (table + table.replace("10**-40", "10**-30"), False),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "ecd.log"
+            for source, verified in cases:
+                with self.subTest(verified=verified, source=source):
+                    path.write_text(source, encoding="utf-8")
+                    batch = adapt_ccdata(data, path, cclib_version="1.8.1")
+                    states = next(item for item in batch.datasets if isinstance(item, ExcitedStateSet))
+                    self.assertEqual(states.rotatory_strengths.unit,
+                                     ROTATORY_STRENGTH_CGS_UNIT if verified else "unknown")
+                    self.assertIs(states.status, DatasetStatus.COMPLETE if verified else DatasetStatus.AMBIGUOUS)
+                    numpy.testing.assert_array_equal(states.rotatory_strengths.values, data.etrotats)
+                    if verified:
+                        params = dict(batch.provenance[0].parameters)
+                        self.assertEqual(params["rotatory_strength_gauge"], "length")
+                        self.assertEqual(params["rotatory_strength_source_field"], "Gaussian R(length)")
+                        self.assertTrue(batch.provenance[0].source_hash)
+
     def test_partial_excited_states_report_missing_and_invalid_configurations(self):
         missing_energy = fake_ccdata(etoscs=numpy.asarray([0.1]))
         batch = adapt_ccdata(
@@ -426,7 +459,7 @@ class CCLibAdapterTests(unittest.TestCase):
 
     def test_reader_descriptor_declares_only_implemented_capabilities(self):
         self.assertEqual(CCLIB_OUTPUT_READER.reader_id, "cclib_output")
-        self.assertEqual(CCLIB_OUTPUT_READER.reader_version, "4")
+        self.assertEqual(CCLIB_OUTPUT_READER.reader_version, "5")
         self.assertEqual(CCLIB_OUTPUT_READER.extensions, (".log", ".out"))
         self.assertEqual(
             CCLIB_OUTPUT_READER.capabilities,
@@ -508,6 +541,9 @@ class CCLibAdapterTests(unittest.TestCase):
                 self.assertAlmostEqual(
                     states.rotatory_strengths.values[0], first_rotatory
                 )
+                self.assertEqual(states.rotatory_strengths.unit,
+                                 ROTATORY_STRENGTH_CGS_UNIT if package == "Gaussian" else "unknown")
+                self.assertIs(states.status, DatasetStatus.COMPLETE if package == "Gaussian" else DatasetStatus.AMBIGUOUS)
                 self.assertEqual(
                     dict(batch.provenance[0].parameters)["package"], package
                 )

@@ -16,7 +16,7 @@ from .model import (
 )
 
 
-ADAPTER_VERSION = "1"
+ADAPTER_VERSION = "2"
 _POINT_PROPERTIES = {
     "fermi_velocity": ("fermi_velocity", "meter_per_second"),
     "fermi_speed": ("fermi_speed", "meter_per_second"),
@@ -66,7 +66,10 @@ def adapt_pyprocar_fermi_surface(
     for attribute in ("points", "faces", "point_data", "cell_data"):
         if not hasattr(surface, attribute):
             raise TypeError("surface must expose PyVista-compatible mesh data")
-    vertices = numpy.asarray(surface.points, dtype=float)
+    vertices = numpy.asarray(surface.points)
+    if numpy.iscomplexobj(vertices) or not numpy.all(numpy.isfinite(vertices)):
+        raise ValueError("PyProcar surface vertices must be finite and real")
+    vertices = vertices.astype(float)
     faces = _faces(surface.faces)
     if "band_index" not in surface.cell_data:
         raise ValueError("PyProcar surface cell_data must contain band_index")
@@ -78,6 +81,13 @@ def adapt_pyprocar_fermi_surface(
     original_to_local = getattr(surface, "band_isosurface_index_map", None)
     if not isinstance(original_to_local, dict):
         raise ValueError("PyProcar surface must expose band_isosurface_index_map")
+    if any(
+        isinstance(value, (bool, numpy.bool_)) or not isinstance(value, (int, numpy.integer)) or value < 0
+        for pair in original_to_local.items() for value in pair
+    ) or len(set(original_to_local.values())) != len(original_to_local):
+        raise ValueError("PyProcar band mapping must contain unique non-negative integers")
+    if any(index >= band_structure.data.shape[2] for index in original_to_local):
+        raise ValueError("PyProcar band mapping exceeds source band count")
     local_to_original = {int(local): int(original) for original, local in original_to_local.items()}
     try:
         band_indices = numpy.asarray(
@@ -101,8 +111,10 @@ def adapt_pyprocar_fermi_surface(
             continue
         semantic_role, unit = _POINT_PROPERTIES[name]
         values = numpy.asarray(surface.point_data[name])
+        if numpy.iscomplexobj(values) or not numpy.all(numpy.isfinite(values)):
+            raise ValueError(f"PyProcar point_data {name} must be finite and real")
         dims = ("vertex",) if values.ndim == 1 else ("vertex", "xyz")
-        if values.shape[0] != len(vertices) or values.ndim not in {1, 2} or (
+        if values.ndim not in {1, 2} or values.shape[0] != len(vertices) or (
             values.ndim == 2 and values.shape[1] != 3
         ):
             raise ValueError(f"PyProcar point_data {name} has an invalid shape")
@@ -127,6 +139,9 @@ def adapt_pyprocar_fermi_surface(
     digest.update(band_structure.revision.encode("utf-8"))
     for values in (vertices, faces, band_indices):
         digest.update(numpy.ascontiguousarray(values).tobytes())
+    for prop in properties:
+        digest.update(repr((prop.semantic_role, prop.data.unit, prop.data.dims)).encode())
+        digest.update(numpy.ascontiguousarray(prop.data.values).tobytes())
     digest.update(repr((spin_index, fermi_energy)).encode("ascii"))
     revision = digest.hexdigest()
     provenance_id = uuid4()

@@ -143,12 +143,19 @@ def _display_range(values, valid, display_min, display_max, symmetric):
     return lower, upper
 
 
-def _scalar_colors(values, valid, lower, upper, symmetric):
+def _scalar_colors(values, valid, lower, upper, symmetric, colormap=None):
     import numpy
 
     normalized = numpy.clip((values - lower) / (upper - lower), 0.0, 1.0)
     colors = numpy.empty((values.size, 4), dtype=float)
-    if symmetric:
+    if colormap is not None:
+        from .core.color_mapping import color_stops
+
+        stops = color_stops(lower, upper, colormap)
+        positions, rgba = zip(*stops)
+        for channel in range(3):
+            colors[:, channel] = numpy.interp(normalized, positions, [value[channel] for value in rgba])
+    elif symmetric:
         blue = numpy.asarray((0.23, 0.30, 0.75))
         white = numpy.asarray((0.95, 0.95, 0.95))
         red = numpy.asarray((0.70, 0.02, 0.15))
@@ -174,6 +181,7 @@ def apply_atomic_scalar(
     display_max=None,
     symmetric=False,
     presentation_only=False,
+    colormap=None,
 ):
     import numpy
 
@@ -206,7 +214,7 @@ def apply_atomic_scalar(
     lower, upper = _display_range(
         stored, valid, display_min, display_max, symmetric
     )
-    colors = _scalar_colors(stored, valid, lower, upper, symmetric)
+    colors = _scalar_colors(stored, valid, lower, upper, symmetric, colormap)
     if not presentation_only:
         _write_attribute(obj.data, "cbq_atom_scalar", "FLOAT", "value", stored)
         _write_attribute(
@@ -223,6 +231,10 @@ def apply_atomic_scalar(
         "color",
         colors.reshape(-1),
     )
+    # Scientific materials preserve these colors across legacy GN attribute stages.
+    if obj.data.attributes.get("cbq_scientific_atom_color") is not None:
+        _write_attribute(obj.data, "cbq_scientific_atom_color", "FLOAT_COLOR",
+                         "color", colors.reshape(-1))
     if presentation_only:
         for attribute in tuple(obj.data.attributes):
             if attribute.name.startswith("cbq_atom_scalar"):
@@ -239,6 +251,8 @@ def apply_atomic_scalar(
         obj["cb_scalar_display_max"] = upper
         obj["cb_scalar_symmetric"] = symmetric
         obj["cb_scalar_missing_policy"] = "mask_nan"
+        if colormap is not None:
+            obj["cb_scalar_colormap"] = colormap
     obj.data.update()
 
 

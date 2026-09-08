@@ -4,7 +4,9 @@ import json
 import math
 import os
 import re
+import shutil
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -14,6 +16,7 @@ from ..core.analysis_report import (
 )
 from ..core.orbital_browser import orbital_rows
 from ..core.scene_preset import builtin_scene_presets, plan_scene_preset, scene_plan_document
+from ..core.storage.atomic_paths import short_sibling_temporary_path
 from .wavefunction import (
     WavefunctionJob, _JOBS, _grid_parameters, _selected_orbitals,
     operation_memory, wavefunction_inputs, worker_configuration,
@@ -23,8 +26,19 @@ from .wavefunction import (
 _EXPORTS = {}
 
 
-class OrbitalExportCancelled(RuntimeError):
-    pass
+from ..render_scene import RenderScope as _RenderScope, RenderCancelled as OrbitalExportCancelled
+
+
+@contextmanager
+def _image_staging(destination):
+    # TemporaryDirectory uses mode 0700; on Windows 3.13 its ACL survives publication.
+    # Ordinary mkdir inherits the user's chosen output folder permissions.
+    path = short_sibling_temporary_path(destination, suffix=".images")
+    path.mkdir()
+    try:
+        yield path
+    finally:
+        shutil.rmtree(path)
 
 
 def parse_orbital_numbers(value, maximum):
@@ -103,154 +117,6 @@ def preflight_orbital_export(context, session, settings, *, orbital_numbers, des
                            display=display, target=target, worker=worker)
 
 
-class _RenderScope:
-    """Own only temporary publication objects; restore every touched display value."""
-
-    def __init__(self, context, project, structure):
-        self.context, self.scene = context, context.scene
-        self.project, self.structure = project, structure
-        self.objects = ()
-        self.collection = None
-        self.camera_copy = None
-
-    def __enter__(self):
-        import bpy
-        from ..scene_preset_view import apply_scene_preset
-
-        scene = self.scene
-        self.camera = scene.camera
-        self.hidden = [(obj, obj.hide_render) for obj in scene.objects]
-        self.selection = tuple(self.context.selected_objects)
-        self.active = self.context.view_layer.objects.active
-        self.render_state = {key: getattr(scene.render, key) for key in (
-            "filepath", "use_file_extension", "use_compositing", "use_sequencer")}
-        self.image = {key: getattr(scene.render.image_settings, key) for key in (
-            "file_format", "color_mode", "color_depth")}
-        self.structure_plan = plan_scene_preset(builtin_scene_presets()["structure_publication"],
-                                               self.project, {"structure": self.structure.id}, {})
-        try:
-            self.collection = bpy.data.collections.new("Orbital Image Export")
-            scene.collection.children.link(self.collection)
-            # Capture the evaluated camera once, including parent/constraint transforms.
-            camera_data = self.camera.data.copy()
-            try:
-                self.camera_copy = bpy.data.objects.new("Orbital Export Camera", camera_data)
-            except BaseException:
-                bpy.data.cameras.remove(camera_data)
-                raise
-            self.collection.objects.link(self.camera_copy)
-            self.camera_copy.matrix_world = self.camera.evaluated_get(
-                self.context.evaluated_depsgraph_get()).matrix_world.copy()
-            scene.camera = self.camera_copy
-            for obj, _hidden in self.hidden:
-                if obj.type not in {"CAMERA", "LIGHT"}:
-                    obj.hide_render = True
-            scene.render.use_file_extension = True
-            # A scene compositor can write outside the output package via File Output nodes.
-            scene.render.use_compositing = False
-            scene.render.use_sequencer = False
-            scene.render.image_settings.file_format = "PNG"
-            scene.render.image_settings.color_mode = "RGBA"
-            scene.render.image_settings.color_depth = "8"
-            self.objects = apply_scene_preset(self.structure_plan, self.project,
-                                              collection=self.collection)
-            return self
-        except BaseException:
-            self.__exit__(None, None, None)
-            raise
-
-    def render(self, plan, destination, cache_root):
-        import bpy
-        from ..scene_preset_view import apply_scene_preset, _remove_objects
-
-        objects = apply_scene_preset(plan, self.project, collection=self.collection,
-                                     cache_root=cache_root)
-        try:
-            self.scene.render.filepath = str(destination)
-            result = bpy.ops.render.render(write_still=True, scene=self.scene.name)
-            if "FINISHED" not in result:
-                raise OrbitalExportCancelled("Rendering was cancelled")
-            with destination.open("rb") as stream:
-                if stream.read(8) != b"\x89PNG\r\n\x1a\n":
-                    raise ValueError("Blender did not produce a PNG image")
-        finally:
-            _remove_objects(objects)
-
-    def document(self):
-        import bpy
-        scene, camera = self.scene, self.camera_copy
-        return {
-            "blender_version": bpy.app.version_string,
-            "structure_view": scene_plan_document(self.structure_plan),
-            "camera": {"name": self.camera.name, "matrix_world": [list(row) for row in camera.matrix_world],
-                       **{key: getattr(camera.data, key) for key in (
-                           "type", "lens", "ortho_scale", "sensor_fit", "sensor_width", "sensor_height",
-                           "shift_x", "shift_y", "clip_start", "clip_end")}},
-            "lights": [{"name": obj.name, "hide_render": hidden,
-                        "matrix_world": [list(row) for row in obj.matrix_world],
-                        "type": obj.data.type, "energy": obj.data.energy,
-                        "color": list(obj.data.color)}
-                       for obj, hidden in self.hidden if obj.type == "LIGHT"],
-            "world": None if scene.world is None else {
-                "name": scene.world.name, "color": list(scene.world.color),
-                "use_nodes": scene.world.use_nodes,
-                "backgrounds": [{"color": list(node.inputs["Color"].default_value),
-                                 "strength": node.inputs["Strength"].default_value,
-                                 "color_linked": node.inputs["Color"].is_linked,
-                                 "strength_linked": node.inputs["Strength"].is_linked}
-                                for node in scene.world.node_tree.nodes if node.type == "BACKGROUND"]
-                               if scene.world.node_tree else []},
-            "render": {key: getattr(scene.render, key) for key in (
-                "engine", "resolution_x", "resolution_y", "resolution_percentage",
-                "pixel_aspect_x", "pixel_aspect_y", "film_transparent", "use_border",
-                "use_crop_to_border", "border_min_x", "border_max_x", "border_min_y", "border_max_y")},
-            "color_management": {key: getattr(scene.view_settings, key) for key in (
-                "view_transform", "look", "exposure", "gamma")},
-            "image_format": dict(file_format="PNG", color_mode="RGBA", color_depth="8"),
-            "compositor_enabled": False,
-            "display_coordinate_unit": "angstrom",
-        }
-
-    def __exit__(self, *_error):
-        import bpy
-        from ..scene_preset_view import _remove_objects
-
-        try:
-            _remove_objects(self.objects)
-            self.objects = ()
-            if self.camera_copy is not None:
-                data = self.camera_copy.data
-                bpy.data.objects.remove(self.camera_copy, do_unlink=True)
-                self.camera_copy = None
-                if data.users == 0:
-                    bpy.data.cameras.remove(data)
-            if self.collection is not None:
-                bpy.data.collections.remove(self.collection)
-                self.collection = None
-        finally:
-            self.scene.camera = self.camera
-            for key, value in self.render_state.items():
-                setattr(self.scene.render, key, value)
-            for key, value in self.image.items():
-                setattr(self.scene.render.image_settings, key, value)
-            for obj, hidden in self.hidden:
-                try:
-                    obj.hide_render = hidden
-                except ReferenceError:
-                    continue
-            for obj in tuple(self.context.selected_objects):
-                obj.select_set(False)
-            for obj in self.selection:
-                try:
-                    obj.select_set(True)
-                except ReferenceError:
-                    continue
-            try:
-                self.context.view_layer.objects.active = self.active
-            except ReferenceError:
-                pass
-
-
 def _release_export(state):
     if _EXPORTS.get(state.session_id) is state:
         _EXPORTS.pop(state.session_id)
@@ -314,8 +180,7 @@ def iter_orbital_images(context, session, settings, *, orbital_numbers, destinat
             # Arm finally before returning the public iterator, without creating resources.
             yield {"stage": "Ready", "progress": 0.}
             check()
-            with TemporaryDirectory(prefix=".cb-orbitals-", dir=preflight.target.parent) as temporary:
-                root = Path(temporary)
+            with _image_staging(preflight.target) as root:
                 (root / "images").mkdir()
                 records, dataset_ids, artifacts = [], [], []
                 with _RenderScope(context, preflight.project, preflight.inputs[0]) as renderer:
@@ -453,7 +318,7 @@ if bpy is not None:
                     try:
                         next(self._iterator)
                     except StopIteration as completed:
-                        self.report({"INFO"}, f"Exported orbital images to {completed.value}")
+                        self.report({"INFO"}, f"Exported images to {completed.value}")
                         return {"FINISHED"}
                     time.sleep(.02)
             except Exception as error:
@@ -488,7 +353,7 @@ if bpy is not None:
                 context.window_manager.progress_update(int(status["progress"] * 100))
                 return {"RUNNING_MODAL"}
             except StopIteration as completed:
-                self.report({"INFO"}, f"Exported orbital images to {completed.value}")
+                self.report({"INFO"}, f"Exported images to {completed.value}")
                 return {"FINISHED"}
             except Exception as error:
                 self.cancel(context)

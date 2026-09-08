@@ -24,6 +24,7 @@ from .model import (
     SpinChannel,
     VibrationalModeSet,
 )
+from .model.spectroscopy import ROTATORY_STRENGTH_CGS_UNIT
 from .readers import (
     CapabilitySupport,
     ReaderDescriptor,
@@ -32,7 +33,7 @@ from .readers import (
 )
 
 
-ADAPTER_VERSION = "4"
+ADAPTER_VERSION = "5"
 _MAPPED_ATTRIBUTES = {
     "atomcharges",
     "atomcoords",
@@ -312,6 +313,63 @@ def _adapt_configurations(values, state_count):
     return tuple(states)
 
 
+def _rotatory_strength_evidence(data, source):
+    """Verify Gaussian's length-gauge column against the original output.
+
+    cclib parser/data.py leaves the cross-parser etrotats unit unspecified.
+    gaussianparser.py (reviewed cclib commit 07260dd0) reads column 4 from
+    R(length), without converting its printed 10**-40 cgs values. A package
+    name alone, a velocity table or a mismatched column is not unit evidence.
+    """
+    import numpy
+
+    if (not hasattr(data, "etrotats")
+            or getattr(data, "metadata", {}).get("package") != "Gaussian"):
+        return None
+    try:
+        stream = source.open("r", encoding="utf-8", errors="replace")
+    except FileNotFoundError:
+        return None
+    expected = numpy.asarray(data.etrotats)
+    evidence = None
+    formulas = (
+        "<0|r|b> * <b|rxdel|0>  (Au), Rotatory Strengths (R)",
+        "1/2[<0|r|b>*<b|rxdel|0> + (<0|rxdel|b>*<b|r|0>)*]",
+    )
+    with stream:
+        for line in stream:
+            if not any(line.strip().startswith(formula) for formula in formulas):
+                continue
+            # cclib replaces etrotats at each length-gauge block; only its last
+            # table can establish the unit of the final normalized attribute.
+            evidence = None
+            unit_line = next(stream, "").strip()
+            columns = next(stream, "").split()
+            if ("(10**-40 erg-esu-cm/Gauss)" not in unit_line
+                    or len(columns) < 5 or columns[4] != "R(length)"):
+                continue
+            parsed = []
+            for row in stream:
+                fields = row.split()
+                if len(fields) != len(columns):
+                    break
+                try:
+                    if int(fields[0]) != len(parsed) + 1:
+                        break
+                    parsed.append(float(fields[4].replace("D", "E")))
+                except ValueError:
+                    break
+            if expected.ndim == 1 and numpy.array_equal(numpy.asarray(parsed), expected):
+                evidence = {
+                    "rotatory_strength_unit": ROTATORY_STRENGTH_CGS_UNIT,
+                    "rotatory_strength_gauge": "length",
+                    "rotatory_strength_source_field": "Gaussian R(length)",
+                    "rotatory_strength_unit_evidence": unit_line,
+                    "rotatory_strength_verification": "original_table_values_match_cclib_etrotats",
+                }
+    return evidence
+
+
 def _adapt_excited_states(
     data,
     *,
@@ -320,6 +378,7 @@ def _adapt_excited_states(
     provenance_id,
     revision,
     issues,
+    rotatory_evidence=None,
 ):
     import numpy
 
@@ -410,15 +469,18 @@ def _adapt_excited_states(
         optional[attribute] = ArrayData(
             numpy.array(values, dtype=float, copy=True), dims, unit
         )
+        if attribute == "etrotats" and rotatory_evidence is not None:
+            optional[attribute] = ArrayData(optional[attribute].values, dims,
+                                            rotatory_evidence["rotatory_strength_unit"])
 
     status = DatasetStatus.COMPLETE
-    if optional["etrotats"] is not None:
+    if optional["etrotats"] is not None and rotatory_evidence is None:
         status = DatasetStatus.AMBIGUOUS
         issues.append(
             ParserIssue(
                 IssueKind.AMBIGUOUS,
                 "excited_state.rotatory_strength.unit",
-                "cclib does not define one cross-parser rotatory-strength unit",
+                "rotatory-strength unit and gauge were not verified against the original output table",
             )
         )
 
@@ -650,6 +712,7 @@ def adapt_ccdata(data, source, *, cclib_version="unknown") -> ImportBatch:
         datasets.append(vibrations)
         parsed_capabilities.append("vibration")
 
+    rotatory_evidence = _rotatory_strength_evidence(data, source)
     excited_states = _adapt_excited_states(
         data,
         structure_id=structure_id,
@@ -657,6 +720,7 @@ def adapt_ccdata(data, source, *, cclib_version="unknown") -> ImportBatch:
         provenance_id=provenance_id,
         revision=revision,
         issues=issues,
+        rotatory_evidence=rotatory_evidence,
     )
     if excited_states is not None:
         datasets.append(excited_states)
@@ -684,6 +748,8 @@ def adapt_ccdata(data, source, *, cclib_version="unknown") -> ImportBatch:
         ("multiplicity", getattr(data, "mult", None)),
         ("unmapped_attributes", unmapped),
     )
+    if rotatory_evidence is not None:
+        parameters += tuple(rotatory_evidence.items())
     provenance = ProvenanceRecord(
         id=provenance_id,
         revision=revision,

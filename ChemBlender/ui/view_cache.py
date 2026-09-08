@@ -12,6 +12,7 @@ from ..core import (
     plan_scene_preset,
     volume_render_cache_key,
 )
+from ..core.scene_preset import legacy_scene_presets
 
 
 _CACHE_FORMAT_VERSION = 1
@@ -96,16 +97,25 @@ def _document(value, name):
     return result
 
 
-def _current_plan(obj, project, *, rebuild_property=False):
+def _current_plan(obj, project, *, rebuild_property=False, rebuild=False):
     preset_id = obj.get("cb_scene_preset_id")
-    if preset_id not in _VOLUME_PRESETS | _SAMPLE_PRESETS:
+    if preset_id not in builtin_scene_presets():
         return None
+    if obj.get("cb_scene_project_id") is not None:
+        try:
+            UUID(obj["cb_scene_project_id"])
+        except (TypeError, ValueError, AttributeError) as error:
+            raise ViewCacheError("scene project metadata is invalid") from error
     current_preset = preset = builtin_scene_presets()[preset_id]
+    saved_version = obj.get("cb_scene_preset_version")
+    if (rebuild or rebuild_property) and saved_version != preset.version:
+        legacy = legacy_scene_presets().get(preset_id)
+        if legacy is not None and saved_version in {legacy.version, "1"}:
+            preset = legacy
     if (
-        rebuild_property
+        (rebuild_property or rebuild)
         and preset_id == "property_on_surface"
-        and obj.get("cb_scene_preset_version") == "1"
-        and preset.version == "2"
+        and saved_version == "1"
     ):
         # Validate the complete saved v1 identity before upgrading its renderer.
         preset = replace(
@@ -125,7 +135,7 @@ def _current_plan(obj, project, *, rebuild_property=False):
             ),
         )
     if obj.get("cb_scene_preset_version") != preset.version:
-        raise ViewCacheError("scene preset metadata is stale")
+        raise ViewCacheError("scene preset metadata is stale; Rebuild View is required")
     if obj.get("cb_scene_view_kind") != preset.view_kind:
         raise ViewCacheError("scene view metadata is stale")
     bindings_document = _document(
@@ -176,6 +186,60 @@ def _current_plan(obj, project, *, rebuild_property=False):
     return plan
 
 
+def scene_plan_from_view(obj, project, *, require_geometry=True, rebuild=False):
+    """Validate saved scientific bindings/settings before rendering or rebuilding."""
+    if obj is None or obj.get("cb_scene_preset_id") not in builtin_scene_presets():
+        raise ViewCacheError("select a ChemBlender scene View")
+    if obj.get("cb_view_instance_id") and obj.get("cb_view_root") is not True:
+        raise ViewCacheError("select the View root")
+    plan = _current_plan(obj, project, rebuild=rebuild)
+    if require_geometry and (getattr(obj, "data", None) is None or getattr(obj, "type", None) not in {"MESH", "CURVE", "VOLUME"}):
+        raise ViewCacheError("View geometry is missing or incompatible")
+    return plan
+
+
+def rebuild_scene_view(obj, project, *, cache_root=None, plan=None):
+    """Build before replacement; failed preparation leaves old geometry intact."""
+    import bpy
+    from ..core import validate_scene_plan
+    from ..scene_preset_view import apply_scene_preset, scene_view_objects, _remove_objects
+
+    saved = scene_plan_from_view(obj, project, require_geometry=False, rebuild=True)
+    plan = saved if plan is None else validate_scene_plan(plan, project)
+    if getattr(obj, "library", None) is not None or not obj.users_collection:
+        raise ViewCacheError("View must be local and linked to a collection")
+    old_objects = scene_view_objects(obj)
+    old_name = obj.name
+    new_objects = ()
+    try:
+        new_objects = apply_scene_preset(plan, project, collection=obj.users_collection[0], cache_root=cache_root)
+        new = new_objects[0]
+        new.parent = obj.parent
+        new.matrix_world = obj.matrix_world.copy()
+        for collection in obj.users_collection[1:]:
+            collection.objects.link(new)
+        new.hide_render = obj.hide_render
+        new.hide_viewport = obj.hide_viewport
+        instance_id = obj.get("cb_view_instance_id") or new["cb_view_instance_id"]
+        for component in scene_view_objects(new):
+            component["cb_view_instance_id"] = instance_id
+        new["cb_view_stale"] = False
+        new.pop("cb_view_diagnostic", None)
+    except BaseException as error:
+        if new_objects:
+            _remove_objects(new_objects)
+        _mark_view_error(obj, error)
+        raise
+    # All scientific construction and pose changes have succeeded. User children
+    # survive at their world pose; cleanup removes only the old owned hierarchy.
+    _remove_objects(old_objects)
+    new.name = old_name
+    if new.name in bpy.context.view_layer.objects:
+        bpy.context.view_layer.objects.active = new
+        new.select_set(True)
+    return new
+
+
 def plan_property_view_rebuild(obj, project):
     """Validate saved property-view inputs without trusting its old VDB path."""
     if (
@@ -186,13 +250,13 @@ def plan_property_view_rebuild(obj, project):
     return _current_plan(obj, project, rebuild_property=True)
 
 
-def plan_grid_sample_view(obj, project, *, require_geometry=True):
+def plan_grid_sample_view(obj, project, *, require_geometry=True, rebuild=False):
     """Validate an owned sample root against its saved scientific plan."""
     if obj is None or obj.get("cb_scene_preset_id") not in _SAMPLE_PRESETS:
         raise ViewCacheError("select a ChemBlender slice, profile or colorbar")
     if obj.get("cb_grid_sample_root") is not True:
         raise ViewCacheError("select the sample view's root object")
-    plan = _current_plan(obj, project)
+    plan = _current_plan(obj, project, rebuild=rebuild)
     expected_type = "CURVE" if plan.view_kind == "grid_profile" else "MESH"
     if require_geometry and (
         getattr(obj, "type", None) != expected_type or getattr(obj, "data", None) is None
@@ -217,7 +281,29 @@ def _mark_view_error(obj, error):
     obj["cb_report_eligible"] = False
 
 
+def _unrelated_project_view(obj, project):
+    """Only explicit foreign ownership and disjoint valid bindings exclude a View."""
+    owner = obj.get("cb_scene_project_id")
+    if owner is None:
+        return False
+    try:
+        if UUID(owner) == project.id:
+            return False
+        bindings = _document(obj.get("cb_scene_bindings_json"), "scene bindings metadata")
+        if not bindings or any(not isinstance(value, dict)
+                               or set(value) != {"entity_id", "revision"}
+                               for value in bindings.values()):
+            return False
+        identities = tuple(UUID(value["entity_id"]) for value in bindings.values())
+    except (TypeError, ValueError, AttributeError, ViewCacheError):
+        return False
+    return not any(identity in project.structures or identity in project.datasets
+                   for identity in identities)
+
+
 def _clear_view_error(obj, plan, project):
+    # A fully validated legacy View acquires its owner without changing .cbq.
+    obj["cb_scene_project_id"] = str(project.id)
     if "cb_view_diagnostic" not in obj and not obj.get("cb_view_stale"):
         return
     obj["cb_view_stale"] = False
@@ -477,6 +563,11 @@ def repair_project_view_caches(
         errors = []
         planned = []
         for obj in tuple(objects):
+            if obj.get("cb_scene_preset_id") and _unrelated_project_view(obj, session.project):
+                _mark_view_error(obj, ViewCacheError(
+                    "View belongs to another project; open its source project before Rebuild View"
+                ))
+                continue
             if obj.get("cb_scene_preset_id") in _SAMPLE_PRESETS:
                 if obj.get("cb_grid_sample_root") is not True:
                     continue
@@ -492,6 +583,15 @@ def repair_project_view_caches(
                 repaired += 1
                 continue
             if getattr(obj, "type", None) != "VOLUME":
+                if (obj.get("cb_scene_preset_id") not in _VOLUME_PRESETS
+                        and obj.get("cb_scene_preset_id") and obj.get("cb_view_root") is not False):
+                    try:
+                        plan = scene_plan_from_view(obj, session.project)
+                        _clear_view_error(obj, plan, session.project)
+                        repaired += 1
+                    except (TypeError, ValueError, ViewCacheError) as error:
+                        _mark_view_error(obj, error)
+                        errors.append(f"{obj.name}: {error}")
                 continue
             try:
                 plan = _current_plan(obj, session.project)

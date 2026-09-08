@@ -115,6 +115,16 @@ class ExcitedStateModelTests(unittest.TestCase):
         )
         self.assertEqual(states.rotatory_strengths.unit, "unknown")
 
+    def test_verified_rotatory_unit_accepts_signed_complete_values(self):
+        from ChemBlender.core.model.spectroscopy import ROTATORY_STRENGTH_CGS_UNIT
+
+        reference = structure()
+        values = ArrayData(numpy.asarray([-0.4, 0.2]), ("state",), ROTATORY_STRENGTH_CGS_UNIT)
+        states = state_set(reference.id, rotatory_strengths=values)
+        self.assertIs(states.status, DatasetStatus.COMPLETE)
+        with self.assertRaises(ValueError):
+            state_set(reference.id, rotatory_strengths=ArrayData(values.values, ("state",), "dimensionless"))
+
     def test_invalid_state_shapes_units_and_multiplicities_fail(self):
         reference = structure()
         invalid = (

@@ -22,6 +22,7 @@ from ChemBlender.core import (
     plan_scene_preset,
     volume_render_cache_key,
 )
+from ChemBlender.core.scene_preset import legacy_scene_presets
 
 
 class FakeGrids:
@@ -163,7 +164,7 @@ class ViewCachePersistenceTests(unittest.TestCase):
         preset = builtin_scene_presets()["property_on_surface"]
         if legacy:
             preset = replace(
-                preset,
+                legacy_scene_presets()["property_on_surface"],
                 version="1",
                 adapter_contracts=(
                     "openvdb_volume_v1", "volume_to_mesh_v1", "surface_property_plan_v1"
@@ -231,16 +232,74 @@ class ViewCachePersistenceTests(unittest.TestCase):
         self.assertEqual(stale.data.grids.loads, 0)
         self.assertEqual(current.data.grids.loads, 1)
 
+    def test_foreign_project_view_keeps_diagnostic_without_current_retry_dirty(self):
+        from ChemBlender.ui import view_cache
+
+        foreign_grid = grid()
+        foreign_project = project_with(foreign_grid)
+        plan = plan_scene_preset(builtin_scene_presets()["grid_volume"],
+            foreign_project, {"grid": foreign_grid.id}, {})
+        foreign = FakeObject("Previous project View", "previous.vdb", plan_metadata(plan))
+        foreign["cb_scene_project_id"] = str(foreign_project.id)
+        foreign["cb_report_eligible"] = True
+        current = self.grid_object()
+        self.session.mark_dirty("view_cache")
+        with patch.object(view_cache, "_ensure_grid_volume_cache", side_effect=self.ensured_path) as ensure:
+            self.assertEqual(view_cache.repair_project_view_caches(
+                session=self.session, objects=(foreign, current), blend_path=self.blend_path), 1)
+        ensure.assert_called_once()
+        self.assertFalse(self.session.dirty)
+        self.assertTrue(foreign["cb_view_stale"])
+        self.assertFalse(foreign["cb_report_eligible"])
+        self.assertIn("source project", foreign["cb_view_diagnostic"])
+        self.assertEqual(foreign["cb_scene_project_id"], str(foreign_project.id))
+        self.assertEqual(foreign.data.filepath, "previous.vdb")
+        self.assertEqual(foreign.data.grids.loads, 0)
+        self.assertEqual(current["cb_scene_project_id"], str(self.project.id))
+
+    def test_missing_current_or_unknown_owner_binding_remains_retry_error(self):
+        from ChemBlender.ui import view_cache
+
+        missing = grid()
+        missing_project = project_with(missing)
+        plan = plan_scene_preset(builtin_scene_presets()["grid_volume"],
+            missing_project, {"grid": missing.id}, {})
+        for owner in (None, str(self.project.id), "invalid-owner"):
+            with self.subTest(owner=owner):
+                obj = FakeObject("Missing binding", "previous.vdb", plan_metadata(plan))
+                if owner is not None:
+                    obj["cb_scene_project_id"] = owner
+                with self.assertRaisesRegex(view_cache.ViewCacheError, "bindings.*stale|project.*invalid"):
+                    view_cache.repair_project_view_caches(
+                        session=self.session, objects=(obj,), blend_path=self.blend_path)
+                self.assertIn("view_cache", self.session.dirty_reasons)
+                self.assertEqual(obj.data.filepath, "previous.vdb")
+
+    def test_foreign_owner_with_any_current_binding_remains_strict(self):
+        from ChemBlender.ui import view_cache
+
+        obj, plan = self.property_object()
+        obj["cb_scene_project_id"] = str(uuid4())
+        bindings = json.loads(obj["cb_scene_bindings_json"])
+        bindings["property_grid"]["entity_id"] = str(uuid4())
+        obj["cb_scene_bindings_json"] = json.dumps(bindings)
+        with self.assertRaisesRegex(view_cache.ViewCacheError, "bindings.*stale"):
+            view_cache.repair_project_view_caches(
+                session=self.session, objects=(obj,), blend_path=self.blend_path)
+        self.assertIn("view_cache", self.session.dirty_reasons)
+        self.assertTrue(obj["cb_view_stale"])
+
     def test_explicit_rebuild_upgrades_saved_plan_and_rejects_changed_inputs(self):
         from ChemBlender.ui import view_cache
 
         legacy, old_plan = self.property_object(legacy=True)
         legacy["cb_cache_path"] = r"\\attacker.invalid\share\wrong.vdb"
         new_plan = view_cache.plan_property_view_rebuild(legacy, self.project)
-        self.assertEqual(new_plan.preset_version, "2")
+        self.assertEqual(new_plan.preset_version, "3")
         self.assertNotEqual(new_plan.render_identity, old_plan.render_identity)
         self.assertEqual(new_plan.bindings, old_plan.bindings)
-        self.assertEqual(new_plan.settings, old_plan.settings)
+        self.assertEqual({key: dict(new_plan.settings)[key] for key, _ in old_plan.settings},
+                         dict(old_plan.settings))
         for key, value in (
             ("cb_scene_preset_version", "99"),
             ("cb_scene_render_identity", "tampered"),

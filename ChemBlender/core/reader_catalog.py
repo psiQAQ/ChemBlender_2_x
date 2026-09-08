@@ -19,6 +19,7 @@ from .formats.smiles import SMILES_READER
 from .mol_v2000 import MOL_V2000_READER
 from .pymatgen_adapter import PYMATGEN_VASP_GRID_READER
 from .pymatgen_electronic import PYMATGEN_VASP_ELECTRONIC_READER
+from .phonopy_adapter import PHONOPY_FILE_READER
 from .qcschema_adapter import QCSCHEMA_READER
 from .readers import READER_API_VERSION, ReaderDescriptor, ReaderRegistry
 from .xyz import XYZ_READER
@@ -35,6 +36,7 @@ _OPTIONAL_READER_DEPENDENCIES = {
     "smiles": "rdkit",
     "pymatgen-vasp-grid": "pymatgen",
     "pymatgen-vasprun-electronic": "pymatgen",
+    "phonopy-file": "phonopy",
 }
 
 _READER_BASENAMES = {
@@ -61,6 +63,7 @@ _READER_FIXTURE_FAMILIES = {
     "pqr": ("PQR chain", "PQR no-chain"),
     "pymatgen-vasp-grid": ("CHGCAR", "ELFCAR", "LOCPOT", "PARCHG"),
     "pymatgen-vasprun-electronic": ("vasprun.xml band/DOS",),
+    "phonopy-file": ("Phonopy NaCl YAML and FORCE_SETS",),
     "qcschema": ("QCSchema AtomicResult", "QCSchema Molecule"),
     "sdf": ("SDF malformed-record recovery", "SDF multi-record"),
     "smiles": ("SMILES file", "SMILES text"),
@@ -126,6 +129,7 @@ def builtin_reader_descriptors():
                 SMILES_READER,
                 PYMATGEN_VASP_ELECTRONIC_READER,
                 PYMATGEN_VASP_GRID_READER,
+                PHONOPY_FILE_READER,
                 QCSCHEMA_READER,
                 XYZ_READER,
             ),

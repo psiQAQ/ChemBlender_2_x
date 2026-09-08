@@ -1,4 +1,6 @@
 import hashlib
+import json
+from dataclasses import replace
 from pathlib import Path
 from uuid import uuid4
 
@@ -19,7 +21,7 @@ from .pymatgen_adapter import adapt_pymatgen_structure
 from .readers import CapabilitySupport, ReaderDescriptor, SniffMatch, SniffResult
 
 
-ADAPTER_VERSION = "1"
+ADAPTER_VERSION = "2"
 
 
 class PymatgenElectronicDependencyError(RuntimeError):
@@ -45,7 +47,7 @@ def _pymatgen_electronic():
 
 
 def sniff_vasprun(source: Path, prefix: bytes) -> SniffResult:
-    canonical = Path(source).name.lower() == "vasprun.xml"
+    canonical = Path(source).name.lower() in {"vasprun.xml", "vasprun.xml.gz"}
     text = prefix.lower()
     looks_like_vasprun = b"<modeling" in text and (
         b"<generator" in text or b"name=\"program\"" in text or b"name='program'" in text
@@ -307,28 +309,134 @@ def adapt_pymatgen_electronic(
     )
 
 
-def parse_vasprun_electronic(source: Path):
+def _band_occupations(result, band_structure):
+    """Use the same OPT data or hybrid suffix that pymatgen selected."""
+    import numpy
+
+    raw = getattr(result, "kpoints_opt_props", None) or result
+    eigenvalues = raw.eigenvalues
+    points = numpy.asarray(raw.actual_kpoints, dtype=float)
+    selected = numpy.asarray([point.frac_coords for point in band_structure.kpoints])
+    offset = len(points) - len(selected)
+    if offset < 0 or not numpy.allclose(points[offset:], selected, rtol=0, atol=1e-10):
+        raise ValueError("band k-point order cannot be aligned with occupations")
+    occupations = {}
+    for spin, bands in band_structure.bands.items():
+        values = numpy.asarray(eigenvalues[spin])[offset:]
+        if values.shape != (len(selected), len(bands), 2) or not numpy.allclose(
+            values[:, :, 0].T, bands, rtol=0, atol=1e-10
+        ):
+            raise ValueError("band energies cannot be aligned with occupations")
+        occupations[spin] = values[:, :, 1].T
+    return occupations
+
+
+def parse_vasprun_electronic(source: Path, *, kpoints_filename=None, line_mode=None):
+    """Parse one calculation with its explicit, provenance-tracked KPOINTS.
+
+    None preserves pymatgen's Line-mode detection. It does not force a uniform
+    DOS calculation onto a symmetry path. Worker callers must stage companions.
+    """
+    if line_mode is not None and not isinstance(line_mode, bool):
+        raise TypeError("line_mode must be bool or None")
     *_, vasprun_type = _pymatgen_electronic()
-    source = Path(source)
+    source = Path(source).resolve()
     content = source.read_bytes()
-    result = vasprun_type(str(source), parse_projected_eigen=True)
-    band_structure = result.get_band_structure(line_mode=False)
-    occupations = {
-        spin: values[:, :, 1].T for spin, values in result.eigenvalues.items()
-    }
-    return adapt_pymatgen_electronic(
+    result = vasprun_type(str(source), parse_projected_eigen=True, parse_potcar_file=False)
+    use_opt = getattr(result, "kpoints_opt_props", None) is not None
+    if kpoints_filename is None:
+        name = "KPOINTS_OPT" if use_opt else "KPOINTS"
+        candidates = [source.parent / (name + suffix) for suffix in ("", ".gz")]
+        companion = next((path for path in candidates if path.is_file()), None)
+    else:
+        companion = Path(kpoints_filename).resolve(strict=True)
+    companion_bytes = companion.read_bytes() if companion is not None else None
+    if line_mode and companion is None:
+        raise ValueError("line_mode requires an explicit or adjacent KPOINTS file")
+    band_structure = result.get_band_structure(
+        kpoints_filename=str(companion or (source.parent / name)),
+        line_mode=bool(line_mode),
+    )
+    occupations = _band_occupations(result, band_structure)
+    batch = adapt_pymatgen_electronic(
         band_structure=band_structure,
         complete_dos=result.complete_dos,
         occupations=occupations,
-        source=str(source.resolve()),
+        source=str(source),
         source_bytes=content,
+    )
+    # A changed companion changes labels/branches even if vasprun is unchanged.
+    parameters = (
+        ("kpoints_source", "KPOINTS_OPT" if use_opt else "KPOINTS"),
+        ("line_mode_requested", line_mode),
+        ("line_mode_resolved", bool(getattr(band_structure, "branches", ()))),
+    )
+    raw_hash = hashlib.sha256(content).hexdigest()
+    companion_hash = hashlib.sha256(companion_bytes).hexdigest() if companion_bytes is not None else ""
+    revision = hashlib.sha256(json.dumps(
+        (batch.provenance[0].producer_version, raw_hash, companion_hash, parameters),
+        separators=(",", ":"), sort_keys=True,
+    ).encode("utf-8")).hexdigest()
+    extra = ()
+    if companion is not None:
+        extra = (ProvenanceRecord(
+            id=uuid4(), revision=companion_hash,
+            producer="pymatgen electronic input", producer_version=ADAPTER_VERSION,
+            source=str(companion), source_hash=companion_hash, parent_ids=(),
+            operation="read_kpoints", parameters=(),
+        ),)
+    provenance = replace(
+        batch.provenance[0], revision=revision,
+        parent_ids=tuple(item.id for item in extra),
+        parameters=batch.provenance[0].parameters + parameters,
+    )
+    if source.read_bytes() != content or (
+        companion is not None and companion.read_bytes() != companion_bytes
+    ):
+        raise ValueError("VASP input changed while parsing")
+    return replace(
+        batch,
+        structures=tuple(replace(item, revision=revision) for item in batch.structures),
+        datasets=tuple(replace(item, revision=revision) for item in batch.datasets),
+        provenance=extra + (provenance,),
+        report=replace(batch.report, created_entity_ids=(
+            *batch.report.created_entity_ids, *(item.id for item in extra),
+        )),
+    )
+
+
+def parse_vasprun_electronic_request(request):
+    """Bridge explicit staged KPOINTS and a declared path mode to the parser."""
+    parameters = dict(request.canonical_parameters)
+    if set(parameters) - {"kpoints_artifact", "kpoints_sha256", "line_mode"}:
+        raise ValueError("unsupported VASP electronic canonical parameter")
+    mode = parameters.get("line_mode", "auto")
+    if mode not in {"auto", "true", "false"}:
+        raise ValueError("line_mode must be auto, true or false")
+    artifact, digest = parameters.get("kpoints_artifact"), parameters.get("kpoints_sha256")
+    companion = None
+    if artifact is not None or digest is not None:
+        if artifact not in {"KPOINTS", "KPOINTS.gz"} or digest is None:
+            raise ValueError("KPOINTS requires its staged filename and SHA256")
+        companion = request.staging_root / artifact
+        if companion.is_symlink() or companion.resolve(strict=True).parent != request.staging_root:
+            raise ValueError("KPOINTS must stay in the staging directory")
+        if hashlib.sha256(companion.read_bytes()).hexdigest() != digest:
+            raise ValueError("KPOINTS SHA256 mismatch")
+    elif any((request.source_path.parent / name).exists() for name in ("KPOINTS", "KPOINTS.gz", "KPOINTS_OPT", "KPOINTS_OPT.gz")):
+        raise ValueError("adjacent KPOINTS must be explicitly declared and hashed")
+    if mode == "true" and companion is None:
+        raise ValueError("line-mode bands require an explicit KPOINTS file")
+    return parse_vasprun_electronic(
+        request.source_path, kpoints_filename=companion,
+        line_mode={"auto": None, "true": True, "false": False}[mode],
     )
 
 
 PYMATGEN_VASP_ELECTRONIC_READER = ReaderDescriptor(
     reader_id="pymatgen-vasprun-electronic",
     reader_version=ADAPTER_VERSION,
-    extensions=(".xml",),
+    extensions=(".xml", ".gz"),
     capabilities={
         "structure": CapabilitySupport.SUPPORTED,
         "band_structure": CapabilitySupport.SUPPORTED,
@@ -338,4 +446,5 @@ PYMATGEN_VASP_ELECTRONIC_READER = ReaderDescriptor(
     priority=130,
     sniff=sniff_vasprun,
     parse=parse_vasprun_electronic,
+    parse_request=parse_vasprun_electronic_request,
 )

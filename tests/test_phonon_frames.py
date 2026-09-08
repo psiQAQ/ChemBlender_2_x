@@ -1,4 +1,5 @@
 import math
+from dataclasses import replace
 import unittest
 from uuid import uuid4
 
@@ -66,6 +67,23 @@ class PhononFrameTests(unittest.TestCase):
         self.assertEqual(frames.structure_id, supercell.id)
         parameters = dict(batch.provenance[0].parameters)
         self.assertEqual(parameters["frequency_terahertz"], -1.0)
+
+    def test_display_amplitude_is_angstrom_with_bohr_reference(self):
+        modes = phonon_modes(uuid4())
+        angstrom = supercell_structure()
+        scale = 0.529177210903
+        bohr = replace(angstrom,
+            coordinates=ArrayData(angstrom.coordinates.values / scale, ("atom", "xyz"), "bohr"),
+            cell=ArrayData(angstrom.cell.values / scale, ("cell_vector", "xyz"), "bohr"))
+        params = dict(primitive_atom_indices=[0, 1, 0, 1],
+            translations=[[0, 0, 0], [0, 0, 0], [1, 0, 0], [1, 0, 0]],
+            qpoint_index=0, mode_index=0, phases=[0., math.pi / 2], amplitude=.4)
+        a = derive_phonon_frames(modes, angstrom, **params)
+        b = derive_phonon_frames(modes, bohr, **params)
+        numpy.testing.assert_allclose(a.datasets[0].data.values, b.datasets[0].data.values * scale)
+        self.assertEqual(b.datasets[0].data.unit, "bohr")
+        self.assertEqual(dict(b.provenance[0].parameters)["amplitude_unit"], "angstrom")
+        self.assertNotEqual(a.datasets[0].revision, b.datasets[0].revision)
 
     def test_rejects_invalid_mapping_and_zero_amplitude(self):
         modes = phonon_modes(uuid4())

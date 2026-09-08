@@ -50,6 +50,7 @@ def mesh_snapshot(obj):
     assert geometry.mesh is not None, "surface did not evaluate to a mesh"
     mesh = geometry.mesh
     assert mesh.vertices and mesh.polygons, "surface mesh must be nonempty"
+    assert all(polygon.use_smooth for polygon in mesh.polygons)
     vertices = np.asarray([tuple(vertex.co) for vertex in mesh.vertices], dtype=float)
     rounded = [tuple(np.round(vertex, 6)) for vertex in vertices]
     # Canonical coordinates and face membership ignore Blender's element ordering.

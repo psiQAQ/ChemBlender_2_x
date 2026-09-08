@@ -2,20 +2,26 @@
 
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .cache_identity import derivation_cache_key, render_cache_key
 from .model import (
     BandStructure,
+    AtomicProperty,
+    AtomFrameProperty,
     DatasetStatus,
     DensityOfStates,
     ExcitedStateSet,
     Grid3D,
+    FermiSurfaceMesh,
+    FrameSet,
+    PhononModeSet,
     QCProject,
     Spectrum,
     SpectrumKind,
     SpectrumProfile,
     Structure,
+    TopologyGraph,
     VibrationalModeSet,
 )
 from .recipe import RecipeBinding, RecipeDefinition
@@ -33,6 +39,12 @@ _ENTITY_TYPES = {
     "Spectrum": Spectrum,
     "BandStructure": BandStructure,
     "DensityOfStates": DensityOfStates,
+    "AtomicProperty": AtomicProperty,
+    "FermiSurfaceMesh": FermiSurfaceMesh,
+    "PhononModeSet": PhononModeSet,
+    "TopologyGraph": TopologyGraph,
+    "FrameSet": FrameSet,
+    "AtomFrameProperty": AtomFrameProperty,
 }
 
 
@@ -181,7 +193,7 @@ def _spec(name, kind, *types, semantic_roles=()):
     return SceneBindingSpec(name, kind, types, semantic_roles)
 
 
-def builtin_scene_presets():
+def legacy_scene_presets():
     presets = (
         ScenePresetDefinition(
             "structure_publication",
@@ -319,6 +331,71 @@ def builtin_scene_presets():
     return {value.preset_id: value for value in presets}
 
 
+def builtin_scene_presets():
+    """Current definitions; legacy definitions remain available for explicit rebuild."""
+    old = legacy_scene_presets()
+    common = (("template", "research"), ("shaded", False), ("material_opacity", 1.))
+    result = {}
+    for name, preset in old.items():
+        extra = common
+        if name == "grid_volume":
+            extra += (("density_scale", 10.), ("signed", False),
+                      ("positive_color", (.04, .45, .80, 1.)),
+                      ("negative_color", (1., .30, .04, 1.)))
+        if name == "vibration_spectrum_linked":
+            extra += (("phase", 0.), ("frame_start", 1), ("frames_per_cycle", 48))
+        result[name] = replace(preset, version=str(int(preset.version) + 1),
+                               default_settings=preset.default_settings + extra)
+    scalar = (("color_min", -1.), ("color_max", 1.), ("symmetric", True),
+              ("colormap", "coolwarm"))
+    plot = (("line_radius", .01), ("axes", True))
+    energy = (("energy_reference", "fermi_shifted"),)
+    trajectory = (("frame_index", 0), ("frame_start", 1), ("frame_step", 1))
+    definitions = (
+        ("nci_surface", "NCI: RDG surface colored by sign(lambda2) rho",
+         (_spec("surface_grid", "dataset", "Grid3D", semantic_roles=("reduced_density_gradient",)),
+          _spec("property_grid", "dataset", "Grid3D", semantic_roles=("sign_lambda2_rho",))),
+         (("surface_dataset_index", 0), ("property_dataset_index", 0),
+          ("surface_isovalue", .5), ("color_min", -.05), ("color_max", .05),
+          ("symmetric", True), ("colormap", "nci"), ("pairing_confirmed", False))),
+        ("trajectory", "Trajectory frame", (_spec("structure", "structure", "Structure"),
+         _spec("frames", "dataset", "FrameSet")), trajectory),
+        ("trajectory_force", "Trajectory with forces", (_spec("structure", "structure", "Structure"),
+         _spec("frames", "dataset", "FrameSet"),
+         _spec("force", "dataset", "AtomFrameProperty", semantic_roles=("atomic_force",))),
+         trajectory + (("vector_scale", 1.),)),
+        ("atomic_scalar", "Atomic scalar", (_spec("structure", "structure", "Structure"),
+         _spec("property", "dataset", "AtomicProperty")), scalar),
+        ("atomic_vector", "Atomic vectors", (_spec("structure", "structure", "Structure"),
+         _spec("property", "dataset", "AtomicProperty")), (("vector_scale", 1.), ("as_force", False))),
+        ("vibration_mode", "Vibrational mode", (_spec("structure", "structure", "Structure"),
+         _spec("modes", "dataset", "VibrationalModeSet")),
+         (("selection_index", 0), ("arrow_scale", 1.), ("amplitude_scale", .4), ("phase", 0.))),
+        ("spectrum_plot", "Spectrum", (_spec("spectrum", "dataset", "Spectrum"),), plot),
+        ("band_structure", "Band structure", (_spec("band", "dataset", "BandStructure"),), plot + energy),
+        ("density_of_states", "DOS / PDOS", (_spec("dos", "dataset", "DensityOfStates"),),
+         plot + energy + (("mirror_beta", True), ("atom_indices", None),
+                          ("orbital_labels", None), ("spin_indices", None))),
+        ("fermi_surface", "Fermi surface", (_spec("surface", "dataset", "FermiSurfaceMesh"),),
+         (("color_property", ""), ("color_min", 0.), ("color_max", 1.),
+          ("colormap", "viridis"), ("vector_property", ""), ("vector_scale", 1.),
+          ("vector_stride", 1))),
+        ("topology_graph", "QTAIM critical points and paths", (_spec("graph", "dataset", "TopologyGraph"),),
+         (("point_radius", .10), ("path_radius", .025), ("color_property", "kind"),
+          ("color_min", 0.), ("color_max", 1.), ("colormap", "viridis"))),
+        ("phonon_mode", "Phonon mode", (_spec("structure", "structure", "Structure"),
+         _spec("modes", "dataset", "PhononModeSet")),
+         (("qpoint_index", 0), ("selection_index", 0), ("amplitude_scale", .4),
+          ("phase", 0.), ("repetitions", (1, 1, 1)))),
+    )
+    for name, title, bindings, settings in definitions:
+        if name in {"vibration_mode", "phonon_mode"}:
+            settings += (("frame_start", 1), ("frames_per_cycle", 48))
+        result[name] = ScenePresetDefinition(name, "1", title, name, bindings,
+                        ("scientific_view_v1",), settings + common)
+    return result
+
+
 def _entity(project, spec, identity, *, require_complete=True):
     registry = project.structures if spec.entity_kind == "structure" else project.datasets
     entity = registry.get(identity)
@@ -372,7 +449,8 @@ def _color_range(result):
         raise ScenePresetError("symmetric must be a boolean")
     if result["symmetric"] and result["color_min"] != -result["color_max"]:
         raise ScenePresetError("symmetric color range must be centered on zero")
-    if result["colormap"] != "coolwarm":
+    from .color_mapping import COLORMAPS
+    if result["colormap"] not in COLORMAPS:
         raise ScenePresetError("unsupported property surface colormap")
 
 
@@ -383,7 +461,20 @@ def _settings(preset, supplied, entities):
     if set(supplied) - set(result):
         raise ScenePresetError("scene settings contain unknown names")
     result.update(supplied)
+    if "template" in result:
+        if result["template"] not in {"research", "teaching"}:
+            raise ScenePresetError("unsupported presentation template")
+        if type(result["shaded"]) is not bool:
+            raise ScenePresetError("shaded must be boolean")
+        result["material_opacity"] = _number(result["material_opacity"],
+                                             "material_opacity", minimum=0., maximum=1.)
     kind = preset.view_kind
+    if kind in {"band_structure", "band_dos_linked"} and not entities["band"].branches:
+        raise ScenePresetError("band-line plots require a high-symmetry path; uniform k-mesh data is for Fermi surfaces")
+    if "frames_per_cycle" in result:
+        if type(result["frame_start"]) is not int or type(result["frames_per_cycle"]) is not int or result["frames_per_cycle"] < 2:
+            raise ScenePresetError("animation requires integer start and at least two frames per cycle")
+        result["phase"] = _number(result["phase"], "phase")
     if kind == "structure":
         if result["display_coordinate_unit"] != "angstrom":
             raise ScenePresetError("structure display unit must be angstrom")
@@ -402,6 +493,12 @@ def _settings(preset, supplied, entities):
             result["dataset_index"], dataset_count, "dataset_index"
         )
         if kind == "grid_volume":
+            if "density_scale" in result:
+                result["density_scale"] = _number(result["density_scale"], "density_scale", positive=True)
+                if type(result["signed"]) is not bool:
+                    raise ScenePresetError("signed must be boolean")
+                for name in ("positive_color", "negative_color"):
+                    result[name] = _color(result[name], name)
             return tuple(
                 (name, _json_value(result[name], name))
                 for name in sorted(result)
@@ -411,7 +508,7 @@ def _settings(preset, supplied, entities):
         result["opacity"] = _number(result["opacity"], "opacity", minimum=0.0, maximum=1.0)
         result["positive_color"] = _color(result["positive_color"], "positive_color")
         result["negative_color"] = _color(result["negative_color"], "negative_color")
-    elif kind == "property_on_surface":
+    elif kind in {"property_on_surface", "nci_surface"}:
         surface, prop = entities["surface_grid"], entities["property_grid"]
         surface_count = surface.data.shape[0] if surface.data.dims[0] == "dataset" else 1
         property_count = prop.data.shape[0] if prop.data.dims[0] == "dataset" else 1
@@ -427,6 +524,13 @@ def _settings(preset, supplied, entities):
         _color_range(result)
         if not grids_share_affine(surface, prop):
             raise ScenePresetError("surface and property grids must share one affine grid")
+        if kind == "nci_surface":
+            from .grid_semantics import validate_nci_pair
+
+            validate_nci_pair(surface, prop,
+                surface_dataset_index=result["surface_dataset_index"],
+                property_dataset_index=result["property_dataset_index"],
+                pairing_confirmed=result["pairing_confirmed"])
     elif kind in {"grid_slice", "grid_profile", "grid_colorbar"}:
         from .grid_lod import _dataset_index
         from .grid_sampling import validate_plane, validate_profile
@@ -488,6 +592,80 @@ def _settings(preset, supplied, entities):
             raise ScenePresetError("unsupported energy reference")
         if not isinstance(result["mirror_beta"], bool):
             raise ScenePresetError("mirror_beta must be a boolean")
+    elif kind in {"atomic_scalar", "atomic_vector"}:
+        dataset = entities["property"]
+        if dataset.structure_id != entities["structure"].id:
+            raise ScenePresetError("atomic property and structure must be linked")
+        expected = ("atom",) if kind == "atomic_scalar" else ("atom", "xyz")
+        if dataset.data.dims != expected:
+            raise ScenePresetError(f"{kind} requires {expected} data")
+        if kind == "atomic_scalar":
+            _color_range(result)
+        else:
+            result["vector_scale"] = _number(result["vector_scale"], "vector_scale", positive=True)
+            if type(result["as_force"]) is not bool:
+                raise ScenePresetError("as_force must be boolean")
+            if result["as_force"] and dataset.semantic_role != "gradient":
+                raise ScenePresetError("only an energy gradient can be converted to force")
+    elif kind in {"trajectory", "trajectory_force"}:
+        frames = entities["frames"]
+        if frames.structure_id != entities["structure"].id:
+            raise ScenePresetError("trajectory and structure must be linked")
+        if frames.data.unit not in {"angstrom", "bohr"}:
+            raise ScenePresetError("trajectory coordinates require angstrom or bohr")
+        result["frame_index"] = _index(result["frame_index"], frames.data.shape[0], "frame_index")
+        if type(result["frame_start"]) is not int or type(result["frame_step"]) is not int or result["frame_step"] < 1:
+            raise ScenePresetError("trajectory timeline requires integer start and positive frame step")
+        if kind == "trajectory_force":
+            force = entities["force"]
+            if (force.frame_set_id != frames.id or force.data.dims != ("frame", "atom", "xyz")
+                    or force.data.shape != frames.data.shape
+                    or force.status not in {DatasetStatus.COMPLETE, DatasetStatus.PARTIAL}):
+                raise ScenePresetError("force dataset must match the complete trajectory axes")
+            result["vector_scale"] = _number(result["vector_scale"], "vector_scale", positive=True)
+    elif kind in {"vibration_mode", "phonon_mode"}:
+        modes = entities["modes"]
+        if modes.structure_id != entities["structure"].id:
+            raise ScenePresetError("modes and structure must be linked")
+        if kind == "phonon_mode":
+            result["qpoint_index"] = _index(result["qpoint_index"], modes.data.shape[0], "qpoint_index")
+            repeats = tuple(result["repetitions"])
+            if len(repeats) != 3 or any(type(v) is not int or not 1 <= v <= 12 for v in repeats):
+                raise ScenePresetError("repetitions require three integers between 1 and 12")
+            result["repetitions"] = repeats
+        else:
+            result["arrow_scale"] = _number(result["arrow_scale"], "arrow_scale", positive=True)
+        result["selection_index"] = _index(result["selection_index"], modes.data.shape[-1], "selection_index")
+        for name in ("amplitude_scale", "phase"):
+            result[name] = _number(result[name], name)
+    elif kind in {"spectrum_plot", "band_structure", "density_of_states"}:
+        result["line_radius"] = _number(result["line_radius"], "line_radius", positive=True)
+        if type(result["axes"]) is not bool:
+            raise ScenePresetError("axes must be boolean")
+        if kind != "spectrum_plot" and result["energy_reference"] not in {"absolute", "fermi_shifted"}:
+            raise ScenePresetError("unsupported energy reference")
+        if kind == "density_of_states":
+            if type(result["mirror_beta"]) is not bool:
+                raise ScenePresetError("mirror_beta must be boolean")
+            for name in ("atom_indices", "orbital_labels", "spin_indices"):
+                if result[name] is not None:
+                    if not isinstance(result[name], (tuple, list)) or not result[name]:
+                        raise ScenePresetError(f"{name} must be a nonempty selection or null")
+                    if name != "orbital_labels" and any(type(v) is not int or v < 0 for v in result[name]):
+                        raise ScenePresetError(f"{name} must contain nonnegative integer indices")
+                    result[name] = tuple(result[name])
+    elif kind in {"fermi_surface", "topology_graph"}:
+        from .color_mapping import color_stops
+        color_stops(result["color_min"], result["color_max"], result["colormap"])
+        if kind == "fermi_surface":
+            result["vector_scale"] = _number(result["vector_scale"], "vector_scale", positive=True)
+            if type(result["vector_stride"]) is not int or result["vector_stride"] < 1:
+                raise ScenePresetError("vector_stride must be a positive integer")
+        else:
+            if result["color_property"] not in {"kind", "field_value", "laplacian"}:
+                raise ScenePresetError("unsupported critical-point color property")
+            for name in ("point_radius", "path_radius"):
+                result[name] = _number(result[name], name, positive=True)
     return tuple((name, _json_value(result[name], name)) for name in sorted(result))
 
 
@@ -509,8 +687,8 @@ def plan_scene_preset(preset, project, bindings, settings):
             project,
             spec,
             identity,
-            require_complete=preset.view_kind
-            not in {"grid_volume", "signed_isosurface"},
+            require_complete=(preset.view_kind not in {"grid_volume", "signed_isosurface"}
+                              and not (preset.view_kind == "trajectory_force" and spec.name == "force")),
         )
         entities[spec.name] = entity
         normalized_bindings.append(

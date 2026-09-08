@@ -75,12 +75,20 @@ class ScenePresetTests(unittest.TestCase):
                 "signed_isosurface",
                 "structure_publication",
                 "vibration_spectrum_linked",
+                "atomic_scalar", "atomic_vector", "vibration_mode", "phonon_mode",
+                "spectrum_plot", "band_structure", "density_of_states",
+                "fermi_surface", "topology_graph",
+                "trajectory", "trajectory_force", "nci_surface",
             },
         )
         for preset in presets.values():
             document = scene_preset_document(preset)
             json.dumps(document, allow_nan=False)
-            self.assertEqual(document["version"], "2" if preset.preset_id == "property_on_surface" else "1")
+            expected = ("1" if preset.preset_id in {"atomic_scalar", "atomic_vector", "vibration_mode",
+                        "phonon_mode", "spectrum_plot", "band_structure", "density_of_states",
+                        "fermi_surface", "topology_graph", "trajectory", "trajectory_force", "nci_surface"} else
+                        "3" if preset.preset_id == "property_on_surface" else "2")
+            self.assertEqual(document["version"], expected)
             self.assertNotIn("callable", repr(document).lower())
             self.assertEqual(scene_preset_from_document(document), preset)
             document["unexpected"] = True

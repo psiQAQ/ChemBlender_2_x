@@ -66,6 +66,27 @@ class PyProcarAdapterTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "band_index"):
             adapt_pyprocar_fermi_surface(surface, band, spin_index=0, fermi_energy=5.0)
 
+    def test_rejects_ambiguous_band_mapping_and_complex_data(self):
+        band = band_structure(periodic_structure().id)
+        for mutation in (
+            lambda surface: setattr(surface, "band_isosurface_index_map", {1: 0, 3: 0}),
+            lambda surface: setattr(surface, "band_isosurface_index_map", {1.5: 0, 3: 1}),
+            lambda surface: setattr(surface, "points", surface.points.astype(complex)),
+            lambda surface: surface.point_data.update(fermi_velocity=surface.point_data["fermi_velocity"].astype(complex)),
+        ):
+            surface = FakeSurface()
+            mutation(surface)
+            with self.assertRaises(ValueError):
+                adapt_pyprocar_fermi_surface(surface, band, spin_index=0, fermi_energy=5.0)
+
+    def test_property_changes_invalidate_mesh_revision(self):
+        band = band_structure(periodic_structure().id)
+        first, second = FakeSurface(), FakeSurface()
+        second.point_data["fermi_velocity"] *= 2
+        first_batch = adapt_pyprocar_fermi_surface(first, band, spin_index=0, fermi_energy=5.)
+        second_batch = adapt_pyprocar_fermi_surface(second, band, spin_index=0, fermi_energy=5.)
+        self.assertNotEqual(first_batch.datasets[0].revision, second_batch.datasets[0].revision)
+
     def test_core_import_does_not_eagerly_load_pyprocar_or_pyvista(self):
         subprocess.run(
             [

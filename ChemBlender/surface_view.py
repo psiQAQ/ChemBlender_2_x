@@ -172,66 +172,26 @@ def ensure_property_surface_cache(
     return path
 
 
-def _material(name, color, opacity):
-    material = bpy.data.materials.new(name)
-    material.diffuse_color = (*color[:3], opacity)
-    material.use_nodes = True
-    principled = next(
-        node for node in material.node_tree.nodes
-        if node.type == "BSDF_PRINCIPLED"
-    )
-    principled.inputs["Base Color"].default_value = color
-    principled.inputs["Alpha"].default_value = opacity
-    if opacity < 1.0 and hasattr(material, "surface_render_method"):
-        material.surface_render_method = "DITHERED"
-    return material
+def _material(name, color, opacity, *, shaded=True):
+    from .scientific_materials import flat_material, matte_material
+
+    return (matte_material if shaded else flat_material)(name, color, opacity=opacity)
 
 
 def property_color_stops(color_min, color_max):
-    """Diverging color stops whose neutral value is scientific zero."""
-    from math import isfinite
+    """Compatibility entrypoint for the established coolwarm palette."""
+    from .core.color_mapping import color_stops
 
-    if not all(map(isfinite, (color_min, color_max))) or color_min >= color_max:
-        raise ValueError("color range must be finite and increasing")
-    neutral = (0.95, 0.95, 0.95, 1.0)
-    blue, red = (0.23, 0.30, 0.75, 1.0), (0.70, 0.02, 0.15, 1.0)
-
-    def color(value):
-        edge = blue if value < 0 else red
-        extent = -color_min if value < 0 else color_max
-        weight = abs(value) / extent if value else 0.
-        return tuple(a + weight * (b - a) for a, b in zip(neutral, edge))
-
-    stops = [(0., color(color_min)), (1., color(color_max))]
-    if color_min < 0 < color_max:
-        stops.insert(1, (-color_min / (color_max - color_min), neutral))
-    return tuple(stops)
+    return color_stops(color_min, color_max)
 
 
-def _property_material(name, color_min, color_max, *, attribute_name=_PROPERTY_ATTRIBUTE):
-    stops = property_color_stops(color_min, color_max)
-    material = _material(name, (0.8, 0.8, 0.8, 1.0), 1.0)
-    nodes = material.node_tree.nodes
-    links = material.node_tree.links
-    principled = next(node for node in nodes if node.type == "BSDF_PRINCIPLED")
-    attribute = nodes.new("ShaderNodeAttribute")
-    attribute.attribute_name = attribute_name
-    mapping = nodes.new("ShaderNodeMapRange")
-    mapping.inputs["From Min"].default_value = float(color_min)
-    mapping.inputs["From Max"].default_value = float(color_max)
-    ramp = nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].color = stops[0][1]
-    ramp.color_ramp.elements[1].color = stops[-1][1]
-    if len(stops) == 3:
-        ramp.color_ramp.elements.new(stops[1][0]).color = stops[1][1]
-    links.new(attribute.outputs["Fac"], mapping.inputs["Value"])
-    links.new(mapping.outputs["Result"], ramp.inputs["Fac"])
-    links.new(ramp.outputs["Color"], principled.inputs["Base Color"])
+def _property_material(name, color_min, color_max, *, attribute_name=_PROPERTY_ATTRIBUTE,
+                       colormap="coolwarm", shaded=True, opacity=1.):
+    from .scientific_materials import scalar_material
+
+    material = scalar_material(name, color_min, color_max, attribute_name=attribute_name,
+                               colormap=colormap, shaded=shaded, opacity=opacity)
     material["cbq_contract"] = "property_colormap_v2"
-    material["cb_property_attribute"] = attribute_name
-    material["cb_color_min"] = float(color_min)
-    material["cb_color_max"] = float(color_max)
-    material["cb_colormap"] = "coolwarm"
     return material
 
 
@@ -274,6 +234,13 @@ def _surface_group(name, threshold, material, *, property_grid=False):
             links.new(geometry, store.inputs["Geometry"])
             links.new(sample.outputs["Value"], store.inputs["Value"])
             geometry = store.outputs["Geometry"]
+        # Interpolated normals improve Cycles lighting without moving scientific
+        # isosurface vertices or altering the sampled scalar values.
+        shade_smooth = nodes.new("GeometryNodeSetShadeSmooth")
+        shade_smooth.domain = "FACE"
+        shade_smooth.inputs["Shade Smooth"].default_value = True
+        links.new(geometry, shade_smooth.inputs["Geometry"])
+        geometry = shade_smooth.outputs["Geometry"]
         set_material = nodes.new("GeometryNodeSetMaterial")
         set_material.inputs["Material"].default_value = material
         links.new(geometry, set_material.inputs["Geometry"])
@@ -296,6 +263,9 @@ def _volume_surface(
     collection,
     property_grid,
     property_range=None,
+    *,
+    colormap="coolwarm",
+    shaded=True,
 ):
     volume = bpy.data.volumes.new(name)
     obj = material = group = None
@@ -307,9 +277,10 @@ def _volume_surface(
         obj = bpy.data.objects.new(name, volume)
         collection.objects.link(obj)
         material = (
-            _property_material(f"{name} Material", *property_range)
+            _property_material(f"{name} Material", *property_range, colormap=colormap,
+                               shaded=shaded, opacity=opacity)
             if property_range is not None
-            else _material(f"{name} Material", color, opacity)
+            else _material(f"{name} Material", color, opacity, shaded=shaded)
         )
         group = _surface_group(
             f"{name} Geometry", threshold, material, property_grid=property_grid
@@ -381,6 +352,7 @@ def create_signed_isosurfaces(
     dataset_index,
     render_identity,
     collection=None,
+    shaded=True,
 ):
     if not isinstance(grid, Grid3D):
         raise TypeError("grid must be a Grid3D")
@@ -409,6 +381,7 @@ def create_signed_isosurfaces(
                 opacity,
                 target,
                 False,
+                shaded=shaded,
             )
             created.append(obj)
             _metadata(obj, grid, dataset_index, path, key, render_identity)
@@ -438,6 +411,8 @@ def create_property_surface(
     property_dataset_index,
     render_identity,
     collection=None,
+    shaded=True,
+    opacity=1.,
 ):
     if not isinstance(surface_grid, Grid3D) or not isinstance(property_grid, Grid3D):
         raise TypeError("surface_grid and property_grid must be Grid3D")
@@ -460,10 +435,12 @@ def create_property_surface(
         "ChemBlender Property Surface",
         isovalue,
         (0.8, 0.8, 0.8, 1.0),
-        1.0,
+        opacity,
         target,
         True,
         (color_min, color_max),
+        colormap=colormap,
+        shaded=shaded,
     )
     _metadata(
         obj, surface_grid, surface_dataset_index, path, key, render_identity

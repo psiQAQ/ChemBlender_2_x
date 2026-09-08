@@ -53,7 +53,7 @@ class GridSampleUITests(unittest.TestCase):
         plan = grid_ui.plan_grid_view(project, source.id, mode="property_surface",
             dataset_index=1, property_grid_id=prop.id, property_dataset_index=1,
             color_min=-.3, color_max=.7, symmetric=False)
-        self.assertEqual(plan.preset_version, "2")
+        self.assertEqual(plan.preset_version, "3")
         values = dict(plan.settings)
         self.assertEqual((values["surface_dataset_index"], values["property_dataset_index"]), (1, 1))
         self.assertEqual((values["color_min"], values["color_max"], values["symmetric"]), (-.3, .7, False))

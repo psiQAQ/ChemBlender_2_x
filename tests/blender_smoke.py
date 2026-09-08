@@ -691,6 +691,8 @@ def assert_enabled(module_key, before_install_modules):
     assert hasattr(bpy.types, "CHEMBLENDER_OT_create_grid_view")
     assert hasattr(bpy.types.Scene, "chemblender_topology")
     assert hasattr(bpy.types.Scene, "chemblender_grid")
+    for name in ("scientific_import", "scientific_view", "scientific_export", "topology_import"):
+        assert hasattr(bpy.types.Scene, "chemblender_" + name), name
     assert_file_handlers(module_key)
     properties = importlib.import_module(f"{module_key}.ui.properties")
     property_identity = properties._scene_property_identity()
@@ -715,6 +717,8 @@ def assert_disabled(module_key, owned_classes):
     assert not hasattr(bpy.types.Scene, "my_tool")
     assert not hasattr(bpy.types.Scene, "chemblender_quick_import")
     assert not hasattr(bpy.types.Scene, "chemblender_topology")
+    for name in ("scientific_import", "scientific_view", "scientific_export", "topology_import"):
+        assert not hasattr(bpy.types.Scene, "chemblender_" + name), name
     assert not hasattr(bpy.types.Scene, "chemblender_grid")
     assert READER_API_HANDLE_KEY not in bpy.app.driver_namespace
     assert not any(
@@ -3758,9 +3762,11 @@ def assert_periodic_electronic_plots(module_key):
     try:
         assert len(band_obj.data.splines) == 4
         assert band_obj["cb_energy_reference"] == "fermi_shifted"
-        assert band_obj.data.splines[0].points[0].co.y == -1.0
+        low, high = band_obj["cb_plot_y_range"]
+        assert numpy.isclose(low + band_obj.data.splines[0].points[0].co.y / band_obj["cb_plot_height"] * (high - low), -1.0)
         assert len(dos_obj.data.splines) == 2
-        assert dos_obj.data.splines[1].points[0].co.x == -0.5
+        low, high = dos_obj["cb_plot_x_range"]
+        assert numpy.isclose(low + dos_obj.data.splines[1].points[0].co.x / dos_obj["cb_plot_width"] * (high - low), -0.5)
         plots.select_band_sample(band_obj, band, 1, 0, 1)
         assert band_obj["cb_selected_spin"] == 1
         assert band_obj["cb_selected_band"] == 1
@@ -5801,6 +5807,7 @@ assert len(arguments) in (1, 2), "expected ZIP path and optional --keep-enabled"
 assert len(arguments) == 1 or arguments[1] == "--keep-enabled"
 keep_enabled = arguments[1:] == ["--keep-enabled"]
 package = Path(arguments[0]).resolve()
+repository_root = Path(__file__).resolve().parents[1]
 assert package.is_file(), package
 assert_package_contents(package)
 before_install_modules = set(sys.modules)
@@ -5823,7 +5830,7 @@ module_key = module_keys[0]
 assert_enabled(module_key, before_install_modules)
 legacy_inventory = json.loads(
     (
-        package.parent.parent
+        repository_root
         / "tests/fixtures/registration/legacy-registration-inventory.json"
     ).read_text(encoding="utf-8")
 )
@@ -5844,7 +5851,11 @@ expected_inventory["module_callbacks"] += [
     {"module": ".ui.grid", "register": True, "unregister": True},
     {"module": ".ui.wavefunction", "register": True, "unregister": True},
     {"module": ".ui.wavefunction_import", "register": True, "unregister": True},
+    {"module": ".ui.scientific_import", "register": True, "unregister": True},
+    {"module": ".ui.topology_import", "register": True, "unregister": True},
     {"module": ".ui.orbital_export", "register": True, "unregister": True},
+    {"module": ".ui.scientific_view", "register": True, "unregister": True},
+    {"module": ".ui.scientific_export", "register": True, "unregister": True},
     {"module": ".ui.project_browser.panel", "register": True, "unregister": True},
     {"module": ".ui.file_handlers", "register": True, "unregister": True},
     {"module": ".ui.workspace", "register": True, "unregister": True},
@@ -5859,6 +5870,28 @@ expected_inventory["registered_classes"] += [
      "id": "chemblender.import_wavefunction", "base": "Operator"},
     {"module": ".ui.orbital_export", "name": "CHEMBLENDER_OT_export_orbitals",
      "id": "chemblender.export_orbitals", "base": "Operator"},
+    {"module": ".ui.scientific_import", "name": "CHEMBLENDER_PG_scientific_import",
+     "id": None, "base": "PropertyGroup"},
+    {"module": ".ui.scientific_import", "name": "CHEMBLENDER_OT_import_scientific_file",
+     "id": "chemblender.import_scientific_file", "base": "Operator"},
+    {"module": ".ui.scientific_import", "name": "CHEMBLENDER_OT_import_fermi",
+     "id": "chemblender.import_fermi", "base": "Operator"},
+    {"module": ".ui.topology_import", "name": "CHEMBLENDER_PG_topology_import",
+     "id": None, "base": "PropertyGroup"},
+    {"module": ".ui.topology_import", "name": "CHEMBLENDER_OT_import_topology",
+     "id": "chemblender.import_topology", "base": "Operator"},
+    {"module": ".ui.scientific_view", "name": "CHEMBLENDER_PG_scientific_view",
+     "id": None, "base": "PropertyGroup"},
+    {"module": ".ui.scientific_view", "name": "CHEMBLENDER_OT_scientific_view",
+     "id": "chemblender.scientific_view", "base": "Operator"},
+    {"module": ".ui.scientific_view", "name": "CHEMBLENDER_OT_derive_scientific_spectrum",
+     "id": "chemblender.derive_scientific_spectrum", "base": "Operator"},
+    {"module": ".ui.scientific_view", "name": "CHEMBLENDER_OT_derive_density_difference",
+     "id": "chemblender.derive_density_difference", "base": "Operator"},
+    {"module": ".ui.scientific_export", "name": "CHEMBLENDER_PG_scientific_export",
+     "id": None, "base": "PropertyGroup"},
+    {"module": ".ui.scientific_export", "name": "CHEMBLENDER_OT_export_scientific",
+     "id": "chemblender.export_scientific", "base": "Operator"},
     {
         "module": ".ui.migration",
         "name": "CHEMBLENDER_OT_migrate_legacy_scene",
@@ -6157,6 +6190,7 @@ expected_inventory["registered_classes"].sort(
     )
 )
 expected_inventory["handlers"] += [
+    {"owner": "frame_change_post", "module": ".ui.scientific_view", "name": "_scientific_frame_change"},
     {"owner": "load_pre", "module": ".trajectory_view", "name": "_load_pre_handler"},
     {"owner": "load_post", "module": ".ui.migration", "name": "_legacy_load_post_handler"},
     {"owner": "load_post", "module": ".runtime.registration", "name": "_reader_api_load_post_handler"},
@@ -6314,19 +6348,19 @@ assert_scene_preset_application(module_key)
 assert_complex_phonon_trajectory(module_key)
 assert_fermi_surface_view(module_key)
 assert_project_sidecar_link(module_key)
-assert_quick_import(module_key, package.parent.parent)
-assert_cube_export_workflow(module_key, package.parent.parent)
-assert_cif_workflow(module_key, package.parent.parent)
-assert_poscar_workflow(module_key, package.parent.parent)
+assert_quick_import(module_key, repository_root)
+assert_cube_export_workflow(module_key, repository_root)
+assert_cif_workflow(module_key, repository_root)
+assert_poscar_workflow(module_key, repository_root)
 assert_optional_workspace(module_key)
 assert_project_session_manager(module_key)
 assert_quality_revision_recovery_contract(module_key)
-assert_topology_view(module_key, package.parent.parent)
-assert_extxyz_workflow(module_key, package.parent.parent)
+assert_topology_view(module_key, repository_root)
+assert_extxyz_workflow(module_key, repository_root)
 assert_sdf_10k_workflow_budget(module_key)
 assert_project_browser_rna_budget(module_key)
-assert_biological_workflow(module_key, package.parent.parent)
-assert_mol2_browser_view(module_key, package.parent.parent)
+assert_biological_workflow(module_key, repository_root)
+assert_mol2_browser_view(module_key, repository_root)
 
 import rdkit
 import gemmi

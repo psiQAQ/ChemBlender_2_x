@@ -300,19 +300,19 @@ def _logical_view_groups(objects):
         if obj.get("cb_scene_preset_id") is None:
             continue
         metadata = _logical_view_metadata(obj)
-        render_identity = metadata[0]
-        if render_identity not in grouped:
-            grouped[render_identity] = [metadata[1:], [obj]]
-            order.append(render_identity)
+        identity = obj.get("cb_view_instance_id") or metadata[0]
+        if identity not in grouped:
+            grouped[identity] = [metadata, [obj]]
+            order.append(identity)
             continue
-        expected, components = grouped[render_identity]
-        if expected != metadata[1:]:
+        expected, components = grouped[identity]
+        if expected != metadata:
             raise ValueError(
                 "logical View components have conflicting metadata"
             )
         components.append(obj)
     return tuple(
-        (tuple(grouped[identity][1]), grouped[identity][0])
+        (tuple(grouped[identity][1]), grouped[identity][0][1:])
         for identity in order
     )
 
@@ -409,6 +409,18 @@ def _revision_view_targets(context, prompt, *, selected_only):
             encoded_bindings,
             settings,
         ) = metadata
+        try:
+            bound_ids = {
+                UUID(value["entity_id"])
+                for value in encoded_bindings.values()
+            }
+        except (KeyError, TypeError, ValueError, AttributeError) as error:
+            raise ValueError(
+                "current View has invalid revision metadata"
+            ) from error
+        # Unrelated old Views must not block this source's revision action.
+        if bound_ids.isdisjoint(current_revision.created_entity_ids):
+            continue
         preset = presets.get(preset_id)
         if preset is None:
             raise ValueError("current View references an unknown preset")
@@ -1561,12 +1573,35 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
             context,
             session,
         )
-        _grid.draw_grid_controls(
-            layout,
-            context,
-            session,
-        )
-        _wavefunction.draw_wavefunction_controls(layout, context, session)
+        header, body = layout.panel("chemblender_grid_tools", default_closed=True)
+        header.label(text="Grid Tools · Sampling and Cache")
+        if body is not None:
+            _grid.draw_grid_controls(body, context, session)
+        header, body = layout.panel("chemblender_wavefunction", default_closed=True)
+        header.label(text="Wavefunction · Orbitals, Density and ESP")
+        if body is not None:
+            _wavefunction.draw_wavefunction_controls(body, context, session)
+        from ..scientific_import import draw_scientific_import
+
+        header, body = layout.panel("chemblender_scientific_import", default_closed=True)
+        header.label(text="Import Scientific Output")
+        if body is not None:
+            draw_scientific_import(body, context, session)
+        from ..topology_import import draw_topology_import
+
+        header, body = layout.panel("chemblender_topology_import", default_closed=True)
+        header.label(text="QTAIM / critic2 Import")
+        if body is not None:
+            draw_topology_import(body, context, session)
+        from ..scientific_view import draw_scientific_controls
+
+        draw_scientific_controls(layout, context, session)
+        from ..scientific_export import draw_scientific_export
+
+        header, body = layout.panel("chemblender_scientific_export", default_closed=True)
+        header.label(text="Cycles · Scientific Images")
+        if body is not None:
+            draw_scientific_export(body, context, session)
 
 
 def register():

@@ -102,6 +102,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         self.fake_bpy.app = SimpleNamespace(background=True)
         self.fake_bpy.data = SimpleNamespace(
             objects=_Objects(),
+            materials=[],
             batch_remove=lambda **_kwargs: None,
         )
         self.fake_bpy.context = SimpleNamespace(collection=object())
@@ -2091,7 +2092,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             state,
             registry,
         )
-        created = SimpleNamespace(type="VOLUME", data=None, modifiers=())
+        created = SimpleNamespace(type="VOLUME", data=None, modifiers=(), children=())
         calls = 0
         presets = []
 
@@ -2131,7 +2132,7 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             state,
             registry,
         )
-        created = SimpleNamespace(type="MESH", data=None, modifiers=())
+        created = SimpleNamespace(type="MESH", data=None, modifiers=(), children=())
         calls = 0
         fatal = GeneratorExit("view generation stopped")
 
@@ -2223,7 +2224,8 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         created = {}
 
         class View(dict):
-            pass
+            children = ()
+            parent = None
 
         def capture(*args, **kwargs):
             created["args"] = args
@@ -2321,15 +2323,17 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         )
         surface = SimpleNamespace(
             type="VOLUME",
+            children=(),
             data=SimpleNamespace(users=0),
             modifiers=(SimpleNamespace(node_group={"cbq_contract": "isosurface_v1"}),),
         )
         property_surface = SimpleNamespace(
             type="VOLUME",
+            children=(),
             data=SimpleNamespace(users=0),
             modifiers=(SimpleNamespace(node_group={"cbq_contract": "property_surface_v1"}),),
         )
-        ordinary = SimpleNamespace(type="MESH", data=None, modifiers=())
+        ordinary = SimpleNamespace(type="MESH", data=None, modifiers=(), children=())
         calls = 0
 
         def fail_second(_plan, *_args, **_kwargs):

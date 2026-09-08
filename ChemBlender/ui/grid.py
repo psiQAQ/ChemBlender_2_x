@@ -346,7 +346,7 @@ def rebuild_grid_sample_view(session, obj):
     from ..scene_preset_view import apply_scene_preset
     from ..grid_sample_view import remove_grid_sample_view
 
-    plan = plan_grid_sample_view(obj, session.project, require_geometry=False)
+    plan = plan_grid_sample_view(obj, session.project, require_geometry=False, rebuild=True)
     if getattr(obj, "library", None) is not None or not obj.users_collection:
         raise ValueError("sample View must be local and linked to a collection")
     prepared_objects = apply_scene_preset(plan, session.project, collection=obj.users_collection[0])

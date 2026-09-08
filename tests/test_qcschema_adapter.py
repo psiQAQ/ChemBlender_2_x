@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy
 
-from ChemBlender.core.model import CalculationStatus, DatasetStatus, QCProject
+from ChemBlender.core.model import AtomicProperty, CalculationStatus, DatasetStatus, QCProject
 from ChemBlender.core.qcschema_adapter import (
     QCSCHEMA_READER,
     QCSchemaCompatibilityError,
@@ -69,12 +69,32 @@ class QCSchemaAdapterTests(unittest.TestCase):
         self.assertEqual(len(calculation.input_structure_ids), 1)
         self.assertEqual(len(calculation.result_structure_ids), 1)
         self.assertNotEqual(calculation.input_structure_ids, calculation.result_structure_ids)
-        gradient = next(item for item in batch.datasets if item.semantic_role == "return_result")
+        gradient = next(item for item in batch.datasets if item.semantic_role == "gradient")
+        self.assertIsInstance(gradient, AtomicProperty)
+        self.assertEqual(gradient.structure_id, calculation.result_structure_ids[0])
         self.assertEqual(gradient.data.dims, ("atom", "xyz"))
         self.assertEqual(gradient.data.unit, "hartree_per_bohr")
         numpy.testing.assert_allclose(gradient.data.values[1], [0.0, 0.0, -0.01])
         self.assertIn("structure", batch.report.parsed_capabilities)
         self.assertIn("energy", batch.report.parsed_capabilities)
+        QCProject(id=gradient.id, schema_version="0.1").commit(batch)
+
+    def test_return_gradient_property_preserves_sign_and_result_structure(self):
+        document = json.loads((FIXTURES / "atomic_result_v1.json").read_text(encoding="utf-8"))
+        expected = numpy.arange(9, dtype=float).reshape(3, 3) / 100.
+        document["properties"]["return_gradient"] = expected.tolist()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "gradient.json"
+            path.write_text(json.dumps(document), encoding="utf-8")
+            batch = parse_qcschema_atomic_result(path)
+        gradient = next(item for item in batch.datasets if item.semantic_role == "gradient")
+        self.assertIsInstance(gradient, AtomicProperty)
+        self.assertEqual(gradient.structure_id, batch.calculations[0].result_structure_ids[0])
+        self.assertEqual(gradient.data.unit, "hartree_per_bohr")
+        numpy.testing.assert_array_equal(gradient.data.values, expected)
+        self.assertIn("gradient", batch.report.parsed_capabilities)
+        self.assertEqual(export_qcschema_atomic_result(batch.qcschema_envelopes[0]), document)
+        QCProject(id=gradient.id, schema_version="0.1").commit(batch)
 
     def test_raw_envelope_round_trips_every_json_field_for_each_version(self):
         for filename in ("atomic_result_v1.json", "atomic_result_v2.json"):

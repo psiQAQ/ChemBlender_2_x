@@ -15,7 +15,8 @@ from .model import (
 )
 
 
-DERIVATION_VERSION = "1"
+DERIVATION_VERSION = "2"
+_ANGSTROM_PER_UNIT = {"angstrom": 1.0, "bohr": 0.529177210903}
 
 
 def _index(value, size, name):
@@ -94,8 +95,15 @@ def derive_phonon_frames(
         / numpy.sqrt(masses)[numpy.newaxis, :, numpy.newaxis]
     )
     coordinates = numpy.asarray(supercell_structure.coordinates.values, dtype=float)
+    # The mass-weighted mode has no physical length. amplitude is an explicit
+    # Angstrom display scale; FrameSet retains the reference coordinate unit.
+    displacements = displacements / _ANGSTROM_PER_UNIT[supercell_structure.coordinates.unit]
     frame_values = coordinates[numpy.newaxis, :, :] + displacements
+    if not numpy.all(numpy.isfinite(frame_values)):
+        raise ValueError("phonon phase produced non-finite coordinates")
     digest = hashlib.sha256()
+    digest.update(DERIVATION_VERSION.encode("ascii"))
+    digest.update(supercell_structure.coordinates.unit.encode("ascii"))
     digest.update(modes.revision.encode("utf-8"))
     digest.update(supercell_structure.revision.encode("utf-8"))
     for values in (primitive_indices, translations, phases):
@@ -133,6 +141,8 @@ def derive_phonon_frames(
             ("mode_index", mode_index),
             ("frequency_terahertz", float(modes.data.values[qpoint_index, mode_index])),
             ("amplitude", float(amplitude)),
+            ("amplitude_unit", "angstrom"),
+            ("amplitude_convention", "display_scale_times_eigenvector_over_sqrt_mass_amu"),
             ("user_phase", float(user_phase)),
             ("phase_convention", "exp_i_2pi_qR_minus_phase"),
         ),

@@ -366,8 +366,9 @@ class RepresentativeExampleTests(unittest.TestCase):
         self.assertEqual(len(qcschema.structures[0].atomic_numbers), 3)
         self.assertEqual(qcschema.report.reader_id, "qcschema_atomic_result_v1")
         self.assertEqual(len(qcschema.datasets), 13)
-        self.assertEqual(qcschema_data["return_result"].data.shape, (3, 3))
-        self.assertEqual(qcschema_data["return_result"].data.unit, "hartree_per_bohr")
+        self.assertEqual(qcschema_data["gradient"].data.shape, (3, 3))
+        self.assertEqual(qcschema_data["gradient"].data.unit, "hartree_per_bohr")
+        self.assertEqual(qcschema_data["gradient"].structure_id, calculation.result_structure_ids[0])
         self.assertEqual((envelope.schema_name, envelope.schema_version), ("qc_schema_output", 1))
         self.assertEqual(
             json.loads(envelope.source_bytes),

@@ -16,7 +16,7 @@ from .model import (
 )
 
 
-DERIVATION_VERSION = "2"
+DERIVATION_VERSION = "3"
 
 
 def _identity(source_dataset, operation, parameters):
@@ -103,6 +103,7 @@ def _derive_spectrum(
         "selection_policy": selection_policy,
         "axis_hash": axis_hash,
         "sample_count": int(sample_axis.size),
+        "intensity_unit": intensity_unit,
     }
     revision = _identity(source_dataset, operation, parameters)
     provenance_id = uuid4()
@@ -213,8 +214,9 @@ def derive_electronic_spectrum(
         status = DatasetStatus.COMPLETE
     else:
         strengths = state_set.rotatory_strengths
-        intensity_unit = "unknown"
-        status = DatasetStatus.AMBIGUOUS
+        intensity_unit = strengths.unit if strengths is not None else "unknown"
+        status = (DatasetStatus.AMBIGUOUS if intensity_unit == "unknown"
+                  else state_set.status)
     if strengths is None:
         raise ValueError(f"state_set does not contain {kind.value} strengths")
     return _derive_spectrum(

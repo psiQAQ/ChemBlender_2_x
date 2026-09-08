@@ -50,6 +50,9 @@ class GridSemanticTests(unittest.TestCase):
                 "electron_density",
                 "spin_density",
                 "electrostatic_potential",
+                "difference_density",
+                "elf",
+                "lol",
                 "reduced_density_gradient",
                 "sign_lambda2_rho",
             ),
@@ -69,6 +72,25 @@ class GridSemanticTests(unittest.TestCase):
                 )
         with self.assertRaises(FrozenInstanceError):
             GRID_SEMANTIC_PRESETS["molecular_orbital"].signed = False
+
+    def test_localization_and_density_difference_semantics_preserve_values(self):
+        source = source_grid(values=numpy.linspace(0., 1., 8).reshape(2, 2, 2))
+        for preset_id, role, unit in (
+            ("elf", "electron_localization_function", "dimensionless"),
+            ("lol", "localized_orbital_locator", "dimensionless"),
+            ("difference_density", "difference_density", "electron_per_cubic_bohr"),
+        ):
+            with self.subTest(preset=preset_id):
+                resolved = resolve_grid_semantics(source, dataset_index=0,
+                    preset_id=preset_id, value_unit=unit).datasets[0]
+                self.assertEqual(resolved.semantic_role, role)
+                self.assertEqual(resolved.data.unit, unit)
+                numpy.testing.assert_array_equal(resolved.data.values, source.data.values)
+        for values in (numpy.full((2, 2, 2), -.001), numpy.full((2, 2, 2), 1.001)):
+            for preset_id in ("elf", "lol"):
+                with self.assertRaisesRegex(ValueError, "zero and one"):
+                    resolve_grid_semantics(source_grid(values=values), dataset_index=0,
+                        preset_id=preset_id, value_unit="dimensionless")
 
     def test_resolution_selects_one_dataset_without_mutating_source(self):
         source = source_grid()

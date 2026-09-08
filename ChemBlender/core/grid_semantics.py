@@ -118,6 +118,36 @@ GRID_SEMANTIC_PRESETS = MappingProxyType(
                 colormap_class="diverging",
             ),
             GridSemanticPreset(
+                "difference_density",
+                "difference_density",
+                ("electron_per_cubic_bohr", "electron_per_cubic_angstrom"),
+                signed=True,
+                default_surface_mode="signed_isosurface",
+                isovalue_policy="fraction_of_max_abs",
+                isovalue_parameter=0.05,
+                colormap_class="diverging",
+            ),
+            GridSemanticPreset(
+                "elf",
+                "electron_localization_function",
+                ("dimensionless",),
+                signed=False,
+                default_surface_mode="grid_volume",
+                isovalue_policy="absolute",
+                isovalue_parameter=0.5,
+                colormap_class="sequential",
+            ),
+            GridSemanticPreset(
+                "lol",
+                "localized_orbital_locator",
+                ("dimensionless",),
+                signed=False,
+                default_surface_mode="grid_volume",
+                isovalue_policy="absolute",
+                isovalue_parameter=0.5,
+                colormap_class="sequential",
+            ),
+            GridSemanticPreset(
                 "reduced_density_gradient",
                 "reduced_density_gradient",
                 ("dimensionless",),
@@ -185,6 +215,8 @@ def default_grid_isovalue(grid, *, dataset_index, preset_id):
 
     preset = _require_preset(preset_id)
     values, _ = _selected_values(grid, dataset_index)
+    if numpy.iscomplexobj(values):
+        raise ValueError("grid values must be real")
     values = numpy.asarray(values, dtype=float)
     if not numpy.all(numpy.isfinite(values)):
         raise ValueError("grid values must be finite")
@@ -194,6 +226,47 @@ def default_grid_isovalue(grid, *, dataset_index, preset_id):
     if maximum == 0.0:
         raise ValueError("relative isovalue requires nonzero grid values")
     return maximum * preset.isovalue_parameter
+
+
+def validate_nci_pair(rdg, signed_density, *, surface_dataset_index=0,
+                      property_dataset_index=0, pairing_confirmed=False):
+    """Validate an explicit RDG/sign(lambda2)*rho pair without changing either field.
+
+    Independently imported Cubes need the user's same-analysis declaration.
+    A shared Structure/affine alone establishes spatial compatibility, not that
+    two fields were evaluated from the same density. No density cutoff is applied.
+    """
+    import numpy
+    from .scene_preset import grids_share_affine
+
+    if type(pairing_confirmed) is not bool:
+        raise TypeError("pairing_confirmed must be bool")
+    if not isinstance(rdg, Grid3D) or not isinstance(signed_density, Grid3D):
+        raise TypeError("NCI inputs must be Grid3D")
+    if rdg.structure_id is None or not grids_share_affine(rdg, signed_density):
+        raise ValueError("NCI requires the same non-null Structure and complete affine grid")
+    if any(grid.status is not DatasetStatus.COMPLETE for grid in (rdg, signed_density)):
+        raise ValueError("NCI requires complete inputs")
+    if rdg.semantic_role != "reduced_density_gradient" or rdg.data.unit != "dimensionless":
+        raise ValueError("NCI surface requires dimensionless reduced_density_gradient")
+    if (signed_density.semantic_role != "sign_lambda2_rho"
+            or signed_density.data.unit not in GRID_SEMANTIC_PRESETS["sign_lambda2_rho"].value_units):
+        raise ValueError("NCI color requires sign_lambda2_rho with a supported density unit")
+    shared_calculation = rdg.source_calculation is not None and rdg.source_calculation == signed_density.source_calculation
+    shared_provenance = bool(set(rdg.provenance_ids).intersection(signed_density.provenance_ids))
+    if not shared_calculation and not shared_provenance and not pairing_confirmed:
+        raise ValueError("Confirm that both NCI fields come from the same density analysis")
+    for grid, index in ((rdg, surface_dataset_index), (signed_density, property_dataset_index)):
+        selected, _index = _selected_values(grid, index)
+        values = numpy.asarray(selected)
+        if values.dtype.kind not in "iuf":
+            raise ValueError("NCI field values must be real numeric arrays")
+        for start in range(0, values.size, 65536):
+            chunk = values.flat[start:start + 65536]
+            if not numpy.all(numpy.isfinite(chunk)):
+                raise ValueError("NCI field values must be finite")
+            if grid is rdg and numpy.any(chunk < 0):
+                raise ValueError("reduced_density_gradient must be nonnegative")
 
 
 def resolve_grid_semantics(grid, *, dataset_index, preset_id, value_unit):
@@ -210,8 +283,16 @@ def resolve_grid_semantics(grid, *, dataset_index, preset_id, value_unit):
         )
     selected, dataset_index = _selected_values(grid, dataset_index)
     values = numpy.array(selected, copy=True, order="C")
+    if numpy.iscomplexobj(values):
+        raise ValueError("grid values must be real")
     if not numpy.all(numpy.isfinite(values)):
         raise ValueError("grid values must be finite")
+    if preset.preset_id == "reduced_density_gradient" and numpy.any(values < 0.0):
+        raise ValueError("reduced_density_gradient must be nonnegative")
+    if preset.preset_id in {"elf", "lol"} and (
+        numpy.any(values < 0.0) or numpy.any(values > 1.0)
+    ):
+        raise ValueError("ELF and LOL values must lie between zero and one")
     parameters = {
         "dataset_index": dataset_index,
         "preset_id": preset.preset_id,

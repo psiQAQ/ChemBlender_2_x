@@ -217,7 +217,11 @@ from .pymatgen_electronic import (
 # Derived/reporting compatibility exports.
 from .phonon_frames import derive_phonon_frames
 # Adapter compatibility exports.
-from .phonopy_adapter import PhonopyDependencyError, adapt_phonopy_qpoints
+from .phonopy_adapter import (
+    PHONOPY_FILE_READER, PhonopyDependencyError, adapt_phonopy_qpoints, parse_phonopy_file,
+)
+from .critic2_paths import parse_critic2_paths
+from .grid_difference import derive_grid_difference
 # Reader contract exports.
 from .readers import (
     AmbiguousReaderError,
@@ -553,6 +557,10 @@ __all__ = [
     "adapt_pyprocar_fermi_surface",
     "parse_vasp_volumetric",
     "parse_vasprun_electronic",
+    "parse_phonopy_file",
+    "PHONOPY_FILE_READER",
+    "parse_critic2_paths",
+    "derive_grid_difference",
     "sniff_vasp_volumetric",
     "sniff_vasprun",
     "parse_iodata_wavefunction",

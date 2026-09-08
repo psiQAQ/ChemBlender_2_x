@@ -414,6 +414,9 @@ def default_registry():
     from .reader_operation import register_reader_operation
 
     register_reader_operation(registry)
+    from .fermi_operation import register_fermi_surface_operation
+
+    register_fermi_surface_operation(registry)
     return registry
 
 

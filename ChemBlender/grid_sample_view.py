@@ -73,6 +73,18 @@ def create_grid_sample_view(grid, kind, settings, *, collection=None):
     scale = _ANGSTROM_SCALE[grid.coordinate_unit]
     objects, data_blocks, materials = [], [], []
 
+    def annotation_material():
+        from .scientific_materials import flat_material
+
+        existing = next((value for value in materials if value.get("cb_grid_annotation_material")), None)
+        if existing is None:
+            color = (.78, .84, .92, 1.) if settings.get("template") == "teaching" else (.04, .055, .07, 1.)
+            existing = flat_material("Scientific annotation", color)
+            existing[_OWNED] = True
+            existing["cb_grid_annotation_material"] = True
+            materials.append(existing)
+        return existing
+
     def object_with_data(name, component, data):
         data[_OWNED] = True
         data_blocks.append(data)
@@ -107,6 +119,7 @@ def create_grid_sample_view(grid, kind, settings, *, collection=None):
         obj.data.dimensions = "3D"
         obj.data.bevel_depth = radius
         obj.data.bevel_resolution = 2
+        obj.data.materials.append(annotation_material())
         for coordinates in segments:
             if len(coordinates) >= 2:
                 _poly_spline(obj.data, coordinates)
@@ -118,31 +131,21 @@ def create_grid_sample_view(grid, kind, settings, *, collection=None):
         obj.data.body = body
         obj.data.size = size
         obj.data.align_x = align
+        obj.data.materials.append(annotation_material())
         obj.location = location
         return obj
 
     def colors(obj, values, valid=None):
         _attribute(obj.data, _VALUE, "FLOAT", values)
         material = _property_material("ChemBlender Grid Colors", settings["color_min"],
-                                      settings["color_max"], attribute_name=_VALUE)
+                                      settings["color_max"], attribute_name=_VALUE,
+                                      colormap=settings["colormap"], shaded=False)
         materials.append(material)
         material[_OWNED] = True
         obj.data.materials.append(material)
-        principled = next(node for node in material.node_tree.nodes
-                          if node.type == "BSDF_PRINCIPLED")
-        color_link = principled.inputs["Base Color"].links[0]
-        material.node_tree.links.new(color_link.from_socket, principled.inputs["Emission Color"])
-        material.node_tree.links.remove(color_link)
-        # Scientific colors must stay readable under arbitrary scene lighting.
-        principled.inputs["Base Color"].default_value = (0., 0., 0., 1.)
-        principled.inputs["Specular IOR Level"].default_value = 0.
-        principled.inputs["Emission Strength"].default_value = 1.
         if valid is not None:
             _attribute(obj.data, _VALID, "BOOLEAN", valid)
-            attribute = material.node_tree.nodes.new("ShaderNodeAttribute")
-            attribute.attribute_name = _VALID
-            material.node_tree.links.new(attribute.outputs["Fac"], principled.inputs["Alpha"])
-            material.surface_render_method = "DITHERED"
+            # Invalid quads are omitted, so transparent masking needs no shader branch.
 
     try:
         if kind == "grid_slice":

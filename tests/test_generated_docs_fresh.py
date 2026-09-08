@@ -118,7 +118,7 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
             [reader["reader_id"] for reader in readers],
             sorted(reader["reader_id"] for reader in readers),
         )
-        self.assertEqual(len(readers), 21)
+        self.assertEqual(len(readers), 22)
         required = {
             "availability_contract",
             "basenames",

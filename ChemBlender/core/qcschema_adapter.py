@@ -8,6 +8,7 @@ from uuid import UUID, uuid5
 from ..Chem_data import ELEMENTS_DEFAULT
 from .model import (
     ArrayData,
+    AtomicProperty,
     CalculationMetadata,
     CalculationRecord,
     CalculationStatus,
@@ -29,7 +30,7 @@ from .readers import (
 )
 
 
-ADAPTER_VERSION = "0.1.0"
+ADAPTER_VERSION = "0.2.0"
 _IDENTITY_NAMESPACE = UUID("ea4359f7-6844-421b-9bc4-d76398113d70")
 _SUPPORTED_RESULTS = {
     ("qc_schema_output", 1),
@@ -196,7 +197,8 @@ def _array_spec(name, value, driver, atom_count):
     return array, dims, unit, DatasetStatus.COMPLETE if unit != "unknown" else DatasetStatus.AMBIGUOUS
 
 
-def _dataset(name, value, driver, atom_count, source_hash, calculation_id, provenance_id, issues):
+def _dataset(name, value, driver, structure, source_hash, calculation_id, provenance_id, issues):
+    atom_count = len(structure.atomic_numbers)
     spec = _array_spec(name, value, driver, atom_count)
     if spec is None:
         issues.append(ParserIssue(IssueKind.UNSUPPORTED, f"properties.{name}" if name != "return_result" else name, "non-numeric value is preserved only in the raw QCSchema envelope"))
@@ -204,16 +206,25 @@ def _dataset(name, value, driver, atom_count, source_hash, calculation_id, prove
     values, dims, unit, status = spec
     if status is DatasetStatus.AMBIGUOUS:
         issues.append(ParserIssue(IssueKind.AMBIGUOUS, f"properties.{name}" if name != "return_result" else name, "numeric value has no supported QCSchema unit mapping"))
-    revision = hashlib.sha256(values.tobytes() + unit.encode("ascii")).hexdigest()
-    return PropertyDataset(
+    is_gradient = dims == ("atom", "xyz") and unit == "hartree_per_bohr" and (
+        name == "return_gradient" or (name == "return_result" and driver == "gradient")
+    )
+    role = "gradient" if is_gradient else name if _TOKEN.fullmatch(name) else "qcschema_property"
+    identity = values.tobytes() + unit.encode("ascii")
+    if is_gradient:
+        # A gradient is dE/dR at the result molecule, never the negated force.
+        identity += f":gradient:{structure.id}:{structure.revision}".encode("ascii")
+    revision = hashlib.sha256(identity).hexdigest()
+    return (AtomicProperty if is_gradient else PropertyDataset)(
         id=_identity(source_hash, f"dataset:{name}"),
         revision=revision,
-        semantic_role=name if _TOKEN.fullmatch(name) else "qcschema_property",
-        domain="global",
+        semantic_role=role,
+        domain="atom" if is_gradient else "global",
         data=ArrayData(values, dims, unit),
         status=status,
         source_calculation=calculation_id,
         provenance_ids=(provenance_id,),
+        **({"structure_id": structure.id} if is_gradient else {}),
     )
 
 
@@ -286,11 +297,11 @@ def parse_qcschema_atomic_result(source):
     for name, value in properties.items():
         if not isinstance(name, str) or not name:
             raise QCSchemaError("properties keys must be non-empty strings")
-        dataset = _dataset(name, value, driver, len(result_structure.atomic_numbers), source_hash, calculation_id, provenance_id, issues)
+        dataset = _dataset(name, value, driver, result_structure, source_hash, calculation_id, provenance_id, issues)
         if dataset is not None:
             datasets.append(dataset)
-    return_dataset = _dataset("return_result", document.get("return_result"), driver, len(result_structure.atomic_numbers), source_hash, calculation_id, provenance_id, issues)
-    if return_dataset is not None and all(item.semantic_role != "return_result" for item in datasets):
+    return_dataset = _dataset("return_result", document.get("return_result"), driver, result_structure, source_hash, calculation_id, provenance_id, issues)
+    if return_dataset is not None and all(item.id != return_dataset.id for item in datasets):
         datasets.append(return_dataset)
 
     provenance = ProvenanceRecord(
@@ -339,7 +350,8 @@ def parse_qcschema_atomic_result(source):
     capabilities = ["structure", "calculation_record"]
     if any(item.data.unit == "hartree" for item in datasets):
         capabilities.append("energy")
-    if driver == "gradient" and return_dataset is not None and return_dataset.status is DatasetStatus.COMPLETE:
+    if any(isinstance(item, AtomicProperty) and item.semantic_role == "gradient"
+           and item.status is DatasetStatus.COMPLETE for item in datasets):
         capabilities.append("gradient")
     report = ParserReport(
         reader_id=f"qcschema_atomic_result_v{schema_version}",

@@ -14,6 +14,9 @@ from .common import (
 from .properties import PropertyDataset
 
 
+ROTATORY_STRENGTH_CGS_UNIT = "ten_minus_forty_erg_esu_centimeter_per_gauss"
+
+
 @dataclass(frozen=True, slots=True)
 class VibrationalModeSet(PropertyDataset):
     structure_id: UUID
@@ -208,13 +211,14 @@ class ExcitedStateSet(PropertyDataset):
             if (
                 self.rotatory_strengths.dims != ("state",)
                 or self.rotatory_strengths.shape != (state_count,)
-                or self.rotatory_strengths.unit != "unknown"
+                or self.rotatory_strengths.unit not in {"unknown", ROTATORY_STRENGTH_CGS_UNIT}
                 or numpy.iscomplexobj(values)
                 or not numpy.all(numpy.isfinite(values))
-                or self.status is not DatasetStatus.AMBIGUOUS
+                or (self.rotatory_strengths.unit == "unknown"
+                    and self.status is not DatasetStatus.AMBIGUOUS)
             ):
                 raise ValueError(
-                    "rotatory_strengths require finite values and ambiguous unknown unit"
+                    "rotatory_strengths require finite values, a supported unit and ambiguous status for unknown units"
                 )
         for values, name in (
             (self.electric_transition_dipoles, "electric_transition_dipoles"),
@@ -285,18 +289,18 @@ class Spectrum(PropertyDataset):
         if not isinstance(self.profile, SpectrumProfile):
             raise TypeError("profile must be a SpectrumProfile")
         expected_role = f"{self.kind.value}_spectrum"
-        expected_unit = {
-            SpectrumKind.IR: "kilometer_per_mole",
-            SpectrumKind.RAMAN: "angstrom_four_per_dalton",
-            SpectrumKind.UV_VIS: "dimensionless",
-            SpectrumKind.ECD: "unknown",
+        expected_units = {
+            SpectrumKind.IR: ("kilometer_per_mole",),
+            SpectrumKind.RAMAN: ("angstrom_four_per_dalton",),
+            SpectrumKind.UV_VIS: ("dimensionless",),
+            SpectrumKind.ECD: ("unknown", ROTATORY_STRENGTH_CGS_UNIT),
         }[self.kind]
         if (
             self.semantic_role != expected_role
             or self.domain != "frequency"
             or self.data.dims != ("sample",)
             or self.data.shape[0] <= 0
-            or self.data.unit != expected_unit
+            or self.data.unit not in expected_units
             or "complex" in self.data.dtype.lower()
         ):
             raise ValueError("Spectrum intensity axis does not match its kind")
@@ -321,5 +325,6 @@ class Spectrum(PropertyDataset):
             raise ValueError("broadened Spectrum requires positive finite fwhm")
         if not isinstance(self.selection_policy, str) or not self.selection_policy:
             raise ValueError("selection_policy must be a non-empty string")
-        if self.kind is SpectrumKind.ECD and self.status is not DatasetStatus.AMBIGUOUS:
+        if (self.kind is SpectrumKind.ECD and self.data.unit == "unknown"
+                and self.status is not DatasetStatus.AMBIGUOUS):
             raise ValueError("ECD Spectrum requires ambiguous status for unknown units")

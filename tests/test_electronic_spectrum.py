@@ -1,4 +1,6 @@
 import unittest
+import tempfile
+from pathlib import Path
 from uuid import uuid4
 
 import numpy
@@ -96,6 +98,31 @@ class ElectronicSpectrumTests(unittest.TestCase):
         project.commit(ImportBatch(structures=(reference,), datasets=(states,)))
         project.commit(batch)
         self.assertIs(project.datasets[spectrum.id], spectrum)
+
+    def test_verified_ecd_retains_units_and_roundtrips_existing_sidecar(self):
+        from ChemBlender.core.model.spectroscopy import ROTATORY_STRENGTH_CGS_UNIT
+        from ChemBlender.core.sidecar import close_project, open_project, save_project
+
+        reference = structure()
+        states = state_set(reference.id, rotatory_strengths=ArrayData(
+            numpy.array([-.478, 2.]), ("state",), ROTATORY_STRENGTH_CGS_UNIT))
+        batch = derive_electronic_spectrum(states, kind=SpectrumKind.ECD, profile=SpectrumProfile.STICK)
+        spectrum = batch.datasets[0]
+        self.assertIs(spectrum.status, DatasetStatus.COMPLETE)
+        self.assertEqual(spectrum.data.unit, ROTATORY_STRENGTH_CGS_UNIT)
+        self.assertEqual(dict(batch.provenance[0].parameters)["intensity_unit"], ROTATORY_STRENGTH_CGS_UNIT)
+        numpy.testing.assert_array_equal(spectrum.data.values, states.rotatory_strengths.values)
+        project = QCProject(id=uuid4(), schema_version="0.1")
+        project.commit(ImportBatch(structures=(reference,), datasets=(states,)))
+        project.commit(batch)
+        with tempfile.TemporaryDirectory() as directory:
+            saved = save_project(Path(directory) / "ecd.cbq", project)
+            restored = open_project(saved)
+            try:
+                self.assertEqual(restored.datasets[spectrum.id].data.unit, ROTATORY_STRENGTH_CGS_UNIT)
+                numpy.testing.assert_array_equal(restored.datasets[spectrum.id].data.values, [-.478, 2.])
+            finally:
+                close_project(restored)
 
     def test_missing_strength_invalid_kind_and_dangling_source_fail(self):
         reference = structure()

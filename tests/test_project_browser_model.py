@@ -929,6 +929,8 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             ("CollectionProperty", "collection"),
             ("EnumProperty", "enum"),
             ("FloatProperty", "float"),
+            ("FloatVectorProperty", "float_vector"),
+            ("IntVectorProperty", "int_vector"),
             ("IntProperty", "int"),
             ("PointerProperty", "pointer"),
             ("StringProperty", "string"),
@@ -1588,6 +1590,9 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             separators=(",", ":"),
         )
         normalized_settings = {
+            "template": "research",
+            "shaded": False,
+            "material_opacity": 1.0,
             "dataset_index": 0,
             "isovalue": 0.05,
             "negative_isovalue": -0.05,
@@ -1605,7 +1610,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             def __init__(self, name, selected):
                 super().__init__(
                     cb_scene_preset_id="signed_isosurface",
-                    cb_scene_preset_version="1",
+                    cb_scene_preset_version="2",
                     cb_scene_view_kind="signed_isosurface",
                     cb_scene_render_identity="logical-view",
                     cb_scene_bindings_json=bindings,
@@ -1672,6 +1677,37 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
 
         self.assertEqual(targets, (((positive, negative), plan),))
         self.assertEqual(planner.call_count, 2)
+
+        unrelated = View("unrelated stale View", True)
+        unrelated["cb_scene_render_identity"] = "unrelated-view"
+        unrelated["cb_scene_bindings_json"] = json.dumps({
+            "grid": {"entity_id": str(uuid4()), "revision": "missing"},
+        })
+        context.scene.objects = (unrelated, positive, negative)
+        for version in ("2", "1"):
+            unrelated["cb_scene_preset_version"] = version
+            with (
+                self.subTest(unrelated_preset_version=version),
+                patch.object(panel, "get_scene_session", return_value=session),
+                patch.object(
+                    panel, "plan_scene_preset", side_effect=(current_plan, plan),
+                ) as planner,
+            ):
+                self.assertEqual(
+                    panel._revision_view_targets(
+                        context, prompt, selected_only=False,
+                    ),
+                    (((positive, negative), plan),),
+                )
+                self.assertEqual(planner.call_count, 2)
+
+        # A stale binding belonging to the affected source still fails closed.
+        current_entity.revision = "unexpected-revision"
+        with (
+            patch.object(panel, "get_scene_session", return_value=session),
+            self.assertRaisesRegex(ValueError, "binding is stale"),
+        ):
+            panel._revision_view_targets(context, prompt, selected_only=False)
 
     def test_logical_view_metadata_conflict_fails_closed(self):
         panel = importlib.import_module(

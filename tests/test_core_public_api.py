@@ -48,7 +48,8 @@ PUBLIC_CORE_NAMES = (
     "sniff_cube", "sniff_ase_structure", "sniff_cclib_output", "sniff_cif", "sniff_gaussian_input", "sniff_orca_input", "sniff_poscar", "sniff_xyz",
     "adapt_ccdata", "adapt_iodata", "adapt_vasp_volumetric", "adapt_pymatgen_electronic",
     "adapt_phonopy_qpoints", "adapt_pyprocar_fermi_surface", "parse_vasp_volumetric",
-    "parse_vasprun_electronic", "sniff_vasp_volumetric", "sniff_vasprun",
+    "parse_vasprun_electronic", "parse_phonopy_file", "PHONOPY_FILE_READER",
+    "parse_critic2_paths", "derive_grid_difference", "sniff_vasp_volumetric", "sniff_vasprun",
     "parse_iodata_wavefunction", "sniff_iodata_wavefunction", "evaluate_electron_density_grid",
     "evaluate_density_matrix_grid", "evaluate_electrostatic_potential_grid",
     "evaluate_molecular_orbital_grid", "derive_electronic_spectrum",
@@ -75,7 +76,7 @@ class CorePublicApiTests(unittest.TestCase):
     def test_public_names_are_frozen(self):
         self.assertEqual(tuple(core.__all__), PUBLIC_CORE_NAMES)
         self.assertEqual(len(core.__all__), len(set(core.__all__)))
-        self.assertEqual(len(core.__all__), 258)
+        self.assertEqual(len(core.__all__), 262)
 
     def test_public_names_resolve_to_attributes(self):
         missing = [name for name in core.__all__ if not hasattr(core, name)]

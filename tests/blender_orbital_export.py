@@ -117,7 +117,7 @@ try:
         run = iterator("cancelled", is_cancelled=lambda: cancelled)
         next(run)
         assert next(run)["stage"] == "Rendered MO 1"
-        assert len(list(directory.glob(".cb-orbitals-*/images/*.png"))) == 1
+        assert len(list(directory.glob("*.images/images/*.png"))) == 1
         cancelled = True
         try:
             next(run)
@@ -163,7 +163,7 @@ try:
             path = result / artifact["path"]
             assert path.is_file() and path.stat().st_size == artifact["size"]
         assert len(list((result / "images").glob("*.png"))) == 2
-        assert not list(directory.glob(".cb-orbitals-*"))
+        assert not list(directory.glob("*.images"))
         assert not export._EXPORTS
         assert len(session.project.datasets) == 2
     close_scene_session(scene)

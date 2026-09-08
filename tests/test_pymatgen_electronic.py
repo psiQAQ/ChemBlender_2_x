@@ -4,6 +4,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
+from uuid import uuid4
 
 import numpy
 
@@ -14,6 +17,7 @@ from ChemBlender.core.pymatgen_electronic import (
     adapt_pymatgen_electronic,
     parse_vasprun_electronic,
     sniff_vasprun,
+    _band_occupations,
 )
 
 
@@ -105,6 +109,23 @@ class PymatgenElectronicIntegrationTests(unittest.TestCase):
         self.assertTrue(numpy.allclose(dos.projections.values[0, :, 0, 1], 0.0))
         QCProject(id=structure.id, schema_version="0.1").commit(batch)
 
+    def test_real_silicon_line_mode_and_dos_remain_separate(self):
+        folder = ROOT / "examples/scientific-visualization/inputs/silicon"
+        batch = parse_vasprun_electronic(folder / "bands/vasprun.xml.gz",
+            kpoints_filename=folder / "bands/KPOINTS", line_mode=True)
+        band = batch.datasets[0]
+        self.assertEqual(band.data.shape[1], 160)
+        self.assertTrue(band.branches)
+        self.assertTrue(any(band.labels))
+        self.assertEqual(band.occupations.shape, band.data.shape)
+        self.assertTrue(dict(batch.provenance[-1].parameters)["line_mode_resolved"])
+        self.assertEqual(batch.provenance[0].operation, "read_kpoints")
+        dos_batch = parse_vasprun_electronic(folder / "dos/vasprun.xml.gz")
+        self.assertFalse(dos_batch.datasets[0].branches)
+        self.assertNotEqual(batch.structures[0].id, dos_batch.structures[0].id)
+        self.assertNotEqual(band.revision, dos_batch.datasets[0].revision)
+        QCProject(id=batch.structures[0].id, schema_version="0.1").commit(batch)
+
     def test_missing_optional_band_arrays_are_reported(self):
         batch = adapt_pymatgen_electronic(band_structure=self.band_structure(False))
         missing = {
@@ -120,6 +141,78 @@ class PymatgenElectronicIntegrationTests(unittest.TestCase):
 
 
 class PymatgenElectronicAdapterTests(unittest.TestCase):
+    def test_occupations_follow_opt_and_hybrid_suffix_without_guessing_order(self):
+        raw = SimpleNamespace(
+            actual_kpoints=[[0, 0, 0], [.25, 0, 0], [.5, 0, 0]],
+            eigenvalues={1: numpy.asarray([[[1, 1]], [[2, .5]], [[3, 0]]])},
+        )
+        band = SimpleNamespace(
+            kpoints=[SimpleNamespace(frac_coords=point) for point in raw.actual_kpoints[1:]],
+            bands={1: numpy.asarray([[2, 3]])},
+        )
+        result = SimpleNamespace(kpoints_opt_props=raw, actual_kpoints=[], eigenvalues={})
+        self.assertEqual(_band_occupations(result, band)[1].tolist(), [[.5, 0]])
+        self.assertEqual(_band_occupations(raw, band)[1].tolist(), [[.5, 0]])
+        band.kpoints.reverse()
+        with self.assertRaisesRegex(ValueError, "k-point order"):
+            _band_occupations(result, band)
+        band.kpoints.reverse()
+        band.bands[1][0, 0] = 99
+        with self.assertRaisesRegex(ValueError, "energies"):
+            _band_occupations(result, band)
+
+    def test_file_parser_tracks_companion_revision_and_rejects_mid_parse_change(self):
+        from ChemBlender.core import ImportBatch, ParserReport, ProvenanceRecord
+        point = SimpleNamespace(frac_coords=(0, 0, 0))
+        band = SimpleNamespace(kpoints=[point], bands={1: numpy.asarray([[1.]])}, branches=("G-X",))
+        class Result:
+            kpoints_opt_props = None
+            actual_kpoints = [(0, 0, 0)]
+            eigenvalues = {1: numpy.asarray([[[1., 1.]]])}
+            complete_dos = object()
+            def get_band_structure(self, **kwargs):
+                self.arguments = kwargs
+                return band
+        result = Result()
+        def adapt(**kwargs):
+            record = ProvenanceRecord(id=uuid4(), revision="raw", producer="test",
+                producer_version="1", source=kwargs["source"],
+                source_hash=__import__("hashlib").sha256(kwargs["source_bytes"]).hexdigest(),
+                parent_ids=(), operation="normalize", parameters=())
+            return ImportBatch(provenance=(record,), report=ParserReport(
+                reader_id="test", reader_version="1", created_entity_ids=(record.id,),
+                parsed_capabilities=(), issues=()))
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            source = folder / "vasprun.xml"
+            source.write_bytes(b"<modeling/>")
+            companion = folder / "KPOINTS"
+            companion.write_bytes(b"G-X")
+            with patch("ChemBlender.core.pymatgen_electronic._pymatgen_electronic",
+                       return_value=(lambda *args, **kwargs: result,)), patch(
+                       "ChemBlender.core.pymatgen_electronic.adapt_pymatgen_electronic", side_effect=adapt):
+                first = parse_vasprun_electronic(source, line_mode=True)
+                self.assertEqual(result.arguments, {"kpoints_filename": str(companion), "line_mode": True})
+                companion.write_bytes(b"G-L")
+                second = parse_vasprun_electronic(source, line_mode=True)
+                self.assertNotEqual(first.provenance[-1].revision, second.provenance[-1].revision)
+                self.assertEqual(first.provenance[-1].source_hash, second.provenance[-1].source_hash)
+                self.assertEqual(second.provenance[-1].parent_ids, (second.provenance[0].id,))
+            def changing_adapt(**kwargs):
+                companion.write_bytes(b"changed while parsing")
+                return adapt(**kwargs)
+            with patch("ChemBlender.core.pymatgen_electronic._pymatgen_electronic",
+                       return_value=(lambda *args, **kwargs: result,)), patch(
+                       "ChemBlender.core.pymatgen_electronic.adapt_pymatgen_electronic", side_effect=changing_adapt):
+                with self.assertRaisesRegex(ValueError, "input changed"):
+                    parse_vasprun_electronic(source)
+
+    def test_line_mode_preflight_and_compressed_name(self):
+        with self.assertRaisesRegex(TypeError, "line_mode"):
+            parse_vasprun_electronic("missing", line_mode="true")
+        self.assertIs(sniff_vasprun(Path("vasprun.xml.gz"), b"compressed").match,
+            SniffMatch.POSSIBLE)
+
     def test_core_import_does_not_eagerly_load_pymatgen(self):
         subprocess.run(
             [

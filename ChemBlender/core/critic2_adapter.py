@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from .cache_identity import parser_cache_key, source_hash_bytes
+from .grid_cache_service import _ANGSTROM_SCALE
 from .model import (
     ArrayData,
     CriticalPointKind,
@@ -21,7 +22,7 @@ from .model import (
 
 
 ADAPTER_ID = "critic2-cpreport-json"
-ADAPTER_VERSION = "1"
+ADAPTER_VERSION = "2"
 CRITIC2_REVIEWED_VERSION = "1.3.15"
 
 
@@ -87,6 +88,23 @@ def _load(path):
     return path, source, document
 
 
+def _coordinate_context(document, coordinate_unit):
+    """critic2 CPJSON stores internal Cartesian coordinates before molecular centering."""
+    source_unit = document.get("units", "bohr")
+    if source_unit not in _ANGSTROM_SCALE or coordinate_unit not in _ANGSTROM_SCALE:
+        raise ValueError("critic2 coordinates require bohr or angstrom units")
+    centering = (0., 0., 0.)
+    section = document.get("structure")
+    if section is not None:
+        _required(section, ("is_molecule",), "structure")
+        if not isinstance(section["is_molecule"], bool):
+            raise ValueError("structure.is_molecule must be boolean")
+        if section["is_molecule"]:
+            _required(section, ("molecule_centering_vector",), "molecular structure")
+            centering = _vector(section["molecule_centering_vector"], "molecule centering vector")
+    return source_unit, _ANGSTROM_SCALE[source_unit] / _ANGSTROM_SCALE[coordinate_unit], centering
+
+
 def parse_critic2_cpreport(
     path,
     *,
@@ -117,6 +135,7 @@ def parse_critic2_cpreport(
 
     path, source, document = _load(path)
     _required(document, ("critical_points",), "critic2 document")
+    source_coordinate_unit, coordinate_scale, centering = _coordinate_context(document, coordinate_unit)
     section = document["critical_points"]
     _required(
         section,
@@ -197,6 +216,8 @@ def parse_critic2_cpreport(
         "field_semantic_role": field_semantic_role,
         "field_unit": field_unit,
         "laplacian_unit": laplacian_unit,
+        "source_coordinate_unit": source_coordinate_unit,
+        "molecule_centering_vector": centering,
     }
     revision = parser_cache_key(source_hash, ADAPTER_ID, ADAPTER_VERSION, options)
     graph_id = uuid5(NAMESPACE_URL, f"chemblender:{ADAPTER_ID}:{revision}")
@@ -234,7 +255,9 @@ def parse_critic2_cpreport(
         stable_id = uuid5(graph_id, f"critical-point:{cell_id}")
         point_ids[cell_id] = stable_id
         cell_by_id[cell_id] = point
-        positions.append(_vector(point["cartesian_coordinates"], "cartesian coordinates"))
+        raw_position = _vector(point["cartesian_coordinates"], "cartesian coordinates")
+        positions.append(tuple((value + offset) * coordinate_scale
+                               for value, offset in zip(raw_position, centering)))
         names.append(source_point["name"])
         kinds.append(source_point["kind"])
         ranks.append(rank)
@@ -279,8 +302,8 @@ def parse_critic2_cpreport(
                         "connection lattice vector",
                         lambda value, name: _integer(value, name),
                     ),
-                    distance=_finite(branch["distance"], "connection distance"),
-                    path_length=_finite(branch["path_length"], "connection path length"),
+                    distance=_finite(branch["distance"], "connection distance") * coordinate_scale,
+                    path_length=_finite(branch["path_length"], "connection path length") * coordinate_scale,
                     length_unit=coordinate_unit,
                 )
             )
