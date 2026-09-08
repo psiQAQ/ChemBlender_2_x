@@ -1,5 +1,28 @@
 # OUTSIDE — 材质、场景呈现与插件边界
 
+## R25 最终复核
+
+执行者：**Agent 模拟用户**。2026-09-08，Blender **5.1.1** / Python **3.13.9**。源码 `039bde7e1bf028b4b691d888d51460ae331ff678`；ZIP SHA-256 `661c58f82ae0a5564d37e713eca281e992ad24fd5b5b81fe2b2aee321862368b`。
+
+UI 与 MCP 各使用独立的干净测试副本。按用户授权，重复动作从 [UI → MCP 命令目录](../../../../../tests/blender_review_commands.py) 读取公开命令；原生首测证据保留在下方阶段记录，重放不记为新的原生 UI 首测。
+
+本次范围：普通材质/World/Area/Camera 及 Collection 随文件恢复；最终包下两张 Eevee 渲染已实际查看且像素相同，科学数组不变。
+
+| 路径 | 最终结果 | 状态与耗时证据 | 配对文件 |
+| --- | --- | --- | --- |
+| UI | Passed（上述复核范围） | [操作结果](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-OUTSIDE-UI-actions-summary.json)；[加载状态](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-OUTSIDE-UI-loaded.json) | [最终副本](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25/OUTSIDE/UI/OUTSIDE-UI.blend) |
+| MCP | Passed（上述复核范围） | [操作结果](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-OUTSIDE-MCP-actions-summary.json)；[加载状态](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-OUTSIDE-MCP-loaded.json) | [最终副本](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25/OUTSIDE/MCP/OUTSIDE-MCP.blend) |
+
+所有最终副本的安装 Python 字节与 R25 ZIP 匹配，Reader API、Scene RNA、公开 poll 通过；原始配对文件及其权威数组未被本轮复核改写。[完整性核查](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-integrity.json)与[逐项范围索引](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-review.json)记录 UUID、manifest hash 和数组检查。每条命令的 JSON 留有实际 `seconds`，不将观察间隔计入产品等待。
+
+最终 [14 集合展示文件](../../../../../.blend-analysis/2026-09-07-review/outputs/final-gallery/ChemBlender-R25-14-cases.blend)含本项同名 Collection 和 UI/MCP 子集合；[总览渲染](../../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery.png)与[真实窗口](../../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery-window-14-collections.png)已查看。展示模型按单体缩放，不用于科学距离比较；科学操作使用上表配对文件。
+
+[UI 最终 Eevee](../../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-OUTSIDE-UI-render.png)与[MCP 最终 Eevee](../../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-OUTSIDE-MCP-render.png)均已实际查看。原生 UI 渲染取消已测试；同步 MCP 渲染调用中途取消仍为 **Not Run**，不以调用完成代替取消体验。
+
+## 阶段验收记录（保留当时状态）
+
+以下版本、失败和“待最终复核”描述对应当时检查点；当前结果以上方 R25 复核为准。
+
 执行者：**Agent 模拟用户**。UI **Passed**；MCP **Passed**。Blender 5.1.1，source `76d1d9e`，R21 ZIP SHA-256 `61b64592fbab352aaaa70ea319963ab6c6436a4f2d2d0728c68fabb7daa73635`。本项操作属于通用 Blender；最终全项同包复核仍待完成。
 
 独立空项目、独立 profile/端口；UI 完成后 MCP 从空文件开始。输入是本轮不可变 `inputs/OUTSIDE/water.mol`，来自仓库 `mol/water-v2000.mol`，三原子、两个来源键。Quick Import 默认 atoms-only View，没有本项未明确接受的显示键。科学 Structure、revision 和坐标保持源值。

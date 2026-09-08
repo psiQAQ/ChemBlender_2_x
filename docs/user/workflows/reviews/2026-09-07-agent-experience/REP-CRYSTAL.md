@@ -1,5 +1,26 @@
 # REP-CRYSTAL — CIF、POSCAR 与 CONTCAR
 
+## R25 最终复核
+
+执行者：**Agent 模拟用户**。2026-09-08，Blender **5.1.1** / Python **3.13.9**。源码 `039bde7e1bf028b4b691d888d51460ae331ff678`；ZIP SHA-256 `661c58f82ae0a5564d37e713eca281e992ad24fd5b5b81fe2b2aee321862368b`。
+
+UI 与 MCP 各使用独立的干净测试副本。按用户授权，重复动作从 [UI → MCP 命令目录](../../../../../tests/blender_review_commands.py) 读取公开命令；原生首测证据保留在下方阶段记录，重放不记为新的原生 UI 首测。
+
+本次范围：三个周期输入的 View/数据绑定、18 个唯一数组、单元格/占据/无序元数据完整性；缺 spglib 的公开失败停止。
+
+| 路径 | 最终结果 | 状态与耗时证据 | 配对文件 |
+| --- | --- | --- | --- |
+| UI | Passed（上述复核范围） | [操作结果](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-REP-CRYSTAL-UI-actions-summary.json)；[加载状态](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-REP-CRYSTAL-UI-loaded.json) | [最终副本](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25/REP-CRYSTAL/UI/REP-CRYSTAL-UI.blend) |
+| MCP | Passed（上述复核范围） | [操作结果](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-REP-CRYSTAL-MCP-actions-summary.json)；[加载状态](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-REP-CRYSTAL-MCP-loaded.json) | [最终副本](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25/REP-CRYSTAL/MCP/REP-CRYSTAL-MCP.blend) |
+
+所有最终副本的安装 Python 字节与 R25 ZIP 匹配，Reader API、Scene RNA、公开 poll 通过；原始配对文件及其权威数组未被本轮复核改写。[完整性核查](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-integrity.json)与[逐项范围索引](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-review.json)记录 UUID、manifest hash 和数组检查。每条命令的 JSON 留有实际 `seconds`，不将观察间隔计入产品等待。
+
+最终 [14 集合展示文件](../../../../../.blend-analysis/2026-09-07-review/outputs/final-gallery/ChemBlender-R25-14-cases.blend)含本项同名 Collection 和 UI/MCP 子集合；[总览渲染](../../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery.png)与[真实窗口](../../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery-window-14-collections.png)已查看。展示模型按单体缩放，不用于科学距离比较；科学操作使用上表配对文件。
+
+## 阶段验收记录（保留当时状态）
+
+以下版本、失败和“待最终复核”描述对应当时检查点；当前结果以上方 R25 复核为准。
+
 执行者：**Agent 模拟用户**。UI 路径 **Passed（已验证 UI 操作的 MCP 重放，加实际窗口检查）**；独立 MCP **Passed**。根据用户后续授权，复用 IMP/DATA 中已经实际操作的导入、周期 View 和保存流程；没有把重放记成新一次原生鼠标键盘首测。Blender **5.1.1**，source `5066cab35b28e21c484eeb64db026273cdea4243`，R24 ZIP SHA-256 `66e0a701ddbac2bf4cf4c4104da9b32a4e14cb632cefaf46a471d2a966861e9b`。最终全案例统一复核另行记录。
 
 两条路径各从空场景开始，先 UI profile，结束后再独立 MCP profile。每次执行从 [命令目录](../../../../../tests/blender_review_commands.py) 读取已验证公开操作，并核对安装 Python 文件与相同 ZIP 一致。[输入副本与 hash](../../../../../.blend-analysis/2026-09-07-review/outputs/REP-CRYSTAL-inputs.json) 保持仓库原始字节。

@@ -25,6 +25,11 @@ OPERATOR_UI_EVIDENCE = {
     "chemblender.derive_crystal_symmetry": "DATA: 原生禁用按钮及缺失原因，详见 DATA.md（仅验证失败停止）",
     "chemblender.resolve_grid_semantics": "VIEW-R9-03-resolved.png；R13 干净原生重测见 VIEW.md",
     "chemblender.create_grid_view": "VIEW-R9-04-volume.png、VIEW-R9-05-surface.png；R13 干净原生重测见 VIEW.md",
+    "chemblender.export_project_entity": "EXP: 原生格式切换、损失预览、取消及确认，详见 EXP.md",
+    "chemblender.import_smiles_text": "IMP: 原生 SMILES 预览与确认，详见 IMP.md",
+    "chemblender.preview_legacy_migration": "MIG-R19-02-preview.png；R20 完整原生重测见 MIG.md",
+    "chemblender.migrate_legacy_scene": "MIG-R19-03-confirmation.png；R20 完整原生重测见 MIG.md",
+    "chemblender.project_link_recovery": "LIFE: 原生 Verify/Relink，详见 LIFE.md",
 }
 
 COMMANDS = {
@@ -93,6 +98,20 @@ for key,value in args.get('values',{}).items():
     assert key in settings.bl_rna.properties
     setattr(settings,key,value)
 result={p.identifier:getattr(settings,p.identifier) for p in settings.bl_rna.properties if p.type in {'STRING','INT','FLOAT','ENUM'}}
+""",
+    "environment": """
+import sys,rdkit,gemmi,numpy
+from bl_ext.user_default.chemblender import reader_api
+descriptors=reader_api.builtin_reader_plugin_registry().descriptors
+result={'blender':bpy.app.version_string,'python':sys.version,'enabled':'bl_ext.user_default.chemblender' in bpy.context.preferences.addons,
+ 'modules':{m.__name__:{'file':m.__file__,'version':getattr(m,'__version__',None)} for m in (rdkit,gemmi,numpy)},
+ 'scene_rna':[p for p in ('chemblender_quick_import','chemblender_project_browser','chemblender_grid') if hasattr(bpy.context.scene,p)],
+ 'reader_api':True,'reader_count':len(descriptors),'quick_import_poll':bpy.ops.chemblender.quick_import.poll()}
+assert result['enabled'] and len(result['scene_rna'])==3 and result['reader_count']>0 and result['quick_import_poll']
+""",
+    "migration_preview": """
+value=bpy.context.scene.chemblender_migration_preview_json
+result={'preview':json.loads(value) if value else None}
 """,
     "clean": """
 assert not bpy.data.is_dirty or args.get('discard_test_scene')
@@ -164,6 +183,17 @@ result={'file':bpy.data.filepath,'dirty':bpy.data.is_dirty,'project':{k:v for k,
  'xyz':[list(v.co) for v in o.data.vertices] if o.type=='MESH' else None,
  'location':list(o.location),'scale':list(o.scale),'hide_render':o.hide_render} for o in s.objects],
  'materials':[{'name':m.name,'nodes':[{'name':n.name,'type':n.bl_idname} for n in m.node_tree.nodes] if m.use_nodes else []} for m in bpy.data.materials]}
+result=json.loads(json.dumps(result,default=list))
+""",
+    "active_view": """
+o=bpy.context.active_object
+assert o and o.type=='MESH'
+marker=bpy.data.objects.get(o.get('cb_selective_marker_object',''))
+result={'name':o.name,'frame':bpy.context.scene.frame_current,'playing':bpy.context.screen.is_animation_playing,
+ 'xyz':[list(v.co) for v in o.data.vertices],'properties':dict(o.items()),
+ 'vectors':[list(v.vector) for v in o.data.attributes['cbq_vector'].data] if 'cbq_vector' in o.data.attributes else None,
+ 'selected':[d.value for d in o.data.attributes['cbq_selected'].data] if 'cbq_selected' in o.data.attributes else None,
+ 'marker_hidden':marker.hide_get() if marker else None}
 result=json.loads(json.dumps(result,default=list))
 """,
     "presentation": """

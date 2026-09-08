@@ -1,5 +1,26 @@
 # REP-BIOLOGICAL — PDB MODEL 与 PQR 参数
 
+## R25 最终复核
+
+执行者：**Agent 模拟用户**。2026-09-08，Blender **5.1.1** / Python **3.13.9**。源码 `039bde7e1bf028b4b691d888d51460ae331ff678`；ZIP SHA-256 `661c58f82ae0a5564d37e713eca281e992ad24fd5b5b81fe2b2aee321862368b`。
+
+UI 与 MCP 各使用独立的干净测试副本。按用户授权，重复动作从 [UI → MCP 命令目录](../../../../../tests/blender_review_commands.py) 读取公开命令；原生首测证据保留在下方阶段记录，重放不记为新的原生 UI 首测。
+
+本次范围：19 原子的 residue mask、MODEL 1/10 坐标、22 个零 radius 选择；完整 PDB/PQR 五数组和层级保存状态。
+
+| 路径 | 最终结果 | 状态与耗时证据 | 配对文件 |
+| --- | --- | --- | --- |
+| UI | Passed（上述复核范围） | [操作结果](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-REP-BIOLOGICAL-UI-actions-summary.json)；[加载状态](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-REP-BIOLOGICAL-UI-loaded.json) | [最终副本](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25/REP-BIOLOGICAL/UI/REP-BIOLOGICAL-UI.blend) |
+| MCP | Passed（上述复核范围） | [操作结果](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-REP-BIOLOGICAL-MCP-actions-summary.json)；[加载状态](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-REP-BIOLOGICAL-MCP-loaded.json) | [最终副本](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25/REP-BIOLOGICAL/MCP/REP-BIOLOGICAL-MCP.blend) |
+
+所有最终副本的安装 Python 字节与 R25 ZIP 匹配，Reader API、Scene RNA、公开 poll 通过；原始配对文件及其权威数组未被本轮复核改写。[完整性核查](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-integrity.json)与[逐项范围索引](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-review.json)记录 UUID、manifest hash 和数组检查。每条命令的 JSON 留有实际 `seconds`，不将观察间隔计入产品等待。
+
+最终 [14 集合展示文件](../../../../../.blend-analysis/2026-09-07-review/outputs/final-gallery/ChemBlender-R25-14-cases.blend)含本项同名 Collection 和 UI/MCP 子集合；[总览渲染](../../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery.png)与[真实窗口](../../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery-window-14-collections.png)已查看。展示模型按单体缩放，不用于科学距离比较；科学操作使用上表配对文件。
+
+## 阶段验收记录（保留当时状态）
+
+以下版本、失败和“待最终复核”描述对应当时检查点；当前结果以上方 R25 复核为准。
+
 执行者：**Agent 模拟用户**。UI **Passed**；独立 MCP **Passed**。UI 首测使用真实窗口 R22/R23；根据用户 2026-09-08 的后续授权，R24 在独立 UI profile 内使用已验证 UI 对应的公开 MCP 命令重放，并实际检查窗口。该重放不冒充新一次原生鼠标键盘首测。
 
 最终版本 Blender **5.1.1** / Python **3.13.9**，source `5066cab35b28e21c484eeb64db026273cdea4243`，R24 ZIP SHA-256 `66e0a701ddbac2bf4cf4c4104da9b32a4e14cb632cefaf46a471d2a966861e9b`。两条路径均核对安装目录内全部 Python 文件与同一 ZIP 一致；整轮最终统一复核仍待完成。

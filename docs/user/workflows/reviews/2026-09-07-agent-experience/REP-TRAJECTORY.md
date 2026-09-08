@@ -1,5 +1,26 @@
 # REP-TRAJECTORY — 32×21 extXYZ 与逐帧属性
 
+## R25 最终复核
+
+执行者：**Agent 模拟用户**。2026-09-08，Blender **5.1.1** / Python **3.13.9**。源码 `039bde7e1bf028b4b691d888d51460ae331ff678`；ZIP SHA-256 `661c58f82ae0a5564d37e713eca281e992ad24fd5b5b81fe2b2aee321862368b`。
+
+UI 与 MCP 各使用独立的干净测试副本。按用户授权，重复动作从 [UI → MCP 命令目录](../../../../../tests/blender_review_commands.py) 读取公开命令；原生首测证据保留在下方阶段记录，重放不记为新的原生 UI 首测。
+
+本次范围：32×21 数据重开与重配置、帧 1/32 坐标及 force、播放/暂停；energy/step/source_index 数组完整性。
+
+| 路径 | 最终结果 | 状态与耗时证据 | 配对文件 |
+| --- | --- | --- | --- |
+| UI | Passed（上述复核范围） | [操作结果](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-REP-TRAJECTORY-UI-actions-summary.json)；[加载状态](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-REP-TRAJECTORY-UI-loaded.json) | [最终副本](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25/REP-TRAJECTORY/UI/REP-TRAJECTORY-UI.blend) |
+| MCP | Passed（上述复核范围） | [操作结果](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-REP-TRAJECTORY-MCP-actions-summary.json)；[加载状态](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-REP-TRAJECTORY-MCP-loaded.json) | [最终副本](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25/REP-TRAJECTORY/MCP/REP-TRAJECTORY-MCP.blend) |
+
+所有最终副本的安装 Python 字节与 R25 ZIP 匹配，Reader API、Scene RNA、公开 poll 通过；原始配对文件及其权威数组未被本轮复核改写。[完整性核查](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-integrity.json)与[逐项范围索引](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-review.json)记录 UUID、manifest hash 和数组检查。每条命令的 JSON 留有实际 `seconds`，不将观察间隔计入产品等待。
+
+最终 [14 集合展示文件](../../../../../.blend-analysis/2026-09-07-review/outputs/final-gallery/ChemBlender-R25-14-cases.blend)含本项同名 Collection 和 UI/MCP 子集合；[总览渲染](../../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery.png)与[真实窗口](../../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery-window-14-collections.png)已查看。展示模型按单体缩放，不用于科学距离比较；科学操作使用上表配对文件。
+
+## 阶段验收记录（保留当时状态）
+
+以下版本、失败和“待最终复核”描述对应当时检查点；当前结果以上方 R25 复核为准。
+
 执行者：**Agent 模拟用户**。UI **Passed**；MCP **Passed**。Blender5.1.1/Python3.13.9，source `1c290eec5d98a6f0cbbb5d6749069c3cc1872dca`，R22 ZIP SHA-256 `82529f5564f8b4f9b319785c35094700c431747ff2daa3b438312c6a2b3a8e56`。最终全轮同包复核仍待完成。
 
 前置：独立空文件、独立profile；UI完成后MCP才开始。输入为不可变`aspirin-rmd17-32.extxyz`副本，61621bytes，SHA-256 `95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a`，[来源清单](../../../../../.blend-analysis/2026-09-07-review/outputs/REP-TRAJECTORY-input.json)。32帧演示子集，不能作为统计独立训练样本。

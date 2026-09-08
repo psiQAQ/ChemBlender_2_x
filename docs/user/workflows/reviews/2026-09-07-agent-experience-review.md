@@ -1,91 +1,94 @@
 # ChemBlender 本轮体验验收
 
-执行者：**Agent 模拟用户**。日期：2026-09-07，Asia/Shanghai。
-本轮独立记录，不改写历史人工验收。当前仍在执行，未完成项目不能视为通过。
+执行者：**Agent 模拟用户**。执行日期：**2026-09-07 至 2026-09-08，Asia/Shanghai**。
 
-## 当前检查点
+单位、过期任务测试及体验中发现的产品问题已修复；固定 wheel、最终 R25 包的本地自动验证、14 项双路径记录及同包复核已完成。**整体验收仍为 Blocked：真实用户 `user_default` 安装重试被自动审批拒绝。** OUTSIDE 的同步 MCP 渲染中途取消为 Not Run，远端 CI 本轮未执行。下列 Passed 仅指明示的已执行范围。
 
-最近完成自动验证的 R22 ZIP `82529f5564f8b4f9b319785c35094700c431747ff2daa3b438312c6a2b3a8e56`（1c290ee）：2,313 tests，26 skips，无失败/错误；隔离smoke104.33s，两配置独立冷依赖检查Passed。REP-MOLECULAR完整UI/MCP重测Passed。以下旧包结果保留为失败—修复链，最终仍需全项复核。
+## 交付入口
 
-| 项目 | UI | MCP |
+- [14 个 Collection 的总展示 .blend](../../../../.blend-analysis/2026-09-07-review/outputs/final-gallery/ChemBlender-R25-14-cases.blend)、[2400×6000 总览渲染](../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery.png)、[较小预览](../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery-preview.png)、[14 集合同屏的真实窗口](../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery-window-14-collections.png)。
+- [最终测试配对目录](../../../../.blend-analysis/2026-09-07-review/outputs/final-R25/)、[28 路径索引及来源](../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-review.json)、[交付文件 hash](../../../../.blend-analysis/2026-09-07-review/outputs/final-delivery-manifest.json)。各项明细链接见下表。
+- [最终 ZIP](../../../../.blend-analysis/2026-09-07-review/package-grid-label/chemblender-2.4.0.zip)、[五文件 artifact 审计](../../../../.blend-analysis/2026-09-07-review/package-grid-label/)、[自动验证结果与耗时](../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-qualification.json)。
+- [已验证 UI 对应的公开 MCP 命令](../../../../tests/blender_review_commands.py)。本轮执行器 `scripts/reuse_blender.py` 每次执行重新读取该目录，核对公开 RNA/poll 和自建 profile 边界，并记录输入、结果、耗时及 UI 证据。
+
+展示文件有 14 个顶层 Collection，每项含 UI/MCP 子集合。其几何为 R25 求值后的展示快照，模型各自缩放排版，普通 Workbench 材质不表达全部节点属性；每个子集合的 `source_blend` 指向权威配对。Volume 的真实体渲染、元素颜色及逐帧近景应看各项独立图片。ENV 没有科学数据，不要求空环境生成 sidecar。迁移的新副本、LIFE 的 Save As 和 Grid 冷恢复配对均另外保留。
+
+## 最终同包复核
+
+Blender **5.1.1**，bundled Python **3.13.9**，Windows；启用键 **`bl_ext.user_default.chemblender`**。独立分支 `fix/quantum-input-units-experience-review`，版本保持 **2.4.0**。最终打包源码 **`039bde7e1bf028b4b691d888d51460ae331ff678`**；后续提交只记录文档、验收命令和证据，不改变包内容。
+
+最终 ZIP SHA-256：`661c58f82ae0a5564d37e713eca281e992ad24fd5b5b81fe2b2aee321862368b`。
+
+原生 UI 首测使用 Windows 鼠标、键盘、菜单、弹窗和屏幕截图，独立 MCP 路径使用公开 Operator/RNA。用户后续允许重复 UI 操作改用 MCP，因此最终复核在两套独立 profile 中重放已验证命令，不冒充新的原生首测。每份复核先从干净文件副本打开，核对已安装源码，再检查公开状态、下表操作及科学数组。首次体验、失败证据和修复 commit 的版本仍在 14 份明细中保留，不将旧包结果改标为 R25。
+
+| 项目明细 | UI 路径最终复核 | MCP 路径最终复核 | R25 实际复核范围 |
+| --- | --- | --- | --- |
+| [ENV](2026-09-07-agent-experience/ENV.md) | 隔离 Passed；实际安装 Blocked | 隔离 Passed；实际安装 Blocked | 两个隔离 user_default 的 R25 安装、新进程依赖检查；28 次加载中的启用键、Reader API、Scene RNA；完整隔离 register/unregister/reload smoke。实际用户安装 Blocked。 |
+| [IMP](2026-09-07-agent-experience/IMP.md) | Passed | Passed | 已保存导入数据和单位的数组完整性；CCO 预览取消；未知 Gaussian 单位诊断、拒绝确认、取消后几何不变。 |
+| [DATA](2026-09-07-agent-experience/DATA.md) | Passed | Passed | 原始与 +1 Å Derived 数据不变；晶体约束隐藏/恢复；缺少 spglib 时停止且不产生结果。 |
+| [VIEW](2026-09-07-agent-experience/VIEW.md) | Passed | Passed | 重开后重新绑定轨迹及 force；首尾帧坐标/力与权威数组一致，播放/暂停恢复；保存的 Grid/Surface 绑定和展示几何。 |
+| [EXP](2026-09-07-agent-experience/EXP.md) | Passed | Passed | 选择周期结构；未确认 XYZ 的 cell/PBC 损失时无输出，确认后文件仅含所选坐标；原回读语义及配对数组保持。 |
+| [LIFE](2026-09-07-agent-experience/LIFE.md) | Passed | Passed | 重开既有 revision 比较项目、Save As 新配对，UUID/manifest 一致；Connected 状态拒绝不适用的 Verify。 |
+| [MIG](2026-09-07-agent-experience/MIG.md) | Passed | Passed | 新复制的旧场景分别预览、拒绝未确认执行、确认迁移、四原子/三键、备份和配对保存；原 MIG 文件另行完整性核对。 |
+| [AGENT](2026-09-07-agent-experience/AGENT.md) | Passed | Passed | 公开 RNA/poll、未知单位阻断反馈、失败确认停止及取消恢复；两测试连接持续可用。 |
+| [OUTSIDE](2026-09-07-agent-experience/OUTSIDE.md) | Passed | Passed | 普通材质/World/Area/Camera 及 Collection 随文件恢复；最终包下两张 Eevee 渲染已实际查看且像素相同，科学数组不变。 |
+| [REP-MOLECULAR](2026-09-07-agent-experience/REP-MOLECULAR.md) | Passed | Passed | 八个默认 View 在 R25 下恢复并求值；59 个唯一权威数组与原配对一致；两路径各八模型展示快照入总览。 |
+| [REP-TRAJECTORY](2026-09-07-agent-experience/REP-TRAJECTORY.md) | Passed | Passed | 32×21 数据重开与重配置、帧 1/32 坐标及 force、播放/暂停；energy/step/source_index 数组完整性。 |
+| [REP-BIOLOGICAL](2026-09-07-agent-experience/REP-BIOLOGICAL.md) | Passed | Passed | 19 原子的 residue mask、MODEL 1/10 坐标、22 个零 radius 选择；完整 PDB/PQR 五数组和层级保存状态。 |
+| [REP-CRYSTAL](2026-09-07-agent-experience/REP-CRYSTAL.md) | Passed | Passed | 三个周期输入的 View/数据绑定、18 个唯一数组、单元格/占据/无序元数据完整性；缺 spglib 的公开失败停止。 |
+| [REP-GRID](2026-09-07-agent-experience/REP-GRID.md) | Passed | Passed | 本项完整干净体验已使用 R25：64³ 全体素、显式语义/单位 provenance、Cycles Volume/正负表面、四 VDB 真正新进程重建；再复核配对及展示。 |
+
+28 份副本全部通过安装 Python 字节比对、Reader API/Scene RNA/poll 和保存状态检查；26 份科学配对的 UUID/manifest 与全部权威数组文件通过核对，原始文件未改变。MIG 另从两份旧场景副本重新迁移，OUTSIDE 在 R25 下重新 Eevee 渲染；REP-GRID 的完整干净导入、语义确认、Cycles 渲染与真正新进程冷恢复本来就发生在最终 R25。最终阶段没有再次逐个点击所有历史菜单；完整原生体验和完整自动 smoke 与上述针对性复核共同提供证据。
+
+## 单位与任务治理修复
+
+`bed5cab` 先复现 Gaussian `Units=Bohr/AU`、ORCA `! Bohrs` 的坐标误读，再修 reader。Gaussian 仅 route section 解析 `Units=...`/括号形式；ORCA 处理简单关键字及 `%coords Units`。一致重复允许，冲突/未知或不可靠坐标配置拒绝，标题和注释不改变坐标单位。输出统一 Å，显式 Bohr 因子 **0.529177210903**，显式 Å 与默认输入保留既有数值语义。
+
+两个 reader 版本为 **2**，现有 provenance parameters 记录源/输出单位及因子；公开函数签名、Reader API 和 sidecar schema 保持。已保存项目不自动缩放，reader 版本变化进入既有 revision 冲突流程；单元和实际 smoke 验证旧结果保留、新 revision 坐标正确。Windows 发布前关闭 lazy array 映射，避免重新导入发布被旧映射锁住。
+
+过期测试改为任务状态一致性：代表样例任务必须 completed、不能仍 active；索引有效且活跃任务不超过一个。治理检查保留。格式说明、生成文档、样例说明和 Unreleased 变更记录同步更新。
+
+最后新增干净检出的文档证据回归：未随 Git 分发的本轮证据目录不存在时允许离线检出，目录存在却缺少被引用文件仍失败，普通文档死链仍失败。回归先复现旧检查失败，再作定点修复；没有删除任务或链接治理检查。该修改只涉及仓库测试，不改变 R25 ZIP。
+
+体验中另修复 Browser draw 写 RNA、公开 Preview/取消/JSON 参数、reload 会话、惰性晶体约束、生物默认 View、力箭头逐帧/几何/起点、重开绑定、导出损失预览与确认、配对 Save As/Relink/revision、迁移预览/显示、MOL2 标签、生物层级反馈和 Grid 小阈值显示。每项明细均保留对应失败—回归—修复—重测链。
+
+## 依赖、构建与自动验证
+
+仅按 `ChemBlender/dependencies.toml` 补齐以下既定 wheel，逐一验证文件名、cp313 ABI、SHA-256、许可证与大小；没有升级或加入可选后端。wheel 未纳入 Git，测试依赖放在本轮 `test-site`，NumPy 使用 Blender bundled 版本 **2.3.4**，未写 Blender 全局 site-packages。
+
+| wheel | 字节 | 许可证 | SHA-256 |
+| --- | ---: | --- | --- |
+| rdkit-2026.3.3-cp313-cp313-win_amd64.whl | 24,618,400 | BSD-3-Clause | f8bd59b24e128c9c70c975bfb1920cf610ba3096439a24ca2850eb861e767c48 |
+| gemmi-0.7.5-cp313-cp313-win_amd64.whl | 2,270,352 | MPL-2.0 | ad1f72ffa24adbfaf259e11471f6f071a668667f6ca846051f3bfea024fd337d |
+
+| 检查 | 结果 | 本轮最终证据 |
 | --- | --- | --- |
-| ENV | 隔离安装与 reload 已验证；实际用户安装 Blocked | 隔离安装已验证；待最终复核 |
-| IMP | f2cbd41 通过；待最终包复核 | f2cbd41 通过；待最终包复核 |
-| DATA | R8 Passed；待全轮最终复核 | R8 Passed；待全轮最终复核 |
-| VIEW | R13 Passed；待全轮最终复核 | R13 Passed；待全轮最终复核 |
-| EXP | R14 Passed；待全轮最终复核 | R14 Passed；待全轮最终复核 |
-| LIFE | R16/R17 Passed；待最终包复核 | R16/R17 Passed；待最终包复核 |
-| MIG | R20 Passed；待全轮最终复核 | R20 Passed；待全轮最终复核 |
-| AGENT | R21 Passed；待全轮最终复核 | R21 Passed，冷依赖已修复；待最终复核 |
-| OUTSIDE | R21 Passed；待全轮最终复核 | R21 Passed；同步渲染中途取消Not Run；待最终复核 |
-| REP-MOLECULAR | R22 Passed；待全轮最终复核 | R22 Passed；待全轮最终复核 |
-| REP-TRAJECTORY | R22 Passed；待全轮最终复核 | R22 Passed；待全轮最终复核 |
-| [REP-BIOLOGICAL](2026-09-07-agent-experience/REP-BIOLOGICAL.md) | Passed（原生首测，R24 按授权 MCP 重放复核） | Passed（独立 R24） |
-| [REP-CRYSTAL](2026-09-07-agent-experience/REP-CRYSTAL.md) | Passed（按授权重放及窗口检查） | Passed（独立 R24） |
-| [REP-GRID](2026-09-07-agent-experience/REP-GRID.md) | Passed（R25 干净重放、原生修复检查、新进程冷恢复） | Passed（独立 R25、真实 Cycles、冷恢复） |
+| 专项失败用例与修复后回归 | Passed | 各项明细；最后 Grid 8 项专项 |
+| 完整 unittest | Passed：2315 tests，26 skips，0 failures/errors | `logs/FINAL-R25-unittest-close.log`；测试 112.908 秒，进程 114.110 秒 |
+| 源码/测试 compile、生成文档检查 | Passed | `FINAL-R25-compile.log`、`FINAL-R25-generated-docs.log` |
+| 原生 extension validate/build | Passed | `qualification-grid-label-static.log`；最终追加 validate 2.749 秒 |
+| ZIP 内容审计、大小预算、artifact verifier | Passed | `package-grid-label/`；最终 verifier 1.028 秒 |
+| 全新临时 BLENDER_USER_RESOURCES 安装及完整 blender_smoke.py | Passed | `FINAL-R25-isolated-smoke-retry.log`，104.846 秒 |
+| 两个实际可见测试 profile 的 user_default 安装/新进程依赖 | Passed | UI 3.312/1.961 秒，MCP 3.104/1.952 秒；`R25-catalog-install-cold.json` |
+| 原用户真实 user_default 安装 | **Blocked** | 首次失败，重试被自动审批拒绝；`actual-user-smoke.log` |
+| 本轮 GitHub Actions | **Not Run** | 未进行远端写入，不引用历史 CI 或 Blender 5.1.2 |
 
-## 源码、环境与证据
+26 个 skip 均在[逐项原因清单](../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-skips.json)：缺少已明确不安装的 ASE、cclib、IOData、phonopy、pymatgen、spglib、GBasis；Gemmi 的“未安装”分支因本轮已安装而跳过；Windows 目录 symlink 缺少权限。不能把这些 optional backend 的计算能力标为已实测通过。
 
-- 独立分支：`fix/quantum-input-units-experience-review`；首阶段修复：`bed5cab`。
-- Blender **5.1.1**，bundled Python **3.13.9**，Windows；不引用历史 5.1.2 或远端 CI 作为本轮通过证据。
-- 已构建 ZIP：`63bc260e465132ad9ea45ee7e2060dfa16a45c87331e118d09dc2f6f232449b3`，29,983,410 bytes。
-- 证据目录：[本轮文件](../../../../.blend-analysis/2026-09-07-review/)。原生输入及 MCP 请求分别记录在 `logs/ui-actions.jsonl`、`logs/mcp-actions.jsonl`。
-- 用户自存的根目录 `1.blend` 不属于本轮产物；测试窗口独立 profile，MCP 端口 9877。
-- 2,289 项 unittest：零失败/错误、26 skips；详见 `logs/unit-final.log`。compileall、生成文档检查、原生 validate/build、五文件 artifact verifier 已通过。
+追加 smoke 首次将归档 ZIP 路径传给脚本，脚本按 `ZIP.parent.parent` 查仓库夹具而失败；改用仓库内 SHA 完全相同的 ZIP 后完整通过。失败日志保留并归为测试调用路径问题。Windows 在同进程卸载已加载 RDKit DLL 时仍输出清理锁定警告；生命周期断言通过，两套自建 profile 的独立冷依赖检查进一步验证真实新进程导入。已有 `mesh.py:513` 的 SyntaxWarning 未作为本轮修复扩展范围。
 
-## 包体归因
+## 包体逐项归因
 
-历史预算为 29,977,165 bytes / 32,066,803 unpacked bytes。当前为 29,983,410 / 32,088,516；增加 6,245 packed / 21,713 unpacked bytes。资源与两个固定 wheel 的内容和大小保持一致。
+最终 **29,989,841 packed bytes / 32,113,134 unpacked bytes**，其中代码 2,718,378、资源 2,506,004、wheel 26,888,752 bytes。所有 unexplained-growth allowance 保持 **0**。
 
-| 成员 | 相对历史预算的 unpacked bytes 变化 | 原因 |
-| --- | ---: | --- |
-| core/formats/gaussian_input.py | +9,601 | 既有 Gaussian reader 加入后未更新预算，本轮加入单位校正 |
-| core/formats/orca_input.py | +9,161 | 既有 ORCA reader 加入后未更新预算，本轮加入单位校正 |
-| core/formats/__init__.py | +359 | 已提交的 reader 导出 |
-| core/reader_catalog.py | +286 | 已提交的 reader 注册 |
-| core/__init__.py | +396 | 已提交的公开 core 导出 |
-| core/import_pipeline/conflicts.py | +92 | 相同文件的 reader 版本变化触发 revision 冲突 |
-| core/storage/publication.py | +199 | 发布前关闭 Windows lazy array 映射 |
-| ui/project_browser/panel.py | +1,619 | 历史包使用 LF；当前标准 Git checkout 为 CRLF，共 1,619 行 |
+相对最初本轮单位修复包增加 **6,431 packed / 24,618 unpacked bytes**，仅 17 个实际修改的代码成员；[逐文件字节、原因和 SHA 归因](../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-package-attribution.json)已与 ZIP 成员求和核对，资源及 wheel 完全相同。各中间包的修复归因和 build identity 保留在本轮目录。
 
-在独立历史 checkout `255cdce` 原生重建得到 29,977,234 bytes；仅将该 panel 恢复 LF，即重现历史包的 29,977,165 bytes 和 32,066,803 unpacked bytes。ZIP 时间戳不同，因此不宣称复现历史 SHA。详细成员对比与重建记录见 `package-native-delta.json` 和 `baseline-reconstruction.json`。本轮相对开始时源码的实际增加为 4,214 unpacked bytes；其余是已提交 reader 与历史换行基线的补齐。全部 unexplained-growth allowance 保持 **0**。
+最初本轮包相对历史预算增加 6,245/21,713 bytes，其中包括此前已提交却未计入预算的两个 reader、公开导出/注册，以及 panel 的 CRLF 1,619 bytes。[历史包重建](../../../../.blend-analysis/2026-09-07-review/baseline-reconstruction.json)与[初始成员归因](../../../../.blend-analysis/2026-09-07-review/package-native-delta.json)已区分这些原因；不能将全部历史差值声称为本轮新增代码。最终相对原历史预算总差值为 12,676 packed / 46,331 unpacked bytes。
 
-## 体验进度
+## 文件保留与剩余边界
 
-14 项将分别保存明细，UI 和 MCP 使用独立前置状态。真实 UI 通过原生鼠标、键盘、菜单和弹窗操作；公共 MCP 仅使用公开 Operator 与公开状态。测试脚本的 HWND/键盘扫描码问题已修正，不能归为产品缺陷。
+报告单独保存，不改写历史人工验收及其 Not Run 状态。[真实用户窗口只读结果](../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-user-preservation.json)与先前状态相同：`1.blend`、Cube/Light/Camera、dirty=false；原进程没有用于测试操作。根目录未跟踪的 `1.blend` 属于用户，不提交。本轮日志、截图、渲染、测试配对及失败副本保留在 ignored `.blend-analysis/2026-09-07-review/`，交付 hash 清单不包含整个 Python/profile 缓存。
 
-## UI 现场修复：Project Browser
+早期 DATA 的失败配对曾被测试脚本继续使用，不能冒充不可变 checkpoint；明细明确注明，原失败截图和日志仍有效。后续失败均另存完整配对并保留。总览首次相机裁切及本轮脚本的路径/RNA 读取错误也保留记录，修正后复核，不将测试工具问题算成产品缺陷。
 
-`IMP-05-water-view.png` 与 `logs/ui-blender-error.log` 记录了真实 draw 上下文禁止写 Scene RNA 的失败，导致 Browser 空白。保存失败现场为 `outputs/failures/IMP-before-browser-fix.blend` 及其 `.cbq`。新增回归先失败；修复将投影更新延后到一次性主线程 timer，合并重复请求，并在文件切换/卸载时取消 timer。源码全量重测 2,290 tests / 26 skips / 0 failures or errors；仍需新包 UI/MCP 复核。
-
-修复 ZIP：`7579c1541eb242cb9220d3c7ff40296446d3f083641cf5c0c50c3f1fb9dc2112`，29,983,926 bytes；只有 `ui/project_browser/panel.py` 相对首包增加 2,087 unpacked bytes，压缩包增加 516 bytes。源码 section 2,695,847 bytes、总解压 32,090,603 bytes。新的五文件审计位于 `package-browser-fix/`，旧包保留在 `package/`，通过记录不会混用。
-
-新包 UI 安装/重启用后，`ENV-R2-04-browser.png` 已实际显示 `No project data`、By Source/By Data 与筛选，错误日志没有 draw traceback。完整隔离 smoke 通过，耗时 103.48 s；仍需重跑有数据的 IMP 与 MCP 复核。
-
-
-## 导入体验补充修复
-
-`22b654d` 修复取消摘要与预览标签；ZIP `c5e438aefeb200e32dfcb5a09b73825acdc5dc6971a3acd64d9f85349c7c4207` 为 29,983,936 bytes，相对 Browser 修复包只有 `ui/import_preview.py` 增加 185 unpacked / 10 packed bytes。完整隔离 smoke 通过，102.91 s。
-
-逐项记录：[ENV](2026-09-07-agent-experience/ENV.md)、[IMP](2026-09-07-agent-experience/IMP.md)。IMP UI 已保存六个 Structure View、IMP/UI 集合、配对 sidecar 与渲染。MCP 检查复现强制 Preview 残留及显式确认值被默认值覆盖，当前修复正在进行最终包复测；其余 12 项尚未执行，不能视为通过。
-
-新增构建 `c206b53e5cb94c8c9a568740b1297d710d001d43175ecca64f2045f8457dd311` 为 29,984,397 bytes，解压 32,092,532 bytes。相对上一包：import_preview.py +369 unpacked / +84 packed，properties.py +1287 / +353，quick_import.py +88 / +24。只有三处公开导入反馈实现变更，所有未解释增长 allowance 仍为 0；审计五文件保存在 package-mcp-preview/。
-
-R6 仅 ui/session.py 增加 742 unpacked / 209 packed bytes，用于注册后恢复已保存 session；包 29,984,722 bytes，总解压 32,093,564 bytes。资源/wheel 未变，所有未解释增长 allowance 为 0。中间同步注册失败包 99234f3f 已淘汰，失败日志仍保留。
-
-
-R8 DATA 双路径完成，详见 [DATA 独立报告](2026-09-07-agent-experience/DATA.md)。该报告保留生物不可见缺陷、dc1ff3d 修复、回归与 UI/MCP 结果，以及旧证据副本被测试脚本继续使用后的状态纠正。最终配对文件按 DATA/UI 与 DATA/MCP 集合保存。其他 11 项仍未执行。
-
-VIEW 的 Grid 选择和力箭头缺陷链见 [VIEW 独立报告](2026-09-07-agent-experience/VIEW.md)。b05dd5c 对应当前最终自动验证包；相对 R9，trajectory_view.py 增加 1716 unpacked / 473 packed bytes，Browser panel 增加 1487 / 288，总包增加 761 bytes，unexplained allowance 为零。窗口重新安装后从空文件重跑 UI；MCP 仍等待 UI 完整结束后独立执行。
-
-R13 VIEW 双路径完整重测通过，详见 [VIEW](2026-09-07-agent-experience/VIEW.md)。配对文件各有 VIEW/UI 或 VIEW/MCP 集合，截图与渲染均保留。此阶段文件重开为同进程，不代替 LIFE 的冷启动。其余 10 项继续执行。
-
-迁移独立报告：[MIG](2026-09-07-agent-experience/MIG.md)。两条路线有独立集合、渲染、完整配对和冷重开证据。继续 AGENT、OUTSIDE 和五类代表输入；最终同包复核与总展示文件尚未完成。
-
-[AGENT独立报告](2026-09-07-agent-experience/AGENT.md)包含单位诊断修复、原生连接恢复与MCP测试profile冷依赖修复的完整证据。还剩OUTSIDE与五类代表输入，以及最终同包复核和14集合总展示文件。
-
-[OUTSIDE独立报告](2026-09-07-agent-experience/OUTSIDE.md)：真实Eevee双路径渲染、材质作用范围、集合、配对与重开通过。剩五类代表输入、最终同包复核和14集合总展示文件。
-
-[REP-MOLECULAR独立报告](2026-09-07-agent-experience/REP-MOLECULAR.md)：八类输入两路线各保存集合、八张独立渲染和配对文件；59个数组hash相同。MOL2误标修复后完整重测通过。剩四类REP、最终同包全项复核和14集合总展示文件。
-
-[REP-TRAJECTORY独立报告](2026-09-07-agent-experience/REP-TRAJECTORY.md)：32×21坐标/力、energy/step/source_index数值与文本一致；双路径1/16/32帧、播放暂停、集合、六张渲染与配对保存通过。剩三类REP、最终同包复核和14集合总文件。
+自动审批拒绝的具体动作是再次安装/清理真实用户扩展目录，原因是首次已触发 NumPy 清理和权限错误，可能影响现有 MCP。当前可供审批的对象为上方同一 R25 ZIP；真实目录备份、关闭占用后的安装及冷启动验证尚未执行。未推送、未创建 tag、未发布 Release、未提高版本。

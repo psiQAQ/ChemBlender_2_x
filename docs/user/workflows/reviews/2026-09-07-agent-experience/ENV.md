@@ -1,5 +1,28 @@
 # ENV — 安装与入口
 
+## R25 最终复核
+
+执行者：**Agent 模拟用户**。2026-09-08，Blender **5.1.1** / Python **3.13.9**。源码 `039bde7e1bf028b4b691d888d51460ae331ff678`；ZIP SHA-256 `661c58f82ae0a5564d37e713eca281e992ad24fd5b5b81fe2b2aee321862368b`。
+
+UI 与 MCP 各使用独立的干净测试副本。按用户授权，重复动作从 [UI → MCP 命令目录](../../../../../tests/blender_review_commands.py) 读取公开命令；原生首测证据保留在下方阶段记录，重放不记为新的原生 UI 首测。
+
+本次范围：两个隔离 user_default 的 R25 安装、新进程依赖检查；28 次加载中的启用键、Reader API、Scene RNA；完整隔离 register/unregister/reload smoke。实际用户安装 Blocked。
+
+| 路径 | 最终结果 | 状态与耗时证据 | 配对文件 |
+| --- | --- | --- | --- |
+| UI | 隔离检查 Passed；实际用户安装 Blocked | [操作结果](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-ENV-UI-actions-summary.json)；[加载状态](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-ENV-UI-loaded.json) | [最终副本](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25/ENV/UI/ENV-R3-UI.blend) |
+| MCP | 隔离检查 Passed；实际用户安装 Blocked | [操作结果](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-ENV-MCP-actions-summary.json)；[加载状态](../../../../../.blend-analysis/2026-09-07-review/outputs/FINAL-R25-ENV-MCP-loaded.json) | [最终副本](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25/ENV/MCP/ENV-R3-MCP.blend) |
+
+所有最终副本的安装 Python 字节与 R25 ZIP 匹配，Reader API、Scene RNA、公开 poll 通过；原始配对文件及其权威数组未被本轮复核改写。[完整性核查](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-integrity.json)与[逐项范围索引](../../../../../.blend-analysis/2026-09-07-review/outputs/final-R25-review.json)记录 UUID、manifest hash 和数组检查。每条命令的 JSON 留有实际 `seconds`，不将观察间隔计入产品等待。
+
+最终 [14 集合展示文件](../../../../../.blend-analysis/2026-09-07-review/outputs/final-gallery/ChemBlender-R25-14-cases.blend)含本项同名 Collection 和 UI/MCP 子集合；[总览渲染](../../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery.png)与[真实窗口](../../../../../.blend-analysis/2026-09-07-review/screenshots/FINAL-R25-gallery-window-14-collections.png)已查看。展示模型按单体缩放，不用于科学距离比较；科学操作使用上表配对文件。
+
+实际用户目录重试仍被自动审批拒绝：此前安装清理已有 NumPy，可能影响现有 MCP。最终 R25 两个隔离配置的安装/冷依赖及完整 smoke Passed，不能替代真实用户资格验证。后续需要在保留用户场景并取得新的明确许可后，对真实目录做备份、停止占用、原生安装同一 ZIP 和新进程验证；本轮没有绕过审批。
+
+## 阶段验收记录（保留当时状态）
+
+以下版本、失败和“待最终复核”描述对应当时检查点；当前结果以上方 R25 复核为准。
+
 执行者：Agent 模拟用户。UI：**Failed，修复后待重测**；MCP：**Passed**（独立隔离安装/生命周期；面板显示待修复后重测）。真实用户目录的额外安装资格验证：**Blocked**，不能将隔离通过替代它。
 
 - 前置：两个独立 factory-startup profile，初始均未安装 ChemBlender。Blender 5.1.1，English，1920×1080 屏幕，1.0 UI scale。

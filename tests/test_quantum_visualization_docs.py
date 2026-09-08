@@ -1880,6 +1880,40 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             for contract in contracts:
                 self.assertIn(contract, sections[task_number], contract)
 
+    def test_review_evidence_links_work_without_local_artifacts(self):
+        from tempfile import TemporaryDirectory
+        from unittest.mock import patch
+
+        with TemporaryDirectory() as directory:
+            checkout = Path(directory)
+            for relative in (
+                "README.md", "AGENTS.md", ".agents/README.md", "docs/README.md"
+            ):
+                path = checkout / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("", encoding="utf-8")
+            report = checkout / "docs/user/reviews/review.md"
+            report.parent.mkdir(parents=True)
+            report.write_text(
+                "[Evidence](../../../.blend-analysis/2026-09-07-review/proof.json)",
+                encoding="utf-8",
+            )
+            with patch.dict(
+                globals(), ROOT=checkout, DOCS=checkout / "docs/quantum-visualization"
+            ):
+                # A clean checkout has no local acceptance artifacts.
+                self.test_local_markdown_links_resolve()
+                evidence = checkout / ".blend-analysis/2026-09-07-review"
+                evidence.mkdir(parents=True)
+                # Once that run is available, a missing referenced file is an error.
+                with self.assertRaises(AssertionError):
+                    self.test_local_markdown_links_resolve()
+                (evidence / "proof.json").write_text("{}", encoding="utf-8")
+                self.test_local_markdown_links_resolve()
+                report.write_text("[Missing](missing.md)", encoding="utf-8")
+                with self.assertRaises(AssertionError):
+                    self.test_local_markdown_links_resolve()
+
     def test_local_markdown_links_resolve(self):
         import re
 
@@ -1908,6 +1942,11 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 if not destination or destination.startswith(("http://", "https://")):
                     continue
                 target = (path.parent / destination).resolve()
+                # This explicitly local review bundle is not distributed with Git.
+                # Keep validating every artifact when the bundle is available.
+                evidence = ROOT / ".blend-analysis/2026-09-07-review"
+                if not evidence.exists() and target.is_relative_to(evidence):
+                    continue
                 self.assertTrue(target.exists(), f"{path}: {destination}")
 
 
