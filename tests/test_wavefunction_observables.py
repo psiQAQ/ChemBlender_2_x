@@ -1,6 +1,8 @@
 import importlib.util
 from pathlib import Path
 import unittest
+from concurrent.futures import CancelledError
+from dataclasses import replace
 from unittest import mock
 from uuid import uuid4
 
@@ -11,11 +13,15 @@ from ChemBlender.core import (
     AtomicProperty,
     DatasetStatus,
     DensityMatrixSpin,
+    DensityMatrixLevel,
     ImportBatch,
     QCProject,
+    ProvenanceRecord,
     evaluate_density_matrix_grid,
     evaluate_electrostatic_potential_grid,
 )
+from ChemBlender.core.wavefunction_observables import derive_density_matrix_from_orbitals
+from tests.test_wavefunction_grid import entities as orbital_entities
 from tests.test_density_matrix_model import density_matrix, entities, values
 
 
@@ -58,6 +64,96 @@ def nuclear_charges(structure, charges=None, **overrides):
 
 
 class WavefunctionObservableTests(unittest.TestCase):
+    @mock.patch("ChemBlender.core.wavefunction_observables._evaluate_stored_basis")
+    @mock.patch("ChemBlender.core.wavefunction_observables._evaluate_esp")
+    def test_density_and_esp_evaluate_only_bounded_point_blocks(self, esp, basis_values):
+        structure, basis = entities()
+        matrix = density_matrix(structure.id, basis.id)
+        basis_values.side_effect = lambda _s, _b, points: points[:, 0][None, :]
+        esp.side_effect = lambda _s, _b, _d, _q, points: points.sum(axis=1)
+        geometry = {**GRID, "shape": (3, 2, 2)}
+        rdm = evaluate_density_matrix_grid(structure, basis, matrix, chunk_size=5, **geometry)
+        potential = evaluate_electrostatic_potential_grid(
+            structure, basis, matrix, nuclear_charges(structure, (0.8,)),
+            chunk_size=5, **geometry,
+        )
+        self.assertEqual([len(call.args[2]) for call in basis_values.call_args_list], [5, 5, 2])
+        self.assertEqual([len(call.args[4]) for call in esp.call_args_list], [5, 5, 2])
+        points = numpy.concatenate([call.args[2] for call in basis_values.call_args_list])
+        numpy.testing.assert_allclose(rdm.datasets[0].data.values.ravel(), points[:, 0]**2)
+        numpy.testing.assert_allclose(potential.datasets[0].data.values.ravel(), points.sum(axis=1))
+
+    @mock.patch("ChemBlender.core.wavefunction_observables._batch")
+    @mock.patch("ChemBlender.core.wavefunction_observables._evaluate_esp")
+    def test_esp_cancellation_after_first_block_discards_output(self, evaluate, batch):
+        structure, basis = entities()
+        matrix = density_matrix(structure.id, basis.id)
+        state = {"cancel": False}
+
+        def evaluate_then_cancel(_s, _b, _d, _q, points):
+            state["cancel"] = True
+            return numpy.zeros(len(points))
+
+        evaluate.side_effect = evaluate_then_cancel
+        with self.assertRaises(CancelledError):
+            evaluate_electrostatic_potential_grid(
+                structure, basis, matrix, nuclear_charges(structure),
+                chunk_size=1, cancel_check=lambda: state["cancel"], **GRID,
+            )
+        self.assertEqual(evaluate.call_count, 1)
+        batch.assert_not_called()
+
+    def test_orbital_rdm_requires_level_and_preserves_derived_source(self):
+        structure, basis, orbitals = orbital_entities()
+        with self.assertRaises(TypeError):
+            derive_density_matrix_from_orbitals(structure, basis, orbitals)
+        batch = derive_density_matrix_from_orbitals(
+            structure, basis, orbitals, level=DensityMatrixLevel.SCF,
+        )
+        density = batch.density_matrices[0]
+        numpy.testing.assert_allclose(density.data.values, [[2.0]])
+        self.assertIs(density.level, DensityMatrixLevel.SCF)
+        self.assertIs(density.spin_role, DensityMatrixSpin.TOTAL)
+        record = batch.provenance[0]
+        self.assertEqual(record.operation, "derive_density_matrix_from_orbitals")
+        self.assertEqual(dict(record.parameters)["density_source"], "orbital_occupations")
+        self.assertEqual(record.source, "")
+        self.assertEqual(record.parent_ids, (structure.id, basis.id, orbitals.id))
+        project = QCProject(id=uuid4(), schema_version="0.1")
+        project.commit(ImportBatch(structures=(structure,), basis_sets=(basis,), orbital_sets=(orbitals,)))
+        project.commit(batch)
+
+    def test_nto_source_is_rejected_without_false_positive_for_toronto(self):
+        structure, basis, orbitals = orbital_entities()
+        for source, operation, allowed in (
+            ("Toronto/water.molden", "parse", True),
+            ("water.nto.molden", "parse", False),
+            ("water.molden", "natural_transition_orbitals", False),
+        ):
+            record = ProvenanceRecord(
+                id=uuid4(), revision="p1", producer="test", producer_version="1",
+                source=source, source_hash="a" * 64, parent_ids=(), operation=operation,
+                parameters=(),
+            )
+            sourced = replace(orbitals, provenance_ids=(record.id,))
+            with self.subTest(source=source, operation=operation):
+                if allowed:
+                    result = derive_density_matrix_from_orbitals(
+                        structure, basis, sourced, level=DensityMatrixLevel.SCF,
+                        source_provenance=(record,),
+                    )
+                    self.assertEqual(len(result.density_matrices), 1)
+                else:
+                    with self.assertRaisesRegex(ValueError, "NTO"):
+                        derive_density_matrix_from_orbitals(
+                            structure, basis, sourced, level=DensityMatrixLevel.SCF,
+                            source_provenance=(record,),
+                        )
+        with self.assertRaisesRegex(ValueError, "source provenance"):
+            derive_density_matrix_from_orbitals(
+                structure, basis, sourced, level=DensityMatrixLevel.SCF,
+            )
+
     @mock.patch("ChemBlender.core.wavefunction_observables._evaluate_stored_basis")
     def test_total_density_grid_preserves_semantics_and_provenance(self, evaluate):
         structure, basis = entities()

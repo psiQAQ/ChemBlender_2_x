@@ -2,6 +2,8 @@
 
 Project 中的 Structure、Grid3D、属性和结果是科学实体；Blender Object、material、Volume 和 surface 是 View。View 可以重建，也可以有多个。不要从“场景里看得见”推断数据已经写回 Project。
 
+FCHK/Molden 的轨道选择、密度和 ESP 求值入口见[波函数工作台](../quantum-workbench.md)；该工作流需要配置独立的 IOData/GBasis Python 环境。
+
 ## 要完成什么
 
 - 创建或检查 Structure View。

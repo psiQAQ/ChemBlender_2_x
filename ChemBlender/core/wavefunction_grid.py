@@ -1,7 +1,10 @@
 import hashlib
 import json
 import operator
-from math import isfinite
+import re
+import sys
+from concurrent.futures import CancelledError
+from math import isfinite, prod
 from uuid import uuid4
 
 from .model import (
@@ -21,6 +24,12 @@ from .model import (
 BACKEND_NAME = "qc-gbasis"
 BACKEND_VERSION = "0.1.0"
 DERIVATION_VERSION = "2"
+DEFAULT_CHUNK_SIZE = 8192
+_WORKING_BYTES = 64 * 1024 * 1024
+_NTO_MARKER = re.compile(
+    r"(?<![a-z0-9])ntos?(?![a-z0-9])|natural[\s_-]+transition[\s_-]+orbitals?",
+    re.IGNORECASE,
+)
 
 
 class GBasisDependencyError(RuntimeError):
@@ -44,6 +53,8 @@ def _require_gbasis_version():
 
 
 def _validate_entities(structure, basis_set, orbital_set):
+    import numpy
+
     if not isinstance(structure, Structure):
         raise TypeError("structure must be a Structure")
     if not isinstance(basis_set, BasisSet):
@@ -64,9 +75,89 @@ def _validate_entities(structure, basis_set, orbital_set):
         raise ValueError("GBasis evaluation requires L2 primitive normalization")
     if orbital_set.kind is OrbitalKind.GENERALIZED:
         raise NotImplementedError("generalized spinor evaluation is not supported")
+    for channel in orbital_set.channels:
+        coefficients = numpy.asarray(channel.coefficients.values)
+        if numpy.iscomplexobj(coefficients):
+            raise NotImplementedError("complex orbital coefficients are not supported")
+        if coefficients.shape[1] != basis_set.basis_function_count:
+            raise ValueError("orbital coefficient width must match basis_set")
+        if not numpy.all(numpy.isfinite(coefficients)):
+            raise ValueError("orbital coefficients must be finite")
 
 
-def _grid_points(origin, step_vectors, shape):
+def _positive_index(value, name):
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a positive integer")
+    try:
+        value = operator.index(value)
+    except TypeError as error:
+        raise ValueError(f"{name} must be a positive integer") from error
+    if value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
+    return value
+
+
+def grid_evaluation_memory(
+    shape, basis_count, *, chunk_size=DEFAULT_CHUNK_SIZE,
+    orbital_count=None, operation="mo",
+):
+    """Bound point blocks; estimate float64 arrays, excluding backend overhead."""
+    shape = tuple(_positive_index(value, "shape") for value in shape)
+    if len(shape) != 3:
+        raise ValueError("shape must contain three positive integers")
+    basis_count = _positive_index(basis_count, "basis_count")
+    chunk_size = _positive_index(chunk_size, "chunk_size")
+    if operation not in {"mo", "density", "spin", "esp"}:
+        raise ValueError("unknown wavefunction operation")
+    if orbital_count is None:
+        orbital_count = 1 if operation == "mo" else basis_count
+    orbital_count = _positive_index(orbital_count, "orbital_count")
+    point_count = prod(shape)
+    if point_count > sys.maxsize // 8:
+        raise ValueError("grid output exceeds the addressable array size")
+    # ESP materializes AO-pair integrals. Keep their point axis bounded too.
+    components = (4 * basis_count**2 + 16 if operation == "esp"
+                  else 4 * basis_count + 2 * orbital_count + 16)
+    chunk_size = min(point_count, chunk_size, DEFAULT_CHUNK_SIZE,
+                     max(1, _WORKING_BYTES // (8 * components)))
+    fixed = 8 * (basis_count**2 if operation == "esp"
+                 else basis_count * orbital_count)
+    working = 8 * chunk_size * components + fixed
+    output = 8 * point_count
+    return {"point_count": point_count, "output_bytes": output,
+            "working_bytes": working, "estimated_bytes": output + working,
+            "chunk_size": chunk_size}
+
+
+def _check_cancel(cancel_check):
+    if cancel_check is not None and cancel_check():
+        raise CancelledError("wavefunction evaluation was cancelled")
+
+
+def _occupations(orbital_set, source_provenance=()):
+    import numpy
+
+    for record in source_provenance:
+        if record.id in orbital_set.provenance_ids and _NTO_MARKER.search(
+            " ".join((record.operation, record.source, str(record.parameters)))
+        ):
+            raise ValueError("NTO weights cannot be used as electron occupations")
+    result = []
+    for channel in orbital_set.channels:
+        if channel.occupations is None:
+            raise ValueError(
+                f"orbital occupations are required for density channel {channel.label}"
+            )
+        values = numpy.asarray(channel.occupations.values)
+        if (numpy.iscomplexobj(values) or not numpy.all(numpy.isfinite(values))
+                or numpy.any(values < 0.0)
+                or numpy.any(values > (2.0 if channel.label == "restricted" else 1.0))):
+            raise ValueError("orbital occupations must be finite real values in the spin range")
+        result.append(values)
+    return tuple(result)
+
+
+def _grid_geometry(origin, step_vectors, shape):
     import numpy
 
     origin = tuple(origin)
@@ -89,23 +180,66 @@ def _grid_points(origin, step_vectors, shape):
         for value in vector
     ):
         raise ValueError("step_vectors must contain finite numbers")
-    try:
-        shape = tuple(operator.index(value) for value in shape)
-    except TypeError as error:
-        raise ValueError("shape must contain three positive integers") from error
-    if len(shape) != 3 or any(value <= 0 for value in shape):
+    shape = tuple(_positive_index(value, "shape") for value in shape)
+    if len(shape) != 3:
         raise ValueError("shape must contain three positive integers")
     steps = numpy.asarray(step_vectors, dtype=float)
     if numpy.linalg.det(steps) == 0.0:
         raise ValueError("step_vectors must be linearly independent")
-    indices = numpy.indices(shape, dtype=float).reshape(3, -1).T
-    points = numpy.asarray(origin, dtype=float) + indices @ steps
     return (
         tuple(float(value) for value in origin),
         tuple(tuple(float(value) for value in vector) for vector in step_vectors),
         shape,
-        points,
     )
+
+
+def _evaluate_grid(
+    origin, step_vectors, shape, evaluate, *, basis_count, operation,
+    orbital_count=None, chunk_size=DEFAULT_CHUNK_SIZE, cancel_check=None,
+    progress=None,
+):
+    """Allocate one output and publish it only after every point block succeeds."""
+    import numpy
+
+    for callback in (cancel_check, progress):
+        if callback is not None and not callable(callback):
+            raise TypeError("cancel_check and progress must be callable or None")
+    origin, step_vectors, shape = _grid_geometry(origin, step_vectors, shape)
+    estimate = grid_evaluation_memory(
+        shape, basis_count, orbital_count=orbital_count,
+        chunk_size=chunk_size, operation=operation,
+    )
+    count, chunk_size = estimate["point_count"], estimate["chunk_size"]
+    _check_cancel(cancel_check)
+    if progress is not None:
+        progress(0, count)
+    _check_cancel(cancel_check)
+    output = numpy.empty(count, dtype=float)
+    steps = numpy.asarray(step_vectors, dtype=float)
+    for start in range(0, count, chunk_size):
+        _check_cancel(cancel_check)
+        stop = min(start + chunk_size, count)
+        flat = numpy.arange(start, stop, dtype=numpy.intp)
+        indices = numpy.column_stack(
+            (flat // (shape[1] * shape[2]), (flat // shape[2]) % shape[1],
+             flat % shape[2])
+        )
+        points = numpy.asarray(origin) + indices @ steps
+        if not numpy.all(numpy.isfinite(points)):
+            raise ValueError("grid coordinates must be finite")
+        values = numpy.asarray(evaluate(points))
+        _check_cancel(cancel_check)
+        if values.shape != (stop - start,):
+            raise ValueError("wavefunction backend returned an unexpected value shape")
+        if numpy.iscomplexobj(values):
+            raise NotImplementedError("complex wavefunction values are not supported")
+        if not numpy.all(numpy.isfinite(values)):
+            raise ValueError("wavefunction backend returned non-finite values")
+        output[start:stop] = values
+        if progress is not None:
+            progress(stop, count)
+    _check_cancel(cancel_check)
+    return origin, step_vectors, shape, output
 
 
 def _gbasis_shells(structure, basis_set, shell_type):
@@ -203,6 +337,10 @@ def _evaluate_channel(structure, basis_set, coefficients, points):
     _require_gbasis_version()
     shells = _gbasis_shells(structure, basis_set, GeneralizedContractionShell)
     signs = numpy.asarray(_basis_function_signs(basis_set), dtype=float)
+    if coefficients is None:
+        return evaluate_basis(shells, points) * signs[:, numpy.newaxis]
+    if numpy.iscomplexobj(coefficients):
+        raise NotImplementedError("complex orbital coefficients are not supported")
     transform = numpy.asarray(coefficients, dtype=float) * signs[numpy.newaxis, :]
     return evaluate_basis(shells, points, transform=transform)
 
@@ -317,6 +455,9 @@ def evaluate_molecular_orbital_grid(
     origin,
     step_vectors,
     shape,
+    chunk_size=DEFAULT_CHUNK_SIZE,
+    cancel_check=None,
+    progress=None,
 ):
     _validate_entities(structure, basis_set, orbital_set)
     selected = _channel(orbital_set, channel)
@@ -331,13 +472,16 @@ def evaluate_molecular_orbital_grid(
     orbital_count = selected.coefficients.shape[0]
     if not 0 <= orbital_index < orbital_count:
         raise IndexError("orbital_index is outside the selected channel")
-    origin, step_vectors, shape, points = _grid_points(origin, step_vectors, shape)
     coefficients = selected.coefficients.values[orbital_index : orbital_index + 1]
-    values = _checked_values(
-        _evaluate_channel(structure, basis_set, coefficients, points),
-        1,
-        points.shape[0],
-    )[0]
+    origin, step_vectors, shape, values = _evaluate_grid(
+        origin, step_vectors, shape,
+        lambda points: _checked_values(
+            _evaluate_channel(structure, basis_set, coefficients, points),
+            1, points.shape[0],
+        )[0],
+        basis_count=basis_set.basis_function_count, operation="mo",
+        chunk_size=chunk_size, cancel_check=cancel_check, progress=progress,
+    )
     return _batch(
         structure,
         basis_set,
@@ -360,29 +504,34 @@ def evaluate_electron_density_grid(
     origin,
     step_vectors,
     shape,
+    chunk_size=DEFAULT_CHUNK_SIZE,
+    cancel_check=None,
+    progress=None,
+    source_provenance=(),
 ):
     import numpy
 
     _validate_entities(structure, basis_set, orbital_set)
-    for channel in orbital_set.channels:
-        if channel.occupations is None:
-            raise ValueError(
-                f"orbital occupations are required for density channel {channel.label}"
+    occupations = _occupations(orbital_set, source_provenance)
+
+    def evaluate(points):
+        density = numpy.zeros(points.shape[0], dtype=float)
+        for channel, occupation in zip(orbital_set.channels, occupations):
+            _check_cancel(cancel_check)
+            values = _checked_values(
+                _evaluate_channel(
+                    structure, basis_set, channel.coefficients.values, points
+                ), channel.coefficients.shape[0], points.shape[0],
             )
-    origin, step_vectors, shape, points = _grid_points(origin, step_vectors, shape)
-    density = numpy.zeros(points.shape[0], dtype=float)
-    for channel in orbital_set.channels:
-        orbital_count = channel.coefficients.shape[0]
-        values = _checked_values(
-            _evaluate_channel(
-                structure, basis_set, channel.coefficients.values, points
-            ),
-            orbital_count,
-            points.shape[0],
-        )
-        density += numpy.einsum(
-            "i,ip,ip->p", channel.occupations.values, values, values
-        )
+            density += numpy.einsum("i,ip,ip->p", occupation, values, values)
+        return density
+
+    origin, step_vectors, shape, density = _evaluate_grid(
+        origin, step_vectors, shape, evaluate,
+        basis_count=basis_set.basis_function_count, operation="density",
+        orbital_count=max(item.coefficients.shape[0] for item in orbital_set.channels),
+        chunk_size=chunk_size, cancel_check=cancel_check, progress=progress,
+    )
     return _batch(
         structure,
         basis_set,

@@ -72,6 +72,7 @@ _topology = importlib.import_module("..topology", __package__)
 _biological = importlib.import_module("..biological", __package__)
 _diagnostics = importlib.import_module("..diagnostics", __package__)
 _grid = importlib.import_module("..grid", __package__)
+_wavefunction = importlib.import_module("..wavefunction", __package__)
 _trajectory_view = importlib.import_module("...trajectory_view", __package__)
 
 
@@ -1565,6 +1566,7 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
             context,
             session,
         )
+        _wavefunction.draw_wavefunction_controls(layout, context, session)
 
 
 def register():

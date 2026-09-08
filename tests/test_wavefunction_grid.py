@@ -3,6 +3,8 @@ from pathlib import Path
 import subprocess
 import sys
 import unittest
+from concurrent.futures import CancelledError
+from dataclasses import replace
 from unittest import mock
 from uuid import uuid4
 
@@ -23,7 +25,9 @@ from ChemBlender.core import (
     evaluate_electron_density_grid,
     evaluate_molecular_orbital_grid,
 )
-from ChemBlender.core.wavefunction_grid import _basis_function_signs
+from ChemBlender.core.wavefunction_grid import (
+    _basis_function_signs, grid_evaluation_memory,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -135,6 +139,85 @@ GRID = {
 
 
 class WavefunctionGridTests(unittest.TestCase):
+    @mock.patch("ChemBlender.core.wavefunction_grid._evaluate_channel")
+    def test_chunks_preserve_affine_order_and_revision_without_full_point_array(self, evaluate):
+        structure, basis, orbitals = entities()
+        geometry = {**GRID, "shape": (3, 2, 4)}
+        expected_points = (numpy.asarray(GRID["origin"])
+                           + numpy.indices(geometry["shape"]).reshape(3, -1).T
+                           @ numpy.asarray(GRID["step_vectors"]))
+        evaluate.side_effect = lambda _s, _b, _c, points: (
+            points[:, 0] - points[:, 2]
+        )[None, :]
+        progress = []
+        with mock.patch("numpy.indices", side_effect=AssertionError("full grid allocated")):
+            chunked = evaluate_molecular_orbital_grid(
+                structure, basis, orbitals, channel="restricted", orbital_index=0,
+                chunk_size=5, progress=lambda done, total: progress.append((done, total)),
+                **geometry,
+            )
+        self.assertEqual([len(call.args[3]) for call in evaluate.call_args_list], [5, 5, 5, 5, 4])
+        numpy.testing.assert_allclose(
+            numpy.concatenate([call.args[3] for call in evaluate.call_args_list]), expected_points,
+        )
+        numpy.testing.assert_allclose(chunked.datasets[0].data.values.ravel(),
+                                      expected_points[:, 0] - expected_points[:, 2])
+        self.assertEqual(progress, [(0, 24), (5, 24), (10, 24), (15, 24), (20, 24), (24, 24)])
+        whole = evaluate_molecular_orbital_grid(
+            structure, basis, orbitals, channel="restricted", orbital_index=0, **geometry,
+        )
+        self.assertEqual(whole.datasets[0].revision, chunked.datasets[0].revision)
+
+    @mock.patch("ChemBlender.core.wavefunction_grid._batch")
+    @mock.patch("ChemBlender.core.wavefunction_grid._evaluate_channel")
+    def test_cancel_between_chunks_and_after_last_chunk_never_publishes(self, evaluate, batch):
+        evaluate.side_effect = lambda _s, _b, _c, points: numpy.ones((1, len(points)))
+        for cancel_at in (0, 1, 2):
+            state = {"done": 0}
+            evaluate.reset_mock()
+            with self.subTest(cancel_at=cancel_at), self.assertRaises(CancelledError):
+                evaluate_molecular_orbital_grid(
+                    *entities(), channel="restricted", orbital_index=0,
+                    chunk_size=1, cancel_check=lambda: state["done"] >= cancel_at,
+                    progress=lambda done, total: state.update(done=done), **GRID,
+                )
+            self.assertEqual(evaluate.call_count, cancel_at)
+        batch.assert_not_called()
+
+    @mock.patch("ChemBlender.core.wavefunction_grid._evaluate_channel")
+    def test_invalid_occupations_and_complex_coefficients_fail_before_backend(self, evaluate):
+        structure, basis, orbitals = entities()
+        channel = orbitals.channels[0]
+        complex_channel = replace(channel, coefficients=ArrayData(
+            numpy.asarray([[1.0 + 2.0j], [0.5]]),
+            ("orbital", "basis_function"), "dimensionless",
+        ))
+        with self.assertRaises(NotImplementedError):
+            evaluate_molecular_orbital_grid(
+                structure, basis, replace(orbitals, channels=(complex_channel,)),
+                channel="restricted", orbital_index=0, **GRID,
+            )
+        for occupations in ([float("nan"), 0], [-1, 0], [3, 0], [1 + 1j, 0]):
+            invalid = replace(channel, occupations=ArrayData(
+                numpy.asarray(occupations), ("orbital",), "dimensionless",
+            ))
+            with self.subTest(occupations=occupations), self.assertRaises(ValueError):
+                evaluate_electron_density_grid(
+                    structure, basis, replace(orbitals, channels=(invalid,)), **GRID,
+                )
+        evaluate.assert_not_called()
+
+    def test_esp_memory_budget_reduces_point_block_before_allocation(self):
+        shape = (100, 100, 100)
+        estimate = grid_evaluation_memory(shape, 512, operation="esp")
+        self.assertEqual(estimate["point_count"], 1000000)
+        self.assertEqual(estimate["output_bytes"], 8000000)
+        self.assertLess(estimate["chunk_size"], 8192)
+        self.assertLess(estimate["working_bytes"], 68 * 1024 * 1024)
+        for bad in (0, True, 1.5):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                grid_evaluation_memory(shape, 1, chunk_size=bad)
+
     def test_core_import_does_not_load_gbasis_or_scipy(self):
         code = (
             "import sys; import ChemBlender.core; "

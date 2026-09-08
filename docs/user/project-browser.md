@@ -15,6 +15,11 @@ are paged; **Entries per Page**, **Prev**, **Next** and **Jump** change only
 the RNA projection, not the scientific project. Selecting a row sets the
 active project entity for the controls below the list.
 
+Selecting an Orbital Set exposes the [wavefunction workbench](quantum-workbench.md):
+orbital energies, occupations, spin channels and grid-cache status, plus external
+worker actions for MO, density and ESP. The same controls provide explicit
+FCHK/Molden import through the configured optional Python environment.
+
 ## Read quality and diagnostics
 
 Rows can show **Complete**, **Partial**, **Ambiguous**, **Incomplete** or

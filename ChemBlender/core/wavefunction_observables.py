@@ -9,6 +9,7 @@ from .model import (
     BasisSet,
     DatasetStatus,
     DensityMatrix,
+    DensityMatrixLevel,
     DensityMatrixSpin,
     Grid3D,
     ImportBatch,
@@ -18,10 +19,14 @@ from .model import (
 from .wavefunction_grid import (
     BACKEND_NAME,
     BACKEND_VERSION,
+    DEFAULT_CHUNK_SIZE,
     _basis_function_signs,
+    _check_cancel,
+    _evaluate_grid,
     _gbasis_shells,
-    _grid_points,
+    _occupations,
     _require_gbasis_version,
+    _validate_entities,
 )
 
 
@@ -60,19 +65,19 @@ def _validate_density_entities(structure, basis_set, density_matrix):
 
 
 def _evaluate_stored_basis(structure, basis_set, points):
-    import numpy
-
     from .wavefunction_grid import _evaluate_channel
 
-    identity = numpy.eye(basis_set.basis_function_count, dtype=float)
-    return _evaluate_channel(structure, basis_set, identity, points)
+    return _evaluate_channel(structure, basis_set, None, points)
 
 
 def _contract_density(density_matrix, basis_values):
     import numpy
 
     matrix = numpy.asarray(density_matrix.data.values, dtype=float)
-    values = numpy.asarray(basis_values, dtype=float)
+    values = numpy.asarray(basis_values)
+    if numpy.iscomplexobj(values):
+        raise NotImplementedError("complex basis values are not supported")
+    values = numpy.asarray(values, dtype=float)
     if values.ndim != 2 or values.shape[0] != matrix.shape[0]:
         raise ValueError("evaluated basis width does not match density matrix")
     if not numpy.all(numpy.isfinite(values)):
@@ -115,18 +120,73 @@ def _evaluate_esp(structure, basis_set, density_matrix, nuclear_charges, points)
     )
 
 
-def _identity(parents, operation, parameters):
+def _identity(parents, operation, parameters, *, backend=(BACKEND_NAME, BACKEND_VERSION)):
     payload = {
         "parents": [(str(entity.id), entity.revision) for entity in parents],
         "operation": operation,
         "operation_version": DERIVATION_VERSION,
-        "backend": [BACKEND_NAME, BACKEND_VERSION],
+        "backend": list(backend),
         "parameters": parameters,
     }
     encoded = json.dumps(
         payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def derive_density_matrix_from_orbitals(
+    structure, basis_set, orbital_set, *, level, source_provenance=(),
+    cancel_check=None,
+):
+    """Reconstruct a total AO matrix from occupations with an explicit level."""
+    import numpy
+
+    _validate_entities(structure, basis_set, orbital_set)
+    if not isinstance(level, DensityMatrixLevel):
+        raise TypeError("level must explicitly be a DensityMatrixLevel")
+    if cancel_check is not None and not callable(cancel_check):
+        raise TypeError("cancel_check must be callable or None")
+    records = {record.id: record for record in source_provenance}
+    for record_id in orbital_set.provenance_ids:
+        if record_id not in records:
+            raise ValueError("orbital source provenance is required for density reconstruction")
+    occupations = _occupations(orbital_set, records.values())
+    _check_cancel(cancel_check)
+    width = basis_set.basis_function_count
+    matrix = numpy.zeros((width, width), dtype=float)
+    block = max(1, min(DEFAULT_CHUNK_SIZE, (64 * 1024 * 1024) // (16 * width)))
+    for channel, occupation in zip(orbital_set.channels, occupations):
+        coefficients = numpy.asarray(channel.coefficients.values)
+        for start in range(0, coefficients.shape[0], block):
+            _check_cancel(cancel_check)
+            current = coefficients[start:start + block]
+            matrix += current.T @ (occupation[start:start + block, None] * current)
+    _check_cancel(cancel_check)
+    if not numpy.all(numpy.isfinite(matrix)):
+        raise ValueError("orbital density reconstruction returned non-finite values")
+    parents = (structure, basis_set, orbital_set)
+    parameters = {"backend": "numpy", "backend_version": numpy.__version__,
+                  "density_level": level.value, "spin_role": "total",
+                  "density_source": "orbital_occupations",
+                  "channels": tuple(channel.label for channel in orbital_set.channels)}
+    operation = "derive_density_matrix_from_orbitals"
+    revision = _identity(parents, operation, parameters,
+                         backend=("numpy", numpy.__version__))
+    provenance_id = uuid4()
+    provenance = ProvenanceRecord(
+        id=provenance_id, revision=revision, producer="ChemBlender",
+        producer_version=DERIVATION_VERSION, source="", source_hash=revision,
+        parent_ids=tuple(entity.id for entity in parents), operation=operation,
+        parameters=tuple(parameters.items()),
+    )
+    density = DensityMatrix(
+        id=uuid4(), revision=revision, structure_id=structure.id,
+        basis_set_id=basis_set.id, level=level, spin_role=DensityMatrixSpin.TOTAL,
+        data=ArrayData(matrix, ("basis_function_row", "basis_function_column"),
+                       "dimensionless"), source_calculation=None,
+        provenance_ids=(provenance_id,),
+    )
+    return ImportBatch(density_matrices=(density,), provenance=(provenance,))
 
 
 def _batch(
@@ -204,15 +264,24 @@ def evaluate_density_matrix_grid(
     origin,
     step_vectors,
     shape,
+    chunk_size=DEFAULT_CHUNK_SIZE,
+    cancel_check=None,
+    progress=None,
 ):
     _validate_density_entities(structure, basis_set, density_matrix)
-    origin, step_vectors, shape, points = _grid_points(origin, step_vectors, shape)
-    basis_values = _evaluate_stored_basis(structure, basis_set, points)
-    values = _contract_density(density_matrix, basis_values)
     role = (
         "electron_density"
         if density_matrix.spin_role is DensityMatrixSpin.TOTAL
         else "spin_density"
+    )
+    origin, step_vectors, shape, values = _evaluate_grid(
+        origin, step_vectors, shape,
+        lambda points: _contract_density(
+            density_matrix, _evaluate_stored_basis(structure, basis_set, points)
+        ),
+        basis_count=basis_set.basis_function_count,
+        operation="density" if role == "electron_density" else "spin",
+        chunk_size=chunk_size, cancel_check=cancel_check, progress=progress,
     )
     return _batch(
         (structure, basis_set, density_matrix),
@@ -240,6 +309,9 @@ def evaluate_electrostatic_potential_grid(
     step_vectors,
     shape,
     nuclear_exclusion_radius=1.0e-8,
+    chunk_size=DEFAULT_CHUNK_SIZE,
+    cancel_check=None,
+    progress=None,
 ):
     import numpy
 
@@ -273,23 +345,24 @@ def evaluate_electrostatic_potential_grid(
         raise ValueError(
             "nuclear_exclusion_radius must be a finite non-negative number"
         )
-    origin, step_vectors, shape, points = _grid_points(origin, step_vectors, shape)
     coordinates = numpy.asarray(structure.coordinates.values, dtype=float)
-    minimum_distances = numpy.full(points.shape[0], numpy.inf)
-    for coordinate in coordinates:
-        minimum_distances = numpy.minimum(
-            minimum_distances, numpy.linalg.norm(points - coordinate, axis=1)
+
+    def evaluate(points):
+        for coordinate in coordinates:
+            _check_cancel(cancel_check)
+            if numpy.any(numpy.linalg.norm(points - coordinate, axis=1)
+                         <= nuclear_exclusion_radius):
+                raise ValueError(
+                    "ESP grid contains a point inside the nuclear exclusion radius"
+                )
+        return _evaluate_esp(
+            structure, basis_set, density_matrix, charge_values, points,
         )
-    if numpy.any(minimum_distances <= nuclear_exclusion_radius):
-        raise ValueError(
-            "ESP grid contains a point inside the nuclear exclusion radius"
-        )
-    values = _evaluate_esp(
-        structure,
-        basis_set,
-        density_matrix,
-        charge_values,
-        points,
+
+    origin, step_vectors, shape, values = _evaluate_grid(
+        origin, step_vectors, shape, evaluate,
+        basis_count=basis_set.basis_function_count, operation="esp",
+        chunk_size=chunk_size, cancel_check=cancel_check, progress=progress,
     )
     return _batch(
         (structure, basis_set, density_matrix, nuclear_charges),

@@ -1,0 +1,49 @@
+# 波函数工作台
+
+Project Browser 的 `Wavefunction` 控件把 FCHK/Molden 中的轨道、密度矩阵和核电荷连接到外部数值 worker，再将完整计算结果保存为项目中的 `Grid3D`。
+
+当前实现包括轨道浏览、单轨道求值、电子/自旋密度和 ESP。任意切片、线剖面和轨道批量出图仍按[实施计划](../../.planning/2026-09-08-quantum-visualization-workbench/task_plan.md)推进。
+
+## 配置数值环境
+
+展开 `Worker Setup`，选择已经准备好的独立 Python 环境和 ChemBlender 开发仓库。安装扩展本身不会安装 IOData、GBasis，也不会向 Blender 的 Python 自动添加这些包。
+
+| 设置 | 内容 | 用途 |
+| --- | --- | --- |
+| Worker Python | 独立环境的 `python.exe` | 运行 IOData 和 GBasis |
+| Worker Repository | 含 `worker/runner.py` 的 ChemBlender 仓库根目录 | 与扩展配套的 worker 实现 |
+| Step (bohr) | 相邻采样点的距离 | 控制网格分辨率 |
+| Origin / Grid Counts | 起点和三个方向的采样点数 | 控制计算区域 |
+| Padding (bohr) | 分子包围盒向外扩展的距离 | `Fit Grid to Molecule` 的边界余量 |
+| Memory Budget (MiB) | 提交任务前检查的估计内存预算 | 拒绝超过预算的网格 |
+
+仓库的 Windows 数值基准使用 Python 3.12，以及[固定依赖清单](../../.github/constraints/gbasis-py312.txt)。使用当前项目已有环境时直接填写路径；创建环境或安装依赖需遵循仓库的授权规则。
+
+内存估计包括输出数组和常见临时数组，不包括已打开项目的数组、输入快照和第三方后端的额外开销。ESP 的 AO-pair 积分比单轨道求值需要更多工作内存；点块大小会随基组大小缩小。计算区间、步长和输入文件决定科学结果，不能只依据图像是否平滑选择网格。
+
+## 导入与轨道选择
+
+1. 点击 `Import FCHK / Molden`。该入口使用配置的外部 Python 解析，并保留原始文件名、路径、哈希和解析来源。
+2. 在 Project Browser 选择 Orbital Set，查看编号、能量、占据、自旋、来源和科学网格缓存状态。界面编号从 `1` 开始，派生记录中的 `orbital_index` 从 `0` 开始。
+3. unrestricted 轨道可切换 `alpha` / `beta`。`HOMO` / `LUMO` / `SOMO` 按钮仅在现有能量和整占据足以确定时出现；缺失或分数占据保留原数值，不补标签。不同自旋通道的相同编号不代表一对相同空间轨道。
+4. 调整 Step 与 Padding，点击 `Fit Grid to Molecule`，检查起点、终点、点数和对应操作的内存估计。
+5. 点击 `Evaluate Selected MO`。每次只计算当前轨道；成功后在 Grid3D 控件创建 `Signed Surface`，分别显示正负相位。
+
+复数轨道和 generalized spinor 当前禁用求值。`cached` 表示当前来源和网格参数已有科学 Grid3D；VDB 是可重建的显示缓存。更改计算区域、来源修订或派生版本后，旧结果不会冒充当前缓存。
+
+## 密度和 ESP
+
+- `Electron Density from Occupations` 根据明确的轨道占据数合成总电子密度。
+- 已有 one-RDM 可直接计算 total 或 spin density；界面同时显示其 SCF/post-SCF 层级和实体标识。
+- ESP 使用 total RDM 和同一 Structure 的显式 `nuclear_charge` 数据集。应选择源文件给出的有效核电荷；原子序数不替代 ECP 下的核电荷。
+- Molden 缺少原始 total RDM 时，`ESP from Occupations` 要求显式选择来源的密度层级，再从轨道占据数派生矩阵。只有知道源计算属于 SCF 或 post-SCF 时才选择相应项；整数占据本身不能证明计算层级。派生矩阵与 ESP 一起成功才进入项目，并分别记录来源。
+
+ESP 核位置具有奇点。网格含核位置或落入核排除半径时会给出诊断，调整起点/步长后重算；不能把核电势静默置零。密度面与 ESP 场需要匹配结构、单位和完整网格变换，当前不做隐式重采样。
+
+## 失败、取消和旧视图
+
+运行任务时可使用取消入口或 `Esc`。数值 worker 写入 session 内的独立项目副本；主线程核对输入修订和完整输出后一次提交。失败、取消或输入在计算期间变化时不发布半成品。
+
+旧 `property_on_surface` v1 视图会标记需要重建。点击 `Rebuild View` 后，density 网格负责生成几何，property 网格只参与采样与着色。新资源成功创建后才替换原视图；重建失败保留原对象和诊断。
+
+保存项目时继续使用[既有 `.blend + .cbq` 流程](project-sidecar.md)。科学数组来自 sidecar；显示对象、节点和 VDB 的存在不代表源数组已经保存。

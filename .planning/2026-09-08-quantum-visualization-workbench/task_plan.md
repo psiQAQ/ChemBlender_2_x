@@ -1,27 +1,35 @@
 # Quantum visualization workbench
 
 ## Goal
-Implement the approved first release A-D in ChemBlender: wavefunction/Cube input, orbital selection, density/ESP, slices/profiles, reproducible export and project recovery. Later professional analysis, periodic and GPU work remains a roadmap.
+Implement approved first-release A-D in ChemBlender: wavefunction/Cube, orbitals, density/ESP, slices/profiles, export and recovery. Later scientific/periodic/GPU work remains a roadmap.
 
 ## Success criteria
-Real scientific fixtures pass core and Blender checks; fixed density with changed property preserves geometry; old views rebuild explicitly; computations cancel safely; project save/reopen/Save As/cache reconstruction works. No unverified completion claims.
+Real fixtures pass core/Blender checks; density-only geometry, explicit old-view rebuild, safe cancellation, save/reopen/Save As and cache recovery pass.
 
 ## Constraints
 Reuse QCProject, .cbq/.npy, worker, Grid3D and native Blender views. No new runtime dependency without approval. Reference submodules stay outside Extension ZIP. No remote writes or publishing. Preserve encoding and line endings.
 
 ## Phases
 - [x] A: Density-only surface geometry, versioned rebuild, parent structure identity; core and real Blender regressions passed. Status: complete
-- [ ] B: Orbital browser, bounded wavefunction computation and RDM/ESP worker adapters. Status: in_progress
+- [ ] B: Orbital/worker UI and bounded MO/RDM/ESP implemented; real numerical gate awaits environment approval. Status: in_progress
 - [ ] C: Property settings, affine sampling, slices/profiles and colorbar. Status: pending
 - [ ] D: Persistent views, export, real example and lifecycle validation. Status: pending
 - [x] References: Added MolecularNodes, MOrbVis and PySCF at reviewed commits; recorded later candidates; 37 documentation contracts passed. Status: complete
-- [ ] Qualification: core tests, Blender runtime, Extension validate/build/ZIP/install and final diff. Status: pending
+- [ ] Qualification: local core, Blender failure lifecycle and validate/build/ZIP passed; scientific success and install gates pending. Status: in_progress
 
 ## Verification
 Track model, adapter, real-file, UI and reopen evidence separately. Reuse existing unittest and Blender smoke infrastructure. External CI/publication requires separate authorization.
+
+| Layer | Current evidence | State |
+| --- | --- | --- |
+| Model | A identity; B blocks, cancellation and orbital metadata tested | Local regressions passed |
+| Adapter | A surface/rebuild; B atomic worker/import, independent input lifetime tested | Local regressions passed |
+| Real files | Pinned FCHK/Molden hashes verified | IOData/GBasis numerical gate pending approval |
+| UI | Blender 5.1.1 selection, grid fit, failures, cancellation and reload passed | Scientific success pending |
+| Save/reopen | A cache/rebuild contracts passed | Complete workflow remains Phase D |
 
 ## Ownership
 Root owns this plan and findings/progress. Agents edit only assigned code and tests; stage gates remain sequential.
 
 ## Next step
-Implement bounded wavefunction worker operations and orbital UI; optional numerical environment installation awaits user approval.
+Await explicit permission to restore the pinned Python 3.12 IOData/GBasis environment. Then finish B real-file/UI checks before starting C and D. No permission has been received yet.

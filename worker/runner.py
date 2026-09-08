@@ -1,5 +1,6 @@
 import argparse
 import re
+from concurrent.futures import CancelledError
 from pathlib import Path
 
 from ChemBlender.core import ImportBatch, close_project, open_project, save_project
@@ -294,6 +295,11 @@ def run_request(request_path, result_path, registry, *, cancel_path=None):
                         output = operation(context, request)
                         if not isinstance(output, OperationOutput):
                             raise TypeError("operation must return OperationOutput")
+                    except CancelledError as error:
+                        result = _error(
+                            request.request_id, WorkerStatus.CANCELLED,
+                            "cancelled", str(error) or "request was cancelled",
+                        )
                     except OperationError as error:
                         result = _error(
                             request.request_id,

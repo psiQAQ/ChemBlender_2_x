@@ -29,6 +29,8 @@ EXPECTED_ROOTS = (
     ".ui.scientific_edit",
     ".ui.export",
     ".ui.grid",
+    ".ui.wavefunction",
+    ".ui.wavefunction_import",
     ".ui.project_browser.panel",
     ".ui.file_handlers",
     ".ui.workspace",

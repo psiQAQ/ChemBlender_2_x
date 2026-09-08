@@ -1,6 +1,8 @@
 import subprocess
+import shutil
+from collections.abc import Mapping
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 class WorkerProcessError(RuntimeError):
     pass
@@ -62,6 +64,7 @@ def start_worker(
     python_executable,
     module="worker.runner",
     working_directory=None,
+    staged_inputs=None,
 ):
     from .core.worker_protocol import WorkerRequest, write_request
 
@@ -80,6 +83,32 @@ def start_worker(
     cancel_path = task_directory / "cancel"
     stdout_path = task_directory / "stdout.log"
     stderr_path = task_directory / "stderr.log"
+    if staged_inputs is not None:
+        if not isinstance(staged_inputs, Mapping):
+            raise TypeError("staged_inputs must be a mapping")
+        reserved = {"request.json", "result.json", "cancel", "stdout.log", "stderr.log"}
+        for relative, source in staged_inputs.items():
+            if not isinstance(relative, str) or not relative:
+                raise ValueError("staged input path must be a relative POSIX path")
+            parts = relative.split("/")
+            if (
+                PurePosixPath(relative).is_absolute()
+                or PureWindowsPath(relative).drive
+                or "\\" in relative
+                or any(part in {"", ".", ".."} or ":" in part
+                       or part.endswith((".", " ")) for part in parts)
+                or parts[0].casefold() in reserved
+            ):
+                raise ValueError("staged input path is unsafe or reserved")
+            source = Path(source).absolute()
+            if any(path.is_symlink() or path.is_junction()
+                   for path in (source, *source.parents)):
+                raise ValueError("staged input source must not use links")
+            destination = task_directory.joinpath(*parts)
+            destination.resolve().relative_to(task_directory.resolve())
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with source.open("rb") as reader, destination.open("xb") as writer:
+                shutil.copyfileobj(reader, writer)
     write_request(request_path, request)
     stdout = stdout_path.open("wb")
     stderr = stderr_path.open("wb")
