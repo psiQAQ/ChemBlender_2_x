@@ -29,7 +29,8 @@ Do not infer current status from this file, completed work, archived evidence, o
 
 - `origin/main` is the maintained release line.
 - `upstream/main` is the upstream reference.
-- `archive/*` is immutable investigation history and never a release base.
+- `main` is the only permanent local/origin branch; working branches are temporary.
+- `archive/<date>/*` annotated tags preserve retired branch tips; experimental archive history is never a release base.
 - `release/*` contains focused release preparation.
 - `feat/*` contains maintained downstream features.
 - Formal `upstream-pr/*` branches start from freshly fetched `upstream/main` and exclude downstream governance, packaging, and extension history.
