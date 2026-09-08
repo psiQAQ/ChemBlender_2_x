@@ -71,7 +71,8 @@ def _write_plan_metadata(obj, plan, entities):
         sort_keys=True,
         separators=(",", ":"),
     )
-    if plan.view_kind in {"signed_isosurface", "property_on_surface"}:
+    if plan.view_kind in {"signed_isosurface", "property_on_surface",
+                          "grid_slice", "grid_profile", "grid_colorbar"}:
         complete = all(
             value.status is DatasetStatus.COMPLETE
             for value in entities.values()
@@ -81,9 +82,21 @@ def _write_plan_metadata(obj, plan, entities):
 
 
 def _remove_objects(objects):
+    sample_roots = [obj for obj in objects
+                    if getattr(obj, "get", lambda *_: None)("cb_grid_sample_root")]
+    for obj in sample_roots:
+        from .grid_sample_view import remove_grid_sample_view
+
+        remove_grid_sample_view(obj)
     data_blocks = []
     for obj in reversed(objects):
-        getter = getattr(obj, "get", None)
+        try:
+            getter = getattr(obj, "get", None)
+            if getter is not None:
+                getter("cb_grid_sample_root")
+        except ReferenceError:
+            # The sample root removed its owned annotations and materials.
+            continue
         if (
             getter is not None
             and getter("cb_structure_contract") == "structure_view_v1"
@@ -156,7 +169,12 @@ def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
     settings = dict(plan.settings)
     created = []
     try:
-        if plan.view_kind == "grid_volume":
+        if plan.view_kind in {"grid_slice", "grid_profile", "grid_colorbar"}:
+            from .grid_sample_view import create_grid_sample_view
+
+            created.extend(create_grid_sample_view(
+                entities["grid"], plan.view_kind, settings, collection=target))
+        elif plan.view_kind == "grid_volume":
             created.append(
                 create_grid_volume(
                     entities["grid"],

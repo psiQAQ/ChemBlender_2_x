@@ -1,4 +1,4 @@
-"""Durable cache repair for ChemBlender-owned Blender Volume objects."""
+"""Repair owned Volume caches and validate saved scientific sample Views."""
 
 import hashlib
 import json
@@ -16,6 +16,7 @@ from ..core import (
 
 _CACHE_FORMAT_VERSION = 1
 _VOLUME_PRESETS = {"grid_volume", "signed_isosurface", "property_on_surface"}
+_SAMPLE_PRESETS = {"grid_slice", "grid_profile", "grid_colorbar"}
 _FATAL_EXCEPTIONS = (
     KeyboardInterrupt,
     SystemExit,
@@ -97,7 +98,7 @@ def _document(value, name):
 
 def _current_plan(obj, project, *, rebuild_property=False):
     preset_id = obj.get("cb_scene_preset_id")
-    if preset_id not in _VOLUME_PRESETS:
+    if preset_id not in _VOLUME_PRESETS | _SAMPLE_PRESETS:
         return None
     current_preset = preset = builtin_scene_presets()[preset_id]
     if (
@@ -185,6 +186,31 @@ def plan_property_view_rebuild(obj, project):
     return _current_plan(obj, project, rebuild_property=True)
 
 
+def plan_grid_sample_view(obj, project, *, require_geometry=True):
+    """Validate an owned sample root against its saved scientific plan."""
+    if obj is None or obj.get("cb_scene_preset_id") not in _SAMPLE_PRESETS:
+        raise ViewCacheError("select a ChemBlender slice, profile or colorbar")
+    if obj.get("cb_grid_sample_root") is not True:
+        raise ViewCacheError("select the sample view's root object")
+    plan = _current_plan(obj, project)
+    expected_type = "CURVE" if plan.view_kind == "grid_profile" else "MESH"
+    if require_geometry and (
+        getattr(obj, "type", None) != expected_type or getattr(obj, "data", None) is None
+    ):
+        raise ViewCacheError("sample view geometry is missing or incompatible")
+    grid = _entity(plan, project, "grid")
+    for key, expected in (
+        ("cb_grid_sample_contract", f"{plan.view_kind}_v1"),
+        ("cb_dataset_id", str(grid.id)),
+        ("cb_dataset_revision", grid.revision),
+        ("cb_dataset_index", dict(plan.settings)["dataset_index"]),
+        ("cb_source_coordinate_unit", grid.coordinate_unit),
+        ("cb_value_unit", grid.data.unit),
+    ):
+        _require(obj.get(key), expected, key)
+    return plan
+
+
 def _mark_view_error(obj, error):
     obj["cb_view_stale"] = True
     obj["cb_view_diagnostic"] = str(error)
@@ -196,7 +222,7 @@ def _clear_view_error(obj, plan, project):
         return
     obj["cb_view_stale"] = False
     obj.pop("cb_view_diagnostic", None)
-    if plan.view_kind in {"signed_isosurface", "property_on_surface"}:
+    if plan.view_kind in {"signed_isosurface", "property_on_surface"} | _SAMPLE_PRESETS:
         obj["cb_report_eligible"] = all(
             _entity(plan, project, binding.name).status.value == "complete"
             for binding in plan.bindings
@@ -437,12 +463,26 @@ def repair_project_view_caches(
     blend_path,
     previous_sidecar_path=None,
 ):
-    """Repair owned Volume caches without changing scientific project state."""
+    """Repair Volume paths and validate sample roots without changing scientific data."""
     repaired = 0
     try:
         errors = []
         planned = []
         for obj in tuple(objects):
+            if obj.get("cb_scene_preset_id") in _SAMPLE_PRESETS:
+                if obj.get("cb_grid_sample_root") is not True:
+                    continue
+                try:
+                    plan = plan_grid_sample_view(obj, session.project)
+                except (TypeError, ValueError, ViewCacheError) as error:
+                    _mark_view_error(obj, error)
+                    errors.append(f"{obj.name}: {error}")
+                    continue
+                # Mesh/Curve datablocks are stored in .blend; only scientific
+                # bindings need checking. Rebuilding is always an explicit action.
+                _clear_view_error(obj, plan, session.project)
+                repaired += 1
+                continue
             if getattr(obj, "type", None) != "VOLUME":
                 continue
             try:

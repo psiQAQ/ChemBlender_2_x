@@ -68,6 +68,9 @@ class ScenePresetTests(unittest.TestCase):
                 "band_dos_linked",
                 "electronic_spectrum_linked",
                 "grid_volume",
+                "grid_slice",
+                "grid_profile",
+                "grid_colorbar",
                 "property_on_surface",
                 "signed_isosurface",
                 "structure_publication",
@@ -139,6 +142,40 @@ class ScenePresetTests(unittest.TestCase):
             preset, project, {"structure": reference.id}, {}
         )
         self.assertNotEqual(first.render_identity, changed.render_identity)
+
+    def test_sample_presets_validate_scientific_parameters_and_identity(self):
+        reference = structure()
+        field = grid(reference.id)
+        field = replace(field, data=ArrayData(numpy.stack((field.data.values, field.data.values)),
+                        ("dataset", "x", "y", "z"), field.data.unit))
+        project = QCProject(uuid4(), "0.1")
+        project.commit(ImportBatch(structures=(reference,), datasets=(field,)))
+        presets = builtin_scene_presets()
+        for name in ("grid_slice", "grid_profile", "grid_colorbar"):
+            with self.subTest(name=name):
+                plan = plan_scene_preset(presets[name], project, {"grid": field.id}, {})
+                self.assertEqual(validate_scene_plan(plan, project), plan)
+                changed = plan_scene_preset(presets[name], project, {"grid": field.id},
+                                             {"dataset_index": 1})
+                self.assertNotEqual(plan.render_identity, changed.render_identity)
+                with self.assertRaises((ValueError, IndexError)):
+                    plan_scene_preset(presets[name], project, {"grid": field.id}, {"dataset_index": 2})
+        for name, settings in (
+            ("grid_slice", {"u_vector": (0., 0., 0.)}),
+            ("grid_slice", {"origin": (float("nan"), 0., 0.)}),
+            ("grid_slice", {"counts": (1, 3)}),
+            ("grid_slice", {"counts": (1001, 1001)}),
+            ("grid_profile", {"sample_count": 1000001}),
+            ("grid_profile", {"end": (-1., 0., 0.)}),
+            ("grid_profile", {"radius": 0.}),
+            ("grid_colorbar", {"width": 0.}),
+            ("grid_colorbar", {"color_min": -2., "color_max": 1.}),
+        ):
+            with self.subTest(name=name, settings=settings), self.assertRaises(ValueError):
+                plan_scene_preset(presets[name], project, {"grid": field.id}, settings)
+        asymmetric = plan_scene_preset(presets["grid_colorbar"], project, {"grid": field.id},
+                        {"color_min": -2., "color_max": 1., "symmetric": False})
+        self.assertEqual(dict(asymmetric.settings)["color_min"], -2.)
 
     def test_signed_and_property_surface_validate_grid_contracts_and_settings(self):
         reference = structure()

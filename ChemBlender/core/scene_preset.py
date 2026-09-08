@@ -23,6 +23,8 @@ from .recipe import RecipeBinding, RecipeDefinition
 
 _TOKEN = re.compile(r"[a-z][a-z0-9_.-]*")
 GRID_AFFINE_ABS_TOLERANCE = 1.0e-9
+# Blender owns a complete Mesh/Curve even though scientific interpolation chunks.
+GRID_SAMPLE_POINT_LIMIT = 1_000_000
 _ENTITY_TYPES = {
     "Structure": Structure,
     "Grid3D": Grid3D,
@@ -235,6 +237,27 @@ def builtin_scene_presets():
             ),
         ),
         ScenePresetDefinition(
+            "grid_slice", "1", "Scientific plane slice", "grid_slice",
+            (_spec("grid", "dataset", "Grid3D"),), ("grid_sample_view_v1",),
+            (("dataset_index", 0), ("origin", (-1., -1., 0.)),
+             ("u_vector", (2., 0., 0.)), ("v_vector", (0., 2., 0.)),
+             ("counts", (65, 65)), ("color_min", -.1), ("color_max", .1),
+             ("symmetric", True), ("colormap", "coolwarm")),
+        ),
+        ScenePresetDefinition(
+            "grid_profile", "1", "Scientific line profile", "grid_profile",
+            (_spec("grid", "dataset", "Grid3D"),), ("grid_sample_view_v1",),
+            (("dataset_index", 0), ("start", (-1., 0., 0.)),
+             ("end", (1., 0., 0.)), ("sample_count", 129), ("radius", .015)),
+        ),
+        ScenePresetDefinition(
+            "grid_colorbar", "1", "Scientific colorbar", "grid_colorbar",
+            (_spec("grid", "dataset", "Grid3D"),), ("grid_sample_view_v1",),
+            (("dataset_index", 0), ("color_min", -.1), ("color_max", .1),
+             ("symmetric", True), ("colormap", "coolwarm"),
+             ("width", 2.), ("height", .2)),
+        ),
+        ScenePresetDefinition(
             "vibration_spectrum_linked",
             "1",
             "Vibration and spectrum linked view",
@@ -340,6 +363,19 @@ def _color(value, name):
     return tuple(_number(item, name, minimum=0.0, maximum=1.0) for item in value)
 
 
+def _color_range(result):
+    result["color_min"] = _number(result["color_min"], "color_min")
+    result["color_max"] = _number(result["color_max"], "color_max")
+    if result["color_min"] >= result["color_max"]:
+        raise ScenePresetError("color range must be increasing")
+    if not isinstance(result["symmetric"], bool):
+        raise ScenePresetError("symmetric must be a boolean")
+    if result["symmetric"] and result["color_min"] != -result["color_max"]:
+        raise ScenePresetError("symmetric color range must be centered on zero")
+    if result["colormap"] != "coolwarm":
+        raise ScenePresetError("unsupported property surface colormap")
+
+
 def _settings(preset, supplied, entities):
     if not isinstance(supplied, dict):
         raise TypeError("scene settings must be a mapping")
@@ -388,18 +424,33 @@ def _settings(preset, supplied, entities):
         result["surface_isovalue"] = _number(
             result["surface_isovalue"], "surface_isovalue", positive=True
         )
-        result["color_min"] = _number(result["color_min"], "color_min")
-        result["color_max"] = _number(result["color_max"], "color_max")
-        if result["color_min"] >= result["color_max"]:
-            raise ScenePresetError("color range must be increasing")
-        if not isinstance(result["symmetric"], bool):
-            raise ScenePresetError("symmetric must be a boolean")
-        if result["symmetric"] and result["color_min"] != -result["color_max"]:
-            raise ScenePresetError("symmetric color range must be centered on zero")
-        if result["colormap"] != "coolwarm":
-            raise ScenePresetError("unsupported property surface colormap")
+        _color_range(result)
         if not grids_share_affine(surface, prop):
             raise ScenePresetError("surface and property grids must share one affine grid")
+    elif kind in {"grid_slice", "grid_profile", "grid_colorbar"}:
+        from .grid_lod import _dataset_index
+        from .grid_sampling import validate_plane, validate_profile
+
+        grid = entities["grid"]
+        if grid.coordinate_unit not in {"angstrom", "bohr"}:
+            raise ScenePresetError("scientific grid views require angstrom or bohr coordinates")
+        result["dataset_index"] = _dataset_index(grid, result["dataset_index"])
+        if kind == "grid_slice":
+            result.update(validate_plane(**{name: result[name] for name in (
+                "origin", "u_vector", "v_vector", "counts", "dataset_index")}))
+        elif kind == "grid_profile":
+            result.update(validate_profile(**{name: result[name] for name in (
+                "start", "end", "sample_count", "dataset_index")}))
+            result["radius"] = _number(result["radius"], "radius", positive=True)
+        else:
+            for name in ("width", "height"):
+                result[name] = _number(result[name], name, positive=True)
+        if kind != "grid_profile":
+            _color_range(result)
+        count = (math.prod(result["counts"]) if kind == "grid_slice"
+                 else result["sample_count"] if kind == "grid_profile" else 0)
+        if count > GRID_SAMPLE_POINT_LIMIT:
+            raise ScenePresetError(f"grid view exceeds {GRID_SAMPLE_POINT_LIMIT:,} sample points")
     elif kind in {"vibration_spectrum_linked", "electronic_spectrum_linked"}:
         source_name = "modes" if kind.startswith("vibration") else "states"
         source = entities[source_name]

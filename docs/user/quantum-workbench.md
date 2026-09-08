@@ -2,7 +2,7 @@
 
 Project Browser 的 `Wavefunction` 控件把 FCHK/Molden 中的轨道、密度矩阵和核电荷连接到外部数值 worker，再将完整计算结果保存为项目中的 `Grid3D`。
 
-当前实现包括轨道浏览、单轨道求值、电子/自旋密度和 ESP。任意切片、线剖面和轨道批量出图仍按[实施计划](../../.planning/2026-09-08-quantum-visualization-workbench/task_plan.md)推进。
+当前实现包括轨道浏览、单轨道求值、电子/自旋密度和 ESP，以及任意切片、线剖面和数值导出。轨道批量出图仍按[实施计划](../../.planning/2026-09-08-quantum-visualization-workbench/task_plan.md)推进。
 
 ## 配置数值环境
 
@@ -41,6 +41,33 @@ Project Browser 的 `Wavefunction` 控件把 FCHK/Molden 中的轨道、密度�
 - Molden 缺少原始 total RDM 时，`ESP from Occupations` 要求显式选择来源的密度层级，再从轨道占据数派生矩阵。只有知道源计算属于 SCF 或 post-SCF 时才选择相应项；整数占据本身不能证明计算层级。派生矩阵与 ESP 一起成功才进入项目，并分别记录来源。
 
 ESP 核位置具有奇点。网格含核位置或落入核排除半径时会给出诊断，调整起点/步长后重算；不能把核电势静默置零。密度面与 ESP 场需要匹配结构、单位和完整网格变换，当前不做隐式重采样。
+
+## 属性映射、切片与剖面
+
+在 Grid3D 控件中选择表面网格的 Dataset Index；属性面另选属性 Grid 及其 Property Dataset Index。
+两侧必须属于同一结构并共享完整网格变换。关闭 Symmetric 后可分别设置 Color Min/Max；
+跨零范围的中性色始终对应零。属性面旁的色标按钮使用属性场的 dataset、单位和同一范围。
+
+`Fit Slice / Profile to Grid` 从完整仿射网格选择中心平面和对角剖面，再按需调整：
+
+| 参数 | 单位/含义 |
+| --- | --- |
+| Slice Origin | 绑定 Grid 的科学坐标，bohr 或 angstrom |
+| Slice U / V | 平面两条完整边的向量，可旋转或倾斜，不是单个 pixel 步长 |
+| Slice Counts | 两个方向的点数，包含端点 |
+| Profile Start / End | 科学坐标中的两端点 |
+| Profile Samples | 包含两端点的采样数 |
+| Profile Radius | 显示线条半径，angstrom |
+| Colorbar Width / Height | 显示色标尺寸，angstrom |
+
+创建 Slice、Profile 或 Colorbar 后，选中其主对象可加载已保存参数、显式重建或导出 CSV。
+修改控件影响下一次创建；已有 View 按自己的 preset 设置保存。科学采样共用三线性插值；
+越界切片留透明孔，剖面断线，CSV 的无效值留空并写入 `valid_mask=0`。非有限坐标、退化平面
+和零长剖面会被拒绝。显示 View 最多包含 1,000,000 个采样点，提交前显示点数和采样数组估计。
+
+移动、旋转或缩放 View 不改变其科学参数，也不改变 CSV 数值。CSV 的首行 JSON 元数据记录
+来源 UUID/revision、dataset、原始 affine、单位和采样参数；使用普通 CSV 工具读取时跳过首行。
+独立色标使用同一色图，并显示范围、单位及范围内的零点；调整表面范围后，以相同范围重新创建色标。
 
 ## 失败、取消和旧视图
 

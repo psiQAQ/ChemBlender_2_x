@@ -187,26 +187,48 @@ def _material(name, color, opacity):
     return material
 
 
-def _property_material(name, color_min, color_max):
+def property_color_stops(color_min, color_max):
+    """Diverging color stops whose neutral value is scientific zero."""
+    from math import isfinite
+
+    if not all(map(isfinite, (color_min, color_max))) or color_min >= color_max:
+        raise ValueError("color range must be finite and increasing")
+    neutral = (0.95, 0.95, 0.95, 1.0)
+    blue, red = (0.23, 0.30, 0.75, 1.0), (0.70, 0.02, 0.15, 1.0)
+
+    def color(value):
+        edge = blue if value < 0 else red
+        extent = -color_min if value < 0 else color_max
+        weight = abs(value) / extent if value else 0.
+        return tuple(a + weight * (b - a) for a, b in zip(neutral, edge))
+
+    stops = [(0., color(color_min)), (1., color(color_max))]
+    if color_min < 0 < color_max:
+        stops.insert(1, (-color_min / (color_max - color_min), neutral))
+    return tuple(stops)
+
+
+def _property_material(name, color_min, color_max, *, attribute_name=_PROPERTY_ATTRIBUTE):
+    stops = property_color_stops(color_min, color_max)
     material = _material(name, (0.8, 0.8, 0.8, 1.0), 1.0)
     nodes = material.node_tree.nodes
     links = material.node_tree.links
     principled = next(node for node in nodes if node.type == "BSDF_PRINCIPLED")
     attribute = nodes.new("ShaderNodeAttribute")
-    attribute.attribute_name = _PROPERTY_ATTRIBUTE
+    attribute.attribute_name = attribute_name
     mapping = nodes.new("ShaderNodeMapRange")
     mapping.inputs["From Min"].default_value = float(color_min)
     mapping.inputs["From Max"].default_value = float(color_max)
     ramp = nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].color = (0.23, 0.30, 0.75, 1.0)
-    ramp.color_ramp.elements[1].color = (0.70, 0.02, 0.15, 1.0)
-    middle = ramp.color_ramp.elements.new(0.5)
-    middle.color = (0.95, 0.95, 0.95, 1.0)
+    ramp.color_ramp.elements[0].color = stops[0][1]
+    ramp.color_ramp.elements[1].color = stops[-1][1]
+    if len(stops) == 3:
+        ramp.color_ramp.elements.new(stops[1][0]).color = stops[1][1]
     links.new(attribute.outputs["Fac"], mapping.inputs["Value"])
     links.new(mapping.outputs["Result"], ramp.inputs["Fac"])
     links.new(ramp.outputs["Color"], principled.inputs["Base Color"])
-    material["cbq_contract"] = "property_colormap_v1"
-    material["cb_property_attribute"] = _PROPERTY_ATTRIBUTE
+    material["cbq_contract"] = "property_colormap_v2"
+    material["cb_property_attribute"] = attribute_name
     material["cb_color_min"] = float(color_min)
     material["cb_color_max"] = float(color_max)
     material["cb_colormap"] = "coolwarm"

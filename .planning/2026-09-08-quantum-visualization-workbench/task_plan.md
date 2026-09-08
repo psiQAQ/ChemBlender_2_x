@@ -12,8 +12,8 @@ Reuse QCProject, .cbq/.npy, worker, Grid3D and native Blender views. No new runt
 ## Phases
 - [x] A: Density-only surface geometry, versioned rebuild, parent structure identity; core and real Blender regressions passed. Status: complete
 - [x] B: Bounded MO/RDM/ESP and orbital/import UI passed real FCHK/Molden/UHF numerical and Blender gates. Status: complete
-- [ ] C: Property settings, affine sampling, slices/profiles and colorbar. Status: in_progress
-- [ ] D: Persistent views, export, real example and lifecycle validation. Status: pending
+- [x] C: Affine sampling, dataset/range controls, slices/profiles/colorbar and atomic CSV passed core and Blender gates. Status: complete
+- [ ] D: Persistent views, export, real example and lifecycle validation. Status: in_progress
 - [x] References: Added MolecularNodes, MOrbVis and PySCF at reviewed commits; recorded later candidates; 37 documentation contracts passed. Status: complete
 - [ ] Qualification: local core, Blender failure lifecycle and validate/build/ZIP passed; scientific success and install gates pending. Status: in_progress
 
@@ -32,4 +32,4 @@ Track model, adapter, real-file, UI and reopen evidence separately. Reuse existi
 Root owns this plan and findings/progress. Agents edit only assigned code and tests; stage gates remain sequential.
 
 ## Next step
-User approved the project-cache environment. Python 3.12.13 and all eight existing pinned packages are installed; uv pip check passed. B real-file/UI checks passed. Implement C with pure affine sampling and native Blender views, then D.
+User approved the project-cache environment. Python 3.12.13 and all eight existing pinned packages are installed; uv pip check passed. B real-file/UI checks passed. C core and Blender gates passed. Finish D batch export, real example and lifecycle, then package qualification.

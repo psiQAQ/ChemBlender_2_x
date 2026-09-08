@@ -16,6 +16,7 @@ from ..core import (
     resolve_grid_semantics,
 )
 from .tasks import Task, TaskState, TaskWorker
+from ..core.scene_preset import GRID_SAMPLE_POINT_LIMIT
 
 
 _SCENE_PROPERTY_NAME = "chemblender_grid"
@@ -209,7 +210,12 @@ def plan_grid_view(
     mode,
     dataset_index=0,
     property_grid_id=None,
+    property_dataset_index=0,
     isovalue=0.05,
+    color_min=-0.1,
+    color_max=0.1,
+    symmetric=True,
+    sample_settings=None,
 ):
     actions = grid_action_availability(project, grid_id)
     presets = builtin_scene_presets()
@@ -240,11 +246,156 @@ def plan_grid_view(
             },
             {
                 "surface_dataset_index": dataset_index,
-                "property_dataset_index": 0,
+                "property_dataset_index": property_dataset_index,
                 "surface_isovalue": isovalue,
+                "color_min": color_min,
+                "color_max": color_max,
+                "symmetric": symmetric,
             },
         )
+    if mode in {"slice", "profile", "colorbar"}:
+        return plan_scene_preset(
+            presets[f"grid_{mode}"], project, {"grid": grid_id},
+            {**(sample_settings or {}), "dataset_index": dataset_index},
+        )
     raise ValueError("selected Grid3D does not support this view")
+
+
+def _color_settings(settings):
+    maximum = settings.color_max
+    return {"color_min": -maximum if settings.symmetric else settings.color_min,
+            "color_max": maximum, "symmetric": settings.symmetric, "colormap": "coolwarm"}
+
+
+def _sample_settings(settings, kind):
+    if kind == "slice":
+        return {"origin": tuple(settings.slice_origin), "u_vector": tuple(settings.slice_u),
+                "v_vector": tuple(settings.slice_v), "counts": tuple(settings.slice_counts),
+                **_color_settings(settings)}
+    if kind == "profile":
+        return {"start": tuple(settings.profile_start), "end": tuple(settings.profile_end),
+                "sample_count": settings.profile_samples, "radius": settings.profile_radius}
+    if kind == "colorbar":
+        return {"width": settings.colorbar_width, "height": settings.colorbar_height,
+                **_color_settings(settings)}
+    return None
+
+
+def _draw_sample_button(layout, settings, kind):
+    from math import prod
+
+    count = (prod(getattr(settings, "slice_counts", (65, 65))) if kind == "slice"
+             else getattr(settings, "profile_samples", 129))
+    layout.label(text=f"{count:,} points; samples ≈ {41 * count / 1024**2:.2f} MiB + Blender geometry")
+    row = layout.row()
+    row.enabled = count <= GRID_SAMPLE_POINT_LIMIT
+    if not row.enabled:
+        layout.label(text=f"Limit: {GRID_SAMPLE_POINT_LIMIT:,} points", icon="ERROR")
+    operator = row.operator("chemblender.create_grid_view", text=f"Create {kind.title()}")
+    operator.mode = kind
+
+
+def fit_grid_sampling(settings, grid):
+    """Choose a central affine plane and a grid diagonal without reading values."""
+    import numpy
+
+    spans = numpy.asarray(grid.step_vectors) * (numpy.asarray(grid.grid_shape) - 1)[:, None]
+    axes = sorted(range(3), key=lambda axis: float(numpy.linalg.norm(spans[axis])), reverse=True)
+    if numpy.linalg.norm(spans[axes[1]]) == 0:
+        raise ValueError("A fitted slice requires two nonzero grid extents")
+    settings.slice_origin = tuple(numpy.asarray(grid.origin) + spans[axes[2]] / 2)
+    settings.slice_u, settings.slice_v = tuple(spans[axes[0]]), tuple(spans[axes[1]])
+    settings.profile_start = grid.origin
+    settings.profile_end = tuple(numpy.asarray(grid.origin) + spans.sum(axis=0))
+
+
+def load_grid_view_settings(settings, plan):
+    """Load saved settings into controls without changing the saved View or grid."""
+    values = dict(plan.settings)
+    mapping = {
+        "dataset_index": "dataset_index", "surface_dataset_index": "dataset_index",
+        "property_dataset_index": "property_dataset_index", "surface_isovalue": "isovalue",
+        "isovalue": "isovalue", "color_min": "color_min", "color_max": "color_max",
+        "symmetric": "symmetric", "origin": "slice_origin", "u_vector": "slice_u",
+        "v_vector": "slice_v", "counts": "slice_counts", "start": "profile_start",
+        "end": "profile_end", "sample_count": "profile_samples", "radius": "profile_radius",
+        "width": "colorbar_width", "height": "colorbar_height",
+    }
+    for name, field_name in mapping.items():
+        if name in values:
+            setattr(settings, field_name, values[name])
+
+
+def export_grid_view_sample(project, obj, destination):
+    """Recompute CSV from validated saved scientific settings, never object transforms."""
+    from .view_cache import plan_grid_sample_view
+    from ..core.grid_sampling import export_grid_sample
+
+    plan = plan_grid_sample_view(obj, project, require_geometry=False)
+    kind = {"grid_slice": "plane", "grid_profile": "profile"}.get(plan.view_kind)
+    if kind is None:
+        raise ValueError("CSV export requires a slice or profile View")
+    binding, = plan.bindings
+    return export_grid_sample(destination, project.datasets[binding.entity_id],
+                              kind=kind, settings=dict(plan.settings))
+
+
+def rebuild_grid_sample_view(session, obj):
+    """Prepare a complete sample View before swapping owned data and annotations."""
+    from .view_cache import plan_grid_sample_view
+    from ..scene_preset_view import apply_scene_preset
+    from ..grid_sample_view import remove_grid_sample_view
+
+    plan = plan_grid_sample_view(obj, session.project, require_geometry=False)
+    if getattr(obj, "library", None) is not None or not obj.users_collection:
+        raise ValueError("sample View must be local and linked to a collection")
+    prepared_objects = apply_scene_preset(plan, session.project, collection=obj.users_collection[0])
+    prepared = next(value for value in prepared_objects if value.get("cb_grid_sample_root") is True)
+    old_data, new_data = obj.data, prepared.data
+    old_metadata = dict(obj.items())
+    old_children = tuple(child for child in obj.children if child.get("cb_grid_sample_component"))
+    new_children = tuple(prepared.children)
+    old_transforms = tuple((child, child.matrix_parent_inverse.copy(), child.matrix_basis.copy())
+                           for child in old_children)
+    new_transforms = tuple((child, child.matrix_parent_inverse.copy(), child.matrix_basis.copy())
+                           for child in new_children)
+    parent_change = prepared.matrix_world.inverted() @ obj.matrix_world
+    try:
+        obj.data, prepared.data = new_data, old_data
+        for child, inverse, basis in old_transforms:
+            child.parent = prepared
+            # User objects can be attached below an owned annotation. Keep its
+            # full parent transform, including shear, until it is removed.
+            child.matrix_parent_inverse = parent_change @ inverse
+            child.matrix_basis = basis
+        for child in new_children:
+            child.parent = obj
+        for key in tuple(obj.keys()):
+            if key.startswith("cb_") and key not in prepared:
+                del obj[key]
+        for key, value in prepared.items():
+            obj[key] = value
+        obj["cb_view_stale"] = False
+        obj.pop("cb_view_diagnostic", None)
+    except BaseException:
+        obj.data, prepared.data = old_data, new_data
+        for child, inverse, basis in old_transforms:
+            child.parent = obj
+            child.matrix_parent_inverse, child.matrix_basis = inverse, basis
+        for child, inverse, basis in new_transforms:
+            child.parent = prepared
+            child.matrix_parent_inverse, child.matrix_basis = inverse, basis
+        for key in tuple(obj.keys()):
+            if key not in old_metadata:
+                del obj[key]
+        for key, value in old_metadata.items():
+            obj[key] = value
+        remove_grid_sample_view(prepared)
+        raise
+    remove_grid_sample_view(prepared)
+    session.active_view_object_name = obj.name
+    session.mark_dirty("view_cache")
+    return obj
 
 
 def rebuild_property_view(session, obj, cache_root):
@@ -310,9 +461,12 @@ def rebuild_property_view(session, obj, cache_root):
 try:
     import bpy
     from bpy.props import (
+        BoolProperty,
         EnumProperty,
         FloatProperty,
+        FloatVectorProperty,
         IntProperty,
+        IntVectorProperty,
         PointerProperty,
         StringProperty,
     )
@@ -343,6 +497,21 @@ if bpy is not None:
 
     class CHEMBLENDER_PG_grid_settings(bpy.types.PropertyGroup):
         dataset_index: IntProperty(name="Dataset", default=0, min=0)
+        property_dataset_index: IntProperty(name="Property Dataset", default=0, min=0)
+        color_min: FloatProperty(name="Color Minimum", default=-0.1, precision=6)
+        color_max: FloatProperty(name="Color Maximum", default=0.1, precision=6)
+        symmetric: BoolProperty(name="Symmetric Colors", default=True)
+        slice_origin: FloatVectorProperty(name="Slice Origin", size=3, default=(0., 0., 0.))
+        slice_u: FloatVectorProperty(name="Slice Span U", size=3, default=(1., 0., 0.))
+        slice_v: FloatVectorProperty(name="Slice Span V", size=3, default=(0., 1., 0.))
+        slice_counts: IntVectorProperty(name="Slice Samples", size=2, default=(65, 65), min=2,
+                                       max=GRID_SAMPLE_POINT_LIMIT)
+        profile_start: FloatVectorProperty(name="Profile Start", size=3, default=(0., 0., 0.))
+        profile_end: FloatVectorProperty(name="Profile End", size=3, default=(1., 1., 1.))
+        profile_samples: IntProperty(name="Profile Samples", default=129, min=2, max=GRID_SAMPLE_POINT_LIMIT)
+        profile_radius: FloatProperty(name="Path Radius (Å)", default=0.015, min=1.e-6)
+        colorbar_width: FloatProperty(name="Colorbar Width (Å)", default=2.0, min=1.e-6)
+        colorbar_height: FloatProperty(name="Colorbar Height (Å)", default=0.2, min=1.e-6)
         preset_id: EnumProperty(
             name="Semantic Preset",
             items=_PRESET_ITEMS,
@@ -412,6 +581,9 @@ if bpy is not None:
         mode: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
         property_grid_id: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
         object_name: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
+        filepath: StringProperty(subtype="FILE_PATH", options={"SKIP_SAVE"})
+        filter_glob: StringProperty(default="*.csv", options={"HIDDEN", "SKIP_SAVE"})
+        check_existing: BoolProperty(default=True, options={"HIDDEN", "SKIP_SAVE"})
 
         @staticmethod
         def _cache_root(session):
@@ -430,19 +602,29 @@ if bpy is not None:
                 if self.property_grid_id
                 else None
             )
+            prop = session.project.datasets.get(property_grid_id)
+            use_property = self.mode == "colorbar" and prop is not None
+            if use_property:
+                grid = prop
+            colors = _color_settings(settings)
             plan = plan_grid_view(
                 session.project,
                 grid.id,
                 mode=self.mode,
                 dataset_index=(
-                    settings.dataset_index
+                    (settings.property_dataset_index if use_property else settings.dataset_index)
                     if grid.data.dims[0] == "dataset"
                     else 0
                 ),
                 property_grid_id=property_grid_id,
+                property_dataset_index=settings.property_dataset_index
+                if prop is not None and prop.data.dims[0] == "dataset" else 0,
                 isovalue=settings.isovalue,
+                color_min=colors["color_min"], color_max=colors["color_max"],
+                symmetric=colors["symmetric"], sample_settings=_sample_settings(settings, self.mode),
             )
-            return session, grid, plan, self._cache_root(session)
+            cache_root = None if self.mode in {"slice", "profile", "colorbar"} else self._cache_root(session)
+            return session, grid, plan, cache_root
 
         @staticmethod
         def _apply(context, session, plan, cache_root):
@@ -455,12 +637,45 @@ if bpy is not None:
                 cache_root=cache_root,
             )
             if created:
-                session.active_view_object_name = created[-1].name
+                root = next((obj for obj in created if obj.get("cb_grid_sample_root") is True), created[-1])
+                session.active_view_object_name = root.name
             session.mark_dirty("view_cache")
             return created
 
         def execute(self, context):
             try:
+                if self.mode in {"load_view", "rebuild_sample", "export_sample"}:
+                    from .session import get_scene_session
+                    from .properties import advance_browser_revision
+                    from .view_cache import plan_grid_sample_view, plan_property_view_rebuild
+
+                    session = get_scene_session(context.scene)
+                    obj = context.scene.objects.get(self.object_name)
+                    if self.mode == "rebuild_sample":
+                        rebuild_grid_sample_view(session, obj)
+                        advance_browser_revision(session)
+                        self.report({"INFO"}, "Grid sample View rebuilt")
+                    elif self.mode == "export_sample":
+                        if not self.filepath:
+                            raise ValueError("Choose a CSV destination")
+                        export_grid_view_sample(session.project, obj, self.filepath)
+                        self.report({"INFO"}, "Grid samples exported from saved scientific settings")
+                    else:
+                        plan = (plan_property_view_rebuild(obj, session.project)
+                                if obj is not None and obj.get("cb_scene_preset_id") == "property_on_surface"
+                                else plan_grid_sample_view(obj, session.project, require_geometry=False))
+                        load_grid_view_settings(getattr(context.scene, _SCENE_PROPERTY_NAME), plan)
+                        binding = next(value for value in plan.bindings if value.name in {"grid", "surface_grid"})
+                        session.active_entity_id = binding.entity_id
+                        context.scene.chemblender_project_browser.active_entity_id = str(binding.entity_id)
+                        session.active_view_object_name = obj.name
+                        advance_browser_revision(session)
+                        self.report({"INFO"}, "Saved View parameters loaded")
+                    return {"FINISHED"}
+                if self.mode == "fit_sampling":
+                    _session, grid, settings = _operator_context(context)
+                    fit_grid_sampling(settings, grid)
+                    return {"FINISHED"}
                 if self.mode == "rebuild_property":
                     from .session import get_scene_session
                     from .properties import advance_browser_revision
@@ -487,6 +702,10 @@ if bpy is not None:
                 return {"CANCELLED"}
 
         def invoke(self, context, _event):
+            if self.mode == "export_sample" and not bpy.app.background:
+                self.filepath = self.filepath or (self.object_name + ".csv")
+                context.window_manager.fileselect_add(self)
+                return {"RUNNING_MODAL"}
             if self.mode != "volume" or bpy.app.background:
                 return self.execute(context)
             try:
@@ -645,6 +864,21 @@ if bpy is not None:
                 )
                 operator.mode = "rebuild_property"
                 operator.object_name = obj.name
+            if obj.get("cb_grid_sample_root") is True:
+                layout.label(text=f"Saved View: {obj.name}")
+                if obj.get("cb_view_stale"):
+                    layout.label(text=obj.get("cb_view_diagnostic", "View needs rebuilding"), icon="ERROR")
+                row = layout.row(align=True)
+                for text, mode in (("Load Parameters", "load_view"), ("Rebuild View", "rebuild_sample")):
+                    operator = row.operator(CHEMBLENDER_OT_create_grid_view.bl_idname, text=text)
+                    operator.mode, operator.object_name = mode, obj.name
+                if obj.get("cb_scene_preset_id") in {"grid_slice", "grid_profile"}:
+                    operator = layout.operator(CHEMBLENDER_OT_create_grid_view.bl_idname, text="Export Samples CSV")
+                    operator.mode, operator.object_name = "export_sample", obj.name
+            elif obj.get("cb_scene_preset_id") == "property_on_surface" and not obj.get("cb_view_stale"):
+                operator = layout.operator(CHEMBLENDER_OT_create_grid_view.bl_idname,
+                                           text=f"Load {obj.name} Parameters")
+                operator.mode, operator.object_name = "load_view", obj.name
         grid = session.project.datasets.get(session.active_entity_id)
         if not isinstance(grid, Grid3D):
             return
@@ -657,9 +891,9 @@ if bpy is not None:
         layout.label(text=f"Semantic: {grid.semantic_role}")
         layout.label(text=f"Value unit: {grid.data.unit}")
         layout.label(text=f"Quality: {grid.status.value}")
+        if grid.data.dims[0] == "dataset":
+            layout.prop(settings, "dataset_index")
         if grid.status is DatasetStatus.AMBIGUOUS:
-            if grid.data.dims[0] == "dataset":
-                layout.prop(settings, "dataset_index")
             layout.prop(settings, "preset_id")
             layout.prop(settings, "value_unit")
             layout.operator(
@@ -683,14 +917,42 @@ if bpy is not None:
             text="Signed Surface",
         )
         operator.mode = "signed_surface"
+        if grid.status is DatasetStatus.COMPLETE:
+            layout.prop(settings, "symmetric")
+            if not getattr(settings, "symmetric", True):
+                layout.prop(settings, "color_min")
+            layout.prop(settings, "color_max", text="Color Limit ±" if getattr(settings, "symmetric", True) else "Color Maximum")
+            if any(session.project.datasets[value].data.dims[0] == "dataset"
+                   for value in actions.property_grid_ids):
+                layout.prop(settings, "property_dataset_index")
         for property_grid_id in actions.property_grid_ids:
             prop = session.project.datasets[property_grid_id]
-            operator = layout.operator(
+            layout.label(text=f"Property: {prop.semantic_role} · {prop.data.unit}")
+            row = layout.row(align=True)
+            operator = row.operator(
                 CHEMBLENDER_OT_create_grid_view.bl_idname,
                 text=f"Map {prop.semantic_role.replace('_', ' ').title()}",
             )
             operator.mode = "property_surface"
             operator.property_grid_id = str(property_grid_id)
+            operator = row.operator(CHEMBLENDER_OT_create_grid_view.bl_idname, text="Colorbar")
+            operator.mode, operator.property_grid_id = "colorbar", str(property_grid_id)
+        if grid.status is DatasetStatus.COMPLETE:
+            layout.separator()
+            layout.label(text=f"Sampling coordinates: {grid.coordinate_unit}; values: {grid.data.unit}")
+            operator = layout.operator(CHEMBLENDER_OT_create_grid_view.bl_idname, text="Fit Slice / Profile to Grid")
+            operator.mode = "fit_sampling"
+            for name in ("slice_origin", "slice_u", "slice_v", "slice_counts"):
+                layout.prop(settings, name)
+            layout.label(text="U / V are full spans; samples include endpoints")
+            _draw_sample_button(layout, settings, "slice")
+            for name in ("profile_start", "profile_end", "profile_samples", "profile_radius"):
+                layout.prop(settings, name)
+            _draw_sample_button(layout, settings, "profile")
+            for name in ("colorbar_width", "colorbar_height"):
+                layout.prop(settings, name)
+            operator = layout.operator(CHEMBLENDER_OT_create_grid_view.bl_idname, text="Create Grid Colorbar")
+            operator.mode = "colorbar"
 
 
     def register():
@@ -741,6 +1003,10 @@ __all__ = (
     "grid_action_availability",
     "grid_preview_summary",
     "plan_grid_view",
+    "fit_grid_sampling",
+    "load_grid_view_settings",
+    "export_grid_view_sample",
+    "rebuild_grid_sample_view",
     "rebuild_property_view",
     "resolve_grid_selection",
 )

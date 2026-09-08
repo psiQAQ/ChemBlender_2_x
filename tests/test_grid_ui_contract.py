@@ -252,9 +252,12 @@ class GridUIContractTests(unittest.TestCase):
             return None
 
         for name in (
+            "BoolProperty",
             "EnumProperty",
             "FloatProperty",
+            "FloatVectorProperty",
             "IntProperty",
+            "IntVectorProperty",
             "PointerProperty",
             "StringProperty",
         ):
