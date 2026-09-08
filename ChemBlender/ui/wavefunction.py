@@ -533,6 +533,15 @@ if bpy is not None:
             ("scf", "SCF", "Explicitly identify the source as SCF"),
             ("post_scf", "Post SCF", "Explicitly identify the source as post-SCF"),
         ))
+        export_orbitals: StringProperty(name="Orbitals (1-based)", default="1",
+            description="Explicit numbers and ranges, for example 5,6 or 3-6; current spin only")
+        export_directory: StringProperty(name="New Output Directory", subtype="DIR_PATH")
+        export_isovalue: FloatProperty(name="Phase Isovalue", default=.05, min=1.e-8)
+        export_positive_color: FloatVectorProperty(name="Positive Phase", subtype="COLOR",
+            size=4, default=(.15, .35, .95, 1.), min=0., max=1.)
+        export_negative_color: FloatVectorProperty(name="Negative Phase", subtype="COLOR",
+            size=4, default=(.95, .20, .15, 1.), min=0., max=1.)
+        export_opacity: FloatProperty(name="Phase Opacity", default=1., min=0., max=1.)
 
     class CHEMBLENDER_OT_wavefunction(bpy.types.Operator):
         bl_idname = "chemblender.wavefunction"
@@ -544,7 +553,10 @@ if bpy is not None:
 
         def _start(self, context):
             from .session import get_scene_session
+            from .orbital_export import _EXPORTS
             session = get_scene_session(context.scene)
+            if session.id in _EXPORTS:
+                raise ValueError("Wait for the current orbital image export")
             settings = getattr(context.scene, _SCENE_PROPERTY_NAME)
             executable, repository = worker_configuration(settings)
             orbitals = session.project.orbital_sets.get(UUID(self.source_id))
@@ -685,6 +697,7 @@ if bpy is not None:
 
     def draw_wavefunction_controls(layout, context, session):
         from .wavefunction_import import draw_wavefunction_import
+        from .orbital_export import _EXPORTS, draw_orbital_export
         settings = getattr(context.scene, _SCENE_PROPERTY_NAME)
         layout.separator()
         layout.label(text="Wavefunction")
@@ -722,7 +735,7 @@ if bpy is not None:
             layout.label(text=f"{status.stage}: {status.state.value}")
             _button(layout, "Cancel Calculation", action="cancel")
         controls = layout.column()
-        controls.enabled = job is None
+        controls.enabled = job is None and session.id not in _EXPORTS
         if orbitals is not None:
             controls.prop(settings, "channel")
             channel = settings.channel or orbitals.channels[0].label
@@ -780,6 +793,8 @@ if bpy is not None:
                                and bool(rows) and not rows[0].evaluation_error)
             _compute_button(derived, "ESP from Occupations", project=session.project, settings=settings,
                             operation_id="wavefunction.esp_from_orbitals_grid", source=orbitals)
+        if orbitals is not None:
+            draw_orbital_export(layout, context, session)
 
     def register():
         global _OWNED_SCENE_PROPERTY

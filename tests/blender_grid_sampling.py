@@ -84,6 +84,11 @@ def check_slice_and_csv():
         assert material["cb_property_attribute"] == "cb_sample_value"
         principal = next(node for node in material.node_tree.nodes if node.type == "BSDF_PRINCIPLED")
         assert principal.inputs["Alpha"].links[0].from_node.attribute_name == "cb_sample_valid"
+        assert principal.inputs["Emission Color"].links[0].from_node.type == "VALTORGB"
+        assert principal.inputs["Emission Strength"].default_value == 1.
+        assert not principal.inputs["Base Color"].is_linked
+        assert tuple(principal.inputs["Base Color"].default_value) == (0., 0., 0., 1.)
+        assert principal.inputs["Specular IOR Level"].default_value == 0.
         with TemporaryDirectory() as temporary:
             path = Path(temporary) / "slice.csv"
             export_grid_sample(path, dataset, kind="plane", settings=settings)
@@ -204,7 +209,96 @@ def check_failed_creation_and_shared_data():
     assert inventory() == before, "shared-data test cleanup leaked datablocks"
 
 
+def check_material_render(output):
+    """An actual render must preserve scalar colors under strong illumination."""
+    from bpy_extras.object_utils import world_to_camera_view
+    from mathutils import Vector
+
+    assert bpy.app.background, "material render QA requires an independent background Blender"
+    output.mkdir(parents=True, exist_ok=True)
+    scene = bpy.data.scenes.new("Sample material QA scene")
+    bpy.context.window.scene = scene
+    scene.render.engine = "CYCLES"
+    scene.cycles.device = "CPU"
+    scene.cycles.samples = 4
+    scene.cycles.use_denoising = False
+    scene.render.resolution_x, scene.render.resolution_y = 500, 300
+    scene.render.resolution_percentage = 100
+    scene.render.film_transparent = True
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.color_mode = "RGBA"
+    scene.view_settings.view_transform = "Standard"
+    scene.view_settings.look = "None"
+    scene.view_settings.exposure = 0
+    scene.view_settings.gamma = 1
+    world = bpy.data.worlds.new("Sample material QA world")
+    world.use_nodes = True
+    world.node_tree.nodes.get("Background").inputs["Strength"].default_value = 0
+    scene.world = world
+    values = np.broadcast_to(np.linspace(-1., 3., 9)[:, None, None], (9, 5, 1)).copy()
+    values[4, 2, 0] = np.nan
+    dataset = replace(grid(), data=ArrayData(values, ("x", "y", "z"), "hartree_per_elementary_charge"),
+                      origin=(0., 0., 0.), step_vectors=((.5, 0., 0.), (0., .25, 0.), (0., 0., 1.)),
+                      coordinate_unit="angstrom")
+    create_grid_sample_view(dataset, "grid_slice", dict(
+        origin=(0., 0., 0.), u_vector=(4., 0., 0.), v_vector=(0., 1., 0.), counts=(9, 5),
+        color_min=-1., color_max=3., symmetric=False))
+    legend = create_grid_sample_view(dataset, "grid_colorbar", dict(
+        color_min=-1., color_max=3., symmetric=False, width=4., height=.4))[0]
+    legend.location.y = 1.5
+    # The zero tick is separately checked above; hide its geometry to sample
+    # the underlying zero-valued color instead of its ordinary lit material.
+    next(child for child in legend.children
+         if child.get("cb_grid_sample_component") == "zero_tick").hide_render = True
+    camera = bpy.data.objects.new("Sample material QA camera", bpy.data.cameras.new("QA camera"))
+    scene.collection.objects.link(camera)
+    camera.location = (2., 1., 8.)
+    camera.data.type = "ORTHO"
+    camera.data.ortho_scale = 5.
+    scene.camera = camera
+    sun = bpy.data.objects.new("Sample material QA sun", bpy.data.lights.new("QA sun", "SUN"))
+    scene.collection.objects.link(sun)
+    bpy.context.view_layer.update()
+    coordinates = {"blue": (.03, 1.7, 0.), "neutral": (1., 1.7, 0.),
+                   "red": (3.97, 1.7, 0.), "slice_blue": (.03, .1, 0.),
+                   "slice_red": (3.97, .1, 0.), "hole": (2., .5, 0.)}
+    renders = []
+    for energy, name in ((0., "unlit"), (100., "bright")):
+        sun.data.energy = energy
+        path = output / (name + ".png")
+        scene.render.filepath = str(path)
+        bpy.ops.render.render(write_still=True)
+        image = bpy.data.images.load(str(path), check_existing=False)
+        try:
+            pixels = np.asarray(image.pixels[:]).reshape(300, 500, 4)
+            samples = {}
+            for label, coordinate in coordinates.items():
+                position = world_to_camera_view(scene, camera, Vector(coordinate))
+                x, y = int(position.x * 500), int(position.y * 300)
+                samples[label] = pixels[y - 1:y + 2, x - 1:x + 2].mean(axis=(0, 1))
+            renders.append(samples)
+        finally:
+            bpy.data.images.remove(image)
+    evidence = {name: {key: value.tolist() for key, value in result.items()}
+                for name, result in zip(("unlit", "bright"), renders)}
+    (output / "samples.json").write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
+    for key in coordinates:
+        np.testing.assert_allclose(renders[0][key], renders[1][key], atol=.015,
+                                   err_msg=f"lighting changed scientific color {key}")
+    for rendered in renders:
+        assert rendered["blue"][2] > rendered["blue"][0] + .2
+        assert rendered["red"][0] > rendered["red"][2] + .2
+        assert np.ptp(rendered["neutral"][:3]) < .03
+        assert rendered["neutral"][:3].min() > .9
+        assert rendered["hole"][3] == 0., "invalid samples must leave a transparent hole"
+        for name in ("blue", "red"):
+            np.testing.assert_allclose(rendered[name], rendered["slice_" + name], atol=.015)
+    return evidence
+
+
 result = {"slice": check_slice_and_csv(), "profile": check_profile_gaps(),
           "colorbar": check_colorbar_and_user_children()}
 check_failed_creation_and_shared_data()
+if "--render-output" in sys.argv:
+    result["render"] = check_material_render(Path(sys.argv[sys.argv.index("--render-output") + 1]))
 print("GRID_SAMPLING_PASSED", json.dumps(result, sort_keys=True))

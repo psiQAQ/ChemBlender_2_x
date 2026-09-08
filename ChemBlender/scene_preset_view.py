@@ -104,7 +104,9 @@ def _remove_objects(objects):
             remove_structure_view(obj)
             continue
         if getattr(obj, "type", None) == "VOLUME" and any(
-            modifier.get("cbq_contract") in {"isosurface_v1", "property_surface_v1", "property_surface_v2"}
+            getattr(modifier, "node_group", None) is not None
+            and modifier.node_group.get("cbq_contract")
+            in {"isosurface_v1", "property_surface_v1", "property_surface_v2"}
             for modifier in obj.modifiers
         ):
             remove_surface_object(obj)

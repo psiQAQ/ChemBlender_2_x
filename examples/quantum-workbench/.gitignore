@@ -1,0 +1,6 @@
+output/qa/
+output/save-as/
+output/material-qa-*/
+output/verification-*.json
+output/water-workbench.cbq/cache/
+output/*.blend1

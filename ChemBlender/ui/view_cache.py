@@ -366,10 +366,12 @@ def _ensure_property_surface_cache(surface_grid, property_grid, path, **kwargs):
     return ensure_property_surface_cache(surface_grid, property_grid, path, **kwargs)
 
 
-def _blender_path(path, blend_path):
+def _blender_path(path, blend_path, *, relative=True):
     absolute = str(_absolute_path(path))
     if absolute.startswith("\\\\?\\"):
         raise ViewCacheError("extended path prefixes must not enter Blender RNA")
+    if not relative:
+        return absolute
     try:
         relative = os.path.relpath(absolute, _absolute_path(blend_path).parent)
     except ValueError:
@@ -462,8 +464,14 @@ def repair_project_view_caches(
     objects,
     blend_path,
     previous_sidecar_path=None,
+    relative_paths=True,
 ):
-    """Repair Volume paths and validate sample roots without changing scientific data."""
+    """Repair derived views; use absolute RNA paths while Blender is saving.
+
+    Save As remaps relative paths after save_pre using the previous .blend base.
+    Absolute paths survive either relative_remap choice; load_post restores paths
+    relative to the actual opened file, including a relocated .blend/.cbq pair.
+    """
     repaired = 0
     try:
         errors = []
@@ -515,7 +523,7 @@ def repair_project_view_caches(
                     raise ViewCacheError("render cache writer did not create a file")
                 obj.data.filepath = str(target)
                 obj.data.grids.load()
-                obj.data.filepath = _blender_path(target, blend_path)
+                obj.data.filepath = _blender_path(target, blend_path, relative=relative_paths)
                 obj["cb_cache_path"] = str(target)
             except BaseException as error:
                 if isinstance(error, _FATAL_EXCEPTIONS):
@@ -548,7 +556,7 @@ def repair_project_view_caches(
                             obj.data.filepath = str(fallback_target)
                             obj.data.grids.load()
                             obj.data.filepath = _blender_path(
-                                fallback_target, blend_path
+                                fallback_target, blend_path, relative=relative_paths
                             )
                     except BaseException as fallback_error:
                         if isinstance(fallback_error, _FATAL_EXCEPTIONS):

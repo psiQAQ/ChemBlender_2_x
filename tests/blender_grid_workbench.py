@@ -113,6 +113,17 @@ try:
         assert legend["cb_dataset_id"] == str(source.id)
         assert legend["cb_value_unit"] == source.data.unit
         assert legend["cb_dataset_index"] == 1
+        before = {name: {value.as_pointer() for value in getattr(bpy.data, name)}
+                  for name in ("objects", "meshes", "curves", "materials")}
+        with patch("ChemBlender.scene_preset_view._write_plan_metadata", side_effect=RuntimeError("metadata failure")):
+            try:
+                bpy.ops.chemblender.create_grid_view(mode="colorbar", property_grid_id=str(source.id))
+            except RuntimeError as error:
+                assert "metadata failure" in str(error)
+            else:
+                raise AssertionError("metadata failure was not raised")
+        after = {name: {value.as_pointer() for value in getattr(bpy.data, name)} for name in before}
+        assert after == before, "preset metadata failure leaked owned components"
     session.mark_clean()
     close_scene_session(scene)
     print("GRID_WORKBENCH_UI_PASSED")

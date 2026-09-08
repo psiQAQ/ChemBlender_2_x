@@ -410,9 +410,9 @@ def rebuild_property_view(session, obj, cache_root):
     modifiers = tuple(
         modifier for modifier in obj.modifiers
         if modifier.type == "NODES"
-        and modifier.get("cbq_contract")
-        in {"property_surface_v1", "property_surface_v2"}
         and modifier.node_group is not None
+        and modifier.node_group.get("cbq_contract")
+        in {"property_surface_v1", "property_surface_v2"}
     )
     if len(modifiers) != 1 or not obj.users_collection:
         raise ValueError("property surface must have one owned surface modifier")
@@ -442,7 +442,10 @@ def rebuild_property_view(session, obj, cache_root):
     except BaseException:
         obj.data = old_data
         modifier.node_group = old_group
-        modifier["cbq_contract"] = old_contract
+        if old_contract is None:
+            modifier.pop("cbq_contract", None)
+        else:
+            modifier["cbq_contract"] = old_contract
         for key in tuple(obj.keys()):
             if key not in old_metadata:
                 del obj[key]

@@ -14,3 +14,4 @@ docs/user/dependencies.json text eol=lf
 docs/user/format-capabilities.json text eol=lf
 examples/user-workflows/inputs/** -text whitespace=-trailing-space,cr-at-eol
 examples/user-workflows/outputs/** -text
+examples/quantum-workbench/output/** -text whitespace=cr-at-eol

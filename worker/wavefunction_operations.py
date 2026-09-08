@@ -23,10 +23,15 @@ def _progress(context):
         now = monotonic()
         if 0 < completed < total and now - last_write < 0.1:
             return
-        _atomic_document(
-            context.task_directory / "progress.json",
-            {"completed": int(completed), "total": int(total)},
-        )
+        try:
+            _atomic_document(
+                context.task_directory / "progress.json",
+                {"completed": int(completed), "total": int(total)},
+            )
+        except PermissionError:
+            # Windows readers can briefly deny replacement. Progress is optional;
+            # leave last_write unchanged so a later block can retry the update.
+            return
         last_write = now
 
     return report

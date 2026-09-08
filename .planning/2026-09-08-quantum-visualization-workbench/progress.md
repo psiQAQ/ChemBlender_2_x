@@ -35,3 +35,22 @@
 
 - C passed: 12 affine sampling/CSV tests on NumPy 1.26.4 and 2.3.4; root 69 related unit/docs contracts passed. Real Blender adapter and full UI regressions passed: multi-dataset property binding, scientific zero colorbar, valid-only slice faces and profile segments, transform-independent CSV, load parameters, failure rollback and explicit rebuild retaining root and user grandchild transforms. The sampled values are display data, not a new .cbq schema.
 - C committed as a local logical phase. D begins with report provenance, sequential orbital image export, and a real-file example/lifecycle gate.
+
+- D report ancestry fixed without schema/API changes: scientific parent UUIDs now resolve through their actual entities and provenance; source revision ownership remains a leaf. Ten tests passed in the numerical environment, including real FCHK MO/RDM-density/ESP report bundles.
+- Full bundled-Python suite: 2,392 tests, one subprocess Gemmi-path failure and 30 optional skips. Passing existing library paths through PYTHONPATH fixed the launch environment; all nine affected crystal qualification tests then passed. Full final suite will run after D is stable.
+- Real example exposed Windows sharing violation replacing optional worker progress.json during polling; a focused progress-publication fix and failure-injection regression are in progress.
+
+- D image/lifecycle QA found two display issues: modifier custom contracts do not persist reliably, so rebuild/cleanup now inspect durable node-group contracts; legacy actual save/open/rebuild and user-resource retention passed. Slice/colorbar lighting is now independent emission; actual unlit/strong-light pixel tests passed.
+- A background test called read_factory_settings and triggered native cleanup of the shared user extension wheels. Root restored all eight original packages from the already-enabled extension manifests through the native wheel manager, without download/version changes. 5,834 wheel-entry hash checks matched; fresh-process imports and numeric/chemistry smoke passed. Interactive scene remained unsaved with its original three objects. Subsequent scene tests use private BLENDER_USER_RESOURCES.
+
+- D passed: sequential orbital image export and atomic report package, all real example lifecycle stages, both Save As remap modes and moved project pair. Fifteen scientific arrays and scientific CSV remain unchanged under display moves and cache recovery.
+- Independent PySCF 2.13.1 RHF/STO-3G comparison passed at twelve fixed grid points: MO, density and ESP maximum absolute differences below 9.60e-9; this is a pointwise check, not integration convergence.
+- Final native validate/build/ZIP (197 entries) and isolated extension lifecycle passed. Full 2,410-test run found one obsolete modifier-contract mock; corrected it and the narrow runner FloatVectorProperty stub. Final rerun and actual-user install follow.
+
+- Final bundled-Python unittest: 2,410 ran, 2,379 passed, 31 optional/environment skips, zero failures/errors (119.967 s). The isolated 74-test import-preview suite and its formerly failing case also passed in fresh processes.
+- First actual-user install/lifecycle passed with the original enabled extension set preserved. Final line-ending-only normalization required rebuilding the ZIP; the byte-exact final package has 197 entries, 30,029,960 bytes, SHA-256 e076d7b0b177ef06aa5492eacfc7b9e7ec534b441bea0f6661ea205aa7a8e2fb. Final artifact installation checks are running.
+
+- Final artifact isolated and actual-user native install/lifecycle both passed (exit 0); actual enabled extension set and userpref.blend bytes stayed unchanged. Installed package matches every final ZIP entry.
+- Final environment audit passed: 4,888 unique files across eight original wheels, zero hash mismatches and fresh imports/numerical smoke. Earlier 5,834 checks included the same 946 RDKit files through both manifests. Interactive MCP confirmed the original unsaved Camera/Cube/Light scene and enabled extensions.
+- Independent delivery review passed: 15 array hashes, 21 planned view identities, 9,590 CSV data rows, report schema/Markdown/artifact hashes, image dimensions and README links. Generated orbital directory inherited Python's private temporary ACL; enabled its parent inheritance so the actual user can read the delivered files. Artifact bytes are preserved with Git -text and CR-at-EOL handling.
+- First-release A-D and all authorized local qualification are complete. Remote CI, push and release were not run.

@@ -1,0 +1,361 @@
+{
+  "blender_version": "5.1.1",
+  "camera": {
+    "clip_end": 1000.0,
+    "clip_start": 0.10000000149011612,
+    "lens": 50.0,
+    "matrix_world": [
+      [
+        0.8840949535369873,
+        -0.24225760996341705,
+        0.3996089994907379,
+        4.0
+      ],
+      [
+        0.46730729937553406,
+        0.45832526683807373,
+        -0.7560170888900757,
+        -7.0
+      ],
+      [
+        -8.601000800467773e-09,
+        0.8551310896873474,
+        0.5184118151664734,
+        5.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "name": "Orbital Export Camera",
+    "ortho_scale": 7.800000190734863,
+    "sensor_fit": "AUTO",
+    "sensor_height": 24.0,
+    "sensor_width": 36.0,
+    "shift_x": 0.0,
+    "shift_y": 0.0,
+    "type": "ORTHO"
+  },
+  "color_management": {
+    "exposure": 0.0,
+    "gamma": 1.0,
+    "look": "None",
+    "view_transform": "Standard"
+  },
+  "compositor_enabled": false,
+  "display_coordinate_unit": "angstrom",
+  "grid_parameters": {
+    "chunk_size": 4096,
+    "origin": [
+      -6.130000114440918,
+      -5.869999885559082,
+      -6.070000171661377
+    ],
+    "shape": [
+      45,
+      45,
+      45
+    ],
+    "step_vectors": [
+      [
+        0.2800000011920929,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.2800000011920929,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.2800000011920929
+      ]
+    ]
+  },
+  "image_format": {
+    "color_depth": "8",
+    "color_mode": "RGBA",
+    "file_format": "PNG"
+  },
+  "lights": [
+    {
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "energy": 400.0,
+      "hide_render": false,
+      "matrix_world": [
+        [
+          -1.0,
+          1.52313091916767e-07,
+          -2.7037650340844266e-08,
+          0.0
+        ],
+        [
+          -1.5099580252808664e-07,
+          -0.923076868057251,
+          0.3846154510974884,
+          5.0
+        ],
+        [
+          3.3624139916810236e-08,
+          0.3846154510974884,
+          0.923076868057251,
+          12.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "name": "Example Key",
+      "type": "AREA"
+    },
+    {
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "energy": 300.0,
+      "hide_render": false,
+      "matrix_world": [
+        [
+          0.4472135603427887,
+          0.596284806728363,
+          -0.6666666865348816,
+          -8.0
+        ],
+        [
+          -0.8944272398948669,
+          0.29814231395721436,
+          -0.3333333432674408,
+          -4.0
+        ],
+        [
+          -7.548435121407238e-08,
+          0.745356023311615,
+          0.6666666269302368,
+          8.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "name": "Example Fill",
+      "type": "AREA"
+    },
+    {
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "energy": 250.0,
+      "hide_render": false,
+      "matrix_world": [
+        [
+          -0.2425357848405838,
+          -0.5707817077636719,
+          0.7844645380973816,
+          8.0
+        ],
+        [
+          0.9701424837112427,
+          -0.1426955610513687,
+          0.19611625373363495,
+          2.0
+        ],
+        [
+          4.190987823449177e-08,
+          0.8086075782775879,
+          0.588348388671875,
+          6.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "name": "Example Rim",
+      "type": "AREA"
+    }
+  ],
+  "orbital_set_id": "d1f9c245-8a35-4087-9d73-55254e0497df",
+  "orbital_set_revision": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816",
+  "orbitals": [
+    {
+      "energy_hartree": -0.387671783,
+      "grid_id": "820ea9cc-cbb8-4ea5-b372-1309f30d9886",
+      "grid_revision": "3c19f7d34cc51bd6c483189be3b6d6a2c243243b287a540d7b3b00b49facdc51",
+      "image": "images/restricted-mo-0005.png",
+      "labels": [
+        "HOMO"
+      ],
+      "occupation": 2.0,
+      "orbital_number": 5,
+      "reused_scientific_cache": true,
+      "spin": "restricted",
+      "view": {
+        "adapter_contracts": [
+          "openvdb_volume_v1",
+          "volume_to_mesh_v1"
+        ],
+        "bindings": [
+          {
+            "entity_id": "820ea9cc-cbb8-4ea5-b372-1309f30d9886",
+            "entity_kind": "dataset",
+            "name": "grid",
+            "revision": "3c19f7d34cc51bd6c483189be3b6d6a2c243243b287a540d7b3b00b49facdc51"
+          }
+        ],
+        "preset_id": "signed_isosurface",
+        "preset_version": "1",
+        "render_identity": "2e01a5b91f448bafcd685c9e98ca2dea02230df87d52ffba0e1866230c56fdb6",
+        "settings": {
+          "dataset_index": 0,
+          "isovalue": 0.04,
+          "negative_color": [
+            0.95,
+            0.2,
+            0.15,
+            1.0
+          ],
+          "negative_isovalue": -0.04,
+          "opacity": 1.0,
+          "positive_color": [
+            0.15,
+            0.35,
+            0.95,
+            1.0
+          ]
+        },
+        "view_kind": "signed_isosurface"
+      }
+    },
+    {
+      "energy_hartree": 0.603082408,
+      "grid_id": "a120a466-63da-4e93-a74e-1924bfa68e24",
+      "grid_revision": "3bbeb6d49e9b3702e874d3954707ad2b21325688f421a6a486ab4b30488771da",
+      "image": "images/restricted-mo-0006.png",
+      "labels": [
+        "LUMO"
+      ],
+      "occupation": 0.0,
+      "orbital_number": 6,
+      "reused_scientific_cache": true,
+      "spin": "restricted",
+      "view": {
+        "adapter_contracts": [
+          "openvdb_volume_v1",
+          "volume_to_mesh_v1"
+        ],
+        "bindings": [
+          {
+            "entity_id": "a120a466-63da-4e93-a74e-1924bfa68e24",
+            "entity_kind": "dataset",
+            "name": "grid",
+            "revision": "3bbeb6d49e9b3702e874d3954707ad2b21325688f421a6a486ab4b30488771da"
+          }
+        ],
+        "preset_id": "signed_isosurface",
+        "preset_version": "1",
+        "render_identity": "c18d64576b56c6a77bd95f459bfd001e2bb30532e7e6ba4fc8c4ed3350622849",
+        "settings": {
+          "dataset_index": 0,
+          "isovalue": 0.04,
+          "negative_color": [
+            0.95,
+            0.2,
+            0.15,
+            1.0
+          ],
+          "negative_isovalue": -0.04,
+          "opacity": 1.0,
+          "positive_color": [
+            0.15,
+            0.35,
+            0.95,
+            1.0
+          ]
+        },
+        "view_kind": "signed_isosurface"
+      }
+    }
+  ],
+  "project_id": "a29b8c43-cc71-4566-be3b-d13c7f3d221c",
+  "render": {
+    "border_max_x": 1.0,
+    "border_max_y": 1.0,
+    "border_min_x": 0.0,
+    "border_min_y": 0.0,
+    "engine": "CYCLES",
+    "film_transparent": false,
+    "pixel_aspect_x": 1.0,
+    "pixel_aspect_y": 1.0,
+    "resolution_percentage": 100,
+    "resolution_x": 1800,
+    "resolution_y": 1200,
+    "use_border": false,
+    "use_crop_to_border": false
+  },
+  "schema_name": "chemblender_orbital_images",
+  "schema_version": 1,
+  "source": "D:\\workspace\\ChemBlender_2_x\\submodules\\iodata\\iodata\\test\\data\\water_sto3g_hf_g03.fchk",
+  "structure_view": {
+    "adapter_contracts": [
+      "structure_view_v1"
+    ],
+    "bindings": [
+      {
+        "entity_id": "9a20aa19-f6e3-41a3-9c23-0fc2f631990b",
+        "entity_kind": "structure",
+        "name": "structure",
+        "revision": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816"
+      }
+    ],
+    "preset_id": "structure_publication",
+    "preset_version": "1",
+    "render_identity": "f5db4d291233fe48f5e8d1b5037db70ccd7649253bdcb3e48d7b5ff913dded0c",
+    "settings": {
+      "display_coordinate_unit": "angstrom"
+    },
+    "view_kind": "structure"
+  },
+  "world": {
+    "backgrounds": [
+      {
+        "color": [
+          0.02500000037252903,
+          0.03500000014901161,
+          0.054999999701976776,
+          1.0
+        ],
+        "color_linked": false,
+        "strength": 0.699999988079071,
+        "strength_linked": false
+      }
+    ],
+    "color": [
+      0.05087608844041824,
+      0.05087608844041824,
+      0.05087608844041824
+    ],
+    "name": "World",
+    "use_nodes": true
+  }
+}

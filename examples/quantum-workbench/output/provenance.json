@@ -1,0 +1,618 @@
+{
+  "csv_sha256": {
+    "plane.csv": "2c58484f595bd0f38a505b38d1557e608ac4f71fdbb70886b8e7b139ae70075e",
+    "profile.csv": "1afcc52430b9753e2045e54cc93352bebaaf44d91e6ea7f9233ddcad57c4c380"
+  },
+  "display": {
+    "cameras": {
+      "Orbital Export Camera": {
+        "matrix_world": [
+          [
+            0.8840949535369873,
+            -0.24225760996341705,
+            0.3996089994907379,
+            4.0
+          ],
+          [
+            0.46730729937553406,
+            0.45832526683807373,
+            -0.7560170888900757,
+            -7.0
+          ],
+          [
+            -8.601000800467773e-09,
+            0.8551310896873474,
+            0.5184118151664734,
+            5.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "ortho_scale": 7.800000190734863,
+        "type": "ORTHO"
+      },
+      "Workbench Overview Camera": {
+        "matrix_world": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0,
+            28.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "ortho_scale": 19.5,
+        "type": "ORTHO"
+      }
+    },
+    "coordinate_unit": "angstrom",
+    "view_root_transforms": {
+      "ESP atoms 01": [
+        [
+          0.9659257531166077,
+          3.9917264160749255e-08,
+          0.25881898403167725,
+          6.0
+        ],
+        [
+          0.21201209723949432,
+          0.5735763311386108,
+          -0.7912400960922241,
+          3.0
+        ],
+        [
+          -0.148452490568161,
+          0.8191520571708679,
+          0.5540321469306946,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "ESP colorbar 01": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          4.25
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.8999999761581421
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "ESP on density 01": [
+        [
+          0.9659257531166077,
+          3.9917264160749255e-08,
+          0.25881898403167725,
+          6.0
+        ],
+        [
+          0.21201209723949432,
+          0.5735763311386108,
+          -0.7912400960922241,
+          3.0
+        ],
+        [
+          -0.148452490568161,
+          0.8191520571708679,
+          0.5540321469306946,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "ESP profile 01": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          2.5999999046325684
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          -1.7999999523162842
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "ESP slice 01": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          -6.0
+        ],
+        [
+          0.0,
+          7.549790126404332e-08,
+          -1.0,
+          -3.0
+        ],
+        [
+          0.0,
+          1.0,
+          7.549790126404332e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "HOMO 5 01": [
+        [
+          0.9659257531166077,
+          3.9917264160749255e-08,
+          0.25881898403167725,
+          -6.0
+        ],
+        [
+          0.21201209723949432,
+          0.5735763311386108,
+          -0.7912400960922241,
+          3.0
+        ],
+        [
+          -0.148452490568161,
+          0.8191520571708679,
+          0.5540321469306946,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "HOMO 5 02": [
+        [
+          0.9659257531166077,
+          3.9917264160749255e-08,
+          0.25881898403167725,
+          -6.0
+        ],
+        [
+          0.21201209723949432,
+          0.5735763311386108,
+          -0.7912400960922241,
+          3.0
+        ],
+        [
+          -0.148452490568161,
+          0.8191520571708679,
+          0.5540321469306946,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "HOMO 5 atoms 01": [
+        [
+          0.9659257531166077,
+          3.9917264160749255e-08,
+          0.25881898403167725,
+          -6.0
+        ],
+        [
+          0.21201209723949432,
+          0.5735763311386108,
+          -0.7912400960922241,
+          3.0
+        ],
+        [
+          -0.148452490568161,
+          0.8191520571708679,
+          0.5540321469306946,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "LUMO 6 01": [
+        [
+          0.9659257531166077,
+          3.9917264160749255e-08,
+          0.25881898403167725,
+          0.0
+        ],
+        [
+          0.21201209723949432,
+          0.5735763311386108,
+          -0.7912400960922241,
+          3.0
+        ],
+        [
+          -0.148452490568161,
+          0.8191520571708679,
+          0.5540321469306946,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "LUMO 6 02": [
+        [
+          0.9659257531166077,
+          3.9917264160749255e-08,
+          0.25881898403167725,
+          0.0
+        ],
+        [
+          0.21201209723949432,
+          0.5735763311386108,
+          -0.7912400960922241,
+          3.0
+        ],
+        [
+          -0.148452490568161,
+          0.8191520571708679,
+          0.5540321469306946,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "LUMO 6 atoms 01": [
+        [
+          0.9659257531166077,
+          3.9917264160749255e-08,
+          0.25881898403167725,
+          0.0
+        ],
+        [
+          0.21201209723949432,
+          0.5735763311386108,
+          -0.7912400960922241,
+          3.0
+        ],
+        [
+          -0.148452490568161,
+          0.8191520571708679,
+          0.5540321469306946,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    }
+  },
+  "example": "water-quantum-workbench",
+  "fields": {
+    "density": {
+      "id": "c93d7237-be0e-40f4-8858-0e9affbf6718",
+      "revision": "f5b7979f4076a277eadd0aab86deea8f7273c2c13e5543e399715b1720cc8d17",
+      "unit": "electron_per_cubic_bohr"
+    },
+    "esp": {
+      "id": "9f539ed5-4473-42ac-ad09-c37c648f501a",
+      "revision": "ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e",
+      "unit": "hartree_per_elementary_charge"
+    },
+    "homo": {
+      "id": "820ea9cc-cbb8-4ea5-b372-1309f30d9886",
+      "revision": "3c19f7d34cc51bd6c483189be3b6d6a2c243243b287a540d7b3b00b49facdc51",
+      "unit": "inverse_bohr_to_three_halves"
+    },
+    "lumo": {
+      "id": "a120a466-63da-4e93-a74e-1924bfa68e24",
+      "revision": "3bbeb6d49e9b3702e874d3954707ad2b21325688f421a6a486ab4b30488771da",
+      "unit": "inverse_bohr_to_three_halves"
+    }
+  },
+  "grid": {
+    "origin": [
+      -6.13,
+      -5.87,
+      -6.07
+    ],
+    "shape": [
+      45,
+      45,
+      45
+    ],
+    "spacing": 0.28
+  },
+  "method": {
+    "basis": "STO-3G",
+    "charge": 0,
+    "convergence": "visualization grid; integration convergence not tested",
+    "density_source": "explicit total SCF AO density matrix",
+    "electron_count": 10,
+    "multiplicity": 1,
+    "nuclear_charge_source": "explicit FCHK Nuclear charges record",
+    "orbital_energies_hartree": [
+      -20.2333942,
+      -1.26583942,
+      -0.629365088,
+      -0.441724988,
+      -0.387671783,
+      0.603082408,
+      0.766134805
+    ],
+    "orbitals_one_based": {
+      "homo": 5,
+      "lumo": 6
+    },
+    "wavefunction": "RHF"
+  },
+  "project_id": "a29b8c43-cc71-4566-be3b-d13c7f3d221c",
+  "render": {
+    "area_light_power_watts": [
+      400,
+      300,
+      250
+    ],
+    "engine": "CYCLES",
+    "resolution": [
+      1800,
+      1200
+    ],
+    "samples": 24,
+    "view_transform": "Standard"
+  },
+  "scientific_array_sha256": {
+    "0b23481e239ae1dad1ee115c9240f9a1a9335b3e1a3e002d6d50c2c5edbeb5b1.npy": "8b719353578cd8ac74b2d54813a1e9870071109bc5445b224603b3fa7e7f7712",
+    "3263a4a9d76ba726e57e1652e0138fc7127287f2d7d158d6e77c0b9a533beed1.npy": "78bd022fe1fd1c9515e19b87b796ec82bd93f9fba8a2c78d9788a055727973a4",
+    "4489c7c0d6f990760df23065b926630dfa65e8cb68180bb38f31541fe82edb5e.npy": "4e5338f099d3106c7d67be63fa072fef82e664fbeebde619ac0aad2934d4a197",
+    "44d0853b8145cd159004694b602b6c86d16c4708523ffac9a220bf750fb926f6.npy": "14048e6d290194e951ff25378d565b21f1b6374bdf0039e273969f0421e870e3",
+    "55efd8dd1bab610ccb032351256e89a01e47eb91ce4dd789cd00cdc95d3a0046.npy": "8178dee4a5e46c4246d3f9115062e85f7a2af0d1f6478bdd039003bfa4d7f123",
+    "639f698547ade16b5becaec4f2317c17a85e5a9b30f876e00b6ceb128e2c3480.npy": "76dbe1820293324cdd14714b2c29506672bad76bc51d0d39b03636943c8b4479",
+    "8619ad23e89adba9c18a2ac72db11763ecc99ed3260daa51a7b598d8f44e46a3.npy": "f8f9184c8bdf8b56a68ea9d8e215f9dda6d687a59f1ada18e1fb68d995281856",
+    "cde0c2c1afcaad4b5bcc885948c1bf887a47a735aff90206423ab3befeb3db2a.npy": "20eca85d81b0cf971cdbfa3a61b0fd22375db9c5c685edddce9d474dd9951c23",
+    "d133e20c97b5525dc3c845caec7f068d8b325f283bf316b47980e391b2aa3cff.npy": "4a01ab47ec173c445483971d8d5fc3b90d9f37a66f4044ea123e3333ef78a83f",
+    "d5e96cb5d222c50ebf0632a2759c8bccca468c52e6370df787bc8cbeea2a292d.npy": "dfe7f9fcfddcad5c76f9d43e75d6135d650333c7a31e5b6a92066b7aa659f122",
+    "d639939425d717b71e63e143cf75080affad669271692eb12933d287b61ac4fd.npy": "cbd2beae22aaeb385ed9512026a9beadd11b9e44cb68e8a2d31d03489d312a71",
+    "df1614fe4e68077df223dfbd3a7678e2167c3b03eab1fd3db37343cd4d71072a.npy": "7e847d5390ac970d5eb1f07d2f22341968b81d896af69180d4fd50a6274ec8c3",
+    "e458674861f0013eb6da4adff2918c02f48da6ff8967e6c31ab7a62e68f13d71.npy": "afd6ede7c3270c9263107be598b8c78d3582683b9710397ebc319d9c69182bc2",
+    "ea2abae4da9ed9380bd6b224ec0424d918e55be5e7072265707afe4f2befcf19.npy": "0479400852feb632427b21b70f5f034ac212e4fd8ee97632b14326c244f0b61c",
+    "f6230924a2bdcb0543c484b9f65711eb142dff3946fd5092515892703ba30ab7.npy": "e1ccc4a3a53e07a6d4046e32c9d12491cf52c53f767b3a89a783b22661986f12"
+  },
+  "software": {
+    "blender": "5.1.1",
+    "blender_numpy": "2.3.4",
+    "numpy": "1.26.4",
+    "qc-gbasis": "0.1.0",
+    "qc-iodata": "1.0.1",
+    "scipy": "1.16.3",
+    "worker_python": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\gbasis-py312\\Scripts\\python.exe"
+  },
+  "source": {
+    "filename_hint": "g03; the input does not declare an exact program version",
+    "iodata_git_commit": "adab5813713ba64641565eb2a8c11803a4e9bba6",
+    "license_path": "submodules/iodata/LICENSE.txt",
+    "original_program_version": null,
+    "path": "submodules\\iodata\\iodata\\test\\data\\water_sto3g_hf_g03.fchk",
+    "sha256": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816",
+    "upstream_license": "LGPL-3.0-or-later",
+    "url": "https://github.com/theochem/iodata/blob/adab5813713ba64641565eb2a8c11803a4e9bba6/iodata/test/data/water_sto3g_hf_g03.fchk"
+  },
+  "views": {
+    "ESP atoms 01": {
+      "cb_scene_bindings_json": "{\"structure\":{\"entity_id\":\"9a20aa19-f6e3-41a3-9c23-0fc2f631990b\",\"revision\":\"aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816\"}}",
+      "cb_scene_preset_id": "structure_publication",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "f5db4d291233fe48f5e8d1b5037db70ccd7649253bdcb3e48d7b5ff913dded0c",
+      "cb_scene_settings_json": "{\"display_coordinate_unit\":\"angstrom\"}"
+    },
+    "ESP colorbar 01": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_colorbar",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "22107b0d1e3deca1de863518a4f4b168fafecd99b1c210790a9393dea688ec15",
+      "cb_scene_settings_json": "{\"color_max\":0.1,\"color_min\":-0.1,\"colormap\":\"coolwarm\",\"dataset_index\":0,\"height\":0.25,\"symmetric\":true,\"width\":3.5}"
+    },
+    "ESP colorbar 02": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_colorbar",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "22107b0d1e3deca1de863518a4f4b168fafecd99b1c210790a9393dea688ec15",
+      "cb_scene_settings_json": "{\"color_max\":0.1,\"color_min\":-0.1,\"colormap\":\"coolwarm\",\"dataset_index\":0,\"height\":0.25,\"symmetric\":true,\"width\":3.5}"
+    },
+    "ESP colorbar 03": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_colorbar",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "22107b0d1e3deca1de863518a4f4b168fafecd99b1c210790a9393dea688ec15",
+      "cb_scene_settings_json": "{\"color_max\":0.1,\"color_min\":-0.1,\"colormap\":\"coolwarm\",\"dataset_index\":0,\"height\":0.25,\"symmetric\":true,\"width\":3.5}"
+    },
+    "ESP colorbar 04": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_colorbar",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "22107b0d1e3deca1de863518a4f4b168fafecd99b1c210790a9393dea688ec15",
+      "cb_scene_settings_json": "{\"color_max\":0.1,\"color_min\":-0.1,\"colormap\":\"coolwarm\",\"dataset_index\":0,\"height\":0.25,\"symmetric\":true,\"width\":3.5}"
+    },
+    "ESP colorbar 05": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_colorbar",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "22107b0d1e3deca1de863518a4f4b168fafecd99b1c210790a9393dea688ec15",
+      "cb_scene_settings_json": "{\"color_max\":0.1,\"color_min\":-0.1,\"colormap\":\"coolwarm\",\"dataset_index\":0,\"height\":0.25,\"symmetric\":true,\"width\":3.5}"
+    },
+    "ESP colorbar 06": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_colorbar",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "22107b0d1e3deca1de863518a4f4b168fafecd99b1c210790a9393dea688ec15",
+      "cb_scene_settings_json": "{\"color_max\":0.1,\"color_min\":-0.1,\"colormap\":\"coolwarm\",\"dataset_index\":0,\"height\":0.25,\"symmetric\":true,\"width\":3.5}"
+    },
+    "ESP on density 01": {
+      "cb_scene_bindings_json": "{\"property_grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"},\"surface_grid\":{\"entity_id\":\"c93d7237-be0e-40f4-8858-0e9affbf6718\",\"revision\":\"f5b7979f4076a277eadd0aab86deea8f7273c2c13e5543e399715b1720cc8d17\"}}",
+      "cb_scene_preset_id": "property_on_surface",
+      "cb_scene_preset_version": "2",
+      "cb_scene_render_identity": "77ef604603d65cd6df4328dedfa13e7392602353079bcf2ee1b2ad72ede6edea",
+      "cb_scene_settings_json": "{\"color_max\":0.1,\"color_min\":-0.1,\"colormap\":\"coolwarm\",\"property_dataset_index\":0,\"surface_dataset_index\":0,\"surface_isovalue\":0.03,\"symmetric\":true}"
+    },
+    "ESP profile 01": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_profile",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "18ccb61b7d4bd2697a17c98674cb3cc3b669f32a14b78151a41cb74b5a826218",
+      "cb_scene_settings_json": "{\"dataset_index\":0,\"end\":[4.5,0.35,0.2],\"radius\":0.012,\"sample_count\":181,\"start\":[-4.5,0.35,0.2]}"
+    },
+    "ESP profile 02": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_profile",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "18ccb61b7d4bd2697a17c98674cb3cc3b669f32a14b78151a41cb74b5a826218",
+      "cb_scene_settings_json": "{\"dataset_index\":0,\"end\":[4.5,0.35,0.2],\"radius\":0.012,\"sample_count\":181,\"start\":[-4.5,0.35,0.2]}"
+    },
+    "ESP profile 03": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_profile",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "18ccb61b7d4bd2697a17c98674cb3cc3b669f32a14b78151a41cb74b5a826218",
+      "cb_scene_settings_json": "{\"dataset_index\":0,\"end\":[4.5,0.35,0.2],\"radius\":0.012,\"sample_count\":181,\"start\":[-4.5,0.35,0.2]}"
+    },
+    "ESP profile 04": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_profile",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "18ccb61b7d4bd2697a17c98674cb3cc3b669f32a14b78151a41cb74b5a826218",
+      "cb_scene_settings_json": "{\"dataset_index\":0,\"end\":[4.5,0.35,0.2],\"radius\":0.012,\"sample_count\":181,\"start\":[-4.5,0.35,0.2]}"
+    },
+    "ESP profile 05": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_profile",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "18ccb61b7d4bd2697a17c98674cb3cc3b669f32a14b78151a41cb74b5a826218",
+      "cb_scene_settings_json": "{\"dataset_index\":0,\"end\":[4.5,0.35,0.2],\"radius\":0.012,\"sample_count\":181,\"start\":[-4.5,0.35,0.2]}"
+    },
+    "ESP profile 06": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_profile",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "18ccb61b7d4bd2697a17c98674cb3cc3b669f32a14b78151a41cb74b5a826218",
+      "cb_scene_settings_json": "{\"dataset_index\":0,\"end\":[4.5,0.35,0.2],\"radius\":0.012,\"sample_count\":181,\"start\":[-4.5,0.35,0.2]}"
+    },
+    "ESP slice 01": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"9f539ed5-4473-42ac-ad09-c37c648f501a\",\"revision\":\"ac799fc1e2c9555bb062d6910905bc6eb1f8c0e8363b58d2c6039a3f6dbcab1e\"}}",
+      "cb_scene_preset_id": "grid_slice",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "2e74317af53f0b29ad663b403b08939de8925b0068877688ae2e89714dde92fb",
+      "cb_scene_settings_json": "{\"color_max\":0.3,\"color_min\":-0.3,\"colormap\":\"coolwarm\",\"counts\":[97,97],\"dataset_index\":0,\"origin\":[-4.5,0.13,-4.5],\"symmetric\":true,\"u_vector\":[9.0,0.0,0.0],\"v_vector\":[0.0,0.0,9.0]}"
+    },
+    "HOMO 5 01": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"820ea9cc-cbb8-4ea5-b372-1309f30d9886\",\"revision\":\"3c19f7d34cc51bd6c483189be3b6d6a2c243243b287a540d7b3b00b49facdc51\"}}",
+      "cb_scene_preset_id": "signed_isosurface",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "2e01a5b91f448bafcd685c9e98ca2dea02230df87d52ffba0e1866230c56fdb6",
+      "cb_scene_settings_json": "{\"dataset_index\":0,\"isovalue\":0.04,\"negative_color\":[0.95,0.2,0.15,1.0],\"negative_isovalue\":-0.04,\"opacity\":1.0,\"positive_color\":[0.15,0.35,0.95,1.0]}"
+    },
+    "HOMO 5 02": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"820ea9cc-cbb8-4ea5-b372-1309f30d9886\",\"revision\":\"3c19f7d34cc51bd6c483189be3b6d6a2c243243b287a540d7b3b00b49facdc51\"}}",
+      "cb_scene_preset_id": "signed_isosurface",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "2e01a5b91f448bafcd685c9e98ca2dea02230df87d52ffba0e1866230c56fdb6",
+      "cb_scene_settings_json": "{\"dataset_index\":0,\"isovalue\":0.04,\"negative_color\":[0.95,0.2,0.15,1.0],\"negative_isovalue\":-0.04,\"opacity\":1.0,\"positive_color\":[0.15,0.35,0.95,1.0]}"
+    },
+    "HOMO 5 atoms 01": {
+      "cb_scene_bindings_json": "{\"structure\":{\"entity_id\":\"9a20aa19-f6e3-41a3-9c23-0fc2f631990b\",\"revision\":\"aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816\"}}",
+      "cb_scene_preset_id": "structure_publication",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "f5db4d291233fe48f5e8d1b5037db70ccd7649253bdcb3e48d7b5ff913dded0c",
+      "cb_scene_settings_json": "{\"display_coordinate_unit\":\"angstrom\"}"
+    },
+    "LUMO 6 01": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"a120a466-63da-4e93-a74e-1924bfa68e24\",\"revision\":\"3bbeb6d49e9b3702e874d3954707ad2b21325688f421a6a486ab4b30488771da\"}}",
+      "cb_scene_preset_id": "signed_isosurface",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "c18d64576b56c6a77bd95f459bfd001e2bb30532e7e6ba4fc8c4ed3350622849",
+      "cb_scene_settings_json": "{\"dataset_index\":0,\"isovalue\":0.04,\"negative_color\":[0.95,0.2,0.15,1.0],\"negative_isovalue\":-0.04,\"opacity\":1.0,\"positive_color\":[0.15,0.35,0.95,1.0]}"
+    },
+    "LUMO 6 02": {
+      "cb_scene_bindings_json": "{\"grid\":{\"entity_id\":\"a120a466-63da-4e93-a74e-1924bfa68e24\",\"revision\":\"3bbeb6d49e9b3702e874d3954707ad2b21325688f421a6a486ab4b30488771da\"}}",
+      "cb_scene_preset_id": "signed_isosurface",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "c18d64576b56c6a77bd95f459bfd001e2bb30532e7e6ba4fc8c4ed3350622849",
+      "cb_scene_settings_json": "{\"dataset_index\":0,\"isovalue\":0.04,\"negative_color\":[0.95,0.2,0.15,1.0],\"negative_isovalue\":-0.04,\"opacity\":1.0,\"positive_color\":[0.15,0.35,0.95,1.0]}"
+    },
+    "LUMO 6 atoms 01": {
+      "cb_scene_bindings_json": "{\"structure\":{\"entity_id\":\"9a20aa19-f6e3-41a3-9c23-0fc2f631990b\",\"revision\":\"aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816\"}}",
+      "cb_scene_preset_id": "structure_publication",
+      "cb_scene_preset_version": "1",
+      "cb_scene_render_identity": "f5db4d291233fe48f5e8d1b5037db70ccd7649253bdcb3e48d7b5ff913dded0c",
+      "cb_scene_settings_json": "{\"display_coordinate_unit\":\"angstrom\"}"
+    }
+  }
+}

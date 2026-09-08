@@ -6,6 +6,7 @@ import math
 import os
 import re
 import shutil
+from dataclasses import fields
 from pathlib import Path, PurePosixPath
 from uuid import UUID, uuid4
 
@@ -176,18 +177,33 @@ def _recipe_document(recipe, plan, project):
 
 
 def _provenance_closure(project, initial_ids):
+    from .import_pipeline.grouping import _semantic_uuid_references
+
+    # Provenance parents may be scientific entities, as in QCProject.commit.
+    # Reuse the semantic reference walk without reading arrays or interpreting
+    # arbitrary parameter UUIDs as references. Only actual records are emitted.
+    entities = {
+        identity: entity
+        for field in fields(project)
+        if field.name not in {"diagnostics", "calculation_groups"}
+        and isinstance(registry := getattr(project, field.name), dict)
+        for identity, entity in registry.items()
+    }
     pending = list(initial_ids)
     found = set()
     while pending:
         identity = pending.pop()
         if identity in found:
             continue
-        record = project.provenance.get(identity)
-        if record is None:
-            raise AnalysisReportError(f"provenance is missing: {identity}")
+        entity = entities.get(identity)
+        if entity is None:
+            raise AnalysisReportError(f"provenance reference is missing: {identity}")
         found.add(identity)
-        pending.extend(record.parent_ids)
-    return tuple(project.provenance[value] for value in sorted(found, key=str))
+        # Source revisions contain reverse ownership lists, not ancestry.
+        if identity not in project.sources and identity not in project.source_revisions:
+            pending.extend(_semantic_uuid_references(entity))
+    return tuple(project.provenance[value]
+                 for value in sorted(found.intersection(project.provenance), key=str))
 
 
 def build_analysis_report(
@@ -223,12 +239,9 @@ def build_analysis_report(
     recipe_document = (
         None if recipe is None else _recipe_document(recipe, recipe_plan, project)
     )
-    provenance_ids = {
-        identity
-        for entity in (*calculations, *datasets)
-        for identity in entity.provenance_ids
-    }
-    provenance = _provenance_closure(project, provenance_ids)
+    provenance = _provenance_closure(
+        project, (entity.id for entity in (*calculations, *datasets))
+    )
 
     artifact_documents = tuple(artifacts)
     for artifact in artifact_documents:

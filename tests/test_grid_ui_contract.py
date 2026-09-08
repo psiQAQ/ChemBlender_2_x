@@ -34,7 +34,7 @@ class GridUIContractTests(unittest.TestCase):
 
             def __init__(self, version):
                 super().__init__(cbq_contract=f"property_surface_v{version}")
-                self.node_group = object()
+                self.node_group = {"cbq_contract": f"property_surface_v{version}"}
 
         class Surface(dict):
             type = "VOLUME"
@@ -59,9 +59,13 @@ class GridUIContractTests(unittest.TestCase):
                     raise RuntimeError("metadata assignment failed")
                 super().__setitem__(key, value)
 
-        for failure in (None, "prepare", "swap"):
-            with self.subTest(failure=failure):
+        for failure, loaded in ((None, False), ("prepare", False), ("swap", False),
+                                (None, True), ("swap", True)):
+            with self.subTest(failure=failure, loaded=loaded):
                 old, prepared = Surface(1), Surface(2)
+                if loaded:
+                    old.modifiers[0].pop("cbq_contract")
+                old_modifier_metadata = dict(old.modifiers[0])
                 old_data, new_data = old.data, prepared.data
                 old_group, new_group = old.modifiers[0].node_group, prepared.modifiers[0].node_group
                 old_metadata = dict(old)
@@ -106,6 +110,7 @@ class GridUIContractTests(unittest.TestCase):
                         self.assertIs(old.data, old_data)
                         self.assertIs(old.modifiers[0].node_group, old_group)
                         self.assertEqual(dict(old), old_metadata)
+                        self.assertEqual(dict(old.modifiers[0]), old_modifier_metadata)
                         self.assertEqual(removed, [] if failure == "prepare" else [
                             (prepared, new_data, new_group)
                         ])

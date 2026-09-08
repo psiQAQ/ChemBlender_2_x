@@ -1,35 +1,33 @@
 # Quantum visualization workbench
 
 ## Goal
-Implement approved first-release A-D in ChemBlender: wavefunction/Cube, orbitals, density/ESP, slices/profiles, export and recovery. Later scientific/periodic/GPU work remains a roadmap.
+Implement approved first-release A-D in ChemBlender: wavefunction/Cube, orbitals, density/ESP, slices/profiles, image export and recovery. Later scientific/periodic/GPU work remains a roadmap.
 
 ## Success criteria
-Real fixtures pass core/Blender checks; density-only geometry, explicit old-view rebuild, safe cancellation, save/reopen/Save As and cache recovery pass.
+Real fixtures pass core/Blender checks; density-only geometry, explicit old-view rebuild, cancellation, save/reopen/Save As and cache recovery pass.
 
 ## Constraints
-Reuse QCProject, .cbq/.npy, worker, Grid3D and native Blender views. No new runtime dependency without approval. Reference submodules stay outside Extension ZIP. No remote writes or publishing. Preserve encoding and line endings.
+Reuse QCProject, .cbq/.npy, worker, Grid3D and native Blender views. The user approved the independent project-cache Python environment; existing pinned constraints are unchanged. Reference sources stay outside the Extension ZIP. No remote writes or publication. Preserve scientific artifact bytes.
 
 ## Phases
-- [x] A: Density-only surface geometry, versioned rebuild, parent structure identity; core and real Blender regressions passed. Status: complete
-- [x] B: Bounded MO/RDM/ESP and orbital/import UI passed real FCHK/Molden/UHF numerical and Blender gates. Status: complete
-- [x] C: Affine sampling, dataset/range controls, slices/profiles/colorbar and atomic CSV passed core and Blender gates. Status: complete
-- [ ] D: Persistent views, export, real example and lifecycle validation. Status: in_progress
-- [x] References: Added MolecularNodes, MOrbVis and PySCF at reviewed commits; recorded later candidates; 37 documentation contracts passed. Status: complete
-- [ ] Qualification: local core, Blender failure lifecycle and validate/build/ZIP passed; scientific success and install gates pending. Status: in_progress
+- [x] A: Density-only property geometry, versioned rebuild and structure identity. Status: complete
+- [x] B: Bounded MO/RDM/ESP worker and orbital/import UI. Status: complete
+- [x] C: Affine sampling, independent datasets/ranges, slices/profiles/colorbar and CSV. Status: complete
+- [x] D: Persistent views, sequential image export, real water example and complete lifecycle. Status: complete
+- [x] References: MolecularNodes, MOrbVis and PySCF pinned; later candidates indexed. Status: complete
+- [x] Qualification: Local unittest, numerical comparisons, native validate/build/ZIP, isolated and actual-user installation passed. Status: complete
 
 ## Verification
-Track model, adapter, real-file, UI and reopen evidence separately. Reuse existing unittest and Blender smoke infrastructure. External CI/publication requires separate authorization.
 
-| Layer | Current evidence | State |
+| Layer | Evidence | State |
 | --- | --- | --- |
-| Model | A identity; B blocks, cancellation and orbital metadata tested | Local regressions passed |
-| Adapter | A surface/rebuild; B atomic worker/import, independent input lifetime tested | Local regressions passed |
-| Real files | Pinned FCHK/Molden hashes verified | Cartesian/pure/UHF, FCHK/Molden, ghost charges, RDM and ESP passed |
-| UI | Blender 5.1.1 selection, grid fit, failures, cancellation and reload passed | Real numerical success, same-project source switching and cleanup passed |
-| Save/reopen | A cache/rebuild contracts passed | Complete workflow remains Phase D |
+| Model | Structure identity, bounded evaluation/cancellation, conservative orbital metadata, affine analytical fields | Passed |
+| Adapter | Atomic ImportBatch/report/export, density-only geometry, independent input lifetime and rollback | Passed |
+| Real files | Cartesian/pure/UHF, FCHK/Molden, ghost charges, RDM/ESP; independent PySCF water comparison at 12 points | Passed |
+| UI | Real Blender 5.1.1 import/selection/calculation/cancel/reload, scientific slice/profile and sequential image export | Passed |
+| Save/reopen | Both Save As remap modes, moved .blend/.cbq pair, deleted VDB cache; scientific arrays/CSV and view parameters unchanged | Passed |
 
-## Ownership
-Root owns this plan and findings/progress. Agents edit only assigned code and tests; stage gates remain sequential.
+Final unittest: 2,410 ran; 2,379 passed, 31 optional/environment skips, zero failures/errors. Dedicated numerical and real Blender checks cover their relevant optional paths separately. Remote CI and publication: Not Run, outside current authorization.
 
-## Next step
-User approved the project-cache environment. Python 3.12.13 and all eight existing pinned packages are installed; uv pip check passed. B real-file/UI checks passed. C core and Blender gates passed. Finish D batch export, real example and lifecycle, then package qualification.
+## Delivery
+See examples/quantum-workbench/README.md and .agents/completed/quantum-visualization-workbench.md. The example contains .blend, .cbq, PNG, CSV, provenance and PySCF comparison. Original shared extension dependencies and user preferences were verified after installation; the interactive scene remains unchanged. No required first-release work remains.

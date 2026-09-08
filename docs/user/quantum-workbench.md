@@ -2,7 +2,7 @@
 
 Project Browser 的 `Wavefunction` 控件把 FCHK/Molden 中的轨道、密度矩阵和核电荷连接到外部数值 worker，再将完整计算结果保存为项目中的 `Grid3D`。
 
-当前实现包括轨道浏览、单轨道求值、电子/自旋密度和 ESP，以及任意切片、线剖面和数值导出。轨道批量出图仍按[实施计划](../../.planning/2026-09-08-quantum-visualization-workbench/task_plan.md)推进。
+当前实现包括轨道浏览、单轨道求值、电子/自旋密度和 ESP，以及任意切片、线剖面、数值导出和轨道批量出图。[水分子示例](../../examples/quantum-workbench/README.md)提供完整场景、科学数据和可重放验证脚本。
 
 ## 配置数值环境
 
@@ -68,6 +68,23 @@ ESP 核位置具有奇点。网格含核位置或落入核排除半径时会给�
 移动、旋转或缩放 View 不改变其科学参数，也不改变 CSV 数值。CSV 的首行 JSON 元数据记录
 来源 UUID/revision、dataset、原始 affine、单位和采样参数；使用普通 CSV 工具读取时跳过首行。
 独立色标使用同一色图，并显示范围、单位及范围内的零点；调整表面范围后，以相同范围重新创建色标。
+切片和色标的颜色使用 emission，不随灯光强度变化；表面保留三维光照。出图仍受 Blender 的 Color Management 设置影响。
+
+## 顺序导出轨道图片
+
+在 `Orbital Images · Current Spin and Grid` 中输入编号，例如 `5,6` 或 `3-6`，选择尚不存在的输出目录，再设置相位阈值、颜色和透明度。输出父目录必须已经存在。
+
+先将场景相机对准分子的科学坐标位置（显示单位 angstrom）。导出使用固定相机、当前自旋通道和计算网格；每张临时创建当前轨道及其结构，已有视图暂时隐藏，完成后恢复。已移位排版的总览视图不改变导出时的科学坐标位置。
+
+| 设置或产物 | 含义 |
+| --- | --- |
+| Orbitals (1-based) | 按填写顺序处理，去掉重复编号；每次计算一个未缓存轨道 |
+| Phase Isovalue / Phase Colors / Opacity | 所选轨道统一使用的 signed-surface 参数 |
+| `images/` | 当前通道各轨道的 PNG |
+| `display.json` | 相机、渲染设置、网格绑定、轨道能量/占据、阈值和相位颜色 |
+| `manifest.json`、`report.md` | 科学来源、派生记录、图片与显示参数的哈希 |
+
+成功计算的科学网格逐项进入项目；全部图片和报告成功后才发布输出目录。取消、渲染失败或源网格改变时清理暂存图片。`Cancel Image Export` 或 `Esc` 在阶段之间取消；当前单张 Blender 渲染结束后才继续处理取消。批量导出暂时关闭 compositor 和 sequencer，避免场景的 File Output 节点写到其它位置，结束后恢复原设置。
 
 ## 失败、取消和旧视图
 

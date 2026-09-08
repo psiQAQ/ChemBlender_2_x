@@ -1,4 +1,6 @@
+import errno
 import json
+import os
 import unittest
 from dataclasses import replace
 from pathlib import Path
@@ -100,6 +102,68 @@ class WavefunctionWorkerTests(unittest.TestCase):
         self.assertTrue(all(len(call.args[3]) == 1 for call in evaluate.call_args_list))
         progress = json.loads((self.directory / "progress.json").read_text("utf-8"))
         self.assertEqual(progress, {"completed": 2, "total": 2})
+
+    @patch("ChemBlender.core.wavefunction_grid._evaluate_channel")
+    def test_progress_permission_failure_retries_without_losing_numeric_output(self, evaluate):
+        evaluate.side_effect = lambda _s, _b, coefficients, points: (
+            coefficients[:, :1] * points[:, 0][None, :]
+        )
+        replace_file = os.replace
+        attempted_progress = []
+
+        def replace_with_busy_reader(source, destination):
+            if Path(destination).name == "progress.json":
+                attempted_progress.append(json.loads(Path(source).read_text("utf-8")))
+                if len(attempted_progress) == 1:
+                    raise PermissionError("progress reader temporarily holds destination")
+            return replace_file(source, destination)
+
+        with patch("ChemBlender.core.worker_protocol.os.replace", side_effect=replace_with_busy_reader), \
+                patch("worker.wavefunction_operations.monotonic", return_value=1.0):
+            result = self.run_operation("mo_grid", parameters={
+                **GRID, "chunk_size": 1, "channel": "restricted", "orbital_index": 0,
+            })
+        _, grid = self.published_grid(result)
+        numpy.testing.assert_allclose(numpy.asarray(grid.data.values).ravel(), [1.0, 1.5])
+        self.assertEqual([item["completed"] for item in attempted_progress], [0, 1, 2])
+        self.assertEqual(json.loads((self.directory / "progress.json").read_text("utf-8")),
+                         {"completed": 2, "total": 2})
+        self.assertFalse(tuple(self.directory.glob(".progress.json.*.tmp")))
+
+    @patch("ChemBlender.core.wavefunction_observables._evaluate_esp")
+    def test_progress_permission_failure_preserves_cancellation_without_partial_rdm(self, evaluate):
+        replace_file = os.replace
+
+        def denied_progress(source, destination):
+            if Path(destination).name == "progress.json":
+                raise PermissionError("progress reader temporarily holds destination")
+            return replace_file(source, destination)
+
+        def cancel(_s, _b, _d, _q, points):
+            self.cancel_path.touch()
+            return numpy.ones(len(points))
+
+        evaluate.side_effect = cancel
+        with patch("ChemBlender.core.worker_protocol.os.replace", side_effect=denied_progress):
+            result = self.run_operation("esp_from_orbitals_grid",
+                inputs=(self.structure, self.basis, self.orbitals, self.charges),
+                parameters={**GRID, "chunk_size": 1, "density_level": "scf"})
+        self.assertIs(result.status, WorkerStatus.CANCELLED)
+        self.assertEqual(evaluate.call_count, 1)
+        self.assertEqual(result.outputs, ())
+        self.assertEqual(self.sidecar_bytes(), self.before)
+        self.assertFalse(tuple(self.directory.glob(".progress.json.*.tmp")))
+
+    def test_progress_other_io_errors_are_not_silenced(self):
+        with patch("worker.wavefunction_operations._atomic_document",
+                   side_effect=OSError(errno.ENOSPC, "disk full")):
+            result = self.run_operation("mo_grid", parameters={
+                **GRID, "channel": "restricted", "orbital_index": 0,
+            })
+        self.assertIs(result.status, WorkerStatus.ERROR)
+        self.assertIn("disk full", result.error.message)
+        self.assertEqual(result.outputs, ())
+        self.assertEqual(self.sidecar_bytes(), self.before)
 
     @patch("ChemBlender.core.wavefunction_observables._evaluate_stored_basis")
     def test_total_and_spin_rdm_keep_distinct_semantics(self, evaluate):

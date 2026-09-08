@@ -312,6 +312,26 @@ class ViewCachePersistenceTests(unittest.TestCase):
         self.assertEqual(obj.data.grids.loads, 1)
         self.assertEqual(obj.data.grids.loaded_filepaths, [str(expected)])
 
+    def test_save_paths_are_absolute_until_opened_file_restores_relative_paths(self):
+        from ChemBlender.ui import view_cache
+
+        obj = self.grid_object()
+        with patch.object(view_cache, "_ensure_grid_volume_cache", side_effect=self.ensured_path):
+            view_cache.repair_project_view_caches(
+                session=self.session, objects=(obj,), blend_path=self.blend_path,
+                relative_paths=False,
+            )
+            self.assertTrue(Path(obj.data.filepath).is_absolute())
+            self.assertEqual(obj.data.filepath, obj["cb_cache_path"])
+            absolute = Path(obj.data.filepath)
+            # Native Save As can now leave absolute RNA untouched regardless
+            # of relative_remap; load_post uses its real file base afterwards.
+            view_cache.repair_project_view_caches(
+                session=self.session, objects=(obj,), blend_path=self.blend_path,
+            )
+        self.assertTrue(obj.data.filepath.startswith("//"))
+        self.assertEqual(view_cache._blender_absolute_path(obj.data.filepath, self.blend_path), absolute)
+
     def test_signed_surface_uses_stable_render_identity_key(self):
         from ChemBlender.ui import view_cache
 

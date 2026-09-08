@@ -330,7 +330,12 @@ def _volume_surface(
 
 
 def remove_surface_object(obj):
-    groups = [modifier.node_group for modifier in obj.modifiers if modifier.node_group]
+    # Node-group properties persist across .blend reloads; modifier properties
+    # need not. Only dispose owned groups, leaving any user modifier data alone.
+    groups = {modifier.node_group for modifier in obj.modifiers
+              if getattr(modifier, "node_group", None) is not None
+              and modifier.node_group.get("cbq_contract")
+              in {"isosurface_v1", "property_surface_v1", "property_surface_v2"}}
     materials = [
         node.inputs["Material"].default_value
         for group in groups

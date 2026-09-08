@@ -143,9 +143,10 @@ def check_signed_branches(cache_root):
             remove_surface_object(obj)
 
 
-def resource_snapshot():
+def resource_snapshot(*, names=False):
     return tuple(
-        frozenset(value.as_pointer() for value in getattr(bpy.data, name))
+        frozenset(value.name if names else value.as_pointer()
+                  for value in getattr(bpy.data, name))
         for name in ("objects", "volumes", "node_groups", "materials")
     )
 
@@ -218,6 +219,16 @@ def check_legacy_rebuild(cache_root):
     legacy.rotation_euler = (0.2, 0.0, -0.1)
     legacy.scale = (1.3, 0.8, 1.1)
     legacy["user_note"] = "Keep this object"
+    saved = Path(cache_root) / "legacy-view.blend"
+    legacy_name = legacy.name
+    collection_name, extra_collection_name = collection.name, extra_collection.name
+    bpy.ops.wm.save_as_mainfile(filepath=str(saved), check_existing=False)
+    bpy.ops.wm.open_mainfile(filepath=str(saved))
+    legacy = bpy.data.objects[legacy_name]
+    collection = bpy.data.collections[collection_name]
+    extra_collection = bpy.data.collections[extra_collection_name]
+    assert legacy.modifiers[0].node_group["cbq_contract"] == "property_surface_v1"
+    legacy.modifiers[0].pop("cbq_contract", None)
     user_group = bpy.data.node_groups.new("User passthrough", "GeometryNodeTree")
     user_group.interface.new_socket(name="Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
     user_group.interface.new_socket(name="Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
@@ -297,7 +308,13 @@ def check_legacy_rebuild(cache_root):
         return {"old_vertices": len(old_mesh[0]), "new_vertices": len(new_mesh[0]),
                 "identity_preserved": True, "failure_rollback": True, "old_resources_removed": True}
     finally:
-        remove_surface_object(legacy)
+        from ChemBlender.scene_preset_view import _remove_objects
+        owned_group = legacy.modifiers[0].node_group.name
+        legacy.modifiers[0].pop("cbq_contract", None)
+        _remove_objects((legacy,))
+        assert bpy.data.node_groups.get(owned_group) is None
+        assert bpy.data.node_groups.get(user_group.name) is user_group
+        bpy.data.node_groups.remove(user_group)
         current_data = current.data
         bpy.data.objects.remove(current, do_unlink=True)
         bpy.data.volumes.remove(current_data)
@@ -308,7 +325,11 @@ def check_legacy_rebuild(cache_root):
 
 def main():
     assert bpy.app.background, "run this regression in a separate background Blender process"
-    baseline_resources = resource_snapshot()
+    # Blender drops unused factory materials (e.g. Dots Stroke) on reload.
+    for material in tuple(bpy.data.materials):
+        if material.users == 0:
+            bpy.data.materials.remove(material)
+    baseline_resources = resource_snapshot(names=True)
     with TemporaryDirectory(prefix="cbq-workbench-") as cache_root:
         result = {
             "blender_version": bpy.app.version_string,
@@ -316,7 +337,8 @@ def main():
             "signed_branches": check_signed_branches(cache_root),
             "legacy_rebuild": check_legacy_rebuild(cache_root),
         }
-    assert resource_snapshot() == baseline_resources, "regression left owned Blender resources behind"
+    final_resources = resource_snapshot(names=True)
+    assert final_resources == baseline_resources, ("regression resource mismatch", baseline_resources, final_resources)
     print("WORKBENCH_PHASE_A_PASSED", json.dumps(result, sort_keys=True))
 
 

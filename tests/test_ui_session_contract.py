@@ -574,6 +574,7 @@ class UiSessionContractTests(unittest.TestCase):
             objects=(),
             blend_path=str(new_blend),
             previous_sidecar_path=old_sidecar,
+            relative_paths=False,
         )
         self.assertEqual(
             session.sidecar_path,
@@ -618,6 +619,7 @@ class UiSessionContractTests(unittest.TestCase):
             session=session,
             objects=(),
             blend_path=self.fake_bpy.data.filepath,
+            relative_paths=False,
         )
         self.assertFalse(session.dirty)
 

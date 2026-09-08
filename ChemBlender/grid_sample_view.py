@@ -128,12 +128,19 @@ def create_grid_sample_view(grid, kind, settings, *, collection=None):
         materials.append(material)
         material[_OWNED] = True
         obj.data.materials.append(material)
+        principled = next(node for node in material.node_tree.nodes
+                          if node.type == "BSDF_PRINCIPLED")
+        color_link = principled.inputs["Base Color"].links[0]
+        material.node_tree.links.new(color_link.from_socket, principled.inputs["Emission Color"])
+        material.node_tree.links.remove(color_link)
+        # Scientific colors must stay readable under arbitrary scene lighting.
+        principled.inputs["Base Color"].default_value = (0., 0., 0., 1.)
+        principled.inputs["Specular IOR Level"].default_value = 0.
+        principled.inputs["Emission Strength"].default_value = 1.
         if valid is not None:
             _attribute(obj.data, _VALID, "BOOLEAN", valid)
             attribute = material.node_tree.nodes.new("ShaderNodeAttribute")
             attribute.attribute_name = _VALID
-            principled = next(node for node in material.node_tree.nodes
-                              if node.type == "BSDF_PRINCIPLED")
             material.node_tree.links.new(attribute.outputs["Fac"], principled.inputs["Alpha"])
             material.surface_render_method = "DITHERED"
 

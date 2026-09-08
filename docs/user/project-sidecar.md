@@ -20,6 +20,12 @@ handler uses Blender's destination argument, so first Save and Save As to a
 new directory or basename publish the matching sidecar in one operation. A clean
 save with valid links is a no-op for scientific arrays and manifest content.
 
+During saving, owned Volume/Surface cache paths use absolute Blender RNA paths
+to avoid Save As remapping them twice. On reopen, ChemBlender resolves the
+verified adjacent sidecar and restores relative cache paths. Moving the pair
+together therefore remains supported; the original cache location is not
+scientific authority.
+
 Before upgrading, migrating a legacy scene or making important scientific
 edits:
 

@@ -87,7 +87,9 @@ class ImportPreviewUIContractTests(unittest.TestCase):
             ("CollectionProperty", "collection"),
             ("EnumProperty", "enum"),
             ("FloatProperty", "float"),
+            ("FloatVectorProperty", "float_vector"),
             ("IntProperty", "int"),
+            ("IntVectorProperty", "int_vector"),
             ("PointerProperty", "pointer"),
             ("StringProperty", "string"),
         ):
@@ -2320,12 +2322,12 @@ class ImportPreviewUIContractTests(unittest.TestCase):
         surface = SimpleNamespace(
             type="VOLUME",
             data=SimpleNamespace(users=0),
-            modifiers=({"cbq_contract": "isosurface_v1"},),
+            modifiers=(SimpleNamespace(node_group={"cbq_contract": "isosurface_v1"}),),
         )
         property_surface = SimpleNamespace(
             type="VOLUME",
             data=SimpleNamespace(users=0),
-            modifiers=({"cbq_contract": "property_surface_v1"},),
+            modifiers=(SimpleNamespace(node_group={"cbq_contract": "property_surface_v1"}),),
         )
         ordinary = SimpleNamespace(type="MESH", data=None, modifiers=())
         calls = 0

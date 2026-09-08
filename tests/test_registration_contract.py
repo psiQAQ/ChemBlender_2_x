@@ -31,6 +31,7 @@ EXPECTED_ROOTS = (
     ".ui.grid",
     ".ui.wavefunction",
     ".ui.wavefunction_import",
+    ".ui.orbital_export",
     ".ui.project_browser.panel",
     ".ui.file_handlers",
     ".ui.workspace",

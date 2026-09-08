@@ -5842,12 +5842,23 @@ expected_inventory["module_callbacks"] += [
     {"module": ".ui.session", "register": True, "unregister": True},
     {"module": ".ui.properties", "register": True, "unregister": True},
     {"module": ".ui.grid", "register": True, "unregister": True},
+    {"module": ".ui.wavefunction", "register": True, "unregister": True},
+    {"module": ".ui.wavefunction_import", "register": True, "unregister": True},
+    {"module": ".ui.orbital_export", "register": True, "unregister": True},
     {"module": ".ui.project_browser.panel", "register": True, "unregister": True},
     {"module": ".ui.file_handlers", "register": True, "unregister": True},
     {"module": ".ui.workspace", "register": True, "unregister": True},
     {"module": ".ui.migration", "register": True, "unregister": True},
 ]
 expected_inventory["registered_classes"] += [
+    {"module": ".ui.wavefunction", "name": "CHEMBLENDER_PG_wavefunction",
+     "id": None, "base": "PropertyGroup"},
+    {"module": ".ui.wavefunction", "name": "CHEMBLENDER_OT_wavefunction",
+     "id": "chemblender.wavefunction", "base": "Operator"},
+    {"module": ".ui.wavefunction_import", "name": "CHEMBLENDER_OT_import_wavefunction",
+     "id": "chemblender.import_wavefunction", "base": "Operator"},
+    {"module": ".ui.orbital_export", "name": "CHEMBLENDER_OT_export_orbitals",
+     "id": "chemblender.export_orbitals", "base": "Operator"},
     {
         "module": ".ui.migration",
         "name": "CHEMBLENDER_OT_migrate_legacy_scene",

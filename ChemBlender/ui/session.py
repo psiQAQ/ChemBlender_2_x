@@ -297,6 +297,9 @@ def _save_pre_handler(filepath):
                 session=session,
                 objects=tuple(getattr(bpy.data, "objects", ())),
                 blend_path=blend_path,
+                # Blender remaps // paths after save_pre while its base is still
+                # the old file. Keep cache paths absolute through that step.
+                relative_paths=False,
             )
             if previous_sidecar_path is not None:
                 repair_values["previous_sidecar_path"] = previous_sidecar_path
