@@ -73,6 +73,8 @@ class PrepareRuntimeTests(unittest.TestCase):
         configuration = load_configuration(self.configuration())
         self.assertEqual(request_environment(self.request("wavefunction.mo_grid")[1]), "wavefunction")
         self.assertEqual(request_environment(self.request("periodic.fermi_surface")[1]), "fermi")
+        self.assertEqual(request_environment(self.request("periodic.phonon")[1]), "scientific")
+        self.assertEqual(request_environment(self.request("topology.qtaim")[1]), "current")
         reader = self.request("reader.parse", {"reader_id": "pymatgen-vasp-grid"})[1]
         self.assertEqual(request_environment(reader), "scientific")
         builtin = self.request("reader.parse", {"reader_id": "cube"})[1]
@@ -101,10 +103,12 @@ class PrepareRuntimeTests(unittest.TestCase):
             "python_version": "3.12.13",
             "executable": sys.executable,
             "versions": {"numpy": "1.26.4", "qc-gbasis": "0.1.0",
-                         "qc-iodata": "1.0.1"},
+                         "qc-iodata": "1.0.1", "phonopy": "4.4.0"},
             "error": None,
         }
-        with patch("chemblender_prepare.runtime._probe_python", return_value=probe):
+        critic = {"available": True, "version": "1.3.15", "error": None}
+        with patch("chemblender_prepare.runtime._probe_python", return_value=probe), \
+                patch("chemblender_prepare.runtime._probe_critic2", return_value=critic):
             document = capability_document(load_configuration(self.configuration()))
         self.assertEqual(document["schema_name"], "chemblender_prepare_capabilities")
         self.assertEqual(document["schema_version"], "1")
@@ -115,6 +119,10 @@ class PrepareRuntimeTests(unittest.TestCase):
         self.assertEqual(operations[("wavefunction.mo_grid", "1")]["backend_versions"],
                          {"qc-gbasis": "0.1.0"})
         self.assertTrue(operations[("project.verify", "1")]["available"])
+        self.assertEqual(operations[("topology.qtaim", "1")]["backend_versions"],
+                         {"critic2": "1.3.15"})
+        self.assertEqual(operations[("periodic.phonon", "1")]["backend_versions"],
+                         {"phonopy": "4.4.0"})
         readers = {item["reader_id"]: item for item in document["readers"]}
         self.assertEqual(len(readers), 22)
         self.assertEqual(readers["iodata_wavefunction"]["environment"], "wavefunction")

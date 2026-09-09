@@ -1,6 +1,6 @@
 # ChemBlender CBQ Viewer 与本地处理模块实施方案
 
-状态：2026-09-09 共享核心、CBQ 1.1、外部分发包、统一 CLI、Blender 单路径异步控制器、既有 scientific reader／Fermi／wavefunction 及 RDKit 分子 operation 迁移均已完成。源码态、正式 ZIP、编辑闭环、保存重开和完整回归已通过；性能／取消移除门槛和专业分析仍须逐项实测，不能由接口存在代替验收。
+状态：2026-09-09 共享核心、CBQ 1.1、外部分发包、统一 CLI、Blender 单路径异步控制器、既有 scientific reader／Fermi／wavefunction、RDKit 分子 operation 以及 QTAIM／NCI／phonon 专业分析均已接入。专业分析已通过真实后端、CLI、源码态 Blender View、保存重开和移走源文件验证；正式 ZIP、全量回归及随后性能／取消移除门槛仍须完成，不能由接口存在代替验收。
 
 ## 目录
 
@@ -93,6 +93,8 @@ chemblender-prepare doctor
 | `grid.nci_fields` | `1` | NCI 所需关联科学场 |
 
 不新增科学结果模型。复用 `Structure`、`TopologyRecord`、`PropertyDataset`、`CalculationRecord`、`ProvenanceRecord` 和已有网格／声子／拓扑实体。分子势能必须进入带单位的标量 `PropertyDataset`，不能只显示在临时 UI 字符串中。未实现操作不放入“可用”能力清单。
+
+三项专业操作均冻结实际来源文件及SHA-256。QTAIM发布5类可验证临界点语义和真实梯度路径的`TopologyGraph`；NCI发布同一Structure绑定、相同affine的RDG与`sign(lambda2)rho`网格对；phonon发布Structure和请求q-point的复数`PhononModeSet`，可选BORN/NAC及group velocity。Windows上的配置若指向WSL critic2 ELF，处理程序使用固定`wsl.exe --exec`参数运行且不经过shell。历史专业provenance不会被后续operation重写。
 
 ## 一次计算与结果缓存
 

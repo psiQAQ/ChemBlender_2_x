@@ -10,14 +10,17 @@ from uuid import uuid4
 
 import numpy
 
-from cbq_core.model import AtomicProperty, FermiSurfaceMesh, Grid3D, QCProject
+from cbq_core.model import (
+    AtomicProperty, FermiSurfaceMesh, Grid3D, PhononModeSet, QCProject,
+)
 from cbq_core.session import ProjectSession
 from cbq_core.sidecar import close_project
 from ChemBlender.ui.processor import ProcessorState
 from ChemBlender.ui.processor_operations import (
     ProcessorError, molecule_inputs, publish_operation, start_fermi_operation,
     start_molecule_operation, start_reader_operation,
-    start_wavefunction_operation, wavefunction_inputs,
+    start_professional_operation, start_wavefunction_operation,
+    wavefunction_inputs,
 )
 
 
@@ -291,6 +294,40 @@ class ProcessorOperationTests(unittest.TestCase):
                     operation.cleanup()
             self.assertEqual(len(set(outputs)), 5)
             self.assertTrue(set(outputs).issubset(session.project.datasets))
+            close_project(session.project)
+
+    @unittest.skipUnless(PROCESSOR_CONFIG.is_file(),
+                         "real processor config required")
+    def test_real_phonon_operation_is_published_and_detached(self):
+        source = ROOT / "examples/scientific-visualization/inputs/phonopy/NaCl"
+        with TemporaryDirectory(prefix="processor-operation-") as temporary, \
+                patch.dict(os.environ, {
+                    "CHEMBLENDER_PREPARE_CONFIG": str(PROCESSOR_CONFIG.resolve())}):
+            root = Path(temporary)
+            session = ProjectSession(uuid4(), QCProject(uuid4(), "1.1"), root)
+            operation = start_professional_operation(
+                PROCESSOR, root, session.project, "periodic.phonon", (),
+                {"qpoints": ((.1, .2, .3),), "nac_q_direction": (1., 0., 0.),
+                 "with_group_velocities": True},
+                {"displacement_yaml": source / "phonopy_disp.yaml",
+                 "force_sets": source / "FORCE_SETS", "born": source / "BORN"},
+            )
+            try:
+                snapshot = wait_for(operation, 60)
+                self.assertIs(snapshot.state, ProcessorState.SUCCEEDED,
+                              snapshot.error)
+                primary = publish_operation(operation, session)
+                modes = session.project.datasets[primary]
+                self.assertIsInstance(modes, PhononModeSet)
+                self.assertEqual(modes.data.shape, (1, 6))
+                self.assertTrue(all(
+                    Path(item["path"]).is_absolute()
+                    for record in session.project.provenance.values()
+                    for item in dict(record.parameters)["source_artifacts"].values()
+                ))
+            finally:
+                operation.cleanup()
+            self.assertTrue(numpy.isfinite(modes.data.values).all())
             close_project(session.project)
 
 

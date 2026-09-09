@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile, TemporaryDirectory
@@ -95,6 +96,8 @@ def _reader_environment(reader_id):
 def request_environment(request):
     if request.operation_id.startswith("wavefunction."):
         return "wavefunction"
+    if request.operation_id == "periodic.phonon":
+        return "scientific"
     if request.operation_id == "periodic.fermi_surface":
         return "fermi"
     if request.operation_id == "reader.parse":
@@ -153,18 +156,30 @@ print(json.dumps({"python_version": sys.version.split()[0],
     return {"available": True, **result, "error": None}
 
 
-def _operation_capability(operation_id, operation_version, probes):
+def _operation_capability(operation_id, operation_version, probes, critic2):
     environment = "current"
     required = ()
     any_required = ()
     if operation_id.startswith("wavefunction."):
         environment, required = "wavefunction", ("qc-gbasis",)
+    elif operation_id == "periodic.phonon":
+        environment, required = "scientific", ("phonopy",)
     elif operation_id == "periodic.fermi_surface":
         environment, required = "fermi", ("pyprocar",)
     elif operation_id == "qcschema.compute":
         any_required = ("qcengine", "pyscf")
     elif operation_id.startswith("molecule."):
         required = ("rdkit",)
+    elif operation_id in {"topology.qtaim", "grid.nci_fields"}:
+        return {
+            "operation_id": operation_id,
+            "operation_version": operation_version,
+            "environment": "current",
+            "available": critic2["available"],
+            "backend_versions": ({"critic2": critic2["version"]}
+                                 if critic2["available"] else {}),
+            "reason": critic2["error"],
+        }
     probe = probes[environment]
     versions = probe["versions"]
     missing = [name for name in required if name not in versions]
@@ -239,8 +254,9 @@ def capability_document(configuration=None):
         probes[environment] = probes_by_path[key]
     from .worker.runner import default_registry
 
+    critic2 = _probe_critic2(configuration["critic2"])
     operations = [
-        _operation_capability(operation_id, operation_version, probes)
+        _operation_capability(operation_id, operation_version, probes, critic2)
         for operation_id, operation_version in sorted(default_registry()._operations)
     ]
     environments = []
@@ -262,6 +278,28 @@ def capability_document(configuration=None):
     }
 
 
+def _wsl_path(path):
+    path = Path(path).resolve()
+    value = path.as_posix()
+    if len(value) < 3 or value[1:3] != ":/" or not value[0].isalpha():
+        raise ValueError("WSL critic2 paths must use a Windows drive")
+    return f"/mnt/{value[0].lower()}/{value[3:]}"
+
+
+def critic2_command(executable, arguments=(), *, cwd=None):
+    executable = Path(executable).resolve(strict=True)
+    with executable.open("rb") as stream:
+        is_elf = stream.read(4) == b"\x7fELF"
+    if os.name == "nt" and is_elf:
+        command = ["wsl.exe"]
+        if cwd is not None:
+            command.extend(("--cd", _wsl_path(cwd)))
+        command.extend(("--exec", _wsl_path(executable)))
+        command.extend(arguments)
+        return command
+    return [str(executable), *arguments]
+
+
 def _probe_critic2(executable):
     if not executable:
         return {"available": False, "version": None, "error": "not configured"}
@@ -271,11 +309,12 @@ def _probe_critic2(executable):
                 "error": "executable does not exist"}
     try:
         completed = subprocess.run(
-            [str(executable), "--version"],
+            critic2_command(executable, ("--version",)),
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             encoding="utf-8",
+            errors="replace",
             timeout=5,
             shell=False,
             check=False,
@@ -283,11 +322,14 @@ def _probe_critic2(executable):
     except (OSError, subprocess.TimeoutExpired) as error:
         return {"available": False, "version": None,
                 "error": str(error) or type(error).__name__}
-    output = completed.stdout.strip() or completed.stderr.strip()
-    if completed.returncode or not output:
+    output = "\n".join(value for value in (
+        completed.stdout.strip(), completed.stderr.strip()
+    ) if value)
+    match = re.search(r"critic2.*?version\s+([^\s]+)", output, re.IGNORECASE)
+    if completed.returncode or match is None:
         return {"available": False, "version": None,
                 "error": output or f"exit code {completed.returncode}"}
-    return {"available": True, "version": output.splitlines()[0], "error": None}
+    return {"available": True, "version": match.group(1), "error": None}
 
 
 def doctor_document(configuration=None, task_directory=None):

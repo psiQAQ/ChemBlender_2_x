@@ -158,11 +158,13 @@ def _copy_input(source, destination, cancel):
 
 
 def _run_worker(request, directory, cancel):
-    from .worker.runner import default_registry, run_request
+    from .runtime import run_worker
 
     request_path = directory / "request.json"
     write_request(request_path, request)
-    result = run_request(request_path, directory / "worker-result.json", default_registry(), cancel_path=cancel)
+    result = run_worker(
+        request_path, directory / "worker-result.json", cancel_path=cancel
+    )
     if result.request_id != request.request_id:
         raise ValueError("Worker result identity mismatch")
     if result.status is WorkerStatus.CANCELLED:
@@ -192,8 +194,6 @@ def _reader_batch(source, reader_id, parameters, companions, directory, project,
     from .reader_api.worker_bridge import parse_with_worker
 
     descriptor = _descriptor(source, reader_id)
-    if not descriptor.availability.available:
-        raise ValueError(f"Reader {descriptor.reader_id} is unavailable: {descriptor.availability.reason_code}")
     source = Path(source).resolve(strict=True)
     artifact = "inputs/" + source.name
     original, digest = _copy_input(source, directory / artifact, cancel)
@@ -409,7 +409,9 @@ def _derive(args, directory, cancel):
             for name, path in _pairs(args.artifact).items():
                 if Path(name).name != name or ":" in name or name in {".", ".."}:
                     raise ValueError("Artifact name must be a simple filename")
-                relative = "inputs/" + name
+                suffix = Path(path).suffix.lower()
+                staged_name = name if Path(name).suffix or not suffix else name + suffix
+                relative = "inputs/" + staged_name
                 original, digest = _copy_input(path, directory / relative, cancel)
                 sources[name] = (original, directory / relative, digest)
                 artifacts[name] = {"path": relative, "sha256": digest}

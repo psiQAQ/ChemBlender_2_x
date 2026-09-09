@@ -4,6 +4,7 @@ from contextlib import redirect_stdout
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
@@ -462,6 +463,17 @@ class PrepareCLITests(unittest.TestCase):
         self.assertFalse(self.output.exists())
 
     def test_esp_derive_requires_explicit_charges_and_publishes_rdm_with_grid(self):
+        configuration = self.root / "processor.json"
+        configuration.write_text(json.dumps({
+            "schema_version": "1",
+            "python": {"wavefunction": sys.executable},
+            "critic2": None,
+        }), encoding="utf-8")
+        environment = patch.dict(
+            os.environ, {"CHEMBLENDER_PREPARE_CONFIG": str(configuration)}
+        )
+        environment.start()
+        self.addCleanup(environment.stop)
         import numpy
         from uuid import uuid4
         from cbq_core.model import QCProject, ImportBatch, AtomicProperty, ArrayData, DatasetStatus
@@ -532,6 +544,30 @@ class PrepareCLITests(unittest.TestCase):
             self.assertFalse(target.exists())
             self.assertEqual(before, {p.relative_to(source): p.read_bytes()
                                       for p in source.rglob("*") if p.is_file()})
+
+    def test_derive_artifact_preserves_source_extension(self):
+        from cbq_core.model import QCProject
+        from cbq_core.sidecar import save_project
+        from cbq_core.worker_protocol import WorkerResult, WorkerStatus
+        from uuid import uuid4
+
+        source = save_project(
+            self.root / "empty.cbq", QCProject(uuid4(), "1.1")
+        )
+        wavefunction = self.root / "water.wfx"
+        wavefunction.write_text("real wavefunction fixture", encoding="utf-8")
+
+        def worker(request, directory, _cancel):
+            document = request.parameters["source_artifacts"]["wavefunction"]
+            self.assertEqual(document["path"], "inputs/wavefunction.wfx")
+            self.assertTrue((directory / document["path"]).is_file())
+            return WorkerResult(request.request_id, WorkerStatus.SUCCESS)
+
+        with patch("chemblender_prepare.cli._run_worker", side_effect=worker):
+            self.cli(
+                "derive", source, "--operation", "project.verify",
+                "--artifact", f"wavefunction={wavefunction}", "-o", self.output,
+            )
 
     def test_formats_and_raw_inspection_do_not_load_blender(self):
         result = self.cli("formats")

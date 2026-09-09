@@ -13,8 +13,10 @@ from uuid import UUID, uuid4
 
 from cbq_core.model import (
     AtomicProperty, BandStructure, DensityMatrix, DensityMatrixSpin,
-    FermiSurfaceMesh, Grid3D, PropertyDataset, QCProject, Structure,
+    FermiSurfaceMesh, Grid3D, PhononModeSet, PropertyDataset, QCProject,
+    Structure, TopologyGraph,
 )
+from cbq_core.grid_semantics import validate_nci_pair
 from cbq_core.package_import import import_package
 from cbq_core.sidecar import close_project, open_project, save_project
 from cbq_core.worker_protocol import EntityReference, WorkerRequest, WORKER_VERSION
@@ -37,6 +39,9 @@ _WAVEFUNCTION_OPERATIONS = {
 _MOLECULE_OPERATIONS = {
     "molecule.smiles_to_3d", "molecule.kekulize", "molecule.optimize",
     "molecule.energy", "molecule.export",
+}
+_PROFESSIONAL_OPERATIONS = {
+    "topology.qtaim", "periodic.phonon", "grid.nci_fields",
 }
 _SCENE_PROPERTY_NAME = "chemblender_processor_operation"
 _OWNED_SCENE_PROPERTY = None
@@ -139,7 +144,7 @@ class PreparedOperation:
 
 
 def _start_operation(executable, workspace, project, operation_id, inputs,
-                     parameters, *, staged_files=()):
+                     parameters, *, staged_files=(), source_artifacts=()):
     if not isinstance(project, QCProject):
         raise TypeError("project must be a QCProject")
     request_id = uuid4()
@@ -147,11 +152,20 @@ def _start_operation(executable, workspace, project, operation_id, inputs,
     task_directory = create_task_directory(workspace, request_id)
     try:
         copied = []
-        for relative, source in staged_files:
+        artifact_documents = {}
+        staged = tuple((None, *value) for value in staged_files) + tuple(source_artifacts)
+        for role, relative, source in staged:
             copied_source, digest = _copy_input(
                 source, task_directory / Path(*PurePosixPath(relative).parts)
             )
             copied.append((copied_source, digest, relative))
+            if role is not None:
+                artifact_documents[role] = {"path": relative, "sha256": digest}
+        parameters = dict(parameters)
+        if artifact_documents:
+            if "source_artifacts" in parameters:
+                raise ProcessorError("source_artifacts are generated from selected files")
+            parameters["source_artifacts"] = artifact_documents
         project_path = task_directory / "project.cbq"
         save_project(project_path, project)
         request = WorkerRequest(
@@ -289,6 +303,43 @@ def start_wavefunction_operation(executable, workspace, project, operation_id,
     )
 
 
+def start_professional_operation(executable, workspace, project, operation_id,
+                                 inputs, parameters, artifacts):
+    if operation_id not in _PROFESSIONAL_OPERATIONS:
+        raise ProcessorError("unsupported professional operation")
+    inputs = tuple(inputs)
+    parameters = dict(parameters)
+    if "grid_points" in parameters:
+        parameters["grid_points"] = list(parameters["grid_points"])
+    if "qpoints" in parameters:
+        parameters["qpoints"] = [list(value) for value in parameters["qpoints"]]
+    if "nac_q_direction" in parameters:
+        parameters["nac_q_direction"] = list(parameters["nac_q_direction"])
+    if operation_id == "topology.qtaim":
+        if len(inputs) != 1 or not isinstance(inputs[0], Structure):
+            raise ProcessorError("QTAIM requires the matching Structure")
+        source = _source_file(artifacts.get("wavefunction", ""))
+        staged = (("wavefunction", "inputs/wavefunction" + source.suffix.lower(), source),)
+    elif operation_id == "grid.nci_fields":
+        if inputs:
+            raise ProcessorError("NCI fields use the selected wavefunction file")
+        source = _source_file(artifacts.get("wavefunction", ""))
+        staged = (("wavefunction", "inputs/wavefunction" + source.suffix.lower(), source),)
+    else:
+        if inputs:
+            raise ProcessorError("phonons use frozen phonopy files")
+        required = {"displacement_yaml", "force_sets"}
+        if set(artifacts) not in (required, required | {"born"}):
+            raise ProcessorError("phonons require phonopy YAML/FORCE_SETS and optional BORN")
+        names = {"displacement_yaml": "inputs/phonopy_disp.yaml",
+                 "force_sets": "inputs/FORCE_SETS", "born": "inputs/BORN"}
+        staged = tuple((role, names[role], value) for role, value in artifacts.items())
+    return _start_operation(
+        executable, workspace, project, operation_id, inputs, parameters,
+        source_artifacts=staged,
+    )
+
+
 def molecule_inputs(project, operation_id, structure_id, topology_id):
     if operation_id not in _MOLECULE_OPERATIONS:
         raise ProcessorError("unsupported molecular operation")
@@ -375,36 +426,47 @@ def reader_options(settings):
         elif settings.line_mode == "true":
             raise ProcessorError("line-mode bands require the matching KPOINTS file")
     elif reader == "phonopy-file":
-        if not settings.force_sets_file.strip():
-            raise ProcessorError("select the matching FORCE_SETS file")
-        companions["force_sets"] = settings.force_sets_file
-        points = []
-        for row in settings.qpoints.split(";"):
-            try:
-                point = tuple(float(item.strip()) for item in row.split(","))
-            except ValueError as error:
-                raise ProcessorError("q-points require finite fractional triples") from error
-            if len(point) != 3 or not all(map(math.isfinite, point)):
-                raise ProcessorError("q-points require finite fractional triples")
-            points.append(point)
+        points, native, companions = phonon_options(settings)
         parameters["qpoints"] = json.dumps(points, allow_nan=False, separators=(",", ":"))
         parameters["with_group_velocities"] = (
-            "true" if settings.with_group_velocities else "false"
+            "true" if native["with_group_velocities"] else "false"
         )
-        if settings.born_file.strip():
-            companions["born"] = settings.born_file
-            if settings.use_nac_direction:
-                direction = tuple(settings.nac_direction)
-                if not all(map(math.isfinite, direction)) or not any(direction):
-                    raise ProcessorError("NAC direction must be finite and nonzero")
-                parameters["nac_q_direction"] = json.dumps(
-                    direction, allow_nan=False, separators=(",", ":")
-                )
-            elif any(not any(point) for point in points):
-                raise ProcessorError("Gamma with BORN requires an explicit NAC direction")
-        elif settings.use_nac_direction:
-            raise ProcessorError("NAC direction requires an explicit BORN file")
+        if "nac_q_direction" in native:
+            parameters["nac_q_direction"] = json.dumps(
+                native["nac_q_direction"], allow_nan=False, separators=(",", ":")
+            )
     return parameters, companions
+
+
+def phonon_options(settings):
+    if not settings.force_sets_file.strip():
+        raise ProcessorError("select the matching FORCE_SETS file")
+    points = []
+    for row in settings.qpoints.split(";"):
+        try:
+            point = tuple(float(item.strip()) for item in row.split(","))
+        except ValueError as error:
+            raise ProcessorError("q-points require finite fractional triples") from error
+        if len(point) != 3 or not all(map(math.isfinite, point)):
+            raise ProcessorError("q-points require finite fractional triples")
+        points.append(point)
+    parameters = {
+        "qpoints": points,
+        "with_group_velocities": bool(settings.with_group_velocities),
+    }
+    companions = {"force_sets": settings.force_sets_file}
+    if settings.born_file.strip():
+        companions["born"] = settings.born_file
+        if settings.use_nac_direction:
+            direction = tuple(settings.nac_direction)
+            if not all(map(math.isfinite, direction)) or not any(direction):
+                raise ProcessorError("NAC direction must be finite and nonzero")
+            parameters["nac_q_direction"] = direction
+        elif any(not any(point) for point in points):
+            raise ProcessorError("Gamma with BORN requires an explicit NAC direction")
+    elif settings.use_nac_direction:
+        raise ProcessorError("NAC direction requires an explicit BORN file")
+    return points, parameters, companions
 
 
 def _validate_sources(operation):
@@ -665,6 +727,84 @@ def _validate_molecule(operation, project, result):
     return structure.id
 
 
+def _validate_professional(operation, project, result):
+    outputs = tuple(_entity_map(project)[item.entity_id] for item in result.outputs)
+    operation_id = operation.request.operation_id
+    expected_artifacts = operation.request.parameters["source_artifacts"]
+    provenance = tuple(value for value in outputs if value.id in project.provenance)
+    if (result.artifacts or not provenance
+            or not any(dict(value.parameters).get("source_artifacts") == expected_artifacts
+                       for value in provenance)):
+        raise ProcessorError("professional result provenance is incomplete")
+    if operation_id == "topology.qtaim":
+        graphs = tuple(value for value in outputs if isinstance(value, TopologyGraph))
+        structure_id = operation.request.inputs[0].entity_id
+        if (len(graphs) != 2 or len(outputs) != len(graphs) + len(provenance)
+                or any(value.structure_id != structure_id for value in graphs)
+                or result.metadata.get("operation") != "topology.qtaim@1"
+                or result.metadata.get("topology_id") != str(graphs[-1].id)
+                or result.cache_key != graphs[-1].revision):
+            raise ProcessorError("QTAIM result semantics are invalid")
+        return graphs[-1].id
+    if operation_id == "grid.nci_fields":
+        structures = tuple(value for value in outputs if isinstance(value, Structure))
+        grids = tuple(value for value in outputs if isinstance(value, Grid3D))
+        if (len(structures) != 1 or len(grids) != 2
+                or len(outputs) != 3 + len(provenance)
+                or result.metadata.get("operation") != "grid.nci_fields@1"):
+            raise ProcessorError("NCI result inventory is invalid")
+        by_role = {value.semantic_role: value for value in grids}
+        if set(by_role) != {"reduced_density_gradient", "sign_lambda2_rho"}:
+            raise ProcessorError("NCI result semantics are invalid")
+        rdg, signed = by_role["reduced_density_gradient"], by_role["sign_lambda2_rho"]
+        validate_nci_pair(rdg, signed)
+        if (result.metadata.get("structure_id") != str(structures[0].id)
+                or result.metadata.get("rdg_id") != str(rdg.id)
+                or result.metadata.get("signed_density_id") != str(signed.id)
+                or result.cache_key is None):
+            raise ProcessorError("NCI result metadata is invalid")
+        return rdg.id
+    structures = tuple(value for value in outputs if isinstance(value, Structure))
+    modes = tuple(value for value in outputs if isinstance(value, PhononModeSet))
+    if (len(structures) != 1 or len(modes) != 1
+            or len(outputs) != 2 + len(provenance)
+            or modes[0].structure_id != structures[0].id
+            or modes[0].status.value != "complete"
+            or result.metadata != {
+                "operation": "periodic.phonon@1",
+                "structure_id": str(structures[0].id),
+                "phonon_mode_id": str(modes[0].id),
+            }
+            or result.cache_key != modes[0].revision):
+        raise ProcessorError("phonon result semantics are invalid")
+    return modes[0].id
+
+
+def _normalize_professional_sources(operation, project):
+    originals = {
+        role: {"path": str(path), "sha256": digest}
+        for role, document in operation.request.parameters["source_artifacts"].items()
+        for path, digest, relative in operation.source_files
+        if relative == document["path"]
+    }
+    staged = {
+        str((operation.task.task_directory / relative).resolve()): str(path)
+        for path, _digest, relative in operation.source_files
+    }
+    for identity, record in tuple(project.provenance.items()):
+        parameters = dict(record.parameters)
+        if parameters.get("source_artifacts") == operation.request.parameters[
+                "source_artifacts"]:
+            parameters["source_artifacts"] = originals
+        project.provenance[identity] = replace(
+            record, source=staged.get(record.source, record.source),
+            parameters=tuple(parameters.items()),
+        )
+    published = operation.task.task_directory / "professional-published.cbq"
+    save_project(published, project)
+    return published
+
+
 def publish_operation(operation, session):
     snapshot = operation.poll()
     if snapshot.state is not ProcessorState.SUCCEEDED or snapshot.result is None:
@@ -703,6 +843,9 @@ def publish_operation(operation, session):
             published = _normalize_fermi_sources(operation, project)
         elif operation.request.operation_id.startswith("molecule."):
             primary = _validate_molecule(operation, project, result)
+        elif operation.request.operation_id in _PROFESSIONAL_OPERATIONS:
+            primary = _validate_professional(operation, project, result)
+            published = _normalize_professional_sources(operation, project)
         else:
             primary = _validate_wavefunction(operation, project, result)
     finally:
@@ -717,7 +860,7 @@ def publish_operation(operation, session):
 try:
     import bpy
     from bpy.props import (
-        BoolProperty, EnumProperty, FloatVectorProperty, IntProperty,
+        BoolProperty, EnumProperty, FloatVectorProperty, IntProperty, IntVectorProperty,
         PointerProperty, StringProperty,
     )
 except ModuleNotFoundError:
@@ -749,6 +892,9 @@ if bpy is not None:
         )
         fermi_directory: StringProperty(name="Fermi Input Directory", subtype="DIR_PATH")
         fermi_spin: IntProperty(name="Fermi Spin Index", default=0, min=0, max=1)
+        nci_grid_points: IntVectorProperty(
+            name="NCI Grid", size=3, default=(40, 40, 40), min=8, max=256,
+        )
         molecule_force_field: EnumProperty(name="Force Field", items=(
             ("MMFF94", "MMFF94", "Merck Molecular Force Field"),
             ("UFF", "UFF", "Universal Force Field"),
@@ -856,6 +1002,33 @@ if bpy is not None:
                     self.operation_id, inputs, parameters,
                     export_destination=destination,
                 )
+            elif self.action == "PROFESSIONAL":
+                if self.operation_id == "periodic.phonon":
+                    _points, parameters, companions = phonon_options(settings)
+                    artifacts = {
+                        "displacement_yaml": bpy.path.abspath(settings.source_file),
+                        **{role: bpy.path.abspath(value)
+                           for role, value in companions.items()},
+                    }
+                    inputs = ()
+                else:
+                    parameters = ({"grid_points": tuple(settings.nci_grid_points)}
+                                  if self.operation_id == "grid.nci_fields" else {})
+                    artifacts = {"wavefunction": bpy.path.abspath(settings.source_file)}
+                    inputs = ()
+                    if self.operation_id == "topology.qtaim":
+                        entity = _entity_map(session.project).get(session.active_entity_id)
+                        structure = (entity if isinstance(entity, Structure) else
+                                     session.project.structures.get(
+                                         getattr(entity, "structure_id", None)
+                                     ))
+                        if structure is None:
+                            raise ProcessorError("select the Structure imported from this wavefunction")
+                        inputs = (structure,)
+                self._operation = start_professional_operation(
+                    executable, session.temporary_root, session.project,
+                    self.operation_id, inputs, parameters, artifacts,
+                )
             else:
                 raise ProcessorError("unsupported processor action")
 
@@ -883,11 +1056,21 @@ if bpy is not None:
                 if snapshot.state is ProcessorState.SUCCEEDED:
                     primary = publish_operation(self._operation, self._session)
                     context.scene.chemblender_project_browser.active_entity_id = str(primary)
-                    context.scene.chemblender_scientific_view.preset_id = "AUTO"
+                    view_settings = context.scene.chemblender_scientific_view
+                    view_settings.preset_id = "AUTO"
+                    if self._operation.request.operation_id == "grid.nci_fields":
+                        view_settings.preset_id = "nci_surface"
+                        view_settings.secondary_source_uuid = snapshot.result.metadata[
+                            "signed_density_id"
+                        ]
+                        view_settings.pairing_confirmed = True
                     _notify_session_mutation(self._session)
                     entity = _entity_map(self._session.project)[primary]
                     if (primary not in self._operation.baseline_ids
-                            and isinstance(entity, (Structure, Grid3D, FermiSurfaceMesh))):
+                            and isinstance(entity, (
+                                Structure, Grid3D, FermiSurfaceMesh,
+                                TopologyGraph, PhononModeSet,
+                            ))):
                         try:
                             view_result = bpy.ops.chemblender.scientific_view(action="CREATE")
                         except RuntimeError:
@@ -1009,6 +1192,22 @@ if bpy is not None:
         button = row.operator(CHEMBLENDER_OT_processor_operation.bl_idname,
                               text="Extract Fermi Surface", icon="IMPORT")
         button.action = "FERMI"
+        body.separator()
+        body.label(text="Professional Analysis")
+        body.prop(settings, "nci_grid_points")
+        row = body.row(align=True)
+        row.enabled = active is None
+        for operation_id, label in (
+            ("topology.qtaim", "QTAIM"),
+            ("grid.nci_fields", "NCI"),
+            ("periodic.phonon", "Phonons"),
+        ):
+            button = row.operator(
+                CHEMBLENDER_OT_processor_operation.bl_idname,
+                text=label, icon="PLAY",
+            )
+            button.action = "PROFESSIONAL"
+            button.operation_id = operation_id
         if active is not None:
             snapshot = (active._operation.task.snapshot()
                         if active._operation is not None else None)

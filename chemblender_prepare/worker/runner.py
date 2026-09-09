@@ -424,6 +424,8 @@ def default_registry():
     registry.register("molecule.group_conformers", "1", accept_group)
     from .molecule_operations import register_molecule_operations
     register_molecule_operations(registry)
+    from .professional_operations import register_professional_operations
+    register_professional_operations(registry)
     return registry
 
 

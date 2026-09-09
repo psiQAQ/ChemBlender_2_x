@@ -40,7 +40,7 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - [x] L2 Blender 接入：单一全局路径、公共异步任务控制器、进度/取消、节流即时预览；本地操作不依赖处理程序。
 - [x] L3 现有重计算：wavefunction、Fermi、scientific reader经统一入口工作。
 - [x] L4 RDKit：SMILES 3D/AddHs/Kekulé/MMFF/UFF/势能/导出，保留纯编辑与静态显示；Mesh→CBQ→新结果闭环。
-- [ ] L5 专业分析：QTAIM、phonon、NCI，真实输入及科学输出；已有数据展示仍本地。
+- [x] L5 专业分析：QTAIM、phonon、NCI，真实输入及科学输出；已有数据展示仍本地。
 - [ ] L6 删除前门槛：RDKit等价、性能、取消、结果可信校验和生命周期。任一失败保持 wheel，修复或延期。
 - [ ] L7 正式瘦身：仅L6全部Passed后移除 RDKit/scientific wheels及对应import/安装入口，再完成隔离无依赖全量验收。
 - [ ] L8 交付：逐物理量真实Cycles材质与背景、窗口截图、目录跳转SOP、错误恢复、架构/依赖决策、格式能力矩阵和本地发行物验证。
@@ -52,7 +52,7 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - 136模块已迁移，42共享模块独立import不加载bpy/rdkit/gemmi/prepare。CBQ1.1专项110项中109Passed/1skip；项目服务/外部导出/worker-client 79项Passed；事务CBQ导入4项Passed。
 - CLI报告真实XYZ/FCHK、多dataset Cube/CIF及13格式导出通过；Tk窗口调用CLI通过。不能替代统一exe、前台Blender响应、编辑或RDKit等价验证。
 - 候选 .blend-analysis/cbq-viewer-ui-smoke-03/qualification.json：Blender5.1.1基础注册/重载/结构/等值面/体积/移走输入/保存重开/删除VDB重建/Save As Passed；ZIP 2,792,828bytes、104members、0wheels。只代表候选范围，未获得正式移除RDKit资格。
-- L3已关闭；L4-L8操作和专项门槛仍为 Not Run。L3全量为2515项、0 failures/0 errors/36 skips、134.046秒，Passed；Blender 5.1.1源码/正式ZIP私有profile完成reader、MO、View、保存重开和源移走闭环，真实Fermi及五项wavefunction operation数值验证Passed。正式瘦身与SOP仍由后续阶段承担，不将L3成功扩大为整份计划完成。
+- L5已关闭；L6-L8门槛仍为 Not Run。QTAIM/NCI/phonon使用真实critic2 1.3.15和phonopy 4.4.0，经统一CLI与正式ZIP安装态Blender完成View、保存重开和源移走；全量2521项、0 failures/0 errors/36 skips、139.705秒。正式瘦身与SOP仍由后续阶段承担，不将L5成功扩大为整份计划完成。
 - legacy 当前链路已用3个哈希锁定fixture完成外部导出、整包导入、注入失败回滚、View恢复、evaluated mesh可见性、保存重开和Project Connected检查；原始报告不自动应用于数值对称升级包。
 - C4发行物验证Passed：wheel 545,234 bytes、SHA256 `40d0be4d8e6f5cfb7766ad16bae717da10d4910f943b2a0280598140094ff8f8`；sdist 888,508 bytes、SHA256 `d310624439a338fc230af8064615c140727b5aee7f401e9cb5ecf291fa40e992`。隔离`--no-deps`安装后从安装目录加载共享核心、CLI和GUI，入口点及`formats --json`的22 readers/13 operations通过。
 - L1统一入口验证Passed：新增独立版本化`capabilities --json`、严格Worker v1文件入口、无安装副作用的`doctor`和固定环境路由；未配置专用环境明确返回unavailable，不回退主Python。相关合同回归121项Passed/1 optional skip；最终wheel/sdist构建、CRC及`runtime.py`内容、隔离安装launcher、三套真实环境22 readers/13 operations和跨环境worker均通过。critic2为WSL ELF，Windows原生doctor如实保持warning，留待L5执行路由处理。
@@ -71,15 +71,15 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 | Difference density | Passed | strict same-grid subtraction | N atom MP2-SCF | 2 formal images | Reopen and SOP Passed |
 | ESP / local potential | Passed | surface/slice/profile | water FCHK ESP | 6 formal images | Reopen Passed; periodic input pending |
 | ELF / LOL | range validation Passed | native grid templates | external output pending | synthetic adapters Passed | external real-result acceptance pending |
-| RDG / sign-lambda2-rho / NCI | pair validation Passed | native Grid to Mesh recipe | external output pending | native UI Passed | external real-result acceptance pending |
+| RDG / sign-lambda2-rho / NCI | pair validation Passed | native Grid to Mesh recipe | critic2 40×40×40 pair Passed | installed UI Passed | save/reopen/source-move Passed |
 | Atomic charges / populations | Passed | native point colors | PQR998 | 2 formal Cycles images | saved Views, reopen and illustrated SOP Passed |
 | Forces / gradients | binding/sign Passed | native arrows | rMD17 | 2 formal stills + 64 PNG/2 MP4 | saved Views, reopen and illustrated SOP Passed |
 | Vibration / IR / Raman | Passed | native molecule/Curve | pinned Gaussian/ORCA | synthetic UI Passed | environment installed; real-result acceptance pending |
 | UV-Vis / ECD | verified Gaussian ECD units | native Curve | pinned Gaussian/ORCA | synthetic UI Passed | environment installed; real-result acceptance pending |
 | Band / DOS / PDOS | Passed | native Curve/PDOS selection | pinned Si VASP | synthetic UI Passed | environment installed; real-result acceptance pending |
 | Fermi / surface properties | Passed | worker + native mesh/arrows | pinned SrVO3 VASP | synthetic UI Passed | Fermi numerical probe Passed; full result/UI acceptance pending |
-| QTAIM / rho / Laplacian | Passed | FLUXPRINT samples + CP glyphs | external output pending | synthetic import/UI Passed | toolchain built; scientific output acceptance pending |
-| Phonons | complex modes Passed | file worker + native phase | pinned NaCl VASP | synthetic UI Passed | environment installed; real-result acceptance pending |
+| QTAIM / rho / Laplacian | Passed | FLUXPRINT samples + CP glyphs | water WFX critic2 Passed | installed UI Passed | save/reopen/source-move Passed |
+| Phonons | complex modes Passed | file worker + native phase | pinned NaCl phonopy Passed | installed UI Passed | save/reopen/source-move Passed |
 | Trajectories / frame properties | Passed | bounded native frame update | rMD17 32 frames | 2 formal stills + 64 PNG/2 MP4 | saved Views, reopen and illustrated SOP Passed |
 
 

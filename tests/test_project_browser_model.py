@@ -934,6 +934,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             setattr(self.fake_props, name, _property(kind))
         self.fake_bpy.props = self.fake_props
         self.fake_bpy.types = SimpleNamespace(
+            AddonPreferences=_PropertyGroup,
             Panel=_Panel,
             Operator=_Operator,
             PropertyGroup=_PropertyGroup,

@@ -3,6 +3,8 @@
 import hashlib
 import importlib.util
 import json
+import os
+import sys
 import unittest
 from dataclasses import replace
 from pathlib import Path
@@ -139,6 +141,17 @@ class FermiImportTests(unittest.TestCase):
         self.input = self.root / "input.cbq"
         self.output = self.root / "result.cbq"
         save_project(self.input, QCProject(uuid4(), "1.1"))
+        configuration = self.root / "processor.json"
+        configuration.write_text(json.dumps({
+            "schema_version": "1",
+            "python": {"fermi": sys.executable},
+            "critic2": None,
+        }), encoding="utf-8")
+        environment = patch.dict(
+            os.environ, {"CHEMBLENDER_PREPARE_CONFIG": str(configuration)}
+        )
+        environment.start()
+        self.addCleanup(environment.stop)
 
     def run_cli(self, success=True):
         args = ["derive", str(self.input), "-o", str(self.output), "--operation", "periodic.fermi_surface", "--json"]
