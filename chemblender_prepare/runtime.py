@@ -163,6 +163,8 @@ def _operation_capability(operation_id, operation_version, probes):
         environment, required = "fermi", ("pyprocar",)
     elif operation_id == "qcschema.compute":
         any_required = ("qcengine", "pyscf")
+    elif operation_id.startswith("molecule."):
+        required = ("rdkit",)
     probe = probes[environment]
     versions = probe["versions"]
     missing = [name for name in required if name not in versions]

@@ -422,6 +422,8 @@ def default_registry():
     register_grid_operations(registry)
     from .conformer_operation import accept_group
     registry.register("molecule.group_conformers", "1", accept_group)
+    from .molecule_operations import register_molecule_operations
+    register_molecule_operations(registry)
     return registry
 
 

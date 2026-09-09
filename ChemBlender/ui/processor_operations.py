@@ -4,6 +4,7 @@ from dataclasses import dataclass, fields, replace
 import hashlib
 import json
 import math
+import os
 from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
 import shutil
@@ -12,7 +13,7 @@ from uuid import UUID, uuid4
 
 from cbq_core.model import (
     AtomicProperty, BandStructure, DensityMatrix, DensityMatrixSpin,
-    FermiSurfaceMesh, Grid3D, QCProject,
+    FermiSurfaceMesh, Grid3D, PropertyDataset, QCProject, Structure,
 )
 from cbq_core.package_import import import_package
 from cbq_core.sidecar import close_project, open_project, save_project
@@ -32,6 +33,10 @@ _WAVEFUNCTION_OPERATIONS = {
     "wavefunction.density_matrix_grid": (None, "electron_per_cubic_bohr"),
     "wavefunction.esp_grid": ("electrostatic_potential", "hartree_per_elementary_charge"),
     "wavefunction.esp_from_orbitals_grid": ("electrostatic_potential", "hartree_per_elementary_charge"),
+}
+_MOLECULE_OPERATIONS = {
+    "molecule.smiles_to_3d", "molecule.kekulize", "molecule.optimize",
+    "molecule.energy", "molecule.export",
 }
 _SCENE_PROPERTY_NAME = "chemblender_processor_operation"
 _OWNED_SCENE_PROPERTY = None
@@ -110,6 +115,7 @@ class PreparedOperation:
     baseline_ids: frozenset
     source_files: tuple
     result_project: Path
+    export_destination: Path | None = None
     closed: bool = False
 
     def request_cancel(self):
@@ -281,6 +287,51 @@ def start_wavefunction_operation(executable, workspace, project, operation_id,
         executable, workspace, project, operation_id, tuple(inputs),
         dict(parameters),
     )
+
+
+def molecule_inputs(project, operation_id, structure_id, topology_id):
+    if operation_id not in _MOLECULE_OPERATIONS:
+        raise ProcessorError("unsupported molecular operation")
+    try:
+        structure = project.structures[structure_id]
+        topology = project.topologies[topology_id]
+    except KeyError as error:
+        raise ProcessorError("select a current molecular Structure and Topology") from error
+    if (not isinstance(structure, Structure)
+            or topology.structure_id != structure.id
+            or topology.id not in structure.topology_ids
+            or structure.coordinates.unit != "angstrom"
+            or structure.atomic_identity is None):
+        raise ProcessorError("molecular operations require a bound angstrom Structure and Topology")
+    inputs = (structure, topology)
+    if operation_id in {"molecule.smiles_to_3d", "molecule.export"}:
+        record = next((
+            value for value in project.molecular_records.values()
+            if value.structure_id == structure.id
+            and value.topology_id in {None, topology.id}
+        ), None)
+        if operation_id == "molecule.smiles_to_3d" and record is None:
+            raise ProcessorError("Generate 3D requires the bound SMILES record")
+        if record is not None:
+            inputs += (record,)
+    return inputs
+
+
+def start_molecule_operation(executable, workspace, project, operation_id,
+                             inputs, parameters, *, export_destination=None):
+    if operation_id not in _MOLECULE_OPERATIONS:
+        raise ProcessorError("unsupported molecular operation")
+    destination = None
+    if operation_id == "molecule.export":
+        if export_destination is None or not str(export_destination).strip():
+            raise ProcessorError("select an export destination")
+        destination = Path(export_destination).expanduser().resolve()
+    operation = _start_operation(
+        executable, workspace, project, operation_id, tuple(inputs),
+        dict(parameters),
+    )
+    operation.export_destination = destination
+    return operation
 
 
 def wavefunction_inputs(project, operation_id, source_id, *, nuclear_charge_id=None):
@@ -497,6 +548,123 @@ def _normalize_fermi_sources(operation, project):
     return published
 
 
+def _copy_export_artifact(source, destination):
+    from cbq_core.storage.atomic_paths import short_sibling_temporary_path
+
+    destination = Path(destination)
+    if destination.exists() and destination.is_dir():
+        destination /= source.name
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = short_sibling_temporary_path(destination)
+    try:
+        with source.open("rb") as reader, temporary.open("xb") as writer:
+            shutil.copyfileobj(reader, writer, 1024 * 1024)
+            writer.flush()
+            os.fsync(writer.fileno())
+        os.replace(temporary, destination)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+    return destination
+
+
+def _validate_molecule(operation, project, result):
+    entities = _entity_map(project)
+    outputs = tuple(entities[item.entity_id] for item in result.outputs)
+    operation_id = operation.request.operation_id
+    expected_operation = f"{operation_id}@1"
+    if result.cache_key is None or result.metadata.get("operation") != expected_operation:
+        raise ProcessorError("molecular result metadata is invalid")
+    provenance = tuple(
+        value for value in outputs if value.id in project.provenance
+    )
+    expected_provenance_operation = (
+        "derive_smiles_3d"
+        if operation_id == "molecule.smiles_to_3d" else operation_id
+    )
+    if (len(provenance) != 1
+            or provenance[0].operation != expected_provenance_operation):
+        raise ProcessorError("molecular provenance is invalid")
+    source_structure_id = operation.request.inputs[0].entity_id
+    source_topology_id = operation.request.inputs[1].entity_id
+    expected_parents = (
+        (operation.request.inputs[2].entity_id,
+         source_structure_id, source_topology_id)
+        if operation_id == "molecule.smiles_to_3d"
+        else (source_structure_id, source_topology_id)
+    )
+    if provenance[0].parent_ids != expected_parents:
+        raise ProcessorError("molecular provenance inputs are invalid")
+
+    if operation_id == "molecule.export":
+        if len(outputs) != 1 or len(result.artifacts) != 1:
+            raise ProcessorError("molecular export inventory is invalid")
+        relative = result.artifacts[0]
+        if result.metadata.get("artifact") != relative:
+            raise ProcessorError("molecular export artifact metadata is invalid")
+        artifact = _safe_artifact(operation.result_project, relative)
+        if _sha256(artifact) != result.metadata.get("artifact_sha256"):
+            raise ProcessorError("molecular export artifact hash mismatch")
+        if operation.export_destination is None:
+            raise ProcessorError("molecular export destination is missing")
+        _copy_export_artifact(artifact, operation.export_destination)
+        return source_structure_id
+
+    if result.artifacts:
+        raise ProcessorError("molecular operation returned unexpected artifacts")
+    calculations = tuple(
+        value for value in outputs if value.id in project.calculations
+    )
+    if len(calculations) != 1:
+        raise ProcessorError("molecular calculation inventory is invalid")
+    calculation = calculations[0]
+    if (calculation.input_structure_ids != (source_structure_id,)
+            or calculation.provenance_ids != (provenance[0].id,)):
+        raise ProcessorError("molecular calculation bindings are invalid")
+
+    if operation_id == "molecule.energy":
+        datasets = tuple(
+            value for value in outputs if isinstance(value, PropertyDataset)
+        )
+        if (len(outputs) != 3 or len(datasets) != 1
+                or calculation.dataset_ids != (datasets[0].id,)):
+            raise ProcessorError("molecular energy inventory is invalid")
+        dataset = datasets[0]
+        import numpy
+        if (dataset.semantic_role != "potential_energy"
+                or dataset.domain != "structure"
+                or dataset.data.unit != "kilocalorie_per_mole"
+                or dataset.data.shape != ()
+                or dataset.source_calculation != calculation.id
+                or not numpy.isfinite(numpy.asarray(dataset.data.values)).all()
+                or result.metadata.get("dataset_id") != str(dataset.id)):
+            raise ProcessorError("molecular energy semantics are invalid")
+        return dataset.id
+
+    structures = tuple(value for value in outputs if isinstance(value, Structure))
+    topologies = tuple(
+        value for value in outputs if value.id in project.topologies
+    )
+    failed_smiles = (
+        operation_id == "molecule.smiles_to_3d"
+        and calculation.status.value == "failed"
+    )
+    if failed_smiles:
+        if len(outputs) != 2 or structures or topologies:
+            raise ProcessorError("failed SMILES 3D inventory is invalid")
+        return calculation.id
+    if (len(outputs) != 4 or len(structures) != 1 or len(topologies) != 1):
+        raise ProcessorError("molecular structure inventory is invalid")
+    structure, topology = structures[0], topologies[0]
+    if (topology.structure_id != structure.id
+            or structure.topology_ids != (topology.id,)
+            or calculation.result_structure_ids != (structure.id,)
+            or result.metadata.get("status") != calculation.status.value
+            or result.cache_key != structure.revision):
+        raise ProcessorError("molecular structure result is invalid")
+    return structure.id
+
+
 def publish_operation(operation, session):
     snapshot = operation.poll()
     if snapshot.state is not ProcessorState.SUCCEEDED or snapshot.result is None:
@@ -533,6 +701,8 @@ def publish_operation(operation, session):
         elif operation.request.operation_id == "periodic.fermi_surface":
             primary = _validate_fermi(operation, project, result)
             published = _normalize_fermi_sources(operation, project)
+        elif operation.request.operation_id.startswith("molecule."):
+            primary = _validate_molecule(operation, project, result)
         else:
             primary = _validate_wavefunction(operation, project, result)
     finally:
@@ -579,6 +749,22 @@ if bpy is not None:
         )
         fermi_directory: StringProperty(name="Fermi Input Directory", subtype="DIR_PATH")
         fermi_spin: IntProperty(name="Fermi Spin Index", default=0, min=0, max=1)
+        molecule_force_field: EnumProperty(name="Force Field", items=(
+            ("MMFF94", "MMFF94", "Merck Molecular Force Field"),
+            ("UFF", "UFF", "Universal Force Field"),
+        ))
+        molecule_add_hydrogens: BoolProperty(name="Add Hydrogens", default=True)
+        molecule_max_iterations: IntProperty(
+            name="Maximum Iterations", default=200, min=1, max=100000,
+        )
+        molecule_export_format: EnumProperty(name="Format", items=(
+            ("mol", "MOL", "MDL molfile"),
+            ("sdf", "SDF", "Structure-data file"),
+            ("smiles", "SMILES", "Canonical isomeric SMILES"),
+        ))
+        molecule_export_path: StringProperty(
+            name="Export File", default="//molecule.sdf", subtype="FILE_PATH",
+        )
 
 
     class CHEMBLENDER_OT_processor_operation(bpy.types.Operator):
@@ -589,6 +775,7 @@ if bpy is not None:
         action: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
         operation_id: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
         source_id: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
+        topology_id: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
 
         _session = None
         _operation = None
@@ -627,6 +814,48 @@ if bpy is not None:
                     executable, session.temporary_root, session.project,
                     self.operation_id, inputs, parameters,
                 )
+            elif self.action == "MOLECULE":
+                inputs = molecule_inputs(
+                    session.project, self.operation_id,
+                    UUID(self.source_id), UUID(self.topology_id),
+                )
+                if self.operation_id == "molecule.smiles_to_3d":
+                    parameters = {
+                        "add_hydrogens": settings.molecule_add_hydrogens,
+                        "force_field": settings.molecule_force_field,
+                        "random_seed": 0xC0FFEE,
+                        "num_threads": 1,
+                        "max_iterations": settings.molecule_max_iterations,
+                    }
+                elif self.operation_id == "molecule.optimize":
+                    parameters = {
+                        "add_hydrogens": settings.molecule_add_hydrogens,
+                        "force_field": settings.molecule_force_field,
+                        "max_iterations": settings.molecule_max_iterations,
+                    }
+                elif self.operation_id == "molecule.energy":
+                    parameters = {"force_field": settings.molecule_force_field}
+                elif self.operation_id == "molecule.export":
+                    parameters = {
+                        "format": settings.molecule_export_format,
+                        "confirm_loss": True,
+                        "isomeric": True,
+                    }
+                else:
+                    parameters = {}
+                destination = None
+                if self.operation_id == "molecule.export":
+                    destination = settings.molecule_export_path
+                    if destination.strip():
+                        destination = Path(bpy.path.abspath(destination))
+                        expected = "." + settings.molecule_export_format
+                        if destination.suffix.lower() != expected:
+                            destination = destination.with_suffix(expected)
+                self._operation = start_molecule_operation(
+                    executable, session.temporary_root, session.project,
+                    self.operation_id, inputs, parameters,
+                    export_destination=destination,
+                )
             else:
                 raise ProcessorError("unsupported processor action")
 
@@ -656,13 +885,23 @@ if bpy is not None:
                     context.scene.chemblender_project_browser.active_entity_id = str(primary)
                     context.scene.chemblender_scientific_view.preset_id = "AUTO"
                     _notify_session_mutation(self._session)
-                    try:
-                        view_result = bpy.ops.chemblender.scientific_view(action="CREATE")
-                    except RuntimeError:
-                        view_result = {"CANCELLED"}
-                    if view_result != {"FINISHED"}:
-                        self.report({"WARNING"}, "Result added; create its View manually")
-                    self.report({"INFO"}, "Processor result added to the project")
+                    entity = _entity_map(self._session.project)[primary]
+                    if (primary not in self._operation.baseline_ids
+                            and isinstance(entity, (Structure, Grid3D, FermiSurfaceMesh))):
+                        try:
+                            view_result = bpy.ops.chemblender.scientific_view(action="CREATE")
+                        except RuntimeError:
+                            view_result = {"CANCELLED"}
+                        if view_result != {"FINISHED"}:
+                            self.report({"WARNING"}, "Result added; create its View manually")
+                    if self._operation.request.operation_id == "molecule.export":
+                        self.report({"INFO"}, "Molecule exported to " + str(
+                            self._operation.export_destination
+                        ))
+                    elif self._operation.request.operation_id == "molecule.energy":
+                        self.report({"INFO"}, "Potential energy added to the project")
+                    else:
+                        self.report({"INFO"}, "Processor result added to the project")
                     return {"FINISHED"}
                 if snapshot.state is ProcessorState.CANCELLED:
                     self.report({"INFO"}, "Processor operation cancelled")
@@ -777,6 +1016,75 @@ if bpy is not None:
                              if snapshot is not None else "Starting processor · Esc to cancel"))
 
 
+    def draw_molecule_controls(layout, context, session, obj):
+        settings = getattr(context.scene, _SCENE_PROPERTY_NAME)
+        try:
+            structure_id = UUID(obj.get("cb_structure_id"))
+            topology_id = UUID(obj.get("cb_topology_id"))
+            structure = session.project.structures[structure_id]
+            topology = session.project.topologies[topology_id]
+        except (KeyError, TypeError, ValueError):
+            layout.label(text="A current molecular Topology is required")
+            return
+        if (obj.get("cb_structure_revision") != structure.revision
+                or obj.get("cb_topology_revision") != topology.revision
+                or topology.structure_id != structure.id):
+            layout.label(text="Refresh the stale molecular View first")
+            return
+        box = layout.box()
+        box.label(text="Local Processor · Molecular Operations")
+        box.prop(settings, "molecule_force_field")
+        box.prop(settings, "molecule_add_hydrogens")
+        box.prop(settings, "molecule_max_iterations")
+        controls = box.column()
+        active = _ACTIVE_OPERATIONS.get(session.id)
+        controls.enabled = active is None and not obj.get("cbq_mesh_edit_pending", False)
+
+        def add_button(target, text, operation_id, icon="NONE"):
+            value = target.operator(
+                CHEMBLENDER_OT_processor_operation.bl_idname,
+                text=text, icon=icon,
+            )
+            value.action = "MOLECULE"
+            value.operation_id = operation_id
+            value.source_id = str(structure.id)
+            value.topology_id = str(topology.id)
+
+        record = next((
+            value for value in session.project.molecular_records.values()
+            if value.structure_id == structure.id
+            and value.topology_id in {None, topology.id}
+            and (revision := session.project.source_revisions.get(
+                value.source_revision_id
+            )) is not None
+            and revision.reader_id == "smiles"
+        ), None)
+        if record is not None:
+            add_button(controls, "Generate 3D (ETKDG)",
+                       "molecule.smiles_to_3d")
+        row = controls.row(align=True)
+        for text, operation_id in (
+            ("Kekulize", "molecule.kekulize"),
+            ("Optimize", "molecule.optimize"),
+            ("Energy", "molecule.energy"),
+        ):
+            add_button(row, text, operation_id)
+        controls.prop(settings, "molecule_export_format")
+        controls.prop(settings, "molecule_export_path")
+        add_button(controls, "Export Molecule", "molecule.export", "EXPORT")
+        if obj.get("cbq_mesh_edit_pending", False):
+            box.label(text="Apply Mesh edits before running molecular operations")
+        elif active is not None:
+            snapshot = (
+                active._operation.task.snapshot()
+                if active._operation is not None else None
+            )
+            box.label(text=(
+                f"{snapshot.state.value}: {snapshot.progress:.0%} · Esc to cancel"
+                if snapshot is not None else "Starting processor · Esc to cancel"
+            ))
+
+
     def register():
         global _OWNED_SCENE_PROPERTY
         from .properties import _same_scene_property, _scene_property_identity
@@ -809,12 +1117,12 @@ if bpy is not None:
 
 
 __all__ = (
-    "PreparedOperation", "publish_operation", "reader_options", "start_fermi_operation",
-    "start_reader_operation", "start_wavefunction_operation",
-    "wavefunction_inputs",
+    "PreparedOperation", "molecule_inputs", "publish_operation", "reader_options",
+    "start_fermi_operation", "start_molecule_operation", "start_reader_operation",
+    "start_wavefunction_operation", "wavefunction_inputs",
 )
 if bpy is not None:
     __all__ += (
         "CHEMBLENDER_OT_processor_operation", "CHEMBLENDER_PG_processor_operation",
-        "draw_processor_inputs",
+        "draw_molecule_controls", "draw_processor_inputs",
     )

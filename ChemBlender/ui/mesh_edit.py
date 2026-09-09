@@ -422,6 +422,15 @@ if bpy is not None:
                 layout.operator('object.editmode_toggle', text="Edit Mesh")
                 layout.operator('chemblender.apply_mesh_edits')
                 layout.label(text="Apply saves a new structure and retains the original")
+                scene = getattr(context, "scene", None)
+                if scene is not None and hasattr(
+                        scene, "chemblender_processor_operation"):
+                    from .processor_operations import draw_molecule_controls
+                    from .session import get_scene_session
+                    draw_molecule_controls(
+                        layout, context, get_scene_session(scene),
+                        context.active_object,
+                    )
                 return
             for action, label in (
                 ('SELECT', 'Select Element'), ('ATOM', 'Set Atoms'),

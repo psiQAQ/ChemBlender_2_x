@@ -5,7 +5,9 @@ from uuid import uuid4
 import numpy
 
 from cbq_core.model import ArrayData
+from cbq_core.model import AtomicIdentityData
 from cbq_core.model import AtomicProperty
+from cbq_core.model import CategoricalData
 from cbq_core.model import DatasetStatus
 from cbq_core.model import QCProject
 from cbq_core.model import QualityStatus
@@ -60,6 +62,19 @@ class StructureDerivationTests(unittest.TestCase):
             molecular_charge=0,
             molecular_multiplicity=1,
             topology_ids=(self.topology_id,),
+            atomic_identity=AtomicIdentityData(
+                isotopes=array((0, 0), ("atom",), "dimensionless", int),
+                formal_charges=array((0, 0), ("atom",), "dimensionless", int),
+                atom_map_numbers=array((1, 2), ("atom",), "dimensionless", int),
+                atom_names=CategoricalData(
+                    array((0, 1), ("atom",), "dimensionless", int),
+                    ("O", "H"), -1,
+                ),
+                stereo_labels=CategoricalData(
+                    array((-1, -1), ("atom",), "dimensionless", int),
+                    (), -1,
+                ),
+            ),
         )
         self.topology = TopologyRecord(
             id=self.topology_id,
@@ -256,6 +271,7 @@ class StructureDerivationTests(unittest.TestCase):
         self.assertNotEqual(derived.id, self.structure.id)
         self.assertEqual(derived.topology_ids, (derived_topology.id,))
         self.assertEqual(derived_topology.structure_id, derived.id)
+        self.assertIs(derived.atomic_identity, self.structure.atomic_identity)
         self.assertIs(derived_topology.source_kind, TopologySource.USER_EDITED)
         self.assertEqual(
             batch.provenance[0].parent_ids,

@@ -15,7 +15,8 @@ from cbq_core.session import ProjectSession
 from cbq_core.sidecar import close_project
 from ChemBlender.ui.processor import ProcessorState
 from ChemBlender.ui.processor_operations import (
-    publish_operation, start_fermi_operation, start_reader_operation,
+    ProcessorError, molecule_inputs, publish_operation, start_fermi_operation,
+    start_molecule_operation, start_reader_operation,
     start_wavefunction_operation, wavefunction_inputs,
 )
 
@@ -45,6 +46,96 @@ def wait_for(operation, timeout=15):
 
 @unittest.skipUnless(PROCESSOR.is_file(), "project processor launcher required")
 class ProcessorOperationTests(unittest.TestCase):
+    def test_molecular_operations_append_select_export_and_survive_cleanup(self):
+        from tests.test_worker_molecule_operations import smiles_batch
+
+        with TemporaryDirectory(prefix="processor-operation-") as temporary:
+            root = Path(temporary)
+            source = smiles_batch("c1ccccc1")
+            project = QCProject(id=uuid4(), schema_version="1.1")
+            project.commit(source)
+            session = ProjectSession(uuid4(), project, root)
+            original_ids = frozenset(project.structures)
+
+            inputs = molecule_inputs(
+                project, "molecule.smiles_to_3d",
+                source.structures[0].id, source.topologies[0].id,
+            )
+            operation = start_molecule_operation(
+                PROCESSOR, root, project, "molecule.smiles_to_3d", inputs,
+                {"add_hydrogens": True, "force_field": "MMFF94",
+                 "random_seed": 0xC0FFEE, "num_threads": 1,
+                 "max_iterations": 200},
+            )
+            try:
+                snapshot = wait_for(operation)
+                self.assertIs(snapshot.state, ProcessorState.SUCCEEDED,
+                              snapshot.error)
+                structure_id = publish_operation(operation, session)
+            finally:
+                operation.cleanup()
+            self.assertIn(structure_id, session.project.structures)
+            self.assertTrue(original_ids.issubset(session.project.structures))
+            structure = session.project.structures[structure_id]
+            topology = session.project.topologies[structure.topology_ids[0]]
+            coordinates = numpy.asarray(structure.coordinates.values).copy()
+
+            inputs = molecule_inputs(
+                session.project, "molecule.energy", structure.id, topology.id,
+            )
+            operation = start_molecule_operation(
+                PROCESSOR, root, session.project, "molecule.energy", inputs,
+                {"force_field": "MMFF94"},
+            )
+            try:
+                self.assertIs(wait_for(operation).state, ProcessorState.SUCCEEDED)
+                energy_id = publish_operation(operation, session)
+            finally:
+                operation.cleanup()
+            energy = session.project.datasets[energy_id]
+            self.assertEqual(energy.data.unit, "kilocalorie_per_mole")
+
+            destination = root / "benzene.sdf"
+            inputs = molecule_inputs(
+                session.project, "molecule.export", structure.id, topology.id,
+            )
+            operation = start_molecule_operation(
+                PROCESSOR, root, session.project, "molecule.export", inputs,
+                {"format": "sdf", "confirm_loss": True, "isomeric": True},
+                export_destination=destination,
+            )
+            try:
+                self.assertIs(wait_for(operation).state, ProcessorState.SUCCEEDED)
+                selected = publish_operation(operation, session)
+            finally:
+                operation.cleanup()
+            self.assertEqual(selected, structure.id)
+            self.assertTrue(destination.is_file())
+            self.assertEqual(
+                numpy.asarray(session.project.structures[structure.id].coordinates.values).shape,
+                coordinates.shape,
+            )
+            close_project(session.project)
+
+    def test_molecule_export_requires_destination(self):
+        from tests.test_worker_molecule_operations import smiles_batch
+
+        with TemporaryDirectory(prefix="processor-operation-") as temporary:
+            root = Path(temporary)
+            source = smiles_batch("CO")
+            project = QCProject(id=uuid4(), schema_version="1.1")
+            project.commit(source)
+            inputs = molecule_inputs(
+                project, "molecule.export",
+                source.structures[0].id, source.topologies[0].id,
+            )
+            with self.assertRaisesRegex(ProcessorError, "export destination"):
+                start_molecule_operation(
+                    PROCESSOR, root, project, "molecule.export", inputs,
+                    {"format": "sdf", "confirm_loss": True},
+                    export_destination="",
+                )
+
     def test_reader_result_is_verified_appended_selected_and_detached(self):
         with TemporaryDirectory(prefix="processor-operation-") as temporary:
             root = Path(temporary)

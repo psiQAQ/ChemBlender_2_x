@@ -649,6 +649,12 @@ def commit_structure_edits(
             else None
         ),
         topology_ids=(() if topology is None else (topology.id,)),
+        atomic_identity=(
+            source.atomic_identity
+            if numbers == source.atomic_numbers
+            and values[-1] == tuple(range(len(numbers)))
+            else None
+        ),
     )
     parameters = (
         ("affected_result_count", len(preview.affected_result_ids)),

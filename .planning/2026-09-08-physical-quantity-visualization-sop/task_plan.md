@@ -39,7 +39,7 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - [x] L1 统一入口：迁移共享 Worker v1，补 capabilities --json、worker REQUEST RESULT --cancel-file CANCEL、doctor和环境路由。
 - [x] L2 Blender 接入：单一全局路径、公共异步任务控制器、进度/取消、节流即时预览；本地操作不依赖处理程序。
 - [x] L3 现有重计算：wavefunction、Fermi、scientific reader经统一入口工作。
-- [ ] L4 RDKit：SMILES 3D/AddHs/Kekulé/MMFF/UFF/势能/导出，保留纯编辑与静态显示；Mesh→CBQ→新结果闭环。
+- [x] L4 RDKit：SMILES 3D/AddHs/Kekulé/MMFF/UFF/势能/导出，保留纯编辑与静态显示；Mesh→CBQ→新结果闭环。
 - [ ] L5 专业分析：QTAIM、phonon、NCI，真实输入及科学输出；已有数据展示仍本地。
 - [ ] L6 删除前门槛：RDKit等价、性能、取消、结果可信校验和生命周期。任一失败保持 wheel，修复或延期。
 - [ ] L7 正式瘦身：仅L6全部Passed后移除 RDKit/scientific wheels及对应import/安装入口，再完成隔离无依赖全量验收。
