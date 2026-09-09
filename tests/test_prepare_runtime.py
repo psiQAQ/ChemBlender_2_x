@@ -103,7 +103,8 @@ class PrepareRuntimeTests(unittest.TestCase):
             "available": True,
             "python_version": "3.12.13",
             "executable": sys.executable,
-            "versions": {"numpy": "1.26.4", "qc-gbasis": "0.1.0",
+            "versions": {"chemblender-prepare": "0.1.0",
+                         "numpy": "1.26.4", "qc-gbasis": "0.1.0",
                          "qc-iodata": "1.0.1", "phonopy": "4.4.0"},
             "error": None,
         }
@@ -118,17 +119,20 @@ class PrepareRuntimeTests(unittest.TestCase):
                       for item in document["operations"]}
         self.assertTrue(operations[("wavefunction.mo_grid", "1")]["available"])
         self.assertEqual(operations[("wavefunction.mo_grid", "1")]["backend_versions"],
-                         {"qc-gbasis": "0.1.0"})
+                         {"qc-gbasis": "0.1.0", "chemblender-prepare": "0.1.0"})
         self.assertTrue(operations[("project.verify", "1")]["available"])
         self.assertEqual(operations[("topology.qtaim", "1")]["backend_versions"],
                          {"critic2": "1.3.15"})
         self.assertEqual(operations[("periodic.phonon", "1")]["backend_versions"],
-                         {"phonopy": "4.4.0"})
+                         {"phonopy": "4.4.0", "chemblender-prepare": "0.1.0"})
         readers = {item["reader_id"]: item for item in document["readers"]}
         self.assertEqual(len(readers), 22)
         self.assertEqual(readers["iodata_wavefunction"]["environment"], "wavefunction")
         self.assertEqual(readers["iodata_wavefunction"]["backend_versions"],
-                         {"qc-iodata": "1.0.1"})
+                         {"qc-iodata": "1.0.1", "chemblender-prepare": "0.1.0"})
+        self.assertFalse(operations[("external_record.fetch", "1")]["available"])
+        self.assertIn("provider", operations[("external_record.fetch", "1")]["reason"])
+        self.assertFalse(operations[("qcschema.compute", "1")]["available"])
 
         stream = io.StringIO()
         with patch("chemblender_prepare.runtime._probe_python", return_value=probe), \
@@ -215,8 +219,11 @@ class PrepareRuntimeTests(unittest.TestCase):
         self.assertEqual(document["schema_name"], "chemblender_prepare_doctor")
         checks = {item["id"]: item for item in document["checks"]}
         self.assertEqual(checks["task_directory"]["status"], "passed")
+        self.assertEqual(checks["dependencies_formats"]["status"], "failed")
         self.assertEqual(checks["critic2"]["status"], "warning")
         self.assertIn("Configure", checks["critic2"]["fix"])
+        self.assertEqual(checks["optional_operations"]["status"], "warning")
+        self.assertIn("external_record.fetch", checks["optional_operations"]["message"])
 
 
 if __name__ == "__main__":

@@ -406,6 +406,13 @@ if bpy is not None:
                 for operation in document["operations"]:
                     state = "Ready" if operation["available"] else operation["reason"]
                     box.label(text=f"{operation['operation_id']} {operation['operation_version']}: {state}")
+                unavailable_readers = [item for item in document["readers"]
+                                       if not item["available"]]
+                if unavailable_readers:
+                    box = self.layout.box()
+                    box.label(text="Unavailable optional readers")
+                    for reader in unavailable_readers:
+                        box.label(text=f"{reader['reader_id']}: {reader['reason']}")
 
 
     class CHEMBLENDER_OT_test_processor(bpy.types.Operator):
@@ -462,9 +469,20 @@ if bpy is not None:
             if snapshot.state is ProcessorState.SUCCEEDED:
                 document = snapshot.result
                 available = sum(item["available"] for item in document["operations"])
+                readers = sum(item["available"] for item in document["readers"])
+                current = next(item for item in document["environments"]
+                               if item["name"] == "current")
+                missing = [name for name in ("numpy", "rdkit", "gemmi")
+                           if name not in current["versions"]]
+                unavailable = sum(not item["available"] for item in document["operations"])
                 _CAPABILITY_STATE.update(
-                    status=f"Processor {document['processor_version']} ready",
-                    detail=f"{available}/{len(document['operations'])} operations available",
+                    status=(f"Processor {document['processor_version']} / Protocol "
+                            f"{document['worker_protocol_version']}"),
+                    detail=(f"{available}/{len(document['operations'])} operations; "
+                            f"{readers}/{len(document['readers'])} readers; "
+                            + ("Standard complete" if not missing else
+                               "Standard missing " + ", ".join(missing))
+                            + f"; {unavailable} optional unavailable"),
                     document=document,
                 )
                 return {"FINISHED"}

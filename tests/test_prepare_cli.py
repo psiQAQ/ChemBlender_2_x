@@ -41,6 +41,27 @@ class PrepareCLITests(unittest.TestCase):
     def convert(self):
         return self.cli("convert", self.xyz, "-o", self.output)
 
+    def test_gui_exposes_read_only_capabilities_and_doctor(self):
+        self.assertEqual(command_arguments({"command": "capabilities"}),
+                         ["capabilities", "--json"])
+        self.assertEqual(command_arguments({"command": "doctor"}),
+                         ["doctor", "--json"])
+        job = CliProcess(["capabilities", "--json"])
+        try:
+            deadline = time.monotonic() + 15
+            result = None
+            while result is None and time.monotonic() < deadline:
+                result = job.poll()
+                time.sleep(0.01)
+            self.assertIsNotNone(result)
+            self.assertEqual(result["schema_name"],
+                             "chemblender_prepare_capabilities")
+        finally:
+            if job.process.poll() is None:
+                job.cancel()
+                job.process.wait(timeout=10)
+            job.close()
+
     def test_pubchem_conversion_verifies_provenance_and_cleans_failed_tasks(self):
         import hashlib
         from types import SimpleNamespace

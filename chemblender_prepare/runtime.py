@@ -31,6 +31,7 @@ _SCIENTIFIC_READERS = frozenset({
     "pymatgen-vasprun-electronic",
 })
 _PROBED_DISTRIBUTIONS = (
+    "chemblender-prepare",
     "numpy",
     "rdkit",
     "gemmi",
@@ -160,6 +161,15 @@ def _operation_capability(operation_id, operation_version, probes, critic2):
     environment = "current"
     required = ()
     any_required = ()
+    if operation_id == "external_record.fetch":
+        return {
+            "operation_id": operation_id,
+            "operation_version": operation_version,
+            "environment": "current",
+            "available": False,
+            "backend_versions": {},
+            "reason": "no live provider transport configured",
+        }
     if operation_id.startswith("wavefunction."):
         environment, required = "wavefunction", ("qc-gbasis",)
     elif operation_id == "periodic.phonon":
@@ -183,10 +193,19 @@ def _operation_capability(operation_id, operation_version, probes, critic2):
     probe = probes[environment]
     versions = probe["versions"]
     missing = [name for name in required if name not in versions]
+    package_version = versions.get("chemblender-prepare")
+    if environment != "current" and package_version != WORKER_VERSION:
+        missing.append(
+            "chemblender-prepare=" + WORKER_VERSION
+            if package_version is None
+            else f"chemblender-prepare={WORKER_VERSION} (found {package_version})"
+        )
     if any_required and not any(name in versions for name in any_required):
         missing = ["qcengine or pyscf"]
     available = probe["available"] and not missing
-    backends = required or tuple(name for name in any_required if name in versions)
+    backends = list(required or tuple(name for name in any_required if name in versions))
+    if environment != "current":
+        backends.append("chemblender-prepare")
     reason = probe["error"] if not probe["available"] else None
     if missing and probe["available"]:
         reason = "missing " + ", ".join(missing)
@@ -218,15 +237,24 @@ def _reader_capabilities(probes):
         available = probe["available"] and (
             distribution is None or distribution in probe["versions"]
         )
+        package_version = probe["versions"].get("chemblender-prepare")
+        if environment != "current" and package_version != WORKER_VERSION:
+            available = False
         reason = probe["error"] if not probe["available"] else None
         if (probe["available"] and distribution is not None
                 and distribution not in probe["versions"]):
             reason = "missing " + distribution
+        if probe["available"] and environment != "current" and package_version != WORKER_VERSION:
+            reason = (f"requires chemblender-prepare={WORKER_VERSION}; "
+                      f"found {package_version or 'not installed'}")
+        versions = ({distribution: probe["versions"][distribution]}
+                    if distribution in probe["versions"] else {})
+        if environment != "current" and package_version is not None:
+            versions["chemblender-prepare"] = package_version
         reader.update({
             "environment": environment,
             "available": available,
-            "backend_versions": ({distribution: probe["versions"][distribution]}
-                                 if distribution in probe["versions"] else {}),
+            "backend_versions": versions,
             "reason": reason,
         })
         readers.append(reader)
@@ -359,7 +387,7 @@ def doctor_document(configuration=None, task_directory=None):
         ("wavefunction", ("qc-gbasis", "qc-iodata"), True),
         ("scientific", ("ase", "cclib", "pymatgen-core", "phonopy"), True),
         ("fermi", ("pyprocar",), True),
-        ("current", ("rdkit", "gemmi"), False),
+        ("current", ("rdkit", "gemmi"), True),
     )
     for environment, required, routed in dependency_groups:
         versions = probes[environment]["versions"]
@@ -371,7 +399,7 @@ def doctor_document(configuration=None, task_directory=None):
             status = "warning"
         else:
             status = "passed"
-        name = "formats" if not routed else environment
+        name = "formats" if environment == "current" and required == ("rdkit", "gemmi") else environment
         checks.append({
             "id": "dependencies_" + name,
             "status": status,
@@ -406,6 +434,20 @@ def doctor_document(configuration=None, task_directory=None):
         "message": critic2["version"] or critic2["error"],
         "fix": (None if critic2["available"] else
                 f"Configure an absolute critic2 path in {CONFIGURATION_ENVIRONMENT}."),
+    })
+    unavailable = [
+        item for item in capabilities["operations"]
+        if not item["available"]
+    ]
+    checks.append({
+        "id": "optional_operations",
+        "status": "warning" if unavailable else "passed",
+        "message": ("; ".join(
+            f"{item['operation_id']}: {item['reason'] or 'unavailable'}"
+            for item in unavailable
+        ) if unavailable else "all operations available"),
+        "fix": ("Install and configure only the optional backends you need."
+                if unavailable else None),
     })
     return {
         "schema_name": "chemblender_prepare_doctor",

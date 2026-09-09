@@ -12,7 +12,8 @@ from cbq_core.worker_protocol import read_result
 from .core.import_pipeline.request import ValidationMode
 
 
-COMMANDS = ("convert", "inspect", "derive", "validate", "upgrade", "export", "formats")
+COMMANDS = ("convert", "inspect", "derive", "validate", "upgrade", "export",
+            "formats", "capabilities", "doctor")
 
 
 def command_arguments(values):
@@ -29,7 +30,7 @@ def command_arguments(values):
         if not text:
             raise ValueError("Enter SMILES text or PubChem CID/name")
         argv.extend(("--" + name.replace("_", "-"), text))
-    elif command != "formats":
+    elif command not in {"formats", "capabilities", "doctor"}:
         if not sources or (command != "convert" and len(sources) != 1):
             raise ValueError("Choose input files; this operation requires one input except convert")
         argv.extend(sources)
@@ -108,10 +109,13 @@ class CliProcess:
             self.cancel_path = self.root / "cancel"
             self.cancel_started = None
             self.terminated = False
+            self.diagnostic = arguments[0] in {"capabilities", "doctor"}
             self.stdout = resources.enter_context((self.root / "stdout.log").open("wb"))
             self.stderr = resources.enter_context((self.root / "stderr.log").open("wb"))
-            argv = [str(python_executable), "-m", "chemblender_prepare", *arguments,
-                    "--task-directory", str(self.task), "--cancel-file", str(self.cancel_path)]
+            argv = [str(python_executable), "-m", "chemblender_prepare", *arguments]
+            if not self.diagnostic:
+                argv.extend(("--task-directory", str(self.task),
+                             "--cancel-file", str(self.cancel_path)))
             self.process = subprocess.Popen(argv, stdin=subprocess.DEVNULL,
                 stdout=self.stdout, stderr=self.stderr,
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -146,6 +150,11 @@ class CliProcess:
             return None
         self.stdout.close()
         self.stderr.close()
+        if self.diagnostic:
+            try:
+                return json.loads((self.root / "stdout.log").read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError) as error:
+                raise RuntimeError("CLI returned an invalid diagnostic document") from error
         result_path = self.task / "result.json"
         if result_path.is_file():
             return read_result(result_path)
@@ -191,7 +200,8 @@ class PrepareWindow:
 
         entry("command", "操作", "convert", COMMANDS)
         entry("python", "运行环境 Python", sys.executable)
-        ttk.Label(frame, text="输入文件／CBQ：每行一个路径").grid(row=row, column=0, sticky="nw", pady=3)
+        source_label = ttk.Label(frame, text="输入文件／CBQ：每行一个路径")
+        source_label.grid(row=row, column=0, sticky="nw", pady=3)
         self.sources = tk.Text(frame, height=3, wrap="none")
         self.sources.grid(row=row, column=1, sticky="ew", pady=3)
         row += 1
@@ -199,9 +209,11 @@ class PrepareWindow:
         buttons.grid(row=row, column=1, sticky="w")
         ttk.Button(buttons, text="选择输入文件", command=self.choose_sources).pack(side="left")
         ttk.Button(buttons, text="选择 CBQ 目录", command=self.choose_project).pack(side="left", padx=6)
+        self.source_widgets = (source_label, self.sources, buttons)
         row += 1
         entry("output", "新输出文件／CBQ 路径")
-        ttk.Button(frame, text="选择输出位置", command=self.choose_output).grid(row=row, column=1, sticky="w")
+        self.output_button = ttk.Button(frame, text="选择输出位置", command=self.choose_output)
+        self.output_button.grid(row=row, column=1, sticky="w")
         row += 1
         self.advanced = tk.BooleanVar(value=False)
         ttk.Checkbutton(frame, text="显示高级选项", variable=self.advanced, command=self.update_fields).grid(row=row, column=1, sticky="w")
@@ -398,6 +410,10 @@ class PrepareWindow:
         for name, widgets in self.field_widgets.items():
             for widget in widgets:
                 widget.grid() if name in visible else widget.grid_remove()
+        needs_input = command not in {"formats", "capabilities", "doctor"}
+        for widget in self.source_widgets:
+            widget.grid() if needs_input else widget.grid_remove()
+        self.output_button.grid() if "output" in visible else self.output_button.grid_remove()
 
     def choose_sources(self):
         from tkinter import filedialog
@@ -471,8 +487,13 @@ class PrepareWindow:
                     self.bar.configure(mode="determinate", value=fraction)
                 self.root.after(100, self.poll)
                 return
-            text = json.dumps(result_document(result), ensure_ascii=False, indent=2)
-            self.status.set({"success": "完成", "cancelled": "已取消", "error": "失败；查看下方诊断"}[result.status.value])
+            if isinstance(result, dict):
+                text = json.dumps(result, ensure_ascii=False, indent=2)
+                self.status.set("诊断完成" if result.get("status") != "failed"
+                                else "诊断失败；查看下方详情")
+            else:
+                text = json.dumps(result_document(result), ensure_ascii=False, indent=2)
+                self.status.set({"success": "完成", "cancelled": "已取消", "error": "失败；查看下方诊断"}[result.status.value])
         except BaseException as error:
             failure = error
             terminal = job.process.poll() is not None

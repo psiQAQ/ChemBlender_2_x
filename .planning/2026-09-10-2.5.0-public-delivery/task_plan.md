@@ -17,7 +17,7 @@
 
 - [x] 从 `d8f0306` 创建 `release/2.5.0`；清理 10 套重复 blender-mcp/Python 链并保留 Blender。
 - [x] P0：修复 routed worker 环境注入，真实隔离环境验证包路径和 NumPy 版本。
-- [ ] 完成 Standard uv-tool、准确 capabilities/doctor、GUI 诊断与 Blender Test Processor。
+- [x] 完成 Standard uv-tool、准确 capabilities/doctor、GUI 诊断与 Blender Test Processor。
 - [ ] 归档旧 SOP，建立完整中英双语安装/API/GUI/Blender/故障/发布文档和离线 HTML。
 - [ ] 升级 2.5.0、构建唯一权威 ZIP/wheel/sdist，完成 private 与 user_default 实装。
 - [ ] 跑专项、全量、构建和文档回归；形成四个逻辑提交并关闭目标。
@@ -35,3 +35,5 @@
 2026-09-10：执行开始。当前 HEAD `d8f0306`，仅用户 `.gitignore` 为未提交修改。进程审计发现 10 套同一 Codex 宿主生成的 blender-mcp/uv Python 链，按 10 个已验证根 PID 停止后仅保留 Blender 5.1.1 PID 36516。
 
 2026-09-10：P0 关闭。routed worker 只通过目标环境的 `python -I -m chemblender_prepare.worker.runner` 运行；gbasis/scientific/fermi 均安装同版本 prepare wheel 且保留各自 NumPy。runtime 专项 6 项、processor operation 全组 9 项均 Passed。
+
+2026-09-10：Standard/诊断阶段关闭。当次 wheel 在全新 uv-tool/Python 3.12 环境安装 NumPy 2.5.3、RDKit 2026.3.3、Gemmi 0.7.5；两个 launcher 的 PE subsystem 分别为 console 3 与 GUI 2。安装、强制重装、卸载、help、capabilities、doctor 和隔离包路径均 Passed。prepare/runtime/controller 51 项 Passed/1 skip，构建 wheel/sdist Passed；PyPI 来源因未发布而 Not Run。
