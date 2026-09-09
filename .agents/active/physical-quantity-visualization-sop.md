@@ -47,3 +47,5 @@
 2026-09-09：最新完整回归为full20：2498项、0 failures/0 errors/36 skips、105.761秒，Passed。旧入口测试已迁移或在当前真实层保留安全契约；3个哈希锁定legacy fixture完成外部导出、当前Viewer恢复、注入失败回滚、evaluated mesh、保存重开和Project Connected检查。C2关闭并形成稳定提交；下一阶段为C3 CBQ 1.1收尾，C3、C4完成前不接L1。
 
 2026-09-09：C2稳定提交为`a12858e`。C3在该提交上重新运行数值对称、历史完整性/升级、事务导入和ProjectLink五模块101项全部Passed/2.570秒，full20亦已覆盖，未发现产品缺口；C3关闭。下一阶段C4外部包基线，完成前不接L1。
+
+2026-09-09：C3状态提交为`cf8225f`。C4已确认冻结lock、7个CLI命令和prepare/Tk/真实格式专项（111 Passed/1 optional skip）；wheel/sdist尚未构建。当前环境缺hatchling/build，安全策略要求用户明确授权uv在隔离构建环境取得pyproject已声明的hatchling；未修改依赖或启动L1。

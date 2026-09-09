@@ -317,3 +317,6 @@ POSCAR旧产品流8项已迁外部CLI/GUI真实入口，保留4项Prepared View�
 
 
 2026-09-09：C2稳定提交`a12858e`完成，工作树仅保留用户`.vscode/`。在该干净基线上核验C3既有实现：`test_cbq_v11_upgrade`、`test_periodic_view_settings`、`test_cbq_package_import`、`test_project_link_pure`、`test_project_service`共101项全部Passed/2.570秒，日志`.blend-analysis/2026-09-08-cbq-architecture-consolidation/cbq-v11-closeout.log`。覆盖数值对称/非正交展开与ADP、历史manifest/array哈希、源包不变和幂等升级、事务导入/重开、ProjectLink写入及多Scene失败回滚；full20亦已覆盖。未发现需补代码的缺口，C3关闭，下一阶段C4。
+
+
+2026-09-09：C3状态提交`cf8225f`完成。C4离线`uv lock --check` Passed；当前`.venv`已有NumPy/RDKit/Gemmi且CLI实际7命令`formats/inspect/validate/upgrade/export/derive/convert --help`全部rc=0。prepare CLI、Tk生命周期、reader conformance、POSCAR和ExtXYZ/外部导出112项中111 Passed/1 optional skip，17.961秒，日志`.blend-analysis/2026-09-08-cbq-architecture-consolidation/prepare-baseline-closeout.log`。wheel/sdist仍Not Run：`.venv`无hatchling/build，`uv build`需临时取得pyproject声明的hatchling，安全策略要求用户另行明确授权；未执行sync、未改环境/依赖文件、未绕过。C4保持未完成，L1未启动。
