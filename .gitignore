@@ -13,3 +13,4 @@ ChemBlender/wheels/*.whl
 .venv/
 dist/
 *.egg-info/
+.vscode/
