@@ -23,7 +23,7 @@ from ..properties import (
     draw_crystal_symmetry_properties,
     draw_selective_dynamics_properties,
     advance_browser_revision,
-    get_quick_import_state,
+    get_project_ui_state,
 )
 from ..session import (
     _record_result,
@@ -32,28 +32,22 @@ from ..session import (
     register_session_cleanup,
     unregister_session_cleanup,
 )
-from ...core import (
-    AtomFrameProperty,
-    AtomicProperty,
-    CategoricalData,
-    ConformerSet,
-    FrameSet,
-    MolecularRecord,
-    Structure,
-    builtin_scene_presets,
-    plan_scene_preset,
-)
-from ...core.project_service import (
-    relink_project_session_for_scenes,
-    verify_project_session_for_scenes,
-)
-from ...core.storage.atomic_paths import short_sibling_temporary_path
+from cbq_core.model import AtomFrameProperty
+from cbq_core.model import AtomicProperty
+from cbq_core.model import CategoricalData
+from cbq_core.model import FrameSet
+from cbq_core.model import Structure
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.project_service import relink_project_session_for_scenes
+from cbq_core.project_service import verify_project_session_for_scenes
+from cbq_core.storage.atomic_paths import short_sibling_temporary_path
 from ...dataset_view import (
     apply_atom_selection,
     apply_atomic_scalar,
     write_vector_view,
 )
-from ...project_link import ProjectLinkStatus
+from cbq_core.project_link import ProjectLinkStatus
 from ...scene_preset_view import (
     _remove_objects as _remove_scene_preset_objects,
     apply_scene_preset,
@@ -67,7 +61,6 @@ from .model import (
     clear_browser_session_cache,
 )
 
-_scientific_edit = importlib.import_module("..scientific_edit", __package__)
 _topology = importlib.import_module("..topology", __package__)
 _biological = importlib.import_module("..biological", __package__)
 _diagnostics = importlib.import_module("..diagnostics", __package__)
@@ -119,7 +112,7 @@ _FATAL_EXCEPTIONS = (
 
 
 def _diagnostics_report(session):
-    return get_quick_import_state(session).diagnostics_report
+    return get_project_ui_state(session).diagnostics_report
 
 
 def _current_diagnostic(state):
@@ -151,7 +144,7 @@ class CHEMBLENDER_OT_diagnostic_page(bpy.types.Operator):
     def execute(self, context):
         try:
             session = get_scene_session(context.scene)
-            state = get_quick_import_state(session)
+            state = get_project_ui_state(session)
             _index, total, _item = _current_diagnostic(state)
             if total:
                 delta = -1 if self.direction == "previous" else 1
@@ -498,7 +491,7 @@ class CHEMBLENDER_OT_revision_view_action(bpy.types.Operator):
         hidden = []
         try:
             session = get_scene_session(context.scene)
-            state = get_quick_import_state(session)
+            state = get_project_ui_state(session)
             current_id = UUID(self.current_revision_id)
             new_id = UUID(self.new_revision_id)
             prompt = next(
@@ -617,7 +610,7 @@ class CHEMBLENDER_OT_project_link_recovery(bpy.types.Operator):
                 raise ValueError(
                     "recovery action is not allowed for the current link state"
                 )
-            state = get_quick_import_state(session)
+            state = get_project_ui_state(session)
             if self.action == "relink":
                 if not self.filepath:
                     raise ValueError("select a ChemBlender .cbq sidecar")
@@ -1177,7 +1170,7 @@ def _browser_refresh_key(scene):
     settings = getattr(scene, _SCENE_PROPERTY_NAME)
     return (
         session.id,
-        get_quick_import_state(session).browser_revision,
+        get_project_ui_state(session).browser_revision,
         settings.mode, settings.search, settings.quality_filter,
         settings.page, settings.page_size,
         presentation_view_records(scene),
@@ -1219,7 +1212,7 @@ def _request_project_browser_refresh(scene):
 
 def refresh_project_browser(scene):
     session = get_scene_session(scene)
-    state = get_quick_import_state(session)
+    state = get_project_ui_state(session)
     settings = getattr(scene, _SCENE_PROPERTY_NAME)
     filters = (
         ()
@@ -1297,7 +1290,7 @@ def _page_subject(settings):
 
 
 def _draw_import_diagnostics(layout, session):
-    state = get_quick_import_state(session)
+    state = get_project_ui_state(session)
     document = state.diagnostics_report
     if document is None:
         return
@@ -1344,7 +1337,7 @@ def _draw_import_diagnostics(layout, session):
 
 
 def _draw_revision_prompts(layout, session):
-    state = get_quick_import_state(session)
+    state = get_project_ui_state(session)
     for prompt in state.revision_prompts:
         box = layout.box()
         box.label(text="Revision Available", icon="FILE_REFRESH")
@@ -1374,7 +1367,7 @@ def _draw_project_link_recovery(layout, context, session):
     actions = _diagnostics.project_recovery_actions(status)
     if not actions:
         return
-    state = get_quick_import_state(session)
+    state = get_project_ui_state(session)
     box = layout.box()
     box.alert = status in {
         ProjectLinkStatus.INCOMPATIBLE,
@@ -1454,6 +1447,8 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
         _request_project_browser_refresh(context.scene)
         session = get_scene_session(context.scene)
         layout = self.layout
+        from ..cbq_import import draw_cbq_import
+        draw_cbq_import(layout, context)
         layout.prop(settings, "mode", expand=True)
         layout.prop(settings, "search", icon="VIEWZOOM")
         layout.prop(settings, "quality_filter")
@@ -1503,9 +1498,6 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
         if settings.active_entity_id:
             layout.label(text=f"Selected: {settings.active_entity_id}")
             selected = session.project.datasets.get(session.active_entity_id)
-            selected_record = session.project.molecular_records.get(
-                session.active_entity_id
-            )
             selected_structure = session.project.structures.get(
                 session.active_entity_id
             )
@@ -1554,20 +1546,6 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
                 session.active_entity_id,
                 settings,
             )
-            if (
-                session.active_entity_id in session.project.structures
-                or isinstance(selected, (FrameSet, ConformerSet))
-                or isinstance(selected_record, MolecularRecord)
-            ):
-                layout.operator(
-                    "chemblender.export_project_entity",
-                    icon="EXPORT",
-                )
-        _scientific_edit.draw_scientific_edit_controls(
-            layout,
-            context,
-            session,
-        )
         _topology.draw_topology_controls(
             layout,
             context,
@@ -1578,21 +1556,9 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
         if body is not None:
             _grid.draw_grid_controls(body, context, session)
         header, body = layout.panel("chemblender_wavefunction", default_closed=True)
-        header.label(text="Wavefunction · Orbitals, Density and ESP")
+        header.label(text="Orbital Results · Prepared Grids")
         if body is not None:
             _wavefunction.draw_wavefunction_controls(body, context, session)
-        from ..scientific_import import draw_scientific_import
-
-        header, body = layout.panel("chemblender_scientific_import", default_closed=True)
-        header.label(text="Import Scientific Output")
-        if body is not None:
-            draw_scientific_import(body, context, session)
-        from ..topology_import import draw_topology_import
-
-        header, body = layout.panel("chemblender_topology_import", default_closed=True)
-        header.label(text="QTAIM / critic2 Import")
-        if body is not None:
-            draw_topology_import(body, context, session)
         from ..scientific_view import draw_scientific_controls
 
         draw_scientific_controls(layout, context, session)

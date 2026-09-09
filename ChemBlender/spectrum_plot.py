@@ -3,7 +3,8 @@
 import bpy
 from math import isfinite
 
-from .core import Spectrum, SpectrumProfile
+from cbq_core.model import Spectrum
+from cbq_core.model import SpectrumProfile
 
 
 _PLOT_WIDTH = 8.0

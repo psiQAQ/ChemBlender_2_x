@@ -11,16 +11,15 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
-from ..core.analysis_report import (
-    build_analysis_report, describe_report_artifact, write_analysis_report_bundle,
-)
-from ..core.orbital_browser import orbital_rows
-from ..core.scene_preset import builtin_scene_presets, plan_scene_preset, scene_plan_document
-from ..core.storage.atomic_paths import short_sibling_temporary_path
-from .wavefunction import (
-    WavefunctionJob, _JOBS, _grid_parameters, _selected_orbitals,
-    operation_memory, wavefunction_inputs, worker_configuration,
-)
+from cbq_core.analysis_report import build_analysis_report
+from cbq_core.analysis_report import describe_report_artifact
+from cbq_core.analysis_report import write_analysis_report_bundle
+from cbq_core.orbital_browser import orbital_rows
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.scene_preset import scene_plan_document
+from cbq_core.storage.atomic_paths import short_sibling_temporary_path
+from .wavefunction import _selected_orbitals
 
 
 _EXPORTS = {}
@@ -77,15 +76,14 @@ def preflight_orbital_export(context, session, settings, *, orbital_numbers, des
     """Validate without creating files, objects, or launching a worker."""
     if context.scene.camera is None or context.scene.camera.type != "CAMERA":
         raise ValueError("Set the scene camera before exporting orbital images")
-    if session.id in _EXPORTS or session.id in _JOBS:
-        raise ValueError("Wait for the current wavefunction or orbital export task")
+    if session.id in _EXPORTS:
+        raise ValueError("Wait for the current orbital export task")
     project = session.project
     orbitals = _selected_orbitals(session, settings)
     if orbitals is None:
         raise ValueError("Select an orbital set before exporting")
     channel = settings.channel or orbitals.channels[0].label
-    parameters = _grid_parameters(settings)
-    rows = orbital_rows(project, orbitals, channel, grid_parameters=parameters)
+    rows = orbital_rows(project, orbitals, channel)
     if isinstance(orbital_numbers, str):
         numbers = parse_orbital_numbers(orbital_numbers, len(rows))
     else:
@@ -95,8 +93,8 @@ def preflight_orbital_export(context, session, settings, *, orbital_numbers, des
             raise ValueError("Orbital numbers must be a non-empty 1-based integer sequence")
         numbers = tuple(dict.fromkeys(numbers))
     for number in numbers:
-        if rows[number - 1].evaluation_error:
-            raise ValueError(rows[number - 1].evaluation_error)
+        if not rows[number - 1].cached_dataset_ids:
+            raise ValueError(f"Orbital {number} has no prepared grid in CBQ; prepare it externally before exporting")
     display = _display_settings(isovalue, positive_color, negative_color, opacity)
     target = Path(destination).expanduser().absolute()
     if os.path.lexists(target):
@@ -105,16 +103,10 @@ def preflight_orbital_export(context, session, settings, *, orbital_numbers, des
     if not parent.is_dir():
         raise ValueError("The output parent must be an existing directory")
     target = parent / target.name
-    inputs = wavefunction_inputs(project, "wavefunction.mo_grid", orbitals.id)
-    worker = None
-    if any(not rows[number - 1].cached_dataset_ids for number in numbers):
-        memory = operation_memory(project, orbitals, "wavefunction.mo_grid", parameters)
-        if memory["estimated_bytes"] > settings.memory_limit_mb * 1024 ** 2:
-            raise ValueError("MO evaluation exceeds the configured memory budget")
-        worker = worker_configuration(settings)
+    inputs = (project.structures[orbitals.structure_id],
+              project.basis_sets[orbitals.basis_set_id], orbitals)
     return SimpleNamespace(project=project, orbitals=orbitals, channel=channel,
-                           parameters=parameters, numbers=numbers, inputs=inputs,
-                           display=display, target=target, worker=worker)
+                           numbers=numbers, inputs=inputs, display=display, target=target)
 
 
 def _release_export(state):
@@ -145,8 +137,8 @@ def iter_orbital_images(context, session, settings, *, orbital_numbers, destinat
                        negative_color=(.95, .20, .15, 1.), opacity=1.):
     """Return a main-thread iterator yielding {stage, progress}; close it on abandonment.
 
-    StopIteration.value is the published directory. Computed scientific grids are
-    committed individually; no images or report are published until all succeed.
+    StopIteration.value is the published directory. Prepared scientific grids are
+    reused; no images or report are published until all succeed.
     """
     preflight = preflight_orbital_export(
         context, session, settings, orbital_numbers=orbital_numbers, destination=destination,
@@ -175,7 +167,6 @@ def iter_orbital_images(context, session, settings, *, orbital_numbers, destinat
         active_entity = session.active_entity_id
         browser = getattr(context.scene, "chemblender_project_browser", None)
         browser_entity = browser.active_entity_id if browser is not None else None
-        job = None
         try:
             # Arm finally before returning the public iterator, without creating resources.
             yield {"stage": "Ready", "progress": 0.}
@@ -187,27 +178,10 @@ def iter_orbital_images(context, session, settings, *, orbital_numbers, destinat
                     document = renderer.document()
                     for ordinal, number in enumerate(preflight.numbers):
                         check()
-                        row = orbital_rows(preflight.project, preflight.orbitals, preflight.channel,
-                                           grid_parameters=preflight.parameters)[number - 1]
-                        cached = bool(row.cached_dataset_ids)
-                        if cached:
-                            grid = preflight.project.datasets[row.cached_dataset_ids[0]]
-                        else:
-                            if preflight.worker is None:
-                                raise ValueError("A previously available orbital cache was removed")
-                            job = WavefunctionJob(session, "wavefunction.mo_grid", preflight.inputs,
-                                {**preflight.parameters, "channel": preflight.channel, "orbital_index": number - 1},
-                                python_executable=preflight.worker[0], working_directory=preflight.worker[1])
-                            job.start()
-                            while not job.worker.done:
-                                check()
-                                status = job.task.snapshot()
-                                yield {"stage": f"MO {number}: {status.stage}",
-                                       "progress": (ordinal + .7 * status.progress) / len(preflight.numbers)}
-                            check()
-                            grid = job.publish(session)
-                            job.close()
-                            job = None
+                        row = orbital_rows(preflight.project, preflight.orbitals, preflight.channel)[number - 1]
+                        if not row.cached_dataset_ids:
+                            raise ValueError("A prepared orbital grid was removed during export")
+                        grid = preflight.project.datasets[row.cached_dataset_ids[0]]
                         consumed_grids[grid.id] = (grid, grid.revision)
                         check()
                         plan = plan_scene_preset(builtin_scene_presets()["signed_isosurface"],
@@ -223,13 +197,15 @@ def iter_orbital_images(context, session, settings, *, orbital_numbers, destinat
                         dataset_ids.append(grid.id)
                         records.append(dict(orbital_number=number, spin=preflight.channel,
                             energy_hartree=row.energy, occupation=row.occupation, labels=list(row.labels),
-                            grid_id=str(grid.id), grid_revision=grid.revision, reused_scientific_cache=cached,
+                            grid_id=str(grid.id), grid_revision=grid.revision, reused_scientific_cache=True,
+                            grid_origin=grid.origin, grid_step_vectors=grid.step_vectors,
+                            grid_shape=grid.grid_shape, grid_coordinate_unit=grid.coordinate_unit,
                             image=filename, view=scene_plan_document(plan)))
                         yield {"stage": f"Rendered MO {number}", "progress": (ordinal + 1) / len(preflight.numbers)}
                     check()
                     document.update(schema_name="chemblender_orbital_images", schema_version=1,
                         project_id=str(preflight.project.id), orbital_set_id=str(preflight.orbitals.id),
-                        orbital_set_revision=preflight.orbitals.revision, grid_parameters=preflight.parameters,
+                        orbital_set_revision=preflight.orbitals.revision,
                         source=row.source, orbitals=records)
                 # Restore Blender before publishing any final image or complete report.
                 check()
@@ -251,14 +227,10 @@ def iter_orbital_images(context, session, settings, *, orbital_numbers, destinat
                 package.rename(preflight.target)
                 return preflight.target
         finally:
-            try:
-                if job is not None:
-                    job.close()
-            finally:
-                session.active_entity_id = active_entity
-                if browser is not None:
-                    browser.active_entity_id = browser_entity
-                _release_export(state)
+            session.active_entity_id = active_entity
+            if browser is not None:
+                browser.active_entity_id = browser_entity
+            _release_export(state)
 
     state.generator = iterate()
     _EXPORTS[session.id] = state
@@ -369,7 +341,7 @@ if bpy is not None:
 def draw_orbital_export(layout, context, session):
     settings = context.scene.chemblender_wavefunction
     box = layout.box()
-    box.label(text="Orbital Images · Current Spin and Grid")
+    box.label(text="Orbital Images · Prepared MO Grids")
     box.label(text="Esc cancels between images; the current render finishes first.")
     state = _EXPORTS.get(session.id)
     if state is not None:
@@ -382,7 +354,7 @@ def draw_orbital_export(layout, context, session):
     if context.scene.camera is None:
         box.label(text="Set the scene camera before exporting", icon="ERROR")
     row = box.row()
-    row.enabled = context.scene.camera is not None and session.id not in _JOBS
+    row.enabled = context.scene.camera is not None
     row.operator("chemblender.export_orbitals")
 
 

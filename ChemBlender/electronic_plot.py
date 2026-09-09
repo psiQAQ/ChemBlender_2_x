@@ -2,7 +2,9 @@ import operator
 
 import bpy
 
-from .core.model import BandStructure, DensityOfStates, EnergyReference
+from cbq_core.model import BandStructure
+from cbq_core.model import DensityOfStates
+from cbq_core.model import EnergyReference
 from .spectrum_plot import (
     _curve_object as _new_curve, _flat_material, _plot_axes, _poly_spline,
     _plot_frame, _plot_position, _positive, _remove_objects,

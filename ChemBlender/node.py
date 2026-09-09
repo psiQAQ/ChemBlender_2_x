@@ -1,6 +1,6 @@
 import  bpy
 import os
-from .Chem_data import ELEMENTS_DEFAULT
+from cbq_core.element_data import ELEMENTS_DEFAULT
 # Get the plugin directory path
 dir_path = os.path.dirname(__file__)
 language = 1 if 'zh_HAN' in bpy.context.preferences.view.language else 0

@@ -5,7 +5,7 @@ from math import isfinite
 
 import bpy
 
-from .core.color_mapping import color_stops
+from cbq_core.color_mapping import color_stops
 
 
 def _color(value):

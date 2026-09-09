@@ -6,8 +6,12 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
-from ..core.analysis_report import build_analysis_report, describe_report_artifact, write_analysis_report_bundle
-from ..core.scene_preset import builtin_scene_presets, plan_scene_preset, scene_plan_document
+from cbq_core.analysis_report import build_analysis_report
+from cbq_core.analysis_report import describe_report_artifact
+from cbq_core.analysis_report import write_analysis_report_bundle
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.scene_preset import scene_plan_document
 from ..render_scene import RenderCancelled, RenderScope
 from .orbital_export import _EXPORTS, _image_staging, _release_export
 from .view_cache import scene_plan_from_view
@@ -90,7 +94,7 @@ def iter_scientific_images(context, session, *, roots, destination,
                  for binding in plan.bindings if binding.name == "frames"}
 
     def time_sources():
-        from ..core import FrameProperty
+        from cbq_core.model import FrameProperty
         return {entity.id: entity.revision for entity in project.datasets.values()
                 if isinstance(entity, FrameProperty) and entity.frame_set_id in frame_ids
                 and entity.semantic_role == "time"}

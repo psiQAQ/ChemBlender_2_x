@@ -5,8 +5,9 @@ import math
 
 import bpy
 
-from .core.color_mapping import color_stops
-from .core.scene_preset import builtin_scene_presets, validate_scene_plan
+from cbq_core.color_mapping import color_stops
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import validate_scene_plan
 from .scientific_materials import _remove_unused, flat_material, scalar_material
 
 
@@ -79,7 +80,7 @@ def _description(plan, project, root):
             threshold = _number(settings["isovalue"])
             legend = [{"label": f"+{threshold}", "color": settings["positive_color"]},
                       {"label": f"-{threshold}", "color": settings["negative_color"]}]
-            from .core.grid_semantics import _selected_values
+            from cbq_core.grid_semantics import _selected_values
             import numpy
 
             values, _index = _selected_values(grid, settings["dataset_index"])

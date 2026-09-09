@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import json
 from math import isfinite
 
-from ..core import Structure
+from cbq_core.model import Structure
 from .structure import (
     StructureViewSettings,
     _PERIODIC_SITE_DISPLAY_CONTRACT,
@@ -274,7 +274,7 @@ def _periodic_render_attributes(
     occupancy_valid = numpy.isfinite(occupancy)
     displayed_occupancy = numpy.where(occupancy_valid, occupancy, 1.0)
 
-    from ..Chem_data import PROBABILITY_ELLIPSOID_TABLE
+    from cbq_core.element_data import PROBABILITY_ELLIPSOID_TABLE
 
     probability_rows = tuple(sorted(PROBABILITY_ELLIPSOID_TABLE.items()))
     probabilities = numpy.asarray(
@@ -1109,18 +1109,15 @@ def _derived_periodic_sites(structure, settings):
         return tuple(int(round(float(value) / quantum)) for value in values)
 
     seen = [{key(values)} for values in original]
-    operations = periodic.symmetry_operations or ("x,y,z",)
-    if operations != ("x,y,z",):
-        import gemmi
-
-        for operation in operations:
-            transform = gemmi.Op(operation)
-            rotation = (
-                numpy.asarray(transform.rot, dtype=float) / transform.DEN
-            )
-            translation = (
-                numpy.asarray(transform.tran, dtype=float) / transform.DEN
-            )
+    if periodic.symmetry_operations:
+        if periodic.symmetry_rotations is None or periodic.symmetry_translations is None:
+            raise ValueError("Numeric symmetry operations are missing; use external CBQ upgrade "
+                             "or display source sites")
+        for rotation, translation in zip(
+            periodic.symmetry_rotations.values, periodic.symmetry_translations.values, strict=True
+        ):
+            rotation = numpy.asarray(rotation, dtype=float)
+            translation = numpy.asarray(translation, dtype=float)
             candidates = _normalize_fractional(
                 fractional @ rotation.T + translation,
                 pbc,

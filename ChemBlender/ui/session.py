@@ -3,12 +3,11 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..core import close_session, create_session
-from ..core.project_service import (
-    save_project_session_for_scenes,
-    sync_project_session_links_for_scenes,
-    verify_project_session_for_scenes,
-)
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from cbq_core.project_service import save_project_session_for_scenes
+from cbq_core.project_service import sync_project_session_links_for_scenes
+from cbq_core.project_service import verify_project_session_for_scenes
 from .view_cache import repair_project_view_caches
 
 
@@ -324,7 +323,7 @@ def _restore_registered_session():
     # register() runs under Blender's restricted data context. Restore after
     # registration, without replacing an existing (possibly dirty) session.
     if _FILE_SESSION is None and bpy.data.filepath:
-        from ..project_link import PROJECT_ID_KEY
+        from cbq_core.project_link import PROJECT_ID_KEY
 
         if any(PROJECT_ID_KEY in scene for scene in bpy.data.scenes):
             _load_post_handler(None)

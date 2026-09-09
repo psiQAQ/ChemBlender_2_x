@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import tempfile
 import json
 import os
 import platform
@@ -12,11 +13,13 @@ from pathlib import Path
 from typing import Any
 
 if __package__:
+    from .stage_viewer import stage_viewer
     from .release_metadata import (
         read_release_metadata,
         release_metadata_document,
     )
 else:
+    from stage_viewer import stage_viewer
     from release_metadata import (
         read_release_metadata,
         release_metadata_document,
@@ -348,8 +351,12 @@ def main() -> int:
         validate_cmd.extend(["--valid-tags", args.valid_tags])
 
     try:
-        _run(validate_cmd, cwd=extension_root)
-        _run([blender_bin, "--command", "extension", "build"], cwd=extension_root)
+        with tempfile.TemporaryDirectory(prefix="chemblender-viewer-build-") as temporary:
+            staged = stage_viewer(extension_root, Path(temporary) / "viewer")
+            validate_cmd[validate_cmd.index("--source-path") + 1] = str(staged)
+            _run(validate_cmd, cwd=staged)
+            _run([blender_bin, "--command", "extension", "build",
+                  "--output-dir", str(extension_root)], cwd=staged)
         package = extension_root / metadata.package_name
         if not package.is_file():
             raise RuntimeError(f"Expected extension package was not built: {package}")

@@ -2,10 +2,12 @@
 
 import bpy
 
-from .core import Grid3D, builtin_scene_presets
-from .core.grid_cache_service import _ANGSTROM_SCALE
-from .core.grid_sampling import line_profile, plane_slice
-from .core.scene_preset import _settings
+from cbq_core.model import Grid3D
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.grid_cache_service import _ANGSTROM_SCALE
+from cbq_core.grid_sampling import line_profile
+from cbq_core.grid_sampling import plane_slice
+from cbq_core.scene_preset import _settings
 from .spectrum_plot import _poly_spline
 from .surface_view import _property_material
 

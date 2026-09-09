@@ -4,10 +4,13 @@ from math import isfinite, tau
 from types import SimpleNamespace
 from uuid import UUID
 
-from ..core import (
-    ArrayData, DatasetStatus, SpectrumKind, SpectrumProfile, builtin_scene_presets, grids_share_affine,
-    plan_scene_preset, derive_electronic_spectrum, derive_vibrational_spectrum,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import SpectrumKind
+from cbq_core.model import SpectrumProfile
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import grids_share_affine
+from cbq_core.scene_preset import plan_scene_preset
+from .default_views import default_grid_preset
 
 
 _SCENE_PROPERTY_NAME = "chemblender_scientific_view"
@@ -44,6 +47,9 @@ def available_presets(entity):
     name = type(entity).__name__
     if name == "Grid3D" and entity.semantic_role == "reduced_density_gradient":
         return ("nci_surface",) + _PRESETS_BY_TYPE[name]
+    if name == "Grid3D":
+        preferred = default_grid_preset(entity)
+        return (preferred,) + tuple(value for value in _PRESETS_BY_TYPE[name] if value != preferred)
     if name == "AtomFrameProperty":
         return ("trajectory_force",) if entity.semantic_role == "atomic_force" and entity.data.dims == ("frame", "atom", "xyz") else ()
     if name == "AtomicProperty":
@@ -148,47 +154,6 @@ def load_settings(settings, plan):
             setattr(settings, name, value)
 
 
-def spectrum_batch(entity, kind, settings):
-    """Reuse the core derivation, with an explicit scientific axis and FWHM."""
-    kind = SpectrumKind(kind)
-    profile = SpectrumProfile(settings.spectrum_profile)
-    options = {"kind": kind, "profile": profile}
-    if profile is not SpectrumProfile.STICK:
-        start, end, width = settings.axis_start, settings.axis_end, settings.fwhm
-        count = settings.axis_points
-        if not all(isfinite(value) for value in (start, end, width)) or start >= end or width <= 0:
-            raise ValueError("spectrum axis must increase and FWHM must be positive and finite")
-        if type(count) is not int or not 2 <= count <= 100_000:
-            raise ValueError("spectrum axis requires 2 to 100,000 samples")
-        import numpy
-        options.update(axis=numpy.linspace(start, end, count), fwhm=width)
-    if type(entity).__name__ == "VibrationalModeSet":
-        return derive_vibrational_spectrum(entity, include_imaginary=settings.include_imaginary, **options)
-    return derive_electronic_spectrum(entity, **options)
-
-
-def difference_candidates(project, left):
-    if type(left).__name__ != "Grid3D" or left.semantic_role != "electron_density":
-        return ()
-    return tuple(right for right in project.datasets.values()
-                 if type(right).__name__ == "Grid3D" and right.semantic_role == "electron_density"
-                 and left.status is right.status is DatasetStatus.COMPLETE
-                 and left.structure_id is not None and left.structure_id == right.structure_id
-                 and left.data.unit == right.data.unit and left.coordinate_unit == right.coordinate_unit
-                 and left.origin == right.origin and left.step_vectors == right.step_vectors
-                 and left.grid_shape == right.grid_shape)
-
-
-def difference_batch(project, left, settings):
-    from ..core.grid_difference import derive_grid_difference
-    identity = UUID(settings.difference_source_uuid) if settings.difference_source_uuid else None
-    right = next((value for value in difference_candidates(project, left) if value.id == identity), None)
-    if right is None:
-        raise ValueError("select the right electron density on the identical scientific grid")
-    return derive_grid_difference(left, right, left_dataset_index=settings.dataset_index,
-                                  right_dataset_index=settings.difference_dataset_index)
-
-
 def timeline_phase(frame, start, frames_per_cycle, base_phase=0.):
     if type(start) is not int or type(frames_per_cycle) is not int or frames_per_cycle < 2:
         raise ValueError("animation requires an integer start and at least two frames per cycle")
@@ -242,34 +207,11 @@ if bpy is not None:
             raise ValueError("linked source selection is stale")
         self.secondary_source_uuid = "" if index == 0 else items[index][0]
 
-    def _difference_items(self, context):
-        items = [("NONE", "Select right density", "")]
-        if context is not None:
-            from .session import get_scene_session
-            session = get_scene_session(context.scene)
-            left = selected_entity(session.project, session.active_entity_id)
-            items.extend((str(value.id), f"Density · {str(value.id)[:8]}", str(value.id))
-                         for value in difference_candidates(session.project, left))
-        result = tuple(items)
-        return _ENUM_ITEMS.setdefault(result, result)
-
-    def _difference_get(self):
-        return next((index for index, item in enumerate(_difference_items(self, bpy.context))
-                     if item[0] == self.difference_source_uuid), 0)
-
-    def _difference_set(self, index):
-        items = _difference_items(self, bpy.context)
-        if not 0 <= index < len(items):
-            raise ValueError("difference source selection is stale")
-        self.difference_source_uuid = "" if index == 0 else items[index][0]
 
     class CHEMBLENDER_PG_scientific_view(bpy.types.PropertyGroup):
         preset_id: EnumProperty(name="Representation", items=_PRESET_ITEMS, default="AUTO")
         secondary_source_uuid: StringProperty(options={"HIDDEN"})
         secondary_source: EnumProperty(name="Linked Dataset", items=_secondary_items, get=_secondary_get, set=_secondary_set)
-        difference_source_uuid: StringProperty(options={"HIDDEN"})
-        difference_source: EnumProperty(name="Right Density", items=_difference_items, get=_difference_get, set=_difference_set)
-        difference_dataset_index: IntProperty(name="Right Dataset Index", default=0, min=0)
         loaded_view_name: StringProperty(options={"HIDDEN"})
         template: EnumProperty(name="Template", items=(("research", "Research", ""), ("teaching", "Teaching", "")))
         shaded: BoolProperty(name="Light Quantitative Colors", default=False,
@@ -321,12 +263,6 @@ if bpy is not None:
         vector_stride: IntProperty(name="Vector Stride", default=1, min=1)
         point_radius: FloatProperty(name="Critical Point Radius", default=.1, min=1.e-6)
         path_radius: FloatProperty(name="Gradient Path Radius", default=.025, min=1.e-6)
-        spectrum_profile: EnumProperty(name="Spectrum Profile", items=tuple((v.value, v.value.title(), "") for v in SpectrumProfile), default="stick")
-        axis_start: FloatProperty(name="Axis Start (cm⁻¹)", default=0.)
-        axis_end: FloatProperty(name="Axis End (cm⁻¹)", default=4000.)
-        axis_points: IntProperty(name="Axis Samples", default=1001, min=2, max=100_000)
-        fwhm: FloatProperty(name="FWHM (cm⁻¹)", default=20., min=1.e-9)
-        include_imaginary: BoolProperty(name="Include Imaginary Modes", default=True)
         frame_start: IntProperty(name="Animation Start Frame", default=1)
         frame_index: IntProperty(name="Source Frame Index (0-based)", default=0, min=0)
         frame_step: IntProperty(name="Timeline Frames Per Source Frame", default=1, min=1)
@@ -354,14 +290,6 @@ if bpy is not None:
         session.active_view_object_name = obj.name
         session.mark_dirty("view_cache")
 
-    def _publish_batch(context, session, settings, batch, preset_id):
-        from .session import _notify_session_mutation
-        session.project.commit(batch)
-        session.mark_dirty("project")
-        session.active_entity_id = batch.datasets[0].id
-        context.scene.chemblender_project_browser.active_entity_id = str(session.active_entity_id)
-        settings.preset_id = preset_id
-        _notify_session_mutation(session)
 
     @bpy.app.handlers.persistent
     def _scientific_frame_change(scene, _depsgraph=None):
@@ -485,35 +413,6 @@ if bpy is not None:
                 return {"CANCELLED"}
             return {"FINISHED"}
 
-    class CHEMBLENDER_OT_derive_scientific_spectrum(bpy.types.Operator):
-        bl_idname = "chemblender.derive_scientific_spectrum"
-        bl_label = "Derive Scientific Spectrum"
-        kind: StringProperty(options={"HIDDEN", "SKIP_SAVE"})
-
-        def execute(self, context):
-            session, entity, settings = _context(context)
-            try:
-                batch = spectrum_batch(entity, self.kind, settings)
-                _publish_batch(context, session, settings, batch, "spectrum_plot")
-            except (AttributeError, RuntimeError, TypeError, ValueError) as error:
-                self.report({"ERROR"}, str(error))
-                return {"CANCELLED"}
-            return {"FINISHED"}
-
-    class CHEMBLENDER_OT_derive_density_difference(bpy.types.Operator):
-        bl_idname = "chemblender.derive_density_difference"
-        bl_label = "Derive Density Difference"
-        bl_description = "Subtract right density from the selected left density without alignment or resampling"
-
-        def execute(self, context):
-            session, entity, settings = _context(context)
-            try:
-                batch = difference_batch(session.project, entity, settings)
-                _publish_batch(context, session, settings, batch, "signed_isosurface")
-            except (AttributeError, RuntimeError, TypeError, ValueError) as error:
-                self.report({"ERROR"}, str(error))
-                return {"CANCELLED"}
-            return {"FINISHED"}
 
     def _button(layout, label, action):
         operator = layout.operator(CHEMBLENDER_OT_scientific_view.bl_idname, text=label)
@@ -525,30 +424,9 @@ if bpy is not None:
         box = layout.box()
         box.label(text="Scientific Representation")
         name = type(entity).__name__
-        if name == "Grid3D" and entity.semantic_role == "electron_density":
-            difference = box.box()
-            difference.label(text=f"Difference: selected density {str(entity.id)[:8]} minus right")
-            difference.prop(settings, "dataset_index", text="Left Dataset Index")
-            difference.prop(settings, "difference_source")
-            difference.prop(settings, "difference_dataset_index")
-            difference.operator(CHEMBLENDER_OT_derive_density_difference.bl_idname, text="Derive Left − Right Density")
-        if name in {"VibrationalModeSet", "ExcitedStateSet"}:
-            box.prop(settings, "spectrum_profile")
-            if settings.spectrum_profile != "stick":
-                for field in ("axis_start", "axis_end", "axis_points", "fwhm"):
-                    box.prop(settings, field)
-            if name == "VibrationalModeSet":
-                box.prop(settings, "include_imaginary")
-                options = (("IR", "ir", entity.ir_intensities), ("Raman Activity", "raman", entity.raman_activities))
-            else:
-                options = (("UV-Vis", "uv_vis", entity.oscillator_strengths), ("ECD", "ecd", entity.rotatory_strengths))
-            for label, kind, values in options:
-                row = box.row()
-                row.enabled = values is not None
-                row.operator(CHEMBLENDER_OT_derive_scientific_spectrum.bl_idname, text=f"Derive {label}").kind = kind
         choices = available_presets(entity)
         if not choices:
-            reason = ("Use Wavefunction controls to compute a Grid" if name in {"OrbitalSet", "DensityMatrix"}
+            reason = ("Select a prepared grid in Orbital Results; add missing quantities in Prepare" if name in {"OrbitalSet", "DensityMatrix"}
                       else "Select a supported Structure or scientific dataset in Project Browser")
             box.label(text=reason, icon="INFO")
             _button(box, "Load Selected View", "LOAD")
@@ -561,7 +439,7 @@ if bpy is not None:
             if linked:
                 box.prop(settings, "secondary_source")
                 if not all(linked.values()):
-                    box.label(text="Required linked dataset is unavailable", icon="INFO")
+                    box.label(text="Linked dataset is missing from CBQ; prepare and import it first", icon="INFO")
             box.label(text=preset.title)
             for field in ("template", "shaded", "material_opacity"):
                 box.prop(settings, field)

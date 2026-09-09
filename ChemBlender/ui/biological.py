@@ -12,13 +12,11 @@ from bpy.props import (
     StringProperty,
 )
 
-from ..core import (
-    AtomicProperty,
-    BiologicalHierarchy,
-    FrameSet,
-    Structure,
-    TopologyRecord,
-)
+from cbq_core.model import AtomicProperty
+from cbq_core.model import BiologicalHierarchy
+from cbq_core.model import FrameSet
+from cbq_core.model import Structure
+from cbq_core.model import TopologyRecord
 from ..dataset_view import apply_atom_selection
 from .. import trajectory_view
 from ..views.structure import (

@@ -3,7 +3,9 @@ from dataclasses import dataclass
 
 import bpy
 
-from .core import AtomFrameProperty, FrameSet, TrajectoryFrameManager
+from cbq_core.model import AtomFrameProperty
+from cbq_core.model import FrameSet
+from cbq_core.trajectory_frames import TrajectoryFrameManager
 from .dataset_view import (
     _GROUP_NAME, _MODIFIER_NAME, _coordinate_scale, _require_structure_match, write_vector_view,
 )

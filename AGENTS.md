@@ -73,7 +73,7 @@ Do not infer current status from this file, completed work, archived evidence, o
 ## Dependency Policy
 
 - Use Blender's bundled NumPy.
-- RDKit is an offline manifest wheel downloaded by developers or CI.
+- RDKit remains a pinned offline manifest wheel until external operation equivalence, editing, performance, cancellation, data integrity, and lifecycle gates all pass. Candidate wheel-free builds do not authorize removal from the formal extension. See decision 0044.
 - Never track `.whl` files or install packages during import, `register()`, or add-on enable.
 - Pin dependency filenames, sources, versions, and SHA-256 values in the dependency reference and CI.
 

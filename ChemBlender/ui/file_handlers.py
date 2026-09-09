@@ -1,25 +1,6 @@
-"""Blender drag-and-drop entry points for Quick Import."""
+"""Blender drag-and-drop entry points for reviewed CBQ import."""
 
 import bpy
-
-from ..reader_api.manifest import _extensions
-
-
-def _builtin_extension_string(descriptors):
-    normalized = set()
-    for descriptor in descriptors:
-        if (
-            descriptor.plugin_id != "chemblender.builtin"
-            or not descriptor.availability.available
-        ):
-            continue
-        for extension in descriptor.extensions:
-            try:
-                normalized.add(_extensions((extension,))[0])
-            except (TypeError, ValueError):
-                continue
-    return ";".join(sorted(normalized))
-
 
 def _poll_region(context, region_type):
     area = getattr(context, "area", None)
@@ -31,19 +12,13 @@ def _poll_region(context, region_type):
 
 
 _FILE_HANDLER_BASE = getattr(bpy.types, "FileHandler", None)
-_FILE_EXTENSIONS = ""
+_FILE_EXTENSIONS = ".cbq"
 
 if _FILE_HANDLER_BASE is not None:
-    from ..runtime.reader_api_bridge import get_reader_plugin_registry
-
-    _FILE_EXTENSIONS = _builtin_extension_string(
-        get_reader_plugin_registry().descriptors
-    )
-
     class CHEMBLENDER_FH_view_3d_window(_FILE_HANDLER_BASE):
         bl_idname = "CHEMBLENDER_FH_view_3d_window"
-        bl_label = "ChemBlender Quick Import"
-        bl_import_operator = "chemblender.quick_import"
+        bl_label = "ChemBlender CBQ Import"
+        bl_import_operator = "chemblender.import_cbq"
         bl_file_extensions = _FILE_EXTENSIONS
 
         @classmethod
@@ -54,7 +29,7 @@ if _FILE_HANDLER_BASE is not None:
     class CHEMBLENDER_FH_project_browser(_FILE_HANDLER_BASE):
         bl_idname = "CHEMBLENDER_FH_project_browser"
         bl_label = "ChemBlender Project Browser Import"
-        bl_import_operator = "chemblender.quick_import"
+        bl_import_operator = "chemblender.import_cbq"
         bl_file_extensions = _FILE_EXTENSIONS
 
         @classmethod

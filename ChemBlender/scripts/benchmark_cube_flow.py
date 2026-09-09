@@ -20,8 +20,11 @@ if not __package__:
 
 import numpy
 
-from ChemBlender.core import Grid3D, QCProject, export_cube, save_project
-from ChemBlender.core.cube import CUBE_READER
+from cbq_core.model import Grid3D
+from cbq_core.model import QCProject
+from chemblender_prepare.core.exporters.cube import export_cube
+from cbq_core.sidecar import save_project
+from chemblender_prepare.core.cube import CUBE_READER
 
 
 def generate_cube(path, *, size):

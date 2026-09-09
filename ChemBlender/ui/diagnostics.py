@@ -3,15 +3,13 @@ import reprlib
 from dataclasses import dataclass
 from uuid import UUID
 
-from ..core import QualityStatus
-from ..core.import_pipeline.report import render_diagnostics_markdown
-from ..project_link import (
-    MANIFEST_HASH_KEY,
-    PROJECT_ID_KEY,
-    PROJECT_SCHEMA_KEY,
-    SIDECAR_LOCATOR_KEY,
-    ProjectLinkStatus,
-)
+from cbq_core.model import QualityStatus
+from cbq_core.diagnostics_report import render_diagnostics_markdown
+from cbq_core.project_link import MANIFEST_HASH_KEY
+from cbq_core.project_link import PROJECT_ID_KEY
+from cbq_core.project_link import PROJECT_SCHEMA_KEY
+from cbq_core.project_link import SIDECAR_LOCATOR_KEY
+from cbq_core.project_link import ProjectLinkStatus
 
 
 @dataclass(frozen=True, slots=True)

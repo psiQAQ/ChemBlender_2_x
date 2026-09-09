@@ -1,22 +1,16 @@
-"""Cube/Grid preview, semantic resolution and Scene Preset controls."""
+"""Grid inspection, sampling and Scene Preset controls."""
 
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
-from ..core import (
-    DatasetStatus,
-    Grid3D,
-    ProjectSession,
-    builtin_grid_semantic_presets,
-    builtin_scene_presets,
-    default_grid_isovalue,
-    grids_share_affine,
-    plan_scene_preset,
-    resolve_grid_semantics,
-)
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import grids_share_affine
+from cbq_core.scene_preset import plan_scene_preset
 from .tasks import Task, TaskState, TaskWorker
-from ..core.scene_preset import GRID_SAMPLE_POINT_LIMIT
+from cbq_core.scene_preset import GRID_SAMPLE_POINT_LIMIT
 
 
 _SCENE_PROPERTY_NAME = "chemblender_grid"
@@ -168,41 +162,6 @@ def grid_action_availability(project, grid_id):
     )
 
 
-def resolve_grid_selection(
-    session,
-    grid_id,
-    *,
-    dataset_index,
-    preset_id,
-    value_unit,
-):
-    if not isinstance(session, ProjectSession):
-        raise TypeError("session must be a ProjectSession")
-    source = _grid(session.project, grid_id)
-    batch = resolve_grid_semantics(
-        source,
-        dataset_index=dataset_index,
-        preset_id=preset_id,
-        value_unit=value_unit,
-    )
-    resolved = batch.datasets[0]
-    existing = session.project.datasets.get(resolved.id)
-    if existing is None:
-        session.project.commit(batch)
-        session.mark_dirty("grid_semantics")
-        created = True
-    else:
-        if (
-            not isinstance(existing, Grid3D)
-            or existing.revision != resolved.revision
-        ):
-            raise RuntimeError("deterministic grid semantic identity collision")
-        resolved = existing
-        created = False
-    session.active_entity_id = resolved.id
-    return resolved, created
-
-
 def plan_grid_view(
     project,
     grid_id,
@@ -329,7 +288,7 @@ def load_grid_view_settings(settings, plan):
 def export_grid_view_sample(project, obj, destination):
     """Recompute CSV from validated saved scientific settings, never object transforms."""
     from .view_cache import plan_grid_sample_view
-    from ..core.grid_sampling import export_grid_sample
+    from cbq_core.grid_sampling import export_grid_sample
 
     plan = plan_grid_sample_view(obj, project, require_geometry=False)
     kind = {"grid_slice": "plane", "grid_profile": "profile"}.get(plan.view_kind)
@@ -465,7 +424,6 @@ try:
     import bpy
     from bpy.props import (
         BoolProperty,
-        EnumProperty,
         FloatProperty,
         FloatVectorProperty,
         IntProperty,
@@ -478,26 +436,6 @@ except ModuleNotFoundError:
 
 
 if bpy is not None:
-    _PRESET_ITEMS = tuple(
-        (
-            preset.preset_id,
-            preset.semantic_role.replace("_", " ").title(),
-            "",
-        )
-        for preset in builtin_grid_semantic_presets().values()
-    )
-
-
-    def _unit_items(self, _context):
-        preset = builtin_grid_semantic_presets().get(self.preset_id)
-        if preset is None:
-            return ()
-        return tuple(
-            (value, value.replace("_", " ").title(), "")
-            for value in preset.value_units
-        )
-
-
     class CHEMBLENDER_PG_grid_settings(bpy.types.PropertyGroup):
         dataset_index: IntProperty(name="Dataset", default=0, min=0)
         property_dataset_index: IntProperty(name="Property Dataset", default=0, min=0)
@@ -515,12 +453,6 @@ if bpy is not None:
         profile_radius: FloatProperty(name="Path Radius (Å)", default=0.015, min=1.e-6)
         colorbar_width: FloatProperty(name="Colorbar Width (Å)", default=2.0, min=1.e-6)
         colorbar_height: FloatProperty(name="Colorbar Height (Å)", default=0.2, min=1.e-6)
-        preset_id: EnumProperty(
-            name="Semantic Preset",
-            items=_PRESET_ITEMS,
-            default="generic_scalar",
-        )
-        value_unit: EnumProperty(name="Value Unit", items=_unit_items)
         isovalue: FloatProperty(
             name="Isovalue",
             default=0.05,
@@ -535,46 +467,6 @@ if bpy is not None:
         session = get_scene_session(context.scene)
         grid = _grid(session.project, session.active_entity_id)
         return session, grid, getattr(context.scene, _SCENE_PROPERTY_NAME)
-
-
-    class CHEMBLENDER_OT_resolve_grid_semantics(bpy.types.Operator):
-        bl_idname = "chemblender.resolve_grid_semantics"
-        bl_label = "Resolve Grid Semantics"
-
-        def execute(self, context):
-            try:
-                session, source, settings = _operator_context(context)
-                settings.isovalue = default_grid_isovalue(
-                    source,
-                    dataset_index=settings.dataset_index,
-                    preset_id=settings.preset_id,
-                )
-                _resolved, created = resolve_grid_selection(
-                    session,
-                    source.id,
-                    dataset_index=settings.dataset_index,
-                    preset_id=settings.preset_id,
-                    value_unit=settings.value_unit,
-                )
-                from .properties import advance_browser_revision
-
-                # Browser refresh preserves its RNA selection, so hand off
-                # the newly resolved entity before requesting the refresh.
-                browser = context.scene.chemblender_project_browser
-                browser.active_entity_id = str(_resolved.id)
-                advance_browser_revision(session)
-                self.report(
-                    {"INFO"},
-                    "Grid semantics resolved"
-                    if created
-                    else "Matching resolved Grid3D already exists",
-                )
-                return {"FINISHED"}
-            except Exception as error:
-                if isinstance(error, MemoryError):
-                    raise
-                self.report({"ERROR"}, str(error))
-                return {"CANCELLED"}
 
 
     class CHEMBLENDER_OT_create_grid_view(bpy.types.Operator):
@@ -714,10 +606,8 @@ if bpy is not None:
             try:
                 session, grid, plan, cache_root = self._values(context)
                 dataset_index = dict(plan.settings)["dataset_index"]
-                from ..core.grid_cache_service import (
-                    VolumeCacheRequest,
-                    prepare_volume_cache,
-                )
+                from cbq_core.grid_cache_service import VolumeCacheRequest
+                from cbq_core.grid_cache_service import prepare_volume_cache
                 from ..grid_volume import (
                     _OPENVDB_WRITER,
                     volume_cache_path,
@@ -897,12 +787,7 @@ if bpy is not None:
         if grid.data.dims[0] == "dataset":
             layout.prop(settings, "dataset_index")
         if grid.status is DatasetStatus.AMBIGUOUS:
-            layout.prop(settings, "preset_id")
-            layout.prop(settings, "value_unit")
-            layout.operator(
-                CHEMBLENDER_OT_resolve_grid_semantics.bl_idname,
-                icon="CHECKMARK",
-            )
+            layout.label(text="Resolve grid units and meaning in Prepare, then import the CBQ", icon="ERROR")
         layout.prop(settings, "isovalue")
         # Float controls have bounded precision; keep tiny thresholds readable.
         layout.label(text=f"Threshold: {settings.isovalue:.6g}")
@@ -1011,12 +896,10 @@ __all__ = (
     "export_grid_view_sample",
     "rebuild_grid_sample_view",
     "rebuild_property_view",
-    "resolve_grid_selection",
 )
 if bpy is not None:
     __all__ += (
         "CHEMBLENDER_OT_create_grid_view",
-        "CHEMBLENDER_OT_resolve_grid_semantics",
         "CHEMBLENDER_PG_grid_settings",
         "draw_grid_controls",
     )

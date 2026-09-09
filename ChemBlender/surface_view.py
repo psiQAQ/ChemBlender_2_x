@@ -7,8 +7,9 @@ from pathlib import Path
 
 import bpy
 
-from .core import Grid3D, grids_share_affine
-from .core.storage.atomic_paths import short_sibling_temporary_path
+from cbq_core.model import Grid3D
+from cbq_core.scene_preset import grids_share_affine
+from cbq_core.storage.atomic_paths import short_sibling_temporary_path
 from .grid_volume import _ANGSTROM_SCALE, _selected_values, _transform_matrix
 
 
@@ -180,7 +181,7 @@ def _material(name, color, opacity, *, shaded=True):
 
 def property_color_stops(color_min, color_max):
     """Compatibility entrypoint for the established coolwarm palette."""
-    from .core.color_mapping import color_stops
+    from cbq_core.color_mapping import color_stops
 
     return color_stops(color_min, color_max)
 

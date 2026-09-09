@@ -1,7 +1,8 @@
 import bpy
 
-from .core import CriticalPointKind, TopologyGraph
-from .core.grid_cache_service import _ANGSTROM_SCALE
+from cbq_core.model import CriticalPointKind
+from cbq_core.model import TopologyGraph
+from cbq_core.grid_cache_service import _ANGSTROM_SCALE
 from .fermi_surface_view import _range
 from .spectrum_plot import _flat_material, _positive, _remove_objects
 

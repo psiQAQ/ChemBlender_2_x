@@ -4,7 +4,7 @@ import operator
 
 import bpy
 
-from .core.model import FermiSurfaceMesh
+from cbq_core.model import FermiSurfaceMesh
 from .spectrum_plot import _flat_material, _positive, _remove_objects
 
 

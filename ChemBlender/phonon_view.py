@@ -4,8 +4,13 @@ from itertools import product
 import operator
 from uuid import uuid4
 
-from .core.model import ArrayData, DatasetStatus, PeriodicSiteData, PhononModeSet, Structure
-from .core.phonon_frames import _index, derive_phonon_frames
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import PeriodicSiteData
+from cbq_core.model import PhononModeSet
+from cbq_core.model import Structure
+from cbq_core.phonon_frames import _index
+from cbq_core.phonon_frames import derive_phonon_frames
 from .views.structure import (
     StructureViewSettings, _coordinate_scale, create_structure_view, remove_structure_view,
 )

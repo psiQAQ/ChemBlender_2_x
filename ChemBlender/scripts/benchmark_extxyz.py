@@ -21,33 +21,23 @@ if not __package__:
 
 import numpy
 
-from ChemBlender.core import (
-    QCProject,
-    close_session,
-    create_session,
-    save_project,
-)
-from ChemBlender.core.exporters import export_extxyz
-from ChemBlender.core.formats.extxyz import (
-    ExtXYZCancelled,
-    iter_extxyz_frames,
-    parse_extxyz,
-)
-from ChemBlender.core.import_pipeline.request import (
-    ImportRequest,
-    ImportSource,
-    ValidationMode,
-)
-from ChemBlender.core.import_pipeline.staging import StagedImportSession
-from ChemBlender.core.import_pipeline.transaction import (
-    ImportCommitDecisions,
-    commit_import_preview,
-)
-from ChemBlender.reader_api.import_pipeline_bridge import (
-    preflight_reader_plugins,
-)
-from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
-from ChemBlender.ui.extxyz_preview import extxyz_preview_summary
+from cbq_core.model import QCProject
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from cbq_core.sidecar import save_project
+from chemblender_prepare.core.exporters import export_extxyz
+from chemblender_prepare.core.formats.extxyz import ExtXYZCancelled
+from chemblender_prepare.core.formats.extxyz import iter_extxyz_frames
+from chemblender_prepare.core.formats.extxyz import parse_extxyz
+from chemblender_prepare.core.import_pipeline.request import ImportRequest
+from chemblender_prepare.core.import_pipeline.request import ImportSource
+from chemblender_prepare.core.import_pipeline.request import ValidationMode
+from chemblender_prepare.core.import_pipeline.staging import StagedImportSession
+from chemblender_prepare.core.import_pipeline.transaction import ImportCommitDecisions
+from chemblender_prepare.core.import_pipeline.transaction import commit_import_preview
+from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
+from chemblender_prepare.extxyz_preview import extxyz_preview_summary
 
 
 def generate_extxyz(path, *, frames, atoms, metadata_only=False):
@@ -162,7 +152,7 @@ def _publication_rollback(source, root):
             staged,
         )
         previous = project_session.project
-        from ChemBlender.core.import_pipeline import transaction
+        from chemblender_prepare.core.import_pipeline import transaction
 
         with patch.object(
             transaction,

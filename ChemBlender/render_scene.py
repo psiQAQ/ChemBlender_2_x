@@ -1,6 +1,8 @@
 """Shared temporary render scope for scientific views and orbital image batches."""
 
-from .core.scene_preset import builtin_scene_presets, plan_scene_preset, scene_plan_document
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.scene_preset import scene_plan_document
 
 
 class RenderCancelled(RuntimeError):
@@ -305,8 +307,8 @@ class RenderScope:
                 if plan.view_kind == "grid_volume" and self.volume_focus_threshold > 0:
                     import numpy
                     from mathutils import Vector
-                    from .core.grid_semantics import _selected_values
-                    from .core.grid_cache_service import _ANGSTROM_SCALE
+                    from cbq_core.grid_semantics import _selected_values
+                    from cbq_core.grid_cache_service import _ANGSTROM_SCALE
 
                     grid = self.project.datasets[plan.bindings[0].entity_id]
                     values, _index = _selected_values(grid, dict(plan.settings)["dataset_index"])

@@ -1,7 +1,5 @@
 import bpy
 import os, re, json
-from .panel import CHEM_texts
-from .read import CIF_Atom, CIF_Structure
 from bpy.types import (
     Operator,
     Menu,
@@ -156,16 +154,6 @@ def register():
         pass
     bpy.types.NODE_MT_add.append(add_chem_button)
 
-    for owner, name in (
-        (bpy.types.Object, "cif_original"),
-        (bpy.types.Object, "cif_current"),
-        (bpy.types.Scene, "my_tool"),
-    ):
-        if hasattr(owner, name):
-            delattr(owner, name)
-    bpy.types.Object.cif_original = bpy.props.PointerProperty(type=CIF_Structure)
-    bpy.types.Object.cif_current = bpy.props.PointerProperty(type=CIF_Structure)
-    bpy.types.Scene.my_tool = bpy.props.PointerProperty(type=CHEM_texts)
     cat_generator(canonical_geo_node_group)
 
 
@@ -175,11 +163,3 @@ def unregister():
         bpy.types.NODE_MT_add.remove(add_chem_button)
     except (ValueError, RuntimeError):
         pass
-
-    for owner, name in (
-        (bpy.types.Object, "cif_original"),
-        (bpy.types.Object, "cif_current"),
-        (bpy.types.Scene, "my_tool"),
-    ):
-        if hasattr(owner, name):
-            delattr(owner, name)

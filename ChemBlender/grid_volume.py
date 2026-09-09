@@ -3,15 +3,14 @@ from pathlib import Path
 
 import bpy
 
-from .core import Grid3D, volume_render_cache_key
-from .core.grid_cache_service import (
-    VolumeCacheRequest,
-    _dataset_index as _cache_dataset_index,
-    _selected_values,
-    _transform_matrix,
-    prepare_volume_cache,
-    volume_cache_path as _volume_cache_path,
-)
+from cbq_core.model import Grid3D
+from cbq_core.grid_lod import volume_render_cache_key
+from cbq_core.grid_cache_service import VolumeCacheRequest
+from cbq_core.grid_cache_service import _dataset_index as _cache_dataset_index
+from cbq_core.grid_cache_service import _selected_values
+from cbq_core.grid_cache_service import _transform_matrix
+from cbq_core.grid_cache_service import prepare_volume_cache
+from cbq_core.grid_cache_service import volume_cache_path as _volume_cache_path
 
 
 _ANGSTROM_SCALE = {

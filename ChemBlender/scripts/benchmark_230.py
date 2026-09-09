@@ -108,9 +108,14 @@ def _blender_runtime_versions():
     if executable is None:
         return empty
     code = (
-        "bpy=__import__('bpy');gemmi=__import__('gemmi');json=__import__('json');rdkit=__import__('rdkit');"
-        "print('CHEMBLENDER_RUNTIME=' + json.dumps({'blender_version': bpy.app.version_string, "
-        "'gemmi_version': gemmi.__version__, 'rdkit_version': rdkit.__version__}, sort_keys=True))"
+        "import bpy, json\n"
+        "versions = {'blender_version': bpy.app.version_string}\n"
+        "for name in ('gemmi', 'rdkit'):\n"
+        "    try:\n"
+        "        versions[name + '_version'] = __import__(name).__version__\n"
+        "    except (ImportError, OSError):\n"
+        "        versions[name + '_version'] = None\n"
+        "print('CHEMBLENDER_RUNTIME=' + json.dumps(versions, sort_keys=True))\n"
     )
     try:
         result = subprocess.run(
@@ -142,7 +147,10 @@ def _blender_runtime_versions():
             result.returncode == 0
             and type(versions) is dict
             and set(versions) == set(empty)
-            and all(isinstance(value, str) and value for value in versions.values())
+            and isinstance(versions["blender_version"], str)
+            and versions["blender_version"]
+            and all(value is None or (isinstance(value, str) and value)
+                    for value in versions.values())
         ):
             return versions
     return empty
@@ -450,7 +458,7 @@ def _prepare_fixtures(case_names, scale, workspace):
                 frames=scale.trajectory_frames,
             )
         if _BATCH_CASES.intersection(case_names):
-            from ChemBlender.core.xyz import parse_xyz
+            from chemblender_prepare.core.xyz import parse_xyz
 
             batch = parse_xyz(source.path)
         return PreparedFixtures(Path(workspace), scale, source, trajectory, batch)
@@ -470,15 +478,15 @@ def _cleanup_fixtures(fixtures):
 
 def _prepare_sample(case_name, fixtures):
     if case_name == "preflight_feedback":
-        from ChemBlender.core.import_pipeline.staging import StagedImportSession
+        from chemblender_prepare.core.import_pipeline.staging import StagedImportSession
 
         return StagedImportSession.create(temp_parent=fixtures.workspace)
     if case_name == "project_commit":
-        from ChemBlender.core import QCProject
+        from cbq_core.model import QCProject
 
         return QCProject(uuid4(), "0.2")
     if case_name == "sidecar_save_open":
-        from ChemBlender.core import QCProject
+        from cbq_core.model import QCProject
 
         project = QCProject(uuid4(), "0.2")
         project.commit(fixtures.batch)
@@ -488,7 +496,7 @@ def _prepare_sample(case_name, fixtures):
             "reopened": None,
         }
     if case_name == "browser_projection_filter":
-        from ChemBlender.core import QCProject
+        from cbq_core.model import QCProject
 
         project = QCProject(uuid4(), "0.2")
         project.commit(fixtures.batch)
@@ -501,7 +509,7 @@ def _cleanup_sample(case_name, sample):
         sample.discard()
     elif case_name == "sidecar_save_open" and sample is not None:
         if sample["reopened"] is not None:
-            from ChemBlender.core import close_project
+            from cbq_core.sidecar import close_project
 
             close_project(sample["reopened"])
         if sample["destination"].exists():
@@ -509,9 +517,10 @@ def _cleanup_sample(case_name, sample):
 
 
 def _preflight_feedback(fixtures, session):
-    from ChemBlender.core.import_pipeline.request import ImportRequest, ImportSource
-    from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
-    from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+    from chemblender_prepare.core.import_pipeline.request import ImportRequest
+    from chemblender_prepare.core.import_pipeline.request import ImportSource
+    from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
+    from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
 
     result = preflight_reader_plugins(
         ImportRequest(sources=(ImportSource(fixtures.source.path),)),
@@ -523,7 +532,7 @@ def _preflight_feedback(fixtures, session):
 
 
 def _parse(fixtures, _sample):
-    from ChemBlender.core.xyz import parse_xyz
+    from chemblender_prepare.core.xyz import parse_xyz
 
     batch = parse_xyz(fixtures.source.path)
     if len(batch.structures[0].atomic_numbers) != fixtures.scale.structure_atoms:
@@ -537,7 +546,8 @@ def _project_commit(fixtures, project):
 
 
 def _sidecar_save_open(_fixtures, sample):
-    from ChemBlender.core import open_project, save_project
+    from cbq_core.sidecar import open_project
+    from cbq_core.sidecar import save_project
 
     save_project(sample["destination"], sample["project"])
     sample["reopened"] = open_project(sample["destination"])

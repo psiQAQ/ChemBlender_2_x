@@ -3,7 +3,7 @@ from math import isfinite, sin
 
 import bpy
 
-from .core import VibrationalModeSet
+from cbq_core.model import VibrationalModeSet
 from .dataset_view import _read_vector_values, write_vector_view
 
 

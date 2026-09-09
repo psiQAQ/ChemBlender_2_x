@@ -7,12 +7,10 @@ from dataclasses import replace
 from pathlib import Path
 from uuid import UUID
 
-from ..core import (
-    builtin_scene_presets,
-    plan_scene_preset,
-    volume_render_cache_key,
-)
-from ..core.scene_preset import legacy_scene_presets
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.grid_lod import volume_render_cache_key
+from cbq_core.scene_preset import legacy_scene_presets
 
 
 _CACHE_FORMAT_VERSION = 1
@@ -201,7 +199,7 @@ def scene_plan_from_view(obj, project, *, require_geometry=True, rebuild=False):
 def rebuild_scene_view(obj, project, *, cache_root=None, plan=None):
     """Build before replacement; failed preparation leaves old geometry intact."""
     import bpy
-    from ..core import validate_scene_plan
+    from cbq_core.scene_preset import validate_scene_plan
     from ..scene_preset_view import apply_scene_preset, scene_view_objects, _remove_objects
 
     saved = scene_plan_from_view(obj, project, require_geometry=False, rebuild=True)

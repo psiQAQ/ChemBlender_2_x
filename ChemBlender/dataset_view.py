@@ -4,16 +4,14 @@ import warnings
 
 import bpy
 
-from .core import (
-    AtomicProperty,
-    CategoricalData,
-    DatasetStatus,
-    ExcitedStateSet,
-    Spectrum,
-    SpectrumKind,
-    SpectrumProfile,
-    VibrationalModeSet,
-)
+from cbq_core.model import AtomicProperty
+from cbq_core.model import CategoricalData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ExcitedStateSet
+from cbq_core.model import Spectrum
+from cbq_core.model import SpectrumKind
+from cbq_core.model import SpectrumProfile
+from cbq_core.model import VibrationalModeSet
 from .views.structure import (
     _coordinate_scale,
     _write_attribute,
@@ -149,7 +147,7 @@ def _scalar_colors(values, valid, lower, upper, symmetric, colormap=None):
     normalized = numpy.clip((values - lower) / (upper - lower), 0.0, 1.0)
     colors = numpy.empty((values.size, 4), dtype=float)
     if colormap is not None:
-        from .core.color_mapping import color_stops
+        from cbq_core.color_mapping import color_stops
 
         stops = color_stops(lower, upper, colormap)
         positions, rgba = zip(*stops)

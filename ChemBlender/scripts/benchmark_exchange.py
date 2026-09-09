@@ -21,18 +21,16 @@ if not __package__:
 
 import numpy
 
-from ChemBlender.core.cjson_adapter import parse_cjson
-from ChemBlender.core.formats.mol2 import parse_mol2
-from ChemBlender.core.formats.pdb import parse_pdb
-from ChemBlender.core.formats.pqr import parse_pqr
-from ChemBlender.core.import_pipeline.request import (
-    ImportRequest,
-    ImportSource,
-    ReaderOverride,
-)
-from ChemBlender.core.import_pipeline.staging import StagedImportSession
-from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
-from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+from chemblender_prepare.core.cjson_adapter import parse_cjson
+from chemblender_prepare.core.formats.mol2 import parse_mol2
+from chemblender_prepare.core.formats.pdb import parse_pdb
+from chemblender_prepare.core.formats.pqr import parse_pqr
+from chemblender_prepare.core.import_pipeline.request import ImportRequest
+from chemblender_prepare.core.import_pipeline.request import ImportSource
+from chemblender_prepare.core.import_pipeline.request import ReaderOverride
+from chemblender_prepare.core.import_pipeline.staging import StagedImportSession
+from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
 
 
 class _MemoryStatus(CStructure):

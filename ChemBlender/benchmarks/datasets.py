@@ -83,7 +83,8 @@ def generate_trajectory_npy(path, *, frames, atoms=1):
     atoms = _positive(atoms, "atoms")
     import numpy
 
-    from ChemBlender.core.sidecar import LazyNpyArray, _array_content_hash
+    from cbq_core.sidecar import LazyNpyArray
+    from cbq_core.sidecar import _array_content_hash
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -2,82 +2,28 @@ import importlib
 
 
 REGISTER_MODULE_NAMES: tuple[str, ...] = (
-    ".chem_utils",
-    ".crys_utils",
     ".extension",
-    ".output",
-    ".panel",
-    ".periodictable",
-    ".read",
-    ".scaffold",
     ".trajectory_view",
     ".ui.session",
     ".ui.properties",
-    ".ui.quick_import",
-    ".ui.import_preview",
+    ".ui.cbq_import",
+    ".ui.mesh_edit",
     ".ui.diagnostics",
     ".ui.topology",
     ".ui.biological",
-    ".ui.scientific_edit",
-    ".ui.export",
     ".ui.grid",
     ".ui.wavefunction",
-    ".ui.wavefunction_import",
-    ".ui.scientific_import",
-    ".ui.topology_import",
     ".ui.orbital_export",
     ".ui.scientific_view",
     ".ui.scientific_export",
     ".ui.project_browser.panel",
     ".ui.file_handlers",
     ".ui.workspace",
-    ".ui.migration",
 )
 
 _package_root = None
 _registered_classes = ()
 _registered_callback_modules = ()
-_reader_api_handle = None
-
-
-def _reader_api_load_post_handler(_dummy):
-    global _reader_api_handle
-
-    if _package_root is None:
-        return
-    bridge = importlib.import_module(
-        ".runtime.reader_api_bridge",
-        _package_root,
-    )
-    _reader_api_handle = bridge.register_reader_api_handle(_package_root)
-    bridge.refresh_reader_plugin_discovery()
-
-
-def _reader_api_load_handler_list():
-    try:
-        import bpy
-    except ModuleNotFoundError:
-        return None
-    return bpy.app.handlers.load_post
-
-
-def _register_reader_api_load_handler():
-    handlers = _reader_api_load_handler_list()
-    if handlers is None:
-        return
-    import bpy
-
-    bpy.app.handlers.persistent(_reader_api_load_post_handler)
-    while _reader_api_load_post_handler in handlers:
-        handlers.remove(_reader_api_load_post_handler)
-    handlers.append(_reader_api_load_post_handler)
-
-
-def _remove_reader_api_load_handler():
-    handlers = _reader_api_load_handler_list()
-    if handlers is not None:
-        while _reader_api_load_post_handler in handlers:
-            handlers.remove(_reader_api_load_post_handler)
 
 
 def _note_cleanup_failure(error, action, cleanup_error):
@@ -88,10 +34,8 @@ def _note_cleanup_failure(error, action, cleanup_error):
 
 def _cleanup_owned_state(
     auto_load,
-    bridge,
     registered_classes,
     callback_modules,
-    handle,
     failure=None,
 ):
     remaining_classes = []
@@ -110,12 +54,6 @@ def _cleanup_owned_state(
             return False
         return True
 
-    remaining_handle = handle
-    if handle is not None and cleanup(
-        lambda: bridge.remove_reader_api_handle(handle),
-        "reader API handle removal",
-    ):
-        remaining_handle = None
     for module in reversed(callback_modules):
         if not cleanup(module.unregister, f"{module.__name__}.unregister"):
             remaining_callbacks.append(module)
@@ -132,7 +70,6 @@ def _cleanup_owned_state(
     return (
         tuple(remaining_classes),
         tuple(remaining_callbacks),
-        remaining_handle,
         failure,
     )
 
@@ -141,7 +78,6 @@ def register_extension(package_root: str) -> None:
     global _package_root
     global _registered_classes
     global _registered_callback_modules
-    global _reader_api_handle
 
     if _package_root is not None:
         if package_root == _package_root:
@@ -149,10 +85,6 @@ def register_extension(package_root: str) -> None:
         raise RuntimeError("another extension package is already registered")
 
     auto_load = importlib.import_module(".auto_load", package_root)
-    bridge = importlib.import_module(
-        ".runtime.reader_api_bridge",
-        package_root,
-    )
     modules = tuple(
         importlib.import_module(name, package_root)
         for name in REGISTER_MODULE_NAMES
@@ -172,21 +104,15 @@ def register_extension(package_root: str) -> None:
             if callable(callback):
                 callback_modules.append(module)
                 callback()
-        handle = bridge.register_reader_api_handle(package_root)
-        _register_reader_api_load_handler()
     except BaseException as error:
-        _remove_reader_api_load_handler()
         (
             _registered_classes,
             _registered_callback_modules,
-            _reader_api_handle,
             _,
         ) = _cleanup_owned_state(
             auto_load,
-            bridge,
             registered_classes,
             callback_modules,
-            None,
             error,
         )
         if _registered_classes or _registered_callback_modules:
@@ -196,42 +122,31 @@ def register_extension(package_root: str) -> None:
     _package_root = package_root
     _registered_classes = tuple(registered_classes)
     _registered_callback_modules = tuple(callback_modules)
-    _reader_api_handle = handle
 
 
 def unregister_extension() -> None:
     global _package_root
     global _registered_classes
     global _registered_callback_modules
-    global _reader_api_handle
 
     if _package_root is None:
         return
 
-    _remove_reader_api_load_handler()
 
     package_root = _package_root
     auto_load = importlib.import_module(".auto_load", package_root)
-    bridge = importlib.import_module(
-        ".runtime.reader_api_bridge",
-        package_root,
-    )
     (
         _registered_classes,
         _registered_callback_modules,
-        _reader_api_handle,
         failure,
     ) = _cleanup_owned_state(
         auto_load,
-        bridge,
         _registered_classes,
         _registered_callback_modules,
-        _reader_api_handle,
     )
     if not (
         _registered_classes
         or _registered_callback_modules
-        or _reader_api_handle is not None
     ):
         _package_root = None
 

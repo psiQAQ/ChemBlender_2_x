@@ -5,13 +5,11 @@ from uuid import uuid4
 
 import bpy
 
-from .core import (
-    AtomicProperty,
-    BiologicalHierarchy,
-    DatasetStatus,
-    EnergyReference,
-    validate_scene_plan,
-)
+from cbq_core.model import AtomicProperty
+from cbq_core.model import BiologicalHierarchy
+from cbq_core.model import DatasetStatus
+from cbq_core.model import EnergyReference
+from cbq_core.scene_preset import validate_scene_plan
 from .dataset_view import (
     apply_atomic_scalar, apply_atomic_vector, link_stick_spectrum_selection,
     write_vector_view,
@@ -328,7 +326,8 @@ def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
         elif plan.view_kind in {"trajectory", "trajectory_force"}:
             from .trajectory_view import apply_trajectory_frame
 
-            obj = create_structure_view(entities["structure"], collection=target)
+            obj = create_structure_view(entities["structure"],
+                _selected_or_unique_topology(project, entities["structure"]), collection=target)
             created.append(obj)
             obj["cb_vector_display_scale"] = settings.get("vector_scale", 1.)
             apply_trajectory_frame(obj, entities["frames"], settings["frame_index"],
@@ -336,7 +335,8 @@ def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
                 frame_step=settings["frame_step"])
             _trajectory_metadata(obj, entities["frames"], project, settings["frame_index"])
         elif plan.view_kind in {"atomic_scalar", "atomic_vector", "vibration_mode"}:
-            obj = create_structure_view(entities["structure"], collection=target)
+            obj = create_structure_view(entities["structure"],
+                _selected_or_unique_topology(project, entities["structure"]), collection=target)
             created.append(obj)
             if plan.view_kind == "atomic_scalar":
                 apply_atomic_scalar(obj, entities["property"],
@@ -461,12 +461,14 @@ def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
                 created.append(
                     create_structure_view(
                         structure,
+                        _selected_or_unique_topology(project, structure),
                         selective_dynamics=selective,
                         collection=target,
                     )
                 )
         elif plan.view_kind == "vibration_spectrum_linked":
-            structure = create_structure_view(entities["structure"], collection=target)
+            structure = create_structure_view(entities["structure"],
+                _selected_or_unique_topology(project, entities["structure"]), collection=target)
             created.append(structure)
             create_vibration_view(
                 structure,
@@ -483,7 +485,8 @@ def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
             )
             created.append(create_spectrum_plot(entities["spectrum"], collection=target, **_plot_settings(settings)))
         elif plan.view_kind == "electronic_spectrum_linked":
-            structure = create_structure_view(entities["structure"], collection=target)
+            structure = create_structure_view(entities["structure"],
+                _selected_or_unique_topology(project, entities["structure"]), collection=target)
             created.append(structure)
             link_stick_spectrum_selection(
                 structure,
@@ -584,7 +587,8 @@ def _trajectory_metadata(root, frames, project, index):
     """Preserve source labels and a unique explicit time channel, never animation time."""
     import math
     import numpy
-    from .core import ArrayData, FrameProperty
+    from cbq_core.model import ArrayData
+    from cbq_core.model import FrameProperty
 
     result = {"frame_index": int(index), "frame_label": frames.comments[index]}
     for key in ("cb_trajectory_time", "cb_trajectory_time_unit", "cb_trajectory_time_dataset_id",

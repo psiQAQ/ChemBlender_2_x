@@ -14,8 +14,9 @@ if not __package__:
 
 import numpy
 
-from ChemBlender.core import ArrayData, Structure
-from ChemBlender.core.topology.infer import infer_distance_topology
+from cbq_core.model import ArrayData
+from cbq_core.model import Structure
+from chemblender_prepare.core.topology.infer import infer_distance_topology
 
 
 def _structure(atom_count):

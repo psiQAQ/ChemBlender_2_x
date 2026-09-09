@@ -5,17 +5,15 @@ import json
 from math import isfinite
 from types import MappingProxyType
 
-from ..Chem_data import ELEMENTS_DEFAULT
-from ..core import (
-    ArrayData,
-    AtomicProperty,
-    BiologicalHierarchy,
-    CategoricalData,
-    DatasetStatus,
-    Structure,
-    TopologyRecord,
-)
-from ..core.topology.periodic import _pbc_primary_coordinates
+from cbq_core.element_data import ELEMENTS_DEFAULT
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomicProperty
+from cbq_core.model import BiologicalHierarchy
+from cbq_core.model import CategoricalData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Structure
+from cbq_core.model import TopologyRecord
+from cbq_core.model.structure import _pbc_primary_coordinates
 
 
 _ANGSTROM_SCALE = {"angstrom": 1.0, "bohr": 0.529177210903}

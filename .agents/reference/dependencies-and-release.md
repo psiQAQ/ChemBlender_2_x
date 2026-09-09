@@ -1,5 +1,15 @@
 # Dependencies and Release
 
+## 当前迁移的依赖门槛
+
+按[决策0044](../decisions/0044-cbq-viewer-local-processor-boundary.md)，正式扩展继续保留下列锁定RDKit wheel，直至外部功能等价、编辑闭环、性能、取消、数据一致性和生命周期全部通过。manifest、staging和包审计必须一致；候选无wheel包仅用于实验验收，不能作为正式删依赖或发布降级版本的依据。
+
+Blender最终仅使用自带NumPy及本地显示代码，共享cbq_core按源码hash打包；原始解析和重计算在外部prepare包。Blender只配置全局本地可执行文件，不配置科学环境路径、不执行pip/uv、不修改全局Python。现有wheel历史来源及哈希保留，便于过渡版本复现。
+
+项目根uv init/uv venv及缓存科学/Fermi/critic2环境已获用户批准。版本隔离和兼容锁详见[依赖提案](../../examples/scientific-visualization/dependencies/PROPOSAL.md)。外部包将构建wheel/sdist供后续PyPI发布，本次不发布。
+
+以下运行基线及依赖段落含旧交付依据；当前迁移验收以active任务和实际运行证据为准。
+
 ## Runtime Baseline
 
 | Item | Value |

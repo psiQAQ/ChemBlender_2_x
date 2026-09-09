@@ -15,8 +15,7 @@ wheels = [
 ]
 
 [permissions]
-files = "Read selected files and write requested visualization caches"
-network = "Download molecular and scaffold data requested by users"
+files = "Read CBQ projects and save caches, images and project data"
 
 [build]
 paths_exclude_pattern = [

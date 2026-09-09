@@ -14,7 +14,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
-from ChemBlender.core.reader_catalog import reader_capability_document
+from chemblender_prepare.core.reader_catalog import reader_capability_document
 from ChemBlender.scripts.dependency_inventory import _validate_schema
 
 
@@ -101,7 +101,7 @@ def _format_table(document):
         "",
         (
             f"Reader API `{document['reader_api_version']}`. Runtime availability "
-            "is evaluated when a reader is selected; this table records the probe "
+            "is evaluated in the external processor when a reader is selected; this table records the probe "
             "contract, not the current machine state."
         ),
         "",
@@ -164,39 +164,23 @@ def _replace_marked_section(source, generated, newline):
     return source[:start] + block + source[end:]
 
 
-def _project_browser_export_ids(repository_root):
-    export_path = Path(repository_root) / "ChemBlender" / "ui" / "export.py"
+def _prepare_export_ids(repository_root):
+    export_path = Path(repository_root) / "chemblender_prepare" / "cli.py"
     tree = ast.parse(export_path.read_text(encoding="utf-8"), export_path)
-    assignments = [
-        node
-        for node in tree.body
-        if isinstance(node, ast.Assign)
-        and any(
-            isinstance(target, ast.Name) and target.id == "_FORMAT_ITEMS"
-            for target in node.targets
-        )
-    ]
-    if len(assignments) != 1:
-        raise ValueError("ui.export must define exactly one _FORMAT_ITEMS")
-    try:
-        rows = ast.literal_eval(assignments[0].value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("ui.export _FORMAT_ITEMS must be literal data") from exc
-    if (
-        not isinstance(rows, tuple)
-        or any(
-            not isinstance(row, tuple)
-            or not row
-            or type(row[0]) is not str
-            or not row[0]
-            for row in rows
-        )
-    ):
-        raise ValueError("ui.export _FORMAT_ITEMS has an invalid shape")
-    format_ids = tuple(row[0] for row in rows)
-    if len(set(format_ids)) != len(format_ids):
-        raise ValueError("ui.export _FORMAT_ITEMS contains duplicate IDs")
-    return format_ids
+    choices = [keyword.value for node in ast.walk(tree)
+               if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+               and node.func.attr == "add_argument" and node.args
+               and isinstance(node.args[0], ast.Constant)
+               and node.args[0].value == "--format"
+               for keyword in node.keywords if keyword.arg == "choices"]
+    if len(choices) != 1:
+        raise ValueError("prepare CLI must define exactly one --format choices list")
+    rows = ast.literal_eval(choices[0])
+    if (not isinstance(rows, tuple) or not rows
+            or any(type(value) is not str or not value for value in rows)
+            or len(set(rows)) != len(rows)):
+        raise ValueError("prepare CLI --format choices must be unique string IDs")
+    return rows
 
 
 def render_documents(repository_root):
@@ -217,13 +201,13 @@ def render_documents(repository_root):
     documented_export_ids = {
         reader["export"]["format_id"]
         for reader in capabilities["readers"]
-        if reader["export"]["execution_mode"] == "project_browser"
+        if reader["export"]["execution_mode"] == "prepare"
     }
-    source_export_ids = set(_project_browser_export_ids(repository_root))
+    source_export_ids = set(_prepare_export_ids(repository_root))
     if documented_export_ids != source_export_ids:
         raise ValueError(
-            "project browser export IDs differ between reader capabilities "
-            f"and ui.export: documented={sorted(documented_export_ids)!r}; "
+            "prepare export IDs differ between reader capabilities "
+            f"and prepare CLI: documented={sorted(documented_export_ids)!r}; "
             f"source={sorted(source_export_ids)!r}"
         )
     return {

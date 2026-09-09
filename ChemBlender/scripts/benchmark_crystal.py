@@ -21,17 +21,14 @@ if not __package__:
 import gemmi
 import numpy
 
-from ChemBlender.core import parse_cif, parse_poscar
-from ChemBlender.core.import_pipeline.request import (
-    ImportRequest,
-    ImportSource,
-    ReaderOverride,
-)
-from ChemBlender.core.import_pipeline.staging import StagedImportSession
-from ChemBlender.reader_api.import_pipeline_bridge import (
-    preflight_reader_plugins,
-)
-from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+from chemblender_prepare.core.formats.cif import parse_cif
+from chemblender_prepare.core.formats.poscar import parse_poscar
+from chemblender_prepare.core.import_pipeline.request import ImportRequest
+from chemblender_prepare.core.import_pipeline.request import ImportSource
+from chemblender_prepare.core.import_pipeline.request import ReaderOverride
+from chemblender_prepare.core.import_pipeline.staging import StagedImportSession
+from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
 from ChemBlender.views.periodic import (
     PeriodicViewSettings,
     _derived_periodic_sites,
