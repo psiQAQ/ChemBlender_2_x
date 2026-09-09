@@ -19,9 +19,10 @@ output = private / ("ownership-" + uuid4().hex)
 output.mkdir(parents=True)
 
 import ChemBlender
-from ChemBlender.core import builtin_scene_presets, plan_scene_preset
-from ChemBlender.core.formats.mol2 import parse_mol2
-from ChemBlender.core.formats.pdb import parse_pdb
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from chemblender_prepare.core.formats.mol2 import parse_mol2
+from chemblender_prepare.core.formats.pdb import parse_pdb
 from ChemBlender.scene_preset_view import apply_scene_preset, scene_view_objects
 from ChemBlender.ui import session as session_ui
 

@@ -5,20 +5,20 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from uuid import UUID
 
-import ChemBlender.project_link as project_link
-from ChemBlender.core import QCProject, close_project, save_project
-from ChemBlender.core.sidecar import SidecarCompatibilityError
-from ChemBlender.project_link import (
-    MANIFEST_HASH_KEY,
-    PROJECT_ID_KEY,
-    PROJECT_SCHEMA_KEY,
-    SIDECAR_LOCATOR_KEY,
-    ProjectLinkStatus,
-    _resolve_sidecar_path,
-    _sidecar_locator,
-    resolve_project_link,
-    write_project_link,
-)
+import cbq_core.project_link as project_link
+from cbq_core.model import QCProject
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import save_project
+from cbq_core.sidecar import SidecarCompatibilityError
+from cbq_core.project_link import MANIFEST_HASH_KEY
+from cbq_core.project_link import PROJECT_ID_KEY
+from cbq_core.project_link import PROJECT_SCHEMA_KEY
+from cbq_core.project_link import SIDECAR_LOCATOR_KEY
+from cbq_core.project_link import ProjectLinkStatus
+from cbq_core.project_link import _resolve_sidecar_path
+from cbq_core.project_link import _sidecar_locator
+from cbq_core.project_link import resolve_project_link
+from cbq_core.project_link import write_project_link
 
 
 PROJECT_ID = UUID("10000000-0000-0000-0000-000000000001")
@@ -60,7 +60,7 @@ class ProjectLinkPureTests(unittest.TestCase):
             write_project_link(scene, project, sidecar)
 
             self.assertEqual(scene[PROJECT_ID_KEY], str(PROJECT_ID))
-            self.assertEqual(scene[PROJECT_SCHEMA_KEY], "1.0")
+            self.assertEqual(scene[PROJECT_SCHEMA_KEY], "1.1")
             self.assertEqual(scene[MANIFEST_HASH_KEY], manifest["manifest_sha256"])
             self.assertIn(SIDECAR_LOCATOR_KEY, scene)
 
@@ -73,7 +73,7 @@ class ProjectLinkPureTests(unittest.TestCase):
 
             write_project_link(scene, project, sidecar)
 
-            self.assertEqual(scene[PROJECT_SCHEMA_KEY], "1.0")
+            self.assertEqual(scene[PROJECT_SCHEMA_KEY], "1.1")
 
     def test_each_scene_assignment_failure_restores_mixed_link_state(self):
         class FailingScene(dict):
@@ -268,7 +268,7 @@ class ProjectLinkPureTests(unittest.TestCase):
 
             save_project(sidecar, project)
             with patch(
-                "ChemBlender.project_link.close_project",
+                "cbq_core.project_link.close_project",
                 wraps=close_project,
             ) as close:
                 result = resolve_project_link(scene)
@@ -330,7 +330,7 @@ class ProjectLinkPureTests(unittest.TestCase):
             write_project_link(scene, project, sidecar)
 
             with patch(
-                "ChemBlender.project_link._open_project_with_manifest",
+                "cbq_core.project_link._open_project_with_manifest",
                 wraps=project_link._open_project_with_manifest,
             ) as opener:
                 result = resolve_project_link(scene, verify_arrays=False)

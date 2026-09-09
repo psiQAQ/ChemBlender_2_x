@@ -4,20 +4,18 @@ from tempfile import TemporaryDirectory
 import unittest
 from uuid import uuid4
 
-from ChemBlender.core import (
-    DatasetStatus,
-    Grid3D,
-    QCProject,
-    builtin_scene_presets,
-    close_project,
-    open_project,
-    plan_scene_preset,
-    resolve_grid_semantics,
-    save_project,
-    scene_plan_document,
-    validate_scene_plan,
-)
-from ChemBlender.core.cube import CUBE_READER
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import QCProject
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.scene_preset import plan_scene_preset
+from chemblender_prepare.core.grid_semantics import resolve_grid_semantics
+from cbq_core.sidecar import save_project
+from cbq_core.scene_preset import scene_plan_document
+from cbq_core.scene_preset import validate_scene_plan
+from chemblender_prepare.core.cube import CUBE_READER
 from ChemBlender.ui.grid import grid_preview_summary
 
 

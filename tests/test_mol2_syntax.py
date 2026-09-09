@@ -2,13 +2,11 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from ChemBlender.core.formats.mol2 import (
-    iter_mol2_records,
-    parse_mol2_record,
-    sniff_mol2,
-)
-from ChemBlender.core.model import IssueKind
-from ChemBlender.core.readers import SniffMatch
+from chemblender_prepare.core.formats.mol2 import iter_mol2_records
+from chemblender_prepare.core.formats.mol2 import parse_mol2_record
+from chemblender_prepare.core.formats.mol2 import sniff_mol2
+from cbq_core.model import IssueKind
+from chemblender_prepare.core.readers import SniffMatch
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "mol2"

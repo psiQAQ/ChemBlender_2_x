@@ -4,14 +4,12 @@ from pathlib import Path
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    DeclaredSymmetry,
-    IssueKind,
-    SymmetryResult,
-    compare_symmetry,
-    parse_cif,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DeclaredSymmetry
+from cbq_core.model import IssueKind
+from cbq_core.model import SymmetryResult
+from cbq_core.symmetry_comparison import compare_symmetry
+from chemblender_prepare.core.formats.cif import parse_cif
 
 
 def derived(number=221, symbol="Pm-3m", hall="-P 4 2 3"):

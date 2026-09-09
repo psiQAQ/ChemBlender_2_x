@@ -1,4 +1,8 @@
 import copy
+import builtins
+import contextlib
+import io
+from types import SimpleNamespace
 import importlib.util
 import math
 from pathlib import Path
@@ -106,23 +110,62 @@ class PerformanceBudgetTests(unittest.TestCase):
             command.index("--python-expr"),
         )
 
+    def test_runtime_probe_preserves_blender_when_scientific_imports_fail(self):
+        harness = load_harness()
+        for unavailable in ({"gemmi"}, {"rdkit"}, {"gemmi", "rdkit"}):
+            def probe_import(name, *args, **kwargs):
+                if name in unavailable:
+                    raise ImportError("backend unavailable")
+                if name == "bpy":
+                    return SimpleNamespace(app=SimpleNamespace(version_string="5.1.1"))
+                if name in {"gemmi", "rdkit"}:
+                    return SimpleNamespace(__version__="test-version")
+                return builtins.__import__(name, *args, **kwargs)
+
+            def run_probe(command, **kwargs):
+                output = io.StringIO()
+                namespace = {"__builtins__": {**vars(builtins), "__import__": probe_import}}
+                with contextlib.redirect_stdout(output):
+                    exec(command[-1], namespace)
+                return SimpleNamespace(returncode=0, stdout=output.getvalue())
+
+            with self.subTest(unavailable=unavailable), mock.patch.object(
+                harness, "_blender_executable", return_value=Path("blender.exe")
+            ), mock.patch.object(harness.subprocess, "run", side_effect=run_probe):
+                harness._blender_runtime_versions.cache_clear()
+                expected = {"blender_version": "5.1.1", **{
+                    name + "_version": None if name in unavailable else "test-version"
+                    for name in ("gemmi", "rdkit")}}
+                self.assertEqual(harness._blender_runtime_versions(), expected)
+
+    def test_runtime_probe_without_executable_reports_unknown(self):
+        harness = load_harness()
+        with mock.patch.object(harness, "_blender_executable", return_value=None), mock.patch.object(
+            harness.subprocess, "run"
+        ) as run:
+            self.assertEqual(harness._blender_runtime_versions(), {
+                "blender_version": None, "gemmi_version": None, "rdkit_version": None})
+            run.assert_not_called()
+
     def test_harness_reports_runtime_and_git_provenance(self):
         harness = load_harness()
-        report = harness.run_benchmark(
-            case_names=("parse",),
-            scale="interactive",
-            warmup_count=0,
-            sample_count=2,
-            runners={"parse": lambda _fixtures, _sample: None},
-        )
+        versions = {"blender_version": "5.1.1", "gemmi_version": "0.7.5",
+                    "rdkit_version": "2026.03.3"}
+        with mock.patch.object(harness, "_blender_runtime_versions", return_value=versions):
+            report = harness.run_benchmark(
+                case_names=("parse",),
+                scale="interactive",
+                warmup_count=0,
+                sample_count=2,
+                runners={"parse": lambda _fixtures, _sample: None},
+            )
 
         self.assertEqual(report["benchmark"], "chemblender-2.3.0-v2")
         self.assertRegex(report["source_commit"], r"^[0-9a-f]{40}$")
         self.assertIsInstance(report["source_dirty"], bool)
         self.assertEqual(report["cases"][0]["measurement"], "diagnostic")
         for field in ("blender_version", "gemmi_version", "rdkit_version"):
-            self.assertIsInstance(report["environment"][field], str)
-            self.assertTrue(report["environment"][field])
+            self.assertEqual(report["environment"][field], versions[field])
 
     def test_budget_maps_approved_p95_limits(self):
         harness = load_harness()

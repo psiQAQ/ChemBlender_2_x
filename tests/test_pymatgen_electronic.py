@@ -10,15 +10,16 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import EnergyReference, IssueKind, QCProject, SniffMatch
-from ChemBlender.core.pymatgen_electronic import (
-    PYMATGEN_VASP_ELECTRONIC_READER,
-    PymatgenElectronicDependencyError,
-    adapt_pymatgen_electronic,
-    parse_vasprun_electronic,
-    sniff_vasprun,
-    _band_occupations,
-)
+from cbq_core.model import EnergyReference
+from cbq_core.model import IssueKind
+from cbq_core.model import QCProject
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.pymatgen_electronic import PYMATGEN_VASP_ELECTRONIC_READER
+from chemblender_prepare.core.pymatgen_electronic import PymatgenElectronicDependencyError
+from chemblender_prepare.core.pymatgen_electronic import adapt_pymatgen_electronic
+from chemblender_prepare.core.pymatgen_electronic import parse_vasprun_electronic
+from chemblender_prepare.core.pymatgen_electronic import sniff_vasprun
+from chemblender_prepare.core.pymatgen_electronic import _band_occupations
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -162,7 +163,9 @@ class PymatgenElectronicAdapterTests(unittest.TestCase):
             _band_occupations(result, band)
 
     def test_file_parser_tracks_companion_revision_and_rejects_mid_parse_change(self):
-        from ChemBlender.core import ImportBatch, ParserReport, ProvenanceRecord
+        from cbq_core.model import ImportBatch
+        from cbq_core.model import ParserReport
+        from cbq_core.model import ProvenanceRecord
         point = SimpleNamespace(frac_coords=(0, 0, 0))
         band = SimpleNamespace(kpoints=[point], bands={1: numpy.asarray([[1.]])}, branches=("G-X",))
         class Result:
@@ -188,9 +191,9 @@ class PymatgenElectronicAdapterTests(unittest.TestCase):
             source.write_bytes(b"<modeling/>")
             companion = folder / "KPOINTS"
             companion.write_bytes(b"G-X")
-            with patch("ChemBlender.core.pymatgen_electronic._pymatgen_electronic",
+            with patch("chemblender_prepare.core.pymatgen_electronic._pymatgen_electronic",
                        return_value=(lambda *args, **kwargs: result,)), patch(
-                       "ChemBlender.core.pymatgen_electronic.adapt_pymatgen_electronic", side_effect=adapt):
+                       "chemblender_prepare.core.pymatgen_electronic.adapt_pymatgen_electronic", side_effect=adapt):
                 first = parse_vasprun_electronic(source, line_mode=True)
                 self.assertEqual(result.arguments, {"kpoints_filename": str(companion), "line_mode": True})
                 companion.write_bytes(b"G-L")
@@ -201,9 +204,9 @@ class PymatgenElectronicAdapterTests(unittest.TestCase):
             def changing_adapt(**kwargs):
                 companion.write_bytes(b"changed while parsing")
                 return adapt(**kwargs)
-            with patch("ChemBlender.core.pymatgen_electronic._pymatgen_electronic",
+            with patch("chemblender_prepare.core.pymatgen_electronic._pymatgen_electronic",
                        return_value=(lambda *args, **kwargs: result,)), patch(
-                       "ChemBlender.core.pymatgen_electronic.adapt_pymatgen_electronic", side_effect=changing_adapt):
+                       "chemblender_prepare.core.pymatgen_electronic.adapt_pymatgen_electronic", side_effect=changing_adapt):
                 with self.assertRaisesRegex(ValueError, "input changed"):
                     parse_vasprun_electronic(source)
 
@@ -218,7 +221,7 @@ class PymatgenElectronicAdapterTests(unittest.TestCase):
             [
                 sys.executable,
                 "-c",
-                "import sys; import ChemBlender.core; assert 'pymatgen' not in sys.modules",
+                "import sys; import cbq_core.model; assert 'pymatgen' not in sys.modules",
             ],
             cwd=ROOT,
             check=True,

@@ -3,12 +3,12 @@ from uuid import UUID
 
 import numpy
 
-from ChemBlender.core import ArrayData, DatasetStatus, Grid3D
-from ChemBlender.core.grid_lod import (
-    derive_grid_lod,
-    surface_render_cache_key,
-    volume_render_cache_key,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from chemblender_prepare.core.grid_lod import derive_grid_lod
+from cbq_core.grid_lod import surface_render_cache_key
+from cbq_core.grid_lod import volume_render_cache_key
 
 
 GRID_ID = UUID("10000000-0000-0000-0000-000000000001")

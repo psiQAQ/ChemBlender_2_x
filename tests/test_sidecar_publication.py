@@ -8,21 +8,18 @@ from pathlib import Path
 from unittest.mock import patch
 from uuid import UUID, uuid4
 
-import ChemBlender.core.storage.publication as publication
-from ChemBlender.core.model import QCProject
-from ChemBlender.core.session import close_session, create_session
-from ChemBlender.core.sidecar import (
-    SidecarIntegrityError,
-    close_project,
-    open_project,
-    save_project,
-)
-from ChemBlender.core.storage.publication import (
-    PublicationCancelled,
-    PublicationRecoveryReport,
-    inspect_publication_orphans,
-    solidify_session,
-)
+import cbq_core.storage.publication as publication
+from cbq_core.model import QCProject
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from cbq_core.sidecar import SidecarIntegrityError
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from cbq_core.storage.publication import PublicationCancelled
+from cbq_core.storage.publication import PublicationRecoveryReport
+from cbq_core.storage.publication import inspect_publication_orphans
+from cbq_core.storage.publication import solidify_session
 from tests.test_sidecar_storage import sample_project
 
 
@@ -70,7 +67,7 @@ class SidecarPublicationTests(unittest.TestCase):
 
         self.assertEqual(published.path, destination.resolve())
         self.assertEqual(published.project_id, session.project.id)
-        self.assertEqual(published.schema_version, "1.0")
+        self.assertEqual(published.schema_version, "1.1")
         self.assertRegex(published.manifest_sha256, r"^[0-9a-f]{64}$")
         self.assertIsInstance(published.generation_id, UUID)
         self.assertEqual(session.sidecar_path, destination.resolve())
@@ -78,7 +75,7 @@ class SidecarPublicationTests(unittest.TestCase):
         restored = open_project(
             destination,
             expected_project_id=session.project.id,
-            expected_schema_version="1.0",
+            expected_schema_version="1.1",
             verify_arrays=True,
         )
         close_project(restored)
@@ -176,7 +173,7 @@ class SidecarPublicationTests(unittest.TestCase):
         destination = self.root / "project.cbq"
 
         with patch(
-            "ChemBlender.core.storage.publication._verify_published_project",
+            "cbq_core.storage.publication._verify_published_project",
             side_effect=SidecarIntegrityError("final verification failed"),
         ):
             with self.assertRaisesRegex(
@@ -202,7 +199,7 @@ class SidecarPublicationTests(unittest.TestCase):
         new_session = self.create_session(new_project)
 
         with patch(
-            "ChemBlender.core.storage.publication._verify_published_project",
+            "cbq_core.storage.publication._verify_published_project",
             side_effect=SidecarIntegrityError("final verification failed"),
         ):
             with self.assertRaises(SidecarIntegrityError):
@@ -226,7 +223,7 @@ class SidecarPublicationTests(unittest.TestCase):
         )
 
         with patch(
-            "ChemBlender.core.storage.publication._verify_staged_project",
+            "cbq_core.storage.publication._verify_staged_project",
             side_effect=SidecarIntegrityError("staged verification failed"),
         ):
             with self.assertRaisesRegex(
@@ -257,7 +254,7 @@ class SidecarPublicationTests(unittest.TestCase):
             return real_replace(source, target)
 
         with patch(
-            "ChemBlender.core.storage.publication.os.replace",
+            "cbq_core.storage.publication.os.replace",
             side_effect=fail_candidate_publish,
         ):
             with self.assertRaisesRegex(OSError, "candidate publish failed"):
@@ -290,15 +287,15 @@ class SidecarPublicationTests(unittest.TestCase):
 
         with (
             patch(
-                "ChemBlender.core.storage.publication._verify_published_project",
+                "cbq_core.storage.publication._verify_published_project",
                 side_effect=publication_error,
             ),
             patch(
-                "ChemBlender.core.storage.publication.os.replace",
+                "cbq_core.storage.publication.os.replace",
                 side_effect=block_evacuation,
             ),
             patch(
-                "ChemBlender.core.storage.publication.shutil.rmtree"
+                "cbq_core.storage.publication.shutil.rmtree"
             ) as recursive_delete,
         ):
             with self.assertRaises(Exception) as captured:
@@ -332,15 +329,15 @@ class SidecarPublicationTests(unittest.TestCase):
 
         with (
             patch(
-                "ChemBlender.core.storage.publication._verify_published_project",
+                "cbq_core.storage.publication._verify_published_project",
                 side_effect=publication_error,
             ),
             patch(
-                "ChemBlender.core.storage.publication.os.replace",
+                "cbq_core.storage.publication.os.replace",
                 side_effect=block_evacuation,
             ),
             patch(
-                "ChemBlender.core.storage.publication.shutil.rmtree"
+                "cbq_core.storage.publication.shutil.rmtree"
             ) as recursive_delete,
         ):
             with self.assertRaises(Exception) as captured:
@@ -371,7 +368,7 @@ class SidecarPublicationTests(unittest.TestCase):
             return publication._verified_project(path, project_id)
 
         with patch(
-            "ChemBlender.core.storage.publication._verify_published_project",
+            "cbq_core.storage.publication._verify_published_project",
             side_effect=replace_final_generation,
         ):
             with self.assertRaises(Exception) as captured:
@@ -401,15 +398,15 @@ class SidecarPublicationTests(unittest.TestCase):
 
         with (
             patch(
-                "ChemBlender.core.storage.publication._verify_published_project",
+                "cbq_core.storage.publication._verify_published_project",
                 side_effect=publication_error,
             ),
             patch(
-                "ChemBlender.core.storage.publication.os.replace",
+                "cbq_core.storage.publication.os.replace",
                 side_effect=block_evacuation,
             ),
             patch(
-                "ChemBlender.core.storage.publication._orphan_report",
+                "cbq_core.storage.publication._orphan_report",
                 side_effect=OSError("cannot scan parent"),
             ),
         ):
@@ -458,19 +455,19 @@ class SidecarPublicationTests(unittest.TestCase):
 
                 final_patch = (
                     patch(
-                        "ChemBlender.core.storage.publication._verify_published_project",
+                        "cbq_core.storage.publication._verify_published_project",
                         side_effect=publication_error,
                     )
                     if failure_phase == "final_verify"
                     else patch(
-                        "ChemBlender.core.storage.publication._verify_published_project",
+                        "cbq_core.storage.publication._verify_published_project",
                         wraps=publication._verify_published_project,
                     )
                 )
                 with (
                     final_patch,
                     patch(
-                        "ChemBlender.core.storage.publication.os.replace",
+                        "cbq_core.storage.publication.os.replace",
                         side_effect=fail_publish_or_restore,
                     ),
                 ):
@@ -525,7 +522,7 @@ class SidecarPublicationTests(unittest.TestCase):
         solidify_session(first, destination)
 
         with patch(
-            "ChemBlender.core.storage.publication.shutil.rmtree",
+            "cbq_core.storage.publication.shutil.rmtree",
             side_effect=OSError("backup cleanup blocked"),
         ):
             published = solidify_session(second, destination)
@@ -574,7 +571,7 @@ class SidecarPublicationTests(unittest.TestCase):
             solidify_session(session, self.root / "missing" / "project.cbq")
         destination = self.root / "project.cbq"
         with patch(
-            "ChemBlender.core.storage.publication._is_link_like",
+            "cbq_core.storage.publication._is_link_like",
             return_value=True,
         ):
             with self.assertRaisesRegex(ValueError, "link"):

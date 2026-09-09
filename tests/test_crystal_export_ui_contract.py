@@ -1,15 +1,15 @@
-import importlib
-import sys
 import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
-from types import ModuleType, SimpleNamespace
-from unittest.mock import patch
+from types import SimpleNamespace
 from uuid import uuid4
 
-from ChemBlender.core import DatasetStatus, QCProject, parse_cif, parse_poscar
-from ChemBlender.core.exporters import PoscarExportSettings
+from cbq_core.model import DatasetStatus
+from cbq_core.model import QCProject
+from chemblender_prepare.core.formats.cif import parse_cif
+from chemblender_prepare.core.formats.poscar import parse_poscar
+from chemblender_prepare.core.exporters import PoscarExportSettings
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,50 +17,10 @@ CIF_SOURCE = ROOT / "tests" / "fixtures" / "cif" / "mixed-site-data.cif"
 POSCAR_SOURCE = (
     ROOT / "tests" / "fixtures" / "poscar" / "cscl-selective.vasp"
 )
-MODULE = "ChemBlender.ui.export"
-
-
-class _Property:
-    def __init__(self, kind, **keywords):
-        self.kind = kind
-        self.keywords = keywords
-
-
-def _property(kind):
-    return lambda **keywords: _Property(kind, **keywords)
-
-
-class _Operator:
-    def report(self, levels, message):
-        self.last_report = (levels, message)
-
-
-class CrystalExportUIContractTests(unittest.TestCase):
+class CrystalExternalExportContractTests(unittest.TestCase):
     def setUp(self):
-        fake_bpy = ModuleType("bpy")
-        props = ModuleType("bpy.props")
-        for name, kind in (
-            ("BoolProperty", "bool"),
-            ("EnumProperty", "enum"),
-            ("FloatProperty", "float"),
-            ("IntProperty", "int"),
-            ("StringProperty", "string"),
-        ):
-            setattr(props, name, _property(kind))
-        fake_bpy.props = props
-        fake_bpy.types = SimpleNamespace(Operator=_Operator)
-        fake_bpy.app = SimpleNamespace(background=True)
-        self.modules = patch.dict(
-            sys.modules,
-            {"bpy": fake_bpy, "bpy.props": props},
-        )
-        self.modules.start()
-        sys.modules.pop(MODULE, None)
-        self.export = importlib.import_module(MODULE)
-
-    def tearDown(self):
-        sys.modules.pop(MODULE, None)
-        self.modules.stop()
+        from chemblender_prepare import export_service
+        self.export = export_service
 
     @staticmethod
     def _project(batch):
@@ -68,15 +28,18 @@ class CrystalExportUIContractTests(unittest.TestCase):
         project.commit(batch)
         return project
 
-    def test_file_browser_property_wrapper_refreshes_its_live_operator(self):
-        module = self.export
-        properties = SimpleNamespace(confirm_loss=True, as_pointer=lambda: 42)
-        preview = unittest.mock.Mock()
-        operation = SimpleNamespace(properties=properties, _selection_and_preview=preview)
-        context = SimpleNamespace(space_data=SimpleNamespace(active_operator=operation))
-        module._export_preview_changed(properties, context)
-        preview.assert_called_once_with(context)
-        self.assertFalse(properties.confirm_loss)
+    def test_gui_forwards_cif_mode_and_drops_hidden_format_settings(self):
+        from chemblender_prepare.gui import command_arguments
+        values = {"command": "export", "sources": "project.cbq", "output": "out.cif",
+                  "entity": str(uuid4()), "format": "cif", "cif-mode": "normalized",
+                  "poscar-comment": "hidden", "poscar-include-selective-dynamics": "false"}
+        argv = command_arguments(values)
+        self.assertIn("--cif-mode", argv)
+        self.assertFalse(any("poscar" in value for value in argv))
+        values["format"] = "poscar"
+        argv = command_arguments(values)
+        self.assertNotIn("--cif-mode", argv)
+        self.assertIn("--no-poscar-include-selective-dynamics", argv)
 
     def test_xyz_reports_periodic_loss_and_blocks_unconfirmed_worker(self):
         batch = parse_poscar(POSCAR_SOURCE)
@@ -88,25 +51,18 @@ class CrystalExportUIContractTests(unittest.TestCase):
         self.assertIn("omit:cell_pbc", {entry.code for entry in report.entries})
         with tempfile.TemporaryDirectory() as directory:
             destination = Path(directory) / "structure.xyz"
-            job = self.export.ExportJob(
-                destination, selection, format_name="xyz",
-                confirm_loss=False, missing_value_token=None,
-            )
-            job.start()
-            self.assertTrue(job.join(10))
-            self.assertIsInstance(job.error, ValueError)
+            with self.assertRaises(ValueError):
+                self.export.export_selection(destination, selection, format_name="xyz", confirm_loss=False)
             self.assertFalse(destination.exists())
-            confirmed = self.export.ExportJob(
+            confirmed = self.export.export_selection(
                 destination, selection, format_name="xyz",
                 confirm_loss=True, missing_value_token=None,
             )
-            confirmed.start()
-            self.assertTrue(confirmed.join(10))
-            self.assertIsNone(confirmed.error)
+            self.assertTrue(confirmed.written)
             self.assertTrue(destination.exists())
 
     def test_xyz_without_extra_scientific_data_needs_no_confirmation(self):
-        from ChemBlender.core import parse_xyz
+        from chemblender_prepare.core.xyz import parse_xyz
         batch = parse_xyz(ROOT / "tests/fixtures/xyz/water.xyz")
         selection = self.export.resolve_export_selection(
             self._project(batch), batch.structures[0].id,
@@ -114,41 +70,25 @@ class CrystalExportUIContractTests(unittest.TestCase):
         report = self.export.preview_export_selection(selection, "xyz")
         self.assertFalse(report.requires_confirmation)
 
-    def test_invoke_suggests_data_filename_and_never_the_current_blend(self):
-        module = self.export
-        operation = module.CHEMBLENDER_OT_export_project_entity()
-        operation.filepath = ""
-        operation.format_name = "extxyz"
-        operation._selection_and_preview = unittest.mock.Mock()
-        context = SimpleNamespace(window_manager=SimpleNamespace(
-            fileselect_add=unittest.mock.Mock(),
-        ))
-        with patch.object(module.bpy, "data", SimpleNamespace(filepath="review.blend"), create=True):
-            self.assertEqual(operation.invoke(context, None), {"RUNNING_MODAL"})
-        self.assertEqual(operation.filepath, "review.extxyz")
+    def test_external_export_requires_an_explicit_destination(self):
+        from chemblender_prepare.gui import command_arguments
+        with self.assertRaisesRegex(ValueError, "output path"):
+            command_arguments({"command": "export", "sources": "project.cbq", "format": "xyz"})
 
-    def test_file_browser_check_updates_suffix_after_format_change(self):
-        operation = self.export.CHEMBLENDER_OT_export_project_entity()
-        operation.filepath = "review.cif"
-        operation.format_name = "xyz"
-        self.assertTrue(operation.check(SimpleNamespace()))
-        self.assertEqual(operation.filepath, "review.xyz")
-        self.assertFalse(operation.check(SimpleNamespace()))
+    def test_output_is_passed_literally_without_shell_interpretation(self):
+        from chemblender_prepare.gui import command_arguments
+        output = "folder with spaces/review $(literal).cif"
+        argv = command_arguments({"command": "export", "sources": "project.cbq", "format": "cif", "output": output})
+        self.assertEqual(argv[argv.index("--output") + 1], output)
 
-    def test_export_refuses_the_current_blend_destination(self):
-        module = self.export
-        operation = module.CHEMBLENDER_OT_export_project_entity()
-        operation.filepath = "review.blend"
-        operation._selection_and_preview = unittest.mock.Mock(
-            return_value=(object(), SimpleNamespace(requires_confirmation=False)),
-        )
-        with (
-            patch.object(module.bpy, "data", SimpleNamespace(filepath="review.blend"), create=True),
-            patch.object(module, "ExportJob") as job,
-        ):
-            self.assertEqual(operation.execute(SimpleNamespace()), {"CANCELLED"})
-        self.assertIn("current Blender file", operation.last_report[1])
-        job.assert_not_called()
+    def test_cli_refuses_any_existing_destination_including_a_blend(self):
+        from chemblender_prepare.cli import _new_output
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "review.blend"
+            destination.write_bytes(b"existing Blender project")
+            with self.assertRaises((ValueError, FileExistsError)):
+                _new_output(destination, cbq=False)
+            self.assertEqual(destination.read_bytes(), b"existing Blender project")
 
     def test_cif_mode_is_explicit_and_preview_lists_complete_plan(self):
         batch = parse_cif(CIF_SOURCE)
@@ -252,19 +192,12 @@ class CrystalExportUIContractTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             destination = Path(directory) / "POSCAR"
-            blocked = self.export.ExportJob(
-                destination,
-                selection,
-                format_name="poscar",
-                confirm_loss=False,
-                missing_value_token=None,
-                poscar_settings=settings,
-            )
-            blocked._run()
-            self.assertIsInstance(blocked.error, ValueError)
+            with self.assertRaises(ValueError):
+                self.export.export_selection(destination, selection, format_name="poscar",
+                                             confirm_loss=False, poscar_settings=settings)
             self.assertFalse(destination.exists())
 
-            accepted = self.export.ExportJob(
+            accepted = self.export.export_selection(
                 destination,
                 selection,
                 format_name="poscar",
@@ -272,8 +205,7 @@ class CrystalExportUIContractTests(unittest.TestCase):
                 missing_value_token=None,
                 poscar_settings=settings,
             )
-            accepted._run()
-            self.assertIsNone(accepted.error)
+            self.assertTrue(accepted.written)
             reparsed = parse_poscar(destination)
             source_numbers = batch.structures[0].atomic_numbers
             self.assertEqual(
@@ -314,143 +246,39 @@ class CrystalExportUIContractTests(unittest.TestCase):
             {entry.code for entry in report.entries},
         )
 
-    def test_operator_resolves_project_entity_not_evaluated_view_geometry(self):
-        module = self.export
-        operation = module.CHEMBLENDER_OT_export_project_entity()
-        operation.format_name = "poscar"
-        operation.missing_value_token = ""
-        operation.cif_mode = "normalized"
-        operation.poscar_coordinate_mode = "direct"
-        operation.poscar_scale_policy = "unit"
-        operation.poscar_include_selective_dynamics = True
-        operation.poscar_velocity_mode = "cartesian"
-        selected_id = uuid4()
-        project = object()
-        selection = module.ExportSelection(
-            structure=SimpleNamespace(periodic=object()),
-            frame_set=None,
-            properties=(),
-        )
-        context = SimpleNamespace(
-            scene=object(),
-            active_object=SimpleNamespace(
-                data="evaluated supercell mesh must not be exported"
-            ),
-        )
-        session = SimpleNamespace(
-            project=project,
-            active_entity_id=selected_id,
-        )
-        report = SimpleNamespace(entries=())
-
-        with (
-            patch.object(module, "get_scene_session", return_value=session),
-            patch.object(
-                module,
-                "resolve_export_selection",
-                return_value=selection,
-            ) as resolve,
-            patch.object(
-                module,
-                "preview_export_selection",
-                return_value=report,
-            ),
-        ):
-            operation._selection_and_preview(context)
-
-        resolve.assert_called_once_with(project, selected_id)
-
-    def test_filepath_refreshes_preview_and_invalid_choice_clears_stale_plan(self):
-        module = self.export
-        operation = module.CHEMBLENDER_OT_export_project_entity()
-        operation.filepath = "old.cif"
-        operation.format_name = "cif"
-        operation.missing_value_token = ""
-        operation.cif_mode = "normalized"
-        operation._preview_report = object()
-        selection = module.ExportSelection(
-            structure=SimpleNamespace(periodic=object()),
-            frame_set=None,
-            properties=(),
-        )
-        session = SimpleNamespace(project=object(), active_entity_id=uuid4())
-        report = SimpleNamespace(entries=())
-        context = SimpleNamespace(scene=object())
-        update = (
-            module.CHEMBLENDER_OT_export_project_entity
-            .__annotations__["filepath"]
-            .keywords["update"]
-        )
-
-        with (
-            patch.object(module, "get_scene_session", return_value=session),
-            patch.object(
-                module,
-                "resolve_export_selection",
-                return_value=selection,
-            ),
-            patch.object(
-                module,
-                "preview_export_selection",
-                return_value=report,
-            ) as preview,
-        ):
-            operation.filepath = "new.cif"
-            update(operation, context)
-
-        self.assertIs(operation._preview_report, report)
-        self.assertEqual(
-            preview.call_args.kwargs["destination"],
-            "new.cif",
-        )
-
-        with (
-            patch.object(module, "get_scene_session", return_value=session),
-            patch.object(
-                module,
-                "resolve_export_selection",
-                return_value=selection,
-            ),
-            patch.object(
-                module,
-                "preview_export_selection",
-                side_effect=ValueError("preserve requires source envelope"),
-            ),
-        ):
-            update(operation, context)
-
-        self.assertIsNone(operation._preview_report)
-        self.assertEqual(
-            operation.loss_preview,
-            "preserve requires source envelope",
-        )
-
-    def test_operator_exposes_comment_and_target_volume_settings(self):
-        import numpy
-
+    def test_export_selection_uses_canonical_project_structure(self):
         batch = parse_poscar(POSCAR_SOURCE)
-        selection = self.export.resolve_export_selection(
-            self._project(batch),
-            batch.structures[0].id,
-        )
-        operation = self.export.CHEMBLENDER_OT_export_project_entity()
-        operation.poscar_comment = "target-volume export"
-        operation.poscar_coordinate_mode = "direct"
-        operation.poscar_scale_policy = "target_volume"
-        operation.poscar_target_volume = abs(
-            float(numpy.linalg.det(selection.structure.cell.values))
-        )
-        operation.poscar_include_selective_dynamics = True
-        operation.poscar_velocity_mode = "cartesian"
+        project = self._project(batch)
+        selection = self.export.resolve_export_selection(project, batch.structures[0].id)
+        self.assertIs(selection.structure, batch.structures[0])
+        self.assertEqual(len(selection.structure.atomic_numbers), 2)
+        self.assertEqual(selection.structure.coordinates.unit, "angstrom")
 
-        settings = operation._poscar_settings(selection)
+    def test_preview_recomputes_destination_and_rejects_invalid_preserve(self):
+        batch = parse_cif(CIF_SOURCE)
+        selection = self.export.resolve_export_selection(self._project(batch), batch.structures[0].id)
+        first = self.export.preview_export_selection(selection, "cif", destination=Path("first.cif"))
+        second = self.export.preview_export_selection(selection, "cif", destination=Path("second.cif"))
+        self.assertNotEqual(next(e for e in first.entries if e.code == "output_path"),
+                            next(e for e in second.entries if e.code == "output_path"))
+        with self.assertRaises(ValueError):
+            self.export.preview_export_selection(replace(selection, cif_envelope=None), "cif", cif_mode="preserve")
 
-        self.assertEqual(settings.comment, "target-volume export")
-        self.assertEqual(settings.scale_policy, "target_volume")
-        self.assertEqual(
-            settings.target_volume,
-            operation.poscar_target_volume,
-        )
+    def test_cli_and_gui_expose_comment_and_target_volume_settings(self):
+        from chemblender_prepare.cli import build_parser
+        from chemblender_prepare.gui import command_arguments
+        values = {"command": "export", "sources": "project.cbq", "output": "POSCAR",
+                  "entity": str(uuid4()), "format": "poscar", "poscar-comment": "target-volume export",
+                  "poscar-scale-policy": "target_volume", "poscar-target-volume": "72.0",
+                  "poscar-coordinate-mode": "cartesian", "poscar-velocity-mode": "direct",
+                  "poscar-include-selective-dynamics": "false"}
+        args = build_parser().parse_args(command_arguments(values))
+        self.assertEqual(args.poscar_comment, "target-volume export")
+        self.assertEqual(args.poscar_scale_policy, "target_volume")
+        self.assertEqual(args.poscar_target_volume, 72.)
+        self.assertEqual(args.poscar_coordinate_mode, "cartesian")
+        self.assertEqual(args.poscar_velocity_mode, "direct")
+        self.assertFalse(args.poscar_include_selective_dynamics)
 
 
 if __name__ == "__main__":

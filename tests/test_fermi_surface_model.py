@@ -3,14 +3,12 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    DatasetStatus,
-    FermiSurfaceMesh,
-    ImportBatch,
-    QCProject,
-    SurfaceProperty,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import FermiSurfaceMesh
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.model import SurfaceProperty
 from tests.test_periodic_electronic_model import band_structure, periodic_structure
 
 

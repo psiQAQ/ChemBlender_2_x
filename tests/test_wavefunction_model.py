@@ -2,19 +2,17 @@ import array
 import unittest
 from uuid import uuid4
 
-from ChemBlender.core import (
-    ArrayData,
-    BasisConvention,
-    BasisFunctionKind,
-    BasisSet,
-    BasisShell,
-    ImportBatch,
-    OrbitalChannel,
-    OrbitalKind,
-    OrbitalSet,
-    QCProject,
-    Structure,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import BasisConvention
+from cbq_core.model import BasisFunctionKind
+from cbq_core.model import BasisSet
+from cbq_core.model import BasisShell
+from cbq_core.model import ImportBatch
+from cbq_core.model import OrbitalChannel
+from cbq_core.model import OrbitalKind
+from cbq_core.model import OrbitalSet
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
 
 
 def array_view(values, shape):

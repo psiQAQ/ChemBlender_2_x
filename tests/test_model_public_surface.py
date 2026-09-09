@@ -1,6 +1,6 @@
 import unittest
 
-import ChemBlender.core as core
+from cbq_core import model as core
 
 
 PUBLIC_MODEL_NAMES = {
@@ -87,11 +87,11 @@ PUBLIC_MODEL_NAMES = {
 class ModelPublicSurfaceTests(unittest.TestCase):
     def test_foundational_types_are_split_but_publicly_reexported(self):
         expected_origins = {
-            "ArrayData": "ChemBlender.core.model.arrays",
-            "CalculationStatus": "ChemBlender.core.model.common",
-            "IssueKind": "ChemBlender.core.model.common",
-            "ParserIssue": "ChemBlender.core.model.diagnostics",
-            "ParserReport": "ChemBlender.core.model.diagnostics",
+            "ArrayData": "cbq_core.model.arrays",
+            "CalculationStatus": "cbq_core.model.common",
+            "IssueKind": "cbq_core.model.common",
+            "ParserIssue": "cbq_core.model.diagnostics",
+            "ParserReport": "cbq_core.model.diagnostics",
         }
         self.assertEqual(
             {
@@ -105,6 +105,6 @@ class ModelPublicSurfaceTests(unittest.TestCase):
         missing = sorted(name for name in PUBLIC_MODEL_NAMES if not hasattr(core, name))
         self.assertEqual(missing, [])
 
-    def test_public_model_names_are_declared_in_core_all(self):
-        missing = sorted(PUBLIC_MODEL_NAMES - set(core.__all__))
+    def test_public_model_names_are_exposed_by_shared_model(self):
+        missing = sorted(PUBLIC_MODEL_NAMES - set(dir(core)))
         self.assertEqual(missing, [])

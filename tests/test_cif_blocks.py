@@ -8,13 +8,15 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import IssueKind, QCProject, parse_cif
-from ChemBlender.core.sidecar import close_project, open_project, save_project
-from ChemBlender.reader_api import (
-    public_batch_document,
-    public_batch_from_document,
-    public_batch_from_internal,
-)
+from cbq_core.model import IssueKind
+from cbq_core.model import QCProject
+from chemblender_prepare.core.formats.cif import parse_cif
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from chemblender_prepare.reader_api import public_batch_document
+from chemblender_prepare.reader_api import public_batch_from_document
+from chemblender_prepare.reader_api import public_batch_from_internal
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "cif"

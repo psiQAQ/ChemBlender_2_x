@@ -37,7 +37,7 @@ class LegacyMigrationBlenderTests(unittest.TestCase):
         if cls.blender is None:
             raise unittest.SkipTest("Blender 5.1 executable unavailable")
 
-    def test_hash_locked_fixtures_migrate_and_reopen(self):
+    def test_hash_locked_fixtures_export_and_reopen(self):
         self.assertEqual(
             tuple(sorted(path.name for path in FIXTURES.glob("*.blend"))),
             tuple(FIXTURE_HASHES),
@@ -59,6 +59,7 @@ class LegacyMigrationBlenderTests(unittest.TestCase):
                         [
                             str(self.blender), "--background", "--python-exit-code", "1",
                             str(fixture), "--python", str(BLENDER_SCRIPT), "--", str(ROOT),
+                            "--external-only",
                         ],
                         cwd=ROOT, env=environment, check=False,
                         capture_output=True, text=True,

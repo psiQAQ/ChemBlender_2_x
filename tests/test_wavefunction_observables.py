@@ -8,19 +8,17 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    AtomicProperty,
-    DatasetStatus,
-    DensityMatrixSpin,
-    DensityMatrixLevel,
-    ImportBatch,
-    QCProject,
-    ProvenanceRecord,
-    evaluate_density_matrix_grid,
-    evaluate_electrostatic_potential_grid,
-)
-from ChemBlender.core.wavefunction_observables import derive_density_matrix_from_orbitals
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomicProperty
+from cbq_core.model import DatasetStatus
+from cbq_core.model import DensityMatrixSpin
+from cbq_core.model import DensityMatrixLevel
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.model import ProvenanceRecord
+from chemblender_prepare.core.wavefunction_observables import evaluate_density_matrix_grid
+from chemblender_prepare.core.wavefunction_observables import evaluate_electrostatic_potential_grid
+from chemblender_prepare.core.wavefunction_observables import derive_density_matrix_from_orbitals
 from tests.test_wavefunction_grid import entities as orbital_entities
 from tests.test_density_matrix_model import density_matrix, entities, values
 
@@ -64,8 +62,8 @@ def nuclear_charges(structure, charges=None, **overrides):
 
 
 class WavefunctionObservableTests(unittest.TestCase):
-    @mock.patch("ChemBlender.core.wavefunction_observables._evaluate_stored_basis")
-    @mock.patch("ChemBlender.core.wavefunction_observables._evaluate_esp")
+    @mock.patch("chemblender_prepare.core.wavefunction_observables._evaluate_stored_basis")
+    @mock.patch("chemblender_prepare.core.wavefunction_observables._evaluate_esp")
     def test_density_and_esp_evaluate_only_bounded_point_blocks(self, esp, basis_values):
         structure, basis = entities()
         matrix = density_matrix(structure.id, basis.id)
@@ -83,8 +81,8 @@ class WavefunctionObservableTests(unittest.TestCase):
         numpy.testing.assert_allclose(rdm.datasets[0].data.values.ravel(), points[:, 0]**2)
         numpy.testing.assert_allclose(potential.datasets[0].data.values.ravel(), points.sum(axis=1))
 
-    @mock.patch("ChemBlender.core.wavefunction_observables._batch")
-    @mock.patch("ChemBlender.core.wavefunction_observables._evaluate_esp")
+    @mock.patch("chemblender_prepare.core.wavefunction_observables._batch")
+    @mock.patch("chemblender_prepare.core.wavefunction_observables._evaluate_esp")
     def test_esp_cancellation_after_first_block_discards_output(self, evaluate, batch):
         structure, basis = entities()
         matrix = density_matrix(structure.id, basis.id)
@@ -154,7 +152,7 @@ class WavefunctionObservableTests(unittest.TestCase):
                 structure, basis, sourced, level=DensityMatrixLevel.SCF,
             )
 
-    @mock.patch("ChemBlender.core.wavefunction_observables._evaluate_stored_basis")
+    @mock.patch("chemblender_prepare.core.wavefunction_observables._evaluate_stored_basis")
     def test_total_density_grid_preserves_semantics_and_provenance(self, evaluate):
         structure, basis = entities()
         matrix = density_matrix(
@@ -188,7 +186,7 @@ class WavefunctionObservableTests(unittest.TestCase):
         )
         project.commit(first)
 
-    @mock.patch("ChemBlender.core.wavefunction_observables._evaluate_stored_basis")
+    @mock.patch("chemblender_prepare.core.wavefunction_observables._evaluate_stored_basis")
     def test_spin_density_retains_negative_values(self, evaluate):
         structure, basis = entities(width=3)
         matrix = density_matrix(
@@ -209,7 +207,7 @@ class WavefunctionObservableTests(unittest.TestCase):
         self.assertEqual(grid.semantic_role, "spin_density")
         numpy.testing.assert_allclose(grid.data.values[:, 0, 0], [1.0, -4.0])
 
-    @mock.patch("ChemBlender.core.wavefunction_observables._evaluate_esp")
+    @mock.patch("chemblender_prepare.core.wavefunction_observables._evaluate_esp")
     def test_esp_uses_total_rdm_and_explicit_nuclear_charge_dataset(self, evaluate):
         structure, basis = entities()
         matrix = density_matrix(structure.id, basis.id)
@@ -234,7 +232,7 @@ class WavefunctionObservableTests(unittest.TestCase):
         )
         self.assertAlmostEqual(evaluate.call_args.args[3][0], 0.8)
 
-    @mock.patch("ChemBlender.core.wavefunction_observables._evaluate_esp")
+    @mock.patch("chemblender_prepare.core.wavefunction_observables._evaluate_esp")
     def test_invalid_esp_roles_references_and_nuclear_singularities_fail(
         self, evaluate
     ):
@@ -275,10 +273,8 @@ class WavefunctionObservableTests(unittest.TestCase):
 
     @unittest.skipUnless(HAS_INTEGRATION, "GBasis/IOData integration unavailable")
     def test_real_rdm_density_spin_conservation_and_esp(self):
-        from ChemBlender.core import (
-            evaluate_electron_density_grid,
-            parse_iodata_wavefunction,
-        )
+        from chemblender_prepare.core.wavefunction_grid import evaluate_electron_density_grid
+        from chemblender_prepare.core.iodata_adapter import parse_iodata_wavefunction
 
         water = parse_iodata_wavefunction(WATER_FCHK)
         water_structure = water.structures[0]

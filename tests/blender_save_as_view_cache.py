@@ -23,7 +23,10 @@ assert bpy.app.background and os.environ.get("BLENDER_USER_RESOURCES"), "use a p
 sys.path.append(args.existing_libraries)
 
 import ChemBlender
-from ChemBlender.core import ArrayData, ImportBatch, builtin_scene_presets, plan_scene_preset
+from cbq_core.model import ArrayData
+from cbq_core.model import ImportBatch
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
 from ChemBlender.scene_preset_view import apply_scene_preset
 from ChemBlender.ui.session import get_scene_session, get_scene_session_status, close_scene_session
 from tests.test_view_cache_persistence import grid

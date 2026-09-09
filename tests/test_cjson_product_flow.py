@@ -6,12 +6,18 @@ from pathlib import Path
 
 import numpy
 
-from ChemBlender.core.cjson_adapter import export_cjson, parse_cjson
-from ChemBlender.core.import_pipeline.parse import stage_import_batch
-from ChemBlender.core.import_pipeline.request import ImportSource, ValidationMode
-from ChemBlender.core.model import AtomicProperty, FrameSet, QCProject
-from ChemBlender.core.readers import READER_API_VERSION
-from ChemBlender.core.sidecar import close_project, open_project, save_project
+from chemblender_prepare.core.cjson_adapter import export_cjson
+from chemblender_prepare.core.cjson_adapter import parse_cjson
+from chemblender_prepare.core.import_pipeline.parse import stage_import_batch
+from chemblender_prepare.core.import_pipeline.request import ImportSource
+from chemblender_prepare.core.import_pipeline.request import ValidationMode
+from cbq_core.model import AtomicProperty
+from cbq_core.model import FrameSet
+from cbq_core.model import QCProject
+from chemblender_prepare.core.readers import READER_API_VERSION
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
 from ChemBlender.views.structure import _structure_view_data
 
 

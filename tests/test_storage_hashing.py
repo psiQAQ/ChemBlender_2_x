@@ -3,10 +3,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from ChemBlender.core.storage.hashing import (
-    sha256_bytes,
-    sha256_file_snapshot,
-)
+from cbq_core.storage.hashing import sha256_bytes
+from cbq_core.storage.hashing import sha256_file_snapshot
 
 
 class StorageHashingTests(unittest.TestCase):

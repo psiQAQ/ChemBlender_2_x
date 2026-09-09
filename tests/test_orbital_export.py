@@ -1,5 +1,4 @@
 import json
-import sys
 import unittest
 from dataclasses import replace
 from pathlib import Path
@@ -10,7 +9,11 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import ImportBatch, QCProject, create_session, close_session, evaluate_molecular_orbital_grid
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.session import create_session
+from cbq_core.session import close_session
+from chemblender_prepare.core.wavefunction_grid import evaluate_molecular_orbital_grid
 from ChemBlender.ui import orbital_export as export
 from tests.test_wavefunction_grid import entities
 
@@ -27,7 +30,7 @@ class OrbitalExportTests(unittest.TestCase):
         self.session.active_entity_id = self.orbitals.id
         self.settings = SimpleNamespace(channel="restricted", orbital_source_uuid=str(self.orbitals.id),
             origin=(-1., -1., -1.), shape=(3, 3, 3), spacing=1., memory_limit_mb=1024,
-            worker_python=sys.executable, worker_repository=str(Path(__file__).resolve().parents[1]))
+)
         self.context = SimpleNamespace(scene=SimpleNamespace(camera=SimpleNamespace(type="CAMERA"),
             chemblender_project_browser=SimpleNamespace(active_entity_id=str(self.orbitals.id))))
         self.rendered = []
@@ -59,7 +62,7 @@ class OrbitalExportTests(unittest.TestCase):
         self.temporary.cleanup()
 
     def cache(self, number):
-        with patch("ChemBlender.core.wavefunction_grid._evaluate_channel",
+        with patch("chemblender_prepare.core.wavefunction_grid._evaluate_channel",
                    side_effect=lambda _s, _b, c, points: numpy.ones((len(c), len(points)))):
             batch = evaluate_molecular_orbital_grid(self.structure, self.basis, self.orbitals,
                 origin=self.settings.origin, step_vectors=((1., 0., 0.), (0., 1., 0.), (0., 0., 1.)),
@@ -77,27 +80,28 @@ class OrbitalExportTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 export.parse_orbital_numbers(value, 3)
 
-    def test_preflight_camera_path_and_grid_cache_are_checked_without_files_or_worker(self):
+    def test_preflight_requires_prepared_grids_without_files_or_workers(self):
         self.cache(1)
-        self.cache(2)
         before = set(self.root.iterdir())
-        self.settings.worker_python = ""
+        with self.assertRaisesRegex(ValueError, "Orbital 2 has no prepared grid"):
+            self.iterator()
+        self.assertEqual(set(self.root.iterdir()), before)
+        self.cache(2)
         prepared = export.preflight_orbital_export(self.context, self.session, self.settings,
             orbital_numbers="1-2", destination=self.root / "images")
-        self.assertIsNone(prepared.worker)
+        self.assertFalse(hasattr(prepared, "worker"))
         self.context.scene.camera = None
         with self.assertRaisesRegex(ValueError, "camera"):
             self.iterator()
         self.context.scene.camera = SimpleNamespace(type="CAMERA")
+        # Old evaluation controls cannot change which scientific data is rendered.
         self.settings.spacing = .5
-        with self.assertRaisesRegex(ValueError, "Worker Python"):
-            self.iterator()
-        self.assertEqual(set(self.root.iterdir()), before)
+        iterator = self.iterator()
+        iterator.close()
 
     def test_cached_images_and_complete_report_publish_together_after_display_restoration(self):
         grids = [self.cache(1), self.cache(2)]
-        with patch.object(export, "_RenderScope", self.renderer), patch.object(
-            export, "WavefunctionJob", side_effect=AssertionError("unexpected recomputation")):
+        with patch.object(export, "_RenderScope", self.renderer):
             iterator = self.iterator()
             self.assertEqual(next(iterator)["stage"], "Render MO 1")
             self.assertFalse((self.root / "images").exists())
@@ -211,50 +215,13 @@ class OrbitalExportTests(unittest.TestCase):
                     self.assertFalse(list(self.root.glob(".cb-orbitals-*")))
                     self.assertFalse(export._EXPORTS)
 
-    def test_cache_miss_is_computed_one_at_a_time_and_second_failure_keeps_only_science(self):
-        jobs = []
-        owner = self
-
-        class Job:
-            def __init__(self, _session, _operation, _inputs, parameters, **_kwargs):
-                self.number = parameters["orbital_index"] + 1
-                self.worker = SimpleNamespace(done=False)
-                self.task = SimpleNamespace(snapshot=lambda: SimpleNamespace(progress=.1, stage="compute"))
-                self.closed = False
-                jobs.append(self)
-
-            def start(self):
-                pass
-
-            def publish(self, _session):
-                if self.number == 2:
-                    raise RuntimeError("injected worker failure")
-                return owner.cache(self.number)
-
-            def close(self):
-                self.closed = True
-
-        with patch.object(export, "_RenderScope", self.renderer), patch.object(export, "WavefunctionJob", Job):
-            iterator = self.iterator()
-            self.assertEqual(next(iterator)["stage"], "MO 1: compute")
-            self.assertEqual([job.number for job in jobs], [1])
-            self.assertEqual(self.session.project.datasets, {})
-            jobs[0].worker.done = True
-            self.assertEqual(next(iterator)["stage"], "Render MO 1")
-            self.assertEqual([job.number for job in jobs], [1])
-            self.assertTrue(jobs[0].closed)
-            self.assertEqual(len(self.session.project.datasets), 1)
-            self.assertEqual(next(iterator)["stage"], "Rendered MO 1")
-            self.assertEqual(next(iterator)["stage"], "MO 2: compute")
-            self.assertEqual([job.number for job in jobs], [1, 2])
-            jobs[1].worker.done = True
-            with self.assertRaisesRegex(RuntimeError, "worker failure"):
-                next(iterator)
-        self.assertTrue(all(job.closed for job in jobs))
-        self.assertEqual(len(self.session.project.datasets), 1)
+    def test_cache_miss_leaves_project_unchanged_before_display_starts(self):
+        with patch.object(export, "_RenderScope", side_effect=AssertionError("unexpected display mutation")):
+            with self.assertRaisesRegex(ValueError, "no prepared grid"):
+                self.iterator()
+        self.assertEqual(self.session.project.datasets, {})
+        self.assertFalse(export._EXPORTS)
         self.assertFalse((self.root / "images").exists())
-        self.assertFalse(list(self.root.glob(".cb-orbitals-*")))
-        self.assertTrue(self.scope_restored)
 
     def test_existing_destination_is_never_replaced_even_when_created_during_export(self):
         for number in (1, 2):

@@ -15,10 +15,15 @@ import openvdb
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ChemBlender.core import (
-    ArrayData, DatasetStatus, Grid3D, ImportBatch, ProjectSession, QCProject,
-    Structure, builtin_scene_presets, plan_scene_preset,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from cbq_core.session import ProjectSession
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
 from ChemBlender.surface_view import (
     create_property_surface,
     create_signed_isosurfaces,

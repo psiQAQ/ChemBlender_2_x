@@ -4,15 +4,13 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    PeriodicSiteData,
-    QualityStatus,
-    Structure,
-    TopologyRecord,
-    TopologySource,
-)
-from ChemBlender.core.topology.periodic import infer_periodic_topology
+from cbq_core.model import ArrayData
+from cbq_core.model import PeriodicSiteData
+from cbq_core.model import QualityStatus
+from cbq_core.model import Structure
+from cbq_core.model import TopologyRecord
+from cbq_core.model import TopologySource
+from chemblender_prepare.core.topology.periodic import infer_periodic_topology
 from ChemBlender.views.structure import (
     StructureViewSettings,
     _structure_view_data,

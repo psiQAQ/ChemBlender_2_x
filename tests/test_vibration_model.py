@@ -3,14 +3,12 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    DatasetStatus,
-    ImportBatch,
-    QCProject,
-    Structure,
-    VibrationalModeSet,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
+from cbq_core.model import VibrationalModeSet
 
 
 def structure(atom_count=2):

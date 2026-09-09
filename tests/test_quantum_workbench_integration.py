@@ -2,7 +2,6 @@
 
 import hashlib
 import importlib.util
-import sys
 import unittest
 from dataclasses import replace
 from pathlib import Path
@@ -13,16 +12,20 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import close_session, create_session, DensityMatrixLevel, DensityMatrixSpin
-from ChemBlender.core.import_pipeline import ImportCancelled, ImportSource, ValidationMode
-from ChemBlender.core.import_pipeline.parse import stage_import_batch
-from ChemBlender.core.iodata_adapter import adapt_iodata
-from ChemBlender.core.worker_protocol import WorkerError, WorkerResult, WorkerStatus, write_result
-from ChemBlender.reader_api.builtin_bridge import public_batch_from_internal
-from ChemBlender.reader_api.canonical_document import write_public_batch_bundle
-from ChemBlender.reader_api.worker_bridge import WorkerReaderExecutionError, WorkerReaderIntegrityError
-from ChemBlender.ui import wavefunction_import as importer
-from ChemBlender.worker_client import start_worker
+from cbq_core.model import DensityMatrixLevel
+from cbq_core.model import DensityMatrixSpin
+from chemblender_prepare.core.import_pipeline import ImportSource
+from chemblender_prepare.core.import_pipeline import ValidationMode
+from chemblender_prepare.core.import_pipeline.parse import stage_import_batch
+from chemblender_prepare.core.iodata_adapter import adapt_iodata
+from cbq_core.worker_protocol import WorkerResult
+from cbq_core.worker_protocol import WorkerStatus
+from chemblender_prepare.reader_api.builtin_bridge import public_batch_from_internal
+from chemblender_prepare.reader_api.canonical_document import write_public_batch_bundle
+from chemblender_prepare.reader_api.worker_bridge import WorkerReaderIntegrityError
+from chemblender_prepare import cli as importer
+from cbq_core.model import QCProject
+from concurrent.futures import CancelledError
 from tests.test_iodata_adapter import fake_iodata
 
 
@@ -41,214 +44,107 @@ def _hash(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def load_reader(source, reader_id, temp_parent, *, parameters=None, companions=None, cancel=None):
+    """Exercise the same frozen reader/typed bundle boundary used by convert."""
+    with TemporaryDirectory(prefix="reader-test-", dir=temp_parent) as temporary:
+        directory = Path(temporary)
+        cancel = Path(cancel) if cancel else directory / "cancel"
+        importer._check(cancel)
+        return importer._reader_batch(source, reader_id, parameters or {}, companions or {},
+            directory, QCProject(uuid4(), "1.1"), cancel, "balanced")
+
+
+def synthetic_result(request, task, batch):
+    source = task / request.parameters["source_artifact"]
+    parameters = request.parameters["canonical_parameters"]
+    staged = stage_import_batch(
+        source=ImportSource(source), validation_mode=ValidationMode.BALANCED,
+        content_hash=_hash(source), byte_size=source.stat().st_size,
+        plugin_id="chemblender.builtin", reader_id=request.parameters["reader_id"],
+        reader_version="1", api_version="1.0-rc1", canonical_parameters=tuple(sorted(parameters.items())),
+        parsed_batch=batch, revision_id=request.request_id)
+    bundle = task / "reader-bundle"
+    document = write_public_batch_bundle(bundle, public_batch_from_internal(staged))
+    hashes = {path.relative_to(task).as_posix(): _hash(path) for path in (bundle / "artifacts").glob("*.npy")}
+    return WorkerResult(request.request_id, WorkerStatus.SUCCESS,
+        artifacts=(document.relative_to(task).as_posix(), *hashes), metadata={
+            "operation": "reader.parse@0.1", "schema_version": "0.1",
+            "document_path": document.relative_to(task).as_posix(),
+            "document_sha256": _hash(document), "artifact_sha256": hashes})
+
+
 class WavefunctionImportBoundaryTests(unittest.TestCase):
     def setUp(self):
         self.temporary = TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
         self.source = self.root / "original.molden.input"
         self.source.write_bytes(b"[Molden Format]\n[Atoms] AU\n")
-        self.task_directories = []
-        self.handles = []
+        self.tasks = []
+        descriptor = SimpleNamespace(reader_id="iodata_wavefunction",
+            availability=SimpleNamespace(available=True))
+        self.descriptor = patch.object(importer, "_descriptor", return_value=descriptor)
+        self.descriptor.start()
+        self.addCleanup(self.descriptor.stop)
 
-    def tearDown(self):
-        self.temporary.cleanup()
+    def load(self, **kwargs):
+        return load_reader(self.source, "iodata_wavefunction", self.root, **kwargs)
 
-    def _load(self, **kwargs):
-        return importer.load_wavefunction_batch(
-            self.source, python_executable=sys.executable, repository=ROOT,
-            project_id=uuid4(), schema_version="0.2",
-            temp_parent=kwargs.pop("temp_parent", self.root), **kwargs,
-        )
-
-    def _synthetic_worker(self, request, workspace, **kwargs):
-        """Mock only the process/parser, retaining canonical bundle verification."""
-        process = Mock()
-        process.poll.return_value = 0
-        process.wait.return_value = 0
-        with patch("ChemBlender.worker_client.subprocess.Popen", return_value=process):
-            handle = start_worker(request, workspace, **kwargs)
-        self.handles.append(handle)
-        task = handle.request_path.parent
-        self.task_directories.append(task)
-        source = task / request.parameters["source_artifact"]
-        self.assertEqual(source.name, "source.molden")
+    def worker(self, request, directory, cancel):
+        self.tasks.append(directory)
+        source = directory / request.parameters["source_artifact"]
+        self.assertEqual(source.name, self.source.name)
         self.assertEqual(_hash(source), request.parameters["source_sha256"])
-        batch = stage_import_batch(
-            source=ImportSource(source), validation_mode=ValidationMode.BALANCED,
-            content_hash=_hash(source), byte_size=source.stat().st_size,
-            plugin_id="chemblender.builtin", reader_id="iodata_wavefunction",
-            reader_version="1", api_version="1.0-rc1",
-            parsed_batch=adapt_iodata(fake_iodata(), source, iodata_version="synthetic"),
-            revision_id=request.request_id,
-        )
-        bundle = task / "reader-bundle"
-        document = write_public_batch_bundle(bundle, public_batch_from_internal(batch))
-        hashes = {path.relative_to(task).as_posix(): _hash(path)
-                  for path in (bundle / "artifacts").glob("*.npy")}
-        document_path = document.relative_to(task).as_posix()
-        result = WorkerResult(request.request_id, WorkerStatus.SUCCESS,
-            artifacts=(document_path, *hashes), metadata={
-                "operation": "reader.parse@0.1", "schema_version": "0.1",
-                "document_path": document_path, "document_sha256": _hash(document),
-                "artifact_sha256": hashes,
-            })
-        write_result(handle.result_path, result)
-        return handle
+        return synthetic_result(request, directory, adapt_iodata(fake_iodata(), source, iodata_version="synthetic"))
 
-    def test_verified_import_detaches_arrays_rebinds_source_and_commits(self):
-        with patch.object(importer, "start_worker", side_effect=self._synthetic_worker):
-            batch = self._load()
-        self.assertTrue(all(not path.exists() for path in self.task_directories))
-        revision = batch.source_revisions[0]
-        self.assertEqual(revision.locator, str(self.source))
-        self.assertEqual(revision.original_filename, self.source.name)
-        self.assertEqual(revision.content_hash, _hash(self.source))
+    def test_verified_import_detaches_arrays_and_restores_source_identity(self):
+        with patch.object(importer, "_run_worker", side_effect=self.worker):
+            batch = self.load()
+        self.assertTrue(all(not path.exists() for path in self.tasks))
+        self.assertEqual(batch.source_revisions[0].locator, str(self.source))
+        self.assertEqual(batch.source_revisions[0].content_hash, _hash(self.source))
         self.assertEqual(batch.sources[0].display_name, self.source.name)
         self.assertEqual(batch.provenance[0].source, str(self.source))
-        self.assertEqual(batch.provenance[0].source_hash, _hash(self.source))
-        numpy.testing.assert_allclose(batch.orbital_sets[0].channels[0].coefficients.values,
-                                      [[1, 0], [0.2, 0.8]])
-        session = create_session(temp_parent=self.root)
-        try:
-            importer.commit_wavefunction_batch(session, batch)
-            self.assertEqual(session.active_entity_id, batch.orbital_sets[0].id)
-            self.assertEqual(len(session.project.structures), 1)
-            self.assertEqual(len(session.project.orbital_sets), 1)
-            self.assertEqual(len(session.project.density_matrices), 1)
-            previous = session.project
-            with self.assertRaisesRegex(ValueError, "already imported"):
-                importer.commit_wavefunction_batch(session, batch)
-            self.assertIs(session.project, previous)
-            self.assertEqual(len(session.project.source_revisions), 1)
-        finally:
-            close_session(session)
+        numpy.testing.assert_allclose(batch.orbital_sets[0].channels[0].coefficients.values, [[1, 0], [.2, .8]])
+        project = QCProject(uuid4(), "1.1")
+        project.commit(batch)
+        self.assertEqual(len(project.structures), 1)
+        self.assertEqual(len(project.orbital_sets), 1)
+        self.assertEqual(len(project.density_matrices), 1)
 
-    def test_standard_blender_session_depth_allows_full_hash_artifacts(self):
-        # A normal Blender temp/session prefix on Windows is already 91 chars.
-        parent = self.root / ("s" * max(1, 91 - len(str(self.root)) - 1))
-        parent.mkdir()
-        with patch.object(importer, "start_worker", side_effect=self._synthetic_worker):
-            batch = self._load(temp_parent=parent)
-        self.assertTrue(batch.orbital_sets)
-        for task in self.task_directories:
-            self.assertLess(len(str(task / "reader-bundle" / "artifacts" / ("0" * 64 + ".npy"))), 260)
-        self.assertFalse(tuple(parent.iterdir()))
+    def test_tampered_source_bundle_and_worker_identity_are_rejected(self):
+        for failure in ("source", "artifact", "identity"):
+            self.source.write_bytes(b"[Molden Format]\n[Atoms] AU\n")
+            def worker(request, directory, cancel):
+                result = self.worker(request, directory, cancel)
+                if failure == "source":
+                    self.source.write_bytes(b"[Molden Format]\nchanged")
+                elif failure == "artifact":
+                    next((directory / "reader-bundle/artifacts").glob("*.npy")).write_bytes(b"tampered")
+                else:
+                    result = replace(result, request_id=uuid4())
+                return result
+            with self.subTest(failure=failure), patch.object(importer, "_run_worker", side_effect=worker):
+                with self.assertRaises((ValueError, WorkerReaderIntegrityError)):
+                    self.load()
+            self.assertTrue(all(not path.exists() for path in self.tasks))
 
-    @unittest.skipUnless(sys.platform == "win32", "Windows executable path limit")
-    def test_deep_temporary_root_is_rejected_before_launch(self):
-        for component in ("d" * 110, "\U0001f52c" * 55):
-            with self.subTest(component=component):
-                parent = self.root / component
-                parent.mkdir()
-                with patch.object(importer, "start_worker") as launch:
-                    with self.assertRaisesRegex(ValueError, "shorter Temporary Files directory"):
-                        self._load(temp_parent=parent)
-                    launch.assert_not_called()
-                self.assertFalse(tuple(parent.iterdir()))
-
-    def test_failed_publication_preserves_project(self):
-        with patch.object(importer, "start_worker", side_effect=self._synthetic_worker):
-            batch = self._load()
-        session = create_session(temp_parent=self.root)
-        previous = session.project
-        try:
-            with patch("ChemBlender.core.import_pipeline.transaction.solidify_session",
-                       side_effect=OSError("injected disk failure")):
-                with self.assertRaisesRegex(OSError, "disk failure"):
-                    importer.commit_wavefunction_batch(session, batch)
-            self.assertIs(session.project, previous)
-            self.assertFalse(session.project.orbital_sets)
-            self.assertFalse(session.dirty)
-            self.assertFalse(tuple((session.temporary_root / "chemblender-import-staging").iterdir()))
-        finally:
-            close_session(session)
-
-    def test_missing_reader_diagnosis_requires_matching_worker_result(self):
-        for matching_id in (True, False):
-            with self.subTest(matching_id=matching_id):
-                def launch(request, workspace, **kwargs):
-                    handle = self._synthetic_worker(request, workspace, **kwargs)
-                    result = WorkerResult(
-                        request.request_id if matching_id else uuid4(), WorkerStatus.ERROR,
-                        error=WorkerError("reader_unavailable", "reader unavailable"),
-                    )
-                    write_result(handle.result_path, result)
-                    return handle
-                with patch.object(importer, "start_worker", side_effect=launch):
-                    if matching_id:
-                        with self.assertRaisesRegex(WorkerReaderExecutionError, "qc-iodata") as raised:
-                            self._load()
-                        self.assertIn(sys.executable, str(raised.exception))
-                        self.assertIn("Worker Setup", str(raised.exception))
-                    else:
-                        with self.assertRaisesRegex(WorkerReaderIntegrityError, "request ID mismatch"):
-                            self._load()
-                self.assertTrue(all(not path.exists() for path in self.task_directories))
-
-    def test_changed_source_and_tampered_artifact_never_return_a_batch(self):
-        for tamper in ("source", "artifact"):
-            with self.subTest(tamper=tamper):
-                self.source.write_bytes(b"[Molden Format]\n[Atoms] AU\n")
-                def launch(request, workspace, **kwargs):
-                    handle = self._synthetic_worker(request, workspace, **kwargs)
-                    if tamper == "source":
-                        self.source.write_bytes(b"[Molden Format]\nchanged content")
-                    else:
-                        next((handle.request_path.parent / "reader-bundle" / "artifacts").glob("*.npy")).write_bytes(b"tampered")
-                    return handle
-                with patch.object(importer, "start_worker", side_effect=launch):
-                    with self.assertRaises((ValueError, WorkerReaderIntegrityError)):
-                        self._load()
-                self.assertTrue(all(not path.exists() for path in self.task_directories))
-
-    def test_cancel_before_launch_and_invalid_content_have_no_process(self):
-        with patch.object(importer, "start_worker") as launch:
-            with self.assertRaises(ImportCancelled):
-                self._load(is_cancelled=lambda: True)
-            self.source.write_text("ordinary text", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "content"):
-                self._load()
-            launch.assert_not_called()
-
-    def test_cancel_while_parsing_stops_owned_process_and_cleans_workspace(self):
-        cancelled = [False]
-        def launch(request, workspace, **kwargs):
-            process = Mock()
-            process.poll.return_value = None
-            with patch("ChemBlender.worker_client.subprocess.Popen", return_value=process):
-                handle = start_worker(request, workspace, **kwargs)
-            def poll():
-                cancelled[0] = True
-                return None
-            handle.process.poll = Mock(side_effect=poll)
-            self.handles.append(handle)
-            self.task_directories.append(handle.request_path.parent)
-            return handle
-        with patch.object(importer, "start_worker", side_effect=launch):
-            with self.assertRaises(ImportCancelled):
-                self._load(is_cancelled=lambda: cancelled[0])
-        self.handles[0].process.terminate.assert_called_once()
-        self.assertFalse(self.task_directories[0].exists())
-
-    def test_session_cleanup_cancels_joins_and_releases_only_its_import(self):
-        session, other_session = object(), object()
-        operator = Mock(_session=session)
-        other = Mock(_session=other_session)
-        with patch.object(importer, "_ACTIVE_IMPORTS", [operator, other]):
-            importer._cancel_session_imports(session)
-        operator._job.request_cancel.assert_called_once()
-        operator._job.join.assert_called_once_with()
-        operator._finish_modal.assert_called_once()
-        other._job.request_cancel.assert_not_called()
-
-    @unittest.skipUnless(importer.bpy is not None, "requires the real Blender operator class")
-    def test_blender_file_selector_cancel_before_execute(self):
-        operator_type = importer.CHEMBLENDER_OT_import_wavefunction
-        # ImportHelper may cancel before execute initializes any job or timer.
-        operator = SimpleNamespace()
-        operator._finish_modal = lambda: operator_type._finish_modal(operator)
-        operator_type.cancel(operator, None)
-        operator_type._finish_modal(operator)
+    def test_cancel_before_and_during_parsing_cleans_owned_workspace(self):
+        cancel = self.root / "cancel"
+        cancel.touch()
+        with patch.object(importer, "_run_worker") as run:
+            with self.assertRaises(CancelledError):
+                self.load(cancel=cancel)
+            run.assert_not_called()
+        cancel.unlink()
+        def worker(request, directory, cancel):
+            result = self.worker(request, directory, cancel)
+            cancel.touch()
+            return result
+        with patch.object(importer, "_run_worker", side_effect=worker):
+            with self.assertRaises(CancelledError):
+                self.load(cancel=cancel)
+        self.assertTrue(all(not path.exists() for path in self.tasks))
 
 
 class RealWavefunctionWorkbenchTests(unittest.TestCase):
@@ -263,10 +159,8 @@ class RealWavefunctionWorkbenchTests(unittest.TestCase):
             self.assertEqual(_hash(self.fixture(name)), digest, name)
 
     def _load(self, name, temporary):
-        return importer.load_wavefunction_batch(
-            self.fixture(name), python_executable=sys.executable, repository=ROOT,
-            project_id=uuid4(), schema_version="0.2", temp_parent=Path(temporary),
-        )
+        return load_reader(self.fixture(name), "iodata_wavefunction", temporary)
+
 
     @unittest.skipUnless(HAS_IODATA, "external Python needs optional qc-iodata")
     def test_real_fchk_and_molden_cross_worker_boundary(self):
@@ -300,11 +194,10 @@ class RealWavefunctionWorkbenchTests(unittest.TestCase):
 
     @unittest.skipUnless(HAS_IODATA and HAS_GBASIS, "external Python needs optional qc-iodata and qc-gbasis")
     def test_molden_explicit_density_derivation_drives_density_and_esp(self):
-        from ChemBlender.core.wavefunction_observables import (
-            derive_density_matrix_from_orbitals, evaluate_density_matrix_grid,
-            evaluate_electrostatic_potential_grid,
-        )
-        from ChemBlender.core.wavefunction_grid import evaluate_electron_density_grid
+        from chemblender_prepare.core.wavefunction_observables import derive_density_matrix_from_orbitals
+        from chemblender_prepare.core.wavefunction_observables import evaluate_density_matrix_grid
+        from chemblender_prepare.core.wavefunction_observables import evaluate_electrostatic_potential_grid
+        from chemblender_prepare.core.wavefunction_grid import evaluate_electron_density_grid
         with TemporaryDirectory() as temporary:
             batch = self._load("h2o.molden.input", temporary)
         structure, basis, orbitals = batch.structures[0], batch.basis_sets[0], batch.orbital_sets[0]
@@ -330,10 +223,8 @@ class RealWavefunctionWorkbenchTests(unittest.TestCase):
     @unittest.skipIf(HAS_IODATA, "missing dependency boundary requires a Python without qc-iodata")
     def test_missing_external_dependency_fails_without_residue(self):
         with TemporaryDirectory() as temporary:
-            with self.assertRaisesRegex(WorkerReaderExecutionError, "qc-iodata") as raised:
+            with self.assertRaisesRegex(ValueError, "unavailable"):
                 self._load("water_sto3g_hf_g03.fchk", temporary)
-            self.assertIn(sys.executable, str(raised.exception))
-            self.assertIn("Worker Setup", str(raised.exception))
             self.assertFalse(tuple(Path(temporary).iterdir()))
 
 

@@ -10,35 +10,31 @@ from uuid import UUID, uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    AtomicProperty,
-    CIFEnvelope,
-    DatasetStatus,
-    FrameSet,
-    Grid3D,
-    ImportBatch,
-    MolecularTopology,
-    PropertyDataset,
-    ProvenanceRecord,
-    QCProject,
-    QualityStatus,
-    SourceRecord,
-    SourceRevision,
-    Structure,
-    TopologyRecord,
-    TopologySource,
-    TrajectoryFrameManager,
-)
-from ChemBlender.core.sidecar import (
-    LazyNpyArray,
-    SidecarCompatibilityError,
-    SidecarIntegrityError,
-    _array_content_hash,
-    close_project,
-    open_project,
-    save_project,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomicProperty
+from cbq_core.model import CIFEnvelope
+from cbq_core.model import DatasetStatus
+from cbq_core.model import FrameSet
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from cbq_core.model import MolecularTopology
+from cbq_core.model import PropertyDataset
+from cbq_core.model import ProvenanceRecord
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
+from cbq_core.model import Structure
+from cbq_core.model import TopologyRecord
+from cbq_core.model import TopologySource
+from cbq_core.trajectory_frames import TrajectoryFrameManager
+from cbq_core.sidecar import LazyNpyArray
+from cbq_core.sidecar import SidecarCompatibilityError
+from cbq_core.sidecar import SidecarIntegrityError
+from cbq_core.sidecar import _array_content_hash
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
 
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -63,7 +59,7 @@ def manifest_hash(manifest):
 
 
 def write_manifest(path, manifest, *, update_hash=True):
-    if update_hash and manifest.get("manifest_version") in ("0.2", "1.0"):
+    if update_hash and manifest.get("manifest_version") in ("0.2", "1.0", "1.1"):
         manifest["manifest_sha256"] = manifest_hash(manifest)
     path.write_text(
         json.dumps(
@@ -454,7 +450,7 @@ class SidecarStorageTests(unittest.TestCase):
         project = open_project(FIXTURES / "sidecar" / "model-v01")
         try:
             self.assertEqual(project.id, PROJECT_ID)
-            self.assertEqual(project.schema_version, "1.0")
+            self.assertEqual(project.schema_version, "1.1")
             self.assertEqual(project.calculation_groups, {})
             self.assertEqual(project.sources, {})
             self.assertEqual(project.source_revisions, {})
@@ -510,7 +506,7 @@ class SidecarStorageTests(unittest.TestCase):
 
             project = open_project(root)
             try:
-                self.assertEqual(project.schema_version, "1.0")
+                self.assertEqual(project.schema_version, "1.1")
                 self.assertEqual(project.calculation_groups, {})
             finally:
                 close_project(project)
@@ -540,9 +536,9 @@ class SidecarStorageTests(unittest.TestCase):
             manifest = json.loads(document)
 
             self.assertEqual(project.schema_version, "0.1")
-            self.assertEqual(manifest["manifest_version"], "1.0")
-            self.assertEqual(manifest["project_schema_version"], "1.0")
-            self.assertEqual(manifest["project"]["schema_version"], "1.0")
+            self.assertEqual(manifest["manifest_version"], "1.1")
+            self.assertEqual(manifest["project_schema_version"], "1.1")
+            self.assertEqual(manifest["project"]["schema_version"], "1.1")
             self.assertEqual(UUID(manifest["generation_id"]).version, 4)
             created = datetime.fromisoformat(
                 manifest["created_at_utc"].replace("Z", "+00:00")
@@ -561,7 +557,7 @@ class SidecarStorageTests(unittest.TestCase):
                 + b"\n",
             )
             restored = open_project(root, expected_schema_version="0.1")
-            self.assertEqual(restored.schema_version, "1.0")
+            self.assertEqual(restored.schema_version, "1.1")
             close_project(restored)
 
     def test_v1_manifest_hash_detects_tampering(self):
@@ -569,7 +565,7 @@ class SidecarStorageTests(unittest.TestCase):
             root = save_project(Path(directory) / "h2.cbq", sample_project())
             manifest_path = root / "manifest.json"
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            self.assertEqual(manifest["manifest_version"], "1.0")
+            self.assertEqual(manifest["manifest_version"], "1.1")
             manifest["project_schema_version"] = "tampered"
             write_manifest(manifest_path, manifest, update_hash=False)
 
@@ -581,7 +577,7 @@ class SidecarStorageTests(unittest.TestCase):
             root = save_project(Path(directory) / "h2.cbq", sample_project())
             manifest_path = root / "manifest.json"
             original = json.loads(manifest_path.read_text(encoding="utf-8"))
-            self.assertEqual(original["manifest_version"], "1.0")
+            self.assertEqual(original["manifest_version"], "1.1")
             invalid_documents = (
                 {key: value for key, value in original.items() if key != "format"},
                 original | {"generation_id": "not-a-uuid"},
@@ -593,7 +589,7 @@ class SidecarStorageTests(unittest.TestCase):
                 with self.subTest(manifest=set(manifest)):
                     write_manifest(manifest_path, copy.deepcopy(manifest))
                     with patch(
-                        "ChemBlender.core.sidecar._Decoder.decode",
+                        "cbq_core.sidecar._Decoder.decode",
                         side_effect=AssertionError("decoder reached"),
                     ):
                         with self.assertRaises(SidecarIntegrityError):
@@ -632,7 +628,7 @@ class SidecarStorageTests(unittest.TestCase):
                     mutate(manifest)
                     write_manifest(manifest_path, manifest)
                     with patch(
-                        "ChemBlender.core.sidecar._Decoder.decode",
+                        "cbq_core.sidecar._Decoder.decode",
                         side_effect=AssertionError("decoder reached"),
                     ):
                         with self.assertRaisesRegex(
@@ -651,7 +647,7 @@ class SidecarStorageTests(unittest.TestCase):
             write_manifest(manifest_path, manifest)
 
             with patch(
-                "ChemBlender.core.sidecar._Decoder.decode",
+                "cbq_core.sidecar._Decoder.decode",
                 side_effect=AssertionError("decoder reached"),
             ):
                 with self.assertRaises(SidecarCompatibilityError):
@@ -732,7 +728,7 @@ class SidecarStorageTests(unittest.TestCase):
             close_project(project)
             restored = open_project(root)
             try:
-                self.assertEqual(restored.schema_version, "1.0")
+                self.assertEqual(restored.schema_version, "1.1")
                 self.assertEqual(restored.sources, {source.id: source})
                 self.assertEqual(
                     restored.source_revisions,
@@ -848,7 +844,7 @@ class SidecarStorageTests(unittest.TestCase):
             root = Path(directory) / "h2.cbq"
             save_project(root, sample_project())
             previous = (root / "manifest.json").read_bytes()
-            with patch("ChemBlender.core.sidecar.os.replace", side_effect=OSError("disk full")):
+            with patch("cbq_core.sidecar.os.replace", side_effect=OSError("disk full")):
                 with self.assertRaises(OSError):
                     save_project(root, sample_project())
             self.assertEqual((root / "manifest.json").read_bytes(), previous)

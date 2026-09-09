@@ -6,13 +6,13 @@ import unittest
 
 import numpy
 
-from ChemBlender.core import IssueKind, QCProject, SniffMatch
-from ChemBlender.core.ase_adapter import (
-    ASE_STRUCTURE_READER,
-    ASEDependencyError,
-    parse_ase_structure,
-    sniff_ase_structure,
-)
+from cbq_core.model import IssueKind
+from cbq_core.model import QCProject
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.ase_adapter import ASE_STRUCTURE_READER
+from chemblender_prepare.core.ase_adapter import ASEDependencyError
+from chemblender_prepare.core.ase_adapter import parse_ase_structure
+from chemblender_prepare.core.ase_adapter import sniff_ase_structure
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,7 +27,7 @@ class ASEAdapterTests(unittest.TestCase):
             [
                 sys.executable,
                 "-c",
-                "import sys; import ChemBlender.core; assert 'ase' not in sys.modules",
+                "import sys; import cbq_core.model; assert 'ase' not in sys.modules",
             ],
             cwd=ROOT,
             check=True,

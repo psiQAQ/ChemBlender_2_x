@@ -19,8 +19,9 @@ import probe_prerelease_version as probe_module
 from probe_prerelease_version import probe_prerelease_version
 
 
+# CBQ-only file permission; transitional RDKit/Gemmi wheels remain pinned.
 PRODUCTION_MANIFEST_SHA256 = (
-    "86f814a26e76439a45db5af15a9d4bf601eefdf2763d7011d08dd0144c0b81df"
+    "9945a9156d0a73c643bb3f61f17f3a65cf470a440fdeda8ee0f3d783a149591e"
 )
 PROBE_VERSION = "2.3.0-alpha.1"
 

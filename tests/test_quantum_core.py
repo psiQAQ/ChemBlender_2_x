@@ -5,23 +5,21 @@ import sys
 import unittest
 from uuid import uuid4
 
-from ChemBlender.core import (
-    ArrayData,
-    CalculationGroup,
-    CalculationRecord,
-    CalculationStatus,
-    DatasetStatus,
-    FrameSet,
-    Grid3D,
-    ImportBatch,
-    ParserReport,
-    PropertyDataset,
-    ProvenanceRecord,
-    QCProject,
-    SourceRecord,
-    SourceRevision,
-    Structure,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import CalculationGroup
+from cbq_core.model import CalculationRecord
+from cbq_core.model import CalculationStatus
+from cbq_core.model import DatasetStatus
+from cbq_core.model import FrameSet
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from cbq_core.model import ParserReport
+from cbq_core.model import PropertyDataset
+from cbq_core.model import ProvenanceRecord
+from cbq_core.model import QCProject
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
+from cbq_core.model import Structure
 
 
 def array_view(values, shape):
@@ -119,7 +117,7 @@ class QuantumCoreTests(unittest.TestCase):
                 self.assertEqual(project.calculation_groups, before)
 
     def test_core_import_does_not_load_bpy(self):
-        code = "import sys; import ChemBlender.core; assert 'bpy' not in sys.modules"
+        code = "import sys; import cbq_core.model; assert 'bpy' not in sys.modules"
         subprocess.run([sys.executable, "-c", code], check=True)
 
     def test_array_data_reads_shape_dtype_and_unit(self):

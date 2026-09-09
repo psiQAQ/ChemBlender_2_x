@@ -114,10 +114,14 @@ def _verify_display(view, settings):
 
 def main():
     import ChemBlender
-    from ChemBlender.core import ArrayData, ImportBatch, ProvenanceRecord, Structure
-    from ChemBlender.core.project_service import relink_project_session_for_scenes
-    from ChemBlender.core.sidecar import LazyNpyArray, close_project
-    from ChemBlender.core.storage.publication import solidify_session
+    from cbq_core.model import ArrayData
+    from cbq_core.model import ImportBatch
+    from cbq_core.model import ProvenanceRecord
+    from cbq_core.model import Structure
+    from cbq_core.project_service import relink_project_session_for_scenes
+    from cbq_core.sidecar import LazyNpyArray
+    from cbq_core.sidecar import close_project
+    from cbq_core.storage.publication import solidify_session
     from ChemBlender.ui.session import get_scene_session
     from ChemBlender.ui.properties import get_quick_import_state
 
@@ -484,5 +488,67 @@ def main():
     print("PASS: legacy migration transaction and reopen")
 
 
+def verify_external_export_preserves_scene():
+    from concurrent.futures import CancelledError
+    from unittest.mock import patch
+    from chemblender_prepare.legacy.export import export_legacy_scene
+    from cbq_core.sidecar import open_project, close_project
+    source = Path(bpy.data.filepath)
+    source_bytes = source.read_bytes()
+    objects = tuple(bpy.data.objects)
+    snapshot = _object_snapshot(objects, bpy.context.scene)
+    inventory = _inventory()
+    links = _scene_links_snapshot()
+    geometry = {obj.name: (tuple(tuple(v.co) for v in obj.data.vertices),
+                          tuple(tuple(e.vertices) for e in obj.data.edges))
+                for obj in objects if obj.type == "MESH"}
+    def unchanged():
+        assert _inventory() == inventory
+        assert _object_snapshot(objects, bpy.context.scene) == snapshot
+        assert _scene_links_snapshot() == links
+        assert geometry == {obj.name: (tuple(tuple(v.co) for v in obj.data.vertices),
+                                       tuple(tuple(e.vertices) for e in obj.data.edges))
+                            for obj in objects if obj.type == "MESH"}
+        assert source.read_bytes() == source_bytes
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        destination = root / "prepared"
+        report = export_legacy_scene(destination, preview=True)
+        assert report["views"] and not destination.exists()
+        unchanged()
+        cancel = root / "cancel"
+        cancel.touch()
+        try:
+            export_legacy_scene(destination, cancel_file=cancel)
+        except CancelledError:
+            pass
+        else:
+            raise AssertionError("cancelled export succeeded")
+        unchanged()
+        cancel.unlink()
+        with patch("chemblender_prepare.legacy.export.save_project", side_effect=OSError("disk full")):
+            try:
+                export_legacy_scene(destination)
+            except OSError:
+                pass
+            else:
+                raise AssertionError("failed save succeeded")
+        assert not tuple(root.iterdir())
+        unchanged()
+        result = export_legacy_scene(destination)
+        unchanged()
+        project = open_project(destination / "project.cbq", verify_arrays=True)
+        try:
+            assert project.structures and project.schema_version == "1.1"
+            assert result["source_sha256"] == hashlib.sha256(source_bytes).hexdigest()
+            assert result["display_restore_status"] == "recorded_only"
+        finally:
+            close_project(project)
+    print("LEGACY_EXTERNAL_SCENE_UNCHANGED")
+
+
 if __name__ == "__main__":
-    main()
+    if "--external-only" in sys.argv:
+        verify_external_export_preserves_scene()
+    else:
+        main()

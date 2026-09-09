@@ -5,30 +5,26 @@ import unittest
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from ChemBlender.core.import_pipeline import (
-    ImportPreview,
-    ImportRequest,
-    ImportSource,
-    ReaderOverride,
-    SourcePreview,
-    StagedImportSession,
-    diagnostics_document,
-    import_summary,
-    preflight_import,
-    render_diagnostics_markdown,
-)
-from ChemBlender.core.cube import CUBE_READER
-from ChemBlender.core.model import (
-    DiagnosticSeverity,
-    DiagnosticValue,
-    ImportBatch,
-    ImportDiagnostic,
-    QualityStatus,
-    SourceRecord,
-    SourceRevision,
-)
-from ChemBlender.core.readers import ReaderRegistry
-from ChemBlender.core.xyz import XYZ_READER
+from chemblender_prepare.core.import_pipeline import ImportPreview
+from chemblender_prepare.core.import_pipeline import ImportRequest
+from chemblender_prepare.core.import_pipeline import ImportSource
+from chemblender_prepare.core.import_pipeline import ReaderOverride
+from chemblender_prepare.core.import_pipeline import SourcePreview
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import diagnostics_document
+from chemblender_prepare.core.import_pipeline import import_summary
+from chemblender_prepare.core.import_pipeline import preflight_import
+from chemblender_prepare.core.import_pipeline import render_diagnostics_markdown
+from chemblender_prepare.core.cube import CUBE_READER
+from cbq_core.model import DiagnosticSeverity
+from cbq_core.model import DiagnosticValue
+from cbq_core.model import ImportBatch
+from cbq_core.model import ImportDiagnostic
+from cbq_core.model import QualityStatus
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
+from chemblender_prepare.core.readers import ReaderRegistry
+from chemblender_prepare.core.xyz import XYZ_READER
 
 
 SOURCE_ID = UUID("20000000-0000-0000-0000-000000000001")

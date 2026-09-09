@@ -4,16 +4,14 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    DatasetStatus,
-    Grid3D,
-    ImportBatch,
-    QCProject,
-    builtin_scene_presets,
-    plan_scene_preset,
-)
-from ChemBlender.core import scene_preset as scene_preset_module
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core import scene_preset as scene_preset_module
 from ChemBlender.ui.project_browser.model import ViewRecord
 
 

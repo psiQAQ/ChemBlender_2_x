@@ -5,22 +5,20 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    DatasetStatus,
-    Grid3D,
-    ImportBatch,
-    QCProject,
-    ScenePresetError,
-    builtin_recipes,
-    builtin_scene_presets,
-    plan_scene_preset,
-    scene_plan_document,
-    scene_preset_document,
-    scene_preset_from_document,
-    scene_preset_for_recipe_view,
-    validate_scene_plan,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.scene_preset import ScenePresetError
+from cbq_core.recipe import builtin_recipes
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.scene_preset import scene_plan_document
+from cbq_core.scene_preset import scene_preset_document
+from cbq_core.scene_preset import scene_preset_from_document
+from cbq_core.scene_preset import scene_preset_for_recipe_view
+from cbq_core.scene_preset import validate_scene_plan
 from tests.test_periodic_electronic_model import (
     band_structure,
     density_of_states,
@@ -28,12 +26,10 @@ from tests.test_periodic_electronic_model import (
 )
 from tests.test_vibration_model import mode_set, structure
 from tests.test_excited_state_model import state_set
-from ChemBlender.core import (
-    SpectrumKind,
-    SpectrumProfile,
-    derive_electronic_spectrum,
-    derive_vibrational_spectrum,
-)
+from cbq_core.model import SpectrumKind
+from cbq_core.model import SpectrumProfile
+from chemblender_prepare.core.vibration_spectrum import derive_electronic_spectrum
+from chemblender_prepare.core.vibration_spectrum import derive_vibrational_spectrum
 
 
 def grid(

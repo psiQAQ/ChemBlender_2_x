@@ -7,12 +7,13 @@ from tempfile import TemporaryDirectory
 import unittest
 from uuid import uuid4
 
-from ChemBlender.core import QualityStatus, TopologySource
+from cbq_core.model import QualityStatus
+from cbq_core.model import TopologySource
 
 
 class SMILESReaderTests(unittest.TestCase):
     def test_direct_text_preserves_exact_utf8_line_and_source_semantics(self):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
 
         text = "[13CH3][C@H](F)Cl chloroalcohol\r\n"
         batch = self._stage_text(text)
@@ -38,9 +39,10 @@ class SMILESReaderTests(unittest.TestCase):
         self.assertTrue((structure.coordinates.values[:, 2] == 0.0).all())
 
     def test_smi_and_smiles_files_are_catalogued_and_keep_exact_bytes(self):
-        from ChemBlender.core import builtin_reader_registry
-        from ChemBlender.core.formats.smiles import SMILES_READER, parse_smiles
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.reader_catalog import builtin_reader_registry
+        from chemblender_prepare.core.formats.smiles import SMILES_READER
+        from chemblender_prepare.core.formats.smiles import parse_smiles
+        from chemblender_prepare.core.readers import SniffMatch
 
         content = b"C[NH3+] ammonium\n"
         with TemporaryDirectory() as directory:
@@ -54,8 +56,8 @@ class SMILESReaderTests(unittest.TestCase):
                     self.assertEqual(parse_smiles(source).molecular_records[0].raw_block, content)
 
     def test_sniff_rejects_unrelated_suffixes(self):
-        from ChemBlender.core.formats.smiles import SMILES_READER
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.smiles import SMILES_READER
+        from chemblender_prepare.core.readers import SniffMatch
 
         self.assertIs(
             SMILES_READER.sniff(Path("molecule.txt"), b"CCO\n").match,
@@ -63,7 +65,7 @@ class SMILESReaderTests(unittest.TestCase):
         )
 
     def test_exact_raw_smiles_bytes_distinguish_entity_identity(self):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
 
         first = parse_smiles_text("CCO ethanol\n")
         second = parse_smiles_text("CCO ethyl-alcohol\n")
@@ -75,10 +77,11 @@ class SMILESReaderTests(unittest.TestCase):
         self.assertNotEqual(first.provenance[0].id, second.provenance[0].id)
 
     def test_inline_smiles_stages_semantic_source_identity_without_temp_path(self):
-        from ChemBlender.core import builtin_reader_registry
-        from ChemBlender.core.import_pipeline.preflight import preflight_import
-        from ChemBlender.core.import_pipeline.request import ImportRequest, ImportSource
-        from ChemBlender.core.import_pipeline.staging import StagedImportSession
+        from chemblender_prepare.core.reader_catalog import builtin_reader_registry
+        from chemblender_prepare.core.import_pipeline.preflight import preflight_import
+        from chemblender_prepare.core.import_pipeline.request import ImportRequest
+        from chemblender_prepare.core.import_pipeline.request import ImportSource
+        from chemblender_prepare.core.import_pipeline.staging import StagedImportSession
 
         identities = []
         with TemporaryDirectory() as first, TemporaryDirectory() as second:
@@ -99,7 +102,7 @@ class SMILESReaderTests(unittest.TestCase):
         self.assertEqual(identities[0], identities[1])
 
     def test_core_preflight_repeated_smiles_has_authoritative_entity_identity(self):
-        from ChemBlender.core import QCProject
+        from cbq_core.model import QCProject
 
         first = self._stage_text("CCO ethanol\n")
         second = self._stage_text("CCO ethanol\n")
@@ -113,7 +116,7 @@ class SMILESReaderTests(unittest.TestCase):
         project.commit(second)
 
     def test_invalid_text_is_blocking_and_creates_no_fake_structure(self):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
 
         batch = parse_smiles_text("not-a-smiles\n")
 
@@ -124,9 +127,9 @@ class SMILESReaderTests(unittest.TestCase):
         self.assertEqual(batch.diagnostics[0].quality_status, QualityStatus.INVALID)
 
     def test_request_cancellation_reaches_rdkit_without_staging_artifacts(self):
-        from ChemBlender.core.formats.rdkit_common import RDKitMoleculeCancelled
-        from ChemBlender.core.formats.smiles import parse_smiles_request
-        from ChemBlender.reader_api.protocol import ParseRequest
+        from chemblender_prepare.core.formats.rdkit_common import RDKitMoleculeCancelled
+        from chemblender_prepare.core.formats.smiles import parse_smiles_request
+        from chemblender_prepare.reader_api.protocol import ParseRequest
 
         with TemporaryDirectory() as directory:
             source = Path(directory) / "water.smi"
@@ -146,7 +149,7 @@ class SMILESReaderTests(unittest.TestCase):
                 )
 
     def test_source_parse_always_returns_explicit_planar_2d_coordinates(self):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
 
         batch = self._stage_text("CCO")
 
@@ -160,8 +163,9 @@ class SMILESReaderTests(unittest.TestCase):
     def test_file_snapshot_is_read_once_and_request_hash_must_match(self):
         from unittest.mock import patch
 
-        from ChemBlender.core.formats.smiles import parse_smiles, parse_smiles_request
-        from ChemBlender.reader_api.protocol import ParseRequest
+        from chemblender_prepare.core.formats.smiles import parse_smiles
+        from chemblender_prepare.core.formats.smiles import parse_smiles_request
+        from chemblender_prepare.reader_api.protocol import ParseRequest
 
         raw = b"CCO ethanol\r\n"
         changed = b"O water\r\n"
@@ -187,12 +191,12 @@ class SMILESReaderTests(unittest.TestCase):
                 )
 
     def test_invalid_encoding_and_multiple_nonempty_lines_are_rejected(self):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
 
         with TemporaryDirectory() as directory:
             source = Path(directory) / "invalid.smi"
             source.write_bytes(b"C\xff\n")
-            from ChemBlender.core.formats.smiles import parse_smiles
+            from chemblender_prepare.core.formats.smiles import parse_smiles
 
             invalid = parse_smiles(source)
         self.assertEqual(invalid.structures, ())
@@ -204,7 +208,7 @@ class SMILESReaderTests(unittest.TestCase):
                 self.assertEqual(batch.diagnostics[0].code, "smiles.invalid")
 
     def test_reader_preserves_charge_maps_stereo_aromaticity_and_rejects_unsupported_chemistry(self):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
 
         batch = parse_smiles_text("[CH3:7]/[CH:8]=[CH:9]/[13CH2:10][NH3+]")
         structure, = batch.structures
@@ -223,7 +227,7 @@ class SMILESReaderTests(unittest.TestCase):
 
     def test_public_imports_do_not_eagerly_load_rdkit(self):
         command = (
-            "import sys; import ChemBlender.core; import ChemBlender.reader_api; "
+            "import sys; import cbq_core.model; import chemblender_prepare.reader_api; "
             "assert not any(name == 'rdkit' or name.startswith('rdkit.') for name in sys.modules)"
         )
         subprocess.run((sys.executable, "-c", command), check=True)
@@ -234,14 +238,14 @@ class SMILESReaderTests(unittest.TestCase):
             source.write_bytes(b"CCO\n")
             command = (
                 "import sys; from pathlib import Path; "
-                "from ChemBlender.core.formats.smiles import sniff_smiles; "
+                "from chemblender_prepare.core.formats.smiles import sniff_smiles; "
                 f"sniff_smiles(Path(r'{source}'), b'CCO\\n'); "
                 "assert not any(name == 'rdkit' or name.startswith('rdkit.') for name in sys.modules)"
             )
             subprocess.run((sys.executable, "-c", command), check=True)
 
     def test_conformer_grouping_skips_smiles_records_without_an_explicit_file_block(self):
-        from ChemBlender.core.import_pipeline.conformer_grouping import suggest_conformer_groups
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         batch = self._stage_text("CCO")
         record = batch.molecular_records[0]
@@ -252,10 +256,11 @@ class SMILESReaderTests(unittest.TestCase):
         )
 
     def _stage_text(self, text):
-        from ChemBlender.core import builtin_reader_registry
-        from ChemBlender.core.import_pipeline.preflight import preflight_import
-        from ChemBlender.core.import_pipeline.request import ImportRequest, ImportSource
-        from ChemBlender.core.import_pipeline.staging import StagedImportSession
+        from chemblender_prepare.core.reader_catalog import builtin_reader_registry
+        from chemblender_prepare.core.import_pipeline.preflight import preflight_import
+        from chemblender_prepare.core.import_pipeline.request import ImportRequest
+        from chemblender_prepare.core.import_pipeline.request import ImportSource
+        from chemblender_prepare.core.import_pipeline.staging import StagedImportSession
 
         source = ImportSource.smiles_text(text)
         with TemporaryDirectory() as directory:

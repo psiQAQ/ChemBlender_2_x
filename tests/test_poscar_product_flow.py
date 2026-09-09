@@ -1,485 +1,178 @@
-import importlib
-import shutil
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from unittest.mock import Mock, patch
-from uuid import uuid4
 
-from ChemBlender.core import QCProject, close_session, create_session, parse_poscar
-from ChemBlender.core.import_pipeline.conformer_grouping import (
-    suggest_staged_conformer_groups,
-)
-from ChemBlender.core.import_pipeline.request import (
-    ImportRequest,
-    ImportSource,
-    ReaderOverride,
-    ValidationMode,
-)
-from ChemBlender.reader_api.import_pipeline_bridge import (
-    preflight_reader_plugins,
-)
-from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+from chemblender_prepare.core.formats.poscar import parse_poscar
 
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "poscar"
 
 
-class _Property:
-    def __init__(self, kind, **keywords):
-        self.kind = kind
-        self.keywords = keywords
-
-
-def _property(kind):
-    return lambda **keywords: _Property(kind, **keywords)
-
-
-class _Operator:
-    def report(self, levels, message):
-        self.last_report = (levels, message)
-
-
-class _PropertyGroup:
-    pass
-
-
 class PoscarProductFlowTests(unittest.TestCase):
+    """External preparation replaces the historical Blender raw-file modal UI."""
+
     def setUp(self):
-        self.fake_bpy = ModuleType("bpy")
-        props = ModuleType("bpy.props")
-        for name, kind in (
-            ("BoolProperty", "bool"),
-            ("CollectionProperty", "collection"),
-            ("EnumProperty", "enum"),
-            ("FloatProperty", "float"),
-            ("IntProperty", "int"),
-            ("PointerProperty", "pointer"),
-            ("StringProperty", "string"),
-        ):
-            setattr(props, name, _property(kind))
-        self.fake_bpy.props = props
-        self.fake_bpy.types = SimpleNamespace(
-            Operator=_Operator,
-            OperatorFileListElement=object,
-            Panel=object,
-            PropertyGroup=_PropertyGroup,
-            Scene=type("Scene", (), {}),
-        )
-        self.fake_bpy.app = SimpleNamespace(background=True)
-        self.fake_bpy.data = SimpleNamespace(
-            objects=SimpleNamespace(remove=lambda *_args, **_kwargs: None),
-            batch_remove=lambda **_kwargs: None,
-        )
-        self.fake_bpy.context = SimpleNamespace(collection=object())
-        self.modules = patch.dict(
-            sys.modules,
-            {"bpy": self.fake_bpy, "bpy.props": props},
-        )
-        self.modules.start()
-        for name in (
-            "ChemBlender.ui.export",
-            "ChemBlender.ui.import_preview",
-            "ChemBlender.ui.properties",
-        ):
-            sys.modules.pop(name, None)
-        self.properties = importlib.import_module("ChemBlender.ui.properties")
-        self.preview_module = importlib.import_module(
-            "ChemBlender.ui.import_preview"
-        )
-        self.export_module = importlib.import_module("ChemBlender.ui.export")
         self.temporary = tempfile.TemporaryDirectory()
-        self.session = create_session(temp_parent=Path(self.temporary.name))
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.output = self.root / "structure.cbq"
 
-    def tearDown(self):
-        try:
-            self.properties.clear_quick_import_state(self.session)
-        except BaseException:
-            pass
-        try:
-            close_session(self.session)
-        except BaseException:
-            pass
-        self.modules.stop()
-        for name in (
-            "ChemBlender.ui.export",
-            "ChemBlender.ui.import_preview",
-            "ChemBlender.ui.properties",
-        ):
-            sys.modules.pop(name, None)
-        self.temporary.cleanup()
-
-    def stage(self, source):
-        staging = self.properties.create_quick_import_staging(self.session)
-        request = ImportRequest(
-            sources=(ImportSource(source),),
-            validation_mode=ValidationMode.BALANCED,
-        )
-        registry = builtin_reader_plugin_registry()
-        preview = preflight_reader_plugins(
-            request,
-            registry,
-            staging,
-            progress=lambda *_args: None,
-            is_cancelled=lambda: False,
-        )
-        self.properties.store_quick_import_preview(
-            self.session,
-            staging,
-            preview,
-            conformer_grouping_suggestions=suggest_staged_conformer_groups(
-                preview,
-                staging,
-            ),
-        )
-        return registry, self.properties.get_quick_import_state(self.session)
+    def cli(self, *args, success=True):
+        import io
+        import json
+        from contextlib import redirect_stdout
+        from chemblender_prepare.cli import main
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            code = main([str(value) for value in args] + ["--json"])
+        result = json.loads(stream.getvalue())
+        self.assertEqual(code, 0 if success else 1, result)
+        return result
 
     def test_preview_summarizes_poscar_scientific_conventions(self):
-        registry, state = self.stage(FIXTURES / "velocities.CONTCAR")
+        row = self.cli("inspect", FIXTURES / "velocities.CONTCAR")["metadata"]["poscar"]
+        self.assertEqual(row["comment"], "velocity block")
+        self.assertEqual(row["scale"], 1)
+        self.assertEqual(row["cell_volume"], 27)
+        self.assertEqual(row["cell_unit"], "angstrom")
+        self.assertEqual(row["species"], ["Na", "Cl"])
+        self.assertEqual(row["counts"], [1, 1])
+        self.assertEqual(row["coordinate_mode"], "cartesian")
+        self.assertTrue(row["selective_dynamics"])
+        self.assertTrue(row["ion_velocities"])
+        self.assertTrue(row["lattice_velocities"])
+        self.assertFalse(row["requires_species_assignment"])
+        self.assertFalse(self.output.exists())
 
-        row, = self.preview_module.project_import_preview(
-            self.session,
-            state,
-            registry,
-        )
-
-        self.assertEqual(row.poscar_comment, "velocity block")
-        self.assertIn("1", row.poscar_scale_summary)
-        self.assertIn("27", row.poscar_cell_summary)
-        self.assertEqual(row.poscar_species_summary, "Na Cl · 1 1")
-        self.assertEqual(row.poscar_coordinate_mode, "Cartesian")
-        self.assertEqual(row.poscar_selective_summary, "Selective Dynamics")
-        self.assertEqual(
-            row.poscar_velocity_summary,
-            "Ion velocities · lattice velocities",
-        )
-        self.assertFalse(row.poscar_requires_species_assignment)
-
-    def test_poscar_preview_bounds_comment_without_truncating_provenance(self):
-        source = Path(self.temporary.name) / "long-comment.POSCAR"
+    def test_preview_bounds_comment_without_truncating_provenance(self):
+        from cbq_core.sidecar import open_project, close_project
+        source = self.root / "long.POSCAR"
         comment = "C" * 60_000
-        lines = (FIXTURES / "cscl-selective.vasp").read_text(
-            encoding="utf-8"
-        ).splitlines()
-        source.write_text(
-            "\n".join((comment, *lines[1:])) + "\n",
-            encoding="utf-8",
-        )
-        registry, state = self.stage(source)
-
-        row, = self.preview_module.project_import_preview(
-            self.session,
-            state,
-            registry,
-        )
-        batch = state.staging_session.result(
-            state.preview.source_previews[0].staged_batch_ids[0]
-        )
-        provenance = next(
-            value
-            for value in batch.provenance
-            if value.producer == "ChemBlender POSCAR adapter"
-        )
-
-        self.assertLessEqual(len(row.poscar_comment), 256)
-        self.assertTrue(row.poscar_comment.endswith("…"))
-        self.assertEqual(dict(provenance.parameters)["comment"], comment)
-
-    def test_vasp4_species_assignment_restages_before_commit(self):
-        registry, state = self.stage(FIXTURES / "vasp4-counts.POSCAR")
-        row, = self.preview_module.project_import_preview(
-            self.session,
-            state,
-            registry,
-        )
-        source_id = state.preview.source_previews[0].source_id
-
-        self.assertTrue(row.poscar_requires_species_assignment)
-        self.assertTrue(row.blocking)
-        with self.assertRaisesRegex(ValueError, "count groups"):
-            self.preview_module.restage_poscar_species_assignment(
-                self.session,
-                state,
-                source_id,
-                "Na",
-                registry,
-                ValidationMode.BALANCED,
-            )
-
-        self.preview_module.restage_poscar_species_assignment(
-            self.session,
-            state,
-            source_id,
-            "Na,Cl",
-            registry,
-            ValidationMode.BALANCED,
-        )
-        refreshed, = self.preview_module.project_import_preview(
-            self.session,
-            state,
-            registry,
-        )
-
-        self.assertFalse(refreshed.poscar_requires_species_assignment)
-        self.assertEqual(refreshed.poscar_species_assignment, "Na,Cl")
-        self.assertFalse(refreshed.blocking)
-        self.assertEqual(
-            state.staging_session.result(
-                state.preview.source_previews[0].staged_batch_ids[0]
-            ).structures[0].atomic_numbers,
-            (11, 11, 17),
-        )
-
-    def test_interactive_species_assignment_starts_cancellable_modal_job(self):
-        registry, state = self.stage(FIXTURES / "vasp4-counts.POSCAR")
-        source_id = state.preview.source_previews[0].source_id
-        job = SimpleNamespace(
-            staging=state.staging_session,
-            attach_ui=Mock(),
-            mark_progress_started=Mock(),
-            start=Mock(),
-        )
-        manager = SimpleNamespace(
-            event_timer_add=Mock(return_value=object()),
-            progress_begin=Mock(),
-            modal_handler_add=Mock(),
-        )
-        context = SimpleNamespace(
-            scene=SimpleNamespace(
-                chemblender_quick_import=SimpleNamespace(
-                    validation_mode=ValidationMode.BALANCED.value,
-                )
-            ),
-            window=object(),
-            window_manager=manager,
-        )
-        operator = self.preview_module.CHEMBLENDER_OT_apply_poscar_species()
-        operator.source_id = str(source_id)
-        operator.species = "Na,Cl"
-        self.fake_bpy.app.background = False
+        lines = (FIXTURES / "cscl-selective.vasp").read_text(encoding="utf-8").splitlines()
+        source.write_text("\n".join((comment, *lines[1:])) + "\n", encoding="utf-8")
+        row = self.cli("inspect", source)["metadata"]["poscar"]
+        self.assertLessEqual(len(row["comment"]), 256)
+        self.assertTrue(row["comment"].endswith("…"))
+        self.cli("convert", source, "-o", self.output)
+        project = open_project(self.output)
         try:
-            with (
-                patch.object(
-                    self.preview_module,
-                    "get_scene_session",
-                    return_value=self.session,
-                ),
-                patch.object(
-                    self.preview_module,
-                    "get_reader_plugin_registry",
-                    return_value=registry,
-                ),
-                patch.object(
-                    self.preview_module,
-                    "_new_preflight_job",
-                    return_value=job,
-                ),
-            ):
-                result = operator.execute(context)
+            provenance = next(value for value in project.provenance.values()
+                              if value.producer == "ChemBlender POSCAR adapter")
+            self.assertEqual(dict(provenance.parameters)["comment"], comment)
         finally:
-            self.fake_bpy.app.background = True
+            close_project(project)
 
-        self.assertEqual(result, {"RUNNING_MODAL"})
-        job.start.assert_called_once_with()
-        manager.progress_begin.assert_called_once_with(0, 100)
-        self.assertIs(state.active_job, job)
+    def test_vasp4_assignment_is_required_before_publication(self):
+        source = FIXTURES / "vasp4-counts.POSCAR"
+        row = self.cli("inspect", source)["metadata"]["poscar"]
+        self.assertTrue(row["requires_species_assignment"])
+        for params in ((), ("--param", "species=Na")):
+            self.cli("convert", source, "-o", self.output, *params, success=False)
+            self.assertFalse(self.output.exists())
+        self.cli("convert", source, "-o", self.output, "--param", "species=Na,Cl")
+        self.assertTrue((self.output / "manifest.json").is_file())
 
-    def test_poscar_modal_worker_forwards_parameters_without_grouping(self):
-        quick_import = importlib.import_module("ChemBlender.ui.quick_import")
-        staging = self.properties.create_quick_import_staging(self.session)
-        source = ImportSource(FIXTURES / "vasp4-counts.POSCAR")
-        job = quick_import._PreflightJob(
-            ImportRequest(
-                sources=(source,),
-                validation_mode=ValidationMode.BALANCED,
-                reader_overrides=(ReaderOverride(source.id, "poscar"),),
-            ),
-            builtin_reader_plugin_registry(),
-            staging,
-            canonical_parameters_by_source={
-                source.id: {"species": "Na,Cl"}
-            },
-            prepare_conformers=False,
-        )
+    def test_gui_subprocess_forwards_species_without_loading_blender(self):
+        import time
+        from chemblender_prepare.gui import CliProcess, command_arguments
+        from cbq_core.sidecar import open_project, close_project
+        args = command_arguments({"command": "convert", "sources": str(FIXTURES / "vasp4-counts.POSCAR"),
+            "output": str(self.output), "reader": "poscar", "params": "species=Na,Cl"})
+        job = CliProcess(args)
+        try:
+            deadline = time.monotonic() + 20
+            result = None
+            while result is None and time.monotonic() < deadline:
+                result = job.poll()
+                time.sleep(0.01)
+            self.assertIsNotNone(result)
+            self.assertEqual(result.status.value, "success", result)
+            project = open_project(self.output)
+            try:
+                self.assertEqual(next(iter(project.structures.values())).atomic_numbers, (11, 11, 17))
+            finally:
+                close_project(project)
+        finally:
+            if job.process.poll() is None:
+                job.cancel()
+                job.process.wait(timeout=10)
+            job.close()
 
-        job.start()
-        self.assertTrue(job.join(10))
+    def test_cancel_marker_prevents_poscar_publication(self):
+        cancel = self.root / "cancel"
+        cancel.touch()
+        result = self.cli("convert", FIXTURES / "vasp4-counts.POSCAR", "-o", self.output,
+                          "--param", "species=Na,Cl", "--cancel-file", cancel, success=False)
+        self.assertEqual(result["status"], "cancelled")
+        self.assertFalse(self.output.exists())
 
-        self.assertIsNone(job.error)
-        self.assertIsNone(job.conformer_suggestions)
-        batch = staging.result(
-            job.preview.source_previews[0].staged_batch_ids[0]
-        )
-        self.assertEqual(batch.structures[0].atomic_numbers, (11, 11, 17))
+    def test_gui_progress_failure_waits_for_owned_process_before_cleanup(self):
+        from chemblender_prepare.gui import PrepareWindow
+        window = PrepareWindow.__new__(PrepareWindow)
+        job = SimpleNamespace(poll=Mock(return_value=None), progress=Mock(side_effect=RuntimeError("progress failed")),
+            process=SimpleNamespace(poll=Mock(return_value=None)), cancel=Mock(), close=Mock())
+        window.job, window.closing = job, False
+        window.status, window.bar, window.report, window.run_button, window.root = (Mock() for _ in range(5))
+        window.poll()
+        job.cancel.assert_called_once_with()
+        job.close.assert_not_called()
+        self.assertIs(window.job, job)
+        window.root.after.assert_called_once_with(100, window.poll)
+        job.process.poll.return_value = 1
+        job.poll.side_effect = RuntimeError("CLI exited without result")
+        window.poll()
+        job.close.assert_called_once_with()
+        self.assertIsNone(window.job)
 
-    def test_poscar_modal_progress_failure_releases_ui_and_ownership(self):
-        _registry, state = self.stage(FIXTURES / "vasp4-counts.POSCAR")
-        source_id = state.preview.source_previews[0].source_id
-        for failure in (
-            RuntimeError("progress failed"),
-            GeneratorExit("fatal progress failed"),
-        ):
-            with self.subTest(failure=type(failure).__name__):
-                job = SimpleNamespace(
-                    staging=state.staging_session,
-                    drain_progress=Mock(
-                        return_value=("preflight", 1, 3)
-                    ),
-                    done=False,
-                    cancel=Mock(),
-                    join=Mock(return_value=True),
-                    release_ui=Mock(),
-                    timer_pending=False,
-                    abandon_ui=Mock(),
-                    error=None,
-                )
-                self.properties.store_quick_import_job(
-                    self.session,
-                    state.staging_session,
-                    job,
-                )
-                operator = (
-                    self.preview_module.CHEMBLENDER_OT_apply_poscar_species()
-                )
-                operator._session = self.session
-                operator._state = state
-                operator._source_id = source_id
-                operator._job = job
-                context = SimpleNamespace(
-                    window_manager=SimpleNamespace(
-                        progress_update=Mock(side_effect=failure),
-                    )
-                )
-                event = SimpleNamespace(type="TIMER")
+    def test_multiple_assignments_append_and_preserve_existing_package(self):
+        from cbq_core.sidecar import open_project, close_project
+        source = FIXTURES / "vasp4-counts.POSCAR"
+        self.cli("convert", source, "-o", self.output, "--param", "species=Na,Cl")
+        original = {p.relative_to(self.output): p.read_bytes() for p in self.output.rglob("*") if p.is_file()}
+        second = self.root / "second.cbq"
+        self.cli("convert", source, "--project", self.output, "-o", second, "--param", "species=K,Br")
+        project = open_project(second)
+        try:
+            self.assertEqual({s.atomic_numbers for s in project.structures.values()}, {(11, 11, 17), (19, 19, 35)})
+        finally:
+            close_project(project)
+        self.assertEqual(original, {p.relative_to(self.output): p.read_bytes() for p in self.output.rglob("*") if p.is_file()})
 
-                if isinstance(failure, GeneratorExit):
-                    with self.assertRaises(GeneratorExit) as raised:
-                        operator.modal(context, event)
-                    self.assertIs(raised.exception, failure)
-                else:
-                    self.assertEqual(
-                        operator.modal(context, event),
-                        {"CANCELLED"},
-                    )
+    def test_export_selection_binds_properties_and_round_trips(self):
+        from cbq_core.sidecar import open_project, close_project
+        from chemblender_prepare.export_service import resolve_export_selection
+        import numpy
+        self.cli("convert", FIXTURES / "cscl-selective.vasp", "-o", self.output)
+        project = open_project(self.output)
+        try:
+            structure = next(iter(project.structures.values()))
+            selection = resolve_export_selection(project, structure.id)
+            self.assertEqual(tuple(item.semantic_role for item in selection.properties), ("selective_dynamics",))
+            destination = self.root / "POSCAR"
+            self.cli("export", self.output, "-o", destination, "--entity", structure.id, "--format", "poscar", "--preview")
+            self.assertFalse(destination.exists())
+            self.cli("export", self.output, "-o", destination, "--entity", structure.id, "--format", "poscar")
+            reparsed = parse_poscar(destination)
+            self.assertEqual(reparsed.structures[0].atomic_numbers, structure.atomic_numbers)
+            self.assertEqual(next(item for item in reparsed.datasets if item.semantic_role == "selective_dynamics").data.values.tolist(),
+                             numpy.asarray(selection.properties[0].data.values).tolist())
+        finally:
+            close_project(project)
 
-                job.cancel.assert_called_once_with()
-                job.join.assert_called_once_with(None)
-                job.release_ui.assert_called_once_with()
-                self.assertIsNone(state.active_job)
-                self.assertIsNone(operator._job)
 
-    def test_multiple_vasp4_assignments_survive_subsequent_restaging(self):
-        staging = self.properties.create_quick_import_staging(self.session)
-        first = Path(self.temporary.name) / "first.POSCAR"
-        second = Path(self.temporary.name) / "second.POSCAR"
-        shutil.copyfile(FIXTURES / "vasp4-counts.POSCAR", first)
-        shutil.copyfile(FIXTURES / "vasp4-counts.POSCAR", second)
-        sources = (
-            ImportSource(first),
-            ImportSource(second),
-        )
-        registry = builtin_reader_plugin_registry()
-        preview = preflight_reader_plugins(
-            ImportRequest(
-                sources=sources,
-                validation_mode=ValidationMode.BALANCED,
-            ),
-            registry,
-            staging,
-            progress=lambda *_args: None,
-            is_cancelled=lambda: False,
-        )
-        self.properties.store_quick_import_preview(
-            self.session,
-            staging,
-            preview,
-        )
-        state = self.properties.get_quick_import_state(self.session)
+class PreparedPoscarViewTests(unittest.TestCase):
+    """Display prepared attributes independently of the external import UI."""
 
-        self.preview_module.restage_poscar_species_assignment(
-            self.session,
-            state,
-            sources[0].id,
-            "Na,Cl",
-            registry,
-            ValidationMode.BALANCED,
-        )
-        with patch.object(
-            self.preview_module,
-            "preflight_reader_plugins",
-            wraps=self.preview_module.preflight_reader_plugins,
-        ) as preflight:
-            self.preview_module.restage_poscar_species_assignment(
-                self.session,
-                state,
-                sources[1].id,
-                "K,Br",
-                registry,
-                ValidationMode.BALANCED,
-            )
-
-        atomic_numbers = tuple(
-            state.staging_session.result(source.staged_batch_ids[0])
-            .structures[0]
-            .atomic_numbers
-            for source in state.preview.source_previews
-        )
-        self.assertEqual(atomic_numbers, ((11, 11, 17), (19, 19, 35)))
-        request = preflight.call_args.args[0]
-        self.assertEqual(tuple(value.id for value in request.sources), (sources[1].id,))
-
-    def test_poscar_export_selection_binds_properties_and_round_trips(self):
-        batch = parse_poscar(FIXTURES / "cscl-selective.vasp")
-        project = QCProject(uuid4(), "0.2")
-        project.commit(batch)
-        selection = self.export_module.resolve_export_selection(
-            project,
-            batch.structures[0].id,
-        )
-
-        self.assertIn("poscar", {item[0] for item in self.export_module._FORMAT_ITEMS})
-        self.assertEqual(
-            tuple(item.semantic_role for item in selection.properties),
-            ("selective_dynamics",),
-        )
-        preview = self.export_module.preview_export_selection(
-            selection,
-            "poscar",
-        )
-        self.assertEqual(preview.format, "poscar")
-
-        destination = Path(self.temporary.name) / "POSCAR"
-        job = self.export_module.ExportJob(
-            destination,
-            selection,
-            format_name="poscar",
-            confirm_loss=False,
-            missing_value_token=None,
-        )
-        job._run()
-
-        self.assertIsNone(job.error)
-        self.assertTrue(job.result.written)
-        reparsed = parse_poscar(destination)
-        self.assertEqual(
-            reparsed.structures[0].atomic_numbers,
-            batch.structures[0].atomic_numbers,
-        )
-        self.assertEqual(
-            next(
-                item
-                for item in reparsed.datasets
-                if item.semantic_role == "selective_dynamics"
-            ).data.values.tolist(),
-            next(
-                item
-                for item in batch.datasets
-                if item.semantic_role == "selective_dynamics"
-            ).data.values.tolist(),
-        )
+    def setUp(self):
+        self.fake_bpy = ModuleType("bpy")
+        self.fake_bpy.data = SimpleNamespace()
+        self.modules = patch.dict(sys.modules, {"bpy": self.fake_bpy})
+        self.modules.start()
+        self.addCleanup(self.modules.stop)
 
     def test_structure_view_data_projects_selective_axis_attributes(self):
         from ChemBlender.views.structure import _structure_view_data

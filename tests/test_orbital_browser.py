@@ -5,11 +5,14 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core.model import ArrayData, ImportBatch, OrbitalKind, QCProject
-from ChemBlender.core.orbital_browser import (
-    estimate_grid_memory, orbital_rows, suggest_grid,
-)
-from ChemBlender.core.wavefunction_grid import evaluate_molecular_orbital_grid
+from cbq_core.model import ArrayData
+from cbq_core.model import ImportBatch
+from cbq_core.model import OrbitalKind
+from cbq_core.model import QCProject
+from chemblender_prepare.core.orbital_browser import estimate_grid_memory
+from cbq_core.orbital_browser import orbital_rows
+from chemblender_prepare.core.orbital_browser import suggest_grid
+from chemblender_prepare.core.wavefunction_grid import evaluate_molecular_orbital_grid
 from tests.test_wavefunction_grid import GRID, entities
 
 
@@ -67,7 +70,7 @@ class OrbitalBrowserTests(unittest.TestCase):
         project, _, _, orbitals = project_with(orbitals)
         self.assertIn("Complex", orbital_rows(project, orbitals, "restricted")[0].evaluation_error)
 
-    @patch("ChemBlender.core.wavefunction_grid._evaluate_channel",
+    @patch("chemblender_prepare.core.wavefunction_grid._evaluate_channel",
            return_value=numpy.array([[1., 2.]]))
     def test_cache_requires_current_identity_structure_and_requested_grid(self, evaluate):
         project, structure, basis, orbitals = project_with()
@@ -83,6 +86,24 @@ class OrbitalBrowserTests(unittest.TestCase):
         for old_grid in (replace(grid, structure_id=None), replace(grid, revision="old")):
             project.datasets[grid.id] = old_grid
             self.assertFalse(orbital_rows(project, orbitals, "restricted")[0].cached_dataset_ids)
+
+        project.datasets[grid.id] = grid
+        record = batch.provenance[0]
+        for key in ("structure_revision", "basis_revision", "orbital_revision"):
+            for value in (None, "stale-revision"):
+                with self.subTest(key=key, value=value):
+                    parameters = dict(record.parameters)
+                    if value is None:
+                        parameters.pop(key)
+                    else:
+                        parameters[key] = value
+                    project.provenance[record.id] = replace(
+                        record, parameters=tuple(parameters.items()))
+                    self.assertFalse(orbital_rows(
+                        project, orbitals, "restricted")[0].cached_dataset_ids)
+        project.provenance[record.id] = record
+        self.assertEqual(orbital_rows(project, orbitals, "restricted")[0].cached_dataset_ids,
+                         (grid.id,))
 
     def test_grid_preflight_covers_bounds_and_bounded_working_memory(self):
         _, structure, basis, _ = project_with()

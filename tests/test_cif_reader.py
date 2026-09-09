@@ -8,19 +8,16 @@ import unittest
 from unittest.mock import patch
 from uuid import uuid4
 
-from ChemBlender import core
-from ChemBlender.core.import_pipeline import (
-    ImportRequest,
-    ImportSource,
-    StagedImportSession,
-    preflight_import,
-)
-from ChemBlender.core.readers import ReaderRegistry
-from ChemBlender.reader_api import ParseRequest, PublicImportBatch
-from ChemBlender.reader_api.registry import (
-    builtin_reader_plugin_registry,
-    builtin_reader_plugins,
-)
+from chemblender_prepare.core import gemmi_adapter as core
+from chemblender_prepare.core.import_pipeline import ImportRequest
+from chemblender_prepare.core.import_pipeline import ImportSource
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import preflight_import
+from chemblender_prepare.core.readers import ReaderRegistry
+from chemblender_prepare.reader_api import ParseRequest
+from chemblender_prepare.reader_api import PublicImportBatch
+from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
+from chemblender_prepare.reader_api.registry import builtin_reader_plugins
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,7 +28,7 @@ class CIFReaderTests(unittest.TestCase):
     def test_catalog_exposes_cif_without_eager_gemmi_import(self):
         code = """
 import sys
-from ChemBlender.reader_api.registry import builtin_reader_plugins
+from chemblender_prepare.reader_api.registry import builtin_reader_plugins
 plugin = next(
     item for item in builtin_reader_plugins()
     if item.descriptor.reader_id == "cif"
@@ -44,7 +41,7 @@ assert "gemmi" not in sys.modules
         self.assertEqual(completed.returncode, 0)
 
     def test_missing_gemmi_marks_only_cif_unavailable(self):
-        import ChemBlender.reader_api.descriptors as descriptors
+        import chemblender_prepare.reader_api.descriptors as descriptors
 
         find_spec = descriptors.importlib.util.find_spec
 
@@ -123,11 +120,11 @@ assert "gemmi" not in sys.modules
         self.assertEqual(len(batch.structures), 1)
         self.assertEqual(len(batch.cif_envelopes), 1)
 
-    def test_legacy_core_exports_delegate_to_formats_module(self):
+    def test_external_adapter_exports_delegate_to_formats_module(self):
         self.assertIsNotNone(
-            importlib.util.find_spec("ChemBlender.core.formats.cif")
+            importlib.util.find_spec("chemblender_prepare.core.formats.cif")
         )
-        module = importlib.import_module("ChemBlender.core.formats.cif")
+        module = importlib.import_module("chemblender_prepare.core.formats.cif")
 
         self.assertIs(core.parse_cif, module.parse_cif)
         self.assertIs(core.sniff_cif, module.sniff_cif)

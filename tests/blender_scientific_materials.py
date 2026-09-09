@@ -14,7 +14,9 @@ sys.path.insert(0, str(ROOT))
 private = Path(os.environ["BLENDER_USER_RESOURCES"]).resolve()
 assert ROOT / ".agents" / "cache" in private.parents, "private test profile required"
 
-from ChemBlender.core import ArrayData, DatasetStatus, Grid3D
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
 from ChemBlender.grid_volume import create_grid_volume
 from ChemBlender.scientific_materials import flat_material, scalar_material, volume_material
 

@@ -7,13 +7,12 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import ArrayData, QCProject
-from ChemBlender.core.exporters import (
-    ExportCancelled,
-    export_mol2,
-    preview_mol2_export,
-)
-from ChemBlender.core.formats.mol2 import parse_mol2
+from cbq_core.model import ArrayData
+from cbq_core.model import QCProject
+from chemblender_prepare.core.exporters import ExportCancelled
+from chemblender_prepare.core.exporters import export_mol2
+from chemblender_prepare.core.exporters import preview_mol2_export
+from chemblender_prepare.core.formats.mol2 import parse_mol2
 
 
 FIXTURES = Path(__file__).with_name("fixtures") / "mol2"
@@ -349,7 +348,7 @@ class Mol2ExporterTests(unittest.TestCase):
             destination = Path(directory) / "existing.mol2"
             destination.write_text("old\n", encoding="utf-8")
             with patch(
-                "ChemBlender.core.exporters.xyz.os.replace",
+                "chemblender_prepare.core.exporters.xyz.os.replace",
                 side_effect=OSError("replace failed"),
             ):
                 with self.assertRaisesRegex(OSError, "replace failed"):

@@ -10,9 +10,12 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import QCProject, close_project, create_session, open_project
-import ChemBlender.legacy.migration as migration
-from ChemBlender.legacy.extraction import (
+from cbq_core.model import QCProject
+from cbq_core.sidecar import close_project
+from cbq_core.session import create_session
+from cbq_core.sidecar import open_project
+import chemblender_prepare.legacy.migration as migration
+from chemblender_prepare.legacy.extraction import (
     LegacyCIFAtomSnapshot,
     LegacyCIFSnapshot,
     LegacyDiagnostic,
@@ -22,7 +25,7 @@ from ChemBlender.legacy.extraction import (
     LegacyNodeModifierSnapshot,
     LegacyObjectSnapshot,
 )
-from ChemBlender.legacy.migration import (
+from chemblender_prepare.legacy.migration import (
     LegacyMigrationCommitResult,
     LegacyMigrationPlan,
     QualityStatus,
@@ -147,6 +150,19 @@ class LegacyMigrationCoreTests(unittest.TestCase):
         numpy.testing.assert_allclose(structure.periodic.occupancies.values, (0.25,))
         self.assertEqual(len(view_plans), 1)
 
+    def test_crystal_rejects_each_invalid_angle_without_changing_base_project(self):
+        snapshot = crystal_snapshot()
+        for index in range(3, 6):
+            for angle in (-1., 0., 180., 200., float("nan"), float("inf")):
+                with self.subTest(index=index, angle=angle):
+                    cell = list(snapshot.cif_current.cell)
+                    cell[index] = angle
+                    invalid = replace(snapshot, cif_current=replace(snapshot.cif_current, cell=tuple(cell)))
+                    with self.assertRaises(ValueError):
+                        plan_legacy_migration(LegacyExtractionReport((invalid,), (), None), self.project)
+                    self.assertEqual(self.project.structures, {})
+                    self.assertEqual(self.project.provenance, {})
+
     def test_plan_validates_crystal_display_against_current_cif_atom_count(self):
         snapshot = replace(
             crystal_snapshot(),
@@ -263,7 +279,7 @@ class LegacyMigrationCoreTests(unittest.TestCase):
                     self.assertTrue(
                         any(item.code == "legacy_unverified" for item in plan.report.diagnostics)
                     )
-            with patch("ChemBlender.legacy.migration.Path.is_symlink", return_value=True):
+            with patch("chemblender_prepare.legacy.migration.Path.is_symlink", return_value=True):
                 plan = plan_legacy_migration(
                     LegacyExtractionReport((molecule_snapshot(),), (), str(target), True),
                     self.project,
@@ -337,7 +353,7 @@ class LegacyMigrationCoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             session = create_session(temp_parent=directory, project=self.project)
             original = session.project
-            with patch("ChemBlender.legacy.migration.solidify_session", side_effect=OSError("publish failed")):
+            with patch("chemblender_prepare.legacy.migration.solidify_session", side_effect=OSError("publish failed")):
                 with self.assertRaisesRegex(OSError, "publish failed"):
                     commit_legacy_migration(session, plan)
             self.assertIs(session.project, original)
@@ -361,7 +377,7 @@ class LegacyMigrationCoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             session = create_session(temp_parent=directory, project=replacement)
             before = (session.project, session.sidecar_path, session.dirty_reasons)
-            with patch("ChemBlender.legacy.migration.solidify_session") as publish:
+            with patch("chemblender_prepare.legacy.migration.solidify_session") as publish:
                 with self.assertRaisesRegex(ValueError, "base project"):
                     commit_legacy_migration(session, plan)
             publish.assert_not_called()
@@ -375,7 +391,7 @@ class LegacyMigrationCoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             session = create_session(temp_parent=directory, project=self.project)
             before = (session.project, session.sidecar_path, session.dirty_reasons)
-            with patch("ChemBlender.legacy.migration.solidify_session") as publish:
+            with patch("chemblender_prepare.legacy.migration.solidify_session") as publish:
                 with self.assertRaisesRegex(ValueError, "base project inventory"):
                     commit_legacy_migration(session, plan)
             publish.assert_not_called()
@@ -398,7 +414,7 @@ class LegacyMigrationCoreTests(unittest.TestCase):
         plan.project.provenance[uuid4()] = next(iter(plan.project.provenance.values()))
         with tempfile.TemporaryDirectory() as directory:
             session = create_session(temp_parent=directory, project=self.project)
-            with patch("ChemBlender.legacy.migration.solidify_session") as publish:
+            with patch("chemblender_prepare.legacy.migration.solidify_session") as publish:
                 with self.assertRaisesRegex(ValueError, "candidate inventory"):
                     commit_legacy_migration(session, plan)
             publish.assert_not_called()
@@ -422,7 +438,7 @@ class LegacyMigrationCoreTests(unittest.TestCase):
         structure.coordinates.values[0, 0] = 9.0
         with tempfile.TemporaryDirectory() as directory:
             session = create_session(temp_parent=directory, project=self.project)
-            with patch("ChemBlender.legacy.migration.solidify_session") as publish:
+            with patch("chemblender_prepare.legacy.migration.solidify_session") as publish:
                 publish.return_value = type(
                     "Published", (), {"project": plan.project, "path": session.temporary_root / "project.cbq"}
                 )()
@@ -441,7 +457,7 @@ class LegacyMigrationCoreTests(unittest.TestCase):
         structure.coordinates.values[0, 0] = 9.0
         with tempfile.TemporaryDirectory() as directory:
             session = create_session(temp_parent=directory, project=base)
-            with patch("ChemBlender.legacy.migration.solidify_session") as publish:
+            with patch("chemblender_prepare.legacy.migration.solidify_session") as publish:
                 publish.return_value = type(
                     "Published", (), {"project": plan.project, "path": session.temporary_root / "project.cbq"}
                 )()
@@ -457,7 +473,7 @@ class LegacyMigrationCoreTests(unittest.TestCase):
         plan.project.provenance[key] = replace(value)
         with tempfile.TemporaryDirectory() as directory:
             session = create_session(temp_parent=directory, project=self.project)
-            with patch("ChemBlender.legacy.migration.solidify_session") as publish:
+            with patch("chemblender_prepare.legacy.migration.solidify_session") as publish:
                 with self.assertRaisesRegex(ValueError, "candidate inventory"):
                     commit_legacy_migration(session, plan)
             publish.assert_not_called()
@@ -468,10 +484,10 @@ class LegacyMigrationCoreTests(unittest.TestCase):
         )
         with tempfile.TemporaryDirectory() as directory:
             session = create_session(temp_parent=directory, project=self.project)
-            with patch("ChemBlender.legacy.migration.solidify_session", side_effect=OSError("publish failed")):
+            with patch("chemblender_prepare.legacy.migration.solidify_session", side_effect=OSError("publish failed")):
                 with self.assertRaisesRegex(OSError, "publish failed"):
                     commit_legacy_migration(session, plan)
-            with patch("ChemBlender.legacy.migration.solidify_session") as publish:
+            with patch("chemblender_prepare.legacy.migration.solidify_session") as publish:
                 publish.return_value = type("Published", (), {"project": plan.project, "path": session.temporary_root / "project.cbq"})()
                 result = commit_legacy_migration(session, plan)
             self.assertIs(result.project, plan.project)

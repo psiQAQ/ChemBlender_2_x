@@ -28,8 +28,9 @@ from release_metadata import (
 )
 
 
+# CBQ-only file permission; transitional RDKit/Gemmi wheels remain pinned.
 PRODUCTION_MANIFEST_SHA256 = (
-    "86f814a26e76439a45db5af15a9d4bf601eefdf2763d7011d08dd0144c0b81df"
+    "9945a9156d0a73c643bb3f61f17f3a65cf470a440fdeda8ee0f3d783a149591e"
 )
 
 
@@ -599,12 +600,20 @@ class ReleaseMetadataTests(unittest.TestCase):
 
     def test_build_reads_metadata_once_and_requires_exact_package(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            extension_root = Path(temp_dir)
+            extension_root = Path(temp_dir) / "ChemBlender"
+            extension_root.mkdir()
             self._write_manifest(extension_root)
+            source_manifest = (extension_root / "blender_manifest.toml").read_bytes()
+            core = Path(temp_dir) / "cbq_core"
+            core.mkdir()
+            (core / "__init__.py").write_bytes(b'"""Shared core fixture."""\n')
 
             def fake_run(command, *, cwd):
-                if command[-3:] == ["--command", "extension", "build"]:
-                    (cwd / "chemblender-2.2.0.zip").write_bytes(b"zip")
+                self.assertEqual((cwd / "_cbq_core/__init__.py").read_bytes(),
+                                 (core / "__init__.py").read_bytes())
+                if command[1:4] == ["--command", "extension", "build"]:
+                    self.assertEqual(command[4:], ["--output-dir", str(extension_root)])
+                    (extension_root / "chemblender-2.2.0.zip").write_bytes(b"zip")
 
             output = io.StringIO()
             with (
@@ -622,6 +631,8 @@ class ReleaseMetadataTests(unittest.TestCase):
                 contextlib.redirect_stdout(output),
             ):
                 result = build_extension.main()
+            self.assertEqual((extension_root / "blender_manifest.toml").read_bytes(),
+                             source_manifest)
 
         self.assertEqual(result, 0)
         read_metadata.assert_called_once_with(extension_root)
@@ -630,8 +641,13 @@ class ReleaseMetadataTests(unittest.TestCase):
 
     def test_build_rejects_missing_exact_package(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            extension_root = Path(temp_dir)
+            extension_root = Path(temp_dir) / "ChemBlender"
+            extension_root.mkdir()
             self._write_manifest(extension_root)
+            source_manifest = (extension_root / "blender_manifest.toml").read_bytes()
+            core = Path(temp_dir) / "cbq_core"
+            core.mkdir()
+            (core / "__init__.py").write_bytes(b'"""Shared core fixture."""\n')
             error = io.StringIO()
             with (
                 mock.patch.object(build_extension, "_extension_root", return_value=extension_root),
@@ -643,6 +659,8 @@ class ReleaseMetadataTests(unittest.TestCase):
                 contextlib.redirect_stderr(error),
             ):
                 result = build_extension.main()
+            self.assertEqual((extension_root / "blender_manifest.toml").read_bytes(),
+                             source_manifest)
 
         self.assertEqual(result, 1)
         self.assertIn("chemblender-2.2.0.zip", error.getvalue())

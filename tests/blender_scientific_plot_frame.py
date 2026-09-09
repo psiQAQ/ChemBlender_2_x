@@ -22,7 +22,10 @@ assert ROOT / ".agents" / "cache" in private.parents and bpy.app.background
 output = private.parent / "plot-frame-qa"
 output.mkdir(exist_ok=True)
 
-from ChemBlender.core import ArrayData, SpectrumKind, SpectrumProfile, derive_electronic_spectrum
+from cbq_core.model import ArrayData
+from cbq_core.model import SpectrumKind
+from cbq_core.model import SpectrumProfile
+from chemblender_prepare.core.vibration_spectrum import derive_electronic_spectrum
 from ChemBlender.electronic_plot import create_band_structure_plot, create_dos_plot
 from ChemBlender.render_scene import RenderScope
 from ChemBlender.scientific_materials import flat_material

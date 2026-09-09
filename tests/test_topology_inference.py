@@ -5,19 +5,15 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    ImportBatch,
-    IssueKind,
-    QCProject,
-    QualityStatus,
-    Structure,
-    TopologySource,
-)
-from ChemBlender.core.topology.infer import (
-    TopologyInferenceSettings,
-    infer_distance_topology,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import ImportBatch
+from cbq_core.model import IssueKind
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from cbq_core.model import Structure
+from cbq_core.model import TopologySource
+from chemblender_prepare.core.topology.infer import TopologyInferenceSettings
+from chemblender_prepare.core.topology.infer import infer_distance_topology
 
 
 def structure(atomic_numbers, coordinates, *, unit="angstrom", **changes):

@@ -2,11 +2,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from ChemBlender.core import ReaderRegistry, SniffMatch, XYZ_READER
-from ChemBlender.core.mol_v2000 import (
-    MOL_V2000_READER,
-    sniff_mol_v2000,
-)
+from chemblender_prepare.core.readers import ReaderRegistry
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.xyz import XYZ_READER
+from chemblender_prepare.core.mol_v2000 import MOL_V2000_READER
+from chemblender_prepare.core.mol_v2000 import sniff_mol_v2000
 
 
 ROOT = Path(__file__).resolve().parents[1]

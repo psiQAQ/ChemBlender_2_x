@@ -5,18 +5,18 @@ import re
 import unittest
 from pathlib import Path
 
-from ChemBlender.core import FrameSet
-from ChemBlender.core.cjson_adapter import parse_cjson
-from ChemBlender.core.cube import parse_cube
-from ChemBlender.core.formats.extxyz import parse_extxyz
-from ChemBlender.core.formats.gaussian_input import parse_gaussian_input
-from ChemBlender.core.formats.mol2 import parse_mol2
-from ChemBlender.core.formats.orca_input import parse_orca_input
-from ChemBlender.core.formats.pdb import parse_pdb
-from ChemBlender.core.formats.poscar import parse_poscar
-from ChemBlender.core.formats.pqr import parse_pqr
-from ChemBlender.core.qcschema_adapter import parse_qcschema
-from ChemBlender.core.xyz import parse_xyz
+from cbq_core.model import FrameSet
+from chemblender_prepare.core.cjson_adapter import parse_cjson
+from chemblender_prepare.core.cube import parse_cube
+from chemblender_prepare.core.formats.extxyz import parse_extxyz
+from chemblender_prepare.core.formats.gaussian_input import parse_gaussian_input
+from chemblender_prepare.core.formats.mol2 import parse_mol2
+from chemblender_prepare.core.formats.orca_input import parse_orca_input
+from chemblender_prepare.core.formats.pdb import parse_pdb
+from chemblender_prepare.core.formats.poscar import parse_poscar
+from chemblender_prepare.core.formats.pqr import parse_pqr
+from chemblender_prepare.core.qcschema_adapter import parse_qcschema
+from chemblender_prepare.core.xyz import parse_xyz
 
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -5,7 +5,9 @@ import unittest
 
 import numpy
 
-from ChemBlender.core import ArrayData, ImportBatch, parse_poscar
+from cbq_core.model import ArrayData
+from cbq_core.model import ImportBatch
+from chemblender_prepare.core.formats.poscar import parse_poscar
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "poscar"
@@ -13,11 +15,9 @@ FIXTURES = Path(__file__).parent / "fixtures" / "poscar"
 
 class PoscarRoundTripTests(unittest.TestCase):
     def test_direct_selective_dynamics_round_trips_semantically(self):
-        from ChemBlender.core.exporters import (
-            PoscarExportSettings,
-            export_poscar,
-            semantic_poscar_differences,
-        )
+        from chemblender_prepare.core.exporters import PoscarExportSettings
+        from chemblender_prepare.core.exporters import export_poscar
+        from chemblender_prepare.core.exporters import semantic_poscar_differences
 
         original = parse_poscar(FIXTURES / "cscl-selective.vasp")
         selective = next(
@@ -38,12 +38,10 @@ class PoscarRoundTripTests(unittest.TestCase):
         self.assertEqual(semantic_poscar_differences(original, reparsed), ())
 
     def test_selected_ion_and_lattice_velocities_round_trip(self):
-        from ChemBlender.core.exporters import (
-            PoscarExportSettings,
-            export_poscar,
-            semantic_poscar_differences,
-        )
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.exporters import PoscarExportSettings
+        from chemblender_prepare.core.exporters import export_poscar
+        from chemblender_prepare.core.exporters import semantic_poscar_differences
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         source = FIXTURES / "velocities.CONTCAR"
         original = parse_poscar(source)
@@ -78,12 +76,10 @@ class PoscarRoundTripTests(unittest.TestCase):
         self.assertIsNotNone(exported_document.lattice_velocities)
 
     def test_velocity_mode_conversion_uses_the_structure_cell(self):
-        from ChemBlender.core.exporters import (
-            PoscarExportSettings,
-            export_poscar,
-            semantic_poscar_differences,
-        )
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.exporters import PoscarExportSettings
+        from chemblender_prepare.core.exporters import export_poscar
+        from chemblender_prepare.core.exporters import semantic_poscar_differences
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         source_text = """velocity basis
 1
@@ -141,10 +137,8 @@ Direct
         )
 
     def test_interleaved_species_are_grouped_without_semantic_loss(self):
-        from ChemBlender.core.exporters import (
-            export_poscar,
-            semantic_poscar_differences,
-        )
+        from chemblender_prepare.core.exporters import export_poscar
+        from chemblender_prepare.core.exporters import semantic_poscar_differences
 
         original = parse_poscar(FIXTURES / "cscl.vasp")
         structure = original.structures[0]

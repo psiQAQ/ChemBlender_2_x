@@ -4,14 +4,16 @@ from uuid import UUID
 
 import numpy
 
-from ChemBlender.core import ArrayData, DatasetStatus, Grid3D
-from ChemBlender.core import ImportBatch, ProvenanceRecord, QCProject
-from ChemBlender.core.grid_semantics import (
-    GRID_SEMANTIC_PRESETS,
-    GridSemanticPreset,
-    default_grid_isovalue,
-    resolve_grid_semantics,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from cbq_core.model import ProvenanceRecord
+from cbq_core.model import QCProject
+from cbq_core.grid_semantics import GRID_SEMANTIC_PRESETS
+from cbq_core.grid_semantics import GridSemanticPreset
+from cbq_core.grid_semantics import default_grid_isovalue
+from chemblender_prepare.core.grid_semantics import resolve_grid_semantics
 
 
 GRID_ID = UUID("10000000-0000-0000-0000-000000000001")

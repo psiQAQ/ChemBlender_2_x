@@ -6,13 +6,13 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import ArrayData, DatasetStatus, QCProject
-from ChemBlender.core.exporters import (
-    ExportCancelled,
-    export_pdb,
-    preview_pdb_export,
-)
-from ChemBlender.core.formats.pdb import parse_pdb
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import QCProject
+from chemblender_prepare.core.exporters import ExportCancelled
+from chemblender_prepare.core.exporters import export_pdb
+from chemblender_prepare.core.exporters import preview_pdb_export
+from chemblender_prepare.core.formats.pdb import parse_pdb
 from tests.test_biological_atom_data import biological_mapping_fixture
 
 

@@ -5,30 +5,28 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender import reader_api
-from ChemBlender.core import (
-    ArrayData,
-    AtomicIdentityData,
-    AtomicProperty,
-    CategoricalData,
-    ChemicalAnnotation,
-    DatasetStatus,
-    ImportBatch,
-    IssueKind,
-    MolecularRecord,
-    ParserIssue,
-    ParserReport,
-    QCProject,
-    QualityStatus,
-    SourceRecord,
-    SourceRevision,
-    Structure,
-    TopologyRecord,
-    TopologySource,
-    close_project,
-    open_project,
-    save_project,
-)
+from chemblender_prepare import reader_api
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomicIdentityData
+from cbq_core.model import AtomicProperty
+from cbq_core.model import CategoricalData
+from cbq_core.model import ChemicalAnnotation
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ImportBatch
+from cbq_core.model import IssueKind
+from cbq_core.model import MolecularRecord
+from cbq_core.model import ParserIssue
+from cbq_core.model import ParserReport
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
+from cbq_core.model import Structure
+from cbq_core.model import TopologyRecord
+from cbq_core.model import TopologySource
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
 
 
 def array(values, dims, unit="dimensionless"):

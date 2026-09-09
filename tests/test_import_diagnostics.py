@@ -6,28 +6,24 @@ import unittest
 from pathlib import Path
 from uuid import uuid4
 
-from ChemBlender.core import (
-    DiagnosticSeverity,
-    DiagnosticValue,
-    ImportBatch,
-    ImportDiagnostic,
-    IssueKind,
-    ParserIssue,
-    ProvenanceRecord,
-    QCProject,
-    QualityStatus,
-    SourceRecord,
-    SourceRevision,
-    diagnostic_from_parser_issue,
-)
-from ChemBlender.core.sidecar import (
-    SidecarIntegrityError,
-    _manifest_hash,
-    _open_project_with_manifest,
-    close_project,
-    open_project,
-    save_project,
-)
+from cbq_core.model import DiagnosticSeverity
+from cbq_core.model import DiagnosticValue
+from cbq_core.model import ImportBatch
+from cbq_core.model import ImportDiagnostic
+from cbq_core.model import IssueKind
+from cbq_core.model import ParserIssue
+from cbq_core.model import ProvenanceRecord
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
+from cbq_core.model import diagnostic_from_parser_issue
+from cbq_core.sidecar import SidecarIntegrityError
+from cbq_core.sidecar import _manifest_hash
+from cbq_core.sidecar import _open_project_with_manifest
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
 
 
 _HASH = "a" * 64

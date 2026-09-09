@@ -4,17 +4,15 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    BiologicalAtomSiteData,
-    BiologicalChain,
-    BiologicalHierarchy,
-    BiologicalModel,
-    BiologicalResidue,
-    CategoricalData,
-    ChemicalAnnotation,
-    ExternalReference,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import BiologicalAtomSiteData
+from cbq_core.model import BiologicalChain
+from cbq_core.model import BiologicalHierarchy
+from cbq_core.model import BiologicalModel
+from cbq_core.model import BiologicalResidue
+from cbq_core.model import CategoricalData
+from cbq_core.model import ChemicalAnnotation
+from cbq_core.model import ExternalReference
 
 
 def categorical(values, categories):

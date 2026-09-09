@@ -3,12 +3,12 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from uuid import UUID
 
-from ChemBlender.core import QCProject, close_project, save_project
-from ChemBlender.project_link import (
-    ProjectLinkStatus,
-    resolve_project_link,
-    write_project_link,
-)
+from cbq_core.model import QCProject
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import save_project
+from cbq_core.project_link import ProjectLinkStatus
+from cbq_core.project_link import resolve_project_link
+from cbq_core.project_link import write_project_link
 
 
 class ProjectLinkTests(unittest.TestCase):

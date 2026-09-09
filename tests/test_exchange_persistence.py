@@ -7,9 +7,12 @@ from uuid import uuid4
 
 import numpy
 
-import ChemBlender.reader_api as reader_api
-from ChemBlender.core import ImportBatch, QCProject
-from ChemBlender.core.sidecar import close_project, open_project, save_project
+import chemblender_prepare.reader_api as reader_api
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
 from tests.test_exchange_project_contract import (
     annotation,
     external_reference,
@@ -119,7 +122,7 @@ class ExchangePersistenceTests(unittest.TestCase):
         self.assertEqual(restored.external_references, ())
 
     def test_public_types_are_exact_core_types_and_cold_imports_remain_optional(self):
-        import ChemBlender.core as core
+        from cbq_core import model as core
 
         for name in (
             "BiologicalAtomSiteData",
@@ -133,7 +136,7 @@ class ExchangePersistenceTests(unittest.TestCase):
             self.assertIs(getattr(reader_api, name), getattr(core, name))
 
         code = (
-            "import sys; import ChemBlender.core; import ChemBlender.reader_api; "
+            "import sys; import cbq_core.model; import chemblender_prepare.reader_api; "
             "forbidden={'openbabel','Bio','rdkit','gemmi','spglib'}; "
             "raise SystemExit(bool(forbidden & set(sys.modules)))"
         )

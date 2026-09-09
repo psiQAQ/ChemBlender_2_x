@@ -1,26 +1,11 @@
-import importlib
 import importlib.util
-import sys
 import tempfile
 import unittest
 from pathlib import Path
-from types import ModuleType, SimpleNamespace
-from unittest.mock import patch
 from uuid import uuid4
 
-from ChemBlender.core import QCProject, create_session, close_session, parse_cif
-from ChemBlender.core.import_pipeline.conformer_grouping import (
-    suggest_staged_conformer_groups,
-)
-from ChemBlender.core.import_pipeline.request import (
-    ImportRequest,
-    ImportSource,
-    ValidationMode,
-)
-from ChemBlender.reader_api.import_pipeline_bridge import (
-    preflight_reader_plugins,
-)
-from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+from cbq_core.model import QCProject
+from chemblender_prepare.core.formats.cif import parse_cif
 from ChemBlender.ui.project_browser.model import BrowserMode, build_browser_rows
 
 
@@ -32,134 +17,93 @@ if HAS_GEMMI:
     import gemmi  # noqa: F401  # keep native types loaded across module patches
 
 
-class _Property:
-    def __init__(self, kind, **keywords):
-        self.kind = kind
-        self.keywords = keywords
+@unittest.skipUnless(HAS_GEMMI, "Gemmi dependency unavailable")
+class CIFProductFlowTests(unittest.TestCase):
+    def cli(self, *args):
+        import io
+        import json
+        from contextlib import redirect_stdout
+        from chemblender_prepare.cli import main
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            code = main([str(value) for value in args] + ["--json"])
+        result = json.loads(stream.getvalue())
+        self.assertEqual(code, 0, result)
+        return result
 
+    def test_preview_and_conversion_preserve_all_cif_blocks(self):
+        from cbq_core.sidecar import open_project, close_project
+        import numpy
+        row = self.cli("inspect", MULTI)["metadata"]["cif"]
+        self.assertEqual((row["block_count"], row["valid_block_count"], row["site_count"]), (2, 2, 4))
+        self.assertEqual([block["name"] for block in row["blocks"]], ["first", "second"])
+        self.assertAlmostEqual(row["blocks"][0]["cell"][0][0], 4.12)
+        self.assertEqual(row["blocks"][0]["cell_unit"], "angstrom")
+        self.assertEqual(row["conversion_policy"], "all_valid_blocks")
+        original = MULTI.read_bytes()
+        expected = parse_cif(MULTI)
+        with tempfile.TemporaryDirectory() as directory:
+            source, output = Path(directory) / "input.cif", Path(directory) / "all.cbq"
+            source.write_bytes(original)
+            self.cli("convert", source, "-o", output)
+            source.unlink()
+            project = open_project(output, verify_arrays=True)
+            try:
+                structures = sorted(project.structures.values(), key=lambda value: value.periodic.cif_block_index)
+                self.assertEqual(len(structures), 2)
+                self.assertEqual(len({value.id for value in structures}), 2)
+                for index, (actual, before) in enumerate(zip(structures, expected.structures)):
+                    self.assertEqual(actual.periodic.cif_block_index, index)
+                    self.assertEqual(actual.periodic.cif_block_key, before.periodic.cif_block_key)
+                    envelope = project.cif_envelopes[actual.periodic.cif_envelope_id]
+                    self.assertEqual(envelope.source_bytes, original)
+                    self.assertEqual(envelope.block_keys[index], actual.periodic.cif_block_key)
+                    numpy.testing.assert_array_equal(actual.coordinates.values, before.coordinates.values)
+                    numpy.testing.assert_array_equal(actual.cell.values, before.cell.values)
+            finally:
+                close_project(project)
 
-def _property(kind):
-    return lambda **keywords: _Property(kind, **keywords)
+    def test_preview_bounds_blocks_and_rejects_input_changed_during_parse(self):
+        from unittest.mock import patch
+        import io
+        import json
+        from contextlib import redirect_stdout
+        from chemblender_prepare.cli import main
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "many.cif"
+            source.write_bytes(MULTI.read_bytes() + b"".join(
+                ("\ndata_note" + str(index) + "\n_audit_creation_method notes\n").encode()
+                for index in range(101)))
+            row = self.cli("inspect", source)["metadata"]["cif"]
+            self.assertEqual(row["block_count"], 103)
+            self.assertEqual(len(row["blocks"]), 100)
+            self.assertTrue(row["blocks_truncated"])
+            self.assertEqual(row["diagnostic_count"], len(parse_cif(source).report.issues))
+            self.assertEqual(len(row["diagnostics"]), 100)
+            def changed(path):
+                batch = parse_cif(path)
+                path.write_bytes(b"data_changed\n_audit_creation_method changed\n")
+                return batch
+            stream = io.StringIO()
+            with patch("chemblender_prepare.core.formats.cif.parse_cif", side_effect=changed), redirect_stdout(stream):
+                code = main(["inspect", str(source), "--json"])
+            self.assertEqual(code, 1)
+            self.assertIn("Input changed during inspection", stream.getvalue())
+            self.assertEqual(json.loads(stream.getvalue())["status"], "error")
 
-
-class _Operator:
-    def report(self, levels, message):
-        self.last_report = (levels, message)
-
-
-class _PropertyGroup:
-    pass
+    def test_preview_reports_nonstructural_blocks_without_inventing_sites(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "mixed.cif"
+            source.write_bytes(MULTI.read_bytes() + b"\ndata_notes\n_audit_creation_method 'notes only'\n")
+            row = self.cli("inspect", source)["metadata"]["cif"]
+        self.assertEqual((row["block_count"], row["valid_block_count"], row["site_count"]), (3, 2, 4))
+        self.assertFalse(row["blocks"][2]["has_structure"])
+        self.assertIsNone(row["blocks"][2]["cell"])
+        self.assertTrue(any(issue["path"] == "cif.blocks[2]" for issue in row["diagnostics"]))
 
 
 @unittest.skipUnless(HAS_GEMMI, "Gemmi dependency unavailable")
-class CIFProductFlowTests(unittest.TestCase):
-    def setUp(self):
-        self.fake_bpy = ModuleType("bpy")
-        props = ModuleType("bpy.props")
-        for name, kind in (
-            ("BoolProperty", "bool"),
-            ("CollectionProperty", "collection"),
-            ("EnumProperty", "enum"),
-            ("FloatProperty", "float"),
-            ("IntProperty", "int"),
-            ("PointerProperty", "pointer"),
-            ("StringProperty", "string"),
-        ):
-            setattr(props, name, _property(kind))
-        self.fake_bpy.props = props
-        self.fake_bpy.types = SimpleNamespace(
-            Operator=_Operator,
-            PropertyGroup=_PropertyGroup,
-        )
-        self.fake_bpy.app = SimpleNamespace(background=True)
-        self.fake_bpy.data = SimpleNamespace(
-            objects=SimpleNamespace(remove=lambda *_args, **_kwargs: None),
-            batch_remove=lambda **_kwargs: None,
-        )
-        self.fake_bpy.context = SimpleNamespace(collection=object())
-        self.modules = patch.dict(
-            sys.modules,
-            {"bpy": self.fake_bpy, "bpy.props": props},
-        )
-        self.modules.start()
-        for name in (
-            "ChemBlender.ui.export",
-            "ChemBlender.ui.import_preview",
-            "ChemBlender.ui.properties",
-        ):
-            sys.modules.pop(name, None)
-        self.properties = importlib.import_module("ChemBlender.ui.properties")
-        self.preview_module = importlib.import_module(
-            "ChemBlender.ui.import_preview"
-        )
-        self.export_module = importlib.import_module("ChemBlender.ui.export")
-        self.temporary = tempfile.TemporaryDirectory()
-        self.session = create_session(temp_parent=Path(self.temporary.name))
-
-    def tearDown(self):
-        try:
-            self.properties.clear_quick_import_state(self.session)
-        except BaseException:
-            pass
-        try:
-            close_session(self.session)
-        except BaseException:
-            pass
-        self.modules.stop()
-        for name in (
-            "ChemBlender.ui.export",
-            "ChemBlender.ui.import_preview",
-            "ChemBlender.ui.properties",
-        ):
-            sys.modules.pop(name, None)
-        self.temporary.cleanup()
-
-    def stage(self, source):
-        staging = self.properties.create_quick_import_staging(self.session)
-        request = ImportRequest(
-            sources=(ImportSource(source),),
-            validation_mode=ValidationMode.BALANCED,
-        )
-        registry = builtin_reader_plugin_registry()
-        preview = preflight_reader_plugins(
-            request,
-            registry,
-            staging,
-            progress=lambda *_args: None,
-            is_cancelled=lambda: False,
-        )
-        self.properties.store_quick_import_preview(
-            self.session,
-            staging,
-            preview,
-            conformer_grouping_suggestions=suggest_staged_conformer_groups(
-                preview,
-                staging,
-            ),
-        )
-        return registry, self.properties.get_quick_import_state(self.session)
-
-    def test_preview_summarizes_cif_and_requires_multi_block_confirmation(self):
-        registry, state = self.stage(MULTI)
-        rows = self.preview_module.project_import_preview(
-            self.session,
-            state,
-            registry,
-        )
-
-        self.assertEqual(len(rows), 1)
-        row = rows[0]
-        self.assertEqual((row.cif_block_count, row.cif_valid_block_count), (2, 2))
-        self.assertIn("first", row.cif_block_summary)
-        self.assertIn("4 sites", row.cif_site_summary)
-        self.assertIn("4.12", row.cif_cell_summary)
-        self.assertFalse(row.cif_default_block_confirmed)
-        with self.assertRaisesRegex(ValueError, "CIF default block"):
-            self.preview_module.import_commit_decisions(state, rows)
-
-        row.cif_default_block_confirmed = True
-        self.preview_module.import_commit_decisions(state, rows)
-
+class PreparedCIFProductFlowTests(unittest.TestCase):
     def test_browser_exposes_site_occupancy_disorder_and_adp_summaries(self):
         batch = parse_cif(MIXED)
         project = QCProject(uuid4(), "0.2")
@@ -178,38 +122,34 @@ class CIFProductFlowTests(unittest.TestCase):
         self.assertTrue(any("Disorder:" in label for label in labels))
         self.assertTrue(any("ADP:" in label for label in labels))
 
+
     def test_background_cif_export_uses_bound_envelope(self):
+        from chemblender_prepare import export_service
         batch = parse_cif(MIXED)
         project = QCProject(uuid4(), "0.2")
         project.commit(batch)
         structure = batch.structures[0]
-        selection = self.export_module.resolve_export_selection(
+        selection = export_service.resolve_export_selection(
             project,
             structure.id,
         )
         self.assertIs(selection.cif_envelope, batch.cif_envelopes[0])
-        preview = self.export_module.preview_export_selection(selection, "cif")
+        preview = export_service.preview_export_selection(selection, "cif")
         self.assertEqual(preview.format, "cif")
         self.assertTrue(
             any(entry.code == "preserve:unknown_content" for entry in preview.entries)
         )
 
-        destination = Path(self.temporary.name) / "exported.cif"
-        job = self.export_module.ExportJob(
-            destination,
-            selection,
-            format_name="cif",
-            confirm_loss=False,
-            missing_value_token=None,
-        )
-        job._run()
-
-        self.assertIsNone(job.error)
-        self.assertTrue(job.result.written)
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "exported.cif"
+            report = export_service.export_selection(destination, selection, format_name="cif", confirm_loss=False)
+            self.assertTrue(report.written)
+            restored_labels = parse_cif(destination).structures[0].periodic.site_labels
         self.assertEqual(
-            parse_cif(destination).structures[0].periodic.site_labels,
+            restored_labels,
             structure.periodic.site_labels,
         )
+
 
 
 if __name__ == "__main__":

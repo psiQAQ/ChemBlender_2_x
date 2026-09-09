@@ -6,29 +6,27 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender import reader_api
-from ChemBlender.core import (
-    ArrayData,
-    AtomicIdentityData,
-    CategoricalData,
-    ConformerSet,
-    DatasetStatus,
-    ImportBatch,
-    MolecularRecord,
-    QCProject,
-    RawRecordProperty,
-    RecordPropertyColumn,
-    SourceRecord,
-    SourceRevision,
-    Structure,
-    TopologyRecord,
-    TopologySource,
-    QualityStatus,
-    save_project,
-    open_project,
-    close_project,
-    SidecarIntegrityError,
-)
+from chemblender_prepare import reader_api
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomicIdentityData
+from cbq_core.model import CategoricalData
+from cbq_core.model import ConformerSet
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ImportBatch
+from cbq_core.model import MolecularRecord
+from cbq_core.model import QCProject
+from cbq_core.model import RawRecordProperty
+from cbq_core.model import RecordPropertyColumn
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
+from cbq_core.model import Structure
+from cbq_core.model import TopologyRecord
+from cbq_core.model import TopologySource
+from cbq_core.model import QualityStatus
+from cbq_core.sidecar import save_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import SidecarIntegrityError
 from tests.test_sidecar_storage import write_manifest
 
 

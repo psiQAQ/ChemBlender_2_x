@@ -5,20 +5,20 @@ from uuid import uuid4
 
 import numpy
 
-import ChemBlender.reader_api as reader_api
-from ChemBlender.core import (
-    ArrayData,
-    AtomFrameProperty,
-    CategoricalData,
-    CellFrameProperty,
-    DatasetStatus,
-    FrameProperty,
-    FrameSet,
-    ImportBatch,
-    QCProject,
-    Structure,
-)
-from ChemBlender.core.sidecar import close_project, open_project, save_project
+import chemblender_prepare.reader_api as reader_api
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomFrameProperty
+from cbq_core.model import CategoricalData
+from cbq_core.model import CellFrameProperty
+from cbq_core.model import DatasetStatus
+from cbq_core.model import FrameProperty
+from cbq_core.model import FrameSet
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
 
 
 def structure_and_frames(*, frame_count=2, atom_count=2):

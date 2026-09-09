@@ -30,10 +30,9 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertLessEqual(len(manifest["permissions"]["files"]), 64)
         self.assertEqual(
             manifest["permissions"]["files"],
-            "Read selected files and write requested visualization caches",
+            "Read CBQ projects and save caches, images and project data",
         )
-        self.assertIn("network", manifest["permissions"])
-        self.assertLessEqual(len(manifest["permissions"]["network"]), 64)
+        self.assertNotIn("network", manifest["permissions"])
         self.assertIn("scripts/", manifest["build"]["paths_exclude_pattern"])
         self.assertTrue((EXTENSION / "__init__.py").exists())
         self.assertTrue((EXTENSION / "scripts" / "build_extension.py").exists())

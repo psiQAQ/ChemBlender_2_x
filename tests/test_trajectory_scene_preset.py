@@ -6,10 +6,14 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData, AtomFrameProperty, DatasetStatus, FrameProperty, ImportBatch, QCProject,
-    builtin_scene_presets, plan_scene_preset,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomFrameProperty
+from cbq_core.model import DatasetStatus
+from cbq_core.model import FrameProperty
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
 from ChemBlender.ui.scientific_view import available_presets, scientific_bindings, timeline_frame
 from tests.test_trajectory_frame_manager import frame_set
 from tests.test_vibration_model import structure

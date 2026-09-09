@@ -7,14 +7,20 @@ from uuid import UUID, uuid4
 
 import numpy
 
-from ChemBlender.core import QCProject, close_project, open_project, save_project
-from ChemBlender.core.worker_protocol import WorkerRequest, WorkerStatus, write_request
-from ChemBlender.core import pyprocar_file as adapter
+from cbq_core.model import QCProject
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from cbq_core.worker_protocol import WorkerRequest
+from cbq_core.worker_protocol import WorkerStatus
+from cbq_core.worker_protocol import write_request
+from chemblender_prepare.core import pyprocar_file as adapter
 from tests.test_pyprocar_file import (
     FakeSurface, mocked_readers, mocked_surface, write_inputs,
 )
-from worker.fermi_operation import register_fermi_surface_operation
-from worker.runner import OperationRegistry, run_request
+from chemblender_prepare.worker.fermi_operation import register_fermi_surface_operation
+from chemblender_prepare.worker.runner import OperationRegistry
+from chemblender_prepare.worker.runner import run_request
 
 
 class FermiWorkerTests(unittest.TestCase):
@@ -74,7 +80,7 @@ class FermiWorkerTests(unittest.TestCase):
 
     def test_hash_mismatch_never_invokes_backend_or_mutates_project(self):
         artifacts = {**self.artifacts, "PROCAR": {**self.artifacts["PROCAR"], "sha256": "0" * 64}}
-        with patch("worker.fermi_operation.parse_vasp_fermi") as backend:
+        with patch("chemblender_prepare.worker.fermi_operation.parse_vasp_fermi") as backend:
             result = self.run_operation(artifacts)
         backend.assert_not_called()
         self.assertIs(result.status, WorkerStatus.ERROR)
@@ -87,7 +93,7 @@ class FermiWorkerTests(unittest.TestCase):
             ({**self.artifacts, "PROCAR": {**self.artifacts["PROCAR"], "path": "../PROCAR"}}, {}),
             (self.artifacts, {"fermi_shift": .5}),
         ):
-            with self.subTest(parameters=parameters), patch("worker.fermi_operation.parse_vasp_fermi") as backend:
+            with self.subTest(parameters=parameters), patch("chemblender_prepare.worker.fermi_operation.parse_vasp_fermi") as backend:
                 result = self.run_operation(artifacts, **parameters)
                 self.assertIs(result.status, WorkerStatus.ERROR)
                 backend.assert_not_called()

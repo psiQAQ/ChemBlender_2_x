@@ -14,7 +14,10 @@ sys.path.insert(0, str(ROOT))
 private = Path(os.environ["BLENDER_USER_RESOURCES"]).resolve()
 assert ROOT / ".agents" / "cache" in private.parents
 
-from ChemBlender.core import ImportBatch, builtin_scene_presets, create_session, plan_scene_preset
+from cbq_core.model import ImportBatch
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.session import create_session
+from cbq_core.scene_preset import plan_scene_preset
 from ChemBlender.scene_preset_view import apply_scene_preset, _remove_objects
 from ChemBlender.ui.scientific_export import export_scientific_images, _encode_video
 from ChemBlender.ui import scientific_export as ui

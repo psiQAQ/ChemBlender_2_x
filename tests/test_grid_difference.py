@@ -7,9 +7,16 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core.grid_difference import derive_grid_difference
-from ChemBlender.core.model import ArrayData, DatasetStatus, Grid3D, ImportBatch, QCProject, Structure
-from ChemBlender.core.sidecar import close_project, open_project, save_project
+from chemblender_prepare.core.grid_difference import derive_grid_difference
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
 
 
 def density(structure_id, values, **changes):

@@ -10,34 +10,30 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    CapabilitySupport,
-    SniffMatch,
-    SniffResult,
-    builtin_reader_registry,
-)
-from ChemBlender.reader_api import (
-    ExecutionMode,
-    ArrayData,
-    DatasetStatus,
-    Grid3D,
-    IssueKind,
-    ParseRequest,
-    ParserIssue,
-    ParserReport,
-    ProgressEvent,
-    PropertyDataset,
-    ProvenanceRecord,
-    PublicImportBatch,
-    PublicReaderDescriptor,
-    ReaderAvailability,
-    ReaderManifestEntry,
-    ReaderPlugin,
-    ReaderPluginManifest,
-    ReaderPluginRegistry,
-    SniffRequest,
-    builtin_reader_plugin_registry,
-)
+from chemblender_prepare.core.readers import CapabilitySupport
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.readers import SniffResult
+from chemblender_prepare.core.reader_catalog import builtin_reader_registry
+from chemblender_prepare.reader_api import ExecutionMode
+from chemblender_prepare.reader_api import ArrayData
+from chemblender_prepare.reader_api import DatasetStatus
+from chemblender_prepare.reader_api import Grid3D
+from chemblender_prepare.reader_api import IssueKind
+from chemblender_prepare.reader_api import ParseRequest
+from chemblender_prepare.reader_api import ParserIssue
+from chemblender_prepare.reader_api import ParserReport
+from chemblender_prepare.reader_api import ProgressEvent
+from chemblender_prepare.reader_api import PropertyDataset
+from chemblender_prepare.reader_api import ProvenanceRecord
+from chemblender_prepare.reader_api import PublicImportBatch
+from chemblender_prepare.reader_api import PublicReaderDescriptor
+from chemblender_prepare.reader_api import ReaderAvailability
+from chemblender_prepare.reader_api import ReaderManifestEntry
+from chemblender_prepare.reader_api import ReaderPlugin
+from chemblender_prepare.reader_api import ReaderPluginManifest
+from chemblender_prepare.reader_api import ReaderPluginRegistry
+from chemblender_prepare.reader_api import SniffRequest
+from chemblender_prepare.reader_api import builtin_reader_plugin_registry
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -409,44 +405,24 @@ class ReaderAPIRegistryTests(unittest.TestCase):
         with self.assertRaises(KeyError):
             registry.unregister(manifest)
 
-    def test_runtime_handle_callbacks_protect_builtin_plugin_identity(self):
-        from ChemBlender.reader_api.registry import builtin_reader_plugins
-        from ChemBlender.runtime.reader_api_bridge import (
-            refresh_reader_plugin_discovery,
-            register_reader_api_handle,
-            remove_reader_api_handle,
-        )
-
-        namespace = {}
-        handle = register_reader_api_handle(
-            "synthetic_repository.chemblender",
-            namespace=namespace,
-        )
+    def test_external_discovery_protects_builtin_plugin_identity(self):
+        from chemblender_prepare.reader_api.registry import builtin_reader_plugins
+        from chemblender_prepare.reader_api.discovery import ReaderPluginDiscovery
+        registry = builtin_reader_plugin_registry()
+        discovery = ReaderPluginDiscovery(registry)
         external = FixedPlugin(public_descriptor("external"))
         builtin = builtin_reader_plugins()[0]
-        try:
-            self.assertIs(type(handle.register_callback), type(lambda: None))
-            self.assertIs(type(handle.unregister_callback), type(lambda: None))
-            handle.register_callback(external)
-            handle.unregister_callback(external.manifest)
-            before = refresh_reader_plugin_discovery().descriptors
-            failed = handle.register_callback(builtin)
-            self.assertFalse(failed.availability.available)
-            self.assertEqual(
-                failed.availability.reason_code,
-                "plugin_registration_failed",
-            )
-            self.assertEqual(
-                refresh_reader_plugin_discovery().descriptors,
-                before,
-            )
-            self.assertTrue(handle.unregister_callback(builtin.manifest))
-            self.assertNotIn(
-                failed,
-                refresh_reader_plugin_discovery().plugins,
-            )
-        finally:
-            remove_reader_api_handle(handle, namespace=namespace)
+        self.assertTrue(discovery.register(external).availability.available)
+        self.assertTrue(discovery.unregister(external.manifest))
+        before = discovery.refresh().descriptors
+        failed = discovery.register(builtin)
+        self.assertFalse(failed.availability.available)
+        self.assertEqual(failed.availability.reason_code, "plugin_registration_failed")
+        self.assertEqual(discovery.refresh().descriptors, before)
+        self.assertTrue(discovery.unregister(builtin.manifest))
+        self.assertNotIn(failed, discovery.refresh().plugins)
+        self.assertTrue(all(actual is expected for actual, expected in
+                            zip(registry.descriptors, before, strict=True)))
 
     def test_selection_matches_existing_xyz_and_cube_registry(self):
         registry = builtin_reader_plugin_registry()
@@ -467,7 +443,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
             )
 
     def test_builtin_bridge_exposes_all_reader_metadata_without_optional_imports(self):
-        from ChemBlender.reader_api.registry import builtin_reader_plugins
+        from chemblender_prepare.reader_api.registry import builtin_reader_plugins
 
         before = set(sys.modules)
         plugins = builtin_reader_plugins()
@@ -936,7 +912,7 @@ class ReaderAPIRegistryTests(unittest.TestCase):
             names = {field.name.lower() for field in fields(contract)}
             self.assertFalse(names & forbidden, (contract, names & forbidden))
 
-        root = Path(__file__).parents[1] / "ChemBlender" / "reader_api"
+        root = Path(__file__).parents[1] / "chemblender_prepare" / "reader_api"
         for name in ("protocol.py", "registry.py"):
             tree = ast.parse((root / name).read_text(encoding="utf-8"))
             for node in ast.walk(tree):

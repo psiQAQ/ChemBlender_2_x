@@ -6,13 +6,12 @@ from uuid import uuid4
 
 import numpy
 
-import ChemBlender.core as core
-from ChemBlender.reader_api import (
-    internal_batch_from_public,
-    public_batch_document,
-    public_batch_from_document,
-    public_batch_from_internal,
-)
+from cbq_core import model as core
+from cbq_core.sidecar import close_project, open_project, save_project
+from chemblender_prepare.reader_api import internal_batch_from_public
+from chemblender_prepare.reader_api import public_batch_document
+from chemblender_prepare.reader_api import public_batch_from_document
+from chemblender_prepare.reader_api import public_batch_from_internal
 
 
 def array(values, dims, unit):
@@ -353,8 +352,8 @@ class CrystalPersistenceContractTests(unittest.TestCase):
 
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "crystal.cbq"
-            core.save_project(destination, project)
-            restored = core.open_project(destination)
+            save_project(destination, project)
+            restored = open_project(destination)
             try:
                 loaded_structure = restored.structures[structure_id]
                 loaded_topology = restored.topologies[topology_id]
@@ -376,7 +375,7 @@ class CrystalPersistenceContractTests(unittest.TestCase):
                     [[1, 0, 0]],
                 )
             finally:
-                core.close_project(restored)
+                close_project(restored)
 
     def test_periodic_batch_round_trips_through_canonical_document(self):
         structure_id = uuid4()

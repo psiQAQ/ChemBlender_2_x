@@ -3,18 +3,19 @@ from tempfile import TemporaryDirectory
 import unittest
 from uuid import uuid4
 
-from ChemBlender.core import (
-    AtomicProperty,
-    CapabilitySupport,
-    DatasetStatus,
-    Grid3D,
-    IssueKind,
-    QCProject,
-    ReaderRegistry,
-    SniffMatch,
-)
-from ChemBlender.core.cube import CUBE_READER, sniff_cube
-from ChemBlender.core.sidecar import close_project, open_project, save_project
+from cbq_core.model import AtomicProperty
+from chemblender_prepare.core.readers import CapabilitySupport
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import IssueKind
+from cbq_core.model import QCProject
+from chemblender_prepare.core.readers import ReaderRegistry
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.cube import CUBE_READER
+from chemblender_prepare.core.cube import sniff_cube
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
 
 
 ROOT = Path(__file__).resolve().parents[1]

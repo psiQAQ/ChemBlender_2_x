@@ -8,17 +8,16 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import ArrayData, CategoricalData, DatasetStatus, FrameSet
-from ChemBlender.core.exporters import (
-    ExportCancelled,
-    export_pqr,
-    preview_pqr_export,
-)
-from ChemBlender.core.formats.pqr import parse_pqr
-from ChemBlender.core.exporters.pdb_readiness import (
-    PDBPQRExportReadiness,
-    PDBPQRExportStatus,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import CategoricalData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import FrameSet
+from chemblender_prepare.core.exporters import ExportCancelled
+from chemblender_prepare.core.exporters import export_pqr
+from chemblender_prepare.core.exporters import preview_pqr_export
+from chemblender_prepare.core.formats.pqr import parse_pqr
+from chemblender_prepare.core.exporters.pdb_readiness import PDBPQRExportReadiness
+from chemblender_prepare.core.exporters.pdb_readiness import PDBPQRExportStatus
 
 
 FIXTURES = Path(__file__).with_name("fixtures") / "pqr"
@@ -38,7 +37,8 @@ class PQRExporterTests(unittest.TestCase):
         )
 
     def _lazy_coordinates(self, batch, directory, name):
-        from ChemBlender.core.sidecar import LazyNpyArray, _array_content_hash
+        from cbq_core.sidecar import LazyNpyArray
+        from cbq_core.sidecar import _array_content_hash
 
         array = numpy.asarray(batch.structures[0].coordinates.values)
         path = Path(directory) / f"{name}.npy"
@@ -201,7 +201,7 @@ class PQRExporterTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "mismatched-element.pqr"
             with patch(
-                "ChemBlender.core.exporters.pqr.pqr_export_readiness",
+                "chemblender_prepare.core.exporters.pqr.pqr_export_readiness",
                 return_value=ready,
             ):
                 with self.assertRaisesRegex(
@@ -531,7 +531,7 @@ class PQRExporterTests(unittest.TestCase):
         )
         for invalid_property, message in invalid_properties:
             with self.subTest(invalid_property=invalid_property), patch(
-                "ChemBlender.core.exporters.pqr.pqr_export_readiness",
+                "chemblender_prepare.core.exporters.pqr.pqr_export_readiness",
                 return_value=ready,
             ), self.assertRaisesRegex(
                 ValueError,
@@ -711,7 +711,7 @@ class PQRExporterTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "serial-overflow.pqr"
             with patch(
-                "ChemBlender.core.exporters.pqr.pqr_export_readiness",
+                "chemblender_prepare.core.exporters.pqr.pqr_export_readiness",
                 return_value=ready,
             ), self.assertRaisesRegex(ValueError, "PQR atom serial is invalid"):
                 export_pqr(

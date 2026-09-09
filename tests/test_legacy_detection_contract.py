@@ -46,6 +46,7 @@ class LegacyDetectionContractTests(unittest.TestCase):
                 str(self.blender),
                 "--background",
                 "--factory-startup",
+                "--disable-autoexec",
                 "--python-exit-code",
                 "1",
             ]

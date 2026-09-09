@@ -14,8 +14,12 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ChemBlender.core import ArrayData, DatasetStatus, Grid3D
-from ChemBlender.core.grid_sampling import export_grid_sample, line_profile, plane_slice
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.grid_sampling import export_grid_sample
+from cbq_core.grid_sampling import line_profile
+from cbq_core.grid_sampling import plane_slice
 from ChemBlender.grid_sample_view import create_grid_sample_view, remove_grid_sample_view
 from ChemBlender.surface_view import property_color_stops
 

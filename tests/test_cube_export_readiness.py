@@ -5,16 +5,14 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    AtomicProperty,
-    CubeExportReadiness,
-    CubeExportStatus,
-    DatasetStatus,
-    Grid3D,
-    cube_export_readiness,
-)
-from ChemBlender.core.cube import CUBE_READER
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomicProperty
+from chemblender_prepare.core.exporters.cube_readiness import CubeExportReadiness
+from chemblender_prepare.core.exporters.cube_readiness import CubeExportStatus
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from chemblender_prepare.core.exporters.cube_readiness import cube_export_readiness
+from chemblender_prepare.core.cube import CUBE_READER
 
 
 FIXTURES = Path(__file__).with_name("fixtures") / "cube"

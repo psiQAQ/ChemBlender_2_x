@@ -10,14 +10,24 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData, AtomicProperty, CalculationRecord, CalculationStatus, DatasetStatus,
-    Grid3D, ImportBatch, OrbitalKind, ProvenanceRecord, QCProject,
-    close_project, close_session, create_session, open_project, save_project,
-)
-from ChemBlender.core.worker_protocol import (
-    WorkerError, WorkerResult, WorkerStatus,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomicProperty
+from cbq_core.model import CalculationRecord
+from cbq_core.model import CalculationStatus
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from cbq_core.model import OrbitalKind
+from cbq_core.model import ProvenanceRecord
+from cbq_core.model import QCProject
+from cbq_core.sidecar import close_project
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from cbq_core.worker_protocol import WorkerError
+from cbq_core.worker_protocol import WorkerResult
+from cbq_core.worker_protocol import WorkerStatus
 from ChemBlender.ui import wavefunction
 from ChemBlender.ui.tasks import TaskState
 from tests.test_wavefunction_grid import entities
@@ -44,9 +54,13 @@ class WavefunctionUITests(unittest.TestCase):
         self.session = create_session(temp_parent=self.temporary.name, project=project)
 
     def tearDown(self):
-        wavefunction.clear_wavefunction_jobs(self.session)
-        close_session(self.session)
-        self.temporary.cleanup()
+        try:
+            wavefunction.clear_wavefunction_jobs(self.session)
+        finally:
+            try:
+                close_session(self.session)
+            finally:
+                self.temporary.cleanup()
 
     def job(self, operation_id="wavefunction.mo_grid", *, parameters=None, inputs=None):
         return wavefunction.WavefunctionJob(
@@ -56,8 +70,9 @@ class WavefunctionUITests(unittest.TestCase):
         )
 
     def execute_worker_in_snapshot(self, request, workspace, **_kwargs):
-        from worker.operation import OperationContext
-        from worker.wavefunction_operations import _mo_grid, _esp_from_orbitals_grid
+        from chemblender_prepare.worker.operation import OperationContext
+        from chemblender_prepare.worker.wavefunction_operations import _mo_grid
+        from chemblender_prepare.worker.wavefunction_operations import _esp_from_orbitals_grid
 
         locator = Path(request.project_locator)
         self.assertIn(self.session.temporary_root, locator.parents)
@@ -89,7 +104,7 @@ class WavefunctionUITests(unittest.TestCase):
     def test_snapshot_worker_cannot_modify_live_project_before_atomic_publish(self):
         job = self.job()
         with patch.object(wavefunction, "start_worker", side_effect=self.execute_worker_in_snapshot), patch(
-            "ChemBlender.core.wavefunction_grid._evaluate_channel", side_effect=self.basis_values
+            "chemblender_prepare.core.wavefunction_grid._evaluate_channel", side_effect=self.basis_values
         ):
             job.start()
             self.assertTrue(job.worker.join(5))
@@ -133,7 +148,7 @@ class WavefunctionUITests(unittest.TestCase):
         close_project(original)
         with patch.object(original_coefficients, "_load", side_effect=AssertionError("closed input read")), patch.object(
             wavefunction, "start_worker", side_effect=self.execute_worker_in_snapshot
-        ), patch("ChemBlender.core.wavefunction_grid._evaluate_channel", side_effect=self.basis_values):
+        ), patch("chemblender_prepare.core.wavefunction_grid._evaluate_channel", side_effect=self.basis_values):
             job.start()
             self.assertTrue(job.worker.join(5))
         job.worker.raise_if_failed()
@@ -172,7 +187,7 @@ class WavefunctionUITests(unittest.TestCase):
             with self.subTest(reason=reason):
                 job = self.job()
                 with patch.object(wavefunction, "start_worker", side_effect=self.execute_worker_in_snapshot), patch(
-                    "ChemBlender.core.wavefunction_grid._evaluate_channel", side_effect=self.basis_values
+                    "chemblender_prepare.core.wavefunction_grid._evaluate_channel", side_effect=self.basis_values
                 ):
                     job.start()
                     self.assertTrue(job.worker.join(5))
@@ -236,7 +251,7 @@ class WavefunctionUITests(unittest.TestCase):
 
         from uuid import UUID
         with patch.object(wavefunction, "start_worker", side_effect=self.execute_worker_in_snapshot), patch(
-            "ChemBlender.core.wavefunction_grid._evaluate_channel", side_effect=self.basis_values
+            "chemblender_prepare.core.wavefunction_grid._evaluate_channel", side_effect=self.basis_values
         ), patch.object(wavefunction, "_detached_output", side_effect=tampered):
             job.start()
             self.assertTrue(job.worker.join(5))
@@ -262,7 +277,7 @@ class WavefunctionUITests(unittest.TestCase):
         parameters["density_level"] = "scf"
         job = self.job("wavefunction.esp_from_orbitals_grid", parameters=parameters, inputs=inputs)
         with patch.object(wavefunction, "start_worker", side_effect=self.execute_worker_in_snapshot), patch(
-            "ChemBlender.core.wavefunction_observables._evaluate_esp",
+            "chemblender_prepare.core.wavefunction_observables._evaluate_esp",
             side_effect=lambda _s, _b, _d, _c, points: numpy.full(len(points), .25),
         ):
             job.start()
@@ -294,34 +309,40 @@ class WavefunctionUITests(unittest.TestCase):
                                           "wavefunction.electron_density_grid", PARAMETERS)
         self.assertEqual(estimate.call_args.kwargs["orbital_count"], 2)
 
+
+
+class PreparedOrbitalSelectionTests(unittest.TestCase):
+    def setUp(self):
+        WavefunctionUITests.setUp(self)
+
+    def tearDown(self):
+        try:
+            close_session(self.session)
+        finally:
+            self.temporary.cleanup()
+
     def test_source_selection_survives_derived_grid_and_resets_source_bound_choices(self):
         structure, basis, orbitals = entities(OrbitalKind.UNRESTRICTED)
         self.session.project.commit(ImportBatch(structures=(structure,), basis_sets=(basis,),
                                                orbital_sets=(orbitals,)))
         settings = SimpleNamespace(orbital_source=str(self.orbitals.id),
-            orbital_source_uuid=str(self.orbitals.id), channel="restricted", orbital_number=7,
-            nuclear_charge_uuid="old-charge", density_level="scf")
+            orbital_source_uuid=str(self.orbitals.id), channel="restricted", orbital_number=7)
         self.session.active_entity_id = orbitals.id
         self.assertIs(wavefunction._selected_orbitals(self.session, settings), orbitals)
         wavefunction.select_wavefunction_source(settings, orbitals)
         self.assertEqual(settings.orbital_source_uuid, str(orbitals.id))
         self.assertEqual(settings.channel, "alpha")
         self.assertEqual(settings.orbital_number, 1)
-        self.assertEqual(settings.nuclear_charge_uuid, "")
-        self.assertEqual(settings.density_level, "UNSET")
         self.session.active_entity_id = uuid4()  # Publication selects the new Grid, not the OrbitalSet.
         self.assertIs(wavefunction._selected_orbitals(self.session, settings), orbitals)
         settings.channel, settings.orbital_number = "beta", 2
-        settings.nuclear_charge_uuid, settings.density_level = "current-charge", "scf"
         wavefunction.select_wavefunction_source(settings, orbitals)
         self.assertEqual((settings.channel, settings.orbital_number), ("beta", 2))
-        self.assertEqual((settings.nuclear_charge_uuid, settings.density_level), ("current-charge", "scf"))
-        # A Browser selection followed by Compute must retain the user's parameters.
+        # Selecting a prepared grid retains the chosen spin and orbital.
         settings.orbital_source_uuid = str(self.orbitals.id)
         wavefunction.select_wavefunction_source(settings, orbitals, reset=False)
         self.assertEqual(settings.orbital_source_uuid, str(orbitals.id))
         self.assertEqual((settings.channel, settings.orbital_number), ("beta", 2))
-        self.assertEqual((settings.nuclear_charge_uuid, settings.density_level), ("current-charge", "scf"))
 
     def test_dynamic_entity_selection_uses_uuid_instead_of_old_list_position(self):
         first = (("NONE", "Select", ""), ("charge-a", "A", ""), ("charge-b", "B", ""))
@@ -330,6 +351,15 @@ class WavefunctionUITests(unittest.TestCase):
         self.assertEqual(wavefunction._enum_number(first, "charge-a"), 1)
         self.assertEqual(wavefunction._enum_number(reordered, "charge-a"), 2)
         self.assertEqual(wavefunction._enum_number(replaced, "charge-a"), 0)
+
+    def test_stale_explicit_source_does_not_select_an_unrelated_set(self):
+        settings = SimpleNamespace(orbital_source_uuid=str(uuid4()), channel="restricted")
+        self.session.active_entity_id = uuid4()
+        self.assertIsNone(wavefunction._selected_orbitals(self.session, settings))
+        settings.orbital_source_uuid = "invalid-uuid"
+        self.assertIsNone(wavefunction._selected_orbitals(self.session, settings))
+        settings.orbital_source_uuid = ""
+        self.assertIs(wavefunction._selected_orbitals(self.session, settings), self.orbitals)
 
 
 if __name__ == "__main__":

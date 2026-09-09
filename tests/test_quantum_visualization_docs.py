@@ -64,9 +64,10 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         self.assertIn("released 2.4.0", formats)
         self.assertIn("Gaussian `.gjf`/`.com` and ORCA `.inp`", unreleased)
         self.assertNotIn("Base 2.3.0 format scope", formats)
-        self.assertIn("Cube export", formats)
-        self.assertIn("PQR export", formats)
-        self.assertIn("Project Browser", formats)
+        self.assertIn("chemblender-prepare export workflow", formats)
+        self.assertIn("PDB, PQR, Cube", formats)
+        self.assertIn("The Viewer imports CBQ", formats)
+        self.assertIn("remains under regression", formats)
 
     def test_240_human_experience_review_is_complete_and_observational(self):
         guide = self.read_doc("docs/user/2.4.0-experience-review.md")
@@ -331,7 +332,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
                 "AtomicResult",
                 "Dependency-free",
                 "raw envelope",
-                "normalized Project Browser export with semantic round-trip",
+                "normalized chemblender-prepare export with semantic round-trip",
                 "reader-capability-matrix.json",
             ),
         }
@@ -375,7 +376,7 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
             scientific_editing,
         )
 
-        from ChemBlender.core import reader_capability_document
+        from chemblender_prepare.core.reader_catalog import reader_capability_document
 
         qcschema = next(
             row
@@ -1750,18 +1751,21 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         guide = self.read_doc(".agents/reference/code-architecture-guide.md")
         expected = {
             path.relative_to(ROOT).as_posix()
-            for root in (ROOT / "ChemBlender", ROOT / "worker")
+            for root in (ROOT / "ChemBlender", ROOT / "cbq_core", ROOT / "chemblender_prepare")
             for path in root.rglob("*.py")
         }
         documented = set(
-            re.findall(r"`((?:ChemBlender|worker)/[^`]+\.py)`", guide)
+            re.findall(r"`((?:ChemBlender|cbq_core|chemblender_prepare)/[^`]+\.py)`", guide)
         )
         self.assertIn(
-            "ChemBlender/core/storage/atomic_paths.py",
+            "cbq_core/storage/atomic_paths.py",
             documented,
         )
         self.assertIn("ChemBlender/ui/view_cache.py", documented)
-        self.assertIn("ChemBlender/ui/export.py", documented)
+        self.assertIn("chemblender_prepare/export_service.py", documented)
+        self.assertIn("cbq_core/package_import.py", documented)
+        self.assertIn("ChemBlender/ui/mesh_edit.py", documented)
+        self.assertIn("ChemBlender/ui/cbq_import.py", documented)
         self.assertIn("ChemBlender/scripts/benchmark_cube_flow.py", documented)
         self.assertIn("ChemBlender/scripts/benchmark_extxyz.py", documented)
         self.assertIn("ChemBlender/scripts/release_metadata.py", documented)
@@ -1814,8 +1818,8 @@ class QuantumVisualizationDocsTests(unittest.TestCase):
         import importlib
 
         self.assertFalse((ROOT / "ChemBlender" / "core" / "model.py").exists())
-        self.assertTrue((ROOT / "ChemBlender" / "core" / "model" / "__init__.py").exists())
-        model = importlib.import_module("ChemBlender.core.model")
+        self.assertTrue((ROOT / "cbq_core" / "model" / "__init__.py").exists())
+        model = importlib.import_module("cbq_core.model")
         self.assertIsNotNone(model.__spec__.submodule_search_locations)
 
     def test_extxyz_plan_records_preimplementation_contracts(self):

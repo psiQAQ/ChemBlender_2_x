@@ -7,10 +7,15 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData, AtomicProperty, ImportBatch, QCProject, SpectrumKind, SpectrumProfile,
-    builtin_scene_presets, derive_vibrational_spectrum, plan_scene_preset,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomicProperty
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.model import SpectrumKind
+from cbq_core.model import SpectrumProfile
+from cbq_core.scene_preset import builtin_scene_presets
+from chemblender_prepare.core.vibration_spectrum import derive_vibrational_spectrum
+from cbq_core.scene_preset import plan_scene_preset
 from ChemBlender.ui import scientific_view as ui
 from tests.test_scene_preset import grid
 from tests.test_vibration_model import structure, mode_set
@@ -23,6 +28,26 @@ class ScientificViewUITests(unittest.TestCase):
         self.field = grid(self.structure.id)
         self.project = QCProject(uuid4(), "0.1")
         self.project.commit(ImportBatch(structures=(self.structure,), datasets=(self.modes, self.field)))
+
+    def test_automatic_grid_representation_uses_shared_scientific_roles(self):
+        from cbq_core.grid_semantics import builtin_grid_semantic_presets
+        from cbq_core.model import DatasetStatus
+        from ChemBlender.ui.default_views import default_grid_preset
+        for semantic in builtin_grid_semantic_presets().values():
+            field = replace(self.field, semantic_role=semantic.semantic_role,
+                            status=DatasetStatus.COMPLETE)
+            with self.subTest(role=semantic.semantic_role):
+                expected = ("nci_surface" if field.semantic_role == "reduced_density_gradient"
+                            else semantic.default_surface_mode)
+                self.assertEqual(ui.selected_preset(field, SimpleNamespace(preset_id="AUTO")).preset_id,
+                                 expected)
+                self.assertEqual(default_grid_preset(field), semantic.default_surface_mode)
+                self.assertEqual(ui.selected_preset(field, SimpleNamespace(preset_id="grid_volume")).preset_id,
+                                 "grid_volume")
+                ambiguous = replace(field, status=DatasetStatus.AMBIGUOUS)
+                if semantic.signed:
+                    self.assertEqual(ui.selected_preset(ambiguous, SimpleNamespace(preset_id="AUTO")).preset_id,
+                                     "grid_volume")
 
     def test_shape_metadata_dispatches_scalar_vector_without_values(self):
         scalar = AtomicProperty(uuid4(), "charge-1", "atomic_charge", "atom",
@@ -90,39 +115,10 @@ class ScientificViewUITests(unittest.TestCase):
         settings.preset_id = "AUTO"
         self.assertEqual(ui.selected_preset(self.field, settings).preset_id, "grid_volume")
 
-    def test_derived_spectrum_uses_exact_core_units_and_keeps_source_unchanged(self):
-        before = self.modes.data.values.copy()
-        settings = SimpleNamespace(spectrum_profile="stick", include_imaginary=False)
-        batch = ui.spectrum_batch(self.modes, "raman", settings)
-        self.assertEqual(batch.datasets[0].data.unit, "angstrom_four_per_dalton")
-        self.assertEqual(batch.datasets[0].source_dataset_id, self.modes.id)
-        numpy.testing.assert_array_equal(batch.datasets[0].data.values, [30.])
-        numpy.testing.assert_array_equal(self.modes.data.values, before)
-        self.assertNotIn(batch.datasets[0].id, self.project.datasets)
-
-    def test_invalid_broadening_is_rejected_before_core_allocation(self):
-        settings = SimpleNamespace(spectrum_profile="gaussian", include_imaginary=True,
-                                   axis_start=0., axis_end=4000., axis_points=1001, fwhm=20.)
-        for name, value in (("axis_end", float("nan")), ("fwhm", 0.), ("axis_points", 100_001)):
-            bad = SimpleNamespace(**vars(settings))
-            setattr(bad, name, value)
-            with self.subTest(name=name), self.assertRaises(ValueError):
-                ui.spectrum_batch(self.modes, "ir", bad)
-
-    def test_difference_selection_is_stricter_than_tolerant_surface_matching(self):
-        right = replace(self.field, id=uuid4(), data=ArrayData(numpy.ones((3, 3, 3)),
-                         ("x", "y", "z"), self.field.data.unit))
-        near = replace(right, id=uuid4(), origin=(1.e-12, 0., 0.))
-        self.project.commit(ImportBatch(datasets=(right, near)))
-        self.assertNotIn(near.id, {item.id for item in ui.difference_candidates(self.project, self.field)})
-        settings = SimpleNamespace(difference_source_uuid=str(right.id), dataset_index=0, difference_dataset_index=0)
-        batch = ui.difference_batch(self.project, self.field, settings)
-        numpy.testing.assert_array_equal(batch.datasets[0].data.values, -numpy.ones((3, 3, 3)))
-        self.assertEqual(batch.datasets[0].semantic_role, "difference_density")
-        self.assertNotIn(batch.datasets[0].id, self.project.datasets)
-        settings.difference_source_uuid = str(near.id)
-        with self.assertRaisesRegex(ValueError, "identical"):
-            ui.difference_batch(self.project, self.field, settings)
+    def test_viewer_exposes_no_scientific_derivation_helpers(self):
+        self.assertFalse(hasattr(ui, "spectrum_batch"))
+        self.assertFalse(hasattr(ui, "difference_batch"))
+        self.assertFalse(hasattr(ui, "difference_candidates"))
 
     def test_timeline_uses_saved_phase_offset_and_exact_period(self):
         self.assertEqual(ui.timeline_phase(12, 12, 48, .2), .2)

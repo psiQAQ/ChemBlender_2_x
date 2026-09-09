@@ -6,37 +6,31 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    CapabilitySupport,
-    ImportBatch,
-    MolecularRecord,
-    ParserReport,
-    ProvenanceRecord,
-    ReaderDescriptor,
-    SniffMatch,
-    SniffResult,
-    Structure,
-    close_session,
-    create_session,
-)
-from ChemBlender.core.import_pipeline import (
-    ImportCommitDecisions,
-    ImportRequest,
-    ImportSource,
-    ReaderOverride,
-    StagedImportSession,
-    ValidationMode,
-    commit_import_preview,
-)
-from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
-from ChemBlender.reader_api.protocol import ParseRequest
-from ChemBlender.reader_api.registry import (
-    ReaderPluginRegistry,
-    _BuiltinReaderPlugin,
-    _builtin_manifest,
-    _builtin_plugin,
-)
+from cbq_core.model import ArrayData
+from chemblender_prepare.core.readers import CapabilitySupport
+from cbq_core.model import ImportBatch
+from cbq_core.model import MolecularRecord
+from cbq_core.model import ParserReport
+from cbq_core.model import ProvenanceRecord
+from chemblender_prepare.core.readers import ReaderDescriptor
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.readers import SniffResult
+from cbq_core.model import Structure
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from chemblender_prepare.core.import_pipeline import ImportCommitDecisions
+from chemblender_prepare.core.import_pipeline import ImportRequest
+from chemblender_prepare.core.import_pipeline import ImportSource
+from chemblender_prepare.core.import_pipeline import ReaderOverride
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import ValidationMode
+from chemblender_prepare.core.import_pipeline import commit_import_preview
+from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from chemblender_prepare.reader_api.protocol import ParseRequest
+from chemblender_prepare.reader_api.registry import ReaderPluginRegistry
+from chemblender_prepare.reader_api.registry import _BuiltinReaderPlugin
+from chemblender_prepare.reader_api.registry import _builtin_manifest
+from chemblender_prepare.reader_api.registry import _builtin_plugin
 
 
 class MolecularRecordStagingTests(unittest.TestCase):

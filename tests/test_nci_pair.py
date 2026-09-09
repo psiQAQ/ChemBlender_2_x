@@ -4,8 +4,10 @@ from uuid import uuid4
 
 import numpy as np
 
-from ChemBlender.core.grid_semantics import validate_nci_pair, resolve_grid_semantics
-from ChemBlender.core.model import ArrayData, DatasetStatus
+from cbq_core.grid_semantics import validate_nci_pair
+from chemblender_prepare.core.grid_semantics import resolve_grid_semantics
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
 from tests.test_grid_difference import density
 
 

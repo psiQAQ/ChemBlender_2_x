@@ -1,14 +1,12 @@
 import json
 import unittest
 
-from ChemBlender.core import (
-    ExternalConnectorError,
-    ExternalRecordRequest,
-    builtin_external_connectors,
-    external_record_request_document,
-    external_record_request_from_document,
-    external_record_source_uri,
-)
+from chemblender_prepare.core.external_connector import ExternalConnectorError
+from chemblender_prepare.core.external_connector import ExternalRecordRequest
+from chemblender_prepare.core.external_connector import builtin_external_connectors
+from chemblender_prepare.core.external_connector import external_record_request_document
+from chemblender_prepare.core.external_connector import external_record_request_from_document
+from chemblender_prepare.core.external_connector import external_record_source_uri
 
 
 class ExternalConnectorTests(unittest.TestCase):

@@ -3,17 +3,13 @@ import unittest
 from dataclasses import FrozenInstanceError
 from uuid import UUID
 
-from ChemBlender.core import QualityStatus
-from ChemBlender.core.import_pipeline.report import (
-    render_diagnostics_markdown,
-)
-from ChemBlender.project_link import (
-    MANIFEST_HASH_KEY,
-    PROJECT_ID_KEY,
-    PROJECT_SCHEMA_KEY,
-    SIDECAR_LOCATOR_KEY,
-    ProjectLinkStatus,
-)
+from cbq_core.model import QualityStatus
+from chemblender_prepare.core.import_pipeline.report import render_diagnostics_markdown
+from cbq_core.project_link import MANIFEST_HASH_KEY
+from cbq_core.project_link import PROJECT_ID_KEY
+from cbq_core.project_link import PROJECT_SCHEMA_KEY
+from cbq_core.project_link import SIDECAR_LOCATOR_KEY
+from cbq_core.project_link import ProjectLinkStatus
 from ChemBlender.ui.diagnostics import (
     DIAGNOSTIC_PREVIEW_CHAR_LIMIT,
     RevisionViewPrompt,

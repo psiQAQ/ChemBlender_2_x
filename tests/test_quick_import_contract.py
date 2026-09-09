@@ -9,16 +9,19 @@ from types import ModuleType, SimpleNamespace
 from unittest.mock import Mock, patch
 from uuid import uuid4
 
-from ChemBlender.core import ProjectSession, create_session
-from ChemBlender.core.import_pipeline.preview import ImportPreview, SourcePreview
-from ChemBlender.core.import_pipeline.preflight import ImportCancelled
-from ChemBlender.core.import_pipeline.request import ValidationMode
-from ChemBlender.core.import_pipeline.staging import StagedImportSession
+from cbq_core.session import ProjectSession
+from cbq_core.session import create_session
+from chemblender_prepare.core.import_pipeline.preview import ImportPreview
+from chemblender_prepare.core.import_pipeline.preview import SourcePreview
+from chemblender_prepare.core.import_pipeline.preflight import ImportCancelled
+from chemblender_prepare.core.import_pipeline.request import ValidationMode
+from chemblender_prepare.core.import_pipeline.staging import StagedImportSession
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PROPERTIES_MODULE = "ChemBlender.ui.properties"
 QUICK_IMPORT_MODULE = "ChemBlender.ui.quick_import"
+CBQ_IMPORT_MODULE = "ChemBlender.ui.cbq_import"
 
 
 class _Property:
@@ -57,6 +60,8 @@ class QuickImportContractTests(unittest.TestCase):
         self.temporary = TemporaryDirectory()
         self.fake_bpy = ModuleType("bpy")
         self.fake_props = ModuleType("bpy.props")
+        self.fake_props.IntProperty = _property("int")
+        self.fake_props.BoolProperty = _property("bool")
         self.fake_props.CollectionProperty = _property("collection")
         self.fake_props.EnumProperty = _property("enum")
         self.fake_props.FloatProperty = _property("float")
@@ -80,309 +85,30 @@ class QuickImportContractTests(unittest.TestCase):
         )
         self.modules = patch.dict(
             sys.modules,
-            {"bpy": self.fake_bpy, "bpy.props": self.fake_props},
+            {"bpy": self.fake_bpy, "bpy.props": self.fake_props, "bmesh": ModuleType("bmesh")},
         )
         self.modules.start()
-        for name in (PROPERTIES_MODULE, QUICK_IMPORT_MODULE):
+        self.addCleanup(self.modules.stop)
+        for name in (PROPERTIES_MODULE, QUICK_IMPORT_MODULE, CBQ_IMPORT_MODULE, "ChemBlender.ui.mesh_edit"):
             sys.modules.pop(name, None)
 
     def tearDown(self):
+        cbq = sys.modules.get(CBQ_IMPORT_MODULE)
+        if cbq is not None:
+            cbq.unregister()
         properties = sys.modules.get(PROPERTIES_MODULE)
         if properties is not None:
             properties.unregister()
         self.modules.stop()
-        for name in (PROPERTIES_MODULE, QUICK_IMPORT_MODULE):
+        for name in (PROPERTIES_MODULE, QUICK_IMPORT_MODULE, CBQ_IMPORT_MODULE, "ChemBlender.ui.mesh_edit"):
             sys.modules.pop(name, None)
         self.temporary.cleanup()
 
-    def test_operator_properties_use_the_approved_contract(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        cls = module.CHEMBLENDER_OT_quick_import
 
-        self.assertEqual(cls.bl_idname, "chemblender.quick_import")
-        self.assertEqual(cls.__annotations__["files"].kind, "collection")
-        self.assertIs(
-            cls.__annotations__["files"].keywords["type"],
-            _OperatorFileListElement,
-        )
-        self.assertEqual(
-            cls.__annotations__["files"].keywords["options"],
-            {"SKIP_SAVE", "HIDDEN"},
-        )
-        self.assertEqual(cls.__annotations__["directory"].kind, "string")
-        self.assertEqual(
-            cls.__annotations__["directory"].keywords["subtype"],
-            "DIR_PATH",
-        )
-        self.assertEqual(
-            cls.__annotations__["directory"].keywords["options"],
-            {"SKIP_SAVE", "HIDDEN"},
-        )
-        validation = cls.__annotations__["validation_mode"]
-        self.assertEqual(validation.kind, "enum")
-        self.assertEqual(
-            tuple(item[0] for item in validation.keywords["items"]),
-            tuple(mode.value for mode in ValidationMode),
-        )
-        self.assertEqual(
-            validation.keywords["default"],
-            ValidationMode.BALANCED.value,
-        )
 
-    def test_smiles_operator_uses_text_import_source(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        cls = module.CHEMBLENDER_OT_import_smiles_text
-        self.assertEqual(cls.bl_idname, "chemblender.import_smiles_text")
-        self.assertEqual(cls.__annotations__["smiles_text"].kind, "string")
-        operator = cls()
-        operator.smiles_text = "CO"
-        operator.validation_mode = ValidationMode.STRICT.value
-        session = create_session(temp_parent=Path(self.temporary.name))
-        captured = []
-        context = SimpleNamespace(
-            scene=SimpleNamespace(
-                chemblender_quick_import=SimpleNamespace(
-                    validation_mode="balanced",
-                    recent_summary="",
-                )
-            ),
-        )
 
-        def preflight(request, *_args, **_kwargs):
-            captured.append(request)
-            return object()
 
-        with patch.object(
-            module,
-            "get_scene_session",
-            return_value=session,
-        ), patch.object(
-            module,
-            "create_quick_import_staging",
-            return_value=object(),
-        ), patch.object(
-            module,
-            "store_quick_import_preview",
-        ), patch.object(
-            module,
-            "get_reader_plugin_registry",
-            return_value=object(),
-        ), patch.object(
-            module,
-            "preflight_reader_plugins",
-            side_effect=preflight,
-        ), patch.object(
-            module,
-            "prepare_conformer_suggestions",
-            return_value=(),
-        ), patch.object(
-            cls,
-            "_finish_preview",
-            return_value={"FINISHED"},
-        ):
-            self.assertEqual(operator.execute(context), {"FINISHED"})
-        self.assertEqual(captured[0].sources[0].text, "CO")
 
-    def test_smiles_invoke_opens_text_and_validation_dialog(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        operator = module.CHEMBLENDER_OT_import_smiles_text()
-        dialogs = []
-        context = SimpleNamespace(
-            scene=SimpleNamespace(
-                chemblender_quick_import=SimpleNamespace(
-                    validation_mode=ValidationMode.STRICT.value,
-                )
-            ),
-            window_manager=SimpleNamespace(
-                invoke_props_dialog=lambda value: dialogs.append(value) or {"RUNNING_MODAL"},
-            ),
-        )
-        self.fake_bpy.app.background = False
-
-        self.assertEqual(operator.invoke(context, None), {"RUNNING_MODAL"})
-        self.assertEqual(dialogs, [operator])
-        self.assertEqual(operator.validation_mode, ValidationMode.STRICT.value)
-
-    def test_invoke_opens_file_selector(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        operator = module.CHEMBLENDER_OT_quick_import()
-        selected = []
-        context = SimpleNamespace(
-            scene=SimpleNamespace(
-                chemblender_quick_import=SimpleNamespace(
-                    validation_mode=ValidationMode.STRICT.value,
-                )
-            ),
-            window_manager=SimpleNamespace(
-                fileselect_add=lambda value: selected.append(value)
-            ),
-        )
-
-        result = operator.invoke(context, None)
-
-        self.assertEqual(result, {"RUNNING_MODAL"})
-        self.assertEqual(selected, [operator])
-        self.assertEqual(
-            operator.validation_mode,
-            ValidationMode.STRICT.value,
-        )
-
-    def test_invoke_with_multiple_files_stages_without_file_selector(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        source_a = Path(self.temporary.name) / "a.xyz"
-        source_b = Path(self.temporary.name) / "b.cube"
-        source_a.write_text("1\nA\nH 0 0 0\n", encoding="utf-8")
-        source_b.write_text("cube\n", encoding="utf-8")
-        project_session = create_session(temp_parent=Path(self.temporary.name))
-        self.assertIsInstance(project_session, ProjectSession)
-        before = self.project_snapshot(project_session)
-        scene_settings = SimpleNamespace(
-            validation_mode=ValidationMode.MAXIMUM.value,
-            recent_summary="",
-        )
-        context = SimpleNamespace(
-            scene=SimpleNamespace(
-                chemblender_quick_import=scene_settings,
-            ),
-            window_manager=SimpleNamespace(
-                fileselect_add=lambda value: selected.append(value)
-            ),
-        )
-        selected = []
-        operator = module.CHEMBLENDER_OT_quick_import()
-        operator.directory = self.temporary.name
-        operator.files = [
-            SimpleNamespace(name=source_b.name),
-            SimpleNamespace(name=source_a.name),
-        ]
-        operator.validation_mode = ValidationMode.MAXIMUM.value
-        captured = {}
-
-        def preflight(request, registry, staging, **_callbacks):
-            captured["request"] = request
-            captured["registry"] = registry
-            captured["staging"] = staging
-            return ImportPreview(
-                session_id=staging.id,
-                source_previews=tuple(
-                    SourcePreview(
-                        source_id=source.id,
-                        source_path=source.path,
-                        selected_reader_id="fixture",
-                    )
-                    for source in request.sources
-                ),
-            )
-
-        registry = object()
-        with patch.object(
-            module,
-            "get_scene_session",
-            return_value=project_session,
-        ), patch.object(
-            module,
-            "get_reader_plugin_registry",
-            return_value=registry,
-        ), patch.object(
-            module,
-            "preflight_reader_plugins",
-            side_effect=preflight,
-        ):
-            result = operator.invoke(context, None)
-
-        self.assertEqual(result, {"FINISHED"})
-        self.assertEqual(selected, [])
-        self.assertEqual(
-            tuple(source.path.name for source in captured["request"].sources),
-            ("a.xyz", "b.cube"),
-        )
-        self.assertIs(
-            captured["request"].validation_mode,
-            ValidationMode.MAXIMUM,
-        )
-        self.assertIs(captured["registry"], registry)
-        state = module.get_quick_import_state(project_session)
-        self.assertIs(state.staging_session, captured["staging"])
-        self.assertIsNotNone(state.preview)
-        self.assertEqual(self.project_snapshot(project_session), before)
-        self.assertIn("2", scene_settings.recent_summary)
-        module.clear_quick_import_state(project_session)
-
-    def test_invoke_with_unknown_suffix_reaches_content_sniff(self):
-        source = Path(self.temporary.name) / "water.dropped"
-        source.write_text("1\nwater\nH 0 0 0\n", encoding="utf-8")
-        module, operator = self.operator_for(source)
-        project_session = create_session(temp_parent=Path(self.temporary.name))
-        selected = []
-        context = self.operator_context()
-        context.window_manager.fileselect_add = (
-            lambda value: selected.append(value)
-        )
-
-        with patch.object(
-            module,
-            "get_scene_session",
-            return_value=project_session,
-        ):
-            result = operator.invoke(context, None)
-
-        self.assertEqual(result, {"FINISHED"})
-        self.assertEqual(selected, [])
-        state = module.get_quick_import_state(project_session)
-        self.assertEqual(
-            state.preview.source_previews[0].selected_reader_id,
-            "xyz",
-        )
-        module.clear_quick_import_state(project_session)
-
-    def test_invoke_does_not_reuse_paths_from_a_prior_drop(self):
-        source = Path(self.temporary.name) / "water.xyz"
-        source.write_text("1\nwater\nH 0 0 0\n", encoding="utf-8")
-        module, operator = self.operator_for(source)
-        selected = []
-        context = self.operator_context()
-        context.window_manager.fileselect_add = (
-            lambda value: selected.append(value)
-        )
-
-        with patch.object(
-            operator,
-            "execute",
-            return_value={"FINISHED"},
-        ) as execute:
-            self.assertEqual(operator.invoke(context, None), {"FINISHED"})
-            self.assertEqual(operator.directory, "")
-            self.assertEqual(operator.files, [])
-            self.assertEqual(
-                operator.invoke(context, None),
-                {"RUNNING_MODAL"},
-            )
-
-        execute.assert_called_once_with(context)
-        self.assertEqual(selected, [operator])
-
-    def test_selected_paths_reject_unsafe_names_and_non_files(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        root = Path(self.temporary.name)
-        source = root / "water.xyz"
-        source.write_text("1\nwater\nH 0 0 0\n", encoding="utf-8")
-        (root / "folder").mkdir()
-
-        for name in ("../water.xyz", str(source), "folder"):
-            with self.subTest(name=name):
-                with self.assertRaises(ValueError):
-                    module._selected_paths(
-                        root,
-                        [SimpleNamespace(name=name)],
-                    )
-        with self.assertRaisesRegex(
-            ValueError,
-            "directory must be a directory",
-        ):
-            module._selected_paths(
-                source,
-                [SimpleNamespace(name=source.name)],
-            )
 
     @staticmethod
     def project_snapshot(session):
@@ -424,63 +150,6 @@ class QuickImportContractTests(unittest.TestCase):
         operator.validation_mode = ValidationMode.BALANCED.value
         return module, operator
 
-    def test_staging_is_owned_immediately_and_fatal_cleanup_is_attempted(self):
-        source = Path(self.temporary.name) / "fatal.xyz"
-        source.write_text("1\nA\nH 0 0 0\n", encoding="utf-8")
-        module, operator = self.operator_for(source)
-        project_session = create_session(temp_parent=Path(self.temporary.name))
-        captured = {}
-
-        def fatal(_request, _registry, staging, **_callbacks):
-            state = module.get_quick_import_state(project_session)
-            self.assertIs(state.staging_session, staging)
-            captured["root"] = staging.root
-            raise KeyboardInterrupt
-
-        with patch.object(
-            module,
-            "get_scene_session",
-            return_value=project_session,
-        ), patch.object(
-            module,
-            "get_reader_plugin_registry",
-            return_value=object(),
-        ), patch.object(
-            module,
-            "preflight_reader_plugins",
-            side_effect=fatal,
-        ):
-            with self.assertRaises(KeyboardInterrupt):
-                operator.execute(self.operator_context())
-
-        self.assertFalse(captured["root"].exists())
-        self.assertNotIn(
-            project_session.id,
-            importlib.import_module(PROPERTIES_MODULE)._QUICK_IMPORT_STATES,
-        )
-
-    def test_generator_exit_is_not_converted_to_cancelled(self):
-        source = Path(self.temporary.name) / "fatal.xyz"
-        source.write_text("1\nA\nH 0 0 0\n", encoding="utf-8")
-        _module, operator = self.operator_for(source)
-
-        with self.assertRaises(GeneratorExit):
-            operator._handle_error(None, GeneratorExit())
-
-    def test_fatal_cleanup_error_is_not_hidden_by_ordinary_error(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        operator = module.CHEMBLENDER_OT_quick_import()
-        fatal = MemoryError("cleanup exhausted memory")
-
-        with patch.object(
-            module,
-            "clear_quick_import_state",
-            side_effect=fatal,
-        ):
-            with self.assertRaises(MemoryError) as raised:
-                operator._handle_error(object(), ValueError("preflight failed"))
-
-        self.assertIs(raised.exception, fatal)
 
     def test_discard_failure_retains_owner_for_successful_retry(self):
         source = Path(self.temporary.name) / "failed.xyz"
@@ -805,124 +474,6 @@ class QuickImportContractTests(unittest.TestCase):
         self.assertEqual(operator._finish_preview(self.operator_context(), preview), {"FINISHED"})
         self.assertEqual(calls, [])
 
-    def test_preflight_job_precomputes_conformer_suggestions_off_main_thread(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        preview = ImportPreview(session_id=uuid4(), source_previews=())
-        suggestions = (object(),)
-        request = object()
-        registry = object()
-        staging = object()
-
-        with patch.object(
-            module,
-            "preflight_reader_plugins",
-            return_value=preview,
-        ), patch.object(
-            module,
-            "prepare_conformer_suggestions",
-            return_value=suggestions,
-        ) as prepare:
-            job = module._PreflightJob(request, registry, staging)
-            job._run()
-
-        self.assertIs(job.preview, preview)
-        self.assertIs(job.conformer_suggestions, suggestions)
-        self.assertIsNone(job.error)
-        prepare.assert_called_once_with(
-            preview,
-            staging,
-            is_cancelled=job._cancelled.is_set,
-        )
-        self.assertEqual(
-            job.drain_progress(),
-            ("conformer_grouping", 1, 1),
-        )
-        snapshot = job.task.snapshot()
-        self.assertEqual(snapshot.state.value, "succeeded")
-        self.assertEqual(snapshot.stage, "preview ready")
-        self.assertEqual(snapshot.progress, 1.0)
-
-    def test_preflight_job_cancels_conformer_precompute(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        preview = ImportPreview(session_id=uuid4(), source_previews=())
-        entered = threading.Event()
-
-        def slow(_preview, _staging, *, is_cancelled):
-            entered.set()
-            while not is_cancelled():
-                time.sleep(0.001)
-            raise ImportCancelled("conformer grouping cancelled")
-
-        with patch.object(
-            module,
-            "preflight_reader_plugins",
-            return_value=preview,
-        ), patch.object(
-            module,
-            "prepare_conformer_suggestions",
-            side_effect=slow,
-        ):
-            job = module._PreflightJob(object(), object(), object())
-            job.start()
-            self.assertTrue(entered.wait(1))
-            job.cancel()
-            self.assertTrue(job.join(1))
-
-        self.assertTrue(job.done)
-        self.assertIsInstance(job.error, ImportCancelled)
-        self.assertEqual(str(job.error), "conformer grouping cancelled")
-        self.assertEqual(job.task.snapshot().state.value, "cancelled")
-
-    def test_modal_thread_start_failure_releases_owned_staging(self):
-        source = Path(self.temporary.name) / "start-failure.xyz"
-        source.write_text("1\nA\nH 0 0 0\n", encoding="utf-8")
-        module, operator = self.operator_for(source)
-        properties = importlib.import_module(PROPERTIES_MODULE)
-        project_session = create_session(temp_parent=Path(self.temporary.name))
-        context = self.operator_context()
-        timer = object()
-        context.window_manager.event_timer_add = (
-            lambda _interval, *, window: timer
-        )
-        context.window_manager.event_timer_remove = lambda _timer: None
-        context.window_manager.modal_handler_add = lambda _operator: None
-        context.window_manager.progress_begin = (
-            lambda _minimum, _maximum: None
-        )
-        context.window_manager.progress_end = lambda: None
-        self.fake_bpy.app.background = False
-        captured = {}
-        original_create = module.create_quick_import_staging
-
-        def create(session):
-            staging = original_create(session)
-            captured["root"] = staging.root
-            return staging
-
-        with patch.object(
-            module,
-            "get_scene_session",
-            return_value=project_session,
-        ), patch.object(
-            module,
-            "get_reader_plugin_registry",
-            return_value=object(),
-        ), patch.object(
-            module,
-            "create_quick_import_staging",
-            side_effect=create,
-        ), patch.object(
-            threading.Thread,
-            "start",
-            side_effect=RuntimeError("thread start failed"),
-        ):
-            result = operator.execute(context)
-
-        self.assertEqual(result, {"CANCELLED"})
-        self.assertFalse(captured["root"].exists())
-        self.assertNotIn(project_session.id, properties._QUICK_IMPORT_STATES)
-        self.assertIn("thread start failed", operator.last_report[1])
-
     def test_replacing_and_unregistering_preview_discards_staging_roots(self):
         properties = importlib.import_module(PROPERTIES_MODULE)
         project_session = create_session(temp_parent=Path(self.temporary.name))
@@ -977,9 +528,9 @@ class QuickImportContractTests(unittest.TestCase):
         self.assertEqual(self.handlers.load_pre, [])
 
     def test_registration_refuses_preexisting_foreign_scene_property(self):
-        properties = importlib.import_module(PROPERTIES_MODULE)
+        properties = importlib.import_module(CBQ_IMPORT_MODULE)
         foreign_property = _Property("foreign")
-        _Scene.chemblender_quick_import = foreign_property
+        _Scene.chemblender_cbq = foreign_property
         try:
             with self.assertRaisesRegex(
                 RuntimeError,
@@ -988,41 +539,41 @@ class QuickImportContractTests(unittest.TestCase):
                 properties.register()
 
             self.assertIs(
-                _Scene.chemblender_quick_import,
+                _Scene.chemblender_cbq,
                 foreign_property,
             )
             self.assertEqual(self.handlers.load_pre, [])
             properties.unregister()
             self.assertIs(
-                _Scene.chemblender_quick_import,
+                _Scene.chemblender_cbq,
                 foreign_property,
             )
         finally:
-            if hasattr(_Scene, "chemblender_quick_import"):
-                del _Scene.chemblender_quick_import
+            if hasattr(_Scene, "chemblender_cbq"):
+                del _Scene.chemblender_cbq
 
     def test_unregister_preserves_later_foreign_scene_property_replacement(self):
-        properties = importlib.import_module(PROPERTIES_MODULE)
+        properties = importlib.import_module(CBQ_IMPORT_MODULE)
         properties.register()
         foreign_property = _Property("replacement")
-        _Scene.chemblender_quick_import = foreign_property
+        _Scene.chemblender_cbq = foreign_property
         try:
             properties.unregister()
 
             self.assertIs(
-                _Scene.chemblender_quick_import,
+                _Scene.chemblender_cbq,
                 foreign_property,
             )
             self.assertEqual(self.handlers.load_pre, [])
         finally:
-            if hasattr(_Scene, "chemblender_quick_import"):
-                del _Scene.chemblender_quick_import
+            if hasattr(_Scene, "chemblender_cbq"):
+                del _Scene.chemblender_cbq
 
     def test_registration_identity_probe_failure_removes_created_property(self):
-        properties = importlib.import_module(PROPERTIES_MODULE)
+        properties = importlib.import_module(CBQ_IMPORT_MODULE)
 
         with patch.object(
-            properties,
+            importlib.import_module(PROPERTIES_MODULE),
             "_scene_property_identity",
             side_effect=(None, None),
         ):
@@ -1032,26 +583,121 @@ class QuickImportContractTests(unittest.TestCase):
             ):
                 properties.register()
 
-        self.assertFalse(hasattr(_Scene, "chemblender_quick_import"))
+        self.assertFalse(hasattr(_Scene, "chemblender_cbq"))
         self.assertIsNone(properties._OWNED_SCENE_PROPERTY)
 
-    def test_panel_keeps_legacy_build_and_adds_quick_import_entry_points(self):
-        legacy_source = (ROOT / "ChemBlender" / "panel.py").read_text(
-            encoding="utf-8"
-        )
-        quick_import_source = (
-            ROOT / "ChemBlender" / "ui" / "quick_import.py"
-        ).read_text(encoding="utf-8")
+    def test_viewer_panels_offer_cbq_and_local_mesh_edit_entry_points(self):
+        from ChemBlender.runtime.registration import REGISTER_MODULE_NAMES
+        cbq_import = importlib.import_module(CBQ_IMPORT_MODULE)
+        mesh_edit = importlib.import_module("ChemBlender.ui.mesh_edit")
+        self.assertIn(".ui.cbq_import", REGISTER_MODULE_NAMES)
+        self.assertIn(".ui.mesh_edit", REGISTER_MODULE_NAMES)
+        self.assertNotIn(".ui.quick_import", REGISTER_MODULE_NAMES)
+        self.assertNotIn(".panel", REGISTER_MODULE_NAMES)
+        layout = Mock()
+        context = SimpleNamespace(scene=SimpleNamespace(chemblender_cbq=SimpleNamespace(
+            input_path="", preview_json="", last_result="")))
+        cbq_import.draw_cbq_import(layout, context)
+        calls = layout.box.return_value
+        self.assertEqual(calls.row.return_value.operator.call_args_list[0].args[0],
+                         "chemblender.preview_cbq")
+        self.assertEqual(calls.row.return_value.operator.call_args_list[1].args[0],
+                         "chemblender.import_cbq")
+        calls.operator.assert_any_call("chemblender.export_cbq", icon="EXPORT")
+        layout.reset_mock()
+        mesh_edit.CHEMBLENDER_PT_mesh_edit.draw(SimpleNamespace(layout=layout),
+            SimpleNamespace(active_object=SimpleNamespace(mode="OBJECT")))
+        layout.operator.assert_any_call("object.editmode_toggle", text="Edit Mesh")
+        layout.operator.assert_any_call("chemblender.apply_mesh_edits")
 
-        self.assertIn("class CHEM_PT_Build", legacy_source)
-        self.assertIn(
-            "class CHEMBLENDER_PT_quick_import",
-            quick_import_source,
-        )
-        self.assertIn('"chemblender.quick_import"', quick_import_source)
-        self.assertIn('"wm.save_mainfile"', quick_import_source)
-        self.assertIn("Open Workspace", quick_import_source)
-        self.assertIn("snapshot = task.snapshot()", quick_import_source)
+
+class ExternalImportSelectionTests(unittest.TestCase):
+    """Former raw Blender import contracts now run at the external entrypoint."""
+    def test_external_file_selector_replaces_selection_and_cancel_preserves_it(self):
+        from chemblender_prepare.gui import PrepareWindow, command_arguments
+        window = PrepareWindow.__new__(PrepareWindow)
+        window.root = Mock()
+        window.sources = Mock()
+        paths = ("D:/inputs with spaces/a.xyz", "D:/inputs with spaces/b.xyz")
+        with patch("tkinter.filedialog.askopenfilenames", side_effect=[paths, ()]) as select:
+            window.choose_sources()
+            window.choose_sources()
+        self.assertEqual(select.call_count, 2)
+        select.assert_called_with(parent=window.root)
+        window.sources.delete.assert_called_once_with("1.0", "end")
+        window.sources.insert.assert_called_once_with("1.0", "\n".join(paths))
+        args = command_arguments({"command": "convert", "sources": "\n".join(paths),
+                                  "output": "result.cbq"})
+        self.assertEqual(args[2:4], list(paths))
+        self.assertEqual(args[args.index("--validation-mode") + 1], "balanced")
+
+    def test_directory_and_missing_file_inputs_publish_nothing(self):
+        from contextlib import redirect_stdout
+        import io
+        import json
+        from chemblender_prepare.cli import main
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = root / "first.xyz"
+            first.write_text("1\nfirst\nH 0 0 0\n", encoding="utf-8")
+            for source in (root / "missing.xyz", root):
+                with self.subTest(source=source), redirect_stdout(io.StringIO()) as stdout:
+                    output = root / "result.cbq"
+                    self.assertNotEqual(main(["convert", str(first), str(source), "-o", str(output), "--json"]), 0)
+                    self.assertEqual(json.loads(stdout.getvalue())["status"], "error")
+                    self.assertFalse(output.exists())
+                    self.assertEqual(first.read_text(encoding="utf-8"), "1\nfirst\nH 0 0 0\n")
+
+    def test_gui_validation_mode_reaches_real_multifile_worker_and_cbq(self):
+        from contextlib import redirect_stdout
+        import io
+        import json
+        from chemblender_prepare import cli
+        from chemblender_prepare.gui import command_arguments
+        from cbq_core.sidecar import open_project, close_project
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            first, second = root / "first.xyz", root / "second.xyz"
+            first.write_text("1\nfirst\nH 0 0 0\n", encoding="utf-8")
+            second.write_text("1\nsecond\nHe 1 0 0\n", encoding="utf-8")
+            output = root / "result.cbq"
+            args = command_arguments({"command": "convert",
+                "sources": f"{first}\n{second}", "output": str(output),
+                "validation-mode": "maximum"})
+            with patch.object(cli, "_run_worker", wraps=cli._run_worker) as worker:
+                with redirect_stdout(io.StringIO()) as stdout:
+                    self.assertEqual(cli.main(args), 0)
+            self.assertEqual(len(worker.call_args_list), 2)
+            for call in worker.call_args_list:
+                self.assertEqual(call.args[0].parameters["validation_mode"], "maximum")
+            self.assertEqual(json.loads(stdout.getvalue())["status"], "success")
+            first.unlink()
+            second.unlink()
+            project = open_project(output, verify_arrays=True)
+            try:
+                self.assertEqual(len(project.structures), 2)
+                self.assertEqual({s.display_name for s in project.sources.values()},
+                                 {"first.xyz", "second.xyz"})
+            finally:
+                close_project(project)
+
+    def test_unknown_suffix_uses_content_sniff_at_external_entry(self):
+        from contextlib import redirect_stdout
+        import io
+        import json
+        from chemblender_prepare.cli import main
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "water.dropped"
+            source.write_text("1\nwater\nH 0 0 0\n", encoding="utf-8")
+            with redirect_stdout(io.StringIO()) as stdout:
+                self.assertEqual(main(["inspect", str(source), "--json"]), 0)
+            self.assertEqual(json.loads(stdout.getvalue())["metadata"]["reader_id"], "xyz")
+
+    def test_gui_rejects_unknown_validation_mode_before_launch(self):
+        from chemblender_prepare.gui import command_arguments
+        with self.assertRaisesRegex(ValueError, "validation"):
+            command_arguments({"command": "convert", "sources": "input.xyz",
+                               "output": "new.cbq", "validation-mode": "unchecked"})
 
 
 if __name__ == "__main__":

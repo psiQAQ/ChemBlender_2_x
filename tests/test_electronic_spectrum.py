@@ -5,16 +5,14 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    DatasetStatus,
-    ImportBatch,
-    QCProject,
-    Spectrum,
-    SpectrumKind,
-    SpectrumProfile,
-    derive_electronic_spectrum,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.model import Spectrum
+from cbq_core.model import SpectrumKind
+from cbq_core.model import SpectrumProfile
+from chemblender_prepare.core.vibration_spectrum import derive_electronic_spectrum
 from tests.test_excited_state_model import state_set
 from tests.test_vibration_model import structure
 
@@ -100,8 +98,10 @@ class ElectronicSpectrumTests(unittest.TestCase):
         self.assertIs(project.datasets[spectrum.id], spectrum)
 
     def test_verified_ecd_retains_units_and_roundtrips_existing_sidecar(self):
-        from ChemBlender.core.model.spectroscopy import ROTATORY_STRENGTH_CGS_UNIT
-        from ChemBlender.core.sidecar import close_project, open_project, save_project
+        from cbq_core.model.spectroscopy import ROTATORY_STRENGTH_CGS_UNIT
+        from cbq_core.sidecar import close_project
+        from cbq_core.sidecar import open_project
+        from cbq_core.sidecar import save_project
 
         reference = structure()
         states = state_set(reference.id, rotatory_strengths=ArrayData(

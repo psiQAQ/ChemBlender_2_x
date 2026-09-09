@@ -7,34 +7,31 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    AtomFrameProperty,
-    CategoricalData,
-    CellFrameProperty,
-    DatasetStatus,
-    FrameProperty,
-    FrameSet,
-    QCProject,
-    builtin_reader_registry,
-    close_session,
-    create_session,
-)
-from ChemBlender.core.formats.extxyz import EXTXYZ_READER, parse_extxyz
-from ChemBlender.core.formats import extxyz as extxyz_module
-from ChemBlender.core.import_pipeline import (
-    ImportCommitDecisions,
-    ImportCancelled,
-    ImportRequest,
-    ImportSource,
-    StagedImportSession,
-    ValidationMode,
-    commit_import_preview,
-)
-from ChemBlender.core.import_pipeline import transaction as transaction_module
-from ChemBlender.reader_api.protocol import ParseRequest
-from ChemBlender.reader_api.builtin_bridge import internal_batch_from_public
-from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
-from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+from cbq_core.model import AtomFrameProperty
+from cbq_core.model import CategoricalData
+from cbq_core.model import CellFrameProperty
+from cbq_core.model import DatasetStatus
+from cbq_core.model import FrameProperty
+from cbq_core.model import FrameSet
+from cbq_core.model import QCProject
+from chemblender_prepare.core.reader_catalog import builtin_reader_registry
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from chemblender_prepare.core.formats.extxyz import EXTXYZ_READER
+from chemblender_prepare.core.formats.extxyz import parse_extxyz
+from chemblender_prepare.core.formats import extxyz as extxyz_module
+from chemblender_prepare.core.import_pipeline import ImportCommitDecisions
+from chemblender_prepare.core.import_pipeline import ImportCancelled
+from chemblender_prepare.core.import_pipeline import ImportRequest
+from chemblender_prepare.core.import_pipeline import ImportSource
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import ValidationMode
+from chemblender_prepare.core.import_pipeline import commit_import_preview
+from chemblender_prepare.core.import_pipeline import transaction as transaction_module
+from chemblender_prepare.reader_api.protocol import ParseRequest
+from chemblender_prepare.reader_api.builtin_bridge import internal_batch_from_public
+from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
 
 
 FIXTURES = Path(__file__).parent / "fixtures"

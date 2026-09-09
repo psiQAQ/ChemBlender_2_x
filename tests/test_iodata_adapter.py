@@ -8,23 +8,19 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    AtomicProperty,
-    BasisFunctionKind,
-    CapabilitySupport,
-    DensityMatrixLevel,
-    DensityMatrixSpin,
-    IssueKind,
-    OrbitalKind,
-    QCProject,
-    SniffMatch,
-)
-from ChemBlender.core.iodata_adapter import (
-    IODATA_WAVEFUNCTION_READER,
-    adapt_iodata,
-    parse_iodata_wavefunction,
-    sniff_iodata_wavefunction,
-)
+from cbq_core.model import AtomicProperty
+from cbq_core.model import BasisFunctionKind
+from chemblender_prepare.core.readers import CapabilitySupport
+from cbq_core.model import DensityMatrixLevel
+from cbq_core.model import DensityMatrixSpin
+from cbq_core.model import IssueKind
+from cbq_core.model import OrbitalKind
+from cbq_core.model import QCProject
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.iodata_adapter import IODATA_WAVEFUNCTION_READER
+from chemblender_prepare.core.iodata_adapter import adapt_iodata
+from chemblender_prepare.core.iodata_adapter import parse_iodata_wavefunction
+from chemblender_prepare.core.iodata_adapter import sniff_iodata_wavefunction
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -115,7 +111,7 @@ class GeneralizedData(SimpleNamespace):
 class IODataAdapterTests(unittest.TestCase):
     def test_core_import_does_not_eagerly_load_iodata_stack(self):
         code = (
-            "import sys; import ChemBlender.core; "
+            "import sys; import cbq_core.model; "
             "assert 'iodata' not in sys.modules; "
             "assert 'attrs' not in sys.modules; "
             "assert 'scipy' not in sys.modules; "

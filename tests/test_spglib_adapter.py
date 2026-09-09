@@ -9,13 +9,14 @@ from uuid import uuid4
 
 import numpy
 
-import ChemBlender.core as core
-from ChemBlender.core import ArrayData, QCProject, parse_cif
-from ChemBlender.core import PeriodicSiteData, Structure
-from ChemBlender.core.spglib_adapter import (
-    SpglibDependencyError,
-    derive_symmetry,
-)
+from cbq_core import model as core
+from cbq_core.model import ArrayData
+from cbq_core.model import QCProject
+from chemblender_prepare.core.formats.cif import parse_cif
+from cbq_core.model import PeriodicSiteData
+from cbq_core.model import Structure
+from chemblender_prepare.core.spglib_adapter import SpglibDependencyError
+from chemblender_prepare.core.spglib_adapter import derive_symmetry
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -103,7 +104,7 @@ class SpglibAdapterTests(unittest.TestCase):
         )()
 
         with patch(
-            "ChemBlender.core.spglib_adapter._spglib",
+            "chemblender_prepare.core.spglib_adapter._spglib",
             return_value=fake_spglib,
         ):
             derived = derive_symmetry(
@@ -141,7 +142,7 @@ class SpglibAdapterTests(unittest.TestCase):
 
     def test_core_import_does_not_eagerly_load_spglib(self):
         code = (
-            "import sys; import ChemBlender.core; "
+            "import sys; import cbq_core.model; "
             "assert 'spglib' not in sys.modules"
         )
         subprocess.run(

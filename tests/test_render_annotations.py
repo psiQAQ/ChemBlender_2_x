@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 from uuid import uuid4
 
-import ChemBlender.core as core
+from cbq_core.scene_preset import builtin_scene_presets
 
 
 class RenderDescriptionTests(unittest.TestCase):
@@ -20,7 +20,6 @@ class RenderDescriptionTests(unittest.TestCase):
         resolver._entities = lambda plan, project: project
         cls.modules = {
             package.__name__: package,
-            package.__name__ + ".core": core,
             resolver.__name__: resolver,
             "bpy": types.ModuleType("bpy"),
         }
@@ -28,7 +27,7 @@ class RenderDescriptionTests(unittest.TestCase):
             cls.annotations = importlib.import_module(package.__name__ + ".render_annotations")
 
     def describe(self, kind, entities, *, shaded=True, root=None, **settings):
-        values = dict(core.builtin_scene_presets()[kind].default_settings)
+        values = dict(builtin_scene_presets()[kind].default_settings)
         values.update(template="teaching", shaded=shaded, **settings)
         plan = types.SimpleNamespace(preset_id=kind, view_kind=kind, settings=tuple(values.items()),
                                      render_identity="test-render")

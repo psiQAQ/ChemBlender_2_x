@@ -10,9 +10,11 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import ArrayData, DatasetStatus, Grid3D
-from ChemBlender.core.exporters.xyz import ExportCancelled
-from ChemBlender.core import grid_sampling as sampling
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from chemblender_prepare.core.exporters.xyz import ExportCancelled
+from cbq_core import grid_sampling as sampling
 from tests.test_grid_lod import SliceOnlyArray
 
 

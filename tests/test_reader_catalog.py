@@ -2,12 +2,10 @@ import json
 import unittest
 from pathlib import Path
 
-from ChemBlender.core import (
-    CapabilitySupport,
-    builtin_reader_descriptors,
-    builtin_reader_registry,
-    reader_capability_document,
-)
+from chemblender_prepare.core.readers import CapabilitySupport
+from chemblender_prepare.core.reader_catalog import builtin_reader_descriptors
+from chemblender_prepare.core.reader_catalog import builtin_reader_registry
+from chemblender_prepare.core.reader_catalog import reader_capability_document
 
 
 MATRIX = Path(__file__).parents[1] / "docs" / "quantum-visualization" / "reader-capability-matrix.json"

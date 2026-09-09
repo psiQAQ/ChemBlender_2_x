@@ -18,7 +18,8 @@ args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:])
 sys.path.append(args.existing_libraries)
 
 import ChemBlender
-from ChemBlender.core import ImportBatch, evaluate_molecular_orbital_grid
+from cbq_core.model import ImportBatch
+from chemblender_prepare.core.wavefunction_grid import evaluate_molecular_orbital_grid
 from ChemBlender.ui import orbital_export as export
 from ChemBlender.ui.session import get_scene_session, close_scene_session
 from tests.test_wavefunction_grid import entities
@@ -57,7 +58,7 @@ try:
     geometry = dict(origin=tuple(settings.origin), shape=tuple(settings.shape),
                     step_vectors=((.25, 0., 0.), (0., .25, 0.), (0., 0., .25)))
     for index in (0, 1):
-        with patch("ChemBlender.core.wavefunction_grid._evaluate_channel", side_effect=
+        with patch("chemblender_prepare.core.wavefunction_grid._evaluate_channel", side_effect=
             lambda _s, _b, c, points: numpy.asarray([points[:, 0] * numpy.exp(-numpy.sum(points ** 2, axis=1))])):
             session.project.commit(evaluate_molecular_orbital_grid(structure, basis, orbitals,
                 channel="restricted", orbital_index=index, **geometry))

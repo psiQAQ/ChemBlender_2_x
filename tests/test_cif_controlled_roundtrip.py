@@ -5,8 +5,9 @@ from pathlib import Path
 
 import numpy
 
-from ChemBlender.core import ArrayData, parse_cif
-from ChemBlender.core.exporters import export_cif
+from cbq_core.model import ArrayData
+from chemblender_prepare.core.formats.cif import parse_cif
+from chemblender_prepare.core.exporters import export_cif
 
 
 class CIFControlledRoundTripTests(unittest.TestCase):

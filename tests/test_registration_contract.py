@@ -1,5 +1,4 @@
 import importlib
-import json
 import sys
 import unittest
 from pathlib import Path
@@ -10,36 +9,11 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRATION_MODULE = "ChemBlender.runtime.registration"
 EXPECTED_ROOTS = (
-    ".chem_utils",
-    ".crys_utils",
-    ".extension",
-    ".output",
-    ".panel",
-    ".periodictable",
-    ".read",
-    ".scaffold",
-    ".trajectory_view",
-    ".ui.session",
-    ".ui.properties",
-    ".ui.quick_import",
-    ".ui.import_preview",
-    ".ui.diagnostics",
-    ".ui.topology",
-    ".ui.biological",
-    ".ui.scientific_edit",
-    ".ui.export",
-    ".ui.grid",
-    ".ui.wavefunction",
-    ".ui.wavefunction_import",
-    ".ui.scientific_import",
-    ".ui.topology_import",
-    ".ui.orbital_export",
-    ".ui.scientific_view",
-    ".ui.scientific_export",
-    ".ui.project_browser.panel",
-    ".ui.file_handlers",
-    ".ui.workspace",
-    ".ui.migration",
+    ".extension", ".trajectory_view", ".ui.session", ".ui.properties",
+    ".ui.cbq_import", ".ui.mesh_edit", ".ui.diagnostics", ".ui.topology",
+    ".ui.biological", ".ui.grid", ".ui.wavefunction", ".ui.orbital_export",
+    ".ui.scientific_view", ".ui.scientific_export", ".ui.project_browser.panel",
+    ".ui.file_handlers", ".ui.workspace",
 )
 
 
@@ -68,9 +42,6 @@ class RegistrationHarness:
         self.callback_register_failure = None
         self.callback_unregister_failure = None
         self.callback_state = set()
-        self.publication_failure = None
-        self.removal_failure = None
-        self.handle = object()
         self.modules = {
             name: ModuleType(self.package_root + name)
             for name in registration.REGISTER_MODULE_NAMES
@@ -86,13 +57,6 @@ class RegistrationHarness:
         )
         self.auto_load._safe_register_class = self._register_class
         self.auto_load._safe_unregister_class = self._unregister_class
-
-        self.bridge = ModuleType(
-            self.package_root + ".runtime.reader_api_bridge"
-        )
-        self.bridge.register_reader_api_handle = self._publish
-        self.bridge.remove_reader_api_handle = self._remove
-        self.bridge.refresh_reader_plugin_discovery = self._refresh_readers
 
     def _module_register(self, name):
         def register():
@@ -128,27 +92,10 @@ class RegistrationHarness:
             raise OSError(cls.__name__)
         return True
 
-    def _publish(self, package_root):
-        self.events.append(("publish_handle", package_root))
-        if self.publication_failure is not None:
-            raise self.publication_failure
-        return self.handle
-
-    def _remove(self, handle):
-        self.events.append(("remove_handle", handle))
-        if self.removal_failure is not None:
-            raise self.removal_failure
-        return True
-
-    def _refresh_readers(self):
-        self.events.append(("refresh_readers",))
-
     def import_module(self, name, package):
         self.imports.append((name, package))
         if name == ".auto_load":
             return self.auto_load
-        if name == ".runtime.reader_api_bridge":
-            return self.bridge
         return self.modules[name]
 
     def patch_imports(self):
@@ -181,50 +128,13 @@ class RegistrationContractTests(unittest.TestCase):
             {"return": None},
         )
 
-    def test_explicit_roots_cover_legacy_formal_inventory_only(self):
+    def test_explicit_roots_cover_viewer_inventory_only(self):
         registration = fresh_registration()
-        inventory = json.loads(
-            (
-                ROOT
-                / "tests/fixtures/registration/"
-                "legacy-registration-inventory.json"
-            ).read_text(encoding="utf-8")
-        )
-
         self.assertEqual(registration.REGISTER_MODULE_NAMES, EXPECTED_ROOTS)
-        self.assertEqual(inventory["schema_version"], 1)
-        self.assertEqual(
-            inventory["baseline_commit"],
-            "7078356c85bd02fcb0db23b01490f87f16abfb94",
-        )
-        self.assertEqual(inventory["blender_version"], "5.1.2")
-        covered_modules = set(registration.REGISTER_MODULE_NAMES)
-        self.assertTrue(
-            {
-                entry["module"]
-                for entry in inventory["registered_classes"]
-            }.issubset(covered_modules)
-        )
-        self.assertTrue(
-            {
-                entry["module"]
-                for entry in inventory["module_callbacks"]
-            }.issubset(covered_modules)
-        )
         for name in registration.REGISTER_MODULE_NAMES:
             self.assertTrue(name.startswith("."))
-            self.assertFalse(
-                name.startswith(
-                    (".core", ".reader_api", ".runtime", ".legacy")
-                )
-            )
-            self.assertTrue(
-                (
-                    ROOT
-                    / "ChemBlender"
-                    / f"{name[1:].replace('.', '/')}.py"
-                ).is_file()
-            )
+            self.assertFalse(name.startswith((".core", ".reader_api", ".runtime", ".legacy")))
+            self.assertTrue((ROOT / "ChemBlender" / f"{name[1:].replace('.', '/')}.py").is_file())
 
     def test_import_is_bpy_free_and_runtime_package_has_no_side_effects(self):
         sys.modules.pop(REGISTRATION_MODULE, None)
@@ -273,8 +183,6 @@ class RegistrationContractTests(unittest.TestCase):
                 ("register_class", "Beta"),
                 ("register_callback", ".extension"),
                 ("register_callback", ".trajectory_view"),
-                ("publish_handle", harness.package_root),
-                ("remove_handle", harness.handle),
                 ("unregister_callback", ".trajectory_view"),
                 ("unregister_callback", ".extension"),
                 ("unregister_class", "Beta"),
@@ -301,40 +209,21 @@ class RegistrationContractTests(unittest.TestCase):
             harness.events.count(("register_callback", ".extension")),
             2,
         )
-        self.assertEqual(
-            harness.events.count(("publish_handle", harness.package_root)),
-            2,
-        )
-        self.assertEqual(
-            harness.events.count(("remove_handle", harness.handle)),
-            2,
-        )
 
-    def test_load_post_republishes_the_owned_reader_handle(self):
+    def test_viewer_does_not_publish_reader_handle_or_touch_foreign_handlers(self):
         registration = fresh_registration()
         harness = RegistrationHarness(registration)
-        handlers = SimpleNamespace(
-            load_post=[],
-            persistent=lambda callback: callback,
-        )
+        foreign_callback = object()
+        foreign_handle = object()
+        handlers = SimpleNamespace(load_post=[foreign_callback])
         fake_bpy = ModuleType("bpy")
-        fake_bpy.app = SimpleNamespace(handlers=handlers)
-
+        fake_bpy.app = SimpleNamespace(handlers=handlers, driver_namespace={"reader": foreign_handle})
         with patch.dict(sys.modules, {"bpy": fake_bpy}), harness.patch_imports():
             registration.register_extension(harness.package_root)
-            self.assertEqual(len(handlers.load_post), 1)
-            handlers.load_post[0](None)
             registration.unregister_extension()
-
-        self.assertEqual(
-            harness.events.count(("publish_handle", harness.package_root)),
-            2,
-        )
-        self.assertEqual(
-            harness.events.count(("refresh_readers",)),
-            1,
-        )
-        self.assertEqual(handlers.load_post, [])
+        self.assertEqual(handlers.load_post, [foreign_callback])
+        self.assertEqual(fake_bpy.app.driver_namespace, {"reader": foreign_handle})
+        self.assertFalse(any("reader" in name for name, _ in harness.imports))
 
     def test_class_failure_rolls_back_only_registered_classes(self):
         registration = fresh_registration()
@@ -430,43 +319,28 @@ class RegistrationContractTests(unittest.TestCase):
             2,
         )
 
-    def test_handle_publication_failure_preserves_incompatible_owner(self):
+    def test_registration_refuses_other_package_without_touching_its_state(self):
         registration = fresh_registration()
         harness = RegistrationHarness(registration)
-        incompatible_owner = object()
-        failure = RuntimeError("reader handle owned elsewhere")
-        failure.incompatible_owner = incompatible_owner
-        harness.publication_failure = failure
-
         with harness.patch_imports():
-            with self.assertRaises(RuntimeError) as caught:
-                registration.register_extension(harness.package_root)
-
-        self.assertIs(caught.exception, failure)
-        self.assertIs(caught.exception.incompatible_owner, incompatible_owner)
-        self.assertFalse(
-            any(event[0] == "remove_handle" for event in harness.events)
-        )
-        self.assertEqual(
-            harness.events[-4:],
-            [
-                ("unregister_callback", ".trajectory_view"),
-                ("unregister_callback", ".extension"),
-                ("unregister_class", "Beta"),
-                ("unregister_class", "Alpha"),
-            ],
-        )
+            registration.register_extension(harness.package_root)
+            before = list(harness.events)
+            with self.assertRaisesRegex(RuntimeError, "another extension package"):
+                registration.register_extension("foreign.addon")
+            self.assertEqual(harness.events, before)
+            self.assertEqual(registration._package_root, harness.package_root)
+            registration.unregister_extension()
 
     def test_cleanup_failures_are_notes_on_original_registration_error(self):
         registration = fresh_registration()
         harness = RegistrationHarness(registration)
-        original = RuntimeError("publication failed")
-        harness.publication_failure = original
+        original = LookupError("callback failed")
+        harness.modules[".trajectory_view"].register = lambda: (_ for _ in ()).throw(original)
         harness.callback_unregister_failure = ".trajectory_view"
         harness.class_unregister_failure = harness.Beta
 
         with harness.patch_imports():
-            with self.assertRaises(RuntimeError) as caught:
+            with self.assertRaises(LookupError) as caught:
                 registration.register_extension(harness.package_root)
 
         self.assertIs(caught.exception, original)
@@ -488,16 +362,13 @@ class RegistrationContractTests(unittest.TestCase):
 
         with harness.patch_imports():
             registration.register_extension(harness.package_root)
-            original = RuntimeError("handle removal failed")
-            harness.removal_failure = original
             harness.callback_unregister_failure = ".trajectory_view"
             harness.class_unregister_failure = harness.Beta
-            with self.assertRaises(RuntimeError) as caught:
+            with self.assertRaises(ArithmeticError) as caught:
                 registration.unregister_extension()
 
-        self.assertIs(caught.exception, original)
+        self.assertEqual(str(caught.exception), ".trajectory_view")
         notes = getattr(caught.exception, "__notes__", ())
-        self.assertTrue(any("ArithmeticError" in note for note in notes))
         self.assertTrue(any("OSError" in note for note in notes))
         self.assertIn(
             ("unregister_callback", ".extension"),
@@ -511,15 +382,13 @@ class RegistrationContractTests(unittest.TestCase):
 
         with harness.patch_imports():
             registration.register_extension(harness.package_root)
-            harness.removal_failure = RuntimeError("handle removal failed")
             harness.callback_unregister_failure = ".trajectory_view"
             harness.class_unregister_failure = harness.Beta
 
-            with self.assertRaisesRegex(RuntimeError, "handle removal failed"):
+            with self.assertRaisesRegex(ArithmeticError, "trajectory_view"):
                 registration.unregister_extension()
 
             self.assertEqual(registration._package_root, harness.package_root)
-            self.assertIs(registration._reader_api_handle, harness.handle)
             self.assertEqual(
                 registration._registered_callback_modules,
                 (harness.modules[".trajectory_view"],),
@@ -529,19 +398,13 @@ class RegistrationContractTests(unittest.TestCase):
                 (harness.Beta,),
             )
 
-            harness.removal_failure = None
             harness.callback_unregister_failure = None
             harness.class_unregister_failure = None
             registration.unregister_extension()
 
         self.assertIsNone(registration._package_root)
-        self.assertIsNone(registration._reader_api_handle)
         self.assertEqual(registration._registered_callback_modules, ())
         self.assertEqual(registration._registered_classes, ())
-        self.assertEqual(
-            harness.events.count(("remove_handle", harness.handle)),
-            2,
-        )
         self.assertEqual(
             harness.events.count(
                 ("unregister_callback", ".trajectory_view")

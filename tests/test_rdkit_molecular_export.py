@@ -9,12 +9,12 @@ from unittest.mock import patch
 
 class RDKitMolecularExportTests(unittest.TestCase):
     def source(self, text="[13CH3:7][C@H:8](F)/C=C/[N+:9](C)(C)C"):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
         batch = parse_smiles_text(text)
         return batch.structures[0], batch.topologies[0]
 
     def record(self, structure, topology, properties=(), title="title"):
-        from ChemBlender.core.model import MolecularRecord
+        from cbq_core.model import MolecularRecord
         from uuid import uuid4
 
         return MolecularRecord(
@@ -22,12 +22,10 @@ class RDKitMolecularExportTests(unittest.TestCase):
             title, 0, "V2000", None, None, tuple(properties), (),
         )
     def test_public_exporter_module_exposes_molecular_entry_points(self):
-        from ChemBlender.core.exporters.rdkit_molecular import (
-            export_mol,
-            export_sdf,
-            export_smiles,
-            preview_molecular_export,
-        )
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_sdf
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_smiles
+        from chemblender_prepare.core.exporters.rdkit_molecular import preview_molecular_export
 
         self.assertTrue(callable(export_mol))
         self.assertTrue(callable(export_sdf))
@@ -35,11 +33,11 @@ class RDKitMolecularExportTests(unittest.TestCase):
         self.assertTrue(callable(preview_molecular_export))
 
     def test_molecular_preview_reports_loss_without_constructing_rdkit_molecule(self):
-        from ChemBlender.core.exporters import preview_molecular_export
+        from chemblender_prepare.core.exporters import preview_molecular_export
 
         structure, topology = self.source()
         with patch(
-            "ChemBlender.core.exporters.rdkit_molecular._molecule",
+            "chemblender_prepare.core.exporters.rdkit_molecular._molecule",
             side_effect=AssertionError("preview constructed an RDKit molecule"),
         ):
             report = preview_molecular_export(
@@ -56,8 +54,9 @@ class RDKitMolecularExportTests(unittest.TestCase):
         )
 
     def test_aromatic_implicit_hydrogen_requires_and_verifies_bound_record_seed(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_mol, export_smiles
-        from ChemBlender.core.formats.smiles import parse_smiles_text
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_smiles
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
 
         batch = parse_smiles_text("[nH]1cccc1")
         with self.assertRaisesRegex(ValueError, "MolecularRecord seed"):
@@ -72,8 +71,8 @@ class RDKitMolecularExportTests(unittest.TestCase):
         ).text)
 
     def test_tetrasubstituted_ez_requires_record_seed_and_preserves_configuration(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_mol
-        from ChemBlender.core.formats.smiles import parse_smiles_text
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
         from rdkit import Chem
 
         batch = parse_smiles_text("F/C(Cl)=C(Br)/I")
@@ -85,8 +84,8 @@ class RDKitMolecularExportTests(unittest.TestCase):
         self.assertIn("STEREOZ", [str(bond.GetStereo()) for bond in molecule.GetBonds()])
 
     def test_authoritative_ez_requires_consistent_coordinates_and_can_override_seed(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_mol
-        from ChemBlender.core.formats.smiles import parse_smiles_text
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
         from rdkit import Chem
 
         raw_z = parse_smiles_text("F/C(Cl)=C(Br)/I")
@@ -102,8 +101,8 @@ class RDKitMolecularExportTests(unittest.TestCase):
             export_mol(raw_z.structures[0], conflicting, record=seed)
 
     def test_v3000_has_one_based_bond_ids_and_v2000_refuses_overflow(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_mol
-        from ChemBlender.core.model import ArrayData
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
+        from cbq_core.model import ArrayData
         import numpy
         structure, topology = self.source()
         text = export_mol(structure, topology, version="V3000").text
@@ -122,7 +121,9 @@ class RDKitMolecularExportTests(unittest.TestCase):
         self.assertIn("V3000", export_mol(overflow, topology).text)
 
     def test_mol_and_sdf_bytes_are_deterministic(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_mol, export_sdf, export_smiles
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_sdf
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_smiles
 
         structure, topology = self.source()
         self.assertEqual(export_mol(structure, topology).text.encode(), export_mol(structure, topology).text.encode())
@@ -130,7 +131,7 @@ class RDKitMolecularExportTests(unittest.TestCase):
         self.assertEqual(export_smiles(structure, topology, confirm_loss=True).text.encode(), export_smiles(structure, topology, confirm_loss=True).text.encode())
 
     def test_export_preserves_identity_aromatic_and_stereo(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_mol
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
         from rdkit import Chem
         structure, topology = self.source()
         molecule = Chem.MolFromMolBlock(export_mol(structure, topology).text, removeHs=False)
@@ -141,8 +142,8 @@ class RDKitMolecularExportTests(unittest.TestCase):
         self.assertIn("  4", export_mol(aromatic_structure, aromatic_topology).text)
 
     def test_sdf_preserves_duplicate_empty_and_multiline_raw_properties(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_sdf
-        from ChemBlender.core.model import RawRecordProperty
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_sdf
+        from cbq_core.model import RawRecordProperty
         structure, topology = self.source()
         record = self.record(structure, topology, (
             RawRecordProperty("x", "one"), RawRecordProperty("x", ""),
@@ -153,7 +154,7 @@ class RDKitMolecularExportTests(unittest.TestCase):
         self.assertLess(text.index(">  <x>"), text.rindex(">  <x>"))
         self.assertIn(">  <multi>\na\nb", text)
         self.assertLess(text.index("title"), text.index("second"))
-        from ChemBlender.core.formats.sdf import parse_sdf
+        from chemblender_prepare.core.formats.sdf import parse_sdf
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "records.sdf"
             destination.write_text(text, encoding="utf-8")
@@ -174,9 +175,10 @@ class RDKitMolecularExportTests(unittest.TestCase):
             export_sdf(structure, topology, records=())
 
     def test_sdf_entries_keep_distinct_authoritative_records_in_order(self):
-        from ChemBlender.core.exporters.rdkit_molecular import SDFExportEntry, export_sdf
-        from ChemBlender.core.formats.sdf import parse_sdf
-        from ChemBlender.core.model import RawRecordProperty
+        from chemblender_prepare.core.exporters.rdkit_molecular import SDFExportEntry
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_sdf
+        from chemblender_prepare.core.formats.sdf import parse_sdf
+        from cbq_core.model import RawRecordProperty
 
         first_structure, first_topology = self.source("CO")
         second_structure, second_topology = self.source("N")
@@ -193,10 +195,11 @@ class RDKitMolecularExportTests(unittest.TestCase):
         self.assertEqual([item.ordered_raw_properties[0].value for item in reopened.molecular_records], ["first", "second"])
 
     def test_conformer_set_entries_keep_reference_atom_order_and_record_order(self):
-        from ChemBlender.core.exporters.rdkit_molecular import (
-            export_sdf, sdf_entries_from_conformer_set,
-        )
-        from ChemBlender.core.model import ArrayData, ConformerSet, DatasetStatus
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_sdf
+        from chemblender_prepare.core.exporters.rdkit_molecular import sdf_entries_from_conformer_set
+        from cbq_core.model import ArrayData
+        from cbq_core.model import ConformerSet
+        from cbq_core.model import DatasetStatus
         from uuid import uuid4
         import numpy
 
@@ -215,21 +218,23 @@ class RDKitMolecularExportTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "conformers.sdf"
             export_sdf(entries=entries, destination=destination, confirm_loss=True)
-            from ChemBlender.core.formats.sdf import parse_sdf
+            from chemblender_prepare.core.formats.sdf import parse_sdf
             reopened = parse_sdf(destination)
             destination.write_text("old", encoding="utf-8")
-            from ChemBlender.core.exporters.xyz import ExportCancelled
+            from chemblender_prepare.core.exporters.xyz import ExportCancelled
             with self.assertRaises(ExportCancelled):
                 export_sdf(entries=entries, destination=destination, confirm_loss=True, is_cancelled=lambda: True)
             self.assertEqual(destination.read_text(encoding="utf-8"), "old")
         self.assertEqual([record.title for record in reopened.molecular_records], ["derived-first", "derived-second"])
 
     def test_conformer_set_uses_verified_reference_seed_and_row_property_lineage(self):
-        from ChemBlender.core.exporters.rdkit_molecular import (
-            export_sdf, sdf_entries_from_conformer_set,
-        )
-        from ChemBlender.core.formats.smiles import parse_smiles_text
-        from ChemBlender.core.model import ArrayData, ConformerSet, DatasetStatus, RawRecordProperty
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_sdf
+        from chemblender_prepare.core.exporters.rdkit_molecular import sdf_entries_from_conformer_set
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
+        from cbq_core.model import ArrayData
+        from cbq_core.model import ConformerSet
+        from cbq_core.model import DatasetStatus
+        from cbq_core.model import RawRecordProperty
         from uuid import uuid4
         import numpy
 
@@ -282,8 +287,8 @@ class RDKitMolecularExportTests(unittest.TestCase):
                     )
 
     def test_cell_metadata_requires_loss_confirmation_but_nonzero_shift_is_rejected(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_mol
-        from ChemBlender.core.model import ArrayData
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
+        from cbq_core.model import ArrayData
         import numpy
 
         structure, topology = self.source("CO")
@@ -310,7 +315,7 @@ class RDKitMolecularExportTests(unittest.TestCase):
             export_mol(structure, shifted, confirm_loss=True)
 
     def test_smiles_requires_loss_confirmation_before_write(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_smiles
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_smiles
         structure, topology = self.source()
         with TemporaryDirectory() as directory:
             target = Path(directory) / "x.smi"; target.write_text("old", encoding="utf-8")
@@ -321,7 +326,8 @@ class RDKitMolecularExportTests(unittest.TestCase):
             self.assertNotEqual(target.read_text(encoding="utf-8"), "old")
 
     def test_multiplicity_loss_requires_confirmation_before_mol_or_sdf_write(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_mol, export_sdf
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_sdf
 
         structure, topology = self.source()
         structure = replace(structure, molecular_multiplicity=2)
@@ -340,8 +346,8 @@ class RDKitMolecularExportTests(unittest.TestCase):
             self.assertNotEqual(sdf_target.read_text(encoding="utf-8"), "old")
 
     def test_atomic_cancel_and_replace_failure_preserve_existing_target(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_mol
-        from ChemBlender.core.exporters.xyz import ExportCancelled
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
+        from chemblender_prepare.core.exporters.xyz import ExportCancelled
 
         structure, topology = self.source()
         with TemporaryDirectory() as directory:
@@ -350,15 +356,15 @@ class RDKitMolecularExportTests(unittest.TestCase):
             with self.assertRaises(ExportCancelled):
                 export_mol(structure, topology, destination=target, is_cancelled=lambda: True)
             self.assertEqual(target.read_text(encoding="utf-8"), "old")
-            with patch("ChemBlender.core.exporters.xyz.os.replace", side_effect=OSError("replace")):
+            with patch("chemblender_prepare.core.exporters.xyz.os.replace", side_effect=OSError("replace")):
                 with self.assertRaisesRegex(OSError, "replace"):
                     export_mol(structure, topology, destination=target)
             self.assertEqual(target.read_text(encoding="utf-8"), "old")
             self.assertEqual([path.name for path in Path(directory).iterdir()], ["x.mol"])
 
     def test_late_cancel_without_destination_stops_after_serialization(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_mol
-        from ChemBlender.core.exporters.xyz import ExportCancelled
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
+        from chemblender_prepare.core.exporters.xyz import ExportCancelled
 
         structure, topology = self.source()
         calls = 0
@@ -370,8 +376,8 @@ class RDKitMolecularExportTests(unittest.TestCase):
             export_mol(structure, topology, is_cancelled=cancelled)
 
     def test_smiles_late_cancel_stops_after_serialization(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_smiles
-        from ChemBlender.core.exporters.xyz import ExportCancelled
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_smiles
+        from chemblender_prepare.core.exporters.xyz import ExportCancelled
 
         structure, topology = self.source()
         calls = 0
@@ -383,8 +389,8 @@ class RDKitMolecularExportTests(unittest.TestCase):
             export_smiles(structure, topology, confirm_loss=True, is_cancelled=cancelled)
 
     def test_sdf_late_cancel_without_destination_stops_after_serialization(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_sdf
-        from ChemBlender.core.exporters.xyz import ExportCancelled
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_sdf
+        from chemblender_prepare.core.exporters.xyz import ExportCancelled
 
         structure, topology = self.source()
         calls = 0
@@ -396,9 +402,11 @@ class RDKitMolecularExportTests(unittest.TestCase):
             export_sdf(structure, topology, is_cancelled=cancelled)
 
     def test_lazy_sidecar_arrays_close_after_export(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_mol
-        from ChemBlender.core.model import ArrayData, CategoricalData
-        from ChemBlender.core.sidecar import LazyNpyArray, _array_content_hash
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
+        from cbq_core.model import ArrayData
+        from cbq_core.model import CategoricalData
+        from cbq_core.sidecar import LazyNpyArray
+        from cbq_core.sidecar import _array_content_hash
         import numpy
 
         structure, topology = self.source()
@@ -439,7 +447,7 @@ class RDKitMolecularExportTests(unittest.TestCase):
             self.assertTrue(all(not value.loaded for value in (coordinates, isotopes, charges, maps, names, stereo, indices, orders, aromatic)))
 
     def test_sdf_midstream_fatal_errors_preserve_target_and_cleanup(self):
-        from ChemBlender.core.exporters.rdkit_molecular import export_sdf
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_sdf
 
         structure, topology = self.source()
         with TemporaryDirectory() as directory:
@@ -449,19 +457,19 @@ class RDKitMolecularExportTests(unittest.TestCase):
                 def chunks(*_args):
                     yield "partial\n"
                     raise error
-                with patch("ChemBlender.core.exporters.rdkit_molecular._sdf_chunks", chunks):
+                with patch("chemblender_prepare.core.exporters.rdkit_molecular._sdf_chunks", chunks):
                     with self.assertRaises(type(error)):
                         export_sdf(structure, topology, destination=target)
                 self.assertEqual(target.read_text(encoding="utf-8"), "old")
                 self.assertEqual([item.name for item in Path(directory).iterdir()], ["x.sdf"])
-            with patch("ChemBlender.core.exporters.xyz.os.fsync", side_effect=OSError("fsync")):
+            with patch("chemblender_prepare.core.exporters.xyz.os.fsync", side_effect=OSError("fsync")):
                 with self.assertRaisesRegex(OSError, "fsync"):
                     export_sdf(structure, topology, destination=target)
             self.assertEqual(target.read_text(encoding="utf-8"), "old")
 
     def test_public_import_does_not_eagerly_import_rdkit(self):
         result = subprocess.run(
-            [sys.executable, "-c", "import sys; import ChemBlender.core.exporters; assert 'rdkit' not in sys.modules"],
+            [sys.executable, "-c", "import sys; import chemblender_prepare.core.exporters; assert 'rdkit' not in sys.modules"],
             cwd=Path(__file__).parents[1], capture_output=True, text=True,
         )
         self.assertEqual(result.returncode, 0, result.stderr)

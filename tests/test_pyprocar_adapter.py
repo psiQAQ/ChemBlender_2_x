@@ -4,8 +4,9 @@ import unittest
 
 import numpy
 
-from ChemBlender.core import IssueKind, QCProject
-from ChemBlender.core.pyprocar_adapter import adapt_pyprocar_fermi_surface
+from cbq_core.model import IssueKind
+from cbq_core.model import QCProject
+from chemblender_prepare.core.pyprocar_adapter import adapt_pyprocar_fermi_surface
 from tests.test_periodic_electronic_model import band_structure, periodic_structure
 
 
@@ -92,7 +93,7 @@ class PyProcarAdapterTests(unittest.TestCase):
             [
                 sys.executable,
                 "-c",
-                "import sys; import ChemBlender.core; assert 'pyprocar' not in sys.modules; assert 'pyvista' not in sys.modules",
+                "import sys; import cbq_core.model; assert 'pyprocar' not in sys.modules; assert 'pyvista' not in sys.modules",
             ],
             check=True,
         )

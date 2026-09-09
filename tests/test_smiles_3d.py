@@ -5,7 +5,9 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import CalculationStatus, QualityStatus, TopologySource
+from cbq_core.model import CalculationStatus
+from cbq_core.model import QualityStatus
+from cbq_core.model import TopologySource
 
 
 class SMILES3DDerivationTests(unittest.TestCase):
@@ -17,7 +19,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
         )
 
     def test_etkdg_derivation_is_reproducible_and_records_explicit_parameters(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
 
         structure, topology, record, source_revision = self.source()
         first = derive_smiles_3d(structure, topology, record, source_revision)
@@ -43,7 +45,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertEqual(first.topologies[0].quality_status, QualityStatus.COMPLETE)
 
     def test_embedding_failure_keeps_the_source_untouched_and_has_no_derived_structure(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
 
         structure, topology, record, source_revision = self.source()
         with patch("rdkit.Chem.AllChem.EmbedMolecule", return_value=-1):
@@ -56,7 +58,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertEqual(batch.provenance[0].parent_ids, (record.id, structure.id, topology.id))
 
     def test_recoverable_embedding_runtime_error_is_a_failed_result(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
 
         structure, topology, record, source_revision = self.source()
         with patch("rdkit.Chem.AllChem.EmbedMolecule", side_effect=RuntimeError("embed")):
@@ -67,7 +69,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertEqual(dict(batch.provenance[0].parameters)["outcome_code"], "smiles_3d.embedding_runtime_failed")
 
     def test_runtime_error_messages_do_not_create_same_identity_with_different_diagnostics(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
 
         structure, topology, record, source_revision = self.source()
         with patch("rdkit.Chem.AllChem.EmbedMolecule", side_effect=RuntimeError("first detail")):
@@ -79,7 +81,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertEqual(first.diagnostics[0].message, second.diagnostics[0].message)
 
     def test_recoverable_force_field_parameter_error_is_incomplete(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
 
         structure, topology, record, source_revision = self.source()
         with patch("rdkit.Chem.AllChem.MMFFHasAllMoleculeParams", side_effect=RuntimeError("parameters")):
@@ -90,7 +92,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertEqual(dict(batch.provenance[0].parameters)["outcome_code"], "smiles_3d.force_field_setup_failed")
 
     def test_nonnegative_embedding_conformer_id_is_successful(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
         from rdkit.Chem import AllChem
 
         structure, topology, record, source_revision = self.source()
@@ -101,7 +103,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertEqual(dict(batch.provenance[0].parameters)["embed_code"], 7)
 
     def test_result_identities_distinguish_success_partial_and_embedding_failure(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
 
         structure, topology, record, source_revision = self.source()
         success = derive_smiles_3d(structure, topology, record, source_revision)
@@ -114,7 +116,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertIsNotNone(dict(success.provenance[0].parameters)["coordinates_digest"])
 
     def test_partial_outcome_code_distinguishes_same_coordinate_result_identity(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
 
         structure, topology, record, source_revision = self.source()
         with patch("rdkit.Chem.AllChem.MMFFHasAllMoleculeParams", return_value=False):
@@ -128,7 +130,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertEqual(dict(setup_failed.provenance[0].parameters)["outcome_code"], "smiles_3d.optimization_setup_failed")
 
     def test_derivation_reconstructs_stereo_and_aromatic_bracket_h_from_exact_smiles(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
 
         stereo = self._source_batch("C/C=C/C")
         aromatic = self._source_batch("c1cc[nH]c1")
@@ -138,7 +140,8 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertGreater(len(aromatic_result.structures[0].atomic_numbers), len(aromatic.structures[0].atomic_numbers))
 
     def test_cancellation_and_fatal_errors_are_not_converted_to_partial_results(self):
-        from ChemBlender.core.derivations.smiles_3d import Smiles3DCancelled, derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import Smiles3DCancelled
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
 
         structure, topology, record, source_revision = self.source()
         with self.assertRaises(Smiles3DCancelled):
@@ -148,7 +151,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
                 derive_smiles_3d(structure, topology, record, source_revision)
 
     def test_failed_optimization_retains_embedded_coordinates_as_partial(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
 
         structure, topology, record, source_revision = self.source()
         with patch("rdkit.Chem.AllChem.MMFFOptimizeMolecule", return_value=1):
@@ -161,8 +164,8 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertTrue(numpy.isfinite(batch.structures[0].coordinates.values).all())
 
     def test_derived_batch_uses_the_real_source_revision_and_commits_to_project(self):
-        from ChemBlender.core import QCProject
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from cbq_core.model import QCProject
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
         source = self._source_batch("CCO")
         project = QCProject(id=uuid4(), schema_version="1.0")
         project.commit(source)
@@ -178,7 +181,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertIn(result.structures[0].id, project.structures)
 
     def test_parameters_change_derivation_identity_and_add_hydrogens_is_explicit(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
 
         structure, topology, record, source_revision = self.source()
         with_hydrogens = derive_smiles_3d(structure, topology, record, source_revision)
@@ -191,7 +194,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertEqual(dict(without_hydrogens.provenance[0].parameters)["max_iterations"], 50)
 
     def test_rdkit_signed_int_parameters_are_rejected_at_python_boundary(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
 
         structure, topology, record, source_revision = self.source()
         with self.assertRaisesRegex(ValueError, "random_seed.*32-bit"):
@@ -200,7 +203,7 @@ class SMILES3DDerivationTests(unittest.TestCase):
             derive_smiles_3d(structure, topology, record, source_revision, max_iterations=2_147_483_648)
 
     def test_disconnected_input_is_a_failed_calculation_with_no_derived_structure(self):
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
         source = self._source_batch("CC.O")
         batch = derive_smiles_3d(source.structures[0], source.topologies[0], source.molecular_records[0], source.source_revisions[0])
         self.assertEqual(batch.calculations[0].status, CalculationStatus.FAILED)
@@ -208,8 +211,8 @@ class SMILES3DDerivationTests(unittest.TestCase):
         self.assertEqual(batch.diagnostics[0].code, "smiles_3d.disconnected")
 
     def test_partial_and_failed_derivations_commit_to_the_source_project(self):
-        from ChemBlender.core import QCProject
-        from ChemBlender.core.derivations.smiles_3d import derive_smiles_3d
+        from cbq_core.model import QCProject
+        from chemblender_prepare.core.derivations.smiles_3d import derive_smiles_3d
         for outcome in ("partial", "failed"):
             with self.subTest(outcome=outcome):
                 source = self._source_batch("CCO")
@@ -223,10 +226,11 @@ class SMILES3DDerivationTests(unittest.TestCase):
 
     def _source_batch(self, text):
         from pathlib import Path
-        from ChemBlender.core import builtin_reader_registry
-        from ChemBlender.core.import_pipeline.preflight import preflight_import
-        from ChemBlender.core.import_pipeline.request import ImportRequest, ImportSource
-        from ChemBlender.core.import_pipeline.staging import StagedImportSession
+        from chemblender_prepare.core.reader_catalog import builtin_reader_registry
+        from chemblender_prepare.core.import_pipeline.preflight import preflight_import
+        from chemblender_prepare.core.import_pipeline.request import ImportRequest
+        from chemblender_prepare.core.import_pipeline.request import ImportSource
+        from chemblender_prepare.core.import_pipeline.staging import StagedImportSession
 
         source = ImportSource.smiles_text(text)
         with TemporaryDirectory() as directory:

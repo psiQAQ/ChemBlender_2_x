@@ -25,7 +25,8 @@ if args.existing_libraries:
     sys.path.append(args.existing_libraries)
 
 import ChemBlender
-from ChemBlender.core import ImportBatch, OrbitalKind
+from cbq_core.model import ImportBatch
+from cbq_core.model import OrbitalKind
 from ChemBlender.ui import session as session_ui
 from ChemBlender.ui import wavefunction as ui
 from ChemBlender.ui import wavefunction_import as importer

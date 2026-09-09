@@ -7,22 +7,20 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    AtomicProperty,
-    CapabilitySupport,
-    CategoricalData,
-    DatasetStatus,
-    IssueKind,
-    QCProject,
-    QualityStatus,
-    TopologySource,
-    builtin_reader_descriptors,
-    builtin_reader_registry,
-    close_project,
-    open_project,
-    save_project,
-)
-from ChemBlender.core.formats import mol2
+from cbq_core.model import AtomicProperty
+from chemblender_prepare.core.readers import CapabilitySupport
+from cbq_core.model import CategoricalData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import IssueKind
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from cbq_core.model import TopologySource
+from chemblender_prepare.core.reader_catalog import builtin_reader_descriptors
+from chemblender_prepare.core.reader_catalog import builtin_reader_registry
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from chemblender_prepare.core.formats import mol2
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "mol2"
@@ -229,7 +227,7 @@ class Mol2RecoveryTests(unittest.TestCase):
     def _assert_strict_rejects(self, invalid_record):
         from tempfile import TemporaryDirectory
 
-        from ChemBlender.reader_api import ParseRequest
+        from chemblender_prepare.reader_api import ParseRequest
 
         valid = (FIXTURES / "small.mol2").read_bytes()
         with TemporaryDirectory() as directory:
@@ -525,7 +523,7 @@ class Mol2RecoveryTests(unittest.TestCase):
         )
 
     def test_zero_molecule_records_fail_closed_for_all_reader_routes(self):
-        from ChemBlender.reader_api import ParseRequest
+        from chemblender_prepare.reader_api import ParseRequest
 
         raw = b"ordinary text\n@<TRIPOS>ATOM\n1 C1 0 0 0 C.3\n"
         with TemporaryDirectory() as directory:
@@ -589,8 +587,8 @@ class Mol2RegistrationTests(unittest.TestCase):
             descriptor,
         )
 
-        from ChemBlender.reader_api import ExecutionMode
-        from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+        from chemblender_prepare.reader_api import ExecutionMode
+        from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
 
         public = next(
             value
@@ -610,8 +608,9 @@ class Mol2RegistrationTests(unittest.TestCase):
         self.assertEqual(selected.reader_id, "mol2")
 
     def test_reader_api_v1_conformance_passes(self):
-        from ChemBlender.reader_api import ReaderConformanceCase, run_reader_conformance
-        from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+        from chemblender_prepare.reader_api import ReaderConformanceCase
+        from chemblender_prepare.reader_api import run_reader_conformance
+        from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
 
         result = run_reader_conformance(
             ReaderConformanceCase(
@@ -636,26 +635,20 @@ class Mol2PersistenceTests(unittest.TestCase):
     def test_repeated_set_diagnostics_survive_preview_commit_and_sidecar_reopen(self):
         from tempfile import TemporaryDirectory
 
-        from ChemBlender.core import (
-            close_project,
-            close_session,
-            create_session,
-            open_project,
-            save_project,
-        )
-        from ChemBlender.core.import_pipeline import (
-            ImportCommitDecisions,
-            ImportRequest,
-            ImportSource,
-            ReaderOverride,
-            StagedImportSession,
-            ValidationMode,
-            commit_import_preview,
-        )
-        from ChemBlender.reader_api.import_pipeline_bridge import (
-            preflight_reader_plugins,
-        )
-        from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+        from cbq_core.sidecar import close_project
+        from cbq_core.session import close_session
+        from cbq_core.session import create_session
+        from cbq_core.sidecar import open_project
+        from cbq_core.sidecar import save_project
+        from chemblender_prepare.core.import_pipeline import ImportCommitDecisions
+        from chemblender_prepare.core.import_pipeline import ImportRequest
+        from chemblender_prepare.core.import_pipeline import ImportSource
+        from chemblender_prepare.core.import_pipeline import ReaderOverride
+        from chemblender_prepare.core.import_pipeline import StagedImportSession
+        from chemblender_prepare.core.import_pipeline import ValidationMode
+        from chemblender_prepare.core.import_pipeline import commit_import_preview
+        from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
+        from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
 
         raw = (
             (FIXTURES / "small.mol2").read_bytes()

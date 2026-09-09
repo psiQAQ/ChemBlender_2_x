@@ -86,11 +86,11 @@ class Wave2CrystalBoundaryQualificationTests(unittest.TestCase):
                 )
 
     def test_public_crystal_surface_uses_unified_model_contract(self):
-        import ChemBlender.core as core
-        import ChemBlender.reader_api as reader_api
+        from cbq_core import model as core
+        import chemblender_prepare.reader_api as reader_api
 
         for module in (core, reader_api):
-            public = set(module.__all__)
+            public = {name for name in dir(module) if not name.startswith("_")}
             with self.subTest(module=module.__name__):
                 self.assertLessEqual(UNIFIED_CRYSTAL_MODEL, public)
                 self.assertTrue(FORBIDDEN_PARALLEL_MODEL.isdisjoint(public))
@@ -109,14 +109,14 @@ class Wave2CrystalBoundaryQualificationTests(unittest.TestCase):
                 "cartesian_to_fractional",
                 "validate_periodic_coordinate_consistency",
             },
-            set(core.__all__),
+            set(dir(core)),
         )
 
     def test_core_and_reader_api_cold_imports_do_not_load_crystal_dependencies(self):
         code = """
 import sys
-import ChemBlender.core
-import ChemBlender.reader_api
+import cbq_core.model
+import chemblender_prepare.reader_api
 loaded = sorted({"gemmi", "spglib"}.intersection(sys.modules))
 raise SystemExit(f"unexpected optional imports: {loaded}" if loaded else 0)
 """
@@ -142,7 +142,7 @@ raise SystemExit(f"unexpected optional imports: {loaded}" if loaded else 0)
         code = f"""
 import sys
 from pathlib import Path
-from ChemBlender.core import parse_cif
+from chemblender_prepare.core.formats.cif import parse_cif
 assert "gemmi" not in sys.modules
 assert "spglib" not in sys.modules
 parse_cif(Path({str(ROOT / "tests" / "fixtures" / "cif" / "cscl.cif")!r}))
@@ -239,11 +239,9 @@ class Wave2CrystalRoundTripQualificationTests(unittest.TestCase):
         "Gemmi dependency unavailable",
     )
     def test_fixed_fixtures_have_expected_scientific_identity(self):
-        from ChemBlender.core import (
-            parse_cif,
-            parse_poscar,
-            unit_cell_parameters,
-        )
+        from chemblender_prepare.core.formats.cif import parse_cif
+        from chemblender_prepare.core.formats.poscar import parse_poscar
+        from cbq_core.model import unit_cell_parameters
 
         expected_cif = {
             "quartz.cif": (
@@ -344,14 +342,12 @@ class Wave2CrystalRoundTripQualificationTests(unittest.TestCase):
         "Gemmi dependency unavailable",
     )
     def test_fixed_cif_inventory_survives_sidecar_and_export_roundtrip(self):
-        from ChemBlender.core import (
-            QCProject,
-            close_project,
-            open_project,
-            parse_cif,
-            save_project,
-        )
-        from ChemBlender.core.exporters import export_cif
+        from cbq_core.model import QCProject
+        from cbq_core.sidecar import close_project
+        from cbq_core.sidecar import open_project
+        from chemblender_prepare.core.formats.cif import parse_cif
+        from cbq_core.sidecar import save_project
+        from chemblender_prepare.core.exporters import export_cif
 
         for name in CIF_QUALIFICATION_CASES:
             source = CIF_FIXTURES / name
@@ -368,7 +364,7 @@ class Wave2CrystalRoundTripQualificationTests(unittest.TestCase):
                     )
                     restored = open_project(sidecar)
                     try:
-                        self.assertEqual(restored.schema_version, "1.0")
+                        self.assertEqual(restored.schema_version, "1.1")
                         for original in batch.structures:
                             reopened = restored.structures[original.id]
                             self.assert_periodic_structure_equal(
@@ -403,23 +399,17 @@ class Wave2CrystalRoundTripQualificationTests(unittest.TestCase):
                         close_project(restored)
 
     def test_fixed_poscar_inventory_survives_sidecar_and_export_roundtrip(self):
-        from ChemBlender.core import (
-            ImportBatch,
-            QCProject,
-            close_project,
-            open_project,
-            parse_poscar,
-            save_project,
-        )
-        from ChemBlender.core.exporters import (
-            PoscarExportSettings,
-            export_poscar,
-            semantic_poscar_differences,
-        )
-        from ChemBlender.core.formats.poscar import (
-            PoscarLatticeVelocityBlock,
-            parse_poscar_document,
-        )
+        from cbq_core.model import ImportBatch
+        from cbq_core.model import QCProject
+        from cbq_core.sidecar import close_project
+        from cbq_core.sidecar import open_project
+        from chemblender_prepare.core.formats.poscar import parse_poscar
+        from cbq_core.sidecar import save_project
+        from chemblender_prepare.core.exporters import PoscarExportSettings
+        from chemblender_prepare.core.exporters import export_poscar
+        from chemblender_prepare.core.exporters import semantic_poscar_differences
+        from chemblender_prepare.core.formats.poscar import PoscarLatticeVelocityBlock
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         for name in POSCAR_QUALIFICATION_CASES:
             source = POSCAR_FIXTURES / name
@@ -436,7 +426,7 @@ class Wave2CrystalRoundTripQualificationTests(unittest.TestCase):
                     )
                     restored = open_project(sidecar)
                     try:
-                        self.assertEqual(restored.schema_version, "1.0")
+                        self.assertEqual(restored.schema_version, "1.1")
                         original = batch.structures[0]
                         reopened = restored.structures[original.id]
                         self.assert_periodic_structure_equal(

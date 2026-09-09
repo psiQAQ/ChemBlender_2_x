@@ -8,25 +8,19 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core.exporters.xyz import (
-    export_extxyz,
-    preview_extxyz_export,
-    semantic_extxyz_differences,
-)
-from ChemBlender.core.formats.extxyz import (
-    ExtXYZSyntaxError,
-    iter_extxyz_frames,
-    parse_extxyz,
-    parse_extxyz_comment,
-)
-from ChemBlender.core.model import (
-    AtomFrameProperty,
-    CategoricalData,
-    CellFrameProperty,
-    DatasetStatus,
-    FrameProperty,
-    ImportBatch,
-)
+from chemblender_prepare.core.exporters.xyz import export_extxyz
+from chemblender_prepare.core.exporters.xyz import preview_extxyz_export
+from chemblender_prepare.core.exporters.xyz import semantic_extxyz_differences
+from chemblender_prepare.core.formats.extxyz import ExtXYZSyntaxError
+from chemblender_prepare.core.formats.extxyz import iter_extxyz_frames
+from chemblender_prepare.core.formats.extxyz import parse_extxyz
+from chemblender_prepare.core.formats.extxyz import parse_extxyz_comment
+from cbq_core.model import AtomFrameProperty
+from cbq_core.model import CategoricalData
+from cbq_core.model import CellFrameProperty
+from cbq_core.model import DatasetStatus
+from cbq_core.model import FrameProperty
+from cbq_core.model import ImportBatch
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "extxyz"
@@ -581,7 +575,7 @@ class ExtXYZExporterTests(unittest.TestCase):
             self.assertEqual(destination.read_bytes(), b"existing\n")
 
             with patch(
-                "ChemBlender.core.exporters.xyz.os.replace",
+                "chemblender_prepare.core.exporters.xyz.os.replace",
                 side_effect=OSError("replace failed"),
             ):
                 with self.assertRaisesRegex(OSError, "replace failed"):
@@ -762,7 +756,7 @@ class ExtXYZExporterTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "collision.extxyz"
             with patch(
-                "ChemBlender.core.exporters.xyz.short_sibling_temporary_path"
+                "chemblender_prepare.core.exporters.xyz.short_sibling_temporary_path"
             ) as temporary:
                 with self.assertRaisesRegex(ValueError, "duplicate.*charge"):
                     export_extxyz(
@@ -793,7 +787,7 @@ class ExtXYZExporterTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "duplicate.extxyz"
             with patch(
-                "ChemBlender.core.exporters.xyz.short_sibling_temporary_path"
+                "chemblender_prepare.core.exporters.xyz.short_sibling_temporary_path"
             ) as temporary:
                 with self.assertRaisesRegex(
                     ValueError,
@@ -838,7 +832,7 @@ class ExtXYZExporterTests(unittest.TestCase):
             destination = root / "normalized-export.extxyz"
 
             with patch(
-                "ChemBlender.core.exporters.xyz.short_sibling_temporary_path"
+                "chemblender_prepare.core.exporters.xyz.short_sibling_temporary_path"
             ) as temporary:
                 with self.assertRaisesRegex(
                     ValueError,
@@ -875,7 +869,7 @@ class ExtXYZExporterTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "unit-collision.extxyz"
             with patch(
-                "ChemBlender.core.exporters.xyz.short_sibling_temporary_path"
+                "chemblender_prepare.core.exporters.xyz.short_sibling_temporary_path"
             ) as temporary:
                 with self.assertRaisesRegex(
                     ValueError,
@@ -950,7 +944,7 @@ class ExtXYZExporterTests(unittest.TestCase):
                 with self.subTest(key=key):
                     destination = root / f"{key}-collision.extxyz"
                     with patch(
-                        "ChemBlender.core.exporters.xyz."
+                        "chemblender_prepare.core.exporters.xyz."
                         "short_sibling_temporary_path"
                     ) as temporary:
                         with self.assertRaisesRegex(

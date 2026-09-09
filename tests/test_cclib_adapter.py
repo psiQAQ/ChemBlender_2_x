@@ -9,26 +9,22 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    AtomicProperty,
-    CalculationStatus,
-    CapabilitySupport,
-    DatasetStatus,
-    ExcitedStateSet,
-    FrameSet,
-    IssueKind,
-    QCProject,
-    SniffMatch,
-    SpinChannel,
-    VibrationalModeSet,
-)
-from ChemBlender.core.cclib_adapter import (
-    CCLIB_OUTPUT_READER,
-    adapt_ccdata,
-    parse_cclib_output,
-    sniff_cclib_output,
-)
-from ChemBlender.core.model.spectroscopy import ROTATORY_STRENGTH_CGS_UNIT
+from cbq_core.model import AtomicProperty
+from cbq_core.model import CalculationStatus
+from chemblender_prepare.core.readers import CapabilitySupport
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ExcitedStateSet
+from cbq_core.model import FrameSet
+from cbq_core.model import IssueKind
+from cbq_core.model import QCProject
+from chemblender_prepare.core.readers import SniffMatch
+from cbq_core.model import SpinChannel
+from cbq_core.model import VibrationalModeSet
+from chemblender_prepare.core.cclib_adapter import CCLIB_OUTPUT_READER
+from chemblender_prepare.core.cclib_adapter import adapt_ccdata
+from chemblender_prepare.core.cclib_adapter import parse_cclib_output
+from chemblender_prepare.core.cclib_adapter import sniff_cclib_output
+from cbq_core.model.spectroscopy import ROTATORY_STRENGTH_CGS_UNIT
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -146,7 +142,7 @@ def fake_ccdata(**overrides):
 class CCLibAdapterTests(unittest.TestCase):
     def test_core_import_does_not_eagerly_load_optional_stack(self):
         code = (
-            "import sys; import ChemBlender.core; "
+            "import sys; import cbq_core.model; "
             "assert 'cclib' not in sys.modules; "
             "assert 'scipy' not in sys.modules; "
             "assert 'numpy' not in sys.modules"

@@ -136,7 +136,7 @@ class RepresentativeExampleTests(unittest.TestCase):
                 self.assertIn("bpy.ops.chemblender", text)
 
     def test_manifest_sdf_metrics_match_parsed_records(self):
-        from ChemBlender.core.formats.sdf import parse_sdf
+        from chemblender_prepare.core.formats.sdf import parse_sdf
 
         for record in (item for item in self.records if item["family"] == "sdf"):
             with self.subTest(path=record["path"]):
@@ -153,7 +153,7 @@ class RepresentativeExampleTests(unittest.TestCase):
     def test_derived_examples_parse_with_expected_semantics(self):
         import numpy
 
-        from ChemBlender.core.reader_catalog import builtin_reader_registry
+        from chemblender_prepare.core.reader_catalog import builtin_reader_registry
 
         inputs = EXAMPLE_ROOT / "inputs"
         registry = builtin_reader_registry()
@@ -261,11 +261,9 @@ class RepresentativeExampleTests(unittest.TestCase):
     def test_direct_examples_parse_with_expected_semantics(self):
         import numpy
 
-        from ChemBlender.core.formats.mol2 import (
-            iter_mol2_records,
-            parse_mol2_record,
-        )
-        from ChemBlender.core.reader_catalog import builtin_reader_registry
+        from chemblender_prepare.core.formats.mol2 import iter_mol2_records
+        from chemblender_prepare.core.formats.mol2 import parse_mol2_record
+        from chemblender_prepare.core.reader_catalog import builtin_reader_registry
 
         inputs = EXAMPLE_ROOT / "inputs"
         registry = builtin_reader_registry()

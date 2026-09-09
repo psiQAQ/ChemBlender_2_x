@@ -1,7 +1,7 @@
 from pathlib import Path
 import unittest
 
-from ChemBlender.core.readers import SniffMatch
+from chemblender_prepare.core.readers import SniffMatch
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "poscar"
@@ -9,7 +9,7 @@ FIXTURES = Path(__file__).parent / "fixtures" / "poscar"
 
 class PoscarSyntaxTests(unittest.TestCase):
     def test_sniff_requires_valid_structure_and_recognizes_canonical_basename(self):
-        from ChemBlender.core.formats.poscar import sniff_poscar
+        from chemblender_prepare.core.formats.poscar import sniff_poscar
 
         valid = (FIXTURES / "cscl.vasp").read_bytes()
 
@@ -23,7 +23,7 @@ class PoscarSyntaxTests(unittest.TestCase):
         )
 
     def test_sniff_marks_valid_vasp_suffix_as_exact_native_format(self):
-        from ChemBlender.core.formats.poscar import sniff_poscar
+        from chemblender_prepare.core.formats.poscar import sniff_poscar
 
         result = sniff_poscar(
             FIXTURES / "cscl.vasp",
@@ -33,7 +33,7 @@ class PoscarSyntaxTests(unittest.TestCase):
         self.assertIs(result.match, SniffMatch.EXACT)
 
     def test_bare_contcar_sniff_is_exact(self):
-        from ChemBlender.core.formats.poscar import sniff_poscar
+        from chemblender_prepare.core.formats.poscar import sniff_poscar
 
         source = FIXTURES / "velocities.CONTCAR"
 
@@ -43,8 +43,8 @@ class PoscarSyntaxTests(unittest.TestCase):
         )
 
     def test_sniff_accepts_valid_truncated_large_poscar_prefix(self):
-        from ChemBlender.core.formats.poscar import sniff_poscar
-        from ChemBlender.core.readers import SNIFF_PREFIX_BYTES
+        from chemblender_prepare.core.formats.poscar import sniff_poscar
+        from chemblender_prepare.core.readers import SNIFF_PREFIX_BYTES
 
         atom_count = 12000
         content = (
@@ -66,7 +66,7 @@ class PoscarSyntaxTests(unittest.TestCase):
         )
 
     def test_negative_scale_normalizes_lattice_and_cartesian_coordinates(self):
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         document = parse_poscar_document(
             (FIXTURES / "negative-scale.vasp").read_bytes()
@@ -81,7 +81,7 @@ class PoscarSyntaxTests(unittest.TestCase):
         self.assertEqual(document.coordinates, ((0.5, 1.0, 1.5),))
 
     def test_positive_scale_normalizes_lattice_and_cartesian_coordinates(self):
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         document = parse_poscar_document(
             b"positive scale\n"
@@ -102,7 +102,7 @@ class PoscarSyntaxTests(unittest.TestCase):
         self.assertEqual(document.coordinates, ((0.5, 1.0, 1.5),))
 
     def test_negative_scale_with_singular_lattice_returns_invalid_diagnostic(self):
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         document = parse_poscar_document(
             b"singular\n-8\n0 0 0\n0 1 0\n0 0 1\nH\n1\nDirect\n0 0 0\n"
@@ -115,7 +115,7 @@ class PoscarSyntaxTests(unittest.TestCase):
         )
 
     def test_zero_scale_returns_invalid_scale_diagnostic(self):
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         document = parse_poscar_document(
             b"zero scale\n"
@@ -135,7 +135,7 @@ class PoscarSyntaxTests(unittest.TestCase):
         )
 
     def test_vasp4_counts_preserve_missing_species_identities(self):
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         document = parse_poscar_document(
             (FIXTURES / "vasp4-counts.POSCAR").read_bytes()
@@ -146,7 +146,7 @@ class PoscarSyntaxTests(unittest.TestCase):
         self.assertEqual(document.coordinates, ((0.0, 0.0, 0.0), (0.5, 0.5, 0.5), (0.25, 0.25, 0.25)))
 
     def test_vasp5_species_and_counts_preserve_source_order(self):
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         document = parse_poscar_document(
             b"ordered species\n"
@@ -167,7 +167,7 @@ class PoscarSyntaxTests(unittest.TestCase):
         self.assertEqual(document.counts, (1, 2, 1))
 
     def test_selective_dynamics_and_direct_mode_are_parsed(self):
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         document = parse_poscar_document(
             (FIXTURES / "cscl-selective.vasp").read_bytes()
@@ -177,7 +177,7 @@ class PoscarSyntaxTests(unittest.TestCase):
         self.assertEqual(document.selective_dynamics, ((False, False, False), (True, False, True)))
 
     def test_coordinate_mode_uses_case_insensitive_first_character(self):
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         document = parse_poscar_document(
             b"k point mode\n1\n1 0 0\n0 1 0\n0 0 1\nH\n1\nk\n0.25 0.5 0.75\n"
@@ -186,7 +186,8 @@ class PoscarSyntaxTests(unittest.TestCase):
         self.assertEqual(document.coordinate_mode, "cartesian")
 
     def test_coordinate_count_and_selective_flags_are_strict(self):
-        from ChemBlender.core.formats.poscar import PoscarSyntaxError, parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import PoscarSyntaxError
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         with self.assertRaisesRegex(PoscarSyntaxError, "coordinate rows"):
             parse_poscar_document(
@@ -198,7 +199,7 @@ class PoscarSyntaxTests(unittest.TestCase):
             )
 
     def test_valid_lattice_and_ion_velocity_blocks_are_preserved(self):
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         document = parse_poscar_document(
             (FIXTURES / "velocities.CONTCAR").read_bytes()
@@ -228,10 +229,8 @@ class PoscarSyntaxTests(unittest.TestCase):
         self.assertEqual(document.velocity_mode, "cartesian")
 
     def test_invalid_or_incomplete_lattice_velocity_blocks_are_rejected(self):
-        from ChemBlender.core.formats.poscar import (
-            PoscarSyntaxError,
-            parse_poscar_document,
-        )
+        from chemblender_prepare.core.formats.poscar import PoscarSyntaxError
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         prefix = (
             b"invalid lattice velocities\n"
@@ -281,10 +280,8 @@ class PoscarSyntaxTests(unittest.TestCase):
                     parse_poscar_document(content)
 
     def test_predictor_corrector_tail_is_not_silently_consumed(self):
-        from ChemBlender.core.formats.poscar import (
-            PoscarSyntaxError,
-            parse_poscar_document,
-        )
+        from chemblender_prepare.core.formats.poscar import PoscarSyntaxError
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         content = (FIXTURES / "velocities.CONTCAR").read_bytes()
 
@@ -296,7 +293,7 @@ class PoscarSyntaxTests(unittest.TestCase):
             )
 
     def test_explicit_velocity_mode_uses_vasp_first_character_rule(self):
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         cases = {
             "Cartesian": "cartesian",
@@ -326,10 +323,8 @@ class PoscarSyntaxTests(unittest.TestCase):
                 self.assertEqual(document.velocities, ((0.1, 0.2, 0.3),))
 
     def test_velocity_triplets_without_mode_are_rejected(self):
-        from ChemBlender.core.formats.poscar import (
-            PoscarSyntaxError,
-            parse_poscar_document,
-        )
+        from chemblender_prepare.core.formats.poscar import PoscarSyntaxError
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         with self.assertRaisesRegex(PoscarSyntaxError, "velocity"):
             parse_poscar_document(
@@ -348,7 +343,7 @@ class PoscarSyntaxTests(unittest.TestCase):
             )
 
     def test_trailing_blank_lines_without_velocities_are_ignored(self):
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         document = parse_poscar_document(
             b"no velocities\n"
@@ -367,7 +362,7 @@ class PoscarSyntaxTests(unittest.TestCase):
         self.assertIsNone(document.velocities)
 
     def test_trailing_blank_lines_after_complete_velocities_are_ignored(self):
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         document = parse_poscar_document(
             b"velocity tail\n"
@@ -388,10 +383,8 @@ class PoscarSyntaxTests(unittest.TestCase):
         self.assertEqual(document.velocities, ((0.1, 0.2, 0.3),))
 
     def test_blank_line_inside_velocity_rows_is_rejected(self):
-        from ChemBlender.core.formats.poscar import (
-            PoscarSyntaxError,
-            parse_poscar_document,
-        )
+        from chemblender_prepare.core.formats.poscar import PoscarSyntaxError
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         with self.assertRaisesRegex(PoscarSyntaxError, "velocity"):
             parse_poscar_document(
@@ -412,7 +405,8 @@ class PoscarSyntaxTests(unittest.TestCase):
             )
 
     def test_invalid_velocity_block_is_rejected(self):
-        from ChemBlender.core.formats.poscar import PoscarSyntaxError, parse_poscar_document
+        from chemblender_prepare.core.formats.poscar import PoscarSyntaxError
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         with self.assertRaisesRegex(PoscarSyntaxError, "velocity"):
             parse_poscar_document(

@@ -16,7 +16,9 @@ sys.path.insert(0, str(ROOT))
 private = Path(os.environ["BLENDER_USER_RESOURCES"]).resolve()
 assert ROOT / ".agents" / "cache" in private.parents
 
-from ChemBlender.core import ArrayData, ImportBatch, create_session
+from cbq_core.model import ArrayData
+from cbq_core.model import ImportBatch
+from cbq_core.session import create_session
 from ChemBlender.ui import scientific_view as ui, session as session_ui
 from ChemBlender.ui import scientific_import, wavefunction_import
 from ChemBlender.ui.project_browser import panel
@@ -139,8 +141,9 @@ try:
         operator = SimpleNamespace()
         operator._finish_modal = lambda: operator_type._finish_modal(operator)
         operator_type.cancel(operator, None)
-    from ChemBlender.core.import_pipeline import ImportSource, ValidationMode
-    from ChemBlender.core.import_pipeline.parse import stage_import_batch
+    from chemblender_prepare.core.import_pipeline import ImportSource
+    from chemblender_prepare.core.import_pipeline import ValidationMode
+    from chemblender_prepare.core.import_pipeline.parse import stage_import_batch
     import hashlib
     source = private / "synthetic-cclib.out"
     source.write_bytes(b"synthetic UI import fixture")

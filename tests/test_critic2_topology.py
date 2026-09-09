@@ -7,21 +7,19 @@ from uuid import uuid4
 
 import numpy as np
 
-from ChemBlender.core import (
-    ArrayData,
-    CriticalPointKind,
-    DatasetStatus,
-    ImportBatch,
-    QCProject,
-    Structure,
-    TopologyConnection,
-    TopologyGraph,
-    TopologyPath,
-    close_project,
-    open_project,
-    parse_critic2_cpreport,
-    save_project,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import CriticalPointKind
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
+from cbq_core.model import TopologyConnection
+from cbq_core.model import TopologyGraph
+from cbq_core.model import TopologyPath
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from chemblender_prepare.core.critic2_adapter import parse_critic2_cpreport
+from cbq_core.sidecar import save_project
 
 
 ROOT = Path(__file__).resolve().parents[1]

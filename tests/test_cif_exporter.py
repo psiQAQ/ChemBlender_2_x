@@ -7,8 +7,10 @@ from pathlib import Path
 
 import numpy
 
-from ChemBlender.core import ArrayData, parse_cif
-from ChemBlender.core.exporters import export_cif, plan_cif_export
+from cbq_core.model import ArrayData
+from chemblender_prepare.core.formats.cif import parse_cif
+from chemblender_prepare.core.exporters import export_cif
+from chemblender_prepare.core.exporters import plan_cif_export
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "cif" / "partial-disorder.cif"
@@ -21,7 +23,7 @@ class CIFExporterTests(unittest.TestCase):
                 sys.executable,
                 "-c",
                 (
-                    "import sys; import ChemBlender.core.exporters; "
+                    "import sys; import chemblender_prepare.core.exporters; "
                     "raise SystemExit('gemmi' in sys.modules)"
                 ),
             ],

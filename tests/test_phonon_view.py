@@ -4,7 +4,8 @@ import unittest
 
 import numpy
 
-from ChemBlender.core import ArrayData, DatasetStatus
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
 from ChemBlender.phonon_view import _display_frame, _reference_supercell, _repetitions
 from tests.test_periodic_electronic_model import periodic_structure
 from tests.test_phonon_model import phonon_modes

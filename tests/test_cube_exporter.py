@@ -8,19 +8,19 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    AtomicIdentityData,
-    CategoricalData,
-    CubeExport,
-    MolecularTopology,
-    export_cube,
-    preview_cube_export,
-)
-from ChemBlender.core.cube import CUBE_READER
-from ChemBlender.core.model import AtomicProperty, Grid3D
-from ChemBlender.core.sidecar import LazyNpyArray, _array_content_hash
-from ChemBlender.core.exporters import ExportCancelled
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomicIdentityData
+from cbq_core.model import CategoricalData
+from chemblender_prepare.core.exporters.cube import CubeExport
+from cbq_core.model import MolecularTopology
+from chemblender_prepare.core.exporters.cube import export_cube
+from chemblender_prepare.core.exporters.cube import preview_cube_export
+from chemblender_prepare.core.cube import CUBE_READER
+from cbq_core.model import AtomicProperty
+from cbq_core.model import Grid3D
+from cbq_core.sidecar import LazyNpyArray
+from cbq_core.sidecar import _array_content_hash
+from chemblender_prepare.core.exporters import ExportCancelled
 
 
 BOHR_TO_ANGSTROM = 0.529177210903
@@ -302,11 +302,11 @@ class CubeExporterTests(unittest.TestCase):
 
         with (
             patch(
-                "ChemBlender.core.exporters.cube.atomic_write_chunks",
+                "chemblender_prepare.core.exporters.cube.atomic_write_chunks",
                 side_effect=consume_first,
             ),
             patch(
-                "ChemBlender.core.exporters.cube._number",
+                "chemblender_prepare.core.exporters.cube._number",
                 side_effect=AssertionError("numeric rows formatted before first yield"),
             ),
         ):
@@ -319,7 +319,7 @@ class CubeExporterTests(unittest.TestCase):
         self.assertEqual(observed, ["ChemBlender deterministic Cube export\n"])
 
     def test_destination_cancels_before_formatting_the_full_payload(self):
-        from ChemBlender.core.exporters.cube import _number
+        from chemblender_prepare.core.exporters.cube import _number
 
         checks = 0
         numeric_rows = 0
@@ -337,7 +337,7 @@ class CubeExporterTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "field.cube"
             with patch(
-                "ChemBlender.core.exporters.cube._number",
+                "chemblender_prepare.core.exporters.cube._number",
                 side_effect=count_number,
             ):
                 with self.assertRaises(ExportCancelled):
@@ -582,7 +582,7 @@ class CubeExporterTests(unittest.TestCase):
             self.assertEqual(destination.read_bytes(), b"previous")
             self.assertEqual(tuple(Path(directory).glob(".*.tmp")), ())
 
-            with patch("ChemBlender.core.exporters.xyz.os.replace", side_effect=OSError("replace failed")):
+            with patch("chemblender_prepare.core.exporters.xyz.os.replace", side_effect=OSError("replace failed")):
                 with self.assertRaisesRegex(OSError, "replace failed"):
                     export_cube(batch, confirm_loss=True, destination=destination)
             self.assertEqual(destination.read_bytes(), b"previous")

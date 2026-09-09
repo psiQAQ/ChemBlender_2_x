@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import numpy
 
-import ChemBlender.core as core
+from cbq_core import model as core
 from tests.test_fermi_surface_model import fermi_surface
 from tests.test_periodic_electronic_model import band_structure, density_of_states
 
@@ -22,7 +22,7 @@ def adapters():
     with patch.dict(sys.modules, {
         "_scientific_adapter_test": package,
         "_scientific_adapter_test.core": core,
-        "_scientific_adapter_test.core.model": importlib.import_module("ChemBlender.core.model"),
+        "_scientific_adapter_test.core.model": importlib.import_module("cbq_core.model"),
         "bpy": types.ModuleType("bpy"),
     }):
         return (importlib.import_module("_scientific_adapter_test.electronic_plot"),

@@ -15,9 +15,17 @@ private = Path(os.environ['BLENDER_USER_RESOURCES']).resolve()
 assert ROOT / '.agents/cache' in private.parents
 private.mkdir(parents=True, exist_ok=True)
 
-from ChemBlender.core import ArrayData, DatasetStatus, Grid3D, ImportBatch, QCProject
-from ChemBlender.core.scene_preset import builtin_scene_presets, plan_scene_preset
-from ChemBlender.core.sidecar import LazyNpyArray, close_project, open_project, save_project
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.sidecar import LazyNpyArray
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
 from ChemBlender.render_scene import RenderCancelled, RenderScope, _coordinate_metadata
 
 values = numpy.zeros((41, 41, 41))

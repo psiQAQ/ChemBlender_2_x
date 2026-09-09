@@ -2,26 +2,20 @@ import unittest
 from dataclasses import dataclass
 from pathlib import Path
 
-from ChemBlender.core import (
-    AtomicProperty,
-    FrameSet,
-    Grid3D,
-    ProvenanceRecord,
-    Structure,
-    TopologyRecord,
-)
-from ChemBlender.core.model_registry import (
-    MODEL_ENUMS,
-    MODEL_TYPES,
-    model_type_from_tag,
-    model_type_tag,
-)
-from ChemBlender.core.sidecar import (
-    SidecarIntegrityError,
-    _Encoder,
-    close_project,
-    open_project,
-)
+from cbq_core.model import AtomicProperty
+from cbq_core.model import FrameSet
+from cbq_core.model import Grid3D
+from cbq_core.model import ProvenanceRecord
+from cbq_core.model import Structure
+from cbq_core.model import TopologyRecord
+from cbq_core.model_registry import MODEL_ENUMS
+from cbq_core.model_registry import MODEL_TYPES
+from cbq_core.model_registry import model_type_from_tag
+from cbq_core.model_registry import model_type_tag
+from cbq_core.sidecar import SidecarIntegrityError
+from cbq_core.sidecar import _Encoder
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
 from tests.test_sidecar_storage import PROJECT_ID, sample_project
 
 

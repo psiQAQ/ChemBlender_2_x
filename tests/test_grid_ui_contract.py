@@ -11,15 +11,18 @@ from unittest.mock import Mock, patch
 
 import numpy
 
-from ChemBlender.core import ArrayData, DatasetStatus, Grid3D, ImportBatch
-from ChemBlender.core.cube import CUBE_READER
-from ChemBlender.core.session import close_session, create_session
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from chemblender_prepare.core.cube import CUBE_READER
+from cbq_core.session import close_session
+from cbq_core.session import create_session
 from ChemBlender.ui import grid as grid_module
 from ChemBlender.ui.grid import (
     grid_action_availability,
     grid_preview_summary,
     plan_grid_view,
-    resolve_grid_selection,
 )
 
 
@@ -28,6 +31,29 @@ TWO_DATASETS = ROOT / "tests/fixtures/cube/two-datasets.cube"
 
 
 class GridUIContractTests(unittest.TestCase):
+    def prepare_grid(self, session, *, dataset_index, preset_id, value_unit):
+        """Use the shipped external entry point, then browse its validated CBQ."""
+        import io
+        import json
+        from contextlib import redirect_stdout
+        from chemblender_prepare.cli import main
+        from cbq_core.sidecar import open_project, close_project
+        output = Path(session.temporary_root) / (str(uuid4()) + ".cbq")
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            code = main(["convert", str(TWO_DATASETS), "-o", str(output),
+                         "--dataset-index", str(dataset_index), "--preset", preset_id,
+                         "--unit", value_unit, "--json"])
+        self.assertEqual(code, 0, stream.getvalue())
+        self.assertEqual(json.loads(stream.getvalue())["status"], "success")
+        project = open_project(output, verify_arrays=True)
+        self.addCleanup(close_project, project)
+        session.project = project
+        resolved = next(value for value in project.datasets.values()
+                        if isinstance(value, Grid3D) and value.semantic_role == preset_id)
+        session.active_entity_id = resolved.id
+        return resolved
+
     def test_property_rebuild_keeps_object_identity_and_rolls_back_failures(self):
         class Modifier(dict):
             type = "NODES"
@@ -185,7 +211,7 @@ class GridUIContractTests(unittest.TestCase):
             session = create_session(temp_parent=temporary)
             try:
                 session.project.commit(batch)
-                resolve_grid_selection(session, raw.id, dataset_index=0,
+                self.prepare_grid(session, dataset_index=0,
                                        preset_id="electron_density",
                                        value_unit="electron_per_cubic_bohr")
                 for threshold, expected in ((0.001, "0.001"), (1e-9, "1e-09")):
@@ -362,7 +388,7 @@ class GridUIContractTests(unittest.TestCase):
         self.assertEqual(len(summary.source_dataset_ids), 33)
         self.assertEqual(summary.source_dataset_ids[-1], "…")
 
-    def test_resolution_commits_derived_grid_without_changing_raw_grid(self):
+    def test_external_interpretation_preserves_raw_grid_and_deterministic_identity(self):
         batch = CUBE_READER.parse(TWO_DATASETS)
         raw = next(value for value in batch.datasets if isinstance(value, Grid3D))
         before = numpy.array(raw.data.values, copy=True)
@@ -371,33 +397,30 @@ class GridUIContractTests(unittest.TestCase):
             try:
                 session.project.commit(batch)
 
-                resolved, created = resolve_grid_selection(
+                resolved = self.prepare_grid(
                     session,
-                    raw.id,
                     dataset_index=1,
                     preset_id="molecular_orbital",
                     value_unit="inverse_bohr_to_three_halves",
                 )
 
-                self.assertTrue(created)
-                self.assertIs(session.project.datasets[raw.id], raw)
+                prepared_raw = next(value for value in session.project.datasets.values()
+                                    if isinstance(value, Grid3D) and value.semantic_role == raw.semantic_role)
+                self.assertEqual(prepared_raw.revision, raw.revision)
                 self.assertEqual(
-                    numpy.asarray(raw.data.values).tolist(),
+                    numpy.asarray(prepared_raw.data.values).tolist(),
                     before.tolist(),
                 )
                 self.assertEqual(resolved.semantic_role, "molecular_orbital")
                 self.assertIs(resolved.status, DatasetStatus.COMPLETE)
                 self.assertEqual(session.active_entity_id, resolved.id)
-                self.assertIn("grid_semantics", session.dirty_reasons)
-                duplicate, duplicate_created = resolve_grid_selection(
-                    session,
-                    raw.id,
-                    dataset_index=1,
-                    preset_id="molecular_orbital",
+                from chemblender_prepare.core.grid_semantics import resolve_grid_semantics
+                duplicate = resolve_grid_semantics(
+                    prepared_raw, dataset_index=1, preset_id="molecular_orbital",
                     value_unit="inverse_bohr_to_three_halves",
-                )
+                ).datasets[0]
                 self.assertEqual(duplicate.id, resolved.id)
-                self.assertFalse(duplicate_created)
+                self.assertEqual(duplicate.revision, resolved.revision)
             finally:
                 close_session(session)
 
@@ -430,9 +453,8 @@ class GridUIContractTests(unittest.TestCase):
                     ).preset_id,
                     "grid_volume",
                 )
-                resolved, _ = resolve_grid_selection(
+                resolved = self.prepare_grid(
                     session,
-                    raw.id,
                     dataset_index=1,
                     preset_id="molecular_orbital",
                     value_unit="inverse_bohr_to_three_halves",

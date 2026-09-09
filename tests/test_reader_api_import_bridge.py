@@ -10,49 +10,40 @@ from unittest.mock import patch
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    CapabilitySupport,
-    ImportBatch,
-    QCProject,
-    ReaderDescriptor,
-    SourceRecord,
-    SourceRevision,
-    Structure,
-    create_session,
-    source_parse_identity,
-)
-from ChemBlender.core.import_pipeline import (
-    ImportCancelled,
-    ImportCommitDecisions,
-    ImportRequest,
-    ImportSource,
-    ReaderOverride,
-    StagedImportSession,
-    ValidationMode,
-    commit_import_preview,
-)
-from ChemBlender.reader_api import (
-    ExecutionMode,
-    PublicImportBatch,
-    PublicReaderDescriptor,
-    ReaderAvailability,
-    ReaderManifestEntry,
-    ReaderPluginManifest,
-    ReaderPluginRegistry,
-    ProgressEvent,
-    SniffMatch,
-    SniffRequest,
-    SniffResult,
-    builtin_reader_plugin_registry,
-)
-from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
-from ChemBlender.reader_api.registry import _builtin_manifest, _builtin_plugin
-from ChemBlender.runtime.reader_api_bridge import (
-    get_reader_plugin_registry,
-    register_reader_api_handle,
-    remove_reader_api_handle,
-)
+from cbq_core.model import ArrayData
+from chemblender_prepare.core.readers import CapabilitySupport
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from chemblender_prepare.core.readers import ReaderDescriptor
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
+from cbq_core.model import Structure
+from cbq_core.session import create_session
+from cbq_core.model import source_parse_identity
+from chemblender_prepare.core.import_pipeline import ImportCancelled
+from chemblender_prepare.core.import_pipeline import ImportCommitDecisions
+from chemblender_prepare.core.import_pipeline import ImportRequest
+from chemblender_prepare.core.import_pipeline import ImportSource
+from chemblender_prepare.core.import_pipeline import ReaderOverride
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import ValidationMode
+from chemblender_prepare.core.import_pipeline import commit_import_preview
+from chemblender_prepare.reader_api import ExecutionMode
+from chemblender_prepare.reader_api import PublicImportBatch
+from chemblender_prepare.reader_api import PublicReaderDescriptor
+from chemblender_prepare.reader_api import ReaderAvailability
+from chemblender_prepare.reader_api import ReaderManifestEntry
+from chemblender_prepare.reader_api import ReaderPluginManifest
+from chemblender_prepare.reader_api import ReaderPluginRegistry
+from chemblender_prepare.reader_api import ProgressEvent
+from chemblender_prepare.reader_api import SniffMatch
+from chemblender_prepare.reader_api import SniffRequest
+from chemblender_prepare.reader_api import SniffResult
+from chemblender_prepare.reader_api import builtin_reader_plugin_registry
+from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from chemblender_prepare.reader_api.registry import _builtin_manifest
+from chemblender_prepare.reader_api.registry import _builtin_plugin
+from chemblender_prepare.reader_api.discovery import ReaderPluginDiscovery
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -347,13 +338,10 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
             return public
 
         plugin = _Plugin(descriptor, matching_result)
-        namespace = {}
-        handle = register_reader_api_handle(
-            "synthetic.chemblender", namespace=namespace
-        )
-        handle.register_callback(plugin)
+        registry = builtin_reader_plugin_registry()
+        discovery = ReaderPluginDiscovery(registry)
+        self.assertTrue(discovery.register(plugin).availability.available)
         try:
-            registry = get_reader_plugin_registry()
             session = self.session()
             preview = preflight_reader_plugins(
                 request,
@@ -385,7 +373,7 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                     committed.project.sources,
                 )
             finally:
-                from ChemBlender.core import close_session
+                from cbq_core.session import close_session
 
                 close_session(project_session)
 
@@ -451,11 +439,10 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                 "external-reader.invalid",
             )
         finally:
-            handle.unregister_callback(plugin.manifest)
-            remove_reader_api_handle(handle, namespace=namespace)
+            self.assertTrue(discovery.unregister(plugin.manifest))
         self.assertNotIn(
             descriptor.reader_id,
-            tuple(item.reader_id for item in get_reader_plugin_registry().descriptors),
+            tuple(item.reader_id for item in registry.descriptors),
         )
 
     def test_external_scientific_result_without_identity_is_invalid(self):
@@ -1320,7 +1307,7 @@ class ReaderAPIImportBridgeTests(unittest.TestCase):
                 if relative.endswith(".cube"):
                     self.assertTrue(result.project.datasets)
             finally:
-                from ChemBlender.core import close_session
+                from cbq_core.session import close_session
 
                 close_session(project_session)
 

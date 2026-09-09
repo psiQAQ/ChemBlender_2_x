@@ -4,21 +4,17 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    AtomicProperty,
-    DatasetStatus,
-    QCProject,
-    QualityStatus,
-    Structure,
-    TopologyRecord,
-    TopologySource,
-)
-from ChemBlender.core.edits.structure import (
-    commit_structure_edits,
-    preview_structure_edits,
-)
-from ChemBlender.ui.scientific_edit import preview_structure_object_edits
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomicProperty
+from cbq_core.model import DatasetStatus
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from cbq_core.model import Structure
+from cbq_core.model import TopologyRecord
+from cbq_core.model import TopologySource
+from cbq_core.structure_edit import commit_structure_edits
+from cbq_core.structure_edit import preview_structure_edits
+from ChemBlender.ui.mesh_edit import structure_edit_arguments
 
 
 def array(values, dims, unit, dtype=float):
@@ -170,6 +166,16 @@ class StructureDerivationTests(unittest.TestCase):
         self.assertTrue(preview.cell_changed)
         self.assertAlmostEqual(preview.max_displacement_angstrom, 0.5)
         self.assertEqual(preview.affected_result_ids, (self.dataset.id,))
+
+    def test_complex_coordinates_and_cells_are_rejected_without_losing_imaginary_values(self):
+        for field in ("coordinates", "cell"):
+            with self.subTest(field=field):
+                original = getattr(self.structure, field)
+                values = numpy.asarray(original.values, dtype=complex)
+                values[0, 0] += 1j
+                edited = self.edited(**{field: ArrayData(values, original.dims, original.unit)})
+                with self.assertRaisesRegex(ValueError, "finite real"):
+                    preview_structure_edits(self.project, self.structure, self.topology, **edited)
 
     def test_equivalent_bohr_view_and_object_transform_are_not_edits(self):
         preview = preview_structure_edits(
@@ -482,12 +488,35 @@ class StructureDerivationTests(unittest.TestCase):
             (0.0, 0.0, 0.0, 1.0),
         )
 
-        preview = preview_structure_object_edits(self.project, obj)
+        source, topology, arguments = structure_edit_arguments(self.project, obj)
+        preview = preview_structure_edits(self.project, source, topology, **arguments)
         self.assertFalse(preview.has_changes)
         vertices[1].co = (1.2, 0.0, 0.0)
-        preview = preview_structure_object_edits(self.project, obj)
+        source, topology, arguments = structure_edit_arguments(self.project, obj)
+        preview = preview_structure_edits(self.project, source, topology, **arguments)
         self.assertTrue(preview.has_changes)
         self.assertAlmostEqual(preview.max_displacement_angstrom, 0.2)
+
+        obj["cb_display_coordinate_unit"] = "bohr"
+        vertices[1].co = (1.8897261246257702, 0.0, 0.0)
+        source, topology, arguments = structure_edit_arguments(self.project, obj)
+        self.assertEqual(arguments["coordinates"].unit, "bohr")
+        self.assertFalse(preview_structure_edits(self.project, source, topology, **arguments).has_changes)
+        vertices[1].co = (3.0, 0.0, 0.0)
+        self.assertAlmostEqual(arguments["coordinates"].values[1, 0], 1.8897261246257702)
+        obj.mode = "EDIT"
+        with self.assertRaisesRegex(ValueError, "Leave Edit Mode"):
+            structure_edit_arguments(self.project, obj)
+        obj.mode = "OBJECT"
+        obj["cb_display_coordinate_unit"] = "unknown"
+        with self.assertRaisesRegex(ValueError, "coordinate unit"):
+            structure_edit_arguments(self.project, obj)
+        obj["cb_display_coordinate_unit"] = "angstrom"
+        obj["cb_structure_revision"] = "stale"
+        with self.assertRaisesRegex(ValueError, "revision is stale"):
+            structure_edit_arguments(self.project, obj)
+        self.assertIs(self.project.structures[self.structure.id], self.structure)
+
 
 
 if __name__ == "__main__":

@@ -7,14 +7,14 @@ import unittest
 
 import numpy
 
-from ChemBlender.core import IssueKind, QCProject, SniffMatch
-from ChemBlender.core.pymatgen_adapter import (
-    PYMATGEN_VASP_GRID_READER,
-    PymatgenDependencyError,
-    adapt_vasp_volumetric,
-    parse_vasp_volumetric,
-    sniff_vasp_volumetric,
-)
+from cbq_core.model import IssueKind
+from cbq_core.model import QCProject
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.pymatgen_adapter import PYMATGEN_VASP_GRID_READER
+from chemblender_prepare.core.pymatgen_adapter import PymatgenDependencyError
+from chemblender_prepare.core.pymatgen_adapter import adapt_vasp_volumetric
+from chemblender_prepare.core.pymatgen_adapter import parse_vasp_volumetric
+from chemblender_prepare.core.pymatgen_adapter import sniff_vasp_volumetric
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -170,7 +170,7 @@ class PymatgenAdapterTests(unittest.TestCase):
             [
                 sys.executable,
                 "-c",
-                "import sys; import ChemBlender.core; assert 'pymatgen' not in sys.modules",
+                "import sys; import cbq_core.model; assert 'pymatgen' not in sys.modules",
             ],
             cwd=ROOT,
             check=True,

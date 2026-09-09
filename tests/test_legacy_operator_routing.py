@@ -7,35 +7,30 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from ChemBlender.core import (
-    CapabilitySupport,
-    ImportBatch,
-    ReaderDescriptor,
-    SniffMatch,
-    SniffResult,
-    close_session,
-    close_project,
-    create_session,
-    open_project,
-    save_project,
-)
-from ChemBlender.core.import_pipeline import (
-    ImportRequest,
-    StagedImportSession,
-    ValidationMode,
-)
-from ChemBlender.core.import_pipeline.parse import stage_import_batch
-from ChemBlender.reader_api import (
-    ReaderPluginRegistry,
-    builtin_reader_plugin_registry,
-)
-from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
-from ChemBlender.reader_api.registry import _builtin_manifest, _builtin_plugin
+from chemblender_prepare.core.readers import CapabilitySupport
+from cbq_core.model import ImportBatch
+from chemblender_prepare.core.readers import ReaderDescriptor
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.readers import SniffResult
+from cbq_core.session import close_session
+from cbq_core.sidecar import close_project
+from cbq_core.session import create_session
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from chemblender_prepare.core.import_pipeline import ImportRequest
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import ValidationMode
+from chemblender_prepare.core.import_pipeline.parse import stage_import_batch
+from chemblender_prepare.reader_api import ReaderPluginRegistry
+from chemblender_prepare.reader_api import builtin_reader_plugin_registry
+from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from chemblender_prepare.reader_api.registry import _builtin_manifest
+from chemblender_prepare.reader_api.registry import _builtin_plugin
 
 
-READER_BRIDGE = "ChemBlender.legacy.reader_bridge"
+READER_BRIDGE = "chemblender_prepare.pubchem_import"
 SCAFFOLD_BRIDGE = "ChemBlender.legacy.scaffold_bridge"
 SCAFFOLD_MODULE = "ChemBlender.scaffold"
 OUTPUT_MODULE = "ChemBlender.output"
@@ -53,11 +48,115 @@ class _Response:
 
 class LegacyReaderBridgeTests(unittest.TestCase):
     def setUp(self):
-        sys.modules.pop(READER_BRIDGE, None)
+        # The external module has no Blender state; keep package and sys.modules identities aligned.
         self.bridge = importlib.import_module(READER_BRIDGE)
 
-    def tearDown(self):
-        sys.modules.pop(READER_BRIDGE, None)
+    def test_external_default_fetch_closes_response_and_bounds_reads(self):
+        response = MagicMock(status=200)
+        response.__enter__.return_value = response
+        response.read.return_value = b'{"IdentifierList":{"CID":[2244]}}'
+        with patch.object(self.bridge, "urlopen", return_value=response) as opened:
+            result = self.bridge._fetch("https://pubchem.ncbi.nlm.nih.gov/", timeout=30)
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.json(), {"IdentifierList": {"CID": [2244]}})
+        opened.assert_called_once_with("https://pubchem.ncbi.nlm.nih.gov/", timeout=30)
+        response.read.assert_called_once_with(64 * 1024 * 1024 + 1)
+        response.__exit__.assert_called_once()
+        oversized = MagicMock()
+        oversized.__len__.return_value = 64 * 1024 * 1024 + 1
+        response.reset_mock()
+        response.read.return_value = oversized
+        with patch.object(self.bridge, "urlopen", return_value=response), self.assertRaisesRegex(
+            OSError, "exceeds 64 MiB"
+        ):
+            self.bridge._fetch("https://pubchem.ncbi.nlm.nih.gov/", timeout=30)
+        response.__exit__.assert_called_once()
+
+    def test_pubchem_cancellation_never_returns_staged_input(self):
+        from concurrent.futures import CancelledError
+        for cancel_at in (1, 2, 3, 4, 5):
+            with self.subTest(cancel_at=cancel_at), tempfile.TemporaryDirectory() as directory:
+                session = create_session(temp_parent=Path(directory))
+                checks = 0
+                def cancelled():
+                    nonlocal checks
+                    checks += 1
+                    return checks >= cancel_at
+                fetch = MagicMock(return_value=_Response(b"SDF"))
+                try:
+                    with self.assertRaises(CancelledError):
+                        self.bridge.stage_pubchem_import(
+                            "2244", session, fetch=fetch, is_cancelled=cancelled)
+                    root = Path(session.temporary_root) / self.bridge._PUBCHEM_ROOT
+                    self.assertEqual(list(root.glob("*")), [])
+                    if cancel_at == 1:
+                        fetch.assert_not_called()
+                finally:
+                    close_session(session)
+
+    def test_pubchem_partial_metadata_failure_removes_both_owned_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            session = create_session(temp_parent=Path(directory))
+            def fail_dump(document, stream, **kwargs):
+                stream.write("{")
+                raise OSError("disk full")
+            try:
+                with patch.object(self.bridge.json, "dump", side_effect=fail_dump):
+                    with self.assertRaisesRegex(OSError, "disk full"):
+                        self.bridge.stage_pubchem_import(
+                            "2244", session, fetch=lambda *a, **k: _Response(b"SDF"))
+                root = Path(session.temporary_root) / self.bridge._PUBCHEM_ROOT
+                self.assertEqual(list(root.glob("*")), [])
+            finally:
+                close_session(session)
+
+    def test_pubchem_failed_staging_preserves_collisions_and_original_error(self):
+        from uuid import UUID
+        for failure in ("collision", "source_write", "cleanup"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                session = create_session(temp_parent=Path(directory))
+                token = UUID(int=1)
+                root = self.bridge._owned_pubchem_root(session, create=True)
+                metadata = root / f"pubchem-2244-{token.hex}.json"
+                original_open = Path.open
+                def open_path(path, mode="r", *args, **kwargs):
+                    stream = original_open(path, mode, *args, **kwargs)
+                    if failure == "source_write" and mode == "xb":
+                        wrapper = MagicMock()
+                        wrapper.__enter__.return_value = wrapper
+                        wrapper.__exit__.side_effect = lambda *a: stream.close()
+                        def fail_write(payload):
+                            stream.write(payload[:1])
+                            raise OSError("source write failed")
+                        wrapper.write.side_effect = fail_write
+                        return wrapper
+                    return stream
+                def fail_dump(*args, **kwargs):
+                    raise OSError("metadata failed")
+                try:
+                    if failure == "collision":
+                        metadata.write_bytes(b"existing")
+                    from contextlib import ExitStack
+                    with ExitStack() as stack:
+                        stack.enter_context(patch.object(self.bridge, "uuid4", return_value=token))
+                        stack.enter_context(patch.object(Path, "open", open_path))
+                        if failure == "cleanup":
+                            stack.enter_context(patch.object(self.bridge.json, "dump", side_effect=fail_dump))
+                            stack.enter_context(patch.object(Path, "unlink", side_effect=OSError("locked")))
+                        with self.assertRaises(OSError) as raised:
+                            self.bridge.stage_pubchem_import(
+                                "2244", session, fetch=lambda *a, **k: _Response(b"SDF"))
+                    if failure == "collision":
+                        self.assertEqual(metadata.read_bytes(), b"existing")
+                        self.assertEqual(list(root.glob("*.sdf")), [])
+                    elif failure == "source_write":
+                        self.assertIn("source write failed", str(raised.exception))
+                        self.assertEqual(list(root.iterdir()), [])
+                    else:
+                        self.assertEqual(str(raised.exception), "metadata failed")
+                        self.assertEqual(len(raised.exception.__notes__), 2)
+                finally:
+                    close_session(session)
 
     def test_file_and_smiles_build_unified_import_requests(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -394,7 +493,7 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
             chemblender=SimpleNamespace(),
             error=SimpleNamespace(custom_dialog=lambda *_args, **_kwargs: None),
         )
-        fake_data = ModuleType("ChemBlender.Chem_data")
+        fake_data = ModuleType("cbq_core.element_data")
         fake_data.ELEMENTS_DEFAULT = {}
         fake_data.BONDS_DEFAULT = {"Default": (0, 0, 0, 1.0)}
         fake_data.SYMOP_OPERATIONS = {}
@@ -412,12 +511,13 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
                 "bpy.props": fake_props,
                 "bpy.types": fake_types,
                 "ChemBlender._math": ModuleType("ChemBlender._math"),
-                "ChemBlender.Chem_data": fake_data,
+                "cbq_core.element_data": fake_data,
                 "ChemBlender.mesh": ModuleType("ChemBlender.mesh"),
                 "ChemBlender.node": ModuleType("ChemBlender.node"),
             },
         )
         self.modules.start()
+        self.addCleanup(self.modules.stop)
         self.fake_bpy = fake_bpy
         for name in (
             SCAFFOLD_MODULE,
@@ -479,63 +579,7 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
         )
         return scaffold, operator, context, calls
 
-    def test_legacy_file_operator_uses_quick_import_for_cif_poscar_and_contcar(self):
-        with tempfile.TemporaryDirectory() as directory:
-            for name in ("legacy.cif", "POSCAR", "CONTCAR"):
-                source = Path(directory) / name
-                source.write_text("data_example\n", encoding="utf-8")
-                scaffold, operator, context, calls = self._scaffold_context(source)
-                result = operator.execute(context)
 
-                self.assertEqual(result, {"FINISHED"})
-                self.assertEqual(calls[0][0], "quick_import")
-                self.assertEqual(calls[0][2]["files"], [{"name": name}])
-
-    def test_legacy_sdf_and_mol2_operator_create_requests_for_quick_import(self):
-        cases = (
-            ("legacy.sdf", "legacy SDF\n$$$$\n"),
-            ("legacy.mol2", "@<TRIPOS>MOLECULE\nlegacy\n"),
-        )
-        with tempfile.TemporaryDirectory() as directory:
-            for name, content in cases:
-                with self.subTest(source=name):
-                    source = Path(directory) / name
-                    source.write_text(content, encoding="utf-8")
-                    scaffold, operator, context, calls = self._scaffold_context(source)
-                    requests = []
-                    build_request = scaffold.file_import_request
-
-                    def capture_request(*args):
-                        request = build_request(*args)
-                        requests.append(request)
-                        return request
-
-                    with patch.object(
-                        scaffold,
-                        "file_import_request",
-                        side_effect=capture_request,
-                    ):
-                        result = operator.execute(context)
-
-                    self.assertEqual(result, {"FINISHED"})
-                    self.assertEqual(len(requests), 1)
-                    self.assertIsInstance(requests[0], ImportRequest)
-                    self.assertEqual(requests[0].sources[0].path, source.resolve())
-                    self.assertEqual(
-                        calls,
-                        [
-                            (
-                                "quick_import",
-                                ("EXEC_DEFAULT",),
-                                {
-                                    "directory": str(source.parent),
-                                    "files": [{"name": name}],
-                                    "validation_mode": "strict",
-                                },
-                            )
-                        ],
-                    )
-                    self.assertNotIn(LEGACY_READ_MODULE, sys.modules)
 
     def test_legacy_smiles_operator_creates_a_request_for_unified_import(self):
         scaffold, operator, context, calls = self._scaffold_context(
@@ -573,50 +617,6 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
         )
         self.assertNotIn(LEGACY_READ_MODULE, sys.modules)
 
-    def test_legacy_smiles_presets_create_requests_for_unified_import(self):
-        cases = (
-            ("Saccharides", "OC"),
-            ("Amino_Acids", "NCC(=O)O"),
-            ("Polymer_Units", "CC"),
-        )
-        for choose, expected_smiles in cases:
-            with self.subTest(choose=choose):
-                scaffold, operator, context, calls = self._scaffold_context(
-                    choose=choose,
-                )
-                requests = []
-                build_request = scaffold.smiles_import_request
-
-                def capture_request(*args):
-                    request = build_request(*args)
-                    requests.append(request)
-                    return request
-
-                with patch.object(
-                    scaffold,
-                    "smiles_import_request",
-                    side_effect=capture_request,
-                ):
-                    result = operator.execute(context)
-
-                self.assertEqual(result, {"FINISHED"})
-                self.assertEqual(len(requests), 1)
-                self.assertIsInstance(requests[0], ImportRequest)
-                self.assertEqual(requests[0].sources[0].text, expected_smiles)
-                self.assertEqual(
-                    calls,
-                    [
-                        (
-                            "import_smiles_text",
-                            ("EXEC_DEFAULT",),
-                            {
-                                "smiles_text": expected_smiles,
-                                "validation_mode": "strict",
-                            },
-                        )
-                    ],
-                )
-                self.assertNotIn(LEGACY_READ_MODULE, sys.modules)
 
     def test_legacy_pubchem_operator_does_not_forward_trust_claims_to_quick_import(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -736,142 +736,34 @@ class LegacyOperatorRoutingTests(unittest.TestCase):
             & set(output.SaveMolButton.__annotations__)
         )
 
-    def test_crystal_panel_hides_legacy_scaffold_actions_for_unified_views(self):
-        fake_ex_package = ModuleType("ChemBlender.ex_package")
-        fake_ex_package.safe_check_rdkit = lambda: True
-        with patch.dict(sys.modules, {"ChemBlender.ex_package": fake_ex_package}):
-            panel = importlib.import_module(PANEL_MODULE)
 
-        calls = []
-
-        class Layout:
-            def label(self, **kwargs):
-                calls.append(("label", kwargs))
-
-            def operator(self, operator_id, **kwargs):
-                calls.append(("operator", operator_id, kwargs))
-                return SimpleNamespace()
-
-        class UnifiedObject:
-            def get(self, key, default=None):
-                if key == "cb_structure_contract":
-                    return "structure_view_v1"
-                return default
-
-        view = panel.CRYSTAL_PT_TOOLS()
-        view.layout = Layout()
-        view.draw(
-            SimpleNamespace(
-                active_object=UnifiedObject(),
-                scene=SimpleNamespace(my_tool=SimpleNamespace()),
-            )
-        )
-
-        self.assertEqual(
-            [call[1] for call in calls if call[0] == "operator"],
-            ["chemblender.apply_scientific_edits"],
-        )
-
-    def test_all_legacy_crystal_direct_write_operators_cancel_for_unified_view(self):
-        fake_bmesh = ModuleType("bmesh")
-        fake_mathutils = ModuleType("mathutils")
-        with patch.dict(
-            sys.modules,
-            {"bmesh": fake_bmesh, "mathutils": fake_mathutils},
-        ):
-            crystal = importlib.import_module(CRYS_MODULE)
-
-        reports = []
-
-        class UnifiedObject:
-            name = "unit_demo"
-
-            def get(self, key, default=None):
-                if key == "cb_structure_contract":
-                    return "structure_view_v1"
-                return default
-
-        context = SimpleNamespace(
-            object=UnifiedObject(),
-            active_object=UnifiedObject(),
-        )
-        for class_name in (
-            "SupercellButton",
-            "AddCellButton",
-            "AddCrysScaffoldButton",
-            "AddCoordPolyhedraButton",
-            "AddDummyButton",
-            "SymmetryDuplicate",
-        ):
-            with self.subTest(operator=class_name):
-                reports.clear()
-                operator = getattr(crystal, class_name)()
-                operator.report = (
-                    lambda level, message: reports.append((level, message))
-                )
-
-                result = operator.execute(context)
-
-                self.assertEqual(result, {"CANCELLED"})
-                self.assertIn("Apply Scientific Edits", reports[0][1])
 
 
 class LegacyCallerInventoryTests(unittest.TestCase):
-    def test_direct_crystal_writers_and_visible_panel_callers_have_an_ast_contract(self):
+    def test_viewer_registration_and_panels_exclude_legacy_direct_crystal_writers(self):
         root = Path(__file__).resolve().parents[1]
-        crystal_tree = ast.parse((root / "ChemBlender" / "crys_utils.py").read_text(encoding="utf-8"))
-        panel_tree = ast.parse((root / "ChemBlender" / "panel.py").read_text(encoding="utf-8"))
+        from ChemBlender.runtime.registration import REGISTER_MODULE_NAMES
+        self.assertIn(".ui.cbq_import", REGISTER_MODULE_NAMES)
+        self.assertIn(".ui.mesh_edit", REGISTER_MODULE_NAMES)
+        self.assertFalse({".crys_utils", ".panel", ".read", ".output", ".ui.quick_import",
+                          ".ui.scientific_edit"} & set(REGISTER_MODULE_NAMES))
+        old_classes = {"SupercellButton", "AddCellButton", "AddCrysScaffoldButton",
+                       "AddCoordPolyhedraButton", "AddDummyButton", "SymmetryDuplicate"}
+        old_actions = {"chem.add_unit_cell", "chem.add_crys_scaffold", "chem.duplicate_symmetry",
+                       "chem.supercell", "chem.add_coordpolyhedra", "chem.add_dummy",
+                       "chem.update_cif_from_mesh"}
+        for path in sorted((root / "ChemBlender").rglob("*.py")):
+            if "scripts" in path.relative_to(root / "ChemBlender").parts:
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            with self.subTest(path=path.relative_to(root)):
+                self.assertFalse(old_classes & {node.name for node in ast.walk(tree)
+                                                if isinstance(node, ast.ClassDef)})
+                for call in (node for node in ast.walk(tree) if isinstance(node, ast.Call)):
+                    if (isinstance(call.func, ast.Attribute) and call.func.attr == "operator"
+                            and call.args and isinstance(call.args[0], ast.Constant)):
+                        self.assertNotIn(call.args[0].value, old_actions)
 
-        def class_by_name(tree, name):
-            return next(
-                node for node in tree.body
-                if isinstance(node, ast.ClassDef) and node.name == name
-            )
-
-        def called_names(node):
-            return {
-                ast.unparse(call.func)
-                for call in ast.walk(node)
-                if isinstance(call, ast.Call)
-            }
-
-        direct_writers = {
-            "SupercellButton": {"mesh.copy_mesh_object", "node.Supercell"},
-            "AddCellButton": {"mesh.unit_cell_edges"},
-            "AddCrysScaffoldButton": {"mesh.create_object", "node.crys_expand"},
-            "AddCoordPolyhedraButton": {"node.CoordPolyhedra"},
-            "AddDummyButton": {"bpy.data.meshes.new", "bpy.data.objects.new"},
-            "SymmetryDuplicate": {"bpy.data.meshes.new", "bpy.data.objects.new"},
-        }
-        for class_name, expected_calls in direct_writers.items():
-            self.assertTrue(expected_calls <= called_names(class_by_name(crystal_tree, class_name)))
-
-        panel = class_by_name(panel_tree, "CRYSTAL_PT_TOOLS")
-        visible_callers = {
-            call.args[0].value
-            for call in ast.walk(panel)
-            if isinstance(call, ast.Call)
-            and isinstance(call.func, ast.Attribute)
-            and call.func.attr == "operator"
-            and call.args
-            and isinstance(call.args[0], ast.Constant)
-            and isinstance(call.args[0].value, str)
-        }
-        self.assertEqual(
-            visible_callers,
-            {
-                "chem.add_unit_cell",
-                "chem.add_crys_scaffold",
-                "chem.sel_symmetry",
-                "chem.duplicate_symmetry",
-                "chem.supercell",
-                "chem.add_coordpolyhedra",
-                "chem.avgfract",
-                "chem.add_dummy",
-                "chem.update_cif_from_mesh",
-                "chem.view_set",
-            },
-        )
 
     def test_legacy_reader_and_block_helper_callers_have_an_exact_ast_contract(self):
         root = Path(__file__).resolve().parents[1]
@@ -936,13 +828,7 @@ class LegacyCallerInventoryTests(unittest.TestCase):
                 "sdf_block": set(),
                 "cif_block": set(),
                 "vasp_block": set(),
-                "xyz_block": {
-                    (
-                        "ChemBlender/ui/scientific_edit.py",
-                        "_write_xyz",
-                        "xyz_block",
-                    ),
-                },
+                "xyz_block": set(),
             },
         )
 

@@ -5,34 +5,28 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from uuid import uuid4
 
-from ChemBlender.core import (
-    DiagnosticSeverity,
-    ImportBatch,
-    IssueKind,
-    ParserIssue,
-    ParserReport,
-    QCProject,
-    source_parse_identity,
-)
-from ChemBlender.core.cube import CUBE_READER
-from ChemBlender.core.import_pipeline import (
-    ImportCancelled,
-    ImportRequest,
-    ImportSource,
-    ReaderOverride,
-    StagedImportSession,
-    detect_import_conflicts,
-    preflight_import,
-)
-from ChemBlender.core.readers import (
-    ReaderAvailability,
-    ReaderDescriptor,
-    ReaderRegistry,
-    ReaderRuntimeDescriptor,
-    SniffMatch,
-    SniffResult,
-)
-from ChemBlender.core.xyz import XYZ_READER
+from cbq_core.model import DiagnosticSeverity
+from cbq_core.model import ImportBatch
+from cbq_core.model import IssueKind
+from cbq_core.model import ParserIssue
+from cbq_core.model import ParserReport
+from cbq_core.model import QCProject
+from cbq_core.model import source_parse_identity
+from chemblender_prepare.core.cube import CUBE_READER
+from chemblender_prepare.core.import_pipeline import ImportCancelled
+from chemblender_prepare.core.import_pipeline import ImportRequest
+from chemblender_prepare.core.import_pipeline import ImportSource
+from chemblender_prepare.core.import_pipeline import ReaderOverride
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import detect_import_conflicts
+from chemblender_prepare.core.import_pipeline import preflight_import
+from chemblender_prepare.core.readers import ReaderAvailability
+from chemblender_prepare.core.readers import ReaderDescriptor
+from chemblender_prepare.core.readers import ReaderRegistry
+from chemblender_prepare.core.readers import ReaderRuntimeDescriptor
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.readers import SniffResult
+from chemblender_prepare.core.xyz import XYZ_READER
 
 
 FIXTURES = Path(__file__).parent / "fixtures"

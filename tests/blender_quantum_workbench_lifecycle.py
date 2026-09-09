@@ -34,8 +34,9 @@ sys.path.insert(0, str(ROOT))
 sys.path.append(args.existing_libraries)
 
 import ChemBlender
-from ChemBlender.core import builtin_scene_presets, plan_scene_preset
-from ChemBlender.core.grid_sampling import export_grid_sample
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.grid_sampling import export_grid_sample
 from ChemBlender.scene_preset_view import _remove_objects, apply_scene_preset
 from ChemBlender.ui import session as session_ui
 from ChemBlender.ui.view_cache import _durable_cache_root, plan_grid_sample_view

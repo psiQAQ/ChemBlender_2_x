@@ -5,24 +5,22 @@ from uuid import uuid4
 
 import numpy
 
-import ChemBlender.reader_api as reader_api
-from ChemBlender.core import (
-    ArrayData,
-    BiologicalAtomSiteData,
-    BiologicalChain,
-    BiologicalHierarchy,
-    BiologicalModel,
-    BiologicalResidue,
-    CategoricalData,
-    ChemicalAnnotation,
-    ExternalReference,
-    ImportBatch,
-    ParserReport,
-    ProvenanceRecord,
-    QCProject,
-    Structure,
-)
-from ChemBlender.core.model.project import validate_project_graph
+import chemblender_prepare.reader_api as reader_api
+from cbq_core.model import ArrayData
+from cbq_core.model import BiologicalAtomSiteData
+from cbq_core.model import BiologicalChain
+from cbq_core.model import BiologicalHierarchy
+from cbq_core.model import BiologicalModel
+from cbq_core.model import BiologicalResidue
+from cbq_core.model import CategoricalData
+from cbq_core.model import ChemicalAnnotation
+from cbq_core.model import ExternalReference
+from cbq_core.model import ImportBatch
+from cbq_core.model import ParserReport
+from cbq_core.model import ProvenanceRecord
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
+from cbq_core.model.project import validate_project_graph
 
 
 def structure(atom_count=2):

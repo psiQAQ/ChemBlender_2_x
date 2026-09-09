@@ -2,12 +2,10 @@ from io import StringIO
 from pathlib import Path
 import unittest
 
-from ChemBlender.core.formats.extxyz import (
-    ExtXYZSyntaxError,
-    iter_extxyz_frames,
-    parse_extxyz_comment,
-    parse_properties_descriptor,
-)
+from chemblender_prepare.core.formats.extxyz import ExtXYZSyntaxError
+from chemblender_prepare.core.formats.extxyz import iter_extxyz_frames
+from chemblender_prepare.core.formats.extxyz import parse_extxyz_comment
+from chemblender_prepare.core.formats.extxyz import parse_properties_descriptor
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "extxyz"

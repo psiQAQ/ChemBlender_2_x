@@ -9,45 +9,41 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    CapabilitySupport,
-    ImportBatch,
-    MolecularRecord,
-    ReaderDescriptor,
-    Structure,
-)
-from ChemBlender.core.import_pipeline import ImportSource, ValidationMode
-from ChemBlender.core.import_pipeline.parse import staged_reader_batch
-from ChemBlender.core.model.sources import source_parse_identity
-from ChemBlender.reader_api import (
-    CIFEnvelope,
-    ExecutionMode,
-    IssueKind,
-    ParserIssue,
-    ParserReport,
-    PublicImportBatch,
-    PublicReaderDescriptor,
-    ReaderAvailability,
-    ReaderManifestEntry,
-    ReaderPluginManifest,
-    ReaderPluginRegistry,
-    SniffMatch,
-    SniffResult,
-    SniffRequest,
-    SourceRecord,
-    SourceRevision,
-    builtin_reader_plugin_registry,
-    public_batch_from_internal,
-)
-from ChemBlender.reader_api.conformance import (
-    ReaderConformanceCase,
-    ReaderConformanceCheck,
-    ReaderConformanceResult,
-    run_reader_conformance,
-)
-from ChemBlender.reader_api.registry import _builtin_manifest, _builtin_plugin
-import ChemBlender.reader_api as reader_api
+from cbq_core.model import ArrayData
+from chemblender_prepare.core.readers import CapabilitySupport
+from cbq_core.model import ImportBatch
+from cbq_core.model import MolecularRecord
+from chemblender_prepare.core.readers import ReaderDescriptor
+from cbq_core.model import Structure
+from chemblender_prepare.core.import_pipeline import ImportSource
+from chemblender_prepare.core.import_pipeline import ValidationMode
+from chemblender_prepare.core.import_pipeline.parse import staged_reader_batch
+from cbq_core.model.sources import source_parse_identity
+from chemblender_prepare.reader_api import CIFEnvelope
+from chemblender_prepare.reader_api import ExecutionMode
+from chemblender_prepare.reader_api import IssueKind
+from chemblender_prepare.reader_api import ParserIssue
+from chemblender_prepare.reader_api import ParserReport
+from chemblender_prepare.reader_api import PublicImportBatch
+from chemblender_prepare.reader_api import PublicReaderDescriptor
+from chemblender_prepare.reader_api import ReaderAvailability
+from chemblender_prepare.reader_api import ReaderManifestEntry
+from chemblender_prepare.reader_api import ReaderPluginManifest
+from chemblender_prepare.reader_api import ReaderPluginRegistry
+from chemblender_prepare.reader_api import SniffMatch
+from chemblender_prepare.reader_api import SniffResult
+from chemblender_prepare.reader_api import SniffRequest
+from chemblender_prepare.reader_api import SourceRecord
+from chemblender_prepare.reader_api import SourceRevision
+from chemblender_prepare.reader_api import builtin_reader_plugin_registry
+from chemblender_prepare.reader_api import public_batch_from_internal
+from chemblender_prepare.reader_api.conformance import ReaderConformanceCase
+from chemblender_prepare.reader_api.conformance import ReaderConformanceCheck
+from chemblender_prepare.reader_api.conformance import ReaderConformanceResult
+from chemblender_prepare.reader_api.conformance import run_reader_conformance
+from chemblender_prepare.reader_api.registry import _builtin_manifest
+from chemblender_prepare.reader_api.registry import _builtin_plugin
+import chemblender_prepare.reader_api as reader_api
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -718,7 +714,7 @@ class ReaderConformanceContractTests(unittest.TestCase):
 
     def test_third_party_reader_requires_source_revision_identity(self):
         source = FIXTURES / "xyz" / "water.xyz"
-        from ChemBlender.core.xyz import XYZ_READER
+        from chemblender_prepare.core.xyz import XYZ_READER
 
         plugin = FactoryPlugin(
             lambda request: public_batch_from_internal(XYZ_READER.parse(source))

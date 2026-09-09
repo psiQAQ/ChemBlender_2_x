@@ -5,19 +5,18 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 
-from ChemBlender.core import close_session, create_session
-from ChemBlender.core.import_pipeline import (
-    ImportCommitDecisions,
-    DuplicateAction,
-    ImportRequest,
-    ImportSource,
-    StagedImportSession,
-    ValidationMode,
-    commit_import_preview,
-    detect_import_conflicts,
-)
-from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
-from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from chemblender_prepare.core.import_pipeline import ImportCommitDecisions
+from chemblender_prepare.core.import_pipeline import DuplicateAction
+from chemblender_prepare.core.import_pipeline import ImportRequest
+from chemblender_prepare.core.import_pipeline import ImportSource
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import ValidationMode
+from chemblender_prepare.core.import_pipeline import commit_import_preview
+from chemblender_prepare.core.import_pipeline import detect_import_conflicts
+from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -59,7 +58,7 @@ class QuantumInputImportPipelineTests(unittest.TestCase):
                 root = Path(directory)
                 source = root / ("hydrogen" + suffix)
                 source.write_text(control, encoding="utf-8")
-                module = importlib.import_module(f"ChemBlender.core.formats.{name}_input")
+                module = importlib.import_module(f"chemblender_prepare.core.formats.{name}_input")
                 descriptor = getattr(module, f"{name.upper()}_INPUT_READER")
                 session = create_session(temp_parent=root)
                 stages = []
@@ -71,7 +70,7 @@ class QuantumInputImportPipelineTests(unittest.TestCase):
                         mock.patch.object(module, "_READER_VERSION", "1"),
                         mock.patch.object(module, "_coordinate_unit", return_value="angstrom"),
                         mock.patch(
-                            "ChemBlender.core.reader_catalog.builtin_reader_descriptors",
+                            "chemblender_prepare.core.reader_catalog.builtin_reader_descriptors",
                             return_value=(replace(descriptor, reader_version="1"),),
                         ),
                     ):

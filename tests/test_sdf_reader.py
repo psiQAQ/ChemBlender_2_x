@@ -33,9 +33,9 @@ def _sdf(*records, final_delimiter=True):
 
 class SDFReaderTests(unittest.TestCase):
     def test_real_multi_record_fixture_is_selected_and_parsed(self) -> None:
-        from ChemBlender.core import builtin_reader_registry
-        from ChemBlender.core.formats.sdf import SDF_READER
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.reader_catalog import builtin_reader_registry
+        from chemblender_prepare.core.formats.sdf import SDF_READER
+        from chemblender_prepare.core.readers import SniffMatch
 
         source = FIXTURE_ROOT / "records.sdf"
         self.assertIs(SDF_READER.sniff(source, source.read_bytes()).match, SniffMatch.EXACT)
@@ -45,7 +45,7 @@ class SDFReaderTests(unittest.TestCase):
         self.assertEqual(len(batch.topologies), 2)
 
     def test_balanced_recovery_keeps_indices_around_a_malformed_record(self) -> None:
-        from ChemBlender.core.formats.sdf import parse_sdf
+        from chemblender_prepare.core.formats.sdf import parse_sdf
 
         batch = parse_sdf(FIXTURE_ROOT / "malformed-middle.sdf")
 
@@ -60,7 +60,7 @@ class SDFReaderTests(unittest.TestCase):
         self.assertEqual(batch.report.issues, ())
 
     def test_raw_properties_preserve_duplicate_empty_and_order(self) -> None:
-        from ChemBlender.core.formats.sdf import parse_sdf
+        from chemblender_prepare.core.formats.sdf import parse_sdf
 
         batch = parse_sdf(FIXTURE_ROOT / "duplicate-empty.sdf")
 
@@ -71,8 +71,8 @@ class SDFReaderTests(unittest.TestCase):
         self.assertEqual(batch.datasets, ())
 
     def test_unambiguous_typed_columns_keep_missing_values_with_masks(self) -> None:
-        from ChemBlender.core import DatasetStatus
-        from ChemBlender.core.formats.sdf import parse_sdf
+        from cbq_core.model import DatasetStatus
+        from chemblender_prepare.core.formats.sdf import parse_sdf
 
         content = _sdf(
             _record(("Energy", b"-1.25"), ("Flag", b"true")),
@@ -97,7 +97,7 @@ class SDFReaderTests(unittest.TestCase):
     def test_normal_int64_property_remains_a_numeric_column(self) -> None:
         import numpy
 
-        from ChemBlender.core.formats.sdf import parse_sdf
+        from chemblender_prepare.core.formats.sdf import parse_sdf
 
         with TemporaryDirectory() as directory:
             source = Path(directory) / "integer.sdf"
@@ -111,8 +111,9 @@ class SDFReaderTests(unittest.TestCase):
         self.assertEqual(identifier.data.values.tolist(), [9223372036854775807])
 
     def test_sdwriter_headers_and_non_numeric_properties_build_categorical_columns(self) -> None:
-        from ChemBlender.core import CategoricalData, DatasetStatus
-        from ChemBlender.core.formats.sdf import parse_sdf
+        from cbq_core.model import CategoricalData
+        from cbq_core.model import DatasetStatus
+        from chemblender_prepare.core.formats.sdf import parse_sdf
 
         content = _sdf(
             MOL_BLOCK + b">  <State>  (1)\nsolid\n\n>  <Count>  (1)\n9223372036854775808\n\n",
@@ -138,8 +139,8 @@ class SDFReaderTests(unittest.TestCase):
         self.assertIsInstance(columns["sdf_count"].data, CategoricalData)
 
     def test_very_large_integer_property_becomes_categorical_without_int_conversion(self) -> None:
-        from ChemBlender.core import CategoricalData
-        from ChemBlender.core.formats.sdf import parse_sdf
+        from cbq_core.model import CategoricalData
+        from chemblender_prepare.core.formats.sdf import parse_sdf
 
         value = b"9" * 5_000
         with TemporaryDirectory() as directory:
@@ -154,7 +155,7 @@ class SDFReaderTests(unittest.TestCase):
         self.assertEqual(identifier.data.categories, (value.decode("ascii"),))
 
     def test_crlf_mol_slice_and_standalone_delimiter_are_exact(self) -> None:
-        from ChemBlender.core.formats.sdf import parse_sdf
+        from chemblender_prepare.core.formats.sdf import parse_sdf
 
         source = FIXTURE_ROOT / "crlf.sdf"
         content = source.read_bytes()
@@ -166,7 +167,7 @@ class SDFReaderTests(unittest.TestCase):
         self.assertEqual(record.ordered_raw_properties[0].value, " $$$$")
 
     def test_mixed_v2000_and_v3000_records_remain_independent(self) -> None:
-        from ChemBlender.core.formats.sdf import parse_sdf
+        from chemblender_prepare.core.formats.sdf import parse_sdf
 
         batch = parse_sdf(FIXTURE_ROOT / "mixed-version.sdf")
 
@@ -176,9 +177,10 @@ class SDFReaderTests(unittest.TestCase):
         )
 
     def test_missing_final_delimiter_keeps_last_record_and_mol_does_not_select_sdf(self) -> None:
-        from ChemBlender.core.formats.sdf import SDF_READER, parse_sdf
-        from ChemBlender.core.formats.mol import MOL_READER
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.sdf import SDF_READER
+        from chemblender_prepare.core.formats.sdf import parse_sdf
+        from chemblender_prepare.core.formats.mol import MOL_READER
+        from chemblender_prepare.core.readers import SniffMatch
 
         content = _sdf(_record(), _record(), final_delimiter=False)
         with TemporaryDirectory() as directory:
@@ -193,8 +195,9 @@ class SDFReaderTests(unittest.TestCase):
         self.assertIs(sdf_sniff.match, SniffMatch.EXACT)
 
     def test_leading_and_consecutive_delimiters_keep_invalid_record_indices(self) -> None:
-        from ChemBlender.core.formats.sdf import SDF_READER, parse_sdf
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.sdf import SDF_READER
+        from chemblender_prepare.core.formats.sdf import parse_sdf
+        from chemblender_prepare.core.readers import SniffMatch
 
         content = b"$$$$\n$$$$\n" + _sdf(_record())
         with TemporaryDirectory() as directory:
@@ -215,12 +218,10 @@ class SDFReaderTests(unittest.TestCase):
         self.assertEqual(len(batch.diagnostics), 2)
 
     def test_boundaries_keys_and_host_revision_are_stable(self) -> None:
-        from ChemBlender.core.formats.sdf import (
-            iter_sdf_file_records,
-            iter_sdf_records,
-            parse_sdf_request,
-        )
-        from ChemBlender.reader_api.protocol import ParseRequest
+        from chemblender_prepare.core.formats.sdf import iter_sdf_file_records
+        from chemblender_prepare.core.formats.sdf import iter_sdf_records
+        from chemblender_prepare.core.formats.sdf import parse_sdf_request
+        from chemblender_prepare.reader_api.protocol import ParseRequest
 
         content = _sdf(_record(), _record())
         with TemporaryDirectory() as directory:
@@ -255,7 +256,8 @@ class SDFReaderTests(unittest.TestCase):
         self.assertEqual(len(set(record.record_key for record in batch.molecular_records)), 2)
 
     def test_final_delimiter_without_newline_has_matching_bytes_and_file_boundaries(self) -> None:
-        from ChemBlender.core.formats.sdf import iter_sdf_file_records, iter_sdf_records
+        from chemblender_prepare.core.formats.sdf import iter_sdf_file_records
+        from chemblender_prepare.core.formats.sdf import iter_sdf_records
 
         record = _record()
         content = record + b"$$$$"
@@ -273,13 +275,11 @@ class SDFReaderTests(unittest.TestCase):
         )
 
     def test_file_cancellation_and_10k_indexing_are_bounded(self) -> None:
-        from ChemBlender.core.formats.sdf import (
-            SDFReaderCancelled,
-            iter_sdf_file_records,
-            iter_sdf_records,
-            parse_sdf_request,
-        )
-        from ChemBlender.reader_api.protocol import ParseRequest
+        from chemblender_prepare.core.formats.sdf import SDFReaderCancelled
+        from chemblender_prepare.core.formats.sdf import iter_sdf_file_records
+        from chemblender_prepare.core.formats.sdf import iter_sdf_records
+        from chemblender_prepare.core.formats.sdf import parse_sdf_request
+        from chemblender_prepare.reader_api.protocol import ParseRequest
 
         with self.assertRaises(SDFReaderCancelled):
             tuple(iter_sdf_records(_sdf(_record()), is_cancelled=lambda: True))
@@ -350,7 +350,7 @@ class SDFReaderTests(unittest.TestCase):
         self.assertLess(peak, 128 * 1024 * 1024)
 
     def test_file_scanner_does_not_buffer_an_unterminated_megabyte_line(self) -> None:
-        from ChemBlender.core.formats.sdf import iter_sdf_file_records
+        from chemblender_prepare.core.formats.sdf import iter_sdf_file_records
 
         with TemporaryDirectory() as directory:
             source = Path(directory) / "long-line.sdf"
@@ -366,7 +366,7 @@ class SDFReaderTests(unittest.TestCase):
         self.assertLess(peak, 256 * 1024)
 
     def test_memory_error_and_host_failures_do_not_become_recovery_diagnostics(self) -> None:
-        from ChemBlender.core.formats import sdf
+        from chemblender_prepare.core.formats import sdf
 
         raw = _sdf(_record())
         with patch.object(sdf, "_parse_record", side_effect=MemoryError("full")):
@@ -389,8 +389,8 @@ class SDFReaderTests(unittest.TestCase):
                 )
 
     def test_single_missing_final_and_delimiter_beyond_prefix_select_sdf(self) -> None:
-        from ChemBlender.core.formats.sdf import SDF_READER
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.sdf import SDF_READER
+        from chemblender_prepare.core.readers import SniffMatch
 
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -407,8 +407,8 @@ class SDFReaderTests(unittest.TestCase):
             )
 
     def test_truncated_sdf_suffix_prose_without_a_complete_mol_block_is_not_selected(self) -> None:
-        from ChemBlender.core.formats.sdf import SDF_READER
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.sdf import SDF_READER
+        from chemblender_prepare.core.readers import SniffMatch
 
         with TemporaryDirectory() as directory:
             source = Path(directory) / "prose.sdf"
@@ -418,8 +418,8 @@ class SDFReaderTests(unittest.TestCase):
         self.assertIs(result.match, SniffMatch.NONE)
 
     def test_large_incomplete_v3000_mol_prefix_is_probable_sdf(self) -> None:
-        from ChemBlender.core.formats.sdf import SDF_READER
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.sdf import SDF_READER
+        from chemblender_prepare.core.readers import SniffMatch
 
         atoms = b"".join(
             f"M  V30 {index} C 1234567890.1234567890 0.0000000000 0.0000000000 0\n".encode("ascii")
@@ -441,7 +441,7 @@ class SDFReaderTests(unittest.TestCase):
         self.assertIs(result.match, SniffMatch.PROBABLE)
 
     def test_v3000_counts_extra_spaces_parse_with_rdkit(self) -> None:
-        from ChemBlender.core.formats.sdf import parse_sdf
+        from chemblender_prepare.core.formats.sdf import parse_sdf
 
         mol = (Path(__file__).with_name("fixtures") / "mol" / "water-v3000.mol").read_bytes()
         content = mol.replace(
@@ -456,8 +456,8 @@ class SDFReaderTests(unittest.TestCase):
         self.assertEqual(len(batch.molecular_records), 1)
 
     def test_tabbed_v3000_counts_prefix_is_not_probable(self) -> None:
-        from ChemBlender.core.formats.sdf import SDF_READER
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.sdf import SDF_READER
+        from chemblender_prepare.core.readers import SniffMatch
 
         content = (
             b"tabbed V3000\nChemBlender\n\n"
@@ -474,7 +474,7 @@ class SDFReaderTests(unittest.TestCase):
         self.assertIs(result.match, SniffMatch.NONE)
 
     def test_record_keys_depend_on_source_identity_and_full_record_hash(self) -> None:
-        from ChemBlender.core.formats.sdf import parse_sdf
+        from chemblender_prepare.core.formats.sdf import parse_sdf
 
         first = _record(("Label", b"same"))
         with TemporaryDirectory() as directory:
@@ -492,7 +492,7 @@ class SDFReaderTests(unittest.TestCase):
         )
 
     def test_direct_parse_uses_a_single_atomic_snapshot_when_source_is_replaced(self) -> None:
-        from ChemBlender.core.formats import sdf
+        from chemblender_prepare.core.formats import sdf
 
         original = _sdf(
             _record(("Source", b"original-one")),
@@ -521,7 +521,7 @@ class SDFReaderTests(unittest.TestCase):
         )
 
     def test_direct_parse_opens_the_product_source_once(self) -> None:
-        from ChemBlender.core.formats import sdf
+        from chemblender_prepare.core.formats import sdf
 
         content = _sdf(_record(), _record())
         with TemporaryDirectory() as directory:
@@ -543,8 +543,8 @@ class SDFReaderTests(unittest.TestCase):
         self.assertEqual(source_opens, 1)
 
     def test_host_request_rejects_a_snapshot_hash_mismatch(self) -> None:
-        from ChemBlender.core.formats.sdf import parse_sdf_request
-        from ChemBlender.reader_api.protocol import ParseRequest
+        from chemblender_prepare.core.formats.sdf import parse_sdf_request
+        from chemblender_prepare.reader_api.protocol import ParseRequest
 
         content = _sdf(_record())
         with TemporaryDirectory() as directory:
@@ -560,17 +560,18 @@ class SDFReaderTests(unittest.TestCase):
     def test_preflight_sidecar_round_trip_keeps_records_raw_properties_and_masks(self) -> None:
         import numpy
 
-        from ChemBlender.core import close_project, close_session, create_session, open_project
-        from ChemBlender.core.import_pipeline import (
-            ImportCommitDecisions,
-            ImportRequest,
-            ImportSource,
-            StagedImportSession,
-            ValidationMode,
-            commit_import_preview,
-        )
-        from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
-        from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+        from cbq_core.sidecar import close_project
+        from cbq_core.session import close_session
+        from cbq_core.session import create_session
+        from cbq_core.sidecar import open_project
+        from chemblender_prepare.core.import_pipeline import ImportCommitDecisions
+        from chemblender_prepare.core.import_pipeline import ImportRequest
+        from chemblender_prepare.core.import_pipeline import ImportSource
+        from chemblender_prepare.core.import_pipeline import StagedImportSession
+        from chemblender_prepare.core.import_pipeline import ValidationMode
+        from chemblender_prepare.core.import_pipeline import commit_import_preview
+        from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
+        from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
 
         with TemporaryDirectory() as directory:
             root = Path(directory)

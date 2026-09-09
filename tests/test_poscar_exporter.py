@@ -5,7 +5,8 @@ import unittest
 
 import numpy
 
-from ChemBlender.core import Structure, parse_poscar
+from cbq_core.model import Structure
+from chemblender_prepare.core.formats.poscar import parse_poscar
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "poscar"
@@ -13,11 +14,9 @@ FIXTURES = Path(__file__).parent / "fixtures" / "poscar"
 
 class PoscarExporterTests(unittest.TestCase):
     def test_preserve_source_scale_keeps_negative_volume_convention(self):
-        from ChemBlender.core.exporters import (
-            PoscarExportSettings,
-            export_poscar,
-        )
-        from ChemBlender.core.formats.poscar import parse_poscar_document
+        from chemblender_prepare.core.exporters import PoscarExportSettings
+        from chemblender_prepare.core.exporters import export_poscar
+        from chemblender_prepare.core.formats.poscar import parse_poscar_document
 
         batch = parse_poscar(FIXTURES / "negative-scale.vasp")
         structure, = batch.structures
@@ -46,10 +45,8 @@ class PoscarExporterTests(unittest.TestCase):
         )
 
     def test_target_volume_must_match_the_scientific_cell(self):
-        from ChemBlender.core.exporters import (
-            PoscarExportSettings,
-            export_poscar,
-        )
+        from chemblender_prepare.core.exporters import PoscarExportSettings
+        from chemblender_prepare.core.exporters import export_poscar
 
         structure = parse_poscar(FIXTURES / "cscl.vasp").structures[0]
         with TemporaryDirectory() as directory:
@@ -64,7 +61,7 @@ class PoscarExporterTests(unittest.TestCase):
                 )
 
     def test_nonperiodic_or_unknown_species_is_rejected(self):
-        from ChemBlender.core.exporters import export_poscar
+        from chemblender_prepare.core.exporters import export_poscar
 
         periodic = parse_poscar(FIXTURES / "cscl.vasp").structures[0]
         nonperiodic = Structure(
@@ -82,7 +79,7 @@ class PoscarExporterTests(unittest.TestCase):
                 export_poscar(destination, unknown)
 
     def test_settings_validate_modes_and_single_line_comment(self):
-        from ChemBlender.core.exporters import PoscarExportSettings
+        from chemblender_prepare.core.exporters import PoscarExportSettings
 
         with self.assertRaisesRegex(ValueError, "coordinate_mode"):
             PoscarExportSettings(coordinate_mode="fractional")

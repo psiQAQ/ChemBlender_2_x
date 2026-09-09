@@ -5,17 +5,19 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from uuid import uuid4
 
-from ChemBlender.core import (
-    QCProject,
-    external_record_request_document,
-    ExternalRecordRequest,
-    open_project,
-    save_project,
-)
-from ChemBlender.core.worker_protocol import WorkerRequest, WorkerStatus, write_request
-from worker.connector_operation import external_record_operation
-from worker.operation import OperationContext, OperationError
-from worker.runner import default_registry, run_request
+from cbq_core.model import QCProject
+from chemblender_prepare.core.external_connector import external_record_request_document
+from chemblender_prepare.core.external_connector import ExternalRecordRequest
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from cbq_core.worker_protocol import WorkerRequest
+from cbq_core.worker_protocol import WorkerStatus
+from cbq_core.worker_protocol import write_request
+from chemblender_prepare.worker.connector_operation import external_record_operation
+from chemblender_prepare.worker.operation import OperationContext
+from chemblender_prepare.worker.operation import OperationError
+from chemblender_prepare.worker.runner import default_registry
+from chemblender_prepare.worker.runner import run_request
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "qcschema" / "atomic_result_v2.json"

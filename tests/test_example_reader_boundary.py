@@ -9,16 +9,12 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
 
-from ChemBlender import reader_api
-from ChemBlender.core.import_pipeline import (
-    ImportRequest,
-    ImportSource,
-    ReaderOverride,
-    StagedImportSession,
-)
-from ChemBlender.reader_api.import_pipeline_bridge import (
-    preflight_reader_plugins,
-)
+from chemblender_prepare import reader_api
+from chemblender_prepare.core.import_pipeline import ImportRequest
+from chemblender_prepare.core.import_pipeline import ImportSource
+from chemblender_prepare.core.import_pipeline import ReaderOverride
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,7 +96,7 @@ class ExampleReaderBoundaryTests(unittest.TestCase):
         source = BOOTSTRAP.read_text(encoding="utf-8")
         self.assertIn('"chemblender.reader_api.v1"', source)
         self.assertNotIn("bl_ext.", source)
-        self.assertNotIn("ChemBlender.reader_api", source)
+        self.assertNotIn("chemblender_prepare.reader_api", source)
 
     def test_manifest_sniff_parse_canonical_and_cancellation(self):
         module = load_reader()
@@ -259,7 +255,7 @@ class ExampleReaderBoundaryTests(unittest.TestCase):
         registrations = []
         removals = []
         handle = SimpleNamespace(
-            module_name="ChemBlender.reader_api",
+            module_name="chemblender_prepare.reader_api",
             register_callback=registrations.append,
             unregister_callback=removals.append,
         )

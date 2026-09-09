@@ -11,9 +11,11 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import ArrayData, DatasetStatus, QCProject
-from ChemBlender.core.formats.pdb import parse_pdb
-from ChemBlender.core.formats.pqr import parse_pqr
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import QCProject
+from chemblender_prepare.core.formats.pdb import parse_pdb
+from chemblender_prepare.core.formats.pqr import parse_pqr
 from ChemBlender.ui.project_browser.model import (
     _biological_detail_rows,
     BrowserMode,

@@ -8,13 +8,13 @@ import unittest
 
 import numpy
 
-from ChemBlender.core import IssueKind, QCProject, SniffMatch
-from ChemBlender.core.phonopy_adapter import (
-    PhonopyDependencyError,
-    adapt_phonopy_qpoints,
-    parse_phonopy_file,
-    sniff_phonopy_file,
-)
+from cbq_core.model import IssueKind
+from cbq_core.model import QCProject
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.phonopy_adapter import PhonopyDependencyError
+from chemblender_prepare.core.phonopy_adapter import adapt_phonopy_qpoints
+from chemblender_prepare.core.phonopy_adapter import parse_phonopy_file
+from chemblender_prepare.core.phonopy_adapter import sniff_phonopy_file
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -139,7 +139,7 @@ class PhonopyAdapterTests(unittest.TestCase):
             [
                 sys.executable,
                 "-c",
-                "import sys; import ChemBlender.core; assert 'phonopy' not in sys.modules",
+                "import sys; import cbq_core.model; assert 'phonopy' not in sys.modules",
             ],
             cwd=ROOT,
             check=True,

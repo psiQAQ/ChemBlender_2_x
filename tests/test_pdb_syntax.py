@@ -2,8 +2,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from ChemBlender.core.model import IssueKind
-from ChemBlender.core.readers import SniffMatch
+from cbq_core.model import IssueKind
+from chemblender_prepare.core.readers import SniffMatch
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "pdb"
@@ -68,7 +68,7 @@ def cryst1_line(
 
 class PDBFixedColumnTests(unittest.TestCase):
     def test_atom_and_hetatm_use_exact_columns_and_element_rules(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         parsed = parse_pdb_records((FIXTURES / "atom-hetatm.pdb").read_bytes())
         atom, iron, alpha_carbon = parsed.atoms
@@ -143,7 +143,7 @@ class PDBFixedColumnTests(unittest.TestCase):
         )
 
     def test_raw_source_and_line_endings_are_preserved(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         raw = (
             b"ATOM      1  N   GLY A   1      11.000  12.000  13.000"
@@ -156,7 +156,8 @@ class PDBFixedColumnTests(unittest.TestCase):
         self.assertEqual(parsed.atoms[0].raw_line, raw)
 
     def test_atom_serial_and_occupancy_are_validated_at_parse_boundary(self):
-        from ChemBlender.core.formats.pdb import PDBSyntaxError, parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import PDBSyntaxError
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         def with_occupancy(serial, name, occupancy):
             line = bytearray(
@@ -209,7 +210,7 @@ class PDBFixedColumnTests(unittest.TestCase):
             parse_pdb_records(raw, validation_mode="strict")
 
     def test_standard_residue_context_disambiguates_left_aligned_ca(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         template = bytearray(
             (FIXTURES / "atom-hetatm.pdb").read_bytes().splitlines()[0]
@@ -232,7 +233,7 @@ class PDBFixedColumnTests(unittest.TestCase):
         )
 
     def test_element_column_requires_right_alignment_before_becoming_authoritative(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         parsed = parse_pdb_records(
             atom_line(1, b" N  ", element_field=b" C")
@@ -259,7 +260,7 @@ class PDBFixedColumnTests(unittest.TestCase):
         )
 
     def test_element_inference_uses_exact_alignment_and_narrow_context(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         cases = (
             (b" C  ", b"ALA", b"ATOM  ", "C"),
@@ -318,7 +319,7 @@ class PDBFixedColumnTests(unittest.TestCase):
                     )
 
     def test_sniff_requires_fixed_column_coordinate_content(self):
-        from ChemBlender.core.formats.pdb import sniff_pdb
+        from chemblender_prepare.core.formats.pdb import sniff_pdb
 
         shifted = b"ATOM 1 CA GLY 1 0 0 0\n"
 
@@ -328,7 +329,7 @@ class PDBFixedColumnTests(unittest.TestCase):
         )
 
     def test_sniff_is_exact_only_for_clean_complete_atom_or_cryst1_content(self):
-        from ChemBlender.core.formats.pdb import sniff_pdb
+        from chemblender_prepare.core.formats.pdb import sniff_pdb
 
         clean_atom = atom_line(1, b" N  ", element_field=b" N") + b"\n"
         with TemporaryDirectory() as temporary:
@@ -347,7 +348,7 @@ class PDBFixedColumnTests(unittest.TestCase):
         )
 
     def test_sniff_truncated_or_recoverably_invalid_content_is_probable(self):
-        from ChemBlender.core.formats.pdb import sniff_pdb
+        from chemblender_prepare.core.formats.pdb import sniff_pdb
 
         first = atom_line(1, b" N  ", element_field=b" N") + b"\n"
         complete = first + atom_line(2, b" C  ", element_field=b" C") + b"\n"
@@ -369,7 +370,8 @@ class PDBFixedColumnTests(unittest.TestCase):
             )
 
     def test_fatal_exceptions_propagate_from_parse_and_sniff(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records, sniff_pdb
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import sniff_pdb
 
         for exception_type in (
             KeyboardInterrupt,
@@ -391,7 +393,7 @@ class PDBFixedColumnTests(unittest.TestCase):
 
 class PDBModelAndSegmentTests(unittest.TestCase):
     def test_model_endmdl_and_ter_assign_models_and_segments(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         parsed = parse_pdb_records((FIXTURES / "multimodel.pdb").read_bytes())
 
@@ -412,7 +414,7 @@ class PDBModelAndSegmentTests(unittest.TestCase):
         self.assertEqual(parsed.issues, ())
 
     def test_atoms_outside_model_default_to_model_one(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         parsed = parse_pdb_records(
             b"ATOM      1  O   HOH A   1       1.000   2.000   3.000"
@@ -422,7 +424,7 @@ class PDBModelAndSegmentTests(unittest.TestCase):
         self.assertEqual(parsed.atoms[0].model_number, 1)
 
     def test_malformed_ter_still_advances_the_segment_boundary(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         parsed = parse_pdb_records(
             atom_line(1, b" N  ", element_field=b" N")
@@ -446,7 +448,7 @@ class PDBModelAndSegmentTests(unittest.TestCase):
         )
 
     def test_model_marker_recovery_keeps_per_model_segment_state(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         parsed = parse_pdb_records(
             b"MODEL        2\n"
@@ -478,7 +480,7 @@ class PDBModelAndSegmentTests(unittest.TestCase):
         )
 
     def test_repeated_model_numbers_keep_distinct_atom_and_bond_occurrences(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         parsed = parse_pdb_records(
             b"MODEL        1\n"
@@ -535,7 +537,7 @@ class PDBModelAndSegmentTests(unittest.TestCase):
 
 class PDBConnectivityTests(unittest.TestCase):
     def test_conect_resolves_after_atoms_and_only_unambiguous_repetition_is_order(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         parsed = parse_pdb_records((FIXTURES / "conect.pdb").read_bytes())
 
@@ -555,7 +557,7 @@ class PDBConnectivityTests(unittest.TestCase):
         )
 
     def test_conect_resolves_reused_serials_within_each_model(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         parsed = parse_pdb_records(
             b"MODEL        1\n"
@@ -593,7 +595,7 @@ class PDBConnectivityTests(unittest.TestCase):
         )
 
     def test_conect_never_builds_a_cross_model_bond(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         parsed = parse_pdb_records(
             b"MODEL        1\n"
@@ -619,7 +621,7 @@ class PDBConnectivityTests(unittest.TestCase):
         )
 
     def test_conect_validates_self_dangling_duplicates_and_multiplicity(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         raw = b"\n".join(
             (
@@ -666,7 +668,7 @@ class PDBConnectivityTests(unittest.TestCase):
 
 class PDBCrystalTests(unittest.TestCase):
     def test_cryst1_parses_cell_declared_space_group_and_source_metadata(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         parsed = parse_pdb_records((FIXTURES / "cryst1.pdb").read_bytes())
 
@@ -680,7 +682,7 @@ class PDBCrystalTests(unittest.TestCase):
         self.assertEqual(parsed.cryst1.source_record, "CRYST1")
 
     def test_cryst1_reports_blank_or_nonpositive_z(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         cases = (
             (None, IssueKind.MISSING),
@@ -699,7 +701,7 @@ class PDBCrystalTests(unittest.TestCase):
                 )
 
     def test_cryst1_validates_space_group_envelope_and_preserves_raw_slice(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         cases = (
             ("", IssueKind.MISSING),
@@ -732,7 +734,7 @@ class PDBCrystalTests(unittest.TestCase):
         self.assertEqual(valid.issues, ())
 
     def test_cryst1_rejects_nonphysical_or_nonfinite_cell_parameters(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         cases = (
             (
@@ -755,7 +757,7 @@ class PDBCrystalTests(unittest.TestCase):
 
 class PDBMalformedRecoveryTests(unittest.TestCase):
     def test_short_unknown_and_mismatched_records_report_and_recover(self):
-        from ChemBlender.core.formats.pdb import parse_pdb_records
+        from chemblender_prepare.core.formats.pdb import parse_pdb_records
 
         raw = (FIXTURES / "malformed.pdb").read_bytes()
         parsed = parse_pdb_records(raw)

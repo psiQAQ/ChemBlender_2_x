@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-import ChemBlender.core.reader_catalog as reader_catalog
+import chemblender_prepare.core.reader_catalog as reader_catalog
 
 
 ROOT = Path(__file__).parents[1]
@@ -17,7 +17,7 @@ SCRIPT = ROOT / "ChemBlender" / "scripts" / "generate_format_docs.py"
 FORMAT_CAPABILITIES = ROOT / "docs" / "user" / "format-capabilities.json"
 DEPENDENCIES = ROOT / "docs" / "user" / "dependencies.json"
 FORMATS = ROOT / "docs" / "user" / "formats.md"
-UI_EXPORT = ROOT / "ChemBlender" / "ui" / "export.py"
+UI_EXPORT = ROOT / "chemblender_prepare" / "cli.py"
 
 
 def _canonical_json(document):
@@ -162,7 +162,7 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
         self.assertEqual(
             by_id["xyz"]["export"],
             {
-                "execution_mode": "project_browser",
+                "execution_mode": "prepare",
                 "format_id": "xyz",
                 "loss_policy": "single_structure_coordinates_only",
                 "maturity": "F4",
@@ -171,17 +171,17 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
         self.assertEqual(
             by_id["cube"]["export"],
             {
-                "execution_mode": "project_browser",
+                "execution_mode": "prepare",
                 "format_id": "cube",
                 "loss_policy": "preview_confirmation",
                 "maturity": "F5",
             },
         )
-        self.assertEqual(by_id["cjson"]["export"]["execution_mode"], "core")
+        self.assertEqual(by_id["cjson"]["export"]["execution_mode"], "prepare")
         self.assertEqual(
             by_id["mol2"]["export"],
             {
-                "execution_mode": "project_browser",
+                "execution_mode": "prepare",
                 "format_id": "mol2",
                 "loss_policy": "preview_confirmation",
                 "maturity": "F5",
@@ -190,7 +190,7 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
         self.assertEqual(
             by_id["pdb"]["export"],
             {
-                "execution_mode": "project_browser",
+                "execution_mode": "prepare",
                 "format_id": "pdb",
                 "loss_policy": "preview_confirmation",
                 "maturity": "F5",
@@ -199,7 +199,7 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
         self.assertEqual(
             by_id["pqr"]["export"],
             {
-                "execution_mode": "project_browser",
+                "execution_mode": "prepare",
                 "format_id": "pqr",
                 "loss_policy": "preview_confirmation",
                 "maturity": "F5",
@@ -242,22 +242,17 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "fixture family coverage"):
                 reader_catalog.reader_capability_document()
 
-    def test_project_browser_export_ids_come_from_ui_source_without_bpy(self):
+    def test_prepare_export_ids_come_from_ui_source_without_bpy(self):
         module = self._module()
         before = sys.modules.get("bpy")
 
         tree = ast.parse(UI_EXPORT.read_text(encoding="utf-8"))
-        assignment = next(
-            node
-            for node in tree.body
-            if isinstance(node, ast.Assign)
-            and any(
-                isinstance(target, ast.Name)
-                and target.id == "_FORMAT_ITEMS"
-                for target in node.targets
-            )
-        )
-        expected = tuple(row[0] for row in ast.literal_eval(assignment.value))
+        format_call = next(node for node in ast.walk(tree)
+                           if isinstance(node, ast.Call) and node.args
+                           and isinstance(node.args[0], ast.Constant)
+                           and node.args[0].value == "--format")
+        expected = ast.literal_eval(next(item.value for item in format_call.keywords
+                                         if item.arg == "choices"))
         capabilities = json.loads(
             module.render_documents(ROOT)[
                 "docs/user/format-capabilities.json"
@@ -266,22 +261,22 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
         documented = {
             reader["export"]["format_id"]
             for reader in capabilities["readers"]
-            if reader["export"]["execution_mode"] == "project_browser"
+            if reader["export"]["execution_mode"] == "prepare"
         }
         self.assertEqual(
-            module._project_browser_export_ids(ROOT),
+            module._prepare_export_ids(ROOT),
             expected,
         )
         self.assertEqual(documented, set(expected))
         self.assertIn("cube", expected)
         self.assertIs(sys.modules.get("bpy"), before)
 
-    def test_user_guide_exposes_pdb_project_browser_export(self):
+    def test_user_guide_exposes_pdb_external_export(self):
         formats = (ROOT / "docs" / "user" / "formats.md").read_text(
             encoding="utf-8"
         )
 
-        self.assertIn("PDB export through Project Browser", formats)
+        self.assertIn("PDB export through chemblender-prepare", formats)
         self.assertNotIn(
             "PDB/PQR | Native import of biological hierarchy/alternate "
             "locations or charge/radius data; no general Project Browser writer",

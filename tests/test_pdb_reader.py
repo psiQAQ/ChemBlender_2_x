@@ -6,39 +6,31 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    BiologicalHierarchy,
-    CapabilitySupport,
-    close_project,
-    DatasetStatus,
-    FrameSet,
-    open_project,
-    QCProject,
-    QualityStatus,
-    ReaderNotFoundError,
-    save_project,
-    SniffMatch,
-    TopologySource,
-    unit_cell_parameters,
-)
-from ChemBlender.core.formats import pdb
-from ChemBlender.core.model.project import validate_project_graph
-from ChemBlender.core.reader_catalog import (
-    builtin_reader_descriptors,
-    builtin_reader_registry,
-)
-from ChemBlender.reader_api import (
-    internal_batch_from_public,
-    ParseRequest,
-    public_batch_document,
-    public_batch_from_document,
-    public_batch_from_internal,
-    builtin_reader_plugin_registry,
-)
-from ChemBlender.reader_api.conformance import (
-    ReaderConformanceCase,
-    run_reader_conformance,
-)
+from cbq_core.model import BiologicalHierarchy
+from chemblender_prepare.core.readers import CapabilitySupport
+from cbq_core.sidecar import close_project
+from cbq_core.model import DatasetStatus
+from cbq_core.model import FrameSet
+from cbq_core.sidecar import open_project
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from chemblender_prepare.core.readers import ReaderNotFoundError
+from cbq_core.sidecar import save_project
+from chemblender_prepare.core.readers import SniffMatch
+from cbq_core.model import TopologySource
+from cbq_core.model import unit_cell_parameters
+from chemblender_prepare.core.formats import pdb
+from cbq_core.model.project import validate_project_graph
+from chemblender_prepare.core.reader_catalog import builtin_reader_descriptors
+from chemblender_prepare.core.reader_catalog import builtin_reader_registry
+from chemblender_prepare.reader_api import internal_batch_from_public
+from chemblender_prepare.reader_api import ParseRequest
+from chemblender_prepare.reader_api import public_batch_document
+from chemblender_prepare.reader_api import public_batch_from_document
+from chemblender_prepare.reader_api import public_batch_from_internal
+from chemblender_prepare.reader_api import builtin_reader_plugin_registry
+from chemblender_prepare.reader_api.conformance import ReaderConformanceCase
+from chemblender_prepare.reader_api.conformance import run_reader_conformance
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "pdb"

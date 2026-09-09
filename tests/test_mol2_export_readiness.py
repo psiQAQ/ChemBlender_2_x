@@ -6,9 +6,9 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import ArrayData
-from ChemBlender.core.exporters import mol2_export_readiness
-from ChemBlender.core.formats.mol2 import parse_mol2
+from cbq_core.model import ArrayData
+from chemblender_prepare.core.exporters import mol2_export_readiness
+from chemblender_prepare.core.formats.mol2 import parse_mol2
 
 
 FIXTURE = Path(__file__).with_name("fixtures") / "mol2" / "small.mol2"

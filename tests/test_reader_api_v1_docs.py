@@ -4,7 +4,7 @@ import tomllib
 import unittest
 from pathlib import Path
 
-import ChemBlender.reader_api as reader_api
+import chemblender_prepare.reader_api as reader_api
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,10 +57,29 @@ class ReaderApiV1DocumentationTests(unittest.TestCase):
         self.assertEqual(len(documented), len(set(documented)))
         namespace = {}
         exec(
-            f"from ChemBlender.reader_api import {', '.join(documented)}",
+            f"from chemblender_prepare.reader_api import {', '.join(documented)}",
             namespace,
         )
         self.assertTrue(all(name in namespace for name in documented))
+
+    def test_external_bootstrap_registers_and_removes_reader(self):
+        from types import ModuleType
+        from unittest.mock import patch
+        from tests.test_plugin_discovery import external_plugin
+        match = re.search(
+            r"<!-- external-reader-bootstrap -->\n```python\n(.*?)\n```",
+            self.read_doc("README.md"), re.DOTALL)
+        self.assertIsNotNone(match)
+        source = match.group(1)
+        self.assertNotIn("bpy", source)
+        module = ModuleType("your_reader")
+        plugin = external_plugin("org.example.docs", "external.docs")
+        module.create_plugin = lambda api: plugin
+        namespace = {}
+        with patch.dict("sys.modules", {"your_reader": module}):
+            exec(compile(source, "Reader README", "exec"), namespace)
+        self.assertIn(plugin.descriptor, namespace["snapshot"].descriptors)
+        self.assertNotIn(plugin.descriptor, namespace["registry"].descriptors)
 
     def test_installed_extension_bootstrap_uses_the_versioned_handle(self):
         document = self.read_doc("README.md")
@@ -138,7 +157,7 @@ class ReaderApiV1DocumentationTests(unittest.TestCase):
             for name in DOC_NAMES
         )
         self.assertNotIn("bl_ext.user_default", combined)
-        self.assertNotIn("ChemBlender.core.model", combined)
+        self.assertNotIn("cbq_core.model", combined)
         self.assertIn(reader_api.READER_API_VERSION, combined)
 
 

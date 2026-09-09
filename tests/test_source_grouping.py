@@ -8,32 +8,28 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core.import_pipeline import grouping as grouping_module
-from ChemBlender.core.import_pipeline import (
-    CalculationGroup,
-    GroupingEvidence,
-    ImportPreview,
-    SourceGroupSuggestion,
-    SourcePreview,
-    StagedImportSession,
-    suggest_source_groups,
-)
-from ChemBlender.core.model import (
-    ArrayData,
-    CIFEnvelope,
-    CalculationMetadata,
-    CalculationRecord,
-    CalculationStatus,
-    DatasetStatus,
-    ImportBatch,
-    MolecularTopology,
-    PeriodicSiteData,
-    PropertyDataset,
-    QCSchemaEnvelope,
-    SourceRecord,
-    SourceRevision,
-    Structure,
-)
+from chemblender_prepare.core.import_pipeline import grouping as grouping_module
+from chemblender_prepare.core.import_pipeline import CalculationGroup
+from chemblender_prepare.core.import_pipeline import GroupingEvidence
+from chemblender_prepare.core.import_pipeline import ImportPreview
+from chemblender_prepare.core.import_pipeline import SourceGroupSuggestion
+from chemblender_prepare.core.import_pipeline import SourcePreview
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import suggest_source_groups
+from cbq_core.model import ArrayData
+from cbq_core.model import CIFEnvelope
+from cbq_core.model import CalculationMetadata
+from cbq_core.model import CalculationRecord
+from cbq_core.model import CalculationStatus
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ImportBatch
+from cbq_core.model import MolecularTopology
+from cbq_core.model import PeriodicSiteData
+from cbq_core.model import PropertyDataset
+from cbq_core.model import QCSchemaEnvelope
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
+from cbq_core.model import Structure
 
 
 class SourceGroupingTests(unittest.TestCase):

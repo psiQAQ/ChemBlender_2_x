@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from threading import Event
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -9,23 +8,17 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    ImportBatch,
-    QCProject,
-    QualityStatus,
-    Structure,
-    TopologyRecord,
-    TopologySource,
-    close_session,
-    create_session,
-)
-from ChemBlender.core.topology.infer import TopologyInferenceSettings
+from cbq_core.model import ArrayData
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from cbq_core.model import Structure
+from cbq_core.model import TopologyRecord
+from cbq_core.model import TopologySource
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from chemblender_prepare.core.topology.infer import TopologyInferenceSettings
 from ChemBlender.ui.topology import (
-    TopologyInferenceJob,
-    apply_topology_proposal,
-    compute_topology_proposal,
-    prepare_topology_proposal,
     record_topology_decision,
     suggested_topology_id,
     topology_choices,
@@ -47,7 +40,7 @@ def structure(*, periodic=False):
         ),
     }
     if periodic:
-        from ChemBlender.core import PeriodicSiteData
+        from cbq_core.model import PeriodicSiteData
 
         values.update(
             cell=ArrayData(
@@ -235,159 +228,94 @@ class TopologyUIContractTests(unittest.TestCase):
                 accept=True,
             )
 
-    def test_compute_commits_one_deterministic_nonperiodic_proposal(self):
-        reference = structure()
-        project = QCProject(uuid4(), "0.2")
-        project.commit(ImportBatch(structures=(reference,)))
-        with TemporaryDirectory() as directory:
-            session = create_session(
-                temp_parent=Path(directory),
-                project=project,
-            )
-            try:
-                first, created = compute_topology_proposal(
-                    session,
-                    reference.id,
-                    TopologyInferenceSettings(),
-                )
-                second, repeated = compute_topology_proposal(
-                    session,
-                    reference.id,
-                    TopologyInferenceSettings(),
-                )
+    def convert(self, source, output, *args, success=True):
+        import io
+        from contextlib import redirect_stdout
+        from chemblender_prepare.cli import main
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            code = main(["convert", str(source), "-o", str(output), "--infer-bonds",
+                         *map(str, args), "--json"])
+        result = json.loads(stream.getvalue())
+        self.assertEqual(code, 0 if success else 1, result)
+        return result
 
-                self.assertTrue(created)
-                self.assertFalse(repeated)
-                self.assertIs(second, first)
+    def test_external_conversion_prepares_deterministic_molecular_bonds(self):
+        from cbq_core.sidecar import open_project, close_project
+        from chemblender_prepare.core.topology.infer import infer_distance_topology
+        with TemporaryDirectory() as directory:
+            source, output = Path(directory) / "water.xyz", Path(directory) / "water.cbq"
+            source.write_text("3\nwater\nO 0 0 0\nH .96 0 0\nH -.24 .93 0\n", encoding="utf-8")
+            self.convert(source, output)
+            project = open_project(output, verify_arrays=True)
+            try:
+                reference = next(iter(project.structures.values()))
+                proposal = project.topologies[reference.topology_ids[0]]
+                self.assertEqual(proposal.source_kind, TopologySource.DISTANCE_INFERRED)
+                numpy.testing.assert_array_equal(proposal.bond_indices.values, ((0, 1), (0, 2)))
+                # Determinism is relative to the same source UUID and revision.
+                first = infer_distance_topology(reference).topologies[0]
+                second = infer_distance_topology(reference).topologies[0]
+                self.assertEqual((first.id, first.revision), (second.id, second.revision))
                 self.assertEqual(len(project.topologies), 1)
-                self.assertEqual(first.source_kind, TopologySource.DISTANCE_INFERRED)
-                self.assertIn("topology", session.dirty_reasons)
             finally:
-                close_session(session)
+                close_project(project)
 
-    def test_compute_selects_periodic_inference_for_periodic_structure(self):
-        reference = structure(periodic=True)
-        project = QCProject(uuid4(), "0.2")
-        project.commit(ImportBatch(structures=(reference,)))
+    def test_external_conversion_selects_periodic_inference(self):
+        from cbq_core.sidecar import open_project, close_project
+        source = Path(__file__).resolve().parent / "fixtures/poscar/cscl-selective.vasp"
         with TemporaryDirectory() as directory:
-            session = create_session(
-                temp_parent=Path(directory),
-                project=project,
-            )
+            output = Path(directory) / "periodic.cbq"
+            self.convert(source, output)
+            project = open_project(output, verify_arrays=True)
             try:
-                proposal, created = compute_topology_proposal(
-                    session,
-                    reference.id,
-                    TopologyInferenceSettings(),
-                )
-
-                self.assertTrue(created)
+                reference = next(iter(project.structures.values()))
+                proposal = project.topologies[reference.topology_ids[0]]
                 self.assertEqual(proposal.structure_id, reference.id)
-                self.assertIn(
-                    ("periodic", True),
-                    proposal.inference_parameters,
-                )
+                self.assertIn(("periodic", True), proposal.inference_parameters)
+                self.assertIsNotNone(proposal.bond_lattice_shifts)
             finally:
-                close_session(session)
+                close_project(project)
 
-    def test_inference_job_does_not_mutate_project_before_main_thread_apply(self):
-        reference = structure()
-        project = QCProject(uuid4(), "0.2")
-        project.commit(ImportBatch(structures=(reference,)))
-        with TemporaryDirectory() as directory:
-            session = create_session(
-                temp_parent=Path(directory),
-                project=project,
-            )
-            try:
-                job = TopologyInferenceJob(
-                    project,
-                    reference.id,
-                    TopologyInferenceSettings(),
-                )
-                job.start()
-                self.assertTrue(job.join(5.0))
-                self.assertIsNone(job.error)
-                self.assertFalse(job.cancelled)
-                self.assertEqual(project.topologies, {})
-                proposal, batch = job.result
+    def test_external_failure_and_late_cancellation_do_not_publish_or_mutate_input(self):
+        from chemblender_prepare.core.topology.infer import infer_distance_topology
+        for cancel_result in (False, True):
+            with self.subTest(cancel=cancel_result), TemporaryDirectory() as directory:
+                source, output = Path(directory) / "water.xyz", Path(directory) / "water.cbq"
+                cancel = Path(directory) / "cancel"
+                raw = b"3\nwater\nO 0 0 0\nH .96 0 0\nH -.24 .93 0\n"
+                source.write_bytes(raw)
+                def interrupted(reference, settings):
+                    self.assertFalse(output.exists())
+                    self.assertFalse(reference.topology_ids)
+                    batch = infer_distance_topology(reference, settings)
+                    if cancel_result:
+                        cancel.touch()
+                        return batch
+                    raise RuntimeError("inference failed")
+                with patch("chemblender_prepare.core.topology.infer.infer_distance_topology", side_effect=interrupted):
+                    result = self.convert(source, output, "--cancel-file", cancel, success=False)
+                self.assertEqual(result["status"], "cancelled" if cancel_result else "error")
+                self.assertFalse(output.exists())
+                self.assertEqual(source.read_bytes(), raw)
 
-                applied, created = apply_topology_proposal(
-                    session,
-                    proposal,
-                    batch,
-                )
-
-                self.assertIs(applied, proposal)
-                self.assertTrue(created)
-                self.assertIs(project.topologies[proposal.id], proposal)
-                self.assertIn("topology", session.dirty_reasons)
-            finally:
-                close_session(session)
-
-    def test_cancelled_inference_job_discards_prepared_batch_without_mutation(self):
-        reference = structure()
-        project = QCProject(uuid4(), "0.2")
-        project.commit(ImportBatch(structures=(reference,)))
-        started = Event()
-        release = Event()
-        original = prepare_topology_proposal
-
-        def delayed(project_arg, structure_id, settings):
-            started.set()
-            release.wait(5.0)
-            return original(project_arg, structure_id, settings)
-
-        with patch.dict(
-            TopologyInferenceJob._run.__globals__,
-            {"prepare_topology_proposal": delayed},
-        ):
-            job = TopologyInferenceJob(
-                project,
-                reference.id,
-                TopologyInferenceSettings(),
-            )
-            job.start()
-            self.assertTrue(started.wait(5.0))
-            job.cancel()
-            release.set()
-            self.assertTrue(job.join(5.0))
-
-        self.assertTrue(job.cancelled)
-        self.assertIsNone(job.result)
-        self.assertIsNone(job.error)
-        self.assertEqual(project.topologies, {})
-
-    def test_inference_job_retries_ui_cleanup_without_losing_timer_ownership(self):
-        class Manager:
-            progress_attempts = 0
-            removed = []
-
-            def progress_end(self):
-                self.progress_attempts += 1
-                if self.progress_attempts == 1:
-                    raise OSError("progress busy")
-
-            def event_timer_remove(self, timer):
-                self.removed.append(timer)
-
-        job = TopologyInferenceJob(
-            QCProject(uuid4(), "0.2"),
-            uuid4(),
-            TopologyInferenceSettings(),
-        )
-        manager = Manager()
-        timer = SimpleNamespace()
-        job.attach_ui(manager, timer)
-        job.mark_progress_started()
-
-        with self.assertRaisesRegex(OSError, "progress busy"):
-            job.release_ui()
-        self.assertTrue(job.timer_pending)
-
-        job.release_ui()
-        self.assertFalse(job.timer_pending)
-        self.assertEqual(manager.removed, [timer])
+    def test_external_gui_cleanup_retries_without_losing_job_ownership(self):
+        from unittest.mock import Mock
+        from chemblender_prepare.gui import PrepareWindow
+        from cbq_core.worker_protocol import WorkerResult, WorkerStatus
+        job = SimpleNamespace(poll=Mock(return_value=WorkerResult(uuid4(), WorkerStatus.SUCCESS)),
+                              process=SimpleNamespace(poll=Mock(return_value=0)),
+                              close=Mock(side_effect=[OSError("cleanup busy"), None]))
+        window = PrepareWindow.__new__(PrepareWindow)
+        window.job, window.closing = job, False
+        window.root, window.bar, window.run_button, window.status, window.report = (Mock() for _ in range(5))
+        with self.assertRaisesRegex(OSError, "cleanup busy"):
+            window.poll()
+        self.assertIs(window.job, job)
+        window.root.after.assert_called_once_with(100, window.poll)
+        window.poll()
+        self.assertIsNone(window.job)
+        self.assertEqual(job.close.call_count, 2)
 
 
 if __name__ == "__main__":

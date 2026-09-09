@@ -8,30 +8,28 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    BasisConvention,
-    BasisFunctionKind,
-    BasisSet,
-    BasisShell,
-    CalculationRecord,
-    CalculationStatus,
-    DatasetStatus,
-    ImportBatch,
-    OrbitalChannel,
-    OrbitalKind,
-    OrbitalSet,
-    ParserReport,
-    QCProject,
-    Spectrum,
-    SpectrumKind,
-    SpectrumProfile,
-    Structure,
-    VibrationalModeSet,
-    open_project,
-    save_project,
-)
-from ChemBlender.core.sidecar import SidecarIntegrityError
+from cbq_core.model import ArrayData
+from cbq_core.model import BasisConvention
+from cbq_core.model import BasisFunctionKind
+from cbq_core.model import BasisSet
+from cbq_core.model import BasisShell
+from cbq_core.model import CalculationRecord
+from cbq_core.model import CalculationStatus
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ImportBatch
+from cbq_core.model import OrbitalChannel
+from cbq_core.model import OrbitalKind
+from cbq_core.model import OrbitalSet
+from cbq_core.model import ParserReport
+from cbq_core.model import QCProject
+from cbq_core.model import Spectrum
+from cbq_core.model import SpectrumKind
+from cbq_core.model import SpectrumProfile
+from cbq_core.model import Structure
+from cbq_core.model import VibrationalModeSet
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from cbq_core.sidecar import SidecarIntegrityError
 from tests.test_sidecar_storage import DATASET_ID, PROVENANCE_ID, sample_project, write_manifest
 
 

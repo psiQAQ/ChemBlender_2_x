@@ -5,15 +5,18 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from uuid import UUID
 
-from ChemBlender.core import QCProject, open_project, save_project
-from ChemBlender.core.worker_protocol import WorkerRequest, WorkerStatus, write_request
+from cbq_core.model import QCProject
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from cbq_core.worker_protocol import WorkerRequest
+from cbq_core.worker_protocol import WorkerStatus
+from cbq_core.worker_protocol import write_request
 
-from worker.qcengine_operation import (
-    QCSchemaExecutionError,
-    execute_qcschema,
-    qcschema_compute_operation,
-)
-from worker.runner import default_registry, run_request
+from chemblender_prepare.worker.qcengine_operation import QCSchemaExecutionError
+from chemblender_prepare.worker.qcengine_operation import execute_qcschema
+from chemblender_prepare.worker.qcengine_operation import qcschema_compute_operation
+from chemblender_prepare.worker.runner import default_registry
+from chemblender_prepare.worker.runner import run_request
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "qcschema"
@@ -87,7 +90,7 @@ class QCSchemaExecutionTests(unittest.TestCase):
             "return_version": 2,
             "task_config": {},
         }
-        with patch("worker.qcengine_operation._load_qcengine_compute", side_effect=ImportError):
+        with patch("chemblender_prepare.worker.qcengine_operation._load_qcengine_compute", side_effect=ImportError):
             with self.assertRaises(QCSchemaExecutionError) as caught:
                 execute_qcschema(request)
         self.assertEqual(caught.exception.code, "dependency_missing")
@@ -180,7 +183,7 @@ class QCSchemaExecutionTests(unittest.TestCase):
                 },
             )()
             with patch(
-                "worker.qcengine_operation._load_qcengine_compute",
+                "chemblender_prepare.worker.qcengine_operation._load_qcengine_compute",
                 return_value=lambda *args, **kwargs: atomic_result_v2(),
             ):
                 output = qcschema_compute_operation(Context(), request)
@@ -218,7 +221,7 @@ class QCSchemaExecutionTests(unittest.TestCase):
             write_request(request_path, request)
 
             with patch(
-                "worker.qcengine_operation._load_qcengine_compute",
+                "chemblender_prepare.worker.qcengine_operation._load_qcengine_compute",
                 return_value=lambda *args, **kwargs: atomic_result_v2(),
             ):
                 result = run_request(request_path, root / "success.json", default_registry())
@@ -237,7 +240,7 @@ class QCSchemaExecutionTests(unittest.TestCase):
                 "error": {"error_type": "input_error", "error_message": "missing program"},
             }
             with patch(
-                "worker.qcengine_operation._load_qcengine_compute",
+                "chemblender_prepare.worker.qcengine_operation._load_qcengine_compute",
                 return_value=lambda *args, **kwargs: failed,
             ):
                 result = run_request(request_path, root / "failed.json", default_registry())
@@ -247,7 +250,7 @@ class QCSchemaExecutionTests(unittest.TestCase):
 
             cancel_path = root / "cancel"
             cancel_path.touch()
-            with patch("worker.qcengine_operation._load_qcengine_compute") as load:
+            with patch("chemblender_prepare.worker.qcengine_operation._load_qcengine_compute") as load:
                 result = run_request(
                     request_path,
                     root / "cancelled.json",

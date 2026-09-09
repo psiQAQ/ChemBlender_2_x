@@ -65,6 +65,7 @@ class FileHandlerContractTests(unittest.TestCase):
         self.bpy = _fake_bpy()
         self.modules = patch.dict(sys.modules, {"bpy": self.bpy})
         self.modules.start()
+        self.addCleanup(self.modules.stop)
 
     def tearDown(self):
         module = sys.modules.get(MODULE_NAME)
@@ -74,68 +75,26 @@ class FileHandlerContractTests(unittest.TestCase):
         sys.modules.pop(MODULE_NAME, None)
         _FileHandler.is_registered = False
 
-    def test_handlers_delegate_to_quick_import_with_available_builtin_extensions(self):
+    def test_handlers_delegate_only_cbq_to_reviewed_import(self):
         module = importlib.import_module(MODULE_NAME)
-        from ChemBlender.runtime.reader_api_bridge import (
-            get_reader_plugin_registry,
-        )
-
-        expected = ";".join(
-            sorted(
-                {
-                    extension.lower()
-                    for descriptor in get_reader_plugin_registry().descriptors
-                    if descriptor.plugin_id == "chemblender.builtin"
-                    and descriptor.availability.available
-                    for extension in descriptor.extensions
-                }
-            )
-        )
-
-        self.assertTrue(expected)
-        self.assertNotIn("*", expected)
-        for extension in (".com", ".gjf", ".inp"):
-            self.assertIn(extension, expected.split(";"))
-        self.assertEqual(
-            tuple(cls.__name__ for cls in module.FILE_HANDLER_CLASSES),
-            (
-                "CHEMBLENDER_FH_view_3d_window",
-                "CHEMBLENDER_FH_project_browser",
-            ),
-        )
+        self.assertEqual(tuple(cls.__name__ for cls in module.FILE_HANDLER_CLASSES),
+            ("CHEMBLENDER_FH_view_3d_window", "CHEMBLENDER_FH_project_browser"))
         for cls in module.FILE_HANDLER_CLASSES:
-            self.assertEqual(
-                cls.bl_import_operator,
-                "chemblender.quick_import",
-            )
-            self.assertEqual(cls.bl_file_extensions, expected)
+            self.assertEqual(cls.bl_import_operator, "chemblender.import_cbq")
+            self.assertEqual(cls.bl_file_extensions, ".cbq")
 
-    def test_extension_projection_filters_and_normalizes_controlled_descriptors(self):
-        module = importlib.import_module(MODULE_NAME)
-        available = SimpleNamespace(available=True)
-        unavailable = SimpleNamespace(available=False)
-        descriptors = (
-            SimpleNamespace(
-                plugin_id="chemblender.builtin",
-                availability=available,
-                extensions=("XYZ", ".cube", ".XYZ", "*.wild", "../bad"),
-            ),
-            SimpleNamespace(
-                plugin_id="chemblender.builtin",
-                availability=unavailable,
-                extensions=(".cif",),
-            ),
-            SimpleNamespace(
-                plugin_id="org.example.external",
-                availability=available,
-                extensions=(".external",),
-            ),
-        )
-
-        self.assertEqual(
-            module._builtin_extension_string(descriptors),
-            ".cube;.xyz",
-        )
+    def test_handlers_do_not_load_readers_or_scientific_dependencies(self):
+        import builtins
+        original = builtins.__import__
+        def guarded(name, *args, **kwargs):
+            if name.split(".")[0] in {"chemblender_prepare", "rdkit", "gemmi"}:
+                raise AssertionError("unexpected parser import: " + name)
+            return original(name, *args, **kwargs)
+        with patch.object(builtins, "__import__", side_effect=guarded):
+            module = importlib.import_module(MODULE_NAME)
+            module.register()
+            module.unregister()
+        self.assertEqual(self.bpy.registered, [])
 
     def test_handlers_accept_only_their_view3d_region_pair(self):
         module = importlib.import_module(MODULE_NAME)
@@ -270,16 +229,10 @@ class FileHandlerContractTests(unittest.TestCase):
         self.bpy = _fake_bpy(file_handler=False)
         self.modules = patch.dict(sys.modules, {"bpy": self.bpy})
         self.modules.start()
+        self.addCleanup(self.modules.stop)
 
-        from ChemBlender.runtime import reader_api_bridge
-
-        with patch.object(
-            reader_api_bridge,
-            "get_reader_plugin_registry",
-            side_effect=AssertionError("registry must not be accessed"),
-        ):
-            module = importlib.import_module(MODULE_NAME)
-            module.register()
+        module = importlib.import_module(MODULE_NAME)
+        module.register()
 
         self.assertEqual(module.FILE_HANDLER_CLASSES, ())
         self.assertEqual(self.bpy.registered, [])

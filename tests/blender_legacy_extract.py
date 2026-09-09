@@ -129,7 +129,8 @@ def create_current_structure_view():
     import numpy
     from uuid import uuid4
 
-    from ChemBlender.core import ArrayData, Structure
+    from cbq_core.model import ArrayData
+    from cbq_core.model import Structure
     from ChemBlender.views import StructureViewSettings, create_structure_view
 
     return create_structure_view(
@@ -152,9 +153,7 @@ def create_current_structure_view():
 def main():
     import ChemBlender
 
-    if bpy.data.filepath:
-        ChemBlender.register()
-    elif MODE == "synthetic":
+    if MODE == "synthetic":
         create_ambiguous_legacy_object()
     elif MODE == "current":
         current = create_current_structure_view()
@@ -163,10 +162,12 @@ def main():
         create_current_structure_view()
         create_ambiguous_legacy_object()
     before = datablock_names()
-    from ChemBlender.legacy import detect_legacy_scene, extract_legacy_objects
+    from chemblender_prepare.legacy import detect_legacy_scene, extract_legacy_objects
 
     detection = detect_legacy_scene()
     report = extract_legacy_objects(detection)
+    assert not hasattr(bpy.types.Object, "cif_original")
+    assert not hasattr(bpy.types.Object, "cif_current")
     after = datablock_names()
     assert before == after, (before, after)
     if bpy.data.filepath:

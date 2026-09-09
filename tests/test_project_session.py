@@ -6,8 +6,10 @@ from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
 
-from ChemBlender.core import ProjectSession, close_session, create_session
-from ChemBlender.core.model import QCProject
+from cbq_core.session import ProjectSession
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from cbq_core.model import QCProject
 
 
 OWNER_MARKER = ".chemblender-session-owner"
@@ -46,7 +48,7 @@ class ProjectSessionTests(unittest.TestCase):
             (session.temporary_root / OWNER_MARKER).read_text(encoding="utf-8"),
             f"{session.id}\n",
         )
-        self.assertEqual(session.project.schema_version, "1.0")
+        self.assertEqual(session.project.schema_version, "1.1")
         self.assertIsNone(session.sidecar_path)
         self.assertIsNone(session.active_entity_id)
         self.assertIsNone(session.active_view_object_name)

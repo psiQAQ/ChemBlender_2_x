@@ -13,30 +13,26 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    AtomFrameProperty,
-    DatasetStatus,
-    DiagnosticSeverity,
-    DiagnosticValue,
-    Grid3D,
-    FrameSet,
-    ImportBatch,
-    ImportDiagnostic,
-    PeriodicSiteData,
-    QCProject,
-    QualityStatus,
-    SourceRecord,
-    SourceRevision,
-    Structure,
-    SymmetryResult,
-)
-from ChemBlender.core.formats.sdf import parse_sdf
-from ChemBlender.core.formats.mol2 import parse_mol2
-from ChemBlender.core.import_pipeline.conformer_grouping import (
-    accept_conformer_group,
-    suggest_conformer_groups,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomFrameProperty
+from cbq_core.model import DatasetStatus
+from cbq_core.model import DiagnosticSeverity
+from cbq_core.model import DiagnosticValue
+from cbq_core.model import Grid3D
+from cbq_core.model import FrameSet
+from cbq_core.model import ImportBatch
+from cbq_core.model import ImportDiagnostic
+from cbq_core.model import PeriodicSiteData
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
+from cbq_core.model import Structure
+from cbq_core.model import SymmetryResult
+from chemblender_prepare.core.formats.sdf import parse_sdf
+from chemblender_prepare.core.formats.mol2 import parse_mol2
+from chemblender_prepare.core.import_pipeline.conformer_grouping import accept_conformer_group
+from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 from ChemBlender.ui.project_browser.model import (
     BrowserMode,
     BrowserRow,
@@ -946,13 +942,15 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         )
         self.modules = patch.dict(
             sys.modules,
-            {"bpy": self.fake_bpy, "bpy.props": self.fake_props},
+            {"bpy": self.fake_bpy, "bpy.props": self.fake_props, "bmesh": ModuleType("bmesh")},
         )
         self.modules.start()
+        self.addCleanup(self.modules.stop)
         for name in (
             "ChemBlender.ui.project_browser.panel",
             "ChemBlender.ui.properties",
-            "ChemBlender.ui.scientific_edit",
+            "ChemBlender.ui.mesh_edit",
+            "ChemBlender.ui.cbq_import",
             "ChemBlender.ui.topology",
         ):
             sys.modules.pop(name, None)
@@ -965,7 +963,8 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         for name in (
             "ChemBlender.ui.project_browser.panel",
             "ChemBlender.ui.properties",
-            "ChemBlender.ui.scientific_edit",
+            "ChemBlender.ui.mesh_edit",
+            "ChemBlender.ui.cbq_import",
             "ChemBlender.ui.topology",
         ):
             sys.modules.pop(name, None)
@@ -1013,9 +1012,10 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         instance.layout = Layout()
         with (
             patch.object(panel, "get_scene_session", return_value=session),
-            patch.object(panel, "get_quick_import_state", return_value=state),
+            patch.object(panel, "get_project_ui_state", return_value=state),
             patch.object(panel, "presentation_view_records", return_value=()),
             patch.object(panel, "refresh_project_browser", side_effect=refresh),
+            patch("ChemBlender.ui.cbq_import.draw_cbq_import"),
         ):
             for _ in range(2):
                 with self.assertRaises(DrawReachedLayout):
@@ -1045,7 +1045,10 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             self.assertEqual(callbacks, set())
 
     def test_selective_constraints_panel_accepts_saved_lazy_arrays(self):
-        from ChemBlender.core import close_project, open_project, parse_poscar, save_project
+        from cbq_core.sidecar import close_project
+        from cbq_core.sidecar import open_project
+        from chemblender_prepare.core.formats.poscar import parse_poscar
+        from cbq_core.sidecar import save_project
 
         properties = importlib.import_module("ChemBlender.ui.properties")
         project = QCProject(id=uuid4(), schema_version="1.0")
@@ -1227,7 +1230,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
                 operation.filepath = selected
                 with (
                     patch.object(panel, "get_scene_session", return_value=session),
-                    patch.object(panel, "get_quick_import_state", return_value=state),
+                    patch.object(panel, "get_project_ui_state", return_value=state),
                     patch.object(panel, "relink_project_session_for_scenes",
                                  return_value=service_result) as relink,
                     patch.object(panel, "_record_result") as record,
@@ -1283,7 +1286,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(panel, "get_scene_session", return_value=session),
             patch.object(
                 panel,
-                "get_quick_import_state",
+                "get_project_ui_state",
                 return_value=state,
             ),
             patch.object(panel, "relink_project_session_for_scenes") as relink,
@@ -1351,7 +1354,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(panel, "get_scene_session", return_value=session),
             patch.object(
                 panel,
-                "get_quick_import_state",
+                "get_project_ui_state",
                 return_value=state,
             ),
         ):
@@ -1382,7 +1385,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(panel, "get_scene_session", return_value=session),
             patch.object(
                 panel,
-                "get_quick_import_state",
+                "get_project_ui_state",
                 return_value=state,
             ),
         ):
@@ -1400,7 +1403,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(panel, "get_scene_session", return_value=session),
             patch.object(
                 panel,
-                "get_quick_import_state",
+                "get_project_ui_state",
                 return_value=state,
             ),
         ):
@@ -1440,7 +1443,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(panel, "get_scene_session", return_value=session),
             patch.object(
                 panel,
-                "get_quick_import_state",
+                "get_project_ui_state",
                 return_value=state,
             ),
         ):
@@ -1466,7 +1469,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
                 ),
                 patch.object(
                     panel,
-                    "get_quick_import_state",
+                    "get_project_ui_state",
                     return_value=state,
                 ),
             ):
@@ -1510,7 +1513,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(panel, "get_scene_session", return_value=session),
             patch.object(
                 panel,
-                "get_quick_import_state",
+                "get_project_ui_state",
                 return_value=state,
             ),
             patch.object(panel, "_revision_view_targets") as targets,
@@ -1545,7 +1548,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(panel, "get_scene_session", return_value=session),
             patch.object(
                 panel,
-                "get_quick_import_state",
+                "get_project_ui_state",
                 return_value=state,
             ),
             patch.object(
@@ -1800,7 +1803,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(panel, "get_scene_session", return_value=session),
             patch.object(
                 panel,
-                "get_quick_import_state",
+                "get_project_ui_state",
                 return_value=state,
             ),
             patch.object(
@@ -1858,14 +1861,9 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
                 declared_hall_symbol="P 1",
             ),
         )
-        with patch.object(
-            properties,
-            "symmetry_availability",
-            return_value=(False, "spglib is not installed"),
-        ):
-            sections = properties.crystal_symmetry_property_sections(
-                structure
-            )
+        with patch.dict(sys.modules, {"spglib": None}):
+            sections = properties.crystal_symmetry_property_sections(structure)
+        self.assertFalse(hasattr(properties, "derive_structure_symmetry"))
         self.assertEqual(
             sections["declared"],
             (
@@ -1879,11 +1877,9 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             sections["derived"][0],
             ("International", "Not derived"),
         )
-        self.assertFalse(sections["derive_available"])
-        self.assertIn("not installed", sections["dependency_reason"])
         self.assertEqual(
             sections["comparison"][0],
-            ("Status", "Not derived"),
+            ("Status", "Not included in CBQ"),
         )
 
     def test_standardized_structure_view_keeps_source_view(self):
@@ -2090,53 +2086,52 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         self.assertTrue(source_view.selected)
         self.assertIs(context.view_layer.objects.active, source_view)
 
-    def test_symmetry_derivation_invalidates_browser_projection(self):
+    def test_prepared_cbq_import_invalidates_browser_projection(self):
+        from dataclasses import asdict
+        from cbq_core.session import create_session, close_session
+        from cbq_core.sidecar import save_project
+        from cbq_core.package_import import preview_package
         properties = importlib.import_module("ChemBlender.ui.properties")
-        structure = SimpleNamespace(id=STRUCTURE_ID, periodic=object())
-        committed = []
-        dirty = []
-        project = SimpleNamespace(
-            structures={STRUCTURE_ID: structure},
-            symmetry_results={},
-            commit=committed.append,
-        )
-        session = SimpleNamespace(
-            project=project,
-            active_entity_id=STRUCTURE_ID,
-            mark_dirty=dirty.append,
-        )
-        context = SimpleNamespace(scene=object())
-        operation = properties.CHEMBLENDER_OT_derive_crystal_symmetry()
-        operation.symprec = 2.0e-5
-        operation.angle_tolerance = 0.5
-        batch = object()
-        with (
-            patch.object(
-                properties,
-                "get_scene_session",
-                return_value=session,
-            ),
-            patch.object(properties, "Structure", SimpleNamespace),
-            patch.object(
-                properties,
-                "symmetry_availability",
-                return_value=(True, ""),
-            ),
-            patch.object(
-                properties,
-                "derive_structure_symmetry",
-                return_value=batch,
-            ),
-            patch.object(properties, "advance_browser_revision") as advance,
-        ):
-            outcome = operation.execute(context)
+        importer = importlib.import_module("ChemBlender.ui.cbq_import")
+        sessions = importlib.import_module("ChemBlender.ui.session")
+        self.fake_bpy.app = SimpleNamespace(handlers=SimpleNamespace(
+            persistent=lambda callback: callback, load_pre=[]))
+        properties.register()
+        self.addCleanup(properties.unregister)
+        with TemporaryDirectory() as directory:
+            session = create_session(temp_parent=Path(directory))
+            try:
+                source = Structure(id=STRUCTURE_ID, revision="prepared-r1",
+                    atomic_numbers=(8,), coordinates=ArrayData(
+                        numpy.zeros((1, 3)), ("atom", "xyz"), "angstrom"))
+                package = QCProject(id=uuid4(), schema_version="1.1")
+                package.commit(ImportBatch(structures=(source,)))
+                path = Path(directory) / "prepared.cbq"
+                save_project(path, package)
+                document = {"path": str(path), **asdict(preview_package(session, path))}
+                settings = SimpleNamespace(input_path=str(path),
+                    preview_json=json.dumps(document), allow_duplicate_sources=False)
+                scene = SimpleNamespace(chemblender_cbq=settings,
+                    chemblender_project_browser=SimpleNamespace(active_entity_id=""))
+                self.fake_bpy.data = SimpleNamespace(scenes=[scene], filepath="")
+                state = properties.get_project_ui_state(session)
+                before = state.browser_revision
+                action = importer.CHEMBLENDER_OT_import_cbq()
+                action.filepath = ""
+                with patch.object(sessions, "get_scene_session", return_value=session):
+                    outcome = action.execute(SimpleNamespace(scene=scene))
+                self.assertEqual(outcome, {"FINISHED"}, action.last_report)
+                self.assertEqual(state.browser_revision, before + 1)
+                self.assertEqual(session.active_entity_id, source.id)
+                self.assertEqual(scene.chemblender_project_browser.active_entity_id, str(source.id))
+                self.assertEqual(settings.preview_json, "")
+                numpy.testing.assert_array_equal(
+                    session.project.structures[source.id].coordinates.values,
+                    source.coordinates.values)
+            finally:
+                close_session(session)
 
-        self.assertEqual(outcome, {"FINISHED"})
-        self.assertEqual(committed, [batch])
-        self.assertEqual(dirty, ["symmetry"])
-        advance.assert_called_once_with(session)
-
-    def test_topology_and_scientific_edit_classes_have_explicit_roots(self):
+    def test_topology_and_mesh_edit_classes_have_explicit_roots(self):
         registration = importlib.import_module(
             "ChemBlender.runtime.registration"
         )
@@ -2147,14 +2142,14 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             importlib.import_module(name)
             for name in (
                 "ChemBlender.ui.topology",
-                "ChemBlender.ui.scientific_edit",
+                "ChemBlender.ui.mesh_edit",
             )
         )
 
         self.assertTrue(
             {
                 ".ui.topology",
-                ".ui.scientific_edit",
+                ".ui.mesh_edit",
             }.issubset(registration.REGISTER_MODULE_NAMES)
         )
         for module in modules:
@@ -2174,8 +2169,8 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
     def test_panel_ignores_stale_ui_module_aliases(self):
         ui_package = importlib.import_module("ChemBlender.ui")
         stale_topology = ModuleType("ChemBlender.ui.topology")
-        stale_scientific_edit = ModuleType(
-            "ChemBlender.ui.scientific_edit"
+        stale_biological = ModuleType(
+            "ChemBlender.ui.mesh_edit"
         )
         with (
             patch.object(
@@ -2186,8 +2181,8 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             ),
             patch.object(
                 ui_package,
-                "scientific_edit",
-                stale_scientific_edit,
+                "biological",
+                stale_biological,
                 create=True,
             ),
         ):
@@ -2196,7 +2191,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             )
 
         self.assertIsNot(panel._topology, stale_topology)
-        self.assertIsNot(panel._scientific_edit, stale_scientific_edit)
+        self.assertIsNot(panel._biological, stale_biological)
         self.assertTrue(
             hasattr(
                 panel._topology,
@@ -2205,8 +2200,8 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
         )
         self.assertTrue(
             hasattr(
-                panel._scientific_edit,
-                "CHEMBLENDER_OT_apply_scientific_edits",
+                panel._biological,
+                "CHEMBLENDER_OT_select_biological_atoms",
             )
         )
 
@@ -2589,7 +2584,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(panel, "get_scene_session", return_value=session),
             patch.object(
                 panel,
-                "get_quick_import_state",
+                "get_project_ui_state",
                 return_value=SimpleNamespace(browser_revision=1),
             ),
             patch.object(panel, "build_browser_rows", return_value=(empty,)),
@@ -2646,7 +2641,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(panel, "get_scene_session", return_value=session),
             patch.object(
                 panel,
-                "get_quick_import_state",
+                "get_project_ui_state",
                 return_value=SimpleNamespace(browser_revision=1),
             ),
             patch.object(panel, "build_browser_rows", return_value=rows),
@@ -2712,7 +2707,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
                 ),
                 patch.object(
                     panel,
-                    "get_quick_import_state",
+                    "get_project_ui_state",
                     return_value=SimpleNamespace(browser_revision=1),
                 ),
             ):
@@ -2777,7 +2772,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(panel, "get_scene_session", return_value=session),
             patch.object(
                 panel,
-                "get_quick_import_state",
+                "get_project_ui_state",
                 return_value=SimpleNamespace(browser_revision=1),
             ),
             patch.object(
@@ -2877,7 +2872,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
                     ),
                     patch.object(
                         panel,
-                        "get_quick_import_state",
+                        "get_project_ui_state",
                         return_value=SimpleNamespace(browser_revision=1),
                     ),
                     patch.object(
@@ -3024,11 +3019,12 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
     def test_single_revision_helper_invalidates_browser_state(self):
         properties = importlib.import_module("ChemBlender.ui.properties")
         with TemporaryDirectory() as directory:
-            from ChemBlender.core import close_session, create_session
+            from cbq_core.session import close_session
+            from cbq_core.session import create_session
 
             session = create_session(temp_parent=Path(directory))
             try:
-                state = properties.get_quick_import_state(session)
+                state = properties.get_project_ui_state(session)
                 self.assertEqual(state.browser_revision, 0)
                 self.assertEqual(
                     properties.advance_browser_revision(session),
@@ -3040,7 +3036,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
                 )
                 self.assertEqual(state.browser_revision, 2)
             finally:
-                properties.clear_quick_import_state(session)
+                properties.clear_project_ui_state(session)
                 close_session(session)
 
     def test_scene_property_registration_is_foreign_safe_and_reversible(self):

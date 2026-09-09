@@ -8,43 +8,39 @@ from uuid import UUID, uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    CalculationRecord,
-    CalculationStatus,
-    DiagnosticSeverity,
-    DiagnosticValue,
-    ImportBatch,
-    ImportDiagnostic,
-    MolecularRecord,
-    ParserReport,
-    ProjectSession,
-    ProvenanceRecord,
-    QCProject,
-    QualityStatus,
-    SourceRecord,
-    SourceRevision,
-    Structure,
-    close_project,
-    close_session,
-    create_session,
-    open_project,
-)
-from ChemBlender.core.import_pipeline import (
-    ConflictDecision,
-    DuplicateAction,
-    GroupingDecision,
-    ImportCommitDecisions,
-    ImportCommitResult,
-    ImportPreview,
-    SourcePreview,
-    StagedImportSession,
-    commit_import_preview,
-    detect_import_conflicts,
-    suggest_source_groups,
-)
-from ChemBlender.core.import_pipeline import transaction as transaction_module
-from ChemBlender.core.storage.publication import PublicationCancelled
+from cbq_core.model import ArrayData
+from cbq_core.model import CalculationRecord
+from cbq_core.model import CalculationStatus
+from cbq_core.model import DiagnosticSeverity
+from cbq_core.model import DiagnosticValue
+from cbq_core.model import ImportBatch
+from cbq_core.model import ImportDiagnostic
+from cbq_core.model import MolecularRecord
+from cbq_core.model import ParserReport
+from cbq_core.session import ProjectSession
+from cbq_core.model import ProvenanceRecord
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
+from cbq_core.model import Structure
+from cbq_core.sidecar import close_project
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from cbq_core.sidecar import open_project
+from chemblender_prepare.core.import_pipeline import ConflictDecision
+from chemblender_prepare.core.import_pipeline import DuplicateAction
+from chemblender_prepare.core.import_pipeline import GroupingDecision
+from chemblender_prepare.core.import_pipeline import ImportCommitDecisions
+from chemblender_prepare.core.import_pipeline import ImportCommitResult
+from chemblender_prepare.core.import_pipeline import ImportPreview
+from chemblender_prepare.core.import_pipeline import SourcePreview
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import commit_import_preview
+from chemblender_prepare.core.import_pipeline import detect_import_conflicts
+from chemblender_prepare.core.import_pipeline import suggest_source_groups
+from chemblender_prepare.core.import_pipeline import transaction as transaction_module
+from cbq_core.storage.publication import PublicationCancelled
 
 
 class ProjectTransactionTests(unittest.TestCase):

@@ -4,17 +4,15 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from worker.external_program import (
-    CRITIC2_ADAPTER,
-    MULTIWFN_ADAPTER,
-    ExternalInvocation,
-    ExternalRunStatus,
-    critic2_invocation,
-    external_run_metadata,
-    multiwfn_invocation,
-    probe_program_version,
-    run_external_program,
-)
+from chemblender_prepare.worker.external_program import CRITIC2_ADAPTER
+from chemblender_prepare.worker.external_program import MULTIWFN_ADAPTER
+from chemblender_prepare.worker.external_program import ExternalInvocation
+from chemblender_prepare.worker.external_program import ExternalRunStatus
+from chemblender_prepare.worker.external_program import critic2_invocation
+from chemblender_prepare.worker.external_program import external_run_metadata
+from chemblender_prepare.worker.external_program import multiwfn_invocation
+from chemblender_prepare.worker.external_program import probe_program_version
+from chemblender_prepare.worker.external_program import run_external_program
 
 
 def script(root, body):

@@ -4,19 +4,15 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    DeclaredSymmetry,
-    PeriodicSiteData,
-    Structure,
-    SymmetryResult,
-)
-from ChemBlender.core.symmetry_service import (
-    derive_structure_symmetry,
-    symmetry_availability,
-    symmetry_comparison_rows,
-)
-from ChemBlender.core.spglib_adapter import SpglibDependencyError
+from cbq_core.model import ArrayData
+from cbq_core.model import DeclaredSymmetry
+from cbq_core.model import PeriodicSiteData
+from cbq_core.model import Structure
+from cbq_core.model import SymmetryResult
+from chemblender_prepare.core.symmetry_service import derive_structure_symmetry
+from chemblender_prepare.core.symmetry_service import symmetry_availability
+from chemblender_prepare.core.symmetry_service import symmetry_comparison_rows
+from chemblender_prepare.core.spglib_adapter import SpglibDependencyError
 
 
 def _array(values, dims):
@@ -78,7 +74,7 @@ def _derived(structure_id):
 class SymmetryServiceTests(unittest.TestCase):
     def test_missing_dependency_is_a_nonfatal_capability_state(self):
         with patch(
-            "ChemBlender.core.spglib_adapter._spglib",
+            "chemblender_prepare.core.spglib_adapter._spglib",
             side_effect=SpglibDependencyError("spglib is missing"),
         ):
             available, reason = symmetry_availability()
@@ -88,7 +84,7 @@ class SymmetryServiceTests(unittest.TestCase):
 
     def test_broken_native_dependency_is_unavailable(self):
         with patch(
-            "ChemBlender.core.spglib_adapter._spglib",
+            "chemblender_prepare.core.spglib_adapter._spglib",
             side_effect=OSError("spglib DLL load failed"),
         ):
             available, reason = symmetry_availability()
@@ -100,7 +96,7 @@ class SymmetryServiceTests(unittest.TestCase):
         source = _structure()
         batch = object()
         with patch(
-            "ChemBlender.core.symmetry_service.derive_symmetry",
+            "chemblender_prepare.core.symmetry_service.derive_symmetry",
             return_value=batch,
         ) as derive:
             result = derive_structure_symmetry(

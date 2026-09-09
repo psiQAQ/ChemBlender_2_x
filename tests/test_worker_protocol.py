@@ -10,39 +10,34 @@ from uuid import UUID
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    BiologicalHierarchy,
-    ChemicalAnnotation,
-    DatasetStatus,
-    ExternalReference,
-    ImportBatch,
-    MolecularRecord,
-    PropertyDataset,
-    QCProject,
-    Structure,
-    open_project,
-    save_project,
-)
-from ChemBlender.worker_client import WorkerProcessError, start_worker
-from ChemBlender.core.worker_protocol import (
-    EntityReference,
-    ProtocolError,
-    WorkerRequest,
-    WorkerResult,
-    WorkerStatus,
-    read_request,
-    read_result,
-    write_request,
-    write_result,
-)
-from worker.runner import (
-    OperationOutput,
-    OperationRegistry,
-    _batch_references,
-    _validate_references,
-    run_request,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import BiologicalHierarchy
+from cbq_core.model import ChemicalAnnotation
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ExternalReference
+from cbq_core.model import ImportBatch
+from cbq_core.model import MolecularRecord
+from cbq_core.model import PropertyDataset
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from chemblender_prepare.worker_client import WorkerProcessError
+from chemblender_prepare.worker_client import start_worker
+from cbq_core.worker_protocol import EntityReference
+from cbq_core.worker_protocol import ProtocolError
+from cbq_core.worker_protocol import WorkerRequest
+from cbq_core.worker_protocol import WorkerResult
+from cbq_core.worker_protocol import WorkerStatus
+from cbq_core.worker_protocol import read_request
+from cbq_core.worker_protocol import read_result
+from cbq_core.worker_protocol import write_request
+from cbq_core.worker_protocol import write_result
+from chemblender_prepare.worker.runner import OperationOutput
+from chemblender_prepare.worker.runner import OperationRegistry
+from chemblender_prepare.worker.runner import _batch_references
+from chemblender_prepare.worker.runner import _validate_references
+from chemblender_prepare.worker.runner import run_request
 
 
 PROJECT_ID = UUID("10000000-0000-0000-0000-000000000001")
@@ -78,6 +73,44 @@ def request(project_locator="project.cbq", *, inputs=()):
 
 
 class WorkerProtocolTests(unittest.TestCase):
+    def test_worker_start_closes_logs_on_partial_open_and_fatal_launch_failure(self):
+        from contextlib import ExitStack
+        original_open = Path.open
+        for phase in ("stderr", "launch", "fatal"):
+            with self.subTest(phase=phase), TemporaryDirectory() as folder, ExitStack() as cleanup:
+                streams = []
+                def opened(path, *args, **kwargs):
+                    if phase == "stderr" and path.name == "stderr.log":
+                        raise OSError("stderr unavailable")
+                    stream = original_open(path, *args, **kwargs)
+                    if path.name in {"stdout.log", "stderr.log"}:
+                        streams.append(stream)
+                        cleanup.callback(stream.close)
+                    return stream
+                error = KeyboardInterrupt("interrupted launch") if phase == "fatal" else OSError("launch failed")
+                with patch.object(Path, "open", opened), \
+                        patch("chemblender_prepare.worker_client.subprocess.Popen", side_effect=error) as launch:
+                    with self.assertRaises(KeyboardInterrupt if phase == "fatal" else OSError):
+                        start_worker(request(), folder, python_executable=sys.executable)
+                self.assertTrue(streams)
+                self.assertTrue(all(stream.closed for stream in streams))
+                if phase == "stderr":
+                    launch.assert_not_called()
+                self.assertFalse(list(Path(folder).rglob("result.json")))
+
+    def test_child_can_write_logs_after_parent_closes_launch_handles(self):
+        with TemporaryDirectory() as folder:
+            handle = start_worker(request(), folder, python_executable=sys.executable, module="this")
+            self.assertTrue(handle._stdout.closed)
+            self.assertTrue(handle._stderr.closed)
+            try:
+                with self.assertRaisesRegex(WorkerProcessError, "without a result"):
+                    handle.wait(timeout=10)
+                self.assertEqual(handle.process.returncode, 0)
+                self.assertGreater(handle.stdout_path.stat().st_size, 0)
+            finally:
+                handle.terminate()
+
     def test_generic_worker_inventories_include_molecular_records(self):
         record = MolecularRecord(
             id=UUID("50000000-0000-0000-0000-000000000005"),
@@ -173,7 +206,7 @@ class WorkerProtocolTests(unittest.TestCase):
             write_result(path, original)
             previous = path.read_bytes()
             with patch(
-                "ChemBlender.core.worker_protocol.os.replace",
+                "cbq_core.worker_protocol.os.replace",
                 side_effect=OSError("disk full"),
             ):
                 with self.assertRaises(OSError):
@@ -359,7 +392,7 @@ class WorkerProtocolTests(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "worker.runner",
+                    "chemblender_prepare.worker.runner",
                     str(request_path),
                     str(result_path),
                 ],
@@ -372,7 +405,7 @@ class WorkerProtocolTests(unittest.TestCase):
 
     def test_default_registry_does_not_import_optional_backends(self):
         code = (
-            "import sys; from worker.runner import default_registry; "
+            "import sys; from chemblender_prepare.worker.runner import default_registry; "
             "registry = default_registry(); "
             "registry.get('wavefunction.mo_grid', '1'); "
             "registry.get('qcschema.compute', '1'); "

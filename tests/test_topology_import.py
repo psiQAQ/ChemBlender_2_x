@@ -6,18 +6,22 @@ from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Event
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData, ImportBatch, Structure, close_project, close_session, create_session,
-    open_project, save_project,
-)
-from ChemBlender.core.import_pipeline import ImportCancelled
-from ChemBlender.ui import topology_import as importer
-from ChemBlender.ui.tasks import Task, TaskWorker
+from cbq_core.model import ArrayData
+from cbq_core.model import ImportBatch
+from cbq_core.model import Structure
+from cbq_core.sidecar import close_project
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from chemblender_prepare.core.import_pipeline import ImportCancelled
+from chemblender_prepare import topology_service as importer
 from tests.test_critic2_paths import FIXTURE, flux_text, BOHR_TO_ANGSTROM
 
 
@@ -68,23 +72,17 @@ class TopologyImportTests(unittest.TestCase):
         self.assertFalse(self.session.dirty)
         self.assertFalse(list(self.session.temporary_root.glob("topology-*")))
 
-    def test_taskworker_commits_parent_and_ordered_paths_once_and_reopens(self):
-        worker = TaskWorker(Task(), lambda cancelled, progress: self.load(is_cancelled=cancelled, progress=progress))
-        worker.start("topology test")
-        self.assertTrue(worker.join(5))
-        worker.raise_if_failed()
+    def test_service_commits_parent_and_ordered_paths_once_and_reopens(self):
+        batch = self.load()
         self.assert_unpublished()
-        batch = worker.result
         self.assertEqual(len(batch.datasets), 2)
         self.assertEqual(batch.datasets[0].paths, ())
         numpy.testing.assert_allclose(batch.datasets[1].paths[0].samples.values, self.samples)
         original_commit = type(self.session.project).commit
         with patch.object(type(self.session.project), "commit", autospec=True,
                           side_effect=original_commit) as commit:
-            importer.commit_topology_batch(self.session, batch)
+            importer.commit_topology_batch(self.session.project, batch)
             commit.assert_called_once()
-        self.assertTrue(self.session.dirty)
-        self.assertEqual(self.session.active_entity_id, batch.datasets[1].id)
         self.assertEqual(batch.provenance[1].parent_ids, (batch.datasets[0].id,))
         self.assertEqual({record.source for record in batch.provenance}, {str(self.cp), str(self.flux)})
         sidecar = self.root / "topology.cbq"
@@ -104,15 +102,15 @@ class TopologyImportTests(unittest.TestCase):
 
     def test_cp_only_can_later_receive_paths_without_replacing_parent(self):
         base = self.load(fluxprint_path=None)
-        importer.commit_topology_batch(self.session, base)
+        importer.commit_topology_batch(self.session.project, base)
         stored = self.session.project.datasets[base.datasets[0].id]
         complete = self.load()
-        importer.commit_topology_batch(self.session, complete)
+        importer.commit_topology_batch(self.session.project, complete)
         self.assertIs(self.session.project.datasets[stored.id], stored)
         self.assertEqual(len(self.session.project.datasets), 2)
         self.assertEqual(len(self.session.project.provenance), 2)
         with self.assertRaisesRegex(ValueError, "already imported"):
-            importer.commit_topology_batch(self.session, complete)
+            importer.commit_topology_batch(self.session.project, complete)
 
     def test_unset_field_and_mismatched_structure_are_rejected(self):
         for kwargs in (
@@ -158,7 +156,7 @@ class TopologyImportTests(unittest.TestCase):
             end_fractional=numpy.zeros(3)), encoding="utf-8")
         self.session.project.commit(ImportBatch(structures=(crystal,)))
         batch = self.load(structure=crystal)
-        importer.commit_topology_batch(self.session, batch)
+        importer.commit_topology_batch(self.session.project, batch)
         path = batch.datasets[-1].paths[0]
         numpy.testing.assert_allclose(path.samples.values, samples @ cell)
         metadata = dict(batch.provenance[-1].parameters)["paths"][0]
@@ -208,7 +206,7 @@ class TopologyImportTests(unittest.TestCase):
                 self.session.project.structures[self.structure.id] = self.structure
                 self.cp.write_bytes(self.cp.read_bytes() + b" ")
             with self.subTest(field=field), self.assertRaisesRegex(ValueError, "changed"):
-                importer.commit_topology_batch(self.session, batch)
+                importer.commit_topology_batch(self.session.project, batch)
             self.assert_unpublished()
 
     def test_invalid_paths_or_cancelled_task_discard_both_graphs(self):
@@ -222,20 +220,17 @@ class TopologyImportTests(unittest.TestCase):
             entered.set()
             release.wait(5)
             return result
-        with patch.object(importer, "parse_critic2_cpreport", side_effect=blocked):
-            worker = TaskWorker(Task(), lambda cancelled, progress: self.load(is_cancelled=cancelled, progress=progress))
-            worker.start("cancellation test")
+        cancelled = Event()
+        with patch.object(importer, "parse_critic2_cpreport", side_effect=blocked), ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(self.load, is_cancelled=cancelled.is_set)
             self.assertTrue(entered.wait(5))
-            worker.request_cancel()
+            cancelled.set()
             release.set()
-            self.assertTrue(worker.join(5))
-        # TaskWorker preserves callback errors; the shared operator recognizes
-        # ImportCancelled and reports cancellation before any publication.
-        self.assertIsInstance(worker.error, ImportCancelled)
-        self.assertIsNone(worker.result)
+            with self.assertRaises(ImportCancelled):
+                future.result(timeout=5)
         batch = self.load()
         with self.assertRaises(ImportCancelled):
-            importer.commit_topology_batch(self.session, batch, is_cancelled=lambda: True)
+            importer.commit_topology_batch(self.session.project, batch, is_cancelled=lambda: True)
         self.assert_unpublished()
 
 

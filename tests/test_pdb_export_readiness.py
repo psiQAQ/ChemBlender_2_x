@@ -5,13 +5,14 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import ArrayData, DatasetStatus, FrameSet, ImportBatch
-from ChemBlender.core.exporters import (
-    pdb_export_readiness,
-    pqr_export_readiness,
-)
-from ChemBlender.core.formats.pdb import parse_pdb
-from ChemBlender.core.formats.pqr import parse_pqr
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import FrameSet
+from cbq_core.model import ImportBatch
+from chemblender_prepare.core.exporters import pdb_export_readiness
+from chemblender_prepare.core.exporters import pqr_export_readiness
+from chemblender_prepare.core.formats.pdb import parse_pdb
+from chemblender_prepare.core.formats.pqr import parse_pqr
 from tests.test_biological_atom_data import biological_mapping_fixture
 
 

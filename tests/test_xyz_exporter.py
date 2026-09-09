@@ -6,8 +6,10 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core.exporters.xyz import ExportCancelled, export_xyz
-from ChemBlender.core.model import ArrayData, Structure
+from chemblender_prepare.core.exporters.xyz import ExportCancelled
+from chemblender_prepare.core.exporters.xyz import export_xyz
+from cbq_core.model import ArrayData
+from cbq_core.model import Structure
 
 
 def _structure(*, unit="angstrom"):
@@ -100,7 +102,7 @@ class XYZExporterTests(unittest.TestCase):
 
             with (
                 patch(
-                    "ChemBlender.core.exporters.xyz.os.fsync",
+                    "chemblender_prepare.core.exporters.xyz.os.fsync",
                     side_effect=cancel_after_fsync,
                 ),
                 self.assertRaisesRegex(ExportCancelled, "cancelled"),

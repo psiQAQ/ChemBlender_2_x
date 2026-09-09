@@ -11,18 +11,16 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    DatasetStatus,
-    Grid3D,
-    ImportBatch,
-    ProjectSession,
-    QCProject,
-    builtin_scene_presets,
-    plan_scene_preset,
-    volume_render_cache_key,
-)
-from ChemBlender.core.scene_preset import legacy_scene_presets
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from cbq_core.session import ProjectSession
+from cbq_core.model import QCProject
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.grid_lod import volume_render_cache_key
+from cbq_core.scene_preset import legacy_scene_presets
 
 
 class FakeGrids:

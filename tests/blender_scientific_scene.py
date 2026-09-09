@@ -12,7 +12,10 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from ChemBlender.core import ImportBatch, QCProject, builtin_scene_presets, plan_scene_preset
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
 from ChemBlender.scene_preset_view import apply_scene_preset, scene_view_objects, _remove_objects
 from ChemBlender.ui.view_cache import scene_plan_from_view, rebuild_scene_view
 from tests.test_periodic_electronic_model import periodic_structure, band_structure, density_of_states

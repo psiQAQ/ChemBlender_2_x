@@ -8,18 +8,14 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    AtomicProperty,
-    DatasetStatus,
-    IssueKind,
-    PropertyDataset,
-)
-from ChemBlender.core.reader_catalog import (
-    builtin_reader_registry,
-    reader_capability_document,
-)
-from ChemBlender.reader_api import ParseRequest
-from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+from cbq_core.model import AtomicProperty
+from cbq_core.model import DatasetStatus
+from cbq_core.model import IssueKind
+from cbq_core.model import PropertyDataset
+from chemblender_prepare.core.reader_catalog import builtin_reader_registry
+from chemblender_prepare.core.reader_catalog import reader_capability_document
+from chemblender_prepare.reader_api import ParseRequest
+from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "poscar"
@@ -27,7 +23,7 @@ FIXTURES = Path(__file__).parent / "fixtures" / "poscar"
 
 class PoscarReaderTests(unittest.TestCase):
     def test_maps_periodic_structure_and_selective_dynamics(self):
-        from ChemBlender.core.formats.poscar import parse_poscar
+        from chemblender_prepare.core.formats.poscar import parse_poscar
 
         batch = parse_poscar(FIXTURES / "cscl-selective.vasp")
         structure, = batch.structures
@@ -56,7 +52,7 @@ class PoscarReaderTests(unittest.TestCase):
         )
 
     def test_preserves_velocity_and_source_convention_metadata(self):
-        from ChemBlender.core.formats.poscar import parse_poscar
+        from chemblender_prepare.core.formats.poscar import parse_poscar
 
         batch = parse_poscar(FIXTURES / "velocities.CONTCAR")
         structure, = batch.structures
@@ -86,7 +82,7 @@ class PoscarReaderTests(unittest.TestCase):
         self.assertEqual(structure.periodic.cif_envelope_id, None)
 
     def test_vasp4_requires_explicit_species_assignment(self):
-        from ChemBlender.core.formats.poscar import parse_poscar
+        from chemblender_prepare.core.formats.poscar import parse_poscar
 
         source = FIXTURES / "vasp4-counts.POSCAR"
         preview = parse_poscar(source)
@@ -113,7 +109,7 @@ class PoscarReaderTests(unittest.TestCase):
         )
 
     def test_invalid_scale_never_creates_a_structure(self):
-        from ChemBlender.core.formats.poscar import parse_poscar
+        from chemblender_prepare.core.formats.poscar import parse_poscar
 
         with TemporaryDirectory() as directory:
             source = Path(directory) / "POSCAR"
@@ -132,7 +128,7 @@ class PoscarReaderTests(unittest.TestCase):
         )
 
     def test_parse_request_uses_species_parameter_and_checks_hash(self):
-        from ChemBlender.core.formats.poscar import POSCAR_READER
+        from chemblender_prepare.core.formats.poscar import POSCAR_READER
 
         source = FIXTURES / "vasp4-counts.POSCAR"
         digest = hashlib.sha256(source.read_bytes()).hexdigest()

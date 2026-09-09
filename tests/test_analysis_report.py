@@ -11,30 +11,29 @@ from uuid import UUID, uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    AnalysisReportError,
-    ArrayData,
-    CalculationMetadata,
-    CalculationRecord,
-    CalculationStatus,
-    DensityMatrixLevel,
-    DatasetStatus,
-    ImportBatch,
-    PropertyDataset,
-    ProvenanceRecord,
-    QCProject,
-    RecipeBinding,
-    RecipePlan,
-    SourceRecord,
-    SourceRevision,
-    build_analysis_report,
-    builtin_recipes,
-    describe_report_artifact,
-    render_analysis_report_markdown,
-    validate_analysis_report,
-    write_analysis_report_bundle,
-)
-from ChemBlender.core.iodata_adapter import adapt_iodata, parse_iodata_wavefunction
+from cbq_core.analysis_report import AnalysisReportError
+from cbq_core.model import ArrayData
+from cbq_core.model import CalculationMetadata
+from cbq_core.model import CalculationRecord
+from cbq_core.model import CalculationStatus
+from cbq_core.model import DensityMatrixLevel
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ImportBatch
+from cbq_core.model import PropertyDataset
+from cbq_core.model import ProvenanceRecord
+from cbq_core.model import QCProject
+from cbq_core.recipe import RecipeBinding
+from cbq_core.recipe import RecipePlan
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
+from cbq_core.analysis_report import build_analysis_report
+from cbq_core.recipe import builtin_recipes
+from cbq_core.analysis_report import describe_report_artifact
+from cbq_core.analysis_report import render_analysis_report_markdown
+from cbq_core.analysis_report import validate_analysis_report
+from cbq_core.analysis_report import write_analysis_report_bundle
+from chemblender_prepare.core.iodata_adapter import adapt_iodata
+from chemblender_prepare.core.iodata_adapter import parse_iodata_wavefunction
 from tests.test_iodata_adapter import fake_iodata
 
 
@@ -215,12 +214,10 @@ class AnalysisReportTests(unittest.TestCase):
     @unittest.skipUnless(HAS_WAVEFUNCTION_STACK and WATER_FCHK.is_file(),
                          "optional IOData/GBasis and pinned water FCHK fixture are required")
     def test_real_water_fchk_mo_density_and_esp_report_bundle(self):
-        from ChemBlender.core.wavefunction_grid import evaluate_molecular_orbital_grid
-        from ChemBlender.core.wavefunction_observables import (
-            derive_density_matrix_from_orbitals,
-            evaluate_density_matrix_grid,
-            evaluate_electrostatic_potential_grid,
-        )
+        from chemblender_prepare.core.wavefunction_grid import evaluate_molecular_orbital_grid
+        from chemblender_prepare.core.wavefunction_observables import derive_density_matrix_from_orbitals
+        from chemblender_prepare.core.wavefunction_observables import evaluate_density_matrix_grid
+        from chemblender_prepare.core.wavefunction_observables import evaluate_electrostatic_potential_grid
 
         digest = hashlib.sha256(WATER_FCHK.read_bytes()).hexdigest()
         self.assertEqual(digest, "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816")
@@ -406,7 +403,7 @@ class AnalysisReportTests(unittest.TestCase):
             [
                 sys.executable,
                 "-c",
-                "import sys; from ChemBlender.core import build_analysis_report; "
+                "import sys; from cbq_core.analysis_report import build_analysis_report; "
                 "assert 'bpy' not in sys.modules",
             ],
             check=True,

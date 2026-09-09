@@ -13,32 +13,13 @@ import numpy
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RDKIT_SITE = (
-    Path(os.environ["APPDATA"])
-    / "Blender Foundation"
-    / "Blender"
-    / "5.1"
-    / "extensions"
-    / ".local"
-    / "lib"
-    / "python3.13"
-    / "site-packages"
-)
-_RDKIT_SITE_PATH = str(RDKIT_SITE)
-_added_rdkit_site = RDKIT_SITE.is_dir() and _RDKIT_SITE_PATH not in sys.path
-if _added_rdkit_site:
-    sys.path.insert(0, _RDKIT_SITE_PATH)
+# Use this interpreter's dependency environment; never borrow Blender packages.
+from rdkit import Chem
+from rdkit.Chem import rdDepictor
 
-try:
-    from rdkit import Chem
-    from rdkit.Chem import rdDepictor
-finally:
-    if _added_rdkit_site:
-        sys.path.remove(_RDKIT_SITE_PATH)
-
-from ChemBlender.core import ImportBatch
-from ChemBlender.core.import_pipeline import ValidationMode
-from ChemBlender.reader_api.builtin_bridge import public_batch_from_internal
+from cbq_core.model import ImportBatch
+from chemblender_prepare.core.import_pipeline import ValidationMode
+from chemblender_prepare.reader_api.builtin_bridge import public_batch_from_internal
 
 
 def _context(module, *, record_key="record-0000"):
@@ -83,7 +64,6 @@ def _add_conformer(molecule):
 
 class RDKitHarnessIsolationTests(unittest.TestCase):
     def test_import_does_not_retain_or_reorder_shared_dependency_path(self):
-        self.assertTrue(RDKIT_SITE.is_dir())
         environment = os.environ.copy()
         environment.pop("PYTHONPATH", None)
         for already_present in (False, True):
@@ -93,7 +73,7 @@ import os
 import sys
 from pathlib import Path
 
-site = Path(os.environ["APPDATA"]) / "Blender Foundation" / "Blender" / "5.1" / "extensions" / ".local" / "lib" / "python3.13" / "site-packages"
+site = Path.cwd() / "unused-dependency-path"
 site_text = str(site)
 if {already_present}:
     sys.path.insert(2, site_text)
@@ -115,18 +95,18 @@ class RDKitCommonAdapterTests(unittest.TestCase):
     @staticmethod
     def adapter():
         try:
-            return importlib.import_module("ChemBlender.core.formats.rdkit_common")
+            return importlib.import_module("chemblender_prepare.core.formats.rdkit_common")
         except ModuleNotFoundError as error:
             if error.name in {
-                "ChemBlender.core.formats",
-                "ChemBlender.core.formats.rdkit_common",
+                "chemblender_prepare.core.formats",
+                "chemblender_prepare.core.formats.rdkit_common",
             }:
                 raise AssertionError("shared RDKit adapter is missing") from error
             raise
 
     def test_core_and_reader_api_imports_do_not_load_rdkit(self):
         code = (
-            "import sys; import ChemBlender.core; import ChemBlender.reader_api; "
+            "import sys; import cbq_core.model; import chemblender_prepare.reader_api; "
             "assert 'rdkit' not in sys.modules"
         )
         subprocess.run([sys.executable, "-c", code], cwd=ROOT, check=True)

@@ -3,18 +3,16 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    BandPathBranch,
-    BandStructure,
-    DatasetStatus,
-    DensityOfStates,
-    EnergyReference,
-    ImportBatch,
-    PeriodicSiteData,
-    QCProject,
-    Structure,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import BandPathBranch
+from cbq_core.model import BandStructure
+from cbq_core.model import DatasetStatus
+from cbq_core.model import DensityOfStates
+from cbq_core.model import EnergyReference
+from cbq_core.model import ImportBatch
+from cbq_core.model import PeriodicSiteData
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
 
 
 def periodic_structure():

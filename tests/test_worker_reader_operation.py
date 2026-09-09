@@ -12,44 +12,33 @@ from uuid import UUID, uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    CapabilitySupport,
-    ImportBatch,
-    MolecularRecord,
-    ParserReport,
-    ReaderDescriptor,
-    SniffMatch,
-    SniffResult,
-    Structure,
-)
-from ChemBlender.core.worker_protocol import (
-    WorkerError,
-    WorkerRequest,
-    WorkerResult,
-    WorkerStatus,
-    write_request,
-)
-from ChemBlender.reader_api import (
-    WorkerReaderExecutionError,
-    WorkerReaderIntegrityError,
-    parse_with_worker,
-)
-from ChemBlender.reader_api.worker_bridge import (
-    _WorkerReaderCancelled,
-    _file_sha256,
-    _task_file,
-)
-from ChemBlender.reader_api.canonical_document import (
-    read_public_batch_bundle,
-    write_public_batch_bundle,
-)
-from ChemBlender.reader_api.registry import (
-    ReaderPluginRegistry,
-    _builtin_manifest,
-    _builtin_plugin,
-)
-from worker.runner import default_registry, run_request
+from cbq_core.model import ArrayData
+from chemblender_prepare.core.readers import CapabilitySupport
+from cbq_core.model import ImportBatch
+from cbq_core.model import MolecularRecord
+from cbq_core.model import ParserReport
+from chemblender_prepare.core.readers import ReaderDescriptor
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.readers import SniffResult
+from cbq_core.model import Structure
+from cbq_core.worker_protocol import WorkerError
+from cbq_core.worker_protocol import WorkerRequest
+from cbq_core.worker_protocol import WorkerResult
+from cbq_core.worker_protocol import WorkerStatus
+from cbq_core.worker_protocol import write_request
+from chemblender_prepare.reader_api import WorkerReaderExecutionError
+from chemblender_prepare.reader_api import WorkerReaderIntegrityError
+from chemblender_prepare.reader_api import parse_with_worker
+from chemblender_prepare.reader_api.worker_bridge import _WorkerReaderCancelled
+from chemblender_prepare.reader_api.worker_bridge import _file_sha256
+from chemblender_prepare.reader_api.worker_bridge import _task_file
+from chemblender_prepare.reader_api.canonical_document import read_public_batch_bundle
+from chemblender_prepare.reader_api.canonical_document import write_public_batch_bundle
+from chemblender_prepare.reader_api.registry import ReaderPluginRegistry
+from chemblender_prepare.reader_api.registry import _builtin_manifest
+from chemblender_prepare.reader_api.registry import _builtin_plugin
+from chemblender_prepare.worker.runner import default_registry
+from chemblender_prepare.worker.runner import run_request
 
 
 REQUEST_ID = UUID("30000000-0000-0000-0000-000000000003")
@@ -191,7 +180,7 @@ class WorkerReaderOperationTests(unittest.TestCase):
         )
 
         with patch(
-            "worker.reader_operation.builtin_reader_plugin_registry",
+            "chemblender_prepare.worker.reader_operation.builtin_reader_plugin_registry",
             return_value=registry,
         ):
             result = self.run_reader(
@@ -288,10 +277,10 @@ class WorkerReaderOperationTests(unittest.TestCase):
                 self.assertIs(result.status, WorkerStatus.ERROR)
                 self.assertEqual(result.error.code, code)
 
-        from ChemBlender.core.readers import ReaderAvailability
+        from chemblender_prepare.core.readers import ReaderAvailability
 
         with patch(
-            "ChemBlender.reader_api.registry._builtin_availability",
+            "chemblender_prepare.reader_api.registry._builtin_availability",
             return_value=ReaderAvailability(
                 False,
                 "built_in",
@@ -335,7 +324,7 @@ class WorkerReaderOperationTests(unittest.TestCase):
             return original(path, is_cancelled)
 
         with patch(
-            "worker.reader_operation._file_sha256",
+            "chemblender_prepare.worker.reader_operation._file_sha256",
             side_effect=cancel_on_hash,
         ):
             result = self.run_reader(cancel_path=cancel)
@@ -352,7 +341,7 @@ class WorkerReaderOperationTests(unittest.TestCase):
             return original(path, is_cancelled)
 
         with patch(
-            "worker.reader_operation._file_sha256",
+            "chemblender_prepare.worker.reader_operation._file_sha256",
             side_effect=cancel_on_output_hash,
         ):
             result = self.run_reader(cancel_path=cancel)
@@ -362,10 +351,10 @@ class WorkerReaderOperationTests(unittest.TestCase):
         self.assertIs(self.run_reader().status, WorkerStatus.SUCCESS)
 
     def test_post_write_validation_failure_removes_owned_bundle(self):
-        from ChemBlender.reader_api import CanonicalDocumentIntegrityError
+        from chemblender_prepare.reader_api import CanonicalDocumentIntegrityError
 
         with patch(
-            "worker.reader_operation.read_public_batch_bundle",
+            "chemblender_prepare.worker.reader_operation.read_public_batch_bundle",
             side_effect=CanonicalDocumentIntegrityError("tampered"),
         ):
             result = self.run_reader()
@@ -375,7 +364,7 @@ class WorkerReaderOperationTests(unittest.TestCase):
 
     def test_result_publication_failure_removes_bundle_and_allows_retry(self):
         with patch(
-            "worker.runner.write_result",
+            "chemblender_prepare.worker.runner.write_result",
             side_effect=OSError("disk full"),
         ):
             with self.assertRaisesRegex(OSError, "disk full"):
@@ -385,7 +374,7 @@ class WorkerReaderOperationTests(unittest.TestCase):
 
     def test_fatal_result_publication_failure_preserves_error_and_cleans_bundle(self):
         with patch(
-            "worker.runner.write_result",
+            "chemblender_prepare.worker.runner.write_result",
             side_effect=SystemExit(9),
         ):
             with self.assertRaises(SystemExit) as raised:
@@ -585,9 +574,9 @@ class WorkerReaderOperationTests(unittest.TestCase):
                     expected,
                 )
 
-    def test_worker_bridge_modules_use_no_dynamic_or_absolute_imports(self):
+    def test_worker_bridge_has_no_blender_package_imports(self):
         root = Path(__file__).resolve().parents[1]
-        source = root / "ChemBlender" / "reader_api" / "worker_bridge.py"
+        source = root / "chemblender_prepare" / "reader_api" / "worker_bridge.py"
         tree = ast.parse(source.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, (ast.Import, ast.ImportFrom)):

@@ -5,7 +5,8 @@ from pathlib import Path
 
 import numpy
 
-from ChemBlender.core import IssueKind, parse_cif
+from cbq_core.model import IssueKind
+from chemblender_prepare.core.formats.cif import parse_cif
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "cif"

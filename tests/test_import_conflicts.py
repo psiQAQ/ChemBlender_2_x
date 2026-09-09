@@ -5,29 +5,25 @@ from pathlib import Path
 from types import MappingProxyType
 from uuid import UUID, uuid4
 
-from ChemBlender.core.import_pipeline import conflicts as conflict_module
-from ChemBlender.core.import_pipeline import (
-    ConflictDecision,
-    DuplicateAction,
-    ImportConflict,
-    ImportConflictCandidate,
-    ImportConflictCategory,
-    ImportPreview,
-    SourcePreview,
-    StagedImportSession,
-    apply_conflict_decisions,
-    detect_import_conflicts,
-)
-from ChemBlender.core.model import (
-    DiagnosticSeverity,
-    ImportBatch,
-    ImportDiagnostic,
-    ProvenanceRecord,
-    QCProject,
-    QualityStatus,
-    SourceRecord,
-    SourceRevision,
-)
+from chemblender_prepare.core.import_pipeline import conflicts as conflict_module
+from chemblender_prepare.core.import_pipeline import ConflictDecision
+from chemblender_prepare.core.import_pipeline import DuplicateAction
+from chemblender_prepare.core.import_pipeline import ImportConflict
+from chemblender_prepare.core.import_pipeline import ImportConflictCandidate
+from chemblender_prepare.core.import_pipeline import ImportConflictCategory
+from chemblender_prepare.core.import_pipeline import ImportPreview
+from chemblender_prepare.core.import_pipeline import SourcePreview
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import apply_conflict_decisions
+from chemblender_prepare.core.import_pipeline import detect_import_conflicts
+from cbq_core.model import DiagnosticSeverity
+from cbq_core.model import ImportBatch
+from cbq_core.model import ImportDiagnostic
+from cbq_core.model import ProvenanceRecord
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
 
 
 class ImportConflictTests(unittest.TestCase):

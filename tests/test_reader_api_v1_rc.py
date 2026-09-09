@@ -7,12 +7,13 @@ from pathlib import Path
 from typing import get_args, get_origin
 import unittest
 
-import ChemBlender.reader_api as reader_api
-from ChemBlender.core.readers import READER_API_VERSION as CORE_READER_API_VERSION
-from ChemBlender.reader_api import canonical_document
-from ChemBlender.reader_api import public_model
-from ChemBlender.reader_api.manifest import ReaderManifestEntry, ReaderPluginManifest
-from ChemBlender.reader_api.registry import builtin_reader_plugins
+import chemblender_prepare.reader_api as reader_api
+from chemblender_prepare.core.readers import READER_API_VERSION as CORE_READER_API_VERSION
+from chemblender_prepare.reader_api import canonical_document
+from chemblender_prepare.reader_api import public_model
+from chemblender_prepare.reader_api.manifest import ReaderManifestEntry
+from chemblender_prepare.reader_api.manifest import ReaderPluginManifest
+from chemblender_prepare.reader_api.registry import builtin_reader_plugins
 
 
 FIXTURE = (
@@ -72,6 +73,23 @@ def _snapshot_hash(value):
     ).hexdigest()
 
 
+def _legacy_field_document(model_type):
+    # Compare the immutable 2.3 snapshot across packaging and Python versions.
+    document = _field_document(model_type)
+    if model_type is reader_api.PeriodicSiteData:
+        document = [row for row in document if row[0] not in
+                    {"symmetry_rotations", "symmetry_translations"}]
+    text = json.dumps(document, ensure_ascii=False)
+    for current, frozen in (
+        ("cbq_core.model.", "ChemBlender.core.model."),
+        ("chemblender_prepare.reader_api.", "ChemBlender.reader_api."),
+        ("chemblender_prepare.core.", "ChemBlender.core."),
+        ("pathlib.Path", "pathlib._local.Path"),
+    ):
+        text = text.replace(current, frozen)
+    return json.loads(text)
+
+
 def _schema_document():
     public_types = {
         name: getattr(reader_api, name)
@@ -92,7 +110,7 @@ def _schema_document():
         "reader_api_version": reader_api.READER_API_VERSION,
         "public_exports": list(reader_api.__all__),
         "dataclass_types": {
-            name: _snapshot_hash(_field_document(model_type))
+            name: _snapshot_hash(_legacy_field_document(model_type))
             for name, model_type in dataclass_types.items()
         },
         "enum_types": {
@@ -180,6 +198,14 @@ class ReaderApiV1RcTests(unittest.TestCase):
             self.assertTrue(is_dataclass(model_type))
         for enum_type in canonical_document._MODEL_ENUMS.values():
             self.assertTrue(issubclass(enum_type, Enum))
+
+    def test_cbq_11_symmetry_fields_are_optional_array_data(self):
+        added = [row for row in _field_document(reader_api.PeriodicSiteData)
+                 if row[0] in {"symmetry_rotations", "symmetry_translations"}]
+        self.assertEqual(added, [
+            [name, _type_document(reader_api.ArrayData | None), ["value", "None"]]
+            for name in ("symmetry_rotations", "symmetry_translations")
+        ])
 
     def test_reader_api_rc_spec_records_freeze_and_document_version_boundary(self):
         document = (

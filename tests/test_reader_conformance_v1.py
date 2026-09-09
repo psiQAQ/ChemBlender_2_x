@@ -5,17 +5,14 @@ from dataclasses import replace
 import subprocess
 import sys
 import unittest
-import zipfile
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import ChemBlender.reader_api as reader_api
-from ChemBlender.reader_api.conformance import (
-    ReaderConformanceCase,
-    run_reader_conformance_v1,
-)
-from ChemBlender.reader_api.protocol import ProgressEvent
-from ChemBlender.reader_api.registry import ReaderPluginRegistry
+import chemblender_prepare.reader_api as reader_api
+from chemblender_prepare.reader_api.conformance import ReaderConformanceCase
+from chemblender_prepare.reader_api.conformance import run_reader_conformance_v1
+from chemblender_prepare.reader_api.protocol import ProgressEvent
+from chemblender_prepare.reader_api.registry import ReaderPluginRegistry
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -146,7 +143,7 @@ class ReaderConformanceV1Tests(unittest.TestCase):
             ROOT / "docs" / "reader-api-v1" / "conformance.md"
         ).read_text(encoding="utf-8")
         for term in (
-            "ChemBlender.reader_api.conformance_cli",
+            "chemblender_prepare.reader_api.conformance_cli",
             "--plugin-path",
             "--fixtures",
             "--output",
@@ -284,21 +281,14 @@ class ReaderConformanceV1Tests(unittest.TestCase):
     def test_wave1_to_wave3_builtin_matrix_has_no_required_skip(self):
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
-            site = root / "site"
-            site.mkdir()
-            for wheel in (
-                ROOT / "ChemBlender" / "wheels" / "gemmi-0.7.5-cp313-cp313-win_amd64.whl",
-                ROOT / "ChemBlender" / "wheels" / "rdkit-2026.3.3-cp313-cp313-win_amd64.whl",
-            ):
-                with zipfile.ZipFile(wheel) as archive:
-                    archive.extractall(site)
+            # Use backends installed for this interpreter, never cp313 Blender wheels.
             smiles = root / "water.smi"
             smiles.write_text("CCO water\n", encoding="ascii")
             script = f"""
 import json
 from pathlib import Path
-from ChemBlender.reader_api import ReaderConformanceCase, builtin_reader_plugin_registry
-from ChemBlender.reader_api.conformance import run_reader_conformance_v1
+from chemblender_prepare.reader_api import ReaderConformanceCase, builtin_reader_plugin_registry
+from chemblender_prepare.reader_api.conformance import run_reader_conformance_v1
 root = Path({str(BUILTIN_FIXTURES)!r})
 registry = builtin_reader_plugin_registry()
 specifications = (
@@ -322,7 +312,7 @@ cases = tuple(
 print(json.dumps(run_reader_conformance_v1(cases), allow_nan=False, sort_keys=True))
 """
             environment = os.environ.copy()
-            environment["PYTHONPATH"] = os.pathsep.join((str(site), str(ROOT)))
+            environment["PYTHONPATH"] = str(ROOT)
             completed = subprocess.run(
                 (sys.executable, "-c", script),
                 cwd=ROOT,
@@ -383,7 +373,7 @@ print(json.dumps(run_reader_conformance_v1(cases), allow_nan=False, sort_keys=Tr
                 (
                     sys.executable,
                     "-m",
-                    "ChemBlender.reader_api.conformance_cli",
+                    "chemblender_prepare.reader_api.conformance_cli",
                     "--plugin-path",
                     str(EXAMPLE),
                     "--fixtures",
@@ -428,7 +418,7 @@ print(json.dumps(run_reader_conformance_v1(cases), allow_nan=False, sort_keys=Tr
                 (
                     sys.executable,
                     "-m",
-                    "ChemBlender.reader_api.conformance_cli",
+                    "chemblender_prepare.reader_api.conformance_cli",
                     "--plugin-path",
                     str(EXAMPLE / "reader.py"),
                     "--fixtures",
@@ -455,7 +445,7 @@ print(json.dumps(run_reader_conformance_v1(cases), allow_nan=False, sort_keys=Tr
                 (
                     sys.executable,
                     "-m",
-                    "ChemBlender.reader_api.conformance_cli",
+                    "chemblender_prepare.reader_api.conformance_cli",
                     "--plugin-path",
                     str(EXAMPLE),
                     "--fixtures",
@@ -489,7 +479,7 @@ print(json.dumps(run_reader_conformance_v1(cases), allow_nan=False, sort_keys=Tr
                 (
                     sys.executable,
                     "-m",
-                    "ChemBlender.reader_api.conformance_cli",
+                    "chemblender_prepare.reader_api.conformance_cli",
                     "--plugin-path",
                     str(plugin),
                     "--fixtures",

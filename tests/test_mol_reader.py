@@ -6,29 +6,23 @@ from uuid import uuid4
 import hashlib
 from unittest.mock import patch
 
-from ChemBlender.core import (
-    builtin_reader_registry,
-    close_project,
-    close_session,
-    create_session,
-    open_project,
-)
-from ChemBlender.core.formats.mol import MOL_READER
-from ChemBlender.core.import_pipeline import (
-    ImportCommitDecisions,
-    ImportRequest,
-    ImportSource,
-    StagedImportSession,
-    ValidationMode,
-    commit_import_preview,
-)
-from ChemBlender.core.mol_v2000 import (
-    MOL_V2000_READER,
-    MOL_V2000_REPLACEMENT,
-    sniff_mol_v2000,
-)
-from ChemBlender.reader_api.import_pipeline_bridge import preflight_reader_plugins
-from ChemBlender.reader_api.registry import builtin_reader_plugin_registry
+from chemblender_prepare.core.reader_catalog import builtin_reader_registry
+from cbq_core.sidecar import close_project
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from cbq_core.sidecar import open_project
+from chemblender_prepare.core.formats.mol import MOL_READER
+from chemblender_prepare.core.import_pipeline import ImportCommitDecisions
+from chemblender_prepare.core.import_pipeline import ImportRequest
+from chemblender_prepare.core.import_pipeline import ImportSource
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import ValidationMode
+from chemblender_prepare.core.import_pipeline import commit_import_preview
+from chemblender_prepare.core.mol_v2000 import MOL_V2000_READER
+from chemblender_prepare.core.mol_v2000 import MOL_V2000_REPLACEMENT
+from chemblender_prepare.core.mol_v2000 import sniff_mol_v2000
+from chemblender_prepare.reader_api.import_pipeline_bridge import preflight_reader_plugins
+from chemblender_prepare.reader_api.registry import builtin_reader_plugin_registry
 from ChemBlender.ui.default_views import plan_default_view
 
 
@@ -37,8 +31,8 @@ FIXTURE_ROOT = Path(__file__).with_name("fixtures") / "mol"
 
 class MOLReaderTests(unittest.TestCase):
     def test_native_mol_reader_sniffs_real_v2000_fixture(self) -> None:
-        from ChemBlender.core.formats.mol import sniff_mol
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.mol import sniff_mol
+        from chemblender_prepare.core.readers import SniffMatch
 
         source = FIXTURE_ROOT / "water-v2000.mol"
         result = sniff_mol(source, source.read_bytes())
@@ -47,8 +41,8 @@ class MOLReaderTests(unittest.TestCase):
         self.assertIn("V2000", result.evidence)
 
     def test_sniff_rejects_counts_line_without_declared_atom_and_bond_blocks(self) -> None:
-        from ChemBlender.core.formats.mol import sniff_mol
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.mol import sniff_mol
+        from chemblender_prepare.core.readers import SniffMatch
 
         content = b"fake\nwriter\n\n  2  1  0  0  0  0  0  0  0  0  0 V2000\nM  END\n"
         with TemporaryDirectory() as directory:
@@ -59,7 +53,7 @@ class MOLReaderTests(unittest.TestCase):
         self.assertIs(result.match, SniffMatch.NONE)
 
     def test_report_lists_only_scientific_entities_in_graph_order(self) -> None:
-        from ChemBlender.core.formats.mol import parse_mol
+        from chemblender_prepare.core.formats.mol import parse_mol
 
         batch = parse_mol(FIXTURE_ROOT / "water-v2000.mol")
         self.assertEqual(
@@ -74,9 +68,9 @@ class MOLReaderTests(unittest.TestCase):
         self.assertNotIn(batch.diagnostics[0].id if batch.diagnostics else None, batch.report.created_entity_ids)
 
     def test_parse_request_propagates_cancellation_to_the_host(self) -> None:
-        from ChemBlender.core.formats.mol import parse_mol_request
-        from ChemBlender.core.formats.rdkit_common import RDKitMoleculeCancelled
-        from ChemBlender.reader_api.protocol import ParseRequest
+        from chemblender_prepare.core.formats.mol import parse_mol_request
+        from chemblender_prepare.core.formats.rdkit_common import RDKitMoleculeCancelled
+        from chemblender_prepare.reader_api.protocol import ParseRequest
 
         source = FIXTURE_ROOT / "water-v2000.mol"
         with TemporaryDirectory() as directory:
@@ -95,8 +89,9 @@ class MOLReaderTests(unittest.TestCase):
                 )
 
     def test_v3000_fixture_is_exact_and_keeps_its_raw_block(self) -> None:
-        from ChemBlender.core.formats.mol import parse_mol, sniff_mol
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.mol import parse_mol
+        from chemblender_prepare.core.formats.mol import sniff_mol
+        from chemblender_prepare.core.readers import SniffMatch
 
         source = FIXTURE_ROOT / "water-v3000.mol"
         batch = parse_mol(source)
@@ -109,8 +104,9 @@ class MOLReaderTests(unittest.TestCase):
     def test_rdkit_v3000_single_atom_without_bond_section_is_exact(self) -> None:
         from rdkit import Chem
 
-        from ChemBlender.core.formats.mol import parse_mol, sniff_mol
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.mol import parse_mol
+        from chemblender_prepare.core.formats.mol import sniff_mol
+        from chemblender_prepare.core.readers import SniffMatch
 
         molecule = Chem.MolFromSmiles("[He]")
         conformer = Chem.Conformer(1)
@@ -134,8 +130,8 @@ class MOLReaderTests(unittest.TestCase):
         self.assertEqual(batch.topologies[0].bond_indices.shape, (0, 2))
 
     def test_valid_mol_content_is_exact_under_an_unrelated_extension(self) -> None:
-        from ChemBlender.core.formats.mol import sniff_mol
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.mol import sniff_mol
+        from chemblender_prepare.core.readers import SniffMatch
 
         content = (FIXTURE_ROOT / "water-v2000.mol").read_bytes()
         with TemporaryDirectory() as directory:
@@ -148,8 +144,8 @@ class MOLReaderTests(unittest.TestCase):
         self.assertIs(selected, MOL_READER)
 
     def test_direct_and_alias_parse_read_source_once_and_keep_the_same_bytes(self) -> None:
-        from ChemBlender.core.formats.mol import parse_mol
-        from ChemBlender.core.mol_v2000 import parse_mol_v2000
+        from chemblender_prepare.core.formats.mol import parse_mol
+        from chemblender_prepare.core.mol_v2000 import parse_mol_v2000
 
         source = FIXTURE_ROOT / "water-v2000.mol"
         raw_block = source.read_bytes()
@@ -171,8 +167,9 @@ class MOLReaderTests(unittest.TestCase):
                 self.assertEqual(batch.provenance[0].source_hash, source_hash)
 
     def test_sniff_and_parse_reject_prose_sdf_and_multiple_records(self) -> None:
-        from ChemBlender.core.formats.mol import parse_mol, sniff_mol
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.formats.mol import parse_mol
+        from chemblender_prepare.core.formats.mol import sniff_mol
+        from chemblender_prepare.core.readers import SniffMatch
 
         valid = (FIXTURE_ROOT / "water-v2000.mol").read_bytes()
         cases = {
@@ -191,7 +188,7 @@ class MOLReaderTests(unittest.TestCase):
                         parse_mol(source)
 
     def test_raw_bom_crlf_and_non_utf8_bytes_are_preserved_with_diagnostic(self) -> None:
-        from ChemBlender.core.formats.mol import parse_mol
+        from chemblender_prepare.core.formats.mol import parse_mol
 
         content = (FIXTURE_ROOT / "water-v2000.mol").read_bytes().replace(
             b"\r\n",
@@ -210,7 +207,7 @@ class MOLReaderTests(unittest.TestCase):
         )
 
     def test_catalog_uses_primary_reader_and_explicit_v2000_alias(self) -> None:
-        from ChemBlender.core.readers import SniffMatch
+        from chemblender_prepare.core.readers import SniffMatch
 
         source = FIXTURE_ROOT / "water-v2000.mol"
         self.assertIs(builtin_reader_registry().select(source), MOL_READER)

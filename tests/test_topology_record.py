@@ -5,14 +5,14 @@ from pathlib import Path
 import unittest
 from uuid import uuid4
 
-import ChemBlender.core as core
-from ChemBlender.core import model
-from ChemBlender.core.import_pipeline.transaction import _merge_batches
-from ChemBlender.core.sidecar import SidecarIntegrityError
-from ChemBlender.core.sidecar_migrations import migrate_manifest
-import ChemBlender.reader_api as reader_api
+from cbq_core import model as core
+from cbq_core import model
+from chemblender_prepare.core.import_pipeline.transaction import _merge_batches
+from cbq_core.sidecar import SidecarIntegrityError
+from cbq_core.sidecar_migrations import migrate_manifest
+import chemblender_prepare.reader_api as reader_api
 import numpy
-from worker.runner import _batch_references
+from chemblender_prepare.worker.runner import _batch_references
 
 
 LEGACY_SIDECAR = (

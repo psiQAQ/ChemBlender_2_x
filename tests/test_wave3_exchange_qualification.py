@@ -15,35 +15,36 @@ from typing import get_args
 
 import numpy
 
-import ChemBlender.reader_api as reader_api
-from ChemBlender.core import (
-    BiologicalAtomSiteData,
-    BiologicalChain,
-    BiologicalHierarchy,
-    BiologicalModel,
-    BiologicalResidue,
-    ChemicalAnnotation,
-    ExternalReference,
-    FrameSet,
-    QCProject,
-    builtin_reader_descriptors,
-    reader_capability_document,
-)
-from ChemBlender.core.cjson_adapter import export_cjson, parse_cjson
-from ChemBlender.core.exporters import (
-    mol2_export_readiness,
-    pdb_export_readiness,
-    pqr_export_readiness,
-)
-from ChemBlender.core.formats.mol2 import parse_mol2
-from ChemBlender.core.formats.pdb import parse_pdb
-from ChemBlender.core.formats.pqr import parse_pqr
-from ChemBlender.core.import_pipeline.parse import stage_import_batch
-from ChemBlender.core.import_pipeline.request import ImportSource, ValidationMode
-from ChemBlender.core.readers import READER_API_VERSION, ReaderNotFoundError
-from ChemBlender.core.sidecar import close_project, open_project, save_project
-from ChemBlender.reader_api.conformance import run_reader_conformance_v1
-from ChemBlender.reader_api.registry import ReaderPluginRegistry
+import chemblender_prepare.reader_api as reader_api
+from cbq_core.model import BiologicalAtomSiteData
+from cbq_core.model import BiologicalChain
+from cbq_core.model import BiologicalHierarchy
+from cbq_core.model import BiologicalModel
+from cbq_core.model import BiologicalResidue
+from cbq_core.model import ChemicalAnnotation
+from cbq_core.model import ExternalReference
+from cbq_core.model import FrameSet
+from cbq_core.model import QCProject
+from chemblender_prepare.core.reader_catalog import builtin_reader_descriptors
+from chemblender_prepare.core.reader_catalog import reader_capability_document
+from chemblender_prepare.core.cjson_adapter import export_cjson
+from chemblender_prepare.core.cjson_adapter import parse_cjson
+from chemblender_prepare.core.exporters import mol2_export_readiness
+from chemblender_prepare.core.exporters import pdb_export_readiness
+from chemblender_prepare.core.exporters import pqr_export_readiness
+from chemblender_prepare.core.formats.mol2 import parse_mol2
+from chemblender_prepare.core.formats.pdb import parse_pdb
+from chemblender_prepare.core.formats.pqr import parse_pqr
+from chemblender_prepare.core.import_pipeline.parse import stage_import_batch
+from chemblender_prepare.core.import_pipeline.request import ImportSource
+from chemblender_prepare.core.import_pipeline.request import ValidationMode
+from chemblender_prepare.core.readers import READER_API_VERSION
+from chemblender_prepare.core.readers import ReaderNotFoundError
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from chemblender_prepare.reader_api.conformance import run_reader_conformance_v1
+from chemblender_prepare.reader_api.registry import ReaderPluginRegistry
 from tests.test_pdb_reader import atom_line
 from tests.test_reader_conformance_v1 import FIXTURE as EXAMPLE_FIXTURE
 from tests.test_reader_conformance_v1 import example_case
@@ -206,7 +207,7 @@ class Wave3ExchangeQualificationTests(unittest.TestCase):
         for model_type in EXCHANGE_TYPES:
             with self.subTest(model=model_type.__name__):
                 self.assertTrue(
-                    model_type.__module__.startswith("ChemBlender.core.model.")
+                    model_type.__module__.startswith("cbq_core.model.")
                 )
                 self.assertFalse(
                     any(
@@ -220,8 +221,8 @@ class Wave3ExchangeQualificationTests(unittest.TestCase):
         script = """
 import json
 import sys
-import ChemBlender.core
-import ChemBlender.reader_api
+import cbq_core.model
+import chemblender_prepare.reader_api
 blocked = {"Bio", "ase", "gemmi", "openbabel", "pymatgen", "rdkit"}
 roots = {name.partition(".")[0] for name in sys.modules}
 print(json.dumps(sorted(blocked & roots)))
@@ -324,12 +325,12 @@ print(json.dumps(sorted(blocked & roots)))
                     first_document = json.loads(
                         (first / "manifest.json").read_text(encoding="utf-8")
                     )
-                    self.assertEqual(first_document["manifest_version"], "1.0")
-                    self.assertEqual(first_document["project_schema_version"], "1.0")
+                    self.assertEqual(first_document["manifest_version"], "1.1")
+                    self.assertEqual(first_document["project_schema_version"], "1.1")
 
                     restored = open_project(first)
                     try:
-                        self.assertEqual(restored.schema_version, "1.0")
+                        self.assertEqual(restored.schema_version, "1.1")
                         self.assertEqual(_vendor_types(restored), set())
                         second = save_project(
                             temporary / f"{name}-second.cbq",

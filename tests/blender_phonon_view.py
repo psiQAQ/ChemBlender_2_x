@@ -12,7 +12,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from ChemBlender.core import ArrayData
+from cbq_core.model import ArrayData
 from ChemBlender import phonon_view, vibration_view
 from ChemBlender.views.structure import create_structure_view, remove_structure_view
 from tests.test_periodic_electronic_model import periodic_structure

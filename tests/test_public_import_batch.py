@@ -5,11 +5,11 @@ from uuid import uuid4
 
 import numpy
 
-import ChemBlender.core as core
-import ChemBlender.reader_api as reader_api
-import ChemBlender.reader_api.builtin_bridge as builtin_bridge
-from ChemBlender.core.cube import CUBE_READER
-from ChemBlender.core.xyz import XYZ_READER
+from cbq_core import model as core
+import chemblender_prepare.reader_api as reader_api
+import chemblender_prepare.reader_api.builtin_bridge as builtin_bridge
+from chemblender_prepare.core.cube import CUBE_READER
+from chemblender_prepare.core.xyz import XYZ_READER
 
 
 ROOT = Path(__file__).resolve().parents[1]

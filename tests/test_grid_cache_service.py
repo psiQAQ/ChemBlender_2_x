@@ -6,11 +6,11 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import ArrayData, DatasetStatus, Grid3D
-from ChemBlender.core.grid_cache_service import (
-    VolumeCacheRequest,
-    prepare_volume_cache,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.grid_cache_service import VolumeCacheRequest
+from cbq_core.grid_cache_service import prepare_volume_cache
 from tests.test_task_state_machine import load_tasks_without_bpy
 
 
@@ -221,12 +221,12 @@ class GridCacheServiceTests(unittest.TestCase):
                 writer = FakeWriter(fail=failure == "writer")
                 context = (
                     patch(
-                        "ChemBlender.core.grid_cache_service.os.replace",
+                        "cbq_core.grid_cache_service.os.replace",
                         side_effect=OSError("publish failed"),
                     )
                     if failure == "publish"
                     else patch(
-                        "ChemBlender.core.grid_cache_service.os.replace",
+                        "cbq_core.grid_cache_service.os.replace",
                         wraps=__import__("os").replace,
                     )
                 )

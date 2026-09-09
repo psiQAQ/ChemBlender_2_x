@@ -11,23 +11,19 @@ from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 from uuid import UUID
 
-import ChemBlender.core.project_service as project_service
-from ChemBlender.core import (
-    ArrayData,
-    ImportBatch,
-    ProjectServiceStatus,
-    ProjectSession,
-    QCProject,
-    Structure,
-    save_project,
-)
-from ChemBlender.project_link import (
-    MANIFEST_HASH_KEY,
-    PROJECT_ID_KEY,
-    PROJECT_SCHEMA_KEY,
-    SIDECAR_LOCATOR_KEY,
-    write_project_link,
-)
+import cbq_core.project_service as project_service
+from cbq_core.model import ArrayData
+from cbq_core.model import ImportBatch
+from cbq_core.project_service import ProjectServiceStatus
+from cbq_core.session import ProjectSession
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
+from cbq_core.sidecar import save_project
+from cbq_core.project_link import MANIFEST_HASH_KEY
+from cbq_core.project_link import PROJECT_ID_KEY
+from cbq_core.project_link import PROJECT_SCHEMA_KEY
+from cbq_core.project_link import SIDECAR_LOCATOR_KEY
+from cbq_core.project_link import write_project_link
 
 
 SESSION_MODULE = "ChemBlender.ui.session"

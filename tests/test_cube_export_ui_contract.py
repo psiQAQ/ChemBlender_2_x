@@ -1,97 +1,35 @@
-import importlib
-import sys
 import unittest
 from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    AtomicProperty,
-    Grid3D,
-    ImportBatch,
-    QCProject,
-    QualityStatus,
-    TopologyRecord,
-    TopologySource,
-    preview_cube_export,
-)
-from ChemBlender.core.cube import CUBE_READER
-from ChemBlender.core.exporters import ExportCancelled
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomicProperty
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from cbq_core.model import TopologyRecord
+from cbq_core.model import TopologySource
+from chemblender_prepare.core.exporters.cube import preview_cube_export
+from chemblender_prepare.core.cube import CUBE_READER
+from chemblender_prepare.core.exporters import ExportCancelled
 
 
-MODULE = "ChemBlender.ui.export"
 SHEARED = Path(__file__).with_name("fixtures") / "cube" / "sheared.cube"
 TWO_DATASETS = (
     Path(__file__).with_name("fixtures") / "cube" / "two-datasets.cube"
 )
 
 
-class _Property:
-    def __init__(self, kind, **keywords):
-        self.kind = kind
-        self.keywords = keywords
-
-
-def _property(kind):
-    return lambda **keywords: _Property(kind, **keywords)
-
-
-class _Operator:
-    def report(self, levels, message):
-        self.last_report = (levels, message)
-
-
-class _WindowManager:
-    def __init__(self):
-        self.selected = None
-
-    def fileselect_add(self, operator):
-        self.selected = operator
-
-
-class _Layout:
-    def __init__(self):
-        self.properties = []
-
-    def prop(self, _owner, name):
-        self.properties.append(name)
-
-    def label(self, **_keywords):
-        pass
-
-
-class CubeExportUIContractTests(unittest.TestCase):
+class CubeExternalExportContractTests(unittest.TestCase):
     def setUp(self):
-        fake_bpy = ModuleType("bpy")
-        props = ModuleType("bpy.props")
-        for name, kind in (
-            ("BoolProperty", "bool"),
-            ("EnumProperty", "enum"),
-            ("FloatProperty", "float"),
-            ("IntProperty", "int"),
-            ("StringProperty", "string"),
-        ):
-            setattr(props, name, _property(kind))
-        fake_bpy.props = props
-        fake_bpy.types = SimpleNamespace(Operator=_Operator)
-        fake_bpy.app = SimpleNamespace(background=True)
-        self.modules = patch.dict(
-            sys.modules,
-            {"bpy": fake_bpy, "bpy.props": props},
-        )
-        self.modules.start()
-        sys.modules.pop(MODULE, None)
-        self.export = importlib.import_module(MODULE)
-
-    def tearDown(self):
-        sys.modules.pop(MODULE, None)
-        self.modules.stop()
+        from chemblender_prepare import export_service
+        self.export = export_service
 
     @staticmethod
     def _project(batch):
@@ -199,24 +137,11 @@ class CubeExportUIContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.export.resolve_export_selection(non_grid, self._charge(batch).id)
 
-    def test_export_prompts_name_grid3d_as_a_supported_entity(self):
+    def test_invalid_selection_reports_supported_scientific_entities(self):
         project = self._project(CUBE_READER.parse(SHEARED))
-        operator = self.export.CHEMBLENDER_OT_export_project_entity
-
-        self.assertIn("Grid3D", operator.bl_description)
-        self.assertEqual(
-            self.export.__doc__,
-            "Background export for the active Project Browser entity.",
-        )
-        with self.assertRaisesRegex(
-            TypeError,
-            "Structure, FrameSet or Grid3D",
-        ):
+        with self.assertRaisesRegex(TypeError, "Structure, FrameSet or Grid3D"):
             self.export.resolve_export_selection(project, "not-a-uuid")
-        with self.assertRaisesRegex(
-            ValueError,
-            "Structure, FrameSet or Grid3D",
-        ):
+        with self.assertRaisesRegex(ValueError, "Structure, FrameSet or Grid3D"):
             self.export.resolve_export_selection(project, uuid4())
 
     def test_projection_preserves_missing_and_ambiguous_charge_for_core_preview(self):
@@ -257,33 +182,14 @@ class CubeExportUIContractTests(unittest.TestCase):
         ):
             preview_cube_export(ambiguous_entities)
 
-    def test_cube_format_filter_and_selected_grid_default(self):
-        module = self.export
-        operator_type = module.CHEMBLENDER_OT_export_project_entity
-        self.assertIn("cube", {item[0] for item in module._FORMAT_ITEMS})
-        self.assertIn(
-            "*.cube",
-            operator_type.__annotations__["filter_glob"].keywords["default"],
-        )
-
-        batch = CUBE_READER.parse(SHEARED)
-        project = self._project(batch)
-        operator = operator_type()
-        operator.format_name = "extxyz"
-        operator.missing_value_token = ""
-        context = SimpleNamespace(scene=object())
-        session = SimpleNamespace(project=project, active_entity_id=self._grid(batch).id)
-        with (
-            patch.object(module, "get_scene_session", return_value=session),
-            patch.object(
-                module,
-                "preview_export_selection",
-                return_value=SimpleNamespace(entries=()),
-            ),
-        ):
-            operator._selection_and_preview(context, default_format=True)
-
-        self.assertEqual(operator.format_name, "cube")
+    def test_cli_accepts_cube_without_silently_selecting_a_dataset(self):
+        from chemblender_prepare.cli import build_parser
+        args = build_parser().parse_args([
+            "export", "project.cbq", "--entity", str(uuid4()),
+            "--format", "cube", "--output", "selected.cube",
+        ])
+        self.assertEqual(args.format, "cube")
+        self.assertIsNone(args.dataset_index)
 
     def test_cube_preview_is_read_only_and_requires_explicit_multi_dataset_index(self):
         scalar_batch = CUBE_READER.parse(SHEARED)
@@ -296,7 +202,7 @@ class CubeExportUIContractTests(unittest.TestCase):
             dataset_index=None,
         )
         with patch(
-            "ChemBlender.core.exporters.cube.export_cube",
+            "chemblender_prepare.core.exporters.cube.export_cube",
         ) as writer:
             self.assertEqual(self._preview_cube(scalar_selection), expected_scalar)
         writer.assert_not_called()
@@ -321,79 +227,26 @@ class CubeExportUIContractTests(unittest.TestCase):
             expected_multi,
         )
 
-    def test_unset_multi_dataset_invoke_opens_dialog_but_execute_fails_closed(self):
+    def test_unset_multi_dataset_export_fails_without_creating_a_file(self):
         batch = CUBE_READER.parse(TWO_DATASETS)
-        project = self._project(batch)
-        module = self.export
-        update = (
-            module.CHEMBLENDER_OT_export_project_entity
-            .__annotations__["format_name"]
-            .keywords["update"]
-        )
-
-        class _UpdatingExportOperator(
-            module.CHEMBLENDER_OT_export_project_entity
-        ):
-            def __setattr__(self, name, value):
-                object.__setattr__(self, name, value)
-                if name == "format_name" and getattr(
-                    self,
-                    "_updates_enabled",
-                    False,
-                ):
-                    update(self, self._update_context)
-
-        operator = _UpdatingExportOperator()
-        operator.filepath = ""
-        operator._updates_enabled = False
-        operator.format_name = "extxyz"
-        operator.missing_value_token = ""
-        operator.cube_dataset_index = -1
-        operator.confirm_loss = False
-        manager = _WindowManager()
-        context = SimpleNamespace(scene=object(), window_manager=manager)
-        operator._update_context = context
-        operator._updates_enabled = True
-        session = SimpleNamespace(project=project, active_entity_id=self._grid(batch).id)
-
-        with (
-            patch.object(module, "get_scene_session", return_value=session),
-            patch.object(module, "preview_cube_export", create=True) as preview,
-        ):
-            result = operator.invoke(context, None)
-
-        self.assertEqual(result, {"RUNNING_MODAL"})
-        self.assertIs(manager.selected, operator)
-        self.assertEqual(operator.format_name, "cube")
-        self.assertEqual(operator.loss_preview, "Select Dataset Index")
-        preview.assert_not_called()
-
+        selection = self._select_grid(self._project(batch), self._grid(batch))
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "selected.cube"
-            operator.filepath = str(destination)
-            with patch.object(module, "get_scene_session", return_value=session):
-                result = operator.execute(context)
-            self.assertEqual(result, {"CANCELLED"})
+            with self.assertRaisesRegex(ValueError, "dataset_index.missing"):
+                self.export.export_selection(destination, selection, format_name="cube", confirm_loss=True)
             self.assertFalse(destination.exists())
+            self.assertEqual(tuple(Path(directory).iterdir()), ())
 
-    def test_dataset_index_control_is_shown_only_for_multi_dataset_cube(self):
-        operator = self.export.CHEMBLENDER_OT_export_project_entity()
-        operator.format_name = "cube"
-        operator.loss_preview = "No data loss"
-        operator.confirm_loss = False
-        operator._preview_report = None
+    def test_gui_forwards_only_an_explicit_dataset_selection(self):
+        from chemblender_prepare.gui import command_arguments
+        values = {"command": "export", "sources": "project.cbq", "output": "selected.cube",
+                  "format": "cube", "entity": str(uuid4()), "dataset_index": ""}
+        self.assertNotIn("--dataset-index", command_arguments(values))
+        values["dataset_index"] = "1"
+        argv = command_arguments(values)
+        self.assertEqual(argv[argv.index("--dataset-index") + 1], "1")
 
-        operator._cube_requires_dataset_index = True
-        operator.layout = _Layout()
-        operator.draw(None)
-        self.assertIn("cube_dataset_index", operator.layout.properties)
-
-        operator._cube_requires_dataset_index = False
-        operator.layout = _Layout()
-        operator.draw(None)
-        self.assertNotIn("cube_dataset_index", operator.layout.properties)
-
-    def test_cube_job_preserves_unconfirmed_destination(self):
+    def test_cube_export_preserves_unconfirmed_destination(self):
         batch = CUBE_READER.parse(SHEARED)
         selection = self._select_grid(self._project(batch), self._grid(batch))
         self.assertTrue(self._preview_cube(selection).requires_confirmation)
@@ -401,7 +254,7 @@ class CubeExportUIContractTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             destination = Path(directory) / "selected.cube"
             destination.write_bytes(b"prior destination\n")
-            job = self.export.ExportJob(
+            report = self.export.export_selection(
                 destination,
                 selection,
                 format_name="cube",
@@ -409,14 +262,10 @@ class CubeExportUIContractTests(unittest.TestCase):
                 missing_value_token=None,
                 dataset_index=None,
             )
-            job.start()
-            self.assertTrue(job.join(5))
-
-            self.assertIsNone(job.error)
-            self.assertFalse(job.result.written)
+            self.assertFalse(report.written)
             self.assertEqual(destination.read_bytes(), b"prior destination\n")
 
-    def test_cube_job_writes_scalar_and_selected_multi_dataset(self):
+    def test_cube_export_writes_scalar_and_selected_multi_dataset(self):
         cases = (
             (CUBE_READER.parse(SHEARED), None),
             (CUBE_READER.parse(TWO_DATASETS), 1),
@@ -428,7 +277,7 @@ class CubeExportUIContractTests(unittest.TestCase):
                     grid = self._grid(batch)
                     selection = self._select_grid(self._project(batch), grid)
                     destination = root / f"selected-{dataset_index}.cube"
-                    job = self.export.ExportJob(
+                    report = self.export.export_selection(
                         destination,
                         selection,
                         format_name="cube",
@@ -436,11 +285,7 @@ class CubeExportUIContractTests(unittest.TestCase):
                         missing_value_token=None,
                         dataset_index=dataset_index,
                     )
-                    job.start()
-                    self.assertTrue(job.join(5))
-
-                    self.assertIsNone(job.error)
-                    self.assertTrue(job.result.written)
+                    self.assertTrue(report.written)
                     reparsed = CUBE_READER.parse(destination)
                     reparsed_grid = self._grid(reparsed)
                     expected = numpy.asarray(grid.data.values)
@@ -452,25 +297,15 @@ class CubeExportUIContractTests(unittest.TestCase):
                         selection.structure.atomic_numbers,
                     )
 
-    def test_cancelled_cube_job_preserves_destination_and_cleans_temporary(self):
+    def test_cancelled_cube_export_preserves_destination_and_cleans_temporary(self):
         batch = CUBE_READER.parse(SHEARED)
         selection = self._select_grid(self._project(batch), self._grid(batch))
         with TemporaryDirectory() as directory:
             root = Path(directory)
             destination = root / "selected.cube"
             destination.write_bytes(b"prior destination\n")
-            job = self.export.ExportJob(
-                destination,
-                selection,
-                format_name="cube",
-                confirm_loss=True,
-                missing_value_token=None,
-                dataset_index=None,
-            )
-            job.cancel()
-            job.start()
-            self.assertTrue(job.join(5))
-
-            self.assertIsInstance(job.error, ExportCancelled)
+            with self.assertRaises(ExportCancelled):
+                self.export.export_selection(destination, selection, format_name="cube",
+                                             confirm_loss=True, is_cancelled=lambda: True)
             self.assertEqual(destination.read_bytes(), b"prior destination\n")
             self.assertEqual(tuple(root.iterdir()), (destination,))

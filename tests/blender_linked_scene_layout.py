@@ -51,8 +51,14 @@ def main():
 
     import ChemBlender
     from ChemBlender import scene_preset_view as views
-    from ChemBlender.core import (ArrayData, ImportBatch, SpectrumKind, SpectrumProfile,
-        builtin_scene_presets, derive_electronic_spectrum, derive_vibrational_spectrum, plan_scene_preset)
+    from cbq_core.model import ArrayData
+    from cbq_core.model import ImportBatch
+    from cbq_core.model import SpectrumKind
+    from cbq_core.model import SpectrumProfile
+    from cbq_core.scene_preset import builtin_scene_presets
+    from chemblender_prepare.core.vibration_spectrum import derive_electronic_spectrum
+    from chemblender_prepare.core.vibration_spectrum import derive_vibrational_spectrum
+    from cbq_core.scene_preset import plan_scene_preset
     from ChemBlender.ui import session as session_ui
     from tests.test_excited_state_model import state_set
     from tests.test_periodic_electronic_model import periodic_structure, band_structure, density_of_states

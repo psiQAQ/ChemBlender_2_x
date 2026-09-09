@@ -6,13 +6,14 @@ import unittest
 
 import numpy
 
-from ChemBlender.core import CapabilitySupport, IssueKind, QCProject, SniffMatch
-from ChemBlender.core.gemmi_adapter import (
-    CIF_READER,
-    GemmiDependencyError,
-    parse_cif,
-    sniff_cif,
-)
+from chemblender_prepare.core.readers import CapabilitySupport
+from cbq_core.model import IssueKind
+from cbq_core.model import QCProject
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.gemmi_adapter import CIF_READER
+from chemblender_prepare.core.gemmi_adapter import GemmiDependencyError
+from chemblender_prepare.core.gemmi_adapter import parse_cif
+from chemblender_prepare.core.gemmi_adapter import sniff_cif
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,7 +25,7 @@ HAS_GEMMI = importlib.util.find_spec("gemmi") is not None
 class GemmiAdapterTests(unittest.TestCase):
     def test_core_import_does_not_eagerly_load_gemmi(self):
         code = (
-            "import sys; import ChemBlender.core; "
+            "import sys; import cbq_core; "
             "assert 'gemmi' not in sys.modules"
         )
         subprocess.run(
@@ -37,7 +38,7 @@ class GemmiAdapterTests(unittest.TestCase):
         result = sniff_cif(CSCL, CSCL.read_bytes())
         self.assertIs(result.match, SniffMatch.EXACT)
         self.assertEqual(CIF_READER.reader_id, "cif")
-        self.assertEqual(CIF_READER.reader_version, "1")
+        self.assertEqual(CIF_READER.reader_version, "2")
         self.assertEqual(CIF_READER.extensions, (".cif",))
         self.assertEqual(
             CIF_READER.capabilities,

@@ -10,17 +10,23 @@ from uuid import UUID, uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData, DensityMatrixSpin, ImportBatch, QCProject,
-    close_project, open_project, save_project,
-)
-from ChemBlender.core.worker_protocol import (
-    EntityReference, WorkerRequest, WorkerStatus, read_result, write_request,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DensityMatrixSpin
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from cbq_core.worker_protocol import EntityReference
+from cbq_core.worker_protocol import WorkerRequest
+from cbq_core.worker_protocol import WorkerStatus
+from cbq_core.worker_protocol import read_result
+from cbq_core.worker_protocol import write_request
 from tests.test_density_matrix_model import density_matrix
 from tests.test_wavefunction_grid import entities, GRID
 from tests.test_wavefunction_observables import nuclear_charges
-from worker.runner import default_registry, run_request
+from chemblender_prepare.worker.runner import default_registry
+from chemblender_prepare.worker.runner import run_request
 
 
 class WavefunctionWorkerTests(unittest.TestCase):
@@ -85,7 +91,7 @@ class WavefunctionWorkerTests(unittest.TestCase):
         self.assertIn(EntityReference(grid.id, grid.revision), result.outputs)
         return project, grid
 
-    @patch("ChemBlender.core.wavefunction_grid._evaluate_channel")
+    @patch("chemblender_prepare.core.wavefunction_grid._evaluate_channel")
     def test_mo_and_occupation_density_publish_grid_and_point_progress(self, evaluate):
         def values(_structure, _basis, coefficients, points):
             return coefficients[:, :1] * points[:, 0][None, :]
@@ -103,7 +109,7 @@ class WavefunctionWorkerTests(unittest.TestCase):
         progress = json.loads((self.directory / "progress.json").read_text("utf-8"))
         self.assertEqual(progress, {"completed": 2, "total": 2})
 
-    @patch("ChemBlender.core.wavefunction_grid._evaluate_channel")
+    @patch("chemblender_prepare.core.wavefunction_grid._evaluate_channel")
     def test_progress_permission_failure_retries_without_losing_numeric_output(self, evaluate):
         evaluate.side_effect = lambda _s, _b, coefficients, points: (
             coefficients[:, :1] * points[:, 0][None, :]
@@ -118,8 +124,8 @@ class WavefunctionWorkerTests(unittest.TestCase):
                     raise PermissionError("progress reader temporarily holds destination")
             return replace_file(source, destination)
 
-        with patch("ChemBlender.core.worker_protocol.os.replace", side_effect=replace_with_busy_reader), \
-                patch("worker.wavefunction_operations.monotonic", return_value=1.0):
+        with patch("cbq_core.worker_protocol.os.replace", side_effect=replace_with_busy_reader), \
+                patch("chemblender_prepare.worker.wavefunction_operations.monotonic", return_value=1.0):
             result = self.run_operation("mo_grid", parameters={
                 **GRID, "chunk_size": 1, "channel": "restricted", "orbital_index": 0,
             })
@@ -130,7 +136,7 @@ class WavefunctionWorkerTests(unittest.TestCase):
                          {"completed": 2, "total": 2})
         self.assertFalse(tuple(self.directory.glob(".progress.json.*.tmp")))
 
-    @patch("ChemBlender.core.wavefunction_observables._evaluate_esp")
+    @patch("chemblender_prepare.core.wavefunction_observables._evaluate_esp")
     def test_progress_permission_failure_preserves_cancellation_without_partial_rdm(self, evaluate):
         replace_file = os.replace
 
@@ -144,7 +150,7 @@ class WavefunctionWorkerTests(unittest.TestCase):
             return numpy.ones(len(points))
 
         evaluate.side_effect = cancel
-        with patch("ChemBlender.core.worker_protocol.os.replace", side_effect=denied_progress):
+        with patch("cbq_core.worker_protocol.os.replace", side_effect=denied_progress):
             result = self.run_operation("esp_from_orbitals_grid",
                 inputs=(self.structure, self.basis, self.orbitals, self.charges),
                 parameters={**GRID, "chunk_size": 1, "density_level": "scf"})
@@ -155,7 +161,7 @@ class WavefunctionWorkerTests(unittest.TestCase):
         self.assertFalse(tuple(self.directory.glob(".progress.json.*.tmp")))
 
     def test_progress_other_io_errors_are_not_silenced(self):
-        with patch("worker.wavefunction_operations._atomic_document",
+        with patch("chemblender_prepare.worker.wavefunction_operations._atomic_document",
                    side_effect=OSError(errno.ENOSPC, "disk full")):
             result = self.run_operation("mo_grid", parameters={
                 **GRID, "channel": "restricted", "orbital_index": 0,
@@ -165,7 +171,7 @@ class WavefunctionWorkerTests(unittest.TestCase):
         self.assertEqual(result.outputs, ())
         self.assertEqual(self.sidecar_bytes(), self.before)
 
-    @patch("ChemBlender.core.wavefunction_observables._evaluate_stored_basis")
+    @patch("chemblender_prepare.core.wavefunction_observables._evaluate_stored_basis")
     def test_total_and_spin_rdm_keep_distinct_semantics(self, evaluate):
         evaluate.side_effect = lambda _s, _b, points: points[:, 0][None, :]
         for matrix, role, expected in (
@@ -180,7 +186,7 @@ class WavefunctionWorkerTests(unittest.TestCase):
                 self.assertEqual(grid.semantic_role, role)
                 numpy.testing.assert_allclose(numpy.asarray(grid.data.values).ravel(), expected)
 
-    @patch("ChemBlender.core.wavefunction_observables._evaluate_esp")
+    @patch("chemblender_prepare.core.wavefunction_observables._evaluate_esp")
     def test_esp_uses_explicit_charge_and_total_rdm(self, evaluate):
         evaluate.side_effect = lambda _s, _b, _d, charges, points: (
             numpy.full(len(points), charges[0])
@@ -194,7 +200,7 @@ class WavefunctionWorkerTests(unittest.TestCase):
         provenance = project.provenance[grid.provenance_ids[0]]
         self.assertIn(self.charges.id, provenance.parent_ids)
 
-    @patch("ChemBlender.core.wavefunction_observables._evaluate_esp")
+    @patch("chemblender_prepare.core.wavefunction_observables._evaluate_esp")
     def test_orbital_esp_publishes_derived_rdm_and_two_provenance_records(self, evaluate):
         evaluate.side_effect = lambda _s, _b, _d, _q, points: numpy.ones(len(points))
         result = self.run_operation(
@@ -211,7 +217,7 @@ class WavefunctionWorkerTests(unittest.TestCase):
         self.assertEqual(dict(rdm_source.parameters)["density_source"], "orbital_occupations")
         self.assertIn(derived.id, project.provenance[grid.provenance_ids[0]].parent_ids)
 
-    @patch("ChemBlender.core.wavefunction_observables._evaluate_esp")
+    @patch("chemblender_prepare.core.wavefunction_observables._evaluate_esp")
     def test_cancel_or_backend_error_never_publishes_partial_grid_or_derived_rdm(self, evaluate):
         for operation in ("esp_grid", "esp_from_orbitals_grid"):
             for cancel in (True, False):

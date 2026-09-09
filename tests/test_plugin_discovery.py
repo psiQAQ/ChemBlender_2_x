@@ -4,15 +4,12 @@ from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from ChemBlender.core.readers import CapabilitySupport, ReaderAvailability
-from ChemBlender.reader_api.manifest import (
-    ExecutionMode,
-    ReaderPluginManifest,
-)
-from ChemBlender.reader_api.registry import (
-    ReaderPluginRegistry,
-    builtin_reader_plugins,
-)
+from chemblender_prepare.core.readers import CapabilitySupport
+from chemblender_prepare.core.readers import ReaderAvailability
+from chemblender_prepare.reader_api.manifest import ExecutionMode
+from chemblender_prepare.reader_api.manifest import ReaderPluginManifest
+from chemblender_prepare.reader_api.registry import ReaderPluginRegistry
+from chemblender_prepare.reader_api.registry import builtin_reader_plugins
 
 
 def external_plugin(plugin_id, reader_id):
@@ -87,7 +84,7 @@ class _MalformedManifest:
 
 class ReaderPluginDiscoveryTests(unittest.TestCase):
     def discovery(self):
-        module = importlib.import_module("ChemBlender.reader_api.discovery")
+        module = importlib.import_module("chemblender_prepare.reader_api.discovery")
         registry = ReaderPluginRegistry(builtin_reader_plugins())
         return module.ReaderPluginDiscovery(registry), registry
 
@@ -571,26 +568,20 @@ class ReaderPluginDiscoveryTests(unittest.TestCase):
         )
 
 
-class ReaderAPIDiscoveryBridgeTests(unittest.TestCase):
+class ExternalReaderDiscoveryIntegrationTests(unittest.TestCase):
     def test_reserved_builtin_id_is_isolated_and_cleaned_by_discovery(self):
-        bridge = importlib.import_module(
-            "ChemBlender.runtime.reader_api_bridge"
-        )
-        registry = bridge.get_reader_plugin_registry()
+        from chemblender_prepare.reader_api.discovery import ReaderPluginDiscovery
+        registry = ReaderPluginRegistry(builtin_reader_plugins())
+        discovery = ReaderPluginDiscovery(registry)
         before = registry.descriptors
         reserved = external_plugin(
             "chemblender.builtin",
             "external.reserved",
         )
-        namespace = {}
-        handle = bridge.register_reader_api_handle(
-            "synthetic_repository.chemblender",
-            namespace=namespace,
-        )
         registered_failure = False
 
         try:
-            failed = handle.register_callback(reserved)
+            failed = discovery.register(reserved)
             registered_failure = True
             self.assertFalse(failed.availability.available)
             self.assertEqual(
@@ -610,10 +601,10 @@ class ReaderAPIDiscoveryBridgeTests(unittest.TestCase):
             )
             self.assertIn(
                 failed,
-                bridge.refresh_reader_plugin_discovery().plugins,
+                discovery.refresh().plugins,
             )
             self.assertTrue(
-                handle.unregister_callback(reserved.manifest)
+                discovery.unregister(reserved.manifest)
             )
             registered_failure = False
             self.assertTrue(
@@ -628,22 +619,18 @@ class ReaderAPIDiscoveryBridgeTests(unittest.TestCase):
             )
             self.assertNotIn(
                 failed,
-                bridge.refresh_reader_plugin_discovery().plugins,
+                discovery.refresh().plugins,
             )
         finally:
             if registered_failure:
-                handle.unregister_callback(reserved.manifest)
-            current = namespace.get(bridge.READER_API_HANDLE_KEY)
-            if current is not None:
-                bridge.remove_reader_api_handle(
-                    current,
-                    namespace=namespace,
-                )
+                discovery.unregister(reserved.manifest)
+            self.assertTrue(all(item.plugin_id == "chemblender.builtin"
+                                for item in registry.descriptors))
 
-    def test_handle_callbacks_refresh_and_clean_explicit_plugin_state(self):
-        bridge = importlib.import_module(
-            "ChemBlender.runtime.reader_api_bridge"
-        )
+    def test_refresh_and_clean_explicit_plugin_state(self):
+        from chemblender_prepare.reader_api.discovery import ReaderPluginDiscovery
+        registry = ReaderPluginRegistry(builtin_reader_plugins())
+        discovery = ReaderPluginDiscovery(registry)
         plugin = external_plugin(
             "org.example.bridge_discovery",
             "external.bridge_discovery",
@@ -652,17 +639,12 @@ class ReaderAPIDiscoveryBridgeTests(unittest.TestCase):
             "org.example.bridge_failure",
             plugin.descriptor.reader_id,
         )
-        namespace = {}
-        handle = bridge.register_reader_api_handle(
-            "synthetic_repository.chemblender",
-            namespace=namespace,
-        )
 
         try:
-            good_state = handle.register_callback(plugin)
-            failed_state = handle.register_callback(duplicate)
-            first = bridge.refresh_reader_plugin_discovery()
-            second = bridge.refresh_reader_plugin_discovery()
+            good_state = discovery.register(plugin)
+            failed_state = discovery.register(duplicate)
+            first = discovery.refresh()
+            second = discovery.refresh()
 
             self.assertTrue(good_state.availability.available)
             self.assertFalse(failed_state.availability.available)
@@ -674,23 +656,19 @@ class ReaderAPIDiscoveryBridgeTests(unittest.TestCase):
             self.assertIn(failed_state, first.plugins)
 
             self.assertTrue(
-                handle.unregister_callback(duplicate.manifest)
+                discovery.unregister(duplicate.manifest)
             )
             self.assertIn(
                 plugin.descriptor.reader_id,
                 {
                     item.reader_id
-                    for item in bridge.get_reader_plugin_registry().descriptors
+                    for item in registry.descriptors
                 },
             )
-            self.assertTrue(handle.unregister_callback(plugin.manifest))
+            self.assertTrue(discovery.unregister(plugin.manifest))
         finally:
-            current = namespace.get(bridge.READER_API_HANDLE_KEY)
-            if current is not None:
-                bridge.remove_reader_api_handle(
-                    current,
-                    namespace=namespace,
-                )
+            self.assertTrue(all(item.plugin_id == "chemblender.builtin"
+                                for item in registry.descriptors))
 
 
 if __name__ == "__main__":

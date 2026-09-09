@@ -12,8 +12,8 @@ from uuid import UUID, uuid4
 
 import numpy
 
-import ChemBlender.reader_api as reader_api
-import ChemBlender.reader_api.canonical_document as canonical_document
+import chemblender_prepare.reader_api as reader_api
+import chemblender_prepare.reader_api.canonical_document as canonical_document
 
 
 STRUCTURE_ID = UUID("20000000-0000-0000-0000-000000000002")
@@ -791,7 +791,7 @@ class ReaderCanonicalDocumentTests(unittest.TestCase):
     def test_implementation_uses_only_relative_imports(self):
         source = (
             Path(__file__).resolve().parents[1]
-            / "ChemBlender"
+            / "chemblender_prepare"
             / "reader_api"
             / "canonical_document.py"
         )

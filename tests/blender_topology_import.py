@@ -15,8 +15,12 @@ private = Path(os.environ["BLENDER_USER_RESOURCES"]).resolve()
 assert ROOT / ".agents" / "cache" in private.parents
 private.mkdir(parents=True, exist_ok=True)
 
-from ChemBlender.core import ImportBatch, close_project, create_session, open_project, save_project
-from ChemBlender.core.import_pipeline import ImportCancelled
+from cbq_core.model import ImportBatch
+from cbq_core.sidecar import close_project
+from cbq_core.session import create_session
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from chemblender_prepare.core.import_pipeline import ImportCancelled
 from ChemBlender.ui import scientific_import, session as session_ui, topology_import, wavefunction_import
 from ChemBlender.ui.project_browser import panel
 from ChemBlender.ui.tasks import Task, TaskState, TaskWorker

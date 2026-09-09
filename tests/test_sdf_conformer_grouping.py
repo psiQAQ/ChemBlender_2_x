@@ -27,7 +27,7 @@ def _molecule(smiles, *, atom_maps=False, order=None, aromatic=False):
 
 def _batch(*entries):
     from rdkit import Chem
-    from ChemBlender.core.formats.sdf import parse_sdf
+    from chemblender_prepare.core.formats.sdf import parse_sdf
 
     records = []
     for molecule, properties in entries:
@@ -50,9 +50,7 @@ def _batch(*entries):
 
 class SDFConformerGroupingTests(unittest.TestCase):
     def test_record_without_topology_is_not_a_grouping_candidate(self):
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            suggest_conformer_groups,
-        )
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         batch = _batch((_molecule("CCO"), ()),)
         record = replace(batch.molecular_records[0], topology_id=None)
@@ -65,10 +63,8 @@ class SDFConformerGroupingTests(unittest.TestCase):
         )
 
     def test_suggestions_are_immutable_and_never_create_a_conformer_set(self):
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            ConformerGroupSuggestion,
-            suggest_conformer_groups,
-        )
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import ConformerGroupSuggestion
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         first = _molecule("FC(Cl)(Br)I", atom_maps=True)
         second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
@@ -83,9 +79,7 @@ class SDFConformerGroupingTests(unittest.TestCase):
             suggestions[0].record_ids = ()
 
     def test_complete_unique_atom_maps_take_precedence_for_reordered_records(self):
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            suggest_conformer_groups,
-        )
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         first = _molecule("FC(Cl)(Br)I", atom_maps=True)
         second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
@@ -98,9 +92,7 @@ class SDFConformerGroupingTests(unittest.TestCase):
         self.assertEqual(suggestion.atom_mappings[1], (4, 3, 2, 1, 0))
 
     def test_mapped_and_unmapped_reordered_records_share_a_bucket(self):
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            suggest_conformer_groups,
-        )
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         batch = _batch(
             (_molecule("FC(Cl)(Br)I", atom_maps=True), ()),
@@ -116,9 +108,7 @@ class SDFConformerGroupingTests(unittest.TestCase):
         self.assertEqual(suggestion.atom_mappings[1], (4, 3, 2, 1, 0))
 
     def test_canonical_rank_isomorphism_mapping_is_deterministic(self):
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            suggest_conformer_groups,
-        )
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         first = _molecule("FC(Cl)(Br)I")
         second = _molecule("FC(Cl)(Br)I", order=(4, 3, 2, 1, 0))
@@ -137,9 +127,7 @@ class SDFConformerGroupingTests(unittest.TestCase):
         self.assertFalse(first_result[0].requires_review)
 
     def test_charge_bond_aromatic_stereo_and_isotope_differences_do_not_group(self):
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            suggest_conformer_groups,
-        )
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         cases = (
             ("charge", _molecule("C[NH3+]"), _molecule("CN")),
@@ -156,16 +144,14 @@ class SDFConformerGroupingTests(unittest.TestCase):
                 )
 
     def test_same_atom_count_alone_does_not_group(self):
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            suggest_conformer_groups,
-        )
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         batch = _batch((_molecule("CCO"), ()), (_molecule("CCN"), ()))
 
         self.assertEqual(suggest_conformer_groups(batch), ())
 
     def test_distinct_molecular_identities_never_reach_pair_mapping(self):
-        from ChemBlender.core.import_pipeline import conformer_grouping
+        from chemblender_prepare.core.import_pipeline import conformer_grouping
 
         batch = _batch(
             (_molecule("FC(Cl)(Br)I"), ()),
@@ -185,7 +171,7 @@ class SDFConformerGroupingTests(unittest.TestCase):
         self.assertEqual(pair_mapping.call_count, 1)
 
     def test_ten_thousand_distinct_buckets_do_no_pairwise_work(self):
-        from ChemBlender.core.import_pipeline import conformer_grouping
+        from chemblender_prepare.core.import_pipeline import conformer_grouping
 
         source_revision_id = uuid4()
 
@@ -242,9 +228,7 @@ class SDFConformerGroupingTests(unittest.TestCase):
         self.assertLessEqual(TrackedMolecule.peak, 2)
 
     def test_ambiguous_symmetric_isomorphism_requires_review(self):
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            suggest_conformer_groups,
-        )
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         batch = _batch((_molecule("CC"), ()), (_molecule("CC", order=(1, 0)), ()))
 
@@ -254,11 +238,11 @@ class SDFConformerGroupingTests(unittest.TestCase):
         self.assertEqual(suggestion.evidence[1].kind, "ambiguous_symmetric_isomorphism")
 
     def test_explicit_acceptance_reorders_coordinates_and_property_columns_with_provenance(self):
-        from ChemBlender.core import ArrayData, CategoricalData, RecordPropertyColumn
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            accept_conformer_group,
-            suggest_conformer_groups,
-        )
+        from cbq_core.model import ArrayData
+        from cbq_core.model import CategoricalData
+        from cbq_core.model import RecordPropertyColumn
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import accept_conformer_group
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         first = _molecule("FC(Cl)(Br)I", atom_maps=True)
         second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
@@ -315,11 +299,10 @@ class SDFConformerGroupingTests(unittest.TestCase):
         self.assertEqual(provenance["topology_lineage"][0][1], batch.topologies[0].revision)
 
     def test_categorical_snapshot_change_fails_closed(self):
-        from ChemBlender.core import ArrayData, CategoricalData
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            accept_conformer_group,
-            suggest_conformer_groups,
-        )
+        from cbq_core.model import ArrayData
+        from cbq_core.model import CategoricalData
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import accept_conformer_group
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         first = _molecule("FC(Cl)(Br)I", atom_maps=True)
         second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
@@ -339,10 +322,8 @@ class SDFConformerGroupingTests(unittest.TestCase):
             accept_conformer_group(suggestion, replace(batch, datasets=(changed,)))
 
     def test_source_and_provenance_snapshot_changes_fail_closed(self):
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            accept_conformer_group,
-            suggest_conformer_groups,
-        )
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import accept_conformer_group
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         first = _molecule("FC(Cl)(Br)I", atom_maps=True)
         second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
@@ -391,10 +372,8 @@ class SDFConformerGroupingTests(unittest.TestCase):
                     accept_conformer_group(suggestion, changed_batch)
 
     def test_cancellation_is_checked_between_rdkit_records(self):
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            ConformerGroupingCancelled,
-            suggest_conformer_groups,
-        )
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import ConformerGroupingCancelled
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         batch = _batch(
             (_molecule("FC(Cl)(Br)I", atom_maps=True), ()),
@@ -412,11 +391,9 @@ class SDFConformerGroupingTests(unittest.TestCase):
         self.assertEqual(calls, 4)
 
     def test_stale_suggestion_and_cancellation_fail_closed(self):
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            ConformerGroupingCancelled,
-            accept_conformer_group,
-            suggest_conformer_groups,
-        )
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import ConformerGroupingCancelled
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import accept_conformer_group
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         first = _molecule("FC(Cl)(Br)I", atom_maps=True)
         second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
@@ -436,11 +413,9 @@ class SDFConformerGroupingTests(unittest.TestCase):
             )
 
     def test_acceptance_converts_bohr_coordinates_to_reference_unit_and_snapshot_tracks_units(self):
-        from ChemBlender.core import ArrayData
-        from ChemBlender.core.import_pipeline.conformer_grouping import (
-            accept_conformer_group,
-            suggest_conformer_groups,
-        )
+        from cbq_core.model import ArrayData
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import accept_conformer_group
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         first = _molecule("FC(Cl)(Br)I", atom_maps=True)
         second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
@@ -463,9 +438,9 @@ class SDFConformerGroupingTests(unittest.TestCase):
         self.assertNotEqual(suggestion, suggest_conformer_groups(batch)[0])
 
     def test_invalid_or_non_explicit_topology_is_not_suggested(self):
-        from ChemBlender.core import TopologySource
-        from ChemBlender.core.model import QualityStatus
-        from ChemBlender.core.import_pipeline.conformer_grouping import suggest_conformer_groups
+        from cbq_core.model import TopologySource
+        from cbq_core.model import QualityStatus
+        from chemblender_prepare.core.import_pipeline.conformer_grouping import suggest_conformer_groups
 
         first = _molecule("FC(Cl)(Br)I", atom_maps=True)
         second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
@@ -487,7 +462,7 @@ class SDFConformerGroupingTests(unittest.TestCase):
                 )
 
     def test_acceptance_is_atomic_when_property_conversion_fails(self):
-        from ChemBlender.core.import_pipeline import conformer_grouping
+        from chemblender_prepare.core.import_pipeline import conformer_grouping
 
         first = _molecule("FC(Cl)(Br)I", atom_maps=True)
         second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))
@@ -511,17 +486,19 @@ class SDFConformerGroupingTests(unittest.TestCase):
         numpy.testing.assert_array_equal(column.data.values, before[1])
 
     def test_transaction_keeps_live_session_unchanged_on_publication_failure_and_round_trips(self):
-        from ChemBlender.core import ImportBatch, SourceRecord, SourceRevision, create_session, close_session
-        from ChemBlender.core.import_pipeline import (
-            ConformerGroupingDecision,
-            ImportCommitDecisions,
-            ImportPreview,
-            SourcePreview,
-            StagedImportSession,
-            commit_import_preview,
-            suggest_conformer_groups,
-        )
-        from ChemBlender.core.import_pipeline import transaction
+        from cbq_core.model import ImportBatch
+        from cbq_core.model import SourceRecord
+        from cbq_core.model import SourceRevision
+        from cbq_core.session import create_session
+        from cbq_core.session import close_session
+        from chemblender_prepare.core.import_pipeline import ConformerGroupingDecision
+        from chemblender_prepare.core.import_pipeline import ImportCommitDecisions
+        from chemblender_prepare.core.import_pipeline import ImportPreview
+        from chemblender_prepare.core.import_pipeline import SourcePreview
+        from chemblender_prepare.core.import_pipeline import StagedImportSession
+        from chemblender_prepare.core.import_pipeline import commit_import_preview
+        from chemblender_prepare.core.import_pipeline import suggest_conformer_groups
+        from chemblender_prepare.core.import_pipeline import transaction
 
         first = _molecule("FC(Cl)(Br)I", atom_maps=True)
         second = _molecule("FC(Cl)(Br)I", atom_maps=True, order=(4, 3, 2, 1, 0))

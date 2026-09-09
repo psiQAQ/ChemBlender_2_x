@@ -47,7 +47,7 @@ def roots():
 
 
 def view_snapshot(project):
-    from ChemBlender.core.scene_preset import scene_plan_document
+    from cbq_core.scene_preset import scene_plan_document
     from ChemBlender.scene_preset_view import scene_view_objects
     from ChemBlender.ui.view_cache import scene_plan_from_view
 
@@ -106,7 +106,8 @@ def main():
     report_path = destination / "verification.json"
 
     import ChemBlender
-    from ChemBlender.core.sidecar import close_project, open_project
+    from cbq_core.sidecar import close_project
+    from cbq_core.sidecar import open_project
     from ChemBlender.ui import session as session_ui
     from render_molecular import array_hashes
 

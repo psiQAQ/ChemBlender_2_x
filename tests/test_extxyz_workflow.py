@@ -4,13 +4,11 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from threading import Event
-from time import sleep
-from types import ModuleType, SimpleNamespace
+from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4
 
-from ChemBlender.core.exporters import ExportCancelled
+from chemblender_prepare.core.exporters import ExportCancelled
 from tests.test_project_browser_model import (
     FORCE_ID,
     FRAME_SET_ID,
@@ -19,15 +17,14 @@ from tests.test_project_browser_model import (
 )
 
 
-MODULE = "ChemBlender.ui.export"
 MOL2_FIXTURES = Path(__file__).parent / "fixtures" / "mol2"
 PDB_FIXTURES = Path(__file__).parent / "fixtures" / "pdb"
 PQR_FIXTURES = Path(__file__).parent / "fixtures" / "pqr"
 
 
 def _mol2_project(*names):
-    from ChemBlender.core import QCProject
-    from ChemBlender.core.formats.mol2 import parse_mol2
+    from cbq_core.model import QCProject
+    from chemblender_prepare.core.formats.mol2 import parse_mol2
 
     project = QCProject(uuid4(), "1.0")
     batches = tuple(parse_mol2(MOL2_FIXTURES / name) for name in names)
@@ -37,8 +34,8 @@ def _mol2_project(*names):
 
 
 def _pdb_project(*names):
-    from ChemBlender.core import QCProject
-    from ChemBlender.core.formats.pdb import parse_pdb
+    from cbq_core.model import QCProject
+    from chemblender_prepare.core.formats.pdb import parse_pdb
 
     project = QCProject(uuid4(), "1.0")
     batches = tuple(parse_pdb(PDB_FIXTURES / name) for name in names)
@@ -48,8 +45,8 @@ def _pdb_project(*names):
 
 
 def _pqr_project(*names):
-    from ChemBlender.core import QCProject
-    from ChemBlender.core.formats.pqr import parse_pqr
+    from cbq_core.model import QCProject
+    from chemblender_prepare.core.formats.pqr import parse_pqr
 
     project = QCProject(uuid4(), "1.0")
     batches = tuple(parse_pqr(PQR_FIXTURES / name) for name in names)
@@ -58,85 +55,11 @@ def _pqr_project(*names):
     return project, batches
 
 
-class _Property:
-    def __init__(self, kind, **keywords):
-        self.kind = kind
-        self.keywords = keywords
-
-
-def _property(kind):
-    return lambda **keywords: _Property(kind, **keywords)
-
-
-class _Operator:
-    def report(self, levels, message):
-        self.last_report = (levels, message)
-
-
-class _WindowManager:
-    def __init__(self, fail_at=None):
-        self.fail_at = fail_at
-        self.calls = []
-        self.timer = object()
-
-    def _call(self, name):
-        self.calls.append(name)
-        if self.fail_at == name:
-            raise RuntimeError(f"{name} failed")
-
-    def event_timer_add(self, _interval, *, window):
-        self._call("event_timer_add")
-        return self.timer
-
-    def event_timer_remove(self, timer):
-        self.assert_timer(timer)
-        self._call("event_timer_remove")
-
-    def progress_begin(self, _low, _high):
-        self._call("progress_begin")
-
-    def progress_update(self, _value):
-        self._call("progress_update")
-
-    def progress_end(self):
-        self._call("progress_end")
-
-    def modal_handler_add(self, _operator):
-        self._call("modal_handler_add")
-
-    def assert_timer(self, timer):
-        if timer is not self.timer:
-            raise AssertionError("unexpected timer")
-
-
-class ExtXYZWorkflowTests(unittest.TestCase):
-    def setUp(self):
-        fake_bpy = ModuleType("bpy")
-        fake_props = ModuleType("bpy.props")
-        for name, kind in (
-            ("BoolProperty", "bool"),
-            ("EnumProperty", "enum"),
-            ("FloatProperty", "float"),
-            ("IntProperty", "int"),
-            ("StringProperty", "string"),
-        ):
-            setattr(fake_props, name, _property(kind))
-        fake_bpy.props = fake_props
-        fake_bpy.types = SimpleNamespace(Operator=_Operator)
-        fake_bpy.app = SimpleNamespace(background=True)
-        self.modules = patch.dict(
-            sys.modules,
-            {"bpy": fake_bpy, "bpy.props": fake_props},
-        )
-        self.modules.start()
-        sys.modules.pop(MODULE, None)
-
-    def tearDown(self):
-        sys.modules.pop(MODULE, None)
-        self.modules.stop()
+class ExternalExportSelectionTests(unittest.TestCase):
+    """Scientific selection and loss checks use the actual external export service."""
 
     def test_frame_set_selection_resolves_structure_and_related_properties(self):
-        module = importlib.import_module(MODULE)
+        module = importlib.import_module("chemblender_prepare.export_service")
 
         selection = module.resolve_export_selection(
             sample_trajectory_project(),
@@ -153,48 +76,12 @@ class ExtXYZWorkflowTests(unittest.TestCase):
         self.assertFalse(report.written)
         self.assertFalse(report.requires_confirmation)
 
-    def test_molecular_formats_are_public_export_choices(self):
-        module = importlib.import_module(MODULE)
-        self.assertTrue({"mol", "sdf", "smiles"}.issubset({item[0] for item in module._FORMAT_ITEMS}))
-
-    def test_mol2_is_a_public_export_choice_and_filter(self):
-        module = importlib.import_module(MODULE)
-
-        self.assertIn("mol2", {item[0] for item in module._FORMAT_ITEMS})
-        filter_glob = (
-            module.CHEMBLENDER_OT_export_project_entity
-            .__annotations__["filter_glob"]
-            .keywords["default"]
-        )
-        self.assertIn("*.mol2", filter_glob.split(";"))
-
-    def test_pdb_is_a_public_export_choice_and_filter(self):
-        module = importlib.import_module(MODULE)
-
-        self.assertIn("pdb", {item[0] for item in module._FORMAT_ITEMS})
-        filter_glob = (
-            module.CHEMBLENDER_OT_export_project_entity
-            .__annotations__["filter_glob"]
-            .keywords["default"]
-        )
-        self.assertIn("*.pdb", filter_glob.split(";"))
-
-    def test_pqr_is_a_public_export_choice_and_filter(self):
-        module = importlib.import_module(MODULE)
-
-        self.assertIn("pqr", {item[0] for item in module._FORMAT_ITEMS})
-        filter_glob = (
-            module.CHEMBLENDER_OT_export_project_entity
-            .__annotations__["filter_glob"]
-            .keywords["default"]
-        )
-        self.assertIn("*.pqr", filter_glob.split(";"))
 
     def test_pqr_selection_reuses_biological_projection_and_core_preview(self):
-        from ChemBlender.core import DatasetStatus
-        from ChemBlender.core.exporters import preview_pqr_export
+        from cbq_core.model import DatasetStatus
+        from chemblender_prepare.core.exporters import preview_pqr_export
 
-        module = importlib.import_module(MODULE)
+        module = importlib.import_module("chemblender_prepare.export_service")
         project, batches = _pqr_project("with-chain.pqr", "no-chain.pqr")
         selected, unrelated = batches
         selection = module.resolve_export_selection(
@@ -296,89 +183,9 @@ class ExtXYZWorkflowTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, message):
                     module.preview_export_selection(invalid, "pqr")
 
-    def test_pqr_background_export_roundtrips_and_cancels_atomically(self):
-        from ChemBlender.core.formats.pqr import parse_pqr
-
-        module = importlib.import_module(MODULE)
-        project, (batch,) = _pqr_project("with-chain.pqr")
-        selection = module.resolve_export_selection(
-            project,
-            batch.structures[0].id,
-        )
-
-        with TemporaryDirectory() as directory:
-            root = Path(directory)
-            destination = root / "selected.pqr"
-            job = module.ExportJob(
-                destination,
-                selection,
-                format_name="pqr",
-                confirm_loss=True,
-                missing_value_token=None,
-            )
-            job.start()
-            self.assertTrue(job.join(5))
-            self.assertIsNone(job.error)
-            self.assertTrue(job.result.written)
-            reparsed = parse_pqr(destination)
-            self.assertEqual(
-                reparsed.structures[0].atomic_numbers,
-                selection.structure.atomic_numbers,
-            )
-            self.assertEqual(
-                {
-                    value.semantic_role
-                    for value in reparsed.datasets
-                },
-                {"partial_charge", "radius"},
-            )
-
-            destination.write_bytes(b"prior destination\n")
-            cancelled = module.ExportJob(
-                destination,
-                selection,
-                format_name="pqr",
-                confirm_loss=True,
-                missing_value_token=None,
-            )
-            cancelled.cancel()
-            cancelled.start()
-            self.assertTrue(cancelled.join(5))
-            self.assertIsInstance(cancelled.error, ExportCancelled)
-            self.assertEqual(destination.read_bytes(), b"prior destination\n")
-            self.assertEqual(tuple(root.iterdir()), (destination,))
-
-    def test_pqr_loss_preview_blocks_unconfirmed_background_write(self):
-        module = importlib.import_module(MODULE)
-        project, (batch,) = _pqr_project("with-chain.pqr")
-        selection = module.resolve_export_selection(
-            project,
-            batch.structures[0].id,
-        )
-        selection = replace(
-            selection,
-            structure=replace(selection.structure, molecular_charge=0),
-        )
-        preview = module.preview_export_selection(selection, "pqr")
-        self.assertTrue(preview.requires_confirmation)
-
-        with TemporaryDirectory() as directory:
-            destination = Path(directory) / "blocked.pqr"
-            job = module.ExportJob(
-                destination,
-                selection,
-                format_name="pqr",
-                confirm_loss=False,
-                missing_value_token=None,
-            )
-            job.start()
-            self.assertTrue(job.join(5))
-            self.assertIsNone(job.error)
-            self.assertFalse(job.result.written)
-            self.assertFalse(destination.exists())
 
     def test_mol2_selection_projects_only_the_selected_record(self):
-        module = importlib.import_module(MODULE)
+        module = importlib.import_module("chemblender_prepare.export_service")
         project, (selected, unrelated) = _mol2_project(
             "small.mol2",
             "aromatic.mol2",
@@ -405,8 +212,9 @@ class ExtXYZWorkflowTests(unittest.TestCase):
             )
         )
 
+
     def test_mol2_multi_record_selection_excludes_sibling_datasets(self):
-        module = importlib.import_module(MODULE)
+        module = importlib.import_module("chemblender_prepare.export_service")
         project, (batch,) = _mol2_project("multi.mol2")
 
         selection = module.resolve_export_selection(
@@ -432,8 +240,9 @@ class ExtXYZWorkflowTests(unittest.TestCase):
             )
         )
 
+
     def test_pdb_structure_selection_projects_exact_hierarchy_and_properties(self):
-        module = importlib.import_module(MODULE)
+        module = importlib.import_module("chemblender_prepare.export_service")
         project, (batch,) = _pdb_project("atom-hetatm.pdb")
         selection = module.resolve_export_selection(
             project,
@@ -458,47 +267,9 @@ class ExtXYZWorkflowTests(unittest.TestCase):
             },
         )
 
-    def test_pdb_conect_topology_reaches_loss_preview_and_confirmation(self):
-        module = importlib.import_module(MODULE)
-        project, (batch,) = _pdb_project("conect.pdb")
-        selection = module.resolve_export_selection(
-            project,
-            batch.structures[0].id,
-        )
-
-        self.assertIsNone(selection.topology)
-        self.assertEqual(selection.associated_topologies, batch.topologies)
-        projection = module._pdb_entities(selection)
-        self.assertEqual(projection.topologies, batch.topologies)
-        report = module.preview_export_selection(selection, "pdb")
-        self.assertTrue(report.requires_confirmation)
-        self.assertIn(
-            "topology_omitted",
-            tuple(entry.code for entry in report.entries),
-        )
-
-        operator = module.CHEMBLENDER_OT_export_project_entity()
-        operator.filepath = "blocked-conect.pdb"
-        operator.format_name = "pdb"
-        operator.confirm_loss = False
-        operator.missing_value_token = ""
-        with (
-            patch.object(
-                module,
-                "get_scene_session",
-                return_value=SimpleNamespace(
-                    project=project,
-                    active_entity_id=batch.structures[0].id,
-                ),
-            ),
-            patch.object(module.ExportJob, "start") as start,
-        ):
-            result = operator.execute(SimpleNamespace(scene=object()))
-        self.assertEqual(result, {"CANCELLED"})
-        start.assert_not_called()
 
     def test_structure_extxyz_does_not_silently_drop_bound_properties(self):
-        module = importlib.import_module(MODULE)
+        module = importlib.import_module("chemblender_prepare.export_service")
         project, (batch,) = _pdb_project("altloc.pdb")
         selection = module.resolve_export_selection(
             project,
@@ -516,12 +287,14 @@ class ExtXYZWorkflowTests(unittest.TestCase):
         ):
             module.preview_export_selection(selection, "extxyz")
 
+
     def test_pdb_frame_set_selection_emits_each_model_once_with_exact_datasets(self):
-        from ChemBlender.core import FrameSet, QCProject
-        from ChemBlender.core.exporters import export_pdb
+        from cbq_core.model import FrameSet
+        from cbq_core.model import QCProject
+        from chemblender_prepare.core.exporters import export_pdb
         from tests.test_biological_atom_data import biological_mapping_fixture
 
-        module = importlib.import_module(MODULE)
+        module = importlib.import_module("chemblender_prepare.export_service")
         batch = biological_mapping_fixture()
         project = QCProject(uuid4(), "1.0")
         project.commit(batch)
@@ -551,43 +324,9 @@ class ExtXYZWorkflowTests(unittest.TestCase):
             2,
         )
 
-    def test_pdb_preview_matches_core_and_requires_explicit_loss_confirmation(self):
-        from ChemBlender.core.exporters import preview_pdb_export
-
-        module = importlib.import_module(MODULE)
-        project, (batch,) = _pdb_project("atom-hetatm.pdb")
-        selection = module.resolve_export_selection(
-            project,
-            batch.structures[0].id,
-        )
-
-        self.assertIsNotNone(getattr(module, "preview_pdb_export", None))
-        report = module.preview_export_selection(selection, "pdb")
-        self.assertEqual(report, preview_pdb_export(module._pdb_entities(selection)))
-        self.assertTrue(report.requires_confirmation)
-
-        operator = module.CHEMBLENDER_OT_export_project_entity()
-        operator.filepath = "blocked.pdb"
-        operator.format_name = "pdb"
-        operator.confirm_loss = False
-        operator.missing_value_token = ""
-        with (
-            patch.object(
-                module,
-                "get_scene_session",
-                return_value=SimpleNamespace(
-                    project=project,
-                    active_entity_id=batch.structures[0].id,
-                ),
-            ),
-            patch.object(module.ExportJob, "start") as start,
-        ):
-            result = operator.execute(SimpleNamespace(scene=object()))
-        self.assertEqual(result, {"CANCELLED"})
-        start.assert_not_called()
 
     def test_pdb_preview_preserves_missing_and_ambiguous_hierarchy_fail_closed(self):
-        module = importlib.import_module(MODULE)
+        module = importlib.import_module("chemblender_prepare.export_service")
         project, (batch,) = _pdb_project("atom-hetatm.pdb")
         selection = module.resolve_export_selection(
             project,
@@ -609,190 +348,11 @@ class ExtXYZWorkflowTests(unittest.TestCase):
                 "pdb",
             )
 
-    def test_pdb_background_job_roundtrips_selected_structure(self):
-        from ChemBlender.core.formats.pdb import parse_pdb
-
-        module = importlib.import_module(MODULE)
-        project, (batch,) = _pdb_project("atom-hetatm.pdb")
-        selection = module.resolve_export_selection(
-            project,
-            batch.structures[0].id,
-        )
-
-        with TemporaryDirectory() as directory:
-            destination = Path(directory) / "selected.pdb"
-            job = module.ExportJob(
-                destination,
-                selection,
-                format_name="pdb",
-                confirm_loss=True,
-                missing_value_token=None,
-            )
-            job.start()
-            self.assertTrue(job.join(5))
-
-            self.assertIsNone(job.error)
-            self.assertTrue(job.result.written)
-            reparsed = parse_pdb(destination)
-            self.assertEqual(
-                reparsed.structures[0].atomic_numbers,
-                selection.structure.atomic_numbers,
-            )
-            self.assertEqual(
-                reparsed.biological_hierarchies[0].atom_count,
-                selection.biological_hierarchies[0].atom_count,
-            )
-
-    def test_pdb_background_job_blocks_unconfirmed_loss_without_writing(self):
-        module = importlib.import_module(MODULE)
-        project, (batch,) = _pdb_project("atom-hetatm.pdb")
-        selection = module.resolve_export_selection(
-            project,
-            batch.structures[0].id,
-        )
-
-        with TemporaryDirectory() as directory:
-            destination = Path(directory) / "blocked.pdb"
-            job = module.ExportJob(
-                destination,
-                selection,
-                format_name="pdb",
-                confirm_loss=False,
-                missing_value_token=None,
-            )
-            job.start()
-            self.assertTrue(job.join(5))
-
-            self.assertIsNone(job.error)
-            self.assertFalse(job.result.written)
-            self.assertFalse(destination.exists())
-
-    def test_cancelled_pdb_job_preserves_destination_and_cleans_temporary(self):
-        module = importlib.import_module(MODULE)
-        project, (batch,) = _pdb_project("atom-hetatm.pdb")
-        selection = module.resolve_export_selection(
-            project,
-            batch.structures[0].id,
-        )
-
-        with TemporaryDirectory() as directory:
-            root = Path(directory)
-            destination = root / "selected.pdb"
-            destination.write_bytes(b"prior destination\n")
-            job = module.ExportJob(
-                destination,
-                selection,
-                format_name="pdb",
-                confirm_loss=True,
-                missing_value_token=None,
-            )
-            job.cancel()
-            job.start()
-            self.assertTrue(job.join(5))
-
-            self.assertIsInstance(job.error, ExportCancelled)
-            self.assertEqual(destination.read_bytes(), b"prior destination\n")
-            self.assertEqual(tuple(root.iterdir()), (destination,))
-
-    def test_mol2_preview_matches_core_and_rejects_conformers(self):
-        from ChemBlender.core.exporters import preview_mol2_export
-
-        module = importlib.import_module(MODULE)
-        project, (batch,) = _mol2_project("small.mol2")
-        selection = module.resolve_export_selection(
-            project,
-            batch.structures[0].id,
-        )
-
-        with patch.object(
-            module,
-            "export_mol2",
-            side_effect=AssertionError("preview serialized MOL2"),
-        ):
-            report = module.preview_export_selection(selection, "mol2")
-
-        self.assertEqual(
-            report,
-            preview_mol2_export(module._mol2_entities(selection)),
-        )
-        self.assertTrue(report.requires_confirmation)
-        operator = module.CHEMBLENDER_OT_export_project_entity()
-        operator.filepath = "blocked.mol2"
-        operator.format_name = "mol2"
-        operator.confirm_loss = False
-        operator.missing_value_token = ""
-        with (
-            patch.object(
-                module,
-                "get_scene_session",
-                return_value=SimpleNamespace(
-                    project=project,
-                    active_entity_id=batch.structures[0].id,
-                ),
-            ),
-            patch.object(module.ExportJob, "start") as start,
-        ):
-            result = operator.execute(SimpleNamespace(scene=object()))
-        self.assertEqual(result, {"CANCELLED"})
-        start.assert_not_called()
-        with self.assertRaisesRegex(ValueError, "ConformerSet export requires SDF"):
-            module.preview_export_selection(
-                replace(selection, conformer_set=object()),
-                "mol2",
-            )
-
-    def test_mol2_background_export_roundtrips_and_cancels_atomically(self):
-        from ChemBlender.core.formats.mol2 import parse_mol2
-
-        module = importlib.import_module(MODULE)
-        project, (batch,) = _mol2_project("small.mol2")
-        selection = module.resolve_export_selection(
-            project,
-            batch.structures[0].id,
-        )
-
-        with TemporaryDirectory() as directory:
-            root = Path(directory)
-            destination = root / "selected.mol2"
-            job = module.ExportJob(
-                destination,
-                selection,
-                format_name="mol2",
-                confirm_loss=True,
-                missing_value_token=None,
-            )
-            job.start()
-            self.assertTrue(job.join(5))
-            self.assertIsNone(job.error)
-            reparsed = parse_mol2(destination)
-            self.assertEqual(
-                reparsed.structures[0].atomic_numbers,
-                selection.structure.atomic_numbers,
-            )
-            self.assertEqual(
-                tuple(map(tuple, reparsed.topologies[0].bond_indices.values)),
-                tuple(map(tuple, selection.topology.bond_indices.values)),
-            )
-
-            destination.write_bytes(b"prior destination\n")
-            cancelled = module.ExportJob(
-                destination,
-                selection,
-                format_name="mol2",
-                confirm_loss=True,
-                missing_value_token=None,
-            )
-            cancelled.cancel()
-            cancelled.start()
-            self.assertTrue(cancelled.join(5))
-            self.assertIsInstance(cancelled.error, ExportCancelled)
-            self.assertEqual(destination.read_bytes(), b"prior destination\n")
-            self.assertEqual(tuple(root.iterdir()), (destination,))
 
     def test_molecular_structure_selection_binds_topology_and_raw_record(self):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
 
-        module = importlib.import_module(MODULE)
+        module = importlib.import_module("chemblender_prepare.export_service")
         batch = parse_smiles_text("CO")
         structure = batch.structures[0]
         topology = batch.topologies[0]
@@ -820,10 +380,11 @@ class ExtXYZWorkflowTests(unittest.TestCase):
         self.assertIs(record_selection.topology, topology)
         self.assertIs(record_selection.record, record)
 
-    def test_conformer_selection_uses_its_reference_topology(self):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
 
-        module = importlib.import_module(MODULE)
+    def test_conformer_selection_uses_its_reference_topology(self):
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
+
+        module = importlib.import_module("chemblender_prepare.export_service")
         batch = parse_smiles_text("CO")
         structure = batch.structures[0]
         first_topology = batch.topologies[0]
@@ -858,10 +419,11 @@ class ExtXYZWorkflowTests(unittest.TestCase):
         self.assertIs(selection.topology, second_topology)
         self.assertIsNone(selection.record)
 
-    def test_conformer_selection_does_not_bind_an_unrelated_single_record(self):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
 
-        module = importlib.import_module(MODULE)
+    def test_conformer_selection_does_not_bind_an_unrelated_single_record(self):
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
+
+        module = importlib.import_module("chemblender_prepare.export_service")
         batch = parse_smiles_text("CO")
         structure = batch.structures[0]
         topology = batch.topologies[0]
@@ -880,10 +442,11 @@ class ExtXYZWorkflowTests(unittest.TestCase):
         self.assertIs(selection.topology, topology)
         self.assertIsNone(selection.record)
 
-    def test_record_selection_rejects_missing_complete_topology(self):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
 
-        module = importlib.import_module(MODULE)
+    def test_record_selection_rejects_missing_complete_topology(self):
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
+
+        module = importlib.import_module("chemblender_prepare.export_service")
         batch = parse_smiles_text("CO")
         structure = batch.structures[0]
         topology = batch.topologies[0]
@@ -906,10 +469,11 @@ class ExtXYZWorkflowTests(unittest.TestCase):
         ):
             module.resolve_export_selection(project, record.id)
 
-    def test_conformer_preview_is_metadata_only(self):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
 
-        module = importlib.import_module(MODULE)
+    def test_conformer_preview_is_metadata_only(self):
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
+
+        module = importlib.import_module("chemblender_prepare.export_service")
         batch = parse_smiles_text("CO")
         selection = module.ExportSelection(
             structure=batch.structures[0],
@@ -939,10 +503,11 @@ class ExtXYZWorkflowTests(unittest.TestCase):
         self.assertFalse(report.written)
         self.assertEqual(report.frame_count, 2)
 
-    def test_single_record_molecular_preview_never_calls_writers(self):
-        from ChemBlender.core.formats.smiles import parse_smiles_text
 
-        module = importlib.import_module(MODULE)
+    def test_single_record_molecular_preview_never_calls_writers(self):
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
+
+        module = importlib.import_module("chemblender_prepare.export_service")
         batch = parse_smiles_text("CO")
         selection = module.ExportSelection(
             structure=batch.structures[0],
@@ -970,11 +535,12 @@ class ExtXYZWorkflowTests(unittest.TestCase):
         self.assertEqual(mol_report.format, "mol")
         self.assertEqual(sdf_report.format, "sdf")
 
-    def test_conformer_preview_reports_metadata_and_missing_record_loss(self):
-        from ChemBlender.core import TopologySource
-        from ChemBlender.core.formats.smiles import parse_smiles_text
 
-        module = importlib.import_module(MODULE)
+    def test_conformer_preview_reports_metadata_and_missing_record_loss(self):
+        from cbq_core.model import TopologySource
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
+
+        module = importlib.import_module("chemblender_prepare.export_service")
         batch = parse_smiles_text("CO")
         structure = replace(
             batch.structures[0],
@@ -1008,124 +574,290 @@ class ExtXYZWorkflowTests(unittest.TestCase):
             },
         )
 
-    def test_conformer_selection_forces_sdf_format(self):
-        module = importlib.import_module(MODULE)
-        operator = module.CHEMBLENDER_OT_export_project_entity()
-        operator.format_name = "mol"
-        operator.missing_value_token = ""
-        context = SimpleNamespace(
-            scene=object(),
-        )
-        conformer_set = object()
-        selection = module.ExportSelection(
-            structure=object(),
-            frame_set=None,
-            properties=(),
-            conformer_set=conformer_set,
+
+    def test_pqr_external_export_roundtrips_and_cancels_atomically(self):
+        from chemblender_prepare.core.formats.pqr import parse_pqr
+
+        module = importlib.import_module("chemblender_prepare.export_service")
+        project, (batch,) = _pqr_project("with-chain.pqr")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
         )
 
-        session = SimpleNamespace(project=object(), active_entity_id=object())
-        with (
-            patch.object(module, "get_scene_session", return_value=session),
-            patch.object(module, "resolve_export_selection", return_value=selection),
-            patch.object(
-                module,
-                "preview_export_selection",
-                return_value=SimpleNamespace(entries=()),
-            ),
-        ):
-            resolved, _preview = operator._selection_and_preview(
-                context,
-                default_format=True,
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            destination = root / "selected.pqr"
+            result = module.export_selection(
+                destination,
+                selection,
+                format_name="pqr",
+                confirm_loss=True,
+                missing_value_token=None,
+            )
+            self.assertTrue(result.written)
+            reparsed = parse_pqr(destination)
+            self.assertEqual(
+                reparsed.structures[0].atomic_numbers,
+                selection.structure.atomic_numbers,
+            )
+            self.assertEqual(
+                {
+                    value.semantic_role
+                    for value in reparsed.datasets
+                },
+                {"partial_charge", "radius"},
             )
 
-        self.assertIs(resolved.conformer_set, conformer_set)
-        self.assertEqual(operator.format_name, "sdf")
+            destination.write_bytes(b"prior destination\n")
+            with self.assertRaises(ExportCancelled):
+                module.export_selection(
+                    destination,
+                    selection,
+                    format_name="pqr",
+                    confirm_loss=True,
+                    missing_value_token=None,
+                    is_cancelled=lambda: True,
+                )
+            self.assertEqual(destination.read_bytes(), b"prior destination\n")
+            self.assertEqual(tuple(root.iterdir()), (destination,))
 
-    def test_record_selection_preserves_explicit_molecular_format(self):
-        module = importlib.import_module(MODULE)
-        operator = module.CHEMBLENDER_OT_export_project_entity()
-        operator.format_name = "smiles"
-        operator.missing_value_token = ""
-        context = SimpleNamespace(scene=object())
-        selection = module.ExportSelection(
-            structure=object(),
-            frame_set=None,
-            properties=(),
-            topology=object(),
-            record=object(),
+
+    def test_pqr_loss_preview_blocks_unconfirmed_external_write(self):
+        module = importlib.import_module("chemblender_prepare.export_service")
+        project, (batch,) = _pqr_project("with-chain.pqr")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
         )
-        session = SimpleNamespace(project=object(), active_entity_id=object())
-
-        with (
-            patch.object(module, "get_scene_session", return_value=session),
-            patch.object(module, "resolve_export_selection", return_value=selection),
-            patch.object(
-                module,
-                "preview_export_selection",
-                return_value=SimpleNamespace(entries=()),
-            ),
-        ):
-            operator._selection_and_preview(context)
-
-        self.assertEqual(operator.format_name, "smiles")
-
-    def test_format_change_refreshes_loss_preview_and_clears_confirmation(self):
-        module = importlib.import_module(MODULE)
-        operator = module.CHEMBLENDER_OT_export_project_entity()
-        operator.format_name = "smiles"
-        operator.missing_value_token = ""
-        operator.confirm_loss = True
-        operator.loss_preview = "No data loss"
-        context = SimpleNamespace(scene=object())
-        selection = module.ExportSelection(
-            structure=object(),
-            frame_set=None,
-            properties=(),
-            topology=object(),
-            record=object(),
+        selection = replace(
+            selection,
+            structure=replace(selection.structure, molecular_charge=0),
         )
-        report = SimpleNamespace(
-            entries=(SimpleNamespace(message="SMILES omits coordinates"),),
-        )
-        session = SimpleNamespace(project=object(), active_entity_id=object())
+        preview = module.preview_export_selection(selection, "pqr")
+        self.assertTrue(preview.requires_confirmation)
 
-        with (
-            patch.object(module, "get_scene_session", return_value=session),
-            patch.object(module, "resolve_export_selection", return_value=selection),
-            patch.object(
-                module,
-                "preview_export_selection",
-                return_value=report,
-            ) as preview,
-        ):
-            update = (
-                module.CHEMBLENDER_OT_export_project_entity
-                .__annotations__["format_name"]
-                .keywords["update"]
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "blocked.pqr"
+            result = module.export_selection(
+                destination,
+                selection,
+                format_name="pqr",
+                confirm_loss=False,
+                missing_value_token=None,
             )
-            update(operator, context)
+            self.assertFalse(result.written)
+            self.assertFalse(destination.exists())
 
-        preview.assert_called_once_with(selection, "smiles", "")
-        self.assertEqual(operator.loss_preview, "SMILES omits coordinates")
-        self.assertFalse(operator.confirm_loss)
 
-    def test_export_update_callback_ignores_stale_rna_owner(self):
-        module = importlib.import_module(MODULE)
-        update = (
-            module.CHEMBLENDER_OT_export_project_entity
-            .__annotations__["format_name"]
-            .keywords["update"]
+    def test_pdb_conect_topology_reaches_loss_preview_and_confirmation(self):
+        module = importlib.import_module("chemblender_prepare.export_service")
+        project, (batch,) = _pdb_project("conect.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
         )
-        owner = SimpleNamespace(confirm_loss=True, loss_preview="stale")
 
-        update(owner, SimpleNamespace(scene=object()))
+        self.assertIsNone(selection.topology)
+        self.assertEqual(selection.associated_topologies, batch.topologies)
+        projection = module._pdb_entities(selection)
+        self.assertEqual(projection.topologies, batch.topologies)
+        report = module.preview_export_selection(selection, "pdb")
+        self.assertTrue(report.requires_confirmation)
+        self.assertIn(
+            "topology_omitted",
+            tuple(entry.code for entry in report.entries),
+        )
 
-        self.assertFalse(owner.confirm_loss)
-        self.assertEqual(owner.loss_preview, "stale")
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "blocked.pdb"
+            result = module.export_selection(destination, selection, format_name="pdb", confirm_loss=False)
+            self.assertFalse(result.written)
+            self.assertFalse(destination.exists())
 
-    def test_cancelled_background_export_leaves_no_destination_or_temporary(self):
-        module = importlib.import_module(MODULE)
+
+    def test_pdb_preview_matches_core_and_requires_explicit_loss_confirmation(self):
+        from chemblender_prepare.core.exporters import preview_pdb_export
+
+        module = importlib.import_module("chemblender_prepare.export_service")
+        project, (batch,) = _pdb_project("atom-hetatm.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        self.assertIsNotNone(getattr(module, "preview_pdb_export", None))
+        report = module.preview_export_selection(selection, "pdb")
+        self.assertEqual(report, preview_pdb_export(module._pdb_entities(selection)))
+        self.assertTrue(report.requires_confirmation)
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "blocked.pdb"
+            result = module.export_selection(destination, selection, format_name="pdb", confirm_loss=False)
+            self.assertFalse(result.written)
+            self.assertFalse(destination.exists())
+
+
+    def test_pdb_external_export_roundtrips_selected_structure(self):
+        from chemblender_prepare.core.formats.pdb import parse_pdb
+
+        module = importlib.import_module("chemblender_prepare.export_service")
+        project, (batch,) = _pdb_project("atom-hetatm.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "selected.pdb"
+            result = module.export_selection(
+                destination,
+                selection,
+                format_name="pdb",
+                confirm_loss=True,
+                missing_value_token=None,
+            )
+
+            self.assertTrue(result.written)
+            reparsed = parse_pdb(destination)
+            self.assertEqual(
+                reparsed.structures[0].atomic_numbers,
+                selection.structure.atomic_numbers,
+            )
+            self.assertEqual(
+                reparsed.biological_hierarchies[0].atom_count,
+                selection.biological_hierarchies[0].atom_count,
+            )
+
+
+    def test_pdb_external_export_blocks_unconfirmed_loss_without_writing(self):
+        module = importlib.import_module("chemblender_prepare.export_service")
+        project, (batch,) = _pdb_project("atom-hetatm.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "blocked.pdb"
+            result = module.export_selection(
+                destination,
+                selection,
+                format_name="pdb",
+                confirm_loss=False,
+                missing_value_token=None,
+            )
+
+            self.assertFalse(result.written)
+            self.assertFalse(destination.exists())
+
+
+    def test_cancelled_pdb_export_preserves_destination_and_cleans_temporary(self):
+        module = importlib.import_module("chemblender_prepare.export_service")
+        project, (batch,) = _pdb_project("atom-hetatm.pdb")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            destination = root / "selected.pdb"
+            destination.write_bytes(b"prior destination\n")
+            with self.assertRaises(ExportCancelled):
+                module.export_selection(
+                    destination,
+                    selection,
+                    format_name="pdb",
+                    confirm_loss=True,
+                    missing_value_token=None,
+                    is_cancelled=lambda: True,
+                )
+
+            self.assertEqual(destination.read_bytes(), b"prior destination\n")
+            self.assertEqual(tuple(root.iterdir()), (destination,))
+
+
+    def test_mol2_preview_matches_core_and_rejects_conformers(self):
+        from chemblender_prepare.core.exporters import preview_mol2_export
+
+        module = importlib.import_module("chemblender_prepare.export_service")
+        project, (batch,) = _mol2_project("small.mol2")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        with patch.object(
+            module,
+            "export_mol2",
+            side_effect=AssertionError("preview serialized MOL2"),
+        ):
+            report = module.preview_export_selection(selection, "mol2")
+
+        self.assertEqual(
+            report,
+            preview_mol2_export(module._mol2_entities(selection)),
+        )
+        self.assertTrue(report.requires_confirmation)
+        with TemporaryDirectory() as directory:
+            destination = Path(directory) / "blocked.mol2"
+            result = module.export_selection(destination, selection, format_name="mol2", confirm_loss=False)
+            self.assertFalse(result.written)
+            self.assertFalse(destination.exists())
+        with self.assertRaisesRegex(ValueError, "ConformerSet export requires SDF"):
+            module.preview_export_selection(
+                replace(selection, conformer_set=object()),
+                "mol2",
+            )
+
+
+    def test_mol2_external_export_roundtrips_and_cancels_atomically(self):
+        from chemblender_prepare.core.formats.mol2 import parse_mol2
+
+        module = importlib.import_module("chemblender_prepare.export_service")
+        project, (batch,) = _mol2_project("small.mol2")
+        selection = module.resolve_export_selection(
+            project,
+            batch.structures[0].id,
+        )
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            destination = root / "selected.mol2"
+            result = module.export_selection(
+                destination,
+                selection,
+                format_name="mol2",
+                confirm_loss=True,
+                missing_value_token=None,
+            )
+            reparsed = parse_mol2(destination)
+            self.assertEqual(
+                reparsed.structures[0].atomic_numbers,
+                selection.structure.atomic_numbers,
+            )
+            self.assertEqual(
+                tuple(map(tuple, reparsed.topologies[0].bond_indices.values)),
+                tuple(map(tuple, selection.topology.bond_indices.values)),
+            )
+
+            destination.write_bytes(b"prior destination\n")
+            with self.assertRaises(ExportCancelled):
+                module.export_selection(
+                    destination,
+                    selection,
+                    format_name="mol2",
+                    confirm_loss=True,
+                    missing_value_token=None,
+                    is_cancelled=lambda: True,
+                )
+            self.assertEqual(destination.read_bytes(), b"prior destination\n")
+            self.assertEqual(tuple(root.iterdir()), (destination,))
+
+
+    def test_cancelled_external_export_leaves_no_destination_or_temporary(self):
+        module = importlib.import_module("chemblender_prepare.export_service")
         selection = module.resolve_export_selection(
             sample_trajectory_project(),
             FRAME_SET_ID,
@@ -1133,262 +865,231 @@ class ExtXYZWorkflowTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             root = Path(directory)
             destination = root / "trajectory.extxyz"
-            job = module.ExportJob(
-                destination,
-                selection,
-                format_name="extxyz",
-                confirm_loss=False,
-                missing_value_token=None,
-            )
+            with self.assertRaises(ExportCancelled):
+                module.export_selection(
+                    destination,
+                    selection,
+                    format_name="extxyz",
+                    confirm_loss=False,
+                    missing_value_token=None,
+                    is_cancelled=lambda: True,
+                )
 
-            job.cancel()
-            job.start()
-            self.assertTrue(job.join(5))
 
-            self.assertTrue(job.done)
-            self.assertIsInstance(job.error, ExportCancelled)
             self.assertFalse(destination.exists())
             self.assertEqual(tuple(root.iterdir()), ())
 
-    def test_export_operator_rna_is_small_and_module_is_explicit_root(self):
-        module = importlib.import_module(MODULE)
-        registration = importlib.import_module(
-            "ChemBlender.runtime.registration"
-        )
 
-        self.assertIn(".ui.export", registration.REGISTER_MODULE_NAMES)
-        operator = module.CHEMBLENDER_OT_export_project_entity
-        self.assertEqual(operator.__module__, MODULE)
-        self.assertTrue(
-            all(
-                value.kind in {"bool", "enum", "float", "int", "string"}
-                for value in operator.__annotations__.values()
-            )
-        )
+    def test_cli_reports_unconfirmed_export_as_failure_and_writes_only_after_confirmation(self):
+        import io
+        import json
+        from contextlib import redirect_stdout
+        from cbq_core.sidecar import save_project
+        from chemblender_prepare.cli import main
+        cases = (("pdb", _pdb_project, "atom-hetatm.pdb"),
+                 ("mol2", _mol2_project, "small.mol2"),
+                 ("pqr", _pqr_project, "with-chain.pqr"))
+        for format_name, factory, fixture in cases:
+            with self.subTest(format=format_name), TemporaryDirectory() as directory:
+                root = Path(directory)
+                project, (batch,) = factory(fixture)
+                if format_name == "pqr":
+                    # PQR cannot retain a molecular charge; make that loss explicit.
+                    structure = batch.structures[0]
+                    project.structures[structure.id] = replace(structure, molecular_charge=0)
+                source = root / "input.cbq"
+                save_project(source, project)
+                destination = root / ("output." + format_name)
+                args = ["export", str(source), "-o", str(destination), "--entity",
+                        str(batch.structures[0].id), "--format", format_name, "--json"]
+                stream = io.StringIO()
+                with redirect_stdout(stream):
+                    code = main(args + ["--preview"])
+                preview = json.loads(stream.getvalue())
+                self.assertEqual(code, 0, preview)
+                self.assertTrue(preview["metadata"]["preview"]["requires_confirmation"])
+                self.assertFalse(destination.exists())
+                stream = io.StringIO()
+                with redirect_stdout(stream):
+                    code = main(args)
+                failure = json.loads(stream.getvalue())
+                self.assertEqual(code, 1, failure)
+                self.assertEqual(failure["status"], "error")
+                self.assertFalse(destination.exists())
+                stream = io.StringIO()
+                with redirect_stdout(stream):
+                    code = main(args + ["--confirm-loss"])
+                result = json.loads(stream.getvalue())
+                self.assertEqual(code, 0, result)
+                self.assertTrue(result["metadata"]["report"]["written"])
+                self.assertTrue(destination.is_file())
 
-    def test_modal_setup_failures_release_owned_ui_in_reverse_order(self):
-        module = importlib.import_module(MODULE)
-        module.bpy.app.background = False
-        session = SimpleNamespace(
-            project=sample_trajectory_project(),
-            active_entity_id=FRAME_SET_ID,
-        )
-        cases = (
-            (
-                "progress_begin",
-                (
-                    "event_timer_add",
-                    "progress_begin",
-                    "event_timer_remove",
-                ),
-            ),
-            (
-                "modal_handler_add",
-                (
-                    "event_timer_add",
-                    "progress_begin",
-                    "progress_update",
-                    "modal_handler_add",
-                    "progress_end",
-                    "event_timer_remove",
-                ),
-            ),
-            (
-                "job.start",
-                (
-                    "event_timer_add",
-                    "progress_begin",
-                    "progress_update",
-                    "modal_handler_add",
-                    "progress_end",
-                    "event_timer_remove",
-                ),
-            ),
-        )
-        for failure, expected_calls in cases:
-            with self.subTest(failure=failure):
-                manager = _WindowManager(
-                    None if failure == "job.start" else failure
-                )
-                context = SimpleNamespace(
-                    scene=object(),
-                    window=object(),
-                    window_manager=manager,
-                )
-                operation = module.CHEMBLENDER_OT_export_project_entity()
-                operation.filepath = "trajectory.extxyz"
-                operation.format_name = "extxyz"
-                operation.confirm_loss = False
-                operation.missing_value_token = ""
-                start_patch = (
-                    patch.object(
-                        module.ExportJob,
-                        "start",
-                        side_effect=RuntimeError("job.start failed"),
-                    )
-                    if failure == "job.start"
-                    else patch.object(module.ExportJob, "start")
-                )
-                with (
-                    patch.object(
-                        module,
-                        "get_scene_session",
-                        return_value=session,
-                    ),
-                    start_patch,
-                ):
-                    result = operation.execute(context)
 
-                self.assertEqual(result, {"CANCELLED"})
-                self.assertEqual(tuple(manager.calls), expected_calls)
-                self.assertIsNone(getattr(operation, "_job", None))
-                self.assertIsNone(getattr(operation, "_timer", None))
+    def test_molecular_formats_are_public_export_choices(self):
+        from chemblender_prepare.cli import build_parser
+        from chemblender_prepare.gui import command_arguments
+        for format_name in ('mol', 'sdf', 'smiles'):
+            with self.subTest(format=format_name):
+                args = command_arguments({"command": "export", "sources": "input.cbq",
+                    "output": "selected." + format_name, "entity": str(STRUCTURE_ID), "format": format_name})
+                parsed = build_parser().parse_args(args)
+                self.assertEqual(parsed.format, format_name)
+                self.assertEqual(parsed.entity, str(STRUCTURE_ID))
+                self.assertEqual(parsed.output, "selected." + format_name)
 
-    def test_operator_cancel_joins_worker_and_releases_ui_once(self):
-        module = importlib.import_module(MODULE)
-        selection = module.resolve_export_selection(
-            sample_trajectory_project(),
-            FRAME_SET_ID,
-        )
-        started = Event()
 
-        def wait_for_cancel(*_args, is_cancelled, **_keywords):
-            started.set()
-            while not is_cancelled():
-                sleep(0.001)
-            raise ExportCancelled("export cancelled")
+    def test_mol2_is_a_public_export_choice_in_cli_and_gui(self):
+        from chemblender_prepare.cli import build_parser
+        from chemblender_prepare.gui import command_arguments
+        for format_name in ('mol2',):
+            with self.subTest(format=format_name):
+                args = command_arguments({"command": "export", "sources": "input.cbq",
+                    "output": "selected." + format_name, "entity": str(STRUCTURE_ID), "format": format_name})
+                parsed = build_parser().parse_args(args)
+                self.assertEqual(parsed.format, format_name)
+                self.assertEqual(parsed.entity, str(STRUCTURE_ID))
+                self.assertEqual(parsed.output, "selected." + format_name)
 
-        manager = _WindowManager()
-        job = module.ExportJob(
-            "trajectory.extxyz",
-            selection,
-            format_name="extxyz",
-            confirm_loss=False,
-            missing_value_token=None,
-        )
-        job.attach_ui(manager, manager.timer)
-        manager.progress_begin(0, 100)
-        job.mark_progress_started()
-        operation = module.CHEMBLENDER_OT_export_project_entity()
-        operation._job = job
-        operation._timer = manager.timer
-        with patch.object(module, "export_extxyz", wait_for_cancel):
-            job.start()
-            self.assertTrue(started.wait(1))
-            operation.cancel(SimpleNamespace(window_manager=manager))
 
-        self.assertTrue(job.done)
-        self.assertTrue(job.join(0))
-        self.assertIsInstance(job.error, ExportCancelled)
-        self.assertEqual(
-            tuple(manager.calls),
-            ("progress_begin", "progress_end", "event_timer_remove"),
-        )
-        self.assertIsNone(operation._job)
-        self.assertIsNone(operation._timer)
-        operation.cancel(SimpleNamespace(window_manager=manager))
-        self.assertEqual(
-            tuple(manager.calls),
-            ("progress_begin", "progress_end", "event_timer_remove"),
-        )
+    def test_pdb_is_a_public_export_choice_in_cli_and_gui(self):
+        from chemblender_prepare.cli import build_parser
+        from chemblender_prepare.gui import command_arguments
+        for format_name in ('pdb',):
+            with self.subTest(format=format_name):
+                args = command_arguments({"command": "export", "sources": "input.cbq",
+                    "output": "selected." + format_name, "entity": str(STRUCTURE_ID), "format": format_name})
+                parsed = build_parser().parse_args(args)
+                self.assertEqual(parsed.format, format_name)
+                self.assertEqual(parsed.entity, str(STRUCTURE_ID))
+                self.assertEqual(parsed.output, "selected." + format_name)
 
-    def test_finish_job_reraises_generator_exit_unchanged(self):
-        module = importlib.import_module(MODULE)
-        operation = module.CHEMBLENDER_OT_export_project_entity()
-        fatal = GeneratorExit("worker stopped")
 
-        with self.assertRaises(GeneratorExit) as raised:
-            operation._finish_job(SimpleNamespace(error=fatal))
+    def test_pqr_is_a_public_export_choice_in_cli_and_gui(self):
+        from chemblender_prepare.cli import build_parser
+        from chemblender_prepare.gui import command_arguments
+        for format_name in ('pqr',):
+            with self.subTest(format=format_name):
+                args = command_arguments({"command": "export", "sources": "input.cbq",
+                    "output": "selected." + format_name, "entity": str(STRUCTURE_ID), "format": format_name})
+                parsed = build_parser().parse_args(args)
+                self.assertEqual(parsed.format, format_name)
+                self.assertEqual(parsed.entity, str(STRUCTURE_ID))
+                self.assertEqual(parsed.output, "selected." + format_name)
 
-        self.assertIs(raised.exception, fatal)
 
-    def test_modal_progress_fatal_releases_job_before_reraising(self):
-        module = importlib.import_module(MODULE)
-        operation = module.CHEMBLENDER_OT_export_project_entity()
-        released = []
-        job = SimpleNamespace(
-            done=True,
-            error=None,
-            join=lambda _timeout: True,
-            release_ui=lambda: released.append(True),
-        )
-        operation._job = job
-        operation._timer = object()
-        context = SimpleNamespace(
-            window_manager=SimpleNamespace(
-                progress_update=lambda _value: (_ for _ in ()).throw(
-                    MemoryError("progress exhausted memory")
-                )
-            )
-        )
+class ExternalExportInteractionTests(unittest.TestCase):
+    """Explicit external format selection and task cancellation replace legacy RNA/modal calls."""
 
-        with self.assertRaises(MemoryError):
-            operation.modal(context, SimpleNamespace(type="TIMER"))
+    def test_conformers_require_explicit_sdf_in_external_tool(self):
+        from chemblender_prepare.export_service import ExportSelection, preview_export_selection
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
+        batch = parse_smiles_text("CO")
+        selection = ExportSelection(batch.structures[0], None, (), topology=batch.topologies[0],
+            conformer_set=SimpleNamespace(record_ids=(uuid4(), uuid4())), records_by_id={})
+        with self.assertRaisesRegex(ValueError, "ConformerSet export requires SDF"):
+            preview_export_selection(selection, "mol")
+        self.assertEqual(preview_export_selection(selection, "sdf").frame_count, 2)
 
-        self.assertEqual(released, [True])
-        self.assertIsNone(operation._job)
+    def test_record_selection_preserves_explicit_molecular_format(self):
+        from chemblender_prepare.export_service import ExportSelection, preview_export_selection
+        from chemblender_prepare.core.formats.smiles import parse_smiles_text
+        from chemblender_prepare.gui import command_arguments
+        from chemblender_prepare.cli import build_parser
+        batch = parse_smiles_text("CO")
+        selection = ExportSelection(batch.structures[0], None, (), topology=batch.topologies[0], record=batch.molecular_records[0])
+        args = command_arguments({"command": "export", "sources": "input.cbq", "output": "output.smiles",
+            "format": "smiles", "entity": str(batch.molecular_records[0].id)})
+        parsed = build_parser().parse_args(args)
+        self.assertEqual(parsed.format, "smiles")
+        self.assertEqual(preview_export_selection(selection, parsed.format).format, "smiles")
 
-    def test_modal_retries_timer_cleanup_before_reraising_completion_fatal(self):
-        module = importlib.import_module(MODULE)
-        operation = module.CHEMBLENDER_OT_export_project_entity()
-        progress_calls = []
-        release_calls = []
-        job = SimpleNamespace(
-            done=True,
-            error=None,
-            join=lambda _timeout: True,
-            timer_pending=True,
-        )
+    def test_changed_export_values_reset_confirmation_and_request_preview(self):
+        from chemblender_prepare.gui import PrepareWindow
+        from unittest.mock import Mock
+        window = PrepareWindow.__new__(PrepareWindow)
+        window.confirm_loss, window.preview = Mock(), Mock()
+        window.job = None
+        window.invalidate_export_confirmation()
+        window.confirm_loss.set.assert_called_once_with(False)
+        window.preview.set.assert_called_once_with(True)
+        self.assertIsNone(window.job)
 
-        def release():
-            release_calls.append(True)
-            if len(release_calls) == 1:
-                raise OSError("timer cleanup failed")
-            job.timer_pending = False
+    def test_unchanged_text_event_does_not_clear_confirmation(self):
+        from chemblender_prepare.gui import PrepareWindow
+        from unittest.mock import Mock
+        window = PrepareWindow.__new__(PrepareWindow)
+        window.invalidate_export_confirmation = Mock()
+        widget = Mock()
+        widget.edit_modified.return_value = False
+        window.input_text_changed(SimpleNamespace(widget=widget))
+        window.invalidate_export_confirmation.assert_not_called()
+        widget.edit_modified.return_value = True
+        window.input_text_changed(SimpleNamespace(widget=widget))
+        window.invalidate_export_confirmation.assert_called_once_with()
+        widget.edit_modified.assert_called_with(False)
 
-        job.release_ui = release
-        job.abandon_ui = lambda: None
-        operation._job = job
-        operation._timer = object()
-        operation.report = lambda *_args: None
-        context = SimpleNamespace(
-            window_manager=SimpleNamespace(
-                progress_update=lambda _value: (
-                    progress_calls.append(True)
-                    or (_ for _ in ()).throw(
-                        MemoryError("progress exhausted memory")
-                    )
-                )
-            )
-        )
+    def test_raw_export_is_not_a_viewer_registration_root(self):
+        from ChemBlender.runtime.registration import REGISTER_MODULE_NAMES
+        self.assertNotIn(".ui.export", REGISTER_MODULE_NAMES)
+        from chemblender_prepare.cli import build_parser
+        args = build_parser().parse_args(["export", "input.cbq", "-o", "output.pdb",
+            "--format", "pdb", "--entity", str(STRUCTURE_ID)])
+        self.assertEqual(args.command, "export")
 
-        self.assertEqual(
-            operation.modal(context, SimpleNamespace(type="TIMER")),
-            {"RUNNING_MODAL"},
-        )
-        self.assertIs(operation._job, job)
-        with self.assertRaisesRegex(MemoryError, "exhausted memory"):
-            operation.modal(context, SimpleNamespace(type="TIMER"))
-
-        self.assertEqual(progress_calls, [True])
-        self.assertEqual(release_calls, [True, True])
-        self.assertIsNone(operation._job)
-
-    def test_cancel_reraises_fatal_cleanup_error(self):
-        module = importlib.import_module(MODULE)
-        operation = module.CHEMBLENDER_OT_export_project_entity()
-        operation._job = object()
-        fatal = MemoryError("cleanup exhausted memory")
-
-        with patch.object(
-            operation,
-            "_cancel_and_release_job",
-            side_effect=fatal,
-        ):
-            with self.assertRaises(MemoryError) as raised:
-                operation.cancel(None)
-
-        self.assertIs(raised.exception, fatal)
+    def test_gui_cancel_collects_real_child_before_releasing_task_once(self):
+        import subprocess
+        import time
+        from unittest.mock import Mock
+        import chemblender_prepare.gui as gui
+        script = """
+import sys, time
+from pathlib import Path
+from uuid import uuid4
+from cbq_core.worker_protocol import WorkerResult, WorkerStatus, WorkerError, write_result
+cancel, task = map(Path, sys.argv[1:])
+task.mkdir()
+(task / 'ready').touch()
+while not cancel.exists():
+    time.sleep(.01)
+write_result(task / 'result.json', WorkerResult(uuid4(), WorkerStatus.CANCELLED, error=WorkerError('cancelled', 'Cancelled by user')))
+"""
+        original = subprocess.Popen
+        def launch(argv, **kwargs):
+            cancel = argv[argv.index("--cancel-file") + 1]
+            task = argv[argv.index("--task-directory") + 1]
+            return original([sys.executable, "-c", script, cancel, task], **kwargs)
+        with patch.object(gui.subprocess, "Popen", side_effect=launch):
+            job = gui.CliProcess(["formats"])
+        root = job.root
+        window = gui.PrepareWindow.__new__(gui.PrepareWindow)
+        window.job, window.closing = job, False
+        window.root, window.status, window.bar, window.report, window.run_button = (Mock() for _ in range(5))
+        try:
+            deadline = time.monotonic() + 10
+            while not (job.task / "ready").exists() and time.monotonic() < deadline:
+                self.assertIsNone(job.process.poll())
+                time.sleep(.01)
+            self.assertTrue((job.task / "ready").exists())
+            with patch.object(job, "close", wraps=job.close) as close:
+                window.cancel()
+                deadline = time.monotonic() + 10
+                while window.job is not None and time.monotonic() < deadline:
+                    window.poll()
+                    time.sleep(.01)
+                self.assertIsNone(window.job)
+                self.assertIsNotNone(job.process.poll())
+                close.assert_called_once_with()
+                self.assertFalse(root.exists())
+                self.assertIn('"status": "cancelled"', window.report.insert.call_args.args[1])
+                window.cancel()
+                window.poll()
+                close.assert_called_once_with()
+        finally:
+            if job.process.poll() is None:
+                job.cancel()
+                job.process.wait(timeout=10)
+            if root.exists():
+                job.close()
 
 
 if __name__ == "__main__":

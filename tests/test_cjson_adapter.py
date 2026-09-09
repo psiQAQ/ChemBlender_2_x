@@ -6,29 +6,28 @@ from pathlib import Path
 
 import numpy
 
-from ChemBlender.core import cjson_adapter
-from ChemBlender.core.cjson_adapter import (
-    CJSON_READER,
-    CJSONCompatibilityError,
-    CJSONError,
-    export_cjson,
-    parse_cjson,
-)
-from ChemBlender.core.model import (
-    AtomicIdentityData,
-    AtomicProperty,
-    CategoricalData,
-    DatasetStatus,
-    ExcitedStateSet,
-    FrameSet,
-    QCProject,
-    QualityStatus,
-    TopologySource,
-)
-from ChemBlender.core.readers import ReaderRegistry
-from ChemBlender.core.sidecar import close_project, open_project, save_project
-from ChemBlender.core.import_pipeline.parse import stage_import_batch
-from ChemBlender.core.import_pipeline.request import ImportSource, ValidationMode
+from chemblender_prepare.core import cjson_adapter
+from chemblender_prepare.core.cjson_adapter import CJSON_READER
+from chemblender_prepare.core.cjson_adapter import CJSONCompatibilityError
+from chemblender_prepare.core.cjson_adapter import CJSONError
+from chemblender_prepare.core.cjson_adapter import export_cjson
+from chemblender_prepare.core.cjson_adapter import parse_cjson
+from cbq_core.model import AtomicIdentityData
+from cbq_core.model import AtomicProperty
+from cbq_core.model import CategoricalData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ExcitedStateSet
+from cbq_core.model import FrameSet
+from cbq_core.model import QCProject
+from cbq_core.model import QualityStatus
+from cbq_core.model import TopologySource
+from chemblender_prepare.core.readers import ReaderRegistry
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from chemblender_prepare.core.import_pipeline.parse import stage_import_batch
+from chemblender_prepare.core.import_pipeline.request import ImportSource
+from chemblender_prepare.core.import_pipeline.request import ValidationMode
 from ChemBlender.ui.topology import topology_choices
 from ChemBlender.views.structure import _structure_view_data
 

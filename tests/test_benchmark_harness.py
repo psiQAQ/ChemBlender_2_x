@@ -28,7 +28,7 @@ class BenchmarkDatasetTests(unittest.TestCase):
             generate_structure_xyz,
             generate_trajectory_npy,
         )
-        from ChemBlender.core.formats.sdf import iter_sdf_file_records
+        from chemblender_prepare.core.formats.sdf import iter_sdf_file_records
 
         self.assertEqual(BENCHMARK_SCALES["interactive"].structure_atoms, 50_000)
         self.assertEqual(BENCHMARK_SCALES["lazy"].structure_atoms, 250_000)
@@ -72,7 +72,9 @@ class BenchmarkDatasetTests(unittest.TestCase):
 
 class BenchmarkHarnessTests(unittest.TestCase):
     def test_registry_covers_plan_stages_and_blender_cases_are_boundaries(self):
-        harness = load_harness()
+        # Probe source sent to Blender may mention bpy; this process must not import it.
+        with patch.dict("sys.modules", {"bpy": None}):
+            harness = load_harness()
 
         self.assertEqual(
             set(harness.CASE_REGISTRY),
@@ -92,7 +94,6 @@ class BenchmarkHarnessTests(unittest.TestCase):
         for name in ("extension_enable", "vdb_cache", "default_view"):
             self.assertEqual(harness.CASE_REGISTRY[name].execution, "blender")
             self.assertIn("Blender", harness.CASE_REGISTRY[name].boundary)
-        self.assertNotIn("import bpy", SCRIPT.read_text(encoding="utf-8"))
 
     def test_builtin_core_runners_can_use_a_tiny_overridden_scale(self):
         from ChemBlender.benchmarks.datasets import BenchmarkScale
@@ -232,7 +233,7 @@ class BenchmarkHarnessTests(unittest.TestCase):
                 patch.object(harness, "generate_structure_xyz", return_value=source),
                 patch.object(harness, "generate_trajectory_npy", return_value=trajectory),
                 patch(
-                    "ChemBlender.core.xyz.parse_xyz",
+                    "chemblender_prepare.core.xyz.parse_xyz",
                     side_effect=RuntimeError("parse failed"),
                 ),
             ):

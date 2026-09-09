@@ -2,18 +2,16 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from ChemBlender.core import ImportBatch
-from ChemBlender.core.readers import (
-    AmbiguousReaderError,
-    CapabilitySupport,
-    ReaderAvailability,
-    ReaderDescriptor,
-    ReaderNotFoundError,
-    ReaderRegistry,
-    ReaderRuntimeDescriptor,
-    SniffMatch,
-    SniffResult,
-)
+from cbq_core.model import ImportBatch
+from chemblender_prepare.core.readers import AmbiguousReaderError
+from chemblender_prepare.core.readers import CapabilitySupport
+from chemblender_prepare.core.readers import ReaderAvailability
+from chemblender_prepare.core.readers import ReaderDescriptor
+from chemblender_prepare.core.readers import ReaderNotFoundError
+from chemblender_prepare.core.readers import ReaderRegistry
+from chemblender_prepare.core.readers import ReaderRuntimeDescriptor
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.readers import SniffResult
 
 
 ROOT = Path(__file__).resolve().parents[1]

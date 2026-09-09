@@ -2,13 +2,11 @@ import math
 import unittest
 from uuid import UUID
 
-from ChemBlender.core.cache_identity import (
-    CacheIdentityError,
-    derivation_cache_key,
-    parser_cache_key,
-    render_cache_key,
-    source_hash_bytes,
-)
+from cbq_core.cache_identity import CacheIdentityError
+from cbq_core.cache_identity import derivation_cache_key
+from cbq_core.cache_identity import parser_cache_key
+from cbq_core.cache_identity import render_cache_key
+from cbq_core.cache_identity import source_hash_bytes
 
 
 class CacheIdentityTests(unittest.TestCase):

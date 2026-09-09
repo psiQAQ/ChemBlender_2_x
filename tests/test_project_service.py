@@ -9,27 +9,23 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from uuid import UUID
 
-import ChemBlender.core as core
-import ChemBlender.core.project_service as project_service
-from ChemBlender.core import (
-    ProjectServiceStatus,
-    QCProject,
-    clear_derived_cache,
-    close_session,
-    create_session,
-    relink_project_session,
-    save_project,
-    save_project_session,
-    verify_project_session,
-)
-from ChemBlender.core.sidecar import open_project
-from ChemBlender.project_link import (
-    MANIFEST_HASH_KEY,
-    PROJECT_ID_KEY,
-    PROJECT_SCHEMA_KEY,
-    SIDECAR_LOCATOR_KEY,
-    write_project_link,
-)
+import cbq_core.project_service as core
+import cbq_core.project_service as project_service
+from cbq_core.project_service import ProjectServiceStatus
+from cbq_core.model import QCProject
+from cbq_core.project_service import clear_derived_cache
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from cbq_core.project_service import relink_project_session
+from cbq_core.sidecar import save_project
+from cbq_core.project_service import save_project_session
+from cbq_core.project_service import verify_project_session
+from cbq_core.sidecar import open_project
+from cbq_core.project_link import MANIFEST_HASH_KEY
+from cbq_core.project_link import PROJECT_ID_KEY
+from cbq_core.project_link import PROJECT_SCHEMA_KEY
+from cbq_core.project_link import SIDECAR_LOCATOR_KEY
+from cbq_core.project_link import write_project_link
 from tests.test_sidecar_storage import FRAMES_ID, sample_project
 
 
@@ -180,7 +176,7 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(result.path, destination.resolve())
         self.assertEqual(result.manifest_sha256, manifest["manifest_sha256"])
         self.assertEqual(scene[PROJECT_ID_KEY], str(PROJECT_ID))
-        self.assertEqual(scene[PROJECT_SCHEMA_KEY], "1.0")
+        self.assertEqual(scene[PROJECT_SCHEMA_KEY], "1.1")
         self.assertEqual(scene[MANIFEST_HASH_KEY], result.manifest_sha256)
         self.assertEqual(session.sidecar_path, destination.resolve())
         self.assertEqual(session.link_status, "connected")
@@ -442,6 +438,25 @@ class ProjectServiceTests(unittest.TestCase):
                 self.assertEqual(result.status, ProjectServiceStatus.INVALID)
                 self.assertEqual(invalid, before)
                 self.assertIn("project_link", session.dirty_reasons)
+
+    def test_link_sync_advances_only_an_explicitly_known_previous_hash(self):
+        session = self.create_session()
+        blend = self.root / "imported.blend"
+        scene = {}
+        session.mark_dirty("import")
+        self.save_for_scenes(session=session, scenes=(scene,), blend_path=blend)
+        previous_hash = scene[MANIFEST_HASH_KEY]
+        scene[MANIFEST_HASH_KEY] = "0" * 64
+        result = project_service.sync_project_session_links_for_scenes(
+            session=session, scenes=(scene,), blend_path=blend,
+            previous_manifest_sha256="1" * 64)
+        self.assertEqual(result.status, ProjectServiceStatus.INVALID)
+        self.assertEqual(scene[MANIFEST_HASH_KEY], "0" * 64)
+        result = project_service.sync_project_session_links_for_scenes(
+            session=session, scenes=(scene,), blend_path=blend,
+            previous_manifest_sha256="0" * 64)
+        self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
+        self.assertEqual(scene[MANIFEST_HASH_KEY], previous_hash)
 
     def test_link_sync_updates_only_locator_and_clears_only_project_link(self):
         session = self.create_session()
@@ -1913,9 +1928,9 @@ class ProjectServiceTests(unittest.TestCase):
             "save_project_session",
             "verify_project_session",
         }
-        self.assertEqual(expected - set(core.__all__), set())
+        self.assertEqual(expected - set(dir(core)), set())
         code = (
-            "import sys; import ChemBlender.core; "
+            "import sys; import cbq_core.project_service; "
             "forbidden={'bpy','cclib','iodata','gbasis','ase','pymatgen'}; "
             "raise SystemExit(bool(forbidden & set(sys.modules)))"
         )
@@ -1929,7 +1944,7 @@ class ProjectServiceTests(unittest.TestCase):
 
     def test_project_link_can_import_before_core_in_fresh_process(self):
         code = (
-            "import sys; import ChemBlender.project_link; import ChemBlender.core; "
+            "import sys; import cbq_core.project_link; import cbq_core.project_service; "
             "forbidden={'bpy','cclib','iodata','gbasis','ase','pymatgen'}; "
             "raise SystemExit(bool(forbidden & set(sys.modules)))"
         )

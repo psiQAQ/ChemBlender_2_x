@@ -10,10 +10,10 @@ import types
 import unittest
 from unittest.mock import patch
 
-import ChemBlender.core.sidecar as sidecar
-import ChemBlender.core.storage.publication as publication
-import ChemBlender.reader_api as reader_api
-import ChemBlender.reader_api.canonical_document as canonical_document
+import cbq_core.sidecar as sidecar
+import cbq_core.storage.publication as publication
+import chemblender_prepare.reader_api as reader_api
+import chemblender_prepare.reader_api.canonical_document as canonical_document
 from tests.test_reader_canonical_document import sample_batch
 from tests.test_sidecar_storage import FIXTURES, GRID_ID, sample_project
 
@@ -102,11 +102,11 @@ class AtomicPathBudgetTests(unittest.TestCase):
 
     def test_short_sibling_path_contract_for_hash_destinations(self):
         spec = importlib.util.find_spec(
-            "ChemBlender.core.storage.atomic_paths"
+            "cbq_core.storage.atomic_paths"
         )
         self.assertIsNotNone(spec, "atomic path helper module is missing")
         module = importlib.import_module(
-            "ChemBlender.core.storage.atomic_paths"
+            "cbq_core.storage.atomic_paths"
         )
         helper = module.short_sibling_temporary_path
         long_parent = Path("parent-" + "x" * 180)

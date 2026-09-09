@@ -1,4 +1,4 @@
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 import importlib
 import sys
 from types import ModuleType, SimpleNamespace
@@ -9,14 +9,12 @@ from uuid import uuid4
 import numpy
 
 import ChemBlender
-from ChemBlender.core import (
-    ArrayData,
-    PeriodicSiteData,
-    QualityStatus,
-    Structure,
-    TopologyRecord,
-    TopologySource,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import PeriodicSiteData
+from cbq_core.model import QualityStatus
+from cbq_core.model import Structure
+from cbq_core.model import TopologyRecord
+from cbq_core.model import TopologySource
 from ChemBlender.views.periodic import (
     PeriodicViewSettings,
     _canonical_source_coordinates,
@@ -69,12 +67,19 @@ def periodic_structure():
             declared_space_group_name=None,
             declared_space_group_number=None,
             symmetry_operations=("x,y,z", "-x,-y,-z"),
+            symmetry_rotations=ArrayData(
+                numpy.array((numpy.eye(3), -numpy.eye(3)), dtype=int),
+                ("symmetry_operation", "row", "column"), "dimensionless",
+            ),
+            symmetry_translations=ArrayData(
+                numpy.zeros((2, 3)), ("symmetry_operation", "xyz"), "dimensionless",
+            ),
             cif_envelope_id=None,
         ),
     )
 
 
-def single_site_structure(*, fractional, symmetry_operations=(), uij=None):
+def single_site_structure(*, fractional, symmetry_operations=(), uij=None, rotations=None):
     cell = numpy.diag((3.0, 3.0, 3.0))
     fractional = numpy.asarray((fractional,), dtype=float)
     return Structure(
@@ -114,6 +119,14 @@ def single_site_structure(*, fractional, symmetry_operations=(), uij=None):
             declared_space_group_name=None,
             declared_space_group_number=None,
             symmetry_operations=symmetry_operations,
+            symmetry_rotations=(None if rotations is None else ArrayData(
+                numpy.asarray(rotations, dtype=int),
+                ("symmetry_operation", "row", "column"), "dimensionless",
+            )),
+            symmetry_translations=(None if rotations is None else ArrayData(
+                numpy.zeros((len(rotations), 3)),
+                ("symmetry_operation", "xyz"), "dimensionless",
+            )),
             cif_envelope_id=None,
         ),
     )
@@ -197,6 +210,17 @@ class PeriodicViewSettingsTests(unittest.TestCase):
             source.coordinates.values,
             original_coordinates,
         )
+
+    def test_legacy_symmetry_requires_upgrade_but_source_sites_remain_readable(self):
+        source = periodic_structure()
+        legacy = replace(source, periodic=replace(
+            source.periodic, symmetry_rotations=None, symmetry_translations=None,
+        ))
+        self.assertEqual(_derived_periodic_sites(legacy, PeriodicViewSettings()),
+                         {"coordinates": (), "source_atom_ids": ()})
+        with self.assertRaisesRegex(ValueError, "external CBQ upgrade"):
+            _derived_periodic_sites(legacy, PeriodicViewSettings(representation="expanded_cell"))
+        numpy.testing.assert_array_equal(legacy.coordinates.values, source.coordinates.values)
 
     def test_constraint_visibility_does_not_drop_scientific_flags(self):
         class Data:
@@ -306,6 +330,7 @@ class PeriodicViewSettingsTests(unittest.TestCase):
         source = single_site_structure(
             fractional=(0.25, 0.10, 0.0),
             symmetry_operations=("x,y,z", "y,x,z"),
+            rotations=(numpy.eye(3), ((0, 1, 0), (1, 0, 0), (0, 0, 1))),
             uij=(0.10, 0.20, 0.30, 0.01, 0.02, 0.03),
         )
         derived = _derived_periodic_sites(

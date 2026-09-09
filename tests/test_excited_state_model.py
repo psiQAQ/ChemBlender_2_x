@@ -3,17 +3,15 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    DatasetStatus,
-    ExcitationContribution,
-    ExcitedStateReferences,
-    ExcitedStateSet,
-    ImportBatch,
-    PropertyDataset,
-    QCProject,
-    SpinChannel,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ExcitationContribution
+from cbq_core.model import ExcitedStateReferences
+from cbq_core.model import ExcitedStateSet
+from cbq_core.model import ImportBatch
+from cbq_core.model import PropertyDataset
+from cbq_core.model import QCProject
+from cbq_core.model import SpinChannel
 from tests.test_vibration_model import structure
 
 
@@ -116,7 +114,7 @@ class ExcitedStateModelTests(unittest.TestCase):
         self.assertEqual(states.rotatory_strengths.unit, "unknown")
 
     def test_verified_rotatory_unit_accepts_signed_complete_values(self):
-        from ChemBlender.core.model.spectroscopy import ROTATORY_STRENGTH_CGS_UNIT
+        from cbq_core.model.spectroscopy import ROTATORY_STRENGTH_CGS_UNIT
 
         reference = structure()
         values = ArrayData(numpy.asarray([-0.4, 0.2]), ("state",), ROTATORY_STRENGTH_CGS_UNIT)

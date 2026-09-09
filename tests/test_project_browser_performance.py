@@ -15,19 +15,19 @@ import numpy
 
 import ChemBlender.ui.project_browser.model as browser_model
 from ChemBlender.benchmarks.datasets import generate_sdf_fixture
-from ChemBlender.core.formats.sdf import iter_sdf_file_records
-from ChemBlender.core.model import (
-    ArrayData,
-    DatasetStatus,
-    Grid3D,
-    MolecularRecord,
-    QualityStatus,
-    Structure,
-    TopologyRecord,
-    TopologySource,
-)
-from ChemBlender.core.model.sources import SourceRecord, SourceRevision
-from ChemBlender.core.sidecar import LazyNpyArray, _array_content_hash
+from chemblender_prepare.core.formats.sdf import iter_sdf_file_records
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import MolecularRecord
+from cbq_core.model import QualityStatus
+from cbq_core.model import Structure
+from cbq_core.model import TopologyRecord
+from cbq_core.model import TopologySource
+from cbq_core.model.sources import SourceRecord
+from cbq_core.model.sources import SourceRevision
+from cbq_core.sidecar import LazyNpyArray
+from cbq_core.sidecar import _array_content_hash
 from ChemBlender.ui.project_browser import (
     BrowserMode,
     ViewRecord,

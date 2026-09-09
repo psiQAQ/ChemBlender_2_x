@@ -48,8 +48,8 @@ class GemmiDependencyContractTests(unittest.TestCase):
     def test_core_and_reader_api_import_without_loading_gemmi(self):
         code = (
             "import sys; "
-            "import ChemBlender.core; "
-            "import ChemBlender.reader_api; "
+            "import cbq_core.model; "
+            "import chemblender_prepare.reader_api; "
             "assert 'gemmi' not in sys.modules"
         )
         subprocess.run(

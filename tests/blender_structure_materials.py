@@ -14,7 +14,11 @@ from mathutils import Vector
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from ChemBlender import scientific_materials as material_view
-from ChemBlender.core import ArrayData, AtomicProperty, CategoricalData, DatasetStatus, Structure
+from cbq_core.model import ArrayData
+from cbq_core.model import AtomicProperty
+from cbq_core.model import CategoricalData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Structure
 from ChemBlender.dataset_view import apply_atomic_scalar, write_vector_view
 from ChemBlender.views.structure import create_structure_view
 
@@ -103,8 +107,10 @@ assert first.data == mesh and tuple(mod.node_group for mod in first.modifiers) =
 
 # The native biological fallback has points instead of a ball-and-stick wrapper.
 # Default publication Views must still receive independent template materials.
-from ChemBlender.core import QCProject, builtin_scene_presets, plan_scene_preset
-from ChemBlender.core.formats.pdb import parse_pdb
+from cbq_core.model import QCProject
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from chemblender_prepare.core.formats.pdb import parse_pdb
 from ChemBlender.scene_preset_view import apply_scene_preset
 
 batch = parse_pdb(ROOT / "tests/fixtures/pdb/altloc.pdb")

@@ -3,18 +3,16 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    CIFEnvelope,
-    DatasetStatus,
-    Grid3D,
-    ImportBatch,
-    PeriodicSiteData,
-    ProvenanceRecord,
-    QCProject,
-    Structure,
-    SymmetryResult,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import CIFEnvelope
+from cbq_core.model import DatasetStatus
+from cbq_core.model import Grid3D
+from cbq_core.model import ImportBatch
+from cbq_core.model import PeriodicSiteData
+from cbq_core.model import ProvenanceRecord
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
+from cbq_core.model import SymmetryResult
 
 
 def periodic_site_data(envelope_id, atom_count=2):

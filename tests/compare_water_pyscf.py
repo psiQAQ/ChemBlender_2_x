@@ -41,7 +41,9 @@ def compare(project_path):
     import pyscf
     import scipy
     from pyscf import gto, lib, scf
-    from ChemBlender.core import Grid3D, close_project, open_project
+    from cbq_core.model import Grid3D
+    from cbq_core.sidecar import close_project
+    from cbq_core.sidecar import open_project
 
     assert sha256(FCHK) == FCHK_SHA256, "the fixed source fixture changed"
     lines = FCHK.read_text(encoding="ascii").splitlines()

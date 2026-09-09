@@ -3,14 +3,12 @@ import json
 import unittest
 from uuid import uuid4
 
-from ChemBlender.core import (
-    ImportBatch,
-    ProvenanceRecord,
-    QCProject,
-    SourceRecord,
-    SourceRevision,
-    source_parse_identity,
-)
+from cbq_core.model import ImportBatch
+from cbq_core.model import ProvenanceRecord
+from cbq_core.model import QCProject
+from cbq_core.model import SourceRecord
+from cbq_core.model import SourceRevision
+from cbq_core.model import source_parse_identity
 
 
 class SourceModelTests(unittest.TestCase):

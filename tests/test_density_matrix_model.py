@@ -2,19 +2,17 @@ import array
 import unittest
 from uuid import uuid4
 
-from ChemBlender.core import (
-    ArrayData,
-    BasisConvention,
-    BasisFunctionKind,
-    BasisSet,
-    BasisShell,
-    DensityMatrix,
-    DensityMatrixLevel,
-    DensityMatrixSpin,
-    ImportBatch,
-    QCProject,
-    Structure,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import BasisConvention
+from cbq_core.model import BasisFunctionKind
+from cbq_core.model import BasisSet
+from cbq_core.model import BasisShell
+from cbq_core.model import DensityMatrix
+from cbq_core.model import DensityMatrixLevel
+from cbq_core.model import DensityMatrixSpin
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
 
 
 def values(items, shape):

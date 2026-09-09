@@ -3,13 +3,15 @@ from tempfile import TemporaryDirectory
 import unittest
 from uuid import uuid4
 
-from ChemBlender.core import CapabilitySupport, IssueKind, QCProject, ReaderRegistry, SniffMatch
-from ChemBlender.core.formats.gaussian_input import parse_gaussian_input
-from ChemBlender.core.formats.orca_input import (
-    ORCA_INPUT_READER,
-    parse_orca_input,
-    sniff_orca_input,
-)
+from chemblender_prepare.core.readers import CapabilitySupport
+from cbq_core.model import IssueKind
+from cbq_core.model import QCProject
+from chemblender_prepare.core.readers import ReaderRegistry
+from chemblender_prepare.core.readers import SniffMatch
+from chemblender_prepare.core.formats.gaussian_input import parse_gaussian_input
+from chemblender_prepare.core.formats.orca_input import ORCA_INPUT_READER
+from chemblender_prepare.core.formats.orca_input import parse_orca_input
+from chemblender_prepare.core.formats.orca_input import sniff_orca_input
 
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -20,7 +20,8 @@ args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:])
 sys.path.append(args.existing_libraries)
 
 import ChemBlender
-from ChemBlender.core import ArrayData, ImportBatch
+from cbq_core.model import ArrayData
+from cbq_core.model import ImportBatch
 from ChemBlender.ui.session import get_scene_session, close_scene_session
 from ChemBlender.ui.view_cache import plan_grid_sample_view
 from tests.test_grid_sampling import grid

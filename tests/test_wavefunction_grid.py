@@ -10,24 +10,21 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    BasisConvention,
-    BasisFunctionKind,
-    BasisSet,
-    BasisShell,
-    ImportBatch,
-    OrbitalChannel,
-    OrbitalKind,
-    OrbitalSet,
-    QCProject,
-    Structure,
-    evaluate_electron_density_grid,
-    evaluate_molecular_orbital_grid,
-)
-from ChemBlender.core.wavefunction_grid import (
-    _basis_function_signs, grid_evaluation_memory,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import BasisConvention
+from cbq_core.model import BasisFunctionKind
+from cbq_core.model import BasisSet
+from cbq_core.model import BasisShell
+from cbq_core.model import ImportBatch
+from cbq_core.model import OrbitalChannel
+from cbq_core.model import OrbitalKind
+from cbq_core.model import OrbitalSet
+from cbq_core.model import QCProject
+from cbq_core.model import Structure
+from chemblender_prepare.core.wavefunction_grid import evaluate_electron_density_grid
+from chemblender_prepare.core.wavefunction_grid import evaluate_molecular_orbital_grid
+from chemblender_prepare.core.wavefunction_grid import _basis_function_signs
+from chemblender_prepare.core.wavefunction_grid import grid_evaluation_memory
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -139,7 +136,7 @@ GRID = {
 
 
 class WavefunctionGridTests(unittest.TestCase):
-    @mock.patch("ChemBlender.core.wavefunction_grid._evaluate_channel")
+    @mock.patch("chemblender_prepare.core.wavefunction_grid._evaluate_channel")
     def test_chunks_preserve_affine_order_and_revision_without_full_point_array(self, evaluate):
         structure, basis, orbitals = entities()
         geometry = {**GRID, "shape": (3, 2, 4)}
@@ -168,8 +165,8 @@ class WavefunctionGridTests(unittest.TestCase):
         )
         self.assertEqual(whole.datasets[0].revision, chunked.datasets[0].revision)
 
-    @mock.patch("ChemBlender.core.wavefunction_grid._batch")
-    @mock.patch("ChemBlender.core.wavefunction_grid._evaluate_channel")
+    @mock.patch("chemblender_prepare.core.wavefunction_grid._batch")
+    @mock.patch("chemblender_prepare.core.wavefunction_grid._evaluate_channel")
     def test_cancel_between_chunks_and_after_last_chunk_never_publishes(self, evaluate, batch):
         evaluate.side_effect = lambda _s, _b, _c, points: numpy.ones((1, len(points)))
         for cancel_at in (0, 1, 2):
@@ -184,7 +181,7 @@ class WavefunctionGridTests(unittest.TestCase):
             self.assertEqual(evaluate.call_count, cancel_at)
         batch.assert_not_called()
 
-    @mock.patch("ChemBlender.core.wavefunction_grid._evaluate_channel")
+    @mock.patch("chemblender_prepare.core.wavefunction_grid._evaluate_channel")
     def test_invalid_occupations_and_complex_coefficients_fail_before_backend(self, evaluate):
         structure, basis, orbitals = entities()
         channel = orbitals.channels[0]
@@ -220,7 +217,7 @@ class WavefunctionGridTests(unittest.TestCase):
 
     def test_core_import_does_not_load_gbasis_or_scipy(self):
         code = (
-            "import sys; import ChemBlender.core; "
+            "import sys; import cbq_core.model; "
             "assert 'gbasis' not in sys.modules; "
             "assert 'scipy' not in sys.modules"
         )
@@ -240,7 +237,7 @@ class WavefunctionGridTests(unittest.TestCase):
         )
         self.assertEqual(_basis_function_signs(signed_basis), (-1.0,))
 
-    @mock.patch("ChemBlender.core.wavefunction_grid._evaluate_channel")
+    @mock.patch("chemblender_prepare.core.wavefunction_grid._evaluate_channel")
     def test_mo_grid_preserves_affine_points_phase_and_provenance(self, evaluate):
         structure, basis, orbitals = entities()
         evaluate.return_value = numpy.asarray([[2.0, -3.0]])
@@ -289,7 +286,7 @@ class WavefunctionGridTests(unittest.TestCase):
         )
         project.commit(first)
 
-    @mock.patch("ChemBlender.core.wavefunction_grid._evaluate_channel")
+    @mock.patch("chemblender_prepare.core.wavefunction_grid._evaluate_channel")
     def test_density_sums_occupations_over_unrestricted_channels(self, evaluate):
         structure, basis, orbitals = entities(OrbitalKind.UNRESTRICTED)
         evaluate.side_effect = (
@@ -367,7 +364,7 @@ class WavefunctionGridTests(unittest.TestCase):
         HAS_INTEGRATION, "GBasis/IOData integration environment unavailable"
     )
     def test_real_fchk_mo_norm_and_density_electron_count(self):
-        from ChemBlender.core import parse_iodata_wavefunction
+        from chemblender_prepare.core.iodata_adapter import parse_iodata_wavefunction
 
         imported = parse_iodata_wavefunction(FCHK)
         structure = imported.structures[0]
@@ -414,7 +411,7 @@ class WavefunctionGridTests(unittest.TestCase):
         from gbasis.wrappers import from_iodata
         from iodata import load_one
 
-        from ChemBlender.core import parse_iodata_wavefunction
+        from chemblender_prepare.core.iodata_adapter import parse_iodata_wavefunction
 
         imported = parse_iodata_wavefunction(PURE_FCHK)
         structure = imported.structures[0]

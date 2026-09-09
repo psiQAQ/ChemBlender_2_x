@@ -17,7 +17,12 @@ private = Path(os.environ["BLENDER_USER_RESOURCES"]).resolve()
 assert ROOT / ".agents" / "cache" in private.parents
 private.mkdir(parents=True, exist_ok=True)
 
-from ChemBlender.core import ArrayData, DatasetStatus, ImportBatch, create_session, builtin_scene_presets, plan_scene_preset
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ImportBatch
+from cbq_core.session import create_session
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
 from ChemBlender.render_scene import RenderScope, RenderCancelled
 from ChemBlender.scene_preset_view import apply_scene_preset, _remove_objects
 from ChemBlender.ui.scientific_export import export_scientific_images, iter_scientific_images

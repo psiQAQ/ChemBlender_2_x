@@ -7,16 +7,15 @@ import unittest
 from pathlib import Path
 from uuid import uuid4
 
-from ChemBlender.core.import_pipeline import (
-    ImportPreview,
-    ImportRequest,
-    ImportSource,
-    ReaderOverride,
-    SourcePreview,
-    StagedImportSession,
-    ValidationMode,
-)
-from ChemBlender.core.model import ImportBatch, QCProject
+from chemblender_prepare.core.import_pipeline import ImportPreview
+from chemblender_prepare.core.import_pipeline import ImportRequest
+from chemblender_prepare.core.import_pipeline import ImportSource
+from chemblender_prepare.core.import_pipeline import ReaderOverride
+from chemblender_prepare.core.import_pipeline import SourcePreview
+from chemblender_prepare.core.import_pipeline import StagedImportSession
+from chemblender_prepare.core.import_pipeline import ValidationMode
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
 
 
 OWNER_MARKER = ".chemblender-import-owner"
@@ -473,7 +472,7 @@ class StagedImportSessionTests(unittest.TestCase):
 
 class ImportPipelineBoundaryTests(unittest.TestCase):
     def test_package_exports_current_preflight_contracts(self):
-        from ChemBlender.core import import_pipeline
+        from chemblender_prepare.core import import_pipeline
 
         self.assertEqual(
             set(import_pipeline.__all__),
@@ -514,7 +513,7 @@ class ImportPipelineBoundaryTests(unittest.TestCase):
                 "suggest_conformer_groups",
             },
         )
-        from ChemBlender import core
+        import cbq_core as core
 
         self.assertFalse(hasattr(core, "diagnostics_document"))
         self.assertFalse(hasattr(core, "import_summary"))
@@ -523,7 +522,7 @@ class ImportPipelineBoundaryTests(unittest.TestCase):
     def test_fresh_import_does_not_load_blender_or_optional_stacks(self):
         code = """
 import sys
-import ChemBlender.core.import_pipeline
+import chemblender_prepare.core.import_pipeline
 blocked = {'bpy', 'cclib', 'iodata', 'gbasis', 'ase', 'pymatgen', 'rdkit'}
 loaded = sorted(blocked.intersection(sys.modules))
 assert loaded == [], loaded

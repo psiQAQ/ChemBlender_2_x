@@ -1,6 +1,7 @@
 import unittest
 
-from ChemBlender.core.color_mapping import COLORMAPS, color_stops
+from cbq_core.color_mapping import COLORMAPS
+from cbq_core.color_mapping import color_stops
 
 
 class ScientificColorMappingTests(unittest.TestCase):

@@ -3,13 +3,11 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    DatasetStatus,
-    ImportBatch,
-    PhononModeSet,
-    QCProject,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ImportBatch
+from cbq_core.model import PhononModeSet
+from cbq_core.model import QCProject
 from tests.test_periodic_electronic_model import periodic_structure
 
 

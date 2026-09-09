@@ -16,8 +16,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from ChemBlender import electronic_plot, fermi_surface_view, spectrum_plot, topology_view
-from ChemBlender.core import ArrayData, BandPathBranch, SpectrumKind, SpectrumProfile, TopologyPath
-from ChemBlender.core import derive_vibrational_spectrum, parse_critic2_cpreport
+from cbq_core.model import ArrayData
+from cbq_core.model import BandPathBranch
+from cbq_core.model import SpectrumKind
+from cbq_core.model import SpectrumProfile
+from cbq_core.model import TopologyPath
+from chemblender_prepare.core.vibration_spectrum import derive_vibrational_spectrum
+from chemblender_prepare.core.critic2_adapter import parse_critic2_cpreport
 from tests.test_fermi_surface_model import fermi_surface
 from tests.test_periodic_electronic_model import band_structure, density_of_states
 from tests.test_vibration_model import mode_set

@@ -12,7 +12,8 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import ArrayData, builtin_scene_presets
+from cbq_core.model import ArrayData
+from cbq_core.scene_preset import builtin_scene_presets
 from ChemBlender.ui import grid as grid_ui, view_cache
 from tests.test_view_cache_persistence import grid, project_with, plan_metadata
 

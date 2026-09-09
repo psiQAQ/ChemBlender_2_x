@@ -5,17 +5,13 @@ import unittest
 
 import numpy
 
-from ChemBlender.core import (
-    SidecarIntegrityError,
-    close_project,
-    open_project,
-    save_project,
-)
-from ChemBlender.core.sidecar import _manifest_hash
-from ChemBlender.core.sidecar_migrations import (
-    CURRENT_MANIFEST_VERSION,
-    CURRENT_PROJECT_SCHEMA_VERSION,
-)
+from cbq_core.sidecar import SidecarIntegrityError
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from cbq_core.sidecar import _manifest_hash
+from cbq_core.sidecar_migrations import CURRENT_MANIFEST_VERSION
+from cbq_core.sidecar_migrations import CURRENT_PROJECT_SCHEMA_VERSION
 from tests.test_sidecar_storage import (
     DATASET_ID,
     FIXTURES,
@@ -71,8 +67,8 @@ class SidecarV1SchemaTests(unittest.TestCase):
         )
 
     def test_current_schema_is_v1_and_save_never_mutates_legacy_caller(self):
-        self.assertEqual(CURRENT_MANIFEST_VERSION, "1.0")
-        self.assertEqual(CURRENT_PROJECT_SCHEMA_VERSION, "1.0")
+        self.assertEqual(CURRENT_MANIFEST_VERSION, "1.1")
+        self.assertEqual(CURRENT_PROJECT_SCHEMA_VERSION, "1.1")
         project = _sample_v02_project()
         self.assertEqual(project.schema_version, "0.2")
         with TemporaryDirectory() as temporary:
@@ -81,14 +77,14 @@ class SidecarV1SchemaTests(unittest.TestCase):
                 (root / "manifest.json").read_text(encoding="utf-8")
             )
         self.assertEqual(project.schema_version, "0.2")
-        self.assertEqual(manifest["manifest_version"], "1.0")
-        self.assertEqual(manifest["project_schema_version"], "1.0")
-        self.assertEqual(manifest["project"]["schema_version"], "1.0")
+        self.assertEqual(manifest["manifest_version"], "1.1")
+        self.assertEqual(manifest["project_schema_version"], "1.1")
+        self.assertEqual(manifest["project"]["schema_version"], "1.1")
 
     def test_v01_fixture_opens_as_v1_with_lazy_arrays(self):
         project = open_project(LEGACY_SIDECAR)
         try:
-            self.assertEqual(project.schema_version, "1.0")
+            self.assertEqual(project.schema_version, "1.1")
             self.assertTrue(project.structures)
             self.assertTrue(project.datasets)
             values = next(iter(project.datasets.values())).data.values
@@ -110,7 +106,7 @@ class SidecarV1SchemaTests(unittest.TestCase):
             expected_schema_version="0.2",
         )
         try:
-            self.assertEqual(project.schema_version, "1.0")
+            self.assertEqual(project.schema_version, "1.1")
             self.assertTrue(project.structures)
             self.assertTrue(project.datasets)
             self.assertEqual(project.diagnostics, {})
@@ -127,7 +123,7 @@ class SidecarV1SchemaTests(unittest.TestCase):
         finally:
             close_project(project)
 
-    def test_v1_fixture_opens_without_migration_and_preserves_arrays(self):
+    def test_v10_fixture_migrates_schema_and_preserves_arrays(self):
         manifest = json.loads(
             (CURRENT_SIDECAR / "manifest.json").read_text(encoding="utf-8")
         )
@@ -135,7 +131,7 @@ class SidecarV1SchemaTests(unittest.TestCase):
         self.assertEqual(manifest["project_schema_version"], "1.0")
         project = open_project(CURRENT_SIDECAR)
         try:
-            self.assertEqual(project.schema_version, "1.0")
+            self.assertEqual(project.schema_version, "1.1")
             self.assert_sample_arrays(project)
         finally:
             close_project(project)
@@ -156,8 +152,8 @@ class SidecarV1SchemaTests(unittest.TestCase):
             manifest = json.loads(
                 (current / "manifest.json").read_text(encoding="utf-8")
             )
-            self.assertEqual(manifest["manifest_version"], "1.0")
-            self.assertEqual(manifest["project_schema_version"], "1.0")
+            self.assertEqual(manifest["manifest_version"], "1.1")
+            self.assertEqual(manifest["project_schema_version"], "1.1")
             self.assertEqual(
                 manifest["manifest_sha256"],
                 _manifest_hash(manifest),

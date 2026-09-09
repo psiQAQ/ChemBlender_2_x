@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from ChemBlender.worker_client import start_worker
+from chemblender_prepare.worker_client import start_worker
 from tests.test_worker_protocol import request
 
 
@@ -24,7 +24,7 @@ class WorkerInputStagingTests(unittest.TestCase):
                 self.assertEqual(command[0], str(executable))
                 return Mock()
 
-            with patch("ChemBlender.worker_client.subprocess.Popen", side_effect=launch):
+            with patch("chemblender_prepare.worker_client.subprocess.Popen", side_effect=launch):
                 handle = start_worker(message, root / "jobs", python_executable=executable,
                                       staged_inputs={"input/source.fchk": source})
             handle._close_logs()
@@ -37,7 +37,7 @@ class WorkerInputStagingTests(unittest.TestCase):
                 root = Path(temporary)
                 executable = root / "python.exe"
                 executable.touch()
-                with patch("ChemBlender.worker_client.subprocess.Popen") as launch:
+                with patch("chemblender_prepare.worker_client.subprocess.Popen") as launch:
                     with self.assertRaises(ValueError):
                         start_worker(request(), root / "jobs", python_executable=executable,
                                      staged_inputs={relative: executable})
@@ -46,7 +46,7 @@ class WorkerInputStagingTests(unittest.TestCase):
             root = Path(temporary)
             executable = root / "python.exe"
             executable.touch()
-            with patch("ChemBlender.worker_client.subprocess.Popen") as launch:
+            with patch("chemblender_prepare.worker_client.subprocess.Popen") as launch:
                 with self.assertRaises(FileNotFoundError):
                     start_worker(request(), root / "jobs", python_executable=executable,
                                  staged_inputs={"source.fchk": root / "missing"})
@@ -58,7 +58,7 @@ class WorkerInputStagingTests(unittest.TestCase):
             executable = root / "python.exe"
             executable.touch()
             with patch.object(Path, "is_symlink", return_value=True), patch(
-                "ChemBlender.worker_client.subprocess.Popen"
+                "chemblender_prepare.worker_client.subprocess.Popen"
             ) as launch:
                 with self.assertRaisesRegex(ValueError, "links"):
                     start_worker(request(), root / "jobs", python_executable=executable,

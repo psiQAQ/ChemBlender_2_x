@@ -2,8 +2,10 @@ import unittest
 
 import numpy
 
-from ChemBlender.core import ArrayData, DatasetStatus, FrameSet
-from ChemBlender.core.trajectory_frames import TrajectoryFrameManager
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import FrameSet
+from cbq_core.trajectory_frames import TrajectoryFrameManager
 
 
 class IndexedOnlyArray:

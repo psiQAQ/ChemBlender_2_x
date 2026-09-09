@@ -4,7 +4,9 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import ArrayData, PeriodicSiteData, Structure
+from cbq_core.model import ArrayData
+from cbq_core.model import PeriodicSiteData
+from cbq_core.model import Structure
 from ChemBlender.views.periodic import (
     PeriodicViewSettings,
     _cell_edge_geometry,

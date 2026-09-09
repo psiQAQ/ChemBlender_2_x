@@ -9,9 +9,14 @@ from uuid import uuid4
 
 import numpy as np
 
-from ChemBlender.core import ArrayData, ImportBatch, QCProject, close_project, open_project, save_project
-from ChemBlender.core.critic2_adapter import parse_critic2_cpreport
-from ChemBlender.core.critic2_paths import parse_critic2_paths
+from cbq_core.model import ArrayData
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
+from cbq_core.sidecar import save_project
+from chemblender_prepare.core.critic2_adapter import parse_critic2_cpreport
+from chemblender_prepare.core.critic2_paths import parse_critic2_paths
 from tests.test_critic2_topology import FIXTURE, structure
 
 

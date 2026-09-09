@@ -3,15 +3,13 @@ from uuid import uuid4
 
 import numpy
 
-from ChemBlender.core import (
-    ArrayData,
-    ImportBatch,
-    QCProject,
-    Spectrum,
-    SpectrumKind,
-    SpectrumProfile,
-    derive_vibrational_spectrum,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
+from cbq_core.model import Spectrum
+from cbq_core.model import SpectrumKind
+from cbq_core.model import SpectrumProfile
+from chemblender_prepare.core.vibration_spectrum import derive_vibrational_spectrum
 from tests.test_vibration_model import mode_set, structure
 
 

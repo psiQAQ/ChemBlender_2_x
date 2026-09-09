@@ -5,24 +5,22 @@ from uuid import uuid4
 
 import numpy as np
 
-from ChemBlender.core import (
-    ArrayData,
-    DatasetStatus,
-    ImportBatch,
-    PropertyDataset,
-    QCProject,
-    RecipeCitation,
-    RecipeDefinition,
-    RecipeInputSpec,
-    RecipeOutputSpec,
-    RecipeParameterSpec,
-    RecipeValidationSpec,
-    RecipeViewSpec,
-    builtin_recipes,
-    plan_recipe,
-    recipe_document,
-    recipe_from_document,
-)
+from cbq_core.model import ArrayData
+from cbq_core.model import DatasetStatus
+from cbq_core.model import ImportBatch
+from cbq_core.model import PropertyDataset
+from cbq_core.model import QCProject
+from cbq_core.recipe import RecipeCitation
+from cbq_core.recipe import RecipeDefinition
+from cbq_core.recipe import RecipeInputSpec
+from cbq_core.recipe import RecipeOutputSpec
+from cbq_core.recipe import RecipeParameterSpec
+from cbq_core.recipe import RecipeValidationSpec
+from cbq_core.recipe import RecipeViewSpec
+from cbq_core.recipe import builtin_recipes
+from cbq_core.recipe import plan_recipe
+from cbq_core.recipe import recipe_document
+from cbq_core.recipe import recipe_from_document
 
 
 def dataset(*, role="excitation_energy", unit="electron_volt", status=DatasetStatus.COMPLETE):

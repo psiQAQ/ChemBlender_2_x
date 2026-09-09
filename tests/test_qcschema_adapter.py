@@ -5,17 +5,18 @@ from pathlib import Path
 
 import numpy
 
-from ChemBlender.core.model import AtomicProperty, CalculationStatus, DatasetStatus, QCProject
-from ChemBlender.core.qcschema_adapter import (
-    QCSCHEMA_READER,
-    QCSchemaCompatibilityError,
-    export_qcschema,
-    export_qcschema_atomic_result,
-    parse_qcschema_molecule,
-    parse_qcschema_atomic_result,
-)
-from ChemBlender.core.readers import ReaderRegistry
-from ChemBlender.core.readers import SniffMatch
+from cbq_core.model import AtomicProperty
+from cbq_core.model import CalculationStatus
+from cbq_core.model import DatasetStatus
+from cbq_core.model import QCProject
+from chemblender_prepare.core.qcschema_adapter import QCSCHEMA_READER
+from chemblender_prepare.core.qcschema_adapter import QCSchemaCompatibilityError
+from chemblender_prepare.core.qcschema_adapter import export_qcschema
+from chemblender_prepare.core.qcschema_adapter import export_qcschema_atomic_result
+from chemblender_prepare.core.qcschema_adapter import parse_qcschema_molecule
+from chemblender_prepare.core.qcschema_adapter import parse_qcschema_atomic_result
+from chemblender_prepare.core.readers import ReaderRegistry
+from chemblender_prepare.core.readers import SniffMatch
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "qcschema"
@@ -121,7 +122,8 @@ class QCSchemaAdapterTests(unittest.TestCase):
         )
 
     def test_project_and_sidecar_accept_qcschema_envelope(self):
-        from ChemBlender.core.sidecar import open_project, save_project
+        from cbq_core.sidecar import open_project
+        from cbq_core.sidecar import save_project
 
         batch = self.parse("atomic_result_v1.json")
         project = QCProject(id=batch.report.created_entity_ids[0], schema_version="0.1")
