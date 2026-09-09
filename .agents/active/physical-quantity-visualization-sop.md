@@ -49,3 +49,5 @@
 2026-09-09：C2稳定提交为`a12858e`。C3在该提交上重新运行数值对称、历史完整性/升级、事务导入和ProjectLink五模块101项全部Passed/2.570秒，full20亦已覆盖，未发现产品缺口；C3关闭。下一阶段C4外部包基线，完成前不接L1。
 
 2026-09-09：C3状态提交为`cf8225f`。C4已确认冻结lock、7个CLI命令和prepare/Tk/真实格式专项（111 Passed/1 optional skip）；wheel/sdist尚未构建。当前环境缺hatchling/build，安全策略要求用户明确授权uv在隔离构建环境取得pyproject已声明的hatchling；未修改依赖或启动L1。
+
+2026-09-09：C4预构建证据提交为`ab45b8b`。连续第三个目标回合复核仍无hatchling/build及当前发行物，因缺少隔离构建依赖获取的用户明确授权，目标状态blocked。恢复入口固定为C4 `uv build`、wheel/sdist内容与隔离安装验收；C2/C3已完成，不得回退或越过C4接L1。

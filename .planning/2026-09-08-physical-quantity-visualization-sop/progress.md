@@ -320,3 +320,6 @@ POSCAR旧产品流8项已迁外部CLI/GUI真实入口，保留4项Prepared View�
 
 
 2026-09-09：C3状态提交`cf8225f`完成。C4离线`uv lock --check` Passed；当前`.venv`已有NumPy/RDKit/Gemmi且CLI实际7命令`formats/inspect/validate/upgrade/export/derive/convert --help`全部rc=0。prepare CLI、Tk生命周期、reader conformance、POSCAR和ExtXYZ/外部导出112项中111 Passed/1 optional skip，17.961秒，日志`.blend-analysis/2026-09-08-cbq-architecture-consolidation/prepare-baseline-closeout.log`。wheel/sdist仍Not Run：`.venv`无hatchling/build，`uv build`需临时取得pyproject声明的hatchling，安全策略要求用户另行明确授权；未执行sync、未改环境/依赖文件、未绕过。C4保持未完成，L1未启动。
+
+
+2026-09-09：C4预构建证据已提交`ab45b8b`。第三个连续目标回合实时复核仍为`hatchling=False`、`build=False`，证据目录无当前0.1.0 wheel/sdist，工作树仅用户`.vscode/`。安全策略要求用户明确授权uv在隔离构建环境获取pyproject已声明的hatchling；同一阻塞达到三回合审计阈值，目标标记blocked。获授权后从C4构建、内容审计和隔离安装验收继续，不重做C2/C3，也不提前启动L1。
