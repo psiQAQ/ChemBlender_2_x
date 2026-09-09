@@ -4,6 +4,16 @@ This documentation targets the local 2.5.0 release candidate. The latest previou
 
 Compatibility is locked to Extension 2.5.0, Worker 0.1.0, Worker Protocol 1, and Reader API `1.0-rc1`.
 
+The clean Python 3.12 Standard qualification resolved the following installed distributions. NumPy and transitive Pillow may resolve to newer compatible versions on a later install; use `uv pip list --python <tool-python>` and the installed distributions' license files as the authoritative local inventory.
+
+| Distribution | Qualified version | License metadata | Role |
+| --- | --- | --- | --- |
+| chemblender-prepare | 0.1.0 | GPL-3.0-or-later | processor |
+| NumPy | 2.5.3 | BSD-3-Clause and bundled compatible notices | arrays |
+| RDKit | 2026.3.3 | BSD-3-Clause | molecular formats and operations |
+| Gemmi | 0.7.5 | MPL-2.0 | CIF formats |
+| Pillow | 12.3.0 | MIT-CMU | RDKit transitive dependency |
+
 Known limits:
 
 - Standard does not install wavefunction, scientific, Fermi, critic2, QCEngine or online-provider backends.

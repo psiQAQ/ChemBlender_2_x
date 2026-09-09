@@ -438,9 +438,9 @@ class ArtifactSizeReportTests(unittest.TestCase):
         budget = artifact_size_report._load_budget(BUDGET)
 
         # L8 final wheel-free Viewer: exact native build baseline.
-        self.assertEqual(budget["baseline_package_bytes"], 2_830_321)
+        self.assertEqual(budget["baseline_package_bytes"], 2_830_577)
         self.assertEqual(budget["allowed_unexplained_growth_bytes"], 0)
-        self.assertEqual(budget["baseline_member_unpacked_bytes"], 4_031_844)
+        self.assertEqual(budget["baseline_member_unpacked_bytes"], 4_033_068)
         self.assertEqual(
             budget["allowed_unexplained_member_unpacked_growth_bytes"], 0
         )
@@ -449,11 +449,11 @@ class ArtifactSizeReportTests(unittest.TestCase):
             budget["section_unpacked_budgets"],
             {
                 "code": {
-                    "baseline_unpacked_bytes": 1_522_554,
+                    "baseline_unpacked_bytes": 1_523_779,
                     "allowed_unexplained_growth_bytes": 0,
                 },
                 "resources": {
-                    "baseline_unpacked_bytes": 2_509_290,
+                    "baseline_unpacked_bytes": 2_509_289,
                     "allowed_unexplained_growth_bytes": 0,
                 },
                 "wheels": {

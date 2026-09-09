@@ -30,7 +30,7 @@ from release_metadata import (
 
 # CBQ-only file permission and wheel-free Viewer manifest.
 PRODUCTION_MANIFEST_SHA256 = (
-    "e06bace88748d2740122b2b8a84ec3569387b24ba9aa8a4896fec1b9ea9eea23"
+    "6203d73e8f0eb49b15cff43735c0f184059c8c1ad1d50a44b541701ee755c47c"
 )
 
 
@@ -76,11 +76,11 @@ class ReleaseMetadataTests(unittest.TestCase):
             metadata,
             ReleaseMetadata(
                 extension_id="chemblender",
-                version="2.4.0",
+                version="2.5.0",
                 platform="windows-x64",
-                package_name="chemblender-2.4.0.zip",
-                checksum_name="chemblender-2.4.0.sha256",
-                artifact_name="chemblender-2.4.0-windows-x64",
+                package_name="chemblender-2.5.0.zip",
+                checksum_name="chemblender-2.5.0.sha256",
+                artifact_name="chemblender-2.5.0-windows-x64",
             ),
         )
 
@@ -389,12 +389,12 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertEqual(
             release_metadata_document(metadata),
             {
-                "artifact_name": "chemblender-2.4.0-windows-x64",
-                "checksum_name": "chemblender-2.4.0.sha256",
+                "artifact_name": "chemblender-2.5.0-windows-x64",
+                "checksum_name": "chemblender-2.5.0.sha256",
                 "extension_id": "chemblender",
-                "package_name": "chemblender-2.4.0.zip",
+                "package_name": "chemblender-2.5.0.zip",
                 "platform": "windows-x64",
-                "version": "2.4.0",
+                "version": "2.5.0",
             },
         )
 
@@ -510,11 +510,11 @@ class ReleaseMetadataTests(unittest.TestCase):
         second = subprocess.run(command, capture_output=True, check=False)
 
         expected = (
-            b'{"artifact_name":"chemblender-2.4.0-windows-x64",'
-            b'"checksum_name":"chemblender-2.4.0.sha256",'
+            b'{"artifact_name":"chemblender-2.5.0-windows-x64",'
+            b'"checksum_name":"chemblender-2.5.0.sha256",'
             b'"extension_id":"chemblender",'
-            b'"package_name":"chemblender-2.4.0.zip",'
-            b'"platform":"windows-x64","version":"2.4.0"}\n'
+            b'"package_name":"chemblender-2.5.0.zip",'
+            b'"platform":"windows-x64","version":"2.5.0"}\n'
         )
         self.assertEqual(first.returncode, 0, first.stderr.decode())
         self.assertEqual(first.stdout, expected)
@@ -537,12 +537,12 @@ class ReleaseMetadataTests(unittest.TestCase):
         )
 
         expected = (
-            b'{"artifact_name":"chemblender-2.4.0-windows-x64",'
+            b'{"artifact_name":"chemblender-2.5.0-windows-x64",'
             b'"channel":"stable",'
-            b'"checksum_name":"chemblender-2.4.0.sha256",'
+            b'"checksum_name":"chemblender-2.5.0.sha256",'
             b'"extension_id":"chemblender","is_prerelease":false,'
-            b'"package_name":"chemblender-2.4.0.zip",'
-            b'"platform":"windows-x64","version":"2.4.0"}\n'
+            b'"package_name":"chemblender-2.5.0.zip",'
+            b'"platform":"windows-x64","version":"2.5.0"}\n'
         )
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         self.assertEqual(result.stdout, expected)

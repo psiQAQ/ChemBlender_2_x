@@ -14,7 +14,7 @@ class RepositoryContractTests(unittest.TestCase):
             (EXTENSION / "blender_manifest.toml").read_text(encoding="utf-8")
         )
         self.assertEqual(manifest["id"], "chemblender")
-        self.assertEqual(manifest["version"], "2.4.0")
+        self.assertEqual(manifest["version"], "2.5.0")
         self.assertEqual(manifest["blender_version_min"], "5.1.0")
         self.assertEqual(manifest["platforms"], ["windows-x64"])
         self.assertNotIn("wheels", manifest)

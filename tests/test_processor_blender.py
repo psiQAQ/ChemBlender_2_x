@@ -10,7 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 BLENDER = Path("C:/Program Files/Blender Foundation/Blender 5.1/blender.exe")
 PROCESSOR = ROOT / ".venv" / "Scripts" / "chemblender-prepare.exe"
-PACKAGE = ROOT / "ChemBlender" / "chemblender-2.4.0.zip"
+PACKAGE = ROOT / "ChemBlender" / "chemblender-2.5.0.zip"
 PROCESSOR_CONFIG = (ROOT / ".blend-analysis" /
                     "2026-09-08-cbq-architecture-consolidation" /
                     "processor-config-01.json")

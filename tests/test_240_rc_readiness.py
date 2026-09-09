@@ -35,8 +35,8 @@ class ReleaseCandidateReadinessTests(unittest.TestCase):
         ):
             self.assertIn(term, notes)
         self.assertIn(
-            "[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/"
-            "v2.4.0...HEAD",
+            "[2.4.0]: https://github.com/psiQAQ/ChemBlender_2_x/"
+            "releases/tag/v2.4.0",
             changelog,
         )
         self.assertIn(

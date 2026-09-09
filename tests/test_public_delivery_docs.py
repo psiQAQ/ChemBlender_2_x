@@ -35,6 +35,11 @@ class PublicDeliveryDocsTests(unittest.TestCase):
             self.assertEqual(manifest["remote_resources"], 0)
             self.assertEqual(manifest["missing_resources"], 0)
             self.assertGreater(manifest["link_count"], 5)
+            self.assertEqual(manifest["image_count"], 1)
+            self.assertEqual(
+                set(manifest["image_sha256"]),
+                {"docs/user/assets/2.5.0/blender-viewer.png"},
+            )
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@ from probe_prerelease_version import probe_prerelease_version
 
 # CBQ files plus selected local processor; the formal Viewer has no scientific wheels.
 PRODUCTION_MANIFEST_SHA256 = (
-    "e06bace88748d2740122b2b8a84ec3569387b24ba9aa8a4896fec1b9ea9eea23"
+    "6203d73e8f0eb49b15cff43735c0f184059c8c1ad1d50a44b541701ee755c47c"
 )
 PROBE_VERSION = "2.3.0-alpha.1"
 

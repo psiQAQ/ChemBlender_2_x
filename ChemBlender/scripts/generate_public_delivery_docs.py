@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import html
 import json
@@ -46,6 +47,7 @@ SOURCES = {
         )
     )),
 }
+SCREENSHOTS = ("docs/user/assets/2.5.0/blender-viewer.png",)
 
 
 def _json_bytes(value):
@@ -157,6 +159,12 @@ def _offline_html(language, sources):
             f'<article id="{section_id}"><div class=path>{html.escape(relative)}</div>'
             + _markdown(source) + "</article>"
         )
+    figures = []
+    for relative in SCREENSHOTS:
+        encoded = base64.b64encode((ROOT / relative).read_bytes()).decode("ascii")
+        figures.append('<figure><img alt="ChemBlender 2.5.0 Viewer" '
+                       f'src="data:image/png;base64,{encoded}">'
+                       f'<figcaption>{html.escape(relative)}</figcaption></figure>')
     return ("<!doctype html><html lang=\"" + language + "\"><meta charset=utf-8>"
             "<meta name=viewport content=\"width=device-width,initial-scale=1\">"
             f"<title>{title}</title><style>"
@@ -165,9 +173,9 @@ def _offline_html(language, sources):
             "nav{display:flex;gap:8px;flex-wrap:wrap}nav a{color:#bde3ff}"
             "article{padding:24px 0;border-bottom:1px solid #8885}.path{font:13px monospace;opacity:.7}"
             "code,pre{font-family:ui-monospace,monospace}pre{padding:12px;overflow:auto;background:#8882}"
-            "pre.table{margin:0;padding:2px 8px}small{opacity:.7}"
+            "pre.table{margin:0;padding:2px 8px}small{opacity:.7}img{max-width:100%;height:auto}"
             "</style><body><header><h1>" + title + "</h1><p>Self-contained / 无远程资源</p><nav>"
-            + "".join(navigation) + "</nav></header><main>" + "".join(sections)
+            + "".join(navigation) + "</nav></header><main>" + "".join(figures) + "".join(sections)
             + "</main></body></html>\n").encode("utf-8")
 
 
@@ -185,8 +193,12 @@ def render_documents():
                 relative: hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
                 for relative in sources
             },
+            "image_sha256": {
+                relative: hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
+                for relative in SCREENSHOTS
+            },
             "link_count": html_bytes.count(b"href="),
-            "image_count": 0,
+            "image_count": len(SCREENSHOTS),
             "remote_resources": 0,
             "missing_resources": 0,
         }

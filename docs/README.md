@@ -20,6 +20,8 @@
 - [Source revisions](development/source-revisions.md)
 - [Fixture policy](development/testing-fixtures.md)
 - [2.3 release procedure](development/release-2.3.md)
+- [2.3 migration guide](migration/2.3.0.md)
+- [Legacy scene migration](user/legacy-migration.md)
 - [Historical implementation plans](superpowers/README.md)
 
 ## Archive

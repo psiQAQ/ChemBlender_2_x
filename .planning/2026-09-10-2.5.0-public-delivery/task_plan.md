@@ -18,9 +18,9 @@
 - [x] 从 `d8f0306` 创建 `release/2.5.0`；清理 10 套重复 blender-mcp/Python 链并保留 Blender。
 - [x] P0：修复 routed worker 环境注入，真实隔离环境验证包路径和 NumPy 版本。
 - [x] 完成 Standard uv-tool、准确 capabilities/doctor、GUI 诊断与 Blender Test Processor。
-- [ ] 归档旧 SOP，建立完整中英双语安装/API/GUI/Blender/故障/发布文档和离线 HTML。
-- [ ] 升级 2.5.0、构建唯一权威 ZIP/wheel/sdist，完成 private 与 user_default 实装。
-- [ ] 跑专项、全量、构建和文档回归；形成四个逻辑提交并关闭目标。
+- [x] 归档旧 SOP，建立完整中英双语安装/API/GUI/Blender/故障/发布文档和离线 HTML。
+- [x] 升级 2.5.0、构建唯一权威 ZIP/wheel/sdist，完成 private 与 user_default 实装。
+- [x] 跑专项、全量、构建和文档回归；形成四个逻辑提交并关闭目标。
 
 ## Verification
 
@@ -39,3 +39,7 @@
 2026-09-10：Standard/诊断阶段关闭。当次 wheel 在全新 uv-tool/Python 3.12 环境安装 NumPy 2.5.3、RDKit 2026.3.3、Gemmi 0.7.5；两个 launcher 的 PE subsystem 分别为 console 3 与 GUI 2。安装、强制重装、卸载、help、capabilities、doctor 和隔离包路径均 Passed。prepare/runtime/controller 51 项 Passed/1 skip，构建 wheel/sdist Passed；PyPI 来源因未发布而 Not Run。
 
 2026-09-10：双语文档源码与离线生成器完成。README、用户、prepare CLI/GUI、Worker Protocol、Reader API、专业 route、项目生命周期、恢复与发布状态均提供中英入口；2.4 工作流和 2026-09-09 scientific SOP 标记为历史资格证据并保留稳定 URL。公开清单由 parser/registry 生成，固定 10 CLI、9 GUI、21 operation、22 reader、13 export；文档专项 82 项 Passed。中英离线 HTML 经 Edge headless 1440x1000 实际加载截图 Passed。该阶段仍待 2.5.0 私有实例截图回填后关闭。
+
+2026-09-10：双语文档阶段关闭。从私有 profile 中实际安装的 2.5.0 实例采集 Blender 5.1.1 当前 UI 截图并嵌入中英离线 HTML；图片 manifest 记录来源和 SHA-256，生成器记录图片数及 hash，Edge headless 再次加载两种语言 Passed。干净 uv-tool 最终复核发现 CLI 缺少顶层 `--version`，已在共享 parser 增加 argparse 原生 version action 和最小回归，源码态验证 Passed，待重建发行物后复验 launcher。
+
+2026-09-10：全部计划项关闭。最终全量 2,531 passed/36 skipped/0 failures/0 errors；Blender 5.1.1 私有 profile 与真实 `user_default` 均通过。真实 2.4.0 扩展及偏好已备份，2.5.0 通过原生 Extension API 安装；冷启动读取持久化 processor 路径、两轮 reload、无 Blender 科学依赖和 Worker Protocol v1 capability 请求均 Passed。最终 ZIP/wheel/sdist SHA-256 分别为 `8e92b3439e92be8f90e3e63fd25e935a2592148d464d010ee1ca3a87e85ea6eb`、`3f1d93acd0eefd29bc304527007b8d53bd0aa3b508e97aea0a18f4624ee62c3e`、`8309f5bcf2553ef7a7ff0ad5364100260e562c1253a9c8997f0c29d06c5dbbce`。远端发布按边界 Not Run。

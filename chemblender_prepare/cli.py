@@ -18,7 +18,7 @@ from cbq_core.sidecar_migrations import CURRENT_PROJECT_SCHEMA_VERSION
 from cbq_core.storage.text import ExportCancelled
 from .core.import_pipeline import ImportCancelled
 from cbq_core.worker_protocol import (
-    EntityReference, WorkerError, WorkerRequest, WorkerResult, WorkerStatus,
+    EntityReference, WORKER_VERSION, WorkerError, WorkerRequest, WorkerResult, WorkerStatus,
     _atomic_document, result_document, write_request, write_result,
 )
 
@@ -672,6 +672,8 @@ def _export_envelope(args, project, destination, cancel):
 
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--version", action="version",
+                        version=f"%(prog)s {WORKER_VERSION}")
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--json", action="store_true", help="Write the existing WorkerResult JSON to stdout")
     common.add_argument("--task-directory", type=Path, help="New task directory for progress and result files")

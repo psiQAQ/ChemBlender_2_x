@@ -1,0 +1,1 @@
+{"blender":"5.1.1","capture":"bpy.ops.screen.screenshot","extension_package":"chemblender-2.5.0.zip","extension_package_sha256":"1eb77f65fab61b89645554f38015014979bd12a91f393104fea3c6b175e870dc","images":{"blender-viewer.png":"e9cd139ccfdb60bc3d40a0bb23ea1ba9730c7e1341bc6df876a99e0e66ee44e4"},"profile":"isolated","schema_version":1}

@@ -8,6 +8,19 @@ Blender仅使用自带NumPy及本地显示代码，共享cbq_core按源码hash�
 
 项目根uv init/uv venv及缓存科学/Fermi/critic2环境已获用户批准。版本隔离和兼容锁详见[依赖提案](../../examples/scientific-visualization/dependencies/PROPOSAL.md)。外部包将构建wheel/sdist供后续PyPI发布，本次不发布。
 
+## 2.5 双制品兼容锁
+
+| 表面 | 版本/边界 |
+| --- | --- |
+| Blender Extension | `ChemBlender 2.5.0`，无科学 wheel |
+| Standard processor | `chemblender-prepare 0.1.0`，Python 3.12 `uv tool install --python 3.12 "chemblender-prepare[formats]"` |
+| Standard dependencies | NumPy、RDKit、Gemmi，仅存在于 tool 环境 |
+| Automation | Worker Protocol `1`，单一 `chemblender-prepare.exe` 绝对路径 |
+| Reader extension | `chemblender_prepare.reader_api`，token `1.0-rc1` |
+| Python modules | `core.*` 与 GUI helpers 为内部实现，不承诺通用 SDK |
+
+本地发布必须同时生成 Extension ZIP、prepare wheel/sdist、SHA-256、许可/依赖清单、资格报告和中英离线 SOP。PyPI 与本地 wheel 两种安装命令都写入 SOP，但在首次发布前只验收本地 wheel；远端发布仍需用户单独授权。
+
 以下运行基线及依赖段落含旧交付依据；当前迁移验收以active任务和实际运行证据为准。
 
 ## Runtime Baseline

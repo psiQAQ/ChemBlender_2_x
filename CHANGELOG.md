@@ -4,9 +4,33 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-09-10
+
 ### Added
 
+- Added the wheel-free CBQ Viewer boundary and `chemblender-prepare 0.1.0` external CLI/GUI, connected through Worker Protocol v1 by one configured executable path.
+- Added bilingual daily-use guides, generated public-interface inventories and self-contained offline documentation.
 - Added dependency-free strict Cartesian structure readers for Gaussian `.gjf`/`.com` and ORCA `.inp`, integrated with Quick Import, Project Browser and Structure View while preserving charge/multiplicity and rejecting unsupported complex geometry forms.
+
+### Changed
+
+- Moved NumPy, RDKit and Gemmi Standard processing into a Python 3.12 `uv tool`; the Blender Extension no longer packages scientific wheels or installs dependencies.
+- Retained pure-Mesh editing, explicit Apply, CBQ import/export, all published Views, animation, cache rebuild, Cycles rendering and saved-project reopen in Blender.
+- Routed optional scientific, wavefunction and Fermi operations through isolated manually configured environments containing the same prepare wheel.
+
+### Compatibility
+
+- Supports Windows x64 with Blender 5.1.0 or later; local qualification uses Blender 5.1.1 and its bundled Python 3.13.
+- Locks Worker Protocol `1`, Worker `0.1.0`, Reader API `1.0-rc1` and CBQ as the scientific exchange boundary.
+
+### Known Limitations
+
+- `chemblender-prepare 0.1.0` is not published to PyPI until a separately authorized release; local qualification installs the built wheel.
+- Scientific/Fermi/wavefunction routes, critic2, QCEngine and online providers are optional manual configurations and report unavailable when absent.
+
+### Verification
+
+- Local release qualification covers one hash-locked native build and ZIP audit, clean Standard `uv tool`, isolated Blender installation, controller lifecycle, editing/view/project regressions and bilingual offline documentation. Remote CI, tag, GitHub Release and PyPI publication are intentionally not part of this local candidate.
 
 ### Fixed
 
@@ -289,7 +313,8 @@ All notable changes to the maintained ChemBlender release line are recorded here
 
 - Imported the latest ChemBlender 2.1.0 source as commit `78c2d8d8d6361302bf8f19a568c3d7cfccde4c19`, based on upstream commit `9077096b776cd18ca85adb4b50253a0d3c18fd76`.
 
-[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/psiQAQ/ChemBlender_2_x/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.5.0
 [2.4.0]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.4.0
 [2.4.0-rc.1]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.4.0-rc.1
 [2.3.0]: https://github.com/psiQAQ/ChemBlender_2_x/releases/tag/v2.3.0

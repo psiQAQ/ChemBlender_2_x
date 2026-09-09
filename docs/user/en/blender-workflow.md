@@ -1,5 +1,9 @@
 # Blender End-to-End SOP
 
+This screenshot was captured directly with `bpy.ops.screen.screenshot` from the isolated, newly installed 2.5.0 ZIP after CBQ import, pure-Mesh Apply, View creation, save and reopen. The visible ChemBlender-owned Structure, Surface and Grid Volume objects come from that installed instance.
+
+[![ChemBlender 2.5.0 isolated Viewer after save and reopen](../assets/2.5.0/blender-viewer.png)](../assets/2.5.0/blender-viewer.png)
+
 1. Run `chemblender-prepare doctor --json`; Standard must pass. Optional warnings are expected unless you configured those backends.
 2. Find the launcher with `uv tool dir --bin`, configure its absolute `chemblender-prepare.exe` path, and run **Test Processor**. Confirm processor `0.1.0`, protocol `1`, Standard complete, and operation/reader counts.
 3. Use the CLI or GUI to inspect and convert a raw file into a new `.cbq` directory. In the GUI, **derive** keeps an operation ID plus JSON parameters as the expert surface.

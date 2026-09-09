@@ -13,7 +13,7 @@ import unittest
 from unittest.mock import patch
 
 from cbq_core.sidecar import open_project, close_project
-from chemblender_prepare.cli import main
+from chemblender_prepare.cli import build_parser, main
 from chemblender_prepare.gui import CliProcess, PrepareWindow, command_arguments
 
 
@@ -40,6 +40,12 @@ class PrepareCLITests(unittest.TestCase):
 
     def convert(self):
         return self.cli("convert", self.xyz, "-o", self.output)
+
+    def test_version_is_available_without_a_command(self):
+        stream = io.StringIO()
+        with redirect_stdout(stream), self.assertRaisesRegex(SystemExit, "0"):
+            build_parser().parse_args(["--version"])
+        self.assertTrue(stream.getvalue().strip().endswith(" 0.1.0"))
 
     def test_gui_exposes_read_only_capabilities_and_doctor(self):
         self.assertEqual(command_arguments({"command": "capabilities"}),

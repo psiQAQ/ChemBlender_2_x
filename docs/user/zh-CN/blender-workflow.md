@@ -1,5 +1,9 @@
 # Blender 完整联动 SOP
 
+下图由新安装的 2.5.0 ZIP 在隔离 profile 中完成 CBQ 导入、纯 Mesh Apply、View 创建、保存和重开后，直接通过 `bpy.ops.screen.screenshot` 采集。画面中的 ChemBlender Structure、Surface 和 Grid Volume 均来自这次实装实例。
+
+[![ChemBlender 2.5.0 隔离实例保存重开后的 Viewer](../assets/2.5.0/blender-viewer.png)](../assets/2.5.0/blender-viewer.png)
+
 1. 运行 `chemblender-prepare doctor --json`；Standard 必需项必须 Passed。未配置可选后端时出现 warning 是正常结果。
 2. 用 `uv tool dir --bin` 定位 launcher，在 Blender 填入 `chemblender-prepare.exe` 绝对路径并运行 **Test Processor**。确认 processor `0.1.0`、协议 `1`、Standard complete 和 operation/reader 数量。
 3. 用 CLI 或 GUI 检查原始文件并生成新的 `.cbq` 目录。GUI 的 **derive** 保留 operation ID 与 JSON 参数，属于专家入口。
