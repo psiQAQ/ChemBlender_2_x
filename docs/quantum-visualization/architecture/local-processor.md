@@ -1,6 +1,6 @@
 # ChemBlender CBQ Viewer 与本地处理模块实施方案
 
-状态：2026-09-08 用户批准的目标方案；当前共享核心迁移尚未形成干净提交。本文中的新增接口、操作和性能指标是待实施、待实测的合同，不代表已有功能通过验收。
+状态：2026-09-09 共享核心、CBQ 1.1、外部分发包、统一 CLI 与 Blender 单路径异步控制器已完成。后续 operation、性能指标及 RDKit 移除门槛仍须逐项实测，不能由接口存在代替验收。
 
 ## 目录
 
@@ -44,6 +44,8 @@ RDKit 的按钮式科学操作需迁移而非删除：SMILES 建模、芳香键�
 
 全局 Add-on Preferences 仅增加 `processor_executable`：本地 `chemblender-prepare.exe` 的绝对路径。`Test Processor` 异步执行 capability 检查，显示工具版本、RDKit 版本、可用 operation 及缺失原因。该路径和能力缓存不写入 `.blend`、CBQ、View 或场景 preset。
 
+使用时在 `Edit > Preferences > Add-ons > ChemBlender` 选择该可执行文件并点击 `Test Processor`。检查立即进入 modal；`Esc` 请求取消。处理程序缺失或能力不足只影响相应外部操作，不影响 CBQ 浏览、Mesh 编辑、已有 View 或本地相位／帧预览。
+
 程序未配置、文件不存在或缺少 capability 时，CBQ 浏览、本地编辑、展示、动画、渲染、保存、重开保持可用；仅禁用对应计算按钮并解释缺失能力。正式过渡版本中的内置 RDKit 路径保持原有功能，直至外部等价门槛通过后切换。
 
 Blender 不执行 pip／uv，不修改 Blender Python，不复制环境路径到项目。首版仅本地可执行文件与文件协议，无 HTTP、常驻服务、认证或远程上传。
@@ -62,7 +64,7 @@ chemblender-prepare doctor
 
 `doctor` 只诊断可执行文件、依赖、环境路由、任务目录权限和 critic2 可运行性，提供面向用户的修复说明，不自动安装。工具自身管理已批准的科学环境、Fermi 环境及 critic2 路径，保留 GBasis 与 NumPy 版本隔离；Blender 不再存储 `worker_python`、`worker_repository`、`fermi_python`。
 
-路由配置使用版本化的 `chemblender-prepare.json`，放在CLI可执行文件旁，或由外部工具环境变量`CHEMBLENDER_PREPARE_CONFIG`指向。文件只接受三个绝对Python路径`wavefunction`、`scientific`、`fermi`和一个可选critic2绝对路径；不写入`.blend`或CBQ。统一`worker`读取请求后按固定operation/reader白名单选择环境，再直接调用同一runner；请求不能指定Python、模块或callable。未配置的路由回退到处理程序自身环境，实际缺失依赖必须在capability和doctor中报告为不可用。
+路由配置使用版本化的 `chemblender-prepare.json`，放在CLI可执行文件旁，或由外部工具环境变量`CHEMBLENDER_PREPARE_CONFIG`指向。文件只接受三个绝对Python路径`wavefunction`、`scientific`、`fermi`和一个可选critic2绝对路径；不写入`.blend`或CBQ。统一`worker`读取请求后按固定operation/reader白名单选择环境，再直接调用同一runner；请求不能指定Python、模块或callable。未配置的专用路由明确报告不可用并拒绝对应任务，不能回退处理程序自身环境；实际缺失依赖也必须在capability和doctor中报告为不可用。
 
 独立包继续采用当前仓库的 `pyproject.toml`、`uv.lock`、`.venv`，构建 wheel／sdist并进行安装测试，为后续 PyPI 发布准备；本次不发布。轻量 Tkinter GUI 通过 CLI 子进程工作，不包含第二份算法。
 

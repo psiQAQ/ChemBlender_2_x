@@ -1,0 +1,69 @@
+"""Run the processor lifecycle in Blender 5.1 with a private profile."""
+
+import os
+from pathlib import Path
+import subprocess
+from tempfile import TemporaryDirectory
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+BLENDER = Path("C:/Program Files/Blender Foundation/Blender 5.1/blender.exe")
+PROCESSOR = ROOT / ".venv" / "Scripts" / "chemblender-prepare.exe"
+PACKAGE = ROOT / "ChemBlender" / "chemblender-2.4.0.zip"
+
+
+class NativeProcessorControllerTests(unittest.TestCase):
+    @unittest.skipUnless(BLENDER.is_file() and PROCESSOR.is_file(),
+                         "Blender 5.1 and project processor are required")
+    def test_registration_preview_capability_and_reload(self):
+        with TemporaryDirectory(prefix="cb-processor-profile-") as profile:
+            environment = dict(
+                os.environ,
+                BLENDER_USER_RESOURCES=profile,
+                PYTHONNOUSERSITE="1",
+                PYTHONDONTWRITEBYTECODE="1",
+            )
+            environment.pop("PYTHONPATH", None)
+            result = subprocess.run(
+                [str(BLENDER), "--background", "--factory-startup", "--offline-mode",
+                 "--python-exit-code", "1", "--python",
+                 str(ROOT / "tests" / "blender_processor_controller.py"),
+                 "--", str(ROOT), str(PROCESSOR)],
+                env=environment,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=90,
+            )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("PROCESSOR_CONTROLLER_PASSED", result.stdout)
+
+    @unittest.skipUnless(BLENDER.is_file() and PROCESSOR.is_file() and PACKAGE.is_file(),
+                         "Blender 5.1, processor, and extension package are required")
+    def test_installed_extension_uses_one_preference_and_keeps_local_editing(self):
+        with TemporaryDirectory(prefix="cb-processor-install-") as profile:
+            environment = dict(
+                os.environ,
+                BLENDER_USER_RESOURCES=profile,
+                PYTHONNOUSERSITE="1",
+                PYTHONDONTWRITEBYTECODE="1",
+            )
+            environment.pop("PYTHONPATH", None)
+            result = subprocess.run(
+                [str(BLENDER), "--background", "--factory-startup", "--offline-mode",
+                 "--python-exit-code", "1", "--python",
+                 str(ROOT / "tests" / "blender_processor_installed.py"),
+                 "--", str(PACKAGE), str(PROCESSOR)],
+                env=environment,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=90,
+            )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("PROCESSOR_INSTALLED_PASSED", result.stdout)
+
+
+if __name__ == "__main__":
+    unittest.main()

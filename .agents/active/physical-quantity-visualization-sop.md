@@ -55,3 +55,5 @@
 2026-09-09：用户已授权并成功运行`uv build`。0.1.0 wheel/sdist通过归档安全、RECORD/元数据/入口点、受控源码完整性审计；本地wheel `--no-deps`隔离安装后，模块来源、launcher及22 readers/13 operations实际输出均通过。未改变环境、lock或依赖文件，C4关闭；下一阶段为L1统一Worker入口。
 
 2026-09-09：L1统一入口已完成。新增版本化`capabilities --json`、共享Worker v1文件入口、无副作用`doctor`和固定外部环境路由；缺少专用路由明确fail closed，不回退主Python。相关121项Passed/1 optional skip，最终wheel/sdist离线构建、CRC/内容、隔离安装launcher和三套真实环境探测通过；22 readers/13 operations均可用，跨GBasis worker返回预期协议错误。critic2为WSL ELF，Windows doctor如实warning，留待L5处理。未改变依赖/lock；下一阶段严格进入L2 Blender异步控制器。
+
+2026-09-09：L2 Blender异步控制器已完成。全局仅保存一个`processor_executable`；Test Processor和公共Worker控制器无shell异步运行，严格校验任务归属、identity、状态和退出码，取消两秒后仅终止owned PID tree。phase/frame采用100 ms尾随本地预览。专项98项、Blender 5.1.1源码/安装版私有profile、validate/build、ZIP审计及2509项全量均Passed（36 skips）；正式包仍保留锁定RDKit/Gemmi wheels。下一阶段严格进入L3，将现有wavefunction、Fermi和scientific reader操作接到该统一控制器。

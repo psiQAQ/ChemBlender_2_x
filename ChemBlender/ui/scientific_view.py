@@ -16,6 +16,7 @@ from .default_views import default_grid_preset
 _SCENE_PROPERTY_NAME = "chemblender_scientific_view"
 _OWNED_SCENE_PROPERTY = None
 _ENUM_ITEMS = {}
+_PREVIEW_PENDING = {}
 _SELECTION_FIELDS = {"atom_indices", "orbital_labels", "spin_indices"}
 _COMMON_SETTINGS = {"template", "shaded", "material_opacity"}
 _PRESETS_BY_TYPE = {
@@ -207,6 +208,42 @@ if bpy is not None:
             raise ValueError("linked source selection is stale")
         self.secondary_source_uuid = "" if index == 0 else items[index][0]
 
+    def _flush_local_previews():
+        pending = tuple(_PREVIEW_PENDING.values())
+        _PREVIEW_PENDING.clear()
+        from .session import get_scene_session
+        from ..scene_preset_view import apply_scientific_frame, apply_scientific_phase
+        for scene, action in pending:
+            settings = getattr(scene, _SCENE_PROPERTY_NAME, None)
+            obj = scene.objects.get(settings.loaded_view_name) if settings else None
+            if obj is None:
+                continue
+            try:
+                project = get_scene_session(scene).project
+                if action == "PHASE":
+                    apply_scientific_phase(obj, project, settings.phase)
+                else:
+                    apply_scientific_frame(obj, project, settings.frame_index)
+                    obj["cb_scientific_playback"] = False
+            except (KeyError, ReferenceError, AttributeError, RuntimeError,
+                    TypeError, ValueError) as error:
+                obj["cb_view_diagnostic"] = str(error)
+        return None
+
+    def _queue_local_preview(self, context, action):
+        scene = getattr(context, "scene", None)
+        if scene is None or not self.loaded_view_name:
+            return
+        _PREVIEW_PENDING[scene.as_pointer()] = (scene, action)
+        if not bpy.app.timers.is_registered(_flush_local_previews):
+            bpy.app.timers.register(_flush_local_previews, first_interval=.1)
+
+    def _queue_phase_preview(self, context):
+        _queue_local_preview(self, context, "PHASE")
+
+    def _queue_frame_preview(self, context):
+        _queue_local_preview(self, context, "FRAME")
+
 
     class CHEMBLENDER_PG_scientific_view(bpy.types.PropertyGroup):
         preset_id: EnumProperty(name="Representation", items=_PRESET_ITEMS, default="AUTO")
@@ -249,7 +286,7 @@ if bpy is not None:
         qpoint_index: IntProperty(name="q-point Index", default=0, min=0)
         arrow_scale: FloatProperty(name="Arrow Scale", default=1., min=1.e-9)
         amplitude_scale: FloatProperty(name="Displacement Amplitude", default=.4)
-        phase: FloatProperty(name="Phase (radians)", default=0.)
+        phase: FloatProperty(name="Phase (radians)", default=0., update=_queue_phase_preview)
         repetitions: IntVectorProperty(name="Supercell Repetitions", size=3, default=(1,1,1), min=1, max=12)
         line_radius: FloatProperty(name="Line Radius", default=.01, min=1.e-6)
         axes: BoolProperty(name="Show Axes", default=True)
@@ -264,7 +301,8 @@ if bpy is not None:
         point_radius: FloatProperty(name="Critical Point Radius", default=.1, min=1.e-6)
         path_radius: FloatProperty(name="Gradient Path Radius", default=.025, min=1.e-6)
         frame_start: IntProperty(name="Animation Start Frame", default=1)
-        frame_index: IntProperty(name="Source Frame Index (0-based)", default=0, min=0)
+        frame_index: IntProperty(name="Source Frame Index (0-based)", default=0, min=0,
+                                 update=_queue_frame_preview)
         frame_step: IntProperty(name="Timeline Frames Per Source Frame", default=1, min=1)
         frames_per_cycle: IntProperty(name="Frames Per Cycle", default=48, min=2)
 
@@ -513,6 +551,9 @@ if bpy is not None:
         unregister_session_cleanup(clear_scientific_playback)
         while _scientific_frame_change in bpy.app.handlers.frame_change_post:
             bpy.app.handlers.frame_change_post.remove(_scientific_frame_change)
+        if bpy.app.timers.is_registered(_flush_local_previews):
+            bpy.app.timers.unregister(_flush_local_previews)
+        _PREVIEW_PENDING.clear()
         if _OWNED_SCENE_PROPERTY is not None and _same_scene_property(_scene_property_identity(_SCENE_PROPERTY_NAME), _OWNED_SCENE_PROPERTY):
             delattr(bpy.types.Scene, _SCENE_PROPERTY_NAME)
         _OWNED_SCENE_PROPERTY = None

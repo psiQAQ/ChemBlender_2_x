@@ -30,7 +30,7 @@ from release_metadata import (
 
 # CBQ-only file permission; transitional RDKit/Gemmi wheels remain pinned.
 PRODUCTION_MANIFEST_SHA256 = (
-    "9945a9156d0a73c643bb3f61f17f3a65cf470a440fdeda8ee0f3d783a149591e"
+    "fe2020ef179ba22a5b35cd831936c4a08bfcfee2255a4985007f82a02f1a929e"
 )
 
 

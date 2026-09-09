@@ -4,6 +4,7 @@ import importlib
 REGISTER_MODULE_NAMES: tuple[str, ...] = (
     ".extension",
     ".trajectory_view",
+    ".ui.processor",
     ".ui.session",
     ".ui.properties",
     ".ui.cbq_import",

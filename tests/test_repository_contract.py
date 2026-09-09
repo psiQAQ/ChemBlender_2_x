@@ -30,7 +30,7 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertLessEqual(len(manifest["permissions"]["files"]), 64)
         self.assertEqual(
             manifest["permissions"]["files"],
-            "Read CBQ projects and save caches, images and project data",
+            "Read CBQ data, save project files, and run a local processor",
         )
         self.assertNotIn("network", manifest["permissions"])
         self.assertIn("scripts/", manifest["build"]["paths_exclude_pattern"])

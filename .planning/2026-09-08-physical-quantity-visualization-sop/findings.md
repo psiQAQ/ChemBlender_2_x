@@ -259,3 +259,5 @@ POSCAR旧产品流8项已迁外部CLI/GUI真实入口，保留4项Prepared View�
 
 
 2026-09-09：L1环境路由必须fail closed。专用wavefunction/scientific/fermi路径缺失时不能借当前Python继续探测或执行，否则当前环境偶然安装的包会造成虚假能力声明并破坏可复现实验；现统一以`not configured`能力原因和`environment_unavailable`WorkerResult拒绝。固定路由表、metadata探测、共享Worker v1和现有registry足够，无需插件发现、动态import或第二套协议。真实三环境使全部22 readers可用；Windows不能直接执行现有WSL critic2 ELF属于L5工具路由问题，L1 doctor保留warning比伪造可用更安全。
+
+2026-09-09：L2无需新任务框架。现有Worker Protocol v1、标准库Popen和Blender modal/timer足以覆盖单一路径、状态、进度、取消、卸载和100 ms尾随本地预览。信任边界必须同时检查绝对可执行路径、任务目录归属、冻结CBQ位于任务内、request identity、协议结果及进程退出码；仅凭success JSON会接受异常退出后的伪造结果。processor偏好和能力缓存属于用户全局状态，不能成为Scene RNA；phase/frame预览只读当前session并更新View，不启动外部进程。正式manifest继续保留两只wheel，L2通过不代表RDKit移除资格。

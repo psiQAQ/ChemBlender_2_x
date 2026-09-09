@@ -9,7 +9,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRATION_MODULE = "ChemBlender.runtime.registration"
 EXPECTED_ROOTS = (
-    ".extension", ".trajectory_view", ".ui.session", ".ui.properties",
+    ".extension", ".trajectory_view", ".ui.processor", ".ui.session", ".ui.properties",
     ".ui.cbq_import", ".ui.mesh_edit", ".ui.diagnostics", ".ui.topology",
     ".ui.biological", ".ui.grid", ".ui.wavefunction", ".ui.orbital_export",
     ".ui.scientific_view", ".ui.scientific_export", ".ui.project_browser.panel",

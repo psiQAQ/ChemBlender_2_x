@@ -15,7 +15,7 @@ wheels = [
 ]
 
 [permissions]
-files = "Read CBQ projects and save caches, images and project data"
+files = "Read CBQ data, save project files, and run a local processor"
 
 [build]
 paths_exclude_pattern = [
