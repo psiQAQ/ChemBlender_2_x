@@ -1,0 +1,271 @@
+import operator
+import re
+from dataclasses import dataclass
+from math import isfinite
+from types import MappingProxyType
+from uuid import UUID, uuid5
+
+from .cache_identity import derivation_cache_key
+from .model import ArrayData
+from .model import DatasetStatus
+from .model import Grid3D
+from .model import ImportBatch
+from .model import ProvenanceRecord
+
+
+_TOKEN = re.compile(r"[a-z][a-z0-9_]*", re.ASCII)
+_SURFACE_MODES = frozenset({"grid_volume", "signed_isosurface"})
+_ISOVALUE_POLICIES = frozenset({"absolute", "fraction_of_max_abs"})
+
+
+@dataclass(frozen=True, slots=True)
+class GridSemanticPreset:
+    preset_id: str
+    semantic_role: str
+    value_units: tuple[str, ...]
+    signed: bool
+    default_surface_mode: str
+    isovalue_policy: str
+    isovalue_parameter: float
+    colormap_class: str
+
+    def __post_init__(self):
+        for name in ("preset_id", "semantic_role", "colormap_class"):
+            value = getattr(self, name)
+            if type(value) is not str or _TOKEN.fullmatch(value) is None:
+                raise ValueError(f"{name} must be a lowercase token")
+        units = tuple(self.value_units)
+        if (
+            not units
+            or len(units) != len(set(units))
+            or any(type(value) is not str or _TOKEN.fullmatch(value) is None for value in units)
+        ):
+            raise ValueError("value_units must contain unique lowercase tokens")
+        if type(self.signed) is not bool:
+            raise TypeError("signed must be a bool")
+        if self.default_surface_mode not in _SURFACE_MODES:
+            raise ValueError("default_surface_mode is unsupported")
+        if self.isovalue_policy not in _ISOVALUE_POLICIES:
+            raise ValueError("isovalue_policy is unsupported")
+        if (
+            isinstance(self.isovalue_parameter, bool)
+            or not isinstance(self.isovalue_parameter, (int, float))
+            or not isfinite(self.isovalue_parameter)
+            or self.isovalue_parameter <= 0.0
+        ):
+            raise ValueError("isovalue_parameter must be finite and positive")
+        object.__setattr__(self, "value_units", units)
+        object.__setattr__(
+            self, "isovalue_parameter", float(self.isovalue_parameter)
+        )
+
+
+GRID_SEMANTIC_PRESETS = MappingProxyType(
+    {
+        value.preset_id: value
+        for value in (
+            GridSemanticPreset(
+                "generic_scalar",
+                "scalar_field",
+                (
+                    "dimensionless",
+                    "electron_per_cubic_bohr",
+                    "electron_per_cubic_angstrom",
+                    "hartree_per_elementary_charge",
+                ),
+                signed=True,
+                default_surface_mode="grid_volume",
+                isovalue_policy="fraction_of_max_abs",
+                isovalue_parameter=0.1,
+                colormap_class="diverging",
+            ),
+            GridSemanticPreset(
+                "molecular_orbital",
+                "molecular_orbital",
+                ("inverse_bohr_to_three_halves",),
+                signed=True,
+                default_surface_mode="signed_isosurface",
+                isovalue_policy="fraction_of_max_abs",
+                isovalue_parameter=0.05,
+                colormap_class="phase",
+            ),
+            GridSemanticPreset(
+                "electron_density",
+                "electron_density",
+                ("electron_per_cubic_bohr", "electron_per_cubic_angstrom"),
+                signed=False,
+                default_surface_mode="grid_volume",
+                isovalue_policy="absolute",
+                isovalue_parameter=0.001,
+                colormap_class="sequential",
+            ),
+            GridSemanticPreset(
+                "spin_density",
+                "spin_density",
+                ("electron_per_cubic_bohr", "electron_per_cubic_angstrom"),
+                signed=True,
+                default_surface_mode="signed_isosurface",
+                isovalue_policy="fraction_of_max_abs",
+                isovalue_parameter=0.05,
+                colormap_class="diverging",
+            ),
+            GridSemanticPreset(
+                "electrostatic_potential",
+                "electrostatic_potential",
+                ("hartree_per_elementary_charge",),
+                signed=True,
+                default_surface_mode="signed_isosurface",
+                isovalue_policy="fraction_of_max_abs",
+                isovalue_parameter=0.05,
+                colormap_class="diverging",
+            ),
+            GridSemanticPreset(
+                "difference_density",
+                "difference_density",
+                ("electron_per_cubic_bohr", "electron_per_cubic_angstrom"),
+                signed=True,
+                default_surface_mode="signed_isosurface",
+                isovalue_policy="fraction_of_max_abs",
+                isovalue_parameter=0.05,
+                colormap_class="diverging",
+            ),
+            GridSemanticPreset(
+                "elf",
+                "electron_localization_function",
+                ("dimensionless",),
+                signed=False,
+                default_surface_mode="grid_volume",
+                isovalue_policy="absolute",
+                isovalue_parameter=0.5,
+                colormap_class="sequential",
+            ),
+            GridSemanticPreset(
+                "lol",
+                "localized_orbital_locator",
+                ("dimensionless",),
+                signed=False,
+                default_surface_mode="grid_volume",
+                isovalue_policy="absolute",
+                isovalue_parameter=0.5,
+                colormap_class="sequential",
+            ),
+            GridSemanticPreset(
+                "reduced_density_gradient",
+                "reduced_density_gradient",
+                ("dimensionless",),
+                signed=False,
+                default_surface_mode="grid_volume",
+                isovalue_policy="absolute",
+                isovalue_parameter=0.5,
+                colormap_class="sequential",
+            ),
+            GridSemanticPreset(
+                "sign_lambda2_rho",
+                "sign_lambda2_rho",
+                ("electron_per_cubic_bohr", "electron_per_cubic_angstrom"),
+                signed=True,
+                default_surface_mode="signed_isosurface",
+                isovalue_policy="fraction_of_max_abs",
+                isovalue_parameter=0.05,
+                colormap_class="diverging",
+            ),
+        )
+    }
+)
+
+
+def builtin_grid_semantic_presets():
+    return GRID_SEMANTIC_PRESETS
+
+
+def _selected_values(grid, dataset_index):
+    if not isinstance(grid, Grid3D):
+        raise TypeError("grid must be a Grid3D")
+    if isinstance(dataset_index, bool):
+        raise TypeError("dataset_index must be an integer")
+    try:
+        dataset_index = operator.index(dataset_index)
+    except TypeError as error:
+        raise TypeError("dataset_index must be an integer") from error
+    if grid.data.dims == ("x", "y", "z"):
+        if dataset_index != 0:
+            raise IndexError("scalar Grid3D only has dataset index 0")
+        return grid.data.values, 0
+    if grid.data.dims != ("dataset", "x", "y", "z"):
+        raise ValueError("grid must use xyz or dataset-xyz dimensions")
+    if not 0 <= dataset_index < grid.data.shape[0]:
+        raise IndexError("dataset_index is outside the Grid3D dataset axis")
+    try:
+        return grid.data.values[dataset_index], dataset_index
+    except (TypeError, NotImplementedError):
+        import numpy
+
+        return numpy.asarray(grid.data.values)[dataset_index], dataset_index
+
+
+def _require_preset(preset_id):
+    if type(preset_id) is not str:
+        raise TypeError("preset_id must be a string")
+    try:
+        return GRID_SEMANTIC_PRESETS[preset_id]
+    except KeyError as error:
+        raise ValueError(f"unknown grid semantic preset: {preset_id}") from error
+
+
+def default_grid_isovalue(grid, *, dataset_index, preset_id):
+    import numpy
+
+    preset = _require_preset(preset_id)
+    values, _ = _selected_values(grid, dataset_index)
+    if numpy.iscomplexobj(values):
+        raise ValueError("grid values must be real")
+    values = numpy.asarray(values, dtype=float)
+    if not numpy.all(numpy.isfinite(values)):
+        raise ValueError("grid values must be finite")
+    if preset.isovalue_policy == "absolute":
+        return preset.isovalue_parameter
+    maximum = float(numpy.max(numpy.abs(values)))
+    if maximum == 0.0:
+        raise ValueError("relative isovalue requires nonzero grid values")
+    return maximum * preset.isovalue_parameter
+
+
+def validate_nci_pair(rdg, signed_density, *, surface_dataset_index=0,
+                      property_dataset_index=0, pairing_confirmed=False):
+    """Validate an explicit RDG/sign(lambda2)*rho pair without changing either field.
+
+    Independently imported Cubes need the user's same-analysis declaration.
+    A shared Structure/affine alone establishes spatial compatibility, not that
+    two fields were evaluated from the same density. No density cutoff is applied.
+    """
+    import numpy
+    from .scene_preset import grids_share_affine
+
+    if type(pairing_confirmed) is not bool:
+        raise TypeError("pairing_confirmed must be bool")
+    if not isinstance(rdg, Grid3D) or not isinstance(signed_density, Grid3D):
+        raise TypeError("NCI inputs must be Grid3D")
+    if rdg.structure_id is None or not grids_share_affine(rdg, signed_density):
+        raise ValueError("NCI requires the same non-null Structure and complete affine grid")
+    if any(grid.status is not DatasetStatus.COMPLETE for grid in (rdg, signed_density)):
+        raise ValueError("NCI requires complete inputs")
+    if rdg.semantic_role != "reduced_density_gradient" or rdg.data.unit != "dimensionless":
+        raise ValueError("NCI surface requires dimensionless reduced_density_gradient")
+    if (signed_density.semantic_role != "sign_lambda2_rho"
+            or signed_density.data.unit not in GRID_SEMANTIC_PRESETS["sign_lambda2_rho"].value_units):
+        raise ValueError("NCI color requires sign_lambda2_rho with a supported density unit")
+    shared_calculation = rdg.source_calculation is not None and rdg.source_calculation == signed_density.source_calculation
+    shared_provenance = bool(set(rdg.provenance_ids).intersection(signed_density.provenance_ids))
+    if not shared_calculation and not shared_provenance and not pairing_confirmed:
+        raise ValueError("Confirm that both NCI fields come from the same density analysis")
+    for grid, index in ((rdg, surface_dataset_index), (signed_density, property_dataset_index)):
+        selected, _index = _selected_values(grid, index)
+        values = numpy.asarray(selected)
+        if values.dtype.kind not in "iuf":
+            raise ValueError("NCI field values must be real numeric arrays")
+        for start in range(0, values.size, 65536):
+            chunk = values.flat[start:start + 65536]
+            if not numpy.all(numpy.isfinite(chunk)):
+                raise ValueError("NCI field values must be finite")
+            if grid is rdg and numpy.any(chunk < 0):
+                raise ValueError("reduced_density_gradient must be nonnegative")

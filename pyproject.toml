@@ -1,0 +1,31 @@
+[project]
+name = "chemblender-prepare"
+version = "0.1.0"
+description = "Prepare validated CBQ scientific data for the ChemBlender Viewer"
+readme = "docs/prepare/README.md"
+license = "GPL-3.0-or-later"
+authors = [
+    { name = "psiQAQ", email = "49629985+psiQAQ@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = ["numpy>=1.26.4,<3"]
+
+[project.optional-dependencies]
+formats = ["rdkit==2026.3.3", "gemmi==0.7.5"]
+
+[project.scripts]
+chemblender-prepare = "chemblender_prepare.cli:main"
+chemblender-prepare-gui = "chemblender_prepare.gui:main"
+
+[project.urls]
+Repository = "https://github.com/psiQAQ/ChemBlender_2_x"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cbq_core", "chemblender_prepare"]
+
+[tool.hatch.build.targets.sdist]
+include = ["cbq_core", "chemblender_prepare", "docs/prepare", "pyproject.toml", "uv.lock", "LICENSE"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

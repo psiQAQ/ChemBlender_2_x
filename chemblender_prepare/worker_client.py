@@ -1,0 +1,143 @@
+import subprocess
+import shutil
+from collections.abc import Mapping
+from dataclasses import dataclass
+from pathlib import Path, PurePosixPath, PureWindowsPath
+
+class WorkerProcessError(RuntimeError):
+    pass
+
+
+@dataclass(slots=True)
+class WorkerHandle:
+    process: subprocess.Popen
+    request_path: Path
+    result_path: Path
+    cancel_path: Path
+    stdout_path: Path
+    stderr_path: Path
+    _stdout: object
+    _stderr: object
+
+    def request_cancel(self):
+        self.cancel_path.touch(exist_ok=True)
+
+    def poll(self):
+        from cbq_core.worker_protocol import read_result
+
+        return_code = self.process.poll()
+        if self.result_path.is_file():
+            self._close_logs()
+            return read_result(self.result_path)
+        if return_code is None:
+            return None
+        self._close_logs()
+        raise WorkerProcessError(
+            f"worker exited with code {return_code} without a result; "
+            f"see {self.stderr_path}"
+        )
+
+    def wait(self, timeout=None):
+        try:
+            self.process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired as error:
+            raise WorkerProcessError("worker did not finish before timeout") from error
+        return self.poll()
+
+    def terminate(self):
+        if self.process.poll() is None:
+            self.process.terminate()
+        self.process.wait()
+        self._close_logs()
+
+    def _close_logs(self):
+        if not self._stdout.closed:
+            self._stdout.close()
+        if not self._stderr.closed:
+            self._stderr.close()
+
+
+def start_worker(
+    request,
+    workspace,
+    *,
+    python_executable,
+    module="chemblender_prepare.worker.runner",
+    working_directory=None,
+    staged_inputs=None,
+):
+    from cbq_core.worker_protocol import WorkerRequest
+    from cbq_core.worker_protocol import write_request
+
+    if not isinstance(request, WorkerRequest):
+        raise TypeError("request must be a WorkerRequest")
+    executable = Path(python_executable)
+    if not executable.is_file():
+        raise WorkerProcessError(f"worker Python does not exist: {executable}")
+    task_directory = Path(workspace) / str(request.request_id)
+    try:
+        task_directory.mkdir(parents=True, exist_ok=False)
+    except FileExistsError as error:
+        raise WorkerProcessError("worker request directory already exists") from error
+    request_path = task_directory / "request.json"
+    result_path = task_directory / "result.json"
+    cancel_path = task_directory / "cancel"
+    stdout_path = task_directory / "stdout.log"
+    stderr_path = task_directory / "stderr.log"
+    if staged_inputs is not None:
+        if not isinstance(staged_inputs, Mapping):
+            raise TypeError("staged_inputs must be a mapping")
+        reserved = {"request.json", "result.json", "cancel", "stdout.log", "stderr.log"}
+        for relative, source in staged_inputs.items():
+            if not isinstance(relative, str) or not relative:
+                raise ValueError("staged input path must be a relative POSIX path")
+            parts = relative.split("/")
+            if (
+                PurePosixPath(relative).is_absolute()
+                or PureWindowsPath(relative).drive
+                or "\\" in relative
+                or any(part in {"", ".", ".."} or ":" in part
+                       or part.endswith((".", " ")) for part in parts)
+                or parts[0].casefold() in reserved
+            ):
+                raise ValueError("staged input path is unsafe or reserved")
+            source = Path(source).absolute()
+            if any(path.is_symlink() or path.is_junction()
+                   for path in (source, *source.parents)):
+                raise ValueError("staged input source must not use links")
+            destination = task_directory.joinpath(*parts)
+            destination.resolve().relative_to(task_directory.resolve())
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with source.open("rb") as reader, destination.open("xb") as writer:
+                shutil.copyfileobj(reader, writer)
+    write_request(request_path, request)
+    command = [
+        str(executable),
+        "-m",
+        module,
+        str(request_path),
+        str(result_path),
+        "--cancel-file",
+        str(cancel_path),
+    ]
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    # Popen duplicates these handles for the child; close our copies after launch.
+    with stdout_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
+        process = subprocess.Popen(
+            command,
+            cwd=None if working_directory is None else str(working_directory),
+            stdin=subprocess.DEVNULL,
+            stdout=stdout,
+            stderr=stderr,
+            creationflags=creationflags,
+        )
+    return WorkerHandle(
+        process,
+        request_path,
+        result_path,
+        cancel_path,
+        stdout_path,
+        stderr_path,
+        stdout,
+        stderr,
+    )
