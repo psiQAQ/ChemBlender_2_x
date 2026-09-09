@@ -61,7 +61,7 @@ class LegacyExportTests(unittest.TestCase):
                     env=dict(os.environ, BLENDER_USER_RESOURCES=temporary, PYTHONNOUSERSITE="1"),
                     capture_output=True, text=True, timeout=60)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertIn("LEGACY_EXTERNAL_SCENE_UNCHANGED", result.stdout)
+                self.assertIn("LEGACY_EXTERNAL_RESTORE_REOPEN_PASSED", result.stdout)
 
     def test_real_blends_preview_export_reopen_and_protect_existing_output(self):
         blender = blender_executable()

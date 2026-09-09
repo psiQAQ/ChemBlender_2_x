@@ -287,3 +287,30 @@ POSCAR旧产品流8项已迁外部CLI/GUI真实入口，保留4项Prepared View�
 
 
 2026-09-09：四批提交27f67c9/85ab235/8244d12/9eebdd7已成功，工作树仅剩用户.vscode/，暂存为空，54ecf4c..HEAD累计diff check通过。继续目标后完成full17（9eebdd7）：2573项、0 failures/88 errors/36 skips、110.906秒、Failed，无新增失败ID。错误分布import-preview55/wavefunction19/quick-import9/legacy路由5。原生纯Mesh编辑/Apply通过；legacy仅external-only导出通过，不代表旧View恢复和回滚已完成，相关门槛保持未完成。blender-mcp --help仍trampoline错误、MCP9876不可达；CIM读取被拒后Get-Process确认用户Blender PID45116路径，未修改该进程。私有后台实时确认Blender5.1.1/Python3.13.9与extension repositories。完整回归日志、summary、失败列表见.blend-analysis/2026-09-08-cbq-architecture-consolidation/migration-full-17*。下阶段继续收敛C2，随后才进入统一入口和控制器；目标保持active。
+
+
+2026-09-09：恢复并绑定用户新增 `/goal`，终止条件为计划所有阶段和验收项完成且check-complete成功，同时保持C2稳定提交后才进入L1统一入口、L2控制器和L4 RDKit闭环的顺序。完整读取active authority及三份规划文件，实时确认c7b932f与仅用户.vscode/未跟踪。解析full17失败清单后确认88项均由四组旧入口测试产生；开始逐组将仍有效契约迁到当前真实入口，先处理legacy 5项。未修改产品或测试，尚无新验证结果。
+
+
+2026-09-09：完成full17 legacy 5项迁移收尾。删除只测试已删除Blender wrapper的LegacyOperatorRoutingTests共278行及专用支架；保留并复跑当前外部PubChem边界/调用清单15 Passed、prepare CLI 38 Passed/1 optional skip、外部导出36 Passed。首次大块补丁未匹配且无改动，随后用AST行号机械删除并清理import。下一簇处理quick-import 9项；C2阶段尚未整体完成或提交。
+
+
+2026-09-09：完成full17 quick-import 9项旧入口迁移收尾。删除仅依赖已移除`ChemBlender.ui.quick_import` modal/staging实现的9项及3个专用helper，保留当前CBQ Viewer注册/面板4项和外部文件选择/真实多文件worker/内容嗅探5项。旧任务所有权、取消、超时、fatal cleanup要求由现有`test_prepare_gui_lifecycle.py`真实`CliProcess`/`PrepareWindow` 13项承接。首次清理遗留`@staticmethod`导致1项测试error，移除后quick-import当前边界9 Passed/0.522秒、GUI生命周期13 Passed/2.084秒；`git diff --check`无空白错误。下一簇处理wavefunction 19项；C2尚未整体完成或提交。
+
+
+2026-09-09：完成full17 wavefunction 19项旧`WavefunctionJob` error收尾。删除9项已移除Blender job实现及其tearDown依赖，独立初始化并保留当前轨道UUID选择3项。安全要求映射到共享Worker runner验证后发布/取消不提交、外部derive输入包不变/显式电荷与level、scientific source identity及GUI owned-process生命周期；旧`worker_python + worker_repository`双配置因违反单一processor executable边界不恢复。当前轨道选择3 Passed，Worker协议15 Passed，scientific import 6 Passed/1 optional skip，prepare CLI 38 Passed/1 optional skip。L2仍须为新Blender控制器补回active revision、取消和原子追加测试；下一簇处理import-preview 55项，C2尚未整体完成或提交。
+
+
+2026-09-09：完成full17 import-preview 55项旧RNA/modal入口收尾。机械删除单一`ImportPreviewUIContractTests`旧类及其fake bpy/helper/import，保留同文件11项当前外部inspection、事务fail-closed、Scene preset致命异常回滚和默认View规划。对应核心契约复跑：当前文件11 Passed/0.779秒，project transaction 22 Passed/0.590秒，CBQ package import 8 Passed/0.448秒，immutable request/preview/staging 27 Passed/0.368秒。未恢复已删除`ChemBlender.ui.import_preview`；revision target、冲突矩阵、取消回滚、原子整包导入与View规划仍由当前真实层覆盖。full17四簇88 errors已逐簇收敛，下一步运行full18确认是否出现剩余回归；C2尚未以全量结果关闭或提交。
+
+
+2026-09-09：full18完整回归通过：2495项、0 failures/0 errors/36 skips、110.158秒，`OK (skipped=36)`；日志为`.blend-analysis/2026-09-08-cbq-architecture-consolidation/migration-full-18.log`。四组旧入口测试收尾未产生新失败，`git diff --check`无空白错误。此结果关闭C2的Python全量回归阻塞，但legacy external-only报告仍明确为`display_restore_status=recorded_only`，尚未满足旧View恢复、失败回滚及保存重开门槛；继续补齐该真实Blender链后才形成C2稳定提交。
+
+
+2026-09-09：开始补齐C2 legacy显示门槛。新增当前Viewer侧`legacy_restore_plan`/`restore_legacy_views`与CBQ面板Restore Legacy Views入口：只接受相邻且原始manifest哈希匹配的`migration.json + project.cbq`，要求整包已无冲突完整导入，白名单解析scaffold/crystal显示字段，旧节点名/输入只存审计不执行；所有View同步创建，失败回滚对象、材质和active selection。纯Python信任边界3项先因模块缺失失败，初版又因混淆raw manifest SHA与canonical manifest identity出现2项失败，修正为分别校验后3项Passed。MCP CLI仍报uv trampoline错误，但只读MCP查询成功确认Windows/Blender5.1.1/精确binary/user_default repo。三fixture首轮真实测试均Failed：真实kind为`scaffold`而非假定`molecule`；旧场景同名非兼容node group触发当前安全拒绝。现已按真实枚举修正，并复用历史验证过的fresh packaged asset策略，待复跑；C2未完成。
+
+
+2026-09-09：C2 legacy显示专项最终复跑通过。`tests.test_legacy_migration_blender`在Blender 5.1.1私有profile中完成3个哈希锁定fixture的外部导出、当前Viewer整包导入、注入失败全量回滚、View恢复、evaluated mesh可见性、保存重开及Project Connected检查，1 harness Passed/5.410秒；legacy纯Python套件33 Passed/18.734秒，Viewer恢复/UI套件12 Passed/0.454秒。修正文档边界：原始`migration.json`只用于同目录且哈希匹配的原始`project.cbq`恢复，数值对称升级包是后续独立科学数据路径，不自动复用原报告。下一步运行包含新恢复链的full19并完成C2稳定提交；C2尚未关闭。
+
+
+2026-09-09：full19运行2498项，仅`test_migration_docs`因`legacy-migration.md`补丁产生12行LF、破坏既有CRLF契约而1 Failed；字节级只归一化换行后该文档专项Passed。随后full20为2498项、0 failures/0 errors/36 skips、105.761秒，Passed，日志`.blend-analysis/2026-09-08-cbq-architecture-consolidation/migration-full-20.log`；语法检查与`git diff --check`通过。C2的迁移、纯Mesh保留、旧入口测试收尾、legacy恢复/回滚/重开和完整回归门槛全部关闭，形成稳定逻辑提交后进入C3，不提前接L1。

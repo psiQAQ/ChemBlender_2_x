@@ -9,7 +9,7 @@
 ## 当前实态
 
 - 分支治理已完成：main 54ecf4c、两项远端CI成功、完整bundle及附注归档标签已核验、旧工作分支已退役，当前feat/cbq-only-viewer。
-- cbq_core／chemblender_prepare迁移已按用户要求保存开发检查点：27f67c9（共享核心/外部工具）、85ab235（Viewer）、8244d12（回归）；文档/示例作为第四批。完整测试与功能保留验收尚未完成，不能把提交当成 C2 完成。
+- cbq_core／chemblender_prepare迁移已按用户要求保存开发检查点：27f67c9（共享核心/外部工具）、85ab235（Viewer）、8244d12（回归）、9eebdd7（文档/示例）；C2最终收尾已补齐测试迁移和legacy View恢复，并由full20关闭。
 - 用户明确批准缓存科学/Fermi/critic2环境及本仓库uv init/venv安装。根.venv/uv.lock已建立；科学环境、Fermi兼容锁及critic2工具链探测完成。科学数值/完整UI验收并未因此自动完成。
 - 候选无wheel Blender验证见 .blend-analysis/cbq-viewer-ui-smoke-03/qualification.json。基础注册、视图、保存重开/源移走/缓存重建通过，不代表RDKit功能等价、纯Mesh编辑、响应时间或正式瘦身完成。
 - 旧分子/原子图像与SOP为既有交付证据，见[验证记录](../../docs/quantum-visualization/scientific-visualization/VERIFICATION.md)；新架构逐物理量验收单独记录。
@@ -43,3 +43,5 @@
 
 
 2026-09-09：四批检查点已提交至9eebdd7；完整回归full17为2573项、0 failures/88 errors/36 skips、110.906秒、Failed，未新增失败标识。错误分布旧import-preview55、wavefunction19、quick-import9、legacy路由5。原生Mesh编辑/Apply通过；legacy external-only导出不替代View恢复/回滚/保存重开，继续保留该门槛。C2尚未完成，详见规划文件和migration-full-17证据。
+
+2026-09-09：最新完整回归为full20：2498项、0 failures/0 errors/36 skips、105.761秒，Passed。旧入口测试已迁移或在当前真实层保留安全契约；3个哈希锁定legacy fixture完成外部导出、当前Viewer恢复、注入失败回滚、evaluated mesh、保存重开和Project Connected检查。C2关闭并形成稳定提交；下一阶段为C3 CBQ 1.1收尾，C3、C4完成前不接L1。

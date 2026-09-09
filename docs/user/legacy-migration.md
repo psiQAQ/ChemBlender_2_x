@@ -1,6 +1,6 @@
 # Legacy scene migration
 
-当前 CBQ 架构使用外部 Blender 提取脚本迁移旧 `.blend`。旧面板流程仅适用于本文后半部分所述的归档 2.3.0 版本。
+当前 CBQ 架构先用外部 Blender 提取脚本迁移旧 `.blend`，再由 Viewer 从迁移报告显式重建 View。旧面板流程仅适用于本文后半部分所述的归档 2.3.0 版本。
 
 ## 目录
 
@@ -45,11 +45,20 @@ try {
 .\.venv\Scripts\chemblender-prepare.exe upgrade "D:\data\legacy-prepared\project.cbq" --output "D:\data\legacy-upgraded.cbq" --json
 ```
 
-升级保留原包、结构 UUID、晶胞和原数值，并为新增数值对称操作更新结构 revision 和来源记录。升级前只支持原位点展示，不支持完整对称展开；不在 Blender 安装 Gemmi。将已验证的 CBQ 通过 Viewer 面板导入当前项目。
+升级保留原包、结构 UUID、晶胞和原数值，并为新增数值对称操作更新结构 revision 和来源记录。升级前只支持原位点展示，不支持完整对称展开；不在 Blender 安装 Gemmi。显示恢复必须先导入与 `migration.json` 同目录、哈希匹配的原始 `project.cbq`，再按下述流程恢复旧 View。升级后的 CBQ 是后续完整对称展开使用的独立科学数据包；当前恢复器不会把原报告自动套用到升级包。
 
 ## 显示恢复边界
 
-报告中的原子半径、颜色、缩放、键显示、材质和节点输入是独立的显示恢复记录，不属于科学数组。当前状态 `display_restore_status: recorded_only` 表示参数已记录，尚未自动恢复为新 View；不要将它解释为旧场景已完整重建。节点名称和输入只作为数据保存，不执行它们，也不根据报告中的来源路径加载文件。保留原 `.blend` 和报告，等待显示恢复步骤完成。
+报告中的原子半径、颜色、缩放、键显示、材质和节点输入是独立的显示恢复记录，不属于科学数组。`display_restore_status: recorded_only` 表示可移植报告本身只记录参数；它不会在导入 CBQ 时自动改变场景。
+
+在 Viewer 的 **CBQ Scientific Project** 区域完成以下步骤：
+
+1. 导入 `legacy-prepared/project.cbq`，确认预览无 UUID 内容冲突。
+2. 在 **Legacy Migration Report** 选择同目录的 `migration.json`。
+3. 点击 **Restore Legacy Views**。成功后会新增以 `(Migrated)` 结尾的 View，旧对象和已有 View 均保留。
+4. 用新文件名保存 `.blend`，关闭并重开，确认 Project 状态为 Connected，并检查新 View。
+
+恢复器重新校验报告格式、原始 manifest 文件哈希和完整 CBQ 内容；只在相邻 CBQ 已完整导入且无冲突时创建 View。节点名称和输入只写入 View 的审计属性，不执行旧节点、不修改同名旧节点组，也不根据报告中的来源路径加载文件。任一 View 创建失败会删除本次已创建的 View、材质和节点资产，并恢复原 active entity/View；科学项目、旧对象和已有 View 不变。目标名称已存在时拒绝重复恢复。
 
 实际验证覆盖本文列出的三个历史 fixture：普通分子、编辑后 scaffold、含占据率和 Uij 的晶体。未知文件仍以具体诊断为准，不承诺恢复任意 `.blend`。
 

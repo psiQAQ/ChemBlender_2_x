@@ -112,6 +112,29 @@ def _verify_display(view, settings):
     assert json.loads(view["cb_legacy_node_settings"]) == expected_audit
 
 
+def _verify_restored_display(view, settings):
+    for name, values, field in (
+        ("radius", settings["radii"], "value"),
+        ("vdw_radius", settings["vdw_radii"], "value"),
+        ("atom_scale_f", settings["atom_scales"], "value"),
+        ("bond_scale_f", settings["bond_scales"], "value"),
+        ("dashed", settings["dashed"], "value"),
+        ("colour", settings["colors"], "color"),
+    ):
+        if values is not None:
+            observed = _attribute_values(view, name, field)
+            numpy.testing.assert_allclose(observed, values, atol=1.0e-7, rtol=0.0)
+    assert len(view.data.materials) == len(settings["materials"])
+    for material, expected in zip(view.data.materials, settings["materials"]):
+        numpy.testing.assert_allclose(material.diffuse_color, expected["diffuse_color"],
+                                      atol=1.0e-7, rtol=0.0)
+        assert abs(material.metallic - expected["metallic"]) <= 1.0e-7
+        assert abs(material.roughness - expected["roughness"]) <= 1.0e-7
+    audit = json.loads(view["cb_legacy_node_settings"])
+    expected_audit = json.loads(json.dumps(settings["node_modifiers"]))
+    assert audit == expected_audit, (audit, expected_audit)
+
+
 def main():
     import ChemBlender
     from cbq_core.model import ArrayData
@@ -492,6 +515,7 @@ def verify_external_export_preserves_scene():
     from concurrent.futures import CancelledError
     from unittest.mock import patch
     from chemblender_prepare.legacy.export import export_legacy_scene
+    from cbq_core.package_import import import_package
     from cbq_core.sidecar import open_project, close_project
     source = Path(bpy.data.filepath)
     source_bytes = source.read_bytes()
@@ -544,7 +568,62 @@ def verify_external_export_preserves_scene():
             assert result["display_restore_status"] == "recorded_only"
         finally:
             close_project(project)
-    print("LEGACY_EXTERNAL_SCENE_UNCHANGED")
+        import ChemBlender
+        import ChemBlender.legacy_restore as legacy_restore
+        ChemBlender.register()
+        from ChemBlender.ui.session import get_scene_session, get_scene_session_status
+        session = get_scene_session(bpy.context.scene)
+        import_package(session, destination / "project.cbq")
+        restore_inventory = (_inventory(), tuple(bpy.data.node_groups),
+                             _object_snapshot(objects, bpy.context.scene))
+        active_before = session.active_entity_id, session.active_view_object_name
+        original_apply = legacy_restore._apply_view_settings
+
+        def fail_after_display(*args):
+            original_apply(*args)
+            raise RuntimeError("injected legacy display failure")
+
+        legacy_restore._apply_view_settings = fail_after_display
+        try:
+            legacy_restore.restore_legacy_views(
+                session, destination / "migration.json", bpy.context.scene.collection)
+        except RuntimeError as error:
+            assert str(error) == "injected legacy display failure"
+        else:
+            raise AssertionError("injected legacy display failure succeeded")
+        finally:
+            legacy_restore._apply_view_settings = original_apply
+        assert (_inventory(), tuple(bpy.data.node_groups),
+                _object_snapshot(objects, bpy.context.scene)) == restore_inventory
+        assert (session.active_entity_id, session.active_view_object_name) == active_before
+        views = legacy_restore.restore_legacy_views(
+            session, destination / "migration.json", bpy.context.scene.collection)
+        assert len(views) == len(result["views"])
+        for view, expected in zip(views, result["views"]):
+            assert view.name == expected["legacy_object_name"] + " (Migrated)"
+            assert view["cb_structure_id"] == expected["structure_id"]
+            assert view["cb_legacy_restore_contract"] == "legacy_view_restore_v1"
+            _verify_restored_display(view, expected["settings"])
+        with bpy.context.temp_override(scene=bpy.context.scene, view_layer=bpy.context.view_layer):
+            bpy.context.view_layer.update()
+            depsgraph = bpy.context.evaluated_depsgraph_get()
+            for view in views:
+                assert sum(len(item.evaluated_get(depsgraph).data.polygons)
+                           for item in (view, *view.children) if item.type == "MESH") > 0
+        restored_blend = root / "legacy-restored.blend"
+        assert bpy.ops.wm.save_as_mainfile(filepath=str(restored_blend)) == {"FINISHED"}
+        restored_sidecar = restored_blend.with_suffix(".cbq")
+        assert restored_sidecar.is_dir()
+        assert bpy.ops.wm.open_mainfile(filepath=str(restored_blend)) == {"FINISHED"}
+        assert get_scene_session_status(bpy.context.scene)[0] == "connected"
+        reopened_session = get_scene_session(bpy.context.scene)
+        for expected in result["views"]:
+            view = bpy.data.objects[expected["legacy_object_name"] + " (Migrated)"]
+            assert view["cb_structure_id"] in map(str, reopened_session.project.structures)
+            _verify_restored_display(view, expected["settings"])
+        assert source.read_bytes() == source_bytes
+        ChemBlender.unregister()
+    print("LEGACY_EXTERNAL_RESTORE_REOPEN_PASSED")
 
 
 if __name__ == "__main__":

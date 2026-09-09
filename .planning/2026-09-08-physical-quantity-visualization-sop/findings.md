@@ -223,3 +223,27 @@ POSCAR旧产品流8项已迁外部CLI/GUI真实入口，保留4项Prepared View�
 
 
 2026-09-09：四批提交27f67c9/85ab235/8244d12/9eebdd7已成功，工作树仅剩用户.vscode/，暂存为空，54ecf4c..HEAD累计diff check通过。继续目标后完成full17（9eebdd7）：2573项、0 failures/88 errors/36 skips、110.906秒、Failed，无新增失败ID。错误分布import-preview55/wavefunction19/quick-import9/legacy路由5。原生纯Mesh编辑/Apply通过；legacy仅external-only导出通过，不代表旧View恢复和回滚已完成，相关门槛保持未完成。blender-mcp --help仍trampoline错误、MCP9876不可达；CIM读取被拒后Get-Process确认用户Blender PID45116路径，未修改该进程。私有后台实时确认Blender5.1.1/Python3.13.9与extension repositories。完整回归日志、summary、失败列表见.blend-analysis/2026-09-08-cbq-architecture-consolidation/migration-full-17*。下阶段继续收敛C2，随后才进入统一入口和控制器；目标保持active。
+
+
+2026-09-09：用户以 `/goal` 明确要求完成全部计划并保持既定阶段顺序。实时恢复确认HEAD为c7b932f、分支feat/cbq-only-viewer，除用户未跟踪.vscode/外工作树干净；现有goal文本已与请求一致。full17的88项error均为迁移后旧入口契约：55项统一在setUp导入已删除的ChemBlender.ui.import_preview，9项依赖已删除quick_import或其staging属性，wavefunction 19个error来自9项旧WavefunctionJob及tearDown，legacy 5项仍要求旧operator桥。后续按真实外部CLI/Tk、CBQ Viewer或公共控制器入口迁移契约；不能恢复旧入口或仅删除安全要求来制造通过。
+
+
+2026-09-09：legacy 5项旧operator wrapper测试只验证已删除scaffold/output/quick_import转发，其有效要求已由当前真实入口更强覆盖。机械删除整个LegacyOperatorRoutingTests及专用fake-bpy/import/常量，不恢复旧入口。首次大块apply_patch因读取输出与实际空白不完全匹配而未修改文件，改用AST精确类行号机械删除并以小补丁清理。LegacyReaderBridge+调用清单15 Passed/0.705秒，prepare CLI 39项38 Passed/1 optional skip/11.550秒，外部导出36 Passed/0.563秒；现有PubChem/SMILES来源复验、Tk argv、CLI/CBQ重开、导出和Viewer旧入口排除均保持覆盖。
+
+
+2026-09-09：quick-import剩余9个error全部来自已删除Blender modal入口；当前架构把进程所有权、进度、取消、启动/清理失败和fatal异常收敛到外部`CliProcess`/`PrepareWindow`，其13项生命周期测试全通过。`test_quick_import_contract.py`保留9项当前边界：CBQ Scene属性注册所有权与可逆性、Viewer面板只暴露CBQ和本地Mesh编辑、外部文件选择原子性、validation mode传递、内容嗅探。机械删除旧9项和3个专用helper后曾遗留helper装饰器，专项回归立即发现并修正；最终当前边界9 Passed、生命周期13 Passed，不恢复旧quick-import模块。
+
+
+2026-09-09：wavefunction 19个error是9条旧`WavefunctionJob`用例各自失败并在tearDown再次调用已删除`clear_wavefunction_jobs`。当前外部链已有对应强边界：Worker runner在输出验证前不发布、operation后取消不commit、failure/output mismatch无success；prepare derive要求显式charges/level、取消/伪造identity/backend failure不发布且输入包字节不变；scientific import拒绝错误result identity和变化source；GUI生命周期只清理自有进程。删除旧类后保留3条Viewer轨道UUID选择测试并独立建session。旧双路径worker配置不恢复；新Blender主线程控制器的active revision/late cancel/atomic append契约明确留到L2实现时测试。
+
+
+2026-09-09：import-preview 55个error全来自已删除`ChemBlender.ui.import_preview`的单一RNA/modal类；同文件的外部CLI inspection、事务缺失batch/变化构象建议fail-closed、Scene preset部分对象回滚及默认View planner均独立且继续通过。旧类的有效数据安全要求没有随UI删除：`test_project_transaction.py`22项覆盖revision target/冲突动作/分组快照/取消/提交发布，`test_cbq_package_import.py`8项覆盖事务整包导入/重复来源/失败重试/重开，`test_import_request_preview.py`27项覆盖immutable preview与owned staging。删除的是旧对话框投影、旧quick-import state及旧modal job本身，不是这些核心边界。
+
+
+2026-09-09：full18在2495项中0 failures/0 errors，确认full17的88个error已全部通过迁移当前契约或删除纯旧UI投影收敛；36个skip均按既有optional/environment条件报告。该绿测不改变legacy显示事实：`chemblender_prepare.legacy.export`只把View计划序列化到`migration.json`并标为`recorded_only`，当前专项仅证明CBQ/report原子导出和源场景不变，不能替代在当前Viewer中重建View、失败时回滚以及保存重开的真实验收。
+
+
+2026-09-09：最小legacy闭环不需要恢复已删除的旧迁移向导或让Viewer读取旧blend；外部导出已经给出验证过的CBQ和独立显示记录，当前侧只需在完整整包导入后事务创建View。`preview_package`可复用同一content fingerprint证明所有incoming实体均已存在且无UUID内容冲突。导出报告的`manifest_sha256`是JSON文件原始字节哈希，而`PackagePreview.manifest_sha256`是manifest内部规范身份，二者不可直接比较。真实旧场景含与新资产同名但无contract的node groups，必须以`bpy.data.libraries.load`取得fresh datablock引用构建新wrapper，不能给旧组补标或覆盖。
+
+
+2026-09-09：三个真实历史fixture证明当前闭环可以在不执行旧节点的前提下恢复原子/键显示、材质及节点参数审计，并在注入异常时把新增View、材质、节点资产和active selection全部回滚；保存重开后Project仍Connected。严格报告哈希也意味着数值对称升级后的manifest不再等同原始包：C2应明确要求先用原包恢复旧View，升级包留作后续科学数据导入，不能隐式把原报告应用于升级包。

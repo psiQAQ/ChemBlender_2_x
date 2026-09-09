@@ -1,26 +1,13 @@
 import importlib
 import sys
-import threading
-import time
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
 from unittest.mock import Mock, patch
-from uuid import uuid4
-
-from cbq_core.session import ProjectSession
-from cbq_core.session import create_session
-from chemblender_prepare.core.import_pipeline.preview import ImportPreview
-from chemblender_prepare.core.import_pipeline.preview import SourcePreview
-from chemblender_prepare.core.import_pipeline.preflight import ImportCancelled
-from chemblender_prepare.core.import_pipeline.request import ValidationMode
-from chemblender_prepare.core.import_pipeline.staging import StagedImportSession
 
 
-ROOT = Path(__file__).resolve().parents[1]
 PROPERTIES_MODULE = "ChemBlender.ui.properties"
-QUICK_IMPORT_MODULE = "ChemBlender.ui.quick_import"
 CBQ_IMPORT_MODULE = "ChemBlender.ui.cbq_import"
 
 
@@ -89,7 +76,7 @@ class QuickImportContractTests(unittest.TestCase):
         )
         self.modules.start()
         self.addCleanup(self.modules.stop)
-        for name in (PROPERTIES_MODULE, QUICK_IMPORT_MODULE, CBQ_IMPORT_MODULE, "ChemBlender.ui.mesh_edit"):
+        for name in (PROPERTIES_MODULE, CBQ_IMPORT_MODULE, "ChemBlender.ui.mesh_edit"):
             sys.modules.pop(name, None)
 
     def tearDown(self):
@@ -100,7 +87,7 @@ class QuickImportContractTests(unittest.TestCase):
         if properties is not None:
             properties.unregister()
         self.modules.stop()
-        for name in (PROPERTIES_MODULE, QUICK_IMPORT_MODULE, CBQ_IMPORT_MODULE, "ChemBlender.ui.mesh_edit"):
+        for name in (PROPERTIES_MODULE, CBQ_IMPORT_MODULE, "ChemBlender.ui.mesh_edit"):
             sys.modules.pop(name, None)
         self.temporary.cleanup()
 
@@ -110,422 +97,18 @@ class QuickImportContractTests(unittest.TestCase):
 
 
 
-    @staticmethod
-    def project_snapshot(session):
-        project = session.project
-        return (
-            id(project),
-            project.id,
-            project.schema_version,
-            tuple(
-                (
-                    name,
-                    tuple(getattr(project, name).items()),
-                )
-                for name in project.__dataclass_fields__
-                if isinstance(getattr(project, name), dict)
-            ),
-            session.dirty_reasons,
-        )
-
-    def operator_context(self):
-        settings = SimpleNamespace(
-            validation_mode=ValidationMode.BALANCED.value,
-            recent_summary="",
-        )
-        window_manager = SimpleNamespace()
-        return SimpleNamespace(
-            scene=SimpleNamespace(
-                chemblender_quick_import=settings,
-            ),
-            window=object(),
-            window_manager=window_manager,
-        )
-
-    def operator_for(self, source):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        operator = module.CHEMBLENDER_OT_quick_import()
-        operator.directory = str(source.parent)
-        operator.files = [SimpleNamespace(name=source.name)]
-        operator.validation_mode = ValidationMode.BALANCED.value
-        return module, operator
 
 
-    def test_discard_failure_retains_owner_for_successful_retry(self):
-        source = Path(self.temporary.name) / "failed.xyz"
-        source.write_text("1\nA\nH 0 0 0\n", encoding="utf-8")
-        module, operator = self.operator_for(source)
-        properties = importlib.import_module(PROPERTIES_MODULE)
-        project_session = create_session(temp_parent=Path(self.temporary.name))
-        original_discard = StagedImportSession.discard
-        calls = 0
 
-        def fail_once(staging):
-            nonlocal calls
-            calls += 1
-            if calls == 1:
-                raise OSError("discard failed")
-            return original_discard(staging)
 
-        with patch.object(
-            module,
-            "get_scene_session",
-            return_value=project_session,
-        ), patch.object(
-            module,
-            "get_reader_plugin_registry",
-            return_value=object(),
-        ), patch.object(
-            module,
-            "preflight_reader_plugins",
-            side_effect=ImportCancelled("cancelled"),
-        ), patch.object(
-            StagedImportSession,
-            "discard",
-            fail_once,
-        ):
-            result = operator.execute(self.operator_context())
 
-        self.assertEqual(result, {"CANCELLED"})
-        state = properties._QUICK_IMPORT_STATES[project_session.id]
-        self.assertTrue(state.staging_session.root.exists())
-        properties.clear_quick_import_state(project_session)
-        self.assertNotIn(project_session.id, properties._QUICK_IMPORT_STATES)
-        self.assertFalse(state.staging_session.root.exists())
 
-    def test_interactive_preflight_is_modal_reports_progress_and_cancels(self):
-        source = Path(self.temporary.name) / "slow.xyz"
-        source.write_text("1\nA\nH 0 0 0\n", encoding="utf-8")
-        module, operator = self.operator_for(source)
-        properties = importlib.import_module(PROPERTIES_MODULE)
-        project_session = create_session(temp_parent=Path(self.temporary.name))
-        started = threading.Event()
-        cancelled = threading.Event()
-        timer = object()
-        calls = []
-        context = self.operator_context()
-        context.window_manager.event_timer_add = (
-            lambda interval, window: calls.append(
-                ("timer_add", interval, window)
-            )
-            or timer
-        )
-        context.window_manager.event_timer_remove = (
-            lambda value: calls.append(("timer_remove", value))
-        )
-        context.window_manager.modal_handler_add = (
-            lambda value: calls.append(("modal", value))
-        )
-        context.window_manager.progress_begin = (
-            lambda minimum, maximum: calls.append(
-                ("progress_begin", minimum, maximum)
-            )
-        )
-        context.window_manager.progress_update = (
-            lambda value: calls.append(("progress_update", value))
-        )
-        context.window_manager.progress_end = (
-            lambda: calls.append(("progress_end",))
-        )
-        self.fake_bpy.app.background = False
 
-        def slow(
-            _request,
-            _registry,
-            _staging,
-            *,
-            canonical_parameters_by_source=None,
-            progress,
-            is_cancelled,
-            _batch_attachment=None,
-        ):
-            self.assertIsNone(canonical_parameters_by_source)
-            self.assertTrue(callable(_batch_attachment))
-            progress("hash", 1, 3)
-            started.set()
-            while not is_cancelled():
-                time.sleep(0.001)
-            cancelled.set()
-            raise ImportCancelled("cancelled")
 
-        with patch.object(
-            module,
-            "get_scene_session",
-            return_value=project_session,
-        ), patch.object(
-            module,
-            "get_reader_plugin_registry",
-            return_value=object(),
-        ), patch.object(
-            module,
-            "preflight_reader_plugins",
-            side_effect=slow,
-        ):
-            result = operator.execute(context)
-            self.assertEqual(result, {"RUNNING_MODAL"})
-            self.assertTrue(started.wait(1))
-            operator.modal(context, SimpleNamespace(type="TIMER"))
-            operator.modal(context, SimpleNamespace(type="ESC"))
-            self.assertTrue(cancelled.wait(1))
-            for _ in range(100):
-                result = operator.modal(
-                    context,
-                    SimpleNamespace(type="TIMER"),
-                )
-                if result == {"CANCELLED"}:
-                    break
-                time.sleep(0.001)
 
-        self.assertEqual(result, {"CANCELLED"})
-        self.assertTrue(
-            any(call[0] == "progress_update" for call in calls),
-            calls,
-        )
-        self.assertIn(("timer_remove", timer), calls)
-        self.assertIn(("progress_end",), calls)
-        self.assertNotIn(project_session.id, properties._QUICK_IMPORT_STATES)
 
-    def test_modal_does_not_consume_late_cancelled_preflight_result(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        operator = module.CHEMBLENDER_OT_quick_import()
-        task = module.Task()
-        task.start("preflight")
-        task.request_cancel()
-        task.complete(object(), "preview ready")
-        job = SimpleNamespace(
-            done=True,
-            error=None,
-            task=task,
-            staging=object(),
-            preview=None,
-            conformer_suggestions=None,
-            drain_progress=lambda: None,
-            join=lambda _timeout: True,
-            release_ui=lambda: None,
-            timer_pending=False,
-            abandon_ui=lambda: None,
-        )
-        operator._job = job
-        operator._project_session = object()
-        operator.report = lambda *_args: None
 
-        with (
-            patch.object(module, "finish_quick_import_job"),
-            patch.object(module, "clear_quick_import_state") as clear,
-            patch.object(module, "store_quick_import_preview") as store,
-            patch.object(
-                module.CHEMBLENDER_OT_quick_import,
-                "_finish_preview",
-                return_value={"FINISHED"},
-            ),
-        ):
-            result = operator.modal(
-                SimpleNamespace(window_manager=SimpleNamespace()),
-                SimpleNamespace(type="TIMER"),
-            )
 
-        self.assertEqual(result, {"CANCELLED"})
-        store.assert_not_called()
-        clear.assert_called_once()
-
-    def test_modal_retries_timer_cleanup_before_reraising_progress_fatal(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        operator = module.CHEMBLENDER_OT_quick_import()
-        session = object()
-        releases = []
-        progress_calls = []
-        job = SimpleNamespace(
-            done=True,
-            error=None,
-            drain_progress=lambda: ("hash", 1, 2),
-            cancel=Mock(),
-            join=Mock(return_value=True),
-            timer_pending=True,
-            abandon_ui=Mock(),
-        )
-
-        def release():
-            releases.append(True)
-            if len(releases) == 1:
-                raise OSError("timer cleanup failed")
-            job.timer_pending = False
-
-        job.release_ui = release
-        operator._job = job
-        operator._project_session = session
-        operator.report = lambda *_args: None
-        context = SimpleNamespace(
-            window_manager=SimpleNamespace(
-                progress_update=lambda _value: (
-                    progress_calls.append(True)
-                    or (_ for _ in ()).throw(
-                        MemoryError("progress exhausted memory")
-                    )
-                )
-            )
-        )
-
-        with (
-            patch.object(module, "finish_quick_import_job") as finish,
-            patch.object(module, "clear_quick_import_state") as clear,
-        ):
-            self.assertEqual(
-                operator.modal(
-                    context,
-                    SimpleNamespace(type="TIMER"),
-                ),
-                {"RUNNING_MODAL"},
-            )
-            self.assertIs(operator._job, job)
-            with self.assertRaisesRegex(MemoryError, "exhausted memory"):
-                operator.modal(
-                    context,
-                    SimpleNamespace(type="TIMER"),
-                )
-
-        self.assertEqual(progress_calls, [True])
-        self.assertEqual(releases, [True, True])
-        job.cancel.assert_called_once_with()
-        job.join.assert_called_once_with(None)
-        finish.assert_called_once_with(session, job)
-        clear.assert_called_once_with(session)
-        self.assertIsNone(operator._job)
-
-    def test_modal_join_fatal_releases_ui_and_staging_before_reraising(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        operator = module.CHEMBLENDER_OT_quick_import()
-        session = object()
-        fatal = GeneratorExit("join stopped")
-        releases = []
-
-        def join(timeout):
-            if timeout == 0:
-                raise fatal
-            return True
-
-        job = SimpleNamespace(
-            done=True,
-            error=None,
-            drain_progress=lambda: None,
-            cancel=Mock(),
-            join=join,
-            timer_pending=False,
-            release_ui=lambda: releases.append(True),
-            abandon_ui=Mock(),
-        )
-        operator._job = job
-        operator._project_session = session
-        context = SimpleNamespace(window_manager=SimpleNamespace())
-
-        with (
-            patch.object(module, "finish_quick_import_job") as finish,
-            patch.object(module, "clear_quick_import_state") as clear,
-        ):
-            with self.assertRaises(GeneratorExit) as raised:
-                operator.modal(
-                    context,
-                    SimpleNamespace(type="TIMER"),
-                )
-
-        self.assertIs(raised.exception, fatal)
-        self.assertEqual(releases, [True])
-        job.cancel.assert_called_once_with()
-        finish.assert_called_once_with(session, job)
-        clear.assert_called_once_with(session)
-        self.assertIsNone(operator._job)
-
-    def test_interactive_preflight_completion_opens_preview_dialog(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        operator = module.CHEMBLENDER_OT_quick_import()
-        operator.validation_mode = ValidationMode.BALANCED.value
-        operator.options = SimpleNamespace(is_invoke=True)
-        preview = ImportPreview(
-            session_id=uuid4(),
-            source_previews=(),
-        )
-        calls = []
-        self.fake_bpy.app.background = False
-        self.fake_bpy.ops = SimpleNamespace(
-            chemblender=SimpleNamespace(
-                confirm_import=lambda mode: calls.append(mode)
-                or {"RUNNING_MODAL"}
-            )
-        )
-        context = self.operator_context()
-
-        result = operator._finish_preview(context, preview)
-
-        self.assertEqual(result, {"FINISHED"})
-        self.assertEqual(calls, ["INVOKE_DEFAULT"])
-
-    def test_direct_execute_preflight_waits_without_opening_a_dialog(self):
-        module = importlib.import_module(QUICK_IMPORT_MODULE)
-        operator = module.CHEMBLENDER_OT_quick_import()
-        operator.options = SimpleNamespace(is_invoke=False)
-        operator.validation_mode = ValidationMode.BALANCED.value
-        preview = ImportPreview(session_id=uuid4(), source_previews=())
-        calls = []
-        self.fake_bpy.app.background = False
-        self.fake_bpy.ops = SimpleNamespace(
-            chemblender=SimpleNamespace(
-                confirm_import=lambda mode: calls.append(mode) or {"RUNNING_MODAL"}
-            )
-        )
-        self.assertEqual(operator._finish_preview(self.operator_context(), preview), {"FINISHED"})
-        self.assertEqual(calls, [])
-
-    def test_replacing_and_unregistering_preview_discards_staging_roots(self):
-        properties = importlib.import_module(PROPERTIES_MODULE)
-        project_session = create_session(temp_parent=Path(self.temporary.name))
-
-        first = properties.create_quick_import_staging(project_session)
-        first_root = first.root
-        properties.store_quick_import_preview(
-            project_session,
-            first,
-            ImportPreview(first.id, ()),
-        )
-        second = properties.create_quick_import_staging(project_session)
-        properties.store_quick_import_preview(
-            project_session,
-            second,
-            ImportPreview(second.id, ()),
-        )
-
-        self.assertFalse(first_root.exists())
-        self.assertTrue(second.root.exists())
-        properties.unregister()
-        self.assertFalse(second.root.exists())
-        self.assertEqual(properties._QUICK_IMPORT_STATES, {})
-
-    def test_property_registration_is_reversible_and_load_clears_staging(self):
-        properties = importlib.import_module(PROPERTIES_MODULE)
-        project_session = create_session(temp_parent=Path(self.temporary.name))
-        staging = properties.create_quick_import_staging(project_session)
-        properties.store_quick_import_preview(
-            project_session,
-            staging,
-            ImportPreview(staging.id, ()),
-        )
-
-        properties.register()
-        owned_property = _Scene.chemblender_quick_import
-        properties.register()
-        self.assertTrue(hasattr(_Scene, "chemblender_quick_import"))
-        self.assertIs(
-            _Scene.chemblender_quick_import,
-            owned_property,
-        )
-        self.assertEqual(
-            self.handlers.load_pre.count(properties._load_pre_handler),
-            1,
-        )
-        self.handlers.load_pre[0](None)
-
-        self.assertFalse(staging.root.exists())
-        properties.unregister()
-        self.assertFalse(hasattr(_Scene, "chemblender_quick_import"))
-        self.assertEqual(self.handlers.load_pre, [])
 
     def test_registration_refuses_preexisting_foreign_scene_property(self):
         properties = importlib.import_module(CBQ_IMPORT_MODULE)

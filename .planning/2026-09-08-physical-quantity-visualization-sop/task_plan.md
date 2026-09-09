@@ -31,11 +31,11 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 
 ## Plan / 实施顺序
 
-- [x] 当前迁移快照分批保存：27f67c9 共享核心/外部工具、85ab235 Viewer、8244d12 回归测试、9eebdd7 文档与示例。C2 全量回归与功能保留门槛仍未关闭。
+- [x] 当前迁移快照分批保存：27f67c9 共享核心/外部工具、85ab235 Viewer、8244d12 回归测试、9eebdd7 文档与示例。
 - [x] C1 分支治理：main 54ecf4c，两个远端 CI Passed；完整 bundle、附注 archive 标签、精确 lease 旧分支退役，新分支 feat/cbq-only-viewer。
-- [ ] C2 当前迁移收尾：共享核心、解析/Worker 外置、调用与测试迁移、纯 Mesh/旧按钮保留审计、架构指南；通过相关验证并形成干净逻辑提交。当前进行中，后续接入不得抢在此门槛前。
-- [ ] C3 CBQ 1.1 收尾：数值对称、旧包完整性、升级、事务导入及链接；专项测试已通过，全面回归未完成。纳入当前迁移提交。
-- [ ] C4 外部包基线：uv init/venv/lock及7个已有CLI命令、薄Tk GUI、真实格式对照、wheel/sdist验证。前半已实现，发行物验证未完成。纳入当前迁移提交。
+- [x] C2 当前迁移收尾：共享核心、解析/Worker 外置、调用与测试迁移、纯 Mesh/旧按钮保留审计、架构指南；旧 View 显式恢复、失败回滚和保存重开通过，full20 全绿并形成干净逻辑提交。
+- [ ] C3 CBQ 1.1 收尾：数值对称、旧包完整性、升级、事务导入及链接；专项测试已通过，全面回归未完成。C2 提交后继续关闭，L1 不得抢先。
+- [ ] C4 外部包基线：uv init/venv/lock及7个已有CLI命令、薄Tk GUI、真实格式对照、wheel/sdist验证。前半已实现，发行物验证未完成。C3 后继续关闭，L1 不得抢先。
 - [ ] L1 统一入口：迁移共享 Worker v1，补 capabilities --json、worker REQUEST RESULT --cancel-file CANCEL、doctor和环境路由。
 - [ ] L2 Blender 接入：单一全局路径、公共异步任务控制器、进度/取消、节流即时预览；本地操作不依赖处理程序。
 - [ ] L3 现有重计算：wavefunction、Fermi、scientific reader经统一入口工作。
@@ -52,8 +52,8 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - 136模块已迁移，42共享模块独立import不加载bpy/rdkit/gemmi/prepare。CBQ1.1专项110项中109Passed/1skip；项目服务/外部导出/worker-client 79项Passed；事务CBQ导入4项Passed。
 - CLI报告真实XYZ/FCHK、多dataset Cube/CIF及13格式导出通过；Tk窗口调用CLI通过。不能替代统一exe、前台Blender响应、编辑或RDKit等价验证。
 - 候选 .blend-analysis/cbq-viewer-ui-smoke-03/qualification.json：Blender5.1.1基础注册/重载/结构/等值面/体积/移走输入/保存重开/删除VDB重建/Save As Passed；ZIP 2,792,828bytes、104members、0wheels。只代表候选范围，未获得正式移除RDKit资格。
-- 新增L1-L8控制器、操作和专项门槛为 Not Run。当前迁移快照已分四批提交；9eebdd7 上 full17：2573项、0 failures/88 errors/36 skips、110.906秒，Failed。错误集中旧 import-preview 55、wavefunction 19、quick-import 9、legacy路由5。全量测试迁移、功能保留审计、完整科学实例、正式打包与SOP尚未完成；不将局部成功记为整项完成。
-- legacy 外部导出测试不能替代显示恢复、失败回滚和保存重开：这些要求继续由 C2 承担，必须补齐当前架构的完整链路后才关闭，不能按 full17 缺少原三个失败认定已修复。
+- 新增L1-L8控制器、操作和专项门槛为 Not Run。C2 收尾后的 full20：2498项、0 failures/0 errors/36 skips、105.761秒，Passed；日志为`.blend-analysis/2026-09-08-cbq-architecture-consolidation/migration-full-20.log`。完整科学实例、正式打包与SOP仍由后续阶段承担，不将C2成功扩大为整份计划完成。
+- legacy 当前链路已用3个哈希锁定fixture完成外部导出、整包导入、注入失败回滚、View恢复、evaluated mesh可见性、保存重开和Project Connected检查；原始报告不自动应用于数值对称升级包。
 - 每阶段先窄测试，再必要的全量/原生/实际UI验证；Passed、Failed、Not Run分别记录。git diff --check与文档链接验证必须通过。
 
 ## Legacy quantity evidence

@@ -156,6 +156,7 @@ if bpy is not None:
     class CHEMBLENDER_PG_cbq(bpy.types.PropertyGroup):
         input_path: StringProperty(name="CBQ Package", subtype="DIR_PATH")
         output_path: StringProperty(name="New CBQ Directory", subtype="DIR_PATH")
+        legacy_report_path: StringProperty(name="Legacy Migration Report", subtype="FILE_PATH")
         preview_json: StringProperty(name="Preview JSON", options={"HIDDEN", "SKIP_SAVE"})
         allow_duplicate_sources: BoolProperty(name="Import Sources with Duplicate Content", default=False,
             description="Explicitly retain sources with matching bytes but different identities")
@@ -262,6 +263,37 @@ if bpy is not None:
                 return {"CANCELLED"}
             return {"FINISHED"}
 
+    class CHEMBLENDER_OT_restore_legacy_views(bpy.types.Operator):
+        bl_idname = "chemblender.restore_legacy_views"
+        bl_label = "Restore Legacy Views"
+        bl_description = "Rebuild Views from a verified external legacy migration report"
+
+        def execute(self, context):
+            from ..legacy_restore import restore_legacy_views
+            from .session import get_scene_session, _notify_session_mutation
+            settings = getattr(context.scene, _SCENE_PROPERTY_NAME)
+            committed = False
+            try:
+                session = get_scene_session(context.scene)
+                views = restore_legacy_views(session, _absolute(settings.legacy_report_path),
+                                             context.collection)
+                committed = True
+                for obj in context.selected_objects:
+                    obj.select_set(False)
+                views[-1].select_set(True)
+                context.view_layer.objects.active = views[-1]
+                context.scene.chemblender_project_browser.active_entity_id = str(session.active_entity_id)
+                _notify_session_mutation(session)
+                settings.last_result = f"Restored {len(views)} legacy View(s)"
+                self.report({"INFO"}, settings.last_result)
+            except (OSError, RuntimeError, TypeError, ValueError) as error:
+                if committed:
+                    self.report({"WARNING"}, "Legacy Views restored, but selection needs refresh: " + str(error))
+                    return {"FINISHED"}
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
+            return {"FINISHED"}
+
     def draw_cbq_import(layout, context):
         settings = getattr(context.scene, _SCENE_PROPERTY_NAME)
         box = layout.box()
@@ -275,6 +307,8 @@ if bpy is not None:
         _draw_review(box, settings)
         box.prop(settings, "output_path")
         box.operator(CHEMBLENDER_OT_export_cbq.bl_idname, icon="EXPORT")
+        box.prop(settings, "legacy_report_path")
+        box.operator(CHEMBLENDER_OT_restore_legacy_views.bl_idname, icon="FILE_REFRESH")
         if settings.last_result:
             box.label(text=settings.last_result)
 
