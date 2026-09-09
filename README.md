@@ -12,11 +12,11 @@ project, while Blender objects are views and rebuildable caches.
 - Install the release ZIP as a Blender Extension; do not copy it into the
   legacy add-on directory.
 
-Release packages bundle RDKit and Gemmi for the workflows that require them.
-Other optional backends, including cclib, IOData, ASE and pymatgen, are
-available only when their separately managed runtime is present. The base
-format workflows do not depend on those optional backends. QCSchema is a
-dependency-free built-in reader for Molecule and AtomicResult JSON.
+Viewer release packages contain no scientific wheels and use Blender's bundled
+NumPy. Raw-format parsing and scientific recomputation run through the separately
+installed `chemblender-prepare` executable; moving that processor does not affect
+already imported CBQ data, local Mesh editing, views, caches or rendering. Its
+optional backends remain isolated from Blender and report availability explicitly.
 
 ## Start with a project
 
@@ -59,6 +59,7 @@ Related user guides:
 - [Quantum chemistry visualization roadmap](docs/quantum-visualization/roadmap.md)
 - [中文代码架构导览](.agents/reference/code-architecture-guide.md)
 
-Wheel files are downloaded locally when needed and are not tracked by Git.
+Scientific dependencies belong to the external prepare environment and are not
+installed into Blender or tracked as wheel files in this repository.
 
 Project website: https://www.chemblender.com

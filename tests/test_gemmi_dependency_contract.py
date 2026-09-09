@@ -27,7 +27,7 @@ import validate_extension
 
 
 class GemmiDependencyContractTests(unittest.TestCase):
-    def test_manifest_and_workflow_lock_official_wheel(self):
+    def test_formal_viewer_does_not_package_the_historical_wheel(self):
         manifest = (EXTENSION / "blender_manifest.toml").read_text(
             encoding="utf-8"
         )
@@ -35,15 +35,10 @@ class GemmiDependencyContractTests(unittest.TestCase):
             ROOT / ".github" / "workflows" / "extension-package.yml"
         ).read_text(encoding="utf-8")
 
-        self.assertIn(f'\"./wheels/{GEMMI_WHEEL}\"', manifest)
-        self.assertIn(GEMMI_WHEEL, workflow)
-        self.assertIn(GEMMI_URL, workflow)
-        self.assertIn(GEMMI_SHA256, workflow)
-        self.assertIn('"GEMMI_WHEEL=$wheelPath`n"', workflow)
-        self.assertIn(
-            "$env:RDKIT_WHEEL $env:GEMMI_WHEEL",
-            workflow,
-        )
+        self.assertNotIn(f'\"./wheels/{GEMMI_WHEEL}\"', manifest)
+        self.assertNotIn(GEMMI_WHEEL, workflow)
+        self.assertNotIn(GEMMI_URL, workflow)
+        self.assertNotIn(GEMMI_SHA256, workflow)
 
     def test_core_and_reader_api_import_without_loading_gemmi(self):
         code = (

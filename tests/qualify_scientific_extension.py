@@ -17,6 +17,20 @@ def document(path, value):
     path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+def snapshot_tree(source, target, prefix, hashes):
+    for path in sorted(source.rglob("*")):
+        relative = path.relative_to(source)
+        if not path.is_file() or "__pycache__" in relative.parts or path.suffix in {".zip", ".pyc"}:
+            continue
+        if path.is_symlink():
+            raise ValueError(f"unexpected source symlink: {path}")
+        data = path.read_bytes()
+        destination = target / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(data)
+        hashes[f"{prefix}/{relative.as_posix()}"] = hashlib.sha256(data).hexdigest()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--blender", required=True)
@@ -27,20 +41,13 @@ def main():
     if ROOT / ".agents" / "cache" not in output.parents:
         raise ValueError("qualification output must be a new project-cache directory")
     output.mkdir(parents=True, exist_ok=False)
-    snapshot = output / "source" / "ChemBlender"
+    snapshot_root = output / "source"
+    snapshot = snapshot_root / "ChemBlender"
     source = ROOT / "ChemBlender"
+    core_source = ROOT / "cbq_core"
     hashes = {}
-    for path in sorted(source.rglob("*")):
-        relative = path.relative_to(source)
-        if not path.is_file() or "__pycache__" in relative.parts or path.suffix in {".zip", ".pyc"}:
-            continue
-        if path.is_symlink():
-            raise ValueError(f"unexpected source symlink: {path}")
-        data = path.read_bytes()
-        target = snapshot / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(data)
-        hashes[relative.as_posix()] = hashlib.sha256(data).hexdigest()
+    snapshot_tree(source, snapshot, "ChemBlender", hashes)
+    snapshot_tree(core_source, snapshot_root / "cbq_core", "cbq_core", hashes)
     document(output / "source-hashes.json", hashes)
     profile = output / "profile"
     profile.mkdir()
@@ -61,10 +68,18 @@ def main():
         "--license-copy-list", str(output / "wheel-license-copy-list.json")])
     run("validate-build", [args.python, "-B", str(scripts / "build_extension.py"),
         "--python", args.python, "--blender", args.blender, "--no-path-lookup"])
+    expected = output / "expected-stage"
+    run("stage-viewer", [args.python, "-B", str(scripts / "stage_viewer.py"),
+        "--source", str(snapshot), "--core-source", str(snapshot_root / "cbq_core"),
+        "--destination", str(expected)])
     manifest = tomllib.loads((snapshot / "blender_manifest.toml").read_text(encoding="utf-8"))
     package = snapshot / (manifest["id"] + "-" + manifest["version"] + ".zip")
     with ZipFile(package) as archive:
         names = archive.namelist()
+        expected_names = {
+            path.relative_to(expected).as_posix() for path in expected.rglob("*") if path.is_file()
+        }
+        assert {name for name in names if not name.endswith("/")} == expected_names
         assert len(names) == len(set(names)), "duplicate ZIP members"
         assert archive.testzip() is None
         for name in names:
@@ -73,11 +88,13 @@ def main():
             assert not ({"submodules", "worker", "scripts", "tests", ".agents", ".planning", "__pycache__"} & set(path.parts)), name
             assert not name.endswith((".pyc", ".zip", ".npy", ".cbq")), name
             if not name.endswith("/"):
-                assert hashlib.sha256(archive.read(name)).hexdigest() == hashes[name], name
+                assert archive.read(name) == (expected / PurePosixPath(name)).read_bytes(), name
         required = {"__init__.py", "blender_manifest.toml", "LICENSE", "Chem_Nodes.blend", "Chem_Nodes_En.blend", "assets/Chem_Workspace.blend"}
-        required.update("ui/" + item + ".py" for item in ("scientific_view", "scientific_import", "scientific_export", "topology_import"))
+        required.update("ui/" + item + ".py" for item in (
+            "cbq_import", "mesh_edit", "processor_operations", "scientific_export", "scientific_view"))
+        required.add("ui/project_browser/panel.py")
         assert required <= set(names), required - set(names)
-        assert sorted(name for name in names if name.endswith(".whl")) == sorted(name.removeprefix("./") for name in manifest["wheels"])
+        assert sorted(name for name in names if name.endswith(".whl")) == sorted(name.removeprefix("./") for name in manifest.get("wheels", []))
     audit = {"package": str(package), "sha256": hashlib.sha256(package.read_bytes()).hexdigest(),
              "bytes": package.stat().st_size, "member_count": len(names), "members": names,
              "status": "Passed", "scope": "initial snapshot qualification; not a release gate"}
@@ -87,9 +104,11 @@ def main():
         "--python", str(runtime), "--", "install", str(package), str(output / "install.json")])
     run("cold-start", [args.blender, "--background", "--python-exit-code", "1",
         "--python", str(runtime), "--", "cold", str(package), str(output / "cold-start.json")])
-    current = {path.relative_to(source).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in source.rglob("*") if path.is_file()
-        and "__pycache__" not in path.relative_to(source).parts and path.suffix not in {".zip", ".pyc"}}
+    current = {}
+    for prefix, root in (("ChemBlender", source), ("cbq_core", core_source)):
+        current.update({f"{prefix}/{path.relative_to(root).as_posix()}": hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in root.rglob("*") if path.is_file()
+            and "__pycache__" not in path.relative_to(root).parts and path.suffix not in {".zip", ".pyc"}})
     drift = sorted(name for name in hashes.keys() | current.keys() if hashes.get(name) != current.get(name))
     document(output / "qualification.json", {"status": "Passed", "scope": audit["scope"],
         "package": str(package), "profile": str(profile), "source_changed_since_snapshot": drift,

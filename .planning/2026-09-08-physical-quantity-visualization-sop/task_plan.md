@@ -42,7 +42,7 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - [x] L4 RDKit：SMILES 3D/AddHs/Kekulé/MMFF/UFF/势能/导出，保留纯编辑与静态显示；Mesh→CBQ→新结果闭环。
 - [x] L5 专业分析：QTAIM、phonon、NCI，真实输入及科学输出；已有数据展示仍本地。
 - [x] L6 删除前门槛：RDKit等价、性能、取消、结果可信校验和生命周期。任一失败保持 wheel，修复或延期。
-- [ ] L7 正式瘦身：仅L6全部Passed后移除 RDKit/scientific wheels及对应import/安装入口，再完成隔离无依赖全量验收。
+- [x] L7 正式瘦身：仅L6全部Passed后移除 RDKit/scientific wheels及对应import/安装入口，再完成隔离无依赖全量验收。
 - [ ] L8 交付：逐物理量真实Cycles材质与背景、窗口截图、目录跳转SOP、错误恢复、架构/依赖决策、格式能力矩阵和本地发行物验证。
 
 ## Verification / 当前证据与不足
@@ -52,7 +52,7 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - 136模块已迁移，42共享模块独立import不加载bpy/rdkit/gemmi/prepare。CBQ1.1专项110项中109Passed/1skip；项目服务/外部导出/worker-client 79项Passed；事务CBQ导入4项Passed。
 - CLI报告真实XYZ/FCHK、多dataset Cube/CIF及13格式导出通过；Tk窗口调用CLI通过。不能替代统一exe、前台Blender响应、编辑或RDKit等价验证。
 - 候选 .blend-analysis/cbq-viewer-ui-smoke-03/qualification.json：Blender5.1.1基础注册/重载/结构/等值面/体积/移走输入/保存重开/删除VDB重建/Save As Passed；ZIP 2,792,828bytes、104members、0wheels。只代表候选范围，未获得正式移除RDKit资格。
-- L6已关闭；L7-L8仍待完成。RDKit功能等价、编辑冻结、信任边界、交互性能、取消与三场景生命周期均Passed；真实Blender NCI 128³取消确认0.33582秒，阿司匹林冷进程额外开销0.01761秒，最终全量2524项、0 failures/0 errors/37 skips、145.698秒。正式瘦身与SOP仍由后续阶段承担，不将L6成功扩大为整份计划完成。
+- L7已关闭；仅L8待完成。正式扩展已移除RDKit/Gemmi/scientific wheels与安装入口；2,830,321-byte、109-member无wheel ZIP及Blender 5.1.1私有profile安装/冷启动、纯Mesh编辑、CBQ导入导出、三项`.blend`资产、保存重开和独立依赖检查均Passed，`find_spec("rdkit")`与`find_spec("gemmi")`均为None；最终全量2525项、0 failures/0 errors/37 skips、140.477秒。最终精确产物预算、逐物理量截图SOP和交付审计仍由L8承担。
 - legacy 当前链路已用3个哈希锁定fixture完成外部导出、整包导入、注入失败回滚、View恢复、evaluated mesh可见性、保存重开和Project Connected检查；原始报告不自动应用于数值对称升级包。
 - C4发行物验证Passed：wheel 545,234 bytes、SHA256 `40d0be4d8e6f5cfb7766ad16bae717da10d4910f943b2a0280598140094ff8f8`；sdist 888,508 bytes、SHA256 `d310624439a338fc230af8064615c140727b5aee7f401e9cb5ecf291fa40e992`。隔离`--no-deps`安装后从安装目录加载共享核心、CLI和GUI，入口点及`formats --json`的22 readers/13 operations通过。
 - L1统一入口验证Passed：新增独立版本化`capabilities --json`、严格Worker v1文件入口、无安装副作用的`doctor`和固定环境路由；未配置专用环境明确返回unavailable，不回退主Python。相关合同回归121项Passed/1 optional skip；最终wheel/sdist构建、CRC及`runtime.py`内容、隔离安装launcher、三套真实环境22 readers/13 operations和跨环境worker均通过。critic2为WSL ELF，Windows原生doctor如实保持warning，留待L5执行路由处理。

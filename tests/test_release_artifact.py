@@ -58,7 +58,7 @@ class ReleaseArtifactTests(unittest.TestCase):
             "Chem_Nodes_En.blend": b"blend",
             **{
                 wheel.removeprefix("./"): b"wheel"
-                for wheel in manifest["wheels"]
+                for wheel in manifest.get("wheels", [])
             },
         }
         entries.update({name: b"extra" for name in extra_entries})

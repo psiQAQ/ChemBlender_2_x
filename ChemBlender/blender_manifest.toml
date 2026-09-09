@@ -9,10 +9,6 @@ website = "https://www.chemblender.com"
 blender_version_min = "5.1.0"
 license = ["SPDX:GPL-3.0-or-later"]
 platforms = ["windows-x64"]
-wheels = [
-  "./wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl",
-  "./wheels/gemmi-0.7.5-cp313-cp313-win_amd64.whl",
-]
 
 [permissions]
 files = "Read CBQ data, save project files, and run a local processor"

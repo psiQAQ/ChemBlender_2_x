@@ -19,9 +19,9 @@ import probe_prerelease_version as probe_module
 from probe_prerelease_version import probe_prerelease_version
 
 
-# CBQ files plus selected local processor; transitional RDKit/Gemmi wheels remain pinned.
+# CBQ files plus selected local processor; the formal Viewer has no scientific wheels.
 PRODUCTION_MANIFEST_SHA256 = (
-    "fe2020ef179ba22a5b35cd831936c4a08bfcfee2255a4985007f82a02f1a929e"
+    "e06bace88748d2740122b2b8a84ec3569387b24ba9aa8a4896fec1b9ea9eea23"
 )
 PROBE_VERSION = "2.3.0-alpha.1"
 

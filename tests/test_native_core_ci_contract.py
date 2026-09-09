@@ -79,12 +79,13 @@ class NativeCoreCiContractTests(unittest.TestCase):
 
         self.assertIn("needs: native-core", package)
         self.assertIn("timeout-minutes: 30", package)
-        self.assertIn("Download pinned extension wheels", package)
+        self.assertNotIn("Download pinned extension wheels", package)
         self.assertIn("Download Blender 5.1.2", package)
-        self.assertIn("-m pip install --disable-pip-version-check", package)
+        self.assertNotIn("-m pip install --disable-pip-version-check", package)
         self.assertIn("BLENDER_USER_RESOURCES", package)
         self.assertIn("build_extension.py --python $blenderPython --blender $blender", package)
-        self.assertIn("tests/blender_smoke.py -- $package", package)
+        self.assertEqual(package.count("tests/blender_cbq_viewer_smoke.py"), 2)
+        self.assertIn("tests/blender_cold_dependencies.py", package)
         self.assertIn(UPLOAD_ARTIFACT, package)
         self.assertNotIn(UPLOAD_ARTIFACT, native)
         self.assertEqual(

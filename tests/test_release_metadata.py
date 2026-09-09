@@ -28,9 +28,9 @@ from release_metadata import (
 )
 
 
-# CBQ-only file permission; transitional RDKit/Gemmi wheels remain pinned.
+# CBQ-only file permission and wheel-free Viewer manifest.
 PRODUCTION_MANIFEST_SHA256 = (
-    "fe2020ef179ba22a5b35cd831936c4a08bfcfee2255a4985007f82a02f1a929e"
+    "e06bace88748d2740122b2b8a84ec3569387b24ba9aa8a4896fec1b9ea9eea23"
 )
 
 

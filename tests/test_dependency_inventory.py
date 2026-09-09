@@ -223,6 +223,21 @@ class DependencyInventoryTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("manifest wheel paths must equal required inventory", result.stdout)
 
+    def test_cli_accepts_wheel_free_inventory_and_manifest(self):
+        self.inventory.write_text(
+            'schema_version = "1"\ndependency = []\n',
+            encoding="utf-8",
+            newline="\n",
+        )
+        manifest = self.root / "blender_manifest.toml"
+        manifest.write_text('id = "chemblender"\n', encoding="utf-8", newline="\n")
+
+        result = self._run_cli("--manifest", str(manifest))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(self.output.read_text()), {"wheels": []})
+        self.assertEqual(json.loads(self.licenses.read_text()), {"licenses": []})
+
     def test_cli_rejects_hash_mismatch_or_missing_license_source(self):
         cases = (
             ("hash", {"expected_sha256": "0" * 64}, "wheel hash mismatch"),
@@ -520,35 +535,8 @@ class DependencyInventoryTests(unittest.TestCase):
         with (ROOT / "ChemBlender" / "blender_manifest.toml").open("rb") as handle:
             manifest = tomllib.load(handle)
 
-        required = [dependency for dependency in dependencies if dependency["required"]]
-        optional = [dependency for dependency in dependencies if not dependency["required"]]
-        self.assertTrue({"rdkit", "gemmi"}.issubset({item["distribution"] for item in required}))
-        self.assertEqual(
-            {f"./wheels/{dependency['filename']}" for dependency in required},
-            set(manifest["wheels"]),
-        )
-        self.assertTrue(required)
-        for dependency in required:
-            with self.subTest(distribution=dependency["distribution"]):
-                for field in (
-                    "distribution",
-                    "version",
-                    "filename",
-                    "platform",
-                    "python_abi",
-                    "url",
-                    "sha256",
-                    "spdx_license",
-                    "license_source",
-                    "max_compressed_bytes",
-                    "max_unpacked_bytes",
-                ):
-                    self.assertTrue(dependency[field])
-        self.assertTrue(
-            {f"./wheels/{dependency['filename']}" for dependency in optional}.isdisjoint(
-                manifest["wheels"]
-            )
-        )
+        self.assertEqual(dependencies, [])
+        self.assertNotIn("wheels", manifest)
 
 
 if __name__ == "__main__":

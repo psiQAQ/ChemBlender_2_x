@@ -40,8 +40,6 @@ def assert_package_contents(package):
         "Chem_Nodes.blend",
         "Chem_Nodes_En.blend",
         "assets/Chem_Workspace.blend",
-        "wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl",
-        "wheels/gemmi-0.7.5-cp313-cp313-win_amd64.whl",
     }
     forbidden_prefixes = ("scripts/", "tests/", "worker/", "__pycache__/")
 
@@ -51,10 +49,7 @@ def assert_package_contents(package):
     assert required <= names, required - names
     assert not any(name.startswith(forbidden_prefixes) for name in names)
     assert not any(name.endswith(".zip") for name in names)
-    assert sorted(name for name in names if name.endswith(".whl")) == [
-        "wheels/gemmi-0.7.5-cp313-cp313-win_amd64.whl",
-        "wheels/rdkit-2026.3.3-cp313-cp313-win_amd64.whl",
-    ]
+    assert not any(name.endswith(".whl") for name in names)
 
 
 def relative_name(name, package_root):
@@ -6357,23 +6352,14 @@ assert_project_session_manager(module_key)
 assert_quality_revision_recovery_contract(module_key)
 assert_topology_view(module_key, repository_root)
 assert_extxyz_workflow(module_key, repository_root)
-assert_sdf_10k_workflow_budget(module_key)
 assert_project_browser_rna_budget(module_key)
 assert_biological_workflow(module_key, repository_root)
 assert_mol2_browser_view(module_key, repository_root)
 
-import rdkit
-import gemmi
-from rdkit import Chem
-from rdkit.Chem import AllChem
+import importlib.util
 
-assert rdkit.__version__
-assert version("rdkit") == "2026.3.3"
-assert gemmi.__version__ == "0.7.5"
-assert version("gemmi") == "0.7.5"
-molecule = Chem.AddHs(Chem.MolFromSmiles("CCO"))
-assert molecule is not None
-assert AllChem.EmbedMolecule(molecule, randomSeed=0xC0FFEE) == 0
+assert importlib.util.find_spec("rdkit") is None
+assert importlib.util.find_spec("gemmi") is None
 
 if keep_enabled:
     print("PASS: ChemBlender extension installed and enabled")

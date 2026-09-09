@@ -2,9 +2,9 @@
 
 ## 当前迁移的依赖门槛
 
-按[决策0044](../decisions/0044-cbq-viewer-local-processor-boundary.md)，正式扩展继续保留下列锁定RDKit wheel，直至外部功能等价、编辑闭环、性能、取消、数据一致性和生命周期全部通过。manifest、staging和包审计必须一致；候选无wheel包仅用于实验验收，不能作为正式删依赖或发布降级版本的依据。
+按[决策0044](../decisions/0044-cbq-viewer-local-processor-boundary.md)，L6 外部功能等价、编辑闭环、性能、取消、数据一致性和生命周期门槛已经全部通过。正式 Viewer 从 L7 起不声明、暂存、下载或打包 RDKit、Gemmi 及其他科学 wheel；manifest、空依赖清单、staging、CI 和包审计必须一致。
 
-Blender最终仅使用自带NumPy及本地显示代码，共享cbq_core按源码hash打包；原始解析和重计算在外部prepare包。Blender只配置全局本地可执行文件，不配置科学环境路径、不执行pip/uv、不修改全局Python。现有wheel历史来源及哈希保留，便于过渡版本复现。
+Blender仅使用自带NumPy及本地显示代码，共享cbq_core按源码hash打包；原始解析和重计算在外部prepare包。Blender只配置全局本地可执行文件，不配置科学环境路径、不执行pip/uv、不修改全局Python。下方旧 wheel 来源及哈希仅保留为历史版本复现依据，不是当前 Viewer 安装输入。
 
 项目根uv init/uv venv及缓存科学/Fermi/critic2环境已获用户批准。版本隔离和兼容锁详见[依赖提案](../../examples/scientific-visualization/dependencies/PROPOSAL.md)。外部包将构建wheel/sdist供后续PyPI发布，本次不发布。
 
@@ -22,7 +22,7 @@ Blender最终仅使用自带NumPy及本地显示代码，共享cbq_core按源码
 
 Use Blender's bundled NumPy and Requests. Verify their origins from an isolated `BLENDER_USER_RESOURCES` root; do not infer availability from an existing extension `.local` directory. Do not install packages into Blender's global Python environment.
 
-## RDKit Wheel
+## 历史 RDKit Wheel 来源
 
 | Item | Value |
 | --- | --- |
@@ -34,7 +34,7 @@ Use Blender's bundled NumPy and Requests. Verify their origins from an isolated 
 | Compressed / unpacked | 24,618,400 / 57,121,218 bytes |
 | License | BSD-3-Clause; wheel path `rdkit-2026.3.3.dist-info/LICENSE.md` |
 
-The wheel is downloaded to `ChemBlender/wheels/`, verified before build, declared in `blender_manifest.toml`, and ignored by Git. Runtime code only checks/imports RDKit; it never downloads or installs it.
+该 artifact 仅用于 2.2/2.3 及早期 2.4 构建复现。当前 Viewer 的 `blender_manifest.toml` 不声明它，staging、CI 和运行时均不下载、安装或导入 RDKit；相关操作属于外部 `chemblender-prepare` 环境。
 
 Pillow is not bundled while ChemBlender does not import PIL or call Pillow-dependent RDKit APIs. Adding such behavior requires a new dependency decision, pinned wheel metadata, and a clean CI install check.
 
@@ -87,6 +87,8 @@ targeted skips, expected failures, unexpected successes, subtest failure/error,
 load errors and zero discovery instead of converting a missing optional backend
 into success.
 
+## 历史 Gemmi Wheel 来源
+
 | Item | Value |
 | --- | --- |
 | Package version | `gemmi==0.7.5` |
@@ -98,21 +100,17 @@ into success.
 | License | MPL-2.0; wheel path `gemmi-0.7.5.dist-info/licenses/LICENSE.txt` |
 | Transitive requirements | None |
 
-Gemmi is a bundled base wheel and owns CIF parsing and raw-envelope access.
-Its adapter uses a late import: extension enable, `ChemBlender.core` and
-`ChemBlender.reader_api` imports must not load Gemmi. Gemmi objects never enter
-the project, sidecar, canonical document or public Reader API.
+该 artifact 仅用于 2.3 及早期 2.4 构建复现。当前 Viewer 不打包或导入 Gemmi；CIF 解析和 raw-envelope 处理属于外部 prepare 环境，Gemmi 对象仍不得进入项目、CBQ canonical document 或 Viewer UI。
 
 ## Machine-readable Bundled Inventory
 
-`ChemBlender/dependencies.toml` is the canonical record for each bundled wheel:
-distribution, version, filename, platform, Python ABI, fixed URL, SHA-256, SPDX
-license, in-wheel license path, required boundary, and compressed/unpacked byte
-ceilings. The RDKit and Gemmi ceilings lock the exact hash-verified artifacts
-above; any dependency update must update all of those fields together with its
-reviewed size/license evidence.
+`ChemBlender/dependencies.toml` is the canonical bundled-dependency inventory.
+The formal Viewer records `dependency = []`, and `blender_manifest.toml` omits
+`wheels`. Any future bundled dependency requires a new decision and must add its
+version, filename, platform, ABI, fixed URL, SHA-256, SPDX license, in-wheel
+license path and size ceilings together.
 
-After CI or a developer has downloaded the fixed wheels, run:
+Run the deterministic empty-inventory check with Blender Python:
 
 ```powershell
 & <Blender Python> ChemBlender/scripts/dependency_inventory.py `
@@ -121,25 +119,19 @@ After CI or a developer has downloaded the fixed wheels, run:
   --license-copy-list wheel-license-copy-list.json
 ```
 
-The standard-library-only CLI reads local wheels only: it checks required
-manifest paths, SHA-256, archive member paths, in-wheel license sources, and
-compressed/unpacked ceilings, then writes canonical JSON plus deterministic
-license-copy targets. It does not download, install, extract, or delete data;
-it rejects traversal, absolute, drive-qualified, and duplicate archive paths.
-Optional external packages remain outside `blender_manifest.toml` wheels.
+The standard-library-only CLI currently emits `{"wheels":[]}` and an empty
+license copy list. Its generic non-empty path remains fail-closed on manifest
+paths, SHA-256, archive member paths, license sources and size ceilings. It does
+not download, install, extract or delete data. External prepare packages remain
+outside the Blender manifest.
 
 ## Artifact Size Budget
 
-`.github/artifact-budgets.json` is the versioned package-budget authority. Its
-`baseline_package_bytes` is a fresh built ZIP measurement and
-`allowed_unexplained_growth_bytes` is zero: any package growth requires an
-explicit baseline update with reviewed build evidence. It records `rdkit` as
-an existing wheel, so RDKit remains in the total package report but does not
-consume the new-wheel allowance. Gemmi is the only approved new wheel for
-2.3.0: each new wheel is limited to 10,000,000 compressed bytes and
-30,000,000 unpacked bytes, with 20,000,000 compressed bytes across all new
-wheels. Every approved new wheel must have a non-empty rationale; missing,
-ambiguous or exceeded budgets fail closed.
+`.github/artifact-budgets.json` remains the versioned package-budget authority;
+`allowed_unexplained_growth_bytes` stays zero. Its exact wheel-free package and
+resource baseline is updated only from the final L8 artifact, not estimated from
+an intermediate build. A smaller ZIP does not by itself authorize a baseline or
+dependency change.
 
 | Item | Value |
 | --- | --- |
@@ -208,12 +200,12 @@ license, authentication and deployment decision; credential values never enter `
 
 1. Run `blender-mcp --help`.
 2. Query Blender version, executable, Python, system, and extension repositories through MCP.
-3. Download and verify the RDKit and Gemmi wheels.
+3. Generate the empty dependency inventory and license-copy list.
 4. Run `ChemBlender/scripts/validate_extension.py` with the MCP-discovered Blender executable.
 5. Run `ChemBlender/scripts/build_extension.py --python <Blender Python> --blender <Blender executable>`.
 6. Install and test once with a temporary `BLENDER_USER_RESOURCES` root.
-7. Verify package contents, module key, representative RDKit operations, Gemmi import/version, properties, installed `.blend` assets, and two disable/enable cycles.
-8. Reinstall the same ZIP into the real `user_default` repository from a fresh Blender process.
+7. Verify zero `.whl`, `find_spec("rdkit") is None`, `find_spec("gemmi") is None`, the module key, CBQ display/edit/reopen, installed `.blend` assets, and two disable/enable cycles.
+8. Reinstall the same ZIP into the real `user_default` repository from a fresh Blender process when release validation is authorized.
 
 ## 人工插件使用体验检阅
 
@@ -236,12 +228,12 @@ an older review exists.
 
 - Tag version equals manifest version after stripping leading `v`.
 - `CHANGELOG.md` has exactly one non-empty dated entry for the manifest version; future tags contain that same entry.
-- CI downloads Blender, RDKit and Gemmi from pinned official locations and verifies checksums.
-- CI emits the hash-verified `wheel-inventory.json` and license-copy list from `dependencies.toml` before package artifact upload.
-- Package CI also emits `artifact-size.json`, verifies the ZIP/package digest and nested wheel license evidence in explicit `package-ci` mode before its only upload, and uploads all five small package metadata files together.
-- Built ZIP contains exactly the declared wheels; Git contains no `.whl`.
+- CI downloads Blender from its pinned official location and verifies its checksum; it does not download scientific wheels.
+- CI emits the deterministic empty `wheel-inventory.json` and license-copy list from `dependencies.toml` before package artifact upload.
+- Package CI also emits `artifact-size.json` and verifies the ZIP/package digest in explicit `package-ci` mode before its only upload.
+- Built ZIP contains no `.whl`; Git contains no `.whl`.
 - Built ZIP excludes development scripts, tests, caches, and nested ZIP files.
-- Unit, validate, build, isolated install, real install, register, unregister, reload, RDKit operation, Gemmi import/version, and `.blend` checks pass.
+- Unit, validate, build, isolated install, real install, register, unregister, reload, CBQ display/edit/reopen, dependency-absence and `.blend` checks pass.
 - Pull-request and maintained `main` runs are green; the exact annotated tag produces the authoritative package artifact for publication.
 - GitHub-owned actions use reviewed full commit SHA pins.
 - Run `extension-release` with `publish=false` before the separately authorized `publish=true` dispatch.
@@ -249,10 +241,9 @@ an older review exists.
 - Only the conditional publish job has `contents: write`; routine package CI and Release verification remain read-only.
 - Publishing, pushing, PR creation, and release creation require explicit authorization.
 
-On Windows, overwriting an already loaded extension may warn that old wheel DLLs cannot be removed. Use a fresh Blender process for release validation; clean CI runners do not have the previous installation.
+On Windows, upgrading from an historical wheel-bearing package may warn that its already loaded DLLs cannot be removed. Exit that old Blender process before installing the wheel-free Viewer; clean profiles and CI runners do not have this legacy lock.
 
-For a persistent `user_default` reinstall, a fresh process is insufficient when the old
-extension is auto-enabled at startup. Disable it and save preferences, exit Blender, install
-from a second cold process, then launch a third process to verify the enabled key and real
-RDKit and Gemmi import. A same-process smoke result does not prove the shared wheels remain complete
-after exit.
+For a persistent `user_default` reinstall, disable an auto-enabled old extension and save
+preferences, exit Blender, install from a second cold process, then launch a third process
+to verify the enabled key, zero packaged wheels and CBQ Viewer lifecycle. A same-process
+smoke result does not prove cold-start behavior.

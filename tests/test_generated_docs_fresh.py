@@ -314,21 +314,7 @@ class GeneratedDocsFreshnessTests(unittest.TestCase):
             self.assertNotIn("available", item["availability"])
             self.assertTrue(item["role"]["reader_ids"])
 
-        self.assertEqual(
-            next(
-                item for item in dependencies if item["distribution"] == "rdkit"
-            )["role"],
-            {
-                "kind": "reader_backend",
-                "reader_ids": ["mol", "mol-v2000", "sdf", "smiles"],
-            },
-        )
-        self.assertEqual(
-            next(
-                item for item in dependencies if item["distribution"] == "gemmi"
-            )["role"],
-            {"kind": "reader_backend", "reader_ids": ["cif"]},
-        )
+        self.assertEqual(dependencies, [])
 
     def test_formats_marked_section_and_cli_check_are_current(self):
         formats = FORMATS.read_text(encoding="utf-8")

@@ -264,3 +264,4 @@ POSCAR旧产品流8项已迁外部CLI/GUI真实入口，保留4项Prepared View�
 2026-09-09：L6确认RDKit移除是等价和信任边界门槛，不需要另一套产品实现。历史`78c2d8d`仅在SMILES/AddHs/ETKDG/Kekulé/MMFF/UFF/energy调用RDKit；当前统一operation及既有测试已覆盖相同调用面，并以0.01 kcal/mol旧显示容差对照势能。结果发布必须同时拒绝过期revision、目录逃逸、绝对路径、symlink和hash篡改；三分子生命周期证明移走处理器、输入CBQ及原始文件后本地编辑、View、Save As、目录移动、冷重开、VDB重建和Cycles仍独立可用。
 
 2026-09-09：75组`blender-mcp.exe`/tool Python/uv Python并非Blender子进程；父PID证据指向当前Codex宿主。首次精确清理74组后，Codex又生成3组、随后再生成1组；均按PID和绝对ExecutablePath双重校验终止，累计清理79组中的78组，保留Blender PID 50440和唯一稳定链`48884→58844→43772`。不能为止漏终止当前Codex宿主；若再生应继续按所有权收敛，并将宿主重复拉起MCP作为独立桌面端缺陷处理。
+2026-09-09 L7 finding：在L6全部等价与生命周期门槛通过后，正式扩展可以完全移除RDKit、Gemmi及科学wheel而不删除纯Mesh编辑或CBQ显示能力。2,830,321-byte、109-member候选在Blender 5.1.1私有profile安装/冷启动及独立依赖探测中Passed，`rdkit`和`gemmi`不可发现，Bundled NumPy可用；最终2525项回归Passed。紧急进程清理最终仅保留Blender PID 50440，重复MCP/Python链为0；Codex MCP stdio transport在终止最后一组陈旧链后未自动重连，这是宿主传输限制，不是扩展运行失败。

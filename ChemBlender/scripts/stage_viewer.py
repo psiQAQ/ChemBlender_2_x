@@ -7,7 +7,6 @@ import json
 from pathlib import Path
 import re
 import shutil
-import tomllib
 
 
 _EXCLUDE = {"__pycache__", "scripts", "tests", "wheels", "deps"}
@@ -73,20 +72,6 @@ def stage_viewer(source, destination, *, core_source=None):
         hashes[relative.as_posix()] = digest
     (destination / '_cbq_core_source.json').write_bytes(
         (json.dumps({'schema': 1, 'files': hashes}, indent=2, sort_keys=True) + '\n').encode())
-    # Keep declared wheels until the external-operation removal gates pass.
-    manifest = tomllib.loads((source / 'blender_manifest.toml').read_text(encoding='utf-8'))
-    for name in manifest.get('wheels', []):
-        relative = Path(name)
-        if (relative.is_absolute() or len(relative.parts) != 2
-                or relative.parts[0] != 'wheels' or relative.suffix != '.whl'):
-            raise ValueError(f"Unsafe declared wheel path: {name}")
-        path = source / relative
-        if (path.is_symlink() or path.parent.is_symlink()
-                or not path.resolve().is_relative_to(source) or not path.is_file()):
-            raise ValueError(f"Missing or linked declared wheel: {name}")
-        target = destination / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(path, target)
     return destination
 
 

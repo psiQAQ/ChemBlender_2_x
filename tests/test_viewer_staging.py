@@ -1,4 +1,4 @@
-"""The shared source and transitional wheels survive Extension staging."""
+"""The shared source is vendored without external scientific wheels."""
 
 import hashlib
 import json
@@ -37,16 +37,14 @@ assert not any(name.split('.')[0] in {'chemblender_prepare', 'bpy', 'rdkit', 'ge
                                     capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_vendors_identical_core_and_only_declared_wheels(self):
+    def test_vendors_identical_core_and_excludes_wheels(self):
         with TemporaryDirectory() as folder:
             root = Path(folder)
             source = root / 'ChemBlender'
             (source / 'wheels').mkdir(parents=True)
             (source / 'ui').mkdir()
-            (source / 'blender_manifest.toml').write_text(
-                'wheels = ["./wheels/rdkit-test.whl"]\n', encoding='utf-8')
-            (source / 'wheels/rdkit-test.whl').write_bytes(b'locked wheel')
-            (source / 'wheels/unlisted.whl').write_bytes(b'not declared')
+            (source / 'blender_manifest.toml').write_text('', encoding='utf-8')
+            (source / 'wheels/rdkit-test.whl').write_bytes(b'external wheel')
             (source / 'ui/panel.py').write_text(
                 'from cbq_core.model import Structure\n', encoding='utf-8')
             core = root / 'cbq_core'
@@ -54,19 +52,12 @@ assert not any(name.split('.')[0] in {'chemblender_prepare', 'bpy', 'rdkit', 'ge
             original = b'"""One authoritative source."""\n'
             (core / '__init__.py').write_bytes(original)
             output = stage_viewer(source, root / 'stage')
-            self.assertEqual((output / 'wheels/rdkit-test.whl').read_bytes(), b'locked wheel')
-            self.assertFalse((output / 'wheels/unlisted.whl').exists())
+            self.assertFalse((output / 'wheels').exists())
             self.assertEqual((output / '_cbq_core/__init__.py').read_bytes(), original)
             self.assertEqual((output / 'ui/panel.py').read_text(),
                              'from .._cbq_core.model import Structure\n')
             self.assertEqual(json.loads((output / '_cbq_core_source.json').read_text())['files'],
                              {'__init__.py': hashlib.sha256(original).hexdigest()})
-            for index, name in enumerate(('../outside.whl', 'wheels/missing.whl')):
-                (source / 'blender_manifest.toml').write_text(
-                    f'wheels = ["{name}"]\n', encoding='utf-8')
-                with self.subTest(name=name), self.assertRaises(ValueError):
-                    stage_viewer(source, root / f'invalid-{index}')
-
             (core / 'bad.py').write_text('from cbq_core.model import Structure\n', encoding='utf-8')
             with self.assertRaisesRegex(ValueError, "relative imports"):
                 stage_viewer(source, root / 'absolute-core-import')

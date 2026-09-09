@@ -97,8 +97,8 @@ def _validate_schema(config: Any) -> list[dict[str, Any]]:
     if type(config["schema_version"]) is not str or config["schema_version"] != SCHEMA_VERSION:
         raise _schema_error(f"schema_version must be {SCHEMA_VERSION!r}")
     dependencies = config["dependency"]
-    if type(dependencies) is not list or not dependencies:
-        raise _schema_error("dependency must be a non-empty array of tables")
+    if type(dependencies) is not list:
+        raise _schema_error("dependency must be an array of tables")
 
     distributions: set[str] = set()
     filenames: set[str] = set()
@@ -182,7 +182,7 @@ def inventory(
             for dependency in dependencies
             if dependency["required"] is True
         ]
-        if manifest.get("wheels") != expected_wheels:
+        if manifest.get("wheels", []) != expected_wheels:
             raise ValueError("manifest wheel paths must equal required inventory")
 
     wheels: list[dict[str, Any]] = []

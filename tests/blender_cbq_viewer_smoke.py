@@ -257,6 +257,9 @@ if args.mode == "cold":
     assert str(session_ui.get_scene_session(bpy.context.scene).project.id) == fixture["project_id"]
 
 no_external_dependencies()
+for name in ("Chem_Nodes.blend", "Chem_Nodes_En.blend", "assets/Chem_Workspace.blend"):
+    with bpy.data.libraries.load(str(extension / name), link=False) as (source, _target):
+        assert source.node_groups or source.workspaces, name
 with ZipFile(package) as archive:
     assert not any(name.endswith(".whl") for name in archive.namelist())
     for name in archive.namelist():

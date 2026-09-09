@@ -149,6 +149,8 @@ CBQ 整包预览、事务加入当前项目：同 UUID／同内容复用，同 U
 
 L6 删除前专项已 **Passed**：历史 `78c2d8d` 调用面与外部 RDKit operation 对照覆盖芳香／Kekulé、手性、带电、多片段拒绝、AddHs、ETKDG、MMFF／UFF、势能及 MOL／SDF／SMILES；Blender 编辑冻结、过期 revision、路径穿越、symlink、hash 篡改、取消和生命周期门槛均通过。阿司匹林冷进程额外开销 0.01761 秒；真实 Blender NCI 128³ 任务进入 modal 0.0000078 秒、显示 running 0.01089 秒、取消确认 0.33582 秒，均低于门槛。正式无 wheel 扩展仍须在 L7 独立验收，不能由 L6 结果替代。
 
+L7 正式无 wheel 扩展已 **Passed**：manifest、依赖清单、staging 与 CI 已一致移除 RDKit、Gemmi 和其他科学 wheel，正式候选 ZIP 为 2,830,321 bytes、109 members、SHA-256 `4dabb6dc463a740846eca72b239e875689bfdd07e390b06e34d82f63cfcbabb5`。Blender 5.1.1 私有 profile 完成安装、冷启动、重复 reload、CBQ 导入导出、纯 Mesh 编辑／Apply、结构／表面／体积 View、保存重开、源移走和三个 `.blend` 资产检查；独立冷启动中 `find_spec("rdkit")` 与 `find_spec("gemmi")` 均为 `None`，Bundled NumPy 可用。全量回归 2525 项通过（37 skips）。最终精确发行物预算与截图 SOP 留给 L8。
+
 ## 交付、SOP 与错误恢复
 
 SOP 提供带正文标题链接的目录及真实窗口截图，覆盖：独立工具准备／验证 CBQ→Blender 导入→面板展示→Cycles 合适背景和材质出图→保存重开；另含一次性处理程序配置、面板计算、编辑后 Apply／Recompute、取消与错误恢复、旧包升级。

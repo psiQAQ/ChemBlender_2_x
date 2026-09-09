@@ -42,15 +42,11 @@ class Wave3CiGateTests(unittest.TestCase):
             )
         )
 
-    def test_windows_ci_uses_the_blender_shared_dependency_site(self):
+    def test_windows_ci_does_not_inject_a_shared_dependency_site(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
 
-        self.assertIn(
-            '$testSite = Join-Path $env:APPDATA '
-            '"Blender Foundation/Blender/5.1/extensions/.local/lib/'
-            'python3.13/site-packages"',
-            workflow,
-        )
+        self.assertNotIn("extensions/.local/lib/python3.13/site-packages", workflow)
+        self.assertNotIn("PYTHONPATH", workflow)
 
     def test_raw_fixtures_and_reader_api_docs_are_checked_out_as_lf(self):
         attributes = ATTRIBUTES.read_text(encoding="utf-8")
@@ -60,15 +56,12 @@ class Wave3CiGateTests(unittest.TestCase):
 
     def test_blender_smoke_failure_stops_the_package_job(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
-        smoke = (
-            "& $blender --background --factory-startup --python-exit-code 1 "
-            "--python tests/blender_smoke.py -- $package"
-        )
-        failure = (
-            'if ($LASTEXITCODE -ne 0) { throw "Blender smoke failed" }'
-        )
+        smoke = "--python tests/blender_cbq_viewer_smoke.py --"
+        failure = 'if ($LASTEXITCODE -ne 0) { throw "Blender Viewer install smoke failed" }'
 
         self.assertLess(workflow.index(smoke), workflow.index(failure))
+        self.assertEqual(workflow.count(smoke), 2)
+        self.assertIn("tests/blender_cold_dependencies.py", workflow)
 
 
 if __name__ == "__main__":

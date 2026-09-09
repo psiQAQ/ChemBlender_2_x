@@ -2,6 +2,7 @@
 
 import hashlib
 import importlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -33,7 +34,7 @@ assert module_key in bpy.context.preferences.addons
 module = importlib.import_module(module_key)
 assert Path(module.__file__).resolve().parent == extension_directory
 assert not any(name == "ChemBlender" or name.startswith("ChemBlender.") for name in sys.modules)
-for forbidden in ("iodata", "gbasis", "scipy", "pymatgen", "pyprocar", "phonopy", "pyscf", "cclib"):
+for forbidden in ("rdkit", "gemmi", "iodata", "gbasis", "scipy", "pymatgen", "pyprocar", "phonopy", "pyscf", "cclib"):
     assert not any(name == forbidden or name.startswith(forbidden + ".") for name in sys.modules), forbidden
 with ZipFile(package) as archive:
     for name in archive.namelist():
@@ -41,23 +42,23 @@ with ZipFile(package) as archive:
             assert hashlib.sha256((extension_directory / name).read_bytes()).digest() == hashlib.sha256(archive.read(name)).digest(), name
 
 registration = importlib.import_module(module_key + ".runtime.registration")
-bridge = importlib.import_module(module_key + ".runtime.reader_api_bridge")
-ui_names = ("scientific_import", "scientific_view", "scientific_export", "topology_import")
-properties = tuple("chemblender_" + name for name in ui_names)
+ui_names = ("cbq_import", "processor_operations", "scientific_view",
+            "scientific_export", "project_browser.panel")
+properties = ("chemblender_cbq", "chemblender_processor_operation",
+              "chemblender_scientific_view", "chemblender_scientific_export",
+              "chemblender_project_browser", "chemblender_topology")
 
 
 def inventory():
     classes = registration._registered_classes
-    for name, prop in zip(ui_names, properties):
+    for name in ui_names:
         assert ".ui." + name in registration.REGISTER_MODULE_NAMES
         owned = [cls for cls in classes if cls.__module__ == module_key + ".ui." + name]
         assert owned and all(cls.is_registered for cls in owned), name
+    for prop in properties:
         assert hasattr(bpy.types.Scene, prop), prop
-    readers = bridge.get_reader_plugin_registry().descriptors
-    assert len(readers) == 22, len(readers)
-    assert "chemblender.reader_api.v1" in bpy.app.driver_namespace
     return {"classes": sorted(cls.__module__ + "." + cls.__name__ for cls in classes),
-            "readers": sorted(item.reader_id for item in readers)}
+            "modules": sorted(registration.REGISTER_MODULE_NAMES)}
 
 
 initial = inventory()
@@ -68,7 +69,6 @@ if mode == "install":
         assert module_key not in bpy.context.preferences.addons
         assert all(not cls.is_registered for cls in owned)
         assert all(not hasattr(bpy.types.Scene, prop) for prop in properties)
-        assert "chemblender.reader_api.v1" not in bpy.app.driver_namespace
         assert not any(getattr(callback, "__module__", "").startswith(module_key + ".")
             for name in ("load_pre", "load_post", "save_pre", "save_post", "frame_change_pre", "frame_change_post")
             for callback in getattr(bpy.app.handlers, name))
@@ -81,29 +81,17 @@ if mode == "install":
     assert bpy.ops.wm.save_userpref() == {"FINISHED"}
 
 import numpy
-import rdkit
-import gemmi
-from rdkit import Chem
-from rdkit.Chem import AllChem
-
-assert rdkit.__version__ == "2026.03.3", rdkit.__version__
-assert gemmi.__version__ == "0.7.5"
-for dependency in (rdkit, gemmi):
-    assert profile in Path(dependency.__file__).resolve().parents, dependency.__file__
+assert importlib.util.find_spec("rdkit") is None
+assert importlib.util.find_spec("gemmi") is None
 assert profile not in Path(numpy.__file__).resolve().parents
-molecule = Chem.AddHs(Chem.MolFromSmiles("CCO"))
-assert AllChem.EmbedMolecule(molecule, randomSeed=0xC0FFEE) == 0
-assert molecule.GetConformer().GetNumAtoms() == 9
-assert gemmi.UnitCell(3, 3, 3, 90, 90, 90).volume == 27
 for name in ("Chem_Nodes.blend", "Chem_Nodes_En.blend", "assets/Chem_Workspace.blend"):
     with bpy.data.libraries.load(str(extension_directory / name), link=False) as (source, _target):
         assert source.node_groups or source.workspaces, name
 result = {"status": "Passed", "mode": mode, "version": bpy.app.version_string,
     "system": platform.system(), "executable": bpy.app.binary_path,
     "extension": str(extension_directory), "module_key": module_key,
-    "profile": str(profile), "new_ui_modules": ui_names, "registration": initial,
-    "rdkit": {"version": rdkit.__version__, "file": rdkit.__file__},
-    "gemmi": {"version": gemmi.__version__, "file": gemmi.__file__},
+    "profile": str(profile), "viewer_ui_modules": ui_names, "registration": initial,
+    "scientific_dependencies": {"rdkit": None, "gemmi": None},
     "numpy": {"version": numpy.__version__, "file": numpy.__file__}}
 Path(report_name).write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
 print("SCIENTIFIC_EXTENSION_QUALIFICATION_PASSED", mode, extension_directory)
