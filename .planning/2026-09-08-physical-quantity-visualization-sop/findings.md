@@ -265,3 +265,9 @@ POSCAR旧产品流8项已迁外部CLI/GUI真实入口，保留4项Prepared View�
 
 2026-09-09：75组`blender-mcp.exe`/tool Python/uv Python并非Blender子进程；父PID证据指向当前Codex宿主。首次精确清理74组后，Codex又生成3组、随后再生成1组；均按PID和绝对ExecutablePath双重校验终止，累计清理79组中的78组，保留Blender PID 50440和唯一稳定链`48884→58844→43772`。不能为止漏终止当前Codex宿主；若再生应继续按所有权收敛，并将宿主重复拉起MCP作为独立桌面端缺陷处理。
 2026-09-09 L7 finding：在L6全部等价与生命周期门槛通过后，正式扩展可以完全移除RDKit、Gemmi及科学wheel而不删除纯Mesh编辑或CBQ显示能力。2,830,321-byte、109-member候选在Blender 5.1.1私有profile安装/冷启动及独立依赖探测中Passed，`rdkit`和`gemmi`不可发现，Bundled NumPy可用；最终2525项回归Passed。紧急进程清理最终仅保留Blender PID 50440，重复MCP/Python链为0；Codex MCP stdio transport在终止最后一组陈旧链后未自动重连，这是宿主传输限制，不是扩展运行失败。
+
+2026-09-09 L8 finding：合法的无wheel正式状态要求inventory、approved distributions和license copy list都允许空列表；artifact脚本原来的“非空列表”校验会错误阻止无wheel交付，根修复是只要求JSON类型为list，仍由manifest、预算和发行物验证器拒绝意外wheel。严格零wheel预算会在wheel inventory契约之前拒绝测试注入，因此测试只锁定共同的`wheel(s)`失败语义，不改变先做外层归档大小限制的安全顺序。最终精确包各区增长为0。
+
+2026-09-09 L8 finding：NCI真实网格不能替代ELF/LOL。固定critic2 1.3.15已从water HF/STO-3G WFX独立生成两套40×40×40真实网格，统一CLI写入语义/单位明确的CBQ；无wheel安装扩展通过公开UI、两种Cycles模板、源移走、独立冷重开、Rebuild和Save As。源/持久sidecar数组SHA-256分别一致为`38583b5…04a5`与`679b06…766e`。这补齐了五层矩阵中最后一个Not Run，不需要再增加新的operation或依赖。
+
+2026-09-09 process finding：最终提交前Codex宿主PID 32764又并列启动3套完全相同的`blender-mcp.exe → tool Python → uv Python`链，均非Blender PID 50440子进程且当前MCP transport仍关闭。再次按9个PID及绝对ExecutablePath双重核验终止；首次命令因一条期望路径拼写不一致安全拒绝且未终止任何进程，更正后Passed。累计清理82组遗留链，最终CIM只剩Blender 5.1.1 PID 50440，重复MCP/Python链为0。

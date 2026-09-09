@@ -269,6 +269,27 @@ class ArtifactSizeReportTests(unittest.TestCase):
             ],
         )
 
+    def test_report_accepts_empty_wheel_inventory(self):
+        self._write_package((("src/code.py", b"code"), ("LICENSE", b"license")))
+        self._write_inventory([])
+        self._write_budget(
+            self.package.stat().st_size,
+            existing_wheel_distributions=[],
+            new_wheel_budget={
+                "max_compressed_bytes_per_wheel": 10_000_000,
+                "max_unpacked_bytes_per_wheel": 30_000_000,
+                "max_compressed_bytes_total": 20_000_000,
+                "approved_wheels": [],
+            },
+        )
+
+        report = artifact_size_report.build_report(
+            self.package, self.inventory, self.license_list, self.budget
+        )
+
+        self.assertEqual(report["wheels"], [])
+        self.assertEqual(report["sections"]["wheels"]["members"], [])
+
     def test_unsafe_or_duplicate_outer_members_are_rejected(self):
         self._prepare_valid_package()
         with zipfile.ZipFile(self.package, "a", zipfile.ZIP_STORED) as archive:
@@ -416,11 +437,10 @@ class ArtifactSizeReportTests(unittest.TestCase):
     def test_repository_budget_is_versioned_and_has_no_unexplained_growth(self):
         budget = artifact_size_report._load_budget(BUDGET)
 
-        # Qualification-08 at 0f9a6c5: 209 source-matched members;
-        # only scientific UI/core code grew; resources and wheels are unchanged.
-        self.assertEqual(budget["baseline_package_bytes"], 30_109_401)
+        # L8 final wheel-free Viewer: exact native build baseline.
+        self.assertEqual(budget["baseline_package_bytes"], 2_830_321)
         self.assertEqual(budget["allowed_unexplained_growth_bytes"], 0)
-        self.assertEqual(budget["baseline_member_unpacked_bytes"], 32_564_548)
+        self.assertEqual(budget["baseline_member_unpacked_bytes"], 4_031_844)
         self.assertEqual(
             budget["allowed_unexplained_member_unpacked_growth_bytes"], 0
         )
@@ -429,15 +449,15 @@ class ArtifactSizeReportTests(unittest.TestCase):
             budget["section_unpacked_budgets"],
             {
                 "code": {
-                    "baseline_unpacked_bytes": 3_169_792,
+                    "baseline_unpacked_bytes": 1_522_554,
                     "allowed_unexplained_growth_bytes": 0,
                 },
                 "resources": {
-                    "baseline_unpacked_bytes": 2_506_004,
+                    "baseline_unpacked_bytes": 2_509_290,
                     "allowed_unexplained_growth_bytes": 0,
                 },
                 "wheels": {
-                    "baseline_unpacked_bytes": 26_888_752,
+                    "baseline_unpacked_bytes": 0,
                     "allowed_unexplained_growth_bytes": 0,
                 },
                 "other": {
@@ -446,8 +466,8 @@ class ArtifactSizeReportTests(unittest.TestCase):
                 },
             },
         )
-        self.assertEqual(budget["existing_wheel_distributions"], ["rdkit"])
-        self.assertEqual(budget["approved_distributions"], ["gemmi"])
+        self.assertEqual(budget["existing_wheel_distributions"], [])
+        self.assertEqual(budget["approved_distributions"], [])
         self.assertEqual(budget["max_compressed_bytes_per_wheel"], 10_000_000)
         self.assertEqual(budget["max_unpacked_bytes_per_wheel"], 30_000_000)
         self.assertEqual(budget["max_compressed_bytes_total"], 20_000_000)

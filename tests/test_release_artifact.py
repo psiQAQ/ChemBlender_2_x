@@ -242,7 +242,7 @@ class ReleaseArtifactTests(unittest.TestCase):
     def test_extra_wheel_fails_package_contract(self):
         self._write_artifact("wheels/unexpected.whl")
 
-        with self.assertRaisesRegex(ValueError, "wheel entries"):
+        with self.assertRaisesRegex(ValueError, "wheels?"):
             verify_artifact(
                 self.artifact_dir,
                 EXTENSION,

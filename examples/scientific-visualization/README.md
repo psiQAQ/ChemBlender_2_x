@@ -9,7 +9,7 @@
 | 分子工作台 | [场景清单](output/molecular/scenes/scene-manifest.json)、[生命周期验证](output/molecular/scenes/lifecycle-verification.json) | water、CH₃、N 原子；保留配套 `.cbq` 文件夹 |
 | 原子电荷、轨迹、逐帧力 | [实图与动画清单](output/atom-trajectory/manifest.json) | 6 张静图、128 帧 PNG、4 段 MP4；rMD17 未声明物理时间间隔 |
 | PQR / rMD17 工作台 | [场景清单](output/atom-trajectory/scenes/scene-manifest.json)、[生命周期验证](output/atom-trajectory/scenes/lifecycle-verification.json)、[PQR](output/atom-trajectory/scenes/pqr.blend)、[rMD17](output/atom-trajectory/scenes/rmd17.blend) | 2 + 4 个 View；Save As、整体移动、独立进程重开、公开 Load / Rebuild、全部 32 帧和 14 个科学数组哈希检查通过；保留相邻 `.cbq` |
-| 可选科学后端 | [依赖提案](dependencies/PROPOSAL.md) | cclib、周期数据、Fermi 与 critic2 的真实闭环仍待批准和验证 |
+| 外部科学后端 | [依赖提案](dependencies/PROPOSAL.md) | 已批准的隔离环境完成 wavefunction、Fermi、QTAIM、NCI、phonon 真实操作；critic2 1.3.15 另从 water WFX 生成并验收 40×40×40 ELF/LOL；运行能力以 `chemblender-prepare capabilities --json` 为准 |
 
 原始文件和输出均保持字节不变，来源、单位、显示设置以各 manifest 和报告为准。渲染输出不进入 Extension ZIP。
 

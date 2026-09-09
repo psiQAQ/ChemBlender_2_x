@@ -129,7 +129,7 @@ def _load_budget(path: Path) -> dict[str, Any]:
     ):
         raise ValueError("invalid budget schema: member unpacked baseline")
     existing = budget["existing_wheel_distributions"]
-    if type(existing) is not list or not existing:
+    if type(existing) is not list:
         raise ValueError("invalid budget schema: existing wheels")
     existing_distributions = [_nonempty_text(value, "budget schema existing wheel") for value in existing]
     if existing_distributions != sorted(set(existing_distributions)):
@@ -180,7 +180,7 @@ def _load_budget(path: Path) -> dict[str, Any]:
 def _load_inventory(inventory_path: Path, license_path: Path) -> list[dict[str, Any]]:
     inventory = _read_json(inventory_path, "wheel inventory")
     wheels = inventory.get("wheels")
-    if type(wheels) is not list or not wheels:
+    if type(wheels) is not list:
         raise ValueError("invalid wheel inventory: wheels")
     required = {
         "distribution",

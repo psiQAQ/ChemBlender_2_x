@@ -1,35 +1,53 @@
-# 本地交付验证记录
+# CBQ Viewer 最终本地交付验证
 
-2026-09-08，源码提交 `67ace7363a9dcc0bab29bdc2601ea6a6357d621f`。已完成可用环境中的真实分子、原子属性和轨迹流程；完整物理量计划仍有待运行项目。结构化证据与原始日志哈希见 [verification.json](verification.json)。
+2026-09-09，分支 `feat/cbq-only-viewer`。最终交付由无 wheel Blender Extension、外部 `chemblender-prepare` 分发包、五层科学证据和完整回归组成。结构化记录见 [verification.json](verification.json)，用户操作见[科学量可视化 SOP](README.md)。
+
+## 最终产物
+
+| 产物 | 结果 | 精确身份 |
+| --- | --- | --- |
+| Blender Extension | Passed | `chemblender-2.4.0.zip`；2,830,321 bytes；109 members；SHA-256 `9ea6adcb84ff8c3e576652d9c140d111d9d509039e5da40d57a5bd404ed06708` |
+| Python wheel | Passed | `chemblender_prepare-0.1.0-py3-none-any.whl`；559,417 bytes；SHA-256 `eca1dd6dcafc37a520af541cc7661a163046a5ed3932551a35213eaacc8093c9` |
+| Python sdist | Passed | `chemblender_prepare-0.1.0.tar.gz`；897,243 bytes；SHA-256 `82554df211cea58e2394f40f2824283d5a2292e89f59755e719ad1b76ad4c6f6` |
+| Artifact budget | Passed | package 2,830,321；unpacked 4,031,844；code 1,522,554；resources 2,509,290；wheels/other 0；全部增长 0 |
+| Release artifact contract | Passed | package、SHA-256、wheel inventory、license list、artifact-size 五件齐全；`metadata-mode=package-ci` |
+
+Extension 本地证据位于 `.agents/cache/l8-final-02/`，发行物副本位于 `.blend-analysis/l8-release-artifact-02/`，Python 包位于 `dist/`；这些路径均为本地可再生产物，不随 Git 发布。
+
+## 验证结果
 
 | 检查 | 结果 | 依据与范围 |
 | --- | --- | --- |
-| unittest | Passed | 2504 tests，36 optional skips；119.703 s。最后的原子颜色/项目归属修复另有实际 Blender/Cycles 回归；只修剪 EOF 空行不改变运行逻辑 |
-| Extension validate/build、ZIP 审计 | Passed | 209 个成员；源码哈希与最终快照一致；参考子模块、worker、示例与规划文件不进入 ZIP |
-| 私有 user_default 安装、启停和冷启动 | Passed | Blender 5.1.1 / Python 3.13.9；106 classes、22 readers；RDKit/Gemmi 实际运行 |
-| 最终包完整 Blender smoke | Passed | exit 0，104.031 s；198 个 Python 模块与当前源码一致；真实导入、Save As/reopen、大文件、取消和卸载检查通过 |
-| 分子场景生命周期 | Passed | 3 工作台、40 总 View、61 个科学 NPY；Save As、整体移动、删除 VDB 后公开重建与重开，科学哈希不变 |
-| PQR / rMD17 生命周期 | Passed | 2 工作台、6 View、14 个科学 NPY；Save As、整体移动、独立进程重开与 32 帧坐标/力检查通过 |
-| 图片、动画与 GUI | Passed | 28 正式 Cycles 静图、128 PNG 帧、4 MP4；11 张原生窗口截图；公开创建、加载、更新、重建、渲染、保存和重开 |
-| 离线 SOP | Passed | 标题目录互链、39 图片；1440 / 390 px 真浏览器检查通过，无横向溢出或控制台错误 |
-| 全部可选真实后端 | Not Run | 新环境尚未批准安装；不能用合成数据、已有渲染适配器或固定输入文件代替完整科学验收 |
-| 共享真实用户安装、远端 CI / 发布 | Not Run | 本轮使用私有配置，未改变共享用户环境；远端操作未获授权 |
+| `uv build --no-cache` | Passed | wheel/sdist 构建、归档读取和 SHA-256 核对通过 |
+| Extension validate/build/staging | Passed | Blender 5.1.1 native validate/build、staging 字节比对、CRC/安全路径/vendored core 审计 |
+| 私有安装与冷启动 | Passed | Blender 5.1.1 / Python 3.13.9；安装、register/unregister/reload、CBQ 与纯 Mesh 路径通过 |
+| 无科学 wheel | Passed | ZIP wheel inventory 为空；冷启动 `find_spec("rdkit")` 与 `find_spec("gemmi")` 均为 `None`；Bundled NumPy 可用 |
+| RDKit 外部等价与性能 | Passed | 芳香/Kekulé、手性、带电、多片段、AddHs、ETKDG、MMFF/UFF、势能、MOL/SDF/SMILES；冷启动额外 0.01761 s |
+| 异步控制器与取消 | Passed | modal 0.0000078 s、running 0.01089 s、取消确认 0.33582 s；失败/过期/篡改不提交 |
+| 生命周期 | Passed | 处理程序、源文件、输入 CBQ/VDB 移走后，既有 CBQ、View、动画、缓存重建及保存重开可用 |
+| 图片、动画与窗口 | Passed | 36 Cycles 静图、128 PNG 帧、4 MP4、11 张真实 Blender 窗口截图；截图清单保留其原安装包身份 |
+| 离线 SOP | Passed | `index.html` 已从当前 Markdown 重建；17 anchors、157 local links、0 remote resources；文档专项在 81 项回归中通过 |
+| 完整 unittest | Passed | 2526 tests、37 skips、0 failures/errors，147.228 s |
+| 共享真实用户安装、远端 CI / 发布 | Not Run | 本轮只使用私有 profile；未经授权不修改共享安装、不 push、不发布 |
 
-最终开发包位于本地缓存 `.agents/cache/scientific-extension-qualification-20260908-08/source/ChemBlender/chemblender-2.4.0.zip`（从仓库根目录起算，不随 Git 分发），30109401 bytes。SHA-256：`fa66bc9f407b3e87d894fd8fc9d0069a470c3e0cc690ae33f009190ca6867995`。包名沿用当前 manifest 版本，不代表已发布新版本。
+## 五层科学证据
 
-完整 smoke 在 Windows 进程内卸载已加载的 RDKit 库时出现私有测试目录的 DLL 占用清理警告，最终检查和退出码均通过；未为消除警告删除共享文件。旧失败日志保留，最新通过结果没有覆盖它们。
+五层指模型、适配器/operation、真实文件、UI/渲染、保存重开。完整逐量矩阵在 [SOP 第 15 节](README.md#verification)。其中：
 
-## 实际完成的科学范围
+- wavefunction、NCI、QTAIM、phonon 已使用真实后端，并覆盖正式安装态 View 与源移走重开；Fermi 使用真实 SrVO₃ 五文件完成统一 operation。
+- MO/密度/ESP、PQR、轨迹与力保留 28 张 Cycles 静图、128 帧动画和 5 个工作台；ELF/LOL 新增 8 张 Cycles 图和 2 个工作台；对应 77 个科学数组已做哈希或完整值生命周期核对。
+- vibration/spectra 与 band/DOS 使用固定真实 Gaussian/ORCA/VASP 文件，并保留 reader、模型、原生 View 与 lifecycle contracts。
+- ELF/LOL 使用 critic2 1.3.15 从真实 water HF/STO-3G WFX 分别生成 40×40×40 网格，经统一 CLI 发布为无量纲 CBQ；无 wheel 安装扩展完成 Grid Volume、Research/Teaching Cycles、移走原 CUBE/输入 CBQ后的独立冷重开、Rebuild 与 Save As。源/持久数组 SHA-256 分别一致为 `38583b…04a5`、`679b07…766e`。
 
-真实 FCHK 的 MO、总电子密度、自旋密度、MP2−SCF 差分密度和 ESP 已经贯通计算、面板、等值面/体积/切片/剖面、模板出图和保存重开。PQR 电荷、rMD17 构型和逐帧力已贯通原子颜色、箭头、播放与动画导出。科学方法、输入哈希、单位和显示参数见[示例索引](../../../examples/scientific-visualization/README.md)。
+## 错误恢复
 
-ELF/LOL/NCI/QTAIM、振动与光谱、Band/DOS/PDOS、声子和 Fermi 的数据适配、原生显示和面板入口已有实现与针对测试；本轮固定真实输入的全部计算、渲染和 SOP 验收仍待 [hash-locked 环境提案](../../../examples/scientific-visualization/dependencies/PROPOSAL.md)。依赖审批依据是仓库 [AGENTS.md](../../../AGENTS.md) 的 Python Environment 要求：`Do not install or change Python dependencies without explicit approval.` 已批准的缓存环境创建不改写为所有新包安装已批准。
+| 情况 | 已验证行为 |
+| --- | --- |
+| 处理程序未配置或后端缺失 | capability 明确 unavailable；Blender 本地编辑与既有 View 保持可用 |
+| 用户取消 | 写 cancel marker；两秒内确认，必要时只终止本任务 PID tree；不发布半成品 |
+| 非零退出、伪造 success、hash/路径/UUID 不可信 | fail closed；活动项目、旧实体和旧 View 不变 |
+| 输入 revision 已过期 | 拒绝结果，要求按当前 revision 重新计算 |
+| CBQ 损坏或旧 schema | 保留原包并报告检查/升级失败；事务导入不留下半项目 |
+| 源文件、处理程序或渲染缓存移走 | 权威 CBQ 数组继续可读；本地 View 可重建，外部重计算需重新配置处理程序 |
 
-## 可重放证据
-
-- [分子工作台生命周期](../../../examples/scientific-visualization/output/molecular/scenes/lifecycle-verification.json)
-- [原子与轨迹工作台生命周期](../../../examples/scientific-visualization/output/atom-trajectory/scenes/lifecycle-verification.json)
-- [GUI 截图和公开操作记录](screenshots/REPLAY.md)与[离线页面浏览器检查](browser-qa.json)
-- [资格验证入口](../../../tests/qualify_scientific_extension.py)与[完整 Blender smoke](../../../tests/blender_smoke.py)
-
-重放时使用独立用户目录；输入和科学数组以原始字节哈希为准，显示缓存可以删除后重建。没有提供网格积分域收敛证明，也没有把原始 ECD 单位、轨迹帧次序或显示箭头缩放解释成额外物理结论。
+重放时使用独立 `BLENDER_USER_RESOURCES`。运行环境能力以 `chemblender-prepare capabilities --json` 和 `doctor` 的当次输出为准；根 `.venv` 未配置专用 scientific/fermi/wavefunction 路由时报告 warning 是预期行为，不等于已配置缓存环境失效。

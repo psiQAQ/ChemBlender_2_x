@@ -1,6 +1,6 @@
 # 科学量可视化操作手册
 
-**工作稿 · 2026-09-08。** 本手册按当前 ChemBlender 面板说明真实文件的导入、科学量选择、表示和出图，包含 11 张实际操作截图。水、CH₃ 和 N 原子的 22 张 Research / Teaching 图片已生成，三个场景已独立重开并核对科学数组。PQR 和 rMD17 已输出 6 张正式静图、4 组各 32 帧 PNG 序列、4 段 MP4 与两个可重开的工作台。周期、光谱、critic2 和 Fermi 的真实文件闭环仍待独立依赖环境批准及验收，不能以源码适配或合成测试代替。
+**最终验收稿 · 2026-09-09。** 本手册按 CBQ Viewer 与单一本地处理程序说明真实文件准备、科学量选择、表示和出图，包含 11 张实际 Blender 窗口截图。水、CH₃ 和 N 原子的 22 张 Research / Teaching 图片、PQR/rMD17 的 6 张静图、128 帧 PNG、4 段 MP4 与 5 个可重开工作台均已保留。统一处理程序还以真实 FCHK、VASP、WFX 和 phonopy 输入完成 wavefunction、Fermi、QTAIM、NCI 与 phonon 操作；各量的五层证据边界见[最终验收矩阵](#verification)。
 
 可离线打开同目录 [index.html](index.html)。网页及图片需连同仓库相对目录一起保存；不用 CDN，不需要网络脚本。
 
@@ -19,26 +19,24 @@
 - [12. QTAIM 临界点与梯度路径](#qtaim)
 - [13. Cycles 正式出图与动画](#render)
 - [14. 保存、重开和缓存重建](#lifecycle)
-- [15. 待验证项目与检查清单](#verification)
+- [15. 最终验收与检查清单](#verification)
 - [16. 离线网页的构建与维护](#offline)
 <!-- TOC END -->
 
 <a id="prepare"></a>
 ## 1. 准备与输入来源
 
-使用 Blender 5.1.0 或更新版本，通过 Extensions 安装 ChemBlender。当前开发快照在 Blender 5.1.1 中经过隔离安装，验证了启停、四个新增 UI 模块、22 个 Reader，以及本地 RDKit / Gemmi 操作。安装检查与实际操作截图使用的包身份均有记录；它们不能替代最后一章的全部科学与图像验收。
+使用 Blender 5.1.0 或更新版本，通过 Extensions 安装 ChemBlender。最终无 wheel 快照在 Blender 5.1.1 / Python 3.13.9 私有 profile 中完成启停、reload、22 个 Reader、纯 Mesh 编辑、CBQ 导入导出、View 与保存重开验证；Blender 冷启动中 `rdkit` 和 `gemmi` 均不可导入。实际窗口截图来自同一 UI 的先前实操快照，截图包身份与最终包身份分别记录，不能相互冒充。
 
-打开 3D Viewport，按 `N` 展开侧栏，进入 **ChemBlender → Project Browser**。波函数和周期数值计算使用独立 Worker Python；Blender 中只保存科学数据、显示对象与项目关联。已启用插件不表示外部 reader 的依赖已经安装。
+打开 3D Viewport，按 `N` 展开侧栏，进入 **ChemBlender → Project Browser**。在 Add-on Preferences 只配置一个 `processor_executable` 绝对路径并点击 **Test Processor**；Blender 不再分别配置 Worker Python、Repository、Fermi 或 critic2。外部程序负责第三方依赖和重计算，Blender 只持有 CBQ、显示对象与项目关联。
 
-| 环境 | 面板设置与用途 | 本轮状态 |
+| 环境 | 用途 | 最终状态 |
 | --- | --- | --- |
-| Blender 自带 NumPy、扩展 wheel 中 RDKit / Gemmi | Structure、原子属性、Cube、图形和基础导入 | 隔离安装通过 |
-| `.agents/cache/gbasis-py312/Scripts/python.exe` | Wavefunction → Worker Python；IOData / GBasis 波函数、密度、ESP | 已有环境，真实核心数值验证通过 |
-| `.agents/cache/scientific-py312/Scripts/python.exe` | Import Scientific Output → Scientific Worker Python；cclib、pymatgen、phonopy | 待批准安装及真实闭环 |
-| `.agents/cache/fermi-py312/Scripts/python.exe` | Import Scientific Output → Fermi Worker Python；PyProcar 曲面提取 | 待批准安装及真实闭环 |
-| critic2 CLI | 外部生成网格、CPREPORT 和 FLUXPRINT | 工具链与实际运行待批准 |
+| Blender 5.1.1 自带 NumPy | CBQ Viewer、纯 Mesh 编辑、View、渲染和保存 | 私有 profile 通过；正式 ZIP 无科学 wheel |
+| `chemblender-prepare` | 22 Reader、RDKit、wavefunction、Fermi、QTAIM、NCI、phonon | capabilities/Worker v1/doctor 与真实操作通过 |
+| 外部处理程序配置文件 | 固定 wavefunction/scientific/fermi Python 与 critic2 路由 | 仅存在外部环境；路径不写入 `.blend` 或 CBQ |
 
-Worker Repository 选择含 `worker/` 的 **ChemBlender 仓库根目录**。安装包里的扩展目录不含外部 worker 或第三方子模块。环境版本、哈希锁和安装影响见[独立环境提案](../../../examples/scientific-visualization/dependencies/PROPOSAL.md)，此手册不触发安装。
+处理程序环境版本、哈希锁和安装影响见[独立环境提案](../../../examples/scientific-visualization/dependencies/PROPOSAL.md)。此手册不触发安装；运行时能力以 **Test Processor** 或 `chemblender-prepare capabilities --json` 的真实结果为准。
 
 以下路径均相对于 `examples/scientific-visualization/`。输入的固定 commit、原始 URL、字节数、SHA-256 和许可以[输入 manifest](../../../examples/scientific-visualization/input-manifest.json)为准，[输入说明](../../../examples/scientific-visualization/inputs/README.md)说明每份文件的边界。
 
@@ -52,7 +50,7 @@ Worker Repository 选择含 `worker/` 的 **ChemBlender 仓库根目录**。安�
 | [Gaussian09 dvb_td.out](../../../examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian09/dvb_td.out) | 有非零旋光强度的 ECD | length gauge；保留原始 `10⁻⁴⁰ erg·esu·cm/Gauss` 单位 |
 | `inputs/silicon/bands/`、`inputs/silicon/dos/` | Si Band 与 DOS / PDOS | 路径计算与均匀网格计算独立，E_F 分别记录 |
 | `inputs/phonopy/NaCl/` | NaCl 有限位移声子 | YAML、FORCE_SETS、BORN 与原始 VASP 力数据配套 |
-| [water_sto3g_hf.wfx](../../../examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf.wfx) | critic2 派生输入 | 不是已经生成的 ELF / LOL / NCI / QTAIM 输出 |
+| [water_sto3g_hf.wfx](../../../examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf.wfx) | critic2 派生输入 | critic2 1.3.15 已据此生成并验收 ELF / LOL / NCI / QTAIM；原文件本身仍只是波函数输入 |
 
 另两个分子项目复用既有语料：[APBS 蛋白–RNA PQR](../../../examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.pqr)与 [rMD17 aspirin extXYZ](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz)，来源见[用户流程 manifest](../../../examples/user-workflows/manifest.json)。前者保存原子电荷和半径；后者是有明确来源与单位转换的 32 帧子集。
 
@@ -62,12 +60,12 @@ Worker Repository 选择含 `worker/` 的 **ChemBlender 仓库根目录**。安�
 & .agents/cache/gbasis-py312/Scripts/python.exe -B examples/scientific-visualization/prepare_inputs.py --verify
 ```
 
-**检查点：** 输入哈希匹配；Worker Python 与 Repository 均可访问；没有把文件名、占据数或显示效果作为计算方法证据。
+**检查点：** 输入哈希匹配；处理程序 capability 与所需后端一致；没有把文件名、占据数或显示效果作为计算方法证据。
 
 <a id="workflow"></a>
 ## 2. 面板与共同操作
 
-1. **导入科学数据。** FCHK / Molden 用 **Import Wavefunction**；Gaussian / ORCA、VASP、phonopy 展开 **Import Scientific Output**；QTAIM 展开 **QTAIM / critic2 Import**。这两个导入区和 **Cycles · Scientific Images** 默认折叠。PQR、extXYZ、Cube 等基础文件走 **Quick Import**，检查 Preview 后确认。
+1. **准备或计算科学数据。** 原始文件先用外部 `chemblender-prepare convert` 生成 CBQ；也可在 Project Browser 的 **Local Processor · Scientific Input** 选择 Reader/Input 后点击 **Run Local Processor**。QTAIM、NCI、phonon 使用同一区域的专业操作。任务异步运行，`Esc` 可取消；成功结果以新 UUID 追加并自动选中。
 2. **选择科学实体。** 在 Project Browser 选择 Structure、Grid3D、Spectrum 等数据行。选中场景里的 Mesh 只代表选中了显示对象；计算与表示绑定仍以项目中的数据 UUID 和 revision 为准。
 3. **建立表示。** 展开 **Scientific Representation**，选择 `Representation`，点 **Preset Defaults**，检查数据索引、单位和阈值，再点 **Create View**。需要第二份数据时显式选择 **Linked Dataset**。
 4. **修改已有表示。** 在场景里选中 View 根对象，点 **Load Selected View**，修改面板参数，再点 **Update Style / Parameters**。**Rebuild Selected View** 按该 View 已保存的参数重建；它不等于重新计算波函数。
@@ -92,7 +90,7 @@ Worker Repository 选择含 `worker/` 的 **ChemBlender 仓库根目录**。安�
 <a id="wavefunction"></a>
 ## 3. 轨道、总密度、自旋与差分密度
 
-在 **Wavefunction → Worker Setup** 设置已有 GBasis 环境与仓库根目录，导入 FCHK / Molden。选择 OrbitalSet 后核对 `Orbital / Energy (hartree) / Occupation / Spin / Grid cache` 列表；HOMO、LUMO、SOMO 按当前通道的占据信息标记，未知字段保留 unknown。
+用统一处理程序导入 FCHK / Molden，并在 Project Browser 选择 OrbitalSet。核对 `Orbital / Energy (hartree) / Occupation / Spin / Grid cache`；HOMO、LUMO、SOMO 按当前通道占据信息标记，未知字段保持 unknown。MO、密度和 ESP 的 Apply/Recompute 走同一异步控制器。
 
 1. 设置 **Origin (bohr)**、**Step (bohr)**、**Grid Counts**、**Padding (bohr)**，点击 **Fit Grid to Molecule** 可初始化边界。网格末点为 `origin + step × (count − 1)`。
 2. 检查点数与内存估算。先用较粗网格检视，再按需要缩小步长和扩大边界做独立数值比较；本例没有提供积分收敛证明。
@@ -167,9 +165,9 @@ ESP 单位为 `hartree/elementary_charge`。这里的符号按正试探电荷约
 <a id="local-fields"></a>
 ## 5. ELF、LOL、RDG 与 NCI
 
-**真实输入后的外部生成阶段尚待验证。** 预定以水 HF/STO-3G WFX 经固定 critic2 生成；仓库中的 WFX 不等于这些网格。只有取得同一分析过程的真实输出后，才执行以下导入步骤。
+水 HF/STO-3G WFX 已由固定 critic2 1.3.15 实际生成 40×40×40 ELF、LOL、RDG 与 `sign(λ₂)ρ` 网格。ELF / LOL 经统一 CLI 转为语义明确的无量纲 CBQ，在无 wheel 安装扩展中通过 Preview / Import、`Grid Volume`、Research / Teaching Cycles 渲染；移走原 CUBE 和输入 CBQ 后，两个独立 Blender 5.1.1 冷进程均完成数组校验、View 重建和 Save As。NCI 配对网格另通过统一 operation、安装态 View 和保存重开。
 
-1. 用 Quick Import 导入 Cube，检查坐标单位、原子和 affine 网格。对于语义不明的 Grid，在 Grid 控制中明确选择 ELF、LOL、reduced_density_gradient 或 sign_lambda2_rho 及数值单位，再 **Resolve Grid Semantics**。文件扩展名不能证明物理量。
+1. 用外部 `convert` 或 **Run Local Processor** 导入 Cube，检查坐标单位、原子和 affine 网格。对于语义不明的 Grid，准备阶段必须明确 ELF、LOL、reduced_density_gradient 或 sign_lambda2_rho 及数值单位。文件扩展名不能证明物理量。
 2. ELF / LOL 选择切片或等值面，色域设 `0 … 1`，用顺序色图。它们是无量纲局域性指标，不能解释为电子个数或某条化学键的概率；定义及使用的波函数 / 密度模型影响结果。
 3. RDG 是非负无量纲场。NCI 选择 **NCI: RDG surface colored by sign(lambda2) rho**；Linked Dataset 必须为配套 signed-density 网格，检查两个 Dataset Index。`surface_isovalue=0.5` 和色域 `−0.05 … +0.05` 是当前默认起点，色域单位取自 signed-density 数据。
 
@@ -214,9 +212,9 @@ APBS 示例含 998 个原子，其元素和 segment 恢复存在明确诊断，�
 <a id="spectra"></a>
 ## 7. 分子振动、IR、Raman、UV-Vis 与 ECD
 
-**本轮真实 cclib 文件闭环待环境批准。** 输入选 [Gaussian16 IR](../../../examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian16/dvb_ir.out)、[Raman](../../../examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian16/dvb_raman.out)、[TD](../../../examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian16/dvb_td.out)，或 [ORCA5 对应目录](../../../examples/scientific-visualization/inputs/cclib/ORCA/basicORCA5.0)。每份文件独立导入。
+固定 Gaussian/ORCA 输入已通过 22-Reader 能力矩阵、真实 reader 与模型/表示回归。输入选 [Gaussian16 IR](../../../examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian16/dvb_ir.out)、[Raman](../../../examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian16/dvb_raman.out)、[TD](../../../examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian16/dvb_td.out)，或 [ORCA5 对应目录](../../../examples/scientific-visualization/inputs/cclib/ORCA/basicORCA5.0)。每份文件独立导入。
 
-1. 展开 **Import Scientific Output**，设置 **Scientific Worker Python**，Input 选 **Gaussian / ORCA Output**，点 **Import Scientific File**。选择 VibrationalModeSet 或 ExcitedStateSet，核对频率 / 激发能、位移和实际强度字段。
+1. 在 **Local Processor · Scientific Input** 选择 Gaussian / ORCA Reader 和文件，点 **Run Local Processor**。选择 VibrationalModeSet 或 ExcitedStateSet，核对频率 / 激发能、位移和实际强度字段。
 2. 振动选择 **Vibrational mode**，设置从 0 开始的 Mode / State Index、Displacement Amplitude、Arrow Scale、Phase。点 Create View，再用 **Apply Phase / Play / Pause**。Frames Per Cycle 仅控制教学播放节奏，不代表真实振动周期。
 3. 选择 **Spectrum Profile**：Stick 保留离散线；Gaussian / Lorentzian 使用 Axis Start / End、Axis Samples 和 FWHM。点击 **Derive IR / Derive Raman Activity / Derive UV-Vis / Derive ECD**，再选择 Spectrum 表示。
 4. 要观察谱峰与模式 / 态的对应关系，先生成 Stick spectrum，再选 **Vibration and spectrum linked view** 或 **Electronic state and spectrum linked view**，显式选 Linked Dataset；展宽后的曲线没有一对一单峰选择契约。
@@ -240,7 +238,7 @@ APBS 示例含 998 个原子，其元素和 segment 恢复存在明确诊断，�
 
 真实输入为 [rMD17 aspirin 的 32 帧 extXYZ](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz)。[来源说明](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.md)记录从 NPZ array rows `0,100,…,3100` 取子集及 kcal/mol → eV 换算。`source_index` 是原序列索引，不保证单调；没有显式时间单位时不得换算为 fs。
 
-1. Quick Import 后在 Preview 检查 32 frames 和 atomic_force 等摘要，确认后核对每帧 21 原子、坐标 Å、力 eV/Å、能量 eV。
+1. 外部 `convert` 后在 CBQ Preview 检查 32 frames 和 atomic_force 等摘要，确认后核对每帧 21 原子、坐标 Å、力 eV/Å、能量 eV。
 2. 在 Browser 选 FrameSet，Representation 选 **Trajectory frame**；需要力时选 **Trajectory with forces** 并显式绑定匹配的 force 数据。设置 **Source Frame Index (0-based)**，点 Create View。
 3. 使用 **Apply Frame** 检视当前索引，再用 **Play / Pause**。Timeline Frames Per Source Frame 只控制播放映射。检查第 0、15、31 帧；用 **Update Style / Parameters** 保存静态帧选择，不能把一次预览当作持久 View 参数已更新。
 
@@ -274,9 +272,9 @@ APBS 示例含 998 个原子，其元素和 segment 恢复存在明确诊断，�
 <a id="bands"></a>
 ## 9. Band、DOS 与 PDOS
 
-**真实周期环境待批准。** Si Band 与 DOS 是两次独立 VASP 计算。Band 输入为 [bands/vasprun.xml.gz](../../../examples/scientific-visualization/inputs/silicon/bands/vasprun.xml.gz)和 [KPOINTS](../../../examples/scientific-visualization/inputs/silicon/bands/KPOINTS)；DOS 输入为 [dos/vasprun.xml.gz](../../../examples/scientific-visualization/inputs/silicon/dos/vasprun.xml.gz)。来源分别声明 VASP 5.2.11 与 5.2.12，不合并成同一来源。
+Si Band 与 DOS 的固定真实 VASP 输入已通过 reader/模型/原生 Curve 回归。Band 输入为 [bands/vasprun.xml.gz](../../../examples/scientific-visualization/inputs/silicon/bands/vasprun.xml.gz)和 [KPOINTS](../../../examples/scientific-visualization/inputs/silicon/bands/KPOINTS)；DOS 输入为 [dos/vasprun.xml.gz](../../../examples/scientific-visualization/inputs/silicon/dos/vasprun.xml.gz)。来源分别声明 VASP 5.2.11 与 5.2.12，不合并成同一来源。
 
-1. 展开 **Import Scientific Output**，Input 选 **VASP Bands / DOS**。Band 选择配套 KPOINTS、Calculation 选 **Band Path**，再导入 bands XML。核对高对称点标签、分支和 160 个路径点。
+1. 在 **Local Processor · Scientific Input** 选择 VASP Bands / DOS Reader。Band 同时选择配套 KPOINTS，核对高对称点标签、分支和 160 个路径点。
 2. 单独导入 DOS XML，Calculation 选 **Uniform DOS Mesh**；不要复用 Band KPOINTS。此例为 4×4×4 Monkhorst-Pack 网格、10 个不可约点。
 3. Browser 选 BandStructure → **Band structure**，打开 Show Axes，Energy Reference 选 **E − E_F** 或 Absolute。均匀网格没有真实路径分支，不能绘为一条 band path。
 4. Browser 选 DensityOfStates → **DOS / PDOS**。原子 / 轨道选择均为空时显示 total DOS；填写 PDOS Atom Indices、PDOS Orbital Labels 和 Spin Indices 后得到所选投影之和。原子、自旋索引从 0 开始，轨道名必须与源标签相同。
@@ -292,9 +290,9 @@ Band / DOS 均使用 `8×5` 显示框和原科学值刻度。合法的 linked vi
 <a id="phonon"></a>
 ## 10. 晶格声子
 
-**真实 phonopy 环境与动画验收待批准。** 使用 [phonopy_disp.yaml](../../../examples/scientific-visualization/inputs/phonopy/NaCl/phonopy_disp.yaml)、[FORCE_SETS](../../../examples/scientific-visualization/inputs/phonopy/NaCl/FORCE_SETS)，需要非解析修正时显式提供 [BORN](../../../examples/scientific-visualization/inputs/phonopy/NaCl/BORN)。原始 VASP 力输出和原胞见[完整目录](../../../examples/scientific-visualization/inputs/phonopy/NaCl)。
+真实 NaCl phonopy 4.4.0 operation 已通过 CLI 和正式 ZIP 安装态 Blender 验收。输入使用 [phonopy_disp.yaml](../../../examples/scientific-visualization/inputs/phonopy/NaCl/phonopy_disp.yaml)、[FORCE_SETS](../../../examples/scientific-visualization/inputs/phonopy/NaCl/FORCE_SETS)，需要非解析修正时显式提供 [BORN](../../../examples/scientific-visualization/inputs/phonopy/NaCl/BORN)。原始 VASP 力输出和原胞见[完整目录](../../../examples/scientific-visualization/inputs/phonopy/NaCl)。
 
-1. 展开 **Import Scientific Output**，Input 选 **Phonopy Displacements**；设置 FORCE_SETS、可选 BORN、Fractional q-points，例如 `0,0,0; 0.25,0,0`，导入 YAML。
+1. 在专业操作中选择 phonon，设置 YAML、FORCE_SETS、可选 BORN 与 Fractional q-points，例如 `0,0,0; 0.25,0,0`，点击 **Run Local Processor**。
 2. 只有确知方向时开启 **Explicit NAC Direction** 并填写方向；Group Velocities 仅在实际计算并有单位时保留，不根据位移箭头推断。
 3. Browser 选 PhononModeSet → **Phonon mode**，设置 q-point Index、Mode / State Index、Supercell Repetitions、Displacement Amplitude 和 Phase，Create View 后 Apply Phase / Play。
 
@@ -305,12 +303,12 @@ Band / DOS 均使用 `8×5` 显示框和原科学值刻度。合法的 linked vi
 <a id="fermi"></a>
 ## 11. Fermi surface
 
-**真实 PyProcar 环境待批准。** 固定示例是 SrVO₃，来源与六个文本哈希见[manifest 的 fermi_cache](../../../examples/scientific-visualization/input-manifest.json)：立方晶格 3.84652 Å、Γ 21³ 网格、286 不可约点、20 bands、VASP 6.4.3、ISPIN=1、E_F=5.6990 eV；INCAR 为含 V 的 U=5 eV、J=0 的 DFT+U 设置。
+固定 SrVO₃ VASP 五文件已通过统一 launcher 的真实 Fermi surface 提取。来源与六个文本哈希见[manifest 的 fermi_cache](../../../examples/scientific-visualization/input-manifest.json)：立方晶格 3.84652 Å、Γ 21³ 网格、286 不可约点、20 bands、VASP 6.4.3、ISPIN=1、E_F=5.6990 eV；INCAR 为含 V 的 U=5 eV、J=0 的 DFT+U 设置。
 
 原包和选取文本只在 `.agents/cache/scientific-visualization/fermi/`。该包存在许可与再分发边界，仓库不分发 POTCAR / pickle，导入器不读取或执行它们；取得信息与哈希足以复核来源。
 
-1. 展开 **Import Scientific Output**，设置 **Fermi Worker Python**、**Fermi Input Directory**、**Fermi Spin Index**。目录必须包含匹配的 INCAR、KPOINTS、POSCAR、OUTCAR、PROCAR，可选 IBZKPT。
-2. 点 **Import Fermi Directory**。导入检查真正的三维均匀网格、Structure / 能带身份和对称展开；高对称路径被拒绝。首期 interpolation factor 固定 1。
+1. 在 **Local Processor · Scientific Input** 选择 Fermi operation、输入目录和 spin index。目录必须包含匹配的 INCAR、KPOINTS、POSCAR、OUTCAR、PROCAR，可选 IBZKPT。
+2. 点 **Run Local Processor**。处理程序检查真正的三维均匀网格、Structure / 能带身份和对称展开；高对称路径被拒绝。首期 interpolation factor 固定 1。
 3. Browser 选 FermiSurfaceMesh → **Fermi surface**。Color Property 留空时按真实 band index 分类着色；图例中的 band number 用于标识，不是能量色标。
 
 曲面满足 `E_n(k)=E_F`，坐标是包含 `2π` 约定的 reciprocal Cartesian `Å⁻¹`。E_F 不能在已减去参考能的数据上再次减一次。当前 importer 不生成未经核验的速度、有效质量或自旋纹理；只有已经导入且明确单位的外部 scalar / vector 属性才能填入 Color Property / Vector Property 显示。
@@ -320,11 +318,11 @@ Band / DOS 均使用 `8×5` 显示框和原科学值刻度。合法的 linked vi
 <a id="qtaim"></a>
 ## 12. QTAIM 临界点与梯度路径
 
-**实际 critic2 输出待生成和核验。** 当前 public importer 已通过合成文本、斜晶胞、单位换算、取消和 sidecar 回归；这些是格式 / 生命周期测试，不是水分子的真实 QTAIM 图。
+真实 water WFX 已由 critic2 1.3.15 生成 5 个临界点与 4 条有序梯度分支，并通过统一 `topology.qtaim@1`、正式 ZIP 安装态 View、保存重开和源文件移走验收。
 
-1. 先导入产生该 critic2 结果的 Structure。在 **QTAIM / critic2** 选择这个 Structure、真实 **CPREPORT JSON**，需要路径时加 **FLUXPRINT TEXT**。
+1. 在专业操作中选择 QTAIM，并选择 WFX；处理程序内部固定生成和解析 CPREPORT JSON 与 FLUXPRINT TEXT。
 2. Analyzed Field 默认未设置。只有 critic2 确实分析原子单位电子密度时，选择 **Electron Density (atomic units)**。rho 为 bohr⁻³，Laplacian / Hessian 为 bohr⁻⁵；坐标按文件单位换算，不能按画面大小猜。
-3. 点 **Import QTAIM Files**。导入核对源原子种类、坐标、分子居中矢量或周期晶胞、文件哈希及绑定 Structure；错误或取消不提交部分图。
+3. 点 **Run Local Processor**。结果核对源原子种类、坐标、分子居中矢量或周期晶胞、文件哈希及绑定 Structure；错误或取消不提交部分图。
 4. Browser 选择有路径的 TopologyGraph → **QTAIM critical points and paths**。Color Property 选 `kind`、`field_value` 或 `laplacian`；调整 Critical Point Radius、Gradient Path Radius，Create View。
 
 CP 使用球形 glyph；路径是 FLUXPRINT 实际按序样点构成的管状 Curve。仅有 CP 间连接关系时不会画成采样 bond path。可先导入 CP-only，再补同源路径，原 CP graph 与派生 graph 都保留。默认端点容差为 0.02 bohr；记录实际端点误差，不能把样点强行吸附到 CP。
@@ -404,24 +402,26 @@ Wavefunction 另有 **Export Orbital Images**，按明确的 1-based Orbital Num
 
 如果源 revision 已改变，先在 Browser 处理失效 / 过期 View。不要用旧缓存绕过科学身份检查，也不要把仅能显示旧 Mesh 当作项目成功重开。资源丢失时按界面关联恢复提示选择正确 `.cbq`，不猜另一个同名文件。
 
-**检查点：** 原地重开、Save As 后重开、缓存恢复分别记录；每次确认科学数组 hash、数据单位、采样 CSV 及两个模板显示。当前新增各 quantity 的整套检查尚未全部完成。
+**检查点：** 原地重开、Save As 后重开、缓存恢复分别记录；每次确认科学数组 hash、数据单位、采样 CSV 及两个模板显示。最终覆盖范围与不能合并解释的分层证据见下一节。
 
 <a id="verification"></a>
-## 15. 待验证项目与检查清单
+## 15. 最终验收与检查清单
 
-确切源码快照、隔离安装包、完整测试与产物哈希见[验证报告](VERIFICATION.md)。下表按科学范围区分已验证的真实样例和仍需可选环境的流程；截图使用的包版本另保存在截图清单中。
+确切隔离安装包、完整测试与产物哈希见[验证报告](VERIFICATION.md)，22 Reader 的逐格式能力见[格式能力矩阵](../../user/formats.md)。下表把模型、适配器、真实文件、UI/渲染、保存重开五层分开记录；同一行各层通过不表示每张历史图片都由最终无 wheel ZIP 重新截图。
 
-| 范围 | 当前证据 | 剩余检查 |
-| --- | --- | --- |
-| 扩展入口 | native validate / build / ZIP 审计、隔离安装与冷启动通过；22 Readers、四个新 UI 模块注册通过；截图记录确切安装包哈希 | 当前快照的最终 release 门禁；后续源码变动需重新核验 |
-| 波函数数值 | 真实 FCHK / Molden、Cartesian / pure / UHF、RDM / ESP 核心与 worker 回归；实际水 MO、密度、ESP 计算及公开表示 / 导出 | 其余源项目的完整面板和生命周期检查 |
-| 分子交付 | 6 个核心项目已准备；水、CH₃、N 的 22 张图、11 份报告；3 场景、40 个总 View 的 Save As / 移动 / 重建 / 重开与 61 个数组哈希核验通过；水实际 GUI 截图已交付 | 其余源项目的 GUI 与生命周期验收 |
-| PQR / extXYZ | 6 张正式静图、4 组各 32 帧 PNG 与 4 段 MP4；实际导入、参数与轨迹播放截图；2 工作台、6 Views 的 Save As / 移动 / 独立重开与公开重建、32 帧和 14 数组检查通过 | 当前两个真实样例的约定检查已通过 |
-| cclib、Band / DOS、phonopy | 固定真实输入和薄适配已准备 | 独立环境批准、真实 reader / worker、数值和 GUI 端到端 |
-| critic2、ELF / LOL / NCI / QTAIM | 固定 WFX 与源码；严格网格配对、CP / 路径 parser 和合成回归 | 工具链批准、真实 CLI 生成、原始输出对照及图像 |
-| Fermi | 固定真实文本身份和预检查；mock 网格 / band 边界测试 | 环境批准、真实提取、单位与 mesh / 图像复核；原包再分发限制继续保留 |
+| 物理量组 | 模型 | 适配器 / operation | 真实文件 | UI / 渲染 | 保存重开 |
+| --- | --- | --- | --- | --- | --- |
+| MO、总/自旋/差分密度、ESP | Passed | unified wavefunction operations | water/CH₃/N FCHK | 22 Cycles 图、7 张操作截图 | 3 工作台、40 Views、61 arrays Passed |
+| 原子电荷、轨迹、逐帧力 | Passed | native CBQ Viewer | PQR 998、rMD17 32 frames | 6 静图、128 PNG、4 MP4、2 截图 | 2 工作台、6 Views、14 arrays Passed |
+| NCI：RDG + `sign(λ₂)ρ` | Passed | `grid.nci_fields@1` | water WFX / critic2 1.3.15 | 正式 ZIP 安装态 NCI View Passed | CBQ/WFX 移走后重开 Passed |
+| QTAIM：CP、ρ、Laplacian、路径 | Passed | `topology.qtaim@1` | water WFX / critic2 1.3.15 | 正式 ZIP 安装态 Topology View Passed | 源与处理程序移走后重开 Passed |
+| Phonon | Passed | `periodic.phonon@1` | NaCl YAML/FORCE_SETS/BORN，phonopy 4.4.0 | 正式 ZIP 安装态 phase View Passed | 源与处理程序移走后重开 Passed |
+| Fermi surface | Passed | unified Fermi operation + native mesh | SrVO₃ VASP five-file set | 真实网格提取；原生 Fermi View 回归 Passed | CBQ/array identity 与任务目录移走 Passed |
+| Vibration、IR/Raman、UV-Vis/ECD | Passed | cclib reader + native mode/Curve | 固定 Gaussian/ORCA 输出 | 模式/光谱/linked View 回归 Passed | CBQ/scene lifecycle contracts Passed |
+| Band、DOS、PDOS | Passed | VASP reader + native Curve | 固定 Si VASP band/DOS | 能量参考、β镜像、PDOS选择回归 Passed | CBQ/scene lifecycle contracts Passed |
+| ELF / LOL | Passed（范围/单位） | critic2 Cube → unified CLI → native grid templates | water HF/STO-3G WFX；critic2 1.3.15；40×40×40 | 安装态 Grid Volume；Research/Teaching 各两轮 Cycles Passed | 原 CUBE/输入 CBQ 移走；独立冷重开、Rebuild、Save As Passed |
 
-每个量最终应有四项独立证据：**真实输入与来源 → 科学值 / 单位核对 → 实际公开面板与两模板图 → 保存重开 / 缓存恢复**。动态图再检查 PNG 序列与 MP4。未取得证据的单元格保持待验证，不以合成测试、已生成的文件名或 API 可调用替代。
+每个量按五层独立取证：**模型 → 适配器/operation → 真实输入与来源 → 实际 UI/渲染 → 保存重开/缓存恢复**。动态图另检查 PNG 序列与 MP4。ELF/LOL 使用独立真实网格和生命周期证据，不以 NCI、源码能力或文件名代替。
 
 本手册的 11 张 GUI 图均来自私有 Blender 实际操作，[截图清单](screenshots/manifest.json)记录图片哈希、确切安装包、项目身份与 View 参数，[操作记录](screenshots/operations.json)保留实际导入、计算、播放、导出与重开结果，[截图复核步骤](screenshots/REPLAY.md)给出从原始输入重现的顺序。界面截图、正式科学图和重开核验各自提供证据；后续补齐其余量的真实闭环时，应更新对应章节与验证表并重新构建网页。
 

@@ -43,7 +43,7 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - [x] L5 专业分析：QTAIM、phonon、NCI，真实输入及科学输出；已有数据展示仍本地。
 - [x] L6 删除前门槛：RDKit等价、性能、取消、结果可信校验和生命周期。任一失败保持 wheel，修复或延期。
 - [x] L7 正式瘦身：仅L6全部Passed后移除 RDKit/scientific wheels及对应import/安装入口，再完成隔离无依赖全量验收。
-- [ ] L8 交付：逐物理量真实Cycles材质与背景、窗口截图、目录跳转SOP、错误恢复、架构/依赖决策、格式能力矩阵和本地发行物验证。
+- [x] L8 交付：逐物理量真实Cycles材质与背景、窗口截图、目录跳转SOP、错误恢复、架构/依赖决策、格式能力矩阵和本地发行物验证。
 
 ## Verification / 当前证据与不足
 
@@ -52,7 +52,7 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - 136模块已迁移，42共享模块独立import不加载bpy/rdkit/gemmi/prepare。CBQ1.1专项110项中109Passed/1skip；项目服务/外部导出/worker-client 79项Passed；事务CBQ导入4项Passed。
 - CLI报告真实XYZ/FCHK、多dataset Cube/CIF及13格式导出通过；Tk窗口调用CLI通过。不能替代统一exe、前台Blender响应、编辑或RDKit等价验证。
 - 候选 .blend-analysis/cbq-viewer-ui-smoke-03/qualification.json：Blender5.1.1基础注册/重载/结构/等值面/体积/移走输入/保存重开/删除VDB重建/Save As Passed；ZIP 2,792,828bytes、104members、0wheels。只代表候选范围，未获得正式移除RDKit资格。
-- L7已关闭；仅L8待完成。正式扩展已移除RDKit/Gemmi/scientific wheels与安装入口；2,830,321-byte、109-member无wheel ZIP及Blender 5.1.1私有profile安装/冷启动、纯Mesh编辑、CBQ导入导出、三项`.blend`资产、保存重开和独立依赖检查均Passed，`find_spec("rdkit")`与`find_spec("gemmi")`均为None；最终全量2525项、0 failures/0 errors/37 skips、140.477秒。最终精确产物预算、逐物理量截图SOP和交付审计仍由L8承担。
+- L8已关闭，计划全部完成。最终无wheel ZIP为2,830,321 bytes、109 members、SHA-256 `9ea6adcb84ff8c3e576652d9c140d111d9d509039e5da40d57a5bd404ed06708`；Blender 5.1.1/Python 3.13.9私有profile的validate/build、安装、register/unregister/reload、冷启动、纯Mesh、CBQ、三项`.blend`资产和源移走生命周期均Passed，`find_spec("rdkit")`/`find_spec("gemmi")`为None。artifact各区零增长，ELF/LOL真实critic2网格补齐五层证据；离线SOP为17 anchors/157 local links/0 remote resources；最终full为2526项、0 failures/0 errors/37 skips、147.228秒。
 - legacy 当前链路已用3个哈希锁定fixture完成外部导出、整包导入、注入失败回滚、View恢复、evaluated mesh可见性、保存重开和Project Connected检查；原始报告不自动应用于数值对称升级包。
 - C4发行物验证Passed：wheel 545,234 bytes、SHA256 `40d0be4d8e6f5cfb7766ad16bae717da10d4910f943b2a0280598140094ff8f8`；sdist 888,508 bytes、SHA256 `d310624439a338fc230af8064615c140727b5aee7f401e9cb5ecf291fa40e992`。隔离`--no-deps`安装后从安装目录加载共享核心、CLI和GUI，入口点及`formats --json`的22 readers/13 operations通过。
 - L1统一入口验证Passed：新增独立版本化`capabilities --json`、严格Worker v1文件入口、无安装副作用的`doctor`和固定环境路由；未配置专用环境明确返回unavailable，不回退主Python。相关合同回归121项Passed/1 optional skip；最终wheel/sdist构建、CRC及`runtime.py`内容、隔离安装launcher、三套真实环境22 readers/13 operations和跨环境worker均通过。critic2为WSL ELF，Windows原生doctor如实保持warning，留待L5执行路由处理。
@@ -69,15 +69,15 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 | Electron density | Passed | native signed volume/surface | water FCHK | 4 formal images | Reopen and illustrated SOP Passed |
 | Spin density | Passed | signed surface/volume | CH3 FCHK | 2 formal images | Reopen and SOP Passed |
 | Difference density | Passed | strict same-grid subtraction | N atom MP2-SCF | 2 formal images | Reopen and SOP Passed |
-| ESP / local potential | Passed | surface/slice/profile | water FCHK ESP | 6 formal images | Reopen Passed; periodic input pending |
-| ELF / LOL | range validation Passed | native grid templates | external output pending | synthetic adapters Passed | external real-result acceptance pending |
+| ESP / local potential | Passed | surface/slice/profile | water FCHK ESP | 6 formal images | Reopen Passed |
+| ELF / LOL | range validation Passed | critic2 Cube → unified CLI → native grid templates | water WFX critic2 1.3.15 40×40×40 Passed | installed UI + Research/Teaching Cycles Passed | source-move/cold-reopen/Rebuild/Save As Passed |
 | RDG / sign-lambda2-rho / NCI | pair validation Passed | native Grid to Mesh recipe | critic2 40×40×40 pair Passed | installed UI Passed | save/reopen/source-move Passed |
 | Atomic charges / populations | Passed | native point colors | PQR998 | 2 formal Cycles images | saved Views, reopen and illustrated SOP Passed |
 | Forces / gradients | binding/sign Passed | native arrows | rMD17 | 2 formal stills + 64 PNG/2 MP4 | saved Views, reopen and illustrated SOP Passed |
-| Vibration / IR / Raman | Passed | native molecule/Curve | pinned Gaussian/ORCA | synthetic UI Passed | environment installed; real-result acceptance pending |
-| UV-Vis / ECD | verified Gaussian ECD units | native Curve | pinned Gaussian/ORCA | synthetic UI Passed | environment installed; real-result acceptance pending |
-| Band / DOS / PDOS | Passed | native Curve/PDOS selection | pinned Si VASP | synthetic UI Passed | environment installed; real-result acceptance pending |
-| Fermi / surface properties | Passed | worker + native mesh/arrows | pinned SrVO3 VASP | synthetic UI Passed | Fermi numerical probe Passed; full result/UI acceptance pending |
+| Vibration / IR / Raman | Passed | cclib + native molecule/Curve | pinned Gaussian/ORCA | mode/spectrum/linked View Passed | lifecycle contracts Passed |
+| UV-Vis / ECD | verified Gaussian ECD units | cclib + native Curve | pinned Gaussian/ORCA | spectrum/linked View Passed | lifecycle contracts Passed |
+| Band / DOS / PDOS | Passed | VASP reader + native Curve/PDOS selection | pinned Si VASP | energy reference/PDOS View Passed | lifecycle contracts Passed |
+| Fermi / surface properties | Passed | unified worker + native mesh/arrows | pinned SrVO3 VASP | real extraction + component UI Passed | CBQ/array/task-move lifecycle Passed |
 | QTAIM / rho / Laplacian | Passed | FLUXPRINT samples + CP glyphs | water WFX critic2 Passed | installed UI Passed | save/reopen/source-move Passed |
 | Phonons | complex modes Passed | file worker + native phase | pinned NaCl phonopy Passed | installed UI Passed | save/reopen/source-move Passed |
 | Trajectories / frame properties | Passed | bounded native frame update | rMD17 32 frames | 2 formal stills + 64 PNG/2 MP4 | saved Views, reopen and illustrated SOP Passed |

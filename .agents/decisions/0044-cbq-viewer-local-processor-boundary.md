@@ -1,6 +1,6 @@
 # 0044：共享 CBQ、保留本地编辑与统一外部处理
 
-日期：2026-09-08。状态：用户批准；L6/L7 门槛已完成，最终 L8 交付尚未完成。
+日期：2026-09-08。状态：用户批准；L6/L7/L8 门槛已全部完成。
 
 ## 决策
 
@@ -18,10 +18,10 @@ RDKit wheel延后删除，不能以裁剪源码替代其二进制依赖。先完
 
 100ms进入modal、1秒显示运行、两秒确认取消、百原子以内冷启动额外开销不超过两秒必须实测。当前无wheel候选smoke只证明基础Viewer生命周期，不替代这些门槛。
 
-完整[方案与验收矩阵](../../docs/quantum-visualization/architecture/local-processor.md)为实施依据；[当前任务](../active/physical-quantity-visualization-sop.md)记录进度。新架构尚未发布，旧编号决策保留历史依据。
+完整[方案与验收矩阵](../../docs/quantum-visualization/architecture/local-processor.md)为实施依据；[完成记录](../completed/physical-quantity-visualization-sop.md)保存最终证据。新架构尚未发布，旧编号决策保留历史依据。
 
 ## 实施结果（2026-09-09）
 
 L6 已完成历史调用面、等价、性能、取消、信任边界和生命周期验收，因而授权进入 L7。L7 随后从正式 manifest、依赖清单、staging 和 CI 移除 RDKit、Gemmi 及其他科学 wheel；Blender 只使用随附 NumPy，第三方科学后端留在外部 `chemblender-prepare` 环境。
 
-无 wheel 正式候选为 2,830,321 bytes、109 members、SHA-256 `4dabb6dc463a740846eca72b239e875689bfdd07e390b06e34d82f63cfcbabb5`。Blender 5.1.1 私有 profile 的安装、冷启动、重复 reload、CBQ/纯 Mesh 编辑、保存重开、三个 `.blend` 资产和依赖隔离均通过，`find_spec("rdkit")`、`find_spec("gemmi")` 均为 `None`；2525 项全量回归通过（37 skips）。L8 的最终精确发行物、资源预算与逐物理量截图 SOP 仍是独立交付门槛。
+L8 最终无 wheel ZIP 为 2,830,321 bytes、109 members、SHA-256 `9ea6adcb84ff8c3e576652d9c140d111d9d509039e5da40d57a5bd404ed06708`。Blender 5.1.1 私有 profile 的安装、冷启动、重复 reload、CBQ/纯 Mesh 编辑、保存重开、三个 `.blend` 资产和依赖隔离均通过，`find_spec("rdkit")`、`find_spec("gemmi")` 均为 `None`；artifact 各区严格零增长，2526 项全量回归通过（37 skips）。逐物理量五层矩阵已补齐，包含 critic2 1.3.15 真实 ELF/LOL 40×40×40 网格、安装态 Research/Teaching Cycles 与源移走冷重开。

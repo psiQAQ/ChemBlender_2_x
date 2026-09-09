@@ -1,6 +1,6 @@
 # ChemBlender CBQ Viewer 与本地处理模块实施方案
 
-状态：2026-09-09 共享核心、CBQ 1.1、外部分发包、统一 CLI、Blender 单路径异步控制器、既有 scientific reader／Fermi／wavefunction、RDKit 分子 operation 以及 QTAIM／NCI／phonon 专业分析均已接入。专业分析已通过真实后端、CLI、源码态 Blender View、保存重开和移走源文件验证；正式 ZIP、全量回归及随后性能／取消移除门槛仍须完成，不能由接口存在代替验收。
+状态：2026-09-09 实施完成。共享核心、CBQ 1.1、外部分发包、统一 CLI、Blender 单路径异步控制器、既有 scientific reader／Fermi／wavefunction、RDKit 分子 operation 以及 QTAIM／NCI／phonon 专业分析均已接入；等价、性能、取消、信任与生命周期门槛通过后，正式扩展已移除全部科学 wheel。最终无 wheel ZIP 已通过 Blender 5.1.1 私有 profile、精确 artifact 预算和完整回归；可复现实态见[验证报告](../scientific-visualization/VERIFICATION.md)。
 
 ## 目录
 
@@ -149,7 +149,7 @@ CBQ 整包预览、事务加入当前项目：同 UUID／同内容复用，同 U
 
 L6 删除前专项已 **Passed**：历史 `78c2d8d` 调用面与外部 RDKit operation 对照覆盖芳香／Kekulé、手性、带电、多片段拒绝、AddHs、ETKDG、MMFF／UFF、势能及 MOL／SDF／SMILES；Blender 编辑冻结、过期 revision、路径穿越、symlink、hash 篡改、取消和生命周期门槛均通过。阿司匹林冷进程额外开销 0.01761 秒；真实 Blender NCI 128³ 任务进入 modal 0.0000078 秒、显示 running 0.01089 秒、取消确认 0.33582 秒，均低于门槛。正式无 wheel 扩展仍须在 L7 独立验收，不能由 L6 结果替代。
 
-L7 正式无 wheel 扩展已 **Passed**：manifest、依赖清单、staging 与 CI 已一致移除 RDKit、Gemmi 和其他科学 wheel，正式候选 ZIP 为 2,830,321 bytes、109 members、SHA-256 `4dabb6dc463a740846eca72b239e875689bfdd07e390b06e34d82f63cfcbabb5`。Blender 5.1.1 私有 profile 完成安装、冷启动、重复 reload、CBQ 导入导出、纯 Mesh 编辑／Apply、结构／表面／体积 View、保存重开、源移走和三个 `.blend` 资产检查；独立冷启动中 `find_spec("rdkit")` 与 `find_spec("gemmi")` 均为 `None`，Bundled NumPy 可用。全量回归 2525 项通过（37 skips）。最终精确发行物预算与截图 SOP 留给 L8。
+L7 正式无 wheel 扩展已 **Passed**：manifest、依赖清单、staging 与 CI 已一致移除 RDKit、Gemmi 和其他科学 wheel。Blender 5.1.1 私有 profile 完成安装、冷启动、重复 reload、CBQ 导入导出、纯 Mesh 编辑／Apply、结构／表面／体积 View、保存重开、源移走和三个 `.blend` 资产检查；独立冷启动中 `find_spec("rdkit")` 与 `find_spec("gemmi")` 均为 `None`，Bundled NumPy 可用。L8 最终精确 ZIP 为 2,830,321 bytes、109 members、SHA-256 `9ea6adcb84ff8c3e576652d9c140d111d9d509039e5da40d57a5bd404ed06708`；artifact 各区增长均为 0，最终 2526 项回归全部通过（37 skips），逐物理量证据见验证报告。
 
 ## 交付、SOP 与错误恢复
 

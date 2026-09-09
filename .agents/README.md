@@ -16,7 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
-| active | [physical-quantity-visualization-sop.md](active/physical-quantity-visualization-sop.md) | Shared CBQ migration, local editing and one executable for external processing; RDKit removal gated by equivalence and performance |
+| completed | [physical-quantity-visualization-sop.md](completed/physical-quantity-visualization-sop.md) | Shared CBQ migration, retained local editing, unified external processor, wheel removal and full delivery qualification |
 | decision | [0044-cbq-viewer-local-processor-boundary.md](decisions/0044-cbq-viewer-local-processor-boundary.md) | Local editing, shared CBQ/Worker and conditional RDKit removal |
 | completed | [quantum-visualization-workbench.md](completed/quantum-visualization-workbench.md) | First-release scientific visualization workflow, real example and local qualification |
 | completed | [quantum-input-units-experience-review.md](completed/quantum-input-units-experience-review.md) | Unit repair, UI/MCP experience review and verified actual-user installation recovery |
