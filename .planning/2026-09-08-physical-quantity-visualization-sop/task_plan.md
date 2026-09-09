@@ -36,7 +36,7 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - [x] C2 当前迁移收尾：共享核心、解析/Worker 外置、调用与测试迁移、纯 Mesh/旧按钮保留审计、架构指南；旧 View 显式恢复、失败回滚和保存重开通过，full20 全绿并形成干净逻辑提交。
 - [x] C3 CBQ 1.1 收尾：数值对称、旧包完整性、升级、事务导入及链接；C3专项101项和包含该实现的full20全部Passed，未重复新增已有能力。
 - [x] C4 外部包基线：uv init/venv/lock及7个已有CLI命令、薄Tk GUI、真实格式对照、wheel/sdist验证。0.1.0发行物内容、RECORD、入口点及隔离安装运行审计通过。
-- [ ] L1 统一入口：迁移共享 Worker v1，补 capabilities --json、worker REQUEST RESULT --cancel-file CANCEL、doctor和环境路由。
+- [x] L1 统一入口：迁移共享 Worker v1，补 capabilities --json、worker REQUEST RESULT --cancel-file CANCEL、doctor和环境路由。
 - [ ] L2 Blender 接入：单一全局路径、公共异步任务控制器、进度/取消、节流即时预览；本地操作不依赖处理程序。
 - [ ] L3 现有重计算：wavefunction、Fermi、scientific reader经统一入口工作。
 - [ ] L4 RDKit：SMILES 3D/AddHs/Kekulé/MMFF/UFF/势能/导出，保留纯编辑与静态显示；Mesh→CBQ→新结果闭环。
@@ -52,9 +52,10 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - 136模块已迁移，42共享模块独立import不加载bpy/rdkit/gemmi/prepare。CBQ1.1专项110项中109Passed/1skip；项目服务/外部导出/worker-client 79项Passed；事务CBQ导入4项Passed。
 - CLI报告真实XYZ/FCHK、多dataset Cube/CIF及13格式导出通过；Tk窗口调用CLI通过。不能替代统一exe、前台Blender响应、编辑或RDKit等价验证。
 - 候选 .blend-analysis/cbq-viewer-ui-smoke-03/qualification.json：Blender5.1.1基础注册/重载/结构/等值面/体积/移走输入/保存重开/删除VDB重建/Save As Passed；ZIP 2,792,828bytes、104members、0wheels。只代表候选范围，未获得正式移除RDKit资格。
-- 新增L1-L8控制器、操作和专项门槛为 Not Run。C2 收尾后的 full20：2498项、0 failures/0 errors/36 skips、105.761秒，Passed；日志为`.blend-analysis/2026-09-08-cbq-architecture-consolidation/migration-full-20.log`。完整科学实例、正式打包与SOP仍由后续阶段承担，不将C2成功扩大为整份计划完成。
+- 新增L2-L8控制器、操作和专项门槛为 Not Run。C2 收尾后的 full20：2498项、0 failures/0 errors/36 skips、105.761秒，Passed；日志为`.blend-analysis/2026-09-08-cbq-architecture-consolidation/migration-full-20.log`。完整科学实例、正式打包与SOP仍由后续阶段承担，不将C2成功扩大为整份计划完成。
 - legacy 当前链路已用3个哈希锁定fixture完成外部导出、整包导入、注入失败回滚、View恢复、evaluated mesh可见性、保存重开和Project Connected检查；原始报告不自动应用于数值对称升级包。
 - C4发行物验证Passed：wheel 545,234 bytes、SHA256 `40d0be4d8e6f5cfb7766ad16bae717da10d4910f943b2a0280598140094ff8f8`；sdist 888,508 bytes、SHA256 `d310624439a338fc230af8064615c140727b5aee7f401e9cb5ecf291fa40e992`。隔离`--no-deps`安装后从安装目录加载共享核心、CLI和GUI，入口点及`formats --json`的22 readers/13 operations通过。
+- L1统一入口验证Passed：新增独立版本化`capabilities --json`、严格Worker v1文件入口、无安装副作用的`doctor`和固定环境路由；未配置专用环境明确返回unavailable，不回退主Python。相关合同回归121项Passed/1 optional skip；最终wheel/sdist构建、CRC及`runtime.py`内容、隔离安装launcher、三套真实环境22 readers/13 operations和跨环境worker均通过。critic2为WSL ELF，Windows原生doctor如实保持warning，留待L5执行路由处理。
 - 每阶段先窄测试，再必要的全量/原生/实际UI验证；Passed、Failed、Not Run分别记录。git diff --check与文档链接验证必须通过。
 
 ## Legacy quantity evidence

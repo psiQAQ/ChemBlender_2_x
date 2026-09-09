@@ -6,6 +6,26 @@ From this repository, use `uv sync --frozen --extra formats`, then `uv run --fro
 
 Run `uv run --frozen chemblender-prepare --help` for CLI commands, or `uv run --frozen chemblender-prepare-gui` for the Tkinter interface. Tk must be available in the chosen Python installation. Preparation runs outside Blender; the Extension does not install these dependencies.
 
+### Unified processor entrypoint
+
+`chemblender-prepare capabilities --json` emits the versioned processor capability document directly. It reports Worker Protocol v1 operations, all 22 readers, selected environments, actual installed backend versions, availability and explicit missing reasons. `chemblender-prepare worker REQUEST RESULT --cancel-file CANCEL` runs the existing strict file protocol; `chemblender-prepare doctor` checks the processor Python, routed environments, dependencies, task-directory writes and critic2 without installing anything.
+
+Environment routes stay outside Blender and CBQ. Put `chemblender-prepare.json` beside the CLI executable, or set `CHEMBLENDER_PREPARE_CONFIG` to its absolute path:
+
+```json
+{
+  "schema_version": "1",
+  "python": {
+    "wavefunction": "C:\\path\\to\\gbasis-env\\Scripts\\python.exe",
+    "scientific": "C:\\path\\to\\scientific-env\\Scripts\\python.exe",
+    "fermi": "C:\\path\\to\\fermi-env\\Scripts\\python.exe"
+  },
+  "critic2": "C:\\path\\to\\critic2.exe"
+}
+```
+
+All paths are absolute. Wavefunction operations and the IOData reader use `wavefunction`; ASE, cclib, pymatgen and phonopy readers use `scientific`; Fermi-surface work uses `fermi`. Other operations use the processor environment. Missing routes fall back to that environment and are reported truthfully by `capabilities` and `doctor`; neither command installs or modifies a dependency.
+
 This source tree is prepared for a future independent PyPI distribution. No PyPI publication has been performed.
 
 Cube export requires an explicit `--dataset-index` for a grid containing multiple datasets. The GUI leaves this field blank until selected; preview and export both reject an unset selection. A scalar grid can be exported without the option. Conversion with `--preset` and `--unit` also requires an explicit `--dataset-index` for multiple datasets. Blank GUI selection does not select dataset zero. A single dataset uses index zero when omitted; conversion without interpretation retains the original multi-dataset grid.

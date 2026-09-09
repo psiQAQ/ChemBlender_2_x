@@ -256,3 +256,6 @@ POSCAR旧产品流8项已迁外部CLI/GUI真实入口，保留4项Prepared View�
 
 
 2026-09-09：获得明确授权后，`uv build`的隔离构建、归档内容审计和本地wheel `--no-deps`隔离安装均通过，且未改变项目环境、lock或依赖声明。实际安装后的模块路径、console scripts和22-reader能力输出证明C4交付物可运行；因此无需为构建验收增加自定义构建脚本或新依赖，C4可关闭。
+
+
+2026-09-09：L1环境路由必须fail closed。专用wavefunction/scientific/fermi路径缺失时不能借当前Python继续探测或执行，否则当前环境偶然安装的包会造成虚假能力声明并破坏可复现实验；现统一以`not configured`能力原因和`environment_unavailable`WorkerResult拒绝。固定路由表、metadata探测、共享Worker v1和现有registry足够，无需插件发现、动态import或第二套协议。真实三环境使全部22 readers可用；Windows不能直接执行现有WSL critic2 ELF属于L5工具路由问题，L1 doctor保留warning比伪造可用更安全。

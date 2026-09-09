@@ -62,6 +62,8 @@ chemblender-prepare doctor
 
 `doctor` 只诊断可执行文件、依赖、环境路由、任务目录权限和 critic2 可运行性，提供面向用户的修复说明，不自动安装。工具自身管理已批准的科学环境、Fermi 环境及 critic2 路径，保留 GBasis 与 NumPy 版本隔离；Blender 不再存储 `worker_python`、`worker_repository`、`fermi_python`。
 
+路由配置使用版本化的 `chemblender-prepare.json`，放在CLI可执行文件旁，或由外部工具环境变量`CHEMBLENDER_PREPARE_CONFIG`指向。文件只接受三个绝对Python路径`wavefunction`、`scientific`、`fermi`和一个可选critic2绝对路径；不写入`.blend`或CBQ。统一`worker`读取请求后按固定operation/reader白名单选择环境，再直接调用同一runner；请求不能指定Python、模块或callable。未配置的路由回退到处理程序自身环境，实际缺失依赖必须在capability和doctor中报告为不可用。
+
 独立包继续采用当前仓库的 `pyproject.toml`、`uv.lock`、`.venv`，构建 wheel／sdist并进行安装测试，为后续 PyPI 发布准备；本次不发布。轻量 Tkinter GUI 通过 CLI 子进程工作，不包含第二份算法。
 
 ## 共享模型与 Worker 协议

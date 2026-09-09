@@ -676,6 +676,15 @@ def build_parser():
     common.add_argument("--cancel-file", type=Path, help="Creating this file requests cancellation")
     common.add_argument("--result-file", type=Path, help="Also write WorkerResult to this file")
     commands = parser.add_subparsers(dest="command", required=True)
+    command = commands.add_parser("capabilities", help="Report live processor capabilities")
+    command.add_argument("--json", action="store_true")
+    command = commands.add_parser("worker", help="Run one Worker Protocol v1 request")
+    command.add_argument("request", type=Path)
+    command.add_argument("result", type=Path)
+    command.add_argument("--cancel-file", type=Path)
+    command = commands.add_parser("doctor", help="Diagnose local processor routing")
+    command.add_argument("--json", action="store_true")
+    command.add_argument("--task-directory", type=Path)
     commands.add_parser("formats", parents=[common], help="List actual reader capabilities and availability")
     for name in ("inspect", "validate", "upgrade", "export", "derive"):
         command = commands.add_parser(name, parents=[common])
@@ -725,6 +734,28 @@ def build_parser():
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    if args.command in {"capabilities", "doctor", "worker"}:
+        from .runtime import (
+            capability_document,
+            doctor_document,
+            load_configuration,
+            run_worker,
+        )
+        try:
+            configuration = load_configuration()
+            if args.command == "worker":
+                result = run_worker(args.request, args.result, args.cancel_file,
+                                    configuration)
+                return 0 if result.status is WorkerStatus.SUCCESS else 1
+            document = (capability_document(configuration)
+                        if args.command == "capabilities"
+                        else doctor_document(configuration, args.task_directory))
+            print(json.dumps(document, ensure_ascii=False, allow_nan=False,
+                             indent=None if args.json else 2))
+            return 0 if document.get("status") != "failed" else 1
+        except (OSError, ValueError) as error:
+            print(str(error), file=sys.stderr)
+            return 2
     request_id = uuid4()
     temporary = None
     try:

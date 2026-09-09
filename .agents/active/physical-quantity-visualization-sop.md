@@ -53,3 +53,5 @@
 2026-09-09：C4预构建证据提交为`ab45b8b`。连续第三个目标回合复核仍无hatchling/build及当前发行物，因缺少隔离构建依赖获取的用户明确授权，目标状态blocked。恢复入口固定为C4 `uv build`、wheel/sdist内容与隔离安装验收；C2/C3已完成，不得回退或越过C4接L1。
 
 2026-09-09：用户已授权并成功运行`uv build`。0.1.0 wheel/sdist通过归档安全、RECORD/元数据/入口点、受控源码完整性审计；本地wheel `--no-deps`隔离安装后，模块来源、launcher及22 readers/13 operations实际输出均通过。未改变环境、lock或依赖文件，C4关闭；下一阶段为L1统一Worker入口。
+
+2026-09-09：L1统一入口已完成。新增版本化`capabilities --json`、共享Worker v1文件入口、无副作用`doctor`和固定外部环境路由；缺少专用路由明确fail closed，不回退主Python。相关121项Passed/1 optional skip，最终wheel/sdist离线构建、CRC/内容、隔离安装launcher和三套真实环境探测通过；22 readers/13 operations均可用，跨GBasis worker返回预期协议错误。critic2为WSL ELF，Windows doctor如实warning，留待L5处理。未改变依赖/lock；下一阶段严格进入L2 Blender异步控制器。
