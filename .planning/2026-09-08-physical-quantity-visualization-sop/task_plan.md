@@ -224,3 +224,5 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 
 
 2026-09-09：迁移Quick Import两项构象预计算契约：旧_PreflightJob后台预计算由CLI inspect生成候选、Tk纯复核及显式异步derive替代。增强test_sdf_inspection_cancel_and_changed_source_discard_staging，实际触碰cancel marker前后检查传入候选函数的is_cancelled回调，验证cancelled结果与暂存目录清理；既有真实Tk选择/复核/子进程derive/CBQ重开测试复跑通过。删除旧preflight_job_precomputes_conformer_suggestions_off_main_thread与preflight_job_cancels_conformer_precompute两项，其他旧任务契约保留。CLI39项38 Passed/1 skipped，11.039秒；GUI生命周期13 Passed/2.067秒。未重跑全量，full16仍最新Failed，C2未提交。
+
+2026-09-10：本计划的 C2-L8 复核以 `progress.md` 的最终资格记录和 `d8f0306` 稳定提交为准，保持全部完成。对外发布可用性、Standard `uv tool`、双语新插件 SOP 与 2.5.0 本机实装由后继计划 `../2026-09-10-2.5.0-public-delivery/task_plan.md` 承接。

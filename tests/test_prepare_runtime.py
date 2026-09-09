@@ -15,6 +15,7 @@ from uuid import uuid4
 from cbq_core.model import QCProject
 from cbq_core.sidecar import save_project
 from cbq_core.worker_protocol import (
+    WorkerError,
     WorkerRequest,
     WorkerResult,
     WorkerStatus,
@@ -163,7 +164,12 @@ class PrepareRuntimeTests(unittest.TestCase):
         configuration = {"schema_version": "1", "python": {
             "wavefunction": str(executable)}, "critic2": None}
 
-        def routed(_command, **_kwargs):
+        def routed(command, **_kwargs):
+            self.assertEqual(command, [
+                str(executable), "-I", "-m",
+                "chemblender_prepare.worker.runner",
+                str(request_path), str(result_path),
+            ])
             write_result(result_path, WorkerResult(uuid4(), WorkerStatus.SUCCESS))
             return SimpleNamespace(returncode=0)
 
@@ -173,6 +179,30 @@ class PrepareRuntimeTests(unittest.TestCase):
         self.assertIs(result.status, WorkerStatus.ERROR)
         self.assertEqual(result.error.code, "result_identity_mismatch")
         self.assertEqual(read_result(result_path), result)
+
+    def test_routed_worker_does_not_inject_the_current_site_packages(self):
+        request_path, request = self.request("wavefunction.mo_grid")
+        result_path = self.root / "isolated-result.json"
+        executable = self.root / "route" / "python.exe"
+        executable.parent.mkdir()
+        executable.touch()
+        configuration = {"schema_version": "1", "python": {
+            "wavefunction": str(executable)}, "critic2": None}
+
+        def routed(command, **_kwargs):
+            self.assertNotIn("sys.path.insert", " ".join(command))
+            self.assertNotIn(str(Path(__file__).resolve().parents[1]), command)
+            write_result(result_path, WorkerResult(
+                request.request_id, WorkerStatus.ERROR,
+                error=WorkerError("operation_failed", "test route"),
+            ))
+            return SimpleNamespace(returncode=1)
+
+        with patch("chemblender_prepare.runtime.subprocess.run", side_effect=routed):
+            result = run_worker(request_path, result_path,
+                                configuration=configuration)
+        self.assertEqual(result.request_id, request.request_id)
+        self.assertEqual(result.error.code, "operation_failed")
 
     def test_doctor_checks_routes_task_directory_and_critic2_without_installing(self):
         probe = {"available": True, "python_version": "3.12.13",

@@ -445,12 +445,8 @@ def run_worker(request_path, result_path, cancel_path=None, configuration=None):
         )
         write_result(result_path, result)
         return result
-    source_root = Path(__file__).resolve().parents[1]
-    script = (
-        "import runpy,sys; sys.path.insert(0,sys.argv.pop(1)); "
-        "runpy.run_module('chemblender_prepare.worker.runner',run_name='__main__')"
-    )
-    command = [str(executable), "-I", "-c", script, str(source_root),
+    command = [str(executable), "-I", "-m",
+               "chemblender_prepare.worker.runner",
                str(request_path), str(result_path)]
     if cancel_path is not None:
         command.extend(("--cancel-file", str(cancel_path)))
