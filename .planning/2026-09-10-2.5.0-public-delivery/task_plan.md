@@ -37,3 +37,5 @@
 2026-09-10：P0 关闭。routed worker 只通过目标环境的 `python -I -m chemblender_prepare.worker.runner` 运行；gbasis/scientific/fermi 均安装同版本 prepare wheel 且保留各自 NumPy。runtime 专项 6 项、processor operation 全组 9 项均 Passed。
 
 2026-09-10：Standard/诊断阶段关闭。当次 wheel 在全新 uv-tool/Python 3.12 环境安装 NumPy 2.5.3、RDKit 2026.3.3、Gemmi 0.7.5；两个 launcher 的 PE subsystem 分别为 console 3 与 GUI 2。安装、强制重装、卸载、help、capabilities、doctor 和隔离包路径均 Passed。prepare/runtime/controller 51 项 Passed/1 skip，构建 wheel/sdist Passed；PyPI 来源因未发布而 Not Run。
+
+2026-09-10：双语文档源码与离线生成器完成。README、用户、prepare CLI/GUI、Worker Protocol、Reader API、专业 route、项目生命周期、恢复与发布状态均提供中英入口；2.4 工作流和 2026-09-09 scientific SOP 标记为历史资格证据并保留稳定 URL。公开清单由 parser/registry 生成，固定 10 CLI、9 GUI、21 operation、22 reader、13 export；文档专项 82 项 Passed。中英离线 HTML 经 Edge headless 1440x1000 实际加载截图 Passed。该阶段仍待 2.5.0 私有实例截图回填后关闭。

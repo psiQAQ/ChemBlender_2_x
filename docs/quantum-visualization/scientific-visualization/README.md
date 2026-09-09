@@ -1,5 +1,7 @@
 # 科学量可视化操作手册
 
+> **归档资格证据。** 本页冻结在 2026-09-09，不再作为 ChemBlender 2.5 日常教程，也不会替换为新 UI 截图。当前教程见[中文 2.5 SOP](../../user/zh-CN/blender-workflow.md)或 [English 2.5 SOP](../../user/en/blender-workflow.md)。
+
 **最终验收稿 · 2026-09-09。** 本手册按 CBQ Viewer 与单一本地处理程序说明真实文件准备、科学量选择、表示和出图，包含 11 张实际 Blender 窗口截图。水、CH₃ 和 N 原子的 22 张 Research / Teaching 图片、PQR/rMD17 的 6 张静图、128 帧 PNG、4 段 MP4 与 5 个可重开工作台均已保留。统一处理程序还以真实 FCHK、VASP、WFX 和 phonopy 输入完成 wavefunction、Fermi、QTAIM、NCI 与 phonon 操作；各量的五层证据边界见[最终验收矩阵](#verification)。
 
 可离线打开同目录 [index.html](index.html)。网页及图片需连同仓库相对目录一起保存；不用 CDN，不需要网络脚本。

@@ -14,3 +14,7 @@
 - 全新临时 uv-tool/Python 3.12 从当次 wheel `[formats]` 安装成功；两个 launcher、help、capabilities、doctor、实际依赖路径、强制重装和卸载均 Passed。GUI launcher PE subsystem=2，无控制台窗口；CLI subsystem=3。
 - prepare/runtime/controller 51 项 Passed、1 项有原因 skip；`uv build --no-cache` wheel/sdist Passed。PyPI 来源尚未发布，Not Run。
 - 下一步：旧 SOP 版本化归档与中英双语 2.5 日常教程、离线 HTML。
+- 建立 README、`docs/user/{en,zh-CN}`、`docs/prepare/{en,zh-CN}` 与自包含离线 HTML；旧 2.4 工作流保留稳定 URL 并明确归档，2026-09-09 scientific SOP 冻结为资格证据。
+- 公开接口清单从 CLI parser、GUI command、Worker registry 和 Reader catalog 生成：10 CLI、9 GUI、21 operation、22 reader、13 export，Reader API `1.0-rc1`。
+- 文档专项 82 项 Passed；Edge headless 以 1440x1000 分别加载中英离线 HTML 并生成截图，均 Passed。
+- 下一步：2.5.0 构建、私有 Blender 实装并从新实例采集当前 UI 截图；完成后再关闭文档阶段。

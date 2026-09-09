@@ -1,5 +1,7 @@
 # Quick Import
 
+> Archived 2.4 workflow. ChemBlender 2.5 accepts prepared CBQ through the current [English SOP](en/blender-workflow.md) or [中文 SOP](zh-CN/blender-workflow.md). This page remains only for old inbound links and historical UI evidence.
+
 Quick Import is the common entry point for ChemBlender's built-in readers. It
 stages input first; it does not write scientific entities into the project
 until you confirm Import Preview. Use it for a single file, multiple files or

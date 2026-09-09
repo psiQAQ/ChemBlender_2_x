@@ -1,0 +1,148 @@
+<!doctype html><html lang="zh-CN"><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>ChemBlender 2.5 离线指南</title><style>:root{color-scheme:light dark}body{font:16px/1.6 system-ui;margin:0}header,main{max-width:1080px;margin:auto;padding:24px}header{background:#17324d;color:white}nav{display:flex;gap:8px;flex-wrap:wrap}nav a{color:#bde3ff}article{padding:24px 0;border-bottom:1px solid #8885}.path{font:13px monospace;opacity:.7}code,pre{font-family:ui-monospace,monospace}pre{padding:12px;overflow:auto;background:#8882}pre.table{margin:0;padding:2px 8px}small{opacity:.7}</style><body><header><h1>ChemBlender 2.5 离线指南</h1><p>Self-contained / 无远程资源</p><nav><a href="#document-0">README.zh-CN.md</a><a href="#document-1">docs/user/zh-CN/index.md</a><a href="#document-2">docs/user/zh-CN/installation.md</a><a href="#document-3">docs/user/zh-CN/blender-workflow.md</a><a href="#document-4">docs/user/zh-CN/capabilities-and-projects.md</a><a href="#document-5">docs/user/zh-CN/troubleshooting.md</a><a href="#document-6">docs/user/zh-CN/release-status.md</a><a href="#document-7">docs/prepare/zh-CN/index.md</a><a href="#document-8">docs/prepare/zh-CN/cli-and-gui.md</a><a href="#document-9">docs/prepare/zh-CN/protocol-and-reader-api.md</a><a href="#document-10">docs/prepare/zh-CN/advanced-routes.md</a></nav></header><main><article id="document-0"><div class=path>README.zh-CN.md</div><h2>ChemBlender</h2>
+<p>English <small>(README.md)</small></p>
+<p>ChemBlender 2.5 是面向 Blender 5.1+ 的 CBQ 科学项目 Viewer。原始文件解析和科学重计算由独立的 <code>chemblender-prepare</code> 完成；Blender 只负责编辑、View、动画、缓存、Cycles 渲染和项目重开，不承载科学 Python 依赖。</p>
+<h3>双组件</h3>
+<pre class=table>| 组件 | 版本 | 职责 |</pre>
+<pre class=table>| --- | --- | --- |</pre>
+<pre class=table>| ChemBlender Extension | 2.5.0 | CBQ 导入导出、纯 Mesh 编辑与 Apply、View、动画、项目生命周期和渲染 |</pre>
+<pre class=table>| chemblender-prepare | 0.1.0 | CLI/GUI 转换、校验、派生、导出、诊断和 Worker Protocol v1 |</pre>
+<p>Extension ZIP 不包含 RDKit、Gemmi 或其他科学 wheel。Standard prepare 把 NumPy、RDKit、Gemmi 安装在独立的 Python 3.12 <code>uv tool</code> 环境中。波函数、scientific、Fermi、critic2、QCEngine 和在线 provider 在未配置时会明确显示 unavailable。</p>
+<h3>安装</h3>
+<ol>
+<li>在 Blender 的 **Preferences &gt; Get Extensions &gt; Install from Disk** 安装 <code>chemblender-2.5.0.zip</code>。</li>
+<li>从发布 wheel 安装 Standard prepare：</li>
+</ol>
+<pre><code>uv tool install --python 3.12 &quot;D:\Downloads\chemblender_prepare-0.1.0-py3-none-any.whl[formats]&quot;
+uv tool dir --bin</code></pre>
+<ol>
+<li>把 <code>chemblender-prepare.exe</code> 的绝对路径填入 ChemBlender preferences，点击 **Test Processor**。</li>
+</ol>
+<p>未来 PyPI 命令为 <code>uv tool install --python 3.12 &quot;chemblender-prepare[formats]&quot;</code>；正式发布前 PyPI 上还没有 0.1.0。</p>
+<h3>从这里开始</h3>
+<ul>
+<li>中文用户指南 <small>(docs/user/zh-CN/index.md)</small></li>
+<li>中文 prepare CLI/GUI/API 指南 <small>(docs/prepare/zh-CN/index.md)</small></li>
+<li>English user guide <small>(docs/user/en/index.md)</small></li>
+<li>English prepare guide <small>(docs/prepare/en/index.md)</small></li>
+<li>源码生成的公开能力清单 <small>(docs/prepare/public-surface.json)</small></li>
+<li>版本记录 <small>(CHANGELOG.md)</small></li>
+</ul>
+<p>CBQ 是唯一科学数据交换边界。保存后应让 <code>project.blend</code> 与 <code>project.cbq/</code> 始终相邻。移动或删除 processor 不会删除已经入库的科学实体和可重建的 Blender View。</p>
+<p>项目网站：https://www.chemblender.com</p></article><article id="document-1"><div class=path>docs/user/zh-CN/index.md</div><h2>ChemBlender 2.5 用户指南</h2>
+<p>English <small>(../en/index.md)</small></p>
+<p>ChemBlender 是 CBQ Viewer。原始化学与模拟文件先在 Blender 外由 prepare 转为经过校验的 CBQ，再交给 Viewer。processor 或原始文件移走后，已保存项目仍可编辑、显示、动画和渲染。</p>
+<h3>指南</h3>
+<ul>
+<li>安装、更新与卸载 <small>(installation.md)</small></li>
+<li>Blender 完整联动 SOP <small>(blender-workflow.md)</small></li>
+<li>能力与项目生命周期 <small>(capabilities-and-projects.md)</small></li>
+<li>错误与恢复 <small>(troubleshooting.md)</small></li>
+<li>发布状态与已知限制 <small>(release-status.md)</small></li>
+</ul>
+<p>固定顺序：安装 Standard prepare → 定位 executable → 配置 Blender → Test Processor → CLI/GUI 生成 CBQ → 导入/编辑/Apply → 外部 operation → View/Cycles → 保存/移动/冷重开 → 取消与故障恢复。</p></article><article id="document-2"><div class=path>docs/user/zh-CN/installation.md</div><h2>安装、更新与卸载</h2>
+<h3>要求</h3>
+<ul>
+<li>Windows x64、Blender 5.1.0 或更高版本、<code>uv</code>。</li>
+<li>同一发布中的 <code>chemblender-2.5.0.zip</code> 和 <code>chemblender_prepare-0.1.0-py3-none-any.whl</code>。</li>
+</ul>
+<h3>安装 Standard prepare</h3>
+<pre><code>uv tool install --python 3.12 &quot;D:\Downloads\chemblender_prepare-0.1.0-py3-none-any.whl[formats]&quot;
+$bin = uv tool dir --bin
+Join-Path $bin &#x27;chemblender-prepare.exe&#x27;</code></pre>
+<p><code>uv tool</code> 会创建隔离环境和小型 launcher，不是单文件应用。Standard 安装 NumPy、RDKit、Gemmi；不要把这些包装进 Blender Python。</p>
+<p>0.1.0 发布到 PyPI 后，可把 wheel 路径换成 <code>&quot;chemblender-prepare[formats]&quot;</code>。</p>
+<h3>安装 Extension</h3>
+<p>打开 Blender **Preferences &gt; Get Extensions**，选择 **Install from Disk**，安装 <code>chemblender-2.5.0.zip</code> 并启用 ChemBlender。把 CLI launcher 的绝对路径填入 **Processor Executable**，点击 **Test Processor**。启用键为 <code>bl_ext.user_default.chemblender</code>。</p>
+<h3>更新或重装</h3>
+<pre><code>uv tool upgrade chemblender-prepare
+uv tool install --python 3.12 &quot;D:\Downloads\chemblender_prepare-0.1.0-py3-none-any.whl[formats]&quot; --force</code></pre>
+<p>保存并退出 Blender 后再安装新版 Extension ZIP。任一组件变化后都重新运行 **Test Processor**。</p>
+<h3>卸载</h3>
+<p>先在 Blender 禁用并卸载 Extension，再运行：</p>
+<pre><code>uv tool uninstall chemblender-prepare</code></pre>
+<p>卸载组件不会删除已有 <code>.blend</code>/<code>.cbq</code> 项目。</p></article><article id="document-3"><div class=path>docs/user/zh-CN/blender-workflow.md</div><h2>Blender 完整联动 SOP</h2>
+<ol>
+<li>运行 <code>chemblender-prepare doctor --json</code>；Standard 必需项必须 Passed。未配置可选后端时出现 warning 是正常结果。</li>
+<li>用 <code>uv tool dir --bin</code> 定位 launcher，在 Blender 填入 <code>chemblender-prepare.exe</code> 绝对路径并运行 **Test Processor**。确认 processor <code>0.1.0</code>、协议 <code>1</code>、Standard complete 和 operation/reader 数量。</li>
+<li>用 CLI 或 GUI 检查原始文件并生成新的 <code>.cbq</code> 目录。GUI 的 **derive** 保留 operation ID 与 JSON 参数，属于专家入口。</li>
+<li>在 ChemBlender 中 Preview 并导入 CBQ，在 Project Browser 选择科学实体。</li>
+<li>修改几何时编辑生成的 Mesh，再执行 **Apply** 创建新 derived Structure；imported Structure 与旧 View 不被覆盖。</li>
+<li>运行支持的外部 operation。modal 任务应显示进度、支持 Cancel、校验 project revision/hash，并追加新结果而不是替换旧结果。</li>
+<li>仅在实体能力允许时创建 Structure、Surface、Volume、trajectory、spectrum 等 View；配置 Cycles 并从 View 渲染。</li>
+<li>让 <code>project.blend</code> 与 <code>project.cbq/</code> 相邻保存。Save As 或移动时两者一起移动，冷重开后复核链接、实体、View 与 hash。</li>
+<li>删除 derived render cache 后从 CBQ 本地重建。移动 processor 或源文件不应破坏已有编辑、View、动画和渲染。</li>
+<li>测试取消和无效 processor 路径；恢复 launcher 路径，重新 **Test Processor**，再显式重试。</li>
+</ol>
+<p>Blender 只暴露高频 Viewer 操作。转换或专业计算类 operation 留在 CLI/Worker；没有面板按钮不等于功能缺失。</p></article><article id="document-4"><div class=path>docs/user/zh-CN/capabilities-and-projects.md</div><h2>能力与项目生命周期</h2>
+<p>Standard processor 提供核心 CBQ 操作、22 个注册 reader（按声明依赖决定可用性）和 13 种公开导出格式。精确清单见源码生成的 public-surface.json <small>(../../prepare/public-surface.json)</small> 与 format-capabilities.json <small>(../format-capabilities.json)</small>。</p>
+<p><code>capabilities</code> 是当前机器的实时事实源。<code>doctor</code> 在 Standard NumPy/RDKit/Gemmi 不完整时失败，并对未配置的专业 route、critic2、QCEngine/provider operation 或 reader 给出具体 warning。</p>
+<p>保存后的项目由两部分组成：</p>
+<ul>
+<li><code>project.blend</code>：Scene、Blender View、呈现状态和 project link。</li>
+<li><code>project.cbq/</code>：权威科学实体、provenance、revision、数组和可重建缓存。</li>
+</ul>
+<p>两者必须一起移动。导入与外部 operation 追加带 provenance 的实体；Mesh Apply 创建 derived Structure，不改写 imported 坐标。View 的外观变化不会自动变成科学数据。</p></article><article id="document-5"><div class=path>docs/user/zh-CN/troubleshooting.md</div><h2>错误与恢复</h2>
+<pre class=table>| 现象 | 检查 | 恢复 |</pre>
+<pre class=table>| --- | --- | --- |</pre>
+<pre class=table>| Test Processor 无法启动 | 绝对路径及文件是否存在 | 运行 `uv tool dir --bin`，填入 CLI `.exe` 后重试 |</pre>
+<pre class=table>| Standard 不完整 | `chemblender-prepare doctor --json` | 在 Python 3.12 中强制重装带 `[formats]` 的 wheel |</pre>
+<pre class=table>| 可选 operation unavailable | `capabilities` 的原因和环境 | 只配置文档指定的 route/backend，不修改 Blender Python |</pre>
+<pre class=table>| 移动后项目链接缺失 | `.blend` 与 `.cbq/` 位置 | 将两者放回一起或 Relink，再 Verify |</pre>
+<pre class=table>| revision/hash 过期 | 任务开始后输入是否变化 | 检查当前项目并新建显式 operation |</pre>
+<pre class=table>| 取消仍在等待 | 等待当前计算块结束 | 持有者两秒后只能终止自己的任务；复用输出前先校验 |</pre>
+<pre class=table>| 缓存丢失 | CBQ 实体是否仍通过校验 | 本地 Rebuild View/cache |</pre>
+<p>不要复用半成品、手改 <code>manifest.json</code>、向 route 注入仓库路径，也不要向 Blender 自带 Python 安装包。</p></article><article id="document-6"><div class=path>docs/user/zh-CN/release-status.md</div><h2>发布状态与已知限制</h2>
+<p>本文档面向本地 2.5.0 发布候选。此前公开 Extension 为 2.4.0；未经发布授权前，PyPI 上没有 <code>chemblender-prepare 0.1.0</code>。本地制品存在不代表远端已经发布。</p>
+<p>兼容组合固定为 Extension 2.5.0、Worker 0.1.0、Worker Protocol 1、Reader API <code>1.0-rc1</code>。</p>
+<p>已知限制：</p>
+<ul>
+<li>Standard 不自动安装 wavefunction、scientific、Fermi、critic2、QCEngine 或在线 provider 后端。</li>
+<li>没有真实 provider/compute backend 时，provider fetch 与 QCSchema compute 明确 unavailable。</li>
+<li>Blender 不为每个 Worker operation 提供面板按钮。</li>
+<li>只移动 <code>.blend</code>/<code>.cbq</code> 中一半时需要 Relink。</li>
+<li><code>chemblender_prepare.core.*</code> 与 GUI helper 是内部实现，不是稳定 Python SDK。</li>
+</ul>
+<p>旧 UI 证据见 2.4 archive <small>(../../archive/2.4.0/README.md)</small>，不要继续把它当成 2.5 日常教程。</p></article><article id="document-7"><div class=path>docs/prepare/zh-CN/index.md</div><h2>chemblender-prepare 0.1.0</h2>
+<p>English <small>(../en/index.md)</small></p>
+<p>外部工具负责原始文件解析、科学派生、导出和诊断。Blender 通过 Worker Protocol v1 调用同一个 executable，不运行 <code>pip</code> 或 <code>uv</code>。</p>
+<ul>
+<li>CLI 与 GUI <small>(cli-and-gui.md)</small></li>
+<li>Worker Protocol 与 Reader API <small>(protocol-and-reader-api.md)</small></li>
+<li>可选 route 配置 <small>(advanced-routes.md)</small></li>
+<li>源码生成的公开能力清单 <small>(../public-surface.json)</small></li>
+</ul>
+<p>公开兼容承诺只有 CLI、Worker Protocol v1、Reader API <code>1.0-rc1</code>。直接导入 <code>core.*</code>、GUI helper 或 worker 实现模块不受支持。</p></article><article id="document-8"><div class=path>docs/prepare/zh-CN/cli-and-gui.md</div><h2>CLI 与 GUI</h2>
+<h3>CLI</h3>
+<pre><code>chemblender-prepare formats --json
+chemblender-prepare capabilities --json
+chemblender-prepare doctor --json
+chemblender-prepare inspect input.cube --json
+chemblender-prepare convert input.cube --preset electron_density --unit electron_per_bohr3 --output result.cbq --json
+chemblender-prepare validate result.cbq --json
+chemblender-prepare upgrade old.cbq --output upgraded.cbq --json
+chemblender-prepare derive result.cbq --operation grid.resolve_semantics --parameters &#x27;{&quot;dataset_id&quot;:&quot;UUID&quot;}&#x27; --output derived.cbq --json
+chemblender-prepare export result.cbq --entity UUID --format cube --preview --output result.cube --json
+chemblender-prepare worker request.json result.json</code></pre>
+<p>精确参数以各命令 <code>--help</code> 为准。目标格式无法表达选中 CBQ 数据时，必须先 preview，再显式确认损失。</p>
+<h3>GUI</h3>
+<p>运行 <code>chemblender-prepare-gui.exe</code>。它是 Windows GUI entry point，不会额外打开控制台。九个入口为 convert、inspect、derive、validate、upgrade、export、formats、capabilities、doctor。</p>
+<p>选择输入文件和全新输出路径。derive 中填写 operation ID，例如 <code>molecule.optimize</code>；参数填写 JSON object，例如 <code>{&quot;force_field&quot;:&quot;MMFF94&quot;}</code>。GUI 不经 shell 启动 CLI，显示进度和结果 JSON，通过文件请求取消；只有两秒内未确认取消时才终止自己持有的进程。</p></article><article id="document-9"><div class=path>docs/prepare/zh-CN/protocol-and-reader-api.md</div><h2>自动化与 Reader 扩展 API</h2>
+<h3>Worker Protocol v1</h3>
+<p>调用 <code>chemblender-prepare worker request.json result.json [--cancel-file PATH]</code>。request 包含 CBQ project、project ID/schema/revision、operation ID/version、inputs、parameters 与 artifacts。worker 原子写进度、检查取消，并发布一个 success/cancelled/error result。Blender 会拒绝身份不匹配、过期 revision、无效 hash 和位于任务目录外的输出。</p>
+<p>规范字段见 local-worker-protocol-v1.md <small>(../../quantum-visualization/specs/local-worker-protocol-v1.md)</small>。request/result 均按不可信输入处理，不要修改正在运行的任务文件。</p>
+<h3>Reader API 1.0-rc1</h3>
+<p>Reader 扩展使用 <code>chemblender_prepare.reader_api</code>、manifest、确定性 discovery、descriptor 和 worker bridge。从 Reader API 总览 <small>(../../reader-api-v1/README.md)</small>、manifest <small>(../../reader-api-v1/manifest.md)</small>、Python API <small>(../../reader-api-v1/python-api.md)</small>、worker bridge <small>(../../reader-api-v1/worker-api.md)</small>、conformance <small>(../../reader-api-v1/conformance.md)</small>开始。</p>
+<p>兼容 token 固定为 <code>1.0-rc1</code>。reader 在声明的环境中运行，不能访问 Blender 内部模块。源码生成的 reader 清单见 public-surface.json <small>(../public-surface.json)</small>。</p></article><article id="document-10"><div class=path>docs/prepare/zh-CN/advanced-routes.md</div><h2>可选后端与 Route</h2>
+<p>Standard 不需要 JSON。高级用户可以把 <code>chemblender-prepare.json</code> 放在 <code>uv tool dir --bin</code> 返回的 CLI launcher 旁边，或设置 <code>CHEMBLENDER_PREPARE_CONFIG</code>。</p>
+<pre><code>{
+  &quot;schema_version&quot;: &quot;1&quot;,
+  &quot;python&quot;: {
+    &quot;wavefunction&quot;: &quot;D:\\envs\\wavefunction\\Scripts\\python.exe&quot;,
+    &quot;scientific&quot;: &quot;D:\\envs\\scientific\\Scripts\\python.exe&quot;,
+    &quot;fermi&quot;: &quot;D:\\envs\\fermi\\Scripts\\python.exe&quot;
+  },
+  &quot;critic2&quot;: &quot;D:\\tools\\critic2.exe&quot;
+}</code></pre>
+<p>每个 route 都必须安装同一 prepare wheel，但不改动该环境已有后端依赖：</p>
+<pre><code>uv pip install --python D:\envs\wavefunction\Scripts\python.exe --no-deps --reinstall D:\Downloads\chemblender_prepare-0.1.0-py3-none-any.whl</code></pre>
+<p>随后只安装并固定需要的后端族：wavefunction 使用 qc-gbasis/qc-iodata，scientific 使用 ASE/cclib/pymatgen/phonopy，Fermi 使用 pyprocar；critic2 使用独立 executable。route 通过 <code>python -I -m chemblender_prepare.worker.runner</code> 运行，禁止注入源码或其他 <code>site-packages</code>。用 <code>capabilities</code> 和 <code>doctor</code> 核对实际 Python、prepare 路径、后端版本和 NumPy。</p></article></main></body></html>

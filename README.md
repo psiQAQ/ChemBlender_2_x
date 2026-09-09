@@ -1,65 +1,47 @@
 # ChemBlender
 
-ChemBlender turns scientific structure and calculation files into inspectable
-Blender projects and views. It is **result-first** and **program-neutral**:
-scientific entities, provenance, revisions and quality states belong to the
-project, while Blender objects are views and rebuildable caches.
+[简体中文](README.zh-CN.md)
 
-## Requirements
+ChemBlender 2.5 is a Blender 5.1+ Viewer for validated CBQ scientific projects. Scientific parsing and recomputation run in the separate `chemblender-prepare` tool; Blender keeps editing, views, animation, caching, Cycles rendering, and project reopening independent of scientific Python packages.
 
-- Windows x64.
-- Blender 5.1 or newer.
-- Install the release ZIP as a Blender Extension; do not copy it into the
-  legacy add-on directory.
+The workflow is result-first and program-neutral on Windows x64 with Blender 5.1. Standard readers cover XYZ/extXYZ, MOL V2000/V3000, SDF, SMILES, CIF, POSCAR/CONTCAR, MOL2, PDB/PQR, Cube, CJSON and QCSchema. Save the `.blend` beside its `.cbq` sidecar and keep them together; optional backends remain explicit external routes.
 
-Viewer release packages contain no scientific wheels and use Blender's bundled
-NumPy. Raw-format parsing and scientific recomputation run through the separately
-installed `chemblender-prepare` executable; moving that processor does not affect
-already imported CBQ data, local Mesh editing, views, caches or rendering. Its
-optional backends remain isolated from Blender and report availability explicitly.
+## Components
 
-## Start with a project
+| Component | Version | Responsibility |
+| --- | --- | --- |
+| ChemBlender Extension | 2.5.0 | CBQ import/export, pure-Mesh editing and Apply, views, animation, project lifecycle and rendering |
+| chemblender-prepare | 0.1.0 | CLI/GUI conversion, validation, derivation, export, diagnostics and Worker Protocol v1 |
 
-1. Use [Quick Import](docs/user/quick-import.md) for a single file, multiple
-   files, SMILES text or drag and drop.
-2. Review reader choice, quality, conflicts, grouping and the proposed default
-   View in Import Preview.
-3. Inspect committed sources, data and views in the
-   [Project Browser](docs/user/project-browser.md).
-4. Save the Blender file to publish its scientific project.
+The Extension ZIP contains no RDKit, Gemmi, or other scientific wheel. The Standard prepare install contains NumPy, RDKit and Gemmi in its own Python 3.12 `uv tool` environment. Optional wavefunction, scientific, Fermi, critic2, QCEngine and provider capabilities report themselves as unavailable until configured.
 
-The ChemBlender 2.4.0 base format scope is XYZ/extXYZ, MOL V2000/V3000, SDF, SMILES, CIF,
-POSCAR/CONTCAR, MOL2, PDB/PQR, Cube, CJSON and QCSchema. Import, export, loss
-and dependency maturity differ by format; see the
-[format guide](docs/user/formats.md) before relying on round-trip behavior.
+## Install
 
-## Keep the project pair together
+1. Install `chemblender-2.5.0.zip` through Blender **Preferences > Get Extensions > Install from Disk**.
+2. Install Standard prepare from a release wheel:
 
-Saving a project uses two paths: `example.blend` for Blender views and
-`example.cbq/` for authoritative scientific data. The `.blend` stores a
-relative link when possible. Back up and move both paths together—**keep them together**—
-or the project can reopen with a missing or mismatched link.
-Recovery and cache safety are covered in the
-[project sidecar guide](docs/user/project-sidecar.md).
+```powershell
+uv tool install --python 3.12 "D:\Downloads\chemblender_prepare-0.1.0-py3-none-any.whl[formats]"
+uv tool dir --bin
+```
 
-Related user guides:
+3. Copy the absolute path to `chemblender-prepare.exe` into ChemBlender preferences and run **Test Processor**.
 
-- [User workflow center: import, process, visualize, export and project lifecycle](docs/user/workflows/README.md)
-- [Provenance-backed workflow samples and per-file format notes](examples/user-workflows/README.md)
-- [Scientific visualization SOP, Cycles images and replayable workbenches](docs/quantum-visualization/scientific-visualization/README.md)
-- [ChemBlender 2.4.0 human experience review](docs/user/2.4.0-experience-review.md)
-- [Data quality and diagnostics](docs/user/data-quality.md)
-- [Scientific editing and topology](docs/user/scientific-editing.md)
+The future PyPI command will be `uv tool install --python 3.12 "chemblender-prepare[formats]"`; 0.1.0 is not on PyPI until the release is published.
 
-## Development
+## Start here
 
-- [Documentation index](docs/README.md)
-- [Extension migration and local build](docs/migration/2.2.0-extension.md)
-- [Branch and release workflow](docs/development/branch-and-release.md)
-- [Quantum chemistry visualization roadmap](docs/quantum-visualization/roadmap.md)
-- [中文代码架构导览](.agents/reference/code-architecture-guide.md)
+- [English user guide](docs/user/en/index.md)
+- [English prepare CLI/GUI/API guide](docs/prepare/en/index.md)
+- [中文用户指南](docs/user/zh-CN/index.md)
+- [中文 prepare CLI/GUI/API 指南](docs/prepare/zh-CN/index.md)
+- [Machine-generated public surface](docs/prepare/public-surface.json)
+- [Code architecture guide](.agents/reference/code-architecture-guide.md)
+- [Archived ChemBlender 2.4.0 experience review](docs/user/2.4.0-experience-review.md)
+- [Archived 2.4.0 workflow index](docs/user/workflows/README.md)
+- [Archived 2.4.0 example corpus](examples/user-workflows/README.md)
+- [Release history](CHANGELOG.md)
 
-Scientific dependencies belong to the external prepare environment and are not
-installed into Blender or tracked as wheel files in this repository.
+CBQ is the only scientific exchange boundary. Keep each saved `project.blend` beside its `project.cbq/` directory. Moving or removing the processor does not remove already stored scientific entities or their rebuildable Blender views.
 
 Project website: https://www.chemblender.com

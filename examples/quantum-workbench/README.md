@@ -1,5 +1,7 @@
 # 水分子量子可视化示例
 
+> 冻结的 2.4 波函数资格样例。2.5 通过单一 `chemblender-prepare.exe` 和 Worker Protocol v1 联动，当前步骤见[中文 prepare 指南](../../docs/prepare/zh-CN/index.md)。
+
 使用固定 IOData FCHK 输入，在独立 worker 中计算 HOMO 5、LUMO 6、电子密度和静电势；Blender 保存轨道等值面、密度表面上的静电势、色标、切片、剖面与结构视图。
 
 可直接打开随附的 [water-workbench.blend](output/water-workbench.blend)，并保持同名 `.cbq` 目录相邻。

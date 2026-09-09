@@ -1,5 +1,7 @@
 # ChemBlender 用户工作流
 
+> 2.4 历史工作流归档。2.5 日常教程已迁移到[中文用户指南](../zh-CN/index.md)和 [English user guide](../en/index.md)；本目录不再随新插件 UI 更新。
+
 本目录按真实操作顺序说明 ChemBlender 2.4.0。第一次使用时，从[导入数据](01-import.md)开始；准备发布或交付项目前，再走一遍[项目保存与恢复](05-project-lifecycle.md)。
 
 ## 相对 2.1.0，用户实际得到什么

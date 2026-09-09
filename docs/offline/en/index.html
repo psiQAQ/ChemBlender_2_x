@@ -1,0 +1,153 @@
+<!doctype html><html lang="en"><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>ChemBlender 2.5 Offline Guide</title><style>:root{color-scheme:light dark}body{font:16px/1.6 system-ui;margin:0}header,main{max-width:1080px;margin:auto;padding:24px}header{background:#17324d;color:white}nav{display:flex;gap:8px;flex-wrap:wrap}nav a{color:#bde3ff}article{padding:24px 0;border-bottom:1px solid #8885}.path{font:13px monospace;opacity:.7}code,pre{font-family:ui-monospace,monospace}pre{padding:12px;overflow:auto;background:#8882}pre.table{margin:0;padding:2px 8px}small{opacity:.7}</style><body><header><h1>ChemBlender 2.5 Offline Guide</h1><p>Self-contained / 无远程资源</p><nav><a href="#document-0">README.md</a><a href="#document-1">docs/user/en/index.md</a><a href="#document-2">docs/user/en/installation.md</a><a href="#document-3">docs/user/en/blender-workflow.md</a><a href="#document-4">docs/user/en/capabilities-and-projects.md</a><a href="#document-5">docs/user/en/troubleshooting.md</a><a href="#document-6">docs/user/en/release-status.md</a><a href="#document-7">docs/prepare/en/index.md</a><a href="#document-8">docs/prepare/en/cli-and-gui.md</a><a href="#document-9">docs/prepare/en/protocol-and-reader-api.md</a><a href="#document-10">docs/prepare/en/advanced-routes.md</a></nav></header><main><article id="document-0"><div class=path>README.md</div><h2>ChemBlender</h2>
+<p>简体中文 <small>(README.zh-CN.md)</small></p>
+<p>ChemBlender 2.5 is a Blender 5.1+ Viewer for validated CBQ scientific projects. Scientific parsing and recomputation run in the separate <code>chemblender-prepare</code> tool; Blender keeps editing, views, animation, caching, Cycles rendering, and project reopening independent of scientific Python packages.</p>
+<p>The workflow is result-first and program-neutral on Windows x64 with Blender 5.1. Standard readers cover XYZ/extXYZ, MOL V2000/V3000, SDF, SMILES, CIF, POSCAR/CONTCAR, MOL2, PDB/PQR, Cube, CJSON and QCSchema. Save the <code>.blend</code> beside its <code>.cbq</code> sidecar and keep them together; optional backends remain explicit external routes.</p>
+<h3>Components</h3>
+<pre class=table>| Component | Version | Responsibility |</pre>
+<pre class=table>| --- | --- | --- |</pre>
+<pre class=table>| ChemBlender Extension | 2.5.0 | CBQ import/export, pure-Mesh editing and Apply, views, animation, project lifecycle and rendering |</pre>
+<pre class=table>| chemblender-prepare | 0.1.0 | CLI/GUI conversion, validation, derivation, export, diagnostics and Worker Protocol v1 |</pre>
+<p>The Extension ZIP contains no RDKit, Gemmi, or other scientific wheel. The Standard prepare install contains NumPy, RDKit and Gemmi in its own Python 3.12 <code>uv tool</code> environment. Optional wavefunction, scientific, Fermi, critic2, QCEngine and provider capabilities report themselves as unavailable until configured.</p>
+<h3>Install</h3>
+<ol>
+<li>Install <code>chemblender-2.5.0.zip</code> through Blender **Preferences &gt; Get Extensions &gt; Install from Disk**.</li>
+<li>Install Standard prepare from a release wheel:</li>
+</ol>
+<pre><code>uv tool install --python 3.12 &quot;D:\Downloads\chemblender_prepare-0.1.0-py3-none-any.whl[formats]&quot;
+uv tool dir --bin</code></pre>
+<ol>
+<li>Copy the absolute path to <code>chemblender-prepare.exe</code> into ChemBlender preferences and run **Test Processor**.</li>
+</ol>
+<p>The future PyPI command will be <code>uv tool install --python 3.12 &quot;chemblender-prepare[formats]&quot;</code>; 0.1.0 is not on PyPI until the release is published.</p>
+<h3>Start here</h3>
+<ul>
+<li>English user guide <small>(docs/user/en/index.md)</small></li>
+<li>English prepare CLI/GUI/API guide <small>(docs/prepare/en/index.md)</small></li>
+<li>中文用户指南 <small>(docs/user/zh-CN/index.md)</small></li>
+<li>中文 prepare CLI/GUI/API 指南 <small>(docs/prepare/zh-CN/index.md)</small></li>
+<li>Machine-generated public surface <small>(docs/prepare/public-surface.json)</small></li>
+<li>Code architecture guide <small>(.agents/reference/code-architecture-guide.md)</small></li>
+<li>Archived ChemBlender 2.4.0 experience review <small>(docs/user/2.4.0-experience-review.md)</small></li>
+<li>Archived 2.4.0 workflow index <small>(docs/user/workflows/README.md)</small></li>
+<li>Archived 2.4.0 example corpus <small>(examples/user-workflows/README.md)</small></li>
+<li>Release history <small>(CHANGELOG.md)</small></li>
+</ul>
+<p>CBQ is the only scientific exchange boundary. Keep each saved <code>project.blend</code> beside its <code>project.cbq/</code> directory. Moving or removing the processor does not remove already stored scientific entities or their rebuildable Blender views.</p>
+<p>Project website: https://www.chemblender.com</p></article><article id="document-1"><div class=path>docs/user/en/index.md</div><h2>ChemBlender 2.5 User Guide</h2>
+<p>简体中文 <small>(../zh-CN/index.md)</small></p>
+<p>ChemBlender is a CBQ Viewer. Prepare raw chemistry and simulation files outside Blender, then import the validated CBQ project. The Viewer remains usable after the processor or original source file is moved.</p>
+<h3>Guides</h3>
+<ul>
+<li>Install, update and uninstall <small>(installation.md)</small></li>
+<li>End-to-end Blender workflow <small>(blender-workflow.md)</small></li>
+<li>Capabilities and project lifecycle <small>(capabilities-and-projects.md)</small></li>
+<li>Errors and recovery <small>(troubleshooting.md)</small></li>
+<li>Release status and limitations <small>(release-status.md)</small></li>
+</ul>
+<p>The normal sequence is: install Standard prepare → locate the executable → configure Blender → Test Processor → create CBQ in CLI/GUI → import/edit/Apply → run an external operation → create Views/Cycles output → save/move/cold reopen → test cancellation and recovery.</p></article><article id="document-2"><div class=path>docs/user/en/installation.md</div><h2>Install, Update and Remove</h2>
+<h3>Requirements</h3>
+<ul>
+<li>Windows x64, Blender 5.1.0 or newer, and <code>uv</code>.</li>
+<li><code>chemblender-2.5.0.zip</code> and <code>chemblender_prepare-0.1.0-py3-none-any.whl</code> from the same release.</li>
+</ul>
+<h3>Install Standard prepare</h3>
+<pre><code>uv tool install --python 3.12 &quot;D:\Downloads\chemblender_prepare-0.1.0-py3-none-any.whl[formats]&quot;
+$bin = uv tool dir --bin
+Join-Path $bin &#x27;chemblender-prepare.exe&#x27;</code></pre>
+<p><code>uv tool</code> creates an isolated environment plus small launchers; it is not a single-file application. Standard installs NumPy, RDKit and Gemmi. Do not install these into Blender Python.</p>
+<p>When 0.1.0 is published on PyPI, replace the wheel path with <code>&quot;chemblender-prepare[formats]&quot;</code>.</p>
+<h3>Install the Extension</h3>
+<p>Open Blender **Preferences &gt; Get Extensions**, choose **Install from Disk**, select <code>chemblender-2.5.0.zip</code>, enable ChemBlender, paste the absolute CLI launcher path into **Processor Executable**, then click **Test Processor**. The enabled module key is <code>bl_ext.user_default.chemblender</code>.</p>
+<h3>Update or reinstall</h3>
+<pre><code>uv tool upgrade chemblender-prepare
+uv tool install --python 3.12 &quot;D:\Downloads\chemblender_prepare-0.1.0-py3-none-any.whl[formats]&quot; --force</code></pre>
+<p>Install a newer Extension ZIP from disk after saving and closing Blender. Re-run **Test Processor** after either component changes.</p>
+<h3>Uninstall</h3>
+<p>Disable and uninstall the Extension in Blender, then run:</p>
+<pre><code>uv tool uninstall chemblender-prepare</code></pre>
+<p>Uninstalling either component does not delete <code>.blend</code>/<code>.cbq</code> projects.</p></article><article id="document-3"><div class=path>docs/user/en/blender-workflow.md</div><h2>Blender End-to-End SOP</h2>
+<ol>
+<li>Run <code>chemblender-prepare doctor --json</code>; Standard must pass. Optional warnings are expected unless you configured those backends.</li>
+<li>Find the launcher with <code>uv tool dir --bin</code>, configure its absolute <code>chemblender-prepare.exe</code> path, and run **Test Processor**. Confirm processor <code>0.1.0</code>, protocol <code>1</code>, Standard complete, and operation/reader counts.</li>
+<li>Use the CLI or GUI to inspect and convert a raw file into a new <code>.cbq</code> directory. In the GUI, **derive** keeps an operation ID plus JSON parameters as the expert surface.</li>
+<li>In ChemBlender, Preview and import the CBQ. Select the scientific entity in Project Browser.</li>
+<li>For geometry changes, edit the generated Mesh, then use **Apply** to create a new derived Structure. Imported structures and old Views remain unchanged.</li>
+<li>Run a supported external operation. The modal task must show progress, support Cancel, verify project revision/hash, and append a new result rather than replacing the previous result.</li>
+<li>Create Structure, Surface, Volume, trajectory, spectrum, or other Views only when the selected entity supports them. Configure Cycles and render from the View.</li>
+<li>Save <code>project.blend</code> beside <code>project.cbq/</code>. Use Save As or move both together; cold reopen and verify the link, entities, Views, and hashes.</li>
+<li>Delete a derived render cache and rebuild it from CBQ. Moving the processor or source file must not break existing editing, Views, animation, or rendering.</li>
+<li>Test cancellation and an invalid processor path. Restore the launcher path, run **Test Processor**, and retry explicitly.</li>
+</ol>
+<p>Blender exposes high-frequency Viewer operations only. Operations that belong to conversion or specialist computation stay in CLI/Worker; their absence from a panel is not a missing implementation.</p></article><article id="document-4"><div class=path>docs/user/en/capabilities-and-projects.md</div><h2>Capabilities and Projects</h2>
+<p>The Standard processor supports core CBQ operations, 22 registered readers subject to their declared dependencies, and 13 public export formats. Read the exact generated lists in public-surface.json <small>(../../prepare/public-surface.json)</small> and format-capabilities.json <small>(../format-capabilities.json)</small>.</p>
+<p><code>capabilities</code> is the live truth for the current machine. <code>doctor</code> fails when Standard NumPy/RDKit/Gemmi is incomplete and emits concrete warnings for unconfigured optional routes, critic2, QCEngine/provider operations, or readers.</p>
+<p>A saved project is a pair:</p>
+<ul>
+<li><code>project.blend</code>: scenes, Blender Views, presentation and a project link.</li>
+<li><code>project.cbq/</code>: authoritative scientific entities, provenance, revisions, arrays and rebuildable caches.</li>
+</ul>
+<p>Keep the pair together. Import and external operations append provenance-backed entities. Mesh Apply creates a derived Structure; it does not rewrite imported coordinates. View changes never become scientific data automatically.</p></article><article id="document-5"><div class=path>docs/user/en/troubleshooting.md</div><h2>Errors and Recovery</h2>
+<pre class=table>| Symptom | Check | Recovery |</pre>
+<pre class=table>| --- | --- | --- |</pre>
+<pre class=table>| Test Processor cannot start | Absolute path and file existence | Run `uv tool dir --bin`, paste the CLI `.exe`, retry |</pre>
+<pre class=table>| Standard incomplete | `chemblender-prepare doctor --json` | Force-reinstall the `[formats]` wheel in Python 3.12 |</pre>
+<pre class=table>| Optional operation unavailable | `capabilities` reason and environment | Configure only the documented route/backend; do not modify Blender Python |</pre>
+<pre class=table>| Project link missing after move | `.blend` and `.cbq/` locations | Put the pair together or use Relink, then Verify |</pre>
+<pre class=table>| Stale revision/hash | Input changed after task start | Inspect the current project and start a new explicit operation |</pre>
+<pre class=table>| Cancellation pending | Wait for the current calculation block | The owner may terminate only its task after two seconds; verify output before reuse |</pre>
+<pre class=table>| Cache missing | CBQ entity still verifies | Rebuild the View/cache locally |</pre>
+<p>Never reuse a partial output, edit <code>manifest.json</code> by hand, inject repository paths into a route, or install packages into Blender&#x27;s bundled Python.</p></article><article id="document-6"><div class=path>docs/user/en/release-status.md</div><h2>Release Status and Known Limits</h2>
+<p>This documentation targets the local 2.5.0 release candidate. The latest previously published Extension is 2.4.0; <code>chemblender-prepare 0.1.0</code> is not on PyPI until publishing is authorized. Local artifacts are not proof of remote publication.</p>
+<p>Compatibility is locked to Extension 2.5.0, Worker 0.1.0, Worker Protocol 1, and Reader API <code>1.0-rc1</code>.</p>
+<p>Known limits:</p>
+<ul>
+<li>Standard does not install wavefunction, scientific, Fermi, critic2, QCEngine or online-provider backends.</li>
+<li>Provider fetch and QCSchema compute report unavailable without an actual provider/compute backend.</li>
+<li>Blender does not expose every Worker operation as a panel button.</li>
+<li>Moving only one half of a <code>.blend</code>/<code>.cbq</code> pair requires Relink.</li>
+<li>Internal <code>chemblender_prepare.core.*</code> and GUI helpers are not a stable Python SDK.</li>
+</ul>
+<p>See the 2.4 archive <small>(../../archive/2.4.0/README.md)</small> for old UI evidence; do not use it as the 2.5 daily tutorial.</p></article><article id="document-7"><div class=path>docs/prepare/en/index.md</div><h2>chemblender-prepare 0.1.0</h2>
+<p>简体中文 <small>(../zh-CN/index.md)</small></p>
+<p>The external tool owns raw-file parsing, scientific derivation, export and diagnostics. Blender invokes the same executable through Worker Protocol v1 and never runs <code>pip</code> or <code>uv</code>.</p>
+<ul>
+<li>CLI and GUI <small>(cli-and-gui.md)</small></li>
+<li>Worker Protocol and Reader API <small>(protocol-and-reader-api.md)</small></li>
+<li>Optional route configuration <small>(advanced-routes.md)</small></li>
+<li>Generated public surface <small>(../public-surface.json)</small></li>
+</ul>
+<p>Public compatibility is CLI + Worker Protocol v1 + Reader API <code>1.0-rc1</code>. Importing <code>core.*</code>, GUI helpers, or worker implementation modules is unsupported.</p></article><article id="document-8"><div class=path>docs/prepare/en/cli-and-gui.md</div><h2>CLI and GUI</h2>
+<h3>CLI</h3>
+<pre><code>chemblender-prepare formats --json
+chemblender-prepare capabilities --json
+chemblender-prepare doctor --json
+chemblender-prepare inspect input.cube --json
+chemblender-prepare convert input.cube --preset electron_density --unit electron_per_bohr3 --output result.cbq --json
+chemblender-prepare validate result.cbq --json
+chemblender-prepare upgrade old.cbq --output upgraded.cbq --json
+chemblender-prepare derive result.cbq --operation grid.resolve_semantics --parameters &#x27;{&quot;dataset_id&quot;:&quot;UUID&quot;}&#x27; --output derived.cbq --json
+chemblender-prepare export result.cbq --entity UUID --format cube --preview --output result.cube --json
+chemblender-prepare worker request.json result.json</code></pre>
+<p>Use each command&#x27;s <code>--help</code> for exact parameters. Export preview and explicit loss confirmation are required where the format cannot represent the selected CBQ data.</p>
+<h3>GUI</h3>
+<p>Launch <code>chemblender-prepare-gui.exe</code>. It is a Windows GUI entry point and does not open an extra console. The nine entries are convert, inspect, derive, validate, upgrade, export, formats, capabilities, and doctor.</p>
+<p>Choose files and a new output path. For derive, enter an operation ID such as <code>molecule.optimize</code> and a JSON object such as <code>{&quot;force_field&quot;:&quot;MMFF94&quot;}</code>. The GUI starts the CLI without a shell, displays progress/result JSON, requests cancellation through a file, and only terminates its owned process if cancellation is not acknowledged within two seconds.</p></article><article id="document-9"><div class=path>docs/prepare/en/protocol-and-reader-api.md</div><h2>Automation and Reader Extension APIs</h2>
+<h3>Worker Protocol v1</h3>
+<p>Use <code>chemblender-prepare worker request.json result.json [--cancel-file PATH]</code>. A request identifies the CBQ project, project ID/schema/revision, operation ID/version, inputs, parameters and artifacts. The worker writes progress atomically, checks cancellation, and publishes one success/cancelled/error result. Blender rejects identity mismatch, stale revisions, invalid hashes and outputs outside its owned task directory.</p>
+<p>The normative field contract is local-worker-protocol-v1.md <small>(../../quantum-visualization/specs/local-worker-protocol-v1.md)</small>. Treat request/result files as untrusted input and do not edit a live task.</p>
+<h3>Reader API 1.0-rc1</h3>
+<p>Reader extensions use <code>chemblender_prepare.reader_api</code>, a manifest, deterministic discovery, a descriptor, and the worker bridge. Start with the Reader API index <small>(../../reader-api-v1/README.md)</small>, manifest <small>(../../reader-api-v1/manifest.md)</small>, Python API <small>(../../reader-api-v1/python-api.md)</small>, worker bridge <small>(../../reader-api-v1/worker-api.md)</small>, and conformance <small>(../../reader-api-v1/conformance.md)</small>.</p>
+<p>The compatibility token stays <code>1.0-rc1</code>. A reader runs in its declared environment and cannot reach Blender internals. The machine-generated reader list is part of public-surface.json <small>(../public-surface.json)</small>.</p></article><article id="document-10"><div class=path>docs/prepare/en/advanced-routes.md</div><h2>Optional Backends and Routes</h2>
+<p>Standard needs no JSON file. Advanced users may place <code>chemblender-prepare.json</code> beside the CLI launcher returned by <code>uv tool dir --bin</code>, or set <code>CHEMBLENDER_PREPARE_CONFIG</code>.</p>
+<pre><code>{
+  &quot;schema_version&quot;: &quot;1&quot;,
+  &quot;python&quot;: {
+    &quot;wavefunction&quot;: &quot;D:\\envs\\wavefunction\\Scripts\\python.exe&quot;,
+    &quot;scientific&quot;: &quot;D:\\envs\\scientific\\Scripts\\python.exe&quot;,
+    &quot;fermi&quot;: &quot;D:\\envs\\fermi\\Scripts\\python.exe&quot;
+  },
+  &quot;critic2&quot;: &quot;D:\\tools\\critic2.exe&quot;
+}</code></pre>
+<p>Install the same prepare wheel into every routed environment without changing that environment&#x27;s backend dependencies:</p>
+<pre><code>uv pip install --python D:\envs\wavefunction\Scripts\python.exe --no-deps --reinstall D:\Downloads\chemblender_prepare-0.1.0-py3-none-any.whl</code></pre>
+<p>Then install and pin only the documented backend family: qc-gbasis/qc-iodata for wavefunction, ASE/cclib/pymatgen/phonopy for scientific, pyprocar for Fermi, or a separate critic2 executable. The routed process is <code>python -I -m chemblender_prepare.worker.runner</code>; source or <code>site-packages</code> injection is forbidden. Verify the actual Python, prepare path, backend versions and NumPy with <code>capabilities</code> and <code>doctor</code>.</p></article></main></body></html>

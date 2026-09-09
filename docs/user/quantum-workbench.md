@@ -1,5 +1,7 @@
 # 波函数工作台
 
+> 已归档的 2.4 工作流。2.5 使用单一 `chemblender-prepare.exe` 路径，不再配置 Worker Python/Repository。当前教程见[中文联动 SOP](zh-CN/blender-workflow.md)或 [English SOP](en/blender-workflow.md)。
+
 Project Browser 的 `Wavefunction` 控件把 FCHK/Molden 中的轨道、密度矩阵和核电荷连接到外部数值 worker，再将完整计算结果保存为项目中的 `Grid3D`。
 
 当前实现包括轨道浏览、单轨道求值、电子/自旋密度和 ESP，以及任意切片、线剖面、数值导出和轨道批量出图。[水分子示例](../../examples/quantum-workbench/README.md)提供完整场景、科学数据和可重放验证脚本。

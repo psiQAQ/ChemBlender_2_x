@@ -1,52 +1,38 @@
 # ChemBlender Documentation
 
-## User Guides
+## Current 2.5 Guides
 
-- [User workflow center](user/workflows/README.md)
-- [Workflow examples, sources and per-file notes](../examples/user-workflows/README.md)
-- [ChemBlender 2.4.0 human experience review](user/2.4.0-experience-review.md)
-- [Quick Import](user/quick-import.md)
-- [Project Browser](user/project-browser.md)
-- [Project and sidecar](user/project-sidecar.md)
-- [Data quality and diagnostics](user/data-quality.md)
-- [Scientific editing and topology](user/scientific-editing.md)
-- [Formats, maturity and dependencies](user/formats.md)
-- [Legacy scene migration](user/legacy-migration.md)
+- [User guide — English](user/en/index.md)
+- [用户指南 — 简体中文](user/zh-CN/index.md)
+- [Prepare CLI, GUI and API — English](prepare/en/index.md)
+- [Prepare CLI、GUI 与 API — 简体中文](prepare/zh-CN/index.md)
+- [Offline English guide](offline/en/index.html)
+- [离线中文指南](offline/zh-CN/index.html)
 
-## Development
+## Stable Technical References
 
+- [Reader API 1.0-rc1](reader-api-v1/README.md)
+- [Worker Protocol v1](quantum-visualization/specs/local-worker-protocol-v1.md)
+- [CBQ and local processor architecture](quantum-visualization/architecture/local-processor.md)
+- [Format capabilities](user/format-capabilities.json)
 - [Changelog](../CHANGELOG.md)
-- [Import Pipeline and reader development](development/import-pipeline.md)
-- [Source revisions, derived entities and View bindings](development/source-revisions.md)
-- [Testing fixture maintenance](development/testing-fixtures.md)
-- [2.3 development and Release gates](development/release-2.3.md)
-- [Branch and release workflow](development/branch-and-release.md)
-- [2.2.0 extension migration](migration/2.2.0-extension.md)
-- [Upgrade to ChemBlender 2.3.0](migration/2.3.0.md)
+- [Reader contribution flow](development/import-pipeline.md)
+- [Source revisions](development/source-revisions.md)
+- [Fixture policy](development/testing-fixtures.md)
+- [2.3 release procedure](development/release-2.3.md)
+- [Historical implementation plans](superpowers/README.md)
 
-## Quantum Visualization Development
+## Archive
 
-- [Development entrypoint](quantum-visualization/README.md)
-- [ChemBlender 2.3.0 development entrypoint](quantum-visualization/2.3.0/README.md)
-- [Reader API v1](reader-api-v1/README.md)
-- [ChemBlender 2.3.0 main audit](quantum-visualization/2.3.0/audits/2026-07-23-main-deep-audit.md)
-- [Phase 0–4 roadmap](quantum-visualization/roadmap.md)
-- [Data-boundary decision agenda](quantum-visualization/architecture/data-boundary.md)
-- [Reference project catalog](quantum-visualization/references.md)
+- [2.4 workflows and examples](archive/2.4.0/README.md)
+- [2.4 workflow index](user/workflows/README.md)
+- [2.4 human experience review](user/2.4.0-experience-review.md)
+- [2.4 Quick Import](user/quick-import.md)
+- [2.4 Project Browser](user/project-browser.md)
+- [2.4 project sidecar lifecycle](user/project-sidecar.md)
+- [2.4 data quality](user/data-quality.md)
+- [2.4 scientific editing](user/scientific-editing.md)
+- [2.4 format matrix](user/formats.md)
+- [2026-09-09 scientific visualization qualification](quantum-visualization/scientific-visualization/README.md)
 
-## Approved Design and Plan
-
-- [Superpowers design and implementation provenance](superpowers/README.md)
-- [ChemBlender 2.3.0 native platform design](superpowers/specs/2026-07-23-chemblender-2.3.0-native-platform-design.md)
-- [ChemBlender 2.3.0 master sequencing plan](superpowers/plans/2026-07-23-chemblender-2.3.0-master-sequencing.md)
-- [2.2.0 repository governance design](superpowers/specs/2026-07-20-chemblender-2.2.0-repository-governance-design.md)
-- [2.1.1 and 2.2.0 rebuild plan](superpowers/plans/2026-07-21-chemblender-2.1.1-and-2.2.0-rebuild.md)
-- [Quantum visualization development-system design](superpowers/specs/2026-07-21-quantum-visualization-development-system-design.md)
-- [Multi-frame XYZ and FrameSet design](superpowers/specs/2026-07-22-multiframe-xyz-design.md)
-- [Quantum visualization documentation implementation plan](superpowers/plans/2026-07-21-quantum-visualization-documentation-system.md)
-- [Quantum semantic core implementation plan](superpowers/plans/2026-07-21-quantum-semantic-core.md)
-- [Reader registry implementation plan](superpowers/plans/2026-07-21-reader-registry.md)
-- [XYZ reader implementation plan](superpowers/plans/2026-07-22-xyz-reader.md)
-- [Multi-frame XYZ implementation plan](superpowers/plans/2026-07-22-multiframe-xyz.md)
-
-Live Agent task status belongs in `.agents/active/`; these documents describe durable developer workflows and decisions.
+Development plans and release evidence remain under `docs/development/`, `docs/quantum-visualization/`, and `.agents/`; they are not daily user tutorials.
