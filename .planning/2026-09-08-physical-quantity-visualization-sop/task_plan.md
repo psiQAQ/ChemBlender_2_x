@@ -35,7 +35,7 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - [x] C1 分支治理：main 54ecf4c，两个远端 CI Passed；完整 bundle、附注 archive 标签、精确 lease 旧分支退役，新分支 feat/cbq-only-viewer。
 - [x] C2 当前迁移收尾：共享核心、解析/Worker 外置、调用与测试迁移、纯 Mesh/旧按钮保留审计、架构指南；旧 View 显式恢复、失败回滚和保存重开通过，full20 全绿并形成干净逻辑提交。
 - [x] C3 CBQ 1.1 收尾：数值对称、旧包完整性、升级、事务导入及链接；C3专项101项和包含该实现的full20全部Passed，未重复新增已有能力。
-- [ ] C4 外部包基线：uv init/venv/lock及7个已有CLI命令、薄Tk GUI、真实格式对照、wheel/sdist验证。前半已实现，发行物验证未完成。C3 后继续关闭，L1 不得抢先。
+- [x] C4 外部包基线：uv init/venv/lock及7个已有CLI命令、薄Tk GUI、真实格式对照、wheel/sdist验证。0.1.0发行物内容、RECORD、入口点及隔离安装运行审计通过。
 - [ ] L1 统一入口：迁移共享 Worker v1，补 capabilities --json、worker REQUEST RESULT --cancel-file CANCEL、doctor和环境路由。
 - [ ] L2 Blender 接入：单一全局路径、公共异步任务控制器、进度/取消、节流即时预览；本地操作不依赖处理程序。
 - [ ] L3 现有重计算：wavefunction、Fermi、scientific reader经统一入口工作。
@@ -54,6 +54,7 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - 候选 .blend-analysis/cbq-viewer-ui-smoke-03/qualification.json：Blender5.1.1基础注册/重载/结构/等值面/体积/移走输入/保存重开/删除VDB重建/Save As Passed；ZIP 2,792,828bytes、104members、0wheels。只代表候选范围，未获得正式移除RDKit资格。
 - 新增L1-L8控制器、操作和专项门槛为 Not Run。C2 收尾后的 full20：2498项、0 failures/0 errors/36 skips、105.761秒，Passed；日志为`.blend-analysis/2026-09-08-cbq-architecture-consolidation/migration-full-20.log`。完整科学实例、正式打包与SOP仍由后续阶段承担，不将C2成功扩大为整份计划完成。
 - legacy 当前链路已用3个哈希锁定fixture完成外部导出、整包导入、注入失败回滚、View恢复、evaluated mesh可见性、保存重开和Project Connected检查；原始报告不自动应用于数值对称升级包。
+- C4发行物验证Passed：wheel 545,234 bytes、SHA256 `40d0be4d8e6f5cfb7766ad16bae717da10d4910f943b2a0280598140094ff8f8`；sdist 888,508 bytes、SHA256 `d310624439a338fc230af8064615c140727b5aee7f401e9cb5ecf291fa40e992`。隔离`--no-deps`安装后从安装目录加载共享核心、CLI和GUI，入口点及`formats --json`的22 readers/13 operations通过。
 - 每阶段先窄测试，再必要的全量/原生/实际UI验证；Passed、Failed、Not Run分别记录。git diff --check与文档链接验证必须通过。
 
 ## Legacy quantity evidence

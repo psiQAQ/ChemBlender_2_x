@@ -323,3 +323,6 @@ POSCAR旧产品流8项已迁外部CLI/GUI真实入口，保留4项Prepared View�
 
 
 2026-09-09：C4预构建证据已提交`ab45b8b`。第三个连续目标回合实时复核仍为`hatchling=False`、`build=False`，证据目录无当前0.1.0 wheel/sdist，工作树仅用户`.vscode/`。安全策略要求用户明确授权uv在隔离构建环境获取pyproject已声明的hatchling；同一阻塞达到三回合审计阈值，目标标记blocked。获授权后从C4构建、内容审计和隔离安装验收继续，不重做C2/C3，也不提前启动L1。
+
+
+2026-09-09：用户明确授权运行`uv build`，目标从blocked恢复。构建成功生成`chemblender_prepare-0.1.0-py3-none-any.whl`和sdist；标准库归档审计通过安全路径、wheel CRC/RECORD、元数据/两个console scripts、162个受控源码文件完整性及排除目录检查。wheel为545,234 bytes/SHA256 `40d0be4d8e6f5cfb7766ad16bae717da10d4910f943b2a0280598140094ff8f8`，sdist为888,508 bytes/SHA256 `d310624439a338fc230af8064615c140727b5aee7f401e9cb5ecf291fa40e992`。本地wheel以`--no-deps`安装至隔离目录，直接launcher `--help` rc=0；`python -I`确认`cbq_core`、prepare、CLI、GUI均从安装目录加载，metadata/entrypoints及`formats --json`的22 readers/13 operations通过。证据为`.blend-analysis/2026-09-08-cbq-architecture-consolidation/prepare-dist-01/{audit.json,runtime-audit.json}`。未运行sync、未改lock/依赖文件或项目环境；C4关闭，下一阶段严格进入L1。

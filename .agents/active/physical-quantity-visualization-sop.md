@@ -51,3 +51,5 @@
 2026-09-09：C3状态提交为`cf8225f`。C4已确认冻结lock、7个CLI命令和prepare/Tk/真实格式专项（111 Passed/1 optional skip）；wheel/sdist尚未构建。当前环境缺hatchling/build，安全策略要求用户明确授权uv在隔离构建环境取得pyproject已声明的hatchling；未修改依赖或启动L1。
 
 2026-09-09：C4预构建证据提交为`ab45b8b`。连续第三个目标回合复核仍无hatchling/build及当前发行物，因缺少隔离构建依赖获取的用户明确授权，目标状态blocked。恢复入口固定为C4 `uv build`、wheel/sdist内容与隔离安装验收；C2/C3已完成，不得回退或越过C4接L1。
+
+2026-09-09：用户已授权并成功运行`uv build`。0.1.0 wheel/sdist通过归档安全、RECORD/元数据/入口点、受控源码完整性审计；本地wheel `--no-deps`隔离安装后，模块来源、launcher及22 readers/13 operations实际输出均通过。未改变环境、lock或依赖文件，C4关闭；下一阶段为L1统一Worker入口。
