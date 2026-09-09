@@ -40,3 +40,6 @@
 
 
 2026-09-09：最新完整回归full16：2574项、3 failures/90 errors/36 skips、105.516秒，Failed；相对full15无新增失败，场景预设致命异常回滚测试独立迁移通过。近期Worker日志句柄、ESP故障边界、轨道缓存revision修复已纳入此轮。C2尚未稳定提交，旧导入/任务/legacy恢复继续收敛。详见规划progress.md及migration-full-16日志。
+
+
+2026-09-09：四批检查点已提交至9eebdd7；完整回归full17为2573项、0 failures/88 errors/36 skips、110.906秒、Failed，未新增失败标识。错误分布旧import-preview55、wavefunction19、quick-import9、legacy路由5。原生Mesh编辑/Apply通过；legacy external-only导出不替代View恢复/回滚/保存重开，继续保留该门槛。C2尚未完成，详见规划文件和migration-full-17证据。

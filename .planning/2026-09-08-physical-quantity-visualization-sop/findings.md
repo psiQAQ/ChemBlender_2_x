@@ -220,3 +220,6 @@ POSCAR旧产品流8项已迁外部CLI/GUI真实入口，保留4项Prepared View�
 
 
 2026-09-09：用户确认额度恢复后，本地Git写入已成功。前三批检查点为27f67c9（共享核心/外部准备）、85ab235（Viewer及依赖政策）、8244d12（测试）；文档/示例为第四批。首批77项76 Passed/1 skipped、15.778秒；暂存检查发现迁入文件原有空白，四文件清理后AST相同、cached diff check通过。最初自动生成补丁输出超长未执行，改用保留换行的字节级格式清理。全部为开发快照，full16仍Failed，C2未关闭；legacy external-only导出验收不能替代View恢复/回滚/保存重开验收，继续补齐。用户本地.vscode设置不提交，无push。
+
+
+2026-09-09：四批提交27f67c9/85ab235/8244d12/9eebdd7已成功，工作树仅剩用户.vscode/，暂存为空，54ecf4c..HEAD累计diff check通过。继续目标后完成full17（9eebdd7）：2573项、0 failures/88 errors/36 skips、110.906秒、Failed，无新增失败ID。错误分布import-preview55/wavefunction19/quick-import9/legacy路由5。原生纯Mesh编辑/Apply通过；legacy仅external-only导出通过，不代表旧View恢复和回滚已完成，相关门槛保持未完成。blender-mcp --help仍trampoline错误、MCP9876不可达；CIM读取被拒后Get-Process确认用户Blender PID45116路径，未修改该进程。私有后台实时确认Blender5.1.1/Python3.13.9与extension repositories。完整回归日志、summary、失败列表见.blend-analysis/2026-09-08-cbq-architecture-consolidation/migration-full-17*。下阶段继续收敛C2，随后才进入统一入口和控制器；目标保持active。

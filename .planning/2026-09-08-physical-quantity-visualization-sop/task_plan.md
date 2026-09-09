@@ -31,7 +31,7 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 
 ## Plan / 实施顺序
 
-- [x] 当前迁移快照分批保存：共享核心/外部工具、Viewer、回归测试已提交；文档与示例随本条记录作为第四批保存。这是可恢复的开发检查点，C2 全量回归与功能保留门槛仍未关闭。
+- [x] 当前迁移快照分批保存：27f67c9 共享核心/外部工具、85ab235 Viewer、8244d12 回归测试、9eebdd7 文档与示例。C2 全量回归与功能保留门槛仍未关闭。
 - [x] C1 分支治理：main 54ecf4c，两个远端 CI Passed；完整 bundle、附注 archive 标签、精确 lease 旧分支退役，新分支 feat/cbq-only-viewer。
 - [ ] C2 当前迁移收尾：共享核心、解析/Worker 外置、调用与测试迁移、纯 Mesh/旧按钮保留审计、架构指南；通过相关验证并形成干净逻辑提交。当前进行中，后续接入不得抢在此门槛前。
 - [ ] C3 CBQ 1.1 收尾：数值对称、旧包完整性、升级、事务导入及链接；专项测试已通过，全面回归未完成。纳入当前迁移提交。
@@ -52,7 +52,8 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - 136模块已迁移，42共享模块独立import不加载bpy/rdkit/gemmi/prepare。CBQ1.1专项110项中109Passed/1skip；项目服务/外部导出/worker-client 79项Passed；事务CBQ导入4项Passed。
 - CLI报告真实XYZ/FCHK、多dataset Cube/CIF及13格式导出通过；Tk窗口调用CLI通过。不能替代统一exe、前台Blender响应、编辑或RDKit等价验证。
 - 候选 .blend-analysis/cbq-viewer-ui-smoke-03/qualification.json：Blender5.1.1基础注册/重载/结构/等值面/体积/移走输入/保存重开/删除VDB重建/Save As Passed；ZIP 2,792,828bytes、104members、0wheels。只代表候选范围，未获得正式移除RDKit资格。
-- 新增L1-L8控制器、操作和专项门槛为 Not Run。全量旧测试迁移、纯Mesh恢复、完整科学实例、正式打包与SOP尚未完成。当前工作区未提交，禁止将局部成功记为整项完成。
+- 新增L1-L8控制器、操作和专项门槛为 Not Run。当前迁移快照已分四批提交；9eebdd7 上 full17：2573项、0 failures/88 errors/36 skips、110.906秒，Failed。错误集中旧 import-preview 55、wavefunction 19、quick-import 9、legacy路由5。全量测试迁移、功能保留审计、完整科学实例、正式打包与SOP尚未完成；不将局部成功记为整项完成。
+- legacy 外部导出测试不能替代显示恢复、失败回滚和保存重开：这些要求继续由 C2 承担，必须补齐当前架构的完整链路后才关闭，不能按 full17 缺少原三个失败认定已修复。
 - 每阶段先窄测试，再必要的全量/原生/实际UI验证；Passed、Failed、Not Run分别记录。git diff --check与文档链接验证必须通过。
 
 ## Legacy quantity evidence
