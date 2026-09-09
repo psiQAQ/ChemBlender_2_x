@@ -23,8 +23,11 @@ sys.path.insert(0, str(ROOT))
 SOURCE = ROOT / ".agents/cache/scientific-corpus/molecular"
 OUTPUT = SOURCE / "previews"
 
-from ChemBlender.core.scene_preset import builtin_scene_presets, plan_scene_preset, scene_plan_document
-from ChemBlender.core.sidecar import close_project, open_project
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.scene_preset import scene_plan_document
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
 from ChemBlender.render_scene import RenderScope
 
 
@@ -93,7 +96,7 @@ def digest(path):
 
 def array_hashes(project):
     from dataclasses import fields, is_dataclass
-    from ChemBlender.core.model import ArrayData
+    from cbq_core.model import ArrayData
 
     result = {}
 
@@ -175,9 +178,9 @@ def main():
 
 
 def render_selected(options, output, destination):
-    from ChemBlender.core.analysis_report import (
-        build_analysis_report, describe_report_artifact, write_analysis_report_bundle,
-    )
+    from cbq_core.analysis_report import build_analysis_report
+    from cbq_core.analysis_report import describe_report_artifact
+    from cbq_core.analysis_report import write_analysis_report_bundle
 
     OUTPUT.mkdir(parents=True, exist_ok=True)
     output.mkdir(parents=True, exist_ok=True)

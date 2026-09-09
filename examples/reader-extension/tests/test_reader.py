@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from ChemBlender import reader_api
+from chemblender_prepare import reader_api
 
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -484,7 +484,9 @@ def _derive_rmd17(cache, output_root, numpy, Chem):
 def _periodic_structure(numpy, numbers, cell, fractional, revision, label):
     from uuid import NAMESPACE_URL, uuid5
 
-    from ChemBlender.core.model import ArrayData, PeriodicSiteData, Structure
+    from cbq_core.model import ArrayData
+    from cbq_core.model import PeriodicSiteData
+    from cbq_core.model import Structure
 
     identifier = uuid5(NAMESPACE_URL, f"chemblender:representative:{revision}:{label}")
     count = len(numbers)
@@ -530,9 +532,12 @@ def _derive_crystal(cache, output_root, numpy):
 
     import gemmi
 
-    from ChemBlender.core.exporters import PoscarExportSettings, export_poscar
-    from ChemBlender.core.formats.cif import parse_cif
-    from ChemBlender.core.model import ArrayData, AtomicProperty, DatasetStatus
+    from chemblender_prepare.core.exporters import PoscarExportSettings
+    from chemblender_prepare.core.exporters import export_poscar
+    from chemblender_prepare.core.formats.cif import parse_cif
+    from cbq_core.model import ArrayData
+    from cbq_core.model import AtomicProperty
+    from cbq_core.model import DatasetStatus
 
     source = _validated_cache(cache, "cod_9012293")
     parsed = parse_cif(source).structures[0]

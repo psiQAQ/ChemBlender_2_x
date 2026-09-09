@@ -89,7 +89,7 @@ def publish_json(path, document):
 
 def statistics(dataset):
     import numpy as np
-    from ChemBlender.core import Grid3D
+    from cbq_core.model import Grid3D
 
     values = np.asarray(dataset.data.values)
     finite = np.isfinite(values)
@@ -123,12 +123,17 @@ def add_source_evidence(batch, source):
 
 def wavefunction_project(name, source, *, spacing, padding, chunk_size):
     import numpy as np
-    from ChemBlender.core import QCProject, DensityMatrixLevel, DensityMatrixSpin
-    from ChemBlender.core.grid_difference import derive_grid_difference
-    from ChemBlender.core.iodata_adapter import parse_iodata_wavefunction
-    from ChemBlender.core.orbital_browser import orbital_rows, suggest_grid
-    from ChemBlender.core.wavefunction_grid import evaluate_molecular_orbital_grid, evaluate_electron_density_grid
-    from ChemBlender.core.wavefunction_observables import evaluate_density_matrix_grid, evaluate_electrostatic_potential_grid
+    from cbq_core.model import QCProject
+    from cbq_core.model import DensityMatrixLevel
+    from cbq_core.model import DensityMatrixSpin
+    from chemblender_prepare.core.grid_difference import derive_grid_difference
+    from chemblender_prepare.core.iodata_adapter import parse_iodata_wavefunction
+    from cbq_core.orbital_browser import orbital_rows
+    from cbq_core.orbital_browser import suggest_grid
+    from chemblender_prepare.core.wavefunction_grid import evaluate_molecular_orbital_grid
+    from chemblender_prepare.core.wavefunction_grid import evaluate_electron_density_grid
+    from chemblender_prepare.core.wavefunction_observables import evaluate_density_matrix_grid
+    from chemblender_prepare.core.wavefunction_observables import evaluate_electrostatic_potential_grid
 
     batch = add_source_evidence(parse_iodata_wavefunction(INPUTS[name]), source)
     project = QCProject(id=uuid4(), schema_version="0.2")
@@ -198,8 +203,8 @@ def wavefunction_project(name, source, *, spacing, padding, chunk_size):
 
 
 def native_project(name, source):
-    from ChemBlender.core import QCProject
-    from ChemBlender.core.reader_catalog import builtin_reader_registry
+    from cbq_core.model import QCProject
+    from chemblender_prepare.core.reader_catalog import builtin_reader_registry
 
     batch = builtin_reader_registry().parse(INPUTS[name], reader_id="pqr" if name == "pqr" else "extxyz")
     batch = add_source_evidence(batch, source)
@@ -212,7 +217,9 @@ def native_project(name, source):
 
 
 def main():
-    from ChemBlender.core import close_project, open_project, save_project
+    from cbq_core.sidecar import close_project
+    from cbq_core.sidecar import open_project
+    from cbq_core.sidecar import save_project
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--only", nargs="+", choices=tuple(INPUTS), default=list(INPUTS))

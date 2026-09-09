@@ -15,8 +15,10 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from render_molecular import SOURCE, array_hashes, cases, digest, staging_directory
-from ChemBlender.core.scene_preset import builtin_scene_presets, plan_scene_preset
-from ChemBlender.core.sidecar import close_project, open_project
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
 from ChemBlender.scene_preset_view import apply_scene_preset
 from ChemBlender.scientific_materials import flat_material
 from ChemBlender.ui import session as session_ui

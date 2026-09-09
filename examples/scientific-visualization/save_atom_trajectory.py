@@ -27,8 +27,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from render_atom_trajectory import SOURCE, bindings_for, cases, hashes
 from render_molecular import array_hashes, digest, staging_directory
 from save_molecular import clean_scene
-from ChemBlender.core import builtin_scene_presets, plan_scene_preset
-from ChemBlender.core.sidecar import close_project, open_project
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.sidecar import close_project
+from cbq_core.sidecar import open_project
 from ChemBlender.dataset_view import _VECTOR_ATTRIBUTE
 from ChemBlender.scene_preset_view import apply_scene_preset, scene_view_objects
 from ChemBlender.scientific_materials import flat_material

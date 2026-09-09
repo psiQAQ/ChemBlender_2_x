@@ -1,13 +1,12 @@
 # Reader API v1 Python API
 
-源码树内的测试与内置 reader 可以从 `ChemBlender.reader_api` 导入。独立安装的
-Extension 必须使用 [API handle bootstrap](README.md#installed-extension-bootstrap)，
-不得猜测安装模块名。
+Reader 从 `chemblender_prepare.reader_api` 导入，运行于外部 Python 环境。
+显式注册见[External Python integration](README.md#external-python-integration)。
 
 ## 生命周期
 
-1. **discovery**：built-in reader 随宿主注册；Extension 通过 handle callback
-   显式注册，不扫描任意 `sys.path`。
+1. **discovery**：外部调用者建立 registry，并用 `ReaderPluginDiscovery.register()`
+   显式注册第三方 reader，不扫描任意 `sys.path`。
 2. **availability**：`PublicReaderDescriptor.availability` 提供 `available`、
    `reason_code` 与安全 detail；不可用 reader 返回诊断，不进入 parser。
 3. **sniff**：宿主创建最多 64 KiB prefix 的 `SniffRequest`。reader 返回精确
@@ -27,7 +26,7 @@ Extension 必须使用 [API handle bootstrap](README.md#installed-extension-boot
 
 ## 精确公开符号
 
-以下列表与 `ChemBlender.reader_api.__all__` 精确一致。未列出的 module、name 或
+以下列表与 `chemblender_prepare.reader_api.__all__` 精确一致。未列出的 module、name 或
 attribute 都不是 Reader API v1 契约。
 
 ```python

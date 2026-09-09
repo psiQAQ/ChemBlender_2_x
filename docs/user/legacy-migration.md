@@ -1,5 +1,63 @@
 # Legacy scene migration
 
+当前 CBQ 架构使用外部 Blender 提取脚本迁移旧 `.blend`。旧面板流程仅适用于本文后半部分所述的归档 2.3.0 版本。
+
+## 目录
+
+- [外部提取与导出](#外部提取与导出)
+- [输出、验证及晶体升级](#输出验证及晶体升级)
+- [显示恢复边界](#显示恢复边界)
+- [历史 2.3.0 面板流程](#历史-230-面板流程)
+
+## 外部提取与导出
+
+使用 Blender 5.1 或更新版本，在本仓库根目录运行。将示例输入、输出路径改为自己的绝对路径。输出父目录必须已存在，结果目录必须不存在。
+
+```powershell
+$previousResources = $env:BLENDER_USER_RESOURCES
+$env:BLENDER_USER_RESOURCES = Join-Path $env:TEMP ("cb-legacy-" + [guid]::NewGuid())
+try {
+    & "C:\Program Files\Blender Foundation\Blender 5.1\blender.exe" --background --factory-startup --disable-autoexec --python-exit-code 1 "D:\data\old.blend" --python ".\chemblender_prepare\legacy\__main__.py" -- --output "D:\data\legacy-prepared" --preview
+} finally {
+    $env:BLENDER_USER_RESOURCES = $previousResources
+}
+```
+
+检查打印的结构清单、显示参数和诊断后，用相同命令去掉末尾 `--preview` 执行导出。脚本只读取原场景；不保存或覆盖原 `.blend`，不加载旧插件，不自动执行文件内脚本。
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `--output` | 必填 | 新目录，包含 `project.cbq/` 和 `migration.json` |
+| `--preview` | 关闭 | 仅输出诊断报告，不写结果 |
+| `--cancel-file` | 未设置 | 可选取消标记路径；检测到文件即停止发布 |
+
+## 输出、验证及晶体升级
+
+`project.cbq` 使用共享 CBQ 1.1 模型，保存结构、显式键、晶体位点、ADP 和来源哈希。报告记录每个新结构 UUID、原对象名称、显示参数、诊断，以及 CBQ manifest 文件 SHA-256。两个文件在同一目录准备并校验后一起发布；失败、取消或目标已存在时不覆盖结果。
+
+```powershell
+.\.venv\Scripts\chemblender-prepare.exe validate "D:\data\legacy-prepared\project.cbq" --json
+```
+
+若报告的 `requires_numeric_symmetry_upgrade` 非空，在已配置 Gemmi 的外部准备环境执行：
+
+```powershell
+.\.venv\Scripts\chemblender-prepare.exe upgrade "D:\data\legacy-prepared\project.cbq" --output "D:\data\legacy-upgraded.cbq" --json
+```
+
+升级保留原包、结构 UUID、晶胞和原数值，并为新增数值对称操作更新结构 revision 和来源记录。升级前只支持原位点展示，不支持完整对称展开；不在 Blender 安装 Gemmi。将已验证的 CBQ 通过 Viewer 面板导入当前项目。
+
+## 显示恢复边界
+
+报告中的原子半径、颜色、缩放、键显示、材质和节点输入是独立的显示恢复记录，不属于科学数组。当前状态 `display_restore_status: recorded_only` 表示参数已记录，尚未自动恢复为新 View；不要将它解释为旧场景已完整重建。节点名称和输入只作为数据保存，不执行它们，也不根据报告中的来源路径加载文件。保留原 `.blend` 和报告，等待显示恢复步骤完成。
+
+实际验证覆盖本文列出的三个历史 fixture：普通分子、编辑后 scaffold、含占据率和 Uij 的晶体。未知文件仍以具体诊断为准，不承诺恢复任意 `.blend`。
+
+## 历史 2.3.0 面板流程
+
+以下为归档版本的使用说明，当前 Viewer 不提供这些旧迁移按钮。
+
+
 The **Legacy Migration** panel converts detected ChemBlender 2.1/2.2 mesh
 objects into the 2.3 Project model. It is an explicit migration, not a file-open
 side effect. Current `structure_view_v1` objects and already owned migration

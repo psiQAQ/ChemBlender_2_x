@@ -10,3 +10,6 @@ Thumbs.db
 !.agents/archive/README.md
 .worktrees/
 ChemBlender/wheels/*.whl
+.venv/
+dist/
+*.egg-info/

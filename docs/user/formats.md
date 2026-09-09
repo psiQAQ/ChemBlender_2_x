@@ -1,5 +1,11 @@
 # Formats, maturity and dependencies
 
+Current workflow: raw files → external chemblender-prepare → validated CBQ → Blender Viewer.
+All import/export format backends in this reference run outside Blender. The Viewer imports CBQ.
+The dependency inventory records the pinned transitional extension wheels; their retention does
+not move parsing back into Blender. RDKit removal remains conditional on the operation acceptance gates.
+
+
 ChemBlender reports format support as **F0–F5** maturity rather than a single
 yes/no flag:
 
@@ -9,7 +15,7 @@ yes/no flag:
 | F1 | Preserve structure identity, coordinates and cell where applicable |
 | F2 | Preserve chemistry/site semantics such as bonds, charge, occupancy or hierarchy |
 | F3 | Preserve results such as frames, properties or Grid3D values |
-| F4 | Complete the Quick Import, Project Browser, View, save/reopen and diagnostic workflow |
+| F4 | Complete external preparation, CBQ import, View, save/reopen and diagnostics |
 | F5 | Export and semantic round-trip within a stated loss policy |
 
 Maturity can differ between import and export. A readable format is not
@@ -17,7 +23,8 @@ automatically a lossless round-trip format.
 
 ## Current development format scope
 
-This checked-out development table extends the released 2.4.0 scope. Released-version facts remain in `CHANGELOG.md`.
+This table describes the development branch, not the released 2.4.0 workflow. Released-version facts remain in `CHANGELOG.md`.
+The retained F0–F5 ratings describe format evidence; they do not certify the complete migrated Viewer lifecycle, which remains under regression.
 
 | Format | Current product boundary |
 | --- | --- |
@@ -27,23 +34,24 @@ This checked-out development table extends the released 2.4.0 scope. Released-ve
 | SMILES | RDKit-backed single-record text/file import, deterministic planar 2D source View, separate provenance-tracked 3D derivation and SMILES export |
 | CIF | Gemmi-backed import of crystal/site/symmetry metadata and controlled CIF export |
 | POSCAR/CONTCAR | Native import/export with Direct/Cartesian, scale, selective dynamics and supported velocity data |
-| MOL2 | Native multi-molecule import plus normalized Project Browser export with semantic round-trip and explicit loss confirmation |
-| PDB/PQR | Native import of biological hierarchy/alternate locations or charge/radius data; PDB export through Project Browser and PQR export through Project Browser, both with representability and loss preview |
-| Cube | Native Structure + Grid3D import, Blender Volume/Surface workflow and Project Browser Cube export for representable scalar grids; export is semantic, not byte-for-byte source reproduction |
-| CJSON | Lightweight structure/topology/property envelope import and controlled core export; no general Project Browser writer |
-| QCSchema | Dependency-free built-in import for Molecule and AtomicResult JSON; maps Structure and supported numeric properties while preserving the complete source JSON as a raw envelope; no general Project Browser writer |
+| MOL2 | Native multi-molecule import plus normalized chemblender-prepare export with semantic round-trip and explicit loss confirmation |
+| PDB/PQR | Native import of biological hierarchy/alternate locations or charge/radius data; PDB export through chemblender-prepare and PQR export through chemblender-prepare, both with representability and loss preview |
+| Cube | Native Structure + Grid3D import, Blender Volume/Surface workflow and chemblender-prepare Cube export for representable scalar grids; export is semantic, not byte-for-byte source reproduction |
+| CJSON | Lightweight structure/topology/property envelope import and controlled external export |
+| QCSchema | Dependency-free built-in import for Molecule and AtomicResult JSON; maps Structure and supported numeric properties while preserving the complete source JSON as a raw envelope; external source-envelope export |
 | Gaussian/ORCA inputs | Dependency-free native structure import for strict inline Cartesian `.gjf`/`.com` and `.inp`; preserves charge/multiplicity and converts explicitly declared Bohr coordinates to angstrom with provenance, does not execute either program, and rejects ambiguous complex geometry syntax |
 
-The Project Browser export workflow currently writes XYZ, extXYZ, MOL, MOL2,
-PDB, PQR, Cube, SDF, SMILES, CIF and POSCAR. It shows a loss preview and requires confirmation when
+The chemblender-prepare export workflow currently writes XYZ, extXYZ, MOL, MOL2,
+PDB, PQR, Cube, SDF, SMILES, CIF, POSCAR, CJSON and QCSchema. It shows a loss preview and requires confirmation when
 the selected format cannot represent source semantics. Never infer export
 support merely because an import reader exists.
 
 ## Bundled and optional dependencies
 
-Windows x64 release packages bundle exact RDKit and Gemmi wheels. RDKit serves
-MOL/SDF/SMILES chemistry; Gemmi serves CIF parsing/export. Their objects stay
-behind adapters and are not stored in the project or sidecar.
+The transitional formal Windows package retains pinned RDKit and Gemmi wheels.
+Current format parsing/export uses the external environment: RDKit handles
+MOL/SDF/SMILES chemistry and Gemmi handles CIF. No backend objects are stored in CBQ.
+Candidate wheel-free builds are validation artifacts, not evidence that the formal removal gates passed.
 
 An **optional backend** such as cclib, IOData, ASE or pymatgen is available only
 when its separately managed runtime passes availability checks. These adapters
@@ -69,30 +77,30 @@ assumptions and recovered values, read [Data quality](data-quality.md).
 <!-- BEGIN GENERATED FORMAT CAPABILITIES -->
 ## Generated format capability reference
 
-Reader API `1.0-rc1`. Runtime availability is evaluated when a reader is selected; this table records the probe contract, not the current machine state.
+Reader API `1.0-rc1`. Runtime availability is evaluated in the external processor when a reader is selected; this table records the probe contract, not the current machine state.
 
 | Reader | Import | Export | Runtime | Fixtures |
 | --- | --- | --- | --- | --- |
 | `ase-structure` (`.vasp`, `.poscar`, `.contcar`, `.extxyz`, `.xyz`, `POSCAR`, `CONTCAR`) | atomic_property=partial, crystal=supported, structure=supported | F0 / none / not_available | runtime module `ase` | ASE extXYZ, ASE POSCAR |
 | `cclib_output` (`.log`, `.out`) | atomic_property=supported, energy=supported, excited_state=supported, structure=supported, trajectory=supported, vibration=supported | F0 / none / not_available | runtime module `cclib` | Gaussian output, ORCA output |
-| `cif` (`.cif`) | cif_envelope=supported, crystal=supported, structure=supported | F5 / project_browser / preview_confirmation | runtime module `gemmi` | CIF crystal, CIF disorder, CIF multi-block |
-| `cjson` (`.cjson`) | atomic_identity=supported, atomic_property=supported, excited_state=partial, grid=partial, orbital=partial, spectrum=partial, structure=supported, topology=supported, trajectory=partial, vibration=partial | F5 / core / controlled_envelope | built-in | CJSON result envelope |
-| `cube` (`.cube`, `.cub`) | atomic_property=supported, grid=supported, structure=supported | F5 / project_browser / preview_confirmation | built-in | Gaussian Cube, multi-dataset Cube |
-| `extxyz` (`.xyz`, `.extxyz`) | properties=supported, structure=supported, trajectory=supported | F5 / project_browser / preview_confirmation | built-in | ASE extXYZ, libAtoms extXYZ, OVITO extXYZ |
+| `cif` (`.cif`) | cif_envelope=supported, crystal=supported, structure=supported | F5 / prepare / preview_confirmation | runtime module `gemmi` | CIF crystal, CIF disorder, CIF multi-block |
+| `cjson` (`.cjson`) | atomic_identity=supported, atomic_property=supported, excited_state=partial, grid=partial, orbital=partial, spectrum=partial, structure=supported, topology=supported, trajectory=partial, vibration=partial | F5 / prepare / controlled_envelope | built-in | CJSON result envelope |
+| `cube` (`.cube`, `.cub`) | atomic_property=supported, grid=supported, structure=supported | F5 / prepare / preview_confirmation | built-in | Gaussian Cube, multi-dataset Cube |
+| `extxyz` (`.xyz`, `.extxyz`) | properties=supported, structure=supported, trajectory=supported | F5 / prepare / preview_confirmation | built-in | ASE extXYZ, libAtoms extXYZ, OVITO extXYZ |
 | `gaussian-input` (`.gjf`, `.com`) | structure=supported | F0 / none / not_available | built-in | Gaussian Cartesian input |
 | `iodata_wavefunction` (`.fchk`, `.fch`, `.molden`, `.input`) | atomic_property=supported, basis_set=supported, density_matrix=supported, orbital=supported, structure=supported | F0 / none / not_available | runtime module `iodata` | FCHK, Molden |
-| `mol` (`.mol`) | atomic_identity=supported, molecular_record=supported, structure=supported, topology=supported | F5 / project_browser / preview_confirmation | runtime module `rdkit` | MOL V2000, MOL V3000 |
-| `mol-v2000` (`.mol`) | atomic_identity=supported, molecular_record=supported, structure=supported, topology=supported | F5 / project_browser / preview_confirmation | runtime module `rdkit` | MOL V2000 |
-| `mol2` (`.mol2`) | atomic_property=supported, multi_record=supported, structure=supported, substructure=supported, topology=supported | F5 / project_browser / preview_confirmation | built-in | Tripos MOL2, MOL2 multi-record, MOL2 substructure |
+| `mol` (`.mol`) | atomic_identity=supported, molecular_record=supported, structure=supported, topology=supported | F5 / prepare / preview_confirmation | runtime module `rdkit` | MOL V2000, MOL V3000 |
+| `mol-v2000` (`.mol`) | atomic_identity=supported, molecular_record=supported, structure=supported, topology=supported | F5 / prepare / preview_confirmation | runtime module `rdkit` | MOL V2000 |
+| `mol2` (`.mol2`) | atomic_property=supported, multi_record=supported, structure=supported, substructure=supported, topology=supported | F5 / prepare / preview_confirmation | built-in | Tripos MOL2, MOL2 multi-record, MOL2 substructure |
 | `orca-input` (`.inp`) | structure=supported | F0 / none / not_available | built-in | ORCA Cartesian input |
-| `pdb` (`.pdb`) | atomic_identity=supported, atomic_property=supported, crystal=partial, hierarchy=supported, multi_model=supported, structure=supported, topology=partial, trajectory=supported | F5 / project_browser / preview_confirmation | built-in | PDB altloc, PDB CONECT, PDB multi-model |
+| `pdb` (`.pdb`) | atomic_identity=supported, atomic_property=supported, crystal=partial, hierarchy=supported, multi_model=supported, structure=supported, topology=partial, trajectory=supported | F5 / prepare / preview_confirmation | built-in | PDB altloc, PDB CONECT, PDB multi-model |
 | `phonopy-file` (`.yaml`, `.yml`) | phonon_mode=supported, structure=supported | F0 / none / not_available | runtime module `phonopy` | Phonopy NaCl YAML and FORCE_SETS |
-| `poscar` (`.vasp`, `.poscar`, `.contcar`, `CONTCAR`, `POSCAR`) | atomic_property=supported, crystal=supported, structure=supported | F5 / project_browser / preview_confirmation | built-in | VASP 4, VASP 5, POSCAR velocity |
-| `pqr` (`.pqr`) | atomic_identity=supported, atomic_property=supported, hierarchy=supported, structure=supported | F5 / project_browser / preview_confirmation | built-in | PQR chain, PQR no-chain |
+| `poscar` (`.vasp`, `.poscar`, `.contcar`, `CONTCAR`, `POSCAR`) | atomic_property=supported, crystal=supported, structure=supported | F5 / prepare / preview_confirmation | built-in | VASP 4, VASP 5, POSCAR velocity |
+| `pqr` (`.pqr`) | atomic_identity=supported, atomic_property=supported, hierarchy=supported, structure=supported | F5 / prepare / preview_confirmation | built-in | PQR chain, PQR no-chain |
 | `pymatgen-vasp-grid` (`.chgcar`, `.parchg`, `.elfcar`, `.locpot`, `CHGCAR`, `PARCHG`, `ELFCAR`, `LOCPOT`) | crystal=supported, grid=supported, structure=supported | F0 / none / not_available | runtime module `pymatgen` | CHGCAR, ELFCAR, LOCPOT, PARCHG |
 | `pymatgen-vasprun-electronic` (`.xml`, `.gz`) | band_structure=supported, dos=supported, projection=partial, structure=supported | F0 / none / not_available | runtime module `pymatgen` | vasprun.xml band/DOS |
-| `qcschema` (`.json`) | calculation_record=partial, energy=partial, gradient=partial, structure=supported | F5 / core / source_envelope | built-in | QCSchema AtomicResult, QCSchema Molecule |
-| `sdf` (`.sdf`) | atomic_identity=supported, molecular_record=supported, record_property=partial, structure=supported, topology=supported | F5 / project_browser / preview_confirmation | runtime module `rdkit` | SDF malformed-record recovery, SDF multi-record |
-| `smiles` (`.smi`, `.smiles`) | atomic_identity=supported, molecular_record=supported, structure=supported, topology=supported | F5 / project_browser / preview_confirmation | runtime module `rdkit` | SMILES file, SMILES text |
-| `xyz` (`.xyz`) | structure=supported, trajectory=supported | F4 / project_browser / single_structure_coordinates_only | built-in | XYZ single-frame, XYZ trajectory |
+| `qcschema` (`.json`) | calculation_record=partial, energy=partial, gradient=partial, structure=supported | F5 / prepare / source_envelope | built-in | QCSchema AtomicResult, QCSchema Molecule |
+| `sdf` (`.sdf`) | atomic_identity=supported, molecular_record=supported, record_property=partial, structure=supported, topology=supported | F5 / prepare / preview_confirmation | runtime module `rdkit` | SDF malformed-record recovery, SDF multi-record |
+| `smiles` (`.smi`, `.smiles`) | atomic_identity=supported, molecular_record=supported, structure=supported, topology=supported | F5 / prepare / preview_confirmation | runtime module `rdkit` | SMILES file, SMILES text |
+| `xyz` (`.xyz`) | structure=supported, trajectory=supported | F4 / prepare / single_structure_coordinates_only | built-in | XYZ single-frame, XYZ trajectory |
 <!-- END GENERATED FORMAT CAPABILITIES -->

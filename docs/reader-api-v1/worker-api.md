@@ -52,7 +52,7 @@ worker 在 hash、parse、artifact write 和 publication 边界检查 cancellati
 
 ## Host process lifecycle
 
-[`WorkerHandle`](../../ChemBlender/worker_client.py) 由 host 持有 process、request、
+[`WorkerHandle`](../../chemblender_prepare/worker_client.py) 由 host 持有 process、request、
 result、cancel 和 stdout/stderr 路径：
 
 - `poll()` 在 result 存在时读取严格 `WorkerResult`；进程退出但没有 result 时抛出

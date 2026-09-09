@@ -5,6 +5,12 @@
 保留 `1.0-rc1` token；stable token 提升留待后续明确的 Reader API 兼容门，
 不因 final Release 状态自动改写。
 
+## 本次宿主迁移
+
+Reader 数据契约 token 保持不变；Python 入口改为 `chemblender_prepare.reader_api`。
+旧2.3 Blender handle安装方式在当前Viewer中已移出，需要Reader作者显式改接外部环境。
+保留token不表示旧bootstrap无需修改；已保存CBQ不依赖Reader重开。
+
 ## 兼容规则
 
 - **same major**：v1 host 保留已发布的必填字段、字段含义、enum 值、异常分类和
@@ -20,6 +26,13 @@
 
 ## 冻结证据
 
-`ChemBlender.reader_api.__all__`、公开 dataclass init fields 和 enum values 由
+`chemblender_prepare.reader_api.__all__`、公开 dataclass init fields 和 enum values 由
 `tests/fixtures/reader-api/public-schema-v1-rc1.json` 及其 SHA-256 锁定。每个兼容
 增加必须同步更新 snapshot、canonical round-trip、本文档和 conformance tests。
+
+
+CBQ 1.1 为 `PeriodicSiteData` 追加 `symmetry_rotations` 与
+`symmetry_translations`，类型均为可选 `ArrayData`、默认 `None`。旧包可缺失字段，
+扩展对称操作前必须在外部补齐并验证；不得把缺失解释为恒等操作。
+原 `public-schema-v1-rc1.json` 及哈希保持不变。回归仅归一已迁移模块路径和
+Python 3.12/3.13 的 Path 类型路径，并单独锁定上述新增字段；其他字段、默认值和枚举仍与旧快照逐项比较。

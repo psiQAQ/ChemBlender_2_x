@@ -1,5 +1,9 @@
 # SimpleCoords Reader Extension
 
+> Historical 2.3 bootstrap. Do not install this extension in the current CBQ Viewer.
+> Reuse `reader.py` through the [external Python integration](../../docs/reader-api-v1/README.md#external-python-integration).
+
+
 This separately installable Blender Extension demonstrates the public
 ChemBlender Reader API v1. It registers
 `org.chemblender.example.simplecoords` through the published

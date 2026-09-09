@@ -1,27 +1,42 @@
-# Physical quantity visualization and SOP
+# CBQ Viewer、本地编辑与外部处理模块
 
-## Authority and boundary
+## 当前 authority
 
-Implement the user's approved physical-quantity panel workflows, Research/Teaching materials, Cycles outputs, real examples and Chinese SOP. The previous workbench at `3c80892` is the starting point, not a substitute for this task's validation.
+执行用户批准的CBQ共享核心/外部准备工具改造，并按2026-09-08追加方案保留Blender纯Mesh编辑和高频交互，通过单一本地可执行文件异步重计算。新增方案取代“Blender仅查看、立即删除RDKit wheel”的旧边界。
 
-The current plan and five-layer quantity matrix are maintained in [.planning/task_plan.md](../../.planning/2026-09-08-physical-quantity-visualization-sop/task_plan.md); [progress.md](../../.planning/2026-09-08-physical-quantity-visualization-sop/progress.md) records material changes and observed failures. Verify current Git and runtime state when resuming.
+完整接口、操作、流程、阶段及门槛：[本地处理模块方案](../../docs/quantum-visualization/architecture/local-processor.md)。主Agent维护[task_plan.md](../../.planning/2026-09-08-physical-quantity-visualization-sop/task_plan.md)、[findings.md](../../.planning/2026-09-08-physical-quantity-visualization-sop/findings.md)、[progress.md](../../.planning/2026-09-08-physical-quantity-visualization-sop/progress.md)。恢复时核查Git和运行环境。
 
-## Delivered and ongoing
+## 当前实态
 
-- Shared public scientific import, View creation/update/rebuild, materials, native plots, trajectory/phonon phase controls and transactional Cycles/PNG/MP4 export are implemented.
-- Real molecular fields have 22 formal images and three `.blend + .cbq` workbenches. Lifecycle validation preserves 40 total Views and 61 scientific arrays through Save As, move, VDB deletion, rebuild and reopen.
-- PQR charges and rMD17 configurations/forces have 6 formal stills, 128 sequence PNGs, 4 MP4s and two saved workbenches. Save As, whole-folder move, independent process reopen, public LOAD/REBUILD and all 32 frames Passed; 14 scientific NPY files are unchanged.
-- [Chinese SOP](../../docs/quantum-visualization/scientific-visualization/README.md) includes 11 actual Blender window screenshots and an offline HTML page. It distinguishes verified real workflows from implementation-only or synthetic coverage.
-- Full unittest-06 Passed 2504 tests, 36 optional skips. Native material, quantitative-color update, affine cloud, transactional export and project-ownership regressions Passed. Qualification and full-smoke identities are recorded in [local delivery verification](../../docs/quantum-visualization/scientific-visualization/VERIFICATION.md).
-- Source implementation is committed locally as `67ace73`; no remote write or release was performed. All Blender installs and UI operations use private profiles; the shared actual-user installation is unchanged.
+- 分支治理已完成：main 54ecf4c、两项远端CI成功、完整bundle及附注归档标签已核验、旧工作分支已退役，当前feat/cbq-only-viewer。
+- cbq_core／chemblender_prepare迁移已按用户要求保存开发检查点：27f67c9（共享核心/外部工具）、85ab235（Viewer）、8244d12（回归）；文档/示例作为第四批。完整测试与功能保留验收尚未完成，不能把提交当成 C2 完成。
+- 用户明确批准缓存科学/Fermi/critic2环境及本仓库uv init/venv安装。根.venv/uv.lock已建立；科学环境、Fermi兼容锁及critic2工具链探测完成。科学数值/完整UI验收并未因此自动完成。
+- 候选无wheel Blender验证见 .blend-analysis/cbq-viewer-ui-smoke-03/qualification.json。基础注册、视图、保存重开/源移走/缓存重建通过，不代表RDKit功能等价、纯Mesh编辑、响应时间或正式瘦身完成。
+- 旧分子/原子图像与SOP为既有交付证据，见[验证记录](../../docs/quantum-visualization/scientific-visualization/VERIFICATION.md)；新架构逐物理量验收单独记录。
 
-## Required continuation
+## 下一步及硬门槛
 
-1. Resolve the already-presented cache-only dependency proposal before actual cclib/periodic/Fermi/critic2 computation. An implemented adapter or synthetic render does not complete these quantity gates.
-2. After approval, validate each backend with the pinned real inputs, finish any runtime integration gaps (including explicit Windows-to-WSL critic2 invocation), then generate the remaining per-quantity Cycles images/animations and GUI SOP sections.
-3. Keep the full plan open until these real scientific, panel, render and lifecycle gates pass. Run shared-user installation or remote release gates only with their corresponding authorization.
+1. 先完成当前模块迁移、测试迁移和架构导览；审计整文件删除中的纯编辑功能；形成干净逻辑提交，才接入新增控制器。
+2. 共享Worker v1、capabilities/worker/doctor、单exe路由，再接Blender全局路径、异步任务和节流预览。路径不进入.blend或CBQ。
+3. 顺序迁移既有wavefunction/Fermi/reader、RDKit编辑闭环、QTAIM/phonon/NCI；结果新UUID追加，旧结果保留，过期或不可信结果不提交。
+4. RDKit wheel正式保留直至功能等价、100ms modal/1秒运行/两秒取消/两秒小分子冷启动额外开销及数据一致性全部通过。任一失败则修复或延期，不发布降级版本。无wheel候选验证不关闭此门槛。
+5. 最后做正式无wheel隔离安装、完整科学可视化/Cycles/生命周期、窗口截图及目录可跳转SOP、Python wheel/sdist和Extension审计。
 
-New package installations require approval under root `AGENTS.md`. The existing cache environment was approved; the [hash-locked package and Fortran-toolchain proposal](../../examples/scientific-visualization/dependencies/PROPOSAL.md) remains pending. Do not install into global Blender Python, change a shared Blender profile, push, run remote CI or publish without corresponding authorization.
-## Approved CBQ-only continuation
+保持项目缓存环境隔离，不改共享Blender profile或全局Python。不复制RDKit源码，不做HTTP/常驻服务，不在Blender安装依赖。独立模块为未来PyPI发布做构建准备；本次不发布Release/PyPI，GUI由用户负责发布。后续新依赖及未获授权外部写入仍遵循仓库审批规则。
 
-The current user instruction supersedes the earlier two-path import proposal: extract cbq_core and chemblender_prepare, use a CLI-driven lightweight external GUI, and keep Blender limited to CBQ visualization. CBQ schema/manifest 1.1 adds numeric periodic operations with explicit external legacy upgrade. The user will publish the GUI. Main integration, archive tags, origin push/CI and retirement of the old feature branches are explicitly authorized before starting feat/cbq-only-viewer. No software Release is authorized. New dependency installations still require the existing approval process; optional real-backend gates remain open. The selected planning directory above owns phases C1-C6.
+2026-09-09 回归快照更新：migration-full-09为最新完整回归（2565项，7 failures/124 errors/36 skips，89.714秒，Failed）。主要剩余旧import-preview/quick-import、wavefunction任务安全、legacy路由/恢复测试迁移。GUI校验模式漏传已修复；多文件/未知扩展名实际CLI→CBQ与Tk验证通过。full09后修复benchmark字符串检索误报，相关59项通过，但未标全量通过。详见规划progress.md，C2稳定提交及所有后续门槛仍未关闭。
+
+2026-09-09 最新全量改为migration-full-10：2569项、6 failures/116 errors/36 skips、93.344秒，Failed。新增Tk SMILES进度文件Windows共享冲突已修复，CLI定向28项27 Passed/1 skipped；未重跑全量。其余失败集中旧导入UI、wavefunction和legacy路由/恢复迁移。详见规划progress.md及full10日志；C2仍未稳定提交。
+
+2026-09-09 最新全量full11：2571项、5 failures/116 errors/36 skips、100.141秒，Failed。Mesh Apply安装版生命周期通过cbq-mesh-apply-lifecycle-02（标准preset、相对core import、保存后Apply/冷重开/显式重建/SaveAs），旧UI/任务/legacy迁移仍待完成，C2未提交。详见规划progress.md。
+
+2026-09-09 最新完整回归为full12：2571项、3 failures/107 errors/36 skips、100.079秒，Failed。外部GUI取消超时/进程所有权和文件选择迁移已有针对性证据，旧preview/quick UI、wavefunction与legacy恢复门槛仍待关闭，C2尚未稳定提交。详见规划progress.md和migration-full-12日志。
+
+
+2026-09-09 最新完整回归full13：2571项、3 failures/102 errors/36 skips、103.062秒，Failed。五项旧构象投影测试已迁到真实Tk/CLI有界证据与显式复核验收；无新增失败。剩余旧导入交互、wavefunction任务及legacy恢复仍待完成，C2未提交。详见规划进度与migration-full-13证据。
+
+
+2026-09-09：最新完整回归更新为full15：2572项、3 failures/91 errors/36 skips、105.328秒，Failed；共享Worker Protocol v1迁至cbq_core且协议字节不变，已有vendoring/隔离加载及专项通过。旧导入/任务/legacy恢复继续迁移，C2尚未形成稳定提交，后续控制器/RDKit门槛不变。详见规划progress.md与migration-full-15证据。
+
+
+2026-09-09：最新完整回归full16：2574项、3 failures/90 errors/36 skips、105.516秒，Failed；相对full15无新增失败，场景预设致命异常回滚测试独立迁移通过。近期Worker日志句柄、ESP故障边界、轨道缓存revision修复已纳入此轮。C2尚未稳定提交，旧导入/任务/legacy恢复继续收敛。详见规划progress.md及migration-full-16日志。

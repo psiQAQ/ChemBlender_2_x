@@ -19,8 +19,11 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from render_molecular import array_hashes, configure_device, digest, image_metrics
-from ChemBlender.core import builtin_scene_presets, close_session, create_session, plan_scene_preset
-from ChemBlender.core.sidecar import open_project
+from cbq_core.scene_preset import builtin_scene_presets
+from cbq_core.session import close_session
+from cbq_core.session import create_session
+from cbq_core.scene_preset import plan_scene_preset
+from cbq_core.sidecar import open_project
 from ChemBlender.scene_preset_view import apply_scene_preset, _remove_objects
 from ChemBlender.ui.scientific_export import iter_scientific_images
 from ChemBlender.ui.orbital_export import _image_staging

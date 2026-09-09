@@ -1,6 +1,10 @@
-# Proposed isolated Fermi worker; installation requires explicit approval.
+# Approved isolated Fermi worker; PyVista 0.47 removed APIs used by PyProcar 6.5.
 pyprocar==6.5.0
 numpy==1.26.4
 scipy==1.16.3
 spglib==2.7.0
 ase==3.29.0
+
+# Keep the upstream Fermi surface APIs and a supported VTK ABI.
+pyvista==0.46.5
+vtk==9.5.2

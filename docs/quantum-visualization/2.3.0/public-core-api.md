@@ -1,10 +1,14 @@
 # ChemBlender.core 公共门面
 
+> 历史 API 说明：以下 `ChemBlender.core` 路径属于拆分前接口，不是当前导入方式。
+> 旧源码链接固定到迁移前提交；当前模型使用 `cbq_core`，parser 与科学操作使用
+> `chemblender_prepare`，参见[本地处理模块方案](../architecture/local-processor.md)。
+
 `ChemBlender.core` 可在普通 CPython 中导入，且不依赖 `bpy`。精确的权威名称列表为 `ChemBlender.core.__all__`，由 [tests/test_core_public_api.py](../../../tests/test_core_public_api.py) 强制检查。
 
 ## 稳定模型门面
 
-模型类和枚举是稳定门面；其构造器与 `.cbq` sidecar 类型标签保持兼容。请从 [ChemBlender.core](../../../ChemBlender/core/__init__.py) 导入这些语义模型。
+模型类和枚举是稳定门面；其构造器与 `.cbq` sidecar 类型标签保持兼容。请从 [ChemBlender.core](https://github.com/psiQAQ/ChemBlender_2_x/blob/54ecf4c5ca51fd19a9a4c5aebd668a91b2e514fe/ChemBlender/core/__init__.py) 导入这些语义模型。
 
 `CalculationGroup` 是用户确认的跨来源计算关系；它属于权威项目模型，保存在 `QCProject.calculation_groups` 并随 `.cbq` 往返。
 

@@ -7,7 +7,7 @@ canonical JSON。它不安装依赖、不扫描 `sys.path`，也不修改项目�
 ## 运行
 
 ```text
-python -m ChemBlender.reader_api.conformance_cli --plugin-path examples/reader-extension --fixtures examples/reader-extension/fixtures --output conformance-result.json
+python -m chemblender_prepare.reader_api.conformance_cli --plugin-path examples/reader-extension --fixtures examples/reader-extension/fixtures --output conformance-result.json
 ```
 
 `--plugin-path` 必须是包含普通 `reader.py` 的目录；该模块必须提供
