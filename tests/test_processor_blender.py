@@ -47,6 +47,8 @@ class NativeProcessorControllerTests(unittest.TestCase):
             )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("PROCESSOR_OPERATIONS_PASSED", result.stdout)
+        print(next(line for line in result.stdout.splitlines()
+                   if line.startswith("PROCESSOR_TIMINGS_JSON=")))
 
     @unittest.skipUnless(BLENDER.is_file() and PROCESSOR.is_file()
                          and PACKAGE.is_file() and PROCESSOR_CONFIG.is_file()
@@ -77,6 +79,8 @@ class NativeProcessorControllerTests(unittest.TestCase):
             )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("PROCESSOR_OPERATIONS_PASSED", result.stdout)
+        print(next(line for line in result.stdout.splitlines()
+                   if line.startswith("PROCESSOR_TIMINGS_JSON=")))
 
     @unittest.skipUnless(BLENDER.is_file() and PROCESSOR.is_file(),
                          "Blender 5.1 and project processor are required")

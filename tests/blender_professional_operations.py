@@ -1,11 +1,13 @@
 """Exercise real QTAIM, NCI, and phonon operations through Blender."""
 
 import importlib
+import json
 import os
 from pathlib import Path
 import shutil
 import sys
 from tempfile import TemporaryDirectory
+import time
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -80,6 +82,60 @@ with TemporaryDirectory(prefix="professional-blender-") as temporary:
         package_root + ".ui.processor.get_processor_preferences",
         return_value=preferences,
     ):
+        processor_operations = importlib.import_module(
+            package_root + ".ui.processor_operations"
+        )
+        operator_type = processor_operations.CHEMBLENDER_OT_processor_operation
+        timers = set()
+        manager = SimpleNamespace(
+            event_timer_add=lambda *_args, **_kwargs: timers.add(object()) or next(iter(timers)),
+            event_timer_remove=lambda timer: timers.remove(timer),
+            modal_handler_add=lambda _operator: None,
+        )
+        context = SimpleNamespace(scene=scene, window=None, window_manager=manager)
+        operator = SimpleNamespace(
+            _session=None, _operation=None, _timer=None, _window_manager=None,
+            action="PROFESSIONAL", operation_id="grid.nci_fields",
+            source_id="", topology_id="", report=lambda *_args: None,
+        )
+        operator._begin = lambda value: operator_type._begin(operator, value)
+        operator._complete = lambda value, snapshot: operator_type._complete(
+            operator, value, snapshot
+        )
+        operator._release = lambda value: operator_type._release(operator, value)
+        settings.nci_grid_points = (128, 128, 128)
+        settings.source_file = str(wavefunction)
+        baseline_ids = session.project._all_entity_ids()
+        started = time.perf_counter()
+        assert operator_type.invoke(operator, context, None) == {"RUNNING_MODAL"}
+        modal_elapsed = time.perf_counter() - started
+        assert modal_elapsed < .1
+        result = operator_type.modal(operator, context, SimpleNamespace(type="TIMER"))
+        running_elapsed = time.perf_counter() - started
+        assert result == {"RUNNING_MODAL"}
+        assert operator._operation.poll().state.value == "running"
+        assert running_elapsed < 1.
+        cancelled_at = time.perf_counter()
+        assert operator_type.modal(
+            operator, context, SimpleNamespace(type="ESC")
+        ) == {"RUNNING_MODAL"}
+        deadline = time.monotonic() + 2.
+        while result == {"RUNNING_MODAL"} and time.monotonic() < deadline:
+            time.sleep(.01)
+            result = operator_type.modal(
+                operator, context, SimpleNamespace(type="TIMER")
+            )
+        cancel_elapsed = time.perf_counter() - cancelled_at
+        assert result == {"CANCELLED"}, result
+        assert cancel_elapsed < 2.
+        assert session.project._all_entity_ids() == baseline_ids
+        assert not timers and session.id not in processor_operations._ACTIVE_OPERATIONS
+        print("PROCESSOR_CANCEL_PROBE_JSON=" + json.dumps({
+            "modal_seconds": modal_elapsed,
+            "running_seconds": running_elapsed,
+            "cancel_seconds": cancel_elapsed,
+        }, sort_keys=True))
+
         settings.source_file = str(wavefunction)
         assert bpy.ops.chemblender.processor_operation(
             "EXEC_DEFAULT", action="PROFESSIONAL",
@@ -123,6 +179,11 @@ with TemporaryDirectory(prefix="professional-blender-") as temporary:
         assert isinstance(phonon, model.PhononModeSet)
         assert numpy.asarray(phonon.eigenvectors.values).shape[:2] == (1, 6)
 
+    print("PROCESSOR_CANCEL_TIMINGS_JSON=" + json.dumps({
+        "cancel_seconds": cancel_elapsed,
+        "modal_seconds": modal_elapsed,
+        "running_seconds": running_elapsed,
+    }, sort_keys=True))
     assert original_ids.issubset(session.project._all_entity_ids())
     for identity in (qtaim_id, nci_id, phonon_id):
         assert any(

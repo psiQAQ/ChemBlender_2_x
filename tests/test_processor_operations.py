@@ -1,5 +1,7 @@
 """Unified Blender-side scientific operation publication contracts."""
 
+from dataclasses import replace
+import hashlib
 from pathlib import Path
 import os
 from tempfile import TemporaryDirectory
@@ -15,9 +17,11 @@ from cbq_core.model import (
 )
 from cbq_core.session import ProjectSession
 from cbq_core.sidecar import close_project
+from cbq_core.worker_protocol import ProtocolError
 from ChemBlender.ui.processor import ProcessorState
 from ChemBlender.ui.processor_operations import (
-    ProcessorError, molecule_inputs, publish_operation, start_fermi_operation,
+    ProcessorError, _safe_artifact, molecule_inputs, publish_operation,
+    start_fermi_operation,
     start_molecule_operation, start_reader_operation,
     start_professional_operation, start_wavefunction_operation,
     wavefunction_inputs,
@@ -186,6 +190,98 @@ class ProcessorOperationTests(unittest.TestCase):
                 publish_operation(operation, session)
             self.assertFalse(session.project.structures)
             operation.cleanup()
+
+    def test_stale_molecular_input_does_not_publish(self):
+        from tests.test_worker_molecule_operations import smiles_batch
+
+        with TemporaryDirectory(prefix="processor-operation-") as temporary:
+            root = Path(temporary)
+            source = smiles_batch("C[NH3+]")
+            project = QCProject(id=uuid4(), schema_version="1.1")
+            project.commit(source)
+            session = ProjectSession(uuid4(), project, root)
+            structure, topology = source.structures[0], source.topologies[0]
+            baseline_ids = project._all_entity_ids()
+            operation = start_molecule_operation(
+                PROCESSOR, root, project, "molecule.energy",
+                molecule_inputs(project, "molecule.energy", structure.id, topology.id),
+                {"force_field": "UFF"},
+            )
+            try:
+                self.assertIs(wait_for(operation).state, ProcessorState.SUCCEEDED)
+                revision = structure.revision
+                project.structures[structure.id] = replace(
+                    structure,
+                    revision=("0" if revision[0] != "0" else "1") + revision[1:],
+                )
+                with self.assertRaisesRegex(ProcessorError, "inputs changed"):
+                    publish_operation(operation, session)
+                self.assertEqual(project._all_entity_ids(), baseline_ids)
+            finally:
+                operation.cleanup()
+
+    def test_untrusted_export_artifacts_do_not_publish_or_escape(self):
+        from tests.test_worker_molecule_operations import smiles_batch
+
+        with TemporaryDirectory(prefix="processor-operation-") as temporary:
+            root = Path(temporary)
+            source = smiles_batch("CO")
+            project = QCProject(id=uuid4(), schema_version="1.1")
+            project.commit(source)
+            session = ProjectSession(uuid4(), project, root)
+            structure, topology = source.structures[0], source.topologies[0]
+            destination = root / "published.sdf"
+            operation = start_molecule_operation(
+                PROCESSOR, root, project, "molecule.export",
+                molecule_inputs(project, "molecule.export", structure.id, topology.id),
+                {"format": "sdf", "confirm_loss": True, "isomeric": True},
+                export_destination=destination,
+            )
+            try:
+                self.assertIs(wait_for(operation).state, ProcessorState.SUCCEEDED)
+                result = operation.task.result
+                for relative in ("../outside.sdf", "C:/outside.sdf"):
+                    metadata = {**result.metadata, "artifact": relative}
+                    with self.subTest(relative=relative):
+                        if relative.startswith(".."):
+                            with self.assertRaisesRegex(ProtocolError, "inside the sidecar"):
+                                replace(result, artifacts=(relative,), metadata=metadata)
+                        with self.assertRaisesRegex(ProcessorError, "artifact path"):
+                            _safe_artifact(operation.result_project, relative)
+                    self.assertFalse(destination.exists())
+
+                operation.task.result = result
+                artifact = operation.result_project / result.artifacts[0]
+                artifact.write_bytes(artifact.read_bytes() + b"tampered")
+                with self.assertRaisesRegex(ProcessorError, "artifact hash"):
+                    publish_operation(operation, session)
+                self.assertFalse(destination.exists())
+
+                outside = root / "outside.sdf"
+                outside.write_bytes(b"outside")
+                linked = operation.result_project / "linked.sdf"
+                metadata = {
+                    **result.metadata,
+                    "artifact": linked.name,
+                    "artifact_sha256": hashlib.sha256(outside.read_bytes()).hexdigest(),
+                }
+                operation.task.result = replace(
+                    result, artifacts=(linked.name,), metadata=metadata,
+                )
+                try:
+                    os.symlink(outside, linked)
+                except OSError:
+                    with patch.object(
+                            Path, "is_symlink", autospec=True,
+                            side_effect=lambda path: path == linked):
+                        with self.assertRaisesRegex(ProcessorError, "must not use links"):
+                            publish_operation(operation, session)
+                else:
+                    with self.assertRaisesRegex(ProcessorError, "must not use links"):
+                        publish_operation(operation, session)
+                self.assertFalse(destination.exists())
+            finally:
+                operation.cleanup()
 
     @unittest.skipUnless((FERMI_FIXTURE / "PROCAR").is_file()
                          and PROCESSOR_CONFIG.is_file(),

@@ -2,6 +2,7 @@
 
 import os
 import importlib
+import json
 from pathlib import Path
 import shutil
 import sys
@@ -66,28 +67,42 @@ with TemporaryDirectory(prefix="processor-blender-") as temporary:
             event_timer_remove=lambda timer: timers.remove(timer),
             modal_handler_add=lambda _operator: None,
         )
+        operator_type = processor_operations.CHEMBLENDER_OT_processor_operation
         operator = SimpleNamespace(
             _session=None, _operation=None, _timer=None, _window_manager=None,
+            action="READER", operation_id="", source_id="", topology_id="",
             report=lambda *_args: None,
         )
         invoke_context = SimpleNamespace(
             scene=scene, window=None, window_manager=manager,
         )
         started = time.perf_counter()
-        result = processor_operations.CHEMBLENDER_OT_processor_operation.invoke(
-            operator, invoke_context, None,
+        operator._begin = lambda context: operator_type._begin(operator, context)
+        operator._complete = lambda context, snapshot: operator_type._complete(
+            operator, context, snapshot
         )
+        operator._release = lambda context: operator_type._release(operator, context)
+        result = operator_type.invoke(operator, invoke_context, None)
+        modal_elapsed = time.perf_counter() - started
         assert result == {"RUNNING_MODAL"}, result
-        assert time.perf_counter() - started < .1
+        assert modal_elapsed < .1
         assert operator._operation is None and timers
-        processor_operations.CHEMBLENDER_OT_processor_operation._release(operator, None)
+        result = operator_type.modal(
+            operator, invoke_context, SimpleNamespace(type="TIMER")
+        )
+        running_elapsed = time.perf_counter() - started
+        assert result == {"RUNNING_MODAL"}, result
+        assert operator._operation.poll().state.value == "running"
+        assert running_elapsed < 1.
+        deadline = time.monotonic() + 120.
+        while result == {"RUNNING_MODAL"} and time.monotonic() < deadline:
+            time.sleep(.02)
+            result = operator_type.modal(
+                operator, invoke_context, SimpleNamespace(type="TIMER")
+            )
+        assert result == {"FINISHED"}, result
         assert not timers
         assert session.id not in processor_operations._ACTIVE_OPERATIONS
-
-        result = bpy.ops.chemblender.processor_operation(
-            "EXEC_DEFAULT", action="READER"
-        )
-        assert result == {"FINISHED"}, result
         assert len(session.project.structures) == 1
         assert len(session.project.basis_sets) == 1
         assert len(session.project.orbital_sets) == 1
@@ -112,6 +127,10 @@ with TemporaryDirectory(prefix="processor-blender-") as temporary:
         expected = numpy.asarray(grid.data.values).copy()
         assert expected.shape == (3, 3, 3) and numpy.isfinite(expected).all()
 
+    print("PROCESSOR_TIMINGS_JSON=" + json.dumps({
+        "modal_seconds": modal_elapsed,
+        "running_seconds": running_elapsed,
+    }, sort_keys=True))
     blend_path = temporary / "processor-operation.blend"
     assert bpy.ops.wm.save_as_mainfile(filepath=str(blend_path)) == {"FINISHED"}
     source_copy.unlink()
