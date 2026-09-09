@@ -94,11 +94,13 @@ class WorkerReaderOperationTests(unittest.TestCase):
             cancel_path=cancel_path,
         )
 
-    def test_fixed_reader_operation_round_trips_without_project_sidecar(self):
+    def test_fixed_reader_operation_round_trips_to_independent_result_project(self):
         result = self.run_reader()
 
         self.assertIs(result.status, WorkerStatus.SUCCESS)
         self.assertFalse((self.root / self.request.project_locator).exists())
+        self.assertTrue((self.root / "reader-result.cbq" / "manifest.json").is_file())
+        self.assertTrue(result.outputs)
         self.assertEqual(
             set(result.metadata),
             {

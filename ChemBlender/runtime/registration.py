@@ -5,6 +5,7 @@ REGISTER_MODULE_NAMES: tuple[str, ...] = (
     ".extension",
     ".trajectory_view",
     ".ui.processor",
+    ".ui.processor_operations",
     ".ui.session",
     ".ui.properties",
     ".ui.cbq_import",

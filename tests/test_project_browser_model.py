@@ -951,6 +951,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             "ChemBlender.ui.properties",
             "ChemBlender.ui.mesh_edit",
             "ChemBlender.ui.cbq_import",
+            "ChemBlender.ui.processor_operations",
             "ChemBlender.ui.topology",
         ):
             sys.modules.pop(name, None)
@@ -965,6 +966,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             "ChemBlender.ui.properties",
             "ChemBlender.ui.mesh_edit",
             "ChemBlender.ui.cbq_import",
+            "ChemBlender.ui.processor_operations",
             "ChemBlender.ui.topology",
         ):
             sys.modules.pop(name, None)
@@ -1016,6 +1018,7 @@ class ProjectBrowserBlenderContractTests(unittest.TestCase):
             patch.object(panel, "presentation_view_records", return_value=()),
             patch.object(panel, "refresh_project_browser", side_effect=refresh),
             patch("ChemBlender.ui.cbq_import.draw_cbq_import"),
+            patch("ChemBlender.ui.processor_operations.draw_processor_inputs"),
         ):
             for _ in range(2):
                 with self.assertRaises(DrawReachedLayout):

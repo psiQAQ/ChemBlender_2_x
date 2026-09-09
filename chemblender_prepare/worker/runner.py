@@ -4,6 +4,7 @@ from concurrent.futures import CancelledError
 from pathlib import Path
 
 from cbq_core.model import ImportBatch
+from cbq_core.model import QCProject
 from cbq_core.sidecar import close_project
 from cbq_core.sidecar import open_project
 from cbq_core.sidecar import save_project
@@ -132,15 +133,21 @@ def _run_task_directory_operation(
 ):
     task_directory = Path(request_path).resolve().parent
     bundle = task_directory / "reader-bundle"
+    output_project = task_directory / "reader-result.cbq"
     bundle_preexisting = bundle.exists() or bundle.is_symlink()
+    output_preexisting = output_project.exists() or output_project.is_symlink()
 
     def failed(result):
-        if bundle_preexisting:
-            return result
         try:
-            from chemblender_prepare.worker.reader_operation import _remove_owned_bundle
-
-            _remove_owned_bundle(task_directory, bundle)
+            if not bundle_preexisting:
+                from chemblender_prepare.worker.reader_operation import _remove_owned_bundle
+                _remove_owned_bundle(task_directory, bundle)
+            if not output_preexisting and output_project.exists():
+                import shutil
+                if output_project.is_symlink() or output_project.is_junction():
+                    raise OperationError("reader_cleanup_failed",
+                                         "refusing to remove a linked reader result")
+                shutil.rmtree(output_project)
         except OperationError as error:
             return _error(
                 request.request_id,
@@ -150,69 +157,53 @@ def _run_task_directory_operation(
             )
         return result
 
-    context = OperationContext(
-        project_path,
-        None,
-        cancel_path,
-        task_directory,
-    )
+    context = OperationContext(project_path, None, cancel_path, task_directory)
     try:
         output = operation(context, request)
         if not isinstance(output, OperationOutput):
             raise TypeError("operation must return OperationOutput")
     except OperationError as error:
-        return failed(
-            _error(
-                request.request_id,
-                WorkerStatus.ERROR,
-                error.code,
-                str(error) or error.code,
-            )
-        )
+        return failed(_error(request.request_id, WorkerStatus.ERROR,
+                             error.code, str(error) or error.code))
     except Exception as error:
-        return failed(
-            _error(
-                request.request_id,
-                WorkerStatus.ERROR,
-                "operation_failed",
-                str(error) or type(error).__name__,
-            )
-        )
+        return failed(_error(request.request_id, WorkerStatus.ERROR,
+                             "operation_failed",
+                             str(error) or type(error).__name__))
     if context.is_cancelled():
-        return failed(
-            _error(
-                request.request_id,
-                WorkerStatus.CANCELLED,
-                "cancelled",
-                "request was cancelled before result publication",
-            )
-        )
-    if output.batch is not None or output.outputs:
-        return failed(
-            _error(
-                request.request_id,
-                WorkerStatus.ERROR,
-                "output_validation_failed",
-                "task-directory operation must not modify the project",
-            )
-        )
+        return failed(_error(
+            request.request_id, WorkerStatus.CANCELLED, "cancelled",
+            "request was cancelled before result publication",
+        ))
     try:
+        if not isinstance(output.batch, ImportBatch):
+            raise TypeError("reader operation must return an ImportBatch")
+        if output.outputs != _batch_references(output.batch):
+            raise ValueError("operation outputs must exactly match its batch")
+        if output_preexisting:
+            raise ValueError("reader result project already exists")
+        project = QCProject(request.project_id, request.project_schema_version)
+        project.commit(output.batch)
+        save_project(output_project, project)
+        project = open_project(
+            output_project,
+            expected_project_id=request.project_id,
+            expected_schema_version=request.project_schema_version,
+        )
+        try:
+            _validate_references(project, output.outputs, "output")
+        finally:
+            close_project(project)
         from chemblender_prepare.reader_api.worker_bridge import _task_file
-
         for artifact in output.artifacts:
             _task_file(task_directory, artifact)
     except Exception as error:
-        return failed(
-            _error(
-                request.request_id,
-                WorkerStatus.ERROR,
-                "output_validation_failed",
-                str(error) or type(error).__name__,
-            )
-        )
+        return failed(_error(request.request_id, WorkerStatus.ERROR,
+                             "output_validation_failed",
+                             str(error) or type(error).__name__))
     return WorkerResult(
         request_id=request.request_id,
         status=WorkerStatus.SUCCESS,
+        outputs=output.outputs,
         artifacts=output.artifacts,
         cache_key=output.cache_key,
         metadata=output.metadata,
@@ -269,6 +260,13 @@ def run_request(request_path, result_path, registry, *, cancel_path=None):
                                 from chemblender_prepare.worker.reader_operation import _remove_owned_bundle
 
                                 _remove_owned_bundle(task_directory, bundle)
+                            except BaseException:
+                                pass
+                        output_project = task_directory / "reader-result.cbq"
+                        if output_project.is_dir() and not output_project.is_symlink():
+                            try:
+                                import shutil
+                                shutil.rmtree(output_project)
                             except BaseException:
                                 pass
                         raise

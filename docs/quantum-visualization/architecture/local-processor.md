@@ -1,6 +1,6 @@
 # ChemBlender CBQ Viewer 与本地处理模块实施方案
 
-状态：2026-09-09 共享核心、CBQ 1.1、外部分发包、统一 CLI 与 Blender 单路径异步控制器已完成。后续 operation、性能指标及 RDKit 移除门槛仍须逐项实测，不能由接口存在代替验收。
+状态：2026-09-09 共享核心、CBQ 1.1、外部分发包、统一 CLI、Blender 单路径异步控制器及既有 scientific reader、Fermi、五项 wavefunction operation 迁移均已完成。源码态与正式 ZIP 私有 profile、真实输入、数值、保存重开及全量回归已通过；后续 RDKit／专业分析、性能指标及移除门槛仍须逐项实测，不能由接口存在代替验收。
 
 ## 目录
 
@@ -45,6 +45,8 @@ RDKit 的按钮式科学操作需迁移而非删除：SMILES 建模、芳香键�
 全局 Add-on Preferences 仅增加 `processor_executable`：本地 `chemblender-prepare.exe` 的绝对路径。`Test Processor` 异步执行 capability 检查，显示工具版本、RDKit 版本、可用 operation 及缺失原因。该路径和能力缓存不写入 `.blend`、CBQ、View 或场景 preset。
 
 使用时在 `Edit > Preferences > Add-ons > ChemBlender` 选择该可执行文件并点击 `Test Processor`。检查立即进入 modal；`Esc` 请求取消。处理程序缺失或能力不足只影响相应外部操作，不影响 CBQ 浏览、Mesh 编辑、已有 View 或本地相位／帧预览。
+
+Project Browser 的 `Local Processor · Scientific Input` 提供 IOData wavefunction、cclib output、VASP band/DOS、Phonopy 和 Fermi 输入；Orbital Results 提供 MO、电子密度、density-matrix density、matrix ESP 与 orbital-derived ESP。按钮先进入公共 modal，首个 timer 才冻结输入并启动处理器；成功结果追加新 UUID 并自动选择，自动 View 不适用或创建失败时仍保留已验证结果。reader 与 Fermi 的持久 provenance 指向原始文件及 hash，不引用随后删除的任务目录。
 
 程序未配置、文件不存在或缺少 capability 时，CBQ 浏览、本地编辑、展示、动画、渲染、保存、重开保持可用；仅禁用对应计算按钮并解释缺失能力。正式过渡版本中的内置 RDKit 路径保持原有功能，直至外部等价门槛通过后切换。
 

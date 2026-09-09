@@ -215,8 +215,9 @@ class CBQViewerUITests(unittest.TestCase):
         self.assertTrue(any("WARNING" in levels and "imported" in message.lower()
                             and "browser refresh failed" in message for levels, message in reports))
 
-    def test_registered_ui_has_no_scientific_dependency_or_computation_entrypoint(self):
+    def test_registered_ui_uses_external_processor_without_embedded_backends(self):
         self.assertIn(".ui.cbq_import", REGISTER_MODULE_NAMES)
+        self.assertIn(".ui.processor_operations", REGISTER_MODULE_NAMES)
         for name in ("quick_import", "import_preview", "scientific_edit", "export", "migration",
                      "scientific_import", "wavefunction_import", "topology_import"):
             self.assertNotIn(".ui." + name, REGISTER_MODULE_NAMES)

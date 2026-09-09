@@ -28,6 +28,7 @@ from chemblender_prepare.reader_api.worker_bridge import _task_file
 
 from chemblender_prepare.worker.operation import OperationError
 from chemblender_prepare.worker.operation import OperationOutput
+from chemblender_prepare.worker.protocol import EntityReference
 
 
 def _remove_owned_bundle(task_directory, bundle):
@@ -223,6 +224,19 @@ def _reader_parse(context, request):
                 "cannot hash reader output",
             ) from error
         output = OperationOutput(
+            outputs=tuple(
+                EntityReference(entity.id, entity.revision)
+                for field in (
+                    "structures", "topologies", "molecular_records",
+                    "biological_hierarchies", "annotations",
+                    "external_references", "cif_envelopes",
+                    "qcschema_envelopes", "cjson_envelopes",
+                    "symmetry_results", "calculations", "datasets",
+                    "basis_sets", "orbital_sets", "density_matrices",
+                    "provenance",
+                )
+                for entity in getattr(internal, field)
+            ),
             artifacts=(_DOCUMENT_PATH, *artifact_hashes),
             metadata={
                 "operation": _OPERATION,
@@ -231,6 +245,7 @@ def _reader_parse(context, request):
                 "document_sha256": document_hash,
                 "artifact_sha256": artifact_hashes,
             },
+            batch=internal,
         )
         completed = True
         return output

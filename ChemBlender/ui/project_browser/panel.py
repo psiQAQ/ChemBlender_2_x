@@ -1449,6 +1449,8 @@ class CHEMBLENDER_PT_project_browser(bpy.types.Panel):
         layout = self.layout
         from ..cbq_import import draw_cbq_import
         draw_cbq_import(layout, context)
+        from ..processor_operations import draw_processor_inputs
+        draw_processor_inputs(layout, context, session)
         layout.prop(settings, "mode", expand=True)
         layout.prop(settings, "search", icon="VIEWZOOM")
         layout.prop(settings, "quality_filter")

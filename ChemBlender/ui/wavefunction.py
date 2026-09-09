@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from cbq_core.model import Grid3D
+from cbq_core.model import AtomicProperty, Grid3D
 from cbq_core.orbital_browser import orbital_rows
 
 _SCENE_PROPERTY_NAME = "chemblender_wavefunction"
@@ -39,10 +39,51 @@ def _enum_number(items, identity, *, default=0):
     return next((index for index, value in enumerate(items) if value[0] == identity), default)
 
 
+def _grid_parameters(settings):
+    from math import isfinite
+    spacing = float(settings.spacing)
+    origin = [float(value) for value in settings.origin]
+    shape = [int(value) for value in settings.shape]
+    if (not isfinite(spacing) or spacing <= 0 or not all(map(isfinite, origin))
+            or any(value < 2 for value in shape)):
+        raise ValueError("Grid origin, spacing and counts are invalid")
+    return {
+        "origin": origin,
+        "step_vectors": [[spacing, 0., 0.], [0., spacing, 0.], [0., 0., spacing]],
+        "shape": shape,
+        "chunk_size": 4096,
+    }
+
+
+def prepare_wavefunction_request(session, settings, operation_id, source_id):
+    from .processor_operations import wavefunction_inputs
+    charge_id = getattr(settings, "nuclear_charge_uuid", "")
+    inputs = wavefunction_inputs(
+        session.project, operation_id, source_id,
+        nuclear_charge_id=UUID(charge_id) if charge_id else None,
+    )
+    parameters = _grid_parameters(settings)
+    if operation_id == "wavefunction.mo_grid":
+        channel = settings.channel or inputs[2].channels[0].label
+        rows = orbital_rows(session.project, inputs[2], channel)
+        index = settings.orbital_number - 1
+        if not 0 <= index < len(rows):
+            raise ValueError("Orbital number is outside the selected spin channel")
+        if rows[index].evaluation_error:
+            raise ValueError(rows[index].evaluation_error)
+        parameters.update(channel=channel, orbital_index=index)
+    elif operation_id == "wavefunction.esp_from_orbitals_grid":
+        if settings.density_level == "UNSET":
+            raise ValueError("Select the source density level explicitly")
+        parameters["density_level"] = settings.density_level
+    return inputs, parameters
+
+
 try:
     import bpy
     from bpy.props import (EnumProperty, FloatProperty, FloatVectorProperty,
-                           IntProperty, PointerProperty, StringProperty)
+                           IntProperty, IntVectorProperty, PointerProperty,
+                           StringProperty)
 except ModuleNotFoundError:
     bpy = None
 
@@ -84,12 +125,55 @@ if bpy is not None:
         select_wavefunction_source(self, orbitals)
 
 
+    def _charge_items(self, context):
+        if context is None:
+            return ()
+        from .session import get_scene_session
+        session = get_scene_session(context.scene)
+        source = session.project.density_matrices.get(session.active_entity_id)
+        source = source or _selected_orbitals(session, self)
+        return _enum_items((("NONE", "Select effective nuclear charges", ""),) + tuple(
+            (str(value.id), f"Nuclear charges · {str(value.id)[:8]}", "")
+            for value in session.project.datasets.values()
+            if isinstance(value, AtomicProperty)
+            and value.semantic_role == "nuclear_charge"
+            and value.status.value == "complete"
+            and source is not None
+            and value.structure_id == source.structure_id
+            and value.data.unit == "elementary_charge"
+        ))
+
+
+    def _charge_get(self):
+        return _enum_number(_charge_items(self, bpy.context), self.nuclear_charge_uuid)
+
+
+    def _charge_set(self, value):
+        items = _charge_items(self, bpy.context)
+        if not 0 <= value < len(items):
+            raise ValueError("nuclear charge selection is stale")
+        self.nuclear_charge_uuid = "" if value == 0 else items[value][0]
+
+
     class CHEMBLENDER_PG_wavefunction(bpy.types.PropertyGroup):
         orbital_source_uuid: StringProperty(options={"HIDDEN"})
+        nuclear_charge_uuid: StringProperty(options={"HIDDEN"})
         orbital_source: EnumProperty(name="Orbital Set", items=_orbital_items,
                                      get=_orbital_get, set=_orbital_set)
         channel: EnumProperty(name="Spin", items=_channel_items)
         orbital_number: IntProperty(name="Orbital", default=1, min=1)
+        origin: FloatVectorProperty(name="Origin (bohr)", size=3, default=(-6., -6., -6.))
+        spacing: FloatProperty(name="Step (bohr)", default=.25, min=1.e-5)
+        shape: IntVectorProperty(name="Grid Counts", size=3, default=(49, 49, 49), min=2)
+        nuclear_charge: EnumProperty(
+            name="Effective Nuclear Charges", items=_charge_items,
+            get=_charge_get, set=_charge_set,
+        )
+        density_level: EnumProperty(name="Density Level", default="UNSET", items=(
+            ("UNSET", "Select density level", "Do not infer occupations"),
+            ("scf", "SCF", "Identify the source as SCF"),
+            ("post_scf", "Post SCF", "Identify the source as post-SCF"),
+        ))
         export_orbitals: StringProperty(name="Orbitals (1-based)", default="1",
             description="Explicit numbers and ranges, for example 5,6 or 3-6; current spin only")
         export_directory: StringProperty(name="New Output Directory", subtype="DIR_PATH")
@@ -147,22 +231,46 @@ if bpy is not None:
         button.action = action
         button.source_id, button.orbital_index = str(source_id), index
 
+
+    def _operation_button(layout, text, operation_id, source_id):
+        button = layout.operator(
+            "chemblender.processor_operation", text=text, icon="PLAY"
+        )
+        button.action = "WAVEFUNCTION"
+        button.operation_id = operation_id
+        button.source_id = str(source_id)
+
     def draw_wavefunction_controls(layout, context, session):
         from .orbital_export import _EXPORTS, draw_orbital_export
         settings = getattr(context.scene, _SCENE_PROPERTY_NAME)
         orbitals = _selected_orbitals(session, settings)
+        matrix = session.project.density_matrices.get(session.active_entity_id)
         if orbitals is None:
-            if session.project.orbital_sets:
+            if matrix is not None:
+                pass
+            elif session.project.orbital_sets:
                 layout.label(text="Selected orbital set is unavailable", icon="ERROR")
                 layout.prop(settings, "orbital_source")
             else:
                 layout.label(text="No orbital metadata in CBQ", icon="INFO")
                 layout.label(text="Prepare orbitals, density and ESP externally, then import CBQ.")
-            return
+                return
         controls = layout.column()
         controls.enabled = session.id not in _EXPORTS
-        if session.active_entity_id not in session.project.orbital_sets:
+        if orbitals is not None and session.active_entity_id not in session.project.orbital_sets:
             controls.prop(settings, "orbital_source")
+        for name in ("origin", "spacing", "shape"):
+            controls.prop(settings, name)
+        source = matrix or orbitals
+        controls.label(text=f"Grid end (bohr): {tuple(round(a + settings.spacing * (n - 1), 5) for a, n in zip(settings.origin, settings.shape))}")
+        if matrix is not None:
+            row = controls.row(align=True)
+            _operation_button(row, "Compute Density Grid",
+                              "wavefunction.density_matrix_grid", matrix.id)
+            controls.prop(settings, "nuclear_charge")
+            _operation_button(controls, "Compute ESP Grid",
+                              "wavefunction.esp_grid", matrix.id)
+            return
         controls.prop(settings, "channel")
         channel = settings.channel or orbitals.channels[0].label
         try:
@@ -196,9 +304,16 @@ if bpy is not None:
                 controls.label(text="This orbital has no prepared grid in CBQ", icon="INFO")
                 if rows[selected].evaluation_error:
                     controls.label(text=rows[selected].evaluation_error, icon="INFO")
-                controls.label(text="Use Prepare to add the result and import the updated CBQ.")
+                _operation_button(controls, "Compute Selected MO Grid",
+                                  "wavefunction.mo_grid", orbitals.id)
         else:
             controls.label(text="Orbital number is outside the selected spin channel", icon="ERROR")
+        _operation_button(controls, "Compute Electron Density",
+                          "wavefunction.electron_density_grid", orbitals.id)
+        controls.prop(settings, "nuclear_charge")
+        controls.prop(settings, "density_level")
+        _operation_button(controls, "Compute ESP from Orbitals",
+                          "wavefunction.esp_from_orbitals_grid", orbitals.id)
         draw_orbital_export(layout, context, session)
 
     def register():
@@ -227,6 +342,6 @@ if bpy is not None:
         _ENUM_ITEMS.clear()
 
 
-__all__ = ("select_wavefunction_source",)
+__all__ = ("prepare_wavefunction_request", "select_wavefunction_source")
 if bpy is not None:
     __all__ += ("CHEMBLENDER_PG_wavefunction", "CHEMBLENDER_OT_wavefunction", "draw_wavefunction_controls")

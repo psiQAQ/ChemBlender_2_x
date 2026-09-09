@@ -248,8 +248,7 @@ def parse_with_worker(request, result, task_directory):
         code = result.error.code if result.error is not None else result.status.value
         raise WorkerReaderExecutionError(f"reader worker failed: {code}")
     if (
-        result.outputs
-        or result.cache_key is not None
+        result.cache_key is not None
         or set(result.metadata) != _METADATA_FIELDS
     ):
         raise WorkerReaderIntegrityError("invalid reader worker result")
@@ -300,4 +299,19 @@ def parse_with_worker(request, result, task_directory):
         raise WorkerReaderIntegrityError(
             "worker source revision identity does not match request"
         )
+    expected_outputs = tuple(
+        (entity.id, entity.revision)
+        for field in (
+            "structures", "topologies", "molecular_records",
+            "biological_hierarchies", "annotations", "external_references",
+            "cif_envelopes", "qcschema_envelopes", "cjson_envelopes",
+            "symmetry_results", "calculations", "datasets", "basis_sets",
+            "orbital_sets", "density_matrices", "provenance",
+        )
+        for entity in getattr(batch, field)
+    )
+    if result.outputs and tuple(
+        (reference.entity_id, reference.revision) for reference in result.outputs
+    ) != expected_outputs:
+        raise WorkerReaderIntegrityError("worker output entity inventory mismatch")
     return batch

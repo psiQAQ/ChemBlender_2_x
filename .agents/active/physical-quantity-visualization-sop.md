@@ -57,3 +57,5 @@
 2026-09-09：L1统一入口已完成。新增版本化`capabilities --json`、共享Worker v1文件入口、无副作用`doctor`和固定外部环境路由；缺少专用路由明确fail closed，不回退主Python。相关121项Passed/1 optional skip，最终wheel/sdist离线构建、CRC/内容、隔离安装launcher和三套真实环境探测通过；22 readers/13 operations均可用，跨GBasis worker返回预期协议错误。critic2为WSL ELF，Windows doctor如实warning，留待L5处理。未改变依赖/lock；下一阶段严格进入L2 Blender异步控制器。
 
 2026-09-09：L2 Blender异步控制器已完成。全局仅保存一个`processor_executable`；Test Processor和公共Worker控制器无shell异步运行，严格校验任务归属、identity、状态和退出码，取消两秒后仅终止owned PID tree。phase/frame采用100 ms尾随本地预览。专项98项、Blender 5.1.1源码/安装版私有profile、validate/build、ZIP审计及2509项全量均Passed（36 skips）；正式包仍保留锁定RDKit/Gemmi wheels。下一阶段严格进入L3，将现有wavefunction、Fermi和scientific reader操作接到该统一控制器。
+
+2026-09-09：L3现有重计算迁移已完成。scientific reader、Fermi及五项wavefunction operation统一经单一processor executable、公共modal控制器和Worker v1执行；输入冻结、输出identity/hash、原始来源归一化、事务追加、新UUID自动选择及任务清理后数组存活均通过。真实缓存VASP、FCHK数值，Blender 5.1.1源码/正式ZIP私有profile的reader→MO→View→保存重开→删除源文件闭环均Passed。正式staging validate/build生成29,715,245 bytes、111 members、SHA256 `14171c26b6f8a2ba24a68b4f4edc8313330410ce011f7f0af60b4e96adfa89d0`，保留锁定RDKit/Gemmi wheels；全量2515项0 failures/0 errors/36 skips、134.046秒。下一阶段严格进入L4 RDKit操作闭环，wheel仍不得移除。
