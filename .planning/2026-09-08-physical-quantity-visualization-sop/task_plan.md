@@ -34,7 +34,7 @@ Blender 保留分子编辑和高频可视化；外部 chemblender-prepare 负责
 - [x] 当前迁移快照分批保存：27f67c9 共享核心/外部工具、85ab235 Viewer、8244d12 回归测试、9eebdd7 文档与示例。
 - [x] C1 分支治理：main 54ecf4c，两个远端 CI Passed；完整 bundle、附注 archive 标签、精确 lease 旧分支退役，新分支 feat/cbq-only-viewer。
 - [x] C2 当前迁移收尾：共享核心、解析/Worker 外置、调用与测试迁移、纯 Mesh/旧按钮保留审计、架构指南；旧 View 显式恢复、失败回滚和保存重开通过，full20 全绿并形成干净逻辑提交。
-- [ ] C3 CBQ 1.1 收尾：数值对称、旧包完整性、升级、事务导入及链接；专项测试已通过，全面回归未完成。C2 提交后继续关闭，L1 不得抢先。
+- [x] C3 CBQ 1.1 收尾：数值对称、旧包完整性、升级、事务导入及链接；C3专项101项和包含该实现的full20全部Passed，未重复新增已有能力。
 - [ ] C4 外部包基线：uv init/venv/lock及7个已有CLI命令、薄Tk GUI、真实格式对照、wheel/sdist验证。前半已实现，发行物验证未完成。C3 后继续关闭，L1 不得抢先。
 - [ ] L1 统一入口：迁移共享 Worker v1，补 capabilities --json、worker REQUEST RESULT --cancel-file CANCEL、doctor和环境路由。
 - [ ] L2 Blender 接入：单一全局路径、公共异步任务控制器、进度/取消、节流即时预览；本地操作不依赖处理程序。

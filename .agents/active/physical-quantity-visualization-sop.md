@@ -45,3 +45,5 @@
 2026-09-09：四批检查点已提交至9eebdd7；完整回归full17为2573项、0 failures/88 errors/36 skips、110.906秒、Failed，未新增失败标识。错误分布旧import-preview55、wavefunction19、quick-import9、legacy路由5。原生Mesh编辑/Apply通过；legacy external-only导出不替代View恢复/回滚/保存重开，继续保留该门槛。C2尚未完成，详见规划文件和migration-full-17证据。
 
 2026-09-09：最新完整回归为full20：2498项、0 failures/0 errors/36 skips、105.761秒，Passed。旧入口测试已迁移或在当前真实层保留安全契约；3个哈希锁定legacy fixture完成外部导出、当前Viewer恢复、注入失败回滚、evaluated mesh、保存重开和Project Connected检查。C2关闭并形成稳定提交；下一阶段为C3 CBQ 1.1收尾，C3、C4完成前不接L1。
+
+2026-09-09：C2稳定提交为`a12858e`。C3在该提交上重新运行数值对称、历史完整性/升级、事务导入和ProjectLink五模块101项全部Passed/2.570秒，full20亦已覆盖，未发现产品缺口；C3关闭。下一阶段C4外部包基线，完成前不接L1。

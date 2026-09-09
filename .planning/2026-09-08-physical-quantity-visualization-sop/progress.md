@@ -314,3 +314,6 @@ POSCAR旧产品流8项已迁外部CLI/GUI真实入口，保留4项Prepared View�
 
 
 2026-09-09：full19运行2498项，仅`test_migration_docs`因`legacy-migration.md`补丁产生12行LF、破坏既有CRLF契约而1 Failed；字节级只归一化换行后该文档专项Passed。随后full20为2498项、0 failures/0 errors/36 skips、105.761秒，Passed，日志`.blend-analysis/2026-09-08-cbq-architecture-consolidation/migration-full-20.log`；语法检查与`git diff --check`通过。C2的迁移、纯Mesh保留、旧入口测试收尾、legacy恢复/回滚/重开和完整回归门槛全部关闭，形成稳定逻辑提交后进入C3，不提前接L1。
+
+
+2026-09-09：C2稳定提交`a12858e`完成，工作树仅保留用户`.vscode/`。在该干净基线上核验C3既有实现：`test_cbq_v11_upgrade`、`test_periodic_view_settings`、`test_cbq_package_import`、`test_project_link_pure`、`test_project_service`共101项全部Passed/2.570秒，日志`.blend-analysis/2026-09-08-cbq-architecture-consolidation/cbq-v11-closeout.log`。覆盖数值对称/非正交展开与ADP、历史manifest/array哈希、源包不变和幂等升级、事务导入/重开、ProjectLink写入及多Scene失败回滚；full20亦已覆盖。未发现需补代码的缺口，C3关闭，下一阶段C4。
