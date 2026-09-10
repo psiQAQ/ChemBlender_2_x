@@ -1,0 +1,68 @@
+{
+  "case_id": "T18",
+  "variant": "T06",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "installed_save_as": {
+    "datasets_equal": 5,
+    "status": "passed",
+    "runtime": {
+      "pid": 47816,
+      "version": "5.1.1",
+      "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python\\bin\\python.exe",
+      "system": "Windows",
+      "repos": [
+        {
+          "name": "extensions.blender.org",
+          "directory": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+        },
+        {
+          "name": "User Default",
+          "directory": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+        },
+        {
+          "name": "System",
+          "directory": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+        },
+        {
+          "name": "Existing local MCP (read only)",
+          "directory": "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+        }
+      ]
+    },
+    "identity": [
+      "931d77f9-3580-551b-a023-93554733a414",
+      "01d34be31e4993f1ee98329b9deb63441e94b1ced6f16f472ea284c7be0a1bbc"
+    ],
+    "atoms": 21,
+    "old_copy_unavailable": true,
+    "coordinates_equal": true,
+    "view_rebuilds": 2,
+    "saved_file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\native-T06\\handoff.blend",
+    "interaction": "native_public_operator_replay",
+    "gui": "not_run",
+    "cold_reopen": "not_run",
+    "human_review": "not_run"
+  },
+  "portable_cold": {
+    "status": "passed",
+    "saved_pid": 47816,
+    "reopened_pid": 28048,
+    "audit": {
+      "status": "passed",
+      "pid": 28048,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\portable-T06\\handoff.blend",
+      "source_frame": 15,
+      "coordinate_error": 1.1842041036658202e-07,
+      "scaled_force_error": 5.515591516846996e-08,
+      "custom_smooth_modifier_restored": false,
+      "view_count": 2,
+      "scientific_playback_after_load": false
+    },
+    "scientific_arrays_equal_original": true,
+    "gui": "not_run",
+    "human_review": "not_run"
+  },
+  "gui": "not_run",
+  "human_review": "not_run"
+}
