@@ -1,0 +1,382 @@
+{
+  "status": "passed",
+  "scope": "CDP offline browser emulation, not OS firewall",
+  "reports": [
+    {
+      "language": "en",
+      "status": "passed",
+      "html_sha256": "f722ddd36dc7796fd0b84f375a13c9d2e7b63e90041e6f419c0eb7dda60b9f88",
+      "network_offline": true,
+      "cross_language_navigation": "passed",
+      "title": "ChemBlender 2.5 Offline Guide",
+      "images": [
+        {
+          "width": 1920,
+          "height": 1009
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1920,
+          "height": 1033
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        }
+      ],
+      "tables": 35,
+      "brokenAnchors": [],
+      "commandText": true,
+      "receipt_downloads": [
+        {
+          "name": "T04-run009-cif-gui-check.json",
+          "sha256": "cd8493f83514fd1c19adf76063bce26d00893add372933481a9f8f8d59249f72"
+        },
+        {
+          "name": "T04-run009-diamond-gui-check.json",
+          "sha256": "c0b118e8c62c38c61229bb04738ba5417fcb63799ae7d37098490af8d7d260ef"
+        },
+        {
+          "name": "T04-run009-ase-gui-check.json",
+          "sha256": "273f89a5ee010297cd45dfc8bc5f8fac15b5858f4f79aec55d498ad41d137542"
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "status": "passed",
+      "html_sha256": "09a19a4e58807f5d7ce1f55482761b6c735a457bc1fbe25d689a67f1ce91e856",
+      "network_offline": true,
+      "cross_language_navigation": "passed",
+      "title": "ChemBlender 2.5 \u7ec2\u8364\u568e\u93b8\u56e7\u5d21",
+      "images": [
+        {
+          "width": 1920,
+          "height": 1009
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1920,
+          "height": 1033
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        }
+      ],
+      "tables": 35,
+      "brokenAnchors": [],
+      "commandText": true,
+      "receipt_downloads": [
+        {
+          "name": "T04-run009-cif-gui-check.json",
+          "sha256": "cd8493f83514fd1c19adf76063bce26d00893add372933481a9f8f8d59249f72"
+        },
+        {
+          "name": "T04-run009-diamond-gui-check.json",
+          "sha256": "c0b118e8c62c38c61229bb04738ba5417fcb63799ae7d37098490af8d7d260ef"
+        },
+        {
+          "name": "T04-run009-ase-gui-check.json",
+          "sha256": "273f89a5ee010297cd45dfc8bc5f8fac15b5858f4f79aec55d498ad41d137542"
+        }
+      ]
+    }
+  ],
+  "visual_review": "EN/ZH cocrystal render and adjacent captions inspected",
+  "documentation_tests": {
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 63.118
+  },
+  "prior_test_failures": "Two freshness failures before actual regeneration after provenance edit; generator then run and full doc tests passed",
+  "human_review": "not_run",
+  "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/offline-qa-t04-refined"
+}

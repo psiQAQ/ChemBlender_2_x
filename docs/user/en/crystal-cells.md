@@ -99,3 +99,19 @@ If a cell is absent, check the candidate version and select the periodic Structu
 On separate copies, clearing the four owned display meshes and invoking the public `REBUILD` Operator restored 64 sites and 12 cell edges without changing scientific arrays. Both rebuilt pairs passed another cold reopen. See the [derived-geometry recovery record](../assets/2.5-tutorials/crystal-cache-recovery.json). This was a native Operator replay, not a GUI deletion demonstration. Rebuilding replaces the display objects: the manually added Subdivision modifier was absent afterward. Reapply the lesson’s cosmetic refinement after a rebuild; keep the original refined pair as the visual reference.
 
 Complete GUI capture, visual quality, independent human replay and the distributable case package remain pending. Keep this lesson marked as a draft until those gates and visual review pass. [Media provenance](../assets/2.5-tutorials/provenance.json) records the current candidate separately from earlier lessons.
+
+## Updated local review pair (run-009)
+
+The following renders use prepare wheel `b736bc61…` and Extension ZIP `a1e2da79…`; earlier screenshots above retain their original artifact bindings. Smooth face normals were added to the derived occupancy and thermal display geometry, preserving element colors and occupancy alpha. Level-2 subdivision, roughness 0.35 and the render settings above were retained. This scene edit was performed through MCP; its manual node-editor path has not been verified.
+
+![COD 4503272: 64 asymmetric sites, partial occupancy and disorder retained](../assets/2.5-tutorials/crystal-cocrystal-run009.png)
+
+COD 4503272 caffeine–succinic acid–chloroform cocrystal: 64 asymmetric sites, 23 partial-occupancy sites and 9 disorder-group sites; cell 6.6439 × 23.2514 × 33.5615 Å. These are source sites, without symmetry expansion or inferred bonds.
+
+![COD 9012293 derived diamond: supplied 64-carbon supercell](../assets/2.5-tutorials/crystal-diamond-run009.png)
+
+Supplied 2×2×2 conventional-cell supercell: 64 carbon atoms, cubic cell 7.1338 Å. Zero velocities are synthetic with unknown units. This is neither a supercell-generation demonstration nor a molecular-dynamics result. Both renders are 2400×1800, Cycles 256 samples; smoothing adds no scientific data resolution.
+
+Original, relocated and ZIP-extracted pairs passed independent-process cold checks with unchanged scientific arrays. See the [cocrystal check](../../../examples/tutorials/2.5.0/T04-run009-render-cold-check.json), [diamond check](../../../examples/tutorials/2.5.0/T04-run009-diamond-render-cold-check.json), and [local package receipt](../../../examples/tutorials/2.5.0/T04-run009-package-check.json). The local `run-009/T04-review.zip` contains both paired projects, source inputs with license notes, renders and bilingual handover instructions; it is a review package, not final acceptance.
+
+The [new rebuild check](../../../examples/tutorials/2.5.0/T04-run009-rebuild-check.json) cleared only copied derived meshes. REBUILD restored 64 sites and 12 cell edges, but removed manual subdivision and smoothing nodes. Reapply cosmetic edits after explicit rebuild; ordinary cold reopening retained them. Original refined projects were unchanged. Human independent reproduction and remaining GUI evidence are still pending.

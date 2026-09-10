@@ -99,3 +99,19 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T04\diamond.cbq" --json
 在独立副本中清空四个所属显示网格后，公开 `REBUILD` Operator 恢复了 64 个位点和 12 条晶胞边，科学数组未变；两个重建工程再次冷重开也通过。见[派生几何恢复记录](../assets/2.5-tutorials/crystal-cache-recovery.json)。这是原生 Operator 重放，不是 GUI 删除演示。重建会替换显示对象，手工添加的 Subdivision modifier 随后不再存在。重建后按本课重新设置外观细化，并保留原始细化工程作为视觉参照。
 
 完整 GUI 留证、视觉质量、人工独立复做和可分发案例包仍待完成。在这些门槛及视觉审阅通过前，本课保持草稿。[媒体来源](../assets/2.5-tutorials/provenance.json)将本候选与较早课程分别记录。
+
+## 更新后的本地审阅工程（run-009）
+
+以下成图使用 prepare wheel `b736bc61…` 与 Extension ZIP `a1e2da79…`；上方早期截图保留原制品绑定。为派生的占位与热椭球显示添加了平滑面法线，保留元素颜色和占位透明度，同时保留二级细分、粗糙度 0.35 及上表渲染参数。这项场景编辑通过 MCP 完成，尚未验证手工节点编辑器操作路径。
+
+![COD 4503272：64 个非对称位点，保留部分占位与无序](../assets/2.5-tutorials/crystal-cocrystal-run009.png)
+
+咖啡因–丁二酸–氯仿共晶：64 个非对称位点，其中 23 个部分占位、9 个带无序组；晶胞 6.6439 × 23.2514 × 33.5615 Å。显示源位点，未展开对称等价位置，未推断键。
+
+![COD 9012293 派生金刚石：输入已有的 64 碳原子超胞](../assets/2.5-tutorials/crystal-diamond-run009.png)
+
+输入已有的 2×2×2 常规晶胞超胞：64 个碳原子、7.1338 Å 立方晶胞。人工附加零速度单位未知，不是生成超胞演示或分子动力学结果。两图均为 2400×1800、Cycles 256 samples；平滑不提高科学数据分辨率。
+
+原工程、搬移副本和 ZIP 解压副本均通过独立进程冷检查，科学数组未变。参见[共晶检查](../../../examples/tutorials/2.5.0/T04-run009-render-cold-check.json)、[金刚石检查](../../../examples/tutorials/2.5.0/T04-run009-diamond-render-cold-check.json)与[本地包记录](../../../examples/tutorials/2.5.0/T04-run009-package-check.json)。本地 `run-009/T04-review.zip` 包含两套配对工程、原始输入及许可说明、成图和双语交接说明；它是审阅包，不代表最终验收通过。
+
+[新版重建检查](../../../examples/tutorials/2.5.0/T04-run009-rebuild-check.json)仅清空副本的派生网格。REBUILD 恢复 64 个位点和 12 条晶胞边，但移除了手工细分和平滑节点。显式重建后重新施加外观编辑；普通冷重开会保留这些设置。原精修工程未变，人工独立复做与剩余 GUI 证据仍待完成。
