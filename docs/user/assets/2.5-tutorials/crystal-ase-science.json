@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "source_sha256": "7cf52f6c2473adad5f32f65bfb97c0d1f6d57f6788802abcc7cb4d05b16f0693",
+  "atoms": 64,
+  "coordinate_error": 0.0,
+  "cell_error": 0.0,
+  "ase_version": "3.29.0",
+  "numpy_version": "2.2.6",
+  "python": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-py312\\Scripts\\python.exe",
+  "prepare_code": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\frozen-prepare-code\\chemblender_prepare\\__init__.py",
+  "boundary": "ASE reports unsupported atom array; this route verifies structure/cell only, not velocity normalization"
+}

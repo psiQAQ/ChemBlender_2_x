@@ -31,7 +31,7 @@ SOURCES = {
     "en": ("README.md", *(
         f"docs/user/en/{name}.md" for name in (
             "index", "installation", "blender-workflow",
-            "capabilities-and-projects", "troubleshooting", "release-status", "first-aspirin", "ethanol-conformers",
+            "capabilities-and-projects", "troubleshooting", "release-status", "first-aspirin", "ethanol-conformers", "crystal-cells",
         )
     ), *(
         f"docs/prepare/en/{name}.md" for name in (
@@ -41,7 +41,7 @@ SOURCES = {
     "zh-CN": ("README.zh-CN.md", *(
         f"docs/user/zh-CN/{name}.md" for name in (
             "index", "installation", "blender-workflow",
-            "capabilities-and-projects", "troubleshooting", "release-status", "first-aspirin", "ethanol-conformers",
+            "capabilities-and-projects", "troubleshooting", "release-status", "first-aspirin", "ethanol-conformers", "crystal-cells",
         )
     ), *(
         f"docs/prepare/zh-CN/{name}.md" for name in (

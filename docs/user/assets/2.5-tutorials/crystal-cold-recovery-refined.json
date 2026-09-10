@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "interaction": "native_process_replay",
+  "checks": [
+    {
+      "subdivision_levels": 2,
+      "status": "passed",
+      "pid": 38648,
+      "blend": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\T04\\cocrystal.blend",
+      "array": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\T04\\cocrystal.cbq\\arrays\\37ba5887aace0ba7526581e330ca8db833f9c6c35b33ad114a1d4c93f7ee9890.npy",
+      "view_coordinate_error": 9.508496106036546e-07,
+      "cell_edges": 12,
+      "structure_id": "3561a84e-0d51-5e77-bc53-7eacee58084e",
+      "scientific_modules": []
+    },
+    {
+      "subdivision_levels": 2,
+      "status": "passed",
+      "pid": 5604,
+      "blend": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\portable\\T04-refined\\cocrystal.blend",
+      "array": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\portable\\T04-refined\\cocrystal.cbq\\arrays\\37ba5887aace0ba7526581e330ca8db833f9c6c35b33ad114a1d4c93f7ee9890.npy",
+      "view_coordinate_error": 9.508496106036546e-07,
+      "cell_edges": 12,
+      "structure_id": "3561a84e-0d51-5e77-bc53-7eacee58084e",
+      "scientific_modules": []
+    },
+    {
+      "subdivision_levels": 2,
+      "status": "passed",
+      "pid": 44556,
+      "blend": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\T04\\diamond.blend",
+      "array": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\T04\\diamond.cbq\\arrays\\278a66016ca1cb0e33ee80a2bdb3d5aeca39ce007b02c681858b7cd945c9f794.npy",
+      "view_coordinate_error": 1.6021728477255692e-07,
+      "cell_edges": 12,
+      "structure_id": "ffde7840-0274-5c2a-bf84-5f8b4e64a39c",
+      "scientific_modules": []
+    },
+    {
+      "subdivision_levels": 2,
+      "status": "passed",
+      "pid": 62448,
+      "blend": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\portable\\T04-refined\\diamond.blend",
+      "array": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\portable\\T04-refined\\diamond.cbq\\arrays\\278a66016ca1cb0e33ee80a2bdb3d5aeca39ce007b02c681858b7cd945c9f794.npy",
+      "view_coordinate_error": 1.6021728477255692e-07,
+      "cell_edges": 12,
+      "structure_id": "ffde7840-0274-5c2a-bf84-5f8b4e64a39c",
+      "scientific_modules": []
+    }
+  ],
+  "scientific_hashes_unchanged": true,
+  "cache_rebuild": "not_run",
+  "human_review": "not_run"
+}

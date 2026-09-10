@@ -76,6 +76,36 @@
       "native_format": "png",
       "extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374",
       "interaction": "native_render_via_mcp"
+    },
+    {
+      "path": "crystal-cocrystal.png",
+      "source_run": "run-004/T04/cocrystal-cycles.png",
+      "sha256": "f153c6deb08bf2082ae1219981035422723e82d6b07790b77686eae398c521ab",
+      "kind": "render",
+      "native_format": "png",
+      "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+      "interaction": "native_render_via_mcp",
+      "status": "pending_visual_and_human_review"
+    },
+    {
+      "path": "crystal-diamond.png",
+      "source_run": "run-004/T04/diamond-cycles.png",
+      "sha256": "f491ba4bc7313e155d24d25b46dcbe26fd798f40c3757fa5c09d85877278ff7c",
+      "kind": "render",
+      "native_format": "png",
+      "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+      "interaction": "native_render_via_mcp",
+      "status": "pending_visual_and_human_review"
+    },
+    {
+      "path": "crystal-cell-view.jpg",
+      "source_run": "run-004/T04/gui/gui-0002.jpg",
+      "sha256": "cf168bdd97b0fa4eb885a7b2b06eb321fe054a7be8dd619adad7262a21d875ff",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+      "interaction": "capture_after_mcp_replay",
+      "status": "pending_visual_and_human_review"
     }
   ]
 }
