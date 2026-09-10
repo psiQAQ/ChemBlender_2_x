@@ -1,0 +1,66 @@
+{
+  "status": "passed",
+  "input_sha256": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a",
+  "all_frames": 32,
+  "atoms_per_frame": 21,
+  "checks": {
+    "coordinates": {
+      "shape": [
+        32,
+        21,
+        3
+      ],
+      "unit": "angstrom",
+      "max_absolute_error": 0.0,
+      "status": "complete"
+    },
+    "atomic_force": {
+      "shape": [
+        32,
+        21,
+        3
+      ],
+      "unit": "electron_volt_per_angstrom",
+      "max_absolute_error": 0.0,
+      "status": "complete"
+    },
+    "energy": {
+      "shape": [
+        32
+      ],
+      "unit": "electron_volt",
+      "max_absolute_error": 0.0,
+      "status": "complete"
+    },
+    "step": {
+      "shape": [
+        32
+      ],
+      "unit": "dimensionless",
+      "max_absolute_error": 0.0,
+      "status": "complete"
+    },
+    "source_index": {
+      "shape": [
+        32
+      ],
+      "unit": "unknown",
+      "max_absolute_error": 0.0,
+      "status": "ambiguous"
+    }
+  },
+  "physical_dt": null,
+  "source_index_boundary": "AMBIGUOUS semantics retained; numeric values exactly match source, not a physical time axis",
+  "gui": "not_run",
+  "playback": "not_run",
+  "interaction": "installed_public_cli",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/T06",
+  "raw_hashes": {
+    "inspect.json": "1226c4120edc4978a4d4bfbee3a95b0429351b46c3e9490769c9dee1e97a268a",
+    "convert.json": "89022686903dc10e2cab0f92adb87f1a84d852d41aa0a5000ed37ee0f9a89b1f",
+    "validate.json": "91513bdcca944f12558a4516cb30c06507079713a9734a2d91160a9fdce4b951",
+    "check_science.py": "0179a9d9f74da270375ad5b875ee3e0247c6dec2f4f8c541bb18f359641ecb9b"
+  },
+  "human_review": "not_run"
+}
