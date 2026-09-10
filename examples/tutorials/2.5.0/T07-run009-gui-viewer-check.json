@@ -1,0 +1,173 @@
+{
+  "status": "passed_scoped_gui_output_to_viewer",
+  "interaction": "actual Prepare GUI output; known Blender public Operators replay",
+  "view": {
+    "status": "passed",
+    "runtime": {
+      "version": "5.1.1",
+      "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "pid": 14140,
+      "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python\\bin\\python.exe",
+      "repos": [
+        {
+          "name": "extensions.blender.org",
+          "path": "D:\\workspace\\ChemBlender_2_x/.blend-analysis/2.5-real-user-tutorials/run-001/profile/extensions\\blender_org"
+        },
+        {
+          "name": "User Default",
+          "path": "D:\\workspace\\ChemBlender_2_x/.blend-analysis/2.5-real-user-tutorials/run-001/profile/extensions\\user_default"
+        },
+        {
+          "name": "System",
+          "path": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+        },
+        {
+          "name": "Existing local MCP (read only)",
+          "path": "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+        }
+      ],
+      "enabled": [
+        "io_anim_bvh",
+        "io_curve_svg",
+        "io_mesh_uv_layout",
+        "io_scene_fbx",
+        "io_scene_gltf2",
+        "cycles",
+        "pose_library",
+        "bl_pkg",
+        "bl_ext.user_default.chemblender",
+        "bl_ext.tutorial_mcp.mcp"
+      ]
+    },
+    "interaction": "known_public_operator_replay",
+    "affine_checks": [
+      {
+        "index": [
+          0,
+          0,
+          0
+        ],
+        "error": 0.0
+      },
+      {
+        "index": [
+          1,
+          0,
+          0
+        ],
+        "error": 0.0
+      },
+      {
+        "index": [
+          0,
+          1,
+          0
+        ],
+        "error": 0.0
+      },
+      {
+        "index": [
+          0,
+          0,
+          1
+        ],
+        "error": 0.0
+      },
+      {
+        "index": [
+          63,
+          63,
+          63
+        ],
+        "error": 1.0658141036401503e-14
+      }
+    ],
+    "geometry": [
+      {
+        "name": "ChemBlender Positive Surface",
+        "vertices": 882
+      },
+      {
+        "name": "ChemBlender Negative Surface",
+        "vertices": 0
+      }
+    ],
+    "value_unit": "electron_per_cubic_bohr",
+    "coordinate_unit": "bohr",
+    "gui": "not_run",
+    "render": "not_run",
+    "human_review": "not_run"
+  },
+  "cold": {
+    "status": "passed",
+    "pid": 54556,
+    "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T07\\h2-gui-view.blend",
+    "version": "5.1.1",
+    "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+    "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+    "runtime": "win32",
+    "repositories": [
+      [
+        "extensions.blender.org",
+        "D:\\workspace\\ChemBlender_2_x/.blend-analysis/2.5-real-user-tutorials/run-001/profile/extensions\\blender_org"
+      ],
+      [
+        "User Default",
+        "D:\\workspace\\ChemBlender_2_x/.blend-analysis/2.5-real-user-tutorials/run-001/profile/extensions\\user_default"
+      ],
+      [
+        "System",
+        "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+      ],
+      [
+        "Existing local MCP (read only)",
+        "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+      ]
+    ],
+    "local_dataset_count": 3,
+    "view_count": 2,
+    "surfaces": [
+      {
+        "name": "ChemBlender Positive Surface",
+        "vertices": 882
+      },
+      {
+        "name": "ChemBlender Negative Surface",
+        "vertices": 0
+      }
+    ],
+    "sampling_checks": "not_applicable",
+    "refinement_retained": false,
+    "gui": "not_run",
+    "human_acceptance": "not_run"
+  },
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "human_acceptance": "not_run",
+  "artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/cube_gui_view_native.py",
+      "sha256": "5d962646a721e9cff7c470ddfc331fdb04d69d05cc0b7131026c5b2bb16f1093"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/gui-view-check.json",
+      "sha256": "6b2df1db165d142b8b74cb52d87a43cf55843e224c9c0591498380a920a5e734"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/h2-gui-view.cold-check.json",
+      "sha256": "6368bfc8b74dfb52f240d6960ee68db37be8a0d3574f2af7bcc6896206c5c799"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/cube-gui.cbq/manifest.json",
+      "sha256": "661d6158c79b1aa3063b4604b65240cd615c027c059676794a29f979a3710ed2"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/h2-gui-view.blend",
+      "sha256": "4fb5e3ec9230ca4eef6934c35cf56af51820d28f1dd2fd43296d3b9e3a45a292"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/h2-gui-view.cbq/manifest.json",
+      "sha256": "e98b2764c5c4cf56719bc0cb42dfdaf89db305e7e8f5c29b983a3c45f90e72cc"
+    }
+  ]
+}
