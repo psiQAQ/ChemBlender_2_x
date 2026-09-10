@@ -1,0 +1,87 @@
+{
+  "source_commit": "abd6a69ad377f5a13402d1c4b07956d445086f16",
+  "artifacts": {
+    "chemblender_prepare-0.1.0-py3-none-any.whl": {
+      "sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "bytes": 555349
+    },
+    "chemblender_prepare-0.1.0.tar.gz": {
+      "sha256": "f4aced56942aeeca3172a63b89cdd5605fecfce4ff9b7b994310b42af76a9e65",
+      "bytes": 921613
+    }
+  },
+  "python_files_source_equal": 165,
+  "extension": "unchanged run007 ZIP; only external prepare adapter changed",
+  "dependency_install": "none",
+  "installed_origin": {
+    "python": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-008\\uv-tool\\chemblender-prepare\\Scripts\\python.exe",
+    "prepare": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-008\\uv-tool\\chemblender-prepare\\Lib\\site-packages\\chemblender_prepare\\__init__.py",
+    "core": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-008\\uv-tool\\chemblender-prepare\\Lib\\site-packages\\cbq_core\\__init__.py",
+    "versions": {
+      "numpy": "2.5.3",
+      "gemmi": "0.7.5",
+      "rdkit": "2026.3.3",
+      "pillow": "12.3.0",
+      "chemblender-prepare": "0.1.0"
+    }
+  },
+  "scientific_wheel_tests": {
+    "tests": 55,
+    "failures": 0,
+    "errors": 0,
+    "skipped": [
+      [
+        "test_parse_reports_missing_dependency (tests.test_ase_adapter.ASEAdapterTests.test_parse_reports_missing_dependency)",
+        "ASE is installed in this interpreter"
+      ],
+      [
+        "test_missing_dependency_is_explicit (tests.test_phonopy_adapter.PhonopyAdapterTests.test_missing_dependency_is_explicit)",
+        "phonopy is installed in this interpreter"
+      ],
+      [
+        "test_parse_reports_missing_dependency (tests.test_pymatgen_adapter.PymatgenAdapterTests.test_parse_reports_missing_dependency)",
+        "pymatgen-core is installed in this interpreter"
+      ],
+      [
+        "test_parse_reports_missing_dependency (tests.test_pymatgen_electronic.PymatgenElectronicAdapterTests.test_parse_reports_missing_dependency)",
+        "pymatgen-core is installed in this interpreter"
+      ],
+      [
+        "test_bohr_cell_is_converted_before_symmetry_search (tests.test_spglib_adapter.SpglibAdapterTests.test_bohr_cell_is_converted_before_symmetry_search)",
+        "Gemmi/spglib dependencies unavailable"
+      ],
+      [
+        "test_cscl_symmetry_and_standard_structure (tests.test_spglib_adapter.SpglibAdapterTests.test_cscl_symmetry_and_standard_structure)",
+        "Gemmi/spglib dependencies unavailable"
+      ],
+      [
+        "test_derive_reports_missing_dependency (tests.test_spglib_adapter.SpglibAdapterTests.test_derive_reports_missing_dependency)",
+        "spglib is installed in this interpreter"
+      ],
+      [
+        "test_nonzero_origin_shift_obeys_spglib_change_of_basis (tests.test_spglib_adapter.SpglibAdapterTests.test_nonzero_origin_shift_obeys_spglib_change_of_basis)",
+        "Gemmi/spglib dependencies unavailable"
+      ],
+      [
+        "test_partial_occupancy_is_not_silently_ignored (tests.test_spglib_adapter.SpglibAdapterTests.test_partial_occupancy_is_not_silently_ignored)",
+        "Gemmi/spglib dependencies unavailable"
+      ],
+      [
+        "test_tolerance_validation (tests.test_spglib_adapter.SpglibAdapterTests.test_tolerance_validation)",
+        "Gemmi/spglib dependencies unavailable"
+      ]
+    ],
+    "status": "passed",
+    "adapter": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-008\\frozen-prepare-code\\chemblender_prepare\\core\\pymatgen_adapter.py",
+    "core": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-008\\frozen-prepare-code\\cbq_core\\__init__.py",
+    "python": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-py312\\Scripts\\python.exe"
+  },
+  "cli": {
+    "doctor": "passed",
+    "capabilities": "passed"
+  },
+  "gui": "not_run",
+  "full_regression_after_adapter_fix": "not_run",
+  "human_review": "not_run",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+}
