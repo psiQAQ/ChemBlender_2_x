@@ -1,0 +1,188 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T07",
+  "title": "Explicit Cube semantics, affine grids, volume/surface/slice/profile and difference",
+  "required_steps": [
+    {
+      "id": "s01",
+      "description": "Prepare inspect/convert and explicit grid semantic/unit resolution",
+      "requires_gui": true
+    },
+    {
+      "id": "s02",
+      "description": "CBQ Preview/Import; select Grid3D and verify affine geometry",
+      "requires_gui": true
+    },
+    {
+      "id": "s03",
+      "description": "Create volume and signed surface; preserve physical scalar meaning",
+      "requires_gui": true
+    },
+    {
+      "id": "s04",
+      "description": "Create slice/profile/colorbar; independently check sampled values",
+      "requires_gui": true
+    },
+    {
+      "id": "s05",
+      "description": "Compatible difference and incompatible-grid rejection",
+      "requires_gui": true
+    },
+    {
+      "id": "s06",
+      "description": "Cycles render and scientific-versus-cosmetic refinement",
+      "requires_gui": true
+    },
+    {
+      "id": "s07",
+      "description": "Save pair, cold reopen, relocate and rebuild derived cache",
+      "requires_gui": true
+    }
+  ],
+  "required_checks": [
+    "input_hash_integrity",
+    "grid_shape_axis_order",
+    "affine_origin_steps",
+    "value_unit_semantics",
+    "all_grid_values",
+    "dataset_selection",
+    "slice_profile_samples",
+    "compatible_difference",
+    "incompatible_difference_rejected",
+    "scientific_arrays_unchanged",
+    "project_pair",
+    "cold_reopen"
+  ],
+  "required_artifact_kinds": [
+    "environment",
+    "gui_raw",
+    "render",
+    "events",
+    "assertions",
+    "scene_blend",
+    "cbq_manifest",
+    "lifecycle",
+    "review"
+  ],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "inputs": [
+    {
+      "path": "examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.cube",
+      "sha256": "51fcb06343132c4b75f340aa5824434c9c622b51df7ea1ad3742920c78af66b4",
+      "license": "GPL-3.0",
+      "source": "Repository analytic teaching model"
+    },
+    {
+      "path": "examples/user-workflows/inputs/cube/two-datasets.cube",
+      "sha256": "cba9356dbd6901a725810aab63a17c79eb2508f178b7b8b77ee306de2f0b31ba",
+      "license": "GPL-3.0",
+      "source": "Repository syntax contract fixture; not physical data"
+    }
+  ],
+  "reference": {
+    "shape": [
+      64,
+      64,
+      64
+    ],
+    "count": 262144,
+    "origin": [
+      -6,
+      -6,
+      -6
+    ],
+    "steps": [
+      [
+        0.1904761905,
+        0,
+        0
+      ],
+      [
+        0,
+        0.1904761905,
+        0
+      ],
+      [
+        0,
+        0,
+        0.1904761905
+      ]
+    ],
+    "coordinate_unit": "bohr",
+    "semantic_role": "electron_density",
+    "value_unit": "electron_per_bohr3",
+    "minimum": 7.75746861e-10,
+    "maximum": 0.229296377,
+    "integral_using_serialized_step": 1.9996717595939106,
+    "value_absolute_tolerance": 1e-12,
+    "affine_absolute_tolerance": 1e-12,
+    "integral_absolute_tolerance": 1e-08,
+    "sampling_absolute_tolerance": 1e-06,
+    "structure_atomic_numbers": [
+      1,
+      1
+    ],
+    "structure_coordinates_bohr": [
+      [
+        0,
+        0,
+        -0.7
+      ],
+      [
+        0,
+        0,
+        0.7
+      ]
+    ],
+    "source_nuclear_charge": [
+      0,
+      0
+    ],
+    "dataset_fixture": {
+      "shape": [
+        2,
+        2,
+        1
+      ],
+      "dataset_ids": [
+        5,
+        7
+      ],
+      "values": [
+        [
+          10,
+          11,
+          12,
+          13
+        ],
+        [
+          100,
+          101,
+          102,
+          103
+        ]
+      ],
+      "origin": [
+        0.1,
+        0.2,
+        0.3
+      ],
+      "coordinate_unit": "bohr",
+      "negative_count": "Reader warning; do not infer converted angstrom units"
+    }
+  },
+  "pending_variants": [
+    "Signed field: freeze formula/source and tolerances before execution; never call generic signed field an orbital",
+    "CHGCAR/LOCPOT: verify existing scientific route, real input provenance and redistribution before execution"
+  ],
+  "boundaries": [
+    "H2 density is analytic LCAO teaching data, not HF/DFT",
+    "Source nuclear charge zero is placeholder, not physical hydrogen charge",
+    "No physical resolution gain from surface tessellation or interpolation; recomputed grid must have distinct provenance",
+    "Existing input notes describe legacy Quick Import; use current CBQ route",
+    "Positive scalar density alone does not verify negative-phase behavior; pending signed variant remains required"
+  ]
+}
