@@ -1,0 +1,138 @@
+{
+  "status": "diagnostic_only",
+  "runs": [
+    {
+      "format": "mol",
+      "version": "V2000",
+      "raw_differences": [
+        "atom 12 chirality differs"
+      ],
+      "methyl_atoms": [
+        {
+          "atom_index": 12,
+          "source_tag": "CHI_TETRAHEDRAL_CW",
+          "parsed_tag": "CHI_UNSPECIFIED",
+          "neighbor_atomic_numbers": [
+            6,
+            1,
+            1,
+            1
+          ]
+        }
+      ],
+      "cleaned_copy_comparison": "passed"
+    },
+    {
+      "format": "mol",
+      "version": "V3000",
+      "raw_differences": [
+        "atom 12 chirality differs"
+      ],
+      "methyl_atoms": [
+        {
+          "atom_index": 12,
+          "source_tag": "CHI_TETRAHEDRAL_CW",
+          "parsed_tag": "CHI_UNSPECIFIED",
+          "neighbor_atomic_numbers": [
+            6,
+            1,
+            1,
+            1
+          ]
+        }
+      ],
+      "cleaned_copy_comparison": "passed"
+    },
+    {
+      "format": "sdf",
+      "version": "V2000",
+      "raw_differences": [
+        "atom 2 chirality differs",
+        "atom 6 chirality differs",
+        "atom 13 chirality differs"
+      ],
+      "methyl_atoms": [
+        {
+          "atom_index": 2,
+          "source_tag": "CHI_TETRAHEDRAL_CW",
+          "parsed_tag": "CHI_UNSPECIFIED",
+          "neighbor_atomic_numbers": [
+            7,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "atom_index": 6,
+          "source_tag": "CHI_TETRAHEDRAL_CW",
+          "parsed_tag": "CHI_UNSPECIFIED",
+          "neighbor_atomic_numbers": [
+            7,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "atom_index": 13,
+          "source_tag": "CHI_TETRAHEDRAL_CW",
+          "parsed_tag": "CHI_UNSPECIFIED",
+          "neighbor_atomic_numbers": [
+            7,
+            1,
+            1,
+            1
+          ]
+        }
+      ],
+      "cleaned_copy_comparison": "passed"
+    },
+    {
+      "format": "sdf",
+      "version": "V3000",
+      "raw_differences": [
+        "atom 2 chirality differs",
+        "atom 6 chirality differs",
+        "atom 13 chirality differs"
+      ],
+      "methyl_atoms": [
+        {
+          "atom_index": 2,
+          "source_tag": "CHI_TETRAHEDRAL_CW",
+          "parsed_tag": "CHI_UNSPECIFIED",
+          "neighbor_atomic_numbers": [
+            7,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "atom_index": 6,
+          "source_tag": "CHI_TETRAHEDRAL_CW",
+          "parsed_tag": "CHI_UNSPECIFIED",
+          "neighbor_atomic_numbers": [
+            7,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "atom_index": 13,
+          "source_tag": "CHI_TETRAHEDRAL_CW",
+          "parsed_tag": "CHI_UNSPECIFIED",
+          "neighbor_atomic_numbers": [
+            7,
+            1,
+            1,
+            1
+          ]
+        }
+      ],
+      "cleaned_copy_comparison": "passed"
+    }
+  ],
+  "scope": "Diagnostic only; frozen prepare export still fails. No scientific arrays or product changed."
+}
