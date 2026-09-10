@@ -1,0 +1,21 @@
+{
+  "case_id": "T17",
+  "variant": "mol2-positive",
+  "input": "examples\\tutorials\\2.5.0\\inputs\\openbabel-mol24\\mol24.mol2",
+  "sha256": "07a76cc2f2662589cc0033ad0e72a7b649c92a59fe64f77ef55bb04275e77e27",
+  "source_url": "https://raw.githubusercontent.com/openbabel/openbabel/0e94434fa75c9f61095023e3c12e0d5f2ac035ff/test/files/mol24.mol2",
+  "expected_atoms": 41,
+  "expected_bonds": 43,
+  "coordinate_atol_angstrom": 0.00011,
+  "charge_atol": 5.1e-05,
+  "required": [
+    "preview no write",
+    "loss confirmation when required",
+    "export and reimport",
+    "atom order and coordinates",
+    "indexed bond orders",
+    "Tripos atom types and supplied charges"
+  ],
+  "status": "not_run",
+  "note": "Adds positive coverage; does not replace 5SUN unknown-bond rejection."
+}
