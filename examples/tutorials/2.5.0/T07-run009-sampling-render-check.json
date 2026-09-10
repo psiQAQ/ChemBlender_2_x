@@ -1,0 +1,79 @@
+{
+  "status": "rendered",
+  "runtime": {
+    "version": "5.1.1",
+    "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+    "pid": 60064,
+    "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python\\bin\\python.exe",
+    "repos": [
+      {
+        "name": "extensions.blender.org",
+        "path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+      },
+      {
+        "name": "User Default",
+        "path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+      },
+      {
+        "name": "System",
+        "path": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+      },
+      {
+        "name": "Existing local MCP (read only)",
+        "path": "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+      }
+    ],
+    "enabled": [
+      "io_anim_bvh",
+      "io_curve_svg",
+      "io_mesh_uv_layout",
+      "io_scene_fbx",
+      "io_scene_gltf2",
+      "cycles",
+      "pose_library",
+      "bl_pkg",
+      "bl_ext.user_default.chemblender",
+      "bl_ext.tutorial_mcp.mcp"
+    ]
+  },
+  "resolution": [
+    2400,
+    1800
+  ],
+  "samples": 256,
+  "view_transform": "Standard",
+  "scientific_arrays_unchanged": true,
+  "sha256": "e81314a192e2e42c301e1958a68b84733ff4bc06c07a80512b2864d5499b0dc8",
+  "interaction": "known_native_scene_operations",
+  "gui_creation": "not_run_new_candidate",
+  "visual_review": "Passed agent visual check: readable labels, slice/profile/colorbar separated, ranges and analytic-model limitation visible. Human acceptance pending.",
+  "human_review": "not_run",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/render_sampling.py",
+      "sha256": "1b690890cef94603fd5459908ac846a136147184306f8bd4514248cb4b9650f0"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/render_sampling_native.py",
+      "sha256": "322508d93d20206e3104b8845d8a20f128ef3642ad3a9a0d6fe1ab9c33fe418d"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/sampling-layout/render.json",
+      "sha256": "e8b924e389f538a7e198ce23b2fc3ead7bc6a81d8e0641ea85fa5891ebdf2fed"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/sampling-layout/sampling.png",
+      "sha256": "e81314a192e2e42c301e1958a68b84733ff4bc06c07a80512b2864d5499b0dc8"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/sampling-layout/h2-grid.blend",
+      "sha256": "3afe99a7d34b321cac28570275121f7cb4493ad7a6af434705dbbc529f6688a4"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/sampling-layout/h2-grid.cbq/manifest.json",
+      "sha256": "0fb2ece3b2c769f9c3c758c00c06d7ffd8c25a86b36c1f125d1628737871adfc"
+    }
+  ]
+}
