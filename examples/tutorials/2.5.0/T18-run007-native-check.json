@@ -1,0 +1,80 @@
+{
+  "case_id": "T18",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "installed_save_as": {
+    "status": "passed",
+    "runtime": {
+      "pid": 36836,
+      "version": "5.1.1",
+      "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python\\bin\\python.exe",
+      "system": "Windows",
+      "repos": [
+        {
+          "name": "extensions.blender.org",
+          "directory": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+        },
+        {
+          "name": "User Default",
+          "directory": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+        },
+        {
+          "name": "System",
+          "directory": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+        },
+        {
+          "name": "Existing local MCP (read only)",
+          "directory": "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+        }
+      ]
+    },
+    "identity": [
+      "55edcef6-7e46-5b1d-9af9-179b88ca0ade",
+      "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4"
+    ],
+    "atoms": 21,
+    "old_copy_unavailable": true,
+    "coordinates_equal": true,
+    "view_rebuilds": 1,
+    "saved_file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\native-T01\\handoff.blend",
+    "interaction": "native_public_operator_replay",
+    "gui": "not_run",
+    "cold_reopen": "not_run",
+    "human_review": "not_run"
+  },
+  "portable_cold": {
+    "status": "passed",
+    "saved_pid": 36836,
+    "reopened_pid": 66468,
+    "audit": {
+      "status": "passed",
+      "track": "read_only_native_audit",
+      "blend_path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\portable-T01\\handoff.blend",
+      "blender_version": "5.1.1",
+      "structure_id": "55edcef6-7e46-5b1d-9af9-179b88ca0ade",
+      "revision": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+      "render_engine": "CYCLES",
+      "resolution": [
+        2400,
+        1800
+      ],
+      "samples": 256,
+      "view_names": [
+        "ChemBlender Structure"
+      ],
+      "coordinate_array_path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\portable-T01\\handoff.cbq\\arrays\\1c791b5e4e977df3e14624a80d825ba53c5b313d8d9547acabd66a41717ebe2b.npy",
+      "scientific_modules_in_blender": [],
+      "scene_links": {
+        "cbq_project_id": "08e197a9-f3c6-4ff5-81fb-becf5e1515f0",
+        "cbq_project_schema_version": "1.1",
+        "cbq_sidecar_locator": "handoff.cbq",
+        "cbq_manifest_sha256": "f43f97570e9cf340c7f4aa776371c633131b539ba41bdbb76ef1afeee415778b"
+      }
+    },
+    "scientific_arrays_equal": true,
+    "gui": "not_run",
+    "human_review": "not_run"
+  },
+  "scope": "T01 installed native Save As, old copy unavailable, View rebuild and portable cold reopen; other T18 variants and GUI pending",
+  "human_review": "not_run"
+}
