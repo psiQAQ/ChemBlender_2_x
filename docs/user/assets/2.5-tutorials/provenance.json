@@ -133,6 +133,46 @@
       "native_format": "jpeg",
       "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
       "status": "pending_human_review"
+    },
+    {
+      "path": "trajectory-prepare-inspect.jpg",
+      "source_run": "run-004/T06/gui/gui-0055.jpg",
+      "sha256": "5c011cd35eb7382a859efbf7ea7bf71d4608e610dc7e60f7769cc85fb9af4ae9",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+      "interaction": "actual_gui_inspect",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "trajectory-prepare-convert.jpg",
+      "source_run": "run-004/T06/gui/gui-0059.jpg",
+      "sha256": "fafacc81272a9ad1b4f25557fc9ee8780de4f5ab6eaa20ac2652c71556e1d292",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+      "interaction": "actual_gui_convert",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "trajectory-frame0.jpg",
+      "source_run": "run-004/T06/gui/gui-0047.jpg",
+      "sha256": "dd518c3badc98e5235961c4f6658e1090336aa39a90ab06687d636fea8b8b46c",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+      "interaction": "capture_after_mcp_replay",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "trajectory-frame31.jpg",
+      "source_run": "run-004/T06/gui/gui-0048.jpg",
+      "sha256": "301baa3a294c61e7aa9b4b0dee09687ab27d35dfb278b61f424d315cd01bc66b",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+      "interaction": "capture_after_mcp_replay",
+      "status": "pending_human_review"
     }
   ]
 }

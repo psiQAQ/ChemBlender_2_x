@@ -24,7 +24,17 @@ Complete [installation](installation.md) and [the first lesson](first-aspirin.md
 
 ## Prepare the CBQ
 
-Put the input in a new lesson folder. These public commands passed; replace the example paths. The dedicated Prepare GUI walkthrough for this input is still pending.
+Put the input in a new lesson folder. In Prepare, use the installed Standard runtime Python and follow these recorded steps:
+
+1. Choose `inspect`, paste the extXYZ path into the input field and set Reader ID to `extxyz`. Click `执行` (Execute). Changing operation rearranges the form; locate the button again before clicking. Expect `success`, frame_count `32`, atomic_force and frame properties energy/source_index/step.
+
+![Actual Prepare inspect result](../assets/2.5-tutorials/trajectory-prepare-inspect.jpg)
+
+2. Choose `convert`, retain the input and Reader ID, set Input Type to `files` and Validation Mode to `balanced`. Enter a new output CBQ path and click `执行`. Expect `success`; the no-prepared-bonds diagnostic is consistent with the atom/arrow View below. The recorded GUI output used `gui-converted.cbq` to preserve the existing project.
+
+![Actual Prepare convert result](../assets/2.5-tutorials/trajectory-prepare-convert.jpg)
+
+The [GUI-output scientific check](../assets/2.5-tutorials/trajectory-gui-science-check.json) compared all 32 frames independently against the input. These equivalent public commands also passed; replace the example paths.
 
 ```powershell
 chemblender-prepare inspect "D:\ChemBlenderLessons\T06\aspirin-rmd17-32.extxyz" --reader extxyz --json
@@ -40,9 +50,15 @@ Expect success and a FrameSet with `coordinates`, an `atomic_force` AtomFramePro
 2. Select the FrameSet in Project Browser. Under `Scientific Representation`, retain `Automatic` and `Research`; the description reads `Trajectory frame`. Click `Create View`.
 3. Select the `atomic_force` dataset. `Automatic` now resolves to `Trajectory with forces`. Click `Create View` again. This creates a separate View bound to the same FrameSet and its force property.
 4. Hide the earlier plain trajectory View in viewport and render, retaining it in the project. Hide the default Cube in both places. Select the force View and frame it with numpad `.`. Overlapping Views at different frames can otherwise look like extra atoms.
-5. In the force View controls, set `Source Frame Index (0-based)` to `15`, then click `Apply Frame`. The preview updates coordinates and force arrows together. Check frames `0` and `31` in the same way; dedicated first/last GUI captures still need completion in this draft.
+5. In the force View controls, set `Source Frame Index (0-based)` to `15`, then click `Apply Frame`. The preview updates coordinates and force arrows together. Check frames `0` and `31` in the same way; the captures below show both endpoints after authorized public FRAME replay.
 
 ![Actual Apply Frame operation at source frame 15](../assets/2.5-tutorials/trajectory-apply-frame.jpg)
+
+![Source frame 0 after FRAME replay](../assets/2.5-tutorials/trajectory-frame0.jpg)
+
+![Source frame 31 after FRAME replay](../assets/2.5-tutorials/trajectory-frame31.jpg)
+
+[Endpoint checks](../assets/2.5-tutorials/trajectory-first-last-check.json) confirm coordinates and scaled forces within display tolerance. These screenshots document the visible result; they do not represent new manual Apply Frame clicks.
 
 The subsequent public `FRAME` replay checked all 32 frames. Display vertices and vectors matched the corresponding source arrays within `1e-6` at display precision, while authoritative arrays remained unchanged. When Vector Display Scale differs from 1, compare displayed vectors against source force multiplied by that scale. The [recorded all-frame check](../assets/2.5-tutorials/trajectory-force-check.json) used scale 1 before cosmetic refinement.
 
@@ -82,4 +98,4 @@ One animation attempt was cancelled while diagnosing a pre-render audit mismatch
 
 See the [32-frame audit](../assets/2.5-tutorials/trajectory-animation-check.json), [video integrity record](../assets/2.5-tutorials/trajectory-video-check.json), [original/moved cold record](../assets/2.5-tutorials/trajectory-cold-recovery.json) and [display rebuild record](../assets/2.5-tutorials/trajectory-cache-recovery.json). Large frame sequences, MP4 and paired projects remain in the local case artifact directory, outside the Extension ZIP.
 
-Human replay, continuous GUI recording, complete first/middle/last capture coverage and case packaging remain pending. [Media provenance](../assets/2.5-tutorials/provenance.json) records original captures separately from rendered images.
+Human replay, continuous GUI recording, scalar frame-panel inspection and case packaging remain pending. [Media provenance](../assets/2.5-tutorials/provenance.json) records original captures separately from rendered images.

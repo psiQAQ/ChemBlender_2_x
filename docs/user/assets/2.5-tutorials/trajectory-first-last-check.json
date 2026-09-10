@@ -1,0 +1,16 @@
+[
+  {
+    "source_frame": 0,
+    "coordinate_error": 1.1420776369064356e-07,
+    "scaled_force_error": 4.4882402017165646e-08,
+    "interaction": "mcp_public_operator_replay",
+    "status": "passed"
+  },
+  {
+    "source_frame": 31,
+    "coordinate_error": 1.733166508088857e-07,
+    "scaled_force_error": 4.663722097397738e-08,
+    "interaction": "mcp_public_operator_replay",
+    "status": "passed"
+  }
+]

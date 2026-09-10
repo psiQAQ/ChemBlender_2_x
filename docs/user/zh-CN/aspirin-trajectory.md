@@ -24,7 +24,17 @@
 
 ## Prepare 转换
 
-把输入放入新的教程目录。以下公开命令已通过，运行时替换示例路径。该输入专用的 Prepare GUI 留证仍待完成。
+把输入放入新的教程目录。在 Prepare 中使用已安装的 Standard 运行环境 Python，按以下实测步骤操作：
+
+1. 操作选择 `inspect`，输入框粘贴 extXYZ 路径，Reader ID 填 `extxyz`，点击 `执行`。切换操作会改变表单布局，应重新定位按钮。预期返回 `success`、frame_count `32`、atomic_force 及 energy/source_index/step 逐帧属性。
+
+![实际 Prepare inspect 结果](../assets/2.5-tutorials/trajectory-prepare-inspect.jpg)
+
+2. 操作改为 `convert`，保留输入及 Reader ID，输入类型为 `files`，校验模式为 `balanced`。填写新的 CBQ 输出路径，点击 `执行`。预期返回 `success`；没有预制键的提示与下面的原子／箭头 View 一致。本次 GUI 输出使用 `gui-converted.cbq`，以保留已有工程。
+
+![实际 Prepare convert 结果](../assets/2.5-tutorials/trajectory-prepare-convert.jpg)
+
+[GUI 产物科学检查](../assets/2.5-tutorials/trajectory-gui-science-check.json)独立核对了全部 32 帧与原始输入。以下等价公开命令也已通过，运行时替换示例路径。
 
 ```powershell
 chemblender-prepare inspect "D:\ChemBlenderLessons\T06\aspirin-rmd17-32.extxyz" --reader extxyz --json
@@ -40,9 +50,15 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T06\aspirin-trajectory.cbq" 
 2. 在 Project Browser 选择 FrameSet。在 `Scientific Representation` 保持 `Automatic`、`Research`，说明显示 `Trajectory frame`，点击 `Create View`。
 3. 选择 `atomic_force` 数据集，此时 `Automatic` 对应 `Trajectory with forces`。再次点击 `Create View`，创建绑定同一个 FrameSet 及其力属性的独立 View。
 4. 关闭前一个普通轨迹 View 的视口与渲染可见性，同时保留该 View。也隐藏默认 Cube。选中力 View，用小键盘 `.` 取景。不同帧的多个 View 重叠会看起来像多出了原子。
-5. 在力 View 控件中将 `Source Frame Index (0-based)` 设为 `15`，点击 `Apply Frame`；坐标和力箭头一起更新。用同样方法检查 `0`、`31`。本草稿专门的首／末帧 GUI 截图仍待补齐。
+5. 在力 View 控件中将 `Source Frame Index (0-based)` 设为 `15`，点击 `Apply Frame`；坐标和力箭头一起更新。用同样方法检查 `0`、`31`。下面的截图记录了经授权公开 FRAME 重放后的两个端点。
 
 ![实际应用源帧 15](../assets/2.5-tutorials/trajectory-apply-frame.jpg)
+
+![FRAME 重放后的源帧 0](../assets/2.5-tutorials/trajectory-frame0.jpg)
+
+![FRAME 重放后的源帧 31](../assets/2.5-tutorials/trajectory-frame31.jpg)
+
+[端点检查](../assets/2.5-tutorials/trajectory-first-last-check.json)确认坐标与缩放后的力满足显示容差。这些截图证明可见结果，不代表重新手动点击了 Apply Frame。
 
 后续公开 `FRAME` 重放检查了全部 32 帧，显示顶点与向量在 `1e-6` 显示精度内对应正确源帧，权威数组不变。Vector Display Scale 不为 1 时，应将显示向量与“源力乘显示比例”比较。[全帧检查记录](../assets/2.5-tutorials/trajectory-force-check.json)使用的是外观细化之前的比例 1。
 
@@ -82,4 +98,4 @@ Rebuild 或 Update 可能替换显示对象，替换后需重新设置自定义�
 
 可查看 [32 帧审计](../assets/2.5-tutorials/trajectory-animation-check.json)、[视频完整性记录](../assets/2.5-tutorials/trajectory-video-check.json)、[原位／移动后冷重开](../assets/2.5-tutorials/trajectory-cold-recovery.json)及[显示重建记录](../assets/2.5-tutorials/trajectory-cache-recovery.json)。大型帧序列、MP4 和配对工程保存在本地案例产物目录，不进入 Extension ZIP。
 
-人工复做、连续 GUI 录屏、完整首／中／末帧截图及案例打包仍待完成。[媒体来源](../assets/2.5-tutorials/provenance.json)分别记录原始截图和渲染图。
+人工复做、连续 GUI 录屏、逐帧数值面板检查及案例打包仍待完成。[媒体来源](../assets/2.5-tutorials/provenance.json)分别记录原始截图和渲染图。
