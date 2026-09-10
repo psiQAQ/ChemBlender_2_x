@@ -1,0 +1,92 @@
+{
+  "case_id": "T04",
+  "variant": "diamond_ase_gui",
+  "status": "passed",
+  "atoms": 64,
+  "coordinate_error": 0.0,
+  "cell_error": 0.0,
+  "source_sha256": "7cf52f6c2473adad5f32f65bfb97c0d1f6d57f6788802abcc7cb4d05b16f0693",
+  "dataset_roles": [],
+  "boundary": "ASE structure and cell route; native POSCAR velocity retention is a separate check",
+  "gui": "passed",
+  "human_review": "not_run",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "events": [
+    {
+      "event_id": "e13",
+      "step_id": "e01",
+      "interaction": "os_gui",
+      "action": "Set explicit ASE route and separate output",
+      "timestamp_utc": "2026-09-10T13:07:13.694Z",
+      "session_id": "run009-prepare-59048-T04",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0020",
+      "after_artifact_id": "gui-0021",
+      "status": "observed"
+    },
+    {
+      "event_id": "e14",
+      "step_id": "e02",
+      "interaction": "os_gui",
+      "action": "Execute ASE route conversion",
+      "timestamp_utc": "2026-09-10T13:07:14.461Z",
+      "session_id": "run009-prepare-59048-T04",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0021",
+      "after_artifact_id": "gui-0022",
+      "status": "observed"
+    }
+  ],
+  "screenshots": [
+    {
+      "id": "gui-0020",
+      "kind": "gui_raw",
+      "path": "gui/gui-0020.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "fa500876b4d10f5bbeb38c8a2734da0bc623a2218549a316693dad5dd3090597",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0021",
+      "kind": "gui_raw",
+      "path": "gui/gui-0021.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "dff49d43734e5e05b0a7f7b3acacf3eadad0766ac531f10979267709cbaa694c",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0022",
+      "kind": "gui_raw",
+      "path": "gui/gui-0022.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "14121d823d8048628b0be27daac61784297cc2eeb553b1a0c8f6382f762435eb",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0023",
+      "kind": "gui_raw",
+      "path": "gui/gui-0023.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "96b1f9b9e0a92ad5203d58666877eee27e247a25917c9ed0912eb42e5e2545ce",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    }
+  ],
+  "gui_diagnostic": "ASE atom array has no normalized unit/semantic mapping",
+  "raw_root": ".blend-analysis\\2.5-real-user-tutorials\\run-009\\T04"
+}
