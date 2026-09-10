@@ -138,7 +138,7 @@ GUI 输出 `gui-difference.cbq` 的全部 262144 个值均通过独立比较。�
 
 Preview/Import 生成的 CBQ，选择 complete 电子密度，创建 Grid volume 或 Signed scalar isosurface。图中等值为存储单位下的 0.04，使用 shaded 材质、Roughness 0.32、Cycles CPU、2400 × 1800 和 256 samples。12 条注释边直接由晶胞矢量生成；相机和光照只影响显示。正曲面有 6392 个顶点，负曲面为空，与全正密度一致。VDB 索引到空间坐标的检查确认非正交仿射变换保留。
 
-此图显示有限网格域，边缘外观受采样域边界影响，不能把外形解释为真实晶体表面。此处未重建 PAW augmentation occupancies。保存的工程对冷重开后，本地 VDB 路径和科学数组保持不变；此变体的 GUI 截图、移动/重建及人工审阅仍待完成。
+此图显示有限网格域，边缘外观受采样域边界影响，不能把外形解释为真实晶体表面。此处未重建 PAW augmentation occupancies。保存的工程对冷重开后，本地 VDB 路径和科学数组保持不变；此变体的独立移动副本冷重开已通过。仅在该副本中删除五个派生 VDB，重建两个 View 后再次冷重开通过，十二条晶胞注释边和全部科学数组保留，原工程未改变。参见[变体恢复记录](../../../examples/tutorials/2.5.0/T07-vasp-recovery-check.json)。GUI 恢复、源文件/处理器不可用恢复及人工审阅仍待完成。
 
 ## 保存、交接与恢复
 

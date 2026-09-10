@@ -1,0 +1,16 @@
+{
+  "case_id": "T07",
+  "variant": "vasp_li_chgcar",
+  "status": "passed",
+  "moved_cold": "passed",
+  "cache_rebuild": "passed",
+  "post_rebuild_cold": "passed",
+  "removed_vdb_count": 5,
+  "scientific_arrays_unchanged": true,
+  "original_pair_unchanged": true,
+  "gui": "not_run",
+  "source_processor_unavailable": "not_run",
+  "human_review": "not_run",
+  "evidence_root": ".blend-analysis/2.5-real-user-tutorials/run-004/portable/T07-vasp-rebuild",
+  "report_sha256": "ab135cc2d1b93c3d0d89fc3d788beecee5951de3dcef632309dac4006d12a2a9"
+}
