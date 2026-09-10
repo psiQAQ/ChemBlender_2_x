@@ -1,0 +1,178 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T17",
+  "title": "Thirteen loss-aware public export formats",
+  "required_steps": [
+    {
+      "id": "s01",
+      "description": "Select applicable entities and preview all13 formats",
+      "requires_gui": true
+    },
+    {
+      "id": "s02",
+      "description": "Require explicit loss confirmation; export and independently reimport",
+      "requires_gui": true
+    },
+    {
+      "id": "s03",
+      "description": "Compare supported scientific fields and record unavoidable losses",
+      "requires_gui": false
+    }
+  ],
+  "required_checks": [
+    "all_13_positive_exports",
+    "preview_no_write",
+    "loss_confirmation_gate",
+    "source_unchanged",
+    "roundtrip_expressible_fields",
+    "unsupported_combo_rejected"
+  ],
+  "required_artifact_kinds": [
+    "environment",
+    "events",
+    "assertions",
+    "gui_raw"
+  ],
+  "variants": [
+    {
+      "format": "xyz",
+      "input": "examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol",
+      "sha256": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+      "source_license_note": "examples/user-workflows/inputs/mol/ain-aspirin-v2000.md",
+      "reader": "mol",
+      "entity_type": "Structure",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 1e-06
+    },
+    {
+      "format": "extxyz",
+      "input": "examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol",
+      "sha256": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+      "source_license_note": "examples/user-workflows/inputs/mol/ain-aspirin-v2000.md",
+      "reader": "mol",
+      "entity_type": "Structure",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 1e-06
+    },
+    {
+      "format": "mol",
+      "input": "examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol",
+      "sha256": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+      "source_license_note": "examples/user-workflows/inputs/mol/ain-aspirin-v2000.md",
+      "reader": "mol",
+      "entity_type": "Structure",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 0.00011
+    },
+    {
+      "format": "mol2",
+      "input": "examples/user-workflows/inputs/mol2/openbabel-5sun-protein.mol2",
+      "sha256": "1ac476afd860c326995e28125cc4cf4007b33e022a8c9f397d9e350f3e5a4fbd",
+      "source_license_note": "examples/user-workflows/inputs/mol2/openbabel-5sun-protein.md",
+      "reader": "mol2",
+      "entity_type": "Structure",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 0.00011
+    },
+    {
+      "format": "pdb",
+      "input": "examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb",
+      "sha256": "21099cb88231455fdfab4095dddfadcc85cc4213e105cf5f9cfff2ca21993378",
+      "source_license_note": "examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.md",
+      "reader": "pdb",
+      "entity_type": "Structure",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 0.0011
+    },
+    {
+      "format": "pqr",
+      "input": "examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.pqr",
+      "sha256": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68",
+      "source_license_note": "examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.md",
+      "reader": "pqr",
+      "entity_type": "Structure",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 0.0011
+    },
+    {
+      "format": "sdf",
+      "input": "examples/user-workflows/inputs/sdf/ccd-3d-showcase.sdf",
+      "sha256": "e94ea5e57e9491fcb1e47b725446f9663a484354e7516ad40a9219888f0328a2",
+      "source_license_note": "examples/user-workflows/inputs/sdf/ccd-3d-showcase.md",
+      "reader": "sdf",
+      "entity_type": "Structure",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 0.00011
+    },
+    {
+      "format": "smiles",
+      "input": "examples/user-workflows/inputs/smiles/ta1-paclitaxel-isomeric.smi",
+      "sha256": "fc9c3aa78dc395d60448b2ed188691ddb7dd70cebe051b6f3123731943edc40e",
+      "source_license_note": "examples/user-workflows/inputs/smiles/ta1-paclitaxel-isomeric.md",
+      "reader": "smiles",
+      "entity_type": "Structure",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 1e-06
+    },
+    {
+      "format": "cif",
+      "input": "examples/user-workflows/inputs/cif/cod-4503272-caffeine-cocrystal.cif",
+      "sha256": "0ab8afbcc0f931327a5cba664df8317bf557f3b6f06b1fe5b27908676b89c5f5",
+      "source_license_note": "examples/user-workflows/inputs/cif/cod-4503272-caffeine-cocrystal.md",
+      "reader": "cif",
+      "entity_type": "Structure",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 1e-06
+    },
+    {
+      "format": "poscar",
+      "input": "examples/user-workflows/inputs/poscar/cod-9012293-diamond.POSCAR",
+      "sha256": "67c040a37159c5f7ba618f6ce264efc24308f50ed982bd0b80035733278bdb5c",
+      "source_license_note": "examples/user-workflows/inputs/poscar/cod-9012293-diamond.md",
+      "reader": "poscar",
+      "entity_type": "Structure",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 1e-06
+    },
+    {
+      "format": "cube",
+      "input": "examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.cube",
+      "sha256": "51fcb06343132c4b75f340aa5824434c9c622b51df7ea1ad3742920c78af66b4",
+      "source_license_note": "examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.md",
+      "reader": "cube",
+      "entity_type": "Grid3D",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 1e-06
+    },
+    {
+      "format": "cjson",
+      "input": "examples/user-workflows/inputs/cjson/avogadro-phthalocyanine.cjson",
+      "sha256": "310cb5b4d48a08662d9e956b1a7ac778a05ea9060be6cffcdfaedecfd390097e",
+      "source_license_note": "examples/user-workflows/inputs/cjson/avogadro-phthalocyanine.md",
+      "reader": "cjson",
+      "entity_type": "CJSONEnvelope",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 1e-06
+    },
+    {
+      "format": "qcschema",
+      "input": "examples/user-workflows/inputs/qcschema/molssi-water-gradient-hf.json",
+      "sha256": "73b28251edde763490937d303cee0b4c2cf4bf55c566d4139c5e33220ffae451",
+      "source_license_note": "examples/user-workflows/inputs/qcschema/molssi-water-gradient-hf.md",
+      "reader": "qcschema",
+      "entity_type": "QCSchemaEnvelope",
+      "selection": "first listed applicable entity; record UUID and atom count",
+      "coordinate_absolute_tolerance_angstrom": 1e-06
+    }
+  ],
+  "comparison_rules": {
+    "structures": "atom species/order and unit-normalized coordinates; format-native topology/charge/radius/hierarchy where expressible",
+    "smiles": "chemical graph, charge and stereochemistry; coordinates explicitly not preserved",
+    "cif_poscar": "cell and atom sites with documented ordering; CIF preserve mode",
+    "cube": "all scalar samples and affine geometry at 1e-6 absolute; semantics may need external reassignment",
+    "envelopes": "JSON value equality with original envelope"
+  },
+  "status": "not_run",
+  "human_review": "not_run"
+}
