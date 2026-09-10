@@ -1,0 +1,52 @@
+{
+  "source_commit": "36b80b8c7652bad8990df361a1909e56161d884a",
+  "artifacts": {
+    "chemblender-2.5.0.zip": {
+      "sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+      "bytes": 2831354
+    },
+    "chemblender_prepare-0.1.0-py3-none-any.whl": {
+      "sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e",
+      "bytes": 555354
+    },
+    "chemblender_prepare-0.1.0.tar.gz": {
+      "sha256": "d495ff48f7309307d5cbe137901a10a25e90fcd8dcf3afc403b54a73118940cb",
+      "bytes": 921631
+    }
+  },
+  "installed_validation": "not_run",
+  "gui": "not_run",
+  "extension_install": {
+    "status": "passed",
+    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "files_verified": 109,
+    "profile": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile",
+    "interaction": "native_operator_replay",
+    "gui_capture": "not_run"
+  },
+  "prepare_install": {
+    "module": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\uv-tool\\chemblender-prepare\\Lib\\site-packages\\cbq_core\\__init__.py",
+    "versions": {
+      "numpy": "2.5.3",
+      "rdkit": "2026.3.3",
+      "gemmi": "0.7.5",
+      "pillow": "12.3.0"
+    }
+  },
+  "save_as_installed": {
+    "status": "passed",
+    "track": "isolated_installed_wheel_real_input",
+    "old_path_unavailable": true,
+    "identity": [
+      "55edcef6-7e46-5b1d-9af9-179b88ca0ade",
+      "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4"
+    ],
+    "atoms": 21,
+    "coordinates_equal": true,
+    "new_array_path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\save-as-fix\\new.cbq\\arrays\\1c791b5e4e977df3e14624a80d825ba53c5b313d8d9547acabd66a41717ebe2b.npy",
+    "installed_candidate_retest": "passed"
+  },
+  "source_files_equal": 165,
+  "full_regression": "not_run",
+  "human_review": "not_run"
+}
