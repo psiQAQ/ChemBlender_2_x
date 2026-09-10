@@ -1,0 +1,52 @@
+{
+  "status": "partial",
+  "scope": "Actual sidebar activation after authorized camera/sidebar MCP replay; not full GUI reconstruction",
+  "pid": 49724,
+  "window_id": 50988602,
+  "event": {
+    "event_id": "e15",
+    "step_id": "f01",
+    "interaction": "os_gui",
+    "action": "Open ChemBlender sidebar tab",
+    "timestamp_utc": "2026-09-10T13:35:40.767Z",
+    "session_id": "run009-blender-49724",
+    "window": {
+      "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "id": 50988602,
+      "title": "cocrystal-view [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T04\\cocrystal-view.blend] - Blender 5.1.1"
+    },
+    "before_artifact_id": "gui-0025",
+    "after_artifact_id": "gui-0026",
+    "status": "observed"
+  },
+  "artifacts": [
+    {
+      "id": "gui-0025",
+      "kind": "gui_raw",
+      "path": "gui/gui-0025.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "b2d865574c2f9a40e7b281bbcbc0580e3e0091f25501c20624fc08e91095153c",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0026",
+      "kind": "gui_raw",
+      "path": "gui/gui-0026.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "9fd0862bda6b7da28cacd6d6af3d7fb11ae1e545626b73dd32e32c592dab7c89",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    }
+  ],
+  "visible_checks": [
+    "64 sites",
+    "Declared symmetry international number 64",
+    "Derived symmetry Not derived"
+  ],
+  "readability": "Partial field truncation in narrow sidebar; not final tutorial screenshot",
+  "human_review": "not_run",
+  "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/T04"
+}
