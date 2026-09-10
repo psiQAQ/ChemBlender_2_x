@@ -20,6 +20,15 @@
     "inspect.json": "31980d80e77141f8b272636abcb10ba0dcf357fc3a3c7291cb161d0176f153c5",
     "convert.json": "28fe6332886bcabe5284c48342236612d5e479bb8b641008ac8e75dd2f32a7ad",
     "validate.json": "8914554cfc51e4134e2808fae44ed4b2b18db545ce41473ae9d40c9adc988b1c",
-    "science-check.json": "f680b5cc3dfec41cdee4d706ec82fa34893c41345ea4230d3bd5b6a57a8519d9"
-  }
+    "science-check.json": "f680b5cc3dfec41cdee4d706ec82fa34893c41345ea4230d3bd5b6a57a8519d9",
+    "view-check.json": "4997bbaad7c54e6c6cbb02ce9e7ef8a33e16c485686718d5e55abc0c7006e97f",
+    "cold-check.json": "963545eb355d86ee4db9256d5d5b9b98104ee3beb49baa3d0effaa1afc53f16a"
+  },
+  "blender_public_operator_replay": "passed",
+  "vdb_affine_error": 0.0,
+  "surface_vertices": [
+    6392,
+    0
+  ],
+  "cold_reopen": "passed"
 }
