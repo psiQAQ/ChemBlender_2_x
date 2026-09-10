@@ -85,9 +85,10 @@
     {
       "case_id": "T07",
       "priority": "P0",
-      "status": "not_run",
-      "status_reason": "Implementation started; this case has no new GUI acceptance yet.",
-      "human_review": "not_run"
+      "status": "in_progress",
+      "status_reason": "Frozen primary Cube spec; public ambiguous/explicit semantic conversion and all262144 value/affine checks passed. Grid UI, variants, sampling, difference, rendering, recovery and human acceptance pending.",
+      "human_review": "not_run",
+      "run": "run-004/T07"
     },
     {
       "case_id": "T08",
