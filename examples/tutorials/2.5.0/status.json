@@ -58,12 +58,62 @@
     {
       "case_id": "T04",
       "priority": "P0",
-      "status": "in_progress",
-      "status_reason": "Frozen CIF/CONTCAR science passed; frozen prepare code with existing ASE 3.29.0 passed convert/validate and independent cell/coordinate comparison (zero error). Installed periodic fix, refined renders and four serial original/moved cold reopens passed. New periodic panel/subdivision GUI evidence is partial; complete tutorial GUI mapping, visual quality, cache recovery and human review remain pending.",
+      "status": "blocked",
+      "status_reason": "New prepare GUI CIF/native POSCAR/ASE conversion, science, periodic View replay, smooth renders, original/relocated/extracted-pair cold reopen and local review package passed. Remaining GUI/caption integration, explicit rebuild checks and independent human acceptance pending.",
       "human_review": "not_run",
-      "run": "run-004/T04",
+      "run": "run-009/T04",
       "gui": "partial",
-      "scientific_processing": "passed"
+      "scientific_processing": "passed",
+      "project_recovery": "passed",
+      "distribution": "blocked",
+      "review_package": {
+        "status": "review_only",
+        "file": "T04-review.zip",
+        "bytes": 10069103,
+        "sha256": "ade7561ddcbe5e6bfeb05aa1cf2825dd87a054d34378d4b59741db6dc96b56ca",
+        "files": 62,
+        "zip_crc": "passed",
+        "all_member_hashes": "passed",
+        "human_acceptance": "not_run",
+        "full_case_acceptance": "incomplete",
+        "scope": "local handover; not final distribution",
+        "extracted_pair_cold_reopen": [
+          {
+            "scope": "scientific recovery; custom smoothing persistence separately classified",
+            "smooth_persistence": "passed",
+            "smooth_groups": [
+              "ChemBlender Periodic Structure Site Occupancy ChemBlender Site Occupancy Nodes",
+              "ChemBlender Periodic Structure Thermal Ellipsoids ChemBlender Thermal Ellipsoids Nodes"
+            ],
+            "subdivision_levels": 2,
+            "status": "passed",
+            "pid": 50100,
+            "blend": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T04-review-extracted\\projects\\cocrystal-view.blend",
+            "array": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T04-review-extracted\\projects\\cocrystal-view.cbq\\arrays\\37ba5887aace0ba7526581e330ca8db833f9c6c35b33ad114a1d4c93f7ee9890.npy",
+            "view_coordinate_error": 9.508496106036546e-07,
+            "cell_edges": 12,
+            "structure_id": "3561a84e-0d51-5e77-bc53-7eacee58084e",
+            "scientific_modules": []
+          },
+          {
+            "scope": "scientific recovery; custom smoothing persistence separately classified",
+            "smooth_persistence": "passed",
+            "smooth_groups": [
+              "ChemBlender Periodic Structure Site Occupancy ChemBlender Site Occupancy Nodes"
+            ],
+            "subdivision_levels": 2,
+            "status": "passed",
+            "pid": 29440,
+            "blend": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T04-review-extracted\\projects\\diamond-view.blend",
+            "array": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T04-review-extracted\\projects\\diamond-view.cbq\\arrays\\278a66016ca1cb0e33ee80a2bdb3d5aeca39ce007b02c681858b7cd945c9f794.npy",
+            "view_coordinate_error": 1.6021728477255692e-07,
+            "cell_edges": 12,
+            "structure_id": "ffde7840-0274-5c2a-bf84-5f8b4e64a39c",
+            "scientific_modules": []
+          }
+        ],
+        "extracted_files_unchanged": "passed"
+      }
     },
     {
       "case_id": "T05",
