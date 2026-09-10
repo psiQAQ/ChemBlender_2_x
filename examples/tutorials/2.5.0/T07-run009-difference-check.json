@@ -1,0 +1,67 @@
+{
+  "status": "passed",
+  "all_262144_values_exact": true,
+  "minimum": -0.034517683074599986,
+  "maximum": 0.020403083258500015,
+  "positive_samples": 138360,
+  "negative_samples": 123784,
+  "incompatible_fixture": "right origin x +0.1 bohr, disposable data-model copy",
+  "rejection": {
+    "protocol_version": "1",
+    "worker_version": "0.1.0",
+    "request_id": "4082b485-7c05-47a4-af43-854ff17f4ccf",
+    "status": "error",
+    "outputs": [],
+    "artifacts": [],
+    "cache_key": null,
+    "metadata": {},
+    "error": {
+      "code": "prepare_failed",
+      "message": "operation_failed: density difference requires identical affine grids and coordinate units"
+    }
+  },
+  "output_absent": true,
+  "original_and_fixture_unchanged": true,
+  "interaction": "installed public CLI; independent raw Cube numerical comparison",
+  "gui": "not_run_new_candidate",
+  "human_acceptance": "not_run",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/check_difference.py",
+      "sha256": "5ed026f804f844507222d4d90919d8cc30748a28544363147c9b32a0f9553526"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/difference-check.json",
+      "sha256": "ae6f076f0a26deae6657b17e8cf3c647891aece40bf286e3087f7ae3bc98b96f"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/difference-rejected.stdout.json",
+      "sha256": "d58947e9190574cc7a4f9ab16c698f064c96232328460d111233d1ea2cf8f1a2"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/recompute-lesson/convert.stdout.json",
+      "sha256": "40e7e90fee30cad0c6d1798a80d32829980df25d4100087ee3013a813b8e1e4a"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/recompute-lesson/difference.stdout.json",
+      "sha256": "d6b190522c36fc692e23da98b8f8a030bc6664eb012528b29c08284fff3f75a2"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/recompute-lesson/resolve.stdout.json",
+      "sha256": "b52e9e77bbfe7cb8721d10995c69d3d52da0e93c8901b020b7260509285b9b06"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/recompute-lesson/validate.stdout.json",
+      "sha256": "d81a8dd134670380c305097665154d09cfebf425d65023f5f3f61cc0e2512c2e"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/recompute_t07_difference.py",
+      "sha256": "6eeeb8b83c56fa56f69e4df04f0a63b1a5bb7ac5701c2c6944433d3f03fd2178"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/generate_t07_density_pair.py",
+      "sha256": "6005401e286db49aeb5414952e225c38e08699e2921112690337048264811fab"
+    }
+  ]
+}
