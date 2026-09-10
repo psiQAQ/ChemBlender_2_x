@@ -59,11 +59,11 @@
       "case_id": "T04",
       "priority": "P0",
       "status": "in_progress",
-      "status_reason": "CIF/CONTCAR fixed before execution; six public CLI steps and independent saved-data science checks passed. Periodic GUI, render/recovery and optional ASE route not run.",
+      "status_reason": "Frozen CIF/CONTCAR science passed; frozen prepare code with existing ASE 3.29.0 passed convert/validate and independent cell/coordinate comparison (zero error). Installed periodic fix, refined renders and four serial original/moved cold reopens passed. New periodic panel/subdivision GUI evidence is partial; complete tutorial GUI mapping, visual quality, cache recovery and human review remain pending.",
       "human_review": "not_run",
-      "run": "run-003/T04",
-      "gui": "not_run",
-      "scientific_processing": "partial"
+      "run": "run-004/T04",
+      "gui": "partial",
+      "scientific_processing": "passed"
     },
     {
       "case_id": "T05",
