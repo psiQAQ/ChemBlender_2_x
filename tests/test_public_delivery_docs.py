@@ -35,13 +35,15 @@ class PublicDeliveryDocsTests(unittest.TestCase):
             self.assertEqual(manifest["remote_resources"], 0)
             self.assertEqual(manifest["missing_resources"], 0)
             self.assertGreater(manifest["link_count"], 5)
-            self.assertEqual(manifest["image_count"], 5)
+            self.assertEqual(manifest["image_count"], 10)
             self.assertEqual(
                 set(manifest["image_sha256"]),
                 {"docs/user/assets/2.5.0/blender-viewer.png", *(
                     'docs/user/assets/2.5-tutorials/' + name for name in (
                         'aspirin-cycles.png', 'aspirin-prepare-convert.jpg',
-                        'aspirin-cbq-preview.jpg', 'aspirin-cold-reopen.jpg'))},
+                        'aspirin-cbq-preview.jpg', 'aspirin-cold-reopen.jpg',
+                        'ethanol-cycles.png', 'ethanol-prepare-convert.jpg',
+                        'ethanol-generated.jpg', 'ethanol-energy.jpg', 'ethanol-apply.jpg'))},
             )
 
     def test_body_links_images_tables_and_paragraphs_survive_rendering(self):
@@ -77,7 +79,9 @@ class PublicDeliveryDocsTests(unittest.TestCase):
         self.assertIn('href="#document-2"', content)
         self.assertIn('href="../zh-CN/index.html#document-1"', content)
         self.assertIn('download="public-surface.json"', content)
-        self.assertEqual(content.count('<img '), 5)
+        self.assertEqual(content.count('<img '), 10)
+        self.assertIn('download="ethanol.smi"', content)
+        self.assertIn('download="ethanol-science-check.json"', content)
         self.assertGreater(content.index('<img '), content.index('<article id="document-3">'))
 
 

@@ -1,0 +1,83 @@
+{
+  "status": "passed",
+  "rdkit_version": "2026.03.3",
+  "structure_count": 5,
+  "source_2d_preserved": true,
+  "generated_atoms": 9,
+  "generated_bonds": 8,
+  "parameters": {
+    "generation": {
+      "add_hydrogens": true,
+      "clear_conformers": true,
+      "coordinates_digest": "90ec458a715685435bd527ab885df688f3fa068b3174fe0bc16a1ac7cd840d80",
+      "embed_code": 0,
+      "embedding": "ETKDGv3",
+      "force_field": "MMFF94",
+      "heavy_atom_mapping": [
+        0,
+        1,
+        2
+      ],
+      "max_iterations": 200,
+      "num_threads": 1,
+      "optimizer_code": 0,
+      "outcome_code": "smiles_3d.success",
+      "outcome_exception": null,
+      "preserve_chirality": true,
+      "random_seed": 12648430,
+      "rdkit_version": "2026.03.3",
+      "status": "success"
+    },
+    "optimization": {
+      "add_hydrogens": false,
+      "force_field": "MMFF94",
+      "iterations_attempted": 10,
+      "max_iterations": 200,
+      "optimizer_status": 0,
+      "rdkit_version": "2026.03.3"
+    }
+  },
+  "energy": {
+    "recorded": -1.3368570639005273,
+    "independent_before": -1.3368570639005273,
+    "independent_after": -1.336857063955483,
+    "unit": "kilocalorie_per_mole",
+    "absolute_tolerance": 1e-06
+  },
+  "apply": {
+    "source_id": "f37310fd-9b4e-5dec-9542-24bc0c5caadf",
+    "derived_id": "6111ef46-7850-59b9-983b-5a80611477b6",
+    "changed_atom_index": 5,
+    "delta_angstrom": [
+      4.500122430250997e-08,
+      -2.3781630886787752e-08,
+      0.1500000185198297
+    ]
+  },
+  "structures": {
+    "source": "286a5c44-7fe3-5766-8a15-9efaaae2e0a8",
+    "generated": "0a58d277-9385-5ab7-a1b9-7bf11f5779ba",
+    "optimized": "c39c7ba5-fd63-5a8b-970d-9c9bf0d18a2d",
+    "kekulized": "f37310fd-9b4e-5dec-9542-24bc0c5caadf",
+    "edited": "6111ef46-7850-59b9-983b-5a80611477b6"
+  },
+  "scientific_hashes": {
+    "arrays/220d631a90e0436ff33e5af0fb60e294b90a43db4b1fab970f07d7dde2ef8ccb.npy": "bc8cc8be39d14af34e5864b0962891316a9ca3bf7687596997669553cc98ac35",
+    "arrays/290d856a97ec746188ae05ce1dbef31b4c8a28df4fcf56f287c5d515857a96d2.npy": "fd7afc58b38f99c822c6297a2aac2764d1e150682e866dd395d7abc33678b131",
+    "arrays/37a7abd933b705dd5c05a291069fa023651ac58960ea19c62ce7cbe59be5619f.npy": "2a90bd7cf517a722cf90b6a613f42217196e80c40bd72a505e9307a7b976e18e",
+    "arrays/38cd1ed8140a87829d912604358bd12042ea1df8af306a2d86b14c40e0ecccec.npy": "ef96e79ade33aa023bbe8ae7309afc79a6ebeaac504e72c1f0d957d081040f26",
+    "arrays/5f7fb9af78bc1b27a9cb07c1996afe1cc51572b70740257d335a3a327be4b739.npy": "fc4d440401c1eae57ef4371fb3b5223bc257f16a8f6b95367222014b209f09e4",
+    "arrays/6807b2e7884383c052cdb83a119ed442f8912a329b9a70e56de16953a3515499.npy": "4bf6773af450243f7e016b685cf35670a8ffe6325d68f651eafb3ea67c4b960d",
+    "arrays/69a04f907c1e621da0600282ac8639f06b35ab7c8e22a8a97c6f5ad1cd99221e.npy": "e455a47291ebb5730a9a01f5172fb53a516dbb9036626395b0c03273531f9e8d",
+    "arrays/75e4bbffa4d28982addcd87306d0daf8cab08bd8b272924edc0ab83fbbcd7daa.npy": "53407a9bdd97d68fc33e27d9796ff5dc9b2a097ed121c8166d6184e060a88bfa",
+    "arrays/85864b09a59c0f173b547fb5a46ac6e8e1c565e36cea82249bb71e3f709f6c7e.npy": "6d032b16e3da5817fd430cfc222373bc52070a9d12a94a9bc1c088515784daf5",
+    "arrays/8e55c4d9350dc64b6e791c2a89511d099327d0c9ebbfb183767c19a8cb3fc0cc.npy": "a7fceac4334028999e5c1432a40887e3756e17a745ea2c26558dd86267102c82",
+    "arrays/99d6a5850e8e246d8a5fe09be3cd04357e815f64fd22da9de9bcfe8bb3800f4c.npy": "f78ae2fcf2c0ca895e9b6dfd1412e727c67541759b87eec90e4008773562a77f",
+    "arrays/9a336cbb80f635097c4ab6d2060e1766f7a53986809fb3785b60a3402ec25dfa.npy": "c2588e749019d5d59008861668cbae0475df61bbdd022203068fa0559211864a",
+    "arrays/a73b8b4cb60390422c253c1c40aaf5e7a323d3beab0e497bc30da994853f1b02.npy": "f25f05a8ef5d6eb3ed97adedd61679b737c0a8bee6c256dfacf79611c487bc44",
+    "arrays/b1c08838b722480bd012e8534689e1897a4f8963e5305b8aa3d1a4858064b85f.npy": "cfb1b93939d0216216735957d457c41fca14ad0f8aa50af375d7e893b153f1a8",
+    "arrays/c557c8687bc7163a317383d2349e8bbdcf77472edfaa016fa380fa21d0c57853.npy": "a4a54b3840dbf8c4ab261e4b5082bbba472068cbf24e76a54e48591d728d930a",
+    "arrays/f7fba71ece7ca098153c8c0295ef588832cc0bd15c72a5d51b1905f95b2292a7.npy": "f7cf4ad3a954133b57f3e54a44235710094ba0eeeba50f52174f1ed5c9e75c3f",
+    "manifest.json": "f74b930ab934d159a34b7ab2f586f671f0efe19b9019ca76043ff7d59a918658"
+  }
+}

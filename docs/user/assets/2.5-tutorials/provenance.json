@@ -32,6 +32,46 @@
       "kind": "render",
       "native_format": "png",
       "extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8"
+    },
+    {
+      "path": "ethanol-prepare-convert.jpg",
+      "source_run": "run-003/T02/gui/gui-0014.jpg",
+      "sha256": "e9d927d1960b0ab40a458a61415742be34aee4ff9357ee662158b70692b25fca",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374"
+    },
+    {
+      "path": "ethanol-generated.jpg",
+      "source_run": "run-003/T02/gui/gui-0033.jpg",
+      "sha256": "f02e95f7e9e99c9608bf84a8da88110473195d5fb14df1b5f8b1afd2756913e3",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374"
+    },
+    {
+      "path": "ethanol-energy.jpg",
+      "source_run": "run-003/T02/gui/gui-0038.jpg",
+      "sha256": "5a14d0755e5bb2f8c9cd47f2a76e31418bc5cd67aa8940e795d2274fd3eed454",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374"
+    },
+    {
+      "path": "ethanol-apply.jpg",
+      "source_run": "run-003/T02/gui/gui-0061.jpg",
+      "sha256": "16491d31bc9f0623a34b334ff5dcaad4716ce9b15ceff05404322803d995416e",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374"
+    },
+    {
+      "path": "ethanol-cycles.png",
+      "source_run": "run-003/T02/ethanol-cycles.png",
+      "sha256": "9d9611e3dcc5cdbfa218089f9ad88c63f5393338f2d45aa22dc2c2c99a38a9c0",
+      "kind": "render",
+      "native_format": "png",
+      "extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374"
     }
   ]
 }
