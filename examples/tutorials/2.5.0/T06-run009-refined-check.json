@@ -1,0 +1,76 @@
+{
+  "status": "passed",
+  "interaction": "native_process_replay",
+  "checks": [
+    {
+      "status": "passed",
+      "pid": 22496,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T06\\trajectory-refined.blend",
+      "source_frame": 15,
+      "coordinate_error": 1.1842041036658202e-07,
+      "scaled_force_error": 5.515591516846996e-08,
+      "smooth_atom_faces": true,
+      "view_count": 2,
+      "scientific_playback_after_load": false
+    },
+    {
+      "status": "passed",
+      "pid": 13636,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T06-refined\\trajectory-refined.blend",
+      "source_frame": 15,
+      "coordinate_error": 1.1842041036658202e-07,
+      "scaled_force_error": 5.515591516846996e-08,
+      "smooth_atom_faces": true,
+      "view_count": 2,
+      "scientific_playback_after_load": false
+    }
+  ],
+  "scientific_hashes_unchanged": true,
+  "cache_rebuild": "not_run",
+  "human_review": "not_run",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "settings": {
+    "source_frame": 15,
+    "atom_display_scale": 0.3,
+    "vector_display_scale": 0.3499999940395355,
+    "roughness": 0.3,
+    "point_energy": 14000,
+    "fill_energy": 1800,
+    "fill_size": 8,
+    "world_rgb": [
+      0.18,
+      0.18,
+      0.18
+    ],
+    "scientific_array_hashes": {
+      "0969bf8a-eb66-59d2-a359-58aed199d731": "20e7775c245689d18010a144f94b0f2cf353010a1fa618b5a9d0fca59b69d5ad",
+      "48972f44-eef2-50b1-91e2-8c9f75bc3336": "4b04e6b242bb8c992277a91d6c24c332e298645837de43446f4bc90c829aae93",
+      "d2475947-ae55-5149-a171-c088e08eedfd": "4b086bfa4ee07bcc88141d72627db4d0a4c9967756111a6836cbf6beecc987c4",
+      "d3c402bc-6da5-5017-9131-b23b53fcf6a5": "1e82f0b2d5dfa5cd847ae93e8acec7f9d951100f7cb524ab8e00f0406c02f908",
+      "dfc336e0-dc16-5c66-83ed-731395585ddd": "b051d3ad6396575a5e31f3e5d2fc28c7056a80356f50e55e7d94d496d2de9ef8"
+    },
+    "note": "Display glyph radius only; unchanged coordinates/force/scientific atom radii"
+  },
+  "scene_fix": {
+    "defect": "Scene edit added a second input to multi-input Join Geometry; original flat branch remained",
+    "fix": "Removed direct atom-material-to-join link, kept single smoothed branch",
+    "faces_before": 42000,
+    "faces_after": 21000,
+    "all_atom_faces_smooth": true,
+    "scope": "tutorial scene edit; product code unchanged"
+  },
+  "render": {
+    "file": "trajectory-frame15-refined.png",
+    "sha256": "694a1d8cbd561079a035215af3ddd7db76f486205d9ff3ce1199e24ee5679e13",
+    "resolution": [
+      2400,
+      1800
+    ],
+    "samples": 256,
+    "visual_review": "Smooth atom highlights and reduced occlusion verified; some 3D vector occlusion remains and no numerical force should be read from shaded image"
+  },
+  "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/T06",
+  "gui": "not_run_new_refinement",
+  "animation": "not_run_new_candidate"
+}
