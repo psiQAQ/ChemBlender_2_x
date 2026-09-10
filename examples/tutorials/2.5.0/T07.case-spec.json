@@ -113,7 +113,7 @@
     ],
     "coordinate_unit": "bohr",
     "semantic_role": "electron_density",
-    "value_unit": "electron_per_bohr3",
+    "value_unit": "electron_per_cubic_bohr",
     "minimum": 7.75746861e-10,
     "maximum": 0.229296377,
     "integral_using_serialized_step": 1.9996717595939106,
