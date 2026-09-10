@@ -1,0 +1,43 @@
+{
+  "scope": "This package only; not ChemBlender application or GUI qualification",
+  "python": "3.13.5",
+  "validator_unit_tests": {
+    "run": 20,
+    "passed": 20,
+    "failed": 0,
+    "skipped": 0,
+    "wall_seconds": 0.8266
+  },
+  "template_check": {
+    "expected_exit": 2,
+    "actual_exit": 2,
+    "verdict": "incomplete"
+  },
+  "design_coverage": {
+    "case_entries": 22,
+    "tutorial_entries": 21,
+    "boundary_entries": 1,
+    "operations": 21,
+    "readers": 22,
+    "export_formats": 13,
+    "cli_commands": 10,
+    "gui_commands": 9,
+    "unmapped_entries": 0
+  },
+  "document_checks": {
+    "source_ids_resolve": true,
+    "html_internal_anchors_resolve": true,
+    "html_has_tables": true,
+    "html_remote_autoload_resources": 0,
+    "readme_links_resolve": true
+  },
+  "not_run": [
+    "Blender GUI",
+    "ChemBlender full tests",
+    "scientific backend execution",
+    "actual tutorial screenshots/renders",
+    "real .blend/.cbq lifecycle",
+    "remote publication"
+  ],
+  "reviewed_commit": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9"
+}

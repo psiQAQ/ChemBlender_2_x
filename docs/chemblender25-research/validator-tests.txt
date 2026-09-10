@@ -1,0 +1,25 @@
+test_01_synthetic_consistency_is_not_real_validation (test_validate_evidence.EvidenceTests.test_01_synthetic_consistency_is_not_real_validation) ... ok
+test_02_synthetic_publish_is_rejected (test_validate_evidence.EvidenceTests.test_02_synthetic_publish_is_rejected) ... ok
+test_03_missing_independent_release_hashes (test_validate_evidence.EvidenceTests.test_03_missing_independent_release_hashes) ... ok
+test_04_expected_build_mismatch (test_validate_evidence.EvidenceTests.test_04_expected_build_mismatch) ... ok
+test_05_image_from_different_build (test_validate_evidence.EvidenceTests.test_05_image_from_different_build) ... ok
+test_06_artifact_tampering (test_validate_evidence.EvidenceTests.test_06_artifact_tampering) ... ok
+test_07_unsafe_path (test_validate_evidence.EvidenceTests.test_07_unsafe_path) ... ok
+test_08_windows_absolute_path (test_validate_evidence.EvidenceTests.test_08_windows_absolute_path) ... ok
+test_09_link_escape (test_validate_evidence.EvidenceTests.test_09_link_escape) ... ok
+test_10_missing_required_step (test_validate_evidence.EvidenceTests.test_10_missing_required_step) ... ok
+test_11_operator_cannot_replace_gui (test_validate_evidence.EvidenceTests.test_11_operator_cannot_replace_gui) ... ok
+test_12_missing_gui_event (test_validate_evidence.EvidenceTests.test_12_missing_gui_event) ... ok
+test_13_failed_science_check (test_validate_evidence.EvidenceTests.test_13_failed_science_check) ... ok
+test_14_missing_adjacent_project (test_validate_evidence.EvidenceTests.test_14_missing_adjacent_project) ... ok
+test_15_not_a_new_session (test_validate_evidence.EvidenceTests.test_15_not_a_new_session) ... ok
+test_16_scientific_array_changed (test_validate_evidence.EvidenceTests.test_16_scientific_array_changed) ... ok
+test_17_missing_independent_review (test_validate_evidence.EvidenceTests.test_17_missing_independent_review) ... ok
+test_18_spec_changed_without_manifest_update (test_validate_evidence.EvidenceTests.test_18_spec_changed_without_manifest_update) ... ok
+test_19_duplicate_json_keys_and_nonfinite_values (test_validate_evidence.EvidenceTests.test_19_duplicate_json_keys_and_nonfinite_values) ... ok
+test_20_not_run_never_passes (test_validate_evidence.EvidenceTests.test_20_not_run_never_passes) ... ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.052s
+
+OK

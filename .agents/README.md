@@ -16,6 +16,7 @@ Historical documents provide provenance, not current status.
 
 | State | Document | Responsibility |
 | --- | --- | --- |
+| active | [2.5-real-user-tutorials.md](active/2.5-real-user-tutorials.md) | Real GUI tutorials, scientific evidence and human acceptance |
 | completed | [2.5.0-public-delivery.md](completed/2.5.0-public-delivery.md) | 2.5 Viewer and prepare 0.1.0 local public delivery qualification |
 | completed | [physical-quantity-visualization-sop.md](completed/physical-quantity-visualization-sop.md) | Shared CBQ migration, retained local editing, unified external processor, wheel removal and full delivery qualification |
 | decision | [0044-cbq-viewer-local-processor-boundary.md](decisions/0044-cbq-viewer-local-processor-boundary.md) | Local editing, shared CBQ/Worker and conditional RDKit removal |

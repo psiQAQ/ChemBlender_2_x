@@ -1,0 +1,264 @@
+[
+  {
+    "id": "S01",
+    "title": "README：2.5 产品与组件边界",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/README.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S02",
+    "title": "公开接口生成清单",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/docs/prepare/public-surface.json",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S03",
+    "title": "Blender 完整联动 SOP",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/docs/user/zh-CN/blender-workflow.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S04",
+    "title": "能力与项目生命周期",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/docs/user/zh-CN/capabilities-and-projects.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S05",
+    "title": "发布状态与已知限制",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/docs/user/zh-CN/release-status.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S06",
+    "title": "2.5.0 本地交付资格记录",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/.agents/completed/2.5.0-public-delivery.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S07",
+    "title": "2.5 截图来源 manifest",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/docs/user/assets/2.5.0/manifest.json",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S08",
+    "title": "公开清单及离线 HTML 生成器",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/ChemBlender/scripts/generate_public_delivery_docs.py",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S09",
+    "title": "根 AGENTS 规则",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/AGENTS.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S10",
+    "title": "实时能力探测与路由实现",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/chemblender_prepare/runtime.py",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "重点核查前 260 行，含 provider 固定 unavailable 与路由判定；非全文件执行审计"
+  },
+  {
+    "id": "S11",
+    "title": "Reader API 与外部 Python 集成",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/docs/reader-api-v1/README.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S12",
+    "title": "历史用户案例语料清单",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/examples/user-workflows/README.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S13",
+    "title": "科学可视化案例及历史验证索引",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/examples/scientific-visualization/README.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S14",
+    "title": "真实科学输入及许可边界",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/examples/scientific-visualization/inputs/README.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S15",
+    "title": "科学 View 的实体匹配与绑定实现",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/ChemBlender/ui/scientific_view.py",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "重点核查前 240 行的生产实现，非本次 Blender 执行结果"
+  },
+  {
+    "id": "S16",
+    "title": "可选后端配置",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/docs/prepare/zh-CN/advanced-routes.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S17",
+    "title": "prepare CLI 与 GUI",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/docs/prepare/zh-CN/cli-and-gui.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S18",
+    "title": "Worker Protocol 与 Reader API",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/docs/prepare/zh-CN/protocol-and-reader-api.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S19",
+    "title": "GitHub 最新公开 Release 查询",
+    "publisher": "GitHub API",
+    "url": "https://api.github.com/repos/psiQAQ/ChemBlender_2_x/releases?per_page=1",
+    "accessed": "2026-09-10",
+    "note": "本次返回 v2.4.0，发布时间 2026-08-03T02:02:01Z；运行时查询结果会随发布变化"
+  },
+  {
+    "id": "S20",
+    "title": "精确 HEAD 的 Actions 查询",
+    "publisher": "GitHub API",
+    "url": "https://api.github.com/repos/psiQAQ/ChemBlender_2_x/actions/runs?head_sha=478bbd498277a0ce9a32fc9b262f36ec8410d2d9&per_page=5",
+    "accessed": "2026-09-10",
+    "note": "本次 total_count=0；不据此否定其他提交的 CI"
+  },
+  {
+    "id": "S21",
+    "title": "release/2.5.0 最新提交查询",
+    "publisher": "GitHub API",
+    "url": "https://api.github.com/repos/psiQAQ/ChemBlender_2_x/commits?sha=release%2F2.5.0&per_page=3",
+    "accessed": "2026-09-10",
+    "note": "本次 HEAD 为 478bbd498277a0ce9a32fc9b262f36ec8410d2d9"
+  },
+  {
+    "id": "S22",
+    "title": "Diátaxis — Tutorials",
+    "publisher": "Diátaxis",
+    "url": "https://www.diataxis.fr/tutorials/",
+    "accessed": "2026-09-10",
+    "note": "教程的教学目标、具体步骤、早期可见结果与实际观察"
+  },
+  {
+    "id": "S23",
+    "title": "Avogadro — Viewing Molecular Orbitals",
+    "publisher": "Avogadro",
+    "url": "https://avogadro.cc/docs/tutorials/viewing-molecular-orbitals.html",
+    "accessed": "2026-09-10",
+    "note": "参考其输入前提—界面步骤—结果图结构；不据此推定 ChemBlender 支持相同功能"
+  },
+  {
+    "id": "S24",
+    "title": "UCSF ChimeraX Tutorials",
+    "publisher": "UCSF ChimeraX Tutorials",
+    "url": "https://www.cgl.ucsf.edu/chimerax/tutorials.html",
+    "accessed": "2026-09-10",
+    "note": "参考按任务组织、可执行命令与案例画廊；仅借鉴文档设计"
+  },
+  {
+    "id": "S25",
+    "title": "ORCA 6.1 Tutorials",
+    "publisher": "ORCA 6.1 Tutorials",
+    "url": "https://www.faccts.de/docs/orca/6.1/tutorials/",
+    "accessed": "2026-09-10",
+    "note": "参考入门/性质/光谱/流程分层；不是 ChemBlender 对 ORCA 6.1 的兼容承诺"
+  },
+  {
+    "id": "S26",
+    "title": "Blender Screen Operators",
+    "publisher": "Blender Screen Operators",
+    "url": "https://docs.blender.org/api/main/bpy.ops.screen.html",
+    "accessed": "2026-09-10",
+    "note": "官方区分全窗口 screenshot 与 editor screenshot_area；main 文档不是 5.1 兼容验收"
+  },
+  {
+    "id": "S27",
+    "title": "历史 Reader 扩展示例",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/examples/reader-extension/README.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S28",
+    "title": "生产注册入口",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/ChemBlender/runtime/registration.py",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  },
+  {
+    "id": "S29",
+    "title": "外部 operation 事务执行实现",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/ChemBlender/ui/processor_operations.py",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "重点核查前 230 行，含固定操作族、源文件哈希和伴随文件规则"
+  },
+  {
+    "id": "S30",
+    "title": "2.5 对外交付任务及阶段记录",
+    "publisher": "ChemBlender repository",
+    "url": "https://github.com/psiQAQ/ChemBlender_2_x/blob/478bbd498277a0ce9a32fc9b262f36ec8410d2d9/.planning/2026-09-10-2.5.0-public-delivery/task_plan.md",
+    "ref": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "accessed": "2026-09-10",
+    "note": "固定提交源码或文档；仓库记录不等于本次独立实测"
+  }
+]

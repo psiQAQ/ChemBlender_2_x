@@ -1,0 +1,8 @@
+{
+  "verdict": "incomplete",
+  "case_id": "T01",
+  "errors": [
+    "run is not passed"
+  ],
+  "limitation": "File/record consistency only: no Blender execution, no independent proof of GUI authenticity or scientific correctness."
+}

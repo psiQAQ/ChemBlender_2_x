@@ -68,12 +68,12 @@ Do not infer current status from this file, completed work, archived evidence, o
 - Require Blender 5.1.0 or newer for the supported release.
 - Build and install through Blender Extensions; never copy 2.2.0 source into a legacy add-on directory.
 - Verify the enabled key `bl_ext.user_default.chemblender`.
-- Validate register, unregister, repeated reload, scene properties, `.blend` assets, and RDKit import in the real runtime.
+- Validate register, unregister, repeated reload, scene properties, `.blend` assets, and absence of RDKit/Gemmi/prepare in the Blender runtime; validate scientific dependencies in the external processor.
 
 ## Dependency Policy
 
 - Use Blender's bundled NumPy.
-- RDKit remains a pinned offline manifest wheel until external operation equivalence, editing, performance, cancellation, data integrity, and lifecycle gates all pass. Candidate wheel-free builds do not authorize removal from the formal extension. See decision 0044.
+- ChemBlender 2.5 is a wheel-free Viewer after the completed equivalence and lifecycle gates in decision 0044. Keep RDKit, Gemmi and scientific dependencies in the external processor; never restore them to Blender to satisfy historical checks.
 - Never track `.whl` files or install packages during import, `register()`, or add-on enable.
 - Pin dependency filenames, sources, versions, and SHA-256 values in the dependency reference and CI.
 

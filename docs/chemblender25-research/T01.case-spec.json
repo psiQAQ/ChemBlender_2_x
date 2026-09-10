@@ -1,0 +1,67 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T01",
+  "title": "阿司匹林：从真实结构到第一张科研配图",
+  "required_steps": [
+    {
+      "id": "s01",
+      "description": "prepare GUI inspect/convert：真实源输入与新输出目录",
+      "requires_gui": true
+    },
+    {
+      "id": "s02",
+      "description": "Blender CBQ Preview/Import",
+      "requires_gui": true
+    },
+    {
+      "id": "s03",
+      "description": "Project Browser 选实体并创建 View",
+      "requires_gui": true
+    },
+    {
+      "id": "s04",
+      "description": "调整已验证的样式、相机和图注",
+      "requires_gui": true
+    },
+    {
+      "id": "s05",
+      "description": "真实渲染并查看 Render Result",
+      "requires_gui": true
+    },
+    {
+      "id": "s06",
+      "description": "保存 .blend 与相邻 .cbq",
+      "requires_gui": true
+    },
+    {
+      "id": "s07",
+      "description": "退出后新进程冷重开并观察结果",
+      "requires_gui": true
+    }
+  ],
+  "required_checks": [
+    "input_hash_integrity",
+    "structure_units_and_identity",
+    "display_vs_scientific_data",
+    "cbq_validation",
+    "render_scientific_accuracy",
+    "project_pair",
+    "cold_reopen"
+  ],
+  "required_artifact_kinds": [
+    "environment",
+    "gui_raw",
+    "render",
+    "events",
+    "assertions",
+    "scene_blend",
+    "cbq_manifest",
+    "lifecycle",
+    "review"
+  ],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "note": "拟定首课验收规格，非运行报告；精确 GUI 标签和按钮位置须由本机实查回填。"
+}

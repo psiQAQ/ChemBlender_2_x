@@ -1,0 +1,31 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_run",
+  "schema_version": 1,
+  "case_id": "T01",
+  "status": "not_run",
+  "status_reason": "模板；尚未执行本地真实 GUI、渲染和冷重开。",
+  "synthetic": false,
+  "spec_sha256": "e0c18e97069c60062086dd7643244845937a8f1fedba5b6611fb685d77c5fade",
+  "baseline": {
+    "reviewed_commit": "478bbd498277a0ce9a32fc9b262f36ec8410d2d9",
+    "extension_sha256": null,
+    "prepare_sha256": null
+  },
+  "environment": {
+    "blender_version": null,
+    "operating_system": null,
+    "profile_id": null,
+    "run_id": null
+  },
+  "artifacts": [],
+  "steps": [],
+  "checks": [],
+  "schema_notes": {
+    "artifacts": "每项含 id/path/sha256/kind；path 相对本 manifest，PNG 另含 extension_sha256。",
+    "steps": "每项含 id/status/interaction/event_id/before_artifact_id/after_artifact_id。",
+    "events": "events artifact 是 JSON 数组；每项含 event_id/step_id/interaction/action/timestamp_utc/session_id 及前后截图 ID。",
+    "checks": "每项含 id/status/expected/observed/artifact_ids，结果数值由真实运行生成。",
+    "lifecycle": "独立文件：status/saved_session_id/reopened_session_id/before_scientific_hashes/after_scientific_hashes。",
+    "review": "独立文件：status/reviewer/independent；必须真正审阅，不凭字段赋值声称通过。"
+  }
+}
