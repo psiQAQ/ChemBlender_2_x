@@ -1,0 +1,45 @@
+{
+  "status": "cli_and_science_passed_with_confirmed_loss",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "runs": [
+    {
+      "format": "mol2",
+      "status": "processed",
+      "entity": {
+        "group": "structures",
+        "id": "6ba511e6-f84e-59f4-9ebe-d76237b8d46f",
+        "name": "",
+        "revision": "d8e8c7c3435ebd6922c6e9907979e55f7729763c64333b6384ffbf5424a80d48",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "Structure",
+        "unit": null
+      },
+      "preview_no_write": true,
+      "requires_confirmation": true,
+      "loss_gate": "passed",
+      "output_sha256": "819b56fdf8084122f3f15b94961c2362980bab5ea77a029e4744f31ecfca1816",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    }
+  ],
+  "science": {
+    "status": "passed",
+    "method": "Independent whitespace-field comparison of original and exported MOL2 text",
+    "atoms": 297,
+    "bonds": 297,
+    "substructures": 17,
+    "coordinate_max_error_angstrom": 0,
+    "charge_max_error": 0,
+    "atom_names_types_substructure_refs_equal": true,
+    "bond_endpoints_and_types_equal": true,
+    "substructure_ids_names_equal": true,
+    "normalized_root_count": 17,
+    "omissions": "Explicit preview/confirmation covers status bits, comments, noncanonical substructure fields and unknown sections; bond IDs renumbered."
+  },
+  "gui": "not_run",
+  "human_review": "not_run",
+  "root_boundary": "All 17 source root atoms are replaced by normalized first-atom roots and GROUP records. This is covered by substructure_fields_omitted confirmation, not lossless preservation."
+}
