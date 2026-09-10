@@ -1,0 +1,32 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T02",
+  "title": "乙醇：SMILES、ETKDG、MMFF94 与 Mesh Apply",
+  "required_steps": [
+    {"id":"s01","description":"prepare GUI inspect/convert ethanol.smi，区分无来源坐标与派生平面显示","requires_gui":true},
+    {"id":"s02","description":"CBQ Preview/Import 并创建分子 View","requires_gui":true},
+    {"id":"s03","description":"Generate 3D (ETKDG)，固定参数并核对完成状态","requires_gui":true},
+    {"id":"s04","description":"Kekulize、Energy、Optimize，保留每次派生结果","requires_gui":true},
+    {"id":"s05","description":"Edit Mode 改动一个原子并 Apply Mesh，旧实体和旧 View 保留","requires_gui":true},
+    {"id":"s06","description":"Cycles 渲染、保存配对工程","requires_gui":true},
+    {"id":"s07","description":"退出后新进程冷重开","requires_gui":true}
+  ],
+  "required_checks": ["input_hash_integrity","source_2d_boundary","generated_3d_identity","force_field_energy","optimization_status","apply_preserves_original","cbq_validation","project_pair","cold_reopen","render_scientific_accuracy"],
+  "required_artifact_kinds": ["environment","gui_raw","render","events","assertions","scene_blend","cbq_manifest","lifecycle","review"],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "input": {"path":"examples/user-workflows/inputs/smiles/ethanol.smi","sha256":"5c9aa2a3024d56c903d547798cbd04ff743433ba0950dbfd8e19238e40651172","license":"GPL-3.0","origin":"repository-authored synthetic molecular input CCO; execution must use the actual installed backend"},
+  "reference": {
+    "source_heavy_atoms":3,"source_coordinate_dimensions":0,"generated_formula":"C2H6O","generated_atoms":9,"generated_bonds":8,"coordinate_unit":"angstrom",
+    "generation":{"add_hydrogens":true,"force_field":"MMFF94","random_seed":12648430,"num_threads":1,"max_iterations":200},
+    "optimization":{"force_field":"MMFF94","add_hydrogens":false,"max_iterations":200},
+    "energy_unit":"kilocalorie_per_mole","energy_comparison_absolute_tolerance":0.000001,
+    "coordinate_absolute_tolerance":0.0000001,
+    "optimizer_success":"CalculationStatus.SUCCESS and optimizer_status=0; otherwise report actual incomplete status",
+    "energy_reference":"Independent RDKit MMFF94 evaluation on the same saved atom mapping, topology and coordinates, frozen before operation; optimized energy must not exceed pre-optimization energy beyond tolerance",
+    "apply_reference":"One selected atom displaced by +0.15 angstrom along Z in Edit Mode; new Structure UUID; source arrays and old View binding unchanged"
+  },
+  "note":"Frozen before T02 execution. Ethanol does not test aromatic resonance; Kekulize on its all-single-bond graph must preserve connectivity. MMFF94 is not quantum computation. Native GUI JPEG is accepted by user decision 2026-09-10; final render stays PNG."
+}

@@ -72,6 +72,10 @@ with TemporaryDirectory(prefix="molecule-blender-") as temporary:
     edited_topology = session.project.topologies[edited.topology_ids[0]]
     assert edited.id != source_id and source_id in session.project.structures
     assert source_topology.id in session.project.topologies
+    numpy.testing.assert_allclose(
+        [tuple(vertex.co) for vertex in source_view.data.vertices],
+        source_coordinates, rtol=0, atol=1e-7,
+    )
     assert not numpy.array_equal(
         numpy.array(edited.coordinates.values, copy=True),
         source_coordinates,

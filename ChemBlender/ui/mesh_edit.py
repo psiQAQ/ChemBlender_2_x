@@ -353,6 +353,7 @@ if bpy is not None:
             from .grid import _ACTIVE_VOLUME_OPERATORS
             from cbq_core.scene_preset import builtin_scene_presets, plan_scene_preset
             from ..scene_preset_view import apply_scene_preset
+            from ..views.structure import create_structure_view, StructureViewSettings
             from .scientific_view import _select_root
 
             session = get_scene_session(context.scene)
@@ -372,6 +373,31 @@ if bpy is not None:
                     previous_hash = link.manifest_sha256
                 warnings = commit_session_batch(session, batch)
                 committed = True
+                # Publication closes the previous project's lazy arrays.
+                source = session.project.structures[source.id]
+                topology = session.project.topologies[topology.id] if topology else None
+                # The edited mesh is a draft, not a valid display of its old binding.
+                # Restore source geometry/atom/bond attributes while retaining the
+                # original object, pose, modifiers and View identity.
+                obj['cbq_mesh_edit_pending'] = True
+                restored = create_structure_view(
+                    source, topology,
+                    StructureViewSettings(attach_ball_and_stick=False),
+                    biological_hierarchy=(
+                        session.project.biological_hierarchies[
+                            UUID(obj['cb_biological_hierarchy_id'])]
+                        if obj.get('cb_biological_hierarchy_id') else None),
+                    atomic_properties=tuple(session.project.datasets.values()),
+                    collection=context.collection,
+                )
+                previous_mesh = obj.data
+                obj.data = restored.data
+                for material in previous_mesh.materials:
+                    obj.data.materials.append(material)
+                obj['Elements'] = restored['Elements']
+                bpy.data.objects.remove(restored, do_unlink=True)
+                if previous_mesh.users == 0:
+                    bpy.data.meshes.remove(previous_mesh)
                 obj['cbq_mesh_edit_pending'] = False
                 derived_id = batch.structures[0].id
                 session.active_entity_id = derived_id

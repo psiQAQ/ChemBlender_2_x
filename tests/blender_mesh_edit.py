@@ -120,6 +120,14 @@ with TemporaryDirectory() as temporary:
             assert view.matrix_world == obj.matrix_world
             assert obj.get("cb_structure_id") == str(source.id)
             assert obj.get("cbq_mesh_edit_pending") is False
+            numpy.testing.assert_array_equal(
+                [v.value for v in obj.data.attributes["atomic_num"].data],
+                source.atomic_numbers,
+            )
+            numpy.testing.assert_allclose(
+                [tuple(v.co) for v in obj.data.vertices], source.coordinates.values,
+                rtol=0, atol=1e-7,
+            )
             reopened = open_project(session.sidecar_path, verify_arrays=True)
             try:
                 assert source.id in reopened.structures and derived.id in reopened.structures

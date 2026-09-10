@@ -1049,6 +1049,10 @@ if bpy is not None:
             finally:
                 if self._session is not None:
                     _ACTIVE_OPERATIONS.pop(self._session.id, None)
+                # Redraw after releasing the active job, including energy-only results.
+                area = getattr(context, "area", None)
+                if area is not None:
+                    area.tag_redraw()
 
         def _complete(self, context, snapshot):
             from .session import _notify_session_mutation

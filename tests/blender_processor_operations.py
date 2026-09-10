@@ -9,7 +9,7 @@ import sys
 from tempfile import TemporaryDirectory
 import time
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import bpy
 import numpy
@@ -74,7 +74,7 @@ with TemporaryDirectory(prefix="processor-blender-") as temporary:
             report=lambda *_args: None,
         )
         invoke_context = SimpleNamespace(
-            scene=scene, window=None, window_manager=manager,
+            scene=scene, window=None, window_manager=manager, area=Mock(),
         )
         started = time.perf_counter()
         operator._begin = lambda context: operator_type._begin(operator, context)
@@ -103,6 +103,7 @@ with TemporaryDirectory(prefix="processor-blender-") as temporary:
         assert result == {"FINISHED"}, result
         assert not timers
         assert session.id not in processor_operations._ACTIVE_OPERATIONS
+        invoke_context.area.tag_redraw.assert_called_once_with()
         assert len(session.project.structures) == 1
         assert len(session.project.basis_sets) == 1
         assert len(session.project.orbital_sets) == 1

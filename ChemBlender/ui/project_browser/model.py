@@ -134,7 +134,9 @@ def _quality(value):
     status = getattr(value, "status", None)
     if status is None:
         status = getattr(value, "quality_status", None)
-    return getattr(status, "value", "") if status is not None else ""
+    token = getattr(status, "value", "") if status is not None else ""
+    # CalculationStatus uses success/failed; badges and filters use QualityStatus.
+    return {"success": "complete", "failed": "invalid"}.get(token, token)
 
 
 def _label(value):

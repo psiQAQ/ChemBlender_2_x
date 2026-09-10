@@ -15,6 +15,8 @@ import numpy
 
 from cbq_core.model import ArrayData
 from cbq_core.model import AtomFrameProperty
+from cbq_core.model import CalculationRecord
+from cbq_core.model import CalculationStatus
 from cbq_core.model import DatasetStatus
 from cbq_core.model import DiagnosticSeverity
 from cbq_core.model import DiagnosticValue
@@ -242,6 +244,29 @@ def sample_molecular_project():
 
 
 class ProjectBrowserModelTests(unittest.TestCase):
+    def test_calculation_states_project_to_valid_quality_badges_and_filters(self):
+        from ChemBlender.ui.diagnostics import quality_presentation
+
+        project = sample_project()
+        expected = {
+            CalculationStatus.SUCCESS: "complete",
+            CalculationStatus.FAILED: "invalid",
+            CalculationStatus.INCOMPLETE: "incomplete",
+        }
+        calculations = tuple(
+            CalculationRecord(uuid4(), "calculation-r1", status, (), (), (), ())
+            for status in expected
+        )
+        project.commit(ImportBatch(calculations=calculations))
+        for calculation in calculations:
+            quality = expected[calculation.status]
+            for mode in BrowserMode:
+                rows = build_browser_rows(project, mode=mode, filters=(quality,))
+                row = next(row for row in rows if row.entity_id == calculation.id)
+                self.assertEqual(row.quality, quality)
+                self.assertTrue(quality_presentation(row.quality).label)
+            self.assertIs(project.calculations[calculation.id].status, calculation.status)
+
     def test_mol2_atom_type_substructure_and_charge_datasets_are_browsable(self):
         batch = parse_mol2(MOL2_SUBSTRUCTURE_FIXTURE)
         project = QCProject(PROJECT_ID, "1.0")
