@@ -1,0 +1,38 @@
+{
+  "status": "source_fix_only",
+  "frozen_wheel_requalified": false,
+  "checks": [
+    {
+      "format": "mol",
+      "public_source_cli_export": "passed",
+      "readback": "passed",
+      "original_cbq_unchanged": true,
+      "export_sha256": "dfe1f93b3fb9021f1628a0ccce26b83d857384db0ccad8656b308c2d33bf3e8d"
+    },
+    {
+      "format": "sdf",
+      "public_source_cli_export": "passed",
+      "readback": "passed",
+      "original_cbq_unchanged": true,
+      "export_sha256": "c3727e24b088f870ef019f99a8d6dac0164acb5c665fa038485244c01235da7e"
+    }
+  ],
+  "regression": {
+    "tests_run": 85,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "modules": [
+      "tests.test_rdkit_molecular_export",
+      "tests.test_molecular_roundtrip",
+      "tests.test_rdkit_common_adapter",
+      "tests.test_prepare_cli"
+    ],
+    "available": {
+      "gemmi": true,
+      "rdkit": true,
+      "iodata": false,
+      "gbasis": false
+    }
+  }
+}

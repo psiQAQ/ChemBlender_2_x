@@ -344,6 +344,13 @@ def _identity_differences(source, parsed):
     differences = []
     if parsed is None or source.GetNumAtoms() != parsed.GetNumAtoms():
         return ("atom inventory differs",)
+    from rdkit import Chem
+
+    # Unsanitized 3D readers can tag non-stereogenic methyl carbons. Compare
+    # chemically valid stereo on copies, retaining the authoritative raw labels.
+    source, parsed = Chem.Mol(source), Chem.Mol(parsed)
+    for molecule in (source, parsed):
+        Chem.AssignStereochemistry(molecule, cleanIt=True, force=True)
     for index, (left, right) in enumerate(zip(source.GetAtoms(), parsed.GetAtoms(), strict=True)):
         if (left.GetAtomicNum(), left.GetIsotope(), left.GetFormalCharge(), left.GetAtomMapNum()) != (
             right.GetAtomicNum(), right.GetIsotope(), right.GetFormalCharge(), right.GetAtomMapNum()

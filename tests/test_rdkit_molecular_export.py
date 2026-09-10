@@ -130,6 +130,35 @@ class RDKitMolecularExportTests(unittest.TestCase):
         self.assertEqual(export_sdf(structure, topology).text.encode(), export_sdf(structure, topology).text.encode())
         self.assertEqual(export_smiles(structure, topology, confirm_loss=True).text.encode(), export_smiles(structure, topology, confirm_loss=True).text.encode())
 
+    def test_real_3d_methyl_tags_do_not_block_mol_export(self):
+        from chemblender_prepare.core.formats.mol import parse_mol
+        from chemblender_prepare.core.formats.sdf import parse_sdf
+        from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
+        from rdkit import Chem
+
+        inputs = Path(__file__).resolve().parents[1] / "examples/user-workflows/inputs"
+        for reader, relative in ((parse_mol, "mol/ain-aspirin-v2000.mol"),
+                                 (parse_sdf, "sdf/ccd-3d-showcase.sdf")):
+            batch = reader(inputs / relative)
+            for structure in batch.structures:
+                candidates = [t for t in batch.topologies if t.structure_id == structure.id]
+                topology = next((t for t in candidates if t.source_kind.value == "rdkit_sanitized"), candidates[0])
+                labels = structure.atomic_identity.stereo_labels.codes.values.copy()
+                for version in ("V2000", "V3000"):
+                    with self.subTest(input=relative, version=version):
+                        result = export_mol(structure, topology, version=version)
+                        reopened = Chem.MolFromMolBlock(result.text, removeHs=False)
+                        self.assertEqual(reopened.GetNumAtoms(), len(structure.atomic_numbers))
+                        self.assertTrue((labels == structure.atomic_identity.stereo_labels.codes.values).all())
+
+    def test_identity_guard_rejects_changed_valid_stereocenter(self):
+        from chemblender_prepare.core.exporters.rdkit_molecular import _identity_differences
+        from rdkit import Chem
+
+        source = Chem.MolFromSmiles("C[C@H](F)Cl")
+        for changed in ("C[C@@H](F)Cl", "CC(F)Cl"):
+            self.assertIn("atom 1 chirality differs", _identity_differences(source, Chem.MolFromSmiles(changed)))
+
     def test_export_preserves_identity_aromatic_and_stereo(self):
         from chemblender_prepare.core.exporters.rdkit_molecular import export_mol
         from rdkit import Chem
