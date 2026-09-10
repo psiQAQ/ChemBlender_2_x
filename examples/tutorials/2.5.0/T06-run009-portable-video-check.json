@@ -1,0 +1,102 @@
+{
+  "status": "passed_scoped_portable_video",
+  "interaction": "native Blender relative-path save, serial moved-copy cold render, headless Edge playback",
+  "checks": {
+    "status": "passed",
+    "stage": "moved_cold_render",
+    "pid": 39012,
+    "version": "5.1.1",
+    "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+    "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+    "runtime": "win32",
+    "repositories": [
+      [
+        "extensions.blender.org",
+        "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+      ],
+      [
+        "User Default",
+        "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+      ],
+      [
+        "System",
+        "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+      ],
+      [
+        "Existing local MCP (read only)",
+        "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+      ]
+    ],
+    "relative_frames": "//frames-refined/",
+    "resolved_frames": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T06-video-moved\\frames-refined",
+    "frame_hashes_verified": 32,
+    "relative_video": "//trajectory-refined.mp4",
+    "video_sha256": "25d25c8e69699c7709cc2c3abad743b5ee9512910e51d44d804f3c095273f712",
+    "video_bytes": 501973
+  },
+  "browser": [
+    {
+      "status": "passed",
+      "network_offline": true,
+      "play_to_end": true,
+      "width": 2400,
+      "height": 1800,
+      "duration": 1.333333,
+      "error": null
+    }
+  ],
+  "original_video_unchanged": true,
+  "artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/portable_video.py",
+      "sha256": "b05e00b9100333a1bf4c46dd5e9d9522b4432bece4c9e3d4c1cbaf4f3ff50392",
+      "bytes": 2010
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/run_portable_video.py",
+      "sha256": "3db2b85a576d1514c29eaeb33b64f5587eda3f2d4bcded0b8f291b15d24ea52e",
+      "bytes": 1558
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/portable/T06-video-moved/portable-check.json",
+      "sha256": "d4ef1414db3fc71da30e2d029aad0ba5d2c50999e8afdc3f0ca4d5d667069c07",
+      "bytes": 1316
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/portable/T06-video-moved/portable.log",
+      "sha256": "23c31c1fb45fe768d4c70536344de66351488b1e9d70bb7e15c9e8eaa399057c",
+      "bytes": 3059
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/portable/T06-video-moved/video-refined.blend",
+      "sha256": "8eee803008edb902d641a6119d803d7772271cc79e35eaed028d1d8e665159ad",
+      "bytes": 94776
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/portable/T06-video-moved/trajectory-refined.mp4",
+      "sha256": "25d25c8e69699c7709cc2c3abad743b5ee9512910e51d44d804f3c095273f712",
+      "bytes": 501973
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/video-portable-browser-qa.mjs",
+      "sha256": "3d71b27595e314c93c0ffd69fe772fa8d4fc7dfddf3c2eceb1f25c542cb96118",
+      "bytes": 4144
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/video-portable-qa/report.json",
+      "sha256": "9f40feddfceab9934fbb701d22dfb07cefbb96da25d17b7b2cb2cbdd36b790f0",
+      "bytes": 172
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/video-portable-qa/video-frame15.png",
+      "sha256": "360efe0132e43df83631949b760e1263044de1c068707a87f135004260fc49c9",
+      "bytes": 171074
+    }
+  ],
+  "handover": "Keep video-refined.blend with the complete frames-refined directory; video output is relative too",
+  "physical_dt": null,
+  "gui_assembly": "not_run",
+  "human_review": "not_run",
+  "scope": "VSE reads pre-rendered frames; no scientific computation or GUI animation proof",
+  "network_scope": "CDP offline emulation, not OS firewall"
+}
