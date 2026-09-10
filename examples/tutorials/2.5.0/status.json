@@ -59,7 +59,7 @@
       "case_id": "T04",
       "priority": "P0",
       "status": "blocked",
-      "status_reason": "New prepare GUI CIF/native POSCAR/ASE conversion, science, periodic View replay, smooth renders, original/relocated/extracted-pair cold reopen and local review package passed. Remaining GUI/caption integration, explicit rebuild checks and independent human acceptance pending.",
+      "status_reason": "New prepare GUI CIF/native POSCAR/ASE conversion, science, periodic View replay, smooth renders, original/relocated/extracted-pair cold reopen and local review package passed. Explicit copy-only mesh clearing/REBUILD and subsequent cold reopen passed; cosmetic subdivision/smoothing require reapplication after REBUILD. Remaining GUI/caption integration and independent human acceptance pending.",
       "human_review": "not_run",
       "run": "run-009/T04",
       "gui": "partial",
