@@ -1,0 +1,80 @@
+{
+  "status": "review_only",
+  "file": "T06-review.zip",
+  "bytes": 121561147,
+  "sha256": "8eea79a46ea7967bda201619dbb066e6a2908315bdc9c884c1c4844284c8003a",
+  "files": 92,
+  "zip_crc": "passed",
+  "all_member_hashes": "passed",
+  "human_acceptance": "not_run",
+  "full_case_acceptance": "incomplete",
+  "scope": "local handover; not final distribution",
+  "extracted_scientific_pair": {
+    "status": "passed",
+    "pid": 25188,
+    "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T06-review-extracted\\projects\\trajectory-refined.blend",
+    "source_frame": 15,
+    "coordinate_error": 1.1842041036658202e-07,
+    "scaled_force_error": 5.515591516846996e-08,
+    "smooth_atom_faces": true,
+    "view_count": 2,
+    "scientific_playback_after_load": false
+  },
+  "extracted_video_assembly": {
+    "status": "passed",
+    "stage": "extracted_cold_path_audit",
+    "pid": 56788,
+    "version": "5.1.1",
+    "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+    "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+    "runtime": "win32",
+    "repositories": [
+      [
+        "extensions.blender.org",
+        "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+      ],
+      [
+        "User Default",
+        "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+      ],
+      [
+        "System",
+        "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+      ],
+      [
+        "Existing local MCP (read only)",
+        "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+      ]
+    ],
+    "relative_frames": "//frames-refined/",
+    "resolved_frames": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T06-review-extracted\\video\\frames-refined",
+    "frame_hashes_verified": 32,
+    "relative_video": "//trajectory-refined.mp4",
+    "video_sha256": "25d25c8e69699c7709cc2c3abad743b5ee9512910e51d44d804f3c095273f712",
+    "video_bytes": 501973,
+    "render_in_this_check": false
+  },
+  "packaged_files_unchanged_after_checks": true,
+  "verification_artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/package_t06.py",
+      "sha256": "3841ac8122515f247f2b19823780d75da39c5992e300a0541dc71da83d0ea373"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/verify_t06_package.py",
+      "sha256": "21ca6856bab3052c8f68e1222f4312fbf1b22d05f8f8ffbcb768ac06017dc51d"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/audit_packaged_video.py",
+      "sha256": "4acd68c987aa21692f265e713e6b087c365533c9138767a0c6fc85fba196450a"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06-review-extracted/projects/trajectory-refined.audit.json",
+      "sha256": "2da1992faa743ad89cb76e6911db7d7e5889cec582ccf46937180787c3b90df8"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06-review-extracted/video/portable-check.json",
+      "sha256": "7cda61319ae0859028f0cf5f50e80847664bdd32f6cb7e8c30f24f67164d4b39"
+    }
+  ]
+}
