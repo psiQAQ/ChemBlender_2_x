@@ -1,0 +1,79 @@
+{
+  "environment": {
+    "python": "D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\scientific-py312\\Scripts\\python.exe",
+    "version": "3.12.13 (main, Jun  2 2026, 22:47:20) [MSC v.1944 64 bit (AMD64)]",
+    "packages": {
+      "ase": {
+        "discoverable": true,
+        "distribution": "ase",
+        "version": "3.29.0"
+      },
+      "cclib": {
+        "discoverable": true,
+        "distribution": "cclib",
+        "version": "1.8.1"
+      },
+      "iodata": {
+        "discoverable": false,
+        "distribution": "qc-iodata",
+        "version": null
+      },
+      "gbasis": {
+        "discoverable": false,
+        "distribution": "qc-gbasis",
+        "version": null
+      },
+      "phonopy": {
+        "discoverable": true,
+        "distribution": "phonopy",
+        "version": "4.4.0"
+      },
+      "pymatgen": {
+        "discoverable": true,
+        "distribution": "pymatgen-core",
+        "version": "2026.7.16"
+      },
+      "spglib": {
+        "discoverable": true,
+        "distribution": "spglib",
+        "version": "2.7.0"
+      },
+      "pyprocar": {
+        "discoverable": false,
+        "distribution": "pyprocar",
+        "version": null
+      },
+      "qcengine": {
+        "discoverable": false,
+        "distribution": "qcengine",
+        "version": null
+      },
+      "pyscf": {
+        "discoverable": false,
+        "distribution": "pyscf",
+        "version": null
+      }
+    }
+  },
+  "initial": {
+    "tests": 55,
+    "failures": 1,
+    "errors": 1,
+    "skipped": 10,
+    "status": "failed"
+  },
+  "findings": [
+    "VASP multichannel created IDs interleaved dataset/provenance; commit requires grouped order",
+    "Phonopy test used unquoted YAML replacement while fixture quotes angstrom; mutation was a no-op"
+  ],
+  "focused_after_fix": {
+    "tests": 16,
+    "passed": 14,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 2
+  },
+  "artifact_rebuild": "not_run",
+  "remaining_environment_checks": "missing Gemmi/IOData/GBasis/PyProcar/QCEngine/PySCF in this interpreter; metadata discovery is not computation acceptance",
+  "human_review": "not_run"
+}

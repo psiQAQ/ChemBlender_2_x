@@ -58,6 +58,20 @@
     "errors": 0,
     "status": "passed"
   },
-  "full_after_fix": "not_run",
+  "full_after_fix": {
+    "status": "passed",
+    "scope": "ef6ea3e before subsequent VASP adapter fix",
+    "tests": 2563,
+    "passed": 2526,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 37,
+    "log_sha256": "79b5eafc57bd9e4c24a0f2104736508966cc7888e1898e3956994c7336702ac4",
+    "run": {
+      "pid": 42952,
+      "exit_code": 0,
+      "elapsed_seconds": 203.02942180633545
+    }
+  },
   "human_review": "not_run"
 }

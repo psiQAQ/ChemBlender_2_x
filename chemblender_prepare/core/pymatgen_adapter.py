@@ -278,9 +278,8 @@ def adapt_vasp_volumetric(
             )
         )
 
-    created = [structure.id]
-    for dataset, record in zip(datasets, provenance):
-        created.extend((dataset.id, record.id))
+    created = [structure.id, *(dataset.id for dataset in datasets),
+               *(record.id for record in provenance)]
     return ImportBatch(
         structures=(structure,),
         datasets=tuple(datasets),

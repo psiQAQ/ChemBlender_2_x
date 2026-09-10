@@ -88,7 +88,9 @@ class PhonopyIntegrationTests(unittest.TestCase):
             target = Path(directory)
             source = target / "phonopy_disp.yaml"
             original = (folder / source.name).read_bytes()
-            source.write_bytes(original.replace(b"length: angstrom", b"length: bohr"))
+            mutated = original.replace(b'length: "angstrom"', b'length: "bohr"')
+            self.assertNotEqual(mutated, original)
+            source.write_bytes(mutated)
             (target / "FORCE_SETS").write_bytes((folder / "FORCE_SETS").read_bytes())
             with self.assertRaisesRegex(ValueError, "units"):
                 parse_phonopy_file(source)
