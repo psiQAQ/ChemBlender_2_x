@@ -1,0 +1,15 @@
+{
+  "case_id": "T17",
+  "format": "pdb",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "preview_no_write": "passed",
+  "confirmed_gui_export": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "models": 10,
+  "atoms_per_model": 1231,
+  "sha256": "d516c0c0d01b86c09abce937d12a609fa4e8be2854f1f578deb16ba87ea29b7f",
+  "preview_artifact": "gui-0060",
+  "success_artifact": "gui-0062",
+  "confirmed_loss": "cell_omitted: PDB CRYST1/unit-cell data omitted",
+  "human_review": "not_run"
+}
