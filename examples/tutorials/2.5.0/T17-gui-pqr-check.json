@@ -1,0 +1,13 @@
+{
+  "case_id": "T17",
+  "format": "pqr",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "gui_preview_no_write": "passed",
+  "gui_confirmed_export": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "sha256": "398e3cccba435f0efe7a4402b5b2bf51c92e418e4812334886bff7cb6d237caf",
+  "preview_artifact": "gui-0026",
+  "success_artifact": "gui-0028",
+  "loss": "chain_segment_indices_omitted; this source restores inferred segments on descending residue numbers, not explicit source chains",
+  "human_review": "not_run"
+}
