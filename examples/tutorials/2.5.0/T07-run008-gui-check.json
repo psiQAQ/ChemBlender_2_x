@@ -1,0 +1,322 @@
+{
+  "case_id": "T07",
+  "variant": "vasp_spin",
+  "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+  "gui_convert": "passed",
+  "science_arrays_exact_to_cli": [
+    "electron_density",
+    "spin_density"
+  ],
+  "shape": [
+    48,
+    48,
+    48
+  ],
+  "source_unchanged": true,
+  "gui_inspect": "success but dependency_missing despite working scientific route",
+  "open_defect": "inspect availability ignores scientific route",
+  "interaction": "os_gui",
+  "events": [
+    {
+      "event_id": "e1",
+      "step_id": "v01",
+      "interaction": "os_gui",
+      "action": "Select inspect operation",
+      "timestamp_utc": "2026-09-10T12:51:18.164Z",
+      "session_id": "run008-prepare-51464",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 33885314,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0002",
+      "after_artifact_id": "gui-0004",
+      "status": "observed"
+    },
+    {
+      "event_id": "e2",
+      "step_id": "v02",
+      "interaction": "os_gui",
+      "action": "Enter fixed spin CHGCAR and reader",
+      "timestamp_utc": "2026-09-10T12:51:28.277Z",
+      "session_id": "run008-prepare-51464",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 33885314,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0004",
+      "after_artifact_id": "gui-0005",
+      "status": "observed"
+    },
+    {
+      "event_id": "e3",
+      "step_id": "v03",
+      "interaction": "os_gui",
+      "action": "Correct inputs after inspect layout change",
+      "timestamp_utc": "2026-09-10T12:51:50.915Z",
+      "session_id": "run008-prepare-51464",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 33885314,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0005",
+      "after_artifact_id": "gui-0006",
+      "status": "observed"
+    },
+    {
+      "event_id": "e4",
+      "step_id": "v04",
+      "interaction": "os_gui",
+      "action": "Execute inspect",
+      "timestamp_utc": "2026-09-10T12:51:57.357Z",
+      "session_id": "run008-prepare-51464",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 33885314,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0006",
+      "after_artifact_id": "gui-0007",
+      "status": "observed"
+    },
+    {
+      "event_id": "e5",
+      "step_id": "v05",
+      "interaction": "os_gui",
+      "action": "Switch to convert",
+      "timestamp_utc": "2026-09-10T12:52:16.637Z",
+      "session_id": "run008-prepare-51464",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 33885314,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0008",
+      "after_artifact_id": "gui-0009",
+      "status": "observed"
+    },
+    {
+      "event_id": "e6",
+      "step_id": "v06",
+      "interaction": "os_gui",
+      "action": "Choose convert menu item",
+      "timestamp_utc": "2026-09-10T12:52:26.971Z",
+      "session_id": "run008-prepare-51464",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 33885314,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0009",
+      "after_artifact_id": "gui-0011",
+      "status": "observed"
+    },
+    {
+      "event_id": "e7",
+      "step_id": "v07",
+      "interaction": "os_gui",
+      "action": "Select convert",
+      "timestamp_utc": "2026-09-10T12:52:33.372Z",
+      "session_id": "run008-prepare-51464",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 33885314,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0011",
+      "after_artifact_id": "gui-0012",
+      "status": "observed"
+    },
+    {
+      "event_id": "e8",
+      "step_id": "v08",
+      "interaction": "os_gui",
+      "action": "Set new GUI CBQ destination",
+      "timestamp_utc": "2026-09-10T12:52:44.150Z",
+      "session_id": "run008-prepare-51464",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 33885314,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0012",
+      "after_artifact_id": "gui-0013",
+      "status": "observed"
+    },
+    {
+      "event_id": "e9",
+      "step_id": "v09",
+      "interaction": "os_gui",
+      "action": "Execute GUI convert",
+      "timestamp_utc": "2026-09-10T12:52:44.426Z",
+      "session_id": "run008-prepare-51464",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 33885314,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0013",
+      "after_artifact_id": "gui-0014",
+      "status": "observed"
+    }
+  ],
+  "screenshots": [
+    {
+      "id": "gui-0001",
+      "kind": "gui_raw",
+      "path": "gui/gui-0001.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "fea268248804e73562943d4c1fb4780f75dcdb94878973b56988013b6599b966",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0002",
+      "kind": "gui_raw",
+      "path": "gui/gui-0002.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "424365580951f992abfeeb4be7ed4377c20842a670665b2b30802879a844950e",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0003",
+      "kind": "gui_raw",
+      "path": "gui/gui-0003.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "59b7aca5d9e69f80acac1b98dfb5af857580714b1419ed5749a87d7508959d61",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0004",
+      "kind": "gui_raw",
+      "path": "gui/gui-0004.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "e19551f20de436de03e81271391727fcf5a02c91d2be82b4ec9142908a7514f2",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0005",
+      "kind": "gui_raw",
+      "path": "gui/gui-0005.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "6640346978b6d3538d9f31a2b065e0433b343ba3df205281d8b02159bd79f75c",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0006",
+      "kind": "gui_raw",
+      "path": "gui/gui-0006.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "e8a8ef14d2f1c94913225d8b45ffe4ddf85150897e1893edcc5f11edd4e065ba",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0007",
+      "kind": "gui_raw",
+      "path": "gui/gui-0007.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "0f49568c18df63288e2d772ceae195ce3ca630a13ff3cc7e0287175141f81be3",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0008",
+      "kind": "gui_raw",
+      "path": "gui/gui-0008.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "7d2092291c8cda5f34bfa008b952e5de631ff1d25577891e546dab393fa5c29e",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0009",
+      "kind": "gui_raw",
+      "path": "gui/gui-0009.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "a7600913ca3cc6b265c593e3691013ed9fbc4165a44cde3e0fd8c49fded66a26",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0010",
+      "kind": "gui_raw",
+      "path": "gui/gui-0010.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "4a1ecdee269740fbf0ebed0773a843969ea3174aef7eac9e97b9324e97fffc79",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0011",
+      "kind": "gui_raw",
+      "path": "gui/gui-0011.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "60c6c562a10baf6ca6e30aa74eb02ced5cf8c1aafdc1c88331e06c114291d4f0",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0012",
+      "kind": "gui_raw",
+      "path": "gui/gui-0012.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "ea29c2a36d25b20a0609d6bca092b2c63fa595f10611856f9a9f6d776f33332e",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0013",
+      "kind": "gui_raw",
+      "path": "gui/gui-0013.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "08563dc0b58b6406e38b5bf263e47c9cd494303fe81130a5866c4e0c3dca27b5",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0014",
+      "kind": "gui_raw",
+      "path": "gui/gui-0014.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "a0abfbfbb7e9b5ff5d3cbbeb48709417e88a9836b16e1366f604eb6348686047",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0015",
+      "kind": "gui_raw",
+      "path": "gui/gui-0015.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "ede1318c78e4d8f69e3d24d72e12a28a1f656617f9afa15930b353b81fc6b2a0",
+      "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    }
+  ],
+  "excluded_screenshots": [
+    "gui-0001: foreground Codex capture"
+  ],
+  "raw_root": ".blend-analysis\\2.5-real-user-tutorials\\run-008\\T07",
+  "human_review": "not_run"
+}
