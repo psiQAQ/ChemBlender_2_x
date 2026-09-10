@@ -1,6 +1,6 @@
 # T07：密度网格、切片与正负等值面
 
-执行草稿。公开转换、五种主网格 View 的实际 GUI 创建、正负显示、数值采样、渲染及串行冷重开/缓存恢复已有证据。Prepare GUI、完整差分重算教程、VASP 输入、其余配图及人工独立复做仍待完成。
+执行草稿。公开转换、五种主网格 View 的实际 GUI 创建、正负显示、数值采样、渲染及串行冷重开/缓存恢复已有证据。Prepare GUI、VASP 输入、其余配图及人工独立复做仍待完成。
 
 ![解析密度重分布成图：蓝色为正，橙色为负](../assets/2.5-tutorials/grid-difference-refined.png)
 
@@ -57,9 +57,27 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T07\h2-density.cbq" --json
 
 每种设置完成后点击 `Create View`。上述切片/剖面坐标单位为 bohr。增加显示样本是在同一 64³ 场上插值，不会增加科学信息。参见[切片检查](../assets/2.5-tutorials/grid-slice-check.json)和[剖面/色标检查](../assets/2.5-tutorials/grid-profile-check.json)。这三种 View 的清晰组合配图仍待补齐。
 
+## 从固定输入重算
+
+将 [recompute_t07_difference.py](../../../examples/tutorials/2.5.0/recompute_t07_difference.py)、[generate_t07_density_pair.py](../../../examples/tutorials/2.5.0/generate_t07_density_pair.py) 和主 Cube 下载到同一教程目录。使用现有 Python 3 解释器，这两个脚本只需要标准库。`--prepare` 指向已安装的处理器可执行文件，不是 Blender。替换以下路径，且 `recomputed` 目录必须尚不存在。
+
+```powershell
+python "D:\ChemBlenderLessons\T07\recompute_t07_difference.py" --prepare "D:\Tools\chemblender-prepare.exe" --source "D:\ChemBlenderLessons\T07\h2-lcao-1s-density-64.cube" --output "D:\ChemBlenderLessons\T07\recomputed"
+```
+
+脚本核对源文件 SHA-256，然后依次执行以下公开操作：
+
+1. 生成双数据集教学 Cube，预期 SHA-256 为 `8902b35f01edee818cd794793c152c7bfc766b8d0d08cb794077c9e0deef3b7c`。
+2. `convert --reader cube --preset electron_density --unit electron_per_cubic_bohr --dataset-index 0` 创建 `pair-first.cbq`，保留原始 ambiguous 双数据集网格，并追加 complete 成键密度。
+3. `derive --operation grid.resolve_semantics` 接收该 ambiguous 网格 UUID，使用参数 `{"dataset_index":1,"preset_id":"electron_density","value_unit":"electron_per_cubic_bohr"}` 创建 `pair-both.cbq`。两份密度共享同一个 Structure。索引从零开始，使用 0/1；Cube 源 ID 1/2 不是 CLI 索引。
+4. `derive --operation grid.difference --input LEFT --input RIGHT` 写出 `pair-difference.cbq`。LEFT 为成键密度，RIGHT 为孤立原子密度；脚本从本次 WorkerResult 读取 UUID，不硬编码旧运行的编号。
+5. `validate` 必须成功。将最终 CBQ 导入 Blender，选择 `Difference` / `difference_density` 数据集，再按下节设置正负等值面。
+
+每步保存实际 CLI 参数列表 `*.argv.json`、原始 WorkerResult `*.stdout.json` 和 stderr。命令失败时脚本停止；检查这些文件，修正原因后使用新的输出目录。不要交换相减顺序。[重放检查](../assets/2.5-tutorials/grid-recompute-check.json)验证了全部 262144 个值、独立下载脚本运行以及拒绝覆盖已有结果。这是公开 CLI 重算路线，GUI 派生路线仍未验证。
+
 ## 正负差分结果与细化
 
-记录中的扩展示例在同一 Structure 和仿射网格上，用成键密度减去两个孤立解析 1s 原子密度之和。[可复现输入生成器](../../../examples/tutorials/2.5.0/generate_t07_density_pair.py)和冻结规格定义了两个数据集。公开 `grid.resolve_semantics` 与 `grid.difference` 处理已通过；完整用户重算步骤及 GUI 路线仍待补齐。
+记录中的扩展示例在同一 Structure 和仿射网格上，用成键密度减去两个孤立解析 1s 原子密度之和。[可复现输入生成器](../../../examples/tutorials/2.5.0/generate_t07_density_pair.py)和冻结规格定义了两个数据集。公开 `grid.resolve_semantics` 与 `grid.difference` 处理已通过；下述 CLI 重算步骤已通过，GUI 派生路线仍待补齐。
 
 对记录中的差分数据集，选择 `Signed scalar isosurface`，设置 Isovalue 0.005，点击 `Create View`。蓝色表示正重分布，橙色表示负重分布。[差分检查](../assets/2.5-tutorials/grid-difference-check.json)核对了全部 262144 次相减，范围为 -0.0345176831 至 0.0204030833。仅在一次性副本中将右侧网格平移 0.1 bohr 后，处理器因仿射几何不兼容而拒绝，输入不变且没有输出。
 

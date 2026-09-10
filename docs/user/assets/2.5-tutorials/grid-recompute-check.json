@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "all_262144_values_exact": true,
+  "minimum": -0.034517683074599986,
+  "maximum": 0.020403083258500015,
+  "positive_samples": 138360,
+  "negative_samples": 123784,
+  "standalone_downloaded_scripts": "passed",
+  "existing_output_refused_without_change": true,
+  "gui": "not_run"
+}

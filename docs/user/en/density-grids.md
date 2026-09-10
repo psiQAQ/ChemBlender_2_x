@@ -1,6 +1,6 @@
 # T07: density grids, slices and signed surfaces
 
-Working draft. Public conversion, five primary Grid Views created through the GUI, signed display, numerical sampling, rendering and serial cold/cache recovery have evidence. Prepare GUI, the complete difference recomputation walkthrough, VASP input, remaining illustrations and independent human replay are pending.
+Working draft. Public conversion, five primary Grid Views created through the GUI, signed display, numerical sampling, rendering and serial cold/cache recovery have evidence. Prepare GUI, VASP input, remaining illustrations and independent human replay are pending.
 
 ![Rendered analytic density redistribution: blue positive, orange negative](../assets/2.5-tutorials/grid-difference-refined.png)
 
@@ -57,9 +57,27 @@ Select the complete primary density before each Create. Each operation below was
 
 Click `Create View` after setting each representation. Slice/profile coordinates above are bohr. More display samples interpolate the same 64³ field; they do not add scientific information. See the [slice check](../assets/2.5-tutorials/grid-slice-check.json) and [profile/colorbar check](../assets/2.5-tutorials/grid-profile-check.json). Clear composed illustrations of these three Views remain pending.
 
+## Recompute from the fixed input
+
+Download [recompute_t07_difference.py](../../../examples/tutorials/2.5.0/recompute_t07_difference.py), [generate_t07_density_pair.py](../../../examples/tutorials/2.5.0/generate_t07_density_pair.py) and the primary Cube into the same lesson folder. Use an existing Python 3 interpreter; these scripts require only the standard library. Set `--prepare` to the installed executable, not the Blender executable. Replace the paths below; `recomputed` must not already exist.
+
+```powershell
+python "D:\ChemBlenderLessons\T07\recompute_t07_difference.py" --prepare "D:\Tools\chemblender-prepare.exe" --source "D:\ChemBlenderLessons\T07\h2-lcao-1s-density-64.cube" --output "D:\ChemBlenderLessons\T07\recomputed"
+```
+
+The script verifies the source SHA-256 and performs these public operations in order:
+
+1. Generate a two-dataset teaching Cube; expect SHA-256 `8902b35f01edee818cd794793c152c7bfc766b8d0d08cb794077c9e0deef3b7c`.
+2. `convert --reader cube --preset electron_density --unit electron_per_cubic_bohr --dataset-index 0` creates `pair-first.cbq`, retaining the original ambiguous two-dataset grid alongside the complete bonding density.
+3. `derive --operation grid.resolve_semantics` takes that ambiguous grid UUID and parameters `{"dataset_index":1,"preset_id":"electron_density","value_unit":"electron_per_cubic_bohr"}` to create `pair-both.cbq`. Both densities now share one Structure. Dataset indices are zero-based 0/1; Cube source IDs 1/2 are not CLI indices.
+4. `derive --operation grid.difference --input LEFT --input RIGHT` writes `pair-difference.cbq`. LEFT is bonding density; RIGHT is isolated-atom density. The script reads UUIDs from this run's WorkerResult rather than hardcoding prior IDs.
+5. `validate` must succeed. Import the final CBQ into Blender, select the `Difference` / `difference_density` dataset, then follow the signed-surface settings below.
+
+Each step saves the exact CLI argument list (`*.argv.json`) and raw WorkerResult (`*.stdout.json`) plus stderr. A failed command stops the script; inspect those files and use a new output directory after correcting the cause. Do not swap subtraction order. [Replay checks](../assets/2.5-tutorials/grid-recompute-check.json) verified all 262144 values, standalone downloaded scripts and refusal to overwrite an existing result. This is a public CLI recomputation route; a GUI derivation route remains unverified.
+
 ## Signed difference result and refinement
 
-The recorded extension example subtracts the sum of two isolated analytic 1s atomic densities from the bonding density, on the same structure and affine grid. The [reproducible input generator](../../../examples/tutorials/2.5.0/generate_t07_density_pair.py) and frozen specification define both datasets. Public `grid.resolve_semantics` and `grid.difference` processing passed, but a complete user recomputation sequence and its GUI route are still pending.
+The recorded extension example subtracts the sum of two isolated analytic 1s atomic densities from the bonding density, on the same structure and affine grid. The [reproducible input generator](../../../examples/tutorials/2.5.0/generate_t07_density_pair.py) and frozen specification define both datasets. Public `grid.resolve_semantics` and `grid.difference` processing passed, and the CLI recomputation sequence below passed; its GUI derivation route remains pending.
 
 For the recorded difference dataset, choose `Signed scalar isosurface`, set Isovalue 0.005 and click `Create View`. Blue marks positive redistribution, orange negative. The [difference check](../assets/2.5-tutorials/grid-difference-check.json) verifies all 262144 subtractions, with range -0.0345176831 to 0.0204030833. A disposable right grid shifted by 0.1 bohr was rejected for incompatible affine geometry without changing inputs or writing an output.
 

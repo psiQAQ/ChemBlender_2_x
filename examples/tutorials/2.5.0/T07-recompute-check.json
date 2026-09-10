@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "all_262144_values_exact": true,
+  "minimum": -0.034517683074599986,
+  "maximum": 0.020403083258500015,
+  "positive_samples": 138360,
+  "negative_samples": 123784,
+  "standalone_downloaded_scripts": "passed",
+  "existing_output_refused_without_change": true,
+  "gui": "not_run",
+  "script_sha256": {
+    "generate_t07_density_pair.py": "6005401e286db49aeb5414952e225c38e08699e2921112690337048264811fab",
+    "recompute_t07_difference.py": "6eeeb8b83c56fa56f69e4df04f0a63b1a5bb7ac5701c2c6944433d3f03fd2178"
+  },
+  "evidence_root": ".blend-analysis/2.5-real-user-tutorials/run-004/T07"
+}

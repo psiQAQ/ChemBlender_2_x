@@ -8,8 +8,9 @@ from pathlib import Path
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--source', type=Path, help='Downloaded fixed primary Cube; defaults to the repository input')
     args = parser.parse_args()
-    source = Path(__file__).resolve().parents[2] / 'user-workflows/inputs/cube/h2-lcao-1s-density-64.cube'
+    source = args.source or Path(__file__).resolve().parents[2] / 'user-workflows/inputs/cube/h2-lcao-1s-density-64.cube'
     assert hashlib.sha256(source.read_bytes()).hexdigest() == '51fcb06343132c4b75f340aa5824434c9c622b51df7ea1ad3742920c78af66b4'
     lines = source.read_text(encoding='utf-8').splitlines()
     bonding = [float(x) for line in lines[8:] for x in line.split()]
