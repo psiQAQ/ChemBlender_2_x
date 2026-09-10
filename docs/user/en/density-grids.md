@@ -1,6 +1,6 @@
 # T07: density grids, slices and signed surfaces
 
-Working draft. Public conversion, five primary Grid Views created through the GUI, signed display, numerical sampling, rendering and serial cold/cache recovery have evidence. VASP input, remaining illustrations and independent human replay are pending.
+Working draft. Public conversion, five primary Grid Views created through the GUI, signed display, numerical sampling, rendering and serial cold/cache recovery have evidence. VASP GUI coverage, remaining illustrations and independent human replay are pending.
 
 ![Rendered analytic density redistribution: blue positive, orange negative](../assets/2.5-tutorials/grid-difference-refined.png)
 
@@ -125,6 +125,20 @@ Keep the camera position (4,-8,3) aimed at the origin and increase orthographic 
 For the preview image, the recorded settings were Cycles CPU, 2400 × 1800, 256 samples and denoising; Principled material Roughness 0.32; orthographic camera (4,-8,3) aimed at the origin, scale 3.2; area light (2,-4,5), 450 W, size 4; world color (0.12,0.12,0.12), strength 0.7. Hide unrelated Views in both viewport and render.
 
 In Geometry Nodes, select each signed surface's `Volume to Mesh` node. Change `Resolution Mode` from `Grid` to `Size`, then `Voxel Size` to 0.025. Keep Threshold 0.005. This new control was tested through Computer Use on the positive surface; the same operation was replayed for the negative surface. Counts increased from 490/612 to 8464/9972 vertices. Blender's native length labels follow scene settings; here 0.025 numeric display units map to 0.025 angstrom. The source grid spacing remains approximately 0.1007956592 angstrom. This is display resampling, not a finer scientific calculation.
+
+## VASP variant: Li CHGCAR
+
+![Li density isosurface and nonorthogonal cell boundary](../assets/2.5-tutorials/grid-li-density.png)
+
+This is imported VASP output, not a new VASP calculation. Download the fixed [CHGCAR](../../../examples/tutorials/2.5.0/inputs/li-chgcar/CHGCAR), its [MIT license](../../../examples/tutorials/2.5.0/inputs/li-chgcar/LICENSE), and [variant specification](../../../examples/tutorials/2.5.0/T07-vasp.case-spec.json). The input is pymatgen-core's `CHGCAR.nospin.gz`, decompressed without data edits, at commit `488ad74cc5ecaba5d24c1726e2762fb47f31f5ef`. SHA-256: `b58e1fb93dedfa746c3f5d1efe033a0560938b375adddd6ff40ef932a73a3c3a`.
+
+The verified processor route reused an existing scientific Python with pymatgen-core 2026.7.16 and the frozen prepare code. No dependencies were installed. Qualify your [scientific route](../../prepare/en/advanced-routes.md) before selecting Reader ID `pymatgen-vasp-grid`; availability in Standard alone is not assumed. Public inspect/convert/validate passed on this route. The VASP GUI walkthrough remains pending.
+
+The input has one Li atom at fractional (0,0,0), a nonorthogonal cell of volume 20.148362761266316 angstrom³ and a 32³ grid. Read x-fastest values, divide by the cell volume, and use each lattice vector divided by 32 as the corresponding step. The adapter reports `inverse_cubic_angstrom`; preserve this stored token. All 32768 normalized values and affine steps matched independently, with integral 0.9999999934509904. [Processing, View and cold-reopen checks](../../../examples/tutorials/2.5.0/T07-vasp-check.json).
+
+Preview/Import the resulting CBQ, select its complete electron density and create Grid volume or Signed scalar isosurface. The rendered surface uses 0.04 in the stored value unit, shaded material with Roughness 0.32, Cycles CPU 2400 × 1800 and 256 samples. Twelve annotation edges come directly from the cell vectors; camera and lights are cosmetic. The positive surface has 6392 vertices and the negative surface is empty, consistent with positive density. VDB index-to-world checks preserve the nonorthogonal affine transform.
+
+This figure shows a finite grid domain. Boundary appearance is affected by the sampled domain; do not interpret its outer shape as a physical crystal surface. PAW augmentation occupancies are not reconstructed here. The saved pair cold-reopened with local VDB paths and unchanged scientific arrays; GUI screenshot coverage, relocation/rebuild of this variant and human review remain pending.
 
 ## Save, hand over and recover
 

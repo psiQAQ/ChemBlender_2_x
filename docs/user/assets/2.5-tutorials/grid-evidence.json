@@ -66,6 +66,11 @@
       "path": "grid-derive-rejected.jpg",
       "sha256": "db271c68daf859ad4a9d54adaec849129f3696c4de7a20801f616c7795e48856",
       "source": "T07/gui native Computer Use capture"
+    },
+    {
+      "path": "grid-li-density.png",
+      "source": "T07/vasp/li-density.png",
+      "sha256": "559c459fe8faf18e30ec45adbd6cd1798cae8bd8f50aeca71b6398244095f140"
     }
   ],
   "human_acceptance": "not_run"

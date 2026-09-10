@@ -1,6 +1,6 @@
 # T07：密度网格、切片与正负等值面
 
-执行草稿。公开转换、五种主网格 View 的实际 GUI 创建、正负显示、数值采样、渲染及串行冷重开/缓存恢复已有证据。VASP 输入、其余配图及人工独立复做仍待完成。
+执行草稿。公开转换、五种主网格 View 的实际 GUI 创建、正负显示、数值采样、渲染及串行冷重开/缓存恢复已有证据。VASP GUI、其余配图及人工独立复做仍待完成。
 
 ![解析密度重分布成图：蓝色为正，橙色为负](../assets/2.5-tutorials/grid-difference-refined.png)
 
@@ -125,6 +125,20 @@ GUI 输出 `gui-difference.cbq` 的全部 262144 个值均通过独立比较。�
 预览图记录的设置为 Cycles CPU、2400 × 1800、256 samples、降噪；Principled 材质 Roughness 0.32；正交相机 (4,-8,3) 朝向原点、scale 3.2；面光源 (2,-4,5)、450 W、size 4；世界颜色 (0.12,0.12,0.12)、strength 0.7。在视口和渲染中隐藏无关 View。
 
 在 Geometry Nodes 中选中各正负曲面的 `Volume to Mesh` 节点，将 `Resolution Mode` 从 `Grid` 改为 `Size`，设置 `Voxel Size` 0.025，保持 Threshold 0.005。正曲面的新控件通过 Computer Use 验证，负曲面重放相同操作。顶点数由 490/612 增至 8464/9972。Blender 原生长度标签跟随场景设置；这里数值 0.025 个显示单位对应 0.025 angstrom。源网格步长仍约 0.1007956592 angstrom。这属于显示重采样，不是更细的科学计算。
+
+## VASP 变体：Li CHGCAR
+
+![Li 密度等值面与非正交晶胞边界](../assets/2.5-tutorials/grid-li-density.png)
+
+这是已有 VASP 输出的导入，不是新执行的 VASP 计算。下载固定 [CHGCAR](../../../examples/tutorials/2.5.0/inputs/li-chgcar/CHGCAR)、[MIT 许可](../../../examples/tutorials/2.5.0/inputs/li-chgcar/LICENSE)和[变体规格](../../../examples/tutorials/2.5.0/T07-vasp.case-spec.json)。输入来自 pymatgen-core 提交 `488ad74cc5ecaba5d24c1726e2762fb47f31f5ef` 的 `CHGCAR.nospin.gz`，仅解压，没有修改数据。SHA-256 为 `b58e1fb93dedfa746c3f5d1efe033a0560938b375adddd6ff40ef932a73a3c3a`。
+
+已验证的处理器路线复用现有 scientific Python、pymatgen-core 2026.7.16 和冻结 prepare 代码，没有安装依赖。使用 Reader ID `pymatgen-vasp-grid` 前，先核验[专业运行路线](../../prepare/zh-CN/advanced-routes.md)，不能假定 Standard 自带此后端。该路线的公开 inspect/convert/validate 已通过；VASP GUI 教程仍待补齐。
+
+输入包含一个分数坐标为 (0,0,0) 的 Li 原子、体积 20.148362761266316 angstrom³ 的非正交晶胞和 32³ 网格。按 x 最快读取数值，除以晶胞体积；各晶格矢量除以 32 即对应网格步长。适配器记录单位 `inverse_cubic_angstrom`，应保留此原始标记。全部 32768 个归一化数值及仿射步长通过独立核对，积分为 0.9999999934509904。参见[处理、View 与冷重开检查](../../../examples/tutorials/2.5.0/T07-vasp-check.json)。
+
+Preview/Import 生成的 CBQ，选择 complete 电子密度，创建 Grid volume 或 Signed scalar isosurface。图中等值为存储单位下的 0.04，使用 shaded 材质、Roughness 0.32、Cycles CPU、2400 × 1800 和 256 samples。12 条注释边直接由晶胞矢量生成；相机和光照只影响显示。正曲面有 6392 个顶点，负曲面为空，与全正密度一致。VDB 索引到空间坐标的检查确认非正交仿射变换保留。
+
+此图显示有限网格域，边缘外观受采样域边界影响，不能把外形解释为真实晶体表面。此处未重建 PAW augmentation occupancies。保存的工程对冷重开后，本地 VDB 路径和科学数组保持不变；此变体的 GUI 截图、移动/重建及人工审阅仍待完成。
 
 ## 保存、交接与恢复
 

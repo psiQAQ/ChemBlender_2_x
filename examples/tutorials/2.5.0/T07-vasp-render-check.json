@@ -1,0 +1,36 @@
+{
+  "status": "rendered",
+  "pid": 25188,
+  "isovalue": 0.04,
+  "unit": "inverse_cubic_angstrom",
+  "cell_edges": 12,
+  "cell": [
+    [
+      2.969072,
+      -0.000523,
+      -0.000907
+    ],
+    [
+      -0.987305,
+      2.80011,
+      0.000907
+    ],
+    [
+      -0.987305,
+      -1.402326,
+      2.423654
+    ]
+  ],
+  "resolution": [
+    2400,
+    1800
+  ],
+  "samples": 256,
+  "scientific_arrays_unchanged": true,
+  "sha256": "559c459fe8faf18e30ec45adbd6cd1798cae8bd8f50aeca71b6398244095f140",
+  "interaction": "known_native_operations",
+  "visual_review": "agent reviewed: visible isosurface and cell; finite-domain edge appearance is explicitly limited in lesson",
+  "human_review": "not_run",
+  "cold_reopen": "passed",
+  "evidence_root": ".blend-analysis/2.5-real-user-tutorials/run-004/T07/vasp"
+}
