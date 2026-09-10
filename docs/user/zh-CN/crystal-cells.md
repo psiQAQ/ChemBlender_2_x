@@ -84,4 +84,6 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T04\diamond.cbq" --json
 
 若没有晶胞，检查候选版本，并在创建 View 前选中周期 Structure。若晶胞被裁切，将全部显示子对象纳入取景。若移动后缺少数组，恢复完整配对目录。保留单独保存的 PNG；冷重开出现空 Render Result 不代表 PNG 丢失。
 
-派生缓存删除／重建、完整 GUI 留证、人工独立复做和可分发案例包仍待完成。在这些门槛及视觉审阅通过前，本课保持草稿。[媒体来源](../assets/2.5-tutorials/provenance.json)将本候选与较早课程分别记录。
+在独立副本中清空四个所属显示网格后，公开 `REBUILD` Operator 恢复了 64 个位点和 12 条晶胞边，科学数组未变；两个重建工程再次冷重开也通过。见[派生几何恢复记录](../assets/2.5-tutorials/crystal-cache-recovery.json)。这是原生 Operator 重放，不是 GUI 删除演示。重建会替换显示对象，手工添加的 Subdivision modifier 随后不再存在。重建后按本课重新设置外观细化，并保留原始细化工程作为视觉参照。
+
+完整 GUI 留证、视觉质量、人工独立复做和可分发案例包仍待完成。在这些门槛及视觉审阅通过前，本课保持草稿。[媒体来源](../assets/2.5-tutorials/provenance.json)将本候选与较早课程分别记录。

@@ -1,0 +1,91 @@
+{
+  "status": "passed",
+  "interaction": "native_process_replay",
+  "checks": [
+    {
+      "status": "passed",
+      "interaction": "native_public_operator_replay",
+      "pid": 61484,
+      "removed_derived_geometry": [
+        {
+          "object": "ChemBlender Periodic Structure",
+          "vertices": 64
+        },
+        {
+          "object": "ChemBlender Periodic Structure Cell",
+          "vertices": 8
+        },
+        {
+          "object": "ChemBlender Periodic Structure Site Occupancy",
+          "vertices": 64
+        },
+        {
+          "object": "ChemBlender Periodic Structure Thermal Ellipsoids",
+          "vertices": 64
+        }
+      ],
+      "cell_edges": 12,
+      "atoms": 64,
+      "view_identity_retained": true,
+      "scientific_arrays_unchanged": true,
+      "subdivision_after_rebuild": [],
+      "cosmetic_boundary": "Rebuild replaces derived objects; reapply custom subdivision/material refinement after rebuilding",
+      "gui": "not_run"
+    },
+    {
+      "status": "passed",
+      "interaction": "native_public_operator_replay",
+      "pid": 13080,
+      "removed_derived_geometry": [
+        {
+          "object": "ChemBlender Periodic Structure",
+          "vertices": 64
+        },
+        {
+          "object": "ChemBlender Periodic Structure Cell",
+          "vertices": 8
+        },
+        {
+          "object": "ChemBlender Periodic Structure Site Occupancy",
+          "vertices": 64
+        },
+        {
+          "object": "ChemBlender Periodic Structure Thermal Ellipsoids",
+          "vertices": 64
+        }
+      ],
+      "cell_edges": 12,
+      "atoms": 64,
+      "view_identity_retained": true,
+      "scientific_arrays_unchanged": true,
+      "subdivision_after_rebuild": [],
+      "cosmetic_boundary": "Rebuild replaces derived objects; reapply custom subdivision/material refinement after rebuilding",
+      "gui": "not_run"
+    }
+  ],
+  "scientific_hashes_unchanged": true,
+  "cache_rebuild": "passed",
+  "human_review": "not_run",
+  "after_rebuild_cold": [
+    {
+      "status": "passed",
+      "pid": 64612,
+      "blend": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\portable\\T04-rebuild\\cocrystal.blend",
+      "array": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\portable\\T04-rebuild\\cocrystal.cbq\\arrays\\37ba5887aace0ba7526581e330ca8db833f9c6c35b33ad114a1d4c93f7ee9890.npy",
+      "view_coordinate_error": 9.508496106036546e-07,
+      "cell_edges": 12,
+      "structure_id": "3561a84e-0d51-5e77-bc53-7eacee58084e",
+      "scientific_modules": []
+    },
+    {
+      "status": "passed",
+      "pid": 32704,
+      "blend": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\portable\\T04-rebuild\\diamond.blend",
+      "array": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\portable\\T04-rebuild\\diamond.cbq\\arrays\\278a66016ca1cb0e33ee80a2bdb3d5aeca39ce007b02c681858b7cd945c9f794.npy",
+      "view_coordinate_error": 1.6021728477255692e-07,
+      "cell_edges": 12,
+      "structure_id": "ffde7840-0274-5c2a-bf84-5f8b4e64a39c",
+      "scientific_modules": []
+    }
+  ]
+}
