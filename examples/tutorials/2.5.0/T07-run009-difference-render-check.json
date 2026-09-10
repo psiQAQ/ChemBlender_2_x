@@ -1,0 +1,71 @@
+{
+  "status": "rendered",
+  "pid": 39920,
+  "version": "5.1.1",
+  "geometry": [
+    {
+      "name": "ChemBlender Positive Surface",
+      "vertices": 8464,
+      "faces": 8462,
+      "smooth_faces": true
+    },
+    {
+      "name": "ChemBlender Negative Surface",
+      "vertices": 9972,
+      "faces": 9968,
+      "smooth_faces": true
+    }
+  ],
+  "isovalue": 0.005,
+  "display_voxel_size_angstrom": 0.025,
+  "scientific_shape": [
+    64,
+    64,
+    64
+  ],
+  "scientific_arrays_unchanged": true,
+  "render": "passed",
+  "gui": "not_run_new_candidate",
+  "human_review": "not_run",
+  "sha256": "cbd613464e59e60a309c7fd7e793d4521d2816069913d28ad402f5b30c1c3526",
+  "visual_review": "Positive blue middle region and negative warm end regions visible with shading; fine interpolation bands remain. Not a quantitative color scale.",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "resolution": [
+    2400,
+    1800
+  ],
+  "samples": 256,
+  "audit_correction": "Retained evaluated_geometry reference to prevent temporary Mesh RNA removal",
+  "draft": "difference-refined.png retains unlit first draft; preferred project difference-lit.blend",
+  "artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/render_difference.py",
+      "sha256": "6841aeaf649a4f51a49d79634b1a9d8556a5fa6017d040ba479bba192052cc15"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/render_difference_lit.py",
+      "sha256": "2a8a5cf93011c97ec94cf493d24cc4aaf0bb7c9add858e7dc2472fcc2d31e343"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/difference-render-check.json",
+      "sha256": "c4f7305a598fe684588da70eae0f252b7eada0feed43d40b525d8c3ebdc4cf3c"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/difference-lit-check.json",
+      "sha256": "cae07ab9ae07351df22460c370bbf043c2409837035847e473edb7b93fda96bb"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/difference-lit.png",
+      "sha256": "cbd613464e59e60a309c7fd7e793d4521d2816069913d28ad402f5b30c1c3526"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/difference-lit.blend",
+      "sha256": "ccc993dafc613f0f90bc8a1885001e4833025d707ee7d80d82e64dedf09528f5"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/difference-lit.cbq/manifest.json",
+      "sha256": "b2c4335a7de181363739f2e42f3cf73f553203327b8576b6c11120a23b782206"
+    }
+  ]
+}
