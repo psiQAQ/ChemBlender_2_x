@@ -458,6 +458,23 @@ def _conformer_summaries(suggestions):
     } for group in suggestions[:100]]
 
 
+def _reader_availability(descriptor, routed_readers=None):
+    from .runtime import _reader_environment, capability_document
+
+    availability = asdict(descriptor.availability)
+    if _reader_environment(descriptor.reader_id) == "current":
+        return availability
+    if routed_readers is None:
+        routed_readers = capability_document()["readers"]
+    reader = next(item for item in routed_readers if item["reader_id"] == descriptor.reader_id)
+    availability.update(
+        available=reader["available"],
+        reason_code="available" if reader["available"] else "environment_unavailable",
+        detail=f"{reader['environment']}: {reader['reason'] or 'available'}",
+    )
+    return availability
+
+
 def _execute(args, directory, cancel):
     _check(cancel)
     if args.command == "formats":
@@ -465,8 +482,10 @@ def _execute(args, directory, cancel):
         from .reader_api.registry import builtin_reader_plugin_registry
         document = reader_capability_document()
         descriptors = {value.reader_id: value for value in builtin_reader_plugin_registry().descriptors}
+        from .runtime import capability_document
+        routed_readers = capability_document()["readers"]
         for reader in document["readers"]:
-            reader["availability"] = asdict(descriptors[reader["reader_id"]].availability)
+            reader["availability"] = _reader_availability(descriptors[reader["reader_id"]], routed_readers)
         from .worker.runner import default_registry
         document["operations"] = [{"operation_id": key[0], "operation_version": key[1]}
                                   for key in sorted(default_registry()._operations)]
@@ -482,7 +501,7 @@ def _execute(args, directory, cancel):
         descriptor = _descriptor(source, args.reader)
         metadata = {"source": str(source), "sha256": _hash(source, cancel), "reader_id": descriptor.reader_id,
                     "capabilities": {name: value.value for name, value in descriptor.capabilities.items()},
-                    "availability": asdict(descriptor.availability)}
+                    "availability": _reader_availability(descriptor)}
         if descriptor.reader_id == "poscar":
             from .core.formats.poscar import parse_poscar_document, _determinant
             raw = source.read_bytes()

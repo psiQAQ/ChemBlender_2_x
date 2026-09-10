@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "scope": "source fix only; run008 installed wheel predates change",
+  "root_cause": "inspect/formats read current interpreter descriptor availability instead of configured route",
+  "fix": "reuse runtime capability_document reader result for routed readers; preserve Reader API descriptors and output keys",
+  "regression_test": "available and unavailable scientific routes; inspect/formats agree",
+  "focused_tests": {
+    "tests": 62,
+    "passed": 61,
+    "skipped": 1,
+    "failures": 0,
+    "errors": 0
+  },
+  "live_source_inspect": {
+    "available": true,
+    "detail": "scientific: available",
+    "execution_mode": "built_in",
+    "reason_code": "available"
+  },
+  "new_wheel": "not_run",
+  "gui_retest": "not_run",
+  "human_review": "not_run"
+}

@@ -596,6 +596,25 @@ class PrepareCLITests(unittest.TestCase):
                 "--artifact", f"wavefunction={wavefunction}", "-o", self.output,
             )
 
+    def test_inspect_and_formats_use_scientific_route_availability(self):
+        from chemblender_prepare.runtime import capability_document
+        readers = capability_document()["readers"]
+        source = ROOT / "examples/tutorials/2.5.0/inputs/li-chgcar/CHGCAR"
+        for available in (True, False):
+            reader = {"reader_id": "pymatgen-vasp-grid", "environment": "scientific",
+                      "available": available, "reason": None if available else "not configured"}
+            with self.subTest(available=available), patch(
+                "chemblender_prepare.runtime.capability_document",
+                return_value={"readers": [reader if item["reader_id"] == reader["reader_id"]
+                                          else item for item in readers]},
+            ):
+                inspected = self.cli("inspect", source, "--reader", reader["reader_id"])
+                formats = self.cli("formats")["metadata"]["readers"]
+                listed = next(item for item in formats if item["reader_id"] == reader["reader_id"])
+                self.assertEqual(inspected["metadata"]["availability"]["available"], available)
+                self.assertEqual(listed["availability"], inspected["metadata"]["availability"])
+                self.assertIn("scientific", listed["availability"]["detail"])
+
     def test_formats_and_raw_inspection_do_not_load_blender(self):
         result = self.cli("formats")
         readers = result["metadata"]["readers"]
