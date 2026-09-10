@@ -1,0 +1,270 @@
+{
+  "case_id": "T18",
+  "status": "passed",
+  "scope": "T01 actual GUI Save As and Cancel; remaining T18 gates open",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "interaction": "os_gui with read-only MCP postchecks",
+  "live_save_as": {
+    "pid": 29552,
+    "blend": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin-handoff.blend",
+    "sidecar": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin-handoff.cbq",
+    "array_path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin-handoff.cbq\\arrays\\1c791b5e4e977df3e14624a80d825ba53c5b313d8d9547acabd66a41717ebe2b.npy",
+    "identity": [
+      "55edcef6-7e46-5b1d-9af9-179b88ca0ade",
+      "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4"
+    ],
+    "atoms": 21,
+    "is_dirty": false,
+    "status": "passed"
+  },
+  "cancel": {
+    "status": "passed",
+    "saved_file_unchanged": true,
+    "identity_unchanged": true,
+    "array_path_unchanged": true,
+    "cancelled_outputs_absent": true,
+    "interaction": "os_gui",
+    "human_review": "not_run"
+  },
+  "original_files_unchanged": 36,
+  "authoritative_arrays_equal": 9,
+  "events": [
+    {
+      "event_id": "e2",
+      "step_id": "s01",
+      "interaction": "os_gui",
+      "action": "Open File menu",
+      "timestamp_utc": "2026-09-10T12:14:40.634Z",
+      "session_id": "run007-recovery-29552",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 11862456,
+        "title": "aspirin [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0004",
+      "after_artifact_id": "gui-0005",
+      "status": "observed"
+    },
+    {
+      "event_id": "e3",
+      "step_id": "s02",
+      "interaction": "os_gui",
+      "action": "File > Save As",
+      "timestamp_utc": "2026-09-10T12:17:44.210Z",
+      "session_id": "run007-recovery-29552",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 11862456,
+        "title": "aspirin [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0006",
+      "after_artifact_id": "gui-0008",
+      "status": "observed"
+    },
+    {
+      "event_id": "e4",
+      "step_id": "s03",
+      "interaction": "os_gui",
+      "action": "Set new handoff filename",
+      "timestamp_utc": "2026-09-10T12:17:53.787Z",
+      "session_id": "run007-recovery-29552",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 11862456,
+        "title": "aspirin [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0008",
+      "after_artifact_id": "gui-0010",
+      "status": "observed"
+    },
+    {
+      "event_id": "e5",
+      "step_id": "s04",
+      "interaction": "os_gui",
+      "action": "Save As paired handoff project",
+      "timestamp_utc": "2026-09-10T12:18:09.373Z",
+      "session_id": "run007-recovery-29552",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 11862456,
+        "title": "aspirin [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0010",
+      "after_artifact_id": "gui-0011",
+      "status": "observed"
+    },
+    {
+      "event_id": "e6",
+      "step_id": "s05",
+      "interaction": "os_gui",
+      "action": "Open File menu for cancellation check",
+      "timestamp_utc": "2026-09-10T12:18:22.764Z",
+      "session_id": "run007-recovery-29552",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 11862456,
+        "title": "aspirin [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0011",
+      "after_artifact_id": "gui-0012",
+      "status": "observed"
+    },
+    {
+      "event_id": "e7",
+      "step_id": "s06",
+      "interaction": "os_gui",
+      "action": "Open Save As dialog",
+      "timestamp_utc": "2026-09-10T12:18:23.326Z",
+      "session_id": "run007-recovery-29552",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 11862456,
+        "title": "aspirin-handoff [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin-handoff.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0012",
+      "after_artifact_id": "gui-0014",
+      "status": "observed"
+    },
+    {
+      "event_id": "e8",
+      "step_id": "s07",
+      "interaction": "os_gui",
+      "action": "Enter unused destination before cancel",
+      "timestamp_utc": "2026-09-10T12:18:34.063Z",
+      "session_id": "run007-recovery-29552",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 11862456,
+        "title": "aspirin-handoff [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin-handoff.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0014",
+      "after_artifact_id": "gui-0016",
+      "status": "observed"
+    },
+    {
+      "event_id": "e9",
+      "step_id": "s08",
+      "interaction": "os_gui",
+      "action": "Cancel Save As",
+      "timestamp_utc": "2026-09-10T12:18:50.196Z",
+      "session_id": "run007-recovery-29552",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 11862456,
+        "title": "aspirin-handoff [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin-handoff.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0016",
+      "after_artifact_id": "gui-0017",
+      "status": "observed"
+    }
+  ],
+  "screenshots": [
+    {
+      "id": "gui-0004",
+      "kind": "gui_raw",
+      "path": "gui/gui-0004.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "18de093263aaf72d37fb57fc01cb06ae49859d9a4eead2d7f631747f96994f80",
+      "prepare_sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0005",
+      "kind": "gui_raw",
+      "path": "gui/gui-0005.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "d76dd57f0d51b30a9131935e0dfc5535ece04fe0086eac8b6ae44818573605db",
+      "prepare_sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0006",
+      "kind": "gui_raw",
+      "path": "gui/gui-0006.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "d44adbb869c6e6fbc29c0adaa82aa4d184f65191956438c6cb517f5fb4a320d8",
+      "prepare_sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0008",
+      "kind": "gui_raw",
+      "path": "gui/gui-0008.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "df3ee8fe9275017f9360e75c6a8ed5fd3ef02c6f1df8d1db220c3f479ccafb17",
+      "prepare_sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0010",
+      "kind": "gui_raw",
+      "path": "gui/gui-0010.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "e336bb23aaf24156fae346f1e7a08c6f3c38a82cf252080670c461f8e95b43f3",
+      "prepare_sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0011",
+      "kind": "gui_raw",
+      "path": "gui/gui-0011.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "1391a0331961509b32992039a3d4afe71c8f952a0baa3883727e42515bed2f4a",
+      "prepare_sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0012",
+      "kind": "gui_raw",
+      "path": "gui/gui-0012.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "87f52d6f5e2546c91faeae6b159c914d82fc3a91bc21a29f403090347f3cf5dc",
+      "prepare_sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0014",
+      "kind": "gui_raw",
+      "path": "gui/gui-0014.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "cd5cade545a50910e279fa985529f5c51c46d9c321e4dcdce30d70c175a6b876",
+      "prepare_sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0016",
+      "kind": "gui_raw",
+      "path": "gui/gui-0016.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "3e14d16a7ac399feb3b7301c98ff038b210703778b6b9636868658f5010fd719",
+      "prepare_sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0017",
+      "kind": "gui_raw",
+      "path": "gui/gui-0017.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "f60b2a7e26f4292921723cb0eefcedd68e1398bd9a5cd50174f68f009d3136c2",
+      "prepare_sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    }
+  ],
+  "raw_root": ".blend-analysis\\2.5-real-user-tutorials\\run-007\\T18",
+  "preflight_excluded_event_ids": [
+    "e1"
+  ],
+  "cold_reopen_this_gui_pair": "not_run",
+  "project_browser_relink_gui": "not_run",
+  "human_review": "not_run"
+}
