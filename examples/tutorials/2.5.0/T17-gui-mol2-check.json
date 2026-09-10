@@ -1,0 +1,16 @@
+{
+  "case_id": "T17",
+  "variant": "mol2-2w73",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "gui_frontend_unchanged": true,
+  "gui_frontend_sha256": "2a8cc1aeb9880bddbdec3521a52159c339d45b60f7374da2788ebcb1977bf830",
+  "processor": "run-006 installed Python selected in GUI",
+  "preview_no_write": "passed",
+  "unconfirmed_export_rejected_without_file": "passed",
+  "confirmed_gui_export": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "output_sha256": "819b56fdf8084122f3f15b94961c2362980bab5ea77a029e4744f31ecfca1816",
+  "success_artifact": "gui-0021",
+  "events": ".blend-analysis\\2.5-real-user-tutorials\\run-006\\T17\\events.json",
+  "human_review": "not_run"
+}
