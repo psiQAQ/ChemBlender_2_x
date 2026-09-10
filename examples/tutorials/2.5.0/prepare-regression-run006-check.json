@@ -1,0 +1,24 @@
+{
+  "modules": [
+    "tests.test_prepare_cli",
+    "tests.test_prepare_runtime",
+    "tests.test_prepare_gui_lifecycle",
+    "tests.test_rdkit_molecular_export",
+    "tests.test_molecular_roundtrip",
+    "tests.test_rdkit_common_adapter",
+    "tests.test_pqr_exporter",
+    "tests.test_pdb_export_readiness",
+    "tests.test_pqr_reader"
+  ],
+  "returncode": 0,
+  "scope": "affected prepare source interfaces; full repository and native Blender gates still pending",
+  "tests_run": 160,
+  "passed": 159,
+  "skipped": 1,
+  "failures": 0,
+  "errors": 0,
+  "log_sha256": "f8ba45c7d8eaa9b61966ddad6b39a7ec472243304a18ece1c202d9be01ce1ba4",
+  "skipped_tests": [
+    "test_real_fchk_mo_derive_uses_existing_numerics (tests.test_prepare_cli.PrepareCLITests.test_real_fchk_mo_derive_uses_existing_numerics) ... skipped 'IOData/GBasis environment required'"
+  ]
+}
