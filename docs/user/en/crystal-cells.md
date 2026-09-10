@@ -36,7 +36,19 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T04\diamond.cbq" --json
 
 Expect `status: success`. Native conversion retained CIF row order, labels, occupancy, disorder and source bytes. Independent source fractional coordinates multiplied by the lattice matched saved Cartesian coordinates exactly. The frozen absolute tolerance is `1e-7` Å. Blender display vertices use lower precision; their cold-reopen errors below `1e-6` do not change the authoritative arrays.
 
-The Prepare GUI route for these two files still needs its own capture. Follow the first lesson's `inspect` and `convert` layout, supply `cif` or `poscar` as Reader ID and retain each diagnostic. The CLI results above are not GUI evidence.
+The following Prepare GUI steps passed with wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`. The Blender images and saved projects elsewhere in this draft retain their earlier artifact bindings.
+
+1. In **操作**, select `inspect`. Set **输入文件 / CBQ** to the downloaded CIF and **Reader ID** to `cif`, then click **执行**. Expect one CIF block and the cell values above.
+2. Select `convert`. The layout changes: enter a new `cocrystal.cbq` in **新输出文件 / CBQ 路径**, check that Reader ID is still `cif`, then click **执行**. Expect `status: success`, with warnings that disorder groups and partial occupancies were preserved and symmetry derivation is disabled.
+
+![Actual CIF conversion preserves occupancy and disorder](../assets/2.5-tutorials/crystal-prepare-cif.jpg)
+
+3. Repeat `inspect` and `convert` for the CONTCAR using Reader ID `poscar` and a separate `diamond.cbq` output. The saved structure contains 64 carbon atoms; the synthetic zero velocity array retains unit `unknown`.
+4. To compare ASE, first configure the scientific route described below. Keep the CONTCAR input, set Reader ID to `ase-structure`, choose a new `diamond-ase.cbq` output, and click **执行**. Keep the unsupported atom-array diagnostic: this output contains the structure and cell, without a normalized velocity dataset.
+
+![Actual ASE conversion reports the atom-array boundary](../assets/2.5-tutorials/crystal-prepare-ase.jpg)
+
+Recorded checks: [CIF GUI and science](../../../examples/tutorials/2.5.0/T04-run009-cif-gui-check.json), [CONTCAR GUI and science](../../../examples/tutorials/2.5.0/T04-run009-diamond-gui-check.json), [ASE GUI and science](../../../examples/tutorials/2.5.0/T04-run009-ase-gui-check.json). All source hashes and coordinate comparisons passed; independent human replay remains pending.
 
 ## Import and frame the complete cell
 
@@ -72,7 +84,7 @@ This image shows the supplied supercell. It does not demonstrate a supercell gen
 
 ## ASE comparison and scientific boundaries
 
-The optional backend route is mandatory for this case's acceptance. An existing ASE 3.29.0 / NumPy 2.2.6 environment, with an explicit `scientific` Python route, converted the same CONTCAR through `--reader ase-structure`. Frozen prepare and CBQ core code were byte-verified in a local package-only overlay because three files in that environment's existing prepare differed from the candidate. No dependency was installed. This is a controlled replay, not a claim that an unconfigured Standard installation provides ASE.
+The optional backend route is mandatory for this case. The GUI run used an independently installed copy of the same prepare wheel in the configured `scientific` Python route, with existing ASE 3.29.0 / NumPy 2.2.6 dependencies. The local test environment references existing dependency directories and is not a portable environment. Set `python.scientific` in `CHEMBLENDER_PREPARE_CONFIG` to your qualified processor environment; run `doctor` and confirm `inspect` reports `scientific: available` before conversion. Standard alone does not supply ASE. See the [route qualification](../../../examples/tutorials/2.5.0/run008-scientific-route-check.json) for the reuse boundary; the latest wheel and GUI bindings are in the receipts above.
 
 The [ASE numerical check](../assets/2.5-tutorials/crystal-ase-science.json) reports zero cell and coordinate error. Preserve the `ase-structure.unsupported` atom-array diagnostic: that route does not validate velocity normalization. Use the native-reader result for this case's explicit unknown-unit zero-velocity boundary.
 

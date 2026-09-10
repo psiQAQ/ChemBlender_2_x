@@ -36,7 +36,19 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T04\diamond.cbq" --json
 
 预期 `status: success`。原生转换保留了 CIF 行顺序、标签、占位、无序和源文件字节。独立以源分数坐标乘晶格矩阵，结果与保存的笛卡尔坐标完全一致；预先固定的绝对容差为 `1e-7` Å。Blender 显示顶点精度较低，冷重开时低于 `1e-6` 的显示误差不意味着权威数组被改写。
 
-这两个输入的 Prepare GUI 路线仍待专门截图验证。可沿用首课 `inspect`、`convert` 布局，将 Reader ID 分别设为 `cif`、`poscar`，保留诊断。上述 CLI 通过不能代替 GUI 证据。
+以下 Prepare GUI 步骤已用 wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a` 验证。本文其他 Blender 图片和保存工程仍保留各自较早的制品归属。
+
+1. 在 **操作** 中选择 `inspect`，将 **输入文件 / CBQ** 设为下载的 CIF，**Reader ID** 设为 `cif`，点击 **执行**。预期显示一个 CIF block 和上表晶胞值。
+2. 选择 `convert` 后布局会变化：在 **新输出文件 / CBQ 路径** 填入新的 `cocrystal.cbq`，确认 Reader ID 仍为 `cif`，点击 **执行**。预期 `status: success`，并提示无序组、部分占位已保留，对称性派生被禁用。
+
+![实际 CIF 转换保留占位和无序信息](../assets/2.5-tutorials/crystal-prepare-cif.jpg)
+
+3. 对 CONTCAR 重复 `inspect` 与 `convert`，Reader ID 使用 `poscar`，输出另设为 `diamond.cbq`。产物包含 64 个碳原子，人工写入的零速度数组保留 `unknown` 单位。
+4. 对照 ASE 前，先按下节配置科学 route。保留 CONTCAR 输入，将 Reader ID 改为 `ase-structure`，输出另设为 `diamond-ase.cbq`，点击 **执行**。保留不支持 atom-array 的诊断：这个产物包含结构和晶胞，没有规范化的速度数据集。
+
+![实际 ASE 转换报告原子数组边界](../assets/2.5-tutorials/crystal-prepare-ase.jpg)
+
+检查记录：[CIF GUI 与科学核对](../../../examples/tutorials/2.5.0/T04-run009-cif-gui-check.json)、[CONTCAR GUI 与科学核对](../../../examples/tutorials/2.5.0/T04-run009-diamond-gui-check.json)、[ASE GUI 与科学核对](../../../examples/tutorials/2.5.0/T04-run009-ase-gui-check.json)。源文件哈希与坐标比对均通过；独立人工复做仍待完成。
 
 ## 导入并取景完整晶胞
 
@@ -72,7 +84,7 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T04\diamond.cbq" --json
 
 ## ASE 对照与科学边界
 
-可选后端路线是本案例的必测项。已有 ASE 3.29.0／NumPy 2.2.6 环境配置明确的 `scientific` Python 路线后，通过 `--reader ase-structure` 转换同一个 CONTCAR。该环境原有 prepare 的三个文件与冻结候选不同，因此本次在独立本地目录使用逐字节核验的 prepare、CBQ core 代码，依赖仍来自已有环境；没有安装依赖。这是受控重放，不表示未配置的 Standard 安装自带 ASE。
+可选后端路线是本案例必测项。GUI 实测在配置的 `scientific` Python route 中独立安装同一 prepare wheel，复用现有 ASE 3.29.0／NumPy 2.2.6 依赖。本地测试环境引用已有依赖目录，不能当作可移动环境。将 `CHEMBLENDER_PREPARE_CONFIG` 中的 `python.scientific` 指向已核验的处理器环境；转换前运行 `doctor`，确认 `inspect` 显示 `scientific: available`。Standard 本身不提供 ASE。[route 验证记录](../../../examples/tutorials/2.5.0/run008-scientific-route-check.json)说明依赖复用边界；最新 wheel 与 GUI 的对应关系见上方记录。
 
 [ASE 数值检查](../assets/2.5-tutorials/crystal-ase-science.json)记录晶胞与坐标误差均为零。保留 `ase-structure.unsupported` atom-array 诊断：这条路线没有验证速度单位归一化。本案例的 unknown 单位零速度边界由原生 Reader 结果验证。
 
