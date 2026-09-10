@@ -1,0 +1,14 @@
+{
+  "case_id": "T17",
+  "format": "smiles",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "preview_no_write": "passed",
+  "gui_export": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "sha256": "fa6dfe7e7a4728dac34eb56c59a45fd508b34b66ef535dfe0213ff1a00258b46",
+  "preview_artifact": "gui-0126",
+  "success_artifact": "gui-0128",
+  "requires_confirmation": true,
+  "human_review": "not_run",
+  "boundary": "Canonical molecular graph/stereochemistry checked; coordinates, atom order, title, raw record and properties omitted as previewed."
+}

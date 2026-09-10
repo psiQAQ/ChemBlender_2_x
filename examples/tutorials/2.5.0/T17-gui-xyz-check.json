@@ -1,0 +1,13 @@
+{
+  "case_id": "T17",
+  "format": "xyz",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "preview_no_write": "passed",
+  "gui_export": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "sha256": "cf68b4618dfbba3a075c09021da5e3d7e02326ef51bf3bee75c2f0074e178f70",
+  "preview_artifact": "gui-0111",
+  "success_artifact": "gui-0113",
+  "requires_confirmation": true,
+  "human_review": "not_run"
+}

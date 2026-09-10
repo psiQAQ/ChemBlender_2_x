@@ -1,0 +1,14 @@
+{
+  "case_id": "T17",
+  "format": "extxyz",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "preview_no_write": "passed",
+  "gui_export": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "sha256": "6ce8eb60fae79a0e93eb489642fc1a89d540953f541c1b2c63b301ca2399c670",
+  "preview_artifact": "gui-0119",
+  "success_artifact": "gui-0121",
+  "requires_confirmation": false,
+  "human_review": "not_run",
+  "options": "Missing-value token blank; panel adds a row. Initial old-coordinate click only toggled preview, then corrected before execution."
+}
