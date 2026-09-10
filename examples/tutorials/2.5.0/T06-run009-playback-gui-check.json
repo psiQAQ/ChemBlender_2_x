@@ -1,0 +1,287 @@
+{
+  "status": "passed_gui_play_pause_scoped",
+  "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/T06",
+  "events": [
+    {
+      "event_id": "e11",
+      "step_id": "p01",
+      "interaction": "os_gui",
+      "action": "Dismiss reopened Render Result using F11",
+      "timestamp_utc": "2026-09-10T14:10:05.989Z",
+      "session_id": "run009-blender-46300-playback",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 8587764,
+        "title": "trajectory-refined [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T06\\trajectory-refined.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0017",
+      "after_artifact_id": "gui-0018",
+      "status": "observed"
+    },
+    {
+      "event_id": "e12",
+      "step_id": "p02",
+      "interaction": "os_gui",
+      "action": "Open ChemBlender sidebar tab",
+      "timestamp_utc": "2026-09-10T14:10:52.982Z",
+      "session_id": "run009-blender-46300-playback",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 8587764,
+        "title": "trajectory-refined [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T06\\trajectory-refined.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0020",
+      "after_artifact_id": "gui-0021",
+      "status": "observed"
+    },
+    {
+      "event_id": "e13",
+      "step_id": "p03",
+      "interaction": "os_gui",
+      "action": "Click Configure Trajectory Playback",
+      "timestamp_utc": "2026-09-10T14:11:05.405Z",
+      "session_id": "run009-blender-46300-playback",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 8587764,
+        "title": "trajectory-refined [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T06\\trajectory-refined.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0021",
+      "after_artifact_id": "gui-0022",
+      "status": "observed"
+    },
+    {
+      "event_id": "e14",
+      "step_id": "p04",
+      "interaction": "os_gui",
+      "action": "Scroll sidebar to scientific animation controls",
+      "timestamp_utc": "2026-09-10T14:11:14.760Z",
+      "session_id": "run009-blender-46300-playback",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 8587764,
+        "title": "trajectory-refined [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T06\\trajectory-refined.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0022",
+      "after_artifact_id": "gui-0023",
+      "status": "observed"
+    },
+    {
+      "event_id": "e15",
+      "step_id": "p05",
+      "interaction": "os_gui",
+      "action": "Scroll to Scientific Representation timeline controls",
+      "timestamp_utc": "2026-09-10T14:11:25.997Z",
+      "session_id": "run009-blender-46300-playback",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 8587764,
+        "title": "trajectory-refined [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T06\\trajectory-refined.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0023",
+      "after_artifact_id": "gui-0024",
+      "status": "observed"
+    },
+    {
+      "event_id": "e16",
+      "step_id": "p06",
+      "interaction": "os_gui",
+      "action": "Scroll to playback buttons",
+      "timestamp_utc": "2026-09-10T14:11:35.044Z",
+      "session_id": "run009-blender-46300-playback",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 8587764,
+        "title": "trajectory-refined [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T06\\trajectory-refined.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0024",
+      "after_artifact_id": "gui-0025",
+      "status": "observed"
+    },
+    {
+      "event_id": "e17",
+      "step_id": "p07",
+      "interaction": "os_gui",
+      "action": "Click Scientific Representation Play",
+      "timestamp_utc": "2026-09-10T14:11:48.441Z",
+      "session_id": "run009-blender-46300-playback",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 8587764,
+        "title": "trajectory-refined [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T06\\trajectory-refined.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0025",
+      "after_artifact_id": "gui-0026",
+      "status": "observed"
+    },
+    {
+      "event_id": "e18",
+      "step_id": "p08",
+      "interaction": "os_gui",
+      "action": "Click Scientific Representation Pause",
+      "timestamp_utc": "2026-09-10T14:12:05.718Z",
+      "session_id": "run009-blender-46300-playback",
+      "window": {
+        "app": "process:C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "id": 8587764,
+        "title": "trajectory-refined [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T06\\trajectory-refined.blend] - Blender 5.1.1"
+      },
+      "before_artifact_id": "gui-0027",
+      "after_artifact_id": "gui-0028",
+      "status": "observed"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "gui-0017",
+      "kind": "gui_raw",
+      "path": "gui/gui-0017.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "c3b9de1242cd3e945beee4463ef185cb3c5e05fc7f4843b24ca911276fd21fe6",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0018",
+      "kind": "gui_raw",
+      "path": "gui/gui-0018.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "2a56ea7c3f86255aad1c855677572ecdf2ea4d5a7d399d1c0249218834aa0f52",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0020",
+      "kind": "gui_raw",
+      "path": "gui/gui-0020.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "675ac17a71927c37cfdf3699fdbe5183d6df5dea30166141b900cca97f94fa5a",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0021",
+      "kind": "gui_raw",
+      "path": "gui/gui-0021.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "51d06af2d4d85d4b2a9bed35d26d7a9e6e324aecd69608e3325f17f15c48bb74",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0022",
+      "kind": "gui_raw",
+      "path": "gui/gui-0022.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "e635b5714bebb1570b37a9581060fbecacd86394d6cf04d445fe21cdc67e7467",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0023",
+      "kind": "gui_raw",
+      "path": "gui/gui-0023.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "b737ad9b916071aad7b4c79017fdf4b994397ac09fb3ed8769e860a85ee78fc1",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0024",
+      "kind": "gui_raw",
+      "path": "gui/gui-0024.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "7a4e738c55630635f1d726e078cc744735f933ec229f0be12bbae167168189da",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0025",
+      "kind": "gui_raw",
+      "path": "gui/gui-0025.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "92e8db7fecd9c5a79852ad3f4e66ab4e93522e4912fc95fd212a488bf19b5273",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0026",
+      "kind": "gui_raw",
+      "path": "gui/gui-0026.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "a0c39a1bd6cc9cb899aaf1b202943b262ece7adcc09023f638286c53a50b8e1a",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0027",
+      "kind": "gui_raw",
+      "path": "gui/gui-0027.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "aca031c301888f68542bb75199d7b79f486df4b7269501446a4a0fc41884bac9",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0028",
+      "kind": "gui_raw",
+      "path": "gui/gui-0028.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "dda4fb399550a1f50213ff336f55047749984df8e58bf573fd23af2e27a12767",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    }
+  ],
+  "live": {
+    "playing": true,
+    "timeline_frame": 8,
+    "scientific_playback": true,
+    "object_properties": {
+      "cb_trajectory_frame_index": 7,
+      "cb_trajectory_frame_label": "Properties=species:S:1:pos:R:3:forces:R:3 energy=-17617.4573808 step=700 source_index=21001 energy_unit=electron_volt forces_unit=electron_volt_per_angstrom step_unit=dimensionless",
+      "cb_trajectory_force_status": "current frame",
+      "cb_trajectory_dataset_id": "0969bf8a-eb66-59d2-a359-58aed199d731",
+      "cb_trajectory_dataset_revision": "da959422540842747f03195620d1a65d2f56b2b071f2f82f17c14d548a984f57",
+      "cb_trajectory_frame_start": 1,
+      "cb_trajectory_frame_step": 1,
+      "cb_trajectory_cache_size": 3,
+      "cb_trajectory_prefetch_ahead": 0,
+      "cb_trajectory_follow_timeline": true
+    }
+  },
+  "paused": {
+    "status": "passed",
+    "pid": 46300,
+    "timeline_frame": 30,
+    "source_frame": 29,
+    "coordinate_error": 1.1794982901491835e-07,
+    "scaled_force_error": 3.492313438435701e-08,
+    "paused": true,
+    "scientific_arrays_unchanged": true,
+    "configuration": "GUI Configure Trajectory Playback then Scientific Representation Play/Pause",
+    "panel_source_frame_index_is_static_preview": 0
+  },
+  "setup": "MCP selected existing force View, LOAD and camera/sidebar; actual GUI Configure Trajectory Playback and Play/Pause",
+  "setup_failures": [
+    "F11 did not dismiss restored Image Editor; native window_close succeeded",
+    "Mistyped scientific_view_action did not exist; corrected to existing scientific_view operator before LOAD"
+  ],
+  "readability": "Play/Pause and frame settings visible; some narrow-panel labels truncated, full screenshot readability remains partial",
+  "human_acceptance": "not_run",
+  "original_project": "not saved during GUI verification",
+  "limitations": [
+    "Source Frame Index is static preview input, not live playback index",
+    "No new cold-reopen claim from this GUI session"
+  ]
+}
