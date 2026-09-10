@@ -1,0 +1,21 @@
+{
+  "case_id": "T07",
+  "status": "partial",
+  "cache_recovery": "passed",
+  "post_rebuild_cold": "passed",
+  "views": 7,
+  "removed_vdb_count": 8,
+  "scientific_arrays_unchanged": true,
+  "original_pair_unchanged": true,
+  "cosmetic_boundary": "Public rebuild restores Grid resolution; reapply Size 0.025 and custom material refinement afterward.",
+  "evidence": {
+    "cache-recovery.json": "19cd68814c25418ce5f74cb27322135daf862968525996187e97d2c0f41ebcd7",
+    "rebuild_native.py": "5d7f7762896283acc07a604261cc4f2eac7efa412ff5d98d3f2631c93601650f",
+    "cache_recovery.py": "d8367f7e2179aeee8603795f1b929c1afe2d6d6e45871d74f923c1cbe4dbdd61",
+    "cache_cold.py": "835e5adcdcb24c60af42182be840a1836501a35d2a70f7484b7d13bf024acb0c"
+  },
+  "artifact_root": ".blend-analysis/2.5-real-user-tutorials/run-004/T07",
+  "gui_recovery": "not_run",
+  "source_processor_unavailable": "not_run",
+  "human_acceptance": "not_run"
+}
