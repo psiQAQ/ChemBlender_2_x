@@ -1,0 +1,22 @@
+{
+  "case_id": "T17",
+  "variant": "mol2-2w73",
+  "input": "examples\\tutorials\\2.5.0\\inputs\\mdanalysis-2w73\\Ligand.mol2",
+  "sha256": "d8e8c7c3435ebd6922c6e9907979e55f7729763c64333b6384ffbf5424a80d48",
+  "source_url": "https://raw.githubusercontent.com/MDAnalysis/mdanalysis/8b8875c73782c8c7f9710f6f6b9ae715bd5ad1bb/testsuite/MDAnalysisTests/data/mol2/Ligand.mol2",
+  "expected_atoms": 297,
+  "expected_bonds": 297,
+  "expected_substructures": 17,
+  "coordinate_atol_angstrom": 0.00011,
+  "charge_atol": 5.1e-05,
+  "required": [
+    "preview no write",
+    "loss confirmation",
+    "export and reimport",
+    "atom order and coordinates",
+    "indexed bond orders",
+    "Tripos atom types and supplied charges",
+    "substructures"
+  ],
+  "status": "not_run"
+}
