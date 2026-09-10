@@ -35,11 +35,50 @@ class PublicDeliveryDocsTests(unittest.TestCase):
             self.assertEqual(manifest["remote_resources"], 0)
             self.assertEqual(manifest["missing_resources"], 0)
             self.assertGreater(manifest["link_count"], 5)
-            self.assertEqual(manifest["image_count"], 1)
+            self.assertEqual(manifest["image_count"], 5)
             self.assertEqual(
                 set(manifest["image_sha256"]),
-                {"docs/user/assets/2.5.0/blender-viewer.png"},
+                {"docs/user/assets/2.5.0/blender-viewer.png", *(
+                    'docs/user/assets/2.5-tutorials/' + name for name in (
+                        'aspirin-cycles.png', 'aspirin-prepare-convert.jpg',
+                        'aspirin-cbq-preview.jpg', 'aspirin-cold-reopen.jpg'))},
             )
+
+    def test_body_links_images_tables_and_paragraphs_survive_rendering(self):
+        module = self.module()
+        source = ('# First step\n\nKeep this paragraph.\n- Click **Preview**.\n\n'
+                  '[Open section](#first-step)\n\n'
+                  '[![Actual screenshot](image.png)](image.png)\n\n'
+                  '| Name | Value |\n| --- | --- |\n| Atoms | 21 |\n')
+        rendered = module._markdown(source)
+        self.assertIn('<p>Keep this paragraph.</p>', rendered)
+        self.assertIn('<a href="#first-step">Open section</a>', rendered)
+        self.assertIn('<a href="image.png"><img alt="Actual screenshot" src="image.png"></a>', rendered)
+        self.assertIn('<thead><tr><th scope="col">Name</th>', rendered)
+        self.assertIn('<td>21</td>', rendered)
+        self.assertLess(rendered.index('Click'), rendered.index('<img'))
+        self.assertIn('<h2 id="first-step">', rendered)
+        self.assertEqual(module._inline('`[literal](file)`'), '<code>[literal](file)</code>')
+        self.assertIn('<ol start="3">', module._markdown('1. Before\n\n![Step](image.png)\n\n3. After'))
+
+    def test_resource_audit_detects_missing_targets_and_remote_images(self):
+        module = self.module()
+        relative = 'docs/offline/en/index.html'
+        content = b'<h2 id="exists">Title</h2><a href="#exists">OK</a><a href="#absent">Bad</a><a href="missing.html">Bad</a><img src="https://example.test/image.png">'
+        stats = module._resource_stats(relative, content, {relative: content})
+        self.assertEqual(stats['missing_resources'], 2)
+        self.assertEqual(stats['remote_resources'], 1)
+        self.assertEqual(stats['link_count'], 3)
+        self.assertEqual(stats['image_count'], 1)
+
+    def test_real_body_links_resolve_to_sections_and_ancillary_downloads(self):
+        documents = self.module().render_documents()
+        content = documents['docs/offline/en/index.html'].decode('utf-8')
+        self.assertIn('href="#document-2"', content)
+        self.assertIn('href="../zh-CN/index.html#document-1"', content)
+        self.assertIn('download="public-surface.json"', content)
+        self.assertEqual(content.count('<img '), 5)
+        self.assertGreater(content.index('<img '), content.index('<article id="document-3">'))
 
 
 if __name__ == "__main__":

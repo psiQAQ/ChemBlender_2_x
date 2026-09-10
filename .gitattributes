@@ -12,6 +12,7 @@ docs/reader-api-v1/*.md text eol=lf
 docs/quantum-visualization/reader-capability-matrix.json text eol=lf
 docs/user/dependencies.json text eol=lf
 docs/user/format-capabilities.json text eol=lf
+docs/chemblender25-research/** -text whitespace=cr-at-eol
 examples/user-workflows/inputs/** -text whitespace=-trailing-space,cr-at-eol
 examples/user-workflows/outputs/** -text
 examples/quantum-workbench/output/** -text whitespace=cr-at-eol

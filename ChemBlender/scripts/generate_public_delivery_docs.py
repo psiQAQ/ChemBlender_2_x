@@ -7,10 +7,12 @@ import argparse
 import base64
 import hashlib
 import html
+from html.parser import HTMLParser
 import json
 from pathlib import Path
 import re
 import sys
+from urllib.parse import unquote, urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -29,7 +31,7 @@ SOURCES = {
     "en": ("README.md", *(
         f"docs/user/en/{name}.md" for name in (
             "index", "installation", "blender-workflow",
-            "capabilities-and-projects", "troubleshooting", "release-status",
+            "capabilities-and-projects", "troubleshooting", "release-status", "first-aspirin",
         )
     ), *(
         f"docs/prepare/en/{name}.md" for name in (
@@ -39,7 +41,7 @@ SOURCES = {
     "zh-CN": ("README.zh-CN.md", *(
         f"docs/user/zh-CN/{name}.md" for name in (
             "index", "installation", "blender-workflow",
-            "capabilities-and-projects", "troubleshooting", "release-status",
+            "capabilities-and-projects", "troubleshooting", "release-status", "first-aspirin",
         )
     ), *(
         f"docs/prepare/zh-CN/{name}.md" for name in (
@@ -47,7 +49,6 @@ SOURCES = {
         )
     )),
 }
-SCREENSHOTS = ("docs/user/assets/2.5.0/blender-viewer.png",)
 
 
 def _json_bytes(value):
@@ -85,27 +86,65 @@ def public_surface():
     }
 
 
-def _inline(value):
+def _slug(value):
+    return re.sub(r"[^\w\s-]", "", value.lower()).replace(" ", "-")
+
+
+def _inline(value, resolve=lambda target, image: (target, None)):
+    fragments = []
+
+    def keep(markup):
+        fragments.append(markup)
+        return f"\x00{len(fragments)-1}\x00"
+
+    def link(match, image=False):
+        target, download = resolve(match[2], image)
+        label = html.escape(match[1])
+        target = html.escape(target, quote=True)
+        if image:
+            return keep(f'<img alt="{label}" src="{target}">')
+        attribute = f' download="{html.escape(download, quote=True)}"' if download else ''
+        return keep(f'<a href="{target}"{attribute}>{label}</a>')
+
+    value = re.sub(r"`([^`]+)`", lambda m: keep('<code>' + html.escape(m[1]) + '</code>'), value)
+    value = re.sub(r"!\[([^]]*)\]\(([^)]+)\)", lambda m: link(m, True), value)
+    value = re.sub(r"\[([^]]+)\]\(([^)]+)\)", link, value)
+    value = re.sub(r"\*\*([^*]+)\*\*", lambda m: keep('<strong>' + html.escape(m[1]) + '</strong>'), value)
     value = html.escape(value)
-    value = re.sub(r"`([^`]+)`", r"<code>\1</code>", value)
-    return re.sub(r"\[([^]]+)\]\(([^)]+)\)", r"\1 <small>(\2)</small>", value)
+    for index in reversed(range(len(fragments))):
+        value = value.replace(f'\x00{index}\x00', fragments[index])
+    return value
 
 
-def _markdown(value):
+def _markdown(value, resolve=lambda target, image: (target, None), prefix=""):
     output = []
     paragraph = []
     listing = None
     code = []
     fence = False
+    table = []
+    headings = {}
 
     def flush():
-        nonlocal paragraph, listing
+        nonlocal paragraph, listing, table
         if paragraph:
-            output.append("<p>" + _inline(" ".join(paragraph)) + "</p>")
+            output.append("<p>" + _inline(" ".join(paragraph), resolve) + "</p>")
             paragraph = []
         if listing:
             output.append(f"</{listing}>")
             listing = None
+        if table:
+            rows = [[cell.strip() for cell in row.strip().strip('|').split('|')] for row in table]
+            header = len(rows) > 1 and all(re.fullmatch(r':?-+:?', cell) for cell in rows[1])
+            output.append('<table>')
+            if header:
+                output.append('<thead><tr>' + ''.join('<th scope="col">' + _inline(cell, resolve) + '</th>' for cell in rows[0]) + '</tr></thead>')
+                rows = rows[2:]
+            output.append('<tbody>')
+            for row in rows:
+                output.append('<tr>' + ''.join('<td>' + _inline(cell, resolve) + '</td>' for cell in row) + '</tr>')
+            output.append('</tbody></table>')
+            table = []
 
     for line in value.splitlines():
         if line.startswith("```"):
@@ -120,51 +159,83 @@ def _markdown(value):
         if fence:
             code.append(line)
             continue
+        if line.startswith('|'):
+            if not table:
+                flush()
+            table.append(line)
+            continue
+        if table:
+            flush()
         heading = re.match(r"^(#{1,6})\s+(.+)$", line)
         if heading:
             flush()
             level = min(len(heading.group(1)) + 1, 6)
-            output.append(f"<h{level}>{_inline(heading.group(2))}</h{level}>")
+            slug = _slug(heading.group(2))
+            count = headings.get(slug, 0)
+            headings[slug] = count + 1
+            anchor = prefix + slug + (f'-{count}' if count else '')
+            output.append(f'<h{level} id="{html.escape(anchor, quote=True)}">{_inline(heading.group(2), resolve)}</h{level}>')
             continue
         item = re.match(r"^\s*(-|\d+\.)\s+(.+)$", line)
         if item:
-            paragraph = []
+            if paragraph:
+                flush()
             kind = "ul" if item.group(1) == "-" else "ol"
             if listing != kind:
                 flush()
-                output.append(f"<{kind}>")
+                start = f' start="{int(item.group(1)[:-1])}"' if kind == 'ol' else ''
+                output.append(f"<{kind}{start}>")
                 listing = kind
-            output.append("<li>" + _inline(item.group(2)) + "</li>")
+            output.append("<li>" + _inline(item.group(2), resolve) + "</li>")
             continue
         if not line.strip():
             flush()
-        elif line.startswith("|"):
-            flush()
-            output.append("<pre class=table>" + html.escape(line) + "</pre>")
         else:
             paragraph.append(line.strip())
     flush()
     return "\n".join(output)
 
 
-def _offline_html(language, sources):
+def _offline_html(language, sources, image_hashes=None):
     title = "ChemBlender 2.5 Offline Guide" if language == "en" else "ChemBlender 2.5 离线指南"
     navigation = []
     sections = []
+    image_hashes = {} if image_hashes is None else image_hashes
+    locations = {(ROOT / source).resolve(): (lang, f'document-{index}')
+                 for lang, paths in SOURCES.items() for index, source in enumerate(paths)}
     for index, relative in enumerate(sources):
         source = (ROOT / relative).read_text(encoding="utf-8")
         section_id = f"document-{index}"
+
+        def resolve(target, image=False):
+            parts = urlsplit(html.unescape(target))
+            if parts.scheme:
+                if parts.scheme not in {'https', 'http', 'mailto'}:
+                    raise ValueError(f'Unsupported link scheme: {relative}: {target}')
+                if image:
+                    raise ValueError(f'Remote image in offline guide: {relative}: {target}')
+                return target, None
+            path = ((ROOT / relative).parent / unquote(parts.path)).resolve() if parts.path else (ROOT / relative).resolve()
+            path.relative_to(ROOT)
+            if not path.is_file():
+                raise ValueError(f'Missing local resource: {relative}: {target}')
+            if not image and path in locations:
+                lang, document = locations[path]
+                fragment = document + ('-' + unquote(parts.fragment) if parts.fragment else '')
+                return ('' if lang == language else f'../{lang}/index.html') + '#' + fragment, None
+            payload = path.read_bytes()
+            mime = {'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+                    '.md': 'text/plain;charset=utf-8', '.json': 'application/json'}.get(path.suffix.lower(), 'application/octet-stream')
+            if image:
+                image_hashes[path.relative_to(ROOT).as_posix()] = hashlib.sha256(payload).hexdigest()
+            # Ancillary source documents are explicit downloads, embedded in this HTML.
+            return f'data:{mime};base64,' + base64.b64encode(payload).decode('ascii'), None if image else path.name
+
         navigation.append(f'<a href="#{section_id}">{html.escape(relative)}</a>')
         sections.append(
             f'<article id="{section_id}"><div class=path>{html.escape(relative)}</div>'
-            + _markdown(source) + "</article>"
+            + _markdown(source, resolve, section_id + '-') + "</article>"
         )
-    figures = []
-    for relative in SCREENSHOTS:
-        encoded = base64.b64encode((ROOT / relative).read_bytes()).decode("ascii")
-        figures.append('<figure><img alt="ChemBlender 2.5.0 Viewer" '
-                       f'src="data:image/png;base64,{encoded}">'
-                       f'<figcaption>{html.escape(relative)}</figcaption></figure>')
     return ("<!doctype html><html lang=\"" + language + "\"><meta charset=utf-8>"
             "<meta name=viewport content=\"width=device-width,initial-scale=1\">"
             f"<title>{title}</title><style>"
@@ -173,16 +244,56 @@ def _offline_html(language, sources):
             "nav{display:flex;gap:8px;flex-wrap:wrap}nav a{color:#bde3ff}"
             "article{padding:24px 0;border-bottom:1px solid #8885}.path{font:13px monospace;opacity:.7}"
             "code,pre{font-family:ui-monospace,monospace}pre{padding:12px;overflow:auto;background:#8882}"
-            "pre.table{margin:0;padding:2px 8px}small{opacity:.7}img{max-width:100%;height:auto}"
+            "table{border-collapse:collapse;width:100%;display:block;overflow:auto}th,td{border:1px solid #8886;padding:8px;text-align:left}"
+            "img{max-width:100%;height:auto}a{overflow-wrap:anywhere}h2,h3,h4{scroll-margin-top:16px}"
             "</style><body><header><h1>" + title + "</h1><p>Self-contained / 无远程资源</p><nav>"
-            + "".join(navigation) + "</nav></header><main>" + "".join(figures) + "".join(sections)
+            + "".join(navigation) + "</nav></header><main>" + "".join(sections)
             + "</main></body></html>\n").encode("utf-8")
+
+
+class _Resources(HTMLParser):
+    def __init__(self, content):
+        super().__init__()
+        self.ids, self.links, self.images = set(), [], []
+        self.feed(content.decode('utf-8'))
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if 'id' in attrs:
+            self.ids.add(attrs['id'])
+        if tag == 'a':
+            self.links.append(attrs.get('href', ''))
+        if tag == 'img':
+            self.images.append(attrs.get('src', ''))
+
+
+def _resource_stats(relative, content, documents):
+    parsed = _Resources(content)
+    missing = []
+    for url in parsed.links + parsed.images:
+        parts = urlsplit(url)
+        if parts.scheme in {'https', 'http', 'mailto', 'data'}:
+            continue
+        target = (ROOT / relative).parent / unquote(parts.path) if parts.path else ROOT / relative
+        key = target.resolve().relative_to(ROOT).as_posix()
+        payload = documents.get(key)
+        if payload is None or parts.fragment and unquote(parts.fragment) not in _Resources(payload).ids:
+            missing.append(url)
+    return {'link_count': len(parsed.links), 'image_count': len(parsed.images),
+            'remote_resources': sum(urlsplit(url).scheme in {'http', 'https'} for url in parsed.images),
+            'external_link_count': sum(urlsplit(url).scheme in {'http', 'https'} for url in parsed.links),
+            'missing_resources': len(missing), 'missing_targets': missing}
 
 
 def render_documents():
     documents = {"docs/prepare/public-surface.json": _json_bytes(public_surface())}
+    images = {}
     for language, sources in SOURCES.items():
-        html_bytes = _offline_html(language, sources)
+        images[language] = {}
+        documents[f'docs/offline/{language}/index.html'] = _offline_html(language, sources, images[language])
+    for language, sources in SOURCES.items():
+        relative = f'docs/offline/{language}/index.html'
+        html_bytes = documents[relative]
         manifest = {
             "schema_name": "chemblender_offline_sop",
             "schema_version": 1,
@@ -193,15 +304,11 @@ def render_documents():
                 relative: hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
                 for relative in sources
             },
-            "image_sha256": {
-                relative: hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
-                for relative in SCREENSHOTS
-            },
-            "link_count": html_bytes.count(b"href="),
-            "image_count": len(SCREENSHOTS),
-            "remote_resources": 0,
-            "missing_resources": 0,
+            "image_sha256": images[language],
+            **_resource_stats(relative, html_bytes, documents),
         }
+        if manifest['missing_resources'] or manifest['remote_resources']:
+            raise ValueError(f'Offline resource audit failed: {language}: {manifest["missing_targets"]}')
         documents[f"docs/offline/{language}/index.html"] = html_bytes
         documents[f"docs/offline/{language}/manifest.json"] = _json_bytes(manifest)
     return documents

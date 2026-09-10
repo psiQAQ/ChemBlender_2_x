@@ -5,16 +5,26 @@
     {
       "case_id": "T00",
       "priority": "P0",
-      "status": "not_run",
-      "status_reason": "Implementation started; this case has no new GUI acceptance yet.",
-      "human_review": "not_run"
+      "status": "blocked",
+      "status_reason": "Real GUI run recorded; native JPEG evidence rule and human acceptance remain pending.",
+      "human_review": "not_run",
+      "run": "run-002/T00",
+      "gui": "partial",
+      "scientific_processing": "not_applicable",
+      "project_recovery": "not_run",
+      "distribution": "blocked"
     },
     {
       "case_id": "T01",
       "priority": "P0",
-      "status": "not_run",
-      "status_reason": "Implementation started; this case has no new GUI acceptance yet.",
-      "human_review": "not_run"
+      "status": "blocked",
+      "status_reason": "Real GUI run recorded; native JPEG evidence rule and human acceptance remain pending.",
+      "human_review": "not_run",
+      "run": "run-002/T01",
+      "gui": "passed",
+      "scientific_processing": "passed",
+      "project_recovery": "passed",
+      "distribution": "blocked"
     },
     {
       "case_id": "T02",

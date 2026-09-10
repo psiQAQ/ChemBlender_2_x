@@ -8,6 +8,7 @@ ChemBlender is a CBQ Viewer. Prepare raw chemistry and simulation files outside 
 
 - [Install, update and uninstall](installation.md)
 - [End-to-end Blender workflow](blender-workflow.md)
+- [First lesson: aspirin with actual GUI captures](first-aspirin.md) — Agent run completed; human replay pending.
 - [Capabilities and project lifecycle](capabilities-and-projects.md)
 - [Errors and recovery](troubleshooting.md)
 - [Release status and limitations](release-status.md)
