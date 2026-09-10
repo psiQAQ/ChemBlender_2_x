@@ -6,6 +6,7 @@ ChemBlender is a CBQ Viewer. Prepare raw chemistry and simulation files outside 
 
 ## Guides
 
+- [T17: scientific data export — working draft](data-export.md)
 - [Install, update and uninstall](installation.md)
 - [End-to-end Blender workflow](blender-workflow.md)
 - [First lesson: aspirin with actual GUI captures](first-aspirin.md) — Agent run completed; human replay pending.

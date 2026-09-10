@@ -1,0 +1,20 @@
+[
+  {
+    "path": "export-preview.jpg",
+    "raw_artifact": "gui-0017",
+    "sha256": "15da68c14b6b8f8e6769bddfe4d859c3c55b71abb031eb323bc03b101ef51203",
+    "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b"
+  },
+  {
+    "path": "export-rejected.jpg",
+    "raw_artifact": "gui-0019",
+    "sha256": "26336ce49ce3db02a64e53e4869bcfa15ea9dc5e8fd61fef8c246a5cc3f703f4",
+    "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b"
+  },
+  {
+    "path": "export-success.jpg",
+    "raw_artifact": "gui-0021",
+    "sha256": "2de42e5d8dd1d51d9c6bb888740e8d105fc74c97e147e0a5f00d31bbb5c592f9",
+    "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b"
+  }
+]

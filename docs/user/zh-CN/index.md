@@ -6,6 +6,7 @@ ChemBlender 是 CBQ Viewer。原始化学与模拟文件先在 Blender 外由 pr
 
 ## 指南
 
+- [T17：科学数据导出（工作草稿）](data-export.md)
 - [安装、更新与卸载](installation.md)
 - [Blender 完整联动 SOP](blender-workflow.md)
 - [首课：阿司匹林与实际 GUI 截图](first-aspirin.md)——已完成 Agent 实操，待人工复做。
