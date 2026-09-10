@@ -1,0 +1,83 @@
+# T06: aspirin trajectory and same-frame forces
+
+This is a working draft. Input conversion, all-frame scientific comparisons, actual Create View / Apply Frame / Play / Pause operations and a static render have evidence. The complete animation, continuous screen recording, paired cold recovery and independent human replay are still pending.
+
+![Aspirin source frame 15 with scaled force arrows](../assets/2.5-tutorials/trajectory-frame15.png)
+
+Gray is carbon, red is oxygen, white is hydrogen and yellow arrows show atomic forces. The input has no prepared bonds, so this view displays atoms and arrows. Some arrows overlap atoms in this projection. Light and shading change the displayed colors; this image is not a quantitative color scale.
+
+## Fixed input and prerequisites
+
+Complete [installation](installation.md) and [the first lesson](first-aspirin.md). Use Blender 5.1.1 and prepare 0.1.0. Candidate Extension SHA-256: `963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a`. Download [aspirin-rmd17-32.extxyz](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz), its [source and license note](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.md), and the [frozen specification](../../../examples/tutorials/2.5.0/T06.case-spec.json). The source note contains older Quick Import instructions; use the CBQ route below for 2.5.
+
+| Item | Reference |
+| --- | --- |
+| Input SHA-256 | `95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a` |
+| Source | CC0 rMD17 v3 aspirin; NPZ rows 0, 100, …, 3100 |
+| Shape | 32 frames × 21 atoms × 3 components |
+| Coordinates | angstrom |
+| Forces | electron_volt_per_angstrom |
+| Energy | electron_volt |
+| step | dimensionless array-row identifier |
+| source_index | Original index; unit unknown and semantic status ambiguous |
+| Physical time interval | Not supplied; label by source frame, never ps |
+
+## Prepare the CBQ
+
+Put the input in a new lesson folder. These public commands passed; replace the example paths. The dedicated Prepare GUI walkthrough for this input is still pending.
+
+```powershell
+chemblender-prepare inspect "D:\ChemBlenderLessons\T06\aspirin-rmd17-32.extxyz" --reader extxyz --json
+chemblender-prepare convert "D:\ChemBlenderLessons\T06\aspirin-rmd17-32.extxyz" --reader extxyz -o "D:\ChemBlenderLessons\T06\aspirin-trajectory.cbq" --json
+chemblender-prepare validate "D:\ChemBlenderLessons\T06\aspirin-trajectory.cbq" --json
+```
+
+Expect success and a FrameSet with `coordinates`, an `atomic_force` AtomFrameProperty, and frame properties `energy`, `step`, `source_index`. All stored coordinates, forces and numeric frame properties matched independently parsed input text exactly. Atom species/order stayed constant across all 32 frames. Preserve the ambiguous source_index status; a successful conversion does not supply missing units.
+
+## Create and inspect the trajectory
+
+1. In a new scene, set `CBQ Package`, confirm the path, then use `Preview CBQ` and `Import CBQ`. The recorded import added nine entities. This import reused verified public Operators through MCP; the following trajectory controls were tested through the actual GUI.
+2. Select the FrameSet in Project Browser. Under `Scientific Representation`, retain `Automatic` and `Research`; the description reads `Trajectory frame`. Click `Create View`.
+3. Select the `atomic_force` dataset. `Automatic` now resolves to `Trajectory with forces`. Click `Create View` again. This creates a separate View bound to the same FrameSet and its force property.
+4. Hide the earlier plain trajectory View in viewport and render, retaining it in the project. Hide the default Cube in both places. Select the force View and frame it with numpad `.`. Overlapping Views at different frames can otherwise look like extra atoms.
+5. In the force View controls, set `Source Frame Index (0-based)` to `15`, then click `Apply Frame`. The preview updates coordinates and force arrows together. Check frames `0` and `31` in the same way; dedicated first/last GUI captures still need completion in this draft.
+
+![Actual Apply Frame operation at source frame 15](../assets/2.5-tutorials/trajectory-apply-frame.jpg)
+
+The subsequent public `FRAME` replay checked all 32 frames. Display vertices and vectors matched the corresponding source arrays within `1e-6` at display precision, while authoritative arrays remained unchanged. When Vector Display Scale differs from 1, compare displayed vectors against source force multiplied by that scale. The [recorded all-frame check](../assets/2.5-tutorials/trajectory-force-check.json) used scale 1 before cosmetic refinement.
+
+| Source frame | Energy, eV | step | source_index |
+| --- | --- | --- | --- |
+| 0 | -17617.8287419 | 0 | 161596 |
+| 15 | -17617.4879446 | 1500 | 26491 |
+| 31 | -17617.7618802 | 3100 | 151469 |
+
+These are dataset references, not energies recomputed by Blender. The table does not imply that the UI displays every field beside the moving structure.
+
+## Play and pause
+
+Scroll within the sidebar until `Play` and `Pause` appear below `Apply Frame`. Keep Animation Start Frame `1` and Timeline Frames Per Source Frame `1`. Click `Play`: the recorded timeline range became 1–32, with source frame equal to timeline frame minus one. Click `Pause` to stop both timeline and scientific playback. Twelve timestamped screenshots were sampled during actual playback; they are not a continuous recording.
+
+`Apply Frame` previews a static source frame. The scene timeline can show another number while paused; use the source-frame control and saved View metadata when identifying that preview. A display rate of 24 fps does not establish the missing physical sampling interval or statistical independence of these selected configurations.
+
+## Refine and render
+
+1. On the selected force View, use `Load Selected View`, set Vector Display Scale to `0.35` and enable `Light Quantitative Colors`, then `Update Style / Parameters`. This smaller arrow scale is a display choice, not a force-unit conversion.
+2. In the existing `CH_Ball and Stick` node, set Subdivision to `5`, as in [the ethanol lesson](ethanol-conformers.md). Keep the source coordinates and forces intact.
+3. Select the View in Object Mode. With the pointer over the viewport, press F3, search `Smooth by Angle` and confirm. Open Modifiers Properties and enable `Ignore Sharpness` on the new modifier; leave Angle at 30°. This exact GUI sequence resolved the faceted atoms. Without selection the command did not add a modifier; without Ignore Sharpness the existing sharp-edge marks preserved the facets.
+
+![Actual Ignore Sharpness setting](../assets/2.5-tutorials/trajectory-smooth.jpg)
+
+4. The recorded camera is orthographic at `(0, -16, 11)`, aimed at the origin, Orthographic Scale `11`. Point Light is at `(0, -8, 9)`, Power `6500`, Radius `3`; World Background linear RGB is `(0.18, 0.18, 0.18)`, Strength `1`. These composition values were set through MCP replay; full manual panel instructions are still pending.
+5. Use Cycles, CPU, 256 samples, denoising and output `2400×1800`, 100%, PNG. Render source frame 15 and save the PNG separately. Keep the `.blend` and same-name `.cbq` directory together.
+6. For the animation route under validation, retain the scientific playback driver while stopping viewport playback, set the scene range to 1–32 and render into a new PNG directory with `Ctrl+F12`. The actual shortcut was tested. Final frame-sequence and video acceptance are pending; do not treat this paragraph as a completed delivery route yet.
+
+Rebuild or Update can replace display objects. Reapply custom subdivision and Smooth by Angle after such replacement; inspect the modifier list before rendering. More display polygons or smoother normals do not add new scientific samples.
+
+## Handover and recovery boundaries
+
+The working pair is `aspirin-trajectory.blend` plus the complete `aspirin-trajectory.cbq` directory. Retain the static PNG and future full PNG sequence separately. Original/moved cold reopening, cache rebuilding and offline reconstruction for this case still need execution. Do not delete authoritative `.npy` arrays as a display-cache repair.
+
+One animation attempt was cancelled while diagnosing a pre-render audit mismatch. A two-frame test showed that `render_pre` runs before source-frame updating; `render_post` matched the right frame, and animation frame 2 matched an explicit same-frame static render pixel-for-pixel. That was an evidence-timing issue, not a demonstrated product wrong-frame defect. Final acceptance must inspect completed frames and post-render checks.
+
+Human replay, continuous GUI recording, complete first/middle/last capture coverage and case packaging remain pending. [Media provenance](../assets/2.5-tutorials/provenance.json) records original captures separately from rendered images.

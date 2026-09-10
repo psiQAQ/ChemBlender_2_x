@@ -106,6 +106,33 @@
       "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
       "interaction": "capture_after_mcp_replay",
       "status": "pending_visual_and_human_review"
+    },
+    {
+      "path": "trajectory-frame15.png",
+      "source_run": "run-004/T06/trajectory-force-frame15.png",
+      "sha256": "97ec29cb3a0206e0e6429e1f15205c3b19c739f84060c220b2cd405631cd5dc8",
+      "kind": "render",
+      "native_format": "png",
+      "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "trajectory-apply-frame.jpg",
+      "source_run": "run-004/T06/gui/gui-0017.jpg",
+      "sha256": "29ec4808f25342834242bbe3808f6735dedaaa75638ea3b8f2fc0101181d7e2b",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "trajectory-smooth.jpg",
+      "source_run": "run-004/T06/gui/gui-0039.jpg",
+      "sha256": "4f963275d3ab73e865f8162cbd6f40891cd55e4448e06cce2aceece743aae6fb",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+      "status": "pending_human_review"
     }
   ]
 }
