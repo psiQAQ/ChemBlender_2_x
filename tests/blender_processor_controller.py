@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 import sys
 import time
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import bpy
 
@@ -74,6 +74,25 @@ with TemporaryDirectory(prefix="processor-native-") as workspace:
         time.sleep(.02)
     assert snapshot.state is processor.ProcessorState.SUCCEEDED, snapshot
     assert snapshot.result["worker_protocol_version"] == "1"
+
+# A completed capability task must redraw Preferences without a second UI action.
+context = SimpleNamespace(area=Mock())
+operator = SimpleNamespace(_task=Mock(), _cleanup=Mock(), report=Mock())
+for terminal in (processor.ProcessorState.SUCCEEDED,
+                 processor.ProcessorState.FAILED,
+                 processor.ProcessorState.CANCELLED):
+    context.area.reset_mock()
+    operator._task.poll.return_value = SimpleNamespace(
+        state=terminal, result=snapshot.result, error=None)
+    result = processor.CHEMBLENDER_OT_test_processor.modal(
+        operator, context, SimpleNamespace(type="TIMER"))
+    assert result == ({"FINISHED"} if terminal is processor.ProcessorState.SUCCEEDED
+                      else {"CANCELLED"})
+    context.area.tag_redraw.assert_called_once_with()
+context.area.reset_mock()
+processor.CHEMBLENDER_OT_test_processor.modal(
+    operator, context, SimpleNamespace(type="ESC"))
+context.area.tag_redraw.assert_called_once_with()
 
 registration.unregister_extension()
 assert all(not cls.is_registered for cls in owned)

@@ -459,6 +459,8 @@ if bpy is not None:
             if event.type == "ESC":
                 self._task.request_cancel()
                 _CAPABILITY_STATE.update(status="Cancelling processor", detail="")
+                if context.area is not None:
+                    context.area.tag_redraw()
                 return {"RUNNING_MODAL"}
             if event.type != "TIMER":
                 return {"PASS_THROUGH"}
@@ -466,6 +468,9 @@ if bpy is not None:
             if snapshot.state not in _TERMINAL_STATES:
                 return {"RUNNING_MODAL"}
             self._cleanup(context)
+            # Timer completion must refresh Preferences without another mouse event.
+            if context.area is not None:
+                context.area.tag_redraw()
             if snapshot.state is ProcessorState.SUCCEEDED:
                 document = snapshot.result
                 available = sum(item["available"] for item in document["operations"])
