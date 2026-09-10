@@ -91,11 +91,23 @@ python "D:\ChemBlenderLessons\T07\recompute_t07_difference.py" --prepare "D:\Too
 4. `derive --operation grid.difference --input LEFT --input RIGHT` 写出 `pair-difference.cbq`。LEFT 为成键密度，RIGHT 为孤立原子密度；脚本从本次 WorkerResult 读取 UUID，不硬编码旧运行的编号。
 5. `validate` 必须成功。将最终 CBQ 导入 Blender，选择 `Difference` / `difference_density` 数据集，再按下节设置正负等值面。
 
-每步保存实际 CLI 参数列表 `*.argv.json`、原始 WorkerResult `*.stdout.json` 和 stderr。命令失败时脚本停止；检查这些文件，修正原因后使用新的输出目录。不要交换相减顺序。[重放检查](../assets/2.5-tutorials/grid-recompute-check.json)验证了全部 262144 个值、独立下载脚本运行以及拒绝覆盖已有结果。这是公开 CLI 重算路线，GUI 派生路线仍未验证。
+每步保存实际 CLI 参数列表 `*.argv.json`、原始 WorkerResult `*.stdout.json` 和 stderr。命令失败时脚本停止；检查这些文件，修正原因后使用新的输出目录。不要交换相减顺序。[重放检查](../assets/2.5-tutorials/grid-recompute-check.json)验证了全部 262144 个值、独立下载脚本运行以及拒绝覆盖已有结果。这是公开 CLI 重算路线，下节已验证差分 GUI。
+
+## 在 Prepare GUI 中执行差分
+
+使用上述重算路线生成的 `pair-both.cbq`，其中必须已有两份 complete 密度。在 Prepare 选择 `derive`，将此 CBQ 设为输入，设置新的输出路径。派生操作填写 `grid.difference`。输入 UUID 一栏先填成键密度 UUID，再填孤立原子密度 UUID，中间以空格分隔；参数保留 `{}`。从自己的 convert/resolve 结果读取 UUID，不要照抄截图编号。点击 `执行`。
+
+![实际兼容网格差分成功](../assets/2.5-tutorials/grid-derive-success.jpg)
+
+GUI 输出 `gui-difference.cbq` 的全部 262144 个值均通过独立比较。在 Blender 选择派生的 `difference_density` 后，使用下节相同的正负显示设置。这里验证了差分 GUI；双数据集的语义赋值仍按 CLI 路线操作。
+
+![实际不兼容网格拒绝提示](../assets/2.5-tutorials/grid-derive-rejected.jpg)
+
+拒绝测试使用明确准备的一次性副本，仅将右侧原点平移 0.1 bohr。Prepare 提示 `density difference requires identical affine grids and coordinate units`，没有生成输出，两份输入包字节均未改变。实际数据遇到此错误时，检查结构身份、原点、步长、形状和单位，不要改标签或强行相减；保留原工程并修正上游输入。参见[GUI 差分及拒绝检查](../assets/2.5-tutorials/grid-gui-difference-check.json)。
 
 ## 正负差分结果与细化
 
-记录中的扩展示例在同一 Structure 和仿射网格上，用成键密度减去两个孤立解析 1s 原子密度之和。[可复现输入生成器](../../../examples/tutorials/2.5.0/generate_t07_density_pair.py)和冻结规格定义了两个数据集。公开 `grid.resolve_semantics` 与 `grid.difference` 处理已通过；下述 CLI 重算步骤已通过，GUI 派生路线仍待补齐。
+记录中的扩展示例在同一 Structure 和仿射网格上，用成键密度减去两个孤立解析 1s 原子密度之和。[可复现输入生成器](../../../examples/tutorials/2.5.0/generate_t07_density_pair.py)和冻结规格定义了两个数据集。公开 `grid.resolve_semantics` 与 `grid.difference` 处理已通过；下述 CLI 重算步骤已通过，上节已验证差分 GUI。
 
 对记录中的差分数据集，选择 `Signed scalar isosurface`，设置 Isovalue 0.005，点击 `Create View`。蓝色表示正重分布，橙色表示负重分布。[差分检查](../assets/2.5-tutorials/grid-difference-check.json)核对了全部 262144 次相减，范围为 -0.0345176831 至 0.0204030833。仅在一次性副本中将右侧网格平移 0.1 bohr 后，处理器因仿射几何不兼容而拒绝，输入不变且没有输出。
 

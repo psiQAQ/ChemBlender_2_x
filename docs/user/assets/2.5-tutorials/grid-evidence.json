@@ -56,6 +56,16 @@
       "path": "grid-prepare-convert.jpg",
       "sha256": "a7d1818ca2460342a29159ece08710e6803a1e812cbb8d9fff69f36bf1e59a58",
       "source": "T07/gui native Computer Use capture"
+    },
+    {
+      "path": "grid-derive-success.jpg",
+      "sha256": "ef7ba11d85fd70646b54c7e51d18fa80e0ab4b93587a100436d140cbd8dd4683",
+      "source": "T07/gui native Computer Use capture"
+    },
+    {
+      "path": "grid-derive-rejected.jpg",
+      "sha256": "db271c68daf859ad4a9d54adaec849129f3696c4de7a20801f616c7795e48856",
+      "source": "T07/gui native Computer Use capture"
     }
   ],
   "human_acceptance": "not_run"

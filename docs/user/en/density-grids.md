@@ -91,11 +91,23 @@ The script verifies the source SHA-256 and performs these public operations in o
 4. `derive --operation grid.difference --input LEFT --input RIGHT` writes `pair-difference.cbq`. LEFT is bonding density; RIGHT is isolated-atom density. The script reads UUIDs from this run's WorkerResult rather than hardcoding prior IDs.
 5. `validate` must succeed. Import the final CBQ into Blender, select the `Difference` / `difference_density` dataset, then follow the signed-surface settings below.
 
-Each step saves the exact CLI argument list (`*.argv.json`) and raw WorkerResult (`*.stdout.json`) plus stderr. A failed command stops the script; inspect those files and use a new output directory after correcting the cause. Do not swap subtraction order. [Replay checks](../assets/2.5-tutorials/grid-recompute-check.json) verified all 262144 values, standalone downloaded scripts and refusal to overwrite an existing result. This is a public CLI recomputation route; a GUI derivation route remains unverified.
+Each step saves the exact CLI argument list (`*.argv.json`) and raw WorkerResult (`*.stdout.json`) plus stderr. A failed command stops the script; inspect those files and use a new output directory after correcting the cause. Do not swap subtraction order. [Replay checks](../assets/2.5-tutorials/grid-recompute-check.json) verified all 262144 values, standalone downloaded scripts and refusal to overwrite an existing result. This is a public CLI recomputation route; the difference GUI is verified below.
+
+## Run the difference in Prepare GUI
+
+Use `pair-both.cbq` from the recomputation route above; both complete densities must already exist. In Prepare choose `derive`, enter this CBQ as input and choose a new output. Set operation `grid.difference`. In the input UUID field, enter the bonding density UUID followed by the isolated-atom density UUID, separated by a space. Keep parameters `{}`. Read UUIDs from your own convert/resolve results; do not copy the screenshot's IDs. Click `执行`.
+
+![Actual compatible difference success](../assets/2.5-tutorials/grid-derive-success.jpg)
+
+The GUI output `gui-difference.cbq` passed independent comparison of all 262144 values. Selecting the derived `difference_density` in Blender uses the same signed display settings below. This verifies the difference GUI, while semantic resolution for the two-dataset input remains documented through CLI.
+
+![Actual incompatible-grid rejection](../assets/2.5-tutorials/grid-derive-rejected.jpg)
+
+The rejection test used an explicitly prepared disposable copy with only the right origin shifted by 0.1 bohr. Prepare reported `density difference requires identical affine grids and coordinate units`. No output was created and both input packages stayed byte-identical. When this occurs in real data, inspect structure identity, origin, steps, shape and units; do not relabel or force a subtraction. Keep the original projects and correct the upstream input. [GUI difference and rejection checks](../assets/2.5-tutorials/grid-gui-difference-check.json).
 
 ## Signed difference result and refinement
 
-The recorded extension example subtracts the sum of two isolated analytic 1s atomic densities from the bonding density, on the same structure and affine grid. The [reproducible input generator](../../../examples/tutorials/2.5.0/generate_t07_density_pair.py) and frozen specification define both datasets. Public `grid.resolve_semantics` and `grid.difference` processing passed, and the CLI recomputation sequence below passed; its GUI derivation route remains pending.
+The recorded extension example subtracts the sum of two isolated analytic 1s atomic densities from the bonding density, on the same structure and affine grid. The [reproducible input generator](../../../examples/tutorials/2.5.0/generate_t07_density_pair.py) and frozen specification define both datasets. Public `grid.resolve_semantics` and `grid.difference` processing passed, and the CLI recomputation sequence below passed; its difference GUI is verified above.
 
 For the recorded difference dataset, choose `Signed scalar isosurface`, set Isovalue 0.005 and click `Create View`. Blue marks positive redistribution, orange negative. The [difference check](../assets/2.5-tutorials/grid-difference-check.json) verifies all 262144 subtractions, with range -0.0345176831 to 0.0204030833. A disposable right grid shifted by 0.1 bohr was rejected for incompatible affine geometry without changing inputs or writing an output.
 

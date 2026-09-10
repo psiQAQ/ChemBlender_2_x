@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "all_262144_values_error": 0.0,
+  "compatible_gui": "gui-0076",
+  "incompatible_gui": "gui-0079",
+  "incompatible_output_absent": true,
+  "both_input_packages_unchanged": true,
+  "unit": "electron_per_cubic_bohr",
+  "minimum": -0.034517683074599986,
+  "maximum": 0.020403083258500015,
+  "human_review": "not_run"
+}
