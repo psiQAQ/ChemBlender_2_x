@@ -76,11 +76,11 @@
       "case_id": "T06",
       "priority": "P0",
       "status": "in_progress",
-      "status_reason": "Spec frozen before conversion. Standard inspect/convert/validate passed. Independent comparison of all 32x21 coordinates/forces and frame energy/step/source_index gives zero error. source_index unknown/ambiguous retained. GUI/playback/render/recovery not run.",
+      "status_reason": "Full32-frame science, actual trajectory/force Create/Apply/Play/Pause, smooth render,32 audited PNGs and H264 video passed. Original/moved cold reopen passed with unchanged arrays and smooth modifier retained. Derived geometry rebuild and subsequent cold reopen passed; custom smoothing must be reapplied. Prepare GUI, dedicated first/last captures, continuous recording, case packaging and human review pending.",
       "human_review": "not_run",
       "run": "run-004/T06",
       "scientific_processing": "passed",
-      "gui": "not_run"
+      "gui": "partial"
     },
     {
       "case_id": "T07",

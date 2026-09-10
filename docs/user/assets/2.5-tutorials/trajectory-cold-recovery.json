@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "interaction": "native_process_replay",
+  "checks": [
+    {
+      "status": "passed",
+      "pid": 52424,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\T06\\aspirin-trajectory.blend",
+      "source_frame": 15,
+      "coordinate_error": 1.1842041036658202e-07,
+      "scaled_force_error": 5.515591516846996e-08,
+      "smooth_ignore_sharpness": true,
+      "view_count": 2,
+      "scientific_playback_after_load": false
+    },
+    {
+      "status": "passed",
+      "pid": 37856,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\portable\\T06\\aspirin-trajectory.blend",
+      "source_frame": 15,
+      "coordinate_error": 1.1842041036658202e-07,
+      "scaled_force_error": 5.515591516846996e-08,
+      "smooth_ignore_sharpness": true,
+      "view_count": 2,
+      "scientific_playback_after_load": false
+    }
+  ],
+  "scientific_hashes_unchanged": true,
+  "cache_rebuild": "not_run",
+  "human_review": "not_run"
+}

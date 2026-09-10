@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "interaction": "native_process_replay",
+  "checks": [
+    {
+      "status": "passed",
+      "interaction": "native_public_operator_replay",
+      "pid": 45136,
+      "removed_derived_geometry": [
+        {
+          "object": "ChemBlender Structure.001",
+          "vertices": 21
+        }
+      ],
+      "source_frame": 15,
+      "coordinate_error": 1.1842041036658202e-07,
+      "scaled_force_error": 5.515591516846996e-08,
+      "atoms": 21,
+      "view_identity_retained": true,
+      "scientific_arrays_unchanged": true,
+      "smooth_modifier_after_rebuild": [],
+      "cosmetic_boundary": "Rebuild replaces derived objects; reapply custom subdivision/material refinement after rebuilding",
+      "gui": "not_run"
+    }
+  ],
+  "scientific_hashes_unchanged": true,
+  "cache_rebuild": "passed",
+  "human_review": "not_run",
+  "after_rebuild_cold": {
+    "status": "passed",
+    "pid": 43368,
+    "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-004\\portable\\T06-rebuild\\aspirin-trajectory.blend",
+    "source_frame": 15,
+    "coordinate_error": 1.1842041036658202e-07,
+    "scaled_force_error": 5.515591516846996e-08,
+    "custom_smooth_modifier_restored": false,
+    "view_count": 2,
+    "scientific_playback_after_load": false
+  }
+}

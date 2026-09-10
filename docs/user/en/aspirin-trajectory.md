@@ -1,6 +1,6 @@
 # T06: aspirin trajectory and same-frame forces
 
-This is a working draft. Input conversion, all-frame scientific comparisons, actual Create View / Apply Frame / Play / Pause operations and a static render have evidence. The complete animation, continuous screen recording, paired cold recovery and independent human replay are still pending.
+This is a working draft. Input conversion, all-frame scientific comparisons, actual Create View / Apply Frame / Play / Pause operations and a static render have evidence. The 32-frame PNG sequence, H.264 encoding, original/moved cold reopening and derived-geometry rebuilding also passed. Continuous screen recording, remaining GUI coverage and independent human replay are pending.
 
 ![Aspirin source frame 15 with scaled force arrows](../assets/2.5-tutorials/trajectory-frame15.png)
 
@@ -70,14 +70,16 @@ Scroll within the sidebar until `Play` and `Pause` appear below `Apply Frame`. K
 
 4. The recorded camera is orthographic at `(0, -16, 11)`, aimed at the origin, Orthographic Scale `11`. Point Light is at `(0, -8, 9)`, Power `6500`, Radius `3`; World Background linear RGB is `(0.18, 0.18, 0.18)`, Strength `1`. These composition values were set through MCP replay; full manual panel instructions are still pending.
 5. Use Cycles, CPU, 256 samples, denoising and output `2400×1800`, 100%, PNG. Render source frame 15 and save the PNG separately. Keep the `.blend` and same-name `.cbq` directory together.
-6. For the animation route under validation, retain the scientific playback driver while stopping viewport playback, set the scene range to 1–32 and render into a new PNG directory with `Ctrl+F12`. The actual shortcut was tested. Final frame-sequence and video acceptance are pending; do not treat this paragraph as a completed delivery route yet.
+6. For the recorded animation route, retain the scientific playback driver while stopping viewport playback, set the scene range to 1–32 and render into a new PNG directory with `Ctrl+F12`. The actual shortcut was tested. All 32 completed PNGs passed decoding and post-render same-frame checks. A separate Blender VSE assembly encoded them as H.264/MPEG4 at 2400×1800 and 24 fps, with 32 video samples and duration 1.333333 seconds. Actual offline browser playback reached the end. The assembly used native API replay; the complete manual assembly/driver-retention GUI route remains pending.
 
 Rebuild or Update can replace display objects. Reapply custom subdivision and Smooth by Angle after such replacement; inspect the modifier list before rendering. More display polygons or smoother normals do not add new scientific samples.
 
 ## Handover and recovery boundaries
 
-The working pair is `aspirin-trajectory.blend` plus the complete `aspirin-trajectory.cbq` directory. Retain the static PNG and future full PNG sequence separately. Original/moved cold reopening, cache rebuilding and offline reconstruction for this case still need execution. Do not delete authoritative `.npy` arrays as a display-cache repair.
+The working pair is `aspirin-trajectory.blend` plus the complete `aspirin-trajectory.cbq` directory. Retain the static PNG and future full PNG sequence separately. Original and relocated-copy cold reopening passed, retaining source frame 15, both Views, force scaling and Smooth by Angle with Ignore Sharpness. Scientific playback is disabled after loading; explicitly start it again before playing. On a separate copy, clearing the force View mesh then using the public REBUILD Operator restored the same-frame coordinates and force without changing scientific arrays; another cold reopen passed. Custom Smooth by Angle was absent after rebuilding, so reapply cosmetic refinement. These checks do not establish source/processor-unavailable offline reconstruction. Do not delete authoritative `.npy` arrays as a display-cache repair.
 
 One animation attempt was cancelled while diagnosing a pre-render audit mismatch. A two-frame test showed that `render_pre` runs before source-frame updating; `render_post` matched the right frame, and animation frame 2 matched an explicit same-frame static render pixel-for-pixel. That was an evidence-timing issue, not a demonstrated product wrong-frame defect. Final acceptance must inspect completed frames and post-render checks.
+
+See the [32-frame audit](../assets/2.5-tutorials/trajectory-animation-check.json), [video integrity record](../assets/2.5-tutorials/trajectory-video-check.json), [original/moved cold record](../assets/2.5-tutorials/trajectory-cold-recovery.json) and [display rebuild record](../assets/2.5-tutorials/trajectory-cache-recovery.json). Large frame sequences, MP4 and paired projects remain in the local case artifact directory, outside the Extension ZIP.
 
 Human replay, continuous GUI recording, complete first/middle/last capture coverage and case packaging remain pending. [Media provenance](../assets/2.5-tutorials/provenance.json) records original captures separately from rendered images.

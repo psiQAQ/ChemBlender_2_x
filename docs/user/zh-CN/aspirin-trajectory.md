@@ -1,6 +1,6 @@
 # T06：阿司匹林轨迹与同帧原子力
 
-本课为执行中草稿。输入转换、全帧科学对照、实际 Create View／Apply Frame／Play／Pause 操作及静态渲染已有证据。完整动画、连续录屏、配对工程冷重开和人工独立复做仍待完成。
+本课为执行中草稿。输入转换、全帧科学对照、实际 Create View／Apply Frame／Play／Pause 操作及静态渲染已有证据。32 帧 PNG 序列、H.264 编码、原位／移动后冷重开及派生几何重建也已通过。连续录屏、剩余 GUI 留证和人工独立复做仍待完成。
 
 ![源帧 15 的阿司匹林与缩放力箭头](../assets/2.5-tutorials/trajectory-frame15.png)
 
@@ -70,14 +70,16 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T06\aspirin-trajectory.cbq" 
 
 4. 实测相机为正交相机，位置 `(0, -16, 11)`，朝向原点，Orthographic Scale 为 `11`。Point Light 位置 `(0, -8, 9)`，Power `6500`，Radius `3`；World Background 线性 RGB 为 `(0.18, 0.18, 0.18)`，Strength `1`。这些构图参数通过 MCP 重放设置，完整手动面板说明仍待验证。
 5. 使用 Cycles、CPU、256 samples、降噪，输出 `2400×1800`、100%、PNG。渲染源帧 15 并单独保存 PNG；同时保留 `.blend` 与完整同名 `.cbq` 目录。
-6. 正在验证的动画路线会在停止视口播放后保留科学播放驱动，将场景范围设为 1–32，再用 `Ctrl+F12` 渲染到新的 PNG 目录。该快捷键已实际尝试。最终帧序列与视频验收待完成，此段还不是已完成的交付路线。
+6. 本次记录的动画路线会在停止视口播放后保留科学播放驱动，将场景范围设为 1–32，再用 `Ctrl+F12` 渲染到新的 PNG 目录。该快捷键已实际尝试。全部 32 张完成的 PNG 均通过解码及渲染后同帧检查。独立 Blender VSE 装配将它们编码为 H.264/MPEG4，尺寸 2400×1800、24 fps、32 个视频样本、时长 1.333333 秒；实际断网浏览播放到末尾。装配使用原生 API 重放，完整手动装配及保留驱动的 GUI 路线仍待验证。
 
 Rebuild 或 Update 可能替换显示对象，替换后需重新设置自定义细分及 Smooth by Angle，渲染前检查修改器列表。更多显示多边形或更平滑的法线不会增加科学采样点。
 
 ## 工程交接与恢复边界
 
-工作工程是 `aspirin-trajectory.blend` 加完整 `aspirin-trajectory.cbq` 目录。另行保留静态 PNG 及后续完整 PNG 序列。本案例的原位／移动后冷重开、缓存重建和离线重建仍待执行。不要把权威 `.npy` 数组当作显示缓存删除。
+工作工程是 `aspirin-trajectory.blend` 加完整 `aspirin-trajectory.cbq` 目录。另行保留静态 PNG 及后续完整 PNG 序列。原工程与移动副本冷重开通过，源帧 15、两个 View、力比例及启用 Ignore Sharpness 的 Smooth by Angle 均保留。加载后科学播放关闭，需要显式重新启动播放。在另一个副本中清空力 View 网格后，公开 REBUILD Operator 恢复了同帧坐标与力，科学数组未变；再次冷重开也通过。重建后自定义 Smooth by Angle 不再存在，需重新设置外观细化。这些检查尚不能证明源文件／处理器不可用时的离线重建。不要把权威 `.npy` 数组当作显示缓存删除。
 
 一次动画尝试因渲染前审计错位而取消。两帧对照证明 `render_pre` 早于源帧更新，`render_post` 对应正确源帧；动画第 2 帧与显式设置同源帧的静态渲染逐像素一致。这是证据采集时机问题，并未证明产品输出错帧。最终验收必须检查完成的图像和渲染后审计。
+
+可查看 [32 帧审计](../assets/2.5-tutorials/trajectory-animation-check.json)、[视频完整性记录](../assets/2.5-tutorials/trajectory-video-check.json)、[原位／移动后冷重开](../assets/2.5-tutorials/trajectory-cold-recovery.json)及[显示重建记录](../assets/2.5-tutorials/trajectory-cache-recovery.json)。大型帧序列、MP4 和配对工程保存在本地案例产物目录，不进入 Extension ZIP。
 
 人工复做、连续 GUI 录屏、完整首／中／末帧截图及案例打包仍待完成。[媒体来源](../assets/2.5-tutorials/provenance.json)分别记录原始截图和渲染图。

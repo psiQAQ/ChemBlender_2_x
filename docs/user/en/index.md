@@ -11,7 +11,7 @@ ChemBlender is a CBQ Viewer. Prepare raw chemistry and simulation files outside 
 - [First lesson: aspirin with actual GUI captures](first-aspirin.md) — Agent run completed; human replay pending.
 - [T02: ethanol conformers, MMFF94 and mesh Apply](ethanol-conformers.md) — actual GUI and science checks; human replay pending.
 - [T04: crystal cells, occupancy and diamond](crystal-cells.md) — draft; science/recovery passed, GUI and human review pending.
-- [T06: aspirin trajectory and same-frame forces](aspirin-trajectory.md) — working draft; animation and recovery pending.
+- [T06: aspirin trajectory and same-frame forces](aspirin-trajectory.md) — working draft; animation/recovery passed, human replay pending.
 - [Capabilities and project lifecycle](capabilities-and-projects.md)
 - [Errors and recovery](troubleshooting.md)
 - [Release status and limitations](release-status.md)

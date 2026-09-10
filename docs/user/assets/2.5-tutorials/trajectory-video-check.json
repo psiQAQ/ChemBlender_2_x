@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "sample_counts": [
+    32
+  ],
+  "sha256": "32c1d505bdb7451ec2909d497d32edfac9003ce03e859578c394fdb9b9a2264f",
+  "bytes": 624711,
+  "browser_playback": "../video-qa/report.json",
+  "physical_dt": null
+}
