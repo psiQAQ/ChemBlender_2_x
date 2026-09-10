@@ -1,0 +1,129 @@
+{
+  "status": "passed_scoped_scientific_recovery",
+  "interaction": "native_public_operator_replay",
+  "checks": [
+    {
+      "status": "passed",
+      "stage": "rebuild",
+      "pid": 39096,
+      "environment": {
+        "version": "5.1.1",
+        "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+        "runtime": "win32",
+        "repositories": [
+          [
+            "extensions.blender.org",
+            "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+          ],
+          [
+            "User Default",
+            "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+          ],
+          [
+            "System",
+            "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+          ],
+          [
+            "Existing local MCP (read only)",
+            "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+          ]
+        ]
+      },
+      "source_frame": 15,
+      "view_id": "10afcca3-44a9-4a32-ad4b-56ea868628ec",
+      "view_count": 2,
+      "coordinate_error": 1.1842041036658202e-07,
+      "scaled_force_error": 5.515591516846996e-08,
+      "scientific_arrays_unchanged": true,
+      "local_array_path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T06-rebuild\\trajectory-refined.cbq\\arrays\\2fdff7b81305d6b6a5d4d199ccf158dd3b9d1ee4f336f73d82c5de76fa38dfa6.npy",
+      "smooth_nodes_after_rebuild": [],
+      "cosmetic_boundary": "Reapply custom appearance after rebuilding derived geometry",
+      "gui": "not_run",
+      "human_acceptance": "not_run",
+      "source_frame_immediately_after_rebuild": 0,
+      "preview_recovery": "LOAD then explicit FRAME 15 before save; REBUILD uses saved View parameters"
+    },
+    {
+      "status": "passed",
+      "stage": "cold_reopen",
+      "pid": 25044,
+      "environment": {
+        "version": "5.1.1",
+        "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+        "runtime": "win32",
+        "repositories": [
+          [
+            "extensions.blender.org",
+            "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+          ],
+          [
+            "User Default",
+            "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+          ],
+          [
+            "System",
+            "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+          ],
+          [
+            "Existing local MCP (read only)",
+            "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+          ]
+        ]
+      },
+      "source_frame": 15,
+      "view_id": "10afcca3-44a9-4a32-ad4b-56ea868628ec",
+      "view_count": 2,
+      "coordinate_error": 1.1842041036658202e-07,
+      "scaled_force_error": 5.515591516846996e-08,
+      "scientific_arrays_unchanged": true,
+      "local_array_path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T06-rebuild\\trajectory-refined.cbq\\arrays\\2fdff7b81305d6b6a5d4d199ccf158dd3b9d1ee4f336f73d82c5de76fa38dfa6.npy",
+      "smooth_nodes_after_rebuild": [],
+      "cosmetic_boundary": "Reapply custom appearance after rebuilding derived geometry",
+      "gui": "not_run",
+      "human_acceptance": "not_run"
+    }
+  ],
+  "original_pair_unchanged": true,
+  "initial_failure": "Audit assumed REBUILD preserves transient preview frame15; actual saved recipe frame0 restored. Both frame0 and explicit FRAME15 checked; failure log retained.",
+  "cosmetic_result": "Custom smooth nodes removed by REBUILD; reapply before presentation",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/portable/T06-rebuild/rebuild-check.json",
+      "sha256": "49a9e9165e05511ef555e5ff0d2f5402f15720eff91059e1449e53c180542722"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/portable/T06-rebuild/rebuilt-cold-check.json",
+      "sha256": "5a11add5f0e0396a52f6dcc42e1cb34489e386571de89d6d3770ca669c7ab420"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/portable/T06-rebuild/rebuild-first-failure.log",
+      "sha256": "d773784b64c5b1b63b07cb2a99489c78cc22fd61079e9ffa61844c221c02ba20"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/portable/T06-rebuild/rebuild.log",
+      "sha256": "b5fc6499ada278ccdb972b7ad91250b4300a0556614e4cb3674e19bd244e9483"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/portable/T06-rebuild/cold.log",
+      "sha256": "a3b8e9b3c8130b6fe5234bc29ee30c6492414b766a9d93b6febc0709b5002d84"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/rebuild_native.py",
+      "sha256": "a37ef97ebb53ba7df6d0c376075ac975d4b7bde7956717ad5e8dd1c921e3cd55"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/run_rebuild.py",
+      "sha256": "bb6f2d47114cd4332070f91092632fd20f815a1032151da990268c58ec41e511"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/resume_rebuild.py",
+      "sha256": "b6c33ea25c56e6154dfc4aea8d89431c66771e1f8a1a6e84fd3583cb65c9ee2e"
+    }
+  ],
+  "gui": "not_run",
+  "human_acceptance": "not_run"
+}
