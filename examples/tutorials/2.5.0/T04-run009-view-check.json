@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "interaction": "public_operator_replay",
+  "pid": 34204,
+  "structure_id": "3561a84e-0d51-5e77-bc53-7eacee58084e",
+  "atoms": 64,
+  "scientific_coordinates_unchanged": true,
+  "display_coordinate_error": 9.508496106036546e-07,
+  "display_precision_note": "Blender mesh float32, separate from unchanged scientific arrays and case source-coordinate tolerance",
+  "cell_edges": 12,
+  "display_subdivision": 2,
+  "array": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T04\\cocrystal-view.cbq\\arrays\\37ba5887aace0ba7526581e330ca8db833f9c6c35b33ad114a1d4c93f7ee9890.npy",
+  "blend": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T04\\cocrystal-view.blend",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "gui_capture": "not_run",
+  "render": "not_run",
+  "cold_reopen": "not_run",
+  "human_review": "not_run"
+}
