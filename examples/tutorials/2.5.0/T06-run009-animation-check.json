@@ -1,0 +1,678 @@
+{
+  "status": "passed_scoped_animation_checks",
+  "interaction": "native public FRAME/render replay and headless Edge CDP playback",
+  "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "sequence": {
+    "status": "passed",
+    "interaction": "native public FRAME and render operator sequence",
+    "environment": {
+      "pid": 66320,
+      "version": "5.1.1",
+      "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+      "runtime": "win32",
+      "repositories": [
+        [
+          "extensions.blender.org",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+        ],
+        [
+          "User Default",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+        ],
+        [
+          "System",
+          "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+        ],
+        [
+          "Existing local MCP (read only)",
+          "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+        ]
+      ]
+    },
+    "frames": [
+      {
+        "source_frame": 0,
+        "image": "0001.png",
+        "sha256": "70b1c986086243f47751370bf12a3bf60d8a476c7a50375f2f048acab7ccecf8",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1420776369064356e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1420776369064356e-07,
+            "scaled_force_error": 4.4882402017165646e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 1,
+        "image": "0002.png",
+        "sha256": "2034b06d78a43013aebc4c396fe912bd9c90350790436b2f38b3a212fe23a2b0",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.5812988252150717e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.5812988252150717e-07,
+            "scaled_force_error": 5.2125557870041916e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 2,
+        "image": "0003.png",
+        "sha256": "ca341cfb38b69695d6ba1c356c1ea8a567a7088676e15436b99f0d83f11ebfa3",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.162738039184319e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.162738039184319e-07,
+            "scaled_force_error": 4.666038178058329e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 3,
+        "image": "0004.png",
+        "sha256": "776ebbe0229eaa4b94859c07907e6ddeee9b4085d69b8b32aee9a1e641ee43fb",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.16406249972556e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.16406249972556e-07,
+            "scaled_force_error": 4.3952064876506824e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 4,
+        "image": "0005.png",
+        "sha256": "b0c738625777bd0b24b5c08da9382f06dfbf0de67cb877e7a1d7be05ad73dbb1",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1525939935808083e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1525939935808083e-07,
+            "scaled_force_error": 2.9165795667474015e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 5,
+        "image": "0006.png",
+        "sha256": "39271a7a74d18af30e3496c8ed25146b37d15695d380a9409c8b2ce9bce89eb3",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.8341430685353544e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.8341430685353544e-07,
+            "scaled_force_error": 4.1965669161925234e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 6,
+        "image": "0007.png",
+        "sha256": "beddb7a9b02a2fea0a1abc949a17fdd8c33b84b87d6a624cdcfb21b890c462d3",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1804199218090616e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1804199218090616e-07,
+            "scaled_force_error": 4.787548313345269e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 7,
+        "image": "0008.png",
+        "sha256": "6c761aa44e64df356943d5a3f14046ab5f5efe16d8a96330fb443bcd018e9976",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 2.1038330100253688e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 2.1038330100253688e-07,
+            "scaled_force_error": 5.943458880608432e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 8,
+        "image": "0009.png",
+        "sha256": "829c80a788ff77c1f2e65423fca265398e96db603d78325ccc3ec6b8a47f9f21",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1752258322061948e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1752258322061948e-07,
+            "scaled_force_error": 4.8421276765964194e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 9,
+        "image": "0010.png",
+        "sha256": "4f84baa143e03278fab70d95d5690feca145a36f63a4bff4862197c4cc7bc276",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1576171887739406e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1576171887739406e-07,
+            "scaled_force_error": 2.7290252169187568e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 10,
+        "image": "0011.png",
+        "sha256": "6da30acca363a7fbf2fabd5214041e9542c780f1185954c8f9f5c1d917e12223",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1352722184554409e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1352722184554409e-07,
+            "scaled_force_error": 4.8760992577001616e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 11,
+        "image": "0012.png",
+        "sha256": "7dfef8d75bf2add1850c7827f9f0cf0f0fd492c05b90a699b5acc25deb1b0dc3",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1858520521101923e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1858520521101923e-07,
+            "scaled_force_error": 3.6906771416767015e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 12,
+        "image": "0013.png",
+        "sha256": "3da611208bd2412446586ab922c5d797b6ce57ab0c2eac88109e2fc25598435c",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 9.850585946935553e-08,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 9.850585946935553e-08,
+            "scaled_force_error": 4.904339245825895e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 13,
+        "image": "0014.png",
+        "sha256": "452621df669fdefe7dd67f8d6bc324ac499421654b98c8f96069d908ebc1eb21",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.0954284679343118e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.0954284679343118e-07,
+            "scaled_force_error": 2.9475764828923445e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 14,
+        "image": "0015.png",
+        "sha256": "7859cf866fafb4e7a9389e198e17aae56c44f10b076856a21f56e44daf7a44ad",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1638244634681882e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1638244634681882e-07,
+            "scaled_force_error": 4.672466680233356e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 15,
+        "image": "0016.png",
+        "sha256": "d3cae13cfb8514ba8e3cd33e4e30bf669a71f09b647e46ed14c49c76468d620c",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1842041036658202e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1842041036658202e-07,
+            "scaled_force_error": 5.515591516846996e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 16,
+        "image": "0017.png",
+        "sha256": "64986f927562ae73a45e9b2adbb05f9346d08eeaa8306c6adc4d4e776916b8dc",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 2.1257812488073569e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 2.1257812488073569e-07,
+            "scaled_force_error": 4.0744138507520233e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 17,
+        "image": "0018.png",
+        "sha256": "16c5a1c38a420b8f08a00407b0c185d3b4baaa1f2c751ec6a97703d80ecddcf0",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 9.13922120204802e-08,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 9.13922120204802e-08,
+            "scaled_force_error": 2.5876280895786863e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 18,
+        "image": "0019.png",
+        "sha256": "327117cd15d4ab799a0d7d060a63ed7e862c807cfe79c41a928999dfad140784",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.8958984338013352e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.8958984338013352e-07,
+            "scaled_force_error": 2.8119478079347004e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 19,
+        "image": "0020.png",
+        "sha256": "cd3aba981da6bf80ba83f7eb9efeef7e9bdd2d2fd5ec7b55989cd8865b00559c",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1187133797108118e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1187133797108118e-07,
+            "scaled_force_error": 5.8115067202990645e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 20,
+        "image": "0021.png",
+        "sha256": "24bb22df822d0c011c11cd77aeccdd5c7f09ccd0fcd42e0e35a72a73591070b5",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.7609619096248252e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.7609619096248252e-07,
+            "scaled_force_error": 3.2289082296799165e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 21,
+        "image": "0022.png",
+        "sha256": "4a7e2a34b49e89b63449dd4e419f16446458ae533973369434e9072e45f5bf41",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 2.1708984387913688e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 2.1708984387913688e-07,
+            "scaled_force_error": 5.9439746236122915e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 22,
+        "image": "0023.png",
+        "sha256": "b41e85f50d48169329b1fdbb3b8a32fdd4179aaaa408248706c5902b172e0a06",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1916625997088204e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1916625997088204e-07,
+            "scaled_force_error": 4.745843340536737e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 23,
+        "image": "0024.png",
+        "sha256": "3d919fa9289f7e5cfd24f0b775e47d4a229499928dd93a38fb7bc9415c7c1387",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1724487292141816e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1724487292141816e-07,
+            "scaled_force_error": 3.9922301464656584e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 24,
+        "image": "0025.png",
+        "sha256": "bf880d84fe7ca72400213d1f26d750d4c9f9478934692637b96448c78306a33f",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1865966786928084e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1865966786928084e-07,
+            "scaled_force_error": 2.9544813595627772e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 25,
+        "image": "0026.png",
+        "sha256": "3ab25e484a8a03ca68887a3d4ee9772390c7f56b2b5a2d678ee82da93f4f92c9",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1342346173393025e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1342346173393025e-07,
+            "scaled_force_error": 2.8256688655581286e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 26,
+        "image": "0027.png",
+        "sha256": "b9ea821377174bd766db93e9c1bac74cd1ad9cd09dc97a78e52124c7dc2666d5",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.6610717779030892e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.6610717779030892e-07,
+            "scaled_force_error": 3.745508769803507e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 27,
+        "image": "0028.png",
+        "sha256": "a20b96ebbdf0a398bb06bae0ba0548881372d3dfbc29c56db69bf159dba99b09",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.3734863291148258e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.3734863291148258e-07,
+            "scaled_force_error": 5.8469244779146834e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 28,
+        "image": "0029.png",
+        "sha256": "149e2388e76f4f550511fdf63f6d0a6ec1c8eddf0a9ae412c745fd0c930846ce",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1735473615104297e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1735473615104297e-07,
+            "scaled_force_error": 3.551217409025753e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 29,
+        "image": "0030.png",
+        "sha256": "6701db2406cb5bd674d7e4477a893e7abb2682f421ccac19cfaa97502b451b44",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1794982901491835e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1794982901491835e-07,
+            "scaled_force_error": 3.492313438435701e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 30,
+        "image": "0031.png",
+        "sha256": "52bc4bd21605b31159a6191a0af36ceb5547840a3153690ce74e5a3c1a82ea92",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.1020690937613153e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.1020690937613153e-07,
+            "scaled_force_error": 2.8214518055236226e-08
+          }
+        ]
+      },
+      {
+        "source_frame": 31,
+        "image": "0032.png",
+        "sha256": "131f49783efd5a95ff38629a5a407a718933010a157ffe038ea01cce2dd49b31",
+        "checks": [
+          {
+            "view": "trajectory",
+            "coordinate_error": 1.733166508088857e-07,
+            "scaled_force_error": null
+          },
+          {
+            "view": "trajectory_force",
+            "coordinate_error": 1.733166508088857e-07,
+            "scaled_force_error": 4.663722097397738e-08
+          }
+        ]
+      }
+    ],
+    "fps": 24,
+    "physical_dt": null,
+    "resolution": [
+      2400,
+      1800
+    ],
+    "samples": 256,
+    "scientific_arrays_unchanged": true,
+    "gui_playback": "not_run",
+    "video": "not_run",
+    "human_review": "not_run"
+  },
+  "video": {
+    "status": "passed_encoding",
+    "frames": 32,
+    "fps": 24,
+    "physical_dt": null,
+    "resolution": [
+      2400,
+      1800
+    ],
+    "codec": "H264",
+    "container": "MPEG4",
+    "color_transform": "Standard, no second AgX transform",
+    "sha256": "8a6cc0e32143e32e61bcb95d79373e1fb63264eb1f2d19ba66d6c032e7f539f0",
+    "bytes": 501973,
+    "playback_verification": "not_run",
+    "interaction": "native Blender sequence assembly; previous assembly template reused",
+    "human_review": "not_run"
+  },
+  "browser_playback": [
+    {
+      "status": "passed",
+      "network_offline": true,
+      "play_to_end": true,
+      "width": 2400,
+      "height": 1800,
+      "duration": 1.333333,
+      "error": null
+    }
+  ],
+  "visual_review": "Source frame 0 and encoded source frame 15 inspected: smooth atom surfaces and force arrows visible; some 3D occlusion remains. Not a full human review.",
+  "offline_scope": "CDP network emulation; not operating-system firewall",
+  "gui_timeline_playback": "not_run_new_candidate",
+  "human_acceptance": "not_run",
+  "delivery": "review_only; sequence assembly uses local absolute frame directory, portability not yet tested",
+  "artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/sequence-check.json",
+      "sha256": "d8cc9757d7130caa7794f6d39a9ce8bcd5be08817728c389e44b2ae8a89e7606",
+      "bytes": 17376
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/render_sequence.py",
+      "sha256": "4c2793d8dea8779d40bb7373dea5071007e229821cf07a1a1fde4294f28d69bb",
+      "bytes": 3686
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/sequence-render.log",
+      "sha256": "e615d460c5e395274e41b99992d212efe66e0bf879e63e59720aa06fab338dc5",
+      "bytes": 5687
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/assemble_video.py",
+      "sha256": "eefa845cc2ead584ea79cd22748803500a3518e987af8898d988f14199c3cfff",
+      "bytes": 1948
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/video-check.json",
+      "sha256": "edb25312daf6206e8acf2b1df1671c2745f46a259c5f1b8b13874142f5eebf33",
+      "bytes": 499
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/video-refined.blend",
+      "sha256": "bb10b871c29e4cf486350bbe173c3a4fb6ed8a6d297535c96c1bb1c69e5a53fe",
+      "bytes": 94776
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06/trajectory-refined.mp4",
+      "sha256": "8a6cc0e32143e32e61bcb95d79373e1fb63264eb1f2d19ba66d6c032e7f539f0",
+      "bytes": 501973
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/video-browser-qa.mjs",
+      "sha256": "1aba652ad385466e963afe8acebcd9d1fd0b8344c2306c11d37c1d33232d6e0e",
+      "bytes": 4114
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/video-qa/report.json",
+      "sha256": "9f40feddfceab9934fbb701d22dfb07cefbb96da25d17b7b2cb2cbdd36b790f0",
+      "bytes": 172
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/video-qa/video-frame15.png",
+      "sha256": "360efe0132e43df83631949b760e1263044de1c068707a87f135004260fc49c9",
+      "bytes": 171074
+    }
+  ]
+}
