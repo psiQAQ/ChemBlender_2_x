@@ -184,5 +184,32 @@
     "No physical resolution gain from surface tessellation or interpolation; recomputed grid must have distinct provenance",
     "Existing input notes describe legacy Quick Import; use current CBQ route",
     "Positive scalar density alone does not verify negative-phase behavior; pending signed variant remains required"
-  ]
+  ],
+  "density_pair_variant": {
+    "generator": "examples/tutorials/2.5.0/generate_t07_density_pair.py",
+    "generated_basename": "h2-density-pair.cube",
+    "sha256": "8902b35f01edee818cd794793c152c7bfc766b8d0d08cb794077c9e0deef3b7c",
+    "license": "GPL-3.0",
+    "kind": "analytic_teaching_model",
+    "shape": [
+      64,
+      64,
+      64
+    ],
+    "dataset_ids": [
+      1,
+      2
+    ],
+    "left_index": 0,
+    "right_index": 1,
+    "left": "Existing normalized bonding LCAO density serialized in primary input",
+    "right": "sum(exp(-2*r_A)/pi, exp(-2*r_B)/pi), centers z=-0.7,+0.7 bohr on serialized primary grid",
+    "difference": "left minus right, same Structure ID and affine grid; not orbital amplitude",
+    "minimum": -0.034517683074599986,
+    "maximum": 0.020403083258500015,
+    "positive_samples": 138360,
+    "negative_samples": 123784,
+    "absolute_tolerance": 1e-12,
+    "affine_rejection": "On a disposable copy only, alter right origin x by0.1bohr retaining structure and units; reject without output or input change"
+  }
 }
