@@ -1,0 +1,173 @@
+{
+  "status": "passed_scoped_cube_conversion_and_view",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "science": {
+    "status": "passed",
+    "input_sha256": "51fcb06343132c4b75f340aa5824434c9c622b51df7ea1ad3742920c78af66b4",
+    "grid_checks": [
+      {
+        "role": "scalar_field",
+        "unit": "unknown",
+        "status": "ambiguous",
+        "all_values_error": 0.0
+      },
+      {
+        "role": "electron_density",
+        "unit": "electron_per_cubic_bohr",
+        "status": "complete",
+        "all_values_error": 0.0
+      }
+    ],
+    "interaction": "public_cli_replay",
+    "explicit_dataset_index": "blank for single-dataset source",
+    "human_review": "not_run"
+  },
+  "view": {
+    "status": "passed",
+    "runtime": {
+      "version": "5.1.1",
+      "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "pid": 12016,
+      "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python\\bin\\python.exe",
+      "repos": [
+        {
+          "name": "extensions.blender.org",
+          "path": "D:\\workspace\\ChemBlender_2_x/.blend-analysis/2.5-real-user-tutorials/run-001/profile/extensions\\blender_org"
+        },
+        {
+          "name": "User Default",
+          "path": "D:\\workspace\\ChemBlender_2_x/.blend-analysis/2.5-real-user-tutorials/run-001/profile/extensions\\user_default"
+        },
+        {
+          "name": "System",
+          "path": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+        },
+        {
+          "name": "Existing local MCP (read only)",
+          "path": "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+        }
+      ],
+      "enabled": [
+        "io_anim_bvh",
+        "io_curve_svg",
+        "io_mesh_uv_layout",
+        "io_scene_fbx",
+        "io_scene_gltf2",
+        "cycles",
+        "pose_library",
+        "bl_pkg",
+        "bl_ext.user_default.chemblender",
+        "bl_ext.tutorial_mcp.mcp"
+      ]
+    },
+    "interaction": "known_public_operator_replay",
+    "affine_checks": [
+      {
+        "index": [
+          0,
+          0,
+          0
+        ],
+        "error": 0.0
+      },
+      {
+        "index": [
+          1,
+          0,
+          0
+        ],
+        "error": 0.0
+      },
+      {
+        "index": [
+          0,
+          1,
+          0
+        ],
+        "error": 0.0
+      },
+      {
+        "index": [
+          0,
+          0,
+          1
+        ],
+        "error": 0.0
+      },
+      {
+        "index": [
+          63,
+          63,
+          63
+        ],
+        "error": 1.0658141036401503e-14
+      }
+    ],
+    "geometry": [
+      {
+        "name": "ChemBlender Positive Surface",
+        "vertices": 882
+      },
+      {
+        "name": "ChemBlender Negative Surface",
+        "vertices": 0
+      }
+    ],
+    "value_unit": "electron_per_cubic_bohr",
+    "coordinate_unit": "bohr",
+    "gui": "not_run",
+    "render": "not_run",
+    "human_review": "not_run"
+  },
+  "audit_corrections": [
+    "First reused VASP check assumed angstrom source: Cube bohr-to-angstrom display factor0.529177210903 added after source review",
+    "Second attempt retained old li.cbq path; replaced with independent fixed Cube text comparison"
+  ],
+  "artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/cube-inspect.json",
+      "sha256": "28057fdd49e3fa71fce5c9ad105ebd3c3dde5d671533ebb016254845f4aa00d0"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/cube-convert.json",
+      "sha256": "35d7c5eb52fc85b37077afdc8a3871776ec9fc2789ccc08cd76e3ea7af1a755d"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/cube-validate.json",
+      "sha256": "77cb47b4ec06d4c216cfac3e4bc3dcabc441ef4ad8768f8610a7d4b3b3197687"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/cube-science-check.json",
+      "sha256": "272c1c7fba15aa34165ef4041cc53f47e4273809b291cb2c5ed5752c0628b8cc"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/view-check.json",
+      "sha256": "6746aa953ca67eeda970679fbd240521c770645f0408c4df091b9ed5b2af0286"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/check_cube_density.py",
+      "sha256": "6cf57d7f1878c1f40202723cbefb7c849142dde4d69c63be879a885e1b9277a6"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/cube_view_native.py",
+      "sha256": "7165bbd549ba084e1bf87dab1d3447b165c3895312cb27bddc6a0c5a366f9261"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/h2-grid.blend",
+      "sha256": "cfb8ac76558aacd71b9276aeee467213ed848d6c6847c893c04ee7d0f6c9c7f3"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/h2-grid.cbq/manifest.json",
+      "sha256": "ea47e10a85db78554536c57f84fc845dd262f0fb8d0ae2be8ea52c66a8b12201"
+    }
+  ],
+  "remaining": [
+    "new Cube GUI inspect/convert evidence",
+    "slice/profile/colorbar",
+    "difference",
+    "render",
+    "cold/moved/rebuild",
+    "human acceptance"
+  ]
+}
