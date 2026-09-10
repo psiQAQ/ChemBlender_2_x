@@ -1,0 +1,92 @@
+{
+  "case_id": "T07",
+  "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+  "single_channel": {
+    "status": "passed",
+    "all_32768_values_max_error": 0.0,
+    "unit": "inverse_cubic_angstrom",
+    "shape": [
+      32,
+      32,
+      32
+    ],
+    "minimum": 0.02186884536231703,
+    "maximum": 0.05465296959596691,
+    "integral": 0.9999999934509904,
+    "affine_steps_exact": true,
+    "source_unchanged": true,
+    "gui": "not_run",
+    "render": "not_run",
+    "vasp_recomputation": "not_run"
+  },
+  "spin_channels": {
+    "status": "passed",
+    "spec": {
+      "case_id": "T07",
+      "variant": "vasp_spin_regression",
+      "source": "submodules\\pymatgen-core\\test-files\\io\\vasp\\outputs\\CHGCAR.spin.gz",
+      "source_commit": "488ad74cc5ecaba5d24c1726e2762fb47f31f5ef",
+      "compressed_sha256": "43c3b6db491b08868f8e49b3114396c88090dd47aa7837eac27729865756253e",
+      "input_sha256": "70c162009ad703a9d168ae9da33e9866c206d6220ed9172b5c0a3cbca7db46e5",
+      "license": "submodules/pymatgen-core/test-files/LICENSE (MIT)",
+      "shape": [
+        48,
+        48,
+        48
+      ],
+      "atoms": 1,
+      "cell_volume": 20.148362761266313,
+      "expected_channels": [
+        "total",
+        "diff"
+      ],
+      "reference": "independent pymatgen raw array divided by cell volume",
+      "absolute_tolerance": 1e-12,
+      "channels": {
+        "total": {
+          "min": 0.02190939190893622,
+          "max": 0.05462887649690216,
+          "integral": 1.0000000012417762
+        },
+        "diff": {
+          "min": -0.001141623169512278,
+          "max": -0.00013564578577838896,
+          "integral": -0.020289127350736263
+        }
+      },
+      "gui": "not_run"
+    },
+    "spec_sha256": "a3fa19550bdfab32908535fd80fb675159dc6992def6c0646159b40bddc8bfb9",
+    "checks": [
+      {
+        "channel": "diff",
+        "semantic": "spin_density",
+        "shape": [
+          48,
+          48,
+          48
+        ],
+        "max_absolute_error": 2.168404344971009e-19,
+        "integral": -0.020289127350736253
+      },
+      {
+        "channel": "total",
+        "semantic": "electron_density",
+        "shape": [
+          48,
+          48,
+          48
+        ],
+        "max_absolute_error": 1.3877787807814457e-17,
+        "integral": 1.0000000012417758
+      }
+    ],
+    "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+    "interaction": "public_cli_existing_scientific_interpreter_with_frozen_wheel_code",
+    "gui": "not_run",
+    "render": "not_run",
+    "human_review": "not_run"
+  },
+  "full_case_acceptance": "not_run",
+  "source_data": "pinned existing pymatgen test-files, no VASP recomputation"
+}
