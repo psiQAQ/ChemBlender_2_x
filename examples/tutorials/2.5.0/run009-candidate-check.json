@@ -71,6 +71,54 @@
       "before_artifact_id": "gui-0004",
       "after_artifact_id": "gui-0005",
       "status": "observed"
+    },
+    {
+      "event_id": "e4",
+      "step_id": "c01",
+      "interaction": "os_gui",
+      "action": "Select convert",
+      "timestamp_utc": "2026-09-10T13:00:26.837Z",
+      "session_id": "run009-prepare-59048",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0007",
+      "after_artifact_id": "gui-0008",
+      "status": "observed"
+    },
+    {
+      "event_id": "e5",
+      "step_id": "c02",
+      "interaction": "os_gui",
+      "action": "Set run009 output",
+      "timestamp_utc": "2026-09-10T13:00:35.360Z",
+      "session_id": "run009-prepare-59048",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0008",
+      "after_artifact_id": "gui-0009",
+      "status": "observed"
+    },
+    {
+      "event_id": "e6",
+      "step_id": "c03",
+      "interaction": "os_gui",
+      "action": "Execute convert",
+      "timestamp_utc": "2026-09-10T13:00:35.628Z",
+      "session_id": "run009-prepare-59048",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0009",
+      "after_artifact_id": "gui-0010",
+      "status": "observed"
     }
   ],
   "screenshots": [
@@ -133,13 +181,78 @@
       "sha256": "de204cc30fc7eafeeb64bf0a407b739207b038fac4692746d74d9fff49d8f0bf",
       "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
       "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0007",
+      "kind": "gui_raw",
+      "path": "gui/gui-0007.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "9a86f468040bc53c28f0b3d09bd3cb9ab73a9c0bed3856bb68c753a7daac9442",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0008",
+      "kind": "gui_raw",
+      "path": "gui/gui-0008.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "59add1696441b62de332b21f3e6afd34ecf44979aefe1defba693696011c8971",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0009",
+      "kind": "gui_raw",
+      "path": "gui/gui-0009.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "8014eb8a9221e031a16e491f01240e01c4355d4678e68a6b035cba1b0ff56df0",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0010",
+      "kind": "gui_raw",
+      "path": "gui/gui-0010.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "b2fc7c5ccdf45bfde7128f93fdb0174c38f9d0e80b00c24e041894888702edfd",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0011",
+      "kind": "gui_raw",
+      "path": "gui/gui-0011.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "888192b79ba0dcf4c3fb0ba03fce2c40352734ab15511bf45d09d02fbeb61b74",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
     }
   ],
   "excluded_screenshots": [
     "gui-0001 initial activation capture, not tutorial proof"
   ],
   "raw_root": ".blend-analysis\\2.5-real-user-tutorials\\run-009",
-  "gui_convert_new_wheel": "not_run",
+  "gui_convert_new_wheel": {
+    "status": "passed",
+    "channels": [
+      "electron_density",
+      "spin_density"
+    ],
+    "shape": [
+      48,
+      48,
+      48
+    ],
+    "arrays_exact_to_reference": true,
+    "source_unchanged": true,
+    "interaction": "os_gui",
+    "human_review": "not_run"
+  },
   "full_regression_new_wheel": "not_run",
   "human_review": "not_run"
 }
