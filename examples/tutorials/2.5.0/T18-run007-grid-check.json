@@ -1,0 +1,110 @@
+{
+  "case_id": "T18",
+  "variant": "T07",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "installed_save_as": {
+    "vdb_paths": [
+      "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\native-T07\\handoff.cbq\\cache\\render\\volume\\b519ad7288d390846f0760fab6acf61f1363b7be6c000bb3267d4d1278078c7d.vdb",
+      "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\native-T07\\handoff.cbq\\cache\\render\\surface\\33fa686bb83818d22525d93ecf9bf4da07b9ddda0723fe5ca768715f009fab52.vdb",
+      "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\native-T07\\handoff.cbq\\cache\\render\\surface\\607b19997d59e8b620126ef9a0dbe811702966949fdc937a2406c49484018049.vdb",
+      "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\native-T07\\handoff.cbq\\cache\\render\\volume\\bc0b6e35f0fd08a9e49b66eb5e3d609c94f4605134c6871c7ed5a44a51ac793f.vdb",
+      "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\native-T07\\handoff.cbq\\cache\\render\\surface\\11b0670445cd302382d764111e3da390e2137c62a9f54d67b88b74184d116bd4.vdb",
+      "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\native-T07\\handoff.cbq\\cache\\render\\surface\\0583177418c8a3872461d8ff149f5a520ac54daceb43dede7a89e77ee0d24174.vdb"
+    ],
+    "datasets_equal": 8,
+    "status": "passed",
+    "runtime": {
+      "pid": 12332,
+      "version": "5.1.1",
+      "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python\\bin\\python.exe",
+      "system": "Windows",
+      "repos": [
+        {
+          "name": "extensions.blender.org",
+          "directory": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+        },
+        {
+          "name": "User Default",
+          "directory": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+        },
+        {
+          "name": "System",
+          "directory": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+        },
+        {
+          "name": "Existing local MCP (read only)",
+          "directory": "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+        }
+      ]
+    },
+    "identity": [
+      "659559d9-3a7f-4466-a4c8-a5f3fee1efeb",
+      "51fcb06343132c4b75f340aa5824434c9c622b51df7ea1ad3742920c78af66b4"
+    ],
+    "atoms": 2,
+    "old_copy_unavailable": true,
+    "coordinates_equal": true,
+    "view_rebuilds": 7,
+    "saved_file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\native-T07\\handoff.blend",
+    "interaction": "native_public_operator_replay",
+    "gui": "not_run",
+    "cold_reopen": "not_run",
+    "human_review": "not_run"
+  },
+  "portable_cold": {
+    "status": "passed",
+    "pid": 53916,
+    "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\portable-T07\\handoff.blend",
+    "views": 7,
+    "datasets": 8,
+    "vdb_paths": [
+      "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\portable-T07\\handoff.cbq\\cache\\render\\volume\\b519ad7288d390846f0760fab6acf61f1363b7be6c000bb3267d4d1278078c7d.vdb",
+      "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\portable-T07\\handoff.cbq\\cache\\render\\surface\\33fa686bb83818d22525d93ecf9bf4da07b9ddda0723fe5ca768715f009fab52.vdb",
+      "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\portable-T07\\handoff.cbq\\cache\\render\\surface\\607b19997d59e8b620126ef9a0dbe811702966949fdc937a2406c49484018049.vdb",
+      "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\portable-T07\\handoff.cbq\\cache\\render\\volume\\bc0b6e35f0fd08a9e49b66eb5e3d609c94f4605134c6871c7ed5a44a51ac793f.vdb",
+      "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\portable-T07\\handoff.cbq\\cache\\render\\surface\\11b0670445cd302382d764111e3da390e2137c62a9f54d67b88b74184d116bd4.vdb",
+      "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\portable-T07\\handoff.cbq\\cache\\render\\surface\\0583177418c8a3872461d8ff149f5a520ac54daceb43dede7a89e77ee0d24174.vdb"
+    ],
+    "surfaces": [
+      {
+        "object": "ChemBlender Positive Surface",
+        "mode": "Grid",
+        "vertices": 882,
+        "dataset_id": "a9b7bc53-5c39-5004-8297-f343f6cbe2eb",
+        "dataset_minimum": 7.75746861e-10
+      },
+      {
+        "object": "ChemBlender Negative Surface.001",
+        "mode": "Grid",
+        "vertices": 0,
+        "dataset_id": "a9b7bc53-5c39-5004-8297-f343f6cbe2eb",
+        "dataset_minimum": 7.75746861e-10
+      },
+      {
+        "object": "ChemBlender Positive Surface.001",
+        "mode": "Grid",
+        "vertices": 490,
+        "dataset_id": "ce106725-3810-5bc5-acdd-9f715d1c0079",
+        "dataset_minimum": -0.034517683074599986
+      },
+      {
+        "object": "ChemBlender Negative Surface",
+        "mode": "Grid",
+        "vertices": 612,
+        "dataset_id": "ce106725-3810-5bc5-acdd-9f715d1c0079",
+        "dataset_minimum": -0.034517683074599986
+      }
+    ],
+    "slice_samples": 4225,
+    "profile_samples": 129,
+    "gui": "not_run"
+  },
+  "scientific_arrays_equal_original": true,
+  "audit_corrections": [
+    "Retain evaluated geometry owner while accessing mesh",
+    "Nonnegative density has no negative isosurface; difference grid must retain both signs"
+  ],
+  "display_limit": "Rebuild resets custom Voxel Size refinement to Grid mode",
+  "human_review": "not_run"
+}
