@@ -1,0 +1,103 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T06",
+  "title": "rMD17 aspirin trajectory and frame-bound forces",
+  "required_steps": [
+    {
+      "id": "s01",
+      "description": "Prepare inspect/convert extXYZ",
+      "requires_gui": true
+    },
+    {
+      "id": "s02",
+      "description": "CBQ Preview/Import and FrameSet selection",
+      "requires_gui": true
+    },
+    {
+      "id": "s03",
+      "description": "Create trajectory and trajectory_force; bind same-frame force",
+      "requires_gui": true
+    },
+    {
+      "id": "s04",
+      "description": "Inspect source frames 0,15,31 with energy and source indices",
+      "requires_gui": true
+    },
+    {
+      "id": "s05",
+      "description": "Play and record actual UI; render image sequence/video",
+      "requires_gui": true
+    },
+    {
+      "id": "s06",
+      "description": "Save pair; original/moved cold reopen and recovery",
+      "requires_gui": true
+    }
+  ],
+  "required_checks": [
+    "input_hash_integrity",
+    "atom_mapping",
+    "all_frame_coordinates",
+    "same_frame_forces",
+    "energy_and_indices",
+    "time_boundary",
+    "cbq_validation",
+    "playback_arrays_unchanged",
+    "project_pair",
+    "cold_reopen"
+  ],
+  "required_artifact_kinds": [
+    "environment",
+    "gui_raw",
+    "render",
+    "events",
+    "assertions",
+    "scene_blend",
+    "cbq_manifest",
+    "lifecycle",
+    "review"
+  ],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "inputs": [
+    {
+      "path": "examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz",
+      "sha256": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a",
+      "license": "CC0-1.0",
+      "source": "rMD17 v3 DOI 10.6084/m9.figshare.12672038.v3; aspirin rows 0..3100 stride 100; adjacent provenance note"
+    }
+  ],
+  "reference": {
+    "frames": 32,
+    "atoms_per_frame": 21,
+    "coordinate_unit": "angstrom",
+    "force_unit": "electron_volt_per_angstrom",
+    "energy_unit": "electron_volt",
+    "physical_time_step": null,
+    "frame_label": "source frame",
+    "sample_frames": {
+      "0": {
+        "energy": -17617.8287419,
+        "step": 0,
+        "source_index": 161596
+      },
+      "15": {
+        "energy": -17617.4879446,
+        "step": 1500,
+        "source_index": 26491
+      },
+      "31": {
+        "energy": -17617.7618802,
+        "step": 3100,
+        "source_index": 151469
+      }
+    },
+    "coordinate_absolute_tolerance": 1e-07,
+    "force_absolute_tolerance": 1e-07,
+    "energy_absolute_tolerance": 1e-07,
+    "comparison": "Independently parse all text rows, species, coordinates, forces, per-frame energy/step/source_index; compare stored CBQ arrays before playback. Display float32 tolerance 1e-6 is separate from authoritative arrays."
+  },
+  "note": "Frozen before execution. Old provenance page contains legacy Quick Import instructions; use current CBQ route. Existing UI may use authorized MCP replay, new panels and required captures use Computer Use. Force arrow scale is cosmetic; no physical dt or statistical independence claim."
+}
