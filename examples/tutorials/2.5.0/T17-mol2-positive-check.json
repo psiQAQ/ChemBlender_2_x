@@ -1,0 +1,13 @@
+{
+  "status": "failed_input_qualification",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "runs": [
+    {
+      "format": "mol2",
+      "status": "failed",
+      "error": "{'protocol_version': '1', 'worker_version': '0.1.0', 'request_id': '12468a0d-59a2-46c7-9bb9-02bac10e183a', 'status': 'error', 'outputs': [], 'artifacts': [], 'cache_key': None, 'metadata': {}, 'error': {'code': 'prepare_failed', 'message': 'mol2.invalid: atom references unknown substructure ID 1'}}",
+      "original_input_unchanged": true
+    }
+  ],
+  "meaning": "Frozen upstream mol24 cannot satisfy positive coverage: atom substructure references lack declarations. Original bytes retained. Continue sourcing a fully declared MOL2."
+}
