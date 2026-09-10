@@ -18,13 +18,22 @@
       "case_id": "T01",
       "priority": "P0",
       "status": "blocked",
-      "status_reason": "Native GUI JPEG approved and verified. Final visual review and independent human acceptance remain pending.",
+      "status_reason": "Final-candidate GUI Prepare and authorized MCP Blender replay, science, render, original/moved cold reopen, bilingual offline guide and review package passed. Historical GUI steps retained separately. Human acceptance and remaining recovery checks pending.",
       "human_review": "not_run",
-      "run": "run-002/T01",
-      "gui": "passed",
+      "run": "run-003/T01",
+      "gui": "partial",
       "scientific_processing": "passed",
       "project_recovery": "passed",
-      "distribution": "blocked"
+      "distribution": "blocked",
+      "review_package": {
+        "status": "review_only",
+        "file": "T01-review.zip",
+        "bytes": 27059561,
+        "sha256": "d97c5184b51a4a5f197d76b620b2a37bbe3a46c6bb77dd847691fc6ca92f880a",
+        "zip_crc": "passed",
+        "artifact_hashes": "passed",
+        "human_review": "not_run"
+      }
     },
     {
       "case_id": "T02",
@@ -49,9 +58,12 @@
     {
       "case_id": "T04",
       "priority": "P0",
-      "status": "not_run",
-      "status_reason": "Implementation started; this case has no new GUI acceptance yet.",
-      "human_review": "not_run"
+      "status": "in_progress",
+      "status_reason": "CIF/CONTCAR fixed before execution; six public CLI steps and independent saved-data science checks passed. Periodic GUI, render/recovery and optional ASE route not run.",
+      "human_review": "not_run",
+      "run": "run-003/T04",
+      "gui": "not_run",
+      "scientific_processing": "partial"
     },
     {
       "case_id": "T05",

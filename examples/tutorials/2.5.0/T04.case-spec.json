@@ -1,0 +1,33 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T04",
+  "title": "晶体、占位与已有金刚石超胞",
+  "required_steps": [
+    {"id":"s01","description":"Prepare inspect/convert CIF and CONTCAR; record block/cell/occupancy diagnostics","requires_gui":true},
+    {"id":"s02","description":"CBQ Preview/Import and entity selection; preserve CIF occupancy and disorder","requires_gui":true},
+    {"id":"s03","description":"Create periodic Views and show cell; distinguish asymmetric sites from expanded structure","requires_gui":true},
+    {"id":"s04","description":"Show existing 64-site diamond supercell and source coordinate convention","requires_gui":true},
+    {"id":"s05","description":"Render both structures with captions; save paired projects","requires_gui":true},
+    {"id":"s06","description":"Separate-process original and relocated reopen","requires_gui":true}
+  ],
+  "required_checks": ["input_hash_integrity","cell_and_coordinates","occupancy_disorder_retention","supercell_identity","velocity_boundary","ase_route","cbq_validation","project_pair","cold_reopen","render_scientific_accuracy"],
+  "required_artifact_kinds": ["environment","gui_raw","render","events","assertions","scene_blend","cbq_manifest","lifecycle","review"],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "inputs": [
+    {"path":"examples/user-workflows/inputs/cif/cod-4503272-caffeine-cocrystal.cif","sha256":"0ab8afbcc0f931327a5cba664df8317bf557f3b6f06b1fe5b27908676b89c5f5","license":"CC0-1.0","source":"COD 4503272; repository provenance note"},
+    {"path":"examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR","sha256":"7cf52f6c2473adad5f32f65bfb97c0d1f6d57f6788802abcc7cb4d05b16f0693","source":"Repository 2x2x2 derivation of COD 9012293 conventional cell; see adjacent provenance note"}
+  ],
+  "reference": {
+    "cif":{"blocks":1,"asymmetric_sites":64,"partial_occupancy_sites":23,"disorder_group_sites":9,"space_group_number":64,"cell_lengths_angstrom":[6.6439,23.2514,33.5615],"cell_angles_degrees":[90,90,90]},
+    "diamond":{"atoms":64,"atomic_number":6,"conventional_cell_atoms":8,"replication":[2,2,2],"cell_lengths_angstrom":[7.1338,7.1338,7.1338],"coordinate_mode":"Direct","velocity_shape":[64,3],"velocity_values":0,"velocity_unit":"unknown"},
+    "coordinate_absolute_tolerance":0.0000001,
+    "cell_absolute_tolerance":0.0000001,
+    "occupancy_reference":"Compare every source CIF row using existing Gemmi, including labels and disorder values; do not silently discard partial sites",
+    "coordinate_reference":"Compare saved Cartesian coordinates against source fractional rows multiplied by source lattice; retain source order/mapping",
+    "ase_route":"Use only an existing configured scientific environment with explicit ase-structure reader; record dependency/version and compare cell/coordinates independently; absent environment remains blocked"
+  },
+  "note":"Frozen before T04 execution. Known operations may be replayed via MCP under user authorization, with prior UI evidence separately referenced; capture new periodic panels via Computer Use. Existing supercell display is not a supercell generator. Zero velocities are synthetic, not MD results. Human review remains mandatory."
+}

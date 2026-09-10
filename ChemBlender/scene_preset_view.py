@@ -28,6 +28,7 @@ from .views.structure import (
     create_structure_view,
     remove_structure_view,
 )
+from .views.periodic import create_periodic_structure_view
 
 
 class ScenePresetApplicationError(RuntimeError):
@@ -458,8 +459,11 @@ def apply_scene_preset(plan, project, *, collection=None, cache_root=None):
                 view["cb_biological_default_reason"] = reason
                 created.append(view)
             else:
+                # Source-site occupancy and cell displays belong to periodic Views.
+                create_view = (create_periodic_structure_view
+                               if structure.periodic is not None else create_structure_view)
                 created.append(
-                    create_structure_view(
+                    create_view(
                         structure,
                         _selected_or_unique_topology(project, structure),
                         selective_dynamics=selective,

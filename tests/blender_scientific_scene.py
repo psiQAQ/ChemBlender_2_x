@@ -2,6 +2,7 @@
 
 import os
 import sys
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
@@ -33,6 +34,26 @@ def run():
     band, dos = band_structure(structure.id), density_of_states(structure.id)
     project = QCProject(uuid4(), "0.2")
     project.commit(ImportBatch(structures=(structure,), datasets=(band, dos)))
+    # Publication must retain periodic display semantics, not just atom positions.
+    coordinates = np.array(structure.coordinates.values, copy=True)
+    publication = builtin_scene_presets()["structure_publication"]
+    periodic_plan = plan_scene_preset(publication, project, {"structure": structure.id}, {})
+    periodic_view, = apply_scene_preset(periodic_plan, project)
+    cell = bpy.data.objects.get(periodic_view.get("cbq_periodic_cell_object", ""))
+    assert cell is not None, "periodic publication lost its cell display"
+    assert len(cell.data.edges) == 12
+    assert np.array_equal(structure.coordinates.values, coordinates)
+    assert cell in scene_view_objects(periodic_view)
+    rebuilt_periodic = rebuild_scene_view(periodic_view, project)
+    assert bpy.data.objects.get(rebuilt_periodic["cbq_periodic_cell_object"]) is not None
+    _remove_objects(scene_view_objects(rebuilt_periodic))
+    molecule = replace(structure, id=uuid4(), cell=None, periodic=None)
+    project.commit(ImportBatch(structures=(molecule,)))
+    molecular_view, = apply_scene_preset(
+        plan_scene_preset(publication, project, {"structure": molecule.id}, {}), project)
+    assert not molecular_view.get("cbq_periodic_cell_object")
+    assert not molecular_view.get("cb_periodic")
+    _remove_objects(scene_view_objects(molecular_view))
     plan = plan_scene_preset(builtin_scene_presets()["band_structure"], project, {"band": band.id}, {})
     baseline = inventory()
     first = apply_scene_preset(plan, project)[0]
