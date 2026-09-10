@@ -16,9 +16,11 @@
 
 `Source Frame Index (0-based)` 是静态 Apply Frame 输入；本次播放中它保持 `0`，不是实时帧计数器。播放时使用时间线映射；静态 Apply Frame 预览可能与时间线不同。[GUI 播放记录](../../../examples/tutorials/2.5.0/T06-run009-playback-gui-check.json)区分 MCP 准备与实际点击。窄侧栏会截断部分标签，完整截图可读性和人工复做仍待验收。
 
-精细工程原位及移动副本冷重开通过，源帧 15 和平滑设置保留，见[细化与恢复记录](../../../examples/tutorials/2.5.0/T06-run009-refined-check.json)。新 32 帧序列采用公开 FRAME 与渲染重放，再通过原生 VSE 装配。H.264/MPEG4 视频为 2400×1800、24 fps，在浏览器 CDP 离线模拟下播放到末尾，时长 1.333333 秒，见[动画记录](../../../examples/tutorials/2.5.0/T06-run009-animation-check.json)。这不是新的 Ctrl+F12 GUI 验证，也不是操作系统级断网测试。视频装配含绝对帧路径，尚未通过移动验收；物理时间仍未知。
+精细工程原位及移动副本冷重开通过，源帧 15 和平滑设置保留，见[细化与恢复记录](../../../examples/tutorials/2.5.0/T06-run009-refined-check.json)。新 32 帧序列采用公开 FRAME 与渲染重放，再通过原生 VSE 装配。H.264/MPEG4 视频为 2400×1800、24 fps，在浏览器 CDP 离线模拟下播放到末尾，时长 1.333333 秒，见[动画记录](../../../examples/tutorials/2.5.0/T06-run009-animation-check.json)。这不是新的 Ctrl+F12 GUI 验证，也不是操作系统级断网测试。原视频装配保留绝对路径；审阅包中的装配使用 `//frames-refined/` 和相对 MP4 输出。移动副本冷重开、全部 32 帧哈希及重新编码通过，见[可移动视频记录](../../../examples/tutorials/2.5.0/T06-run009-portable-video-check.json)。保持装配工程与完整帧目录相邻；物理时间仍未知。
 
-旧 `trajectory-view.blend` 草稿含重叠的平面／平滑显示分支，请使用精细工程。Rebuild 可能移除自定义外观节点，需要重新设置。新候选重建、完整手动渲染说明、可移动视频装配及人工独立验收仍未完成。
+旧 `trajectory-view.blend` 草稿含重叠的平面／平滑显示分支，请使用精细工程。Rebuild 可能移除自定义外观节点，需要重新设置。在副本上清空派生几何后，REBUILD 恢复保存配方的源帧 0。依次使用 `Load Selected View`、将 Source Frame Index 设为 `15`、点击 `Apply Frame`，再保存以恢复该静态预览。坐标与力、View 标识、科学数组不变及随后冷重开均通过，见[重建记录](../../../examples/tutorials/2.5.0/T06-run009-rebuild-check.json)。自定义平滑已被移除，需要重新设置。完整手动渲染说明、剩余 GUI 覆盖及人工独立验收仍未完成。
+
+本地 `T06-review.zip` 含 92 个文件（121,561,147 bytes）：输入及许可、精细配对工程、静态图、32 帧、相对路径视频装配、MP4、双语交接及证据。SHA-256 为 `8eea79a46ea7967bda201619dbb066e6a2908315bdc9c884c1c4844284c8003a`。新解压目录中的科学工程冷重开和视频帧路径／哈希检查通过，见[审阅包记录](../../../examples/tutorials/2.5.0/T06-run009-package-check.json)。这是本地审阅包，不是最终验收通过，也未把大包嵌入本离线页面。
 
 本课为执行中草稿。输入转换、全帧科学对照、实际 Create View／Apply Frame／Play／Pause 操作及静态渲染已有证据。32 帧 PNG 序列、H.264 编码、原位／移动后冷重开及派生几何重建也已通过。连续录屏、剩余 GUI 留证和人工独立复做仍待完成。
 

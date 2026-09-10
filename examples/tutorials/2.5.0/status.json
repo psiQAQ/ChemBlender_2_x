@@ -126,11 +126,20 @@
       "case_id": "T06",
       "priority": "P0",
       "status": "in_progress",
-      "status_reason": "Full32-frame science, actual trajectory/force Create/Apply/Play/Pause, smooth render,32 audited PNGs and H264 video passed. Original/moved cold reopen passed with unchanged arrays and smooth modifier retained. Derived geometry rebuild and subsequent cold reopen passed; custom smoothing must be reapplied. Prepare GUI inspect/convert and first/last captures passed; GUI-converted all32 source arrays match exactly. Review-only package CRC/all-member hashes passed. Scalar frame GUI, continuous recording, full GUI lifecycle and human review pending.",
+      "status_reason": "Current frozen candidate: Prepare GUI, all32 scientific/frame checks, refined render/sequence/video, actual Play/Pause, original/moved cold reopen, derived mesh REBUILD plus explicit FRAME15 recovery, relative video assembly and extracted review package passed. Custom smooth nodes require reapplication after REBUILD. Full manual rendering, scalar-frame GUI, remaining lifecycle GUI/readability and independent human acceptance remain pending.",
       "human_review": "not_run",
-      "run": "run-004/T06",
+      "run": "run-009/T06",
       "scientific_processing": "passed",
-      "gui": "partial"
+      "gui": "partial",
+      "project_recovery": "partial",
+      "distribution": "blocked",
+      "review_package": {
+        "status": "review_only",
+        "file": "T06-review.zip",
+        "sha256": "8eea79a46ea7967bda201619dbb066e6a2908315bdc9c884c1c4844284c8003a",
+        "bytes": 121561147,
+        "record": "T06-run009-package-check.json"
+      }
     },
     {
       "case_id": "T07",

@@ -1,0 +1,395 @@
+{
+  "status": "passed",
+  "scope": "T06 handover documentation and offline receipt downloads",
+  "browser_checks": [
+    {
+      "language": "en",
+      "status": "passed",
+      "html_sha256": "c63c0bafdfb9ce0eef5e4dcc4ad247fcdae824a4bb98d91af0cc87271878f5e1",
+      "network_offline": true,
+      "cross_language_navigation": "passed",
+      "title": "ChemBlender 2.5 Offline Guide",
+      "images": [
+        {
+          "width": 1920,
+          "height": 1009
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1920,
+          "height": 1033
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 1920,
+          "height": 1033
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        }
+      ],
+      "tables": 35,
+      "brokenAnchors": [],
+      "commandText": true,
+      "receipt_downloads": [
+        {
+          "name": "T06-run009-rebuild-check.json",
+          "sha256": "9e28d67b68e96de153d8f1180f36edc7014360bc899bf35588fc5dfc97ae44c7"
+        },
+        {
+          "name": "T06-run009-portable-video-check.json",
+          "sha256": "1cfe56170e296bd6050002a3469f993f435d3dfc016aa33c0a0885c1898524a5"
+        },
+        {
+          "name": "T06-run009-package-check.json",
+          "sha256": "7c03d46d2a1cf0c9ffc216b0ae80ebe3617bd5f045f26b2cf3cfec4605c9635d"
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "status": "passed",
+      "html_sha256": "58440f3d2fafd4f13f351f8de6ad6d5a2e79531289aafd0440bff2e15c9be4ce",
+      "network_offline": true,
+      "cross_language_navigation": "passed",
+      "title": "ChemBlender 2.5 \u79bb\u7ebf\u6307\u5357",
+      "images": [
+        {
+          "width": 1920,
+          "height": 1009
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1920,
+          "height": 1033
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 1920,
+          "height": 1033
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        }
+      ],
+      "tables": 35,
+      "brokenAnchors": [],
+      "commandText": true,
+      "receipt_downloads": [
+        {
+          "name": "T06-run009-rebuild-check.json",
+          "sha256": "9e28d67b68e96de153d8f1180f36edc7014360bc899bf35588fc5dfc97ae44c7"
+        },
+        {
+          "name": "T06-run009-portable-video-check.json",
+          "sha256": "1cfe56170e296bd6050002a3469f993f435d3dfc016aa33c0a0885c1898524a5"
+        },
+        {
+          "name": "T06-run009-package-check.json",
+          "sha256": "7c03d46d2a1cf0c9ffc216b0ae80ebe3617bd5f045f26b2cf3cfec4605c9635d"
+        }
+      ]
+    }
+  ],
+  "tests": {
+    "suite": "test_public_delivery_docs.py",
+    "passed": 5,
+    "seconds": 67.3
+  },
+  "human_acceptance": "not_run",
+  "network_scope": "CDP offline emulation; not OS firewall"
+}
