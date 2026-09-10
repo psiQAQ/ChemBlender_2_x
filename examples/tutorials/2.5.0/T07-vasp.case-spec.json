@@ -1,0 +1,76 @@
+{
+  "case_id": "T07",
+  "variant": "vasp_li_chgcar",
+  "source": "pymatgen-core test-files/io/vasp/outputs/CHGCAR.nospin.gz",
+  "source_commit": "488ad74cc5ecaba5d24c1726e2762fb47f31f5ef",
+  "license": "MIT; accompanying test-files LICENSE",
+  "compressed_sha256": "1d0f7cab991845fb6b5576839727948d189d339e908c5908ea8ffd935337a715",
+  "input_sha256": "b58e1fb93dedfa746c3f5d1efe033a0560938b375adddd6ff40ef932a73a3c3a",
+  "shape": [
+    32,
+    32,
+    32
+  ],
+  "atomic_numbers": [
+    3
+  ],
+  "fractional_coordinates": [
+    [
+      0,
+      0,
+      0
+    ]
+  ],
+  "coordinate_unit": "angstrom",
+  "cell": [
+    [
+      2.969072,
+      -0.000523,
+      -0.000907
+    ],
+    [
+      -0.987305,
+      2.80011,
+      0.000907
+    ],
+    [
+      -0.987305,
+      -1.402326,
+      2.423654
+    ]
+  ],
+  "cell_volume": 20.148362761266316,
+  "origin": [
+    0,
+    0,
+    0
+  ],
+  "step_vectors": [
+    [
+      0.0927835,
+      -1.634375e-05,
+      -2.834375e-05
+    ],
+    [
+      -0.03085328125,
+      0.0875034375,
+      2.834375e-05
+    ],
+    [
+      -0.03085328125,
+      -0.0438226875,
+      0.0757391875
+    ]
+  ],
+  "raw_order": "x fastest; numpy reshape(shape, order=F)",
+  "raw_min": 0.44062142953,
+  "raw_max": 1.1011678574,
+  "normalized_min": 0.02186884536231703,
+  "normalized_max": 0.05465296959596691,
+  "rectangular_integral": 0.9999999934509903,
+  "expected_unit": "inverse_cubic_angstrom",
+  "all_values_absolute_tolerance": 1e-12,
+  "affine_absolute_tolerance": 1e-12,
+  "backend": "existing pymatgen-core 2026.7.16 via frozen prepare overlay",
+  "boundary": "Existing VASP output import; no VASP recomputation, no reconstruction of PAW augmentation occupancies"
+}
