@@ -1,0 +1,36 @@
+{
+  "case_id": "T17",
+  "status": "incomplete",
+  "processed_formats": [
+    "xyz",
+    "extxyz",
+    "pdb",
+    "smiles",
+    "cif",
+    "poscar",
+    "cube",
+    "cjson",
+    "qcschema"
+  ],
+  "failed_formats": {
+    "mol": "{'protocol_version': '1', 'worker_version': '0.1.0', 'request_id': 'bd103766-39da-414b-8377-5605f19cfc2d', 'status': 'error', 'outputs': [], 'artifacts': [], 'cache_key': None, 'metadata': {}, 'error': {'code': 'prepare_failed', 'message': 'V3000 cannot preserve molecular identity: atom 12 chirality differs'}}",
+    "mol2": "{'protocol_version': '1', 'worker_version': '0.1.0', 'request_id': 'e0792d50-4020-47aa-b8f7-f08f05edda29', 'status': 'error', 'outputs': [], 'artifacts': [], 'cache_key': None, 'metadata': {}, 'error': {'code': 'prepare_failed', 'message': 'molecular export requires a complete topology'}}",
+    "pqr": "{'protocol_version': '1', 'worker_version': '0.1.0', 'request_id': '3fc43fb7-fa33-44ae-93d3-10545c79accb', 'status': 'error', 'outputs': [], 'artifacts': [], 'cache_key': None, 'metadata': {}, 'error': {'code': 'prepare_failed', 'message': 'PQR export is Invalid: dataset.radius.values, hierarchy.residue_key.conflict'}}",
+    "sdf": "{'protocol_version': '1', 'worker_version': '0.1.0', 'request_id': '84123a96-0c05-4d54-b45b-9a596824c39c', 'status': 'error', 'outputs': [], 'artifacts': [], 'cache_key': None, 'metadata': {}, 'error': {'code': 'prepare_failed', 'message': 'V3000 cannot preserve molecular identity: atom 2 chirality differs, atom 6 chirality differs, atom 13 chirality differs'}}"
+  },
+  "envelope_checks": [
+    {
+      "format": "cjson",
+      "json_value_equality": "passed"
+    },
+    {
+      "format": "qcschema",
+      "json_value_equality": "passed"
+    }
+  ],
+  "other_scientific_comparisons": "not_run",
+  "gui": "not_run",
+  "human_review": "not_run",
+  "evidence_root": ".blend-analysis/2.5-real-user-tutorials/run-004/T17",
+  "run_sha256": "8a3f11eeb2704ff0906778d7c709c82070be0a4ceeec67c1e4d2ecfe81194a52"
+}
