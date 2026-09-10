@@ -1,0 +1,84 @@
+{
+  "status": "rendered",
+  "runtime": {
+    "version": "5.1.1",
+    "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+    "pid": 65908,
+    "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python\\bin\\python.exe",
+    "repos": [
+      {
+        "name": "extensions.blender.org",
+        "path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+      },
+      {
+        "name": "User Default",
+        "path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+      },
+      {
+        "name": "System",
+        "path": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+      },
+      {
+        "name": "Existing local MCP (read only)",
+        "path": "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+      }
+    ],
+    "enabled": [
+      "io_anim_bvh",
+      "io_curve_svg",
+      "io_mesh_uv_layout",
+      "io_scene_fbx",
+      "io_scene_gltf2",
+      "cycles",
+      "pose_library",
+      "bl_pkg",
+      "bl_ext.user_default.chemblender",
+      "bl_ext.tutorial_mcp.mcp"
+    ]
+  },
+  "branches": [
+    {
+      "multiplier": 100.0,
+      "color": [
+        0.03999999910593033,
+        0.44999998807907104,
+        0.800000011920929,
+        1.0
+      ],
+      "density_attribute_disabled": true
+    },
+    {
+      "multiplier": -100.0,
+      "color": [
+        1.0,
+        0.30000001192092896,
+        0.03999999910593033,
+        1.0
+      ],
+      "density_attribute_disabled": true
+    }
+  ],
+  "density_scale": 100,
+  "resolution": [
+    2400,
+    1800
+  ],
+  "samples": 256,
+  "scientific_arrays_unchanged": true,
+  "sha256": "9012d7abb7e4055ed75dab2fc041a609976681df9b00108b802cfec6ba6869b5",
+  "interaction": "known_native_scene_operations",
+  "visual_review": "agent_reviewed: positive blue and negative orange regions distinguishable, main diffuse cloud framed; optical colors are not a quantitative scale",
+  "human_review": "not_run",
+  "cold_reopen": "passed",
+  "visual_acceptance": "not_run",
+  "pid": 59536,
+  "orthographic_scale": 4.8,
+  "key_energy": 3000,
+  "fill_energy": 1200,
+  "world_color": [
+    0.015,
+    0.015,
+    0.015
+  ],
+  "scientific_and_vdb_hashes_unchanged": true
+}

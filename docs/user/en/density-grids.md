@@ -92,7 +92,14 @@ For the recorded difference dataset, choose `Signed scalar isosurface`, set Isov
 
 ![Actual signed difference surface at isovalue 0.005](../assets/2.5-tutorials/grid-signed-surface.jpg)
 
-The actual `Separate Positive / Negative Volume` control was also tested. It uses a signed VDB and two shader branches, not two independent scientific grids. Full VDB values agree with the scientific difference within 1.122e-9 at float32 precision. A final volume render remains pending.
+The actual `Separate Positive / Negative Volume` control was also tested. It uses a signed VDB and two shader branches, not two independent scientific grids. Full VDB values agree with the scientific difference within 1.122e-9 at float32 precision.
+
+![Signed volume with stronger optical display and directed lighting](../assets/2.5-tutorials/grid-signed-volume.png)
+
+To reproduce this volume view, select the difference grid, choose Grid volume, enable `Separate Positive / Negative Volume`, and set `Volume Density Scale` to 100. For an existing volume View, use `Load Selected View`, change the scale and `Update Selected View`. Hide signed surfaces and other Views in both viewport and render. The recorded public LOAD/UPDATE retained the scientific arrays; shader traversal verified `max(100f,0)` and `max(-100f,0)` with no extra Density Attribute multiplication. Blue shows positive redistribution and orange negative redistribution. These optical colors are not a quantitative density scale.
+
+Keep the camera position (4,-8,3) aimed at the origin and increase orthographic scale to 4.8. Aim a 3000 W area light at the origin from (2,-4,5), size 4; add a 1200 W disk area light at (-3,-2,1), size 3, also aimed at the origin. Set World color (0.015,0.015,0.015), strength 0.7. Render using Cycles CPU, 2400 × 1800, 256 samples and denoising. Default scale 10 was too faint in this scene; both earlier scale 10/100 trials remain in local evidence. Increasing optical scale does not recompute or change the VDB. [Array/VDB integrity and cold-reopen evidence](../assets/2.5-tutorials/grid-volume-render.json). Human image review is pending.
+
 
 For the preview image, the recorded settings were Cycles CPU, 2400 × 1800, 256 samples and denoising; Principled material Roughness 0.32; orthographic camera (4,-8,3) aimed at the origin, scale 3.2; area light (2,-4,5), 450 W, size 4; world color (0.12,0.12,0.12), strength 0.7. Hide unrelated Views in both viewport and render.
 

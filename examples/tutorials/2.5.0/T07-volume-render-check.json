@@ -12,7 +12,10 @@
     "signed-volume.png": "e3c8052f9988066c51a823b6c77c823b5a9fd02218ebeb7387e88deaa84b209b",
     "render.json": "2f83ab830522a3ecf08bb1c00ea1e609ef58ce0d371123148b4b3b23370e495e",
     "render-scale10.json": "0a50cbb047b19a4cb0aed1ba521dd8eeac9f086428ed074f187fdc39bcdbeeb0",
-    "h2-grid.audit.json": "a932bbdea8387a1c3f43b30a8b43b9b9b49eafc1c89c0113089b7e2ca2853779"
+    "h2-grid.audit.json": "4e13da90496ec9e9dc00ecb7c2cba910420891e782065ab68698631717f75b56",
+    "signed-volume-lit.png": "9012d7abb7e4055ed75dab2fc041a609976681df9b00108b802cfec6ba6869b5",
+    "render-lit.json": "416263417b63e4ef5f1943d8f07485da6fe383f4eca05f00902f56e92cb48ce9"
   },
-  "next_action": "Improve light and camera framing; retain scale10/100 comparisons"
+  "next_action": "Complete missing GUI/backend/lifecycle gates and case package",
+  "agent_visual_review": "passed for teaching illustration after directed lights and framing; human acceptance pending"
 }

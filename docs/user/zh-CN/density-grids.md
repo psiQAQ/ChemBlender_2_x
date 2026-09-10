@@ -92,7 +92,14 @@ python "D:\ChemBlenderLessons\T07\recompute_t07_difference.py" --prepare "D:\Too
 
 ![实际等值 0.005 的正负差分曲面](../assets/2.5-tutorials/grid-signed-surface.jpg)
 
-实际 `Separate Positive / Negative Volume` 控件也已测试：使用一个有符号 VDB 和两个着色分支，不是两个独立科学网格。全部 VDB 数值与科学差分在 float32 精度下误差不超过 1.122e-9；最终体积成图仍待完成。
+实际 `Separate Positive / Negative Volume` 控件也已测试：使用一个有符号 VDB 和两个着色分支，不是两个独立科学网格。全部 VDB 数值与科学差分在 float32 精度下误差不超过 1.122e-9；
+
+![增强光学显示与定向照明后的正负体积图](../assets/2.5-tutorials/grid-signed-volume.png)
+
+复现此图：选择差分网格，选择 Grid volume，勾选 `Separate Positive / Negative Volume`，将 `Volume Density Scale` 设为 100。已有体积 View 时，使用 `Load Selected View`，修改强度后点击 `Update Selected View`。在视口和渲染中隐藏正负曲面及其他 View。记录中的公开 LOAD/UPDATE 保持科学数组不变；着色检查确认使用 `max(100f,0)`、`max(-100f,0)`，没有额外 Density Attribute 乘算。蓝色表示正重分布，橙色表示负重分布；光学颜色不是定量密度色标。
+
+保持相机位置 (4,-8,3) 朝向原点，将正交 scale 增至 4.8。主面光源位于 (2,-4,5)，朝向原点，3000 W、size 4；增加圆盘面光源 (-3,-2,1)，同样朝向原点，1200 W、size 3。World 颜色为 (0.015,0.015,0.015)，strength 0.7。使用 Cycles CPU、2400 × 1800、256 samples 和降噪。此场景默认 scale 10 过淡，之前的 scale 10/100 对照图均保留在本地证据中。提高光学强度不重算或修改 VDB。参见[数组/VDB 一致性及冷重开证据](../assets/2.5-tutorials/grid-volume-render.json)。人工图像审阅仍待完成。
+
 
 预览图记录的设置为 Cycles CPU、2400 × 1800、256 samples、降噪；Principled 材质 Roughness 0.32；正交相机 (4,-8,3) 朝向原点、scale 3.2；面光源 (2,-4,5)、450 W、size 4；世界颜色 (0.12,0.12,0.12)、strength 0.7。在视口和渲染中隐藏无关 View。
 

@@ -41,6 +41,11 @@
       "source": "sampling-layout/sampling.png",
       "path": "grid-sampling.png",
       "sha256": "6899d3e76e7c3ff2ad5ed07b6a8aa93515916362150b8b372049f3ffceb78052"
+    },
+    {
+      "source": "volume-layout/signed-volume-lit.png",
+      "path": "grid-signed-volume.png",
+      "sha256": "9012d7abb7e4055ed75dab2fc041a609976681df9b00108b802cfec6ba6869b5"
     }
   ],
   "human_acceptance": "not_run"
