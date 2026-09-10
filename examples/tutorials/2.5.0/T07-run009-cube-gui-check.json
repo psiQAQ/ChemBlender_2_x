@@ -1,0 +1,481 @@
+{
+  "status": "passed_scoped_gui_cube",
+  "science": {
+    "status": "passed",
+    "input_sha256": "51fcb06343132c4b75f340aa5824434c9c622b51df7ea1ad3742920c78af66b4",
+    "grid_checks": [
+      {
+        "role": "electron_density",
+        "unit": "electron_per_cubic_bohr",
+        "status": "complete",
+        "all_values_error": 0.0
+      },
+      {
+        "role": "scalar_field",
+        "unit": "unknown",
+        "status": "ambiguous",
+        "all_values_error": 0.0
+      }
+    ],
+    "interaction": "actual_prepare_gui",
+    "explicit_dataset_index": "blank for single-dataset source",
+    "human_review": "not_run"
+  },
+  "events": [
+    {
+      "event_id": "e7",
+      "step_id": "c01",
+      "interaction": "os_gui",
+      "action": "Select input path line",
+      "timestamp_utc": "2026-09-10T14:43:32.908Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0013",
+      "after_artifact_id": "gui-0014",
+      "status": "observed"
+    },
+    {
+      "event_id": "e8",
+      "step_id": "c02",
+      "interaction": "os_gui",
+      "action": "Enter fixed H2 Cube input",
+      "timestamp_utc": "2026-09-10T14:43:51.212Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0014",
+      "after_artifact_id": "gui-0015",
+      "status": "observed"
+    },
+    {
+      "event_id": "e9",
+      "step_id": "c03",
+      "interaction": "os_gui",
+      "action": "Select Reader ID",
+      "timestamp_utc": "2026-09-10T14:43:59.722Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0015",
+      "after_artifact_id": "gui-0016",
+      "status": "observed"
+    },
+    {
+      "event_id": "e10",
+      "step_id": "c04",
+      "interaction": "os_gui",
+      "action": "Set Reader cube",
+      "timestamp_utc": "2026-09-10T14:44:05.937Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0016",
+      "after_artifact_id": "gui-0017",
+      "status": "observed"
+    },
+    {
+      "event_id": "e11",
+      "step_id": "c05",
+      "interaction": "os_gui",
+      "action": "Execute Cube inspect",
+      "timestamp_utc": "2026-09-10T14:44:14.523Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0017",
+      "after_artifact_id": "gui-0018",
+      "status": "observed"
+    },
+    {
+      "event_id": "e12",
+      "step_id": "c06",
+      "interaction": "os_gui",
+      "action": "Open operation list",
+      "timestamp_utc": "2026-09-10T14:44:34.663Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0019",
+      "after_artifact_id": "gui-0021",
+      "status": "observed"
+    },
+    {
+      "event_id": "e13",
+      "step_id": "c07",
+      "interaction": "os_gui",
+      "action": "Choose convert",
+      "timestamp_utc": "2026-09-10T14:44:42.942Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0021",
+      "after_artifact_id": "gui-0022",
+      "status": "observed"
+    },
+    {
+      "event_id": "e14",
+      "step_id": "c08",
+      "interaction": "os_gui",
+      "action": "Select new output path field",
+      "timestamp_utc": "2026-09-10T14:44:52.169Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0022",
+      "after_artifact_id": "gui-0023",
+      "status": "observed"
+    },
+    {
+      "event_id": "e15",
+      "step_id": "c09",
+      "interaction": "os_gui",
+      "action": "Enter separate Cube GUI output",
+      "timestamp_utc": "2026-09-10T14:45:01.997Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0023",
+      "after_artifact_id": "gui-0024",
+      "status": "observed"
+    },
+    {
+      "event_id": "e16",
+      "step_id": "c10",
+      "interaction": "os_gui",
+      "action": "Focus Cube preset field",
+      "timestamp_utc": "2026-09-10T14:45:11.082Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0024",
+      "after_artifact_id": "gui-0025",
+      "status": "observed"
+    },
+    {
+      "event_id": "e17",
+      "step_id": "c11",
+      "interaction": "os_gui",
+      "action": "Set electron_density preset",
+      "timestamp_utc": "2026-09-10T14:45:18.286Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0025",
+      "after_artifact_id": "gui-0026",
+      "status": "observed"
+    },
+    {
+      "event_id": "e18",
+      "step_id": "c12",
+      "interaction": "os_gui",
+      "action": "Focus Cube value unit",
+      "timestamp_utc": "2026-09-10T14:45:29.040Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0026",
+      "after_artifact_id": "gui-0027",
+      "status": "observed"
+    },
+    {
+      "event_id": "e19",
+      "step_id": "c13",
+      "interaction": "os_gui",
+      "action": "Set electron_per_cubic_bohr unit",
+      "timestamp_utc": "2026-09-10T14:45:36.713Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0027",
+      "after_artifact_id": "gui-0028",
+      "status": "observed"
+    },
+    {
+      "event_id": "e20",
+      "step_id": "c14",
+      "interaction": "os_gui",
+      "action": "Execute explicit Cube conversion",
+      "timestamp_utc": "2026-09-10T14:45:44.061Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0028",
+      "after_artifact_id": "gui-0029",
+      "status": "observed"
+    },
+    {
+      "event_id": "e21",
+      "step_id": "c15",
+      "interaction": "os_gui",
+      "action": "Scroll result to response status",
+      "timestamp_utc": "2026-09-10T14:46:12.570Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0030",
+      "after_artifact_id": "gui-0031",
+      "status": "observed"
+    },
+    {
+      "event_id": "e22",
+      "step_id": "c16",
+      "interaction": "os_gui",
+      "action": "Scroll to beginning of response",
+      "timestamp_utc": "2026-09-10T14:46:20.181Z",
+      "session_id": "run009-prepare-59048-cube",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0031",
+      "after_artifact_id": "gui-0032",
+      "status": "observed"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "gui-0013",
+      "kind": "gui_raw",
+      "path": "gui/gui-0013.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "fb3ff98c9919cdaa1027cd4d0730d9c5a5f4f0c8cb3d3392a0c1693f4f05c291",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0014",
+      "kind": "gui_raw",
+      "path": "gui/gui-0014.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "537ce0bd0da98f1e585d669097605b2150b078a6dd84e82b3e7d724f462be194",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0015",
+      "kind": "gui_raw",
+      "path": "gui/gui-0015.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "f2ade1e4d5c5a9c63009a49138fa935d3f6c81c516255d65945532845450283d",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0016",
+      "kind": "gui_raw",
+      "path": "gui/gui-0016.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "7dbc0b76d5042bd46e05af31f759dc4914f854ec0c4737a08f76de7a1ea618ed",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0017",
+      "kind": "gui_raw",
+      "path": "gui/gui-0017.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "ba1f3b399f00895efa2281e9df656652f90dfea323ef47539247e78c7703fb6f",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0018",
+      "kind": "gui_raw",
+      "path": "gui/gui-0018.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "e54637aabef99f8eadad3891c71bb31a885d71fb103335ee57339374fa9876d2",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0019",
+      "kind": "gui_raw",
+      "path": "gui/gui-0019.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "28152fda8bf2b58f811967e76a7b03e239b6257f3c41b463a693018a2f1113c3",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0021",
+      "kind": "gui_raw",
+      "path": "gui/gui-0021.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "7a919babd5c3bee23591a8ce1ac7d4f0d8d1052999d2acb83333d4be8e219dbf",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0022",
+      "kind": "gui_raw",
+      "path": "gui/gui-0022.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "29cc3285c86076feb7bf1658f37ace4242e50187c239ce869855cf0e38564d71",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0023",
+      "kind": "gui_raw",
+      "path": "gui/gui-0023.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "aff4b78e60a26c22c1dfe3f37a998c4d92c2dbfe8d890c55567c18a6be5de39a",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0024",
+      "kind": "gui_raw",
+      "path": "gui/gui-0024.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "cb49229b28a7c3b81e66a696f1374c373ce812ca8a6b3c8dc5b48bfccb20cef7",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0025",
+      "kind": "gui_raw",
+      "path": "gui/gui-0025.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "83dee8a27b0f1c57544de8823f92c247331a30b2152a78cac9acb23ecffedfae",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0026",
+      "kind": "gui_raw",
+      "path": "gui/gui-0026.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "fe41f017524447b5a04701ef3e6659f71af142f215a59930f9b77c24139f26b9",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0027",
+      "kind": "gui_raw",
+      "path": "gui/gui-0027.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "5fbc14a5778a7fb7cdc6f53ef43ad2dc1bcb01ac2dae6eb553854d2ec67b4310",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0028",
+      "kind": "gui_raw",
+      "path": "gui/gui-0028.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "91e3097fccf133d1c2e8dfc781ebd04de4bc2193a99a05b36622a2df555782a3",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0029",
+      "kind": "gui_raw",
+      "path": "gui/gui-0029.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "80cdc7b5519a65c4e6a79c1ad8c9a3fde52bdd9952f3b7e6d907a1bfd35826df",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0030",
+      "kind": "gui_raw",
+      "path": "gui/gui-0030.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "841e848e6c65229ba96b68f07d7456779f2ba8c1e8e2780a4c84af543585e8a8",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0031",
+      "kind": "gui_raw",
+      "path": "gui/gui-0031.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "a161ec42761314a630257d1a797e43366c0c43b751edf38729b6510981d62c54",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0032",
+      "kind": "gui_raw",
+      "path": "gui/gui-0032.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "f94c415542ffcc0d5acece88e5af027cc6e4fc160f114b14bd2a354e78edca01",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    }
+  ],
+  "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/T07",
+  "inspect_request_id": "a5995fa0-fe3d-48fa-ab98-1ae4a9bee922",
+  "convert_request_id": "96f49f57-708d-46ba-902d-f0c96dc9a85b",
+  "output": "cube-gui.cbq",
+  "human_acceptance": "not_run",
+  "capture_note": "Initial occluded capture excluded; activated returned Prepare window before inputs",
+  "viewer_new_gui_output": "not_run"
+}
