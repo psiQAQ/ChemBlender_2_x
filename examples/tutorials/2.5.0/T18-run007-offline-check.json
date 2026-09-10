@@ -1,0 +1,343 @@
+{
+  "status": "passed",
+  "scope": "CDP offline network emulation in isolated headless Edge; not OS firewall isolation",
+  "reports": [
+    {
+      "language": "en",
+      "status": "passed",
+      "html_sha256": "1f0806e05082fcf6da69e52fd14d4af0869ed5a0459f0e503e7eb13ec6c897d6",
+      "network_offline": true,
+      "cross_language_navigation": "passed",
+      "title": "ChemBlender 2.5 Offline Guide",
+      "images": [
+        {
+          "width": 1920,
+          "height": 1009
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1920,
+          "height": 1033
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        }
+      ],
+      "tables": 35,
+      "brokenAnchors": [],
+      "commandText": true,
+      "receipt_downloads": [
+        {
+          "name": "T18-run007-gui-save-check.json",
+          "sha256": "8e7fd3d8bd280af5cf50fb38f2bd72682160c63ed18c3de930c74e2fe273a23d"
+        },
+        {
+          "name": "T18-run007-gui-relink-check.json",
+          "sha256": "38ce37dd25d118edbcddeb773583bcf516a2f454f38fe42767573cb9b02a47af"
+        },
+        {
+          "name": "T18-run007-gui-pairs-cold-check.json",
+          "sha256": "0a9db2a7c071270c1a1dd0244126af2806f72c1e632b18640bbed021245f2f1c"
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "status": "passed",
+      "html_sha256": "30de5f718c419afec1934c7715b1120c330a7b57b35d52ad42c3f7f2c7e74644",
+      "network_offline": true,
+      "cross_language_navigation": "passed",
+      "title": "ChemBlender 2.5 \u7ec2\u8364\u568e\u93b8\u56e7\u5d21",
+      "images": [
+        {
+          "width": 1920,
+          "height": 1009
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1920,
+          "height": 1033
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        }
+      ],
+      "tables": 35,
+      "brokenAnchors": [],
+      "commandText": true,
+      "receipt_downloads": [
+        {
+          "name": "T18-run007-gui-save-check.json",
+          "sha256": "8e7fd3d8bd280af5cf50fb38f2bd72682160c63ed18c3de930c74e2fe273a23d"
+        },
+        {
+          "name": "T18-run007-gui-relink-check.json",
+          "sha256": "38ce37dd25d118edbcddeb773583bcf516a2f454f38fe42767573cb9b02a47af"
+        },
+        {
+          "name": "T18-run007-gui-pairs-cold-check.json",
+          "sha256": "0a9db2a7c071270c1a1dd0244126af2806f72c1e632b18640bbed021245f2f1c"
+        }
+      ]
+    }
+  ],
+  "visual_review": "English and Chinese recovery screenshots inspected; steps adjacent to images",
+  "raw_root": ".blend-analysis\\2.5-real-user-tutorials\\run-007\\offline-qa-t18",
+  "human_review": "not_run"
+}
