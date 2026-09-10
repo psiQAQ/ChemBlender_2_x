@@ -1,0 +1,41 @@
+{
+  "status": "passed",
+  "checks": [
+    {
+      "case": "missing",
+      "status": "missing",
+      "message": "sidecar manifest not found: D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\fault-cases\\missing.cbq\\manifest.json",
+      "session_unchanged": true
+    },
+    {
+      "case": "damaged",
+      "status": "invalid",
+      "message": "sidecar array checksum mismatch: arrays/087b272a7dc8f6b276996175eaf5ddd3cf34164aec06b2bbaaabe29ac7885617.npy",
+      "session_unchanged": true
+    },
+    {
+      "case": "different_project",
+      "status": "mismatch",
+      "message": "sidecar project UUID or manifest hash does not match scene link",
+      "session_unchanged": true
+    },
+    {
+      "case": "stale_manifest_generation",
+      "status": "mismatch",
+      "message": "sidecar project UUID or manifest hash does not match scene link"
+    },
+    {
+      "case": "publication_cancel",
+      "status": "cancelled",
+      "output_absent": true
+    }
+  ],
+  "valid_relink_after_rejection": "passed",
+  "original_hashes_unchanged": true,
+  "track": "installed_wheel_public_core",
+  "gui": "not_run",
+  "entity_stale_revision": "not_run",
+  "human_review": "not_run",
+  "case_id": "T18",
+  "prepare_sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e"
+}
