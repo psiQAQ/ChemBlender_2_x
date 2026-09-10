@@ -1,0 +1,14 @@
+{
+  "case_id": "T17",
+  "format": "cif",
+  "mode": "preserve",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "advanced_mode_control": "actual Computer Use selection",
+  "preview_no_write": "passed",
+  "gui_export": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "sha256": "075cb038ff2587a4da144043ed7e82a3ce20936f2be86be99d388727da98ce22",
+  "preview_artifact": "gui-0071",
+  "success_artifact": "gui-0073",
+  "human_review": "not_run"
+}
