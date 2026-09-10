@@ -1,5 +1,25 @@
 # T06：阿司匹林轨迹与同帧原子力
 
+## 当前候选：精细工程与已验证播放
+
+下方早期操作记录与图片保留原候选绑定。当前本地审阅使用 `run-009/T06` 中的 `trajectory-refined.blend` 和完整同名 `.cbq` 目录。Extension SHA-256 为 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`；prepare wheel SHA-256 为 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`。下文固定输入和科学单位不变；新候选已有 [Prepare GUI 检查](../../../examples/tutorials/2.5.0/T06-run009-gui-check.json)及[全帧 View 检查](../../../examples/tutorials/2.5.0/T06-run009-view-check.json)。大型产物目前仅供本地审阅，可分发下载包仍待完成。
+
+![精细化后的源帧 15，Cycles 2400×1800、256 samples](../assets/2.5-tutorials/trajectory-refined-run009.png)
+
+原子显示比例为 `0.3`，力箭头显示比例为 `0.35`，原子细分为 `5`，材质粗糙度为 `0.3`。功率 `14000` 的点光源和功率 `1800`、尺寸 `8` 的圆盘补光改善可见性。工程使用单条 Set Shade Smooth 原子分支，共 21,000 个平滑面，没有采用早期的 Smooth by Angle 修改器。自定义节点通过 MCP 编辑，其手动 GUI 搭建仍未验证。保留科学数组：这些修改改善显示表面，不会提高数据采样分辨率。当前投影仍有部分箭头被遮挡。
+
+1. 将精细 `.blend` 与 `.cbq` 放在一起后打开。如果恢复的 Image Editor 遮住场景，关闭该辅助窗口。选中力 View `ChemBlender Structure.001`，在 `Scientific Representation` 下使用 `Load Selected View`。冷加载后科学播放默认暂停。
+2. 在 Project Browser 选中坐标 FrameSet，点击 `Configure Trajectory Playback`。在 ChemBlender 侧栏内滚动至科学控件，保持 Animation Start Frame 为 `1`、Timeline Frames Per Source Frame 为 `1`。
+3. 点击 `Apply Frame` 下方的 `Play`，再点 `Pause`。本候选的两个按钮均通过 Computer Use 实际点击。暂停截图的时间线为第 `30` 帧，对应源帧 `29`；坐标与缩放力均在 `1e-6` 容差内匹配该源帧。
+
+![实际 Pause 后的时间线第 30 帧](../assets/2.5-tutorials/trajectory-pause-run009.jpg)
+
+`Source Frame Index (0-based)` 是静态 Apply Frame 输入；本次播放中它保持 `0`，不是实时帧计数器。播放时使用时间线映射；静态 Apply Frame 预览可能与时间线不同。[GUI 播放记录](../../../examples/tutorials/2.5.0/T06-run009-playback-gui-check.json)区分 MCP 准备与实际点击。窄侧栏会截断部分标签，完整截图可读性和人工复做仍待验收。
+
+精细工程原位及移动副本冷重开通过，源帧 15 和平滑设置保留，见[细化与恢复记录](../../../examples/tutorials/2.5.0/T06-run009-refined-check.json)。新 32 帧序列采用公开 FRAME 与渲染重放，再通过原生 VSE 装配。H.264/MPEG4 视频为 2400×1800、24 fps，在浏览器 CDP 离线模拟下播放到末尾，时长 1.333333 秒，见[动画记录](../../../examples/tutorials/2.5.0/T06-run009-animation-check.json)。这不是新的 Ctrl+F12 GUI 验证，也不是操作系统级断网测试。视频装配含绝对帧路径，尚未通过移动验收；物理时间仍未知。
+
+旧 `trajectory-view.blend` 草稿含重叠的平面／平滑显示分支，请使用精细工程。Rebuild 可能移除自定义外观节点，需要重新设置。新候选重建、完整手动渲染说明、可移动视频装配及人工独立验收仍未完成。
+
 本课为执行中草稿。输入转换、全帧科学对照、实际 Create View／Apply Frame／Play／Pause 操作及静态渲染已有证据。32 帧 PNG 序列、H.264 编码、原位／移动后冷重开及派生几何重建也已通过。连续录屏、剩余 GUI 留证和人工独立复做仍待完成。
 
 ![源帧 15 的阿司匹林与缩放力箭头](../assets/2.5-tutorials/trajectory-frame15.png)

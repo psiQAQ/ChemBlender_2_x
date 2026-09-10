@@ -1,5 +1,25 @@
 # T06: aspirin trajectory and same-frame forces
 
+## Current candidate: refined project and verified playback
+
+The earlier walkthrough and images below retain their original candidate binding. For the current local review use `trajectory-refined.blend` with its complete same-name `.cbq` directory in `run-009/T06`. Extension SHA-256 is `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`; prepare wheel SHA-256 is `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`. The fixed input and scientific units below are unchanged. New [Prepare GUI checks](../../../examples/tutorials/2.5.0/T06-run009-gui-check.json) and [all-frame View checks](../../../examples/tutorials/2.5.0/T06-run009-view-check.json) bind this candidate. Large artifacts are local review files; a distributable download is still pending.
+
+![Refined source frame 15, Cycles 2400×1800 and 256 samples](../assets/2.5-tutorials/trajectory-refined-run009.png)
+
+Atom display scale is `0.3`, vector display scale `0.35`, atom subdivision `5` and material roughness `0.3`. A point light of power `14000` and a disk fill light of power `1800`, size `8`, improve visibility. This project uses a single Set Shade Smooth atom branch with 21,000 smooth faces. It does not use the earlier Smooth by Angle modifier. Custom node editing was performed through MCP; its manual GUI construction remains unverified. Preserve the scientific arrays: these changes improve display surfaces, not data sampling resolution. Some arrows remain occluded in this projection.
+
+1. Open the refined `.blend` beside its `.cbq`. If the restored Image Editor covers the scene, close that secondary window. Select the force View `ChemBlender Structure.001`, then use `Load Selected View` under `Scientific Representation`. Cold loading leaves scientific playback paused.
+2. Select the coordinates FrameSet in Project Browser and click `Configure Trajectory Playback`. Scroll within the ChemBlender sidebar to the scientific controls. Retain Animation Start Frame `1` and Timeline Frames Per Source Frame `1`.
+3. Click `Play` below `Apply Frame`, then `Pause`. These buttons were clicked through Computer Use on this candidate. The paused capture shows timeline frame `30`, corresponding to source frame `29`; coordinates and scaled forces matched that source frame within `1e-6`.
+
+![Actual Pause result at timeline frame 30](../assets/2.5-tutorials/trajectory-pause-run009.jpg)
+
+`Source Frame Index (0-based)` is the static Apply Frame input. It remained `0` during this playback and is not a live frame counter. Use the timeline mapping for playback; a static Apply Frame preview may differ from the timeline. The [GUI playback record](../../../examples/tutorials/2.5.0/T06-run009-playback-gui-check.json) separates MCP setup from actual clicks. Some labels are truncated in the narrow sidebar; full screenshot readability and human replay are pending.
+
+The refined pair passed original and moved-copy cold reopening with source frame 15 and smoothing intact: [refinement and recovery record](../../../examples/tutorials/2.5.0/T06-run009-refined-check.json). The newer 32-frame sequence uses explicit public FRAME and render replay, followed by native VSE assembly. H.264/MPEG4 playback at 2400×1800 and 24 fps reached the end in 1.333333 seconds under browser CDP offline emulation: [animation record](../../../examples/tutorials/2.5.0/T06-run009-animation-check.json). This is not a new Ctrl+F12 GUI validation or an operating-system network-isolation test. The video assembly has absolute frame paths and has not passed relocation. Physical time remains unknown.
+
+The older `trajectory-view.blend` draft contains overlapping flat and smooth display branches; use the refined pair. Rebuild may remove custom appearance nodes, which must be reapplied. New-candidate rebuild, complete manual rendering instructions, portable video assembly and independent human acceptance remain open.
+
 This is a working draft. Input conversion, all-frame scientific comparisons, actual Create View / Apply Frame / Play / Pause operations and a static render have evidence. The 32-frame PNG sequence, H.264 encoding, original/moved cold reopening and derived-geometry rebuilding also passed. Continuous screen recording, remaining GUI coverage and independent human replay are pending.
 
 ![Aspirin source frame 15 with scaled force arrows](../assets/2.5-tutorials/trajectory-frame15.png)

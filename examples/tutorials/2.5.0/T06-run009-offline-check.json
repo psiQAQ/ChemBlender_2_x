@@ -1,0 +1,413 @@
+{
+  "status": "passed_scoped_offline_docs",
+  "browser_checks": [
+    {
+      "language": "en",
+      "status": "passed",
+      "html_sha256": "f4fe92b5cc0c51a442a0886b366c5b2d9dce5665effc7bbbebc2a3005d3ea332",
+      "network_offline": true,
+      "cross_language_navigation": "passed",
+      "title": "ChemBlender 2.5 Offline Guide",
+      "images": [
+        {
+          "width": 1920,
+          "height": 1009
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1920,
+          "height": 1033
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 1920,
+          "height": 1033
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        }
+      ],
+      "tables": 35,
+      "brokenAnchors": [],
+      "commandText": true,
+      "receipt_downloads": [
+        {
+          "name": "T06-run009-gui-check.json",
+          "sha256": "8a97b4907fe578603b325c464e08f2714da617f5eb1626512c5bd5432352f014"
+        },
+        {
+          "name": "T06-run009-playback-gui-check.json",
+          "sha256": "c38799dff5fabd394dd6ca7ae3054c21cc4a3c67041ba3beae20729b9c99348e"
+        },
+        {
+          "name": "T06-run009-animation-check.json",
+          "sha256": "f9625248b955d3dd4649ae640c09f4b770bb3ef43c3477a906421b57259d7c51"
+        }
+      ]
+    },
+    {
+      "language": "zh-CN",
+      "status": "passed",
+      "html_sha256": "01db1d7b5dc63f47284ea85ebcfe2118c398662d206cda431c494fa887e42b9c",
+      "network_offline": true,
+      "cross_language_navigation": "passed",
+      "title": "ChemBlender 2.5 离线指南",
+      "images": [
+        {
+          "width": 1920,
+          "height": 1009
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1920,
+          "height": 1033
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 1920,
+          "height": 1033
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 1602,
+          "height": 992
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 2400,
+          "height": 1800
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        },
+        {
+          "width": 902,
+          "height": 882
+        }
+      ],
+      "tables": 35,
+      "brokenAnchors": [],
+      "commandText": true,
+      "receipt_downloads": [
+        {
+          "name": "T06-run009-gui-check.json",
+          "sha256": "8a97b4907fe578603b325c464e08f2714da617f5eb1626512c5bd5432352f014"
+        },
+        {
+          "name": "T06-run009-playback-gui-check.json",
+          "sha256": "c38799dff5fabd394dd6ca7ae3054c21cc4a3c67041ba3beae20729b9c99348e"
+        },
+        {
+          "name": "T06-run009-animation-check.json",
+          "sha256": "f9625248b955d3dd4649ae640c09f4b770bb3ef43c3477a906421b57259d7c51"
+        }
+      ]
+    }
+  ],
+  "tests": {
+    "suite": "test_public_delivery_docs.py",
+    "passed": 5,
+    "failed": 0,
+    "seconds": 67.445
+  },
+  "visual_review": "Both languages: steps followed by actual Pause screenshot and static-frame explanation; narrow panel truncation remains documented",
+  "artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/offline-browser-t06-refined.mjs",
+      "sha256": "e2969428be15350be1785a86d8b33c73e723c81040025df0a428b19c183ea282"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/offline-qa-t06-refined/report.json",
+      "sha256": "c561bb68943fcb4231c2f8eecedb67827626e2d98c4feb44ef458a1b4fa61607"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/offline-qa-t06-refined/en-recovery.png",
+      "sha256": "67deeb0c3bf910c18e6697074b4d190c244589c197d7d90f5a81c0756f07e3d8"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/offline-qa-t06-refined/zh-CN-recovery.png",
+      "sha256": "bb40dd951f34aa7437d4676cb5bd955b6b0c3d48152098517d62465b5915571c"
+    }
+  ],
+  "limitation": "CDP offline emulation, not OS firewall; human acceptance not run; large case package pending"
+}

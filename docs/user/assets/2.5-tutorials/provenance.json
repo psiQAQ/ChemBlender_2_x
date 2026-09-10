@@ -191,6 +191,24 @@
       "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
       "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
       "status": "pending_human_review"
+    },
+    {
+      "path": "trajectory-refined-run009.png",
+      "source_run": "run-009/T06/trajectory-frame15-refined.png",
+      "sha256": "694a1d8cbd561079a035215af3ddd7db76f486205d9ff3ce1199e24ee5679e13",
+      "kind": "render",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "trajectory-pause-run009.jpg",
+      "source_run": "run-009/T06/gui/gui-0028.jpg",
+      "sha256": "dda4fb399550a1f50213ff336f55047749984df8e58bf573fd23af2e27a12767",
+      "kind": "gui_raw",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "status": "pending_human_review"
     }
   ]
 }
