@@ -182,6 +182,25 @@ class ProjectServiceTests(unittest.TestCase):
         self.assertEqual(session.link_status, "connected")
         self.assertFalse(session.dirty)
 
+    def test_save_as_remains_readable_when_previous_sidecar_is_unavailable(self):
+        source = self.root / "before.cbq"
+        save_project(source, sample_project())
+        session = self.create_session(project=open_project(source))
+        session.sidecar_path = source
+        session.link_status = "connected"
+        expected = session.project.datasets[FRAMES_ID].data.values[:].tolist()
+        scene = {}
+        result = self.save_for_scenes(
+            session=session, scenes=(scene,), blend_path=self.root / "after.blend"
+        )
+        self.assertEqual(result.status, ProjectServiceStatus.CONNECTED)
+        # Only this test's temporary sidecar is moved; original data is retained.
+        source.resolve().relative_to(self.root.resolve())
+        source.rename(self.root / "before-unavailable.cbq")
+        values = session.project.datasets[FRAMES_ID].data.values
+        self.assertEqual(values[:].tolist(), expected)
+        self.assertTrue(values.path.is_relative_to(self.root / "after.cbq"))
+
     def test_save_projects_one_verified_link_to_every_scene(self):
         session = self.create_session()
         session.mark_dirty("import")

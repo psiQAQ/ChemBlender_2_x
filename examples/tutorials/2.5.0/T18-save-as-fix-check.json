@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "track": "source_core_real_input",
+  "old_path_unavailable": true,
+  "identity": [
+    "55edcef6-7e46-5b1d-9af9-179b88ca0ade",
+    "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4"
+  ],
+  "atoms": 21,
+  "coordinates_equal": true,
+  "new_array_path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-006\\T18\\save-as-fix\\new.cbq\\arrays\\1c791b5e4e977df3e14624a80d825ba53c5b313d8d9547acabd66a41717ebe2b.npy",
+  "installed_candidate_retest": "not_run",
+  "case_id": "T18",
+  "tests": {
+    "project_service_publication": 73,
+    "ui_session_trajectory": 57,
+    "failures": 0,
+    "errors": 0
+  },
+  "human_review": "not_run"
+}

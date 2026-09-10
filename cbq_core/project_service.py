@@ -445,7 +445,9 @@ def save_project_session_for_scenes(*, session, scenes, blend_path):
     destination = blend.resolve().with_suffix(".cbq")
     was_clean = not session.dirty
     try:
-        published = solidify_session(session, destination)
+        published = solidify_session(
+            session, destination, transfer_verified_project=True
+        )
     except Exception:
         if was_clean:
             session.mark_dirty("project_link")
@@ -455,6 +457,7 @@ def save_project_session_for_scenes(*, session, scenes, blend_path):
         links, values = _verified_link_values(session, destination, blend)
         _write_scene_links(scenes, values, links)
     except (SidecarNotFoundError, SidecarCompatibilityError, SidecarIntegrityError) as error:
+        close_project(published.project)
         result = _error_result(error, destination, session.project)
         session.sidecar_path = published.path
         session.link_status = result.status.value
@@ -462,11 +465,14 @@ def save_project_session_for_scenes(*, session, scenes, blend_path):
             session.mark_dirty("project_link")
         return result
     except BaseException:
+        close_project(published.project)
         session.sidecar_path = published.path
         session.link_status = ProjectServiceStatus.INVALID.value
         if was_clean:
             session.mark_dirty("project_link")
         raise
+    # Save As must not leave lazy arrays bound to the previous sidecar.
+    session.project = published.project
     session.link_status = ProjectServiceStatus.CONNECTED.value
     session.mark_clean()
     return ProjectServiceResult(
