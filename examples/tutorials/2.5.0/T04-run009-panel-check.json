@@ -48,5 +48,18 @@
   ],
   "readability": "Partial field truncation in narrow sidebar; not final tutorial screenshot",
   "human_review": "not_run",
-  "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/T04"
+  "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/T04",
+  "sidebar_resize": {
+    "status": "failed",
+    "reason": "CU boundary drags did not change region width; stopped repeated attempts",
+    "observed_width": 280,
+    "events": [
+      "f02",
+      "f03",
+      "f04",
+      "f05",
+      "f06"
+    ],
+    "note": "f05 rejected invalid coordinate shape before input; others observed without confirmed resize"
+  }
 }
