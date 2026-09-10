@@ -1,0 +1,22 @@
+{
+  "status": "failed",
+  "check": "live_array_rebound_after_save_as",
+  "pid": 33636,
+  "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-006\\T18\\working\\T01\\aspirin-handoff.blend",
+  "structure_id": "55edcef6-7e46-5b1d-9af9-179b88ca0ade",
+  "revision": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+  "coordinate_path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-006\\T18\\working\\T01\\aspirin.cbq\\arrays\\1c791b5e4e977df3e14624a80d825ba53c5b313d8d9547acabd66a41717ebe2b.npy",
+  "expected_cbq": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-006\\T18\\working\\T01\\aspirin-handoff.cbq",
+  "cold_reopen": "not_run",
+  "product_defect": "needs_triage",
+  "scene_links": {
+    "cbq_project_id": "08e197a9-f3c6-4ff5-81fb-becf5e1515f0",
+    "cbq_project_schema_version": "1.1",
+    "cbq_sidecar_locator": "aspirin-handoff.cbq",
+    "cbq_manifest_sha256": "a97be10758e4b5bf91c8bdb20765aa0b419de6c9f4d6926e972c5f01399044ae"
+  },
+  "originals_unchanged": true,
+  "array_files_equal": 9,
+  "case_id": "T18",
+  "human_review": "not_run"
+}
