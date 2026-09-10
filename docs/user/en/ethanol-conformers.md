@@ -73,6 +73,8 @@ The audit found five Structures and five matching Views. Only hydrogen index 5 m
 
 Save `ethanol.blend` beside the complete `ethanol.cbq` directory. Quit this tutorial Blender process normally and start a new process to open the saved file. Keep only one tutorial process running at a time. Check the selected View, all five Structures and their retained Views; viewport hiding is intentional.
 
+If an empty `Render Result` window reappears after opening the project, close that secondary window to see the main scene. Render Result is not the saved PNG; open `ethanol-cycles.png` to view the persistent image or press F12 to render again.
+
 Copy or move the **pair**, including all CBQ arrays. A relocated-copy cold-process audit passed with unchanged hashes and array paths beneath the new CBQ directory. This is distinct from deleting derived caches and rebuilding; that additional recovery check remains pending. Human blind replay and a distributable case package are also pending.
 
 For a standalone integrity check, use the public command below after replacing the example path. Expect `status: success`. Validation does not prove the chemistry, render quality or human reproducibility.

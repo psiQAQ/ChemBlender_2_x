@@ -30,7 +30,7 @@
       "case_id": "T02",
       "priority": "P0",
       "status": "blocked",
-      "status_reason": "GUI operations, science, final candidate PNG, cold audit and bilingual offline lesson completed on run-003. Dedicated s07 paired GUI event, remaining recovery/review packaging and independent human acceptance are pending.",
+      "status_reason": "GUI operations, science, final candidate PNG, dedicated cold-open event, bilingual offline lesson and review-only package completed on run-003. Remaining cache recovery and independent human acceptance are pending.",
       "human_review": "not_run",
       "run": "run-003/T02",
       "gui": "partial",

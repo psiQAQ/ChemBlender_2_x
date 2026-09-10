@@ -247,6 +247,7 @@ uv tool install --python 3.12 &quot;D:\Downloads\chemblender_prepare-0.1.0-py3-n
 </ol>
 <h3 id="document-8-handover-and-recovery">Handover and recovery</h3>
 <p>Save <code>ethanol.blend</code> beside the complete <code>ethanol.cbq</code> directory. Quit this tutorial Blender process normally and start a new process to open the saved file. Keep only one tutorial process running at a time. Check the selected View, all five Structures and their retained Views; viewport hiding is intentional.</p>
+<p>If an empty <code>Render Result</code> window reappears after opening the project, close that secondary window to see the main scene. Render Result is not the saved PNG; open <code>ethanol-cycles.png</code> to view the persistent image or press F12 to render again.</p>
 <p>Copy or move the <strong>pair</strong>, including all CBQ arrays. A relocated-copy cold-process audit passed with unchanged hashes and array paths beneath the new CBQ directory. This is distinct from deleting derived caches and rebuilding; that additional recovery check remains pending. Human blind replay and a distributable case package are also pending.</p>
 <p>For a standalone integrity check, use the public command below after replacing the example path. Expect <code>status: success</code>. Validation does not prove the chemistry, render quality or human reproducibility.</p>
 <pre><code>chemblender-prepare validate &quot;D:\ChemBlenderLessons\T02\ethanol.cbq&quot; --json</code></pre>

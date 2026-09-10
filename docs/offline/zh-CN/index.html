@@ -242,6 +242,7 @@ uv tool install --python 3.12 &quot;D:\Downloads\chemblender_prepare-0.1.0-py3-n
 </ol>
 <h3 id="document-8-工程交接与恢复">工程交接与恢复</h3>
 <p>将 <code>ethanol.blend</code> 与完整的 <code>ethanol.cbq</code> 目录放在一起。正常退出本教程 Blender 进程，再用新进程打开保存文件。同一时间只运行一个教程实例。检查选中的 View、5 个 Structure 和保留的 View；旧 View 被隐藏是有意的。</p>
+<p>如果打开工程后出现空的 <code>Render Result</code> 窗口，关闭该辅助窗口即可看到主场景。Render Result 不等于已经保存的 PNG；查看持久化图像请打开 <code>ethanol-cycles.png</code>，或按 F12 重新渲染。</p>
 <p>复制或移动时携带<strong>整对文件</strong>，包括 CBQ 的全部数组。本次移动副本的独立冷进程审计通过，哈希不变，数组路径位于新 CBQ 目录内。这与删除派生缓存后的重建不同，后者仍待执行。人工盲复做和可分发案例包也尚未完成。</p>
 <p>可用以下公开命令检查完整性，请替换示例路径。预期 <code>status: success</code>；validate 不代表化学正确、图像质量通过或人工可复现。</p>
 <pre><code>chemblender-prepare validate &quot;D:\ChemBlenderLessons\T02\ethanol.cbq&quot; --json</code></pre>
