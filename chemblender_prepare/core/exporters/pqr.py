@@ -263,9 +263,9 @@ def _label(value, name, maximum, *, required=True):
     return value
 
 
-def _number(value, width, precision, name, *, positive=False):
+def _number(value, width, precision, name, *, nonnegative=False):
     number = float(value)
-    if not math.isfinite(number) or positive and number <= 0.0:
+    if not math.isfinite(number) or nonnegative and number < 0.0:
         raise ValueError(f"PQR {name} is invalid")
     if len(f"{number:{width}.{precision}f}") > width:
         raise ValueError(f"PQR {name} overflows")
@@ -351,12 +351,13 @@ def _projection(project_entities):
         numpy.all(numpy.isfinite(coordinates))
         and numpy.all(numpy.isfinite(charges))
         and numpy.all(numpy.isfinite(radii))
-        and numpy.all(radii > 0.0)
+        and numpy.all(radii >= 0.0)
     ):
         raise ValueError("PQR numeric values are invalid")
     preserve_serials = readiness.status is PDBPQRExportStatus.READY
     rows = []
     native_residue_names = {}
+    last_residue_number, inferred_segment = None, 0
     for index in range(atom_count):
         residue_index = int(residue_indices[index])
         if not 0 <= residue_index < len(hierarchy.residues):
@@ -381,8 +382,14 @@ def _projection(project_entities):
         )
         residue_id = f"{residue.sequence_number}{insertion_code}"
         _label(residue_id, "residue number", 5)
+        # Match the no-chain reader: descending residue numbers start a segment.
+        if not chain_id:
+            if last_residue_number is not None and residue.sequence_number < last_residue_number:
+                inferred_segment += 1
+            last_residue_number = residue.sequence_number
         native_residue_key = (
             chain_id,
+            inferred_segment if not chain_id else 0,
             residue.sequence_number,
             insertion_code,
             residue.hetero,
@@ -415,7 +422,7 @@ def _projection(project_entities):
                 _number(y, 8, 3, "y coordinate"),
                 _number(z, 8, 3, "z coordinate"),
                 _number(charges[index], 8, 4, "charge"),
-                _number(radii[index], 7, 4, "radius", positive=True),
+                _number(radii[index], 7, 4, "radius", nonnegative=True),
             )
         )
         line = " ".join(fields) + "\n"

@@ -24,6 +24,33 @@ FIXTURES = Path(__file__).with_name("fixtures") / "pqr"
 
 
 class PQRExporterTests(unittest.TestCase):
+    def test_real_apbs_zero_radii_and_inferred_segments_roundtrip(self):
+        source = Path(__file__).resolve().parents[1] / "examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.pqr"
+        batch = parse_pqr(source)
+        preview = preview_pqr_export(batch)
+        self.assertTrue(preview.requires_confirmation)
+        with TemporaryDirectory() as directory:
+            target = Path(directory) / "roundtrip.pqr"
+            export_pqr(batch, destination=target, confirm_loss=True)
+            reopened = parse_pqr(target)
+        self.assertEqual(reopened.structures[0].atomic_numbers, batch.structures[0].atomic_numbers)
+        numpy.testing.assert_allclose(reopened.structures[0].coordinates.values,
+                                      batch.structures[0].coordinates.values, rtol=0, atol=0.00051)
+        radius = self._property(batch, "radius")
+        negative = numpy.asarray(radius.data.values).copy()
+        negative[0] = -0.1
+        self._assert_rejected_without_publication(
+            self._replace_property(batch, replace(radius, data=replace(radius.data, values=negative))),
+            "dataset.radius.values", confirm_loss=True,
+        )
+        for role in ("radius", "partial_charge"):
+            numpy.testing.assert_allclose(self._property(reopened, role).data.values,
+                                          self._property(batch, role).data.values, rtol=0, atol=0.000051)
+        self.assertEqual(int(numpy.count_nonzero(self._property(reopened, "radius").data.values == 0)), 22)
+        self.assertEqual(len(reopened.biological_hierarchies[0].residues), 41)
+        self.assertEqual(tuple((c.chain_id, c.segment_index) for c in reopened.biological_hierarchies[0].chains),
+                         tuple((c.chain_id, c.segment_index) for c in batch.biological_hierarchies[0].chains))
+
     def _property(self, batch, role):
         return next(value for value in batch.datasets if value.semantic_role == role)
 

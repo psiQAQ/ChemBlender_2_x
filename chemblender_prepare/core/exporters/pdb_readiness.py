@@ -97,7 +97,7 @@ def _property(
     required,
     width,
     precision,
-    positive=False,
+    nonnegative=False,
     occupancy=False,
 ):
     token = f"dataset.{role}"
@@ -147,7 +147,7 @@ def _property(
     elif numpy.any(~finite & ~numpy.isnan(values)):
         issues.add(f"{token}.values")
     valid = values[finite]
-    if positive and numpy.any(valid <= 0.0):
+    if nonnegative and numpy.any(valid < 0.0):
         issues.add(f"{token}.values")
     if occupancy and numpy.any((valid < 0.0) | (valid > 1.0)):
         issues.add(f"{token}.values")
@@ -271,6 +271,7 @@ def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
         and all(value in {"atom", "hetatm"} for value in record_kinds)
     ):
         native_residue_names = {}
+        last_residue_number, inferred_segment = None, 0
         for atomic_number, atom_name, record_kind, residue_index in zip(
             structure.atomic_numbers,
             atom_names,
@@ -286,8 +287,14 @@ def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
             if residue.hetero != (record_kind == "hetatm"):
                 issues.add("hierarchy.residue_kind.mismatch")
             chain = hierarchy.chains[residue.chain_index]
+            # Match the no-chain reader: descending residue numbers start a segment.
+            if not chain.chain_id:
+                if last_residue_number is not None and residue.sequence_number < last_residue_number:
+                    inferred_segment += 1
+                last_residue_number = residue.sequence_number
             native_key = (
                 chain.chain_id,
+                inferred_segment if not chain.chain_id else 0,
                 residue.sequence_number,
                 residue.insertion_code,
                 residue.hetero,
@@ -378,7 +385,7 @@ def _structure_readiness(structure, hierarchies, datasets, issues, *, pqr):
             required=True,
             width=7,
             precision=4,
-            positive=True,
+            nonnegative=True,
         )
     else:
         _property(

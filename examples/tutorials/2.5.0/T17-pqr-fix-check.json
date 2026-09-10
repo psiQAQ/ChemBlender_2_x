@@ -1,0 +1,29 @@
+{
+  "status": "source_fix_only",
+  "frozen_wheel_requalified": false,
+  "checks": [
+    {
+      "format": "pqr",
+      "public_source_cli_export": "passed",
+      "readback": "passed",
+      "original_cbq_unchanged": true,
+      "export_sha256": "398e3cccba435f0efe7a4402b5b2bf51c92e418e4812334886bff7cb6d237caf"
+    }
+  ],
+  "regression": {
+    "tests": 56,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "real_apbs_checks": [
+      "998 atoms",
+      "coordinates atol 0.00051 angstrom",
+      "charge/radius atol 0.000051",
+      "22 zero radii",
+      "41 residues",
+      "blank chain IDs and inferred segment indices retained",
+      "negative radius rejected without publication"
+    ]
+  },
+  "mol2_boundary": "5SUN contains unknown un bonds; no complete topology is available. Retain rejection coverage; add a real supported positive input without replacing this source."
+}
