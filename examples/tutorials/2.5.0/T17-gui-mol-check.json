@@ -1,0 +1,14 @@
+{
+  "case_id": "T17",
+  "format": "mol",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "preview_no_write": "passed",
+  "requires_confirmation": false,
+  "gui_export_without_confirmation": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "sha256": "dfe1f93b3fb9021f1628a0ccce26b83d857384db0ccad8656b308c2d33bf3e8d",
+  "preview_artifact": "gui-0040",
+  "success_artifact": "gui-0042",
+  "scope": "Selected aspirin MOL native fields, not whole CBQ project preservation",
+  "human_review": "not_run"
+}
