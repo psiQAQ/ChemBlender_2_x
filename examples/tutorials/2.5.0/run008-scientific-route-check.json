@@ -1,0 +1,39 @@
+{
+  "status": "passed",
+  "route_environment": {
+    "python": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-008\\scientific-route\\Scripts\\python.exe",
+    "prepare": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-008\\scientific-route\\Lib\\site-packages\\chemblender_prepare\\__init__.py",
+    "core": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-008\\scientific-route\\Lib\\site-packages\\cbq_core\\__init__.py",
+    "wheel_files_equal": 165,
+    "versions": {
+      "numpy": "2.2.6",
+      "gemmi": "0.7.5",
+      "rdkit": "2026.3.3",
+      "ase": "3.29.0",
+      "cclib": "1.8.1",
+      "phonopy": "4.4.0",
+      "pymatgen-core": "2026.7.16",
+      "spglib": "2.7.0"
+    },
+    "dependency_mode": "read-only .pth references to existing environments; no dependency install",
+    "portable": "no, requires referenced local environments"
+  },
+  "cli_doctor": "passed",
+  "cli_convert_validate": "passed",
+  "arrays_exact_to_frozen_wheel_replay": [
+    "spin_density",
+    "electron_density"
+  ],
+  "config_sha256": "035d5a41427847dd8912ab8e8a201921bd5c8caee4808e38d88068f3eab3f763",
+  "gui": "not_run",
+  "human_review": "not_run",
+  "prepare_sha256": "e3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d",
+  "repository_adapter_tests_in_reused_environment": {
+    "tests": 55,
+    "passed": 50,
+    "skipped": 5,
+    "failures": 0,
+    "errors": 0,
+    "scope": "repository source tests with route dependencies; installed wheel covered separately by public CLI"
+  }
+}
