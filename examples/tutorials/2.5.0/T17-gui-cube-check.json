@@ -1,0 +1,21 @@
+{
+  "case_id": "T17",
+  "format": "cube",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "preview_no_write": "passed",
+  "confirmed_gui_export": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "sha256": "3d0ba822bad2a72a66302c189fb321d6c3eb469a7afc851c1cee71b83adf9773",
+  "scalar_count": 262144,
+  "scalar_origin_steps_max_error": 0,
+  "preview_artifact": "gui-0033",
+  "success_artifact": "gui-0035",
+  "dataset_index": "blank for this single dataset",
+  "confirmed_losses": [
+    "grid_semantic_role_omitted",
+    "grid_value_unit_omitted",
+    "project_identity_omitted",
+    "provenance_omitted"
+  ],
+  "human_review": "not_run"
+}
