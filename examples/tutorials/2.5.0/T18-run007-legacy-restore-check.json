@@ -1,0 +1,28 @@
+{
+  "case_id": "T18",
+  "variant": "legacy",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "restore": {
+    "status": "passed",
+    "pid": 48516,
+    "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\legacy\\restored.blend",
+    "interaction": "public_operator_replay",
+    "gui": "not_run"
+  },
+  "cold": {
+    "status": "passed",
+    "pid": 10280,
+    "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\legacy\\restored.blend",
+    "views": [
+      {
+        "view": "legacy_formaldehyde (Migrated)",
+        "display_fields_equal": true
+      }
+    ],
+    "gui": "not_run",
+    "human_review": "not_run"
+  },
+  "source_unchanged": true,
+  "remaining": "GUI replay and full portable dependency audit; default brush material references installation assets",
+  "human_review": "not_run"
+}
