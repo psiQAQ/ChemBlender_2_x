@@ -1,0 +1,18 @@
+{
+  "case_id": "T07",
+  "shader_signs": "passed",
+  "scientific_arrays_unchanged": true,
+  "cold_reopen": "passed",
+  "render_execution": "passed",
+  "visual_acceptance": "not_run",
+  "human_acceptance": "not_run",
+  "artifact_root": ".blend-analysis/2.5-real-user-tutorials/run-004/T07/volume-layout",
+  "artifacts": {
+    "signed-volume-scale10.png": "38b6c00af730b998cd7a091d61ce4a7ff58c37348ad5de36a9ba80a13655594e",
+    "signed-volume.png": "e3c8052f9988066c51a823b6c77c823b5a9fd02218ebeb7387e88deaa84b209b",
+    "render.json": "2f83ab830522a3ecf08bb1c00ea1e609ef58ce0d371123148b4b3b23370e495e",
+    "render-scale10.json": "0a50cbb047b19a4cb0aed1ba521dd8eeac9f086428ed074f187fdc39bcdbeeb0",
+    "h2-grid.audit.json": "a932bbdea8387a1c3f43b30a8b43b9b9b49eafc1c89c0113089b7e2ca2853779"
+  },
+  "next_action": "Improve light and camera framing; retain scale10/100 comparisons"
+}
