@@ -55,7 +55,16 @@ Select the complete primary density before each Create. Each operation below was
 | Scientific line profile | Start (-1,0,0), end (1,0,0), 129 samples | Distance label 0–2 bohr; values 0.0630902003 to 0.176022212; maximum error 7.951e-9 |
 | Scientific colorbar | Symmetric range off; color 0 to 0.25; width 2, height 0.2 in display angstrom | Endpoints 0 and 0.25; electron_per_cubic_bohr label |
 
-Click `Create View` after setting each representation. Slice/profile coordinates above are bohr. More display samples interpolate the same 64³ field; they do not add scientific information. See the [slice check](../assets/2.5-tutorials/grid-slice-check.json) and [profile/colorbar check](../assets/2.5-tutorials/grid-profile-check.json). Clear composed illustrations of these three Views remain pending.
+Click `Create View` after setting each representation. Slice/profile coordinates above are bohr. More display samples interpolate the same 64³ field; they do not add scientific information. See the [slice check](../assets/2.5-tutorials/grid-slice-check.json) and [profile/colorbar check](../assets/2.5-tutorials/grid-profile-check.json).
+
+![Actual Cycles render of the slice, profile and colorbar](../assets/2.5-tutorials/grid-sampling.png)
+
+The figure preserves the native profile extrema and distance labels. Its short plateau comes from interpolation of the fixed scientific grid; the curve was not smoothed to hide it. Chinese readers: the left panel is the XY slice, the right panel the line profile, and the lower bar maps density values.
+
+To arrange the existing Views without altering sample arrays, work on a new saved pair. Move the slice root to (-0.75,0.25,0), the profile root to (0.85,0.78,0), and the colorbar root to (-1.279,-0.59,0); scale the colorbar uniformly by 0.52917721. Its endpoint labels remain 0 and 0.25. Hide only the profile's physical Path object in render, retaining its Graph, Axes and labels. Set graph curve bevel depth 0.003, axes 0.0015 and profile label size 0.04. These are cosmetic display coordinates and widths, not replacements for the source coordinates in the table.
+
+Use an orthographic camera at (0,0,8), rotation (0,0,0), scale 3.4; white World; Standard view transform, exposure 0 and gamma 1. Render at 2400 × 1800 with Cycles CPU, 256 samples and denoising. Additional captions identify the source and sampling boundary. This composition used known native scene operations; the earlier screenshots, not this render, prove GUI creation. [Render and cold-reopen record](../assets/2.5-tutorials/grid-sampling-render.json). Custom layout and curve widths may need reapplication after Rebuild.
+
 
 ## Recompute from the fixed input
 

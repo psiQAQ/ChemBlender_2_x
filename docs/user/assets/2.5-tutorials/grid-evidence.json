@@ -36,6 +36,11 @@
       "source": "difference-science-check.json",
       "path": "grid-difference-check.json",
       "sha256": "9ffe3186be6555f1dacf17216051b56b35c804c451aad0316a09be296e350548"
+    },
+    {
+      "source": "sampling-layout/sampling.png",
+      "path": "grid-sampling.png",
+      "sha256": "6899d3e76e7c3ff2ad5ed07b6a8aa93515916362150b8b372049f3ffceb78052"
     }
   ],
   "human_acceptance": "not_run"

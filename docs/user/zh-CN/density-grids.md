@@ -55,7 +55,16 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T07\h2-density.cbq" --json
 | Scientific line profile | 起点 (-1,0,0)，终点 (1,0,0)，129 样本 | 距离标签 0–2 bohr；数值 0.0630902003 至 0.176022212，最大误差 7.951e-9 |
 | Scientific colorbar | 关闭对称范围，颜色范围 0 至 0.25；宽 2、高 0.2，显示单位 angstrom | 端点 0、0.25，标签 electron_per_cubic_bohr |
 
-每种设置完成后点击 `Create View`。上述切片/剖面坐标单位为 bohr。增加显示样本是在同一 64³ 场上插值，不会增加科学信息。参见[切片检查](../assets/2.5-tutorials/grid-slice-check.json)和[剖面/色标检查](../assets/2.5-tutorials/grid-profile-check.json)。这三种 View 的清晰组合配图仍待补齐。
+每种设置完成后点击 `Create View`。上述切片/剖面坐标单位为 bohr。增加显示样本是在同一 64³ 场上插值，不会增加科学信息。参见[切片检查](../assets/2.5-tutorials/grid-slice-check.json)和[剖面/色标检查](../assets/2.5-tutorials/grid-profile-check.json)。
+
+![切片、剖面与色标的实际 Cycles 成图](../assets/2.5-tutorials/grid-sampling.png)
+
+图中保留原生剖面极值和距离标签。短平台来自固定科学网格的插值，没有通过平滑曲线掩盖。左侧为 XY 切片，右侧为线剖面，下方色条对应密度值；英文说明强调显示采样不增加科学分辨率。
+
+在新保存的工程对中排版，保持采样数组不变：将切片根对象移到 (-0.75,0.25,0)，剖面根对象移到 (0.85,0.78,0)，色标根对象移到 (-1.279,-0.59,0)；色标统一缩放 0.52917721，端点标签仍为 0 和 0.25。仅在渲染中隐藏剖面的物理 Path 对象，保留 Graph、Axes 和标签。图线 bevel depth 设为 0.003，坐标轴为 0.0015，剖面标签字号为 0.04。这些是排版位置和显示线宽，不替代上表的源坐标。
+
+正交相机位置 (0,0,8)，旋转 (0,0,0)，scale 3.4；白色 World；Standard 视图变换、exposure 0、gamma 1。使用 Cycles CPU、2400 × 1800、256 samples 和降噪。额外标题注明来源和采样边界。排版使用已知原生场景操作；GUI 创建证据来自之前的截图，不能用此渲染图代替。[渲染与冷重开记录](../assets/2.5-tutorials/grid-sampling-render.json)。Rebuild 后可能需要重新应用自定义排版和线宽。
+
 
 ## 从固定输入重算
 
