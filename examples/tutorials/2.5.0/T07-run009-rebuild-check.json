@@ -1,0 +1,387 @@
+{
+  "status": "passed",
+  "checks": [
+    {
+      "name": "h2-grid",
+      "removed_vdb_count": 3,
+      "rebuild": {
+        "status": "passed",
+        "pid": 39532,
+        "runtime": {
+          "version": "5.1.1",
+          "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+          "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python\\bin\\python.exe",
+          "repositories": [
+            {
+              "name": "extensions.blender.org",
+              "directory": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+            },
+            {
+              "name": "User Default",
+              "directory": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+            },
+            {
+              "name": "System",
+              "directory": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+            },
+            {
+              "name": "Existing local MCP (read only)",
+              "directory": "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+            }
+          ],
+          "enabled": [
+            "io_anim_bvh",
+            "io_curve_svg",
+            "io_mesh_uv_layout",
+            "io_scene_fbx",
+            "io_scene_gltf2",
+            "cycles",
+            "pose_library",
+            "bl_pkg",
+            "bl_ext.user_default.chemblender",
+            "bl_ext.tutorial_mcp.mcp"
+          ]
+        },
+        "views": [
+          {
+            "identity": "cdfbf291-fadf-4e23-89de-c7bec669e913",
+            "preset": "grid_volume"
+          },
+          {
+            "identity": "d7b3498b-f3d4-420f-9721-590f238412e2",
+            "preset": "signed_isosurface"
+          }
+        ],
+        "restored_volume_paths": [
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-rebuild\\h2-grid\\h2-grid.cbq\\cache\\render\\volume\\ec1aecf1ee673c688e90d4dcba8c94a7d78112005326ce3bc783a00a02f7becf.vdb",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-rebuild\\h2-grid\\h2-grid.cbq\\cache\\render\\surface\\f94f77c3d7654c2cc5b6e26275b44ac2edd8cc1725598094f6e8940a358f0aff.vdb",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-rebuild\\h2-grid\\h2-grid.cbq\\cache\\render\\surface\\a9f11f35ddf0f9e7fe022b5fd5c4ebfa8113db190595344feddfd47609bc7c26.vdb"
+        ],
+        "surface_modes": [
+          {
+            "object": "ChemBlender Positive Surface",
+            "mode": "Grid",
+            "vertices": 882
+          },
+          {
+            "object": "ChemBlender Negative Surface.001",
+            "mode": "Grid",
+            "vertices": 0
+          }
+        ],
+        "scientific_arrays_unchanged": true,
+        "interaction": "native_public_operator_replay",
+        "gui": "not_run",
+        "human_review": "not_run"
+      },
+      "cold": {
+        "status": "passed",
+        "pid": 60528,
+        "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-rebuild\\h2-grid\\h2-grid.blend",
+        "version": "5.1.1",
+        "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+        "runtime": "win32",
+        "repositories": [
+          [
+            "extensions.blender.org",
+            "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+          ],
+          [
+            "User Default",
+            "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+          ],
+          [
+            "System",
+            "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+          ],
+          [
+            "Existing local MCP (read only)",
+            "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+          ]
+        ],
+        "local_dataset_count": 3,
+        "view_count": 2,
+        "surfaces": [
+          {
+            "name": "ChemBlender Positive Surface",
+            "vertices": 882
+          },
+          {
+            "name": "ChemBlender Negative Surface.001",
+            "vertices": 0
+          }
+        ],
+        "sampling_checks": "not_applicable",
+        "refinement_retained": false,
+        "gui": "not_run",
+        "human_acceptance": "not_run"
+      }
+    },
+    {
+      "name": "h2-sampling",
+      "removed_vdb_count": 3,
+      "rebuild": {
+        "status": "passed",
+        "pid": 51128,
+        "runtime": {
+          "version": "5.1.1",
+          "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+          "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python\\bin\\python.exe",
+          "repositories": [
+            {
+              "name": "extensions.blender.org",
+              "directory": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+            },
+            {
+              "name": "User Default",
+              "directory": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+            },
+            {
+              "name": "System",
+              "directory": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+            },
+            {
+              "name": "Existing local MCP (read only)",
+              "directory": "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+            }
+          ],
+          "enabled": [
+            "io_anim_bvh",
+            "io_curve_svg",
+            "io_mesh_uv_layout",
+            "io_scene_fbx",
+            "io_scene_gltf2",
+            "cycles",
+            "pose_library",
+            "bl_pkg",
+            "bl_ext.user_default.chemblender",
+            "bl_ext.tutorial_mcp.mcp"
+          ]
+        },
+        "views": [
+          {
+            "identity": "cdfbf291-fadf-4e23-89de-c7bec669e913",
+            "preset": "grid_volume"
+          },
+          {
+            "identity": "d7b3498b-f3d4-420f-9721-590f238412e2",
+            "preset": "signed_isosurface"
+          },
+          {
+            "identity": "03e9f955-5b63-4bf2-b138-3cd049700739",
+            "preset": "grid_slice"
+          },
+          {
+            "identity": "450a5aec-ac8d-4efc-b9c9-0beb9c75ffae",
+            "preset": "grid_profile"
+          },
+          {
+            "identity": "5d2ade4a-d94e-4c41-b93f-f95d267d8ab7",
+            "preset": "grid_colorbar"
+          }
+        ],
+        "restored_volume_paths": [
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-rebuild\\h2-sampling\\h2-sampling.cbq\\cache\\render\\volume\\ec1aecf1ee673c688e90d4dcba8c94a7d78112005326ce3bc783a00a02f7becf.vdb",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-rebuild\\h2-sampling\\h2-sampling.cbq\\cache\\render\\surface\\f94f77c3d7654c2cc5b6e26275b44ac2edd8cc1725598094f6e8940a358f0aff.vdb",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-rebuild\\h2-sampling\\h2-sampling.cbq\\cache\\render\\surface\\a9f11f35ddf0f9e7fe022b5fd5c4ebfa8113db190595344feddfd47609bc7c26.vdb"
+        ],
+        "surface_modes": [
+          {
+            "object": "ChemBlender Positive Surface",
+            "mode": "Grid",
+            "vertices": 882
+          },
+          {
+            "object": "ChemBlender Negative Surface.001",
+            "mode": "Grid",
+            "vertices": 0
+          }
+        ],
+        "scientific_arrays_unchanged": true,
+        "interaction": "native_public_operator_replay",
+        "gui": "not_run",
+        "human_review": "not_run"
+      },
+      "cold": {
+        "status": "passed",
+        "pid": 42152,
+        "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-rebuild\\h2-sampling\\h2-sampling.blend",
+        "version": "5.1.1",
+        "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+        "runtime": "win32",
+        "repositories": [
+          [
+            "extensions.blender.org",
+            "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+          ],
+          [
+            "User Default",
+            "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+          ],
+          [
+            "System",
+            "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+          ],
+          [
+            "Existing local MCP (read only)",
+            "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+          ]
+        ],
+        "local_dataset_count": 3,
+        "view_count": 5,
+        "surfaces": [
+          {
+            "name": "ChemBlender Positive Surface",
+            "vertices": 882
+          },
+          {
+            "name": "ChemBlender Negative Surface.001",
+            "vertices": 0
+          }
+        ],
+        "sampling_checks": "passed",
+        "refinement_retained": false,
+        "gui": "not_run",
+        "human_acceptance": "not_run"
+      }
+    },
+    {
+      "name": "difference-lit",
+      "removed_vdb_count": 2,
+      "rebuild": {
+        "status": "passed",
+        "pid": 46280,
+        "runtime": {
+          "version": "5.1.1",
+          "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+          "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python\\bin\\python.exe",
+          "repositories": [
+            {
+              "name": "extensions.blender.org",
+              "directory": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+            },
+            {
+              "name": "User Default",
+              "directory": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+            },
+            {
+              "name": "System",
+              "directory": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+            },
+            {
+              "name": "Existing local MCP (read only)",
+              "directory": "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+            }
+          ],
+          "enabled": [
+            "io_anim_bvh",
+            "io_curve_svg",
+            "io_mesh_uv_layout",
+            "io_scene_fbx",
+            "io_scene_gltf2",
+            "cycles",
+            "pose_library",
+            "bl_pkg",
+            "bl_ext.user_default.chemblender",
+            "bl_ext.tutorial_mcp.mcp"
+          ]
+        },
+        "views": [
+          {
+            "identity": "0cd5f5cb-514b-4af5-8326-0d15d30f46e8",
+            "preset": "signed_isosurface"
+          }
+        ],
+        "restored_volume_paths": [
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-rebuild\\difference-lit\\difference-lit.cbq\\cache\\render\\surface\\273d12ab93147c835882b4e1a96bbd037243a597f67bd3cfbef0e094cf4b6fb3.vdb",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-rebuild\\difference-lit\\difference-lit.cbq\\cache\\render\\surface\\8bc1e8cecbeef800c532fc68b8ba4cbb852cf5807ba7420e754a911ee1034dcf.vdb"
+        ],
+        "surface_modes": [
+          {
+            "object": "ChemBlender Positive Surface",
+            "mode": "Grid",
+            "vertices": 490
+          },
+          {
+            "object": "ChemBlender Negative Surface.001",
+            "mode": "Grid",
+            "vertices": 612
+          }
+        ],
+        "scientific_arrays_unchanged": true,
+        "interaction": "native_public_operator_replay",
+        "gui": "not_run",
+        "human_review": "not_run"
+      },
+      "cold": {
+        "status": "passed",
+        "pid": 40340,
+        "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-rebuild\\difference-lit\\difference-lit.blend",
+        "version": "5.1.1",
+        "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+        "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+        "runtime": "win32",
+        "repositories": [
+          [
+            "extensions.blender.org",
+            "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+          ],
+          [
+            "User Default",
+            "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+          ],
+          [
+            "System",
+            "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+          ],
+          [
+            "Existing local MCP (read only)",
+            "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+          ]
+        ],
+        "local_dataset_count": 5,
+        "view_count": 1,
+        "surfaces": [
+          {
+            "name": "ChemBlender Positive Surface",
+            "vertices": 490
+          },
+          {
+            "name": "ChemBlender Negative Surface.001",
+            "vertices": 612
+          }
+        ],
+        "sampling_checks": "not_applicable",
+        "refinement_retained": false,
+        "gui": "not_run",
+        "human_acceptance": "not_run"
+      }
+    }
+  ],
+  "original_pairs_unchanged": true,
+  "source_processor_unavailable": "not_run",
+  "human_review": "not_run",
+  "cosmetic_boundary": "REBUILD restores Grid resolution; custom Size .025 and smooth nodes must be reapplied",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/cache_recovery.py",
+      "sha256": "98d9c8406911d94c23302488be2f3840697db39a9060f1c4c2821236d24b5929"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/rebuild_native.py",
+      "sha256": "7ec040a7cc2ea5cde9cd66c5558120d9a36f51ab4a431d591350a9cd97f2a215"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/audit_rebuilt.py",
+      "sha256": "e8aaf51ac284469270b64921e73ae5c4119bfee934f4821151030843bddc79cb"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/cache-recovery.json",
+      "sha256": "3a375493fb3206f1795da219f99ebaa74d25bcaf38b4a13e66fb0715cba12d03"
+    }
+  ]
+}
