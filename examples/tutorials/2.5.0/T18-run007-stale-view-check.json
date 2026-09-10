@@ -1,0 +1,14 @@
+{
+  "case_id": "T18",
+  "status": "passed",
+  "pid": 38236,
+  "stale_view_binding_rejected": "Error: scene bindings metadata is stale\n",
+  "original_view_retained": true,
+  "scientific_files_unchanged": true,
+  "restored_binding_rebuild": "passed",
+  "scope": "View binding revision corruption only; authoritative entity revision not edited",
+  "interaction": "native_public_operator_replay",
+  "gui": "not_run",
+  "human_review": "not_run",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+}
