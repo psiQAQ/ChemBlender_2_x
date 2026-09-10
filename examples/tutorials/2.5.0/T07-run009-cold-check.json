@@ -1,0 +1,283 @@
+{
+  "status": "passed",
+  "interaction": "native_process_replay",
+  "checks": [
+    {
+      "status": "passed",
+      "pid": 59832,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T07\\h2-grid.blend",
+      "version": "5.1.1",
+      "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+      "runtime": "win32",
+      "repositories": [
+        [
+          "extensions.blender.org",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+        ],
+        [
+          "User Default",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+        ],
+        [
+          "System",
+          "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+        ],
+        [
+          "Existing local MCP (read only)",
+          "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+        ]
+      ],
+      "local_dataset_count": 3,
+      "view_count": 2,
+      "surfaces": [
+        {
+          "name": "ChemBlender Positive Surface",
+          "vertices": 882
+        },
+        {
+          "name": "ChemBlender Negative Surface",
+          "vertices": 0
+        }
+      ],
+      "sampling_checks": "not_applicable",
+      "refinement_retained": false,
+      "gui": "not_run",
+      "human_acceptance": "not_run"
+    },
+    {
+      "status": "passed",
+      "pid": 63976,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-grids\\h2-grid.blend",
+      "version": "5.1.1",
+      "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+      "runtime": "win32",
+      "repositories": [
+        [
+          "extensions.blender.org",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+        ],
+        [
+          "User Default",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+        ],
+        [
+          "System",
+          "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+        ],
+        [
+          "Existing local MCP (read only)",
+          "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+        ]
+      ],
+      "local_dataset_count": 3,
+      "view_count": 2,
+      "surfaces": [
+        {
+          "name": "ChemBlender Positive Surface",
+          "vertices": 882
+        },
+        {
+          "name": "ChemBlender Negative Surface",
+          "vertices": 0
+        }
+      ],
+      "sampling_checks": "not_applicable",
+      "refinement_retained": false,
+      "gui": "not_run",
+      "human_acceptance": "not_run"
+    },
+    {
+      "status": "passed",
+      "pid": 55992,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T07\\h2-sampling.blend",
+      "version": "5.1.1",
+      "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+      "runtime": "win32",
+      "repositories": [
+        [
+          "extensions.blender.org",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+        ],
+        [
+          "User Default",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+        ],
+        [
+          "System",
+          "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+        ],
+        [
+          "Existing local MCP (read only)",
+          "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+        ]
+      ],
+      "local_dataset_count": 3,
+      "view_count": 5,
+      "surfaces": [
+        {
+          "name": "ChemBlender Positive Surface",
+          "vertices": 882
+        },
+        {
+          "name": "ChemBlender Negative Surface",
+          "vertices": 0
+        }
+      ],
+      "sampling_checks": "passed",
+      "refinement_retained": false,
+      "gui": "not_run",
+      "human_acceptance": "not_run"
+    },
+    {
+      "status": "passed",
+      "pid": 57676,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-grids\\h2-sampling.blend",
+      "version": "5.1.1",
+      "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+      "runtime": "win32",
+      "repositories": [
+        [
+          "extensions.blender.org",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+        ],
+        [
+          "User Default",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+        ],
+        [
+          "System",
+          "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+        ],
+        [
+          "Existing local MCP (read only)",
+          "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+        ]
+      ],
+      "local_dataset_count": 3,
+      "view_count": 5,
+      "surfaces": [
+        {
+          "name": "ChemBlender Positive Surface",
+          "vertices": 882
+        },
+        {
+          "name": "ChemBlender Negative Surface",
+          "vertices": 0
+        }
+      ],
+      "sampling_checks": "passed",
+      "refinement_retained": false,
+      "gui": "not_run",
+      "human_acceptance": "not_run"
+    },
+    {
+      "status": "passed",
+      "pid": 40368,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T07\\difference-lit.blend",
+      "version": "5.1.1",
+      "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+      "runtime": "win32",
+      "repositories": [
+        [
+          "extensions.blender.org",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+        ],
+        [
+          "User Default",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+        ],
+        [
+          "System",
+          "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+        ],
+        [
+          "Existing local MCP (read only)",
+          "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+        ]
+      ],
+      "local_dataset_count": 5,
+      "view_count": 1,
+      "surfaces": [
+        {
+          "name": "ChemBlender Positive Surface",
+          "vertices": 8464
+        },
+        {
+          "name": "ChemBlender Negative Surface",
+          "vertices": 9972
+        }
+      ],
+      "sampling_checks": "not_applicable",
+      "refinement_retained": true,
+      "gui": "not_run",
+      "human_acceptance": "not_run"
+    },
+    {
+      "status": "passed",
+      "pid": 59968,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T07-grids\\difference-lit.blend",
+      "version": "5.1.1",
+      "executable": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe",
+      "python": "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\python",
+      "runtime": "win32",
+      "repositories": [
+        [
+          "extensions.blender.org",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\blender_org"
+        ],
+        [
+          "User Default",
+          "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-001\\profile\\extensions\\user_default"
+        ],
+        [
+          "System",
+          "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\extensions\\system"
+        ],
+        [
+          "Existing local MCP (read only)",
+          "C:\\Users\\ustcw\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\lab_blender_org"
+        ]
+      ],
+      "local_dataset_count": 5,
+      "view_count": 1,
+      "surfaces": [
+        {
+          "name": "ChemBlender Positive Surface",
+          "vertices": 8464
+        },
+        {
+          "name": "ChemBlender Negative Surface",
+          "vertices": 9972
+        }
+      ],
+      "sampling_checks": "not_applicable",
+      "refinement_retained": true,
+      "gui": "not_run",
+      "human_acceptance": "not_run"
+    }
+  ],
+  "scientific_hashes_unchanged": true,
+  "cache_rebuild": "not_run",
+  "human_review": "not_run",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/audit_cold.py",
+      "sha256": "cfb85c4f9d8523d92463986ed7061d46947b75667d210a0c4f0681db59f85dff"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/cold_recovery.py",
+      "sha256": "b38c5effffd317fbc3344dfa8d48964745c0c44da1872b4b18cea64eca5038f6"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/grid-cold-recovery.json",
+      "sha256": "a27f23c2b0ca88fc895abee76f5c4445fe8251e0bd1701d3383a8f60e9f294c3"
+    }
+  ]
+}
