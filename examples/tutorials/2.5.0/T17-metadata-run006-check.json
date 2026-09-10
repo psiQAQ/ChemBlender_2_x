@@ -1,0 +1,76 @@
+{
+  "case_id": "T17",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "checks": [
+    {
+      "format": "pdb",
+      "complete_hierarchy_and_atom_sites_equal": true,
+      "datasets": [
+        {
+          "type": "FrameSet",
+          "role": "coordinates",
+          "shape": [
+            10,
+            1231,
+            3
+          ],
+          "unit": "angstrom",
+          "max_error": 0.0
+        },
+        {
+          "type": "AtomicProperty",
+          "role": "b_factor",
+          "shape": [
+            1231
+          ],
+          "unit": "angstrom_squared",
+          "max_error": 0.0
+        },
+        {
+          "type": "AtomicProperty",
+          "role": "occupancy",
+          "shape": [
+            1231
+          ],
+          "unit": "dimensionless",
+          "max_error": 0.0
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "format": "pqr",
+      "complete_hierarchy_and_atom_sites_equal": true,
+      "datasets": [
+        {
+          "type": "AtomicProperty",
+          "role": "partial_charge",
+          "shape": [
+            998
+          ],
+          "unit": "elementary_charge",
+          "max_error": 0.0
+        },
+        {
+          "type": "AtomicProperty",
+          "role": "radius",
+          "shape": [
+            998
+          ],
+          "unit": "angstrom",
+          "max_error": 0.0
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "format": "sdf",
+      "title_equal": true,
+      "ordered_raw_properties_equal": true,
+      "raw_property_count": 0,
+      "scope": "Selected record only; empty property list does not prove arbitrary SDF property fidelity.",
+      "status": "passed"
+    }
+  ],
+  "human_review": "not_run"
+}
