@@ -1,0 +1,409 @@
+{
+  "source_commit": "b2ea362430f28c1481112ae087c03a2b4fa162dd",
+  "artifacts": {
+    "chemblender_prepare-0.1.0-py3-none-any.whl": {
+      "sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+      "bytes": 555289
+    },
+    "chemblender_prepare-0.1.0.tar.gz": {
+      "sha256": "e96b5a90386dfb04caedcf18dca2afa2aa25132126fa8fe96add16ab7f808b96",
+      "bytes": 898830
+    }
+  },
+  "checks": [
+    {
+      "format": "mol",
+      "preview_no_write": true,
+      "installed_export": "passed",
+      "readback": "passed",
+      "original_cbq_unchanged": true
+    },
+    {
+      "format": "sdf",
+      "preview_no_write": true,
+      "installed_export": "passed",
+      "readback": "passed",
+      "original_cbq_unchanged": true
+    }
+  ],
+  "source_files_equal": 165,
+  "installed": {
+    "module": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-006\\uv-tool\\chemblender-prepare\\Lib\\site-packages\\chemblender_prepare\\__init__.py",
+    "versions": {
+      "chemblender-prepare": "0.1.0",
+      "numpy": "2.5.3",
+      "rdkit": "2026.3.3",
+      "gemmi": "0.7.5",
+      "pillow": "12.3.0"
+    }
+  },
+  "status": "focused_installed_validation_passed",
+  "full_regression": "not_run",
+  "gui": "not_run",
+  "t17": [
+    {
+      "format": "xyz",
+      "status": "processed",
+      "entity": {
+        "group": "structures",
+        "id": "a020697f-61b9-5c34-815b-d6b5a750e7ec",
+        "name": "",
+        "revision": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "Structure",
+        "unit": null
+      },
+      "preview_no_write": true,
+      "requires_confirmation": true,
+      "loss_gate": "passed",
+      "output_sha256": "cf68b4618dfbba3a075c09021da5e3d7e02326ef51bf3bee75c2f0074e178f70",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    },
+    {
+      "format": "extxyz",
+      "status": "processed",
+      "entity": {
+        "group": "structures",
+        "id": "c0fd86cb-67be-5423-a140-1a03adc58915",
+        "name": "",
+        "revision": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "Structure",
+        "unit": null
+      },
+      "preview_no_write": true,
+      "requires_confirmation": false,
+      "output_sha256": "6ce8eb60fae79a0e93eb489642fc1a89d540953f541c1b2c63b301ca2399c670",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    },
+    {
+      "format": "mol",
+      "status": "processed",
+      "entity": {
+        "group": "structures",
+        "id": "13a454b7-9a7c-5084-a9e0-db7fdc52ceee",
+        "name": "",
+        "revision": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "Structure",
+        "unit": null
+      },
+      "preview_no_write": true,
+      "requires_confirmation": false,
+      "output_sha256": "dfe1f93b3fb9021f1628a0ccce26b83d857384db0ccad8656b308c2d33bf3e8d",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    },
+    {
+      "format": "mol2",
+      "status": "failed",
+      "entity": {
+        "group": "structures",
+        "id": "7671d75f-54ea-50f2-b950-4cf567276753",
+        "name": "",
+        "revision": "1ac476afd860c326995e28125cc4cf4007b33e022a8c9f397d9e350f3e5a4fbd",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "Structure",
+        "unit": null
+      },
+      "error": "{'protocol_version': '1', 'worker_version': '0.1.0', 'request_id': 'cf6a5d9f-9a06-4d52-8269-01247c01426b', 'status': 'error', 'outputs': [], 'artifacts': [], 'cache_key': None, 'metadata': {}, 'error': {'code': 'prepare_failed', 'message': 'molecular export requires a complete topology'}}",
+      "original_input_unchanged": true
+    },
+    {
+      "format": "pdb",
+      "status": "processed",
+      "entity": {
+        "group": "structures",
+        "id": "7902c7b6-604d-5bed-9857-075248de4a63",
+        "name": "",
+        "revision": "21099cb88231455fdfab4095dddfadcc85cc4213e105cf5f9cfff2ca21993378",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "Structure",
+        "unit": null
+      },
+      "preview_no_write": true,
+      "requires_confirmation": true,
+      "loss_gate": "passed",
+      "output_sha256": "d516c0c0d01b86c09abce937d12a609fa4e8be2854f1f578deb16ba87ea29b7f",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    },
+    {
+      "format": "pqr",
+      "status": "processed",
+      "entity": {
+        "group": "structures",
+        "id": "b41e3fe8-28bd-53f1-8be0-ee8437f7a38a",
+        "name": "",
+        "revision": "44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "Structure",
+        "unit": null
+      },
+      "preview_no_write": true,
+      "requires_confirmation": true,
+      "loss_gate": "passed",
+      "output_sha256": "398e3cccba435f0efe7a4402b5b2bf51c92e418e4812334886bff7cb6d237caf",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    },
+    {
+      "format": "sdf",
+      "status": "processed",
+      "entity": {
+        "group": "structures",
+        "id": "19cee879-4241-5293-bc82-71b72499de05",
+        "name": "",
+        "revision": "3168a68590fba4b643e19ce59834b30fd079789928b0d99adbae9bc4dfc5cf46",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "Structure",
+        "unit": null
+      },
+      "preview_no_write": true,
+      "requires_confirmation": false,
+      "output_sha256": "321156c4a1842f93b396fd73f3f394eee76ad08c0761aa321b88561779a65198",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    },
+    {
+      "format": "smiles",
+      "status": "processed",
+      "entity": {
+        "group": "structures",
+        "id": "5ca2d292-3d4e-594e-8cc8-2ec742179efd",
+        "name": "",
+        "revision": "4cab412ece40feee9e5443096afb31d3e16d0ebdeb3906a851c88c54dc2ae903",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "Structure",
+        "unit": null
+      },
+      "preview_no_write": true,
+      "requires_confirmation": true,
+      "loss_gate": "passed",
+      "output_sha256": "fa6dfe7e7a4728dac34eb56c59a45fd508b34b66ef535dfe0213ff1a00258b46",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    },
+    {
+      "format": "cif",
+      "status": "processed",
+      "entity": {
+        "group": "structures",
+        "id": "3561a84e-0d51-5e77-bc53-7eacee58084e",
+        "name": "",
+        "revision": "0ab8afbcc0f931327a5cba664df8317bf557f3b6f06b1fe5b27908676b89c5f5:4503272",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "Structure",
+        "unit": null
+      },
+      "preview_no_write": true,
+      "requires_confirmation": false,
+      "output_sha256": "075cb038ff2587a4da144043ed7e82a3ce20936f2be86be99d388727da98ce22",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    },
+    {
+      "format": "poscar",
+      "status": "processed",
+      "entity": {
+        "group": "structures",
+        "id": "f088df61-707a-5167-ac3a-8375220ac310",
+        "name": "",
+        "revision": "67c040a37159c5f7ba618f6ce264efc24308f50ed982bd0b80035733278bdb5c:C",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "Structure",
+        "unit": null
+      },
+      "preview_no_write": true,
+      "requires_confirmation": false,
+      "output_sha256": "67c040a37159c5f7ba618f6ce264efc24308f50ed982bd0b80035733278bdb5c",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    },
+    {
+      "format": "cube",
+      "status": "processed",
+      "entity": {
+        "group": "datasets",
+        "id": "5092acfe-e407-52b2-8046-65b7ebca3357",
+        "name": "",
+        "revision": "04a24ad8b9c2a8aed12a3462650555cd476c3fdb85a030d4598b0c98036de5f0",
+        "semantic_role": "electron_density",
+        "shape": [
+          64,
+          64,
+          64
+        ],
+        "status": "complete",
+        "structure_id": "ce15e2bb-caa9-40b6-9f9e-7fe8553eda14",
+        "type": "Grid3D",
+        "unit": "electron_per_cubic_bohr"
+      },
+      "preview_no_write": true,
+      "requires_confirmation": true,
+      "loss_gate": "passed",
+      "output_sha256": "3d0ba822bad2a72a66302c189fb321d6c3eb469a7afc851c1cee71b83adf9773",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    },
+    {
+      "format": "cjson",
+      "status": "processed",
+      "entity": {
+        "group": "cjson_envelopes",
+        "id": "12ed6139-dc27-5abf-9404-bd31b5615f0a",
+        "name": "",
+        "revision": "310cb5b4d48a08662d9e956b1a7ac778a05ea9060be6cffcdfaedecfd390097e",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "CJSONEnvelope",
+        "unit": null
+      },
+      "preview_no_write": true,
+      "requires_confirmation": false,
+      "output_sha256": "2fa9ba20a2cbb6e1409cde8a9cbfbe54568e9eff6ff4b4f9d85e711c97344f58",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    },
+    {
+      "format": "qcschema",
+      "status": "processed",
+      "entity": {
+        "group": "qcschema_envelopes",
+        "id": "67a0d169-fe4f-528c-b693-2a6509513157",
+        "name": "",
+        "revision": "73b28251edde763490937d303cee0b4c2cf4bf55c566d4139c5e33220ffae451",
+        "semantic_role": null,
+        "shape": null,
+        "status": null,
+        "structure_id": null,
+        "type": "QCSchemaEnvelope",
+        "unit": null
+      },
+      "preview_no_write": true,
+      "requires_confirmation": false,
+      "output_sha256": "5fb9f5a3ad4b24158c2d7ab0bfb81e416e9235a5a5f3f3bba26f8f7d90ab09af",
+      "science_comparison": "not_run",
+      "original_input_unchanged": true
+    }
+  ],
+  "field_checks": {
+    "scope": "numeric and inventory checks only; bonds, stereo, lattice, Cube and SMILES require separate verification",
+    "checks": [
+      {
+        "format": "xyz",
+        "atom_count": 21,
+        "atom_mapping_equal": true,
+        "coordinate_max_error_angstrom": 0.0,
+        "status": "passed"
+      },
+      {
+        "format": "extxyz",
+        "atom_count": 21,
+        "atom_mapping_equal": true,
+        "coordinate_max_error_angstrom": 0.0,
+        "status": "passed"
+      },
+      {
+        "format": "mol",
+        "atom_count": 21,
+        "atom_mapping_equal": true,
+        "coordinate_max_error_angstrom": 0.0,
+        "status": "passed"
+      },
+      {
+        "format": "pdb",
+        "atom_count": 1231,
+        "atom_mapping_equal": true,
+        "coordinate_max_error_angstrom": 0.0,
+        "status": "passed"
+      },
+      {
+        "format": "pqr",
+        "atom_count": 998,
+        "atom_mapping_equal": true,
+        "coordinate_max_error_angstrom": 0.0,
+        "properties": {
+          "radius": {
+            "max_error": 0.0,
+            "unit": "angstrom"
+          },
+          "partial_charge": {
+            "max_error": 0.0,
+            "unit": "elementary_charge"
+          }
+        },
+        "residues": 41,
+        "source_chain_ids_and_segments_equal": true,
+        "status": "passed"
+      },
+      {
+        "format": "sdf",
+        "atom_count": 21,
+        "atom_mapping_equal": true,
+        "coordinate_max_error_angstrom": 0.0,
+        "status": "passed"
+      },
+      {
+        "format": "cif",
+        "atom_count": 64,
+        "atom_mapping_equal": true,
+        "coordinate_max_error_angstrom": 0.0,
+        "status": "passed"
+      },
+      {
+        "format": "poscar",
+        "atom_count": 8,
+        "atom_mapping_equal": true,
+        "coordinate_max_error_angstrom": 0.0,
+        "status": "passed"
+      },
+      {
+        "format": "cjson",
+        "json_value_equality": true,
+        "status": "passed"
+      },
+      {
+        "format": "qcschema",
+        "json_value_equality": true,
+        "status": "passed"
+      }
+    ]
+  },
+  "supersedes_prepare_sha256": "8ac4a40e4f607a56d0a2137841a31db6cd69ee439005b1c70be7a67a2e13cfbf",
+  "remaining": "Full scientific comparisons, positive real MOL2 input, GUI, full regression and final artifact acceptance remain incomplete."
+}
