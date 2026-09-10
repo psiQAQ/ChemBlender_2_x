@@ -1,0 +1,85 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T18",
+  "title": "Portable project handoff and recovery on isolated copies",
+  "required_steps": [
+    {
+      "id": "s01",
+      "description": "Save As a paired project through GUI; preserve original input",
+      "requires_gui": true
+    },
+    {
+      "id": "s02",
+      "description": "Cold reopen in a new process; inspect Project Browser after whole-folder relocation",
+      "requires_gui": true
+    },
+    {
+      "id": "s03",
+      "description": "On copies only remove derived caches; rebuild with processor and source unavailable",
+      "requires_gui": true
+    },
+    {
+      "id": "s04",
+      "description": "Exercise relink failure and recovery, cancel, stale revision and damaged-copy rejection",
+      "requires_gui": true
+    },
+    {
+      "id": "s05",
+      "description": "Explicitly migrate a legacy copy; preserve original legacy bytes",
+      "requires_gui": true
+    }
+  ],
+  "required_checks": [
+    "paired_cold_reopen",
+    "moved_entity_revision_array_hashes_equal",
+    "source_processor_unavailable_rebuild",
+    "cancel_no_contamination",
+    "wrong_path_recovery",
+    "stale_revision_rejected",
+    "damaged_copy_rejected",
+    "legacy_copy_migration",
+    "originals_unchanged"
+  ],
+  "required_artifact_kinds": [
+    "environment",
+    "events",
+    "assertions",
+    "gui_raw",
+    "scene_blend",
+    "cbq_manifest",
+    "lifecycle",
+    "review"
+  ],
+  "inputs": [
+    {
+      "case": "T01",
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-003/T01/aspirin.blend",
+      "sha256": "94e521be1dee2817be115525b2c52c3dddf770739eed22627e8d103557d3250f"
+    },
+    {
+      "case": "T06",
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-004/T06/aspirin-trajectory.blend",
+      "sha256": "a96858db4dfa5c54ac23c7220e7129ef1e09fe64ace60a11156a805a7679dde1"
+    },
+    {
+      "case": "T07",
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-004/T07/h2-grid.blend",
+      "sha256": "81447a025761209002eabd420aab0b411b313658cc849a6b1be735e1883d7f98"
+    },
+    {
+      "case": "legacy",
+      "path": "examples/user-workflows/inputs/legacy/chemblender-2.1-molecule.blend",
+      "sha256": "36b05c3cacbcc067714615a49df35cf20973bc8122329194ddaecd249df6c3d4"
+    }
+  ],
+  "input_inventory_sha256": "68793a2301fe7a14eef1896b15d40b74e63f455b700a2ddf49f451331d9b5ba9",
+  "comparison_rules": {
+    "science": "Exact UUID/revision and authoritative array hashes; same frame properties where applicable",
+    "render": "Inspect view restoration separately; blend binary equality is not required",
+    "deletion": "Only explicitly identified derived caches in isolated test copies",
+    "availability": "Demonstrate processor and source unavailability during rebuild, not merely absence of calls in a log"
+  },
+  "status": "not_run",
+  "human_review": "not_run"
+}
