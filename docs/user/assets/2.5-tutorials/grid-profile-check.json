@@ -1,0 +1,22 @@
+{
+  "status": "passed",
+  "profile_samples": 129,
+  "independent_raw_cube_value_error": 7.950163749548267e-09,
+  "minimum": 0.06309020030686734,
+  "maximum": 0.17602221200000004,
+  "distance_label": "0 - 2 [bohr]",
+  "colorbar_range": [
+    0,
+    0.25
+  ],
+  "value_unit": "electron_per_cubic_bohr",
+  "profile_graph_note": "Values decoded from normalized graph geometry with stored min/max; distance is in source bohr, display widths in angstrom",
+  "colorbar_vertex_values": [
+    0,
+    0.25,
+    0.25,
+    0
+  ],
+  "graph_width_angstrom": 1.058354377746582,
+  "distance_conversion_error": 4.4059417891872954e-08
+}

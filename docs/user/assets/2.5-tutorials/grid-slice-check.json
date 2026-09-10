@@ -1,0 +1,34 @@
+{
+  "status": "passed",
+  "samples": 4225,
+  "plane_origin": [
+    -1,
+    -1,
+    0
+  ],
+  "span_u": [
+    2,
+    0,
+    0
+  ],
+  "span_v": [
+    0,
+    2,
+    0
+  ],
+  "coordinate_unit": "bohr",
+  "value_unit": "electron_per_cubic_bohr",
+  "independent_trilinear_max_error": 7.403512219950059e-09,
+  "source": "raw Cube text",
+  "all_samples_valid": true,
+  "color_range": [
+    0,
+    0.25
+  ],
+  "scientific_grid_shape": [
+    64,
+    64,
+    64
+  ],
+  "boundary": "65x65 interpolated display samples do not increase original scientific resolution"
+}

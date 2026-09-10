@@ -1,0 +1,42 @@
+{
+  "status": "passed",
+  "input_sha256": "51fcb06343132c4b75f340aa5824434c9c622b51df7ea1ad3742920c78af66b4",
+  "checks": [
+    {
+      "package": "h2-ambiguous.cbq",
+      "grids": [
+        [
+          "scalar_field",
+          "unknown",
+          "ambiguous"
+        ]
+      ],
+      "all_values_error": 0,
+      "affine_error": 0,
+      "integral": 1.9996717595939104,
+      "atoms": 2,
+      "status": "passed"
+    },
+    {
+      "package": "h2-density.cbq",
+      "grids": [
+        [
+          "electron_density",
+          "electron_per_cubic_bohr",
+          "complete"
+        ],
+        [
+          "scalar_field",
+          "unknown",
+          "ambiguous"
+        ]
+      ],
+      "all_values_error": 0,
+      "affine_error": 0,
+      "integral": 1.9996717595939104,
+      "atoms": 2,
+      "status": "passed"
+    }
+  ],
+  "scope": "Primary64cube only; variants/sampling/difference/GUI/lifecycle pending"
+}

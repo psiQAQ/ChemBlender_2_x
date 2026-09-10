@@ -1,0 +1,42 @@
+{
+  "case_id": "T07",
+  "extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+  "artifacts": [
+    {
+      "source": "difference-surface-refined.png",
+      "path": "grid-difference-refined.png",
+      "sha256": "4fcce3ae88829655779ed1a6dcd95c1b28523000387445dbd9578e654d07c939"
+    },
+    {
+      "source": "gui/gui-0014.jpg",
+      "path": "grid-primary-surface.jpg",
+      "sha256": "d48a99ec0d1cb6750103b7bb22acae904985c2a6488d912a47ce6656c988d8f9"
+    },
+    {
+      "source": "gui/gui-0033.jpg",
+      "path": "grid-signed-surface.jpg",
+      "sha256": "8eb3303cc4d315875ca5cad06a720e3904bd82d9749cbd480645405306dd8712"
+    },
+    {
+      "source": "science-check.json",
+      "path": "grid-science-check.json",
+      "sha256": "b5c79029281175f2539154d6f4c8e9d97e80481b4e73c6287d3049f0b89ac614"
+    },
+    {
+      "source": "slice-science-check.json",
+      "path": "grid-slice-check.json",
+      "sha256": "e6633c20a7849199fe6697b8d3ac4742efc03c8a3b45dc9ed6487989193305d1"
+    },
+    {
+      "source": "profile-colorbar-check.json",
+      "path": "grid-profile-check.json",
+      "sha256": "ddba00edd6e91a750d9f21d8521bcd3f7b50491a97944e512d11b36d10cd8347"
+    },
+    {
+      "source": "difference-science-check.json",
+      "path": "grid-difference-check.json",
+      "sha256": "9ffe3186be6555f1dacf17216051b56b35c804c451aad0316a09be296e350548"
+    }
+  ],
+  "human_acceptance": "not_run"
+}

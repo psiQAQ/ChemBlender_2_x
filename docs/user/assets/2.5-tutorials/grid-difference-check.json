@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "left_id": "2bfaebac-fff9-5b15-90d3-d776b5c6af28",
+  "right_id": "0b2f077a-09c5-540b-8519-a7b9d1613fc7",
+  "difference_id": "ce106725-3810-5bc5-acdd-9f715d1c0079",
+  "max_error": 0.0,
+  "minimum": -0.034517683074599986,
+  "maximum": 0.020403083258500015,
+  "positive_samples": 138360,
+  "negative_samples": 123784,
+  "unit": "electron_per_cubic_bohr",
+  "coordinate_unit": "bohr",
+  "kind": "analytic teaching density difference, not orbital"
+}
