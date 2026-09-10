@@ -1,0 +1,46 @@
+{
+  "case_id": "T18",
+  "variant": "legacy",
+  "prepare_sha256": "3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e",
+  "execution": "Wheel package files extracted without external dependency directories; standalone Blender uses bundled NumPy and --disable-autoexec",
+  "preview_no_write": true,
+  "export": "passed",
+  "source_unchanged": true,
+  "source_sha256": "36b05c3cacbcc067714615a49df35cf20973bc8122329194ddaecd249df6c3d4",
+  "science": {
+    "status": "passed",
+    "atoms": 4,
+    "atomic_numbers": [
+      6,
+      8,
+      1,
+      1
+    ],
+    "coordinate_max_error": 0,
+    "coordinate_unit": "angstrom",
+    "bond_indices": [
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        3
+      ]
+    ],
+    "bond_orders": [
+      2,
+      1,
+      1
+    ],
+    "display_restore": "not_run",
+    "human_review": "not_run"
+  },
+  "viewer_restore": "not_run",
+  "gui": "not_run",
+  "human_review": "not_run"
+}
