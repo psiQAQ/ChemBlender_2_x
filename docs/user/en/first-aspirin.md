@@ -59,7 +59,7 @@ The `Cycles · Scientific Images` report export currently requires a physical-qu
 
 ![Actual Project Browser after reopening in a new process](../assets/2.5-tutorials/aspirin-cold-reopen.jpg)
 
-GUI captures are native JPEGs returned by Computer Use, without annotations or repainting. The render is a native Blender PNG. [Source and hash records](../assets/2.5-tutorials/provenance.json) are separate. The original research checker requires GUI PNGs, so its media rule still needs alignment; renaming a JPEG to PNG does not satisfy that requirement.
+GUI captures are native JPEGs returned by Computer Use, without annotations or repainting. The render is a native Blender PNG. [Source and hash records](../assets/2.5-tutorials/provenance.json) are separate. On 2026-09-10 the user approved native GUI JPEGs for the execution checker, which checks file signatures, suffixes and hashes. The original research package remains intact. Format checks do not establish screenshot authenticity or replace human review.
 
 ## Recovery and scientific limits
 

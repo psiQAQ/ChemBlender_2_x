@@ -59,7 +59,7 @@
 
 ![新进程冷重开后实际 Project Browser](../assets/2.5-tutorials/aspirin-cold-reopen.jpg)
 
-截图是 Computer Use 返回的原生 JPEG，未标注或重绘；成图是 Blender 保存的原生 PNG。[资源来源与哈希](../assets/2.5-tutorials/provenance.json)单独记录。研究包原检查器要求 GUI PNG，因此 JPEG 原件的验收规则仍待对齐，不能把扩展名改成 PNG 当作满足要求。
+截图是 Computer Use 返回的原生 JPEG，未标注或重绘；成图是 Blender 保存的原生 PNG。[资源来源与哈希](../assets/2.5-tutorials/provenance.json)单独记录。2026-09-10 已确认执行版检查器接受原生 GUI JPEG，并检查文件签名、后缀与哈希；原研究包保持完整。格式检查不代替截图真实性或人工审阅。
 
 ## 错误恢复与科学边界
 

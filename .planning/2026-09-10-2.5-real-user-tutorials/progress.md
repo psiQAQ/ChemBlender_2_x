@@ -1,4 +1,5 @@
 # Progress
+2026-09-10 media decision: User explicitly accepted native GUI JPEG. Execution copy preserves schema and all review gates; GUI JPEG/PNG suffix/signature checks, PNG-only render. 23 tests Passed, 1 symlink-permission Skipped; 168 recorded JPEGs decoded and matched hashes; original research 15/15 unchanged. Both updated offline pages passed real network-offline navigation/image/download checks. Review package regenerated (SHA256 21467542e666985f230e7a1b90e29f82b512ca6ce426f62158156a85de56f418); still review_only. T00 missing-file inspect reported WinError 2 and recovered to success after valid input restored; new GUI evidence retained.
 2026-09-10: Implementation authorized. Created feat/2.5-real-user-tutorials. M0 in progress. No case GUI execution yet; human acceptance Not Run.
 Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Python read_text defaults to GBK here; use explicit UTF-8. Existing private-viewer/export.cbq has denied traversal; do not modify old evidence.
 
