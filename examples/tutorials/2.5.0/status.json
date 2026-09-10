@@ -76,7 +76,7 @@
       "case_id": "T06",
       "priority": "P0",
       "status": "in_progress",
-      "status_reason": "Full32-frame science, actual trajectory/force Create/Apply/Play/Pause, smooth render,32 audited PNGs and H264 video passed. Original/moved cold reopen passed with unchanged arrays and smooth modifier retained. Derived geometry rebuild and subsequent cold reopen passed; custom smoothing must be reapplied. Prepare GUI inspect/convert and first/last captures passed; GUI-converted all32 source arrays match exactly. Scalar frame panel inspection, continuous recording, case packaging and human review pending.",
+      "status_reason": "Full32-frame science, actual trajectory/force Create/Apply/Play/Pause, smooth render,32 audited PNGs and H264 video passed. Original/moved cold reopen passed with unchanged arrays and smooth modifier retained. Derived geometry rebuild and subsequent cold reopen passed; custom smoothing must be reapplied. Prepare GUI inspect/convert and first/last captures passed; GUI-converted all32 source arrays match exactly. Review-only package CRC/all-member hashes passed. Scalar frame GUI, continuous recording, full GUI lifecycle and human review pending.",
       "human_review": "not_run",
       "run": "run-004/T06",
       "scientific_processing": "passed",

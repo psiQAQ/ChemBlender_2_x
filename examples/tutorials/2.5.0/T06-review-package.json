@@ -1,0 +1,11 @@
+{
+  "status": "review_only",
+  "file": "T06-review.zip",
+  "bytes": 176193068,
+  "sha256": "d15e8af6a2ab9634acef8e5808b63f9e7561adeb213bf5e8c0b801e627529ad8",
+  "files": 170,
+  "zip_crc": "passed",
+  "all_member_hashes": "passed",
+  "human_acceptance": "not_run",
+  "manifest_verdict": "incomplete"
+}
