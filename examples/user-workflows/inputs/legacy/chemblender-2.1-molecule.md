@@ -41,6 +41,8 @@ ChemBlender 2.5 使用外部迁移导出：独立 Blender 进程运行 prepare �
 
 以上是当前入口说明；实际 GUI 留证与独立人工复做尚待完成，不能将 Operator 验证当成人工验收。
 
+在已确认可用的 Viewer 操作重放中，可通过 Blender MCP 调用 `bpy.ops.chemblender.preview_cbq()`、`bpy.ops.chemblender.import_cbq()` 和 `bpy.ops.chemblender.restore_legacy_views()`；先将 `scene.chemblender_cbq.input_path` 与 `legacy_report_path` 分别设置为导出 CBQ 和迁移报告路径。重放仅替代已验证的操作，不替代首次 GUI 路径或截图留证。外部 legacy 导出仍须使用前述独立进程。
+
 ## Agent 提示词
 
 ```text
