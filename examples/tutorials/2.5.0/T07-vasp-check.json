@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "all_32768_values_max_error": 0.0,
+  "unit": "inverse_cubic_angstrom",
+  "shape": [
+    32,
+    32,
+    32
+  ],
+  "minimum": 0.02186884536231703,
+  "maximum": 0.05465296959596691,
+  "integral": 0.9999999934509904,
+  "affine_steps_exact": true,
+  "source_unchanged": true,
+  "gui": "not_run",
+  "render": "not_run",
+  "vasp_recomputation": "not_run",
+  "evidence_root": ".blend-analysis/2.5-real-user-tutorials/run-004/T07/vasp",
+  "artifact_sha256": {
+    "inspect.json": "31980d80e77141f8b272636abcb10ba0dcf357fc3a3c7291cb161d0176f153c5",
+    "convert.json": "28fe6332886bcabe5284c48342236612d5e479bb8b641008ac8e75dd2f32a7ad",
+    "validate.json": "8914554cfc51e4134e2808fae44ed4b2b18db545ce41473ae9d40c9adc988b1c",
+    "science-check.json": "f680b5cc3dfec41cdee4d706ec82fa34893c41345ea4230d3bd5b6a57a8519d9"
+  }
+}
