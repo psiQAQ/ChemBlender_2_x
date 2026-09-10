@@ -1,0 +1,49 @@
+{
+  "status": "passed",
+  "interaction": "native_process_replay",
+  "checks": [
+    {
+      "status": "passed",
+      "pid": 37900,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T06\\trajectory-view.blend",
+      "source_frame": 15,
+      "coordinate_error": 1.1842041036658202e-07,
+      "scaled_force_error": 5.515591516846996e-08,
+      "smooth_atom_faces": true,
+      "view_count": 2,
+      "scientific_playback_after_load": false
+    },
+    {
+      "status": "passed",
+      "pid": 51676,
+      "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T06\\trajectory-view.blend",
+      "source_frame": 15,
+      "coordinate_error": 1.1842041036658202e-07,
+      "scaled_force_error": 5.515591516846996e-08,
+      "smooth_atom_faces": true,
+      "view_count": 2,
+      "scientific_playback_after_load": false
+    }
+  ],
+  "scientific_hashes_unchanged": true,
+  "cache_rebuild": "not_run",
+  "human_review": "not_run",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "render": {
+    "frame": 15,
+    "resolution": [
+      2400,
+      1800
+    ],
+    "samples": 256,
+    "engine": "CYCLES",
+    "sha256": "6f5c9e9b30da2d0f20ab0317ddd6f42ba4f4dda68460051298f863746f2f2be1",
+    "visual_review": "partial: arrow occlusion and dark atom regions remain; not final visual acceptance"
+  },
+  "draft": "UPDATE returned display to frame0; first render retained as trajectory-frame0-draft.png; explicit FRAME15 and numerical check preceded final rendering",
+  "smoothing": "Custom Set Shade Smooth on scientific atom geometry; old Smooth by Angle append unavailable, not reused",
+  "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/T06",
+  "gui": "not_run_new_render",
+  "animation": "not_run_new_candidate"
+}
