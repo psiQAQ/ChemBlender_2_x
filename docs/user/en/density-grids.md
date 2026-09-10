@@ -1,6 +1,6 @@
 # T07: density grids, slices and signed surfaces
 
-Working draft. Public conversion, five primary Grid Views created through the GUI, signed display, numerical sampling, rendering and serial cold/cache recovery have evidence. Prepare GUI, VASP input, remaining illustrations and independent human replay are pending.
+Working draft. Public conversion, five primary Grid Views created through the GUI, signed display, numerical sampling, rendering and serial cold/cache recovery have evidence. VASP input, remaining illustrations and independent human replay are pending.
 
 ![Rendered analytic density redistribution: blue positive, orange negative](../assets/2.5-tutorials/grid-difference-refined.png)
 
@@ -26,7 +26,16 @@ The Cube nuclear-charge column contains zero placeholders. Do not interpret thes
 
 ## Prepare and import
 
-Create a fresh lesson folder and use new output paths. These public commands were verified; replace the example folder. They are CLI evidence, not a recorded Prepare GUI session.
+In Prepare, keep the installed Standard runtime Python. Choose `inspect`, enter the primary Cube path, set Reader ID to `cube` and click `执行` (Execute). Expect `success`, reader availability and the fixed input hash.
+
+![Actual Prepare Cube inspect](../assets/2.5-tutorials/grid-prepare-inspect.jpg)
+
+Choose `convert` from the operation list. Changing operation rearranges the form, so locate its fields again. Retain Input Type `files`, Reader ID `cube` and Validation Mode `balanced`. Set a new output path, Cube preset `electron_density` and Cube unit `electron_per_cubic_bohr`. Leave dataset index blank for this single-dataset source. Click `执行` and expect success. The recorded new output is `gui-density.cbq`; prior projects were preserved.
+
+![Actual Prepare explicit density conversion](../assets/2.5-tutorials/grid-prepare-convert.jpg)
+
+[Independent GUI-output checks](../assets/2.5-tutorials/grid-gui-density-check.json) matched all 262144 values and affine steps exactly, with both original ambiguous and appended complete grids retained. Equivalent public commands follow; replace the paths and use a fresh output.
+
 
 ```powershell
 chemblender-prepare inspect "D:\ChemBlenderLessons\T07\h2-lcao-1s-density-64.cube" --reader cube --json

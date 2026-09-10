@@ -1,0 +1,22 @@
+{
+  "status": "passed",
+  "input_sha256": "51fcb06343132c4b75f340aa5824434c9c622b51df7ea1ad3742920c78af66b4",
+  "grid_checks": [
+    {
+      "role": "electron_density",
+      "unit": "electron_per_cubic_bohr",
+      "status": "complete",
+      "all_values_error": 0.0
+    },
+    {
+      "role": "scalar_field",
+      "unit": "unknown",
+      "status": "ambiguous",
+      "all_values_error": 0.0
+    }
+  ],
+  "gui_inspect": "gui-0053",
+  "gui_convert": "gui-0062",
+  "explicit_dataset_index": "blank for single-dataset source",
+  "human_review": "not_run"
+}

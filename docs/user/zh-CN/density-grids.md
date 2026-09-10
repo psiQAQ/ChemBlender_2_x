@@ -1,6 +1,6 @@
 # T07：密度网格、切片与正负等值面
 
-执行草稿。公开转换、五种主网格 View 的实际 GUI 创建、正负显示、数值采样、渲染及串行冷重开/缓存恢复已有证据。Prepare GUI、VASP 输入、其余配图及人工独立复做仍待完成。
+执行草稿。公开转换、五种主网格 View 的实际 GUI 创建、正负显示、数值采样、渲染及串行冷重开/缓存恢复已有证据。VASP 输入、其余配图及人工独立复做仍待完成。
 
 ![解析密度重分布成图：蓝色为正，橙色为负](../assets/2.5-tutorials/grid-difference-refined.png)
 
@@ -26,7 +26,16 @@ Cube 核电荷列中的零是占位值，不应解释为真实核电荷。
 
 ## 准备与导入
 
-新建教程文件夹，输出使用新路径。以下公开命令已验证，请替换示例目录。这是 CLI 证据，尚不是 Prepare GUI 操作记录。
+在 Prepare 保持已安装的 Standard 运行环境 Python。选择 `inspect`，输入主 Cube 路径，Reader ID 设为 `cube`，点击 `执行`。预期返回 `success`、Reader 可用状态和固定输入哈希。
+
+![实际 Prepare Cube inspect](../assets/2.5-tutorials/grid-prepare-inspect.jpg)
+
+从操作列表选择 `convert`。切换操作会重排表单，需要重新定位字段。保留输入类型 `files`、Reader ID `cube`、校验模式 `balanced`。设置新输出路径，Cube preset 为 `electron_density`，Cube 数值单位为 `electron_per_cubic_bohr`。此输入只有一个数据集，dataset index 留空。点击 `执行`，预期成功。记录中的新输出为 `gui-density.cbq`，原工程保留。
+
+![实际 Prepare 显式密度转换](../assets/2.5-tutorials/grid-prepare-convert.jpg)
+
+[GUI 输出独立检查](../assets/2.5-tutorials/grid-gui-density-check.json)确认全部 262144 个值及仿射步长完全一致，同时保留原始 ambiguous 和追加 complete 网格。以下为等价公开命令，请替换路径并使用新输出。
+
 
 ```powershell
 chemblender-prepare inspect "D:\ChemBlenderLessons\T07\h2-lcao-1s-density-64.cube" --reader cube --json
