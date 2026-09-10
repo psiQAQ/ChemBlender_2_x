@@ -1,0 +1,74 @@
+{
+  "case_id": "T18",
+  "status": "passed",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "interaction": "independent_native_read_only_processes",
+  "results": [
+    {
+      "folder": "gui-T01",
+      "saved_pid": 29552,
+      "reopened_pid": 37876,
+      "exit_code": 0,
+      "paired_files_unchanged": true,
+      "audit": {
+        "status": "passed",
+        "track": "read_only_native_audit",
+        "blend_path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin-handoff.blend",
+        "blender_version": "5.1.1",
+        "structure_id": "55edcef6-7e46-5b1d-9af9-179b88ca0ade",
+        "revision": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+        "render_engine": "CYCLES",
+        "resolution": [
+          2400,
+          1800
+        ],
+        "samples": 256,
+        "view_names": [
+          "ChemBlender Structure"
+        ],
+        "coordinate_array_path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-T01\\aspirin-handoff.cbq\\arrays\\1c791b5e4e977df3e14624a80d825ba53c5b313d8d9547acabd66a41717ebe2b.npy",
+        "scientific_modules_in_blender": [],
+        "scene_links": {
+          "cbq_project_id": "08e197a9-f3c6-4ff5-81fb-becf5e1515f0",
+          "cbq_project_schema_version": "1.1",
+          "cbq_sidecar_locator": "aspirin-handoff.cbq",
+          "cbq_manifest_sha256": "b7a5d7185d5171ad44c356e266d80f6adf4275fd4417451f1dda4b53e4aa9b32"
+        }
+      }
+    },
+    {
+      "folder": "gui-relink",
+      "saved_pid": 29552,
+      "reopened_pid": 66252,
+      "exit_code": 0,
+      "paired_files_unchanged": true,
+      "audit": {
+        "status": "passed",
+        "track": "read_only_native_audit",
+        "blend_path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-relink\\aspirin-handoff.blend",
+        "blender_version": "5.1.1",
+        "structure_id": "55edcef6-7e46-5b1d-9af9-179b88ca0ade",
+        "revision": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+        "render_engine": "CYCLES",
+        "resolution": [
+          2400,
+          1800
+        ],
+        "samples": 256,
+        "view_names": [
+          "ChemBlender Structure"
+        ],
+        "coordinate_array_path": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\gui-relink\\aspirin-handoff.cbq\\arrays\\1c791b5e4e977df3e14624a80d825ba53c5b313d8d9547acabd66a41717ebe2b.npy",
+        "scientific_modules_in_blender": [],
+        "scene_links": {
+          "cbq_project_id": "08e197a9-f3c6-4ff5-81fb-becf5e1515f0",
+          "cbq_project_schema_version": "1.1",
+          "cbq_sidecar_locator": "aspirin-handoff.cbq",
+          "cbq_manifest_sha256": "4baf0a4b42d63ffa374d6611d4fd7e7a5a972c74f9147ca60808ee272ec08fd3"
+        }
+      }
+    }
+  ],
+  "gui_save_and_relink": "separate receipts",
+  "human_review": "not_run"
+}
