@@ -29,9 +29,15 @@
     {
       "case_id": "T02",
       "priority": "P0",
-      "status": "not_run",
-      "status_reason": "Implementation started; this case has no new GUI acceptance yet.",
-      "human_review": "not_run"
+      "status": "blocked",
+      "status_reason": "GUI molecular operations and saved-array science passed on run-003; render, GUI cold reopen, portable recovery, full lesson and human acceptance remain incomplete.",
+      "human_review": "not_run",
+      "run": "run-003/T02",
+      "gui": "partial",
+      "scientific_processing": "passed",
+      "project_recovery": "partial",
+      "distribution": "blocked",
+      "extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374"
     },
     {
       "case_id": "T03",
