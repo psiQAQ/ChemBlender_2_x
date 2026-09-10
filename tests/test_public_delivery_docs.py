@@ -41,7 +41,7 @@ class PublicDeliveryDocsTests(unittest.TestCase):
                 {"docs/user/assets/2.5.0/blender-viewer.png", *(
                     'docs/user/assets/2.5-tutorials/' + name for name in (
                         'aspirin-cycles.png', 'aspirin-prepare-convert.jpg',
-                        'aspirin-cbq-preview.jpg', 'aspirin-cold-reopen.jpg',
+                        'aspirin-view.jpg', 'aspirin-render-result.jpg',
                         'ethanol-cycles.png', 'ethanol-prepare-convert.jpg',
                         'ethanol-generated.jpg', 'ethanol-energy.jpg', 'ethanol-apply.jpg'))},
             )

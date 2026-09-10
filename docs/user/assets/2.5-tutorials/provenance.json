@@ -2,38 +2,6 @@
   "status": "pending_human_review",
   "images": [
     {
-      "path": "aspirin-prepare-convert.jpg",
-      "source_run": "run-002/T01/gui/gui-0015.jpg",
-      "sha256": "563f79b7dadf2fe26537b0790f8cca36d7771eb4ac515c12384ea6f4e9899121",
-      "kind": "gui_raw",
-      "native_format": "jpeg",
-      "extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8"
-    },
-    {
-      "path": "aspirin-cbq-preview.jpg",
-      "source_run": "run-002/T01/gui/gui-0027.jpg",
-      "sha256": "79ff8b294e3f7c2533427348d67f018aa7ca011e65af88f8aca0849c951405b1",
-      "kind": "gui_raw",
-      "native_format": "jpeg",
-      "extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8"
-    },
-    {
-      "path": "aspirin-cold-reopen.jpg",
-      "source_run": "run-002/T01/gui/gui-0115.jpg",
-      "sha256": "2c92e469c62df97970c53326a8c15f6574612cb5c07dc886ab485508cd040378",
-      "kind": "gui_raw",
-      "native_format": "jpeg",
-      "extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8"
-    },
-    {
-      "path": "aspirin-cycles.png",
-      "source_run": "run-002/T01/aspirin-cycles.png",
-      "sha256": "77b2d7eec68c5ff38e0294b1da18c634b797ae62dda3e922fc85e3b36833c703",
-      "kind": "render",
-      "native_format": "png",
-      "extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8"
-    },
-    {
       "path": "ethanol-prepare-convert.jpg",
       "source_run": "run-003/T02/gui/gui-0014.jpg",
       "sha256": "e9d927d1960b0ab40a458a61415742be34aee4ff9357ee662158b70692b25fca",
@@ -72,6 +40,42 @@
       "kind": "render",
       "native_format": "png",
       "extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374"
+    },
+    {
+      "path": "aspirin-prepare-convert.jpg",
+      "source_run": "run-003/T01/gui/gui-0018.jpg",
+      "sha256": "07bd4cabccfd9b6c5e52ff2dd8538a09a7cdad946f3ff53181e4a01c049ea567",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374",
+      "interaction": "os_gui"
+    },
+    {
+      "path": "aspirin-view.jpg",
+      "source_run": "run-003/T01/gui/gui-0020.jpg",
+      "sha256": "e0e750f6434cd84d7f8a660f47760ecceb08872450aab42c8850a293ca58f924",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374",
+      "interaction": "capture_after_mcp_replay"
+    },
+    {
+      "path": "aspirin-render-result.jpg",
+      "source_run": "run-003/T01/gui/gui-0021.jpg",
+      "sha256": "5d109e482ae7273865a3c1aa201e9d3871a239e5e88e743295a4ee28ba0224e7",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374",
+      "interaction": "capture_after_mcp_replay"
+    },
+    {
+      "path": "aspirin-cycles.png",
+      "source_run": "run-003/T01/aspirin-cycles.png",
+      "sha256": "85ef878641ee46a513c2e0d0389c5a5e174e0a01b5db7bd9580fb49f9ce0c13f",
+      "kind": "render",
+      "native_format": "png",
+      "extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374",
+      "interaction": "native_render_via_mcp"
     }
   ]
 }

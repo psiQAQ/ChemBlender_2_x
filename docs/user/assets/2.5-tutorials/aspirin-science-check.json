@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "atoms": 21,
+  "bonds": 21,
+  "hydrogens": 8,
+  "coordinate_max_absolute_error": 0.0,
+  "coordinates_unit": "angstrom",
+  "structure_id": "55edcef6-7e46-5b1d-9af9-179b88ca0ade",
+  "revision": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+  "explicit_topology_id": "37044450-e6d6-5c52-ac1a-ffe994869e79",
+  "scientific_hashes": {
+    "arrays/087b272a7dc8f6b276996175eaf5ddd3cf34164aec06b2bbaaabe29ac7885617.npy": "62afd66aead24f2e184b863dbd437381d95e09eabad69271fcb7a832ce0495e9",
+    "arrays/15a61c36e62ad43f722a1a5ca7a4fa47b5587f955f953f6f92fa71a538fbcc40.npy": "48d38e46c942cd3170e067d740aef19f046c4f53d650eb2d82dcb7fdc03a9c3f",
+    "arrays/1c791b5e4e977df3e14624a80d825ba53c5b313d8d9547acabd66a41717ebe2b.npy": "3a26a135e578ad3ae005badc9592e9e3493b7ad007ac61b1d79223124d0cf2ff",
+    "arrays/41e76996ff0acc20ed025762e6ab3f94debc091da46abb3ec5ac6a43e1c2dbca.npy": "23b695331f8a97987b41695ce8489b98f721b22ddbc6ab39a45caeee03acb369",
+    "arrays/422c2fd4fc08037cf75f32b129cfd7a4aa8dd6cdcf82a0ab48ad5b2115d04ed5.npy": "6bf67ce6b4389896646c780579d83a2ab4b6c39312d22571fef9d85d2087a625",
+    "arrays/ad8ffaa836bff99783c803d848ec275fa11d6798b5cd6aecafe8a804bfba4a63.npy": "b20209f648293d81ff9bfbafb7124ab7e80065761748d52120e23fc57fe1f815",
+    "arrays/cba0cf4f58ba17330f2545ecccbda919cda08bac5266ba92a5e7073f94c0bd4f.npy": "0c6cc226e060237a1ba6c37a69cce6299e19f43a1ea1184a5cbb44107540602e",
+    "arrays/d1cfebfc57165d5e3df924877834b380a622a41aa59add7af9f884968dbfb3ea.npy": "65faafe2971bf48cbedc70271672804b2bf7721c5b89578d11c2152adde41fac",
+    "arrays/d8ee0769150375ffc3121fcee96d3ed5468615b3cda0c3f242ea4b2515d2a138.npy": "9f295630b4142eea4c926dc6eb8fc07caf4c773152b12af3e95ecb16dca5eaca",
+    "manifest.json": "2e557f370938f35d1ceaa28e08f99d4989b46a23897af732d5dd35f349c8a1c5"
+  }
+}
