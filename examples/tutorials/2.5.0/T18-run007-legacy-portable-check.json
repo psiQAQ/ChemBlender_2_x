@@ -1,0 +1,31 @@
+{
+  "case_id": "T18",
+  "variant": "legacy",
+  "dependency_audit": {
+    "linked_libraries": 0,
+    "linked_materials": 0,
+    "external_images": 0,
+    "fonts": 0,
+    "weak_asset_sources": [
+      "//..\\..\\..\\run-001\\profile\\extensions\\user_default\\chemblender\\Chem_Nodes_En.blend",
+      "C:\\Program Files\\Blender Foundation\\Blender 5.1\\5.1\\datafiles\\assets\\brushes\\essentials_brushes-gp_draw.blend"
+    ]
+  },
+  "portable_cold": {
+    "status": "passed",
+    "pid": 65236,
+    "file": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-007\\T18\\legacy\\portable\\restored.blend",
+    "views": [
+      {
+        "view": "legacy_formaldehyde (Migrated)",
+        "display_fields_equal": true
+      }
+    ],
+    "gui": "not_run",
+    "human_review": "not_run"
+  },
+  "scientific_array_hashes_equal": true,
+  "scope": "Moved paired project and report, same installed Blender profile; weak reference sources were not physically removed",
+  "gui": "not_run",
+  "human_review": "not_run"
+}
