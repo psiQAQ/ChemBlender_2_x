@@ -1,0 +1,14 @@
+{
+  "case_id": "T17",
+  "format": "cjson",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "preview_no_write": "passed",
+  "gui_export": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "original_json_value_equality": true,
+  "sha256": "2fa9ba20a2cbb6e1409cde8a9cbfbe54568e9eff6ff4b4f9d85e711c97344f58",
+  "preview_artifact": "gui-0093",
+  "success_artifact": "gui-0095",
+  "requires_confirmation": false,
+  "human_review": "not_run"
+}
