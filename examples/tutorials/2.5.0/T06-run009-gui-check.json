@@ -1,0 +1,278 @@
+{
+  "status": "passed",
+  "input_sha256": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a",
+  "all_frames": 32,
+  "atoms_per_frame": 21,
+  "checks": {
+    "coordinates": {
+      "shape": [
+        32,
+        21,
+        3
+      ],
+      "unit": "angstrom",
+      "max_absolute_error": 0.0,
+      "status": "complete"
+    },
+    "atomic_force": {
+      "shape": [
+        32,
+        21,
+        3
+      ],
+      "unit": "electron_volt_per_angstrom",
+      "max_absolute_error": 0.0,
+      "status": "complete"
+    },
+    "energy": {
+      "shape": [
+        32
+      ],
+      "unit": "electron_volt",
+      "max_absolute_error": 0.0,
+      "status": "complete"
+    },
+    "step": {
+      "shape": [
+        32
+      ],
+      "unit": "dimensionless",
+      "max_absolute_error": 0.0,
+      "status": "complete"
+    },
+    "source_index": {
+      "shape": [
+        32
+      ],
+      "unit": "unknown",
+      "max_absolute_error": 0.0,
+      "status": "ambiguous"
+    }
+  },
+  "physical_dt": null,
+  "source_index_boundary": "AMBIGUOUS semantics retained; numeric values exactly match source, not a physical time axis",
+  "gui": "passed_convert",
+  "playback": "not_run",
+  "gui_inspect": "not_run",
+  "interaction": "actual_prepare_gui",
+  "events": [
+    {
+      "event_id": "e1",
+      "step_id": "g01",
+      "interaction": "os_gui",
+      "action": "Select source input",
+      "timestamp_utc": "2026-09-10T13:43:02.245Z",
+      "session_id": "run009-prepare-59048-T06",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0002",
+      "after_artifact_id": "gui-0003",
+      "status": "observed"
+    },
+    {
+      "event_id": "e2",
+      "step_id": "g02",
+      "interaction": "os_gui",
+      "action": "Enter fixed rMD17 trajectory input",
+      "timestamp_utc": "2026-09-10T13:43:12.460Z",
+      "session_id": "run009-prepare-59048-T06",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0003",
+      "after_artifact_id": "gui-0004",
+      "status": "observed"
+    },
+    {
+      "event_id": "e3",
+      "step_id": "g03",
+      "interaction": "os_gui",
+      "action": "Select output path",
+      "timestamp_utc": "2026-09-10T13:43:19.665Z",
+      "session_id": "run009-prepare-59048-T06",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0004",
+      "after_artifact_id": "gui-0005",
+      "status": "observed"
+    },
+    {
+      "event_id": "e4",
+      "step_id": "g04",
+      "interaction": "os_gui",
+      "action": "Enter separate GUI output",
+      "timestamp_utc": "2026-09-10T13:43:29.132Z",
+      "session_id": "run009-prepare-59048-T06",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0005",
+      "after_artifact_id": "gui-0006",
+      "status": "observed"
+    },
+    {
+      "event_id": "e5",
+      "step_id": "g05",
+      "interaction": "os_gui",
+      "action": "Select Reader ID",
+      "timestamp_utc": "2026-09-10T13:43:37.230Z",
+      "session_id": "run009-prepare-59048-T06",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0006",
+      "after_artifact_id": "gui-0007",
+      "status": "observed"
+    },
+    {
+      "event_id": "e6",
+      "step_id": "g06",
+      "interaction": "os_gui",
+      "action": "Enter extxyz Reader ID",
+      "timestamp_utc": "2026-09-10T13:43:45.558Z",
+      "session_id": "run009-prepare-59048-T06",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0007",
+      "after_artifact_id": "gui-0008",
+      "status": "observed"
+    },
+    {
+      "event_id": "e7",
+      "step_id": "g07",
+      "interaction": "os_gui",
+      "action": "Execute extXYZ GUI conversion",
+      "timestamp_utc": "2026-09-10T13:43:53.864Z",
+      "session_id": "run009-prepare-59048-T06",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0008",
+      "after_artifact_id": "gui-0009",
+      "status": "observed"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "gui-0001",
+      "kind": "gui_raw",
+      "path": "gui/gui-0001.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "3564c5e7c9edde6ee59ae05c47eeeddc664d6f39aa2ede56e8f3aff4e7f3ee03",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0002",
+      "kind": "gui_raw",
+      "path": "gui/gui-0002.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "3564c5e7c9edde6ee59ae05c47eeeddc664d6f39aa2ede56e8f3aff4e7f3ee03",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0003",
+      "kind": "gui_raw",
+      "path": "gui/gui-0003.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "6d167ab89fa2d64702a1c45377abd2d3b67aa95d08186438f38a9976075865f8",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0004",
+      "kind": "gui_raw",
+      "path": "gui/gui-0004.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "141304cbe61ec230ac77d80aed15ac5f235112ab3cb7b8f613a90b8e83130c60",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0005",
+      "kind": "gui_raw",
+      "path": "gui/gui-0005.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "ede96e2584b77219fe1bea3f4e81843bd20431566189d969290f1058d47e3e42",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0006",
+      "kind": "gui_raw",
+      "path": "gui/gui-0006.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "868eb0e6a453886cf020fdfef81d1e9a71571befa9b77c20c75a05bf00f01d5e",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0007",
+      "kind": "gui_raw",
+      "path": "gui/gui-0007.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "441d58b87204af2b4149b7c13d38ed33a8537ec4d0d4489e0b44820d1273baa8",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0008",
+      "kind": "gui_raw",
+      "path": "gui/gui-0008.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "3faf32e15c8475c671a9d46824a60f227287516cee387aa1741a257ddc590b39",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0009",
+      "kind": "gui_raw",
+      "path": "gui/gui-0009.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "dce34eb471c2d4a9cd87d67e60bbdeb0a5cbd19736bdd997f9cf2a59986a029e",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0010",
+      "kind": "gui_raw",
+      "path": "gui/gui-0010.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "80c479b4e448b9e7b6111e33a40255cb721fed8aac8202904dbc93024aaba393",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    }
+  ],
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/T06",
+  "human_review": "not_run",
+  "note": "CLI and GUI each independently compared to same full text reference; success screenshot is last artifact"
+}
