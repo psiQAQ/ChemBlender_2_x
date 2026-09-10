@@ -1,0 +1,45 @@
+{
+  "status": "passed",
+  "pid": 60616,
+  "interaction": "known public operator replay",
+  "slice_samples": 4225,
+  "slice_error": 7.403512219950059e-09,
+  "profile_samples": 129,
+  "profile_error": 3.834455503115564e-09,
+  "colorbar_range": [
+    0,
+    0.25
+  ],
+  "coordinate_unit": "bohr",
+  "value_unit": "electron_per_cubic_bohr",
+  "scientific_arrays_unchanged": true,
+  "scientific_shape": [
+    64,
+    64,
+    64
+  ],
+  "source": "independent trilinear interpolation of raw Cube text",
+  "gui": "not_run_new_candidate",
+  "render": "not_run",
+  "human_acceptance": "not_run",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "artifacts": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/sample_native.py",
+      "sha256": "55f2d41842443b2ca88c5b96b8263003ad499da255e412b06aaa7cf226325210"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/sampling-check.json",
+      "sha256": "d533c6c252bca0504f0f37149f70547c888c89b2cdcbeca0fe7c338b66d16385"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/h2-sampling.blend",
+      "sha256": "7e4c7b02db019693f9e615430050c340aee9b73dbc003017d34534085e097c32"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/h2-sampling.cbq/manifest.json",
+      "sha256": "0fb2ece3b2c769f9c3c758c00c06d7ffd8c25a86b36c1f125d1628737871adfc"
+    }
+  ]
+}
