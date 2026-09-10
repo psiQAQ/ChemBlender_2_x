@@ -1,0 +1,61 @@
+{
+  "status": "passed",
+  "interaction": "native_process_replay",
+  "checks": [
+    {
+      "scope": "scientific recovery; custom smoothing persistence separately classified",
+      "smooth_persistence": "passed",
+      "smooth_groups": [
+        "ChemBlender Periodic Structure Site Occupancy ChemBlender Site Occupancy Nodes"
+      ],
+      "subdivision_levels": 2,
+      "status": "passed",
+      "pid": 59084,
+      "blend": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T04\\diamond-view.blend",
+      "array": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\T04\\diamond-view.cbq\\arrays\\278a66016ca1cb0e33ee80a2bdb3d5aeca39ce007b02c681858b7cd945c9f794.npy",
+      "view_coordinate_error": 1.6021728477255692e-07,
+      "cell_edges": 12,
+      "structure_id": "ffde7840-0274-5c2a-bf84-5f8b4e64a39c",
+      "scientific_modules": []
+    },
+    {
+      "scope": "scientific recovery; custom smoothing persistence separately classified",
+      "smooth_persistence": "passed",
+      "smooth_groups": [
+        "ChemBlender Periodic Structure Site Occupancy ChemBlender Site Occupancy Nodes"
+      ],
+      "subdivision_levels": 2,
+      "status": "passed",
+      "pid": 37656,
+      "blend": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T04-diamond-verified\\diamond-view.blend",
+      "array": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-009\\portable\\T04-diamond-verified\\diamond-view.cbq\\arrays\\278a66016ca1cb0e33ee80a2bdb3d5aeca39ce007b02c681858b7cd945c9f794.npy",
+      "view_coordinate_error": 1.6021728477255692e-07,
+      "cell_edges": 12,
+      "structure_id": "ffde7840-0274-5c2a-bf84-5f8b4e64a39c",
+      "scientific_modules": []
+    }
+  ],
+  "scientific_hashes_unchanged": true,
+  "cache_rebuild": "not_run",
+  "human_review": "not_run",
+  "live": {
+    "cell_in_camera": true,
+    "scientific_coordinates_equal_gui": true,
+    "pid": 58544
+  },
+  "render": {
+    "file": ".blend-analysis/2.5-real-user-tutorials/run-009/T04/diamond-cycles-smooth.png",
+    "sha256": "0e3a278c277a15a315082271481025370afffdd69bd75bfa6ccbd9e4032c73c9",
+    "resolution": [
+      2400,
+      1800
+    ],
+    "engine": "CYCLES",
+    "samples": 256,
+    "visual_review": "Smooth carbon spheres and full cell frame; existing source supercell, not generated; caption pending"
+  },
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "gui_capture": "not_run",
+  "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/T04"
+}
