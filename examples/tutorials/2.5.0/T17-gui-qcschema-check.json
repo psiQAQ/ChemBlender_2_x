@@ -1,0 +1,15 @@
+{
+  "case_id": "T17",
+  "format": "qcschema",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "preview_no_write": "passed",
+  "gui_export": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "original_json_value_equality": true,
+  "sha256": "5fb9f5a3ad4b24158c2d7ab0bfb81e416e9235a5a5f3f3bba26f8f7d90ab09af",
+  "preview_artifact": "gui-0100",
+  "success_artifact": "gui-0102",
+  "requires_confirmation": false,
+  "boundary": "Original QCSchema envelope only; derived project fields are not added. Existing HF/cc-pVDZ gradient result exchange, not a new compute run.",
+  "human_review": "not_run"
+}
