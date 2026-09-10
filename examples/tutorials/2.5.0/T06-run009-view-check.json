@@ -1,0 +1,400 @@
+{
+  "status": "passed",
+  "pid": 48700,
+  "interaction": "public_operator_replay",
+  "checks": [
+    {
+      "view": "trajectory",
+      "frame": 0,
+      "coordinate_error": 1.1420776369064356e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 1,
+      "coordinate_error": 1.5812988252150717e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 2,
+      "coordinate_error": 1.162738039184319e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 3,
+      "coordinate_error": 1.16406249972556e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 4,
+      "coordinate_error": 1.1525939935808083e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 5,
+      "coordinate_error": 1.8341430685353544e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 6,
+      "coordinate_error": 1.1804199218090616e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 7,
+      "coordinate_error": 2.1038330100253688e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 8,
+      "coordinate_error": 1.1752258322061948e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 9,
+      "coordinate_error": 1.1576171887739406e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 10,
+      "coordinate_error": 1.1352722184554409e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 11,
+      "coordinate_error": 1.1858520521101923e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 12,
+      "coordinate_error": 9.850585946935553e-08,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 13,
+      "coordinate_error": 1.0954284679343118e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 14,
+      "coordinate_error": 1.1638244634681882e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 15,
+      "coordinate_error": 1.1842041036658202e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 16,
+      "coordinate_error": 2.1257812488073569e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 17,
+      "coordinate_error": 9.13922120204802e-08,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 18,
+      "coordinate_error": 1.8958984338013352e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 19,
+      "coordinate_error": 1.1187133797108118e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 20,
+      "coordinate_error": 1.7609619096248252e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 21,
+      "coordinate_error": 2.1708984387913688e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 22,
+      "coordinate_error": 1.1916625997088204e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 23,
+      "coordinate_error": 1.1724487292141816e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 24,
+      "coordinate_error": 1.1865966786928084e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 25,
+      "coordinate_error": 1.1342346173393025e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 26,
+      "coordinate_error": 1.6610717779030892e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 27,
+      "coordinate_error": 1.3734863291148258e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 28,
+      "coordinate_error": 1.1735473615104297e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 29,
+      "coordinate_error": 1.1794982901491835e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 30,
+      "coordinate_error": 1.1020690937613153e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory",
+      "frame": 31,
+      "coordinate_error": 1.733166508088857e-07,
+      "scaled_force_error": null
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 0,
+      "coordinate_error": 1.1420776369064356e-07,
+      "scaled_force_error": 1.1820542011875546e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 1,
+      "coordinate_error": 1.5812988252150717e-07,
+      "scaled_force_error": 1.186236571193433e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 2,
+      "coordinate_error": 1.162738039184319e-07,
+      "scaled_force_error": 2.0980981485507755e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 3,
+      "coordinate_error": 1.16406249972556e-07,
+      "scaled_force_error": 1.1325502935477516e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 4,
+      "coordinate_error": 1.1525939935808083e-07,
+      "scaled_force_error": 1.077503664070889e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 5,
+      "coordinate_error": 1.8341430685353544e-07,
+      "scaled_force_error": 1.5337656211755757e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 6,
+      "coordinate_error": 1.1804199218090616e-07,
+      "scaled_force_error": 8.827219222240501e-08
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 7,
+      "coordinate_error": 2.1038330100253688e-07,
+      "scaled_force_error": 1.0208940448563908e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 8,
+      "coordinate_error": 1.1752258322061948e-07,
+      "scaled_force_error": 1.1765207519331966e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 9,
+      "coordinate_error": 1.1576171887739406e-07,
+      "scaled_force_error": 1.1246105957596342e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 10,
+      "coordinate_error": 1.1352722184554409e-07,
+      "scaled_force_error": 1.1879736350195458e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 11,
+      "coordinate_error": 1.1858520521101923e-07,
+      "scaled_force_error": 9.468237305298999e-08
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 12,
+      "coordinate_error": 9.850585946935553e-08,
+      "scaled_force_error": 2.1230976532393697e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 13,
+      "coordinate_error": 1.0954284679343118e-07,
+      "scaled_force_error": 1.091130128472173e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 14,
+      "coordinate_error": 1.1638244634681882e-07,
+      "scaled_force_error": 2.0974814418650567e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 15,
+      "coordinate_error": 1.1842041036658202e-07,
+      "scaled_force_error": 2.2545888711533735e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 16,
+      "coordinate_error": 2.1257812488073569e-07,
+      "scaled_force_error": 1.0709270004127802e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 17,
+      "coordinate_error": 9.13922120204802e-08,
+      "scaled_force_error": 9.41150388733547e-08
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 18,
+      "coordinate_error": 1.8958984338013352e-07,
+      "scaled_force_error": 1.1839980462724498e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 19,
+      "coordinate_error": 1.1187133797108118e-07,
+      "scaled_force_error": 1.1767805174756063e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 20,
+      "coordinate_error": 1.7609619096248252e-07,
+      "scaled_force_error": 1.0349411638799211e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 21,
+      "coordinate_error": 2.1708984387913688e-07,
+      "scaled_force_error": 1.1309060043984687e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 22,
+      "coordinate_error": 1.1916625997088204e-07,
+      "scaled_force_error": 1.1189626469843006e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 23,
+      "coordinate_error": 1.1724487292141816e-07,
+      "scaled_force_error": 1.1290073231862152e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 24,
+      "coordinate_error": 1.1865966786928084e-07,
+      "scaled_force_error": 5.5692016553976487e-08
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 25,
+      "coordinate_error": 1.1342346173393025e-07,
+      "scaled_force_error": 1.0668925787271633e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 26,
+      "coordinate_error": 1.6610717779030892e-07,
+      "scaled_force_error": 1.1760676255079261e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 27,
+      "coordinate_error": 1.3734863291148258e-07,
+      "scaled_force_error": 1.1038525382645048e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 28,
+      "coordinate_error": 1.1735473615104297e-07,
+      "scaled_force_error": 1.1631794416544494e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 29,
+      "coordinate_error": 1.1794982901491835e-07,
+      "scaled_force_error": 1.1785468734260007e-07
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 30,
+      "coordinate_error": 1.1020690937613153e-07,
+      "scaled_force_error": 7.922622069500562e-08
+    },
+    {
+      "view": "trajectory_force",
+      "frame": 31,
+      "coordinate_error": 1.733166508088857e-07,
+      "scaled_force_error": 8.481286606354388e-08
+    }
+  ],
+  "scientific_arrays_unchanged": true,
+  "display_tolerance": 1e-06,
+  "saved_frame": 15,
+  "render": "not_run",
+  "cold_reopen": "not_run",
+  "human_review": "not_run",
+  "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/T06"
+}

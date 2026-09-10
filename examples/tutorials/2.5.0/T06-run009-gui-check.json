@@ -53,7 +53,7 @@
   "source_index_boundary": "AMBIGUOUS semantics retained; numeric values exactly match source, not a physical time axis",
   "gui": "passed_convert",
   "playback": "not_run",
-  "gui_inspect": "not_run",
+  "gui_inspect": "passed",
   "interaction": "actual_prepare_gui",
   "events": [
     {
@@ -167,6 +167,54 @@
       "before_artifact_id": "gui-0008",
       "after_artifact_id": "gui-0009",
       "status": "observed"
+    },
+    {
+      "event_id": "e8",
+      "step_id": "h01",
+      "interaction": "os_gui",
+      "action": "Open operation menu",
+      "timestamp_utc": "2026-09-10T13:45:02.431Z",
+      "session_id": "run009-prepare-59048-T06",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0011",
+      "after_artifact_id": "gui-0013",
+      "status": "observed"
+    },
+    {
+      "event_id": "e9",
+      "step_id": "h02",
+      "interaction": "os_gui",
+      "action": "Select inspect menu entry",
+      "timestamp_utc": "2026-09-10T13:45:17.213Z",
+      "session_id": "run009-prepare-59048-T06",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0013",
+      "after_artifact_id": "gui-0014",
+      "status": "observed"
+    },
+    {
+      "event_id": "e10",
+      "step_id": "h03",
+      "interaction": "os_gui",
+      "action": "Execute GUI trajectory inspection",
+      "timestamp_utc": "2026-09-10T13:45:25.508Z",
+      "session_id": "run009-prepare-59048-T06",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0014",
+      "after_artifact_id": "gui-0015",
+      "status": "observed"
     }
   ],
   "artifacts": [
@@ -269,10 +317,84 @@
       "sha256": "80c479b4e448b9e7b6111e33a40255cb721fed8aac8202904dbc93024aaba393",
       "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
       "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0011",
+      "kind": "gui_raw",
+      "path": "gui/gui-0011.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "fad4711d6d9d0dd1b0c0200ef60888059e169b1d887025a2bc1f176516de84fb",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0012",
+      "kind": "gui_raw",
+      "path": "gui/gui-0012.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "fba976091c0f307f83fa06dd87833d3328e60cfdbb40c0c872e8fae0b07df8ab",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0013",
+      "kind": "gui_raw",
+      "path": "gui/gui-0013.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "9796a8bbe9df80f8a0491f91e091d325a65ded32bd9953c38dec0645312fd08b",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0014",
+      "kind": "gui_raw",
+      "path": "gui/gui-0014.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "575a9eff12658c7f054c215d624cb59e1bbcf498f05a05798ca7e424ffd8dc4b",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0015",
+      "kind": "gui_raw",
+      "path": "gui/gui-0015.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "90d897feeae443851b95bbfb518e6a7920808e056d0bf641a4283c089f472b55",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0016",
+      "kind": "gui_raw",
+      "path": "gui/gui-0016.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "a59acc647960e6331b82da40ddbe0016a6836f58bced1173b7431b229da91b14",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
     }
   ],
   "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
   "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-009/T06",
   "human_review": "not_run",
-  "note": "CLI and GUI each independently compared to same full text reference; success screenshot is last artifact"
+  "note": "CLI and GUI each independently compared to same full text reference; success screenshot is last artifact",
+  "inspect_visible": {
+    "available": true,
+    "reason_code": "available",
+    "frame_count": 32,
+    "atomic_properties": [
+      "atomic_force"
+    ],
+    "frame_properties": [
+      "energy",
+      "source_index",
+      "step"
+    ],
+    "has_lattice": false
+  }
 }
