@@ -1,6 +1,6 @@
 # T17: export scientific data with explicit loss checks
 
-Working draft. All 13 formats have installed CLI export/readback evidence; the MOL2 workflow below also has actual Prepare GUI evidence. Other GUI routes, remaining native metadata checks and human replay are pending. This lesson does not yet qualify a Blender project handoff.
+Working draft. All 13 formats have installed CLI export/readback and actual Prepare GUI export evidence. Each GUI output is byte-identical to its scientifically checked CLI output. Advanced options beyond those listed below, project recovery and independent human replay remain pending. This lesson does not yet qualify a Blender project handoff.
 
 ## Fixed input and processor
 
@@ -20,7 +20,7 @@ Copy the UUID of the Structure from the result. Use your returned UUID; screensh
 ## Actual Prepare export steps
 
 1. Open Prepare. Set **Operation / 操作** to `export` and **Runtime Python / 运行环境 Python** to the Python executable inside the installed candidate environment. This field expects Python, not `chemblender-prepare.exe`.
-2. Set **Input files / CBQ** to `ligand.cbq`, the output to a new `ligand-exported.mol2`, the entity UUID to the Structure UUID, and **Export format** to `mol2`. Leave **Cube dataset index** empty.
+2. Use the file picker or enter the absolute path to `ligand.cbq` in **Input files / CBQ**, and an absolute path to a new `ligand-exported.mol2` for the output, the entity UUID to the Structure UUID, and **Export format** to `mol2`. Leave **Cube dataset index** empty.
 3. Keep **导出先预览** checked and click **执行**. Expect `success`, a preview report and no output file.
 
 ![Actual preview and loss entries](../assets/2.5-tutorials/export-preview.jpg)
@@ -51,17 +51,39 @@ Our GUI output is byte-identical to the scientifically checked CLI output: coord
 | xyz, extxyz | Aspirin: 21 atoms, coordinates/order exact |
 | mol | Aspirin: coordinates, identity and indexed molecular graph match |
 | mol2 | 2W73: 297 atoms/bonds, confirmed losses above |
-| pdb | Ubiquitin: 1231 atoms, coordinates/order exact; further native metadata checks pending |
+| pdb | Ubiquitin: 10 frames × 1231 atoms; all coordinates, occupancy, B factors and hierarchy match; unit cell omitted with confirmation |
 | pqr | APBS protein–RNA: 998 charges/radii exact, 22 zero radii, 41 residues and two inferred segments retained |
-| sdf | Selected CCD molecule: coordinates/identity/graph match; remaining record metadata checks pending |
+| sdf | Selected CCD molecule: coordinates/identity/graph and title match; its empty property list does not test nonempty SDF properties |
 | smiles | Paclitaxel: canonical isomeric graph matches; coordinates are not retained |
 | cif, poscar | Cocrystal / diamond: coordinates and cell matrices exact |
 | cube | Analytic H2: all 262144 samples, origin and steps exact; assign physical semantics again after import |
 | cjson, qcschema | JSON values match original envelopes |
 
-Use the [13-format specification](../../../examples/tutorials/2.5.0/T17.case-spec.json), [installed-run receipt](../../../examples/tutorials/2.5.0/prepare-run006-check.json), and [additional scientific checks](../../../examples/tutorials/2.5.0/T17-science-run006-check.json). MOL2's positive supplement is the 2W73 specification above. CLI coverage does not prove all GUI controls.
+Use the [13-format specification](../../../examples/tutorials/2.5.0/T17.case-spec.json), [installed-run receipt](../../../examples/tutorials/2.5.0/prepare-run006-check.json), and [additional scientific checks](../../../examples/tutorials/2.5.0/T17-science-run006-check.json). MOL2's positive supplement is the 2W73 specification above. The [native metadata checks](../../../examples/tutorials/2.5.0/T17-metadata-run006-check.json) cover PDB/PQR hierarchy and the selected SDF record. Positive format coverage does not prove every advanced option.
+
+## Verified GUI settings
+
+Use the same preview → inspect → export sequence. These receipts bind the actual screenshots to the candidate hash.
+
+| Format / receipt | Recorded setting or boundary |
+| --- | --- |
+| [xyz](../../../examples/tutorials/2.5.0/T17-gui-xyz-check.json) | Confirm omitted topology, identity and metadata |
+| [extxyz](../../../examples/tutorials/2.5.0/T17-gui-extxyz-check.json) | Advanced missing-value token left blank; adds a panel row |
+| [mol](../../../examples/tutorials/2.5.0/T17-gui-mol-check.json) | No confirmation required for this sample |
+| [mol2](../../../examples/tutorials/2.5.0/T17-gui-mol2-check.json) | Confirmed losses described above |
+| [pdb](../../../examples/tutorials/2.5.0/T17-gui-pdb-check.json) | All 10 models; confirmed unit-cell omission |
+| [pqr](../../../examples/tutorials/2.5.0/T17-gui-pqr-check.json) | Confirmed segment-index omission; source charges retained |
+| [sdf](../../../examples/tutorials/2.5.0/T17-gui-sdf-check.json) | Selected record only; no confirmation required |
+| [smiles](../../../examples/tutorials/2.5.0/T17-gui-smiles-check.json) | Confirm coordinate/order/title/raw-record/property omissions |
+| [cif](../../../examples/tutorials/2.5.0/T17-gui-cif-check.json) | Advanced CIF mode: preserve |
+| [poscar](../../../examples/tutorials/2.5.0/T17-gui-poscar-check.json) | Advanced fields blank: defaults; nondefault options untested |
+| [cube](../../../examples/tutorials/2.5.0/T17-gui-cube-check.json) | Single dataset, index blank; confirm semantics/unit omissions |
+| [cjson](../../../examples/tutorials/2.5.0/T17-gui-cjson-check.json) | Original envelope JSON values retained |
+| [qcschema](../../../examples/tutorials/2.5.0/T17-gui-qcschema-check.json) | Original envelope only; derived project fields excluded; no new compute |
 
 ## Recovery and scientific limits
+
+After changing input, verify the entity UUID again: the recorded SDF attempt initially retained a UUID from the previous input and was rejected. Copy the current input's UUID, preview again, then export. Changing format changes visible controls; use their labels, not fixed screen coordinates.
 
 Keep source files, source CBQ and exported files separate. If the destination exists, choose a new name. If loss confirmation is required, inspect the report; confirmation permits listed omissions, not arbitrary scientific changes.
 
