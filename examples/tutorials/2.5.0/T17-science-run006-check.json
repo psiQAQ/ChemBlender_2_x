@@ -1,0 +1,54 @@
+{
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "checks": [
+    {
+      "format": "mol",
+      "canonical_isomeric_graph_equal": true,
+      "indexed_bonds_equal": true,
+      "atom_identity_equal": true,
+      "bond_count": 21,
+      "method": "RDKit reconstruction from CBQ plus canonical isomeric SMILES and indexed edge comparison",
+      "status": "passed"
+    },
+    {
+      "format": "sdf",
+      "canonical_isomeric_graph_equal": true,
+      "indexed_bonds_equal": true,
+      "atom_identity_equal": true,
+      "bond_count": 21,
+      "method": "RDKit reconstruction from CBQ plus canonical isomeric SMILES and indexed edge comparison",
+      "status": "passed"
+    },
+    {
+      "format": "smiles",
+      "canonical_isomeric_graph_equal": true,
+      "status": "passed"
+    },
+    {
+      "format": "cif",
+      "cell_max_error": 0.0,
+      "status": "passed"
+    },
+    {
+      "format": "poscar",
+      "cell_max_error": 0.0,
+      "status": "passed"
+    },
+    {
+      "format": "cube",
+      "values_max_error": 0.0,
+      "origin_max_error": 0.0,
+      "steps_max_error": 0.0,
+      "scalar_count": 262144,
+      "semantics": "Reimport remains ambiguous; Cube does not encode explicit density role/unit.",
+      "status": "passed"
+    }
+  ],
+  "status": "partial_case_evidence",
+  "remaining": [
+    "positive real MOL2 input",
+    "remaining native metadata/hierarchy/property comparisons",
+    "GUI export paths",
+    "tutorial package and human review"
+  ]
+}
