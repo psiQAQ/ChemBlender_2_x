@@ -1,0 +1,15 @@
+{
+  "case_id": "T17",
+  "format": "sdf",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "stale_entity_rejection_artifact": "gui-0049",
+  "corrected_preview_artifact": "gui-0052",
+  "success_artifact": "gui-0054",
+  "preview_no_write": "passed",
+  "requires_confirmation": false,
+  "gui_export": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "sha256": "321156c4a1842f93b396fd73f3f394eee76ad08c0761aa321b88561779a65198",
+  "scope": "Selected CCD record; no arbitrary nonempty SDF properties claimed",
+  "human_review": "not_run"
+}
