@@ -1,0 +1,145 @@
+{
+  "source_commit": "32d96303b2c0e16260b32b470c2d5601226d9318",
+  "artifacts": {
+    "chemblender_prepare-0.1.0-py3-none-any.whl": {
+      "sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "bytes": 555545
+    },
+    "chemblender_prepare-0.1.0.tar.gz": {
+      "sha256": "c8b61502a788b3f9bb93975e6a85cd641b1fd33d2d783ccab15e5453155a5a9e",
+      "bytes": 921762
+    }
+  },
+  "python_files_source_and_both_installs_equal": 165,
+  "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+  "scientific_route": "local dependency reuse; not portable",
+  "cli_doctor": "passed",
+  "cli_inspect_formats_agree": {
+    "available": true,
+    "detail": "scientific: available",
+    "execution_mode": "built_in",
+    "reason_code": "available"
+  },
+  "gui_inspect": "passed: available true, scientific: available visibly confirmed",
+  "gui_launcher_pid": 59048,
+  "gui_window_id": 7540582,
+  "events": [
+    {
+      "event_id": "e1",
+      "step_id": "i01",
+      "interaction": "os_gui",
+      "action": "Choose inspect",
+      "timestamp_utc": "2026-09-10T12:59:06.090Z",
+      "session_id": "run009-prepare-59048",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0002",
+      "after_artifact_id": "gui-0003",
+      "status": "observed"
+    },
+    {
+      "event_id": "e2",
+      "step_id": "i02",
+      "interaction": "os_gui",
+      "action": "Set fixed CHGCAR input and reader",
+      "timestamp_utc": "2026-09-10T12:59:21.889Z",
+      "session_id": "run009-prepare-59048",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0003",
+      "after_artifact_id": "gui-0004",
+      "status": "observed"
+    },
+    {
+      "event_id": "e3",
+      "step_id": "i03",
+      "interaction": "os_gui",
+      "action": "Execute inspect with configured scientific route",
+      "timestamp_utc": "2026-09-10T12:59:22.427Z",
+      "session_id": "run009-prepare-59048",
+      "window": {
+        "app": "process:D:\\workspace\\ChemBlender_2_x\\.agents\\cache\\pythons\\cpython-3.12.13-windows-x86_64-none\\pythonw.exe",
+        "id": 7540582,
+        "title": "ChemBlender Prepare \u2014 \u8ba1\u7b97\u7ed3\u679c\u51c6\u5907"
+      },
+      "before_artifact_id": "gui-0004",
+      "after_artifact_id": "gui-0005",
+      "status": "observed"
+    }
+  ],
+  "screenshots": [
+    {
+      "id": "gui-0001",
+      "kind": "gui_raw",
+      "path": "gui/gui-0001.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "9ba2fe92f2f3c45a062b5992ce8b017c0df6e4cc02344472ae5e929b6304144c",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0002",
+      "kind": "gui_raw",
+      "path": "gui/gui-0002.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "9ba2fe92f2f3c45a062b5992ce8b017c0df6e4cc02344472ae5e929b6304144c",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0003",
+      "kind": "gui_raw",
+      "path": "gui/gui-0003.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "177e29753bac0966b3e5aa973a5054bea629c90c1441c52c4959adeaab41b4ba",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0004",
+      "kind": "gui_raw",
+      "path": "gui/gui-0004.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "f3c8b3b3e0870e6d5bada9e9664ef06b3a178bfdbf93a2e79b552e203cecc83d",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0005",
+      "kind": "gui_raw",
+      "path": "gui/gui-0005.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "b5d9562e33bc4d70d70913201cdf56f81d75bc1bf0db7b2dcca74f772ef1ce4e",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    },
+    {
+      "id": "gui-0006",
+      "kind": "gui_raw",
+      "path": "gui/gui-0006.jpg",
+      "capture_format": "jpg",
+      "capture_source": "Computer Use native screenshot",
+      "sha256": "de204cc30fc7eafeeb64bf0a407b739207b038fac4692746d74d9fff49d8f0bf",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    }
+  ],
+  "excluded_screenshots": [
+    "gui-0001 initial activation capture, not tutorial proof"
+  ],
+  "raw_root": ".blend-analysis\\2.5-real-user-tutorials\\run-009",
+  "gui_convert_new_wheel": "not_run",
+  "full_regression_new_wheel": "not_run",
+  "human_review": "not_run"
+}
