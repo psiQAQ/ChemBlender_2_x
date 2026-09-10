@@ -1,0 +1,14 @@
+{
+  "case_id": "T17",
+  "format": "poscar",
+  "prepare_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+  "preview_no_write": "passed",
+  "gui_export": "passed",
+  "gui_equals_scientifically_checked_cli": true,
+  "sha256": "67c040a37159c5f7ba618f6ce264efc24308f50ed982bd0b80035733278bdb5c",
+  "preview_artifact": "gui-0083",
+  "success_artifact": "gui-0085",
+  "options": "default; advanced fields left blank",
+  "nondefault_advanced_options": "not_run",
+  "human_review": "not_run"
+}
