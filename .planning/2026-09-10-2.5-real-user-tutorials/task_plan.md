@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 6 — 教程收口与本地交付；Phase 4/5 的明确 Blocked 项并行保留
-- Next Step: P6.2/P6.4 保持 Blocked；继续 P6.5 形成 22 案例人工独立复做清单，Agent 不代签
+- Next Step: 22 案例人工清单已形成但尚未独立复做，P6.5/P6.6 保持 Blocked；继续 P6.7 审计最终候选制品冻结条件
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。

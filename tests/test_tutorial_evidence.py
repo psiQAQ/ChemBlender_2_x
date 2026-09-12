@@ -241,6 +241,16 @@ class TutorialStatusTests(unittest.TestCase):
             self.assertFalse(archive['development_paths_outside_evidence'], name)
             self.assertEqual(len(archive['sha256']), 64, name)
 
+    def test_independent_review_checklist_has_one_unsigned_section_per_case(self):
+        path = ROOT / 'examples/tutorials/2.5.0/independent-human-review-checklists.md'
+        text = path.read_text(encoding='utf-8')
+        headings = {line.split()[1] for line in text.splitlines() if line.startswith('## T') or line.startswith('## B')}
+        expected = {f'T{index:02d}' for index in range(21)} | {'B01'}
+        self.assertEqual(headings, expected)
+        self.assertNotIn('- [x]', text.lower())
+        self.assertEqual(text.count('Reviewer／日期／签名：________________'), 22)
+        self.assertTrue(all(case['human_review'] == 'not_run' for case in self.status['cases']))
+
     def test_all_cases_have_separate_acceptance_dimensions(self):
         expected = {f'T{index:02d}' for index in range(21)} | {'B01'}
         cases = {case['case_id']: case for case in self.status['cases']}
