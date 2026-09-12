@@ -17,8 +17,18 @@ Review ZIPs are local `review_only` handover packages. They are not final distri
 
 The execution checker accepts original GUI JPEG or PNG evidence with matching suffix, signature and hash; renders remain PNG. This verifies record integrity, not screenshot authenticity or human acceptance. The original research package remains byte-identical.
 
+`validate_evidence.py` reports evidence integrity, technical completion, independent review and acceptance separately. A non-passed run is still fully audited for every record it declares; missing gates return `incomplete`, while malformed records, broken links, unsafe paths and wrong hashes return `invalid`.
+
+Execution supplement v1 is optional. [T01.execution-supplement.json](T01.execution-supplement.json) records the first approved GUI-to-MCP reuse chain. Each replay links the prior direct-GUI run and captures, the user authorization, the candidate difference check and a hash-linked public Operator receipt. It is classified as `authorized_mcp_replay`, never as a new `os_gui` or `human_gui` event. A changed button, new panel or previously unverified step still requires direct GUI evidence.
+
 Example integrity check for the retained historical T01 run (its candidate scope remains historical):
 
 ```powershell
 .venv\Scripts\python.exe examples\tutorials\2.5.0\validate_evidence.py .blend-analysis\2.5-real-user-tutorials\run-003\T01\run-manifest.json --spec examples\tutorials\2.5.0\T01.case-spec.json
+```
+
+To include the approved replay chain, append:
+
+```powershell
+--execution-supplement examples\tutorials\2.5.0\T01.execution-supplement.json
 ```

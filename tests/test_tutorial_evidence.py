@@ -17,6 +17,47 @@ with patch.dict(sys.modules, {'validate_evidence': validator}):
 
 
 class TutorialEvidenceTests(contracts['EvidenceTests']):
+    def mark_incomplete(self, status):
+        self.m.update(status=status, status_reason=f'Synthetic {status} run')
+
+    def execution_supplement(self):
+        artifact = self.artifact('assert')
+        return {
+            'schema_version': 1,
+            'case_id': 'UNIT',
+            'spec_sha256': validator.sha256(self.spec_path),
+            'authorization': {
+                'approved_by': 'user',
+                'approved_at': '2026-09-10T00:00:00Z',
+                'basis': 'Synthetic authorization contract',
+            },
+            'replays': [{
+                'step_id': 's1',
+                'interaction': 'authorized_mcp_replay',
+                'classification': 'replay_not_direct_gui',
+                'original_gui': {
+                    'source_run_id': 'synthetic-original',
+                    'source_extension_sha256': 'e' * 64,
+                    'source_manifest_sha256': 'f' * 64,
+                    'events_sha256': '1' * 64,
+                    'event_id': 'original-e1',
+                    'before_artifact_sha256': '2' * 64,
+                    'after_artifact_sha256': '3' * 64,
+                },
+                'candidate_difference': {
+                    'status': 'passed',
+                    'to_extension_sha256': 'a' * 64,
+                    'to_prepare_sha256': 'b' * 64,
+                    'checked_fields': ['operator', 'scientific_output'],
+                },
+                'operator_receipt': {
+                    'status': 'passed',
+                    'artifact_id': 'assert',
+                    'sha256': artifact['sha256'],
+                },
+            }],
+        }
+
     def replace_image(self, aid, suffix, payload):
         artifact = self.artifact(aid)
         artifact['path'] = aid + suffix
@@ -40,6 +81,113 @@ class TutorialEvidenceTests(contracts['EvidenceTests']):
     def test_truncated_jpeg_is_rejected(self):
         self.replace_image('pre', '.jpeg', b'\xff\xd8\xffSYNTHETIC')
         self.assert_invalid()
+
+    def test_blocked_run_still_audits_tampered_artifact(self):
+        self.mark_incomplete('blocked')
+        (self.root / 'render.png').write_bytes(b'tampered')
+        self.assert_invalid()
+
+    def test_running_run_still_audits_missing_artifact(self):
+        self.mark_incomplete('running')
+        (self.root / 'render.png').unlink()
+        self.assert_invalid()
+
+    def test_failed_run_still_audits_path_escape(self):
+        self.mark_incomplete('failed')
+        self.artifact('pre')['path'] = '../outside.png'
+        self.assert_invalid()
+
+    def test_blocked_run_still_audits_wrong_hash(self):
+        self.mark_incomplete('blocked')
+        self.artifact('pre')['sha256'] = 'e' * 64
+        self.assert_invalid()
+
+    def test_running_run_still_audits_event_chain(self):
+        self.mark_incomplete('running')
+        self.m['steps'][0]['event_id'] = 'missing'
+        self.assert_invalid()
+
+    def test_minimal_not_run_needs_no_placeholder_evidence(self):
+        self.m = {
+            'schema_version': 1,
+            'case_id': 'UNIT',
+            'status': 'not_run',
+            'status_reason': 'Synthetic case not executed',
+            'spec_sha256': validator.sha256(self.spec_path),
+        }
+        result = self.result()
+        self.assertEqual(result['verdict'], 'incomplete')
+        self.assertEqual(result['integrity_status'], 'passed')
+        self.assertEqual(result['technical_status'], 'incomplete')
+        self.assertEqual(result['independent_review_status'], 'incomplete')
+        self.assertEqual(result['acceptance_status'], 'incomplete')
+
+    def test_10_missing_required_step(self):
+        self.m['steps'] = []
+        result = self.result()
+        self.assertEqual(result['verdict'], 'incomplete')
+        self.assertEqual(result['integrity_status'], 'passed')
+        self.assertEqual(result['technical_status'], 'incomplete')
+
+    def test_13_failed_science_check(self):
+        self.m['checks'][0]['status'] = 'failed'
+        result = self.result()
+        self.assertEqual(result['verdict'], 'incomplete')
+        self.assertEqual(result['integrity_status'], 'passed')
+        self.assertEqual(result['technical_status'], 'incomplete')
+
+    def test_14_missing_adjacent_project(self):
+        artifact = self.artifact('blend')
+        moved = self.root / 'other.blend'
+        (self.root / 'project.blend').rename(moved)
+        artifact['path'] = 'other.blend'
+        result = self.result()
+        self.assertEqual(result['verdict'], 'incomplete')
+        self.assertEqual(result['integrity_status'], 'passed')
+        self.assertEqual(result['technical_status'], 'incomplete')
+
+    def test_17_missing_independent_review(self):
+        self.alter_json('review', lambda value: value.update(independent=False))
+        result = self.result()
+        self.assertEqual(result['verdict'], 'incomplete')
+        self.assertEqual(result['integrity_status'], 'passed')
+        self.assertEqual(result['technical_status'], 'passed')
+        self.assertEqual(result['independent_review_status'], 'incomplete')
+
+    def test_wrong_candidate_hash_is_invalid_integrity(self):
+        result = self.result(expected_extension='e' * 64)
+        self.assertEqual(result['verdict'], 'invalid')
+        self.assertEqual(result['integrity_status'], 'invalid')
+
+    def test_historical_screenshot_cannot_be_relabelled(self):
+        self.artifact('pre')['extension_sha256'] = 'e' * 64
+        result = self.result()
+        self.assertEqual(result['verdict'], 'invalid')
+        self.assertEqual(result['integrity_status'], 'invalid')
+
+    def test_execution_supplement_allows_only_explicit_replay(self):
+        self.m['steps'][0].update(
+            status='not_run', interaction='mcp_replay', replay_status='passed',
+            artifact_ids=['assert'], reason='Authorized replay; not direct GUI',
+        )
+        supplement_path = self.root / 'execution-supplement.json'
+        self.write_json(supplement_path, self.execution_supplement())
+        result = self.result(execution_supplement=supplement_path)
+        self.assertEqual(result['verdict'], 'integrity_ok')
+        self.assertEqual(result['technical_status'], 'passed')
+
+    def test_execution_supplement_requires_complete_reuse_chain(self):
+        self.m['steps'][0].update(
+            status='not_run', interaction='mcp_replay', replay_status='passed',
+            artifact_ids=['assert'], reason='Authorized replay; not direct GUI',
+        )
+        supplement = self.execution_supplement()
+        del supplement['replays'][0]['original_gui']['event_id']
+        supplement_path = self.root / 'execution-supplement.json'
+        self.write_json(supplement_path, supplement)
+        result = self.result(execution_supplement=supplement_path)
+        self.assertEqual(result['verdict'], 'invalid')
+        self.assertEqual(result['integrity_status'], 'invalid')
 
 
 class TutorialStatusTests(unittest.TestCase):
@@ -77,6 +225,37 @@ class TutorialStatusTests(unittest.TestCase):
             if case['distribution'] == 'passed':
                 self.assertEqual(case['technical_status'], 'passed', case['case_id'])
                 self.assertEqual(case['human_review'], 'passed', case['case_id'])
+
+
+class LocalBlockedManifestTests(unittest.TestCase):
+    RUN_ROOT = ROOT / '.blend-analysis/2.5-real-user-tutorials/run-003'
+
+    @unittest.skipUnless((RUN_ROOT / 'T01/run-manifest.json').is_file() and
+                         (RUN_ROOT / 'T02/run-manifest.json').is_file(),
+                         'local T01/T02 run-003 evidence is unavailable')
+    def test_real_blocked_manifests_are_incomplete_but_corruption_is_invalid(self):
+        for case_id in ('T01', 'T02'):
+            with self.subTest(case_id=case_id):
+                manifest = self.RUN_ROOT / case_id / 'run-manifest.json'
+                spec_path = ROOT / f'examples/tutorials/2.5.0/{case_id}.case-spec.json'
+                supplement = (ROOT / 'examples/tutorials/2.5.0/T01.execution-supplement.json'
+                              if case_id == 'T01' else None)
+                result = validator.audit(
+                    manifest, spec_path, execution_supplement=supplement)
+                self.assertEqual(result['verdict'], 'incomplete')
+                self.assertEqual(result['integrity_status'], 'passed')
+                document = json.loads(manifest.read_text(encoding='utf-8'))
+                target = (manifest.parent / document['artifacts'][0]['path']).resolve()
+                actual_sha256 = validator.sha256
+
+                def wrong_hash(path):
+                    return '0' * 64 if path.resolve() == target else actual_sha256(path)
+
+                with patch.object(validator, 'sha256', side_effect=wrong_hash):
+                    corrupted = validator.audit(
+                        manifest, spec_path, execution_supplement=supplement)
+                self.assertEqual(corrupted['verdict'], 'invalid')
+                self.assertEqual(corrupted['integrity_status'], 'invalid')
 
 
 if __name__ == '__main__':

@@ -12,8 +12,8 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 
 ## Control
 
-- Current Phase: Phase 2 — 修复证据检查与 GUI/MCP 复用规则
-- Next Step: P2.1 增加未完成运行完整性失败测试
+- Current Phase: Phase 3 — 专业环境资格分层
+- Next Step: P3.1 重新记录四类环境事实
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -44,21 +44,21 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 
 ### Phase 2 — 修复证据检查与 GUI/MCP 复用规则
 
-**Status:** in_progress
+**Status:** complete
 
-- [ ] P2.1 先增加失败测试，证明 blocked/running/failed manifest 中的损坏、缺失、路径逃逸、错误哈希和事件断链目前会被提前返回漏掉。
-- [ ] P2.2 删除 `_audit()` 的未通过状态提前返回；无论总体状态如何，都审计已经声明的 baseline、artifact、event、step、check 和 lifecycle。
-- [ ] P2.3 未执行项目不要求伪造文件；已声明文件必须通过完整性审计。完整性通过但门槛未完成时返回 `incomplete`。
-- [ ] P2.4 增加四类分离状态字段；`invalid` 只表示证据完整性或结构错误，不能被 `status=blocked` 掩盖。
-- [ ] P2.5 增加合法未完成、缺失 GUI、缺失科学检查、缺失人工审阅、错误候选哈希、历史截图换标等回归测试。
-- [ ] P2.6 定义并测试 execution supplement v1；直接 GUI 仍使用 `os_gui/human_gui`，授权 MCP 重放使用单独类型和完整复用链。
-- [ ] P2.7 为 T01 建立首个补充规格；新面板、变化按钮和未验证步骤继续要求真实 GUI。
-- [ ] P2.8 用真实 T01/T02 blocked manifest 验证：损坏证据会失败，完整但未人工验收仍为 incomplete。
-- [ ] P2.9 运行证据测试、相关文档测试和 `git diff --check`，提交“审计未完成运行并记录授权重放”。
+- [x] P2.1 先增加失败测试，证明 blocked/running/failed manifest 中的损坏、缺失、路径逃逸、错误哈希和事件断链目前会被提前返回漏掉。
+- [x] P2.2 删除 `_audit()` 的未通过状态提前返回；无论总体状态如何，都审计已经声明的 baseline、artifact、event、step、check 和 lifecycle。
+- [x] P2.3 未执行项目不要求伪造文件；已声明文件必须通过完整性审计。完整性通过但门槛未完成时返回 `incomplete`。
+- [x] P2.4 增加四类分离状态字段；`invalid` 只表示证据完整性或结构错误，不能被 `status=blocked` 掩盖。
+- [x] P2.5 增加合法未完成、缺失 GUI、缺失科学检查、缺失人工审阅、错误候选哈希、历史截图换标等回归测试。
+- [x] P2.6 定义并测试 execution supplement v1；直接 GUI 仍使用 `os_gui/human_gui`，授权 MCP 重放使用单独类型和完整复用链。
+- [x] P2.7 为 T01 建立首个补充规格；新面板、变化按钮和未验证步骤继续要求真实 GUI。
+- [x] P2.8 用真实 T01/T02 blocked manifest 验证：损坏证据会失败，完整但未人工验收仍为 incomplete。
+- [x] P2.9 运行证据测试、相关文档测试和 `git diff --check`，提交“审计未完成运行并记录授权重放”。
 
 ### Phase 3 — 专业环境资格分层
 
-**Status:** pending
+**Status:** in_progress
 
 - [ ] P3.1 重新记录 Standard、scientific、wavefunction、fermi 环境的解释器、依赖版本、实际 import origin、prepare wheel 和 route 配置。
 - [ ] P3.2 将环境状态明确分为 `development_reuse`、`isolated_install`、`distribution_ready`；`.pth` 跨环境引用只能是第一类。

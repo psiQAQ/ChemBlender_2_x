@@ -39,7 +39,7 @@
       "technical_status": "incomplete",
       "scientific_processing": "passed",
       "direct_gui": "partial",
-      "authorized_replay": "passed_unmodeled",
+      "authorized_replay": "passed",
       "render": "passed",
       "recovery": "partial",
       "tutorial": "passed",
@@ -52,7 +52,8 @@
       "distribution": "blocked",
       "evidence_refs": [
         ".blend-analysis/2.5-real-user-tutorials/run-003/T01/run-manifest.json",
-        "examples/tutorials/2.5.0/T01.case-spec.json"
+        "examples/tutorials/2.5.0/T01.case-spec.json",
+        "examples/tutorials/2.5.0/T01.execution-supplement.json"
       ]
     },
     {
