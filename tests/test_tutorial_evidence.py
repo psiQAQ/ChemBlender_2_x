@@ -251,6 +251,15 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(text.count('Reviewer／日期／签名：________________'), 22)
         self.assertTrue(all(case['human_review'] == 'not_run' for case in self.status['cases']))
 
+    def test_retained_artifacts_are_not_promoted_as_final(self):
+        audit = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-final-artifact-freeze-audit.json').read_text(encoding='utf-8'))
+        self.assertEqual(audit['status'], 'blocked')
+        self.assertFalse(audit['final_artifact_frozen'])
+        self.assertFalse(audit['published'])
+        self.assertNotEqual(audit['current_source_commit'], audit['retained_artifacts']['extension']['source_commit'])
+        self.assertEqual(audit['source_difference']['extension_changed_files_since_retained_zip'], ['ChemBlender/ui/scientific_view.py'])
+        self.assertTrue(all(len(item['sha256']) == 64 for item in audit['retained_artifacts'].values()))
+
     def test_all_cases_have_separate_acceptance_dimensions(self):
         expected = {f'T{index:02d}' for index in range(21)} | {'B01'}
         cases = {case['case_id']: case for case in self.status['cases']}

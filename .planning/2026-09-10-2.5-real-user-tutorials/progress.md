@@ -623,3 +623,10 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - Added `examples/tutorials/2.5.0/independent-human-review-checklists.md` with one separate, entirely unchecked section for every T00–T20/B01 case. Each section identifies fixed-spec/input setup, direct operations, independent science assertions, render or explicit N/A, lifecycle/recovery, defect/fix/retest recording and a blank reviewer/date/signature line.
 - A regression test requires exactly the 22 case IDs, forbids any `[x]` marker and requires 22 blank signature lines. This file is a work package only; it is not human evidence.
 - Classification: checklist creation Passed, but no second clean-profile blind replay or independent signature occurred. P6.5 and P6.6 remain unchecked and all `human_review` values remain `not_run`. Next executable item is P6.7.
+
+## 2026-09-13 — P6.7 final-artifact freeze audit
+
+- Recomputed retained artifact bytes/hashes and read their original freeze receipts. Extension ZIP `a1e2da79…` is 2,831,354 bytes from source `36b80b8c`; run-009 wheel `b736bc61…` is 555,545 bytes and sdist `c8b61502…` is 921,762 bytes from source `32d96303`.
+- Current HEAD at audit time is `8ade6c7f`. `git diff --name-only` proves the Extension source changed at `ChemBlender/ui/scientific_view.py` after the retained ZIP; Prepare/core source has no corresponding change after run-009.
+- Versioned audit: `examples/tutorials/2.5.0/P6-final-artifact-freeze-audit.json`. It explicitly classifies all three files as retained candidates, sets `final_artifact_frozen=false`, and records no publication.
+- Classification: P6.7 remains unchecked. A final freeze cannot predate current-source build/install checks, full test closure, blocked case gates or independent human review. Next executable item is P6.8.
