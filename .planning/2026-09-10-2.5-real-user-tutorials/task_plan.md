@@ -6,14 +6,14 @@ Goal: 完成 T00–T20/B01 的真实用户教程纠偏、技术验收、独立�
 
 Success Criteria: 每项操作、验证和证据路径写入 `progress.md` 后才勾选；人工独立验收只由独立复做者签署；所有技术门槛通过且没有 failure/error。
 
-Constraints: 不安装或升级依赖；不删除或换标历史证据；不 push、tag、Release 或发布 PyPI；同时最多一个 Agent-owned Blender 进程；保持 `docs/chemblender25-research/` 字节不变。
+Constraints: 用户已授权为 scientific/wavefunction/fermi/QCSchema 更新和配置现有专业环境、关闭/使用当前 Blender、把 `.blend/.cbq/review ZIP` 纳入离线教程，并为 T16 固定具备可审计许可的可再分发输入；不删除或换标历史证据；不 push、tag、Release 或发布 PyPI；同时最多一个 Agent-owned Blender 进程；保持 `docs/chemblender25-research/` 字节不变；独立人工验收仍只能由独立复做者签署。
 
 Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA、Extension validate/build、隔离与真实 profile、全量测试、`git diff --check`、planning `check-complete.ps1`。
 
 ## Control
 
 - Current Phase: Phase 6 — 教程收口与本地交付；Phase 4/5 的明确 Blocked 项并行保留
-- Next Step: P6.12 Blocked；先完成 P4/P5/P6 的 GUI、专业环境、教程/工程下载、当前制品和独立人工门槛，才可标记整体 complete
+- Next Step: 使用已隔离配置的 wavefunction route 执行 T08 真实 FCHK/Molden 解析与轨道相位科学检查；依次推进 T09–T14/T16，再执行唯一 Blender 第二干净 profile 和离线工程交付
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。

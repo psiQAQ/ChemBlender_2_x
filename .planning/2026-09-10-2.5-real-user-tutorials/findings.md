@@ -187,6 +187,12 @@
 - The existing PyProcar 6.5.0 environment is dependency-self-contained but remains `development_reuse`: eight Prepare/Core files differ from the current wheel and `python.fermi` is not configured. The current operation probe fails `environment_unavailable` without output before any private input is staged.
 - A public T16 requires both an explicitly redistributable uniform-k-mesh bundle and authorization to update/configure the existing Fermi environment. Neither gate can substitute for the other.
 
+## 2026-09-13 professional routes after authorization
+
+- Run-012 Standard, wavefunction, scientific, Fermi and QCSchema environments are self-contained `isolated_install` qualifications. Each has all 165 Prepare/Core Python files byte-equal to wheel `3ca42c26...`; dependency checks pass and no cross-environment `.pth`, `PYTHONPATH` or source injection is present.
+- `qcschema.compute@1` now has an explicit `python.qcschema` route. A local Apache-2.0 PySCF 2.13.1 `py3-none-win_amd64` wheel runs under Python 3.12.14 and produced RHF/cc-pVDZ water energy `-76.0214183672713 Eh`, within `9.34e-11 Eh` of the frozen MolSSI result. The routed CBQ validates.
+- Environment qualification does not imply `distribution_ready`, case GUI/render/lifecycle completion or independent human acceptance. T16 still needs input bytes whose redistribution permission is actually recorded; user authorization to proceed does not create third-party copyright provenance.
+
 ## B01 provider boundary
 
 - Current capabilities advertises `external_record.fetch@1` as `available=false` with `no live provider transport configured`. A valid credential-free QCArchive provider request reaches the reviewed worker contract and fails `dependency_missing` without output or a network request.
@@ -196,3 +202,9 @@
 ## Execution-supplement target boundary
 
 - The current T01/T02 execution supplements are scoped to `run-010`; without matching `run-010` manifests they cannot be attached to historical `run-003` manifests. The checker correctly treats such a cross-run pairing as invalid rather than upgrading historical evidence.
+
+## Authorized professional-environment update
+
+- The existing scientific, GBasis and Fermi virtual environments already contain their specialized dependencies without cross-environment paths inside those original environments. The smallest authorized change is to install the frozen current Prepare wheel into each applicable environment and configure explicit routes; the run-009 synthetic scientific-route venv with `.pth` should not be promoted.
+- After the authorized offline replacement, each original environment contains all 165 current-candidate Prepare/Core Python files byte-for-byte and passes `uv pip check`; these original environments can now be qualified directly instead of the cross-environment run-009 route.
+- PySCF 2.14.0 has conda-forge win-64 builds for Python 3.11, but the project requires Python >=3.12; bypassing that constraint is not valid qualification. QCSchema compute currently has no separate route, so a small runtime/config extension is required before a compliant specialized backend can be used.

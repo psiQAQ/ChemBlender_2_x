@@ -1,12 +1,20 @@
 {
   "schema_name": "chemblender_tutorial_environment_qualification",
   "schema_version": 1,
-  "captured_at_utc": "2026-09-12T14:53:31.8546128Z",
-  "repository_head": "fd7656f4738556daf1aab93bbd9fef5ae588db35",
+  "captured_at_utc": "2026-09-12T23:28:08.2929188Z",
+  "repository_head": "3b241ae16156b458836d72298e2f02edcd17ffde",
   "candidate": {
-    "prepare_wheel": ".blend-analysis/2.5-real-user-tutorials/run-009/artifacts/chemblender_prepare-0.1.0-py3-none-any.whl",
-    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "prepare_wheel": ".blend-analysis/2.5-real-user-tutorials/run-012/artifacts/chemblender_prepare-0.1.0-py3-none-any.whl",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+    "prepare_sdist": ".blend-analysis/2.5-real-user-tutorials/run-012/artifacts/chemblender_prepare-0.1.0.tar.gz",
+    "prepare_sdist_sha256": "17c0191fccc9bc9c3e9f80a1ff81febe8b4941593a17bf5311598a39012c01a4",
     "python_files": 165
+  },
+  "route_configuration": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-012/professional-processor.json",
+    "sha256": "08742071105ac78f2723c4e7b6873008890dbd858755b3735e3c0720c6d4f465",
+    "capabilities": "passed",
+    "doctor": "passed with expected critic2/provider warnings"
   },
   "qualification_levels": {
     "development_reuse": "Useful local evidence only; may reuse another environment or a non-current Prepare install.",
@@ -17,147 +25,83 @@
     {
       "name": "standard",
       "qualification": "isolated_install",
-      "python": ".blend-analysis/2.5-real-user-tutorials/run-009/uv-tool/chemblender-prepare/Scripts/python.exe",
+      "python": ".blend-analysis/2.5-real-user-tutorials/run-012/uv-tool/chemblender-prepare/Scripts/python.exe",
       "python_version": "3.12.13",
-      "prepare_origin": ".blend-analysis/2.5-real-user-tutorials/run-009/uv-tool/chemblender-prepare/Lib/site-packages/chemblender_prepare/__init__.py",
-      "core_origin": ".blend-analysis/2.5-real-user-tutorials/run-009/uv-tool/chemblender-prepare/Lib/site-packages/cbq_core/__init__.py",
-      "versions": {
-        "chemblender-prepare": "0.1.0",
-        "numpy": "2.5.3",
-        "rdkit": "2026.3.3",
-        "gemmi": "0.7.5"
-      },
+      "versions": {"chemblender-prepare": "0.1.0", "numpy": "2.5.3", "rdkit": "2026.3.3", "gemmi": "0.7.5"},
       "dependency_origins": "same environment",
       "cross_environment_pth": [],
       "wheel_python_files_equal": 165,
       "wheel_python_files_changed": [],
       "dependency_check": "passed: uv pip check checked 5 packages",
       "configured_route": "current",
-      "replay": "passed: capabilities --json and doctor --json",
-      "distribution_ready": false,
-      "limitation": "Final distribution, full-test and independent-review gates remain open."
-    },
-    {
-      "name": "scientific",
-      "qualification": "development_reuse",
-      "python": ".blend-analysis/2.5-real-user-tutorials/run-009/scientific-route/Scripts/python.exe",
-      "python_version": "3.12.13",
-      "prepare_origin": ".blend-analysis/2.5-real-user-tutorials/run-009/scientific-route/Lib/site-packages/chemblender_prepare/__init__.py",
-      "core_origin": ".blend-analysis/2.5-real-user-tutorials/run-009/scientific-route/Lib/site-packages/cbq_core/__init__.py",
-      "versions": {
-        "chemblender-prepare": "0.1.0",
-        "numpy": "2.2.6",
-        "ase": "3.29.0",
-        "cclib": "1.8.1",
-        "phonopy": "4.4.0",
-        "pymatgen-core": "2026.7.16",
-        "spglib": "2.7.0",
-        "rdkit": "2026.3.3",
-        "gemmi": "0.7.5"
-      },
-      "dependency_origins": {
-        "numpy_ase_cclib_phonopy_pymatgen_spglib": ".agents/cache/scientific-py312/Lib/site-packages",
-        "rdkit_gemmi": ".blend-analysis/2.5-real-user-tutorials/run-009/uv-tool/chemblender-prepare/Lib/site-packages"
-      },
-      "cross_environment_pth": [
-        ".agents/cache/scientific-py312/Lib/site-packages",
-        ".blend-analysis/2.5-real-user-tutorials/run-009/uv-tool/chemblender-prepare/Lib/site-packages"
-      ],
-      "wheel_python_files_equal": 165,
-      "wheel_python_files_changed": [],
-      "dependency_check": "failed: uv pip check sees only the local distribution and cannot count dependencies injected by .pth",
-      "configured_route": ".blend-analysis/2.5-real-user-tutorials/run-009/scientific-processor.json",
-      "configured_route_sha256": "8f539030c15d195949ada6eba3775305d291c7be28b5de84d564c09af865ca32",
-      "historical_result": "run-008/run-009 numerical and integration results retained",
-      "replay": "not_run: environment is not self-contained",
-      "distribution_ready": false,
-      "blocked": "dependency authorization required",
-      "minimum_install": "Create an isolated environment and install the current Prepare wheel with numpy, ase, cclib, phonopy, pymatgen-core and spglib; do not use .pth or source injection."
+      "distribution_ready": false
     },
     {
       "name": "wavefunction",
-      "qualification": "development_reuse",
+      "qualification": "isolated_install",
       "python": ".agents/cache/gbasis-py312/Scripts/python.exe",
       "python_version": "3.12.13",
-      "prepare_origin": ".agents/cache/gbasis-py312/Lib/site-packages/chemblender_prepare/__init__.py",
-      "core_origin": ".agents/cache/gbasis-py312/Lib/site-packages/cbq_core/__init__.py",
-      "versions": {
-        "chemblender-prepare": "0.1.0",
-        "numpy": "1.26.4",
-        "scipy": "1.16.3",
-        "qc-iodata": "1.0.1",
-        "qc-gbasis": "0.1.0"
-      },
+      "versions": {"chemblender-prepare": "0.1.0", "numpy": "1.26.4", "scipy": "1.16.3", "qc-iodata": "1.0.1", "qc-gbasis": "0.1.0"},
       "dependency_origins": "same environment",
       "cross_environment_pth": [],
-      "wheel_python_files_equal": 157,
-      "wheel_python_files_changed": [
-        "cbq_core/project_service.py",
-        "chemblender_prepare/cli.py",
-        "chemblender_prepare/gui.py",
-        "chemblender_prepare/runtime.py",
-        "chemblender_prepare/core/pymatgen_adapter.py",
-        "chemblender_prepare/core/exporters/pdb_readiness.py",
-        "chemblender_prepare/core/exporters/pqr.py",
-        "chemblender_prepare/core/exporters/rdkit_molecular.py"
-      ],
+      "wheel_python_files_equal": 165,
+      "wheel_python_files_changed": [],
       "dependency_check": "passed: uv pip check checked 9 packages",
-      "configured_route": null,
-      "replay": "not_run: installed Prepare files do not match the current candidate and no route is configured",
-      "distribution_ready": false,
-      "blocked": "dependency authorization required",
-      "minimum_install": "Install the current Prepare wheel into the existing dependency-self-contained qc-iodata/qc-gbasis environment, then configure python.wavefunction."
+      "configured_route": "python.wavefunction",
+      "distribution_ready": false
+    },
+    {
+      "name": "scientific",
+      "qualification": "isolated_install",
+      "python": ".agents/cache/scientific-py312/Scripts/python.exe",
+      "python_version": "3.12.13",
+      "versions": {"chemblender-prepare": "0.1.0", "numpy": "2.2.6", "ase": "3.29.0", "cclib": "1.8.1", "phonopy": "4.4.0", "pymatgen-core": "2026.7.16", "spglib": "2.7.0"},
+      "dependency_origins": "same environment",
+      "cross_environment_pth": [],
+      "wheel_python_files_equal": 165,
+      "wheel_python_files_changed": [],
+      "dependency_check": "passed: uv pip check checked 48 packages",
+      "configured_route": "python.scientific",
+      "distribution_ready": false
     },
     {
       "name": "fermi",
-      "qualification": "development_reuse",
+      "qualification": "isolated_install",
       "python": ".agents/cache/fermi-py312/Scripts/python.exe",
       "python_version": "3.12.13",
-      "prepare_origin": ".agents/cache/fermi-py312/Lib/site-packages/chemblender_prepare/__init__.py",
-      "core_origin": ".agents/cache/fermi-py312/Lib/site-packages/cbq_core/__init__.py",
-      "versions": {
-        "chemblender-prepare": "0.1.0",
-        "numpy": "1.26.4",
-        "scipy": "1.16.3",
-        "ase": "3.29.0",
-        "spglib": "2.7.0",
-        "pyprocar": "6.5.0",
-        "pyvista": "0.46.5",
-        "vtk": "9.5.2"
-      },
+      "versions": {"chemblender-prepare": "0.1.0", "numpy": "1.26.4", "scipy": "1.16.3", "ase": "3.29.0", "spglib": "2.7.0", "pyprocar": "6.5.0", "pyvista": "0.46.5", "vtk": "9.5.2"},
       "dependency_origins": "same environment",
       "cross_environment_pth": [],
-      "wheel_python_files_equal": 157,
-      "wheel_python_files_changed": [
-        "cbq_core/project_service.py",
-        "chemblender_prepare/cli.py",
-        "chemblender_prepare/gui.py",
-        "chemblender_prepare/runtime.py",
-        "chemblender_prepare/core/pymatgen_adapter.py",
-        "chemblender_prepare/core/exporters/pdb_readiness.py",
-        "chemblender_prepare/core/exporters/pqr.py",
-        "chemblender_prepare/core/exporters/rdkit_molecular.py"
-      ],
+      "wheel_python_files_equal": 165,
+      "wheel_python_files_changed": [],
       "dependency_check": "passed: uv pip check checked 145 packages",
-      "configured_route": null,
-      "replay": "not_run: installed Prepare files do not match the current candidate and no route is configured",
+      "configured_route": "python.fermi",
       "distribution_ready": false,
-      "blocked": "dependency authorization required",
-      "minimum_install": "Install the current Prepare wheel into the existing dependency-self-contained PyProcar environment, then configure python.fermi; licensed inputs remain a separate gate."
+      "limitation": "T16 input redistribution remains a separate provenance gate."
+    },
+    {
+      "name": "qcschema",
+      "qualification": "isolated_install",
+      "python": ".agents/cache/qcschema-py312/python.exe",
+      "python_version": "3.12.14",
+      "versions": {"chemblender-prepare": "0.1.0", "numpy": "1.26.4", "scipy": "1.17.1", "h5py": "3.16.0", "pyscf": "2.13.1"},
+      "dependency_origins": "same environment",
+      "cross_environment_pth": [],
+      "wheel_python_files_equal": 165,
+      "wheel_python_files_changed": [],
+      "dependency_check": "passed: uv pip check checked 11 packages",
+      "configured_route": "python.qcschema",
+      "backend_wheel": "pyscf-2.13.1-py3-none-win_amd64.whl",
+      "backend_wheel_sha256": "4c8ab728f5acaf4623032de4ea84ccee8680f969a72b023564aeb12d699433a7",
+      "backend_license": "Apache-2.0",
+      "real_compute": "passed: PySCF RHF/cc-pVDZ water energy",
+      "distribution_ready": false
     }
   ],
   "unavailable_routes": {
-    "qcschema_compute": {
-      "blocked": "dependency authorization required",
-      "minimum_install": "qcengine plus a real compute backend such as pyscf"
-    },
-    "critic2": {
-      "blocked": "dependency authorization required",
-      "minimum_install": "an authorized critic2 executable and an absolute configured path"
-    },
-    "external_provider": {
-      "blocked": "live transport unavailable",
-      "minimum_install": "none; configure an authorized provider transport"
-    }
-  }
+    "critic2": {"qualification": "development_reuse", "limitation": "Retained WSL ELF route is configured per T15 run, not in the shared run-012 configuration."},
+    "external_provider": {"blocked": "live transport unavailable", "minimum_install": "none; configure an authorized provider transport"}
+  },
+  "overall_distribution_ready": false,
+  "limitation": "Environment isolation is qualified; final package, Blender, tutorial and independent human-review gates remain separate."
 }

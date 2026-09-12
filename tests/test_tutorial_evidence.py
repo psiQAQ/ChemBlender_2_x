@@ -324,7 +324,10 @@ class TutorialStatusTests(unittest.TestCase):
         document = json.loads(qualification_path.read_text(encoding='utf-8'))
         allowed = {'development_reuse', 'isolated_install', 'distribution_ready'}
         environments = {item['name']: item for item in document['environments']}
-        self.assertEqual(set(environments), {'standard', 'scientific', 'wavefunction', 'fermi'})
+        self.assertEqual(
+            set(environments),
+            {'standard', 'scientific', 'wavefunction', 'fermi', 'qcschema'},
+        )
         for name, environment in environments.items():
             self.assertIn(environment['qualification'], allowed, name)
             if environment['cross_environment_pth']:
@@ -334,7 +337,9 @@ class TutorialStatusTests(unittest.TestCase):
                 self.assertTrue(environment['distribution_ready'], name)
                 self.assertFalse(environment['wheel_python_files_changed'], name)
         self.assertEqual(environments['standard']['qualification'], 'isolated_install')
-        self.assertEqual(environments['scientific']['qualification'], 'development_reuse')
+        self.assertEqual(environments['scientific']['qualification'], 'isolated_install')
+        self.assertEqual(environments['qcschema']['qualification'], 'isolated_install')
+        self.assertIn('real PySCF compute passed', self.status['environment_routes']['qcschema_compute'])
         self.assertFalse(environments['wavefunction']['distribution_ready'])
         self.assertFalse(environments['fermi']['distribution_ready'])
 
@@ -494,7 +499,7 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['distribution'], 'blocked')
         self.assertEqual(case['human_review'], 'not_run')
 
-    def test_t20_exchange_does_not_claim_compute_success(self):
+    def test_t20_separates_exchange_from_real_compute_and_downstream_gates(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         case = next(item for item in self.status['cases'] if item['case_id'] == 'T20')
         spec = json.loads((base / 'T20.case-spec.json').read_text(encoding='utf-8'))
@@ -503,13 +508,15 @@ class TutorialStatusTests(unittest.TestCase):
             path = ROOT / item['path']
             self.assertEqual(path.stat().st_size, item['bytes'])
             self.assertEqual(validator.sha256(path), item['sha256'])
-        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
-        self.assertIn('imported without local recomputation', receipt['verified']['existing_result'])
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_prepare_candidate']['prepare_wheel_sha256'])
+        self.assertIn('qc_schema_output/1', receipt['verified']['exchange'])
         self.assertIn('force is its negative', receipt['verified']['gradient_semantics'])
-        self.assertFalse(receipt['verified']['actual_compute_succeeded'])
-        self.assertIn('dependency authorization required', receipt['blocked']['actual_compute'])
-        self.assertEqual(case['scientific_processing'], 'exchange_passed_compute_not_run')
-        self.assertEqual(case['technical_status'], 'not_run')
+        self.assertTrue(receipt['verified']['actual_compute_succeeded'])
+        self.assertLess(receipt['verified']['absolute_difference_hartree'], 1e-9)
+        self.assertEqual(receipt['verified']['computed_cbq_validation'], 'passed')
+        self.assertIn('Not run', receipt['blocked']['gui_render_lifecycle'])
+        self.assertEqual(case['scientific_processing'], 'passed')
+        self.assertEqual(case['technical_status'], 'incomplete')
         self.assertEqual(case['direct_gui'], 'not_run')
         self.assertEqual(case['distribution'], 'blocked')
         self.assertEqual(case['human_review'], 'not_run')
