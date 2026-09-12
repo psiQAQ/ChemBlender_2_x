@@ -445,16 +445,32 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['distribution'], 'blocked')
         self.assertEqual(case['human_review'], 'not_run')
 
-    def test_t09_t10_reuse_route_blocker_without_claiming_processing(self):
+    def test_t09_current_density_science_keeps_downstream_gates_separate(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T09')
+        receipt = json.loads((base / 'T09-current-candidate-check.json').read_text(encoding='utf-8'))
+        spec = json.loads((base / 'T09.case-spec.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_prepare_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['inputs'], [{key: item[key] for key in ('path', 'sha256', 'bytes')} for item in spec['inputs']])
+        self.assertAlmostEqual(float(receipt['verified']['water_total_grid'].split('integral ')[1].split(' electrons')[0]), 10.009725189952228)
+        self.assertIn('maximum absolute difference 6.20106722047653e-14', receipt['verified']['water_orbital_rdm_match'])
+        self.assertIn('minimum -0.03088356337703481', receipt['verified']['ch3_spin_grid'])
+        self.assertIn('post-SCF minus SCF', receipt['verified']['nitrogen_difference'])
+        self.assertEqual(receipt['verified']['cbq_validation'], 'passed for water total, CH3 spin and nitrogen paired-level difference projects')
+        self.assertEqual(case['technical_status'], 'incomplete')
+        self.assertEqual(case['scientific_processing'], 'passed')
+        self.assertEqual(case['direct_gui'], 'not_run')
+        self.assertEqual(case['human_review'], 'not_run')
+
+    def test_t10_reuses_historical_route_blocker_without_claiming_processing(self):
         cases = {item['case_id']: item for item in self.status['cases']}
-        for case_id in ('T09', 'T10'):
-            case = cases[case_id]
-            self.assertEqual(case['status'], 'blocked')
-            self.assertEqual(case['candidate_scope'], 'current_candidate_environment_only')
-            self.assertEqual(case['technical_status'], 'not_run')
-            self.assertEqual(case['scientific_processing'], 'not_run')
-            self.assertIn('examples/tutorials/2.5.0/T08-environment-blocker.json', case['evidence_refs'])
-            self.assertEqual(case['human_review'], 'not_run')
+        case = cases['T10']
+        self.assertEqual(case['status'], 'blocked')
+        self.assertEqual(case['candidate_scope'], 'current_candidate_environment_only')
+        self.assertEqual(case['technical_status'], 'not_run')
+        self.assertEqual(case['scientific_processing'], 'not_run')
+        self.assertIn('examples/tutorials/2.5.0/T08-environment-blocker.json', case['evidence_refs'])
+        self.assertEqual(case['human_review'], 'not_run')
 
     def test_t11_t14_scientific_route_stays_development_only(self):
         base = ROOT / 'examples/tutorials/2.5.0'

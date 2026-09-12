@@ -1,0 +1,54 @@
+{
+  "case_id": "T09",
+  "status": "blocked",
+  "scope": "Current isolated Prepare plus routed qc-iodata/qc-gbasis density science; GUI, render, lifecycle, tutorial and review remain separate.",
+  "candidate": {
+    "source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+    "environment_qualification": "isolated_install",
+    "route": "python.wavefunction",
+    "iodata_version": "1.0.1",
+    "gbasis_version": "0.1.0"
+  },
+  "inputs": [
+    {"path": "examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf_g03.fchk", "sha256": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816", "bytes": 5369},
+    {"path": "examples/scientific-visualization/inputs/wavefunction/ch3_hf_sto3g.fchk", "sha256": "b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c", "bytes": 8333},
+    {"path": "examples/scientific-visualization/inputs/wavefunction/nitrogen-mp2.fchk", "sha256": "5e24d62229514689c5c0f1c904f09dbba205baf699843901d46cc5aa1cf19f7a", "bytes": 8975}
+  ],
+  "verified": {
+    "density_matrices": "water SCF total only; CH3 SCF total and spin; nitrogen SCF/post-SCF total and spin, with no fabricated missing level or role",
+    "water_total_grid": "SCF total RDM, 138x121x145 at 0.1 bohr, integral 10.009725189952228 electrons",
+    "water_orbital_rdm_match": "same 3x1x1 affine grid, maximum absolute difference 6.20106722047653e-14 electron_per_cubic_bohr",
+    "ch3_spin_grid": "SCF spin, 147x147x147 at 0.1 bohr, integral 0.9999988480353028 electrons; minimum -0.03088356337703481 and maximum 0.25696829628250345",
+    "nitrogen_level_grids": "post-SCF and SCF total densities share origin [-6,-6,-6] bohr, 0.2 bohr steps and shape 61x61x61",
+    "nitrogen_difference": "valid post-SCF minus SCF difference_density; integral -0.0002771078469740399, minimum -0.05350207574397814, maximum 0.004957387724204176",
+    "finite_values": true,
+    "units": "all density, spin and difference grids use electron_per_cubic_bohr",
+    "cbq_validation": "passed for water total, CH3 spin and nitrogen paired-level difference projects"
+  },
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-012/T09",
+    "water_manifest_sha256": "b28d1b79e4715c2d0db288490baa501128e4f39dd4a1a2b87637e01425d2f2a7",
+    "ch3_manifest_sha256": "2eafb76b7c0ec1ee05962934d1b0f3ae00593bd4b35e15d9d9b5f4a1cc330165",
+    "nitrogen_manifest_sha256": "2c5342f09a09b85873b38f46db267ff623d65036e8edd0a2350c2ae601c730a5",
+    "water_total_result_sha256": "763d3dc5fd4fe54c935ed3afe76e7aa6126274dcfcb174d7bfd2007332e1258b",
+    "water_orbital_small_result_sha256": "6c182e998c56b884baa5c8798f76252ee59702b58e4fc8c74bbc34c9a860b718",
+    "water_rdm_small_result_sha256": "41befae75ce58652b0efec670304bc3d7161efa8801154e8d209eaafdc56e1dc",
+    "ch3_spin_result_sha256": "eaf1b1a57a9c6ad6309eda8ff8ba81d5c25215808a67c089dbe091f95a17325d",
+    "nitrogen_postscf_result_sha256": "5425d02243ed469960acd758d230d90c830c8317eb8222d8444c7e1b1a447065",
+    "nitrogen_scf_result_sha256": "8d137b989d513cf2da994c364cad60468239e8b183b525eaa72558fe6e7bf11f",
+    "nitrogen_difference_result_sha256": "703632037caf2ce7d8c2ce58a4b924cb420b0f8899868da4ce2d98ea1c281c51",
+    "validate_water_sha256": "dc3d8cac0371f61b302c0b701a87e04219e59b2a3bd49826c9e84ecf87354a61",
+    "validate_ch3_sha256": "803fca7e993b41d65527f2d0a6622f7255fbaf86d2402b78081a1c3672415f4a",
+    "validate_nitrogen_sha256": "f0b1691df220c7b241e437b3d5c81a4605d8678a951fd76bb4fcd962dc28c896"
+  },
+  "blocked": {
+    "prepare_gui": "No current direct-GUI operation was performed.",
+    "blender_views_render": "Density, spin-density and level-difference Views are not rendered.",
+    "project_pair_cold_reopen_recovery": "Not run.",
+    "tutorial_offline_qa_review_package": "Not run.",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}

@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 6 — 教程收口与本地交付；Phase 4/5 的明确 Blocked 项并行保留
-- Next Step: 使用已隔离配置的 wavefunction route 执行 T09 电子密度、自旋密度和 RDM 网格科学检查；随后推进 T10–T14/T16，再执行唯一 Blender 第二干净 profile 和离线工程交付
+- Next Step: 使用已隔离配置的 wavefunction route 执行 T10 同结构同网格密度表面 ESP 着色科学检查；随后推进 T11–T14/T16，再执行唯一 Blender 第二干净 profile 和离线工程交付
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
