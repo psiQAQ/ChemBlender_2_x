@@ -1,0 +1,45 @@
+{
+  "schema_name": "chemblender_offline_delivery_audit",
+  "schema_version": 1,
+  "plan_id": "2026-09-10-2.5-real-user-tutorials",
+  "status": "blocked",
+  "generator": "ChemBlender/scripts/generate_public_delivery_docs.py",
+  "languages": {
+    "en": {
+      "html": "docs/offline/en/index.html",
+      "html_sha256": "49e8c038ae930cca58ffa9328913eb77e8ac861d662de385753dbce340974a9a",
+      "download_count": 115,
+      "image_count": 39,
+      "remote_resources": 0,
+      "missing_resources": 0,
+      "language_navigation": "passed",
+      "fixed_input_downloads": "passed",
+      "script_downloads": "passed",
+      "receipt_downloads": "passed",
+      "project_downloads": "missing"
+    },
+    "zh-CN": {
+      "html": "docs/offline/zh-CN/index.html",
+      "html_sha256": "ec7c47c71626451d34e3d315fc223863c002fb20e783a9f4a13eb95040444cb3",
+      "download_count": 111,
+      "image_count": 39,
+      "remote_resources": 0,
+      "missing_resources": 0,
+      "language_navigation": "passed",
+      "fixed_input_downloads": "passed",
+      "script_downloads": "passed",
+      "receipt_downloads": "passed",
+      "project_downloads": "missing"
+    }
+  },
+  "project_download_suffixes_checked": [
+    ".blend",
+    ".cbq",
+    ".zip"
+  ],
+  "blocker": "The generated offline HTML embeds no paired Blender/CBQ project or review-package download. Local review artifacts must not be silently pulled into tracked HTML generation.",
+  "limitations": [
+    "Static self-contained-resource validation is the available offline check; it does not replace human browser interaction.",
+    "P6.4 remains unchecked until approved project artifacts are included and the complete offline guide is replayed independently."
+  ]
+}

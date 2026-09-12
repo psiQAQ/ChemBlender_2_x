@@ -1,6 +1,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import re
 import unittest
 
 
@@ -86,6 +87,9 @@ class PublicDeliveryDocsTests(unittest.TestCase):
         self.assertEqual(content.count('<img '), 39)
         self.assertIn('download="ethanol.smi"', content)
         self.assertIn('download="ethanol-science-check.json"', content)
+        self.assertIn('download="recompute_t07_difference.py"', content)
+        self.assertIn('download="T06-run009-package-check.json"', content)
+        self.assertFalse(re.search(r'download="[^"]+\.(?:blend|cbq|zip)"', content, re.IGNORECASE))
         self.assertGreater(content.index('<img '), content.index('<article id="document-3">'))
 
 

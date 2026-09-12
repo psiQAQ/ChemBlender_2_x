@@ -610,3 +610,10 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - All seven archives passed CRC. No member name is absolute or contains a `..` segment. A content scan for the repository `.blend-analysis` root found development-cache paths only under `evidence/` validation material: counts were 1, 1, 0, 3, 10, 12 and 1 respectively. No project, input, tutorial or media member contained that development-cache root.
 - Versioned audit: `examples/tutorials/2.5.0/P6-review-package-path-audit.json`. The regression test requires the seven accepted/supporting archives, empty unsafe-name lists, empty development paths outside evidence and 64-character archive hashes.
 - Classification: P6.3 Passed and is checked. These remain local review packages and do not substitute for missing GUI or human review. Next Step is P6.4.
+
+## 2026-09-13 — P6.4 offline delivery audit
+
+- Regenerated both offline guides with the repository generator. Static offline-resource validation passed for both languages: 39 embedded images, zero remote resources, zero missing resources, valid internal anchors and cross-language navigation.
+- Directly enumerated `download=` entries. English has 115 and Chinese has 111 embedded downloads; representative fixed inputs (`ain-aspirin-v2000.mol`, `ethanol.smi`, `aspirin-rmd17-32.extxyz`, `CHGCAR`), both T07 scripts and current receipts are present.
+- Blocker: neither HTML contains a `.blend`, `.cbq` or review ZIP project download. Local ignored review artifacts were not silently embedded into tracked HTML. Static parsing also does not replace independent browser replay.
+- Versioned audit: `examples/tutorials/2.5.0/P6-offline-delivery-audit.json`; HTML hashes are recorded there. P6.4 remains unchecked. Next executable item is P6.5.
