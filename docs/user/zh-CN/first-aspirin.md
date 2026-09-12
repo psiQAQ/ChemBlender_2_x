@@ -1,14 +1,14 @@
 # 首课：阿司匹林，从 MOL 到可重开的科研图
 
-当前 Prepare wheel 与 Extension 已用下述固定输入完成端到端重放：转换、科学核对、Blender 公开 Operator、Cycles 渲染、移动副本重建和独立进程冷重开均通过。现有 GUI 截图仍是历史直接 GUI 证据，不会换标成当前点击。人工按教程独立复做仍待完成。
+本课只走一条路线：从固定 MOL 文件经 Prepare 和 Blender Viewer，得到保存的 Cycles 图片及可冷重开的配对工程。
 
-![当前候选阿司匹林 Cycles 渲染](../assets/2.5-tutorials/aspirin-cycles-current.png)
+![阿司匹林 Cycles 渲染](../assets/2.5-tutorials/aspirin-cycles-current.png)
 
 图中灰色为 C、红色为 O、白色为 H，双杆表示原文件的双键。球的大小用于显示，不代表电子密度。这里保留默认网格的可见面片；这是一张首课操作成图，尚未经人工图像质量验收。
 
 ## 前提与固定输入
 
-先完成[安装与诊断](installation.md)。本课只需 Standard 处理环境，不需要专业计算后端。当前候选 ZIP 的 SHA-256 为 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`；当前 prepare 0.1.0 wheel 为 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`。
+先完成[安装与诊断](installation.md)。本课只需 Standard 处理环境，不需要专业计算后端。
 
 下载[固定的 AIN MOL 输入](../../../examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol)，放入自己的课程目录，例如 `D:\ChemBlenderLessons\T01\`。输入采用 CCD AIN 的 ideal coordinates；来源与许可见[输入语料说明](../../../examples/user-workflows/README.md)。它不包含量子计算或实验电子密度。
 
@@ -39,7 +39,7 @@
 5. 在 `Topology` 中，对 `Explicit File · Complete · 21 bonds` 点击 `Show`。分子应出现键；这个按钮只改变 View 的拓扑显示。不要为了显示键点击 `Accept` 或执行 `Apply`。
 6. 在 Outliner 选中本课新场景的默认 `Cube`，按 Delete 移除它。保留 Camera 和 Light。不要在自己的已有工程中照此删除对象。
 
-![已验证操作经 MCP 重放后的实际 View](../assets/2.5-tutorials/aspirin-view.jpg)
+![显示原文件显式拓扑的阿司匹林 View](../assets/2.5-tutorials/aspirin-view.jpg)
 
 ## 构图、照明与 Cycles
 
@@ -49,7 +49,7 @@
 4. 在 Render Properties 选择 `Cycles`，将 Render 下的 `Max Samples` 设为 `256`。本次使用 CPU，默认降噪开启。
 5. 按 `F12` 渲染。在独立 `Blender Render` 窗口内按 Home 完整显示图片。通过 `Image → Save As…` 保存 `aspirin-cycles.png` 到课程目录；确认目录、文件名和 PNG 格式后点 `Save As Image`。
 
-![MCP 渲染后的实际 Render Result](../assets/2.5-tutorials/aspirin-render-result.jpg)
+![已保存的阿司匹林 Render Result](../assets/2.5-tutorials/aspirin-render-result.jpg)
 
 `Cycles · Scientific Images` 面板的报告导出目前要求物理量数据集，本课的纯 Structure 使用 Blender 原生渲染。默认灯光位于分子背面时，碳原子会很暗；先检查灯的位置，再增加功率，不要改科学数组来补偿照明。
 
@@ -57,9 +57,7 @@
 
 1. 回到 Blender 主窗口，按 `Ctrl+S`，将工程保存为课程目录内的 `aspirin.blend`。确保它与 `aspirin.cbq\` 相邻且同名。
 2. 正常退出本课 Blender 进程。重新启动 Blender，再打开 `aspirin.blend`；仅重新加载当前文件不算冷重开。
-3. 核对分子 View、原文件 21 条键以及 Project Browser 中的 Structure。新建工程副本时，同时带走 `.blend` 和整个 `.cbq` 目录。原工程及整体移动副本均已在独立原生进程中重开；数组路径指向副本 CBQ 内，科学数据哈希未改变。当前候选还在故意不可用的 processor 路径下从移动副本执行了 `Rebuild View`，随后再次冷重开通过。
-
-截图是 Computer Use 返回的原生 JPEG，未标注或重绘；成图是 Blender 保存的原生 PNG。[资源来源与哈希](../assets/2.5-tutorials/provenance.json)单独记录。2026-09-10 已确认执行版检查器接受原生 GUI JPEG，并检查文件签名、后缀与哈希；原研究包保持完整。格式检查不代替截图真实性或人工审阅。
+3. 核对分子 View、原文件 21 条键以及 Project Browser 中的 Structure。新建工程副本时，同时带走 `.blend` 和整个 `.cbq` 目录。如果显示对象缺失而副本 CBQ 完整，选中 Structure 后点击 `Rebuild View`，再保存并冷重开副本。
 
 ## 错误恢复与科学边界
 
@@ -75,4 +73,4 @@
 
 ## 验证附录
 
-当前候选适用性记录见 [T01-current-candidate-check.json](../../../examples/tutorials/2.5.0/T01-current-candidate-check.json)。本章 Prepare 与 Blender GUI 截图来自保留的历史运行，并由 [T01.execution-supplement.json](../../../examples/tutorials/2.5.0/T01.execution-supplement.json)关联；它们证明相同控件，但不会变成新的当前候选 GUI 事件。
+当前 Extension SHA-256 为 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`；当前 Prepare wheel SHA-256 为 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`。[当前候选适用性记录](../../../examples/tutorials/2.5.0/T01-current-candidate-check.json)覆盖转换、科学核对、公开 Blender Operator、Cycles 渲染、移动副本重建及独立进程冷重开。本章 Prepare 与 Blender GUI 截图是保留历史运行中的原生 JPEG，并由 [T01.execution-supplement.json](../../../examples/tutorials/2.5.0/T01.execution-supplement.json)关联；它们证明控件未变，但不会成为新的当前候选 GUI 事件。成图是 Blender 保存的原生 PNG，[资源来源与哈希](../assets/2.5-tutorials/provenance.json)单独记录。检查器核对文件签名、后缀和哈希，但这些检查不能证明截图真实性，也不能代替尚未完成的人工独立复做。

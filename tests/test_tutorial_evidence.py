@@ -197,6 +197,31 @@ class TutorialStatusTests(unittest.TestCase):
             (ROOT / 'examples/tutorials/2.5.0/status.json').read_text(encoding='utf-8')
         )
 
+    def test_primary_tutorial_routes_keep_run_metadata_in_appendix(self):
+        tutorials = (
+            ('en/first-aspirin.md', '## Validation appendix'),
+            ('zh-CN/first-aspirin.md', '## 验证附录'),
+            ('en/ethanol-conformers.md', '## Validation appendix'),
+            ('zh-CN/ethanol-conformers.md', '## 验证附录'),
+            ('en/aspirin-trajectory.md', '## Validation appendix'),
+            ('zh-CN/aspirin-trajectory.md', '## 验证附录'),
+        )
+        hashes = (
+            self.status['current_candidate']['extension_sha256'],
+            self.status['current_candidate']['prepare_wheel_sha256'],
+        )
+        for relative, marker in tutorials:
+            with self.subTest(tutorial=relative):
+                text = (ROOT / 'docs/user' / relative).read_text(encoding='utf-8')
+                self.assertEqual(text.count(marker), 1)
+                body, appendix = text.split(marker)
+                for audit_term in ('run-00', 'MCP', 'API replay', 'Computer Use',
+                                   'Current-candidate', '当前候选', *hashes):
+                    self.assertNotIn(audit_term, body)
+                for candidate_hash in hashes:
+                    self.assertIn(candidate_hash, appendix)
+                self.assertTrue('human' in appendix.lower() or '人工' in appendix)
+
     def test_all_cases_have_separate_acceptance_dimensions(self):
         expected = {f'T{index:02d}' for index in range(21)} | {'B01'}
         cases = {case['case_id']: case for case in self.status['cases']}

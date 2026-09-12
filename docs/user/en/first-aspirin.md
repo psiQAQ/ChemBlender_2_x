@@ -1,14 +1,14 @@
 # First lesson: aspirin, from MOL to a reopenable scientific image
 
-The current Prepare wheel and Extension were replayed end to end with the fixed input below. The current run passed conversion, science checks, public Blender operations, Cycles rendering, moved-pair rebuild and separate-process reopening. Existing GUI captures remain historical direct-GUI evidence and are never relabeled as current clicks. Independent human replay is pending.
+This lesson follows one path from a fixed MOL file through Prepare and the Blender Viewer to a saved Cycles image and a reopenable project pair.
 
-![Current-candidate aspirin Cycles render](../assets/2.5-tutorials/aspirin-cycles-current.png)
+![Aspirin Cycles render](../assets/2.5-tutorials/aspirin-cycles-current.png)
 
 Gray is C, red is O and white is H. Paired rods show double bonds from the input file. Sphere sizes are display choices, not electron density. This first-lesson image retains visible facets from the default mesh; human image-quality acceptance is pending.
 
 ## Prerequisites and fixed input
 
-Complete [installation and diagnostics](installation.md) first. Only the Standard processor environment is needed. The current candidate ZIP SHA-256 is `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`; the current prepare 0.1.0 wheel SHA-256 is `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`.
+Complete [installation and diagnostics](installation.md) first. Only the Standard processor environment is needed.
 
 Download the [fixed AIN MOL input](../../../examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol) to your lesson folder, for example `D:\ChemBlenderLessons\T01\`. It uses CCD AIN ideal coordinates; see the [input corpus notes](../../../examples/user-workflows/README.md) for source and licensing. It contains neither a quantum calculation nor experimental electron density.
 
@@ -39,7 +39,7 @@ Download the [fixed AIN MOL input](../../../examples/user-workflows/inputs/mol/a
 5. Under `Topology`, click `Show` for `Explicit File · Complete · 21 bonds`. Bonds should appear. This changes the View's displayed topology; do not click `Accept` or run `Apply` just to show bonds.
 6. Select the default `Cube` in the Outliner of this new lesson scene and press Delete. Keep Camera and Light. Do not apply this cleanup to objects in an existing project of your own.
 
-![View after verified operations replayed through MCP](../assets/2.5-tutorials/aspirin-view.jpg)
+![Aspirin View with explicit input topology](../assets/2.5-tutorials/aspirin-view.jpg)
 
 ## Composition, lighting and Cycles
 
@@ -49,7 +49,7 @@ Download the [fixed AIN MOL input](../../../examples/user-workflows/inputs/mol/a
 4. In Render Properties choose `Cycles`, and set Render `Max Samples` to `256`. This run used CPU with default denoising enabled.
 5. Press `F12`. In the separate `Blender Render` window press Home to fit the entire image. Use `Image → Save As…` to save `aspirin-cycles.png` in the lesson folder. Check directory, filename and PNG format, then click `Save As Image`.
 
-![Actual Render Result after MCP render](../assets/2.5-tutorials/aspirin-render-result.jpg)
+![Saved aspirin Render Result](../assets/2.5-tutorials/aspirin-render-result.jpg)
 
 The `Cycles · Scientific Images` report export currently requires a physical-quantity dataset. This pure Structure lesson uses Blender's native render workflow. If carbon atoms look too dark, check whether the default light is behind the molecule, then adjust its position and power; do not change scientific arrays to compensate for lighting.
 
@@ -57,9 +57,7 @@ The `Cycles · Scientific Images` report export currently requires a physical-qu
 
 1. Return to the Blender main window and press `Ctrl+S`. Save `aspirin.blend` in the lesson folder, beside the same-name `aspirin.cbq\` directory.
 2. Quit this Blender process normally. Start Blender again and open `aspirin.blend`. Reloading inside the same process is not a cold reopen.
-3. Check the molecule View, the 21 input bonds and Structure in Project Browser. When making a project copy, carry both `.blend` and the entire `.cbq` directory. Separate native processes reopened both the original pair and a relocated copy; array paths resolved beneath the copied CBQ and scientific hashes stayed unchanged. On the current candidate, `Rebuild View` also succeeded from the relocated pair while the processor path was deliberately unavailable, followed by another clean cold reopen.
-
-GUI captures are native JPEGs returned by Computer Use, without annotations or repainting. The render is a native Blender PNG. [Source and hash records](../assets/2.5-tutorials/provenance.json) are separate. On 2026-09-10 the user approved native GUI JPEGs for the execution checker, which checks file signatures, suffixes and hashes. The original research package remains intact. Format checks do not establish screenshot authenticity or replace human review.
+3. Check the molecule View, the 21 input bonds and Structure in Project Browser. When making a project copy, carry both `.blend` and the entire `.cbq` directory. If the display objects are missing but the copied CBQ is intact, select Structure and click `Rebuild View`, then save and cold reopen the copy again.
 
 ## Recovery and scientific limits
 
@@ -75,4 +73,4 @@ Atom count, order, input bond orders and coordinates passed the checks. Ball-and
 
 ## Validation appendix
 
-The current-candidate applicability record is [T01-current-candidate-check.json](../../../examples/tutorials/2.5.0/T01-current-candidate-check.json). The Prepare and Blender GUI screenshots in this chapter come from the retained historical run and are linked through [T01.execution-supplement.json](../../../examples/tutorials/2.5.0/T01.execution-supplement.json); they demonstrate the same unchanged controls but do not become new current-candidate GUI events.
+The current Extension SHA-256 is `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`; the current Prepare wheel SHA-256 is `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`. The [current-candidate applicability record](../../../examples/tutorials/2.5.0/T01-current-candidate-check.json) covers conversion, science checks, public Blender operations, Cycles rendering, moved-pair rebuild and separate-process reopening. The Prepare and Blender GUI captures are retained native JPEGs from the historical run and are linked through [T01.execution-supplement.json](../../../examples/tutorials/2.5.0/T01.execution-supplement.json); they demonstrate unchanged controls but do not become new current-candidate GUI events. The render is a native Blender PNG, and [source and hash records](../assets/2.5-tutorials/provenance.json) remain separate. The checker validates file signatures, suffixes and hashes; those checks do not establish screenshot authenticity or replace independent human replay, which remains pending.

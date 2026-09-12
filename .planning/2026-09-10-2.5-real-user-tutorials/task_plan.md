@@ -12,8 +12,8 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 
 ## Control
 
-- Current Phase: Phase 5 — 逐个实施 P1/P2 案例；Phase 3/4 的明确 Blocked 项并行保留
-- Next Step: Phase 5 各案例保持明确 Blocked；继续 P6.1 核对 T01/T02/T06 教程正文是否只有单一路线
+- Current Phase: Phase 6 — 教程收口与本地交付；Phase 4/5 的明确 Blocked 项并行保留
+- Next Step: P6.2 逐章核对固定输入、GUI 操作、结果、渲染、工程恢复与科学边界；缺失项保持 Blocked
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -110,9 +110,9 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 
 ### Phase 6 — 教程收口、人工验收与本地交付
 
-**Status:** pending
+**Status:** in_progress
 
-- [ ] P6.1 T01/T02/T06 等正文仅保留一套当前用户流程；旧候选、失败调试、PID 和长哈希移入验证附录。
+- [x] P6.1 T01/T02/T06 等正文仅保留一套当前用户流程；旧候选、失败调试、PID 和长哈希移入验证附录。
 - [ ] P6.2 所有教程包含固定输入、准确按钮/参数、逐步可见结果、原始截图、最终渲染、工程入口、恢复步骤和科学边界。
 - [ ] P6.3 本地交接包只使用包内相对路径；开发缓存绝对路径只出现在验证附录。
 - [ ] P6.4 重新生成中英离线 HTML，实际断网检查图片、锚点、语言导航、输入、脚本、工程和 receipt 下载。
