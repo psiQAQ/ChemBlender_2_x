@@ -1,0 +1,28 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T09",
+  "title": "Electron density, spin density and density-matrix grids",
+  "required_steps": [
+    {"id":"s01","description":"Parse fixed water, CH3 and nitrogen FCHK inputs through the current wavefunction route","requires_gui":true},
+    {"id":"s02","description":"Identify total/spin and SCF/post-SCF density matrices without substituting missing data","requires_gui":true},
+    {"id":"s03","description":"Evaluate orbital and density-matrix grids on explicit matching geometries","requires_gui":true},
+    {"id":"s04","description":"Integrate density with documented domain/resolution convergence and electron-count tolerance","requires_gui":true},
+    {"id":"s05","description":"Create density, spin and valid difference Views with explicit source/level labels","requires_gui":true},
+    {"id":"s06","description":"Render, save/move/cold-reopen the project pairs and exercise recovery","requires_gui":true}
+  ],
+  "required_checks": ["input_hash_integrity","environment_current_candidate","density_source_and_level","spin_role","grid_compatibility","electron_count_convergence","difference_validity","render_scientific_accuracy","project_pair","cold_reopen","recovery"],
+  "required_artifact_kinds": ["environment","events","assertions","gui_raw","render","scene_blend","cbq_manifest","lifecycle","review"],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "inputs": [
+    {"path":"examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf_g03.fchk","sha256":"aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816","bytes":5369,"license":"LGPL-3.0 root distribution; retain per-file notices","role":"restricted closed-shell SCF density"},
+    {"path":"examples/scientific-visualization/inputs/wavefunction/ch3_hf_sto3g.fchk","sha256":"b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c","bytes":8333,"license":"LGPL-3.0 root distribution; retain per-file notices","role":"unrestricted total and spin SCF density"},
+    {"path":"examples/scientific-visualization/inputs/wavefunction/nitrogen-mp2.fchk","sha256":"5e24d62229514689c5c0f1c904f09dbba205baf699843901d46cc5aa1cf19f7a","bytes":8975,"license":"LGPL-3.0 root distribution; retain per-file notices","role":"SCF and post-SCF density-matrix distinction"}
+  ],
+  "candidate": {"prepare_wheel_sha256":"b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a","required_route":"python.wavefunction"},
+  "status": "blocked",
+  "human_review": "not_run",
+  "note": "Blocked: dependency authorization required. Reuses T08-environment-blocker.json for the shared current-candidate route fact; no scientific operation was run."
+}

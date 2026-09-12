@@ -1,0 +1,26 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T10",
+  "title": "Electrostatic potential coloring on a matching density surface",
+  "required_steps": [
+    {"id":"s01","description":"Parse the fixed water FCHK through the current wavefunction route","requires_gui":true},
+    {"id":"s02","description":"Evaluate electron-density and electrostatic-potential grids from the same structure and calculation","requires_gui":true},
+    {"id":"s03","description":"Verify identical grid shape, origin, axes and unit compatibility before coloring","requires_gui":true},
+    {"id":"s04","description":"Create a density isosurface colored by ESP with explicit range and colorbar","requires_gui":true},
+    {"id":"s05","description":"Render and independently sample surface/color values","requires_gui":true},
+    {"id":"s06","description":"Save/move/cold-reopen the project pair and exercise mismatch/recovery paths","requires_gui":true}
+  ],
+  "required_checks": ["input_hash_integrity","environment_current_candidate","same_structure_and_calculation","grid_geometry_match","density_surface_semantics","esp_unit_and_colorbar","mismatch_rejection","render_scientific_accuracy","project_pair","cold_reopen","recovery"],
+  "required_artifact_kinds": ["environment","events","assertions","gui_raw","render","scene_blend","cbq_manifest","lifecycle","review"],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "inputs": [
+    {"path":"examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf_g03.fchk","sha256":"aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816","bytes":5369,"license":"LGPL-3.0 root distribution; retain per-file notices","role":"single-calculation density and ESP source"}
+  ],
+  "candidate": {"prepare_wheel_sha256":"b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a","required_route":"python.wavefunction"},
+  "status": "blocked",
+  "human_review": "not_run",
+  "note": "Blocked: dependency authorization required. Reuses T08-environment-blocker.json for the shared current-candidate route fact; no density or ESP grid was generated."
+}

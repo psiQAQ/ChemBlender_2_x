@@ -492,3 +492,11 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - Current Standard `inspect` on the exact FCHK returned protocol success with `available=false`, `reason_code=environment_unavailable` and `detail=wavefunction: not configured`; no scientific output was produced. Raw receipt: `.blend-analysis/2.5-real-user-tutorials/run-011/T08/inspect-current-standard.json` SHA-256 `fd43412c...`.
 - Added `T08.case-spec.json` and `T08-environment-blocker.json`; updated status to `blocked` while `technical_status` and `scientific_processing` remain `not_run`. P5.3 stays unchecked. Minimum change requires separate dependency authorization to install the frozen current wheel and configure `python.wavefunction`; no `.pth`, `PYTHONPATH` or source injection was used.
 - JSON parsing Passed; all 14 `TutorialStatusTests` Passed; planning `check-complete.ps1` and `git diff --check` exited 0. Planned local checkpoint subject: `docs(tutorials): record T08 environment blocker`.
+
+2026-09-13 P5.4/P5.5 T09/T10 shared wavefunction blocker:
+
+- Frozen T09 water/CH3/nitrogen FCHK inputs and the required total/spin, SCF/post-SCF, grid-compatibility and convergence assertions. Frozen T10's single-water-input same-calculation/same-structure/same-grid density/ESP rule and mismatch rejection.
+- Reused the live T08 current-candidate environment receipt because both cases require the identical `python.wavefunction` route. No duplicate old-candidate execution was performed and no historical grid was relabeled.
+- Updated T09/T10 to `blocked` while `technical_status` and `scientific_processing` remain `not_run`; both checklist items stay unchecked. Next item is P5.6 T11 cclib route qualification.
+- JSON parsing Passed; all 15 `TutorialStatusTests` Passed; planning `check-complete.ps1` and `git diff --check` exited 0. Planned local checkpoint subject: `docs(tutorials): record T09 T10 route blockers`.
+- Harness error: the first `git add` path misspelled `2.5.0` as `2.78.0`; Git rejected the pathspec before commit. No file was lost or committed; the exact path was used on retry.

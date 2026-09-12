@@ -329,6 +329,17 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['distribution'], 'blocked')
         self.assertEqual(case['human_review'], 'not_run')
 
+    def test_t09_t10_reuse_route_blocker_without_claiming_processing(self):
+        cases = {item['case_id']: item for item in self.status['cases']}
+        for case_id in ('T09', 'T10'):
+            case = cases[case_id]
+            self.assertEqual(case['status'], 'blocked')
+            self.assertEqual(case['candidate_scope'], 'current_candidate_environment_only')
+            self.assertEqual(case['technical_status'], 'not_run')
+            self.assertEqual(case['scientific_processing'], 'not_run')
+            self.assertIn('examples/tutorials/2.5.0/T08-environment-blocker.json', case['evidence_refs'])
+            self.assertEqual(case['human_review'], 'not_run')
+
     def test_t06_current_frame_panel_values_match_frozen_spec(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         receipt = json.loads((base / 'T06-current-frame-panel-check.json').read_text(encoding='utf-8'))

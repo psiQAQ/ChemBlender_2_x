@@ -266,9 +266,9 @@
     {
       "case_id": "T09",
       "priority": "P1",
-      "status": "not_run",
-      "status_reason": "No local case execution evidence.",
-      "candidate_scope": "none",
+      "status": "blocked",
+      "status_reason": "T09 requires the same current-candidate wavefunction route blocked in T08; inputs and scientific boundaries are frozen, but no density processing was run.",
+      "candidate_scope": "current_candidate_environment_only",
       "technical_status": "not_run",
       "scientific_processing": "not_run",
       "direct_gui": "not_run",
@@ -278,15 +278,18 @@
       "tutorial": "not_run",
       "review_package": "not_run",
       "human_review": "not_run",
-      "distribution": "not_run",
-      "evidence_refs": []
+      "distribution": "blocked",
+      "evidence_refs": [
+        "examples/tutorials/2.5.0/T09.case-spec.json",
+        "examples/tutorials/2.5.0/T08-environment-blocker.json"
+      ]
     },
     {
       "case_id": "T10",
       "priority": "P1",
-      "status": "not_run",
-      "status_reason": "No local case execution evidence.",
-      "candidate_scope": "none",
+      "status": "blocked",
+      "status_reason": "T10 requires the same current-candidate wavefunction route blocked in T08; the single-calculation density/ESP boundary is frozen, but no grid processing was run.",
+      "candidate_scope": "current_candidate_environment_only",
       "technical_status": "not_run",
       "scientific_processing": "not_run",
       "direct_gui": "not_run",
@@ -296,8 +299,11 @@
       "tutorial": "not_run",
       "review_package": "not_run",
       "human_review": "not_run",
-      "distribution": "not_run",
-      "evidence_refs": []
+      "distribution": "blocked",
+      "evidence_refs": [
+        "examples/tutorials/2.5.0/T10.case-spec.json",
+        "examples/tutorials/2.5.0/T08-environment-blocker.json"
+      ]
     },
     {
       "case_id": "T11",
