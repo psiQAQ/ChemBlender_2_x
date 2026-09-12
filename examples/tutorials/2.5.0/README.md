@@ -7,6 +7,7 @@ The immutable design baseline remains in [the research package](../../../docs/ch
 ## Current entry points
 
 - Current candidate receipt: [run009-candidate-check.json](run009-candidate-check.json).
+- Environment qualification: [environment-qualification.json](environment-qualification.json). `development_reuse` is local evidence only, `isolated_install` requires the current wheel and no cross-environment path injection, and `distribution_ready` additionally requires every final delivery and independent-review gate.
 - Current-candidate P0 work: T04, T06 and T07 use run-009 receipts listed in `status.json`.
 - Historical evidence: T00/T01/T02 use earlier candidates and require explicit current-candidate applicability checks before technical closure.
 - Existing P0 evidence: T17 uses run-006 Prepare receipts; T18 uses run-007 Extension receipts. Neither is `not_run`, but both remain incomplete.
@@ -14,6 +15,8 @@ The immutable design baseline remains in [the research package](../../../docs/ch
 - Offline guide: [English](../../../docs/offline/en/index.html) / [中文](../../../docs/offline/zh-CN/index.html).
 
 Review ZIPs are local `review_only` handover packages. They are not final distribution artifacts and do not prove independent review. Technical status, direct GUI evidence, authorized replay, human review and distribution are tracked separately.
+
+The current Standard environment is an isolated current-wheel install but is not distribution-ready. The scientific route remains `development_reuse` because it uses cross-environment `.pth` paths. The dependency-self-contained wavefunction and fermi caches contain eight Prepare/Core files that differ from the current wheel and are not configured in run-009. Replaying any of these as a current professional route therefore requires authorization to update the environment; no `.pth`, `PYTHONPATH` or source injection is permitted.
 
 The execution checker accepts original GUI JPEG or PNG evidence with matching suffix, signature and hash; renders remain PNG. This verifies record integrity, not screenshot authenticity or human acceptance. The original research package remains byte-identical.
 

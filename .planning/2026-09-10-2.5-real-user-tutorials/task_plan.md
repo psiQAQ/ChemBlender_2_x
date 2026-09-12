@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 3 — 专业环境资格分层
-- Next Step: P3.1 重新记录四类环境事实
+- Next Step: P3.4 Blocked（需要专业环境变更授权）；继续 P4.1 的 Standard/Viewer 工作
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -60,12 +60,12 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 
 **Status:** in_progress
 
-- [ ] P3.1 重新记录 Standard、scientific、wavefunction、fermi 环境的解释器、依赖版本、实际 import origin、prepare wheel 和 route 配置。
-- [ ] P3.2 将环境状态明确分为 `development_reuse`、`isolated_install`、`distribution_ready`；`.pth` 跨环境引用只能是第一类。
-- [ ] P3.3 对 run008/run009 receipt 保留数值与集成结果，但删除或纠正任何“可移交隔离环境”暗示。
+- [x] P3.1 重新记录 Standard、scientific、wavefunction、fermi 环境的解释器、依赖版本、实际 import origin、prepare wheel 和 route 配置。
+- [x] P3.2 将环境状态明确分为 `development_reuse`、`isolated_install`、`distribution_ready`；`.pth` 跨环境引用只能是第一类。
+- [x] P3.3 对 run008/run009 receipt 保留数值与集成结果，但删除或纠正任何“可移交隔离环境”暗示。
 - [ ] P3.4 使用现有且已授权、依赖自足的环境重放可用专业路线；不新增 `.pth`、`PYTHONPATH` 或源码注入。
-- [ ] P3.5 缺少依赖的专业路线标记 `Blocked: dependency authorization required`，列出最小安装需求，同时继续 Standard/Viewer 项目。
-- [ ] P3.6 更新状态、环境说明和部署边界测试，运行 `git diff --check`，提交“区分开发复用与部署资格”。
+- [x] P3.5 缺少依赖的专业路线标记 `Blocked: dependency authorization required`，列出最小安装需求，同时继续 Standard/Viewer 项目。
+- [x] P3.6 更新状态、环境说明和部署边界测试，运行 `git diff --check`，提交“区分开发复用与部署资格”。
 
 ### Phase 4 — 按顺序关闭全部 P0 案例
 

@@ -226,6 +226,26 @@ class TutorialStatusTests(unittest.TestCase):
                 self.assertEqual(case['technical_status'], 'passed', case['case_id'])
                 self.assertEqual(case['human_review'], 'passed', case['case_id'])
 
+    def test_environment_qualification_keeps_deployment_boundaries_separate(self):
+        qualification_path = ROOT / 'examples/tutorials/2.5.0/environment-qualification.json'
+        self.assertEqual(self.status['environment_qualification'], qualification_path.name)
+        document = json.loads(qualification_path.read_text(encoding='utf-8'))
+        allowed = {'development_reuse', 'isolated_install', 'distribution_ready'}
+        environments = {item['name']: item for item in document['environments']}
+        self.assertEqual(set(environments), {'standard', 'scientific', 'wavefunction', 'fermi'})
+        for name, environment in environments.items():
+            self.assertIn(environment['qualification'], allowed, name)
+            if environment['cross_environment_pth']:
+                self.assertEqual(environment['qualification'], 'development_reuse', name)
+                self.assertFalse(environment['distribution_ready'], name)
+            if environment['qualification'] == 'distribution_ready':
+                self.assertTrue(environment['distribution_ready'], name)
+                self.assertFalse(environment['wheel_python_files_changed'], name)
+        self.assertEqual(environments['standard']['qualification'], 'isolated_install')
+        self.assertEqual(environments['scientific']['qualification'], 'development_reuse')
+        self.assertFalse(environments['wavefunction']['distribution_ready'])
+        self.assertFalse(environments['fermi']['distribution_ready'])
+
 
 class LocalBlockedManifestTests(unittest.TestCase):
     RUN_ROOT = ROOT / '.blend-analysis/2.5-real-user-tutorials/run-003'

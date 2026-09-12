@@ -1,5 +1,8 @@
 {
   "status": "passed",
+  "qualification": "development_reuse",
+  "isolated_install": false,
+  "distribution_ready": false,
   "route_environment": {
     "python": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-008\\scientific-route\\Scripts\\python.exe",
     "prepare": "D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-008\\scientific-route\\Lib\\site-packages\\chemblender_prepare\\__init__.py",
@@ -16,7 +19,7 @@
       "spglib": "2.7.0"
     },
     "dependency_mode": "read-only .pth references to existing environments; no dependency install",
-    "portable": "no, requires referenced local environments"
+    "portable": "no; this receipt proves local numerical and integration behavior only, not an isolated or transferable installation"
   },
   "cli_doctor": "passed",
   "cli_convert_validate": "passed",

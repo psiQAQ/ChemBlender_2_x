@@ -7,6 +7,16 @@
     "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
     "prepare_sdist_sha256": "c8b61502a788b3f9bb93975e6a85cd641b1fd33d2d783ccab15e5453155a5a9e"
   },
+  "environment_qualification": "environment-qualification.json",
+  "environment_routes": {
+    "standard": "isolated_install",
+    "scientific": "blocked: dependency authorization required",
+    "wavefunction": "blocked: dependency authorization required",
+    "fermi": "blocked: dependency authorization required",
+    "qcschema_compute": "blocked: dependency authorization required",
+    "critic2": "blocked: dependency authorization required",
+    "external_provider": "blocked: live transport unavailable"
+  },
   "cases": [
     {
       "case_id": "T00",

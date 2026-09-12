@@ -12,7 +12,13 @@
   },
   "python_files_source_and_both_installs_equal": 165,
   "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-  "scientific_route": "local dependency reuse; not portable",
+  "scientific_route": {
+    "qualification": "development_reuse",
+    "numerical_and_integration_results": "retained",
+    "isolated_install": false,
+    "distribution_ready": false,
+    "reason": "Cross-environment .pth references make this local evidence only; it is not portable or transferable."
+  },
   "cli_doctor": "passed",
   "cli_inspect_formats_agree": {
     "available": true,
