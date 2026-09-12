@@ -1,162 +1,134 @@
-# ChemBlender 2.5 real user tutorials
+# ChemBlender 2.5 真实用户教程纠偏与全量验收计划
 
-Goal: Deliver bilingual, real GUI and scientifically checked T00-T20 plus B01 tutorials and portable projects. Human independent acceptance remains mandatory.
-Goal tracking: The user explicitly activated the remaining M0-M5 scope as a persistent goal on 2026-09-10. Keep the goal active while executable work remains; update this plan and the active record after material progress. Human acceptance and mandatory blockers cannot be self-certified.
-Success: Required scientific, GUI, render, persistence and distribution checks pass; human review is recorded separately.
-Constraints: Preserve the current unsaved Blender scene and installed environments. Reuse existing backends; ask before installing dependencies. No external publication. Research source package stays byte-identical.
-Verification: Per-case frozen specs, event/screenshot records, public CLI validation, cold reopen/move, offline browser QA, relevant regression, package audit and git diff --check.
+PLAN_ID: `2026-09-10-2.5-real-user-tutorials`
 
-## Plan
-- [ ] M0: Freeze artifacts, isolated profile, evidence specifications and GUI capability.
-- [ ] M1: T00/T01 GUI, Cycles, save/cold reopen and first offline lesson.
-- [ ] M2: T02, T04, T06, T07, T17, T18 required core scenarios.
-- [ ] M3: T03/T05, T08-T10, T11/T12, T13/T14, T15, T19/T20/T16/B01.
-- [ ] M4: Bilingual offline documentation and human blind replay.
-- [ ] M5: Local candidate, regression and distribution evidence.
-
-## Defaults
-User-authorized hybrid execution: Computer Use only for required raw screenshots and previously untried UI/panel operations; proven UI actions may use Blender MCP/public Operators. Keep MCP replay and GUI evidence separate. Reuse the prior UI-to-MCP catalog when applicable. One GUI operator and at most one Agent-owned Blender process at a time, including background replay/audit. Preserve the user's pre-existing unsaved Blender process. Save and exit the tutorial process before cold reopen or background checks; verify its exact PID has exited before launching the next one. Reuse the isolated tutorial profile serially. Human independent reviewer. New profile and per-run directories. No scientific source or sidecar arrays deleted during recovery tests.
-
-2026-09-10 hybrid execution: User approved MCP for previously proven Blender UI actions. Prior reference: .agents/completed/quantum-input-units-experience-review.md and tests/blender_review_commands.py. Reused existing Blender Lab MCP files through a read-only SYSTEM repository in the isolated tutorial profile; no dependency installed. Current sole Blender PID 50636 verified through MCP (5.1.1, isolated profile, ChemBlender enabled). Former user PID 55840 exited independently. T01 final-candidate Preview/Import/Create View passed via public Operators, with 21 coordinates unchanged; mcp-import.json explicitly labels replay. Required new screenshots and render/recovery remain pending.
-
-2026-09-10 visual quality steering: User requests use of available materials, subdivision and finer data grids. Apply native refinement to derived display meshes; preserve source scientific arrays, units and mapping. Distinguish display interpolation from independently recomputed finer scientific grids; record backend and convergence for the latter. T04 coarse source-site/diamond PNGs and matching paired projects saved; original/moved cold audits passed in four serial processes with 12 cell edges and unchanged CBQ hashes. Diamond cropped draft retained and camera corrected. Agent PID 52280 reopened saved diamond for refinement: actual CU Ctrl+2 added Subdivision after occupancy Geometry Nodes; MCP adjusted lens 50 mm, roughness 0.35, lighting/world. Refined render running; final quality inspection and post-refinement recovery pending. This modifies scene presentation only; Extension 963b905f remains unchanged.
-
-2026-09-10 refined T04 recovery: Cocrystal render completed and source array hashes verified unchanged; local facets remain visible, so visual quality is pending. Saved and normally exited tutorial PID 52280. Four sequential native cold audits of refined original/moved cocrystal and diamond pairs Passed; subdivision level 2 persisted, 12 cell edges retained, paired scientific hashes unchanged. Evidence: run-004/T04/cold-recovery-refined.json; moved pairs: run-004/portable/T04-refined. No dependency changes. Existing scientific prepare differs in cli.py/gui.py/runtime.py from frozen Standard installation, so ASE replay remains unverified pending code isolation. Next: complete ASE route, T04 bilingual lesson and remaining P0 cases; human review and cache rebuild remain Not Run.
-
-2026-09-10 T04 ASE positive route: Existing scientific environment required an explicit scientific route, then frozen prepare/cbq_core package-only overlay (byte-verified against Standard installation) passed public CLI convert/validate without installation or dependency changes. Existing ASE 3.29.0 and NumPy 2.2.6 supplied the backend. Independent source fractional-coordinate x cell comparison passed with coordinate and cell error 0.0 for 64 C. ASE unsupported atom-array diagnostic retained: this route does not claim velocity normalization. Evidence: run-004/T04/ase-code-freeze.json, ase-processor.json, ase-convert.json, ase-validate.json, ase-science.json. T04 scientific_processing now passed; GUI/docs/visual quality/cache/human gates remain pending. Persistent goal active.
-
-2026-09-10 T07 cache recovery: Fresh portable/T07-rebuild copy only; removed8 verified cache/render VDB files. Serial native public REBUILD restored7 View identities and local VDB paths with scientific npy hashes unchanged; original blend/CBQ full hashes unchanged. Independent post-rebuild cold Passed7Views and all CBQ hashes unchanged. Rebuild resets custom VolumeToMesh Size0.025 to Grid (difference surfaces490/612 vertices); original refined pair remains intact. Receipt T07-recovery-check.json; raw cache-recovery.json. GUI recovery, processor/source-unavailable rebuild, otherViews rendering, bilingualT07 docs,VASP variant and human acceptance remain. No Blender left running; overall goal active.
-
-2026-09-10 T07 CLI recomputation lesson: Added stdlib recompute_t07_difference.py invoking frozen public CLI only, discovering current UUIDs from WorkerResult, preserving raw argv/stdout/stderr and refusing existing output. Generator --source enables standalone downloads; fixed Cube/pair hashes unchanged. Fresh recompute-lesson and downloaded-scripts/result both convert/resolve/difference/validate Passed; independent manifest/npy vs raw two-dataset Cube all262144 values exact,positive138360negative123784. Repeat output refused with every existing file hash unchanged. Bilingual steps and offline downloads updated; actual offline Edge both languages23images,input and bothscriptdownloads byte-identical,5 docs tests Passed. Test probe initially used wrong semantic_role density_difference; corrected to actual difference_density, no product defect. No dependency/product/ZIP change or Blender process. Remaining GUI derivation,otherViews illustrations,VASP,source/processor-unavailable recovery,package,human acceptance; goal active.
-
-2026-09-10 T17 started: Frozen7be683c13realinputvariants/licensenotes/checkrules. FrozenStandard publicconvert/exportpreview/lossgate/export/reimport run.9processed xyz/extxyz/pdb/smiles/cif/poscar/cube/cjson/qcschema; previewsnowrite,requiredlossgate rejectswithoutconfirmation,originalinputhashesunchanged.IndependentCJSON/QCSchema JSONvalueequalityPassed.4failures preserved:mol andsdf V3000identitychirality differs;mol2complete topologyrequired;PQRradius/residue_key.conflict invalid. These are unresolved input/contract/product triage,notenvironmentassumptions,notpositivecoverage. RawT17logs andT17-initial-check.json. Nexttrace molecularstereo roundtripguard/callers,qualifyMOL2/PQRdata,remainingfieldcomparisons andGUI. T07remainingGUI/offline-sourceprocessor/package retained;goalactive,noBlender.
-
-2026-09-10 T17 CJSON GUI: Same Prepare window/run006 Python, verified CJSONEnvelope UUID 12ed6139-dc27-5abf-9404-bd31b5615f0a. gui0093 preview success without output; gui0095 export success with confirmation unchecked. GUI output byte-equal CLI and JSON-value-equal original Avogadro input. T17-gui-cjson-check.json records partial evidence. No Blender started; remaining formats/tutorial/full goal and human gates open.
-
-2026-09-10 T17 QCSchema GUI: Same Prepare window/run006 Python, QCSchemaEnvelope 67a0d169-fe4f-528c-b693-2a6509513157. gui0100 preview success without output; source_envelope explicitly excludes derived project fields. gui0102 export success without confirmation. GUI output byte-equal CLI and JSON-value-equal original MolSSI water HF/cc-pVDZ gradient result, SHA5fb9f5a3ad4b24158c2d7ab0bfb81e416e9235a5a5f3f3bba26f8f7d90ab09af. T17-gui-qcschema-check.json records exchange only, not T20 compute. No Blender started; xyz/extxyz/smiles GUI, tutorial integration and full goal/human gates remain open.
-
-2026-09-10 T17 remaining format GUI: XYZ gui0111 preview/no-write and gui0113 confirmed export; extxyz gui0119 preview/no-write and gui0121 unconfirmed export (blank missing-value token); SMILES gui0126 preview/no-write and gui0128 confirmed export. All three GUI files byte-equal scientifically checked run006 CLI outputs. extxyz extra advanced row shifted buttons; initial click toggled preview only, corrected before execution. XYZ topology/identity/metadata and SMILES coordinates/order/record losses explicit. 13 formats now have positive Prepare GUI export receipts, not full T17 acceptance; tutorial integration, project recovery/full regression/human remain. No Blender started, goal active.
-
-2026-09-10 T17 bilingual integration: Updated both data-export lessons with all 13 GUI receipt links, actual default/advanced options and loss boundaries; corrected PDB 10-frame metadata and selected SDF empty-properties scope; absolute GUI paths and stale-UUID recovery documented. Regenerated offline guides. 5 documentation tests Passed in 53.258s; actual network-offline Edge EN/ZH checks passed with 33 images, no broken anchors, cross-language navigation, script downloads and exact 2W73 MOL2 hash. Current report: run006/offline-qa-t17/report.json. No product/dependency changes or Blender process. Project handoff, broader acceptance and human replay remain open; goal active.
-
-2026-09-10 T18 preparation: Froze T18.case-spec.json SHA8401d8d132c10d7f3b9b2267a48ca734580f3083a32b3c9bf71ee4d60df80b13 before execution. Copied T01 aspirin, T06 trajectory, T07 grid and historical legacy inputs to run006/T18/working; all 36 files byte-equal originals, inventory retained. Required gates include source/processor-unavailable rebuild, cancel, relink, stale revision, damaged copy and explicit legacy migration, all NotRun. Confirmed no Blender running, launched one isolated tutorial instance PID33636; blender-mcp help and live combined runtime query passed Blender5.1.1/Windows/profile/user_default enabled. environment.json and process.json retained. T17 full acceptance remains open; no claim of recovery from copy equality. Goal active.
-
-2026-09-10 T18 T01 Save As GUI: PID33636 opened isolated aspirin copy via proven public operator; 21 atoms/one View and copy-local arrays verified. Actual File > Save As produced aspirin-handoff.blend and matching CBQ; all authoritative arrays equal and all 36 original input files unchanged. Runtime check failed: scene locator is aspirin-handoff.cbq but current lazy coordinate array still points to working/T01/aspirin.cbq. Recorded T18-save-as-check.json as failed live-rebind check, product impact needs triage; cold reopen and old-path-unavailable behavior NotRun. Raw screenshots/events retained. Shortcut initially performed Save; child File View screenshots use parent coordinates, main-window targeting fixed input. No original modified; goal active.
-
-2026-09-10 T18 T01 cold reopen: Normally exited saved/clean PID33636 and verified no Blender process before background PID6124. Existing read-only audit passed exact UUID/revision,21 atoms, one View,Cycles2400x1800/256 and coordinate array resolved under aspirin-handoff.cbq. Native process exited0; T18-cold-check.json retains result, not GUI proof. Saved disk pair is usable; live-session stale array path remains unresolved. Source tracing: project_service.save_project_session_for_scenes calls solidify_session without adopting published project; solidify closes mappings and updates sidecar_path but retains old lazy array paths. Need explicit old-path-unavailable reproduction and scoped fix/tests. No Blender currently running; goal active.
-
-2026-09-10 T18 Save As source fix: Regression reproduced SidecarIntegrityError after old temporary sidecar renamed. Shared project_service now requests existing verified-project transfer, adopts only after successful scene link writes, closes candidate on link failure preserving rollback contract. 73 project/publication plus57 UI/session/trajectory tests Passed (130 total). Real21-atom aspirin source-core replay with old copy unavailable preserved UUID/revision/all coordinates and lazy path under new.cbq. T18-save-as-fix-check.json explicitly source-only. Existing Extension963b905 and preparecdb056 predate this shared-core fix; must refreeze/reinstall/requalify affected evidence, no retagging old screenshots. No Blender started; broader goal and human remain open.
-
-2026-09-10 run007 candidate: Built source36b80b8 native Extensionvalidate/buildPassed ZIPa1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28 (109 files); preparewheel3991107133bf4b16e4e460324b351bd0084439de0d71854bf8d5a1da7994439e, sdistd495ff48f7309307d5cbe137901a10a25e90fcd8dcf3afc403b54a73118940cb.165wheelPythonfiles sourceequal,sharedfix inZIP verified,no wheels inViewer. Offlineisolatedprepareinstall existing versions unchanged; -I installedorigin,doctor/capabilities and realaspirin old-path-unavailable SaveAs fixPassed. Extension installed natively in tutorialprofile with109files byteequal,preferences saved,process exited. run007-candidate-check.json; GUI/coldinstall/fullregression/affectedcase evidence pending. Old artifacts retained; no screenshots retagged. Goal active.
-
-2026-09-10 T18 run007 installed native validation: New process36836 verified all109installedfiles against ZIPa1e2da79, loaded fresh T01 copy, public SaveAs to handoff, renamed only oldtestCBQ, then read21atomcoordinates/UUID/revision from newCBQ, rebuilt View and saved successfully. Copied only newpairedfiles to portable-T01; after process exit,newPID66468 cold audit Passed localarraypath,UUID/revision,oneView,Cycles2400x1800/256 and arrays equal. Both processes exited; T18-run007-native-check.json explicitly operator/cold evidence,GUI/othervariants/sourceprocessorunavailable/fullgate/human pending. Goal active.
-
-2026-09-10 T18 run007 T06 installed native: PID47816 verified candidateZIPfiles; SaveAs fresh trajectory copy, oldcopy path unavailable, all5datasets exact and lazy paths under newCBQ; 2Views rebuilt and saved. NewPID28048 portablepair cold Passed32x21x3/frame15,coordinateerror1.1842e-7,scaledforceerror5.5156e-8,2Views; NPYhashesequaloriginal. CustomSmoothnotrestored as previously documented; playbackoffafterload. T18-run007-trajectory-check.json operator/cold only; GUI,T07,unavailableprocessor/source andfailuregates remain. Both processes exited, goalactive.
-
-2026-09-10 T18 run007 T07 installed native: PID12332 SaveAs,oldcopy unavailable,all8datasets exact,newCBQarraypaths,7Views rebuilt,VDBpaths allnewlocal,saved. Portable cold PID53916 passed7Views/8datasets/6VDBpaths,slice4225/profile129; NPYhashesequaloriginal. Audit corrected transient geometry-owner lifetime and overbroad nonempty-surface assertion: positive density min7.757e-10 legitimately has emptynegative surface, difference min-0.0345 has490/612positive/negativevertices. Rebuild returns Gridmode; customfineVoxelSize notpersisted as already documented. Failedauditlogsretained; T18-run007-grid-check.json operator/cold only. NoBlender running,GUI/sourceprocessorunavailable/faultgates/human pending;goalactive.
-
-2026-09-10 T18 T07 unavailable-input/processor probe: InstalledZIPa1e2da79 PID37764, Python audit hook active before open_mainfile denies all .cube opens and external process launches. Explicit realCube read and processorlaunch probes both PermissionError; then cleared only offline-T07 copy derivedcache (6VDB), rebuilt7Views/restored6VDB paths/saved; scientificNPYhashes unchanged. T18-run007-offline-rebuild-check.json scopes process-level enforcement,OS-levelisolation andGUI/humanNotRun. Initialharness cbq_core ModuleNotFoundError corrected to packaged _cbq_core path,logs retained; no productchange. Process exited,remainingfaultgates/GUI/legacy/fullgoalopen.
-
-2026-09-10 T18 installed-wheel fault checks: Isolated -I run007core,realT01copy missingpath->missing,one-bytecorruptedcopyarray->invalid(checksum),differentT07project->mismatch,stale savedmanifesthash->mismatch. Rejections preserve activeproject/scenelinks; subsequentvalidrelinkPassed. Cancelbeforepublication raisesPublicationCancelled,nooutput/residualtmp; goodcopyandoriginalfullfilehashesunchanged. T18-run007-fault-check.json distinguishes manifestgeneration from entityrevision(NotRun),GUIcancel/relinkNotRun. Script and rawfaultcopiesretained;noBlenderstarted;goalactive.
-
-2026-09-10 T18 installed stale View binding: PID38236 loaded T01copy,changed only cb_scene_bindings_json revision to stale token; publicREBUILD rejected scene bindings metadata is stale,originalViewpointer/identity retained and allCBQfilehashesunchanged. Restoringoriginalbinding thenREBUILDPassed. T18-run007-stale-view-check.json explicitly Viewrevision mismatch,notmutatingauthoritative entity. Nativeoperatorproof only,GUI/legacy/remainingcases/humanpending; process exited,goalactive.
-
-2026-09-10 T18 legacy: Existing inputnote stilldocuments2.4migrationoperators,2.5uses external legacy/__main__.py and Viewer restore_legacy_views. Fromrun007wheel extracted onlycbq_core/prepare to isolatedruntime(no externaldeps copied), serialprivateBlender factory/disableautoexec preview(nooutput) thenexportPassed; originalandcopySHA36b05c3unchanged. Installed-I science4atomsC/O/H/H exactcoordsangstrom,3indexedbondsorders2/1/1. T18-run007-legacy-export-check.json. migration.json displayrecordedonly,Viewerrestore/save/cold/GUI andinputdoccorrectionpending; noBlenderremaining,goalactive.
-
-2026-09-10 T18 legacy Viewer native: Installed publicpreview/importCBQ (3entities) thenrestore_legacy_views (1View) savedrestored.blend+cbq. IndependentcoldPID10280 verifiedstructurelink,localcoordinatearraypath,displayradius/vdw/atomscale/bondscale/colors atol1e-7 andlegacy nodeaudit exact. OriginallegacySHAunchanged. T18-run007-legacy-restore-check.json; savewarneddefaultbrushmaterial referencesinstallationassets,fullportabledependency auditpending. GUIandoldinputdoccorrection stillpending;processes exited,goalactive.
-
-2026-09-10 legacy input documentation corrected: Removed stale2.4directmigrationoperator instructions; documented2.5 external privateBlender preview/export, wheelpackage-only runtime withbundledNumPy, ViewerPreview/Import/RestoreLegacyViews,pairedsave/coldcheck andpreservedoriginal. Linkedrun007export/restorereceipts,keptGUI/externaldependency/human pending. AlllocalMarkdownlinktargetsverified; gitdiffcheckPassed. No product/artifactchange orBlenderprocess;goalactive.
-
-2026-09-10 T18 legacy dependency/portable audit: Saved brush/nodeasset paths confirmed library_weak_reference,0linkedlibraries/linkedmaterials/externalimages/fonts; onlyVIEWERimages. Copiedrestoredpair+report tolegacy/portable; independentPID65236 localarraypath/displayparams coldPassed,NPYhashesequal. T18-run007-legacy-portable-check.json scopes sameprofile,weaksourcefilesnotphysicallyremoved; no unnecessaryassetdeletion. GUI/secondprofile/humanremaining,process exited,goalactive.
-
-2026-09-10 T18 run007 actual GUI: single PID29552 File > Save As created aspirin-handoff pair; immediate MCP read-only check confirms newCBQ lazy coordinate path,21atoms and unchanged identity. GUI Cancel with unused filename leaves current pair/identity/path clean and no cancelled outputs. All36originalfiles unchanged,9authoritativeNPY arrays equal,rawJPEG hashes checked. T18-run007-gui-save-check.json selects current online session only,preflight gray/occluded screenshots excluded. This GUI pair cold reopen and ProjectBrowser/relink/legacy GUI remain NotRun; goal active. PID29552 remains sole tutorial Blender.
-
-2026-09-10 T18 actual GUI Project Browser recovery: opened blend-only gui-relink copy with missing sidecar,existing View retained; N > ChemBlender shows Project link: Missing. Relink wrong T07 manifest rejected UUID/manifest mismatch,0structures and1View preserved. Retry correct T01 manifest connected21atoms/exactidentity. Proven save operator creates local recovered pair;9NPY hashes equal original and36originalfiles unchanged. T18-run007-gui-relink-check.json stores nativeJPEG/event references. First retry click dismissed error report; second opened dialog. Cold recovered-pair and remaining GUI/legacy/human gates open. Single PID29552 clean/saved; goal active.
-
-2026-09-10 T18 GUI pair cold checks: normally exited clean PID29552; serial independent PID37876(gui-T01) and66252(gui-relink) passed21atoms/exactUUID/revision,localCBQarraypath,oneView,Cycles2400x1800/256,no scientific modules inViewer; pairedfiles unchanged. T18-run007-gui-pairs-cold-check.json. Added matching EN/ZH SaveAs/missinglink/wrongmanifest/recovery/coldhandoff instructions with two originalJPEG screenshots. Regenerated offline guides35images,0missing/remote resources. Firstdocs run failed2 obsolete33image assertions; updated explicitassetlist/count,rerun5tests Passed71.024s. New offline browser visual/network-blocked test stillNotRun; human/fullcase gates open. No Blender running;goalactive.
-
-2026-09-10 T18 offline actual browser: isolated headlessEdge CDP offline=true,EN/ZH35images all loaded,0brokenanchors,chapter4 andlanguage navigation Passed. Actualdownloads all3GUI/coldreceipts byteequal; bothrecoverypage screenshots visually inspected,steps adjacent. T18-run007-offline-check.json binds generatedHTMLhashes and rawreport/screenshots. Scope browsernetworkemulation,notOSfirewall. Goalactive;human/fullcase/remainingcandidate qualification stillopen.
-
-2026-09-10 run007 fullcontracts PID50232 exited1:2563tests/2525passed/1failure/0errors/37skips,219.426s. Solefailure adjacent legacy documentation contract missing Blender MCP/operator guidance from prior rewrite. Added valid preview/import/restore operators and input/report settings,kept externalprivateexport andGUI distinction. Focused representativeexamples10Passed0.547s. run007-full-contracts-check.json retains failure and37skip reasons;fullafterfixNotRun,no greenfullclaim. No product/artifactchange;goalactive.
-
-2026-09-10 Fullretest at ef6ea3e passed2563tests/2526passed/0failures/0errors/37skips,202.199s PID42952 exited0. Existing scientific-py312 read-only reuse discovered ASE/cclib/phonopy/pymatgen/spglib;55optionaltests exposed1failure1error10skips. Fixed VASP multichannel report IDs to dataset-group thenprovenance-group order; fixed phonopy quoted-unit test mutation with explicit changedbytes assertion. Focused16tests14passed2skipped. run007-scientific-environment-check.json; productfix notyetbuilt,prepare wheel requires newfreeze/requalification; prior fullpass scopes prefixfixsource only. No deps installed,goalactive.
-
-2026-09-10 run008 prepare freeze sourceabd6a69: wheele3ce7f2fbaa7c0d0267cc7bb62b66db33b66b80ed0b2b43f517af2574ff5db9d,sdistf4aced56942aeeca3172a63b89cdd5605fecfce4ff9b7b994310b42af76a9e65;165Pythonfilesbyteequal. Existing scientific interpreter loads wheel-only packages first,55tests45passed10skipped,0failures/errors; serialization-only harnessfailure fixedandretried. New isolateduvtool install offline reuses unchangedNumPy2.5.3/Gemmi0.7.5/RDKit2026.3.3/Pillow12.3.0,-Iinstalledoriginschecked,doctor/capabilitiesexit0. Viewer/sharedcore unchanged since36b80b8; ZIPa1e2da79 retained. run008-candidate-check.json; newGUI/fullregression/affectedcase requalificationpending,oldreceiptsnoretag. NoBlenderstarted;goalactive.
-
-2026-09-10 T07 run008 CLI scientific requalification: pinnedLiCHGCAR32cubed singlechannel32768valuesexact andaffineexact,integral0.99999999345. Added frozen existingCHGCAR.spin.gz source488ad74 SHA43c3b6db,rawSHA70c16200,48cubed,total+diffspecbeforeconvert. Newwheel e3ce7f2 publicCLI convert/validatePassed,bothchannels110592valueserrors1.39e-17/2.17e-19,unitsinversecubicangstrom,negative spin integral-0.020289 retained. T07-run008-vasp-check.json;GUI/render/wholecaseNotRun. Fullrun PID42148 stillrunning(handle48258);nootherBlenderlaunched. Goalactive.
-
-2026-09-10 run008 fullcontracts PID42148 exit0,2563tests/2526passed/0failure/0error/37skips,196.235s; recordedrawhash andallskipreasons inrun008-candidate-check. Read-only scientific route audit: installedprepare0.1.0 adapterSHA04d5c17 differscandidatebe7e076; runtime route launches-I-m installedpackage,so existing scientificroute cannotbeclaimednewwheel. PriorT07wheeloverlayremainsvalidseparateproof. Noenvchange,noBlenderremaining;candidateGUI/professionalroutequalification/humanremaining,goalactive.
-
-2026-09-10 run008 scientificroute: isolatedvenv installs frozenpreparewheel --no-deps,plain.pth referencesexisting scientific+Standardsitepackages read-only.165installedPythonfilesbyteequal,-Iprepare/core ownsitechecked; scientificNumPy2.2.6 distinctfromStandard2.5.3,existingGemmi/RDKitavailable. PublicinstalledCLI withscientific-processor.json doctor/convertrealspin/validatePassed,both48cubedarraysbytevalueequalfrozenoverlay. Repository55adaptertests50passed5skips,0errors/failures; notmisrepresentedinstalledtest. run008-scientific-route-check.json. Localroute dependsreferencedenvs,notportable,noexistingenvmodified/noadditionaldependenciesdownloaded. GUI andfullcase/humanpending,goalactive.
-
-2026-09-10 T07 run008 actualGUI launcher51464/window33885314: inspectsuccess butdependency_missing whileconfiguredrouteGUIconvertPassed. Both48cubedGUIarrays exactCLI; sourceunchanged; PAWaugmentationlossvisible. T07-run008-gui-check.json storesrawJPEG/events,initialCodexcaptureexcluded. Inspectlayoutmisplacedtextcorrectedbeforeexecution;Home didnotselectconvert,usemenu. RecordharnessGBKread correctedUTF8. Openinspectrouteavailabilitydiagnosticdefectneedsfix. NoBlenderstarted;newPrepare remainsopen;goalactive,human/fullcasepending.
-
-2026-09-10 inspectroute sourcefix: inspect/formats previouslyusedlocalReaderdescriptor while capabilities/convert useroutes. Shared CLI helper nowreusesruntime capability readeravailable/reason forroutedreaders; ReaderAPI/outputkeys unchanged. Regressionfirstfailed,thenpassedavailable/unavailable;62CLI/runtime/GUI lifecycle tests61passed1skip15.685s. RealCHGCAR sourceCLI withrun008scientificroute reportsavailable=true,scientific:available. run008-inspect-route-fix-check.json sourceonly; newwheel/refreeze/reinstall/newGUI evidence stillrequired,existingrun008e3cewheelunchanged. Goalactive.
-
-2026-09-10 run009 prepare source32d9630 wheelb736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a,sdistc8b61502a788b3f9bb93975e6a85cd641b1fd33d2d783ccab15e5453155a5a9e. NewStandard+scientificrouteinstalls165filesbyteequalsource/wheel; existingdepsreadonlyreuse. InstalledCLI doctorPassed,inspect/formats availabletrue/scientificavailable. ClosedtaskoldGUI33885314 normally; newlauncher59048/window7540582 actualGUIinspectsameCHGCAR nowavailabletrue,rawJPEGhasheschecked. run009-candidate-check.json; oldrun008errorproofretained,newconvert/fullregression/humanpending. NewPrepareopen,noBlenderstarted;goalactive.
-
-2026-09-10 run009 sameGUIwindow7540582 inspect->convert realspin input success,newspin-gui.cbq. Both48cubedscientificarrays exactqualifiedCLIreference,inputhashunchanged;rawJPEG/eventsboundb736wheelupdatedcandidatecheck. Fullcontractsstarted independently after noBlenderconfirmed,see run009/full-contracts-process.json and toolhandle forlive status;noresultyet. GUI/gridrender/fullcases/humanremaining;goalactive.
-
-2026-09-10 T04 run009 actualPrepareGUI inspect/convert fixedCOD4503272CIFPassed:64sites,23partialoccupancies,9disordergroups; labels/occupancies/groups allsourceequal,coords0error,cellreferenceequal,sourcehashunchanged. GUI diagnostics preserve disorder/partialoccupancy anddisable symmetryderivation. T04-run009-cif-gui-check.json rawJPEG/events frozenb736wheel. DiamondCONTCARGUIstillpending;fullregressionPID22248 ongoinghandle67880;nootherBlenderlaunched. Goalactive,human/fullcaseopen.
-
-2026-09-10 run009 fullcontracts2564tests/2527passed/0failures/0errors/37skips204.794s PID22248exit0; candidatecheckupdatedallskipreasons. T04 actualGUI diamondCONTCAR inspect/convertPassed,64C/cell7.1338angstrom/sourcefractional-to-Cartesiancoords0error,64x3zero velocity retainedunitunknown,sourcehashunchanged. T04-run009-diamond-gui-check.json. Existing supercellnotgenerator,zerovelocitiesnotMD. FurtherASErouteGUI/Viewerremaininggates andhumanopen;noBlenderstarted;goalactive.
-
-2026-09-10 T04 explicitASEGUI viaqualifiedscientificroute passed same64Cdiamond:coordinate/cellerror0,sourcehashunchanged. GUIwarns ASEatomarray no normalizedunit/semanticmapping; no datasetcreated,so nativePOSCARunknown-unitvelocityproof remainsseparate. T04-run009-ase-gui-check.json withactualJPEG/eventsb736wheel. CrystalEN/ZHstillstalePrepareGUIpendingparagraphneedsupdatewithnewreceipts; existingViewer/renderhashesmustretainoldbindings. NoBlenderstarted;goalactive,human/fullcasepending.
-
-2026-09-10 T04 bilingual Prepare lesson updated with actual CIF/ASE native JPEG and three run009 GUI receipts; earlier Viewer/render artifact bindings retained. Offline Edge CDP network emulation: EN/ZH 37 images loaded, zero broken anchors, chapter/language navigation and three receipt downloads byteequal Passed; both step screenshots visually checked. Documentation tests 5 Passed in53.596s; T04-run009-offline-check.json records raw hashes. No product changes or Blender launched. Display material/subdivision improvements remain separate from scientific grid resolution; actual grid refinement requires numerical validation. Remaining case/candidate/human gates open; goal active.
-
-2026-09-10 T04 run009 single Blender PID34204 live5.1.1 isolatedprofile: public Preview/Import 7entities/64sites; structure_publication View created,12cell edges/cell matrix checked. Occupancy display subdivision2 added; authoritative coordinates bytevalue unchanged. Saved cocrystal-view.blend/CBQ and verified live lazyarray belongs newpair. Mesh float32 error9.5085e-7 separate from scientific source tolerance1e-7. T04-run009-view-check.json records replay,notGUI; newrender/cold/relocation/human NotRun. Initial MCP call lacked bpy import and failed before mutation; retried self-contained successfully. Clean saved Blender remains open;goalactive.
-
-2026-09-10 T04 run009 cocrystal rendered Cycles2400x1800/256; smooth face-normal nodes in occupancy/thermal display reduce facets, scientific arrays unchanged. Original and relocated pair serial cold PID36052/38472 Passed, localarrays/64sites/12edges/subdivision2/bothsmoothnodes retained. Initial audit globalgroupcount included unrelated CH_Add Material; corrected targetfilter andreran; no product persistence defect. Prior commentary inference corrected. T04-run009-render-cold-check.json binds render hashes/artifacts. NoBlenderremaining. GUIcapture/caption/diamond/newcache-rebuild/human gates stillopen;goalactive.
-
-2026-09-10 T04 run009 diamond GUI-output public Preview/Import5entities/64C and structure_publication replay passed. Smooth occupancy face normals/subdivision2/roughness.35, Cycles2400x1800/256 render visuallychecked; allcellvertices in camera, scientificcoords exactGUIoutput. Normalexit58544 then serialoriginal59084/portable37656 coldPassed,cell7.1338/localarrays/12edges/smooth/subdivision retained. T04-run009-diamond-render-cold-check.json. NoBlenderremaining; screenshots/captions/package/cache-rebuild/human stillopen;goalactive.
-
-2026-09-10 T04 localreview ZIP62files/10069103bytes SHAade7561ddcbe5e6bfeb05aa1cf2825dd87a054d34378d4b59741db6dc96b56ca created,CRC/allmemberhashesPassed. Includes2pairedprojects/rawinputs+CC0notes/2PNG/bilingualhandover+captions/GUIevidence; noinstallers/dependencies. FreshZIPextraction serialcold50100/29440 passed64sites/cell/localarrays/subdivision/smooth; allpackagedfilesunchanged. T04-run009-package-check.json; statusT04 updatedandstaleREADMEblanketNotRun corrected. Reviewonly,humanNotRun,fullcaseincomplete. NoBlenderremaining;goalactive.
-
-2026-09-10 T04 run009 explicitderivedmeshclear/publicREBUILD on copies passed61760/63892:64sites/12celledges/Viewidentity/scientificarrays unchanged. Subsequentcold60908/41180 passedlocalpair. Manualsubdivisionandcustomsmoothnodes absentafterREBUILD; expectedcosmeticboundary,reapplyafterrebuild. Originalblend+CBQ hashes matchreviewpackageunchanged. T04-run009-rebuild-check.json capturesruntime/artifacts; onlynativeoperatorproof,GUIdeletionNotRun. NoBlenderremaining;GUIcapture/tutorialintegration/humanstillopen;goalactive.
-
-2026-09-10 T04 run009 refinedPNGs/provenance/bilingualcaptions and cold/rebuild/package links integratedEN/ZH; olderimages retainbindings. Offline39imagesallloaded/0brokenanchors/language+chapter+3downloadsPassed,captionpagesvisuallychecked. Twofreshnessfailuresfromprovenanceeditaftergeneration; actualregenerationthen5testsPassed63.118s. T04-run009-refined-offline-check.json. No productchanges;GUI/human/fullcasepending;goalactive.
-
-2026-09-10 T04 liveisolatedBlender49724/window50988602 coldopenedcocrystal; runtime5.1.1/paths/reposchecked. Knowncamera/sidebar replay thenactualCU tabclick f01; rawJPEG0025/0026 verified,64sites/declaredSG64/derivedNotderivedvisible. Narrowpanel truncatesfields,readabilitypartial,notfinalscreenshot. T04-run009-panel-check.json. Evidencewriter GBK failure corrected explicitUTF8. Blendercleanopen,originalpairunchanged. RemainingreadableGUI/diamond/humanopen;goalactive.
-
-2026-09-10 T04 CU bundledskill/API read: flatfrom_x/from_y/to_x/to_y correct; screenshot-bound f07 still noresize. Region_scale hasnoEXECparameters; do notclaimfix. Normalexitclean49724. AdvancedindependentT06 newwheel publicCLIinspect/convert/validatePassed,installed-Iindependenttextparse all32x21coords/forces/energy/step/sourceindexexact0error,framebindingschecked. T06-run009-cli-check.json;source_indexunknown/ambiguous/physicaldtnull retained. NewGUI/playback/lifecycle/humanpending;T04readabilityopen;goalactive.
-
-2026-09-10 T06 run009 actualPreparewindow7540582 GUIconvertfixedrMD17 viaextxyz toseparateaspirin-gui.cbq Passed; rawJPEG/events g01-g07 validated. Independentall32x21textreference coords/forces/energy/step/sourceindex0error,units/framebindingscorrect; no preparedbondsdiagnosticvisible. T06-run009-gui-check.json. NewGUIinspect/Viewer/playback/lifecycle/humanpending. NoBlenderstarted;goalactive.
-
-2026-09-10 T06 actualGUIinspect h01-h03 Passedavailable/extxyz32frames/force+energy+step+source_index/nolattice;rawJPEGupdatedreceipt. SingleBlender48700 isolated5.1.1 runtimechecked,publicimport9entities,createdtrajectory+trajectory_force. All32framesbothViews64checks passed maxcoords2.1709e-7/scaledforces2.2546e-7<display1e-6; authoritativearraybytesunchanged. Savedtrajectory-viewpairframe15. T06-run009-view-check.json. Blendercleanopen;newrender/playbackcapture/cold/humanpending;goalactive.
-
-2026-09-10 T06 run009 renderedCycles2400x1800/256 frame15,vector.35,atomsubdiv5/customsmoothnode. PriorSmoothbyAngle nodegroup notavailableforappend; switchedT04verifiedsmoothfacenode. UPDATEresetframe0; firstrenderpreservedframe0draft,explicitFRAME15checkedcoords/forcebeforerender. Visualqualitypartialarrowocclusion/darkregions. Normalquit48700;serialoriginal37900/moved51676coldPassed2Views/frame15/localarrays/smooth,scientifichashesunchanged. T06-run009-render-cold-check.json. NoBlenderremaining;animation/GUI/refinement/humanopen;goalactive.
-
-2026-09-10 T06 separate refinedpair atomdisplay.3/roughness.3/point14000/fill1800 size8/world.18 retainsvector.35/science. Found Agent sceneedit duplicateflat+smoothbranches atmulti-inputJoin; removeddirectflatlink,42000->21000facesallsmooth. FixedPNGvisuallyverified; olderoverlapdraftretained. Cold22496/13636 passedframe15/coords/forces/localarrays/21000smoothfaces/radius/fill,hashesunchanged. T06-run009-refined-check.json. No productcodechange; oldtrajectory-view pair remainsdraftwithduplicatedisplay, prefertrajectory-refined. NoBlenderremaining;animation/GUI/humanopen;goalactive.
-
-2026-09-10 T06 refined animation completed: PID66320 normal quit,32 PNGs Cycles2400x1800/256;64 View/frame coordinate-force checks and scientific arrays unchanged Passed. Serial native template assembly exit0 produced H264/MPEG4 24fps,32frames. Edge CDP offline playback Passed2400x1800,duration1.333333s,to-end/noerror; encoded frame15 visually checked. T06-run009-animation-check.json binds raw evidence/video/frame hashes. Display fps is not physical time; GUI timeline/human review/assembly portability remain NotRun. No product changes;goal active.
-
-2026-09-10 T06 GUI playback isolatedPID46300: CU Configure Trajectory Playback, Scientific Representation Play/Pause; live playingtrue/source7/timeline8, pausedtimeline30/source29. Coordinateerror1.1795e-7/force3.4923e-8<1e-6,scientificarraybytesunchanged Passed. NativeJPEG/events in T06-run009-playback-gui-check.json. Source Frame Index remains static preview0, not live indicator; some narrowlabels truncated. Setup wrongoperatorname corrected, no productdefect. Originalprojectnotresaved; human/readability/fullcase remain open,goalactive.
-
-2026-09-10 T06 currentcandidateEN/ZH section added refinedrender/nativePauseJPEG with originalhashprovenance, exactplayback/staticpreview distinction, localpair andnewreceipts; oldcandidatehistoryretained. OfflineEdgeCDP41images/0brokenanchors/language+chapter+3receiptbyteequalPassed; bothlanguagepagesvisuallyreviewed. Docs5testsPassed67.445s afterexistingStandardruntimegeneration; initialsystemPythonmissingNumPy, noinstall. T06-run009-offline-check.json. Narrowlabels/manualrender/portableassembly/newrebuild/package/humanstillopen;goalactive.
-
-2026-09-10 T06 copiedpairderivedmeshclear/publicREBUILD PassedPID39096, cold25044Passed. Initialassertpreview15failed: REBUILD restores savedrecipeframe0; checkedframe0coords/force, explicitLOAD+FRAME15 restoredpreviewbeforeSave. Both finalcoords1.1842e-7/force5.5156e-8<1e-6,Viewidentity/scientificarrays/originalpairunchanged. Customsmoothnodesremovedexpectedcosmeticboundary. T06-run009-rebuild-check.json retainsfailurelog andscope. GUIdelete/manualcosmeticreapply/tutorialrecoveryparagraph/portableassembly/package/humanremainopen;noBlenderremaining;goalactive.
-
-2026-09-10 T06 separatevideoassembly uses //frames-refined/ and //trajectory-refined.mp4; wholecopymovedto portable/T06-video-moved, serialcoldPID39012 loaded32localframehashesandencodedPassed. EdgeCDPoffline2400x1800/1.333333s/to-end/noerrorPassed; originalvideoSHAunchanged. T06-run009-portable-video-check.json. Keeprelativeassemblywithcompleteframesfolder; GUIassembly/humanpending. No productchanges/noBlenderremaining;packaging+docsremaining,goalactive.
-
-2026-09-10 T06 localreviewZIP92files/121561147bytes SHA8eea79a46ea7967bda201619dbb066e6a2908315bdc9c884c1c4844284c8003a CRC/memberhashPassed. Includesrefinedpairedproject/32PNGs/relativeVSE+MP4/rawCC0input/bilingualhandover/GUIevidence. FreshZIPextraction serialcold25188 scientificframe15/coords+forces/smoothingPassed;56788 VSElocal32framehashes/pathauditPassed (no re-encoding in this extraction check). Allpackagedfilesunchanged. T06-run009-package-check.json. Reviewonly,notfinaldistribution,human/fullcaseopen;docsrecovery/packageintegrationnext,goalactive.
-
-2026-09-10 T06 EN/ZH recovery instructions updated: savedrecipe0 vs explicitFRAME15, smoothreapply, relativeVSE,92filelocalreviewpackageSHA/size/limits; statusindexnowrun009withpartialGUI/recovery andhumanNotRun. Offline41images/0brokenanchors/language+chapter+3newreceiptbyteequalPassed; docs5Passed67.300s. T06-run009-handover-offline-check.json. NoBlenderlaunched; remainingP0T07newcandidateintegrationnext whileT06manual/human gapsremainopen;goalactive.
-
-2026-09-10 T07 newwheelCubeCLIinspect/convert/validatePassed; independent262144values/origin/steps exactlysource, originalambiguous+explicitcompleteelectron_density retained. SerialBlender12016publicPreview/Import10entities,volume+signedsurfaceSavedh2-gridpair. VDBbohr->angstromaffine5points max1.07e-14;positive882vertices/negative0expected;allscientificvaluesunchanged. ReusedauditfixedunitassumptionandstaleVASPpath,notproductdefects. T07-run009-cube-view-check.json. NewGUI/sampling/difference/render/cold/humanremaining;noBlenderremaining;goalactive.
-
-2026-09-10 T07 nativepublicslice/profile/colorbar createdcurrentcandidatePID60616. IndependentrawCube8-cornertrilinear4225sliceerror7.4035e-9/129profileerror3.8345e-9<1e-7;allvalid/colorbar0-.25/displaybohr->angstromgeometryPassed. Scientific64cubedarraybytesunchanged;Savedseparateh2-samplingpair. T07-run009-sampling-check.json. No newGUI/render/coldclaim; difference/newGUI/render/recovery/humanremainopen;noBlenderremaining;goalactive.
-
-2026-09-10 T07 existingpublicrecompute_t07_difference.py withrun009wheelPassed generatefixedpairSHA8902b35f/convertindex0/resolveindex1/difference/validate. Independent262144valuesexactbondingminusisolatedatoms,positive138360/negative123784,min-.034517683/max.020403083. Disposabledata-modelrightorigin+0.1bohr rejectedexplicitidenticalaffineerror,nooutput,original+fixturehashesunchanged. T07-run009-difference-check.json installed-Icheck. NoBlenderlaunched;newGUI/signedrender/lifecycle/humanremaining;goalactive.
-
-2026-09-10 T07 newdifferencesignedsurfaces .005,displayvoxel.025angstrom:positive8464vertices/negative9972,allsmooth. Cycles2400x1800/256 renderedunlitdraftthenpreferredshaded difference-lit pair;visualreviewbluepositive/warmnegativecomplete,interpolationbandsremain. Scientific64cubedarraysunchanged. FirstaudittemporaryevaluatedgeometryRNAreferencefixed,notproduct. T07-run009-difference-render-check.json. Native replayonly;newGUI/cold/rebuild/remainingrender/humanopen;noBlenderremaining;goalactive.
-
-2026-09-10 T07 h2-grid/h2-sampling/difference-lit original+portablecopies6serialcoldprocessesPassed. Localdataset/VDBpaths verified,finitearrays,4225slice/129profile/colorbar.25retained,refinedsurfaces8464/9972vertices/smooth/voxel.025retained. AllpairedCBQfilehashesunchanged. T07-run009-cold-check.json. Cachedeletion/rebuild stillNotRunnewcandidate;newGUI/otherrenders/docs/package/humanremainopen;noBlenderremaining;goalactive.
-
-2026-09-10 T07 h2-grid/h2-sampling/difference-lit copiesVDBdelete/publicREBUILD+independentcold6serialprocessesPassed,localVDBrestored/Viewidentity/arraysretained,originalpairhashesunchanged. CustomSize.025+smoothlostexpecteddisplayboundary;differencesurfacesbackto490/612vertices Gridresolution. T07-run009-rebuild-check.json. Source/processorunavailabletestNotRun;newGUI/remainingrenders/docs/package/humanopen;noBlenderremaining;goalactive.
-
-2026-09-10 T07 actualexistingPrepare7540582 currentwheelCubeinspect/convertPassed,c01-c16nativeJPEG/events. Explicitpreset electron_density/unit electron_per_cubic_bohr,datasetindexblank,newcube-gui.cbq; independent262144values+origin+steps0error,ambiguousoriginalretained. T07-run009-cube-gui-check.json. Initialoccludedcaptureexcludedafteractivation. NoBlenderstarted;newGUIoutputViewerintegration/remainingrenders/docs/package/humanopen;goalactive.
-
-2026-09-10 T07 actualCubeGUIoutput cube-gui.cbq publicPreview/Import10entities,volume/signedsurface Savedh2-gui-viewpairPID14140;all262144valuesexactinput/VDBaffine1.07e-14. Independentcold54556localarrays/VDB/2ViewsPassedpositive882/negative0expected. T07-run009-gui-viewer-check.json. ThisisGUIPrepare->nativeViewerreplay,notnewViewerGUIproof; remainingrenders/docs/package/humanopen;noBlenderremaining;goalactive.
-
-2026-09-10 T07 separate sampling-layout currentcandidateCy2400x1800/256renderPassed; reusedpriorcorrectedspacing/linewidth,explicitnewcamera/world. Slice4225/profile129/colorbar0-.25/units/modelboundary readablevisually; scientificarrays/originalpairhashesunchanged. T07-run009-sampling-render-check.json. Renderlayoutcold/remainingvolume/docs/package/humanopen;noBlenderremaining;goalactive.
+Goal: 完成 T00–T20/B01 的真实用户教程纠偏、技术验收、独立人工验收和本地交付。
+
+Success Criteria: 每项操作、验证和证据路径写入 `progress.md` 后才勾选；人工独立验收只由独立复做者签署；所有技术门槛通过且没有 failure/error。
+
+Constraints: 不安装或升级依赖；不删除或换标历史证据；不 push、tag、Release 或发布 PyPI；同时最多一个 Agent-owned Blender 进程；保持 `docs/chemblender25-research/` 字节不变。
+
+Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA、Extension validate/build、隔离与真实 profile、全量测试、`git diff --check`、planning `check-complete.ps1`。
+
+## Control
+
+- Current Phase: Phase 2 — 修复证据检查与 GUI/MCP 复用规则
+- Next Step: P2.1 增加未完成运行完整性失败测试
+- Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
+- Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
+- Human rule: Agent 不得代签 `human_review`。
+- Commit rule: 每个阶段形成一个本地逻辑 commit；Phase 5 每个完成案例形成独立逻辑 commit。
+
+## Interfaces
+
+- `task_plan.md`：唯一执行清单，只保留阶段、状态、复选项和当前下一步。
+- `progress.md`：追加命令、结果、错误、证据路径和 commit。
+- `findings.md`：只保存稳定结论、限制和可复用发现。
+- `.agents/active/2.5-real-user-tutorials.md`：只保留当前候选、当前案例、进程、阻塞和下一步。
+- `status.json`：逐案汇总 scientific processing、直接 GUI、授权重放、render、recovery、tutorial、review package、human review、distribution 和证据引用。
+- `validate_evidence.py`：保留现有 CLI/退出码，增加可选 `--execution-supplement` 和四类分离状态字段。
+
+### Phase 1 — 统一计划与当前事实
+
+**Status:** complete
+
+- [x] P1.1 固定 `PLAN_ID`，记录当前分支、HEAD、工作区、Blender/Prepare 进程和候选制品哈希。
+- [x] P1.2 逐项核对 T00–T20/B01 的 receipt、run manifest、本地产物和适用候选；聊天记录不能单独作为通过依据。
+- [x] P1.3 把 `task_plan.md` 与 active 文件中的唯一历史记录补入 `progress.md`，随后缩短二者，确保无证据丢失。
+- [x] P1.4 将本计划写入 `task_plan.md`，增加 `Current Phase`、`Next Step` 和本 checklist。
+- [x] P1.5 更新 `status.json`：T07 指向 run-009；T17/T18 不再写 `not_run`；T01/T02 明确历史候选与当前候选的适用范围。
+- [x] P1.6 更新教程 README，移除 run-002 作为当前入口，改为当前状态、当前 receipt 和 review-only 边界。
+- [x] P1.7 纳入审查目录的两份文档，保持 `docs/chemblender25-research/` 字节不变。
+- [x] P1.8 增加状态一致性测试：有已接纳 receipt 的案例不能无解释地汇总为 `not_run`，人工、技术和分发状态不能互相代证。
+- [x] P1.9 运行状态/文档测试、`git diff --check`，提交“统一教程计划与当前事实”。
+
+### Phase 2 — 修复证据检查与 GUI/MCP 复用规则
+
+**Status:** in_progress
+
+- [ ] P2.1 先增加失败测试，证明 blocked/running/failed manifest 中的损坏、缺失、路径逃逸、错误哈希和事件断链目前会被提前返回漏掉。
+- [ ] P2.2 删除 `_audit()` 的未通过状态提前返回；无论总体状态如何，都审计已经声明的 baseline、artifact、event、step、check 和 lifecycle。
+- [ ] P2.3 未执行项目不要求伪造文件；已声明文件必须通过完整性审计。完整性通过但门槛未完成时返回 `incomplete`。
+- [ ] P2.4 增加四类分离状态字段；`invalid` 只表示证据完整性或结构错误，不能被 `status=blocked` 掩盖。
+- [ ] P2.5 增加合法未完成、缺失 GUI、缺失科学检查、缺失人工审阅、错误候选哈希、历史截图换标等回归测试。
+- [ ] P2.6 定义并测试 execution supplement v1；直接 GUI 仍使用 `os_gui/human_gui`，授权 MCP 重放使用单独类型和完整复用链。
+- [ ] P2.7 为 T01 建立首个补充规格；新面板、变化按钮和未验证步骤继续要求真实 GUI。
+- [ ] P2.8 用真实 T01/T02 blocked manifest 验证：损坏证据会失败，完整但未人工验收仍为 incomplete。
+- [ ] P2.9 运行证据测试、相关文档测试和 `git diff --check`，提交“审计未完成运行并记录授权重放”。
+
+### Phase 3 — 专业环境资格分层
+
+**Status:** pending
+
+- [ ] P3.1 重新记录 Standard、scientific、wavefunction、fermi 环境的解释器、依赖版本、实际 import origin、prepare wheel 和 route 配置。
+- [ ] P3.2 将环境状态明确分为 `development_reuse`、`isolated_install`、`distribution_ready`；`.pth` 跨环境引用只能是第一类。
+- [ ] P3.3 对 run008/run009 receipt 保留数值与集成结果，但删除或纠正任何“可移交隔离环境”暗示。
+- [ ] P3.4 使用现有且已授权、依赖自足的环境重放可用专业路线；不新增 `.pth`、`PYTHONPATH` 或源码注入。
+- [ ] P3.5 缺少依赖的专业路线标记 `Blocked: dependency authorization required`，列出最小安装需求，同时继续 Standard/Viewer 项目。
+- [ ] P3.6 更新状态、环境说明和部署边界测试，运行 `git diff --check`，提交“区分开发复用与部署资格”。
+
+### Phase 4 — 按顺序关闭全部 P0 案例
+
+**Status:** pending
+
+每个案例只有在当前候选身份、输入/许可、科学检查、直接 GUI 或合规授权重放、渲染、配对工程、移动/冷重开/恢复、中英教程、离线 QA、review package 和检查器结果均有证据时，才能勾选技术完成；人工验收单列。
+
+- [ ] P4.1 T00：核对当前候选安装、Test Processor、doctor/capabilities、失败恢复和教程入口。
+- [ ] P4.2 T01：完成当前候选适用性、execution supplement、剩余缓存恢复、正文单一路线和 review package。
+- [ ] P4.3 T02：复用已验证产品修复，补当前候选适用性与缓存恢复；无新失败不重复改产品。
+- [ ] P4.4 T04：补可读侧栏截图、准确手动步骤和当前候选映射；保留 CIF/POSCAR/ASE、渲染、移动与重建证据。
+- [ ] P4.5 T06：补帧 0/15/31 的 energy/source index 可见检查、实际 UI 录制、手动渲染/节点步骤和完整恢复。
+- [ ] P4.6 若现有 UI 无法显示 T06 冻结规格要求的逐帧标量，复用现有 FrameProperty 数据，在现有面板增加最小只读当前帧值，不增加新数据模型；补单元测试、构建和受影响案例复验。
+- [ ] P4.7 T07：补 sampling-layout 冷重开、volume/remaining render、当前候选 GUI、真实缺源/缺处理器恢复、VASP 适用范围和 review package。
+- [ ] P4.8 T17：核对 13 格式正向导出、loss gate、科学字段比较、GUI 回执、项目交接和当前候选回归；保留正确拒绝案例。
+- [ ] P4.9 T18：在隔离副本上用不存在的 processor 路径和移除的副本源文件实际证明离线重建；补 GUI legacy migration、第二干净 profile、取消/错误 relink/损坏/过期恢复。
+- [ ] P4.10 对 T00/T01/T02/T04/T06/T07/T17/T18 分别运行检查器并更新状态为 `ready_for_human_review` 或明确 `Blocked`。
+- [ ] P4.11 运行 P0 聚合测试、Extension validate/build、当前候选安装检查和 `git diff --check`，提交“关闭 P0 技术与教程门槛”。
+
+### Phase 5 — 逐个实施 P1/P2 案例
+
+**Status:** pending
+
+每个案例依次执行：冻结 case spec → 固定输入/许可/哈希 → CLI/Worker → Prepare GUI → Blender View → 独立科学断言 → render → save/move/cold/rebuild/recovery → 中英教程和离线 QA → review package → 状态更新。
+
+- [ ] P5.1 T03：SMILES 三维化、力场优化、SDF 记录与构象分组。
+- [ ] P5.2 T05：PDB 多模型、PQR 电荷/半径和 MOL2 层级展示。
+- [ ] P5.3 T08：真实 FCHK/Molden 轨道正负相位。
+- [ ] P5.4 T09：电子密度、自旋密度和 RDM 网格，严格区分来源与密度层级。
+- [ ] P5.5 T10：同结构同网格的密度表面 ESP 着色。
+- [ ] P5.6 T11：Gaussian/ORCA 振动、IR/Raman 和模式动画。
+- [ ] P5.7 T12：TD 输出、UV–Vis/ECD 图与 gauge/强度边界。
+- [ ] P5.8 T13：能带、DOS、投影和能量参考。
+- [ ] P5.9 T14：NaCl q 点声子模式与周期相位动画。
+- [ ] P5.10 T15：critic2 QTAIM/NCI；不虚构缺失路径或键能。
+- [ ] P5.11 T19：Reader API 外部 Python 集成；不承诺自动进入普通导入界面。
+- [ ] P5.12 T20：QCSchema 真实 compute；交换成功不能替代实际计算成功。
+- [ ] P5.13 T16：Fermi surface；许可未关闭前不分发 POTCAR、pickle 或不合规输入。
+- [ ] P5.14 B01：验证 provider unavailable 的真实诊断边界；没有 live transport 时不伪造在线成功。
+- [ ] P5.15 每完成一个案例立即更新 checklist、`status.json`、教程索引和 `progress.md`，并作独立逻辑 commit。
+- [ ] P5.16 所有未获依赖或许可授权的项目保持未勾选并记录阻塞，不用 skip 冒充通过。
+
+### Phase 6 — 教程收口、人工验收与本地交付
+
+**Status:** pending
+
+- [ ] P6.1 T01/T02/T06 等正文仅保留一套当前用户流程；旧候选、失败调试、PID 和长哈希移入验证附录。
+- [ ] P6.2 所有教程包含固定输入、准确按钮/参数、逐步可见结果、原始截图、最终渲染、工程入口、恢复步骤和科学边界。
+- [ ] P6.3 本地交接包只使用包内相对路径；开发缓存绝对路径只出现在验证附录。
+- [ ] P6.4 重新生成中英离线 HTML，实际断网检查图片、锚点、语言导航、输入、脚本、工程和 receipt 下载。
+- [ ] P6.5 为每个案例生成独立人工复做清单；第二干净 profile 按教程盲走并记录操作、结果、缺陷、修复和复测。
+- [ ] P6.6 只有独立复做者签署后，勾选对应 `human_review`；否则保持 `ready_for_human_review`。
+- [ ] P6.7 冻结最终本地 Extension ZIP 与 prepare wheel/sdist，记录源码提交、SHA-256、内容清单和依赖来源。
+- [ ] P6.8 运行全量测试并分别报告 Passed/Failed/Skipped/Error；任何 failure 或 error 都阻止技术完成。
+- [ ] P6.9 执行 Extension validate/build、ZIP 内容审计、隔离 profile 安装、真实 `user_default` 冷启动、无 RDKit/Gemmi/prepare Viewer 验证和专业后端验证。
+- [ ] P6.10 运行所有案例检查器、状态一致性测试、文档测试、离线 QA、`git diff --check` 和 planning `check-complete.ps1`。
+- [ ] P6.11 更新 active/current status 和最终本地交付报告；明确远端 CI、push、Release、PyPI 均未获授权且不属于本地完成。
+- [ ] P6.12 最终逻辑 commit 后，仅在所有阶段和人工门槛确实完成时把 M0–M5 与 Phase 1–6 标为 complete。
+
+## Assumptions and Defaults
+
+- 范围包含原总目标 T00–T20/B01，不仅是 F01–F06 纠偏。
+- 实施起点和审查锚点均已复核为 `c1fa7584f56d6df387617406958065573e9b56c1`；后续候选适用性以 receipt 记录的源码与制品哈希为准。
+- 缺失依赖只阻塞对应专业路线，Standard/Viewer 工作继续。
+- 历史截图、失败日志、旧制品和原研究包保留，不删除、不换标。
+- 优先复用现有代码、规格、测试和证据结构；只对确认的产品缺口做最小修复。
