@@ -648,3 +648,12 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - Offline static resources, anchors, bilingual navigation and generated-document freshness passed. The existing `P6-offline-delivery-audit.json` still reports missing project downloads, so offline delivery acceptance remains blocked.
 - `git diff --check` Passed. Planning `check-complete.ps1` exited 0 while correctly leaving Phase 4/5/6 unfinished; the planning checker validates file consistency and does not override unchecked gates.
 - P6.10 is checked because all discovered manifests and requested static commands were run and the remaining no-manifest cases are explicitly classified. This does not make any case ready for human review.
+
+## 2026-09-13 — P6.11 local delivery conclusion
+
+- Added `examples/tutorials/2.5.0/P6-local-delivery-report.md` and linked it from `status.json.local_delivery`. The report records the exact passed checks, incomplete/invalid/no-manifest case results, tutorial/project-download gaps, environment/license blockers, all 22 unsigned human reviews and the stale final-artifact boundary.
+- Repository check: local branch was 23 commits ahead of `origin/feat/2.5-real-user-tutorials` at assessed commit `abfebd36125e669e4164ceb1316d058915b0ab9f`; `docs/chemblender25-research/` had no changed path relative to `c1fa758`. User-owned Blender 5.1.1 PID 26228 remained active at `C:\\Program Files\\Blender Foundation\\Blender 5.1\\blender.exe` and was not closed or reused.
+- External writes remain Not Run / not authorized: remote CI, push, tag, GitHub Release and PyPI. P6.11 is checked because the requested current status and local delivery conclusion are durable; the conclusion is Blocked, not final acceptance.
+- Verification: `tests.test_tutorial_evidence` passed 64 executable tests with 1 OS-symlink skip and 0 failures/errors; `status.json` parsed as JSON; `git diff --check` and planning `check-complete.ps1` Passed.
+- Local logical commit subject: `docs(tutorials): record blocked local delivery`.
+- P6.12 remains unchecked. Phase 4/5/6 and overall plan remain `in_progress`; independent human review is still `not_run` for every case.

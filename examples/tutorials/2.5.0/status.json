@@ -17,6 +17,12 @@
     "critic2": "development_reuse: retained WSL ELF configured per run",
     "external_provider": "blocked: live transport unavailable"
   },
+  "local_delivery": {
+    "status": "blocked",
+    "assessed_commit": "abfebd36125e669e4164ceb1316d058915b0ab9f",
+    "report": "P6-local-delivery-report.md",
+    "remote_writes": "not_authorized"
+  },
   "cases": [
     {
       "case_id": "T00",

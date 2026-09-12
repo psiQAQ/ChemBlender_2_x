@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 6 — 教程收口与本地交付；Phase 4/5 的明确 Blocked 项并行保留
-- Next Step: P6.11 汇总本地交付状态；只能形成带 Blocked 项的阶段报告，不能宣称最终验收或分发就绪
+- Next Step: P6.12 Blocked；先完成 P4/P5/P6 的 GUI、专业环境、教程/工程下载、当前制品和独立人工门槛，才可标记整体 complete
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -122,7 +122,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 - [x] P6.8 运行全量测试并分别报告 Passed/Failed/Skipped/Error；任何 failure 或 error 都阻止技术完成。
 - [ ] P6.9 执行 Extension validate/build、ZIP 内容审计、隔离 profile 安装、真实 `user_default` 冷启动、无 RDKit/Gemmi/prepare Viewer 验证和专业后端验证。
 - [x] P6.10 运行所有案例检查器、状态一致性测试、文档测试、离线 QA、`git diff --check` 和 planning `check-complete.ps1`。
-- [ ] P6.11 更新 active/current status 和最终本地交付报告；明确远端 CI、push、Release、PyPI 均未获授权且不属于本地完成。
+- [x] P6.11 更新 active/current status 和最终本地交付报告；明确远端 CI、push、Release、PyPI 均未获授权且不属于本地完成。
 - [ ] P6.12 最终逻辑 commit 后，仅在所有阶段和人工门槛确实完成时把 M0–M5 与 Phase 1–6 标为 complete。
 
 ## Assumptions and Defaults

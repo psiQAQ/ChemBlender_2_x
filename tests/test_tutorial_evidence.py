@@ -280,6 +280,15 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(receipt['acceptance']['human_review'], 'not_run')
         self.assertEqual(receipt['acceptance']['distribution'], 'blocked')
 
+    def test_p6_local_delivery_report_is_explicitly_blocked(self):
+        delivery = self.status['local_delivery']
+        report = (ROOT / 'examples/tutorials/2.5.0' / delivery['report']).read_text(encoding='utf-8')
+        self.assertEqual(delivery['status'], 'blocked')
+        self.assertEqual(delivery['remote_writes'], 'not_authorized')
+        self.assertIn('不具备最终用户验收或分发条件', report)
+        self.assertIn('22 个案例的 `human_review` 全部为 `not_run`', report)
+        self.assertIn('`git push`、tag、GitHub Release、PyPI 发布', report)
+
     def test_all_cases_have_separate_acceptance_dimensions(self):
         expected = {f'T{index:02d}' for index in range(21)} | {'B01'}
         cases = {case['case_id']: case for case in self.status['cases']}
