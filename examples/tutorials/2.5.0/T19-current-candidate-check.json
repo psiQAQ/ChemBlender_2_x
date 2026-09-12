@@ -1,0 +1,42 @@
+{
+  "case_id": "T19",
+  "status": "blocked",
+  "scope": "Current isolated Standard external Python integration; Viewer GUI and delivery gates remain separate.",
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "environment_qualification": "isolated_install",
+    "reader_api_version": "1.0-rc1"
+  },
+  "verified": {
+    "conformance": "1 required case passed, 0 failed, 0 skipped; 16 checks in subprocess isolation",
+    "registration": "22 built-ins before, 23 with explicit simplecoords registration, 22 after unregister",
+    "valid_fixture": "O/H/H coordinates exactly 0,0,0; 0.7,0,0.5; -0.7,0,0.5 angstrom",
+    "invalid_units": "simplecoords.invalid without scientific entities",
+    "invalid_atom_count": "simplecoords.invalid without scientific entities",
+    "cbq_validation": "passed",
+    "reopen_after_unregister": "passed; SourceRevision retains plugin, reader and API identities",
+    "ordinary_import": "current CLI/Tk GUI lists 22 built-in readers and does not include simplecoords",
+    "historical_blender_extension_installed": false,
+    "distribution_claimed": false
+  },
+  "api_boundary": {
+    "stable": "chemblender_prepare.reader_api 1.0-rc1 plugin data and registry contracts",
+    "internal_current_2_5": "preflight_reader_plugins, commit_import_preview and cbq_core.sidecar publication",
+    "statement": "The internal transaction/sidecar calls used for this current integration are not promised as stable Reader API symbols."
+  },
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-011/T19",
+    "science_receipt": ".blend-analysis/2.5-real-user-tutorials/run-011/T19/science-check.json",
+    "science_receipt_sha256": "c3ad65512926bd394d6be28989587a3eda22b0b41a5b58eb417e171e1cafba17",
+    "conformance_sha256": "1212be557fa32989d601f5af870aad9f405a41df563b3792d7e297ebdce062d0",
+    "cbq_manifest_sha256": "a9a4d9e01a784982747a29a8842cbaed46f8beb4885368670f965ca92733b0f9"
+  },
+  "blocked": {
+    "viewer_gui_render_lifecycle": "Not run while user-owned Blender PID 26228 is active; no concurrent Agent Blender is allowed.",
+    "tutorial_offline_qa_review_package": "Not run because the required Viewer GUI/render/lifecycle artifacts do not exist.",
+    "installable_plugin_distribution": "Not in scope; the historical Blender Extension must not be installed into the current Viewer.",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}

@@ -1,0 +1,89 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T19",
+  "title": "External Python Reader API integration and CBQ handoff",
+  "required_steps": [
+    {
+      "id": "s01",
+      "description": "Run the SimpleCoords reader conformance suite in the current Prepare environment",
+      "requires_gui": false
+    },
+    {
+      "id": "s02",
+      "description": "Explicitly register, discover and invoke the trusted reader from external Python, commit a validated CBQ, then unregister it",
+      "requires_gui": false
+    },
+    {
+      "id": "s03",
+      "description": "Import the validated CBQ through the current Viewer without installing the historical Blender reader Extension",
+      "requires_gui": true
+    },
+    {
+      "id": "s04",
+      "description": "Render, save/move/cold-reopen after reader removal and exercise invalid-input recovery",
+      "requires_gui": true
+    }
+  ],
+  "required_checks": [
+    "input_hash_and_license",
+    "reader_api_version",
+    "explicit_registration_discovery_unregister",
+    "conformance",
+    "invalid_unit_rejected",
+    "invalid_atom_count_rejected",
+    "cbq_validation",
+    "reopen_without_reader",
+    "ordinary_cli_does_not_autoload",
+    "stable_api_internal_pipeline_boundary",
+    "viewer_import",
+    "project_pair",
+    "cold_reopen",
+    "recovery"
+  ],
+  "required_artifact_kinds": [
+    "environment",
+    "events",
+    "assertions",
+    "gui_raw",
+    "render",
+    "scene_blend",
+    "cbq_manifest",
+    "lifecycle",
+    "review"
+  ],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "inputs": [
+    {
+      "path": "examples/reader-extension/fixtures/water.cbsimple",
+      "sha256": "ff7461bf78ca5f09959a8382795d1d8898cb8d68205bbcb75940a8a36b68fbfd",
+      "bytes": 83,
+      "license": "MIT",
+      "role": "SimpleCoords water fixture"
+    },
+    {
+      "path": "examples/reader-extension/reader.py",
+      "sha256": "496fc22a7304018aeb573b8029a525a10cab275ee5635ab6ea4b75b2e4b98a7f",
+      "bytes": 7744,
+      "license": "MIT",
+      "role": "trusted external Python reader implementation"
+    },
+    {
+      "path": "examples/reader-extension/LICENSE",
+      "sha256": "1ecec70facbddf501b8011aeb812cabeb906ecb4037fb1bbde142c8a2348e98f",
+      "bytes": 1102,
+      "license": "MIT",
+      "role": "source distribution license"
+    }
+  ],
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "reader_api_version": "1.0-rc1",
+    "required_route": "external_python"
+  },
+  "status": "blocked",
+  "human_review": "not_run",
+  "note": "External Python registration, conformance, invalid-input rejection, CBQ publication/validation and reopen after unregister passed. The ordinary CLI/Tk GUI does not auto-load this instance; Viewer GUI/render/lifecycle, tutorial/review package and independent human review are not run."
+}

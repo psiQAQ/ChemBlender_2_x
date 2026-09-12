@@ -381,6 +381,27 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['human_review'], 'not_run')
         self.assertEqual(self.status['environment_routes']['critic2'], 'development_reuse: retained WSL ELF configured per run')
 
+    def test_t19_external_reader_does_not_claim_ordinary_import(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T19')
+        spec = json.loads((base / 'T19.case-spec.json').read_text(encoding='utf-8'))
+        receipt = json.loads((base / 'T19-current-candidate-check.json').read_text(encoding='utf-8'))
+        for item in spec['inputs']:
+            path = ROOT / item['path']
+            self.assertEqual(path.stat().st_size, item['bytes'])
+            self.assertEqual(validator.sha256(path), item['sha256'])
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['candidate']['reader_api_version'], '1.0-rc1')
+        self.assertIn('22 built-in readers', receipt['verified']['ordinary_import'])
+        self.assertFalse(receipt['verified']['historical_blender_extension_installed'])
+        self.assertFalse(receipt['verified']['distribution_claimed'])
+        self.assertIn('not promised as stable', receipt['api_boundary']['statement'])
+        self.assertEqual(case['scientific_processing'], 'passed')
+        self.assertEqual(case['technical_status'], 'incomplete')
+        self.assertEqual(case['direct_gui'], 'not_run')
+        self.assertEqual(case['distribution'], 'blocked')
+        self.assertEqual(case['human_review'], 'not_run')
+
     def test_t08_t14_specs_bind_existing_input_bytes(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         for case_id in ('T08', 'T09', 'T10', 'T11', 'T12', 'T13', 'T14'):

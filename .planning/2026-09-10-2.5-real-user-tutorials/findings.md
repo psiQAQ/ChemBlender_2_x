@@ -168,3 +168,9 @@
 - The fixed water WFX produces 5 critical points (3 nuclear and 2 bond), 4 connections and 4 ordered FLUXPRINT paths. The schema contains no bond-energy field, so neither the receipt nor tutorial may infer bond energies.
 - The same WFX produces paired `40 x 40 x 40` RDG and `sign(lambda2)rho` grids with one Structure identity. The Cube Structure is translated relative to the original WFX-import Structure while pairwise geometry agrees within `1e-6 bohr`; QTAIM correctly rejects that translated Structure binding and publishes no output.
 - A pre-cancelled NCI operation publishes no CBQ output. These CLI recovery checks do not substitute for direct GUI, Blender lifecycle or independent human review.
+
+## T19 Reader API boundary
+
+- The current isolated Standard environment exposes Reader API `1.0-rc1`. The MIT SimpleCoords example passes all 16 conformance checks in subprocess isolation and can be explicitly registered, discovered, parsed and unregistered from external Python without installing the historical Blender Extension.
+- Explicit registration temporarily changes the in-process registry from 22 to 23 readers. The current CLI/Tk GUI remains at 22 built-ins and does not auto-load that Python instance; an external Reader example must never be described as appearing automatically in ordinary import UI.
+- A validated CBQ remains readable after the reader is unregistered. Reader API data/registry contracts are stable; the current `preflight_reader_plugins`, `commit_import_preview` and `cbq_core.sidecar` publication calls used to form the CBQ are internal 2.5 pipeline details, not promised stable SDK symbols.
