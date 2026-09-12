@@ -1,0 +1,71 @@
+{
+  "case_id": "T08",
+  "status": "blocked",
+  "scope": "Current isolated Prepare plus routed qc-iodata/qc-gbasis FCHK and Molden processing; GUI, render, lifecycle, tutorial and review remain separate.",
+  "candidate": {
+    "source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+    "environment_qualification": "isolated_install",
+    "route": "python.wavefunction",
+    "iodata_version": "1.0.1",
+    "gbasis_version": "0.1.0"
+  },
+  "inputs": [
+    {
+      "path": "examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf_g03.fchk",
+      "sha256": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816",
+      "bytes": 5369,
+      "method_scope": "HF/STO-3G declared by the fixed fixture and parsed basis name"
+    },
+    {
+      "path": "examples/scientific-visualization/inputs/wavefunction/h2o.molden.input",
+      "sha256": "2bf025dc02fdb689e61c980ac55dc4bef35a31e4bfc819a668ac36d721f44f06",
+      "bytes": 11936,
+      "method_scope": "source does not declare an SCF/post-SCF method; no method is inferred"
+    }
+  ],
+  "verified": {
+    "inspect_and_convert": "passed for both fixed inputs through iodata_wavefunction on python.wavefunction",
+    "orbital_boundary": "both restricted channels contain five occupied orbitals; HOMO index 4 and LUMO index 5 are zero-based",
+    "fchk_basis_and_energies": "STO-3G, 7 basis functions and 7 orbitals; HOMO -0.387671783 Eh, LUMO 0.603082408 Eh",
+    "molden_basis_and_energies": "basis label remains unknown, 19 basis functions and 19 orbitals; HOMO -0.501318358017878 Eh, LUMO 0.145164468718922 Eh",
+    "grid_geometry": "all four grids use origin [-4,-4,-4] bohr, diagonal 0.25 bohr steps and shape 33x33x33",
+    "grid_unit": "inverse_bohr_to_three_halves",
+    "signed_phase": "all four grids contain values >= +0.03 and <= -0.03; paired rendering must use equal absolute isovalues and describe phase, not charge",
+    "fchk_homo_square_integral_on_box": 0.9999982778500862,
+    "fchk_lumo_square_integral_on_box": 1.0064830629662929,
+    "molden_homo_square_integral_on_box": 0.9987280888305516,
+    "molden_lumo_square_integral_on_box": 0.8378070530675222,
+    "finite_values": true,
+    "cbq_validation": "passed for both paired projects",
+    "method_inference_avoided": true
+  },
+  "grids": [
+    {"source": "fchk", "orbital": "HOMO", "index": 4, "id": "1208fe22-a462-4957-8bd9-f201dbf9aff0", "minimum": -0.7071411896240752, "maximum": 0.7071411896240737, "positive_voxels_at_0.03": 1422, "negative_voxels_at_minus_0.03": 1422},
+    {"source": "fchk", "orbital": "LUMO", "index": 5, "id": "8810fd88-4582-4690-a828-d5b6e37933d5", "minimum": -1.1513821406715514, "maximum": 0.6236829494823066, "positive_voxels_at_0.03": 527, "negative_voxels_at_minus_0.03": 5620},
+    {"source": "molden", "orbital": "HOMO", "index": 4, "id": "8ee1e148-233f-47d6-a0e2-011f958babb5", "minimum": -0.636705310403132, "maximum": 0.636705310403132, "positive_voxels_at_0.03": 2281, "negative_voxels_at_minus_0.03": 2281},
+    {"source": "molden", "orbital": "LUMO", "index": 5, "id": "60fedd12-b95b-4a20-b054-9365517b3154", "minimum": -0.2643839272121059, "maximum": 0.22422532483029878, "positive_voxels_at_0.03": 17031, "negative_voxels_at_minus_0.03": 494}
+  ],
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-012/T08",
+    "fchk_manifest_sha256": "2f572d85f04dd8aaea777fbefe6e4a3fe39cb1dd28ebc2fa9fb8d83ddefb6f48",
+    "molden_manifest_sha256": "8bd8b3014f3b84127bb51b66d466f0d5bcd76240b091554b65709d071904a963",
+    "convert_fchk_result_sha256": "8f82107f85a73d4ba1c2806cee68da29ef25920a86fc32d53cdf253540818421",
+    "convert_molden_result_sha256": "fd6ec9300e03e897e710d5f5aa050a87c47385dee559f6b641e64cdf8ba9cfae",
+    "derive_fchk_homo_result_sha256": "1a23059a85c012ed0633c13d1f24b8c14dae595f962bfb5bb64c19d760ce7686",
+    "derive_fchk_lumo_result_sha256": "fcbc8e7f7ed1c9778db190c2c52ba217064c6077e07d17a459d0b3d58d7d668a",
+    "derive_molden_homo_result_sha256": "3062910e5369dd4cffb6fcb6a410188c3d0d97ebeaf57ea4b3894c4d3f87fefd",
+    "derive_molden_lumo_result_sha256": "26f4d8aa1cd6fc48f73fc4a3721f34ef4e849d47b51bf95f341b651a4b4a9691",
+    "validate_fchk_result_sha256": "ba3a6de1a30cc34bf8432eaed119e6b64fca8e65f3b5310db541ef36980f02e0",
+    "validate_molden_result_sha256": "482d60a761ebe0e6bf240194af25f4d834f752f0312330876fdb875e3f6e1ada"
+  },
+  "blocked": {
+    "prepare_gui": "No current direct-GUI operation was performed.",
+    "blender_phase_render": "The four signed grids are ready for paired positive/negative isosurfaces, but Blender rendering is not run.",
+    "project_pair_cold_reopen_recovery": "Not run.",
+    "tutorial_offline_qa_review_package": "Not run.",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}

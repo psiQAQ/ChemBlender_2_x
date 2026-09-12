@@ -413,16 +413,35 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['direct_gui'], 'not_run')
         self.assertEqual(case['human_review'], 'not_run')
 
-    def test_t08_environment_blocker_does_not_claim_science(self):
+    def test_t08_historical_environment_blocker_remains_historical(self):
         base = ROOT / 'examples/tutorials/2.5.0'
-        case = next(item for item in self.status['cases'] if item['case_id'] == 'T08')
         receipt = json.loads((base / 'T08-environment-blocker.json').read_text(encoding='utf-8'))
         self.assertEqual(receipt['current_candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
         self.assertFalse(receipt['current_candidate']['availability']['available'])
         self.assertEqual(receipt['existing_wavefunction_cache']['qualification'], 'development_reuse')
         self.assertEqual(receipt['existing_wavefunction_cache']['current_candidate_python_files_changed'], 8)
         self.assertEqual(receipt['scientific_processing'], 'not_run')
-        self.assertEqual(case['technical_status'], 'not_run')
+
+    def test_t08_current_science_keeps_downstream_gates_separate(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T08')
+        receipt = json.loads((base / 'T08-current-candidate-check.json').read_text(encoding='utf-8'))
+        spec = json.loads((base / 'T08.case-spec.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_prepare_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(
+            [{key: item[key] for key in ('path', 'sha256', 'bytes')} for item in receipt['inputs']],
+            [{key: item[key] for key in ('path', 'sha256', 'bytes')} for item in spec['inputs']],
+        )
+        self.assertEqual(receipt['verified']['cbq_validation'], 'passed for both paired projects')
+        self.assertTrue(receipt['verified']['method_inference_avoided'])
+        self.assertEqual({item['index'] for item in receipt['grids']}, {4, 5})
+        for grid in receipt['grids']:
+            self.assertLess(grid['minimum'], -0.03)
+            self.assertGreater(grid['maximum'], 0.03)
+            self.assertGreater(grid['positive_voxels_at_0.03'], 0)
+            self.assertGreater(grid['negative_voxels_at_minus_0.03'], 0)
+        self.assertEqual(case['scientific_processing'], 'passed')
+        self.assertEqual(case['technical_status'], 'incomplete')
         self.assertEqual(case['distribution'], 'blocked')
         self.assertEqual(case['human_review'], 'not_run')
 

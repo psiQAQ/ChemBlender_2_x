@@ -193,6 +193,11 @@
 - `qcschema.compute@1` now has an explicit `python.qcschema` route. A local Apache-2.0 PySCF 2.13.1 `py3-none-win_amd64` wheel runs under Python 3.12.14 and produced RHF/cc-pVDZ water energy `-76.0214183672713 Eh`, within `9.34e-11 Eh` of the frozen MolSSI result. The routed CBQ validates.
 - Environment qualification does not imply `distribution_ready`, case GUI/render/lifecycle completion or independent human acceptance. T16 still needs input bytes whose redistribution permission is actually recorded; user authorization to proceed does not create third-party copyright provenance.
 
+## T08 current wavefunction science
+
+- Both fixed sources passed through `python.wavefunction`: FCHK and Molden each produced restricted HOMO index 4 and LUMO index 5 grids on the explicit 33-cube geometry. All four grids contain positive and negative phase at `|0.03|` and validate as CBQ.
+- The Molden source does not declare an SCF/post-SCF method, so none is inferred. Its finite-box LUMO square integral `0.8378` is retained as a finite-box result rather than a normalization claim.
+
 ## B01 provider boundary
 
 - Current capabilities advertises `external_record.fetch@1` as `available=false` with `no live provider transport configured`. A valid credential-free QCArchive provider request reaches the reviewed worker contract and fails `dependency_missing` without output or a network request.
