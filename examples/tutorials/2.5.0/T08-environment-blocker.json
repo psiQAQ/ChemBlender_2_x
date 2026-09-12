@@ -1,0 +1,39 @@
+{
+  "case_id": "T08",
+  "status": "blocked",
+  "reason": "dependency authorization required",
+  "current_candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "standard_inspect_status": "success_with_reader_unavailable",
+    "reader_id": "iodata_wavefunction",
+    "availability": {
+      "available": false,
+      "detail": "wavefunction: not configured",
+      "reason_code": "environment_unavailable"
+    },
+    "raw_receipt": ".blend-analysis/2.5-real-user-tutorials/run-011/T08/inspect-current-standard.json",
+    "raw_receipt_sha256": "fd43412c4eb65e53e8b631e5d690f11609ec636a6686d26be17f7cc8a5a7eac2"
+  },
+  "existing_wavefunction_cache": {
+    "qualification": "development_reuse",
+    "python": ".agents/cache/gbasis-py312/Scripts/python.exe",
+    "versions": {
+      "chemblender-prepare": "0.1.0",
+      "qc-iodata": "1.0.1",
+      "qc-gbasis": "0.1.0",
+      "numpy": "1.26.4",
+      "scipy": "1.16.3"
+    },
+    "reader_available": true,
+    "current_candidate_python_files_equal": 157,
+    "current_candidate_python_files_changed": 8,
+    "configured_route": null,
+    "classification": "usable only as non-current development evidence; not a current-candidate execution route"
+  },
+  "minimum_authorized_change": "Install the frozen current Prepare wheel into the dependency-self-contained qc-iodata/qc-gbasis environment and configure python.wavefunction; do not use .pth, PYTHONPATH or source injection.",
+  "scientific_processing": "not_run",
+  "direct_gui": "not_run",
+  "render": "not_run",
+  "lifecycle": "not_run",
+  "human_review": "not_run"
+}

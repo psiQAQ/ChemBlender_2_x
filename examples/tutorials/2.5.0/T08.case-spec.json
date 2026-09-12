@@ -1,0 +1,31 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T08",
+  "title": "FCHK and Molden HOMO/LUMO orbital phase",
+  "required_steps": [
+    {"id":"s01","description":"Inspect fixed FCHK and Molden inputs through the current configured wavefunction route","requires_gui":true},
+    {"id":"s02","description":"Record basis, orbital channels, occupations, energies, source method and selected orbital indices","requires_gui":true},
+    {"id":"s03","description":"Evaluate occupied and unoccupied orbital grids with explicit origin, axes, shape and unit","requires_gui":true},
+    {"id":"s04","description":"Create paired positive/negative signed isosurfaces at the same absolute isovalue","requires_gui":true},
+    {"id":"s05","description":"Render labeled orbital views and verify phase, not charge, semantics","requires_gui":true},
+    {"id":"s06","description":"Save/move/cold-reopen the project pair and exercise cancellation and recovery","requires_gui":true}
+  ],
+  "required_checks": ["input_hash_integrity","environment_current_candidate","basis_and_orbitals","occupation_and_index","grid_geometry_and_unit","positive_negative_phase","equal_absolute_isovalue","render_scientific_accuracy","project_pair","cold_reopen","recovery"],
+  "required_artifact_kinds": ["environment","events","assertions","gui_raw","render","scene_blend","cbq_manifest","lifecycle","review"],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "inputs": [
+    {"path":"examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf_g03.fchk","sha256":"aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816","bytes":5369,"license":"LGPL-3.0 root distribution; retain per-file notices","role":"restricted HF/STO-3G FCHK"},
+    {"path":"examples/scientific-visualization/inputs/wavefunction/h2o.molden.input","sha256":"2bf025dc02fdb689e61c980ac55dc4bef35a31e4bfc819a668ac36d721f44f06","bytes":11936,"license":"LGPL-3.0 root distribution; retain per-file notices","role":"Molden orbital source without a declared SCF/post-SCF method"}
+  ],
+  "candidate": {
+    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "required_route": "python.wavefunction"
+  },
+  "status": "blocked",
+  "human_review": "not_run",
+  "note": "Blocked: dependency authorization required. The self-contained qc-iodata/qc-gbasis cache has a non-current Prepare/Core install and no configured route; the current Standard candidate reports wavefunction not configured. No source injection or dependency modification is permitted."
+}

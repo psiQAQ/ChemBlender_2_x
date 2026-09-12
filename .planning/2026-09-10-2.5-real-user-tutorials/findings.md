@@ -149,3 +149,9 @@
 - Compatible 1D3Z MODEL records map to one 1231-atom Structure plus a 10-frame coordinate `FrameSet`; source fixed-column coordinates match exactly. An identity-mismatched two-model PDB remains two independent Structures and never becomes a fabricated trajectory.
 - The APBS PQR retains all 998 partial charges and radii, including 22 zero radii. Its two blank-chain entries are inferred segments, not source chain IDs; the total stored charge differs from `-14` only by floating-point summation noise.
 - Supported MOL2 bonds create an explicit topology. The 5SUN `un` bond type prevents any of its 6248 declared bonds from being promoted to authoritative topology, while 6185 atoms and 390 substructure IDs remain available as properties.
+
+## T08 wavefunction environment boundary
+
+- The current Standard candidate recognizes `iodata_wavefunction` but reports `wavefunction: not configured`; `inspect` succeeds as metadata inspection while explicitly returning `available=false`. This is not scientific execution.
+- The existing qc-iodata/qc-gbasis cache is dependency-self-contained and its reader is available, but eight installed Prepare/Core files differ from the frozen candidate and no `python.wavefunction` route is configured. It remains `development_reuse`, not current-candidate acceptance.
+- Closing the gate requires authorization to install the already frozen current wheel into that environment and configure the route. `.pth`, `PYTHONPATH` and source injection are prohibited substitutes.

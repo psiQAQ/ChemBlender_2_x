@@ -483,3 +483,12 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - Independent installed-core science receipt Passed: `.blend-analysis/2.5-real-user-tutorials/run-011/T05/science-check.json` SHA-256 `ced1f1bb...`; tracked summary: `examples/tutorials/2.5.0/T05-current-candidate-check.json`.
 - Updated `status.json` to `blocked` / science `passed`. Prepare GUI, Blender Views/render/lifecycle, bilingual tutorial/offline QA/review package, conforming checker input and independent human review remain Not Run; P5.2 stays unchecked. Next item is P5.3 T08 environment qualification.
 - JSON parsing Passed; all 13 `TutorialStatusTests` Passed; planning `check-complete.ps1` and `git diff --check` exited 0. Planned local checkpoint subject: `test(tutorials): qualify T05 Standard formats`.
+
+2026-09-13 P5.3 T08 environment qualification and blocker:
+
+- Frozen the two T08 sources from `input-manifest.json`: water FCHK SHA-256 `aa8dec77...`, 5369 bytes, and water Molden SHA-256 `2bf025dc...`, 11936 bytes; both retain the IOData LGPL-3.0 root-distribution notice.
+- Live qc-iodata/qc-gbasis cache audit confirmed Python 3.12.13, `qc-iodata 1.0.1`, `qc-gbasis 0.1.0`, NumPy 1.26.4 and SciPy 1.16.3 from the same environment. Its `iodata_wavefunction` reader is available, but eight Prepare/Core files differ from the current wheel and no route is configured.
+- The old cached CLI does not implement top-level `--version`; that command returned argparse error. Version was instead read from installed distribution metadata. `formats --json` succeeded and was used only for capability evidence, not current-candidate acceptance.
+- Current Standard `inspect` on the exact FCHK returned protocol success with `available=false`, `reason_code=environment_unavailable` and `detail=wavefunction: not configured`; no scientific output was produced. Raw receipt: `.blend-analysis/2.5-real-user-tutorials/run-011/T08/inspect-current-standard.json` SHA-256 `fd43412c...`.
+- Added `T08.case-spec.json` and `T08-environment-blocker.json`; updated status to `blocked` while `technical_status` and `scientific_processing` remain `not_run`. P5.3 stays unchecked. Minimum change requires separate dependency authorization to install the frozen current wheel and configure `python.wavefunction`; no `.pth`, `PYTHONPATH` or source injection was used.
+- JSON parsing Passed; all 14 `TutorialStatusTests` Passed; planning `check-complete.ps1` and `git diff --check` exited 0. Planned local checkpoint subject: `docs(tutorials): record T08 environment blocker`.

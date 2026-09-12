@@ -243,9 +243,10 @@
     {
       "case_id": "T08",
       "priority": "P1",
-      "status": "not_run",
-      "status_reason": "No local case execution evidence.",
-      "candidate_scope": "none",
+      "status": "blocked",
+      "status_reason": "Current Standard reports wavefunction not configured; the self-contained qc-iodata/qc-gbasis cache has eight non-current Prepare/Core files and no configured route. Dependency authorization is required.",
+      "run": "run-011/T08-environment-check",
+      "candidate_scope": "current_candidate_environment_only",
       "technical_status": "not_run",
       "scientific_processing": "not_run",
       "direct_gui": "not_run",
@@ -255,8 +256,12 @@
       "tutorial": "not_run",
       "review_package": "not_run",
       "human_review": "not_run",
-      "distribution": "not_run",
-      "evidence_refs": []
+      "distribution": "blocked",
+      "evidence_refs": [
+        "examples/tutorials/2.5.0/T08.case-spec.json",
+        "examples/tutorials/2.5.0/T08-environment-blocker.json",
+        "examples/tutorials/2.5.0/environment-qualification.json"
+      ]
     },
     {
       "case_id": "T09",

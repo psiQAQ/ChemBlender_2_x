@@ -316,6 +316,19 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['direct_gui'], 'not_run')
         self.assertEqual(case['human_review'], 'not_run')
 
+    def test_t08_environment_blocker_does_not_claim_science(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T08')
+        receipt = json.loads((base / 'T08-environment-blocker.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['current_candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertFalse(receipt['current_candidate']['availability']['available'])
+        self.assertEqual(receipt['existing_wavefunction_cache']['qualification'], 'development_reuse')
+        self.assertEqual(receipt['existing_wavefunction_cache']['current_candidate_python_files_changed'], 8)
+        self.assertEqual(receipt['scientific_processing'], 'not_run')
+        self.assertEqual(case['technical_status'], 'not_run')
+        self.assertEqual(case['distribution'], 'blocked')
+        self.assertEqual(case['human_review'], 'not_run')
+
     def test_t06_current_frame_panel_values_match_frozen_spec(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         receipt = json.loads((base / 'T06-current-frame-panel-check.json').read_text(encoding='utf-8'))
