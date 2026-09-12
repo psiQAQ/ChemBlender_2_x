@@ -1,0 +1,56 @@
+{
+  "case_id": "T10",
+  "status": "blocked",
+  "scope": "Current isolated Prepare plus routed same-source density and ESP science; Blender coloring, lifecycle, tutorial and review remain separate.",
+  "candidate": {
+    "source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+    "environment_qualification": "isolated_install",
+    "route": "python.wavefunction",
+    "iodata_version": "1.0.1",
+    "gbasis_version": "0.1.0"
+  },
+  "input": {
+    "path": "examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf_g03.fchk",
+    "sha256": "aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816",
+    "bytes": 5369
+  },
+  "verified": {
+    "same_source": "density and ESP use the same Structure, STO-3G BasisSet, SCF total DensityMatrix and fixed FCHK provenance; ESP additionally binds the matching nuclear-charge AtomicProperty",
+    "same_affine_grid": true,
+    "shape": [66, 66, 66],
+    "origin_bohr": [-4.0625, -4.0625, -4.0625],
+    "step_vectors_bohr": [[0.125, 0.0, 0.0], [0.0, 0.125, 0.0], [0.0, 0.0, 0.125]],
+    "density_id": "b5217149-1629-4adb-9ae5-4eae35b01933",
+    "density_unit": "electron_per_cubic_bohr",
+    "esp_id": "99abaeed-6d4b-4fd2-bdd3-8669970fbfc0",
+    "esp_unit": "hartree_per_elementary_charge",
+    "nuclear_exclusion_radius_bohr": 0.05,
+    "density_extrema": [3.322879275276767e-12, 56.32063940764529],
+    "esp_extrema": [-0.12005368339978428, 55.10141145852263],
+    "density_surface_band": [0.045, 0.055],
+    "surface_band_voxels": 1686,
+    "surface_esp_range": [-0.11841375338287907, 0.3913153186709799],
+    "finite_values": true,
+    "nuclear_singularity_recovery": "origin [0,0,0] inside the 0.05-bohr exclusion radius failed with operation_failed, exit 1 and no output project",
+    "cbq_validation": "passed"
+  },
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-012/T10",
+    "manifest_sha256": "0829dd6c58f272ed75232e6697d258fa93ecc59df3d8d01b74316ac48756311f",
+    "density_result_sha256": "1992275b0bee0f62b553592c235c2c152903931335464b9ee83010773c06c5c3",
+    "esp_result_sha256": "9da1b0b2fe1654148512ee494b7efbbd050621fc73e71785da486ce761fc73e2",
+    "singularity_result_sha256": "5eb702a46c63bb6e2dd1545cbdb8634aae9b9058a0a37086ac5d079b3b001c90",
+    "validate_result_sha256": "08e9690be38290f09a0f2db9e07f5eca6183e1c54857588d0dcf573173678300"
+  },
+  "blocked": {
+    "prepare_gui": "No current direct-GUI operation was performed.",
+    "blender_surface_coloring": "Density isosurface, ESP attribute binding, explicit color range/colorbar and independent surface sampling are not rendered.",
+    "mismatch_gui_recovery": "The real nuclear-singularity rejection is recorded; wrong-grid Viewer binding remains Not Run.",
+    "project_pair_cold_reopen": "Not run.",
+    "tutorial_offline_qa_review_package": "Not run.",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}

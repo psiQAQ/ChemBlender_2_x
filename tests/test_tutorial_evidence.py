@@ -462,14 +462,23 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['direct_gui'], 'not_run')
         self.assertEqual(case['human_review'], 'not_run')
 
-    def test_t10_reuses_historical_route_blocker_without_claiming_processing(self):
-        cases = {item['case_id']: item for item in self.status['cases']}
-        case = cases['T10']
-        self.assertEqual(case['status'], 'blocked')
-        self.assertEqual(case['candidate_scope'], 'current_candidate_environment_only')
-        self.assertEqual(case['technical_status'], 'not_run')
-        self.assertEqual(case['scientific_processing'], 'not_run')
-        self.assertIn('examples/tutorials/2.5.0/T08-environment-blocker.json', case['evidence_refs'])
+    def test_t10_current_density_esp_science_keeps_viewer_gates_separate(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T10')
+        receipt = json.loads((base / 'T10-current-candidate-check.json').read_text(encoding='utf-8'))
+        spec = json.loads((base / 'T10.case-spec.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_prepare_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['input'], {key: spec['inputs'][0][key] for key in ('path', 'sha256', 'bytes')})
+        self.assertTrue(receipt['verified']['same_affine_grid'])
+        self.assertEqual(receipt['verified']['density_unit'], 'electron_per_cubic_bohr')
+        self.assertEqual(receipt['verified']['esp_unit'], 'hartree_per_elementary_charge')
+        self.assertGreater(receipt['verified']['surface_band_voxels'], 0)
+        self.assertLess(receipt['verified']['surface_esp_range'][0], 0)
+        self.assertGreater(receipt['verified']['surface_esp_range'][1], 0)
+        self.assertIn('exit 1 and no output project', receipt['verified']['nuclear_singularity_recovery'])
+        self.assertEqual(case['technical_status'], 'incomplete')
+        self.assertEqual(case['scientific_processing'], 'passed')
+        self.assertEqual(case['direct_gui'], 'not_run')
         self.assertEqual(case['human_review'], 'not_run')
 
     def test_t11_t14_scientific_route_stays_development_only(self):

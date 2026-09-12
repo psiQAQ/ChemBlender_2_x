@@ -203,6 +203,11 @@
 - Water SCF total RDM integrates to `10.009725189952228 e` on the documented 0.1-bohr grid; orbital-occupation and stored-RDM density agree to `6.21e-14` on an identical probe grid.
 - CH3 SCF spin density integrates to `0.9999988480353028 e` and retains negative values. Nitrogen post-SCF and SCF total densities remain separately labeled and form a valid same-structure, same-affine-grid `post-SCF minus SCF` difference; no missing level or spin role is synthesized.
 
+## T10 current density-surface ESP science
+
+- Water density and ESP are bound to the same Structure, BasisSet and SCF total DensityMatrix and share an exact `66^3` affine grid; density remains `electron_per_cubic_bohr` and ESP remains `hartree_per_elementary_charge`.
+- The `0.045–0.055` density surface band contains 1,686 sampled voxels with ESP spanning `-0.1184` to `0.3913`. A grid point inside the explicit 0.05-bohr nuclear exclusion radius is rejected with no output, so near-nuclear singularity handling remains visible rather than silently clipped.
+
 ## B01 provider boundary
 
 - Current capabilities advertises `external_record.fetch@1` as `available=false` with `no live provider transport configured`. A valid credential-free QCArchive provider request reaches the reviewed worker contract and fails `dependency_missing` without output or a network request.
