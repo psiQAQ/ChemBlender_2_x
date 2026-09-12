@@ -231,6 +231,16 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(audit['status'], 'blocked')
         self.assertTrue(all(item['missing'] for item in audit['documented_cases'].values()))
 
+    def test_p6_review_packages_keep_development_paths_in_evidence_only(self):
+        audit = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-review-package-path-audit.json').read_text(encoding='utf-8'))
+        self.assertEqual(audit['status'], 'passed')
+        self.assertEqual(audit['crc_status'], 'passed_all')
+        self.assertEqual(set(audit['archives']), {'T01', 'T02-current', 'T02-historical', 'T04', 'T06', 'T07', 'T17'})
+        for name, archive in audit['archives'].items():
+            self.assertFalse(archive['unsafe_member_names'], name)
+            self.assertFalse(archive['development_paths_outside_evidence'], name)
+            self.assertEqual(len(archive['sha256']), 64, name)
+
     def test_all_cases_have_separate_acceptance_dimensions(self):
         expected = {f'T{index:02d}' for index in range(21)} | {'B01'}
         cases = {case['case_id']: case for case in self.status['cases']}

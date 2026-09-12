@@ -1,0 +1,70 @@
+{
+  "schema_name": "chemblender_review_package_path_audit",
+  "schema_version": 1,
+  "plan_id": "2026-09-10-2.5-real-user-tutorials",
+  "status": "passed",
+  "rule": "Archive member names are package-relative. Development-cache paths may occur only in evidence validation appendices.",
+  "archives": {
+    "T01": {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T01-review-v2.zip",
+      "sha256": "f297991f40629e29633c09bea1b94d60ddbccdda6e5ce66b52c34507d276d51f",
+      "entry_count": 20,
+      "unsafe_member_names": [],
+      "development_path_members": 1,
+      "development_paths_outside_evidence": []
+    },
+    "T02-current": {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T02-current-review-addendum.zip",
+      "sha256": "6252a9257901e01e6e49f8b80589a11b7896fe354b8fcb1e71e26108cdb60a79",
+      "entry_count": 28,
+      "unsafe_member_names": [],
+      "development_path_members": 1,
+      "development_paths_outside_evidence": []
+    },
+    "T02-historical": {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-003/T02-review.zip",
+      "sha256": "39c659f8e42255209d19adc3425cbe977be19128e547f0ea3dd21d438b51d99e",
+      "entry_count": 242,
+      "unsafe_member_names": [],
+      "development_path_members": 0,
+      "development_paths_outside_evidence": []
+    },
+    "T04": {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T04-review.zip",
+      "sha256": "ade7561ddcbe5e6bfeb05aa1cf2825dd87a054d34378d4b59741db6dc96b56ca",
+      "entry_count": 62,
+      "unsafe_member_names": [],
+      "development_path_members": 3,
+      "development_paths_outside_evidence": []
+    },
+    "T06": {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/T06-review.zip",
+      "sha256": "8eea79a46ea7967bda201619dbb066e6a2908315bdc9c884c1c4844284c8003a",
+      "entry_count": 92,
+      "unsafe_member_names": [],
+      "development_path_members": 10,
+      "development_paths_outside_evidence": []
+    },
+    "T07": {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T07-review-v2.zip",
+      "sha256": "2733b330c9f5a252664e5225cb291035550cc69815dd74098c7f155ae813c8bb",
+      "entry_count": 73,
+      "unsafe_member_names": [],
+      "development_path_members": 12,
+      "development_paths_outside_evidence": []
+    },
+    "T17": {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T17-review-v2.zip",
+      "sha256": "f6db78b42075a21ad96eb90f7b4b32a16de48acd9a95a0c6bfec6e3377eaa9d3",
+      "entry_count": 481,
+      "unsafe_member_names": [],
+      "development_path_members": 1,
+      "development_paths_outside_evidence": []
+    }
+  },
+  "crc_status": "passed_all",
+  "limitations": [
+    "These are local review packages, not final distribution artifacts.",
+    "Package path portability does not substitute for missing GUI or independent human review."
+  ]
+}

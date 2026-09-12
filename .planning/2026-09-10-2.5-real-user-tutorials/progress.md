@@ -603,3 +603,10 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - Every documented case retains at least one declared gap: current direct GUI, readable/new-panel capture, remaining render, recovery replay or independent human review. T17 records render and `.blend` as not applicable because it is Prepare-only; this exception is not reused by Viewer cases.
 - Versioned audit: `examples/tutorials/2.5.0/P6-tutorial-completeness-audit.json`. A test requires the documented and missing groups to be disjoint and jointly cover all 22 cases, and requires every documented case to retain a nonempty missing list.
 - Classification: P6.2 is Blocked and remains unchecked. Missing scientific/GUI/render/recovery evidence is not replaced with generic tutorial prose. Next executable item is P6.3.
+
+## 2026-09-13 — P6.3 review-package path audit
+
+- Read the retained T01, T02 current addendum, T02 historical base, T04, T06, T07 and T17 ZIPs directly with Python standard-library `zipfile`; recomputed SHA-256, entry counts, CRC and member paths.
+- All seven archives passed CRC. No member name is absolute or contains a `..` segment. A content scan for the repository `.blend-analysis` root found development-cache paths only under `evidence/` validation material: counts were 1, 1, 0, 3, 10, 12 and 1 respectively. No project, input, tutorial or media member contained that development-cache root.
+- Versioned audit: `examples/tutorials/2.5.0/P6-review-package-path-audit.json`. The regression test requires the seven accepted/supporting archives, empty unsafe-name lists, empty development paths outside evidence and 64-character archive hashes.
+- Classification: P6.3 Passed and is checked. These remain local review packages and do not substitute for missing GUI or human review. Next Step is P6.4.

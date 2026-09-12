@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 6 — 教程收口与本地交付；Phase 4/5 的明确 Blocked 项并行保留
-- Next Step: P6.2 已审计并因 14 个案例缺双语章节、现有章节仍有证据缺口而 Blocked；继续 P6.3 审计本地交接包路径
+- Next Step: P6.2 保持 Blocked；继续 P6.4 重新生成并离线核对中英 HTML
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -114,7 +114,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 
 - [x] P6.1 T01/T02/T06 等正文仅保留一套当前用户流程；旧候选、失败调试、PID 和长哈希移入验证附录。
 - [ ] P6.2 所有教程包含固定输入、准确按钮/参数、逐步可见结果、原始截图、最终渲染、工程入口、恢复步骤和科学边界。
-- [ ] P6.3 本地交接包只使用包内相对路径；开发缓存绝对路径只出现在验证附录。
+- [x] P6.3 本地交接包只使用包内相对路径；开发缓存绝对路径只出现在验证附录。
 - [ ] P6.4 重新生成中英离线 HTML，实际断网检查图片、锚点、语言导航、输入、脚本、工程和 receipt 下载。
 - [ ] P6.5 为每个案例生成独立人工复做清单；第二干净 profile 按教程盲走并记录操作、结果、缺陷、修复和复测。
 - [ ] P6.6 只有独立复做者签署后，勾选对应 `human_review`；否则保持 `ready_for_human_review`。
