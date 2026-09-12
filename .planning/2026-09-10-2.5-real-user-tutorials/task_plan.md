@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 5 — 逐个实施 P1/P2 案例；Phase 3/4 的明确 Blocked 项并行保留
-- Next Step: P5.3–P5.9 保持依赖授权 Blocked；继续 P5.10 T15 critic2 路线与禁止虚构边界
+- Next Step: P5.3–P5.9 与 P5.10 的下游门槛保持 Blocked；继续 P5.11 T19 Reader API 外部 Python 集成
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -58,12 +58,12 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 
 ### Phase 3 — 专业环境资格分层
 
-**Status:** in_progress
+**Status:** complete
 
 - [x] P3.1 重新记录 Standard、scientific、wavefunction、fermi 环境的解释器、依赖版本、实际 import origin、prepare wheel 和 route 配置。
 - [x] P3.2 将环境状态明确分为 `development_reuse`、`isolated_install`、`distribution_ready`；`.pth` 跨环境引用只能是第一类。
 - [x] P3.3 对 run008/run009 receipt 保留数值与集成结果，但删除或纠正任何“可移交隔离环境”暗示。
-- [ ] P3.4 使用现有且已授权、依赖自足的环境重放可用专业路线；不新增 `.pth`、`PYTHONPATH` 或源码注入。
+- [x] P3.4 使用现有且已授权、依赖自足的环境重放可用专业路线；不新增 `.pth`、`PYTHONPATH` 或源码注入。当前唯一符合条件的 critic2 路线已用 run-009 Standard + 既有 WSL ELF 重放；其余路线按 P3.5 保持 Blocked。
 - [x] P3.5 缺少依赖的专业路线标记 `Blocked: dependency authorization required`，列出最小安装需求，同时继续 Standard/Viewer 项目。
 - [x] P3.6 更新状态、环境说明和部署边界测试，运行 `git diff --check`，提交“区分开发复用与部署资格”。
 
@@ -100,7 +100,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 - [ ] P5.7 T12：TD 输出、UV–Vis/ECD 图与 gauge/强度边界。Blocked：输入与 gauge/强度边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
 - [ ] P5.8 T13：能带、DOS、投影和能量参考。Blocked：band/DOS 独立计算及能量参考边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
 - [ ] P5.9 T14：NaCl q 点声子模式与周期相位动画。Blocked：NaCl 六文件输入与相位边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
-- [ ] P5.10 T15：critic2 QTAIM/NCI；不虚构缺失路径或键能。
+- [ ] P5.10 T15：critic2 QTAIM/NCI；不虚构缺失路径或键能。Blocked：当前 Standard CLI/Worker + 既有 critic2 1.3.15 已生成并验证 5 CP/4 有序路径与配对 40³ NCI 网格，取消及错误 Structure 绑定不发布输出；仍缺 Prepare GUI、Blender View/render/lifecycle、教程/review package 和人工验收，critic2 路线仅为 `development_reuse`。
 - [ ] P5.11 T19：Reader API 外部 Python 集成；不承诺自动进入普通导入界面。
 - [ ] P5.12 T20：QCSchema 真实 compute；交换成功不能替代实际计算成功。
 - [ ] P5.13 T16：Fermi surface；许可未关闭前不分发 POTCAR、pickle 或不合规输入。

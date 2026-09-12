@@ -161,3 +161,10 @@
 
 - With `CHEMBLENDER_PREPARE_CONFIG` set to the existing run-009 route, doctor and capabilities report cclib, pymatgen and phonopy features available. The same interpreter's `sys.path` proves those dependencies come from `.agents/cache/scientific-py312` plus the Standard environment through `.pth`.
 - Capability availability is therefore valid development evidence but not isolated-install evidence. T11–T14 must remain unexecuted for current tutorial acceptance until an authorized self-contained environment exists.
+
+## T15 critic2 boundary
+
+- The current run-009 Standard wheel can route both `topology.qtaim@1` and `grid.nci_fields@1` to the retained WSL critic2 1.3.15 ELF without `.pth`, `PYTHONPATH`, source injection or dependency installation. The project-cache ELF remains `development_reuse`, not a distribution-ready processor route.
+- The fixed water WFX produces 5 critical points (3 nuclear and 2 bond), 4 connections and 4 ordered FLUXPRINT paths. The schema contains no bond-energy field, so neither the receipt nor tutorial may infer bond energies.
+- The same WFX produces paired `40 x 40 x 40` RDG and `sign(lambda2)rho` grids with one Structure identity. The Cube Structure is translated relative to the original WFX-import Structure while pairwise geometry agrees within `1e-6 bohr`; QTAIM correctly rejects that translated Structure binding and publishes no output.
+- A pre-cancelled NCI operation publishes no CBQ output. These CLI recovery checks do not substitute for direct GUI, Blender lifecycle or independent human review.

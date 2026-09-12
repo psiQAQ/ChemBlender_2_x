@@ -354,6 +354,33 @@ class TutorialStatusTests(unittest.TestCase):
             self.assertEqual(case['distribution'], 'blocked')
             self.assertEqual(case['human_review'], 'not_run')
 
+    def test_t15_current_science_keeps_gui_and_distribution_blocked(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T15')
+        spec_path = base / 'T15.case-spec.json'
+        receipt_path = base / 'T15-current-candidate-check.json'
+        spec = json.loads(spec_path.read_text(encoding='utf-8'))
+        receipt = json.loads(receipt_path.read_text(encoding='utf-8'))
+        source = ROOT / spec['inputs'][0]['path']
+        self.assertEqual(source.stat().st_size, spec['inputs'][0]['bytes'])
+        self.assertEqual(validator.sha256(source), spec['inputs'][0]['sha256'])
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['candidate']['critic2_route_qualification'], 'development_reuse')
+        self.assertIn('5 critical points', receipt['verified']['qtaim'])
+        self.assertIn('40x40x40', receipt['verified']['nci'])
+        self.assertFalse(receipt['verified']['bond_energy_claimed'])
+        self.assertEqual(receipt['raw_evidence']['root'], '.blend-analysis/2.5-real-user-tutorials/run-011/T15')
+        self.assertTrue(all(
+            len(value) == 64 for key, value in receipt['raw_evidence'].items()
+            if key.endswith('_sha256')
+        ))
+        self.assertEqual(case['scientific_processing'], 'passed')
+        self.assertEqual(case['technical_status'], 'incomplete')
+        self.assertEqual(case['direct_gui'], 'not_run')
+        self.assertEqual(case['distribution'], 'blocked')
+        self.assertEqual(case['human_review'], 'not_run')
+        self.assertEqual(self.status['environment_routes']['critic2'], 'development_reuse: retained WSL ELF configured per run')
+
     def test_t08_t14_specs_bind_existing_input_bytes(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         for case_id in ('T08', 'T09', 'T10', 'T11', 'T12', 'T13', 'T14'):

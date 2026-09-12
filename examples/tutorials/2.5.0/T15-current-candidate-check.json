@@ -1,0 +1,47 @@
+{
+  "case_id": "T15",
+  "status": "blocked",
+  "scope": "Current Standard CLI/Worker plus retained WSL critic2; GUI, Blender, distribution and human gates remain separate.",
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "standard_environment_qualification": "isolated_install",
+    "critic2_route_qualification": "development_reuse",
+    "critic2_version": "1.3.15",
+    "critic2_sha256": "4f4fdb6b915c994cd3673778a175bbb1d8ce2ebff89b3a42c6d31d4f051f9f4e"
+  },
+  "input": {
+    "path": "examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf.wfx",
+    "sha256": "7f9769dc050126f5a5bbf7e1f03d64751838269f5f123da33d28dc7e80a4e183",
+    "bytes": 5280
+  },
+  "verified": {
+    "doctor_and_capabilities": "passed; topology.qtaim and grid.nci_fields available with critic2 1.3.15",
+    "qtaim": "5 critical points: 3 nuclear and 2 bond; 4 connections; 4 ordered paths with 3/8/8/3 samples",
+    "nci": "paired 40x40x40 reduced_density_gradient and sign_lambda2_rho grids on one Structure; finite values and units validated",
+    "bond_energy_claimed": false,
+    "mismatched_structure": "translated NCI Cube Structure rejected for QTAIM without output; pairwise geometry remained equal within 1e-6 bohr",
+    "cancel": "pre-cancelled NCI returned cancelled without output",
+    "cbq_validation": "passed_for_qtaim_and_nci",
+    "original_input_unchanged": true
+  },
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-011/T15",
+    "science_receipt": ".blend-analysis/2.5-real-user-tutorials/run-011/T15/science-check.json",
+    "science_receipt_sha256": "a520a25e9aa509ed12d76111cf1b2a61704edc30e9a29d1a38aa0810c51bd357",
+    "nci_result_sha256": "8bfc24e36f492b31df7de73a266d97ffdb04c5353d09f88e36af77de774fb1a7",
+    "qtaim_result_sha256": "82b9f41deaf2d398e04301708aece439df1472f3f077c3b1388a180adb6aa656",
+    "mismatched_structure_result_sha256": "fb767e49d7527bb5b3018e0a56dc77c14333ad6f579ff0a613cbc52d7eb8dccf",
+    "cancel_result_sha256": "cf76250c6fd16386be3f84edc775acfad956fde4a41a85860f1eb0fec223a227",
+    "nci_validation_sha256": "90bd81c18ebe6ca01d93806188b5e5c5efca4fe498a8526d6ee6b58da582afda",
+    "qtaim_validation_sha256": "e453ee09c891cbcce3745a4036581699b4aaaa902733f8306a6626b6c22bd7b0"
+  },
+  "blocked": {
+    "prepare_gui": "No current direct-GUI operation was performed.",
+    "blender_views_render_lifecycle": "Not run while user-owned Blender PID 26228 is active; no concurrent Agent Blender is allowed.",
+    "tutorial_offline_qa_review_package": "Not run because the required GUI/render/lifecycle artifacts do not exist.",
+    "distribution": "The retained WSL critic2 cache is a development route, not a distribution-ready processor environment.",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}

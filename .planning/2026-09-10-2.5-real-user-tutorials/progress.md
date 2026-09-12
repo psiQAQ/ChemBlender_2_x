@@ -509,3 +509,29 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - Frozen T11 four-file Gaussian/ORCA IR/Raman inputs; T12 three-file Gaussian/ORCA TD/UV-Vis/ECD inputs; T13 separate silicon band and DOS calculations; T14 six-file NaCl phonopy bundle. Hashes, byte sizes, licenses and scientific non-substitution rules come from `input-manifest.json`.
 - Added the shared `T11-T14-scientific-route-blocker.json` and four case specs. T11–T14 are `blocked` with technical/scientific processing `not_run`; all four checklist items remain unchecked. Next item is P5.10 T15.
 - JSON and all T08–T14 input byte/hash bindings Passed; all 17 `TutorialStatusTests` Passed; planning `check-complete.ps1` and `git diff --check` exited 0. Planned local checkpoint subject: `docs(tutorials): record scientific route blockers`.
+## 2026-09-13 — T15 current critic2 CLI/Worker qualification
+
+- Goal: freeze the T15 water WFX, run current-candidate QTAIM/NCI through an existing authorized critic2 executable, and retain the GUI/distribution/human boundaries.
+- Candidate and route:
+  - Standard CLI/Python: `.blend-analysis/2.5-real-user-tutorials/run-009/bin/chemblender-prepare.exe` and its isolated current-wheel Python.
+  - Prepare wheel SHA-256: `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`.
+  - critic2: `.agents/cache/critic2-build/src/critic2`, 10,688,624 bytes, SHA-256 `4f4fdb6b915c994cd3673778a175bbb1d8ce2ebff89b3a42c6d31d4f051f9f4e`, version 1.3.15.
+  - Per-run `processor.json` only configures the retained absolute ELF path. No package, `.pth`, `PYTHONPATH`, source injection or dependency file changed.
+- Input: `examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf.wfx`, 5,280 bytes, SHA-256 `7f9769dc050126f5a5bbf7e1f03d64751838269f5f123da33d28dc7e80a4e183`; original IOData Git blob and LGPL-3.0 root-distribution notice retained.
+- Commands and results:
+  - `chemblender-prepare capabilities --json` and `doctor --json --task-directory .../T15/doctor-task`: exit 0; both `grid.nci_fields@1` and `topology.qtaim@1` available with critic2 1.3.15; doctor status `passed` with unrelated optional-route warnings.
+  - `derive ... --operation grid.nci_fields --parameters '{"grid_points":[40,40,40]}' --artifact wavefunction=...`: success; one Structure plus paired `reduced_density_gradient` and `sign_lambda2_rho` Grid3D values, both shape 40×40×40.
+  - First `topology.qtaim` against the NCI Cube Structure: failed with `CPREPORT atom identities/coordinates do not uniquely match the Structure`; no output published. Independent comparison proved the Cube Structure is a translation of the WFX-import Structure, with pairwise-distance max delta `7.438496194556166e-07 bohr` and translation residual `3.3333333249174757e-07 bohr`.
+  - Repeated `topology.qtaim` against the retained immutable CBQ Structure imported from the same WFX: success; 5 CPs (3 nuclear, 2 bond), 4 connections and 4 ordered paths with 3/8/8/3 samples. No bond-energy field or claim was added.
+  - Both resulting CBQs passed current `chemblender-prepare validate --json`.
+  - Pre-created cancel marker followed by NCI derive: Worker status `cancelled`, CLI exit 1 and no output directory.
+- Harness correction: the first independent audit completed its assertions but failed during cleanup because it called nonexistent `QCProject.close()`. It was corrected to the existing `close_project()` API and rerun; the final audit verdict is `passed`.
+- Receipt/test correction: the first status-test run failed because the QTAIM result SHA-256 was transcribed as a 63-character value. Recomputing the file hash gave `82b9f41deaf2d398e04301708aece439df1472f3f077c3b1388a180adb6aa656`; the tracked receipt was corrected before commit.
+- Evidence:
+  - Raw root: `.blend-analysis/2.5-real-user-tutorials/run-011/T15/`.
+  - Science audit: `science-check.json`, SHA-256 `a520a25e9aa509ed12d76111cf1b2a61704edc30e9a29d1a38aa0810c51bd357`.
+  - Versioned spec/receipt: `examples/tutorials/2.5.0/T15.case-spec.json` and `T15-current-candidate-check.json`.
+- Classification: scientific processing Passed; recovery partial (CLI cancel and invalid binding); technical status Incomplete. `critic2` route is `development_reuse`; direct GUI, Blender View/render/save/move/cold/rebuild, tutorial/offline QA, review package, independent human review and distribution are Not Run/Blocked.
+- Checklist: P3.4 is complete for the only currently authorized, dependency-self-contained professional route; P5.10 remains unchecked because its downstream gates are missing. Next Step is P5.11 T19.
+- Verification: full `tests.test_tutorial_evidence` ran 53 tests with 0 failures/errors and 1 symlink-permission skip; planning `check-complete.ps1` and `git diff --check` exited 0. The first focused run's hash-length failure is recorded above and was corrected before this passing run.
+- Commit: pending local logical commit; no push, tag, Release or PyPI publication.

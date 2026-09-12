@@ -14,7 +14,7 @@
     "wavefunction": "blocked: dependency authorization required",
     "fermi": "blocked: dependency authorization required",
     "qcschema_compute": "blocked: dependency authorization required",
-    "critic2": "blocked: dependency authorization required",
+    "critic2": "development_reuse: retained WSL ELF configured per run",
     "external_provider": "blocked: live transport unavailable"
   },
   "cases": [
@@ -380,20 +380,24 @@
     {
       "case_id": "T15",
       "priority": "P1",
-      "status": "not_run",
-      "status_reason": "No local case execution evidence.",
-      "candidate_scope": "none",
-      "technical_status": "not_run",
-      "scientific_processing": "not_run",
+      "status": "blocked",
+      "status_reason": "Current Standard CLI/Worker QTAIM and NCI processing passed with the retained WSL critic2 route; direct GUI, Blender render/lifecycle, tutorial/review package and independent review are not run.",
+      "run": "run-011/T15",
+      "candidate_scope": "current_prepare_with_development_critic2_route",
+      "technical_status": "incomplete",
+      "scientific_processing": "passed",
       "direct_gui": "not_run",
       "authorized_replay": "not_run",
       "render": "not_run",
-      "recovery": "not_run",
+      "recovery": "partial_cli_cancel_and_binding_rejection",
       "tutorial": "not_run",
       "review_package": "not_run",
       "human_review": "not_run",
-      "distribution": "not_run",
-      "evidence_refs": []
+      "distribution": "blocked",
+      "evidence_refs": [
+        "examples/tutorials/2.5.0/T15.case-spec.json",
+        "examples/tutorials/2.5.0/T15-current-candidate-check.json"
+      ]
     },
     {
       "case_id": "T16",
