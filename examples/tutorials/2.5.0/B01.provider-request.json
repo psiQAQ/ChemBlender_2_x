@@ -1,0 +1,15 @@
+{
+  "connector_request": {
+    "schema_name": "chemblender_external_record_request",
+    "schema_version": 1,
+    "provider": "qcarchive",
+    "connector_version": "1",
+    "locator": {
+      "server_url": "https://archive.example.org",
+      "record_id": "42"
+    },
+    "envelope_type": "qcschema",
+    "authentication_ref": null
+  },
+  "transport": "provider"
+}

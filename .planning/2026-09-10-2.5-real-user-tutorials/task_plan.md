@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 5 — 逐个实施 P1/P2 案例；Phase 3/4 的明确 Blocked 项并行保留
-- Next Step: P5.3–P5.13 的未完成门槛保持 Blocked；继续 P5.14 B01 外部 provider unavailable 边界
+- Next Step: P5.3–P5.14 的未完成门槛保持 Blocked；核对 P5.15/P5.16 的逐案例状态、commit 和阻塞汇总
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -104,7 +104,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 - [ ] P5.11 T19：Reader API 外部 Python 集成；不承诺自动进入普通导入界面。Blocked：当前 Standard 外部 Python 显式注册/discovery/unregister、conformance、非法输入拒绝、CBQ 发布/validate/注销后重开均通过；普通 CLI/Tk GUI 仍仅有 22 个内置 reader。缺 Viewer GUI/render/lifecycle、教程/review package 和人工验收。
 - [ ] P5.12 T20：QCSchema 真实 compute；交换成功不能替代实际计算成功。Blocked：当前 Standard 对固定 MolSSI AtomicResult 的交换、gradient/force 语义、依赖缺失失败与取消均有证据；QCEngine/PySCF 均未安装，实际 SCF 未运行，缺 GUI/render/lifecycle、教程/review package 和人工验收。
 - [ ] P5.13 T16：Fermi surface；许可未关闭前不分发 POTCAR、pickle 或不合规输入。Blocked：cache-only text allowlist 的字节验证通过，但 archive 无内含 LICENSE、再分发未获批准；未复制/处理/分发 POTCAR 或 pickle。当前 fermi route 未配置且缓存环境有 8 个非当前 Prepare/Core 文件，科学处理及全部下游门槛未运行。
-- [ ] P5.14 B01：验证 provider unavailable 的真实诊断边界；没有 live transport 时不伪造在线成功。
+- [ ] P5.14 B01：验证 provider unavailable 的真实诊断边界；没有 live transport 时不伪造在线成功。Blocked：当前 capabilities、真实 provider dependency、缺凭据与取消边界均通过且无输出/网络请求；缺直接 GUI、教程/offline QA、review package 和人工验收。负向边界未计作正向 fetch 成功。
 - [ ] P5.15 每完成一个案例立即更新 checklist、`status.json`、教程索引和 `progress.md`，并作独立逻辑 commit。
 - [ ] P5.16 所有未获依赖或许可授权的项目保持未勾选并记录阻塞，不用 skip 冒充通过。
 

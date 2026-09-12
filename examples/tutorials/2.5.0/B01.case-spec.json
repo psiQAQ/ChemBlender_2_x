@@ -1,0 +1,45 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "B01",
+  "title": "External provider unavailable boundary",
+  "required_steps": [
+    {"id": "s01", "description": "Read current capabilities and doctor output for external_record.fetch", "requires_gui": false},
+    {"id": "s02", "description": "Submit a valid provider request and retain the real unavailable result without fake transport", "requires_gui": false},
+    {"id": "s03", "description": "Exercise missing-authentication and cancellation recovery without publishing output", "requires_gui": false},
+    {"id": "s04", "description": "Show the unavailable state in the public UI and explain it in the bilingual tutorial", "requires_gui": true}
+  ],
+  "required_checks": [
+    "capability_available_false",
+    "capability_reason",
+    "provider_dependency_missing",
+    "authentication_missing",
+    "cancellation_no_publication",
+    "no_network_fetch_claim",
+    "offline_fixture_not_live",
+    "pubchem_not_generic_provider",
+    "direct_gui",
+    "tutorial",
+    "independent_review"
+  ],
+  "required_artifact_kinds": ["environment", "events", "assertions", "gui_raw", "recovery", "review"],
+  "requires_project_pair": false,
+  "requires_cold_reopen": false,
+  "requires_independent_review": true,
+  "inputs": [
+    {
+      "path": "examples/tutorials/2.5.0/B01.provider-request.json",
+      "sha256": "779db0ee3efdcd2598e224521ba671db2a4aa35e64abe3a705d176a9a063d4c6",
+      "bytes": 365,
+      "license": "project-authored request",
+      "role": "credential-free QCArchive provider boundary request"
+    }
+  ],
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "operation": "external_record.fetch@1"
+  },
+  "status": "blocked",
+  "human_review": "not_run",
+  "note": "CLI capability and negative recovery boundaries passed. There was no network request or positive fetch; public GUI/tutorial/review and independent human review are not run."
+}

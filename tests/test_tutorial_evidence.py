@@ -442,6 +442,26 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['distribution'], 'blocked')
         self.assertEqual(case['human_review'], 'not_run')
 
+    def test_b01_unavailable_boundary_is_not_positive_fetch(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'B01')
+        spec = json.loads((base / 'B01.case-spec.json').read_text(encoding='utf-8'))
+        receipt = json.loads((base / 'B01-current-candidate-check.json').read_text(encoding='utf-8'))
+        request = ROOT / spec['inputs'][0]['path']
+        self.assertEqual(request.stat().st_size, spec['inputs'][0]['bytes'])
+        self.assertEqual(validator.sha256(request), spec['inputs'][0]['sha256'])
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertIn('available=false', receipt['verified']['capability'])
+        self.assertFalse(receipt['verified']['network_request_performed'])
+        self.assertFalse(receipt['verified']['positive_fetch_succeeded'])
+        self.assertFalse(receipt['verified']['offline_fixture_claimed_as_live'])
+        self.assertFalse(receipt['verified']['pubchem_claimed_as_generic_provider'])
+        self.assertEqual(case['scientific_processing'], 'not_applicable_boundary')
+        self.assertEqual(case['technical_status'], 'incomplete')
+        self.assertEqual(case['direct_gui'], 'not_run')
+        self.assertEqual(case['distribution'], 'not_applicable_boundary')
+        self.assertEqual(case['human_review'], 'not_run')
+
     def test_t08_t14_specs_bind_existing_input_bytes(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         for case_id in ('T08', 'T09', 'T10', 'T11', 'T12', 'T13', 'T14'):

@@ -186,3 +186,9 @@
 - The retained SrVO3 archive is cache-only: its dataset card declares MIT, the archive has no LICENSE and redistribution is not approved. Read-only verification covers only six reviewed VASP text members. No POTCAR or pickle is extracted, executed or distributed.
 - The existing PyProcar 6.5.0 environment is dependency-self-contained but remains `development_reuse`: eight Prepare/Core files differ from the current wheel and `python.fermi` is not configured. The current operation probe fails `environment_unavailable` without output before any private input is staged.
 - A public T16 requires both an explicitly redistributable uniform-k-mesh bundle and authorization to update/configure the existing Fermi environment. Neither gate can substitute for the other.
+
+## B01 provider boundary
+
+- Current capabilities advertises `external_record.fetch@1` as `available=false` with `no live provider transport configured`. A valid credential-free QCArchive provider request reaches the reviewed worker contract and fails `dependency_missing` without output or a network request.
+- An explicit missing credential fails `authentication_missing`, and pre-cancellation publishes nothing. These are valid recovery checks but not positive provider success.
+- The offline fixture transport and dedicated PubChem converter are separate paths. Neither proves that QCArchive, AiiDA or NOMAD live transport is configured.

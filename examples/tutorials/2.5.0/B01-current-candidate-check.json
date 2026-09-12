@@ -1,0 +1,36 @@
+{
+  "case_id": "B01",
+  "status": "blocked",
+  "scope": "Current isolated Standard negative boundary only; not a positive online-fetch case.",
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "environment_qualification": "isolated_install",
+    "operation": "external_record.fetch@1"
+  },
+  "verified": {
+    "capability": "available=false; reason=no live provider transport configured",
+    "provider_request": "dependency_missing: optional qcarchive connector backend is not installed; no output",
+    "authentication_request": "authentication_missing: external connector authentication is unavailable; no output",
+    "pre_cancelled_request": "cancelled before result publication; no output",
+    "network_request_performed": false,
+    "positive_fetch_succeeded": false,
+    "offline_fixture_claimed_as_live": false,
+    "pubchem_claimed_as_generic_provider": false
+  },
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-011/B01",
+    "capability_receipt": ".blend-analysis/2.5-real-user-tutorials/run-011/B01/capability-check.json",
+    "capability_receipt_sha256": "fd3a5db84a7a3d26b044e698e4858aa5493c26720af6dbda50894733145b0b03",
+    "provider_result_sha256": "e30c543fa744fe13a8441f457fa3fd8bf6821e62e7d70493e2a9450f8064b9ea",
+    "authentication_result_sha256": "ace78a99f59b945b73f5651a49b5479cfb985bfc83966d5a2ffc5f4210382362",
+    "cancel_result_sha256": "44932090976743140c8652b494872aa446222f81692aae6d3e3ffcadb1f4d646"
+  },
+  "blocked": {
+    "positive_provider": "A real provider requires a user-selected service, deployment and authentication strategy plus independent product/security authorization.",
+    "direct_gui": "The current unavailable state has no direct GUI capture.",
+    "tutorial_offline_qa_review_package": "not_run",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}
