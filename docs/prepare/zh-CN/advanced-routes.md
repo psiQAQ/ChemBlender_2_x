@@ -8,7 +8,8 @@ Standard 不需要 JSON。高级用户可以把 `chemblender-prepare.json` 放�
   "python": {
     "wavefunction": "D:\\envs\\wavefunction\\Scripts\\python.exe",
     "scientific": "D:\\envs\\scientific\\Scripts\\python.exe",
-    "fermi": "D:\\envs\\fermi\\Scripts\\python.exe"
+    "fermi": "D:\\envs\\fermi\\Scripts\\python.exe",
+    "qcschema": "D:\\envs\\qcschema\\Scripts\\python.exe"
   },
   "critic2": "D:\\tools\\critic2.exe"
 }
@@ -20,4 +21,4 @@ Standard 不需要 JSON。高级用户可以把 `chemblender-prepare.json` 放�
 uv pip install --python D:\envs\wavefunction\Scripts\python.exe --no-deps --reinstall D:\Downloads\chemblender_prepare-0.1.0-py3-none-any.whl
 ```
 
-随后只安装并固定需要的后端族：wavefunction 使用 qc-gbasis/qc-iodata，scientific 使用 ASE/cclib/pymatgen/phonopy，Fermi 使用 pyprocar；critic2 使用独立 executable。route 通过 `python -I -m chemblender_prepare.worker.runner` 运行，禁止注入源码或其他 `site-packages`。用 `capabilities` 和 `doctor` 核对实际 Python、prepare 路径、后端版本和 NumPy。
+随后只安装并固定需要的后端族：wavefunction 使用 qc-gbasis/qc-iodata，scientific 使用 ASE/cclib/pymatgen/phonopy，Fermi 使用 pyprocar，QCSchema compute 使用 PySCF 或 QCEngine；critic2 使用独立 executable。route 通过 `python -I -m chemblender_prepare.worker.runner` 运行，禁止注入源码或其他 `site-packages`。用 `capabilities` 和 `doctor` 核对实际 Python、prepare 路径、后端版本和 NumPy。

@@ -22,7 +22,8 @@ from cbq_core.worker_protocol import (
 
 CAPABILITY_SCHEMA_VERSION = "1"
 CONFIGURATION_ENVIRONMENT = "CHEMBLENDER_PREPARE_CONFIG"
-_ENVIRONMENTS = frozenset({"wavefunction", "scientific", "fermi"})
+_ROUTED_ENVIRONMENTS = ("wavefunction", "scientific", "fermi", "qcschema")
+_ENVIRONMENTS = frozenset(_ROUTED_ENVIRONMENTS)
 _SCIENTIFIC_READERS = frozenset({
     "ase-structure",
     "cclib_output",
@@ -101,6 +102,8 @@ def request_environment(request):
         return "scientific"
     if request.operation_id == "periodic.fermi_surface":
         return "fermi"
+    if request.operation_id == "qcschema.compute":
+        return "qcschema"
     if request.operation_id == "reader.parse":
         return _reader_environment(request.parameters.get("reader_id"))
     return "current"
@@ -177,6 +180,7 @@ def _operation_capability(operation_id, operation_version, probes, critic2):
     elif operation_id == "periodic.fermi_surface":
         environment, required = "fermi", ("pyprocar",)
     elif operation_id == "qcschema.compute":
+        environment = "qcschema"
         any_required = ("qcengine", "pyscf")
     elif operation_id.startswith("molecule."):
         required = ("rdkit",)
@@ -265,7 +269,7 @@ def capability_document(configuration=None):
     configuration = configuration or load_configuration()
     probes_by_path = {}
     probes = {}
-    for environment in ("current", "wavefunction", "scientific", "fermi"):
+    for environment in ("current", *_ROUTED_ENVIRONMENTS):
         executable = _route_executable(configuration, environment)
         if executable is None:
             probes[environment] = {
@@ -288,7 +292,7 @@ def capability_document(configuration=None):
         for operation_id, operation_version in sorted(default_registry()._operations)
     ]
     environments = []
-    for name in ("current", "wavefunction", "scientific", "fermi"):
+    for name in ("current", *_ROUTED_ENVIRONMENTS):
         probe = probes[name]
         environments.append({
             "name": name,
@@ -383,15 +387,18 @@ def doctor_document(configuration=None, task_directory=None):
         })
     probes = {item["name"]: item for item in capabilities["environments"]}
     dependency_groups = (
-        ("current", ("numpy",), True),
-        ("wavefunction", ("qc-gbasis", "qc-iodata"), True),
-        ("scientific", ("ase", "cclib", "pymatgen-core", "phonopy"), True),
-        ("fermi", ("pyprocar",), True),
-        ("current", ("rdkit", "gemmi"), True),
+        ("current", ("numpy",), True, False),
+        ("wavefunction", ("qc-gbasis", "qc-iodata"), True, False),
+        ("scientific", ("ase", "cclib", "pymatgen-core", "phonopy"), True, False),
+        ("fermi", ("pyprocar",), True, False),
+        ("qcschema", ("qcengine", "pyscf"), True, True),
+        ("current", ("rdkit", "gemmi"), True, False),
     )
-    for environment, required, routed in dependency_groups:
+    for environment, required, routed, require_any in dependency_groups:
         versions = probes[environment]["versions"]
-        missing = [name for name in required if name not in versions]
+        present = [name for name in required if name in versions]
+        missing = ([] if require_any and present else
+                   [name for name in required if name not in versions])
         configured = environment == "current" or environment in configuration["python"]
         if missing and routed and configured:
             status = "failed"
@@ -403,8 +410,10 @@ def doctor_document(configuration=None, task_directory=None):
         checks.append({
             "id": "dependencies_" + name,
             "status": status,
-            "message": ("missing " + ", ".join(missing) if missing else
-                        ", ".join(f"{item}={versions[item]}" for item in required)),
+            "message": ("missing " + (" or " if require_any else ", ").join(missing)
+                        if missing else ", ".join(
+                            f"{item}={versions[item]}" for item in present
+                        )),
             "fix": (f"Install the documented {name} dependencies in the configured environment."
                     if missing else None),
         })

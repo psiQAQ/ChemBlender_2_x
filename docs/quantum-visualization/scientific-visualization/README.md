@@ -36,7 +36,7 @@
 | --- | --- | --- |
 | Blender 5.1.1 自带 NumPy | CBQ Viewer、纯 Mesh 编辑、View、渲染和保存 | 私有 profile 通过；正式 ZIP 无科学 wheel |
 | `chemblender-prepare` | 22 Reader、RDKit、wavefunction、Fermi、QTAIM、NCI、phonon | capabilities/Worker v1/doctor 与真实操作通过 |
-| 外部处理程序配置文件 | 固定 wavefunction/scientific/fermi Python 与 critic2 路由 | 仅存在外部环境；路径不写入 `.blend` 或 CBQ |
+| 外部处理程序配置文件 | 固定 wavefunction/scientific/fermi/qcschema Python 与 critic2 路由 | 仅存在外部环境；路径不写入 `.blend` 或 CBQ |
 
 处理程序环境版本、哈希锁和安装影响见[独立环境提案](../../../examples/scientific-visualization/dependencies/PROPOSAL.md)。此手册不触发安装；运行时能力以 **Test Processor** 或 `chemblender-prepare capabilities --json` 的真实结果为准。
 

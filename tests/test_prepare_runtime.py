@@ -47,6 +47,7 @@ class PrepareRuntimeTests(unittest.TestCase):
                 "wavefunction": sys.executable,
                 "scientific": sys.executable,
                 "fermi": sys.executable,
+                "qcschema": sys.executable,
             },
             "critic2": str(self.root / "critic2"),
         }), encoding="utf-8")
@@ -75,6 +76,7 @@ class PrepareRuntimeTests(unittest.TestCase):
         self.assertEqual(request_environment(self.request("wavefunction.mo_grid")[1]), "wavefunction")
         self.assertEqual(request_environment(self.request("periodic.fermi_surface")[1]), "fermi")
         self.assertEqual(request_environment(self.request("periodic.phonon")[1]), "scientific")
+        self.assertEqual(request_environment(self.request("qcschema.compute")[1]), "qcschema")
         self.assertEqual(request_environment(self.request("topology.qtaim")[1]), "current")
         reader = self.request("reader.parse", {"reader_id": "pymatgen-vasp-grid"})[1]
         self.assertEqual(request_environment(reader), "scientific")
@@ -105,7 +107,8 @@ class PrepareRuntimeTests(unittest.TestCase):
             "executable": sys.executable,
             "versions": {"chemblender-prepare": "0.1.0",
                          "numpy": "1.26.4", "qc-gbasis": "0.1.0",
-                         "qc-iodata": "1.0.1", "phonopy": "4.4.0"},
+                         "qc-iodata": "1.0.1", "phonopy": "4.4.0",
+                         "pyscf": "2.14.0"},
             "error": None,
         }
         critic = {"available": True, "version": "1.3.15", "error": None}
@@ -132,7 +135,11 @@ class PrepareRuntimeTests(unittest.TestCase):
                          {"qc-iodata": "1.0.1", "chemblender-prepare": "0.1.0"})
         self.assertFalse(operations[("external_record.fetch", "1")]["available"])
         self.assertIn("provider", operations[("external_record.fetch", "1")]["reason"])
-        self.assertFalse(operations[("qcschema.compute", "1")]["available"])
+        self.assertTrue(operations[("qcschema.compute", "1")]["available"])
+        self.assertEqual(operations[("qcschema.compute", "1")]["environment"],
+                         "qcschema")
+        self.assertEqual(operations[("qcschema.compute", "1")]["backend_versions"],
+                         {"pyscf": "2.14.0", "chemblender-prepare": "0.1.0"})
 
         stream = io.StringIO()
         with patch("chemblender_prepare.runtime._probe_python", return_value=probe), \
@@ -220,6 +227,7 @@ class PrepareRuntimeTests(unittest.TestCase):
         checks = {item["id"]: item for item in document["checks"]}
         self.assertEqual(checks["task_directory"]["status"], "passed")
         self.assertEqual(checks["dependencies_formats"]["status"], "failed")
+        self.assertEqual(checks["dependencies_qcschema"]["status"], "failed")
         self.assertEqual(checks["critic2"]["status"], "warning")
         self.assertIn("Configure", checks["critic2"]["fix"])
         self.assertEqual(checks["optional_operations"]["status"], "warning")

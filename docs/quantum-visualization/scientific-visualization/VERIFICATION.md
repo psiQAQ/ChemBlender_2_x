@@ -50,4 +50,4 @@ Extension 本地证据位于 `.agents/cache/l8-final-02/`，发行物副本位�
 | CBQ 损坏或旧 schema | 保留原包并报告检查/升级失败；事务导入不留下半项目 |
 | 源文件、处理程序或渲染缓存移走 | 权威 CBQ 数组继续可读；本地 View 可重建，外部重计算需重新配置处理程序 |
 
-重放时使用独立 `BLENDER_USER_RESOURCES`。运行环境能力以 `chemblender-prepare capabilities --json` 和 `doctor` 的当次输出为准；根 `.venv` 未配置专用 scientific/fermi/wavefunction 路由时报告 warning 是预期行为，不等于已配置缓存环境失效。
+重放时使用独立 `BLENDER_USER_RESOURCES`。运行环境能力以 `chemblender-prepare capabilities --json` 和 `doctor` 的当次输出为准；根 `.venv` 未配置专用 scientific/fermi/wavefunction/qcschema 路由时报告 warning 是预期行为，不等于已配置缓存环境失效。
