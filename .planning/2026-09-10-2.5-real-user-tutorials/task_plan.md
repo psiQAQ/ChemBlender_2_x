@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 6 — 教程收口与本地交付；Phase 4/5 的明确 Blocked 项并行保留
-- Next Step: P6.7 因保留 Extension 早于 T06 面板变更且多项门槛未闭合而 Blocked；继续 P6.8 运行全量测试并分类结果
+- Next Step: P6.9 需要当前源码 Extension validate/build/install 与专业后端验证；用户 Blender 进程仍活动，先保持 Blocked 并继续 P6.10 可离线门槛
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -119,7 +119,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 - [ ] P6.5 为每个案例生成独立人工复做清单；第二干净 profile 按教程盲走并记录操作、结果、缺陷、修复和复测。
 - [ ] P6.6 只有独立复做者签署后，勾选对应 `human_review`；否则保持 `ready_for_human_review`。
 - [ ] P6.7 冻结最终本地 Extension ZIP 与 prepare wheel/sdist，记录源码提交、SHA-256、内容清单和依赖来源。
-- [ ] P6.8 运行全量测试并分别报告 Passed/Failed/Skipped/Error；任何 failure 或 error 都阻止技术完成。
+- [x] P6.8 运行全量测试并分别报告 Passed/Failed/Skipped/Error；任何 failure 或 error 都阻止技术完成。
 - [ ] P6.9 执行 Extension validate/build、ZIP 内容审计、隔离 profile 安装、真实 `user_default` 冷启动、无 RDKit/Gemmi/prepare Viewer 验证和专业后端验证。
 - [ ] P6.10 运行所有案例检查器、状态一致性测试、文档测试、离线 QA、`git diff --check` 和 planning `check-complete.ps1`。
 - [ ] P6.11 更新 active/current status 和最终本地交付报告；明确远端 CI、push、Release、PyPI 均未获授权且不属于本地完成。

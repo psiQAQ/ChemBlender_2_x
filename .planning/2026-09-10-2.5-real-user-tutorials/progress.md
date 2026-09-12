@@ -630,3 +630,11 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - Current HEAD at audit time is `8ade6c7f`. `git diff --name-only` proves the Extension source changed at `ChemBlender/ui/scientific_view.py` after the retained ZIP; Prepare/core source has no corresponding change after run-009.
 - Versioned audit: `examples/tutorials/2.5.0/P6-final-artifact-freeze-audit.json`. It explicitly classifies all three files as retained candidates, sets `final_artifact_frozen=false`, and records no publication.
 - Classification: P6.7 remains unchecked. A final freeze cannot predate current-source build/install checks, full test closure, blocked case gates or independent human review. Next executable item is P6.8.
+
+## 2026-09-13 — P6.8 full repository suite
+
+- Two discovery-entry probes were rejected before tests: bare `unittest discover` found zero tests, and forcing `-t .` failed because the tests directory is not an importable package. The repository-documented command was then used unchanged.
+- Command: `.venv/Scripts/python.exe -m unittest discover -s tests -p 'test_*.py' -v`.
+- Result Passed: 2,603 total, 2,566 passed, 37 skipped, 0 failures, 0 errors, exit 0, 217.523 seconds. Optional IOData/GBasis, cclib, ASE, pymatgen, Fermi and other environment-dependent cases remain explicit skips rather than inferred professional-route passes.
+- Versioned receipt: `examples/tutorials/2.5.0/P6-full-test-check.json`. P6.8 is checked. This suite does not replace P6.9 current-artifact Blender validation/install or professional-environment gates.
+- Focused receipt verification initially named `TutorialEvidenceTests` instead of the actual `TutorialStatusTests` class and returned one loader error; the corrected class-qualified check is the valid focused verification below.

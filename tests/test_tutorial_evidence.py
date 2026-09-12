@@ -260,6 +260,15 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(audit['source_difference']['extension_changed_files_since_retained_zip'], ['ChemBlender/ui/scientific_view.py'])
         self.assertTrue(all(len(item['sha256']) == 64 for item in audit['retained_artifacts'].values()))
 
+    def test_p6_full_suite_has_no_failures_or_errors(self):
+        receipt = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-full-test-check.json').read_text(encoding='utf-8'))
+        counts = receipt['counts']
+        self.assertEqual(receipt['status'], 'passed')
+        self.assertEqual(receipt['exit_code'], 0)
+        self.assertEqual(counts['failed'], 0)
+        self.assertEqual(counts['errors'], 0)
+        self.assertEqual(counts['total'], counts['passed'] + counts['skipped'])
+
     def test_all_cases_have_separate_acceptance_dimensions(self):
         expected = {f'T{index:02d}' for index in range(21)} | {'B01'}
         cases = {case['case_id']: case for case in self.status['cases']}

@@ -1,0 +1,24 @@
+{
+  "schema_name": "chemblender_full_test_check",
+  "schema_version": 1,
+  "plan_id": "2026-09-10-2.5-real-user-tutorials",
+  "source_commit": "c950757e9a9a60acef247eac8037642d803587e3",
+  "command": ".venv/Scripts/python.exe -m unittest discover -s tests -p test_*.py -v",
+  "python": "3.12.13",
+  "status": "passed",
+  "counts": {
+    "total": 2603,
+    "passed": 2566,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 37,
+    "expected_failures": 0,
+    "unexpected_successes": 0
+  },
+  "duration_seconds": 217.523,
+  "exit_code": 0,
+  "limitations": [
+    "Optional scientific integration skips remain skips and do not qualify the missing professional environments.",
+    "This Python suite does not replace the current-artifact Blender validate/build/install gate in P6.9."
+  ]
+}
