@@ -180,3 +180,9 @@
 - The fixed MolSSI `qc_schema_output/1` is an existing successful HF/cc-pVDZ gradient result. Current Standard imports one Structure, one Calculation, 13 datasets and the raw envelope, but does not rerun or verify the third-party calculation.
 - The atomic gradient retains its original sign and `hartree_per_bohr` unit. A displayed force is the negative gradient and must not be described as the imported quantity itself.
 - The separately frozen AtomicInput v2 uses the same O/H/H geometry and HF/cc-pVDZ with an energy driver supported by the direct PySCF adapter. Current Standard has neither QCEngine nor PySCF: both real operation attempts fail `dependency_missing` without output, and a pre-cancelled attempt publishes nothing. Exchange success therefore cannot close T20 compute.
+
+## T16 Fermi input and route boundary
+
+- The retained SrVO3 archive is cache-only: its dataset card declares MIT, the archive has no LICENSE and redistribution is not approved. Read-only verification covers only six reviewed VASP text members. No POTCAR or pickle is extracted, executed or distributed.
+- The existing PyProcar 6.5.0 environment is dependency-self-contained but remains `development_reuse`: eight Prepare/Core files differ from the current wheel and `python.fermi` is not configured. The current operation probe fails `environment_unavailable` without output before any private input is staged.
+- A public T16 requires both an explicitly redistributable uniform-k-mesh bundle and authorization to update/configure the existing Fermi environment. Neither gate can substitute for the other.

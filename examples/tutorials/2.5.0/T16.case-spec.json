@@ -1,0 +1,46 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T16",
+  "title": "Licensed uniform-k-mesh Fermi surface",
+  "required_steps": [
+    {"id": "s01", "description": "Acquire an explicitly redistributable uniform-k-mesh VASP text bundle without POTCAR or pickle", "requires_gui": false},
+    {"id": "s02", "description": "Run periodic.fermi_surface through the current isolated PyProcar route", "requires_gui": true},
+    {"id": "s03", "description": "Check band/spin identity, Fermi reference, mesh axes, triangle faces and permitted surface properties", "requires_gui": false},
+    {"id": "s04", "description": "Display, render, save/move/cold-reopen and exercise cancellation and input-integrity recovery", "requires_gui": true}
+  ],
+  "required_checks": [
+    "redistribution_license",
+       "uniform_k_mesh",
+       "text_only_allowlist",
+    "no_potcar_or_pickle",
+    "current_processor_route",
+    "fermi_energy_reference",
+    "band_and_spin_identity",
+    "mesh_axis_and_face_integrity",
+    "project_pair",
+    "cold_reopen",
+    "recovery"
+  ],
+  "required_artifact_kinds": ["environment", "license", "events", "assertions", "gui_raw", "render", "scene_blend", "cbq_manifest", "lifecycle", "review"],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "inputs": [],
+  "private_input_record": {
+    "manifest": "examples/scientific-visualization/input-manifest.json#fermi_cache",
+    "archive_sha256": "1d079392bb1bc4dbd30606bde763bcf1f1aef6bafd3eb9a6aef3b94f25a029d5",
+    "source_statement": "Dataset card declares MIT, archive has no LICENSE, redistribution not approved.",
+    "allowed_local_members": ["IBZKPT", "INCAR", "KPOINTS", "OUTCAR", "POSCAR", "PROCAR"],
+    "distribution": "prohibited",
+    "execution": "not_run"
+  },
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "required_operation": "periodic.fermi_surface@1",
+    "required_route": "fermi"
+  },
+  "status": "blocked",
+  "human_review": "not_run",
+  "note": "No redistributable input is approved. The private cache verifies locally but was not copied, processed or distributed; the current fermi route is also not configured and contains eight non-current Prepare/Core files."
+}

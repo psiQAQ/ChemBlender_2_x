@@ -422,6 +422,26 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['distribution'], 'blocked')
         self.assertEqual(case['human_review'], 'not_run')
 
+    def test_t16_private_fermi_cache_is_not_distribution_evidence(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T16')
+        spec = json.loads((base / 'T16.case-spec.json').read_text(encoding='utf-8'))
+        receipt = json.loads((base / 'T16-environment-license-blocker.json').read_text(encoding='utf-8'))
+        manifest = json.loads((ROOT / 'examples/scientific-visualization/input-manifest.json').read_text(encoding='utf-8'))
+        self.assertEqual(spec['inputs'], [])
+        self.assertEqual(spec['private_input_record']['archive_sha256'], manifest['fermi_cache']['sha256'])
+        self.assertEqual(spec['private_input_record']['distribution'], 'prohibited')
+        self.assertEqual(receipt['private_cache']['qualification'], 'development_reuse')
+        self.assertEqual(receipt['private_cache']['current_candidate_python_files_changed'], 8)
+        self.assertFalse(receipt['private_cache']['potcar_extracted_or_distributed'])
+        self.assertFalse(receipt['private_cache']['pickle_extracted_executed_or_distributed'])
+        self.assertEqual(receipt['private_cache']['scientific_processing'], 'not_run')
+        self.assertFalse(receipt['current_operation_probe']['output_published'])
+        self.assertEqual(case['scientific_processing'], 'not_run')
+        self.assertEqual(case['technical_status'], 'not_run')
+        self.assertEqual(case['distribution'], 'blocked')
+        self.assertEqual(case['human_review'], 'not_run')
+
     def test_t08_t14_specs_bind_existing_input_bytes(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         for case_id in ('T08', 'T09', 'T10', 'T11', 'T12', 'T13', 'T14'):

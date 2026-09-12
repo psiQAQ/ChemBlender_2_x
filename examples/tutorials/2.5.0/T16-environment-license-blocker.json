@@ -1,0 +1,45 @@
+{
+  "case_id": "T16",
+  "status": "blocked",
+  "scope": "Current-candidate environment and redistribution boundary only; no Fermi scientific processing was run.",
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "operation": "periodic.fermi_surface@1"
+  },
+  "private_cache": {
+    "archive_sha256": "1d079392bb1bc4dbd30606bde763bcf1f1aef6bafd3eb9a6aef3b94f25a029d5",
+    "dataset_card_sha256": "687ae78d0ebbb60e127bc33e136f5dcb8493b3c27c9789e9448273f91f83be77",
+    "source_license_statement": "Dataset card declares MIT; archive has no LICENSE; redistribution not approved.",
+    "read_only_allowlist_verification": "passed: INCAR, KPOINTS, POSCAR, OUTCAR, PROCAR and IBZKPT bytes and SHA-256 match input-manifest.json",
+    "qualification": "development_reuse",
+    "python": ".agents/cache/fermi-py312/Scripts/python.exe",
+    "versions": {
+      "python": "3.12.13",
+      "pyprocar": "6.5.0",
+      "pyvista": "0.46.5",
+      "vtk": "9.5.2"
+    },
+    "current_candidate_python_files_changed": 8,
+    "route_configured": false,
+    "potcar_extracted_or_distributed": false,
+    "pickle_extracted_executed_or_distributed": false,
+    "scientific_processing": "not_run"
+  },
+  "current_operation_probe": {
+    "status": "error",
+    "error": "environment_unavailable: fermi Python is not configured",
+    "exit_code": 1,
+    "private_artifacts_supplied": false,
+    "output_published": false,
+    "result_sha256": "923854019125a616de52392d5f01dd9cceb954691d39bf5dba89fb67430ffd00"
+  },
+  "blocked": {
+    "redistributable_input": "No archive-embedded license or explicit redistribution approval. A public uniform-k-mesh text bundle is required.",
+    "environment": "Authorization is required to install the frozen current wheel into the existing self-contained environment and configure python.fermi.",
+    "scientific_gui_render_lifecycle": "not_run",
+    "tutorial_offline_qa_review_package": "not_run",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}
