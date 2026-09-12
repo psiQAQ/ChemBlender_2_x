@@ -1,0 +1,28 @@
+{
+  "case_ids": ["T11", "T12", "T13", "T14"],
+  "status": "blocked",
+  "reason": "dependency authorization required",
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "python_files_equal": 165
+  },
+  "route": {
+    "qualification": "development_reuse",
+    "config": ".blend-analysis/2.5-real-user-tutorials/run-009/scientific-processor.json",
+    "config_sha256": "8f539030c15d195949ada6eba3775305d291c7be28b5de84d564c09af865ca32",
+    "doctor_with_config": "passed",
+    "dependencies": {"numpy":"2.2.6","ase":"3.29.0","cclib":"1.8.1","phonopy":"4.4.0","pymatgen-core":"2026.7.16","spglib":"2.7.0"},
+    "cross_environment_paths": [
+      ".agents/cache/scientific-py312/Lib/site-packages",
+      ".blend-analysis/2.5-real-user-tutorials/run-009/uv-tool/chemblender-prepare/Lib/site-packages"
+    ],
+    "capabilities_with_config": {"cclib_output":true,"pymatgen-vasprun-electronic":true,"phonopy-file":true,"periodic.phonon":true}
+  },
+  "classification": "Capabilities are live development evidence only; cross-environment .pth prevents isolated-install or distribution-ready qualification.",
+  "minimum_authorized_change": "Create a self-contained environment with the frozen current Prepare wheel plus the required scientific dependencies; do not use .pth, PYTHONPATH or source injection.",
+  "scientific_processing": "not_run",
+  "direct_gui": "not_run",
+  "render": "not_run",
+  "lifecycle": "not_run",
+  "human_review": "not_run"
+}

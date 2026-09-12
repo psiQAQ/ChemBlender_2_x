@@ -1,0 +1,20 @@
+{
+  "schema_name":"proposed_chemblender_tutorial_case_spec","schema_version":1,"case_id":"T14","title":"NaCl q-point phonon mode and periodic phase animation",
+  "required_steps":[
+    {"id":"s01","description":"Parse the fixed NaCl phonopy displacement and force-set bundle through the current scientific route","requires_gui":true},
+    {"id":"s02","description":"Select q point, branch and supercell while recording frequency, eigenvector and phase conventions","requires_gui":true},
+    {"id":"s03","description":"Create a periodic mode animation with complex phase and cell replication handled explicitly","requires_gui":true},
+    {"id":"s04","description":"Render, save/move/cold-reopen and exercise recovery","requires_gui":true}
+  ],
+  "required_checks":["input_hash_integrity","environment_isolated","force_sets_and_structure","q_point_and_branch","frequency_and_eigenvectors","periodic_phase","render_scientific_accuracy","project_pair","cold_reopen","recovery"],
+  "required_artifact_kinds":["environment","events","assertions","gui_raw","render","scene_blend","cbq_manifest","lifecycle","review"],"requires_project_pair":true,"requires_cold_reopen":true,"requires_independent_review":true,
+  "inputs":[
+    {"path":"examples/scientific-visualization/inputs/phonopy/NaCl/phonopy_disp.yaml","sha256":"05553d717297aeef35f8d79bccbb4916a474e7b24ddbafe1b0d9ed148694a602","bytes":12203,"license":"BSD-3-Clause","role":"phonopy displacement metadata"},
+    {"path":"examples/scientific-visualization/inputs/phonopy/NaCl/FORCE_SETS","sha256":"2485a1ee2c43579e868c65f376c45d81caa0928a4899a8edc292ac6843aaac10","bytes":6282,"license":"BSD-3-Clause","role":"finite-displacement forces"},
+    {"path":"examples/scientific-visualization/inputs/phonopy/NaCl/BORN","sha256":"ee092139922747bce9a7751ec9e0d1874c22653842cc6811bf6a09738052ab66","bytes":127,"license":"BSD-3-Clause","role":"Born charges and dielectric data"},
+    {"path":"examples/scientific-visualization/inputs/phonopy/NaCl/POSCAR-unitcell","sha256":"e253251c217904352af3cf6f144485e5967e81a4d9b1e0b10c5b09394388b9f6","bytes":734,"license":"BSD-3-Clause","role":"unit cell"},
+    {"path":"examples/scientific-visualization/inputs/phonopy/NaCl/vasprun.xml-001","sha256":"8783119f733ec223afb9ca7579935a170c86acea32e0bf462f0b18c411665d7c","bytes":46150,"license":"BSD-3-Clause","role":"first displacement result"},
+    {"path":"examples/scientific-visualization/inputs/phonopy/NaCl/vasprun.xml-002","sha256":"374bf0e5013e3089abefd2ff666f009a7c2244e31de5d55c4d5e28d0f1cb7d26","bytes":45042,"license":"BSD-3-Clause","role":"second displacement result"}
+  ],
+  "candidate":{"prepare_wheel_sha256":"b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a","required_route":"python.scientific"},"status":"blocked","human_review":"not_run","note":"Blocked: current scientific route is development_reuse via cross-environment .pth; no phonon processing was run."
+}

@@ -156,3 +156,8 @@
 - The existing qc-iodata/qc-gbasis cache is dependency-self-contained and its reader is available, but eight installed Prepare/Core files differ from the frozen candidate and no `python.wavefunction` route is configured. It remains `development_reuse`, not current-candidate acceptance.
 - Closing the gate requires authorization to install the already frozen current wheel into that environment and configure the route. `.pth`, `PYTHONPATH` and source injection are prohibited substitutes.
 - T09 density/RDM and T10 density-surface ESP depend on the same route, so the T08 live environment receipt is sufficient to block them before execution. Freezing their distinct scientific assertions does not convert that shared environment fact into processing evidence.
+
+## T11–T14 scientific route boundary
+
+- With `CHEMBLENDER_PREPARE_CONFIG` set to the existing run-009 route, doctor and capabilities report cclib, pymatgen and phonopy features available. The same interpreter's `sys.path` proves those dependencies come from `.agents/cache/scientific-py312` plus the Standard environment through `.pth`.
+- Capability availability is therefore valid development evidence but not isolated-install evidence. T11–T14 must remain unexecuted for current tutorial acceptance until an authorized self-contained environment exists.

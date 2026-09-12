@@ -1,0 +1,18 @@
+{
+  "schema_name":"proposed_chemblender_tutorial_case_spec","schema_version":1,"case_id":"T11","title":"Gaussian and ORCA vibration, IR/Raman and mode animation",
+  "required_steps":[
+    {"id":"s01","description":"Parse fixed Gaussian/ORCA IR and Raman outputs through the current scientific route","requires_gui":true},
+    {"id":"s02","description":"Verify frequencies, intensities, activities, normal-mode units and source program","requires_gui":true},
+    {"id":"s03","description":"Create spectrum and selected vibration-mode animation without inventing missing intensities","requires_gui":true},
+    {"id":"s04","description":"Render, save/move/cold-reopen and exercise recovery","requires_gui":true}
+  ],
+  "required_checks":["input_hash_integrity","environment_isolated","frequency_and_mode_vectors","ir_raman_source","animation_phase","render_scientific_accuracy","project_pair","cold_reopen","recovery"],
+  "required_artifact_kinds":["environment","events","assertions","gui_raw","render","scene_blend","cbq_manifest","lifecycle","review"],"requires_project_pair":true,"requires_cold_reopen":true,"requires_independent_review":true,
+  "inputs":[
+    {"path":"examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian16/dvb_ir.out","sha256":"bc1a21de15ada135d5188b11d44226389022d92488ddfa8163ba7d4d713e5061","bytes":185543,"license":"BSD-3-Clause","role":"Gaussian vibration and IR"},
+    {"path":"examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian16/dvb_raman.out","sha256":"fc97b8c179dbad721262be6077be893b13b785b36f8ae3493a1dd4b3d4bf18b9","bytes":148126,"license":"BSD-3-Clause","role":"Gaussian Raman activity"},
+    {"path":"examples/scientific-visualization/inputs/cclib/ORCA/basicORCA5.0/dvb_ir.out","sha256":"deb64567281a4673849812a63fc7b1147c33d1c4ad3b67f6b3bf7ec03ab1046c","bytes":122846,"license":"BSD-3-Clause","role":"ORCA vibration and IR"},
+    {"path":"examples/scientific-visualization/inputs/cclib/ORCA/basicORCA5.0/dvb_raman.out","sha256":"956e9a7989c8fc917ef358f57423286d7228f59fff18f159e25c19e71e3181e8","bytes":132927,"license":"BSD-3-Clause","role":"ORCA Raman activity"}
+  ],
+  "candidate":{"prepare_wheel_sha256":"b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a","required_route":"python.scientific"},"status":"blocked","human_review":"not_run","note":"Blocked: current scientific route is development_reuse via cross-environment .pth; no spectroscopy processing was run."
+}

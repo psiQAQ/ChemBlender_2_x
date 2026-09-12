@@ -1,0 +1,17 @@
+{
+  "schema_name":"proposed_chemblender_tutorial_case_spec","schema_version":1,"case_id":"T13","title":"Band structure, DOS, projection and energy reference",
+  "required_steps":[
+    {"id":"s01","description":"Parse fixed silicon band and independent DOS calculations through the current scientific route","requires_gui":true},
+    {"id":"s02","description":"Verify k-path labels, energies, occupations, DOS/projection channels and each energy reference","requires_gui":true},
+    {"id":"s03","description":"Create band/DOS plots without silently aligning independent calculations","requires_gui":true},
+    {"id":"s04","description":"Render/export, save/move/cold-reopen and exercise recovery","requires_gui":true}
+  ],
+  "required_checks":["input_hash_integrity","environment_isolated","k_path","band_energies","dos_and_projection","energy_reference","independent_calculation_boundary","render_scientific_accuracy","project_pair","cold_reopen","recovery"],
+  "required_artifact_kinds":["environment","events","assertions","gui_raw","render","scene_blend","cbq_manifest","lifecycle","review"],"requires_project_pair":true,"requires_cold_reopen":true,"requires_independent_review":true,
+  "inputs":[
+    {"path":"examples/scientific-visualization/inputs/silicon/bands/vasprun.xml.gz","sha256":"c54b9e248c598c42fff058aab4ccb3dae90eb5362010cdece9a4542a0581b37c","bytes":121071,"license":"MIT","role":"silicon band calculation"},
+    {"path":"examples/scientific-visualization/inputs/silicon/bands/KPOINTS","sha256":"45fb053139f5a902fe409bd5d7a56fde7530bb862b6e1a12b23611473ec3da3d","bytes":823,"license":"MIT","role":"band-path labels"},
+    {"path":"examples/scientific-visualization/inputs/silicon/dos/vasprun.xml.gz","sha256":"a9d74c3f928cd32880d77b81a1968a6abf2ca8b88a41516ecb8bdfe210e333fc","bytes":29148,"license":"MIT","role":"independent DOS/PDOS calculation"}
+  ],
+  "candidate":{"prepare_wheel_sha256":"b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a","required_route":"python.scientific"},"status":"blocked","human_review":"not_run","note":"Blocked: current scientific route is development_reuse via cross-environment .pth; no electronic-structure processing was run."
+}

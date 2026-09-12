@@ -500,3 +500,12 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - Updated T09/T10 to `blocked` while `technical_status` and `scientific_processing` remain `not_run`; both checklist items stay unchecked. Next item is P5.6 T11 cclib route qualification.
 - JSON parsing Passed; all 15 `TutorialStatusTests` Passed; planning `check-complete.ps1` and `git diff --check` exited 0. Planned local checkpoint subject: `docs(tutorials): record T09 T10 route blockers`.
 - Harness error: the first `git add` path misspelled `2.5.0` as `2.78.0`; Git rejected the pathspec before commit. No file was lost or committed; the exact path was used on retry.
+
+2026-09-13 P5.6–P5.9 T11–T14 scientific route qualification:
+
+- Live import audit confirmed current Prepare/Core inside `scientific-route`, with NumPy 2.2.6, ASE 3.29.0, cclib 1.8.1, phonopy 4.4.0, pymatgen-core 2026.7.16 and spglib 2.7.0. `sys.path` also confirmed the two cross-environment `.pth` sources already recorded in Phase 3.
+- Harness errors: the first doctor/capabilities call passed an unsupported `--config` flag and failed; the next doctor call used a nonexistent task directory and failed that check. After creating the exact directory and setting the documented `CHEMBLENDER_PREPARE_CONFIG`, doctor passed and capabilities reported cclib/pymatgen/phonopy routes available.
+- The corrected live result does not change qualification: the environment remains `development_reuse`, not isolated or distribution-ready. No scientific case operation was run.
+- Frozen T11 four-file Gaussian/ORCA IR/Raman inputs; T12 three-file Gaussian/ORCA TD/UV-Vis/ECD inputs; T13 separate silicon band and DOS calculations; T14 six-file NaCl phonopy bundle. Hashes, byte sizes, licenses and scientific non-substitution rules come from `input-manifest.json`.
+- Added the shared `T11-T14-scientific-route-blocker.json` and four case specs. T11–T14 are `blocked` with technical/scientific processing `not_run`; all four checklist items remain unchecked. Next item is P5.10 T15.
+- JSON and all T08–T14 input byte/hash bindings Passed; all 17 `TutorialStatusTests` Passed; planning `check-complete.ps1` and `git diff --check` exited 0. Planned local checkpoint subject: `docs(tutorials): record scientific route blockers`.

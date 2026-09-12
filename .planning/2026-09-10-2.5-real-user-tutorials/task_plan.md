@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 5 — 逐个实施 P1/P2 案例；Phase 3/4 的明确 Blocked 项并行保留
-- Next Step: P5.3–P5.5 保持依赖授权 Blocked；继续 P5.6 T11 cclib 路线资格与输入边界
+- Next Step: P5.3–P5.9 保持依赖授权 Blocked；继续 P5.10 T15 critic2 路线与禁止虚构边界
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -96,10 +96,10 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 - [ ] P5.3 T08：真实 FCHK/Molden 轨道正负相位。Blocked：当前 Standard 的 wavefunction route 未配置；现有 IOData/GBasis cache 含 8 个非当前 Prepare/Core 文件且未配置 route，需授权安装冻结 wheel 后才能执行。
 - [ ] P5.4 T09：电子密度、自旋密度和 RDM 网格，严格区分来源与密度层级。Blocked：复用 T08 的 current-candidate wavefunction 环境阻塞；输入与密度层级边界已冻结，未运行科学处理。
 - [ ] P5.5 T10：同结构同网格的密度表面 ESP 着色。Blocked：复用 T08 的 current-candidate wavefunction 环境阻塞；同计算/同结构/同网格边界已冻结，未生成 density/ESP grid。
-- [ ] P5.6 T11：Gaussian/ORCA 振动、IR/Raman 和模式动画。
-- [ ] P5.7 T12：TD 输出、UV–Vis/ECD 图与 gauge/强度边界。
-- [ ] P5.8 T13：能带、DOS、投影和能量参考。
-- [ ] P5.9 T14：NaCl q 点声子模式与周期相位动画。
+- [ ] P5.6 T11：Gaussian/ORCA 振动、IR/Raman 和模式动画。Blocked：输入与科学边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
+- [ ] P5.7 T12：TD 输出、UV–Vis/ECD 图与 gauge/强度边界。Blocked：输入与 gauge/强度边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
+- [ ] P5.8 T13：能带、DOS、投影和能量参考。Blocked：band/DOS 独立计算及能量参考边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
+- [ ] P5.9 T14：NaCl q 点声子模式与周期相位动画。Blocked：NaCl 六文件输入与相位边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
 - [ ] P5.10 T15：critic2 QTAIM/NCI；不虚构缺失路径或键能。
 - [ ] P5.11 T19：Reader API 外部 Python 集成；不承诺自动进入普通导入界面。
 - [ ] P5.12 T20：QCSchema 真实 compute；交换成功不能替代实际计算成功。

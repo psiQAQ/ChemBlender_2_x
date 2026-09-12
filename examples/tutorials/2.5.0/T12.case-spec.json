@@ -1,0 +1,17 @@
+{
+  "schema_name":"proposed_chemblender_tutorial_case_spec","schema_version":1,"case_id":"T12","title":"TD output, UV-Vis/ECD and gauge boundaries",
+  "required_steps":[
+    {"id":"s01","description":"Parse fixed Gaussian and ORCA TD outputs through the current scientific route","requires_gui":true},
+    {"id":"s02","description":"Verify excitation energies, oscillator/rotatory strengths, gauge and source units","requires_gui":true},
+    {"id":"s03","description":"Create UV-Vis/ECD plots while keeping unavailable transition data explicit","requires_gui":true},
+    {"id":"s04","description":"Render/export, save/move/cold-reopen and exercise recovery","requires_gui":true}
+  ],
+  "required_checks":["input_hash_integrity","environment_isolated","excitation_energy","oscillator_strength","ecd_gauge_and_unit","missing_data_boundary","render_scientific_accuracy","project_pair","cold_reopen","recovery"],
+  "required_artifact_kinds":["environment","events","assertions","gui_raw","render","scene_blend","cbq_manifest","lifecycle","review"],"requires_project_pair":true,"requires_cold_reopen":true,"requires_independent_review":true,
+  "inputs":[
+    {"path":"examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian16/dvb_td.out","sha256":"c9255c92b829a4d2072ffca262be4dd9212f35a9c75d84c1fe8eb5969c166eef","bytes":55292,"license":"BSD-3-Clause","role":"Gaussian UV-Vis"},
+    {"path":"examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian09/dvb_td.out","sha256":"01619fecb8ca4d80b1ddfddb6cb9dc1983e52e23616e20ac0e4f1a6bb55462e0","bytes":45637,"license":"BSD-3-Clause","role":"Gaussian ECD length gauge and explicit cgs unit"},
+    {"path":"examples/scientific-visualization/inputs/cclib/ORCA/basicORCA5.0/dvb_td.out","sha256":"b4262a21e11ea441551f465f4ae04aee0d4f9ddf35e6a94c0309400c924f17f6","bytes":248644,"license":"BSD-3-Clause","role":"ORCA UV-Vis/ECD"}
+  ],
+  "candidate":{"prepare_wheel_sha256":"b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a","required_route":"python.scientific"},"status":"blocked","human_review":"not_run","note":"Blocked: current scientific route is development_reuse via cross-environment .pth; no TD processing was run."
+}

@@ -340,6 +340,29 @@ class TutorialStatusTests(unittest.TestCase):
             self.assertIn('examples/tutorials/2.5.0/T08-environment-blocker.json', case['evidence_refs'])
             self.assertEqual(case['human_review'], 'not_run')
 
+    def test_t11_t14_scientific_route_stays_development_only(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        receipt = json.loads((base / 'T11-T14-scientific-route-blocker.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['route']['qualification'], 'development_reuse')
+        self.assertEqual(len(receipt['route']['cross_environment_paths']), 2)
+        cases = {item['case_id']: item for item in self.status['cases']}
+        for case_id in receipt['case_ids']:
+            case = cases[case_id]
+            self.assertEqual(case['status'], 'blocked')
+            self.assertEqual(case['technical_status'], 'not_run')
+            self.assertEqual(case['scientific_processing'], 'not_run')
+            self.assertEqual(case['distribution'], 'blocked')
+            self.assertEqual(case['human_review'], 'not_run')
+
+    def test_t08_t14_specs_bind_existing_input_bytes(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        for case_id in ('T08', 'T09', 'T10', 'T11', 'T12', 'T13', 'T14'):
+            spec = json.loads((base / f'{case_id}.case-spec.json').read_text(encoding='utf-8'))
+            for item in spec['inputs']:
+                path = ROOT / item['path']
+                self.assertEqual(path.stat().st_size, item['bytes'], (case_id, path))
+                self.assertEqual(validator.sha256(path), item['sha256'], (case_id, path))
+
     def test_t06_current_frame_panel_values_match_frozen_spec(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         receipt = json.loads((base / 'T06-current-frame-panel-check.json').read_text(encoding='utf-8'))
