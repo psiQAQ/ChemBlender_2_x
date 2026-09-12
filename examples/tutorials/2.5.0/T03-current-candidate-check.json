@@ -1,0 +1,51 @@
+{
+  "case_id": "T03",
+  "status": "blocked",
+  "scope": "Current Standard CLI/Worker and independent scientific checks; GUI, Blender and human gates remain separate.",
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "environment_qualification": "isolated_install",
+    "rdkit_version": "2026.03.3"
+  },
+  "inputs": [
+    {
+      "path": "examples/user-workflows/inputs/sdf/mixed-properties.sdf",
+      "sha256": "c37ff47810613f7eca3cc22ab27397812ab32bd3afef7c1dd4d72875fb5a22cf"
+    },
+    {
+      "path": "examples/user-workflows/inputs/sdf/ccd-3d-showcase.sdf",
+      "sha256": "e94ea5e57e9491fcb1e47b725446f9663a484354e7516ad40a9219888f0328a2"
+    }
+  ],
+  "verified": {
+    "t02_smiles_and_mmff94": "reused_hash_linked_current_applicability",
+    "positive_inspect": "3 records, 1 ambiguous symmetric conformer suggestion, identity mappings",
+    "unconfirmed_grouping": "rejected_without_output",
+    "confirmed_grouping": "passed",
+    "conformer_set": "3 x 3 x 3 angstrom; ambiguous; source records retained",
+    "record_properties": "State=[solid,liquid,missing]; Flag=[true,missing,missing]",
+    "different_molecules": "AIN/CFF/TA1 produced 0 suggestions; stale positive suggestion rejected without output",
+    "cancel": "cancelled_without_output",
+    "sdf_export": "preview_no_write; 3 records exported",
+    "sdf_reimport": "coordinates and properties exact; validate passed",
+    "original_inputs_unchanged": true
+  },
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-011/T03",
+    "science_receipt": ".blend-analysis/2.5-real-user-tutorials/run-011/T03/science-check.json",
+    "science_receipt_sha256": "df1a98e259554a5dc9aeb4a22adfecf0e136edbd89db8866bdd7248b8bcafec7",
+    "confirmed_operation_sha256": "93783718685653936ba1000bfef1909c34b3b7a7c9373c1f75971077527e6105",
+    "unconfirmed_rejection_sha256": "3988eaa00a381d03a22738b2b2992248c1fa26e3106e667a207d3119f57457a1",
+    "different_molecule_rejection_sha256": "02dd540028526a86ebbac2f0796a9281f5e14c32e39cb0805d179a3b43fedcfd",
+    "cancelled_operation_sha256": "bc16a6e867de8757cb4d3236feda290e1457b47e8d92333b3c9834d3271021b0",
+    "export_sha256": "b19e911fe1cd2559189f972d97ffb2eaa6a802f09591964cf2d589879303743b"
+  },
+  "blocked": {
+    "prepare_gui": "No OS GUI interaction tool is available for suggestion review and confirmation evidence.",
+    "blender_view_render_lifecycle": "Not run while user-owned Blender PID 26228 is active; no concurrent Agent Blender is allowed.",
+    "tutorial_offline_qa_review_package": "Not run because the required GUI/render/lifecycle artifacts do not exist.",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}

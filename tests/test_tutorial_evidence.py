@@ -288,6 +288,21 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(entry['interaction'], 'os_gui')
         self.assertEqual(receipt['human_review'], 'not_run')
 
+    def test_t03_standard_receipt_keeps_gui_and_lifecycle_blocked(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T03')
+        spec_path = base / 'T03.case-spec.json'
+        receipt = json.loads((base / 'T03-current-candidate-check.json').read_text(encoding='utf-8'))
+        spec = json.loads(spec_path.read_text(encoding='utf-8'))
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['inputs'], [{key: item[key] for key in ('path', 'sha256')} for item in spec['inputs'][:2]])
+        self.assertEqual(receipt['verified']['confirmed_grouping'], 'passed')
+        self.assertTrue(receipt['verified']['different_molecules'].startswith('AIN/CFF/TA1'))
+        self.assertIn('prepare_gui', receipt['blocked'])
+        self.assertEqual(case['scientific_processing'], 'passed')
+        self.assertEqual(case['direct_gui'], 'not_run')
+        self.assertEqual(case['human_review'], 'not_run')
+
     def test_t06_current_frame_panel_values_match_frozen_spec(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         receipt = json.loads((base / 'T06-current-frame-panel-check.json').read_text(encoding='utf-8'))

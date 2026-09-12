@@ -137,3 +137,9 @@
 - Source/processor-unavailable recovery is now OS-level evidence on isolated T06/T07 copies, not the older Python audit-hook approximation. It proves local authoritative arrays can rebuild Viewer state without source or processor access.
 - The legacy sample has native public-operator migration and portable cold-open evidence, but no direct-GUI migration event. That replay cannot be relabeled as GUI evidence.
 - A user-owned Blender process blocks launching the planned second clean profile under the single-process rule; the process must not be closed or reused by the Agent.
+
+## T03 conformer grouping boundary
+
+- `molecule.group_conformers` requires the suggestion ID, its snapshot hash and every selected `MolecularRecord` UUID. Omitting the selected inputs fails before the confirmation gate and is a harness error, not a product defect.
+- The fixed three-water SDF produces one ambiguous symmetric suggestion. An unconfirmed request is rejected without output; explicit confirmation creates one 3-frame `ConformerSet` while retaining the source records and typed-property missing masks.
+- The AIN/CFF/TA1 negative SDF produces no suggestion; a stale suggestion, a pre-cancelled request and an unconfirmed ambiguous request all leave no output. SDF export/reimport preserves coordinates and record properties exactly.

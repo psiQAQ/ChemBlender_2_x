@@ -107,20 +107,24 @@
     {
       "case_id": "T03",
       "priority": "P1",
-      "status": "not_run",
-      "status_reason": "No local case execution evidence.",
-      "candidate_scope": "none",
-      "technical_status": "not_run",
-      "scientific_processing": "not_run",
+      "status": "blocked",
+      "status_reason": "Current Standard inspect/group/export/reimport, explicit confirmation, cancellation and different-molecule rejection passed; Prepare GUI and Blender render/lifecycle are not run.",
+      "run": "run-011/T03",
+      "candidate_scope": "current_prepare_standard_cli",
+      "technical_status": "incomplete",
+      "scientific_processing": "passed",
       "direct_gui": "not_run",
       "authorized_replay": "not_run",
       "render": "not_run",
-      "recovery": "not_run",
+      "recovery": "partial_cli_cancel_and_rejection",
       "tutorial": "not_run",
       "review_package": "not_run",
       "human_review": "not_run",
-      "distribution": "not_run",
-      "evidence_refs": []
+      "distribution": "blocked",
+      "evidence_refs": [
+        "examples/tutorials/2.5.0/T03.case-spec.json",
+        "examples/tutorials/2.5.0/T03-current-candidate-check.json"
+      ]
     },
     {
       "case_id": "T04",

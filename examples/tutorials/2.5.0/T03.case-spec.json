@@ -1,0 +1,47 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T03",
+  "title": "SDF multi-record inspection and explicit conformer grouping",
+  "required_steps": [
+    {"id":"s01","description":"Reuse the T02 current-candidate SMILES 3D/MMFF94 result without relabeling its GUI evidence","requires_gui":false},
+    {"id":"s02","description":"Inspect and convert the fixed mixed-properties SDF; retain all records, properties and missing masks","requires_gui":true},
+    {"id":"s03","description":"Review the suggested same-molecule group, atom mappings and ambiguity warning before confirmation","requires_gui":true},
+    {"id":"s04","description":"Explicitly confirm molecule.group_conformers and retain independent source records","requires_gui":true},
+    {"id":"s05","description":"Export the accepted ConformerSet to SDF, reimport it and reject a different-molecule negative case","requires_gui":true},
+    {"id":"s06","description":"Create and render a View, save/move/cold-reopen the pair and exercise recovery","requires_gui":true}
+  ],
+  "required_checks": ["input_hash_integrity","t02_smiles_generation_applicability","record_count_and_properties","atom_mapping_and_elements","ambiguous_group_requires_confirmation","different_molecules_not_grouped","conformer_set_scientific_values","sdf_export_reimport","cbq_validation","render_scientific_accuracy","project_pair","cold_reopen","recovery"],
+  "required_artifact_kinds": ["environment","events","assertions","gui_raw","render","scene_blend","cbq_manifest","lifecycle","review"],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "inputs": [
+    {"path":"examples/user-workflows/inputs/sdf/mixed-properties.sdf","sha256":"c37ff47810613f7eca3cc22ab27397812ab32bd3afef7c1dd4d72875fb5a22cf","bytes":1061,"license":"GPL-3.0","role":"three same-water records with stable source order and deliberately incomplete property columns"},
+    {"path":"examples/user-workflows/inputs/sdf/ccd-3d-showcase.sdf","sha256":"e94ea5e57e9491fcb1e47b725446f9663a484354e7516ad40a9219888f0328a2","bytes":11111,"license":"CC0-1.0","role":"AIN/CFF/TA1 different-molecule negative case"},
+    {"path":"examples/user-workflows/inputs/smiles/ethanol.smi","sha256":"5c9aa2a3024d56c903d547798cbd04ff743433ba0950dbfd8e19238e40651172","bytes":4,"license":"GPL-3.0","role":"T02 applicability anchor; do not rerun or relabel historical GUI events"}
+  ],
+  "reference": {
+    "mixed_records": 3,
+    "mixed_atom_count_each": 3,
+    "mixed_bond_count_each": 2,
+    "typed_properties": ["sdf_state", "sdf_flag"],
+    "state_values": ["solid", "liquid", null],
+    "flag_values": [true, null, null],
+    "suggested_groups": 1,
+    "suggested_group_records": 3,
+    "suggestion_requires_review": true,
+    "expected_mapping": [0, 1, 2],
+    "different_molecule_records": ["AIN", "CFF", "TA1"],
+    "different_molecule_suggestions": 0,
+    "coordinate_absolute_tolerance_angstrom": 0.0000001
+  },
+  "candidate": {
+    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "standard_qualification": "isolated_install"
+  },
+  "status": "blocked",
+  "human_review": "not_run",
+  "note": "T02 owns SMILES three-dimensionalization and MMFF94 optimization; T03 reuses only its hash-linked current applicability. Standard SDF grouping, negative, cancellation and export/reimport checks passed. Prepare GUI, Blender render/lifecycle, tutorial package and independent human review remain blocked or not run."
+}
