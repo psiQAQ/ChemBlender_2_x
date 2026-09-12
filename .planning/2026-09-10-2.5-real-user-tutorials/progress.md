@@ -638,3 +638,13 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - Result Passed: 2,603 total, 2,566 passed, 37 skipped, 0 failures, 0 errors, exit 0, 217.523 seconds. Optional IOData/GBasis, cclib, ASE, pymatgen, Fermi and other environment-dependent cases remain explicit skips rather than inferred professional-route passes.
 - Versioned receipt: `examples/tutorials/2.5.0/P6-full-test-check.json`. P6.8 is checked. This suite does not replace P6.9 current-artifact Blender validation/install or professional-environment gates.
 - Focused receipt verification initially named `TutorialEvidenceTests` instead of the actual `TutorialStatusTests` class and returned one loader error; the corrected class-qualified check is the valid focused verification below.
+
+## 2026-09-13 — P6.10 case-checker and offline/static gates
+
+- Discovered five local `run-manifest.json` files and executed the checker against all five. Current-applicable run-003 T01/T02 each returned exit 2 / `incomplete` with integrity passed; run-004 T06 returned exit 1 / `invalid` for its already documented broken GUI event/step chain. Historical run-001/run-002 T01 each returned exit 2 / `incomplete` with integrity passed.
+- Pairing either current execution supplement with the historical run-003 manifest returned exit 1 / `invalid`, as it must: the supplements declare `run-010/T01` and `run-010/T02`, whose conforming manifests do not exist. This failed pairing is retained as a boundary result and is not the accepted historical checker result.
+- Nineteen cases have no conforming manifest, so no synthetic manifest was created. The versioned result `examples/tutorials/2.5.0/P6-offline-gate-summary.json` lists every case explicitly and keeps all acceptance/distribution blockers.
+- `.venv/Scripts/python.exe -m unittest tests.test_tutorial_evidence -v`: 63 total, 62 passed, 1 skipped (OS symlink capability), 0 failures/errors. `.venv/Scripts/python.exe -m unittest tests.test_public_delivery_docs -v`: 5 passed, 0 failures/errors. `generate_public_delivery_docs.py --check`: Passed.
+- Offline static resources, anchors, bilingual navigation and generated-document freshness passed. The existing `P6-offline-delivery-audit.json` still reports missing project downloads, so offline delivery acceptance remains blocked.
+- `git diff --check` Passed. Planning `check-complete.ps1` exited 0 while correctly leaving Phase 4/5/6 unfinished; the planning checker validates file consistency and does not override unchecked gates.
+- P6.10 is checked because all discovered manifests and requested static commands were run and the remaining no-manifest cases are explicitly classified. This does not make any case ready for human review.

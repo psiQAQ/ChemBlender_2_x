@@ -269,6 +269,17 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(counts['errors'], 0)
         self.assertEqual(counts['total'], counts['passed'] + counts['skipped'])
 
+    def test_p6_offline_gate_summary_preserves_blockers(self):
+        receipt = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-offline-gate-summary.json').read_text(encoding='utf-8'))
+        checkers = receipt['case_checkers']
+        self.assertEqual(checkers['discovered_manifest_count'], checkers['executed_manifest_count'])
+        self.assertEqual({item['case_id'] for item in checkers['current_applicable']}, {'T01', 'T02', 'T06'})
+        self.assertEqual(set(checkers['no_conforming_manifest']), {item['case_id'] for item in self.status['cases']} - {'T01', 'T02', 'T06'})
+        self.assertEqual(receipt['static_gates']['offline_project_downloads'], 'blocked_missing')
+        self.assertEqual(receipt['acceptance']['ready_for_human_review'], [])
+        self.assertEqual(receipt['acceptance']['human_review'], 'not_run')
+        self.assertEqual(receipt['acceptance']['distribution'], 'blocked')
+
     def test_all_cases_have_separate_acceptance_dimensions(self):
         expected = {f'T{index:02d}' for index in range(21)} | {'B01'}
         cases = {case['case_id']: case for case in self.status['cases']}

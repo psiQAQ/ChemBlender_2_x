@@ -192,3 +192,7 @@
 - Current capabilities advertises `external_record.fetch@1` as `available=false` with `no live provider transport configured`. A valid credential-free QCArchive provider request reaches the reviewed worker contract and fails `dependency_missing` without output or a network request.
 - An explicit missing credential fails `authentication_missing`, and pre-cancellation publishes nothing. These are valid recovery checks but not positive provider success.
 - The offline fixture transport and dedicated PubChem converter are separate paths. Neither proves that QCArchive, AiiDA or NOMAD live transport is configured.
+
+## Execution-supplement target boundary
+
+- The current T01/T02 execution supplements are scoped to `run-010`; without matching `run-010` manifests they cannot be attached to historical `run-003` manifests. The checker correctly treats such a cross-run pairing as invalid rather than upgrading historical evidence.
