@@ -222,6 +222,15 @@ class TutorialStatusTests(unittest.TestCase):
                     self.assertIn(candidate_hash, appendix)
                 self.assertTrue('human' in appendix.lower() or '人工' in appendix)
 
+    def test_p6_tutorial_completeness_audit_covers_every_case(self):
+        audit = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-tutorial-completeness-audit.json').read_text(encoding='utf-8'))
+        covered = set(audit['documented_cases']) | set(audit['missing_bilingual_case_chapters'])
+        expected = {f'T{index:02d}' for index in range(21)} | {'B01'}
+        self.assertEqual(covered, expected)
+        self.assertFalse(set(audit['documented_cases']) & set(audit['missing_bilingual_case_chapters']))
+        self.assertEqual(audit['status'], 'blocked')
+        self.assertTrue(all(item['missing'] for item in audit['documented_cases'].values()))
+
     def test_all_cases_have_separate_acceptance_dimensions(self):
         expected = {f'T{index:02d}' for index in range(21)} | {'B01'}
         cases = {case['case_id']: case for case in self.status['cases']}

@@ -596,3 +596,10 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - Added `test_primary_tutorial_routes_keep_run_metadata_in_appendix`, which checks exactly one appendix marker per chapter, rejects run/candidate/replay metadata before it, requires both current candidate hashes in the appendix and requires an explicit human-review statement. Updated the offline-doc image contract to the generated 39-image corpus.
 - Verification Passed: focused route test 1/1; all 58 tutorial-evidence tests passed with 0 failures/errors and 1 symlink-permission skip; all 5 public-delivery document tests passed; `git diff --check` exited 0. `tests.test_documentation` was Not Run because that module does not exist in this repository; the attempted import produced `ModuleNotFoundError`, while the applicable document suite above passed.
 - Checklist: P6.1 complete. Next Step is P6.2. No product code, dependency, Blender process, research document, push, tag, Release or PyPI publication changed.
+
+## 2026-09-13 — P6.2 tutorial completeness audit
+
+- Audited all 22 T00–T20/B01 cases against the bilingual `docs/user/{en,zh-CN}` corpus and the explicit P6.2 fields. Eight cases have a related bilingual chapter; 14 cases (T03, T05, T08–T16, T19, T20 and B01) have no bilingual case chapter.
+- Every documented case retains at least one declared gap: current direct GUI, readable/new-panel capture, remaining render, recovery replay or independent human review. T17 records render and `.blend` as not applicable because it is Prepare-only; this exception is not reused by Viewer cases.
+- Versioned audit: `examples/tutorials/2.5.0/P6-tutorial-completeness-audit.json`. A test requires the documented and missing groups to be disjoint and jointly cover all 22 cases, and requires every documented case to retain a nonempty missing list.
+- Classification: P6.2 is Blocked and remains unchecked. Missing scientific/GUI/render/recovery evidence is not replaced with generic tutorial prose. Next executable item is P6.3.

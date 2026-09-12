@@ -1,0 +1,96 @@
+{
+  "schema_name": "chemblender_tutorial_completeness_audit",
+  "schema_version": 1,
+  "plan_id": "2026-09-10-2.5-real-user-tutorials",
+  "status": "blocked",
+  "languages": [
+    "en",
+    "zh-CN"
+  ],
+  "required_fields": [
+    "fixed_input_and_license",
+    "exact_gui_actions_and_parameters",
+    "observable_results",
+    "original_gui_capture",
+    "final_render_or_explicit_not_applicable",
+    "project_handover_and_recovery_or_explicit_not_applicable",
+    "scientific_boundary"
+  ],
+  "documented_cases": {
+    "T00": {
+      "chapter": "installation.md",
+      "missing": [
+        "current-candidate direct GUI installation and failure-recovery capture"
+      ]
+    },
+    "T01": {
+      "chapter": "first-aspirin.md",
+      "missing": [
+        "current-candidate direct GUI replay",
+        "independent human replay"
+      ]
+    },
+    "T02": {
+      "chapter": "ethanol-conformers.md",
+      "missing": [
+        "current-candidate direct GUI replay",
+        "independent human replay"
+      ]
+    },
+    "T04": {
+      "chapter": "crystal-cells.md",
+      "missing": [
+        "readable current-candidate sidebar capture",
+        "independent human replay"
+      ]
+    },
+    "T06": {
+      "chapter": "aspirin-trajectory.md",
+      "missing": [
+        "direct GUI capture of source-frame scalar rows",
+        "continuous GUI recording",
+        "independent human replay"
+      ]
+    },
+    "T07": {
+      "chapter": "density-grids.md",
+      "missing": [
+        "remaining volume renders",
+        "current-candidate direct GUI recovery capture",
+        "independent human replay"
+      ]
+    },
+    "T17": {
+      "chapter": "data-export.md",
+      "missing": [
+        "independent human replay"
+      ],
+      "render_and_blend_project": "not_applicable_prepare_only_case"
+    },
+    "T18": {
+      "chapter": "capabilities-and-projects.md",
+      "missing": [
+        "direct GUI legacy migration",
+        "second clean-profile replay",
+        "independent human replay"
+      ]
+    }
+  },
+  "missing_bilingual_case_chapters": [
+    "T03",
+    "T05",
+    "T08",
+    "T09",
+    "T10",
+    "T11",
+    "T12",
+    "T13",
+    "T14",
+    "T15",
+    "T16",
+    "T19",
+    "T20",
+    "B01"
+  ],
+  "conclusion": "P6.2 remains blocked. Existing chapters are retained, but absent scientific, GUI, render, recovery, or human evidence is not replaced by generic prose."
+}
