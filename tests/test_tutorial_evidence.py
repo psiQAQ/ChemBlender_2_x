@@ -303,6 +303,19 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['direct_gui'], 'not_run')
         self.assertEqual(case['human_review'], 'not_run')
 
+    def test_t05_standard_receipt_preserves_format_boundaries(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T05')
+        receipt = json.loads((base / 'T05-current-candidate-check.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertIn('no FrameSet fabricated', receipt['verified']['pdb_incompatible'])
+        self.assertIn("unknown 'un'", receipt['verified']['mol2_partial'])
+        self.assertEqual(receipt['verified']['cbq_validation'], 'passed_all_five')
+        self.assertIn('blender_views_render_lifecycle', receipt['blocked'])
+        self.assertEqual(case['scientific_processing'], 'passed')
+        self.assertEqual(case['direct_gui'], 'not_run')
+        self.assertEqual(case['human_review'], 'not_run')
+
     def test_t06_current_frame_panel_values_match_frozen_spec(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         receipt = json.loads((base / 'T06-current-frame-panel-check.json').read_text(encoding='utf-8'))

@@ -1,0 +1,38 @@
+{
+  "case_id": "T05",
+  "status": "blocked",
+  "scope": "Current Standard CLI/Worker and independent source comparisons; GUI, Blender and human gates remain separate.",
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "environment_qualification": "isolated_install"
+  },
+  "verified": {
+    "pdb_compatible": "1231 atoms; 10 x 1231 x 3 angstrom frames; chain A segment 0; 76 residues; source coordinate max error 0",
+    "pdb_incompatible": "MODEL atom counts 1 and 2 retained as independent Structures; no FrameSet fabricated",
+    "pqr": "998 atoms; 41 residues; two inferred blank-chain segments; 998 charges/radii; 22 zero radii; total charge approximately -14 e; source coordinate/value max error 0",
+    "mol2_supported": "3 atoms; 2 explicit bonds; 2 substructures; atom type, partial charge and substructure properties retained",
+    "mol2_partial": "6185 atoms; 6248 declared bonds; unknown 'un' prevents fabricated topology; 390 substructures and four unsupported extension section kinds preserved",
+    "cbq_validation": "passed_all_five",
+    "cancel": "pre-cancelled conversion returned cancelled_without_output",
+    "original_inputs_unchanged": true
+  },
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-011/T05",
+    "science_receipt": ".blend-analysis/2.5-real-user-tutorials/run-011/T05/science-check.json",
+    "science_receipt_sha256": "ced1f1bb273238ae5a9ed47c25ec2535498441d0f2a9af3e61787564fd5ee78b",
+    "pdb_convert_sha256": "14f57138c0fb4a8828417a5b4309425ce2a2336c66fa2ff6019c6f509f3f2579",
+    "pqr_convert_sha256": "e4c49a7cfbf6336edf07d64d3c7d32c7e768905b3dc5b0506cd6483a48a3bbda",
+    "mol2_supported_convert_sha256": "e2a24e9ce3f9120c53fd71544f66132f7b65debb7e4b8c7ff93babf6e2b15b0e",
+    "mol2_partial_convert_sha256": "c617eb15add95393b893d4f05953fe287242ce1dc9b3b75cb232b294fdc428fa",
+    "pdb_incompatible_convert_sha256": "3b87ff58f76ea37af0f19479eb27bc53ab499a50cd30f9158a0d29d4aed1ebb7",
+    "cancelled_operation_sha256": "be509bcc0746c990841515470ee769681f86b51aa735db2e56a8cf54a2c03b4b"
+  },
+  "blocked": {
+    "prepare_gui": "No OS GUI interaction tool is available for the required previews and confirmation evidence.",
+    "blender_views_render_lifecycle": "Not run while user-owned Blender PID 26228 is active; no concurrent Agent Blender is allowed.",
+    "tutorial_offline_qa_review_package": "Not run because the required GUI/render/lifecycle artifacts do not exist.",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}

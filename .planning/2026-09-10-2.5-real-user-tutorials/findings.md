@@ -143,3 +143,9 @@
 - `molecule.group_conformers` requires the suggestion ID, its snapshot hash and every selected `MolecularRecord` UUID. Omitting the selected inputs fails before the confirmation gate and is a harness error, not a product defect.
 - The fixed three-water SDF produces one ambiguous symmetric suggestion. An unconfirmed request is rejected without output; explicit confirmation creates one 3-frame `ConformerSet` while retaining the source records and typed-property missing masks.
 - The AIN/CFF/TA1 negative SDF produces no suggestion; a stale suggestion, a pre-cancelled request and an unconfirmed ambiguous request all leave no output. SDF export/reimport preserves coordinates and record properties exactly.
+
+## T05 biological and MOL2 boundary
+
+- Compatible 1D3Z MODEL records map to one 1231-atom Structure plus a 10-frame coordinate `FrameSet`; source fixed-column coordinates match exactly. An identity-mismatched two-model PDB remains two independent Structures and never becomes a fabricated trajectory.
+- The APBS PQR retains all 998 partial charges and radii, including 22 zero radii. Its two blank-chain entries are inferred segments, not source chain IDs; the total stored charge differs from `-14` only by floating-point summation noise.
+- Supported MOL2 bonds create an explicit topology. The 5SUN `un` bond type prevents any of its 6248 declared bonds from being promoted to authoritative topology, while 6185 atoms and 390 substructure IDs remain available as properties.

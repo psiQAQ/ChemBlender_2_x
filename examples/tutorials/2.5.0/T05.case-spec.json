@@ -1,0 +1,56 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T05",
+  "title": "PDB multi-model, PQR charge/radius and MOL2 hierarchy",
+  "required_steps": [
+    {"id":"s01","description":"Inspect and convert fixed compatible and incompatible PDB multi-model inputs","requires_gui":true},
+    {"id":"s02","description":"Verify compatible trajectory frames and reject forced trajectory semantics for identity-mismatched models","requires_gui":true},
+    {"id":"s03","description":"Inspect and convert the APBS PQR; retain charge, radius, residue and inferred-segment provenance","requires_gui":true},
+    {"id":"s04","description":"Inspect supported and partial MOL2 inputs; distinguish interpreted topology from preserved unsupported declarations","requires_gui":true},
+    {"id":"s05","description":"Create hierarchy, trajectory, charge and radius Views and exercise public selection controls","requires_gui":true},
+    {"id":"s06","description":"Render, save/move/cold-reopen the project pairs and exercise cancellation and recovery","requires_gui":true}
+  ],
+  "required_checks": ["input_hash_integrity","pdb_model_identity","trajectory_frames","biological_hierarchy","pqr_charge_radius","pqr_inferred_segments","mol2_substructure","mol2_topology_boundary","cbq_validation","cancel_without_output","render_scientific_accuracy","project_pair","cold_reopen","recovery"],
+  "required_artifact_kinds": ["environment","events","assertions","gui_raw","render","scene_blend","cbq_manifest","lifecycle","review"],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "inputs": [
+    {"path":"examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb","sha256":"21099cb88231455fdfab4095dddfadcc85cc4213e105cf5f9cfff2ca21993378","bytes":1015821,"license":"CC0-1.0","role":"compatible ten-model PDB"},
+    {"path":"examples/user-workflows/inputs/pdb/multimodel.pdb","sha256":"45ccec78bcdaa1a1bfe877fea3d9b41f40e5ffa7833fb47a76439184209ec679","bytes":316,"license":"GPL-3.0","role":"identity-mismatched PDB negative contract"},
+    {"path":"examples/user-workflows/inputs/pqr/apbs-protein-rna-nb.pqr","sha256":"44f78c804e4f006f74a9f2b439094063e1046735106e2c8436543ba7e7578a68","bytes":70047,"license":"BSD-3-Clause","role":"PQR charge/radius and inferred segments"},
+    {"path":"examples/user-workflows/inputs/mol2/substructure.mol2","sha256":"70b955ea460074b47110f59ba9b757aa61bfe5e2d62d0743a931e74df8ae9ef7","bytes":344,"license":"GPL-3.0","role":"supported topology and two-substructure contract"},
+    {"path":"examples/user-workflows/inputs/mol2/openbabel-5sun-protein.mol2","sha256":"1ac476afd860c326995e28125cc4cf4007b33e022a8c9f397d9e350f3e5a4fbd","bytes":779286,"license":"GPL-2.0-only","role":"large partial MOL2 with unknown bond and extension sections"},
+    {"path":"examples/user-workflows/inputs/pqr/with-chain.pqr","sha256":"7abdc850d0ae2bbf58de9ebeb8e4ddf6f51715290c011531e8ca02ec15a12c93","bytes":105,"license":"GPL-3.0","role":"pre-cancelled conversion input"}
+  ],
+  "reference": {
+    "pdb_atoms": 1231,
+    "pdb_models": 10,
+    "pdb_frames_shape": [10,1231,3],
+    "pdb_chain_segments": [["A",0]],
+    "pdb_residues": 76,
+    "incompatible_model_atom_counts": [1,2],
+    "pqr_atoms": 998,
+    "pqr_residues": 41,
+    "pqr_inferred_segments": [["",0],["",1]],
+    "pqr_zero_radii": 22,
+    "pqr_total_charge": -14.0,
+    "mol2_supported_atoms": 3,
+    "mol2_supported_bonds": 2,
+    "mol2_supported_substructures": 2,
+    "mol2_large_atoms": 6185,
+    "mol2_large_declared_bonds": 6248,
+    "mol2_large_interpreted_bonds": 0,
+    "mol2_large_substructures": 390,
+    "coordinate_absolute_tolerance_angstrom": 0.0000001
+  },
+  "candidate": {
+    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "standard_qualification": "isolated_install"
+  },
+  "status": "blocked",
+  "human_review": "not_run",
+  "note": "Standard inspect/convert/validate, source-level science checks, incompatible-model handling and pre-cancellation passed. Prepare GUI, Viewer Views/selections, render/lifecycle, tutorial package and independent human review are not run."
+}

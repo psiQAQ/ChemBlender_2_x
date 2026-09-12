@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 5 — 逐个实施 P1/P2 案例；Phase 3/4 的明确 Blocked 项并行保留
-- Next Step: 既有 Blocked 门槛保留；继续 P5.2 T05 Standard 路线
+- Next Step: 既有 Blocked 门槛保留；核对 P5.3 T08 wavefunction 路线的现有资格与授权边界
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -92,7 +92,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 每个案例依次执行：冻结 case spec → 固定输入/许可/哈希 → CLI/Worker → Prepare GUI → Blender View → 独立科学断言 → render → save/move/cold/rebuild/recovery → 中英教程和离线 QA → review package → 状态更新。
 
 - [ ] P5.1 T03：SMILES 三维化、力场优化、SDF 记录与构象分组。Blocked：复用了 T02 的哈希关联 SMILES/MMFF94 适用性；Standard SDF 分组、导出、负例和取消已通过，但缺 Prepare GUI、Blender render/lifecycle、教程包和人工验收。
-- [ ] P5.2 T05：PDB 多模型、PQR 电荷/半径和 MOL2 层级展示。
+- [ ] P5.2 T05：PDB 多模型、PQR 电荷/半径和 MOL2 层级展示。Blocked：Standard PDB/PQR/MOL2 转换、科学比对、负例、validation 和取消已通过，但缺 Prepare GUI、Blender Views/render/lifecycle、教程包和人工验收。
 - [ ] P5.3 T08：真实 FCHK/Molden 轨道正负相位。
 - [ ] P5.4 T09：电子密度、自旋密度和 RDM 网格，严格区分来源与密度层级。
 - [ ] P5.5 T10：同结构同网格的密度表面 ESP 着色。
