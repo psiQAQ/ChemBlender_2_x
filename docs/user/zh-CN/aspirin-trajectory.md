@@ -6,7 +6,7 @@
 
 ![精细化后的源帧 15，Cycles 2400×1800、256 samples](../assets/2.5-tutorials/trajectory-refined-run009.png)
 
-原子显示比例为 `0.3`，力箭头显示比例为 `0.35`，原子细分为 `5`，材质粗糙度为 `0.3`。功率 `14000` 的点光源和功率 `1800`、尺寸 `8` 的圆盘补光改善可见性。工程使用单条 Set Shade Smooth 原子分支，共 21,000 个平滑面，没有采用早期的 Smooth by Angle 修改器。自定义节点通过 MCP 编辑，其手动 GUI 搭建仍未验证。保留科学数组：这些修改改善显示表面，不会提高数据采样分辨率。当前投影仍有部分箭头被遮挡。
+原子显示比例为 `0.3`，力箭头显示比例为 `0.35`，原子细分为 `5`，材质粗糙度为 `0.3`。功率 `14000` 的点光源和功率 `1800`、尺寸 `8` 的圆盘补光改善可见性。工程使用单条 Set Shade Smooth 原子分支，共 21,000 个平滑面，没有采用早期的 Smooth by Angle 修改器。准确的手工节点接线见“细化与渲染”。保留科学数组：这些修改改善显示表面，不会提高数据采样分辨率。当前投影仍有部分箭头被遮挡。
 
 1. 将精细 `.blend` 与 `.cbq` 放在一起后打开。如果恢复的 Image Editor 遮住场景，关闭该辅助窗口。选中力 View `ChemBlender Structure.001`，在 `Scientific Representation` 下使用 `Load Selected View`。冷加载后科学播放默认暂停。
 2. 在 Project Browser 选中坐标 FrameSet，点击 `Configure Trajectory Playback`。在 ChemBlender 侧栏内滚动至科学控件，保持 Animation Start Frame 为 `1`、Timeline Frames Per Source Frame 为 `1`。
@@ -14,11 +14,11 @@
 
 ![实际 Pause 后的时间线第 30 帧](../assets/2.5-tutorials/trajectory-pause-run009.jpg)
 
-`Source Frame Index (0-based)` 是静态 Apply Frame 输入；本次播放中它保持 `0`，不是实时帧计数器。播放时使用时间线映射；静态 Apply Frame 预览可能与时间线不同。[GUI 播放记录](../../../examples/tutorials/2.5.0/T06-run009-playback-gui-check.json)区分 MCP 准备与实际点击。窄侧栏会截断部分标签，完整截图可读性和人工复做仍待验收。
+`Source Frame Index (0-based)` 是静态 Apply Frame 输入；已记录播放时它仍为 `0`，并不是实时帧计数器。后续最小测试候选在控件下增加只读的 `Current Source Frame`、`Energy`、`Source Index` 和 `Step`。安装后的 Extension 重放已核对源帧 0、15、31 的冻结值且科学数组不变，见[当前帧面板检查](../../../examples/tutorials/2.5.0/T06-current-frame-panel-check.json)。新行仍需真实 GUI 截图；脚本重放不换标为新的 GUI 操作。[GUI 播放记录](../../../examples/tutorials/2.5.0/T06-run009-playback-gui-check.json)区分 MCP 准备与实际点击。
 
-精细工程原位及移动副本冷重开通过，源帧 15 和平滑设置保留，见[细化与恢复记录](../../../examples/tutorials/2.5.0/T06-run009-refined-check.json)。新 32 帧序列采用公开 FRAME 与渲染重放，再通过原生 VSE 装配。H.264/MPEG4 视频为 2400×1800、24 fps，在浏览器 CDP 离线模拟下播放到末尾，时长 1.333333 秒，见[动画记录](../../../examples/tutorials/2.5.0/T06-run009-animation-check.json)。这不是新的 Ctrl+F12 GUI 验证，也不是操作系统级断网测试。原视频装配保留绝对路径；审阅包中的装配使用 `//frames-refined/` 和相对 MP4 输出。移动副本冷重开、全部 32 帧哈希及重新编码通过，见[可移动视频记录](../../../examples/tutorials/2.5.0/T06-run009-portable-video-check.json)。保持装配工程与完整帧目录相邻；物理时间仍未知。
+精细工程原位及移动副本冷重开通过，源帧 15 和平滑设置保留，见[细化与恢复记录](../../../examples/tutorials/2.5.0/T06-run009-refined-check.json)。另一个副本还在记录的 extXYZ 临时不可用、processor 路径不存在时完成了重建和冷重开，见[离线恢复检查](../../../examples/tutorials/2.5.0/T06-run010-offline-recovery-check.json)。新 32 帧序列采用公开 FRAME 与渲染重放，再通过原生 VSE 装配。H.264/MPEG4 视频为 2400×1800、24 fps，在浏览器 CDP 离线模拟下播放到末尾，时长 1.333333 秒，见[动画记录](../../../examples/tutorials/2.5.0/T06-run009-animation-check.json)。这不是新的 Ctrl+F12 GUI 验证，也不是操作系统级断网测试。原视频装配保留绝对路径；审阅包中的装配使用 `//frames-refined/` 和相对 MP4 输出。移动副本冷重开、全部 32 帧哈希及重新编码通过，见[可移动视频记录](../../../examples/tutorials/2.5.0/T06-run009-portable-video-check.json)。保持装配工程与完整帧目录相邻；物理时间仍未知。
 
-旧 `trajectory-view.blend` 草稿含重叠的平面／平滑显示分支，请使用精细工程。Rebuild 可能移除自定义外观节点，需要重新设置。在副本上清空派生几何后，REBUILD 恢复保存配方的源帧 0。依次使用 `Load Selected View`、将 Source Frame Index 设为 `15`、点击 `Apply Frame`，再保存以恢复该静态预览。坐标与力、View 标识、科学数组不变及随后冷重开均通过，见[重建记录](../../../examples/tutorials/2.5.0/T06-run009-rebuild-check.json)。自定义平滑已被移除，需要重新设置。完整手动渲染说明、剩余 GUI 覆盖及人工独立验收仍未完成。
+旧 `trajectory-view.blend` 草稿含重叠的平面／平滑显示分支，请使用精细工程。Rebuild 可能移除自定义外观节点，需要重新设置。在副本上清空派生几何后，REBUILD 恢复保存配方的源帧 0。依次使用 `Load Selected View`、将 Source Frame Index 设为 `15`、点击 `Apply Frame`，再保存以恢复该静态预览。坐标与力、View 标识、科学数组不变及随后冷重开均通过，见[重建记录](../../../examples/tutorials/2.5.0/T06-run009-rebuild-check.json)。自定义平滑已被移除，需要重新设置。新标量行的真实 GUI 截图和人工独立验收仍未完成。
 
 本地 `T06-review.zip` 含 92 个文件（121,561,147 bytes）：输入及许可、精细配对工程、静态图、32 帧、相对路径视频装配、MP4、双语交接及证据。SHA-256 为 `8eea79a46ea7967bda201619dbb066e6a2908315bdc9c884c1c4844284c8003a`。新解压目录中的科学工程冷重开和视频帧路径／哈希检查通过，见[审阅包记录](../../../examples/tutorials/2.5.0/T06-run009-package-check.json)。这是本地审阅包，不是最终验收通过，也未把大包嵌入本离线页面。
 
@@ -30,7 +30,7 @@
 
 ## 固定输入与前提
 
-先完成[安装](installation.md)和[首课](first-aspirin.md)。使用 Blender 5.1.1、prepare 0.1.0；候选 Extension SHA-256 为 `963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a`。下载 [aspirin-rmd17-32.extxyz](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz)、[来源与许可说明](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.md)和[冻结规格](../../../examples/tutorials/2.5.0/T06.case-spec.json)。来源说明含旧 Quick Import 操作，本课 2.5 使用下面的 CBQ 路线。
+先完成[安装](installation.md)和[首课](first-aspirin.md)。使用 Blender 5.1.1、prepare 0.1.0；已接纳的 run-009 证据使用 Extension SHA-256 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`，标量面板测试候选由单独回执绑定，尚未成为 Phase 4 汇总候选。下载 [aspirin-rmd17-32.extxyz](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz)、[来源与许可说明](../../../examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.md)和[冻结规格](../../../examples/tutorials/2.5.0/T06.case-spec.json)。来源说明含旧 Quick Import 操作，本课 2.5 使用下面的 CBQ 路线。
 
 | 项目 | 参考 |
 | --- | --- |
@@ -90,7 +90,7 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T06\aspirin-trajectory.cbq" 
 | 15 | -17617.4879446 | 1500 | 26491 |
 | 31 | -17617.7618802 | 3100 | 151469 |
 
-这些是数据集参考值，不是 Blender 重新计算的能量。该表不表示实际界面已在动态结构旁显示每个字段。
+这些是数据集参考值，不是 Blender 重新计算的能量。在标量面板测试候选中，它们以当前 View 帧的只读行显示；`source_index` 仍明确标成 `unit unknown; ambiguous`。
 
 ## 播放与暂停
 
@@ -101,23 +101,23 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T06\aspirin-trajectory.cbq" 
 ## 细化与渲染
 
 1. 选中力 View，使用 `Load Selected View`，将 Vector Display Scale 设为 `0.35`，启用 `Light Quantitative Colors`，再点 `Update Style / Parameters`。缩短箭头是显示选择，不是力单位转换。
-2. 按[乙醇课程](ethanol-conformers.md)的方法，将现有 `CH_Ball and Stick` 节点的 Subdivision 设为 `5`，保持源坐标与力不变。
-3. 在 Object Mode 选中 View，鼠标置于视口，按 F3 搜索 `Smooth by Angle` 并确认。在 Modifiers Properties 中启用新修改器的 `Ignore Sharpness`，Angle 保持 30°。该 GUI 步骤已消除原子棱面。未选中对象时命令不会添加修改器；不启用 Ignore Sharpness 时，已有锐边标记仍会保留棱面。
+2. 打开力 View 的 `ChemBlender Ball and Stick` Geometry Nodes 修改器。在现有 `CH_Ball and Stick` 组中将 `Subdivision` 设为 `5`，不要改源坐标与力。
+3. 在同一节点编辑器按 `Shift+A`，搜索并添加 `Set Shade Smooth`，放在 `ChemBlender Scientific Atom Material` 后。按 `Group.001: Ball and Stick` → `ChemBlender Scientific Atom Geometry` → `ChemBlender Scientific Atom Material` → `Set Shade Smooth: Mesh` → `Join Geometry` 接线；保留 `ChemBlender Vector Instances` 到 `Join Geometry` 的独立连接。删除原先 Atom Material 直连 Join 的线，否则平面与平滑原子分支会重叠，面数会从 21,000 翻倍到 42,000。
 
-![实际启用 Ignore Sharpness](../assets/2.5-tutorials/trajectory-smooth.jpg)
+![保留的早期 Smooth by Angle 尝试；精细工程使用上面的节点路线](../assets/2.5-tutorials/trajectory-smooth.jpg)
 
-4. 实测相机为正交相机，位置 `(0, -16, 11)`，朝向原点，Orthographic Scale 为 `11`。Point Light 位置 `(0, -8, 9)`，Power `6500`，Radius `3`；World Background 线性 RGB 为 `(0.18, 0.18, 0.18)`，Strength `1`。这些构图参数通过 MCP 重放设置，完整手动面板说明仍待验证。
-5. 使用 Cycles、CPU、256 samples、降噪，输出 `2400×1800`、100%、PNG。渲染源帧 15 并单独保存 PNG；同时保留 `.blend` 与完整同名 `.cbq` 目录。
-6. 本次记录的动画路线会在停止视口播放后保留科学播放驱动，将场景范围设为 1–32，再用 `Ctrl+F12` 渲染到新的 PNG 目录。该快捷键已实际尝试。全部 32 张完成的 PNG 均通过解码及渲染后同帧检查。独立 Blender VSE 装配将它们编码为 H.264/MPEG4，尺寸 2400×1800、24 fps、32 个视频样本、时长 1.333333 秒；实际断网浏览播放到末尾。装配使用原生 API 重放，完整手动装配及保留驱动的 GUI 路线仍待验证。
+4. 在 Camera 属性中选择 `Orthographic`，Location 设为 `(0, -16, 11)`，Rotation X 为 `0.968509` 弧度、Y/Z 为 `0`，Orthographic Scale 为 `11`。Point Light 位于 `(0, -16, 11)`，Power `14000`、Radius `3`。添加名为 `Tutorial Fill` 的 Area light，位置 `(5, 4, 8)`、Shape `Disk`、Power `1800`、Size `8`，朝向原点。World 属性中将 Background 线性 RGB 设为 `(0.18, 0.18, 0.18)`、Strength `1`。
+5. 在 Render Properties 选择 Cycles、Device `CPU`、Render Samples `256` 并启用降噪；Output Properties 设为 `2400×1800`、`100%`、`PNG`。应用源帧 15，按 `F12`，再用 `Image → Save As…`；将配对 `.blend` 保存到完整 `.cbq` 目录旁。
+6. 动画前先配置播放，按 `Pause` 停止视口但不要关闭科学播放标志；Start/End 设为 `1`/`32`，新输出路径设为 `//frames-refined/frame_`、格式 PNG，再用 `Render → Render Animation`（`Ctrl+F12`）。另建 Video Editing 场景，用 `Add → Image/Sequence` 按文件名顺序选择 32 张 PNG；设 24 fps、同样的 2400×1800，输出选择 `FFmpeg Video`、容器 `MPEG-4`、编码 `H.264`、路径 `//trajectory-refined.mp4`，然后渲染动画。此手工路径与已验证的相对路径 VSE 工程一致；原装配操作是 API 重放，不是已录制的 GUI 序列。
 
-Rebuild 或 Update 可能替换显示对象，替换后需重新设置自定义细分及 Smooth by Angle，渲染前检查修改器列表。更多显示多边形或更平滑的法线不会增加科学采样点。
+Rebuild 或 Update 可能替换显示对象，替换后需重新设置 Subdivision 5 和单条 Set Shade Smooth 节点分支；渲染前检查节点连接。更多显示多边形或更平滑的法线不会增加科学采样点。
 
 ## 工程交接与恢复边界
 
-工作工程是 `aspirin-trajectory.blend` 加完整 `aspirin-trajectory.cbq` 目录。另行保留静态 PNG 及后续完整 PNG 序列。原工程与移动副本冷重开通过，源帧 15、两个 View、力比例及启用 Ignore Sharpness 的 Smooth by Angle 均保留。加载后科学播放关闭，需要显式重新启动播放。在另一个副本中清空力 View 网格后，公开 REBUILD Operator 恢复了同帧坐标与力，科学数组未变；再次冷重开也通过。重建后自定义 Smooth by Angle 不再存在，需重新设置外观细化。这些检查尚不能证明源文件／处理器不可用时的离线重建。不要把权威 `.npy` 数组当作显示缓存删除。
+工作工程是 `trajectory-refined.blend` 加完整 `trajectory-refined.cbq` 目录；静态 PNG 与完整 PNG 序列另行保留。原工程与移动副本冷重开通过，源帧 15、两个 View、力比例和单条平滑节点分支均保留。加载后科学播放关闭，需要显式重新启动播放。另一个副本测试时，记录的源文件被临时改名，processor 偏好指向不存在的可执行文件；清空力 View 网格后，REBUILD 从本地 CBQ 数组恢复源帧 0，随后用 `Load Selected View` 与 Apply Frame 15 恢复审阅预览，并在源文件和 processor 仍不可用时由独立进程冷重开。七个 CBQ 文件字节不变。重建后重新添加外观节点分支；不要把权威 `.npy` 数组当作显示缓存删除。
 
 一次动画尝试因渲染前审计错位而取消。两帧对照证明 `render_pre` 早于源帧更新，`render_post` 对应正确源帧；动画第 2 帧与显式设置同源帧的静态渲染逐像素一致。这是证据采集时机问题，并未证明产品输出错帧。最终验收必须检查完成的图像和渲染后审计。
 
 可查看 [32 帧审计](../assets/2.5-tutorials/trajectory-animation-check.json)、[视频完整性记录](../assets/2.5-tutorials/trajectory-video-check.json)、[原位／移动后冷重开](../assets/2.5-tutorials/trajectory-cold-recovery.json)及[显示重建记录](../assets/2.5-tutorials/trajectory-cache-recovery.json)。大型帧序列、MP4 和配对工程保存在本地案例产物目录，不进入 Extension ZIP。
 
-人工复做、连续 GUI 录屏、逐帧数值面板检查及案例打包仍待完成。[媒体来源](../assets/2.5-tutorials/provenance.json)分别记录原始截图和渲染图。
+人工复做、连续 GUI 录屏及新标量帧行的真实截图仍待完成。本地审阅包已存在，但不是最终可分发包。[媒体来源](../assets/2.5-tutorials/provenance.json)分别记录原始截图和渲染图。

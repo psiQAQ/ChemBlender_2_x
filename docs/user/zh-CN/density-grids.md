@@ -1,6 +1,6 @@
 # T07：密度网格、切片与正负等值面
 
-执行草稿。公开转换、五种主网格 View 的实际 GUI 创建、正负显示、数值采样、渲染及串行冷重开/缓存恢复已有证据。VASP GUI、其余配图及人工独立复做仍待完成。
+技术证据已达到待复核状态。公开转换、五种主网格 View 的实际 GUI 创建、正负显示、数值采样、渲染、串行冷重开/缓存恢复及源文件/处理器均不可用时的恢复已有证据；人工独立复做仍待完成。
 
 ![解析密度重分布成图：蓝色为正，橙色为负](../assets/2.5-tutorials/grid-difference-refined.png)
 
@@ -8,7 +8,7 @@
 
 ## 固定输入
 
-先完成[安装](installation.md)和[首课](first-aspirin.md)。使用 Blender 5.1.1、prepare 0.1.0；候选 Extension SHA-256 为 `963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a`。
+先完成[安装](installation.md)和[首课](first-aspirin.md)。直接 GUI 记录使用 Blender 5.1.1、prepare 0.1.0 和已接纳 Extension SHA-256 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`。后续 Phase 4 测试候选 SHA-256 `2637ce7ccc846854a280ebe56ea91f858a29591aa6614cc53cd92ea28bb3ea3f` 只增加 T06 只读轨迹行，并单独通过本课离线恢复；不能把它换标为一次新的 GUI 操作。
 
 下载 [h2-lcao-1s-density-64.cube](../../../examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.cube)、[来源与许可说明](../../../examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.md)及[冻结规格](../../../examples/tutorials/2.5.0/T07.case-spec.json)。来源说明中的旧导入流程不能代替以下 CBQ 路线。
 
@@ -132,13 +132,13 @@ GUI 输出 `gui-difference.cbq` 的全部 262144 个值均通过独立比较。�
 
 这是已有 VASP 输出的导入，不是新执行的 VASP 计算。下载固定 [CHGCAR](../../../examples/tutorials/2.5.0/inputs/li-chgcar/CHGCAR)、[MIT 许可](../../../examples/tutorials/2.5.0/inputs/li-chgcar/LICENSE)和[变体规格](../../../examples/tutorials/2.5.0/T07-vasp.case-spec.json)。输入来自 pymatgen-core 提交 `488ad74cc5ecaba5d24c1726e2762fb47f31f5ef` 的 `CHGCAR.nospin.gz`，仅解压，没有修改数据。SHA-256 为 `b58e1fb93dedfa746c3f5d1efe033a0560938b375adddd6ff40ef932a73a3c3a`。
 
-已验证的处理器路线复用现有 scientific Python、pymatgen-core 2026.7.16 和冻结 prepare 代码，没有安装依赖。使用 Reader ID `pymatgen-vasp-grid` 前，先核验[专业运行路线](../../prepare/zh-CN/advanced-routes.md)，不能假定 Standard 自带此后端。该路线的公开 inspect/convert/validate 已通过；VASP GUI 教程仍待补齐。
+已验证的处理器路线复用现有 scientific Python、pymatgen-core 2026.7.16 和冻结 prepare 代码，没有安装依赖。该环境属于 `development_reuse`，不是隔离安装或可分发环境，因为 import 路线并非自足。使用 Reader ID `pymatgen-vasp-grid` 前，先核验[专业运行路线](../../prepare/zh-CN/advanced-routes.md)，不能假定 Standard 自带此后端。该路线的公开 inspect/convert/validate 已通过。当前已接纳候选对主 Cube 路线有直接 GUI 证据；VASP 变体只有公开原生 Operator 重放、渲染和恢复证据。
 
 输入包含一个分数坐标为 (0,0,0) 的 Li 原子、体积 20.148362761266316 angstrom³ 的非正交晶胞和 32³ 网格。按 x 最快读取数值，除以晶胞体积；各晶格矢量除以 32 即对应网格步长。适配器记录单位 `inverse_cubic_angstrom`，应保留此原始标记。全部 32768 个归一化数值及仿射步长通过独立核对，积分为 0.9999999934509904。参见[处理、View 与冷重开检查](../../../examples/tutorials/2.5.0/T07-vasp-check.json)。
 
 Preview/Import 生成的 CBQ，选择 complete 电子密度，创建 Grid volume 或 Signed scalar isosurface。图中等值为存储单位下的 0.04，使用 shaded 材质、Roughness 0.32、Cycles CPU、2400 × 1800 和 256 samples。12 条注释边直接由晶胞矢量生成；相机和光照只影响显示。正曲面有 6392 个顶点，负曲面为空，与全正密度一致。VDB 索引到空间坐标的检查确认非正交仿射变换保留。
 
-此图显示有限网格域，边缘外观受采样域边界影响，不能把外形解释为真实晶体表面。此处未重建 PAW augmentation occupancies。保存的工程对冷重开后，本地 VDB 路径和科学数组保持不变；此变体的独立移动副本冷重开已通过。仅在该副本中删除五个派生 VDB，重建两个 View 后再次冷重开通过，十二条晶胞注释边和全部科学数组保留，原工程未改变。参见[变体恢复记录](../../../examples/tutorials/2.5.0/T07-vasp-recovery-check.json)。GUI 恢复、源文件/处理器不可用恢复及人工审阅仍待完成。
+此图显示有限网格域，边缘外观受采样域边界影响，不能把外形解释为真实晶体表面。此处未重建 PAW augmentation occupancies。保存的工程对冷重开后，本地 VDB 路径和科学数组保持不变；此变体的独立移动副本冷重开已通过。仅在该副本中删除五个派生 VDB，重建两个 View 后再次冷重开通过，十二条晶胞注释边和全部科学数组保留，原工程未改变。参见[变体恢复记录](../../../examples/tutorials/2.5.0/T07-vasp-recovery-check.json)。VASP 直接 GUI 与人工独立复核仍待完成，不能用原生重放代证。
 
 ## 保存、交接与恢复
 
@@ -146,4 +146,4 @@ Preview/Import 生成的 CBQ，选择 complete 电子密度，创建 Grid volume
 
 仅在新的一次性副本中删除八个 `cache/render` VDB 文件，再对七个 View 使用 `Rebuild Selected View`：公开 Operator 重放和随后独立冷重开均通过。不要删除权威 `.npy` 数组。参见[恢复记录](../../../examples/tutorials/2.5.0/T07-recovery-check.json)。
 
-Rebuild 会恢复生成时的 `Grid` 分辨率，需要随后重新应用 Size 0.025 及自定义材质细化。原始细化工程不变。这些检查尚不能证明 GUI 恢复，或源文件与处理器均不可用时的重建；不能据此标为完整离线可用。可分发案例包和人工独立验收仍待完成。
+Rebuild 会恢复生成时的 `Grid` 分辨率，需要随后重新应用 Size 0.025 及自定义材质细化。原始细化工程不变。另一个 H2 副本在记录中的 Cube 源文件和故意设置为不存在的 processor 路径均不可用时打开：加载阶段先从本地 CBQ 数组恢复 3 个派生 VDB；再次移走这些 VDB 后，公开 `Rebuild Selected View` 恢复两个 View，随后独立冷进程重新打开，3 个本地数组和 3 个本地 VDB 均保持有效。源文件已按原哈希还原。参见[离线恢复记录](../../../examples/tutorials/2.5.0/T07-run010-offline-recovery-check.json)。这是原生重放证据，不是 GUI 恢复录制。本地 review package 仅供复核，人工独立验收仍待完成。

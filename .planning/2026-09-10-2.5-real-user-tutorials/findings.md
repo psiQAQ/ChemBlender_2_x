@@ -110,3 +110,30 @@
 2026-09-10 T06 run009 renderedCycles2400x1800/256 frame15,vector.35,atomsubdiv5/customsmoothnode. PriorSmoothbyAngle nodegroup notavailableforappend; switchedT04verifiedsmoothfacenode. UPDATEresetframe0; firstrenderpreservedframe0draft,explicitFRAME15checkedcoords/forcebeforerender. Visualqualitypartialarrowocclusion/darkregions. Normalquit48700;serialoriginal37900/moved51676coldPassed2Views/frame15/localarrays/smooth,scientifichashesunchanged. T06-run009-render-cold-check.json. NoBlenderremaining;animation/GUI/refinement/humanopen;goalactive.
 
 2026-09-10 T06 separate refinedpair atomdisplay.3/roughness.3/point14000/fill1800 size8/world.18 retainsvector.35/science. Found Agent sceneedit duplicateflat+smoothbranches atmulti-inputJoin; removeddirectflatlink,42000->21000facesallsmooth. FixedPNGvisuallyverified; olderoverlapdraftretained. Cold22496/13636 passedframe15/coords/forces/localarrays/21000smoothfaces/radius/fill,hashesunchanged. T06-run009-refined-check.json. No productcodechange; oldtrajectory-view pair remainsdraftwithduplicatedisplay, prefertrajectory-refined. NoBlenderremaining;animation/GUI/humanopen;goalactive.
+
+2026-09-12 T01 current-candidate reuse: Standard conversion produced the same nine authoritative NPY byte hashes as the accepted historical case; only the regenerated manifest identity changed. This supports hash-linked applicability reuse but does not relabel historical GUI events.
+
+2026-09-12 Blender audit scripts: `REBUILD` replaces View RNA objects, so post-rebuild checks must reacquire the View from `bpy.context.scene.objects`; retaining the pre-rebuild Python object produces a harness `ReferenceError`, not a product failure.
+
+2026-09-12 T02 Save-As replay: saving adopts a newly verified project object. Audit scripts must reacquire the session and model entities after `wm.save_as_mainfile`; retaining a pre-save lazy-array entity can reopen the retired temporary sidecar and create a Windows lock that does not occur in the corrected user flow.
+
+2026-09-13 T04 screenshot boundary: a native GUI capture proves only fields that are actually legible. The 1602×992 capture proves 64 sites and declared/derived symmetry; clipped paths and hashes remain receipt-bound facts and are never reconstructed from the image.
+
+2026-09-13 Viewer packaging: direct `blender --command extension build --source-dir ChemBlender` omits the shared core and is not an installable candidate. Always use `ChemBlender/scripts/build_extension.py`, which stages the wheel-free Viewer and rewrites the shared core under `_cbq_core` before native validate/build.
+## T07 recovery and handover
+
+- A saved Grid project can regenerate missing VDB caches from authoritative local CBQ arrays during Blender load, before a later audit script runs. To prove the explicit recovery control separately, remove only the regenerated VDBs in a disposable copy and then invoke `scientific_view(action="REBUILD")`.
+- The VASP reader evidence uses a `development_reuse` scientific route. Numerical, View, render and recovery evidence remains valid, but it does not establish an isolated or distribution-ready processor environment.
+- A review ZIP can carry the H2 primary/sampling/difference projects and the VASP project entirely with relative paths; all four extracted projects cold-opened under the isolated Viewer candidate without importing RDKit, Gemmi, Prepare or pymatgen.
+
+## T17 current export qualification
+
+- Between run-006 and the current run-009 Prepare wheels, no exporter module changed. The three changed members are Save-As project ownership, routed Reader availability and pymatgen provenance ordering. Current qualification nevertheless reruns all formats rather than relying only on this diff.
+- All thirteen current-candidate exports are byte-identical to their scientifically checked run-006 counterparts after preview, applicable loss rejection, reimport and validation. This permits reuse of the scientific comparisons while preserving the historical identity of the GUI events.
+- T17 is a Prepare-only export case. A truthful handover consists of authoritative source CBQs, exported files, roundtrip CBQs, fixed inputs/licenses, tutorial and receipts; it does not require or imply a Blender `.blend`.
+
+## T18 recovery boundary
+
+- Source/processor-unavailable recovery is now OS-level evidence on isolated T06/T07 copies, not the older Python audit-hook approximation. It proves local authoritative arrays can rebuild Viewer state without source or processor access.
+- The legacy sample has native public-operator migration and portable cold-open evidence, but no direct-GUI migration event. That replay cannot be relabeled as GUI evidence.
+- A user-owned Blender process blocks launching the planned second clean profile under the single-process rule; the process must not be closed or reused by the Agent.

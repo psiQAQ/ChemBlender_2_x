@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "case_id": "T02",
+  "run_id": "run-010/T02",
+  "status": "passed",
+  "candidate": {
+    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a"
+  },
+  "input": {
+    "path": "examples/user-workflows/inputs/smiles/ethanol.smi",
+    "sha256": "5c9aa2a3024d56c903d547798cbd04ff743433ba0950dbfd8e19238e40651172",
+    "license": "GPL-3.0"
+  },
+  "scientific_processing": {
+    "status": "passed",
+    "source_manifest_sha256": "a2db3e15ea87f0395afd1e7dbb41c57959c3d906d1caea83a7eb4cdb65c4e93d",
+    "derived_manifest_sha256": "7079cd4d8ebc37473ff0153b9283773f54975fdb8e5ca22abcd19adca7ad2281",
+    "source_heavy_atoms": 3,
+    "source_is_planar_depiction": true,
+    "generated_atoms": 9,
+    "generated_bonds": 8,
+    "embedding": "ETKDGv3",
+    "random_seed": 12648430,
+    "force_field": "MMFF94",
+    "optimizer_status": 0,
+    "recorded_energy_kcal_per_mol": -1.3368570639005273,
+    "independent_generated_energy_kcal_per_mol": -1.3368570639005273,
+    "independent_optimized_energy_kcal_per_mol": -1.336857063955483,
+    "historical_array_content_names": {
+      "current_pre_edit": 14,
+      "shared_with_historical": 14
+    }
+  },
+  "viewer_replay": {
+    "status": "passed",
+    "interaction": "authorized_mcp_replay",
+    "classification": "replay_not_direct_gui",
+    "blender_version": "5.1.1",
+    "operators": [
+      "preview_cbq",
+      "import_cbq",
+      "scientific_view",
+      "apply_mesh_edits",
+      "wm.save_as_mainfile"
+    ],
+    "source_structure_retained": true,
+    "final_structure_count": 5,
+    "changed_atom_index": 5,
+    "delta_angstrom": [
+      0.00000004500122430250997,
+      -0.000000023781630886787752,
+      0.14999995891518492
+    ],
+    "blend_sha256": "cef174fe7bc6097df80038ca3a692ae3daeb01b3185f5c1618089d91666698b3",
+    "manifest_sha256": "d0ab33593677cae76c47ae1954ada48c4f5f524de7385fa4e7653a48993804f2"
+  },
+  "cache_recovery": {
+    "status": "passed",
+    "processor_available": false,
+    "cleared_derived_structure_views": 2,
+    "rebuilt_views": 2,
+    "scientific_hashes_unchanged": true,
+    "structure_bindings_preserved": true,
+    "cold_reopen": "passed",
+    "pair_local": true,
+    "viewer_scientific_modules_loaded": false
+  },
+  "render": {
+    "status": "passed",
+    "interaction": "authorized_mcp_replay",
+    "classification": "replay_not_direct_gui",
+    "blender_version": "5.1.1",
+    "engine": "CYCLES",
+    "samples": 256,
+    "resolution": [2400, 1800],
+    "image_sha256": "a354ef9326b80b690e9cd09b8273fc5c6834e3ff649932cd44eb22d0bf901921",
+    "image_size_bytes": 3576996,
+    "scientific_hashes_unchanged": true,
+    "agent_visual_review": "passed",
+    "independent_human_review": "not_run"
+  },
+  "historical_evidence": {
+    "run": "run-003/T02",
+    "direct_gui": "passed",
+    "render": "passed",
+    "review_package": "review_only",
+    "relabelled_as_current": false
+  },
+  "evidence": {
+    "scientific_check": ".blend-analysis/2.5-real-user-tutorials/run-010/T02/current-science-check.json",
+    "viewer_apply_check": ".blend-analysis/2.5-real-user-tutorials/run-010/T02/current-view-apply-check.json",
+    "portable_rebuild_check": ".blend-analysis/2.5-real-user-tutorials/run-010/T02/portable-rebuild-check.json",
+    "portable_cold_check": ".blend-analysis/2.5-real-user-tutorials/run-010/T02/portable-cold-check.json",
+    "current_render_check": ".blend-analysis/2.5-real-user-tutorials/run-010/T02/current-render-check.json"
+  },
+  "limitations": [
+    "Historical direct-GUI events and render remain historical until linked through the execution supplement.",
+    "The current replay creates only the source and edited display Views needed for applicability and recovery; it does not replace the historical five-View GUI walkthrough.",
+    "Independent human review is not run and distribution is not approved."
+  ]
+}

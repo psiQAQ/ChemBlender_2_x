@@ -1,14 +1,14 @@
 # First lesson: aspirin, from MOL to a reopenable scientific image
 
-Prepare inspect/convert was repeated through the real GUI. Previously verified Blender operations were replayed through public Operators via MCP on the frozen candidate below; screenshots show that replay, not a new GUI click sequence. Science, rendering and separate-process reopening passed. Independent human replay is pending.
+The current Prepare wheel and Extension were replayed end to end with the fixed input below. The current run passed conversion, science checks, public Blender operations, Cycles rendering, moved-pair rebuild and separate-process reopening. Existing GUI captures remain historical direct-GUI evidence and are never relabeled as current clicks. Independent human replay is pending.
 
-![Actual aspirin Cycles render](../assets/2.5-tutorials/aspirin-cycles.png)
+![Current-candidate aspirin Cycles render](../assets/2.5-tutorials/aspirin-cycles-current.png)
 
 Gray is C, red is O and white is H. Paired rods show double bonds from the input file. Sphere sizes are display choices, not electron density. This first-lesson image retains visible facets from the default mesh; human image-quality acceptance is pending.
 
 ## Prerequisites and fixed input
 
-Complete [installation and diagnostics](installation.md) first. Only the Standard processor environment is needed. The tutorial candidate ZIP SHA-256 is `bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374`; the prepare 0.1.0 wheel SHA-256 is `3f1d93acd0eefd29bc304527007b8d53bd0aa3b508e97aea0a18f4624ee62c3e`.
+Complete [installation and diagnostics](installation.md) first. Only the Standard processor environment is needed. The current candidate ZIP SHA-256 is `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`; the current prepare 0.1.0 wheel SHA-256 is `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`.
 
 Download the [fixed AIN MOL input](../../../examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol) to your lesson folder, for example `D:\ChemBlenderLessons\T01\`. It uses CCD AIN ideal coordinates; see the [input corpus notes](../../../examples/user-workflows/README.md) for source and licensing. It contains neither a quantum calculation nor experimental electron density.
 
@@ -57,7 +57,7 @@ The `Cycles · Scientific Images` report export currently requires a physical-qu
 
 1. Return to the Blender main window and press `Ctrl+S`. Save `aspirin.blend` in the lesson folder, beside the same-name `aspirin.cbq\` directory.
 2. Quit this Blender process normally. Start Blender again and open `aspirin.blend`. Reloading inside the same process is not a cold reopen.
-3. Check the molecule View, the 21 input bonds and Structure in Project Browser. When making a project copy, carry both `.blend` and the entire `.cbq` directory. Separate native processes reopened both the original pair and a relocated copy; array paths resolved beneath the copied CBQ and scientific hashes stayed unchanged. Cache rebuild remains a T18 acceptance item.
+3. Check the molecule View, the 21 input bonds and Structure in Project Browser. When making a project copy, carry both `.blend` and the entire `.cbq` directory. Separate native processes reopened both the original pair and a relocated copy; array paths resolved beneath the copied CBQ and scientific hashes stayed unchanged. On the current candidate, `Rebuild View` also succeeded from the relocated pair while the processor path was deliberately unavailable, followed by another clean cold reopen.
 
 GUI captures are native JPEGs returned by Computer Use, without annotations or repainting. The render is a native Blender PNG. [Source and hash records](../assets/2.5-tutorials/provenance.json) are separate. On 2026-09-10 the user approved native GUI JPEGs for the execution checker, which checks file signatures, suffixes and hashes. The original research package remains intact. Format checks do not establish screenshot authenticity or replace human review.
 
@@ -69,6 +69,10 @@ GUI captures are native JPEGs returned by Computer Use, without annotations or r
 - Missing scientific data after reopening: check the adjacent `aspirin.cbq\manifest.json` and `arrays\`. Restore a backup before attempting repairs; do not delete authoritative arrays.
 - Native Render Result pixels are not automatically stored in the `.blend`. Keep the separate PNG for handover; the saved scene can render again.
 
-Atom count, order, input bond orders and coordinates passed the checks. Ball-and-stick display, lighting, camera and samples only affect presentation. This lesson does not claim energy optimization, conformer selection or quantum computation. Human replay and final image review remain pending.
+Atom count, order, input bond orders and coordinates passed the checks. Ball-and-stick display, lighting, camera and samples only affect presentation. This lesson does not claim energy optimization, conformer selection or quantum computation. The current render is technically valid but remains subject to independent framing/image-quality review.
 
 [Scientific checks and array hashes](../assets/2.5-tutorials/aspirin-science-check.json) record the measured results.
+
+## Validation appendix
+
+The current-candidate applicability record is [T01-current-candidate-check.json](../../../examples/tutorials/2.5.0/T01-current-candidate-check.json). The Prepare and Blender GUI screenshots in this chapter come from the retained historical run and are linked through [T01.execution-supplement.json](../../../examples/tutorials/2.5.0/T01.execution-supplement.json); they demonstrate the same unchanged controls but do not become new current-candidate GUI events.

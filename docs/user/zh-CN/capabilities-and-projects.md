@@ -26,3 +26,5 @@ Standard processor 提供核心 CBQ 操作、22 个注册 reader（按声明依�
 恢复后保存 `.blend`，生成位于其旁边的配对 `.cbq`。退出后用新 Blender 进程重新打开，检查预期实体和 View。通过前保留原始配对工程。
 
 T18 阿司匹林实测已核对 21 个原子、未变的实体 UUID/revision、9 份一致的科学数组、GUI Save As/Cancel、错误重链接拒绝后正确恢复，以及两份已保存工程的独立进程冷重开。截图绑定候选 ZIP `a1e2da79…`；这些是 Agent 证据，独立人工验收仍待完成。完整记录：[GUI 另存](../../../examples/tutorials/2.5.0/T18-run007-gui-save-check.json)、[GUI 恢复](../../../examples/tutorials/2.5.0/T18-run007-gui-relink-check.json)、[冷重开](../../../examples/tutorials/2.5.0/T18-run007-gui-pairs-cold-check.json)。
+
+在 T06、T07 的隔离副本中，Phase 4 测试候选 `2637ce7c…` 还在记录源文件被移走、processor 首选项指向不存在的可执行文件时，完成了派生几何/VDB 缓存重建和冷重开；权威数组与原工程均未改变。缺失、损坏、不同工程和过期副本会先被拒绝，再允许正确重链接。legacy 样例已通过原生公开操作完成导出、恢复和冷重开，但直接 GUI migration 仍然阻塞；原生重放不能换标成新的 GUI 事件。由于当时存在用户自有 Blender 进程，第二干净 profile 也尚未运行。见[当前 T18 审计](../../../examples/tutorials/2.5.0/T18-current-candidate-check.json)。

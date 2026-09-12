@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "case_id": "T17",
+  "run_id": "run-010/T17",
+  "status": "passed",
+  "classification": "review_only",
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "qualification": "isolated_install"
+  },
+  "archive": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T17-review-v2.zip",
+    "sha256": "f6db78b42075a21ad96eb90f7b4b32a16de48acd9a95a0c6bfec6e3377eaa9d3",
+    "size_bytes": 4595769,
+    "entry_count": 481,
+    "crc_status": "passed",
+    "relative_paths_only": true
+  },
+  "contents": {
+    "authoritative_source_cbq_count": 13,
+    "exported_file_count": 13,
+    "roundtrip_cbq_count": 13,
+    "original_inputs_and_license_notes": true,
+    "bilingual_tutorials": true,
+    "current_and_historical_receipts": true,
+    "blender_project": "not_applicable_prepare_only_case"
+  },
+  "extracted_validation": {
+    "status": "passed",
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-010/review-extract-v2/T17-v2",
+    "validated_cbq_count": 26,
+    "report_sha256": "e2eda59924ddbda38cda0aaf8a234c7a76dd5a78178bdd1844bd817f04ac6cf5"
+  },
+  "limitations": [
+    "The archive is a local review package, not a distribution artifact.",
+    "Run-006 direct-GUI evidence retains its historical candidate identity.",
+    "Independent human review is not run."
+  ]
+}

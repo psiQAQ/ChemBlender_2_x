@@ -1,0 +1,38 @@
+{
+  "case_id": "T04",
+  "status": "passed",
+  "scope": "Current-candidate mapping and readable native sidebar evidence; independent human review remains separate.",
+  "candidate": {
+    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "run": "run-009/T04"
+  },
+  "native_sidebar_capture": {
+    "source": ".blend-analysis/2.5-real-user-tutorials/run-009/T04/gui/gui-0036.jpg",
+    "public_copy": "docs/user/assets/2.5-tutorials/crystal-sidebar-run009.jpg",
+    "sha256": "fbc96a7603dccda1b3518e4b9c4fdf1eb9cde3a4658d2b1ca400a710f9c47d0c",
+    "dimensions": [1602, 992],
+    "capture_source": "Computer Use native screenshot",
+    "interaction": "os_gui",
+    "event_id": "e21",
+    "visible_checks": [
+      "Project Browser reports Sites: 64",
+      "Declared Symmetry reports Name: C m c a",
+      "Declared Symmetry reports International number: 64",
+      "Declared Symmetry reports Operations: 16",
+      "Derived Symmetry reports International: Not derived"
+    ],
+    "limitation": "The sidebar displays long package paths and selected entity hashes in truncated form; the full candidate and package identity is established by this receipt, not inferred from clipped UI text."
+  },
+  "scientific_and_workflow_evidence": [
+    "examples/tutorials/2.5.0/T04-run009-cif-gui-check.json",
+    "examples/tutorials/2.5.0/T04-run009-diamond-gui-check.json",
+    "examples/tutorials/2.5.0/T04-run009-ase-gui-check.json",
+    "examples/tutorials/2.5.0/T04-run009-render-cold-check.json",
+    "examples/tutorials/2.5.0/T04-run009-diamond-render-cold-check.json",
+    "examples/tutorials/2.5.0/T04-run009-rebuild-check.json",
+    "examples/tutorials/2.5.0/T04-run009-package-check.json"
+  ],
+  "historical_evidence_policy": "Earlier candidate images remain labeled with their original artifact hashes; this receipt does not relabel them as current-candidate actions.",
+  "human_review": "not_run"
+}

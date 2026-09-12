@@ -246,6 +246,114 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertFalse(environments['wavefunction']['distribution_ready'])
         self.assertFalse(environments['fermi']['distribution_ready'])
 
+    def test_current_replay_chains_match_current_receipts(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        candidate = self.status['current_candidate']
+        for case_id in ('T01', 'T02'):
+            receipt_path = base / f'{case_id}-current-candidate-check.json'
+            receipt = json.loads(receipt_path.read_text(encoding='utf-8'))
+            supplement = json.loads(
+                (base / f'{case_id}.current-execution-supplement.json').read_text(encoding='utf-8')
+            )
+            self.assertEqual(supplement['target_run'], f'run-010/{case_id}')
+            for replay in supplement['replays']:
+                self.assertEqual(replay['interaction'], 'authorized_mcp_replay')
+                self.assertEqual(replay['classification'], 'replay_not_direct_gui')
+                self.assertEqual(
+                    replay['candidate_difference']['to_extension_sha256'],
+                    candidate['extension_sha256'],
+                )
+                self.assertEqual(
+                    replay['candidate_difference']['to_prepare_sha256'],
+                    candidate['prepare_wheel_sha256'],
+                )
+                self.assertEqual(
+                    replay['operator_receipt']['sha256'], validator.sha256(receipt_path)
+                )
+            self.assertEqual(receipt['case_id'], case_id)
+
+    def test_t04_current_sidebar_capture_is_byte_bound_to_provenance(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        receipt = json.loads((base / 'T04-current-candidate-check.json').read_text(encoding='utf-8'))
+        capture = receipt['native_sidebar_capture']
+        public_copy = ROOT / capture['public_copy']
+        provenance = json.loads(
+            (ROOT / 'docs/user/assets/2.5-tutorials/provenance.json').read_text(encoding='utf-8')
+        )
+        entry = next(item for item in provenance['images'] if item['path'] == public_copy.name)
+        self.assertEqual(receipt['candidate']['extension_sha256'], self.status['current_candidate']['extension_sha256'])
+        self.assertEqual(receipt['candidate']['prepare_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(validator.sha256(public_copy), capture['sha256'])
+        self.assertEqual(entry['sha256'], capture['sha256'])
+        self.assertEqual(entry['interaction'], 'os_gui')
+        self.assertEqual(receipt['human_review'], 'not_run')
+
+    def test_t06_current_frame_panel_values_match_frozen_spec(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        receipt = json.loads((base / 'T06-current-frame-panel-check.json').read_text(encoding='utf-8'))
+        spec = json.loads((base / 'T06.case-spec.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['sample_frames'], spec['reference']['sample_frames'])
+        self.assertTrue(receipt['scientific_arrays_unchanged'])
+        self.assertFalse(receipt['viewer_forbidden_modules_loaded'])
+        self.assertEqual(receipt['direct_gui'], 'blocked_for_new_panel_capture')
+        self.assertEqual(receipt['human_review'], 'not_run')
+
+    def test_t07_recovery_and_review_package_remain_separately_classified(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T07')
+        candidate = json.loads((base / 'T07-current-candidate-check.json').read_text(encoding='utf-8'))
+        recovery = json.loads((base / 'T07-run010-offline-recovery-check.json').read_text(encoding='utf-8'))
+        package = json.loads((base / 'T07-run010-package-check.json').read_text(encoding='utf-8'))
+        self.assertEqual(candidate['accepted_candidate']['extension_sha256'], self.status['current_candidate']['extension_sha256'])
+        self.assertEqual(recovery['status'], 'passed')
+        self.assertEqual(recovery['direct_gui'], 'not_run_for_recovery')
+        self.assertEqual(package['classification'], 'review_only')
+        self.assertEqual(package['cold_open']['status'], 'passed')
+        self.assertEqual(package['limitations'][-1], 'VASP direct GUI and independent human review are not run.')
+        self.assertEqual(case['review_package'], 'passed')
+        self.assertEqual(case['human_review'], 'not_run')
+
+    def test_t17_current_regression_and_prepare_handover_cover_all_formats(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T17')
+        current = json.loads((base / 'T17-current-candidate-check.json').read_text(encoding='utf-8'))
+        package = json.loads((base / 'T17-run010-package-check.json').read_text(encoding='utf-8'))
+        self.assertEqual(current['current_candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(current['regression']['format_count'], 13)
+        self.assertEqual(current['regression']['byte_equal_to_scientifically_checked_run006_outputs'], 'passed_all')
+        self.assertEqual(current['historical_gui_candidate']['classification'], 'historical_direct_gui_not_relabelled')
+        self.assertEqual(package['contents']['authoritative_source_cbq_count'], 13)
+        self.assertEqual(package['contents']['roundtrip_cbq_count'], 13)
+        self.assertEqual(package['extracted_validation']['validated_cbq_count'], 26)
+        self.assertEqual(package['contents']['blender_project'], 'not_applicable_prepare_only_case')
+        self.assertEqual(case['render'], 'not_applicable')
+        self.assertEqual(case['human_review'], 'not_run')
+
+    def test_p0_checker_summary_matches_blocked_statuses(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        summary = json.loads((base / 'P4-p0-checker-summary.json').read_text(encoding='utf-8'))
+        p0 = {item['case_id']: item for item in summary['cases']}
+        self.assertEqual(set(p0), {'T00', 'T01', 'T02', 'T04', 'T06', 'T07', 'T17', 'T18'})
+        self.assertEqual(set(summary['blocked']), set(p0))
+        self.assertFalse(summary['ready_for_human_review'])
+        cases = {item['case_id']: item for item in self.status['cases']}
+        for case_id, result in p0.items():
+            self.assertEqual(result['classification'], 'blocked', case_id)
+            self.assertEqual(cases[case_id]['status'], 'blocked', case_id)
+            self.assertEqual(cases[case_id]['human_review'], 'not_run', case_id)
+        self.assertEqual(p0['T01']['integrity_status'], 'passed')
+        self.assertEqual(p0['T02']['integrity_status'], 'passed')
+        self.assertEqual(p0['T06']['verdict'], 'invalid')
+
+    def test_t18_current_audit_preserves_gui_and_native_boundaries(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        receipt = json.loads((base / 'T18-current-candidate-check.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['status'], 'blocked')
+        self.assertEqual(receipt['verified']['gui_save_as_and_cancel'], 'passed_historical_candidate')
+        self.assertEqual(receipt['verified']['legacy_export_restore_and_portable_cold_reopen'], 'passed_native_replay')
+        self.assertIn('legacy_migration_direct_gui', receipt['blocked'])
+        self.assertEqual(receipt['human_review'], 'not_run')
+
 
 class LocalBlockedManifestTests(unittest.TestCase):
     RUN_ROOT = ROOT / '.blend-analysis/2.5-real-user-tutorials/run-003'

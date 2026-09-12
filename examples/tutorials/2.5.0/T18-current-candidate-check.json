@@ -1,0 +1,67 @@
+{
+  "case_id": "T18",
+  "status": "blocked",
+  "scope": "Current-candidate applicability and recovery audit; historical GUI evidence retains its original candidate identity.",
+  "candidates": {
+    "accepted_gui_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "phase4_test_extension_sha256": "2637ce7ccc846854a280ebe56ea91f858a29591aa6614cc53cd92ea28bb3ea3f"
+  },
+  "verified": {
+    "gui_save_as_and_cancel": "passed_historical_candidate",
+    "gui_wrong_project_rejected_then_relinked": "passed_historical_candidate",
+    "paired_independent_cold_reopen": "passed_historical_candidate",
+    "missing_damaged_different_and_stale_projects_rejected": "passed_native_replay",
+    "valid_relink_after_rejection": "passed_native_replay",
+    "source_and_processor_unavailable_rebuild": "passed_phase4_test_candidate",
+    "legacy_export_restore_and_portable_cold_reopen": "passed_native_replay",
+    "originals_unchanged": true
+  },
+  "blocked": {
+    "legacy_migration_direct_gui": "No OS GUI interaction tool is available; native public-operator replay is not relabeled as direct GUI.",
+    "second_clean_profile": "Not run because an existing user-owned Blender 5.1.1 process (PID 26228) was active; concurrent Blender launch is prohibited for this plan.",
+    "independent_human_review": "not_run"
+  },
+  "evidence": [
+    {
+      "path": "examples/tutorials/2.5.0/T18-run007-gui-save-check.json",
+      "sha256": "8e7fd3d8bd280af5cf50fb38f2bd72682160c63ed18c3de930c74e2fe273a23d"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/T18-run007-gui-relink-check.json",
+      "sha256": "38ce37dd25d118edbcddeb773583bcf516a2f454f38fe42767573cb9b02a47af"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/T18-run007-gui-pairs-cold-check.json",
+      "sha256": "0a9db2a7c071270c1a1dd0244126af2806f72c1e632b18640bbed021245f2f1c"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/T18-run007-fault-check.json",
+      "sha256": "187fd31e6ea694ee7228c447396042f80ca2d1652d85246e6645631a21c1ab2b"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/T18-run007-stale-view-check.json",
+      "sha256": "ff9bda6dedfae329dbe5c1221fba9034308bc69bc2b3bc337ecdd74e4406144b"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/T18-run007-legacy-export-check.json",
+      "sha256": "c846ddd5697970e7488f945968e60daaa99027aa84f418dfebdf7ac2d2625872"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/T18-run007-legacy-restore-check.json",
+      "sha256": "aecf22d841d797841967a4f7c0ec86730a96ab2893d5e5b0a3b561f03ead1491"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/T18-run007-legacy-portable-check.json",
+      "sha256": "aec4d801cb6126bef1fd2e90b02b1c5069b8c1f165f86c50a2e37709f11956b5"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/T06-run010-offline-recovery-check.json",
+      "sha256": "f83e42df3ab8852218d625073b572db1669e5f00804f7f1fc09bbb6ca68fb79d"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/T07-run010-offline-recovery-check.json",
+      "sha256": "4240704a579a9cbfef816d5b60c58777a2699af94134bd5d19a42be8128c63f6"
+    }
+  ],
+  "human_review": "not_run"
+}

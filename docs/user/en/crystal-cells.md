@@ -1,6 +1,6 @@
 # T04: crystal sites, occupancy and an existing diamond supercell
 
-This lesson is a working draft. Saved scientific data, ASE conversion and original/moved cold reopening passed. Blender import and composition used the authorized replay of previously verified operations; the cell screenshot is an actual capture. Complete step-by-step GUI coverage, visual quality and independent human replay remain pending.
+This lesson is a working draft. Current-candidate Prepare GUI, scientific checks, original/moved cold reopening, renders and rebuild recovery passed. Blender import and composition used replay of previously verified operations; the sidebar image below is a native GUI capture after that replay. Independent human replay remains pending.
 
 ![Cocrystal source sites inside the declared cell](../assets/2.5-tutorials/crystal-cocrystal.png)
 
@@ -8,7 +8,7 @@ The empty part of this cell is intentional: this view contains the 64 source asy
 
 ## Prerequisites and fixed inputs
 
-Complete [installation](installation.md) and [the first lesson](first-aspirin.md). This case uses Blender 5.1.1, prepare 0.1.0 and candidate ZIP SHA-256 `963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a`. It contains the periodic Create View correction; earlier candidates can omit the cell display. The prepare wheel remains `3f1d93acd0eefd29bc304527007b8d53bd0aa3b508e97aea0a18f4624ee62c3e`.
+Complete [installation](installation.md) and [the first lesson](first-aspirin.md). The current mapping uses Blender 5.1.1, prepare 0.1.0 wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a` and Extension ZIP SHA-256 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`. The [current-candidate receipt](../../../examples/tutorials/2.5.0/T04-current-candidate-check.json) binds those artifacts to run-009. Earlier images below keep their original hashes and are not relabeled as current actions.
 
 Download the [COD 4503272 CIF](../../../examples/user-workflows/inputs/cif/cod-4503272-caffeine-cocrystal.cif) and [diamond CONTCAR](../../../examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR). Keep the [case specification](../../../examples/tutorials/2.5.0/T04.case-spec.json), which contains their hashes and comparison tolerances. The CIF is a CC0 COD source; the diamond input is an existing repository 2×2×2 derivation of the COD 9012293 conventional cell, not a new simulation.
 
@@ -54,6 +54,11 @@ Recorded checks: [CIF GUI and science](../../../examples/tutorials/2.5.0/T04-run
 
 1. In a new lesson scene, open the `ChemBlender` sidebar. Set `CBQ Package` to `cocrystal.cbq`, confirm the path, then use `Preview CBQ` and `Import CBQ`.
 2. Select the Structure in Project Browser. Under `Scientific Representation`, use `Automatic`, `Research`, then `Create View`. Expect `ChemBlender Periodic Structure` with Cell, Site Occupancy and Thermal Ellipsoids display children. The source-site representation retains the declared cell and occupancy; it does not generate symmetry copies.
+
+![Current-candidate Project Browser and symmetry fields](../assets/2.5-tutorials/crystal-sidebar-run009.jpg)
+
+This native screenshot exposes the checks a user can read directly: `Sites: 64`, declared `C m c a`, international number `64`, `Operations: 16`, and derived symmetry `Not derived`. Blender truncates the long CBQ path and selected-entity hash in this sidebar width; use the linked receipt for their full values.
+
 3. Hide the default Cube in both viewport and render. In the Outliner, expand the periodic object and select the parent plus its three display children. Place the pointer over the viewport and press numpad `.` to frame the selection. Framing only the source atoms can crop the cell.
 
 ![Actual complete-cell framing after Operator replay](../assets/2.5-tutorials/crystal-cell-view.jpg)
@@ -98,7 +103,7 @@ If a cell is absent, check the candidate version and select the periodic Structu
 
 On separate copies, clearing the four owned display meshes and invoking the public `REBUILD` Operator restored 64 sites and 12 cell edges without changing scientific arrays. Both rebuilt pairs passed another cold reopen. See the [derived-geometry recovery record](../assets/2.5-tutorials/crystal-cache-recovery.json). This was a native Operator replay, not a GUI deletion demonstration. Rebuilding replaces the display objects: the manually added Subdivision modifier was absent afterward. Reapply the lesson’s cosmetic refinement after a rebuild; keep the original refined pair as the visual reference.
 
-Complete GUI capture, visual quality, independent human replay and the distributable case package remain pending. Keep this lesson marked as a draft until those gates and visual review pass. [Media provenance](../assets/2.5-tutorials/provenance.json) records the current candidate separately from earlier lessons.
+Independent human replay and the distributable case package remain pending. Keep this lesson marked as a draft until those gates and visual review pass. [Media provenance](../assets/2.5-tutorials/provenance.json) records the current candidate separately from earlier lessons.
 
 ## Updated local review pair (run-009)
 

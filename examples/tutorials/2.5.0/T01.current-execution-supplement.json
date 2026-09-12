@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "case_id": "T01",
+  "target_run": "run-010/T01",
+  "spec_sha256": "e0c18e97069c60062086dd7643244845937a8f1fedba5b6611fb685d77c5fade",
+  "authorization": {
+    "approved_by": "user",
+    "approved_at": "2026-09-10",
+    "basis": "User approved MCP replay only for Blender UI actions already proven by direct GUI evidence. Replays remain separately classified and do not become new GUI events."
+  },
+  "replays": [
+    {
+      "step_id": "s02",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-002/T01",
+        "source_extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8",
+        "source_manifest_sha256": "3a707e82d8560ed10a05622872c8cd5f1668126ebfadb7af853b4a57345b810d",
+        "events_sha256": "6a45c786d6dbc2b0a1a0fe4387bbf6f47bd5108bfadb7d4efc2517ef6c424b8a",
+        "event_id": "e23",
+        "before_artifact_sha256": "92bb963afa174e787edf647ffcc888a3e30c96c152e65b2965c4857cb24fb964",
+        "after_artifact_sha256": "d537d4a0d3daee64c5003a1a907f333ed0365301528181254688f730f408e012"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+        "checked_fields": ["preview", "import", "entity_count", "coordinates"]
+      },
+      "operator_receipt": {
+        "status": "passed",
+        "artifact_id": "T01-current-candidate-check",
+        "sha256": "10383f4496ff377ee40561bb29a74daa9391c4a6c55e97421f27fb84d474793b"
+      }
+    },
+    {
+      "step_id": "s03",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-002/T01",
+        "source_extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8",
+        "source_manifest_sha256": "3a707e82d8560ed10a05622872c8cd5f1668126ebfadb7af853b4a57345b810d",
+        "events_sha256": "6a45c786d6dbc2b0a1a0fe4387bbf6f47bd5108bfadb7d4efc2517ef6c424b8a",
+        "event_id": "e26",
+        "before_artifact_sha256": "694408797e15e1520458f9b13dc2b494e795d0476145882ca8a11e19d8efdb50",
+        "after_artifact_sha256": "62105d1144489cb09a0573756ffa3e6369287b0293f5bd6c5771a6991df23f76"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+        "checked_fields": ["create_view", "structure_id", "coordinates"]
+      },
+      "operator_receipt": {
+        "status": "passed",
+        "artifact_id": "T01-current-candidate-check",
+        "sha256": "10383f4496ff377ee40561bb29a74daa9391c4a6c55e97421f27fb84d474793b"
+      }
+    },
+    {
+      "step_id": "s04",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-002/T01",
+        "source_extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8",
+        "source_manifest_sha256": "3a707e82d8560ed10a05622872c8cd5f1668126ebfadb7af853b4a57345b810d",
+        "events_sha256": "6a45c786d6dbc2b0a1a0fe4387bbf6f47bd5108bfadb7d4efc2517ef6c424b8a",
+        "event_id": "e62",
+        "before_artifact_sha256": "5d30c72176a659ec715c0d4771a70bfddbb0c3970508fb7ae3cdf6a42733e72e",
+        "after_artifact_sha256": "c485b74f77b27016b27fb5e733502e47f92ce656177c49ae995e4d99110b1e6e"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+        "checked_fields": ["topology", "camera", "light", "render_settings"]
+      },
+      "operator_receipt": {
+        "status": "passed",
+        "artifact_id": "T01-current-candidate-check",
+        "sha256": "10383f4496ff377ee40561bb29a74daa9391c4a6c55e97421f27fb84d474793b"
+      }
+    },
+    {
+      "step_id": "s05",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-002/T01",
+        "source_extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8",
+        "source_manifest_sha256": "3a707e82d8560ed10a05622872c8cd5f1668126ebfadb7af853b4a57345b810d",
+        "events_sha256": "6a45c786d6dbc2b0a1a0fe4387bbf6f47bd5108bfadb7d4efc2517ef6c424b8a",
+        "event_id": "e64",
+        "before_artifact_sha256": "4a24f5f7da9f802822e6793c4e9a6427848d01b494ddf75eef097311ce2e4220",
+        "after_artifact_sha256": "aa50639fde18531f4f96e14920a733178957f5d844736544ab8af0d4d3633b83"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+        "checked_fields": ["cycles", "resolution", "samples", "render"]
+      },
+      "operator_receipt": {
+        "status": "passed",
+        "artifact_id": "T01-current-candidate-check",
+        "sha256": "10383f4496ff377ee40561bb29a74daa9391c4a6c55e97421f27fb84d474793b"
+      }
+    },
+    {
+      "step_id": "s06",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-002/T01",
+        "source_extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8",
+        "source_manifest_sha256": "3a707e82d8560ed10a05622872c8cd5f1668126ebfadb7af853b4a57345b810d",
+        "events_sha256": "6a45c786d6dbc2b0a1a0fe4387bbf6f47bd5108bfadb7d4efc2517ef6c424b8a",
+        "event_id": "e83",
+        "before_artifact_sha256": "10907869cd5816d2491ab67355d74a3c618529a6ba7e620f1113f4cf287c8dc9",
+        "after_artifact_sha256": "4384d875bfd1c0cd4bc52adc25c4959604dc5d38b57fec3eb3ae2bf6aab0cbd4"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+        "checked_fields": ["blend_save", "cbq_pair", "scientific_hashes"]
+      },
+      "operator_receipt": {
+        "status": "passed",
+        "artifact_id": "T01-current-candidate-check",
+        "sha256": "10383f4496ff377ee40561bb29a74daa9391c4a6c55e97421f27fb84d474793b"
+      }
+    },
+    {
+      "step_id": "s07",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-002/T01",
+        "source_extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8",
+        "source_manifest_sha256": "3a707e82d8560ed10a05622872c8cd5f1668126ebfadb7af853b4a57345b810d",
+        "events_sha256": "6a45c786d6dbc2b0a1a0fe4387bbf6f47bd5108bfadb7d4efc2517ef6c424b8a",
+        "event_id": "e86",
+        "before_artifact_sha256": "0a54adef9f267a0deab3c489918e71420655f43b095c37f5b9d2625c02bdb0f9",
+        "after_artifact_sha256": "2c92e469c62df97970c53326a8c15f6574612cb5c07dc886ab485508cd040378"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+        "checked_fields": ["cold_reopen", "moved_pair", "scientific_hashes"]
+      },
+      "operator_receipt": {
+        "status": "passed",
+        "artifact_id": "T01-current-candidate-check",
+        "sha256": "10383f4496ff377ee40561bb29a74daa9391c4a6c55e97421f27fb84d474793b"
+      }
+    }
+  ]
+}

@@ -123,6 +123,43 @@ def scientific_bindings(project, entity, preset, secondary_uuid=""):
     return bound
 
 
+def trajectory_frame_rows(project, entity, obj):
+    """Return read-only scalar values for the frame currently shown by a trajectory View."""
+    from cbq_core.model import FrameProperty
+
+    frame_set_id = entity.id if type(entity).__name__ == "FrameSet" else getattr(entity, "frame_set_id", None)
+    while obj is not None and obj.get("cb_view_root") is not True:
+        obj = obj.parent
+    if obj is None or obj.get("cb_trajectory_dataset_id") != str(frame_set_id):
+        return ()
+    index = obj.get("cb_trajectory_frame_index")
+    frames = project.datasets.get(frame_set_id)
+    if isinstance(index, bool) or not isinstance(index, int) or frames is None or not 0 <= index < frames.data.shape[0]:
+        return ()
+    rows = [f"Current Source Frame: {index} / {frames.data.shape[0] - 1}"]
+    properties = sorted(
+        (value for value in project.datasets.values()
+         if isinstance(value, FrameProperty) and value.frame_set_id == frame_set_id),
+        key=lambda value: ({"energy": 0, "source_index": 1, "step": 2}.get(value.semantic_role, 3),
+                           value.semantic_role, value.revision),
+    )
+    for value in properties:
+        available = value.validity_mask is None or bool(value.validity_mask.values[index])
+        scalar = value.data.values[index] if available else "missing"
+        scalar = scalar.item() if hasattr(scalar, "item") else scalar
+        if isinstance(scalar, float):
+            scalar = format(scalar, ".15g")
+        label = value.semantic_role.replace("_", " ").title()
+        details = []
+        if value.data.unit != "dimensionless":
+            details.append("unit unknown" if value.data.unit == "unknown" else value.data.unit)
+        if value.status.value != "complete":
+            details.append(value.status.value)
+        suffix = f" ({'; '.join(details)})" if details else ""
+        rows.append(f"{label}: {scalar}{suffix}")
+    return tuple(rows)
+
+
 def preset_settings(settings, preset):
     result = {}
     for name, default in preset.default_settings:
@@ -520,6 +557,8 @@ if bpy is not None:
         if name in {"FrameSet", "AtomFrameProperty"}:
             box.label(text="Source frames retain their labels and explicit time units")
             box.label(text="Apply Frame previews; Update View saves the static frame")
+            for row in trajectory_frame_rows(session.project, entity, context.active_object):
+                box.label(text=row)
             _button(box, "Apply Frame", "FRAME")
             row = box.row(align=True)
             _button(row, "Play", "PLAY")

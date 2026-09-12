@@ -1,0 +1,88 @@
+{
+  "schema_name": "chemblender_tutorial_current_candidate_check",
+  "schema_version": 1,
+  "case_id": "T01",
+  "captured_at_utc": "2026-09-12T15:17:29.8930020Z",
+  "candidate": {
+    "source_commit": "32d96303b2c0e16260b32b470c2d5601226d9318",
+    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a"
+  },
+  "input": {
+    "path": "examples/user-workflows/inputs/mol/ain-aspirin-v2000.mol",
+    "sha256": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+    "license_and_source": "examples/user-workflows/README.md"
+  },
+  "prepare": {
+    "interaction": "cli_current_candidate",
+    "convert_result": ".blend-analysis/2.5-real-user-tutorials/run-010/T01/convert-result.json",
+    "convert_result_sha256": "a30f84773b1b6a8eb03a29beba17fea4bdb8098aea3f9d1d18b4ad1d27bb469a",
+    "convert": "passed",
+    "validate": "passed",
+    "atoms": 21,
+    "hydrogens": 8,
+    "explicit_bonds": 21,
+    "atomic_numbers_equal": true,
+    "bond_indices_equal": true,
+    "bond_orders_equal": true,
+    "coordinate_unit": "angstrom",
+    "coordinate_max_absolute_error": 0.0,
+    "structure_revision": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+    "scientific_arrays_equal_to_historical_run": 9
+  },
+  "viewer_replay": {
+    "interaction": "authorized_mcp_replay",
+    "operators": [
+      "preview_cbq",
+      "import_cbq",
+      "scientific_view CREATE",
+      "scientific_view REBUILD",
+      "wm.save_as_mainfile"
+    ],
+    "status": "passed",
+    "structure_id": "8c1a7e6c-3ce5-54ec-b1cc-8a250b2f4c1d",
+    "structure_revision": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
+    "view": "ChemBlender Structure",
+    "coordinates_unchanged": true,
+    "original_blend_sha256": "66923230a80cc5e6a8e01b86ac48c2d90b73b6a8b44a54dc598679bf6de4709e",
+    "paired_manifest_sha256": "9325f00af261aa8484417687038a0b6ec78c5cc2506f1779aa99b45b6b114f93"
+  },
+  "render": {
+    "interaction": "native_current_candidate_replay",
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T01/current-aspirin-cycles.png",
+    "sha256": "6c1ee7451d8186c69672f2e02c51610b09fd169e59c8b958c6c05b3c95686df0",
+    "resolution": [2400, 1800],
+    "engine": "CYCLES",
+    "samples": 256,
+    "explicit_topology": true,
+    "agent_visual_review": "passed with visible atoms and input bonds; framing remains for independent human review",
+    "discarded_draft": {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T01/current-aspirin-cycles-draft.png",
+      "sha256": "54983bd2306b33488af9d7d322f1d38cae451e9487700912e404961737d9161b",
+      "reason": "Replay omitted the documented default Cube deletion and explicit topology Show step."
+    }
+  },
+  "lifecycle": {
+    "original_cold_reopen": "passed",
+    "portable_pair": ".blend-analysis/2.5-real-user-tutorials/run-010/portable/T01/aspirin.blend + aspirin.cbq",
+    "portable_blend_sha256_after_rebuild": "436c86d51fa3b0b50276862ea24a3774f02aea77f1b077b18bd9f011b47baf35",
+    "portable_manifest_sha256": "9325f00af261aa8484417687038a0b6ec78c5cc2506f1779aa99b45b6b114f93",
+    "portable_paths_local": true,
+    "processor_available_during_rebuild": false,
+    "public_view_rebuild": "passed",
+    "post_rebuild_cold_reopen": "passed",
+    "scientific_arrays_unchanged": true,
+    "viewer_scientific_modules": []
+  },
+  "historical_evidence": {
+    "direct_prepare_gui": "run-003/T01",
+    "direct_blender_gui": "run-002/T01",
+    "render": "run-003/T01/aspirin-cycles.png",
+    "render_sha256": "85ef878641ee46a513c2e0d0389c5a5e174e0a01b5db7bd9580fb49f9ce0c13f",
+    "classification": "historical evidence; never relabeled as current GUI"
+  },
+  "technical_status": "passed",
+  "review_package": "pending",
+  "human_review": "not_run",
+  "distribution": "blocked"
+}

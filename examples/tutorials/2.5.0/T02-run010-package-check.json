@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "case_id": "T02",
+  "run_id": "run-010/T02",
+  "status": "passed",
+  "classification": "review_only_current_addendum",
+  "archive": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T02-current-review-addendum.zip",
+    "sha256": "6252a9257901e01e6e49f8b80589a11b7896fe354b8fcb1e71e26108cdb60a79",
+    "size_bytes": 3744021,
+    "file_count": 28,
+    "crc_status": "passed",
+    "relative_paths_only": true
+  },
+  "historical_base_package": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-003/T02-review.zip",
+    "sha256": "39c659f8e42255209d19adc3425cbe977be19128e547f0ea3dd21d438b51d99e",
+    "classification": "review_only_historical_gui_base"
+  },
+  "included_evidence": {
+    "current_candidate_receipt_sha256": "b66d1533cc9317db2e4b461dfd3a95125bd0f492798f907b7089a1b5a3aa55c0",
+    "current_execution_supplement_sha256": "8fb6d753282c670c69fa3f232752d2ace75a27c24b257b1db6f51e9fd2c7886b",
+    "input_sha256": "5c9aa2a3024d56c903d547798cbd04ff743433ba0950dbfd8e19238e40651172",
+    "blend_sha256": "cef174fe7bc6097df80038ca3a692ae3daeb01b3185f5c1618089d91666698b3",
+    "manifest_sha256": "d0ab33593677cae76c47ae1954ada48c4f5f524de7385fa4e7653a48993804f2",
+    "render_sha256": "a354ef9326b80b690e9cd09b8273fc5c6834e3ff649932cd44eb22d0bf901921"
+  },
+  "cold_open": {
+    "status": "passed",
+    "blender_version": "5.1.1",
+    "profile": "run-001/profile",
+    "extracted_project": ".blend-analysis/2.5-real-user-tutorials/run-010/review-extract/T02-current-addendum/project/ethanol.blend",
+    "paired_cbq_local": true,
+    "structures": 5,
+    "views": 2,
+    "viewer_scientific_modules_loaded": false,
+    "exit_code": 0
+  },
+  "limitations": [
+    "Use this addendum with the retained historical base package; direct GUI artifacts are not duplicated or relabeled.",
+    "The addendum is not a distribution artifact.",
+    "Independent human review is not run."
+  ]
+}

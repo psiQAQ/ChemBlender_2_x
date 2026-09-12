@@ -1,0 +1,42 @@
+{
+  "case_id": "T06",
+  "status": "passed",
+  "scope": "Derived-geometry rebuild and independent cold reopen while both the recorded source file and processor executable are unavailable.",
+  "candidate": {
+    "extension_sha256": "2637ce7ccc846854a280ebe56ea91f858a29591aa6614cc53cd92ea28bb3ea3f",
+    "profile": ".blend-analysis/2.5-real-user-tutorials/run-010/installed-p4.6-v3/profile"
+  },
+  "isolation": {
+    "working_copy": ".blend-analysis/2.5-real-user-tutorials/run-010/T06/offline-recovery/trajectory-refined.blend",
+    "source_path": "examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz",
+    "source_sha256_before_and_after": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a",
+    "source_during_test": "temporarily renamed and unavailable; restored in finally",
+    "processor_path_during_test": ".blend-analysis/2.5-real-user-tutorials/run-010/T06/offline-recovery/missing/chemblender-prepare.exe",
+    "processor_exists": false,
+    "original_project_sha256": "61040d2fefaaf2f2aa6f811f873447beb2cfb31c0493047b5b8f0c72c0b52f81",
+    "original_project_modified": false,
+    "original_and_copy_cbq_files_equal": true,
+    "cbq_file_count": 7
+  },
+  "rebuild": {
+    "operator": "chemblender.scientific_view action=REBUILD",
+    "saved_recipe_frame_after_rebuild": 0,
+    "restored_static_frame": 15,
+    "coordinate_error": 1.1842041036658202e-07,
+    "scaled_force_error": 5.515591516846996e-08,
+    "scientific_arrays_unchanged": true,
+    "raw_receipt": ".blend-analysis/2.5-real-user-tutorials/run-010/T06/offline-recovery/offline-rebuild.json",
+    "raw_receipt_sha256": "c3de5004fa13668ce6360583f74c888da0719b17e7a35f92543fd503fc3a7f6d"
+  },
+  "cold_reopen": {
+    "independent_process": true,
+    "source_frame": 15,
+    "coordinate_error": 1.1842041036658202e-07,
+    "scaled_force_error": 5.515591516846996e-08,
+    "scientific_arrays_unchanged": true,
+    "raw_receipt": ".blend-analysis/2.5-real-user-tutorials/run-010/T06/offline-recovery/offline-cold.json",
+    "raw_receipt_sha256": "8d685e6a010e7215c5a0aee2d2d9bc3c75063bfefe8f5fa031aa03ae7dfa3164"
+  },
+  "direct_gui": "not_run",
+  "human_review": "not_run"
+}

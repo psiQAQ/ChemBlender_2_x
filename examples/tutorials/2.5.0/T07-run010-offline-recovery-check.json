@@ -1,0 +1,42 @@
+{
+  "case_id": "T07",
+  "status": "passed",
+  "scope": "H2 Grid derived-cache rebuild and independent cold reopen while both the recorded Cube source and processor executable are unavailable.",
+  "candidate": {
+    "extension_sha256": "2637ce7ccc846854a280ebe56ea91f858a29591aa6614cc53cd92ea28bb3ea3f",
+    "profile": ".blend-analysis/2.5-real-user-tutorials/run-010/installed-p4.6-v3/profile"
+  },
+  "isolation": {
+    "working_copy": ".blend-analysis/2.5-real-user-tutorials/run-010/T07/offline-recovery/h2-grid.blend",
+    "source_path": "examples/user-workflows/inputs/cube/h2-lcao-1s-density-64.cube",
+    "source_sha256_before_and_after": "51fcb06343132c4b75f340aa5824434c9c622b51df7ea1ad3742920c78af66b4",
+    "source_during_test": "temporarily renamed and unavailable; restored in finally",
+    "processor_path_during_test": ".blend-analysis/2.5-real-user-tutorials/run-010/T07/offline-recovery/missing/chemblender-prepare.exe",
+    "processor_exists": false,
+    "authoritative_array_count": 3,
+    "authoritative_arrays_equal_to_original": true,
+    "original_project_path": ".blend-analysis/2.5-real-user-tutorials/run-009/T07/h2-grid.blend",
+    "original_project_sha256": "cfb8ac76558aacd71b9276aeee467213ed848d6c6847c893c04ee7d0f6c9c7f3"
+  },
+  "rebuild": {
+    "operator": "chemblender.scientific_view action=REBUILD",
+    "views": 2,
+    "vdb_restored_on_initial_load": 3,
+    "vdb_removed_again_before_operator": 3,
+    "vdb_restored_by_operator": 3,
+    "scientific_arrays_unchanged": true,
+    "raw_receipt": ".blend-analysis/2.5-real-user-tutorials/run-010/T07/offline-recovery/offline-rebuild.json",
+    "raw_receipt_sha256": "c431d1221207208d2c14c8b884c91cdacc8c7a0b2c786ab499aac5982c803aa6"
+  },
+  "cold_reopen": {
+    "independent_process": true,
+    "views": 2,
+    "local_arrays": 3,
+    "local_vdbs": 3,
+    "scientific_arrays_unchanged": true,
+    "raw_receipt": ".blend-analysis/2.5-real-user-tutorials/run-010/T07/offline-recovery/offline-cold.json",
+    "raw_receipt_sha256": "a8d973b4351ec63eadfd4c8e8103f4ca36654ae097ccf20567d1e24cb02a3349"
+  },
+  "direct_gui": "not_run_for_recovery",
+  "human_review": "not_run"
+}

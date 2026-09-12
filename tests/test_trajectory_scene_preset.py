@@ -14,7 +14,7 @@ from cbq_core.model import ImportBatch
 from cbq_core.model import QCProject
 from cbq_core.scene_preset import builtin_scene_presets
 from cbq_core.scene_preset import plan_scene_preset
-from ChemBlender.ui.scientific_view import available_presets, scientific_bindings, timeline_frame
+from ChemBlender.ui.scientific_view import available_presets, scientific_bindings, timeline_frame, trajectory_frame_rows
 from tests.test_trajectory_frame_manager import frame_set
 from tests.test_vibration_model import structure
 from tests.test_scene_preset import grid
@@ -42,6 +42,31 @@ def trajectory_fixture(*, lazy=True):
 
 
 class TrajectorySceneTests(unittest.TestCase):
+    def test_current_trajectory_frame_rows_show_linked_scalar_properties(self):
+        project, _, frames, force, time, _ = trajectory_fixture(lazy=False)
+        energy = replace(time, id=uuid4(), revision="energy-1", semantic_role="energy",
+                         data=ArrayData(numpy.array([-1., -2.5, -3.]), ("frame",), "electron_volt"))
+        source_index = replace(time, id=uuid4(), revision="source-index-1", semantic_role="source_index",
+                               data=ArrayData(numpy.array([10, 20, 30]), ("frame",), "unknown"),
+                               status=DatasetStatus.AMBIGUOUS)
+        step = replace(time, id=uuid4(), revision="step-1", semantic_role="step",
+                       data=ArrayData(numpy.array([0, 4, 8]), ("frame",), "dimensionless"))
+        project.commit(ImportBatch(datasets=(energy, source_index, step)))
+
+        class View(dict):
+            parent = None
+
+        view = View(cb_view_root=True, cb_trajectory_dataset_id=str(frames.id),
+                    cb_trajectory_frame_index=1)
+        self.assertEqual(trajectory_frame_rows(project, force, view), (
+            "Current Source Frame: 1 / 2",
+            "Energy: -2.5 (electron_volt)",
+            "Source Index: 20 (unit unknown; ambiguous)",
+            "Step: 4",
+            "Time: 0.4 (femtosecond)",
+        ))
+        self.assertEqual(trajectory_frame_rows(project, frames, View()), ())
+
     def test_static_timeline_plan_is_lazy_and_binds_force_to_its_frames(self):
         project, reference, frames, force, _, source = trajectory_fixture()
         preset = builtin_scene_presets()["trajectory_force"]

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "case_id": "T07",
+  "run_id": "run-010/T07",
+  "status": "passed",
+  "classification": "review_only",
+  "candidate": {
+    "accepted_gui_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "offline_recovery_extension_sha256": "2637ce7ccc846854a280ebe56ea91f858a29591aa6614cc53cd92ea28bb3ea3f",
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a"
+  },
+  "archive": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T07-review-v2.zip",
+    "sha256": "2733b330c9f5a252664e5225cb291035550cc69815dd74098c7f155ae813c8bb",
+    "size_bytes": 28922735,
+    "entry_count": 73,
+    "crc_status": "passed",
+    "relative_paths_only": true
+  },
+  "contents": {
+    "fixed_inputs_and_licenses": true,
+    "bilingual_tutorials": true,
+    "primary_sampling_difference_and_vasp_projects": true,
+    "four_final_renders": true,
+    "selected_receipts_and_case_specs": true
+  },
+  "cold_open": {
+    "status": "passed",
+    "blender_version": "5.1.1",
+    "profile": "run-010/installed-p4.6-v3/profile",
+    "extracted_root": ".blend-analysis/2.5-real-user-tutorials/run-010/review-extract-v2/T07",
+    "projects": [
+      {"name": "h2-primary", "views": 2, "local_arrays": 3, "local_vdbs": 3, "receipt_sha256": "b99b896919c0f67c9413d831b45f7337fda5aad4aee755d71cae34c8c5f49c56"},
+      {"name": "h2-sampling", "views": 5, "local_arrays": 3, "local_vdbs": 3, "receipt_sha256": "9e253244098368edf1f72a393d758e162165f033921d04e5d7f200977604e7f1"},
+      {"name": "h2-difference", "views": 1, "local_arrays": 5, "local_vdbs": 2, "receipt_sha256": "9a15b3e6c630c61846a5d839a1583e21fc0c18fbdea0857c8c9f0169c948dfc8"},
+      {"name": "vasp", "views": 2, "local_arrays": 1, "local_vdbs": 3, "receipt_sha256": "5c673cb858c7dfaeec830e84f83d9a1bbb1aa269b9a83059c4529e6d0c80392a"}
+    ],
+    "viewer_scientific_modules_loaded": false
+  },
+  "limitations": [
+    "The archive is a local review package, not a distribution artifact.",
+    "The VASP processor route is development_reuse, not isolated_install or distribution_ready.",
+    "VASP direct GUI and independent human review are not run."
+  ]
+}

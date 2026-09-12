@@ -1,6 +1,6 @@
 # T02: ethanol conformers, MMFF94 and an explicit mesh edit
 
-This lesson has actual GUI, scientific and cold-reopen evidence. Independent human replay is pending. The image below shows the final **manually edited** structure, not the optimized energy minimum.
+The current Standard processor and Viewer candidate reproduced the fixed scientific values, explicit Apply, Cycles render, moved-pair display rebuild and independent cold reopen. The GUI captures remain historical direct-GUI evidence linked through a separately classified replay supplement; they are not relabeled as current clicks. Independent human replay is pending. The image below is the retained historical GUI-run render of the final **manually edited** structure, not the optimized energy minimum.
 
 ![Ethanol after the explicit hydrogen edit](../assets/2.5-tutorials/ethanol-cycles.png)
 
@@ -8,7 +8,7 @@ Gray is carbon, red is oxygen and white is hydrogen. Nine atoms and eight bonds 
 
 ## Prerequisites and fixed input
 
-Complete [installation](installation.md) and learn the sidebar layout in [the first lesson](first-aspirin.md). This run uses Blender 5.1.1, Standard prepare 0.1.0 and RDKit 2026.03.3. Candidate ZIP SHA-256: `bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374`. Prepare wheel SHA-256: `3f1d93acd0eefd29bc304527007b8d53bd0aa3b508e97aea0a18f4624ee62c3e`. Earlier T01 screenshots use an earlier candidate.
+Complete [installation](installation.md) and learn the sidebar layout in [the first lesson](first-aspirin.md). The current replay uses Blender 5.1.1, Standard prepare 0.1.0 and RDKit 2026.03.3. Current Extension SHA-256: `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`. Current Prepare wheel SHA-256: `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`.
 
 Download [ethanol.smi](../../../examples/user-workflows/inputs/smiles/ethanol.smi) into a new folder such as `D:\ChemBlenderLessons\T02\`. It contains `CCO` followed by a newline: a repository-authored synthetic input under GPL-3.0, not an experimental structure. Keep the [frozen case specification](../../../examples/tutorials/2.5.0/T02.case-spec.json) with your records.
 
@@ -48,7 +48,7 @@ Download [ethanol.smi](../../../examples/user-workflows/inputs/smiles/ethanol.sm
 
 ![Completed energy record in Project Browser](../assets/2.5-tutorials/ethanol-energy.jpg)
 
-See the [recorded numerical checks](../assets/2.5-tutorials/ethanol-science-check.json). These values are references for the fixed backend and input, not measurements. Ethanol has only single bonds here: `Kekulize` checks this operation's execution and connectivity preservation, not aromatic resonance handling.
+See the [recorded numerical checks](../assets/2.5-tutorials/ethanol-science-check.json) and the [current-candidate applicability record](../../../examples/tutorials/2.5.0/T02-current-candidate-check.json). Both runs produced the same displayed values. These values are references for the fixed backend and input, not measurements. Ethanol has only single bonds here: `Kekulize` checks this operation's execution and connectivity preservation, not aromatic resonance handling.
 
 ## Apply one deliberate edit while retaining the source
 
@@ -75,7 +75,7 @@ Save `ethanol.blend` beside the complete `ethanol.cbq` directory. Quit this tuto
 
 If an empty `Render Result` window reappears after opening the project, close that secondary window to see the main scene. Render Result is not the saved PNG; open `ethanol-cycles.png` to view the persistent image or press F12 to render again.
 
-Copy or move the **pair**, including all CBQ arrays. A relocated-copy cold-process audit passed with unchanged hashes and array paths beneath the new CBQ directory. This is distinct from deleting derived caches and rebuilding; that additional recovery check remains pending. Human blind replay and a distributable case package are also pending.
+Copy or move the **pair**, including all CBQ arrays. On the current candidate, a relocated copy was opened with a deliberately unavailable processor. Clearing only the two derived Structure View meshes and using `Rebuild Selected View` restored both displays without changing any scientific hash; another clean process reopened the result with all array paths under the copied CBQ directory. Never delete authoritative NPY arrays. Human blind replay remains pending; the local review package is review-only, not a distribution artifact.
 
 For a standalone integrity check, use the public command below after replacing the example path. Expect `status: success`. Validation does not prove the chemistry, render quality or human reproducibility.
 
@@ -85,4 +85,4 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T02\ethanol.cbq" --json
 
 If an operation fails, retain its diagnostic and the last saved pair before retrying. If `Generate 3D` is absent, select the original SMILES-bound View. If a render is crowded, check the render camera icons for earlier Views. If an opened project cannot find arrays, restore the complete adjacent CBQ directory; do not invent missing coordinates or delete authoritative arrays as a cache repair.
 
-MMFF94 is a molecular mechanics force field. ETKDG generates a plausible conformer, not a global-minimum proof or quantum calculation. A single energy comparison is meaningful only for the same molecule, atom mapping, units and force field. GUI JPEGs are native captures; the render is Blender PNG. [Media provenance and hashes](../assets/2.5-tutorials/provenance.json) remain separate from human acceptance.
+MMFF94 is a molecular mechanics force field. ETKDG generates a plausible conformer, not a global-minimum proof or quantum calculation. A single energy comparison is meaningful only for the same molecule, atom mapping, units and force field. GUI JPEGs are native historical captures; the current CLI/Operator replay is recorded by [T02.current-execution-supplement.json](../../../examples/tutorials/2.5.0/T02.current-execution-supplement.json) and never becomes new direct-GUI evidence. [Media provenance and hashes](../assets/2.5-tutorials/provenance.json) remain separate from human acceptance.

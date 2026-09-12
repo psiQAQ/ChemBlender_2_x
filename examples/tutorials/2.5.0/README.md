@@ -8,9 +8,9 @@ The immutable design baseline remains in [the research package](../../../docs/ch
 
 - Current candidate receipt: [run009-candidate-check.json](run009-candidate-check.json).
 - Environment qualification: [environment-qualification.json](environment-qualification.json). `development_reuse` is local evidence only, `isolated_install` requires the current wheel and no cross-environment path injection, and `distribution_ready` additionally requires every final delivery and independent-review gate.
-- Current-candidate P0 work: T04, T06 and T07 use run-009 receipts listed in `status.json`.
-- Historical evidence: T00/T01/T02 use earlier candidates and require explicit current-candidate applicability checks before technical closure.
-- Existing P0 evidence: T17 uses run-006 Prepare receipts; T18 uses run-007 Extension receipts. Neither is `not_run`, but both remain incomplete.
+- Current-candidate P0 work: T00, T04, T06 and T07 use current-candidate receipts listed in `status.json`.
+- Current applicability: T00 has a [current-candidate applicability receipt](T00-current-candidate-check.json). T01 has a [current-candidate receipt](T01-current-candidate-check.json), a separately classified [execution supplement](T01.current-execution-supplement.json), and a [review-package receipt](T01-run010-package-check.json). T02 has its own [current-candidate receipt](T02-current-candidate-check.json), [execution supplement](T02.current-execution-supplement.json), and [current review-addendum receipt](T02-run010-package-check.json). T07 has a [candidate-scope receipt](T07-current-candidate-check.json), [source/processor-unavailable recovery](T07-run010-offline-recovery-check.json), and a [review-package receipt](T07-run010-package-check.json). T18 has a [current recovery audit](T18-current-candidate-check.json). Historical direct-GUI events retain their original candidate identity. The [P0 checker summary](P4-p0-checker-summary.json) records every executed checker and every explicit no-manifest blocker.
+- Existing P0 evidence: T17 retains run-006 direct-GUI receipts and now has a [current-candidate 13-format regression](T17-current-candidate-check.json) plus [review-package receipt](T17-run010-package-check.json). T18 uses run-007 Extension receipts. Neither independent human review is complete.
 - First lesson: [English](../../../docs/user/en/first-aspirin.md) / [中文](../../../docs/user/zh-CN/first-aspirin.md).
 - Offline guide: [English](../../../docs/offline/en/index.html) / [中文](../../../docs/offline/zh-CN/index.html).
 

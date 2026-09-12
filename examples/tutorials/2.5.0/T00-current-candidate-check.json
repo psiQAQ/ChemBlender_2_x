@@ -1,0 +1,98 @@
+{
+  "schema_name": "chemblender_tutorial_current_candidate_check",
+  "schema_version": 1,
+  "case_id": "T00",
+  "captured_at_utc": "2026-09-12T15:08:06.5679092Z",
+  "candidate": {
+    "source_commit": "32d96303b2c0e16260b32b470c2d5601226d9318",
+    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a"
+  },
+  "runtime": {
+    "pid": 12188,
+    "blender_version": "5.1.1",
+    "blender_executable": "C:/Program Files/Blender Foundation/Blender 5.1/blender.exe",
+    "system": "Windows",
+    "profile": ".blend-analysis/2.5-real-user-tutorials/run-001/profile",
+    "repo": "user_default",
+    "enabled_key": "bl_ext.user_default.chemblender",
+    "normal_exit": true
+  },
+  "installed_extension": {
+    "package": ".blend-analysis/2.5-real-user-tutorials/run-007/artifacts/chemblender-2.5.0.zip",
+    "package_members": 109,
+    "member_mismatches": [],
+    "status": "passed"
+  },
+  "test_processor": {
+    "interaction": "authorized_mcp_replay",
+    "operator": "bpy.ops.chemblender.test_processor('INVOKE_DEFAULT')",
+    "invoke_result": ["RUNNING_MODAL"],
+    "status": "Processor 0.1.0 / Protocol 1",
+    "detail": "10/21 operations; 16/22 readers; Standard complete; 11 optional unavailable",
+    "processor_executable": ".blend-analysis/2.5-real-user-tutorials/run-009/uv-tool/chemblender-prepare/Scripts/chemblender-prepare.exe",
+    "current_environment": {
+      "python_version": "3.12.13",
+      "numpy": "2.5.3",
+      "rdkit": "2026.3.3",
+      "gemmi": "0.7.5"
+    },
+    "status_result": "passed"
+  },
+  "failure_recovery": {
+    "invalid_processor": ".blend-analysis/2.5-real-user-tutorials/run-009/uv-tool/chemblender-prepare/Scripts/missing-chemblender-prepare.exe",
+    "invalid_exists": false,
+    "invalid_result": "expected operator error: processor executable does not exist",
+    "mcp_limitation": "Blender converted the operator ERROR report to RuntimeError, so restoration was performed in a separate MCP call.",
+    "restored_valid_path": true,
+    "saved_preferences": ["FINISHED"],
+    "retest_invoke": ["RUNNING_MODAL"],
+    "retest_status": "Processor 0.1.0 / Protocol 1",
+    "status": "passed"
+  },
+  "cli": {
+    "doctor": "passed",
+    "capabilities": "passed",
+    "operation_count": 21,
+    "reader_count": 22,
+    "environment_qualification": "isolated_install"
+  },
+  "authorized_reuse_chain": {
+    "authorization": "User-approved plan permits GUI-to-MCP replay only for UI already proven by direct GUI evidence.",
+    "classification": "replay_not_direct_gui",
+    "original_gui": {
+      "source_run": "run-003/T00",
+      "source_extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374",
+      "events_sha256": "50b84008a9628a38be88f24b59e37d7784b3b275e5f6b581285b308c30f36f6b",
+      "event_id": "e15",
+      "before_artifact_sha256": "2177b18862832f6eef86ee43bb92b6d1f726d32c9f9cb2ac7705b90eccf19ecf",
+      "after_artifact_sha256": "37df3e76f62c7ba0e83f9220e3939d7d291ceeecbe4b08c8eabfa603297a4182"
+    },
+    "candidate_difference": {
+      "status": "passed",
+      "blender_manifest_sha256_unchanged": "edaeff1a499151876fcb91e1a7078b66ab303027f2a7808b4631f2af670b4fc3",
+      "processor_ui_sha256_unchanged": "09c1d44fb40f67534940f533f7ed09e68d8820fd507e37e74e1fa7d775010614",
+      "current_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28"
+    }
+  },
+  "tutorial_entries": {
+    "english": [
+      "docs/user/en/installation.md",
+      "docs/user/en/blender-workflow.md",
+      "docs/user/en/troubleshooting.md"
+    ],
+    "chinese": [
+      "docs/user/zh-CN/installation.md",
+      "docs/user/zh-CN/blender-workflow.md",
+      "docs/user/zh-CN/troubleshooting.md"
+    ],
+    "offline_docs_test": "passed"
+  },
+  "technical_status": "incomplete",
+  "remaining": [
+    "case-specific checker and review package",
+    "independent human review"
+  ],
+  "human_review": "not_run",
+  "distribution": "blocked"
+}

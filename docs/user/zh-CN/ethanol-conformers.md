@@ -1,6 +1,6 @@
 # T02：乙醇构象、MMFF94 与显式网格编辑
 
-本课已有实际 GUI、科学检查和冷重开证据，独立人工复做尚未完成。下图展示最终**手工编辑后**的结构，不是优化得到的能量极小结构。
+当前 Standard processor 与 Viewer 候选已复现固定科学数值、显式 Apply、Cycles 渲染、移动工程显示重建及独立冷重开。GUI 截图仍是由单独 replay supplement 关联的历史直接 GUI 证据，不会换标为当前点击。独立人工复做尚未完成。下图是保留的历史 GUI 运行成图，展示最终**手工编辑后**的结构，不是优化得到的能量极小结构。
 
 ![显式移动氢原子后的乙醇](../assets/2.5-tutorials/ethanol-cycles.png)
 
@@ -8,7 +8,7 @@
 
 ## 前提与固定输入
 
-先完成[安装](installation.md)，并通过[首课](first-aspirin.md)熟悉侧栏。本次使用 Blender 5.1.1、Standard prepare 0.1.0 和 RDKit 2026.03.3。候选 ZIP SHA-256：`bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374`；prepare wheel SHA-256：`3f1d93acd0eefd29bc304527007b8d53bd0aa3b508e97aea0a18f4624ee62c3e`。此前 T01 截图对应更早的候选制品。
+先完成[安装](installation.md)，并通过[首课](first-aspirin.md)熟悉侧栏。当前重放使用 Blender 5.1.1、Standard prepare 0.1.0 和 RDKit 2026.03.3。当前 Extension SHA-256：`a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`；当前 Prepare wheel SHA-256：`b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`。
 
 下载 [ethanol.smi](../../../examples/user-workflows/inputs/smiles/ethanol.smi)，放入新目录，例如 `D:\ChemBlenderLessons\T02\`。文件内容为 `CCO` 加换行，是仓库编写、采用 GPL-3.0 许可的合成输入，不是实验结构。保留[冻结的案例规格](../../../examples/tutorials/2.5.0/T02.case-spec.json)供核对。
 
@@ -48,7 +48,7 @@
 
 ![Project Browser 中已完成的能量记录](../assets/2.5-tutorials/ethanol-energy.jpg)
 
-参见[本次数字核查记录](../assets/2.5-tutorials/ethanol-science-check.json)。这些数值是固定后端和输入下的参考，不是实验测量。本例乙醇只有单键，`Kekulize` 验证操作执行及连接关系保留，不覆盖芳香共振处理。
+参见[本次数字核查记录](../assets/2.5-tutorials/ethanol-science-check.json)和[当前候选适用性记录](../../../examples/tutorials/2.5.0/T02-current-candidate-check.json)。两次运行得到相同的显示数值。这些数值是固定后端和输入下的参考，不是实验测量。本例乙醇只有单键，`Kekulize` 验证操作执行及连接关系保留，不覆盖芳香共振处理。
 
 ## 显式 Apply 一次编辑，并保留来源
 
@@ -75,7 +75,7 @@
 
 如果打开工程后出现空的 `Render Result` 窗口，关闭该辅助窗口即可看到主场景。Render Result 不等于已经保存的 PNG；查看持久化图像请打开 `ethanol-cycles.png`，或按 F12 重新渲染。
 
-复制或移动时携带**整对文件**，包括 CBQ 的全部数组。本次移动副本的独立冷进程审计通过，哈希不变，数组路径位于新 CBQ 目录内。这与删除派生缓存后的重建不同，后者仍待执行。人工盲复做和可分发案例包也尚未完成。
+复制或移动时携带**整对文件**，包括 CBQ 的全部数组。当前候选验证在 processor 路径故意不可用时打开移动副本，只清空两个派生 Structure View 的网格，再使用 `Rebuild Selected View` 恢复两个显示；科学哈希不变，另一干净进程冷重开后所有数组路径仍位于副本 CBQ 内。不要删除权威 NPY 数组。人工盲复做仍未完成；本地 review package 只供审查，不是分发制品。
 
 可用以下公开命令检查完整性，请替换示例路径。预期 `status: success`；validate 不代表化学正确、图像质量通过或人工可复现。
 
@@ -85,4 +85,4 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T02\ethanol.cbq" --json
 
 操作失败时，先保留诊断和上次保存的整对工程，再重试。没有 `Generate 3D` 时，选择绑定原始 SMILES 的 View。渲染中结构拥挤时，检查旧 View 的渲染相机图标。打开工程缺少数组时，恢复完整的相邻 CBQ 目录；不要编造坐标，也不要把删除权威数组当作缓存修复。
 
-MMFF94 是分子力场；ETKDG 生成合理构象，不证明全局最低能量，也不是量子计算。能量比较必须使用同一分子、原子映射、单位和力场。GUI JPEG 为原生截图，成图为 Blender PNG；[媒体来源与哈希](../assets/2.5-tutorials/provenance.json)和人工验收分开记录。
+MMFF94 是分子力场；ETKDG 生成合理构象，不证明全局最低能量，也不是量子计算。能量比较必须使用同一分子、原子映射、单位和力场。GUI JPEG 是历史原生截图；当前 CLI/Operator 重放记录在 [T02.current-execution-supplement.json](../../../examples/tutorials/2.5.0/T02.current-execution-supplement.json)，不会成为新的直接 GUI 证据。[媒体来源与哈希](../assets/2.5-tutorials/provenance.json)和人工验收分开记录。

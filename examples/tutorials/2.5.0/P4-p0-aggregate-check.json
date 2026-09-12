@@ -1,0 +1,69 @@
+{
+  "plan_id": "2026-09-10-2.5-real-user-tutorials",
+  "phase": "P4.11",
+  "status": "passed_scoped",
+  "tests": [
+    {
+      "scope": "tutorial evidence, trajectory scene preset and frame manager",
+      "passed": 53,
+      "skipped": 1,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "scope": "scene preset, periodic View, Viewer UI, project service, validation, staging and package import",
+      "passed": 95,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "scope": "public delivery documentation",
+      "passed": 5,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "execution": "five test methods executed independently"
+    }
+  ],
+  "public_delivery_docs_check": "passed",
+  "phase4_test_candidate": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/build-p4.6/chemblender-2.5.0-viewer-normalized.zip",
+    "sha256": "2637ce7ccc846854a280ebe56ea91f858a29591aa6614cc53cd92ea28bb3ea3f",
+    "bytes": 2831878,
+    "members": 109,
+    "duplicate_members": 0,
+    "unsafe_paths": 0,
+    "crc": "passed",
+    "wheel_members": 0,
+    "vendored_cbq_core": true,
+    "native_extension_validate": "passed_during_p4_6",
+    "native_extension_build": "passed_during_p4_6"
+  },
+  "isolated_install": {
+    "status": "passed_during_p4_6",
+    "receipt": ".blend-analysis/2.5-real-user-tutorials/run-010/installed-p4.6-v3/install.json",
+    "receipt_sha256": "969446deba238fd42722fd6a51ae4a297fae95858ed3d3de5af6ff2964996ce7",
+    "module_key": "bl_ext.user_default.chemblender",
+    "blender_version": "5.1.1",
+    "viewer_forbidden_dependencies_absent": true,
+    "zip_scientific_view_matches_installed_sha256": "6d77994f7d54bb69a4a4a17f4ec107485edb9856fc444a1dfff2226dabc57af8",
+    "source_scientific_view_sha256": "95f08dc651135fbce6198807ddd64f8b1ab819e9fed25cd0e3422bb967c95482",
+    "source_to_stage_difference": "expected cbq_core to relative _cbq_core import rewrite"
+  },
+  "rerun_boundary": {
+    "native_build_install_this_step": "not_repeated",
+    "reason": "The exact current Phase 4 candidate already passed native validate/build/install in P4.6; user-owned Blender PID 26228 remained active, so no concurrent Blender process was launched.",
+    "user_process_untouched": true
+  },
+  "git_diff_check": "passed",
+  "planning_check": "passed_with_documented_blockers",
+  "remaining_blockers": [
+    "P3.4 professional environment replay authorization",
+    "P4.5 T06 new-panel direct GUI capture",
+    "P4.9 T18 direct-GUI legacy migration and second clean profile",
+    "P0 conforming manifests/replay supplements listed in P4-p0-checker-summary.json",
+    "independent human review"
+  ],
+  "human_review": "not_run"
+}

@@ -12,8 +12,8 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 
 ## Control
 
-- Current Phase: Phase 3 — 专业环境资格分层
-- Next Step: P3.4 Blocked（需要专业环境变更授权）；继续 P4.1 的 Standard/Viewer 工作
+- Current Phase: Phase 4 — 按顺序关闭全部 P0 案例
+- Next Step: P3.4/P4.5/P4.9 与 P0 检查器门槛保持 Blocked；继续 P5.1 T03 Standard 路线
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -69,21 +69,21 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 
 ### Phase 4 — 按顺序关闭全部 P0 案例
 
-**Status:** pending
+**Status:** in_progress
 
 每个案例只有在当前候选身份、输入/许可、科学检查、直接 GUI 或合规授权重放、渲染、配对工程、移动/冷重开/恢复、中英教程、离线 QA、review package 和检查器结果均有证据时，才能勾选技术完成；人工验收单列。
 
-- [ ] P4.1 T00：核对当前候选安装、Test Processor、doctor/capabilities、失败恢复和教程入口。
-- [ ] P4.2 T01：完成当前候选适用性、execution supplement、剩余缓存恢复、正文单一路线和 review package。
-- [ ] P4.3 T02：复用已验证产品修复，补当前候选适用性与缓存恢复；无新失败不重复改产品。
-- [ ] P4.4 T04：补可读侧栏截图、准确手动步骤和当前候选映射；保留 CIF/POSCAR/ASE、渲染、移动与重建证据。
-- [ ] P4.5 T06：补帧 0/15/31 的 energy/source index 可见检查、实际 UI 录制、手动渲染/节点步骤和完整恢复。
-- [ ] P4.6 若现有 UI 无法显示 T06 冻结规格要求的逐帧标量，复用现有 FrameProperty 数据，在现有面板增加最小只读当前帧值，不增加新数据模型；补单元测试、构建和受影响案例复验。
-- [ ] P4.7 T07：补 sampling-layout 冷重开、volume/remaining render、当前候选 GUI、真实缺源/缺处理器恢复、VASP 适用范围和 review package。
-- [ ] P4.8 T17：核对 13 格式正向导出、loss gate、科学字段比较、GUI 回执、项目交接和当前候选回归；保留正确拒绝案例。
-- [ ] P4.9 T18：在隔离副本上用不存在的 processor 路径和移除的副本源文件实际证明离线重建；补 GUI legacy migration、第二干净 profile、取消/错误 relink/损坏/过期恢复。
-- [ ] P4.10 对 T00/T01/T02/T04/T06/T07/T17/T18 分别运行检查器并更新状态为 `ready_for_human_review` 或明确 `Blocked`。
-- [ ] P4.11 运行 P0 聚合测试、Extension validate/build、当前候选安装检查和 `git diff --check`，提交“关闭 P0 技术与教程门槛”。
+- [x] P4.1 T00：核对当前候选安装、Test Processor、doctor/capabilities、失败恢复和教程入口。
+- [x] P4.2 T01：完成当前候选适用性、execution supplement、剩余缓存恢复、正文单一路线和 review package。
+- [x] P4.3 T02：复用已验证产品修复，补当前候选适用性与缓存恢复；无新失败不重复改产品。
+- [x] P4.4 T04：补可读侧栏截图、准确手动步骤和当前候选映射；保留 CIF/POSCAR/ASE、渲染、移动与重建证据。
+- [ ] P4.5 T06：补帧 0/15/31 的 energy/source index 可见检查、实际 UI 录制、手动渲染/节点步骤和完整恢复。Blocked：新标量行属于新面板，仍需真实 GUI 截图；当前会话无 OS GUI 操作工具。
+- [x] P4.6 若现有 UI 无法显示 T06 冻结规格要求的逐帧标量，复用现有 FrameProperty 数据，在现有面板增加最小只读当前帧值，不增加新数据模型；补单元测试、构建和受影响案例复验。
+- [x] P4.7 T07：补 sampling-layout 冷重开、volume/remaining render、当前候选 GUI、真实缺源/缺处理器恢复、VASP 适用范围和 review package。
+- [x] P4.8 T17：核对 13 格式正向导出、loss gate、科学字段比较、GUI 回执、项目交接和当前候选回归；保留正确拒绝案例。
+- [ ] P4.9 T18：在隔离副本上用不存在的 processor 路径和移除的副本源文件实际证明离线重建；补 GUI legacy migration、第二干净 profile、取消/错误 relink/损坏/过期恢复。Blocked：自动恢复、故障拒绝和 legacy 原生迁移已通过；当前无 OS GUI 工具，且用户自有 Blender PID 26228 在运行，不能启动第二 profile。
+- [x] P4.10 对 T00/T01/T02/T04/T06/T07/T17/T18 分别运行检查器并更新状态为 `ready_for_human_review` 或明确 `Blocked`。
+- [x] P4.11 运行 P0 聚合测试、Extension validate/build、当前候选安装检查和 `git diff --check`，提交 Phase 4 P0 资格证据（未关闭的门槛保持 Blocked）。
 
 ### Phase 5 — 逐个实施 P1/P2 案例
 

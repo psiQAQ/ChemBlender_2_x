@@ -1,0 +1,20 @@
+{
+  "case_id": "T07",
+  "status": "passed",
+  "scope": "Current accepted run-009 GUI evidence plus run-010 offline recovery on the Phase 4 test candidate; independent human review remains separate.",
+  "accepted_candidate": {
+    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "run": "run-009/T07",
+    "actual_prepare_gui": "examples/tutorials/2.5.0/T07-run009-cube-gui-check.json",
+    "viewer_replay": "examples/tutorials/2.5.0/T07-run009-gui-viewer-check.json"
+  },
+  "phase4_test_candidate": {
+    "extension_sha256": "2637ce7ccc846854a280ebe56ea91f858a29591aa6614cc53cd92ea28bb3ea3f",
+    "profile": ".blend-analysis/2.5-real-user-tutorials/run-010/installed-p4.6-v3/profile",
+    "scope": "The only packaged product change is the T06 read-only current-frame row; no T07 data model, Grid View or processor path changed.",
+    "verification": "examples/tutorials/2.5.0/T07-run010-offline-recovery-check.json"
+  },
+  "historical_evidence_policy": "Run-009 GUI events retain their original accepted candidate identity and are not relabeled as new GUI actions on the Phase 4 test candidate.",
+  "human_review": "not_run"
+}

@@ -1,0 +1,45 @@
+{
+  "case_id": "T17",
+  "status": "passed",
+  "scope": "All thirteen frozen positive export routes replayed with the current Standard isolated install; historical direct-GUI events retain their original candidate identity.",
+  "current_candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "qualification": "isolated_install",
+    "run": "run-010/T17/current-regression"
+  },
+  "historical_gui_candidate": {
+    "prepare_wheel_sha256": "cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b",
+    "run": "run-006/T17",
+    "formats_with_direct_gui_receipts": 13,
+    "classification": "historical_direct_gui_not_relabelled"
+  },
+  "wheel_difference": {
+    "changed_python_files": [
+      "cbq_core/project_service.py",
+      "chemblender_prepare/cli.py",
+      "chemblender_prepare/core/pymatgen_adapter.py"
+    ],
+    "exporter_files_changed": [],
+    "note": "The current run still executed every route; member comparison is supporting evidence only."
+  },
+  "regression": {
+    "formats": ["xyz", "extxyz", "mol", "sdf", "pdb", "pqr", "mol2", "smiles", "cif", "poscar", "cube", "cjson", "qcschema"],
+    "format_count": 13,
+    "preview_no_write": "passed_all",
+    "loss_confirmation_gate": "passed_all_applicable",
+    "positive_export": "passed_all",
+    "byte_equal_to_scientifically_checked_run006_outputs": "passed_all",
+    "reimport": "passed_all",
+    "validate": "passed_all",
+    "source_cbq_unchanged": "passed_all",
+    "correct_incomplete_topology_rejection": "passed_without_output",
+    "raw_report": ".blend-analysis/2.5-real-user-tutorials/run-010/T17/current-regression/report.json",
+    "raw_report_sha256": "1c70e4fe028b470ce65ddea5a68928ab0967baf643edfea0851fa705a662a4bc"
+  },
+  "scientific_comparison_basis": [
+    "examples/tutorials/2.5.0/T17-science-run006-check.json",
+    "examples/tutorials/2.5.0/T17-metadata-run006-check.json",
+    "examples/tutorials/2.5.0/T17-mol2-2w73-check.json"
+  ],
+  "human_review": "not_run"
+}

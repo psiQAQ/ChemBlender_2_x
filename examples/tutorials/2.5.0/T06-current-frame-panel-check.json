@@ -1,0 +1,61 @@
+{
+  "case_id": "T06",
+  "status": "passed_product_gap_only",
+  "scope": "P4.6 read-only current-frame scalar panel and installed-candidate regression; direct GUI capture and human review remain separate.",
+  "implementation": {
+    "source": "ChemBlender/ui/scientific_view.py",
+    "source_sha256": "95f08dc651135fbce6198807ddd64f8b1ab819e9fed25cd0e3422bb967c95482",
+    "behavior": "Read the active trajectory View frame index and its existing linked FrameProperty values; do not add or mutate a scientific data model.",
+    "displayed_roles": [
+      "energy",
+      "source_index",
+      "step"
+    ]
+  },
+  "test_candidate": {
+    "extension_sha256": "2637ce7ccc846854a280ebe56ea91f858a29591aa6614cc53cd92ea28bb3ea3f",
+    "bytes": 2831878,
+    "members": 109,
+    "crc": "passed",
+    "safe_relative_paths": true,
+    "duplicate_members": 0,
+    "vendored_cbq_core": true,
+    "wheel_files": 0,
+    "promotion": "pending Phase 4 commit and consolidated candidate mapping"
+  },
+  "verification": {
+    "unit_test": "tests.test_trajectory_scene_preset passed 4/4",
+    "source_blender_test": "tests/blender_trajectory_scene.py passed",
+    "native_extension_validate": "passed",
+    "native_extension_build": "passed through ChemBlender/scripts/build_extension.py",
+    "isolated_installed_viewer_smoke": "passed",
+    "t06_raw_receipt": ".blend-analysis/2.5-real-user-tutorials/run-010/T06/p4.6-current-frame-panel.json",
+    "t06_raw_receipt_sha256": "e684471983fe88d072554e1deedaf6f1270cbd77c07d57afefde6b7f84c75d49"
+  },
+  "sample_frames": {
+    "0": {
+      "energy": -17617.8287419,
+      "source_index": 161596,
+      "step": 0
+    },
+    "15": {
+      "energy": -17617.4879446,
+      "source_index": 26491,
+      "step": 1500
+    },
+    "31": {
+      "energy": -17617.7618802,
+      "source_index": 151469,
+      "step": 3100
+    }
+  },
+  "scientific_arrays_unchanged": true,
+  "viewer_forbidden_modules_loaded": false,
+  "failed_attempt": {
+    "artifact_sha256": "17823feeb37ed8966361173b582b47618788869f5fb4f28ff014e122d5f16c50",
+    "status": "rejected",
+    "reason": "Direct native build skipped the repository staging step and failed isolated installation with No module named 'cbq_core'. The artifact was not promoted."
+  },
+  "direct_gui": "blocked_for_new_panel_capture",
+  "human_review": "not_run"
+}

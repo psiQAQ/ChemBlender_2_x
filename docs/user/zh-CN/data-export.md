@@ -1,10 +1,10 @@
 # T17：明确损失后导出科学数据
 
-工作草稿。13 种格式已有安装版 CLI 导出与回读、实际 Prepare GUI 导出证据；每份 GUI 输出均与科学检查通过的 CLI 输出逐字节一致。下述选项以外的高级设置、工程恢复及人工独立复做仍待完成。本课尚不构成 Blender 工程交接验收。
+技术证据已达到待复核状态。13 种格式均有当前候选 CLI 预览、损失门槛、导出、回读与校验证据，也保留历史候选上的实际 Prepare GUI 导出证据。当前输出与 run-006 中已关联科学检查和 GUI 的输出逐字节一致；人工独立复做仍待完成。
 
 ## 固定输入与处理器
 
-先完成 [Standard prepare 安装](installation.md)。本次使用 prepare 0.1.0 候选 wheel，SHA-256 为 `cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b`。旧版同名 0.1.0 wheel 不含分子手性与 PQR 修复；候选包仅完成本地专项验证，未发布。
+先完成 [Standard prepare 安装](installation.md)。当前隔离候选为 prepare 0.1.0 wheel，SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`。实际 GUI receipt 保留早期 run-006 wheel SHA-256 `cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b`，不能换标。当前候选已重放全部 13 条路线，导出字节与 run-006 一致。
 
 下载 [Ligand.mol2](../../../examples/tutorials/2.5.0/inputs/mdanalysis-2w73/Ligand.mol2)、[来源说明](../../../examples/tutorials/2.5.0/inputs/mdanalysis-2w73/README.md)、[LICENSE](../../../examples/tutorials/2.5.0/inputs/mdanalysis-2w73/LICENSE) 和 [案例规格](../../../examples/tutorials/2.5.0/T17-mol2-2w73.case-spec.json)。输入 SHA-256 为 `d8e8c7c3435ebd6922c6e9907979e55f7729763c64333b6384ffbf5424a80d48`，包含 297 个原子、297 条键、17 个 substructure。来源标注为 2W73 配体、GAST_HUCK 电荷；这是已有准备结果，并非本次新计算。
 
@@ -59,7 +59,7 @@ chemblender-prepare validate reopened.cbq --json
 | cube | 解析 H2：262144 个采样、原点与步进一致；回读后需重新指定物理语义 |
 | cjson、qcschema | JSON 值与原始 envelope 一致 |
 
-参阅 [13 格式规格](../../../examples/tutorials/2.5.0/T17.case-spec.json)、[安装运行记录](../../../examples/tutorials/2.5.0/prepare-run006-check.json) 和 [补充科学检查](../../../examples/tutorials/2.5.0/T17-science-run006-check.json)。MOL2 正向补充使用上面的 2W73 规格。[原生元数据检查](../../../examples/tutorials/2.5.0/T17-metadata-run006-check.json) 覆盖 PDB/PQR 层级和选定 SDF 记录。格式正向覆盖不等于每个高级选项均已验证。
+参阅 [13 格式规格](../../../examples/tutorials/2.5.0/T17.case-spec.json)、[当前候选回归](../../../examples/tutorials/2.5.0/T17-current-candidate-check.json)、[安装运行记录](../../../examples/tutorials/2.5.0/prepare-run006-check.json) 和 [补充科学检查](../../../examples/tutorials/2.5.0/T17-science-run006-check.json)。MOL2 正向补充使用上面的 2W73 规格。[原生元数据检查](../../../examples/tutorials/2.5.0/T17-metadata-run006-check.json) 覆盖 PDB/PQR 层级和选定 SDF 记录。格式正向覆盖不等于每个高级选项均已验证。
 
 ## 已验证的 GUI 设置
 
@@ -89,4 +89,4 @@ chemblender-prepare validate reopened.cbq --json
 
 5SUN 含未知 `un` 键，没有完整解释拓扑，导出拒绝符合预期。Open Babel mol24 引用了未声明的 substructure，导入被拒绝。两个拒绝均不抵消正向覆盖要求，也未人为补造缺失层级或键。
 
-规范化 MOL2 是交换文件，不能替代配对的 `.blend` / `.cbq` 工程。交接时保留权威 CBQ。渲染材质和显示网格细分不会提高科学分辨率，也不能修复不完整拓扑。
+规范化 MOL2 是交换文件，不能替代配对的 `.blend` / `.cbq` 工程。T17 是 Prepare-only 导出案例，不会创建 Blender 场景，因此 review-only 交接包按格式保留权威来源 CBQ、导出文件、回读 CBQ、receipt 和本教程；解压后保持相对路径一起移动。这里既不创建也不暗示另有 `.blend`。渲染材质和显示网格细分不会提高科学分辨率，也不能修复不完整拓扑。人工独立复核仍为 `not_run`。

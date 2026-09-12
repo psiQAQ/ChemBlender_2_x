@@ -1,10 +1,10 @@
 # T17: export scientific data with explicit loss checks
 
-Working draft. All 13 formats have installed CLI export/readback and actual Prepare GUI export evidence. Each GUI output is byte-identical to its scientifically checked CLI output. Advanced options beyond those listed below, project recovery and independent human replay remain pending. This lesson does not yet qualify a Blender project handoff.
+Review-ready technical draft. All 13 formats have current-candidate CLI preview/loss-gate/export/readback/validate evidence and historical actual Prepare GUI export evidence. Current outputs are byte-identical to the scientifically checked GUI-linked run-006 outputs. Independent human replay remains pending.
 
 ## Fixed input and processor
 
-Use [Standard prepare](installation.md). This run uses prepare 0.1.0 candidate wheel SHA-256 `cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b`; the older 0.1.0 wheel does not include the molecular stereo and PQR fixes. The candidate is locally qualified, not published.
+Use [Standard prepare](installation.md). The current isolated candidate is prepare 0.1.0 wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`. The actual GUI receipts retain the earlier run-006 wheel SHA-256 `cdb056514b7b9eed068aa96cd95dd2d12c8b183e753350b7fc6b424fd513c56b`; they are not relabeled. The current candidate replayed all 13 routes and produced byte-identical exports.
 
 Download [Ligand.mol2](../../../examples/tutorials/2.5.0/inputs/mdanalysis-2w73/Ligand.mol2), [source note](../../../examples/tutorials/2.5.0/inputs/mdanalysis-2w73/README.md), [LICENSE](../../../examples/tutorials/2.5.0/inputs/mdanalysis-2w73/LICENSE), and [case specification](../../../examples/tutorials/2.5.0/T17-mol2-2w73.case-spec.json). Its SHA-256 is `d8e8c7c3435ebd6922c6e9907979e55f7729763c64333b6384ffbf5424a80d48`: 297 atoms, 297 bonds, 17 substructures. The source labels it a 2W73 ligand with GAST_HUCK charges; this is existing prepared data, not a new calculation.
 
@@ -59,7 +59,7 @@ Our GUI output is byte-identical to the scientifically checked CLI output: coord
 | cube | Analytic H2: all 262144 samples, origin and steps exact; assign physical semantics again after import |
 | cjson, qcschema | JSON values match original envelopes |
 
-Use the [13-format specification](../../../examples/tutorials/2.5.0/T17.case-spec.json), [installed-run receipt](../../../examples/tutorials/2.5.0/prepare-run006-check.json), and [additional scientific checks](../../../examples/tutorials/2.5.0/T17-science-run006-check.json). MOL2's positive supplement is the 2W73 specification above. The [native metadata checks](../../../examples/tutorials/2.5.0/T17-metadata-run006-check.json) cover PDB/PQR hierarchy and the selected SDF record. Positive format coverage does not prove every advanced option.
+Use the [13-format specification](../../../examples/tutorials/2.5.0/T17.case-spec.json), [current-candidate regression](../../../examples/tutorials/2.5.0/T17-current-candidate-check.json), [installed-run receipt](../../../examples/tutorials/2.5.0/prepare-run006-check.json), and [additional scientific checks](../../../examples/tutorials/2.5.0/T17-science-run006-check.json). MOL2's positive supplement is the 2W73 specification above. The [native metadata checks](../../../examples/tutorials/2.5.0/T17-metadata-run006-check.json) cover PDB/PQR hierarchy and the selected SDF record. Positive format coverage does not prove every advanced option.
 
 ## Verified GUI settings
 
@@ -89,4 +89,4 @@ Keep source files, source CBQ and exported files separate. If the destination ex
 
 5SUN has an unknown `un` bond and no complete interpreted topology; export rejection is expected. Open Babel mol24 references an undeclared substructure and is rejected on import. Neither rejection counts as positive coverage, and no missing hierarchy or bonds were fabricated.
 
-Normalized MOL2 is a data exchange artifact, not a replacement for a paired `.blend`/`.cbq` project. Keep the authoritative CBQ when handing off work. Render settings and mesh refinement do not increase scientific resolution or repair incomplete topology.
+Normalized MOL2 is a data exchange artifact, not a replacement for a paired `.blend`/`.cbq` project. T17 is a Prepare-only export case and does not create a Blender scene. Its review-only handover therefore contains each authoritative source CBQ, exported file and reimported CBQ, together with receipts and this tutorial. Keep those relative paths together after extraction. A separate Blender `.blend` is neither created nor implied. Render settings and mesh refinement do not increase scientific resolution or repair incomplete topology. Independent human review is still `not_run`.

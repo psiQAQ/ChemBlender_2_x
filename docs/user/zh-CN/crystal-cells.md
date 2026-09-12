@@ -1,6 +1,6 @@
 # T04：晶体位点、占位与已有金刚石超胞
 
-本课为执行中草稿。保存后的科学数据、ASE 转换和原位／移动后冷重开已通过验证。Blender 导入和构图复用了此前验证过的操作，通过 MCP 重放；晶胞截图来自实际运行。完整逐步 GUI 留证、视觉质量和人工独立复做尚未通过。
+本课为执行中草稿。当前候选的 Prepare GUI、科学检查、原位／移动后冷重开、渲染和重建恢复已通过。Blender 导入和构图复用了此前验证过的操作；下方侧栏图是在该重放后取得的原生 GUI 截图。人工独立复做尚未通过。
 
 ![声明晶胞中的共晶源位点](../assets/2.5-tutorials/crystal-cocrystal.png)
 
@@ -8,7 +8,7 @@
 
 ## 前提与固定输入
 
-先完成[安装](installation.md)和[首课](first-aspirin.md)。本课使用 Blender 5.1.1、prepare 0.1.0，Extension ZIP SHA-256 为 `963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a`。此版本包含周期结构 Create View 修复，较早候选可能缺少晶胞显示。prepare wheel 保持 `3f1d93acd0eefd29bc304527007b8d53bd0aa3b508e97aea0a18f4624ee62c3e`。
+先完成[安装](installation.md)和[首课](first-aspirin.md)。当前映射使用 Blender 5.1.1、prepare 0.1.0 wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a` 与 Extension ZIP SHA-256 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`。[当前候选回执](../../../examples/tutorials/2.5.0/T04-current-candidate-check.json)将这些制品绑定到 run-009。下方较早图片保留原哈希，不换标为当前操作。
 
 下载 [COD 4503272 CIF](../../../examples/user-workflows/inputs/cif/cod-4503272-caffeine-cocrystal.cif) 与[金刚石 CONTCAR](../../../examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR)，同时保留含输入哈希和容差的[案例规格](../../../examples/tutorials/2.5.0/T04.case-spec.json)。CIF 是 CC0 的 COD 输入；金刚石输入是仓库已有的 COD 9012293 常规晶胞 2×2×2 派生结构，并非本课新算的模拟结果。
 
@@ -54,6 +54,11 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T04\diamond.cbq" --json
 
 1. 在新的教程场景中打开 `ChemBlender` 侧栏，将 `CBQ Package` 设为 `cocrystal.cbq` 并确认路径，依次使用 `Preview CBQ`、`Import CBQ`。
 2. 在 Project Browser 选择 Structure。进入 `Scientific Representation`，使用 `Automatic`、`Research`，点击 `Create View`。预期生成 `ChemBlender Periodic Structure`，以及 Cell、Site Occupancy、Thermal Ellipsoids 显示子对象。源位点表示保留声明的晶胞和占位，不生成对称复制。
+
+![当前候选的 Project Browser 与对称性字段](../assets/2.5-tutorials/crystal-sidebar-run009.jpg)
+
+这张原生截图可直接读出 `Sites: 64`、声明的 `C m c a`、国际编号 `64`、`Operations: 16` 和派生对称性 `Not derived`。该侧栏宽度会截断较长的 CBQ 路径与所选实体哈希；完整值以链接回执为准。
+
 3. 同时关闭默认 Cube 的视口和渲染可见性。在 Outliner 展开周期结构对象，选中父对象及三个显示子对象；鼠标移至视口，按小键盘 `.` 取景。只对原子取景可能裁掉晶胞。
 
 ![Operator 重放后实际截取的完整晶胞取景](../assets/2.5-tutorials/crystal-cell-view.jpg)
@@ -98,7 +103,7 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T04\diamond.cbq" --json
 
 在独立副本中清空四个所属显示网格后，公开 `REBUILD` Operator 恢复了 64 个位点和 12 条晶胞边，科学数组未变；两个重建工程再次冷重开也通过。见[派生几何恢复记录](../assets/2.5-tutorials/crystal-cache-recovery.json)。这是原生 Operator 重放，不是 GUI 删除演示。重建会替换显示对象，手工添加的 Subdivision modifier 随后不再存在。重建后按本课重新设置外观细化，并保留原始细化工程作为视觉参照。
 
-完整 GUI 留证、视觉质量、人工独立复做和可分发案例包仍待完成。在这些门槛及视觉审阅通过前，本课保持草稿。[媒体来源](../assets/2.5-tutorials/provenance.json)将本候选与较早课程分别记录。
+人工独立复做和可分发案例包仍待完成。在这些门槛及视觉审阅通过前，本课保持草稿。[媒体来源](../assets/2.5-tutorials/provenance.json)将本候选与较早课程分别记录。
 
 ## 更新后的本地审阅工程（run-009）
 

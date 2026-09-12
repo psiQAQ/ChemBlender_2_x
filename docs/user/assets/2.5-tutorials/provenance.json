@@ -78,6 +78,17 @@
       "interaction": "native_render_via_mcp"
     },
     {
+      "path": "aspirin-cycles-current.png",
+      "source_run": "run-010/T01/current-aspirin-cycles.png",
+      "sha256": "6c1ee7451d8186c69672f2e02c51610b09fd169e59c8b958c6c05b3c95686df0",
+      "kind": "render",
+      "native_format": "png",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "interaction": "native_current_candidate_replay",
+      "status": "pending_human_review"
+    },
+    {
       "path": "crystal-cocrystal.png",
       "source_run": "run-004/T04/cocrystal-cycles.png",
       "sha256": "f153c6deb08bf2082ae1219981035422723e82d6b07790b77686eae398c521ab",
@@ -190,6 +201,17 @@
       "kind": "render",
       "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
       "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "crystal-sidebar-run009.jpg",
+      "source_run": "run-009/T04/gui/gui-0036.jpg",
+      "sha256": "fbc96a7603dccda1b3518e4b9c4fdf1eb9cde3a4658d2b1ca400a710f9c47d0c",
+      "kind": "gui_raw",
+      "native_format": "jpeg",
+      "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+      "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+      "interaction": "os_gui",
       "status": "pending_human_review"
     },
     {
