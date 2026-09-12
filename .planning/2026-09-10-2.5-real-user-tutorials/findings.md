@@ -174,3 +174,9 @@
 - The current isolated Standard environment exposes Reader API `1.0-rc1`. The MIT SimpleCoords example passes all 16 conformance checks in subprocess isolation and can be explicitly registered, discovered, parsed and unregistered from external Python without installing the historical Blender Extension.
 - Explicit registration temporarily changes the in-process registry from 22 to 23 readers. The current CLI/Tk GUI remains at 22 built-ins and does not auto-load that Python instance; an external Reader example must never be described as appearing automatically in ordinary import UI.
 - A validated CBQ remains readable after the reader is unregistered. Reader API data/registry contracts are stable; the current `preflight_reader_plugins`, `commit_import_preview` and `cbq_core.sidecar` publication calls used to form the CBQ are internal 2.5 pipeline details, not promised stable SDK symbols.
+
+## T20 QCSchema compute boundary
+
+- The fixed MolSSI `qc_schema_output/1` is an existing successful HF/cc-pVDZ gradient result. Current Standard imports one Structure, one Calculation, 13 datasets and the raw envelope, but does not rerun or verify the third-party calculation.
+- The atomic gradient retains its original sign and `hartree_per_bohr` unit. A displayed force is the negative gradient and must not be described as the imported quantity itself.
+- The separately frozen AtomicInput v2 uses the same O/H/H geometry and HF/cc-pVDZ with an energy driver supported by the direct PySCF adapter. Current Standard has neither QCEngine nor PySCF: both real operation attempts fail `dependency_missing` without output, and a pre-cancelled attempt publishes nothing. Exchange success therefore cannot close T20 compute.

@@ -1,0 +1,54 @@
+{
+  "schema_name": "proposed_chemblender_tutorial_case_spec",
+  "schema_version": 1,
+  "case_id": "T20",
+  "title": "QCSchema exchange and real local compute",
+  "required_steps": [
+    {"id": "s01", "description": "Import the fixed MolSSI AtomicResult as exchange evidence without claiming a local calculation", "requires_gui": true},
+    {"id": "s02", "description": "Run the fixed AtomicInput through an available authorized QCEngine or PySCF backend and retain the new result separately", "requires_gui": true},
+    {"id": "s03", "description": "Compare method, basis, geometry, energy, provenance and gradient/force semantics without treating schema exchange as compute success", "requires_gui": false},
+    {"id": "s04", "description": "Display, render, save/move/cold-reopen and exercise cancellation and unavailable-backend recovery", "requires_gui": true}
+  ],
+  "required_checks": [
+    "input_hash_and_license",
+    "existing_result_exchange",
+    "actual_backend_version",
+    "actual_scf_success",
+    "method_basis_geometry_match",
+    "gradient_is_not_force",
+    "separate_imported_and_computed_results",
+    "viewer_import",
+    "render",
+    "project_pair",
+    "cold_reopen",
+    "recovery"
+  ],
+  "required_artifact_kinds": ["environment", "events", "assertions", "gui_raw", "render", "scene_blend", "cbq_manifest", "lifecycle", "review"],
+  "requires_project_pair": true,
+  "requires_cold_reopen": true,
+  "requires_independent_review": true,
+  "inputs": [
+    {
+      "path": "examples/user-workflows/inputs/qcschema/molssi-water-gradient-hf.json",
+      "sha256": "73b28251edde763490937d303cee0b4c2cf4bf55c566d4139c5e33220ffae451",
+      "bytes": 1378,
+      "license": "BSD-3-Clause",
+      "role": "existing MolSSI HF/cc-pVDZ gradient AtomicResult"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/T20.compute-input.json",
+      "sha256": "46283be2e5fa3837d94f136c656ff1a8ad5079fd36f1cae74c2ccb84e09cbe38",
+      "bytes": 766,
+      "license": "project-authored tutorial input",
+      "role": "new HF/cc-pVDZ energy AtomicInput v2 for actual compute"
+    }
+  ],
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "required_operation": "qcschema.compute@1",
+    "allowed_backends": ["qcengine", "pyscf"]
+  },
+  "status": "blocked",
+  "human_review": "not_run",
+  "note": "Current exchange and unavailable-backend recovery passed. Neither QCEngine nor PySCF is installed, so no real compute ran; GUI, render/lifecycle, tutorial/review package and independent human review are also not run."
+}

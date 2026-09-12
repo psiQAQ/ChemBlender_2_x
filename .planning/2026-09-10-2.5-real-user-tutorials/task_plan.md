@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 5 — 逐个实施 P1/P2 案例；Phase 3/4 的明确 Blocked 项并行保留
-- Next Step: P5.3–P5.11 的未完成门槛保持 Blocked；继续 P5.12 T20 QCSchema 真实 compute 边界
+- Next Step: P5.3–P5.12 的未完成门槛保持 Blocked；继续 P5.13 T16 Fermi surface 输入许可与环境边界
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -102,7 +102,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 - [ ] P5.9 T14：NaCl q 点声子模式与周期相位动画。Blocked：NaCl 六文件输入与相位边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
 - [ ] P5.10 T15：critic2 QTAIM/NCI；不虚构缺失路径或键能。Blocked：当前 Standard CLI/Worker + 既有 critic2 1.3.15 已生成并验证 5 CP/4 有序路径与配对 40³ NCI 网格，取消及错误 Structure 绑定不发布输出；仍缺 Prepare GUI、Blender View/render/lifecycle、教程/review package 和人工验收，critic2 路线仅为 `development_reuse`。
 - [ ] P5.11 T19：Reader API 外部 Python 集成；不承诺自动进入普通导入界面。Blocked：当前 Standard 外部 Python 显式注册/discovery/unregister、conformance、非法输入拒绝、CBQ 发布/validate/注销后重开均通过；普通 CLI/Tk GUI 仍仅有 22 个内置 reader。缺 Viewer GUI/render/lifecycle、教程/review package 和人工验收。
-- [ ] P5.12 T20：QCSchema 真实 compute；交换成功不能替代实际计算成功。
+- [ ] P5.12 T20：QCSchema 真实 compute；交换成功不能替代实际计算成功。Blocked：当前 Standard 对固定 MolSSI AtomicResult 的交换、gradient/force 语义、依赖缺失失败与取消均有证据；QCEngine/PySCF 均未安装，实际 SCF 未运行，缺 GUI/render/lifecycle、教程/review package 和人工验收。
 - [ ] P5.13 T16：Fermi surface；许可未关闭前不分发 POTCAR、pickle 或不合规输入。
 - [ ] P5.14 B01：验证 provider unavailable 的真实诊断边界；没有 live transport 时不伪造在线成功。
 - [ ] P5.15 每完成一个案例立即更新 checklist、`status.json`、教程索引和 `progress.md`，并作独立逻辑 commit。

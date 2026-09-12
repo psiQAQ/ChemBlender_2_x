@@ -1,0 +1,38 @@
+{
+  "case_id": "T20",
+  "status": "blocked",
+  "scope": "Current isolated Standard exchange and real-compute availability boundary.",
+  "candidate": {
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "environment_qualification": "isolated_install",
+    "operation": "qcschema.compute@1"
+  },
+  "verified": {
+    "exchange": "passed: qc_schema_output/1 produced one Structure, one Calculation, 13 datasets and one retained QCSchema envelope",
+    "existing_result": "HF/cc-pVDZ gradient from QM Program 1.1; imported without local recomputation or third-party numerical verification",
+    "gradient_semantics": "3x3 hartree_per_bohr gradient retained with original sign; force is its negative and was not substituted",
+    "compute_input": "qcschema_atomic_input/2, same water symbols/geometry, HF/cc-pVDZ energy driver",
+    "pyscf_attempt": "dependency_missing; no output published",
+    "qcengine_attempt": "dependency_missing; no output published",
+    "pre_cancelled_attempt": "cancelled before result publication",
+    "actual_compute_succeeded": false,
+    "distribution_claimed": false
+  },
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-011/T20",
+    "science_receipt": ".blend-analysis/2.5-real-user-tutorials/run-011/T20/science-check.json",
+    "science_receipt_sha256": "605203c7339ee43270d0dc07f94b3a2ee191f40ce44b08d490a436d183dccddc",
+    "imported_manifest_sha256": "18ece9a81edd011c5e9f26ce63280018d7063814a8df33eb9a2cc9f136efca3d",
+    "pyscf_result_sha256": "19094bd0ce365becab80fb5d2cc4d9ae8a159c06536e00a87875bc1d0e1b8a24",
+    "qcengine_result_sha256": "b47aebefee467aa98a2b1cec2b6c8d22bcb3fd606b34b3006be5c595e20e0e3a",
+    "cancel_result_sha256": "7614a99a2c6287f1abd67e24b02dc4e1117a7e224ad2cb0482e0cc743f245f09"
+  },
+  "blocked": {
+    "actual_compute": "Blocked: dependency authorization required. Current Standard has neither QCEngine nor PySCF; the minimum direct route is PySCF for the frozen energy input.",
+    "gui_render_lifecycle": "Not run; an imported result cannot stand in for the missing compute result.",
+    "tutorial_offline_qa_review_package": "Not run because the real compute and downstream artifacts do not exist.",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}

@@ -402,6 +402,26 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['distribution'], 'blocked')
         self.assertEqual(case['human_review'], 'not_run')
 
+    def test_t20_exchange_does_not_claim_compute_success(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T20')
+        spec = json.loads((base / 'T20.case-spec.json').read_text(encoding='utf-8'))
+        receipt = json.loads((base / 'T20-current-candidate-check.json').read_text(encoding='utf-8'))
+        for item in spec['inputs']:
+            path = ROOT / item['path']
+            self.assertEqual(path.stat().st_size, item['bytes'])
+            self.assertEqual(validator.sha256(path), item['sha256'])
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertIn('imported without local recomputation', receipt['verified']['existing_result'])
+        self.assertIn('force is its negative', receipt['verified']['gradient_semantics'])
+        self.assertFalse(receipt['verified']['actual_compute_succeeded'])
+        self.assertIn('dependency authorization required', receipt['blocked']['actual_compute'])
+        self.assertEqual(case['scientific_processing'], 'exchange_passed_compute_not_run')
+        self.assertEqual(case['technical_status'], 'not_run')
+        self.assertEqual(case['direct_gui'], 'not_run')
+        self.assertEqual(case['distribution'], 'blocked')
+        self.assertEqual(case['human_review'], 'not_run')
+
     def test_t08_t14_specs_bind_existing_input_bytes(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         for case_id in ('T08', 'T09', 'T10', 'T11', 'T12', 'T13', 'T14'):

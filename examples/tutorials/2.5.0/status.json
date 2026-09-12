@@ -500,20 +500,24 @@
     {
       "case_id": "T20",
       "priority": "P2",
-      "status": "not_run",
-      "status_reason": "No local compute-success evidence; exchange success must not be reported as compute success.",
-      "candidate_scope": "none",
+      "status": "blocked",
+      "status_reason": "Current Standard QCSchema exchange, gradient semantics, unavailable-backend failures and cancellation are evidenced, but neither QCEngine nor PySCF is installed, so no actual compute ran.",
+      "run": "run-011/T20",
+      "candidate_scope": "current_prepare_exchange_and_compute_availability",
       "technical_status": "not_run",
-      "scientific_processing": "not_run",
+      "scientific_processing": "exchange_passed_compute_not_run",
       "direct_gui": "not_run",
       "authorized_replay": "not_run",
       "render": "not_run",
-      "recovery": "not_run",
+      "recovery": "partial_dependency_failure_and_cancel",
       "tutorial": "not_run",
       "review_package": "not_run",
       "human_review": "not_run",
-      "distribution": "not_run",
-      "evidence_refs": []
+      "distribution": "blocked",
+      "evidence_refs": [
+        "examples/tutorials/2.5.0/T20.case-spec.json",
+        "examples/tutorials/2.5.0/T20-current-candidate-check.json"
+      ]
     },
     {
       "case_id": "B01",
