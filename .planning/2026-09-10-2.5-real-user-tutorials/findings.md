@@ -218,6 +218,11 @@
 - Gaussian TD data has complete dimensionless oscillator strengths and original-table-verified length-gauge cgs rotatory strengths. The ORCA data retains oscillator and rotatory values but remains `ambiguous` because its rotatory unit/gauge and transition dipole arrays are not verified.
 - Missing ORCA electric, velocity and magnetic transition dipoles remain absent. Plotting can use valid oscillator strengths, but an ORCA ECD axis must not be assigned the Gaussian cgs unit or length-gauge label.
 
+## T13 current electronic-structure science
+
+- The fixed silicon band calculation contains 160 labeled k-points across ten branches, spin-resolved `2x160x13` bands and `2x160x13x2x9` projections. Its band and DOS energy references are absolute with Fermi level `5.85611255 eV`.
+- The fixed DOS calculation is independent: it has a different Structure ID and Fermi level `5.46766285 eV`. Both projects validate, but their bands/DOS must not be silently aligned or merged; any combined presentation must expose the independent-calculation boundary.
+
 ## B01 provider boundary
 
 - Current capabilities advertises `external_record.fetch@1` as `available=false` with `no live provider transport configured`. A valid credential-free QCArchive provider request reaches the reviewed worker contract and fails `dependency_missing` without output or a network request.

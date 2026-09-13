@@ -1,0 +1,43 @@
+{
+  "case_id": "T13",
+  "status": "blocked",
+  "scope": "Current isolated scientific route parses fixed silicon band and independent DOS calculations; GUI plots, lifecycle, tutorial and review remain separate.",
+  "candidate": {
+    "source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+    "environment_qualification": "isolated_install",
+    "route": "python.scientific",
+    "pymatgen_core_version": "2026.7.16"
+  },
+  "inputs": [
+    {"path": "examples/scientific-visualization/inputs/silicon/bands/vasprun.xml.gz", "sha256": "c54b9e248c598c42fff058aab4ccb3dae90eb5362010cdece9a4542a0581b37c", "bytes": 121071},
+    {"path": "examples/scientific-visualization/inputs/silicon/bands/KPOINTS", "sha256": "45fb053139f5a902fe409bd5d7a56fde7530bb862b6e1a12b23611473ec3da3d", "bytes": 823},
+    {"path": "examples/scientific-visualization/inputs/silicon/dos/vasprun.xml.gz", "sha256": "a9d74c3f928cd32880d77b81a1968a6abf2ca8b88a41516ecb8bdfe210e333fc", "bytes": 29148}
+  ],
+  "verified": {
+    "band_calculation": "Structure 9cd8b12b-42e1-491b-b66b-78075333945b; bands shape 2x160x13, energies -6.1991..22.025 eV, occupations 0..1; DOS shape 2x301; Fermi 5.85611255 eV; absolute energy reference",
+    "k_path": "10 explicit branches: Γ-X, X-W, W-K, K-Γ, Γ-L, L-U, U-W, W-L, L-K and U-X over 160 k-points",
+    "band_projections": "shape 2x160x13x2x9 with alpha/beta spins and s, py, pz, px, dxy, dyz, dz2, dxz, dx2 channels",
+    "dos_calculation": "Independent Structure 1bdb8c15-fd2d-4ae4-9dd0-79e42ba50e73; bands shape 2x10x9; DOS shape 2x301 with projections 2x301x2x9; Fermi 5.46766285 eV; absolute energy references",
+    "independent_calculation_boundary": "Structure IDs and Fermi energies differ, so the band and DOS calculations are not silently aligned or merged",
+    "cbq_validation": "passed_both"
+  },
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-012/T13",
+    "band_manifest_sha256": "09f31ca09b66a3209ed498779acae8c2e2b555b035c4a49d643866b49f837820",
+    "band_result_sha256": "1a4b7c41e4f96b389738224804c8385a41fd844bf812bcf84d8c5bf6158c5856",
+    "band_validate_sha256": "ecd623f362873617dfb716c14783440552a8f252eef49c8ac89659ad8e95971e",
+    "dos_manifest_sha256": "06f2dcfe53702ced3daa52bedd30238536ab6b8734128b5d6d6ae3cd80aa845f",
+    "dos_result_sha256": "5939e0fd271ccdd26382043e21e7c8a898e9bbc46821652309deafc75019747b",
+    "dos_validate_sha256": "8e8b332305fecaf58827e905ea614487645c74ba7f231734fb9ad69698f30473"
+  },
+  "blocked": {
+    "prepare_gui": "No current direct-GUI operation was performed.",
+    "band_dos_plots": "Band/DOS/projection Views, explicit energy-reference controls and exported render are not run.",
+    "project_pair_cold_reopen_recovery": "Not run.",
+    "tutorial_offline_qa_review_package": "Not run.",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}

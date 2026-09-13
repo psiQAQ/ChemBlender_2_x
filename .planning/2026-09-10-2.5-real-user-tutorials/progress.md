@@ -735,3 +735,12 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - All three CBQ projects passed `validate --json`; manifest and operation hashes are versioned in `T12-current-candidate-check.json`. Focused current/historical status tests and `git diff --check` passed.
 - T12 scientific processing is `passed`, technical status is `incomplete`; Prepare GUI, UV-Vis/ECD plot/render/export, project-pair/cold-reopen/recovery, tutorial/review package, conforming manifest and independent human review remain Not Run. P5.7 stays unchecked. Next Step is T13 science.
 - Full tutorial-evidence verification passed 69 tests with one OS-symlink skip and zero failures/errors. Public delivery docs were regenerated/current and `git diff --check` passed.
+
+## 2026-09-13 — T13 current band, DOS, projection and energy-reference science
+
+- Converted the fixed MIT-licensed silicon band calculation plus KPOINTS and the independent DOS calculation through current isolated `python.scientific`; both resulting CBQ projects passed `validate --json`.
+- The band calculation contains spin-resolved `2x160x13` energies, 160 k-points, ten explicit Γ/X/W/K/L/U branches and `2x160x13x2x9` projections. Its Fermi level is `5.85611255 eV` and its band/DOS references are absolute.
+- The independent DOS calculation contains `2x301` DOS with `2x301x2x9` projections, a different Structure ID and Fermi level `5.46766285 eV`. The receipt explicitly prohibits silent alignment or merging of the two calculations.
+- Exact input, manifest, operation and validation hashes are versioned in `T13-current-candidate-check.json`. T13 scientific processing is `passed`, but technical status is `incomplete`; direct GUI, band/DOS/projection plots and render, project-pair/cold-reopen/recovery, tutorial/review package, conforming manifest and independent human review remain Not Run. P5.8 stays unchecked. Next Step is T14 science.
+- Harness error: the first validation-file read used nonexistent shorthand names `validate-bands.json` and `validate-dos.json`; the actual files are `validate-silicon-bands.json` and `validate-silicon-dos.json`. This was a read-only path mistake and changed no evidence.
+- Verification Passed: all 70 tutorial-evidence tests ran with 69 Passed, one OS-symlink capability Skip and zero failures/errors. Both offline documents regenerated/current; all five public-delivery tests, generator `--check`, planning `check-complete.ps1` and `git diff --check` passed.
