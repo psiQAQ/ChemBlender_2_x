@@ -223,6 +223,11 @@
 - The fixed silicon band calculation contains 160 labeled k-points across ten branches, spin-resolved `2x160x13` bands and `2x160x13x2x9` projections. Its band and DOS energy references are absolute with Fermi level `5.85611255 eV`.
 - The fixed DOS calculation is independent: it has a different Structure ID and Fermi level `5.46766285 eV`. Both projects validate, but their bands/DOS must not be silently aligned or merged; any combined presentation must expose the independent-calculation boundary.
 
+## T14 current phonon science
+
+- The fixed NaCl YAML/POSCAR unit cells match exactly, and both 64-atom FORCE_SETS displacement-force blocks match the two source vasprun files exactly. The current isolated phonopy route yields two q points, six finite modes per point and complex `2x6x2x3` mass-weighted eigenvectors.
+- For `q=[0.25,0,0]`, mode 0 at `1.9328713489070468 THz`, the `exp(i*2pi*qR-phase)` convention closes a full phase cycle within `7.15e-26 angstrom` and maps the adjacent repeated cell within `4.45e-16 angstrom`. Explicit q points have no integration weights and this run did not request group velocities; neither field is synthesized.
+
 ## B01 provider boundary
 
 - Current capabilities advertises `external_record.fetch@1` as `available=false` with `no live provider transport configured`. A valid credential-free QCArchive provider request reaches the reviewed worker contract and fails `dependency_missing` without output or a network request.

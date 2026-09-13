@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 6 — 教程收口与本地交付；Phase 4/5 的明确 Blocked 项并行保留
-- Next Step: 使用已隔离配置的 scientific route 执行 T14 NaCl q 点声子与周期相位科学检查；随后推进 T16，再执行唯一 Blender 第二干净 profile 和离线工程交付
+- Next Step: 为 T16 固定可再分发 Fermi-surface 输入许可并通过已隔离配置的 fermi route 执行科学检查；随后执行唯一 Blender 第二干净 profile 和离线工程交付
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -99,7 +99,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 - [ ] P5.6 T11：Gaussian/ORCA 振动、IR/Raman 和模式动画。Blocked：输入与科学边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
 - [ ] P5.7 T12：TD 输出、UV–Vis/ECD 图与 gauge/强度边界。Blocked：输入与 gauge/强度边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
 - [ ] P5.8 T13：能带、DOS、投影和能量参考。Blocked：当前隔离 scientific route 的 band/DOS、k-path、投影及独立能量参考科学检查已通过；仍缺直接 GUI、plot/render、project pair/cold reopen/recovery、教程/review package、manifest 和人工验收。
-- [ ] P5.9 T14：NaCl q 点声子模式与周期相位动画。Blocked：NaCl 六文件输入与相位边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
+- [ ] P5.9 T14：NaCl q 点声子模式与周期相位动画。Blocked：当前隔离 scientific route 的六文件来源一致性、q 点声子、complex eigenvector 与周期相位科学检查已通过；仍缺直接 GUI、动画/render、project pair/cold reopen/recovery、教程/review package、manifest 和人工验收。
 - [ ] P5.10 T15：critic2 QTAIM/NCI；不虚构缺失路径或键能。Blocked：当前 Standard CLI/Worker + 既有 critic2 1.3.15 已生成并验证 5 CP/4 有序路径与配对 40³ NCI 网格，取消及错误 Structure 绑定不发布输出；仍缺 Prepare GUI、Blender View/render/lifecycle、教程/review package 和人工验收，critic2 路线仅为 `development_reuse`。
 - [ ] P5.11 T19：Reader API 外部 Python 集成；不承诺自动进入普通导入界面。Blocked：当前 Standard 外部 Python 显式注册/discovery/unregister、conformance、非法输入拒绝、CBQ 发布/validate/注销后重开均通过；普通 CLI/Tk GUI 仍仅有 22 个内置 reader。缺 Viewer GUI/render/lifecycle、教程/review package 和人工验收。
 - [ ] P5.12 T20：QCSchema 真实 compute；交换成功不能替代实际计算成功。Blocked：当前 Standard 对固定 MolSSI AtomicResult 的交换、gradient/force 语义、依赖缺失失败与取消均有证据；QCEngine/PySCF 均未安装，实际 SCF 未运行，缺 GUI/render/lifecycle、教程/review package 和人工验收。

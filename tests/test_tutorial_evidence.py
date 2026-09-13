@@ -498,19 +498,11 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['direct_gui'], 'not_run')
         self.assertEqual(case['human_review'], 'not_run')
 
-    def test_t14_historical_scientific_route_blocker_does_not_claim_processing(self):
+    def test_t11_t14_historical_scientific_route_blocker_remains_historical(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         receipt = json.loads((base / 'T11-T14-scientific-route-blocker.json').read_text(encoding='utf-8'))
         self.assertEqual(receipt['route']['qualification'], 'development_reuse')
         self.assertEqual(len(receipt['route']['cross_environment_paths']), 2)
-        cases = {item['case_id']: item for item in self.status['cases']}
-        for case_id in ('T14',):
-            case = cases[case_id]
-            self.assertEqual(case['status'], 'blocked')
-            self.assertEqual(case['technical_status'], 'not_run')
-            self.assertEqual(case['scientific_processing'], 'not_run')
-            self.assertEqual(case['distribution'], 'blocked')
-            self.assertEqual(case['human_review'], 'not_run')
 
     def test_t13_current_electronic_structure_keeps_independent_calculations_separate(self):
         base = ROOT / 'examples/tutorials/2.5.0'
@@ -523,6 +515,27 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertIn('2x160x13x2x9', receipt['verified']['band_projections'])
         self.assertIn('not silently aligned or merged', receipt['verified']['independent_calculation_boundary'])
         self.assertEqual(receipt['verified']['cbq_validation'], 'passed_both')
+        self.assertTrue(all(
+            len(value) == 64 for key, value in receipt['raw_evidence'].items()
+            if key.endswith('_sha256')
+        ))
+        self.assertEqual(case['technical_status'], 'incomplete')
+        self.assertEqual(case['scientific_processing'], 'passed')
+        self.assertEqual(case['direct_gui'], 'not_run')
+        self.assertEqual(case['human_review'], 'not_run')
+
+    def test_t14_current_phonon_science_keeps_animation_gates_separate(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T14')
+        receipt = json.loads((base / 'T14-current-candidate-check.json').read_text(encoding='utf-8'))
+        spec = json.loads((base / 'T14.case-spec.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_prepare_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['inputs'], [{key: item[key] for key in ('path', 'sha256', 'bytes')} for item in spec['inputs']])
+        self.assertIn('maximum absolute difference 0', receipt['verified']['source_consistency'])
+        self.assertIn('2x6x2x3', receipt['verified']['eigenvectors'])
+        self.assertIn('exp_i_2pi_qR_minus_phase', receipt['verified']['periodic_phase'])
+        self.assertIn('neither field is synthesized', receipt['verified']['missing_fields'])
+        self.assertEqual(receipt['verified']['cbq_validation'], 'passed')
         self.assertTrue(all(
             len(value) == 64 for key, value in receipt['raw_evidence'].items()
             if key.endswith('_sha256')
