@@ -1,0 +1,41 @@
+{
+  "case_id": "T03",
+  "run_id": "run-015",
+  "status": "passed_technical_ready_for_human_review",
+  "candidate": {
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3"
+  },
+  "direct_gui": {
+    "prepare": "passed",
+    "blender": "passed_project_browser_and_f12",
+    "blender_pid": 27740,
+    "blender_closed_without_save": true
+  },
+  "outputs": {
+    "grouped_manifest_sha256": "e320c0a70bca57fb8a5fc1ea5fd53b32fce09d33201b1fcd49f29fe2694a7f41",
+    "export_sdf_sha256": "77efc2e4f2ef269111a039abfe7f60b766af482d4e9daf50d96461caa64b0b13",
+    "roundtrip_manifest_sha256": "39596504fcd3a10711d9c3cbda4bcb0fe5e4d2049d0525ab4b17ec8196b3b6b0",
+    "negative_manifest_sha256": "6d5cb1cf8ebbb164ebc33dca8d8872dd0baea3601e98b38a1e048f000ef27556"
+  },
+  "manifest": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-015/T03/run-manifest.json",
+    "sha256": "022d7c2ff996775435887d2126919c4ff2f3bcc220a19aedca04535ca094ae2c",
+    "integrity_status": "passed",
+    "technical_status": "passed",
+    "independent_review_status": "incomplete"
+  },
+  "review_package": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-015/T03/T03-review.zip",
+    "sha256": "07b0cc00f977820111cc6419a76feae258e0b19763bb77ce61e5c6c09c2300d5",
+    "members": 39,
+    "paths_are_relative": true
+  },
+  "mcp_support": {
+    "scope": "Restore the already recorded camera matrix and per-object render visibility in memory before the direct F12 action.",
+    "classification": "support_not_direct_gui",
+    "saved": false
+  },
+  "retained_failures": "Seven failed GUI attempts are preserved with hashes in the raw direct-gui-receipt.json.",
+  "human_review": "not_run"
+}

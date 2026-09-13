@@ -6,7 +6,7 @@
 
 | 案例 | 固定输入与准确路线 | 可见结果与科学边界 | 证据 |
 | --- | --- | --- | --- |
-| T03 | SMILES `CCO`；Prepare GUI `derive`，operation `molecule.conformers`，参数 `{"count":3,"force_field":"MMFF94"}`，再执行 `validate`；每个 Structure 用 `Structure publication`。 | 保留三个构象。MMFF94 只排序本次构象，不是电子能。 | [回执](../../../examples/tutorials/2.5.0/T03-current-candidate-check.json) |
+| T03 | Prepare GUI `Convert`：`mixed-properties.sdf`、reader `sdf`；执行 `Inspect`、`Review Conformer candidate`，勾选 `Reviewed` 后 `Derive`；把 ConformerSet 导出为 SDF 并重新导入。Viewer 中每个 Structure 使用 `Structure publication`。 | 三条源记录保持独立；显式确认新增一个 identity mapping 的 ambiguous 三帧 ConformerSet。`ccd-3d-showcase.sdf` 必须得到零个 suggestion。SMILES/MMFF94 归 T02，不归 T03。 | [回执](../../../examples/tutorials/2.5.0/T03-current-candidate-check.json) |
 | T05 | 固定 PDB/PQR/MOL2；Prepare GUI `convert`；PDB 用 `Trajectory frame`，PQR/MOL2 charge 用 `Atomic scalar`。 | PDB model 顺序、PQR charge/radius、MOL2 hierarchy 分开保留；同为 atom-indexed 不代表同义。 | [回执](../../../examples/tutorials/2.5.0/T05-current-candidate-check.json) |
 | T08 | 固定 FCHK/Molden，经 `python.wavefunction`；记录的 `33³`、`0.25 bohr` HOMO/LUMO grid；`Signed scalar isosurface`，`+0.03/-0.03`。 | 正负相位均可见。有限盒归一化不是全空间证明。 | [回执](../../../examples/tutorials/2.5.0/T08-current-candidate-check.json) |
 | T09 | 固定 water/CH3/N2 FCHK；选择 CH3 spin density 与 `Signed scalar isosurface`。 | 自旋密度保留正负；total、spin、post-SCF-minus-SCF 是不同数据集。 | [回执](../../../examples/tutorials/2.5.0/T09-current-candidate-check.json) |
@@ -20,6 +20,25 @@
 | T19 | 显式 external Python register/discover/conformance；Viewer `Structure publication`。 | Reader API 可用，但不加入普通 GUI 的 22 个 reader。 | [回执](../../../examples/tutorials/2.5.0/T19-current-candidate-check.json) |
 | T20 | 通过 `python.qcschema` 执行 `qcschema.compute@1`；选择 gradient 与 `Atomic vector`。 | 实际 PySCF 2.13.1 RHF/cc-pVDZ 能量 `-76.0214183672713 Eh`；交换成功不等于计算成功。 | [回执](../../../examples/tutorials/2.5.0/T20-current-candidate-check.json) |
 | B01 | 无 provider credential/live transport 时，Prepare GUI 先 `capabilities` 后 `doctor`，并测试 Cancel。 | provider unavailable，无网络请求、无输出；负向边界按设计无科学 render/project。 | [回执](../../../examples/tutorials/2.5.0/B01-current-candidate-check.json) |
+
+## T03 直接 GUI 步骤
+
+1. 在 Prepare `Convert` 中选择 `examples/user-workflows/inputs/sdf/mixed-properties.sdf`，reader 设为 `sdf`，指定输出 `.cbq` 后点击 `Run`。
+2. 切换到 `Inspect`，选择刚生成的 CBQ 并点击 `Run`。打开 `Review Conformer candidate`；核对三条记录、每条记录的 mapping `[0, 1, 2]`，以及 symmetric-isomorphism 警告。
+3. 勾选 `Reviewed`，指定新的输出 CBQ，点击 `Derive`。结果必须包含 shape `[3, 3, 3]`、unit `angstrom`、status `ambiguous` 的 `ConformerSet`，同时三条源 Structure 仍保留。
+4. 在 `Export` 中选择该 ConformerSet 与 `sdf`，先 Preview，再 Write。把写出的 SDF 转回 CBQ，并对两份 CBQ 执行 `validate`。
+5. 转换 `ccd-3d-showcase.sdf`，检查后点击 `Review Conformer candidate`。界面必须显示 `conformer_suggestion_count: 0` 并拒绝 review。
+6. 保持 `project.blend` 与 `project.cbq/` 相邻，在 Blender 打开工程，确认 Project Browser 有三条记录，选择第一条 Structure 后按 F12。恢复时让导入源不可用，冷启动打开工程对，逐个选择 View，在无 processor 条件下点击 `Rebuild Selected View`。
+
+![T03 mapping 与歧义警告](../assets/2.5-tutorials/scientific/t03-prepare-mapping-current.png)
+
+![T03 不同分子拒绝](../assets/2.5-tutorials/scientific/t03-negative-rejected-current.png)
+
+![T03 当前 Project Browser](../assets/2.5-tutorials/scientific/t03-project-browser-current.png)
+
+![T03 当前 F12 结果](../assets/2.5-tutorials/scientific/t03-f12-current.png)
+
+最终 F12 使用原生渲染回执中已经记录的相机矩阵。恢复该矩阵和 render visibility 是获授权的 MCP 辅助，不标成直接 GUI 点击；打开最终安装候选、检查 Project Browser、按 F12、检查结果以及不保存退出属于直接 OS GUI。技术检查已通过，独立人工验收仍未签署。
 
 ## 原生渲染图库
 
@@ -55,4 +74,4 @@
 
 ![T20 QCSchema gradient](../assets/2.5-tutorials/scientific/t20-qcschema-gradient.png)
 
-linked spectrum 的标签小于专用 plot render。当前本章所有案例仍缺直接 GUI 直录，独立人工验收仍未签署。
+linked spectrum 的标签小于专用 plot render。T03 已补当前 Prepare/Blender 直接 GUI；其余案例仍需逐项补直接 GUI。所有案例的独立人工验收仍未签署。

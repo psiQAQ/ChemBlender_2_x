@@ -331,10 +331,10 @@ class TutorialStatusTests(unittest.TestCase):
         receipt = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-offline-gate-summary.json').read_text(encoding='utf-8'))
         checkers = receipt['case_checkers']
         self.assertEqual(checkers['discovered_manifest_count'], checkers['executed_manifest_count'])
-        self.assertEqual({item['case_id'] for item in checkers['current_applicable']}, {'T01', 'T02', 'T06'})
-        self.assertEqual(set(checkers['no_conforming_manifest']), {item['case_id'] for item in self.status['cases']} - {'T01', 'T02', 'T06'})
+        self.assertEqual({item['case_id'] for item in checkers['current_applicable']}, {'T01', 'T02', 'T03', 'T06'})
+        self.assertEqual(set(checkers['no_conforming_manifest']), {item['case_id'] for item in self.status['cases']} - {'T01', 'T02', 'T03', 'T06'})
         self.assertEqual(receipt['static_gates']['offline_project_downloads'], 'passed_shared_companion_zip')
-        self.assertEqual(receipt['acceptance']['ready_for_human_review'], [])
+        self.assertEqual(receipt['acceptance']['ready_for_human_review'], ['T03'])
         self.assertEqual(receipt['acceptance']['human_review'], 'not_run')
         self.assertEqual(receipt['acceptance']['distribution'], 'blocked')
 
@@ -445,19 +445,35 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(entry['interaction'], 'os_gui')
         self.assertEqual(receipt['human_review'], 'not_run')
 
-    def test_t03_standard_receipt_keeps_gui_and_lifecycle_blocked(self):
+    def test_t03_current_gui_and_lifecycle_are_separately_classified(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         case = next(item for item in self.status['cases'] if item['case_id'] == 'T03')
-        spec_path = base / 'T03.case-spec.json'
         receipt = json.loads((base / 'T03-current-candidate-check.json').read_text(encoding='utf-8'))
-        spec = json.loads(spec_path.read_text(encoding='utf-8'))
-        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.applicability['from_candidate']['prepare_wheel_sha256'])
-        self.assertEqual(receipt['inputs'], [{key: item[key] for key in ('path', 'sha256')} for item in spec['inputs'][:2]])
-        self.assertEqual(receipt['verified']['confirmed_grouping'], 'passed')
+        gui = json.loads((base / 'T03-run015-direct-gui-check.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['candidate']['extension_sha256'], self.applicability['to_candidate']['extension_sha256'])
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.applicability['to_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['verified']['prepare_direct_gui'], 'passed_convert_inspect_review_confirm_export_reimport_negative')
         self.assertTrue(receipt['verified']['different_molecules'].startswith('AIN/CFF/TA1'))
-        self.assertIn('prepare_gui', receipt['blocked'])
+        self.assertEqual(receipt['checker']['technical_status'], 'passed')
+        self.assertEqual(receipt['checker']['independent_review_status'], 'incomplete')
+        self.assertEqual(gui['mcp_support']['classification'], 'support_not_direct_gui')
+        self.assertFalse(gui['mcp_support']['saved'])
+        provenance = json.loads(
+            (ROOT / 'docs/user/assets/2.5-tutorials/provenance.json').read_text(encoding='utf-8')
+        )
+        for name, key in (
+            ('t03-prepare-mapping-current.png', 'prepare_mapping_png_sha256'),
+            ('t03-negative-rejected-current.png', 'negative_rejection_png_sha256'),
+            ('t03-project-browser-current.png', 'project_browser_png_sha256'),
+            ('t03-f12-current.png', 'f12_png_sha256'),
+        ):
+            path = ROOT / 'docs/user/assets/2.5-tutorials/scientific' / name
+            entry = next(item for item in provenance['images'] if item['path'] == f'scientific/{name}')
+            self.assertEqual(validator.sha256(path), receipt['evidence'][key])
+            self.assertEqual(entry['sha256'], receipt['evidence'][key])
         self.assertEqual(case['scientific_processing'], 'passed')
-        self.assertEqual(case['direct_gui'], 'not_run')
+        self.assertTrue(case['direct_gui'].startswith('passed_'))
+        self.assertEqual(case['technical_status'], 'passed')
         self.assertEqual(case['human_review'], 'not_run')
 
     def test_t05_standard_receipt_preserves_format_boundaries(self):

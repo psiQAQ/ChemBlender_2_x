@@ -231,6 +231,50 @@
       "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
       "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
       "status": "pending_human_review"
+    },
+    {
+      "path": "scientific/t03-prepare-mapping-current.png",
+      "source_run": "run-015/T03/gui/s03-mapping-bottom-v2.png",
+      "sha256": "70d9c68d70e3aa465c8bd949ea62ca5c9a7fca465c1b5dca829b75a253cf29a2",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "os_gui",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "scientific/t03-negative-rejected-current.png",
+      "source_run": "run-015/T03/gui/s05-negative-review-rejected-v2.png",
+      "sha256": "3372ccd0b525c013de31e781d0478d94d5028933166d3167fea7169237f544ec",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "os_gui",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "scientific/t03-project-browser-current.png",
+      "source_run": "run-015/T03/gui/s06-project-browser.png",
+      "sha256": "1d2eae51e11dc836625d7f724defdf698b94458a0d2ee49b5b0bc602b2be17d8",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "os_gui",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "scientific/t03-f12-current.png",
+      "source_run": "run-015/T03/gui/s06-render-result-current-final.png",
+      "sha256": "5a9b46ee84bb4fed44d458b0bcb3e93fad6c4cc6782acba5d10a55a61c830eea",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "os_gui_after_disclosed_mcp_support",
+      "status": "pending_human_review"
     }
   ]
 }

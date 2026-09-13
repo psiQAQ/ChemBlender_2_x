@@ -7,9 +7,9 @@
   "languages": {
     "en": {
       "html": "docs/offline/en/index.html",
-      "html_sha256": "c353f24b00a17ecb180dcdc848e8ff57322b91880bd41c9cf34db5d1bdead898",
+      "html_sha256": "44eafb86d95308f1712f277adea0a3c81320bb96c955a792ef8c0344b75d07e9",
       "download_count": 135,
-      "image_count": 60,
+      "image_count": 64,
       "remote_resources": 0,
       "missing_resources": 0,
       "language_navigation": "passed",
@@ -25,9 +25,9 @@
     },
     "zh-CN": {
       "html": "docs/offline/zh-CN/index.html",
-      "html_sha256": "d130a96f2d9e0dec032127c2c9843cdbce27bb59e8ffc3fb8f3eafb49c1ea293",
+      "html_sha256": "b728a788ec2b0c8bf96bbc8c8a6b031d7c8cb39b7e789b05bd7879f18eab93b6",
       "download_count": 131,
-      "image_count": 60,
+      "image_count": 64,
       "remote_resources": 0,
       "missing_resources": 0,
       "language_navigation": "passed",
@@ -53,7 +53,7 @@
     "layout": "shared companion file referenced by both offline HTML files"
   },
   "limitations": [
-    "Headless Edge loaded the prior local HTML files with DNS mapped to 0.0.0.0. The current T18 refresh was not re-rendered in Edge; generator and parser tests verify every current image, anchor, language link and download target.",
+    "Headless Edge loaded the prior local HTML files with DNS mapped to 0.0.0.0. The current T03/T18 refresh was not re-rendered in Edge; generator and parser tests verify every current image, anchor, language link and download target.",
     "This offline QA does not replace the independent tutorial replay required by P6.5/P6.6."
   ]
 }

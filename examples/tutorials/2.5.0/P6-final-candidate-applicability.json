@@ -34,6 +34,6 @@
     "examples/tutorials/2.5.0/P5-viewer-batch-check.json"
   ],
   "historical_receipt_policy": "Receipts retain the bytes they actually exercised. Applicability to the final local candidate is recorded here rather than relabeling historical GUI or scientific events.",
-  "direct_gui_exceptions": ["all cases without a current direct GUI event"],
+  "direct_gui_exceptions": ["T05", "T08", "T09", "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T19", "T20", "B01"],
   "human_review": "not_run"
 }

@@ -39,7 +39,7 @@
     },
     "T03": {
       "chapter": "scientific-cases.md",
-      "missing": ["current-candidate Prepare/Blender direct GUI capture", "independent human replay"]
+      "missing": ["independent human replay"]
     },
     "T04": {
       "chapter": "crystal-cells.md",

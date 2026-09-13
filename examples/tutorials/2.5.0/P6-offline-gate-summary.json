@@ -5,8 +5,8 @@
   "source_commit": "58dc1e07824cc42c273dd3a870d7e8ccdacc7d49",
   "status": "complete_with_blockers",
   "case_checkers": {
-    "discovered_manifest_count": 5,
-    "executed_manifest_count": 5,
+    "discovered_manifest_count": 6,
+    "executed_manifest_count": 6,
     "current_applicable": [
       {
         "case_id": "T01",
@@ -37,6 +37,16 @@
         "integrity_status": "invalid",
         "technical_status": "incomplete",
         "independent_review_status": "incomplete"
+      },
+      {
+        "case_id": "T03",
+        "manifest": ".blend-analysis/2.5-real-user-tutorials/run-015/T03/run-manifest.json",
+        "manifest_sha256": "022d7c2ff996775435887d2126919c4ff2f3bcc220a19aedca04535ca094ae2c",
+        "exit_code": 2,
+        "verdict": "incomplete",
+        "integrity_status": "passed",
+        "technical_status": "passed",
+        "independent_review_status": "incomplete"
       }
     ],
     "historical": [
@@ -59,7 +69,6 @@
     ],
     "no_conforming_manifest": [
       "T00",
-      "T03",
       "T04",
       "T05",
       "T07",
@@ -97,8 +106,8 @@
   },
   "static_gates": {
     "tutorial_evidence_tests": {
-      "total": 75,
-      "passed": 74,
+      "total": 76,
+      "passed": 75,
       "skipped": 1,
       "failed": 0,
       "errors": 0
@@ -117,9 +126,9 @@
     "planning_check": "passed_with_unfinished_items"
   },
   "acceptance": {
-    "ready_for_human_review": [],
+    "ready_for_human_review": ["T03"],
     "human_review": "not_run",
     "distribution": "blocked",
-    "reason": "Current direct-GUI events and conforming per-case manifests remain incomplete; all 22 independent reviews remain unsigned. Portable project downloads and current-source Blender qualification passed."
+    "reason": "T03 passed its technical checker and is ready for independent review. Other current direct-GUI events and conforming per-case manifests remain incomplete; all 22 independent reviews remain unsigned. Portable project downloads and current-source Blender qualification passed."
   }
 }

@@ -37,11 +37,11 @@
     "coordinate_absolute_tolerance_angstrom": 0.0000001
   },
   "candidate": {
-    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
     "standard_qualification": "isolated_install"
   },
-  "status": "blocked",
+  "status": "ready_for_human_review",
   "human_review": "not_run",
-  "note": "T02 owns SMILES three-dimensionalization and MMFF94 optimization; T03 reuses only its hash-linked current applicability. Standard SDF grouping, negative, cancellation and export/reimport checks passed. Prepare GUI, Blender render/lifecycle, tutorial package and independent human review remain blocked or not run."
+  "note": "T02 owns SMILES three-dimensionalization and MMFF94 optimization; T03 reuses only its hash-linked current applicability. Current Prepare GUI covered SDF inspection, explicit ambiguous-group confirmation, export/reimport and different-molecule rejection. Current Blender GUI covered project browsing and F12 after separately disclosed MCP camera setup; native render, portable pair and source-unavailable cold rebuild are retained from the byte-applicable Viewer batch. Independent human review remains not run."
 }
