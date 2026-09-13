@@ -1,0 +1,66 @@
+{
+  "schema_name": "chemblender_current_extension_qualification",
+  "schema_version": 1,
+  "plan_id": "2026-09-10-2.5-real-user-tutorials",
+  "status": "passed",
+  "source_commit": "cdbdbb3da170ccddf21079e7db3b6231167cf657",
+  "extension": {
+    "path": "ChemBlender/chemblender-2.5.0.zip",
+    "sha256": "20ae86e47d317884fb1e15b7ddfd7d6ccc07f6a256e2562d1c16df8e66e1aa1e",
+    "bytes": 2831878,
+    "members": 109,
+    "unsafe_members": [],
+    "wheel_members": []
+  },
+  "runtime": {
+    "system": "Windows-11-10.0.22631-SP0",
+    "blender": "5.1.1",
+    "executable": "C:/Program Files/Blender Foundation/Blender 5.1/blender.exe",
+    "bundled_python": "C:/Program Files/Blender Foundation/Blender 5.1/5.1/python/bin/python.exe",
+    "module_key": "bl_ext.user_default.chemblender"
+  },
+  "checks": {
+    "native_validate": "passed",
+    "native_build": "passed",
+    "zip_audit": "passed",
+    "second_clean_profile_install": "passed_short_path",
+    "second_clean_profile_cold_reopen": "passed",
+    "second_clean_profile_project_pair_and_rebuild": "passed",
+    "second_clean_profile_external_dependencies_absent": "passed",
+    "real_user_default_reinstall": "completed",
+    "real_user_default_cold_start": "passed",
+    "real_user_default_package_members_match": "passed_109_of_109",
+    "professional_routes": "passed_isolated_install"
+  },
+  "viewer_dependency_result": {
+    "numpy_origin": "C:/Program Files/Blender Foundation/Blender 5.1/5.1/python/Lib/site-packages/numpy/__init__.py",
+    "rdkit_available": false,
+    "gemmi_available": false,
+    "prepare_available": false
+  },
+  "evidence": {
+    "clean_profile": ".blend-analysis/r13",
+    "clean_install_receipt": ".blend-analysis/r13/install.json",
+    "clean_cold_receipt": ".blend-analysis/r13/cold.json",
+    "clean_dependency_receipt": ".blend-analysis/r13/cold-dependencies.json",
+    "user_default_dependency_receipt": ".blend-analysis/r13/user-default-cold.json",
+    "environment_qualification": "examples/tutorials/2.5.0/environment-qualification.json"
+  },
+  "retained_failures": [
+    {
+      "scope": "long_path_clean_profile",
+      "result": "failed",
+      "reason": "Windows temporary CBQ path exceeded the usable path depth after native installation; the same candidate passed from the repository short-path profile."
+    },
+    {
+      "scope": "same_process_real_profile_smoke",
+      "result": "failed",
+      "reason": "The legacy comprehensive smoke expected ui.quick_import after an in-process overwrite, but the CBQ-only Viewer registration intentionally no longer registers that module. Cold-start qualification and exact installed-byte comparison passed."
+    }
+  ],
+  "limitations": [
+    "Native background operations are not classified as direct os_gui or human_gui events.",
+    "Independent human review remains unsigned.",
+    "The current local candidate is not published or distribution-approved."
+  ]
+}

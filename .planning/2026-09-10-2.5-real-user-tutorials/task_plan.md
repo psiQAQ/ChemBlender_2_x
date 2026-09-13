@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 6 — 教程收口与本地交付；Phase 4/5 的明确 Blocked 项并行保留
-- Next Step: 按 Blender MCP 资格流程重新枚举唯一 Blender 进程，构建当前 Extension，并开始第二干净 profile 的直接 GUI、render、项目与恢复批量验收；人工签署保持独立
+- Next Step: 为已具备当前科学输出的 T03/T05/T08–T16/T19/T20/B01 批量补 Blender View/render/project/cold-reopen/recovery；直接 GUI 与人工签署保持独立阻塞
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -120,7 +120,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 - [ ] P6.6 只有独立复做者签署后，勾选对应 `human_review`；否则保持 `ready_for_human_review`。
 - [ ] P6.7 冻结最终本地 Extension ZIP 与 prepare wheel/sdist，记录源码提交、SHA-256、内容清单和依赖来源。
 - [x] P6.8 运行全量测试并分别报告 Passed/Failed/Skipped/Error；任何 failure 或 error 都阻止技术完成。
-- [ ] P6.9 执行 Extension validate/build、ZIP 内容审计、隔离 profile 安装、真实 `user_default` 冷启动、无 RDKit/Gemmi/prepare Viewer 验证和专业后端验证。
+- [x] P6.9 执行 Extension validate/build、ZIP 内容审计、隔离 profile 安装、真实 `user_default` 冷启动、无 RDKit/Gemmi/prepare Viewer 验证和专业后端验证。
 - [x] P6.10 运行所有案例检查器、状态一致性测试、文档测试、离线 QA、`git diff --check` 和 planning `check-complete.ps1`。
 - [x] P6.11 更新 active/current status 和最终本地交付报告；明确远端 CI、push、Release、PyPI 均未获授权且不属于本地完成。
 - [ ] P6.12 最终逻辑 commit 后，仅在所有阶段和人工门槛确实完成时把 M0–M5 与 Phase 1–6 标为 complete。

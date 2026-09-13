@@ -21,7 +21,7 @@ PLAN_ID: `2026-09-10-2.5-real-user-tutorials`
 - 离线 HTML 的静态资源、锚点和下载链接有效，但没有 `.blend`、`.cbq` 或 review ZIP 工程下载。
 - scientific、wavefunction、fermi、QCSchema compute 路线需要依赖/配置授权；T16 输入许可未关闭；B01 无 live provider transport。
 - 22 个案例的 `human_review` 全部为 `not_run`，Agent 未代签。
-- 保留 Extension ZIP 早于当前 `ChemBlender/ui/scientific_view.py` 变更；未形成当前源码 final artifact，也未执行 P6.9 的完整 Blender validate/build/install/profile 门槛。用户自有 Blender 5.1.1 PID 26228 保持运行且未被接管或关闭。
+- 当前源码 Extension 已重新 validate/build：ZIP SHA-256 `20ae86e47d317884fb1e15b7ddfd7d6ccc07f6a256e2562d1c16df8e66e1aa1e`。第二干净 profile 的安装、独立冷进程、工程配对/重建和无科学依赖 Viewer 均通过；真实 `user_default` 冷启动及 109 个安装文件逐字节比对也通过。直接 GUI 与人工复做仍未因此升级。
 
 ## 当前证据入口
 
@@ -31,6 +31,7 @@ PLAN_ID: `2026-09-10-2.5-real-user-tutorials`
 - 案例检查器与离线门槛：`examples/tutorials/2.5.0/P6-offline-gate-summary.json`
 - 教程完整性：`examples/tutorials/2.5.0/P6-tutorial-completeness-audit.json`
 - 制品冻结审计：`examples/tutorials/2.5.0/P6-final-artifact-freeze-audit.json`
+- 当前 Extension 资格：`examples/tutorials/2.5.0/P6-current-extension-qualification.json`
 - 独立人工清单：`examples/tutorials/2.5.0/independent-human-review-checklists.md`
 
 ## 外部写入边界

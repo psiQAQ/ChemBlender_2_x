@@ -2,17 +2,18 @@
   "schema_version": 2,
   "reviewed_commit": "c1fa7584f56d6df387617406958065573e9b56c1",
   "current_candidate": {
-    "source_commit": "32d96303b2c0e16260b32b470c2d5601226d9318",
-    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-    "prepare_sdist_sha256": "c8b61502a788b3f9bb93975e6a85cd641b1fd33d2d783ccab15e5453155a5a9e"
+    "source_commit": "cdbdbb3da170ccddf21079e7db3b6231167cf657",
+    "extension_sha256": "20ae86e47d317884fb1e15b7ddfd7d6ccc07f6a256e2562d1c16df8e66e1aa1e",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+    "prepare_sdist_sha256": "17c0191fccc9bc9c3e9f80a1ff81febe8b4941593a17bf5311598a39012c01a4",
+    "qualification": "P6-current-extension-qualification.json"
   },
   "current_prepare_candidate": {
     "source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
     "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
     "prepare_sdist_sha256": "17c0191fccc9bc9c3e9f80a1ff81febe8b4941593a17bf5311598a39012c01a4",
     "qualification": "isolated_install",
-    "limitation": "Not promoted to the combined current_candidate until Extension and cross-case applicability are rebuilt and requalified."
+    "limitation": "Promoted into current_candidate after P6.9 Extension qualification; distribution and independent-review gates remain open."
   },
   "environment_qualification": "environment-qualification.json",
   "environment_routes": {

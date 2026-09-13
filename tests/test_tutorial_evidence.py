@@ -269,6 +269,19 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(counts['errors'], 0)
         self.assertEqual(counts['total'], counts['passed'] + counts['skipped'])
 
+    def test_current_extension_passed_clean_and_user_default_qualification(self):
+        receipt = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-current-extension-qualification.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['status'], 'passed')
+        self.assertEqual(receipt['extension']['members'], 109)
+        self.assertFalse(receipt['extension']['unsafe_members'])
+        self.assertFalse(receipt['extension']['wheel_members'])
+        self.assertTrue(all(value == 'passed' or value.startswith('passed_') or value == 'completed'
+                            for value in receipt['checks'].values()))
+        self.assertFalse(receipt['viewer_dependency_result']['rdkit_available'])
+        self.assertFalse(receipt['viewer_dependency_result']['gemmi_available'])
+        self.assertFalse(receipt['viewer_dependency_result']['prepare_available'])
+        self.assertEqual(self.status['current_candidate']['extension_sha256'], receipt['extension']['sha256'])
+
     def test_p6_offline_gate_summary_preserves_blockers(self):
         receipt = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-offline-gate-summary.json').read_text(encoding='utf-8'))
         checkers = receipt['case_checkers']
