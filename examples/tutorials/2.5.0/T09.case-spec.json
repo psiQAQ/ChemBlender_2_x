@@ -19,7 +19,7 @@
   "inputs": [
     {"path":"examples/scientific-visualization/inputs/wavefunction/water_sto3g_hf_g03.fchk","sha256":"aa8dec77849d4f9e1e9dc9357c80f5b4d6ba1efc3bbc17da6c59754bdaed0816","bytes":5369,"license":"LGPL-3.0 root distribution; retain per-file notices","role":"restricted closed-shell SCF density"},
     {"path":"examples/scientific-visualization/inputs/wavefunction/ch3_hf_sto3g.fchk","sha256":"b5b33475a6766447a287e6cf16ac6111eb489a5985743413b056ac2e7a4c384c","bytes":8333,"license":"LGPL-3.0 root distribution; retain per-file notices","role":"unrestricted total and spin SCF density"},
-    {"path":"examples/scientific-visualization/inputs/wavefunction/nitrogen-mp2.fchk","sha256":"5e24d62229514689c5c0f1c904f09dbba205baf699843901d46cc5aa1cf19f7a","bytes":8975,"license":"LGPL-3.0 root distribution; retain per-file notices","role":"SCF and post-SCF density-matrix distinction"}
+    {"path":"examples/scientific-visualization/inputs/wavefunction/nitrogen-mp2.fchk","sha256":"5e24d62229514689c5c0f1c904f09dbba205baf699843901d46cc5aa1cf19f7a","bytes":8975,"license":"LGPL-3.0 root distribution; retain per-file notices","role":"single-atom nitrogen SCF and post-SCF density-matrix distinction; not N2"}
   ],
   "candidate": {"prepare_wheel_sha256":"b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a","required_route":"python.wavefunction"},
   "status": "blocked",

@@ -1,0 +1,41 @@
+{
+  "case_id": "T05",
+  "run_id": "run-016",
+  "status": "passed_technical_ready_for_human_review",
+  "candidate": {
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3"
+  },
+  "direct_gui": {
+    "prepare": "passed_five_conversions_and_inspections",
+    "blender": "passed_three_sequential_project_browser_sessions_and_pdb_f12",
+    "blender_pids": [10900, 38672, 5184],
+    "blender_closed_without_save": true
+  },
+  "visible_results": {
+    "pdb": "10 frames; model, chain/segment, residue and atom counts; playback configured",
+    "pqr": "Partial charge and Radius both Complete and selectable",
+    "mol2": "two substructure categories, RES A selection and explicit two-bond topology controls",
+    "large_mol2": "unsupported DICT, NORMAL, SET and unknown bond-type diagnostics retained"
+  },
+  "manifest": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-016/T05/run-manifest.json",
+    "sha256": "5a8eb7dafb7fbfe18938867e1b5cf2fb9a7951cee2ba600794cb69ccb36056d8",
+    "integrity_status": "passed",
+    "technical_status": "passed",
+    "independent_review_status": "incomplete"
+  },
+  "review_package": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-016/T05/T05-review.zip",
+    "sha256": "3531011878930f18e0d29ce20d5ee5eb5fde0b8b2042dad4889ab171c1aa4e4e",
+    "members": 65,
+    "paths_are_relative": true
+  },
+  "mcp_support": {
+    "scope": "Restore the recorded PDB camera and lights in memory before the direct F12 action.",
+    "classification": "support_not_direct_gui",
+    "saved": false
+  },
+  "retained_failures": "Five failed focus or wrong-operation captures are preserved with hashes in the raw direct-gui-receipt.json.",
+  "human_review": "not_run"
+}

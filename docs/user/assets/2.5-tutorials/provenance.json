@@ -275,6 +275,61 @@
       "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
       "interaction": "os_gui_after_disclosed_mcp_support",
       "status": "pending_human_review"
+    },
+    {
+      "path": "scientific/t05-prepare-pqr-current.png",
+      "source_run": "run-016/T05/gui/s03-pqr-inspected-v2.png",
+      "sha256": "c146e86bc4d324da0f9b12e7316aa7408a0d07718fee39bbd9655699c6ebafea",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "os_gui",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "scientific/t05-pdb-frameset-current.png",
+      "source_run": "run-016/T05/gui/blender-pdb-frameset-selected.png",
+      "sha256": "b78a7a661c6b29a0673599500ac6f63fc7da6f8a7bd6ceefab86478c9dbb0611",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "os_gui",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "scientific/t05-pqr-radius-current.png",
+      "source_run": "run-016/T05/gui/blender-pqr-radius-selected.png",
+      "sha256": "e3dd281ac43a08e2bb6c8d470559261386a53e038e7987eb208fb73a8a1ddce6",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "os_gui",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "scientific/t05-mol2-substructure-current.png",
+      "source_run": "run-016/T05/gui/blender-mol2-close-dialog.png",
+      "sha256": "7fbf07ee02cc49ffa9437737e116e1481083423eaa2191821ce329b2875fc482",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "os_gui",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "scientific/t05-f12-current.png",
+      "source_run": "run-016/T05/gui/blender-pdb-f12-result.png",
+      "sha256": "de1a1f0173108f1664310dc2c1659a7dc6b1a7558464a93561cb0f0d7177033b",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "os_gui_after_disclosed_mcp_support",
+      "status": "pending_human_review"
     }
   ]
 }

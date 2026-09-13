@@ -5,8 +5,8 @@
   "source_commit": "58dc1e07824cc42c273dd3a870d7e8ccdacc7d49",
   "status": "complete_with_blockers",
   "case_checkers": {
-    "discovered_manifest_count": 6,
-    "executed_manifest_count": 6,
+    "discovered_manifest_count": 7,
+    "executed_manifest_count": 7,
     "current_applicable": [
       {
         "case_id": "T01",
@@ -47,6 +47,16 @@
         "integrity_status": "passed",
         "technical_status": "passed",
         "independent_review_status": "incomplete"
+      },
+      {
+        "case_id": "T05",
+        "manifest": ".blend-analysis/2.5-real-user-tutorials/run-016/T05/run-manifest.json",
+        "manifest_sha256": "5a8eb7dafb7fbfe18938867e1b5cf2fb9a7951cee2ba600794cb69ccb36056d8",
+        "exit_code": 1,
+        "verdict": "incomplete",
+        "integrity_status": "passed",
+        "technical_status": "passed",
+        "independent_review_status": "incomplete"
       }
     ],
     "historical": [
@@ -70,7 +80,6 @@
     "no_conforming_manifest": [
       "T00",
       "T04",
-      "T05",
       "T07",
       "T08",
       "T09",
@@ -126,9 +135,9 @@
     "planning_check": "passed_with_unfinished_items"
   },
   "acceptance": {
-    "ready_for_human_review": ["T03"],
+    "ready_for_human_review": ["T03", "T05"],
     "human_review": "not_run",
     "distribution": "blocked",
-    "reason": "T03 passed its technical checker and is ready for independent review. Other current direct-GUI events and conforming per-case manifests remain incomplete; all 22 independent reviews remain unsigned. Portable project downloads and current-source Blender qualification passed."
+    "reason": "T03 and T05 passed their technical checkers and are ready for independent review. P0 checker inputs remain missing, incomplete or invalid; other P1/P2 direct-GUI events and conforming manifests remain incomplete; all 22 independent reviews remain unsigned. Portable project downloads and current-source Blender qualification passed."
   }
 }

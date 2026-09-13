@@ -46,11 +46,11 @@
     "coordinate_absolute_tolerance_angstrom": 0.0000001
   },
   "candidate": {
-    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
     "standard_qualification": "isolated_install"
   },
-  "status": "blocked",
+  "status": "ready_for_human_review",
   "human_review": "not_run",
-  "note": "Standard inspect/convert/validate, source-level science checks, incompatible-model handling and pre-cancellation passed. Prepare GUI, Viewer Views/selections, render/lifecycle, tutorial package and independent human review are not run."
+  "note": "Current Prepare GUI covered compatible and mismatched PDB, APBS PQR, supported MOL2 and partial MOL2. Current Blender GUI covered trajectory/hierarchy, charge/radius, substructure/topology selection and PDB F12; native render, portable pairs and source-unavailable cold rebuild are retained from the byte-applicable Viewer batch. Independent human review remains not run."
 }

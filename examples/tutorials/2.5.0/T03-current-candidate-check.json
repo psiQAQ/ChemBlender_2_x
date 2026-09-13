@@ -13,6 +13,7 @@
     "t02_smiles_and_mmff94": "reused_hash_linked_current_applicability_without_gui_relabeling",
     "prepare_direct_gui": "passed_convert_inspect_review_confirm_export_reimport_negative",
     "positive_inspect": "3 records, 1 ambiguous symmetric conformer suggestion, identity mappings",
+    "derive_operation": "molecule.group_conformers with ordered record UUIDs and populated suggestion_id/snapshot/review_confirmed=true; no molecule.conformers or count=3 parameter",
     "confirmed_conformer_set": "shape [3,3,3], angstrom, ambiguous, source records retained",
     "record_properties": "State=[solid,liquid,missing]; Flag=[true,missing,missing]",
     "different_molecules": "AIN/CFF/TA1 produced 0 suggestions; review rejected",

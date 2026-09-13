@@ -16,6 +16,7 @@
     {"path": "examples/scientific-visualization/inputs/wavefunction/nitrogen-mp2.fchk", "sha256": "5e24d62229514689c5c0f1c904f09dbba205baf699843901d46cc5aa1cf19f7a", "bytes": 8975}
   ],
   "verified": {
+    "nitrogen_input_identity": "nitrogen-mp2.fchk contains one N atom (atomic number 7), charge 0, multiplicity 2 and 7 electrons; it is not N2",
     "density_matrices": "water SCF total only; CH3 SCF total and spin; nitrogen SCF/post-SCF total and spin, with no fabricated missing level or role",
     "water_total_grid": "SCF total RDM, 138x121x145 at 0.1 bohr, integral 10.009725189952228 electrons",
     "water_orbital_rdm_match": "same 3x1x1 affine grid, maximum absolute difference 6.20106722047653e-14 electron_per_cubic_bohr",

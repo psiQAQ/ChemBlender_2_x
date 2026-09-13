@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 5 — 逐个实施 P1/P2 案例；Phase 6 独立人工复做门槛并行保留
-- Next Step: P5.2 为 T05 补当前候选 PDB/PQR/MOL2 Prepare/Blender 直接 GUI 和 conforming manifest；独立复做者签署 human_review 仍单独保留
+- Next Step: P4.12 复用当前 P0 真实证据，逐项补齐或修正 conforming run manifest 与 execution supplement；不得把 audit-complete 写成 technical-complete
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -69,9 +69,11 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 
 ### Phase 4 — 按顺序关闭全部 P0 案例
 
-**Status:** complete
+**Status:** in_progress
 
 每个案例只有在当前候选身份、输入/许可、科学检查、直接 GUI 或合规授权重放、渲染、配对工程、移动/冷重开/恢复、中英教程、离线 QA、review package 和检查器结果均有证据时，才能勾选技术完成；人工验收单列。
+
+下列已勾选项表示相应操作或审计已执行，不表示案例技术验收完成。当前 T01/T02 checker 为 `incomplete`，T06 历史 manifest 为 `invalid`，T00/T04/T07/T17/T18 尚无 conforming manifest。
 
 - [x] P4.1 T00：核对当前候选安装、Test Processor、doctor/capabilities、失败恢复和教程入口。
 - [x] P4.2 T01：完成当前候选适用性、execution supplement、剩余缓存恢复、正文单一路线和 review package。
@@ -84,6 +86,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 - [x] P4.9 T18：在隔离副本上用不存在的 processor 路径和移除的副本源文件实际证明离线重建；补 GUI legacy migration、第二干净 profile、取消/错误 relink、损坏与过期恢复。
 - [x] P4.10 对 T00/T01/T02/T04/T06/T07/T17/T18 分别运行检查器并更新状态为 `ready_for_human_review` 或明确 `Blocked`。
 - [x] P4.11 运行 P0 聚合测试、Extension validate/build、当前候选安装检查和 `git diff --check`，提交 Phase 4 P0 资格证据（未关闭的门槛保持 Blocked）。
+- [ ] P4.12 复用真实已有 P0 证据，补齐 T00/T01/T02/T04/T06/T07/T17/T18 的当前候选 conforming manifest、必要 execution supplement 与引用；完整性和技术状态通过后才标 `ready_for_human_review`。
 
 ### Phase 5 — 逐个实施 P1/P2 案例
 
@@ -92,7 +95,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 每个案例依次执行：冻结 case spec → 固定输入/许可/哈希 → CLI/Worker → Prepare GUI → Blender View → 独立科学断言 → render → save/move/cold/rebuild/recovery → 中英教程和离线 QA → review package → 状态更新。
 
 - [x] P5.1 T03：SDF 多记录检查、显式歧义构象分组、导出/重导入、不同分子拒绝、当前 Prepare/Blender 直接 GUI、native render、portable project、无源冷重建、双语离线教程、review ZIP 和 conforming manifest 均通过技术门槛；人工验收仍单列为 `not_run`。SMILES/MMFF94 归 T02，不换标为 T03。
-- [ ] P5.2 T05：PDB 多模型、PQR 电荷/半径和 MOL2 层级展示。Blocked：科学、trajectory/charge native View/render、portable project、无源冷重建和双语教程已通过；仍缺 Prepare/Blender 直接 GUI、conforming manifest 和人工验收。
+- [x] P5.2 T05：PDB 多模型、PQR 电荷/半径和 MOL2 层级展示；当前 Prepare/Blender 直接 GUI、三种 native render、portable project、无源冷重建、双语离线教程、review ZIP 和 conforming manifest 通过技术门槛；人工验收仍为 `not_run`。
 - [ ] P5.3 T08：真实 FCHK/Molden 轨道正负相位。Blocked：隔离 wavefunction science、signed phase render、portable project、无源冷重建和双语教程已通过；仍缺直接 GUI、conforming manifest 和人工验收。
 - [ ] P5.4 T09：电子密度、自旋密度和 RDM 网格，严格区分来源与密度层级。Blocked：隔离 science、signed spin render、portable project、无源冷重建和双语教程已通过；仍缺直接 GUI、conforming manifest 和人工验收。
 - [ ] P5.5 T10：同结构同网格的密度表面 ESP 着色。Blocked：隔离 science、property-on-surface render、portable project、无源冷重建和双语教程已通过；仍缺直接 GUI、conforming manifest 和人工验收。

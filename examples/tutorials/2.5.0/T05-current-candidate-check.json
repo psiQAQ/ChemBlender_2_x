@@ -1,38 +1,57 @@
 {
   "case_id": "T05",
-  "status": "blocked",
-  "scope": "Current Standard CLI/Worker and independent source comparisons; GUI, Blender and human gates remain separate.",
+  "status": "ready_for_human_review",
+  "scope": "Current final-candidate Prepare and Blender direct GUI plus hash-linked native render/lifecycle evidence; independent review remains separate.",
   "candidate": {
-    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "extension_source_commit": "9b972a5cc3a7aa04c20ebfd6985bc5199a20ac39",
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "prepare_source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
     "environment_qualification": "isolated_install"
   },
   "verified": {
     "pdb_compatible": "1231 atoms; 10 x 1231 x 3 angstrom frames; chain A segment 0; 76 residues; source coordinate max error 0",
     "pdb_incompatible": "MODEL atom counts 1 and 2 retained as independent Structures; no FrameSet fabricated",
-    "pqr": "998 atoms; 41 residues; two inferred blank-chain segments; 998 charges/radii; 22 zero radii; total charge approximately -14 e; source coordinate/value max error 0",
+    "pqr": "998 atoms; 41 residues; two inferred blank-chain segments; charges/radii complete; 22 zero radii; total charge approximately -14 e",
     "mol2_supported": "3 atoms; 2 explicit bonds; 2 substructures; atom type, partial charge and substructure properties retained",
     "mol2_partial": "6185 atoms; 6248 declared bonds; unknown 'un' prevents fabricated topology; 390 substructures and four unsupported extension section kinds preserved",
-    "cbq_validation": "passed_all_five",
+    "prepare_direct_gui": "passed_convert_and_inspect_all_positive_and_boundary_inputs",
+    "blender_direct_gui": "passed_trajectory_hierarchy_charge_radius_substructure_topology_and_f12",
+    "cbq_validation": "passed_all_five_current_final_candidate",
     "cancel": "pre-cancelled conversion returned cancelled_without_output",
+    "render": "passed_three_native_renders_and_current_pdb_f12",
+    "project_pairs": "passed_three_portable_adjacent_blend_cbq_pairs",
+    "cold_reopen_and_recovery": "passed_source_unavailable_without_processor_for_all_three_projects",
     "original_inputs_unchanged": true
   },
-  "raw_evidence": {
-    "root": ".blend-analysis/2.5-real-user-tutorials/run-011/T05",
-    "science_receipt": ".blend-analysis/2.5-real-user-tutorials/run-011/T05/science-check.json",
-    "science_receipt_sha256": "ced1f1bb273238ae5a9ed47c25ec2535498441d0f2a9af3e61787564fd5ee78b",
-    "pdb_convert_sha256": "14f57138c0fb4a8828417a5b4309425ce2a2336c66fa2ff6019c6f509f3f2579",
-    "pqr_convert_sha256": "e4c49a7cfbf6336edf07d64d3c7d32c7e768905b3dc5b0506cd6483a48a3bbda",
-    "mol2_supported_convert_sha256": "e2a24e9ce3f9120c53fd71544f66132f7b65debb7e4b8c7ff93babf6e2b15b0e",
-    "mol2_partial_convert_sha256": "c617eb15add95393b893d4f05953fe287242ce1dc9b3b75cb232b294fdc428fa",
-    "pdb_incompatible_convert_sha256": "3b87ff58f76ea37af0f19479eb27bc53ab499a50cd30f9158a0d29d4aed1ebb7",
-    "cancelled_operation_sha256": "be509bcc0746c990841515470ee769681f86b51aa735db2e56a8cf54a2c03b4b"
+  "evidence": {
+    "raw_root": ".blend-analysis/2.5-real-user-tutorials/run-016/T05",
+    "run_manifest": ".blend-analysis/2.5-real-user-tutorials/run-016/T05/run-manifest.json",
+    "run_manifest_sha256": "5a8eb7dafb7fbfe18938867e1b5cf2fb9a7951cee2ba600794cb69ccb36056d8",
+    "direct_gui_receipt_sha256": "54f1ef9f7e334f4aa3b48c891f9ee91da404a469ee359578628b4de76e28c1ee",
+    "prepare_pqr_png_sha256": "c146e86bc4d324da0f9b12e7316aa7408a0d07718fee39bbd9655699c6ebafea",
+    "pdb_frameset_png_sha256": "b78a7a661c6b29a0673599500ac6f63fc7da6f8a7bd6ceefab86478c9dbb0611",
+    "pqr_radius_png_sha256": "e3dd281ac43a08e2bb6c8d470559261386a53e038e7987eb208fb73a8a1ddce6",
+    "mol2_substructure_png_sha256": "7fbf07ee02cc49ffa9437737e116e1481083423eaa2191821ce329b2875fc482",
+    "f12_png_sha256": "de1a1f0173108f1664310dc2c1659a7dc6b1a7558464a93561cb0f0d7177033b",
+    "review_zip": ".blend-analysis/2.5-real-user-tutorials/run-016/T05/T05-review.zip",
+    "review_zip_sha256": "3531011878930f18e0d29ce20d5ee5eb5fde0b8b2042dad4889ab171c1aa4e4e",
+    "review_zip_members": 65
   },
-  "blocked": {
-    "prepare_gui": "No OS GUI interaction tool is available for the required previews and confirmation evidence.",
-    "blender_views_render_lifecycle": "Not run while user-owned Blender PID 26228 is active; no concurrent Agent Blender is allowed.",
-    "tutorial_offline_qa_review_package": "Not run because the required GUI/render/lifecycle artifacts do not exist.",
-    "case_checker": "No conforming run manifest exists.",
-    "independent_human_review": "not_run"
+  "checker": {
+    "verdict": "incomplete",
+    "integrity_status": "passed",
+    "technical_status": "passed",
+    "independent_review_status": "incomplete",
+    "acceptance_status": "incomplete",
+    "only_error": "independent review is incomplete"
   },
-  "human_review": "not_run"
+  "disclosures": [
+    "The PDB F12 camera and lights were restored by MCP support from the recorded native render document in memory only; this is not labeled as a direct GUI event.",
+    "Save/move/cold-reopen evidence is a byte-applicable native background receipt and is not relabeled as direct GUI.",
+    "Direct GUI selection updated cold CBQ manifest metadata; scientific arrays remained unchanged and accepted pairs use original project CBQs.",
+    "Failed window-focus and wrong-operation attempts remain hash-listed in the raw direct GUI receipt."
+  ],
+  "human_review": "not_run",
+  "distribution": "blocked_not_requested"
 }

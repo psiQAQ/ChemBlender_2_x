@@ -6,10 +6,10 @@ Exact common Viewer steps: extract without renaming members, open `project.blend
 
 | Case | Fixed input and exact route | Visible result and scientific boundary | Evidence |
 | --- | --- | --- | --- |
-| T03 | Prepare GUI `Convert`: `mixed-properties.sdf`, reader `sdf`; `Inspect`; `Review Conformer candidate`; check `Reviewed`; `Derive`; export the ConformerSet to SDF and reimport it. In Viewer select each Structure and use `Structure publication`. | Three source records stay independent; the explicit confirmation adds one ambiguous 3-frame ConformerSet with identity mappings. `ccd-3d-showcase.sdf` yields zero suggestions. T02, not T03, owns SMILES/MMFF94 generation. | [Receipt](../../../examples/tutorials/2.5.0/T03-current-candidate-check.json) |
+| T03 | Prepare GUI `Convert`: `mixed-properties.sdf`, reader `sdf`; inspect all three SDF records; review the proposed atom mappings; then run `molecule.group_conformers` with the populated ordered record UUIDs, `suggestion_id`, `snapshot` and `review_confirmed=true`. Export the resulting ConformerSet to SDF and reimport it. In Viewer select each Structure and use `Structure publication`. | Three source records stay independent; explicit confirmation adds one ambiguous 3-frame ConformerSet with identity mappings. No `molecule.conformers` operation or `count=3` parameter is used. `ccd-3d-showcase.sdf` yields zero suggestions. T02, not T03, owns SMILES/MMFF94 generation. | [Receipt](../../../examples/tutorials/2.5.0/T03-current-candidate-check.json) |
 | T05 | Fixed PDB/PQR/MOL2; Prepare GUI `convert`; Viewer `Trajectory frame` for PDB and `Atomic scalar` for PQR/MOL2 charge. | PDB model order, PQR charge/radius and MOL2 hierarchy remain distinct; atom-indexing does not make fields equivalent. | [Receipt](../../../examples/tutorials/2.5.0/T05-current-candidate-check.json) |
 | T08 | Fixed FCHK/Molden through `python.wavefunction`; recorded `33³`, `0.25 bohr` HOMO/LUMO grids; `Signed scalar isosurface`, `+0.03/-0.03`. | Both phases are visible. Finite-box normalization is not a full-space proof. | [Receipt](../../../examples/tutorials/2.5.0/T08-current-candidate-check.json) |
-| T09 | Fixed water/CH3/N2 FCHK; select CH3 spin density and `Signed scalar isosurface`. | Signed spin density remains signed; total, spin and post-SCF-minus-SCF densities are separate datasets. | [Receipt](../../../examples/tutorials/2.5.0/T09-current-candidate-check.json) |
+| T09 | Fixed water, CH3 and single-atom nitrogen FCHK inputs; select CH3 spin density and `Signed scalar isosurface`. | `nitrogen-mp2.fchk` contains one N atom, not N2. Signed spin density remains signed; total, spin and post-SCF-minus-SCF densities are separate datasets. | [Receipt](../../../examples/tutorials/2.5.0/T09-current-candidate-check.json) |
 | T10 | Fixed water density and ESP with the same Structure and affine grid; `Property on surface`. | ESP colors the density isosurface; ESP is not the isovalue. A nuclear-singularity probe is rejected. | [Receipt](../../../examples/tutorials/2.5.0/T10-current-candidate-check.json) |
 | T11 | Fixed Gaussian/ORCA output through `python.scientific`; `Vibration mode`, selection index `1`, `Apply Phase`; separately `Spectrum plot`. | IR/Raman source fields remain distinct. Phase is animation phase, not physical time. | [Receipt](../../../examples/tutorials/2.5.0/T11-current-candidate-check.json) |
 | T12 | Fixed Gaussian/ORCA TD output; `Spectrum plot` for UV–Vis/ECD; `Electronic spectrum linked` only for complete Gaussian states. | Gaussian ECD retains verified length gauge/unit. ORCA missing gauge/unit stays unknown and uses spectrum-only View. | [Receipt](../../../examples/tutorials/2.5.0/T12-current-candidate-check.json) |
@@ -24,8 +24,8 @@ Exact common Viewer steps: extract without renaming members, open `project.blend
 ## T03 direct-GUI walkthrough
 
 1. In Prepare `Convert`, choose `examples/user-workflows/inputs/sdf/mixed-properties.sdf`, set reader `sdf`, set an output `.cbq`, and click `Run`.
-2. Switch to `Inspect`, select that CBQ, and click `Run`. Open `Review Conformer candidate`; verify three records, mapping `[0, 1, 2]` for each record, and the symmetric-isomorphism warning.
-3. Check `Reviewed`, choose a new output CBQ, and click `Derive`. The result must contain a `ConformerSet` with shape `[3, 3, 3]`, unit `angstrom`, status `ambiguous`, while all three source Structures remain present.
+2. Switch to `Inspect`, select that CBQ, and click `Run`. Confirm `record_count: 3` and `conformer_suggestion_count: 1`. Open `Review Conformer candidate`; verify the ordered three records, mapping `[0, 1, 2]` for each record, and the symmetric-isomorphism warning.
+3. Check `Reviewed` and click `Populate derive task`. In the main window keep operation `molecule.group_conformers`; keep the three populated input UUIDs in their displayed order; keep parameters `suggestion_id`, `snapshot` and `review_confirmed: true`; choose a new output CBQ and click `Run`. Do not enter `molecule.conformers` or a `count=3` parameter. The result must contain a `ConformerSet` with shape `[3, 3, 3]`, unit `angstrom`, status `ambiguous`, while all three source Structures remain present.
 4. In `Export`, select the ConformerSet, choose `sdf`, first run Preview and then Write. Convert the written SDF back to CBQ and run `validate` on both CBQs.
 5. Convert `ccd-3d-showcase.sdf`, inspect it, and click `Review Conformer candidate`. The visible result must say `conformer_suggestion_count: 0` and refuse review.
 6. Keep `project.blend` beside `project.cbq/`, open it in Blender, confirm three Project Browser entries, select the first Structure, and press F12. For recovery, remove access to the imported source, cold-open the pair, select each View, and click `Rebuild Selected View` without a processor.
@@ -40,15 +40,36 @@ Exact common Viewer steps: extract without renaming members, open `project.blend
 
 The final F12 used the camera matrix already recorded in the native render receipt. Restoring that matrix and render visibility was an authorized MCP support action and is not labeled as a direct GUI click; opening the final installed candidate, inspecting Project Browser, pressing F12, inspecting the result, and quitting without saving were direct OS-GUI actions. The technical checker passes; independent human review remains unsigned.
 
+## T05 direct-GUI walkthrough
+
+1. In Prepare `Convert`, process `examples/user-workflows/inputs/pdb/1d3z-ubiquitin-nmr.pdb` and `pdb/multimodel.pdb` with reader `pdb`; then open both CBQs with `Inspect`. The former must expose a `10 × 1231 × 3` FrameSet. The latter must retain the model-identity warning and independent Structures, not fabricate a trajectory.
+2. Convert and inspect `pqr/apbs-protein-rna-nb.pqr` with reader `pqr`. The result must retain 998 charge/radius values, 41 residues and two inferred segments. Zero radii remain source values and are not silently replaced.
+3. Convert and inspect `mol2/substructure.mol2` and `mol2/openbabel-5sun-protein.mol2` with reader `mol2`. The small file must contain 3 atoms, 2 bonds and 2 substructures. The large file retains DICT/NORMAL/SET declarations and the `un` bond warning without interpreting 6,248 unknown bonds as topology.
+4. Open the adjacent PDB `project.blend + project.cbq/` pair. In Project Browser choose `By Data`, select the Coordinates FrameSet, and verify `Trajectory: 10 frame(s)`, Model 1, one chain/segment, 76 residues and 1,231 atoms. Click `Configure Trajectory Playback`; the timeline end becomes 10.
+5. Open the PQR and MOL2 pairs sequentially. PQR `Partial charge` and `Radius` must both be `Complete` and selectable. MOL2 must show two Substructure categories, the `RES A` selection control, and `Explicit File · Complete · 2 bonds` topology. Close each Blender session with `Don't Save`.
+6. Press F12 in the PDB project and inspect the complete structure. Three native renders separately cover trajectory, PQR charge and MOL2 partial charge. For recovery make both source and processor unavailable, cold-open each pair in a distinct process, select its View and click `Rebuild Selected View`; all scientific array hashes must remain unchanged.
+
+![T05 Prepare PQR inspection](../assets/2.5-tutorials/scientific/t05-prepare-pqr-current.png)
+
+![T05 PDB FrameSet and biological hierarchy](../assets/2.5-tutorials/scientific/t05-pdb-frameset-current.png)
+
+![T05 PQR radius selection](../assets/2.5-tutorials/scientific/t05-pqr-radius-current.png)
+
+![T05 MOL2 substructure and topology](../assets/2.5-tutorials/scientific/t05-mol2-substructure-current.png)
+
+![T05 current F12 result](../assets/2.5-tutorials/scientific/t05-f12-current.png)
+
+The final PDB F12 restored only the camera and lights already recorded by the native receipt, in memory. That MCP support is not labeled as direct GUI. The run-016 technical checker passes and the review ZIP contains only relative paths; independent human review remains unsigned.
+
 ## Native render gallery
 
-![T03 conformers](../assets/2.5-tutorials/scientific/t03-conformers.png)
+![T03 explicitly grouped conformer records](../assets/2.5-tutorials/scientific/t03-conformers.png)
 
 ![T05 PDB models](../assets/2.5-tutorials/scientific/t05-pdb-models.png)
 
 ![T08 FCHK HOMO phases](../assets/2.5-tutorials/scientific/t08-fchk-homo.png)
 
-![T09 signed spin density](../assets/2.5-tutorials/scientific/t09-spin-density.png)
+![T09 CH3 signed spin density](../assets/2.5-tutorials/scientific/t09-spin-density.png)
 
 ![T10 density surface colored by ESP](../assets/2.5-tutorials/scientific/t10-density-esp.png)
 
@@ -74,4 +95,4 @@ The final F12 used the camera matrix already recorded in the native render recei
 
 ![T20 QCSchema gradient](../assets/2.5-tutorials/scientific/t20-qcschema-gradient.png)
 
-Linked spectrum labels are smaller than a dedicated plot render. T03 now has current direct Prepare/Blender GUI captures; the other cases still require their case-specific direct GUI pass. Independent review remains unsigned for every case.
+Linked spectrum labels are smaller than a dedicated plot render. T03 and T05 now have current direct Prepare/Blender GUI captures; the other cases still require their case-specific direct GUI pass. Independent review remains unsigned for every case.
