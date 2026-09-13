@@ -265,3 +265,9 @@
 - Xbox Game Bar provides a dependency-free continuous desktop recording path. Keep failed subwindow, truncated and uncommitted-entry captures as rejected evidence rather than deleting or relabeling them.
 - Game Bar binds the recording to the foreground application at the hotkey event. Set and verify Blender foreground in the same native call before `Win+Alt+R`, and treat a capture whose filename names another app as failed evidence even when the global timer overlay appears over Blender.
 - Current 2.5 legacy migration is a two-part route: the external legacy exporter creates `project.cbq` plus `migration.json`; the Viewer then uses **Preview CBQ → Import CBQ → Restore Legacy Views**. The removed legacy in-Blender migration panel is not the current user route.
+
+## T03 SDF grouping and GUI evidence boundary
+
+- T03 is not the SMILES/MMFF94 generation case; that work belongs to T02. T03 starts from a three-record SDF, preserves the records and partial typed properties, and requires explicit confirmation before adding an ambiguous ConformerSet.
+- A final GUI render may combine a direct F12 action with separately disclosed MCP setup only when the setup is not labeled as GUI, changes are not saved, and an independently recorded native render/lifecycle already binds the same camera, objects and scientific bytes.
+- GUI forms can retain hidden advanced values across commands. A successful reimport must clear stale Dataset Index and Entity UUID fields; failed attempts are evidence of the recovery route, not accepted success screenshots.
