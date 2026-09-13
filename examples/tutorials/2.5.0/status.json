@@ -427,11 +427,11 @@
       "case_id": "T16",
       "priority": "P2",
       "status": "blocked",
-      "status_reason": "The cache-only text allowlist verifies, but redistribution is not approved and no public input is frozen. The current fermi route is unconfigured and its cached environment has eight non-current files.",
-      "run": "run-011/T16-environment-check",
-      "candidate_scope": "current_candidate_environment_and_license_only",
-      "technical_status": "not_run",
-      "scientific_processing": "not_run",
+      "status_reason": "The MIT-declared six-file VASP text allowlist is versioned and approved for tutorial redistribution; current isolated Fermi processing and hash/cancel recovery passed. Direct GUI, render, project-pair/cold-reopen, tutorial/review package, manifest and human review remain open.",
+      "run": "run-012/T16",
+      "candidate_scope": "current_isolated_prepare_and_fermi_route",
+      "technical_status": "incomplete",
+      "scientific_processing": "passed",
       "direct_gui": "not_run",
       "authorized_replay": "not_run",
       "render": "not_run",
@@ -443,6 +443,8 @@
       "evidence_refs": [
         "examples/tutorials/2.5.0/T16.case-spec.json",
         "examples/tutorials/2.5.0/T16-environment-license-blocker.json",
+        "examples/tutorials/2.5.0/T16-current-candidate-check.json",
+        "examples/scientific-visualization/inputs/fermi/SrVO3/PROVENANCE.md",
         "examples/tutorials/2.5.0/environment-qualification.json"
       ]
     },

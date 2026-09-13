@@ -631,23 +631,43 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['distribution'], 'blocked')
         self.assertEqual(case['human_review'], 'not_run')
 
-    def test_t16_private_fermi_cache_is_not_distribution_evidence(self):
+    def test_t16_private_fermi_cache_receipt_remains_historical(self):
         base = ROOT / 'examples/tutorials/2.5.0'
-        case = next(item for item in self.status['cases'] if item['case_id'] == 'T16')
         spec = json.loads((base / 'T16.case-spec.json').read_text(encoding='utf-8'))
         receipt = json.loads((base / 'T16-environment-license-blocker.json').read_text(encoding='utf-8'))
         manifest = json.loads((ROOT / 'examples/scientific-visualization/input-manifest.json').read_text(encoding='utf-8'))
-        self.assertEqual(spec['inputs'], [])
         self.assertEqual(spec['private_input_record']['archive_sha256'], manifest['fermi_cache']['sha256'])
-        self.assertEqual(spec['private_input_record']['distribution'], 'prohibited')
+        self.assertEqual(spec['private_input_record']['distribution'], 'historical_cache_only')
         self.assertEqual(receipt['private_cache']['qualification'], 'development_reuse')
         self.assertEqual(receipt['private_cache']['current_candidate_python_files_changed'], 8)
         self.assertFalse(receipt['private_cache']['potcar_extracted_or_distributed'])
         self.assertFalse(receipt['private_cache']['pickle_extracted_executed_or_distributed'])
         self.assertEqual(receipt['private_cache']['scientific_processing'], 'not_run')
         self.assertFalse(receipt['current_operation_probe']['output_published'])
-        self.assertEqual(case['scientific_processing'], 'not_run')
-        self.assertEqual(case['technical_status'], 'not_run')
+
+    def test_t16_current_fermi_surface_binds_public_allowlist_and_recovery(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T16')
+        spec = json.loads((base / 'T16.case-spec.json').read_text(encoding='utf-8'))
+        receipt = json.loads((base / 'T16-current-candidate-check.json').read_text(encoding='utf-8'))
+        manifest = json.loads((ROOT / 'examples/scientific-visualization/input-manifest.json').read_text(encoding='utf-8'))
+        for item in spec['inputs']:
+            path = ROOT / item['path']
+            self.assertEqual(path.stat().st_size, item['bytes'])
+            self.assertEqual(validator.sha256(path), item['sha256'])
+        public = manifest['fermi_public_bundle']
+        self.assertEqual(public['license'], 'MIT')
+        self.assertEqual(public['license_evidence']['sha256'], receipt['license']['dataset_card_sha256'])
+        names = {path.name for path in (ROOT / 'examples/scientific-visualization/inputs/fermi/SrVO3').iterdir()}
+        self.assertTrue({'POTCAR', 'WAVECAR', 'ebs.pkl', 'structure.pkl'}.isdisjoint(names))
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_prepare_candidate']['prepare_wheel_sha256'])
+        self.assertIn('9261 full k points', receipt['verified']['mesh'])
+        self.assertIn('5064 valid non-degenerate triangles', receipt['verified']['surface'])
+        self.assertIn('fermi_source_invalid', receipt['verified']['hash_recovery'])
+        self.assertIn('returned cancelled', receipt['verified']['cancel_recovery'])
+        self.assertEqual(receipt['verified']['cbq_validation'], 'passed')
+        self.assertEqual(case['scientific_processing'], 'passed')
+        self.assertEqual(case['technical_status'], 'incomplete')
         self.assertEqual(case['distribution'], 'blocked')
         self.assertEqual(case['human_review'], 'not_run')
 

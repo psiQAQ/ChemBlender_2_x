@@ -357,7 +357,7 @@
     "bytes": 5639342,
     "cache_directory": ".agents/cache/scientific-visualization/fermi",
     "archive_name": "non-spin-polarized.zip",
-    "license": "dataset card declares MIT; archive has no LICENSE; redistribution not approved",
+    "license": "dataset card declares MIT; archive remains cache-only; six reviewed text members were approved for tutorial redistribution on 2026-09-13",
     "scientific_context": {
       "formula": "SrVO3",
       "lattice_angstrom": 3.84652,
@@ -417,9 +417,27 @@
       "sha256": "687ae78d0ebbb60e127bc33e136f5dcb8493b3c27c9789e9448273f91f83be77"
     }
   },
+  "fermi_public_bundle": {
+    "directory": "inputs/fermi/SrVO3",
+    "source_archive_sha256": "1d079392bb1bc4dbd30606bde763bcf1f1aef6bafd3eb9a6aef3b94f25a029d5",
+    "source_commit": "bf44809171f5228236c6a3716ba8933af08ddaeb",
+    "license": "MIT",
+    "license_evidence": {"path": "inputs/fermi/SrVO3/dataset-card.md", "sha256": "687ae78d0ebbb60e127bc33e136f5dcb8493b3c27c9789e9448273f91f83be77", "bytes": 306},
+    "provenance": {"path": "inputs/fermi/SrVO3/PROVENANCE.md", "sha256": "339a10bf715553dfe62df0dd7aa2dd2d2658662e58090bb1fb8d6135ffab592e", "bytes": 1085},
+    "members": [
+      {"path": "inputs/fermi/SrVO3/IBZKPT", "bytes": 256200, "sha256": "9d790d544ab048dd3cedbbcbd7d1c08569a4d2f05db6744e25217331b42882c3"},
+      {"path": "inputs/fermi/SrVO3/INCAR", "bytes": 2247, "sha256": "037a17548d71141f50822370b26f053ec984b4cf91d4e5e6068626ab23e79496"},
+      {"path": "inputs/fermi/SrVO3/KPOINTS", "bytes": 37, "sha256": "93fee9666ecf366b57d18cde755ba6e257de596e2cbf8bb9b691fe058ba7bd61"},
+      {"path": "inputs/fermi/SrVO3/OUTCAR", "bytes": 2179251, "sha256": "a807d7e3abe8663873c95e01410e3fb42546661c979c6ecfc59e062de3b41e57"},
+      {"path": "inputs/fermi/SrVO3/POSCAR", "bytes": 546, "sha256": "f09d098f3c9ed6feed95b8df087b44909798f051fbacbe692dc1f840415ca9fe"},
+      {"path": "inputs/fermi/SrVO3/PROCAR", "bytes": 3438384, "sha256": "37a1f6debbcf8212d5fbcfa4ba75bce5a01505f3c93263409998cac4f8f27ef4"}
+    ],
+    "excluded_archive_members": ["POTCAR", "WAVECAR", "CHG", "CHGCAR", "vaspout.h5", "ebs.pkl", "structure.pkl"],
+    "redistribution_approval": "user approved for the ChemBlender 2.5 offline tutorial on 2026-09-13"
+  },
   "constraints": [
     "Band and DOS are separate calculations with separate energy references.",
-    "Fermi archive stays in ignored project cache. No POTCAR or pickle member is extracted, parsed, executed or redistributed.",
+    "The full Fermi archive stays in ignored project cache. Only the versioned six-file text allowlist is redistributed; no POTCAR, WAVECAR or pickle member is parsed, executed or redistributed.",
     "Fixtures are compatibility examples, not convergence benchmarks."
   ]
 }

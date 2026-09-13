@@ -1,0 +1,54 @@
+{
+  "case_id": "T16",
+  "status": "blocked",
+  "scope": "Redistributable six-file VASP text allowlist and current isolated Fermi processing; GUI/render/lifecycle/tutorial/review remain separate.",
+  "candidate": {
+    "source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+    "environment_qualification": "isolated_install",
+    "route": "python.fermi",
+    "pyprocar_version": "6.5.0",
+    "pyprocar_source_commit": "4a2ec9049af78fdd35b6214eef68fe40e5f356ed"
+  },
+  "license": {
+    "source_dataset": "lllangWV/pyprocar_test_data",
+    "source_commit": "bf44809171f5228236c6a3716ba8933af08ddaeb",
+    "dataset_card_declared_license": "MIT",
+    "dataset_card_sha256": "687ae78d0ebbb60e127bc33e136f5dcb8493b3c27c9789e9448273f91f83be77",
+    "user_redistribution_approval": "2026-09-13",
+    "included_members": ["IBZKPT", "INCAR", "KPOINTS", "OUTCAR", "POSCAR", "PROCAR"],
+    "excluded_members": ["POTCAR", "WAVECAR", "CHG", "CHGCAR", "vaspout.h5", "ebs.pkl", "structure.pkl"],
+    "provenance_path": "examples/scientific-visualization/inputs/fermi/SrVO3/PROVENANCE.md"
+  },
+  "verified": {
+    "text_allowlist": "six versioned files match the pinned archive; no POTCAR, WAVECAR or pickle is present in the public input directory",
+    "structure": "SrVO3 atomic numbers [38,23,8,8,8] from VASP 6.4.3",
+    "mesh": "21x21x21 Gamma mesh; 286 irreducible k points expanded with 48 symmetry rotations to 9261 full k points",
+    "band": "shape 1x9261x20, spin channel alpha, absolute energy reference, Fermi energy 5.699 eV",
+    "surface": "2748 finite inverse-angstrom vertices and 5064 valid non-degenerate triangles for source bands [16,17,18], spin index 0",
+    "identity": "FermiSurfaceMesh links the exact current BandStructure and Structure IDs and retains cartesian_reciprocal_2pi coordinates",
+    "surface_properties": "none; projections, occupations, velocity and effective mass are not derived or claimed",
+    "hash_recovery": "wrong PROCAR SHA-256 returned fermi_source_invalid, exit 1 and left the empty project manifest unchanged",
+    "cancel_recovery": "pre-cancelled request returned cancelled, exit 1 and left the empty project manifest unchanged",
+    "cbq_validation": "passed"
+  },
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-012/T16",
+    "request_sha256": "5039d5e9fdeb052cbe75a91488a51fd5cad2cef665dd3b215db00542ba5a352e",
+    "result_sha256": "7d7ddda3c17bd898c80e1dda38f78647cc55ac97684992ded7dbd682f04ed92e",
+    "manifest_sha256": "08d35bdd85432b25d253000bb908ad759901b167521b9150d067b9d5a87541ab",
+    "validate_sha256": "f4efadb227d7204254c5fa75210a8bc59221e6ce18456d45c30bbab2594d1226",
+    "science_check_sha256": "275bb9c334e569b7d9397fca9a116a46178b364a15980e35103085c2ea5ee708",
+    "hash_recovery_sha256": "c9378ee51e2e940fc862f214732e5d8c13bf97f18eab465b743e398c582cf830",
+    "cancel_recovery_sha256": "89b91866c728e5c79159cc9167d9b7d0218ad9b6daa2dc6e8dc17797f38b606e"
+  },
+  "blocked": {
+    "prepare_gui": "No current direct-GUI operation was performed.",
+    "fermi_view_render": "Fermi-surface View, render and visual scientific audit are not run.",
+    "project_pair_cold_reopen": "Not run.",
+    "tutorial_offline_qa_review_package": "Not run.",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}
