@@ -726,3 +726,12 @@ Errors: PowerShell rg wildcard paths are not expanded; use directory plus -g. Py
 - All four CBQ projects passed `validate --json`. Manifest and raw conversion hashes are versioned in `T11-current-candidate-check.json`; focused current/historical status tests and `git diff --check` passed.
 - T11 scientific processing is `passed`, technical status is `incomplete`; Prepare GUI, IR/Raman spectrum Views, Blender mode animation/render, project-pair/cold-reopen/recovery, tutorial/review package, conforming manifest and independent human review remain Not Run. P5.6 stays unchecked. Next Step is T12 science.
 - Full tutorial-evidence verification passed 68 tests with one OS-symlink skip and zero failures/errors. Public delivery docs were regenerated/current and `git diff --check` passed.
+
+## 2026-09-13 — T12 current TD, UV-Vis/ECD and gauge science
+
+- Converted the three fixed BSD-3-Clause TD outputs through current isolated `python.scientific`: Gaussian16 UV-Vis, Gaussian09 ECD and ORCA5 TD. Gaussian results contain five complete states; ORCA contains ten states and remains explicitly `ambiguous`.
+- All energies are finite `inverse_centimeter` values and all oscillator strengths are finite/dimensionless. Gaussian09 rotatory strengths are `[-0.478,-48.1793,14.1405,13.1303,10.6555]` with original-table-verified `length` gauge and `ten_minus_forty_erg_esu_centimeter_per_gauss` unit. Gaussian16 retains signed zeros under the same verified convention.
+- ORCA retains rotatory values but their unit is `unknown`, no gauge/source field is claimed, and electric/velocity/magnetic transition dipole arrays are absent. These are preserved as missing/ambiguous rather than replaced with Gaussian conventions.
+- All three CBQ projects passed `validate --json`; manifest and operation hashes are versioned in `T12-current-candidate-check.json`. Focused current/historical status tests and `git diff --check` passed.
+- T12 scientific processing is `passed`, technical status is `incomplete`; Prepare GUI, UV-Vis/ECD plot/render/export, project-pair/cold-reopen/recovery, tutorial/review package, conforming manifest and independent human review remain Not Run. P5.7 stays unchecked. Next Step is T13 science.
+- Full tutorial-evidence verification passed 69 tests with one OS-symlink skip and zero failures/errors. Public delivery docs were regenerated/current and `git diff --check` passed.

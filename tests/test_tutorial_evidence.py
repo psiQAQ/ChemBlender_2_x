@@ -504,13 +504,29 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(receipt['route']['qualification'], 'development_reuse')
         self.assertEqual(len(receipt['route']['cross_environment_paths']), 2)
         cases = {item['case_id']: item for item in self.status['cases']}
-        for case_id in ('T12', 'T13', 'T14'):
+        for case_id in ('T13', 'T14'):
             case = cases[case_id]
             self.assertEqual(case['status'], 'blocked')
             self.assertEqual(case['technical_status'], 'not_run')
             self.assertEqual(case['scientific_processing'], 'not_run')
             self.assertEqual(case['distribution'], 'blocked')
             self.assertEqual(case['human_review'], 'not_run')
+
+    def test_t12_current_td_science_keeps_orca_gauge_ambiguous(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        case = next(item for item in self.status['cases'] if item['case_id'] == 'T12')
+        receipt = json.loads((base / 'T12-current-candidate-check.json').read_text(encoding='utf-8'))
+        spec = json.loads((base / 'T12.case-spec.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_prepare_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['inputs'], [{key: item[key] for key in ('path', 'sha256', 'bytes')} for item in spec['inputs']])
+        self.assertIn('gauge length', receipt['verified']['gaussian_rotatory_evidence'])
+        self.assertIn('unit unknown and no gauge claim', receipt['verified']['orca5'])
+        self.assertIn('absent and not synthesized', receipt['verified']['orca_missing_transition_dipoles'])
+        self.assertEqual(receipt['verified']['cbq_validation'], 'passed_all_three')
+        self.assertEqual(case['technical_status'], 'incomplete')
+        self.assertEqual(case['scientific_processing'], 'passed')
+        self.assertEqual(case['direct_gui'], 'not_run')
+        self.assertEqual(case['human_review'], 'not_run')
 
     def test_t15_current_science_keeps_gui_and_distribution_blocked(self):
         base = ROOT / 'examples/tutorials/2.5.0'

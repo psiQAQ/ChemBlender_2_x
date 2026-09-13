@@ -213,6 +213,11 @@
 - All four fixed Gaussian/ORCA files contain 54 finite modes for 20 atoms with `54x20x3` angstrom displacements and no imaginary mode. Gaussian exposes reduced masses/force constants; these are absent in the ORCA fixtures and remain absent.
 - IR-only fixtures retain no Raman activity, while Raman fixtures retain both fields. Selected-mode `+/-0.5` endpoints average back to source coordinates within floating-point tolerance; this validates phase math but does not substitute for Blender animation evidence.
 
+## T12 current TD spectroscopy science
+
+- Gaussian TD data has complete dimensionless oscillator strengths and original-table-verified length-gauge cgs rotatory strengths. The ORCA data retains oscillator and rotatory values but remains `ambiguous` because its rotatory unit/gauge and transition dipole arrays are not verified.
+- Missing ORCA electric, velocity and magnetic transition dipoles remain absent. Plotting can use valid oscillator strengths, but an ORCA ECD axis must not be assigned the Gaussian cgs unit or length-gauge label.
+
 ## B01 provider boundary
 
 - Current capabilities advertises `external_record.fetch@1` as `available=false` with `no live provider transport configured`. A valid credential-free QCArchive provider request reaches the reviewed worker contract and fails `dependency_missing` without output or a network request.

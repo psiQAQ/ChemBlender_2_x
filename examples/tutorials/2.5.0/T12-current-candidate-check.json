@@ -1,0 +1,41 @@
+{
+  "case_id": "T12",
+  "status": "blocked",
+  "scope": "Current isolated scientific route parses fixed Gaussian/ORCA TD evidence; plots, lifecycle, tutorial and review remain separate.",
+  "candidate": {
+    "source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+    "environment_qualification": "isolated_install",
+    "route": "python.scientific",
+    "cclib_version": "1.8.1"
+  },
+  "inputs": [
+    {"path": "examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian16/dvb_td.out", "sha256": "c9255c92b829a4d2072ffca262be4dd9212f35a9c75d84c1fe8eb5969c166eef", "bytes": 55292},
+    {"path": "examples/scientific-visualization/inputs/cclib/Gaussian/basicGaussian09/dvb_td.out", "sha256": "01619fecb8ca4d80b1ddfddb6cb9dc1983e52e23616e20ac0e4f1a6bb55462e0", "bytes": 45637},
+    {"path": "examples/scientific-visualization/inputs/cclib/ORCA/basicORCA5.0/dvb_td.out", "sha256": "b4262a21e11ea441551f465f4ae04aee0d4f9ddf35e6a94c0309400c924f17f6", "bytes": 248644}
+  ],
+  "verified": {
+    "gaussian16": "5 complete states, first 43030.485341579 cm^-1; dimensionless oscillator strengths [0.1707,0.6779,0,0.1793,0]; length-gauge cgs rotatory strengths all signed zero",
+    "gaussian09": "5 complete states, first 45398.529145123 cm^-1; oscillator strengths [0.0018,0.588,0.034,0.011,0.1551]; length-gauge cgs rotatory strengths [-0.478,-48.1793,14.1405,13.1303,10.6555]",
+    "gaussian_rotatory_evidence": "unit ten_minus_forty_erg_esu_centimeter_per_gauss, gauge length and source field Gaussian R(length) were verified against the original table",
+    "orca5": "10 ambiguous states, first 25241 cm^-1; dimensionless oscillator strengths retained; rotatory values retained with unit unknown and no gauge claim",
+    "orca_missing_transition_dipoles": "electric, velocity and magnetic transition dipole arrays are absent and not synthesized",
+    "configurations_present": true,
+    "finite_values": true,
+    "cbq_validation": "passed_all_three"
+  },
+  "raw_evidence": {
+    "root": ".blend-analysis/2.5-real-user-tutorials/run-012/T12",
+    "manifest_sha256": {"gaussian16": "bec1c9396d409a84efbd5ba8889ec414fcf74769072c05a68a94e15d982198ff", "gaussian09": "5425b8588c546df34bef5921d8df328b06f0101aaae2e7ee929507a5b2702a9a", "orca5": "be7b960cd48349ae94ceed198639548082964c805b0ba90b44981614e0c1076b"},
+    "convert_result_sha256": {"gaussian16": "50f2f09c9a6eff843c54c496204c667e9c12114838537fe5c7e5db1592833fd3", "gaussian09": "cca7ac41ba03c3b2df7dbe6f8dccd0733e4e827a7785ab7c4c44cb5a6f5ebf1f", "orca5": "405b04d4822508860bd31a8dfb61382f982c677447c49e8e4785b2edb45f0f0d"}
+  },
+  "blocked": {
+    "prepare_gui": "No current direct-GUI operation was performed.",
+    "uvvis_ecd_plots": "UV-Vis/ECD Views and exported render are not run; ORCA ECD cannot be assigned a physical unit or gauge.",
+    "project_pair_cold_reopen_recovery": "Not run.",
+    "tutorial_offline_qa_review_package": "Not run.",
+    "case_checker": "No conforming run manifest exists.",
+    "independent_human_review": "not_run"
+  },
+  "human_review": "not_run"
+}
