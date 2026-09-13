@@ -2,7 +2,7 @@
 
 本课只走一条路线：从固定 extXYZ 输入，经 Prepare、两个轨迹 View、逐帧检查、播放与渲染，得到可整体移动的配对工程。
 
-![精细化后的源帧 15，Cycles 2400×1800、256 samples](../assets/2.5-tutorials/trajectory-refined-run009.png)
+![源帧 15，Cycles 2400×1800、256 samples](../assets/2.5-tutorials/trajectory-force-frame15-current.png)
 
 灰色为碳、红色为氧、白色为氢，黄色箭头表示原子力。输入没有准备好的键，因此显示原子和箭头。该投影下仍有部分箭头与原子重叠。光照和阴影会改变显示颜色，本图不是定量色标。
 
@@ -94,7 +94,7 @@ Rebuild 或 Update 可能替换显示对象，替换后需重新设置 Subdivisi
 
 ## 验证附录
 
-已接纳的 run-009 证据使用 Extension SHA-256 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28` 和 Prepare wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`。[Prepare GUI](../../../examples/tutorials/2.5.0/T06-run009-gui-check.json)、[GUI 输出科学检查](../assets/2.5-tutorials/trajectory-gui-science-check.json)、[全帧 View](../../../examples/tutorials/2.5.0/T06-run009-view-check.json)、[力检查](../assets/2.5-tutorials/trajectory-force-check.json)、[播放](../../../examples/tutorials/2.5.0/T06-run009-playback-gui-check.json)、[重建](../../../examples/tutorials/2.5.0/T06-run009-rebuild-check.json)及[离线恢复](../../../examples/tutorials/2.5.0/T06-run010-offline-recovery-check.json)记录保持单独候选绑定。等价 CLI inspect/convert/validate 路线也已通过，但只属于审计证据，不是第二条教程路线。最终候选的[直接 GUI 回执](../../../examples/tutorials/2.5.0/T06-run013-direct-gui-check.json)绑定 source frame 0、15、31 的可读标量截图和一段连续 OS GUI 录屏；它不会修补或掩盖无效的历史 run manifest。
+已接纳的 run-009 证据使用 Extension SHA-256 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28` 和 Prepare wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`。[Prepare GUI](../../../examples/tutorials/2.5.0/T06-run009-gui-check.json)、[GUI 输出科学检查](../assets/2.5-tutorials/trajectory-gui-science-check.json)、[全帧 View](../../../examples/tutorials/2.5.0/T06-run009-view-check.json)、[力检查](../assets/2.5-tutorials/trajectory-force-check.json)、[播放](../../../examples/tutorials/2.5.0/T06-run009-playback-gui-check.json)、[重建](../../../examples/tutorials/2.5.0/T06-run009-rebuild-check.json)及[离线恢复](../../../examples/tutorials/2.5.0/T06-run010-offline-recovery-check.json)记录保持单独候选绑定。等价 CLI inspect/convert/validate 路线也已通过，但只属于审计证据，不是第二条教程路线。最终候选的[直接 GUI 回执](../../../examples/tutorials/2.5.0/T06-run013-direct-gui-check.json)绑定 source frame 0、15、31 的可读标量截图和一段连续 OS GUI 录屏。无效的历史 manifest 仍原样保留；替代它的[当前候选回执](../../../examples/tutorials/2.5.0/T06-current-candidate-check.json)和[执行补充](../../../examples/tutorials/2.5.0/T06.current-execution-supplement.json)分别绑定当前 render/rebuild/cold 重放与未改身份的历史 GUI 事件。当前 manifest 已通过完整性和技术门槛；独立审阅仍未完成。
 
 本地 `T06-review.zip` 含配对工程、静态图、32 帧序列、相对路径 VSE 装配、MP4、双语交接与证据；SHA-256 为 `8eea79a46ea7967bda201619dbb066e6a2908315bdc9c884c1c4844284c8003a`。[审阅包记录](../../../examples/tutorials/2.5.0/T06-run009-package-check.json)只证明 review-only 交接，不是最终分发。[动画](../../../examples/tutorials/2.5.0/T06-run009-animation-check.json)、[视频完整性](../assets/2.5-tutorials/trajectory-video-check.json)、[可移动视频](../../../examples/tutorials/2.5.0/T06-run009-portable-video-check.json)、[冷重开](../assets/2.5-tutorials/trajectory-cold-recovery.json)、[缓存重建](../assets/2.5-tutorials/trajectory-cache-recovery.json)、保留的 [Smooth by Angle 实验](../assets/2.5-tutorials/trajectory-smooth.jpg)及[媒体来源](../assets/2.5-tutorials/provenance.json)属于审计材料。一次取消的渲染前审计是采集时机问题；`render_post` 与显式静态对照匹配正确源帧。人工独立复做仍待完成。
 

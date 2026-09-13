@@ -1,0 +1,33 @@
+{
+  "case_id": "T06",
+  "status": "review_only",
+  "file": ".blend-analysis/2.5-real-user-tutorials/run-010/T06/T06-current-review-addendum.zip",
+  "sha256": "0ba80ca71070579843f8cce0a9a5851a985fcbbb0b768e94f32e25d84f62e24b",
+  "bytes": 169767542,
+  "members": 78,
+  "zip_crc": "passed",
+  "unsafe_member_names": [],
+  "development_path_members": 16,
+  "development_paths_outside_evidence": [],
+  "failed_evidence": {
+    "members": 25,
+    "location": "failures/run-013/",
+    "excluded_from_acceptance": true
+  },
+  "included_evidence": {
+    "manifest_sha256": "f2e767eea8fbd2e06bc02c15bab6a682e5556d3d5482c9716842ac81944133ae",
+    "current_execution_supplement_sha256": "155a16402a0be1ac4179c7443c44e8697b23e7e7e84aac635ca9db986a1ab308",
+    "current_candidate_receipt_sha256": "375227c2a613130a29a6d7a4c822efdc718f0c6e2d558f7ee4538f6b22963887",
+    "current_render_sha256": "f70ee7d642e16f52fc2121e36ff656c4c88d6308772367b82f569b6aa901a6f7",
+    "current_project_location": "evidence/current-project/",
+    "offline_languages": ["en", "zh-CN"],
+    "historical_gui_source_chains": 5
+  },
+  "portable_handover_base": {
+    "file": ".blend-analysis/2.5-real-user-tutorials/run-009/T06-review.zip",
+    "sha256": "8eea79a46ea7967bda201619dbb066e6a2908315bdc9c884c1c4844284c8003a",
+    "reason": "The current project copy retains development provenance and is evidence-only; the separately audited historical base remains the portable animation handoff."
+  },
+  "human_review": "not_run",
+  "distribution": "blocked"
+}

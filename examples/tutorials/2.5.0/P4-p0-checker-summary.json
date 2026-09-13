@@ -59,16 +59,16 @@
     {
       "case_id": "T06",
       "checker_status": "executed",
-      "exit_code": 1,
-      "verdict": "invalid",
-      "integrity_status": "invalid",
-      "technical_status": "incomplete",
+      "exit_code": 2,
+      "verdict": "incomplete",
+      "integrity_status": "passed",
+      "technical_status": "passed",
       "independent_review_status": "incomplete",
-      "acceptance_status": "invalid",
-      "raw_output": ".blend-analysis/2.5-real-user-tutorials/run-010/P4.10-checkers/T06.json",
-      "raw_output_sha256": "23b6417fef60d56130ad4a52b5443c71406541391ba59735f7b485c4ea53433f",
-      "classification": "blocked",
-      "reason": "The historical manifest declares broken step/event GUI links; the new scalar panel also lacks direct GUI evidence."
+      "acceptance_status": "incomplete",
+      "raw_output": ".blend-analysis/2.5-real-user-tutorials/run-010/P4.12-checkers/T06-current.json",
+      "raw_output_sha256": "20c80f06ebed57fdf1cf8ccd6ad7ddb65d376189743193936833538f82589ba1",
+      "classification": "ready_for_human_review",
+      "reason": "The invalid historical manifest is preserved; the current replacement manifest passes integrity and technical gates, with only independent review incomplete."
     },
     {
       "case_id": "T07",
@@ -93,10 +93,10 @@
     "T00",
     "T01",
     "T02",
-    "T04"
+    "T04",
+    "T06"
   ],
   "blocked": [
-    "T06",
     "T07",
     "T17",
     "T18"

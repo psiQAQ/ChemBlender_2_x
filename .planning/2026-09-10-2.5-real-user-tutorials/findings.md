@@ -277,3 +277,9 @@
 - Historical direct GUI evidence may support a current-candidate case only through an execution supplement that preserves the original candidate/event/capture hashes and binds a distinct current Operator receipt; it must never be relabeled as a new GUI action.
 - A current visible-state screenshot proves only the state shown. Current render, rebuild and cold-open receipts must independently bind the current candidate and artifacts before the technical gate can pass.
 - Review ZIP working members must use relative package paths. Development absolute paths may remain only in explicitly named evidence or historical appendices, and failed captures belong only under `failures/`.
+
+## T06 replacement-manifest boundary
+
+- A structurally invalid historical manifest should remain immutable. A new current manifest may replace it for current acceptance only when it independently binds the final candidate, current render/recovery, direct GUI evidence and any authorized replay source chain.
+- Frame-property acceptance requires readable values and unit/status in the actual GUI capture. A separate numeric audit supports the claim but cannot repair clipped GUI text.
+- `authorized_mcp_replay` can close unchanged historical GUI steps only through original event/artifact hashes, current difference checks and a current public Operator receipt. It is never a new `os_gui` event or independent human review.

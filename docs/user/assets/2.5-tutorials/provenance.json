@@ -224,6 +224,47 @@
       "status": "pending_human_review"
     },
     {
+      "path": "trajectory-force-frame15-current.png",
+      "source_run": "run-010/T06/current-candidate/trajectory-frame15-current.png",
+      "sha256": "f70ee7d642e16f52fc2121e36ff656c4c88d6308772367b82f569b6aa901a6f7",
+      "kind": "render",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "native_public_operator_replay",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "trajectory-current-frame-000.png",
+      "source_run": "run-013/T06/gui/t06-wide-source-index-000.png",
+      "sha256": "74c294eb2f6727d681e1e7a0353498e6493e417ef5ca7768bf045568e986ed66",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "interaction": "os_gui",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "trajectory-current-frame-015.png",
+      "source_run": "run-013/T06/gui/t06-wide-source-index-015.png",
+      "sha256": "34439f3628710f421b8ccbc499cae96b6f0142b2cd0f362019fee2f39a48fb44",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "interaction": "os_gui",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "trajectory-current-frame-031.png",
+      "source_run": "run-013/T06/gui/t06-wide-source-index-031.png",
+      "sha256": "bc2288413b426612876fb8e51c7e6d73d885ef6c6ea4231513f87427e233a60b",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "interaction": "os_gui",
+      "status": "pending_human_review"
+    },
+    {
       "path": "trajectory-pause-run009.jpg",
       "source_run": "run-009/T06/gui/gui-0028.jpg",
       "sha256": "dda4fb399550a1f50213ff336f55047749984df8e58bf573fd23af2e27a12767",

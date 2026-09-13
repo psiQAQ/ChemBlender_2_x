@@ -61,6 +61,14 @@
       "development_path_members": 10,
       "development_paths_outside_evidence": []
     },
+    "T06-current": {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T06/T06-current-review-addendum.zip",
+      "sha256": "0ba80ca71070579843f8cce0a9a5851a985fcbbb0b768e94f32e25d84f62e24b",
+      "entry_count": 78,
+      "unsafe_member_names": [],
+      "development_path_members": 16,
+      "development_paths_outside_evidence": []
+    },
     "T07": {
       "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T07-review-v2.zip",
       "sha256": "2733b330c9f5a252664e5225cb291035550cc69815dd74098c7f155ae813c8bb",

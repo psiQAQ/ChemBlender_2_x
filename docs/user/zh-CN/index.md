@@ -12,7 +12,7 @@ ChemBlender 是 CBQ Viewer。原始化学与模拟文件先在 Blender 外由 pr
 - [首课：阿司匹林与实际 GUI 截图](first-aspirin.md)——已完成 Agent 实操，待人工复做。
 - [T02：乙醇构象、MMFF94 与网格 Apply](ethanol-conformers.md)——已有实际 GUI 与科学检查，待人工复做。
 - [T04：晶胞、占位与金刚石](crystal-cells.md) — 草稿；科学与恢复验证通过，GUI 和人工验收待完成。
-- [T06：阿司匹林轨迹与同帧力](aspirin-trajectory.md) — 执行中草稿，动画／恢复验证通过，人工复做待完成。
+- [T06：阿司匹林轨迹与同帧力](aspirin-trajectory.md) — 技术检查通过；独立人工复做待完成。
 - [T07：密度网格、切片与正负等值面 — 执行草稿，待人工复做。](density-grids.md)
 - [T03/T05/T08–T16/T19/T20/B01：科学案例合集](scientific-cases.md)——固定输入、原生渲染、可恢复工程对与真实 GUI 边界。
 - [能力与项目生命周期](capabilities-and-projects.md)

@@ -1,0 +1,139 @@
+{
+  "schema_name": "chemblender_execution_supplement",
+  "schema_version": 1,
+  "case_id": "T06",
+  "spec_sha256": "18478ce3d6a99d90a942817f22a17a3c76ea5988b2486cb1e6be883df4ca4320",
+  "authorization": {
+    "approved_by": "user",
+    "approved_at": "2026-09-13",
+    "basis": "User approved reuse of existing real GUI evidence through versioned GUI-to-MCP replay supplements while requiring original event identity, current difference checks and current public Operator receipts."
+  },
+  "replays": [
+    {
+      "step_id": "s01",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-004/T06",
+        "source_extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+        "source_manifest_sha256": "3a10552996c52c22c976021235364d85791e89f5b0be8e2c90dbb46b025c8239",
+        "events_sha256": "2ab5481d08eb0648389a51f7cf9664c2af7fd95b8cee8d0ebace5420ee18475b",
+        "event_id": "e25",
+        "before_artifact_sha256": "ae9a23a6d664686d6a6592d5c489de7006f888cd55e49133dc30d53916951921",
+        "after_artifact_sha256": "0cf091ab1211c01ed69465b8a9a61d20764313682d29ba34915d55e674104625"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": ["extxyz_reader", "input_hash", "frames", "atoms", "array_hashes", "prepare_runtime_change_scope"]
+      },
+      "operator_receipt": {
+        "status": "passed",
+        "artifact_id": "T06-current-candidate-check",
+        "sha256": "375227c2a613130a29a6d7a4c822efdc718f0c6e2d558f7ee4538f6b22963887"
+      }
+    },
+    {
+      "step_id": "s02",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-004/T06",
+        "source_extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+        "source_manifest_sha256": "3a10552996c52c22c976021235364d85791e89f5b0be8e2c90dbb46b025c8239",
+        "events_sha256": "2ab5481d08eb0648389a51f7cf9664c2af7fd95b8cee8d0ebace5420ee18475b",
+        "event_id": "e1",
+        "before_artifact_sha256": "c97731a046cf2ecd1891f1871357df59965e8df4a0f76bc2aeb15f38b113428c",
+        "after_artifact_sha256": "f42411d8cbdcb36946be8c95a1b41d41c9ce2ef166b58166f97b7a77c99d30b4"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": ["cbq_preview", "cbq_import", "FrameSet_selection", "project_manifest_hash"]
+      },
+      "operator_receipt": {
+        "status": "passed",
+        "artifact_id": "T06-current-candidate-check",
+        "sha256": "375227c2a613130a29a6d7a4c822efdc718f0c6e2d558f7ee4538f6b22963887"
+      }
+    },
+    {
+      "step_id": "s03",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-004/T06",
+        "source_extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+        "source_manifest_sha256": "3a10552996c52c22c976021235364d85791e89f5b0be8e2c90dbb46b025c8239",
+        "events_sha256": "2ab5481d08eb0648389a51f7cf9664c2af7fd95b8cee8d0ebace5420ee18475b",
+        "event_id": "e8",
+        "before_artifact_sha256": "cb9ab30ccae04fc1e844c6150d9ffbf80cd1e7ea879afb42936960c7454be82e",
+        "after_artifact_sha256": "65a0eb20b4c8a3afbbcb6ee5bd2e3ccae4e7d6c832fdcd4cb0321c8236c74efa"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": ["trajectory_preset", "trajectory_force_preset", "same_frame_force", "display_scale"]
+      },
+      "operator_receipt": {
+        "status": "passed",
+        "artifact_id": "T06-current-candidate-check",
+        "sha256": "375227c2a613130a29a6d7a4c822efdc718f0c6e2d558f7ee4538f6b22963887"
+      }
+    },
+    {
+      "step_id": "s05",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-004/T06",
+        "source_extension_sha256": "963b905f3e5ee3c5fc1fa53a1ccefd5c60616d89ac77977efe4afdbed066426a",
+        "source_manifest_sha256": "3a10552996c52c22c976021235364d85791e89f5b0be8e2c90dbb46b025c8239",
+        "events_sha256": "2ab5481d08eb0648389a51f7cf9664c2af7fd95b8cee8d0ebace5420ee18475b",
+        "event_id": "e17",
+        "before_artifact_sha256": "453816d7fc486997d336e505502993cea49c5e23ba137392add3cb188cf240ca",
+        "after_artifact_sha256": "051c6e63b7ff406e2d32301cf4ca9f681986d9c88ec20f676a94d17eee237f5e"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": ["play_pause", "continuous_current_gui_recording", "frame15_render", "scientific_arrays"]
+      },
+      "operator_receipt": {
+        "status": "passed",
+        "artifact_id": "T06-current-candidate-check",
+        "sha256": "375227c2a613130a29a6d7a4c822efdc718f0c6e2d558f7ee4538f6b22963887"
+      }
+    },
+    {
+      "step_id": "s06",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-003/T02",
+        "source_extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374",
+        "source_manifest_sha256": "8c458712aeb82dc53d0acb79dce8f5019dc3ddd0eea17d8210fe483cf0ff102d",
+        "events_sha256": "67b84537435a45228b0a04bd3d38e7df291ed3d0799b4bd35d58942d7a4a26c8",
+        "event_id": "e156",
+        "before_artifact_sha256": "c083eb87e2a48377dfab4b10c285652bc63d496cc7e46f3d316e4170e0f8cd5b",
+        "after_artifact_sha256": "151cc33c28c844c26cd41da00739741ab6b6e96644b4efb5271c89ad66bee866"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": ["project_pair", "source_unavailable", "processor_unavailable", "rebuild", "distinct_process_cold_reopen", "scientific_hashes"]
+      },
+      "operator_receipt": {
+        "status": "passed",
+        "artifact_id": "T06-current-candidate-check",
+        "sha256": "375227c2a613130a29a6d7a4c822efdc718f0c6e2d558f7ee4538f6b22963887"
+      }
+    }
+  ],
+  "note": "s04 is a current direct OS GUI event and is intentionally absent from this replay list. Replays are not new GUI actions or independent human review."
+}

@@ -1,0 +1,41 @@
+{
+  "case_id": "T06",
+  "status": "ready_for_human_review",
+  "run": "run-010/T06/current-candidate",
+  "manifest": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T06/current-candidate/run-manifest.json",
+    "sha256": "f2e767eea8fbd2e06bc02c15bab6a682e5556d3d5482c9716842ac81944133ae"
+  },
+  "execution_supplement": {
+    "path": "examples/tutorials/2.5.0/T06.current-execution-supplement.json",
+    "sha256": "155a16402a0be1ac4179c7443c44e8697b23e7e7e84aac635ca9db986a1ab308",
+    "replay_steps": ["s01", "s02", "s03", "s05", "s06"],
+    "direct_gui_steps": ["s04"],
+    "classification": "authorized_mcp_replay_not_direct_gui"
+  },
+  "candidate": {
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3"
+  },
+  "checker": {
+    "exit_code": 2,
+    "verdict": "incomplete",
+    "integrity_status": "passed",
+    "technical_status": "passed",
+    "independent_review_status": "incomplete",
+    "acceptance_status": "incomplete",
+    "errors": ["independent review is incomplete"]
+  },
+  "raw_output": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/P4.12-checkers/T06-current.json",
+    "sha256": "20c80f06ebed57fdf1cf8ccd6ad7ddb65d376189743193936833538f82589ba1"
+  },
+  "historical_manifest": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-004/T06/run-manifest.json",
+    "status": "invalid",
+    "preserved": true,
+    "replaced_for_current_acceptance": true
+  },
+  "human_review": "not_run",
+  "distribution": "blocked"
+}

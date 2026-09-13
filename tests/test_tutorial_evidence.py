@@ -251,7 +251,7 @@ class TutorialStatusTests(unittest.TestCase):
         audit = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-review-package-path-audit.json').read_text(encoding='utf-8'))
         self.assertEqual(audit['status'], 'passed')
         self.assertEqual(audit['crc_status'], 'passed_all')
-        self.assertEqual(set(audit['archives']), {'T00', 'T01', 'T02-current', 'T02-historical', 'T04', 'T04-current', 'T06', 'T07', 'T17', 'scientific-viewer'})
+        self.assertEqual(set(audit['archives']), {'T00', 'T01', 'T02-current', 'T02-historical', 'T04', 'T04-current', 'T06', 'T06-current', 'T07', 'T17', 'scientific-viewer'})
         for name, archive in audit['archives'].items():
             self.assertFalse(archive['unsafe_member_names'], name)
             self.assertFalse(archive['development_paths_outside_evidence'], name)
@@ -259,7 +259,7 @@ class TutorialStatusTests(unittest.TestCase):
 
     def test_t01_t02_review_receipts_bind_current_execution_supplements(self):
         base = ROOT / 'examples/tutorials/2.5.0'
-        for case_id in ('T01', 'T02', 'T04'):
+        for case_id in ('T01', 'T02', 'T04', 'T06'):
             with self.subTest(case_id=case_id):
                 receipt = json.loads((base / f'{case_id}-run010-package-check.json').read_text(encoding='utf-8'))
                 supplement = base / f'{case_id}.current-execution-supplement.json'
@@ -331,10 +331,10 @@ class TutorialStatusTests(unittest.TestCase):
         receipt = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-offline-gate-summary.json').read_text(encoding='utf-8'))
         checkers = receipt['case_checkers']
         self.assertEqual(checkers['discovered_manifest_count'], checkers['executed_manifest_count'])
-        self.assertEqual({item['case_id'] for item in checkers['current_applicable']}, {'T00', 'T01', 'T02', 'T03', 'T05', 'T06'})
-        self.assertEqual(set(checkers['no_conforming_manifest']), {item['case_id'] for item in self.status['cases']} - {'T00', 'T01', 'T02', 'T03', 'T05', 'T06'})
+        self.assertEqual({item['case_id'] for item in checkers['current_applicable']}, {'T00', 'T01', 'T02', 'T03', 'T04', 'T05', 'T06'})
+        self.assertEqual(set(checkers['no_conforming_manifest']), {item['case_id'] for item in self.status['cases']} - {'T00', 'T01', 'T02', 'T03', 'T04', 'T05', 'T06'})
         self.assertEqual(receipt['static_gates']['offline_project_downloads'], 'passed_shared_companion_zip')
-        self.assertEqual(receipt['acceptance']['ready_for_human_review'], ['T00', 'T01', 'T02', 'T03', 'T05'])
+        self.assertEqual(receipt['acceptance']['ready_for_human_review'], ['T00', 'T01', 'T02', 'T03', 'T04', 'T05', 'T06'])
         self.assertEqual(receipt['acceptance']['human_review'], 'not_run')
         self.assertEqual(receipt['acceptance']['distribution'], 'blocked')
 
@@ -871,6 +871,38 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(direct['verification']['blender_processes_after'], 0)
         self.assertEqual(receipt['human_review'], 'not_run')
 
+    def test_t06_current_manifest_and_supplement_bind_real_sources(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        supplement_path = base / 'T06.current-execution-supplement.json'
+        supplement = json.loads(supplement_path.read_text(encoding='utf-8'))
+        operator_path = base / 'T06-current-candidate-check.json'
+        technical = json.loads((base / 'T06-run010-technical-check.json').read_text(encoding='utf-8'))
+        source_roots = {
+            'run-004/T06': ROOT / '.blend-analysis/2.5-real-user-tutorials/run-004/T06',
+            'run-003/T02': ROOT / '.blend-analysis/2.5-real-user-tutorials/run-003/T02',
+        }
+        for replay in supplement['replays']:
+            original = replay['original_gui']
+            source = source_roots[original['source_run_id']]
+            events_path = source / 'events.json'
+            events = json.loads(events_path.read_text(encoding='utf-8'))
+            event = next(item for item in events if item['event_id'] == original['event_id'])
+            artifacts = {
+                item['id']: item
+                for item in json.loads((source / 'gui-artifacts.json').read_text(encoding='utf-8'))
+            }
+            self.assertEqual(validator.sha256(source / 'run-manifest.json'), original['source_manifest_sha256'])
+            self.assertEqual(validator.sha256(events_path), original['events_sha256'])
+            self.assertEqual(artifacts[event['before_artifact_id']]['sha256'], original['before_artifact_sha256'])
+            self.assertEqual(artifacts[event['after_artifact_id']]['sha256'], original['after_artifact_sha256'])
+            self.assertEqual(replay['operator_receipt']['sha256'], validator.sha256(operator_path))
+            self.assertEqual(replay['interaction'], 'authorized_mcp_replay')
+            self.assertEqual(replay['classification'], 'replay_not_direct_gui')
+        self.assertEqual({item['step_id'] for item in supplement['replays']}, {'s01', 's02', 's03', 's05', 's06'})
+        self.assertEqual(technical['checker']['integrity_status'], 'passed')
+        self.assertEqual(technical['checker']['technical_status'], 'passed')
+        self.assertEqual(technical['checker']['independent_review_status'], 'incomplete')
+
     def test_t07_recovery_and_review_package_remain_separately_classified(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         case = next(item for item in self.status['cases'] if item['case_id'] == 'T07')
@@ -907,7 +939,7 @@ class TutorialStatusTests(unittest.TestCase):
         summary = json.loads((base / 'P4-p0-checker-summary.json').read_text(encoding='utf-8'))
         p0 = {item['case_id']: item for item in summary['cases']}
         self.assertEqual(set(p0), {'T00', 'T01', 'T02', 'T04', 'T06', 'T07', 'T17', 'T18'})
-        ready = {'T00', 'T01', 'T02', 'T04'}
+        ready = {'T00', 'T01', 'T02', 'T04', 'T06'}
         self.assertEqual(set(summary['blocked']), set(p0) - ready)
         self.assertEqual(set(summary['ready_for_human_review']), ready)
         cases = {item['case_id']: item for item in self.status['cases']}
@@ -922,7 +954,9 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(p0['T00']['technical_status'], 'passed')
         self.assertEqual(p0['T01']['technical_status'], 'passed')
         self.assertEqual(p0['T02']['technical_status'], 'passed')
-        self.assertEqual(p0['T06']['verdict'], 'invalid')
+        self.assertEqual(p0['T06']['verdict'], 'incomplete')
+        self.assertEqual(p0['T06']['integrity_status'], 'passed')
+        self.assertEqual(p0['T06']['technical_status'], 'passed')
 
     def test_t00_spec_keeps_failure_recovery_as_direct_gui(self):
         spec = json.loads((ROOT / 'examples/tutorials/2.5.0/T00.case-spec.json').read_text(encoding='utf-8'))

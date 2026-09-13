@@ -51,7 +51,7 @@ class PublicDeliveryDocsTests(unittest.TestCase):
                         'crystal-cocrystal-run009.png', 'crystal-diamond-run009.png', 'crystal-sidebar-run009.jpg', 'crystal-diamond.png', 'crystal-cell-view.jpg',
                         'crystal-current-run010.png', 'crystal-cocrystal-run010.png', 'crystal-diamond-run010.png',
                         'export-preview.jpg', 'export-rejected.jpg', 'export-success.jpg', 'grid-li-density.png', 'grid-derive-success.jpg', 'grid-derive-rejected.jpg', 'grid-prepare-inspect.jpg', 'grid-prepare-convert.jpg', 'grid-signed-volume.png', 'grid-sampling.png', 'grid-difference-refined.png', 'grid-primary-surface.jpg', 'grid-signed-surface.jpg',
-                        'trajectory-refined-run009.png', 'trajectory-apply-frame.jpg', 'trajectory-prepare-inspect.jpg', 'trajectory-prepare-convert.jpg', 'trajectory-frame0.jpg', 'trajectory-frame31.jpg',
+                        'trajectory-force-frame15-current.png', 'trajectory-apply-frame.jpg', 'trajectory-prepare-inspect.jpg', 'trajectory-prepare-convert.jpg', 'trajectory-frame0.jpg', 'trajectory-frame31.jpg',
                         'trajectory-current-frame-000.png', 'trajectory-current-frame-015.png', 'trajectory-current-frame-031.png')),
                     *(f'docs/user/assets/2.5-tutorials/scientific/{name}.png' for name in (
                         't03-conformers', 't03-f12-current', 't03-negative-rejected-current',
@@ -104,6 +104,7 @@ class PublicDeliveryDocsTests(unittest.TestCase):
         self.assertIn('download="ethanol-science-check.json"', content)
         self.assertIn('download="recompute_t07_difference.py"', content)
         self.assertIn('download="T06-run009-package-check.json"', content)
+        self.assertIn('download="T06.current-execution-supplement.json"', content)
         self.assertIn('download="scientific-viewer-review.zip"', content)
         self.assertFalse(re.search(r'download="[^"]+\.(?:blend|cbq)"', content, re.IGNORECASE))
         self.assertEqual(

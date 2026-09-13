@@ -1,0 +1,89 @@
+{
+  "schema_name": "chemblender_current_candidate_case_check",
+  "schema_version": 1,
+  "plan_id": "2026-09-10-2.5-real-user-tutorials",
+  "case_id": "T06",
+  "status": "passed",
+  "scope": "Current-candidate technical Operator check. Historical GUI actions remain historical and are reused only through the execution supplement; independent human review is not included.",
+  "candidate": {
+    "extension_source_commit": "9b972a5cc3a7aa04c20ebfd6985bc5199a20ac39",
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "prepare_source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+    "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+    "final_applicability_receipt": "examples/tutorials/2.5.0/P6-final-candidate-applicability.json",
+    "final_applicability_sha256": "95e0f51e6c614acb30b45b04b935cf313ae354288c23bbec3270de9d91171eae"
+  },
+  "input": {
+    "path": "examples/user-workflows/inputs/extxyz/aspirin-rmd17-32.extxyz",
+    "sha256": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a",
+    "license": "CC0-1.0",
+    "modified": false
+  },
+  "historical_science_and_gui": {
+    "candidate_scope": "run-004/run-009 only; not relabeled as current",
+    "cli_receipt_sha256": "0aaaf788d28fc33b4d4882d92f5654cef7b13d5d34678d499ed1716d3a902574",
+    "prepare_gui_receipt_sha256": "8a97b4907fe578603b325c464e08f2714da617f5eb1626512c5bd5432352f014",
+    "view_science_receipt_sha256": "97ee6431207ca7e62c84d9409140fffb4e751ac3777978d16efdeef6d562da04",
+    "animation_receipt_sha256": "f9625248b955d3dd4649ae640c09f4b770bb3ef43c3477a906421b57259d7c51",
+    "render_cold_receipt_sha256": "f90891030a99a9f36a7320d8478b2122f961a78b3a8173befdb516b03a408219"
+  },
+  "current_direct_gui": {
+    "receipt": "examples/tutorials/2.5.0/T06-run013-direct-gui-check.json",
+    "receipt_sha256": "6dc0c9430f0113e4321e56574f6fa26d2a848a8bd611adf8415089100096c9de",
+    "interaction": "os_gui",
+    "source_frames": [0, 15, 31],
+    "recording_sha256": "06433d0fa5062f3aa73723552c587925b28348b3adacce43f2eff227cc76b3e0",
+    "project_sha256_before_and_after": "49b02f282ce8fe8d665112068e78c9797493f7562e7128fde20334d6971f0031"
+  },
+  "current_operator_replay": {
+    "profile": "user_default/final-local-candidate",
+    "blender": "5.1.1",
+    "scene_sha256": "92acbfada4e8ed8898b6da8239f357479030ed7a773b844ea6b90afeb2bd9d41",
+    "cbq_manifest_sha256": "d3b70a21ef239c039167b77647111a710fe50815da9961868d71990d13f44cfe",
+    "rebuild": {
+      "pid": 35176,
+      "source_available": false,
+      "processor_available": false,
+      "receipt_sha256": "e0911f8d06fb7449c679d477c78bdddfddf9c7e39d156cf54b20429e4ab93084"
+    },
+    "cold_reopen": {
+      "pid": 15620,
+      "distinct_process": true,
+      "source_available": false,
+      "processor_available": false,
+      "receipt_sha256": "72f450bd47b05d1d6d8e122cc8f7a117d6adc22f6e04d64b9e6c81e2a7126a5a"
+    },
+    "render": {
+      "pid": 26224,
+      "engine": "CYCLES",
+      "resolution": [2400, 1800],
+      "source_frame": 15,
+      "sha256": "f70ee7d642e16f52fc2121e36ff656c4c88d6308772367b82f569b6aa901a6f7",
+      "receipt_sha256": "34413c4d4ffcc3722c50054ee5eb0d5ee39e685ac9b17759c2f6c57d4a9257a0",
+      "agent_visual_review": "passed; molecule, element colors and force arrows are visible"
+    },
+    "source_sha256_before_and_after": "95ad7342776441a9ce2d524a65351dad8b8e29ab40857b4ed858d17ab71a409a",
+    "coordinate_error": 1.1842041036658202e-07,
+    "scaled_force_error": 5.515591516846996e-08,
+    "scientific_arrays_unchanged": true,
+    "blender_processes_after": 0
+  },
+  "scientific_assertions": {
+    "frames": 32,
+    "atoms_per_frame": 21,
+    "atom_mapping": "passed",
+    "all_frame_coordinates": "passed",
+    "same_frame_forces": "passed",
+    "energy_and_indices": "passed_frames_0_15_31",
+    "physical_time_step": null,
+    "time_boundary": "no physical dt or independence claim",
+    "cbq_validation": "passed",
+    "playback_arrays_unchanged": true
+  },
+  "retained_warnings": [
+    "right_mouse_navigation load/unregister errors are unrelated to ChemBlender and did not change exit 0",
+    "DepthGenius reported missing torch; ChemBlender does not load or require torch"
+  ],
+  "human_review": "not_run",
+  "distribution": "blocked"
+}
