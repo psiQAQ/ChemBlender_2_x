@@ -249,3 +249,9 @@
 - The existing scientific, GBasis and Fermi virtual environments already contain their specialized dependencies without cross-environment paths inside those original environments. The smallest authorized change is to install the frozen current Prepare wheel into each applicable environment and configure explicit routes; the run-009 synthetic scientific-route venv with `.pth` should not be promoted.
 - After the authorized offline replacement, each original environment contains all 165 current-candidate Prepare/Core Python files byte-for-byte and passes `uv pip check`; these original environments can now be qualified directly instead of the cross-environment run-009 route.
 - PySCF 2.14.0 has conda-forge win-64 builds for Python 3.11, but the project requires Python >=3.12; bypassing that constraint is not valid qualification. QCSchema compute currently has no separate route, so a small runtime/config extension is required before a compliant specialized backend can be used.
+
+## Portable scientific review packages
+
+- A `.blend/.cbq` pair can rebuild without its raw source while still leaking development paths through CBQ provenance. Archive-member safety alone is insufficient: audit the working manifest contents separately from evidence appendices.
+- The accepted local handoff pattern is a relative `project.blend` + `project.cbq/` pair whose working source locators use `source-unavailable/<basename>`. Preserve the exact pre-normalization manifest only under `evidence/original-manifests/`, update the `.blend` manifest hash, then cold-open and rebuild every View.
+- Large review ZIPs should be one shared offline companion file rather than duplicated as Base64 inside each language HTML. The offline resource graph can remain complete and network-free while both languages reference the same audited bytes.

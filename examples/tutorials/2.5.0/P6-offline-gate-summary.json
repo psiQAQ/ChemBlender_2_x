@@ -82,14 +82,14 @@
   "execution_supplements": {
     "T01": {
       "path": "examples/tutorials/2.5.0/T01.current-execution-supplement.json",
-      "sha256": "81517ba3087519e61fed38fb88e9e8f0d0c155e63f98ccac3705c11abe8e5fdf",
+      "sha256": "a61110921bddc4e11aefb05a0ff9dfb7d4aff121f0f6f0b4d52689893db0515a",
       "target_run": "run-010/T01",
       "target_manifest": "missing",
       "run_003_pairing": "invalid_as_expected"
     },
     "T02": {
       "path": "examples/tutorials/2.5.0/T02.current-execution-supplement.json",
-      "sha256": "8fb6d753282c670c69fa3f232752d2ace75a27c24b257b1db6f51e9fd2c7886b",
+      "sha256": "8ab113ad7ae4109a1167eee2ad2f7dde12df15ca88355cc5ff652ce91b40f29a",
       "target_run": "run-010/T02",
       "target_manifest": "missing",
       "run_003_pairing": "invalid_as_expected"
@@ -97,8 +97,8 @@
   },
   "static_gates": {
     "tutorial_evidence_tests": {
-      "total": 63,
-      "passed": 62,
+      "total": 75,
+      "passed": 74,
       "skipped": 1,
       "failed": 0,
       "errors": 0
@@ -112,7 +112,7 @@
     },
     "generated_docs_check": "passed",
     "offline_static_resources": "passed",
-    "offline_project_downloads": "blocked_missing",
+    "offline_project_downloads": "passed_shared_companion_zip",
     "git_diff_check": "passed",
     "planning_check": "passed_with_unfinished_items"
   },
@@ -120,6 +120,6 @@
     "ready_for_human_review": [],
     "human_review": "not_run",
     "distribution": "blocked",
-    "reason": "Case manifests, current execution-supplement targets, project downloads, current-source Blender qualification and independent reviews remain incomplete."
+    "reason": "Current direct-GUI events and conforming per-case manifests remain incomplete; all 22 independent reviews remain unsigned. Portable project downloads and current-source Blender qualification passed."
   }
 }

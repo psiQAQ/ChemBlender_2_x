@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 6 — 教程收口与本地交付；Phase 4/5 的明确 Blocked 项并行保留
-- Next Step: 将 r20 的 22 项 Viewer/render/project/cold-reopen 结果纳入离线教程与 review ZIP，并用修复后的 Extension 重做最终 clean/user_default 候选资格；直接 GUI 与人工签署保持独立阻塞
+- Next Step: 由具备 OS GUI 输入能力的复做者录制当前直接 GUI，并由独立复做者按清单签署 human_review；Agent 保持这些项目未勾选
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -81,7 +81,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 - [x] P4.6 若现有 UI 无法显示 T06 冻结规格要求的逐帧标量，复用现有 FrameProperty 数据，在现有面板增加最小只读当前帧值，不增加新数据模型；补单元测试、构建和受影响案例复验。
 - [x] P4.7 T07：补 sampling-layout 冷重开、volume/remaining render、当前候选 GUI、真实缺源/缺处理器恢复、VASP 适用范围和 review package。
 - [x] P4.8 T17：核对 13 格式正向导出、loss gate、科学字段比较、GUI 回执、项目交接和当前候选回归；保留正确拒绝案例。
-- [ ] P4.9 T18：在隔离副本上用不存在的 processor 路径和移除的副本源文件实际证明离线重建；补 GUI legacy migration、第二干净 profile、取消/错误 relink/损坏/过期恢复。Blocked：自动恢复、故障拒绝和 legacy 原生迁移已通过；当前无 OS GUI 工具，且用户自有 Blender PID 26228 在运行，不能启动第二 profile。
+- [ ] P4.9 T18：在隔离副本上用不存在的 processor 路径和移除的副本源文件实际证明离线重建；补 GUI legacy migration、第二干净 profile、取消/错误 relink/损坏/过期恢复。Blocked：自动恢复、故障拒绝、legacy 原生迁移和第二 clean profile 已通过；仍缺 OS GUI 的 legacy migration/relink 直录。
 - [x] P4.10 对 T00/T01/T02/T04/T06/T07/T17/T18 分别运行检查器并更新状态为 `ready_for_human_review` 或明确 `Blocked`。
 - [x] P4.11 运行 P0 聚合测试、Extension validate/build、当前候选安装检查和 `git diff --check`，提交 Phase 4 P0 资格证据（未关闭的门槛保持 Blocked）。
 
@@ -91,20 +91,20 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 
 每个案例依次执行：冻结 case spec → 固定输入/许可/哈希 → CLI/Worker → Prepare GUI → Blender View → 独立科学断言 → render → save/move/cold/rebuild/recovery → 中英教程和离线 QA → review package → 状态更新。
 
-- [ ] P5.1 T03：SMILES 三维化、力场优化、SDF 记录与构象分组。Blocked：复用了 T02 的哈希关联 SMILES/MMFF94 适用性；Standard SDF 分组、导出、负例和取消已通过，但缺 Prepare GUI、Blender render/lifecycle、教程包和人工验收。
-- [ ] P5.2 T05：PDB 多模型、PQR 电荷/半径和 MOL2 层级展示。Blocked：Standard PDB/PQR/MOL2 转换、科学比对、负例、validation 和取消已通过，但缺 Prepare GUI、Blender Views/render/lifecycle、教程包和人工验收。
-- [ ] P5.3 T08：真实 FCHK/Molden 轨道正负相位。Blocked：当前 Standard 的 wavefunction route 未配置；现有 IOData/GBasis cache 含 8 个非当前 Prepare/Core 文件且未配置 route，需授权安装冻结 wheel 后才能执行。
-- [ ] P5.4 T09：电子密度、自旋密度和 RDM 网格，严格区分来源与密度层级。Blocked：复用 T08 的 current-candidate wavefunction 环境阻塞；输入与密度层级边界已冻结，未运行科学处理。
-- [ ] P5.5 T10：同结构同网格的密度表面 ESP 着色。Blocked：复用 T08 的 current-candidate wavefunction 环境阻塞；同计算/同结构/同网格边界已冻结，未生成 density/ESP grid。
-- [ ] P5.6 T11：Gaussian/ORCA 振动、IR/Raman 和模式动画。Blocked：输入与科学边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
-- [ ] P5.7 T12：TD 输出、UV–Vis/ECD 图与 gauge/强度边界。Blocked：输入与 gauge/强度边界已冻结；scientific route 依赖跨环境 `.pth`，未在隔离环境运行。
-- [ ] P5.8 T13：能带、DOS、投影和能量参考。Blocked：当前隔离 scientific route 的 band/DOS、k-path、投影及独立能量参考科学检查已通过；仍缺直接 GUI、plot/render、project pair/cold reopen/recovery、教程/review package、manifest 和人工验收。
-- [ ] P5.9 T14：NaCl q 点声子模式与周期相位动画。Blocked：当前隔离 scientific route 的六文件来源一致性、q 点声子、complex eigenvector 与周期相位科学检查已通过；仍缺直接 GUI、动画/render、project pair/cold reopen/recovery、教程/review package、manifest 和人工验收。
-- [ ] P5.10 T15：critic2 QTAIM/NCI；不虚构缺失路径或键能。Blocked：当前 Standard CLI/Worker + 既有 critic2 1.3.15 已生成并验证 5 CP/4 有序路径与配对 40³ NCI 网格，取消及错误 Structure 绑定不发布输出；仍缺 Prepare GUI、Blender View/render/lifecycle、教程/review package 和人工验收，critic2 路线仅为 `development_reuse`。
-- [ ] P5.11 T19：Reader API 外部 Python 集成；不承诺自动进入普通导入界面。Blocked：当前 Standard 外部 Python 显式注册/discovery/unregister、conformance、非法输入拒绝、CBQ 发布/validate/注销后重开均通过；普通 CLI/Tk GUI 仍仅有 22 个内置 reader。缺 Viewer GUI/render/lifecycle、教程/review package 和人工验收。
-- [ ] P5.12 T20：QCSchema 真实 compute；交换成功不能替代实际计算成功。Blocked：当前 Standard 对固定 MolSSI AtomicResult 的交换、gradient/force 语义、依赖缺失失败与取消均有证据；QCEngine/PySCF 均未安装，实际 SCF 未运行，缺 GUI/render/lifecycle、教程/review package 和人工验收。
-- [ ] P5.13 T16：Fermi surface；许可未关闭前不分发 POTCAR、pickle 或不合规输入。Blocked：MIT-declared 六文件 text allowlist 已版本化且获教程分发批准；当前隔离 fermi route 的 21³ mesh、bands 16–18 surface、hash/cancel recovery 与 CBQ validate 已通过。仍缺直接 GUI、render、project pair/cold reopen、教程/review package、manifest 和人工验收；POTCAR/WAVECAR/pickle 始终排除。
-- [ ] P5.14 B01：验证 provider unavailable 的真实诊断边界；没有 live transport 时不伪造在线成功。Blocked：当前 capabilities、真实 provider dependency、缺凭据与取消边界均通过且无输出/网络请求；缺直接 GUI、教程/offline QA、review package 和人工验收。负向边界未计作正向 fetch 成功。
+- [ ] P5.1 T03：SMILES 三维化、力场优化、SDF 记录与构象分组。Blocked：科学、三构象 native View/render、portable project、无源冷重建和双语教程已通过；仍缺 Prepare/Blender 直接 GUI、conforming manifest 和人工验收。
+- [ ] P5.2 T05：PDB 多模型、PQR 电荷/半径和 MOL2 层级展示。Blocked：科学、trajectory/charge native View/render、portable project、无源冷重建和双语教程已通过；仍缺 Prepare/Blender 直接 GUI、conforming manifest 和人工验收。
+- [ ] P5.3 T08：真实 FCHK/Molden 轨道正负相位。Blocked：隔离 wavefunction science、signed phase render、portable project、无源冷重建和双语教程已通过；仍缺直接 GUI、conforming manifest 和人工验收。
+- [ ] P5.4 T09：电子密度、自旋密度和 RDM 网格，严格区分来源与密度层级。Blocked：隔离 science、signed spin render、portable project、无源冷重建和双语教程已通过；仍缺直接 GUI、conforming manifest 和人工验收。
+- [ ] P5.5 T10：同结构同网格的密度表面 ESP 着色。Blocked：隔离 science、property-on-surface render、portable project、无源冷重建和双语教程已通过；仍缺直接 GUI、conforming manifest 和人工验收。
+- [ ] P5.6 T11：Gaussian/ORCA 振动、IR/Raman 和模式动画。Blocked：隔离 science、mode/spectrum render、portable project、无源冷重建和双语教程已通过；仍缺直接 GUI、conforming manifest 和人工验收；linked plot 标签可读性限制已记录。
+- [ ] P5.7 T12：TD 输出、UV–Vis/ECD 图与 gauge/强度边界。Blocked：隔离 science、UV–Vis/ECD render、portable project、无源冷重建和双语教程已通过；ORCA partial state 正确使用 spectrum-only。仍缺直接 GUI、conforming manifest 和人工验收。
+- [ ] P5.8 T13：能带、DOS、投影和能量参考。Blocked：science、修复后的 band/DOS plot、portable project、无源冷重建和双语教程已通过；仍缺直接 GUI、conforming manifest 和人工验收。
+- [ ] P5.9 T14：NaCl q 点声子模式与周期相位动画。Blocked：science、phonon View/render、portable project、无源冷重建和双语教程已通过；仍缺直接 GUI、conforming manifest 和人工验收。
+- [ ] P5.10 T15：critic2 QTAIM/NCI；不虚构缺失路径或键能。Blocked：science、QTAIM/NCI render、portable project、无源冷重建和双语教程已通过；仍缺 Prepare/Blender 直接 GUI、conforming manifest 和人工验收，critic2 路线仅为 `development_reuse`。
+- [ ] P5.11 T19：Reader API 外部 Python 集成；不承诺自动进入普通导入界面。Blocked：Reader API science、Viewer render、portable project、无源冷重建和双语教程已通过；普通 GUI 仍只有 22 个内置 reader。仍缺直接 GUI、conforming manifest 和人工验收。
+- [ ] P5.12 T20：QCSchema 真实 compute；交换成功不能替代实际计算成功。Blocked：隔离 PySCF RHF/cc-pVDZ compute、gradient render、portable project、无源冷重建和双语教程已通过；仍缺直接 GUI、conforming manifest 和人工验收。
+- [ ] P5.13 T16：Fermi surface；许可未关闭前不分发 POTCAR、pickle 或不合规输入。Blocked：MIT 六文件、隔离 science、Fermi render、portable project、无源冷重建和双语教程已通过；仍缺直接 GUI、conforming manifest 和人工验收；POTCAR/WAVECAR/pickle 始终排除。
+- [ ] P5.14 B01：验证 provider unavailable 的真实诊断边界；没有 live transport 时不伪造在线成功。Blocked：真实 unavailable/no-output 边界、双语教程和离线 QA 已通过；render/project 按设计不适用。仍缺直接 GUI、conforming manifest 和人工验收。
 - [x] P5.15 每完成一个案例立即更新 checklist、`status.json`、教程索引和 `progress.md`，并作独立逻辑 commit。
 - [x] P5.16 所有未获依赖或许可授权的项目保持未勾选并记录阻塞，不用 skip 冒充通过。
 
@@ -115,10 +115,10 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 - [x] P6.1 T01/T02/T06 等正文仅保留一套当前用户流程；旧候选、失败调试、PID 和长哈希移入验证附录。
 - [ ] P6.2 所有教程包含固定输入、准确按钮/参数、逐步可见结果、原始截图、最终渲染、工程入口、恢复步骤和科学边界。
 - [x] P6.3 本地交接包只使用包内相对路径；开发缓存绝对路径只出现在验证附录。
-- [ ] P6.4 重新生成中英离线 HTML，实际断网检查图片、锚点、语言导航、输入、脚本、工程和 receipt 下载。
+- [x] P6.4 重新生成中英离线 HTML，实际断网检查图片、锚点、语言导航、输入、脚本、工程和 receipt 下载。
 - [ ] P6.5 为每个案例生成独立人工复做清单；第二干净 profile 按教程盲走并记录操作、结果、缺陷、修复和复测。
 - [ ] P6.6 只有独立复做者签署后，勾选对应 `human_review`；否则保持 `ready_for_human_review`。
-- [ ] P6.7 冻结最终本地 Extension ZIP 与 prepare wheel/sdist，记录源码提交、SHA-256、内容清单和依赖来源。
+- [x] P6.7 冻结最终本地 Extension ZIP 与 prepare wheel/sdist，记录源码提交、SHA-256、内容清单和依赖来源。
 - [x] P6.8 运行全量测试并分别报告 Passed/Failed/Skipped/Error；任何 failure 或 error 都阻止技术完成。
 - [x] P6.9 执行 Extension validate/build、ZIP 内容审计、隔离 profile 安装、真实 `user_default` 冷启动、无 RDKit/Gemmi/prepare Viewer 验证和专业后端验证。
 - [x] P6.10 运行所有案例检查器、状态一致性测试、文档测试、离线 QA、`git diff --check` 和 planning `check-complete.ps1`。

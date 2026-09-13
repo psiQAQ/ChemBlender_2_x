@@ -74,3 +74,5 @@
 ## 验证附录
 
 当前 Extension SHA-256 为 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`；当前 Prepare wheel SHA-256 为 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`。[当前候选适用性记录](../../../examples/tutorials/2.5.0/T01-current-candidate-check.json)覆盖转换、科学核对、公开 Blender Operator、Cycles 渲染、移动副本重建及独立进程冷重开。本章 Prepare 与 Blender GUI 截图是保留历史运行中的原生 JPEG，并由 [T01.execution-supplement.json](../../../examples/tutorials/2.5.0/T01.execution-supplement.json)关联；它们证明控件未变，但不会成为新的当前候选 GUI 事件。成图是 Blender 保存的原生 PNG，[资源来源与哈希](../assets/2.5-tutorials/provenance.json)单独记录。检查器核对文件签名、后缀和哈希，但这些检查不能证明截图真实性，也不能代替尚未完成的人工独立复做。
+
+最终本地候选适用性：Extension SHA-256 `73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8`; Prepare wheel SHA-256 `3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3`. 上述历史回执保留真实执行字节；[最终差异映射](../../../examples/tutorials/2.5.0/P6-final-candidate-applicability.json)不会把它们换标为新的 GUI 事件。

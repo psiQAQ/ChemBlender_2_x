@@ -31,7 +31,7 @@ SOURCES = {
     "en": ("README.md", *(
         f"docs/user/en/{name}.md" for name in (
             "index", "installation", "blender-workflow",
-            "capabilities-and-projects", "troubleshooting", "release-status", "first-aspirin", "ethanol-conformers", "crystal-cells", "aspirin-trajectory", "density-grids", "data-export",
+            "capabilities-and-projects", "troubleshooting", "release-status", "first-aspirin", "ethanol-conformers", "crystal-cells", "aspirin-trajectory", "density-grids", "data-export", "scientific-cases",
         )
     ), *(
         f"docs/prepare/en/{name}.md" for name in (
@@ -41,7 +41,7 @@ SOURCES = {
     "zh-CN": ("README.zh-CN.md", *(
         f"docs/user/zh-CN/{name}.md" for name in (
             "index", "installation", "blender-workflow",
-            "capabilities-and-projects", "troubleshooting", "release-status", "first-aspirin", "ethanol-conformers", "crystal-cells", "aspirin-trajectory", "density-grids", "data-export",
+            "capabilities-and-projects", "troubleshooting", "release-status", "first-aspirin", "ethanol-conformers", "crystal-cells", "aspirin-trajectory", "density-grids", "data-export", "scientific-cases",
         )
     ), *(
         f"docs/prepare/zh-CN/{name}.md" for name in (
@@ -49,6 +49,8 @@ SOURCES = {
         )
     )),
 }
+
+OFFLINE_ARTIFACTS = ("docs/offline/artifacts/scientific-viewer-review.zip",)
 
 
 def _json_bytes(value):
@@ -219,6 +221,9 @@ def _offline_html(language, sources, image_hashes=None):
             path.relative_to(ROOT)
             if not path.is_file():
                 raise ValueError(f'Missing local resource: {relative}: {target}')
+            artifact = path.relative_to(ROOT).as_posix()
+            if artifact in OFFLINE_ARTIFACTS:
+                return f"../artifacts/{path.name}", path.name
             if not image and path in locations:
                 lang, document = locations[path]
                 fragment = document + ('-' + unquote(parts.fragment) if parts.fragment else '')
@@ -286,7 +291,8 @@ def _resource_stats(relative, content, documents):
 
 
 def render_documents():
-    documents = {"docs/prepare/public-surface.json": _json_bytes(public_surface())}
+    documents = {"docs/prepare/public-surface.json": _json_bytes(public_surface()),
+                 **{relative: (ROOT / relative).read_bytes() for relative in OFFLINE_ARTIFACTS}}
     images = {}
     for language, sources in SOURCES.items():
         images[language] = {}

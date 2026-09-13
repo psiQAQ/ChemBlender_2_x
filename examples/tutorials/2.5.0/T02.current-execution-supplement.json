@@ -24,9 +24,13 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["inspect", "convert", "source_2d_boundary"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "inspect",
+          "convert",
+          "source_2d_boundary"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -49,9 +53,13 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["preview", "import", "structure_view"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "preview",
+          "import",
+          "structure_view"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -74,9 +82,14 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["ETKDGv3", "MMFF94", "random_seed", "atom_mapping"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "ETKDGv3",
+          "MMFF94",
+          "random_seed",
+          "atom_mapping"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -99,9 +112,14 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["energy", "optimize", "optimizer_status", "kekulize"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "energy",
+          "optimize",
+          "optimizer_status",
+          "kekulize"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -124,9 +142,13 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["mesh_delta", "new_structure", "source_retained"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "mesh_delta",
+          "new_structure",
+          "source_retained"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -149,9 +171,15 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["cycles", "samples", "resolution", "render", "scientific_hashes"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "cycles",
+          "samples",
+          "resolution",
+          "render",
+          "scientific_hashes"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -174,9 +202,14 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["moved_pair", "clear_display_mesh", "rebuild_without_processor", "cold_reopen"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "moved_pair",
+          "clear_display_mesh",
+          "rebuild_without_processor",
+          "cold_reopen"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -184,5 +217,6 @@
         "sha256": "b66d1533cc9317db2e4b461dfd3a95125bd0f492798f907b7089a1b5a3aa55c0"
       }
     }
-  ]
+  ],
+  "final_candidate_applicability": "examples/tutorials/2.5.0/P6-final-candidate-applicability.json"
 }

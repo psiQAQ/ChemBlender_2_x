@@ -24,9 +24,14 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["preview", "import", "entity_count", "coordinates"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "preview",
+          "import",
+          "entity_count",
+          "coordinates"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -49,9 +54,13 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["create_view", "structure_id", "coordinates"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "create_view",
+          "structure_id",
+          "coordinates"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -74,9 +83,14 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["topology", "camera", "light", "render_settings"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "topology",
+          "camera",
+          "light",
+          "render_settings"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -99,9 +113,14 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["cycles", "resolution", "samples", "render"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "cycles",
+          "resolution",
+          "samples",
+          "render"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -124,9 +143,13 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["blend_save", "cbq_pair", "scientific_hashes"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "blend_save",
+          "cbq_pair",
+          "scientific_hashes"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -149,9 +172,13 @@
       },
       "candidate_difference": {
         "status": "passed",
-        "to_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-        "to_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-        "checked_fields": ["cold_reopen", "moved_pair", "scientific_hashes"]
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "cold_reopen",
+          "moved_pair",
+          "scientific_hashes"
+        ]
       },
       "operator_receipt": {
         "status": "passed",
@@ -159,5 +186,6 @@
         "sha256": "10383f4496ff377ee40561bb29a74daa9391c4a6c55e97421f27fb84d474793b"
       }
     }
-  ]
+  ],
+  "final_candidate_applicability": "examples/tutorials/2.5.0/P6-final-candidate-applicability.json"
 }

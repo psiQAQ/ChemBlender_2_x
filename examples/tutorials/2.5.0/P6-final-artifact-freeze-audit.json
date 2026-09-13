@@ -2,42 +2,43 @@
   "schema_name": "chemblender_final_artifact_freeze_audit",
   "schema_version": 1,
   "plan_id": "2026-09-10-2.5-real-user-tutorials",
-  "status": "blocked",
-  "current_source_commit": "8ade6c7f08dfbe6de12cc1c2424b970cf3837cef",
-  "retained_artifacts": {
+  "status": "passed_local_freeze_with_acceptance_blockers",
+  "current_source_commit": "9b972a5cc3a7aa04c20ebfd6985bc5199a20ac39",
+  "frozen_local_artifacts": {
     "extension": {
-      "path": ".blend-analysis/2.5-real-user-tutorials/run-007/artifacts/chemblender-2.5.0.zip",
-      "source_commit": "36b80b8c7652bad8990df361a1909e56161d884a",
-      "bytes": 2831354,
-      "sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-      "classification": "accepted_historical_candidate_not_final"
+      "path": "ChemBlender/chemblender-2.5.0.zip",
+      "source_commit": "9b972a5cc3a7aa04c20ebfd6985bc5199a20ac39",
+      "bytes": 2831887,
+      "sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "members": 109,
+      "classification": "frozen_local_technical_candidate"
     },
     "prepare_wheel": {
-      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/artifacts/chemblender_prepare-0.1.0-py3-none-any.whl",
-      "source_commit": "32d96303b2c0e16260b32b470c2d5601226d9318",
-      "bytes": 555545,
-      "sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-      "classification": "accepted_current_prepare_candidate_not_final"
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-012/artifacts/chemblender_prepare-0.1.0-py3-none-any.whl",
+      "source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+      "bytes": 555644,
+      "sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "python_files": 165,
+      "classification": "frozen_local_technical_candidate"
     },
     "prepare_sdist": {
-      "path": ".blend-analysis/2.5-real-user-tutorials/run-009/artifacts/chemblender_prepare-0.1.0.tar.gz",
-      "source_commit": "32d96303b2c0e16260b32b470c2d5601226d9318",
-      "bytes": 921762,
-      "sha256": "c8b61502a788b3f9bb93975e6a85cd641b1fd33d2d783ccab15e5453155a5a9e",
-      "classification": "accepted_current_prepare_candidate_not_final"
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-012/artifacts/chemblender_prepare-0.1.0.tar.gz",
+      "source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+      "bytes": 921867,
+      "sha256": "17c0191fccc9bc9c3e9f80a1ff81febe8b4941593a17bf5311598a39012c01a4",
+      "classification": "frozen_local_technical_candidate"
     }
   },
-  "source_difference": {
-    "extension_changed_files_since_retained_zip": [
-      "ChemBlender/ui/scientific_view.py"
-    ],
-    "prepare_changed_files_since_run009": []
+  "qualification": {
+    "extension": "examples/tutorials/2.5.0/P6-current-extension-qualification.json",
+    "prepare_and_dependency_sources": "examples/tutorials/2.5.0/environment-qualification.json",
+    "review_package": "examples/tutorials/2.5.0/P6-scientific-project-package-check.json"
   },
-  "blockers": [
-    "The retained Extension ZIP predates the T06 read-only current-frame fields and is not byte-derived from current HEAD.",
-    "P6.2, P6.4, P6.5 and P6.6 are incomplete, and multiple Phase 4/5 cases remain blocked.",
-    "A final freeze cannot precede full tests, current-candidate build/install checks and independent human review."
+  "acceptance_blockers": [
+    "Direct GUI evidence remains missing for multiple Phase 4/5 cases.",
+    "Independent human review remains unsigned for all 22 cases.",
+    "The local freeze is not distribution approval and is not published."
   ],
-  "final_artifact_frozen": false,
+  "final_artifact_frozen": true,
   "published": false
 }

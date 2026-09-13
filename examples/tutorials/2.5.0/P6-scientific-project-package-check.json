@@ -1,0 +1,34 @@
+{
+  "schema_name": "chemblender_scientific_project_package_check",
+  "schema_version": 1,
+  "plan_id": "2026-09-10-2.5-real-user-tutorials",
+  "status": "passed",
+  "package": {
+    "path": "docs/offline/artifacts/scientific-viewer-review.zip",
+    "bytes": 47045777,
+    "sha256": "4d921d21c475c0ae11acd25cc5f76d9552643d8a98f7a791968d5b7d1827483e",
+    "members": 336,
+    "unsafe_member_names": [],
+    "crc_status": "passed"
+  },
+  "projects": {
+    "items": 22,
+    "blend_files": 22,
+    "cbq_manifests": 22,
+    "native_renders": 24,
+    "current_manifest_absolute_development_paths": 0,
+    "cold_reopen_and_rebuild": "passed_all",
+    "processor_required": false
+  },
+  "provenance": {
+    "portable_locator": "source-unavailable/<basename>",
+    "original_manifest_directory": "evidence/original-manifests/",
+    "original_manifests_with_development_paths": 4,
+    "development_paths_outside_evidence": []
+  },
+  "cases": ["T03", "T05", "T08", "T09", "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T19", "T20"],
+  "limitations": [
+    "The package is for local tutorial review, not a published release artifact.",
+    "Background native Blender verification does not replace direct GUI capture or independent human review."
+  ]
+}

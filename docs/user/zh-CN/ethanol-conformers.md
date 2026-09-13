@@ -90,3 +90,5 @@ MMFF94 是分子力场；ETKDG 生成合理构象，不证明全局最低能量�
 ## 验证附录
 
 当前重放使用 Blender 5.1.1、Standard Prepare 0.1.0 和 RDKit 2026.03.3。Extension SHA-256：`a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`；Prepare wheel SHA-256：`b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`。[当前候选适用性记录](../../../examples/tutorials/2.5.0/T02-current-candidate-check.json)覆盖固定科学数值、Apply、渲染、processor 故意不可用时的移动工程重建，以及数组路径指向副本目录的干净冷重开。GUI JPEG 保持历史原生截图身份；[T02.current-execution-supplement.json](../../../examples/tutorials/2.5.0/T02.current-execution-supplement.json)记录当前 CLI/Operator 重放，不会把它改标为直接 GUI。[媒体来源与哈希](../assets/2.5-tutorials/provenance.json)单独保存。人工独立复做尚未完成；本地 review package 只供审阅，不是分发制品。
+
+最终本地候选适用性：Extension SHA-256 `73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8`; Prepare wheel SHA-256 `3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3`. 上述历史回执保留真实执行字节；[最终差异映射](../../../examples/tutorials/2.5.0/P6-final-candidate-applicability.json)不会把它们换标为新的 GUI 事件。

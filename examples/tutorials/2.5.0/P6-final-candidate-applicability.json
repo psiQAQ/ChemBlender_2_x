@@ -1,0 +1,39 @@
+{
+  "schema_name": "chemblender_final_candidate_applicability",
+  "schema_version": 1,
+  "plan_id": "2026-09-10-2.5-real-user-tutorials",
+  "status": "passed_with_direct_gui_exceptions",
+  "from_candidate": {
+    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a"
+  },
+  "to_candidate": {
+    "extension_source_commit": "9b972a5cc3a7aa04c20ebfd6985bc5199a20ac39",
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "prepare_source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3"
+  },
+  "source_difference": {
+    "extension": ["ChemBlender/electronic_plot.py", "ChemBlender/ui/scientific_view.py"],
+    "prepare": ["chemblender_prepare/runtime.py"]
+  },
+  "impact": {
+    "electronic_plot": "T13 LazyNpyArray materialization fix; focused plot tests and current installed-Extension T13 band/DOS renders passed.",
+    "scientific_view": "T06 read-only current-frame scalar rows; this new panel evidence still requires direct GUI capture and is not covered by historical screenshots.",
+    "prepare_runtime": "Adds the explicit python.qcschema route used by the current T20 real compute; other reader/export/derive operation contracts are unchanged."
+  },
+  "final_container_equivalence": {
+    "previous_qualified_sha256": "0e427d689b04213cef1496d2a22a8e97cfd86d39c8718451e381e0d85951c207",
+    "difference": "ZIP metadata only",
+    "member_bytes": "passed_109_of_109_against_previous_r15_and_new_r25_installs",
+    "new_clean_profile_cold_import": "passed"
+  },
+  "current_candidate_qualification": [
+    "examples/tutorials/2.5.0/P6-current-extension-qualification.json",
+    "examples/tutorials/2.5.0/environment-qualification.json",
+    "examples/tutorials/2.5.0/P5-viewer-batch-check.json"
+  ],
+  "historical_receipt_policy": "Receipts retain the bytes they actually exercised. Applicability to the final local candidate is recorded here rather than relabeling historical GUI or scientific events.",
+  "direct_gui_exceptions": ["T06 new scalar rows", "T18 legacy migration and relink", "all cases without a current direct GUI event"],
+  "human_review": "not_run"
+}

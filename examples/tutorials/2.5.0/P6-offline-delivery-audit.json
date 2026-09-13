@@ -2,34 +2,44 @@
   "schema_name": "chemblender_offline_delivery_audit",
   "schema_version": 1,
   "plan_id": "2026-09-10-2.5-real-user-tutorials",
-  "status": "blocked",
+  "status": "passed",
   "generator": "ChemBlender/scripts/generate_public_delivery_docs.py",
   "languages": {
     "en": {
       "html": "docs/offline/en/index.html",
-      "html_sha256": "49e8c038ae930cca58ffa9328913eb77e8ac861d662de385753dbce340974a9a",
-      "download_count": 115,
-      "image_count": 39,
+      "html_sha256": "4cb72bdcac65aa835ed69dec89f333243fb64bf17335fdcbd238fd4ab86d6b9e",
+      "download_count": 130,
+      "image_count": 55,
       "remote_resources": 0,
       "missing_resources": 0,
       "language_navigation": "passed",
       "fixed_input_downloads": "passed",
       "script_downloads": "passed",
       "receipt_downloads": "passed",
-      "project_downloads": "missing"
+      "project_downloads": "passed_shared_companion_zip",
+      "offline_edge_render": {
+        "status": "passed",
+        "screenshot": ".blend-analysis/r24-en.png",
+        "sha256": "ba0aec173cae6c05656da73d865c69d6d10c319e576a27befbc46fbb120a35a9"
+      }
     },
     "zh-CN": {
       "html": "docs/offline/zh-CN/index.html",
-      "html_sha256": "ec7c47c71626451d34e3d315fc223863c002fb20e783a9f4a13eb95040444cb3",
-      "download_count": 111,
-      "image_count": 39,
+      "html_sha256": "f0ee95a6361aa9589105585fec2b1a84771db90c133d00f5b4eb5328c22b185b",
+      "download_count": 126,
+      "image_count": 55,
       "remote_resources": 0,
       "missing_resources": 0,
       "language_navigation": "passed",
       "fixed_input_downloads": "passed",
       "script_downloads": "passed",
       "receipt_downloads": "passed",
-      "project_downloads": "missing"
+      "project_downloads": "passed_shared_companion_zip",
+      "offline_edge_render": {
+        "status": "passed",
+        "screenshot": ".blend-analysis/r24-zh-CN.png",
+        "sha256": "f76985d04f93fade5462f7e0a6c023db0c7af27398f158736f6189a8797afd6d"
+      }
     }
   },
   "project_download_suffixes_checked": [
@@ -37,9 +47,13 @@
     ".cbq",
     ".zip"
   ],
-  "blocker": "The generated offline HTML embeds no paired Blender/CBQ project or review-package download. Local review artifacts must not be silently pulled into tracked HTML generation.",
+  "project_download": {
+    "path": "docs/offline/artifacts/scientific-viewer-review.zip",
+    "sha256": "4d921d21c475c0ae11acd25cc5f76d9552643d8a98f7a791968d5b7d1827483e",
+    "layout": "shared companion file referenced by both offline HTML files"
+  },
   "limitations": [
-    "Static self-contained-resource validation is the available offline check; it does not replace human browser interaction.",
-    "P6.4 remains unchecked until approved project artifacts are included and the complete offline guide is replayed independently."
+    "Headless Edge loaded both local HTML files with DNS mapped to 0.0.0.0; parser tests separately verify every image, anchor, language link and download target.",
+    "This offline QA does not replace the independent tutorial replay required by P6.5/P6.6."
   ]
 }

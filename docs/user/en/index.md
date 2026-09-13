@@ -14,6 +14,7 @@ ChemBlender is a CBQ Viewer. Prepare raw chemistry and simulation files outside 
 - [T04: crystal cells, occupancy and diamond](crystal-cells.md) — draft; science/recovery passed, GUI and human review pending.
 - [T06: aspirin trajectory and same-frame forces](aspirin-trajectory.md) — working draft; animation/recovery passed, human replay pending.
 - [T07: density grids, slices and signed surfaces — working draft; human replay pending.](density-grids.md)
+- [T03/T05/T08–T16/T19/T20/B01: scientific case gallery](scientific-cases.md) — fixed inputs, native renders, recoverable project pairs and honest GUI limits.
 - [Capabilities and project lifecycle](capabilities-and-projects.md)
 - [Errors and recovery](troubleshooting.md)
 - [Release status and limitations](release-status.md)

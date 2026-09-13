@@ -60,6 +60,17 @@
       "unsafe_member_names": [],
       "development_path_members": 1,
       "development_paths_outside_evidence": []
+    },
+    "scientific-viewer": {
+      "path": "docs/offline/artifacts/scientific-viewer-review.zip",
+      "sha256": "4d921d21c475c0ae11acd25cc5f76d9552643d8a98f7a791968d5b7d1827483e",
+      "entry_count": 336,
+      "blend_files": 22,
+      "cbq_manifests": 22,
+      "render_files": 24,
+      "unsafe_member_names": [],
+      "development_path_members": 4,
+      "development_paths_outside_evidence": []
     }
   },
   "crc_status": "passed_all",

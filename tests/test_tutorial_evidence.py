@@ -1,10 +1,12 @@
 """Reuse the research checker contracts; all fixtures are synthetic."""
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import runpy
 import sys
 import unittest
+import zipfile
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -196,6 +198,20 @@ class TutorialStatusTests(unittest.TestCase):
         cls.status = json.loads(
             (ROOT / 'examples/tutorials/2.5.0/status.json').read_text(encoding='utf-8')
         )
+        cls.applicability = json.loads(
+            (ROOT / 'examples/tutorials/2.5.0/P6-final-candidate-applicability.json').read_text(encoding='utf-8')
+        )
+
+    def test_final_candidate_applicability_preserves_historical_bytes(self):
+        current = self.status['current_candidate']
+        self.assertEqual(self.applicability['to_candidate']['extension_sha256'], current['extension_sha256'])
+        self.assertEqual(self.applicability['to_candidate']['prepare_wheel_sha256'], current['prepare_wheel_sha256'])
+        self.assertEqual(
+            set(self.applicability['source_difference']['extension']),
+            {'ChemBlender/electronic_plot.py', 'ChemBlender/ui/scientific_view.py'},
+        )
+        self.assertEqual(self.applicability['source_difference']['prepare'], ['chemblender_prepare/runtime.py'])
+        self.assertEqual(self.applicability['human_review'], 'not_run')
 
     def test_primary_tutorial_routes_keep_run_metadata_in_appendix(self):
         tutorials = (
@@ -235,11 +251,30 @@ class TutorialStatusTests(unittest.TestCase):
         audit = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-review-package-path-audit.json').read_text(encoding='utf-8'))
         self.assertEqual(audit['status'], 'passed')
         self.assertEqual(audit['crc_status'], 'passed_all')
-        self.assertEqual(set(audit['archives']), {'T01', 'T02-current', 'T02-historical', 'T04', 'T06', 'T07', 'T17'})
+        self.assertEqual(set(audit['archives']), {'T01', 'T02-current', 'T02-historical', 'T04', 'T06', 'T07', 'T17', 'scientific-viewer'})
         for name, archive in audit['archives'].items():
             self.assertFalse(archive['unsafe_member_names'], name)
             self.assertFalse(archive['development_paths_outside_evidence'], name)
             self.assertEqual(len(archive['sha256']), 64, name)
+
+    def test_scientific_review_package_is_portable_and_complete(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        receipt = json.loads((base / 'P6-scientific-project-package-check.json').read_text(encoding='utf-8'))
+        package = ROOT / receipt['package']['path']
+        self.assertEqual(hashlib.sha256(package.read_bytes()).hexdigest(), receipt['package']['sha256'])
+        with zipfile.ZipFile(package) as archive:
+            self.assertIsNone(archive.testzip())
+            names = archive.namelist()
+            self.assertEqual(len(names), receipt['package']['members'])
+            self.assertEqual(sum(name.endswith('.blend') for name in names), 22)
+            self.assertEqual(sum(name.endswith('/project.cbq/manifest.json') for name in names), 22)
+            for name in names:
+                self.assertFalse(name.startswith(('/', '\\')) or '..' in Path(name).parts or '\\' in name)
+                if name.endswith('/project.cbq/manifest.json'):
+                    text = archive.read(name).decode('utf-8')
+                    self.assertNotIn('.blend-analysis', text)
+                    self.assertNotIn('D:\\\\workspace', text)
+                    self.assertNotIn('/mnt/', text)
 
     def test_independent_review_checklist_has_one_unsigned_section_per_case(self):
         path = ROOT / 'examples/tutorials/2.5.0/independent-human-review-checklists.md'
@@ -251,14 +286,13 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(text.count('Reviewer／日期／签名：________________'), 22)
         self.assertTrue(all(case['human_review'] == 'not_run' for case in self.status['cases']))
 
-    def test_retained_artifacts_are_not_promoted_as_final(self):
+    def test_local_artifacts_are_frozen_without_distribution_claim(self):
         audit = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-final-artifact-freeze-audit.json').read_text(encoding='utf-8'))
-        self.assertEqual(audit['status'], 'blocked')
-        self.assertFalse(audit['final_artifact_frozen'])
+        self.assertEqual(audit['status'], 'passed_local_freeze_with_acceptance_blockers')
+        self.assertTrue(audit['final_artifact_frozen'])
         self.assertFalse(audit['published'])
-        self.assertNotEqual(audit['current_source_commit'], audit['retained_artifacts']['extension']['source_commit'])
-        self.assertEqual(audit['source_difference']['extension_changed_files_since_retained_zip'], ['ChemBlender/ui/scientific_view.py'])
-        self.assertTrue(all(len(item['sha256']) == 64 for item in audit['retained_artifacts'].values()))
+        self.assertEqual(audit['current_source_commit'], audit['frozen_local_artifacts']['extension']['source_commit'])
+        self.assertTrue(all(len(item['sha256']) == 64 for item in audit['frozen_local_artifacts'].values()))
 
     def test_p6_full_suite_has_no_failures_or_errors(self):
         receipt = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-full-test-check.json').read_text(encoding='utf-8'))
@@ -288,7 +322,7 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(checkers['discovered_manifest_count'], checkers['executed_manifest_count'])
         self.assertEqual({item['case_id'] for item in checkers['current_applicable']}, {'T01', 'T02', 'T06'})
         self.assertEqual(set(checkers['no_conforming_manifest']), {item['case_id'] for item in self.status['cases']} - {'T01', 'T02', 'T06'})
-        self.assertEqual(receipt['static_gates']['offline_project_downloads'], 'blocked_missing')
+        self.assertEqual(receipt['static_gates']['offline_project_downloads'], 'passed_shared_companion_zip')
         self.assertEqual(receipt['acceptance']['ready_for_human_review'], [])
         self.assertEqual(receipt['acceptance']['human_review'], 'not_run')
         self.assertEqual(receipt['acceptance']['distribution'], 'blocked')
@@ -298,9 +332,10 @@ class TutorialStatusTests(unittest.TestCase):
         report = (ROOT / 'examples/tutorials/2.5.0' / delivery['report']).read_text(encoding='utf-8')
         self.assertEqual(delivery['status'], 'blocked')
         self.assertEqual(delivery['remote_writes'], 'not_authorized')
-        self.assertIn('不具备最终用户验收或分发条件', report)
+        self.assertIn('整体仍为 **Blocked**', report)
+        self.assertIn('当前环境不能产生真实鼠标/键盘 GUI 事件', report)
         self.assertIn('22 个案例的 `human_review` 全部为 `not_run`', report)
-        self.assertIn('`git push`、tag、GitHub Release、PyPI 发布', report)
+        self.assertIn('`git push`、tag、GitHub Release、PyPI', report)
 
     def test_all_cases_have_separate_acceptance_dimensions(self):
         expected = {f'T{index:02d}' for index in range(21)} | {'B01'}
@@ -391,8 +426,8 @@ class TutorialStatusTests(unittest.TestCase):
             (ROOT / 'docs/user/assets/2.5-tutorials/provenance.json').read_text(encoding='utf-8')
         )
         entry = next(item for item in provenance['images'] if item['path'] == public_copy.name)
-        self.assertEqual(receipt['candidate']['extension_sha256'], self.status['current_candidate']['extension_sha256'])
-        self.assertEqual(receipt['candidate']['prepare_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['candidate']['extension_sha256'], self.applicability['from_candidate']['extension_sha256'])
+        self.assertEqual(receipt['candidate']['prepare_sha256'], self.applicability['from_candidate']['prepare_wheel_sha256'])
         self.assertEqual(validator.sha256(public_copy), capture['sha256'])
         self.assertEqual(entry['sha256'], capture['sha256'])
         self.assertEqual(entry['interaction'], 'os_gui')
@@ -404,7 +439,7 @@ class TutorialStatusTests(unittest.TestCase):
         spec_path = base / 'T03.case-spec.json'
         receipt = json.loads((base / 'T03-current-candidate-check.json').read_text(encoding='utf-8'))
         spec = json.loads(spec_path.read_text(encoding='utf-8'))
-        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.applicability['from_candidate']['prepare_wheel_sha256'])
         self.assertEqual(receipt['inputs'], [{key: item[key] for key in ('path', 'sha256')} for item in spec['inputs'][:2]])
         self.assertEqual(receipt['verified']['confirmed_grouping'], 'passed')
         self.assertTrue(receipt['verified']['different_molecules'].startswith('AIN/CFF/TA1'))
@@ -417,7 +452,7 @@ class TutorialStatusTests(unittest.TestCase):
         base = ROOT / 'examples/tutorials/2.5.0'
         case = next(item for item in self.status['cases'] if item['case_id'] == 'T05')
         receipt = json.loads((base / 'T05-current-candidate-check.json').read_text(encoding='utf-8'))
-        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.applicability['from_candidate']['prepare_wheel_sha256'])
         self.assertIn('no FrameSet fabricated', receipt['verified']['pdb_incompatible'])
         self.assertIn("unknown 'un'", receipt['verified']['mol2_partial'])
         self.assertEqual(receipt['verified']['cbq_validation'], 'passed_all_five')
@@ -429,7 +464,7 @@ class TutorialStatusTests(unittest.TestCase):
     def test_t08_historical_environment_blocker_remains_historical(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         receipt = json.loads((base / 'T08-environment-blocker.json').read_text(encoding='utf-8'))
-        self.assertEqual(receipt['current_candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['current_candidate']['prepare_wheel_sha256'], self.applicability['from_candidate']['prepare_wheel_sha256'])
         self.assertFalse(receipt['current_candidate']['availability']['available'])
         self.assertEqual(receipt['existing_wavefunction_cache']['qualification'], 'development_reuse')
         self.assertEqual(receipt['existing_wavefunction_cache']['current_candidate_python_files_changed'], 8)
@@ -584,7 +619,7 @@ class TutorialStatusTests(unittest.TestCase):
         source = ROOT / spec['inputs'][0]['path']
         self.assertEqual(source.stat().st_size, spec['inputs'][0]['bytes'])
         self.assertEqual(validator.sha256(source), spec['inputs'][0]['sha256'])
-        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.applicability['from_candidate']['prepare_wheel_sha256'])
         self.assertEqual(receipt['candidate']['critic2_route_qualification'], 'development_reuse')
         self.assertIn('5 critical points', receipt['verified']['qtaim'])
         self.assertIn('40x40x40', receipt['verified']['nci'])
@@ -610,7 +645,7 @@ class TutorialStatusTests(unittest.TestCase):
             path = ROOT / item['path']
             self.assertEqual(path.stat().st_size, item['bytes'])
             self.assertEqual(validator.sha256(path), item['sha256'])
-        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.applicability['from_candidate']['prepare_wheel_sha256'])
         self.assertEqual(receipt['candidate']['reader_api_version'], '1.0-rc1')
         self.assertIn('22 built-in readers', receipt['verified']['ordinary_import'])
         self.assertFalse(receipt['verified']['historical_blender_extension_installed'])
@@ -692,7 +727,7 @@ class TutorialStatusTests(unittest.TestCase):
         request = ROOT / spec['inputs'][0]['path']
         self.assertEqual(request.stat().st_size, spec['inputs'][0]['bytes'])
         self.assertEqual(validator.sha256(request), spec['inputs'][0]['sha256'])
-        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.applicability['from_candidate']['prepare_wheel_sha256'])
         self.assertIn('available=false', receipt['verified']['capability'])
         self.assertFalse(receipt['verified']['network_request_performed'])
         self.assertFalse(receipt['verified']['positive_fetch_succeeded'])
@@ -729,7 +764,7 @@ class TutorialStatusTests(unittest.TestCase):
         candidate = json.loads((base / 'T07-current-candidate-check.json').read_text(encoding='utf-8'))
         recovery = json.loads((base / 'T07-run010-offline-recovery-check.json').read_text(encoding='utf-8'))
         package = json.loads((base / 'T07-run010-package-check.json').read_text(encoding='utf-8'))
-        self.assertEqual(candidate['accepted_candidate']['extension_sha256'], self.status['current_candidate']['extension_sha256'])
+        self.assertEqual(candidate['accepted_candidate']['extension_sha256'], self.applicability['from_candidate']['extension_sha256'])
         self.assertEqual(recovery['status'], 'passed')
         self.assertEqual(recovery['direct_gui'], 'not_run_for_recovery')
         self.assertEqual(package['classification'], 'review_only')
@@ -743,7 +778,7 @@ class TutorialStatusTests(unittest.TestCase):
         case = next(item for item in self.status['cases'] if item['case_id'] == 'T17')
         current = json.loads((base / 'T17-current-candidate-check.json').read_text(encoding='utf-8'))
         package = json.loads((base / 'T17-run010-package-check.json').read_text(encoding='utf-8'))
-        self.assertEqual(current['current_candidate']['prepare_wheel_sha256'], self.status['current_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(current['current_candidate']['prepare_wheel_sha256'], self.applicability['from_candidate']['prepare_wheel_sha256'])
         self.assertEqual(current['regression']['format_count'], 13)
         self.assertEqual(current['regression']['byte_equal_to_scientifically_checked_run006_outputs'], 'passed_all')
         self.assertEqual(current['historical_gui_candidate']['classification'], 'historical_direct_gui_not_relabelled')
