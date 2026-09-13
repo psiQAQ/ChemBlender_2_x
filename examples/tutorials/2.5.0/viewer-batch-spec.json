@@ -1,0 +1,118 @@
+{
+  "schema_name": "chemblender_tutorial_viewer_batch",
+  "schema_version": 1,
+  "items": [
+    {
+      "case_id": "T03",
+      "name": "T03-conformers",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-011/T03/grouped.cbq",
+      "views": [
+        {"preset": "structure_publication", "bindings": {"structure": {"type": "Structure", "index": 0}}},
+        {"preset": "structure_publication", "bindings": {"structure": {"type": "Structure", "index": 1}}},
+        {"preset": "structure_publication", "bindings": {"structure": {"type": "Structure", "index": 2}}}
+      ]
+    },
+    {
+      "case_id": "T05",
+      "name": "T05-pdb-models",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-011/T05/pdb.cbq",
+      "views": [{"preset": "trajectory", "bindings": {"structure": {"type": "Structure"}, "frames": {"type": "FrameSet", "semantic_role": "coordinates"}}}]
+    },
+    {
+      "case_id": "T05",
+      "name": "T05-pqr-charge",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-011/T05/pqr.cbq",
+      "views": [{"preset": "atomic_scalar", "bindings": {"structure": {"type": "Structure"}, "property": {"type": "AtomicProperty", "semantic_role": "partial_charge"}}}]
+    },
+    {
+      "case_id": "T05",
+      "name": "T05-mol2-hierarchy",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-011/T05/mol2.cbq",
+      "views": [{"preset": "atomic_scalar", "bindings": {"structure": {"type": "Structure"}, "property": {"type": "AtomicProperty", "semantic_role": "partial_charge"}}}]
+    },
+    {
+      "case_id": "T08",
+      "name": "T08-fchk-homo",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-012/T08/water-fchk-homo.cbq",
+      "views": [{"preset": "signed_isosurface", "bindings": {"grid": {"type": "Grid3D", "semantic_role": "molecular_orbital"}}, "settings": {"isovalue": 0.04}}]
+    },
+    {
+      "case_id": "T08",
+      "name": "T08-molden-homo",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-012/T08/water-molden-homo.cbq",
+      "views": [{"preset": "signed_isosurface", "bindings": {"grid": {"type": "Grid3D", "semantic_role": "molecular_orbital"}}, "settings": {"isovalue": 0.04}}]
+    },
+    {
+      "case_id": "T09",
+      "name": "T09-spin-density",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-012/T09/ch3-spin-density.cbq",
+      "views": [{"preset": "signed_isosurface", "bindings": {"grid": {"type": "Grid3D", "semantic_role": "spin_density"}}}]
+    },
+    {
+      "case_id": "T10",
+      "name": "T10-density-esp",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-012/T10/water-density-esp.cbq",
+      "views": [{"preset": "property_on_surface", "bindings": {"surface_grid": {"type": "Grid3D", "semantic_role": "electron_density"}, "property_grid": {"type": "Grid3D", "semantic_role": "electrostatic_potential"}}, "settings": {"surface_isovalue": 0.03, "color_min": -0.1, "color_max": 0.1}}]
+    },
+    {
+      "case_id": "T11",
+      "name": "T11-vibration",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-012/T11/gaussian-ir.cbq",
+      "views": [{"preset": "vibration_mode", "bindings": {"structure": {"type": "Structure"}, "modes": {"type": "VibrationalModeSet", "semantic_role": "vibrational_modes"}}, "settings": {"selection_index": 1}}]
+    },
+    {
+      "case_id": "T12",
+      "name": "T12-excited-structure",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-012/T12/gaussian16-uvvis.cbq",
+      "views": [{"preset": "structure_publication", "bindings": {"structure": {"type": "Structure"}}}]
+    },
+    {
+      "case_id": "T13",
+      "name": "T13-bands",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-012/T13/silicon-bands.cbq",
+      "views": [{"preset": "band_structure", "bindings": {"band": {"type": "BandStructure", "semantic_role": "band_structure"}}, "settings": {"energy_reference": "absolute"}}]
+    },
+    {
+      "case_id": "T13",
+      "name": "T13-dos",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-012/T13/silicon-dos.cbq",
+      "views": [{"preset": "density_of_states", "bindings": {"dos": {"type": "DensityOfStates", "semantic_role": "density_of_states"}}, "settings": {"energy_reference": "absolute"}}]
+    },
+    {
+      "case_id": "T14",
+      "name": "T14-phonon",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-012/T14/nacl-phonon.cbq",
+      "views": [{"preset": "phonon_mode", "bindings": {"structure": {"type": "Structure"}, "modes": {"type": "PhononModeSet", "semantic_role": "phonon_modes"}}, "settings": {"qpoint_index": 1, "selection_index": 0, "repetitions": [2, 1, 1]}}]
+    },
+    {
+      "case_id": "T15",
+      "name": "T15-qtaim",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-011/T15/qtaim.cbq",
+      "views": [{"preset": "topology_graph", "bindings": {"graph": {"type": "TopologyGraph", "semantic_role": "topology_graph", "index": 1}}}]
+    },
+    {
+      "case_id": "T15",
+      "name": "T15-nci",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-011/T15/nci-40.cbq",
+      "views": [{"preset": "nci_surface", "bindings": {"surface_grid": {"type": "Grid3D", "semantic_role": "reduced_density_gradient"}, "property_grid": {"type": "Grid3D", "semantic_role": "sign_lambda2_rho"}}, "settings": {"pairing_confirmed": true}}]
+    },
+    {
+      "case_id": "T16",
+      "name": "T16-fermi",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-012/T16/srvo3-fermi.cbq",
+      "views": [{"preset": "fermi_surface", "bindings": {"surface": {"type": "FermiSurfaceMesh", "semantic_role": "fermi_surface"}}}]
+    },
+    {
+      "case_id": "T19",
+      "name": "T19-reader-api",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-011/T19/simplecoords.cbq",
+      "views": [{"preset": "structure_publication", "bindings": {"structure": {"type": "Structure"}}}]
+    },
+    {
+      "case_id": "T20",
+      "name": "T20-qcschema-gradient",
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-012/T20/isolated-computed.cbq",
+      "views": [{"preset": "atomic_vector", "bindings": {"structure": {"type": "Structure", "index": 1}, "property": {"type": "AtomicProperty", "semantic_role": "gradient"}}}]
+    }
+  ]
+}

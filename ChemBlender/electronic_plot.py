@@ -63,8 +63,10 @@ def create_band_structure_plot(
     if not isinstance(axes, bool):
         raise TypeError("axes must be a bool")
     target = collection or bpy.context.collection
-    distances = dataset.distances.values
-    energies = dataset.data.values
+    import numpy
+
+    distances = numpy.asarray(dataset.distances.values)
+    energies = numpy.asarray(dataset.data.values)
     branches = tuple((branch.start_index, branch.end_index) for branch in dataset.branches)
     made, materials = [], []
     try:
@@ -144,11 +146,12 @@ def create_dos_plot(
             materials.append(material)
         obj = _new_curve(name, target, radius=line_radius, material=material)
         made.append(obj)
+        energies = numpy.asarray(dataset.energies.values)
         x_range, y_range = _plot_frame(obj, (min(0., plotted.min()), max(0., plotted.max())),
-            _energy_plot_range((dataset.energies.values.min() - shift, dataset.energies.values.max() - shift), energy_limits))
+            _energy_plot_range((energies.min() - shift, energies.max() - shift), energy_limits))
         for values in plotted:
             _poly_spline(obj.data, tuple(_plot_position(density, energy - shift, x_range, y_range)
-                for density, energy in zip(values, dataset.energies.values)))
+                for density, energy in zip(values, energies)))
         if axes:
             density_unit = "states / (eV Å³)" if dataset.data.unit.endswith("per_cubic_angstrom") else "states / eV"
             selection = ("Total DOS" if selected_atoms is None else
