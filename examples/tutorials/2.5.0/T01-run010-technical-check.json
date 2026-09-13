@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "case_id": "T01",
+  "run_id": "run-010/T01",
+  "status": "ready_for_human_review",
+  "candidate": {
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3"
+  },
+  "manifest": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T01/run-manifest.json",
+    "sha256": "4b83ea34ab466fe050db5f5cc5a1e229efe9fb7c0e3a41e3dd1da418240516e9"
+  },
+  "execution_supplement": {
+    "path": "examples/tutorials/2.5.0/T01.current-execution-supplement.json",
+    "sha256": "8ffe3feb09db502d9a9787eac6446644a040191aa5f283be6577af24de5be54c",
+    "covered_steps": ["s01", "s02", "s03", "s04", "s05", "s06", "s07"],
+    "classification": "authorized_mcp_replay_not_direct_gui"
+  },
+  "current_visible_state": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T01/gui/current-final-aspirin.png",
+    "sha256": "bbcd933cc545ab0838240e1f29bdf21717ee8e3b9f7368eb11c887992df6b630",
+    "classification": "native_screen_capture_not_direct_gui_action_proof"
+  },
+  "retained_failed_capture": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T01/gui/failed-console-capture.png",
+    "sha256": "fc36b312ca108e321162887d5da94d06a0b60542add5000382da7c3e782ee1c5",
+    "accepted": false,
+    "reason": "The foreground check selected the Blender launch console instead of the 3D window."
+  },
+  "checker": {
+    "exit_code": 2,
+    "verdict": "incomplete",
+    "integrity_status": "passed",
+    "technical_status": "passed",
+    "independent_review_status": "incomplete",
+    "acceptance_status": "incomplete"
+  },
+  "human_review": "not_run"
+}

@@ -6,19 +6,19 @@
   "rule": "Archive member names are package-relative. Development-cache paths may occur only in evidence validation appendices.",
   "archives": {
     "T01": {
-      "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T01-review-v3.zip",
-      "sha256": "bb397396147cc4ab14ac90eb3526a58366a2cdf5d9683fe518c6226edd9b0bb2",
-      "entry_count": 20,
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T01-review-v4.zip",
+      "sha256": "61597978145b707d92ebd26a2f1e53430d6575f83d5c2b369aa8efd47c933cb8",
+      "entry_count": 24,
       "unsafe_member_names": [],
-      "development_path_members": 1,
+      "development_path_members": 2,
       "development_paths_outside_evidence": []
     },
     "T02-current": {
-      "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T02-current-review-addendum-v2.zip",
-      "sha256": "e149663c8a0a567c00a97c541ad21409d81505421af17dd28d2c0fbe8543b405",
-      "entry_count": 28,
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T02-current-review-addendum-v3.zip",
+      "sha256": "68a7188cffd8c62e694e246fa9b2b32c3e3211ec28f9fb41096ae0f6cdebea97",
+      "entry_count": 31,
       "unsafe_member_names": [],
-      "development_path_members": 1,
+      "development_path_members": 2,
       "development_paths_outside_evidence": []
     },
     "T02-historical": {

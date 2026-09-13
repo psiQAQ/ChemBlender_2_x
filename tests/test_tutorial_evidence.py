@@ -334,7 +334,7 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual({item['case_id'] for item in checkers['current_applicable']}, {'T01', 'T02', 'T03', 'T05', 'T06'})
         self.assertEqual(set(checkers['no_conforming_manifest']), {item['case_id'] for item in self.status['cases']} - {'T01', 'T02', 'T03', 'T05', 'T06'})
         self.assertEqual(receipt['static_gates']['offline_project_downloads'], 'passed_shared_companion_zip')
-        self.assertEqual(receipt['acceptance']['ready_for_human_review'], ['T03', 'T05'])
+        self.assertEqual(receipt['acceptance']['ready_for_human_review'], ['T01', 'T02', 'T03', 'T05'])
         self.assertEqual(receipt['acceptance']['human_review'], 'not_run')
         self.assertEqual(receipt['acceptance']['distribution'], 'blocked')
 
@@ -868,20 +868,24 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(case['render'], 'not_applicable')
         self.assertEqual(case['human_review'], 'not_run')
 
-    def test_p0_checker_summary_matches_blocked_statuses(self):
+    def test_p0_checker_summary_matches_current_statuses(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         summary = json.loads((base / 'P4-p0-checker-summary.json').read_text(encoding='utf-8'))
         p0 = {item['case_id']: item for item in summary['cases']}
         self.assertEqual(set(p0), {'T00', 'T01', 'T02', 'T04', 'T06', 'T07', 'T17', 'T18'})
-        self.assertEqual(set(summary['blocked']), set(p0))
-        self.assertFalse(summary['ready_for_human_review'])
+        ready = {'T01', 'T02'}
+        self.assertEqual(set(summary['blocked']), set(p0) - ready)
+        self.assertEqual(set(summary['ready_for_human_review']), ready)
         cases = {item['case_id']: item for item in self.status['cases']}
         for case_id, result in p0.items():
-            self.assertEqual(result['classification'], 'blocked', case_id)
-            self.assertEqual(cases[case_id]['status'], 'blocked', case_id)
+            expected = 'ready_for_human_review' if case_id in ready else 'blocked'
+            self.assertEqual(result['classification'], expected, case_id)
+            self.assertEqual(cases[case_id]['status'], expected, case_id)
             self.assertEqual(cases[case_id]['human_review'], 'not_run', case_id)
         self.assertEqual(p0['T01']['integrity_status'], 'passed')
         self.assertEqual(p0['T02']['integrity_status'], 'passed')
+        self.assertEqual(p0['T01']['technical_status'], 'passed')
+        self.assertEqual(p0['T02']['technical_status'], 'passed')
         self.assertEqual(p0['T06']['verdict'], 'invalid')
 
     def test_t18_current_audit_preserves_gui_and_native_boundaries(self):

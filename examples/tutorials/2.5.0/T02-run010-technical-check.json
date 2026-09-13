@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "case_id": "T02",
+  "run_id": "run-010/T02",
+  "status": "ready_for_human_review",
+  "candidate": {
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3"
+  },
+  "manifest": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T02/run-manifest.json",
+    "sha256": "3177b4dd97860cedfe83a2ee48c456f97d32f984badda71b995a552839798a28"
+  },
+  "execution_supplement": {
+    "path": "examples/tutorials/2.5.0/T02.current-execution-supplement.json",
+    "sha256": "8ab113ad7ae4109a1167eee2ad2f7dde12df15ca88355cc5ff652ce91b40f29a",
+    "covered_steps": ["s01", "s02", "s03", "s04", "s05", "s06", "s07"],
+    "classification": "authorized_mcp_replay_not_direct_gui"
+  },
+  "current_visible_state": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T02/gui/current-final-ethanol.png",
+    "sha256": "3361ee1381131511b886e0c4c95ce856a60031f297a4dbb985b8b7b09d8360ab",
+    "classification": "native_screen_capture_not_direct_gui_action_proof"
+  },
+  "checker": {
+    "exit_code": 2,
+    "verdict": "incomplete",
+    "integrity_status": "passed",
+    "technical_status": "passed",
+    "independent_review_status": "incomplete",
+    "acceptance_status": "incomplete"
+  },
+  "human_review": "not_run"
+}

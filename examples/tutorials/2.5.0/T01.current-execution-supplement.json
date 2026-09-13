@@ -10,6 +10,36 @@
   },
   "replays": [
     {
+      "step_id": "s01",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-003/T01",
+        "source_extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374",
+        "source_manifest_sha256": "273493d2a9a6ffe7b48ddaf51e836f763ceab6802e36da310cf60dd037835ec5",
+        "events_sha256": "af41ff24f9fec89b3088037a95e6e9f8970d8cb2c675a4baca5f83ef308baf45",
+        "event_id": "e12",
+        "before_artifact_sha256": "126e353d8d5995423a02aca3759ff17eb2e5898b1ab71db717a876c341f945bd",
+        "after_artifact_sha256": "8ef8f7fff2559a1e8af7bc7e0aca6d3edcc8dd92496ac7644c225cd98e76fb58"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": [
+          "input_hash",
+          "convert",
+          "validate",
+          "atom_mapping"
+        ]
+      },
+      "operator_receipt": {
+        "status": "passed",
+        "artifact_id": "T01-current-candidate-check",
+        "sha256": "10383f4496ff377ee40561bb29a74daa9391c4a6c55e97421f27fb84d474793b"
+      }
+    },
+    {
       "step_id": "s02",
       "interaction": "authorized_mcp_replay",
       "classification": "replay_not_direct_gui",

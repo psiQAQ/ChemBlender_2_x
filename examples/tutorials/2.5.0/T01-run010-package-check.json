@@ -3,22 +3,26 @@
   "case_id": "T01",
   "run_id": "run-010/T01",
   "status": "passed",
-  "classification": "review_only",
+  "classification": "review_only_ready_for_human_review",
   "candidate": {
     "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
     "prepare_wheel_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a"
   },
   "archive": {
-    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T01-review-v3.zip",
-    "sha256": "bb397396147cc4ab14ac90eb3526a58366a2cdf5d9683fe518c6226edd9b0bb2",
-    "size_bytes": 3812176,
-    "file_count": 20,
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T01-review-v4.zip",
+    "sha256": "61597978145b707d92ebd26a2f1e53430d6575f83d5c2b369aa8efd47c933cb8",
+    "size_bytes": 4663579,
+    "file_count": 24,
     "crc_status": "passed",
     "relative_paths_only": true
   },
   "included_evidence": {
     "current_candidate_receipt_sha256": "10383f4496ff377ee40561bb29a74daa9391c4a6c55e97421f27fb84d474793b",
-    "current_execution_supplement_sha256": "a61110921bddc4e11aefb05a0ff9dfb7d4aff121f0f6f0b4d52689893db0515a",
+    "current_execution_supplement_sha256": "8ffe3feb09db502d9a9787eac6446644a040191aa5f283be6577af24de5be54c",
+    "current_manifest_sha256": "4b83ea34ab466fe050db5f5cc5a1e229efe9fb7c0e3a41e3dd1da418240516e9",
+    "technical_check_sha256": "cc2ed564589efcbb0a19854787ec3935e73ea32ea23e3f217f8e41a4bf89cb42",
+    "current_visible_state_sha256": "bbcd933cc545ab0838240e1f29bdf21717ee8e3b9f7368eb11c887992df6b630",
+    "retained_failed_capture_sha256": "fc36b312ca108e321162887d5da94d06a0b60542add5000382da7c3e782ee1c5",
     "input_sha256": "32bd93a45508c66d28205bfd423068a41434022a7cc7c312cb0a983c17178bf4",
     "blend_sha256": "66923230a80cc5e6a8e01b86ac48c2d90b73b6a8b44a54dc598679bf6de4709e",
     "manifest_sha256": "9325f00af261aa8484417687038a0b6ec78c5cc2506f1779aa99b45b6b114f93",
@@ -39,6 +43,7 @@
   "limitations": [
     "The archive is a local review package, not a distribution artifact.",
     "Direct GUI evidence is historical and remains separately classified through the execution supplement.",
-    "Independent human review is not run."
+    "The failed console-window capture is retained under failures/ and is excluded from acceptance artifacts.",
+    "The current checker reports integrity passed and technical passed; independent human review is not run."
   ]
 }

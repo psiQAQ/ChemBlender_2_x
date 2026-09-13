@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "reviewed_commit": "c1fa7584f56d6df387617406958065573e9b56c1",
+  "reviewed_commit": "f7baaa198571474e776dc5570e1694955c58584f",
   "current_candidate": {
     "source_commit": "9b972a5cc3a7aa04c20ebfd6985bc5199a20ac39",
     "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
@@ -59,30 +59,32 @@
     {
       "case_id": "T01",
       "priority": "P0",
-      "status": "blocked",
-      "status_reason": "Current-candidate evidence and review package are present, but the available run-003 checker result is incomplete (integrity passed; technical and independent review incomplete).",
+      "status": "ready_for_human_review",
+      "status_reason": "The current run-010 manifest passes integrity and technical gates using the authorized historical GUI replay chain plus a separately classified current visible-state capture; independent human review remains incomplete.",
       "run": "run-010/T01",
       "candidate_scope": "current_candidate_with_authorized_historical_gui_reuse",
-      "technical_status": "incomplete",
+      "technical_status": "passed",
       "scientific_processing": "passed",
       "direct_gui": "historical_passed",
       "authorized_replay": "passed",
+      "current_gui_state": "passed_not_direct_action_proof",
       "render": "passed",
       "recovery": "passed",
       "tutorial": "passed",
       "review_package": {
-        "status": "review_only",
-        "file": ".blend-analysis/2.5-real-user-tutorials/run-010/T01-review-v3.zip",
-        "sha256": "bb397396147cc4ab14ac90eb3526a58366a2cdf5d9683fe518c6226edd9b0bb2"
+        "status": "review_only_ready_for_human_review",
+        "file": ".blend-analysis/2.5-real-user-tutorials/run-010/T01-review-v4.zip",
+        "sha256": "61597978145b707d92ebd26a2f1e53430d6575f83d5c2b369aa8efd47c933cb8"
       },
       "human_review": "not_run",
       "distribution": "blocked",
       "evidence_refs": [
-        ".blend-analysis/2.5-real-user-tutorials/run-003/T01/run-manifest.json",
+        ".blend-analysis/2.5-real-user-tutorials/run-010/T01/run-manifest.json",
         "examples/tutorials/2.5.0/T01.case-spec.json",
         "examples/tutorials/2.5.0/T01.execution-supplement.json",
         "examples/tutorials/2.5.0/T01.current-execution-supplement.json",
         "examples/tutorials/2.5.0/T01-current-candidate-check.json",
+        "examples/tutorials/2.5.0/T01-run010-technical-check.json",
         "examples/tutorials/2.5.0/T01-run010-package-check.json",
         "examples/tutorials/2.5.0/P4-p0-checker-summary.json"
       ]
@@ -90,14 +92,15 @@
     {
       "case_id": "T02",
       "priority": "P0",
-      "status": "blocked",
-      "status_reason": "Current-candidate science/render/recovery evidence is present, but the available run-003 checker result is incomplete (integrity passed; render check and independent review incomplete).",
+      "status": "ready_for_human_review",
+      "status_reason": "The current run-010 manifest passes integrity and technical gates using the authorized historical GUI replay chain plus a separately classified current visible-state capture; independent human review remains incomplete.",
       "run": "run-010/T02",
       "candidate_scope": "current_candidate_with_authorized_historical_gui_reuse",
-      "technical_status": "incomplete",
+      "technical_status": "passed",
       "scientific_processing": "passed",
       "direct_gui": "historical_passed",
       "authorized_replay": "passed",
+      "current_gui_state": "passed_not_direct_action_proof",
       "render": "passed",
       "recovery": "passed",
       "tutorial": "passed",
@@ -105,16 +108,17 @@
         "status": "review_only",
         "historical_base_file": ".blend-analysis/2.5-real-user-tutorials/run-003/T02-review.zip",
         "historical_base_sha256": "39c659f8e42255209d19adc3425cbe977be19128e547f0ea3dd21d438b51d99e",
-        "current_addendum_file": ".blend-analysis/2.5-real-user-tutorials/run-010/T02-current-review-addendum-v2.zip",
-        "current_addendum_sha256": "e149663c8a0a567c00a97c541ad21409d81505421af17dd28d2c0fbe8543b405"
+        "current_addendum_file": ".blend-analysis/2.5-real-user-tutorials/run-010/T02-current-review-addendum-v3.zip",
+        "current_addendum_sha256": "68a7188cffd8c62e694e246fa9b2b32c3e3211ec28f9fb41096ae0f6cdebea97"
       },
       "human_review": "not_run",
       "distribution": "blocked",
       "evidence_refs": [
-        ".blend-analysis/2.5-real-user-tutorials/run-003/T02/run-manifest.json",
+        ".blend-analysis/2.5-real-user-tutorials/run-010/T02/run-manifest.json",
         "examples/tutorials/2.5.0/T02.case-spec.json",
         "examples/tutorials/2.5.0/T02.current-execution-supplement.json",
         "examples/tutorials/2.5.0/T02-current-candidate-check.json",
+        "examples/tutorials/2.5.0/T02-run010-technical-check.json",
         "examples/tutorials/2.5.0/T02-run010-package-check.json",
         "examples/tutorials/2.5.0/P4-p0-checker-summary.json"
       ]
@@ -134,7 +138,7 @@
       "recovery": "passed_source_unavailable_cold_rebuild",
       "tutorial": "passed_bilingual_with_current_direct_gui",
       "review_package": {
-        "status": "review_only",
+        "status": "review_only_ready_for_human_review",
         "file": ".blend-analysis/2.5-real-user-tutorials/run-015/T03/T03-review.zip",
         "sha256": "07b0cc00f977820111cc6419a76feae258e0b19763bb77ce61e5c6c09c2300d5",
         "members": 39

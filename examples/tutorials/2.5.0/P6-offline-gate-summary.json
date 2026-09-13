@@ -5,27 +5,27 @@
   "source_commit": "58dc1e07824cc42c273dd3a870d7e8ccdacc7d49",
   "status": "complete_with_blockers",
   "case_checkers": {
-    "discovered_manifest_count": 7,
-    "executed_manifest_count": 7,
+    "discovered_manifest_count": 9,
+    "executed_manifest_count": 9,
     "current_applicable": [
       {
         "case_id": "T01",
-        "manifest": ".blend-analysis/2.5-real-user-tutorials/run-003/T01/run-manifest.json",
-        "manifest_sha256": "273493d2a9a6ffe7b48ddaf51e836f763ceab6802e36da310cf60dd037835ec5",
+        "manifest": ".blend-analysis/2.5-real-user-tutorials/run-010/T01/run-manifest.json",
+        "manifest_sha256": "4b83ea34ab466fe050db5f5cc5a1e229efe9fb7c0e3a41e3dd1da418240516e9",
         "exit_code": 2,
         "verdict": "incomplete",
         "integrity_status": "passed",
-        "technical_status": "incomplete",
+        "technical_status": "passed",
         "independent_review_status": "incomplete"
       },
       {
         "case_id": "T02",
-        "manifest": ".blend-analysis/2.5-real-user-tutorials/run-003/T02/run-manifest.json",
-        "manifest_sha256": "8c458712aeb82dc53d0acb79dce8f5019dc3ddd0eea17d8210fe483cf0ff102d",
+        "manifest": ".blend-analysis/2.5-real-user-tutorials/run-010/T02/run-manifest.json",
+        "manifest_sha256": "3177b4dd97860cedfe83a2ee48c456f97d32f984badda71b995a552839798a28",
         "exit_code": 2,
         "verdict": "incomplete",
         "integrity_status": "passed",
-        "technical_status": "incomplete",
+        "technical_status": "passed",
         "independent_review_status": "incomplete"
       },
       {
@@ -52,7 +52,7 @@
         "case_id": "T05",
         "manifest": ".blend-analysis/2.5-real-user-tutorials/run-016/T05/run-manifest.json",
         "manifest_sha256": "5a8eb7dafb7fbfe18938867e1b5cf2fb9a7951cee2ba600794cb69ccb36056d8",
-        "exit_code": 1,
+        "exit_code": 2,
         "verdict": "incomplete",
         "integrity_status": "passed",
         "technical_status": "passed",
@@ -100,17 +100,17 @@
   "execution_supplements": {
     "T01": {
       "path": "examples/tutorials/2.5.0/T01.current-execution-supplement.json",
-      "sha256": "a61110921bddc4e11aefb05a0ff9dfb7d4aff121f0f6f0b4d52689893db0515a",
+      "sha256": "8ffe3feb09db502d9a9787eac6446644a040191aa5f283be6577af24de5be54c",
       "target_run": "run-010/T01",
-      "target_manifest": "missing",
-      "run_003_pairing": "invalid_as_expected"
+      "target_manifest": "passed_technical",
+      "run_003_pairing": "retained_historical_not_current"
     },
     "T02": {
       "path": "examples/tutorials/2.5.0/T02.current-execution-supplement.json",
       "sha256": "8ab113ad7ae4109a1167eee2ad2f7dde12df15ca88355cc5ff652ce91b40f29a",
       "target_run": "run-010/T02",
-      "target_manifest": "missing",
-      "run_003_pairing": "invalid_as_expected"
+      "target_manifest": "passed_technical",
+      "run_003_pairing": "retained_historical_not_current"
     }
   },
   "static_gates": {
@@ -135,9 +135,9 @@
     "planning_check": "passed_with_unfinished_items"
   },
   "acceptance": {
-    "ready_for_human_review": ["T03", "T05"],
+    "ready_for_human_review": ["T01", "T02", "T03", "T05"],
     "human_review": "not_run",
     "distribution": "blocked",
-    "reason": "T03 and T05 passed their technical checkers and are ready for independent review. P0 checker inputs remain missing, incomplete or invalid; other P1/P2 direct-GUI events and conforming manifests remain incomplete; all 22 independent reviews remain unsigned. Portable project downloads and current-source Blender qualification passed."
+    "reason": "T01, T02, T03 and T05 passed their technical checkers and are ready for independent review. Remaining P0 checker inputs are missing or invalid; other P1/P2 direct-GUI events and conforming manifests remain incomplete; all 22 independent reviews remain unsigned. Portable project downloads and current-source Blender qualification passed."
   }
 }

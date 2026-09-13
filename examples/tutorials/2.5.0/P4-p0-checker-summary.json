@@ -1,7 +1,7 @@
 {
   "plan_id": "2026-09-10-2.5-real-user-tutorials",
-  "phase": "P4.10",
-  "status": "complete_with_blocked_cases",
+  "phase": "P4.12",
+  "status": "in_progress",
   "checker": "examples/tutorials/2.5.0/validate_evidence.py",
   "cases": [
     {
@@ -16,12 +16,12 @@
       "exit_code": 2,
       "verdict": "incomplete",
       "integrity_status": "passed",
-      "technical_status": "incomplete",
+      "technical_status": "passed",
       "independent_review_status": "incomplete",
       "acceptance_status": "incomplete",
-      "raw_output": ".blend-analysis/2.5-real-user-tutorials/run-010/P4.10-checkers/T01.json",
-      "raw_output_sha256": "92694abe20b2cb1d78fc04a64fb2d8fd1e035bcbc8e584e35dbe9ee06f4cdef6",
-      "classification": "blocked"
+      "raw_output": ".blend-analysis/2.5-real-user-tutorials/run-010/P4.12-checkers/T01.json",
+      "raw_output_sha256": "292e82a10e5f4e678f516dcf07396a1e630908f56e6fce7600dce6f27a8f05e0",
+      "classification": "ready_for_human_review"
     },
     {
       "case_id": "T02",
@@ -29,12 +29,12 @@
       "exit_code": 2,
       "verdict": "incomplete",
       "integrity_status": "passed",
-      "technical_status": "incomplete",
+      "technical_status": "passed",
       "independent_review_status": "incomplete",
       "acceptance_status": "incomplete",
-      "raw_output": ".blend-analysis/2.5-real-user-tutorials/run-010/P4.10-checkers/T02.json",
-      "raw_output_sha256": "21a1e9c24f7bc17f8429b4ee1ef54749e9d5c6b9b339654d4f7be532024b9142",
-      "classification": "blocked"
+      "raw_output": ".blend-analysis/2.5-real-user-tutorials/run-010/P4.12-checkers/T02.json",
+      "raw_output_sha256": "85360e35bbaa9c3b58fdf598fa179c1fcf011ce7cba32306873590da2cb2c2b0",
+      "classification": "ready_for_human_review"
     },
     {
       "case_id": "T04",
@@ -75,11 +75,12 @@
       "reason": "No conforming run-manifest.json exists; current-candidate direct GUI legacy restore/relink and the second clean profile are covered by scoped receipts but are not a substitute for the manifest."
     }
   ],
-  "ready_for_human_review": [],
+  "ready_for_human_review": [
+    "T01",
+    "T02"
+  ],
   "blocked": [
     "T00",
-    "T01",
-    "T02",
     "T04",
     "T06",
     "T07",
