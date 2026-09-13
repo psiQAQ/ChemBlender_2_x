@@ -344,7 +344,8 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(delivery['status'], 'blocked')
         self.assertEqual(delivery['remote_writes'], 'not_authorized')
         self.assertIn('整体仍为 **Blocked**', report)
-        self.assertIn('当前环境不能产生真实鼠标/键盘 GUI 事件', report)
+        self.assertIn('当前环境已能产生并核验真实鼠标/键盘 GUI 事件', report)
+        self.assertIn('T18 legacy migration/relink 仍缺直接 GUI 录制', report)
         self.assertIn('22 个案例的 `human_review` 全部为 `not_run`', report)
         self.assertIn('`git push`、tag、GitHub Release、PyPI', report)
 
@@ -766,7 +767,16 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(receipt['sample_frames'], spec['reference']['sample_frames'])
         self.assertTrue(receipt['scientific_arrays_unchanged'])
         self.assertFalse(receipt['viewer_forbidden_modules_loaded'])
-        self.assertEqual(receipt['direct_gui'], 'blocked_for_new_panel_capture')
+        self.assertEqual(receipt['direct_gui'], 'passed_current_candidate')
+        direct = json.loads((base / 'T06-run013-direct-gui-check.json').read_text(encoding='utf-8'))
+        for frame, expected in spec['reference']['sample_frames'].items():
+            actual = direct['sample_frames'][frame]
+            self.assertEqual({key: actual[key] for key in expected}, expected)
+            capture = ROOT / actual['tutorial_capture']
+            self.assertEqual(capture.stat().st_size, actual['bytes'])
+            self.assertEqual(validator.sha256(capture), actual['sha256'])
+        self.assertEqual(direct['verification']['values_match_frozen_case_spec'], 'passed_all_3')
+        self.assertEqual(direct['verification']['blender_processes_after'], 0)
         self.assertEqual(receipt['human_review'], 'not_run')
 
     def test_t07_recovery_and_review_package_remain_separately_classified(self):

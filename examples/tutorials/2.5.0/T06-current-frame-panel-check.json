@@ -1,7 +1,7 @@
 {
   "case_id": "T06",
-  "status": "passed_product_gap_only",
-  "scope": "P4.6 read-only current-frame scalar panel and installed-candidate regression; direct GUI capture and human review remain separate.",
+  "status": "passed_product_and_direct_gui_scoped",
+  "scope": "P4.6 read-only current-frame scalar panel, installed-candidate regression and P4.5 current direct GUI capture; human review and the invalid historical run manifest remain separate.",
   "implementation": {
     "source": "ChemBlender/ui/scientific_view.py",
     "source_sha256": "95f08dc651135fbce6198807ddd64f8b1ab819e9fed25cd0e3422bb967c95482",
@@ -13,15 +13,15 @@
     ]
   },
   "test_candidate": {
-    "extension_sha256": "2637ce7ccc846854a280ebe56ea91f858a29591aa6614cc53cd92ea28bb3ea3f",
-    "bytes": 2831878,
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "bytes": 2831887,
     "members": 109,
     "crc": "passed",
     "safe_relative_paths": true,
     "duplicate_members": 0,
     "vendored_cbq_core": true,
     "wheel_files": 0,
-    "promotion": "pending Phase 4 commit and consolidated candidate mapping"
+    "promotion": "final local candidate"
   },
   "verification": {
     "unit_test": "tests.test_trajectory_scene_preset passed 4/4",
@@ -56,6 +56,7 @@
     "status": "rejected",
     "reason": "Direct native build skipped the repository staging step and failed isolated installation with No module named 'cbq_core'. The artifact was not promoted."
   },
-  "direct_gui": "blocked_for_new_panel_capture",
+  "direct_gui": "passed_current_candidate",
+  "direct_gui_receipt": "examples/tutorials/2.5.0/T06-run013-direct-gui-check.json",
   "human_review": "not_run"
 }

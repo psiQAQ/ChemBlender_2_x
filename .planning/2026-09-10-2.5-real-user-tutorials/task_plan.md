@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 6 — 教程收口与本地交付；Phase 4/5 的明确 Blocked 项并行保留
-- Next Step: 由具备 OS GUI 输入能力的复做者录制当前直接 GUI，并由独立复做者按清单签署 human_review；Agent 保持这些项目未勾选
+- Next Step: P4.9 使用当前候选直录 T18 legacy migration/relink；随后逐案补 Phase 5 当前直接 GUI 和 conforming manifests。独立复做者签署 human_review 仍单独保留
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -77,7 +77,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 - [x] P4.2 T01：完成当前候选适用性、execution supplement、剩余缓存恢复、正文单一路线和 review package。
 - [x] P4.3 T02：复用已验证产品修复，补当前候选适用性与缓存恢复；无新失败不重复改产品。
 - [x] P4.4 T04：补可读侧栏截图、准确手动步骤和当前候选映射；保留 CIF/POSCAR/ASE、渲染、移动与重建证据。
-- [ ] P4.5 T06：补帧 0/15/31 的 energy/source index 可见检查、实际 UI 录制、手动渲染/节点步骤和完整恢复。Blocked：新标量行属于新面板，仍需真实 GUI 截图；当前会话无 OS GUI 操作工具。
+- [x] P4.5 T06：补帧 0/15/31 的 energy/source index 可见检查、实际 UI 录制、手动渲染/节点步骤和完整恢复。
 - [x] P4.6 若现有 UI 无法显示 T06 冻结规格要求的逐帧标量，复用现有 FrameProperty 数据，在现有面板增加最小只读当前帧值，不增加新数据模型；补单元测试、构建和受影响案例复验。
 - [x] P4.7 T07：补 sampling-layout 冷重开、volume/remaining render、当前候选 GUI、真实缺源/缺处理器恢复、VASP 适用范围和 review package。
 - [x] P4.8 T17：核对 13 格式正向导出、loss gate、科学字段比较、GUI 回执、项目交接和当前候选回归；保留正确拒绝案例。

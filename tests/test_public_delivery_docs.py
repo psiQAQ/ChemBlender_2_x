@@ -36,7 +36,7 @@ class PublicDeliveryDocsTests(unittest.TestCase):
             self.assertEqual(manifest["remote_resources"], 0)
             self.assertEqual(manifest["missing_resources"], 0)
             self.assertGreater(manifest["link_count"], 5)
-            self.assertEqual(manifest["image_count"], 55)
+            self.assertEqual(manifest["image_count"], 58)
             self.assertEqual(
                 set(manifest["image_sha256"]),
                 {"docs/user/assets/2.5.0/blender-viewer.png", *(
@@ -48,7 +48,8 @@ class PublicDeliveryDocsTests(unittest.TestCase):
                         'ethanol-generated.jpg', 'ethanol-energy.jpg', 'ethanol-apply.jpg',
                         'crystal-cocrystal-run009.png', 'crystal-diamond-run009.png', 'crystal-sidebar-run009.jpg', 'crystal-cocrystal.png', 'crystal-diamond.png', 'crystal-cell-view.jpg',
                         'export-preview.jpg', 'export-rejected.jpg', 'export-success.jpg', 'grid-li-density.png', 'grid-derive-success.jpg', 'grid-derive-rejected.jpg', 'grid-prepare-inspect.jpg', 'grid-prepare-convert.jpg', 'grid-signed-volume.png', 'grid-sampling.png', 'grid-difference-refined.png', 'grid-primary-surface.jpg', 'grid-signed-surface.jpg',
-                        'trajectory-refined-run009.png', 'trajectory-apply-frame.jpg', 'trajectory-prepare-inspect.jpg', 'trajectory-prepare-convert.jpg', 'trajectory-frame0.jpg', 'trajectory-frame31.jpg')),
+                        'trajectory-refined-run009.png', 'trajectory-apply-frame.jpg', 'trajectory-prepare-inspect.jpg', 'trajectory-prepare-convert.jpg', 'trajectory-frame0.jpg', 'trajectory-frame31.jpg',
+                        'trajectory-current-frame-000.png', 'trajectory-current-frame-015.png', 'trajectory-current-frame-031.png')),
                     *(f'docs/user/assets/2.5-tutorials/scientific/{name}.png' for name in (
                         't03-conformers', 't05-pdb-models', 't08-fchk-homo',
                         't09-spin-density', 't10-density-esp', 't11-vibration',
@@ -90,7 +91,7 @@ class PublicDeliveryDocsTests(unittest.TestCase):
         self.assertIn('href="#document-2"', content)
         self.assertIn('href="../zh-CN/index.html#document-1"', content)
         self.assertIn('download="public-surface.json"', content)
-        self.assertEqual(content.count('<img '), 55)
+        self.assertEqual(content.count('<img '), 58)
         self.assertIn('download="ethanol.smi"', content)
         self.assertIn('download="ethanol-science-check.json"', content)
         self.assertIn('download="recompute_t07_difference.py"', content)

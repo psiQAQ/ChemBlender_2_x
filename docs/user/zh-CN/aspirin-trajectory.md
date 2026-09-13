@@ -62,6 +62,14 @@
 
 这些是数据集参考值，不是 Blender 重新计算的能量。`source_index` 仍明确标成 `unit unknown; ambiguous`。
 
+最终本地候选把这些既有 FrameProperty 值显示为只读行。侧栏拖宽后，每个数值及 `unknown; ambiguous` 边界均完整可读：
+
+![source frame 0 的只读逐帧标量行](../assets/2.5-tutorials/trajectory-current-frame-000.png)
+
+![source frame 15 的只读逐帧标量行](../assets/2.5-tutorials/trajectory-current-frame-015.png)
+
+![source frame 31 的只读逐帧标量行](../assets/2.5-tutorials/trajectory-current-frame-031.png)
+
 ## 播放与暂停
 
 在侧栏内滚动到 `Apply Frame` 下方的 `Play`、`Pause`。保持 Animation Start Frame 为 `1`，Timeline Frames Per Source Frame 为 `1`。点击 `Play`：时间线范围变为 1–32，源帧等于时间线帧减一。点击 `Pause` 后，时间线与科学播放均停止。
@@ -86,8 +94,8 @@ Rebuild 或 Update 可能替换显示对象，替换后需重新设置 Subdivisi
 
 ## 验证附录
 
-已接纳的 run-009 证据使用 Extension SHA-256 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28` 和 Prepare wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`。[Prepare GUI](../../../examples/tutorials/2.5.0/T06-run009-gui-check.json)、[GUI 输出科学检查](../assets/2.5-tutorials/trajectory-gui-science-check.json)、[全帧 View](../../../examples/tutorials/2.5.0/T06-run009-view-check.json)、[力检查](../assets/2.5-tutorials/trajectory-force-check.json)、[播放](../../../examples/tutorials/2.5.0/T06-run009-playback-gui-check.json)、[重建](../../../examples/tutorials/2.5.0/T06-run009-rebuild-check.json)及[离线恢复](../../../examples/tutorials/2.5.0/T06-run010-offline-recovery-check.json)记录保持单独候选绑定。等价 CLI inspect/convert/validate 路线也已通过，但只属于审计证据，不是第二条教程路线。只读当前帧行已由脚本核对源帧 0、15、31，但仍缺直接 GUI 截图。
+已接纳的 run-009 证据使用 Extension SHA-256 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28` 和 Prepare wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`。[Prepare GUI](../../../examples/tutorials/2.5.0/T06-run009-gui-check.json)、[GUI 输出科学检查](../assets/2.5-tutorials/trajectory-gui-science-check.json)、[全帧 View](../../../examples/tutorials/2.5.0/T06-run009-view-check.json)、[力检查](../assets/2.5-tutorials/trajectory-force-check.json)、[播放](../../../examples/tutorials/2.5.0/T06-run009-playback-gui-check.json)、[重建](../../../examples/tutorials/2.5.0/T06-run009-rebuild-check.json)及[离线恢复](../../../examples/tutorials/2.5.0/T06-run010-offline-recovery-check.json)记录保持单独候选绑定。等价 CLI inspect/convert/validate 路线也已通过，但只属于审计证据，不是第二条教程路线。最终候选的[直接 GUI 回执](../../../examples/tutorials/2.5.0/T06-run013-direct-gui-check.json)绑定 source frame 0、15、31 的可读标量截图和一段连续 OS GUI 录屏；它不会修补或掩盖无效的历史 run manifest。
 
-本地 `T06-review.zip` 含配对工程、静态图、32 帧序列、相对路径 VSE 装配、MP4、双语交接与证据；SHA-256 为 `8eea79a46ea7967bda201619dbb066e6a2908315bdc9c884c1c4844284c8003a`。[审阅包记录](../../../examples/tutorials/2.5.0/T06-run009-package-check.json)只证明 review-only 交接，不是最终分发。[动画](../../../examples/tutorials/2.5.0/T06-run009-animation-check.json)、[视频完整性](../assets/2.5-tutorials/trajectory-video-check.json)、[可移动视频](../../../examples/tutorials/2.5.0/T06-run009-portable-video-check.json)、[冷重开](../assets/2.5-tutorials/trajectory-cold-recovery.json)、[缓存重建](../assets/2.5-tutorials/trajectory-cache-recovery.json)、保留的 [Smooth by Angle 实验](../assets/2.5-tutorials/trajectory-smooth.jpg)及[媒体来源](../assets/2.5-tutorials/provenance.json)属于审计材料。一次取消的渲染前审计是采集时机问题；`render_post` 与显式静态对照匹配正确源帧。连续 GUI 录屏、新标量行的直接截图和人工独立复做仍待完成。
+本地 `T06-review.zip` 含配对工程、静态图、32 帧序列、相对路径 VSE 装配、MP4、双语交接与证据；SHA-256 为 `8eea79a46ea7967bda201619dbb066e6a2908315bdc9c884c1c4844284c8003a`。[审阅包记录](../../../examples/tutorials/2.5.0/T06-run009-package-check.json)只证明 review-only 交接，不是最终分发。[动画](../../../examples/tutorials/2.5.0/T06-run009-animation-check.json)、[视频完整性](../assets/2.5-tutorials/trajectory-video-check.json)、[可移动视频](../../../examples/tutorials/2.5.0/T06-run009-portable-video-check.json)、[冷重开](../assets/2.5-tutorials/trajectory-cold-recovery.json)、[缓存重建](../assets/2.5-tutorials/trajectory-cache-recovery.json)、保留的 [Smooth by Angle 实验](../assets/2.5-tutorials/trajectory-smooth.jpg)及[媒体来源](../assets/2.5-tutorials/provenance.json)属于审计材料。一次取消的渲染前审计是采集时机问题；`render_post` 与显式静态对照匹配正确源帧。人工独立复做仍待完成。
 
 最终本地候选适用性：Extension SHA-256 `73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8`; Prepare wheel SHA-256 `3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3`. 上述历史回执保留真实执行字节；[最终差异映射](../../../examples/tutorials/2.5.0/P6-final-candidate-applicability.json)不会把它们换标为新的 GUI 事件。

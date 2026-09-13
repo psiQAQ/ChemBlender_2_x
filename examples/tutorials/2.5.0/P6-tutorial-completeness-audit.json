@@ -54,11 +54,7 @@
     },
     "T06": {
       "chapter": "aspirin-trajectory.md",
-      "missing": [
-        "direct GUI capture of source-frame scalar rows",
-        "continuous GUI recording",
-        "independent human replay"
-      ]
+      "missing": ["independent human replay"]
     },
     "T07": {
       "chapter": "density-grids.md",

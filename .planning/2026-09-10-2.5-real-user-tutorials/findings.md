@@ -257,3 +257,9 @@
 - A `.blend/.cbq` pair can rebuild without its raw source while still leaking development paths through CBQ provenance. Archive-member safety alone is insufficient: audit the working manifest contents separately from evidence appendices.
 - The accepted local handoff pattern is a relative `project.blend` + `project.cbq/` pair whose working source locators use `source-unavailable/<basename>`. Preserve the exact pre-normalization manifest only under `evidence/original-manifests/`, update the `.blend` manifest hash, then cold-open and rebuild every View.
 - Large review ZIPs should be one shared offline companion file rather than duplicated as Base64 inside each language HTML. The offline resource graph can remain complete and network-free while both languages reference the same audited bytes.
+
+## Direct OS GUI evidence on Windows
+
+- A Blender receipt can classify native `user32` mouse/keyboard input as `os_gui` when it records the exact executable, PID, top-level window handle/title, before/after artifacts and artifact hashes. It is still Agent-operated GUI evidence, never `human_gui` or independent review.
+- Narrow Blender N-panels may truncate scientific values even when the underlying row is correct. Drag the panel's left separator to widen it and require the screenshot itself to show the complete value and unit/status; do not infer hidden text from a separate scripted check.
+- Xbox Game Bar provides a dependency-free continuous desktop recording path. Keep failed subwindow, truncated and uncommitted-entry captures as rejected evidence rather than deleting or relabeling them.

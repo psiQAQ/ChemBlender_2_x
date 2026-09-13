@@ -1,0 +1,81 @@
+{
+  "schema_name": "chemblender_direct_gui_check",
+  "schema_version": 1,
+  "plan_id": "2026-09-10-2.5-real-user-tutorials",
+  "case_id": "T06",
+  "status": "passed_scoped",
+  "scope": "Current-candidate direct OS GUI capture of the read-only source-frame scalar rows and one continuous source-frame recording; independent human review and replacement of the invalid historical run manifest remain separate.",
+  "candidate": {
+    "extension_source_commit": "9b972a5cc3a7aa04c20ebfd6985bc5199a20ac39",
+    "extension_zip": "ChemBlender/chemblender-2.5.0.zip",
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "extension_bytes": 2831887,
+    "installed_profile": "user_default",
+    "installed_member_equivalence": "passed_109_of_109"
+  },
+  "environment": {
+    "blender_version": "5.1.1",
+    "executable": "C:/Program Files/Blender Foundation/Blender 5.1/blender.exe",
+    "process_id": 40016,
+    "window_handle": 3344360,
+    "window_title": "trajectory-refined [D:\\workspace\\ChemBlender_2_x\\.blend-analysis\\2.5-real-user-tutorials\\run-010\\T06\\offline-recovery\\trajectory-refined.blend] - Blender 5.1.1",
+    "interaction": "os_gui",
+    "input_method": "Windows user32 mouse/keyboard events",
+    "capture_method": "Windows desktop screenshot and Xbox Game Bar recording"
+  },
+  "sample_frames": {
+    "0": {
+      "energy": -17617.8287419,
+      "source_index": 161596,
+      "step": 0,
+      "raw_capture": ".blend-analysis/2.5-real-user-tutorials/run-013/T06/gui/t06-wide-source-index-000.png",
+      "tutorial_capture": "docs/user/assets/2.5-tutorials/trajectory-current-frame-000.png",
+      "bytes": 608078,
+      "sha256": "74c294eb2f6727d681e1e7a0353498e6493e417ef5ca7768bf045568e986ed66"
+    },
+    "15": {
+      "energy": -17617.4879446,
+      "source_index": 26491,
+      "step": 1500,
+      "raw_capture": ".blend-analysis/2.5-real-user-tutorials/run-013/T06/gui/t06-wide-source-index-015.png",
+      "tutorial_capture": "docs/user/assets/2.5-tutorials/trajectory-current-frame-015.png",
+      "bytes": 592526,
+      "sha256": "34439f3628710f421b8ccbc499cae96b6f0142b2cd0f362019fee2f39a48fb44"
+    },
+    "31": {
+      "energy": -17617.7618802,
+      "source_index": 151469,
+      "step": 3100,
+      "raw_capture": ".blend-analysis/2.5-real-user-tutorials/run-013/T06/gui/t06-wide-source-index-031.png",
+      "tutorial_capture": "docs/user/assets/2.5-tutorials/trajectory-current-frame-031.png",
+      "bytes": 607158,
+      "sha256": "bc2288413b426612876fb8e51c7e6d73d885ef6c6ea4231513f87427e233a60b"
+    }
+  },
+  "recording": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-013/T06/gui/t06-wide-source-frame-os-gui-recording.mp4",
+    "bytes": 1597366,
+    "sha256": "06433d0fa5062f3aa73723552c587925b28348b3adacce43f2eff227cc76b3e0",
+    "sequence": [0, 15, 31],
+    "classification": "continuous_os_gui_recording"
+  },
+  "verification": {
+    "values_match_frozen_case_spec": "passed_all_3",
+    "source_index_unit_and_status_visible": "passed_unknown_ambiguous",
+    "tutorial_copies_byte_equal_raw_captures": "passed_all_3",
+    "project_sha256_before_and_after": "49b02f282ce8fe8d665112068e78c9797493f7562e7128fde20334d6971f0031",
+    "project_saved": false,
+    "exit_choice": "Do Not Save",
+    "blender_processes_after": 0
+  },
+  "retained_failed_attempts": [
+    "The initial screenshot targeted Blender's Image Editor subwindow and is excluded.",
+    "The first narrow-sidebar captures truncated source_index values and are excluded from the readable-frame claim.",
+    "One frame-15 entry attempt remained on frame 0 and is excluded; the corrected wide capture is authoritative."
+  ],
+  "historical_manifest": {
+    "status": "invalid",
+    "reason": "Broken event/capture links in the historical run-004 manifest are not repaired or hidden by this current direct-GUI receipt."
+  },
+  "human_review": "not_run"
+}

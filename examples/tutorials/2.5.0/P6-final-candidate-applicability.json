@@ -19,7 +19,7 @@
   },
   "impact": {
     "electronic_plot": "T13 LazyNpyArray materialization fix; focused plot tests and current installed-Extension T13 band/DOS renders passed.",
-    "scientific_view": "T06 read-only current-frame scalar rows; this new panel evidence still requires direct GUI capture and is not covered by historical screenshots.",
+    "scientific_view": "T06 read-only current-frame scalar rows; run-013 records readable current-candidate direct OS GUI captures at source frames 0, 15 and 31 plus a continuous recording.",
     "prepare_runtime": "Adds the explicit python.qcschema route used by the current T20 real compute; other reader/export/derive operation contracts are unchanged."
   },
   "final_container_equivalence": {
@@ -34,6 +34,6 @@
     "examples/tutorials/2.5.0/P5-viewer-batch-check.json"
   ],
   "historical_receipt_policy": "Receipts retain the bytes they actually exercised. Applicability to the final local candidate is recorded here rather than relabeling historical GUI or scientific events.",
-  "direct_gui_exceptions": ["T06 new scalar rows", "T18 legacy migration and relink", "all cases without a current direct GUI event"],
+  "direct_gui_exceptions": ["T18 legacy migration and relink", "all cases without a current direct GUI event"],
   "human_review": "not_run"
 }
