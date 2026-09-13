@@ -1,38 +1,69 @@
 {
   "case_id": "T04",
   "status": "passed",
-  "scope": "Current-candidate mapping and readable native sidebar evidence; independent human review remains separate.",
+  "scope": "Current-candidate public Operator replay, current render, current visible state and cold/moved reopen; historical GUI evidence retains its original candidate identity.",
   "candidate": {
-    "extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-    "prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
-    "run": "run-009/T04"
+    "extension_source_commit": "9b972a5cc3a7aa04c20ebfd6985bc5199a20ac39",
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "prepare_source_commit": "3b241ae16156b458836d72298e2f02edcd17ffde",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+    "run": "run-010/T04"
   },
-  "native_sidebar_capture": {
-    "source": ".blend-analysis/2.5-real-user-tutorials/run-009/T04/gui/gui-0036.jpg",
-    "public_copy": "docs/user/assets/2.5-tutorials/crystal-sidebar-run009.jpg",
-    "sha256": "fbc96a7603dccda1b3518e4b9c4fdf1eb9cde3a4658d2b1ca400a710f9c47d0c",
-    "dimensions": [1602, 992],
-    "capture_source": "Computer Use native screenshot",
-    "interaction": "os_gui",
-    "event_id": "e21",
-    "visible_checks": [
-      "Project Browser reports Sites: 64",
-      "Declared Symmetry reports Name: C m c a",
-      "Declared Symmetry reports International number: 64",
-      "Declared Symmetry reports Operations: 16",
-      "Derived Symmetry reports International: Not derived"
-    ],
-    "limitation": "The sidebar displays long package paths and selected entity hashes in truncated form; the full candidate and package identity is established by this receipt, not inferred from clipped UI text."
+  "candidate_difference": {
+    "status": "passed",
+    "receipt": "examples/tutorials/2.5.0/P6-final-candidate-applicability.json",
+    "receipt_sha256": "95e0f51e6c614acb30b45b04b935cf313ae354288c23bbec3270de9d91171eae",
+    "t04_impact": "The final delta is limited to T06 current-frame rows, T13 plot materialization and the T20 QCSchema route; T04 conversion and periodic Viewer contracts are unchanged."
   },
-  "scientific_and_workflow_evidence": [
-    "examples/tutorials/2.5.0/T04-run009-cif-gui-check.json",
-    "examples/tutorials/2.5.0/T04-run009-diamond-gui-check.json",
-    "examples/tutorials/2.5.0/T04-run009-ase-gui-check.json",
-    "examples/tutorials/2.5.0/T04-run009-render-cold-check.json",
-    "examples/tutorials/2.5.0/T04-run009-diamond-render-cold-check.json",
-    "examples/tutorials/2.5.0/T04-run009-rebuild-check.json",
-    "examples/tutorials/2.5.0/T04-run009-package-check.json"
+  "historical_direct_gui": {
+    "candidate_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+    "candidate_prepare_sha256": "b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a",
+    "source_manifest": ".blend-analysis/2.5-real-user-tutorials/run-009/T04/source-manifest.json",
+    "source_manifest_sha256": "0882be1bc0ef61a18e77b942171f00c2988e7bc96b53f6ca34613409d9f0e533",
+    "accepted_prepare_events": ["e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9", "e10", "e11", "e12", "e13", "e14"],
+    "accepted_sidebar_event": "e21",
+    "excluded_event": {"event_id": "e19", "reason": "Unknown status after an invalid non-finite drag coordinate."},
+    "native_sidebar_capture": {
+      "source": ".blend-analysis/2.5-real-user-tutorials/run-009/T04/gui/gui-0036.jpg",
+      "public_copy": "docs/user/assets/2.5-tutorials/crystal-sidebar-run009.jpg",
+      "sha256": "fbc96a7603dccda1b3518e4b9c4fdf1eb9cde3a4658d2b1ca400a710f9c47d0c",
+      "visible": {"sites": 64, "declared_space_group": "C m c a", "international_number": 64, "operations": 16, "derived_symmetry": "Not derived"}
+    }
+  },
+  "current_operator_replay": {
+    "interaction": "native_public_operator_replay",
+    "classification": "not_direct_gui",
+    "cocrystal": {"receipt": ".blend-analysis/2.5-real-user-tutorials/run-010/T04/cocrystal-view.current-rebuild.json", "sha256": "f15d11dd03ecda121648b6c3300dee280a20fb11c3a61b738324e17269592126"},
+    "diamond": {"receipt": ".blend-analysis/2.5-real-user-tutorials/run-010/T04/diamond-view.current-rebuild.json", "sha256": "2bfb7fb5b717545947870d1df1032f3e58ebb9c853c7e69547b52de5a64be63a"},
+    "checks": {"sites_each": 64, "cell_edges_each": 12, "view_identity_retained": true, "scientific_arrays_unchanged": true, "viewer_scientific_modules": []}
+  },
+  "current_visible_state": {
+    "interaction": "mcp_visible_state_capture",
+    "classification": "not_direct_gui_action_proof",
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T04/current-visible-state.png",
+    "sha256": "612af2df1d700a1d2988907f80e7d09e668c1b2a0f8fc084c259de02b6dde4fe",
+    "dimensions": [1920, 1080],
+    "visible": "Current user_default candidate with the 64-site cocrystal periodic View framed in Blender 5.1.1."
+  },
+  "current_renders": [
+    {"path": ".blend-analysis/2.5-real-user-tutorials/run-010/T04/accepted/cocrystal-view.png", "sha256": "2cb59eb327ab6bfd1f48f853e64a1855f531bf69f3bc869564909898e826dd0e", "receipt_sha256": "a7bb983259faddbc1f726ce837a9de76ed89344a963a17b6df1607f16ed4437d"},
+    {"path": ".blend-analysis/2.5-real-user-tutorials/run-010/T04/accepted/diamond-view.png", "sha256": "299760936b31ecb5dfd89a4ca44b77fb9d953bd947d335a697f2cdaf71a981e9", "receipt_sha256": "78fed2561fc14094e80bb4a6b054f697bf448e8b0489c8524d8c184d05e204ec"}
   ],
-  "historical_evidence_policy": "Earlier candidate images remain labeled with their original artifact hashes; this receipt does not relabel them as current-candidate actions.",
+  "current_lifecycle": {
+    "status": "passed",
+    "original_cold_receipts": ["759b838583a54295ffd122eaa1379a6aef3e31becf881735ab2493fa329a463b", "8b2d3025acaab98036b5b7b7e6cad97215f7018085f17fd06190b41f5c683c54"],
+    "moved_cold_receipts": ["6c5a764b7a45ace609b811ca46b6147625eee1412205c8c2580e32ffeaa4ef9b", "574b141fadfce94fbe4bf1561144f43ae7d0858ead02dddd1457e1ece79f38fe"],
+    "scientific_hashes_unchanged": true
+  },
+  "scientific_and_workflow_evidence": {
+    "cif_gui_receipt_sha256": "cd8493f83514fd1c19adf76063bce26d00893add372933481a9f8f8d59249f72",
+    "diamond_gui_receipt_sha256": "c0b118e8c62c38c61229bb04738ba5417fcb63799ae7d37098490af8d7d260ef",
+    "ase_gui_receipt_sha256": "273f89a5ee010297cd45dfc8bc5f8fac15b5858f4f79aec55d498ad41d137542",
+    "view_receipt_sha256": "8c3b31903ea05e937c514ab98ce31d79c84387d7af8c5fcc081cb2548921f29f",
+    "historical_rebuild_receipt_sha256": "b897703b83a6cd4b8ad8bd8043141af152068e5b3aaa201e012dc23c62928f1c",
+    "offline_receipt_sha256": "2783c415ce815cba0b6213498da539e42a032eb33cda7174f4b38c70fbe91827",
+    "review_package_receipt_sha256": "f2b35e35b92370c0a36e2758bccfb42416e7ee4e85e80482d87a84d379d2a126"
+  },
+  "historical_evidence_policy": "Historical events and images retain their actual candidate hashes. The current replay, renders and cold-open files are separate run-010 evidence and are not called new GUI actions.",
   "human_review": "not_run"
 }

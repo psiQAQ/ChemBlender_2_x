@@ -1,14 +1,14 @@
 # T04：晶体位点、占位与已有金刚石超胞
 
-本课为执行中草稿。当前候选的 Prepare GUI、科学检查、原位／移动后冷重开、渲染和重建恢复已通过。Blender 导入和构图复用了此前验证过的操作；下方侧栏图是在该重放后取得的原生 GUI 截图。人工独立复做尚未通过。
+本课在当前本地候选上已达到技术完成，可交给独立复做者验收。Prepare 与 Blender 操作步骤使用[授权执行补充](../../../examples/tutorials/2.5.0/T04.current-execution-supplement.json)：原直接 GUI 事件保留历史候选哈希，当前公开 Operator 重放、渲染、可见状态截图以及原位／移动后冷重开另行记录。人工独立复做仍未签署。
 
-![声明晶胞中的共晶源位点](../assets/2.5-tutorials/crystal-cocrystal.png)
+![当前候选声明晶胞中的共晶源位点](../assets/2.5-tutorials/crystal-cocrystal-run010.png)
 
-晶胞中的大片空白是当前表示的结果：这里显示 64 个源文件不对称位点，没有按对称操作展开完整晶体。部分占位使用透明度表达，无序重叠位点保留。草稿成图仍有局部棱面。
+晶胞中的大片空白是当前表示的结果：这里显示 64 个源文件不对称位点，没有按对称操作展开完整晶体。部分占位使用透明度表达，无序重叠位点保留。
 
 ## 前提与固定输入
 
-先完成[安装](installation.md)和[首课](first-aspirin.md)。当前映射使用 Blender 5.1.1、prepare 0.1.0 wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a` 与 Extension ZIP SHA-256 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`。[当前候选回执](../../../examples/tutorials/2.5.0/T04-current-candidate-check.json)将这些制品绑定到 run-009。下方较早图片保留原哈希，不换标为当前操作。
+先完成[安装](installation.md)和[首课](first-aspirin.md)。当前映射使用 Blender 5.1.1、prepare 0.1.0 wheel SHA-256 `3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3` 与 Extension ZIP SHA-256 `73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8`。[当前候选回执](../../../examples/tutorials/2.5.0/T04-current-candidate-check.json)绑定 run-010 当前证据；下方历史图片保留原哈希，不换标为当前操作。
 
 下载 [COD 4503272 CIF](../../../examples/user-workflows/inputs/cif/cod-4503272-caffeine-cocrystal.cif) 与[金刚石 CONTCAR](../../../examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR)，同时保留含输入哈希和容差的[案例规格](../../../examples/tutorials/2.5.0/T04.case-spec.json)。CIF 是 CC0 的 COD 输入；金刚石输入是仓库已有的 COD 9012293 常规晶胞 2×2×2 派生结构，并非本课新算的模拟结果。
 
@@ -36,7 +36,7 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T04\diamond.cbq" --json
 
 预期 `status: success`。原生转换保留了 CIF 行顺序、标签、占位、无序和源文件字节。独立以源分数坐标乘晶格矩阵，结果与保存的笛卡尔坐标完全一致；预先固定的绝对容差为 `1e-7` Å。Blender 显示顶点精度较低，冷重开时低于 `1e-6` 的显示误差不意味着权威数组被改写。
 
-以下 Prepare GUI 步骤已用 wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a` 验证。本文其他 Blender 图片和保存工程仍保留各自较早的制品归属。
+以下 Prepare GUI 步骤由历史 wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a` 直接录制。最终候选适用性与当前重放由执行补充按哈希连接；这些旧事件不算新的 GUI 证明。
 
 1. 在 **操作** 中选择 `inspect`，将 **输入文件 / CBQ** 设为下载的 CIF，**Reader ID** 设为 `cif`，点击 **执行**。预期显示一个 CIF block 和上表晶胞值。
 2. 选择 `convert` 后布局会变化：在 **新输出文件 / CBQ 路径** 填入新的 `cocrystal.cbq`，确认 Reader ID 仍为 `cif`，点击 **执行**。预期 `status: success`，并提示无序组、部分占位已保留，对称性派生被禁用。
@@ -55,7 +55,7 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T04\diamond.cbq" --json
 1. 在新的教程场景中打开 `ChemBlender` 侧栏，将 `CBQ Package` 设为 `cocrystal.cbq` 并确认路径，依次使用 `Preview CBQ`、`Import CBQ`。
 2. 在 Project Browser 选择 Structure。进入 `Scientific Representation`，使用 `Automatic`、`Research`，点击 `Create View`。预期生成 `ChemBlender Periodic Structure`，以及 Cell、Site Occupancy、Thermal Ellipsoids 显示子对象。源位点表示保留声明的晶胞和占位，不生成对称复制。
 
-![当前候选的 Project Browser 与对称性字段](../assets/2.5-tutorials/crystal-sidebar-run009.jpg)
+![历史 run-009 的 Project Browser 与对称性字段](../assets/2.5-tutorials/crystal-sidebar-run009.jpg)
 
 这张原生截图可直接读出 `Sites: 64`、声明的 `C m c a`、国际编号 `64`、`Operations: 16` 和派生对称性 `Not derived`。该侧栏宽度会截断较长的 CBQ 路径与所选实体哈希；完整值以链接回执为准。
 
@@ -103,9 +103,19 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T04\diamond.cbq" --json
 
 在独立副本中清空四个所属显示网格后，公开 `REBUILD` Operator 恢复了 64 个位点和 12 条晶胞边，科学数组未变；两个重建工程再次冷重开也通过。见[派生几何恢复记录](../assets/2.5-tutorials/crystal-cache-recovery.json)。这是原生 Operator 重放，不是 GUI 删除演示。重建会替换显示对象，手工添加的 Subdivision modifier 随后不再存在。重建后按本课重新设置外观细化，并保留原始细化工程作为视觉参照。
 
-人工独立复做和可分发案例包仍待完成。在这些门槛及视觉审阅通过前，本课保持草稿。[媒体来源](../assets/2.5-tutorials/provenance.json)将本候选与较早课程分别记录。
+当前技术检查器的完整性与技术门槛均通过。人工独立复做仍待签署，因此分发状态继续保持 blocked。[媒体来源](../assets/2.5-tutorials/provenance.json)分别记录当前候选与历史候选。
 
-## 更新后的本地审阅工程（run-009）
+## 当前本地候选收口（run-010）
+
+![公开 REBUILD 重放后的当前候选 Viewer 状态](../assets/2.5-tutorials/crystal-current-run010.png)
+
+上图是可见状态截图，不是直接操作证明。两种结构均在独立的当前候选副本上执行公开 `REBUILD`；每份工程都保留 64 个位点、12 条晶胞边、View identity 与全部科学数组哈希。随后又用四个 Blender 进程冷开原位和搬移后的配对工程，sidecar 均为本地路径，Viewer 未加载 RDKit、Gemmi 或 Prepare。
+
+![当前候选已有的 64 碳原子金刚石结构](../assets/2.5-tutorials/crystal-diamond-run010.png)
+
+两张当前成图均为 2400×1800、Cycles 256 samples，回执确认科学数组未变。[当前候选回执](../../../examples/tutorials/2.5.0/T04-current-candidate-check.json)与[执行补充](../../../examples/tutorials/2.5.0/T04.current-execution-supplement.json)是技术审阅入口，但不能代替独立人工复做。
+
+## 历史精修审阅工程（run-009）
 
 以下成图使用 prepare wheel `b736bc61…` 与 Extension ZIP `a1e2da79…`；上方早期截图保留原制品绑定。为派生的占位与热椭球显示添加了平滑面法线，保留元素颜色和占位透明度，同时保留二级细分、粗糙度 0.35 及上表渲染参数。这项场景编辑通过 MCP 完成，尚未验证手工节点编辑器操作路径。
 

@@ -251,7 +251,7 @@ class TutorialStatusTests(unittest.TestCase):
         audit = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-review-package-path-audit.json').read_text(encoding='utf-8'))
         self.assertEqual(audit['status'], 'passed')
         self.assertEqual(audit['crc_status'], 'passed_all')
-        self.assertEqual(set(audit['archives']), {'T00', 'T01', 'T02-current', 'T02-historical', 'T04', 'T06', 'T07', 'T17', 'scientific-viewer'})
+        self.assertEqual(set(audit['archives']), {'T00', 'T01', 'T02-current', 'T02-historical', 'T04', 'T04-current', 'T06', 'T07', 'T17', 'scientific-viewer'})
         for name, archive in audit['archives'].items():
             self.assertFalse(archive['unsafe_member_names'], name)
             self.assertFalse(archive['development_paths_outside_evidence'], name)
@@ -259,7 +259,7 @@ class TutorialStatusTests(unittest.TestCase):
 
     def test_t01_t02_review_receipts_bind_current_execution_supplements(self):
         base = ROOT / 'examples/tutorials/2.5.0'
-        for case_id in ('T01', 'T02'):
+        for case_id in ('T01', 'T02', 'T04'):
             with self.subTest(case_id=case_id):
                 receipt = json.loads((base / f'{case_id}-run010-package-check.json').read_text(encoding='utf-8'))
                 supplement = base / f'{case_id}.current-execution-supplement.json'
@@ -438,18 +438,52 @@ class TutorialStatusTests(unittest.TestCase):
     def test_t04_current_sidebar_capture_is_byte_bound_to_provenance(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         receipt = json.loads((base / 'T04-current-candidate-check.json').read_text(encoding='utf-8'))
-        capture = receipt['native_sidebar_capture']
+        capture = receipt['historical_direct_gui']['native_sidebar_capture']
         public_copy = ROOT / capture['public_copy']
         provenance = json.loads(
             (ROOT / 'docs/user/assets/2.5-tutorials/provenance.json').read_text(encoding='utf-8')
         )
         entry = next(item for item in provenance['images'] if item['path'] == public_copy.name)
-        self.assertEqual(receipt['candidate']['extension_sha256'], self.applicability['from_candidate']['extension_sha256'])
-        self.assertEqual(receipt['candidate']['prepare_sha256'], self.applicability['from_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['candidate']['extension_sha256'], self.applicability['to_candidate']['extension_sha256'])
+        self.assertEqual(receipt['candidate']['prepare_wheel_sha256'], self.applicability['to_candidate']['prepare_wheel_sha256'])
+        self.assertEqual(receipt['historical_direct_gui']['candidate_extension_sha256'], self.applicability['from_candidate']['extension_sha256'])
+        self.assertEqual(receipt['historical_direct_gui']['candidate_prepare_sha256'], self.applicability['from_candidate']['prepare_wheel_sha256'])
         self.assertEqual(validator.sha256(public_copy), capture['sha256'])
         self.assertEqual(entry['sha256'], capture['sha256'])
         self.assertEqual(entry['interaction'], 'os_gui')
         self.assertEqual(receipt['human_review'], 'not_run')
+
+    def test_t04_execution_supplement_binds_real_source_files(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        supplement = json.loads(
+            (base / 'T04.current-execution-supplement.json').read_text(encoding='utf-8')
+        )
+        source_roots = {
+            'run-009/T04': ROOT / '.blend-analysis/2.5-real-user-tutorials/run-009/T04',
+            'run-002/T01': ROOT / '.blend-analysis/2.5-real-user-tutorials/run-002/T01',
+            'run-003/T02': ROOT / '.blend-analysis/2.5-real-user-tutorials/run-003/T02',
+        }
+        for replay in supplement['replays']:
+            original = replay['original_gui']
+            source = source_roots[original['source_run_id']]
+            manifest = source / (
+                'source-manifest.json'
+                if original['source_run_id'] == 'run-009/T04'
+                else 'run-manifest.json'
+            )
+            events_path = source / 'events.json'
+            events = json.loads(events_path.read_text(encoding='utf-8'))
+            event = next(item for item in events if item['event_id'] == original['event_id'])
+            artifacts = {
+                item['id']: item
+                for item in json.loads((source / 'gui-artifacts.json').read_text(encoding='utf-8'))
+            }
+            self.assertEqual(validator.sha256(manifest), original['source_manifest_sha256'])
+            self.assertEqual(validator.sha256(events_path), original['events_sha256'])
+            self.assertEqual(artifacts[event['before_artifact_id']]['sha256'], original['before_artifact_sha256'])
+            self.assertEqual(artifacts[event['after_artifact_id']]['sha256'], original['after_artifact_sha256'])
+            self.assertEqual(event['interaction'], 'os_gui')
+            self.assertEqual(event['status'], 'observed')
 
     def test_t03_current_gui_and_lifecycle_are_separately_classified(self):
         base = ROOT / 'examples/tutorials/2.5.0'
@@ -873,7 +907,7 @@ class TutorialStatusTests(unittest.TestCase):
         summary = json.loads((base / 'P4-p0-checker-summary.json').read_text(encoding='utf-8'))
         p0 = {item['case_id']: item for item in summary['cases']}
         self.assertEqual(set(p0), {'T00', 'T01', 'T02', 'T04', 'T06', 'T07', 'T17', 'T18'})
-        ready = {'T00', 'T01', 'T02'}
+        ready = {'T00', 'T01', 'T02', 'T04'}
         self.assertEqual(set(summary['blocked']), set(p0) - ready)
         self.assertEqual(set(summary['ready_for_human_review']), ready)
         cases = {item['case_id']: item for item in self.status['cases']}

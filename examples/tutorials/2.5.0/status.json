@@ -165,29 +165,29 @@
     {
       "case_id": "T04",
       "priority": "P0",
-      "status": "blocked",
-      "status_reason": "Current Prepare GUI, science, readable sidebar, renders, recovery and review package passed, but no conforming run manifest exists and Viewer replay is not modeled as a supplement.",
-      "run": "run-009/T04",
+      "status": "ready_for_human_review",
+      "status_reason": "The current run-010 manifest and six-step execution supplement pass integrity and technical checks. Historical direct-GUI events retain their original candidates; independent review remains unsigned.",
+      "run": "run-010/T04",
       "candidate_scope": "current_candidate",
-      "technical_status": "incomplete",
+      "technical_status": "passed",
       "scientific_processing": "passed",
-      "direct_gui": "passed_for_prepare_and_sidebar",
-      "authorized_replay": "passed_unmodeled",
-      "render": "passed",
-      "recovery": "passed",
-      "tutorial": "passed_draft",
+      "direct_gui": "passed_historical_prepare_and_sidebar",
+      "authorized_replay": "passed_six_step_supplement",
+      "render": "passed_current_candidate",
+      "recovery": "passed_current_original_and_moved",
+      "tutorial": "passed_current_technical_draft",
       "review_package": {
         "status": "review_only",
-        "file": "T04-review.zip",
-        "sha256": "ade7561ddcbe5e6bfeb05aa1cf2825dd87a054d34378d4b59741db6dc96b56ca"
+        "file": "T04-current-review-addendum.zip",
+        "sha256": "eaeb6ed3dabaecf311096ac24d775734d46927611a14c87dc27fcaed443ecc1a"
       },
       "human_review": "not_run",
       "distribution": "blocked",
       "evidence_refs": [
         "examples/tutorials/2.5.0/T04-current-candidate-check.json",
-        "examples/tutorials/2.5.0/T04-run009-package-check.json",
-        "examples/tutorials/2.5.0/T04-run009-refined-offline-check.json",
-        "examples/tutorials/2.5.0/T04-run009-rebuild-check.json",
+        "examples/tutorials/2.5.0/T04.current-execution-supplement.json",
+        "examples/tutorials/2.5.0/T04-run010-technical-check.json",
+        "examples/tutorials/2.5.0/T04-run010-package-check.json",
         "examples/tutorials/2.5.0/P4-p0-checker-summary.json"
       ]
     },

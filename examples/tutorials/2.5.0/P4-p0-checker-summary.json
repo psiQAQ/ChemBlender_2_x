@@ -45,9 +45,16 @@
     },
     {
       "case_id": "T04",
-      "checker_status": "not_run",
-      "classification": "blocked",
-      "reason": "No conforming run-manifest.json exists and the native replay chain is not modeled as an execution supplement."
+      "checker_status": "executed",
+      "exit_code": 2,
+      "verdict": "incomplete",
+      "integrity_status": "passed",
+      "technical_status": "passed",
+      "independent_review_status": "incomplete",
+      "acceptance_status": "incomplete",
+      "raw_output": ".blend-analysis/2.5-real-user-tutorials/run-010/P4.12-checkers/T04.json",
+      "raw_output_sha256": "84b9a954bb0811b26ff889ec461d1dccc0b761652c227c87413d11c0b9427a44",
+      "classification": "ready_for_human_review"
     },
     {
       "case_id": "T06",
@@ -85,10 +92,10 @@
   "ready_for_human_review": [
     "T00",
     "T01",
-    "T02"
+    "T02",
+    "T04"
   ],
   "blocked": [
-    "T04",
     "T06",
     "T07",
     "T17",

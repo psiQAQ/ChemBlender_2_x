@@ -1,14 +1,14 @@
 # T04: crystal sites, occupancy and an existing diamond supercell
 
-This lesson is a working draft. Current-candidate Prepare GUI, scientific checks, original/moved cold reopening, renders and rebuild recovery passed. Blender import and composition used replay of previously verified operations; the sidebar image below is a native GUI capture after that replay. Independent human replay remains pending.
+This lesson is technically complete for the current local candidate and ready for independent review. Prepare and Blender action steps use the [authorized execution supplement](../../../examples/tutorials/2.5.0/T04.current-execution-supplement.json): the original direct-GUI events retain their historical candidate hashes, while current public-Operator replay, renders, visible-state capture and original/moved cold reopening are recorded separately. Independent human replay remains pending.
 
-![Cocrystal source sites inside the declared cell](../assets/2.5-tutorials/crystal-cocrystal.png)
+![Current-candidate cocrystal source sites inside the declared cell](../assets/2.5-tutorials/crystal-cocrystal-run010.png)
 
-The empty part of this cell is intentional: this view contains the 64 source asymmetric sites, not a symmetry-expanded crystal. Partial occupancy is represented by opacity. Overlapping disordered sites are retained. Fine shading facets remain visible in this draft.
+The empty part of this cell is intentional: this view contains the 64 source asymmetric sites, not a symmetry-expanded crystal. Partial occupancy is represented by opacity and overlapping disordered sites are retained.
 
 ## Prerequisites and fixed inputs
 
-Complete [installation](installation.md) and [the first lesson](first-aspirin.md). The current mapping uses Blender 5.1.1, prepare 0.1.0 wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a` and Extension ZIP SHA-256 `a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28`. The [current-candidate receipt](../../../examples/tutorials/2.5.0/T04-current-candidate-check.json) binds those artifacts to run-009. Earlier images below keep their original hashes and are not relabeled as current actions.
+Complete [installation](installation.md) and [the first lesson](first-aspirin.md). The current mapping uses Blender 5.1.1, prepare 0.1.0 wheel SHA-256 `3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3` and Extension ZIP SHA-256 `73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8`. The [current-candidate receipt](../../../examples/tutorials/2.5.0/T04-current-candidate-check.json) binds current run-010 evidence; historical images below keep their original hashes and are not relabeled as current actions.
 
 Download the [COD 4503272 CIF](../../../examples/user-workflows/inputs/cif/cod-4503272-caffeine-cocrystal.cif) and [diamond CONTCAR](../../../examples/user-workflows/inputs/poscar/cod-9012293-diamond-2x2x2.CONTCAR). Keep the [case specification](../../../examples/tutorials/2.5.0/T04.case-spec.json), which contains their hashes and comparison tolerances. The CIF is a CC0 COD source; the diamond input is an existing repository 2×2×2 derivation of the COD 9012293 conventional cell, not a new simulation.
 
@@ -36,7 +36,7 @@ chemblender-prepare validate "D:\ChemBlenderLessons\T04\diamond.cbq" --json
 
 Expect `status: success`. Native conversion retained CIF row order, labels, occupancy, disorder and source bytes. Independent source fractional coordinates multiplied by the lattice matched saved Cartesian coordinates exactly. The frozen absolute tolerance is `1e-7` Å. Blender display vertices use lower precision; their cold-reopen errors below `1e-6` do not change the authoritative arrays.
 
-The following Prepare GUI steps passed with wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`. The Blender images and saved projects elsewhere in this draft retain their earlier artifact bindings.
+The following Prepare GUI steps were directly recorded with historical wheel SHA-256 `b736bc61ecdbee77f61696576c98092afc7352a9af16b4367bfd3c2e3159af3a`. Final-candidate applicability and the current replay are hash-linked by the supplement; these old events are not new GUI proof.
 
 1. In **操作**, select `inspect`. Set **输入文件 / CBQ** to the downloaded CIF and **Reader ID** to `cif`, then click **执行**. Expect one CIF block and the cell values above.
 2. Select `convert`. The layout changes: enter a new `cocrystal.cbq` in **新输出文件 / CBQ 路径**, check that Reader ID is still `cif`, then click **执行**. Expect `status: success`, with warnings that disorder groups and partial occupancies were preserved and symmetry derivation is disabled.
@@ -55,7 +55,7 @@ Recorded checks: [CIF GUI and science](../../../examples/tutorials/2.5.0/T04-run
 1. In a new lesson scene, open the `ChemBlender` sidebar. Set `CBQ Package` to `cocrystal.cbq`, confirm the path, then use `Preview CBQ` and `Import CBQ`.
 2. Select the Structure in Project Browser. Under `Scientific Representation`, use `Automatic`, `Research`, then `Create View`. Expect `ChemBlender Periodic Structure` with Cell, Site Occupancy and Thermal Ellipsoids display children. The source-site representation retains the declared cell and occupancy; it does not generate symmetry copies.
 
-![Current-candidate Project Browser and symmetry fields](../assets/2.5-tutorials/crystal-sidebar-run009.jpg)
+![Historical run-009 Project Browser and symmetry fields](../assets/2.5-tutorials/crystal-sidebar-run009.jpg)
 
 This native screenshot exposes the checks a user can read directly: `Sites: 64`, declared `C m c a`, international number `64`, `Operations: 16`, and derived symmetry `Not derived`. Blender truncates the long CBQ path and selected-entity hash in this sidebar width; use the linked receipt for their full values.
 
@@ -103,9 +103,19 @@ If a cell is absent, check the candidate version and select the periodic Structu
 
 On separate copies, clearing the four owned display meshes and invoking the public `REBUILD` Operator restored 64 sites and 12 cell edges without changing scientific arrays. Both rebuilt pairs passed another cold reopen. See the [derived-geometry recovery record](../assets/2.5-tutorials/crystal-cache-recovery.json). This was a native Operator replay, not a GUI deletion demonstration. Rebuilding replaces the display objects: the manually added Subdivision modifier was absent afterward. Reapply the lesson’s cosmetic refinement after a rebuild; keep the original refined pair as the visual reference.
 
-Independent human replay and the distributable case package remain pending. Keep this lesson marked as a draft until those gates and visual review pass. [Media provenance](../assets/2.5-tutorials/provenance.json) records the current candidate separately from earlier lessons.
+The current technical checker passes integrity and technical gates. Independent human replay remains pending, and distribution therefore stays blocked. [Media provenance](../assets/2.5-tutorials/provenance.json) records current and historical candidates separately.
 
-## Updated local review pair (run-009)
+## Current local candidate closure (run-010)
+
+![Current-candidate Viewer state after public REBUILD replay](../assets/2.5-tutorials/crystal-current-run010.png)
+
+The visible-state capture above is not direct action proof. Public `REBUILD` was executed on separate current-candidate copies for both structures; each retained 64 sites, 12 cell edges, View identity and every scientific array hash. Four further Blender processes cold-opened the original and relocated pairs with local sidecar paths and no RDKit, Gemmi or Prepare modules loaded in the Viewer.
+
+![Current-candidate supplied 64-carbon diamond structure](../assets/2.5-tutorials/crystal-diamond-run010.png)
+
+The two current renders are 2400×1800, Cycles 256 samples, and their receipts confirm unchanged scientific arrays. The [current-candidate receipt](../../../examples/tutorials/2.5.0/T04-current-candidate-check.json) and [execution supplement](../../../examples/tutorials/2.5.0/T04.current-execution-supplement.json) are the technical-review entrypoints. They do not replace independent human replay.
+
+## Historical refined review pair (run-009)
 
 The following renders use prepare wheel `b736bc61…` and Extension ZIP `a1e2da79…`; earlier screenshots above retain their original artifact bindings. Smooth face normals were added to the derived occupancy and thermal display geometry, preserving element colors and occupancy alpha. Level-2 subdivision, roughness 0.35 and the render settings above were retained. This scene edit was performed through MCP; its manual node-editor path has not been verified.
 

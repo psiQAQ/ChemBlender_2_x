@@ -271,3 +271,9 @@
 - T03 is not the SMILES/MMFF94 generation case; that work belongs to T02. T03 starts from a three-record SDF, preserves the records and partial typed properties, and requires explicit confirmation before adding an ambiguous ConformerSet.
 - A final GUI render may combine a direct F12 action with separately disclosed MCP setup only when the setup is not labeled as GUI, changes are not saved, and an independently recorded native render/lifecycle already binds the same camera, objects and scientific bytes.
 - GUI forms can retain hidden advanced values across commands. A successful reimport must clear stale Dataset Index and Entity UUID fields; failed attempts are evidence of the recovery route, not accepted success screenshots.
+
+## T04 historical-GUI/current-candidate boundary
+
+- Historical direct GUI evidence may support a current-candidate case only through an execution supplement that preserves the original candidate/event/capture hashes and binds a distinct current Operator receipt; it must never be relabeled as a new GUI action.
+- A current visible-state screenshot proves only the state shown. Current render, rebuild and cold-open receipts must independently bind the current candidate and artifacts before the technical gate can pass.
+- Review ZIP working members must use relative package paths. Development absolute paths may remain only in explicitly named evidence or historical appendices, and failed captures belong only under `failures/`.

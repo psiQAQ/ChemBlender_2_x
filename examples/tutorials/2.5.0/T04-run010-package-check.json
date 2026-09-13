@@ -1,0 +1,26 @@
+{
+  "case_id": "T04",
+  "status": "review_only",
+  "file": ".blend-analysis/2.5-real-user-tutorials/run-010/T04-current-review-addendum.zip",
+  "sha256": "eaeb6ed3dabaecf311096ac24d775734d46927611a14c87dc27fcaed443ecc1a",
+  "bytes": 151370622,
+  "members": 92,
+  "zip_crc": "passed",
+  "unsafe_member_names": [],
+  "included_evidence": {
+    "manifest_sha256": "ae54920bbe32027bfc3dd1d6e3b5099a619fa9f20268b8e4bfd7cc428a4e7bca",
+    "current_execution_supplement_sha256": "bfedb167f7a0364048b3b1cc6ad0e4abe49ae7fd06b70b9168e3ed222865d021",
+    "current_candidate_receipt_sha256": "fae9ad1a18e7759482888dfcd49e9ae98005fcab6a5625a7f6e5613e4cd9f3a0",
+    "current_projects": 4,
+    "current_renders": 2,
+    "offline_languages": ["en", "zh-CN"],
+    "historical_gui_source_chains": 3
+  },
+  "failed_evidence": {
+    "members": ["failures/mcp-screenshot-left-image-editor-before-alt-f4.png"],
+    "excluded_from_acceptance": true
+  },
+  "human_review": "not_run",
+  "distribution": "blocked",
+  "scope": "Current-candidate T04 technical-review addendum. It does not replace the historical run-009 base package or independent human review."
+}

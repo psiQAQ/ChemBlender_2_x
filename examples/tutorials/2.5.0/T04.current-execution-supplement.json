@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "case_id": "T04",
+  "target_run": "run-010/T04",
+  "spec_sha256": "8287b1e4de98d817a2035a0ff463d590ee9190b50066605c9224d67ac31e57fc",
+  "authorization": {
+    "approved_by": "user",
+    "approved_at": "2026-09-13",
+    "basis": "User approved the previously blocked scientific environments, Blender/profile use, local review packages and T16 input licensing, while retaining the existing rule that GUI-to-MCP reuse must remain separately classified."
+  },
+  "replays": [
+    {
+      "step_id": "s01",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-009/T04",
+        "source_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+        "source_manifest_sha256": "0882be1bc0ef61a18e77b942171f00c2988e7bc96b53f6ca34613409d9f0e533",
+        "events_sha256": "bd85ddcd2cacd3cce036347f9ace9412adfeb69e5a576211aaa6b9af75d94c02",
+        "event_id": "e6",
+        "before_artifact_sha256": "c7d01c1e0c051a6a5a53d880394a60459feea9958b7473d6d39ade661c57cb0a",
+        "after_artifact_sha256": "1eb424154cff67ca3116948885050d774abed01647bd55741f7e8e43a192743d"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": ["cif_inspect_convert", "contcar_inspect_convert", "occupancy_diagnostics", "cbq_validate"]
+      },
+      "operator_receipt": {"status": "passed", "artifact_id": "T04-current-candidate-check", "sha256": "fae9ad1a18e7759482888dfcd49e9ae98005fcab6a5625a7f6e5613e4cd9f3a0"}
+    },
+    {
+      "step_id": "s02",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-002/T01",
+        "source_extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8",
+        "source_manifest_sha256": "3a707e82d8560ed10a05622872c8cd5f1668126ebfadb7af853b4a57345b810d",
+        "events_sha256": "6a45c786d6dbc2b0a1a0fe4387bbf6f47bd5108bfadb7d4efc2517ef6c424b8a",
+        "event_id": "e22",
+        "before_artifact_sha256": "79ff8b294e3f7c2533427348d67f018aa7ca011e65af88f8aca0849c951405b1",
+        "after_artifact_sha256": "92bb963afa174e787edf647ffcc888a3e30c96c152e65b2965c4857cb24fb964"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": ["preview", "import", "entity_selection", "occupancy_disorder"]
+      },
+      "operator_receipt": {"status": "passed", "artifact_id": "T04-current-candidate-check", "sha256": "fae9ad1a18e7759482888dfcd49e9ae98005fcab6a5625a7f6e5613e4cd9f3a0"}
+    },
+    {
+      "step_id": "s03",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-002/T01",
+        "source_extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8",
+        "source_manifest_sha256": "3a707e82d8560ed10a05622872c8cd5f1668126ebfadb7af853b4a57345b810d",
+        "events_sha256": "6a45c786d6dbc2b0a1a0fe4387bbf6f47bd5108bfadb7d4efc2517ef6c424b8a",
+        "event_id": "e26",
+        "before_artifact_sha256": "694408797e15e1520458f9b13dc2b494e795d0476145882ca8a11e19d8efdb50",
+        "after_artifact_sha256": "62105d1144489cb09a0573756ffa3e6369287b0293f5bd6c5771a6991df23f76"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": ["create_view", "periodic_cell", "source_sites", "expanded_structure_boundary"]
+      },
+      "operator_receipt": {"status": "passed", "artifact_id": "T04-current-candidate-check", "sha256": "fae9ad1a18e7759482888dfcd49e9ae98005fcab6a5625a7f6e5613e4cd9f3a0"}
+    },
+    {
+      "step_id": "s04",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-009/T04",
+        "source_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
+        "source_manifest_sha256": "0882be1bc0ef61a18e77b942171f00c2988e7bc96b53f6ca34613409d9f0e533",
+        "events_sha256": "bd85ddcd2cacd3cce036347f9ace9412adfeb69e5a576211aaa6b9af75d94c02",
+        "event_id": "e12",
+        "before_artifact_sha256": "08dac238ea0e49794de1edc36b32c7163da1f9e7e5e950bb6fb6790cd1899c2d",
+        "after_artifact_sha256": "9744aadeafd0c01665bc812d2aa95b17e75d78d513131a5a9a8f865871b14867"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": ["diamond_64_sites", "direct_coordinates", "zero_velocity_boundary", "ase_route"]
+      },
+      "operator_receipt": {"status": "passed", "artifact_id": "T04-current-candidate-check", "sha256": "fae9ad1a18e7759482888dfcd49e9ae98005fcab6a5625a7f6e5613e4cd9f3a0"}
+    },
+    {
+      "step_id": "s05",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-002/T01",
+        "source_extension_sha256": "a5556df69ce1a94cf10ad112babe7611213017e9998083a8d1b2560b7a38eef8",
+        "source_manifest_sha256": "3a707e82d8560ed10a05622872c8cd5f1668126ebfadb7af853b4a57345b810d",
+        "events_sha256": "6a45c786d6dbc2b0a1a0fe4387bbf6f47bd5108bfadb7d4efc2517ef6c424b8a",
+        "event_id": "e63",
+        "before_artifact_sha256": "c485b74f77b27016b27fb5e733502e47f92ce656177c49ae995e4d99110b1e6e",
+        "after_artifact_sha256": "658eae00dd1046828e1c72087501e312bb19276dc82d5b68de053e4b407d0c67"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": ["cycles_render", "resolution", "samples", "paired_projects"]
+      },
+      "operator_receipt": {"status": "passed", "artifact_id": "T04-current-candidate-check", "sha256": "fae9ad1a18e7759482888dfcd49e9ae98005fcab6a5625a7f6e5613e4cd9f3a0"}
+    },
+    {
+      "step_id": "s06",
+      "interaction": "authorized_mcp_replay",
+      "classification": "replay_not_direct_gui",
+      "original_gui": {
+        "source_run_id": "run-003/T02",
+        "source_extension_sha256": "bb436e22d801c8cf564236d14f77117c4600f665b9feff66d9231bfd170c2374",
+        "source_manifest_sha256": "8c458712aeb82dc53d0acb79dce8f5019dc3ddd0eea17d8210fe483cf0ff102d",
+        "events_sha256": "67b84537435a45228b0a04bd3d38e7df291ed3d0799b4bd35d58942d7a4a26c8",
+        "event_id": "e156",
+        "before_artifact_sha256": "c083eb87e2a48377dfab4b10c285652bc63d496cc7e46f3d316e4170e0f8cd5b",
+        "after_artifact_sha256": "151cc33c28c844c26cd41da00739741ab6b6e96644b4efb5271c89ad66bee866"
+      },
+      "candidate_difference": {
+        "status": "passed",
+        "to_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+        "to_prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+        "checked_fields": ["separate_process", "original_pair", "moved_pair", "scientific_hashes"]
+      },
+      "operator_receipt": {"status": "passed", "artifact_id": "T04-current-candidate-check", "sha256": "fae9ad1a18e7759482888dfcd49e9ae98005fcab6a5625a7f6e5613e4cd9f3a0"}
+    }
+  ],
+  "final_candidate_applicability": "examples/tutorials/2.5.0/P6-final-candidate-applicability.json"
+}

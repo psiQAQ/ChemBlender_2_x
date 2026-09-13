@@ -330,6 +330,39 @@
       "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
       "interaction": "os_gui_after_disclosed_mcp_support",
       "status": "pending_human_review"
+    },
+    {
+      "path": "crystal-current-run010.png",
+      "source_run": "run-010/T04/current-visible-state.png",
+      "sha256": "612af2df1d700a1d2988907f80e7d09e668c1b2a0f8fc084c259de02b6dde4fe",
+      "kind": "gui_raw",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "mcp_visible_state_capture",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "crystal-cocrystal-run010.png",
+      "source_run": "run-010/T04/accepted/cocrystal-view.png",
+      "sha256": "2cb59eb327ab6bfd1f48f853e64a1855f531bf69f3bc869564909898e826dd0e",
+      "kind": "render",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "native_current_candidate_render",
+      "status": "pending_human_review"
+    },
+    {
+      "path": "crystal-diamond-run010.png",
+      "source_run": "run-010/T04/accepted/diamond-view.png",
+      "sha256": "299760936b31ecb5dfd89a4ca44b77fb9d953bd947d335a697f2cdaf71a981e9",
+      "kind": "render",
+      "native_format": "png",
+      "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+      "prepare_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3",
+      "interaction": "native_current_candidate_render",
+      "status": "pending_human_review"
     }
   ]
 }
