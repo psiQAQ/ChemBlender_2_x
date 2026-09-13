@@ -31,6 +31,7 @@ view_cache = importlib.import_module(KEY + ".ui.view_cache")
 scene_view = importlib.import_module(KEY + ".scene_preset_view")
 render_scene = importlib.import_module(KEY + ".render_scene")
 presets = importlib.import_module(KEY + "._cbq_core.scene_preset")
+project_link = importlib.import_module(KEY + "._cbq_core.project_link")
 
 
 def digest(path):
@@ -67,6 +68,11 @@ def plan(project, view):
 
 
 def linked_structure(project, planned):
+    if planned.view_kind in {
+        "spectrum_plot", "electronic_spectrum_linked", "band_structure",
+        "density_of_states", "band_dos_linked",
+    }:
+        return None
     for binding in planned.bindings:
         if binding.entity_kind == "structure":
             return project.structures[binding.entity_id]
@@ -78,7 +84,14 @@ def linked_structure(project, planned):
 
 
 def clear_scene():
-    session_ui.close_scene_session(bpy.context.scene)
+    scene = bpy.context.scene
+    session_ui.close_scene_session(scene)
+    for key in (
+        project_link.PROJECT_ID_KEY, project_link.PROJECT_SCHEMA_KEY,
+        project_link.SIDECAR_LOCATOR_KEY, project_link.MANIFEST_HASH_KEY,
+    ):
+        if key in scene:
+            del scene[key]
     for obj in tuple(bpy.data.objects):
         bpy.data.objects.remove(obj, do_unlink=True)
 

@@ -1,0 +1,72 @@
+{
+  "schema_name": "chemblender_viewer_batch_check",
+  "schema_version": 1,
+  "plan_id": "2026-09-10-2.5-real-user-tutorials",
+  "status": "passed_with_acceptance_blockers",
+  "source_commit": "9b972a5cc3a7aa04c20ebfd6985bc5199a20ac39",
+  "extension_sha256": "0e427d689b04213cef1496d2a22a8e97cfd86d39c8718451e381e0d85951c207",
+  "runtime": {
+    "blender": "5.1.1",
+    "profile": ".blend-analysis/r15/p",
+    "installed_extension": "bl_ext.user_default.chemblender"
+  },
+  "batch": {
+    "root": ".blend-analysis/r20",
+    "build_summary": {
+      "path": ".blend-analysis/r20/build-summary.json",
+      "sha256": "b9d12bec5707f8d26d0a09e6fa585c9cb824ba99cf46ddf4082690148a5a2ddf",
+      "status": "passed",
+      "items": 22,
+      "views": 24
+    },
+    "cold_summary": {
+      "path": ".blend-analysis/r20/cold-summary.json",
+      "sha256": "6ccbee5e42d1fcfd4f980d887300bf826d20b520ce335f7dd06fbc72a0aa5fa7",
+      "status": "passed",
+      "items": 22
+    }
+  },
+  "cases": [
+    "T03",
+    "T05",
+    "T08",
+    "T09",
+    "T10",
+    "T11",
+    "T12",
+    "T13",
+    "T14",
+    "T15",
+    "T16",
+    "T19",
+    "T20"
+  ],
+  "checks": {
+    "native_view_creation": "passed_all",
+    "native_render": "passed_all",
+    "blend_cbq_pair": "passed_all",
+    "source_removed_before_cold_reopen": "passed_all",
+    "cold_rebuild": "passed_all",
+    "scientific_array_hashes_preserved": "passed_all",
+    "representative_agent_visual_review": "passed_with_readability_limitation"
+  },
+  "retained_failures": [
+    {
+      "root": ".blend-analysis/r14",
+      "reason": "LazyNpyArray plot values exposed a product defect fixed at source commit 9b972a5."
+    },
+    {
+      "root": ".blend-analysis/r16",
+      "reason": "The test harness overlaid a structure on plot-only views; the harness was corrected without changing product semantics."
+    },
+    {
+      "root": ".blend-analysis/r19",
+      "reason": "ORCA partial excited-state records cannot satisfy the linked-state preset; the truthful spectrum-only preset passed in r20."
+    }
+  ],
+  "limitations": [
+    "These are background native Blender operations, not direct os_gui or human_gui events.",
+    "Linked vibration and electronic spectrum renders are scientifically present but have smaller plot labels than a tutorial-only plot render.",
+    "No independent human review is claimed."
+  ]
+}

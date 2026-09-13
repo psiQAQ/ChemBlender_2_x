@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 6 — 教程收口与本地交付；Phase 4/5 的明确 Blocked 项并行保留
-- Next Step: 为已具备当前科学输出的 T03/T05/T08–T16/T19/T20/B01 批量补 Blender View/render/project/cold-reopen/recovery；直接 GUI 与人工签署保持独立阻塞
+- Next Step: 将 r20 的 22 项 Viewer/render/project/cold-reopen 结果纳入离线教程与 review ZIP，并用修复后的 Extension 重做最终 clean/user_default 候选资格；直接 GUI 与人工签署保持独立阻塞
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。

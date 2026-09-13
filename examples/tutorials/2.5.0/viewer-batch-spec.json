@@ -61,10 +61,34 @@
       "views": [{"preset": "vibration_mode", "bindings": {"structure": {"type": "Structure"}, "modes": {"type": "VibrationalModeSet", "semantic_role": "vibrational_modes"}}, "settings": {"selection_index": 1}}]
     },
     {
+      "case_id": "T11",
+      "name": "T11-gaussian-ir",
+      "source": ".blend-analysis/r18/T11-gaussian-ir.cbq",
+      "views": [{"preset": "vibration_spectrum_linked", "bindings": {"structure": {"type": "Structure"}, "modes": {"type": "VibrationalModeSet", "semantic_role": "vibrational_modes"}, "spectrum": {"type": "Spectrum"}}, "settings": {"selection_index": 1}}]
+    },
+    {
+      "case_id": "T11",
+      "name": "T11-orca-raman",
+      "source": ".blend-analysis/r18/T11-orca-raman.cbq",
+      "views": [{"preset": "vibration_spectrum_linked", "bindings": {"structure": {"type": "Structure"}, "modes": {"type": "VibrationalModeSet", "semantic_role": "vibrational_modes"}, "spectrum": {"type": "Spectrum"}}, "settings": {"selection_index": 1}}]
+    },
+    {
       "case_id": "T12",
-      "name": "T12-excited-structure",
-      "source": ".blend-analysis/2.5-real-user-tutorials/run-012/T12/gaussian16-uvvis.cbq",
-      "views": [{"preset": "structure_publication", "bindings": {"structure": {"type": "Structure"}}}]
+      "name": "T12-gaussian-uvvis",
+      "source": ".blend-analysis/r18/T12-gaussian-uvvis.cbq",
+      "views": [{"preset": "electronic_spectrum_linked", "bindings": {"structure": {"type": "Structure"}, "states": {"type": "ExcitedStateSet", "semantic_role": "excited_states"}, "spectrum": {"type": "Spectrum"}}, "settings": {"selection_index": 0}}]
+    },
+    {
+      "case_id": "T12",
+      "name": "T12-gaussian-ecd",
+      "source": ".blend-analysis/r18/T12-gaussian-ecd.cbq",
+      "views": [{"preset": "electronic_spectrum_linked", "bindings": {"structure": {"type": "Structure"}, "states": {"type": "ExcitedStateSet", "semantic_role": "excited_states"}, "spectrum": {"type": "Spectrum"}}, "settings": {"selection_index": 0}}]
+    },
+    {
+      "case_id": "T12",
+      "name": "T12-orca-uvvis",
+      "source": ".blend-analysis/r18/T12-orca-uvvis.cbq",
+      "views": [{"preset": "spectrum_plot", "bindings": {"spectrum": {"type": "Spectrum"}}}]
     },
     {
       "case_id": "T13",
