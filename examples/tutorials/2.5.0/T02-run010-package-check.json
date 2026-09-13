@@ -5,9 +5,9 @@
   "status": "passed",
   "classification": "review_only_current_addendum",
   "archive": {
-    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T02-current-review-addendum.zip",
-    "sha256": "6252a9257901e01e6e49f8b80589a11b7896fe354b8fcb1e71e26108cdb60a79",
-    "size_bytes": 3744021,
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T02-current-review-addendum-v2.zip",
+    "sha256": "e149663c8a0a567c00a97c541ad21409d81505421af17dd28d2c0fbe8543b405",
+    "size_bytes": 3745839,
     "file_count": 28,
     "crc_status": "passed",
     "relative_paths_only": true
@@ -19,7 +19,7 @@
   },
   "included_evidence": {
     "current_candidate_receipt_sha256": "b66d1533cc9317db2e4b461dfd3a95125bd0f492798f907b7089a1b5a3aa55c0",
-    "current_execution_supplement_sha256": "8fb6d753282c670c69fa3f232752d2ace75a27c24b257b1db6f51e9fd2c7886b",
+    "current_execution_supplement_sha256": "8ab113ad7ae4109a1167eee2ad2f7dde12df15ca88355cc5ff652ce91b40f29a",
     "input_sha256": "5c9aa2a3024d56c903d547798cbd04ff743433ba0950dbfd8e19238e40651172",
     "blend_sha256": "cef174fe7bc6097df80038ca3a692ae3daeb01b3185f5c1618089d91666698b3",
     "manifest_sha256": "d0ab33593677cae76c47ae1954ada48c4f5f524de7385fa4e7653a48993804f2",

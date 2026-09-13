@@ -12,8 +12,9 @@ PLAN_ID: `2026-09-10-2.5-real-user-tutorials`
 - 全部 T00–T20/B01 均有中英教程路线。最终共享 review ZIP 为 47,045,777 bytes、336 个安全成员、22 个工程对和 24 个 render；工作 manifest 不含开发机绝对路径。
 - 中英离线 HTML 各包含 55 张内嵌图片和一个真实 review ZIP 下载；Edge 在 DNS 被映射到 `0.0.0.0` 时完成两种语言的实际加载截图。
 - Extension 原生 validate/build 通过。最终 wheel-free 109-member ZIP 为 2,831,887 bytes，SHA-256 `73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8`；新 r25 profile 安装与冷 import 通过，且 109 个成员与此前已完成工程/恢复资格的 r15 候选逐字节一致。
-- Prepare wheel/sdist 已本地冻结；未发布。最终工作树完整复测为 2,616 total：2,579 passed，37 skipped，0 failures，0 errors，耗时 220.592s。
+- Prepare wheel/sdist 已本地冻结；未发布。最终工作树完整复测为 2,617 total：2,580 passed，37 skipped，0 failures，0 errors，耗时 220.437s。
 - 首次全量测试暴露新增科学图片断言的路径口径错误（1 failure）；修复后公共文档测试 5/5 和全量套件均通过，失败历史保留在 `progress.md`。
+- T01 review ZIP v3 与 T02 current addendum v2 已重新绑定最终候选 execution supplement；旧 ZIP 保留为历史证据，没有换标。
 
 ## 仍未关闭
 

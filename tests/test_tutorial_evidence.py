@@ -257,6 +257,17 @@ class TutorialStatusTests(unittest.TestCase):
             self.assertFalse(archive['development_paths_outside_evidence'], name)
             self.assertEqual(len(archive['sha256']), 64, name)
 
+    def test_t01_t02_review_receipts_bind_current_execution_supplements(self):
+        base = ROOT / 'examples/tutorials/2.5.0'
+        for case_id in ('T01', 'T02'):
+            with self.subTest(case_id=case_id):
+                receipt = json.loads((base / f'{case_id}-run010-package-check.json').read_text(encoding='utf-8'))
+                supplement = base / f'{case_id}.current-execution-supplement.json'
+                self.assertEqual(
+                    receipt['included_evidence']['current_execution_supplement_sha256'],
+                    hashlib.sha256(supplement.read_bytes()).hexdigest(),
+                )
+
     def test_scientific_review_package_is_portable_and_complete(self):
         base = ROOT / 'examples/tutorials/2.5.0'
         receipt = json.loads((base / 'P6-scientific-project-package-check.json').read_text(encoding='utf-8'))

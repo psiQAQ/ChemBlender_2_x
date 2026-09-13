@@ -120,6 +120,8 @@
 2026-09-13 T04 screenshot boundary: a native GUI capture proves only fields that are actually legible. The 1602×992 capture proves 64 sites and declared/derived symmetry; clipped paths and hashes remain receipt-bound facts and are never reconstructed from the image.
 
 2026-09-13 Viewer packaging: direct `blender --command extension build --source-dir ChemBlender` omits the shared core and is not an installable candidate. Always use `ChemBlender/scripts/build_extension.py`, which stages the wheel-free Viewer and rewrites the shared core under `_cbq_core` before native validate/build.
+
+2026-09-13 Review-package binding: when a versioned execution supplement changes candidate applicability, updating its standalone receipt is insufficient. Any review ZIP that embeds the supplement must be versioned again, and the package receipt must bind both the new archive hash and the exact embedded supplement hash; retain the prior ZIP as historical evidence.
 ## T07 recovery and handover
 
 - A saved Grid project can regenerate missing VDB caches from authoritative local CBQ arrays during Blender load, before a later audit script runs. To prove the explicit recovery control separately, remove only the regenerated VDBs in a disposable copy and then invoke `scientific_view(action="REBUILD")`.

@@ -28,7 +28,7 @@
   "local_delivery": {
     "status": "blocked",
     "tested_base_commit": "e7cb294055a7f15288d6cc5a7cff94b78a60a126",
-    "full_test_result": "2579 passed, 37 skipped, 0 failed, 0 errors",
+    "full_test_result": "2580 passed, 37 skipped, 0 failed, 0 errors",
     "report": "P6-local-delivery-report.md",
     "remote_writes": "not_authorized"
   },
@@ -72,8 +72,8 @@
       "tutorial": "passed",
       "review_package": {
         "status": "review_only",
-        "file": ".blend-analysis/2.5-real-user-tutorials/run-010/T01-review-v2.zip",
-        "sha256": "f297991f40629e29633c09bea1b94d60ddbccdda6e5ce66b52c34507d276d51f"
+        "file": ".blend-analysis/2.5-real-user-tutorials/run-010/T01-review-v3.zip",
+        "sha256": "bb397396147cc4ab14ac90eb3526a58366a2cdf5d9683fe518c6226edd9b0bb2"
       },
       "human_review": "not_run",
       "distribution": "blocked",
@@ -105,8 +105,8 @@
         "status": "review_only",
         "historical_base_file": ".blend-analysis/2.5-real-user-tutorials/run-003/T02-review.zip",
         "historical_base_sha256": "39c659f8e42255209d19adc3425cbe977be19128e547f0ea3dd21d438b51d99e",
-        "current_addendum_file": ".blend-analysis/2.5-real-user-tutorials/run-010/T02-current-review-addendum.zip",
-        "current_addendum_sha256": "6252a9257901e01e6e49f8b80589a11b7896fe354b8fcb1e71e26108cdb60a79"
+        "current_addendum_file": ".blend-analysis/2.5-real-user-tutorials/run-010/T02-current-review-addendum-v2.zip",
+        "current_addendum_sha256": "e149663c8a0a567c00a97c541ad21409d81505421af17dd28d2c0fbe8543b405"
       },
       "human_review": "not_run",
       "distribution": "blocked",

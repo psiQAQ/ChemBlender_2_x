@@ -8,15 +8,15 @@
   "python": "3.12.13",
   "status": "passed",
   "counts": {
-    "total": 2616,
-    "passed": 2579,
+    "total": 2617,
+    "passed": 2580,
     "failed": 0,
     "errors": 0,
     "skipped": 37,
     "expected_failures": 0,
     "unexpected_successes": 0
   },
-  "duration_seconds": 220.592,
+  "duration_seconds": 220.437,
   "exit_code": 0,
   "limitations": [
     "Optional scientific integration skips remain skips and do not qualify the missing professional environments.",
