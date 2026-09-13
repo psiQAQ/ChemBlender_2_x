@@ -1,0 +1,103 @@
+{
+  "case_id": "T18",
+  "status": "passed_scoped_current_candidate",
+  "scope": "Current-candidate Windows OS GUI legacy restore and missing/wrong/correct project relink; this is not an independent human review or a conforming case run manifest.",
+  "candidate": {
+    "extension_path": "ChemBlender/chemblender-2.5.0.zip",
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "extension_bytes": 2831887,
+    "blender": "5.1.1",
+    "executable": "C:/Program Files/Blender Foundation/Blender 5.1/blender.exe"
+  },
+  "interaction": "os_gui",
+  "verified": {
+    "legacy_cbq_preview": "passed",
+    "legacy_cbq_import": "passed",
+    "legacy_view_restore": "passed",
+    "legacy_restored_view": "legacy_formaldehyde (Migrated)",
+    "missing_project_state": "observed",
+    "wrong_project_rejected": "sidecar project UUID or manifest hash does not match scene link",
+    "wrong_project_state_preserved": true,
+    "correct_project_relink": "passed",
+    "project_entries_after_relink": 1,
+    "source_blend_unchanged": true,
+    "second_clean_profile": "passed_by_P6_current_extension_qualification"
+  },
+  "inputs": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/legacy/project.cbq/manifest.json",
+      "sha256": "76520b3fe72ba325c6630d30da656adac76eede54ff10219a2133373115a5bcb"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/legacy/migration.json",
+      "sha256": "89254823db77ec16101e374961faab53d31d2bce9e8369345f7b0d21276731b0"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/relink/missing/aspirin-handoff.blend",
+      "sha256": "c14fade1fac1f9aca6c47ee8b740b9301838f47c005914c626cbf07a85170a20"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/relink/wrong/handoff.cbq/manifest.json",
+      "sha256": "21d4a9499d682beebd9b7b1b0f0e8e7037232a8badacb4d717acd4e2cd6389cc"
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/relink/correct/aspirin-handoff.cbq/manifest.json",
+      "sha256": "fac6a7e29868aae9b359fa23ec4177bba90621417f4e7867c7cfec1500963a95"
+    }
+  ],
+  "screenshots": [
+    {
+      "step": "legacy_restore",
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/gui/t18-legacy-restored-current.png",
+      "sha256": "7a181850a74ee169e0ef94b2400c0915eb4f5b4bf06d3c422aa3dc7cdadb3c0d"
+    },
+    {
+      "step": "missing_project",
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/gui/t18-relink-missing-current.png",
+      "sha256": "0b876d118917087d6192f7c1629d4c73427451ff8aff025cd9bda24690ac0ea2"
+    },
+    {
+      "step": "wrong_project_rejected",
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/gui/t18-relink-wrong-rejected-current2.png",
+      "sha256": "ceebf3ecf94b6f9ccb94a388ca6ea06e154647be998c49bac1a59ec5ee91334a"
+    },
+    {
+      "step": "correct_project_relinked",
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/gui/t18-relink-correct-current.png",
+      "sha256": "939c99c8434390eb0edf67733ecec91227c3ea7497503abb402eafcffb17e3bc"
+    }
+  ],
+  "recordings": [
+    {
+      "step": "wrong_then_correct_relink",
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/gui/t18-relink-current-blender-recording.mp4",
+      "sha256": "56c5a5f849d82e5affb41e9d84dbf4f6e7da0c0ce306b6c71f51d66349b10e75",
+      "bytes": 1109600,
+      "window_binding": "aspirin-handoff [...] - Blender 5.1.1"
+    },
+    {
+      "step": "legacy_restore",
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/gui/t18-legacy-restore-current-blender-recording.mp4",
+      "sha256": "0e88e24fa40e7154032d93a42468df27111e2cf1a897e4230358890c1684e2ac",
+      "bytes": 9344865,
+      "window_binding": "Blender 5.1.1"
+    }
+  ],
+  "retained_failed_evidence": [
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/gui/t18-legacy-relink-os-gui-recording.mp4",
+      "reason": "Game Bar bound the first long recording to ChatGPT rather than Blender; it is excluded from acceptance."
+    },
+    {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-014/T18/gui/failed-t18-focused-empty-workflow.mp4",
+      "reason": "The retry recorded an empty scene because the sidebar did not open; it is excluded from acceptance."
+    }
+  ],
+  "process_note": "A stale Agent-owned unsaved retry process remained open briefly while the next retry was launched. Both exact Blender 5.1.1 PIDs were closed with Quit/Don't Save; no user-owned process was touched and no source artifact changed.",
+  "limitations": [
+    "Legacy export and scientific equality remain supported by the retained run-007 native receipts; this receipt adds direct GUI evidence only.",
+    "No conforming T18 run-manifest.json has been produced.",
+    "Independent human review remains not_run."
+  ],
+  "human_review": "not_run"
+}

@@ -7,9 +7,9 @@
   "languages": {
     "en": {
       "html": "docs/offline/en/index.html",
-      "html_sha256": "4cb72bdcac65aa835ed69dec89f333243fb64bf17335fdcbd238fd4ab86d6b9e",
-      "download_count": 130,
-      "image_count": 55,
+      "html_sha256": "c353f24b00a17ecb180dcdc848e8ff57322b91880bd41c9cf34db5d1bdead898",
+      "download_count": 135,
+      "image_count": 60,
       "remote_resources": 0,
       "missing_resources": 0,
       "language_navigation": "passed",
@@ -18,16 +18,16 @@
       "receipt_downloads": "passed",
       "project_downloads": "passed_shared_companion_zip",
       "offline_edge_render": {
-        "status": "passed",
+        "status": "passed_prior_content",
         "screenshot": ".blend-analysis/r24-en.png",
         "sha256": "ba0aec173cae6c05656da73d865c69d6d10c319e576a27befbc46fbb120a35a9"
       }
     },
     "zh-CN": {
       "html": "docs/offline/zh-CN/index.html",
-      "html_sha256": "f0ee95a6361aa9589105585fec2b1a84771db90c133d00f5b4eb5328c22b185b",
-      "download_count": 126,
-      "image_count": 55,
+      "html_sha256": "d130a96f2d9e0dec032127c2c9843cdbce27bb59e8ffc3fb8f3eafb49c1ea293",
+      "download_count": 131,
+      "image_count": 60,
       "remote_resources": 0,
       "missing_resources": 0,
       "language_navigation": "passed",
@@ -36,7 +36,7 @@
       "receipt_downloads": "passed",
       "project_downloads": "passed_shared_companion_zip",
       "offline_edge_render": {
-        "status": "passed",
+        "status": "passed_prior_content",
         "screenshot": ".blend-analysis/r24-zh-CN.png",
         "sha256": "f76985d04f93fade5462f7e0a6c023db0c7af27398f158736f6189a8797afd6d"
       }
@@ -53,7 +53,7 @@
     "layout": "shared companion file referenced by both offline HTML files"
   },
   "limitations": [
-    "Headless Edge loaded both local HTML files with DNS mapped to 0.0.0.0; parser tests separately verify every image, anchor, language link and download target.",
+    "Headless Edge loaded the prior local HTML files with DNS mapped to 0.0.0.0. The current T18 refresh was not re-rendered in Edge; generator and parser tests verify every current image, anchor, language link and download target.",
     "This offline QA does not replace the independent tutorial replay required by P6.5/P6.6."
   ]
 }

@@ -1,10 +1,11 @@
 {
   "case_id": "T18",
   "status": "blocked",
-  "scope": "Current-candidate applicability and recovery audit; historical GUI evidence retains its original candidate identity.",
+  "scope": "Current-candidate applicability and recovery audit; run-014 adds direct OS GUI legacy restore and relink evidence while historical GUI evidence retains its original candidate identity.",
   "candidates": {
     "accepted_gui_extension_sha256": "a1e2da79253d505b60daa42aa465eb725cdd1eba00e6c81ce4082102a62d0f28",
-    "phase4_test_extension_sha256": "2637ce7ccc846854a280ebe56ea91f858a29591aa6614cc53cd92ea28bb3ea3f"
+    "phase4_test_extension_sha256": "2637ce7ccc846854a280ebe56ea91f858a29591aa6614cc53cd92ea28bb3ea3f",
+    "current_extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8"
   },
   "verified": {
     "gui_save_as_and_cancel": "passed_historical_candidate",
@@ -14,14 +15,24 @@
     "valid_relink_after_rejection": "passed_native_replay",
     "source_and_processor_unavailable_rebuild": "passed_phase4_test_candidate",
     "legacy_export_restore_and_portable_cold_reopen": "passed_native_replay",
+    "legacy_restore_direct_gui": "passed_current_candidate_run014",
+    "missing_wrong_and_correct_relink_direct_gui": "passed_current_candidate_run014",
+    "second_clean_profile": "passed_current_candidate_qualification",
     "originals_unchanged": true
   },
   "blocked": {
-    "legacy_migration_direct_gui": "No OS GUI interaction tool is available; native public-operator replay is not relabeled as direct GUI.",
-    "second_clean_profile": "Not run because an existing user-owned Blender 5.1.1 process (PID 26228) was active; concurrent Blender launch is prohibited for this plan.",
+    "conforming_run_manifest": "No conforming T18 run-manifest.json exists; direct GUI and native receipts remain separate scoped evidence.",
     "independent_human_review": "not_run"
   },
   "evidence": [
+    {
+      "path": "examples/tutorials/2.5.0/T18-run014-direct-gui-check.json",
+      "sha256": "17bd952486be43e8580ba99705c313e494c7d85a485101f057bba84f7af07b7d"
+    },
+    {
+      "path": "examples/tutorials/2.5.0/P6-current-extension-qualification.json",
+      "sha256": "8c1aeca0cb5ccb1ce5b75abae8231b2a59bb12d0ce4c166eae6578911b6d1a4d"
+    },
     {
       "path": "examples/tutorials/2.5.0/T18-run007-gui-save-check.json",
       "sha256": "8e7fd3d8bd280af5cf50fb38f2bd72682160c63ed18c3de930c74e2fe273a23d"

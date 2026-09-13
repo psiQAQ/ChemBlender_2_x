@@ -109,8 +109,6 @@
     "T18": {
       "chapter": "capabilities-and-projects.md",
       "missing": [
-        "direct GUI legacy migration",
-        "second clean-profile replay",
         "independent human replay"
       ]
     },

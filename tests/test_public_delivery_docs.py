@@ -36,12 +36,14 @@ class PublicDeliveryDocsTests(unittest.TestCase):
             self.assertEqual(manifest["remote_resources"], 0)
             self.assertEqual(manifest["missing_resources"], 0)
             self.assertGreater(manifest["link_count"], 5)
-            self.assertEqual(manifest["image_count"], 58)
+            self.assertEqual(manifest["image_count"], 60)
             self.assertEqual(
                 set(manifest["image_sha256"]),
                 {"docs/user/assets/2.5.0/blender-viewer.png", *(
                     'docs/user/assets/2.5-tutorials/' + name for name in (
-                        'crystal-prepare-cif.jpg', 'crystal-prepare-ase.jpg', 'project-link-missing.jpg', 'project-link-mismatch.jpg',
+                        'crystal-prepare-cif.jpg', 'crystal-prepare-ase.jpg',
+                        'project-legacy-restored-current.png', 'project-relink-connected-current.png',
+                        'project-relink-missing-current.png', 'project-relink-wrong-current.png',
                         'aspirin-cycles-current.png', 'aspirin-prepare-convert.jpg',
                         'aspirin-view.jpg', 'aspirin-render-result.jpg',
                         'ethanol-cycles.png', 'ethanol-prepare-convert.jpg',
@@ -91,7 +93,7 @@ class PublicDeliveryDocsTests(unittest.TestCase):
         self.assertIn('href="#document-2"', content)
         self.assertIn('href="../zh-CN/index.html#document-1"', content)
         self.assertIn('download="public-surface.json"', content)
-        self.assertEqual(content.count('<img '), 58)
+        self.assertEqual(content.count('<img '), 60)
         self.assertIn('download="ethanol.smi"', content)
         self.assertIn('download="ethanol-science-check.json"', content)
         self.assertIn('download="recompute_t07_difference.py"', content)

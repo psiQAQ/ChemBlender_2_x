@@ -53,15 +53,12 @@
   },
   "rerun_boundary": {
     "native_build_install_this_step": "not_repeated",
-    "reason": "The exact current Phase 4 candidate already passed native validate/build/install in P4.6; user-owned Blender PID 26228 remained active, so no concurrent Blender process was launched.",
+    "reason": "The exact current candidate already passed native validate/build/install and two clean-profile qualifications; T18 run-014 added direct OS GUI legacy restore/relink without changing the package.",
     "user_process_untouched": true
   },
   "git_diff_check": "passed",
   "planning_check": "passed_with_documented_blockers",
   "remaining_blockers": [
-    "P3.4 professional environment replay authorization",
-    "P4.5 T06 new-panel direct GUI capture",
-    "P4.9 T18 direct-GUI legacy migration and second clean profile",
     "P0 conforming manifests/replay supplements listed in P4-p0-checker-summary.json",
     "independent human review"
   ],

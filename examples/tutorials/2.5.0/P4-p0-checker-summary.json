@@ -72,7 +72,7 @@
       "case_id": "T18",
       "checker_status": "not_run",
       "classification": "blocked",
-      "reason": "No conforming run-manifest.json exists; direct-GUI legacy migration and the second clean profile remain open."
+      "reason": "No conforming run-manifest.json exists; current-candidate direct GUI legacy restore/relink and the second clean profile are covered by scoped receipts but are not a substitute for the manifest."
     }
   ],
   "ready_for_human_review": [],

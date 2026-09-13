@@ -345,7 +345,7 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(delivery['remote_writes'], 'not_authorized')
         self.assertIn('整体仍为 **Blocked**', report)
         self.assertIn('当前环境已能产生并核验真实鼠标/键盘 GUI 事件', report)
-        self.assertIn('T18 legacy migration/relink 仍缺直接 GUI 录制', report)
+        self.assertIn('T18 当前候选 direct GUI legacy restore 与 missing/wrong/correct relink 已通过', report)
         self.assertIn('22 个案例的 `human_review` 全部为 `not_run`', report)
         self.assertIn('`git push`、tag、GitHub Release、PyPI', report)
 
@@ -832,7 +832,10 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertEqual(receipt['status'], 'blocked')
         self.assertEqual(receipt['verified']['gui_save_as_and_cancel'], 'passed_historical_candidate')
         self.assertEqual(receipt['verified']['legacy_export_restore_and_portable_cold_reopen'], 'passed_native_replay')
-        self.assertIn('legacy_migration_direct_gui', receipt['blocked'])
+        self.assertEqual(receipt['verified']['legacy_restore_direct_gui'], 'passed_current_candidate_run014')
+        self.assertEqual(receipt['verified']['missing_wrong_and_correct_relink_direct_gui'], 'passed_current_candidate_run014')
+        self.assertEqual(receipt['verified']['second_clean_profile'], 'passed_current_candidate_qualification')
+        self.assertIn('conforming_run_manifest', receipt['blocked'])
         self.assertEqual(receipt['human_review'], 'not_run')
 
 
