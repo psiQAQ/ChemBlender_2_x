@@ -5,9 +5,19 @@
   "source_commit": "58dc1e07824cc42c273dd3a870d7e8ccdacc7d49",
   "status": "complete_with_blockers",
   "case_checkers": {
-    "discovered_manifest_count": 9,
-    "executed_manifest_count": 9,
+    "discovered_manifest_count": 10,
+    "executed_manifest_count": 10,
     "current_applicable": [
+      {
+        "case_id": "T00",
+        "manifest": ".blend-analysis/2.5-real-user-tutorials/run-010/T00/run-manifest.json",
+        "manifest_sha256": "d53c3dcae4b76b9a9ecd70310d0c3e5be8a031006e4415fe5eb41f2bb8c7db64",
+        "exit_code": 2,
+        "verdict": "incomplete",
+        "integrity_status": "passed",
+        "technical_status": "passed",
+        "independent_review_status": "incomplete"
+      },
       {
         "case_id": "T01",
         "manifest": ".blend-analysis/2.5-real-user-tutorials/run-010/T01/run-manifest.json",
@@ -78,7 +88,6 @@
       }
     ],
     "no_conforming_manifest": [
-      "T00",
       "T04",
       "T07",
       "T08",
@@ -115,8 +124,8 @@
   },
   "static_gates": {
     "tutorial_evidence_tests": {
-      "total": 76,
-      "passed": 75,
+      "total": 77,
+      "passed": 76,
       "skipped": 1,
       "failed": 0,
       "errors": 0
@@ -135,9 +144,9 @@
     "planning_check": "passed_with_unfinished_items"
   },
   "acceptance": {
-    "ready_for_human_review": ["T01", "T02", "T03", "T05"],
+    "ready_for_human_review": ["T00", "T01", "T02", "T03", "T05"],
     "human_review": "not_run",
     "distribution": "blocked",
-    "reason": "T01, T02, T03 and T05 passed their technical checkers and are ready for independent review. Remaining P0 checker inputs are missing or invalid; other P1/P2 direct-GUI events and conforming manifests remain incomplete; all 22 independent reviews remain unsigned. Portable project downloads and current-source Blender qualification passed."
+    "reason": "T00, T01, T02, T03 and T05 passed their technical checkers and are ready for independent review. Remaining P0 checker inputs are missing or invalid; other P1/P2 direct-GUI events and conforming manifests remain incomplete; all 22 independent reviews remain unsigned. Portable project downloads and current-source Blender qualification passed."
   }
 }

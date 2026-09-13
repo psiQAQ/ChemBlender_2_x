@@ -6,9 +6,16 @@
   "cases": [
     {
       "case_id": "T00",
-      "checker_status": "not_run",
-      "classification": "blocked",
-      "reason": "No conforming run-manifest.json exists; receipts cannot substitute for the checker input."
+      "checker_status": "executed",
+      "exit_code": 2,
+      "verdict": "incomplete",
+      "integrity_status": "passed",
+      "technical_status": "passed",
+      "independent_review_status": "incomplete",
+      "acceptance_status": "incomplete",
+      "raw_output": ".blend-analysis/2.5-real-user-tutorials/run-010/P4.12-checkers/T00.json",
+      "raw_output_sha256": "a4eb0776d2d9975fb5fa8d12a68e956ff4eadc5640dc617eb84747b797877147",
+      "classification": "ready_for_human_review"
     },
     {
       "case_id": "T01",
@@ -76,11 +83,11 @@
     }
   ],
   "ready_for_human_review": [
+    "T00",
     "T01",
     "T02"
   ],
   "blocked": [
-    "T00",
     "T04",
     "T06",
     "T07",

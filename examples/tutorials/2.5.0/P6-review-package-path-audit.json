@@ -5,6 +5,14 @@
   "status": "passed",
   "rule": "Archive member names are package-relative. Development-cache paths may occur only in evidence validation appendices.",
   "archives": {
+    "T00": {
+      "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T00-review-v2.zip",
+      "sha256": "eed391047c393f30c742c4483b8646ad030b917ccdbcb9c062d012208f0e708b",
+      "entry_count": 66,
+      "unsafe_member_names": [],
+      "development_path_members": 0,
+      "development_paths_outside_evidence": []
+    },
     "T01": {
       "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T01-review-v4.zip",
       "sha256": "61597978145b707d92ebd26a2f1e53430d6575f83d5c2b369aa8efd47c933cb8",

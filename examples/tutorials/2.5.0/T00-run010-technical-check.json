@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "case_id": "T00",
+  "run_id": "run-010/T00",
+  "status": "ready_for_human_review",
+  "candidate": {
+    "extension_sha256": "73fe2c248a7c1ad939018ce21a4ae44c52855abbdaff124af581bd34ffe469c8",
+    "prepare_wheel_sha256": "3ca42c26be19aebc5444d5df5a0490a15d3da6c370f2c4ec6883921a3e8880e3"
+  },
+  "manifest": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T00/run-manifest.json",
+    "sha256": "d53c3dcae4b76b9a9ecd70310d0c3e5be8a031006e4415fe5eb41f2bb8c7db64"
+  },
+  "direct_gui": {
+    "install_and_enable": "passed",
+    "test_processor": "passed",
+    "invalid_path_and_restore": "passed",
+    "sessions": ["run010-t00-recovery-p23080", "run010-t00-install-p5716"],
+    "normal_exit": true
+  },
+  "operator_check": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/T00/operator-check.json",
+    "sha256": "830b42679266bec86faddabbb46f4271e2e437d631226215e56a57bf60a8517f"
+  },
+  "retained_failures": {
+    "count": 38,
+    "accepted": false,
+    "examples": [
+      "blank Preferences window",
+      "late missing-path capture without visible error",
+      "restore captures taken before Test Processor completed",
+      "mistargeted file-browser text input that modified the unsaved default scene"
+    ]
+  },
+  "checker": {
+    "path": ".blend-analysis/2.5-real-user-tutorials/run-010/P4.12-checkers/T00.json",
+    "sha256": "a4eb0776d2d9975fb5fa8d12a68e956ff4eadc5640dc617eb84747b797877147",
+    "exit_code": 2,
+    "verdict": "incomplete",
+    "integrity_status": "passed",
+    "technical_status": "passed",
+    "independent_review_status": "incomplete",
+    "acceptance_status": "incomplete"
+  },
+  "execution_supplement": "not_required_current_direct_gui",
+  "human_review": "not_run",
+  "distribution": "blocked"
+}

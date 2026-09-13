@@ -13,7 +13,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 ## Control
 
 - Current Phase: Phase 5 — 逐个实施 P1/P2 案例；Phase 6 独立人工复做门槛并行保留
-- Next Step: P4.12 录制 T00 当前直接 GUI 的无效 processor 路径失败与恢复重试，再建立 execution supplement 和 conforming manifest
+- Next Step: P4.12 复用 T04 现有当前候选 science/render/lifecycle 与直接 GUI 证据，补 conforming manifest；仅在缺口确实无法复用时补录最小 GUI
 - Checklist rule: 只有操作、验证和证据路径均写入 `progress.md` 后才能标记 `[x]`。
 - Blocked rule: 失败或缺少授权的项目保持 `[ ]`，并在 `progress.md` 记录 `Blocked` 及原因。
 - Human rule: Agent 不得代签 `human_review`。
@@ -73,7 +73,7 @@ Verification: 逐案证据检查器、状态一致性测试、文档与离线 QA
 
 每个案例只有在当前候选身份、输入/许可、科学检查、直接 GUI 或合规授权重放、渲染、配对工程、移动/冷重开/恢复、中英教程、离线 QA、review package 和检查器结果均有证据时，才能勾选技术完成；人工验收单列。
 
-下列已勾选项表示相应操作或审计已执行，不表示全部 P0 案例技术验收完成。T01/T02 当前 manifest 已通过完整性与技术门槛，但独立审阅仍为 `incomplete`；T06 历史 manifest 为 `invalid`，T00/T04/T07/T17/T18 尚无 conforming manifest。
+下列已勾选项表示相应操作或审计已执行，不表示全部 P0 案例技术验收完成。T00/T01/T02 当前 manifest 已通过完整性与技术门槛，但独立审阅仍为 `incomplete`；T06 历史 manifest 为 `invalid`，T04/T07/T17/T18 尚无 conforming manifest。
 
 - [x] P4.1 T00：核对当前候选安装、Test Processor、doctor/capabilities、失败恢复和教程入口。
 - [x] P4.2 T01：完成当前候选适用性、execution supplement、剩余缓存恢复、正文单一路线和 review package。

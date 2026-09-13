@@ -251,7 +251,7 @@ class TutorialStatusTests(unittest.TestCase):
         audit = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-review-package-path-audit.json').read_text(encoding='utf-8'))
         self.assertEqual(audit['status'], 'passed')
         self.assertEqual(audit['crc_status'], 'passed_all')
-        self.assertEqual(set(audit['archives']), {'T01', 'T02-current', 'T02-historical', 'T04', 'T06', 'T07', 'T17', 'scientific-viewer'})
+        self.assertEqual(set(audit['archives']), {'T00', 'T01', 'T02-current', 'T02-historical', 'T04', 'T06', 'T07', 'T17', 'scientific-viewer'})
         for name, archive in audit['archives'].items():
             self.assertFalse(archive['unsafe_member_names'], name)
             self.assertFalse(archive['development_paths_outside_evidence'], name)
@@ -331,10 +331,10 @@ class TutorialStatusTests(unittest.TestCase):
         receipt = json.loads((ROOT / 'examples/tutorials/2.5.0/P6-offline-gate-summary.json').read_text(encoding='utf-8'))
         checkers = receipt['case_checkers']
         self.assertEqual(checkers['discovered_manifest_count'], checkers['executed_manifest_count'])
-        self.assertEqual({item['case_id'] for item in checkers['current_applicable']}, {'T01', 'T02', 'T03', 'T05', 'T06'})
-        self.assertEqual(set(checkers['no_conforming_manifest']), {item['case_id'] for item in self.status['cases']} - {'T01', 'T02', 'T03', 'T05', 'T06'})
+        self.assertEqual({item['case_id'] for item in checkers['current_applicable']}, {'T00', 'T01', 'T02', 'T03', 'T05', 'T06'})
+        self.assertEqual(set(checkers['no_conforming_manifest']), {item['case_id'] for item in self.status['cases']} - {'T00', 'T01', 'T02', 'T03', 'T05', 'T06'})
         self.assertEqual(receipt['static_gates']['offline_project_downloads'], 'passed_shared_companion_zip')
-        self.assertEqual(receipt['acceptance']['ready_for_human_review'], ['T01', 'T02', 'T03', 'T05'])
+        self.assertEqual(receipt['acceptance']['ready_for_human_review'], ['T00', 'T01', 'T02', 'T03', 'T05'])
         self.assertEqual(receipt['acceptance']['human_review'], 'not_run')
         self.assertEqual(receipt['acceptance']['distribution'], 'blocked')
 
@@ -873,7 +873,7 @@ class TutorialStatusTests(unittest.TestCase):
         summary = json.loads((base / 'P4-p0-checker-summary.json').read_text(encoding='utf-8'))
         p0 = {item['case_id']: item for item in summary['cases']}
         self.assertEqual(set(p0), {'T00', 'T01', 'T02', 'T04', 'T06', 'T07', 'T17', 'T18'})
-        ready = {'T01', 'T02'}
+        ready = {'T00', 'T01', 'T02'}
         self.assertEqual(set(summary['blocked']), set(p0) - ready)
         self.assertEqual(set(summary['ready_for_human_review']), ready)
         cases = {item['case_id']: item for item in self.status['cases']}
@@ -884,6 +884,8 @@ class TutorialStatusTests(unittest.TestCase):
             self.assertEqual(cases[case_id]['human_review'], 'not_run', case_id)
         self.assertEqual(p0['T01']['integrity_status'], 'passed')
         self.assertEqual(p0['T02']['integrity_status'], 'passed')
+        self.assertEqual(p0['T00']['integrity_status'], 'passed')
+        self.assertEqual(p0['T00']['technical_status'], 'passed')
         self.assertEqual(p0['T01']['technical_status'], 'passed')
         self.assertEqual(p0['T02']['technical_status'], 'passed')
         self.assertEqual(p0['T06']['verdict'], 'invalid')
@@ -895,6 +897,11 @@ class TutorialStatusTests(unittest.TestCase):
         self.assertIn('invalid_processor_path_rejected', spec['required_checks'])
         self.assertIn('processor_path_restored', spec['required_checks'])
         self.assertEqual(spec['render_and_project_pair'], 'not_applicable_installation_and_diagnostics_case')
+        receipt = json.loads((ROOT / 'examples/tutorials/2.5.0/T00-run010-technical-check.json').read_text(encoding='utf-8'))
+        self.assertEqual(receipt['status'], 'ready_for_human_review')
+        self.assertEqual(receipt['execution_supplement'], 'not_required_current_direct_gui')
+        self.assertEqual(receipt['checker']['technical_status'], 'passed')
+        self.assertEqual(receipt['checker']['independent_review_status'], 'incomplete')
 
     def test_t18_current_audit_preserves_gui_and_native_boundaries(self):
         base = ROOT / 'examples/tutorials/2.5.0'
